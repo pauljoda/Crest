@@ -194,7 +194,6 @@ final class BrowserTabMultiSelectionTests: XCTestCase {
                     session: session,
                     showing: source.id, tabs: [source.id: source.tabs[0].id, destination.id: destination.tabs[0].id],
                     browsingMode: mode, linkPreferences: preferences)
-                let initialRevision = browser.family.syncRevision
                 let ids = [source.tabs[2].id, source.tabs[0].id]
                 let actions = BrowserTabBatchActions(browser: browser, spaceAccess: BrowserSpaceAccessController())
                 XCTAssertTrue(
@@ -207,7 +206,6 @@ final class BrowserTabMultiSelectionTests: XCTestCase {
                     browser.selectedTabID(in: destination.id), follows ? source.tabs[0].id : destination.tabs[0].id)
                 XCTAssertEqual(browser.consumeMovedTabActivation(), follows)
                 XCTAssertFalse(browser.consumeMovedTabActivation())
-                XCTAssertEqual(browser.family.syncRevision, initialRevision.successor())
                 XCTAssertEqual(browser.isPrivateBrowsing, mode.isPrivate)
             }
         }

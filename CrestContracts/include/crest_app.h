@@ -65,13 +65,19 @@ CREST_API void CREST_CALL crest_buffer_free(crest_buffer_t* buffer);
  * command changed, and the WorkspaceOpened and WorkspaceClosed of each session
  * attached to the app, wait in a pending batch. The wake callback carries
  * nothing: it runs on whichever core thread published the change, never while
- * the core holds a lock, and only when the batch goes from empty to not empty.
- * Answer it by draining, on the host's own thread. NULL removes the callback;
- * when set_wake returns, no earlier callback is still running. */
+ * the core holds a lock, when the batch goes from empty to not empty and when
+ * the core queues work that follows the host's turn. Answer it by draining, on
+ * the host's own thread, on its next turn, then calling crest_app_end_turn. A
+ * callback set while changes wait is called at once. NULL removes the
+ * callback; when set_wake returns, no earlier callback is still running. */
 typedef void (CREST_CALL *crest_wake_t)(void* context);
 CREST_API crest_status_t CREST_CALL crest_app_set_wake(uint64_t app, crest_wake_t callback, void* context);
 /* OK: buffer = the pending changes, oldest first (a count, then each change). */
 CREST_API crest_status_t CREST_CALL crest_app_drain(uint64_t app, crest_buffer_t* out);
+/* The host finished a turn of its thread: the drain a wake asked for has run.
+ * Work queued to follow the turn, such as sync staging, may start, so the
+ * edits one turn makes stage once. A drain inside a turn does not end it. */
+CREST_API crest_status_t CREST_CALL crest_app_end_turn(uint64_t app);
 
 /* TRANSITIONAL, removed when session intents land: the persistent session the
  * app keeps in storage, for the JSON session commands. EMPTY when the app has

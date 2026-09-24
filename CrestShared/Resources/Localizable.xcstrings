@@ -564,6 +564,9 @@
     "Certificate Not Trusted" : {
 
     },
+    "Changes couldn’t be saved for sync." : {
+
+    },
     "Changes made after this checkpoint may be missing. Crest will keep a separate copy of the current files and fetch current iCloud records before uploading again." : {
 
     },
@@ -15885,6 +15888,9 @@
     "Some iCloud changes could not be read. Update Crest on all devices, then pull from iCloud." : {
 
     },
+    "Some of this browsing session can’t be synced." : {
+
+    },
     "Something to read" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -16719,6 +16725,9 @@
         }
       }
     },
+    "Sync can’t record more changes on this device." : {
+
+    },
     "Sync Crest with iCloud" : {
       "localizations" : {
         "ar" : {
@@ -17415,6 +17424,9 @@
           }
         }
       }
+    },
+    "This browsing session is too large to sync." : {
+
     },
     "This build cannot request browser-wide passkey access until Apple approves Crest’s managed capability." : {
       "localizations" : {

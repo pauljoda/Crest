@@ -32,6 +32,8 @@ internal sealed partial class Device {
     private readonly Dictionary<Guid, SavedWindow> saved = [];
     private readonly SessionStorage? storage;
     private readonly Action<Change> announce;
+    /// Asks the host for a drain on its next turn.
+    private readonly Action requestTurn;
     /// The tabs an older release kept in the session, which a window without a
     /// record adopts during the launch that loaded them.
     private IReadOnlyDictionary<Guid, Guid> legacyTabs = new Dictionary<Guid, Guid>();
@@ -44,12 +46,15 @@ internal sealed partial class Device {
     #region Constructors
 
     /// A device whose saved windows `storage` keeps, starting from `records`;
-    /// without storage every window lives in memory.
-    public Device(SessionStorage? storage, DeviceRecords records, Action<Change> announce) {
+    /// without storage every window lives in memory. `requestTurn` asks the
+    /// host for a drain on its next turn.
+    public Device(SessionStorage? storage, DeviceRecords records, Action<Change> announce, Action requestTurn) {
         ArgumentNullException.ThrowIfNull(records);
         ArgumentNullException.ThrowIfNull(announce);
+        ArgumentNullException.ThrowIfNull(requestTurn);
         this.storage = storage;
         this.announce = announce;
+        this.requestTurn = requestTurn;
         foreach (var record in records.Windows) saved[record.Id] = record;
         lastUse = records.Windows.Count == 0 ? 0 : records.Windows.Max(record => record.Used);
         adoptedWindowRecords = records.AdoptedWindowRecords;
@@ -153,6 +158,24 @@ internal sealed partial class Device {
             }));
         }
         foreach (var change in changes) announce(change);
+    }
+
+    /// Publishes a change a workspace's session started itself, such as a
+    /// finished sync stage. Called with no lock held.
+    public void Announce(Change change) {
+        ArgumentNullException.ThrowIfNull(change);
+        announce(change);
+    }
+
+    /// A workspace's session queued work that follows the host's turn. Called
+    /// with no lock held.
+    public void RequestTurn() => requestTurn();
+
+    /// The host finished a turn: each workspace's session hears it.
+    public void TurnEnded() {
+        NativeSessionAuthority[] sessions;
+        lock (gate) sessions = [.. workspaces.Values];
+        foreach (var session in sessions) session.TurnEnded();
     }
 
     /// Runs `edit` on each of `windows` and answers a change for every one

@@ -36,10 +36,10 @@ enum BrowserCoreSync {
     /// A journal mutation's `arguments` for `stage`.
     struct StageArguments: Encodable {
         let session: BrowserSession
-        let deletionReason: BrowserSyncTombstoneReason
+        let deletionReason: SyncDeletionReason
         let now: TimeInterval
 
-        init(session: BrowserSession, deletionReason: BrowserSyncTombstoneReason, at date: Date) {
+        init(session: BrowserSession, deletionReason: SyncDeletionReason, at date: Date) {
             self.session = BrowserCoreSessionAuthority.compact(session)
             self.deletionReason = deletionReason
             now = date.timeIntervalSinceReferenceDate

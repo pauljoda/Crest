@@ -27,17 +27,12 @@ public sealed class NativeSessionTransfer : IDisposable {
 
     #region Actions - Transfer
 
-    internal void Reserve(NativeSyncTransaction? sync = null) {
+    internal void Reserve() {
         lock (NativeSessionAuthority.Gate) {
             if (completed || a is not null) throw new BrowserRuleException(BrowserRuleCodes.InvalidTransferTransaction);
             try {
                 a = sourceCommand.Reserve();
                 b = destinationCommand.Reserve();
-                if (sync is not null) {
-                    if (ReferenceEquals(sync.Owner.Session, source)) a.BindSync(sync);
-                    else if (ReferenceEquals(sync.Owner.Session, destination)) b.BindSync(sync);
-                    else throw new BrowserRuleException(BrowserRuleCodes.InvalidSyncSessionOwner);
-                }
             } catch { a?.Dispose(); b?.Dispose(); a = b = null; throw; }
         }
     }
@@ -56,18 +51,25 @@ public sealed class NativeSessionTransfer : IDisposable {
         destination.Published(previousDestination, b.Session, b.FollowUp, b.Events);
     }
 
-    /// Reserves both states, saves the side that keeps a file with the sync
-    /// journal, then publishes both. A failed save cancels both reservations.
-    public void CommitDurably(NativeSyncTransaction? sync = null) {
-        Reserve(sync);
+    /// Reserves both states, stages the side that syncs, saves the side that
+    /// keeps a file with that journal, then publishes both. A failed stage or
+    /// save cancels both reservations.
+    public void CommitDurably() {
+        Reserve();
+        NativeSyncTransaction? staged = null;
         try {
+            var reason = SyncStaging.Transfer.Reason;
+            if (source.StageWithSave(a!.Session, reason) is { } fromSource) a!.BindSync(staged = fromSource);
+            else if (destination.StageWithSave(b!.Session, reason) is { } fromDestination) b!.BindSync(staged = fromDestination);
             source.Storage?.Save(a!.Session, a.Revision, a.SyncTransaction?.Journal, a.Checkpoint);
             destination.Storage?.Save(b!.Session, b.Revision, b.SyncTransaction?.Journal, b.Checkpoint);
         } catch {
             Dispose();
+            staged?.Dispose();
             throw;
         }
         Commit();
+        staged?.Owner.AnnounceStaged();
     }
 
     public void Dispose() {

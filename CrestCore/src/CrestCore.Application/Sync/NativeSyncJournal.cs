@@ -19,6 +19,8 @@ public sealed class NativeSyncJournal {
     private readonly Lazy<byte[]> encoded;
     internal IEnumerable<JsonObject> Records => records.Values;
     internal JsonNode Preferences => metadata["preferences"]!.DeepClone();
+    /// How many records wait to upload.
+    internal int PendingCount => pending.Count;
 
     #endregion
 
@@ -108,8 +110,20 @@ public sealed class NativeSyncJournal {
         return new(fields, new(records, StringComparer.Ordinal), new(pending, StringComparer.Ordinal));
     }
 
-    public NativeSyncJournal Apply(ReadOnlySpan<byte> bytes) {
-        var request = Parse(bytes);
+    public NativeSyncJournal Apply(ReadOnlySpan<byte> bytes) => Apply(Parse(bytes));
+
+    /// The journal after staging `session`, a whole session in the stored
+    /// format that nothing else holds, under this journal's preferences.
+    /// Records it no longer holds are deleted for `reason` where their absence
+    /// authorizes a deletion; `now` in seconds since 2001 dates the tombstones.
+    internal NativeSyncJournal Stage(JsonObject session, SyncDeletionReason reason, double now) => Apply(new JsonObject {
+        ["version"] = 1,
+        ["operation"] = NativeSyncOperationCodes.Name(NativeSyncOperation.Stage),
+        ["preferences"] = Preferences,
+        ["arguments"] = new JsonObject { ["session"] = session, ["deletionReason"] = reason.Name, ["now"] = now }
+    });
+
+    internal NativeSyncJournal Apply(JsonObject request) {
         if (request["version"]!.GetValue<int>() != 1) throw new BrowserRuleException(BrowserRuleCodes.VersionMismatch);
         var fields = metadata.DeepClone().AsObject();
         fields["preferences"] = request["preferences"]!.DeepClone();
@@ -129,14 +143,14 @@ public sealed class NativeSyncJournal {
             result["payload"] = payload.DeepClone(); result["version"] = Version(); result.Remove("tombstone");
             return result;
         }
-        JsonObject Delete(JsonObject previous, string reason) {
+        JsonObject Delete(JsonObject previous, SyncDeletionReason reason) {
             double now = args["now"]!.GetValue<double>();
             if (!double.IsFinite(now)) throw new BrowserRuleException(BrowserRuleCodes.InvalidSyncDate);
             return new() {
                 ["id"] = previous["id"]!.DeepClone(),
                 ["spaceID"] = previous["spaceID"]!.DeepClone(),
                 ["version"] = Version(),
-                ["tombstone"] = new JsonObject { ["reason"] = reason, ["deletedAt"] = now }
+                ["tombstone"] = new JsonObject { ["reason"] = reason.Name, ["deletedAt"] = now }
             };
         }
         if (operation is NativeSyncOperation.Merge or NativeSyncOperation.Replace or NativeSyncOperation.Overwrite) {
@@ -189,11 +203,13 @@ public sealed class NativeSyncJournal {
                     if (desired.TryGetValue(id, out var payload)) next[id] = Save(payload);
                     else {
                         if (Payload(next[id]) is { } old && !Includes(fields["preferences"]!, old)) continue;
-                        next[id] = Delete(next[id], SyncDeletionReasons.Superseded);
+                        next[id] = Delete(next[id], SyncDeletionReason.Superseded);
                     }
                     queued.Add(id);
                 }
             } else {
+                var fallback = SyncDeletionReason.Named(args["deletionReason"]!.GetValue<string>())
+                    ?? throw new BrowserRuleException(BrowserRuleCodes.InvalidSyncDeletion);
                 // Parent evidence is from the accepted journal before staging.
                 var spaces = records.Values.Where(r => Kind(r) == SyncRecordKinds.Space).Select(r => Id(r["spaceID"])).ToHashSet();
                 var folderRecords = records.Values.Where(r => Kind(r) == SyncRecordKinds.Folder).ToDictionary(r => Id(r["id"]!["value"]));
@@ -208,14 +224,14 @@ public sealed class NativeSyncJournal {
                 foreach (var (id, record) in next.ToArray()) {
                     if (cleaning.Contains(Id(record["spaceID"]))) continue;
                     if (Payload(record) is not { } payload || !Includes(fields["preferences"]!, payload) || desired.ContainsKey(id)) continue;
-                    string? reason;
-                    if (!Portable(payload)) reason = SyncDeletionReasons.Superseded;
+                    SyncDeletionReason? reason;
+                    if (!Portable(payload)) reason = SyncDeletionReason.Superseded;
                     else {
                         if (!spaces.Contains(Id(record["spaceID"])) || !AncestryArrived(payload, folderRecords)) continue;
                         string kind = Kind(record);
                         var placement = kind == SyncRecordKinds.Tab ? TabPlacement.Named(Value(payload)["placement"]!.GetValue<string>()) ?? throw new BrowserRuleException(BrowserRuleCodes.InvalidSyncPlacement) : (TabPlacement?)null;
                         reason = SyncDeletionPolicy.Reason(kind, placement, archiveReasons.GetValueOrDefault(Id(record["id"]!["value"])),
-                            desired.ContainsKey(SyncRecordKinds.Space + ":" + Id(record["spaceID"]).ToString("D")), args["deletionReason"]!.GetValue<string>());
+                            desired.ContainsKey(SyncRecordKinds.Space + ":" + Id(record["spaceID"]).ToString("D")), fallback);
                     }
                     if (reason is null) continue;
                     next[id] = Delete(record, reason); queued.Add(id);

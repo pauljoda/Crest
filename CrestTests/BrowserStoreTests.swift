@@ -171,8 +171,7 @@ final class BrowserStoreTests: XCTestCase {
         )
         let store = BrowserStore(
             session: .freshInstallSeed,
-            syncCoordinator: coordinator,
-            syncCoalescingDelay: .zero
+            syncCoordinator: coordinator
         )
 
         store.openNewTab(
@@ -383,7 +382,7 @@ final class BrowserStoreTests: XCTestCase {
         let space = try XCTUnwrap(store.selectedSpace)
         let member = try XCTUnwrap(space.tabs.first { $0.url != nil })
         let assignment = BrowserSpaceRuntimeAssignment(space: space)
-        let revision = store.family.syncRevision
+        let revision = store.sessionRevision
 
         store.updateBackgroundPage(
             BrowserBackgroundPageUpdate(
@@ -392,7 +391,7 @@ final class BrowserStoreTests: XCTestCase {
                 estimatedProgress: 0.5, isLoading: true, readerModeState: .unavailable,
                 completedNavigationURL: nil, processTerminationCount: 0)
         )
-        XCTAssertEqual(store.family.syncRevision, revision)
+        XCTAssertEqual(store.sessionRevision, revision)
         XCTAssertEqual(store.session.space(id: space.id)?.tabs.first { $0.id == member.id }?.title, member.title)
     }
 
@@ -493,8 +492,7 @@ final class BrowserStoreTests: XCTestCase {
         try coordinator.markUploaded(coordinator.journal.pendingRecordIDs)
         let store = BrowserStore(
             session: .preview,
-            syncCoordinator: coordinator,
-            syncCoalescingDelay: .zero
+            syncCoordinator: coordinator
         )
         let selectedSpaceID = store.selectedSpaceID
         let otherSpace = try XCTUnwrap(
@@ -533,8 +531,7 @@ final class BrowserStoreTests: XCTestCase {
         try coordinator.markUploaded(coordinator.journal.pendingRecordIDs)
         let store = BrowserStore(
             session: .preview,
-            syncCoordinator: coordinator,
-            syncCoalescingDelay: .zero
+            syncCoordinator: coordinator
         )
 
         store.openNewTab(url: try XCTUnwrap(URL(string: "https://example.com/synced")))
@@ -570,8 +567,7 @@ final class BrowserStoreTests: XCTestCase {
         try coordinator.markUploaded(coordinator.journal.pendingRecordIDs)
         let store = BrowserStore(
             session: session,
-            syncCoordinator: coordinator,
-            syncCoalescingDelay: .zero
+            syncCoordinator: coordinator
         )
 
         store.clearHistory()
@@ -595,8 +591,7 @@ final class BrowserStoreTests: XCTestCase {
         try coordinator.markUploaded(coordinator.journal.pendingRecordIDs)
         let store = BrowserStore(
             session: session,
-            syncCoordinator: coordinator,
-            syncCoalescingDelay: .zero
+            syncCoordinator: coordinator
         )
         let tabID = try XCTUnwrap(store.selectedSpace?.currentTabs.first?.id)
 
@@ -641,8 +636,7 @@ final class BrowserStoreTests: XCTestCase {
         try coordinator.markUploaded(coordinator.journal.pendingRecordIDs)
         let store = BrowserStore(
             session: session,
-            syncCoordinator: coordinator,
-            syncCoalescingDelay: .zero
+            syncCoordinator: coordinator
         )
 
         store.deleteTab(pinnedTab.id, in: session.spaces[0].id)
@@ -889,8 +883,7 @@ final class BrowserStoreTests: XCTestCase {
         try coordinator.stage(session: .preview)
         let store = BrowserStore(
             session: .preview,
-            syncCoordinator: coordinator,
-            syncCoalescingDelay: .zero
+            syncCoordinator: coordinator
         )
         let tabs = try XCTUnwrap(store.selectedSpace).tabs
         let selectableTabs = Array(tabs.prefix(3))
@@ -920,7 +913,6 @@ final class BrowserStoreTests: XCTestCase {
 
         let store = BrowserStore(
             session: .preview, syncCoordinator: BrowserSyncCoordinator(persistence: syncPersistence))
-        store.beginInitialSyncStaging(session: store.session)
         let elapsed = start.duration(to: .now)
 
         XCTAssertLessThan(
@@ -953,8 +945,7 @@ final class BrowserStoreTests: XCTestCase {
         let store = BrowserStore(
             session: .preview,
             credentialVault: vault,
-            syncCoordinator: coordinator,
-            syncCoalescingDelay: .zero
+            syncCoordinator: coordinator
         )
         let deletedSpace = try XCTUnwrap(store.session.spaces.first)
         let retainedSpace = try XCTUnwrap(
@@ -1283,8 +1274,7 @@ final class BrowserStoreTests: XCTestCase {
         try coordinator.markUploaded(coordinator.journal.pendingRecordIDs)
         let firstWindow = BrowserStore(
             session: session,
-            syncCoordinator: coordinator,
-            syncCoalescingDelay: .milliseconds(100)
+            syncCoordinator: coordinator
         )
         let secondWindow = firstWindow.makeWindowStore()
         let existingTab = try XCTUnwrap(secondWindow.selectedTab)
@@ -1303,7 +1293,6 @@ final class BrowserStoreTests: XCTestCase {
             )
         )
 
-        firstWindow.stageSync()
         await firstWindow.flushPendingSyncPersistence()
         await secondWindow.flushPendingSyncPersistence()
 
@@ -1324,46 +1313,6 @@ final class BrowserStoreTests: XCTestCase {
         )
     }
 
-    func testCoordinatorRejectsAStageOlderThanThePublishedFamilyRevision() throws {
-        var session = BrowserSession.preview
-        let folder = BrowserFolder(title: "Keep Me", symbol: "folder")
-        session.spaces[0].folders.append(folder)
-        let coordinator = BrowserSyncCoordinator(
-            persistence: InMemoryBrowserSyncJournalPersistence(),
-            deviceID: UUID(
-                uuid: (
-                    0x52, 0x45, 0x56, 0x49, 0x53, 0x49, 0x4F, 0x4E,
-                    0x42, 0x41, 0x52, 0x52, 0x49, 0x45, 0x52, 0x01
-                )
-            )
-        )
-        try coordinator.stage(session: session)
-        try coordinator.markUploaded(coordinator.journal.pendingRecordIDs)
-        let family = BrowserStoreFamily(session: session, core: CrestCore())
-        let staleRevision = family.reserveSyncRevision()
-        var staleSession = session
-        staleSession.spaces[0].folders.removeAll { $0.id == folder.id }
-        let currentRevision = family.reserveSyncRevision()
-        coordinator.advanceStoreRevision(to: currentRevision)
-
-        let staged = try coordinator.stage(
-            session: staleSession,
-            deletionReason: .superseded,
-            storeRevision: staleRevision
-        )
-
-        XCTAssertFalse(staged)
-        let folderRecordID = BrowserSyncRecordID(
-            kind: .folder,
-            value: folder.id.rawValue
-        )
-        XCTAssertNotNil(
-            coordinator.journal.records.first { $0.id == folderRecordID }?
-                .payload
-        )
-        XCTAssertTrue(coordinator.journal.pendingRecordIDs.isEmpty)
-    }
-
     func testIncomingSyncPreservesCustomizationWaitingForCoalescedPersistence() async throws {
         let session = BrowserSession.preview
         let coordinator = BrowserSyncCoordinator(persistence: InMemoryBrowserSyncJournalPersistence())
@@ -1377,8 +1326,7 @@ final class BrowserStoreTests: XCTestCase {
         try remote.stage(session: remoteSession)
 
         let store = BrowserStore(
-            session: session, syncCoordinator: coordinator,
-            syncCoalescingDelay: .milliseconds(100))
+            session: session, syncCoordinator: coordinator)
         let otherWindow = store.makeWindowStore()
         let spaceID = session.spaces[0].id
         var branding = session.spaces[0].branding
@@ -1704,7 +1652,6 @@ final class BrowserStoreMutationTests: XCTestCase {
             browser: browser, spaceAccess: BrowserSpaceAccessController())
         let source = BrowserTabRuntimeAssignment(
             tabID: tab.id, spaceID: space.id, profileID: space.profile.id)
-        let revision = browser.family.syncRevision
         let metadata = BrowserPageMetadata(
             url: nextURL, displayURL: nextURL, title: "New", displayTitle: "New",
             faviconData: Data("new icon".utf8), iconAccent: nil)
@@ -1719,7 +1666,6 @@ final class BrowserStoreMutationTests: XCTestCase {
         XCTAssertEqual(browser.selectedTab?.title, "New")
         XCTAssertEqual(browser.selectedSpace?.history.first?.url, nextURL)
         XCTAssertEqual(browser.selectedTab?.faviconData, metadata.faviconData)
-        XCTAssertEqual(browser.family.syncRevision, revision.successor(), "Only the completed navigation stages")
     }
 
     func testBackgroundPageIgnoresProvisionalMetadataAndAcceptsLateCommittedFavicon() throws {
@@ -1732,7 +1678,6 @@ final class BrowserStoreMutationTests: XCTestCase {
         let browser = BrowserStore(
             session: BrowserSession(spaces: [space]))
         let assignment = BrowserSpaceRuntimeAssignment(space: space)
-        let revision = browser.family.syncRevision
         func update(_ completedURL: URL?, favicon: Data?) -> BrowserBackgroundPageUpdate {
             BrowserBackgroundPageUpdate(
                 tabID: tab.id, assignment: assignment, url: nextURL, title: "New",
@@ -1749,7 +1694,6 @@ final class BrowserStoreMutationTests: XCTestCase {
         XCTAssertEqual(browser.selectedTab?.url, nextURL)
         XCTAssertEqual(browser.selectedTab?.title, "New")
         XCTAssertEqual(browser.selectedSpace?.history.first?.url, nextURL)
-        XCTAssertEqual(browser.family.syncRevision, revision.successor(), "Only the completed navigation stages")
 
         let icon = Data("late icon".utf8)
         browser.updateBackgroundPage(update(nil, favicon: icon))
@@ -1783,7 +1727,6 @@ final class BrowserStoreMutationTests: XCTestCase {
             let tab = try XCTUnwrap(space.tabs.first { $0.url != nil })
             let url = try XCTUnwrap(tab.url)
             let selectedTabID = otherWindow.selectedTab?.id
-            let revision = store.family.syncRevision
             let title = changesTitle ? "Completed background navigation" : tab.title
             let faviconData = changesIcon ? Data("new icon".utf8) : tab.faviconData
 
@@ -1796,7 +1739,6 @@ final class BrowserStoreMutationTests: XCTestCase {
                 )
             )
 
-            XCTAssertEqual(store.family.syncRevision, revision.successor())
             let sharedSpace = try XCTUnwrap(otherWindow.session.space(id: space.id))
             XCTAssertEqual(sharedSpace.tabs.first { $0.id == tab.id }?.title, title)
             XCTAssertEqual(sharedSpace.tabs.first { $0.id == tab.id }?.faviconData, faviconData)

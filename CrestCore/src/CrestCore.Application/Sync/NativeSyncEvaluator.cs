@@ -69,9 +69,8 @@ public static class NativeSyncEvaluator {
             if (Id(identity["id"]) != recordId || (kind != SyncRecordKinds.Space && Id(identity["spaceID"]) != spaceId))
                 throw new BrowserRuleException(BrowserRuleCodes.SyncIdentityMismatch);
         }
-        var reason = tombstone?["reason"]?.GetValue<string>();
-        if (tombstone is not null && !SyncDeletionReasons.Includes(reason))
-            throw new BrowserRuleException(BrowserRuleCodes.InvalidSyncDeletion);
+        var reason = tombstone is null ? null : SyncDeletionReason.Named(tombstone["reason"]?.GetValue<string>())
+            ?? throw new BrowserRuleException(BrowserRuleCodes.InvalidSyncDeletion);
         return new(kind, recordId, spaceId, Version(record), reason,
             tombstone is null ? null : Date(tombstone, "deletedAt"), kind == SyncRecordKinds.Tab && payload is not null ? Date(payload, "lastActivatedAt") : null);
     }

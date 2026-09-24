@@ -166,15 +166,15 @@ CREST_API crest_status_t CREST_CALL crest_session_create_borrowed(
     uint64_t source, const uint8_t* request, size_t length, uint64_t* out_session);
 CREST_API crest_status_t CREST_CALL crest_session_prepare_borrowed_refresh(uint64_t session, uint64_t* out_command);
 /* Semantic same-profile workspace transfer. Commit reserves both states,
-   saves the side that keeps a file with the sealed sync transaction's journal
-   (sync_transaction may be zero), then publishes both. STORAGE_FAILED or any
-   other failure cancels both, and the transfer cannot be committed again.
-   Releasing an uncommitted transfer leaves both sessions as they were. */
+   stages the side whose session syncs, saves the side that keeps a file with
+   that journal, then publishes both. STORAGE_FAILED or any other failure
+   cancels both, and the transfer cannot be committed again. Releasing an
+   uncommitted transfer leaves both sessions as they were. */
 CREST_API crest_status_t CREST_CALL crest_session_prepare_transfer(
     uint64_t source, uint64_t destination, const uint8_t *bytes, size_t count, uint64_t *transfer);
 CREST_API crest_status_t CREST_CALL crest_session_read_transfer(
     uint64_t transfer, uint8_t *destination, size_t capacity, size_t *length);
-CREST_API crest_status_t CREST_CALL crest_session_commit_transfer(uint64_t transfer, uint64_t sync_transaction);
+CREST_API crest_status_t CREST_CALL crest_session_commit_transfer(uint64_t transfer);
 CREST_API crest_status_t CREST_CALL crest_session_release_transfer(uint64_t transfer);
 
 /* Attaches a session to an app's device, so that app's windows may show it,
@@ -190,6 +190,11 @@ CREST_API crest_status_t CREST_CALL crest_session_destroy(uint64_t session);
  * assignment), and the session's changes arrive through the app's drain when
  * it commits. Commit answers INVALID_STATE once the session accepted anything
  * after the command was prepared, including a second commit of the same command.
+ * The core stages each committed command for sync itself. A command whose
+ * effects outside the core depend on the file (Space deletion, imports,
+ * batches, moves between Spaces) is saved with its sync journal before commit
+ * returns; STORAGE_FAILED then leaves the session, the journal and the file as
+ * they were, and the command can be committed again.
  * Input/output <= 4 MiB for page/Space edits, <= 64 MiB for workspace imports. Always release the command, including failed commits.
  * Keep its originating session alive until the command is released. */
 CREST_API crest_status_t CREST_CALL crest_session_prepare_command(
@@ -198,13 +203,6 @@ CREST_API crest_status_t CREST_CALL crest_session_read_command(
     uint64_t command, uint8_t* destination, size_t capacity, size_t* out_length);
 CREST_API crest_status_t CREST_CALL crest_session_commit_command(uint64_t command);
 CREST_API crest_status_t CREST_CALL crest_session_release_command(uint64_t command);
-/* TRANSITIONAL, removed when session intents land: commits a prepared command
- * and saves it before returning, with the sealed sync transaction's journal in
- * the same transaction when sync_transaction is not zero. For commits whose
- * effects outside the core depend on the file: sync commits and Space
- * deletion. STORAGE_FAILED leaves the session, the journal and the file as
- * they were, and the command can be committed again. */
-CREST_API crest_status_t CREST_CALL crest_session_commit_command_durably(uint64_t command, uint64_t sync_transaction);
 /* TRANSITIONAL, removed when session intents land: applies a value delta and
  * saves it before returning. With a sealed incoming sync transaction, which may
  * authorize local cleanup intents, its journal is saved and published with the
@@ -213,24 +211,34 @@ CREST_API crest_status_t CREST_CALL crest_session_commit_command_durably(uint64_
 CREST_API crest_status_t CREST_CALL crest_session_replace_durably(uint64_t session, uint64_t sync_transaction,
     const uint8_t *delta, size_t delta_length);
 
-// A session's sync component owns journal publication and local revision order.
-// Prepare returning zero handles means the captured local revision is stale.
-// Seal rechecks staleness. Commit publishes the journal; when its session keeps
-// a file, commit first saves the journal with the newest accepted session and
-// answers STORAGE_FAILED, leaving the transaction pending, when that fails. A
-// journal a durable session commit already published is left alone.
+// A session's sync component owns journal publication and stages the session's
+// accepted edits itself, reporting SyncJournalChanged to the attached app.
+// Prepare starts a transaction for the transport once any transaction in
+// progress finishes; a merge, replacement or overwrite supersedes the stages
+// still queued. Commit publishes the journal; when its session keeps a file,
+// commit first saves the journal with the newest accepted session and answers
+// STORAGE_FAILED, leaving the transaction pending, when that fails. A journal a
+// durable session commit already published is left alone.
 CREST_API crest_status_t CREST_CALL crest_sync_authority_create(uint64_t journal, uint64_t *authority);
 CREST_API crest_status_t CREST_CALL crest_sync_authority_release(uint64_t authority);
 /* The journal the authority accepted last, as a new snapshot handle the caller
  * releases with crest_sync_journal_release. */
 CREST_API crest_status_t CREST_CALL crest_sync_authority_snapshot(uint64_t authority, uint64_t *journal);
+/* Counts the journals the authority accepted; a reader holding a snapshot reads
+ * again when it changes. */
+CREST_API crest_status_t CREST_CALL crest_sync_authority_version(uint64_t authority, uint64_t *version);
+/* Blocks until every stage requested before the call has committed or failed,
+ * without waiting out a coalescing delay. Call it off the UI thread. */
+CREST_API crest_status_t CREST_CALL crest_sync_authority_flush(uint64_t authority);
+/* Makes the authority the session's sync component. The first attachment
+ * stages the session as a launch does. */
 CREST_API crest_status_t CREST_CALL crest_session_attach_sync(uint64_t session, uint64_t authority);
-CREST_API crest_status_t CREST_CALL crest_sync_authority_advance(uint64_t authority, uint64_t revision);
 CREST_API crest_status_t CREST_CALL crest_sync_authority_prepare(uint64_t authority,
-    int32_t has_revision, uint64_t revision, const uint8_t *input, size_t length,
-    uint64_t *transaction, uint64_t *journal, uint64_t *query);
+    const uint8_t *input, size_t length, uint64_t *transaction, uint64_t *journal, uint64_t *query);
 CREST_API crest_status_t CREST_CALL crest_sync_transaction_seal(uint64_t transaction, int32_t *accepted);
-CREST_API crest_status_t CREST_CALL crest_sync_transaction_commit(uint64_t transaction);
+/* Commits a sealed transaction and writes the authority's version of its
+ * journal, the one crest_sync_authority_version reported once it was accepted. */
+CREST_API crest_status_t CREST_CALL crest_sync_transaction_commit(uint64_t transaction, uint64_t *version);
 CREST_API crest_status_t CREST_CALL crest_sync_transaction_release(uint64_t transaction);
 
 #ifdef __cplusplus

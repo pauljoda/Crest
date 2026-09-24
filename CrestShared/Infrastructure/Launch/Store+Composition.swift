@@ -22,22 +22,20 @@ extension BrowserStore {
     }
 
     /// The store over the session the core loaded. Its sync component is the
-    /// core's own, so every journal it accepts is saved with the session.
+    /// core's own, which staged the loaded session and saves every journal it
+    /// accepts with the session.
     static func production(
         stored: BrowserCoreStoredSession, core: CrestCore, favicons: any BrowserFaviconStoring,
         credentialVault: any CredentialVault
     ) -> BrowserStore {
         let family = BrowserStoreFamily(stored: stored, storage: core, favicons: favicons)
-        let store = BrowserStore(
+        return BrowserStore(
             credentialVault: credentialVault,
             syncCoordinator: BrowserSyncCoordinator(core: stored.sync),
-            syncCoalescingDelay: .milliseconds(150),
             browsingMode: .standard,
             family: family,
             core: core
         )
-        store.beginInitialSyncStaging(session: store.session)
-        return store
     }
 
     /// The core's checkpoint repair, accepted before any page is created.
@@ -54,10 +52,8 @@ extension BrowserStore {
     /// open window shows and every tab a saved window's record shows. It claims
     /// the family's sweep slot, so the first active scene does not repeat it.
     func sweepAtLaunch(now: Date = .now) {
-        guard family.beginCleanupSweep(at: now), family.executeRecords(.recordsSweep, from: self, at: now) else {
-            return
-        }
-        stageSync(deletionReason: .retention)
+        guard family.beginCleanupSweep(at: now) else { return }
+        _ = family.executeRecords(.recordsSweep, from: self, at: now)
     }
 
     static func preview() -> BrowserStore {
@@ -79,15 +75,12 @@ extension BrowserStore {
         core: CrestCore
     ) -> BrowserStore {
         let session = launchRepair(isolatedFixtureSession(for: launchEnvironment))
-        let syncCoordinator = BrowserSyncCoordinator(persistence: InMemoryBrowserSyncJournalPersistence())
-        let store = BrowserStore(
+        return BrowserStore(
             session: session,
             credentialVault: InMemoryCredentialVault(),
-            syncCoordinator: syncCoordinator,
+            syncCoordinator: BrowserSyncCoordinator(persistence: InMemoryBrowserSyncJournalPersistence()),
             core: core
         )
-        store.beginInitialSyncStaging(session: store.session)
-        return store
     }
 
     private static func persistentIsolatedLaunch(

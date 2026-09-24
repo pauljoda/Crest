@@ -21,7 +21,6 @@ extension BrowserStore {
             tabId: tab.id.rawValue, returnToSavedURL: returningToSavedURL)
         guard family.execute(.tabCloseDurable, in: space.id, arguments: arguments, from: self, at: .now) != nil
         else { return false }
-        stageSync()
         return true
     }
 }

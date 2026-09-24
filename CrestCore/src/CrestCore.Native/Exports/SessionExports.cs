@@ -126,7 +126,7 @@ public static unsafe partial class Exports {
     [UnmanagedCallersOnly(EntryPoint = "crest_session_commit_command", CallConvs = [typeof(CallConvCdecl)])]
     public static int SessionCommitCommand(ulong handle) {
         if (!SessionCommands.TryGetValue(handle, out var command)) return CoreStatus.InvalidHandle;
-        try { command.Commit(); return CoreStatus.Ok; } catch (Exception e) { return SessionError(e); }
+        try { command.Commit(); return CoreStatus.Ok; } catch (Exception e) { return DurableError(e); }
     }
 
     [UnmanagedCallersOnly(EntryPoint = "crest_session_release_command", CallConvs = [typeof(CallConvCdecl)])]

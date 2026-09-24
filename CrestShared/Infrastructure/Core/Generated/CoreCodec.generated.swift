@@ -7,7 +7,7 @@ import Foundation
 enum CoreCodec {
     /// SHA-256 of the canonical contract schema. The core refuses any other.
     static let fingerprint: [UInt8] = [
-        0x26, 0x87, 0xbc, 0xef, 0xa9, 0xa0, 0x03, 0x21, 0x77, 0xf8, 0x86, 0x81, 0xd2, 0x5e, 0x26, 0x22, 0x3b, 0x71, 0x1c, 0x76, 0xc2, 0x1a, 0x66, 0x81, 0xd4, 0x8f, 0xbc, 0xb6, 0xe4, 0x90, 0x18, 0xec
+        0xe7, 0xdd, 0xcb, 0x58, 0x45, 0x20, 0x88, 0xc6, 0x3f, 0xfe, 0x93, 0xc8, 0x51, 0xaf, 0x55, 0xca, 0x2e, 0x7c, 0xec, 0x68, 0x1d, 0xcf, 0x13, 0x42, 0xe2, 0xb1, 0x47, 0x0d, 0x66, 0x9a, 0xba, 0x04
     ]
     /// SHA-256 of the engine contract alone, which an engine binding registers with.
     static let engineFingerprint: [UInt8] = [
@@ -102,15 +102,17 @@ extension Change {
         case 12: self = .spacesChanged(try SpacesChanged(from: &reader))
         case 13: self = .splitGroupsChanged(try SplitGroupsChanged(from: &reader))
         case 14: self = .storageFailed(try StorageFailed(from: &reader))
-        case 15: self = .tabCopied(try TabCopied(from: &reader))
-        case 16: self = .tabFaviconAssigned(try TabFaviconAssigned(from: &reader))
-        case 17: self = .tabsChanged(try TabsChanged(from: &reader))
-        case 18: self = .windowChanged(try WindowChanged(from: &reader))
-        case 19: self = .windowClosed(try WindowClosed(from: &reader))
-        case 20: self = .windowRecordsAdopted(try WindowRecordsAdopted(from: &reader))
-        case 21: self = .workspaceChanged(try WorkspaceChanged(from: &reader))
-        case 22: self = .workspaceClosed(try WorkspaceClosed(from: &reader))
-        case 23: self = .workspaceOpened(try WorkspaceOpened(from: &reader))
+        case 15: self = .syncJournalChanged(try SyncJournalChanged(from: &reader))
+        case 16: self = .syncStagingFailed(try SyncStagingFailed(from: &reader))
+        case 17: self = .tabCopied(try TabCopied(from: &reader))
+        case 18: self = .tabFaviconAssigned(try TabFaviconAssigned(from: &reader))
+        case 19: self = .tabsChanged(try TabsChanged(from: &reader))
+        case 20: self = .windowChanged(try WindowChanged(from: &reader))
+        case 21: self = .windowClosed(try WindowClosed(from: &reader))
+        case 22: self = .windowRecordsAdopted(try WindowRecordsAdopted(from: &reader))
+        case 23: self = .workspaceChanged(try WorkspaceChanged(from: &reader))
+        case 24: self = .workspaceClosed(try WorkspaceClosed(from: &reader))
+        case 25: self = .workspaceOpened(try WorkspaceOpened(from: &reader))
         default: throw WireError.malformed("Unknown Change tag \(tag)")
         }
     }
@@ -162,32 +164,38 @@ extension Change {
         case .storageFailed(let value):
             writer.writeTag(14)
             value.encode(into: &writer)
-        case .tabCopied(let value):
+        case .syncJournalChanged(let value):
             writer.writeTag(15)
             value.encode(into: &writer)
-        case .tabFaviconAssigned(let value):
+        case .syncStagingFailed(let value):
             writer.writeTag(16)
             value.encode(into: &writer)
-        case .tabsChanged(let value):
+        case .tabCopied(let value):
             writer.writeTag(17)
             value.encode(into: &writer)
-        case .windowChanged(let value):
+        case .tabFaviconAssigned(let value):
             writer.writeTag(18)
             value.encode(into: &writer)
-        case .windowClosed(let value):
+        case .tabsChanged(let value):
             writer.writeTag(19)
             value.encode(into: &writer)
-        case .windowRecordsAdopted(let value):
+        case .windowChanged(let value):
             writer.writeTag(20)
             value.encode(into: &writer)
-        case .workspaceChanged(let value):
+        case .windowClosed(let value):
             writer.writeTag(21)
             value.encode(into: &writer)
-        case .workspaceClosed(let value):
+        case .windowRecordsAdopted(let value):
             writer.writeTag(22)
             value.encode(into: &writer)
-        case .workspaceOpened(let value):
+        case .workspaceChanged(let value):
             writer.writeTag(23)
+            value.encode(into: &writer)
+        case .workspaceClosed(let value):
+            writer.writeTag(24)
+            value.encode(into: &writer)
+        case .workspaceOpened(let value):
+            writer.writeTag(25)
             value.encode(into: &writer)
         }
     }
@@ -230,12 +238,13 @@ extension Rejection {
         case 30: self = .storageFromNewerApp(try StorageFromNewerApp(from: &reader))
         case 31: self = .storageRestoreInterrupted(try StorageRestoreInterrupted(from: &reader))
         case 32: self = .storageUnreadable(try StorageUnreadable(from: &reader))
-        case 33: self = .tabAlreadyHasPage(try TabAlreadyHasPage(from: &reader))
-        case 34: self = .unknownPage(try UnknownPage(from: &reader))
-        case 35: self = .unknownSpace(try UnknownSpace(from: &reader))
-        case 36: self = .unknownWorkspace(try UnknownWorkspace(from: &reader))
-        case 37: self = .unsavedWorkspace(try UnsavedWorkspace(from: &reader))
-        case 38: self = .windowNotOpen(try WindowNotOpen(from: &reader))
+        case 33: self = .syncStagingRefused(try SyncStagingRefused(from: &reader))
+        case 34: self = .tabAlreadyHasPage(try TabAlreadyHasPage(from: &reader))
+        case 35: self = .unknownPage(try UnknownPage(from: &reader))
+        case 36: self = .unknownSpace(try UnknownSpace(from: &reader))
+        case 37: self = .unknownWorkspace(try UnknownWorkspace(from: &reader))
+        case 38: self = .unsavedWorkspace(try UnsavedWorkspace(from: &reader))
+        case 39: self = .windowNotOpen(try WindowNotOpen(from: &reader))
         default: throw WireError.malformed("Unknown Rejection tag \(tag)")
         }
     }
@@ -341,23 +350,26 @@ extension Rejection {
         case .storageUnreadable(let value):
             writer.writeTag(32)
             value.encode(into: &writer)
-        case .tabAlreadyHasPage(let value):
+        case .syncStagingRefused(let value):
             writer.writeTag(33)
             value.encode(into: &writer)
-        case .unknownPage(let value):
+        case .tabAlreadyHasPage(let value):
             writer.writeTag(34)
             value.encode(into: &writer)
-        case .unknownSpace(let value):
+        case .unknownPage(let value):
             writer.writeTag(35)
             value.encode(into: &writer)
-        case .unknownWorkspace(let value):
+        case .unknownSpace(let value):
             writer.writeTag(36)
             value.encode(into: &writer)
-        case .unsavedWorkspace(let value):
+        case .unknownWorkspace(let value):
             writer.writeTag(37)
             value.encode(into: &writer)
-        case .windowNotOpen(let value):
+        case .unsavedWorkspace(let value):
             writer.writeTag(38)
+            value.encode(into: &writer)
+        case .windowNotOpen(let value):
+            writer.writeTag(39)
             value.encode(into: &writer)
         }
     }
@@ -4141,6 +4153,43 @@ extension StrongPasswordRecipe {
     }
 }
 
+extension SyncJournalChanged {
+    init(from reader: inout WireReader) throws(WireError) {
+        let workspaceID = try reader.readUUID()
+        let pendingRecords = try reader.readInt()
+        self.init(workspaceID: workspaceID, pendingRecords: pendingRecords)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeUUID(workspaceID)
+        writer.writeInt(pendingRecords)
+    }
+}
+
+extension SyncStagingFailed {
+    init(from reader: inout WireReader) throws(WireError) {
+        let workspaceID = try reader.readUUID()
+        let reason = try SyncStagingFailure(from: &reader)
+        self.init(workspaceID: workspaceID, reason: reason)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeUUID(workspaceID)
+        reason.encode(into: &writer)
+    }
+}
+
+extension SyncStagingRefused {
+    init(from reader: inout WireReader) throws(WireError) {
+        let reason = try SyncStagingFailure(from: &reader)
+        self.init(reason: reason)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        reason.encode(into: &writer)
+    }
+}
+
 extension SystemPasswordOffer {
     init(from reader: inout WireReader) throws(WireError) {
         let spaceOffersSystemPasswords = try reader.readBool()
@@ -5721,6 +5770,34 @@ extension SitePermissionDecision {
         let tag = try reader.readEnum()
         guard Self.all.indices.contains(tag) else {
             throw WireError.malformed("Unknown SitePermissionDecision \(tag)")
+        }
+        self = Self.all[tag]
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeEnum(tag)
+    }
+}
+
+extension SyncDeletionReason {
+    init(from reader: inout WireReader) throws(WireError) {
+        let tag = try reader.readEnum()
+        guard Self.all.indices.contains(tag) else {
+            throw WireError.malformed("Unknown SyncDeletionReason \(tag)")
+        }
+        self = Self.all[tag]
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeEnum(tag)
+    }
+}
+
+extension SyncStagingFailure {
+    init(from reader: inout WireReader) throws(WireError) {
+        let tag = try reader.readEnum()
+        guard Self.all.indices.contains(tag) else {
+            throw WireError.malformed("Unknown SyncStagingFailure \(tag)")
         }
         self = Self.all[tag]
     }

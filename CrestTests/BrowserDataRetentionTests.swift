@@ -124,8 +124,7 @@ final class BrowserDataRetentionTests: XCTestCase {
         try sync.stage(session: session, at: oldDate)
         let browser = BrowserStore(
             session: session,
-            syncCoordinator: sync,
-            syncCoalescingDelay: .zero
+            syncCoordinator: sync
         )
 
         browser.updateDataRetentionPreferences(

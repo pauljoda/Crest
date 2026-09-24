@@ -2432,20 +2432,19 @@ final class BrowserSyncTests: XCTestCase {
         XCTAssertEqual(coordinator.journal, original)
     }
 
-    func testJournalReadsAndNewerRevisionsDoNotWaitForBackgroundPersistence() async throws {
+    func testJournalReadsDoNotWaitForBackgroundPersistence() async throws {
         let saving = expectation(description: "Background journal reached persistence")
         let persistence = PausingBrowserSyncJournalPersistence { saving.fulfill() }
         let coordinator = BrowserSyncCoordinator(persistence: persistence)
         let original = coordinator.journal
         let session = oneSpaceSession()
         let stage = Task.detached {
-            try coordinator.stage(session: session, storeRevision: .initial)
+            try coordinator.stage(session: session)
         }
         await fulfillment(of: [saving], timeout: 5)
 
-        let accessed = expectation(description: "Session revision and committed snapshot remain available")
+        let accessed = expectation(description: "The committed snapshot remains available")
         let access = Task.detached {
-            coordinator.advanceStoreRevision(to: .initial.successor())
             let snapshot = coordinator.journal
             accessed.fulfill()
             return snapshot
@@ -2458,10 +2457,6 @@ final class BrowserSyncTests: XCTestCase {
         XCTAssertEqual(snapshot, original, "An unfinished save must not publish its candidate journal.")
         XCTAssertTrue(staged)
         XCTAssertFalse(coordinator.journal.records.isEmpty)
-        XCTAssertFalse(
-            try coordinator.stage(session: session, storeRevision: .initial),
-            "Finishing an older save must not roll back the newer revision barrier."
-        )
         XCTAssertEqual(try persistence.load(), coordinator.journal)
     }
 

@@ -76,7 +76,7 @@ struct BrowserSyncRecord: Codable, Equatable, Sendable {
         id: BrowserSyncRecordID,
         spaceID: SpaceID,
         version: BrowserSyncVersion,
-        reason: BrowserSyncTombstoneReason,
+        reason: SyncDeletionReason,
         at date: Date
     ) -> BrowserSyncRecord {
         BrowserSyncRecord(
@@ -135,14 +135,8 @@ enum BrowserSyncRecordKind: String, Codable, CaseIterable, Equatable, Sendable {
 }
 
 struct BrowserSyncTombstone: Codable, Equatable, Sendable {
-    let reason: BrowserSyncTombstoneReason
+    let reason: SyncDeletionReason
     let deletedAt: Date
-}
-
-enum BrowserSyncTombstoneReason: String, Codable, Equatable, Sendable {
-    case explicitDelete
-    case superseded
-    case retention
 }
 
 struct BrowserSyncVersion: Codable, Equatable, Comparable, Sendable {

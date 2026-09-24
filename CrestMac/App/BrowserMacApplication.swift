@@ -86,7 +86,7 @@ final class BrowserMacApplication {
             usesIsolatedLaunch
             ? BrowserCloudSyncController.isolated(browser: browser)
             : BrowserCloudSyncController(browser: browser)
-        browser.setCloudSyncChangeHandler { [weak cloudSync] in
+        core.syncJournalChangeHandler = { [weak cloudSync] in
             Task { await cloudSync?.localChangesDidStage() }
         }
         let transientBrowsing = BrowserTransientBrowsingCoordinator()

@@ -140,9 +140,9 @@ enum BrowserCoreTabBatch {
 
     /// The batch's copies, and the session it proposes.
     ///
-    /// TRANSITIONAL until S5.2 stages sync in the core: the proposed session is
-    /// only what the sync stager reads before the batch commits. The session
-    /// copy follows the core's changes once it has.
+    /// TRANSITIONAL until S6.1: the proposed session is only where the commit
+    /// reads the images the batch's tabs wear. The session copy follows the
+    /// core's changes once it has.
     static func applying(_ response: Response, to session: BrowserSession) throws
         -> (session: BrowserSession, result: BrowserTabBatchResult)
     {

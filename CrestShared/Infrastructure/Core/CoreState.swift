@@ -21,6 +21,9 @@ final class CoreState {
     var savedRevision: Int64 = 0
     /// Why the core's last save failed, until a later save succeeds.
     var storageFailure: StorageFailure?
+    /// Why the core could not stage the session's latest edits for sync, until
+    /// a later stage succeeds.
+    var syncStagingFailure: SyncStagingFailure?
     /// TRANSITIONAL until S6.1: the Swift session copy of each attached
     /// workspace, which its session changes update.
     @ObservationIgnored var sessionCopies: [UUID: SessionCopy] = [:]

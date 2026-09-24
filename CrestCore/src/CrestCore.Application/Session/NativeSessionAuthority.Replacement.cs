@@ -15,14 +15,19 @@ public sealed partial class NativeSessionAuthority {
 
     #region Actions - Replacement
 
+    /// Makes `value` this session's sync component. The first time, it stages
+    /// the session as it is, as a launch does.
     public void AttachSync(NativeSyncAuthority value) {
+        SessionState? attached = null;
         lock (Gate) {
             if (workspaceKind != WorkspaceKind.Persistent
                 || sync is not null && !ReferenceEquals(sync, value)
                 || value.Session is not null && !ReferenceEquals(value.Session, this))
                 throw new CrestCore.Domain.BrowserRuleException(CrestCore.Domain.BrowserRuleCodes.InvalidSyncSessionOwner);
+            if (sync is null) attached = session;
             sync = value; value.Session = this;
         }
+        if (attached is { DisposableSeedMarker: null }) value.Queue(attached, SyncStaging.Launch);
     }
 
     /// Reserves a validated revision while it is saved. Other writes are
@@ -68,26 +73,49 @@ public sealed partial class NativeSessionAuthority {
         }
     }
 
-    /// Commits a prepared command with `durability`. A sync transaction's
-    /// journal is saved and published with it, so a command that carries one
-    /// must wait for disk.
-    internal void Commit(NativeSessionCommand command, Durability durability, NativeSyncTransaction? transaction) {
-        if (!durability.WaitsForDisk) {
-            if (transaction is not null) throw new ArgumentException("A command that carries a journal waits for disk.", nameof(durability));
+    /// Commits a prepared command as its staging says. A command that stages
+    /// with its save is saved with its journal before either is published and
+    /// before this returns; a failed save or stage leaves the session, the
+    /// journal and the file as they were. Any other command is saved behind
+    /// and staged on the sync worker.
+    internal void Commit(NativeSessionCommand command) {
+        if (command.Staging is not { Urgency.StagesWithSave: true } staging) {
             CommitCommand(command);
             return;
         }
-        NativeSessionReplacement reserved;
-        lock (Gate) {
-            reserved = ReserveCommand(command);
-            try {
-                if (transaction is not null) reserved.BindSync(transaction);
-            } catch {
-                reserved.Dispose();
-                throw;
-            }
+        var reserved = ReserveCommand(command);
+        NativeSyncTransaction? staged;
+        try {
+            staged = StageWithSave(command.Session, staging.Reason);
+            if (staged is not null) reserved.BindSync(staged);
+        } catch {
+            reserved.Dispose();
+            throw;
         }
-        SaveAndCommit(reserved);
+        try {
+            SaveAndCommit(reserved);
+        } catch {
+            staged?.Dispose();
+            throw;
+        }
+        staged?.Owner.AnnounceStaged();
+    }
+
+    /// The sealed journal `next` stages with its save, or null when no sync is
+    /// attached or `next` is a disposable seed, which never syncs.
+    internal NativeSyncTransaction? StageWithSave(SessionState next, CrestCore.Contracts.SyncDeletionReason reason) {
+        NativeSyncAuthority? target;
+        lock (Gate) target = sync;
+        return target is null || next.DisposableSeedMarker is not null ? null : target.StageWithSave(next, reason);
+    }
+
+    /// Queues the stage of an accepted state, when a sync is attached, the
+    /// state holds something `previous` did not and it is no disposable seed.
+    private void QueueStage(SessionState previous, SessionState next, SyncStaging? staging) {
+        NativeSyncAuthority? target;
+        lock (Gate) target = sync;
+        if (target is null || staging is null || next.DisposableSeedMarker is not null || next.Equals(previous)) return;
+        target.Queue(next, staging);
     }
 
     /// Replaces the session with the edits `delta` names and saves the result,

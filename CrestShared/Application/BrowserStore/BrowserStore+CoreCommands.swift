@@ -87,7 +87,6 @@ extension BrowserStore {
             let result = family.execute(
                 .transientPromote, in: destination.spaceID, arguments: arguments, from: self, at: date)
         else { return nil }
-        stageSync()
         return (result.tabId.map(TabID.init(rawValue:)), result.adoptLivePage == true)
     }
 

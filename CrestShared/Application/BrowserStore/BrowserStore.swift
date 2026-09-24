@@ -27,10 +27,6 @@ final class BrowserStore {
     @ObservationIgnored let core: CrestCore
     @ObservationIgnored let credentialVault: any CredentialVault
     @ObservationIgnored let syncCoordinator: BrowserSyncCoordinator?
-    @ObservationIgnored let syncCoalescingDelay: Duration
-    @ObservationIgnored var cloudSyncChangeHandler: (@Sendable () -> Void)?
-    @ObservationIgnored var syncStageGeneration = 0
-    @ObservationIgnored var syncStageTask: Task<Void, Never>?
     @ObservationIgnored var credentialSaveOperations: [BrowserCredentialSaveKey: BrowserCredentialSaveOperation] = [:]
     @ObservationIgnored let linkPreferences: BrowserLinkPreferenceStore
     @ObservationIgnored var pendingMovedTabActivation: BrowserTabRuntimeAssignment?
@@ -136,7 +132,6 @@ final class BrowserStore {
         tabs: [SpaceID: TabID] = [:],
         credentialVault: any CredentialVault = InMemoryCredentialVault(),
         syncCoordinator: BrowserSyncCoordinator? = nil,
-        syncCoalescingDelay: Duration = .milliseconds(150),
         browsingMode: BrowserBrowsingMode = .standard,
         linkPreferences: BrowserLinkPreferenceStore = .shared,
         core: CrestCore = CrestCore()
@@ -145,7 +140,6 @@ final class BrowserStore {
             opening: BrowserWindowOpening(showingSpaceID: spaceID, showingTabs: tabs, restoresTabs: spaceID == nil),
             credentialVault: credentialVault,
             syncCoordinator: syncCoordinator,
-            syncCoalescingDelay: syncCoalescingDelay,
             browsingMode: browsingMode,
             family: BrowserStoreFamily(session: session, browsingMode: browsingMode, core: core),
             linkPreferences: linkPreferences,
@@ -159,10 +153,8 @@ final class BrowserStore {
         opening: BrowserWindowOpening = BrowserWindowOpening(),
         credentialVault: any CredentialVault,
         syncCoordinator: BrowserSyncCoordinator?,
-        syncCoalescingDelay: Duration,
         browsingMode: BrowserBrowsingMode,
         family: BrowserStoreFamily,
-        cloudSyncChangeHandler: (@Sendable () -> Void)? = nil,
         linkPreferences: BrowserLinkPreferenceStore = .shared,
         core: CrestCore
     ) {
@@ -171,10 +163,8 @@ final class BrowserStore {
         self.core = core
         self.credentialVault = credentialVault
         self.syncCoordinator = syncCoordinator
-        self.syncCoalescingDelay = syncCoalescingDelay
         self.browsingMode = browsingMode
         self.family = family
-        self.cloudSyncChangeHandler = cloudSyncChangeHandler
         localSyncErrorDescription = nil
         lastWindow = WindowState(
             id: opening.id.rawValue, workspaceID: UUID(), shownSpaceID: UUID(), shownTabs: [], splitColumnShares: [])
@@ -214,17 +204,12 @@ final class BrowserStore {
 extension BrowserStore {
     func resetPrivateBrowsingSession() {
         guard isPrivateBrowsing else { return }
-        syncStageTask?.cancel()
-        syncStageTask = nil
-        syncStageGeneration = 0
         credentialSaveOperations.removeAll()
         family.resetDeletionState()
         interactionObserver?.browserWillResetSession()
         let template = BrowserSessionArguments.SpaceTemplate(template: BrowserSession.privateBrowsing().spaces[0])
         guard family.executeSpace(.spaceResetPrivate, arguments: template, from: self) else { return }
         localSyncErrorDescription = nil
-        let revision = family.publish(session, from: self)
-        syncCoordinator?.advanceStoreRevision(to: revision)
     }
 
     /// Another window over this family's session. Without a record of its own
@@ -236,10 +221,8 @@ extension BrowserStore {
             opening: opening,
             credentialVault: credentialVault,
             syncCoordinator: syncCoordinator,
-            syncCoalescingDelay: syncCoalescingDelay,
             browsingMode: browsingMode,
             family: family,
-            cloudSyncChangeHandler: cloudSyncChangeHandler,
             linkPreferences: linkPreferences,
             core: core
         )
@@ -253,37 +236,23 @@ extension BrowserStore {
 extension BrowserStore {
     func mergeRemoteSyncRecords(_ records: [BrowserSyncRecord]) throws {
         guard let syncCoordinator else { return }
-        let revision = family.reserveSyncRevision()
-        syncCoordinator.advanceStoreRevision(to: revision)
-        _ = try syncCoordinator.merge(remoteRecords: records, into: session, storeRevision: revision) {
-            next, transaction in
+        _ = try syncCoordinator.merge(remoteRecords: records, into: session) { next, transaction in
             try self.family.installSyncedSession(next, transaction: transaction, from: self)
         }
-        family.publish(session, from: self, at: revision)
         localSyncErrorDescription = nil
     }
 
     func prepareToOverwriteCloud(with remoteRecords: [BrowserSyncRecord]) throws {
         guard let syncCoordinator else { return }
-        let revision = family.reserveSyncRevision()
-        syncCoordinator.advanceStoreRevision(to: revision)
-        try syncCoordinator.prepareToOverwriteCloud(
-            with: session,
-            remoteRecords: remoteRecords,
-            storeRevision: revision
-        )
+        try syncCoordinator.prepareToOverwriteCloud(with: session, remoteRecords: remoteRecords)
         localSyncErrorDescription = nil
     }
 
     func replaceLocalWithCloud(_ remoteRecords: [BrowserSyncRecord]) throws {
         guard let syncCoordinator else { return }
-        let revision = family.reserveSyncRevision()
-        syncCoordinator.advanceStoreRevision(to: revision)
-        _ = try syncCoordinator.replaceLocalWithCloud(remoteRecords, replacing: session, storeRevision: revision) {
-            next, transaction in
+        _ = try syncCoordinator.replaceLocalWithCloud(remoteRecords, replacing: session) { next, transaction in
             try self.family.installSyncedSession(next, transaction: transaction, from: self)
         }
-        family.publish(session, from: self, at: revision)
         localSyncErrorDescription = nil
     }
 
@@ -292,89 +261,12 @@ extension BrowserStore {
         try replaceLocalWithCloud(remoteRecords)
     }
 
-    func setCloudSyncChangeHandler(_ handler: (@Sendable () -> Void)?) {
-        cloudSyncChangeHandler = handler
-    }
-
-    /// Returns once the sync staging this window started has finished and
-    /// every edit accepted before the call is on disk, or a save has failed.
-    /// Quitting and backgrounding wait for it.
+    /// Returns once the sync stages the core queued for edits accepted before
+    /// the call have finished and every such edit is on disk, or a save has
+    /// failed. Quitting and backgrounding wait for it.
     func flushPendingSyncPersistence() async {
-        await syncStageTask?.value
+        await syncCoordinator?.staged()
         await family.flushPendingSaves()
-    }
-
-    func beginInitialSyncStaging(
-        session snapshot: BrowserSession,
-        deletionReason: BrowserSyncTombstoneReason = .retention
-    ) {
-        guard let syncCoordinator, !snapshot.hasDisposableSeedState else { return }
-        let generation = syncStageGeneration
-        let storeRevision = BrowserStoreSyncRevision.initial
-        syncCoordinator.advanceStoreRevision(to: storeRevision)
-
-        syncStageTask = Task { @MainActor [weak self] in
-            do {
-                let staged = try await syncCoordinator.stageInBackground(
-                    session: snapshot,
-                    deletionReason: deletionReason,
-                    storeRevision: storeRevision
-                )
-                guard self?.syncStageGeneration == generation else { return }
-                self?.localSyncErrorDescription = nil
-                if staged {
-                    self?.cloudSyncChangeHandler?()
-                }
-            } catch {
-                guard self?.syncStageGeneration == generation else { return }
-                self?.localSyncErrorDescription = String(describing: error)
-            }
-        }
-    }
-
-    /// Stages sync after an accepted edit. The core already saves every edit
-    /// it accepts; this orders the window's background staging after it, with
-    /// the edit's deletion reason and urgency.
-    ///
-    /// TRANSITIONAL: staging moves into the core when session intents land,
-    /// because each intent's handler knows its own deletion reason and urgency.
-    /// These call sites then go away.
-    func stageSync(
-        deletionReason: BrowserSyncTombstoneReason = .superseded,
-        urgency syncUrgency: BrowserStoreSyncStageUrgency = .immediate
-    ) {
-        let storeRevision = family.publish(session, from: self)
-        syncCoordinator?.advanceStoreRevision(to: storeRevision)
-        guard let syncCoordinator, !session.hasDisposableSeedState else { return }
-
-        syncStageGeneration += 1
-        let generation = syncStageGeneration
-        let sessionSnapshot = session
-        let previousTask = syncStageTask
-        let coalescingDelay = syncCoalescingDelay
-
-        syncStageTask = Task { @MainActor [weak self] in
-            if syncUrgency == .coalesced, coalescingDelay > .zero {
-                try? await Task.sleep(for: coalescingDelay)
-            }
-            await previousTask?.value
-            guard syncUrgency == .immediate || self?.syncStageGeneration == generation else {
-                return
-            }
-            do {
-                let staged = try await syncCoordinator.stageInBackground(
-                    session: sessionSnapshot,
-                    deletionReason: deletionReason,
-                    storeRevision: storeRevision
-                )
-                self?.localSyncErrorDescription = nil
-                if staged {
-                    self?.cloudSyncChangeHandler?()
-                }
-            } catch {
-                self?.localSyncErrorDescription = String(describing: error)
-            }
-        }
     }
 
     /// The family accepted a change. The core's device has already moved or
@@ -400,10 +292,6 @@ extension BrowserStore {
         lastWindow = window
         sessionRevision &+= 1
     }
-
-    func invalidatePendingSyncStage() {
-        syncStageGeneration &+= 1
-    }
 }
 
 // MARK: - Cloud Sync Model
@@ -411,15 +299,15 @@ extension BrowserStore {
 @MainActor
 extension BrowserStore: BrowserCloudSyncModelGateway {
     func cloudSyncRecords() async -> [BrowserSyncRecord] {
-        guard !session.hasDisposableSeedState else { return [] }
-        await syncStageTask?.value
-        return syncCoordinator?.journal.records ?? []
+        guard !session.hasDisposableSeedState, let syncCoordinator else { return [] }
+        await syncCoordinator.staged()
+        return await Task.detached(priority: .utility) { syncCoordinator.journal.records }.value
     }
 
     func cloudSyncPendingRecordIDs() async -> Set<BrowserSyncRecordID> {
-        guard !session.hasDisposableSeedState else { return [] }
-        await syncStageTask?.value
-        return syncCoordinator?.journal.pendingRecordIDs ?? []
+        guard !session.hasDisposableSeedState, let syncCoordinator else { return [] }
+        await syncCoordinator.staged()
+        return await Task.detached(priority: .utility) { syncCoordinator.journal.pendingRecordIDs }.value
     }
 
     func mergeCloudSyncRecords(_ records: [BrowserSyncRecord]) async throws {
@@ -455,5 +343,9 @@ extension BrowserStore: BrowserCloudSyncWorkflowGateway {
 
     var cloudSyncPendingRecordCount: Int { pendingSyncRecordCount }
 
-    var cloudSyncLocalErrorDescription: String? { localSyncErrorDescription }
+    /// Why the core could not stage the latest edits for sync, or the last
+    /// local sync failure this window saw.
+    var cloudSyncLocalErrorDescription: String? {
+        core.state.syncStagingFailure.map { String(localized: $0.title) } ?? localSyncErrorDescription
+    }
 }

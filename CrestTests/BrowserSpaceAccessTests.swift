@@ -256,8 +256,7 @@ final class BrowserSpaceAccessTests: XCTestCase {
 
     func testStorePersistsDefaultAndPrivateSpacePolicies() throws {
         let store = BrowserStore(
-            session: .preview,
-            syncCoalescingDelay: .zero
+            session: .preview
         )
         let personal = try XCTUnwrap(store.session.spaces.last)
 

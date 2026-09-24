@@ -469,11 +469,32 @@ static void storage_boundary(void) {
         struct timespec pause = { 0, 5000000 };
         nanosleep(&pause, NULL);
     }
-    assert(storage_wakes == 1);
+    /* The core wakes the host for the save and for a turn: the launch stage
+     * of the adopted session waits for the host to end its turn. */
+    assert(storage_wakes >= 1);
     /* One change: Saved(Revision: 1), a tag and a little-endian int64. */
-    assert(crest_app_drain(app, &buffer) == CREST_OK);
-    assert(buffer.length == 10 && buffer.bytes[0] == 1 && buffer.bytes[1] == CREST_CHANGE_SAVED && buffer.bytes[2] == 1);
-    crest_buffer_free(&buffer);
+    int saved = 0;
+    for (int attempt = 0; attempt < 1000 && !saved; attempt++) {
+        assert(crest_app_drain(app, &buffer) == CREST_OK);
+        saved = buffer.length == 10 && buffer.bytes[0] == 1 && buffer.bytes[1] == CREST_CHANGE_SAVED && buffer.bytes[2] == 1;
+        assert(saved || (buffer.length == 1 && buffer.bytes[0] == 0));
+        crest_buffer_free(&buffer);
+        struct timespec pause = { 0, 5000000 };
+        if (!saved) nanosleep(&pause, NULL);
+    }
+    assert(saved);
+    /* Ending the turn starts the launch stage, which the host hears about. */
+    assert(crest_app_end_turn(app) == CREST_OK);
+    int staged = 0;
+    for (int attempt = 0; attempt < 1000 && !staged; attempt++) {
+        assert(crest_app_drain(app, &buffer) == CREST_OK);
+        staged = buffer.length > 2 && buffer.bytes[0] == 1 && buffer.bytes[1] == CREST_CHANGE_SYNC_JOURNAL_CHANGED;
+        assert(staged || (buffer.length == 1 && buffer.bytes[0] == 0));
+        crest_buffer_free(&buffer);
+        struct timespec pause = { 0, 5000000 };
+        if (!staged) nanosleep(&pause, NULL);
+    }
+    assert(staged);
     assert(crest_app_set_wake(app, NULL, NULL) == CREST_OK);
     assert(crest_app_session(app, &session, &sync, &projection) == CREST_OK && session != 0);
     /* The stored session's workspace, which a saved window shows. */
@@ -511,6 +532,11 @@ static void storage_boundary(void) {
     assert(crest_app_create(fingerprint, sizeof(fingerprint), configuration, configured, &app, &buffer) == CREST_REJECTED
         && app == 0 && buffer.bytes != NULL && buffer.bytes[0] == CREST_REJECTION_STORAGE_UNREADABLE);
     crest_buffer_free(&buffer);
+    /* The second launch kept a recovery checkpoint, since the file held a
+     * session and its staged journal; without one a restore is refused. */
+    char checkpoint[256];
+    snprintf(checkpoint, sizeof(checkpoint), "%s/session.recovery.sqlite", directory);
+    assert(remove(checkpoint) == 0);
     assert(crest_app_restore(fingerprint, sizeof(fingerprint), configuration, configured, &buffer) == CREST_REJECTED
         && buffer.bytes != NULL && buffer.bytes[0] == CREST_REJECTION_RECOVERY_CHECKPOINT_UNUSABLE);
     crest_buffer_free(&buffer);

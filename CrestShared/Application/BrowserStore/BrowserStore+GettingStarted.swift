@@ -56,7 +56,6 @@ extension BrowserStore {
         let id = openSessionTab(
             title: title, url: nil, nativeContent: content, symbol: symbol,
             in: space.id, placement: placement)
-        stageSync()
         return id
     }
 }

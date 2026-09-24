@@ -44,7 +44,7 @@ struct BrowserSyncSettingsView: View {
                         .accessibilityIdentifier("icloud-sync-error")
                 }
 
-                if let localError = browser.localSyncErrorDescription {
+                if let localError = browser.cloudSyncLocalErrorDescription {
                     Label(localError, systemImage: "exclamationmark.triangle.fill")
                         .foregroundStyle(.red)
                 }

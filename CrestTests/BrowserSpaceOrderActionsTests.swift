@@ -29,13 +29,13 @@ final class BrowserSpaceOrderActionsTests: XCTestCase {
         actions.moveDown()
         XCTAssertEqual(browser.session.spaces.last?.id, movedID)
         XCTAssertFalse(actions.canMoveDown)
-        let revision = browser.family.syncRevision
+        let revision = browser.sessionRevision
         actions.moveDown()
         let missing = BrowserSpaceOrderActions(browser: browser, spaceID: SpaceID())
         XCTAssertFalse(missing.canMoveUp)
         XCTAssertFalse(missing.canMoveDown)
         missing.moveUp()
         missing.moveDown()
-        XCTAssertEqual(browser.family.syncRevision, revision, "A move that cannot happen stages nothing")
+        XCTAssertEqual(browser.sessionRevision, revision, "A move that cannot happen changes nothing")
     }
 }

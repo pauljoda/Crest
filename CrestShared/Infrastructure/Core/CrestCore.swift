@@ -34,6 +34,9 @@ final class CrestCore {
     let storageDirectory: URL?
     /// Called for each save the core started itself and could not finish.
     @ObservationIgnored var storageFailureHandler: ((StorageFailure) -> Void)?
+    /// Called each time the core staged the session's edits in its sync
+    /// journal, so the cloud transport can schedule an upload.
+    @ObservationIgnored var syncJournalChangeHandler: (() -> Void)?
     @ObservationIgnored nonisolated let handle: UInt64
     @ObservationIgnored private let wake = CoreWakeRelay()
     /// Callers waiting for a revision to reach disk. A drain resumes them.
@@ -139,12 +142,23 @@ final class CrestCore {
     private func apply(_ changes: [Change]) {
         for change in changes {
             state.apply(change)
-            if case .storageFailed(let failure) = change { storageFailed(failure.reason) }
+            switch change {
+            case .storageFailed(let failure): storageFailed(failure.reason)
+            case .syncJournalChanged: syncJournalChangeHandler?()
+            default: break
+            }
         }
         state.sessionBatchApplied()
         #if DEBUG
             batchApplied?(changes)
         #endif
+    }
+
+    /// Tells the core the main queue finished the turn a wake's drain followed,
+    /// so the work it queued behind that turn, such as a sync stage, may start.
+    func endTurn() {
+        let status = crest_app_end_turn(handle)
+        guard status == CREST_OK else { Self.buildBug(status, "end the main queue's turn") }
     }
 
     private func decodeChanges(from reader: inout WireReader, _ source: @autoclosure () -> String) -> [Change] {
@@ -214,8 +228,8 @@ final class CrestCore {
 }
 
 /// Carries the core's wake from whichever thread published a change to one
-/// drain on the main queue. A wake that finds a drain already queued adds
-/// nothing.
+/// drain on the main queue, which also ends the main queue's turn for the
+/// core. A wake that finds a drain already queued adds nothing.
 private final class CoreWakeRelay: Sendable {
     nonisolated(unsafe) weak var core: CrestCore?
     private let isScheduled = Atomic<Bool>(false)
@@ -224,7 +238,10 @@ private final class CoreWakeRelay: Sendable {
         guard !isScheduled.exchange(true, ordering: .acquiringAndReleasing) else { return }
         DispatchQueue.main.async { [self] in
             isScheduled.store(false, ordering: .releasing)
-            MainActor.assumeIsolated { core?.drain() }
+            MainActor.assumeIsolated {
+                core?.drain()
+                core?.endTurn()
+            }
         }
     }
 }

@@ -42,12 +42,10 @@ public static unsafe partial class Exports {
     }
 
     [UnmanagedCallersOnly(EntryPoint = "crest_session_commit_transfer", CallConvs = [typeof(CallConvCdecl)])]
-    public static int SessionCommitTransfer(ulong handle, ulong transaction) {
+    public static int SessionCommitTransfer(ulong handle) {
         if (!SessionTransfers.TryGetValue(handle, out var value)) return CoreStatus.InvalidHandle;
-        NativeSyncTransaction? sync = null;
-        if (transaction != 0 && !SyncTransactions.TryGetValue(transaction, out sync)) return CoreStatus.InvalidHandle;
         try {
-            value.CommitDurably(sync);
+            value.CommitDurably();
             return CoreStatus.Ok;
         } catch (Exception e) { return DurableError(e); }
     }

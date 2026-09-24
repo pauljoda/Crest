@@ -43,12 +43,12 @@ final class BrowserSettingsPrivacyPolicyTests: XCTestCase {
                 browser.session.spaces.removeLast()
             }
             let before = browser.session
-            let revision = browser.family.syncRevision
+            let revision = browser.sessionRevision
 
             XCTAssertNil(action.select(destination.id, matching: assignment), "\(invalidation)")
 
             XCTAssertEqual(browser.session, before, "\(invalidation)")
-            XCTAssertEqual(browser.family.syncRevision, revision, "\(invalidation)")
+            XCTAssertEqual(browser.sessionRevision, revision, "\(invalidation)")
         }
     }
 

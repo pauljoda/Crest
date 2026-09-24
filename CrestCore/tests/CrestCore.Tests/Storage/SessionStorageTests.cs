@@ -160,38 +160,43 @@ public sealed unsafe partial class BrowserContractsTests {
     }
 
     [Fact]
-    public void ADurableCommitIsOnDiskWithItsJournalBeforeItReturnsOrNeitherChanges() {
+    public void ACommandStagedWithItsSaveIsOnDiskWithItsJournalBeforeItReturnsOrNeitherChanges() {
         using var directory = new StorageDirectory();
-        var fixture = SavedSession();
-        var document = fixture.Document["session"]!.AsObject();
-        var record = SyncTabRecord(fixture.Tab, fixture.Space, 9, Guid.NewGuid());
-        var journal = JournalDocument(record);
+        var document = SavedSession().Document["session"]!.AsObject();
+        document.Remove("disposableSeedMarker");
+        var second = document["spaces"]![0]!.DeepClone().AsObject();
+        second["id"] = SwiftId(Guid.NewGuid()); second["profile"]!["id"] = Guid.NewGuid().ToString();
+        second["tabs"] = new JsonArray(); second["folders"] = new JsonArray(); second["history"] = new JsonArray();
+        document["spaces"]!.AsArray().Add(second);
         using var app = new CrestApp(new AppConfiguration(directory.Path));
-        _ = DrainUntil(app, changes => changes.OfType<Saved>().Any(), app.Send(Adoption(document, journal)));
+        var answered = app.Send(Adoption(document));
         var session = app.Session!;
         var sync = app.SessionSync!;
-        var loaded = sync.Snapshot;
+        sync.Flush();
+        var launched = DrainUntil(app,
+            changes => changes.OfType<SyncJournalChanged>().Any() && changes.OfType<Saved>().Any(), answered);
+        Assert.Contains(launched, change => change is SyncJournalChanged { PendingRecords: > 0 });
+        var deletion = new JsonObject { ["operationID"] = Guid.NewGuid().ToString("D") };
+        session.PrepareCommand(SpaceCommand(document, "space.deletion.begin", deletion.DeepClone().AsObject(), second)).Commit();
+        var staged = sync.Snapshot;
         var before = StoredParts(directory.File);
-        var acknowledge = JournalCommand(journal, "acknowledge",
-            new() { ["acknowledgements"] = new JsonArray(new JsonObject { ["id"] = record["id"]!.DeepClone() }) });
-        using var transaction = sync.Prepare(1, acknowledge)!;
-        Assert.True(transaction.Seal());
 
-        var rename = session.PrepareCommand(SpaceCommand(document, "tab.rename", new() { ["tabId"] = fixture.Tab.ToString(), ["title"] = "Saved with its journal" }));
-
+        var removal = session.PrepareCommand(SpaceCommand(document, "space.remove", deletion.DeepClone().AsObject(), second));
         RefuseWrites(directory.File, "journal");
-        Assert.Throws<StorageException>(() => rename.Commit(Durability.BeforeReturn, transaction));
-        Assert.Equal(1UL, session.Revision);
-        Assert.Same(loaded, sync.Snapshot);
+        Assert.Throws<StorageException>(() => removal.Commit());
+        Assert.Equal(2UL, session.Revision);
+        Assert.Same(staged, sync.Snapshot);
         AssertSameParts(before, StoredParts(directory.File));
 
         AcceptWrites(directory.File);
-        rename.Commit(Durability.BeforeReturn, transaction);
-        Assert.Equal(2UL, session.Revision);
+        removal.Commit();
+        Assert.Equal(3UL, session.Revision);
         var after = StoredParts(directory.File);
         Assert.True(after["core"].AsSpan().SequenceEqual(session.Checkpoint().Read("core")));
-        Assert.True(after["journal"].AsSpan().SequenceEqual(transaction.Journal.Read()));
-        Assert.Same(transaction.Journal, sync.Snapshot);
+        Assert.True(after["journal"].AsSpan().SequenceEqual(sync.Snapshot.Read()));
+        var tombstone = JsonNode.Parse(sync.Snapshot.Read())!["records"]!.AsArray().Single(record =>
+            record!["id"]!["kind"]!.GetValue<string>() == "space" && JsonNode.DeepEquals(record["spaceID"], second["id"]));
+        Assert.Equal("explicitDelete", tombstone!["tombstone"]!["reason"]!.GetValue<string>());
     }
 
     [Fact]
@@ -207,7 +212,7 @@ public sealed unsafe partial class BrowserContractsTests {
         session.Commit(RenameDelta(document, "Edited before staging"));
         var acknowledge = JournalCommand(journal, "acknowledge",
             new() { ["acknowledgements"] = new JsonArray(new JsonObject { ["id"] = record["id"]!.DeepClone() }) });
-        using var transaction = app.SessionSync!.Prepare(2, acknowledge)!;
+        using var transaction = app.SessionSync!.Prepare(acknowledge);
         Assert.True(transaction.Seal());
         transaction.CommitDurably();
 

@@ -2023,7 +2023,7 @@ final class MobileBrowserNavigationTests: XCTestCase {
     /// Records that `spaceID`'s deletion began, as deleting a Space does before
     /// any window releases it, so the core refuses the Space new pages.
     private func beginDeleting(_ spaceID: SpaceID, in browser: BrowserStore) throws {
-        try browser.family.executeSpaceDurably(
+        try browser.family.commitSpace(
             .spaceDeletionBegin,
             in: spaceID,
             arguments: BrowserSessionArguments.SpaceDeletion(operationID: UUID()),

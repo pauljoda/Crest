@@ -10,8 +10,15 @@ public sealed class NativeSyncTransaction : IDisposable {
     #region Variables
 
     internal NativeSyncAuthority Owner { get; }
-    internal ulong? SourceRevision { get; }
+    /// The queued stage this transaction stages, which commits only while it
+    /// is the newest; null for one that always may.
+    internal ulong? Sequence { get; }
+    /// The queued stage this transaction replaced, queued again if it never
+    /// commits.
+    internal SyncStager.Request? Superseded { get; set; }
     internal bool IsSealed { get; set; }
+    /// The authority's version once it accepted this journal; zero before.
+    public ulong Version { get; internal set; }
     private bool completed, committed;
     internal bool IsReadyToCommit => IsSealed && !completed;
     public NativeSyncJournal Journal { get; private set; }
@@ -22,22 +29,28 @@ public sealed class NativeSyncTransaction : IDisposable {
 
     #region Constructors
 
-    internal NativeSyncTransaction(NativeSyncAuthority owner, ulong? revision, NativeSyncJournal journal) { Owner = owner; SourceRevision = revision; Journal = journal; }
+    internal NativeSyncTransaction(NativeSyncAuthority owner, ulong? sequence, NativeSyncJournal journal) {
+        Owner = owner; Sequence = sequence; Journal = journal;
+    }
 
     #endregion
 
     #region Actions - Sync
 
-    internal void Build(ReadOnlySpan<byte> input) {
-        if (input.Length is 0 or > NativeSyncJournal.MaximumBytes) throw new BrowserRuleException(BrowserRuleCodes.SyncSizeLimit);
-        var request = JsonNode.Parse(input, documentOptions: new() { MaxDepth = 64 })!.AsObject();
+    internal void Build(JsonObject request, NativeSyncOperation operation) {
         request["preferences"] = Journal.Preferences;
-        if (NativeSyncOperationCodes.Parse(request["operation"]!.GetValue<string>()) is NativeSyncOperation.Merge or NativeSyncOperation.Replace) {
+        if (operation is NativeSyncOperation.Merge or NativeSyncOperation.Replace) {
             var result = NativeSyncSessionTransition.Prepare(Journal, Encoding.UTF8.GetBytes(request.ToJsonString()), Owner.Session?.Access);
             Journal = result.Journal;
             MaterializedSpaceDeletions = StoredSessionCodec.DecodeSpaceDeletions(result.Materialization["session"]![StoredSessionCodec.Key.SpaceDeletions]);
             Materialization = NativeSyncQuery.Success(result.Materialization);
-        } else Journal = Journal.Apply(Encoding.UTF8.GetBytes(request.ToJsonString()));
+        } else Journal = Journal.Apply(request);
+        _ = Journal.Read();
+    }
+
+    /// Stages `session` for `reason`, dating tombstones `now` seconds since 2001.
+    internal void Stage(SessionState session, SyncDeletionReason reason, double now) {
+        Journal = Journal.Stage(StoredSessionCodec.Encode(session), reason, now);
         _ = Journal.Read();
     }
 
@@ -69,8 +82,9 @@ public sealed class NativeSyncTransaction : IDisposable {
     public void Dispose() {
         lock (NativeSessionAuthority.Gate) {
             if (completed) return;
-            Owner.Cancel(this); completed = true;
+            completed = true;
         }
+        Owner.Cancel(this);
     }
 
     #endregion

@@ -7,19 +7,19 @@ namespace CrestCore.Domain;
 public static class SyncDeletionPolicy {
     #region Actions - Sync
 
-    public static string? Reason(string kind, TabPlacement? placement, ArchiveReason? archiveReason,
-        bool owningSpaceRemains, string fallback) {
-        if (!SyncDeletionReasons.Includes(fallback))
-            throw new BrowserRuleException(BrowserRuleCodes.InvalidSyncDeletion);
+    /// The reason a record the staged session no longer holds is deleted for,
+    /// or null when its absence authorizes nothing. `fallback` is the reason
+    /// of the edit being staged.
+    public static SyncDeletionReason? Reason(string kind, TabPlacement? placement, ArchiveReason? archiveReason,
+        bool owningSpaceRemains, SyncDeletionReason fallback) {
         if (kind != SyncRecordKinds.Tab) return kind is SyncRecordKinds.Space or SyncRecordKinds.Folder
-            ? fallback == SyncDeletionReasons.ExplicitDelete ? fallback : null : fallback;
+            ? fallback.IsExplicit ? fallback : null : fallback;
         if (archiveReason?.IsExplicitDeletion == true)
-            return SyncDeletionReasons.ExplicitDelete;
+            return SyncDeletionReason.ExplicitDelete;
         if (archiveReason is not null)
             return placement?.IsDurable != false ? null : archiveReason.IsCleanup
-                ? SyncDeletionReasons.Retention : SyncDeletionReasons.Superseded;
-        return !owningSpaceRemains && fallback == SyncDeletionReasons.ExplicitDelete
-            ? SyncDeletionReasons.ExplicitDelete : null;
+                ? SyncDeletionReason.Retention : SyncDeletionReason.Superseded;
+        return !owningSpaceRemains && fallback.IsExplicit ? SyncDeletionReason.ExplicitDelete : null;
     }
 
     #endregion

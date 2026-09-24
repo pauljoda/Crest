@@ -7,12 +7,10 @@ extension BrowserStore {
         guard selectedSpace != nil else { return }
         let spaceID = selectedSpaceID
         guard recordSessionVisit(url: url, title: title, in: spaceID) else { return }
-        stageSync(urgency: .coalesced)
     }
 
     func recordVisit(url: URL, title: String?, in spaceID: SpaceID) {
         guard recordSessionVisit(url: url, title: title, in: spaceID) else { return }
-        stageSync(urgency: .coalesced)
     }
 
     @discardableResult
@@ -23,7 +21,6 @@ extension BrowserStore {
     ) -> Bool {
         guard space(matching: assignment) != nil else { return false }
         guard recordSessionVisit(url: url, title: title, in: assignment.spaceID) else { return false }
-        stageSync(urgency: .coalesced)
         return true
     }
 
@@ -55,7 +52,6 @@ extension BrowserStore {
                 arguments: BrowserSessionArguments.TransientArchive(requestId: requestID, tab: tab),
                 from: self, at: date) != nil
         else { return false }
-        stageSync(urgency: .coalesced)
         return true
     }
 
@@ -66,7 +62,6 @@ extension BrowserStore {
 
     func clearHistory(in spaceID: SpaceID) {
         guard family.executeRecords(.historyClear, in: spaceID, from: self) else { return }
-        stageSync(deletionReason: .explicitDelete)
     }
 
     @discardableResult
@@ -75,13 +70,11 @@ extension BrowserStore {
     ) -> Bool {
         guard space(matching: assignment) != nil else { return false }
         guard family.executeRecords(.historyClear, in: assignment.spaceID, from: self) else { return false }
-        stageSync(deletionReason: .explicitDelete)
         return true
     }
 
     func cleanupCurrentTabs() {
         guard family.executeRecords(.recordsCleanup, from: self) else { return }
-        stageSync(deletionReason: .retention)
     }
 
     /// Applies every Space's tab and stored-record retention policies to a
@@ -96,7 +89,6 @@ extension BrowserStore {
     func sweepExpiredBrowsingData(now: Date = .now) -> Bool {
         guard family.beginCleanupSweep(at: now) else { return false }
         guard family.executeRecords(.recordsSweep, from: self, at: now) else { return true }
-        stageSync(deletionReason: .retention)
         return true
     }
 
@@ -132,7 +124,6 @@ extension BrowserStore {
     func cleanupCurrentTabs(in spaceID: SpaceID) {
         guard session.space(id: spaceID) != nil else { return }
         guard family.executeRecords(.recordsCleanup, in: spaceID, from: self) else { return }
-        stageSync(deletionReason: .retention)
     }
 
     func restoreArchivedTab(_ id: TabID) {
@@ -142,7 +133,6 @@ extension BrowserStore {
                 .archiveRestore, in: selectedSpaceID, arguments: BrowserSessionArguments.Tab(tabId: id.rawValue),
                 from: self)
         else { return }
-        stageSync(deletionReason: .superseded)
     }
 
     @discardableResult
@@ -159,7 +149,6 @@ extension BrowserStore {
                 .archiveRestore, in: assignment.spaceID, arguments: BrowserSessionArguments.Tab(tabId: id.rawValue),
                 from: self)
         else { return false }
-        stageSync(deletionReason: .superseded)
         return true
     }
 }
@@ -184,7 +173,6 @@ extension BrowserStore {
                 .historyRemoveURL, in: assignment.spaceID,
                 arguments: BrowserSessionArguments.HistoryRemoveURL(url: url.absoluteString), from: self)
         else { return false }
-        stageSync(deletionReason: .explicitDelete)
         return true
     }
 
@@ -202,7 +190,6 @@ extension BrowserStore {
                     start: startDate.timeIntervalSinceReferenceDate, end: endDate.timeIntervalSinceReferenceDate),
                 from: self)
         else { return false }
-        stageSync(deletionReason: .explicitDelete)
         return true
     }
 }
@@ -225,7 +212,6 @@ extension BrowserStore {
         // other settings surface writes, so it takes the same core command, and
         // the core's own sweep then applies it.
         guard setCoreSpaceValue(.spaceBrowsingPreferences, preferences, in: spaceID) else { return }
-        let removedRecords = family.executeRecords(.recordsSweep, in: spaceID, from: self, at: now)
-        stageSync(deletionReason: removedRecords ? .retention : .superseded)
+        _ = family.executeRecords(.recordsSweep, in: spaceID, from: self, at: now)
     }
 }

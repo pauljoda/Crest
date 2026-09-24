@@ -72,6 +72,15 @@ public static unsafe partial class Exports {
         } catch { return CoreStatus.InternalError; }
     }
 
+    [UnmanagedCallersOnly(EntryPoint = "crest_app_end_turn", CallConvs = [typeof(CallConvCdecl)])]
+    public static int AppEndTurn(ulong app) {
+        try {
+            if (!Apps.TryGetValue(app, out var crest)) return CoreStatus.InvalidHandle;
+            crest.EndTurn();
+            return CoreStatus.Ok;
+        } catch { return CoreStatus.InternalError; }
+    }
+
     [UnmanagedCallersOnly(EntryPoint = "crest_app_drain", CallConvs = [typeof(CallConvCdecl)])]
     public static int AppDrain(ulong app, CrestBuffer* output) {
         if (output == null) return CoreStatus.InvalidArgument;

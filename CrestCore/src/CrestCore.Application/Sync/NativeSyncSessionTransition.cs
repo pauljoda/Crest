@@ -1,6 +1,7 @@
 using System.Text;
 using System.Text.Json.Nodes;
 
+using CrestCore.Contracts;
 using CrestCore.Domain;
 
 namespace CrestCore.Application;
@@ -35,8 +36,8 @@ public sealed record NativeSyncSessionTransition(NativeSyncJournal Journal, Json
                 ["arguments"] = args
             }.ToJsonString()));
         }
-        void Stage(JsonObject session, string reason) => Apply(NativeSyncOperation.Stage, new JsonObject { ["session"] = session.DeepClone(), ["deletionReason"] = reason, ["now"] = now });
-        if (!replacing && local["disposableSeedMarker"] is null) Stage(local, SyncDeletionReasons.Superseded);
+        void Stage(JsonObject session, SyncDeletionReason reason) => Apply(NativeSyncOperation.Stage, new JsonObject { ["session"] = session.DeepClone(), ["deletionReason"] = reason.Name, ["now"] = now });
+        if (!replacing && local["disposableSeedMarker"] is null) Stage(local, SyncDeletionReason.Superseded);
         Apply(replacing ? NativeSyncOperation.Replace : NativeSyncOperation.Merge, new JsonObject { ["records"] = incoming.DeepClone() });
         // Only an accepted explicit Space tombstone authorizes deleting this
         // device's profile. Missing records, tab deletion and retention do not.
@@ -44,7 +45,7 @@ public sealed record NativeSyncSessionTransition(NativeSyncJournal Journal, Json
         var pendingIds = (local["spaceDeletions"] as JsonArray ?? new())
             .Select(n => NativeSessionAuthority.Id(n!["spaceID"])).ToHashSet();
         foreach (var record in next.Records.Where(r => r!["id"]?["kind"]?.GetValue<string>() == SyncRecordKinds.Space
-            && r["tombstone"]?["reason"]?.GetValue<string>() == SyncDeletionReasons.ExplicitDelete)) {
+            && SyncDeletionReason.Named(r["tombstone"]?["reason"]?.GetValue<string>())?.IsExplicit == true)) {
             var id = NativeSessionAuthority.Id(record!["id"]!["value"]);
             var space = local["spaces"]!.AsArray().FirstOrDefault(s => NativeSessionAuthority.Id(s!["id"]) == id);
             if (space is null || !pendingIds.Add(id)) continue;
@@ -82,7 +83,7 @@ public sealed record NativeSyncSessionTransition(NativeSyncJournal Journal, Json
         // and cloud replacement never carry or replace them.
         if (local[StoredSessionCodec.Key.AppPreferences] is { } appPreferences)
             repaired["session"]![StoredSessionCodec.Key.AppPreferences] = appPreferences.DeepClone();
-        if (!replacing || removed) Stage(repaired["session"]!.AsObject(), removed ? SyncDeletionReasons.Retention : SyncDeletionReasons.Superseded);
+        if (!replacing || removed) Stage(repaired["session"]!.AsObject(), removed ? SyncDeletionReason.Retention : SyncDeletionReason.Superseded);
         return new(next, repaired);
     }
 

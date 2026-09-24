@@ -24,8 +24,8 @@ final class BrowserCoreSessionAuthority {
 
     final class PreparedTransfer {
         fileprivate let handle: UInt64
-        /// TRANSITIONAL until S5.2 stages sync in the core: the sessions the
-        /// transfer proposes, which the sync stager reads before it commits.
+        /// TRANSITIONAL until S6.1: the sessions the transfer proposes, whose
+        /// tabs' images the commit offers.
         let source: BrowserSession
         let destination: BrowserSession
 
@@ -40,8 +40,8 @@ final class BrowserCoreSessionAuthority {
 
     final class PreparedChange {
         fileprivate let handle: UInt64
-        /// TRANSITIONAL until S5.2 stages sync in the core: the session the
-        /// command proposes, which the sync stager reads before it commits.
+        /// TRANSITIONAL until S6.1: the session the command proposes, which a
+        /// tab batch previews and whose tabs' images the commit offers.
         let session: BrowserSession
 
         fileprivate init(handle: UInt64, session: BrowserSession) {
@@ -144,11 +144,6 @@ final class BrowserCoreSessionAuthority {
         let arguments: BrowserCoreWorkspaceImport.Arguments
         @BrowserCoreNullable var windowId: UUID?
         let now: TimeInterval
-    }
-
-    /// A Space command's answer: the session with each Space's settings.
-    private struct SpaceAnswer: Decodable {
-        var session: BrowserSession
     }
 
     /// A record command's answer, read only for whether it changed anything.
@@ -445,15 +440,15 @@ final class BrowserCoreSessionAuthority {
         }
     }
 
-    /// Commits a prepared transfer: the core saves the side that keeps a file,
-    /// with the sync journal, before either side is published. The moved tab
-    /// keeps the image it wore in the workspace it left.
+    /// Commits a prepared transfer: the core stages the side that syncs and
+    /// saves the side that keeps a file, with that journal, before either side
+    /// is published. The moved tab keeps the image it wore in the workspace it
+    /// left.
     static func commitTransfer(
         _ prepared: PreparedTransfer,
-        source: BrowserCoreSessionAuthority, destination: BrowserCoreSessionAuthority,
-        sync: BrowserCoreSyncTransaction? = nil
+        source: BrowserCoreSessionAuthority, destination: BrowserCoreSessionAuthority
     ) throws {
-        let committed = crest_session_commit_transfer(prepared.handle, sync?.handle ?? 0)
+        let committed = crest_session_commit_transfer(prepared.handle)
         guard committed == CREST_OK else { throw CoreError(committed) }
         let images = OfferedImages(placedFrom: prepared.source, prepared.destination)
         source.offered = images
@@ -548,25 +543,6 @@ final class BrowserCoreSessionAuthority {
         }
     }
 
-    /// A Space command prepared for a durable commit.
-    func prepareSpace<Arguments: Encodable>(
-        _ operation: BrowserSessionOperation, in spaceID: SpaceID?, arguments: Arguments,
-        window: UUID?, at date: Date
-    ) throws -> PreparedChange {
-        let space = spaceID.flatMap { projection.space(id: $0) }
-        let data = try JSONEncoder().encode(
-            Command(
-                operation: operation, spaceId: spaceID?.rawValue, profileId: space?.profile.id,
-                arguments: arguments, windowId: window, now: date.timeIntervalSinceReferenceDate))
-        let handle = try prepareCommand(data)
-        do {
-            return PreparedChange(handle: handle, session: try stagingSession(fromSpaceAnswer: readCommand(handle)))
-        } catch {
-            crest_session_release_command(handle)
-            throw error
-        }
-    }
-
     func prepareWorkspace(_ request: BrowserCoreWorkspaceImport.Request, window: UUID?) throws -> PreparedChange {
         let input = try JSONEncoder().encode(
             WorkspaceImportCommand(
@@ -583,36 +559,18 @@ final class BrowserCoreSessionAuthority {
         }
     }
 
-    /// Commits a prepared command and saves it before publishing, with the sync
-    /// transaction's journal when one is given. A failed save leaves the
-    /// projection and the core's session unchanged. The tabs it places wear
-    /// the images the prepared session gave them.
-    func commitDurably(_ command: PreparedChange, sync: BrowserCoreSyncTransaction? = nil) throws {
-        let result = crest_session_commit_command_durably(command.handle, sync?.handle ?? 0)
+    /// Commits a prepared command. The core saves one whose effects outside it
+    /// depend on the file, with the journal it stages, before this returns; a
+    /// failed save or stage leaves the projection and the core's session
+    /// unchanged. The tabs it places wear the images the prepared session gave
+    /// them.
+    func commit(_ command: PreparedChange) throws {
+        let result = crest_session_commit_command(command.handle)
         guard result == CREST_OK else { throw CoreError(result) }
         follow(offering: OfferedImages(placedFrom: command.session))
     }
 
     // MARK: - Actions - Core calls
-
-    /// TRANSITIONAL until S5.2 stages sync in the core: the session a Space
-    /// command proposes, which the sync stager reads before the command
-    /// commits. The answer carries each Space's settings; the records the
-    /// copy holds complete it.
-    private func stagingSession(fromSpaceAnswer output: Data) throws -> BrowserSession {
-        var next = try JSONDecoder().decode(SpaceAnswer.self, from: output).session
-        for index in next.spaces.indices {
-            guard let existing = projection.space(id: next.spaces[index].id) else { continue }
-            guard next.spaces[index].profile == existing.profile else {
-                throw CoreError.rejected(CREST_INVALID_ARGUMENT)
-            }
-            next.spaces[index].tabs = existing.tabs
-            next.spaces[index].folders = existing.folders
-            next.spaces[index].history = existing.history
-            next.spaces[index].archivedTabs = existing.archivedTabs
-        }
-        return next
-    }
 
     /// Prepares, reads and commits one command, then applies what the core
     /// published for it. The answer is read before the commit, so a failed
@@ -625,7 +583,7 @@ final class BrowserCoreSessionAuthority {
         defer { crest_session_release_command(command) }
         let result = try decode(try readCommand(command))
         let committed = crest_session_commit_command(command)
-        guard committed == CREST_OK else { throw CoreError.rejected(committed) }
+        guard committed == CREST_OK else { throw CoreError(committed) }
         follow(offering: images)
         return result
     }

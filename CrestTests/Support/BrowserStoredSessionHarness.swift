@@ -54,7 +54,7 @@ final class BrowserStoredSessionHarness {
         let family = BrowserStoreFamily(stored: stored, storage: core, favicons: favicons)
         return BrowserStore(
             credentialVault: InMemoryCredentialVault(), syncCoordinator: BrowserSyncCoordinator(core: stored.sync),
-            syncCoalescingDelay: .milliseconds(150), browsingMode: .standard, family: family, core: core)
+            browsingMode: .standard, family: family, core: core)
     }
 
     // MARK: - Actions - Launches

@@ -199,7 +199,7 @@ public static class NativeSyncMaterializer {
         var projected = result.Select(a => Id(a["tab"]!["id"])).ToHashSet();
         var localTabs = Local(local, StoredSessionCodec.Key.Tabs).Where(PortableTab).ToDictionary(t => Id(t["id"]));
         foreach (var record in records.Where(r => Text(r["id"]?["kind"]) == SyncRecordKinds.Tab && Id(r["spaceID"]) == space
-            && Text(r["tombstone"]?["reason"]) == SyncDeletionReasons.ExplicitDelete)) {
+            && SyncDeletionReason.Named(Text(r["tombstone"]?["reason"]))?.IsExplicit == true)) {
             var id = Id(record["id"]!["value"]);
             if (projected.Contains(id) || !localTabs.TryGetValue(id, out var tab)) continue;
             result.Add(new JsonObject {

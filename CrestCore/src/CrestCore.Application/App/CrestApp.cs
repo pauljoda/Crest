@@ -39,12 +39,12 @@ public sealed partial class CrestApp : IDisposable {
     public CrestApp(AppConfiguration configuration) {
         ArgumentNullException.ThrowIfNull(configuration);
         if (configuration.StorageDirectory is not { } directory) {
-            device = new(storage: null, DeviceRecords.Empty, Announce);
+            device = new(storage: null, DeviceRecords.Empty, Announce, RequestTurn);
             pages = new(device, engines);
             return;
         }
         storage = SessionStorage.Open(directory, Announce, out var loaded);
-        device = new(storage, storage.Device, Announce);
+        device = new(storage, storage.Device, Announce, RequestTurn);
         pages = new(device, engines);
         try {
             if (loaded.Session is { } stored) Establish(stored, loaded.Journal, loaded.LegacySelection);
@@ -88,6 +88,7 @@ public sealed partial class CrestApp : IDisposable {
             published = [.. Drain(), .. changes.Published];
         }
         Deliver();
+        WakeForRequestedTurn();
         return published;
     }
 
@@ -137,11 +138,12 @@ public sealed partial class CrestApp : IDisposable {
 
     #region Actions - Lifetime
 
-    /// Saves any accepted revision still pending and closes the session file.
-    /// The stored session accepts no edits afterwards, and no engine binding
-    /// hears from the core again.
+    /// Stages and saves any accepted revision still pending and closes the
+    /// session file. The stored session accepts no edits afterwards, and no
+    /// engine binding hears from the core again.
     public void Dispose() {
         lock (gate) engines.Clear();
+        SessionSync?.Stop();
         Session?.Release();
         storage?.Dispose();
     }

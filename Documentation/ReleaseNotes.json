@@ -2269,6 +2269,10 @@
     "crest-normalization-core": {
       "category": "internal",
       "message": "The core keeps a crest's figure and composition the way every device draws them, so Space branding stays steady across sync."
+    },
+    "core-sync-staging": {
+      "category": "internal",
+      "message": "The core stages sync itself, with each edit's deletion reason and urgency, and saves changes that sync together before returning."
     }
   }
 }

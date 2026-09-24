@@ -5,13 +5,7 @@ import Foundation
 extension BrowserStore {
     @discardableResult
     func openNewTab() -> TabID? {
-        guard let result = selectOrCreateStartPageDraft() else { return nil }
-        if result.wasCreated {
-            stageSync()
-        } else {
-            stageSync(urgency: .coalesced)
-        }
-        return result.tabID
+        selectOrCreateStartPageDraft()
     }
 
     /// Presents the Start Page before the person chooses a restored tab.
@@ -21,50 +15,41 @@ extension BrowserStore {
     /// not turn the Start Page draft into the next "last active tab."
     @discardableResult
     func presentStartPageForLaunch() -> TabID? {
-        selectOrCreateStartPageDraft()?.tabID
+        selectOrCreateStartPageDraft()
     }
 
     /// Like launch presentation, entering an unloaded Space keeps the
     /// remembered tab intact and does not persist a replacement selection.
     @discardableResult
     func presentStartPageForSpaceEntry() -> TabID? {
-        selectOrCreateStartPageDraft(excludingSplitGroups: true)?.tabID
+        selectOrCreateStartPageDraft(excludingSplitGroups: true)
     }
 
-    private func selectOrCreateStartPageDraft(excludingSplitGroups: Bool = false) -> (
-        tabID: TabID,
-        wasCreated: Bool
-    )? {
+    private func selectOrCreateStartPageDraft(excludingSplitGroups: Bool = false) -> TabID? {
         guard let space = selectedSpace else { return nil }
         if let draft = space.currentTabs.first(where: {
             $0.isStartPage && (!excludingSplitGroups || space.splitGroup(containing: $0.id) == nil)
         }) {
-            guard activateSessionTab(draft.id, in: space.id) else { return nil }
-            return (draft.id, false)
+            return activateSessionTab(draft.id, in: space.id) ? draft.id : nil
         }
-        guard
-            let tabID = openSessionTab(
-                title: BrowserTab.startPageTitle,
-                url: nil,
-                symbol: BrowserTab.startPageSymbol,
-                in: space.id,
-                insertingAfter: selectedTabID(in: space.id)
-            )
-        else { return nil }
-        return (tabID, true)
+        return openSessionTab(
+            title: BrowserTab.startPageTitle,
+            url: nil,
+            symbol: BrowserTab.startPageSymbol,
+            in: space.id,
+            insertingAfter: selectedTabID(in: space.id)
+        )
     }
 
     @discardableResult
     func openNewTab(url: URL) -> TabID? {
         guard let space = selectedSpace else { return nil }
-        let tabID = openSessionTab(
+        return openSessionTab(
             title: url.host() ?? url.absoluteString,
             url: url,
             in: space.id,
             insertingAfter: selectedTabID(in: space.id)
         )
-        stageSync()
-        return tabID
     }
 
     @discardableResult
@@ -81,15 +66,13 @@ extension BrowserStore {
         guard !deletingSpaceIDs.contains(spaceID),
             let space = session.space(id: spaceID)
         else { return nil }
-        let tabID = openSessionTab(
+        return openSessionTab(
             title: url.host() ?? url.absoluteString,
             url: url,
             in: spaceID,
             insertingAfter: selectedTabID(in: space.id),
             shouldSelect: selecting
         )
-        stageSync()
-        return tabID
     }
 
     @discardableResult
@@ -128,7 +111,6 @@ extension BrowserStore {
             let updatedSpace = session.space(id: spaceID),
             let tab = updatedSpace.tabs.first(where: { $0.id == tabID })
         else { return nil }
-        stageSync()
         return BrowserPopupTabRegistration(tab: tab, space: updatedSpace)
     }
 
@@ -159,7 +141,6 @@ extension BrowserStore {
             guard let self, self.session.space(id: spaceID) != nil,
                 self.closeSessionTab(id, in: spaceID, resetArchivePlacement: resetArchivePlacement)
             else { return false }
-            self.stageSync(deletionReason: .superseded)
             return true
         }
     }
@@ -214,7 +195,6 @@ extension BrowserStore {
             guard let self, let current = self.space(matching: assignment),
                 Set(current.currentTabs.map(\.id)) == ids,
                 self.clearSessionTabs(in: assignment.spaceID) else { return false }
-            self.stageSync(deletionReason: .superseded)
             return true
         }
     }
@@ -227,7 +207,6 @@ extension BrowserStore {
         let tab = BrowserTabRuntimeAssignment(tabID: id, spaceID: assignment.spaceID, profileID: assignment.profileID)
         return performPageDismissal(of: [tab]) { [weak self] in
             guard let self, self.deleteSessionTab(id, in: assignment.spaceID) else { return false }
-            self.stageSync(deletionReason: .explicitDelete)
             return true
         }
     }
@@ -241,7 +220,6 @@ extension BrowserStore {
         guard renameSessionTab(title, tabID: id, in: spaceID) else {
             return false
         }
-        stageSync(urgency: .coalesced)
         return true
     }
 
@@ -261,7 +239,6 @@ extension BrowserStore {
         guard let normalized = BrowserIconSymbol.normalizedEmoji(emoji),
             setSessionTabIcon(.emoji, emoji: normalized, tabID: id, in: spaceID)
         else { return }
-        stageSync(urgency: .coalesced)
     }
 
     @discardableResult
@@ -275,7 +252,6 @@ extension BrowserStore {
             let normalized = BrowserIconSymbol.normalizedEmoji(emoji),
             setSessionTabIcon(.emoji, emoji: normalized, tabID: id, in: assignment.spaceID)
         else { return false }
-        stageSync(urgency: .coalesced)
         return true
     }
 
@@ -289,7 +265,6 @@ extension BrowserStore {
             setSessionTabIcon(.pulled, faviconData: faviconData,
                 iconAccent: iconAccent, tabID: id, in: spaceID)
         else { return }
-        stageSync(urgency: .coalesced)
     }
 
     @discardableResult
@@ -304,7 +279,6 @@ extension BrowserStore {
             setSessionTabIcon(.pulled, faviconData: faviconData,
                 iconAccent: iconAccent, tabID: id, in: assignment.spaceID)
         else { return false }
-        stageSync(urgency: .coalesced)
         return true
     }
 
@@ -319,12 +293,10 @@ extension BrowserStore {
             cacheSessionTabFavicon(faviconData, iconAccent: iconAccent,
                 url: url, tabID: id, in: spaceID)
         else { return }
-        stageSync(urgency: .coalesced)
     }
 
     func clearTabIcon(for id: TabID, in spaceID: SpaceID) {
         guard setSessionTabIcon(.automatic, tabID: id, in: spaceID) else { return }
-        stageSync(urgency: .coalesced)
     }
 
     @discardableResult
@@ -336,7 +308,6 @@ extension BrowserStore {
             space.tabs.contains(where: { $0.id == id }),
             setSessionTabIcon(.automatic, tabID: id, in: assignment.spaceID)
         else { return false }
-        stageSync(urgency: .coalesced)
         return true
     }
 
@@ -348,7 +319,6 @@ extension BrowserStore {
         guard
             setSessionSavedLocation(.replace, tabID: id, in: spaceID)
         else { return false }
-        stageSync(urgency: .coalesced)
         return true
     }
 
@@ -360,7 +330,6 @@ extension BrowserStore {
         guard setSessionSavedLocation(.restore, tabID: id, in: spaceID),
             let url = session.space(id: spaceID)?.tabs.first(where: { $0.id == id })?.url
         else { return nil }
-        stageSync(urgency: .coalesced)
         return url
     }
 
@@ -383,7 +352,6 @@ extension BrowserStore {
                 url: url, title: url.host() ?? url.absoluteString, faviconData: nil, iconAccent: nil, tabID: tabID,
                 in: space.id)
         else { return }
-        stageSync(urgency: .coalesced)
     }
 
     #if DEBUG
@@ -398,7 +366,6 @@ extension BrowserStore {
                 url: observedURL, title: title, faviconData: faviconData, iconAccent: iconAccent, tabID: tabID,
                 in: space.id)
         else { return }
-        stageSync(urgency: .coalesced)
     }
     #endif
 
@@ -424,7 +391,6 @@ extension BrowserStore {
             arguments: BrowserSessionArguments.HistoryVisit(url: committedURL.absoluteString, title: title),
             from: self)
         guard changedMetadata || visited else { return false }
-        stageSync(urgency: .coalesced)
         return changedMetadata
     }
 
@@ -472,7 +438,6 @@ extension BrowserStore {
                 in: spaceID
             )
         else { return false }
-        stageSync(urgency: .coalesced)
         return true
     }
 

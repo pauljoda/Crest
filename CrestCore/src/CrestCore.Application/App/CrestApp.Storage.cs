@@ -83,11 +83,12 @@ public sealed partial class CrestApp {
         }
         var sync = new NativeSyncAuthority(journal ?? NativeSyncJournal.Fresh(Guid.NewGuid()));
         var session = new NativeSessionAuthority(repaired, target);
-        session.AttachSync(sync);
         launchProjection = Encoding.UTF8.GetBytes(NativeSessionMaintenance.Answer(repaired, origins).ToJsonString());
         Session = session;
         SessionSync = sync;
         device.AttachPersistent(session, legacySelection);
+        // After the device, so the transport hears the launch stage.
+        session.AttachSync(sync);
     }
 
     #endregion

@@ -11,6 +11,7 @@ public sealed partial class CrestApp {
     private readonly Lock wakeGate = new();
     private Action? wake;
     private int wakesInFlight;
+    private bool turnRequested;
 
     #endregion
 
@@ -28,11 +29,33 @@ public sealed partial class CrestApp {
     /// Sets the callback that tells the host a drain has something for it, or
     /// removes it with null. The callback carries nothing, runs on whichever
     /// thread published the change, and is never called while the core holds
-    /// a lock. When this returns, no earlier callback is still running.
+    /// a lock. When this returns, no earlier callback is still running. A
+    /// callback set while changes wait is called at once, so the host hears
+    /// the changes the core made before it could.
     public void SetWake(Action? value) {
         lock (wakeGate) wake = value;
         var spinner = new SpinWait();
         while (Volatile.Read(ref wakesInFlight) > 0) spinner.SpinOnce();
+        bool waiting;
+        lock (pendingGate) waiting = pending.Count > 0;
+        if (value is not null && waiting) Wake();
+    }
+
+    /// The host finished a turn of its own thread, having drained after a
+    /// wake. Work the core queued to follow the host's turn, such as a sync
+    /// stage, may start. A drain the host runs inside a turn does not end it.
+    public void EndTurn() => device.TurnEnded();
+
+    /// Asks the host for a drain on its next turn, which ends the turn. An
+    /// intent that asks waits to wake the host until it releases the lock.
+    private void RequestTurn() {
+        if (gate.IsHeldByCurrentThread) Volatile.Write(ref turnRequested, true);
+        else Wake();
+    }
+
+    /// Wakes the host for the turn an intent asked for while it held the lock.
+    private void WakeForRequestedTurn() {
+        if (Interlocked.Exchange(ref turnRequested, false)) Wake();
     }
 
     /// Queues a change for the next drain. The host is woken only when the

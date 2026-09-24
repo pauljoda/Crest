@@ -44,6 +44,5 @@ extension BrowserStore {
 
     func persistSplitCommand(_ result: BrowserCoreSessionEditing.Result, from space: BrowserSpace) {
         prepareAcceptedCopies(result, from: space)
-        stageSync(urgency: .coalesced)
     }
 }

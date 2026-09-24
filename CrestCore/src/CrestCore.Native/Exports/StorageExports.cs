@@ -50,17 +50,6 @@ public static unsafe partial class Exports {
 
     #region Actions - Durable commits
 
-    [UnmanagedCallersOnly(EntryPoint = "crest_session_commit_command_durably", CallConvs = [typeof(CallConvCdecl)])]
-    public static int SessionCommitCommandDurably(ulong command, ulong transaction) {
-        if (!SessionCommands.TryGetValue(command, out var prepared)) return CoreStatus.InvalidHandle;
-        NativeSyncTransaction? sync = null;
-        if (transaction != 0 && !SyncTransactions.TryGetValue(transaction, out sync)) return CoreStatus.InvalidHandle;
-        try {
-            prepared.Commit(Durability.BeforeReturn, sync);
-            return CoreStatus.Ok;
-        } catch (Exception error) { return DurableError(error); }
-    }
-
     [UnmanagedCallersOnly(EntryPoint = "crest_session_replace_durably", CallConvs = [typeof(CallConvCdecl)])]
     public static int SessionReplaceDurably(ulong handle, ulong transaction, byte* delta, nuint count) {
         if (!ValidSessionInput(delta, count)) return CoreStatus.InvalidArgument;

@@ -22,6 +22,10 @@ public sealed class NativeSessionCommand {
     /// The tabs the command copied and the image it assigned, which the
     /// session's own changes cannot tell.
     internal SessionTabEvents Events { get; }
+    /// How the command's edit reaches the sync journal, and so whether it is
+    /// saved before the command returns; null for a command that stages
+    /// nothing.
+    internal SyncStaging? Staging { get; private set; }
 
     #endregion
 
@@ -49,13 +53,20 @@ public sealed class NativeSessionCommand {
         owner.RequirePendingTransient(TransientCompletion);
     }
 
-    public void Commit() => owner.CommitCommand(this);
-
-    /// Commits with `durability`, saving `transaction`'s journal with the session.
-    public void Commit(Durability durability, NativeSyncTransaction? transaction = null) =>
-        owner.Commit(this, durability, transaction);
+    /// Commits the command. One that stages with its save is on disk with its
+    /// journal before this returns; a failed save or stage changes nothing.
+    public void Commit() => owner.Commit(this);
 
     internal NativeSessionReplacement Reserve() => owner.ReserveCommand(this);
+
+    #endregion
+
+    #region Mutators
+
+    internal NativeSessionCommand StagedAs(SyncStaging? staging) {
+        Staging = staging;
+        return this;
+    }
 
     #endregion
 }

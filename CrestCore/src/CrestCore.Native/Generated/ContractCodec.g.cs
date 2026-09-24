@@ -14,7 +14,7 @@ namespace CrestCore.Native;
 public static class ContractCodec {
     /// <summary>SHA-256 of the canonical contract schema.</summary>
     public static ReadOnlySpan<byte> Fingerprint => [
-        0x26, 0x87, 0xbc, 0xef, 0xa9, 0xa0, 0x03, 0x21, 0x77, 0xf8, 0x86, 0x81, 0xd2, 0x5e, 0x26, 0x22, 0x3b, 0x71, 0x1c, 0x76, 0xc2, 0x1a, 0x66, 0x81, 0xd4, 0x8f, 0xbc, 0xb6, 0xe4, 0x90, 0x18, 0xec
+        0xe7, 0xdd, 0xcb, 0x58, 0x45, 0x20, 0x88, 0xc6, 0x3f, 0xfe, 0x93, 0xc8, 0x51, 0xaf, 0x55, 0xca, 0x2e, 0x7c, 0xec, 0x68, 0x1d, 0xcf, 0x13, 0x42, 0xe2, 0xb1, 0x47, 0x0d, 0x66, 0x9a, 0xba, 0x04
     ];
 
     /// <summary>SHA-256 of the engine contract alone, which an engine binding registers with.</summary>
@@ -180,15 +180,17 @@ public static class ContractCodec {
             case 12: return ReadSpacesChanged(reader);
             case 13: return ReadSplitGroupsChanged(reader);
             case 14: return ReadStorageFailed(reader);
-            case 15: return ReadTabCopied(reader);
-            case 16: return ReadTabFaviconAssigned(reader);
-            case 17: return ReadTabsChanged(reader);
-            case 18: return ReadWindowChanged(reader);
-            case 19: return ReadWindowClosed(reader);
-            case 20: return ReadWindowRecordsAdopted(reader);
-            case 21: return ReadWorkspaceChanged(reader);
-            case 22: return ReadWorkspaceClosed(reader);
-            case 23: return ReadWorkspaceOpened(reader);
+            case 15: return ReadSyncJournalChanged(reader);
+            case 16: return ReadSyncStagingFailed(reader);
+            case 17: return ReadTabCopied(reader);
+            case 18: return ReadTabFaviconAssigned(reader);
+            case 19: return ReadTabsChanged(reader);
+            case 20: return ReadWindowChanged(reader);
+            case 21: return ReadWindowClosed(reader);
+            case 22: return ReadWindowRecordsAdopted(reader);
+            case 23: return ReadWorkspaceChanged(reader);
+            case 24: return ReadWorkspaceClosed(reader);
+            case 25: return ReadWorkspaceOpened(reader);
             default: throw new WireFormatException($"Unknown Change tag {tag}.");
         }
     }
@@ -257,40 +259,48 @@ public static class ContractCodec {
                 writer.WriteTag(14);
                 WriteStorageFailed(writer, member);
                 break;
-            case TabCopied member:
+            case SyncJournalChanged member:
                 writer.WriteTag(15);
+                WriteSyncJournalChanged(writer, member);
+                break;
+            case SyncStagingFailed member:
+                writer.WriteTag(16);
+                WriteSyncStagingFailed(writer, member);
+                break;
+            case TabCopied member:
+                writer.WriteTag(17);
                 WriteTabCopied(writer, member);
                 break;
             case TabFaviconAssigned member:
-                writer.WriteTag(16);
+                writer.WriteTag(18);
                 WriteTabFaviconAssigned(writer, member);
                 break;
             case TabsChanged member:
-                writer.WriteTag(17);
+                writer.WriteTag(19);
                 WriteTabsChanged(writer, member);
                 break;
             case WindowChanged member:
-                writer.WriteTag(18);
+                writer.WriteTag(20);
                 WriteWindowChanged(writer, member);
                 break;
             case WindowClosed member:
-                writer.WriteTag(19);
+                writer.WriteTag(21);
                 WriteWindowClosed(writer, member);
                 break;
             case WindowRecordsAdopted member:
-                writer.WriteTag(20);
+                writer.WriteTag(22);
                 WriteWindowRecordsAdopted(writer, member);
                 break;
             case WorkspaceChanged member:
-                writer.WriteTag(21);
+                writer.WriteTag(23);
                 WriteWorkspaceChanged(writer, member);
                 break;
             case WorkspaceClosed member:
-                writer.WriteTag(22);
+                writer.WriteTag(24);
                 WriteWorkspaceClosed(writer, member);
                 break;
             case WorkspaceOpened member:
-                writer.WriteTag(23);
+                writer.WriteTag(25);
                 WriteWorkspaceOpened(writer, member);
                 break;
             default: throw new ArgumentOutOfRangeException(nameof(value), value.GetType().Name, "Not a contract Change.");
@@ -333,12 +343,13 @@ public static class ContractCodec {
             case 30: return ReadStorageFromNewerApp(reader);
             case 31: return ReadStorageRestoreInterrupted(reader);
             case 32: return ReadStorageUnreadable(reader);
-            case 33: return ReadTabAlreadyHasPage(reader);
-            case 34: return ReadUnknownPage(reader);
-            case 35: return ReadUnknownSpace(reader);
-            case 36: return ReadUnknownWorkspace(reader);
-            case 37: return ReadUnsavedWorkspace(reader);
-            case 38: return ReadWindowNotOpen(reader);
+            case 33: return ReadSyncStagingRefused(reader);
+            case 34: return ReadTabAlreadyHasPage(reader);
+            case 35: return ReadUnknownPage(reader);
+            case 36: return ReadUnknownSpace(reader);
+            case 37: return ReadUnknownWorkspace(reader);
+            case 38: return ReadUnsavedWorkspace(reader);
+            case 39: return ReadWindowNotOpen(reader);
             default: throw new WireFormatException($"Unknown Rejection tag {tag}.");
         }
     }
@@ -479,28 +490,32 @@ public static class ContractCodec {
                 writer.WriteTag(32);
                 WriteStorageUnreadable(writer, member);
                 break;
-            case TabAlreadyHasPage member:
+            case SyncStagingRefused member:
                 writer.WriteTag(33);
+                WriteSyncStagingRefused(writer, member);
+                break;
+            case TabAlreadyHasPage member:
+                writer.WriteTag(34);
                 WriteTabAlreadyHasPage(writer, member);
                 break;
             case UnknownPage member:
-                writer.WriteTag(34);
+                writer.WriteTag(35);
                 WriteUnknownPage(writer, member);
                 break;
             case UnknownSpace member:
-                writer.WriteTag(35);
+                writer.WriteTag(36);
                 WriteUnknownSpace(writer, member);
                 break;
             case UnknownWorkspace member:
-                writer.WriteTag(36);
+                writer.WriteTag(37);
                 WriteUnknownWorkspace(writer, member);
                 break;
             case UnsavedWorkspace member:
-                writer.WriteTag(37);
+                writer.WriteTag(38);
                 WriteUnsavedWorkspace(writer, member);
                 break;
             case WindowNotOpen member:
-                writer.WriteTag(38);
+                writer.WriteTag(39);
                 WriteWindowNotOpen(writer, member);
                 break;
             default: throw new ArgumentOutOfRangeException(nameof(value), value.GetType().Name, "Not a contract Rejection.");
@@ -3657,6 +3672,46 @@ public static class ContractCodec {
         }
     }
 
+    public static SyncJournalChanged ReadSyncJournalChanged(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new SyncJournalChanged(
+            reader.ReadGuid(),
+            reader.ReadInt32());
+    }
+
+    public static void WriteSyncJournalChanged(WireWriter writer, SyncJournalChanged value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteGuid(value.WorkspaceId);
+        writer.WriteInt32(value.PendingRecords);
+    }
+
+    public static SyncStagingFailed ReadSyncStagingFailed(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new SyncStagingFailed(
+            reader.ReadGuid(),
+            ReadSyncStagingFailure(reader));
+    }
+
+    public static void WriteSyncStagingFailed(WireWriter writer, SyncStagingFailed value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteGuid(value.WorkspaceId);
+        WriteSyncStagingFailure(writer, value.Reason);
+    }
+
+    public static SyncStagingRefused ReadSyncStagingRefused(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new SyncStagingRefused(
+            ReadSyncStagingFailure(reader));
+    }
+
+    public static void WriteSyncStagingRefused(WireWriter writer, SyncStagingRefused value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        WriteSyncStagingFailure(writer, value.Reason);
+    }
+
     public static SystemPasswordOffer ReadSystemPasswordOffer(WireReader reader) {
         ArgumentNullException.ThrowIfNull(reader);
         return new SystemPasswordOffer(
@@ -4875,6 +4930,28 @@ public static class ContractCodec {
         ArgumentNullException.ThrowIfNull(writer);
         ArgumentNullException.ThrowIfNull(value);
         writer.WriteEnum(TagOf(SitePermissionDecision.All, value));
+    }
+
+    public static SyncDeletionReason ReadSyncDeletionReason(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return SyncDeletionReason.All[reader.ReadEnum(SyncDeletionReason.All.Count)];
+    }
+
+    public static void WriteSyncDeletionReason(WireWriter writer, SyncDeletionReason value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteEnum(TagOf(SyncDeletionReason.All, value));
+    }
+
+    public static SyncStagingFailure ReadSyncStagingFailure(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return SyncStagingFailure.All[reader.ReadEnum(SyncStagingFailure.All.Count)];
+    }
+
+    public static void WriteSyncStagingFailure(WireWriter writer, SyncStagingFailure value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteEnum(TagOf(SyncStagingFailure.All, value));
     }
 
     public static TabIconMode ReadTabIconMode(WireReader reader) {

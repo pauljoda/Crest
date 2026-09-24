@@ -162,7 +162,6 @@ final class BrowserStoreWorkspaceTests: XCTestCase {
         XCTAssertEqual(temporary.selectedTab?.placement, .current)
         XCTAssertNil(temporary.selectedTab?.folderID)
         XCTAssertNil(temporary.selectedTab?.savedURL)
-        source.stageSync()
         XCTAssertNil(source.selectedTab)
         XCTAssertTrue(try XCTUnwrap(source.selectedSpace).tabs.isEmpty)
 

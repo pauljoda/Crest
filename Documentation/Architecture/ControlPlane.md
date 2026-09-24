@@ -491,14 +491,19 @@ installed Spaces are still outstanding. Startup stages restored local edits befo
 including edits saved before their coalesced sync projection completed.
 
 `NativeSyncAuthority` is attached to the persistent session authority and owns the
-accepted journal, the latest local revision and pending publication. Private and
-temporary workspaces cannot attach it, and one sync owner cannot serve unrelated
-store families. Preparing a candidate does not publish it. The core rechecks its
-revision before storage; an edit arriving during storage advances the revision
-barrier without waiting for encoding or allowing a later stale snapshot to win.
-Incoming merges bind their journal transaction to the session replacement, so
-both core values publish under the same lock after SQLite commits. Swift retains
-read projections and schedules native background work and storage.
+accepted journal and the session's staging. Private and temporary workspaces
+cannot attach it, and one sync owner cannot serve unrelated store families. The
+core stages every accepted revision itself, on a worker, from the revision's
+immutable state; each command carries the reason its removals are deleted for
+and how soon it stages. A coalesced edit waits briefly for a newer one, and a
+stage that a newer request replaces before it seals is dropped, so a burst of
+edits stages once. Space deletion, imports, batches and moves between Spaces or
+workspaces stage inside their reservation, and the file takes the session and
+the journal in one transaction before either publishes. A disposable seed never
+stages, and the first attachment stages the session as a launch does. Incoming
+merges bind their journal transaction to the session replacement, so both core
+values publish under the same lock after SQLite commits. The transport hears
+`SyncJournalChanged` after each stage and reads the journal the core accepted.
 
 Sync compares UUID fields by identity and timestamps by their exact binary date
 value. Different JSON number spellings from native encoders do not create edits;

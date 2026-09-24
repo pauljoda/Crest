@@ -139,7 +139,6 @@ public static class BrowserRuleCodes {
     public const string SyncIdentityMismatch = "sync_identity_mismatch";
     public const string SyncRecordLimit = "sync_record_limit";
     public const string SyncSizeLimit = "sync_size_limit";
-    public const string SyncTransactionInProgress = "sync_transaction_in_progress";
     public const string SyncTransactionNotSealed = "sync_transaction_not_sealed";
     public const string TabLimit = "tab_limit";
     public const string TemporaryWorkspaceRequired = "temporary_workspace_required";

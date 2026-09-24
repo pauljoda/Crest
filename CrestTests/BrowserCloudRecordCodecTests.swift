@@ -218,10 +218,10 @@ final class BrowserCloudRecordCodecTests: XCTestCase {
         try senderCoordinator.stage(session: session)
         let sender = BrowserStore(
             session: session,
-            syncCoordinator: senderCoordinator, syncCoalescingDelay: .zero)
+            syncCoordinator: senderCoordinator)
         let receiver = BrowserStore(
             session: session,
-            syncCoordinator: receiverCoordinator, syncCoalescingDelay: .zero)
+            syncCoordinator: receiverCoordinator)
         let codec = BrowserCloudRecordCodec()
         try receiver.mergeRemoteSyncRecords(
             senderCoordinator.journal.records.map { try codec.decode(codec.encode($0)) })

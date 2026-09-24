@@ -47,6 +47,34 @@ public sealed partial class NativeSessionAuthority {
         }
     }
 
+    /// Publishes a change about this session's workspace through the device
+    /// that shows it; a session no window shows yet publishes nothing. Called
+    /// with no lock held.
+    internal void Announce(Func<Guid, Change> change) {
+        Device? target;
+        Guid workspace;
+        lock (Gate) {
+            target = device;
+            workspace = workspaceId;
+        }
+        target?.Announce(change(workspace));
+    }
+
+    /// Asks the host of the device that shows this session for a turn. Called
+    /// with no lock held.
+    internal void RequestTurn() {
+        Device? target;
+        lock (Gate) target = device;
+        target?.RequestTurn();
+    }
+
+    /// The host of the device that shows this session finished a turn.
+    internal void TurnEnded() {
+        NativeSyncAuthority? attached;
+        lock (Gate) attached = sync;
+        attached?.TurnEnded();
+    }
+
     /// Tells the device the session accepted `next` in place of `previous`,
     /// with what the command chose for the window that issued it and what it
     /// did that the two states cannot tell. Called with no lock held.
@@ -61,11 +89,12 @@ public sealed partial class NativeSessionAuthority {
     }
 
     /// Records that a window showed `tabId`, which current-tab cleanup reads,
-    /// as a new state saved behind, and answers the state it replaced and the
-    /// new one. Answers null, and changes nothing, when the Space or tab is
-    /// gone, the Space is being deleted, or this session takes no edits. Throws
-    /// `Rejected` for a locked Space.
+    /// as a new state saved behind and staged once uses pause, and answers the
+    /// state it replaced and the new one. Answers null, and changes nothing,
+    /// when the Space or tab is gone, the Space is being deleted, or this
+    /// session takes no edits. Throws `Rejected` for a locked Space.
     internal (SessionState Previous, SessionState Next)? Touch(Guid spaceId, Guid tabId, DateTimeOffset now) {
+        SessionState previous, next;
         lock (Gate) {
             try {
                 RequireWritable();
@@ -77,11 +106,13 @@ public sealed partial class NativeSessionAuthority {
             if (IsLockedUnderGate(space)) throw new Rejected(new SpaceLocked(spaceId));
             // The stored spelling of the time, so the next load reads the same value.
             var at = StoredSessionCodec.Date(StoredSessionCodec.Seconds(now));
-            var next = Replacing(session, space with {
+            next = Replacing(session, space with {
                 Tabs = [.. space.Tabs.Select(tab => tab.Id == tabId ? tab with { LastActivatedAt = at } : tab)]
             });
-            return (Accept(next), next);
+            previous = Accept(next);
         }
+        QueueStage(previous, next, SyncStaging.TabUse);
+        return (previous, next);
     }
 
     /// Whether this process holds no grant to show `space`.

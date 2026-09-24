@@ -19,22 +19,27 @@ public sealed partial class NativeSessionAuthority {
             if (request["version"]!.GetValue<int>() != 1) throw new BrowserRuleException(BrowserRuleCodes.VersionMismatch);
             RequireAccessibleCommand(request);
             var operation = SessionOperationCodes.Parse(request["operation"]!.GetValue<string>());
-            if (operation == SessionOperation.WorkspaceImport) return PrepareWorkspaceCommand(request);
-            if (SessionOperationCodes.IsPreferences(operation)) return PreparePreferencesCommand(request, operation);
-            if (bytes.Length > MaximumEditBytes) throw new BrowserRuleException(BrowserRuleCodes.SessionEditLimit);
-            if (operation == SessionOperation.TabsBatch) return PrepareTabBatch(request);
-            if (SessionOperationCodes.IsRecord(operation))
-                return PrepareRecordCommand(request);
-            if (SessionOperationCodes.IsTransient(operation))
-                return PrepareTransientCommand(request);
-            if (operation == SessionOperation.TabTransfer) return PrepareTabTransfer(request);
-            if (SessionOperationCodes.IsSpace(operation))
-                return PrepareSpaceCommand(request);
-            if (operation is SessionOperation.TabPromoteTransient or SessionOperation.TabArchiveTransient)
-                throw new BrowserRuleException(BrowserRuleCodes.TransientRequiresCommand);
-            var (next, answer, followUp, events) = EditSpace(request, operation);
-            return new NativeSessionCommand(this, session, next, Output(answer), followUp: followUp, events: events);
+            return PrepareOperation(request, operation, bytes.Length)
+                .StagedAs(SessionOperationCodes.Staging(operation, request));
         }
+    }
+
+    private NativeSessionCommand PrepareOperation(JsonObject request, SessionOperation operation, int length) {
+        if (operation == SessionOperation.WorkspaceImport) return PrepareWorkspaceCommand(request);
+        if (SessionOperationCodes.IsPreferences(operation)) return PreparePreferencesCommand(request, operation);
+        if (length > MaximumEditBytes) throw new BrowserRuleException(BrowserRuleCodes.SessionEditLimit);
+        if (operation == SessionOperation.TabsBatch) return PrepareTabBatch(request);
+        if (SessionOperationCodes.IsRecord(operation))
+            return PrepareRecordCommand(request);
+        if (SessionOperationCodes.IsTransient(operation))
+            return PrepareTransientCommand(request);
+        if (operation == SessionOperation.TabTransfer) return PrepareTabTransfer(request);
+        if (SessionOperationCodes.IsSpace(operation))
+            return PrepareSpaceCommand(request);
+        if (operation is SessionOperation.TabPromoteTransient or SessionOperation.TabArchiveTransient)
+            throw new BrowserRuleException(BrowserRuleCodes.TransientRequiresCommand);
+        var (next, answer, followUp, events) = EditSpace(request, operation);
+        return new NativeSessionCommand(this, session, next, Output(answer), followUp: followUp, events: events);
     }
 
     /// One tab, folder or split edit in the Space the request names: the next
@@ -98,9 +103,9 @@ public sealed partial class NativeSessionAuthority {
         lock (Gate) return new(this, session, session, output);
     }
 
-    /// Accepts a prepared command, saved behind, and publishes what it changed.
-    /// Throws `Rejected` with `StaleCommand` when the session accepted anything
-    /// after the command was prepared.
+    /// Accepts a prepared command, saved behind, publishes what it changed and
+    /// queues its stage. Throws `Rejected` with `StaleCommand` when the session
+    /// accepted anything after the command was prepared.
     internal void CommitCommand(NativeSessionCommand command) {
         SessionState previous;
         lock (Gate) {
@@ -110,6 +115,7 @@ public sealed partial class NativeSessionAuthority {
             previous = Accept(command.Session);
         }
         Published(previous, command.Session, command.FollowUp, command.Events);
+        QueueStage(previous, command.Session, command.Staging);
     }
 
     #endregion

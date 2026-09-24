@@ -192,7 +192,7 @@ public sealed partial class BrowserContractsTests {
         var owner = new NativeSessionAuthority(Bytes(session));
         var sync = new NativeSyncAuthority(new NativeSyncJournal(Bytes(JournalDocument(SyncTabRecord(fixture.Tab, fixture.Space, 1, Guid.NewGuid())))));
         owner.AttachSync(sync);
-        using var transaction = sync.Prepare(1, Bytes(new JsonObject {
+        using var transaction = sync.Prepare(Bytes(new JsonObject {
             ["version"] = 1,
             ["operation"] = "merge",
             ["session"] = session.DeepClone(),
@@ -203,7 +203,7 @@ public sealed partial class BrowserContractsTests {
                 ["version"] = new JsonObject { ["logicalClock"] = 900UL, ["deviceID"] = Guid.NewGuid().ToString("D") },
                 ["tombstone"] = new JsonObject { ["reason"] = "explicitDelete", ["deletedAt"] = 800000000.0 }
             })
-        }))!;
+        }));
         var result = JsonNode.Parse(transaction.Materialization!)!["value"]!["session"]!;
         byte[] Delta(JsonNode value) {
             string[] sections = ["tabs", "folders", "archivedTabs", "history"];

@@ -39,6 +39,8 @@ enum Change: Equatable, Sendable {
     case spacesChanged(SpacesChanged)
     case splitGroupsChanged(SplitGroupsChanged)
     case storageFailed(StorageFailed)
+    case syncJournalChanged(SyncJournalChanged)
+    case syncStagingFailed(SyncStagingFailed)
     case tabCopied(TabCopied)
     case tabFaviconAssigned(TabFaviconAssigned)
     case tabsChanged(TabsChanged)
@@ -85,6 +87,7 @@ enum Rejection: Equatable, Error, Sendable {
     case storageFromNewerApp(StorageFromNewerApp)
     case storageRestoreInterrupted(StorageRestoreInterrupted)
     case storageUnreadable(StorageUnreadable)
+    case syncStagingRefused(SyncStagingRefused)
     case tabAlreadyHasPage(TabAlreadyHasPage)
     case unknownPage(UnknownPage)
     case unknownSpace(UnknownSpace)
@@ -118,6 +121,8 @@ extension CoreState {
         case .spacesChanged(let change): apply(change)
         case .splitGroupsChanged(let change): apply(change)
         case .storageFailed(let change): apply(change)
+        case .syncJournalChanged(let change): apply(change)
+        case .syncStagingFailed(let change): apply(change)
         case .tabCopied(let change): apply(change)
         case .tabFaviconAssigned(let change): apply(change)
         case .tabsChanged(let change): apply(change)
@@ -1046,6 +1051,20 @@ struct StrongPassword: Query, Equatable, Sendable {
 struct StrongPasswordRecipe: Equatable, Sendable {
     let length: Int
     let groups: [String]
+}
+
+struct SyncJournalChanged: Equatable, Sendable {
+    let workspaceID: UUID
+    let pendingRecords: Int
+}
+
+struct SyncStagingFailed: Equatable, Sendable {
+    let workspaceID: UUID
+    let reason: SyncStagingFailure
+}
+
+struct SyncStagingRefused: Equatable, Sendable {
+    let reason: SyncStagingFailure
 }
 
 struct SystemPasswordOffer: Query, Equatable, Sendable {
@@ -5783,6 +5802,85 @@ struct SitePermissionDecision: Hashable, Sendable {
     }
 
     static func == (lhs: SitePermissionDecision, rhs: SitePermissionDecision) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+}
+
+/// The members of the core's `SyncDeletionReason`. A member's wire tag is its index in `all`.
+struct SyncDeletionReason: Hashable, Sendable {
+    let tag: Int
+    let name: String
+    let isExplicit: Bool
+
+    private init(tag: Int, name: String, isExplicit: Bool) {
+        self.tag = tag
+        self.name = name
+        self.isExplicit = isExplicit
+    }
+
+    static let explicitDelete = SyncDeletionReason(tag: 0, name: "explicitDelete", isExplicit: true)
+    static let superseded = SyncDeletionReason(tag: 1, name: "superseded", isExplicit: false)
+    static let retention = SyncDeletionReason(tag: 2, name: "retention", isExplicit: false)
+
+    static let all: [SyncDeletionReason] = [explicitDelete, superseded, retention]
+
+    static func named(_ name: String?) -> SyncDeletionReason? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: SyncDeletionReason, rhs: SyncDeletionReason) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+}
+
+/// The members of the core's `SyncStagingFailure`. A member's wire tag is its index in `all`.
+struct SyncStagingFailure: Hashable, Sendable {
+    let tag: Int
+    let name: String
+    let title: LocalizedStringResource
+
+    private init(tag: Int, name: String, title: LocalizedStringResource) {
+        self.tag = tag
+        self.name = name
+        self.title = title
+    }
+
+    static let tooLarge = SyncStagingFailure(
+        tag: 0,
+        name: "tooLarge",
+        title: LocalizedStringResource("This browsing session is too large to sync.")
+    )
+    static let invalidSession = SyncStagingFailure(
+        tag: 1,
+        name: "invalidSession",
+        title: LocalizedStringResource("Some of this browsing session can’t be synced.")
+    )
+    static let clockExhausted = SyncStagingFailure(
+        tag: 2,
+        name: "clockExhausted",
+        title: LocalizedStringResource("Sync can’t record more changes on this device.")
+    )
+    static let notSaved = SyncStagingFailure(
+        tag: 3,
+        name: "notSaved",
+        title: LocalizedStringResource("Changes couldn’t be saved for sync.")
+    )
+
+    static let all: [SyncStagingFailure] = [tooLarge, invalidSession, clockExhausted, notSaved]
+
+    static func named(_ name: String?) -> SyncStagingFailure? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: SyncStagingFailure, rhs: SyncStagingFailure) -> Bool {
         lhs.tag == rhs.tag
     }
 

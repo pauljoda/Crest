@@ -16,7 +16,6 @@ final class BrowserStoreFamily {
     var authoritativeSession: BrowserSession { core.projection }
     let temporarySourceAssignment: BrowserSpaceRuntimeAssignment?
     let temporarySettingsBrowser: BrowserStore?
-    private(set) var syncRevision: BrowserStoreSyncRevision = .initial
     private var activeSpaceDeletions: Set<SpaceID> = []
     var deletingSpaceIDs: Set<SpaceID> {
         activeSpaceDeletions.union(authoritativeSession.spaceDeletions?.map(\.spaceID) ?? [])
@@ -178,19 +177,19 @@ final class BrowserStoreFamily {
         }
     }
 
-    func executeSpaceDurably<Arguments: Encodable>(_ operation: BrowserSessionOperation, in spaceID: SpaceID,
-        arguments: Arguments, deletionReason: BrowserSyncTombstoneReason = .superseded, from source: BrowserStore,
-        at date: Date = .now) throws {
+    /// A Space command whose failure the caller handles, such as a deletion
+    /// step the core saves before it returns.
+    func commitSpace<Arguments: Encodable>(_ operation: BrowserSessionOperation, in spaceID: SpaceID,
+        arguments: Arguments, from source: BrowserStore, at date: Date = .now) throws {
         let previous = authoritativeSession
-        let command = try core.prepareSpace(
-            operation, in: spaceID, arguments: arguments, window: source.windowID.rawValue, at: date)
-        try commitPreparedChange(command, previous: previous, deletionReason: deletionReason, from: source, at: date)
+        try core.executeSpace(operation, in: spaceID, arguments: arguments, window: source.windowID.rawValue, at: date)
+        reconcileStores(after: previous, from: source)
     }
 
     func importWorkspace(_ request: BrowserCoreWorkspaceImport.Request, from source: BrowserStore) throws {
         let previous = authoritativeSession
         let command = try core.prepareWorkspace(request, window: source.windowID.rawValue)
-        try commitPreparedChange(command, previous: previous, deletionReason: .superseded, from: source, at: .now)
+        try commitPreparedChange(command, previous: previous, from: source)
     }
 
     func prepareTabBatch(_ request: BrowserTabBatchRequest, arguments: BrowserCoreTabBatch.Arguments, from store: BrowserStore,
@@ -198,29 +197,18 @@ final class BrowserStoreFamily {
         try core.prepareTabBatch(request, arguments: arguments, window: store.windowID.rawValue, at: date)
     }
 
-    func commitTabBatch(_ command: BrowserCoreSessionAuthority.PreparedChange,
-        deletionReason: BrowserSyncTombstoneReason, from store: BrowserStore, at date: Date) throws {
-        try commitPreparedChange(command, previous: authoritativeSession, deletionReason: deletionReason, from: store, at: date)
+    func commitTabBatch(_ command: BrowserCoreSessionAuthority.PreparedChange, from store: BrowserStore) throws {
+        try commitPreparedChange(command, previous: authoritativeSession, from: store)
     }
 
-    /// Space deletion, import, batches and cross-Space moves: the command and
-    /// the journal it stages are saved together before the command returns,
-    /// because an upload follows and Space deletion erases engine data between
-    /// its two commands.
+    /// Commits a prepared command whose failure the caller handles. The core
+    /// saves Space deletion, imports, batches and cross-Space moves with the
+    /// journal it stages before this returns, because an upload follows and
+    /// Space deletion erases engine data between its two commands.
     private func commitPreparedChange(_ command: BrowserCoreSessionAuthority.PreparedChange,
-        previous: BrowserSession, deletionReason: BrowserSyncTombstoneReason, from source: BrowserStore, at date: Date) throws {
-        let revision = reserveSyncRevision()
-        if let sync = source.syncCoordinator {
-            sync.advanceStoreRevision(to: revision)
-            try sync.installLocalCommand(command.session, deletionReason: deletionReason, at: date, revision: revision) {
-                _, transaction in
-                try self.core.commitDurably(command, sync: transaction)
-            }
-        } else {
-            try core.commitDurably(command)
-        }
+        previous: BrowserSession, from source: BrowserStore) throws {
+        try core.commit(command)
         reconcileStores(after: previous, from: source)
-        source.cloudSyncChangeHandler?()
     }
 
     /// App-wide behavior preferences. Only the preference record changes, so
@@ -282,7 +270,7 @@ final class BrowserStoreFamily {
         let previous = authoritativeSession
         let command = try core.prepareTabMove(tabID, source: source, destination: destination,
             arguments: arguments, window: store.windowID.rawValue, at: date)
-        try commitPreparedChange(command, previous: previous, deletionReason: .superseded, from: store, at: date)
+        try commitPreparedChange(command, previous: previous, from: store)
     }
 
     static func prepareTransfer(_ id: TabID, assignment: BrowserSpaceRuntimeAssignment,
@@ -296,24 +284,12 @@ final class BrowserStoreFamily {
         source: BrowserStore, destination: BrowserStore) throws {
         let previousSource = source.family.authoritativeSession
         let previousDestination = destination.family.authoritativeSession
-        let durable = source.isTemporaryWorkspace ? destination : source
-        let next = source.isTemporaryWorkspace ? prepared.destination : prepared.source
-        let revision = durable.family.reserveSyncRevision()
-        // The core saves the persistent side with its journal before either
-        // side is published; the temporary side keeps nothing.
-        func commit(_ transaction: BrowserCoreSyncTransaction? = nil) throws {
-            try BrowserCoreSessionAuthority.commitTransfer(prepared, source: source.family.core,
-                destination: destination.family.core, sync: transaction)
-        }
-        if let sync = durable.syncCoordinator {
-            sync.advanceStoreRevision(to: revision)
-            try sync.installLocalCommand(next, deletionReason: .superseded, at: .now, revision: revision) {
-                _, transaction in try commit(transaction)
-            }
-        } else { try commit() }
+        // The core saves the persistent side with the journal it stages before
+        // either side is published; the temporary side keeps nothing.
+        try BrowserCoreSessionAuthority.commitTransfer(prepared, source: source.family.core,
+            destination: destination.family.core)
         source.family.reconcileStores(after: previousSource, from: source)
         destination.family.reconcileStores(after: previousDestination, from: destination)
-        durable.cloudSyncChangeHandler?()
     }
 
     // MARK: - Actions - Storage
@@ -387,34 +363,6 @@ final class BrowserStoreFamily {
         }
         borrowedFamilies.removeAll { $0.value == nil }
         for child in borrowedFamilies.compactMap(\.value) { _ = child.refreshBorrowed() }
-    }
-
-    @discardableResult
-    func publish(
-        _ session: BrowserSession,
-        from source: BrowserStore,
-        at reservedRevision: BrowserStoreSyncRevision? = nil
-    ) -> BrowserStoreSyncRevision {
-        let revision = reservedRevision ?? reserveSyncRevision()
-        precondition(revision == syncRevision)
-        // Mutations already updated the one shared graph. Persistence advances
-        // its sync revision without copying it back into every window.
-        return revision
-    }
-
-    /// Orders every window's background sync work against the one shared
-    /// session. A window may still hold a task captured before another window's
-    /// edit; invalidating its local generation avoids needless work, while the
-    /// revision lets the shared coordinator reject it even if it was already
-    /// running when the newer edit arrived.
-    @discardableResult
-    func reserveSyncRevision() -> BrowserStoreSyncRevision {
-        syncRevision = syncRevision.successor()
-        stores.removeAll { $0.value == nil }
-        for store in stores.compactMap(\.value) {
-            store.invalidatePendingSyncStage()
-        }
-        return syncRevision
     }
 
     /// Claims the next retention sweep for the whole family. There is no primary

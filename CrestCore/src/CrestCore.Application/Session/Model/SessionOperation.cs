@@ -1,3 +1,8 @@
+using System.Text.Json.Nodes;
+
+using CrestCore.Contracts;
+using CrestCore.Domain;
+
 namespace CrestCore.Application;
 
 internal enum SessionOperation {
@@ -150,6 +155,39 @@ internal static class SessionOperationCodes {
         _ when value?.StartsWith("transient.", StringComparison.Ordinal) == true => SessionOperation.UnknownTransient,
         _ => SessionOperation.Unknown
     };
+
+    #endregion
+
+    #region Actions - Sync
+
+    /// How a command's accepted revision reaches the sync journal: why the
+    /// records it removed are deleted, and how soon it stages. Null for a
+    /// command that changes nothing the journal reads.
+    ///
+    /// TRANSITIONAL until the typed session intents land (S5.3 onward): each
+    /// intent then carries its own staging, and this switch goes with the
+    /// operation strings.
+    public static SyncStaging? Staging(SessionOperation operation, JsonObject request) {
+        var explicitDelete = SyncDeletionReason.ExplicitDelete;
+        var superseded = SyncDeletionReason.Superseded;
+        var retention = SyncDeletionReason.Retention;
+        return operation switch {
+            SessionOperation.TabDelete or SessionOperation.FolderDelete or SessionOperation.HistoryClear
+                or SessionOperation.HistoryRemoveUrl or SessionOperation.HistoryRemoveRange => new(explicitDelete, SyncUrgency.Immediate),
+            SessionOperation.RecordsSweep or SessionOperation.RecordsCleanup => new(retention, SyncUrgency.Immediate),
+            SessionOperation.TabOpen or SessionOperation.TabCopy or SessionOperation.TabClose or SessionOperation.TabClearCurrent
+                or SessionOperation.TabCloseDurable or SessionOperation.ArchiveRestore or SessionOperation.TransientPromote
+                or SessionOperation.FolderCreate or SessionOperation.SpaceCreate or SessionOperation.SpaceAccess
+                or SessionOperation.SpaceCredentialPreferences => new(superseded, SyncUrgency.Immediate),
+            SessionOperation.SpaceRemove => new(explicitDelete, SyncUrgency.WithSave),
+            SessionOperation.SpaceDeletionBegin or SessionOperation.WorkspaceImport or SessionOperation.TabTransfer =>
+                new(superseded, SyncUrgency.WithSave),
+            SessionOperation.TabsBatch => new(Enum.TryParse<TabBatchKind>(request["arguments"]?["kind"]?.GetValue<string>(), out var kind)
+                && kind == TabBatchKind.Delete ? explicitDelete : superseded, SyncUrgency.WithSave),
+            SessionOperation.LaunchPlan or SessionOperation.SpaceResetPrivate => null,
+            _ => new(superseded, SyncUrgency.Coalesced)
+        };
+    }
 
     #endregion
 

@@ -50,25 +50,32 @@ public static unsafe partial class Exports {
         try { owner.AttachSync(value); return CoreStatus.Ok; } catch (Exception error) { return SyncJournalError(error); }
     }
 
-    [UnmanagedCallersOnly(EntryPoint = "crest_sync_authority_advance", CallConvs = [typeof(CallConvCdecl)])]
-    public static int SyncAuthorityAdvance(ulong handle, ulong revision) {
+    [UnmanagedCallersOnly(EntryPoint = "crest_sync_authority_version", CallConvs = [typeof(CallConvCdecl)])]
+    public static int SyncAuthorityVersion(ulong handle, ulong* version) {
+        if (version == null) return CoreStatus.InvalidArgument;
+        *version = 0;
         if (!SyncAuthorities.TryGetValue(handle, out var owner)) return CoreStatus.InvalidHandle;
-        owner.Advance(revision); return CoreStatus.Ok;
+        *version = owner.Version; return CoreStatus.Ok;
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "crest_sync_authority_flush", CallConvs = [typeof(CallConvCdecl)])]
+    public static int SyncAuthorityFlush(ulong handle) {
+        if (!SyncAuthorities.TryGetValue(handle, out var owner)) return CoreStatus.InvalidHandle;
+        owner.Flush(); return CoreStatus.Ok;
     }
 
     [UnmanagedCallersOnly(EntryPoint = "crest_sync_authority_prepare", CallConvs = [typeof(CallConvCdecl)])]
-    public static int SyncAuthorityPrepare(ulong handle, int hasRevision, ulong revision, byte* input, nuint count,
+    public static int SyncAuthorityPrepare(ulong handle, byte* input, nuint count,
         ulong* transaction, ulong* journal, ulong* query) {
         if (transaction == null || journal == null || query == null) return CoreStatus.InvalidArgument;
         *transaction = 0; *journal = 0; *query = 0;
-        if (input == null || count == 0 || hasRevision is < 0 or > 1) return CoreStatus.InvalidArgument;
+        if (input == null || count == 0) return CoreStatus.InvalidArgument;
         if (count > NativeSyncJournal.MaximumBytes) return CoreStatus.LimitExceeded;
         if (!SyncAuthorities.TryGetValue(handle, out var owner)) return CoreStatus.InvalidHandle;
         NativeSyncTransaction? value = null;
         ulong transactionId = 0, journalId = 0, queryId = 0;
         try {
-            value = owner.Prepare(hasRevision == 1 ? revision : null, new(input, (int)count));
-            if (value is null) return CoreStatus.Ok; // Superseded local snapshot.
+            value = owner.Prepare(new(input, (int)count));
             transactionId = checked((ulong)Interlocked.Increment(ref nextHandle));
             journalId = checked((ulong)Interlocked.Increment(ref nextHandle));
             if (!SyncTransactions.TryAdd(transactionId, value) || !SyncJournals.TryAdd(journalId, value.Journal))
@@ -96,10 +103,13 @@ public static unsafe partial class Exports {
     }
 
     [UnmanagedCallersOnly(EntryPoint = "crest_sync_transaction_commit", CallConvs = [typeof(CallConvCdecl)])]
-    public static int SyncTransactionCommit(ulong handle) {
+    public static int SyncTransactionCommit(ulong handle, ulong* version) {
+        if (version == null) return CoreStatus.InvalidArgument;
+        *version = 0;
         if (!SyncTransactions.TryGetValue(handle, out var value)) return CoreStatus.InvalidHandle;
         try {
             value.CommitDurably();
+            *version = value.Version;
             return CoreStatus.Ok;
         } catch (StorageException) {
             return CoreStatus.StorageFailed;
