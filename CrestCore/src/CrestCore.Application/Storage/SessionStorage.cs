@@ -245,8 +245,11 @@ internal sealed class SessionStorage : IDisposable {
                 if (!pendingIsNew) return;
                 pendingIsNew = false;
             }
-            Announce(WriteBehind());
+            // The window records a revision moved are queued just after it, so a
+            // revision is announced as saved once they are written too.
+            var saved = WriteBehind();
             Announce(WriteDeviceBehind());
+            Announce(saved);
         }
     }
 

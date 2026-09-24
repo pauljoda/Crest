@@ -9,12 +9,11 @@ import Foundation
 struct BrowserCoreStoredSession {
     // MARK: - Types
 
-    /// The core's answer: the session as loaded and repaired, where each
-    /// repaired tab came from, and the selection an older release stored.
+    /// The core's answer: the session as loaded and repaired, and where each
+    /// repaired tab came from.
     private struct Projection: Decodable {
         let session: BrowserSession
         let assets: [Origin]
-        let legacySelection: BrowserLegacySessionSelection?
     }
 
     private struct Origin: Decodable {
@@ -36,9 +35,6 @@ struct BrowserCoreStoredSession {
 
     let authority: BrowserCoreSessionAuthority
     let sync: BrowserCoreSyncAuthority
-    /// The selection an older release stored in the session the core loaded or
-    /// carried, for the first window that has no record of its own.
-    let legacySelection: BrowserLegacySessionSelection?
 
     // MARK: - Initializers
 
@@ -82,7 +78,6 @@ struct BrowserCoreStoredSession {
         authority = BrowserCoreSessionAuthority(
             adopting: handles.session, revision: handles.revision, projection: session)
         self.sync = sync
-        legacySelection = projection.legacySelection
     }
 
     // MARK: - Actions - Reading

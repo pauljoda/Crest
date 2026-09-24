@@ -9,8 +9,7 @@ final class BrowserCommandPaletteActionPolicyTests: XCTestCase {
         let source = makeSpace(index: 1)
         let target = try assignment(for: source)
         let other = makeSpace(index: 2)
-        let browser = makeBrowser(
-            spaces: [source, other], selection: BrowserStoreSelection(selectedSpaceID: source.id))
+        let browser = makeBrowser(spaces: [source, other], showing: source.id)
         var selectionCount = 0
         let actions = BrowserEmptySelectionPaletteActions(
             source: BrowserSpaceRuntimeAssignment(space: source), browser: browser,
@@ -20,16 +19,16 @@ final class BrowserCommandPaletteActionPolicyTests: XCTestCase {
 
         func assertUnavailable(line: UInt = #line) {
             let session = browser.session
-            let selection = browser.selection
+            let window = browser.window
             XCTAssertFalse(actions.isAvailable, line: line)
             XCTAssertFalse(actions.selectTab(target), line: line)
             XCTAssertFalse(actions.openURL(URL(string: "about:blank")!), line: line)
             XCTAssertEqual(browser.session, session, line: line)
-            XCTAssertEqual(browser.selection, selection, line: line)
+            XCTAssertEqual(browser.window, window, line: line)
         }
 
         // The window chose a tab in the source Space.
-        browser.presentTab(target.tabID, in: source.id)
+        browser.activateSessionTab(target.tabID, in: source.id)
         assertUnavailable()
         browser.clearPresentedTabSelection(in: source.id)
         XCTAssertTrue(actions.isAvailable)
@@ -59,9 +58,7 @@ final class BrowserCommandPaletteActionPolicyTests: XCTestCase {
         let destination = makeSpace(index: 2)
         let sourceAssignment = try assignment(for: source)
         let browser = makeBrowser(
-            spaces: [source, destination],
-            selection: BrowserStoreSelection(
-                selectedSpaceID: source.id, selectedTabIDsBySpace: [source.id: sourceAssignment.tabID]))
+            spaces: [source, destination], showing: source.id, tabs: [source.id: sourceAssignment.tabID])
         let access = BrowserSpaceAccessController()
         let destinationAssignment = try assignment(for: destination)
 
@@ -122,11 +119,13 @@ final class BrowserCommandPaletteActionPolicyTests: XCTestCase {
 
     private func makeBrowser(
         spaces: [BrowserSpace],
-        selection: BrowserStoreSelection
+        showing spaceID: SpaceID,
+        tabs: [SpaceID: TabID] = [:]
     ) -> BrowserStore {
         BrowserStore(
             session: BrowserSession(spaces: spaces),
-            selection: selection,
+            showing: spaceID,
+            tabs: tabs,
             browsingMode: .privateBrowsing
         )
     }

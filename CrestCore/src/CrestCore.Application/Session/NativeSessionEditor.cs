@@ -30,8 +30,8 @@ internal static class NativeSessionEditor {
 
     #region Actions - Session editing
 
-    /// Edits `space` for `operation`. The viewed tab decides follow-up hints only;
-    /// the result reports the tab the window should show next and nothing stores it.
+    /// Edits `space` for `operation`. The tab the issuing window shows decides
+    /// only what that window shows next, which the result reports.
     public static SessionEditResult Evaluate(SessionOperation operation, SpaceState space, SessionEditArguments args,
         DateTimeOffset now, Guid? viewedTabId) {
         var edited = BrowserTabCollection.Restore(space);
@@ -74,12 +74,6 @@ internal static class NativeSessionEditor {
                     if (args.Select == true) { selected = tab.Id; selectSpace = true; }
                     break;
                 }
-            case SessionOperation.TabTouch:
-                // Records when the person last looked at a tab, which drives
-                // cleanup. Showing it is the window's own selection change.
-                var touchedTabId = args.RequiredTabId;
-                edited.Tab(touchedTabId).Activate(now); result = touchedTabId;
-                break;
             case SessionOperation.TabCopy: {
                     var source = args.RequiredTabId;
                     var copy = edited.DuplicateTab(source, new SuppliedIds(args.RequiredIds), now,

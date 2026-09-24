@@ -22,7 +22,7 @@ struct MobileBrowserWindowScene: View {
         pageStoreRegistry: MobileBrowserPageStoreRegistry,
         spaceAccess: BrowserSpaceAccessController,
         tabStateArchive: (any BrowserTabStateArchiving)?,
-        windowStatePersistence: any BrowserWindowStatePersisting,
+        windowLayouts: BrowserWindowLayouts,
         startupBehavior: BrowserStartupBehavior,
         monitorsMemoryPressure: Bool,
         usesEphemeralWebsiteDataStores: Bool,
@@ -46,7 +46,7 @@ struct MobileBrowserWindowScene: View {
                 pageStoreRegistry: pageStoreRegistry,
                 spaceAccess: spaceAccess,
                 tabStateArchive: tabStateArchive,
-                windowStatePersistence: windowStatePersistence,
+                windowLayouts: windowLayouts,
                 startupBehavior: startupBehavior,
                 monitorsMemoryPressure: monitorsMemoryPressure,
                 usesEphemeralWebsiteDataStores: usesEphemeralWebsiteDataStores,
@@ -74,6 +74,7 @@ struct MobileBrowserWindowScene: View {
     var body: some View {
         sceneSurface
             .modifier(BrowserChromeAppearancePersistence())
+            .environment(model.browser.core)
             .environment(\.browserInteractionCapabilities, BrowserInteractionCapabilities(supportsTouch: true))
             .accessibilityElement(children: .contain)
             .accessibilityIdentifier(
@@ -105,9 +106,6 @@ struct MobileBrowserWindowScene: View {
                 )
             ) { _ in
                 model.handleMemoryPressure()
-            }
-            .onChange(of: model.browser.selection) {
-                model.captureWindowSelection()
             }
             .onChange(of: scenePhase, initial: true) { _, phase in
                 switch phase {

@@ -56,7 +56,7 @@ final class MobileTransientBrowsingTests: XCTestCase {
         let work = try XCTUnwrap(session.spaces.first)
         let pages = MobileBrowserPageStore(usesEphemeralWebsiteDataStores: true)
         let url = try XCTUnwrap(URL(string: "about:blank"))
-        pages.select(session: BrowserPresentedSession(session: session, selection: BrowserStoreSelection(launching: session)))
+        pages.select(session: BrowserStore(session: session).presented)
         let lease = try XCTUnwrap(
             pages.makeTransientPageLease(url: url, in: work)
         )
@@ -99,7 +99,7 @@ final class MobileTransientBrowsingTests: XCTestCase {
         let source = try XCTUnwrap(browser.session.spaces.first)
         let destination = try XCTUnwrap(browser.session.spaces.last)
         let tab = try XCTUnwrap(source.currentTabs.first)
-        browser.presentTab(tab.id, in: source.id)
+        browser.activateSessionTab(tab.id, in: source.id)
         let pages = MobileBrowserPageStore(usesEphemeralWebsiteDataStores: true)
 
         pages.select(session: browser.presented)
@@ -110,7 +110,7 @@ final class MobileTransientBrowsingTests: XCTestCase {
             browser.moveTab(tab.id, from: source.id, into: destination.id)
         )
         pages.reconcile(session: browser.session)
-        browser.presentTab(tab.id, in: destination.id)
+        browser.activateSessionTab(tab.id, in: destination.id)
         pages.select(session: browser.presented)
 
         let destinationPage = try XCTUnwrap(pages.activePage)

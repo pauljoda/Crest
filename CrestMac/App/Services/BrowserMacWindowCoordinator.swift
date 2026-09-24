@@ -14,7 +14,7 @@ final class BrowserMacWindowCoordinator {
     let browser: BrowserStore
     private let pages: BrowserPagePool
     let spaceAccess: BrowserSpaceAccessController
-    private let windowStatePersistence: any BrowserWindowStatePersisting
+    private let windowLayouts: BrowserWindowLayouts
     @ObservationIgnored private var windows: [BrowserWindowID: BrowserMacWindowModel] = [:]
     @ObservationIgnored private var canceledTransfers: Set<BrowserWindowID> = []
     @ObservationIgnored private var pendingTransfers: [BrowserWindowID: PendingTransfer] = [:]
@@ -22,12 +22,12 @@ final class BrowserMacWindowCoordinator {
 
     init(
         browser: BrowserStore, pages: BrowserPagePool, spaceAccess: BrowserSpaceAccessController,
-        windowStatePersistence: any BrowserWindowStatePersisting
+        windowLayouts: BrowserWindowLayouts
     ) {
         self.browser = browser
         self.pages = pages
         self.spaceAccess = spaceAccess
-        self.windowStatePersistence = windowStatePersistence
+        self.windowLayouts = windowLayouts
     }
 
     func existingModel(for id: BrowserWindowID) -> BrowserMacWindowModel? { windows[id] }
@@ -77,15 +77,17 @@ final class BrowserMacWindowCoordinator {
         let state: BrowserWindowStateStore
         if request.kind == .temporary {
             guard let assignment = request.sourceAssignment,
-                let temporary = browser.makeTemporaryWindowStore(in: assignment)
+                let temporary = browser.makeTemporaryWindowStore(in: assignment, id: request.id)
             else { return nil }
             windowBrowser = temporary
             state = BrowserWindowStateStore(
-                id: request.id, browser: temporary, persistence: InMemoryBrowserWindowStatePersistence())
+                id: request.id, browser: temporary, layouts: BrowserWindowLayouts(defaults: nil))
         } else {
-            state = BrowserWindowStateStore(
-                id: request.id, browser: source, persistence: windowStatePersistence)
-            windowBrowser = browser.makeWindowStore(restoring: state.state)
+            // A window without a record of its own starts as the window it was
+            // opened from shows.
+            windowBrowser = browser.makeWindowStore(
+                BrowserWindowOpening(id: request.id, saved: true, copying: source.windowID))
+            state = BrowserWindowStateStore(id: request.id, browser: windowBrowser, layouts: windowLayouts)
         }
         let transient = BrowserTransientBrowsingCoordinator()
         let windowPages = pages.makeWindowPool(
@@ -128,9 +130,11 @@ final class BrowserMacWindowCoordinator {
         if model.isTemporary {
             model.pages.closeWindowWorkspace()
             model.windowState.removePersistedState()
+            model.browser.family.temporarySettingsBrowser?.close()
         } else {
             model.pages.releaseWindowPresentation()
         }
+        model.browser.close()
     }
 
     func reconcileTemporaryWorkspaces() {
@@ -188,6 +192,8 @@ final class BrowserMacWindowCoordinator {
         guard let destination = windows.removeValue(forKey: id) else { return }
         destination.tearOffPlacement?.cancel()
         destination.pages.closeWindowWorkspace()
+        destination.browser.family.temporarySettingsBrowser?.close()
+        destination.browser.close()
         destination.window?.close()
     }
 
@@ -218,14 +224,15 @@ final class BrowserMacWindowCoordinator {
     }
 
     /// The core decides whether the dragged tab may leave its window: the
-    /// Space still matches and is unlocked, holds the tab, and the drag carries
-    /// that tab alone.
+    /// window still shows the Space with its profile and it is unlocked, holds
+    /// the tab, and the drag carries that tab alone. A Space this window is
+    /// deleting never lets a tab go.
     private func canTearOff(_ item: BrowserTabDragItem, from model: BrowserMacWindowModel) -> Bool {
-        let space = model.browser.space(matching: item.spaceAssignment)
-        return BrowserCorePolicy.allowsTearOff(
-            spaceMatches: space != nil, spaceLocked: space.map(spaceAccess.isLocked) ?? false,
-            containsTab: space?.tabs.contains(where: { $0.id == item.tabID }) == true,
-            selection: item.selection?.ids, tabID: item.tabID)
+        guard model.browser.space(matching: item.spaceAssignment) != nil else { return false }
+        let question = CanTearOff(
+            windowID: model.browser.windowID.rawValue, spaceID: item.spaceID.rawValue, profileID: item.profileID,
+            tabID: item.tabID.rawValue, draggedTabs: item.selection?.ids.map(\.rawValue))
+        return (try? model.browser.core.query(question))?.allowed == true
     }
 
     private func transfer(

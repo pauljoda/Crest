@@ -254,36 +254,43 @@ file save before they return: sync commits with their journal, Space deletion,
 imports, batches, cross-Space moves and workspace transfers. The core publishes
 `Saved(revision)` and `StorageFailed(reason)` through its wake-and-drain path;
 quitting and backgrounding wait for `Saved`. Favicons stay in the native side
-store. Saved parts hold browsing data only; see "Selection is window state"
+store. Saved parts hold browsing data only; see "Windows belong to the device"
 below. Private, temporary and borrowed families stay in memory.
 
-### Selection is window state
+### Windows belong to the device
 
-Which Space a window shows and the tab it shows in each Space are UI state. The
-core session holds Spaces, tabs, order, folders, splits and `lastActivatedAt`
-timestamps, never what is on screen. `BrowserSession` and `BrowserSpace` carry no
-selection; each window's `BrowserStoreSelection` is the only copy, persisted in
-its `BrowserWindowState` record so relaunch returns to the same Space and tabs.
-Views and page pools read a window's `BrowserPresentedSession` (the core's data
-plus that window's selection), which is never encoded or sent to the core.
+Which Space a window shows and the tab it shows in each Space are the core
+device's window state, never part of the session. The session holds Spaces,
+tabs, order, folders, splits and `lastActivatedAt` timestamps. Every session a
+window may show is attached to the device (`crest_session_attach_device`),
+which answers its workspace identity. A window opens with `OpenWindow`, closes
+with `CloseWindow`, and changes what it shows with `ShowSpace`, `ShowTab`,
+`DismissShownTab` and `ResizeSplitColumns`; the core publishes `WindowChanged`
+and Swift renders each window from `CrestCore.state.windows`. Showing a tab
+records its `lastActivatedAt` as a revision of its own and publishes
+`TabActivated`, which the family's projection follows. The device also keeps
+each window's recently shown tabs, which choose the tab a dismissed one gives
+way to. The `CanTearOff` query decides whether a dragged tab may leave its
+window, and `FallbackTab` answers the tab a draft Space would show first.
 
-Commands send what the requesting window shows as read-only `view` context,
-because some rules need it (a close falls back from the shown tab; cleanup keeps
-the shown tab; a promotion inserts after it; a batch acts on the Space shown).
-Every answer carries a `selection` hint (`spaceId`, per-Space `tabId`) that only
-the issuing window applies; other windows reconcile their own selection against
-what still exists. Showing a tab sends `tab.touch`, which only records
-`lastActivatedAt`; showing a Space sends nothing. Launch cleanup runs the core's
-`records.sweep` with `keepTabIds`, the tabs every stored window record shows,
-before any window is on screen.
+Commands name the window that issued them (`windowId`), because some rules
+read what it shows (a close falls back from the shown tab; a promotion inserts
+after it; a batch acts on the Space shown). When a command commits, the device
+moves the issuing window to what the command chose and repairs every other
+window of that workspace against what still exists. Cleanup keeps every tab an
+open window shows and every tab a saved window's record shows.
 
-Older documents stored a session-level `selectedSpaceID` and per-Space
-`selectedTabID`. They still load: the core's stored-format codec
-(`StoredSessionCodec`) ignores the fields on the way in and never writes them,
-and the core answers them once with the session it loads or carries
-(`BrowserLegacySessionSelection`) so the first window without its own record
-adopts them; a record that predates captured Spaces folds them in and captures
-from then on. Sync never carried selection and still does not.
+Windows over the persistent session are saved in device tables beside the
+session in `session.sqlite`: the sixteen used last. They are never synced,
+and `user_version` does not change for them. Sidebar width
+and presentation stay the platform's (`BrowserWindowLayouts`). Older releases
+kept each window's record in `crest.windows.v1` and the viewed Space and tabs
+inside the session (`selectedSpaceID`, `selectedTabID`). Both still load:
+`AdoptWindowRecords` carries the records into the device store once, folding the
+session's legacy tabs into records written before windows remembered their
+Spaces; the stored-format codec ignores the legacy fields and never writes
+them, and a window without a record adopts them during the launch that loaded
+them. Sync never carried selection and still does not.
 
 ### Commands and value edits
 
@@ -550,9 +557,9 @@ projection and native assets; commands prepare against the core's current
 revision. The native caller decodes the projection before committing it. Durable
 commands reserve publication while the Apple storage adapter writes the matching
 session and sync journal. Failed storage releases the reservation without
-publishing a partial edit. Each window keeps its own selection when windows
-reconcile with the accepted family state; only the issuing window applies a
-command's selection hint.
+publishing a partial edit. The core's device moves the window that issued a
+command and repairs the others; each window reads what it shows from the
+core's state.
 
 The real WebKit composition uses `BrowserWebKitPageEngine` and the existing page
 pools. The Chromium composition implements those same native ports through

@@ -127,10 +127,7 @@ final class MobileBrowserSidebarUtilityCoordinatorTests: XCTestCase {
         )
         let browser = BrowserStore(
             session: BrowserSession(spaces: [source, destination]),
-            selection: BrowserStoreSelection(
-                selectedSpaceID: source.id,
-                selectedTabIDsBySpace: [source.id: selectedTab.id]
-            ),
+            showing: source.id, tabs: [source.id: selectedTab.id],
             browsingMode: .privateBrowsing
         )
         let pages = MobileBrowserPageStore(usesEphemeralWebsiteDataStores: true)

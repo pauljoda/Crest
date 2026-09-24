@@ -391,16 +391,7 @@
     "tabId": "11111111-1111-4111-8111-111111111111",
     "copies": [],
     "changed": true,
-    "favicon": null,
-    "selection": {
-      "spaceId": "6c1d5447-4e3d-46a7-9b60-e3b95d6c7848",
-      "tabs": [
-        {
-          "spaceId": "6c1d5447-4e3d-46a7-9b60-e3b95d6c7848",
-          "tabId": "11111111-1111-4111-8111-111111111111"
-        }
-      ]
-    }
+    "favicon": null
   },
   "tab.close": {
     "space": {
@@ -799,16 +790,7 @@
     "tabId": null,
     "copies": [],
     "changed": true,
-    "favicon": null,
-    "selection": {
-      "spaceId": null,
-      "tabs": [
-        {
-          "spaceId": "6c1d5447-4e3d-46a7-9b60-e3b95d6c7848",
-          "tabId": "056f15c0-13ce-4ed0-b9fe-dd4a9d05a56d"
-        }
-      ]
-    }
+    "favicon": null
   },
   "folder.create": {
     "space": {
@@ -1203,11 +1185,7 @@
     "tabId": null,
     "copies": [],
     "changed": true,
-    "favicon": null,
-    "selection": {
-      "spaceId": null,
-      "tabs": []
-    }
+    "favicon": null
   },
   "split.join": {
     "space": {
@@ -1637,16 +1615,7 @@
       }
     ],
     "changed": true,
-    "favicon": null,
-    "selection": {
-      "spaceId": "6c1d5447-4e3d-46a7-9b60-e3b95d6c7848",
-      "tabs": [
-        {
-          "spaceId": "6c1d5447-4e3d-46a7-9b60-e3b95d6c7848",
-          "tabId": "33333333-3333-4333-8333-333333333333"
-        }
-      ]
-    }
+    "favicon": null
   },
   "split.title": {
     "changes": [
@@ -1672,11 +1641,7 @@
           }
         ]
       }
-    ],
-    "selection": {
-      "spaceId": null,
-      "tabs": []
-    }
+    ]
   },
   "split.tint": {
     "changes": [
@@ -1702,11 +1667,7 @@
           }
         ]
       }
-    ],
-    "selection": {
-      "spaceId": null,
-      "tabs": []
-    }
+    ]
   },
   "history.visit": {
     "changes": [
@@ -1723,11 +1684,7 @@
           "url": "https://news.example/article/42"
         }
       }
-    ],
-    "selection": {
-      "spaceId": null,
-      "tabs": []
-    }
+    ]
   },
   "archive.restore": {
     "changes": [
@@ -2184,28 +2141,10 @@
           "tabId": "fda1db22-5eee-4001-b553-5208f01b5c65",
           "copies": [],
           "changed": true,
-          "favicon": null,
-          "selection": {
-            "spaceId": null,
-            "tabs": [
-              {
-                "spaceId": "6c1d5447-4e3d-46a7-9b60-e3b95d6c7848",
-                "tabId": "fda1db22-5eee-4001-b553-5208f01b5c65"
-              }
-            ]
-          }
+          "favicon": null
         }
       }
-    ],
-    "selection": {
-      "spaceId": null,
-      "tabs": [
-        {
-          "spaceId": "6c1d5447-4e3d-46a7-9b60-e3b95d6c7848",
-          "tabId": "fda1db22-5eee-4001-b553-5208f01b5c65"
-        }
-      ]
-    }
+    ]
   },
   "tab.transfer": {
     "source": {
@@ -2755,10 +2694,6 @@
       "folders": [],
       "history": [],
       "archivedTabs": []
-    },
-    "selection": {
-      "spaceId": null,
-      "tabs": []
     }
   },
   "space.identity": {
@@ -3138,10 +3073,6 @@
           "archivedTabs": []
         }
       ]
-    },
-    "selection": {
-      "spaceId": null,
-      "tabs": []
     }
   },
   "space.saved_expansion": {
@@ -3521,10 +3452,6 @@
           "archivedTabs": []
         }
       ]
-    },
-    "selection": {
-      "spaceId": null,
-      "tabs": []
     }
   },
   "space.browsing_preferences": {
@@ -3904,10 +3831,6 @@
           "archivedTabs": []
         }
       ]
-    },
-    "selection": {
-      "spaceId": null,
-      "tabs": []
     }
   },
   "space.branding": {
@@ -4290,10 +4213,6 @@
           "archivedTabs": []
         }
       ]
-    },
-    "selection": {
-      "spaceId": null,
-      "tabs": []
     }
   },
   "space.credential_preferences": {
@@ -4676,10 +4595,6 @@
           "archivedTabs": []
         }
       ]
-    },
-    "selection": {
-      "spaceId": null,
-      "tabs": []
     }
   },
   "space.access": {
@@ -5062,10 +4977,6 @@
           "archivedTabs": []
         }
       ]
-    },
-    "selection": {
-      "spaceId": null,
-      "tabs": []
     }
   },
   "space.default": {
@@ -5448,10 +5359,6 @@
           "archivedTabs": []
         }
       ]
-    },
-    "selection": {
-      "spaceId": null,
-      "tabs": []
     }
   },
   "records.sweep": {
@@ -5885,11 +5792,7 @@
           "tabId": null,
           "copies": [],
           "changed": true,
-          "favicon": null,
-          "selection": {
-            "spaceId": null,
-            "tabs": []
-          }
+          "favicon": null
         },
         "removedHistory": [
           "c75426b1-c343-4227-9157-76059184ed63"
@@ -5902,11 +5805,7 @@
           4
         ]
       }
-    ],
-    "selection": {
-      "spaceId": null,
-      "tabs": []
-    }
+    ]
   },
   "preferences.set": {
     "preferences": {
@@ -6318,10 +6217,6 @@
           "archivedTabs": []
         }
       ]
-    },
-    "selection": {
-      "spaceId": null,
-      "tabs": []
     }
   },
   "space.search_provider.upsert.second": {
@@ -6716,10 +6611,6 @@
           "archivedTabs": []
         }
       ]
-    },
-    "selection": {
-      "spaceId": null,
-      "tabs": []
     }
   },
   "space.search_provider.remove": {
@@ -7109,10 +7000,6 @@
           "archivedTabs": []
         }
       ]
-    },
-    "selection": {
-      "spaceId": null,
-      "tabs": []
     }
   },
   "preferences.translation_rule": {
@@ -7624,10 +7511,6 @@
           "archivedTabs": []
         }
       ]
-    },
-    "selection": {
-      "spaceId": null,
-      "tabs": []
     }
   },
   "space.create": {
@@ -8121,15 +8004,6 @@
           "archivedTabs": []
         }
       ]
-    },
-    "selection": {
-      "spaceId": "66666666-6666-4666-8666-666666666666",
-      "tabs": [
-        {
-          "spaceId": "66666666-6666-4666-8666-666666666666",
-          "tabId": "68686868-6868-4868-8868-686868686868"
-        }
-      ]
     }
   },
   "space.deletion.begin": {
@@ -8619,10 +8493,6 @@
           "archivedTabs": []
         }
       ]
-    },
-    "selection": {
-      "spaceId": null,
-      "tabs": []
     }
   },
   "space.remove": {
@@ -9006,10 +8876,6 @@
           "archivedTabs": []
         }
       ]
-    },
-    "selection": {
-      "spaceId": null,
-      "tabs": []
     }
   },
   "workspace.import": {
@@ -9897,16 +9763,7 @@
         "sourceSpaceIndex": 0,
         "sourceTabIndex": 0
       }
-    ],
-    "selection": {
-      "spaceId": "77777777-7777-4777-8777-777777777777",
-      "tabs": [
-        {
-          "spaceId": "77777777-7777-4777-8777-777777777777",
-          "tabId": "99999999-9999-4999-8999-999999999999"
-        }
-      ]
-    }
+    ]
   },
   "checkpoint.core": {
     "defaultSpaceID": {

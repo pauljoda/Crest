@@ -101,9 +101,7 @@ public sealed partial class NativeSessionAuthority {
             reserved.Dispose();
             throw;
         }
-        var revision = reserved.Commit();
-        Published(reserved.Session, reserved.FollowUp);
-        return revision;
+        return reserved.Commit();
     }
 
     internal NativeSessionReplacement ReserveCommand(NativeSessionCommand command) {

@@ -564,7 +564,8 @@ final class MobileBrowserInteropTests: XCTestCase {
         let space = makePopupSpace()
         let store = BrowserStore(
             session: BrowserSession(spaces: [space]),
-            selection: selection(showing: space.id, in: [space])
+            showing: space.id,
+            tabs: shownTabs(in: [space])
         )
         let pages = MobileBrowserPageStore(
             popupTabHost: store.popupTabHost,
@@ -1076,7 +1077,7 @@ final class MobileBrowserInteropTests: XCTestCase {
         pages.select(session: session)
         try await load(url, in: try XCTUnwrap(pages.activePage))
         pages.unloadPage(for: openTab.id)
-        session = presented(session.spaces, showing: protectedSpace.id, tabs: session.selection.tabSelections)
+        session = presented(session.spaces, showing: protectedSpace.id, tabs: shownTabs(of: session))
         pages.select(session: session)
         try await load(url, in: try XCTUnwrap(pages.activePage))
         // The unload that leaves the residue: the page is gone from memory
@@ -1121,7 +1122,7 @@ final class MobileBrowserInteropTests: XCTestCase {
         let pages = MobileBrowserPageStore()
 
         pages.select(session: session)
-        session = presented(session.spaces, showing: protectedSpace.id, tabs: session.selection.tabSelections)
+        session = presented(session.spaces, showing: protectedSpace.id, tabs: shownTabs(of: session))
         pages.select(session: session)
         let secretPage = try XCTUnwrap(pages.activePage)
         XCTAssertTrue(pages.containsResidentPage(for: secret.id))
@@ -1135,7 +1136,7 @@ final class MobileBrowserInteropTests: XCTestCase {
 
         pages.select(session: session)
         XCTAssertTrue(pages.activePage === secretPage)
-        session = presented(session.spaces, showing: openSpace.id, tabs: session.selection.tabSelections)
+        session = presented(session.spaces, showing: openSpace.id, tabs: shownTabs(of: session))
         pages.select(session: session)
         let openPage = pages.activePage
         pages.relockProtectedSpace(protectedSpace)
@@ -1189,7 +1190,7 @@ final class MobileBrowserInteropTests: XCTestCase {
         XCTAssertGreaterThan(scroll, 0)
         var spaces = session.spaces
         spaces[0].tabs[0].url = secondURL
-        session = presented(spaces, showing: space.id, tabs: session.selection.tabSelections)
+        session = presented(spaces, showing: space.id, tabs: shownTabs(of: session))
 
         for _ in 0..<3 {
             pages.relockProtectedSpace(space)
@@ -1364,24 +1365,35 @@ final class MobileBrowserInteropTests: XCTestCase {
         return BrowserTabStateArchive(rootDirectory: root)
     }
 
-    /// A window's view of `spaces`: selection is window state, so fixtures pass
-    /// it beside the session. Spaces without a chosen tab show their fallback.
+    /// A window's view of `spaces`: what it shows is window state, so fixtures
+    /// pass it beside the session. Spaces without a chosen tab show their
+    /// fallback.
     private func presented(
         _ spaces: [BrowserSpace], showing spaceID: SpaceID, tabs: [SpaceID: TabID] = [:]
     ) -> BrowserPresentedSession {
         BrowserPresentedSession(
             session: BrowserSession(spaces: spaces),
-            selection: selection(showing: spaceID, in: spaces, tabs: tabs))
+            window: .preview(showing: spaceID, tabs: shownTabs(in: spaces, tabs: tabs)))
     }
 
-    private func selection(
-        showing spaceID: SpaceID, in spaces: [BrowserSpace], tabs: [SpaceID: TabID] = [:]
-    ) -> BrowserStoreSelection {
+    /// The tab each of `spaces` shows: the one `tabs` names, else the Space's
+    /// fallback by the core's rule.
+    private func shownTabs(in spaces: [BrowserSpace], tabs: [SpaceID: TabID] = [:]) -> [SpaceID: TabID] {
+        let core = CrestCore()
         var chosen = tabs
         for space in spaces where chosen[space.id] == nil {
-            chosen[space.id] = BrowserStoreSelection.fallbackTabID(in: space)
+            chosen[space.id] = core.fallbackTabID(in: space)
         }
-        return BrowserStoreSelection(selectedSpaceID: spaceID, selectedTabIDsBySpace: chosen)
+        return chosen
+    }
+
+    /// The tab `session` shows in each of its Spaces that shows one.
+    private func shownTabs(of session: BrowserPresentedSession) -> [SpaceID: TabID] {
+        var shown: [SpaceID: TabID] = [:]
+        for space in session.spaces {
+            shown[space.id] = session.selectedTabID(in: space.id)
+        }
+        return shown
     }
 
     private func makeStateSpace(
@@ -1409,7 +1421,8 @@ final class MobileBrowserInteropTests: XCTestCase {
         let space = makePopupSpace()
         let store = BrowserStore(
             session: BrowserSession(spaces: [space]),
-            selection: selection(showing: space.id, in: [space])
+            showing: space.id,
+            tabs: shownTabs(in: [space])
         )
         let pages = MobileBrowserPageStore(
             browsingMode: browsingMode,

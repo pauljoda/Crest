@@ -124,9 +124,6 @@ struct BrowserMacWindowScene: View {
                 pages.downloadCenter.sweepExpiredRecords(using: browser.session)
             }
         }
-        .onChange(of: browser.selection) {
-            windowState.captureSelection(of: browser)
-        }
         .onChange(of: chrome.columnVisibility, initial: true) { _, visibility in
             windowState.captureSidebar(
                 isPresented: visibility != .detailOnly
@@ -205,7 +202,6 @@ struct BrowserMacWindowScene: View {
         pages.archiveResidentTabStates()
         Task {
             await browser.flushPendingSyncPersistence()
-            await windowState.flushPendingPersistence()
             await pages.flushPendingTabStateWrites()
         }
     }

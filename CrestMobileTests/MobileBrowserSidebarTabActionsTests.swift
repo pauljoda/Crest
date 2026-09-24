@@ -82,7 +82,7 @@ final class MobileBrowserSidebarTabActionsTests: XCTestCase {
         return Context(
             browser: BrowserStore(
                 session: BrowserSession(spaces: [space]),
-                selection: BrowserStoreSelection(selectedSpaceID: space.id, selectedTabIDsBySpace: [space.id: tab.id]),
+                showing: space.id, tabs: [space.id: tab.id],
                 browsingMode: .privateBrowsing
             ),
             pages: MobileBrowserPageStore(usesEphemeralWebsiteDataStores: true),

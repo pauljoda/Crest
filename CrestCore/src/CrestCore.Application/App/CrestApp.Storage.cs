@@ -9,8 +9,6 @@ namespace CrestCore.Application;
 public sealed partial class CrestApp {
     #region Variables
 
-    private const string LegacySelectionField = "legacySelection";
-
     private readonly SessionStorage? storage;
     private byte[]? launchProjection;
 
@@ -26,9 +24,8 @@ public sealed partial class CrestApp {
     #region Actions - Stored session
 
     /// TRANSITIONAL until session intents land: the session as it was loaded
-    /// and repaired, `{"session", "assets", "legacySelection"}`, read with the
-    /// command API. `assets` names the tab each repaired tab's native images
-    /// came from; `legacySelection` is the selection an older release stored.
+    /// and repaired, `{"session", "assets"}`, read with the command API.
+    /// `assets` names the tab each repaired tab's native images came from.
     public NativeSessionCommand? SessionProjection() {
         lock (gate) return Session is { } session && launchProjection is { } bytes ? session.Projection(bytes) : null;
     }
@@ -87,9 +84,7 @@ public sealed partial class CrestApp {
         var sync = new NativeSyncAuthority(journal ?? NativeSyncJournal.Fresh(Guid.NewGuid()));
         var session = new NativeSessionAuthority(repaired, target);
         session.AttachSync(sync);
-        var projection = NativeSessionMaintenance.Answer(repaired, origins);
-        if (legacySelection is not null) projection[LegacySelectionField] = legacySelection;
-        launchProjection = Encoding.UTF8.GetBytes(projection.ToJsonString());
+        launchProjection = Encoding.UTF8.GetBytes(NativeSessionMaintenance.Answer(repaired, origins).ToJsonString());
         Session = session;
         SessionSync = sync;
         device.AttachPersistent(session, legacySelection);

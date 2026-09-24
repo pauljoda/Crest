@@ -192,9 +192,7 @@ final class BrowserTabMultiSelectionTests: XCTestCase {
                 preferences.followsTabsMovedToAnotherSpace = follows
                 let browser = BrowserStore(
                     session: session,
-                    selection: BrowserStoreSelection(
-                        selectedSpaceID: source.id,
-                        selectedTabIDsBySpace: [source.id: source.tabs[0].id, destination.id: destination.tabs[0].id]),
+                    showing: source.id, tabs: [source.id: source.tabs[0].id, destination.id: destination.tabs[0].id],
                     browsingMode: mode, linkPreferences: preferences)
                 let initialRevision = browser.family.syncRevision
                 let ids = [source.tabs[2].id, source.tabs[0].id]
@@ -635,16 +633,10 @@ final class BrowserTabMultiSelectionTests: XCTestCase {
         preferences.followsTabsMovedToAnotherSpace = false
         let spaceID = session.spaces[0].id
         let shown = tabs.isEmpty ? session.spaces[0].tabs.first.map { [spaceID: $0.id] } ?? [:] : tabs
-        let selection = BrowserStoreSelection(selectedSpaceID: spaceID, selectedTabIDsBySpace: shown)
-        let browser = BrowserStore(
-            session: session, selection: selection,
-            linkPreferences: preferences)
-        if let fallbackTabID {
-            var previous = selection
-            previous.selectTab(fallbackTabID, in: spaceID)
-            browser.tabSelectionHistory = BrowserTabSelectionHistory(session: session, selection: previous)
-            browser.tabSelectionHistory.reconcile(session: session, selection: selection)
-        }
+        var opening = shown
+        if let fallbackTabID { opening[spaceID] = fallbackTabID }
+        let browser = BrowserStore(session: session, showing: spaceID, tabs: opening, linkPreferences: preferences)
+        if fallbackTabID != nil, let shownTab = shown[spaceID] { browser.activateSessionTab(shownTab, in: spaceID) }
         return browser
     }
 

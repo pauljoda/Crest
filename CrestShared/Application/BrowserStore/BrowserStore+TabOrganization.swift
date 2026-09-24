@@ -250,13 +250,6 @@ extension BrowserStore {
         before destinationTabID: TabID? = nil
     ) -> Bool {
         guard let source = session.space(id: sourceSpaceID) else { return false }
-        var history = tabSelectionHistory
-        let fallbackID =
-            selectedTabID(in: source.id) == id
-            ? history.fallbackTabID(
-                afterDismissing: id, in: sourceSpaceID,
-                availableTabIDs: Set(source.tabs.map(\.id)))
-            : nil
         guard let destination = session.space(id: destinationSpaceID) else { return false }
         let follows = linkPreferences.followsTabsMovedToAnotherSpace
         do {
@@ -264,13 +257,12 @@ extension BrowserStore {
                 destination: BrowserSpaceRuntimeAssignment(space: destination),
                 arguments: BrowserCoreTabTransfer.Arguments(
                     tabID: id, placement: placement, folderID: folderID,
-                    before: destinationTabID, fallback: fallbackID, selecting: follows), from: self, at: .now)
+                    before: destinationTabID, selecting: follows), from: self, at: .now)
         } catch { localSyncErrorDescription = "Core tab move failed: \(error)"; return false }
         if follows {
             pendingMovedTabActivation = BrowserTabRuntimeAssignment(
                 tabID: id, spaceID: destination.id, profileID: destination.profile.id)
         }
-        tabSelectionHistory = history
         return true
     }
 
@@ -714,8 +706,8 @@ extension BrowserStore {
         return space
     }
 
-    /// Shows another Space in this window. Selection is window state, so
-    /// nothing is sent to the core or saved with the session.
+    /// Shows another Space in this window. What a window shows is the core
+    /// device's, and never part of the session.
     func selectSpace(_ id: SpaceID) {
         guard id != selectedSpaceID,
             !deletingSpaceIDs.contains(id),
@@ -751,19 +743,12 @@ extension BrowserStore {
         stageSync(urgency: .coalesced)
     }
 
-    @discardableResult
-    func selectDismissalFallback(afterDismissing id: TabID) -> TabID? {
-        guard let space = selectedSpace else { return nil }
-        let fallbackID = dismissalFallbackTabID(
-            afterDismissing: id,
-            in: space
-        )
-        if let fallbackID, activateSessionTab(fallbackID, in: space.id) {
-            stageSync(urgency: .coalesced)
-        } else {
-            clearPresentedTabSelection(in: space.id)
-        }
-        return fallbackID
+    /// Stops showing a tab without closing it: the window returns to the tab
+    /// it showed before in the shown Space, or shows nothing there.
+    func selectDismissalFallback(afterDismissing id: TabID) {
+        guard let space = selectedSpace else { return }
+        dismissShownTab(id, in: space.id)
+        if selectedTabID(in: space.id) != nil { stageSync(urgency: .coalesced) }
     }
 
     @discardableResult
@@ -780,16 +765,5 @@ extension BrowserStore {
         let nextID = tabs[wrappedIndex].id
         selectTab(nextID)
         return nextID
-    }
-
-    func dismissalFallbackTabID(
-        afterDismissing id: TabID,
-        in space: BrowserSpace
-    ) -> TabID? {
-        tabSelectionHistory.fallbackTabID(
-            afterDismissing: id,
-            in: space.id,
-            availableTabIDs: Set(space.tabs.map(\.id))
-        )
     }
 }

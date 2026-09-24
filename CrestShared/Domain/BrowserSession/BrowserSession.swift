@@ -1,8 +1,8 @@
 import Foundation
 
 /// The browsing data the core owns, as the native read projection. Which Space
-/// and tab a window shows is window state (`BrowserStoreSelection`), never part
-/// of the session.
+/// and tab a window shows is the core device's window state, never part of the
+/// session.
 struct BrowserSession: Codable, Equatable, Sendable {
     var spaces: [BrowserSpace]
     var defaultSpaceID: SpaceID? = nil

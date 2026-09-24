@@ -92,7 +92,7 @@ struct MobileBrowserPreviewFixture {
                 )
             ),
             browser: browser,
-            persistence: InMemoryBrowserWindowStatePersistence()
+            layouts: BrowserWindowLayouts(defaults: nil)
         )
         windowState.captureSidebar(
             width: Double(MobileBrowserRootLayout.defaultRegularSidebarWidth),

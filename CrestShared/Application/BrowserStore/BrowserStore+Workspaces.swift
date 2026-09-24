@@ -3,16 +3,17 @@ import Foundation
 extension BrowserStore {
     /// Borrows a Space's profile and policies while keeping browsing records
     /// in a separate, memory-only family. The window starts without a tab.
-    func makeTemporaryWindowStore(in assignment: BrowserSpaceRuntimeAssignment) -> BrowserStore? {
+    func makeTemporaryWindowStore(
+        in assignment: BrowserSpaceRuntimeAssignment, id: BrowserWindowID = BrowserWindowID()
+    ) -> BrowserStore? {
         guard space(matching: assignment) != nil else { return nil }
         let settingsBrowser = profileSettingsBrowser.makeWindowStore(
-            restoresTabSelection: false, selectingSpaceID: assignment.spaceID)
+            BrowserWindowOpening(showingSpaceID: assignment.spaceID, restoresTabs: false))
         let workspaceFamily: BrowserStoreFamily
         do { workspaceFamily = try settingsBrowser.family.makeBorrowed(in: assignment, settingsBrowser: settingsBrowser) }
         catch { localSyncErrorDescription = "Core workspace creation failed: \(error)"; return nil }
-        let workspace = workspaceFamily.authoritativeSession
         return BrowserStore(
-            session: workspace,
+            opening: BrowserWindowOpening(id: id),
             credentialVault: credentialVault,
             syncCoordinator: nil,
             syncCoalescingDelay: syncCoalescingDelay,
@@ -65,7 +66,7 @@ extension BrowserStore {
             isPrivateBrowsing == destination.isPrivateBrowsing else { return false }
         if family === destination.family { return true }
         return (try? BrowserStoreFamily.prepareTransfer(id, assignment: sourceAssignment,
-            source: self, destination: destination, fallback: nil, selecting: false)) != nil
+            source: self, destination: destination, selecting: false)) != nil
     }
 
     @discardableResult
@@ -86,15 +87,10 @@ extension BrowserStore {
             }
             return true
         }
-        var history = tabSelectionHistory
-        let fallback = history.fallbackTabID(afterDismissing: id, in: source.id,
-            availableTabIDs: Set(source.tabs.map(\.id)).subtracting([id]))
         do {
             let command = try BrowserStoreFamily.prepareTransfer(id, assignment: sourceAssignment,
-                source: self, destination: destination, fallback: fallback, selecting: selecting)
+                source: self, destination: destination, selecting: selecting)
             try BrowserStoreFamily.transfer(command, source: self, destination: destination)
-            tabSelectionHistory = history
-            tabSelectionHistory.reconcile(session: session, selection: selection)
             tabMultiSelection.clear()
             return true
         } catch {

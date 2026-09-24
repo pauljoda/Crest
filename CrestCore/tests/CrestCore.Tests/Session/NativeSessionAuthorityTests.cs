@@ -10,12 +10,6 @@ namespace CrestCore.Tests;
 
 public sealed partial class BrowserContractsTests {
     private static byte[] Bytes(JsonNode value) => Encoding.UTF8.GetBytes(value.ToJsonString());
-    /// What a window shows, taken from a fixture's legacy selection fields. The
-    /// core reads it as command context only.
-    private static JsonObject View(JsonNode session) => new() {
-        ["spaceId"] = session["selectedSpaceID"]?.DeepClone(),
-        ["tabs"] = new JsonArray(session["spaces"]!.AsArray().Select(s => (JsonNode)new JsonObject { ["spaceId"] = s!["id"]!.DeepClone(), ["tabId"] = s["selectedTabID"]?.DeepClone() }).ToArray())
-    };
     private static byte[] RenameDelta(JsonNode session, string title) {
         var space = session["spaces"]![0]!;
         var tab = space["tabs"]![0]!.DeepClone(); tab["title"] = title;
@@ -44,7 +38,6 @@ public sealed partial class BrowserContractsTests {
             ["operation"] = operation,
             ["spaceId"] = fixture.Space.ToString(),
             ["profileId"] = space["profile"]!["id"]!.DeepClone(),
-            ["view"] = View(session),
             ["arguments"] = new JsonObject { ["requestId"] = Guid.NewGuid().ToString() },
             ["now"] = 800000001.0
         };
@@ -108,13 +101,10 @@ public sealed partial class BrowserContractsTests {
         var fixture = SavedSession(); var session = fixture.Document["session"]!;
         var space = session["spaces"]![0]!;
         var authority = new NativeSessionAuthority(Bytes(session));
-        var window = View(session);
-        window["tabs"]![0]!["tabId"] = null;
         byte[] Request(string title) => Bytes(new JsonObject {
             ["version"] = 1,
             ["spaceId"] = fixture.Space.ToString(),
             ["profileId"] = space["profile"]!["id"]!.DeepClone(),
-            ["view"] = window.DeepClone(),
             ["operation"] = "tab.rename",
             ["now"] = 800000001.0,
             ["arguments"] = new JsonObject { ["tabId"] = fixture.Tab.ToString(), ["title"] = title },
@@ -135,17 +125,20 @@ public sealed partial class BrowserContractsTests {
         Assert.True(JsonNode.DeepEquals(space["branding"], saved["branding"]));
     }
 
-    private static byte[] SpaceCommand(JsonNode session, string operation, JsonObject arguments, JsonNode? target = null) {
+    /// A command in `target`, the session's first Space unless named, issued
+    /// from `window` when one is given.
+    private static byte[] SpaceCommand(JsonNode session, string operation, JsonObject arguments, JsonNode? target = null,
+        Guid? window = null) {
         target ??= session["spaces"]![0]!;
-        return Bytes(new JsonObject {
+        var request = new JsonObject {
             ["version"] = 1,
             ["operation"] = operation,
             ["arguments"] = arguments,
             ["spaceId"] = target["id"]!.DeepClone(),
             ["profileId"] = target["profile"]!["id"]!.DeepClone(),
-            ["view"] = View(session),
             ["now"] = 800000002.0
-        });
+        };
+        return Bytes(window is { } issuer ? IssuedFrom(request, issuer) : request);
     }
 
     [Fact]
@@ -256,8 +249,10 @@ public sealed partial class BrowserContractsTests {
         session["spaces"]!.AsArray().Add(second);
         session["defaultSpaceID"] = session["spaces"]![0]!["id"]!.DeepClone();
         var authority = new NativeSessionAuthority(Bytes(session));
+        using var device = new TestDevice(authority);
+        var window = device.Showing(session);
         var args = new JsonObject { ["operationID"] = Guid.NewGuid().ToString("D") };
-        authority.PrepareCommand(1, SpaceCommand(session, "space.deletion.begin", args.DeepClone().AsObject())).Commit();
+        authority.PrepareCommand(1, SpaceCommand(session, "space.deletion.begin", args.DeepClone().AsObject(), window: window)).Commit();
         Assert.Throws<BrowserRuleException>(() => authority.PrepareCommand(2,
             SpaceCommand(session, "space.deletion.begin", new() { ["operationID"] = Guid.NewGuid().ToString("D") }, second)));
         var command = authority.PrepareCommand(2, SpaceCommand(session, "space.remove", args.DeepClone().AsObject()));
@@ -267,7 +262,7 @@ public sealed partial class BrowserContractsTests {
         Assert.Single(projection["spaces"]!.AsArray());
         // The window showing the removed Space moves to the one that takes its
         // place; the launch Space follows. Neither is stored as a selection.
-        Assert.Equal(SpaceId(second), HintedSpace(output));
+        Assert.Equal(SpaceId(second), device.Space(window));
         Assert.Null(projection["selectedSpaceID"]);
         Assert.True(JsonNode.DeepEquals(second["id"], projection["defaultSpaceID"]));
         Assert.Null(projection["spaceDeletions"]);
@@ -283,17 +278,21 @@ public sealed partial class BrowserContractsTests {
         second["tabs"] = new JsonArray(); second["selectedTabID"] = null;
         session["spaces"]!.AsArray().Add(second);
         var authority = new NativeSessionAuthority(Bytes(session));
+        using var device = new TestDevice(authority);
+        var window = device.Showing(session);
         var args = new JsonObject { ["operationID"] = Guid.NewGuid().ToString("D") };
-        var command = authority.PrepareCommand(1, SpaceCommand(session, "space.deletion.begin", args.DeepClone().AsObject()));
-        Assert.Equal(SpaceId(second), HintedSpace(JsonNode.Parse(command.Output)!));
+        var command = authority.PrepareCommand(1, SpaceCommand(session, "space.deletion.begin", args.DeepClone().AsObject(), window: window));
         using (var cancelled = command.Reserve()) {
             Assert.Equal(1UL, authority.Revision);
             Assert.Null(JsonNode.Parse(authority.Checkpoint(1).Read("core"))!["spaceDeletions"]);
             Assert.Throws<BrowserRuleException>(() => authority.Commit(1, RenameDelta(session, "Racing write")));
         }
+        Assert.Equal(SpaceId(session["spaces"]![0]!), device.Space(window));
         using var saved = command.Reserve();
         var bytes = saved.Checkpoint.Read("core");
         saved.Commit();
+        // The window leaves the Space being deleted for the one that takes its place.
+        Assert.Equal(SpaceId(second), device.Space(window));
         var restarted = new NativeSessionAuthority(bytes);
         var restored = JsonNode.Parse(bytes)!;
         Assert.Single(restored["spaceDeletions"]!.AsArray());

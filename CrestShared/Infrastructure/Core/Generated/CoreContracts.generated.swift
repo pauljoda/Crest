@@ -274,6 +274,12 @@ struct CustomSearchEngineAdmission: Query, Equatable, Sendable {
     let existing: [CustomSearchEngine]
 }
 
+struct DismissShownTab: Intent, Equatable, Sendable {
+    let windowID: UUID
+    let spaceID: UUID
+    let tabID: UUID
+}
+
 struct DownloadLimitReached: Equatable, Sendable {
     let limit: Int
 }
@@ -400,6 +406,16 @@ struct FailDownload: Intent, Equatable, Sendable {
     let message: String
 }
 
+struct FallbackTab: Query, Equatable, Sendable {
+    typealias Answer = FallbackTabIndex
+
+    let placements: [TabPlacement]
+}
+
+struct FallbackTabIndex: Equatable, Sendable {
+    let index: Int?
+}
+
 struct FinishDownload: Intent, Equatable, Sendable {
     let downloadID: UUID
     let finalByteCount: Int64?
@@ -497,6 +513,7 @@ struct OpenWindow: Intent, Equatable, Sendable {
     let saved: Bool
     let copyingWindowID: UUID?
     let showingSpaceID: UUID?
+    let showingTabs: [ShownTab]
     let restoresTabs: Bool
 }
 
@@ -818,6 +835,12 @@ enum SystemPasswordWriteThroughAvailability: Int, CaseIterable, Sendable {
     case isolatedLaunch = 2
     case systemVersionRequired = 3
     case managedBrowserCapabilityRequired = 4
+}
+
+enum TabPlacement: Int, CaseIterable, Sendable {
+    case current = 0
+    case pinned = 1
+    case saved = 2
 }
 
 enum TearOffRefusal: Int, CaseIterable, Sendable {

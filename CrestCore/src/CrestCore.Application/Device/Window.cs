@@ -46,10 +46,10 @@ internal sealed class Window {
         this.recent = recent;
     }
 
-    /// A window that shows what `record` kept, or only its Space.
-    public static Window Restoring(SavedWindow record, Guid workspaceId, bool restoresTabs) => new(record.Id, workspaceId, saved: true,
-        record.ShownSpaceId, restoresTabs ? record.Tabs.ToDictionary(tab => tab.SpaceId, tab => tab.TabId) : [],
-        restoresTabs ? record.Shares.ToDictionary(group => group.GroupId, group => group.Shares) : [], []);
+    /// A window that shows what `record` kept.
+    public static Window Restoring(SavedWindow record, Guid workspaceId) => new(record.Id, workspaceId, saved: true,
+        record.ShownSpaceId, record.Tabs.ToDictionary(tab => tab.SpaceId, tab => tab.TabId),
+        record.Shares.ToDictionary(group => group.GroupId, group => group.Shares), []);
 
     /// A window that starts as `other` shows, without its split columns.
     public static Window Copying(Window other, Guid id, bool saved) =>
@@ -91,10 +91,18 @@ internal sealed class Window {
     /// Moves the window to `spaceId` and keeps what it shows there, even nothing.
     public void MoveTo(Guid spaceId) => ShownSpaceId = spaceId;
 
-    /// Shows `tabId` in its Space and moves the window there, or shows nothing
-    /// in `spaceId` and leaves the window where it is.
-    public void ShowTab(Guid spaceId, Guid? tabId) {
-        if (tabId is not null) ShownSpaceId = spaceId;
+    /// Keeps only the Space the window shows: it shows no tab anywhere until
+    /// one is chosen, and keeps no split columns or history.
+    public void ForgetTabs() {
+        tabs.Clear();
+        shares.Clear();
+        recent.Clear();
+    }
+
+    /// Shows `tabId` in its Space, moving the window there when `moves`, or
+    /// shows nothing in `spaceId` and leaves the window where it is.
+    public void ShowTab(Guid spaceId, Guid? tabId, bool moves) {
+        if (moves && tabId is not null) ShownSpaceId = spaceId;
         tabs[spaceId] = tabId;
         Remember(spaceId);
     }
@@ -169,6 +177,12 @@ internal sealed class Window {
     #endregion
 
     #region Actions - Rules
+
+    /// A draft Space's fallback tab, by its tabs' placements.
+    public static FallbackTabIndex Answer(FallbackTab question) {
+        ArgumentNullException.ThrowIfNull(question);
+        return new(TabSelectionPolicy.Fallback(question.Placements));
+    }
 
     /// The tab a Space shows when no window chose one: the first open tab,
     /// else the first pinned one, else the first tab.

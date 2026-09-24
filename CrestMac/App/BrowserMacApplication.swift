@@ -251,12 +251,7 @@ final class BrowserMacApplication {
         privateBrowser.tabLinkProvider = privatePages
         browser.tabCopying = pages
         privateBrowser.tabCopying = privatePages
-        let windowStatePersistence: any BrowserWindowStatePersisting =
-            if let sidebarDefaults {
-                UserDefaultsBrowserWindowStatePersistence(defaults: sidebarDefaults)
-            } else {
-                InMemoryBrowserWindowStatePersistence()
-            }
+        let windowLayouts = BrowserWindowLayouts(defaults: sidebarDefaults)
         let onboardingProgress = BrowserOnboardingProgressStore.launchStore(
             isIsolated: usesIsolatedLaunch,
             forceWelcome: launchEnvironment.forcesOnboardingWelcome,
@@ -267,30 +262,23 @@ final class BrowserMacApplication {
             for: launchEnvironment,
             hasActiveLaunchGate: onboardingProgress.isLaunchGateActive
         )
-        let mainWindowState = BrowserWindowStateStore(
-            id: .main,
-            browser: browser,
-            persistence: windowStatePersistence
-        )
-        // The main window's own record is where its selection lives between
-        // launches; the session carries none. Launch cleanup then keeps every
-        // tab a stored window will show.
-        browser.restoreLaunchSelection(tabsFrom: mainWindowState.state)
-        browser.sweepAtLaunch(keeping: windowStatePersistence.loadAll())
+        // The core carries what each window showed into its own records once;
+        // launch cleanup then keeps every tab a saved window will show.
+        windowLayouts.adoptLegacyRecords(into: core)
+        browser.sweepAtLaunch()
         self.browser = browser
         self.cloudSync = cloudSync
         self.onboardingProgress = onboardingProgress
         self.onboardingCoordinator = BrowserOnboardingCoordinator()
         self.chrome = BrowserChromeState(
-                sidebarIsPresented: mainWindowState.sidebarIsPresented ?? true,
+                sidebarIsPresented: windowLayouts.layout(for: .main)?.sidebarIsPresented ?? true,
                 utilityPresentation: BrowserUtilityPresentationState(
                     defaults: utilityDefaults
                 )
             )
         self.transientBrowsing = transientBrowsing
         self.windowCoordinator = BrowserMacWindowCoordinator(
-                browser: browser, pages: pages, spaceAccess: spaceAccess,
-                windowStatePersistence: windowStatePersistence)
+                browser: browser, pages: pages, spaceAccess: spaceAccess, windowLayouts: windowLayouts)
         self.privateBrowser = privateBrowser
         self.privateChrome = BrowserChromeState(
                 utilityPresentation: BrowserUtilityPresentationState(
@@ -354,6 +342,7 @@ final class BrowserMacApplication {
             .environment(windowTransparency)
             .environment(softwareUpdates)
             .environment(passkeyAccess)
+            .environment(browser.core)
             .environment(\.browserSidebarWidgetRuntime, sidebarWidgets)
             .environment(\.browserSiteControlAnchor, siteControlAnchor)
             .modifier(BrowserSoftwareUpdateDetailsPresentation())
@@ -377,6 +366,7 @@ final class BrowserMacApplication {
         .environment(windowTransparency)
         .environment(softwareUpdates)
         .environment(passkeyAccess)
+        .environment(privateBrowser.core)
         .environment(
             \.browserSidebarWidgetRuntime,
             sidebarWidgets

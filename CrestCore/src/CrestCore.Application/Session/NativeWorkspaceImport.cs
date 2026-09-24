@@ -47,11 +47,14 @@ public sealed class NativeWorkspaceImport {
     }
 
     /// The imported session with its answer, or no session and `{"error": code}`.
-    internal static (SessionState? Session, JsonObject Answer) Preview(SessionState session, JsonObject arguments, string mode, double now) {
+    /// `followUp` takes what the importing window shows next.
+    internal static (SessionState? Session, JsonObject Answer) Preview(SessionState session, JsonObject arguments, string mode, double now,
+        WindowFollowUp? followUp = null) {
         try {
             if (!double.IsFinite(now)) throw new BrowserRuleException(BrowserRuleCodes.InvalidSavedDate);
             var import = new NativeWorkspaceImport();
-            var imported = import.Apply(session, arguments, WorkspaceImportModeCodes.Parse(mode), StoredSessionCodec.Date(now), out var answer);
+            var imported = import.Apply(session, arguments, WorkspaceImportModeCodes.Parse(mode), StoredSessionCodec.Date(now),
+                followUp ?? new WindowFollowUp(window: null), out var answer);
             return (imported, answer);
         } catch (BrowserRuleException error) {
             return (null, new() { ["error"] = error.Code });
@@ -95,7 +98,7 @@ public sealed class NativeWorkspaceImport {
     }
 
     private SessionState Apply(SessionState session, JsonObject arguments, WorkspaceImportMode mode, DateTimeOffset now,
-        out JsonObject answer) {
+        WindowFollowUp followUp, out JsonObject answer) {
         var spaces = session.Spaces.Select(space => new Draft(space, isOriginal: true)).ToList();
         var defaultSpace = session.DefaultSpaceId;
         var seedMarker = session.DisposableSeedMarker;
@@ -205,13 +208,11 @@ public sealed class NativeWorkspaceImport {
         };
         var repaired = NativeSessionMaintenance.Repair(imported, now, null, new SystemIdSource(), out _);
         // Show the imported instance even when repair replaced a colliding ID.
-        var hint = new SessionSelectionHint();
-        if (affectedIndex >= 0) hint.SelectSpace(repaired.Spaces[affectedIndex].Id);
-        foreach (var (si, ti) in shown) hint.SelectTab(SessionView.Empty, repaired.Spaces[si].Id, repaired.Spaces[si].Tabs[ti].Id);
+        if (affectedIndex >= 0) followUp.ShowSpace(repaired.Spaces[affectedIndex].Id);
+        foreach (var (si, ti) in shown) followUp.ShowTab(repaired.Spaces[si].Id, repaired.Spaces[si].Tabs[ti].Id);
         answer = new() {
             ["session"] = StoredSessionCodec.Encode(repaired),
-            ["assets"] = assets,
-            [SessionSelectionHint.Key] = hint.Encode()
+            ["assets"] = assets
         };
         return repaired;
     }

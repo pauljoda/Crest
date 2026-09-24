@@ -134,12 +134,12 @@ final class BrowserTabTearOffWindowTests: XCTestCase {
                 accent: .indigo, folders: [], tabs: [tab])
             let browser = BrowserStore(
                 session: BrowserSession(spaces: [space]),
-                selection: BrowserStoreSelection(selectedSpaceID: space.id, selectedTabIDsBySpace: [space.id: tab.id]))
+                showing: space.id, tabs: [space.id: tab.id])
             let access = BrowserSpaceAccessController()
             coordinator = BrowserMacWindowCoordinator(
                 browser: browser,
                 pages: BrowserPagePool(monitorsMemoryPressure: false, usesEphemeralWebsiteDataStores: true),
-                spaceAccess: access, windowStatePersistence: InMemoryBrowserWindowStatePersistence())
+                spaceAccess: access, windowLayouts: BrowserWindowLayouts(defaults: nil))
             source = try XCTUnwrap(coordinator.model(for: .initial))
             root = BrowserRootModel(
                 browser: source.browser, pages: source.pages, chrome: source.chrome, spaceAccess: access,

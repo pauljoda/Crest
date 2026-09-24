@@ -1,24 +1,24 @@
-/// What one window renders: the core's browsing data together with that
-/// window's own selection. It is a presentation value built by `BrowserStore`
-/// for views and page pools; it is not Codable, never sent to the core and never
-/// stored, so selection stays window state.
+/// What one window renders: the core's browsing data together with what the
+/// core says that window shows. It is a presentation value built by
+/// `BrowserStore` for views and page pools; it is not Codable and never
+/// stored, so what a window shows stays the core's window state.
 struct BrowserPresentedSession: Equatable {
     // MARK: - Variables
 
     let session: BrowserSession
-    let selection: BrowserStoreSelection
+    let window: WindowState
 
     var spaces: [BrowserSpace] { session.spaces }
     var defaultSpaceID: SpaceID? { session.defaultSpaceID }
-    var selectedSpaceID: SpaceID { selection.selectedSpaceID }
+    var selectedSpaceID: SpaceID { window.shownSpace }
     /// Nil while the shown Space is being deleted.
     var selectedSpace: BrowserSpace? {
         guard session.spaceDeletions?.contains(where: { $0.spaceID == selectedSpaceID }) != true else { return nil }
-        return selection.selectedSpace(in: session)
+        return session.space(id: selectedSpaceID)
     }
     var selectedTab: BrowserTab? {
-        guard selectedSpace != nil else { return nil }
-        return selection.selectedTab(in: session)
+        guard let space = selectedSpace, let tabID = window.shownTabID(in: space.id) else { return nil }
+        return space.tabs.first { $0.id == tabID }
     }
     var tabIDs: [TabID] { session.tabIDs }
     var tabRuntimeAssignments: Set<BrowserTabRuntimeAssignment> { session.tabRuntimeAssignments }
@@ -27,7 +27,7 @@ struct BrowserPresentedSession: Equatable {
 
     /// The tab this window shows in a Space, if any.
     func selectedTabID(in spaceID: SpaceID) -> TabID? {
-        selection.selectedTabID(in: spaceID)
+        window.shownTabID(in: spaceID)
     }
 
     func space(id: SpaceID) -> BrowserSpace? {

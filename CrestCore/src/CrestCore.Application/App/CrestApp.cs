@@ -100,6 +100,7 @@ public sealed partial class CrestApp : IDisposable {
                 ExternalLinkRoute route => links.Answer(route),
                 QuickWindowSite site => links.Answer(site),
                 CanTearOff tearOff => device.Answer(tearOff),
+                FallbackTab fallback => Window.Answer(fallback),
                 _ => throw new ArgumentOutOfRangeException(nameof(query), query.GetType().Name, "No area answers this query.")
             };
             return (TAnswer)answer;

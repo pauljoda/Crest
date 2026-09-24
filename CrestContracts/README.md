@@ -32,15 +32,17 @@ engine references.
 The native Crest apps use the `crest_session_*`, `crest_sync_*`,
 `crest_access_*`, `crest_app_*` and `crest_permissions_*` entry points,
 plus `crest_core_evaluate_policy` and `crest_core_evaluate_sync`.
-The session holds browsing data only; which Space and tab a window shows is
-window state. Session commands take what the requesting window shows as
-read-only `view` context (`{"spaceId", "tabs": [{"spaceId", "tabId"}]}`) and answer
-with a `selection` hint of the same shape that only that window applies.
-`tab.touch` records `lastActivatedAt` and nothing else. The session file never
-stores a selection; a stored document with the older session-level
-`selectedSpaceID` and per-Space `selectedTabID` still loads, hands them to the
-launch window once through `crest_app_session`, and loses them at the next save. `records.sweep` accepts `keepTabIds`,
-the tabs stored window records show, for launch cleanup.
+The session holds browsing data only; which Space and tab a window shows is the
+device's window state. `crest_session_attach_device` attaches a session to an
+app's device and writes the workspace identity the device gave it. Session
+commands name the window that issued them (`windowId`); when a command commits,
+the device moves that window to what the command chose, repairs every other
+window of that workspace, and publishes `WindowChanged` for each window that
+changed. The session file never stores a selection; a stored document with the
+older session-level `selectedSpaceID` and per-Space `selectedTabID` still loads,
+gives its tabs to a window without a record during that launch, and loses them
+at the next save. `records.sweep` keeps every tab an open window or a saved
+window's record shows.
 `crest_access_*` owns process-local Space unlock grants, shared by the native
 desktop and mobile access controllers. The platform supplies device-authentication
 results; the core accepts only the current request for the exact Space/profile
@@ -139,15 +141,14 @@ list.
 `workspace.command_route` answers `local`, `source` or `rejected` for a session
 command issued from an owned or borrowed workspace.
 
-Window state is device-local and never enters the session. `window.repair`
-takes the window's selected Space, whether the window records captured Spaces,
-one presence-fact entry per session Space (at most 64) and the window's stored
-split layouts with their live member counts (at most 64); it returns the
-selected Space, one `window`/`first`/`none` tab choice per Space, the layouts to
-keep and the captured Spaces. `window.split_layout`
-validates and normalizes captured column shares, `window.tear_off` decides
-whether a dragged tab may leave its window, and `tabs.selection_fallback`
-returns the tab a Space shows when its selection is gone. `setup.space`, `setup.tab` and `setup.reconcile`
+Window state is device-local and never enters the session. The
+`OpenWindow`, `CloseWindow`, `ShowSpace`, `ShowTab`, `DismissShownTab`,
+`ResizeSplitColumns` and one-time `AdoptWindowRecords` intents on `crest_app_*`
+own it; windows over the persistent session keep their records in device tables
+beside the session, sixteen at most. Showing a tab records its
+`lastActivatedAt` as a revision of its own and publishes `TabActivated`. The
+`CanTearOff` query decides whether a dragged tab may leave its window, and
+`FallbackTab` answers the tab a draft Space shows first. `setup.space`, `setup.tab` and `setup.reconcile`
 admit manual-setup draft edits against the import's Space and pinned limits
 and follow Spaces changed elsewhere; `onboarding.completion` and
 `onboarding.guide` decide what finishing setup does. The import review, which

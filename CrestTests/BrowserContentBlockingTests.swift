@@ -81,9 +81,7 @@ final class BrowserContentBlockingTests: XCTestCase {
         let firstTab = BrowserTab.startPage()
         let firstSpace = contentBlockingSpace(name: "Protected", tab: firstTab)
         var session = BrowserSession(spaces: [firstSpace])
-        let selection = BrowserStoreSelection(
-            selectedSpaceID: firstSpace.id, selectedTabIDsBySpace: [firstSpace.id: firstTab.id]
-        )
+        let window = WindowState.preview(showing: firstSpace.id, tabs: [firstSpace.id: firstTab.id])
         let pool = BrowserPagePool(
             browsingMode: .privateBrowsing,
             contentRuleListProvider: provider
@@ -99,7 +97,7 @@ final class BrowserContentBlockingTests: XCTestCase {
             pool.contentBlockingErrorDescription,
             pool.contentBlockingErrorDescription ?? ""
         )
-        pool.select(session: BrowserPresentedSession(session: session, selection: selection))
+        pool.select(session: BrowserPresentedSession(session: session, window: window))
         XCTAssertEqual(pool.activePage?.isContentBlockingActive, true)
         let transientLease = try XCTUnwrap(
             pool.makeTransientPageLease(
@@ -228,7 +226,6 @@ final class BrowserContentBlockingTests: XCTestCase {
             tabs: [activeTab, backgroundTab]
         )
         let session = BrowserSession(spaces: [space])
-        var selection = BrowserStoreSelection(selectedSpaceID: space.id)
         let pool = BrowserPagePool(
             browsingMode: .privateBrowsing,
             contentRuleListProvider: provider
@@ -240,11 +237,13 @@ final class BrowserContentBlockingTests: XCTestCase {
         }
 
         await pool.prepareContentBlocking()
-        selection.selectTab(backgroundTab.id, in: space.id)
-        pool.select(session: BrowserPresentedSession(session: session, selection: selection))
+        pool.select(
+            session: BrowserPresentedSession(
+                session: session, window: .preview(showing: space.id, tabs: [space.id: backgroundTab.id])))
         let backgroundPage = try XCTUnwrap(pool.activePage)
-        selection.selectTab(activeTab.id, in: space.id)
-        pool.select(session: BrowserPresentedSession(session: session, selection: selection))
+        pool.select(
+            session: BrowserPresentedSession(
+                session: session, window: .preview(showing: space.id, tabs: [space.id: activeTab.id])))
         let activePage = try XCTUnwrap(pool.activePage)
         XCTAssertFalse(activePage === backgroundPage)
 

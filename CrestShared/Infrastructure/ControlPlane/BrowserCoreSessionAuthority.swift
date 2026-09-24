@@ -4,9 +4,9 @@ import Observation
 
 /// One core session per store family. `projection` is the accepted native read
 /// model, including native favicon assets; it cannot publish an unaccepted edit.
-/// It holds browsing data only: each command reads what the requesting window
-/// shows as context (`view`) and answers with a `BrowserSelectionHint` the window
-/// applies to its own selection.
+/// It holds browsing data only. What each window shows is the core device's:
+/// a command names the window that issued it, and the device moves that
+/// window when the command commits and repairs the others.
 @Observable @MainActor
 final class BrowserCoreSessionAuthority {
     // MARK: - Types
@@ -22,18 +22,11 @@ final class BrowserCoreSessionAuthority {
         fileprivate let handle: UInt64
         let source: BrowserSession
         let destination: BrowserSession
-        let sourceHint: BrowserSelectionHint
-        let destinationHint: BrowserSelectionHint
 
-        fileprivate init(
-            handle: UInt64, source: BrowserSession, destination: BrowserSession,
-            sourceHint: BrowserSelectionHint, destinationHint: BrowserSelectionHint
-        ) {
+        fileprivate init(handle: UInt64, source: BrowserSession, destination: BrowserSession) {
             self.handle = handle
             self.source = source
             self.destination = destination
-            self.sourceHint = sourceHint
-            self.destinationHint = destinationHint
         }
 
         deinit { crest_session_release_transfer(handle) }
@@ -42,13 +35,10 @@ final class BrowserCoreSessionAuthority {
     final class PreparedChange {
         fileprivate let handle: UInt64
         let session: BrowserSession
-        /// The follow-up selection for the window that issued the command.
-        let hint: BrowserSelectionHint
 
-        fileprivate init(handle: UInt64, session: BrowserSession, hint: BrowserSelectionHint) {
+        fileprivate init(handle: UInt64, session: BrowserSession) {
             self.handle = handle
             self.session = session
-            self.hint = hint
         }
 
         deinit { crest_session_release_command(handle) }
@@ -80,34 +70,16 @@ final class BrowserCoreSessionAuthority {
         let profileId: UUID
     }
 
-    /// What a window shows, as read-only command context: its Space and the tab
-    /// it shows in each of the session's Spaces (null for none).
-    private struct View: Encodable {
-        struct Tab: Encodable {
-            let spaceId: UUID
-            @BrowserCoreNullable var tabId: UUID?
-        }
-
-        let spaceId: UUID
-        let tabs: [Tab]
-
-        init(_ selection: BrowserStoreSelection, in session: BrowserSession) {
-            spaceId = selection.selectedSpaceID.rawValue
-            tabs = session.spaces.map { space in
-                Tab(spaceId: space.id.rawValue, tabId: selection.selectedTabID(in: space.id)?.rawValue)
-            }
-        }
-    }
-
     /// One session command: its operation, the Space it runs in (null for a
-    /// command without one), its arguments and the issuing window's view.
+    /// command without one), its arguments and the window that issued it
+    /// (null for none).
     private struct Command<Arguments: Encodable>: Encodable {
         let version = 1
         let operation: BrowserSessionOperation
         @BrowserCoreNullable var spaceId: UUID?
         @BrowserCoreNullable var profileId: UUID?
         let arguments: Arguments
-        let view: View
+        @BrowserCoreNullable var windowId: UUID?
         let now: TimeInterval
     }
 
@@ -120,17 +92,18 @@ final class BrowserCoreSessionAuthority {
         let destinationSpaceId: UUID
         let destinationProfileId: UUID
         let arguments: BrowserCoreTabTransfer.Arguments
-        let view: View
+        @BrowserCoreNullable var windowId: UUID?
         let now: TimeInterval
     }
 
-    /// A tab moving between two workspaces, with each side's view.
+    /// A tab moving between two workspaces, from the window it leaves to the
+    /// one it moves to.
     private struct WorkspaceTransfer: Encodable {
         let version = 1
         let spaceId: UUID
         let profileId: UUID
-        let sourceView: View
-        let destinationView: View
+        @BrowserCoreNullable var sourceWindowId: UUID?
+        @BrowserCoreNullable var destinationWindowId: UUID?
         let arguments: BrowserCoreTabTransfer.Arguments
         let now: TimeInterval
     }
@@ -141,7 +114,7 @@ final class BrowserCoreSessionAuthority {
         let operation = BrowserSessionOperation.workspaceImport
         let mode: BrowserCoreWorkspaceImport.Mode
         let arguments: BrowserCoreWorkspaceImport.Arguments
-        let view: View
+        @BrowserCoreNullable var windowId: UUID?
         let now: TimeInterval
     }
 
@@ -151,7 +124,6 @@ final class BrowserCoreSessionAuthority {
 
     private struct MetadataProjection: Decodable {
         var session: BrowserSession
-        let selection: BrowserSelectionHint?
     }
 
     private struct RecordChanges: Decodable {
@@ -166,7 +138,6 @@ final class BrowserCoreSessionAuthority {
         }
 
         let changes: [Change]
-        let selection: BrowserSelectionHint?
     }
 
     private struct PreferencesResult: Decodable {
@@ -241,6 +212,10 @@ final class BrowserCoreSessionAuthority {
     @ObservationIgnored private let owner: SessionHandle
     @ObservationIgnored private var borrowedSource: BrowserCoreSessionAuthority?
     @ObservationIgnored private var borrowedSourceRevision: UInt64?
+    /// The core whose device shows this session in its windows, and the
+    /// workspace it gave the session; nil until a window opens over it.
+    @ObservationIgnored private(set) weak var device: CrestCore?
+    @ObservationIgnored private(set) var workspaceID: UUID?
 
     /// The core's revision of this session, for waiting until it is on disk.
     var acceptedRevision: UInt64 { revision }
@@ -299,6 +274,35 @@ final class BrowserCoreSessionAuthority {
         self.projection = projection
         self.borrowedSource = borrowedSource
         borrowedSourceRevision = borrowedSource.revision
+    }
+
+    // MARK: - Actions - Device
+
+    /// Attaches this session to `core`'s device so its windows may show it,
+    /// and answers the workspace identity the core gave it. A session shows in
+    /// one core's windows only.
+    func attach(to core: CrestCore) -> UUID {
+        if let workspaceID {
+            precondition(device === core, "A session shows in one core's windows only.")
+            return workspaceID
+        }
+        var bytes = [UInt8](repeating: 0, count: 16)
+        let status = crest_session_attach_device(owner.value, core.handle, &bytes)
+        guard status == CREST_OK else { CrestCore.buildBug(status, "attach a session to its device") }
+        let workspace = bytes.withUnsafeBytes { UUID(uuid: $0.load(as: uuid_t.self)) }
+        device = core
+        workspaceID = workspace
+        return workspace
+    }
+
+    /// A window showed a tab, and the core recorded when as a revision of its
+    /// own, which the projection follows.
+    func recordActivation(_ activated: TabActivated) {
+        revision = UInt64(activated.revision)
+        guard let spaceIndex = projection.spaces.firstIndex(where: { $0.id.rawValue == activated.spaceID }),
+            let tabIndex = projection.spaces[spaceIndex].tabs.firstIndex(where: { $0.id.rawValue == activated.tabID })
+        else { return }
+        projection.spaces[spaceIndex].tabs[tabIndex].lastActivatedAt = activated.at
     }
 
     // MARK: - Actions - Borrowing
@@ -378,7 +382,7 @@ final class BrowserCoreSessionAuthority {
     func prepareTabMove(
         _ tabID: TabID, source: BrowserSpaceRuntimeAssignment,
         destination: BrowserSpaceRuntimeAssignment, arguments: BrowserCoreTabTransfer.Arguments,
-        view: BrowserStoreSelection, at date: Date
+        window: UUID?, at date: Date
     ) throws -> PreparedChange {
         guard let moved = projection.space(id: source.spaceID)?.tabs.first(where: { $0.id == tabID })
         else { throw CoreError.rejected(CREST_INVALID_ARGUMENT) }
@@ -386,13 +390,13 @@ final class BrowserCoreSessionAuthority {
             TabTransferCommand(
                 spaceId: source.spaceID.rawValue, profileId: source.profileID,
                 destinationSpaceId: destination.spaceID.rawValue, destinationProfileId: destination.profileID,
-                arguments: arguments, view: View(view, in: projection), now: date.timeIntervalSinceReferenceDate))
+                arguments: arguments, windowId: window, now: date.timeIntervalSinceReferenceDate))
         let handle = try prepareCommand(data)
         do {
             let result = try JSONDecoder().decode(BrowserCoreTabTransfer.Result.self, from: readCommand(handle))
             let intermediate = try BrowserCoreTabTransfer.applying(result.source, to: projection, moved: moved)
             let next = try BrowserCoreTabTransfer.applying(result.destination, to: intermediate, moved: moved)
-            return PreparedChange(handle: handle, session: next, hint: result.selection ?? .none)
+            return PreparedChange(handle: handle, session: next)
         } catch {
             crest_session_release_command(handle)
             throw error
@@ -403,26 +407,25 @@ final class BrowserCoreSessionAuthority {
     /// prepared, read and released without committing.
     func acceptsTabMove(
         _ tabID: TabID, source: BrowserSpaceRuntimeAssignment,
-        destination: BrowserSpaceRuntimeAssignment, view: BrowserStoreSelection
+        destination: BrowserSpaceRuntimeAssignment, window: UUID?
     ) -> Bool {
         (try? prepareTabMove(
             tabID, source: source, destination: destination,
-            arguments: BrowserCoreTabTransfer.Arguments(tabID: tabID), view: view, at: .now)) != nil
+            arguments: BrowserCoreTabTransfer.Arguments(tabID: tabID), window: window, at: .now)) != nil
     }
 
     static func prepareTransfer(
-        source: BrowserCoreSessionAuthority, sourceView: BrowserStoreSelection,
-        destination: BrowserCoreSessionAuthority, destinationView: BrowserStoreSelection,
-        tabID: TabID, assignment: BrowserSpaceRuntimeAssignment, fallback: TabID?, selecting: Bool
+        source: BrowserCoreSessionAuthority, sourceWindow: UUID?,
+        destination: BrowserCoreSessionAuthority, destinationWindow: UUID?,
+        tabID: TabID, assignment: BrowserSpaceRuntimeAssignment, selecting: Bool
     ) throws -> PreparedTransfer {
         guard let moved = source.projection.space(id: assignment.spaceID)?.tabs.first(where: { $0.id == tabID })
         else { throw CoreError.rejected(CREST_INVALID_ARGUMENT) }
         let input = try JSONEncoder().encode(
             WorkspaceTransfer(
                 spaceId: assignment.spaceID.rawValue, profileId: assignment.profileID,
-                sourceView: View(sourceView, in: source.projection),
-                destinationView: View(destinationView, in: destination.projection),
-                arguments: BrowserCoreTabTransfer.Arguments(tabID: tabID, fallback: fallback, selecting: selecting),
+                sourceWindowId: sourceWindow, destinationWindowId: destinationWindow,
+                arguments: BrowserCoreTabTransfer.Arguments(tabID: tabID, selecting: selecting),
                 now: Date.now.timeIntervalSinceReferenceDate))
         var handle: UInt64 = 0
         let status = input.withUnsafeBytes { bytes in
@@ -447,8 +450,7 @@ final class BrowserCoreSessionAuthority {
                 handle: handle,
                 source: try BrowserCoreTabTransfer.applying(result.source, to: source.projection, moved: moved),
                 destination: try BrowserCoreTabTransfer.applying(
-                    result.destination, to: destination.projection, moved: moved),
-                sourceHint: result.sourceSelection ?? .none, destinationHint: result.destinationSelection ?? .none)
+                    result.destination, to: destination.projection, moved: moved))
         } catch {
             crest_session_release_transfer(handle)
             throw error
@@ -481,13 +483,13 @@ final class BrowserCoreSessionAuthority {
     /// capacity) instead of keeping copies of them.
     func accepts<Arguments: Encodable>(
         _ operation: BrowserSessionOperation, in spaceID: SpaceID, arguments: Arguments,
-        view: BrowserStoreSelection
+        window: UUID?
     ) -> Bool {
         guard let space = projection.space(id: spaceID),
             let data = try? JSONEncoder().encode(
                 Command(
                     operation: operation, spaceId: spaceID.rawValue, profileId: space.profile.id,
-                    arguments: arguments, view: View(view, in: projection),
+                    arguments: arguments, windowId: window,
                     now: Date.now.timeIntervalSinceReferenceDate)),
             let handle = try? prepareCommand(data)
         else { return false }
@@ -497,7 +499,7 @@ final class BrowserCoreSessionAuthority {
 
     func execute<Arguments: Encodable>(
         _ operation: BrowserSessionOperation, in spaceID: SpaceID, arguments: Arguments,
-        view: BrowserStoreSelection, at date: Date
+        window: UUID?, at date: Date
     ) throws -> BrowserCoreSessionEditing.Result {
         guard let index = projection.spaces.firstIndex(where: { $0.id == spaceID }) else {
             throw CoreError.rejected(CREST_INVALID_ARGUMENT)
@@ -505,7 +507,7 @@ final class BrowserCoreSessionAuthority {
         let data = try JSONEncoder().encode(
             Command(
                 operation: operation, spaceId: spaceID.rawValue, profileId: projection.spaces[index].profile.id,
-                arguments: arguments, view: View(view, in: projection), now: date.timeIntervalSinceReferenceDate))
+                arguments: arguments, windowId: window, now: date.timeIntervalSinceReferenceDate))
         return try commitCommand(data) { output in
             let result = try BrowserCoreSessionEditing.decode(
                 output, preservingAssetsFrom: self.projection.spaces[index])
@@ -527,27 +529,25 @@ final class BrowserCoreSessionAuthority {
 
     func executeSpace<Arguments: Encodable>(
         _ operation: BrowserSessionOperation, in spaceID: SpaceID?, arguments: Arguments,
-        view: BrowserStoreSelection, at date: Date
-    ) throws -> (changed: Bool, hint: BrowserSelectionHint) {
-        let previous = projection
-        let prepared = try prepareSpace(operation, in: spaceID, arguments: arguments, view: view, at: date)
+        window: UUID?, at date: Date
+    ) throws {
+        let prepared = try prepareSpace(operation, in: spaceID, arguments: arguments, window: window, at: date)
         var accepted: UInt64 = 0
         let result = crest_session_commit_command(prepared.handle, &accepted)
         guard result == CREST_OK else { throw CoreError.rejected(result) }
         revision = accepted
         projection = prepared.session
-        return (projection != previous || !prepared.hint.isEmpty, prepared.hint)
     }
 
     func executeRecords<Arguments: Encodable>(
         _ operation: BrowserSessionOperation, in spaceID: SpaceID?, arguments: Arguments,
-        view: BrowserStoreSelection, at date: Date
-    ) throws -> (changed: Bool, hint: BrowserSelectionHint) {
+        window: UUID?, at date: Date
+    ) throws -> Bool {
         let space = spaceID.flatMap { projection.space(id: $0) }
         let data = try JSONEncoder().encode(
             Command(
                 operation: operation, spaceId: spaceID?.rawValue, profileId: space?.profile.id,
-                arguments: arguments, view: View(view, in: projection), now: date.timeIntervalSinceReferenceDate))
+                arguments: arguments, windowId: window, now: date.timeIntervalSinceReferenceDate))
         return try commitCommand(data) { output in
             let result = try JSONDecoder().decode(RecordChanges.self, from: output)
             var next = self.projection
@@ -591,25 +591,25 @@ final class BrowserCoreSessionAuthority {
                 }
                 if let groups = change.splitGroups { next.spaces[index].splitGroups = groups }
             }
-            return (next, (!result.changes.isEmpty, result.selection ?? .none))
+            return (next, !result.changes.isEmpty)
         }
     }
 
     func prepareTabBatch(
-        _ request: BrowserTabBatchRequest, arguments: BrowserCoreTabBatch.Arguments, view: BrowserStoreSelection,
+        _ request: BrowserTabBatchRequest, arguments: BrowserCoreTabBatch.Arguments, window: UUID?,
         at date: Date
     ) throws -> (command: PreparedChange, result: BrowserTabBatchResult) {
         let data = try JSONEncoder().encode(
             Command(
                 operation: .tabsBatch, spaceId: request.assignment.spaceID.rawValue,
-                profileId: request.assignment.profileID, arguments: arguments, view: View(view, in: projection),
+                profileId: request.assignment.profileID, arguments: arguments, windowId: window,
                 now: date.timeIntervalSinceReferenceDate))
         let handle = try prepareCommand(data)
         do {
             let response = try JSONDecoder().decode(BrowserCoreTabBatch.Response.self, from: readCommand(handle))
             let prepared = try BrowserCoreTabBatch.applying(response, to: projection)
             return (
-                PreparedChange(handle: handle, session: prepared.session, hint: response.selection ?? .none),
+                PreparedChange(handle: handle, session: prepared.session),
                 prepared.result
             )
         } catch {
@@ -620,35 +620,33 @@ final class BrowserCoreSessionAuthority {
 
     func prepareSpace<Arguments: Encodable>(
         _ operation: BrowserSessionOperation, in spaceID: SpaceID?, arguments: Arguments,
-        view: BrowserStoreSelection, at date: Date
+        window: UUID?, at date: Date
     ) throws -> PreparedChange {
         let space = spaceID.flatMap { projection.space(id: $0) }
         let data = try JSONEncoder().encode(
             Command(
                 operation: operation, spaceId: spaceID?.rawValue, profileId: space?.profile.id,
-                arguments: arguments, view: View(view, in: projection), now: date.timeIntervalSinceReferenceDate))
+                arguments: arguments, windowId: window, now: date.timeIntervalSinceReferenceDate))
         let handle = try prepareCommand(data)
         do {
             let next = try decodeMetadataProjection(readCommand(handle))
-            return PreparedChange(handle: handle, session: next.session, hint: next.selection ?? .none)
+            return PreparedChange(handle: handle, session: next.session)
         } catch {
             crest_session_release_command(handle)
             throw error
         }
     }
 
-    func prepareWorkspace(_ request: BrowserCoreWorkspaceImport.Request, view: BrowserStoreSelection) throws
-        -> PreparedChange
-    {
+    func prepareWorkspace(_ request: BrowserCoreWorkspaceImport.Request, window: UUID?) throws -> PreparedChange {
         let input = try JSONEncoder().encode(
             WorkspaceImportCommand(
-                mode: request.mode, arguments: request.arguments, view: View(view, in: projection),
+                mode: request.mode, arguments: request.arguments, windowId: window,
                 now: Date.now.timeIntervalSinceReferenceDate))
         let handle = try prepareCommand(input)
         do {
             let result = try JSONDecoder().decode(BrowserCoreWorkspaceImport.Result.self, from: readCommand(handle))
             let next = try result.materialize(existing: projection, request: request)
-            return PreparedChange(handle: handle, session: next, hint: result.selection ?? .none)
+            return PreparedChange(handle: handle, session: next)
         } catch {
             crest_session_release_command(handle)
             throw error
@@ -811,7 +809,7 @@ final class BrowserCoreSessionAuthority {
 
 extension BrowserCoreSessionAuthority {
     /// Applies one `preferences.*` command. Only the preference record changes,
-    /// so window selection and Space records stay exactly as projected.
+    /// so every window and Space record stays exactly as projected.
     func executePreferences(_ request: BrowserAppPreferenceRequest) throws -> Bool {
         try commitCommand(try JSONEncoder().encode(request)) { output in
             var next = self.projection

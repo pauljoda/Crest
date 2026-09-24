@@ -3,6 +3,7 @@ import SwiftUI
 struct BrowserCrestImportTabList: View {
     let space: BrowserSpace
     let matchedTabIDs: Set<TabID>
+    let highlightedTabID: TabID?
 
     var body: some View {
         ScrollView {
@@ -47,7 +48,7 @@ struct BrowserCrestImportTabList: View {
         BrowserImportSidebarResultTabRow(
             tab: tab,
             profileID: space.profile.id,
-            isSelected: tab.id == BrowserStoreSelection.fallbackTabID(in: space),
+            isSelected: tab.id == highlightedTabID,
             isMatched: matchedTabIDs.contains(tab.id)
         )
     }

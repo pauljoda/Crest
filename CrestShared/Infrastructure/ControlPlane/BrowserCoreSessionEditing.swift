@@ -22,8 +22,6 @@ enum BrowserCoreSessionEditing {
         var changed: Bool
         var adoptLivePage: Bool?
         var favicon: FaviconAssignment?
-        /// The follow-up selection for the window that issued the command.
-        var selection: BrowserSelectionHint?
     }
 
     static func decode(_ output: Data, preservingAssetsFrom space: BrowserSpace) throws -> Result {

@@ -46,7 +46,7 @@ final class MobileBrowserPageStoreTests: XCTestCase {
         let space = try XCTUnwrap(session.spaces.first)
         let browser = BrowserStore(
             session: session,
-            selection: BrowserStoreSelection(selectedSpaceID: space.id, selectedTabIDsBySpace: [space.id: source.id]))
+            showing: space.id, tabs: [space.id: source.id])
         let pages = MobileBrowserPageStore(usesEphemeralWebsiteDataStores: true)
         browser.tabCopying = pages
         pages.select(session: browser.presented)
@@ -367,7 +367,7 @@ final class MobileBrowserPageStoreTests: XCTestCase {
         let otherSpace = makeSpace(index: 21, savesCredentials: true)
         let session = BrowserPresentedSession(
             session: BrowserSession(spaces: [try XCTUnwrap(split.session.selectedSpace), otherSpace]),
-            selection: split.session.selection
+            window: split.session.window
         )
         let pages = makeSplitPageStore()
         pages.select(session: session)
@@ -708,7 +708,7 @@ final class MobileBrowserPageStoreTests: XCTestCase {
         }
         return BrowserPresentedSession(
             session: session,
-            selection: BrowserStoreSelection(selectedSpaceID: space.id, selectedTabIDsBySpace: [space.id: shown])
+            window: .preview(showing: space.id, tabs: [space.id: shown])
         )
     }
 
@@ -825,6 +825,6 @@ private struct SplitFixture {
                 return tab
             }
         )
-        return BrowserPresentedSession(session: BrowserSession(spaces: [flattened]), selection: session.selection)
+        return BrowserPresentedSession(session: BrowserSession(spaces: [flattened]), window: session.window)
     }
 }

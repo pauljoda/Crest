@@ -755,10 +755,7 @@ final class MobileBrowserSidebarReorderPolicyTests: XCTestCase {
             )
             browser = BrowserStore(
                 session: BrowserSession(spaces: [space]),
-                selection: BrowserStoreSelection(
-                    selectedSpaceID: space.id,
-                    selectedTabIDsBySpace: [space.id: cards.first?.id ?? joiner.id]
-                ),
+                showing: space.id, tabs: [space.id: cards.first?.id ?? joiner.id],
                 browsingMode: .privateBrowsing
             )
             sidebarInteraction = BrowserSidebarInteractionState.connected(to: browser)

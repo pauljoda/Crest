@@ -459,7 +459,7 @@ final class BrowserPeekModelTests: XCTestCase {
         let sourceTabID = try XCTUnwrap(source.tabs.first?.id)
         let browser = BrowserStore(
             session: BrowserSession(spaces: [source, destination]),
-            selection: BrowserStoreSelection(selectedSpaceID: source.id, selectedTabIDsBySpace: [source.id: sourceTabID]),
+            showing: source.id, tabs: [source.id: sourceTabID],
             credentialVault: InMemoryCredentialVault(),
             browsingMode: .privateBrowsing
         )

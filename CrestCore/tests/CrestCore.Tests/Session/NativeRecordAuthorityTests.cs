@@ -109,13 +109,16 @@ public sealed partial class BrowserContractsTests {
         });
         space["archivedTabs"] = new JsonArray();
         var core = new NativeSessionAuthority(Bytes(session));
-        var command = core.PrepareCommand(1, SpaceCommand(session, "records.sweep", new()));
+        using var device = new TestDevice(core);
+        var window = device.Showing(session);
+        var shown = device.Shown(window);
+        var command = core.PrepareCommand(1, SpaceCommand(session, "records.sweep", new(), window: window));
         command.Commit();
         var saved = JsonNode.Parse(core.Checkpoint(2).Read("core"))!["spaces"]![0]!;
         // The tab the window shows survives the sweep, and nothing asks the
         // window to change what it shows.
         Assert.Single(saved["tabs"]!.AsArray());
-        Assert.True(LeavesSelection(JsonNode.Parse(command.Output)!));
+        Assert.Equal(shown, device.Shown(window));
         Assert.Null(saved["selectedTabID"]);
         Assert.Single(saved["archivedTabs"]!.AsArray());
         Assert.Equal(currentId, Guid.Parse(saved["archivedTabs"]![0]!["tab"]!["id"]!["rawValue"]!.GetValue<string>()));

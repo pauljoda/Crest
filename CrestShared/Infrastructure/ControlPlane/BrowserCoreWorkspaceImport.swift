@@ -70,8 +70,6 @@ enum BrowserCoreWorkspaceImport {
         let session: BrowserSession?
         let assets: [Asset]?
         let error: BrowserCoreErrorCode?
-        /// The imported Space and the tabs it shows first, for the importing window.
-        let selection: BrowserSelectionHint?
 
         func materialize(existing: BrowserSession, request: Request) throws -> BrowserSession {
             if let error {

@@ -3,9 +3,11 @@ import SwiftUI
 struct BrowserSpaceSidebarPreview: View {
     let space: BrowserSpace
     @Environment(\.browserInteractionCapabilities) private var capabilities
+    @Environment(CrestCore.self) private var core: CrestCore?
 
-    /// No window shows a previewed Space, so it highlights its fallback tab.
-    private var selectedTabID: TabID? { BrowserStoreSelection.fallbackTabID(in: space) }
+    /// No window shows a previewed Space, so it highlights the tab the core
+    /// would show first.
+    private var selectedTabID: TabID? { core?.fallbackTabID(in: space) }
 
     var body: some View {
         ZStack {

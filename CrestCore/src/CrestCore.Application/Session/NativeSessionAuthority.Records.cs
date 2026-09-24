@@ -8,9 +8,9 @@ namespace CrestCore.Application;
 public sealed partial class NativeSessionAuthority {
     #region Actions - Records
 
-    // The caller sends intent and what its window shows. Existing history and
-    // archive entries come from the authority; only changed read models and the
-    // window's follow-up selection hint cross back.
+    // The caller sends intent and the window that issued it. Existing history
+    // and archive entries come from the authority; only changed read models
+    // cross back, and the device moves the window when the command commits.
     private NativeSessionCommand PrepareRecordCommand(ulong expected, JsonObject request) {
         var operation = SessionOperationCodes.Parse(request["operation"]!.GetValue<string>());
         var args = request["arguments"]!.AsObject();
@@ -20,8 +20,8 @@ public sealed partial class NativeSessionAuthority {
         if (target is { } id) _ = TransferSpace(id, Id(request["profileId"]));
         else if (operation is not (SessionOperation.RecordsSweep or SessionOperation.RecordsCleanup))
             throw new BrowserRuleException(BrowserRuleCodes.MissingSpaceIdentity);
-        var view = SessionView.Decode(request[SessionView.Key]);
-        var hint = new SessionSelectionHint();
+        var followUp = new WindowFollowUp(IssuingWindow(request));
+        var kept = device?.ShownTabs(workspaceId);
         var changes = new JsonArray();
         var spaces = session.Spaces.Select(original => {
             if (target is { } requested && requested != original.Id || PendingDeletion(session, original.Id) is not null)
@@ -45,22 +45,21 @@ public sealed partial class NativeSessionAuthority {
                     space = space with { ArchivedTabs = space.ArchivedTabs.Where((_, index) => index != archiveIndex).ToArray() };
                     change["removedArchiveIndices"] = new JsonArray(JsonValue.Create(archiveIndex));
                 } else if (operation is SessionOperation.RecordsSweep or SessionOperation.RecordsCleanup) {
-                    // Launch sweeps before any window is on screen, so the caller
-                    // names every tab its restored windows show.
+                    // Cleanup keeps every tab a window shows, and at launch every
+                    // tab a saved window will show.
                     if (RetentionPolicy.TabLifetime(space.BrowsingPreferences.CurrentTabCleanup) is { } lifetime)
-                        editArguments = new() { Lifetime = lifetime.TotalSeconds, TabIds = KeptTabs(args) };
+                        editArguments = new() { Lifetime = lifetime.TotalSeconds, TabIds = kept?.ToArray() };
                 } else throw new BrowserRuleException(BrowserRuleCodes.UnknownRecordCommand);
                 if (editArguments is not null) {
                     // Cleanup keeps the tab this window shows; a restored tab is the
                     // one it should show next.
                     var edited = NativeSessionEditor.Evaluate(
                         operation == SessionOperation.ArchiveRestore ? SessionOperation.TabRestoreArchive : SessionOperation.TabCleanup,
-                        space, editArguments, StoredSessionCodec.Date(now), view.Tab(space.Id));
+                        space, editArguments, StoredSessionCodec.Date(now), followUp.Window?.Tab(space.Id));
                     if (operation == SessionOperation.ArchiveRestore || !space.Tabs.SequenceEqual(edited.Edited.TabStates)) {
                         space = edited.Edited.Capture(space);
-                        var spaceHint = new SessionSelectionHint().SelectTab(view, space.Id, edited.SelectedTabId);
-                        hint.SelectTab(view, space.Id, edited.SelectedTabId);
-                        change["tabEdit"] = edited.Answer(space, spaceHint);
+                        followUp.ShowTab(space.Id, edited.SelectedTabId);
+                        change["tabEdit"] = edited.Answer(space);
                     }
                 }
                 if (operation == SessionOperation.RecordsSweep) space = SweepRecords(space, now, change);
@@ -70,14 +69,8 @@ public sealed partial class NativeSessionAuthority {
         }).ToArray();
         var next = session with { Spaces = spaces };
         Validate(next); ValidateBorrowedSession(next);
-        return new(this, expected, next, Output(new JsonObject {
-            ["changes"] = changes,
-            [SessionSelectionHint.Key] = hint.Encode()
-        }));
+        return new(this, expected, next, Output(new JsonObject { ["changes"] = changes }), followUp: followUp);
     }
-
-    private static IReadOnlyList<Guid>? KeptTabs(JsonObject args) =>
-        args["keepTabIds"] is JsonArray kept ? kept.Select(Id).ToArray() : null;
 
     private static JsonArray Identities(IEnumerable<Guid> ids) => new(ids.Select(id => (JsonNode?)JsonValue.Create(id.ToString("D"))).ToArray());
 

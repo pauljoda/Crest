@@ -28,10 +28,7 @@ extension BrowserStore {
         credentialVault: any CredentialVault
     ) -> BrowserStore {
         let family = BrowserStoreFamily(stored: stored, storage: core, favicons: favicons)
-        let session = family.authoritativeSession
         let store = BrowserStore(
-            session: session,
-            selection: stored.legacySelection?.launchSelection(in: session),
             credentialVault: credentialVault,
             syncCoordinator: BrowserSyncCoordinator(core: stored.sync),
             syncCoalescingDelay: .milliseconds(150),
@@ -53,18 +50,13 @@ extension BrowserStore {
     }
 
     /// Launch cleanup and retention, as the core's own `records.sweep` on this
-    /// family's session. No window is on screen yet, so every tab a stored window
-    /// record shows is kept along with this store's own selection. It claims the
-    /// family's sweep slot, so the first active scene does not repeat it.
-    func sweepAtLaunch(keeping windows: [BrowserWindowState], now: Date = .now) {
-        guard family.beginCleanupSweep(at: now) else { return }
-        let kept = Set(windows.flatMap { $0.selection.tabSelections.values })
-            .union(selection.tabSelections.values)
-        guard
-            family.executeRecords(
-                .recordsSweep, arguments: BrowserSessionArguments.RecordsSweep(keepTabIds: kept.map(\.rawValue)),
-                from: self, at: now)
-        else { return }
+    /// family's session. No scene is on screen yet; the core keeps every tab an
+    /// open window shows and every tab a saved window's record shows. It claims
+    /// the family's sweep slot, so the first active scene does not repeat it.
+    func sweepAtLaunch(now: Date = .now) {
+        guard family.beginCleanupSweep(at: now), family.executeRecords(.recordsSweep, from: self, at: now) else {
+            return
+        }
         stageSync(deletionReason: .retention)
     }
 

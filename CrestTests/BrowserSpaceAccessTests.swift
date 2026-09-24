@@ -18,7 +18,7 @@ final class BrowserSpaceAccessTests: XCTestCase {
 
         XCTAssertEqual(store.session.defaultSpaceID, personal.id)
         XCTAssertEqual(store.selectedSpaceID, work.id)
-        XCTAssertEqual(BrowserStoreSelection(launching: store.session).selectedSpaceID, personal.id)
+        XCTAssertEqual(BrowserStore(session: store.session).selectedSpaceID, personal.id)
     }
 
     func testLegacySessionAndSpaceDecodeWithSafeAccessDefaults() throws {
@@ -290,25 +290,6 @@ final class BrowserSpaceAccessTests: XCTestCase {
         XCTAssertFalse(changed)
         XCTAssertEqual(store.selectedSpace?.accessPolicy, .deviceOwnerAuthentication)
         XCTAssertTrue(access.isLocked(replacement))
-    }
-
-    func testRestoredWindowKeepsItsSpaceWhenTheDefaultSpaceDiffers() throws {
-        var session = BrowserSession.preview
-        let work = try XCTUnwrap(session.spaces.first)
-        let personal = try XCTUnwrap(session.spaces.last)
-        session.defaultSpaceID = personal.id
-        let root = BrowserStore(
-            session: session
-        )
-        let savedState = BrowserWindowState(
-            selectedSpaceID: work.id,
-            selectedTabIDsBySpace: [:]
-        )
-
-        let window = root.makeWindowStore(restoring: savedState)
-
-        XCTAssertEqual(window.selectedSpaceID, work.id)
-        XCTAssertEqual(root.makeWindowStore().selectedSpaceID, personal.id)
     }
 }
 

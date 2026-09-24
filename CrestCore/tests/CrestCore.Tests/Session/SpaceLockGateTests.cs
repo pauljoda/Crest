@@ -41,7 +41,6 @@ public sealed partial class BrowserContractsTests {
             ["operation"] = "workspace.import",
             ["mode"] = "manual",
             ["now"] = 800000002.0,
-            ["view"] = View(session),
             ["arguments"] = new JsonObject {
                 ["sources"] = new JsonArray(session["spaces"]![0]!.DeepClone()),
                 ["drafts"] = new JsonArray(new JsonObject {
@@ -220,7 +219,6 @@ public sealed partial class BrowserContractsTests {
             ["now"] = 800000100.0,
             ["spaceId"] = local["spaces"]![0]!["id"]!.DeepClone(),
             ["profileId"] = local["spaces"]![0]!["profile"]!["id"]!.DeepClone(),
-            ["view"] = View(local),
             ["arguments"] = new JsonObject { ["tabId"] = Guid.NewGuid().ToString(), ["title"] = "Leaked" }
         }))).Code);
     }

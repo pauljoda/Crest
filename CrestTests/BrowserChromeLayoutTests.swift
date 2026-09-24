@@ -471,8 +471,7 @@ extension BrowserChromeLayoutTests {
             let selectedTabID = space.tabs[0].id
             let browser = BrowserStore(
                 session: BrowserSession(spaces: [space]),
-                selection: BrowserStoreSelection(
-                    selectedSpaceID: space.id, selectedTabIDsBySpace: [space.id: selectedTabID]))
+                showing: space.id, tabs: [space.id: selectedTabID])
             let pages = BrowserPagePool()
             pages.select(session: browser.presented)
             let model = BrowserRootModel(

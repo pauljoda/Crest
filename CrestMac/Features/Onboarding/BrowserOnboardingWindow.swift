@@ -70,6 +70,7 @@ struct BrowserOnboardingWindow: View {
             close: close,
             openCrest: openCrest
         )
+        .environment(flow.browser.core)
     }
 
     private func close() {

@@ -35,7 +35,6 @@ internal enum PolicyOperation {
     ShortcutsBindings,
     ShortcutsNumberedSelection,
     TabsDismissal,
-    TabsSelectionFallback,
     TranslationMatches,
     TranslationRule,
     // Links, Quick Windows, presentation, branding and workspace routing.
@@ -50,9 +49,6 @@ internal enum PolicyOperation {
     QuickWindowDismissal,
     QuickWindowRetarget,
     WorkspaceCommandRoute,
-    WindowRepair,
-    WindowSplitLayout,
-    WindowTearOff,
 }
 
 internal static class PolicyOperationCodes {
@@ -92,7 +88,6 @@ internal static class PolicyOperationCodes {
         "shortcuts.bindings" => PolicyOperation.ShortcutsBindings,
         "shortcuts.numbered_selection" => PolicyOperation.ShortcutsNumberedSelection,
         "tabs.dismissal" => PolicyOperation.TabsDismissal,
-        "tabs.selection_fallback" => PolicyOperation.TabsSelectionFallback,
         "translation.matches" => PolicyOperation.TranslationMatches,
         "translation.rule" => PolicyOperation.TranslationRule,
         // Links, Quick Windows, presentation, branding and workspace routing.
@@ -107,9 +102,6 @@ internal static class PolicyOperationCodes {
         "quick_window.dismissal" => PolicyOperation.QuickWindowDismissal,
         "quick_window.retarget" => PolicyOperation.QuickWindowRetarget,
         "workspace.command_route" => PolicyOperation.WorkspaceCommandRoute,
-        "window.repair" => PolicyOperation.WindowRepair,
-        "window.split_layout" => PolicyOperation.WindowSplitLayout,
-        "window.tear_off" => PolicyOperation.WindowTearOff,
         _ => PolicyOperation.Unknown
     };
 

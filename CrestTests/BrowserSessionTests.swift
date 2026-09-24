@@ -695,16 +695,16 @@ final class BrowserSessionTests: XCTestCase {
 
         let repaired = try XCTUnwrap(session.space(id: emptySpace.id))
         XCTAssertEqual(repaired.tabs.count, 1)
-        let launch = BrowserStoreSelection(launching: session)
+        let launch = BrowserStore(session: session)
         XCTAssertEqual(launch.selectedSpaceID, emptySpace.id)
-        let launchTab = try XCTUnwrap(launch.selectedTab(in: session))
+        let launchTab = try XCTUnwrap(launch.selectedTab)
         XCTAssertEqual(launchTab.title, BrowserTab.startPageTitle)
         XCTAssertEqual(launchTab.symbol, BrowserTab.startPageSymbol)
         XCTAssertEqual(launchTab.placement, .current)
 
         let noSpaces = try BrowserCoreSync.repair(BrowserSession(spaces: []))
         XCTAssertEqual(noSpaces.spaces.count, 1)
-        XCTAssertNotNil(BrowserStoreSelection(launching: noSpaces).selectedTab(in: noSpaces))
+        XCTAssertNotNil(BrowserStore(session: noSpaces).selectedTab)
     }
 
     func testRuntimeRepairBoundsPinsHistoryFoldersAndArchivedIdentities() throws {
@@ -775,138 +775,11 @@ final class BrowserSessionTests: XCTestCase {
         XCTAssertFalse(Set(repaired.tabs.map(\.id)).contains(archivedID))
     }
 
-    func testTwoBrowserWindowsKeepIndependentSpaceAndTabSelections() throws {
-        let session = BrowserSession.preview
-        let work = try XCTUnwrap(session.spaces.first)
-        let personal = try XCTUnwrap(session.spaces.last)
-        let workTabID = try XCTUnwrap(work.tabs.first?.id)
-        let personalTabID = try XCTUnwrap(personal.tabs.last?.id)
-        var firstWindow = launchWindow(session)
-        var secondWindow = launchWindow(session)
-
-        firstWindow.selectTab(workTabID, in: work.id, session: session)
-        secondWindow.selectTab(personalTabID, in: personal.id, session: session)
-
-        XCTAssertEqual(firstWindow.selectedSpaceID, work.id)
-        XCTAssertEqual(firstWindow.selectedTab(in: session)?.id, workTabID)
-        XCTAssertEqual(secondWindow.selectedSpaceID, personal.id)
-        XCTAssertEqual(secondWindow.selectedTab(in: session)?.id, personalTabID)
-        XCTAssertNotEqual(firstWindow.id, secondWindow.id)
-    }
-
-    func testBrowserWindowSelectionRoundTripsForSceneRestoration() throws {
-        let session = BrowserSession.preview
-        let personal = try XCTUnwrap(session.spaces.last)
-        let selectedTabID = try XCTUnwrap(personal.tabs.first?.id)
-        var window = launchWindow(session)
-        window.selectTab(selectedTabID, in: personal.id, session: session)
-
-        let encoded = try JSONEncoder().encode(window)
-        let restored = try JSONDecoder().decode(BrowserWindowState.self, from: encoded)
-
-        XCTAssertEqual(restored, window)
-        XCTAssertEqual(restored.selectedSpaceID, personal.id)
-        XCTAssertEqual(restored.selectedTab(in: session)?.id, selectedTabID)
-    }
-
-    func testBrowserWindowChromeRoundTripsIndependentlyAndKeepsLegacySnapshotsReadable() throws {
-        let session = BrowserSession.preview
-        var firstWindow = launchWindow(session)
-        var secondWindow = launchWindow(session)
-
-        firstWindow.captureSidebar(width: 364, isPresented: false)
-        secondWindow.captureSidebar(width: 278, isPresented: true)
-
-        let firstRestored = try JSONDecoder().decode(
-            BrowserWindowState.self,
-            from: JSONEncoder().encode(firstWindow)
-        )
-        let secondRestored = try JSONDecoder().decode(
-            BrowserWindowState.self,
-            from: JSONEncoder().encode(secondWindow)
-        )
-
-        XCTAssertEqual(firstRestored.sidebarWidth, 364)
-        XCTAssertEqual(firstRestored.sidebarIsPresented, false)
-        XCTAssertEqual(secondRestored.sidebarWidth, 278)
-        XCTAssertEqual(secondRestored.sidebarIsPresented, true)
-
-        var legacyObject = try XCTUnwrap(
-            JSONSerialization.jsonObject(
-                with: JSONEncoder().encode(firstWindow)
-            ) as? [String: Any]
-        )
-        legacyObject["sidebarWidth"] = nil
-        legacyObject["sidebarIsPresented"] = nil
-        let legacyData = try JSONSerialization.data(withJSONObject: legacyObject)
-        let legacyRestored = try JSONDecoder().decode(
-            BrowserWindowState.self,
-            from: legacyData
-        )
-
-        XCTAssertNil(legacyRestored.sidebarWidth)
-        XCTAssertNil(legacyRestored.sidebarIsPresented)
-        XCTAssertEqual(legacyRestored.selectedSpaceID, firstWindow.selectedSpaceID)
-    }
-
-    func testBrowserWindowSelectionSnapshotIgnoresPageMetadataChanges() throws {
-        var session = BrowserSession.preview
-        let windowID = BrowserWindowID()
-        let selection = BrowserStoreSelection(launching: session)
-        let originalSelection = BrowserWindowState(id: windowID, restoring: selection, in: session)
-        let spaceIndex = try XCTUnwrap(
-            session.spaces.firstIndex { $0.id == selection.selectedSpaceID }
-        )
-        let selectedTabID = try XCTUnwrap(selection.selectedTabID(in: selection.selectedSpaceID))
-        let tabIndex = try XCTUnwrap(
-            session.spaces[spaceIndex].tabs.firstIndex { $0.id == selectedTabID }
-        )
-
-        session.spaces[spaceIndex].tabs[tabIndex].url = URL(string: "https://example.com/updated")
-        session.spaces[spaceIndex].tabs[tabIndex].title = "Updated page title"
-
-        XCTAssertEqual(
-            BrowserWindowState(id: windowID, restoring: selection, in: session),
-            originalSelection
-        )
-    }
-
-    func testWindowPersistenceRestoresTwoWindowsAndRemovesOnlyTheClosedOne() async throws {
-        let suiteName = "com.pauldavis.crest.tests.windows.\(UUID().uuidString)"
-        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
-        defer { defaults.removePersistentDomain(forName: suiteName) }
-        let persistence = UserDefaultsBrowserWindowStatePersistence(defaults: defaults)
-        let session = BrowserSession.preview
-        let personal = try XCTUnwrap(session.spaces.last)
-        let personalTabID = try XCTUnwrap(personal.tabs.last?.id)
-        let firstWindow = launchWindow(session)
-        var secondWindow = launchWindow(session)
-        secondWindow.selectTab(personalTabID, in: personal.id, session: session)
-
-        persistence.save(firstWindow)
-        persistence.save(secondWindow)
-        await persistence.flushPendingSaves()
-
-        XCTAssertEqual(persistence.load(id: firstWindow.id), firstWindow)
-        XCTAssertEqual(persistence.load(id: secondWindow.id), secondWindow)
-
-        persistence.remove(id: firstWindow.id)
-        await persistence.flushPendingSaves()
-
-        XCTAssertNil(persistence.load(id: firstWindow.id))
-        XCTAssertEqual(persistence.load(id: secondWindow.id), secondWindow)
-    }
-
     // MARK: - Helpers
 
-    /// A window store over `session` that opens the launch selection.
+    /// A window store over `session` that opens on its launch Space.
     private func makeStore(_ session: BrowserSession) -> BrowserStore {
         BrowserStore(session: session)
-    }
-
-    /// A new window record showing the launch selection of `session`.
-    private func launchWindow(_ session: BrowserSession) -> BrowserWindowState {
-        BrowserWindowState(restoring: BrowserStoreSelection(launching: session), in: session)
     }
 }
 

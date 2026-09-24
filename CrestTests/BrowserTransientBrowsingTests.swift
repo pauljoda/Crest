@@ -581,7 +581,7 @@ final class BrowserTransientBrowsingTests: XCTestCase {
         XCTAssertEqual(
             store.routingDecision(
                 for: second,
-                in: BrowserPresentedSession(session: session, selection: BrowserStoreSelection(launching: session)),
+                in: BrowserStore(session: session).presented,
                 asking: core
             ),
             .quickWindow(spaceID: personal.id)

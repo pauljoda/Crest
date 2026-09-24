@@ -135,8 +135,7 @@ private final class BrowserAppearancePreviewState {
         space.splitGroups = [BrowserSplitGroupMetadata(id: splitGroupID)]
         siteAccents = Dictionary(uniqueKeysWithValues: zip(pins.map(\.id), pinSources.map(\.2)))
         browser = BrowserStore(
-            session: BrowserSession(spaces: [space]),
-            selection: BrowserStoreSelection(selectedSpaceID: space.id, selectedTabIDsBySpace: [space.id: notes.id]),
+            session: BrowserSession(spaces: [space]), showing: space.id, tabs: [space.id: notes.id],
             browsingMode: .privateBrowsing)
         sidebarInteraction = BrowserSidebarInteractionState.connected(to: browser)
     }

@@ -2,6 +2,7 @@ import SwiftUI
 
 struct BrowserCrestImportChrome: View {
     let space: BrowserSpace
+    let highlightedTabID: TabID?
 
     var body: some View {
         VStack(spacing: 7) {
@@ -31,7 +32,7 @@ struct BrowserCrestImportChrome: View {
     }
 
     private var selectedHost: String? {
-        BrowserStoreSelection.fallbackTabID(in: space).flatMap { id in
+        highlightedTabID.flatMap { id in
             space.tabs.first { $0.id == id }?.url?.host
         }
     }

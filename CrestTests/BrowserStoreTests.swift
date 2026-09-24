@@ -780,10 +780,7 @@ final class BrowserStoreTests: XCTestCase {
         )
         let store = BrowserStore(
             session: BrowserSession(spaces: [selectedSpace, untouchedSpace]),
-            selection: BrowserStoreSelection(
-                selectedSpaceID: selectedSpace.id,
-                selectedTabIDsBySpace: [selectedSpace.id: tabs[0].id, untouchedSpace.id: untouchedTab.id]
-            )
+            showing: selectedSpace.id, tabs: [selectedSpace.id: tabs[0].id, untouchedSpace.id: untouchedTab.id]
         )
 
         XCTAssertEqual(store.selectAdjacentTab(offset: -1), tabs[2].id)
@@ -847,7 +844,7 @@ final class BrowserStoreTests: XCTestCase {
         )
         let store = BrowserStore(
             session: BrowserSession(spaces: [space]),
-            selection: BrowserStoreSelection(selectedSpaceID: space.id, selectedTabIDsBySpace: [space.id: source.id])
+            showing: space.id, tabs: [space.id: source.id]
         )
 
         let duplicateID = try XCTUnwrap(store.duplicateSelectedTab())
@@ -1227,96 +1224,19 @@ final class BrowserStoreTests: XCTestCase {
         )
     }
 
-    func testWindowStateStoreRestoresAndPersistsOnlyItsOwnSelection() throws {
-        let browser = BrowserStore(session: .preview)
-        let session = browser.session
-        let work = try XCTUnwrap(session.spaces.first)
-        let personal = try XCTUnwrap(session.spaces.last)
-        let workTabID = try XCTUnwrap(work.tabs.first?.id)
-        let personalTabID = try XCTUnwrap(personal.tabs.last?.id)
-        let persistence = InMemoryBrowserWindowStatePersistence()
-        var savedState = BrowserWindowState(restoring: browser.selection, in: session)
-        savedState.selectTab(personalTabID, in: personal.id, session: session)
-        persistence.save(savedState)
-        let firstWindow = BrowserWindowStateStore(
-            id: savedState.id,
-            browser: browser,
-            persistence: persistence
-        )
-        let secondWindow = BrowserWindowStateStore(
-            id: BrowserWindowID(),
-            browser: browser,
-            persistence: persistence
-        )
-
-        XCTAssertEqual(firstWindow.selectedTab(in: session)?.id, personalTabID)
-        firstWindow.selectTab(workTabID, in: work.id, session: session)
-
-        XCTAssertEqual(firstWindow.selectedTab(in: session)?.id, workTabID)
-        XCTAssertEqual(secondWindow.selectedSpaceID, browser.selectedSpaceID)
-        XCTAssertEqual(
-            persistence.load(id: firstWindow.id)?.selectedTab(in: session)?.id,
-            workTabID
-        )
-        XCTAssertEqual(
-            persistence.load(id: secondWindow.id)?.selectedTab(in: session)?.id,
-            browser.selectedTab?.id
-        )
-    }
-
-    func testWindowStateStoreRecordsTheTabThatActuallyRenders() throws {
-        let persistence = InMemoryBrowserWindowStatePersistence()
-        let browser = BrowserStore(session: .preview)
-        let session = browser.session
-        let stateStore = BrowserWindowStateStore(
-            id: BrowserWindowID(),
-            browser: browser,
-            persistence: persistence
-        )
-        let renderedSpace = try XCTUnwrap(session.spaces.last)
-        let renderedTabID = try XCTUnwrap(renderedSpace.tabs.last?.id)
-
-        stateStore.recordRenderedTab(
-            renderedTabID,
-            in: renderedSpace.id,
-            session: session
-        )
-
-        let persistedState = try XCTUnwrap(persistence.load(id: stateStore.id))
-        XCTAssertEqual(persistedState.selectedSpaceID, renderedSpace.id)
-        XCTAssertEqual(
-            persistedState.selectedTab(in: session)?.id,
-            renderedTabID
-        )
-    }
-
     func testWindowStateStorePersistsChromeOnlyForItsOwningWindow() {
         let browser = BrowserStore(session: .preview)
-        let persistence = InMemoryBrowserWindowStatePersistence()
-        let firstWindow = BrowserWindowStateStore(
-            id: BrowserWindowID(),
-            browser: browser,
-            persistence: persistence
-        )
-        let secondWindow = BrowserWindowStateStore(
-            id: BrowserWindowID(),
-            browser: browser,
-            persistence: persistence
-        )
+        let layouts = BrowserWindowLayouts(defaults: nil)
+        let firstWindow = BrowserWindowStateStore(id: BrowserWindowID(), browser: browser, layouts: layouts)
+        let secondWindow = BrowserWindowStateStore(id: BrowserWindowID(), browser: browser, layouts: layouts)
 
         firstWindow.captureSidebar(width: 364, isPresented: false)
         secondWindow.captureSidebar(width: 278, isPresented: true)
 
-        XCTAssertEqual(persistence.load(id: firstWindow.id)?.sidebarWidth, 364)
-        XCTAssertEqual(
-            persistence.load(id: firstWindow.id)?.sidebarIsPresented,
-            false
-        )
-        XCTAssertEqual(persistence.load(id: secondWindow.id)?.sidebarWidth, 278)
-        XCTAssertEqual(
-            persistence.load(id: secondWindow.id)?.sidebarIsPresented,
-            true
-        )
+        XCTAssertEqual(layouts.layout(for: firstWindow.id)?.sidebarWidth, 364)
+        XCTAssertEqual(layouts.layout(for: firstWindow.id)?.sidebarIsPresented, false)
+        XCTAssertEqual(layouts.layout(for: secondWindow.id)?.sidebarWidth, 278)
+        XCTAssertEqual(layouts.layout(for: secondWindow.id)?.sidebarIsPresented, true)
     }
 
     func testWindowStoresShareBrowserMutationsButKeepIndependentSelections() throws {

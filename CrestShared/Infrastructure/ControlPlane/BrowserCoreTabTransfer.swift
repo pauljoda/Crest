@@ -6,31 +6,24 @@ enum BrowserCoreTabTransfer {
     struct Result: Decodable {
         var source: BrowserSpace
         var destination: BrowserSpace
-        /// A move between two Spaces of one workspace answers its window once.
-        var selection: BrowserSelectionHint?
-        /// A move between workspaces answers each side's window.
-        var sourceSelection: BrowserSelectionHint?
-        var destinationSelection: BrowserSelectionHint?
     }
 
-    /// Where a moved tab lands and which tab its old window shows instead.
+    /// Where a moved tab lands, and whether the window that moved it follows.
     struct Arguments: Encodable, Sendable {
         let tabId: UUID
         @BrowserCoreNullable var placement: TabPlacement?
         @BrowserCoreNullable var folderId: UUID?
         @BrowserCoreNullable var before: UUID?
-        @BrowserCoreNullable var fallbackTabId: UUID?
         let select: Bool
 
         init(
             tabID: TabID, placement: TabPlacement? = nil, folderID: FolderID? = nil,
-            before: TabID? = nil, fallback: TabID? = nil, selecting: Bool = false
+            before: TabID? = nil, selecting: Bool = false
         ) {
             tabId = tabID.rawValue
             self.placement = placement
             folderId = folderID?.rawValue
             self.before = before?.rawValue
-            fallbackTabId = fallback?.rawValue
             select = selecting
         }
     }

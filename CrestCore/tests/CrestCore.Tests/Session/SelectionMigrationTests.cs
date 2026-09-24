@@ -1,6 +1,7 @@
 using System.Text.Json.Nodes;
 
 using CrestCore.Application;
+using CrestCore.Contracts;
 
 using Xunit;
 
@@ -34,41 +35,45 @@ public sealed partial class BrowserContractsTests {
             Assert.Null(written["spaces"]![0]!["selectedTabID"]);
         }
 
-        // Showing a tab only records when it was last used; the answer suggests
-        // nothing and the document still carries no selection.
-        var touch = authority.PrepareCommand(1, SpaceCommand(session, "tab.touch", new() { ["tabId"] = fixture.Tab.ToString() }));
-        Assert.True(LeavesSelection(JsonNode.Parse(touch.Output)!));
-        touch.Commit();
+        // A window showing a tab only records when it was last used; the
+        // document still carries no selection.
+        using var device = new TestDevice(authority);
+        device.Send(new ShowTab(device.Open(fixture.Space), fixture.Space, fixture.Tab));
         var touched = JsonNode.Parse(authority.Checkpoint(2).Read("core"))!["spaces"]![0]!;
-        Assert.Equal(800000002.0, touched["tabs"]![0]!["lastActivatedAt"]!.GetValue<double>());
+        Assert.True(touched["tabs"]![0]!["lastActivatedAt"]!.GetValue<double>() > 800000000.25);
         Assert.Null(touched["selectedTabID"]);
     }
 
     [Fact]
-    public void ClosingTheViewedTabHintsItsFallbackWhileOtherWindowsKeepTheirOwn() {
+    public void ClosingTheShownTabReturnsToTheWindowsPreviousTabWhileOtherWindowsKeepTheirOwn() {
         var fixture = SavedSession(); var session = fixture.Document["session"]!;
         var space = session["spaces"]![0]!;
-        var current = space["tabs"]![0]!.DeepClone(); var currentId = Guid.NewGuid();
-        current["id"] = SwiftId(currentId); current["placement"] = "current"; current["folderID"] = null;
-        current["savedURL"] = null; current["splitGroupID"] = null;
-        space["tabs"]!.AsArray().Add(current);
-        var authority = new NativeSessionAuthority(Bytes(session));
-        byte[] Close(Guid? viewed) {
-            var request = JsonNode.Parse(SpaceCommand(session, "tab.close",
-                new() { ["tabId"] = currentId.ToString(), ["fallbackTabId"] = fixture.Tab.ToString() }))!;
-            request["view"] = new JsonObject {
-                ["spaceId"] = fixture.Space.ToString(),
-                ["tabs"] = new JsonArray(new JsonObject { ["spaceId"] = fixture.Space.ToString(), ["tabId"] = viewed?.ToString() })
-            };
-            return Bytes(request);
+        JsonNode Current(Guid id) {
+            var tab = space["tabs"]![0]!.DeepClone();
+            tab["id"] = SwiftId(id); tab["placement"] = "current"; tab["folderID"] = null;
+            tab["savedURL"] = null; tab["splitGroupID"] = null;
+            return tab;
         }
+        Guid earlier = Guid.NewGuid(), closing = Guid.NewGuid();
+        space["tabs"]!.AsArray().Add(Current(earlier));
+        space["tabs"]!.AsArray().Add(Current(closing));
+        var authority = new NativeSessionAuthority(Bytes(session));
+        using var device = new TestDevice(authority);
+        var closer = device.Open(fixture.Space);
+        foreach (var tab in new[] { fixture.Tab, earlier, closing }) device.Send(new ShowTab(closer, fixture.Space, tab));
+        var other = device.Open(fixture.Space);
+        device.Send(new ShowTab(other, fixture.Space, fixture.Tab));
+        var revision = authority.Revision;
 
-        var viewing = JsonNode.Parse(authority.PrepareCommand(1, Close(currentId)).Output)!;
-        Assert.True(HintsTab(viewing, fixture.Space, fixture.Tab));
-        Assert.Null(HintedSpace(viewing));
+        authority.PrepareCommand(revision, SpaceCommand(session, "tab.close", new() { ["tabId"] = closing.ToString() }, window: closer)).Commit();
+        Assert.Equal(earlier, device.Tab(closer, fixture.Space));
+        Assert.Equal(fixture.Space, device.Space(closer));
+        // A window showing another tab changes nothing.
+        Assert.Equal(fixture.Tab, device.Tab(other, fixture.Space));
 
-        // A window showing another tab is not asked to change anything.
-        Assert.True(LeavesSelection(JsonNode.Parse(authority.PrepareCommand(1, Close(fixture.Tab)).Output)!));
+        // A tab another window closes leaves this one showing nothing there.
+        authority.PrepareCommand(revision + 1, SpaceCommand(session, "tab.close", new() { ["tabId"] = earlier.ToString() }, window: other)).Commit();
+        Assert.Null(device.Tab(closer, fixture.Space));
     }
 
     [Fact]
@@ -85,10 +90,9 @@ public sealed partial class BrowserContractsTests {
         }
         Guid shownElsewhere = Stale(), unshown = Stale();
         var authority = new NativeSessionAuthority(Bytes(session));
-        var sweep = JsonNode.Parse(SpaceCommand(session, "records.sweep",
-            new() { ["keepTabIds"] = new JsonArray(shownElsewhere.ToString()) }))!;
-        sweep["view"] = null;
-        authority.PrepareCommand(1, Bytes(sweep)).Commit();
+        using var device = new TestDevice(authority);
+        device.Open(fixture.Space, (fixture.Space, shownElsewhere));
+        authority.PrepareCommand(1, SpaceCommand(session, "records.sweep", new())).Commit();
         var tabs = JsonNode.Parse(authority.Checkpoint(2).Read("core"))!["spaces"]![0]!["tabs"]!.AsArray()
             .Select(t => Guid.Parse(t!["id"]!["rawValue"]!.GetValue<string>())).ToArray();
         Assert.Contains(shownElsewhere, tabs);

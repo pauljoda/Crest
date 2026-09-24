@@ -235,13 +235,13 @@ final class BrowserMacWindowCoordinatorTests: XCTestCase {
             accent: .indigo, folders: [], tabs: [tab])
         let browser = BrowserStore(
             session: BrowserSession(spaces: [space]),
-            selection: BrowserStoreSelection(selectedSpaceID: space.id, selectedTabIDsBySpace: [space.id: tab.id]))
+            showing: space.id, tabs: [space.id: tab.id])
         let pages = BrowserPagePool(monitorsMemoryPressure: false)
         return (
             browser,
             BrowserMacWindowCoordinator(
                 browser: browser, pages: pages, spaceAccess: BrowserSpaceAccessController(),
-                windowStatePersistence: InMemoryBrowserWindowStatePersistence())
+                windowLayouts: BrowserWindowLayouts(defaults: nil))
         )
     }
 }

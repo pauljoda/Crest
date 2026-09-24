@@ -15,7 +15,7 @@ enum BrowserSavedLocationAction: String, Encodable, Sendable {
 enum BrowserSessionArguments {
     // MARK: - Tabs
 
-    /// Commands that name one tab: `tab.touch`, `tab.delete`, `split.leave`,
+    /// Commands that name one tab: `tab.delete`, `split.leave`,
     /// `archive.restore`.
     struct Tab: Encodable, Sendable {
         let tabId: UUID
@@ -33,14 +33,12 @@ enum BrowserSessionArguments {
     /// `tab.close`.
     struct TabClose: Encodable, Sendable {
         let tabId: UUID
-        @BrowserCoreNullable var fallbackTabId: UUID?
         let resetArchivePlacement: Bool
     }
 
     /// `tab.close_durable`.
     struct TabCloseDurable: Encodable, Sendable {
         let tabId: UUID
-        @BrowserCoreNullable var fallbackTabId: UUID?
         let returnToSavedURL: Bool
     }
 
@@ -252,11 +250,6 @@ enum BrowserSessionArguments {
     struct HistoryRemoveRange: Encodable, Sendable {
         let start: TimeInterval
         let end: TimeInterval
-    }
-
-    /// `records.sweep` at launch: the tabs any window shows survive it.
-    struct RecordsSweep: Encodable, Sendable {
-        let keepTabIds: [UUID]
     }
 
     // MARK: - Spaces

@@ -7,7 +7,7 @@ import XCTest
 final class BrowserStoreWorkspaceTests: XCTestCase {
     func testAnEmptyWindowSelectionSurvivesOtherWindowsPublishingAndDeletingTabs() throws {
         let first = BrowserStore(session: .preview)
-        let empty = first.makeWindowStore(restoresTabSelection: false)
+        let empty = first.makeWindowStore(BrowserWindowOpening(restoresTabs: false))
         let tab = try XCTUnwrap(first.selectedSpace?.tabs.first)
         let ids = first.session.tabIDs
 
@@ -18,26 +18,6 @@ final class BrowserStoreWorkspaceTests: XCTestCase {
         first.deleteTab(tab.id, in: first.selectedSpaceID)
         XCTAssertNil(empty.selectedTab)
         XCTAssertFalse(empty.session.tabIDs.contains(tab.id))
-    }
-
-    func testAnExplicitEmptyWindowSelectionSurvivesPersistenceAndRestoration() throws {
-        let owner = BrowserStore(session: .preview)
-        let empty = owner.makeWindowStore(restoresTabSelection: false)
-        let captured = BrowserWindowState(restoring: empty.selection, in: empty.session)
-        var saved = try JSONDecoder().decode(BrowserWindowState.self, from: JSONEncoder().encode(captured))
-        saved.repair(using: owner.session)
-
-        let restored = owner.makeWindowStore(restoring: saved)
-
-        XCTAssertNil(saved.selectedTab(in: owner.session))
-        XCTAssertNil(restored.selectedTab)
-        XCTAssertTrue(restored.session.spaces.allSatisfy { restored.selectedTabID(in: $0.id) == nil })
-        XCTAssertEqual(restored.session.tabIDs, owner.session.tabIDs)
-
-        var legacy = BrowserWindowState(selectedSpaceID: owner.selectedSpaceID, selectedTabIDsBySpace: [:])
-        legacy.repair(using: owner.session)
-        // A record written before windows captured their Spaces keeps its legacy fallback.
-        XCTAssertEqual(legacy.selectedTab(in: owner.session)?.id, owner.selectedSpace?.tabs.first?.id)
     }
 
     func testTemporaryWorkspaceBorrowsItsProfileButKeepsAllBrowsingRecordsLocal() async throws {
@@ -163,8 +143,7 @@ final class BrowserStoreWorkspaceTests: XCTestCase {
             folders: [], tabs: [companionTab])
         let source = BrowserStore(
             session: BrowserSession(spaces: [space, companion]),
-            selection: BrowserStoreSelection(
-                selectedSpaceID: space.id, selectedTabIDsBySpace: [space.id: tab.id, companion.id: companionTab.id]))
+            showing: space.id, tabs: [space.id: tab.id, companion.id: companionTab.id])
         let assignment = BrowserSpaceRuntimeAssignment(space: space)
         let temporary = try XCTUnwrap(source.makeTemporaryWindowStore(in: assignment))
 

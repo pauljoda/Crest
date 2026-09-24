@@ -37,10 +37,10 @@ public sealed partial class NativeSessionAuthority {
                 new(spaceId, profileId), args["sourceAccessible"]!.GetValue<bool>(),
                 args["destinationAccessible"]!.GetValue<bool>(), args["supportsLiveAdoption"]!.GetValue<bool>());
         } else if (operation != SessionOperation.TransientArchive) throw new BrowserRuleException(BrowserRuleCodes.UnknownTransientCommand);
-        var (next, answer) = EditSpace(request, operation == SessionOperation.TransientPromote
+        var (next, answer, followUp) = EditSpace(request, operation == SessionOperation.TransientPromote
             ? SessionOperation.TabPromoteTransient : SessionOperation.TabArchiveTransient);
         answer["adoptLivePage"] = adopt && args["tab"] is not null;
-        return new(this, expected, next, Output(answer), transientCompletion: completion);
+        return new(this, expected, next, Output(answer), transientCompletion: completion, followUp: followUp);
     }
 
     #endregion

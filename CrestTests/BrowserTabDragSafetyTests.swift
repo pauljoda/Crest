@@ -362,7 +362,7 @@ final class BrowserTabDragSafetyTests: XCTestCase {
         var restored = BrowserSession(spaces: [decoy, capturedSource, destination])
         restored = try BrowserCoreSync.repair(restored)
         let browser = BrowserStore(
-            session: restored, selection: BrowserStoreSelection(selectedSpaceID: destination.id))
+            session: restored, showing: destination.id)
         let repairedID = try XCTUnwrap(restored.space(id: capturedSource.id)?.tabs.first?.id)
         XCTAssertNotEqual(repairedID, duplicateTabID)
         let stale = BrowserTabDragItem(tabID: duplicateTabID, spaceID: capturedSource.id, profileID: capturedSource.profile.id)
@@ -1449,9 +1449,7 @@ final class BrowserTabDragSafetyTests: XCTestCase {
         }
         return BrowserStore(
             session: BrowserSession(spaces: spaces),
-            selection: BrowserStoreSelection(
-                selectedSpaceID: selectedSpaceID ?? spaces.first?.id ?? SpaceID(),
-                selectedTabIDsBySpace: tabs),
+            showing: selectedSpaceID ?? spaces.first?.id ?? SpaceID(), tabs: tabs,
             browsingMode: .privateBrowsing
         )
     }

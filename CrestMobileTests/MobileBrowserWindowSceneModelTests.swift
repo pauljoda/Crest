@@ -22,7 +22,7 @@ final class MobileBrowserWindowSceneModelTests: XCTestCase {
                 pageStoreRegistry: registry,
                 spaceAccess: BrowserSpaceAccessController(),
                 tabStateArchive: nil,
-                windowStatePersistence: InMemoryBrowserWindowStatePersistence(),
+                windowLayouts: BrowserWindowLayouts(defaults: nil),
                 startupBehavior: behavior,
                 monitorsMemoryPressure: false
             )
@@ -45,7 +45,7 @@ final class MobileBrowserWindowSceneModelTests: XCTestCase {
         let model = MobileBrowserWindowSceneModel(
             id: BrowserWindowID(), rootBrowser: rootBrowser, permissionCenter: BrowserSitePermissionCenter(),
             pageStoreRegistry: registry, spaceAccess: BrowserSpaceAccessController(), tabStateArchive: nil,
-            windowStatePersistence: InMemoryBrowserWindowStatePersistence(), startupBehavior: .showStartPage,
+            windowLayouts: BrowserWindowLayouts(defaults: nil), startupBehavior: .showStartPage,
             monitorsMemoryPressure: false, usesEphemeralWebsiteDataStores: true)
         model.privateBrowser.openNewTab(url: try XCTUnwrap(URL(string: "https://private.example")))
         let privateSession = model.privateBrowser.session
@@ -90,7 +90,7 @@ final class MobileBrowserWindowSceneModelTests: XCTestCase {
             pageStoreRegistry: registry,
             spaceAccess: BrowserSpaceAccessController(),
             tabStateArchive: nil,
-            windowStatePersistence: InMemoryBrowserWindowStatePersistence(),
+            windowLayouts: BrowserWindowLayouts(defaults: nil),
             startupBehavior: .lastActiveTab,
             monitorsMemoryPressure: false,
             usesEphemeralWebsiteDataStores: true
@@ -116,18 +116,17 @@ final class MobileBrowserWindowSceneModelTests: XCTestCase {
             folders: [], tabs: [sharedTab, otherTab])
         let root = BrowserStore(
             session: BrowserSession(spaces: [space]),
-            selection: BrowserStoreSelection(
-                selectedSpaceID: space.id, selectedTabIDsBySpace: [space.id: sharedTab.id]))
+            showing: space.id, tabs: [space.id: sharedTab.id])
         let registry = MobileBrowserPageStoreRegistry(
             primary: MobileBrowserPageStore(usesEphemeralWebsiteDataStores: true))
         let permissionCenter = BrowserSitePermissionCenter()
         let spaceAccess = BrowserSpaceAccessController()
-        let windowPersistence = InMemoryBrowserWindowStatePersistence()
+        let windowLayouts = BrowserWindowLayouts(defaults: nil)
         func makeScene() -> MobileBrowserWindowSceneModel {
             MobileBrowserWindowSceneModel(
                 id: BrowserWindowID(), rootBrowser: root, permissionCenter: permissionCenter,
                 pageStoreRegistry: registry, spaceAccess: spaceAccess, tabStateArchive: nil,
-                windowStatePersistence: windowPersistence, startupBehavior: .lastActiveTab,
+                windowLayouts: windowLayouts, startupBehavior: .lastActiveTab,
                 monitorsMemoryPressure: false, usesEphemeralWebsiteDataStores: true)
         }
         let first = makeScene()

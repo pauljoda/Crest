@@ -193,6 +193,6 @@ final class BrowserSplitTabCopyTests: XCTestCase {
             tabs: tabs)
         return BrowserStore(
             session: BrowserSession(spaces: [space]),
-            selection: BrowserStoreSelection(selectedSpaceID: space.id, selectedTabIDsBySpace: [space.id: selected]))
+            showing: space.id, tabs: [space.id: selected])
     }
 }

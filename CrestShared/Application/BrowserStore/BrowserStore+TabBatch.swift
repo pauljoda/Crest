@@ -11,11 +11,6 @@ extension BrowserStore {
     private func prepareOwnedTabBatch(_ request: BrowserTabBatchRequest, action: BrowserTabBatchAction, at date: Date)
         throws -> (command: BrowserCoreSessionAuthority.PreparedChange, result: BrowserTabBatchResult) {
         guard let source = space(matching: request.assignment) else { throw BrowserTabBatchError.staleSelection }
-        var history = tabSelectionHistory
-        let fallback = selectedTabID(in: source.id).flatMap {
-            history.fallbackTabID(afterDismissing: $0, in: source.id,
-                availableTabIDs: Set(source.tabs.map(\.id)).subtracting(request.ids))
-        }
         var observedIDs = Set(request.ids)
         if case .split(let target?, _) = action {
             observedIDs.insert(target)
@@ -24,7 +19,7 @@ extension BrowserStore {
             }
         }
         let arguments = BrowserCoreTabBatch.Arguments(
-            request: request, action: action, fallback: fallback,
+            request: request, action: action,
             follow: linkPreferences.followsTabsMovedToAnotherSpace,
             observations: copyObservations(for: observedIDs, in: source))
         return try family.prepareTabBatch(request, arguments: arguments, from: self, at: date)

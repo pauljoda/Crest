@@ -88,10 +88,7 @@ final class MobileSavedLocationRestoreActionTests: XCTestCase {
         )
         let browser = BrowserStore(
             session: BrowserSession(spaces: [source, destination]),
-            selection: BrowserStoreSelection(
-                selectedSpaceID: source.id,
-                selectedTabIDsBySpace: [source.id: tab.id, destination.id: destinationTab.id]
-            ),
+            showing: source.id, tabs: [source.id: tab.id, destination.id: destinationTab.id],
             browsingMode: .privateBrowsing
         )
         let pages = MobileBrowserPageStore(

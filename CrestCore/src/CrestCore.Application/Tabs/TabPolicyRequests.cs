@@ -7,15 +7,9 @@ using static CrestCore.Application.PolicyFields;
 
 namespace CrestCore.Application;
 
-/// Typed requests for the page-residency, process-recovery, tab-dismissal and
-/// tab-selection policy operations.
+/// Typed requests for the page-residency, process-recovery and tab-dismissal
+/// policy operations.
 internal static class TabPolicyRequests {
-    #region Variables
-
-    private const int MaximumSelectionCandidates = 3;
-
-    #endregion
-
     #region Actions - Decoding
 
     public sealed record ReleaseLimit(MemoryPressureLevel Level, int EligiblePageCount, DevicePlatform Platform) {
@@ -60,18 +54,6 @@ internal static class TabPolicyRequests {
                 : TabPlacementCodes.Parse(Protocol.Text(request, "placement")) ?? throw new ProtocolException(ProtocolErrorCodes.InvalidPlacement);
             bool isStartPage = OptionalFlag(request, "isStartPage") ?? false;
             return new(placement, isStartPage, Integer(request, "tabCount"));
-        }
-    }
-
-    public sealed record SelectionFallback(IReadOnlyList<TabPlacement> Placements) {
-        public static SelectionFallback Decode(JsonElement request) {
-            Members(request, "placements");
-            var placements = new List<TabPlacement>();
-            foreach (var item in Element(request, "placements").EnumerateArray()) {
-                if (placements.Count >= MaximumSelectionCandidates) throw new ProtocolException(ProtocolErrorCodes.RecordBatchLimit);
-                placements.Add(TabPlacementCodes.Parse(item.GetString()) ?? throw new ProtocolException(ProtocolErrorCodes.InvalidPlacement));
-            }
-            return new(placements);
         }
     }
 

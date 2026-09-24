@@ -5,7 +5,7 @@ import Observation
 @MainActor
 final class BrowserStore {
     /// The core-owned browsing data. It carries no selection; what this window
-    /// shows is `selection`.
+    /// shows is `window`.
     #if DEBUG
         var session: BrowserSession {
             get { family.currentSession }
@@ -16,9 +16,8 @@ final class BrowserStore {
     #else
         var session: BrowserSession { family.currentSession }
     #endif
-    /// The Space and tabs this window shows. Window records persist it; the core
-    /// session never holds it.
-    private(set) var selection: BrowserStoreSelection
+    /// This window in the core's device, which owns what it shows.
+    let windowID: BrowserWindowID
     private(set) var sessionRevision = 0
     var localSyncErrorDescription: String?
     let browsingMode: BrowserBrowsingMode
@@ -33,35 +32,39 @@ final class BrowserStore {
     @ObservationIgnored var syncStageGeneration = 0
     @ObservationIgnored var syncStageTask: Task<Void, Never>?
     @ObservationIgnored var credentialSaveOperations: [BrowserCredentialSaveKey: BrowserCredentialSaveOperation] = [:]
-    @ObservationIgnored var tabSelectionHistory: BrowserTabSelectionHistory
     @ObservationIgnored let linkPreferences: BrowserLinkPreferenceStore
     @ObservationIgnored var pendingMovedTabActivation: BrowserTabRuntimeAssignment?
     @ObservationIgnored weak var interactionObserver: (any BrowserStoreInteractionObserving)?
     @ObservationIgnored weak var tabLinkProvider: (any BrowserTabLinkProviding)?
     @ObservationIgnored weak var tabCopying: (any BrowserTabCopying)?
+    /// What this window showed when it last followed the core, which it keeps
+    /// showing once the core no longer has it open.
+    @ObservationIgnored private var lastWindow: WindowState
+    @ObservationIgnored private var isClosed = false
+
+    /// What the core says this window shows.
+    var window: WindowState { core.state.windows[windowID.rawValue] ?? lastWindow }
 
     var deletingSpaceIDs: Set<SpaceID> { family.deletingSpaceIDs }
-    var selectedSpaceID: SpaceID { selection.selectedSpaceID }
+    var selectedSpaceID: SpaceID { window.shownSpace }
     var selectedSpace: BrowserSpace? {
-        guard !deletingSpaceIDs.contains(selection.selectedSpaceID) else {
-            return nil
-        }
-        return selection.selectedSpace(in: family.currentSession)
+        guard !deletingSpaceIDs.contains(selectedSpaceID) else { return nil }
+        return family.currentSession.space(id: selectedSpaceID)
     }
     var selectedTab: BrowserTab? {
-        guard selectedSpace != nil else { return nil }
-        return selection.selectedTab(in: family.currentSession)
+        guard let space = selectedSpace, let tabID = window.shownTabID(in: space.id) else { return nil }
+        return space.tabs.first { $0.id == tabID }
     }
 
     /// The tab this window shows in a Space, if any.
     func selectedTabID(in spaceID: SpaceID) -> TabID? {
-        selection.selectedTabID(in: spaceID)
+        window.shownTabID(in: spaceID)
     }
 
-    /// The session as this window renders it: the core's data and this
-    /// window's selection.
+    /// The session as this window renders it: the core's data and what the
+    /// core says this window shows.
     var presented: BrowserPresentedSession {
-        BrowserPresentedSession(session: session, selection: selection)
+        BrowserPresentedSession(session: session, window: window)
     }
     var isPrivateBrowsing: Bool { browsingMode.isPrivate }
     var isTemporaryWorkspace: Bool { temporarySourceAssignment != nil }
@@ -72,48 +75,66 @@ final class BrowserStore {
     }
     var localSyncCoordinatorStatus: BrowserSyncCoordinatorStatus? { syncCoordinator?.status }
 
-    /// The viewed Space and an empty tab selection belong to this window.
-    /// A core command is only needed when saved tab data changes.
+    /// Shows a Space in this window, on the tab it last showed there or the
+    /// Space's fallback.
     func selectPresentedSpace(_ id: SpaceID) {
-        guard !deletingSpaceIDs.contains(id), let space = session.space(id: id) else { return }
-        selection.selectSpace(space)
+        guard !deletingSpaceIDs.contains(id), session.space(id: id) != nil else { return }
+        guard sendWindowIntent(ShowSpace(windowID: windowID.rawValue, spaceID: id.rawValue)) else { return }
         tabMultiSelection.clear()
-        selectionDidChange()
+        sessionRevision &+= 1
     }
 
     func clearPresentedTabSelection(in spaceID: SpaceID) {
-        selection.clearTab(in: spaceID)
-        selectionDidChange()
-    }
-
-    /// Shows a tab in this window. Only the window's selection changes.
-    func presentTab(_ tabID: TabID, in spaceID: SpaceID) {
-        guard !deletingSpaceIDs.contains(spaceID), session.space(id: spaceID)?.contains(tabID) == true else { return }
-        selection.selectTab(tabID, in: spaceID)
-        selectionDidChange()
-    }
-
-    /// Adopts the tabs a window record remembers for each Space at launch.
-    /// Launch keeps opening the Space it chose (the default Space), as it
-    /// always has; only the per-Space tabs come from the record.
-    func restoreLaunchSelection(tabsFrom record: BrowserWindowState) {
-        var restored = BrowserStoreSelection(
-            selectedSpaceID: selection.selectedSpaceID, selectedTabIDsBySpace: record.selection.tabSelections)
-        restored.reconcile(using: session, excluding: deletingSpaceIDs)
-        if let space = restored.selectedSpace(in: session) { restored.selectSpace(space) }
-        selection = restored
-        tabMultiSelection.clear()
-        selectionDidChange()
-    }
-
-    private func selectionDidChange() {
+        guard sendWindowIntent(ShowTab(windowID: windowID.rawValue, spaceID: spaceID.rawValue, tabID: nil)) else {
+            return
+        }
         sessionRevision &+= 1
-        tabSelectionHistory.reconcile(session: session, selection: selection)
     }
 
+    /// Shows a tab in this window and records when it was last used, which
+    /// current-tab cleanup reads. Answers false when the core would not show it.
+    @discardableResult
+    func activateSessionTab(_ id: TabID, in spaceID: SpaceID) -> Bool {
+        guard !deletingSpaceIDs.contains(spaceID), session.space(id: spaceID)?.contains(id) == true,
+            sendWindowIntent(ShowTab(windowID: windowID.rawValue, spaceID: spaceID.rawValue, tabID: id.rawValue))
+        else { return false }
+        sessionRevision &+= 1
+        return true
+    }
+
+    /// Stops showing a tab the session keeps: the window returns to the tab it
+    /// showed before in that Space, or shows nothing there.
+    func dismissShownTab(_ id: TabID, in spaceID: SpaceID) {
+        guard
+            sendWindowIntent(
+                DismissShownTab(windowID: windowID.rawValue, spaceID: spaceID.rawValue, tabID: id.rawValue))
+        else { return }
+        sessionRevision &+= 1
+    }
+
+    /// The column shares this window keeps for a split group it resized.
+    func resizeSplitColumns(_ fractions: [Double], for groupID: SplitGroupID) {
+        sendWindowIntent(ResizeSplitColumns(windowID: windowID.rawValue, groupID: groupID.rawValue, shares: fractions))
+    }
+
+    /// Runs one intent about this window. A tab use the core recorded keeps
+    /// the family's session in step. Answers false when a rule refused it.
+    @discardableResult
+    private func sendWindowIntent(_ intent: some Intent) -> Bool {
+        let changes: [Change]
+        do { changes = try core.send(intent) } catch { return false }
+        lastWindow = window
+        for case .tabActivated(let activated) in changes { family.recordActivation(activated) }
+        return true
+    }
+
+    /// A window over a new family holding `session`. Without `spaceID` it opens
+    /// on the launch Space and its fallback tab; with one it shows that Space
+    /// and only the `tabs` named.
     convenience init(
         session: BrowserSession,
-        selection: BrowserStoreSelection? = nil,
+        showing spaceID: SpaceID? = nil,
+        tabs: [SpaceID: TabID] = [:],
         credentialVault: any CredentialVault = InMemoryCredentialVault(),
         syncCoordinator: BrowserSyncCoordinator? = nil,
         syncCoalescingDelay: Duration = .milliseconds(150),
@@ -122,8 +143,7 @@ final class BrowserStore {
         core: CrestCore = CrestCore()
     ) {
         self.init(
-            session: session,
-            selection: selection,
+            opening: BrowserWindowOpening(showingSpaceID: spaceID, showingTabs: tabs, restoresTabs: spaceID == nil),
             credentialVault: credentialVault,
             syncCoordinator: syncCoordinator,
             syncCoalescingDelay: syncCoalescingDelay,
@@ -134,11 +154,10 @@ final class BrowserStore {
         )
     }
 
-    /// `selection` is what this window shows; without one it opens the launch
-    /// Space on its fallback tab.
+    /// Opens a window over `family`'s session in `core`'s device as `opening`
+    /// says.
     init(
-        session: BrowserSession,
-        selection: BrowserStoreSelection? = nil,
+        opening: BrowserWindowOpening = BrowserWindowOpening(),
         credentialVault: any CredentialVault,
         syncCoordinator: BrowserSyncCoordinator?,
         syncCoalescingDelay: Duration,
@@ -148,11 +167,9 @@ final class BrowserStore {
         linkPreferences: BrowserLinkPreferenceStore = .shared,
         core: CrestCore
     ) {
-        let initial = selection ?? BrowserStoreSelection(launching: session)
-        self.selection = initial
+        windowID = opening.id
         self.linkPreferences = linkPreferences
         self.core = core
-        tabSelectionHistory = BrowserTabSelectionHistory(session: session, selection: initial)
         self.credentialVault = credentialVault
         self.syncCoordinator = syncCoordinator
         self.syncCoalescingDelay = syncCoalescingDelay
@@ -160,8 +177,36 @@ final class BrowserStore {
         self.family = family
         self.cloudSyncChangeHandler = cloudSyncChangeHandler
         localSyncErrorDescription = nil
-        family.register(self)
-        self.selection.reconcile(using: family.currentSession, excluding: family.deletingSpaceIDs)
+        lastWindow = WindowState(
+            id: opening.id.rawValue, workspaceID: UUID(), shownSpaceID: UUID(), shownTabs: [], splitColumnShares: [])
+        let workspace = family.register(self)
+        do {
+            try core.send(
+                OpenWindow(
+                    windowID: opening.id.rawValue, workspaceID: workspace,
+                    saved: opening.saved && family.keepsWindowRecords, copyingWindowID: opening.copying?.rawValue,
+                    showingSpaceID: opening.showingSpaceID?.rawValue,
+                    showingTabs: opening.showingTabs.map {
+                        ShownTab(spaceID: $0.key.rawValue, tabID: $0.value.rawValue)
+                    },
+                    restoresTabs: opening.restoresTabs))
+        } catch {
+            preconditionFailure("The core refused to open a window over its own workspace: \(error)")
+        }
+        lastWindow = window
+    }
+
+    /// Closes this window in the core's device. What it showed stays readable
+    /// for anything still holding the store.
+    func close() {
+        guard !isClosed else { return }
+        isClosed = true
+        lastWindow = window
+        _ = try? core.send(CloseWindow(windowID: windowID.rawValue))
+    }
+
+    isolated deinit {
+        close()
     }
 }
 
@@ -183,31 +228,13 @@ extension BrowserStore {
         syncCoordinator?.advanceStoreRevision(to: revision)
     }
 
-    func makeWindowStore(
-        restoring savedState: BrowserWindowState? = nil,
-        restoresTabSelection: Bool = true,
-        selectingSpaceID: SpaceID? = nil
-    ) -> BrowserStore {
-        let windowSession = family.currentSession
-        var windowSelection: BrowserStoreSelection
-        if var savedState {
-            savedState.repair(using: windowSession)
-            windowSelection = savedState.selection
-        } else {
-            windowSelection = BrowserStoreSelection(launching: windowSession, excluding: deletingSpaceIDs)
-        }
-        if !restoresTabSelection {
-            windowSelection = BrowserStoreSelection(selectedSpaceID: windowSelection.selectedSpaceID)
-        }
-        // Choosing the window's Space keeps whatever tab it restored there,
-        // including none.
-        if let selectingSpaceID, windowSession.space(id: selectingSpaceID) != nil {
-            windowSelection = BrowserStoreSelection(
-                selectedSpaceID: selectingSpaceID, selectedTabIDsBySpace: windowSelection.tabSelections)
-        }
+    /// Another window over this family's session. Without a record of its own
+    /// it starts as this window shows, unless `opening` names another.
+    func makeWindowStore(_ opening: BrowserWindowOpening = BrowserWindowOpening()) -> BrowserStore {
+        var opening = opening
+        opening.copying = opening.copying ?? windowID
         let store = BrowserStore(
-            session: windowSession,
-            selection: windowSelection,
+            opening: opening,
             credentialVault: credentialVault,
             syncCoordinator: syncCoordinator,
             syncCoalescingDelay: syncCoalescingDelay,
@@ -351,31 +378,28 @@ extension BrowserStore {
         }
     }
 
-    /// `hint` is the core's follow-up selection when this window issued the
-    /// accepted command; other windows keep their own selection.
-    func receiveFamilySessionChange(
-        from previous: BrowserSession, to shared: BrowserSession, hint: BrowserSelectionHint
-    ) {
-        let previousSelection = selection
-        let previousSpace = previous.space(id: previousSelection.selectedSpaceID)
-        selection.apply(hint)
-        selection.reconcile(using: shared, excluding: deletingSpaceIDs)
-        let selectedSpace = shared.space(id: selection.selectedSpaceID)
-        if previousSelection.selectedSpaceID != selection.selectedSpaceID
+    /// The family accepted a change. The core's device has already moved or
+    /// repaired this window; a window that now shows another Space, or its
+    /// Space under another profile or policy, drops its multi-selection.
+    func receiveFamilySessionChange(from previous: BrowserSession, to shared: BrowserSession) {
+        let previousSpaceID = lastWindow.shownSpace
+        let previousSpace = previous.space(id: previousSpaceID)
+        let selectedSpace = shared.space(id: selectedSpaceID)
+        if previousSpaceID != selectedSpaceID
             || previousSpace?.profile.id != selectedSpace?.profile.id
             || previousSpace?.accessPolicy != selectedSpace?.accessPolicy
         {
             tabMultiSelection.clear()
         }
         if let activation = pendingMovedTabActivation,
-            selection.selectedSpaceID != activation.spaceID
-                || selection.selectedTabID(in: activation.spaceID) != activation.tabID
+            selectedSpaceID != activation.spaceID
+                || selectedTabID(in: activation.spaceID) != activation.tabID
                 || selectedSpace?.profile.id != activation.profileID
         {
             pendingMovedTabActivation = nil
         }
+        lastWindow = window
         sessionRevision &+= 1
-        tabSelectionHistory.reconcile(session: session, selection: selection)
     }
 
     func invalidatePendingSyncStage() {

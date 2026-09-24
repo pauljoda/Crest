@@ -729,12 +729,10 @@ final class MobileBrowserRootModelTests: XCTestCase {
     ) -> MobileBrowserRootFixture {
         let browser = BrowserStore(
             session: BrowserSession(spaces: spaces),
+            showing: selectedSpaceID,
             // Every Space shows its first tab, as a window restoring them would.
-            selection: BrowserStoreSelection(
-                selectedSpaceID: selectedSpaceID,
-                selectedTabIDsBySpace: Dictionary(
-                    uniqueKeysWithValues: spaces.compactMap { space in space.tabs.first.map { (space.id, $0.id) } })
-            ),
+            tabs: Dictionary(
+                uniqueKeysWithValues: spaces.compactMap { space in space.tabs.first.map { (space.id, $0.id) } }),
             browsingMode: browsingMode
         )
         let pages = MobileBrowserPageStore(

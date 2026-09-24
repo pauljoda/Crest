@@ -12,9 +12,9 @@ public sealed partial class NativeSessionAuthority {
         try {
             // A batch acts on the tabs the person multi-selected in the Space
             // their window shows; any other Space means the selection is stale.
-            var view = SessionView.Decode(request[SessionView.Key]);
+            var followUp = new WindowFollowUp(IssuingWindow(request));
             var sourceId = Id(request["spaceId"]);
-            if (view.SpaceId != sourceId) throw new BrowserRuleException(BrowserRuleCodes.StaleSelection);
+            if (followUp.Window?.ShownSpaceId != sourceId) throw new BrowserRuleException(BrowserRuleCodes.StaleSelection);
             var source = TransferSpace(sourceId, Id(request["profileId"]));
             var args = request["arguments"]!.AsObject();
             var selection = args["selection"]!;
@@ -41,8 +41,15 @@ public sealed partial class NativeSessionAuthority {
             var a = BrowserTabCollection.Restore(source);
             var b = destination is null ? null : BrowserTabCollection.Restore(destination);
             var now = Now(request);
-            var result = a.ApplyBatch(captured, action, view.Tab(sourceId), Tab(args["fallbackTabId"]),
-                b, destination is null ? null : view.Tab(destination.Id), new SystemIdSource(), now);
+            // The tab the window shows gives way to the one it showed before,
+            // among the tabs the batch leaves in place.
+            var batched = captured.Tabs.Select(tab => tab.Id).ToHashSet();
+            var fallback = followUp.Window?.Tab(sourceId) is { } shown && batched.Contains(shown)
+                ? followUp.FallbackAfterDismissing(sourceId, shown,
+                    source.Tabs.Select(tab => tab.Id).Where(id => !batched.Contains(id)).ToHashSet())
+                : null;
+            var result = a.ApplyBatch(captured, action, followUp.Window?.Tab(sourceId), fallback,
+                b, destination is null ? null : followUp.Window?.Tab(destination.Id), new SystemIdSource(), now);
             var observations = (args["copyObservations"] as JsonArray ?? []).Select(node => SessionTabObservation.Decode(node!)).ToArray();
             foreach (var pair in result.Copies) {
                 var observation = observations.FirstOrDefault(item => item.TabId == pair.Source);
@@ -63,18 +70,14 @@ public sealed partial class NativeSessionAuthority {
                     ["changed"] = true,
                     ["copies"] = new JsonArray(result.Copies.Select(p => (JsonNode)new JsonObject { ["source"] = p.Source.ToString(), ["copy"] = p.Copy.ToString() }).ToArray())
                 });
-            var hint = new SessionSelectionHint().SelectTab(view, sourceId, result.Selection);
+            followUp.ShowTab(sourceId, result.Selection);
             if (destination is not null) {
-                hint.SelectTab(view, destination.Id, result.DestinationSelection);
-                if (action.Follow) hint.SelectSpace(destination.Id);
+                followUp.ShowTab(destination.Id, result.DestinationSelection);
+                if (action.Follow) followUp.ShowSpace(destination.Id);
             }
             var next = Replacing(session, [.. organized.Select(pair => pair.Space)]);
             Validate(next);
-            var output = Output(new JsonObject {
-                ["changes"] = changes,
-                [SessionSelectionHint.Key] = hint.Encode()
-            });
-            return new(this, expected, next, output);
+            return new(this, expected, next, Output(new JsonObject { ["changes"] = changes }), followUp: followUp);
         } catch (BrowserRuleException error) {
             return new(this, expected, session, Output(new JsonObject { ["error"] = error.Code }), error.Code);
         }

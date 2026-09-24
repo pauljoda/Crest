@@ -10,8 +10,8 @@ namespace CrestCore.Tests;
 
 public sealed partial class BrowserContractsTests {
     /// One edit to a Space in a session of its own, answered the way the native
-    /// caller reads it. The window shows `viewedTab`, if any.
-    private static JsonNode Edited(JsonNode space, string operation, JsonObject arguments, Guid? viewedTab = null) {
+    /// caller reads it.
+    private static JsonNode Edited(JsonNode space, string operation, JsonObject arguments) {
         var authority = new NativeSessionAuthority(Bytes(new JsonObject { ["spaces"] = new JsonArray(space.DeepClone()) }));
         return JsonNode.Parse(authority.PrepareCommand(1, Bytes(new JsonObject {
             ["version"] = 1,
@@ -19,10 +19,6 @@ public sealed partial class BrowserContractsTests {
             ["spaceId"] = space["id"]!.DeepClone(),
             ["profileId"] = space["profile"]!["id"]!.DeepClone(),
             ["arguments"] = arguments,
-            ["view"] = new JsonObject {
-                ["spaceId"] = space["id"]!["rawValue"]!.DeepClone(),
-                ["tabs"] = new JsonArray(new JsonObject { ["spaceId"] = space["id"]!["rawValue"]!.DeepClone(), ["tabId"] = viewedTab?.ToString() })
-            },
             ["now"] = 800000001.0
         })).Output)!;
     }
@@ -76,8 +72,13 @@ public sealed partial class BrowserContractsTests {
     [Fact]
     public void NativeOpenAndClosePreserveDurableTabsAndPublishTheRequestedSelection() {
         var f = SavedSession(); var original = f.Document["session"]!["spaces"]![0]!;
+        var session = new JsonObject { ["spaces"] = new JsonArray(original.DeepClone()) };
+        var authority = new NativeSessionAuthority(Bytes(session));
+        using var device = new TestDevice(authority);
+        var window = device.Open(f.Space, (f.Space, f.Tab));
+        var elsewhere = device.Open(f.Space, (f.Space, f.Tab));
         var newId = Guid.NewGuid();
-        var opened = Edited(original, "tab.open", new() {
+        var opening = authority.PrepareCommand(1, SpaceCommand(session, "tab.open", new() {
             ["select"] = true,
             ["tab"] = new JsonObject {
                 ["id"] = SwiftId(newId),
@@ -87,22 +88,25 @@ public sealed partial class BrowserContractsTests {
                 ["symbol"] = "globe",
                 ["lastActivatedAt"] = 800000001.0
             }
-        });
+        }, window: window));
+        opening.Commit();
+        var opened = JsonNode.Parse(opening.Output)!;
         Assert.Equal(newId.ToString(), opened["tabId"]!.GetValue<string>());
-        Assert.True(HintsTab(opened, f.Space, newId));
-        Assert.Equal(f.Space, HintedSpace(opened));
+        // Only the window that opened the tab shows it.
+        Assert.Equal(newId, device.Tab(window, f.Space));
+        Assert.Equal(f.Tab, device.Tab(elsewhere, f.Space));
         var space = opened["space"]!;
         Assert.Equal(2, space["tabs"]!.AsArray().Count);
         Assert.True(JsonNode.DeepEquals(original["tabs"]![0], space["tabs"]![0]));
         Assert.True(JsonNode.DeepEquals(original["branding"], space["branding"]));
-        // Closing the tab the window shows suggests its fallback; the Space
-        // itself records no selection.
-        var closedResult = Edited(space, "tab.close",
-            new() { ["tabId"] = newId.ToString(), ["fallbackTabId"] = f.Tab.ToString() }, viewedTab: newId);
-        var closed = closedResult["space"]!;
+        // Closing the tab the window shows returns it to the tab it showed
+        // before; the Space itself records no selection.
+        var closing = authority.PrepareCommand(2, SpaceCommand(session, "tab.close", new() { ["tabId"] = newId.ToString() }, window: window));
+        closing.Commit();
+        var closed = JsonNode.Parse(closing.Output)!["space"]!;
         Assert.Single(closed["tabs"]!.AsArray());
         Assert.Single(closed["archivedTabs"]!.AsArray());
-        Assert.True(HintsTab(closedResult, f.Space, f.Tab));
+        Assert.Equal(f.Tab, device.Tab(window, f.Space));
         Assert.Null(closed["selectedTabID"]);
         Assert.Equal("closed", closed["archivedTabs"]![0]!["reason"]!.GetValue<string>());
     }

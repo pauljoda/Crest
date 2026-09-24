@@ -280,7 +280,7 @@ final class BrowserPortableArchiveTests: XCTestCase {
         var tabs = try XCTUnwrap(spaces[0]["tabs"] as? [[String: Any]])
         let savedIndex = try XCTUnwrap(
             tabs.firstIndex {
-                $0["placement"] as? String == TabPlacement.saved.rawValue
+                $0["placement"] as? String == "saved"
             })
         tabs[savedIndex]["folderID"] = UUID().uuidString
         spaces[0]["tabs"] = tabs

@@ -14,6 +14,7 @@ internal sealed partial class Device {
             case CloseWindow closing: Close(closing, changes); break;
             case ShowSpace showing: Show(showing, changes); break;
             case ShowTab showing: Show(showing, changes); break;
+            case DismissShownTab dismissing: Dismiss(dismissing, changes); break;
             case ResizeSplitColumns resizing: Resize(resizing, changes); break;
             case AdoptWindowRecords adoption: Adopt(adoption, changes); break;
             default: throw new ArgumentOutOfRangeException(nameof(intent), intent.GetType().Name, "The device does not handle this intent.");
@@ -31,11 +32,13 @@ internal sealed partial class Device {
             if (intent.Saved && intent.WorkspaceId != persistentWorkspace)
                 throw new Rejected(new UnsavedWorkspace(intent.WorkspaceId));
             var window = intent.Saved && saved.TryGetValue(intent.WindowId, out var record)
-                ? Window.Restoring(record, intent.WorkspaceId, intent.RestoresTabs)
+                ? Window.Restoring(record, intent.WorkspaceId)
                 : intent.CopyingWindowId is { } copied && open.TryGetValue(copied, out var source) && source.WorkspaceId == intent.WorkspaceId
                     ? Window.Copying(source, intent.WindowId, intent.Saved)
                     : Window.Launching(intent.WindowId, intent.WorkspaceId, intent.Saved, session,
                         intent.WorkspaceId == persistentWorkspace ? legacyTabs : new Dictionary<Guid, Guid>());
+            if (!intent.RestoresTabs) window.ForgetTabs();
+            foreach (var shown in intent.ShowingTabs) window.ShowTab(shown.SpaceId, shown.TabId, moves: false);
             if (intent.ShowingSpaceId is { } showing && session.Spaces.Any(space => space.Id == showing)) window.MoveTo(showing);
             window.Repair(session);
             open[window.Id] = window;
@@ -59,17 +62,34 @@ internal sealed partial class Device {
     }
 
     /// Showing a tab records its use first, as its own revision of the
-    /// workspace, so cleanup never archives what a window just showed.
+    /// workspace, so cleanup never archives what a window just showed. A
+    /// workspace that takes no edits records nothing and still shows it.
     private void Show(ShowTab intent, ChangeFeed changes) {
         var window = Opened(intent.WindowId);
         var authority = Workspace(window.WorkspaceId);
         if (Available(authority.Current, intent.SpaceId) is not { } space) return;
         if (intent.TabId is { } tabId) {
             if (space.Tabs.All(tab => tab.Id != tabId)) return;
-            if (authority.Touch(intent.SpaceId, tabId, DateTimeOffset.UtcNow) is not { } touched) return;
-            changes.Publish(new TabActivated(window.WorkspaceId, intent.SpaceId, tabId, touched.At, checked((long)touched.Revision)));
+            if (authority.Touch(intent.SpaceId, tabId, DateTimeOffset.UtcNow) is { } touched)
+                changes.Publish(new TabActivated(window.WorkspaceId, intent.SpaceId, tabId, touched.At, checked((long)touched.Revision)));
         }
-        lock (gate) Publish(Changing([window], shown => shown.ShowTab(intent.SpaceId, intent.TabId)), changes);
+        lock (gate) Publish(Changing([window], shown => shown.ShowTab(intent.SpaceId, intent.TabId, moves: true)), changes);
+    }
+
+    /// The window returns to the tab it showed before, recording its use the
+    /// way showing a tab does, or shows nothing in that Space.
+    private void Dismiss(DismissShownTab intent, ChangeFeed changes) {
+        var window = Opened(intent.WindowId);
+        var authority = Workspace(window.WorkspaceId);
+        if (Available(authority.Current, intent.SpaceId) is not { } space) return;
+        Guid? fallback;
+        lock (gate) {
+            if (window.Tab(space.Id) != intent.TabId) return;
+            fallback = window.DismissalFallback(space.Id, intent.TabId, space.Tabs.Select(tab => tab.Id).ToHashSet());
+        }
+        if (fallback is { } tabId && authority.Touch(space.Id, tabId, DateTimeOffset.UtcNow) is { } touched)
+            changes.Publish(new TabActivated(window.WorkspaceId, space.Id, tabId, touched.At, checked((long)touched.Revision)));
+        lock (gate) Publish(Changing([window], shown => shown.ShowTab(space.Id, fallback, moves: false)), changes);
     }
 
     private void Resize(ResizeSplitColumns intent, ChangeFeed changes) {

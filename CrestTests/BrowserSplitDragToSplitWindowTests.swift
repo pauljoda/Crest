@@ -223,7 +223,7 @@ final class BrowserSplitDragToSplitWindowTests: XCTestCase {
         )
         let browser = BrowserStore(
             session: BrowserSession(spaces: [space]),
-            selection: BrowserStoreSelection(selectedSpaceID: space.id, selectedTabIDsBySpace: [space.id: presented.id])
+            showing: space.id, tabs: [space.id: presented.id]
         )
         let model = BrowserRootModel(
             browser: browser,

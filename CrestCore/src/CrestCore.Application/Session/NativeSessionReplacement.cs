@@ -44,7 +44,16 @@ internal sealed class NativeSessionReplacement : IDisposable {
         }
     }
 
+    /// Publishes the reserved revision, then tells the device.
     internal ulong Commit() {
+        var revision = Complete();
+        owner.Published(Session, FollowUp);
+        return revision;
+    }
+
+    /// Publishes the reserved revision. The caller tells the device once it
+    /// holds no lock.
+    internal ulong Complete() {
         lock (NativeSessionAuthority.Gate) {
             if (completed) throw new CrestCore.Domain.BrowserRuleException(CrestCore.Domain.BrowserRuleCodes.InvalidSessionTransaction);
             var revision = owner.CompleteReplacement(this, true);

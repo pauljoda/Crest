@@ -41,14 +41,19 @@ public sealed class NativeSessionTransfer : IDisposable {
         }
     }
 
+    /// Publishes both reserved revisions together, then tells the device.
     internal (ulong Source, ulong Destination) Commit() {
+        (ulong Source, ulong Destination) result;
         lock (NativeSessionAuthority.Gate) {
             if (completed || a is null || b is null) throw new BrowserRuleException(BrowserRuleCodes.InvalidTransferTransaction);
             // At most one side is persistent. Publish its journal first; the
             // two reserved session commits then cannot fail or interleave.
             a.SyncTransaction?.Commit(); b.SyncTransaction?.Commit();
-            var result = (a.Commit(), b.Commit()); completed = true; return result;
+            result = (a.Complete(), b.Complete()); completed = true;
         }
+        source.Published(a.Session, a.FollowUp);
+        destination.Published(b.Session, b.FollowUp);
+        return result;
     }
 
     /// Reserves both revisions, saves the side that keeps a file with the sync
@@ -62,10 +67,7 @@ public sealed class NativeSessionTransfer : IDisposable {
             Dispose();
             throw;
         }
-        var revisions = Commit();
-        source.Published(a!.Session, a.FollowUp);
-        destination.Published(b!.Session, b.FollowUp);
-        return revisions;
+        return Commit();
     }
 
     public void Dispose() {

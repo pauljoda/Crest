@@ -42,7 +42,7 @@ final class BrowserCommandPaletteCompletionTests: XCTestCase {
             BrowserTab(title: "Private", url: URL(string: "https://secret.example/path"), placement: .current))
         let browser = BrowserStore(
             session: BrowserSession(spaces: [original, other]),
-            selection: BrowserStoreSelection(selectedSpaceID: original.id, selectedTabIDsBySpace: [original.id: tab.id]),
+            showing: original.id, tabs: [original.id: tab.id],
             browsingMode: .privateBrowsing)
         let access = BrowserSpaceAccessController()
         let model = BrowserCommandPaletteModel(
@@ -69,7 +69,7 @@ final class BrowserCommandPaletteCompletionTests: XCTestCase {
             id: original.id, profile: BrowsingProfile(), name: original.name, symbol: original.symbol,
             accent: original.accent, folders: [], tabs: original.tabs)
         browser.session = BrowserSession(spaces: [replacement])
-        browser.presentTab(tab.id, in: original.id)
+        browser.activateSessionTab(tab.id, in: original.id)
         XCTAssertNil(model.urlCompletion)
         XCTAssertFalse(model.acceptURLCompletion())
     }
@@ -79,7 +79,7 @@ final class BrowserCommandPaletteCompletionTests: XCTestCase {
         let space = makeSpace(tab)
         let browser = BrowserStore(
             session: BrowserSession(spaces: [space]),
-            selection: BrowserStoreSelection(selectedSpaceID: space.id), browsingMode: .privateBrowsing)
+            showing: space.id, browsingMode: .privateBrowsing)
         var explicitSelectionCount = 0
         let actions = BrowserEmptySelectionPaletteActions(
             source: BrowserSpaceRuntimeAssignment(space: space), browser: browser,

@@ -82,7 +82,6 @@ internal sealed record SessionEditArguments {
             FolderColorValue = operation == SessionOperation.FolderColor ? Color("value") : null,
             TabId = Id("tabId"),
             TargetId = Id("targetId"),
-            FallbackTabId = Id("fallbackTabId"),
             FolderId = Id("folderId"),
             ParentId = Id("parentId"),
             BeforeFolderId = Id("beforeFolderId"),
@@ -114,10 +113,9 @@ internal sealed record SessionEditArguments {
 
     private static IReadOnlyList<string> FieldsFor(SessionOperation operation) => operation switch {
         SessionOperation.TabPromoteTransient or SessionOperation.TabArchiveTransient or SessionOperation.TabRestoreArchive => ["tab"],
-        SessionOperation.TabCloseDurable => ["tabId", "fallbackTabId", "returnToSavedURL"],
+        SessionOperation.TabCloseDurable => ["tabId", "returnToSavedURL"],
         SessionOperation.TabCleanup => ["lifetime", "tabIds"],
         SessionOperation.TabOpen => ["tab", "index", "after", "select"],
-        SessionOperation.TabTouch => ["tabId"],
         SessionOperation.TabCopy => ["tabId", "ids", "placement", "index", "select", "copyObservations"],
         SessionOperation.TabRename => ["tabId", "title"],
         SessionOperation.TabObserve => ["tabId", "url", "title", "iconAccent", "faviconChanged", "hasFavicon"],
@@ -140,8 +138,8 @@ internal sealed record SessionEditArguments {
         SessionOperation.FolderDelete => ["folderId"],
         SessionOperation.FolderMove => ["folderId", "placement", "parentId", "beforeFolderId", "before"],
         SessionOperation.TabsFile => ["tabIds", "placement", "folderId", "before", "beforeFolderId", "detach"],
-        SessionOperation.TabClose or SessionOperation.TabDelete => ["tabId", "fallbackTabId", "resetArchivePlacement"],
-        SessionOperation.TabClearCurrent => ["fallbackTabId", "resetArchivePlacement"],
+        SessionOperation.TabClose or SessionOperation.TabDelete => ["tabId", "resetArchivePlacement"],
+        SessionOperation.TabClearCurrent => ["resetArchivePlacement"],
         _ => []
     };
 

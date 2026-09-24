@@ -102,16 +102,16 @@ enum BrowserPreviewSessionFactory {
 // MARK: - Cleanup Fixture
 
 extension BrowserSession {
+    /// The preview session with every open tab stale in the Space a window
+    /// opens on. Cleanup keeps the one that window shows.
     static func cleanupFixture(now: Date) -> BrowserSession {
         var session = preview
-        let launch = BrowserStoreSelection(launching: session)
-        guard let spaceIndex = session.spaces.firstIndex(where: { $0.id == launch.selectedSpaceID }) else {
+        let launchSpaceID = session.defaultSpaceID ?? session.spaces.first?.id
+        guard let spaceIndex = session.spaces.firstIndex(where: { $0.id == launchSpaceID }) else {
             return session
         }
-        let selectedID = launch.selectedTabID(in: launch.selectedSpaceID)
         for tabIndex in session.spaces[spaceIndex].tabs.indices {
-            let tab = session.spaces[spaceIndex].tabs[tabIndex]
-            if tab.placement == .current, tab.id != selectedID {
+            if session.spaces[spaceIndex].tabs[tabIndex].placement == .current {
                 session.spaces[spaceIndex].tabs[tabIndex].lastActivatedAt = now.addingTimeInterval(-13 * 60 * 60)
             }
         }

@@ -1,3 +1,5 @@
+using System.Text.Json.Nodes;
+
 using CrestCore.Contracts;
 using CrestCore.Domain;
 
@@ -5,6 +7,9 @@ namespace CrestCore.Application;
 
 public sealed partial class NativeSessionAuthority {
     #region Variables
+
+    /// The request member that names the window a command came from.
+    private const string WindowField = "windowId";
 
     /// The device whose windows show this session, and the workspace it gave
     /// it; null until attached.
@@ -21,6 +26,8 @@ public sealed partial class NativeSessionAuthority {
     #endregion
 
     #region Actions - Device
+
+    private static Guid? OptionalId(JsonNode? value) => value is null ? null : Id(value);
 
     internal void AttachDevice(Device value, Guid workspace) {
         lock (Gate) {

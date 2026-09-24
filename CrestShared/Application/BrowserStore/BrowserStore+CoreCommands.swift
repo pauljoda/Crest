@@ -1,7 +1,7 @@
 import Foundation
 
-// Store commands use the owned core session: they send intent and what this
-// window shows, and apply the core's selection hint to this window only.
+// Store commands use the owned core session: they send intent and name this
+// window, which the core's device moves when the command commits.
 extension BrowserStore {
     func createSessionTabFolder(
         _ tabIDs: [TabID], in spaceID: SpaceID,
@@ -112,27 +112,12 @@ extension BrowserStore {
         return TabID(rawValue: id)
     }
 
-    /// Shows a tab in this window and records when it was last used, which
-    /// current-tab cleanup reads. Only that timestamp reaches the core; what the
-    /// window shows is its own selection.
+    /// Closes a tab. A window that showed it returns to the tab it showed
+    /// before, which the core's device chooses.
     @discardableResult
-    func activateSessionTab(_ id: TabID, in spaceID: SpaceID) -> Bool {
-        guard !deletingSpaceIDs.contains(spaceID), session.space(id: spaceID)?.contains(id) == true,
-            family.execute(
-                .tabTouch, in: spaceID, arguments: BrowserSessionArguments.Tab(tabId: id.rawValue),
-                from: self, at: .now) != nil
-        else { return false }
-        presentTab(id, in: spaceID)
-        return true
-    }
-
-    @discardableResult
-    func closeSessionTab(
-        _ id: TabID, in spaceID: SpaceID, fallbackTabID: TabID? = nil,
-        resetArchivePlacement: Bool = true
-    ) -> Bool {
+    func closeSessionTab(_ id: TabID, in spaceID: SpaceID, resetArchivePlacement: Bool = true) -> Bool {
         let arguments = BrowserSessionArguments.TabClose(
-            tabId: id.rawValue, fallbackTabId: fallbackTabID?.rawValue, resetArchivePlacement: resetArchivePlacement)
+            tabId: id.rawValue, resetArchivePlacement: resetArchivePlacement)
         return family.execute(.tabClose, in: spaceID, arguments: arguments, from: self, at: .now) != nil
     }
 

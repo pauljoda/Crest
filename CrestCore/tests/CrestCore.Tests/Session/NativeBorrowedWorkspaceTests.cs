@@ -54,7 +54,6 @@ public sealed partial class BrowserContractsTests {
             ["now"] = 800000100.0,
             ["spaceId"] = local["spaces"]![0]!["id"]!.DeepClone(),
             ["profileId"] = local["spaces"]![0]!["profile"]!["id"]!.DeepClone(),
-            ["view"] = View(local),
             ["arguments"] = new JsonObject { ["tabId"] = localTab["id"]!["rawValue"]!.DeepClone(), ["title"] = "Prepared locally" }
         });
         var pending = child.PrepareCommand(2, request);

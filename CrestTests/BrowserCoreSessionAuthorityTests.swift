@@ -17,9 +17,9 @@ final class BrowserCoreSessionAuthorityTests: XCTestCase {
         }
         var journal = BrowserSyncJournal()
         try journal.stage(session: original)
-        let harness = try BrowserStoredSessionHarness(
-            session: original, journal: journal, selection: showing(original.spaces[0]))
+        let harness = try BrowserStoredSessionHarness(session: original, journal: journal)
         let store = harness.store
+        store.selectSpace(original.spaces[0].id)
         let request = BrowserTabBatchRequest(ids: tabs.map(\.id), in: store.session.spaces[0])
         try store.commitTabBatch(request, action: .delete)
         // The batch is on disk with its journal when the command returns.
@@ -42,7 +42,8 @@ final class BrowserCoreSessionAuthorityTests: XCTestCase {
             title: "Archived", url: URL(string: "https://example.org/archive"), placement: .current)
         archived.faviconData = Data([1, 3, 5])
         original.spaces[0].archivedTabs = [ArchivedTab(tab: archived, archivedAt: .now, reason: .closed)]
-        let store = BrowserStore(session: original, selection: showing(original.spaces[0]))
+        let store = BrowserStore(
+            session: original, showing: original.spaces[0].id, tabs: fallbackTabs(original.spaces[0]))
         let other = store.makeWindowStore()
         other.selectSpace(original.spaces[1].id)
         let otherSpace = other.selectedSpace?.id
@@ -143,7 +144,8 @@ final class BrowserCoreSessionAuthorityTests: XCTestCase {
         let saved = try harness.stored().session
         XCTAssertNotNil(saved.space(id: target.id))
         let staleWindow = BrowserPresentedSession(
-            session: saved, selection: showing(try XCTUnwrap(saved.space(id: target.id))))
+            session: saved,
+            window: .preview(showing: target.id, tabs: fallbackTabs(try XCTUnwrap(saved.space(id: target.id)))))
         let pages = BrowserPagePool()
         pages.select(session: staleWindow)
         XCTAssertNil(pages.activePage, "A restored window must not reopen a pending profile")
@@ -296,7 +298,7 @@ final class BrowserCoreSessionAuthorityTests: XCTestCase {
         let icon = Data([3, 2, 1])
         session.spaces[0].tabs[0].faviconData = icon
         let store = BrowserStore(session: session)
-        let other = store.makeWindowStore(restoresTabSelection: false)
+        let other = store.makeWindowStore(BrowserWindowOpening(restoresTabs: false))
         let id = session.spaces[0].id
         store.updateSpaceIdentity(id, name: "  Research  ", symbol: " ", accent: .teal)
         XCTAssertEqual(other.session.space(id: id)?.name, "Research")
@@ -325,9 +327,9 @@ final class BrowserCoreSessionAuthorityTests: XCTestCase {
         let icon = Data([1, 2, 3])
         original.spaces[0].tabs[0].faviconData = icon
         original.spaces[0].history.append(visit("https://example.org/direct", title: "Visit"))
-        let harness = try BrowserStoredSessionHarness(
-            session: original, selection: BrowserStoreSelection(selectedSpaceID: original.spaces[1].id))
+        let harness = try BrowserStoredSessionHarness(session: original)
         let store = harness.store
+        store.selectPresentedSpace(original.spaces[1].id)
         XCTAssertTrue(store.setTabCustomTitle("Core command", for: tabID, in: spaceID))
         XCTAssertEqual(store.session.spaces[0].tabs[0].faviconData, icon)
         XCTAssertEqual(store.session.spaces[0].history, original.spaces[0].history)
@@ -342,10 +344,12 @@ final class BrowserCoreSessionAuthorityTests: XCTestCase {
     }
 
     /// An installed release kept the viewed Space and each Space's tab inside
-    /// its stored session. That session still loads, its selection opens the
-    /// launch window and folds once into a window record written before windows
-    /// captured their Spaces, and the session saved next holds none of it.
-    func testLegacyStoredSelectionLoadsFoldsOnceAndLeavesTheSavedSession() async throws {
+    /// its stored session, and each window's record in its defaults. The
+    /// session still loads; a window without a record opens on the launch Space
+    /// with the tabs the release showed, a record written before windows
+    /// remembered their Spaces folds them in once, its sidebar layout comes
+    /// across, and the session saved next holds none of it.
+    func testLegacyStoredSelectionAndWindowRecordsComeAcrossOnceAndLeaveTheSavedSession() async throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }
         let suiteName = "crest.core-authority-test.legacy.\(UUID().uuidString)"
@@ -357,7 +361,7 @@ final class BrowserCoreSessionAuthorityTests: XCTestCase {
         // the stored per-Space tabs come from the older selection.
         installed.defaultSpaceID = installed.spaces[0].id
         let space = installed.spaces[1]
-        let tab = try XCTUnwrap(space.tabs.first { $0.id != BrowserStoreSelection.fallbackTabID(in: space) })
+        let tab = try XCTUnwrap(space.tabs.first { $0.id != CrestCore().fallbackTabID(in: space) })
         try BrowserInstalledRelease.write(installed, to: defaults, favicons: icons)
         // Spell the installed release's selection into its stored core.
         func json<Value: Encodable>(_ value: Value) throws -> Any {
@@ -370,31 +374,41 @@ final class BrowserCoreSessionAuthorityTests: XCTestCase {
         spaces[1]["selectedTabID"] = try json(tab.id)
         core["spaces"] = spaces
         defaults.set(try JSONSerialization.data(withJSONObject: core), forKey: BrowserLegacySessionDefaults.coreKey)
+        // A window record written before windows remembered their Spaces.
+        let recorded = BrowserWindowID()
+        let record: [String: Any] = [
+            "id": ["rawValue": recorded.rawValue.uuidString],
+            "selectedSpaceID": ["rawValue": space.id.rawValue.uuidString],
+            "selectedTabIDsBySpace": [Any](),
+            "sidebarWidth": 289.0,
+        ]
+        defaults.set(
+            try JSONSerialization.data(withJSONObject: [record]), forKey: BrowserWindowLayouts.legacyRecordsKey)
 
         let crest = try CrestCore(configuration: AppConfiguration(storageDirectory: directory.path))
         let stored = try BrowserStore.migratedStorage(
             core: crest, legacy: BrowserLegacySessionDefaults(defaults: defaults, journalDefaults: [defaults]),
             favicons: icons, seed: .freshInstallSeed, environment: .current)
-        let session = stored.authority.projection
-        XCTAssertEqual(session, installed)
-        let launch = try XCTUnwrap(stored.legacySelection).launchSelection(in: session)
-        XCTAssertEqual(launch.selectedSpaceID, installed.defaultSpaceID)
-        XCTAssertEqual(launch.selectedTabID(in: space.id), tab.id)
-
-        var window = BrowserWindowState(selectedSpaceID: space.id, selectedTabIDsBySpace: [:])
-        window.foldLegacySelection(launch, in: session)
-        XCTAssertEqual(window.selection.selectedTabID(in: space.id), tab.id)
-        let folded = window
-        window.foldLegacySelection(BrowserStoreSelection(selectedSpaceID: space.id), in: session)
-        XCTAssertEqual(window, folded, "A record folds the legacy selection only once")
-
+        XCTAssertEqual(stored.authority.projection, installed)
         let store = BrowserStore.production(
             stored: stored, core: crest, favicons: icons, credentialVault: InMemoryCredentialVault())
+        XCTAssertEqual(store.selectedSpaceID, installed.defaultSpaceID)
+        XCTAssertEqual(store.selectedTabID(in: space.id), tab.id)
+
+        let layouts = BrowserWindowLayouts(defaults: defaults)
+        layouts.adoptLegacyRecords(into: crest)
+        XCTAssertEqual(layouts.layout(for: recorded)?.sidebarWidth, 289)
+        let window = store.makeWindowStore(BrowserWindowOpening(id: recorded, saved: true))
+        XCTAssertEqual(window.selectedSpaceID, space.id)
+        XCTAssertEqual(window.selectedTabID(in: space.id), tab.id)
+
         await store.flushPendingSyncPersistence()
         let relaunched = try CrestCore(configuration: AppConfiguration(storageDirectory: directory.path))
         let reopened = try XCTUnwrap(try BrowserCoreStoredSession.load(core: relaunched, favicons: icons))
         XCTAssertEqual(reopened.authority.projection, store.session)
-        XCTAssertNil(reopened.legacySelection, "The next save must not write the selection back")
+        let next = BrowserStore.production(
+            stored: reopened, core: relaunched, favicons: icons, credentialVault: InMemoryCredentialVault())
+        XCTAssertNil(next.selectedTabID(in: space.id), "The next save must not write the selection back")
     }
 
     /// Tab images stay native assets beside the core's file: a captured icon
@@ -435,11 +449,9 @@ final class BrowserCoreSessionAuthorityTests: XCTestCase {
 
     // MARK: - Fixtures
 
-    /// A window showing `space` on its fallback tab.
-    private func showing(_ space: BrowserSpace) -> BrowserStoreSelection {
-        var selection = BrowserStoreSelection(selectedSpaceID: space.id)
-        selection.selectSpace(space)
-        return selection
+    /// The tab the core would show first in `space`, as a window's tabs.
+    private func fallbackTabs(_ space: BrowserSpace) -> [SpaceID: TabID] {
+        CrestCore().fallbackTabID(in: space).map { [space.id: $0] } ?? [:]
     }
 
     private func visit(_ address: String, title: String) -> BrowserHistoryEntry {

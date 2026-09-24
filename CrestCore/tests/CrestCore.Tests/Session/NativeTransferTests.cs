@@ -19,12 +19,14 @@ public sealed partial class BrowserContractsTests {
         }
         return value;
     }
-    private static byte[] TransferRequest(JsonNode source, JsonNode destination) => Bytes(new JsonObject {
+    /// A move of the source's first tab to another workspace, issued from
+    /// `windows` when given: the window it left and the one it moves to.
+    private static byte[] TransferRequest(JsonNode source, (Guid Source, Guid Destination)? windows = null) => Bytes(new JsonObject {
         ["version"] = 1,
         ["spaceId"] = source["spaces"]![0]!["id"]!.DeepClone(),
         ["profileId"] = source["spaces"]![0]!["profile"]!["id"]!.DeepClone(),
-        ["sourceView"] = View(source),
-        ["destinationView"] = View(destination),
+        ["sourceWindowId"] = windows?.Source.ToString(),
+        ["destinationWindowId"] = windows?.Destination.ToString(),
         ["now"] = 800000010.0,
         ["arguments"] = new JsonObject { ["tabId"] = source["spaces"]![0]!["tabs"]![0]!["id"]!.DeepClone(), ["select"] = true }
     });
@@ -32,37 +34,38 @@ public sealed partial class BrowserContractsTests {
     public void TransferReservesBothGraphsCancelsWithoutMutationAndPreservesOpaqueMetadata() {
         var source = SavedSession().Document["session"]!; var target = EmptyTemporary(source);
         var a = new NativeSessionAuthority(Bytes(source)); var b = Borrow(a, source);
+        using var device = new TestDevice(a);
+        var windows = (Source: device.Showing(source), Destination: device.ShowingIn(device.Attach(b), target));
         var original = a.Checkpoint(1).Read("core");
-        using (var cancelled = NativeSessionAuthority.PrepareTransfer(a, 1, b, 1, TransferRequest(source, target))) {
+        using (var cancelled = NativeSessionAuthority.PrepareTransfer(a, 1, b, 1, TransferRequest(source))) {
             cancelled.Reserve();
             Assert.Throws<BrowserRuleException>(() => a.Commit(1, RenameDelta(source, "Racing source")));
             Assert.Throws<BrowserRuleException>(() => b.Commit(1, Bytes(new JsonObject { ["version"] = 1, ["spaces"] = new JsonArray() })));
             Assert.Equal(original, a.Checkpoint(1).Read("core"));
         }
         Assert.Equal(1UL, a.Revision); Assert.Equal(1UL, b.Revision);
-        using var accepted = NativeSessionAuthority.PrepareTransfer(a, 1, b, 1, TransferRequest(source, target));
+        using var accepted = NativeSessionAuthority.PrepareTransfer(a, 1, b, 1, TransferRequest(source, windows));
         accepted.Reserve();
         var removed = JsonNode.Parse(accepted.SourceCheckpoint.Read("core"))!["spaces"]![0]!;
         var inserted = JsonNode.Parse(accepted.DestinationCheckpoint.Read("core"))!["spaces"]![0]!;
         Assert.Empty(removed["tabs"]!.AsArray()); Assert.Empty(removed["archivedTabs"]!.AsArray()); Assert.Null(removed["selectedTabID"]);
         var moved = inserted["tabs"]![0]!;
         Assert.True(JsonNode.DeepEquals(source["spaces"]![0]!["tabs"]![0]!["iconAccent"], moved["iconAccent"]));
-        // Each window gets its own hint: the source shows nothing once its tab
-        // left, and the destination shows the tab it received.
-        var hints = JsonNode.Parse(accepted.Output)!;
-        var spaceId = SpaceId(inserted); var movedId = Guid.Parse(moved["id"]!["rawValue"]!.GetValue<string>());
-        Assert.True(HintsTab(new JsonObject { ["selection"] = hints["sourceSelection"]!.DeepClone() }, spaceId, null));
-        Assert.True(HintsTab(new JsonObject { ["selection"] = hints["destinationSelection"]!.DeepClone() }, spaceId, movedId));
         Assert.Null(inserted["selectedTabID"]);
         Assert.Equal("current", moved["placement"]!.GetValue<string>()); Assert.Null(moved["folderID"]); Assert.Null(moved["savedURL"]);
         Assert.Equal((2UL, 2UL), accepted.Commit());
+        // Each window follows the move: the source shows nothing once its tab
+        // left, and the destination shows the tab it received.
+        var spaceId = SpaceId(inserted); var movedId = Guid.Parse(moved["id"]!["rawValue"]!.GetValue<string>());
+        Assert.Null(device.Tab(windows.Source, spaceId));
+        Assert.Equal(movedId, device.Tab(windows.Destination, spaceId));
         Assert.Throws<BrowserRuleException>(() => accepted.Commit());
     }
     [Fact]
     public void TransferRejectsStaleDestinationDuplicateIdentityAndPrivateBoundary() {
         var source = SavedSession().Document["session"]!; var target = EmptyTemporary(source);
         var a = new NativeSessionAuthority(Bytes(source)); var b = Borrow(a, source);
-        using var prepared = NativeSessionAuthority.PrepareTransfer(a, 1, b, 1, TransferRequest(source, target));
+        using var prepared = NativeSessionAuthority.PrepareTransfer(a, 1, b, 1, TransferRequest(source));
         b.Commit(1, Bytes(new JsonObject { ["version"] = 1, ["spaces"] = new JsonArray() }));
         Assert.Throws<BrowserRuleException>(() => prepared.Reserve());
         Assert.Equal(1UL, a.Revision);
@@ -72,11 +75,11 @@ public sealed partial class BrowserContractsTests {
         var privateOwner = new NativeSessionAuthority(Bytes(privateSession));
         var privateTarget = Borrow(privateOwner, source);
         Assert.Equal("private_workspace_boundary", Assert.Throws<BrowserRuleException>(() =>
-            NativeSessionAuthority.PrepareTransfer(a, 2, privateTarget, 1, TransferRequest(source, target))).Code);
+            NativeSessionAuthority.PrepareTransfer(a, 2, privateTarget, 1, TransferRequest(source))).Code);
         var unrelatedOwner = new NativeSessionAuthority(Bytes(source));
         var unrelatedTarget = Borrow(unrelatedOwner, source);
         Assert.Equal("different_profile_owner", Assert.Throws<BrowserRuleException>(() =>
-            NativeSessionAuthority.PrepareTransfer(a, 2, unrelatedTarget, 1, TransferRequest(source, target))).Code);
+            NativeSessionAuthority.PrepareTransfer(a, 2, unrelatedTarget, 1, TransferRequest(source))).Code);
         var duplicate = source.DeepClone();
         var duplicateOwner = Borrow(a, source);
         var space = duplicate["spaces"]![0]!;
@@ -85,9 +88,9 @@ public sealed partial class BrowserContractsTests {
             ["spaces"] = new JsonArray(new JsonObject { ["id"] = space["id"]!.DeepClone(), ["tabs"] = new JsonObject { ["replace"] = space["tabs"]!.DeepClone() } })
         }));
         Assert.Equal("duplicate_tab", Assert.Throws<BrowserRuleException>(() =>
-            NativeSessionAuthority.PrepareTransfer(a, 2, duplicateOwner, 2, TransferRequest(source, duplicate))).Code);
+            NativeSessionAuthority.PrepareTransfer(a, 2, duplicateOwner, 2, TransferRequest(source))).Code);
         b.PrepareBorrowedRefresh(b.Revision).Commit();
-        var badRequest = JsonNode.Parse(TransferRequest(source, target))!; badRequest["profileId"] = Guid.NewGuid().ToString();
+        var badRequest = JsonNode.Parse(TransferRequest(source))!; badRequest["profileId"] = Guid.NewGuid().ToString();
         Assert.Equal("wrong_profile_identity", Assert.Throws<BrowserRuleException>(() =>
             NativeSessionAuthority.PrepareTransfer(a, 2, b, b.Revision, Bytes(badRequest))).Code);
     }
@@ -97,6 +100,7 @@ public sealed partial class BrowserContractsTests {
         var target = SavedSession().Document["session"]!["spaces"]![0]!.DeepClone();
         source["spaces"]!.AsArray().Add(target);
         var original = source["spaces"]![0]!; var tab = original["tabs"]![0]!;
+        Guid? window = null;
         byte[] Request(string placement) => Bytes(new JsonObject {
             ["version"] = 1,
             ["operation"] = "tab.transfer",
@@ -104,24 +108,27 @@ public sealed partial class BrowserContractsTests {
             ["profileId"] = original["profile"]!["id"]!.DeepClone(),
             ["destinationSpaceId"] = target["id"]!.DeepClone(),
             ["destinationProfileId"] = target["profile"]!["id"]!.DeepClone(),
-            ["view"] = View(source),
+            ["windowId"] = window?.ToString(),
             ["now"] = 800000011.0,
             ["arguments"] = new JsonObject { ["tabId"] = tab["id"]!.DeepClone(), ["placement"] = placement }
         });
         var owner = new NativeSessionAuthority(Bytes(source));
+        using var device = new TestDevice(owner);
+        window = device.Showing(source);
         var command = owner.PrepareCommand(1, Request("saved"));
         Assert.Equal(1UL, owner.Revision);
         var projection = JsonNode.Parse(command.Output)!;
         Assert.Empty(projection["source"]!["tabs"]!.AsArray());
         Assert.Equal(2, projection["destination"]!["tabs"]!.AsArray().Count);
-        // The source window's shown tab moved away, so it shows nothing; the
-        // destination keeps what it shows.
-        Assert.True(HintsTab(projection, SpaceId(original), null));
-        Assert.DoesNotContain(projection["selection"]!["tabs"]!.AsArray(), entry => Guid.Parse(entry!["spaceId"]!.GetValue<string>()) == SpaceId(target));
         command.Commit();
+        // The window's shown tab moved away, so it shows nothing in the source;
+        // the destination keeps what it shows.
+        Assert.Null(device.Tab(window.Value, SpaceId(original)));
+        Assert.Equal(SpaceId(target["tabs"]![0]!), device.Tab(window.Value, SpaceId(target)));
         var pinned = new JsonArray(Enumerable.Range(0, 12).Select(_ => { var t = tab.DeepClone(); t["id"] = SwiftId(Guid.NewGuid()); t["placement"] = "pinned"; t["folderID"] = null; return t; }).ToArray());
         target["tabs"] = pinned;
         var full = new NativeSessionAuthority(Bytes(source));
+        window = null;
         Assert.Equal("pinned_limit", Assert.Throws<BrowserRuleException>(() => full.PrepareCommand(1, Request("pinned"))).Code);
         Assert.Equal(1UL, full.Revision);
     }

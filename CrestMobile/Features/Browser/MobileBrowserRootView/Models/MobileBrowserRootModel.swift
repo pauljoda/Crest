@@ -113,15 +113,6 @@ extension MobileBrowserRootModel {
         }
     }
 
-    func recordRenderedSelection(_ selection: BrowserTabRuntimeAssignment?) {
-        guard let selection else { return }
-        windowState?.recordRenderedTab(
-            selection.tabID,
-            in: selection.spaceID,
-            session: browser.session
-        )
-    }
-
     func regularSidebarPresentationChanged(
         _ presentation: BrowserSidebarPresentation
     ) {
@@ -297,15 +288,6 @@ extension MobileBrowserRootModel {
 
     var selectedPage: MobileBrowserPage? {
         selectedPageActions?.activePage
-    }
-
-    var renderedPageSelection: BrowserTabRuntimeAssignment? {
-        guard let page = selectedPage else { return nil }
-        return BrowserTabRuntimeAssignment(
-            tabID: page.tabID,
-            spaceID: page.spaceID,
-            profileID: page.profileID
-        )
     }
 
     var selectedSpaceIsLocked: Bool {

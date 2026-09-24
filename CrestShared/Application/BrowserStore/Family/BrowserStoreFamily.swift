@@ -31,6 +31,10 @@ final class BrowserStoreFamily {
     /// Where tab images are kept beside the session file; nil in memory.
     @ObservationIgnored private let favicons: (any BrowserFaviconStoring)?
 
+    /// Whether this family's windows keep their records across launches:
+    /// only the windows over the session the core keeps in its file do.
+    var keepsWindowRecords: Bool { storage != nil }
+
     init(
         session: BrowserSession, browsingMode: BrowserBrowsingMode = .standard,
         temporarySourceAssignment: BrowserSpaceRuntimeAssignment? = nil,
@@ -120,13 +124,24 @@ final class BrowserStoreFamily {
         return current
     }
 
-    func register(_ store: BrowserStore) {
+    /// Adds a window of this family, attaching the session to that window's
+    /// core the first time, and answers the workspace it shows.
+    func register(_ store: BrowserStore) -> UUID {
         if let sync = store.syncCoordinator {
             do { try core.attachSync(sync.core) }
             catch { preconditionFailure("Cannot attach sync to the core session: \(error)") }
         }
         stores.removeAll { $0.value == nil }
         stores.append(WeakStore(value: store))
+        return core.attach(to: store.core)
+    }
+
+    /// A window showed a tab, and the core recorded when as its own revision.
+    func recordActivation(_ activated: TabActivated) {
+        guard activated.workspaceID == core.workspaceID else { return }
+        let previous = authoritativeSession
+        core.recordActivation(activated)
+        reconcileStores(after: previous, from: nil)
     }
 
     #if DEBUG
@@ -156,10 +171,11 @@ final class BrowserStoreFamily {
     func executeSpace<Arguments: Encodable>(_ operation: BrowserSessionOperation, in spaceID: SpaceID? = nil,
         arguments: Arguments, from source: BrowserStore, at date: Date = .now) -> Bool {
         let previous = authoritativeSession
+        let shown = source.window
         do {
-            let result = try core.executeSpace(operation, in: spaceID, arguments: arguments, view: source.selection, at: date)
-            reconcileStores(after: previous, from: source, hint: result.hint)
-            return result.changed
+            try core.executeSpace(operation, in: spaceID, arguments: arguments, window: source.windowID.rawValue, at: date)
+            reconcileStores(after: previous, from: source)
+            return authoritativeSession != previous || source.window != shown
         } catch {
             source.localSyncErrorDescription = "Core Space command failed: \(error)"
             return false
@@ -170,19 +186,20 @@ final class BrowserStoreFamily {
         arguments: Arguments, deletionReason: BrowserSyncTombstoneReason = .superseded, from source: BrowserStore,
         at date: Date = .now) throws {
         let previous = authoritativeSession
-        let command = try core.prepareSpace(operation, in: spaceID, arguments: arguments, view: source.selection, at: date)
+        let command = try core.prepareSpace(
+            operation, in: spaceID, arguments: arguments, window: source.windowID.rawValue, at: date)
         try commitPreparedChange(command, previous: previous, deletionReason: deletionReason, from: source, at: date)
     }
 
     func importWorkspace(_ request: BrowserCoreWorkspaceImport.Request, from source: BrowserStore) throws {
         let previous = authoritativeSession
-        let command = try core.prepareWorkspace(request, view: source.selection)
+        let command = try core.prepareWorkspace(request, window: source.windowID.rawValue)
         try commitPreparedChange(command, previous: previous, deletionReason: .superseded, from: source, at: .now)
     }
 
     func prepareTabBatch(_ request: BrowserTabBatchRequest, arguments: BrowserCoreTabBatch.Arguments, from store: BrowserStore,
         at date: Date) throws -> (command: BrowserCoreSessionAuthority.PreparedChange, result: BrowserTabBatchResult) {
-        try core.prepareTabBatch(request, arguments: arguments, view: store.selection, at: date)
+        try core.prepareTabBatch(request, arguments: arguments, window: store.windowID.rawValue, at: date)
     }
 
     func commitTabBatch(_ command: BrowserCoreSessionAuthority.PreparedChange,
@@ -206,12 +223,12 @@ final class BrowserStoreFamily {
         } else {
             try core.commitDurably(command)
         }
-        reconcileStores(after: previous, from: source, hint: command.hint)
+        reconcileStores(after: previous, from: source)
         source.cloudSyncChangeHandler?()
     }
 
     /// App-wide behavior preferences. Only the preference record changes, so
-    /// every window keeps its own selection.
+    /// every window keeps showing what it showed.
     func executePreferences(_ request: BrowserAppPreferenceRequest, from source: BrowserStore) -> Bool {
         let previous = authoritativeSession
         do {
@@ -231,8 +248,9 @@ final class BrowserStoreFamily {
         arguments: Arguments, from source: BrowserStore, at date: Date) -> BrowserCoreSessionEditing.Result? {
         let previous = authoritativeSession
         do {
-            let result = try core.execute(operation, in: spaceID, arguments: arguments, view: source.selection, at: date)
-            reconcileStores(after: previous, from: source, hint: result.selection ?? .none)
+            let result = try core.execute(
+                operation, in: spaceID, arguments: arguments, window: source.windowID.rawValue, at: date)
+            reconcileStores(after: previous, from: source)
             return result
         } catch {
             source.localSyncErrorDescription = "Core command failed: \(error)"
@@ -258,9 +276,10 @@ final class BrowserStoreFamily {
         arguments: Arguments, from source: BrowserStore, at date: Date = .now) -> Bool {
         let previous = authoritativeSession
         do {
-            let result = try core.executeRecords(operation, in: spaceID, arguments: arguments, view: source.selection, at: date)
-            if result.changed { reconcileStores(after: previous, from: source, hint: result.hint) }
-            return result.changed
+            let changed = try core.executeRecords(
+                operation, in: spaceID, arguments: arguments, window: source.windowID.rawValue, at: date)
+            if changed { reconcileStores(after: previous, from: source) }
+            return changed
         } catch {
             source.localSyncErrorDescription = "Core record command failed: \(error)"
             return false
@@ -271,15 +290,15 @@ final class BrowserStoreFamily {
         arguments: BrowserCoreTabTransfer.Arguments, from store: BrowserStore, at date: Date) throws {
         let previous = authoritativeSession
         let command = try core.prepareTabMove(tabID, source: source, destination: destination,
-            arguments: arguments, view: store.selection, at: date)
+            arguments: arguments, window: store.windowID.rawValue, at: date)
         try commitPreparedChange(command, previous: previous, deletionReason: .superseded, from: store, at: date)
     }
 
     static func prepareTransfer(_ id: TabID, assignment: BrowserSpaceRuntimeAssignment,
-        source: BrowserStore, destination: BrowserStore, fallback: TabID?, selecting: Bool) throws -> BrowserCoreSessionAuthority.PreparedTransfer {
-        try BrowserCoreSessionAuthority.prepareTransfer(source: source.family.core, sourceView: source.selection,
-            destination: destination.family.core, destinationView: destination.selection,
-            tabID: id, assignment: assignment, fallback: fallback, selecting: selecting)
+        source: BrowserStore, destination: BrowserStore, selecting: Bool) throws -> BrowserCoreSessionAuthority.PreparedTransfer {
+        try BrowserCoreSessionAuthority.prepareTransfer(source: source.family.core, sourceWindow: source.windowID.rawValue,
+            destination: destination.family.core, destinationWindow: destination.windowID.rawValue,
+            tabID: id, assignment: assignment, selecting: selecting)
     }
 
     static func transfer(_ prepared: BrowserCoreSessionAuthority.PreparedTransfer,
@@ -301,8 +320,8 @@ final class BrowserStoreFamily {
                 _, transaction in try commit(transaction)
             }
         } else { try commit() }
-        source.family.reconcileStores(after: previousSource, from: source, hint: prepared.sourceHint)
-        destination.family.reconcileStores(after: previousDestination, from: destination, hint: prepared.destinationHint)
+        source.family.reconcileStores(after: previousSource, from: source)
+        destination.family.reconcileStores(after: previousDestination, from: destination)
         durable.cloudSyncChangeHandler?()
     }
 
@@ -357,27 +376,25 @@ final class BrowserStoreFamily {
     /// committing anything.
     func accepts<Arguments: Encodable>(_ operation: BrowserSessionOperation, in spaceID: SpaceID,
         arguments: Arguments, from store: BrowserStore) -> Bool {
-        core.accepts(operation, in: spaceID, arguments: arguments, view: store.selection)
+        core.accepts(operation, in: spaceID, arguments: arguments, window: store.windowID.rawValue)
     }
 
     /// Whether the core would accept moving a tab between two Spaces of this
     /// workspace, asked without committing anything.
     func acceptsTabMove(_ tabID: TabID, source: BrowserSpaceRuntimeAssignment,
         destination: BrowserSpaceRuntimeAssignment, from store: BrowserStore) -> Bool {
-        core.acceptsTabMove(tabID, source: source, destination: destination, view: store.selection)
+        core.acceptsTabMove(tabID, source: source, destination: destination, window: store.windowID.rawValue)
     }
 
-    /// Every window follows the accepted session. Only the window that issued
-    /// the command receives the core's follow-up selection hint; the others keep
-    /// their own selection, reconciled against what still exists.
-    private func reconcileStores(after previous: BrowserSession, from source: BrowserStore?,
-        hint: BrowserSelectionHint = .none) {
+    /// Every window follows the accepted session. The core's device already
+    /// moved the window that issued the command and repaired the others; its
+    /// changes are applied first, so each window reads what it shows now.
+    private func reconcileStores(after previous: BrowserSession, from source: BrowserStore?) {
+        core.device?.drain()
         persistFavicons(from: previous, to: authoritativeSession)
         stores.removeAll { $0.value == nil }
         for store in stores.compactMap(\.value) {
-            store.receiveFamilySessionChange(
-                from: previous, to: authoritativeSession, hint: store === source ? hint : .none
-            )
+            store.receiveFamilySessionChange(from: previous, to: authoritativeSession)
         }
         borrowedFamilies.removeAll { $0.value == nil }
         for child in borrowedFamilies.compactMap(\.value) { _ = child.refreshBorrowed() }

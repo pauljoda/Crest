@@ -7,7 +7,7 @@ import Foundation
 enum CoreCodec {
     /// SHA-256 of the canonical contract schema. The core refuses any other.
     static let fingerprint: [UInt8] = [
-        0x20, 0x28, 0x32, 0x58, 0xc1, 0x4b, 0x05, 0x71, 0x09, 0xff, 0xd5, 0xef, 0xbc, 0x71, 0xe3, 0xfd, 0x58, 0xbc, 0xb3, 0x59, 0x3d, 0xc0, 0x7f, 0x39, 0x2e, 0xd0, 0x7c, 0x1b, 0x6b, 0xbc, 0x24, 0xf6
+        0x0c, 0x1f, 0xac, 0x2b, 0x4f, 0xae, 0x20, 0x67, 0x8c, 0x17, 0x05, 0x95, 0x1a, 0x4a, 0x6e, 0x36, 0xf8, 0x04, 0xfa, 0xf5, 0x7d, 0x3a, 0x76, 0x16, 0xf7, 0xf6, 0xbd, 0x46, 0x2b, 0xec, 0x6f, 0xfe
     ]
 
     static func decodeIntent(from reader: inout WireReader) throws(WireError) -> any Intent {
@@ -22,18 +22,19 @@ enum CoreCodec {
         case 6: return try BlockAutomaticDownload(from: &reader)
         case 7: return try CancelDownload(from: &reader)
         case 8: return try CloseWindow(from: &reader)
-        case 9: return try ExpireDownloads(from: &reader)
-        case 10: return try FailDownload(from: &reader)
-        case 11: return try FinishDownload(from: &reader)
-        case 12: return try OpenWindow(from: &reader)
-        case 13: return try RecordDownloadTransfer(from: &reader)
-        case 14: return try RemoveDownload(from: &reader)
-        case 15: return try RemoveProfileDownloads(from: &reader)
-        case 16: return try ResizeSplitColumns(from: &reader)
-        case 17: return try RestartDownload(from: &reader)
-        case 18: return try SetDownloadDestination(from: &reader)
-        case 19: return try ShowSpace(from: &reader)
-        case 20: return try ShowTab(from: &reader)
+        case 9: return try DismissShownTab(from: &reader)
+        case 10: return try ExpireDownloads(from: &reader)
+        case 11: return try FailDownload(from: &reader)
+        case 12: return try FinishDownload(from: &reader)
+        case 13: return try OpenWindow(from: &reader)
+        case 14: return try RecordDownloadTransfer(from: &reader)
+        case 15: return try RemoveDownload(from: &reader)
+        case 16: return try RemoveProfileDownloads(from: &reader)
+        case 17: return try ResizeSplitColumns(from: &reader)
+        case 18: return try RestartDownload(from: &reader)
+        case 19: return try SetDownloadDestination(from: &reader)
+        case 20: return try ShowSpace(from: &reader)
+        case 21: return try ShowTab(from: &reader)
         default: throw WireError.malformed("Unknown Intent tag \(tag)")
         }
     }
@@ -52,12 +53,13 @@ enum CoreCodec {
         case 8: return try DownloadProgress(from: &reader)
         case 9: return try DownloadRisk(from: &reader)
         case 10: return try ExternalLinkRoute(from: &reader)
-        case 11: return try MostRecentCredential(from: &reader)
-        case 12: return try PasskeyAccess(from: &reader)
-        case 13: return try QuickWindowSite(from: &reader)
-        case 14: return try StrongPassword(from: &reader)
-        case 15: return try SystemPasswordOffer(from: &reader)
-        case 16: return try SystemPasswordWriteThrough(from: &reader)
+        case 11: return try FallbackTab(from: &reader)
+        case 12: return try MostRecentCredential(from: &reader)
+        case 13: return try PasskeyAccess(from: &reader)
+        case 14: return try QuickWindowSite(from: &reader)
+        case 15: return try StrongPassword(from: &reader)
+        case 16: return try SystemPasswordOffer(from: &reader)
+        case 17: return try SystemPasswordWriteThrough(from: &reader)
         default: throw WireError.malformed("Unknown Query tag \(tag)")
         }
     }
@@ -995,6 +997,26 @@ extension CustomSearchEngineAdmission {
     }
 }
 
+extension DismissShownTab {
+    init(from reader: inout WireReader) throws(WireError) {
+        let windowID = try reader.readUUID()
+        let spaceID = try reader.readUUID()
+        let tabID = try reader.readUUID()
+        self.init(windowID: windowID, spaceID: spaceID, tabID: tabID)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeUUID(windowID)
+        writer.writeUUID(spaceID)
+        writer.writeUUID(tabID)
+    }
+
+    func encodeIntent(into writer: inout WireWriter) {
+        writer.writeTag(9)
+        encode(into: &writer)
+    }
+}
+
 extension DownloadLimitReached {
     init(from reader: inout WireReader) throws(WireError) {
         let limit = try reader.readInt()
@@ -1451,7 +1473,7 @@ extension ExpireDownloads {
     }
 
     func encodeIntent(into writer: inout WireWriter) {
-        writer.writeTag(9)
+        writer.writeTag(10)
         encode(into: &writer)
     }
 }
@@ -1531,8 +1553,60 @@ extension FailDownload {
     }
 
     func encodeIntent(into writer: inout WireWriter) {
-        writer.writeTag(10)
+        writer.writeTag(11)
         encode(into: &writer)
+    }
+}
+
+extension FallbackTab {
+    init(from reader: inout WireReader) throws(WireError) {
+        let placementsCount = try reader.readCount()
+        var placements: [TabPlacement] = []
+        placements.reserveCapacity(placementsCount)
+        for _ in 0..<placementsCount {
+            let placementsElement = try TabPlacement(from: &reader)
+            placements.append(placementsElement)
+        }
+        self.init(placements: placements)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeCount(placements.count)
+        for element0 in placements {
+            element0.encode(into: &writer)
+        }
+    }
+
+    func encodeQuery(into writer: inout WireWriter) {
+        writer.writeTag(11)
+        encode(into: &writer)
+    }
+
+    static func decodeAnswer(from reader: inout WireReader) throws(WireError) -> FallbackTabIndex {
+        let answer = try FallbackTabIndex(from: &reader)
+        return answer
+    }
+}
+
+extension FallbackTabIndex {
+    init(from reader: inout WireReader) throws(WireError) {
+        let index: Int?
+        if try reader.readPresence() {
+            let indexValue = try reader.readInt()
+            index = indexValue
+        } else {
+            index = nil
+        }
+        self.init(index: index)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        if let present0 = index {
+            writer.writePresence(true)
+            writer.writeInt(present0)
+        } else {
+            writer.writePresence(false)
+        }
     }
 }
 
@@ -1560,7 +1634,7 @@ extension FinishDownload {
     }
 
     func encodeIntent(into writer: inout WireWriter) {
-        writer.writeTag(11)
+        writer.writeTag(12)
         encode(into: &writer)
     }
 }
@@ -1890,7 +1964,7 @@ extension MostRecentCredential {
     }
 
     func encodeQuery(into writer: inout WireWriter) {
-        writer.writeTag(11)
+        writer.writeTag(12)
         encode(into: &writer)
     }
 
@@ -1919,8 +1993,15 @@ extension OpenWindow {
         } else {
             showingSpaceID = nil
         }
+        let showingTabsCount = try reader.readCount()
+        var showingTabs: [ShownTab] = []
+        showingTabs.reserveCapacity(showingTabsCount)
+        for _ in 0..<showingTabsCount {
+            let showingTabsElement = try ShownTab(from: &reader)
+            showingTabs.append(showingTabsElement)
+        }
         let restoresTabs = try reader.readBool()
-        self.init(windowID: windowID, workspaceID: workspaceID, saved: saved, copyingWindowID: copyingWindowID, showingSpaceID: showingSpaceID, restoresTabs: restoresTabs)
+        self.init(windowID: windowID, workspaceID: workspaceID, saved: saved, copyingWindowID: copyingWindowID, showingSpaceID: showingSpaceID, showingTabs: showingTabs, restoresTabs: restoresTabs)
     }
 
     func encode(into writer: inout WireWriter) {
@@ -1939,11 +2020,15 @@ extension OpenWindow {
         } else {
             writer.writePresence(false)
         }
+        writer.writeCount(showingTabs.count)
+        for element0 in showingTabs {
+            element0.encode(into: &writer)
+        }
         writer.writeBool(restoresTabs)
     }
 
     func encodeIntent(into writer: inout WireWriter) {
-        writer.writeTag(12)
+        writer.writeTag(13)
         encode(into: &writer)
     }
 }
@@ -1963,7 +2048,7 @@ extension PasskeyAccess {
     }
 
     func encodeQuery(into writer: inout WireWriter) {
-        writer.writeTag(12)
+        writer.writeTag(13)
         encode(into: &writer)
     }
 
@@ -1997,7 +2082,7 @@ extension QuickWindowSite {
     }
 
     func encodeQuery(into writer: inout WireWriter) {
-        writer.writeTag(13)
+        writer.writeTag(14)
         encode(into: &writer)
     }
 
@@ -2044,7 +2129,7 @@ extension RecordDownloadTransfer {
     }
 
     func encodeIntent(into writer: inout WireWriter) {
-        writer.writeTag(13)
+        writer.writeTag(14)
         encode(into: &writer)
     }
 }
@@ -2071,7 +2156,7 @@ extension RemoveDownload {
     }
 
     func encodeIntent(into writer: inout WireWriter) {
-        writer.writeTag(14)
+        writer.writeTag(15)
         encode(into: &writer)
     }
 }
@@ -2087,7 +2172,7 @@ extension RemoveProfileDownloads {
     }
 
     func encodeIntent(into writer: inout WireWriter) {
-        writer.writeTag(15)
+        writer.writeTag(16)
         encode(into: &writer)
     }
 }
@@ -2116,7 +2201,7 @@ extension ResizeSplitColumns {
     }
 
     func encodeIntent(into writer: inout WireWriter) {
-        writer.writeTag(16)
+        writer.writeTag(17)
         encode(into: &writer)
     }
 }
@@ -2132,7 +2217,7 @@ extension RestartDownload {
     }
 
     func encodeIntent(into writer: inout WireWriter) {
-        writer.writeTag(17)
+        writer.writeTag(18)
         encode(into: &writer)
     }
 }
@@ -2205,7 +2290,7 @@ extension SetDownloadDestination {
     }
 
     func encodeIntent(into writer: inout WireWriter) {
-        writer.writeTag(18)
+        writer.writeTag(19)
         encode(into: &writer)
     }
 }
@@ -2238,7 +2323,7 @@ extension ShowSpace {
     }
 
     func encodeIntent(into writer: inout WireWriter) {
-        writer.writeTag(19)
+        writer.writeTag(20)
         encode(into: &writer)
     }
 }
@@ -2269,7 +2354,7 @@ extension ShowTab {
     }
 
     func encodeIntent(into writer: inout WireWriter) {
-        writer.writeTag(20)
+        writer.writeTag(21)
         encode(into: &writer)
     }
 }
@@ -2402,7 +2487,7 @@ extension StrongPassword {
     }
 
     func encodeQuery(into writer: inout WireWriter) {
-        writer.writeTag(14)
+        writer.writeTag(15)
         encode(into: &writer)
     }
 
@@ -2449,7 +2534,7 @@ extension SystemPasswordOffer {
     }
 
     func encodeQuery(into writer: inout WireWriter) {
-        writer.writeTag(15)
+        writer.writeTag(16)
         encode(into: &writer)
     }
 
@@ -2487,7 +2572,7 @@ extension SystemPasswordWriteThrough {
     }
 
     func encodeQuery(into writer: inout WireWriter) {
-        writer.writeTag(16)
+        writer.writeTag(17)
         encode(into: &writer)
     }
 
@@ -2898,6 +2983,20 @@ extension SystemPasswordWriteThroughAvailability {
         let rawValue = try reader.readEnum()
         guard let value = SystemPasswordWriteThroughAvailability(rawValue: rawValue) else {
             throw WireError.malformed("Unknown SystemPasswordWriteThroughAvailability \(rawValue)")
+        }
+        self = value
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeEnum(rawValue)
+    }
+}
+
+extension TabPlacement {
+    init(from reader: inout WireReader) throws(WireError) {
+        let rawValue = try reader.readEnum()
+        guard let value = TabPlacement(rawValue: rawValue) else {
+            throw WireError.malformed("Unknown TabPlacement \(rawValue)")
         }
         self = value
     }

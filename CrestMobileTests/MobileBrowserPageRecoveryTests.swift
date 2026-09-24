@@ -32,7 +32,7 @@ final class MobileBrowserPageRecoveryTests: XCTestCase {
         let space = makeSpace(index: 2)
         let session = BrowserPresentedSession(
             session: BrowserSession(spaces: [space]),
-            selection: BrowserStoreSelection(selectedSpaceID: space.id, selectedTabIDsBySpace: [space.id: space.tabs[0].id])
+            window: .preview(showing: space.id, tabs: [space.id: space.tabs[0].id])
         )
         let pages = MobileBrowserPageStore(usesEphemeralWebsiteDataStores: true)
         pages.select(session: session)

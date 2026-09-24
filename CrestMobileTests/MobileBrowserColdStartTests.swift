@@ -21,14 +21,8 @@ final class MobileBrowserColdStartTests: XCTestCase {
         session.spaces[0].tabs[1].splitGroupID = group
         let root = BrowserStore(session: session)
         let id = BrowserWindowID()
-        let persistence = InMemoryBrowserWindowStatePersistence()
-        persistence.save(
-            BrowserWindowState(
-                id: id,
-                selectedSpaceID: root.selectedSpaceID,
-                selectedTabIDsBySpace: [:],
-                sidebarIsPresented: false
-            ))
+        let layouts = BrowserWindowLayouts(defaults: nil)
+        layouts.save(BrowserWindowState(id: id, sidebarIsPresented: false))
         let model = MobileBrowserWindowSceneModel(
             id: id,
             rootBrowser: root,
@@ -36,7 +30,7 @@ final class MobileBrowserColdStartTests: XCTestCase {
             pageStoreRegistry: MobileBrowserPageStoreRegistry(primary: MobileBrowserPageStore()),
             spaceAccess: BrowserSpaceAccessController(),
             tabStateArchive: nil,
-            windowStatePersistence: persistence,
+            windowLayouts: layouts,
             startupBehavior: .lastActiveTab,
             monitorsMemoryPressure: false,
             usesEphemeralWebsiteDataStores: true

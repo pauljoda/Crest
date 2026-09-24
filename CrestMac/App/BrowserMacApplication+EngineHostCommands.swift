@@ -82,7 +82,6 @@ extension BrowserMacApplication: BrowserEngineHostCommands {
         // pages are still resident.
         host.pages.archiveResidentTabStates()
         await host.browser.flushPendingSyncPersistence()
-        await host.windowState?.flushPendingPersistence()
         await host.pages.flushPendingTabStateWrites()
     }
 

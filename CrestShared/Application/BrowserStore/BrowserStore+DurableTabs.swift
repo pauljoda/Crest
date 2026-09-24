@@ -15,17 +15,10 @@ extension BrowserStore {
             let tab = space.tabs.first(where: { $0.id == assignment.tabID }),
             tab.placement != .current
         else { return false }
-        // Selecting another member would immediately present the just-closed
-        // card again. Leave that split intact for the next explicit selection.
-        let availableIDs = Set(
-            space.tabs.filter {
-                $0.id != tab.id && (tab.splitGroupID == nil || $0.splitGroupID != tab.splitGroupID)
-            }.map(\.id))
-        let fallbackID = tabSelectionHistory.fallbackTabID(
-            afterDismissing: tab.id, in: space.id, availableTabIDs: availableIDs
-        )
+        // The core returns the window to the tab it showed before, skipping the
+        // closed tab's split, whose other members would present it again.
         let arguments = BrowserSessionArguments.TabCloseDurable(
-            tabId: tab.id.rawValue, fallbackTabId: fallbackID?.rawValue, returnToSavedURL: returningToSavedURL)
+            tabId: tab.id.rawValue, returnToSavedURL: returningToSavedURL)
         guard family.execute(.tabCloseDurable, in: space.id, arguments: arguments, from: self, at: .now) != nil
         else { return false }
         stageSync()

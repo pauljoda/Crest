@@ -107,10 +107,7 @@ final class MobileContentBlockingActionTests: XCTestCase {
         return ContentBlockingFixture(
             browser: BrowserStore(
                 session: BrowserSession(spaces: [firstSpace, secondSpace]),
-                selection: BrowserStoreSelection(
-                    selectedSpaceID: firstSpace.id,
-                    selectedTabIDsBySpace: [firstSpace.id: firstTab.id, secondSpace.id: secondTab.id]
-                )
+                showing: firstSpace.id, tabs: [firstSpace.id: firstTab.id, secondSpace.id: secondTab.id]
             ),
             firstSpaceID: firstSpace.id,
             secondSpaceID: secondSpace.id,

@@ -167,7 +167,7 @@ final class BrowserDurableTabCloseTests: XCTestCase {
         )
         let browser = BrowserStore(
             session: BrowserSession(spaces: [space]),
-            selection: BrowserStoreSelection(selectedSpaceID: space.id, selectedTabIDsBySpace: [space.id: tab.id])
+            showing: space.id, tabs: [space.id: tab.id]
         )
         return Context(
             browser: browser, tab: tab, copy: copy, archived: archived,

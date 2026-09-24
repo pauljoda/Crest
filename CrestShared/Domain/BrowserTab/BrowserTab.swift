@@ -269,7 +269,7 @@ struct BrowserTab: Codable, Equatable, Identifiable, Sendable {
         // `.saved` is the placement that preserves an unfamiliar tab most
         // faithfully: a saved tab keeps its address, is never swept by current-tab
         // cleanup, and is not subject to the pinned-tab limit.
-        placement = container.decodeTolerantly(.placement, default: .saved)
+        placement = (try? container.decodeIfPresent(TabPlacement.self, forKey: .placement)).flatMap { $0 } ?? .saved
         folderID = try container.decodeIfPresent(FolderID.self, forKey: .folderID)
         splitGroupID = try container.decodeIfPresent(
             SplitGroupID.self,

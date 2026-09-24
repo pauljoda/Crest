@@ -26,7 +26,7 @@ final class MobileBrowserWindowSceneModel {
         pageStoreRegistry: MobileBrowserPageStoreRegistry,
         spaceAccess: BrowserSpaceAccessController,
         tabStateArchive: (any BrowserTabStateArchiving)?,
-        windowStatePersistence: any BrowserWindowStatePersisting,
+        windowLayouts: BrowserWindowLayouts,
         startupBehavior: BrowserStartupBehavior,
         monitorsMemoryPressure: Bool,
         usesEphemeralWebsiteDataStores: Bool = false,
@@ -35,15 +35,9 @@ final class MobileBrowserWindowSceneModel {
         privateDownloads: MobileBrowserDownloads? = nil,
         linkPreferenceStore: BrowserLinkPreferenceStore = .shared
     ) {
-        let windowState = BrowserWindowStateStore(
-            id: id,
-            browser: rootBrowser,
-            persistence: windowStatePersistence
-        )
-        let browser = rootBrowser.makeWindowStore(
-            restoring: windowState.state,
-            restoresTabSelection: false
-        )
+        // A scene restores the Space it showed and starts without a tab.
+        let browser = rootBrowser.makeWindowStore(BrowserWindowOpening(id: id, saved: true, restoresTabs: false))
+        let windowState = BrowserWindowStateStore(id: id, browser: browser, layouts: windowLayouts)
         let sidebarIsPresented = windowState.sidebarIsPresented ?? true
         let navigation = MobileBrowserNavigationState(
             regularSidebarIsPresented: sidebarIsPresented,
@@ -177,10 +171,6 @@ final class MobileBrowserWindowSceneModel {
         privatePages.handleMemoryPressure(.critical)
     }
 
-    func captureWindowSelection() {
-        windowState.captureSelection(of: browser)
-    }
-
     func prepareForInactiveScene() {
         spaceAccess.lockAllForInactiveScene()
         flushPendingPersistence()
@@ -283,7 +273,6 @@ final class MobileBrowserWindowSceneModel {
         pages.archiveResidentTabStates()
         Task {
             await browser.flushPendingSyncPersistence()
-            await windowState.flushPendingPersistence()
             await pages.flushPendingTabStateWrites()
         }
     }

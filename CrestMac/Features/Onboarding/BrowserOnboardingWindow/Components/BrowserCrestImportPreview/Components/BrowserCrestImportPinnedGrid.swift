@@ -3,6 +3,7 @@ import SwiftUI
 struct BrowserCrestImportPinnedGrid: View {
     let space: BrowserSpace
     let matchedTabIDs: Set<TabID>
+    let highlightedTabID: TabID?
 
     var body: some View {
         LazyVGrid(columns: columns, spacing: 8) {
@@ -19,7 +20,7 @@ struct BrowserCrestImportPinnedGrid: View {
                     isMatched
                         ? BrowserOnboardingPalette.match.opacity(0.2)
                         : Color.primary.opacity(
-                            tab.id == BrowserStoreSelection.fallbackTabID(in: space) ? 0.14 : 0.075
+                            tab.id == highlightedTabID ? 0.14 : 0.075
                         ),
                     in: .rect(cornerRadius: 10, style: .continuous)
                 )

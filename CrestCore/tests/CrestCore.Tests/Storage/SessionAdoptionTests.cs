@@ -62,9 +62,10 @@ public sealed partial class BrowserContractsTests {
             Assert.Contains(spaces.SelectMany(space => space!["tabs"]!.AsArray()), tab => tab!["faviconURL"] is not null);
             Assert.NotEmpty(spaces.SelectMany(space => space!["splitGroups"]!.AsArray()));
             Assert.NotEmpty(spaces.SelectMany(space => space!["archivedTabs"]!.AsArray()));
-            // The first window without a record of its own still adopts what the release showed.
-            var selection = projection["legacySelection"]!;
-            Assert.Equal(core["selectedSpaceID"]!["rawValue"]!.GetValue<string>(), selection["selectedSpaceID"]!["rawValue"]!.GetValue<string>());
+            // A window without a record of its own still adopts the tabs the release showed.
+            var window = Assert.IsType<WindowChanged>(Assert.Single(app.Send(new OpenWindow(Guid.NewGuid(),
+                app.AttachWorkspace(app.Session!), Saved: true, null, null, [], RestoresTabs: true)))).Window;
+            Assert.Contains(new ShownTab(SpaceId(spaces[1]!), SpaceId(spaces[1]!["tabs"]![2]!)), window.ShownTabs);
 
             // The journal keeps its device identity, clock, records and the uploads still owed.
             var carried = JsonNode.Parse(app.SessionSync!.Snapshot.Read())!;

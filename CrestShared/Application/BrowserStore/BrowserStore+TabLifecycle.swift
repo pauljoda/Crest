@@ -156,11 +156,9 @@ extension BrowserStore {
             space.tabs.contains(where: { $0.id == id }) else { return false }
         let assignment = BrowserTabRuntimeAssignment(tabID: id, spaceID: spaceID, profileID: space.profile.id)
         return performPageDismissal(of: [assignment]) { [weak self] in
-            guard let self, let current = self.session.space(id: spaceID) else { return false }
-            let fallbackID = selectedTabID(in: current.id) == id
-                ? self.dismissalFallbackTabID(afterDismissing: id, in: current) : nil
-            guard self.closeSessionTab(id, in: spaceID, fallbackTabID: fallbackID,
-                resetArchivePlacement: resetArchivePlacement) else { return false }
+            guard let self, self.session.space(id: spaceID) != nil,
+                self.closeSessionTab(id, in: spaceID, resetArchivePlacement: resetArchivePlacement)
+            else { return false }
             self.stageSync(deletionReason: .superseded)
             return true
         }

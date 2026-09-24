@@ -107,7 +107,7 @@ enum BrowserRootPreviewFixture {
         let windowState = BrowserWindowStateStore(
             id: BrowserWindowID(rawValue: uuid(0x51)),
             browser: browser,
-            persistence: InMemoryBrowserWindowStatePersistence()
+            layouts: BrowserWindowLayouts(defaults: nil)
         )
         windowState.captureSidebar(
             width: Double(BrowserChromeLayout.sidebarIdealWidth),

@@ -1,5 +1,7 @@
 using System.Text.Json.Nodes;
 
+using CrestCore.Application;
+using CrestCore.Contracts;
 using CrestCore.Domain;
 
 namespace CrestCore.Tests;
@@ -10,18 +12,64 @@ namespace CrestCore.Tests;
 public sealed partial class BrowserContractsTests {
     private static JsonObject SwiftId(Guid value) => new() { ["rawValue"] = value.ToString().ToUpperInvariant() };
 
-    /// The Space a command's selection hint tells its window to show, if any.
-    private static Guid? HintedSpace(JsonNode output)
-        => output["selection"]!["spaceId"] is { } space ? Guid.Parse(space.GetValue<string>()) : null;
+    /// A device showing a session under test in its windows. Commands name the
+    /// window that issued them by `windowId`, and `Shown` answers what a window
+    /// shows after every commit so far.
+    private sealed class TestDevice : IDisposable {
+        private readonly CrestApp app = new();
+        private readonly Dictionary<Guid, WindowState> windows = [];
 
-    /// Whether the hint tells the window to show `tab` (null for nothing) in `space`.
-    private static bool HintsTab(JsonNode output, Guid space, Guid? tab) => output["selection"]!["tabs"]!.AsArray().Any(entry =>
-        Guid.Parse(entry!["spaceId"]!.GetValue<string>()) == space
-        && (entry["tabId"] is { } value ? Guid.Parse(value.GetValue<string>()) == tab : tab is null));
+        public TestDevice(NativeSessionAuthority authority) => Workspace = app.AttachWorkspace(authority);
 
-    /// A hint that leaves the window's selection exactly as it was.
-    private static bool LeavesSelection(JsonNode output)
-        => output["selection"]!["spaceId"] is null && output["selection"]!["tabs"]!.AsArray().Count == 0;
+        /// The workspace of the session the device was made for.
+        public Guid Workspace { get; }
+
+        /// Attaches another session and answers its workspace.
+        public Guid Attach(NativeSessionAuthority authority) => app.AttachWorkspace(authority);
+
+        /// A window on the first session showing `space`, and `tabs` in the Spaces they name.
+        public Guid Open(Guid? space, params (Guid Space, Guid? Tab)[] tabs) => OpenIn(Workspace, space, tabs);
+
+        public Guid OpenIn(Guid workspace, Guid? space, params (Guid Space, Guid? Tab)[] tabs) {
+            var id = Guid.NewGuid();
+            Record(app.Send(new OpenWindow(id, workspace, Saved: false, CopyingWindowId: null, ShowingSpaceId: space,
+                [.. tabs.Select(tab => new ShownTab(tab.Space, tab.Tab))], RestoresTabs: true)));
+            return id;
+        }
+
+        /// A window on the first session showing what a fixture's legacy
+        /// selection fields name.
+        public Guid Showing(JsonNode session) => ShowingIn(Workspace, session);
+
+        public Guid ShowingIn(Guid workspace, JsonNode session) => OpenIn(workspace,
+            session["selectedSpaceID"] is { } space ? Guid.Parse(space["rawValue"]!.GetValue<string>()) : null,
+            [.. session["spaces"]!.AsArray().Where(item => item!["selectedTabID"] is not null)
+                .Select(item => (SpaceId(item!), (Guid?)Guid.Parse(item!["selectedTabID"]!["rawValue"]!.GetValue<string>())))]);
+
+        public void Send(WindowIntent intent) => Record(app.Send(intent));
+
+        public WindowState Shown(Guid window) {
+            Record(app.Drain());
+            return windows[window];
+        }
+
+        public Guid Space(Guid window) => Shown(window).ShownSpaceId;
+
+        /// The tab `window` shows in `space`, or null for none.
+        public Guid? Tab(Guid window, Guid space) => Shown(window).ShownTabs.SingleOrDefault(tab => tab.SpaceId == space)?.TabId;
+
+        public void Dispose() => app.Dispose();
+
+        private void Record(IReadOnlyList<Change> changes) {
+            foreach (var change in changes.OfType<WindowChanged>()) windows[change.Window.Id] = change.Window;
+        }
+    }
+
+    /// `request`, issued from `window`.
+    private static JsonObject IssuedFrom(JsonObject request, Guid window) {
+        request["windowId"] = window.ToString();
+        return request;
+    }
 
     private static Guid SpaceId(JsonNode space) => Guid.Parse(space["id"]!["rawValue"]!.GetValue<string>());
 

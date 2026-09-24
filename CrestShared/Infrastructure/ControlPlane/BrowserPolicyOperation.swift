@@ -36,7 +36,6 @@ enum BrowserPolicyOperation: String, Codable, Sendable {
     case shortcutsBindings = "shortcuts.bindings"
     case shortcutsNumberedSelection = "shortcuts.numbered_selection"
     case tabsDismissal = "tabs.dismissal"
-    case tabsSelectionFallback = "tabs.selection_fallback"
     case translationMatches = "translation.matches"
     case translationRule = "translation.rule"
     case brandingNormalize = "branding.normalize"
@@ -50,7 +49,4 @@ enum BrowserPolicyOperation: String, Codable, Sendable {
     case quickWindowDismissal = "quick_window.dismissal"
     case quickWindowRetarget = "quick_window.retarget"
     case workspaceCommandRoute = "workspace.command_route"
-    case windowRepair = "window.repair"
-    case windowSplitLayout = "window.split_layout"
-    case windowTearOff = "window.tear_off"
 }

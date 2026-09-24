@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 
 using CrestCore.Application;
+using CrestCore.Contracts;
 
 using Xunit;
 
@@ -12,12 +13,15 @@ namespace CrestCore.Tests;
 /// the core's projections with them. These fixtures were written by the Swift
 /// encoder: a session with every optional member set, and the installed session
 /// the upgrade test carries. Command answers were recorded from the core before
-/// it held typed records, for the same inputs.
+/// it held typed records, for the same inputs, each issued from a window that
+/// showed what the step's `window` names.
 public sealed class StoredFormatTests {
     private static JsonObject Fixture(string name) =>
         JsonNode.Parse(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Session", "Fixtures", name)))!.AsObject();
 
     private static byte[] Bytes(JsonNode value) => Encoding.UTF8.GetBytes(value.ToJsonString());
+
+    private static Guid? Id(JsonNode? value) => value is null ? null : Guid.Parse(value.GetValue<string>());
 
     private static NativeSessionAuthority Load(JsonObject session) {
         var creation = session.DeepClone().AsObject();
@@ -49,14 +53,27 @@ public sealed class StoredFormatTests {
         var session = Fixture("maximal-session.json");
         var expected = Fixture("session-answers.json");
         var authority = Load(session);
+        using var app = new CrestApp();
+        var workspace = app.AttachWorkspace(authority);
         var differences = new List<string>();
         void Compare(string name, JsonNode? actual) =>
             differences.AddRange(StoredJson.Differences(expected[name], actual, StoredJson.Comparison.AsSwiftReads, name));
         foreach (var step in Fixture("session-commands.json")["commands"]!.AsArray()) {
             var name = step!["name"]!.GetValue<string>();
-            var command = authority.PrepareCommand(authority.Revision, Bytes(step["request"]!));
+            var request = step["request"]!.DeepClone().AsObject();
+            Guid? window = null;
+            if (step["window"] is { } shown) {
+                var issuer = Guid.NewGuid();
+                window = issuer;
+                app.Send(new OpenWindow(issuer, workspace, Saved: false, CopyingWindowId: null, Id(shown["spaceId"]),
+                    [.. shown["tabs"]!.AsArray().Select(tab => new ShownTab(Id(tab!["spaceId"])!.Value, Id(tab["tabId"])))],
+                    RestoresTabs: true));
+                request["windowId"] = issuer.ToString();
+            }
+            var command = authority.PrepareCommand(authority.Revision, Bytes(request));
             Compare(name, JsonNode.Parse(command.Output));
             if (step["commit"]!.GetValue<bool>()) command.Commit();
+            if (window is { } opened) app.Send(new CloseWindow(opened));
         }
         var checkpoint = authority.Checkpoint(authority.Revision);
         var core = JsonNode.Parse(checkpoint.Read("core"))!;

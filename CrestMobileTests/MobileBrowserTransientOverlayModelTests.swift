@@ -299,10 +299,7 @@ final class MobileBrowserTransientOverlayModelTests: XCTestCase {
         let destination = makeSpace(name: "Destination")
         let browser = BrowserStore(
             session: BrowserSession(spaces: [source, destination]),
-            selection: BrowserStoreSelection(
-                selectedSpaceID: source.id,
-                selectedTabIDsBySpace: [source.id: source.tabs[0].id, destination.id: destination.tabs[0].id]
-            ),
+            showing: source.id, tabs: [source.id: source.tabs[0].id, destination.id: destination.tabs[0].id],
             credentialVault: InMemoryCredentialVault(),
             browsingMode: .privateBrowsing
         )
@@ -693,10 +690,7 @@ final class MobileBrowserTransientOverlayModelTests: XCTestCase {
         let destination = makeSpace(name: "Destination")
         let browser = BrowserStore(
             session: BrowserSession(spaces: [source, destination]),
-            selection: BrowserStoreSelection(
-                selectedSpaceID: source.id,
-                selectedTabIDsBySpace: [source.id: source.tabs[0].id, destination.id: destination.tabs[0].id]
-            ),
+            showing: source.id, tabs: [source.id: source.tabs[0].id, destination.id: destination.tabs[0].id],
             credentialVault: InMemoryCredentialVault(),
             browsingMode: .privateBrowsing
         )
@@ -767,10 +761,7 @@ final class MobileBrowserTransientOverlayModelTests: XCTestCase {
         let destination = makeSpace(name: "Destination")
         let browser = BrowserStore(
             session: BrowserSession(spaces: [source, destination]),
-            selection: BrowserStoreSelection(
-                selectedSpaceID: source.id,
-                selectedTabIDsBySpace: [source.id: source.tabs[0].id, destination.id: destination.tabs[0].id]
-            ),
+            showing: source.id, tabs: [source.id: source.tabs[0].id, destination.id: destination.tabs[0].id],
             credentialVault: InMemoryCredentialVault(),
             browsingMode: .privateBrowsing
         )

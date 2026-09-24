@@ -43,7 +43,6 @@ enum BrowserSessionOperation: String, Codable, Sendable {
     case splitReorder = "split.reorder"
     case splitTint = "split.tint"
     case splitTitle = "split.title"
-    case tabTouch = "tab.touch"
     case tabArchiveTransient = "tab.archive_transient"
     case tabCleanup = "tab.cleanup"
     case tabClearCurrent = "tab.clear_current"

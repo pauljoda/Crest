@@ -10,16 +10,14 @@ namespace CrestCore.Application;
 public static partial class NativePolicyEvaluator {
     #region Actions - Tabs
 
-    /// Null when the operation is not a page-residency, process-recovery,
-    /// tab-dismissal or tab-selection policy.
+    /// Null when the operation is not a page-residency, process-recovery or
+    /// tab-dismissal policy.
     private static JsonObject? EvaluateTabs(PolicyOperation operation, JsonElement request) => operation switch {
         PolicyOperation.ResidencyReleaseLimit => ReleaseLimit(Requests.ReleaseLimit.Decode(request)),
         PolicyOperation.ResidencyReleasePlan => ReleasePlan(Requests.ReleasePlan.Decode(request)),
         PolicyOperation.ResidencyProcessRecovery => TabPolicyCodes.RecoveryAnswer(
             PageProcessRecoveryPolicy.Decide(Requests.ProcessRecovery.Decode(request).ConsecutiveTerminations)),
         PolicyOperation.TabsDismissal => Dismiss(Requests.Dismissal.Decode(request)),
-        PolicyOperation.TabsSelectionFallback => TabPolicyCodes.SelectionFallbackAnswer(
-            TabSelectionPolicy.Fallback(Requests.SelectionFallback.Decode(request).Placements)),
         _ => null
     };
 

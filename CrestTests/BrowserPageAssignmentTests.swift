@@ -19,7 +19,7 @@ final class BrowserPageAssignmentTests: XCTestCase {
             tabs: space.tabs
         )
         let differentProfile = BrowserPresentedSession(
-            session: BrowserSession(spaces: [replacement]), selection: session.selection
+            session: BrowserSession(spaces: [replacement]), window: session.window
         )
         XCTAssertFalse(pool.isPresentingSelection(in: differentProfile))
 
@@ -38,15 +38,17 @@ final class BrowserPageAssignmentTests: XCTestCase {
             tabs: [first, second]
         )
         var session = BrowserSession(spaces: [space])
-        var selection = BrowserStoreSelection(selectedSpaceID: space.id, selectedTabIDsBySpace: [space.id: first.id])
-        let shown = { BrowserPresentedSession(session: session, selection: selection) }
+        var shownTab = first.id
+        let shown = {
+            BrowserPresentedSession(session: session, window: .preview(showing: space.id, tabs: [space.id: shownTab]))
+        }
         let pool = BrowserPagePool(usesEphemeralWebsiteDataStores: true)
         pool.select(session: shown())
         XCTAssertTrue(pool.isPresentingSelection(in: shown()))
 
-        selection.selectTab(second.id, in: space.id)
+        shownTab = second.id
         XCTAssertFalse(pool.isPresentingSelection(in: shown()))
-        selection.selectTab(first.id, in: space.id)
+        shownTab = first.id
         session.spaces[0].tabs.reverse()
         XCTAssertFalse(pool.isPresentingSelection(in: shown()))
         session.spaces[0].tabs = [first]
@@ -170,8 +172,8 @@ final class BrowserPageAssignmentTests: XCTestCase {
         pool.reconcile(validTabIDs: [])
     }
 
-    /// The preview session as a window that opened it with the launch selection.
+    /// The preview session as a new window over it shows it.
     private func presented(_ session: BrowserSession) -> BrowserPresentedSession {
-        BrowserPresentedSession(session: session, selection: BrowserStoreSelection(launching: session))
+        BrowserStore(session: session).presented
     }
 }

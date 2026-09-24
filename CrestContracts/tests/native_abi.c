@@ -127,15 +127,6 @@ static void policy_boundary(void) {
     const uint8_t invalid[] = { 0xff };
     assert(crest_core_evaluate_policy(invalid, sizeof(invalid), output, 256, &length) == CREST_INVALID_MESSAGE);
     assert(length == 0);
-    /* Window repair answers from presence facts; a captured empty Space stays empty. */
-    const char *window = "{\"version\":1,\"operation\":\"window.repair\",\"selectedSpaceID\":\"66666666-6666-6666-6666-666666666666\","
-        "\"capturesSelection\":true,"
-        "\"spaces\":[{\"id\":\"44444444-4444-4444-4444-444444444444\",\"windowTab\":false,\"captured\":true,"
-        "\"hasTabs\":true}],\"splitLayouts\":[]}";
-    assert(crest_core_evaluate_policy((const uint8_t*)window, strlen(window), output, 256, &length) == CREST_OK);
-    output[length] = 0;
-    assert(strstr((const char*)output, "\"selectedSpaceID\":\"44444444-4444-4444-4444-444444444444\"")
-        && strstr((const char*)output, "\"selections\":[\"none\"]"));
     const char *setup = "{\"version\":1,\"operation\":\"setup.tab\",\"placement\":\"pinned\",\"existingPinnedCount\":12,"
         "\"addedPinnedCount\":0,\"url\":\"https://example.com/\",\"title\":null}";
     assert(crest_core_evaluate_policy((const uint8_t*)setup, strlen(setup), output, 256, &length) == CREST_OK);
@@ -397,11 +388,12 @@ static void storage_boundary(void) {
     assert(crest_session_attach_device(session, app, workspace) == CREST_OK);
     assert(crest_session_attach_device(session, app, again) == CREST_OK && memcmp(workspace, again, 16) == 0);
     /* OpenWindow: its tag, the window, the workspace, Saved, no window to copy,
-     * no Space to show, RestoresTabs. It answers one WindowChanged. */
-    uint8_t opening[37] = { CREST_INTENT_OPEN_WINDOW };
+     * no Space to show, no tabs to show, RestoresTabs. It answers one
+     * WindowChanged. */
+    uint8_t opening[38] = { CREST_INTENT_OPEN_WINDOW };
     memset(opening + 1, 0x42, 16);
     memcpy(opening + 17, workspace, 16);
-    opening[33] = 1; opening[34] = 0; opening[35] = 0; opening[36] = 1;
+    opening[33] = 1; opening[34] = 0; opening[35] = 0; opening[36] = 0; opening[37] = 1;
     assert(crest_app_dispatch(app, opening, sizeof(opening), &buffer) == CREST_OK);
     assert(buffer.length > 2 && buffer.bytes[0] == 1 && buffer.bytes[1] == CREST_CHANGE_WINDOW_CHANGED);
     crest_buffer_free(&buffer);

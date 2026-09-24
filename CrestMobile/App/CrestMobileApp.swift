@@ -44,7 +44,7 @@ private final class BrowserMobileApplication {
     let downloads: MobileBrowserDownloads
     let privateDownloads: MobileBrowserDownloads
     let tabStateArchive: (any BrowserTabStateArchiving)?
-    let windowStatePersistence: any BrowserWindowStatePersisting
+    let windowLayouts: BrowserWindowLayouts
     let startupBehavior: BrowserStartupBehavior
     let automaticallyPresentsOnboarding: Bool
     let usesEphemeralWebsiteDataStores: Bool
@@ -200,23 +200,18 @@ private final class BrowserMobileApplication {
         self.privateDownloads = privateDownloads
         self.tabStateArchive = tabStateArchive
         if usesIsolatedLaunch {
-            if let isolationID = launchEnvironment.persistentIsolationID,
-                let defaults = UserDefaults(
-                    suiteName: BrowserLaunchEnvironment.isolatedDefaultsSuiteName(
-                        isolationID: isolationID
-                    )
-                )
-            {
-                windowStatePersistence = UserDefaultsBrowserWindowStatePersistence(defaults: defaults)
-            } else {
-                windowStatePersistence = InMemoryBrowserWindowStatePersistence()
-            }
+            windowLayouts = BrowserWindowLayouts(
+                defaults: launchEnvironment.persistentIsolationID.flatMap {
+                    UserDefaults(suiteName: BrowserLaunchEnvironment.isolatedDefaultsSuiteName(isolationID: $0))
+                })
         } else {
-            windowStatePersistence = UserDefaultsBrowserWindowStatePersistence()
+            windowLayouts = BrowserWindowLayouts(defaults: .standard)
         }
-        // Scenes restore their own selection from these records later; launch
-        // cleanup keeps every tab one of them will show.
-        browser.sweepAtLaunch(keeping: windowStatePersistence.loadAll())
+        // The core carries what each scene showed into its own records once;
+        // scenes restore from them later, and launch cleanup keeps every tab
+        // one of them will show.
+        windowLayouts.adoptLegacyRecords(into: core)
+        browser.sweepAtLaunch()
         automaticallyPresentsOnboarding =
             MobileBrowserAutomaticOnboardingPolicy
             .shouldPresent(
@@ -236,7 +231,7 @@ private final class BrowserMobileApplication {
             pageStoreRegistry: pageStoreRegistry,
             spaceAccess: spaceAccess,
             tabStateArchive: tabStateArchive,
-            windowStatePersistence: windowStatePersistence,
+            windowLayouts: windowLayouts,
             startupBehavior: startupBehavior,
             monitorsMemoryPressure: monitorsMemoryPressure,
             usesEphemeralWebsiteDataStores: usesEphemeralWebsiteDataStores,

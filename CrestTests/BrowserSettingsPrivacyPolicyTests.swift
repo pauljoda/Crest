@@ -11,9 +11,8 @@ final class BrowserSettingsPrivacyPolicyTests: XCTestCase {
             session.spaces[0].tabs.append(settings)
             let source = session.spaces[0]
             let destination = session.spaces[1]
-            var selection = BrowserStoreSelection(launching: session)
-            selection.selectSpace(source)
-            let browser = BrowserStore(session: session, selection: selection)
+            let browser = BrowserStore(session: session)
+            browser.selectSpace(source.id)
             let action = BrowserSettingsSpaceSelectionAction(
                 browser: browser, spaceAccess: BrowserSpaceAccessController())
             let assignment = BrowserTabRuntimeAssignment(

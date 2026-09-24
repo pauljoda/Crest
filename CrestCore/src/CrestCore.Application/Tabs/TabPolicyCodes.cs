@@ -33,7 +33,6 @@ internal static class TabPolicyCodes {
 
     public static JsonObject DismissalAnswer(TabDismissalAction action) => new() { ["action"] = Dismissal(action) };
 
-    public static JsonObject SelectionFallbackAnswer(int? index) => new() { ["index"] = index };
 
     private static JsonArray Identifiers(IReadOnlyList<string> values) =>
         new(values.Select(value => (JsonNode?)JsonValue.Create(value)).ToArray());

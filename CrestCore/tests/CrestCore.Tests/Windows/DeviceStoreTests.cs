@@ -41,7 +41,7 @@ public sealed partial class BrowserContractsTests {
             second = SpaceId(spaces[1]!);
             tab = TabId(spaces[1]!, 3);
             group = Guid.Parse(spaces[0]!["splitGroups"]![0]!["id"]!["rawValue"]!.GetValue<string>());
-            app.Send(new OpenWindow(window, workspace, Saved: true, CopyingWindowId: null, ShowingSpaceId: null, RestoresTabs: true));
+            app.Send(new OpenWindow(window, workspace, Saved: true, CopyingWindowId: null, ShowingSpaceId: null, ShowingTabs: [], RestoresTabs: true));
             var touched = app.Send(new ShowTab(window, second, tab));
             Assert.Equal(tab, Assert.IsType<TabActivated>(touched[0]).TabId);
             Assert.Equal(second, Shown(touched).ShownSpaceId);
@@ -58,13 +58,13 @@ public sealed partial class BrowserContractsTests {
 
         var (relaunched, persistent, _) = DeviceApp(directory);
         using var relaunchedDisposal = relaunched;
-        var restored = Shown(relaunched.Send(new OpenWindow(window, persistent, Saved: true, null, null, RestoresTabs: true)));
+        var restored = Shown(relaunched.Send(new OpenWindow(window, persistent, Saved: true, null, null, [], RestoresTabs: true)));
         Assert.Equal(second, restored.ShownSpaceId);
         Assert.Equal(tab, ShownTab(restored, second));
         Assert.Single(restored.SplitColumnShares);
         // A scene that restores only its Space keeps the Space and chooses tabs afresh.
         relaunched.Send(new CloseWindow(window));
-        var spaceOnly = Shown(relaunched.Send(new OpenWindow(window, persistent, Saved: true, null, null, RestoresTabs: false)));
+        var spaceOnly = Shown(relaunched.Send(new OpenWindow(window, persistent, Saved: true, null, null, [], RestoresTabs: false)));
         Assert.Equal(second, spaceOnly.ShownSpaceId);
         Assert.Null(ShownTab(spaceOnly, second));
     }
@@ -76,8 +76,8 @@ public sealed partial class BrowserContractsTests {
         using var disposal = app;
         var (first, second) = (SpaceId(spaces[0]!), SpaceId(spaces[1]!));
         Guid showing = Guid.NewGuid(), elsewhere = Guid.NewGuid();
-        app.Send(new OpenWindow(showing, workspace, Saved: true, null, null, true));
-        app.Send(new OpenWindow(elsewhere, workspace, Saved: false, null, null, true));
+        app.Send(new OpenWindow(showing, workspace, Saved: true, null, null, [], true));
+        app.Send(new OpenWindow(elsewhere, workspace, Saved: false, null, null, [], true));
         var shownTab = TabId(spaces[1]!, 2);
         app.Send(new ShowTab(showing, second, shownTab));
         app.Send(new ShowTab(elsewhere, second, TabId(spaces[1]!, 0)));
@@ -124,9 +124,9 @@ public sealed partial class BrowserContractsTests {
             var memoryWorkspace = app.AttachWorkspace(memory);
             Assert.Equal(memoryWorkspace, app.AttachWorkspace(memory));
             Assert.Equal(new UnsavedWorkspace(memoryWorkspace),
-                Assert.Throws<Rejected>(() => app.Send(new OpenWindow(Guid.NewGuid(), memoryWorkspace, true, null, null, true))).Rejection);
-            app.Send(new OpenWindow(Guid.NewGuid(), memoryWorkspace, Saved: false, null, null, true));
-            foreach (var window in windows) app.Send(new OpenWindow(window, workspace, Saved: true, null, null, true));
+                Assert.Throws<Rejected>(() => app.Send(new OpenWindow(Guid.NewGuid(), memoryWorkspace, true, null, null, [], true))).Rejection);
+            app.Send(new OpenWindow(Guid.NewGuid(), memoryWorkspace, Saved: false, null, null, [], true));
+            foreach (var window in windows) app.Send(new OpenWindow(window, workspace, Saved: true, null, null, [], true));
             // Using the first window again keeps it; the second is now the oldest.
             app.Send(new ShowSpace(windows[0], SpaceId(spaces[1]!)));
             // A released session takes its windows with it.
@@ -175,12 +175,12 @@ public sealed partial class BrowserContractsTests {
         using var relaunchedDisposal = relaunched;
         Assert.Empty(relaunched.Send(new AdoptWindowRecords(Bytes(records))));
         // A record that remembered its Spaces shows nothing where it chose nothing.
-        var capturedWindow = Shown(relaunched.Send(new OpenWindow(captured, workspace, true, null, null, true)));
+        var capturedWindow = Shown(relaunched.Send(new OpenWindow(captured, workspace, true, null, null, [], true)));
         Assert.Equal(second, capturedWindow.ShownSpaceId);
         Assert.Null(ShownTab(capturedWindow, second));
         Assert.Contains(capturedWindow.ShownTabs, tab => tab.SpaceId == second);
         // An older record takes the tab the release kept in the session.
-        var olderWindow = Shown(relaunched.Send(new OpenWindow(older, workspace, true, null, null, true)));
+        var olderWindow = Shown(relaunched.Send(new OpenWindow(older, workspace, true, null, null, [], true)));
         Assert.Equal(first, olderWindow.ShownSpaceId);
         Assert.Equal(legacyTab, ShownTab(olderWindow, second));
     }
@@ -191,12 +191,42 @@ public sealed partial class BrowserContractsTests {
         var (app, workspace, spaces) = DeviceApp(directory);
         using var disposal = app;
         var window = Guid.NewGuid();
-        app.Send(new OpenWindow(window, workspace, false, null, null, true));
+        app.Send(new OpenWindow(window, workspace, false, null, null, [], true));
         var (space, profile, tab) = (SpaceId(spaces[0]!), Guid.Parse(spaces[0]!["profile"]!["id"]!.GetValue<string>()), TabId(spaces[0]!, 0));
         Assert.Equal(new TearOffPermission(true, null), app.Query(new CanTearOff(window, space, profile, tab, null)));
         Assert.Equal(new TearOffPermission(true, null), app.Query(new CanTearOff(window, space, profile, tab, [tab])));
         Assert.Equal(TearOffRefusal.SeveralTabs, app.Query(new CanTearOff(window, space, profile, tab, [tab, TabId(spaces[0]!, 1)])).Reason);
         Assert.Equal(TearOffRefusal.SpaceChanged, app.Query(new CanTearOff(window, space, Guid.NewGuid(), tab, null)).Reason);
         Assert.Equal(TearOffRefusal.TabGone, app.Query(new CanTearOff(window, space, profile, Guid.NewGuid(), null)).Reason);
+    }
+
+    [Fact]
+    public void DismissingAShownTabReturnsToTheTabTheWindowShowedBefore() {
+        using var directory = new StorageDirectory();
+        var (app, workspace, spaces) = DeviceApp(directory);
+        using var disposal = app;
+        var space = SpaceId(spaces[1]!);
+        var (earlier, dismissed) = (TabId(spaces[1]!, 0), TabId(spaces[1]!, 2));
+        var window = Guid.NewGuid();
+        app.Send(new OpenWindow(window, workspace, Saved: false, null, space, [], RestoresTabs: false));
+        app.Send(new ShowTab(window, space, earlier));
+        app.Send(new ShowTab(window, space, dismissed));
+        // A window that no longer shows the tab is left alone.
+        Assert.Empty(app.Send(new DismissShownTab(window, space, earlier)));
+
+        var returned = app.Send(new DismissShownTab(window, space, dismissed));
+        Assert.Equal(earlier, Assert.IsType<TabActivated>(returned[0]).TabId);
+        Assert.Equal(earlier, ShownTab(Shown(returned), space));
+        // With nothing left to return to, it shows nothing there.
+        Assert.Null(ShownTab(Shown(app.Send(new DismissShownTab(window, space, earlier))), space));
+    }
+
+    [Fact]
+    public void ASpaceNoWindowChoseATabForShowsItsFirstOpenThenPinnedThenFirstTab() {
+        using var app = new CrestApp();
+        Assert.Equal(1, app.Query(new FallbackTab([TabPlacement.Pinned, TabPlacement.Current])).Index);
+        Assert.Equal(1, app.Query(new FallbackTab([TabPlacement.Saved, TabPlacement.Pinned])).Index);
+        Assert.Equal(0, app.Query(new FallbackTab([TabPlacement.Saved])).Index);
+        Assert.Null(app.Query(new FallbackTab([])).Index);
     }
 }

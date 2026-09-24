@@ -34,8 +34,7 @@ public sealed partial class NativeSessionAuthority {
         var operation = SessionOperationCodes.Parse(request["operation"]!.GetValue<string>());
         BorrowedCommandRouting.RequireLocal(operation, workspaceKind == BrowserWorkspaceKind.Temporary);
         var args = request["arguments"]!.AsObject();
-        var view = SessionView.Decode(request[SessionView.Key]);
-        var hint = new SessionSelectionHint();
+        var followUp = new WindowFollowUp(IssuingWindow(request));
         var spaces = session.Spaces.ToList();
         var deletions = session.SpaceDeletions.ToList();
         var defaultSpace = session.DefaultSpaceId;
@@ -69,7 +68,7 @@ public sealed partial class NativeSessionAuthority {
                 };
             spaces.Add(space);
             // A new Space is the one its window shows next, on its only tab.
-            hint.SelectSpace(space.Id).SelectTab(view, space.Id, space.Tabs[0].Id);
+            followUp.ShowSpace(space.Id).ShowTab(space.Id, space.Tabs[0].Id);
             created = space.Id;
         } else if (operation == SessionOperation.SpaceReorder) {
             spaces = SpaceOrganizationPolicy.Move(spaces,
@@ -95,8 +94,8 @@ public sealed partial class NativeSessionAuthority {
                     deletions.Add(new(operationId, space.Id, space.ProfileId));
                     // The window showing a Space that is going away moves to the
                     // first one that stays.
-                    if (view.SpaceId == id)
-                        hint.SelectSpace(spaces.First(s => deletions.All(deletion => deletion.SpaceId != s.Id)).Id);
+                    if (followUp.Window?.ShownSpaceId == id)
+                        followUp.ShowSpace(spaces.First(s => deletions.All(deletion => deletion.SpaceId != s.Id)).Id);
                     break;
                 case SessionOperation.SpaceIdentity:
                     spaces[index] = space with {
@@ -143,7 +142,7 @@ public sealed partial class NativeSessionAuthority {
                     // The Space that takes the removed one's place is where its
                     // window goes and, when it was the launch Space, the new one.
                     var neighbor = spaces[Math.Min(index, spaces.Count - 1)].Id;
-                    if (view.SpaceId == id) hint.SelectSpace(neighbor);
+                    if (followUp.Window?.ShownSpaceId == id) followUp.ShowSpace(neighbor);
                     if (defaultSpace == id) defaultSpace = neighbor;
                     break;
                 default: throw new BrowserRuleException(BrowserRuleCodes.UnknownSpaceCommand);
@@ -154,10 +153,7 @@ public sealed partial class NativeSessionAuthority {
         var projection = StoredSessionCodec.Encode(next with {
             Spaces = spaces.Select(s => created == s.Id ? s : Settings(s)).ToArray()
         });
-        return new NativeSessionCommand(this, expected, next, Output(new JsonObject {
-            ["session"] = projection,
-            [SessionSelectionHint.Key] = hint.Encode()
-        }));
+        return new NativeSessionCommand(this, expected, next, Output(new JsonObject { ["session"] = projection }), followUp: followUp);
     }
 
     #endregion

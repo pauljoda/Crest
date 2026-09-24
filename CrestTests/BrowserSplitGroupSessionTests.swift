@@ -73,8 +73,7 @@ final class BrowserSplitGroupSessionTests: XCTestCase {
         let destination = makeSpace(name: "Destination", tabs: [resident])
         let store = BrowserStore(
             session: BrowserSession(spaces: [source, destination]),
-            selection: BrowserStoreSelection(
-                selectedSpaceID: source.id, selectedTabIDsBySpace: [source.id: head.id, destination.id: resident.id])
+            showing: source.id, tabs: [source.id: head.id, destination.id: resident.id]
         )
 
         XCTAssertTrue(store.moveTab(head.id, from: source.id, into: destination.id))
@@ -204,7 +203,7 @@ final class BrowserSplitGroupSessionTests: XCTestCase {
         let other = makeSpace(name: "Other", tabs: [head, tail])
         let store = BrowserStore(
             session: BrowserSession(spaces: [selected, other]),
-            selection: BrowserStoreSelection(selectedSpaceID: selected.id, selectedTabIDsBySpace: [other.id: head.id])
+            showing: selected.id, tabs: [other.id: head.id]
         )
         let assignment = BrowserSpaceRuntimeAssignment(space: other)
 
@@ -298,8 +297,7 @@ final class BrowserSplitGroupSessionTests: XCTestCase {
         let other = makeSpace(name: "Other", tabs: [foreign])
         let store = BrowserStore(
             session: BrowserSession(spaces: [selected, other]),
-            selection: BrowserStoreSelection(
-                selectedSpaceID: selected.id, selectedTabIDsBySpace: [selected.id: target.id, other.id: foreign.id])
+            showing: selected.id, tabs: [selected.id: target.id, other.id: foreign.id]
         )
 
         XCTAssertFalse(
@@ -599,8 +597,7 @@ final class BrowserSplitGroupSessionTests: XCTestCase {
     private func makeStore(space: BrowserSpace, selectedTabID: TabID?) -> BrowserStore {
         BrowserStore(
             session: BrowserSession(spaces: [space]),
-            selection: BrowserStoreSelection(
-                selectedSpaceID: space.id, selectedTabIDsBySpace: selectedTabID.map { [space.id: $0] } ?? [:])
+            showing: space.id, tabs: selectedTabID.map { [space.id: $0] } ?? [:]
         )
     }
 

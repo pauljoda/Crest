@@ -16,7 +16,6 @@ public sealed partial class BrowserContractsTests {
             ["operation"] = "transient.promote",
             ["spaceId"] = target["id"]!.DeepClone(),
             ["profileId"] = target["profile"]!["id"]!.DeepClone(),
-            ["view"] = View(session),
             ["now"] = 800000100.0,
             ["arguments"] = new JsonObject {
                 ["requestId"] = Guid.NewGuid().ToString(),
@@ -92,15 +91,19 @@ public sealed partial class BrowserContractsTests {
     public void TransientArchiveKeepsSelectionAndRejectsDuplicateOrRevokedCompletion() {
         var session = SavedSession().Document["session"]!;
         session["spaces"]!.AsArray().Add(SavedSession().Document["session"]!["spaces"]![0]!.DeepClone());
-        var owner = new NativeSessionAuthority(Bytes(session)); var request = TransientRequest(session);
+        var owner = new NativeSessionAuthority(Bytes(session));
+        using var device = new TestDevice(owner);
+        var window = device.Showing(session);
+        var shown = device.Shown(window);
+        var request = IssuedFrom(TransientRequest(session), window);
         request["operation"] = "transient.archive";
         request["arguments"]!["sourceAccessible"] = false; // A retained value may be archived after relocking.
         var command = owner.PrepareCommand(1, Bytes(request));
         var result = JsonNode.Parse(command.Output)!;
-        Assert.True(LeavesSelection(result));
         Assert.Null(result["space"]!["selectedTabID"]);
         Assert.Equal("quickWindow", result["space"]!["archivedTabs"]![0]!["reason"]!.GetValue<string>());
         command.Commit();
+        Assert.Equal(shown, device.Shown(window));
         Assert.Equal("transient_already_completed", Assert.Throws<BrowserRuleException>(() => owner.PrepareCommand(2, Bytes(request))).Code);
         var pendingRequest = TransientRequest(session); pendingRequest["operation"] = "transient.archive";
         var pending = owner.PrepareCommand(2, Bytes(pendingRequest));
@@ -114,14 +117,17 @@ public sealed partial class BrowserContractsTests {
     public void EmptyTransientPromotionSelectsWithoutCreatingATab() {
         var session = SavedSession().Document["session"]!;
         session["spaces"]!.AsArray().Add(SavedSession().Document["session"]!["spaces"]![0]!.DeepClone());
-        var owner = new NativeSessionAuthority(Bytes(session)); var request = TransientRequest(session, 1, empty: true);
+        var owner = new NativeSessionAuthority(Bytes(session));
+        using var device = new TestDevice(owner);
+        var window = device.Showing(session);
+        var request = IssuedFrom(TransientRequest(session, 1, empty: true), window);
         request["arguments"]!["leaseSpaceId"] = null; request["arguments"]!["leaseProfileId"] = null;
         var command = owner.PrepareCommand(1, Bytes(request)); var result = JsonNode.Parse(command.Output)!;
         Assert.Null(result["tabId"]);
-        Assert.Equal(SpaceId(session["spaces"]![1]!), HintedSpace(result));
         Assert.False(result["adoptLivePage"]!.GetValue<bool>());
         Assert.True(JsonNode.DeepEquals(session["spaces"]![1]!["tabs"], result["space"]!["tabs"]));
         command.Commit();
         Assert.Equal(2UL, owner.Revision);
+        Assert.Equal(SpaceId(session["spaces"]![1]!), device.Space(window));
     }
 }

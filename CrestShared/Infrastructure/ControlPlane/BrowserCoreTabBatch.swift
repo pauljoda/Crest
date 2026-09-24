@@ -21,8 +21,6 @@ enum BrowserCoreTabBatch {
     struct Response: Decodable {
         var error: BrowserCoreErrorCode?
         var changes: [BrowserCoreSessionEditing.Result]?
-        /// The follow-up selection for the window that ran the batch.
-        var selection: BrowserSelectionHint?
     }
 
     /// The `tabs.batch` arguments: the multi-selection as the window captured
@@ -30,7 +28,6 @@ enum BrowserCoreTabBatch {
     struct Arguments: Encodable {
         private enum CodingKeys: String, CodingKey {
             case selection
-            case fallbackTabId
             case follow
             case copyObservations
             case folderColor
@@ -48,14 +45,12 @@ enum BrowserCoreTabBatch {
 
         let request: BrowserTabBatchRequest
         let action: BrowserTabBatchAction
-        let fallback: TabID?
         let follow: Bool
         let observations: [BrowserSessionArguments.CopyObservation]
 
         func encode(to encoder: any Encoder) throws {
             var container = encoder.container(keyedBy: CodingKeys.self)
             try container.encode(Selection(request), forKey: .selection)
-            try container.encode(fallback?.rawValue, forKey: .fallbackTabId)
             try container.encode(follow, forKey: .follow)
             try container.encode(observations, forKey: .copyObservations)
             try container.encode(BrowserSpaceBrandColor.folderDefault, forKey: .folderColor)
@@ -140,9 +135,7 @@ enum BrowserCoreTabBatch {
         -> (session: BrowserSession, result: BrowserTabBatchResult)
     {
         if let error = response.error { throw batchError(error) }
-        guard let changes = response.changes,
-            response.selection?.spaceID.map({ id in session.spaces.contains { $0.id == id } }) != false
-        else { throw BrowserTabBatchError.invalidDestination }
+        guard let changes = response.changes else { throw BrowserTabBatchError.invalidDestination }
         var next = session
         let originals = Dictionary(uniqueKeysWithValues: session.spaces.flatMap(\.tabs).map { ($0.id, $0) })
         var copies: [(source: TabID, copy: TabID)] = []

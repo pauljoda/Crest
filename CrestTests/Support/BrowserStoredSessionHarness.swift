@@ -25,16 +25,16 @@ final class BrowserStoredSessionHarness {
     // MARK: - Initializers
 
     /// Gives a new file `session` and `journal` as its first session, then
-    /// opens it with a window showing `selection`.
+    /// opens it with a window on its launch Space.
     init(
-        session: BrowserSession, journal: BrowserSyncJournal? = nil, selection: BrowserStoreSelection? = nil,
+        session: BrowserSession, journal: BrowserSyncJournal? = nil,
         favicons: InMemoryBrowserFaviconStore = InMemoryBrowserFaviconStore()
     ) throws {
         directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
         self.favicons = favicons
         core = try CrestCore(configuration: AppConfiguration(storageDirectory: directory.path))
         try BrowserInstalledRelease.adopt(session, journal: journal, into: core, favicons: favicons)
-        store = try Self.open(core, favicons: favicons, selection: selection)
+        store = try Self.open(core, favicons: favicons)
     }
 
     /// Opens the file a harness left behind, as a launch after a crash would.
@@ -42,24 +42,19 @@ final class BrowserStoredSessionHarness {
         self.directory = directory
         self.favicons = favicons
         core = try CrestCore(configuration: AppConfiguration(storageDirectory: directory.path))
-        store = try Self.open(core, favicons: favicons, selection: nil)
+        store = try Self.open(core, favicons: favicons)
     }
 
     deinit {
         try? FileManager.default.removeItem(at: directory)
     }
 
-    private static func open(
-        _ core: CrestCore, favicons: InMemoryBrowserFaviconStore, selection: BrowserStoreSelection?
-    )
-        throws -> BrowserStore
-    {
+    private static func open(_ core: CrestCore, favicons: InMemoryBrowserFaviconStore) throws -> BrowserStore {
         let stored = try XCTUnwrap(BrowserCoreStoredSession.load(core: core, favicons: favicons))
         let family = BrowserStoreFamily(stored: stored, storage: core, favicons: favicons)
         return BrowserStore(
-            session: family.authoritativeSession, selection: selection, credentialVault: InMemoryCredentialVault(),
-            syncCoordinator: BrowserSyncCoordinator(core: stored.sync), syncCoalescingDelay: .milliseconds(150),
-            browsingMode: .standard, family: family, core: core)
+            credentialVault: InMemoryCredentialVault(), syncCoordinator: BrowserSyncCoordinator(core: stored.sync),
+            syncCoalescingDelay: .milliseconds(150), browsingMode: .standard, family: family, core: core)
     }
 
     // MARK: - Actions - Launches

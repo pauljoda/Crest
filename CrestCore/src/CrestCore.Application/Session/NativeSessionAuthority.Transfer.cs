@@ -21,14 +21,15 @@ public sealed partial class NativeSessionAuthority {
         if (sourceId == destinationId) throw new BrowserRuleException(BrowserRuleCodes.SameSpaceTransfer);
         var source = TransferSpace(sourceId, Id(request["profileId"]));
         var destination = TransferSpace(destinationId, Id(request["destinationProfileId"]));
-        var args = request["arguments"]!.AsObject(); var view = SessionView.Decode(request[SessionView.Key]);
-        var result = NativeTabTransfer.Evaluate(source, view, destination, view, NativeTabTransfer.Arguments.Decode(args), Now(request));
+        var args = request["arguments"]!.AsObject();
+        var followUp = new WindowFollowUp(IssuingWindow(request));
+        var arguments = NativeTabTransfer.Arguments.Decode(args);
+        var result = NativeTabTransfer.Evaluate(source, followUp, destination, followUp, arguments, Now(request));
         var next = Replacing(session, result.Source, result.Destination);
         Validate(next);
-        var hint = new SessionSelectionHint().SelectTab(view, sourceId, result.SourceSelection)
-            .SelectTab(view, destinationId, result.DestinationSelection);
-        if (args["select"]?.GetValue<bool>() == true) hint.SelectSpace(destinationId);
-        return new(this, expected, next, Output(result.Encode(hint)));
+        followUp.ShowTab(sourceId, result.SourceSelection).ShowTab(destinationId, result.DestinationSelection);
+        if (arguments.Select) followUp.ShowSpace(destinationId);
+        return new(this, expected, next, Output(result.Encode()), followUp: followUp);
     }
 
     public static NativeSessionTransfer PrepareTransfer(NativeSessionAuthority source, ulong sourceRevision,
@@ -54,19 +55,21 @@ public sealed partial class NativeSessionAuthority {
                 throw new BrowserRuleException(BrowserRuleCodes.DuplicateTab);
             // A window transfer keeps the exact profile and makes a current tab.
             args = args with { Placement = TabPlacement.Current, FolderId = null, Before = null, AfterSelection = true };
-            var sourceView = SessionView.Decode(request["sourceView"]);
-            var destinationView = SessionView.Decode(request["destinationView"]);
-            var result = NativeTabTransfer.Evaluate(a, sourceView, b, destinationView, args, Now(request));
-            // Each window gets its own hint: the source shows its fallback, the
-            // destination the moved tab when the move selects it.
-            var sourceHint = new SessionSelectionHint().SelectTab(sourceView, spaceId, result.SourceSelection);
-            var destinationHint = new SessionSelectionHint().SelectTab(destinationView, spaceId, result.DestinationSelection);
-            if (args.Select) destinationHint.SelectSpace(spaceId);
+            // Each window follows its own side: the source shows the tab it
+            // showed before the moved one, the destination the moved tab when
+            // the move selects it.
+            var sourceFollowUp = new WindowFollowUp(source.device?.Snapshot(source.workspaceId, OptionalId(request["sourceWindowId"])));
+            var destinationFollowUp = new WindowFollowUp(
+                destination.device?.Snapshot(destination.workspaceId, OptionalId(request["destinationWindowId"])));
+            var result = NativeTabTransfer.Evaluate(a, sourceFollowUp, b, destinationFollowUp, args, Now(request));
+            sourceFollowUp.ShowTab(spaceId, result.SourceSelection);
+            destinationFollowUp.ShowTab(spaceId, result.DestinationSelection);
+            if (args.Select) destinationFollowUp.ShowSpace(spaceId);
             var nextSource = Replacing(source.session, result.Source);
             var nextDestination = Replacing(destination.session, result.Destination);
             Validate(nextSource); Validate(nextDestination);
-            return new(source, new(source, sourceRevision, nextSource, []), destination,
-                new(destination, destinationRevision, nextDestination, []), Output(result.Encode(sourceHint, destinationHint)));
+            return new(source, new(source, sourceRevision, nextSource, [], followUp: sourceFollowUp), destination,
+                new(destination, destinationRevision, nextDestination, [], followUp: destinationFollowUp), Output(result.Encode()));
         }
     }
 

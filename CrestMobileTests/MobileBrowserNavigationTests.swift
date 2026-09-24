@@ -119,7 +119,8 @@ final class MobileBrowserNavigationTests: XCTestCase {
         locked.accessPolicy = .deviceOwnerAuthentication
         let browser = BrowserStore(
             session: BrowserSession(spaces: [locked]),
-            selection: selection(showing: locked.id, in: [locked])
+            showing: locked.id,
+            tabs: shownTabs(in: [locked])
         )
         let pages = MobileBrowserPageStore(usesEphemeralWebsiteDataStores: true)
         let access = BrowserSpaceAccessController()
@@ -415,7 +416,8 @@ final class MobileBrowserNavigationTests: XCTestCase {
             let space = makeSpace(index: 334)
             let browser = BrowserStore(
                 session: BrowserSession(spaces: [space]),
-                selection: selection(showing: space.id, in: [space])
+                showing: space.id,
+                tabs: shownTabs(in: [space])
             )
             let pages = MobileBrowserPageStore(usesEphemeralWebsiteDataStores: true)
             let model = makeModel(browser: browser, pages: pages)
@@ -598,8 +600,8 @@ final class MobileBrowserNavigationTests: XCTestCase {
         let secondSpace = makeSpace(index: 52)
         let browser = BrowserStore(
             session: BrowserSession(spaces: [firstSpace, secondSpace]),
-            selection: selection(
-                showing: firstSpace.id, in: [firstSpace, secondSpace], tabs: [firstSpace.id: tabs[0].id])
+            showing: firstSpace.id,
+            tabs: shownTabs(in: [firstSpace, secondSpace], tabs: [firstSpace.id: tabs[0].id])
         )
         let pages = MobileBrowserPageStore(
             usesEphemeralWebsiteDataStores: true
@@ -641,7 +643,8 @@ final class MobileBrowserNavigationTests: XCTestCase {
         )
         let browser = BrowserStore(
             session: BrowserSession(spaces: [space]),
-            selection: selection(showing: space.id, in: [space], tabs: [space.id: first.id])
+            showing: space.id,
+            tabs: shownTabs(in: [space], tabs: [space.id: first.id])
         )
         let pages = MobileBrowserPageStore(
             usesEphemeralWebsiteDataStores: true
@@ -683,7 +686,8 @@ final class MobileBrowserNavigationTests: XCTestCase {
         )
         let browser = BrowserStore(
             session: BrowserSession(spaces: [space]),
-            selection: selection(showing: space.id, in: [space], tabs: [space.id: pinned.id])
+            showing: space.id,
+            tabs: shownTabs(in: [space], tabs: [space.id: pinned.id])
         )
         let pages = MobileBrowserPageStore(
             usesEphemeralWebsiteDataStores: true
@@ -720,7 +724,8 @@ final class MobileBrowserNavigationTests: XCTestCase {
         )
         let browser = BrowserStore(
             session: BrowserSession(spaces: [space]),
-            selection: selection(showing: space.id, in: [space], tabs: [space.id: source.id])
+            showing: space.id,
+            tabs: shownTabs(in: [space], tabs: [space.id: source.id])
         )
         let pages = MobileBrowserPageStore(
             usesEphemeralWebsiteDataStores: true
@@ -851,7 +856,8 @@ final class MobileBrowserNavigationTests: XCTestCase {
         let secondSpace = makeSpace(index: 14)
         let browser = BrowserStore(
             session: BrowserSession(spaces: [firstSpace, secondSpace]),
-            selection: selection(showing: firstSpace.id, in: [firstSpace, secondSpace])
+            showing: firstSpace.id,
+            tabs: shownTabs(in: [firstSpace, secondSpace])
         )
         let pages = MobileBrowserPageStore(usesEphemeralWebsiteDataStores: true)
         let commands = MobileBrowserCommandController(browser: browser, pages: pages)
@@ -962,7 +968,8 @@ final class MobileBrowserNavigationTests: XCTestCase {
         let secondSpace = makeSpace(index: 16)
         let browser = BrowserStore(
             session: BrowserSession(spaces: [firstSpace, secondSpace]),
-            selection: selection(showing: firstSpace.id, in: [firstSpace, secondSpace])
+            showing: firstSpace.id,
+            tabs: shownTabs(in: [firstSpace, secondSpace])
         )
         let pages = MobileBrowserPageStore(usesEphemeralWebsiteDataStores: true)
         let model = makeModel(browser: browser, pages: pages)
@@ -1046,7 +1053,8 @@ final class MobileBrowserNavigationTests: XCTestCase {
     ) throws -> BrowserStore {
         let browser = BrowserStore(
             session: BrowserSession(spaces: [split.space]),
-            selection: selection(showing: split.space.id, in: [split.space])
+            showing: split.space.id,
+            tabs: shownTabs(in: [split.space])
         )
         let space = try XCTUnwrap(browser.selectedSpace)
         XCTAssertEqual(
@@ -1079,7 +1087,8 @@ final class MobileBrowserNavigationTests: XCTestCase {
         let secondSpace = makeSpace(index: 2)
         let browser = BrowserStore(
             session: BrowserSession(spaces: [firstSpace, secondSpace]),
-            selection: selection(showing: firstSpace.id, in: [firstSpace, secondSpace])
+            showing: firstSpace.id,
+            tabs: shownTabs(in: [firstSpace, secondSpace])
         )
         let pages = MobileBrowserPageStore(
             usesEphemeralWebsiteDataStores: true
@@ -1453,7 +1462,8 @@ final class MobileBrowserNavigationTests: XCTestCase {
         )
         let browser = BrowserStore(
             session: BrowserSession(spaces: [space]),
-            selection: selection(showing: space.id, in: [space], tabs: [space.id: reddit.id])
+            showing: space.id,
+            tabs: shownTabs(in: [space], tabs: [space.id: reddit.id])
         )
         let pages = MobileBrowserPageStore(
             usesEphemeralWebsiteDataStores: true
@@ -1501,7 +1511,8 @@ final class MobileBrowserNavigationTests: XCTestCase {
         )
         let browser = BrowserStore(
             session: BrowserSession(spaces: [space]),
-            selection: selection(showing: space.id, in: [space], tabs: [space.id: pinned.id])
+            showing: space.id,
+            tabs: shownTabs(in: [space], tabs: [space.id: pinned.id])
         )
         let pages = MobileBrowserPageStore(
             usesEphemeralWebsiteDataStores: true
@@ -1593,7 +1604,8 @@ final class MobileBrowserNavigationTests: XCTestCase {
         )
         let browser = BrowserStore(
             session: BrowserSession(spaces: [space]),
-            selection: selection(showing: space.id, in: [space], tabs: [space.id: tabs[0].id])
+            showing: space.id,
+            tabs: shownTabs(in: [space], tabs: [space.id: tabs[0].id])
         )
         let pages = MobileBrowserPageStore(
             usesEphemeralWebsiteDataStores: true
@@ -1635,7 +1647,8 @@ final class MobileBrowserNavigationTests: XCTestCase {
         )
         let browser = BrowserStore(
             session: BrowserSession(spaces: [space]),
-            selection: selection(showing: space.id, in: [space], tabs: [space.id: tabs[0].id])
+            showing: space.id,
+            tabs: shownTabs(in: [space], tabs: [space.id: tabs[0].id])
         )
         let pages = MobileBrowserPageStore(
             usesEphemeralWebsiteDataStores: true
@@ -1687,7 +1700,8 @@ final class MobileBrowserNavigationTests: XCTestCase {
         )
         let browser = BrowserStore(
             session: BrowserSession(spaces: [space]),
-            selection: selection(showing: space.id, in: [space], tabs: [space.id: current[0].id])
+            showing: space.id,
+            tabs: shownTabs(in: [space], tabs: [space.id: current[0].id])
         )
         let pages = MobileBrowserPageStore(
             usesEphemeralWebsiteDataStores: true
@@ -1998,18 +2012,14 @@ final class MobileBrowserNavigationTests: XCTestCase {
         )
     }
 
-    /// What a window shows: `spaceID`, with every Space on the tab `tabs`
-    /// names for it, or else its first tab.
-    private func selection(
-        showing spaceID: SpaceID,
-        in spaces: [BrowserSpace],
-        tabs: [SpaceID: TabID] = [:]
-    ) -> BrowserStoreSelection {
+    /// The tab a window shows in each of `spaces`: the one `tabs` names for
+    /// it, or else its first tab.
+    private func shownTabs(in spaces: [BrowserSpace], tabs: [SpaceID: TabID] = [:]) -> [SpaceID: TabID] {
         var shown: [SpaceID: TabID] = [:]
         for space in spaces {
             shown[space.id] = tabs[space.id] ?? space.tabs.first?.id
         }
-        return BrowserStoreSelection(selectedSpaceID: spaceID, selectedTabIDsBySpace: shown)
+        return shown
     }
 
     private func presented(
@@ -2019,7 +2029,7 @@ final class MobileBrowserNavigationTests: XCTestCase {
     ) -> BrowserPresentedSession {
         BrowserPresentedSession(
             session: session,
-            selection: selection(showing: spaceID, in: session.spaces, tabs: tabs)
+            window: .preview(showing: spaceID, tabs: shownTabs(in: session.spaces, tabs: tabs))
         )
     }
 
