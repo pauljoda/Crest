@@ -4,6 +4,29 @@
     "" : {
 
     },
+    "%lld of %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld of %2$lld"
+          }
+        }
+      }
+    },
+    "%lld tabs" : {
+
+    },
+    "%lld/%lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld/%2$lld"
+          }
+        }
+      }
+    },
     "·" : {
       "localizations" : {
         "ar" : {
@@ -469,13 +492,64 @@
         }
       }
     },
+    "1 Day" : {
+
+    },
+    "1 Week" : {
+
+    },
+    "1 Year" : {
+
+    },
+    "30 Days" : {
+
+    },
+    "90 Days" : {
+
+    },
+    "A patterned band behind the sidebar." : {
+
+    },
+    "A recovery checkpoint is available from %@." : {
+
+    },
+    "After 1 Hour" : {
+
+    },
+    "After 12 Hours" : {
+
+    },
+    "After 24 Hours" : {
+
+    },
+    "After 30 Days" : {
+
+    },
+    "After 6 Hours" : {
+
+    },
+    "After 7 Days" : {
+
+    },
     "Allowed for Session" : {
+
+    },
+    "Apple Translation requires a physical device. It is not available in Simulator." : {
 
     },
     "Ask after First" : {
 
     },
     "Automatic Downloads" : {
+
+    },
+    "Background tab activity" : {
+
+    },
+    "Balanced" : {
+
+    },
+    "Block known trackers" : {
 
     },
     "Blocked by Default" : {
@@ -487,7 +561,28 @@
     "Camera & Microphone" : {
 
     },
+    "Certificate Not Trusted" : {
+
+    },
+    "Changes made after this checkpoint may be missing. Crest will keep a separate copy of the current files and fetch current iCloud records before uploading again." : {
+
+    },
+    "Check your internet connection and try again." : {
+
+    },
+    "Choose which accounts to import." : {
+
+    },
+    "Choose which blocklists a Space loads" : {
+
+    },
+    "Choose which blocklists this Space loads" : {
+
+    },
     "Chosen Space" : {
+
+    },
+    "Click a shortcut, then press a key with Command, Option, Control, or Shift." : {
 
     },
     "Command (⌘)" : {
@@ -496,7 +591,28 @@
     "Command-click" : {
 
     },
+    "Connection Details Unavailable" : {
+
+    },
+    "Connection Secure" : {
+
+    },
     "Contains" : {
+
+    },
+    "Control your browsing data" : {
+
+    },
+    "Crest couldn't open your session" : {
+
+    },
+    "crestbrowser.com" : {
+
+    },
+    "Customize how your Space looks." : {
+
+    },
+    "Dangerous Site" : {
 
     },
     "Default (Ask after First)" : {
@@ -505,13 +621,62 @@
     "Default (Block)" : {
 
     },
+    "Disabled and selected" : {
+
+    },
+    "Engine experiments" : {
+
+    },
+    "extensions permissions Chromium Chrome Web Store install copies Spaces" : {
+
+    },
     "External Apps" : {
+
+    },
+    "Forever" : {
+
+    },
+    "Glow" : {
+
+    },
+    "Imported password" : {
 
     },
     "Is Exactly" : {
 
     },
+    "Loading" : {
+
+    },
+    "Make Crest your own" : {
+
+    },
+    "Manage Filter Lists" : {
+
+    },
+    "Match %lld of %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Match %1$lld of %2$lld"
+          }
+        }
+      }
+    },
     "Most Recent Space" : {
+
+    },
+    "No recovery checkpoint is available. Retry after checking that your disk is available and has free space." : {
+
+    },
+    "Opacity" : {
+
+    },
+    "Open Link in Peek" : {
+
+    },
+    "open local file document html pdf archive webarchive mhtml" : {
 
     },
     "Option (⌥)" : {
@@ -12229,6 +12394,9 @@
     "Pall" : {
       "extractionState" : "manual"
     },
+    "Partly Secure" : {
+
+    },
     "Passkey access is off" : {
       "localizations" : {
         "ar" : {
@@ -13537,6 +13705,9 @@
     "Remember in %@" : {
 
     },
+    "Remember in this Space" : {
+
+    },
     "Remember the chosen Space for each site" : {
       "localizations" : {
         "ar" : {
@@ -14003,6 +14174,9 @@
     "Reset every WebKit feature flag?" : {
 
     },
+    "Reset Icon" : {
+
+    },
     "Reset practice" : {
 
     },
@@ -14077,6 +14251,12 @@
           }
         }
       }
+    },
+    "Restore Checkpoint" : {
+
+    },
+    "Restore the last checkpoint?" : {
+
     },
     "Restores each site's default permission behavior" : {
 
@@ -14201,6 +14381,9 @@
 
     },
     "Review Password Import" : {
+
+    },
+    "Review Passwords" : {
 
     },
     "Review this Space’s content and network settings." : {
@@ -14475,6 +14658,9 @@
           }
         }
       }
+    },
+    "Save Setup" : {
+
     },
     "Save this tab" : {
 
@@ -14808,6 +14994,9 @@
       }
     },
     "Search passwords" : {
+
+    },
+    "Search Passwords" : {
 
     },
     "Search saved passwords" : {
@@ -15362,6 +15551,9 @@
     "Show notifications from websites and extensions you allow." : {
 
     },
+    "Show notifications from websites you allow." : {
+
+    },
     "Show or Hide Developer Toolbar" : {
 
     },
@@ -15404,6 +15596,9 @@
         }
       }
     },
+    "Show Saved Files" : {
+
+    },
     "Show Side Panel" : {
 
     },
@@ -15417,6 +15612,9 @@
           }
         }
       }
+    },
+    "Show sidebar" : {
+
     },
     "Show Sidebar Temporarily" : {
 
@@ -15665,6 +15863,9 @@
         }
       }
     },
+    "Some content on this page was not delivered securely." : {
+
+    },
     "Some copies could not be installed. Completed installations were kept." : {
 
     },
@@ -15771,6 +15972,9 @@
           }
         }
       }
+    },
+    "Space extensions and permissions" : {
+
     },
     "Space icon" : {
       "extractionState" : "stale",
@@ -16393,6 +16597,12 @@
         }
       }
     },
+    "Suspend" : {
+
+    },
+    "Suspend pauses inactive tabs. Throttle lets them continue limited work, which may improve responsiveness while using more resources. Changes apply to new tabs; restart Crest to apply to all open tabs." : {
+
+    },
     "Swipe between Spaces" : {
       "localizations" : {
         "ar" : {
@@ -16875,6 +17085,9 @@
         }
       }
     },
+    "The connection was interrupted." : {
+
+    },
     "The credential belongs to the embedded %@ frame, not %@." : {
       "localizations" : {
         "ar" : {
@@ -17062,6 +17275,9 @@
       }
     },
     "The pages you are actively using now." : {
+
+    },
+    "The password could not be saved. Try again." : {
 
     },
     "The password is saved in this Space, but the form changed before Crest could fill it." : {
@@ -17548,6 +17764,12 @@
         }
       }
     },
+    "This session was saved by a newer version of Crest. Update Crest before opening it." : {
+
+    },
+    "This sign-in form belongs to a different website." : {
+
+    },
     "This sign-in frame is embedded in %arg." : {
       "extractionState" : "stale",
       "localizations" : {
@@ -17569,6 +17791,9 @@
         }
       }
     },
+    "This site may try to harm your Mac or steal your information." : {
+
+    },
     "This site took too long to respond" : {
       "localizations" : {
         "ar" : {
@@ -17578,6 +17803,9 @@
           }
         }
       }
+    },
+    "This site’s certificate is not trusted. Information you send could be read by others." : {
+
     },
     "This tab is still pinned or saved, but its web page is not using memory." : {
       "extractionState" : "stale",
@@ -17606,6 +17834,9 @@
           }
         }
       }
+    },
+    "Throttle" : {
+
     },
     "Tint Folder Title" : {
 
@@ -18257,6 +18488,9 @@
     "Up to %lld per row" : {
 
     },
+    "Up to date" : {
+
+    },
     "Up to four colors, independent of the sidebar background." : {
 
     },
@@ -18865,6 +19099,9 @@
         }
       }
     },
+    "WebKit Chromium experimental preview testable developer stable runtime flags features" : {
+
+    },
     "WebKit experimental preview testable developer stable runtime flags features" : {
 
     },
@@ -19072,6 +19309,9 @@
         }
       }
     },
+    "Working" : {
+
+    },
     "Wyvern" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -19112,6 +19352,12 @@
       }
     },
     "You can still set up Spaces manually." : {
+
+    },
+    "Your saved files are preserved. Browsing and iCloud sync will stay stopped until your session can be opened." : {
+
+    },
+    "Your Spaces are ready." : {
 
     },
     "You’re offline" : {

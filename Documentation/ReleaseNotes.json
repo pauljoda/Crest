@@ -2241,6 +2241,10 @@
     "policy-answer-sets": {
       "category": "internal",
       "message": "Link, scheme, download and popup decisions and search-engine flaws describe themselves."
+    },
+    "catalog-complete": {
+      "category": "internal",
+      "message": "Every user-facing string the apps extract is in the localization catalog."
     }
   }
 }
