@@ -829,9 +829,7 @@ final class CrestChromiumRoot: NSObject, BrowserMacWindowPresenting {
                 guard allowed else { instance.quitting = false; return }
                 Task { @MainActor in
                     for quick in Array(instance.quickWindows.values) { quick.window.closeAfterApproval() }
-                    for id in Array(instance.windows.keys) {
-                        await instance.commands.flushPendingPersistence(in: id)
-                    }
+                    await instance.commands.flushPendingPersistenceBeforeQuit()
                     instance.host.disposePages()
                     instance.hasStopped = true
                     instance.host.completeQuit()

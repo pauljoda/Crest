@@ -76,13 +76,17 @@ extension BrowserMacApplication: BrowserEngineHostCommands {
 
     // MARK: - Actions - Lifecycle
 
-    func flushPendingPersistence(in window: BrowserWindowID) async {
-        guard let host = hostWindow(window) else { return }
+    func flushPendingPersistenceBeforeQuit() async {
+        // Private and temporary windows keep nothing, and every other window
+        // shares the persistent session, so one flush covers the edits of all.
+        let pools = [pages] + windowCoordinator.openWindowPages
         // Reading each resident page's session state has to happen while the
         // pages are still resident.
-        host.pages.archiveResidentTabStates()
-        await host.browser.flushPendingSyncPersistence()
-        await host.pages.flushPendingTabStateWrites()
+        for pool in pools { pool.archiveResidentTabStates() }
+        await BrowserPersistenceFlush().run { [browser] in
+            await browser.flushPendingSyncPersistenceUntilSettled()
+            for pool in pools { await pool.flushPendingTabStateWrites() }
+        }
     }
 
     func closePrivateBrowsing() {

@@ -2305,6 +2305,10 @@
     "restored-windows-keep-their-own-content": {
       "category": "fixed",
       "message": "When macOS reopens Crest's windows after you quit, each window comes back on its own Space and tab instead of mirroring the first window."
+    },
+    "quit-saves-last-edits": {
+      "category": "fixed",
+      "message": "A change made right before quitting Crest, or right before it goes to the background on iPhone and iPad, is now always saved and queued for sync."
     }
   }
 }

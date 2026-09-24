@@ -120,6 +120,7 @@ targetTemplates:
       - path: CrestMac
         excludes:
           - App/CrestApp.swift
+          - App/CrestAppDelegate.swift
           - Features/SiteSettings/Components/BrowserEngineSiteSections.swift
       - path: CrestEngines/Chromium/Apple
         excludes:

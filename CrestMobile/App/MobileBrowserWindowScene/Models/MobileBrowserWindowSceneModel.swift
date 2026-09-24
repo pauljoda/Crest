@@ -271,9 +271,15 @@ final class MobileBrowserWindowSceneModel {
         // Reading resident WebKit session state must happen while pages remain
         // resident, before the asynchronous persistence flush begins.
         pages.archiveResidentTabStates()
-        Task {
-            await browser.flushPendingSyncPersistence()
-            await pages.flushPendingTabStateWrites()
+        // iOS may suspend the app once the scene leaves the foreground and end
+        // it while suspended, so the flush keeps it running until it is done.
+        let backgroundTask = MobileBackgroundTask(named: "Save pending edits")
+        Task { [browser, pages] in
+            await BrowserPersistenceFlush().run {
+                await browser.flushPendingSyncPersistenceUntilSettled()
+                await pages.flushPendingTabStateWrites()
+            }
+            backgroundTask.end()
         }
     }
 

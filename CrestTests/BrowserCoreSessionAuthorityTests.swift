@@ -290,6 +290,34 @@ final class BrowserCoreSessionAuthorityTests: XCTestCase {
         XCTAssertEqual(restored.journal, coordinator.journal)
     }
 
+    /// Quitting and backgrounding wait for this flush and nothing after it:
+    /// edits accepted just before are on disk and staged for sync once it
+    /// returns, though a rename stages only after a coalescing delay and a new
+    /// tab only once the turn that opened it ends.
+    func testFlushLeavesTheLastEditsSavedAndStagedForSync() async throws {
+        var journal = BrowserSyncJournal()
+        try journal.stage(session: .preview)
+        let harness = try BrowserStoredSessionHarness(session: .preview, journal: journal)
+        let store = harness.store
+        let coordinator = try XCTUnwrap(store.syncCoordinator)
+        await store.flushPendingSyncPersistence()
+        try coordinator.markUploaded(coordinator.journal.pendingRecordIDs)
+        XCTAssertEqual(try harness.stored().journal?.pendingRecordIDs, [])
+
+        let space = store.session.spaces[0]
+        store.updateSpaceIdentity(space.id, name: "Renamed before quit", symbol: "book", accent: .teal)
+        let url = try XCTUnwrap(URL(string: "https://example.org/opened-before-quit"))
+        let opened = try XCTUnwrap(store.openNewTab(url: url, in: space.id, selecting: true))
+        await store.flushPendingSyncPersistence()
+
+        let stored = try harness.stored()
+        XCTAssertEqual(stored.session.space(id: space.id)?.name, "Renamed before quit")
+        XCTAssertEqual(stored.session.space(id: space.id)?.tabs.contains { $0.id == opened }, true)
+        let staged = try XCTUnwrap(stored.journal).pendingRecordIDs
+        XCTAssertTrue(staged.contains(BrowserSyncRecordID(kind: .space, value: space.id.rawValue)))
+        XCTAssertTrue(staged.contains(BrowserSyncRecordID(kind: .tab, value: opened.rawValue)))
+    }
+
     func testCoreRepairPreservesAssetOwnershipWhenIdentitiesCollide() throws {
         var first = BrowserSession.preview.spaces[0]
         first.tabs = [first.tabs[0]]

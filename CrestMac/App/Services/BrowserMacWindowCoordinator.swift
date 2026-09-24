@@ -32,6 +32,9 @@ final class BrowserMacWindowCoordinator {
 
     func existingModel(for id: BrowserWindowID) -> BrowserMacWindowModel? { windows[id] }
 
+    /// The page pool of each open window.
+    var openWindowPages: [BrowserPagePool] { windows.values.map(\.pages) }
+
     @discardableResult
     func activateExistingWindow(for source: BrowserStore) -> Bool {
         guard let space = source.selectedSpace, !spaceAccess.isLocked(space) else { return false }

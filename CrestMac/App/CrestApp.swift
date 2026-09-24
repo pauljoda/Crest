@@ -4,10 +4,9 @@ import SwiftUI
 /// through `CrestChromiumRoot` and excludes this file.
 @main
 struct CrestApp: App {
-    @State private var launch = BrowserApplicationLaunch {
-        try BrowserMacApplication(pageClosePreparation: BrowserWebKitPageClosePreparer())
-    }
+    @NSApplicationDelegateAdaptor private var delegate: CrestAppDelegate
     @State private var windowRestoration = BrowserMacWindowRestoration()
+    private var launch: BrowserApplicationLaunch<BrowserMacApplication> { delegate.launch }
 
     var body: some Scene {
         WindowGroup(

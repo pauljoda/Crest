@@ -26,8 +26,10 @@ protocol BrowserEngineHostCommands: AnyObject {
     func openGettingStarted(in window: BrowserWindowID)
     func selectSpace(_ spaceID: SpaceID, in window: BrowserWindowID)
 
-    /// Writes `window`'s pending session, window and tab state before quit.
-    func flushPendingPersistence(in window: BrowserWindowID) async
+    /// Returns once every edit the app accepted is on disk and staged for
+    /// sync and every window's resident page state is written, or once a few
+    /// seconds have passed. Quitting waits for it.
+    func flushPendingPersistenceBeforeQuit() async
     /// Ends private browsing once its window has closed.
     func closePrivateBrowsing()
 }

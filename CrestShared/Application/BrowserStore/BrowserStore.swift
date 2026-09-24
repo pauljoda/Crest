@@ -269,6 +269,18 @@ extension BrowserStore {
         await family.flushPendingSaves()
     }
 
+    /// Flushes again after any pass the session changed during, so an edit
+    /// still on its way when quitting or backgrounding began, such as a link
+    /// being opened or a page's settling title, is saved and staged too.
+    /// Callers bound the wait with `BrowserPersistenceFlush`.
+    func flushPendingSyncPersistenceUntilSettled() async {
+        var revision: Int
+        repeat {
+            revision = sessionRevision
+            await flushPendingSyncPersistence()
+        } while sessionRevision != revision
+    }
+
     /// The family accepted a change. The core's device has already moved or
     /// repaired this window; a window that now shows another Space, or its
     /// Space under another profile or policy, drops its multi-selection.
