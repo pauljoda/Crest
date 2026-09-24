@@ -2389,6 +2389,10 @@
     "session-intents-commit-in-lock": {
       "category": "internal",
       "message": "Session intents commit under the lock that computed them, and refusals without words of their own read as a plain failure."
+    },
+    "abi-invalid-session": {
+      "category": "internal",
+      "message": "The C ABI program checks a refused seed against the renamed InvalidSession rejection."
     }
   }
 }

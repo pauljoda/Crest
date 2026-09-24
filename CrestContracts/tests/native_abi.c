@@ -202,10 +202,10 @@ static void session_boundary(void) {
     assert(size > 0 && (size_t)size < sizeof(json));
     uint8_t intent[1100];
     /* A seed that is not a session in the stored format is refused with the
-     * flaw it has (SeedFlaw.Unreadable is 0). */
+     * flaw it has (SessionFlaw.Unreadable is 0). */
     size_t length = open_workspace(intent, sizeof(intent), persistent_kind, "[]", 2);
     assert(crest_app_dispatch(app, intent, length, &buffer) == CREST_REJECTED);
-    assert(buffer.length == 2 && buffer.bytes[0] == CREST_REJECTION_INVALID_SEED && buffer.bytes[1] == 0);
+    assert(buffer.length == 2 && buffer.bytes[0] == CREST_REJECTION_INVALID_SESSION && buffer.bytes[1] == 0);
     crest_buffer_free(&buffer);
     /* A borrowed workspace opens only by borrowing. */
     length = open_workspace(intent, sizeof(intent), borrowed_kind, json, (size_t)size);
