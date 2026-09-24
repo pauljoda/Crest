@@ -5,12 +5,8 @@ extension BrowserPlatformPage {
     func synchronizePopupPermission(for url: URL? = nil) {
         let origin = (url ?? displayURL ?? pageEngine.currentURL)
             .flatMap(BrowserSiteOrigin.init(url:))
-        let decision =
-            origin.map {
-                permissionCenter.decision(for: .popups, origin: $0, in: spaceID)
-            } ?? .ask
         let allowsAutomaticPopups =
-            BrowserCorePolicy.allowsAutomaticPopups(decision: decision)
+            origin.map { permissionCenter.decision(for: .popups, origin: $0, in: spaceID).grants } ?? false
         _ = pageEngine.applyAutomaticPopups(allowsAutomaticPopups)
         recordPopupPermissionSynchronized(
             allowsAutomaticPopups: allowsAutomaticPopups,
@@ -29,9 +25,7 @@ extension BrowserPlatformPage {
     /// A popup the engine's own blocker held back in the current document.
     func recordEngineBlockedPopup(pageURL: URL, documentIdentifier: String) {
         guard let origin = BrowserSiteOrigin(url: pageURL),
-            !BrowserCorePolicy.allowsAutomaticPopups(
-                decision: permissionCenter.decision(for: .popups, origin: origin, in: spaceID)
-            )
+            !permissionCenter.decision(for: .popups, origin: origin, in: spaceID).grants
         else { return }
         var nextState = blockedPopupState
         guard nextState.recordBlockedAttempt(documentIdentifier: documentIdentifier, origin: origin) else { return }

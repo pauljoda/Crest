@@ -4,11 +4,11 @@ import Observation
 struct BrowserSitePermissionChange {
     var spaceID: SpaceID?
     var origin: BrowserSiteOrigin?
-    var permission: BrowserSitePermission?
+    var permission: SitePermission?
     var detail: String?
     var revokesAuthorization: Bool
 
-    func affects(_ permission: BrowserSitePermission, origin: BrowserSiteOrigin, in spaceID: SpaceID) -> Bool {
+    func affects(_ permission: SitePermission, origin: BrowserSiteOrigin, in spaceID: SpaceID) -> Bool {
         (self.spaceID == nil || self.spaceID == spaceID)
             && (self.origin == nil || self.origin == origin)
             && (self.permission == nil || self.permission == permission)
@@ -48,7 +48,7 @@ final class BrowserSitePermissionCenter {
     private struct Decision: Encodable {
         let spaceID: String
         let origin: BrowserSiteOrigin
-        let permission: BrowserSitePermission
+        let permission: SitePermission
         @BrowserCoreNullable var detail: String?
         let locked: Bool
     }
@@ -57,7 +57,7 @@ final class BrowserSitePermissionCenter {
     private struct MediaDecision: Encodable {
         let spaceID: String
         let origin: BrowserSiteOrigin
-        let media: BrowserMediaPermission
+        let media: SitePermission
         let locked: Bool
     }
 
@@ -71,9 +71,9 @@ final class BrowserSitePermissionCenter {
     private struct SetDecision: Encodable {
         let spaceID: String
         let origin: BrowserSiteOrigin
-        let permission: BrowserSitePermission
+        let permission: SitePermission
         @BrowserCoreNullable var detail: String?
-        let decision: BrowserSitePermissionDecision
+        let decision: SitePermissionDecision
         let recordID: String
         let now: TimeInterval
         let locked: Bool
@@ -90,7 +90,7 @@ final class BrowserSitePermissionCenter {
     }
 
     private struct DecisionAnswer: Decodable {
-        let decision: BrowserSitePermissionDecision
+        let decision: SitePermissionDecision
     }
 
     private struct RecordsAnswer: Decodable {
@@ -101,7 +101,7 @@ final class BrowserSitePermissionCenter {
         struct Change: Decodable {
             let spaceID: UUID?
             let origin: BrowserSiteOrigin?
-            let permission: BrowserSitePermission?
+            let permission: SitePermission?
             let detail: String?
             let revokesAuthorization: Bool
         }
@@ -142,11 +142,11 @@ final class BrowserSitePermissionCenter {
     /// The choice that applies to one request. `detail` narrows a capability a
     /// site can ask for more than one way.
     func decision(
-        for permission: BrowserSitePermission,
+        for permission: SitePermission,
         origin: BrowserSiteOrigin,
         detail: String? = nil,
         in spaceID: SpaceID
-    ) -> BrowserSitePermissionDecision {
+    ) -> SitePermissionDecision {
         _ = revision
         let request = Decision(
             spaceID: spaceID.rawValue.coreIdentifier, origin: origin, permission: permission, detail: detail,
@@ -156,10 +156,10 @@ final class BrowserSitePermissionCenter {
 
     /// Combined capture must respect a block on either device.
     func mediaDecision(
-        for media: BrowserMediaPermission,
+        for media: SitePermission,
         origin: BrowserSiteOrigin,
         in spaceID: SpaceID
-    ) -> BrowserSitePermissionDecision {
+    ) -> SitePermissionDecision {
         _ = revision
         let request = MediaDecision(
             spaceID: spaceID.rawValue.coreIdentifier, origin: origin, media: media, locked: isSpaceLocked(spaceID))
@@ -184,8 +184,8 @@ final class BrowserSitePermissionCenter {
     // MARK: - Actions - Changes
 
     func setDecision(
-        _ decision: BrowserSitePermissionDecision,
-        for permission: BrowserSitePermission,
+        _ decision: SitePermissionDecision,
+        for permission: SitePermission,
         origin: BrowserSiteOrigin,
         detail: String? = nil,
         in spaceID: SpaceID,

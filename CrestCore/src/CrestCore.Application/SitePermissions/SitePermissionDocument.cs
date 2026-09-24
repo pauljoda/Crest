@@ -11,7 +11,9 @@ namespace CrestCore.Application;
 /// Identities are uppercase UUIDs, the Space is `{"rawValue": …}`, a missing
 /// `detail` is the site-wide rule and `modifiedAt` is seconds since 2001-01-01.
 /// Existing documents load unchanged and are written back in the same shape,
-/// so no migration is needed.
+/// so no migration is needed. A capability and a decision are spelled as
+/// their set's `Name`. The permission ledger's JSON and the origin policies
+/// spell an origin as a record does, `{"scheme": …, "host": …, "port": …}`.
 internal static class SitePermissionDocument {
     #region Variables
 
@@ -23,6 +25,9 @@ internal static class SitePermissionDocument {
     private const string Detail = "detail";
     private const string Decision = "decision";
     private const string ModifiedAt = "modifiedAt";
+    private const string Scheme = "scheme";
+    private const string Host = "host";
+    private const string Port = "port";
 
     #endregion
 
@@ -59,11 +64,11 @@ internal static class SitePermissionDocument {
         var value = new JsonObject {
             [Id] = record.Id.ToString("D").ToUpperInvariant(),
             [Space] = new JsonObject { [RawValue] = record.Space.ToString("D").ToUpperInvariant() },
-            [Origin] = SitePermissionCodes.Origin(record.Origin),
-            [Permission] = SitePermissionCodes.Permission(record.Permission)
+            [Origin] = EncodeOrigin(record.Origin),
+            [Permission] = record.Permission.Name
         };
         if (record.Detail is { } detail) value[Detail] = detail;
-        value[Decision] = SitePermissionCodes.Decision(record.Decision);
+        value[Decision] = record.Decision.Name;
         value[ModifiedAt] = record.ModifiedAt;
         return value;
     }
@@ -73,12 +78,12 @@ internal static class SitePermissionDocument {
             if (item.ValueKind != JsonValueKind.Object) return null;
             var space = item.GetProperty(Space);
             var origin = item.GetProperty(Origin);
-            if (SitePermissionCodes.ParsePermission(item.GetProperty(Permission).GetString()) is not { } permission
-                || SitePermissionCodes.TryParseDecision(item.GetProperty(Decision).GetString()) is not { } decision) return null;
+            if (SitePermission.Named(item.GetProperty(Permission).GetString()) is not { } permission
+                || SitePermissionDecision.Named(item.GetProperty(Decision).GetString()) is not { } decision) return null;
             string? detail = item.TryGetProperty(Detail, out var stored) && stored.ValueKind != JsonValueKind.Null ? stored.GetString() : null;
             return new(Identity(item.GetProperty(Id)), Identity(space.ValueKind == JsonValueKind.Object ? space.GetProperty(RawValue) : space),
-                new(origin.GetProperty(SitePermissionCodes.Scheme).GetString() ?? "", origin.GetProperty(SitePermissionCodes.Host).GetString() ?? "",
-                    origin.GetProperty(SitePermissionCodes.Port).GetInt32()),
+                new(origin.GetProperty(Scheme).GetString() ?? "", origin.GetProperty(Host).GetString() ?? "",
+                    origin.GetProperty(Port).GetInt32()),
                 permission, detail, decision, item.GetProperty(ModifiedAt).GetDouble());
         } catch (Exception error) when (error is BrowserRuleException or ProtocolException or InvalidOperationException
             or KeyNotFoundException or FormatException) {
@@ -89,6 +94,37 @@ internal static class SitePermissionDocument {
     private static Guid Identity(JsonElement value) =>
         Guid.TryParseExact(value.GetString(), "D", out var id) && id != Guid.Empty
             ? id : throw new BrowserRuleException(BrowserRuleCodes.InvalidSavedIdentity);
+
+    #endregion
+
+    #region Actions - Requests
+
+    /// A decision a request names by its saved spelling.
+    public static SitePermissionDecision DecodeDecision(JsonElement request, string field) =>
+        SitePermissionDecision.Named(Protocol.Text(request, field, 64))
+        ?? throw new ProtocolException(ProtocolErrorCodes.InvalidPermissionDecision);
+
+    #endregion
+
+    #region Actions - Origins
+
+    /// An origin in the record's shape.
+    public static JsonObject EncodeOrigin(SiteOrigin origin) => new() {
+        [Scheme] = origin.Scheme,
+        [Host] = origin.Host,
+        [Port] = origin.Port
+    };
+
+    /// An origin a platform reported in a request, which must be exactly the
+    /// record's shape; the domain lowercases it and fills in the default web port.
+    public static SiteOrigin DecodeOrigin(JsonElement value) {
+        Protocol.Members(value, Scheme, Host, Port);
+        return new(Protocol.Text(value, Scheme, SiteOrigin.MaximumSchemeLength), Protocol.Text(value, Host, SiteOrigin.MaximumHostLength),
+            value.GetProperty(Port).GetInt32());
+    }
+
+    public static SiteOrigin? DecodeOptionalOrigin(JsonElement request, string field) =>
+        request.TryGetProperty(field, out var value) && value.ValueKind != JsonValueKind.Null ? DecodeOrigin(value) : null;
 
     #endregion
 }

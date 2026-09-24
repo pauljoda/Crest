@@ -135,7 +135,7 @@ enum BrowserCorePolicy {
     private struct AutomaticDownloadRequest: Encodable {
         let userInitiated: Bool
         let userApprovedRetry: Bool
-        let savedDecision: BrowserSitePermissionDecision
+        let savedDecision: SitePermissionDecision
         let hasAllowedAutomaticDownload: Bool
     }
 
@@ -284,7 +284,7 @@ enum BrowserCorePolicy {
     /// keep. An unavailable core asks the person instead of deciding silently.
     static func automaticDownload(
         isUserInitiated: Bool, isUserApprovedRetry: Bool,
-        savedDecision: BrowserSitePermissionDecision, hasAllowedAutomaticDownload: Bool
+        savedDecision: SitePermissionDecision, hasAllowedAutomaticDownload: Bool
     ) -> (action: BrowserAutomaticDownloadAction, hasAllowedAutomaticDownload: Bool) {
         let request = AutomaticDownloadRequest(
             userInitiated: isUserInitiated, userApprovedRetry: isUserApprovedRetry, savedDecision: savedDecision,

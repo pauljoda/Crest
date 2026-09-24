@@ -427,7 +427,7 @@ final class BrowserWebKitDownloadTransport: NSObject, BrowserDownloadTransport {
         )
         let assessment = verdict.assessment
         send(for: download) { AssessDownloadRisk(downloadID: $0, assessment: assessment) }
-        let savedDecision: BrowserSitePermissionDecision
+        let savedDecision: SitePermissionDecision
         if let origin = sourceOrigins[key], let spaceID = spaceIDs[key] {
             savedDecision = center.permissionCenter.decision(
                 for: .automaticDownloads,
@@ -657,50 +657,23 @@ final class BrowserWebKitDownloadTransport: NSObject, BrowserDownloadTransport {
         }
         let permissionCenter = center.permissionCenter
 
-        switch permissionCenter.decision(
-            for: .automaticDownloads,
-            origin: origin,
-            in: spaceID
-        ) {
-        case .grantForSession, .grantPersistently:
-            return true
-        case .denyForSession, .denyPersistently:
-            return false
-        case .ask:
-            send(for: download) { AwaitDownloadApproval(downloadID: $0) }
-            guard let request = permissionRequests[key],
-                request.generation == request.controller.generation
-            else { return false }
-            let response = await request.controller.response(
-                to: .automaticDownloads, origin: origin, topLevelOrigin: origin,
-                spaceName: spaceNames[key] ?? "this"
-            )
-            guard itemIDs[key] != nil, request.generation == request.controller.generation else { return false }
-            let latest = permissionCenter.decision(for: .automaticDownloads, origin: origin, in: spaceID)
-            guard latest != .denyPersistently, latest != .denyForSession else { return false }
-            switch response {
-            case .denyOnce:
-                return false
-            case .allowOnce:
-                return true
-            case .grantPersistently:
-                permissionCenter.setDecision(
-                    .grantPersistently,
-                    for: .automaticDownloads,
-                    origin: origin,
-                    in: spaceID
-                )
-                return true
-            case .denyPersistently:
-                permissionCenter.setDecision(
-                    .denyPersistently,
-                    for: .automaticDownloads,
-                    origin: origin,
-                    in: spaceID
-                )
-                return false
-            }
+        let decision = permissionCenter.decision(for: .automaticDownloads, origin: origin, in: spaceID)
+        guard decision.verdict == .ask else { return decision.grants }
+        send(for: download) { AwaitDownloadApproval(downloadID: $0) }
+        guard let request = permissionRequests[key],
+            request.generation == request.controller.generation
+        else { return false }
+        let response = await request.controller.response(
+            to: .automaticDownloads, origin: origin, topLevelOrigin: origin,
+            spaceName: spaceNames[key] ?? "this"
+        )
+        guard itemIDs[key] != nil, request.generation == request.controller.generation else { return false }
+        let latest = permissionCenter.decision(for: .automaticDownloads, origin: origin, in: spaceID)
+        guard !latest.denies else { return false }
+        if let savedDecision = response.savedDecision {
+            permissionCenter.setDecision(savedDecision, for: .automaticDownloads, origin: origin, in: spaceID)
         }
+        return response.grants
     }
 
     private func release(

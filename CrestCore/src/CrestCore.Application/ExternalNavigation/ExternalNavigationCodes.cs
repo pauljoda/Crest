@@ -22,18 +22,10 @@ internal static class ExternalNavigationCodes {
         _ => "blocked"
     };
 
-    public static string Consent(ExternalSchemeConsent consent) => consent switch {
-        ExternalSchemeConsent.Open => "open",
-        ExternalSchemeConsent.Prompt => "prompt",
-        _ => "block"
-    };
-
     public static JsonObject AcceptedAnswer(bool accepted) => new() { ["accepted"] = accepted };
 
     public static JsonObject DispositionAnswer(ExternalSchemeDisposition disposition) =>
         new() { ["disposition"] = Disposition(disposition) };
-
-    public static JsonObject ConsentAnswer(ExternalSchemeConsent consent) => new() { ["consent"] = Consent(consent) };
 
     #endregion
 }

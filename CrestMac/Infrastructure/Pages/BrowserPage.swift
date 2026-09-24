@@ -1096,7 +1096,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
     /// Tells the page about a change to one of its site's permissions, after
     /// the engine applied it: the popup preference and the bridges an engine
     /// runs inside the page follow the new decision.
-    private func sitePermissionDidChange(_ permission: BrowserSitePermission) {
+    private func sitePermissionDidChange(_ permission: SitePermission) {
         if permission == .popups { synchronizePopupPermission() }
         engineAdapter.sitePermissionDidChange(permission, on: self)
     }
@@ -1105,27 +1105,17 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
     /// answers at once, otherwise Crest's prompt asks and a lasting answer is
     /// saved for the Space.
     func resolveEngineSitePermission(
-        _ permission: BrowserSitePermission,
+        _ permission: SitePermission,
         origin: BrowserSiteOrigin,
         topLevelOrigin: BrowserSiteOrigin
     ) async -> BrowserEnginePermissionResponse {
-        switch permissionCenter.decision(for: permission, origin: origin, in: spaceID) {
-        case .grantPersistently, .grantForSession: return .allow
-        case .denyPersistently, .denyForSession: return .block
-        case .ask: break
-        }
+        let decision = permissionCenter.decision(for: permission, origin: origin, in: spaceID)
+        guard decision.verdict == .ask else { return decision.grants ? .allow : .block }
         let response = await sitePermissionRequests.response(
             to: permission, origin: origin, topLevelOrigin: topLevelOrigin, spaceName: spaceName)
-        switch response {
-        case .allowOnce: return .allowOnce
-        case .denyOnce: return .dismiss
-        case .grantPersistently:
-            permissionCenter.setDecision(.grantPersistently, for: permission, origin: origin, in: spaceID)
-            return .allow
-        case .denyPersistently:
-            permissionCenter.setDecision(.denyPersistently, for: permission, origin: origin, in: spaceID)
-            return .block
-        }
+        guard let savedDecision = response.savedDecision else { return response.grants ? .allowOnce : .dismiss }
+        permissionCenter.setDecision(savedDecision, for: permission, origin: origin, in: spaceID)
+        return savedDecision.grants ? .allow : .block
     }
 
     // MARK: - Actions - History availability

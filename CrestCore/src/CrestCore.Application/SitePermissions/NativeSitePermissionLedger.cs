@@ -56,16 +56,14 @@ public sealed class NativeSitePermissionLedger {
             case SitePermissionCommand.Decision:
                 Protocol.Members(request, "version", "command", "spaceID", "origin", "permission", "detail", "locked");
                 return new() {
-                    ["decision"] = SitePermissionCodes.Decision(ledger.Decision(Protocol.Id(request, "spaceID"),
-                        SitePermissionCodes.Origin(request, "origin"), SitePermissionCodes.Permission(request, "permission"),
-                        Protocol.OptionalText(request, "detail", SitePermissionLedger.MaximumDetailLength), Locked(request)))
+                    ["decision"] = ledger.Decision(Protocol.Id(request, "spaceID"), Origin(request), Permission(request),
+                        Protocol.OptionalText(request, "detail", SitePermissionLedger.MaximumDetailLength), Locked(request)).Name
                 };
             case SitePermissionCommand.MediaDecision:
                 Protocol.Members(request, "version", "command", "spaceID", "origin", "media", "locked");
                 return new() {
-                    ["decision"] = SitePermissionCodes.Decision(ledger.MediaDecision(Protocol.Id(request, "spaceID"),
-                        SitePermissionCodes.Origin(request, "origin"), SitePermissionCodes.Media(Protocol.Text(request, "media", 64)),
-                        Locked(request)))
+                    ["decision"] = ledger.MediaDecision(Protocol.Id(request, "spaceID"), Origin(request), Media(request),
+                        Locked(request)).Name
                 };
             case SitePermissionCommand.Records:
                 Protocol.Members(request, "version", "command", "spaceID", "locked");
@@ -76,11 +74,9 @@ public sealed class NativeSitePermissionLedger {
             case SitePermissionCommand.Set:
                 Protocol.Members(request, "version", "command", "spaceID", "origin", "permission", "detail", "decision",
                     "recordID", "now", "locked");
-                return Outcome(ledger.Set(Protocol.Id(request, "spaceID"), SitePermissionCodes.Origin(request, "origin"),
-                    SitePermissionCodes.Permission(request, "permission"),
-                    Protocol.OptionalText(request, "detail", SitePermissionLedger.MaximumDetailLength),
-                    SitePermissionCodes.ParseDecision(Protocol.Text(request, "decision", 64)), Protocol.Id(request, "recordID"),
-                    request.GetProperty("now").GetDouble(), Locked(request)));
+                return Outcome(ledger.Set(Protocol.Id(request, "spaceID"), Origin(request), Permission(request),
+                    Protocol.OptionalText(request, "detail", SitePermissionLedger.MaximumDetailLength), Decision(request),
+                    Protocol.Id(request, "recordID"), request.GetProperty("now").GetDouble(), Locked(request)));
             case SitePermissionCommand.ResetRecord:
                 Protocol.Members(request, "version", "command", "id");
                 return Outcome(ledger.ResetRecord(Protocol.Id(request, "id")));
@@ -93,15 +89,34 @@ public sealed class NativeSitePermissionLedger {
         }
     }
 
+    #endregion
+
+    #region Actions - Requests
+
     private static bool Locked(JsonElement request) => request.GetProperty("locked").GetBoolean();
+
+    private static SiteOrigin Origin(JsonElement request) => SitePermissionDocument.DecodeOrigin(request.GetProperty("origin"));
+
+    private static SitePermission Permission(JsonElement request) =>
+        SitePermission.Named(Protocol.Text(request, "permission", 64)) ?? throw new ProtocolException(ProtocolErrorCodes.InvalidSitePermission);
+
+    private static SitePermission Media(JsonElement request) =>
+        SitePermission.Named(Protocol.Text(request, "media", 64)) is { IsMedia: true } media
+            ? media : throw new ProtocolException(ProtocolErrorCodes.InvalidMediaPermission);
+
+    private static SitePermissionDecision Decision(JsonElement request) => SitePermissionDocument.DecodeDecision(request, "decision");
+
+    #endregion
+
+    #region Actions - Answers
 
     private JsonObject Outcome(SitePermissionOutcome outcome) => new() {
         ["applied"] = outcome.Applied,
         ["document"] = outcome.PersistenceChanged ? SitePermissionDocument.Write(ledger.PersistentRecords) : null,
         ["changes"] = new JsonArray([.. outcome.Changes.Select(change => (JsonNode?)new JsonObject {
             ["spaceID"] = change.Space?.ToString("D"),
-            ["origin"] = change.Origin is { } origin ? SitePermissionCodes.Origin(origin) : null,
-            ["permission"] = change.Permission is { } permission ? SitePermissionCodes.Permission(permission) : null,
+            ["origin"] = change.Origin is { } origin ? SitePermissionDocument.EncodeOrigin(origin) : null,
+            ["permission"] = change.Permission?.Name,
             ["detail"] = change.Detail,
             ["revokesAuthorization"] = change.RevokesAuthorization
         })])

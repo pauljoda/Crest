@@ -19,7 +19,7 @@ final class BrowserPageSitePermissionSession: BrowserSitePermissionObserver {
     // MARK: - Types
 
     private struct MediaGrant: Hashable {
-        let permission: BrowserMediaPermission
+        let permission: SitePermission
         let origin: BrowserSiteOrigin
     }
 
@@ -27,10 +27,10 @@ final class BrowserPageSitePermissionSession: BrowserSitePermissionObserver {
 
     /// The permissions an engine may enforce itself. Crest's per-Space record
     /// decides them and the engine is told the answer.
-    static let engineEnforcedPermissions: [BrowserSitePermission] = [.camera, .microphone, .location, .notifications]
+    static let engineEnforcedPermissions: [SitePermission] = [.camera, .microphone, .location, .notifications]
 
     /// The permissions whose changes the page is told about.
-    private static let observedPermissions: [BrowserSitePermission] = engineEnforcedPermissions + [.popups]
+    private static let observedPermissions: [SitePermission] = engineEnforcedPermissions + [.popups]
 
     /// The URL of the document the page shows, whose site the engine applies
     /// decisions to.
@@ -38,12 +38,12 @@ final class BrowserPageSitePermissionSession: BrowserSitePermissionObserver {
 
     /// Runs after a change affected one of the observed permissions for the
     /// page's site.
-    var siteDecisionDidChange: @MainActor (BrowserSitePermission) -> Void = { _ in }
+    var siteDecisionDidChange: @MainActor (SitePermission) -> Void = { _ in }
 
     private let engine: any BrowserPageEngine
     private let permissionCenter: BrowserSitePermissionCenter
     private let spaceID: SpaceID
-    private var mediaGrants: [MediaGrant: BrowserSitePermissionDecision] = [:]
+    private var mediaGrants: [MediaGrant: SitePermissionDecision] = [:]
 
     // MARK: - Initializers
 
@@ -58,7 +58,7 @@ final class BrowserPageSitePermissionSession: BrowserSitePermissionObserver {
 
     /// Remembers capture the page was allowed, with the decision that allowed
     /// it, so a later withdrawal of that decision ends the capture.
-    func recordMediaGrant(_ permission: BrowserMediaPermission, origin: BrowserSiteOrigin) {
+    func recordMediaGrant(_ permission: SitePermission, origin: BrowserSiteOrigin) {
         mediaGrants[MediaGrant(permission: permission, origin: origin)] = permissionCenter.mediaDecision(
             for: permission, origin: origin, in: spaceID)
     }
@@ -72,7 +72,7 @@ final class BrowserPageSitePermissionSession: BrowserSitePermissionObserver {
         for (grant, previous) in mediaGrants {
             let decision = permissionCenter.mediaDecision(for: grant.permission, origin: grant.origin, in: spaceID)
             guard decision != previous else { continue }
-            if decision == .grantPersistently || decision == .grantForSession {
+            if decision.grants {
                 mediaGrants[grant] = decision
                 continue
             }
@@ -92,29 +92,21 @@ final class BrowserPageSitePermissionSession: BrowserSitePermissionObserver {
         }
     }
 
-    private func apply(_ permission: BrowserSitePermission, origin: BrowserSiteOrigin) {
-        var decision = permissionCenter.decision(for: permission, origin: origin, in: spaceID)
-        if decision == .ask, permission == .camera || permission == .microphone {
-            decision = permissionCenter.decision(for: .cameraAndMicrophone, origin: origin, in: spaceID)
-        }
-        let allowed: Bool? =
-            switch decision {
-            case .grantPersistently, .grantForSession: true
-            case .denyPersistently, .denyForSession: false
-            case .ask: nil
-            }
-        _ = engine.applySitePermission(permission, allowed: allowed)
+    /// A device without its own answer follows a combined capture record.
+    private func apply(_ permission: SitePermission, origin: BrowserSiteOrigin) {
+        let decision = ([permission] + permission.combinations).lazy
+            .map { self.permissionCenter.decision(for: $0, origin: origin, in: self.spaceID) }
+            .first { $0.verdict != .ask }
+        _ = engine.applySitePermission(permission, allowed: decision?.grants)
     }
 
     private func affects(
         _ change: BrowserSitePermissionChange,
-        _ permission: BrowserSitePermission,
+        _ permission: SitePermission,
         origin: BrowserSiteOrigin
     ) -> Bool {
-        if change.affects(permission, origin: origin, in: spaceID) { return true }
-        // The combined capture record answers either device.
-        return (permission == .camera || permission == .microphone)
-            && change.affects(.cameraAndMicrophone, origin: origin, in: spaceID)
+        // A combined capture record answers each of its devices.
+        ([permission] + permission.combinations).contains { change.affects($0, origin: origin, in: spaceID) }
     }
 
     // MARK: - Actions - Observation

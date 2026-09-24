@@ -7,7 +7,7 @@ import Foundation
 enum CoreCodec {
     /// SHA-256 of the canonical contract schema. The core refuses any other.
     static let fingerprint: [UInt8] = [
-        0xcd, 0xf1, 0x8f, 0x5e, 0xc9, 0xdf, 0xdc, 0x18, 0x1c, 0xcf, 0xc8, 0x17, 0x5e, 0x18, 0x47, 0x47, 0x12, 0x35, 0x0d, 0x50, 0x1e, 0x92, 0x56, 0xcb, 0x60, 0x61, 0x52, 0xa0, 0x70, 0xc8, 0x0b, 0xeb
+        0x0b, 0x1f, 0x34, 0xf9, 0x53, 0x4d, 0x48, 0x61, 0x34, 0x2b, 0x7b, 0x4e, 0x3c, 0x70, 0x5a, 0x93, 0x9b, 0xf5, 0xfc, 0x3e, 0x01, 0xc1, 0xf1, 0x03, 0x1b, 0x45, 0xb1, 0x2a, 0x8d, 0x43, 0x9b, 0x3a
     ]
 
     static func decodeIntent(from reader: inout WireReader) throws(WireError) -> any Intent {
@@ -2388,6 +2388,20 @@ extension ShortcutModifiers {
     }
 }
 
+extension SitePermissionVerdict {
+    init(from reader: inout WireReader) throws(WireError) {
+        let rawValue = try reader.readEnum()
+        guard let value = SitePermissionVerdict(rawValue: rawValue) else {
+            throw WireError.malformed("Unknown SitePermissionVerdict \(rawValue)")
+        }
+        self = value
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeEnum(rawValue)
+    }
+}
+
 extension StorageFailure {
     init(from reader: inout WireReader) throws(WireError) {
         let rawValue = try reader.readEnum()
@@ -2528,6 +2542,20 @@ extension EngineCapability {
     }
 }
 
+extension HostedNotificationRequestAction {
+    init(from reader: inout WireReader) throws(WireError) {
+        let tag = try reader.readEnum()
+        guard Self.all.indices.contains(tag) else {
+            throw WireError.malformed("Unknown HostedNotificationRequestAction \(tag)")
+        }
+        self = Self.all[tag]
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeEnum(tag)
+    }
+}
+
 extension NumberedSelectionTarget {
     init(from reader: inout WireReader) throws(WireError) {
         let tag = try reader.readEnum()
@@ -2561,6 +2589,34 @@ extension ShortcutSection {
         let tag = try reader.readEnum()
         guard Self.all.indices.contains(tag) else {
             throw WireError.malformed("Unknown ShortcutSection \(tag)")
+        }
+        self = Self.all[tag]
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeEnum(tag)
+    }
+}
+
+extension SitePermission {
+    init(from reader: inout WireReader) throws(WireError) {
+        let tag = try reader.readEnum()
+        guard Self.all.indices.contains(tag) else {
+            throw WireError.malformed("Unknown SitePermission \(tag)")
+        }
+        self = Self.all[tag]
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeEnum(tag)
+    }
+}
+
+extension SitePermissionDecision {
+    init(from reader: inout WireReader) throws(WireError) {
+        let tag = try reader.readEnum()
+        guard Self.all.indices.contains(tag) else {
+            throw WireError.malformed("Unknown SitePermissionDecision \(tag)")
         }
         self = Self.all[tag]
     }

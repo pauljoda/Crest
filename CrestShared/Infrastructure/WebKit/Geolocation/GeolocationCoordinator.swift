@@ -223,45 +223,29 @@ final class BrowserGeolocationCoordinator: BrowserSitePermissionObserver {
         let decision = permissionCenter.decision(for: .location, origin: request.origin, in: spaceID)
         // Allow Once deliberately leaves the stored decision at Ask. The
         // request's lifetime carries that consent until an explicit withdrawal.
-        return isCurrentRequest(request) && request.isAuthorized
-            && decision != .denyPersistently && decision != .denyForSession
+        return isCurrentRequest(request) && request.isAuthorized && !decision.denies
             && service.currentAuthorization() == .authorized
     }
 
     private func authorize(_ request: Request) async -> Bool {
         guard isCurrentRequest(request), !Task.isCancelled else { return false }
         let origin = request.origin
-        var decisionToPersist: BrowserSitePermissionDecision?
-        switch permissionCenter.decision(
-            for: .location,
-            origin: origin,
-            in: spaceID
-        ) {
-        case .denyForSession, .denyPersistently:
-            return false
-        case .grantForSession, .grantPersistently:
-            break
-        case .ask:
+        var decisionToPersist: SitePermissionDecision?
+        let decision = permissionCenter.decision(for: .location, origin: origin, in: spaceID)
+        if decision.denies { return false }
+        if decision.verdict == .ask {
             let response = await prompt(origin, webView.url, spaceName)
             guard isCurrentRequest(request) && !Task.isCancelled else { return false }
-            let latest = permissionCenter.decision(for: .location, origin: origin, in: spaceID)
-            guard latest != .denyPersistently, latest != .denyForSession else { return false }
-            switch response {
-            case .denyOnce:
-                return false
-            case .allowOnce:
-                break
-            case .grantPersistently:
-                decisionToPersist = .grantPersistently
-            case .denyPersistently:
-                permissionCenter.setDecision(
-                    .denyPersistently,
-                    for: .location,
-                    origin: origin,
-                    in: spaceID
-                )
+            guard !permissionCenter.decision(for: .location, origin: origin, in: spaceID).denies else { return false }
+            // A saved block applies at once; a saved grant waits for the
+            // system's consent.
+            guard response.grants else {
+                if let savedDecision = response.savedDecision {
+                    permissionCenter.setDecision(savedDecision, for: .location, origin: origin, in: spaceID)
+                }
                 return false
             }
+            decisionToPersist = response.savedDecision
         }
 
         guard isCurrentRequest(request) && !Task.isCancelled else { return false }
@@ -280,8 +264,7 @@ final class BrowserGeolocationCoordinator: BrowserSitePermissionObserver {
         guard isSystemAuthorized,
             isCurrentRequest(request) && !Task.isCancelled
         else { return false }
-        let latest = permissionCenter.decision(for: .location, origin: origin, in: spaceID)
-        guard latest != .denyPersistently, latest != .denyForSession else { return false }
+        guard !permissionCenter.decision(for: .location, origin: origin, in: spaceID).denies else { return false }
         if let decisionToPersist {
             permissionCenter.setDecision(
                 decisionToPersist,
@@ -299,17 +282,14 @@ final class BrowserGeolocationCoordinator: BrowserSitePermissionObserver {
         frame: WKFrameInfo?,
         frameDocumentIdentifier: String? = nil
     ) {
+        // The states are the Permissions API's.
         let state: String
-        switch permissionCenter.decision(
-            for: .location,
-            origin: origin,
-            in: spaceID
-        ) {
+        switch permissionCenter.decision(for: .location, origin: origin, in: spaceID).verdict {
         case .ask:
             state = "prompt"
-        case .denyForSession, .denyPersistently:
+        case .deny:
             state = "denied"
-        case .grantForSession, .grantPersistently:
+        case .grant:
             switch service.currentAuthorization() {
             case .authorized:
                 state = "granted"

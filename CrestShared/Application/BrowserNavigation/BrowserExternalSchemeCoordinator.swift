@@ -64,19 +64,14 @@ final class BrowserExternalSchemeCoordinator {
 
         // A hand-off launches another application, so an unapproved request
         // always pauses at Crest's prompt, whether or not a click started it.
-        switch BrowserCorePolicy.externalSchemeConsent(
-            decision: permissionCenter.decision(
-                for: .externalApplications,
-                origin: origin,
-                detail: scheme,
-                in: spaceID
-            )
-        ) {
-        case .open:
+        let decision = permissionCenter.decision(
+            for: .externalApplications, origin: origin, detail: scheme, in: spaceID)
+        switch decision.verdict {
+        case .grant:
             opensExternalURL(destinationURL)
-        case .block:
+        case .deny:
             return
-        case .prompt:
+        case .ask:
             switch await prompt(origin, destinationURL, spaceName) {
             case .open:
                 opensExternalURL(destinationURL)

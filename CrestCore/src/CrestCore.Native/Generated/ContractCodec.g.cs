@@ -14,7 +14,7 @@ namespace CrestCore.Native;
 public static class ContractCodec {
     /// <summary>SHA-256 of the canonical contract schema.</summary>
     public static ReadOnlySpan<byte> Fingerprint => [
-        0xcd, 0xf1, 0x8f, 0x5e, 0xc9, 0xdf, 0xdc, 0x18, 0x1c, 0xcf, 0xc8, 0x17, 0x5e, 0x18, 0x47, 0x47, 0x12, 0x35, 0x0d, 0x50, 0x1e, 0x92, 0x56, 0xcb, 0x60, 0x61, 0x52, 0xa0, 0x70, 0xc8, 0x0b, 0xeb
+        0x0b, 0x1f, 0x34, 0xf9, 0x53, 0x4d, 0x48, 0x61, 0x34, 0x2b, 0x7b, 0x4e, 0x3c, 0x70, 0x5a, 0x93, 0x9b, 0xf5, 0xfc, 0x3e, 0x01, 0xc1, 0xf1, 0x03, 0x1b, 0x45, 0xb1, 0x2a, 0x8d, 0x43, 0x9b, 0x3a
     ];
 
     public static Intent ReadIntent(WireReader reader) {
@@ -2165,6 +2165,16 @@ public static class ContractCodec {
         writer.WriteEnum((int)value);
     }
 
+    public static SitePermissionVerdict ReadSitePermissionVerdict(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return (SitePermissionVerdict)reader.ReadEnum(3);
+    }
+
+    public static void WriteSitePermissionVerdict(WireWriter writer, SitePermissionVerdict value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        writer.WriteEnum((int)value);
+    }
+
     public static StorageFailure ReadStorageFailure(WireReader reader) {
         ArgumentNullException.ThrowIfNull(reader);
         return (StorageFailure)reader.ReadEnum(5);
@@ -2273,6 +2283,17 @@ public static class ContractCodec {
         writer.WriteEnum(TagOf(EngineCapability.All, value));
     }
 
+    public static HostedNotificationRequestAction ReadHostedNotificationRequestAction(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return HostedNotificationRequestAction.All[reader.ReadEnum(HostedNotificationRequestAction.All.Count)];
+    }
+
+    public static void WriteHostedNotificationRequestAction(WireWriter writer, HostedNotificationRequestAction value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteEnum(TagOf(HostedNotificationRequestAction.All, value));
+    }
+
     public static NumberedSelectionTarget ReadNumberedSelectionTarget(WireReader reader) {
         ArgumentNullException.ThrowIfNull(reader);
         return NumberedSelectionTarget.All[reader.ReadEnum(NumberedSelectionTarget.All.Count)];
@@ -2304,6 +2325,28 @@ public static class ContractCodec {
         ArgumentNullException.ThrowIfNull(writer);
         ArgumentNullException.ThrowIfNull(value);
         writer.WriteEnum(TagOf(ShortcutSection.All, value));
+    }
+
+    public static SitePermission ReadSitePermission(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return SitePermission.All[reader.ReadEnum(SitePermission.All.Count)];
+    }
+
+    public static void WriteSitePermission(WireWriter writer, SitePermission value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteEnum(TagOf(SitePermission.All, value));
+    }
+
+    public static SitePermissionDecision ReadSitePermissionDecision(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return SitePermissionDecision.All[reader.ReadEnum(SitePermissionDecision.All.Count)];
+    }
+
+    public static void WriteSitePermissionDecision(WireWriter writer, SitePermissionDecision value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteEnum(TagOf(SitePermissionDecision.All, value));
     }
 
     /// <summary>A fixed set member's wire tag: its index in the set's <c>All</c>.</summary>

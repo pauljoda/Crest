@@ -10,15 +10,6 @@ enum BrowserExternalSchemeDisposition: Equatable, Sendable {
     case handOff
 }
 
-/// What Crest does about one external-scheme hand-off once consent is known.
-/// The core decides it from the saved choice.
-/// Raw values are the core's `external.consent` spellings.
-enum BrowserExternalSchemeConsent: String, Decodable, Equatable, Sendable {
-    case open
-    case prompt
-    case block
-}
-
 /// The answer to one external-app prompt. Cancelling is deliberately not a
 /// remembered block: a person declining one hand-off has not asked Crest to
 /// refuse every future one, which Site Permissions is there for.

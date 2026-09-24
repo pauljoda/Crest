@@ -692,6 +692,12 @@ struct ShortcutModifiers: OptionSet, Sendable {
     static let shift = ShortcutModifiers(rawValue: 8)
 }
 
+enum SitePermissionVerdict: Int, CaseIterable, Sendable {
+    case ask = 0
+    case grant = 1
+    case deny = 2
+}
+
 enum StorageFailure: Int, CaseIterable, Sendable {
     case diskFull = 0
     case readOnly = 1
@@ -1201,6 +1207,78 @@ struct EngineCapability: Hashable, Sendable {
     }
 
     static func == (lhs: EngineCapability, rhs: EngineCapability) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+}
+
+/// The members of the core's `HostedNotificationRequestAction`. A member's wire tag is its index in `all`.
+struct HostedNotificationRequestAction: Hashable, Sendable {
+    enum Kinds: Sendable {
+        case respondDefault
+        case respondDenied
+        case resolveSystemAuthorization
+        case promptForSitePermission
+    }
+
+    let tag: Int
+    let kind: Kinds
+    let name: String
+    let answers: SitePermissionVerdict
+    let answersUserActivation: Bool?
+
+    private init(tag: Int, kind: Kinds, name: String, answers: SitePermissionVerdict, answersUserActivation: Bool?) {
+        self.tag = tag
+        self.kind = kind
+        self.name = name
+        self.answers = answers
+        self.answersUserActivation = answersUserActivation
+    }
+
+    static let respondDefault = HostedNotificationRequestAction(
+        tag: 0,
+        kind: .respondDefault,
+        name: "respondDefault",
+        answers: .ask,
+        answersUserActivation: false
+    )
+    static let respondDenied = HostedNotificationRequestAction(
+        tag: 1,
+        kind: .respondDenied,
+        name: "respondDenied",
+        answers: .deny,
+        answersUserActivation: nil
+    )
+    static let resolveSystemAuthorization = HostedNotificationRequestAction(
+        tag: 2,
+        kind: .resolveSystemAuthorization,
+        name: "resolveSystemAuthorization",
+        answers: .grant,
+        answersUserActivation: nil
+    )
+    static let promptForSitePermission = HostedNotificationRequestAction(
+        tag: 3,
+        kind: .promptForSitePermission,
+        name: "promptForSitePermission",
+        answers: .ask,
+        answersUserActivation: true
+    )
+
+    static let all: [HostedNotificationRequestAction] = [
+        respondDefault,
+        respondDenied,
+        resolveSystemAuthorization,
+        promptForSitePermission
+    ]
+
+    static func named(_ name: String?) -> HostedNotificationRequestAction? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: HostedNotificationRequestAction, rhs: HostedNotificationRequestAction) -> Bool {
         lhs.tag == rhs.tag
     }
 
@@ -3029,6 +3107,256 @@ struct ShortcutSection: Hashable, Sendable {
     }
 
     static func == (lhs: ShortcutSection, rhs: ShortcutSection) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+}
+
+/// The members of the core's `SitePermission`. A member's wire tag is its index in `all`.
+struct SitePermission: Hashable, Sendable {
+    let tag: Int
+    let name: String
+    let title: LocalizedStringResource
+    let symbol: String
+    let requestTitle: LocalizedStringResource
+    let askTitle: LocalizedStringResource
+    let askChoiceTitle: LocalizedStringResource
+    let isMedia: Bool
+    let components: [SitePermission]
+
+    private init(
+        tag: Int,
+        name: String,
+        title: LocalizedStringResource,
+        symbol: String,
+        requestTitle: LocalizedStringResource,
+        askTitle: LocalizedStringResource,
+        askChoiceTitle: LocalizedStringResource,
+        isMedia: Bool,
+        components: [SitePermission]
+    ) {
+        self.tag = tag
+        self.name = name
+        self.title = title
+        self.symbol = symbol
+        self.requestTitle = requestTitle
+        self.askTitle = askTitle
+        self.askChoiceTitle = askChoiceTitle
+        self.isMedia = isMedia
+        self.components = components
+    }
+
+    static let camera = SitePermission(
+        tag: 0,
+        name: "camera",
+        title: LocalizedStringResource("Camera"),
+        symbol: "video",
+        requestTitle: LocalizedStringResource("Wants to use your camera"),
+        askTitle: LocalizedStringResource("Ask"),
+        askChoiceTitle: LocalizedStringResource("Ask"),
+        isMedia: true,
+        components: []
+    )
+    static let microphone = SitePermission(
+        tag: 1,
+        name: "microphone",
+        title: LocalizedStringResource("Microphone"),
+        symbol: "mic",
+        requestTitle: LocalizedStringResource("Wants to use your microphone"),
+        askTitle: LocalizedStringResource("Ask"),
+        askChoiceTitle: LocalizedStringResource("Ask"),
+        isMedia: true,
+        components: []
+    )
+    static let cameraAndMicrophone = SitePermission(
+        tag: 2,
+        name: "cameraAndMicrophone",
+        title: LocalizedStringResource("Camera & Microphone"),
+        symbol: "video.and.waveform",
+        requestTitle: LocalizedStringResource("Wants to use your camera and microphone"),
+        askTitle: LocalizedStringResource("Ask"),
+        askChoiceTitle: LocalizedStringResource("Ask"),
+        isMedia: true,
+        components: [SitePermission.camera, SitePermission.microphone]
+    )
+    static let location = SitePermission(
+        tag: 3,
+        name: "location",
+        title: LocalizedStringResource("Location"),
+        symbol: "location",
+        requestTitle: LocalizedStringResource("Wants to use your location"),
+        askTitle: LocalizedStringResource("Ask"),
+        askChoiceTitle: LocalizedStringResource("Ask"),
+        isMedia: false,
+        components: []
+    )
+    static let notifications = SitePermission(
+        tag: 4,
+        name: "notifications",
+        title: LocalizedStringResource("Notifications"),
+        symbol: "bell",
+        requestTitle: LocalizedStringResource("Wants to send notifications while this page is open"),
+        askTitle: LocalizedStringResource("Ask"),
+        askChoiceTitle: LocalizedStringResource("Ask"),
+        isMedia: false,
+        components: []
+    )
+    static let popups = SitePermission(
+        tag: 5,
+        name: "popups",
+        title: LocalizedStringResource("Automatic Pop-ups"),
+        symbol: "macwindow.on.rectangle",
+        requestTitle: LocalizedStringResource("Requests permission"),
+        askTitle: LocalizedStringResource("Blocked by Default"),
+        askChoiceTitle: LocalizedStringResource("Default (Block)"),
+        isMedia: false,
+        components: []
+    )
+    static let automaticDownloads = SitePermission(
+        tag: 6,
+        name: "automaticDownloads",
+        title: LocalizedStringResource("Automatic Downloads"),
+        symbol: "arrow.down.circle",
+        requestTitle: LocalizedStringResource("Wants to download multiple files automatically"),
+        askTitle: LocalizedStringResource("Ask after First"),
+        askChoiceTitle: LocalizedStringResource("Default (Ask after First)"),
+        isMedia: false,
+        components: []
+    )
+    static let externalApplications = SitePermission(
+        tag: 7,
+        name: "externalApplications",
+        title: LocalizedStringResource("External Apps"),
+        symbol: "arrow.up.forward.app",
+        requestTitle: LocalizedStringResource("Requests permission"),
+        askTitle: LocalizedStringResource("Ask"),
+        askChoiceTitle: LocalizedStringResource("Ask"),
+        isMedia: false,
+        components: []
+    )
+
+    static let all: [SitePermission] = [
+        camera,
+        microphone,
+        cameraAndMicrophone,
+        location,
+        notifications,
+        popups,
+        automaticDownloads,
+        externalApplications
+    ]
+
+    static func named(_ name: String?) -> SitePermission? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: SitePermission, rhs: SitePermission) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+}
+
+/// The members of the core's `SitePermissionDecision`. A member's wire tag is its index in `all`.
+struct SitePermissionDecision: Hashable, Sendable {
+    let tag: Int
+    let name: String
+    let verdict: SitePermissionVerdict
+    let grants: Bool
+    let denies: Bool
+    let isPersistent: Bool
+    let precedence: Int
+    let title: LocalizedStringResource
+
+    private init(
+        tag: Int,
+        name: String,
+        verdict: SitePermissionVerdict,
+        grants: Bool,
+        denies: Bool,
+        isPersistent: Bool,
+        precedence: Int,
+        title: LocalizedStringResource
+    ) {
+        self.tag = tag
+        self.name = name
+        self.verdict = verdict
+        self.grants = grants
+        self.denies = denies
+        self.isPersistent = isPersistent
+        self.precedence = precedence
+        self.title = title
+    }
+
+    static let ask = SitePermissionDecision(
+        tag: 0,
+        name: "ask",
+        verdict: .ask,
+        grants: false,
+        denies: false,
+        isPersistent: false,
+        precedence: 2,
+        title: LocalizedStringResource("Ask")
+    )
+    static let grantForSession = SitePermissionDecision(
+        tag: 1,
+        name: "grantForSession",
+        verdict: .grant,
+        grants: true,
+        denies: false,
+        isPersistent: false,
+        precedence: 1,
+        title: LocalizedStringResource("Allowed for Session")
+    )
+    static let denyForSession = SitePermissionDecision(
+        tag: 2,
+        name: "denyForSession",
+        verdict: .deny,
+        grants: false,
+        denies: true,
+        isPersistent: false,
+        precedence: 3,
+        title: LocalizedStringResource("Blocked for Session")
+    )
+    static let grantPersistently = SitePermissionDecision(
+        tag: 3,
+        name: "grantPersistently",
+        verdict: .grant,
+        grants: true,
+        denies: false,
+        isPersistent: true,
+        precedence: 0,
+        title: LocalizedStringResource("Allow")
+    )
+    static let denyPersistently = SitePermissionDecision(
+        tag: 4,
+        name: "denyPersistently",
+        verdict: .deny,
+        grants: false,
+        denies: true,
+        isPersistent: true,
+        precedence: 4,
+        title: LocalizedStringResource("Block")
+    )
+
+    static let all: [SitePermissionDecision] = [
+        ask,
+        grantForSession,
+        denyForSession,
+        grantPersistently,
+        denyPersistently
+    ]
+
+    static func named(_ name: String?) -> SitePermissionDecision? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: SitePermissionDecision, rhs: SitePermissionDecision) -> Bool {
         lhs.tag == rhs.tag
     }
 

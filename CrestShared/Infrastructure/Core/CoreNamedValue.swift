@@ -65,4 +65,10 @@ extension CapabilityStatus: CoreNamedValue {}
 
 extension EngineCapability: CoreNamedValue {}
 
+extension HostedNotificationRequestAction: CoreNamedValue {}
+
 extension ShortcutCommand: CoreNamedValue {}
+
+extension SitePermission: CoreNamedValue {}
+
+extension SitePermissionDecision: CoreNamedValue {}

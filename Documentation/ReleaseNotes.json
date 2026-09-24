@@ -2181,6 +2181,10 @@
     "core-legacy-migration-restore": {
       "category": "internal",
       "message": "The core carries an installed release's session into its file on first launch and restores the recovery checkpoint itself."
+    },
+    "site-permission-sets": {
+      "category": "internal",
+      "message": "Site permissions and permission decisions are self-describing sets shared by the core and Swift."
     }
   }
 }

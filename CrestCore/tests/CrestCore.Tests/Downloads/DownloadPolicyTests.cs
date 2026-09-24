@@ -75,12 +75,12 @@ public sealed class DownloadPolicyTests {
     }
 
     [Theory]
-    [InlineData(SitePermissionDecision.GrantForSession, AutomaticDownloadAction.Allow)]
-    [InlineData(SitePermissionDecision.GrantPersistently, AutomaticDownloadAction.Allow)]
-    [InlineData(SitePermissionDecision.DenyForSession, AutomaticDownloadAction.Deny)]
-    [InlineData(SitePermissionDecision.DenyPersistently, AutomaticDownloadAction.Deny)]
-    public void SavedDecisionsAnswerAutomaticDownloadsWithoutThrottling(SitePermissionDecision decision,
-        AutomaticDownloadAction expected) {
+    [InlineData("grantForSession", AutomaticDownloadAction.Allow)]
+    [InlineData("grantPersistently", AutomaticDownloadAction.Allow)]
+    [InlineData("denyForSession", AutomaticDownloadAction.Deny)]
+    [InlineData("denyPersistently", AutomaticDownloadAction.Deny)]
+    public void SavedDecisionsAnswerAutomaticDownloadsWithoutThrottling(string name, AutomaticDownloadAction expected) {
+        var decision = SitePermissionDecision.Named(name)!;
         var verdict = AutomaticDownloadPolicy.Decide(false, false, decision, true);
         Assert.Equal(expected, verdict.Action);
         Assert.Equal(new AutomaticDownloadVerdict(expected, false),

@@ -195,7 +195,7 @@ extension BrowserPage: WKUIDelegate {
             decisionHandler(.deny)
             return
         }
-        BrowserMediaPermission(type).resolve(
+        SitePermission(type).resolve(
             origin: BrowserSiteOrigin(origin),
             topLevelOrigin: topLevelOrigin,
             spaceID: spaceID,
@@ -205,7 +205,7 @@ extension BrowserPage: WKUIDelegate {
         ) { [weak self] decision in
             if decision == .grant {
                 self?.sitePermissionSession.recordMediaGrant(
-                    BrowserMediaPermission(type), origin: BrowserSiteOrigin(origin))
+                    SitePermission(type), origin: BrowserSiteOrigin(origin))
             }
             decisionHandler(decision)
         }

@@ -16,23 +16,14 @@ internal static class SitePermissionPolicyRequests {
     public sealed record SecureOrigin(SiteOrigin Origin) {
         public static SecureOrigin Decode(JsonElement request) {
             Members(request, "origin");
-            return new(SitePermissionCodes.Origin(request, "origin"));
+            return new(SitePermissionDocument.DecodeOrigin(Element(request, "origin")));
         }
     }
 
     public sealed record NotificationRequest(SitePermissionDecision Decision, bool HasUserActivation) {
         public static NotificationRequest Decode(JsonElement request) {
             Members(request, "decision", "hasUserActivation");
-            var decision = SitePermissionCodes.Decision(request, "decision");
-            return new(decision, Flag(request, "hasUserActivation"));
-        }
-    }
-
-    /// A saved decision alone, as `popups.automatic` and `external.consent` ask.
-    public sealed record SavedDecision(SitePermissionDecision Decision) {
-        public static SavedDecision Decode(JsonElement request) {
-            Members(request, "decision");
-            return new(SitePermissionCodes.Decision(request, "decision"));
+            return new(SitePermissionDocument.DecodeDecision(request, "decision"), Flag(request, "hasUserActivation"));
         }
     }
 
@@ -40,10 +31,25 @@ internal static class SitePermissionPolicyRequests {
         SiteOrigin? Origin) {
         public static PopupNotice Decode(JsonElement request) {
             Members(request, "state", "event", "documentIdentifier", "origin");
-            var state = SitePermissionCodes.PopupState(Element(request, "state"));
-            var popupEvent = SitePermissionCodes.PopupEvent(Protocol.Text(request, "event", 64));
+            var state = PopupState(Element(request, "state"));
+            var popupEvent = BlockedPopupEvent.Named(Protocol.Text(request, "event", 64))
+                ?? throw new ProtocolException(ProtocolErrorCodes.InvalidPopupEvent);
             var document = Protocol.OptionalText(request, "documentIdentifier", BlockedPopupPageState.MaximumDocumentIdentifierLength);
-            return new(state, popupEvent, document, SitePermissionCodes.OptionalOrigin(request, "origin"));
+            return new(state, popupEvent, document, SitePermissionDocument.DecodeOptionalOrigin(request, "origin"));
+        }
+
+        /// A page's popup notice as the native store keeps it. A status and an
+        /// origin come together or not at all.
+        private static BlockedPopupPageState PopupState(JsonElement value) {
+            Protocol.Members(value, "status", "origin", "documentIdentifier", "indicationRevision");
+            var status = Protocol.OptionalText(value, "status", 64) is { } name
+                ? BlockedPopupStatus.Named(name) ?? throw new ProtocolException(ProtocolErrorCodes.InvalidStatus)
+                : null;
+            var origin = SitePermissionDocument.DecodeOptionalOrigin(value, "origin");
+            if ((status is null) != (origin is null)) throw new BrowserRuleException(BrowserRuleCodes.InvalidBlockedPopup);
+            return new(status, origin,
+                Protocol.OptionalText(value, "documentIdentifier", BlockedPopupPageState.MaximumDocumentIdentifierLength),
+                value.GetProperty("indicationRevision").GetInt32());
         }
     }
 

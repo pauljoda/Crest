@@ -1,3 +1,5 @@
+using CrestCore.Contracts;
+
 namespace CrestCore.Domain;
 
 /// One saved, persistent choice. `Detail` narrows a capability a site can ask

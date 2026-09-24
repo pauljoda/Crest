@@ -1,22 +1,19 @@
 import SwiftUI
 
 struct BrowserSitePermissionRow: View {
-    let permission: BrowserSitePermission
+    let permission: SitePermission
     let origin: BrowserSiteOrigin
     let spaceID: SpaceID
     let permissionCenter: BrowserSitePermissionCenter
 
     var body: some View {
         HStack(spacing: CrestSpacing.small) {
-            Label(permission.settingsLabel, systemImage: permission.symbol)
+            Label(permission.title, systemImage: permission.symbol)
                 .font(.caption)
             Spacer(minLength: CrestSpacing.small)
-            Menu(permission.settingsLabel(for: currentDecision)) {
+            Menu(permission.title(for: currentDecision)) {
                 Group {
-                    Button(
-                        permission.defaultDecisionLabel,
-                        systemImage: "questionmark.circle"
-                    ) {
+                    Button(permission.askChoiceTitle, systemImage: "questionmark.circle") {
                         setDecision(.ask)
                     }
                     Button("Allow", systemImage: "checkmark.circle") {
@@ -34,7 +31,7 @@ struct BrowserSitePermissionRow: View {
         }
     }
 
-    private var currentDecision: BrowserSitePermissionDecision {
+    private var currentDecision: SitePermissionDecision {
         permissionCenter.decision(
             for: permission,
             origin: origin,
@@ -42,7 +39,7 @@ struct BrowserSitePermissionRow: View {
         )
     }
 
-    private func setDecision(_ decision: BrowserSitePermissionDecision) {
+    private func setDecision(_ decision: SitePermissionDecision) {
         permissionCenter.setDecision(
             decision,
             for: permission,

@@ -20,10 +20,4 @@ internal static class DownloadCodes {
     };
 
     #endregion
-
-    #region Actions - Decoding
-
-    public static SitePermissionDecision ParseDecision(string? value) => SitePermissionCodes.ParseDecision(value);
-
-    #endregion
 }

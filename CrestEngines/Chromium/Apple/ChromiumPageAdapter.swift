@@ -136,7 +136,7 @@
         func prepareForNavigation() {}
         /// The engine enforces site permissions itself; the page's permission
         /// session has already applied the change through `applySitePermission`.
-        func sitePermissionDidChange(_ permission: BrowserSitePermission, on page: BrowserPage) {}
+        func sitePermissionDidChange(_ permission: SitePermission, on page: BrowserPage) {}
     }
 
     extension BrowserAuthenticationChallenge {

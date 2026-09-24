@@ -16,7 +16,7 @@ internal static class DownloadPolicyRequests {
         public static Automatic Decode(JsonElement request) {
             Members(request, "userInitiated", "userApprovedRetry", "savedDecision", "hasAllowedAutomaticDownload");
             bool initiated = Flag(request, "userInitiated"), approved = Flag(request, "userApprovedRetry");
-            var decision = DownloadCodes.ParseDecision(Protocol.Text(request, "savedDecision"));
+            var decision = SitePermissionDocument.DecodeDecision(request, "savedDecision");
             return new(initiated, approved, decision, Flag(request, "hasAllowedAutomaticDownload"));
         }
     }

@@ -1,10 +1,10 @@
 import Foundation
 
 /// Site-permission rules answered by the portable core: secure origins for
-/// location and hosted notifications, the notification request action, the
-/// automatic-popup rule and the blocked-popup notice transitions. Saved
-/// choices themselves live in the core ledger behind
-/// `BrowserSitePermissionCenter`. Every answer fails closed.
+/// location and hosted notifications, the notification request action and the
+/// blocked-popup notice transitions. Saved choices themselves live in the core
+/// ledger behind `BrowserSitePermissionCenter`, and what a decision means
+/// travels with the decision. Every answer fails closed.
 extension BrowserCorePolicy {
     // MARK: - Types
 
@@ -25,20 +25,12 @@ extension BrowserCorePolicy {
     }
 
     private struct NotificationRequest: Encodable {
-        let decision: BrowserSitePermissionDecision
+        let decision: SitePermissionDecision
         let hasUserActivation: Bool
     }
 
     private struct NotificationAnswer: Decodable {
-        @BrowserCoreOptional var action: BrowserHostedWebNotificationPermissionRequestAction?
-    }
-
-    private struct DecisionRequest: Encodable {
-        let decision: BrowserSitePermissionDecision
-    }
-
-    private struct AllowsAnswer: Decodable {
-        @BrowserCoreOptional var allows: Bool?
+        @BrowserCoreOptional var action: HostedNotificationRequestAction?
     }
 
     private struct PopupNoticeRequest: Encodable {
@@ -88,18 +80,12 @@ extension BrowserCorePolicy {
 
     /// What a notification permission request leads to. An unavailable core denies it.
     static func hostedNotificationPermissionRequestAction(
-        for decision: BrowserSitePermissionDecision,
+        for decision: SitePermissionDecision,
         hasUserActivation: Bool
-    ) -> BrowserHostedWebNotificationPermissionRequestAction {
+    ) -> HostedNotificationRequestAction {
         let request = NotificationRequest(decision: decision, hasUserActivation: hasUserActivation)
         return evaluate(.notificationsPermissionRequest, request, answer: NotificationAnswer.self)?.action
             ?? .respondDenied
-    }
-
-    /// Whether the saved choice lets a site open windows without a gesture.
-    /// An unavailable core keeps automatic popups blocked.
-    static func allowsAutomaticPopups(decision: BrowserSitePermissionDecision) -> Bool {
-        evaluate(.popupsAutomatic, DecisionRequest(decision: decision), answer: AllowsAnswer.self)?.allows ?? false
     }
 
     /// The page's popup state after one event, or nil when nothing changes or

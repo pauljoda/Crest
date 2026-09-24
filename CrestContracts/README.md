@@ -115,11 +115,12 @@ Session choices never appear in the document, and permissions are not synced.
 Every question and write carries the Space's `locked` state: a locked Space
 answers `ask`, lists nothing and records nothing, while resets still apply.
 The pure `geolocation.origin`, `notifications.origin`,
-`notifications.permission_request`, `popups.automatic`, `popups.notice`,
-`external.url`, `external.local_document`, `external.scheme`,
-`external.consent`, `authentication.handling`, `authentication.source_label`
-and `authentication.fixture_trust` operations answer the origin, scheme,
-popup-notice and HTTP authentication rules. URLs arrive as the platform
+`notifications.permission_request`, `popups.notice`, `external.url`,
+`external.local_document`, `external.scheme`, `authentication.handling`,
+`authentication.source_label` and `authentication.fixture_trust` operations
+answer the origin, scheme, popup-notice and HTTP authentication rules. What a
+saved decision means (whether it grants, blocks or asks) travels with the
+generated `SitePermissionDecision`, so no operation answers it. URLs arrive as the platform
 parser's facts; every caller refuses, blocks or asks when it gets no answer.
 
 The `ExternalLinkRoute` query takes the link preferences routing reads and the

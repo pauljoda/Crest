@@ -1,6 +1,7 @@
 extension BrowserSitePermissionRecord {
     var displayLabel: String {
-        guard let detail, !detail.isEmpty else { return permission.settingsLabel }
-        return "\(permission.settingsLabel) (\(detail))"
+        let title = String(localized: permission.title)
+        guard let detail, !detail.isEmpty else { return title }
+        return "\(title) (\(detail))"
     }
 }

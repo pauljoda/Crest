@@ -38,14 +38,6 @@ extension BrowserCorePolicy {
         @BrowserCoreOptional var disposition: Disposition?
     }
 
-    private struct ConsentRequest: Encodable {
-        let decision: BrowserSitePermissionDecision
-    }
-
-    private struct ConsentAnswer: Decodable {
-        @BrowserCoreOptional var consent: BrowserExternalSchemeConsent?
-    }
-
     // MARK: - Actions - Origins
 
     /// Whether another application, a drop, a peek, a popup or a menu item may
@@ -75,11 +67,6 @@ extension BrowserCorePolicy {
         case .handOff: return .handOff
         case nil: return .blocked
         }
-    }
-
-    /// What one external-app hand-off does once its saved choice is known.
-    static func externalSchemeConsent(decision: BrowserSitePermissionDecision) -> BrowserExternalSchemeConsent {
-        evaluate(.externalConsent, ConsentRequest(decision: decision), answer: ConsentAnswer.self)?.consent ?? .block
     }
 
     /// An empty component crosses as `null`, as a missing one does.

@@ -221,7 +221,7 @@ final class BrowserGeolocationBridgeTests: XCTestCase {
         }
     }
 
-    private func resolvePrompt(in fixture: Fixture, response: BrowserPagePermissionController.Response) async throws {
+    private func resolvePrompt(in fixture: Fixture, response: BrowserSitePermissionPromptResponse) async throws {
         try await waitUntil("a fresh site consent prompt") { fixture.page.sitePermissionRequests.current != nil }
         fixture.page.sitePermissionRequests.resolve(
             try XCTUnwrap(fixture.page.sitePermissionRequests.current?.id), response: response)

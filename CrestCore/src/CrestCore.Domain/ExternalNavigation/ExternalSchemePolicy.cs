@@ -34,13 +34,5 @@ public static class ExternalSchemePolicy {
         return ExternalSchemeDisposition.HandOff;
     }
 
-    /// A hand-off launches another application, so an unapproved request always
-    /// pauses at Crest's consent prompt, including script-mediated app links.
-    public static ExternalSchemeConsent Consent(SitePermissionDecision decision) => decision switch {
-        SitePermissionDecision.GrantForSession or SitePermissionDecision.GrantPersistently => ExternalSchemeConsent.Open,
-        SitePermissionDecision.DenyForSession or SitePermissionDecision.DenyPersistently => ExternalSchemeConsent.Block,
-        _ => ExternalSchemeConsent.Prompt
-    };
-
     #endregion
 }

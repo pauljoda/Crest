@@ -22,7 +22,7 @@ struct BrowserSitePermissionRecordRow: View {
 
             Spacer(minLength: CrestSpacing.small)
 
-            Menu(record.decision.settingsLabel) {
+            Menu(record.decision.title) {
                 Group {
                     Button("Allow", systemImage: "checkmark.circle") {
                         set(.grantPersistently)
@@ -46,12 +46,12 @@ struct BrowserSitePermissionRecordRow: View {
             .accessibilityLabel(
                 "\(record.displayLabel) for \(record.origin.displayName)"
             )
-            .accessibilityValue(record.decision.settingsLabel)
+            .accessibilityValue(Text(record.decision.title))
         }
         .frame(minHeight: CrestFormRowMetrics.minimumHeight)
     }
 
-    private func set(_ decision: BrowserSitePermissionDecision) {
+    private func set(_ decision: SitePermissionDecision) {
         permissionCenter.setDecision(
             decision,
             for: record.permission,

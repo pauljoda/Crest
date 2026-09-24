@@ -469,6 +469,33 @@
         }
       }
     },
+    "Allowed for Session" : {
+
+    },
+    "Ask after First" : {
+
+    },
+    "Automatic Downloads" : {
+
+    },
+    "Blocked by Default" : {
+
+    },
+    "Blocked for Session" : {
+
+    },
+    "Camera & Microphone" : {
+
+    },
+    "Default (Ask after First)" : {
+
+    },
+    "Default (Block)" : {
+
+    },
+    "External Apps" : {
+
+    },
     "%@/s" : {
 
     },

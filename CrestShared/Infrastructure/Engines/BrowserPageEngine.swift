@@ -48,11 +48,11 @@ protocol BrowserPageEngine: BrowserFindExecuting {
     /// Applies Crest's decision for one site permission to an engine that
     /// enforces it itself: true allows, false blocks, nil leaves it to ask.
     /// False when the page enforces the decision through Crest's own bridges.
-    func applySitePermission(_ permission: BrowserSitePermission, allowed: Bool?) -> Bool
+    func applySitePermission(_ permission: SitePermission, allowed: Bool?) -> Bool
     /// Ends the page's live capture after Crest withdrew the grant that allowed
     /// it. An engine that enforces site permissions itself ends capture when
     /// `applySitePermission` blocks it and needs nothing here.
-    func stopMediaCapture(_ media: BrowserMediaPermission)
+    func stopMediaCapture(_ media: SitePermission)
     /// Opens the popups the engine's blocker held back, once the person has
     /// allowed them. False when the engine keeps no such list.
     func showBlockedPopups() -> Bool
@@ -92,8 +92,8 @@ extension BrowserPageEngine {
     var interactionState: Data? { nil }
     var contentScripting: (any BrowserPageContentScripting)? { nil }
     func applyAutomaticPopups(_ allowed: Bool) -> Bool { false }
-    func applySitePermission(_ permission: BrowserSitePermission, allowed: Bool?) -> Bool { false }
-    func stopMediaCapture(_ media: BrowserMediaPermission) {}
+    func applySitePermission(_ permission: SitePermission, allowed: Bool?) -> Bool { false }
+    func stopMediaCapture(_ media: SitePermission) {}
     func showBlockedPopups() -> Bool { false }
     func refreshFavicon() {}
     func clearSiteData(for url: URL) async -> Bool { false }

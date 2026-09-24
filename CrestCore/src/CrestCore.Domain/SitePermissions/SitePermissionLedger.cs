@@ -1,3 +1,5 @@
+using CrestCore.Contracts;
+
 namespace CrestCore.Domain;
 
 /// Per-Space site permission choices for one process.
@@ -37,7 +39,7 @@ public sealed class SitePermissionLedger {
         foreach (var record in records) {
             if (persistent.Count >= MaximumRecords) break;
             if (record.Id == Guid.Empty || record.Space == Guid.Empty || !IsValidDetail(record.Detail)
-                || !SitePermissionDecisionPolicy.IsPersistent(record.Decision) || !double.IsFinite(record.ModifiedAt)) continue;
+                || !record.Decision.IsPersistent || !double.IsFinite(record.ModifiedAt)) continue;
             if (persistent.Any(existing => existing.Id == record.Id)) continue;
             if (!seen.Add((record.Space, Key(record)))) continue;
             persistent.Add(record);
@@ -63,24 +65,18 @@ public sealed class SitePermissionLedger {
         return SitePermissionDecision.Ask;
     }
 
-    /// Combined capture must respect a block on either device. An existing
-    /// combined grant still answers a request for just one of those devices.
-    public SitePermissionDecision MediaDecision(Guid space, SiteOrigin origin, MediaPermission media, bool isLocked) {
+    /// A capture request's decision. Combined capture must respect a block on
+    /// either device, and an existing combined grant still answers a request
+    /// for just one of those devices. `media` must be a capture device.
+    public SitePermissionDecision MediaDecision(Guid space, SiteOrigin origin, SitePermission media, bool isLocked) {
+        ArgumentNullException.ThrowIfNull(media);
+        if (!media.IsMedia) throw new ArgumentException($"{media.Name} is not a capture device.", nameof(media));
         if (isLocked) return SitePermissionDecision.Ask;
-        var combined = Decision(space, origin, SitePermission.CameraAndMicrophone, null, false);
-        SitePermission[] devices = media switch {
-            MediaPermission.Camera => [SitePermission.Camera],
-            MediaPermission.Microphone => [SitePermission.Microphone],
-            _ => [SitePermission.Camera, SitePermission.Microphone]
-        };
-        var decisions = devices.Select(device => Decision(space, origin, device, null, false)).ToArray();
-        var all = decisions.Prepend(combined).ToArray();
-        if (all.Contains(SitePermissionDecision.DenyPersistently)) return SitePermissionDecision.DenyPersistently;
-        if (all.Contains(SitePermissionDecision.DenyForSession)) return SitePermissionDecision.DenyForSession;
-        if (SitePermissionDecisionPolicy.Grants(combined)) return combined;
-        if (decisions.All(decision => decision == SitePermissionDecision.GrantPersistently)) return SitePermissionDecision.GrantPersistently;
-        if (decisions.All(SitePermissionDecisionPolicy.Grants)) return SitePermissionDecision.GrantForSession;
-        return SitePermissionDecision.Ask;
+        var devices = media.Devices().Select(device => Decision(space, origin, device, null, false)).ToArray();
+        var combinations = media.Combinations().Select(combination => Decision(space, origin, combination, null, false)).ToArray();
+        var strongest = SitePermissionDecision.Strongest(devices.Concat(combinations));
+        if (strongest.Denies) return strongest;
+        return combinations.FirstOrDefault(decision => decision.Grants) ?? SitePermissionDecision.Strongest(devices);
     }
 
     /// One Space's saved choices in display order. A locked Space lists none.
@@ -98,36 +94,34 @@ public sealed class SitePermissionLedger {
     public SitePermissionOutcome Set(Guid space, SiteOrigin origin, SitePermission permission, string? detail,
         SitePermissionDecision decision, Guid recordId, double now, bool isLocked) {
         ArgumentNullException.ThrowIfNull(origin);
+        ArgumentNullException.ThrowIfNull(permission);
+        ArgumentNullException.ThrowIfNull(decision);
         RequireDetail(detail);
         if (space == Guid.Empty || recordId == Guid.Empty) throw new BrowserRuleException(BrowserRuleCodes.InvalidIdentity);
         if (!double.IsFinite(now)) throw new BrowserRuleException(BrowserRuleCodes.InvalidRecordDate);
         if (isLocked) return SitePermissionOutcome.Rejected;
         var key = new SitePermissionKey(origin, permission, detail);
         bool persistenceChanged = false;
-        switch (decision) {
-            case SitePermissionDecision.Ask:
-                if (session.TryGetValue(space, out var cleared)) cleared.Remove(key);
-                persistenceChanged = persistent.RemoveAll(record => record.Space == space && Key(record) == key) > 0;
-                break;
-            case SitePermissionDecision.GrantForSession or SitePermissionDecision.DenyForSession:
-                if (!session.TryGetValue(space, out var decisions)) session[space] = decisions = [];
-                decisions[key] = decision;
-                break;
-            default:
-                if (session.TryGetValue(space, out var overridden)) overridden.Remove(key);
-                int index = persistent.FindIndex(record => record.Space == space && Key(record) == key);
-                if (index >= 0) {
-                    persistent[index] = persistent[index] with { Decision = decision, ModifiedAt = now };
-                } else {
-                    if (persistent.Count >= MaximumRecords) throw new BrowserRuleException(BrowserRuleCodes.SitePermissionRecordLimit);
-                    if (persistent.Any(record => record.Id == recordId)) throw new BrowserRuleException(BrowserRuleCodes.DuplicateSitePermissionRecord);
-                    persistent.Add(new(recordId, space, origin, permission, detail, decision, now));
-                }
-                persistenceChanged = true;
-                break;
+        if (decision.IsPersistent) {
+            if (session.TryGetValue(space, out var overridden)) overridden.Remove(key);
+            int index = persistent.FindIndex(record => record.Space == space && Key(record) == key);
+            if (index >= 0) {
+                persistent[index] = persistent[index] with { Decision = decision, ModifiedAt = now };
+            } else {
+                if (persistent.Count >= MaximumRecords) throw new BrowserRuleException(BrowserRuleCodes.SitePermissionRecordLimit);
+                if (persistent.Any(record => record.Id == recordId)) throw new BrowserRuleException(BrowserRuleCodes.DuplicateSitePermissionRecord);
+                persistent.Add(new(recordId, space, origin, permission, detail, decision, now));
+            }
+            persistenceChanged = true;
+        } else if (decision.Verdict == SitePermissionVerdict.Ask) {
+            if (session.TryGetValue(space, out var cleared)) cleared.Remove(key);
+            persistenceChanged = persistent.RemoveAll(record => record.Space == space && Key(record) == key) > 0;
+        } else {
+            if (!session.TryGetValue(space, out var decisions)) session[space] = decisions = [];
+            decisions[key] = decision;
         }
         return new(true, persistenceChanged,
-            [new(space, origin, permission, detail, !SitePermissionDecisionPolicy.Grants(decision))]);
+            [new(space, origin, permission, detail, !decision.Grants)]);
     }
 
     public SitePermissionOutcome ResetRecord(Guid id) {

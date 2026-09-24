@@ -1,3 +1,4 @@
+using CrestCore.Contracts;
 using CrestCore.Domain;
 
 using Xunit;
@@ -35,13 +36,6 @@ public sealed class OriginPolicyTests {
         Assert.Equal(ExternalSchemeDisposition.Blocked, ExternalSchemePolicy.Disposition(new string('a', 300), false));
 
     [Fact]
-    public void ExternalAppsOpenOnlyWithAGrantAndAskOtherwise() {
-        Assert.Equal(ExternalSchemeConsent.Open, ExternalSchemePolicy.Consent(SitePermissionDecision.GrantForSession));
-        Assert.Equal(ExternalSchemeConsent.Block, ExternalSchemePolicy.Consent(SitePermissionDecision.DenyPersistently));
-        Assert.Equal(ExternalSchemeConsent.Prompt, ExternalSchemePolicy.Consent(SitePermissionDecision.Ask));
-    }
-
-    [Fact]
     public void WebLinksNeedHttpOrHttpsAndAHost() {
         Assert.True(ExternalUrlPolicy.AcceptsWebLink("HTTPS", "example.com"));
         Assert.True(ExternalUrlPolicy.AcceptsWebLink("http", "example.com"));
@@ -63,35 +57,32 @@ public sealed class OriginPolicyTests {
 
     [Fact]
     public void NotificationRequestsPromptOnlyWithActivation() {
-        Assert.Equal(HostedNotificationRequestAction.PromptForSitePermission, HostedNotificationRequestPolicy.Action(SitePermissionDecision.Ask, true));
-        Assert.Equal(HostedNotificationRequestAction.RespondDefault, HostedNotificationRequestPolicy.Action(SitePermissionDecision.Ask, false));
-        Assert.Equal(HostedNotificationRequestAction.RespondDenied, HostedNotificationRequestPolicy.Action(SitePermissionDecision.DenyForSession, true));
+        Assert.Equal(HostedNotificationRequestAction.PromptForSitePermission, HostedNotificationRequestAction.For(SitePermissionDecision.Ask, true));
+        Assert.Equal(HostedNotificationRequestAction.RespondDefault, HostedNotificationRequestAction.For(SitePermissionDecision.Ask, false));
+        Assert.Equal(HostedNotificationRequestAction.RespondDenied, HostedNotificationRequestAction.For(SitePermissionDecision.DenyForSession, true));
         Assert.Equal(HostedNotificationRequestAction.ResolveSystemAuthorization,
-            HostedNotificationRequestPolicy.Action(SitePermissionDecision.GrantPersistently, false));
+            HostedNotificationRequestAction.For(SitePermissionDecision.GrantPersistently, false));
     }
 
     [Fact]
     public void ADocumentShowsOneBlockedPopupIndicationUntilItNavigates() {
-        Assert.False(BlockedPopupNoticePolicy.AllowsAutomaticPopups(SitePermissionDecision.Ask));
-        Assert.True(BlockedPopupNoticePolicy.AllowsAutomaticPopups(SitePermissionDecision.GrantForSession));
-
-        var blocked = BlockedPopupNoticePolicy.Apply(BlockedPopupPageState.Empty, BlockedPopupEvent.Blocked, "doc-1", Site)!;
+        var blocked = BlockedPopupEvent.Blocked.Apply(BlockedPopupPageState.Empty, "doc-1", Site)!;
         Assert.Equal(BlockedPopupStatus.Blocked, blocked.Status);
         Assert.Equal(1, blocked.IndicationRevision);
-        Assert.Null(BlockedPopupNoticePolicy.Apply(blocked, BlockedPopupEvent.Blocked, "doc-1", Site));
-        Assert.Null(BlockedPopupNoticePolicy.Apply(blocked, BlockedPopupEvent.PopupAllowed, null, null));
+        Assert.Null(BlockedPopupEvent.Blocked.Apply(blocked, "doc-1", Site));
+        Assert.Null(BlockedPopupEvent.PopupAllowed.Apply(blocked, null, null));
 
-        var allowed = BlockedPopupNoticePolicy.Apply(blocked, BlockedPopupEvent.PermissionAllowed, null, null)!;
+        var allowed = BlockedPopupEvent.PermissionAllowed.Apply(blocked, null, null)!;
         Assert.Equal(BlockedPopupStatus.AllowedAwaitingRetry, allowed.Status);
-        Assert.Equal(BlockedPopupStatus.Blocked, BlockedPopupNoticePolicy.Apply(allowed, BlockedPopupEvent.PermissionBlockedAgain, null, null)!.Status);
+        Assert.Equal(BlockedPopupStatus.Blocked, BlockedPopupEvent.PermissionBlockedAgain.Apply(allowed, null, null)!.Status);
 
-        var cleared = BlockedPopupNoticePolicy.Apply(allowed, BlockedPopupEvent.PopupAllowed, null, null)!;
+        var cleared = BlockedPopupEvent.PopupAllowed.Apply(allowed, null, null)!;
         Assert.Null(cleared.Status);
         Assert.Null(cleared.DocumentIdentifier);
         Assert.Equal(1, cleared.IndicationRevision);
-        Assert.Null(BlockedPopupNoticePolicy.Apply(cleared, BlockedPopupEvent.Navigation, null, null));
-        Assert.Null(BlockedPopupNoticePolicy.Apply(blocked, BlockedPopupEvent.Navigation, null, null)!.Status);
-        Assert.Throws<BrowserRuleException>(() => BlockedPopupNoticePolicy.Apply(cleared, BlockedPopupEvent.Blocked, null, Site));
+        Assert.Null(BlockedPopupEvent.Navigation.Apply(cleared, null, null));
+        Assert.Null(BlockedPopupEvent.Navigation.Apply(blocked, null, null)!.Status);
+        Assert.Throws<BrowserRuleException>(() => BlockedPopupEvent.Blocked.Apply(cleared, null, Site));
     }
 
     [Fact]

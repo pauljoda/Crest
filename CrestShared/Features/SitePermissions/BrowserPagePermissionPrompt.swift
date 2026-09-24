@@ -18,7 +18,7 @@ struct BrowserPagePermissionPrompt: View {
                     Text(request.origin.displayName)
                         .font(.callout.weight(.semibold))
                         .fixedSize(horizontal: false, vertical: true)
-                    Text(requestDescription)
+                    Text(request.permission.requestTitle)
                         .font(.callout)
                         .foregroundStyle(.secondary)
                     if request.origin != request.topLevelOrigin {
@@ -66,18 +66,6 @@ struct BrowserPagePermissionPrompt: View {
         .padding(14)
         .frame(width: 280, alignment: .leading)
         .onChange(of: request.id) { remembersChoice = true }
-    }
-
-    private var requestDescription: LocalizedStringKey {
-        switch request.permission {
-        case .camera: "Wants to use your camera"
-        case .microphone: "Wants to use your microphone"
-        case .cameraAndMicrophone: "Wants to use your camera and microphone"
-        case .notifications: "Wants to send notifications while this page is open"
-        case .location: "Wants to use your location"
-        case .automaticDownloads: "Wants to download multiple files automatically"
-        default: "Requests permission"
-        }
     }
 }
 

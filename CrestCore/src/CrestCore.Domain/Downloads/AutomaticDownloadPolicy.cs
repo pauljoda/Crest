@@ -1,3 +1,5 @@
+using CrestCore.Contracts;
+
 namespace CrestCore.Domain;
 
 /// Chrome-style automatic-download throttling for one page and origin: while
@@ -14,19 +16,19 @@ public static class AutomaticDownloadPolicy {
         // A fresh user action starts a fresh one-download allowance.
         bool allowance = !isUserInitiated && hasAllowedAutomaticDownload;
         var action = Action(isUserInitiated || isUserApprovedRetry, savedDecision, allowance);
-        if (!isUserInitiated && !isUserApprovedRetry && savedDecision == SitePermissionDecision.Ask
+        if (!isUserInitiated && !isUserApprovedRetry && savedDecision.Verdict == SitePermissionVerdict.Ask
             && action == AutomaticDownloadAction.Allow) allowance = true;
         return new(action, allowance);
     }
 
+    /// An approved download goes ahead, and so does one the saved decision
+    /// grants. A saved block refuses it. Without an answer, the first automatic
+    /// download goes ahead and any further one asks.
     private static AutomaticDownloadAction Action(bool isUserApproved, SitePermissionDecision savedDecision,
         bool hasAllowedAutomaticDownload) {
-        if (isUserApproved) return AutomaticDownloadAction.Allow;
-        return savedDecision switch {
-            SitePermissionDecision.GrantForSession or SitePermissionDecision.GrantPersistently => AutomaticDownloadAction.Allow,
-            SitePermissionDecision.DenyForSession or SitePermissionDecision.DenyPersistently => AutomaticDownloadAction.Deny,
-            _ => hasAllowedAutomaticDownload ? AutomaticDownloadAction.RequestPermission : AutomaticDownloadAction.Allow
-        };
+        if (isUserApproved || savedDecision.Grants) return AutomaticDownloadAction.Allow;
+        if (savedDecision.Denies) return AutomaticDownloadAction.Deny;
+        return hasAllowedAutomaticDownload ? AutomaticDownloadAction.RequestPermission : AutomaticDownloadAction.Allow;
     }
 
     #endregion

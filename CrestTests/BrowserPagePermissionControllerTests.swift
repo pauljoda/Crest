@@ -38,12 +38,12 @@ final class BrowserPagePermissionControllerTests: XCTestCase {
     func testDownloadAndLocationDismissalAreTemporaryAndExplicitChoicesArePreserved() async throws {
         let controller = BrowserPagePermissionController()
         let origin = BrowserSiteOrigin(scheme: "https", host: "files.example", port: 443)
-        for permission in [BrowserSitePermission.automaticDownloads, .location] {
+        for permission in [SitePermission.automaticDownloads, .location] {
             let unavailable = await controller.response(
                 to: permission, origin: origin, topLevelOrigin: origin, spaceName: "Work")
             XCTAssertEqual(unavailable, .denyOnce)
             controller.setPresentationAvailable(true)
-            for choice in [BrowserPagePermissionController.Response.grantPersistently, .denyPersistently] {
+            for choice in [BrowserSitePermissionPromptResponse.grantPersistently, .denyPersistently] {
                 let task = Task {
                     await controller.response(to: permission, origin: origin, topLevelOrigin: origin, spaceName: "Work")
                 }
@@ -95,7 +95,7 @@ final class BrowserPagePermissionControllerTests: XCTestCase {
         let other = BrowserSiteOrigin(scheme: "https", host: "other.example", port: 443)
         let session = BrowserPageSitePermissionSession(engine: engine, permissionCenter: center, spaceID: spaceID)
         session.siteURL = { page }
-        var refreshed: [BrowserSitePermission] = []
+        var refreshed: [SitePermission] = []
         session.siteDecisionDidChange = { refreshed.append($0) }
 
         center.setDecision(.grantPersistently, for: .location, origin: other, in: spaceID)
@@ -115,14 +115,14 @@ final class BrowserPagePermissionControllerTests: XCTestCase {
         let spaceID = SpaceID()
         let origin = BrowserSiteOrigin(scheme: "https", host: "media.example", port: 443)
         var decisions: [WKPermissionDecision] = []
-        BrowserMediaPermission.camera.resolve(
+        SitePermission.camera.resolve(
             origin: origin, topLevelOrigin: origin, spaceID: spaceID, spaceName: "Work",
             permissionCenter: center, requests: controller
         ) { decisions.append($0) }
         controller.cancelAll()
         XCTAssertEqual(decisions, [.deny])
         XCTAssertEqual(center.mediaDecision(for: .camera, origin: origin, in: spaceID), .ask)
-        BrowserMediaPermission.camera.resolve(
+        SitePermission.camera.resolve(
             origin: origin, topLevelOrigin: origin, spaceID: spaceID, spaceName: "Work",
             permissionCenter: center, requests: controller
         ) { decisions.append($0) }
@@ -137,8 +137,8 @@ final class BrowserPagePermissionControllerTests: XCTestCase {
         let controller = BrowserPagePermissionController()
         controller.setPresentationAvailable(true)
         let origin = BrowserSiteOrigin(scheme: "https", host: "camera.example", port: 443)
-        var responses: [BrowserPagePermissionController.Response?] = []
-        for permission in [BrowserSitePermission.camera, .notifications] {
+        var responses: [BrowserSitePermissionPromptResponse?] = []
+        for permission in [SitePermission.camera, .notifications] {
             controller.request(permission, origin: origin, topLevelOrigin: origin, spaceName: "Work") {
                 responses.append($0)
             }
@@ -182,7 +182,7 @@ final class BrowserPagePermissionControllerTests: XCTestCase {
 /// A page engine that enforces site permissions itself, as Chromium does.
 @MainActor
 private final class EnforcingPageEngine: BrowserPageEngine {
-    var applied: [(permission: BrowserSitePermission, allowed: Bool?)] = []
+    var applied: [(permission: SitePermission, allowed: Bool?)] = []
 
     let registration = BrowserEngineRegistration.chromium
     let nativeView = NSView()
@@ -192,7 +192,7 @@ private final class EnforcingPageEngine: BrowserPageEngine {
     var canGoBack: Bool { false }
     var canGoForward: Bool { false }
 
-    func applySitePermission(_ permission: BrowserSitePermission, allowed: Bool?) -> Bool {
+    func applySitePermission(_ permission: SitePermission, allowed: Bool?) -> Bool {
         applied.append((permission, allowed))
         return true
     }

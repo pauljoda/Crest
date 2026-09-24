@@ -259,7 +259,7 @@ final class BrowserWebKitPageAdapter: BrowserPageEngineAdapter {
 
     /// WebKit geolocation observes the permission centre itself; the hosted
     /// notification bridge is told so the document sees the new permission.
-    func sitePermissionDidChange(_ permission: BrowserSitePermission, on page: BrowserPage) {
+    func sitePermissionDidChange(_ permission: SitePermission, on page: BrowserPage) {
         guard permission == .notifications else { return }
         page.refreshHostedWebNotificationPermission()
     }

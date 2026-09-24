@@ -69,6 +69,16 @@ public sealed class NativeSitePermissionTests {
         Assert.Empty(Apply(ledger, new() { ["command"] = "records", ["spaceID"] = SpaceID, ["locked"] = true })["records"]!.AsArray());
     }
 
+    /// The saved document and the ledger's JSON spell capabilities and
+    /// decisions by name, so a renamed member would orphan saved choices.
+    [Fact]
+    public void SavedSpellingsNeverChange() {
+        Assert.Equal(["camera", "microphone", "cameraAndMicrophone", "location", "notifications", "popups", "automaticDownloads",
+            "externalApplications"], SitePermission.All.Select(permission => permission.Name));
+        Assert.Equal(["ask", "grantForSession", "denyForSession", "grantPersistently", "denyPersistently"],
+            SitePermissionDecision.All.Select(decision => decision.Name));
+    }
+
     [Fact]
     public void AnUnreadableDocumentLoadsNothing() {
         var ledger = new NativeSitePermissionLedger();
@@ -180,7 +190,6 @@ public sealed class NativeSitePermissionTests {
         })["action"]!.GetValue<string>());
         Assert.Equal("handOff", Policy(new() { ["operation"] = "external.scheme", ["scheme"] = "mailto", ["appInitiated"] = false })["disposition"]!.GetValue<string>());
         Assert.Equal("engine", Policy(new() { ["operation"] = "external.scheme", ["scheme"] = null, ["appInitiated"] = false })["disposition"]!.GetValue<string>());
-        Assert.Equal("prompt", Policy(new() { ["operation"] = "external.consent", ["decision"] = "ask" })["consent"]!.GetValue<string>());
         Assert.True(Policy(new() { ["operation"] = "external.url", ["scheme"] = "https", ["host"] = "example.com" })["accepted"]!.GetValue<bool>());
         Assert.False(Policy(new() { ["operation"] = "external.url", ["scheme"] = "file", ["host"] = null })["accepted"]!.GetValue<bool>());
         Assert.False(Policy(new() {
@@ -190,8 +199,11 @@ public sealed class NativeSitePermissionTests {
             ["hasPath"] = true,
             ["host"] = "server"
         })["accepted"]!.GetValue<bool>());
-        Assert.False(Policy(new() { ["operation"] = "popups.automatic", ["decision"] = "denyForSession" })["allows"]!.GetValue<bool>());
-        Assert.Throws<ProtocolException>(() => Policy(new() { ["operation"] = "external.consent", ["decision"] = "always" }));
+        Assert.Throws<ProtocolException>(() => Policy(new() {
+            ["operation"] = "notifications.permission_request",
+            ["decision"] = "always",
+            ["hasUserActivation"] = true
+        }));
     }
 
     [Fact]

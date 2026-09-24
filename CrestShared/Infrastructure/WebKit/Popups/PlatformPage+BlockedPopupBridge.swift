@@ -21,13 +21,7 @@ extension BrowserPlatformPage {
             let origin = BrowserSiteOrigin(url: frameURL),
             let currentURL = webKitView?.url,
             BrowserSiteOrigin(url: currentURL) == origin,
-            !BrowserCorePolicy.allowsAutomaticPopups(
-                decision: permissionCenter.decision(
-                    for: .popups,
-                    origin: origin,
-                    in: spaceID
-                )
-            )
+            !permissionCenter.decision(for: .popups, origin: origin, in: spaceID).grants
         else { return }
 
         var nextState = blockedPopupState

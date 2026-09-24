@@ -11,16 +11,9 @@ protocol BrowserPagePermissionProviding: AnyObject {
 @Observable
 @MainActor
 final class BrowserPagePermissionController {
-    enum Response: Equatable {
-        case allowOnce
-        case grantPersistently
-        case denyOnce
-        case denyPersistently
-    }
-
     struct Request: Identifiable, Equatable {
         let id = UUID()
-        let permission: BrowserSitePermission
+        let permission: SitePermission
         let origin: BrowserSiteOrigin
         let topLevelOrigin: BrowserSiteOrigin
         let spaceName: String
@@ -30,7 +23,7 @@ final class BrowserPagePermissionController {
     private(set) var generation = UUID()
     @ObservationIgnored private var isPresentationAvailable = false
     @ObservationIgnored private var requests: [Request] = []
-    @ObservationIgnored private var completions: [UUID: [(Response?) -> Void]] = [:]
+    @ObservationIgnored private var completions: [UUID: [(BrowserSitePermissionPromptResponse?) -> Void]] = [:]
 
     func setPresentationAvailable(_ available: Bool) {
         isPresentationAvailable = available
@@ -38,11 +31,11 @@ final class BrowserPagePermissionController {
     }
 
     func request(
-        _ permission: BrowserSitePermission,
+        _ permission: SitePermission,
         origin: BrowserSiteOrigin,
         topLevelOrigin: BrowserSiteOrigin,
         spaceName: String,
-        completion: @escaping (Response?) -> Void
+        completion: @escaping (BrowserSitePermissionPromptResponse?) -> Void
     ) {
         guard isPresentationAvailable else {
             completion(nil)
@@ -64,7 +57,7 @@ final class BrowserPagePermissionController {
         current = requests.first
     }
 
-    func resolve(_ id: UUID, response: Response) {
+    func resolve(_ id: UUID, response: BrowserSitePermissionPromptResponse) {
         guard current?.id == id else { return }
         requests.removeFirst()
         let callbacks = completions.removeValue(forKey: id) ?? []
@@ -73,53 +66,37 @@ final class BrowserPagePermissionController {
     }
 
     func response(
-        to permission: BrowserSitePermission,
+        to permission: SitePermission,
         origin: BrowserSiteOrigin,
         topLevelOrigin: BrowserSiteOrigin,
         spaceName: String
     ) async -> BrowserSitePermissionPromptResponse {
         await withCheckedContinuation { continuation in
             request(permission, origin: origin, topLevelOrigin: topLevelOrigin, spaceName: spaceName) { response in
-                let result: BrowserSitePermissionPromptResponse
-                switch response {
-                case .allowOnce: result = .allowOnce
-                case .grantPersistently: result = .grantPersistently
-                case .denyPersistently: result = .denyPersistently
-                case .denyOnce, nil: result = .denyOnce
-                }
-                continuation.resume(returning: result)
+                continuation.resume(returning: response ?? .denyOnce)
             }
         }
     }
 
     func authorize(
-        _ permission: BrowserSitePermission,
+        _ permission: SitePermission,
         origin: BrowserSiteOrigin,
         topLevelOrigin: BrowserSiteOrigin,
         spaceID: SpaceID,
         spaceName: String,
         permissionCenter: BrowserSitePermissionCenter
     ) async -> Bool {
-        switch permissionCenter.decision(for: permission, origin: origin, in: spaceID) {
-        case .grantForSession, .grantPersistently: return true
-        case .denyForSession, .denyPersistently: return false
-        case .ask: break
-        }
+        let decision = permissionCenter.decision(for: permission, origin: origin, in: spaceID)
+        guard decision.verdict == .ask else { return decision.grants }
         let generation = generation
         let response = await response(
             to: permission, origin: origin, topLevelOrigin: topLevelOrigin, spaceName: spaceName)
         guard generation == self.generation else { return false }
-        let latest = permissionCenter.decision(for: permission, origin: origin, in: spaceID)
-        guard latest != .denyPersistently, latest != .denyForSession else { return false }
-        switch response {
-        case .allowOnce: return true
-        case .denyOnce: return false
-        case .grantPersistently, .denyPersistently:
-            permissionCenter.setDecision(
-                response == .grantPersistently ? .grantPersistently : .denyPersistently,
-                for: permission, origin: origin, in: spaceID)
-            return response == .grantPersistently
+        guard !permissionCenter.decision(for: permission, origin: origin, in: spaceID).denies else { return false }
+        if let savedDecision = response.savedDecision {
+            permissionCenter.setDecision(savedDecision, for: permission, origin: origin, in: spaceID)
         }
+        return response.grants
     }
 
     func cancelAll() {

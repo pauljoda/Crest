@@ -269,18 +269,18 @@
                         host: message.host, port: message.port ?? 0, handle: message.frame as NSString)))
         }
 
-        struct SitePermission: Identifiable {
+        struct ContentSetting: Identifiable {
             let id: String
             let label: String
             var value: Int
             let supportsAsk: Bool
         }
-        var permissions: [SitePermission] {
+        var permissions: [ContentSetting] {
             (host?.permissions(forPage: id) ?? []).compactMap { item in
                 guard let id = item["id"] as? String, let label = item["label"] as? String,
                     let value = item["value"] as? Int
                 else { return nil }
-                return SitePermission(
+                return ContentSetting(
                     id: id, label: label, value: value, supportsAsk: item["supportsAsk"] as? Bool ?? false)
             }
         }
@@ -320,24 +320,21 @@
         private(set) var mediaSessionLocation: String?
         var mediaSessionTransport: (any BrowserMediaSessionTransport)? { self }
 
-        func applySitePermission(_ permission: BrowserSitePermission, allowed: Bool?) -> Bool {
-            let key: String
-            switch permission {
-            case .camera: key = "camera"
-            case .microphone: key = "microphone"
-            case .location: key = "location"
-            case .notifications: key = "notifications"
-            default: return false
-            }
+        /// The host keys the content settings it enforces by the permissions'
+        /// names: 1 allows, 2 blocks and 0 clears the site's own setting.
+        func applySitePermission(_ permission: SitePermission, allowed: Bool?) -> Bool {
+            guard Self.enforcedPermissions.contains(permission) else { return false }
             guard created, !disposed else { return true }
-            _ = setPermission(key, value: allowed.map { $0 ? 1 : 2 } ?? 0)
+            _ = setPermission(permission.name, value: allowed.map { $0 ? 1 : 2 } ?? 0)
             return true
         }
+
+        private static let enforcedPermissions: [SitePermission] = [.camera, .microphone, .location, .notifications]
 
         /// Answers the engine's site permission requests from Crest's record and
         /// prompt.
         var permissionHandler:
-            ((BrowserSitePermission, BrowserSiteOrigin, BrowserSiteOrigin) async -> BrowserEnginePermissionResponse)?
+            ((SitePermission, BrowserSiteOrigin, BrowserSiteOrigin) async -> BrowserEnginePermissionResponse)?
 
         /// The engine clears the site its page is showing.
         func clearSiteData(for url: URL) async -> Bool {
@@ -576,7 +573,7 @@
                     MainActor.assumeIsolated {
                         guard let self, let handler = self.permissionHandler,
                             let permission = (request["permission"] as? String).flatMap(
-                                BrowserSitePermission.init(rawValue:)),
+                                SitePermission.named),
                             let origin = (request["origin"] as? String).flatMap(URL.init(string:)).flatMap(
                                 BrowserSiteOrigin.init(url:))
                         else {

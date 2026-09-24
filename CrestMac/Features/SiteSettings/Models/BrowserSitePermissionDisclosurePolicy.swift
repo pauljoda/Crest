@@ -3,7 +3,7 @@ enum BrowserSitePermissionDisclosurePolicy {
 
     static func visiblePermissions(
         isExpanded: Bool
-    ) -> [BrowserSitePermission] {
-        isExpanded ? BrowserSitePermission.allCases : []
+    ) -> [SitePermission] {
+        isExpanded ? SitePermission.all : []
     }
 }

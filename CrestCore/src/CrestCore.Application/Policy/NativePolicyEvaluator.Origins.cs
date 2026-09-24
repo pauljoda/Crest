@@ -17,8 +17,6 @@ public static partial class NativePolicyEvaluator {
         PolicyOperation.ExternalLocalDocument => ExternalNavigationCodes.AcceptedAnswer(
             ExternalUrlPolicy.AcceptsLocalDocument(Requests.LocalDocument.Decode(request).Facts)),
         PolicyOperation.ExternalScheme => SchemeDisposition(Requests.Scheme.Decode(request)),
-        PolicyOperation.ExternalConsent => ExternalNavigationCodes.ConsentAnswer(
-            ExternalSchemePolicy.Consent(SitePermissionPolicyRequests.SavedDecision.Decode(request).Decision)),
         _ => null
     };
 

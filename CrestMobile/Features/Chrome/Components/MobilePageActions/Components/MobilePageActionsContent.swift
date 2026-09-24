@@ -188,9 +188,9 @@ struct MobilePageActionsContent: View {
     private func sitePermissions(for page: MobileBrowserPage) -> some View {
         if let origin = page.url.flatMap(BrowserSiteOrigin.init(url:)) {
             Menu("Site Permissions", systemImage: "slider.horizontal.3") {
-                ForEach(BrowserSitePermission.allCases, id: \.self) { permission in
+                ForEach(SitePermission.all, id: \.self) { permission in
                     Picker(
-                        permission.settingsLabel,
+                        permission.title,
                         selection: Binding {
                             page.permissionCenter.decision(for: permission, origin: origin, in: page.spaceID)
                         } set: { decision in
@@ -198,9 +198,9 @@ struct MobilePageActionsContent: View {
                                 decision, for: permission, origin: origin, in: page.spaceID)
                         }
                     ) {
-                        Text(permission.defaultDecisionLabel).tag(BrowserSitePermissionDecision.ask)
-                        Text("Allow").tag(BrowserSitePermissionDecision.grantPersistently)
-                        Text("Block").tag(BrowserSitePermissionDecision.denyPersistently)
+                        Text(permission.askChoiceTitle).tag(SitePermissionDecision.ask)
+                        Text("Allow").tag(SitePermissionDecision.grantPersistently)
+                        Text("Block").tag(SitePermissionDecision.denyPersistently)
                     }
                     .pickerStyle(.menu)
                 }

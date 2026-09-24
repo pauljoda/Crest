@@ -1,8 +1,8 @@
 namespace CrestCore.Domain;
 
 /// The order saved choices are listed in: by origin as a person reads it,
-/// case-insensitively and with numbers compared by value, then by capability,
-/// then by detail.
+/// case-insensitively and with numbers compared by value, then by the
+/// capability's stored name, then by detail.
 public sealed class SitePermissionRecordOrder : IComparer<SitePermissionRecord> {
     #region Variables
 
@@ -18,7 +18,7 @@ public sealed class SitePermissionRecordOrder : IComparer<SitePermissionRecord> 
         if (y is null) return 1;
         int origin = Natural(x.Origin.DisplayName, y.Origin.DisplayName);
         if (origin != 0) return origin;
-        int permission = x.Permission.CompareTo(y.Permission);
+        int permission = string.CompareOrdinal(x.Permission.Name, y.Permission.Name);
         return permission != 0 ? permission : string.CompareOrdinal(x.Detail ?? "", y.Detail ?? "");
     }
 
