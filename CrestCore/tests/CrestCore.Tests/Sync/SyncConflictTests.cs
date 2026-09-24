@@ -76,9 +76,9 @@ public sealed partial class BrowserContractsTests {
     [Fact]
     public void ArchiveArrivalCannotRemoveProtectedOrExplicitlyDeletedTabsBeforeTheirTombstone() {
         var device = Guid.NewGuid(); var older = new SyncVersion(1, device); var newer = new SyncVersion(2, device);
-        Assert.True(SyncConflictPolicy.ActiveTabWins(TabPlacement.Saved, 0, older, "closed", 100, newer));
-        Assert.True(SyncConflictPolicy.ActiveTabWins(TabPlacement.Current, 0, older, "deletedOnAnotherDevice", 100, newer));
-        Assert.False(SyncConflictPolicy.ActiveTabWins(TabPlacement.Current, 0, older, "closed", 100, newer));
-        Assert.True(SyncConflictPolicy.ActiveTabWins(TabPlacement.Current, 101, older, "autoCleanup", 100, newer));
+        Assert.True(SyncConflictPolicy.ActiveTabWins(TabPlacement.Saved, 0, older, ArchiveReason.Closed, 100, newer));
+        Assert.True(SyncConflictPolicy.ActiveTabWins(TabPlacement.Current, 0, older, ArchiveReason.DeletedOnAnotherDevice, 100, newer));
+        Assert.False(SyncConflictPolicy.ActiveTabWins(TabPlacement.Current, 0, older, ArchiveReason.Closed, 100, newer));
+        Assert.True(SyncConflictPolicy.ActiveTabWins(TabPlacement.Current, 101, older, ArchiveReason.AutoCleanup, 100, newer));
     }
 }

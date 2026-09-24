@@ -13,20 +13,5 @@ public static class SyncContentPolicy {
     public static bool IncludesTab(string? url, bool native, string? savedUrl)
         => !native && Includes(url) && (savedUrl is null || Includes(savedUrl));
 
-    // Receiving a record changes its local presentation to Synced, not the
-    // original cause recorded by the device that archived it.
-    public static string ProjectArchiveReason(string reason, string? existingReason = null) => reason switch {
-        ArchiveReasons.Synced => existingReason is null or ArchiveReasons.Synced
-            ? ArchiveReasons.Closed : ProjectArchiveReason(existingReason),
-        ArchiveReasons.DeletedOnAnotherDevice => ArchiveReasons.Deleted,
-        _ => reason
-    };
-
-    public static string ArchiveReason(string storedReason, string? deletionOrigin) => deletionOrigin switch {
-        SyncDeletionOrigins.Local => ArchiveReasons.Deleted,
-        SyncDeletionOrigins.Remote => ArchiveReasons.DeletedOnAnotherDevice,
-        _ => storedReason
-    };
-
     #endregion
 }

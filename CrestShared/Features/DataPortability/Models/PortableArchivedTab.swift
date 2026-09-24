@@ -3,7 +3,7 @@ import Foundation
 struct PortableArchivedTab: Codable, Equatable, Sendable {
     let tab: PortableTab
     let archivedAt: Date
-    let reason: TabArchiveReason
+    let reason: ArchiveReason
 
     init(_ archivedTab: ArchivedTab) {
         tab = PortableTab(archivedTab.tab)

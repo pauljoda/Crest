@@ -14,7 +14,7 @@ namespace CrestCore.Native;
 public static class ContractCodec {
     /// <summary>SHA-256 of the canonical contract schema.</summary>
     public static ReadOnlySpan<byte> Fingerprint => [
-        0xeb, 0x79, 0xc7, 0x05, 0x4e, 0xa1, 0x29, 0x95, 0x62, 0x74, 0x44, 0x70, 0x55, 0x4e, 0x9c, 0xbe, 0xe8, 0x2f, 0xab, 0x1e, 0x5b, 0x3f, 0x03, 0x7b, 0x27, 0x00, 0xe8, 0x38, 0x6b, 0x5b, 0x4c, 0x20
+        0x6d, 0x60, 0x6d, 0xc7, 0xce, 0x12, 0xb9, 0x75, 0x3c, 0x46, 0x8b, 0x01, 0x8a, 0xb2, 0x2d, 0x4a, 0x85, 0x28, 0x3e, 0x15, 0x65, 0x2e, 0xd1, 0x6f, 0x05, 0x21, 0x60, 0xfe, 0x39, 0xc9, 0x49, 0xbe
     ];
 
     public static Intent ReadIntent(WireReader reader) {
@@ -2683,6 +2683,16 @@ public static class ContractCodec {
         writer.WriteEnum((int)value);
     }
 
+    public static SystemTint ReadSystemTint(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return (SystemTint)reader.ReadEnum(4);
+    }
+
+    public static void WriteSystemTint(WireWriter writer, SystemTint value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        writer.WriteEnum((int)value);
+    }
+
     public static TearOffRefusal ReadTearOffRefusal(WireReader reader) {
         ArgumentNullException.ThrowIfNull(reader);
         return (TearOffRefusal)reader.ReadEnum(4);
@@ -2702,6 +2712,28 @@ public static class ContractCodec {
         ArgumentNullException.ThrowIfNull(writer);
         ArgumentNullException.ThrowIfNull(value);
         writer.WriteEnum(TagOf(AdapterRole.All, value));
+    }
+
+    public static ArchiveFilterGroup ReadArchiveFilterGroup(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return ArchiveFilterGroup.All[reader.ReadEnum(ArchiveFilterGroup.All.Count)];
+    }
+
+    public static void WriteArchiveFilterGroup(WireWriter writer, ArchiveFilterGroup value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteEnum(TagOf(ArchiveFilterGroup.All, value));
+    }
+
+    public static ArchiveReason ReadArchiveReason(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return ArchiveReason.All[reader.ReadEnum(ArchiveReason.All.Count)];
+    }
+
+    public static void WriteArchiveReason(WireWriter writer, ArchiveReason value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteEnum(TagOf(ArchiveReason.All, value));
     }
 
     public static CapabilityStatus ReadCapabilityStatus(WireReader reader) {

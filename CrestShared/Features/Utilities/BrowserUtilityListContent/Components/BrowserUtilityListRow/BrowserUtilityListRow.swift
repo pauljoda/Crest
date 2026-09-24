@@ -17,7 +17,7 @@ struct BrowserUtilityListRow: View {
                         title: archived.tab.displayTitle,
                         subtitle: archiveSubtitle(archived),
                         subtitleStyle: AnyShapeStyle(
-                            archived.reason.utilityTint
+                            archived.reason.tint.color
                         )
                     ) {
                         TabFaviconView(
@@ -69,8 +69,8 @@ struct BrowserUtilityListRow: View {
     }
 
     private func archiveSubtitle(_ archived: ArchivedTab) -> Text {
-        let icon = Image(systemName: archived.reason.utilitySystemImage)
-        let status = Text(archived.reason.utilityTitle)
+        let icon = Image(systemName: archived.reason.symbol)
+        let status = Text(archived.reason.title)
         if let host = archived.tab.url?.host() {
             return Text("\(icon) \(status) · \(host)")
         }

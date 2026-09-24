@@ -190,9 +190,9 @@ public static class NativeSyncMaterializer {
             if (previous is not null) {
                 value["reason"] = previous["reason"]!.DeepClone(); value["deletionOrigin"] = previous["deletionOrigin"]?.DeepClone();
             } else {
-                value["reason"] = ArchiveReasons.Synced;
-                if (Text(archive["reason"]) is ArchiveReasons.Deleted or ArchiveReasons.DeletedOnAnotherDevice)
-                    value["deletionOrigin"] = SyncDeletionOrigins.Remote;
+                var received = ArchiveReason.Received(ArchiveReason.Named(Text(archive["reason"]))?.IsExplicitDeletion == true);
+                value["reason"] = received.StoredReason;
+                if (received.DeletionOrigin is { } origin) value["deletionOrigin"] = origin;
             }
             result.Add(value);
         }
@@ -204,8 +204,8 @@ public static class NativeSyncMaterializer {
             if (projected.Contains(id) || !localTabs.TryGetValue(id, out var tab)) continue;
             result.Add(new JsonObject {
                 ["tab"] = Tab(tab, tab, archived: true),
-                ["reason"] = ArchiveReasons.Synced,
-                ["deletionOrigin"] = SyncDeletionOrigins.Remote,
+                ["reason"] = ArchiveReason.Received(explicitDeletion: true).StoredReason,
+                ["deletionOrigin"] = ArchiveReason.Received(explicitDeletion: true).DeletionOrigin,
                 ["archivedAt"] = record["tombstone"]?["deletedAt"]?.DeepClone() ?? JsonValue.Create(now)
             });
         }

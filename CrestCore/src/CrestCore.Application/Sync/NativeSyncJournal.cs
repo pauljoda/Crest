@@ -78,6 +78,10 @@ public sealed class NativeSyncJournal {
 
     private static JsonObject Value(JsonNode payload) => payload["value"]!.AsObject();
 
+    /// An archive reason this build does not know counts as a close, as the
+    /// stored session reads it.
+    private static ArchiveReason Known(string name) => ArchiveReason.Named(name) ?? ArchiveReason.Closed;
+
     private static JsonObject PayloadId(JsonObject payload) {
         string kind = payload["type"]!.GetValue<string>();
         var identity = kind == SyncRecordKinds.Archive ? Value(payload)["tab"]! : Value(payload);
@@ -194,9 +198,9 @@ public sealed class NativeSyncJournal {
                 var spaces = records.Values.Where(r => Kind(r) == SyncRecordKinds.Space).Select(r => Id(r["spaceID"])).ToHashSet();
                 var folderRecords = records.Values.Where(r => Kind(r) == SyncRecordKinds.Folder).ToDictionary(r => Id(r["id"]!["value"]));
                 var archiveReasons = session is null
-                    ? args["archiveReasons"]!.AsArray().ToDictionary(n => Id(n!["id"]), n => n!["reason"]!.GetValue<string>())
+                    ? args["archiveReasons"]!.AsArray().ToDictionary(n => Id(n!["id"]), n => Known(n!["reason"]!.GetValue<string>()))
                     : NativeSyncProjection.Items(session, "spaces").SelectMany(s => NativeSyncProjection.Items(s!, StoredSessionCodec.Key.ArchivedTabs))
-                        .ToDictionary(a => Id(a!["tab"]!["id"]), a => NativeSyncProjection.ArchiveReason(a!));
+                        .ToDictionary(a => Id(a!["tab"]!["id"]), a => Known(NativeSyncProjection.ArchiveReasonName(a!)));
                 foreach (var (id, payload) in desired.OrderBy(p => p.Key, StringComparer.Ordinal)) {
                     if (next.TryGetValue(id, out var existing) && NativeSyncEvaluator.Equivalent(Payload(existing), payload)) continue;
                     next[id] = Save(payload); queued.Add(id);

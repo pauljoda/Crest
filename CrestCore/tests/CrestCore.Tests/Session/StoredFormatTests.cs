@@ -41,8 +41,14 @@ public sealed class StoredFormatTests {
     /// The stored session and the synced records spell each member of these
     /// sets as its name, so a renamed member would misread a person's data.
     [Fact]
-    public void StoredSpellingsNeverChange() =>
+    public void StoredSpellingsNeverChange() {
         Assert.Equal(["pinned", "saved", "current"], TabPlacement.All.Select(placement => placement.Name));
+        Assert.Equal(["autoCleanup", "closed", "deleted", "deletedOnAnotherDevice", "quickWindow", "synced"],
+            ArchiveReason.All.Select(reason => reason.Name));
+        Assert.Equal(["autoCleanup", "closed", "closed", "synced", "quickWindow", "synced"],
+            ArchiveReason.All.Select(reason => reason.StoredReason));
+        Assert.Equal([null, null, "local", "remote", null, null], ArchiveReason.All.Select(reason => reason.DeletionOrigin));
+    }
 
     [Theory]
     [InlineData("maximal-session.json")]

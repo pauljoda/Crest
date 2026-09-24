@@ -186,7 +186,8 @@ public static class NativeSyncEvaluator {
             if (!byId.TryGetValue(archiveName, out var archiveRecord) || Payload(archiveRecord) is not { } archive) continue;
             var payload = Payload(tab)!;
             bool active = SyncConflictPolicy.ActiveTabWins(Placement(payload), Date(payload, "lastActivatedAt")!.Value,
-                Version(tab), Text(archive, "reason"), Date(archive, "archivedAt")!.Value, Version(archiveRecord));
+                Version(tab), ArchiveReason.Named(Text(archive, "reason")) ?? ArchiveReason.Closed, Date(archive, "archivedAt")!.Value,
+                Version(archiveRecord));
             byId.Remove(active ? archiveName : Name(tab));
         }
         return new JsonArray(byId.OrderBy(p => p.Key, StringComparer.Ordinal).Select(p => p.Value.DeepClone()).ToArray());

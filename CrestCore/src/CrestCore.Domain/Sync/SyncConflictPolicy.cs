@@ -24,9 +24,9 @@ public static class SyncConflictPolicy {
     }
 
     public static bool ActiveTabWins(TabPlacement placement, double activated, SyncVersion tabVersion,
-        string archiveReason, double archived, SyncVersion archiveVersion)
-        => placement.IsDurable || archiveReason is ArchiveReasons.Deleted or ArchiveReasons.DeletedOnAnotherDevice
-            || (archiveReason == ArchiveReasons.AutoCleanup ? activated > archived : tabVersion.CompareTo(archiveVersion) > 0);
+        ArchiveReason archiveReason, double archived, SyncVersion archiveVersion)
+        => placement.IsDurable || archiveReason.IsExplicitDeletion
+            || (archiveReason.IsCleanup ? activated > archived : tabVersion.CompareTo(archiveVersion) > 0);
 
     #endregion
 }

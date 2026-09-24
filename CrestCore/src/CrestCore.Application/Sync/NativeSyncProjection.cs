@@ -27,8 +27,19 @@ public static class NativeSyncProjection {
 
     internal static bool PortableTab(JsonNode tab) => SyncContentPolicy.IncludesTab(Text(tab["url"]), tab["nativeContent"] is not null, SavedUrl(tab));
 
-    internal static string ArchiveReason(JsonNode archive)
-        => SyncContentPolicy.ArchiveReason(Text(archive["reason"])!, Text(archive["deletionOrigin"]));
+    /// A stored archive record's reason as sync spells it. A reason this build
+    /// does not know keeps its stored spelling.
+    internal static string ArchiveReasonName(JsonNode archive) {
+        string stored = Text(archive["reason"])!;
+        return ArchiveReason.Stored(stored, Text(archive["deletionOrigin"]))?.Name ?? stored;
+    }
+
+    /// The reason a synced archive record carries, given the one the shared
+    /// record carried before.
+    private static string SyncedArchiveReason(JsonNode archive, string? shared) {
+        string name = ArchiveReasonName(archive);
+        return ArchiveReason.Named(name)?.SyncProjection(shared) ?? name;
+    }
 
     internal static SyncPreferences Preferences(JsonNode source) => new(
         source["savedStructure"]!.GetValue<bool>(), source["currentTabs"]!.GetValue<bool>(), source["historyAndArchive"]!.GetValue<bool>());
@@ -110,8 +121,7 @@ public static class NativeSyncProjection {
             for (int j = 0; j < archive.Length; j++) Add(SyncRecordKinds.Archive, new JsonObject {
                 ["tab"] = Tab(archive[j]["tab"]!, space["id"]!, archiveTokens[j], archived: true),
                 ["archivedAt"] = archive[j]["archivedAt"]!.DeepClone(),
-                ["reason"] = SyncContentPolicy.ProjectArchiveReason(ArchiveReason(archive[j]),
-                    archiveReasons.GetValueOrDefault(Id(archive[j]["tab"]!["id"])))
+                ["reason"] = SyncedArchiveReason(archive[j], archiveReasons.GetValueOrDefault(Id(archive[j]["tab"]!["id"])))
             });
         }
         return result;

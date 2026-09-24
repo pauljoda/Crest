@@ -61,6 +61,8 @@ private struct NameKey: CodingKey {
 
 extension AdapterRole: CoreNamedValue {}
 
+extension ArchiveReason: CoreNamedValue {}
+
 extension CapabilityStatus: CoreNamedValue {}
 
 extension DevicePlatform: CoreNamedValue {}

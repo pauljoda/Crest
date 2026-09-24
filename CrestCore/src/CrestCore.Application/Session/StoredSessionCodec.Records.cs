@@ -8,14 +8,6 @@ namespace CrestCore.Application;
 internal static partial class StoredSessionCodec {
     #region Variables
 
-    private const string AutoCleanupReason = "autoCleanup";
-    private const string ClosedReason = "closed";
-    private const string DeletedReason = "deleted";
-    private const string DeletedOnAnotherDeviceReason = "deletedOnAnotherDevice";
-    private const string QuickWindowReason = "quickWindow";
-    private const string SyncedReason = "synced";
-    private const string LocalDeletion = "local";
-    private const string RemoteDeletion = "remote";
     private const string UntitledFolder = "Folder";
 
     #endregion
@@ -79,42 +71,21 @@ internal static partial class StoredSessionCodec {
 
     #region Actions - Archive
 
-    /// An archived tab. Swift keeps its deletion causes readable by older builds:
-    /// a local deletion is a close from `local` and one confirmed elsewhere a sync
-    /// from `remote`. An unknown cause is a close.
+    /// An archived tab. Its reason is spelled so older builds can read it, with
+    /// a deletion origin for the two deletions. An unknown cause is a close.
     internal static ArchivedTabState DecodeArchivedTab(JsonNode? node) {
         var value = Object(node);
-        var reason = Text(value[Key.DeletionOrigin]) switch {
-            LocalDeletion => ArchiveReason.Deleted,
-            RemoteDeletion => ArchiveReason.DeletedOnAnotherDevice,
-            _ => Text(value[Key.Reason]) switch {
-                AutoCleanupReason => ArchiveReason.AutoCleanup,
-                DeletedReason => ArchiveReason.Deleted,
-                DeletedOnAnotherDeviceReason => ArchiveReason.DeletedOnAnotherDevice,
-                QuickWindowReason => ArchiveReason.QuickWindow,
-                SyncedReason => ArchiveReason.Synced,
-                _ => ArchiveReason.Closed
-            }
-        };
+        var reason = ArchiveReason.Stored(Text(value[Key.Reason]), Text(value[Key.DeletionOrigin])) ?? ArchiveReason.Closed;
         return new(DecodeTab(value[Key.Tab]), Date(value[Key.ArchivedAt]), reason);
     }
 
     internal static JsonObject Encode(ArchivedTabState archived) {
-        var (reason, origin) = archived.Reason switch {
-            ArchiveReason.AutoCleanup => (AutoCleanupReason, (string?)null),
-            ArchiveReason.Closed => (ClosedReason, null),
-            ArchiveReason.Deleted => (ClosedReason, LocalDeletion),
-            ArchiveReason.DeletedOnAnotherDevice => (SyncedReason, RemoteDeletion),
-            ArchiveReason.QuickWindow => (QuickWindowReason, null),
-            ArchiveReason.Synced => (SyncedReason, null),
-            _ => throw new BrowserRuleException(BrowserRuleCodes.InvalidSavedState)
-        };
         var value = new JsonObject {
             [Key.Tab] = Encode(archived.Tab),
             [Key.ArchivedAt] = Seconds(archived.ArchivedAt),
-            [Key.Reason] = reason
+            [Key.Reason] = archived.Reason.StoredReason
         };
-        Put(value, Key.DeletionOrigin, origin);
+        Put(value, Key.DeletionOrigin, archived.Reason.DeletionOrigin);
         return value;
     }
 

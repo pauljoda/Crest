@@ -7,7 +7,7 @@ import Foundation
 enum CoreCodec {
     /// SHA-256 of the canonical contract schema. The core refuses any other.
     static let fingerprint: [UInt8] = [
-        0xeb, 0x79, 0xc7, 0x05, 0x4e, 0xa1, 0x29, 0x95, 0x62, 0x74, 0x44, 0x70, 0x55, 0x4e, 0x9c, 0xbe, 0xe8, 0x2f, 0xab, 0x1e, 0x5b, 0x3f, 0x03, 0x7b, 0x27, 0x00, 0xe8, 0x38, 0x6b, 0x5b, 0x4c, 0x20
+        0x6d, 0x60, 0x6d, 0xc7, 0xce, 0x12, 0xb9, 0x75, 0x3c, 0x46, 0x8b, 0x01, 0x8a, 0xb2, 0x2d, 0x4a, 0x85, 0x28, 0x3e, 0x15, 0x65, 0x2e, 0xd1, 0x6f, 0x05, 0x21, 0x60, 0xfe, 0x39, 0xc9, 0x49, 0xbe
     ]
 
     static func decodeIntent(from reader: inout WireReader) throws(WireError) -> any Intent {
@@ -2992,6 +2992,20 @@ extension SystemPasswordWriteThroughAvailability {
     }
 }
 
+extension SystemTint {
+    init(from reader: inout WireReader) throws(WireError) {
+        let rawValue = try reader.readEnum()
+        guard let value = SystemTint(rawValue: rawValue) else {
+            throw WireError.malformed("Unknown SystemTint \(rawValue)")
+        }
+        self = value
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeEnum(rawValue)
+    }
+}
+
 extension TearOffRefusal {
     init(from reader: inout WireReader) throws(WireError) {
         let rawValue = try reader.readEnum()
@@ -3011,6 +3025,34 @@ extension AdapterRole {
         let tag = try reader.readEnum()
         guard Self.all.indices.contains(tag) else {
             throw WireError.malformed("Unknown AdapterRole \(tag)")
+        }
+        self = Self.all[tag]
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeEnum(tag)
+    }
+}
+
+extension ArchiveFilterGroup {
+    init(from reader: inout WireReader) throws(WireError) {
+        let tag = try reader.readEnum()
+        guard Self.all.indices.contains(tag) else {
+            throw WireError.malformed("Unknown ArchiveFilterGroup \(tag)")
+        }
+        self = Self.all[tag]
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeEnum(tag)
+    }
+}
+
+extension ArchiveReason {
+    init(from reader: inout WireReader) throws(WireError) {
+        let tag = try reader.readEnum()
+        guard Self.all.indices.contains(tag) else {
+            throw WireError.malformed("Unknown ArchiveReason \(tag)")
         }
         self = Self.all[tag]
     }

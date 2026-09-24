@@ -837,6 +837,13 @@ enum SystemPasswordWriteThroughAvailability: Int, CaseIterable, Sendable {
     case managedBrowserCapabilityRequired = 4
 }
 
+enum SystemTint: Int, CaseIterable, Sendable {
+    case red = 0
+    case orange = 1
+    case purple = 2
+    case blue = 3
+}
+
 enum TearOffRefusal: Int, CaseIterable, Sendable {
     case spaceChanged = 0
     case spaceLocked = 1
@@ -868,6 +875,195 @@ struct AdapterRole: Hashable, Sendable {
     }
 
     static func == (lhs: AdapterRole, rhs: AdapterRole) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+}
+
+/// The members of the core's `ArchiveFilterGroup`. A member's wire tag is its index in `all`.
+struct ArchiveFilterGroup: Hashable, Sendable {
+    let tag: Int
+    let name: String
+    let title: LocalizedStringResource
+    let symbol: String
+
+    private init(tag: Int, name: String, title: LocalizedStringResource, symbol: String) {
+        self.tag = tag
+        self.name = name
+        self.title = title
+        self.symbol = symbol
+    }
+
+    static let closed = ArchiveFilterGroup(
+        tag: 0,
+        name: "closed",
+        title: LocalizedStringResource("Closed"),
+        symbol: "xmark.circle.fill"
+    )
+    static let automatic = ArchiveFilterGroup(
+        tag: 1,
+        name: "automatic",
+        title: LocalizedStringResource("Automatically Cleaned"),
+        symbol: "archivebox.fill"
+    )
+    static let synced = ArchiveFilterGroup(
+        tag: 2,
+        name: "synced",
+        title: LocalizedStringResource("Synced from Another Device"),
+        symbol: "icloud.and.arrow.down.fill"
+    )
+    static let quickWindow = ArchiveFilterGroup(
+        tag: 3,
+        name: "quickWindow",
+        title: LocalizedStringResource("Quick Windows"),
+        symbol: "timer"
+    )
+
+    static let all: [ArchiveFilterGroup] = [closed, automatic, synced, quickWindow]
+
+    static func named(_ name: String?) -> ArchiveFilterGroup? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: ArchiveFilterGroup, rhs: ArchiveFilterGroup) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+}
+
+/// The members of the core's `ArchiveReason`. A member's wire tag is its index in `all`.
+/// Core-only behavior, not emitted: `syncProjection`.
+struct ArchiveReason: Hashable, Sendable {
+    let tag: Int
+    let name: String
+    let storedReason: String
+    let deletionOrigin: String?
+    let filterGroup: ArchiveFilterGroup
+    let title: LocalizedStringResource
+    let symbol: String
+    let tint: SystemTint
+    let isExplicitDeletion: Bool
+    let isCleanup: Bool
+    let isReceived: Bool
+
+    private init(
+        tag: Int,
+        name: String,
+        storedReason: String,
+        deletionOrigin: String?,
+        filterGroup: ArchiveFilterGroup,
+        title: LocalizedStringResource,
+        symbol: String,
+        tint: SystemTint,
+        isExplicitDeletion: Bool,
+        isCleanup: Bool,
+        isReceived: Bool
+    ) {
+        self.tag = tag
+        self.name = name
+        self.storedReason = storedReason
+        self.deletionOrigin = deletionOrigin
+        self.filterGroup = filterGroup
+        self.title = title
+        self.symbol = symbol
+        self.tint = tint
+        self.isExplicitDeletion = isExplicitDeletion
+        self.isCleanup = isCleanup
+        self.isReceived = isReceived
+    }
+
+    static let autoCleanup = ArchiveReason(
+        tag: 0,
+        name: "autoCleanup",
+        storedReason: "autoCleanup",
+        deletionOrigin: nil,
+        filterGroup: ArchiveFilterGroup.automatic,
+        title: LocalizedStringResource("Automatically cleaned"),
+        symbol: "archivebox.fill",
+        tint: .orange,
+        isExplicitDeletion: false,
+        isCleanup: true,
+        isReceived: false
+    )
+    static let closed = ArchiveReason(
+        tag: 1,
+        name: "closed",
+        storedReason: "closed",
+        deletionOrigin: nil,
+        filterGroup: ArchiveFilterGroup.closed,
+        title: LocalizedStringResource("Closed"),
+        symbol: "xmark.circle.fill",
+        tint: .red,
+        isExplicitDeletion: false,
+        isCleanup: false,
+        isReceived: false
+    )
+    static let deleted = ArchiveReason(
+        tag: 2,
+        name: "deleted",
+        storedReason: "closed",
+        deletionOrigin: "local",
+        filterGroup: ArchiveFilterGroup.closed,
+        title: LocalizedStringResource("Deleted"),
+        symbol: "trash.fill",
+        tint: .red,
+        isExplicitDeletion: true,
+        isCleanup: false,
+        isReceived: false
+    )
+    static let deletedOnAnotherDevice = ArchiveReason(
+        tag: 3,
+        name: "deletedOnAnotherDevice",
+        storedReason: "synced",
+        deletionOrigin: "remote",
+        filterGroup: ArchiveFilterGroup.synced,
+        title: LocalizedStringResource("Deleted on another device"),
+        symbol: "trash.fill",
+        tint: .red,
+        isExplicitDeletion: true,
+        isCleanup: false,
+        isReceived: true
+    )
+    static let quickWindow = ArchiveReason(
+        tag: 4,
+        name: "quickWindow",
+        storedReason: "quickWindow",
+        deletionOrigin: nil,
+        filterGroup: ArchiveFilterGroup.quickWindow,
+        title: LocalizedStringResource("Quick Window"),
+        symbol: "timer",
+        tint: .purple,
+        isExplicitDeletion: false,
+        isCleanup: false,
+        isReceived: false
+    )
+    static let synced = ArchiveReason(
+        tag: 5,
+        name: "synced",
+        storedReason: "synced",
+        deletionOrigin: nil,
+        filterGroup: ArchiveFilterGroup.synced,
+        title: LocalizedStringResource("Synced from another device"),
+        symbol: "icloud.and.arrow.down.fill",
+        tint: .blue,
+        isExplicitDeletion: false,
+        isCleanup: false,
+        isReceived: true
+    )
+
+    static let all: [ArchiveReason] = [autoCleanup, closed, deleted, deletedOnAnotherDevice, quickWindow, synced]
+
+    static func named(_ name: String?) -> ArchiveReason? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: ArchiveReason, rhs: ArchiveReason) -> Bool {
         lhs.tag == rhs.tag
     }
 

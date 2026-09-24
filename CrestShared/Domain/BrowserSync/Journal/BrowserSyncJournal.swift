@@ -286,7 +286,7 @@ struct BrowserSyncJournal: Codable, Equatable, Sendable {
     private static func deletionReason(
         for payload: BrowserSyncPayload,
         desiredPayloadsByID: [BrowserSyncRecordID: BrowserSyncPayload],
-        archivedTabReasonsByID: [TabID: TabArchiveReason],
+        archivedTabReasonsByID: [TabID: ArchiveReason],
         fallback: BrowserSyncTombstoneReason
     ) -> BrowserSyncTombstoneReason? {
         guard case .tab(let tab) = payload else {

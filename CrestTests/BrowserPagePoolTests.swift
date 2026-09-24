@@ -2932,7 +2932,7 @@ final class BrowserPagePoolTests: XCTestCase {
 
     /// What the core does when a tab is closed or deleted: the tab moves to
     /// its Space's archive.
-    private func archiveTab(_ tabID: TabID, reason: TabArchiveReason, in session: inout BrowserSession) {
+    private func archiveTab(_ tabID: TabID, reason: ArchiveReason, in session: inout BrowserSession) {
         for index in session.spaces.indices {
             guard let position = session.spaces[index].tabs.firstIndex(where: { $0.id == tabID }) else { continue }
             let tab = session.spaces[index].tabs.remove(at: position)

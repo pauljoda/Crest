@@ -159,7 +159,7 @@ enum BrowserShowcaseSessionFactory {
         _ title: String,
         _ url: URL,
         _ symbol: String,
-        reason: TabArchiveReason,
+        reason: ArchiveReason,
         secondsAgo: TimeInterval
     ) -> ArchivedTab {
         ArchivedTab(

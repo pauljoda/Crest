@@ -1855,7 +1855,7 @@ final class BrowserSyncTests: XCTestCase {
 
         try journal.stage(session: materialized, at: fixedDate(700))
         XCTAssertTrue(
-            journal.activeRecords.compactMap { record -> TabArchiveReason? in
+            journal.activeRecords.compactMap { record -> ArchiveReason? in
                 guard case .archive(let archive)? = record.payload else {
                     return nil
                 }

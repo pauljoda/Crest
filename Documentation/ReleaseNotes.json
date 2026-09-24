@@ -2213,6 +2213,10 @@
     "tab-placement-set": {
       "category": "internal",
       "message": "Tab placements are one set that ranks and describes its sections."
+    },
+    "archive-reason-set": {
+      "category": "internal",
+      "message": "Archive reasons are spelled once, on the reasons themselves."
     }
   }
 }
