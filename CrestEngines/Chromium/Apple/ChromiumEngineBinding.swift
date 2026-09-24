@@ -36,6 +36,9 @@
                     hostCommands: hostCommands, binding: self)
                 pages[creation.pageID] = page
                 request.built = ChromiumPageAdapter(page)
+            case .loadPage(let loading):
+                guard let url = URL(string: loading.url) else { return }
+                pages[loading.pageID]?.loadRequested(url)
             case .closePage(let closing):
                 pages.removeValue(forKey: closing.pageID)?.dispose()
                 report(PageClosed(pageID: closing.pageID))

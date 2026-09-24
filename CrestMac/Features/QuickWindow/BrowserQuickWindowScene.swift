@@ -143,7 +143,7 @@ struct BrowserQuickWindowScene: View {
                 ) != nil
             else { return }
             context.pages.select(session: context.browser.presented)
-            context.pages.load(url)
+            context.pages.navigate(to: url.absoluteString)
             openBrowserWindow()
             dismissWindow()
         }

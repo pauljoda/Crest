@@ -13,7 +13,7 @@ struct BrowserQuickWindowAddressControl: View {
             BrowserQuickWindowSourceSpaceIndicator(space: model.space)
             Divider().frame(height: 16)
             BrowserQuickWindowAddressSecurityIcon(
-                isSecure: model.page?.hasOnlySecureContent == true
+                isSecure: model.page?.live.security.isSecure == true
             )
             BrowserAddressContent(
                 text: $addressText,
@@ -37,7 +37,7 @@ struct BrowserQuickWindowAddressControl: View {
         .browserAddressFieldSurface(
             leadingPadding: BrowserQuickWindowLayout.sourceChipLeadingInset,
             progress: model.page?.estimatedProgress ?? 0,
-            isLoading: model.page?.isLoading == true,
+            isLoading: model.page?.live.isLoading == true,
             isEditing: isAddressEditing
         )
         .frame(

@@ -25,7 +25,7 @@ extension BrowserPage {
                 removeHostedWebNotifications()
             }
         }
-        guard let currentURL = displayURL ?? webKitView?.url,
+        guard let currentURL = live.displayURL ?? webKitView?.url,
             let origin = BrowserSiteOrigin(url: currentURL)
         else {
             return
@@ -539,7 +539,7 @@ extension BrowserPage {
         origin: BrowserSiteOrigin
     ) -> Bool {
         guard documentIdentifier == hostedNotificationDocumentIdentifier,
-            let currentURL = webKitView?.url ?? displayURL,
+            let currentURL = webKitView?.url ?? live.displayURL,
             let currentOrigin = BrowserSiteOrigin(url: currentURL)
         else { return false }
         return currentOrigin == origin

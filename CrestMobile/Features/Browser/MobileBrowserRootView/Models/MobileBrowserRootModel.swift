@@ -10,7 +10,6 @@ final class MobileBrowserRootModel {
     let pages: MobileBrowserPageStore
     let navigation: MobileBrowserNavigationState
     let spaceAccess: BrowserSpaceAccessController
-    private let pageSession: BrowserPageSessionSynchronizer
     let windowState: BrowserWindowStateStore?
     private let layoutPersistence: BrowserWindowLayoutPersistence
     let startupBehavior: BrowserStartupBehavior
@@ -45,7 +44,6 @@ final class MobileBrowserRootModel {
         settings = MobileBrowserSettingsPresentation(
             browser: browser, pages: pages, navigation: navigation, spaceAccess: spaceAccess)
         self.spaceAccess = spaceAccess
-        pageSession = BrowserPageSessionSynchronizer(browser: browser, spaceAccess: spaceAccess)
         self.windowState = windowState
         layoutPersistence = BrowserWindowLayoutPersistence(windowState: windowState)
         self.startupBehavior = startupBehavior
@@ -140,14 +138,11 @@ extension MobileBrowserRootModel {
 // MARK: - Page Synchronization
 
 extension MobileBrowserRootModel {
-    /// Shows the address of the selected page in the address field, unless
-    /// the person is editing it. The core records what the page's navigations
-    /// change in the session from its engine's reports.
+    /// Shows the address the selected page reads in the core in the address
+    /// field, unless the person is editing it or the Space is locked.
     func synchronizePageMetadata(isAddressEditing: Bool) {
-        guard let page = selectedPage, let source = selectedTabAssignment,
-            let updatedAddress = pageSession.address(of: page.metadata, matching: source)
-        else { return }
-        if !isAddressEditing { address = updatedAddress }
+        guard !isAddressEditing, !selectedSpaceIsLocked, let page = selectedPage else { return }
+        address = (page.live.displayURL ?? browser.selectedTab?.url)?.absoluteString ?? ""
     }
 
 }
@@ -171,18 +166,15 @@ extension MobileBrowserRootModel {
         navigation.selectTab()
     }
 
+    /// Loads what the person typed, which the core resolves by the Space's
+    /// address rules. A native Settings or Getting Started tab takes the
+    /// address first, so a page can open for it. False when a rule refused it.
     @discardableResult
     func submitAddress() -> Bool {
-        guard
-            let url = AddressResolver.resolve(
-                address,
-                searchProvider: browser.selectedSpace?.browsingPreferences.searchProvider
-                    ?? .google
-            )
-        else { return false }
-        browser.navigateSelectedTab(to: url)
-        pages.selectAndLoad(url, in: browser.presented)
-        address = url.absoluteString
+        let input = address
+        browser.navigateSelectedTab(to: input)
+        guard pages.selectAndNavigate(to: input, in: browser.presented) else { return false }
+        address = (selectedPage?.live.displayURL ?? browser.selectedTab?.url)?.absoluteString ?? input
         navigation.selectTab()
         return true
     }
@@ -579,10 +571,10 @@ extension MobileBrowserRootModel {
         else { return false }
         switch mode {
         case .editLocation:
-            browser.navigateSelectedTab(to: url)
+            browser.navigateSelectedTab(to: url.absoluteString)
         case .newTab:
             if browser.selectedTab?.isStartPage == true {
-                browser.navigateSelectedTab(to: url)
+                browser.navigateSelectedTab(to: url.absoluteString)
             } else {
                 guard
                     browser.openNewTab(
@@ -595,7 +587,7 @@ extension MobileBrowserRootModel {
                 else { return false }
             }
         }
-        pages.selectAndLoad(url, in: browser.presented)
+        pages.selectAndNavigate(to: url.absoluteString, in: browser.presented)
         address = url.absoluteString
         return true
     }

@@ -24,7 +24,7 @@ struct BrowserSiteControlContent: View {
             BrowserEngineSiteControlsSection(
                 page: configuration.page,
                 space: configuration.space,
-                url: configuration.page.url,
+                url: configuration.page.live.documentURL,
                 dismiss: dismiss
             )
             Divider()

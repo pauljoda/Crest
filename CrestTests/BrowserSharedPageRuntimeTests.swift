@@ -14,31 +14,21 @@ final class BrowserSharedPageRuntimeTests: XCTestCase {
         pool.select(tab: tab, space: space)
         let page = try XCTUnwrap(pool.activePage)
         let url = try XCTUnwrap(URL(string: "https://example.com/first"))
-        var state = BrowserPageEngineState(
-            url: url, title: "First", isLoading: true,
-            security: .secure, themeColor: nil,
-            canGoBack: false, canGoForward: false, failure: nil, committed: false)
 
         page.receive(.navigationStarted)
-        page.receive(.stateChanged(state))
-        state.committed = true
-        page.receive(.stateChanged(state))
+        page.receive(.loadingChanged(true))
+        page.receive(.navigationCommitted(url, isLoading: true))
         XCTAssertEqual(page.completedNavigationCount, 0)
-        state.committed = false
-        state.isLoading = false
-        page.receive(.stateChanged(state))
+        page.receive(.loadingChanged(false))
         XCTAssertEqual(page.completedNavigationCount, 1)
 
         page.receive(.navigationStarted)
-        state.isLoading = true
-        page.receive(.stateChanged(state))
-        state.isLoading = false
-        page.receive(.stateChanged(state))
+        page.receive(.loadingChanged(true))
+        page.receive(.loadingChanged(false))
         XCTAssertEqual(page.completedNavigationCount, 1)
 
-        state.url = try XCTUnwrap(URL(string: "https://example.com/first#section"))
-        state.committed = true
-        page.receive(.stateChanged(state))
+        let section = try XCTUnwrap(URL(string: "https://example.com/first#section"))
+        page.receive(.navigationCommitted(section, isLoading: false))
         XCTAssertEqual(page.completedNavigationCount, 2)
     }
 

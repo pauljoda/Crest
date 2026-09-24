@@ -1,8 +1,8 @@
 import Foundation
 
-/// Tells the core what one page's engine saw its navigations and its icon do.
-/// Every engine binding feeds it the engine's own callbacks, so a page reports
-/// the same events whichever engine hosts it:
+/// Tells the core what one page's engine shows and what its navigations and
+/// icon do. Every engine binding feeds it the engine's own callbacks, so a
+/// page reports the same events whichever engine hosts it:
 ///
 /// - A navigation that loads a new document starts, commits, then finishes
 ///   with the title it settled on, or fails.
@@ -12,12 +12,17 @@ import Foundation
 ///   document is still loading belongs to that load, which finishes it.
 /// - An icon is reported when the engine finds one for the document, and
 ///   again when the page's theme changes the color behind it.
+/// - What the page shows, its `PageSnapshot`, is reported at the end of any
+///   main-queue turn in which the binding said it changed, and only when it
+///   differs from the last one reported, so a burst of engine callbacks costs
+///   the core one report. The snapshot carries the address a navigation that
+///   has not committed is heading to, which this tracks.
 ///
 /// The core decides what each event records; this only decides when the
 /// engine's callbacks amount to one.
 @MainActor
 final class EnginePageReporter {
-    // MARK: - Variables
+    // MARK: - Static Variables
 
     /// How long a page's title must hold after a move within its document
     /// before the move finishes. Sites that route in script, such as video,
@@ -31,10 +36,23 @@ final class EnginePageReporter {
     /// as one counting unread mail, still records.
     static let titleSettleLimit: Duration = .seconds(2)
 
+    /// The reporters whose page changed in this turn, reported together once
+    /// it ends.
+    private static var changedThisTurn: [EnginePageReporter] = []
+
+    // MARK: - Variables
+
     private let report: @MainActor (any EngineEvent, Data?) -> Void
-    /// The page's title as the engine shows it now.
-    private let currentTitle: @MainActor () -> String
+    /// What the engine shows now, given the address a navigation that has not
+    /// committed is heading to.
+    private let snapshot: @MainActor (_ pendingURL: String?) -> PageSnapshot
     private let pageID: UUID
+    /// The last snapshot reported, which a new one must differ from.
+    private var reported: PageSnapshot?
+    /// The page changed since its last report, which is due when the turn ends.
+    private var isReportDue = false
+    /// Where a navigation that has not committed is heading.
+    private(set) var pendingURL: URL?
     /// The document's address as last reported.
     private var documentURL: URL?
     /// A navigation to a new document started and has not finished or failed.
@@ -50,30 +68,74 @@ final class EnginePageReporter {
     // MARK: - Initializers
 
     /// A reporter for `pageID` that hands each event to `report`, with the
-    /// image a `PageIconChanged` names, and reads the page's title from
-    /// `title` when a move within the document settles.
+    /// image a `PageIconChanged` names, and reads what the engine shows from
+    /// `snapshot`, which is given the pending address to carry.
     init(
-        pageID: UUID, title: @escaping @MainActor () -> String,
+        pageID: UUID, snapshot: @escaping @MainActor (_ pendingURL: String?) -> PageSnapshot,
         report: @escaping @MainActor (any EngineEvent, Data?) -> Void
     ) {
         self.pageID = pageID
-        currentTitle = title
+        self.snapshot = snapshot
         self.report = report
     }
 
     /// A reporter that reports through the engine hosting `page`.
-    convenience init(page: CorePage, title: @escaping @MainActor () -> String) {
-        self.init(pageID: page.id, title: title) { [weak page] event, icon in page?.report(event, icon: icon) }
+    convenience init(page: CorePage, snapshot: @escaping @MainActor (_ pendingURL: String?) -> PageSnapshot) {
+        self.init(pageID: page.id, snapshot: snapshot) { [weak page] event, icon in page?.report(event, icon: icon) }
+    }
+
+    // MARK: - Actions - State
+
+    /// What the page shows changed. The page reports once this turn ends,
+    /// however often this is called before then.
+    func stateChanged() {
+        guard !isReportDue else { return }
+        isReportDue = true
+        Self.changedThisTurn.append(self)
+        guard Self.changedThisTurn.count == 1 else { return }
+        DispatchQueue.main.async {
+            MainActor.assumeIsolated { Self.reportChangedPages() }
+        }
+    }
+
+    private static func reportChangedPages() {
+        let changed = changedThisTurn
+        changedThisTurn = []
+        for reporter in changed { reporter.reportState() }
+    }
+
+    private func reportState() {
+        isReportDue = false
+        let current = snapshot(pendingURL?.absoluteString)
+        guard current != reported else { return }
+        reported = current
+        report(PageStateChanged(pageID: pageID, snapshot: current), nil)
     }
 
     // MARK: - Actions - Navigation
+
+    /// The page is heading to `url`: the app asked it to load the address, or
+    /// the engine accepted a navigation of its document to it.
+    func heading(to url: URL?) {
+        guard let url else { return }
+        pendingURL = url
+        stateChanged()
+    }
 
     /// A navigation to a new document began, toward `url` when the engine
     /// knows it yet.
     func started(_ url: URL?) {
         cancelSettling()
         isLoadingDocument = true
+        if let url { pendingURL = url }
+        stateChanged()
         report(NavigationStarted(pageID: pageID, url: url?.absoluteString ?? "", sameDocument: false), nil)
+    }
+
+    /// The server sent the navigation that has not committed on to `url`.
+    func redirected(to url: URL) {
+        pendingURL = url
+        stateChanged()
     }
 
     /// The new document took effect at `url`, without the icon of the one it
@@ -81,7 +143,9 @@ final class EnginePageReporter {
     func committed(_ url: URL) {
         cancelSettling()
         documentURL = url
+        pendingURL = nil
         icon = nil
+        stateChanged()
         report(NavigationCommitted(pageID: pageID, url: url.absoluteString, sameDocument: false), nil)
     }
 
@@ -90,20 +154,35 @@ final class EnginePageReporter {
         cancelSettling()
         isLoadingDocument = false
         documentURL = url
+        pendingURL = nil
+        stateChanged()
         report(NavigationFinished(pageID: pageID, url: url.absoluteString, title: title ?? ""), nil)
     }
 
-    /// The navigation failed and its document records nothing.
-    func failed(_ url: URL?, error: NavigationError) {
+    /// The navigation failed as `failure` describes, and its document records
+    /// nothing.
+    func failed(_ failure: PageFailure) {
         cancelSettling()
         isLoadingDocument = false
-        report(NavigationFailed(pageID: pageID, url: url?.absoluteString, error: error), nil)
+        pendingURL = nil
+        stateChanged()
+        report(NavigationFailed(pageID: pageID, failure: failure), nil)
     }
 
     /// The navigation stopped without failing, as one that became a download
     /// or was cancelled does, so no new document is loading.
     func interrupted() {
         isLoadingDocument = false
+        pendingURL = nil
+        stateChanged()
+    }
+
+    /// The engine's current history entry shows `url`, which ends a navigation
+    /// heading there that commits nothing, as a move within the document does.
+    func arrived(at url: URL?) {
+        guard let url, url == pendingURL else { return }
+        pendingURL = nil
+        stateChanged()
     }
 
     /// The page's address changed without a new document: a move within the
@@ -112,6 +191,7 @@ final class EnginePageReporter {
     func movedWithinDocument(to url: URL) {
         guard url != documentURL else { return }
         documentURL = url
+        stateChanged()
         report(NavigationStarted(pageID: pageID, url: url.absoluteString, sameDocument: true), nil)
         report(NavigationCommitted(pageID: pageID, url: url.absoluteString, sameDocument: true), nil)
         guard !isLoadingDocument else { return }
@@ -123,6 +203,7 @@ final class EnginePageReporter {
     /// The page's title changed, which restarts the wait of a move within the
     /// document, never past its limit.
     func titleChanged() {
+        stateChanged()
         guard let pending = settling else { return }
         pending.timer.cancel()
         settling = (
@@ -137,7 +218,7 @@ final class EnginePageReporter {
             guard let self, self.settling?.url == url else { return }
             self.settling = nil
             self.report(
-                NavigationFinished(pageID: self.pageID, url: url.absoluteString, title: self.currentTitle()), nil)
+                NavigationFinished(pageID: self.pageID, url: url.absoluteString, title: self.snapshot(nil).title), nil)
         }
     }
 

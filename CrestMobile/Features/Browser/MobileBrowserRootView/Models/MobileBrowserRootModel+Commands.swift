@@ -29,7 +29,7 @@ extension MobileBrowserRootModel {
             canGoForward: pageActions?.canGoForward == true,
             hasSelectedTab: browser.selectedTab != nil,
             hasActivePage: pageActions?.isAvailable == true,
-            isLoading: pageActions?.activePage?.isLoading == true,
+            isLoading: pageActions?.activePage?.live.isLoading == true,
             canDismissSelectedTab: controller.canDismissSelectedTab
                 && transientBrowsing.peekRequest == nil
                 && transientBrowsing.quickWindowRequest == nil,

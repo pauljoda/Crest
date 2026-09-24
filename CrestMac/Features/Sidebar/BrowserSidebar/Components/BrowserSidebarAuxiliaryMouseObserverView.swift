@@ -88,9 +88,9 @@ final class BrowserSidebarAuxiliaryMouseObserverView: NSView {
         guard let page else { return false }
         return switch action {
         case .previousSpace:
-            page.canGoBack
+            page.live.canGoBack
         case .nextSpace:
-            page.canGoForward
+            page.live.canGoForward
         }
     }
 

@@ -63,15 +63,15 @@ struct MobileSelectedPageActionPort: MobilePageActions {
     }
 
     var activeURL: URL? {
-        activePage?.url
+        activePage?.live.displayURL
     }
 
     var canGoBack: Bool {
-        activePage?.canGoBack == true
+        activePage?.live.canGoBack == true
     }
 
     var canGoForward: Bool {
-        activePage?.canGoForward == true
+        activePage?.live.canGoForward == true
     }
 
     var backHistory: [BrowserNavigationHistoryItem] {

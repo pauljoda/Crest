@@ -7,13 +7,16 @@ import os
 @Observable
 @MainActor
 final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPagePermissionProviding {
-    // MARK: - Variables
+    // MARK: - Static Variables
 
-    var opensModifiedLinksInForeground = false
     @ObservationIgnored static let lifecycleSignposter = OSSignposter(
         subsystem: "com.pauldavis.crest",
         category: "WebKitLifecycle"
     )
+
+    // MARK: - Variables
+
+    var opensModifiedLinksInForeground = false
 
     /// The core's page, which `release(keepingState:)` ends.
     @ObservationIgnored let corePage: CorePage
@@ -30,32 +33,27 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
         return controller
     }()
 
-    private(set) var url: URL?
-    private(set) var title = ""
+    /// What the page shows as the core holds it: its address, title,
+    /// loading, history, security, failure and media. Presentation that
+    /// changes constantly, such as progress, find and zoom, stays here.
+    var live: PageLiveState { corePage.live }
     private(set) var estimatedProgress = 0.0
-    private(set) var isLoading = false
     private(set) var isContentFullscreen: Bool {
         get { observed(\.isContentFullscreenStorage, as: \.isContentFullscreen) }
         set { publish(newValue, into: \.isContentFullscreenStorage, as: \.isContentFullscreen) }
     }
     @ObservationIgnored private var isContentFullscreenStorage = false
-    /// The engine's judgment of the current document's connection.
-    private(set) var securityState = BrowserPageSecurityState.none
     private(set) var faviconData: Data?
     private(set) var themeColor: NSColor?
-    private(set) var canGoBack = false
-    private(set) var canGoForward = false
     var processTerminationCount = 0
+    /// Documents the page committed and finished, which reveal its surface.
     var committedNavigationCount = 0
     var completedNavigationCount = 0
-    private var hasCommittedNavigationAwaitingCompletion = false
-    private(set) var navigationFailure: BrowserNavigationFailure?
+    @ObservationIgnored private var hasCommittedNavigationAwaitingCompletion = false
     var blockedPopupState = BrowserBlockedPopupPageState()
     private(set) var engineInfoBars: [BrowserEngineInfoBar] = []
     var pendingServerTrustIdentity: BrowserServerTrustIdentity?
-    var pendingNavigationURL: URL?
     var webContentFailureMessage: String?
-    var hasOnlySecureContent: Bool { securityState.isSecure }
     var isFindPresented: Bool { findSession.isPresented }
     var findQuery: String { findSession.query }
     var findMatchState: BrowserFindMatchState { findSession.matchState }
@@ -133,9 +131,6 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
         credentialSession.state
     }
     @ObservationIgnored let httpAuthenticationSession: BrowserHTTPAuthenticationSession
-    var displayURL: URL? {
-        navigationFailure?.failingURL ?? pendingNavigationURL ?? url
-    }
 
     // Session-only presentation state belongs to the live page, including in splits.
     private var developerToolbarVisibilityOverride: Bool?
@@ -147,7 +142,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
 
     var isDeveloperModeEnabled: Bool {
         developerToolbarVisibilityOverride
-            ?? (developerViewport != nil || BrowserDeveloperModePolicy.isAutomatic(for: displayURL))
+            ?? (developerViewport != nil || BrowserDeveloperModePolicy.isAutomatic(for: live.displayURL))
     }
 
     /// The tab that owns this page's Media Session, read when the session
@@ -164,8 +159,9 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
     var mediaSessionFallbackTitle: @MainActor () -> String? {
         { [weak self] in
             guard let self else { return nil }
-            return self.navigationContext?.mediaSessionOwnerTitle(observedPageTitle: self.title)
-                ?? BrowserTab.resolvedCustomTitle(self.title)
+            let title = self.live.title
+            return self.navigationContext?.mediaSessionOwnerTitle(observedPageTitle: title)
+                ?? BrowserTab.resolvedCustomTitle(title)
         }
     }
 
@@ -292,7 +288,8 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
             }
         )
         super.init()
-        sitePermissionSession.siteURL = { [weak self] in self?.pageEngine.currentURL ?? self?.url }
+        corePage.appLoad = { [weak self] in self?.load($0) }
+        sitePermissionSession.siteURL = { [weak self] in self?.pageEngine.currentURL ?? self?.live.documentURL }
         sitePermissionSession.siteDecisionDidChange = { [weak self] in self?.sitePermissionDidChange($0) }
         // The Space's default zoom; an engine that creates its page later
         // replays it then.
@@ -317,7 +314,8 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
                 )
             ) { [weak self] message in
                 guard let self else { return }
-                self.credentialSession.receive(message.body, from: message.frame, topLevelURL: self.url)
+                self.credentialSession.receive(
+                    message.body, from: message.frame, topLevelURL: self.pageEngine.currentURL)
             }
         }
     }
@@ -335,13 +333,16 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
         load(URLRequest(url: url))
     }
 
+    /// Loads `request` in the page as the app's own load, which only the app
+    /// may make: the core's `LoadPage`, or a request web content made that
+    /// the app replays. An address the person asked for goes through the
+    /// core's `Navigate`, never here.
     func load(_ request: URLRequest) {
         // An engine that reports its own navigations prepares the page when it
         // says one started; until then the page only shows the load pending.
-        if pageEngine.reportsNavigationState, let destination = request.url {
-            pendingNavigationURL = destination
+        if pageEngine.reportsNavigationState, request.url != nil {
+            engineAdapter.reporter?.heading(to: request.url)
             webContentFailureMessage = nil
-            isLoading = true
             pageEngine.load(request)
             return
         }
@@ -381,7 +382,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
         appInitiatedURL = url
         prepareForNavigation(to: url)
         guard pageEngine.restoreInteractionState(state, expecting: url) else {
-            pendingNavigationURL = nil
+            engineAdapter.reporter?.interrupted()
             return false
         }
         return true
@@ -408,8 +409,8 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
         let shouldRefreshAutomaticIcon =
             tab.iconMode.followsPage
             && !tab.hasCurrentAutomaticFavicon
-            && url != nil
-            && !isLoading
+            && live.url != nil
+            && !live.isLoading
         if faviconData != tab.displayFaviconData
             || navigationContext?.iconMode != tab.iconMode
             || navigationContext?.tabID != tab.id
@@ -471,7 +472,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
     }
 
     func presentFind() {
-        findSession.present(hasLoadedPage: url != nil)
+        findSession.present(hasLoadedPage: live.url != nil)
     }
 
     @discardableResult
@@ -492,7 +493,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
     }
 
     func beginRegionCapture() {
-        guard url != nil else { return }
+        guard live.url != nil else { return }
         isRegionCapturePresented = true
     }
 
@@ -549,7 +550,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
                 panel.canCreateDirectories = true
                 panel.nameFieldStringValue =
                     BrowserDeveloperCapturePolicy
-                    .pngFilename(title: title, url: url)
+                    .pngFilename(title: live.title, url: live.documentURL)
                 panel.title = "Save Portrait Capture"
                 panel.prompt = "Save"
                 guard await panel.beginSheetModal(for: window) == .OK,
@@ -677,7 +678,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
 
     @discardableResult
     func copyPageLink() -> Bool {
-        BrowserPageLinkClipboard.copy(url)
+        BrowserPageLinkClipboard.copy(live.documentURL)
     }
 
     func copyDeveloperPageLink() {
@@ -688,8 +689,8 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
 
     @discardableResult
     func copyPageLinkAsMarkdown() -> Bool {
-        guard let url else { return false }
-        let label = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let url = live.documentURL else { return false }
+        let label = live.title.trimmingCharacters(in: .whitespacesAndNewlines)
         let resolvedLabel = label.isEmpty ? (url.host() ?? url.absoluteString) : label
         let escapedLabel =
             resolvedLabel
@@ -702,7 +703,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
     }
 
     private func fullPageSnapshot(snapshotWidth: CGFloat? = nil) async throws -> NSImage {
-        guard url != nil, let service = pageEngine.documentServices else {
+        guard live.url != nil, let service = pageEngine.documentServices else {
             throw BrowserDeveloperCaptureError.pageUnavailable
         }
         return try await service.fullPageSnapshot(width: snapshotWidth)
@@ -783,7 +784,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
     }
 
     func sharePage() {
-        guard let url else { return }
+        guard let url = live.documentURL else { return }
         let picker = NSSharingServicePicker(items: [url])
         picker.delegate = self
         sharingPicker = picker
@@ -802,10 +803,11 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
 
     func printPage() {
         guard !preparingPrint, printOperation == nil, let service = pageEngine.documentServices,
-            url != nil, let window = nativeView.window
+            live.url != nil, let window = nativeView.window
         else { return }
         let printInfo = NSPrintInfo.shared.copy() as? NSPrintInfo ?? NSPrintInfo.shared
-        let jobTitle = title.isEmpty ? url?.host() ?? ProductIdentity.name : title
+        let title = live.title
+        let jobTitle = title.isEmpty ? live.documentURL?.host() ?? ProductIdentity.name : title
         preparingPrint = true
         Task { [weak self, weak window] in
             guard let self else { return }
@@ -827,15 +829,15 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
     }
 
     func pdfData() async throws -> Data {
-        guard url != nil, let service = pageEngine.documentServices else {
+        guard live.url != nil, let service = pageEngine.documentServices else {
             throw BrowserPageExportError.pageUnavailable
         }
         return try await service.pdfData()
     }
 
     func exportPDF() {
-        guard let window = nativeView.window, url != nil else { return }
-        let suggestedFilename = BrowserPageExportPolicy.pdfFilename(title: title, url: url)
+        guard let window = nativeView.window, live.url != nil else { return }
+        let suggestedFilename = BrowserPageExportPolicy.pdfFilename(title: live.title, url: live.documentURL)
         Task { [weak self, weak window] in
             guard let self, let window else { return }
             do {
@@ -859,20 +861,20 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
     }
 
     func webArchiveData() async throws -> Data {
-        guard url != nil, let service = pageEngine.documentServices else {
+        guard live.url != nil, let service = pageEngine.documentServices else {
             throw BrowserPageExportError.pageUnavailable
         }
         return try await service.webArchiveData()
     }
 
     func exportWebArchive() {
-        guard let window = nativeView.window, url != nil,
+        guard let window = nativeView.window, live.url != nil,
             let service = pageEngine.documentServices
         else { return }
         let format = service.archiveFormat
         let suggestedFilename = BrowserPageExportPolicy.webArchiveFilename(
-            title: title,
-            url: url,
+            title: live.title,
+            url: live.documentURL,
             format: format
         )
         Task { [weak self, weak window] in
@@ -929,6 +931,9 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
 
     // MARK: - Actions - Navigation state
 
+    /// Readies the page for a navigation of its document to `url`, which the
+    /// app asked for or the engine accepted: what belonged to the document it
+    /// leaves goes, and the page shows it heading to `url`.
     func prepareForNavigation(to url: URL?) {
         // Same-document navigation never commits a replacement document.
         // Cancel the current pull here; suspend new pulls only when WebKit
@@ -946,29 +951,11 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
         beginBlockedPopupNavigation()
         synchronizePopupPermission(for: url)
         faviconSession?.invalidate()
-        pendingNavigationURL = url
+        engineAdapter.reporter?.heading(to: url)
         // A capture describes one document's DOM. A right-click whose menu
         // never opened — a page that cancelled the event to draw its own —
         // must not survive into the next document.
         linkContextCapture.clear()
-        clearNavigationFailure(preservingPendingURL: true)
-    }
-
-    /// Shows a failed navigation in place of the page. `currentURL` is the
-    /// engine's own document, the fallback when nothing was pending.
-    func recordNavigationFailure(
-        _ error: any Error,
-        phase: BrowserNavigationFailurePhase,
-        currentURL: URL?
-    ) {
-        let fallbackURL = pendingNavigationURL ?? currentURL ?? url
-        pendingNavigationURL = nil
-        navigationFailure = BrowserNavigationFailure(
-            error: error,
-            phase: phase,
-            fallbackURL: fallbackURL
-        )
-        canGoBack = canReturnFromNavigationFailure || pageEngine.canGoBack
     }
 
     // MARK: - Actions - Engine observations
@@ -984,27 +971,53 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
             // A prompt the engine withdrew with its document has no one to answer.
             sitePermissionRequests.cancelAll()
             mediaSessionCoordinator?.prepareForNavigation()
-        case .stateChanged(let state):
-            receive(state)
-        case .urlChanged(let value):
-            translation.documentURLDidChange(from: url, to: value)
-            url = value
+        case .urlChanged(let previous, let current):
+            translation.documentURLDidChange(from: previous, to: current)
             refreshNavigationState()
-            credentialState.didChangeTopLevelURL(to: value)
-        case .titleChanged(let value):
-            recordObservedTitle(value)
+            credentialState.didChangeTopLevelURL(to: current)
+        case .titleChanged:
+            mediaSessionCoordinator?.ownerTitleDidChange()
             refreshNavigationState()
         case .progressChanged(let value):
             estimatedProgress = value
-        case .loadingChanged(let value):
-            isLoading = value
-            refreshNavigationState()
-        case .securityStateChanged(let value):
-            securityState = value
-        case .themeColorChanged(let value):
-            themeColor = value
         case .historyChanged:
             refreshNavigationState()
+        case .loadingChanged(let isLoading):
+            guard !isLoading else { return }
+            linkDrag?.didFinishNavigation()
+            // A navigation that failed or turned into a download ends
+            // here without committing.
+            linkHover?.didFailNavigation()
+            mediaSessionCoordinator?.didFinishNavigation()
+            if hasCommittedNavigationAwaitingCompletion {
+                hasCommittedNavigationAwaitingCompletion = false
+                completedNavigationCount += 1
+            }
+        case .navigationCommitted(let url, let isLoading):
+            hasCommittedNavigationAwaitingCompletion = isLoading
+            isContentFullscreen = false
+            webContentFailureMessage = nil
+            linkHover?.didCommitNavigation()
+            mediaSessionCoordinator?.didCommitNavigation()
+            committedNavigationCount += 1
+            if !isLoading { completedNavigationCount += 1 }
+            Task { await httpAuthenticationSession.authenticationSucceeded() }
+            synchronizePopupPermission(for: url)
+            sitePermissionSession.synchronize(for: url)
+        case .navigationFailed:
+            // The engine reported the failure to the core, which shows it
+            // until a navigation commits: the engine retries a network error
+            // on its own, and a retry that fails again commits no new error
+            // page.
+            hasCommittedNavigationAwaitingCompletion = false
+            httpAuthenticationSession.authenticationFailed()
+        case .webContentProcessTerminated:
+            hasCommittedNavigationAwaitingCompletion = false
+            webContentFailureMessage = "process_terminated"
+            credentialState.webContentProcessDidTerminate()
+            mediaSessionCoordinator?.webContentProcessDidTerminate()
+        case .themeColorChanged(let value):
+            themeColor = value
         case .infoBarAdded(let bar):
             guard !engineInfoBars.contains(where: { $0.id == bar.id }) else { return }
             engineInfoBars.append(bar)
@@ -1019,10 +1032,11 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
         case .linkHovered(let destination):
             linkHover?.receiveEngineHover(destination)
         case .popupBlocked(let pageURL):
-            recordEngineBlockedPopup(pageURL: pageURL, documentIdentifier: "\(committedNavigationCount)")
+            recordEngineBlockedPopup(pageURL: pageURL, documentIdentifier: String(committedNavigationCount))
         case .favicon(let data, let source):
             if let source {
-                guard let url, BrowserTabStateRestorePolicy.restoresArchivedState(archivedURL: source, tabURL: url)
+                guard let url = pageEngine.currentURL,
+                    BrowserTabStateRestorePolicy.restoresArchivedState(archivedURL: source, tabURL: url)
                 else { return }
             }
             faviconData = data
@@ -1039,65 +1053,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
             }
         case .creationFailed(let message):
             hasCommittedNavigationAwaitingCompletion = false
-            isLoading = false
             webContentFailureMessage = message
-        }
-    }
-
-    private func receive(_ state: BrowserPageEngineState) {
-        let wasLoading = isLoading
-        // The engine creates a blank document before loading the requested URL.
-        if state.url?.absoluteString == "about:blank", pendingNavigationURL != nil { return }
-        url = state.url
-        title = state.title
-        isLoading = state.isLoading
-        if !isLoading {
-            linkDrag?.didFinishNavigation()
-            // A navigation that failed or turned into a download ends
-            // here without committing.
-            linkHover?.didFailNavigation()
-            mediaSessionCoordinator?.didFinishNavigation()
-        }
-        estimatedProgress = isLoading ? 0.5 : 1
-        securityState = state.security
-        themeColor = state.themeColor
-        canGoBack = state.canGoBack
-        canGoForward = state.canGoForward
-        // A failure is reported once, by the navigation that failed; the
-        // state changes after it do not repeat it. It stays until a
-        // navigation commits: the engine retries a network error on its
-        // own, and a retry that fails again commits no new error page.
-        switch state.failure {
-        case .processTerminated:
-            hasCommittedNavigationAwaitingCompletion = false
-            webContentFailureMessage = "process_terminated"
-            credentialState.webContentProcessDidTerminate()
-            mediaSessionCoordinator?.webContentProcessDidTerminate()
-        case .navigationFailed(let failure):
-            hasCommittedNavigationAwaitingCompletion = false
-            pendingNavigationURL = nil
-            navigationFailure = failure
-            httpAuthenticationSession.authenticationFailed()
-        case nil: break
-        }
-        if state.committed {
-            hasCommittedNavigationAwaitingCompletion = true
-            isContentFullscreen = false
-            pendingNavigationURL = nil
-            navigationFailure = nil
-            webContentFailureMessage = nil
-            linkHover?.didCommitNavigation()
-            mediaSessionCoordinator?.didCommitNavigation()
-            committedNavigationCount += 1
-            Task { await httpAuthenticationSession.authenticationSucceeded() }
-            synchronizePopupPermission(for: state.url)
-            sitePermissionSession.synchronize(for: state.url)
-        }
-        if !isLoading, hasCommittedNavigationAwaitingCompletion,
-            wasLoading || state.committed
-        {
-            hasCommittedNavigationAwaitingCompletion = false
-            completedNavigationCount += 1
         }
     }
 
@@ -1130,21 +1086,17 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
 
     // MARK: - Actions - History availability
 
+    /// Brings the engine's supplemental history up to date and tells the core
+    /// what the page shows. An engine that reports its own navigation state
+    /// already told it.
     func refreshNavigationState() {
-        // An engine that reports its own navigation state already published it.
         guard !pageEngine.reportsNavigationState else { return }
         synchronizeNavigationHistory()
-        canGoBack = canReturnFromNavigationFailure || !pageEngine.backHistory.isEmpty || pageEngine.canGoBack
-        canGoForward = !pageEngine.forwardHistory.isEmpty || pageEngine.canGoForward
+        engineAdapter.reporter?.stateChanged()
     }
 
-    func clearNavigationFailure(preservingPendingURL: Bool = false) {
-        navigationFailure = nil
-        if !preservingPendingURL {
-            pendingNavigationURL = nil
-        }
-        refreshNavigationState()
-    }
+    /// The reporter that tells the core what the page's engine shows.
+    var navigationReporter: EnginePageReporter? { engineAdapter.reporter }
 
     // MARK: - Actions - Failure notices
 
@@ -1167,15 +1119,8 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
 
     // MARK: - Actions - Title and favicon
 
-    private func recordObservedTitle(_ observedTitle: String?) {
-        let normalizedTitle = observedTitle ?? ""
-        guard title != normalizedTitle else { return }
-        title = normalizedTitle
-        mediaSessionCoordinator?.ownerTitleDidChange()
-    }
-
     func refreshFavicon() {
-        guard navigationContext?.iconMode.followsPage == true, url != nil else { return }
+        guard navigationContext?.iconMode.followsPage == true, pageEngine.currentURL != nil else { return }
         if let faviconSession {
             faviconSession.refresh()
         } else {

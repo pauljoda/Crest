@@ -31,7 +31,7 @@ final class BrowserTabStateCoordinator {
         guard let archive, !page.wasOpenedAsPopup, let state = page.interactionState else { return }
         archive.archive(
             interactionState: state,
-            url: page.url,
+            url: page.live.documentURL,
             profileID: page.profileID,
             tabID: tabID
         )

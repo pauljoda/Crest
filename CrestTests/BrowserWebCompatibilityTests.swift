@@ -167,7 +167,7 @@ final class BrowserWebCompatibilityTests: XCTestCase {
                 responseHTML: try blockedPopupFixtureHTML()
             )
             try await waitUntil("the popup blocker fixture to load") {
-                opener.url == origin && !opener.isLoading
+                opener.live.documentURL == origin && !opener.live.isLoading
             }
 
             XCTAssertFalse(
@@ -204,7 +204,7 @@ final class BrowserWebCompatibilityTests: XCTestCase {
                 responseHTML: try blockedPopupFixtureHTML()
             )
             try await waitUntil("navigation away from the blocked document") {
-                opener.url == navigatedOrigin && !opener.isLoading
+                opener.live.documentURL == navigatedOrigin && !opener.live.isLoading
             }
             XCTAssertNil(
                 opener.blockedPopupState.notice,
@@ -251,7 +251,7 @@ final class BrowserWebCompatibilityTests: XCTestCase {
                 responseHTML: try blockedPopupFixtureHTML()
             )
             try await waitUntil("the transient popup blocker fixture to load") {
-                opener.url == origin && !opener.isLoading
+                opener.live.documentURL == origin && !opener.live.isLoading
             }
             try await waitUntil("all transient automatic window requests to run") {
                 try await self.intResult(
@@ -306,7 +306,7 @@ final class BrowserWebCompatibilityTests: XCTestCase {
                 responseHTML: try blockedPopupFixtureHTML()
             )
             try await waitUntil("the denied popup fixture to load") {
-                opener.url == origin && !opener.isLoading
+                opener.live.documentURL == origin && !opener.live.isLoading
             }
             try await waitUntil("all denied automatic requests to run") {
                 try await self.intResult(
@@ -346,7 +346,7 @@ final class BrowserWebCompatibilityTests: XCTestCase {
                 responseHTML: try blockedPopupFixtureHTML()
             )
             try await waitUntil("the explicit popup fixture to load") {
-                opener.url == origin && !opener.isLoading
+                opener.live.documentURL == origin && !opener.live.isLoading
             }
             XCTAssertFalse(
                 opener.webView.configuration.preferences
@@ -421,7 +421,7 @@ final class BrowserWebCompatibilityTests: XCTestCase {
                 responseHTML: try blockedPopupFixtureHTML()
             )
             try await waitUntil("the transient target-blank fixture to load") {
-                page.url == origin && page.title == "Automatic Pop-up Fixture"
+                page.live.documentURL == origin && page.live.title == "Automatic Pop-up Fixture"
             }
 
             _ = try await stringResult(
@@ -433,23 +433,23 @@ final class BrowserWebCompatibilityTests: XCTestCase {
             )
 
             try await waitUntil("target blank to navigate the transient page") {
-                page.url == destination && !page.isLoading
+                page.live.documentURL == destination && !page.live.isLoading
             }
             XCTAssertTrue(lease.page === page)
             XCTAssertEqual(store.selectedSpace?.tabs.map(\.id), [openerTab.id])
-            XCTAssertTrue(page.canGoBack)
-            XCTAssertFalse(page.canGoForward)
-            XCTAssertNil(page.navigationFailure)
+            XCTAssertTrue(page.live.canGoBack)
+            XCTAssertFalse(page.live.canGoForward)
+            XCTAssertNil(page.live.failure)
 
             page.goBack()
             try await waitUntil("target-blank history to return to its source") {
-                page.url == origin && page.title == "Automatic Pop-up Fixture"
+                page.live.documentURL == origin && page.live.title == "Automatic Pop-up Fixture"
             }
-            XCTAssertTrue(page.canGoForward)
+            XCTAssertTrue(page.live.canGoForward)
 
             page.goForward()
             try await waitUntil("target-blank history to move forward") {
-                page.url == destination && !page.isLoading
+                page.live.documentURL == destination && !page.live.isLoading
             }
             XCTAssertTrue(lease.page === page)
             XCTAssertEqual(store.selectedSpace?.tabs.map(\.id), [openerTab.id])
@@ -497,7 +497,7 @@ final class BrowserWebCompatibilityTests: XCTestCase {
                 responseHTML: try blockedPopupFixtureHTML()
             )
             try await waitUntil("the transient window-open fixture to load") {
-                page.url == origin && page.title == "Automatic Pop-up Fixture"
+                page.live.documentURL == origin && page.live.title == "Automatic Pop-up Fixture"
             }
 
             _ = try await stringResult(
@@ -509,23 +509,23 @@ final class BrowserWebCompatibilityTests: XCTestCase {
             )
 
             try await waitUntil("window.open to navigate the transient page") {
-                page.url == destination && !page.isLoading
+                page.live.documentURL == destination && !page.live.isLoading
             }
             XCTAssertTrue(lease.page === page)
             XCTAssertEqual(store.selectedSpace?.tabs.map(\.id), [openerTab.id])
-            XCTAssertTrue(page.canGoBack)
-            XCTAssertFalse(page.canGoForward)
-            XCTAssertNil(page.navigationFailure)
+            XCTAssertTrue(page.live.canGoBack)
+            XCTAssertFalse(page.live.canGoForward)
+            XCTAssertNil(page.live.failure)
 
             page.goBack()
             try await waitUntil("window-open history to return to its source") {
-                page.url == origin && page.title == "Automatic Pop-up Fixture"
+                page.live.documentURL == origin && page.live.title == "Automatic Pop-up Fixture"
             }
-            XCTAssertTrue(page.canGoForward)
+            XCTAssertTrue(page.live.canGoForward)
 
             page.goForward()
             try await waitUntil("window-open history to move forward") {
-                page.url == destination && !page.isLoading
+                page.live.documentURL == destination && !page.live.isLoading
             }
             XCTAssertTrue(lease.page === page)
             XCTAssertEqual(store.selectedSpace?.tabs.map(\.id), [openerTab.id])
@@ -581,7 +581,7 @@ final class BrowserWebCompatibilityTests: XCTestCase {
                 responseHTML: fixtureHTML
             )
             try await waitUntil("the opener fixture to load") {
-                opener.url == origin && !opener.isLoading
+                opener.live.documentURL == origin && !opener.live.isLoading
             }
             let openResult = try await stringResult(
                 from: opener.webView,

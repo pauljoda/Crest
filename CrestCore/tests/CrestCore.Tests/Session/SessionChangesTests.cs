@@ -150,7 +150,7 @@ public sealed partial class BrowserContractsTests {
             } else if (RecordedIntents.Typed(request, workspace, window, authority.Current) is { } intents) {
                 clock.Now = RecordedIntents.Time(request);
                 ids.Supply(RecordedIntents.Identities(request));
-                changes = [.. intents.SelectMany(app.Send)];
+                changes = RecordedIntents.Send(app, engine, request, intents, window);
                 var granted = new List<Change>();
                 TestGrants.UnlockGuarded(intent => { var sent = app.Send(intent); granted.AddRange(sent); return sent; }, workspace,
                     authority.Current);

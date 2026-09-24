@@ -7,7 +7,7 @@ final class MobileSavedLocationRestoreActionTests: XCTestCase {
     func testStaleSpaceSelectionCannotRestoreOrNavigateEitherPage() throws {
         let context = makeContext()
         let sourcePage = try XCTUnwrap(context.pages.activePage)
-        let sourcePageURL = sourcePage.url
+        let sourcePageURL = sourcePage.live.documentURL
         context.browser.selectSpace(context.destination.id)
         var activationCount = 0
         let action = MobileSavedLocationRestoreAction(
@@ -25,7 +25,7 @@ final class MobileSavedLocationRestoreActionTests: XCTestCase {
                 .tabs.first?.url,
             context.awayURL
         )
-        XCTAssertEqual(sourcePage.url, sourcePageURL)
+        XCTAssertEqual(sourcePage.live.documentURL, sourcePageURL)
     }
 
     func testExactAssignmentRestoresAndActivatesItsOwnPage() throws {

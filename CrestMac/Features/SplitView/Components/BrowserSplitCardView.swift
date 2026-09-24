@@ -97,7 +97,7 @@ struct BrowserSplitCardView: View {
             BrowserPagePresentationInput(
                 selection: tab.pagePresentationSelection,
                 hasActivePage: page != nil,
-                hasNavigationFailure: page?.navigationFailure != nil,
+                hasNavigationFailure: page?.live.failure != nil,
                 hasProcessFailure: page?.webContentFailureMessage != nil,
                 unloadedBehavior: .remainUnloaded
             )

@@ -2,11 +2,17 @@ import Foundation
 
 extension CoreState {
     func apply(_ change: PageOpened) {
-        pages[change.page.id] = change.page
+        pages[change.page.id] = PageStateModel(change.page)
     }
 
+    /// A page that stays open keeps its object, which notifies only for what
+    /// really changed.
     func apply(_ change: PageChanged) {
-        pages[change.page.id] = change.page
+        if let page = pages[change.page.id] {
+            page.update(change.page)
+        } else {
+            pages[change.page.id] = PageStateModel(change.page)
+        }
     }
 
     func apply(_ change: PageRemoved) {

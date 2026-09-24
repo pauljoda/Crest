@@ -93,7 +93,7 @@ public sealed partial class BrowserContractsTests {
         var linked = Guid.NewGuid();
 
         var changes = device.Send(new OpenLinkInSplit(device.Workspace, window, fixture.Space, linked, fixture.Tab,
-            "https://example.org/link", "Link", []));
+            "https://example.org/link", "Link"));
 
         // The saved pair stays; open copies of it and the link make the split.
         Assert.Equal(2, changes.OfType<TabCopied>().Count());

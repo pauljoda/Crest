@@ -120,17 +120,12 @@ final class BrowserPageRuntimeStore {
         }
     }
 
-    func pageDidChange(
-        _ runtime: BrowserTabRuntime, previous: BrowserBackgroundPageSnapshot?, current: BrowserBackgroundPageSnapshot,
-        currentPageChanged: Bool = false
-    ) {
+    /// The first navigation of the page `runtime` holds settled, so an idle
+    /// page off screen starts counting its idle time.
+    func pageSettled(_ runtime: BrowserTabRuntime) {
         guard let tabID = runtime.tabID, runtimes[tabID] === runtime else { return }
-        if current.completedNavigationCount > 0 || current.hasNavigationFailure
-            || (previous?.isLoading == true && !current.isLoading)
-        {
-            if !presentedTabIDs.contains(tabID), inactiveSinceByTabID[tabID] == nil {
-                inactiveSinceByTabID[tabID] = .now
-            }
+        if !presentedTabIDs.contains(tabID), inactiveSinceByTabID[tabID] == nil {
+            inactiveSinceByTabID[tabID] = .now
         }
     }
 

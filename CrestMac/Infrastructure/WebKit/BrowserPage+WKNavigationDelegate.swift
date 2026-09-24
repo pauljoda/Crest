@@ -27,7 +27,6 @@ extension BrowserPage: WKNavigationDelegate {
         // WebKit accepted the navigation Crest asked for, so the authorization
         // that came with it is spent.
         consumeAppInitiatedURL()
-        clearNavigationFailure(preservingPendingURL: true)
         pendingServerTrustIdentity = nil
         credentialState.didStartNavigation()
         readerModeSession?.invalidate()
@@ -64,7 +63,7 @@ extension BrowserPage: WKNavigationDelegate {
         guard isCurrentNavigation(navigation),
             let redirectedURL = webView.url
         else { return }
-        pendingNavigationURL = redirectedURL
+        webKitAdapter?.reporter?.redirected(to: redirectedURL)
     }
 
     func webView(
@@ -91,7 +90,7 @@ extension BrowserPage: WKNavigationDelegate {
                 trigger: BrowserPopupTrigger.classify(navigationAction.navigationType),
                 origin: externalSchemeCoordinator.sourceOrigin(
                     for: navigationAction,
-                    currentURL: displayURL
+                    currentURL: live.displayURL
                 )
             )
             decisionHandler(.cancel)
@@ -345,7 +344,6 @@ extension BrowserPage: WKNavigationDelegate {
         #endif
         guard isCurrentNavigation(navigation) else { return }
         activeNavigation = nil
-        clearNavigationFailure()
         processRecovery.recordSuccessfulNavigation()
         webContentFailureMessage = nil
         let completedURL = webView.url
@@ -358,7 +356,6 @@ extension BrowserPage: WKNavigationDelegate {
                 webView.url == completedURL
             else { return }
             let title = documentTitle?.isEmpty == false ? documentTitle : webView.title
-            self.receive(.titleChanged(title))
             self.completedNavigationCount += 1
             if let completedURL { self.webKitAdapter?.reporter?.finished(completedURL, title: title) }
         }
@@ -385,7 +382,7 @@ extension BrowserPage: WKNavigationDelegate {
         httpAuthenticationSession.authenticationFailed()
         recordNavigationFailure(
             error,
-            phase: .committed,
+            replacedDocument: true,
             navigation: navigation
         )
     }
@@ -402,7 +399,7 @@ extension BrowserPage: WKNavigationDelegate {
         httpAuthenticationSession.authenticationFailed()
         recordNavigationFailure(
             error,
-            phase: .provisional,
+            replacedDocument: false,
             navigation: navigation
         )
     }

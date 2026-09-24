@@ -65,7 +65,7 @@ struct BrowserExternalLinkHandler: ViewModifier {
                 ) != nil
             else { return }
             pages.select(session: browser.presented)
-            pages.load(url)
+            pages.navigate(to: url.absoluteString)
             chrome.dismissCommandPalette()
         }
     }

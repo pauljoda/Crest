@@ -50,7 +50,7 @@ extension BrowserMacApplication: BrowserEngineHostCommands {
         guard let host = hostWindow(window), host.browser.openNewTab(url: url, matching: space) != nil
         else { return false }
         host.pages.select(session: host.browser.presented)
-        host.pages.load(url)
+        host.pages.navigate(to: url.absoluteString)
         host.chrome.dismissCommandPalette()
         return true
     }

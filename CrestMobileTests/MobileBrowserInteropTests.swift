@@ -542,7 +542,7 @@ final class MobileBrowserInteropTests: XCTestCase {
         XCTAssertTrue(popupPage.webView === popupWebView)
         XCTAssertTrue(popupPage.wasOpenedAsPopup)
         XCTAssertTrue(popupPage.isAwaitingPopupNavigation)
-        XCTAssertNil(popupPage.pendingNavigationURL)
+        XCTAssertNil(popupPage.live.pendingNavigationURL)
         XCTAssertFalse(context.opener.wasOpenedAsPopup)
     }
 
@@ -898,7 +898,7 @@ final class MobileBrowserInteropTests: XCTestCase {
 
         XCTAssertTrue(page.webView.backForwardList.backList.isEmpty)
         XCTAssertEqual(
-            page.pendingNavigationURL ?? page.webView.url,
+            page.live.pendingNavigationURL ?? page.webView.url,
             url,
             "Refused state must leave a plain load of the tab's own URL behind."
         )
@@ -1288,7 +1288,7 @@ final class MobileBrowserInteropTests: XCTestCase {
 
         XCTAssertFalse(restoredPage === originalPage)
         XCTAssertEqual(
-            restoredPage.pendingNavigationURL ?? restoredPage.webView.url,
+            restoredPage.live.pendingNavigationURL ?? restoredPage.webView.url,
             secondURL,
             "A purged tab falls back to a plain load of its own URL."
         )

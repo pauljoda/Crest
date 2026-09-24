@@ -9,6 +9,10 @@ import Observation
 @MainActor
 @Observable
 final class Engines {
+    // MARK: - Static Variables
+
+    private static let logger = Logger(subsystem: "com.pauldavis.crest", category: "Pages")
+
     // MARK: - Types
 
     /// A page the platform asked the core to open, while the core asks its
@@ -65,8 +69,6 @@ final class Engines {
 
     // MARK: - Variables
 
-    private static let logger = Logger(subsystem: "com.pauldavis.crest", category: "Pages")
-
     /// The registered bindings, by kind.
     private(set) var bindings: [EngineKind: any EngineBinding] = [:]
     /// The core's handle for each registered engine, and its relay, which the
@@ -75,6 +77,8 @@ final class Engines {
     @ObservationIgnored private var requests: [UUID: PageRequest] = [:]
     /// The engine that hosts each page the core asked one to create.
     @ObservationIgnored private var hosts: [UUID: EngineKind] = [:]
+    /// The pages the core opened, while their owners keep them.
+    @ObservationIgnored private var opened: [UUID: WeakPage] = [:]
     /// The icon each page last reported, until a tab adopts it and the bytes
     /// move to `FaviconAssets` under that tab.
     @ObservationIgnored private var pageIcons: [UUID: Data] = [:]
@@ -124,7 +128,13 @@ final class Engines {
             request.page.release(keepingState: false)
             return nil
         }
+        opened[intent.pageID] = WeakPage(value: request.page)
         return OpenedPage(page: request.page, built: built)
+    }
+
+    /// The page the core opened as `pageID`, while its owner keeps it.
+    func page(_ pageID: UUID) -> CorePage? {
+        opened[pageID]?.value
     }
 
     /// The page the core is asking a binding to create, while its owner waits.
@@ -155,6 +165,7 @@ final class Engines {
     func forget(_ pageID: UUID) {
         hosts[pageID] = nil
         pageIcons[pageID] = nil
+        opened[pageID] = nil
     }
 
     private func report(_ event: some EngineEvent, on kind: EngineKind, icon: (page: UUID, data: Data)?) {
@@ -186,6 +197,7 @@ final class Engines {
     func run(_ command: EngineCommand, on kind: EngineKind) {
         switch command {
         case .createPage(let creation): hosts[creation.pageID] = kind
+        case .loadPage: break
         case .closePage(let closing): forget(closing.pageID)
         }
         bindings[kind]?.run(command)
@@ -195,4 +207,9 @@ final class Engines {
 /// A registration's owner, held weakly so the registration goes with it.
 private struct WeakOwner {
     weak var value: AnyObject?
+}
+
+/// A page the core opened, held weakly so it goes with its owner.
+private struct WeakPage {
+    weak var value: CorePage?
 }

@@ -65,7 +65,7 @@ public sealed partial class BrowserContractsTests {
         var page = Guid.NewGuid();
 
         var opened = Assert.IsType<PageOpened>(Assert.Single(app.Send(new OpenPage(page, workspace, space, tab, window)))).Page;
-        Assert.Equal(new PageState(page, workspace, space, tab, EngineKind.WebKit, PagePhase.Opening), opened);
+        Assert.Equal(new PageState(page, workspace, space, tab, EngineKind.WebKit, PagePhase.Opening, PageLiveState.Blank), opened);
         Assert.Equal([new CreatePage(page, ProfileId(session["spaces"]![0]!), IsPrivate: false)], binding.Commands);
         app.Report(engine, new PageCreated(page));
         Assert.Equal(opened with { Phase = PagePhase.Live }, Assert.IsType<PageChanged>(Assert.Single(app.Drain())).Page);
@@ -145,7 +145,7 @@ public sealed partial class BrowserContractsTests {
         Assert.Equal(new TabAlreadyHasPage(tab, resident), Refusal(app, new MovePage(transient, workspace, space, tab, window)));
         app.Send(new ReleasePage(resident, KeepsState: false));
         var adopted = Assert.IsType<PageChanged>(Assert.Single(app.Send(new MovePage(transient, workspace, space, tab, window)))).Page;
-        Assert.Equal(new PageState(transient, workspace, space, tab, EngineKind.WebKit, PagePhase.Opening), adopted);
+        Assert.Equal(new PageState(transient, workspace, space, tab, EngineKind.WebKit, PagePhase.Opening, PageLiveState.Blank), adopted);
 
         // The borrowed workspace shows the same Space in the same profile.
         var moved = Assert.IsType<PageChanged>(Assert.Single(app.Send(new MovePage(transient, borrowed, space, tab, borrowedWindow)))).Page;

@@ -2341,6 +2341,10 @@
     "static-variables-slice": {
       "category": "internal",
       "message": "Types made in the Spaces, access, preference and search work keep their static members in their own section."
+    },
+    "page-live-state": {
+      "category": "internal",
+      "message": "Each page's address, title, loading, history, security and failure live in the core, which also resolves what the person types before a page loads it."
     }
   }
 }

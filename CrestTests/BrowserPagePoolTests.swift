@@ -125,7 +125,7 @@ final class BrowserPagePoolTests: XCTestCase {
         browser.unlockForTesting(locked)
         browser.session = BrowserSession(spaces: [space])
         let previousURL = try XCTUnwrap(URL(string: "about:blank#already-navigated"))
-        browser.navigateSelectedTab(to: previousURL)
+        browser.navigateSelectedTab(to: previousURL.absoluteString)
         XCTAssertFalse(action.perform(assignment, url: url))
         XCTAssertEqual(browser.selectedTab?.url, previousURL)
         XCTAssertNil(pages.activePage)
@@ -148,7 +148,7 @@ final class BrowserPagePoolTests: XCTestCase {
             let page = try XCTUnwrap(pool.activePage)
             try await load(root, in: page)
             try await load(child, in: page)
-            browser.navigateSelectedTab(to: child)
+            browser.navigateSelectedTab(to: child.absoluteString)
             let unrelatedID = TabID()
             archive.archive(
                 interactionState: Data("unrelated archive".utf8), url: child,
@@ -184,7 +184,7 @@ final class BrowserPagePoolTests: XCTestCase {
                 XCTAssertEqual(reopened.webView.url, child)
                 XCTAssertEqual(reopened.webView.backForwardList.backList.map(\.url), [root])
             } else {
-                XCTAssertEqual(reopened.pendingNavigationURL, root)
+                XCTAssertEqual(reopened.live.pendingNavigationURL, root)
                 XCTAssertFalse(reopened.webView.canGoBack)
             }
         }
@@ -206,7 +206,7 @@ final class BrowserPagePoolTests: XCTestCase {
         let page = try XCTUnwrap(pool.activePage)
         try await load(root, in: page)
         try await load(child, in: page)
-        browser.navigateSelectedTab(to: child)
+        browser.navigateSelectedTab(to: child.absoluteString)
         pool.archiveResidentTabStates()
         XCTAssertNotNil(archive.archivedState(profileID: space.profile.id, tabID: tab.id))
         let action = BrowserSavedLocationRestoreAction(
@@ -220,7 +220,7 @@ final class BrowserPagePoolTests: XCTestCase {
                 )))
 
         XCTAssertTrue(pool.activePage === page)
-        XCTAssertEqual(page.pendingNavigationURL, root)
+        XCTAssertEqual(page.live.pendingNavigationURL, root)
         XCTAssertEqual(browser.selectedTab?.id, tab.id)
         XCTAssertFalse(try XCTUnwrap(browser.selectedTab).isAwayFromSavedLocation)
         XCTAssertNil(archive.archivedState(profileID: space.profile.id, tabID: tab.id))
@@ -395,7 +395,7 @@ final class BrowserPagePoolTests: XCTestCase {
         let failedTab = try XCTUnwrap(
             context.store.selectedSpace?.tabs.first { $0.id == backgroundTab.id }
         )
-        XCTAssertEqual(page.displayURL, failureURL)
+        XCTAssertEqual(page.live.displayURL, failureURL)
         XCTAssertEqual(failedTab.url, acceptedTab.url)
         XCTAssertEqual(failedTab.title, acceptedTab.title)
         XCTAssertEqual(context.store.selectedSpace?.history, acceptedHistory)
@@ -1011,7 +1011,7 @@ final class BrowserPagePoolTests: XCTestCase {
             browser: browser, contentRuleListProvider: EmptyBrowserContentRuleListProvider())
         pages.select(session: browser.presented)
         let resident = try XCTUnwrap(pages.activePage)
-        let pending = resident.pendingNavigationURL
+        let pending = resident.live.pendingNavigationURL
         pages.deactivatePagePresentation()
 
         XCTAssertFalse(pages.requiresStartPageOnEntry(to: space, showing: tab.id))
@@ -1023,7 +1023,7 @@ final class BrowserPagePoolTests: XCTestCase {
 
         XCTAssertEqual(browser.selectedTab?.id, tab.id)
         XCTAssertTrue(pages.activePage === resident)
-        XCTAssertEqual(resident.pendingNavigationURL, pending)
+        XCTAssertEqual(resident.live.pendingNavigationURL, pending)
         XCTAssertEqual(pages.retainedTabIDs, [tab.id])
     }
 
@@ -1745,7 +1745,7 @@ final class BrowserPagePoolTests: XCTestCase {
         context.store.selectTab(tab.id)
         context.pool.select(session: context.store.presented)
         XCTAssertTrue(context.pool.activePage?.isAwaitingPopupNavigation == true)
-        XCTAssertNil(context.pool.activePage?.pendingNavigationURL)
+        XCTAssertNil(context.pool.activePage?.live.pendingNavigationURL)
     }
 
     func testAdoptedPopupInheritsTheOpenerWebsiteDataStoreAndProfile() throws {
@@ -1777,7 +1777,7 @@ final class BrowserPagePoolTests: XCTestCase {
 
         XCTAssertTrue(context.pool.activePage === popupPage)
         XCTAssertTrue(popupPage.isAwaitingPopupNavigation)
-        XCTAssertNil(popupPage.pendingNavigationURL)
+        XCTAssertNil(popupPage.live.pendingNavigationURL)
     }
 
     func testUserActivatedPopupFromATransientPageNavigatesTheSameLease() throws {
@@ -1808,7 +1808,7 @@ final class BrowserPagePoolTests: XCTestCase {
 
         XCTAssertNil(popupWebView)
         XCTAssertTrue(lease.page === transientPage)
-        XCTAssertEqual(transientPage.pendingNavigationURL, popupURL)
+        XCTAssertEqual(transientPage.navigationReporter?.pendingURL, popupURL)
         XCTAssertEqual(store.selectedSpace?.tabs.count, tabCount)
         XCTAssertEqual(store.selectedTab?.id, openerTab.id)
     }
@@ -1893,7 +1893,7 @@ final class BrowserPagePoolTests: XCTestCase {
         for member in members {
             let page = try XCTUnwrap(pool.presentedPage(for: member.id))
             XCTAssertEqual(
-                page.pendingNavigationURL ?? page.webView.url,
+                page.live.pendingNavigationURL ?? page.webView.url,
                 member.url,
                 "A card the person can see must not wait for focus to load."
             )
@@ -2461,7 +2461,7 @@ final class BrowserPagePoolTests: XCTestCase {
 
         XCTAssertTrue(page.webView.backForwardList.backList.isEmpty)
         XCTAssertEqual(
-            page.pendingNavigationURL ?? page.webView.url,
+            page.live.pendingNavigationURL ?? page.webView.url,
             url,
             "Refused state must leave a plain load of the tab's own URL behind."
         )
@@ -2494,7 +2494,7 @@ final class BrowserPagePoolTests: XCTestCase {
         let page = try XCTUnwrap(pool.activePage)
 
         XCTAssertTrue(page.webView.backForwardList.backList.isEmpty)
-        XCTAssertEqual(page.pendingNavigationURL ?? page.webView.url, renamedURL)
+        XCTAssertEqual(page.live.pendingNavigationURL ?? page.webView.url, renamedURL)
 
         pool.reconcile(validTabIDs: [])
     }
@@ -2813,7 +2813,7 @@ final class BrowserPagePoolTests: XCTestCase {
 
     private func waitForNavigationFailure(in page: BrowserPage) async throws {
         for attempt in 0..<200 {
-            if page.navigationFailure != nil {
+            if page.live.failure != nil {
                 return
             }
             if attempt < 199 {

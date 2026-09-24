@@ -46,15 +46,29 @@
         private var creating = false
         private var created = false
         private var disposed = false
-        /// Tells the core what the page's navigations and icon do.
-        @ObservationIgnored private lazy var reporter = EnginePageReporter(
-            pageID: pageID, title: { [weak self] in self?.reportedTitle ?? "" },
+        /// Tells the core what the page shows and what its navigations and
+        /// icon do.
+        @ObservationIgnored private(set) lazy var reporter = EnginePageReporter(
+            pageID: pageID,
+            snapshot: { [weak self] pendingURL in
+                PageSnapshot(
+                    url: self?.currentURL?.absoluteString, pendingURL: pendingURL, title: self?.reportedTitle ?? "",
+                    isLoading: self?.isLoading ?? false, canGoBack: self?.canGoBack ?? false,
+                    canGoForward: self?.canGoForward ?? false, security: self?.security ?? PageSecurity.none,
+                    media: self?.currentMediaActivity ?? [])
+            },
             report: { [weak self] event, icon in
                 guard let self else { return }
                 self.binding?.pageReported(event, icon: icon.map { (self.pageID, $0) })
             })
         /// The page's title, as the last `changed` report gave it.
         @ObservationIgnored private var reportedTitle = ""
+        /// Whether the page loads, as the last `changed` report said.
+        @ObservationIgnored private var isLoading = false
+        /// The engine's judgment of the page's connection, as the last
+        /// `changed` report gave it; a spelling this build does not know
+        /// claims nothing.
+        @ObservationIgnored private var security = PageSecurity.none
         /// The engine started a navigation to a new document since the last
         /// commit. The host reports no start for a move within the document,
         /// so a commit without one is such a move.
@@ -141,14 +155,15 @@
         /// Every `changed` report carries the page's history, loading and failure
         /// state, so the page reads them from it.
         var reportsNavigationState: Bool { true }
-        var currentMediaActivity: BrowserPageMediaActivity? {
+        var currentMediaActivity: PageMediaActivity? {
             guard created, !disposed, let values = host?.mediaActivity(forPage: id) else { return nil }
-            return BrowserPageMediaActivity(
-                isPlaying: values["playing"] as? Bool == true,
-                isCapturing: values["capturing"] as? Bool == true,
-                hasPictureInPicture: values["pictureInPicture"] as? Bool == true)
+            var activity: PageMediaActivity = []
+            if values["playing"] as? Bool == true { activity.insert(.playing) }
+            if values["capturing"] as? Bool == true { activity.insert(.capturing) }
+            if values["pictureInPicture"] as? Bool == true { activity.insert(.pictureInPicture) }
+            return activity
         }
-        func mediaActivity() async -> BrowserPageMediaActivity? { currentMediaActivity }
+        func mediaActivity() async -> PageMediaActivity? { currentMediaActivity }
         func enterPictureInPicture() -> Bool {
             guard created, !disposed, let host else { return false }
             return host.command(ChromiumPageHostCommand.pictureInPictureEnter.rawValue, page: id, url: nil)
@@ -179,6 +194,12 @@
             command(bypassingCache ? .reloadFromOrigin : .reload)
         }
         func stop() { command(.stop) }
+
+        /// Loads `url` as the core asked, and shows the page heading there.
+        func loadRequested(_ url: URL) {
+            reporter.heading(to: url)
+            load(url)
+        }
 
         func load(_ url: URL) {
             if let pendingNavigation, pendingNavigation.url != url {
@@ -575,15 +596,21 @@
         }
 
         private func receive(_ change: ChromiumPageChange) {
+            // The engine creates a blank document before it loads the address
+            // the page was asked for, which is nothing the page shows.
+            if change.url == "about:blank", reporter.pendingURL != nil { return }
             backHistory = history(change.backHistory)
             forwardHistory = history(change.forwardHistory)
             canGoBack = change.canGoBack ?? false
             canGoForward = change.canGoForward ?? false
             currentURL = change.url.map(ChromiumInternalURL.presented).flatMap(URL.init(string:))
+            isLoading = change.isLoading ?? false
+            security = change.security.flatMap(PageSecurity.named) ?? PageSecurity.none
             if change.committed == true { surface.layoutEngineView() }
             pageHost = change.url.flatMap(URL.init(string:))?.host()
             mediaSessionLocation = change.url
             reportNavigation(change)
+            reporter.stateChanged()
             observer(ChromiumPageReport(.changed, change: change.presented()))
         }
 
@@ -604,8 +631,7 @@
             switch change.pageFailure {
             case .navigationFailed:
                 awaitsFinish = false
-                let failure = BrowserNavigationFailure(chromiumNetError: change.errorCode ?? 0, failingURL: url)
-                reporter.failed(url, error: failure.kind)
+                reporter.failed(PageFailure(chromiumNetError: change.errorCode ?? 0, failingURL: url))
                 return
             case .processTerminated:
                 awaitsFinish = false
@@ -623,8 +649,8 @@
                     reporter.movedWithinDocument(to: url)
                 }
             }
-            if let title = change.title, title != reportedTitle {
-                reportedTitle = title
+            if change.title ?? "" != reportedTitle {
+                reportedTitle = change.title ?? ""
                 reporter.titleChanged()
             }
             if awaitsFinish, change.isLoading != true {
@@ -756,6 +782,9 @@
                 reporter.started(nil)
             } else if event == .favicon {
                 reportIcon(values)
+            } else if event == .mediaSession {
+                // Playback and Picture in Picture move with the page's session.
+                reporter.stateChanged()
             }
             observer(report)
         }

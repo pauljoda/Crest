@@ -94,7 +94,7 @@ final class BrowserQuickWindowModel {
             return
         }
         guard let space,
-            let url = page?.url
+            let url = page?.live.documentURL
                 ?? releasedPageSnapshot?.url
                 ?? presentedRequest.initialURL
         else {
@@ -145,7 +145,7 @@ final class BrowserQuickWindowModel {
             )
         else { return }
         if let page {
-            page.load(url)
+            page.corePage.navigate(to: url.absoluteString)
             return
         }
         guard let pages else { return }
@@ -358,7 +358,7 @@ final class BrowserQuickWindowModel {
         BrowserTransientPageSnapshot(
             assignment: lease.assignment,
             url: lease.recoverableURL,
-            title: lease.page?.title,
+            title: lease.page?.live.title,
             pageID: lease.pageID
         )
     }

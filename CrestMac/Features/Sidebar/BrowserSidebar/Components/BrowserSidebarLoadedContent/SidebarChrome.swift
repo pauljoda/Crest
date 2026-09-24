@@ -35,7 +35,7 @@ struct SidebarChrome: View {
                 .animation(
                     BrowserVisualAccessibilityPolicy.animation(
                         SpacePagerSettlement.standardAnimation, reduceMotion: reduceMotion),
-                    value: [pages.canGoBack, pages.canGoForward, pages.activePage?.isLoading == true]
+                    value: [pages.canGoBack, pages.canGoForward, pages.activePage?.live.isLoading == true]
                 )
 
                 if context.utilityPresentation.surface == nil {

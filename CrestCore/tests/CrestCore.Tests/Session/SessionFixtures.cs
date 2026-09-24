@@ -20,6 +20,8 @@ public sealed partial class BrowserContractsTests {
     private sealed class TestDevice : IDisposable {
         private readonly CrestApp app;
         private readonly Dictionary<Guid, WindowState> windows = [];
+        /// The engine the device's pages open on, once one opened.
+        private Engine? engine;
 
         public TestDevice(NativeSessionAuthority authority) {
             app = new(new AppConfiguration(null), Clock, Ids);
@@ -63,6 +65,18 @@ public sealed partial class BrowserContractsTests {
                 .Select(item => (SpaceId(item!), (Guid?)Guid.Parse(item!["selectedTabID"]!["rawValue"]!.GetValue<string>())))]);
 
         public TAnswer Query<TAnswer>(Query<TAnswer> query) => app.Query(query);
+
+        /// A live page `window` hosts for `tab` in `space`, whose engine shows
+        /// `snapshot`.
+        public Guid ShowPage(Guid window, Guid space, Guid tab, PageSnapshot snapshot) {
+            engine ??= app.RegisterEngine(new EngineRegistration(EngineKind.WebKit, EngineCapability.Required, IsDefault: true), _ => { });
+            var page = Guid.NewGuid();
+            Send(new OpenPage(page, Workspace, space, tab, window));
+            app.Report(engine, new PageCreated(page));
+            app.Report(engine, new PageStateChanged(page, snapshot));
+            Record(app.Drain());
+            return page;
+        }
 
         public IReadOnlyList<Change> Send(Intent intent) {
             var changes = app.Send(intent);

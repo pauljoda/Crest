@@ -25,9 +25,9 @@ public sealed partial class NativeSessionAuthority {
     /// when the page lives in that Space and its engine can move it between
     /// windows.
     private SessionEdit PromotingTransientPage(SessionState basis, PromoteTransientPage intent, DateTimeOffset now, IIdSource ids,
-        Func<Guid, TransientPage?>? pages) {
+        Pages? pages) {
         RequirePendingTransient(intent.PageId);
-        var page = pages?.Invoke(intent.PageId) is { } found && found.WorkspaceId == workspaceId
+        var page = pages?.Transient(intent.PageId) is { } found && found.WorkspaceId == workspaceId
             ? found : throw new Rejected(new UnknownPage(intent.PageId));
         var source = Editable(basis, page.SpaceId);
         if (source.ProfileId != page.ProfileId) throw new Rejected(new PageProfileMismatch(page.Id, source.Id));
@@ -45,10 +45,10 @@ public sealed partial class NativeSessionAuthority {
 
     /// Archives the page as a closed open tab of its Space.
     private SessionEdit ArchivingTransientPage(SessionState basis, ArchiveTransientPage intent, DateTimeOffset now, IIdSource ids,
-        Func<Guid, TransientPage?>? pages) {
+        Pages? pages) {
         RequirePendingTransient(intent.PageId);
         var space = Editable(basis, intent.SpaceId);
-        if (pages?.Invoke(intent.PageId) is { } page
+        if (pages?.Transient(intent.PageId) is { } page
             && (page.WorkspaceId != workspaceId || page.SpaceId != space.Id || page.ProfileId != space.ProfileId))
             throw new Rejected(new PageProfileMismatch(page.Id, space.Id));
         var edited = BrowserTabCollection.Restore(space);

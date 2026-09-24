@@ -19,7 +19,7 @@ struct BrowserWebPageSurface: View {
             } action: { _ in
                 (page.nativeView as? any BrowserNativePageSurfaceLifecycle)?.presentationGeometryDidChange()
             }
-            .accessibilityLabel(page.title.isEmpty ? "Web page" : page.title)
+            .accessibilityLabel(page.live.title.isEmpty ? "Web page" : page.live.title)
             .opacity(
                 BrowserPageSurfacePolicy.revealsWebContent(
                     committedNavigationCount: page.committedNavigationCount
@@ -181,7 +181,7 @@ private struct BrowserPageLoadingPresentation: View {
     }
 
     private var openingLabel: Text {
-        guard let host = page.displayURL?.host(), !host.isEmpty else {
+        guard let host = page.live.displayURL?.host(), !host.isEmpty else {
             return Text(
                 "Opening page…",
                 comment: "Initial status while a web page begins navigating."
@@ -195,14 +195,14 @@ private struct BrowserPageLoadingPresentation: View {
 
     private var isNavigating: Bool {
         BrowserPageSurfacePolicy.isNavigating(
-            isLoading: page.isLoading,
-            hasPendingNavigation: page.pendingNavigationURL != nil,
+            isLoading: page.live.isLoading,
+            hasPendingNavigation: page.live.pendingNavigationURL != nil,
             committedNavigationCount: page.committedNavigationCount
         )
     }
 
     private var hasFailure: Bool {
-        page.navigationFailure != nil || page.webContentFailureMessage != nil
+        page.live.failure != nil || page.webContentFailureMessage != nil
     }
 
     private var showsInitialStatus: Bool {

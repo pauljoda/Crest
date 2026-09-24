@@ -101,7 +101,7 @@ public sealed partial class CrestApp : IDisposable {
                     pages.Handle(page, changes, Issue);
                     break;
                 case SessionIntent session:
-                    device.Workspace(session.WorkspaceId).Handle(session, clock.Now, ids, pages.Transient);
+                    device.Workspace(session.WorkspaceId).Handle(session, clock.Now, ids, pages);
                     break;
                 case SpaceAccessIntent grant:
                     access.Handle(grant, changes);
@@ -156,7 +156,7 @@ public sealed partial class CrestApp : IDisposable {
         if (intent is not SessionIntent session)
             throw new ArgumentOutOfRangeException(nameof(intent), intent.GetType().Name, "Only a session intent can be checked.");
         try {
-            device.Workspace(session.WorkspaceId).Check(session, clock.Now, new SystemIdSource(), pages.Transient);
+            device.Workspace(session.WorkspaceId).Check(session, clock.Now, new SystemIdSource(), pages);
             return new(Refusal: null);
         } catch (Rejected refused) {
             return new(refused.Rejection);

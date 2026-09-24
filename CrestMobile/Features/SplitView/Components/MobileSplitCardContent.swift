@@ -44,7 +44,7 @@ struct MobileSplitCardContent: View {
                 unloadedSurface
             }
         case .navigationFailure:
-            if let page, let failure = page.navigationFailure {
+            if let page, let failure = page.live.failure {
                 BrowserNavigationFailureView(
                     failure: failure,
                     branding: space.branding,
@@ -62,7 +62,7 @@ struct MobileSplitCardContent: View {
         case .processFailure:
             if let page {
                 BrowserNavigationFailureView(
-                    failure: .webContentProcessStopped(url: page.displayURL),
+                    failure: .webContentProcessStopped(url: page.live.displayURL),
                     branding: space.branding,
                     layout: failureLayout,
                     canGoBack: false,
@@ -120,7 +120,7 @@ struct MobileSplitCardContent: View {
             BrowserPagePresentationInput(
                 selection: member.pagePresentationSelection,
                 hasActivePage: page != nil,
-                hasNavigationFailure: page?.navigationFailure != nil,
+                hasNavigationFailure: page?.live.failure != nil,
                 hasProcessFailure: page?.showsProcessFailure == true,
                 // A card never self-restores. Membership decides what is on
                 // screen, and the surface that owns the card asks for the page.

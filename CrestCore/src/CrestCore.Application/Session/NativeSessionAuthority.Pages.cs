@@ -81,16 +81,19 @@ public sealed partial class NativeSessionAuthority {
         }
     }
 
-    /// Gives a tab that shows no web page the address the intent names,
-    /// titled by its host, so a page can open for it; see `NavigateTab`. A tab
-    /// that already shows a web page is left as it is.
-    private SessionEdit NavigatingTab(SessionState basis, NavigateTab intent) {
-        if (!Uri.TryCreate(intent.Url, UriKind.Absolute, out var address)) throw new Rejected(new UnsupportedAddress(intent.Url));
+    /// Gives a tab that shows no web page the address the intent's input
+    /// resolves to by its Space's rules, on an engine that shows internal
+    /// pages when `allowsInternalPages`, titled by its host, so a page can open
+    /// for it; see `NavigateTab`. A tab that already shows a web page is left
+    /// as it is.
+    private SessionEdit NavigatingTab(SessionState basis, NavigateTab intent, bool allowsInternalPages) {
         var space = Editable(basis, intent.SpaceId);
         var stored = space.Tabs.FirstOrDefault(tab => tab.Id == intent.TabId) ?? throw new Rejected(new UnknownTab(intent.TabId));
+        var url = AddressResolution.Loading(intent.Input, space.Settings.BrowsingPreferences, allowsInternalPages);
         var tab = BrowserTab.Restore(stored);
         if (tab.Content.IsWebPage) return new(basis, SyncStaging.PageReport);
-        tab.ObserveAppearance(intent.Url, address.Host.Length > 0 ? address.Host : intent.Url);
+        var address = new Uri(url);
+        tab.ObserveAppearance(url, address.Host.Length > 0 ? address.Host : url);
         var tabs = space.Tabs.Select(candidate => candidate.Id == intent.TabId ? tab.State : candidate);
         return new(Replacing(basis, space with { Tabs = [.. tabs] }), SyncStaging.PageReport);
     }

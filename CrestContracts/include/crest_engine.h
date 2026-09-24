@@ -2,8 +2,9 @@
 #define CREST_ENGINE_H
 
 /* The engine contract. An engine binding registers with an app, the core
- * hands it commands (CreatePage, ClosePage) and the binding reports what
- * happens to its pages (PageCreated, PageCreationFailed, PageClosed).
+ * hands it commands (CreatePage, LoadPage, ClosePage) and the binding reports
+ * what happens to its pages (PageCreated, PageCreationFailed, PageClosed, the
+ * navigation events and PageStateChanged, at most once per page per turn).
  * Registrations, commands and reports cross in the same generated wire format
  * as crest_app.h; crest_contracts.h names the EngineCommand and EngineEvent
  * tags and the engine contract's own fingerprint, which changes only when the

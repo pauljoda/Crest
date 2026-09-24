@@ -24,17 +24,6 @@ extension BrowserStore {
         }
     }
 
-    /// What the pages of the tabs a split join may copy show now: the joining
-    /// tab and the target's whole split.
-    func splitSourcePages(source: TabID?, target: TabID, in space: BrowserSpace) -> [SourcePage] {
-        var ids: Set<TabID> = [target]
-        if let source { ids.insert(source) }
-        if let group = space.tabs.first(where: { $0.id == target })?.splitGroupID {
-            ids.formUnion(space.splitGroupMembers(of: group).map(\.id))
-        }
-        return sourcePages(for: ids, in: space)
-    }
-
     /// The core has accepted each copy's identity and visible URL/title. The
     /// adapter now prepares its opaque navigation history before pages mount.
     func prepareAcceptedCopies(_ copies: [TabCopied], from space: BrowserSpace) {

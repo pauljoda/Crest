@@ -103,7 +103,7 @@ extension BrowserPage {
         webKitAdapter?.applyContentBlocking(
             policy: policy,
             balancedRuleLists: balancedRuleLists,
-            reloadsImmediately: activation == .immediately && url != nil
+            reloadsImmediately: activation == .immediately && pageEngine.currentURL != nil
         )
     }
 
@@ -112,19 +112,23 @@ extension BrowserPage {
             completedNavigationCount == 0 ? .clear : nil
     }
 
+    /// Tells the core the page's current navigation failed with `error`,
+    /// which `replacedDocument` when it came after the new document took the
+    /// page's place. A navigation that became a download or was cancelled is
+    /// no failure, and only ends.
     func recordNavigationFailure(
         _ error: any Error,
-        phase: BrowserNavigationFailurePhase,
+        replacedDocument: Bool,
         navigation: WKNavigation?
     ) {
-        guard isCurrentNavigation(navigation) else { return }
+        guard isCurrentNavigation(navigation), let reporter = webKitAdapter?.reporter else { return }
         activeNavigation = nil
-        recordNavigationFailure(error, phase: phase, currentURL: webKitView?.url)
-        // A navigation that became a download or was cancelled is no failure.
-        if let failure = navigationFailure {
-            webKitAdapter?.reporter?.failed(failure.failingURL, error: failure.kind)
+        if let failure = PageFailure(
+            error: error, replacedDocument: replacedDocument, fallbackURL: reporter.pendingURL ?? webKitView?.url)
+        {
+            reporter.failed(failure)
         } else {
-            webKitAdapter?.reporter?.interrupted()
+            reporter.interrupted()
         }
     }
 

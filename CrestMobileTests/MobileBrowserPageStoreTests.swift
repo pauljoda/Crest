@@ -21,7 +21,7 @@ final class MobileBrowserPageStoreTests: XCTestCase {
         let page = try XCTUnwrap(pages.activePage)
         page.webView.loadSimulatedRequest(
             URLRequest(url: current), responseHTML: "<html><title>Copy fixture</title></html>")
-        try await waitUntil { page.url == current && !page.webView.isLoading }
+        try await waitUntil { page.live.documentURL == current && !page.webView.isLoading }
         pages.select(session: presented(BrowserSession(spaces: [space]), showing: selected.id))
         let before = pages.residentPageCount
         let activePage = pages.activePage
@@ -96,8 +96,8 @@ final class MobileBrowserPageStoreTests: XCTestCase {
         let pages = MobileBrowserPageStore(browser: store, usesEphemeralWebsiteDataStores: true)
         let url = try XCTUnwrap(URL(string: "https://example.com/search"))
 
-        store.navigateSelectedTab(to: url)
-        pages.selectAndLoad(url, in: store.presented)
+        store.navigateSelectedTab(to: url.absoluteString)
+        pages.selectAndNavigate(to: url.absoluteString, in: store.presented)
 
         XCTAssertEqual(
             try XCTUnwrap(pages.activePage).appInitiatedNavigationCount,

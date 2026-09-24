@@ -129,7 +129,7 @@ extension BrowserStore {
     func openExternalURL(_ url: URL) -> Bool {
         guard BrowserCorePolicy.acceptsExternalURL(url) else { return false }
         if selectedTab?.isStartPage == true {
-            navigateSelectedTab(to: url)
+            navigateSelectedTab(to: url.absoluteString)
         } else {
             openNewTab(url: url)
         }
@@ -310,14 +310,18 @@ extension BrowserStore {
     /// Start Page, so a page can open for it. An existing web page stays at its
     /// accepted location until its engine reports the new navigation, which
     /// the core records.
-    func navigateSelectedTab(to url: URL) {
+    /// Gives the selected tab, while it shows a native view or the Start
+    /// Page, the address `input` names by its Space's rules, so a page can
+    /// open for it. False when it changed nothing: the tab shows a web page,
+    /// the input was blank, or a rule refused it.
+    @discardableResult
+    func navigateSelectedTab(to input: String) -> Bool {
         guard selectedTab?.isWebPage == false,
             let space = selectedSpace, let tabID = selectedTabID(in: space.id)
-        else { return }
-        family.send(
+        else { return false }
+        return family.send(
             NavigateTab(
-                workspaceID: family.workspaceID, spaceID: space.id.rawValue, tabID: tabID.rawValue,
-                url: url.absoluteString),
+                workspaceID: family.workspaceID, spaceID: space.id.rawValue, tabID: tabID.rawValue, input: input),
             from: self, failure: "Core navigation failed")
     }
 

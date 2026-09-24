@@ -10,37 +10,25 @@ final class BrowserNavigationFailureClassificationTests: XCTestCase {
         let url = try XCTUnwrap(URL(string: "https://status.example.test/report"))
 
         let timeout = try XCTUnwrap(
-            BrowserNavigationFailure(
-                error: URLError(.timedOut),
-                phase: .provisional,
-                fallbackURL: url
-            )
+            PageFailure(error: URLError(.timedOut), replacedDocument: false, fallbackURL: url)
         )
-        XCTAssertEqual(timeout.kind, .timedOut)
+        XCTAssertEqual(timeout.error, .timedOut)
         XCTAssertEqual(timeout.failingURL, url)
-        XCTAssertEqual(timeout.browserCode, "CREST_TIMED_OUT")
-        XCTAssertEqual(timeout.errorDomain, NSURLErrorDomain)
-        XCTAssertEqual(timeout.errorCode, URLError.timedOut.rawValue)
+        XCTAssertEqual(timeout.error.code, "CREST_TIMED_OUT")
+        XCTAssertEqual(timeout.domain, NSURLErrorDomain)
+        XCTAssertEqual(timeout.code, Int64(URLError.timedOut.rawValue))
 
         let offline = try XCTUnwrap(
-            BrowserNavigationFailure(
-                error: URLError(.notConnectedToInternet),
-                phase: .provisional,
-                fallbackURL: url
-            )
+            PageFailure(error: URLError(.notConnectedToInternet), replacedDocument: false, fallbackURL: url)
         )
-        XCTAssertEqual(offline.kind, .offline)
-        XCTAssertEqual(offline.browserCode, "CREST_INTERNET_DISCONNECTED")
+        XCTAssertEqual(offline.error, .offline)
+        XCTAssertEqual(offline.error.code, "CREST_INTERNET_DISCONNECTED")
 
         let secureConnection = try XCTUnwrap(
-            BrowserNavigationFailure(
-                error: URLError(.serverCertificateUntrusted),
-                phase: .provisional,
-                fallbackURL: url
-            )
+            PageFailure(error: URLError(.serverCertificateUntrusted), replacedDocument: false, fallbackURL: url)
         )
-        XCTAssertEqual(secureConnection.kind, .secureConnectionFailed)
-        XCTAssertEqual(secureConnection.browserCode, "CREST_CERTIFICATE_INVALID")
+        XCTAssertEqual(secureConnection.error, .secureConnectionFailed)
+        XCTAssertEqual(secureConnection.error.code, "CREST_CERTIFICATE_INVALID")
     }
 
     func testUsesTheFailingURLReportedByURLLoading() throws {
@@ -52,49 +40,42 @@ final class BrowserNavigationFailureClassificationTests: XCTestCase {
             userInfo: [NSURLErrorFailingURLErrorKey: failingURL]
         )
 
-        let failure = try XCTUnwrap(
-            BrowserNavigationFailure(
-                error: error,
-                phase: .provisional,
-                fallbackURL: fallbackURL
-            )
-        )
+        let failure = try XCTUnwrap(PageFailure(error: error, replacedDocument: false, fallbackURL: fallbackURL))
 
-        XCTAssertEqual(failure.kind, .cannotFindServer)
+        XCTAssertEqual(failure.error, .cannotFindServer)
         XCTAssertEqual(failure.failingURL, failingURL)
         XCTAssertEqual(failure.displayHost, "actual.example.test")
     }
 
     func testIgnoresExpectedNavigationInterruptions() {
         XCTAssertNil(
-            BrowserNavigationFailure(
-                error: URLError(.cancelled),
-                phase: .provisional,
-                fallbackURL: URL(string: "https://example.test")
-            )
+            PageFailure(
+                error: URLError(.cancelled), replacedDocument: false, fallbackURL: URL(string: "https://example.test"))
         )
         XCTAssertNil(
-            BrowserNavigationFailure(
-                error: NSError(domain: "WebKitErrorDomain", code: 102),
-                phase: .provisional,
-                fallbackURL: URL(string: "https://example.test")
-            )
+            PageFailure(
+                error: NSError(domain: "WebKitErrorDomain", code: 102), replacedDocument: false,
+                fallbackURL: URL(string: "https://example.test"))
         )
         XCTAssertNil(
-            BrowserNavigationFailure(
-                error: WKError(.webContentProcessTerminated),
-                phase: .committed,
-                fallbackURL: URL(string: "https://example.test")
-            )
+            PageFailure(
+                error: WKError(.webContentProcessTerminated), replacedDocument: true,
+                fallbackURL: URL(string: "https://example.test"))
         )
     }
 }
 
+/// A WebKit page's failures, redirects and hand-offs reach the core, which
+/// holds what the page shows; each check waits for the core to publish it.
 @MainActor
 final class BrowserPageNavigationFailureTests: XCTestCase {
     private var navigationSource: WKWebView?
+    /// The window the page belongs to and its pool, kept while the test runs
+    /// so its workspace stays attached to the core.
+    private var browser: BrowserStore?
+    private var pool: BrowserPagePool?
 
-    func testDesktopPagePublishesAndRetriesAProvisionalFailure() throws {
+    func testDesktopPagePublishesAndRetriesAProvisionalFailure() async throws {
         let page = try makePage()
         let failingURL = try XCTUnwrap(URL(string: "https://offline.example.test/path"))
         let error = NSError(
@@ -109,19 +90,20 @@ final class BrowserPageNavigationFailureTests: XCTestCase {
             withError: error
         )
 
-        XCTAssertEqual(page.navigationFailure?.kind, .cannotConnect)
-        XCTAssertEqual(page.navigationFailure?.phase, .provisional)
-        XCTAssertEqual(page.displayURL, failingURL)
+        try await waitUntil { page.live.failure != nil }
+        XCTAssertEqual(page.live.failure?.error, .cannotConnect)
+        XCTAssertEqual(page.live.failure?.replacedDocument, false)
+        XCTAssertEqual(page.live.displayURL, failingURL)
         XCTAssertFalse(page.canReturnFromNavigationFailure)
 
         page.retryAfterNavigationFailure()
 
-        XCTAssertNil(page.navigationFailure)
-        XCTAssertEqual(page.pendingNavigationURL, failingURL)
-        XCTAssertEqual(page.displayURL, failingURL)
+        XCTAssertNil(page.live.failure)
+        XCTAssertEqual(page.live.pendingNavigationURL, failingURL)
+        XCTAssertEqual(page.live.displayURL, failingURL)
     }
 
-    func testDesktopPageIgnoresAFailureFromASupersededNavigation() throws {
+    func testDesktopPageIgnoresAFailureFromASupersededNavigation() async throws {
         let page = try makePage()
         let superseded = try makeNavigation()
         let current = try makeNavigation()
@@ -133,11 +115,12 @@ final class BrowserPageNavigationFailureTests: XCTestCase {
             didFailProvisionalNavigation: superseded,
             withError: URLError(.cannotConnectToHost)
         )
+        await settle()
 
-        XCTAssertNil(page.navigationFailure)
+        XCTAssertNil(page.live.failure)
     }
 
-    func testDesktopPageFollowsAServerRedirectInTheDisplayedURL() throws {
+    func testDesktopPageFollowsAServerRedirectInTheDisplayedURL() async throws {
         let page = try makePage()
         let requestedURL = try XCTUnwrap(URL(string: "https://short.example.test/start"))
         let redirectedURL = try XCTUnwrap(URL(string: "https://destination.example.test/final"))
@@ -145,8 +128,8 @@ final class BrowserPageNavigationFailureTests: XCTestCase {
         page.load(requestedURL)
         page.webView(page.webView, didStartProvisionalNavigation: navigation)
 
-        XCTAssertEqual(page.pendingNavigationURL, requestedURL)
-        XCTAssertEqual(page.displayURL, requestedURL)
+        try await waitUntil { page.live.pendingNavigationURL == requestedURL }
+        XCTAssertEqual(page.live.displayURL, requestedURL)
 
         let redirectingWebView = RedirectingWebViewStub(
             frame: .zero,
@@ -158,11 +141,11 @@ final class BrowserPageNavigationFailureTests: XCTestCase {
             didReceiveServerRedirectForProvisionalNavigation: navigation
         )
 
-        XCTAssertEqual(page.pendingNavigationURL, redirectedURL)
-        XCTAssertEqual(page.displayURL, redirectedURL)
+        try await waitUntil { page.live.pendingNavigationURL == redirectedURL }
+        XCTAssertEqual(page.live.displayURL, redirectedURL)
     }
 
-    func testDesktopPageHandsOffAnExternalSchemeWithoutAnErrorPage() throws {
+    func testDesktopPageHandsOffAnExternalSchemeWithoutAnErrorPage() async throws {
         let page = try makePage()
         let mailURL = try XCTUnwrap(URL(string: "mailto:person@example.com"))
         let recorder = PolicyRecorder()
@@ -179,7 +162,6 @@ final class BrowserPageNavigationFailureTests: XCTestCase {
         ) { recorder.policy = $0 }
 
         XCTAssertEqual(recorder.policy, .cancel)
-        XCTAssertNil(page.pendingNavigationURL)
 
         // WebKit answers a policy cancel with a frame-load interruption, which
         // must never become one of Crest's error pages.
@@ -188,9 +170,25 @@ final class BrowserPageNavigationFailureTests: XCTestCase {
             didFailProvisionalNavigation: nil,
             withError: NSError(domain: "WebKitErrorDomain", code: 102)
         )
+        await settle()
 
-        XCTAssertNil(page.navigationFailure)
-        XCTAssertNil(page.displayURL)
+        XCTAssertNil(page.live.pendingNavigationURL)
+        XCTAssertNil(page.live.failure)
+        XCTAssertNil(page.live.displayURL)
+    }
+
+    private func waitUntil(_ condition: @escaping @MainActor () -> Bool) async throws {
+        let deadline = ContinuousClock.now + .seconds(5)
+        while !condition() {
+            guard ContinuousClock.now < deadline else { return XCTFail("Timed out waiting for the core") }
+            try await Task.sleep(for: .milliseconds(10))
+        }
+    }
+
+    /// Lets the page report what it shows and the core publish it: a few
+    /// turns of the main queue.
+    private func settle() async {
+        for _ in 0..<5 { try? await Task.sleep(for: .milliseconds(10)) }
     }
 
     /// Mints a real navigation object. WebKit owns navigation identity, so the
@@ -214,7 +212,10 @@ final class BrowserPageNavigationFailureTests: XCTestCase {
             folders: [],
             tabs: [tab]
         )
-        let pool = BrowserPagePool(browser: .hostingPages(BrowserSession(spaces: [space])))
+        let browser = BrowserStore.hostingPages(BrowserSession(spaces: [space]))
+        self.browser = browser
+        let pool = BrowserPagePool(browser: browser)
+        self.pool = pool
         pool.select(tab: tab, space: space)
         return try XCTUnwrap(pool.activePage)
     }

@@ -254,7 +254,7 @@ final class MobileBrowserWindowSceneModel {
             else {
                 return false
             }
-            pages.selectAndLoad(url, in: browser.presented)
+            pages.selectAndNavigate(to: url.absoluteString, in: browser.presented)
             navigation.selectTab()
         }
         return true

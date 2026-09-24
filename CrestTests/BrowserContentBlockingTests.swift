@@ -274,7 +274,7 @@ final class BrowserContentBlockingTests: XCTestCase {
             let keptSentinel = try await documents.hasSentinel(in: page)
             let trackers = try await documents.trackerState(in: page)
             XCTAssertEqual(page.completedNavigationCount, navigationCount)
-            XCTAssertFalse(page.isLoading)
+            XCTAssertFalse(page.live.isLoading)
             XCTAssertTrue(keptSentinel)
             XCTAssertEqual(trackers, [false, true])
             XCTAssertEqual(page.isContentBlockingActive, true)

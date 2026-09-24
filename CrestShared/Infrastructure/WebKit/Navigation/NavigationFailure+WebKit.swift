@@ -1,31 +1,35 @@
 import Foundation
 import WebKit
 
-extension BrowserNavigationFailure {
+extension PageFailure {
+    /// The failure WebKit reported with `error`, which `replacedDocument` when
+    /// it came after the new document took the page's place, or nil for an
+    /// interruption that is no failure. `fallbackURL` names the address when
+    /// the error does not.
     init?(
         error: any Error,
-        phase: BrowserNavigationFailurePhase,
+        replacedDocument: Bool,
         fallbackURL: URL?
     ) {
         let error = error as NSError
         guard !Self.isExpectedInterruption(error) else { return nil }
 
         self.init(
-            kind: Self.kind(for: error),
-            phase: phase,
-            failingURL: Self.failingURL(in: error) ?? fallbackURL,
-            errorDomain: error.domain,
-            errorCode: error.code
+            error: Self.kind(for: error),
+            url: (Self.failingURL(in: error) ?? fallbackURL)?.absoluteString,
+            replacedDocument: replacedDocument,
+            domain: error.domain,
+            code: Int64(error.code)
         )
     }
 
-    static func webContentProcessStopped(url: URL?) -> BrowserNavigationFailure {
-        BrowserNavigationFailure(
-            kind: .webContentProcessStopped,
-            phase: .committed,
-            failingURL: url,
-            errorDomain: WKError.errorDomain,
-            errorCode: WKError.webContentProcessTerminated.rawValue
+    static func webContentProcessStopped(url: URL?) -> PageFailure {
+        PageFailure(
+            error: .webContentProcessStopped,
+            url: url?.absoluteString,
+            replacedDocument: true,
+            domain: WKError.errorDomain,
+            code: Int64(WKError.webContentProcessTerminated.rawValue)
         )
     }
 

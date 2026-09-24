@@ -4,9 +4,9 @@ using CrestCore.Domain;
 namespace CrestCore.Application;
 
 /// One page this device hosts: its owner, the window that hosts it, the engine
-/// that hosts it and where it stands there. Its engine page lives in the
-/// profile of the Space it opened in, so the page only ever moves between
-/// Spaces of that profile.
+/// that hosts it, where it stands there and its live state. Its engine page
+/// lives in the profile of the Space it opened in, so the page only ever moves
+/// between Spaces of that profile.
 internal sealed class Page {
     #region Variables
 
@@ -26,10 +26,26 @@ internal sealed class Page {
 
     public PagePhase Phase { get; private set; } = PagePhase.Opening;
 
-    public PageState State => new(Id, WorkspaceId, SpaceId, TabId, Engine.Kind, Phase);
+    public PageState State => new(Id, WorkspaceId, SpaceId, TabId, Engine.Kind, Phase, Live);
+
+    /// What rules and views read of the page now: what its engine last showed,
+    /// and why its latest navigation failed. A failure over the document the
+    /// page still shows can be left for that document, so the page can go back
+    /// even when its engine's history cannot.
+    public PageLiveState Live => new(shown.Url, shown.PendingUrl, shown.Title, shown.IsLoading,
+        shown.CanGoBack || failure is { ReplacedDocument: false } && shown.Url is not null, shown.CanGoForward, shown.Security,
+        failure, shown.Media);
 
     /// The icon the engine last reported for the document the page shows.
     public PageIcon? Icon { get; private set; }
+
+    /// What the page's engine last reported it shows, with the address the
+    /// core asked it to load since.
+    private PageSnapshot shown = PageSnapshot.Blank;
+
+    /// Why the page's latest navigation failed, until another commits a new
+    /// document or the page is asked to load or leave the failure.
+    private PageFailure? failure;
 
     /// The address of the page the document shows, as it last committed or
     /// was recorded.
@@ -81,6 +97,7 @@ internal sealed class Page {
     /// document begins one only when it reaches another page: a fragment is
     /// part of the page it names, and the document keeps its icon.
     public void Commit(string url, bool sameDocument) {
+        if (!sameDocument) failure = null;
         if (sameDocument && documentUrl is { } shown && new WebAddress(shown).IsSamePage(new WebAddress(url))) return;
         documentUrl = url;
         isRecorded = false;
@@ -96,8 +113,26 @@ internal sealed class Page {
         return true;
     }
 
-    /// A navigation failed, so the document it was loading records nothing.
-    public void Fail() => isRecorded = true;
+    /// A navigation failed as `reason` describes, so the document it was
+    /// loading records nothing, and the page shows the failure in place of
+    /// where it was heading.
+    public void Fail(PageFailure reason) {
+        isRecorded = true;
+        failure = reason;
+        shown = shown with { PendingUrl = null };
+    }
+
+    /// The page is asked to load `url`, and shows it heading there at once.
+    public void Load(string url) {
+        failure = null;
+        shown = shown with { PendingUrl = url };
+    }
+
+    /// The person left the page's failure for the document behind it.
+    public void LeaveFailure() => failure = null;
+
+    /// The engine reported what the page shows now.
+    public void Show(PageSnapshot snapshot) => shown = snapshot;
 
     /// The engine reported an icon for the document. Answers whether its tab
     /// may wear it now: the page has a tab and the document is recorded, so

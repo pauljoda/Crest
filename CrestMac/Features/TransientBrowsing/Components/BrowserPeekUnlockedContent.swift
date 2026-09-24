@@ -112,7 +112,7 @@ struct BrowserPeekUnlockedContent: View {
     private var showsInitialLoadingSurface: Bool {
         guard let page = model.page else { return false }
         return page.committedNavigationCount == 0
-            && page.navigationFailure == nil
+            && page.live.failure == nil
             && page.webContentFailureMessage == nil
     }
 

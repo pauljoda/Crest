@@ -144,9 +144,9 @@ final class BrowserPagePool:
     /// Where unloaded tabs leave their WebKit session state. Its archive is nil
     /// for a private pool, even if an archive is handed in.
     @ObservationIgnored private let tabState: BrowserTabStateCoordinator
-    /// What each background page this pool watches looked like when it last
-    /// changed, which tells when its first navigation settled.
-    @ObservationIgnored private var backgroundPageSnapshots: [TabID: BrowserBackgroundPageSnapshot] = [:]
+    /// The pages opened behind the one on screen whose first navigation has
+    /// not settled yet.
+    @ObservationIgnored private var unsettledBackgroundTabs: Set<TabID> = []
 
     init(
         browser: BrowserStore,
@@ -526,17 +526,17 @@ final class BrowserPagePool:
         return runtime.page
     }
 
-    var canGoBack: Bool { activePage?.canGoBack == true }
-    var canGoForward: Bool { activePage?.canGoForward == true }
+    var canGoBack: Bool { activePage?.live.canGoBack == true }
+    var canGoForward: Bool { activePage?.live.canGoForward == true }
     var backHistory: [BrowserNavigationHistoryItem] { activePage?.backHistory ?? [] }
     var forwardHistory: [BrowserNavigationHistoryItem] { activePage?.forwardHistory ?? [] }
 
     var hasActivePage: Bool {
-        activePage?.url != nil
+        activePage?.live.documentURL != nil
     }
 
     var isLoading: Bool {
-        activePage?.isLoading == true
+        activePage?.live.isLoading == true
     }
 
     var pageZoomLabel: String {
@@ -628,13 +628,13 @@ final class BrowserPagePool:
     /// runtime store watches its own pages.
     private func observeBackgroundPage(_ page: BrowserPage, for tabID: TabID) {
         guard !publishesPageMetadataCentrally else { return }
-        backgroundPageSnapshots[tabID] = BrowserBackgroundPageSnapshot(page: page)
+        unsettledBackgroundTabs.insert(tabID)
         trackBackgroundPageChanges(page, for: tabID)
     }
 
     private func trackBackgroundPageChanges(_ page: BrowserPage, for tabID: TabID) {
         withObservationTracking {
-            _ = BrowserBackgroundPageSnapshot(page: page)
+            _ = page.hasSettledNavigation
         } onChange: { [weak self, weak page] in
             Task { @MainActor in
                 guard let self, let page else { return }
@@ -644,29 +644,22 @@ final class BrowserPagePool:
     }
 
     private func backgroundPageDidChange(_ page: BrowserPage, for tabID: TabID) {
-        guard tabRuntimes[tabID]?.page === page, backgroundPageSnapshots[tabID] != nil else {
+        guard tabRuntimes[tabID]?.page === page, unsettledBackgroundTabs.contains(tabID) else {
             forgetBackgroundPageObservation(for: tabID)
             return
         }
-        let previous = backgroundPageSnapshots[tabID]
-        let current = BrowserBackgroundPageSnapshot(page: page)
-        backgroundPageSnapshots[tabID] = current
-        trackBackgroundPageChanges(page, for: tabID)
-
-        let initialNavigationSettled =
-            current.completedNavigationCount > 0
-            || current.hasNavigationFailure
-            || (previous?.isLoading == true && !current.isLoading)
-        if initialNavigationSettled,
-            !presentedTabIDs.contains(tabID),
-            inactiveSinceByTabID[tabID] == nil
-        {
+        guard page.hasSettledNavigation else {
+            trackBackgroundPageChanges(page, for: tabID)
+            return
+        }
+        forgetBackgroundPageObservation(for: tabID)
+        if !presentedTabIDs.contains(tabID), inactiveSinceByTabID[tabID] == nil {
             inactiveSinceByTabID[tabID] = .now
         }
     }
 
     private func forgetBackgroundPageObservation(for tabID: TabID) {
-        backgroundPageSnapshots[tabID] = nil
+        unsettledBackgroundTabs.remove(tabID)
     }
 
     /// The cards `tab` brings on screen, with the caller's own tab value in
@@ -919,8 +912,11 @@ final class BrowserPagePool:
         profileDataStores.releaseAllEphemeralStores()
     }
 
-    func load(_ url: URL) {
-        activePage?.load(url)
+    /// Asks the core to load what the person typed or chose in the page the
+    /// window shows. False when there is none or a rule refused it.
+    @discardableResult
+    func navigate(to input: String) -> Bool {
+        activePage?.corePage.navigate(to: input) ?? false
     }
 
     /// The cards a visited-link restyle applies to.
@@ -1353,7 +1349,7 @@ final class BrowserPagePool:
         let canReloadResidentPage =
             residentPage?.spaceID == space.id
             && residentPage?.profileID == space.profile.id
-            && residentPage?.url != nil
+            && residentPage?.live.documentURL != nil
         select(session: session)
         guard canReloadResidentPage else { return }
         activePage?.reload()
@@ -1607,7 +1603,10 @@ final class BrowserPagePool:
         // WebKit owns an adopted popup's first navigation. Loading it here would
         // replace the document `window.open()` handed to the opener.
         guard !page.isAwaitingPopupNavigation else { return }
-        guard page.url == nil, page.pendingNavigationURL == nil, let url = tab.url else { return }
+        // A page its engine shows something in, or that is already heading
+        // somewhere, has had its first navigation.
+        guard page.pageEngine.currentURL == nil, page.navigationReporter?.pendingURL == nil, let url = tab.url
+        else { return }
         let interval = Self.lifecycleSignposter.beginInterval("Start Initial Navigation")
         // The adapter restores its own navigation state instead of a plain load.
         // Missing or incompatible archives fall back to the tab's current URL.
@@ -1620,7 +1619,7 @@ final class BrowserPagePool:
             Self.lifecycleSignposter.endInterval("Start Initial Navigation", interval)
             return
         }
-        page.load(url)
+        page.corePage.navigate(to: url.absoluteString)
         Self.lifecycleSignposter.endInterval("Start Initial Navigation", interval)
     }
 
@@ -1635,7 +1634,7 @@ final class BrowserPagePool:
         let canReloadResidentPage =
             residentPage?.spaceID == space.id
             && residentPage?.profileID == space.profile.id
-            && residentPage?.url != nil
+            && residentPage?.live.documentURL != nil
 
         select(session: session)
 
@@ -1905,8 +1904,8 @@ extension BrowserPagePool: BrowserTabCopying {
     func sourceForTabCopy(_ source: BrowserTab, in space: BrowserSpace) -> BrowserTab {
         var observed = source
         if let page = tabRuntimes[source.id]?.page, page.spaceID == space.id, page.profileID == space.profile.id {
-            observed.url = page.displayURL ?? source.url
-            observed.title = page.title.isEmpty ? source.title : page.title
+            observed.url = page.live.displayURL ?? source.url
+            observed.title = page.live.title.isEmpty ? source.title : page.live.title
         }
         return observed
     }
@@ -1914,9 +1913,9 @@ extension BrowserPagePool: BrowserTabCopying {
     func prepareTabCopy(from source: BrowserTab, to copy: inout BrowserTab, in space: BrowserSpace) {
         let state: Data?
         if let page = tabRuntimes[source.id]?.page, page.spaceID == space.id, page.profileID == space.profile.id {
-            copy.url = page.displayURL ?? source.url
-            copy.title = page.title.isEmpty ? source.title : page.title
-            state = !page.wasOpenedAsPopup && page.url == copy.url ? page.interactionState : nil
+            copy.url = page.live.displayURL ?? source.url
+            copy.title = page.live.title.isEmpty ? source.title : page.live.title
+            state = !page.wasOpenedAsPopup && page.live.documentURL == copy.url ? page.interactionState : nil
         } else if let url = source.url {
             state = archivedInteractionState(
                 for: source, spaceID: space.id, profileID: space.profile.id, expecting: url, consumePendingCopy: false)
@@ -1936,6 +1935,6 @@ extension BrowserPagePool: BrowserTabLinkProviding {
             page.spaceID == space.id,
             page.profileID == space.profile.id
         else { return tab.url }
-        return page.url
+        return page.live.documentURL
     }
 }

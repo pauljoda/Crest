@@ -68,16 +68,20 @@ public sealed partial class CrestApp {
     /// the call that holds it: an intent drains the batch before it returns,
     /// and a report wakes the host once it lets go. An undrained save gives way
     /// to a newer one and outlasts an older one, which a writer on another
-    /// thread can announce after it.
+    /// thread can announce after it. A page's newer state replaces its
+    /// undrained older one, so a page that changes many times between drains
+    /// arrives once, where its latest change falls.
     private void Announce(Change change) {
         bool wakes;
         lock (pendingGate) {
+            wakes = pending.Count == 0;
             if (change is Saved saved && pending.Count > 0 && pending[^1] is Saved earlier) {
                 if (saved.Revision > earlier.Revision) pending[^1] = saved;
             } else {
+                if (change is PageChanged { Page.Id: var pageId })
+                    pending.RemoveAll(waiting => waiting is PageChanged older && older.Page.Id == pageId);
                 pending.Add(change);
             }
-            wakes = pending.Count == 1;
         }
         if (!wakes) return;
         if (gate.IsHeldByCurrentThread) Volatile.Write(ref wakeOwed, true);

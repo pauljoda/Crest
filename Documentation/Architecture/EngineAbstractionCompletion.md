@@ -176,13 +176,14 @@ Remaining:
 
 Done:
 
-- Each page carries an engine-neutral `BrowserPageSecurityState` (`none`,
-  `insecure`, `secure`, `mixed_content`, `certificate_error`, `dangerous`).
-  Chromium reports it in every `changed` payload from
+- Each page's live state in the core carries an engine-neutral `PageSecurity`
+  (`none`, `insecure`, `secure`, `mixed_content`, `certificate_error`,
+  `dangerous`), whose members carry the title, symbol and detail Site Controls
+  shows. Chromium reports it in every `changed` payload from
   `SecurityStateTabHelper`. WebKit derives it from the scheme,
   `hasOnlySecureContent`, the trust result on `serverTrust`, and any override
-  in `BrowserServerTrustOverrideStore`. Site Controls shows each state and
-  offers `View Certificate` whenever the engine hands over its trust.
+  in `BrowserServerTrustOverrideStore`. Site Controls offers
+  `View Certificate` whenever the engine hands over its trust.
 - Basic and Digest authentication go through the shared
   `BrowserHTTPAuthenticationSession` and prompt on both engines. Proxy
   challenges and other schemes keep the engine's own handling.

@@ -6,7 +6,7 @@ struct BrowserQuickWindowPageObservationModifier: ViewModifier {
 
     func body(content: Content) -> some View {
         content
-            .onChange(of: model.page?.url) { _, url in
+            .onChange(of: model.page?.live.documentURL) { _, url in
                 guard let url else { return }
                 addressText = url.absoluteString
                 model.updatePresentedURL(url)

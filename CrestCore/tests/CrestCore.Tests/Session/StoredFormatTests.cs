@@ -104,7 +104,7 @@ public sealed class StoredFormatTests {
             } else if (RecordedIntents.Typed(request, workspace, window, authority.Current) is { } intents) {
                 clock.Now = RecordedIntents.Time(request);
                 ids.Supply(RecordedIntents.Identities(request));
-                foreach (var intent in intents) app.Send(intent);
+                RecordedIntents.Send(app, engine, request, intents, window);
                 TestGrants.UnlockGuarded(app.Send, workspace, authority.Current);
             } else if (RecordedIntents.Navigation(request) is { } navigation) {
                 clock.Now = navigation.At;

@@ -63,8 +63,8 @@ struct MobilePageActionsContent: View {
             }
 
             Button(
-                pages.activePage?.isLoading == true ? "Stop" : "Reload",
-                systemImage: pages.activePage?.isLoading == true ? "xmark" : "arrow.clockwise"
+                pages.activePage?.live.isLoading == true ? "Stop" : "Reload",
+                systemImage: pages.activePage?.live.isLoading == true ? "xmark" : "arrow.clockwise"
             ) {
                 pages.reloadOrStop()
             }
@@ -185,7 +185,7 @@ struct MobilePageActionsContent: View {
 
     @ViewBuilder
     private func sitePermissions(for page: MobileBrowserPage) -> some View {
-        if let origin = page.url.flatMap(BrowserSiteOrigin.init(url:)) {
+        if let origin = page.live.documentURL.flatMap(BrowserSiteOrigin.init(url:)) {
             Menu("Site Permissions", systemImage: "slider.horizontal.3") {
                 ForEach(SitePermission.all, id: \.self) { permission in
                     Picker(

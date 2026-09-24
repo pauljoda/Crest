@@ -48,7 +48,7 @@ struct BrowserWebContentView: View {
             BrowserTranslationHost(
                 translation: page.translation, page: page,
                 isActive: pages.activePage === page && isSelectedSpace,
-                isLoading: page.isLoading,
+                isLoading: page.live.isLoading,
                 isReaderActive: page.readerModeState.isActive
             )
         )
@@ -66,7 +66,7 @@ struct BrowserWebContentView: View {
                 || page.credentialFillRequest != nil
                 || page.credentialSaveCandidate != nil
                 || page.isRegionCapturePresented
-                || page.navigationFailure != nil
+                || page.live.failure != nil
                 || page.webContentFailureMessage != nil
         )
     }
@@ -76,7 +76,7 @@ struct BrowserWebContentView: View {
             BrowserPagePresentationInput(
                 selection: .webPage,
                 hasActivePage: true,
-                hasNavigationFailure: page.navigationFailure != nil,
+                hasNavigationFailure: page.live.failure != nil,
                 hasProcessFailure: page.webContentFailureMessage != nil,
                 unloadedBehavior: .remainUnloaded
             )

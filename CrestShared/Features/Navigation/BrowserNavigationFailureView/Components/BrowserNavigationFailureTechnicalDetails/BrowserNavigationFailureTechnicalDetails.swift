@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct BrowserNavigationFailureTechnicalDetails: View {
-    let failure: BrowserNavigationFailure
+    let failure: PageFailure
 
     var body: some View {
         VStack(alignment: .leading, spacing: CrestSpacing.medium) {
@@ -16,15 +16,15 @@ struct BrowserNavigationFailureTechnicalDetails: View {
             }
             BrowserNavigationFailureDetailRow(
                 label: "Error Domain",
-                value: failure.errorDomain
+                value: failure.domain
             )
             BrowserNavigationFailureDetailRow(
                 label: "Error Number",
-                value: String(failure.errorCode)
+                value: String(failure.code)
             )
             BrowserNavigationFailureDetailRow(
                 label: "Loading Stage",
-                value: failure.phase == .provisional
+                value: !failure.replacedDocument
                     ? String(localized: "Before content loaded")
                     : String(localized: "After content started loading")
             )

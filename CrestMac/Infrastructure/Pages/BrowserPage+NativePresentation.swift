@@ -9,7 +9,7 @@ extension BrowserPage {
 
     var canReviewCertificate: Bool {
         BrowserSiteCertificatePresentationPolicy.isAvailable(
-            url: displayURL,
+            url: live.displayURL,
             hasServerTrust: pageEngine.serverTrust != nil
         )
     }

@@ -1208,7 +1208,7 @@ final class MobileBrowserNavigationTests: XCTestCase {
             let keptSentinel = try await documents.hasSentinel(in: page)
             let trackers = try await documents.trackerState(in: page)
             XCTAssertEqual(page.completedNavigationCount, navigationCount)
-            XCTAssertFalse(page.isLoading)
+            XCTAssertFalse(page.live.isLoading)
             XCTAssertTrue(keptSentinel)
             XCTAssertEqual(trackers, [false, true])
             XCTAssertEqual(page.isContentBlockingActive, true)
@@ -1280,7 +1280,7 @@ final class MobileBrowserNavigationTests: XCTestCase {
             backgroundPage.completedNavigationCount,
             backgroundNavigationCount
         )
-        XCTAssertFalse(backgroundPage.isLoading)
+        XCTAssertFalse(backgroundPage.live.isLoading)
         XCTAssertTrue(backgroundSentinel)
         XCTAssertEqual(backgroundPage.isContentBlockingActive, false)
     }
@@ -1871,7 +1871,7 @@ final class MobileBrowserNavigationTests: XCTestCase {
             baseURL: URL(string: "https://example.test/page")!
         )
         try await waitUntil(timeout: .seconds(8)) {
-            page.completedNavigationCount == 1 && page.url != nil
+            page.completedNavigationCount == 1 && page.live.documentURL != nil
         }
 
         page.presentFind()
@@ -1948,7 +1948,7 @@ final class MobileBrowserNavigationTests: XCTestCase {
             "<html><body><h1>Crest PDF Export</h1><p>Rendered by WebKit.</p></body></html>",
             baseURL: URL(string: "https://pdf.crest.test")
         )
-        try await waitUntil { page.completedNavigationCount == 1 && page.url != nil }
+        try await waitUntil { page.completedNavigationCount == 1 && page.live.documentURL != nil }
 
         let data = try await page.pdfData()
         let document = try XCTUnwrap(
@@ -1967,7 +1967,7 @@ final class MobileBrowserNavigationTests: XCTestCase {
             "<html><body><h1>Crest Mobile Web Archive</h1><p>Rendered by WebKit.</p></body></html>",
             baseURL: URL(string: "https://archive.crest.test")
         )
-        try await waitUntil { page.completedNavigationCount == 1 && page.url != nil }
+        try await waitUntil { page.completedNavigationCount == 1 && page.live.documentURL != nil }
 
         let data = try await page.webArchiveData()
         let propertyList = try PropertyListSerialization.propertyList(

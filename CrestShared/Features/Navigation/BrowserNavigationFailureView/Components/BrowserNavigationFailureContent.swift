@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct BrowserNavigationFailureContent: View {
-    let failure: BrowserNavigationFailure
+    let failure: PageFailure
     let presentation: BrowserNavigationFailurePresentation
     let layout: BrowserNavigationFailureLayout
     let canGoBack: Bool

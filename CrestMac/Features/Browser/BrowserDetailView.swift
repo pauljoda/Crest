@@ -36,7 +36,7 @@ struct BrowserDetailView: View {
                 selection: tab.map { $0.pagePresentationSelection }
                     ?? .none,
                 hasActivePage: page != nil,
-                hasNavigationFailure: page?.navigationFailure != nil,
+                hasNavigationFailure: page?.live.failure != nil,
                 hasProcessFailure: page?.webContentFailureMessage != nil,
                 unloadedBehavior: .remainUnloaded
             )

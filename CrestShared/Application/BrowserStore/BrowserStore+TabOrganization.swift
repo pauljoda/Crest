@@ -358,8 +358,7 @@ extension BrowserStore {
         return sendCopying(
             JoinSplit(
                 workspaceID: family.workspaceID, windowID: windowID.rawValue, spaceID: space.id.rawValue,
-                tabID: item.tabID.rawValue, targetTabID: targetTabID.rawValue, index: memberIndex,
-                sourcePages: splitSourcePages(source: item.tabID, target: targetTabID, in: space)),
+                tabID: item.tabID.rawValue, targetTabID: targetTabID.rawValue, index: memberIndex),
             in: space) != nil
     }
 
@@ -502,7 +501,7 @@ extension BrowserStore {
         family.canSend(
             JoinSplit(
                 workspaceID: family.workspaceID, windowID: windowID.rawValue, spaceID: space.id.rawValue,
-                tabID: tabID.rawValue, targetTabID: targetTabID.rawValue, index: nil, sourcePages: []),
+                tabID: tabID.rawValue, targetTabID: targetTabID.rawValue, index: nil),
             from: self)
     }
 
@@ -583,8 +582,7 @@ extension BrowserStore {
                 OpenLinkInSplit(
                     workspaceID: family.workspaceID, windowID: windowID.rawValue, spaceID: space.id.rawValue,
                     tabID: openedID.rawValue, targetTabID: targetTabID.rawValue, address: url.absoluteString,
-                    title: url.host() ?? url.absoluteString,
-                    sourcePages: splitSourcePages(source: nil, target: targetTabID, in: space)),
+                    title: url.host() ?? url.absoluteString),
                 in: space) != nil
         else { return nil }
         return openedID
@@ -610,7 +608,7 @@ extension BrowserStore {
         return family.canSend(
             OpenLinkInSplit(
                 workspaceID: family.workspaceID, windowID: windowID.rawValue, spaceID: space.id.rawValue, tabID: UUID(),
-                targetTabID: tabID.rawValue, address: "about:blank", title: "", sourcePages: []),
+                targetTabID: tabID.rawValue, address: "about:blank", title: ""),
             from: self)
     }
 

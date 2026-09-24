@@ -1486,16 +1486,8 @@ final class BrowserStoreMutationTests: XCTestCase {
             accent: .indigo, folders: [], tabs: [tab])
         let browser = BrowserStore(
             session: BrowserSession(spaces: [space]))
-        let synchronizer = BrowserPageSessionSynchronizer(
-            browser: browser, spaceAccess: BrowserSpaceAccessController())
-        let source = BrowserTabRuntimeAssignment(
-            tabID: tab.id, spaceID: space.id, profileID: space.profile.id)
-        let metadata = BrowserPageMetadata(
-            url: nextURL, displayURL: nextURL, title: "New", displayTitle: "New",
-            faviconData: Data("new icon".utf8), iconAccent: nil)
 
-        browser.navigateSelectedTab(to: nextURL)
-        XCTAssertEqual(synchronizer.address(of: metadata, matching: source), nextURL.absoluteString)
+        XCTAssertFalse(browser.navigateSelectedTab(to: nextURL.absoluteString))
         XCTAssertEqual(browser.selectedTab?.url, originalURL)
         XCTAssertEqual(browser.selectedTab?.title, "Old")
         XCTAssertTrue(try XCTUnwrap(browser.selectedSpace).history.isEmpty)

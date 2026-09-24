@@ -42,12 +42,15 @@ struct BrowserSiteSecuritySection: View {
         page.canReviewCertificate
     }
 
+    /// The connection as the core holds it for the page.
+    private var security: PageSecurity { page.live.security }
+
     /// An HTTPS page the engine judged secure but whose verified trust it could
     /// not hand over. Without a certificate to show, the page is not called
     /// secure; the engine's warnings for other states still stand.
     private var isUnconfirmedSecure: Bool {
-        page.securityState == .secure
-            && page.displayURL?.scheme?.lowercased() == "https"
+        security.isSecure
+            && page.live.displayURL?.scheme?.lowercased() == "https"
             && !canReviewCertificate
     }
 
@@ -57,49 +60,21 @@ struct BrowserSiteSecuritySection: View {
             .foregroundStyle(tint)
     }
 
-    private var title: LocalizedStringKey {
-        if isUnconfirmedSecure { return "Connection Details Unavailable" }
-        return switch page.securityState {
-        case .secure: "Secure"
-        case .mixedContent: "Partly Secure"
-        case .certificateError: "Certificate Not Trusted"
-        case .dangerous: "Dangerous Site"
-        case .insecure, .none: "Not Secure"
-        }
+    private var title: LocalizedStringResource {
+        isUnconfirmedSecure ? "Connection Details Unavailable" : security.title
     }
 
     private var symbol: String {
-        if isUnconfirmedSecure { return "lock" }
-        return switch page.securityState {
-        case .secure: "lock.fill"
-        case .mixedContent: "lock.trianglebadge.exclamationmark.fill"
-        case .certificateError: "exclamationmark.lock.fill"
-        case .dangerous: "exclamationmark.octagon.fill"
-        case .insecure, .none: "lock.open.fill"
-        }
+        isUnconfirmedSecure ? "lock" : security.symbol
     }
 
     private var tint: Color {
         if isUnconfirmedSecure { return .secondary }
-        return switch page.securityState {
-        case .secure: .green
-        case .mixedContent, .insecure, .none: .orange
-        case .certificateError, .dangerous: .red
-        }
+        if security.isSecure { return .green }
+        return security.isHazardous ? .red : .orange
     }
 
-    private var detail: LocalizedStringKey? {
-        switch page.securityState {
-        case .mixedContent:
-            "Some content on this page was not delivered securely."
-        case .certificateError:
-            "This site’s certificate is not trusted. Information you send could be read by others."
-        case .dangerous:
-            "This site may try to harm your Mac or steal your information."
-        case .secure, .insecure, .none:
-            nil
-        }
-    }
+    private var detail: LocalizedStringResource? { security.detail }
 
     private func presentCertificate() {
         if let reviewCertificate {

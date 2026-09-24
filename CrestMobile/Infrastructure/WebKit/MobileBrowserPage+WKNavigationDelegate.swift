@@ -46,7 +46,6 @@ extension MobileBrowserPage: WKNavigationDelegate {
         // WebKit accepted the navigation Crest asked for, so the authorization
         // that came with it is spent.
         consumeAppInitiatedURL()
-        clearNavigationFailure(preservingPendingURL: true)
         pendingServerTrustIdentity = nil
         linkActivationSourceStore.removeAll()
         credentialState.didStartNavigation()
@@ -74,7 +73,7 @@ extension MobileBrowserPage: WKNavigationDelegate {
         guard isCurrentNavigation(navigation),
             let redirectedURL = webView.url
         else { return }
-        pendingNavigationURL = redirectedURL
+        reporter.redirected(to: redirectedURL)
     }
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation?) {
@@ -112,7 +111,7 @@ extension MobileBrowserPage: WKNavigationDelegate {
                 trigger: BrowserPopupTrigger.classify(navigationAction.navigationType),
                 origin: externalSchemeCoordinator.sourceOrigin(
                     for: navigationAction,
-                    currentURL: displayURL
+                    currentURL: live.displayURL
                 )
             )
             decisionHandler(.cancel)
@@ -306,7 +305,7 @@ extension MobileBrowserPage: WKNavigationDelegate {
         httpAuthenticationSession.authenticationFailed()
         recordNavigationFailure(
             error,
-            phase: .committed,
+            replacedDocument: true,
             navigation: navigation
         )
     }
@@ -319,7 +318,7 @@ extension MobileBrowserPage: WKNavigationDelegate {
         httpAuthenticationSession.authenticationFailed()
         recordNavigationFailure(
             error,
-            phase: .provisional,
+            replacedDocument: false,
             navigation: navigation
         )
     }

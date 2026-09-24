@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct BrowserNavigationFailureHeadline: View {
-    let failure: BrowserNavigationFailure
+    let failure: PageFailure
     let presentation: BrowserNavigationFailurePresentation
     let alignment: HorizontalAlignment
     let textAlignment: TextAlignment
@@ -20,12 +20,12 @@ struct BrowserNavigationFailureHeadline: View {
                 .fixedSize(horizontal: false, vertical: true)
 
             // Selectable text is an AppKit view: a label with no value recurses when assistive apps read it.
-            Text(failure.browserCode)
+            Text(failure.error.code)
                 .font(.caption.monospaced())
                 .foregroundStyle(.tertiary)
                 .textSelection(.enabled)
                 .accessibilityLabel("Error code")
-                .accessibilityValue(failure.browserCode)
+                .accessibilityValue(failure.error.code)
         }
     }
 }

@@ -322,7 +322,7 @@ struct BrowserSplitPageSurface: View {
                     BrowserPagePresentationInput(
                         selection: member.pagePresentationSelection,
                         hasActivePage: page != nil,
-                        hasNavigationFailure: page?.navigationFailure != nil,
+                        hasNavigationFailure: page?.live.failure != nil,
                         hasProcessFailure: page?.webContentFailureMessage != nil,
                         unloadedBehavior: .remainUnloaded
                     )

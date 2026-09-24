@@ -19,23 +19,25 @@ final class BrowserPageNavigationMarkerTests: XCTestCase {
         // document. No didFinish callback will retire its pending destination.
         page.prepareForNavigation(to: post)
         _ = try await page.webView.evaluateJavaScript("history.pushState({}, '', '/post')")
-        try await waitForNavigation { page.url == post }
-        XCTAssertNil(page.pendingNavigationURL)
-        XCTAssertEqual(page.displayURL, post)
+        // The core hears the address and the retired destination once the
+        // engine's history settles, which can be a turn after the address.
+        try await waitForNavigation { page.live.documentURL == post && page.live.pendingNavigationURL == nil }
+        XCTAssertNil(page.live.pendingNavigationURL)
+        XCTAssertEqual(page.live.displayURL, post)
         XCTAssertEqual(page.backHistory.map(\.url), page.webView.backForwardList.backList.reversed().map(\.url))
 
         _ = try await page.webView.evaluateJavaScript("history.back()")
-        try await waitForNavigation { page.url == root }
-        XCTAssertEqual(page.displayURL, root)
+        try await waitForNavigation { page.live.documentURL == root }
+        XCTAssertEqual(page.live.displayURL, root)
         XCTAssertEqual(page.committedNavigationCount, commits)
 
         _ = try await page.webView.evaluateJavaScript("history.forward()")
-        try await waitForNavigation { page.url == post }
+        try await waitForNavigation { page.live.documentURL == post }
         _ = try await page.webView.evaluateJavaScript("history.replaceState({}, '', '/updated-post')")
         let replaced = try XCTUnwrap(URL(string: "https://history.crest.test/updated-post"))
-        try await waitForNavigation { page.url == replaced }
-        XCTAssertEqual(page.displayURL, replaced)
-        XCTAssertNil(page.pendingNavigationURL)
+        try await waitForNavigation { page.live.documentURL == replaced && page.live.pendingNavigationURL == nil }
+        XCTAssertEqual(page.live.displayURL, replaced)
+        XCTAssertNil(page.live.pendingNavigationURL)
     }
 
     func testLinkHistoryRetainsSameDocumentEntriesAndDiscardsForwardBranch() async throws {
@@ -51,31 +53,31 @@ final class BrowserPageNavigationMarkerTests: XCTestCase {
             page.navigationHistory.recordLink(to: destination, in: page.webView.backForwardList)
             page.prepareForNavigation(to: destination)
             _ = try await page.webView.evaluateJavaScript("history.pushState({}, '', '\(destination.path)')")
-            try await waitForNavigation { page.url == destination }
+            try await waitForNavigation { page.live.documentURL == destination }
         }
         XCTAssertEqual(page.backHistory.map(\.url), [feed, root])
         page.goBack()
-        try await waitForNavigation { page.url == feed }
-        XCTAssertEqual(page.displayURL, feed)
+        try await waitForNavigation { page.live.documentURL == feed }
+        XCTAssertEqual(page.live.displayURL, feed)
         XCTAssertEqual(page.forwardHistory.map(\.url), [post])
         page.goForward(toDepth: 1)
-        try await waitForNavigation { page.url == post }
+        try await waitForNavigation { page.live.documentURL == post }
         page.goBack(toDepth: 2)
-        try await waitForNavigation { page.url == root }
+        try await waitForNavigation { page.live.documentURL == root }
         XCTAssertEqual(page.forwardHistory.map(\.url), [feed, post])
         page.goForward()
-        try await waitForNavigation { page.url == feed }
+        try await waitForNavigation { page.live.documentURL == feed }
 
         // Replacing the current entry must not create a duplicate. A new link
         // after Back must discard the old forward branch, even for equal URLs.
         _ = try await page.webView.evaluateJavaScript("history.replaceState({}, '', '/updated-feed')")
         let updated = try XCTUnwrap(URL(string: "https://history.crest.test/updated-feed"))
-        try await waitForNavigation { page.url == updated }
+        try await waitForNavigation { page.live.documentURL == updated }
         XCTAssertEqual(page.backHistory.map(\.url), [root])
         page.navigationHistory.recordLink(to: root, in: page.webView.backForwardList)
         page.prepareForNavigation(to: root)
         _ = try await page.webView.evaluateJavaScript("history.pushState({}, '', '/root')")
-        try await waitForNavigation { page.url == root }
+        try await waitForNavigation { page.live.documentURL == root }
         XCTAssertEqual(page.backHistory.map(\.url), [updated, root])
         XCTAssertTrue(page.forwardHistory.isEmpty)
 

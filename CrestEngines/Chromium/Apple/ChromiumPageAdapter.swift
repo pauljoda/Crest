@@ -26,6 +26,7 @@
         var readerModeSession: BrowserReaderModeSession? { nil }
         var faviconSession: BrowserFaviconSession? { nil }
         var isContentBlockingActive: Bool { false }
+        var reporter: EnginePageReporter? { native.reporter }
         /// Fills go through the engine's content scripting.
         var credentialEvaluator: BrowserCredentialSession.Evaluate? { nil }
 
@@ -47,8 +48,7 @@
                     ?? .dismiss
             }
             native.observer = { [weak page] report in
-                guard let event = report.pageEvent else { return }
-                page?.receive(event)
+                for event in report.pageEvents { page?.receive(event) }
             }
             native.linkHandler = { [weak page] name, destination, label in
                 guard let page, let action = ChromiumLinkAction(rawValue: name) else { return false }
@@ -66,7 +66,8 @@
                     reply(false, nil)
                     return
                 }
-                let request = URLRequest(url: sourceURL ?? page.url ?? URL(fileURLWithPath: "/"))
+                let request = URLRequest(
+                    url: sourceURL ?? page.pageEngine.currentURL ?? URL(fileURLWithPath: "/"))
                 switch kind {
                 case .alert:
                     page.dialogPresenter.presentAlert(message: message, request: request) {
@@ -174,13 +175,18 @@
     }
 
     extension ChromiumPageReport {
-        /// The engine-neutral event this report describes, or nil when the page
+        /// The engine-neutral events this report describes, none when the page
         /// has nothing to do with it or its values do not describe one.
-        fileprivate var pageEvent: BrowserPageEngineEvent? {
+        fileprivate var pageEvents: [BrowserPageEngineEvent] {
+            if event == .changed { return change?.pageEvents ?? [] }
+            return pageEvent.map { [$0] } ?? []
+        }
+
+        private var pageEvent: BrowserPageEngineEvent? {
             let url = (values["url"] as? String).flatMap(URL.init(string:))
             switch event {
             case .navigationStarted: return .navigationStarted
-            case .changed: return change.map { .stateChanged($0.pageState) }
+            case .changed: return nil
             case .infoBarAdded: return BrowserEngineInfoBar(values: values).map { .infoBarAdded($0) }
             case .infoBarRemoved: return .infoBarRemoved(id: values["id"] as? Int)
             case .mediaSession: return values["body"].map { .mediaSession(body: $0) }
@@ -199,30 +205,31 @@
     }
 
     extension ChromiumPageChange {
-        fileprivate var pageState: BrowserPageEngineState {
-            let url = url.flatMap(URL.init(string:))
-            let failure: BrowserPageEngineState.Failure? =
-                switch pageFailure {
-                case .processTerminated: .processTerminated
-                case .navigationFailed:
-                    .navigationFailed(BrowserNavigationFailure(chromiumNetError: errorCode ?? 0, failingURL: url))
-                case nil: nil
-                }
-            return BrowserPageEngineState(
-                url: url,
-                title: title ?? "",
-                isLoading: isLoading ?? false,
-                security: securityState,
-                themeColor: themeColor.map { argb in
-                    NSColor(
-                        srgbRed: CGFloat((argb >> 16) & 0xFF) / 255, green: CGFloat((argb >> 8) & 0xFF) / 255,
-                        blue: CGFloat(argb & 0xFF) / 255, alpha: CGFloat((argb >> 24) & 0xFF) / 255)
-                },
-                canGoBack: canGoBack ?? false,
-                canGoForward: canGoForward ?? false,
-                failure: failure,
-                committed: committed == true
-            )
+        /// What one `changed` report tells the page, in order: whether it
+        /// still loads, which ends a navigation it no longer loads, its
+        /// progress and theme, a failure, then a committed document. What the
+        /// page shows reaches the core through the native page's reporter.
+        fileprivate var pageEvents: [BrowserPageEngineEvent] {
+            let isLoading = isLoading ?? false
+            var events: [BrowserPageEngineEvent] = [
+                .loadingChanged(isLoading),
+                .progressChanged(isLoading ? 0.5 : 1),
+                .themeColorChanged(
+                    themeColor.map { argb in
+                        NSColor(
+                            srgbRed: CGFloat((argb >> 16) & 0xFF) / 255, green: CGFloat((argb >> 8) & 0xFF) / 255,
+                            blue: CGFloat(argb & 0xFF) / 255, alpha: CGFloat((argb >> 24) & 0xFF) / 255)
+                    }),
+            ]
+            switch pageFailure {
+            case .processTerminated: events.append(.webContentProcessTerminated)
+            case .navigationFailed: events.append(.navigationFailed)
+            case nil: break
+            }
+            if committed == true {
+                events.append(.navigationCommitted(url.flatMap(URL.init(string:)), isLoading: isLoading))
+            }
+            return events
         }
     }
 
@@ -284,10 +291,10 @@
         private var completion: (@MainActor (Bool) -> Void)?
         private var check: Task<Void, Never>?
 
-        var isPictureInPictureActive: Bool { native.currentMediaActivity?.hasPictureInPicture == true }
+        var isPictureInPictureActive: Bool { native.currentMediaActivity?.contains(.pictureInPicture) == true }
         var protectsPageResidency: Bool { isPictureInPictureActive || completion != nil }
         var canAutomaticallyEnterPictureInPicture: Bool {
-            native.currentMediaActivity.map { $0.isPlaying && !$0.hasPictureInPicture } == true
+            native.currentMediaActivity.map { $0.contains(.playing) && !$0.contains(.pictureInPicture) } == true
         }
 
         init(native: ChromiumNativePage, coordinator: BrowserAutomaticPictureInPictureCoordinator = .shared) {

@@ -3,10 +3,10 @@ import SwiftUI
 /// How the failure page presents each `NavigationError`. A member the switches
 /// do not name reads as the unknown one.
 struct BrowserNavigationFailurePresentation {
-    let failure: BrowserNavigationFailure
+    let failure: PageFailure
 
     var title: LocalizedStringResource {
-        switch failure.kind {
+        switch failure.error {
         case .offline:
             "You’re offline"
         case .timedOut:
@@ -35,7 +35,7 @@ struct BrowserNavigationFailurePresentation {
     }
 
     var message: Text {
-        switch failure.kind {
+        switch failure.error {
         case .offline:
             Text("Crest can’t reach \(failure.displayHost) without a network connection.")
         case .timedOut:
@@ -64,7 +64,7 @@ struct BrowserNavigationFailurePresentation {
     }
 
     var primarySuggestion: LocalizedStringResource {
-        switch failure.kind {
+        switch failure.error {
         case .offline:
             "Reconnect to Wi-Fi or Ethernet, then try again."
         case .timedOut, .connectionLost:
@@ -87,7 +87,7 @@ struct BrowserNavigationFailurePresentation {
     }
 
     var secondarySuggestion: LocalizedStringResource {
-        switch failure.kind {
+        switch failure.error {
         case .offline, .timedOut, .connectionLost:
             "If you use a VPN or proxy, confirm that it is connected."
         case .cannotFindServer:
@@ -110,7 +110,7 @@ struct BrowserNavigationFailurePresentation {
     }
 
     var symbolName: String {
-        switch failure.kind {
+        switch failure.error {
         case .offline:
             "wifi.slash"
         case .timedOut:

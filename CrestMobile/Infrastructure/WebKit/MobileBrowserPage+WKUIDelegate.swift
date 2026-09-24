@@ -129,6 +129,7 @@ extension MobileBrowserPage: WKUIDelegate {
     @objc(_webView:hasVideoInPictureInPictureDidChange:)
     func webView(_ webView: WKWebView, hasVideoInPictureInPictureDidChange isActive: Bool) {
         webKitEngine?.hasVideoInPictureInPicture = isActive
+        refreshMediaActivity()
     }
 
     /// Closes only tabs that web content opened. A hand-opened tab keeps its

@@ -3,7 +3,7 @@ import Foundation
 extension BrowserPlatformPage {
     func goBack() {
         refreshNavigationState()
-        if navigationFailure != nil {
+        if live.failure != nil {
             returnFromNavigationFailure()
             return
         }
@@ -20,13 +20,13 @@ extension BrowserPlatformPage {
 
     func goBack(toDepth depth: Int) {
         guard depth > 0, backHistory.contains(where: { $0.depth == depth }) else { return }
-        clearNavigationFailure()
+        corePage.leaveFailure()
         pageEngine.navigateHistory(by: -depth)
     }
 
     func goForward(toDepth depth: Int) {
         guard depth > 0, forwardHistory.contains(where: { $0.depth == depth }) else { return }
-        clearNavigationFailure()
+        corePage.leaveFailure()
         pageEngine.navigateHistory(by: depth)
     }
 
@@ -35,28 +35,24 @@ extension BrowserPlatformPage {
     /// publish history from the same observation path as the address bar.
     func synchronizeNavigationHistory() {
         let currentEntryURL = pageEngine.synchronizeHistory()
-        if let pendingNavigationURL, pageEngine.currentURL == pendingNavigationURL,
-            currentEntryURL == pendingNavigationURL
-        {
-            self.pendingNavigationURL = nil
-        }
+        if pageEngine.currentURL == currentEntryURL { navigationReporter?.arrived(at: currentEntryURL) }
     }
 
     func reload() { pageEngine.reload(bypassingCache: false) }
 
     func clearSiteDataAndReload() async {
-        guard let targetURL = displayURL ?? pageEngine.currentURL,
+        guard let targetURL = live.displayURL ?? pageEngine.currentURL,
             await pageEngine.clearSiteData(for: targetURL)
         else { return }
         if pageEngine.currentURL == nil {
-            load(targetURL)
+            corePage.navigate(to: targetURL.absoluteString)
         } else {
             pageEngine.reload(bypassingCache: true)
         }
     }
 
     func performReload(_ mode: BrowserPageReloadMode) {
-        switch BrowserPageReloadPolicy.action(isLoading: isLoading, mode: mode) {
+        switch BrowserPageReloadPolicy.action(isLoading: live.isLoading, mode: mode) {
         case .stop: pageEngine.stop()
         case .reload: pageEngine.reload(bypassingCache: false)
         case .reloadFromOrigin: pageEngine.reload(bypassingCache: true)
@@ -66,16 +62,12 @@ extension BrowserPlatformPage {
     func stopLoading() { pageEngine.stop() }
 
     func retryAfterNavigationFailure() {
-        guard
-            let url = navigationFailure?.failingURL
-                ?? pendingNavigationURL
-                ?? self.url
-        else { return }
-        load(url)
+        guard let url = live.displayURL else { return }
+        corePage.navigate(to: url.absoluteString)
     }
 
     var canProceedAfterCertificateFailure: Bool {
-        navigationFailure?.kind == .secureConnectionFailed
+        live.failure?.error == .secureConnectionFailed
             && pendingServerTrustIdentity != nil
     }
 
@@ -87,26 +79,20 @@ extension BrowserPlatformPage {
         retryAfterNavigationFailure()
     }
 
-    /// Leaves the failure notice for the page behind it. A committed failure
-    /// replaced that page, so it goes back; an engine that reports its own
-    /// state shows its error as a committed document too.
+    /// Leaves the failure notice for the page behind it. A failure that
+    /// replaced that page, as a committed error page does, goes back to it.
     func returnFromNavigationFailure() {
-        guard let navigationFailure else { return }
-        let replacedPage = navigationFailure.phase == .committed || pageEngine.reportsNavigationState
-        let shouldNavigateBack = replacedPage && pageEngine.canGoBack
-        clearNavigationFailure()
+        guard let failure = live.failure else { return }
+        let shouldNavigateBack = failure.replacedDocument && pageEngine.canGoBack
+        corePage.leaveFailure()
         if shouldNavigateBack {
             pageEngine.navigateHistory(by: -1)
         }
     }
 
     var canReturnFromNavigationFailure: Bool {
-        guard let navigationFailure else { return false }
-        if navigationFailure.phase == .provisional, !pageEngine.reportsNavigationState,
-            pageEngine.currentURL != nil
-        {
-            return true
-        }
+        guard let failure = live.failure else { return false }
+        if !failure.replacedDocument, pageEngine.currentURL != nil { return true }
         return pageEngine.canGoBack
     }
 

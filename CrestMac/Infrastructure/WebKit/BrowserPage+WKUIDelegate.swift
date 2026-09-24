@@ -36,6 +36,7 @@ extension BrowserPage: WKUIDelegate {
     func webView(_ webView: WKWebView, hasVideoInPictureInPictureDidChange isActive: Bool) {
         pictureInPicture?.nativePresentationDidChange(isActive: isActive)
         webKitEngine?.hasVideoInPictureInPicture = isActive
+        refreshMediaActivity()
     }
 
     /// WebKit offers beforeunload confirmation only through this desktop SPI;

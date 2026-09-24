@@ -16,6 +16,9 @@ protocol BrowserPageEngineAdapter: AnyObject {
     var readerModeSession: BrowserReaderModeSession? { get }
     var faviconSession: BrowserFaviconSession? { get }
     var isContentBlockingActive: Bool { get }
+    /// Tells the core what the page's engine shows and what its navigations
+    /// do, once the adapter is attached to its page.
+    var reporter: EnginePageReporter? { get }
     /// Evaluates a credential fill in the document that asked for it, for an
     /// engine whose bridges are not installed through `contentScripting`.
     var credentialEvaluator: BrowserCredentialSession.Evaluate? { get }
@@ -66,19 +69,30 @@ extension BrowserPagePictureInPictureController {
     func nativePresentationDidChange(isActive: Bool) {}
 }
 
-/// Something the engine observed about its page. The WebKit adapter reports
-/// individual property changes; an engine that reports a navigation snapshot
-/// delivers `.stateChanged`.
+/// Something the engine observed about its page that the page presents or
+/// acts on. What the page shows, such as its address, title, loading and
+/// security, reaches the core through the adapter's `reporter` instead.
 enum BrowserPageEngineEvent {
     case navigationStarted
-    case stateChanged(BrowserPageEngineState)
-    case urlChanged(URL?)
-    case titleChanged(String?)
+    /// The document's address changed from `from` to `to`.
+    case urlChanged(from: URL?, to: URL?)
+    case titleChanged
     case progressChanged(Double)
-    case loadingChanged(Bool)
-    case securityStateChanged(BrowserPageSecurityState)
     case themeColorChanged(NSColor?)
+    /// The engine's back-forward list changed.
     case historyChanged
+    /// An engine that reports its own navigations says whether the page is
+    /// loading; each report that it is not ends the navigation in progress.
+    case loadingChanged(Bool)
+    /// An engine that reports its own navigations committed a new document at
+    /// the address, which finished too unless it still loads.
+    case navigationCommitted(URL?, isLoading: Bool)
+    /// An engine that reports its own navigations failed one; its reporter
+    /// told the core why.
+    case navigationFailed
+    /// An engine that reports its own navigations lost the page's content
+    /// process.
+    case webContentProcessTerminated
     case infoBarAdded(BrowserEngineInfoBar)
     case infoBarRemoved(id: Int?)
     case mediaSession(body: Any)
@@ -92,23 +106,4 @@ enum BrowserPageEngineEvent {
     case developerPanelClosed
     case closeRequested
     case creationFailed(message: String)
-}
-
-/// One report of a page's navigation state from an engine that keeps it.
-struct BrowserPageEngineState {
-    enum Failure {
-        case processTerminated
-        case navigationFailed(BrowserNavigationFailure)
-    }
-
-    var url: URL?
-    var title: String
-    var isLoading: Bool
-    var security: BrowserPageSecurityState
-    var themeColor: NSColor?
-    var canGoBack: Bool
-    var canGoForward: Bool
-    var failure: Failure?
-    /// True when this report ends a navigation that committed a document.
-    var committed: Bool
 }

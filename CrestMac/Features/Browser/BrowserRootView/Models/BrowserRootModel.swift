@@ -12,7 +12,6 @@ final class BrowserRootModel {
     let pages: BrowserPagePool
     let chrome: BrowserChromeState
     let spaceAccess: BrowserSpaceAccessController
-    private let pageSession: BrowserPageSessionSynchronizer
     let windowState: BrowserWindowStateStore?
     private let layoutPersistence: BrowserWindowLayoutPersistence
     let startupBehavior: BrowserStartupBehavior
@@ -93,7 +92,6 @@ final class BrowserRootModel {
         self.pages = pages
         self.chrome = chrome
         self.spaceAccess = spaceAccess
-        pageSession = BrowserPageSessionSynchronizer(browser: browser, spaceAccess: spaceAccess)
         self.windowState = windowState
         layoutPersistence = BrowserWindowLayoutPersistence(windowState: windowState)
         self.startupBehavior = startupBehavior
@@ -214,18 +212,13 @@ extension BrowserRootModel {
         return BrowserWindowTitle.resolve(page: selectedPage, storedTitle: tab.title, url: tab.url)
     }
 
-    /// Shows the address of the page the window shows in the address field,
-    /// unless the person is editing it. The core records what the page's
-    /// navigations change in the session from its engine's reports.
+    /// Shows the address the page of the tab the window shows reads in the
+    /// core, or its tab's, in the address field, unless the person is editing
+    /// it, the Space is locked or no page shows that tab; another window's or
+    /// Space's page never replaces what the field holds.
     func synchronizePageMetadata() {
-        guard !isAddressEditing else { return }
-        if pages.publishesPageMetadataCentrally {
-            address = (selectedPage?.metadata.displayURL ?? browser.selectedTab?.url)?.absoluteString ?? ""
-        } else if let page = selectedPage, let source = selectedTabAssignment,
-            let updatedAddress = pageSession.address(of: page.metadata, matching: source)
-        {
-            address = updatedAddress
-        }
+        guard !isAddressEditing, !selectedSpaceIsLocked, let page = selectedPage else { return }
+        address = (page.live.displayURL ?? browser.selectedTab?.url)?.absoluteString ?? ""
     }
 
 }
@@ -260,20 +253,20 @@ extension BrowserRootModel {
         )
     }
 
+    /// Loads what the person typed, which the core resolves by the Space's
+    /// address rules. A native Settings or Getting Started tab has no page:
+    /// the core gives it the address first, and selection builds its page and
+    /// loads it there.
     func submitAddress() {
-        guard
-            let url = AddressResolver.resolve(
-                address,
-                searchProvider: browser.selectedSpace?.browsingPreferences.searchProvider
-                    ?? .google
-            )
-        else { return }
-        browser.navigateSelectedTab(to: url)
-        // A native Settings or Getting Started tab has no resident page.
-        // Selection builds the web page after the core changes its content.
-        pages.select(session: browser.presented)
-        pages.load(url)
-        address = url.absoluteString
+        let input = address
+        if browser.selectedTab?.isWebPage == false {
+            guard browser.navigateSelectedTab(to: input) else { return }
+            pages.select(session: browser.presented)
+        } else {
+            pages.select(session: browser.presented)
+            guard pages.navigate(to: input) else { return }
+        }
+        address = (selectedPage?.live.displayURL ?? browser.selectedTab?.url)?.absoluteString ?? input
         isAddressEditing = false
         AddressFocusAction.resign()
     }
@@ -657,10 +650,10 @@ extension BrowserRootModel {
         else { return false }
         switch mode {
         case .editLocation:
-            browser.navigateSelectedTab(to: url)
+            browser.navigateSelectedTab(to: url.absoluteString)
         case .newTab:
             if browser.selectedTab?.isStartPage == true {
-                browser.navigateSelectedTab(to: url)
+                browser.navigateSelectedTab(to: url.absoluteString)
             } else {
                 guard
                     browser.openNewTab(
@@ -674,7 +667,7 @@ extension BrowserRootModel {
             }
         }
         pages.select(session: browser.presented)
-        pages.load(url)
+        pages.navigate(to: url.absoluteString)
         address = url.absoluteString
         return true
     }

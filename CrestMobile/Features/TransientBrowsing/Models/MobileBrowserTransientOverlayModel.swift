@@ -217,7 +217,7 @@ final class MobileBrowserTransientOverlayModel {
             let page = pageLease.page,
             let outcome = BrowserTransientPagePromotion(
                 page: page.corePage,
-                url: page.url ?? request.url,
+                url: page.live.documentURL ?? request.url,
                 destinationAssignment: destinationAssignment
             ).perform(
                 in: browser,
@@ -229,7 +229,7 @@ final class MobileBrowserTransientOverlayModel {
         else { return false }
 
         if case .quickWindow(let quickWindowRequest) = request {
-            let pageURL = page.url ?? quickWindowRequest.initialURL
+            let pageURL = page.live.documentURL ?? quickWindowRequest.initialURL
             if BrowserCorePolicy.quickWindowRetarget(quickWindowRequest, to: pageURL ?? quickWindowRequest.url,
                 assignment: destinationAssignment, pageURL: pageURL).remembersSpace, let pageURL {
                 preferences.rememberSpace(destinationAssignment.spaceID, for: pageURL)
@@ -400,7 +400,7 @@ final class MobileBrowserTransientOverlayModel {
         BrowserTransientPageSnapshot(
             assignment: lease.assignment,
             url: lease.recoverableURL,
-            title: lease.page?.title,
+            title: lease.page?.live.title,
             pageID: lease.pageID
         )
     }

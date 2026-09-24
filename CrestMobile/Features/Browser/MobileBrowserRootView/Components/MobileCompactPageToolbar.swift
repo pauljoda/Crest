@@ -26,7 +26,7 @@ struct MobileCompactPageToolbar: View {
                     isEditing: $isAddressEditing,
                     isSecure: pageActions?.activeURL?.scheme?.lowercased() == "https",
                     progress: pageActions?.activePage?.estimatedProgress ?? 0,
-                    isLoading: pageActions?.activePage?.isLoading == true,
+                    isLoading: pageActions?.activePage?.live.isLoading == true,
                     pageActions: pageActions,
                     downloadsAccess: downloadsAccess,
                     hideToolbar: hideToolbar,

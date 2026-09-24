@@ -537,7 +537,7 @@ final class MobileBrowserTransientOverlayModelTests: XCTestCase {
         )
         try await waitUntil(timeout: .seconds(8)) {
             page.completedNavigationCount > startingCount
-                && page.url?.host() == currentURL.host()
+                && page.live.documentURL?.host() == currentURL.host()
         }
         var lockedSource = context.source
         lockedSource.accessPolicy = .deviceOwnerAuthentication

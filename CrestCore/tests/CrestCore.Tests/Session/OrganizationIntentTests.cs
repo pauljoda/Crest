@@ -50,11 +50,13 @@ public sealed partial class BrowserContractsTests {
         device.Ids.Supply([copy]);
 
         Assert.Equal(draftId, Assert.IsType<WebPagesOnly>(Assert.Throws<Rejected>(() =>
-            device.Send(new JoinSplit(device.Workspace, window, f.Space, draftId, targetId, null, []))).Rejection).TabId);
-        var copied = Assert.Single(device.Send(new JoinSplit(device.Workspace, window, f.Space, f.Tab, targetId, null,
-            [new SourcePage(f.Tab, "https://example.com/live", "Live page")])).OfType<TabCopied>());
+            device.Send(new JoinSplit(device.Workspace, window, f.Space, draftId, targetId, null))).Rejection).TabId);
+        // The saved tab's page has moved on before its navigation was recorded.
+        device.ShowPage(window, f.Space, f.Tab, PageSnapshot.Blank with { Url = "https://example.com/live", Title = "Live page" });
+        var copied = Assert.Single(device.Send(new JoinSplit(device.Workspace, window, f.Space, f.Tab, targetId, null))
+            .OfType<TabCopied>());
 
-        // The saved tab stays as it was; its copy shows the page it showed.
+        // The saved tab stays as it was; its copy shows what its page shows now.
         Assert.Equal((f.Tab, copy), (copied.SourceTabId, copied.CopyTabId));
         var joined = core.Current.Spaces[0];
         var original = joined.Tabs.Single(tab => tab.Id == f.Tab);
@@ -64,6 +66,6 @@ public sealed partial class BrowserContractsTests {
         Assert.Equal(joined.Tabs.Single(tab => tab.Id == targetId).SplitGroupId, joined.Tabs.Single(tab => tab.Id == copy).SplitGroupId);
         Assert.Equal(copy, device.Tab(window, f.Space));
         Assert.Equal(copy, Assert.IsType<AlreadyInSplit>(Assert.Throws<Rejected>(() =>
-            device.Send(new JoinSplit(device.Workspace, window, f.Space, copy, targetId, null, []))).Rejection).TabId);
+            device.Send(new JoinSplit(device.Workspace, window, f.Space, copy, targetId, null))).Rejection).TabId);
     }
 }

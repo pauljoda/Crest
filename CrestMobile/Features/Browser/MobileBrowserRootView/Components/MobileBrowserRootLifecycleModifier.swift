@@ -54,7 +54,7 @@ struct MobileBrowserRootLifecycleModifier: ViewModifier {
 
         let pageObservedContent =
             preparedContent
-            .onChange(of: model.selectedPage?.displayURL) {
+            .onChange(of: model.selectedPage?.live.displayURL) {
                 synchronizePageMetadata()
             }
 

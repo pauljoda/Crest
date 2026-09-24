@@ -201,7 +201,7 @@ private final class EnforcingPageEngine: BrowserPageEngine {
     func navigateHistory(by offset: Int) {}
     func reload(bypassingCache: Bool) {}
     func stop() {}
-    func mediaActivity() async -> BrowserPageMediaActivity? { nil }
+    func mediaActivity() async -> PageMediaActivity? { nil }
     func transferOwnership(to windowID: BrowserWindowID) -> Bool { true }
     func capture(rect: CGRect?, width: CGFloat?, completion: @escaping @MainActor (NSImage?) -> Void) {
         completion(nil)

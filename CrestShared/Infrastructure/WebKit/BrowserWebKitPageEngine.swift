@@ -14,6 +14,9 @@ final class BrowserWebKitPageEngine: BrowserPageEngine {
     /// which covers PiP entered from its own controls and cross-origin frames.
     /// The page that owns the delegate forwards the callback here.
     @ObservationIgnored var hasVideoInPictureInPicture = false
+    /// What media the page ran when WebKit last answered, which the page's
+    /// snapshot reports.
+    @ObservationIgnored private(set) var knownMediaActivity: PageMediaActivity = []
     @ObservationIgnored private var stagedRequest: URLRequest?
     #if os(macOS)
         @ObservationIgnored private var closeCompletion: (@MainActor (Bool) -> Void)?
@@ -181,14 +184,25 @@ final class BrowserWebKitPageEngine: BrowserPageEngine {
             depth: depth,
             title: title.isEmpty ? item.url.host() ?? item.url.absoluteString : title, url: item.url)
     }
-    func mediaActivity() async -> BrowserPageMediaActivity? {
+    func mediaActivity() async -> PageMediaActivity? {
         let state = await withCheckedContinuation { continuation in
             webView.requestMediaPlaybackState { continuation.resume(returning: $0) }
         }
-        return BrowserPageMediaActivity(
-            isPlaying: state == .playing,
-            isCapturing: webView.cameraCaptureState != .none || webView.microphoneCaptureState != .none,
-            hasPictureInPicture: hasVideoInPictureInPicture)
+        var activity: PageMediaActivity = []
+        if state == .playing { activity.insert(.playing) }
+        if webView.cameraCaptureState != .none || webView.microphoneCaptureState != .none {
+            activity.insert(.capturing)
+        }
+        if hasVideoInPictureInPicture { activity.insert(.pictureInPicture) }
+        return activity
+    }
+
+    /// Asks WebKit what media the page runs now, and answers whether that
+    /// differs from what it said before.
+    func refreshMediaActivity() async -> Bool {
+        guard let activity = await mediaActivity(), activity != knownMediaActivity else { return false }
+        knownMediaActivity = activity
+        return true
     }
     #if os(macOS)
         /// Asks the page's beforeunload handlers whether it may close. WebKit runs

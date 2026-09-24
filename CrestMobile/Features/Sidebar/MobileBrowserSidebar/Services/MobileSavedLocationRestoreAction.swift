@@ -17,7 +17,7 @@ struct MobileSavedLocationRestoreAction {
             !spaceAccess.isLocked(space),
             let tab = space.tabs.first(where: { $0.id == assignment.tabID }),
             BrowserSavedLocationRestorePolicy.shouldRestore(
-                tab, pendingURL: pages.residentPage(matching: assignment)?.pendingNavigationURL
+                tab, pendingURL: pages.residentPage(matching: assignment)?.live.pendingNavigationURL
             ),
             !pages.containsResidentPage(for: tab.id) || pages.containsResidentPage(matching: assignment)
         else { return false }
@@ -35,7 +35,7 @@ struct MobileSavedLocationRestoreAction {
         )
         guard let page = pageActions.activePage
         else { return false }
-        if hadResidentPage && page.pendingNavigationURL != url { page.load(url) }
+        if hadResidentPage && page.live.pendingNavigationURL != url { page.corePage.navigate(to: url.absoluteString) }
         return true
     }
 }

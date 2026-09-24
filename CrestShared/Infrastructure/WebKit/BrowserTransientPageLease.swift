@@ -20,7 +20,7 @@ final class BrowserTransientPageLease {
     /// pressure takes the page back.
     private(set) var pageID: UUID
     private(set) var wasReleasedForMemoryPressure = false
-    var recoverableURL: URL { page?.url ?? reloadURL }
+    var recoverableURL: URL { page?.live.documentURL ?? reloadURL }
     var canBeReused: Bool { page != nil || wasReleasedForMemoryPressure }
 
     @ObservationIgnored private(set) var isActive = true
@@ -52,7 +52,7 @@ final class BrowserTransientPageLease {
         self.userActivity = userActivity
         self.onDownloadOnlyNavigation = onDownloadOnlyNavigation
         page.monitorUserActivity(userActivity)
-        page.load(url)
+        page.corePage.navigate(to: url.absoluteString)
     }
 
     func setActive(_ isActive: Bool) {
@@ -66,7 +66,7 @@ final class BrowserTransientPageLease {
             balancedRuleLists: balancedContentRuleLists
         )
         page.monitorUserActivity(userActivity)
-        page.load(reloadURL)
+        page.corePage.navigate(to: reloadURL.absoluteString)
         self.page = page
         pageID = page.corePage.id
         wasReleasedForMemoryPressure = false
@@ -74,7 +74,7 @@ final class BrowserTransientPageLease {
 
     func releaseForMemoryPressure() {
         guard let page else { return }
-        reloadURL = page.url ?? reloadURL
+        reloadURL = page.live.documentURL ?? reloadURL
         page.release(keepingState: false)
         self.page = nil
         wasReleasedForMemoryPressure = true

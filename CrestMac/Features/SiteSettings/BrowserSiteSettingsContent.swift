@@ -37,7 +37,7 @@ struct BrowserSiteSettingsContent: View {
     }
 
     private var origin: BrowserSiteOrigin? {
-        page.displayURL.flatMap(BrowserSiteOrigin.init(url:))
+        page.live.displayURL.flatMap(BrowserSiteOrigin.init(url:))
     }
 }
 

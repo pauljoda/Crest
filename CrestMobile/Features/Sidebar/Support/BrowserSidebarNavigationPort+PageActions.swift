@@ -25,7 +25,7 @@ extension BrowserSidebarNavigationPort {
             goForwardToHistoryItem: { item in
                 pageActions?.goForward(to: item)
             },
-            isLoading: { pageActions?.activePage?.isLoading == true },
+            isLoading: { pageActions?.activePage?.live.isLoading == true },
             hasActivePage: { pageActions?.isAvailable == true },
             activeURL: { pageActions?.activeURL },
             reloadOrStop: { pageActions?.reloadOrStop() },

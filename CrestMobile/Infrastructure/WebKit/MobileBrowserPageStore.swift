@@ -29,9 +29,9 @@ final class MobileBrowserPageStore:
     typealias ModifiedLinkOpener =
         @MainActor (URL, SpaceID, Bool) -> BrowserModifiedLinkRegistration?
 
-    /// What each background page the store watches looked like when it last
-    /// changed, which tells when its first navigation settled.
-    @ObservationIgnored private var backgroundPageSnapshots: [TabID: BrowserBackgroundPageSnapshot] = [:]
+    /// The pages opened behind the one on screen whose first navigation has
+    /// not settled yet.
+    @ObservationIgnored private var unsettledBackgroundTabs: Set<TabID> = []
 
     /// The focused card: the one page the toolbar, find bar, navigation
     /// controls, and every lifecycle observer speak for. Split View adds cards
@@ -170,11 +170,11 @@ final class MobileBrowserPageStore:
         memoryPressureSource?.cancel()
     }
 
-    var canGoBack: Bool { activePage?.canGoBack == true }
-    var canGoForward: Bool { activePage?.canGoForward == true }
+    var canGoBack: Bool { activePage?.live.canGoBack == true }
+    var canGoForward: Bool { activePage?.live.canGoForward == true }
     var backHistory: [BrowserNavigationHistoryItem] { activePage?.backHistory ?? [] }
     var forwardHistory: [BrowserNavigationHistoryItem] { activePage?.forwardHistory ?? [] }
-    var activeURL: URL? { activePage?.url }
+    var activeURL: URL? { activePage?.live.displayURL }
     var pageZoomLabel: String {
         BrowserPageZoomPolicy.percentageLabel(for: activePage?.pageZoom ?? 1)
     }
@@ -239,21 +239,21 @@ final class MobileBrowserPageStore:
         reconcileCredentialAccess(in: session.session)
     }
 
-    func selectAndLoad(
-        _ url: URL,
+    /// Presents what the window selects and asks the core to load what the
+    /// person typed or chose in its page, instead of the tab's own address.
+    /// False when there is no page or a rule refused the load.
+    @discardableResult
+    func selectAndNavigate(
+        to input: String,
         in session: BrowserPresentedSession,
         at time: Date = .now
-    ) {
-        if prepareSelectedPage(
-            in: session,
-            at: time,
-            loadsInitialURL: false
-        ) {
-            activePage?.load(url)
-        } else {
+    ) -> Bool {
+        defer { reconcileCredentialAccess(in: session.session) }
+        guard prepareSelectedPage(in: session, at: time, loadsInitialURL: false) else {
             deactivatePagePresentation(at: time)
+            return false
         }
-        reconcileCredentialAccess(in: session.session)
+        return activePage?.corePage.navigate(to: input) ?? false
     }
 
     func loadOpenedLink(_ registration: BrowserModifiedLinkRegistration, request: URLRequest, selecting: Bool) {
@@ -271,13 +271,13 @@ final class MobileBrowserPageStore:
     /// Watches a page opened behind the one on screen until its first
     /// navigation settles, so residency can count its idle time.
     private func observeBackgroundPage(_ page: MobileBrowserPage) {
-        backgroundPageSnapshots[page.tabID] = BrowserBackgroundPageSnapshot(page: page)
+        unsettledBackgroundTabs.insert(page.tabID)
         trackBackgroundPageChanges(page)
     }
 
     private func trackBackgroundPageChanges(_ page: MobileBrowserPage) {
         withObservationTracking {
-            _ = BrowserBackgroundPageSnapshot(page: page)
+            _ = page.hasSettledNavigation
         } onChange: { [weak self, weak page] in
             Task { @MainActor in
                 guard let self, let page else { return }
@@ -288,16 +288,13 @@ final class MobileBrowserPageStore:
 
     private func backgroundPageDidChange(_ page: MobileBrowserPage) {
         let tabID = page.tabID
-        guard pagesByTabID[tabID] === page, backgroundPageSnapshots[tabID] != nil else { return }
-        let previous = backgroundPageSnapshots[tabID]
-        let current = BrowserBackgroundPageSnapshot(page: page)
-        backgroundPageSnapshots[tabID] = current
-        trackBackgroundPageChanges(page)
-        if current.completedNavigationCount > 0 || current.hasNavigationFailure
-            || (previous?.isLoading == true && !current.isLoading)
-        {
-            stampPreparedPageIfNeeded(tabID, at: .now)
+        guard pagesByTabID[tabID] === page, unsettledBackgroundTabs.contains(tabID) else { return }
+        guard page.hasSettledNavigation else {
+            trackBackgroundPageChanges(page)
+            return
         }
+        unsettledBackgroundTabs.remove(tabID)
+        stampPreparedPageIfNeeded(tabID, at: .now)
     }
 
     private func prepareSelectedPage(
@@ -619,7 +616,7 @@ final class MobileBrowserPageStore:
             page.release(keepingState: false)
         }
         pagesByTabID.removeAll()
-        backgroundPageSnapshots.removeAll()
+        unsettledBackgroundTabs.removeAll()
         residencyRevision &+= 1
         inactiveSinceByTabID.removeAll()
         memoryPressureReleaseTask?.cancel()
@@ -640,10 +637,6 @@ final class MobileBrowserPageStore:
             }
         }
         ephemeralDataStores.removeAll()
-    }
-
-    func load(_ url: URL) {
-        activePage?.load(url)
     }
 
     func styleVisitedLinks(in space: BrowserSpace) async {
@@ -1253,9 +1246,8 @@ final class MobileBrowserPageStore:
                 allowsCredentialAccess: !browsingMode.isPrivate,
                 isCredentialAccessEnabled: space.credentialPreferences.isEnabled,
                 defaultPageZoom: pageZoomPreferences.defaultZoom,
-                loadsInitialURL: loadsInitialURL
-                    && adoptedConfiguration == nil
-                    && archivedState == nil,
+                // The core loads the tab's address once the page is open.
+                loadsInitialURL: false,
                 loadHTTPAuthenticationCredential: { [loadHTTPAuthenticationCredential] protectionSpace in
                     try await loadHTTPAuthenticationCredential(protectionSpace, space.id)
                 },
@@ -1270,11 +1262,11 @@ final class MobileBrowserPageStore:
         }
         guard let page = opened(opening) else { return nil }
         // Anything WebKit will not take falls through to the plain load the page
-        // was told to skip.
-        if let archivedState, let url = tab.url,
-            !page.restoreInteractionState(archivedState, expecting: url)
+        // would otherwise start, which the core asks its engine for.
+        if loadsInitialURL, adoptedConfiguration == nil, let url = tab.url,
+            archivedState.map({ !page.restoreInteractionState($0, expecting: url) }) ?? true
         {
-            page.load(url)
+            page.corePage.navigate(to: url.absoluteString)
         }
         return page
     }
@@ -1458,7 +1450,7 @@ final class MobileBrowserPageStore:
     }
 
     private func forgetBackgroundPageObservation(for tabID: TabID) {
-        backgroundPageSnapshots[tabID] = nil
+        unsettledBackgroundTabs.remove(tabID)
     }
 
     /// Writes out the WebKit session state of every resident page. The app calls
@@ -1560,8 +1552,8 @@ extension MobileBrowserPageStore: BrowserTabCopying {
     func sourceForTabCopy(_ source: BrowserTab, in space: BrowserSpace) -> BrowserTab {
         var observed = source
         if let page = pagesByTabID[source.id], page.spaceID == space.id, page.profileID == space.profile.id {
-            observed.url = page.displayURL ?? source.url
-            if let title = page.title, !title.isEmpty { observed.title = title }
+            observed.url = page.live.displayURL ?? source.url
+            if !page.live.title.isEmpty { observed.title = page.live.title }
         }
         return observed
     }
@@ -1569,9 +1561,9 @@ extension MobileBrowserPageStore: BrowserTabCopying {
     func prepareTabCopy(from source: BrowserTab, to copy: inout BrowserTab, in space: BrowserSpace) {
         let state: Data?
         if let page = pagesByTabID[source.id], page.spaceID == space.id, page.profileID == space.profile.id {
-            copy.url = page.displayURL ?? source.url
-            if let title = page.title, !title.isEmpty { copy.title = title }
-            state = !page.wasOpenedAsPopup && page.url == copy.url ? page.interactionState : nil
+            copy.url = page.live.displayURL ?? source.url
+            if !page.live.title.isEmpty { copy.title = page.live.title }
+            state = !page.wasOpenedAsPopup && page.live.documentURL == copy.url ? page.interactionState : nil
         } else if let url = source.url {
             state = archivedInteractionState(
                 for: source, spaceID: space.id, profileID: space.profile.id, expecting: url, consumePendingCopy: false)
@@ -1591,6 +1583,6 @@ extension MobileBrowserPageStore: BrowserTabLinkProviding {
             page.spaceID == space.id,
             page.profileID == space.profile.id
         else { return tab.url }
-        return page.url
+        return page.live.documentURL
     }
 }

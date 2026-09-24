@@ -100,7 +100,7 @@ struct MobileBrowserDetailView: View {
                         unloadedPageSurface
                     }
                 case .navigationFailure:
-                    if let page, let failure = page.navigationFailure {
+                    if let page, let failure = page.live.failure {
                         BrowserNavigationFailureView(
                             failure: failure,
                             branding: browser.selectedSpace?.branding,
@@ -117,7 +117,7 @@ struct MobileBrowserDetailView: View {
                 case .processFailure:
                     if let page {
                         BrowserNavigationFailureView(
-                            failure: .webContentProcessStopped(url: page.displayURL),
+                            failure: .webContentProcessStopped(url: page.live.displayURL),
                             branding: browser.selectedSpace?.branding,
                             layout: isCompact ? .compact : .regular,
                             canGoBack: false,
@@ -170,7 +170,7 @@ struct MobileBrowserDetailView: View {
                         .zIndex(1)
                 } else if compactToolbarIsHidden {
                     MobileCompactDomainChip(
-                        url: page?.url,
+                        url: page?.live.documentURL,
                         showToolbar: showCompactToolbar
                     )
                     .safeAreaPadding(.bottom, 0)
@@ -427,7 +427,7 @@ struct MobileBrowserDetailView: View {
             BrowserPagePresentationInput(
                 selection: selectionPresentation,
                 hasActivePage: page != nil,
-                hasNavigationFailure: page?.navigationFailure != nil,
+                hasNavigationFailure: page?.live.failure != nil,
                 hasProcessFailure: page?.showsProcessFailure == true,
                 unloadedBehavior: isCompact
                     ? .restoreAutomatically
@@ -505,8 +505,8 @@ struct MobileBrowserDetailView: View {
                 reduceMotion: reduceMotion
             )
         ) {
-            browser.navigateSelectedTab(to: url)
-            pages.selectAndLoad(url, in: browser.presented)
+            browser.navigateSelectedTab(to: url.absoluteString)
+            pages.selectAndNavigate(to: url.absoluteString, in: browser.presented)
         }
         return true
     }

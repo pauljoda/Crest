@@ -231,7 +231,7 @@ final class BrowserPageActionsTests: XCTestCase {
             "<main>Crest native find needle</main>",
             baseURL: URL(string: "https://find.crest.test")
         )
-        await waitUntil { page.completedNavigationCount == 1 && page.url != nil }
+        await waitUntil { page.completedNavigationCount == 1 && page.live.documentURL != nil }
 
         page.presentFind()
         page.find("needle")
@@ -394,7 +394,7 @@ final class BrowserPageActionsTests: XCTestCase {
             "<html><body><h1>Crest PDF Export</h1><p>Rendered by WebKit.</p></body></html>",
             baseURL: URL(string: "https://pdf.crest.test")
         )
-        await waitUntil { page.completedNavigationCount == 1 && page.url != nil }
+        await waitUntil { page.completedNavigationCount == 1 && page.live.documentURL != nil }
 
         let data = try await page.pdfData()
         let document = try XCTUnwrap(
@@ -415,7 +415,7 @@ final class BrowserPageActionsTests: XCTestCase {
             "<html><body><h1>Crest Web Archive</h1><p>Rendered by WebKit.</p></body></html>",
             baseURL: URL(string: "https://archive.crest.test")
         )
-        await waitUntil { page.completedNavigationCount == 1 && page.url != nil }
+        await waitUntil { page.completedNavigationCount == 1 && page.live.documentURL != nil }
 
         let data = try await page.webArchiveData()
         let propertyList = try PropertyListSerialization.propertyList(

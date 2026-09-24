@@ -35,16 +35,20 @@ app through `crest_engine_register`, passing the engine contract's own
 fingerprint, an encoded `EngineRegistration` (its kind, the capabilities it
 supports, whether new pages open on it) and a function table the core copies.
 Every engine must support the required capabilities and one engine is the
-default. The core runs `EngineCommand`s (`CreatePage`, `ClosePage`) through the
-table's `run`, in order, never while it holds a lock and never on the stack of
-the report that caused them. The binding reports `EngineEvent`s (`PageCreated`,
-`PageCreationFailed`, `PageClosed`) with `crest_engine_report`, which never
-refuses one. The engine fingerprint covers only the engine roots and the
+default. The core runs `EngineCommand`s (`CreatePage`, `LoadPage`, `ClosePage`)
+through the table's `run`, in order, never while it holds a lock and never on
+the stack of the report that caused them. The binding reports `EngineEvent`s
+(`PageCreated`, `PageCreationFailed`, `PageClosed`, the navigation events and
+`PageStateChanged`) with `crest_engine_report`, which never refuses one. A
+binding reports a page's `PageSnapshot` at most once per turn and only when it
+changed; the core keeps it with the page's failure as `PageLiveState` and
+publishes `PageChanged` only when that differs. The engine fingerprint covers only the engine roots and the
 registration, so an edit elsewhere in the contracts leaves it unchanged. The
-`OpenPage`, `MovePage` and `ReleasePage` intents on `crest_app_*` own page
-identity: which tab or transient request owns each page, which engine hosts it,
-and the lock, deletion and one-page-per-tab rules. Pages are never saved or
-synced.
+`OpenPage`, `MovePage`, `ReleasePage`, `Navigate` and `LeavePageFailure`
+intents on `crest_app_*` own page identity and loads: which tab or transient
+request owns each page, which engine hosts it, what an address the person
+typed resolves to, and the lock, deletion and one-page-per-tab rules. Pages are
+never saved or synced.
 
 `CrestCore.Contracts.Protocol` defines the current JSON contract. It parses bounded UTF-8 JSON directly and
 builds JSON nodes without reflection. The application and domain have no native

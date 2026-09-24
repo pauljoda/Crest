@@ -21,9 +21,11 @@ final class BrowserWebKitPageAdapter: BrowserPageEngineAdapter {
     /// twice on it throws, and removing one would strip it from the opener.
     let ownsUserContentController: Bool
     var activeNavigation: WKNavigation?
-    /// Tells the core what the page's navigations and icon do, once the page
-    /// is attached.
+    /// Tells the core what the page shows and what its navigations and icon
+    /// do, once the page is attached.
     private(set) var reporter: EnginePageReporter?
+    /// The document's address as WebKit last published it.
+    private var documentURL: URL?
     let contentRuleSession: BrowserPageContentRuleSession
     var geolocationCoordinator: BrowserGeolocationCoordinator?
     private let geolocationService: any BrowserGeolocationServicing
@@ -119,7 +121,12 @@ final class BrowserWebKitPageAdapter: BrowserPageEngineAdapter {
 
     func attach(to page: BrowserPage, allowsCredentialAccess: Bool) {
         self.page = page
-        reporter = EnginePageReporter(page: page.corePage) { [weak page] in page?.title ?? "" }
+        reporter = EnginePageReporter(page: page.corePage) { [weak self] pendingURL in
+            self?.snapshot(pendingURL: pendingURL)
+                ?? PageSnapshot(
+                    url: nil, pendingURL: pendingURL, title: "", isLoading: false, canGoBack: false,
+                    canGoForward: false, security: PageSecurity.none, media: [])
+        }
         webView.menuHost = page
         webView.linkHover = linkHover
         webView.linkDrag = linkDrag
@@ -298,15 +305,17 @@ final class BrowserWebKitPageAdapter: BrowserPageEngineAdapter {
             // mutation. Read the settled URL and list together on the next turn.
             Task { @MainActor in
                 guard let self else { return }
-                self.page?.receive(.urlChanged(self.webView.url))
-                self.publishSecurityState()
+                let previous = self.documentURL
+                self.documentURL = self.webView.url
+                self.page?.receive(.urlChanged(from: previous, to: self.webView.url))
+                self.reporter?.stateChanged()
                 self.reportMoveWithinDocument()
             }
         }
         .store(in: &observations)
-        webView.publisher(for: \.title, options: [.initial, .new]).sink { [weak self] value in
+        webView.publisher(for: \.title, options: [.initial, .new]).sink { [weak self] _ in
             MainActor.assumeIsolated {
-                self?.page?.receive(.titleChanged(value))
+                self?.page?.receive(.titleChanged)
                 self?.reporter?.titleChanged()
             }
         }
@@ -315,16 +324,27 @@ final class BrowserWebKitPageAdapter: BrowserPageEngineAdapter {
             MainActor.assumeIsolated { self?.page?.receive(.progressChanged(value)) }
         }
         .store(in: &observations)
-        webView.publisher(for: \.isLoading, options: [.initial, .new]).sink { [weak self] value in
-            MainActor.assumeIsolated { self?.page?.receive(.loadingChanged(value)) }
+        webView.publisher(for: \.isLoading, options: [.initial, .new]).sink { [weak self] _ in
+            MainActor.assumeIsolated {
+                self?.page?.receive(.historyChanged)
+                self?.page?.refreshMediaActivity()
+            }
         }
         .store(in: &observations)
         webView.publisher(for: \.hasOnlySecureContent, options: [.initial, .new]).sink { [weak self] _ in
-            MainActor.assumeIsolated { self?.publishSecurityState() }
+            MainActor.assumeIsolated { self?.reporter?.stateChanged() }
         }
         .store(in: &observations)
         webView.publisher(for: \.serverTrust, options: [.new]).sink { [weak self] _ in
-            MainActor.assumeIsolated { self?.publishSecurityState() }
+            MainActor.assumeIsolated { self?.reporter?.stateChanged() }
+        }
+        .store(in: &observations)
+        webView.publisher(for: \.cameraCaptureState, options: [.new]).sink { [weak self] _ in
+            MainActor.assumeIsolated { self?.page?.refreshMediaActivity() }
+        }
+        .store(in: &observations)
+        webView.publisher(for: \.microphoneCaptureState, options: [.new]).sink { [weak self] _ in
+            MainActor.assumeIsolated { self?.page?.refreshMediaActivity() }
         }
         .store(in: &observations)
         webView.publisher(for: \.themeColor, options: [.initial, .new]).sink { [weak self] value in
@@ -353,18 +373,26 @@ final class BrowserWebKitPageAdapter: BrowserPageEngineAdapter {
         reporter?.movedWithinDocument(to: url)
     }
 
-    /// Restates the page's security from the document WebKit is showing, its
-    /// secure-content flag and the trust it kept.
-    private func publishSecurityState() {
-        guard let page else { return }
+    /// What WebKit shows for the page now: the document and its title,
+    /// whether it loads, its history with Crest's supplement, the page's
+    /// security from its secure-content flag and the trust it kept, and the
+    /// media WebKit last said it runs.
+    private func snapshot(pendingURL: String?) -> PageSnapshot? {
+        guard let page else { return nil }
         let overrides = page.serverTrustOverrides
         let profileID = page.profileID
-        page.receive(
-            .securityStateChanged(
-                BrowserPageSecurityState(
-                    webKitURL: webView.url,
-                    hasOnlySecureContent: webView.hasOnlySecureContent,
-                    serverTrust: webView.serverTrust,
-                    isApprovedOverride: { overrides.isApproved($0, for: profileID) })))
+        return PageSnapshot(
+            url: webView.url?.absoluteString,
+            pendingURL: pendingURL,
+            title: webView.title ?? "",
+            isLoading: webView.isLoading,
+            canGoBack: !webKit.backHistory.isEmpty || webView.canGoBack,
+            canGoForward: !webKit.forwardHistory.isEmpty || webView.canGoForward,
+            security: PageSecurity(
+                webKitURL: webView.url,
+                hasOnlySecureContent: webView.hasOnlySecureContent,
+                serverTrust: webView.serverTrust,
+                isApprovedOverride: { overrides.isApproved($0, for: profileID) }),
+            media: webKit.knownMediaActivity)
     }
 }

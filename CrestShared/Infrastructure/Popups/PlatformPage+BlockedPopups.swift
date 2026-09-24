@@ -3,7 +3,7 @@ import Foundation
 extension BrowserPlatformPage {
     /// Applies Crest's popup decision for the page's site to its engine.
     func synchronizePopupPermission(for url: URL? = nil) {
-        let origin = (url ?? displayURL ?? pageEngine.currentURL)
+        let origin = (url ?? live.displayURL ?? pageEngine.currentURL)
             .flatMap(BrowserSiteOrigin.init(url:))
         let allowsAutomaticPopups =
             origin.map { permissionCenter.decision(for: .popups, origin: $0, in: spaceID).grants } ?? false
@@ -47,7 +47,7 @@ extension BrowserPlatformPage {
     func allowAutomaticPopupsForBlockedSite() {
         guard let notice = blockedPopupState.notice,
             notice.status.offersAllow,
-            let currentURL = displayURL ?? pageEngine.currentURL,
+            let currentURL = live.displayURL ?? pageEngine.currentURL,
             BrowserSiteOrigin(url: currentURL) == notice.origin
         else { return }
 

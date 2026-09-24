@@ -5,7 +5,7 @@ namespace CrestCore.Contracts;
 /// problem whichever engine saw it. An error travels as its index in `All`,
 /// so `All` is append-only.
 public sealed class NavigationError {
-    #region Variables
+    #region Static Variables
 
     public static readonly NavigationError Offline = new(name: "offline", code: "CREST_INTERNET_DISCONNECTED");
     public static readonly NavigationError TimedOut = new(name: "timedOut", code: "CREST_TIMED_OUT");
@@ -24,6 +24,10 @@ public sealed class NavigationError {
         Offline, TimedOut, CannotFindServer, CannotConnect, ConnectionLost, SecureConnectionFailed, TooManyRedirects,
         UnsupportedAddress, Blocked, Unavailable, WebContentProcessStopped, Unknown
     ];
+
+    #endregion
+
+    #region Variables
 
     public string Name { get; }
 

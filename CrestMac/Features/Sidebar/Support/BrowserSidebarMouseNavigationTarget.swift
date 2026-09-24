@@ -9,8 +9,9 @@ import AppKit
 @MainActor
 protocol BrowserSidebarMouseNavigationTarget: AnyObject {
     var nativeView: NSView { get }
-    var canGoBack: Bool { get }
-    var canGoForward: Bool { get }
+    /// What the page shows as the core holds it, including whether it can go
+    /// back or forward.
+    var live: PageLiveState { get }
     func goBack()
     func goForward()
 }

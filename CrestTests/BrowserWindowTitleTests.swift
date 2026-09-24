@@ -117,7 +117,7 @@ final class BrowserWindowTitleTests: XCTestCase {
             URLRequest(url: URL(string: "https://alpha.crest.test")!),
             responseHTML: "<html><head><title>\(title)</title></head><body>Fixture</body></html>"
         )
-        try await waitUntil { page.title == title && !page.isLoading }
+        try await waitUntil { page.live.title == title && !page.live.isLoading }
     }
 
     private func waitUntil(_ condition: @escaping @MainActor () -> Bool) async throws {

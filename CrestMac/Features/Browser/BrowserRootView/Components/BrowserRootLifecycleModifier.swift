@@ -52,7 +52,7 @@ struct BrowserRootLifecycleModifier: ViewModifier {
         let pageObservedContent =
             preparedContent
             .onChange(of: model.browser.selectedTab?.url) { model.synchronizePageMetadata() }
-            .onChange(of: model.pages.activePage?.displayURL) {
+            .onChange(of: model.pages.activePage?.live.displayURL) {
                 model.synchronizePageMetadata()
             }
 

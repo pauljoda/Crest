@@ -20,7 +20,7 @@ struct BrowserDeveloperToolbar: View {
             BrowserDeveloperToolbarBackground(isOpaque: reduceTransparency)
         }
         .onAppear(perform: synchronizeAddress)
-        .onChange(of: page.displayURL) { _, _ in synchronizeAddress() }
+        .onChange(of: page.live.displayURL) { _, _ in synchronizeAddress() }
     }
 
     private var controls: some View {
@@ -93,25 +93,21 @@ struct BrowserDeveloperToolbar: View {
     }
 
     private func synchronizeAddress() {
-        address = page.displayURL?.absoluteString ?? ""
+        address = page.live.displayURL?.absoluteString ?? ""
     }
 
+    /// Loads what the person typed, which the core resolves by the Space's
+    /// address rules.
     private func navigate() {
-        guard
-            let url = AddressResolver.resolve(
-                address,
-                searchProvider: browser.selectedSpace?.browsingPreferences
-                    .searchProvider ?? .google
-            )
-        else { return }
+        let input = address
         if BrowserDeveloperNavigationPolicy.updatesSelectedTab(
             isActivePage: pages.activePage === page
         ) {
-            browser.navigateSelectedTab(to: url)
-            pages.load(url)
+            browser.navigateSelectedTab(to: input)
+            guard pages.navigate(to: input) else { return }
         } else {
-            page.load(url)
+            guard page.corePage.navigate(to: input) else { return }
         }
-        address = url.absoluteString
+        synchronizeAddress()
     }
 }

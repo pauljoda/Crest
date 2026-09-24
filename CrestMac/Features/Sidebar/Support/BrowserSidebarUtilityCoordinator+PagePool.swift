@@ -23,7 +23,7 @@ extension BrowserSidebarUtilityCoordinator {
                     guard browser.openNewTab(url: url, matching: assignment) != nil
                     else { return }
                     pages.select(session: browser.presented)
-                    pages.load(url)
+                    pages.navigate(to: url.absoluteString)
                 },
                 selectRestoredTab: { tabID in
                     browser.selectTab(tabID)

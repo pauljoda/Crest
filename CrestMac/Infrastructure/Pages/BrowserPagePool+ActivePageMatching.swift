@@ -19,9 +19,9 @@ extension BrowserPagePool {
                     )
                 )
             else { return false }
-            return member.url == nil || page.url != nil
-                || page.pendingNavigationURL != nil
-                || page.navigationFailure != nil
+            return member.url == nil || page.live.documentURL != nil
+                || page.live.pendingNavigationURL != nil
+                || page.live.failure != nil
                 || page.isAwaitingPopupNavigation
         }
     }

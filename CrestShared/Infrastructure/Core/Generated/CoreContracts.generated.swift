@@ -99,6 +99,7 @@ enum Rejection: Equatable, Error, Sendable {
     case noCurrentTabs(NoCurrentTabs)
     case noSavedAddress(NoSavedAddress)
     case notPrivateWorkspace(NotPrivateWorkspace)
+    case pageNotLoadable(PageNotLoadable)
     case pageProfileMismatch(PageProfileMismatch)
     case persistentWorkspaceRequired(PersistentWorkspaceRequired)
     case pinnedTabsFull(PinnedTabsFull)
@@ -152,6 +153,7 @@ enum Rejection: Equatable, Error, Sendable {
 enum EngineCommand: Equatable, Sendable {
     case closePage(ClosePage)
     case createPage(CreatePage)
+    case loadPage(LoadPage)
 }
 
 extension CoreState {
@@ -942,7 +944,6 @@ struct JoinSplit: Intent, Equatable, Sendable {
     let tabID: UUID
     let targetTabID: UUID
     let index: Int?
-    let sourcePages: [SourcePage]
 }
 
 struct KeepPageLoaded: Intent, Equatable, Sendable {
@@ -998,6 +999,10 @@ struct LaunchPlan: Query, Equatable, Sendable {
     let hasActiveLaunchGate: Bool
 }
 
+struct LeavePageFailure: Intent, Equatable, Sendable {
+    let pageID: UUID
+}
+
 struct LeaveSplit: Intent, Equatable, Sendable {
     let workspaceID: UUID
     let spaceID: UUID
@@ -1048,6 +1053,11 @@ struct LinkRoutingPreferences: Equatable, Sendable {
     let chosenSpaceID: UUID?
     let remembersSpaceBySite: Bool
     let rememberedSpaceID: UUID?
+}
+
+struct LoadPage: Equatable, Sendable {
+    let pageID: UUID
+    let url: String
 }
 
 struct LockAllSpaces: Intent, Equatable, Sendable {
@@ -1120,11 +1130,16 @@ struct NativeTabContent: Equatable, Sendable {
     let resourceID: UUID?
 }
 
+struct Navigate: Intent, Equatable, Sendable {
+    let pageID: UUID
+    let input: String
+}
+
 struct NavigateTab: Intent, Equatable, Sendable {
     let workspaceID: UUID
     let spaceID: UUID
     let tabID: UUID
-    let url: String
+    let input: String
 }
 
 struct NavigationCommitted: EngineEvent, Equatable, Sendable {
@@ -1135,8 +1150,7 @@ struct NavigationCommitted: EngineEvent, Equatable, Sendable {
 
 struct NavigationFailed: EngineEvent, Equatable, Sendable {
     let pageID: UUID
-    let url: String?
-    let error: NavigationError
+    let failure: PageFailure
 }
 
 struct NavigationFinished: EngineEvent, Equatable, Sendable {
@@ -1179,7 +1193,6 @@ struct OpenLinkInSplit: Intent, Equatable, Sendable {
     let targetTabID: UUID
     let address: String
     let title: String
-    let sourcePages: [SourcePage]
 }
 
 struct OpenPage: Intent, Equatable, Sendable {
@@ -1227,10 +1240,35 @@ struct PageCreationFailed: EngineEvent, Equatable, Sendable {
     let pageID: UUID
 }
 
+struct PageFailure: Equatable, Sendable {
+    let error: NavigationError
+    let url: String?
+    let replacedDocument: Bool
+    let domain: String
+    let code: Int64
+}
+
 struct PageIconChanged: EngineEvent, Equatable, Sendable {
     let pageID: UUID
     let url: String
     let accent: TabIconAccent?
+}
+
+struct PageLiveState: Equatable, Sendable {
+    let url: String?
+    let pendingURL: String?
+    let title: String
+    let isLoading: Bool
+    let canGoBack: Bool
+    let canGoForward: Bool
+    let security: PageSecurity
+    let failure: PageFailure?
+    let media: PageMediaActivity
+    let address: String?
+}
+
+struct PageNotLoadable: Equatable, Sendable {
+    let pageID: UUID
 }
 
 struct PageOpened: Equatable, Sendable {
@@ -1246,6 +1284,17 @@ struct PageRemoved: Equatable, Sendable {
     let pageID: UUID
 }
 
+struct PageSnapshot: Equatable, Sendable {
+    let url: String?
+    let pendingURL: String?
+    let title: String
+    let isLoading: Bool
+    let canGoBack: Bool
+    let canGoForward: Bool
+    let security: PageSecurity
+    let media: PageMediaActivity
+}
+
 struct PageState: Equatable, Sendable, Identifiable {
     let id: UUID
     let workspaceID: UUID
@@ -1253,6 +1302,12 @@ struct PageState: Equatable, Sendable, Identifiable {
     let tabID: UUID?
     let engine: EngineKind
     let phase: PagePhase
+    let live: PageLiveState
+}
+
+struct PageStateChanged: EngineEvent, Equatable, Sendable {
+    let pageID: UUID
+    let snapshot: PageSnapshot
 }
 
 struct PasskeyAccess: Query, Equatable, Sendable {
@@ -2197,6 +2252,13 @@ enum CrestTrim: Int, CaseIterable, Sendable {
     case doubleRing = 6
     case seal = 7
     case beaded = 8
+}
+
+struct PageMediaActivity: OptionSet, Sendable {
+    let rawValue: Int
+    static let playing = PageMediaActivity(rawValue: 1)
+    static let capturing = PageMediaActivity(rawValue: 2)
+    static let pictureInPicture = PageMediaActivity(rawValue: 4)
 }
 
 enum PasskeyAuthorizationState: Int, CaseIterable, Sendable {
@@ -3884,6 +3946,104 @@ struct PagePhase: Hashable, Sendable {
     }
 
     static func == (lhs: PagePhase, rhs: PagePhase) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+}
+
+/// The members of the core's `PageSecurity`. A member's wire tag is its index in `all`.
+struct PageSecurity: Hashable, Sendable {
+    let tag: Int
+    let name: String
+    let title: LocalizedStringResource
+    let symbol: String
+    let detail: LocalizedStringResource?
+    let isSecure: Bool
+    let isHazardous: Bool
+
+    private init(
+        tag: Int,
+        name: String,
+        title: LocalizedStringResource,
+        symbol: String,
+        detail: LocalizedStringResource?,
+        isSecure: Bool,
+        isHazardous: Bool
+    ) {
+        self.tag = tag
+        self.name = name
+        self.title = title
+        self.symbol = symbol
+        self.detail = detail
+        self.isSecure = isSecure
+        self.isHazardous = isHazardous
+    }
+
+    static let none = PageSecurity(
+        tag: 0,
+        name: "none",
+        title: LocalizedStringResource("Not Secure"),
+        symbol: "lock.open.fill",
+        detail: nil,
+        isSecure: false,
+        isHazardous: false
+    )
+    static let insecure = PageSecurity(
+        tag: 1,
+        name: "insecure",
+        title: LocalizedStringResource("Not Secure"),
+        symbol: "lock.open.fill",
+        detail: nil,
+        isSecure: false,
+        isHazardous: false
+    )
+    static let secure = PageSecurity(
+        tag: 2,
+        name: "secure",
+        title: LocalizedStringResource("Secure"),
+        symbol: "lock.fill",
+        detail: nil,
+        isSecure: true,
+        isHazardous: false
+    )
+    static let mixedContent = PageSecurity(
+        tag: 3,
+        name: "mixed_content",
+        title: LocalizedStringResource("Partly Secure"),
+        symbol: "lock.trianglebadge.exclamationmark.fill",
+        detail: LocalizedStringResource("Some content on this page was not delivered securely."),
+        isSecure: false,
+        isHazardous: false
+    )
+    static let certificateError = PageSecurity(
+        tag: 4,
+        name: "certificate_error",
+        title: LocalizedStringResource("Certificate Not Trusted"),
+        symbol: "exclamationmark.lock.fill",
+        detail: LocalizedStringResource("This site’s certificate is not trusted. Information you send could be read by others."),
+        isSecure: false,
+        isHazardous: true
+    )
+    static let dangerous = PageSecurity(
+        tag: 5,
+        name: "dangerous",
+        title: LocalizedStringResource("Dangerous Site"),
+        symbol: "exclamationmark.octagon.fill",
+        detail: LocalizedStringResource("This site may try to harm your Mac or steal your information."),
+        isSecure: false,
+        isHazardous: true
+    )
+
+    static let all: [PageSecurity] = [none, insecure, secure, mixedContent, certificateError, dangerous]
+
+    static func named(_ name: String?) -> PageSecurity? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: PageSecurity, rhs: PageSecurity) -> Bool {
         lhs.tag == rhs.tag
     }
 
@@ -6963,6 +7123,52 @@ final class FolderStateModel: ObservedModel, Identifiable {
         if isCollapsed != value.isCollapsed { isCollapsed = value.isCollapsed }
         if collapseModifiedAt != value.collapseModifiedAt { collapseModifiedAt = value.collapseModifiedAt }
         if orderAnchorTabID != value.orderAnchorTabID { orderAnchorTabID = value.orderAnchorTabID }
+    }
+}
+
+/// `PageState` as an object views observe field by field. `update` assigns only
+/// the fields that differ, so a field that keeps its value notifies no one.
+@MainActor
+@Observable
+final class PageStateModel: ObservedModel, Identifiable {
+    let id: UUID
+    private(set) var workspaceID: UUID
+    private(set) var spaceID: UUID
+    private(set) var tabID: UUID?
+    private(set) var engine: EngineKind
+    private(set) var phase: PagePhase
+    private(set) var live: PageLiveState
+
+    var value: PageState {
+        PageState(
+            id: id,
+            workspaceID: workspaceID,
+            spaceID: spaceID,
+            tabID: tabID,
+            engine: engine,
+            phase: phase,
+            live: live
+        )
+    }
+
+    init(_ value: PageState) {
+        id = value.id
+        workspaceID = value.workspaceID
+        spaceID = value.spaceID
+        tabID = value.tabID
+        engine = value.engine
+        phase = value.phase
+        live = value.live
+    }
+
+    func update(_ value: PageState) {
+        precondition(value.id == id, "A PageStateModel takes only its own PageState's values.")
+        if workspaceID != value.workspaceID { workspaceID = value.workspaceID }
+        if spaceID != value.spaceID { spaceID = value.spaceID }
+        if tabID != value.tabID { tabID = value.tabID }
+        if engine != value.engine { engine = value.engine }
+        if phase != value.phase { phase = value.phase }
+        if live != value.live { live = value.live }
     }
 }
 

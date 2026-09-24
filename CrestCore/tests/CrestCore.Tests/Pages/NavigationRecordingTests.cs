@@ -27,7 +27,7 @@ public sealed partial class BrowserContractsTests {
 
     /// Reports a new document at `url` that finishes titled `title`, and
     /// answers the changes it caused.
-    private static IReadOnlyList<Change> Navigate(CrestApp app, Engine engine, Guid page, string url, string title) {
+    private static IReadOnlyList<Change> Browse(CrestApp app, Engine engine, Guid page, string url, string title) {
         app.Report(engine, new NavigationStarted(page, url, SameDocument: false));
         app.Report(engine, new NavigationCommitted(page, url, SameDocument: false));
         app.Report(engine, new NavigationFinished(page, url, title));
@@ -47,7 +47,7 @@ public sealed partial class BrowserContractsTests {
         var earlier = History(authority)[0];
 
         // The tab and the visit change together, then the record is announced.
-        var changes = Navigate(app, engine, page, "https://example.com/article#two", "Later title");
+        var changes = Browse(app, engine, page, "https://example.com/article#two", "Later title");
         Assert.Equal([typeof(TabsChanged), typeof(HistoryChanged), typeof(NavigationRecorded)], changes.Select(change => change.GetType()));
         Assert.Equal(new NavigationRecorded(page, workspace, SpaceId(session["spaces"]![0]!), FirstTab(authority).Id,
             "https://example.com/article#two"), changes[^1]);
@@ -68,7 +68,7 @@ public sealed partial class BrowserContractsTests {
         Assert.Equal("https://example.com/article#two", FirstTab(authority).Url);
 
         // A blank title is the page saying nothing, not a request to clear.
-        Navigate(app, engine, page, "https://example.com/untitled", "");
+        Browse(app, engine, page, "https://example.com/untitled", "");
         Assert.Equal(("https://example.com/untitled", "Later title"), (FirstTab(authority).Url, FirstTab(authority).Title));
         Assert.Equal(("https://example.com/untitled", "example.com"), (History(authority)[0].Url, History(authority)[0].Title));
     }
@@ -81,7 +81,7 @@ public sealed partial class BrowserContractsTests {
         using var disposal = app;
         var tab = FirstTab(authority);
 
-        var changes = Navigate(app, engine, page, "https://news.example/story", "Story");
+        var changes = Browse(app, engine, page, "https://news.example/story", "Story");
         Assert.Equal([typeof(HistoryChanged), typeof(NavigationRecorded)], changes.Select(change => change.GetType()));
         Assert.Null(Assert.IsType<NavigationRecorded>(changes[^1]).TabId);
         Assert.Equal(tab, FirstTab(authority));
@@ -90,7 +90,7 @@ public sealed partial class BrowserContractsTests {
 
         // An address history does not keep changes nothing, and is still taken.
         var history = History(authority);
-        Assert.Equal([typeof(NavigationRecorded)], Navigate(app, engine, page, "crest://extensions", "Extensions")
+        Assert.Equal([typeof(NavigationRecorded)], Browse(app, engine, page, "crest://extensions", "Extensions")
             .Select(change => change.GetType()));
         Assert.Equal(history, History(authority));
     }
@@ -106,7 +106,7 @@ public sealed partial class BrowserContractsTests {
         app.Send(new SetSpaceAccess(workspace, SpaceId(session["spaces"]![0]!), SpaceAccessPolicy.DeviceOwnerAuthentication));
         var before = authority.Current;
 
-        Assert.Empty(Navigate(app, engine, page, "https://example.com/secret", "Secret"));
+        Assert.Empty(Browse(app, engine, page, "https://example.com/secret", "Secret"));
         Assert.Same(before, authority.Current);
     }
 
@@ -118,7 +118,7 @@ public sealed partial class BrowserContractsTests {
         var (app, engine, page, _) = NavigatingPage(authority, session);
         using var disposal = app;
 
-        Assert.Contains(Navigate(app, engine, page, "https://private.example/", "Private"), change => change is NavigationRecorded);
+        Assert.Contains(Browse(app, engine, page, "https://private.example/", "Private"), change => change is NavigationRecorded);
         Assert.Equal(WorkspaceKind.Private, authority.Kind);
         Assert.Equal("https://private.example/", FirstTab(authority).Url);
         Assert.Equal("https://private.example/", History(authority)[0].Url);
@@ -130,7 +130,7 @@ public sealed partial class BrowserContractsTests {
         var authority = new NativeSessionAuthority(Bytes(session));
         var (app, engine, page, _) = NavigatingPage(authority, session);
         using var disposal = app;
-        Navigate(app, engine, page, "https://app.example/inbox", "Inbox");
+        Browse(app, engine, page, "https://app.example/inbox", "Inbox");
 
         void Move(string url, string title) {
             app.Report(engine, new NavigationStarted(page, url, SameDocument: true));
@@ -162,12 +162,14 @@ public sealed partial class BrowserContractsTests {
 
         app.Report(engine, new NavigationStarted(page, "https://down.example/", SameDocument: false));
         app.Report(engine, new NavigationCommitted(page, "https://down.example/", SameDocument: false));
-        app.Report(engine, new NavigationFailed(page, "https://down.example/", NavigationError.ConnectionLost));
+        app.Report(engine, new NavigationFailed(page, new PageFailure(NavigationError.ConnectionLost, "https://down.example/",
+            ReplacedDocument: false, "NSURLErrorDomain", -1005)));
         app.Report(engine, new NavigationFinished(page, "https://down.example/", "Error"));
-        Assert.Empty(Own(app.Drain()));
+        // The page shows the failure, and the session records nothing.
+        Assert.Equal(NavigationError.ConnectionLost, Assert.IsType<PageChanged>(Assert.Single(Own(app.Drain()))).Page.Live.Failure?.Error);
         Assert.Same(before, authority.Current);
 
-        Assert.Single(Navigate(app, engine, page, "https://up.example/", "Up").OfType<NavigationRecorded>());
+        Assert.Single(Browse(app, engine, page, "https://up.example/", "Up").OfType<NavigationRecorded>());
     }
 
     [Fact]
@@ -233,7 +235,7 @@ public sealed partial class BrowserContractsTests {
         Assert.Equal(themed, FirstTab(authority).IconAccent);
 
         // A new document leaves the old one's icon behind.
-        Navigate(app, engine, page, "https://example.net/", "Elsewhere");
+        Browse(app, engine, page, "https://example.net/", "Elsewhere");
         Assert.Equal("https://example.org/", FirstTab(authority).FaviconUrl);
 
         // A chosen icon is never replaced by the page's.
@@ -257,14 +259,18 @@ public sealed partial class BrowserContractsTests {
         var workspace = app.AttachWorkspace(authority);
         app.Drain();
 
-        Assert.IsType<TabsChanged>(Assert.Single(app.Send(new NavigateTab(workspace, fixture.Space, fixture.Tab, "https://example.org/"))));
+        // Blank input, and input no page can load, are refused.
+        Assert.Equal(new UnsupportedAddress("  "), Refusal(app, new NavigateTab(workspace, fixture.Space, fixture.Tab, "  ")));
+        var endless = new string('a', 4097);
+        Assert.Equal(new UnsupportedAddress(endless), Refusal(app, new NavigateTab(workspace, fixture.Space, fixture.Tab, endless)));
+
+        // A host the person typed becomes its address.
+        Assert.IsType<TabsChanged>(Assert.Single(app.Send(new NavigateTab(workspace, fixture.Space, fixture.Tab, " example.org "))));
         Assert.Null(FirstTab(authority).NativeContent);
-        Assert.Equal(("https://example.org/", "example.org"), (FirstTab(authority).Url, FirstTab(authority).Title));
+        Assert.Equal(("https://example.org", "example.org"), (FirstTab(authority).Url, FirstTab(authority).Title));
 
         // A web page keeps its address until its engine reports one.
         Assert.Empty(app.Send(new NavigateTab(workspace, fixture.Space, fixture.Tab, "https://example.net/")));
-        Assert.Equal(new UnsupportedAddress("example"),
-            Refusal(app, new NavigateTab(workspace, fixture.Space, fixture.Tab, "example")));
         Assert.Equal(new UnknownSpace(fixture.Tab), Refusal(app, new NavigateTab(workspace, fixture.Tab, fixture.Tab, "https://a.example/")));
         var gone = Guid.NewGuid();
         Assert.Equal(new UnknownTab(gone), Refusal(app, new NavigateTab(workspace, fixture.Space, gone, "https://example.net/")));

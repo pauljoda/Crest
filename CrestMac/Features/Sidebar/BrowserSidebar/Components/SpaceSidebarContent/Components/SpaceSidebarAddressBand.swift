@@ -49,7 +49,7 @@ struct SpaceSidebarAddressBand: View {
             focusRequest: addressFocusRequest,
             isSecure: isSecure,
             progress: displayedPage?.estimatedProgress ?? 0,
-            isLoading: displayedPage?.isLoading == true,
+            isLoading: displayedPage?.live.isLoading == true,
             hasResidentPage: displayedPage != nil,
             hasActiveSite: siteControl != nil,
             capabilities: capabilities,
@@ -75,13 +75,13 @@ struct SpaceSidebarAddressBand: View {
     }
 
     private var isSecure: Bool {
-        if let page = displayedPage { return page.hasOnlySecureContent }
+        if let page = displayedPage { return page.live.security.isSecure }
         return selectedTab?.url?.scheme?.lowercased() == "https"
     }
 
     private var siteControl: BrowserSiteControlConfiguration? {
         guard let page = displayedPage,
-            page.displayURL != nil
+            page.live.displayURL != nil
         else {
             return nil
         }

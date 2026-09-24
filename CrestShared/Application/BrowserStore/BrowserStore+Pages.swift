@@ -23,4 +23,5 @@ extension BrowserStore {
     func adoptPage(_ page: CorePage, in spaceID: SpaceID, as tabID: TabID?) -> Bool {
         page.move(to: window.workspaceID, spaceID: spaceID, tabID: tabID, windowID: windowID)
     }
+
 }

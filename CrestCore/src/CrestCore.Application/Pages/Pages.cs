@@ -4,9 +4,10 @@ using CrestCore.Domain;
 namespace CrestCore.Application;
 
 /// The pages this device hosts: which tab or transient request owns each, the
-/// window that hosts it and the engine that hosts it. Never saved or synced.
-/// The platform decides when a page opens or goes; the core decides whether it
-/// may, and on which engine, and asks the engine to create and close it.
+/// window that hosts it, the engine that hosts it and the live state its
+/// engine reports. Never saved or synced. The platform decides when a page
+/// opens or goes; the core decides whether it may, and on which engine, and
+/// asks the engine to create, load and close it.
 ///
 /// A window hosts one page for a tab. The Mac's windows over one workspace
 /// share one runtime store, so a second window shows the page the first opened
@@ -19,6 +20,10 @@ internal sealed class Pages(Device device, Engines engines, IClock clock, IIdSou
     #region Variables
 
     private readonly Dictionary<Guid, Page> open = [];
+
+    /// Whether the engine new pages open on shows internal pages, such as an
+    /// engine's settings.
+    public bool OpensInternalPages => engines.Default?.Supports(EngineCapability.InternalPages) == true;
 
     #endregion
 
@@ -35,6 +40,8 @@ internal sealed class Pages(Device device, Engines engines, IClock clock, IIdSou
             case OpenPage opening: Open(opening, changes, issue); break;
             case MovePage moving: Move(moving, changes); break;
             case ReleasePage releasing: Release(releasing, changes, issue); break;
+            case Navigate navigation: Load(navigation, changes, issue); break;
+            case LeavePageFailure leaving: LeaveFailure(leaving, changes); break;
             default: throw new ArgumentOutOfRangeException(nameof(intent), intent.GetType().Name, "Pages do not handle this intent.");
         }
     }
@@ -73,16 +80,53 @@ internal sealed class Pages(Device device, Engines engines, IClock clock, IIdSou
         if (page.Phase.HoldsEnginePage) issue(page.Engine, new ClosePage(page.Id, intent.KeepsState));
     }
 
+    /// Resolves what the person asked for by the address rules of the page's
+    /// Space and engine, shows the page heading there at once, and asks its
+    /// engine to load it.
+    private void Load(Navigate intent, ChangeFeed changes, Action<Engine, EngineCommand> issue) {
+        var page = Known(intent.PageId);
+        if (!page.Phase.HoldsEnginePage) throw new Rejected(new PageNotLoadable(page.Id));
+        var space = Hosting(device.Workspace(page.WorkspaceId), page.SpaceId);
+        var url = AddressResolution.Loading(intent.Input, space.Settings.BrowsingPreferences,
+            page.Engine.Supports(EngineCapability.InternalPages));
+        Update(page, changes, () => page.Load(url));
+        issue(page.Engine, new LoadPage(page.Id, url));
+    }
+
+    private void LeaveFailure(LeavePageFailure intent, ChangeFeed changes) {
+        var page = Known(intent.PageId);
+        Update(page, changes, page.LeaveFailure);
+    }
+
+    #endregion
+
+    #region Actions - Queries
+
+    /// The live state of the page that shows `tabId` of a workspace in
+    /// `windowId`, or in another window of the workspace when that window
+    /// hosts none, or null when no page shows the tab.
+    public PageLiveState? Showing(Guid workspaceId, Guid windowId, Guid tabId) {
+        PageLiveState? elsewhere = null;
+        foreach (var page in open.Values) {
+            if (page.WorkspaceId != workspaceId || page.TabId != tabId || !page.Phase.HoldsEnginePage) continue;
+            if (page.WindowId == windowId) return page.Live;
+            elsewhere ??= page.Live;
+        }
+        return elsewhere;
+    }
+
     #endregion
 
     #region Actions - Reports
 
     /// Applies what an engine saw happen to one of its pages. A report about a
     /// page the core no longer knows, one another engine hosts, or one that
-    /// would move a page backwards changes nothing. A finished navigation is
-    /// recorded once per document in the Space the page lives in, and an icon
-    /// reported for a recorded document goes to the page's tab; either waits
-    /// while a transaction holds the workspace's session.
+    /// would move a page backwards changes nothing. What the engine shows, a
+    /// failure and a commit that ends it change the page's live state, which
+    /// is published only when it differs. A finished navigation is recorded
+    /// once per document in the Space the page lives in, and an icon reported
+    /// for a recorded document goes to the page's tab; either waits while a
+    /// transaction holds the workspace's session.
     public void Report(Engine engine, EngineEvent report, ChangeFeed changes) {
         ArgumentNullException.ThrowIfNull(engine);
         ArgumentNullException.ThrowIfNull(report);
@@ -96,6 +140,7 @@ internal sealed class Pages(Device device, Engines engines, IClock clock, IIdSou
             NavigationFinished finished => finished.PageId,
             NavigationFailed failed => failed.PageId,
             PageIconChanged icon => icon.PageId,
+            PageStateChanged state => state.PageId,
             _ => throw new ArgumentOutOfRangeException(nameof(report), report.GetType().Name, "Pages do not handle this report.")
         };
         if (!open.TryGetValue(pageId, out var page) || !ReferenceEquals(page.Engine, engine)) return;
@@ -105,18 +150,29 @@ internal sealed class Pages(Device device, Engines engines, IClock clock, IIdSou
             case PageClosed: Enter(page, PagePhase.Closed, changes); break;
             // Nothing is recorded until the navigation finishes.
             case NavigationStarted: break;
-            case NavigationCommitted committed: page.Commit(committed.Url, committed.SameDocument); break;
+            case NavigationCommitted committed:
+                Update(page, changes, () => page.Commit(committed.Url, committed.SameDocument));
+                break;
             case NavigationFinished finished when page.Finish(finished.Url):
                 Edit(page, new NavigationRecord(page.Id, page.SpaceId, clock.Now, page.TabId, finished.Url, finished.Title, page.Icon,
                     ids.Next()), changes);
                 break;
             case NavigationFinished: break;
-            case NavigationFailed: page.Fail(); break;
+            case NavigationFailed failed: Update(page, changes, () => page.Fail(failed.Failure)); break;
             case PageIconChanged reported when page.ShowIcon(new(reported.Url, reported.Accent)) && page.TabId is { } tabId:
                 Edit(page, new IconAdoption(page.Id, page.SpaceId, clock.Now, tabId, page.Icon!), changes);
                 break;
             case PageIconChanged: break;
+            case PageStateChanged reported: Update(page, changes, () => page.Show(reported.Snapshot)); break;
         }
+    }
+
+    /// Applies `update` to the page, and publishes the page when that changed
+    /// what readers see of it.
+    private static void Update(Page page, ChangeFeed changes, Action update) {
+        var before = page.State;
+        update();
+        if (page.State != before) changes.Publish(new PageChanged(page.State));
     }
 
     private static void Enter(Page page, PagePhase next, ChangeFeed changes) {

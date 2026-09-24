@@ -17,7 +17,7 @@ struct BrowserQuickWindowAddressTrailingControl: View {
                 .foregroundStyle(.tertiary)
             } else if let page {
                 BrowserReloadControl(
-                    isLoading: page.isLoading,
+                    isLoading: page.live.isLoading,
                     isDeveloperMode: page.isDeveloperModeEnabled,
                     reloadOrStop: reloadOrStop,
                     reload: { page.performReload(.standard) },

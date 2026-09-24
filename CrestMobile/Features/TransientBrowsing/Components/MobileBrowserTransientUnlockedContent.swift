@@ -91,7 +91,7 @@ struct MobileBrowserTransientUnlockedContent: View {
 
     private var showsInitialLoadingSurface: Bool {
         guard let page = model.page, !model.request.isQuickWindow else { return false }
-        return page.committedNavigationCount == 0 && page.navigationFailure == nil
+        return page.committedNavigationCount == 0 && page.live.failure == nil
     }
 
     private var actions: BrowserTransientCardActions {

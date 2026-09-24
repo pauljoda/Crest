@@ -11,7 +11,7 @@ final class BrowserQuickWindowModelTests: XCTestCase {
         context.model.preparePage(isActive: true)
         let page = try XCTUnwrap(context.model.page)
         page.webView.loadHTMLString("<title>Quick page</title>", baseURL: context.model.presentedRequest.url)
-        try await waitUntil { page.title == "Quick page" && !page.isLoading }
+        try await waitUntil { page.live.title == "Quick page" && !page.live.isLoading }
         XCTAssertEqual(context.model.windowTitle(for: context.requestBinding.request), "Quick page")
         context.browser.seedSelectedTabNavigation(to: nil, titled: "Unrelated selected tab")
         XCTAssertEqual(context.model.windowTitle(for: context.requestBinding.request), "Quick page")
@@ -59,7 +59,7 @@ final class BrowserQuickWindowModelTests: XCTestCase {
         XCTAssertNil(popupWebView)
         XCTAssertTrue(context.model.pageLease === lease)
         XCTAssertTrue(context.model.page === page)
-        XCTAssertEqual(page.pendingNavigationURL, destination)
+        XCTAssertEqual(page.navigationReporter?.pendingURL, destination)
         XCTAssertEqual(context.browser.selectedSpace?.tabs.count, tabCount)
         XCTAssertEqual(
             context.model.presentedRequest.id,
@@ -484,7 +484,7 @@ final class BrowserQuickWindowModelTests: XCTestCase {
                 as: replacement
             )
         )
-        XCTAssertNotEqual(oldPage.url, rejectedURL)
+        XCTAssertNotEqual(oldPage.live.documentURL, rejectedURL)
         XCTAssertEqual(
             context.model.selectedAssignment,
             BrowserSpaceRuntimeAssignment(space: context.source)

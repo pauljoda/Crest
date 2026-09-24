@@ -90,9 +90,7 @@ internal static class RecordedIntents {
                 [.. (arguments["tabIds"] as JsonArray ?? []).Select(id => Guid.Parse(id!.GetValue<string>()))],
                 arguments["detach"]?.GetValue<bool>() == true)],
             "split.join" => [new JoinSplit(workspace, window ?? Guid.Empty, Id("spaceId"), Argument("tabId"), Argument("targetId"),
-                arguments["index"]?.GetValue<int>(), [.. (arguments["copyObservations"] as JsonArray ?? []).Select(page =>
-                    new SourcePage(Guid.Parse(page!["tabId"]!.GetValue<string>()), page["url"]?.GetValue<string>(),
-                        page["title"]!.GetValue<string>()))])],
+                arguments["index"]?.GetValue<int>())],
             "split.title" => [new NameSplit(workspace, Id("spaceId"), Argument("groupId"), arguments["value"]?.GetValue<string>())],
             "split.tint" => [new TintSplit(workspace, Id("spaceId"), Argument("groupId"), Color(arguments["value"]))],
             "space.identity" => [new SetSpaceIdentity(workspace, Id("spaceId"), Text("name"), Text("symbol"),
@@ -135,6 +133,28 @@ internal static class RecordedIntents {
         var arguments = request["arguments"]!.AsObject();
         return new(Guid.Parse(request["spaceId"]!.GetValue<string>()), arguments["url"]!.GetValue<string>(),
             arguments["title"]?.GetValue<string>() ?? "", Time(request));
+    }
+
+    /// Sends the intents a recorded request became, from `window`, while pages
+    /// `engine` hosts there show what the request observed its tabs' pages
+    /// showing, as a split join's copies start from them, and answers the
+    /// changes the core published, through the pages' release.
+    public static IReadOnlyList<Change> Send(CrestApp app, Engine engine, JsonObject request, IReadOnlyList<SessionIntent> intents,
+        Guid? window) {
+        var changes = new List<Change>();
+        var shown = new List<Guid>();
+        foreach (var observed in request["arguments"]?["copyObservations"] as JsonArray ?? []) {
+            var page = Guid.NewGuid();
+            changes.AddRange(app.Send(new OpenPage(page, intents[0].WorkspaceId, Guid.Parse(request["spaceId"]!.GetValue<string>()),
+                Guid.Parse(observed!["tabId"]!.GetValue<string>()), window!.Value)));
+            app.Report(engine, new PageCreated(page));
+            var snapshot = PageSnapshot.Blank with { Url = observed["url"]?.GetValue<string>(), Title = observed["title"]!.GetValue<string>() };
+            app.Report(engine, new PageStateChanged(page, snapshot));
+            shown.Add(page);
+        }
+        foreach (var intent in intents) changes.AddRange(app.Send(intent));
+        foreach (var page in shown) changes.AddRange(app.Send(new ReleasePage(page, KeepsState: false)));
+        return changes;
     }
 
     /// An engine for recorded navigations' pages, which does what the core asks.

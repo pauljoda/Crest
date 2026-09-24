@@ -127,7 +127,7 @@ final class BrowserPeekModelTests: XCTestCase {
         XCTAssertNil(popupWebView)
         XCTAssertTrue(context.model.pageLease === lease)
         XCTAssertTrue(context.model.page === page)
-        XCTAssertEqual(page.pendingNavigationURL, destination)
+        XCTAssertEqual(page.navigationReporter?.pendingURL, destination)
         XCTAssertEqual(context.browser.selectedSpace?.tabs.count, tabCount)
         XCTAssertEqual(context.coordinator.peekRequest, context.request)
     }

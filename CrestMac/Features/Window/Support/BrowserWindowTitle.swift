@@ -14,9 +14,9 @@ enum BrowserWindowTitle {
             return resolve(title: storedTitle, url: url, fallback: fallback)
         }
         let title =
-            page.pendingNavigationURL == nil && page.navigationFailure == nil
-            ? page.title : nil
-        return resolve(title: title, url: page.displayURL ?? url, fallback: fallback)
+            page.live.pendingNavigationURL == nil && page.live.failure == nil
+            ? page.live.title : nil
+        return resolve(title: title, url: page.live.displayURL ?? url, fallback: fallback)
     }
 
     private static func resolve(title: String?, url: URL?, fallback: String) -> String {

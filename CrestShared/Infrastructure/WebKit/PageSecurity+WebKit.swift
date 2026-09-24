@@ -1,7 +1,7 @@
 import Foundation
 import Security
 
-extension BrowserPageSecurityState {
+extension PageSecurity {
     /// WebKit's judgment of a page. WebKit reports only whether every resource
     /// arrived securely, so a certificate error is recognized from the trust it
     /// kept: an evaluation that failed, or a certificate the person chose to

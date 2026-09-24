@@ -56,14 +56,15 @@ public sealed partial class NativeSessionAuthority {
 
     #region Actions - Splits
 
-    private SessionEdit JoiningSplit(SessionState basis, JoinSplit intent, DateTimeOffset now, IIdSource ids) {
+    private SessionEdit JoiningSplit(SessionState basis, JoinSplit intent, DateTimeOffset now, IIdSource ids, Pages? pages) {
         var space = Editable(basis, intent.SpaceId);
         return Joining(basis, space, BrowserTabCollection.Restore(space), intent.WindowId, intent.TabId, intent.TargetTabId,
-            intent.Index, intent.SourcePages, now, ids);
+            intent.Index, pages, now, ids);
     }
 
     /// Opens the link as a new open tab and joins it to the target's split.
-    private SessionEdit OpeningLinkInSplit(SessionState basis, OpenLinkInSplit intent, DateTimeOffset now, IIdSource ids) {
+    private SessionEdit OpeningLinkInSplit(SessionState basis, OpenLinkInSplit intent, DateTimeOffset now, IIdSource ids,
+        Pages? pages) {
         var space = Editable(basis, intent.SpaceId);
         if (basis.Spaces.Any(candidate => candidate.Tabs.Any(tab => tab.Id == intent.TabId)))
             throw new Rejected(new TabAlreadyExists(intent.TabId));
@@ -72,22 +73,25 @@ public sealed partial class NativeSessionAuthority {
             SavedUrl: null, TabIconMode.WebSymbol, FaviconUrl: null, IconAccent: null, StoredIconMode: null, TabPlacement.Current,
             FolderId: null, SplitGroupId: null, now, PositionModifiedAt: null, CustomTitle: null, TitleModifiedAt: null,
             KeepsPageLoaded: false)), null);
-        return Joining(basis, space, edited, intent.WindowId, intent.TabId, intent.TargetTabId, null, intent.SourcePages, now, ids);
+        return Joining(basis, space, edited, intent.WindowId, intent.TabId, intent.TargetTabId, null, pages, now, ids);
     }
 
     /// Joins `tabId` to the split of `targetId` in `edited`, the organization
     /// of `space`, and shows the joined tab in the issuing window. A copy of a
-    /// page starts from what `pages` says its source shows, and a durable
-    /// target's split copied into new tabs keeps its name, icon and tint.
+    /// web page starts from the address and title its source's page shows
+    /// now, preferring the page the issuing window hosts, since the page can
+    /// move on before its navigation is recorded; a source without a page
+    /// keeps what the session holds. A durable target's split copied into new
+    /// tabs keeps its name, icon and tint.
     private SessionEdit Joining(SessionState basis, SpaceState space, BrowserTabCollection edited, Guid windowId, Guid tabId, Guid targetId,
-        int? index, IReadOnlyList<SourcePage> pages, DateTimeOffset now, IIdSource ids) {
+        int? index, Pages? pages, DateTimeOffset now, IIdSource ids) {
         var target = edited.Tab(targetId);
         var durableGroup = target.Placement.IsDurable ? target.SplitGroupId : null;
         var joined = edited.JoinSplit(tabId, targetId, index, ids, now);
         foreach (var (source, copyId) in joined.Copies) {
             var tab = edited.Tab(copyId);
-            if (tab.Content.IsWebPage && pages.FirstOrDefault(page => page.TabId == source) is { } shown)
-                tab.AdoptObservation(shown.Address, shown.Title);
+            if (tab.Content.IsWebPage && pages?.Showing(workspaceId, windowId, source) is { } shown)
+                tab.ObserveAppearance(shown.Address, shown.Title);
         }
         if (durableGroup is { } copied && joined.Copies.Any(pair => pair.Source == targetId)
             && edited.Tab(joined.SelectedTab).SplitGroupId is { } copy)

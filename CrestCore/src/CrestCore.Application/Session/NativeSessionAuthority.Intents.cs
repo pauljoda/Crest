@@ -18,15 +18,15 @@ public sealed partial class NativeSessionAuthority {
     #region Actions - Intents
 
     /// Runs one session intent at `now`, drawing new identities from `ids`
-    /// and reading the Quick Window and Peek pages an intent names from
-    /// `pages`, and commits what it changed, which the device publishes. An
-    /// intent that changes nothing commits nothing, and publishes only what it
-    /// did that the session cannot tell, such as the image a tab now wears,
-    /// and what its window shows next, such as the tab it returns to after
-    /// putting a saved tab's page away. Throws `Rejected` naming the rule that
-    /// refused it, or `SaveFailed` for an edit saved before it returns whose
-    /// save failed, which changed nothing.
-    internal void Handle(SessionIntent intent, DateTimeOffset now, IIdSource ids, Func<Guid, TransientPage?>? pages = null) {
+    /// and reading what the device's `pages` show, such as the Quick Window
+    /// and Peek pages an intent names, and commits what it changed, which the
+    /// device publishes. An intent that changes nothing commits nothing, and
+    /// publishes only what it did that the session cannot tell, such as the
+    /// image a tab now wears, and what its window shows next, such as the tab
+    /// it returns to after putting a saved tab's page away. Throws `Rejected`
+    /// naming the rule that refused it, or `SaveFailed` for an edit saved
+    /// before it returns whose save failed, which changed nothing.
+    internal void Handle(SessionIntent intent, DateTimeOffset now, IIdSource ids, Pages? pages = null) {
         ArgumentNullException.ThrowIfNull(intent);
         ArgumentNullException.ThrowIfNull(ids);
         NativeSessionCommand? command = null;
@@ -54,15 +54,17 @@ public sealed partial class NativeSessionAuthority {
 
     /// Throws the `Rejected` that would refuse `intent` at `now`, and changes
     /// nothing. New identities come from `ids`, and are never used.
-    internal void Check(SessionIntent intent, DateTimeOffset now, IIdSource ids, Func<Guid, TransientPage?>? pages = null) {
+    internal void Check(SessionIntent intent, DateTimeOffset now, IIdSource ids, Pages? pages = null) {
         ArgumentNullException.ThrowIfNull(intent);
         ArgumentNullException.ThrowIfNull(ids);
         lock (Gate) _ = Edit(intent, Stamp(now), ids, pages);
     }
 
     /// The edit an intent makes to the accepted session, validated, or null
-    /// for a sweep the last one makes unnecessary. The caller holds the gate.
-    private SessionEdit? Edit(SessionIntent intent, DateTimeOffset now, IIdSource ids, Func<Guid, TransientPage?>? pages) {
+    /// for a sweep the last one makes unnecessary. `pages` are what the
+    /// device's windows show, which a copy of a tab starts from. The caller
+    /// holds the gate.
+    private SessionEdit? Edit(SessionIntent intent, DateTimeOffset now, IIdSource ids, Pages? pages) {
         var basis = IntentBasis();
         var edit = intent switch {
             ClearHistory clear => ClearingHistory(basis, clear),
@@ -79,8 +81,8 @@ public sealed partial class NativeSessionAuthority {
             MoveFolder move => MovingFolder(basis, move, now),
             DeleteFolder deletion => DeletingFolder(basis, deletion, now),
             FileTabs filing => Filing(basis, filing, now),
-            JoinSplit join => JoiningSplit(basis, join, now, ids),
-            OpenLinkInSplit link => OpeningLinkInSplit(basis, link, now, ids),
+            JoinSplit join => JoiningSplit(basis, join, now, ids, pages),
+            OpenLinkInSplit link => OpeningLinkInSplit(basis, link, now, ids, pages),
             LeaveSplit leave => LeavingSplit(basis, leave, now),
             MoveSplitMember move => MovingSplitMember(basis, move, now),
             StepSplitMember step => SteppingSplitMember(basis, step, now),
@@ -97,7 +99,7 @@ public sealed partial class NativeSessionAuthority {
             MoveTab move => MovingTab(basis, move, now),
             PromoteTransientPage promotion => PromotingTransientPage(basis, promotion, now, ids, pages),
             ArchiveTransientPage archive => ArchivingTransientPage(basis, archive, now, ids, pages),
-            NavigateTab navigation => NavigatingTab(basis, navigation),
+            NavigateTab navigation => NavigatingTab(basis, navigation, pages?.OpensInternalPages ?? false),
             RenameTab rename => RenamingTab(basis, rename, now),
             ChooseTabIcon icon => ChoosingTabIcon(basis, icon),
             ReplaceSavedAddress adoption => ReplacingSavedAddress(basis, adoption),

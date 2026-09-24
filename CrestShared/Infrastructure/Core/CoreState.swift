@@ -21,9 +21,10 @@ final class CoreState {
     /// What each open window shows, by window. The dictionary changes only
     /// when a window opens or closes.
     var windows: [UUID: WindowStateModel] = [:]
-    /// Each page this device hosts, by page: its owner, its engine and where
-    /// it stands there.
-    var pages: [UUID: PageState] = [:]
+    /// Each page this device hosts, by page: its owner, its engine, where it
+    /// stands there and its live state. The dictionary changes only when a
+    /// page opens or goes, so a page's new title redraws only its readers.
+    var pages: [UUID: PageStateModel] = [:]
     /// The newest file revision the core has on disk, counting the stored
     /// session's edits and this device's saved windows; zero before its first
     /// save and for a core that keeps nothing.

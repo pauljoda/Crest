@@ -37,7 +37,8 @@ protocol BrowserPageEngine: BrowserFindExecuting {
     func stop()
     var interactionState: Data? { get }
     func restoreInteractionState(_ state: Data, expecting url: URL) -> Bool
-    func mediaActivity() async -> BrowserPageMediaActivity?
+    /// What media the page runs now, or nil when the engine cannot tell.
+    func mediaActivity() async -> PageMediaActivity?
     /// Content bridges run by the engine itself, or nil when the page installs
     /// them through the engine's own API.
     var contentScripting: (any BrowserPageContentScripting)? { get }
@@ -139,9 +140,3 @@ protocol BrowserPageDocumentServices {
     func printOperation(with info: NSPrintInfo) async throws -> NSPrintOperation
 }
 #endif
-
-struct BrowserPageMediaActivity {
-    var isPlaying: Bool
-    var isCapturing: Bool
-    var hasPictureInPicture: Bool
-}

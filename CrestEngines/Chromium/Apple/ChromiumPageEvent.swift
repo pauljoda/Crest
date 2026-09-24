@@ -73,10 +73,6 @@
         var themeColor: UInt32?
 
         var pageFailure: ChromiumPageFailure? { failure.flatMap(ChromiumPageFailure.init(rawValue:)) }
-        /// The engine's verdict; a spelling this build does not know claims nothing.
-        var securityState: BrowserPageSecurityState {
-            security.flatMap(BrowserPageSecurityState.init(rawValue:)) ?? .none
-        }
 
         // MARK: - Actions - Namespace
 

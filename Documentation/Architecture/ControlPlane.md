@@ -171,8 +171,12 @@ for each interaction. The core owns page identity: a pool or page store opens
 each page through the core (`OpenPage`) from its window, hands a page to another
 owner (`MovePage`) and releases it (`ReleasePage`), and the core refuses a page
 in a locked Space, in one being deleted or for a tab that already has one. It
-asks the page's engine to create and close the engine's page, and the binding
-reports what the engine did. Document export, printing, full-page capture and inspector commands
+asks the page's engine to create, load and close the engine's page, and the
+binding reports what the engine did, including a `PageSnapshot` of what the page
+shows, which the core keeps as the page's `PageLiveState`. Typed addresses, the
+command palette, Open Location and every first load go through `Navigate`, which
+the core resolves by the Space's address and search rules before it issues
+`LoadPage`. Document export, printing, full-page capture and inspector commands
 now use native engine services. Save panels and print sheets remain native UI.
 The command route and developer capture controls consult the registered services;
 Chromium exports PDFs, full-page PNG captures and MHTML archives through a fixed,
