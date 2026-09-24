@@ -4,15 +4,11 @@ namespace CrestCore.Contracts;
 public static class ProtocolErrorCodes {
     #region Variables
 
-    public const string CapabilityLimit = "capability_limit";
     public const string DuplicateMember = "duplicate_member";
     public const string HandleCollision = "handle_collision";
-    public const string InvalidAdapter = "invalid_adapter";
     public const string InvalidCounter = "invalid_counter";
-    public const string InvalidEndpoint = "invalid_endpoint";
     public const string InvalidEntryPoint = "invalid_entry_point";
     public const string InvalidInput = "invalid_input";
-    public const string InvalidLimit = "invalid_limit";
     public const string InvalidPeekModifier = "invalid_peek_modifier";
     public const string InvalidPermissionDecision = "invalid_permission_decision";
     public const string InvalidPlacement = "invalid_placement";
@@ -22,7 +18,6 @@ public static class ProtocolErrorCodes {
     public const string InvalidStatus = "invalid_status";
     public const string InvalidString = "invalid_string";
     public const string InvalidUuid = "invalid_uuid";
-    public const string InvalidVersion = "invalid_version";
     public const string LanguageBatchLimit = "language_batch_limit";
     public const string PolicyInputLimit = "policy_input_limit";
     public const string RecordBatchLimit = "record_batch_limit";

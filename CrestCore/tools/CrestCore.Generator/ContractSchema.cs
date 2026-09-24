@@ -8,9 +8,89 @@ using CrestCore.Contracts;
 
 namespace CrestCore.Generator;
 
-/// The four kinds of contract type. Each root's concrete types form a union
+/// The kinds of contract message. Each root's concrete types form a union
 /// whose wire tag is the type's index in ordinal name order.
-internal enum ContractRoot { Intent, Change, Rejection, Query }
+///
+/// A root travels one way. The core reads what travels to it (intents,
+/// queries and engine events), so each of those is a message on its own with
+/// a byte limit, and a platform encodes it through a protocol. The core writes
+/// the rest (changes, rejections and engine commands), and a platform decodes
+/// each of those as the cases of one enum. The engine roots form the engine
+/// contract, which an engine binding checks by its own fingerprint.
+internal sealed class ContractRoot {
+    #region Variables
+
+    public static readonly ContractRoot Intent = new(typeof(Intent), travelsToCore: true,
+        swiftDocumentation: "A request to change the core's state, sent with `CrestCore.send`.");
+    public static readonly ContractRoot Change = new(typeof(Change), travelsToCore: false,
+        swiftDocumentation: "Everything an intent can change. `CoreState.apply` keeps the read model current.");
+    public static readonly ContractRoot Rejection = new(typeof(Rejection), travelsToCore: false,
+        swiftDocumentation: "The rule that refused an intent or a query.", swiftConformances: "Error, Sendable");
+    public static readonly ContractRoot Query = new(typeof(Query<>), travelsToCore: true,
+        swiftDocumentation: "A question the core answers without changing state, asked with `CrestCore.query`.");
+    public static readonly ContractRoot EngineCommand = new(typeof(EngineCommand), travelsToCore: false, isEngine: true,
+        swiftDocumentation: "What the core asks an engine binding to do, run by `EngineBinding.run`.");
+    public static readonly ContractRoot EngineEvent = new(typeof(EngineEvent), travelsToCore: true, isEngine: true,
+        swiftDocumentation: "What happened to one of an engine binding's pages, reported with `CrestCore.report`.");
+
+    /// Every root, in the order the canonical description lists them.
+    public static IReadOnlyList<ContractRoot> All { get; } = [Intent, Change, Rejection, Query, EngineCommand, EngineEvent];
+
+    /// The root's C# base type; a query's is the open `Query<>`.
+    public Type Type { get; }
+
+    /// The base type's name without its generic arity: `Query` for `Query<>`.
+    public string Name { get; }
+
+    /// The core reads messages of this root, each on its own.
+    public bool TravelsToCore { get; }
+
+    /// Part of the engine contract rather than the application API.
+    public bool IsEngine { get; }
+
+    /// Each message is a question with a typed answer.
+    public bool HasAnswer => Type.IsGenericTypeDefinition;
+
+    /// The Swift declaration's documentation: the protocol a message that
+    /// travels to the core conforms to, or the enum of the ones it writes.
+    public string SwiftDocumentation { get; }
+
+    /// What the Swift enum of a root the core writes conforms to.
+    public string SwiftConformances { get; }
+
+    #endregion
+
+    #region Constructors
+
+    private ContractRoot(Type type, bool travelsToCore, string swiftDocumentation, bool isEngine = false,
+        string swiftConformances = "Sendable") {
+        Type = type;
+        Name = type.IsGenericTypeDefinition ? type.Name[..type.Name.IndexOf('`', StringComparison.Ordinal)] : type.Name;
+        TravelsToCore = travelsToCore;
+        IsEngine = isEngine;
+        SwiftDocumentation = swiftDocumentation;
+        SwiftConformances = swiftConformances;
+    }
+
+    #endregion
+
+    #region Actions - Membership
+
+    /// Whether `type` is one of this root's concrete messages.
+    public bool Contains(Type type) => HasAnswer ? AnswerOf(type) is not null : Type.IsAssignableFrom(type);
+
+    /// The type a question of this root answers with, or null for a type that
+    /// asks nothing.
+    public Type? AnswerOf(Type type) {
+        for (var current = type.BaseType; current is not null; current = current.BaseType)
+            if (current.IsGenericType && current.GetGenericTypeDefinition() == Type) return current.GetGenericArguments()[0];
+        return null;
+    }
+
+    public override string ToString() => Name;
+
+    #endregion
+}
 
 internal enum Primitive { Bool, Int, Long, Double, String, Guid, Date, Duration, Bytes }
 
@@ -93,15 +173,20 @@ internal sealed class ContractSchemaException(string message) : Exception(messag
 /// Every contract type reachable from the roots, and the fingerprint of their
 /// canonical description.
 ///
-/// The roots are every concrete type assignable to `Intent`, `Change` or
-/// `Rejection`, or deriving from `Query<>`, and every fixed set, so a set
-/// reaches Swift before any record names it. Configurations cross once, at
-/// creation, so they join the closure without a tag. The closure adds the
-/// records, enums and fixed sets their constructor parameters and set data use.
+/// The roots are every concrete member of a `ContractRoot`, and every fixed
+/// set, so a set reaches Swift before any record names it. Configurations
+/// cross once, at creation or registration, so they join the closure without a
+/// tag. The closure adds the records, enums and fixed sets their constructor
+/// parameters and set data use. The engine contract is described a second
+/// time on its own, for its own fingerprint.
 internal sealed class ContractSchema {
     #region Variables
 
     public const int WireVersion = 1;
+
+    /// The first word of each canonical description, naming its contract.
+    private const string ApplicationContract = "crest-contracts";
+    private const string EngineContract = "crest-engine";
 
     /// The members a fixed set declares, and the one the generator adds.
     private const string SetAll = "All";
@@ -128,11 +213,22 @@ internal sealed class ContractSchema {
 
     public byte[] Fingerprint => SHA256.HashData(Encoding.UTF8.GetBytes(Canonical));
 
+    /// The canonical description of the engine contract alone: the engine
+    /// roots, the registration an engine hands the core, and what they reach.
+    /// An edit anywhere else in the contracts leaves it, and so an engine built
+    /// against it, unchanged.
+    public string EngineCanonical { get; private set; } = "";
+
+    public byte[] EngineFingerprint => SHA256.HashData(Encoding.UTF8.GetBytes(EngineCanonical));
+
+    /// The contract the canonical description names.
+    private readonly string contract;
+
     #endregion
 
     #region Constructors
 
-    private ContractSchema() { }
+    private ContractSchema(string contract) => this.contract = contract;
 
     #endregion
 
@@ -143,19 +239,26 @@ internal sealed class ContractSchema {
         return Load(assembly.GetExportedTypes());
     }
 
-    /// The schema whose roots are the given types' concrete contract types.
+    /// The schema whose roots are the given types' concrete contract types,
+    /// with the engine contract's own description beside it.
     public static ContractSchema Load(IEnumerable<Type> types) {
         ArgumentNullException.ThrowIfNull(types);
-        var schema = new ContractSchema();
         var candidates = types.Where(type => type is { IsClass: true, IsAbstract: false }).ToList();
-        schema.AddRoot(ContractRoot.Intent, candidates.Where(typeof(Intent).IsAssignableFrom));
-        schema.AddRoot(ContractRoot.Change, candidates.Where(typeof(Change).IsAssignableFrom));
-        schema.AddRoot(ContractRoot.Rejection, candidates.Where(typeof(Rejection).IsAssignableFrom));
-        schema.AddRoot(ContractRoot.Query, candidates.Where(type => QueryAnswer(type) is not null));
-        foreach (var type in candidates.Where(typeof(Configuration).IsAssignableFrom).OrderBy(type => type.Name, StringComparer.Ordinal))
-            schema.DescribeRecord(type);
-        foreach (var set in candidates.Where(IsFixedSet).OrderBy(type => type.Name, StringComparer.Ordinal))
-            schema.DescribeSet(set, set.Name);
+        var schema = Describing(ApplicationContract, candidates, ContractRoot.All,
+            candidates.Where(typeof(Configuration).IsAssignableFrom), candidates.Where(IsFixedSet));
+        schema.EngineCanonical = Describing(EngineContract, candidates, [.. ContractRoot.All.Where(root => root.IsEngine)],
+            candidates.Where(type => type == typeof(EngineRegistration)), []).Canonical;
+        return schema;
+    }
+
+    /// A schema whose roots are `included`'s members among `candidates`, with
+    /// `configurations` and `sets` described whether or not a record names them.
+    private static ContractSchema Describing(string contract, List<Type> candidates, IReadOnlyList<ContractRoot> included,
+        IEnumerable<Type> configurations, IEnumerable<Type> sets) {
+        var schema = new ContractSchema(contract);
+        foreach (var root in ContractRoot.All) schema.AddRoot(root, included.Contains(root) ? candidates.Where(root.Contains) : []);
+        foreach (var type in configurations.OrderBy(type => type.Name, StringComparer.Ordinal)) schema.DescribeRecord(type);
+        foreach (var set in sets.OrderBy(type => type.Name, StringComparer.Ordinal)) schema.DescribeSet(set, set.Name);
         schema.Validate();
         schema.Canonical = schema.Describe();
         return schema;
@@ -164,28 +267,20 @@ internal sealed class ContractSchema {
     private void AddRoot(ContractRoot root, IEnumerable<Type> types) {
         var ordered = types.OrderBy(type => type.Name, StringComparer.Ordinal).ToList();
         roots[root] = [.. ordered.Select((type, tag) => {
-            var answer = root == ContractRoot.Query
-                ? ResolveRequired(QueryAnswer(type)!, null, $"{type.Name} answer")
-                : null;
+            var answer = root.AnswerOf(type) is { } answered ? ResolveRequired(answered, null, $"{type.Name} answer") : null;
             return new ContractMember(DescribeRecord(type), tag, answer, MessageLimit(type, root));
         })];
     }
 
-    /// An intent's or a query's byte limit: its own, or the default. Nothing
-    /// else crosses as a message on its own, so nothing else may name one.
+    /// The byte limit of a message the core reads: its own, or the default.
+    /// Nothing the core writes is read on its own, so nothing else may name one.
     private static int? MessageLimit(Type type, ContractRoot root) {
         var limit = type.GetCustomAttribute<MessageLimitAttribute>(inherit: false);
-        if (root is not (ContractRoot.Intent or ContractRoot.Query))
-            return limit is null ? null : throw new ContractSchemaException($"{type.Name}: only an intent or a query has a message limit.");
+        if (!root.TravelsToCore)
+            return limit is null ? null : throw new ContractSchemaException($"{type.Name}: only a message the core reads has a message limit.");
         if (limit is { Bytes: <= 0 })
             throw new ContractSchemaException($"{type.Name}: a message limit must be a positive number of bytes.");
         return limit?.Bytes ?? MessageLimitAttribute.DefaultBytes;
-    }
-
-    private static Type? QueryAnswer(Type type) {
-        for (var current = type.BaseType; current is not null; current = current.BaseType)
-            if (current.IsGenericType && current.GetGenericTypeDefinition() == typeof(Query<>)) return current.GetGenericArguments()[0];
-        return null;
     }
 
     #endregion
@@ -231,9 +326,7 @@ internal sealed class ContractSchema {
         if (type == typeof(DateTimeOffset)) return new PrimitiveField(Primitive.Date);
         if (type == typeof(TimeSpan)) return new PrimitiveField(Primitive.Duration);
         if (type == typeof(byte[])) return new PrimitiveField(Primitive.Bytes);
-        if (type == typeof(Intent)) return new RootField(ContractRoot.Intent);
-        if (type == typeof(Change)) return new RootField(ContractRoot.Change);
-        if (type == typeof(Rejection)) return new RootField(ContractRoot.Rejection);
+        if (ContractRoot.All.FirstOrDefault(root => root.Type == type) is { } union) return new RootField(union);
         if (type.IsEnum) return DescribeEnum(type, where);
         if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(IReadOnlyList<>))
             return new ListField(Resolve(type.GetGenericArguments()[0], info?.GenericTypeArguments.FirstOrDefault(), $"{where}[]"));
@@ -553,7 +646,7 @@ internal sealed class ContractSchema {
     /// fields in order, and each root's tags.
     private string Describe() {
         var text = new StringBuilder();
-        text.Append("crest-contracts wire ").Append(WireVersion).Append('\n');
+        text.Append(contract).Append(" wire ").Append(WireVersion).Append('\n');
         foreach (var item in Enums)
             text.Append(item.IsFlags ? "flags " : "enum ").Append(item.Name)
                 .Append(string.Concat(item.Members.Select(member => $" {member.Key}={member.Value}"))).Append('\n');
@@ -565,9 +658,9 @@ internal sealed class ContractSchema {
         foreach (var record in Records)
             text.Append("record ").Append(record.Name).Append('(')
                 .Append(string.Join(", ", record.Fields.Select(field => $"{field.Name}: {Describe(field.Type)}"))).Append(")\n");
-        foreach (var root in Enum.GetValues<ContractRoot>())
+        foreach (var root in ContractRoot.All)
             foreach (var member in Members(root))
-                text.Append(root.ToString().ToLowerInvariant()).Append(' ').Append(member.Tag).Append(' ').Append(member.Name)
+                text.Append(root.Name.ToLowerInvariant()).Append(' ').Append(member.Tag).Append(' ').Append(member.Name)
                     .Append(member.Answer is { } answer ? $" -> {Describe(answer)}" : "")
                     .Append(member.MaximumBytes is { } limit ? $" limit={limit.ToString(CultureInfo.InvariantCulture)}" : "").Append('\n');
         return text.ToString();

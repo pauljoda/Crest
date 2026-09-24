@@ -5,12 +5,6 @@ using System.Text.Json;
 namespace CrestCore.Contracts;
 
 public static class Protocol {
-    #region Variables
-
-    public const int Version = 1;
-
-    #endregion
-
     #region Actions - Parsing
 
     public static JsonElement Parse(ReadOnlySpan<byte> utf8) {
@@ -71,39 +65,6 @@ public static class Protocol {
         if (!ulong.TryParse(s, NumberStyles.None, CultureInfo.InvariantCulture, out var value)
             || value == 0 || s != value.ToString(CultureInfo.InvariantCulture)) throw new ProtocolException(ProtocolErrorCodes.InvalidCounter);
         return value;
-    }
-
-    public static string Endpoint(JsonElement e, string key) {
-        string s = Text(e, key, 96);
-        if (s[0] is < 'a' or > 'z' || s.Any(c => !(char.IsAsciiLetterLower(c) || char.IsAsciiDigit(c) || c is '.' or '-' or '_')))
-            throw new ProtocolException(ProtocolErrorCodes.InvalidEndpoint);
-        return s;
-    }
-
-    #endregion
-
-    #region Actions - Descriptors
-
-    public static Adapter Descriptor(ReadOnlySpan<byte> bytes) {
-        var e = Parse(bytes);
-        Members(e, "adapterId", "role", "implementationId", "implementationVersion", "protocolVersion", "capabilities");
-        if (e.GetProperty("protocolVersion").GetInt32() != Version) throw new ProtocolException(ProtocolErrorCodes.VersionMismatch);
-        string id = Endpoint(e, "adapterId");
-        var role = AdapterRole.Named(Text(e, "role"));
-        if (id == "core" || role is null) throw new ProtocolException(ProtocolErrorCodes.InvalidAdapter);
-        var capabilities = new Dictionary<string, Capability>();
-        foreach (var p in e.GetProperty("capabilities").EnumerateObject()) {
-            if (capabilities.Count >= 128 || p.Name.Length > 128) throw new ProtocolException(ProtocolErrorCodes.CapabilityLimit);
-            var c = p.Value;
-            Members(c, "status", "contractVersion", "scope", "limitations", "evidence");
-            var status = CapabilityStatus.Named(Text(c, "status")) ?? throw new ProtocolException(ProtocolErrorCodes.InvalidStatus);
-            int version = c.GetProperty("contractVersion").GetInt32();
-            if (version < 1) throw new ProtocolException(ProtocolErrorCodes.InvalidVersion);
-            var limits = c.GetProperty("limitations").EnumerateArray().Select(l => l.GetString() ?? throw new ProtocolException(ProtocolErrorCodes.InvalidLimit)).ToArray();
-            if (limits.Length > 32 || limits.Any(l => l.Length > 512)) throw new ProtocolException(ProtocolErrorCodes.InvalidLimit);
-            capabilities.Add(p.Name, new(status, version, Text(c, "scope", 256), limits, Text(c, "evidence", 512)));
-        }
-        return new(id, role, Text(e, "implementationId", 128), Text(e, "implementationVersion", 128), capabilities);
     }
 
     #endregion

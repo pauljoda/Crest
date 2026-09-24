@@ -17,10 +17,18 @@ protocol Query: Sendable {
     static func decodeAnswer(from reader: inout WireReader) throws(WireError) -> Answer
 }
 
+/// What happened to one of an engine binding's pages, reported with `CrestCore.report`.
+protocol EngineEvent: Sendable {
+    func encodeEngineEvent(into writer: inout WireWriter)
+}
+
 /// Everything an intent can change. `CoreState.apply` keeps the read model current.
 enum Change: Equatable, Sendable {
     case downloadUpdated(DownloadUpdated)
     case downloadsRemoved(DownloadsRemoved)
+    case pageChanged(PageChanged)
+    case pageOpened(PageOpened)
+    case pageRemoved(PageRemoved)
     case saved(Saved)
     case sessionAdopted(SessionAdopted)
     case storageFailed(StorageFailed)
@@ -33,10 +41,15 @@ enum Change: Equatable, Sendable {
 /// The rule that refused an intent or a query.
 enum Rejection: Equatable, Error, Sendable {
     case credentialRecordLimitReached(CredentialRecordLimitReached)
+    case defaultEngineAlreadyRegistered(DefaultEngineAlreadyRegistered)
     case downloadLimitReached(DownloadLimitReached)
     case duplicateCredential(DuplicateCredential)
     case duplicateDownload(DuplicateDownload)
+    case duplicatePage(DuplicatePage)
     case duplicateSearchEngineName(DuplicateSearchEngineName)
+    case engineAlreadyRegistered(EngineAlreadyRegistered)
+    case engineLacksCapability(EngineLacksCapability)
+    case engineNotRegistered(EngineNotRegistered)
     case invalidCredentialDate(InvalidCredentialDate)
     case invalidCredentialOrigin(InvalidCredentialOrigin)
     case invalidCredentialRecord(InvalidCredentialRecord)
@@ -49,17 +62,28 @@ enum Rejection: Equatable, Error, Sendable {
     case invalidRetentionLifetime(InvalidRetentionLifetime)
     case invalidSearchEngine(InvalidSearchEngine)
     case invalidSplitColumnShares(InvalidSplitColumnShares)
+    case pageProfileMismatch(PageProfileMismatch)
     case recoveryCheckpointUnusable(RecoveryCheckpointUnusable)
     case saveFailed(SaveFailed)
     case searchEngineLimitReached(SearchEngineLimitReached)
+    case spaceBeingDeleted(SpaceBeingDeleted)
     case spaceLocked(SpaceLocked)
     case staleCredentialComparison(StaleCredentialComparison)
     case storageFromNewerApp(StorageFromNewerApp)
     case storageRestoreInterrupted(StorageRestoreInterrupted)
     case storageUnreadable(StorageUnreadable)
+    case tabAlreadyHasPage(TabAlreadyHasPage)
+    case unknownPage(UnknownPage)
+    case unknownSpace(UnknownSpace)
     case unknownWorkspace(UnknownWorkspace)
     case unsavedWorkspace(UnsavedWorkspace)
     case windowNotOpen(WindowNotOpen)
+}
+
+/// What the core asks an engine binding to do, run by `EngineBinding.run`.
+enum EngineCommand: Equatable, Sendable {
+    case closePage(ClosePage)
+    case createPage(CreatePage)
 }
 
 extension CoreState {
@@ -68,6 +92,9 @@ extension CoreState {
         switch change {
         case .downloadUpdated(let change): apply(change)
         case .downloadsRemoved(let change): apply(change)
+        case .pageChanged(let change): apply(change)
+        case .pageOpened(let change): apply(change)
+        case .pageRemoved(let change): apply(change)
         case .saved(let change): apply(change)
         case .sessionAdopted(let change): apply(change)
         case .storageFailed(let change): apply(change)
@@ -139,6 +166,11 @@ struct CancelDownload: Intent, Equatable, Sendable {
     let message: String
 }
 
+struct ClosePage: Equatable, Sendable {
+    let pageID: UUID
+    let keepsState: Bool
+}
+
 struct CloseWindow: Intent, Equatable, Sendable {
     let windowID: UUID
 }
@@ -146,6 +178,12 @@ struct CloseWindow: Intent, Equatable, Sendable {
 struct ContentRuleList: Equatable, Sendable {
     let identifier: String
     let source: String
+}
+
+struct CreatePage: Equatable, Sendable {
+    let pageID: UUID
+    let profileID: UUID
+    let isPrivate: Bool
 }
 
 struct CredentialCapture: Query, Equatable, Sendable {
@@ -274,6 +312,10 @@ struct CustomSearchEngineAdmission: Query, Equatable, Sendable {
     let existing: [CustomSearchEngine]
 }
 
+struct DefaultEngineAlreadyRegistered: Equatable, Sendable {
+    let current: EngineKind
+}
+
 struct DismissShownTab: Intent, Equatable, Sendable {
     let windowID: UUID
     let spaceID: UUID
@@ -378,7 +420,29 @@ struct DuplicateCredential: Equatable, Sendable {
 struct DuplicateDownload: Equatable, Sendable {
 }
 
+struct DuplicatePage: Equatable, Sendable {
+    let pageID: UUID
+}
+
 struct DuplicateSearchEngineName: Equatable, Sendable {
+}
+
+struct EngineAlreadyRegistered: Equatable, Sendable {
+    let kind: EngineKind
+}
+
+struct EngineLacksCapability: Equatable, Sendable {
+    let kind: EngineKind
+    let capability: EngineCapability
+}
+
+struct EngineNotRegistered: Equatable, Sendable {
+}
+
+struct EngineRegistration: Equatable, Sendable {
+    let kind: EngineKind
+    let capabilities: [EngineCapability]
+    let isDefault: Bool
 }
 
 struct ExpireDownloads: Intent, Equatable, Sendable {
@@ -507,6 +571,21 @@ struct MostRecentCredential: Query, Equatable, Sendable {
     let records: [CredentialRecord]
 }
 
+struct MovePage: Intent, Equatable, Sendable {
+    let pageID: UUID
+    let workspaceID: UUID
+    let spaceID: UUID
+    let tabID: UUID?
+}
+
+struct OpenPage: Intent, Equatable, Sendable {
+    let pageID: UUID
+    let workspaceID: UUID
+    let spaceID: UUID
+    let tabID: UUID?
+    let windowID: UUID
+}
+
 struct OpenWindow: Intent, Equatable, Sendable {
     let windowID: UUID
     let workspaceID: UUID
@@ -515,6 +594,44 @@ struct OpenWindow: Intent, Equatable, Sendable {
     let showingSpaceID: UUID?
     let showingTabs: [ShownTab]
     let restoresTabs: Bool
+}
+
+struct PageChanged: Equatable, Sendable {
+    let page: PageState
+}
+
+struct PageClosed: EngineEvent, Equatable, Sendable {
+    let pageID: UUID
+}
+
+struct PageCreated: EngineEvent, Equatable, Sendable {
+    let pageID: UUID
+}
+
+struct PageCreationFailed: EngineEvent, Equatable, Sendable {
+    let pageID: UUID
+}
+
+struct PageOpened: Equatable, Sendable {
+    let page: PageState
+}
+
+struct PageProfileMismatch: Equatable, Sendable {
+    let pageID: UUID
+    let spaceID: UUID
+}
+
+struct PageRemoved: Equatable, Sendable {
+    let pageID: UUID
+}
+
+struct PageState: Equatable, Sendable, Identifiable {
+    let id: UUID
+    let workspaceID: UUID
+    let spaceID: UUID
+    let tabID: UUID?
+    let engine: EngineKind
+    let phase: PagePhase
 }
 
 struct PasskeyAccess: Query, Equatable, Sendable {
@@ -548,6 +665,11 @@ struct RecordDownloadTransfer: Intent, Equatable, Sendable {
 
 struct RecoveryCheckpointUnusable: Equatable, Sendable {
     let reason: StorageFailure
+}
+
+struct ReleasePage: Intent, Equatable, Sendable {
+    let pageID: UUID
+    let keepsState: Bool
 }
 
 struct RemoveDownload: Intent, Equatable, Sendable {
@@ -610,6 +732,10 @@ struct ShowTab: Intent, Equatable, Sendable {
 struct ShownTab: Equatable, Sendable {
     let spaceID: UUID
     let tabID: UUID?
+}
+
+struct SpaceBeingDeleted: Equatable, Sendable {
+    let spaceID: UUID
 }
 
 struct SpaceLocked: Equatable, Sendable {
@@ -682,6 +808,11 @@ struct TabActivated: Equatable, Sendable {
     let revision: Int64
 }
 
+struct TabAlreadyHasPage: Equatable, Sendable {
+    let tabID: UUID
+    let pageID: UUID
+}
+
 struct TabFavicon: Equatable, Sendable {
     let tabID: UUID
     let image: Data
@@ -690,6 +821,14 @@ struct TabFavicon: Equatable, Sendable {
 struct TearOffPermission: Equatable, Sendable {
     let allowed: Bool
     let reason: TearOffRefusal?
+}
+
+struct UnknownPage: Equatable, Sendable {
+    let pageID: UUID
+}
+
+struct UnknownSpace: Equatable, Sendable {
+    let spaceID: UUID
 }
 
 struct UnknownWorkspace: Equatable, Sendable {
@@ -836,36 +975,6 @@ enum TearOffRefusal: Int, CaseIterable, Sendable {
 }
 
 // MARK: - Fixed sets
-
-/// The members of the core's `AdapterRole`. A member's wire tag is its index in `all`.
-struct AdapterRole: Hashable, Sendable {
-    let tag: Int
-    let name: String
-
-    private init(tag: Int, name: String) {
-        self.tag = tag
-        self.name = name
-    }
-
-    static let ui = AdapterRole(tag: 0, name: "ui")
-    static let engine = AdapterRole(tag: 1, name: "engine")
-    static let platform = AdapterRole(tag: 2, name: "platform")
-    static let services = AdapterRole(tag: 3, name: "services")
-
-    static let all: [AdapterRole] = [ui, engine, platform, services]
-
-    static func named(_ name: String?) -> AdapterRole? {
-        all.first { $0.name == name }
-    }
-
-    static func == (lhs: AdapterRole, rhs: AdapterRole) -> Bool {
-        lhs.tag == rhs.tag
-    }
-
-    func hash(into hasher: inout Hasher) {
-        hasher.combine(tag)
-    }
-}
 
 /// The members of the core's `ArchiveFilterGroup`. A member's wire tag is its index in `all`.
 struct ArchiveFilterGroup: Hashable, Sendable {
@@ -1887,6 +1996,44 @@ struct EngineCapability: Hashable, Sendable {
     }
 }
 
+/// The members of the core's `EngineKind`. A member's wire tag is its index in `all`.
+struct EngineKind: Hashable, Sendable {
+    let tag: Int
+    let name: String
+    let title: LocalizedStringResource
+
+    private init(tag: Int, name: String, title: LocalizedStringResource) {
+        self.tag = tag
+        self.name = name
+        self.title = title
+    }
+
+    static let chromium = EngineKind(
+        tag: 0,
+        name: "chromium",
+        title: LocalizedStringResource("Chromium", comment: "The name of a browser engine. Keep the product name as it is.")
+    )
+    static let webKit = EngineKind(
+        tag: 1,
+        name: "webkit",
+        title: LocalizedStringResource("WebKit", comment: "The name of a browser engine. Keep the product name as it is.")
+    )
+
+    static let all: [EngineKind] = [chromium, webKit]
+
+    static func named(_ name: String?) -> EngineKind? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: EngineKind, rhs: EngineKind) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+}
+
 /// The members of the core's `ExternalLinkDestination`. A member's wire tag is its index in `all`.
 /// Core-only behavior, not emitted: `space`.
 struct ExternalLinkDestination: Hashable, Sendable {
@@ -2271,6 +2418,39 @@ struct NumberedSelectionTarget: Hashable, Sendable {
     }
 
     static func == (lhs: NumberedSelectionTarget, rhs: NumberedSelectionTarget) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+}
+
+/// The members of the core's `PagePhase`. A member's wire tag is its index in `all`.
+/// Core-only behavior, not emitted: `follows`.
+struct PagePhase: Hashable, Sendable {
+    let tag: Int
+    let name: String
+    let holdsEnginePage: Bool
+
+    private init(tag: Int, name: String, holdsEnginePage: Bool) {
+        self.tag = tag
+        self.name = name
+        self.holdsEnginePage = holdsEnginePage
+    }
+
+    static let opening = PagePhase(tag: 0, name: "opening", holdsEnginePage: true)
+    static let live = PagePhase(tag: 1, name: "live", holdsEnginePage: true)
+    static let failed = PagePhase(tag: 2, name: "failed", holdsEnginePage: false)
+    static let closed = PagePhase(tag: 3, name: "closed", holdsEnginePage: false)
+
+    static let all: [PagePhase] = [opening, live, failed, closed]
+
+    static func named(_ name: String?) -> PagePhase? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: PagePhase, rhs: PagePhase) -> Bool {
         lhs.tag == rhs.tag
     }
 

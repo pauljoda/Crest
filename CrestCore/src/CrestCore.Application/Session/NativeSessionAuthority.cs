@@ -30,7 +30,6 @@ public sealed partial class NativeSessionAuthority {
     /// The file a persistent session the core loaded keeps; null in memory.
     private readonly SessionStorage? storage;
     public ulong Revision { get; private set; } = 1;
-    public Adapter? Engine { get; private set; }
 
     #endregion
 
@@ -57,22 +56,6 @@ public sealed partial class NativeSessionAuthority {
         Validate(session);
         this.storage = storage;
         storage.Enqueue(session, Revision);
-    }
-
-    #endregion
-
-    #region Actions - Engine registration
-
-    /// Process-local registration shares the transport descriptor contract. It
-    /// cannot be changed by session edits, restored files or remote sync records.
-    public void RegisterEngine(ReadOnlySpan<byte> descriptor) {
-        var engine = Protocol.Descriptor(descriptor);
-        if (engine.Role != AdapterRole.Engine || !EngineCapability.Required.All(engine.Supports))
-            throw new BrowserRuleException(BrowserRuleCodes.InvalidEngineRegistration);
-        lock (Gate) {
-            if (Engine is not null) throw new BrowserRuleException(BrowserRuleCodes.EngineAlreadyRegistered);
-            Engine = engine;
-        }
     }
 
     #endregion

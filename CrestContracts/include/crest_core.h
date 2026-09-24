@@ -25,7 +25,6 @@ extern "C" {
 #endif
 
 #define CREST_ABI_VERSION 1u
-#define CREST_PROTOCOL_VERSION 1u
 
 typedef int32_t crest_status_t;
 
@@ -152,10 +151,6 @@ CREST_API crest_status_t CREST_CALL crest_sync_query_release(uint64_t handle);
  */
 CREST_API crest_status_t CREST_CALL crest_session_create(
     const uint8_t* session, size_t length, uint64_t* out_session, uint64_t* out_revision);
-/* One process-local engine descriptor per native session. A v1 capability
-   descriptor; never saved or synced with browser records. */
-CREST_API crest_status_t CREST_CALL crest_session_register_engine(
-    uint64_t session, const uint8_t* descriptor, size_t length);
 /* Attach the process-local Space access authority this session must consult.
    A command that reads or mutates a Space whose stored policy requires
    authentication is rejected while that Space holds no grant; locking, sync

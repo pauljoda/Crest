@@ -5,9 +5,9 @@ namespace CrestCore.Generator;
 
 /// Emits the Swift read model and its codec. Records become structs, enums
 /// become `Int` enums or option sets, fixed sets become structs of `static let`
-/// members, intents and queries conform to the
-/// `Intent` and `Query` protocols, and changes and rejections become the cases
-/// of `Change` and `Rejection`.
+/// members, messages Swift sends (intents, queries, engine events) conform to
+/// their root's protocol, and messages it receives (changes, rejections,
+/// engine commands) become the cases of their root's enum.
 internal static class SwiftEmitter {
     #region Variables
 
@@ -27,25 +27,9 @@ internal static class SwiftEmitter {
         ArgumentNullException.ThrowIfNull(schema);
         var equatable = EquatableRecords(schema);
         var code = new StringBuilder(Header);
-        code.Append("""
-
-            // MARK: - Roots
-
-            /// A request to change the core's state, sent with `CrestCore.send`.
-            protocol Intent: Sendable {
-                func encodeIntent(into writer: inout WireWriter)
-            }
-
-            /// A question the core answers without changing state, asked with `CrestCore.query`.
-            protocol Query: Sendable {
-                associatedtype Answer: Sendable
-                func encodeQuery(into writer: inout WireWriter)
-                static func decodeAnswer(from reader: inout WireReader) throws(WireError) -> Answer
-            }
-
-            """);
-        EmitUnion(code, schema, ContractRoot.Change, "/// Everything an intent can change. `CoreState.apply` keeps the read model current.", equatable, "Sendable");
-        EmitUnion(code, schema, ContractRoot.Rejection, "/// The rule that refused an intent or a query.", equatable, "Error, Sendable");
+        code.Append("\n// MARK: - Roots\n");
+        foreach (var root in ContractRoot.All.Where(root => root.TravelsToCore)) EmitProtocol(code, root);
+        foreach (var root in ContractRoot.All.Where(root => !root.TravelsToCore)) EmitUnion(code, schema, root, equatable);
         code.Append("""
 
             extension CoreState {
@@ -59,18 +43,18 @@ internal static class SwiftEmitter {
         code.Append("        }\n    }\n}\n");
 
         var roots = new Dictionary<Type, (ContractRoot Root, ContractMember Member)>();
-        foreach (var root in Enum.GetValues<ContractRoot>())
+        foreach (var root in ContractRoot.All)
             foreach (var member in schema.Members(root)) roots[member.Record.Type] = (root, member);
         code.Append("\n// MARK: - Records\n");
         foreach (var record in schema.Records) {
             var conformances = new List<string>();
-            if (roots.TryGetValue(record.Type, out var owner) && owner.Root is ContractRoot.Intent or ContractRoot.Query)
-                conformances.Add(owner.Root.ToString());
+            bool isSent = roots.TryGetValue(record.Type, out var owner) && owner.Root.TravelsToCore;
+            if (isSent) conformances.Add(owner.Root.Name);
             if (equatable.Contains(record.Type)) conformances.Add("Equatable");
             conformances.Add("Sendable");
             if (record.Fields.Any(field => field.Name == "Id")) conformances.Add("Identifiable");
             code.Append('\n').Append($"struct {record.Name}: {string.Join(", ", conformances)} {{\n");
-            if (owner.Root == ContractRoot.Query && roots.ContainsKey(record.Type))
+            if (isSent && owner.Root.HasAnswer)
                 code.Append($"    typealias Answer = {TypeName(owner.Member.Answer!)}\n\n");
             foreach (var field in record.Fields)
                 code.Append($"    let {Naming.SwiftIdentifier(Naming.SwiftMember(field.Name))}: {TypeName(field.Type)}\n");
@@ -142,12 +126,23 @@ internal static class SwiftEmitter {
         code.Append('\n').Append($"    func hash(into hasher: inout Hasher) {{\n        hasher.combine({identity})\n    }}\n}}\n");
     }
 
-    private static void EmitUnion(StringBuilder code, ContractSchema schema, ContractRoot root, string documentation,
-        HashSet<Type> equatable, string conformances) {
+    /// A root the platform sends becomes the protocol its messages conform to,
+    /// each encoding itself with its tag; a question also decodes its answer.
+    private static void EmitProtocol(StringBuilder code, ContractRoot root) {
+        code.Append('\n').Append($"/// {root.SwiftDocumentation}\n");
+        code.Append($"protocol {root.Name}: Sendable {{\n");
+        if (root.HasAnswer) code.Append("    associatedtype Answer: Sendable\n");
+        code.Append($"    func encode{root.Name}(into writer: inout WireWriter)\n");
+        if (root.HasAnswer) code.Append("    static func decodeAnswer(from reader: inout WireReader) throws(WireError) -> Answer\n");
+        code.Append("}\n");
+    }
+
+    /// A root the platform receives becomes an enum with a case per message.
+    private static void EmitUnion(StringBuilder code, ContractSchema schema, ContractRoot root, HashSet<Type> equatable) {
         var members = schema.Members(root);
         bool isEquatable = members.All(member => equatable.Contains(member.Record.Type));
-        code.Append('\n').Append(documentation).Append('\n');
-        code.Append($"enum {root}: {(isEquatable ? "Equatable, " : "")}{conformances} {{\n");
+        code.Append('\n').Append($"/// {root.SwiftDocumentation}\n");
+        code.Append($"enum {root.Name}: {(isEquatable ? "Equatable, " : "")}{root.SwiftConformances} {{\n");
         foreach (var member in members) code.Append($"    case {Naming.SwiftMember(member.Name)}({member.Name})\n");
         code.Append("}\n");
     }
@@ -168,7 +163,7 @@ internal static class SwiftEmitter {
 
     private static bool IsEquatable(FieldType type, HashSet<Type> excluded, ContractSchema schema) => type switch {
         RecordField record => !excluded.Contains(record.Type),
-        RootField { Root: ContractRoot.Intent or ContractRoot.Query } => false,
+        RootField { Root.TravelsToCore: true } => false,
         RootField root => schema.Members(root.Root).All(member => !excluded.Contains(member.Record.Type)),
         ListField list => IsEquatable(list.Element, excluded, schema),
         OptionalField optional => IsEquatable(optional.Value, excluded, schema),
@@ -187,7 +182,10 @@ internal static class SwiftEmitter {
         code.Append("    /// SHA-256 of the canonical contract schema. The core refuses any other.\n");
         code.Append("    static let fingerprint: [UInt8] = [\n        ");
         code.Append(string.Join(", ", schema.Fingerprint.Select(value => $"0x{value:x2}"))).Append("\n    ]\n");
-        foreach (var root in new[] { ContractRoot.Intent, ContractRoot.Query }) {
+        code.Append("    /// SHA-256 of the engine contract alone, which an engine binding registers with.\n");
+        code.Append("    static let engineFingerprint: [UInt8] = [\n        ");
+        code.Append(string.Join(", ", schema.EngineFingerprint.Select(value => $"0x{value:x2}"))).Append("\n    ]\n");
+        foreach (var root in ContractRoot.All.Where(root => root.TravelsToCore)) {
             code.Append('\n').Append($"    static func decode{root}(from reader: inout WireReader) throws(WireError) -> any {root} {{\n");
             code.Append("        let tag = try reader.readTag()\n        switch tag {\n");
             foreach (var member in schema.Members(root))
@@ -196,7 +194,7 @@ internal static class SwiftEmitter {
         }
         code.Append("}\n");
 
-        foreach (var root in new[] { ContractRoot.Change, ContractRoot.Rejection }) {
+        foreach (var root in ContractRoot.All.Where(root => !root.TravelsToCore)) {
             var members = schema.Members(root);
             code.Append('\n').Append($"extension {root} {{\n");
             code.Append("    init(from reader: inout WireReader) throws(WireError) {\n");
@@ -213,7 +211,7 @@ internal static class SwiftEmitter {
         }
 
         var tags = new Dictionary<Type, (ContractRoot Root, ContractMember Member)>();
-        foreach (var root in new[] { ContractRoot.Intent, ContractRoot.Query })
+        foreach (var root in ContractRoot.All.Where(root => root.TravelsToCore))
             foreach (var member in schema.Members(root)) tags[member.Record.Type] = (root, member);
         foreach (var record in schema.Records) {
             code.Append('\n').Append($"extension {record.Name} {{\n");
@@ -231,7 +229,7 @@ internal static class SwiftEmitter {
             if (tags.TryGetValue(record.Type, out var owner)) {
                 code.Append('\n').Append($"    func encode{owner.Root}(into writer: inout WireWriter) {{\n");
                 code.Append($"        writer.writeTag({owner.Member.Tag})\n        encode(into: &writer)\n    }}\n");
-                if (owner.Root == ContractRoot.Query) {
+                if (owner.Root.HasAnswer) {
                     var answer = new List<string>();
                     Decode(owner.Member.Answer!, "answer", answer, "        ");
                     code.Append('\n').Append($"    static func decodeAnswer(from reader: inout WireReader) throws(WireError) -> {TypeName(owner.Member.Answer!)} {{\n");
@@ -285,7 +283,7 @@ internal static class SwiftEmitter {
             case EnumField or SetField or RecordField:
                 lines.Add($"{indent}let {name} = try {TypeName(type)}(from: &reader)");
                 break;
-            case RootField { Root: ContractRoot.Intent or ContractRoot.Query } root:
+            case RootField { Root.TravelsToCore: true } root:
                 lines.Add($"{indent}let {name} = try CoreCodec.decode{root.Root}(from: &reader)");
                 break;
             case RootField root:
@@ -316,7 +314,7 @@ internal static class SwiftEmitter {
 
     private static string Encode(FieldType type, string value, string indent, int depth) => type switch {
         PrimitiveField primitive => $"{indent}writer.write{Method(primitive.Kind)}({value})\n",
-        RootField { Root: ContractRoot.Intent or ContractRoot.Query } root => $"{indent}{value}.encode{root.Root}(into: &writer)\n",
+        RootField { Root.TravelsToCore: true } root => $"{indent}{value}.encode{root.Root}(into: &writer)\n",
         EnumField or SetField or RecordField or RootField => $"{indent}{value}.encode(into: &writer)\n",
         ListField list => $"{indent}writer.writeCount({value}.count)\n"
             + $"{indent}for element{depth} in {value} {{\n"
@@ -349,10 +347,10 @@ internal static class SwiftEmitter {
         LocalizedField => "LocalizedStringResource",
         KindsField kinds => kinds.Type.Name,
         RecordField record => record.Type.Name,
-        RootField { Root: ContractRoot.Intent or ContractRoot.Query } root => $"any {root.Root}",
+        RootField { Root.TravelsToCore: true } root => $"any {root.Root}",
         RootField root => root.Root.ToString(),
         ListField list => $"[{TypeName(list.Element)}]",
-        OptionalField { Value: RootField { Root: ContractRoot.Intent or ContractRoot.Query } } optional => $"({TypeName(optional.Value)})?",
+        OptionalField { Value: RootField { Root.TravelsToCore: true } } optional => $"({TypeName(optional.Value)})?",
         OptionalField optional => $"{TypeName(optional.Value)}?",
         _ => throw new ContractSchemaException($"Unknown field type {type}.")
     };

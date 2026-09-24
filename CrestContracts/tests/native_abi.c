@@ -2,6 +2,7 @@
 #include "crest_app.h"
 #include "crest_contracts.h"
 #include "crest_core.h"
+#include "crest_engine.h"
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -176,23 +177,109 @@ static void session_boundary(void) {
         && session != 0 && revision == 1);
     memset(json, 0xaa, sizeof(json)); /* The core must own its session copy. */
 
-    /* The remaining v1 descriptor contract: process-local engine registration. */
-    const char* capability = "{\"status\":\"supported\",\"contractVersion\":1,\"scope\":\"native ABI test\",\"limitations\":[],\"evidence\":\"native consumer\"}";
-    char engine[2048];
-    size = snprintf(engine, sizeof(engine),
-        "{\"adapterId\":\"engine\",\"role\":\"engine\",\"implementationId\":\"fixture\","
-        "\"implementationVersion\":\"1\",\"protocolVersion\":%u,\"capabilities\":{\"pages\":%s,\"navigation\":%s,"
-        "\"workspace-profiles\":%s,\"profile-deletion\":%s}}",
-        CREST_PROTOCOL_VERSION, capability, capability, capability, capability);
-    assert(size > 0 && (size_t)size < sizeof(engine));
-    assert(crest_session_register_engine(session + 1000, (const uint8_t*)engine, (size_t)size) == CREST_INVALID_HANDLE);
-    assert(crest_session_register_engine(session, (const uint8_t*)engine, (size_t)size) == CREST_OK);
-    assert(crest_session_register_engine(session, (const uint8_t*)engine, (size_t)size) == CREST_INVALID_MESSAGE);
-    memset(engine, 0xaa, sizeof(engine)); /* The session must own its descriptor copy. */
-
     assert(crest_session_destroy(session) == CREST_OK);
     assert(crest_session_destroy(session) == CREST_INVALID_HANDLE);
-    assert(crest_session_register_engine(session, (const uint8_t*)engine, (size_t)size) == CREST_INVALID_HANDLE);
+}
+/* A binding under test: what attach handed it and the commands it ran. */
+typedef struct {
+    uint64_t app, engine;
+    crest_engine_report_t report;
+    int commands;
+    uint8_t last[64];
+    size_t last_length;
+} engine_fixture_t;
+static void CREST_CALL attach_engine(void* context, uint64_t app, uint64_t engine, crest_engine_report_t report) {
+    engine_fixture_t* fixture = context;
+    fixture->app = app; fixture->engine = engine; fixture->report = report;
+}
+static void CREST_CALL run_engine(void* context, const uint8_t* command, size_t length) {
+    engine_fixture_t* fixture = context;
+    assert(length <= sizeof(fixture->last));
+    memcpy(fixture->last, command, length);
+    fixture->last_length = length;
+    fixture->commands++;
+}
+/* An engine binding registers through its function table, runs the command
+ * that opening a page causes, and reports back; reports are never refused. */
+static void engine_boundary(void) {
+    const uint8_t fingerprint[CREST_CONTRACTS_FINGERPRINT_LENGTH] = CREST_CONTRACTS_FINGERPRINT;
+    const uint8_t engine_fingerprint[CREST_ENGINE_CONTRACT_FINGERPRINT_LENGTH] = CREST_ENGINE_CONTRACT_FINGERPRINT;
+    const uint8_t memory_only[] = { 0 };
+    uint64_t app = 0, engine = 0;
+    crest_buffer_t buffer = { NULL, 0 };
+    assert(crest_app_create(fingerprint, sizeof(fingerprint), memory_only, sizeof(memory_only), &app, &buffer) == CREST_OK);
+    /* EngineRegistration: WebKit (its index in EngineKind.All), the required
+     * capabilities as their indexes in EngineCapability.All (pages,
+     * navigation, workspace-profiles, profile-deletion), then IsDefault. */
+    const uint8_t registration[] = { 1, 4, 0, 1, 7, 9, 1 };
+    engine_fixture_t fixture = { 0 };
+    const crest_engine_binding_t binding = { &fixture, attach_engine, run_engine };
+    assert(crest_engine_register(app, fingerprint, sizeof(fingerprint), registration, sizeof(registration), &binding,
+        &engine, &buffer) == CREST_VERSION_MISMATCH && engine == 0 && fixture.engine == 0);
+    assert(crest_engine_register(app, engine_fingerprint, sizeof(engine_fingerprint), registration, sizeof(registration),
+        &binding, &engine, &buffer) == CREST_OK && engine != 0 && buffer.bytes == NULL);
+    assert(fixture.app == app && fixture.engine == engine && fixture.report == crest_engine_report);
+    assert(crest_engine_register(app, engine_fingerprint, sizeof(engine_fingerprint), registration, sizeof(registration),
+        &binding, &engine, &buffer) == CREST_REJECTED && buffer.bytes[0] == CREST_REJECTION_ENGINE_ALREADY_REGISTERED);
+    crest_buffer_free(&buffer);
+    engine = fixture.engine;
+
+    /* A session attached to the app's device, with a window open over it. */
+    char json[1024];
+    int size = snprintf(json, sizeof(json),
+        "{\"spaces\":[{\"id\":{\"rawValue\":\"%s\"},\"profile\":{\"id\":\"%s\"},\"name\":\"Reading\",\"tabs\":[],"
+        "\"folders\":[],\"history\":[],\"archivedTabs\":[]}]}", space_id, profile_id);
+    assert(size > 0 && (size_t)size < sizeof(json));
+    uint64_t session = 0, revision = 0;
+    assert(crest_session_create((const uint8_t*)json, (size_t)size, &session, &revision) == CREST_OK);
+    uint8_t workspace[16];
+    assert(crest_session_attach_device(session, app, workspace) == CREST_OK);
+    /* OpenWindow: the window, the workspace, not saved, nothing to copy or show, RestoresTabs. */
+    uint8_t opening[38] = { CREST_INTENT_OPEN_WINDOW };
+    memset(opening + 1, 0x42, 16);
+    memcpy(opening + 17, workspace, 16);
+    opening[37] = 1;
+    assert(crest_app_dispatch(app, opening, sizeof(opening), &buffer) == CREST_OK);
+    crest_buffer_free(&buffer);
+
+    /* OpenPage: the page, the workspace, the Space (all 0x44), no tab, the
+     * window. The dispatch returns once the binding ran CreatePage: the page,
+     * the Space's profile (all 0x55) and whether it is private. */
+    uint8_t page[66] = { CREST_INTENT_OPEN_PAGE };
+    memset(page + 1, 0x61, 16);
+    memcpy(page + 17, workspace, 16);
+    memset(page + 33, 0x44, 16);
+    page[49] = 0;
+    memset(page + 50, 0x42, 16);
+    assert(crest_app_dispatch(app, page, sizeof(page), &buffer) == CREST_OK);
+    assert(buffer.bytes[0] == 1 && buffer.bytes[1] == CREST_CHANGE_PAGE_OPENED);
+    crest_buffer_free(&buffer);
+    assert(fixture.commands == 1 && fixture.last_length == 34 && fixture.last[0] == CREST_ENGINE_COMMAND_CREATE_PAGE);
+    assert(memcmp(fixture.last + 1, page + 1, 16) == 0 && fixture.last[17] == 0x55 && fixture.last[33] == 0);
+
+    /* PageCreated for that page goes through the drain; one for a page the
+     * core does not know is fine and changes nothing. */
+    uint8_t created[17] = { CREST_ENGINE_EVENT_PAGE_CREATED };
+    memcpy(created + 1, page + 1, 16);
+    assert(fixture.report(app, engine, created, sizeof(created)) == CREST_OK);
+    assert(crest_app_drain(app, &buffer) == CREST_OK && buffer.bytes[0] == 1 && buffer.bytes[1] == CREST_CHANGE_PAGE_CHANGED);
+    crest_buffer_free(&buffer);
+    memset(created + 1, 0x77, 16);
+    assert(crest_engine_report(app, engine, created, sizeof(created)) == CREST_OK);
+    assert(crest_app_drain(app, &buffer) == CREST_OK && buffer.length == 1 && buffer.bytes[0] == 0);
+    crest_buffer_free(&buffer);
+    /* Bytes that do not decode, and handles that name no engine of this app. */
+    const uint8_t garbage[] = { 0x7f, 0x01 };
+    assert(crest_engine_report(app, engine, garbage, sizeof(garbage)) == CREST_INVALID_MESSAGE);
+    assert(crest_engine_report(app, engine, created, sizeof(created) - 1) == CREST_INVALID_MESSAGE);
+    assert(crest_engine_report(app, engine + 1000, created, sizeof(created)) == CREST_INVALID_HANDLE);
+    assert(crest_engine_report(app + 1000, engine, created, sizeof(created)) == CREST_INVALID_HANDLE);
+
+    assert(crest_engine_unregister(app, engine) == CREST_OK);
+    assert(crest_engine_unregister(app, engine) == CREST_INVALID_HANDLE);
+    assert(crest_engine_report(app, engine, created, sizeof(created)) == CREST_INVALID_HANDLE);
+    assert(crest_session_destroy(session) == CREST_OK);
+    assert(crest_app_destroy(app) == CREST_OK);
 }
 /* A session that consults the access authority refuses commands against a
  * locked Space until that exact Space/profile pair holds a grant. */
@@ -433,9 +520,10 @@ int main(void) {
     app_boundary();
     permissions_boundary();
     session_boundary();
+    engine_boundary();
     storage_boundary();
     locked_space_boundary();
     preferences_boundary();
-    puts("Native ABI buffer ownership, size retry, handle, session and lock checks passed.");
+    puts("Native ABI buffer ownership, size retry, handle, session, engine and lock checks passed.");
     return 0;
 }

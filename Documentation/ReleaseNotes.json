@@ -2245,6 +2245,10 @@
     "catalog-complete": {
       "category": "internal",
       "message": "Every user-facing string the apps extract is in the localization catalog."
+    },
+    "core-engine-registry-pages": {
+      "category": "internal",
+      "message": "The core keeps a registry of engines and knows which page each tab and window hosts."
     }
   }
 }

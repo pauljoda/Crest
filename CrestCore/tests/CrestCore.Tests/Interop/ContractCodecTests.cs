@@ -1,5 +1,7 @@
 using System.Collections;
 using System.Reflection;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 
 using CrestCore.Application;
 using CrestCore.Contracts;
@@ -15,7 +17,7 @@ namespace CrestCore.Tests;
 /// new test.
 public sealed unsafe class ContractCodecTests {
     private static readonly Assembly Contracts = typeof(Intent).Assembly;
-    private static readonly Type[] Roots = [typeof(Intent), typeof(Change), typeof(Rejection)];
+    private static readonly Type[] Roots = [typeof(Intent), typeof(Change), typeof(Rejection), typeof(EngineCommand), typeof(EngineEvent)];
     private static readonly NullabilityInfoContext Nullability = new();
 
     private static bool IsQuery(Type type) {
@@ -217,8 +219,8 @@ public sealed unsafe class ContractCodecTests {
         Assert.Contains("lhs.name == rhs.name", swift, StringComparison.Ordinal);
         Assert.Contains("static let madePrefix = \"made:\"", swift, StringComparison.Ordinal);
         Assert.DoesNotContain("tag", swift, StringComparison.Ordinal);
-        Assert.DoesNotContain("extension Engine", SwiftEmitter.EmitCodec(schema), StringComparison.Ordinal);
-        Assert.DoesNotContain("ReadEngine", CSharpCodecEmitter.Emit(schema), StringComparison.Ordinal);
+        Assert.DoesNotContain("extension Engine {", SwiftEmitter.EmitCodec(schema), StringComparison.Ordinal);
+        Assert.DoesNotContain("ReadEngine(", CSharpCodecEmitter.Emit(schema), StringComparison.Ordinal);
     }
 
     [Theory]
@@ -245,6 +247,52 @@ public sealed unsafe class ContractCodecTests {
         Assert.Equal(CoreStatus.VersionMismatch, AppClient.Create([], &handle));
         Assert.Equal(CoreStatus.Ok, AppClient.Create(ContractCodec.Fingerprint, &handle));
         Assert.NotEqual(0ul, handle);
+    }
+
+    /// The Chromium engine is built against the engine contract alone, so an
+    /// edit anywhere else must leave its fingerprint as it was.
+    [Fact]
+    public void TheEngineContractKeepsItsFingerprintWhenTheApplicationContractChanges() {
+        var types = Contracts.GetExportedTypes();
+        var schema = ContractSchema.Load(types);
+        var extended = ContractSchema.Load([.. types, typeof(Ordered.ShowSignal)]);
+
+        Assert.NotEqual(schema.Fingerprint, extended.Fingerprint);
+        Assert.Equal(schema.EngineFingerprint, extended.EngineFingerprint);
+        Assert.Equal(ContractCodec.EngineFingerprint.ToArray(), schema.EngineFingerprint);
+        Assert.Contains("record EngineRegistration(", schema.EngineCanonical, StringComparison.Ordinal);
+        Assert.Contains("engineevent 0 PageClosed", schema.EngineCanonical, StringComparison.Ordinal);
+        Assert.DoesNotContain("intent ", schema.EngineCanonical, StringComparison.Ordinal);
+    }
+
+    [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
+    private static void IgnoreCommand(nint context, byte* command, nuint length) { }
+
+    [Fact]
+    public void AnEngineRegistersOnlyWithThisBuildsEngineContract() {
+        using var app = new AppClient();
+        var registration = AppClient.Encode(writer => ContractCodec.WriteEngineRegistration(writer,
+            new EngineRegistration(EngineKind.WebKit, EngineCapability.Required, IsDefault: true)));
+        int Register(ReadOnlySpan<byte> fingerprint, out ulong engine) {
+            var binding = new CrestEngineBinding { Run = &IgnoreCommand };
+            CrestBuffer rejection;
+            ulong handle;
+            int status;
+            fixed (byte* expected = fingerprint)
+            fixed (byte* settings = registration)
+                status = ((delegate* unmanaged[Cdecl]<ulong, byte*, nuint, byte*, nuint, CrestEngineBinding*, ulong*, CrestBuffer*, int>)
+                    &Exports.EngineRegister)(app.Handle, expected, (nuint)fingerprint.Length, settings, (nuint)registration.Length, &binding,
+                    &handle, &rejection);
+            ((delegate* unmanaged[Cdecl]<CrestBuffer*, void>)&Exports.BufferFree)(&rejection);
+            engine = handle;
+            return status;
+        }
+
+        Assert.Equal(CoreStatus.VersionMismatch, Register(ContractCodec.Fingerprint, out var refused));
+        Assert.Equal(0ul, refused);
+        Assert.Equal(CoreStatus.Ok, Register(ContractCodec.EngineFingerprint, out var engine));
+        Assert.NotEqual(0ul, engine);
+        Assert.Equal(CoreStatus.Rejected, Register(ContractCodec.EngineFingerprint, out _));
     }
 
     [Fact]

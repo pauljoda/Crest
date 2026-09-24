@@ -1,7 +1,8 @@
 namespace CrestCore.Contracts;
 
-/// How far an adapter vouches for one capability it declares. Descriptors
-/// spell a status as its `Name`.
+/// How far an engine vouches for one capability it declares. An engine
+/// registers with the core only the capabilities it supports; the platform
+/// keeps the rest to explain what an engine lacks.
 public sealed class CapabilityStatus {
     #region Variables
 

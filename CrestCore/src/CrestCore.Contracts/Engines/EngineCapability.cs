@@ -1,11 +1,7 @@
 namespace CrestCore.Contracts;
 
-/// A feature an engine adapter declares to the core and to shared UI. An
-/// adapter descriptor keys its capability map by `Name`. A descriptor may name
-/// capabilities this build does not know, so the parsed map stays keyed by
-/// name and is asked about typed capabilities.
-///
-/// `All` is append-only.
+/// A feature an engine declares to the core when it registers, and to shared
+/// UI. A capability travels as its index in `All`, so `All` is append-only.
 public sealed class EngineCapability {
     #region Variables
 
@@ -47,7 +43,7 @@ public sealed class EngineCapability {
     /// The capabilities an engine must support to register.
     public static IReadOnlyList<EngineCapability> Required { get; } = [.. All.Where(capability => capability.IsRequired)];
 
-    /// The descriptor's spelling.
+    /// The capability's stored spelling, which platform settings name.
     public string Name { get; }
 
     /// Every browsing engine must support the capability to register. A Space

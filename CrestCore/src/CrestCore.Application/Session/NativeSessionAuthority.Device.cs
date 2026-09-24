@@ -23,6 +23,9 @@ public sealed partial class NativeSessionAuthority {
         }
     }
 
+    /// Pages in this workspace keep nothing once they close.
+    internal bool IsPrivateBrowsing => privateBrowsing;
+
     #endregion
 
     #region Actions - Device

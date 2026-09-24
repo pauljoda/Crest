@@ -31,8 +31,12 @@ internal static class CSharpCodecEmitter {
             """).Append('\n');
         code.Append("        ").Append(string.Join(", ", schema.Fingerprint.Select(value => $"0x{value:x2}"))).Append('\n');
         code.Append("    ];\n");
-        foreach (var root in Enum.GetValues<ContractRoot>()) EmitRoot(code, schema, root);
-        foreach (var root in new[] { ContractRoot.Intent, ContractRoot.Query }) EmitLimits(code, schema, root);
+        code.Append('\n').Append("    /// <summary>SHA-256 of the engine contract alone, which an engine binding registers with.</summary>\n");
+        code.Append("    public static ReadOnlySpan<byte> EngineFingerprint => [\n");
+        code.Append("        ").Append(string.Join(", ", schema.EngineFingerprint.Select(value => $"0x{value:x2}"))).Append('\n');
+        code.Append("    ];\n");
+        foreach (var root in ContractRoot.All) EmitRoot(code, schema, root);
+        foreach (var root in ContractRoot.All.Where(root => root.TravelsToCore)) EmitLimits(code, schema, root);
         EmitAnswers(code, schema);
         foreach (var record in schema.Records) EmitRecord(code, record);
         foreach (var item in schema.Enums) EmitEnum(code, item);
@@ -45,7 +49,7 @@ internal static class CSharpCodecEmitter {
 
     private static void EmitRoot(StringBuilder code, ContractSchema schema, ContractRoot root) {
         var members = schema.Members(root);
-        string type = root == ContractRoot.Query ? "object" : root.ToString();
+        string type = root.HasAnswer ? "object" : root.Name;
         code.Append('\n').Append($"    public static {type} Read{root}(WireReader reader) {{\n");
         code.Append("        int tag = reader.ReadTag();\n        switch (tag) {\n");
         foreach (var member in members)
@@ -68,7 +72,7 @@ internal static class CSharpCodecEmitter {
     /// dispatcher checks before it reads the message. A tag no type uses takes
     /// the default and then fails to decode.
     private static void EmitLimits(StringBuilder code, ContractSchema schema, ContractRoot root) {
-        code.Append('\n').Append($"    /// <summary>The most bytes one encoded {root.ToString().ToLowerInvariant()} with this tag may take.</summary>\n");
+        code.Append('\n').Append($"    /// <summary>The most bytes one encoded {string.Join(' ', Naming.Words(root.Name)).ToLowerInvariant()} with this tag may take.</summary>\n");
         code.Append($"    public static int Maximum{root}Bytes(int tag) => tag switch {{\n");
         foreach (var member in schema.Members(root).Where(member => member.MaximumBytes != MessageLimitAttribute.DefaultBytes))
             code.Append($"        {member.Tag} => {member.MaximumBytes},\n");

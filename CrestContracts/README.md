@@ -1,6 +1,7 @@
 # Portable core contract
 
-The implemented C ABI is in `include/crest_core.h` and `include/crest_app.h`.
+The implemented C ABI is in `include/crest_core.h`, `include/crest_app.h` and
+`include/crest_engine.h`.
 
 `crest_app.h` is the typed application API. Intents, changes, rejections,
 queries and answers are the C# records in `CrestCore.Contracts`, and they cross
@@ -24,8 +25,25 @@ core starts itself, such as `Saved` and `StorageFailed`, wait for
 generated: run `Scripts/control-plane/generate-contracts.sh` after changing a
 contract record to rewrite the core's codec, the Swift models and codec, and
 `include/crest_contracts.h` with the tags and the fingerprint. Source code
-never spells a wire tag. `CrestCore.Contracts.Protocol`
-defines the current JSON contract. It parses bounded UTF-8 JSON directly and
+never spells a wire tag.
+
+`crest_engine.h` is the engine contract. An engine binding registers with an
+app through `crest_engine_register`, passing the engine contract's own
+fingerprint, an encoded `EngineRegistration` (its kind, the capabilities it
+supports, whether new pages open on it) and a function table the core copies.
+Every engine must support the required capabilities and one engine is the
+default. The core runs `EngineCommand`s (`CreatePage`, `ClosePage`) through the
+table's `run`, in order, never while it holds a lock and never on the stack of
+the report that caused them. The binding reports `EngineEvent`s (`PageCreated`,
+`PageCreationFailed`, `PageClosed`) with `crest_engine_report`, which never
+refuses one. The engine fingerprint covers only the engine roots and the
+registration, so an edit elsewhere in the contracts leaves it unchanged. The
+`OpenPage`, `MovePage` and `ReleasePage` intents on `crest_app_*` own page
+identity: which tab or transient request owns each page, which engine hosts it,
+and the lock, deletion and one-page-per-tab rules. Pages are never saved or
+synced.
+
+`CrestCore.Contracts.Protocol` defines the current JSON contract. It parses bounded UTF-8 JSON directly and
 builds JSON nodes without reflection. The application and domain have no native
 engine references.
 
@@ -59,8 +77,7 @@ The asynchronous message-based kernel (`crest_core_create` through
 Its browsing, records, deletion, transfer, residency and content-blocking rules
 are now owned by the synchronous session, sync, access and policy entry points
 above. `Documentation/Architecture/ControlPlane.md` describes that live path.
-`CrestCore.Contracts.Protocol` retains the shared JSON parsing helpers and the
-v1 capability descriptor used by `crest_session_register_engine`.
+`CrestCore.Contracts.Protocol` retains the shared JSON parsing helpers.
 
 `crest_core_evaluate_policy` is a separate pure-function entry point for the
 native store APIs. Requests use `version: 1` and an
@@ -197,7 +214,7 @@ This branch's contract is experimental. Do not advertise external ABI stability
 until the complete contract and compatibility fixtures are ratified.
 
 `tests/native_abi.c` is a native consumer of the actual shared library. It
-exercises the policy, access, app, permissions and session entry points,
+exercises the policy, access, app, engine, permissions and session entry points,
 checking buffer
 ownership, non-consuming size probes, stale revisions and invalid handles. The
 managed suite covers the session, sync and domain rules.

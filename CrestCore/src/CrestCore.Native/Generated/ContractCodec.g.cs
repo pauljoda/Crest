@@ -14,7 +14,12 @@ namespace CrestCore.Native;
 public static class ContractCodec {
     /// <summary>SHA-256 of the canonical contract schema.</summary>
     public static ReadOnlySpan<byte> Fingerprint => [
-        0xf6, 0x4a, 0xf6, 0x4a, 0xee, 0x1f, 0x4d, 0x1d, 0xa4, 0x98, 0x53, 0x72, 0x3d, 0x74, 0xb8, 0xff, 0xd0, 0x69, 0xc4, 0x1d, 0xc9, 0x0f, 0x58, 0xe1, 0x03, 0x26, 0xcb, 0xfd, 0xc2, 0x50, 0x01, 0x05
+        0x71, 0xb4, 0x4f, 0x86, 0x70, 0xa4, 0xeb, 0x31, 0xbf, 0x95, 0x2b, 0xfe, 0x04, 0x0e, 0x7d, 0x22, 0xc8, 0x18, 0x34, 0xcf, 0x55, 0x6d, 0x15, 0x09, 0x65, 0x87, 0x35, 0xfc, 0x26, 0x56, 0xfd, 0x24
+    ];
+
+    /// <summary>SHA-256 of the engine contract alone, which an engine binding registers with.</summary>
+    public static ReadOnlySpan<byte> EngineFingerprint => [
+        0xa4, 0x40, 0x84, 0xcb, 0xe7, 0x76, 0xfc, 0x18, 0x38, 0xa9, 0x3c, 0xb1, 0xde, 0x61, 0x87, 0x42, 0x01, 0xbb, 0x5b, 0x24, 0x8a, 0x62, 0x07, 0x20, 0x7c, 0xab, 0xf0, 0xec, 0x60, 0x0e, 0x68, 0xe8
     ];
 
     public static Intent ReadIntent(WireReader reader) {
@@ -33,15 +38,18 @@ public static class ContractCodec {
             case 10: return ReadExpireDownloads(reader);
             case 11: return ReadFailDownload(reader);
             case 12: return ReadFinishDownload(reader);
-            case 13: return ReadOpenWindow(reader);
-            case 14: return ReadRecordDownloadTransfer(reader);
-            case 15: return ReadRemoveDownload(reader);
-            case 16: return ReadRemoveProfileDownloads(reader);
-            case 17: return ReadResizeSplitColumns(reader);
-            case 18: return ReadRestartDownload(reader);
-            case 19: return ReadSetDownloadDestination(reader);
-            case 20: return ReadShowSpace(reader);
-            case 21: return ReadShowTab(reader);
+            case 13: return ReadMovePage(reader);
+            case 14: return ReadOpenPage(reader);
+            case 15: return ReadOpenWindow(reader);
+            case 16: return ReadRecordDownloadTransfer(reader);
+            case 17: return ReadReleasePage(reader);
+            case 18: return ReadRemoveDownload(reader);
+            case 19: return ReadRemoveProfileDownloads(reader);
+            case 20: return ReadResizeSplitColumns(reader);
+            case 21: return ReadRestartDownload(reader);
+            case 22: return ReadSetDownloadDestination(reader);
+            case 23: return ReadShowSpace(reader);
+            case 24: return ReadShowTab(reader);
             default: throw new WireFormatException($"Unknown Intent tag {tag}.");
         }
     }
@@ -102,40 +110,52 @@ public static class ContractCodec {
                 writer.WriteTag(12);
                 WriteFinishDownload(writer, member);
                 break;
-            case OpenWindow member:
+            case MovePage member:
                 writer.WriteTag(13);
+                WriteMovePage(writer, member);
+                break;
+            case OpenPage member:
+                writer.WriteTag(14);
+                WriteOpenPage(writer, member);
+                break;
+            case OpenWindow member:
+                writer.WriteTag(15);
                 WriteOpenWindow(writer, member);
                 break;
             case RecordDownloadTransfer member:
-                writer.WriteTag(14);
+                writer.WriteTag(16);
                 WriteRecordDownloadTransfer(writer, member);
                 break;
+            case ReleasePage member:
+                writer.WriteTag(17);
+                WriteReleasePage(writer, member);
+                break;
             case RemoveDownload member:
-                writer.WriteTag(15);
+                writer.WriteTag(18);
                 WriteRemoveDownload(writer, member);
                 break;
             case RemoveProfileDownloads member:
-                writer.WriteTag(16);
+                writer.WriteTag(19);
                 WriteRemoveProfileDownloads(writer, member);
                 break;
             case ResizeSplitColumns member:
-                writer.WriteTag(17);
+                writer.WriteTag(20);
                 WriteResizeSplitColumns(writer, member);
                 break;
             case RestartDownload member:
-                writer.WriteTag(18);
+                writer.WriteTag(21);
                 WriteRestartDownload(writer, member);
                 break;
             case SetDownloadDestination member:
-                writer.WriteTag(19);
+                writer.WriteTag(22);
                 WriteSetDownloadDestination(writer, member);
                 break;
             case ShowSpace member:
-                writer.WriteTag(20);
+                writer.WriteTag(23);
                 WriteShowSpace(writer, member);
                 break;
             case ShowTab member:
-                writer.WriteTag(21);
+                writer.WriteTag(24);
                 WriteShowTab(writer, member);
                 break;
             default: throw new ArgumentOutOfRangeException(nameof(value), value.GetType().Name, "Not a contract Intent.");
@@ -147,13 +167,16 @@ public static class ContractCodec {
         switch (tag) {
             case 0: return ReadDownloadUpdated(reader);
             case 1: return ReadDownloadsRemoved(reader);
-            case 2: return ReadSaved(reader);
-            case 3: return ReadSessionAdopted(reader);
-            case 4: return ReadStorageFailed(reader);
-            case 5: return ReadTabActivated(reader);
-            case 6: return ReadWindowChanged(reader);
-            case 7: return ReadWindowClosed(reader);
-            case 8: return ReadWindowRecordsAdopted(reader);
+            case 2: return ReadPageChanged(reader);
+            case 3: return ReadPageOpened(reader);
+            case 4: return ReadPageRemoved(reader);
+            case 5: return ReadSaved(reader);
+            case 6: return ReadSessionAdopted(reader);
+            case 7: return ReadStorageFailed(reader);
+            case 8: return ReadTabActivated(reader);
+            case 9: return ReadWindowChanged(reader);
+            case 10: return ReadWindowClosed(reader);
+            case 11: return ReadWindowRecordsAdopted(reader);
             default: throw new WireFormatException($"Unknown Change tag {tag}.");
         }
     }
@@ -170,32 +193,44 @@ public static class ContractCodec {
                 writer.WriteTag(1);
                 WriteDownloadsRemoved(writer, member);
                 break;
-            case Saved member:
+            case PageChanged member:
                 writer.WriteTag(2);
+                WritePageChanged(writer, member);
+                break;
+            case PageOpened member:
+                writer.WriteTag(3);
+                WritePageOpened(writer, member);
+                break;
+            case PageRemoved member:
+                writer.WriteTag(4);
+                WritePageRemoved(writer, member);
+                break;
+            case Saved member:
+                writer.WriteTag(5);
                 WriteSaved(writer, member);
                 break;
             case SessionAdopted member:
-                writer.WriteTag(3);
+                writer.WriteTag(6);
                 WriteSessionAdopted(writer, member);
                 break;
             case StorageFailed member:
-                writer.WriteTag(4);
+                writer.WriteTag(7);
                 WriteStorageFailed(writer, member);
                 break;
             case TabActivated member:
-                writer.WriteTag(5);
+                writer.WriteTag(8);
                 WriteTabActivated(writer, member);
                 break;
             case WindowChanged member:
-                writer.WriteTag(6);
+                writer.WriteTag(9);
                 WriteWindowChanged(writer, member);
                 break;
             case WindowClosed member:
-                writer.WriteTag(7);
+                writer.WriteTag(10);
                 WriteWindowClosed(writer, member);
                 break;
             case WindowRecordsAdopted member:
-                writer.WriteTag(8);
+                writer.WriteTag(11);
                 WriteWindowRecordsAdopted(writer, member);
                 break;
             default: throw new ArgumentOutOfRangeException(nameof(value), value.GetType().Name, "Not a contract Change.");
@@ -206,33 +241,43 @@ public static class ContractCodec {
         int tag = reader.ReadTag();
         switch (tag) {
             case 0: return ReadCredentialRecordLimitReached(reader);
-            case 1: return ReadDownloadLimitReached(reader);
-            case 2: return ReadDuplicateCredential(reader);
-            case 3: return ReadDuplicateDownload(reader);
-            case 4: return ReadDuplicateSearchEngineName(reader);
-            case 5: return ReadInvalidCredentialDate(reader);
-            case 6: return ReadInvalidCredentialOrigin(reader);
-            case 7: return ReadInvalidCredentialRecord(reader);
-            case 8: return ReadInvalidCredentialUsername(reader);
-            case 9: return ReadInvalidDownloadIdentity(reader);
-            case 10: return ReadInvalidDownloadProgress(reader);
-            case 11: return ReadInvalidDownloadSample(reader);
-            case 12: return ReadInvalidDownloadText(reader);
-            case 13: return ReadInvalidPasswordLength(reader);
-            case 14: return ReadInvalidRetentionLifetime(reader);
-            case 15: return ReadInvalidSearchEngine(reader);
-            case 16: return ReadInvalidSplitColumnShares(reader);
-            case 17: return ReadRecoveryCheckpointUnusable(reader);
-            case 18: return ReadSaveFailed(reader);
-            case 19: return ReadSearchEngineLimitReached(reader);
-            case 20: return ReadSpaceLocked(reader);
-            case 21: return ReadStaleCredentialComparison(reader);
-            case 22: return ReadStorageFromNewerApp(reader);
-            case 23: return ReadStorageRestoreInterrupted(reader);
-            case 24: return ReadStorageUnreadable(reader);
-            case 25: return ReadUnknownWorkspace(reader);
-            case 26: return ReadUnsavedWorkspace(reader);
-            case 27: return ReadWindowNotOpen(reader);
+            case 1: return ReadDefaultEngineAlreadyRegistered(reader);
+            case 2: return ReadDownloadLimitReached(reader);
+            case 3: return ReadDuplicateCredential(reader);
+            case 4: return ReadDuplicateDownload(reader);
+            case 5: return ReadDuplicatePage(reader);
+            case 6: return ReadDuplicateSearchEngineName(reader);
+            case 7: return ReadEngineAlreadyRegistered(reader);
+            case 8: return ReadEngineLacksCapability(reader);
+            case 9: return ReadEngineNotRegistered(reader);
+            case 10: return ReadInvalidCredentialDate(reader);
+            case 11: return ReadInvalidCredentialOrigin(reader);
+            case 12: return ReadInvalidCredentialRecord(reader);
+            case 13: return ReadInvalidCredentialUsername(reader);
+            case 14: return ReadInvalidDownloadIdentity(reader);
+            case 15: return ReadInvalidDownloadProgress(reader);
+            case 16: return ReadInvalidDownloadSample(reader);
+            case 17: return ReadInvalidDownloadText(reader);
+            case 18: return ReadInvalidPasswordLength(reader);
+            case 19: return ReadInvalidRetentionLifetime(reader);
+            case 20: return ReadInvalidSearchEngine(reader);
+            case 21: return ReadInvalidSplitColumnShares(reader);
+            case 22: return ReadPageProfileMismatch(reader);
+            case 23: return ReadRecoveryCheckpointUnusable(reader);
+            case 24: return ReadSaveFailed(reader);
+            case 25: return ReadSearchEngineLimitReached(reader);
+            case 26: return ReadSpaceBeingDeleted(reader);
+            case 27: return ReadSpaceLocked(reader);
+            case 28: return ReadStaleCredentialComparison(reader);
+            case 29: return ReadStorageFromNewerApp(reader);
+            case 30: return ReadStorageRestoreInterrupted(reader);
+            case 31: return ReadStorageUnreadable(reader);
+            case 32: return ReadTabAlreadyHasPage(reader);
+            case 33: return ReadUnknownPage(reader);
+            case 34: return ReadUnknownSpace(reader);
+            case 35: return ReadUnknownWorkspace(reader);
+            case 36: return ReadUnsavedWorkspace(reader);
+            case 37: return ReadWindowNotOpen(reader);
             default: throw new WireFormatException($"Unknown Rejection tag {tag}.");
         }
     }
@@ -245,112 +290,152 @@ public static class ContractCodec {
                 writer.WriteTag(0);
                 WriteCredentialRecordLimitReached(writer, member);
                 break;
-            case DownloadLimitReached member:
+            case DefaultEngineAlreadyRegistered member:
                 writer.WriteTag(1);
+                WriteDefaultEngineAlreadyRegistered(writer, member);
+                break;
+            case DownloadLimitReached member:
+                writer.WriteTag(2);
                 WriteDownloadLimitReached(writer, member);
                 break;
             case DuplicateCredential member:
-                writer.WriteTag(2);
+                writer.WriteTag(3);
                 WriteDuplicateCredential(writer, member);
                 break;
             case DuplicateDownload member:
-                writer.WriteTag(3);
+                writer.WriteTag(4);
                 WriteDuplicateDownload(writer, member);
                 break;
+            case DuplicatePage member:
+                writer.WriteTag(5);
+                WriteDuplicatePage(writer, member);
+                break;
             case DuplicateSearchEngineName member:
-                writer.WriteTag(4);
+                writer.WriteTag(6);
                 WriteDuplicateSearchEngineName(writer, member);
                 break;
+            case EngineAlreadyRegistered member:
+                writer.WriteTag(7);
+                WriteEngineAlreadyRegistered(writer, member);
+                break;
+            case EngineLacksCapability member:
+                writer.WriteTag(8);
+                WriteEngineLacksCapability(writer, member);
+                break;
+            case EngineNotRegistered member:
+                writer.WriteTag(9);
+                WriteEngineNotRegistered(writer, member);
+                break;
             case InvalidCredentialDate member:
-                writer.WriteTag(5);
+                writer.WriteTag(10);
                 WriteInvalidCredentialDate(writer, member);
                 break;
             case InvalidCredentialOrigin member:
-                writer.WriteTag(6);
+                writer.WriteTag(11);
                 WriteInvalidCredentialOrigin(writer, member);
                 break;
             case InvalidCredentialRecord member:
-                writer.WriteTag(7);
+                writer.WriteTag(12);
                 WriteInvalidCredentialRecord(writer, member);
                 break;
             case InvalidCredentialUsername member:
-                writer.WriteTag(8);
+                writer.WriteTag(13);
                 WriteInvalidCredentialUsername(writer, member);
                 break;
             case InvalidDownloadIdentity member:
-                writer.WriteTag(9);
+                writer.WriteTag(14);
                 WriteInvalidDownloadIdentity(writer, member);
                 break;
             case InvalidDownloadProgress member:
-                writer.WriteTag(10);
+                writer.WriteTag(15);
                 WriteInvalidDownloadProgress(writer, member);
                 break;
             case InvalidDownloadSample member:
-                writer.WriteTag(11);
+                writer.WriteTag(16);
                 WriteInvalidDownloadSample(writer, member);
                 break;
             case InvalidDownloadText member:
-                writer.WriteTag(12);
+                writer.WriteTag(17);
                 WriteInvalidDownloadText(writer, member);
                 break;
             case InvalidPasswordLength member:
-                writer.WriteTag(13);
+                writer.WriteTag(18);
                 WriteInvalidPasswordLength(writer, member);
                 break;
             case InvalidRetentionLifetime member:
-                writer.WriteTag(14);
+                writer.WriteTag(19);
                 WriteInvalidRetentionLifetime(writer, member);
                 break;
             case InvalidSearchEngine member:
-                writer.WriteTag(15);
+                writer.WriteTag(20);
                 WriteInvalidSearchEngine(writer, member);
                 break;
             case InvalidSplitColumnShares member:
-                writer.WriteTag(16);
+                writer.WriteTag(21);
                 WriteInvalidSplitColumnShares(writer, member);
                 break;
+            case PageProfileMismatch member:
+                writer.WriteTag(22);
+                WritePageProfileMismatch(writer, member);
+                break;
             case RecoveryCheckpointUnusable member:
-                writer.WriteTag(17);
+                writer.WriteTag(23);
                 WriteRecoveryCheckpointUnusable(writer, member);
                 break;
             case SaveFailed member:
-                writer.WriteTag(18);
+                writer.WriteTag(24);
                 WriteSaveFailed(writer, member);
                 break;
             case SearchEngineLimitReached member:
-                writer.WriteTag(19);
+                writer.WriteTag(25);
                 WriteSearchEngineLimitReached(writer, member);
                 break;
+            case SpaceBeingDeleted member:
+                writer.WriteTag(26);
+                WriteSpaceBeingDeleted(writer, member);
+                break;
             case SpaceLocked member:
-                writer.WriteTag(20);
+                writer.WriteTag(27);
                 WriteSpaceLocked(writer, member);
                 break;
             case StaleCredentialComparison member:
-                writer.WriteTag(21);
+                writer.WriteTag(28);
                 WriteStaleCredentialComparison(writer, member);
                 break;
             case StorageFromNewerApp member:
-                writer.WriteTag(22);
+                writer.WriteTag(29);
                 WriteStorageFromNewerApp(writer, member);
                 break;
             case StorageRestoreInterrupted member:
-                writer.WriteTag(23);
+                writer.WriteTag(30);
                 WriteStorageRestoreInterrupted(writer, member);
                 break;
             case StorageUnreadable member:
-                writer.WriteTag(24);
+                writer.WriteTag(31);
                 WriteStorageUnreadable(writer, member);
                 break;
+            case TabAlreadyHasPage member:
+                writer.WriteTag(32);
+                WriteTabAlreadyHasPage(writer, member);
+                break;
+            case UnknownPage member:
+                writer.WriteTag(33);
+                WriteUnknownPage(writer, member);
+                break;
+            case UnknownSpace member:
+                writer.WriteTag(34);
+                WriteUnknownSpace(writer, member);
+                break;
             case UnknownWorkspace member:
-                writer.WriteTag(25);
+                writer.WriteTag(35);
                 WriteUnknownWorkspace(writer, member);
                 break;
             case UnsavedWorkspace member:
-                writer.WriteTag(26);
+                writer.WriteTag(36);
                 WriteUnsavedWorkspace(writer, member);
                 break;
             case WindowNotOpen member:
-                writer.WriteTag(27);
+                writer.WriteTag(37);
                 WriteWindowNotOpen(writer, member);
                 break;
             default: throw new ArgumentOutOfRangeException(nameof(value), value.GetType().Name, "Not a contract Rejection.");
@@ -462,6 +547,61 @@ public static class ContractCodec {
         }
     }
 
+    public static EngineCommand ReadEngineCommand(WireReader reader) {
+        int tag = reader.ReadTag();
+        switch (tag) {
+            case 0: return ReadClosePage(reader);
+            case 1: return ReadCreatePage(reader);
+            default: throw new WireFormatException($"Unknown EngineCommand tag {tag}.");
+        }
+    }
+
+    public static void WriteEngineCommand(WireWriter writer, EngineCommand value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        switch (value) {
+            case ClosePage member:
+                writer.WriteTag(0);
+                WriteClosePage(writer, member);
+                break;
+            case CreatePage member:
+                writer.WriteTag(1);
+                WriteCreatePage(writer, member);
+                break;
+            default: throw new ArgumentOutOfRangeException(nameof(value), value.GetType().Name, "Not a contract EngineCommand.");
+        }
+    }
+
+    public static EngineEvent ReadEngineEvent(WireReader reader) {
+        int tag = reader.ReadTag();
+        switch (tag) {
+            case 0: return ReadPageClosed(reader);
+            case 1: return ReadPageCreated(reader);
+            case 2: return ReadPageCreationFailed(reader);
+            default: throw new WireFormatException($"Unknown EngineEvent tag {tag}.");
+        }
+    }
+
+    public static void WriteEngineEvent(WireWriter writer, EngineEvent value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        switch (value) {
+            case PageClosed member:
+                writer.WriteTag(0);
+                WritePageClosed(writer, member);
+                break;
+            case PageCreated member:
+                writer.WriteTag(1);
+                WritePageCreated(writer, member);
+                break;
+            case PageCreationFailed member:
+                writer.WriteTag(2);
+                WritePageCreationFailed(writer, member);
+                break;
+            default: throw new ArgumentOutOfRangeException(nameof(value), value.GetType().Name, "Not a contract EngineEvent.");
+        }
+    }
+
     /// <summary>The most bytes one encoded intent with this tag may take.</summary>
     public static int MaximumIntentBytes(int tag) => tag switch {
         1 => 67108864,
@@ -470,6 +610,11 @@ public static class ContractCodec {
 
     /// <summary>The most bytes one encoded query with this tag may take.</summary>
     public static int MaximumQueryBytes(int tag) => tag switch {
+        _ => 16777216
+    };
+
+    /// <summary>The most bytes one encoded engine event with this tag may take.</summary>
+    public static int MaximumEngineEventBytes(int tag) => tag switch {
         _ => 16777216
     };
 
@@ -723,6 +868,20 @@ public static class ContractCodec {
         writer.WriteString(value.Message);
     }
 
+    public static ClosePage ReadClosePage(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new ClosePage(
+            reader.ReadGuid(),
+            reader.ReadBool());
+    }
+
+    public static void WriteClosePage(WireWriter writer, ClosePage value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteGuid(value.PageId);
+        writer.WriteBool(value.KeepsState);
+    }
+
     public static CloseWindow ReadCloseWindow(WireReader reader) {
         ArgumentNullException.ThrowIfNull(reader);
         return new CloseWindow(
@@ -747,6 +906,22 @@ public static class ContractCodec {
         ArgumentNullException.ThrowIfNull(value);
         writer.WriteString(value.Identifier);
         writer.WriteString(value.Source);
+    }
+
+    public static CreatePage ReadCreatePage(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new CreatePage(
+            reader.ReadGuid(),
+            reader.ReadGuid(),
+            reader.ReadBool());
+    }
+
+    public static void WriteCreatePage(WireWriter writer, CreatePage value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteGuid(value.PageId);
+        writer.WriteGuid(value.ProfileId);
+        writer.WriteBool(value.IsPrivate);
     }
 
     public static CredentialCapture ReadCredentialCapture(WireReader reader) {
@@ -1114,6 +1289,18 @@ public static class ContractCodec {
         }
     }
 
+    public static DefaultEngineAlreadyRegistered ReadDefaultEngineAlreadyRegistered(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new DefaultEngineAlreadyRegistered(
+            ReadEngineKind(reader));
+    }
+
+    public static void WriteDefaultEngineAlreadyRegistered(WireWriter writer, DefaultEngineAlreadyRegistered value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        WriteEngineKind(writer, value.Current);
+    }
+
     public static DismissShownTab ReadDismissShownTab(WireReader reader) {
         ArgumentNullException.ThrowIfNull(reader);
         return new DismissShownTab(
@@ -1454,6 +1641,18 @@ public static class ContractCodec {
         ArgumentNullException.ThrowIfNull(value);
     }
 
+    public static DuplicatePage ReadDuplicatePage(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new DuplicatePage(
+            reader.ReadGuid());
+    }
+
+    public static void WriteDuplicatePage(WireWriter writer, DuplicatePage value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteGuid(value.PageId);
+    }
+
     public static DuplicateSearchEngineName ReadDuplicateSearchEngineName(WireReader reader) {
         ArgumentNullException.ThrowIfNull(reader);
         return new DuplicateSearchEngineName();
@@ -1462,6 +1661,61 @@ public static class ContractCodec {
     public static void WriteDuplicateSearchEngineName(WireWriter writer, DuplicateSearchEngineName value) {
         ArgumentNullException.ThrowIfNull(writer);
         ArgumentNullException.ThrowIfNull(value);
+    }
+
+    public static EngineAlreadyRegistered ReadEngineAlreadyRegistered(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new EngineAlreadyRegistered(
+            ReadEngineKind(reader));
+    }
+
+    public static void WriteEngineAlreadyRegistered(WireWriter writer, EngineAlreadyRegistered value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        WriteEngineKind(writer, value.Kind);
+    }
+
+    public static EngineLacksCapability ReadEngineLacksCapability(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new EngineLacksCapability(
+            ReadEngineKind(reader),
+            ReadEngineCapability(reader));
+    }
+
+    public static void WriteEngineLacksCapability(WireWriter writer, EngineLacksCapability value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        WriteEngineKind(writer, value.Kind);
+        WriteEngineCapability(writer, value.Capability);
+    }
+
+    public static EngineNotRegistered ReadEngineNotRegistered(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new EngineNotRegistered();
+    }
+
+    public static void WriteEngineNotRegistered(WireWriter writer, EngineNotRegistered value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+    }
+
+    public static EngineRegistration ReadEngineRegistration(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new EngineRegistration(
+            ReadEngineKind(reader),
+            reader.ReadList(() => ReadEngineCapability(reader)),
+            reader.ReadBool());
+    }
+
+    public static void WriteEngineRegistration(WireWriter writer, EngineRegistration value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        WriteEngineKind(writer, value.Kind);
+        writer.WriteCount(value.Capabilities.Count);
+        foreach (var itemCapabilities in value.Capabilities) {
+            WriteEngineCapability(writer, itemCapabilities);
+        }
+        writer.WriteBool(value.IsDefault);
     }
 
     public static ExpireDownloads ReadExpireDownloads(WireReader reader) {
@@ -1872,6 +2126,54 @@ public static class ContractCodec {
         }
     }
 
+    public static MovePage ReadMovePage(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new MovePage(
+            reader.ReadGuid(),
+            reader.ReadGuid(),
+            reader.ReadGuid(),
+            reader.ReadPresence() ? (Guid?)reader.ReadGuid() : null);
+    }
+
+    public static void WriteMovePage(WireWriter writer, MovePage value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteGuid(value.PageId);
+        writer.WriteGuid(value.WorkspaceId);
+        writer.WriteGuid(value.SpaceId);
+        if (value.TabId is { } presentTabId) {
+            writer.WritePresence(true);
+            writer.WriteGuid(presentTabId);
+        } else {
+            writer.WritePresence(false);
+        }
+    }
+
+    public static OpenPage ReadOpenPage(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new OpenPage(
+            reader.ReadGuid(),
+            reader.ReadGuid(),
+            reader.ReadGuid(),
+            reader.ReadPresence() ? (Guid?)reader.ReadGuid() : null,
+            reader.ReadGuid());
+    }
+
+    public static void WriteOpenPage(WireWriter writer, OpenPage value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteGuid(value.PageId);
+        writer.WriteGuid(value.WorkspaceId);
+        writer.WriteGuid(value.SpaceId);
+        if (value.TabId is { } presentTabId) {
+            writer.WritePresence(true);
+            writer.WriteGuid(presentTabId);
+        } else {
+            writer.WritePresence(false);
+        }
+        writer.WriteGuid(value.WindowId);
+    }
+
     public static OpenWindow ReadOpenWindow(WireReader reader) {
         ArgumentNullException.ThrowIfNull(reader);
         return new OpenWindow(
@@ -1907,6 +2209,119 @@ public static class ContractCodec {
             WriteShownTab(writer, itemShowingTabs);
         }
         writer.WriteBool(value.RestoresTabs);
+    }
+
+    public static PageChanged ReadPageChanged(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new PageChanged(
+            ReadPageState(reader));
+    }
+
+    public static void WritePageChanged(WireWriter writer, PageChanged value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        WritePageState(writer, value.Page);
+    }
+
+    public static PageClosed ReadPageClosed(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new PageClosed(
+            reader.ReadGuid());
+    }
+
+    public static void WritePageClosed(WireWriter writer, PageClosed value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteGuid(value.PageId);
+    }
+
+    public static PageCreated ReadPageCreated(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new PageCreated(
+            reader.ReadGuid());
+    }
+
+    public static void WritePageCreated(WireWriter writer, PageCreated value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteGuid(value.PageId);
+    }
+
+    public static PageCreationFailed ReadPageCreationFailed(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new PageCreationFailed(
+            reader.ReadGuid());
+    }
+
+    public static void WritePageCreationFailed(WireWriter writer, PageCreationFailed value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteGuid(value.PageId);
+    }
+
+    public static PageOpened ReadPageOpened(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new PageOpened(
+            ReadPageState(reader));
+    }
+
+    public static void WritePageOpened(WireWriter writer, PageOpened value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        WritePageState(writer, value.Page);
+    }
+
+    public static PageProfileMismatch ReadPageProfileMismatch(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new PageProfileMismatch(
+            reader.ReadGuid(),
+            reader.ReadGuid());
+    }
+
+    public static void WritePageProfileMismatch(WireWriter writer, PageProfileMismatch value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteGuid(value.PageId);
+        writer.WriteGuid(value.SpaceId);
+    }
+
+    public static PageRemoved ReadPageRemoved(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new PageRemoved(
+            reader.ReadGuid());
+    }
+
+    public static void WritePageRemoved(WireWriter writer, PageRemoved value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteGuid(value.PageId);
+    }
+
+    public static PageState ReadPageState(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new PageState(
+            reader.ReadGuid(),
+            reader.ReadGuid(),
+            reader.ReadGuid(),
+            reader.ReadPresence() ? (Guid?)reader.ReadGuid() : null,
+            ReadEngineKind(reader),
+            ReadPagePhase(reader));
+    }
+
+    public static void WritePageState(WireWriter writer, PageState value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteGuid(value.Id);
+        writer.WriteGuid(value.WorkspaceId);
+        writer.WriteGuid(value.SpaceId);
+        if (value.TabId is { } presentTabId) {
+            writer.WritePresence(true);
+            writer.WriteGuid(presentTabId);
+        } else {
+            writer.WritePresence(false);
+        }
+        WriteEngineKind(writer, value.Engine);
+        WritePagePhase(writer, value.Phase);
     }
 
     public static PasskeyAccess ReadPasskeyAccess(WireReader reader) {
@@ -1994,6 +2409,20 @@ public static class ContractCodec {
         ArgumentNullException.ThrowIfNull(writer);
         ArgumentNullException.ThrowIfNull(value);
         WriteStorageFailure(writer, value.Reason);
+    }
+
+    public static ReleasePage ReadReleasePage(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new ReleasePage(
+            reader.ReadGuid(),
+            reader.ReadBool());
+    }
+
+    public static void WriteReleasePage(WireWriter writer, ReleasePage value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteGuid(value.PageId);
+        writer.WriteBool(value.KeepsState);
     }
 
     public static RemoveDownload ReadRemoveDownload(WireReader reader) {
@@ -2186,6 +2615,18 @@ public static class ContractCodec {
         } else {
             writer.WritePresence(false);
         }
+    }
+
+    public static SpaceBeingDeleted ReadSpaceBeingDeleted(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new SpaceBeingDeleted(
+            reader.ReadGuid());
+    }
+
+    public static void WriteSpaceBeingDeleted(WireWriter writer, SpaceBeingDeleted value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteGuid(value.SpaceId);
     }
 
     public static SpaceLocked ReadSpaceLocked(WireReader reader) {
@@ -2383,6 +2824,20 @@ public static class ContractCodec {
         writer.WriteInt64(value.Revision);
     }
 
+    public static TabAlreadyHasPage ReadTabAlreadyHasPage(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new TabAlreadyHasPage(
+            reader.ReadGuid(),
+            reader.ReadGuid());
+    }
+
+    public static void WriteTabAlreadyHasPage(WireWriter writer, TabAlreadyHasPage value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteGuid(value.TabId);
+        writer.WriteGuid(value.PageId);
+    }
+
     public static TabFavicon ReadTabFavicon(WireReader reader) {
         ArgumentNullException.ThrowIfNull(reader);
         return new TabFavicon(
@@ -2414,6 +2869,30 @@ public static class ContractCodec {
         } else {
             writer.WritePresence(false);
         }
+    }
+
+    public static UnknownPage ReadUnknownPage(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new UnknownPage(
+            reader.ReadGuid());
+    }
+
+    public static void WriteUnknownPage(WireWriter writer, UnknownPage value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteGuid(value.PageId);
+    }
+
+    public static UnknownSpace ReadUnknownSpace(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new UnknownSpace(
+            reader.ReadGuid());
+    }
+
+    public static void WriteUnknownSpace(WireWriter writer, UnknownSpace value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteGuid(value.SpaceId);
     }
 
     public static UnknownWorkspace ReadUnknownWorkspace(WireReader reader) {
@@ -2693,17 +3172,6 @@ public static class ContractCodec {
         writer.WriteEnum((int)value);
     }
 
-    public static AdapterRole ReadAdapterRole(WireReader reader) {
-        ArgumentNullException.ThrowIfNull(reader);
-        return AdapterRole.All[reader.ReadEnum(AdapterRole.All.Count)];
-    }
-
-    public static void WriteAdapterRole(WireWriter writer, AdapterRole value) {
-        ArgumentNullException.ThrowIfNull(writer);
-        ArgumentNullException.ThrowIfNull(value);
-        writer.WriteEnum(TagOf(AdapterRole.All, value));
-    }
-
     public static ArchiveFilterGroup ReadArchiveFilterGroup(WireReader reader) {
         ArgumentNullException.ThrowIfNull(reader);
         return ArchiveFilterGroup.All[reader.ReadEnum(ArchiveFilterGroup.All.Count)];
@@ -2869,6 +3337,17 @@ public static class ContractCodec {
         writer.WriteEnum(TagOf(EngineCapability.All, value));
     }
 
+    public static EngineKind ReadEngineKind(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return EngineKind.All[reader.ReadEnum(EngineKind.All.Count)];
+    }
+
+    public static void WriteEngineKind(WireWriter writer, EngineKind value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteEnum(TagOf(EngineKind.All, value));
+    }
+
     public static ExternalLinkDestination ReadExternalLinkDestination(WireReader reader) {
         ArgumentNullException.ThrowIfNull(reader);
         return ExternalLinkDestination.All[reader.ReadEnum(ExternalLinkDestination.All.Count)];
@@ -2955,6 +3434,17 @@ public static class ContractCodec {
         ArgumentNullException.ThrowIfNull(writer);
         ArgumentNullException.ThrowIfNull(value);
         writer.WriteEnum(TagOf(NumberedSelectionTarget.All, value));
+    }
+
+    public static PagePhase ReadPagePhase(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return PagePhase.All[reader.ReadEnum(PagePhase.All.Count)];
+    }
+
+    public static void WritePagePhase(WireWriter writer, PagePhase value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteEnum(TagOf(PagePhase.All, value));
     }
 
     public static PasskeyAccessStatus ReadPasskeyAccessStatus(WireReader reader) {

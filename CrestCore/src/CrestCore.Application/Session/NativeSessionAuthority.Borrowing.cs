@@ -21,7 +21,7 @@ public sealed partial class NativeSessionAuthority {
 
     private NativeSessionAuthority(SessionState initial, NativeSessionAuthority source, Guid space, Guid profile) {
         session = initial; workspaceKind = BrowserWorkspaceKind.Temporary;
-        privateBrowsing = source.privateBrowsing; Engine = source.Engine; access = source.access;
+        privateBrowsing = source.privateBrowsing; access = source.access;
         borrowedSource = source; borrowedSpace = space; borrowedProfile = profile;
         borrowedSourceRevision = source.Revision;
         Validate(session);

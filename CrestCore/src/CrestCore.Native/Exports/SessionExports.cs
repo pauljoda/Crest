@@ -42,13 +42,6 @@ public static unsafe partial class Exports {
         } catch (Exception e) { return SessionError(e); }
     }
 
-    [UnmanagedCallersOnly(EntryPoint = "crest_session_register_engine", CallConvs = [typeof(CallConvCdecl)])]
-    public static int SessionRegisterEngine(ulong handle, byte* bytes, nuint count) {
-        if (!ValidSessionInput(bytes, count) || count > 65536) return CoreStatus.InvalidArgument;
-        if (!Sessions.TryGetValue(handle, out var session)) return CoreStatus.InvalidHandle;
-        try { session.RegisterEngine(new(bytes, (int)count)); return CoreStatus.Ok; } catch (Exception e) { return SessionError(e); }
-    }
-
     [UnmanagedCallersOnly(EntryPoint = "crest_session_create_borrowed", CallConvs = [typeof(CallConvCdecl)])]
     public static int SessionCreateBorrowed(ulong source, ulong expected, byte* bytes, nuint count,
         ulong* handle, ulong* revision, ulong* projection) {

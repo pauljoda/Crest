@@ -26,7 +26,6 @@ public static class BrowserRuleCodes {
     public const string DuplicateSpaceProfile = "duplicate_space_profile";
     public const string DuplicateSyncRecord = "duplicate_sync_record";
     public const string DuplicateTab = "duplicate_tab";
-    public const string EngineAlreadyRegistered = "engine_already_registered";
     public const string FolderActionUnavailable = "folder_action_unavailable";
     public const string FolderCycle = "folder_cycle";
     public const string FolderDepthLimit = "folder_depth_limit";
@@ -39,7 +38,6 @@ public static class BrowserRuleCodes {
     public const string InvalidDate = "invalid_date";
     public const string InvalidDeletionIntent = "invalid_deletion_intent";
     public const string InvalidDestination = "invalid_destination";
-    public const string InvalidEngineRegistration = "invalid_engine_registration";
     public const string InvalidFocusedIndex = "invalid_focused_index";
     public const string InvalidFolderAnchor = "invalid_folder_anchor";
     public const string InvalidFolderPlacement = "invalid_folder_placement";

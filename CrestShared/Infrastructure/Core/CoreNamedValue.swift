@@ -1,9 +1,9 @@
 import Foundation
 
 /// A generated fixed set that crosses a JSON boundary as its member's `name`:
-/// a policy request or answer, or an adapter descriptor, including as a
-/// dictionary key. Decoding a name this build does not know fails, so a
-/// tolerant reader decides what an unknown name means.
+/// a policy request or answer, including as a dictionary key. Decoding a name
+/// this build does not know fails, so a tolerant reader decides what an
+/// unknown name means.
 protocol CoreNamedValue: Codable, CodingKeyRepresentable {
     var name: String { get }
 
@@ -59,8 +59,6 @@ private struct NameKey: CodingKey {
     }
 }
 
-extension AdapterRole: CoreNamedValue {}
-
 extension AutomaticDownloadAction: CoreNamedValue {}
 
 extension ArchiveReason: CoreNamedValue {}
@@ -69,8 +67,6 @@ extension BlockedPopupEvent: CoreNamedValue {}
 
 extension BlockedPopupStatus: CoreNamedValue {}
 
-extension CapabilityStatus: CoreNamedValue {}
-
 extension ContentBlockingPolicy: CoreNamedValue {}
 
 extension CurrentTabCleanup: CoreNamedValue {}
@@ -78,8 +74,6 @@ extension CurrentTabCleanup: CoreNamedValue {}
 extension DataRetention: CoreNamedValue {}
 
 extension DevicePlatform: CoreNamedValue {}
-
-extension EngineCapability: CoreNamedValue {}
 
 extension ExternalLinkDestination: CoreNamedValue {}
 

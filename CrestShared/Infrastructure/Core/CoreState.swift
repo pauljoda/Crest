@@ -13,6 +13,9 @@ final class CoreState {
     var downloads: [DownloadState] = []
     /// What each open window shows, by window.
     var windows: [UUID: WindowState] = [:]
+    /// Each page this device hosts, by page: its owner, its engine and where
+    /// it stands there.
+    var pages: [UUID: PageState] = [:]
     /// The newest session revision the core has on disk; zero before its
     /// first save and for a core that keeps nothing.
     var savedRevision: Int64 = 0

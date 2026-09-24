@@ -7,8 +7,10 @@ namespace CrestCore.Application;
 /// changing anything. Each area handles its own intents and queries. One lock
 /// serializes every call on this instance.
 ///
-/// Changes the core starts itself, such as a finished save, wait in a pending
-/// batch the host drains after its wake callback runs.
+/// Changes the core starts itself, such as a finished save or an engine's
+/// report, wait in a pending batch the host drains after its wake callback
+/// runs. Commands for engine bindings wait in a queue that is delivered once
+/// the lock is released.
 public sealed partial class CrestApp : IDisposable {
     #region Variables
 
@@ -20,6 +22,8 @@ public sealed partial class CrestApp : IDisposable {
     private readonly Links links = new();
     /// This device's windows and what each shows.
     private readonly Device device;
+    /// The pages this device hosts, and the engines that host them.
+    private readonly Pages pages;
 
     #endregion
 
@@ -35,10 +39,12 @@ public sealed partial class CrestApp : IDisposable {
         ArgumentNullException.ThrowIfNull(configuration);
         if (configuration.StorageDirectory is not { } directory) {
             device = new(storage: null, DeviceRecords.Empty, Announce);
+            pages = new(device, engines);
             return;
         }
         storage = SessionStorage.Open(directory, Announce, out var loaded);
         device = new(storage, storage.Device, Announce);
+        pages = new(device, engines);
         try {
             if (loaded.Session is { } stored) Establish(stored, loaded.Journal, loaded.LegacySelection);
         } catch (Exception error) {
@@ -53,9 +59,11 @@ public sealed partial class CrestApp : IDisposable {
     #region Actions - Intents
 
     /// The changes the intent published. An intent that does not apply to the
-    /// current state publishes none.
+    /// current state publishes none. Engine commands the intent caused have
+    /// been delivered when this returns, unless it runs inside a delivery.
     public IReadOnlyList<Change> Send(Intent intent) {
         ArgumentNullException.ThrowIfNull(intent);
+        IReadOnlyList<Change> published;
         lock (gate) {
             var changes = new ChangeFeed();
             switch (intent) {
@@ -68,11 +76,16 @@ public sealed partial class CrestApp : IDisposable {
                 case WindowIntent window:
                     device.Handle(window, changes);
                     break;
+                case PageIntent page:
+                    pages.Handle(page, changes, Issue);
+                    break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(intent), intent.GetType().Name, "No area handles this intent.");
             }
-            return changes.Published;
+            published = changes.Published;
         }
+        Deliver();
+        return published;
     }
 
     #endregion
@@ -121,8 +134,10 @@ public sealed partial class CrestApp : IDisposable {
     #region Actions - Lifetime
 
     /// Saves any accepted revision still pending and closes the session file.
-    /// The stored session accepts no edits afterwards.
+    /// The stored session accepts no edits afterwards, and no engine binding
+    /// hears from the core again.
     public void Dispose() {
+        lock (gate) engines.Clear();
         Session?.Release();
         storage?.Dispose();
     }

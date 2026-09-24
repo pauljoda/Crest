@@ -133,11 +133,13 @@ internal sealed partial class Device {
 
     #region Actions - Lookup
 
-    private Window Opened(Guid windowId) {
+    /// The open window, or `WindowNotOpen`.
+    internal Window Opened(Guid windowId) {
         lock (gate) return open.TryGetValue(windowId, out var window) ? window : throw new Rejected(new WindowNotOpen(windowId));
     }
 
-    private NativeSessionAuthority Workspace(Guid workspaceId) {
+    /// The attached workspace, or `UnknownWorkspace`.
+    internal NativeSessionAuthority Workspace(Guid workspaceId) {
         lock (gate)
             return workspaces.TryGetValue(workspaceId, out var authority) ? authority : throw new Rejected(new UnknownWorkspace(workspaceId));
     }
