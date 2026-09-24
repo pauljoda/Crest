@@ -21,6 +21,8 @@ protocol Query: Sendable {
 enum Change: Equatable, Sendable {
     case downloadUpdated(DownloadUpdated)
     case downloadsRemoved(DownloadsRemoved)
+    case saved(Saved)
+    case storageFailed(StorageFailed)
 }
 
 /// The rule that refused an intent or a query.
@@ -43,6 +45,9 @@ enum Rejection: Equatable, Error, Sendable {
     case invalidSearchEngine(InvalidSearchEngine)
     case searchEngineLimitReached(SearchEngineLimitReached)
     case staleCredentialComparison(StaleCredentialComparison)
+    case storageFromNewerApp(StorageFromNewerApp)
+    case storageRestoreInterrupted(StorageRestoreInterrupted)
+    case storageUnreadable(StorageUnreadable)
 }
 
 extension CoreState {
@@ -51,6 +56,8 @@ extension CoreState {
         switch change {
         case .downloadUpdated(let change): apply(change)
         case .downloadsRemoved(let change): apply(change)
+        case .saved(let change): apply(change)
+        case .storageFailed(let change): apply(change)
         }
     }
 }
@@ -59,6 +66,10 @@ extension CoreState {
 
 struct AcknowledgeDownloads: Intent, Equatable, Sendable {
     let profileID: UUID
+}
+
+struct AppConfiguration: Equatable, Sendable {
+    let storageDirectory: String?
 }
 
 struct AssessDownloadRisk: Intent, Equatable, Sendable {
@@ -460,6 +471,10 @@ struct RestartDownload: Intent, Equatable, Sendable {
     let downloadID: UUID
 }
 
+struct Saved: Equatable, Sendable {
+    let revision: Int64
+}
+
 struct SearchEngineLimitReached: Equatable, Sendable {
     let limit: Int
 }
@@ -471,6 +486,20 @@ struct SetDownloadDestination: Intent, Equatable, Sendable {
 }
 
 struct StaleCredentialComparison: Equatable, Sendable {
+}
+
+struct StorageFailed: Equatable, Sendable {
+    let reason: StorageFailure
+}
+
+struct StorageFromNewerApp: Equatable, Sendable {
+}
+
+struct StorageRestoreInterrupted: Equatable, Sendable {
+}
+
+struct StorageUnreadable: Equatable, Sendable {
+    let reason: StorageFailure
 }
 
 struct StrongPassword: Query, Equatable, Sendable {
@@ -603,6 +632,14 @@ enum SearchEngineFlaw: Int, CaseIterable, Sendable {
     case credentialsInTemplate = 10
     case placeholderInFragment = 11
     case secretInTemplate = 12
+}
+
+enum StorageFailure: Int, CaseIterable, Sendable {
+    case diskFull = 0
+    case readOnly = 1
+    case busy = 2
+    case damaged = 3
+    case unavailable = 4
 }
 
 enum SystemPasswordWriteThroughAvailability: Int, CaseIterable, Sendable {

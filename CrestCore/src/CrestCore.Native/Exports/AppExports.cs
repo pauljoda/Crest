@@ -27,24 +27,76 @@ public static unsafe partial class Exports {
     #region Actions - Native exports
 
     [UnmanagedCallersOnly(EntryPoint = "crest_app_create", CallConvs = [typeof(CallConvCdecl)])]
-    public static int AppCreate(byte* fingerprint, nuint length, ulong* app) {
-        if (app == null) return CoreStatus.InvalidArgument;
+    public static int AppCreate(byte* fingerprint, nuint length, byte* configuration, nuint configurationLength,
+        ulong* app, CrestBuffer* rejection) {
+        if (app == null || rejection == null) return CoreStatus.InvalidArgument;
         *app = 0;
-        if (fingerprint == null && length != 0) return CoreStatus.InvalidArgument;
+        *rejection = default;
+        if (fingerprint == null && length != 0 || configuration == null && configurationLength != 0) return CoreStatus.InvalidArgument;
+        if (configurationLength > MaximumMessageBytes) return CoreStatus.LimitExceeded;
         try {
             if (length != (nuint)ContractCodec.Fingerprint.Length
                 || !new ReadOnlySpan<byte>(fingerprint, (int)length).SequenceEqual(ContractCodec.Fingerprint))
                 return CoreStatus.VersionMismatch;
+            var reader = new WireReader(new ReadOnlySpan<byte>(configuration, (int)configurationLength).ToArray());
+            var settings = Finished(ContractCodec.ReadAppConfiguration(reader), reader);
+            CrestApp created;
+            try {
+                created = new CrestApp(settings);
+            } catch (Rejected refused) {
+                var writer = new WireWriter();
+                ContractCodec.WriteRejection(writer, refused.Rejection);
+                *rejection = Allocate(writer.WrittenSpan);
+                return CoreStatus.Rejected;
+            }
             var id = checked((ulong)Interlocked.Increment(ref nextHandle));
-            if (!Apps.TryAdd(id, new CrestApp())) return CoreStatus.InternalError;
+            if (!Apps.TryAdd(id, created)) {
+                created.Dispose();
+                return CoreStatus.InternalError;
+            }
             *app = id;
+            return CoreStatus.Ok;
+        } catch (WireFormatException) {
+            return CoreStatus.InvalidMessage;
+        } catch {
+            return CoreStatus.InternalError;
+        }
+    }
+
+    /// Saves what the app's session file still owes and closes it. Clear the
+    /// wake callback first.
+    [UnmanagedCallersOnly(EntryPoint = "crest_app_destroy", CallConvs = [typeof(CallConvCdecl)])]
+    public static int AppDestroy(ulong app) {
+        try {
+            if (!Apps.TryRemove(app, out var crest)) return CoreStatus.InvalidHandle;
+            crest.Dispose();
             return CoreStatus.Ok;
         } catch { return CoreStatus.InternalError; }
     }
 
-    [UnmanagedCallersOnly(EntryPoint = "crest_app_destroy", CallConvs = [typeof(CallConvCdecl)])]
-    public static int AppDestroy(ulong app) {
-        try { return Apps.TryRemove(app, out _) ? CoreStatus.Ok : CoreStatus.InvalidHandle; } catch { return CoreStatus.InternalError; }
+    [UnmanagedCallersOnly(EntryPoint = "crest_app_set_wake", CallConvs = [typeof(CallConvCdecl)])]
+    public static int AppSetWake(ulong app, delegate* unmanaged[Cdecl]<nint, void> callback, nint context) {
+        try {
+            if (!Apps.TryGetValue(app, out var crest)) return CoreStatus.InvalidHandle;
+            var function = (nint)callback;
+            crest.SetWake(function == 0 ? null : () => Wake(function, context));
+            return CoreStatus.Ok;
+        } catch { return CoreStatus.InternalError; }
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "crest_app_drain", CallConvs = [typeof(CallConvCdecl)])]
+    public static int AppDrain(ulong app, CrestBuffer* output) {
+        if (output == null) return CoreStatus.InvalidArgument;
+        *output = default;
+        try {
+            if (!Apps.TryGetValue(app, out var crest)) return CoreStatus.InvalidHandle;
+            var changes = crest.Drain();
+            var writer = new WireWriter();
+            writer.WriteCount(changes.Count);
+            foreach (var change in changes) ContractCodec.WriteChange(writer, change);
+            *output = Allocate(writer.WrittenSpan);
+            return CoreStatus.Ok;
+        } catch { return CoreStatus.InternalError; }
     }
 
     [UnmanagedCallersOnly(EntryPoint = "crest_app_dispatch", CallConvs = [typeof(CallConvCdecl)])]
@@ -99,6 +151,8 @@ public static unsafe partial class Exports {
             return CoreStatus.InternalError;
         }
     }
+
+    private static void Wake(nint callback, nint context) => ((delegate* unmanaged[Cdecl]<nint, void>)callback)(context);
 
     /// A decoded message must use every byte it arrived with.
     private static T Finished<T>(T message, WireReader reader) {

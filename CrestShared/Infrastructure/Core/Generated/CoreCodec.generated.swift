@@ -7,7 +7,7 @@ import Foundation
 enum CoreCodec {
     /// SHA-256 of the canonical contract schema. The core refuses any other.
     static let fingerprint: [UInt8] = [
-        0xde, 0xb7, 0x93, 0x7e, 0xb1, 0xbc, 0x94, 0xb3, 0x1f, 0x19, 0x31, 0xa3, 0x4d, 0x25, 0xc1, 0x55, 0x21, 0xf6, 0x92, 0x41, 0xa4, 0x98, 0xa3, 0xf6, 0x42, 0xe3, 0x39, 0x71, 0x4b, 0xd9, 0xca, 0x95
+        0x94, 0x45, 0x94, 0x97, 0xed, 0xca, 0x0a, 0x35, 0x06, 0x7e, 0xc6, 0x55, 0x20, 0xad, 0xc1, 0x6d, 0xdd, 0x8d, 0x49, 0x89, 0xaf, 0x12, 0xf5, 0x59, 0xf0, 0x77, 0x0e, 0xeb, 0x51, 0xe3, 0x63, 0x5c
     ]
 
     static func decodeIntent(from reader: inout WireReader) throws(WireError) -> any Intent {
@@ -61,6 +61,8 @@ extension Change {
         switch tag {
         case 0: self = .downloadUpdated(try DownloadUpdated(from: &reader))
         case 1: self = .downloadsRemoved(try DownloadsRemoved(from: &reader))
+        case 2: self = .saved(try Saved(from: &reader))
+        case 3: self = .storageFailed(try StorageFailed(from: &reader))
         default: throw WireError.malformed("Unknown Change tag \(tag)")
         }
     }
@@ -72,6 +74,12 @@ extension Change {
             value.encode(into: &writer)
         case .downloadsRemoved(let value):
             writer.writeTag(1)
+            value.encode(into: &writer)
+        case .saved(let value):
+            writer.writeTag(2)
+            value.encode(into: &writer)
+        case .storageFailed(let value):
+            writer.writeTag(3)
             value.encode(into: &writer)
         }
     }
@@ -99,6 +107,9 @@ extension Rejection {
         case 15: self = .invalidSearchEngine(try InvalidSearchEngine(from: &reader))
         case 16: self = .searchEngineLimitReached(try SearchEngineLimitReached(from: &reader))
         case 17: self = .staleCredentialComparison(try StaleCredentialComparison(from: &reader))
+        case 18: self = .storageFromNewerApp(try StorageFromNewerApp(from: &reader))
+        case 19: self = .storageRestoreInterrupted(try StorageRestoreInterrupted(from: &reader))
+        case 20: self = .storageUnreadable(try StorageUnreadable(from: &reader))
         default: throw WireError.malformed("Unknown Rejection tag \(tag)")
         }
     }
@@ -159,6 +170,15 @@ extension Rejection {
         case .staleCredentialComparison(let value):
             writer.writeTag(17)
             value.encode(into: &writer)
+        case .storageFromNewerApp(let value):
+            writer.writeTag(18)
+            value.encode(into: &writer)
+        case .storageRestoreInterrupted(let value):
+            writer.writeTag(19)
+            value.encode(into: &writer)
+        case .storageUnreadable(let value):
+            writer.writeTag(20)
+            value.encode(into: &writer)
         }
     }
 }
@@ -176,6 +196,28 @@ extension AcknowledgeDownloads {
     func encodeIntent(into writer: inout WireWriter) {
         writer.writeTag(0)
         encode(into: &writer)
+    }
+}
+
+extension AppConfiguration {
+    init(from reader: inout WireReader) throws(WireError) {
+        let storageDirectory: String?
+        if try reader.readPresence() {
+            let storageDirectoryValue = try reader.readString()
+            storageDirectory = storageDirectoryValue
+        } else {
+            storageDirectory = nil
+        }
+        self.init(storageDirectory: storageDirectory)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        if let present0 = storageDirectory {
+            writer.writePresence(true)
+            writer.writeString(present0)
+        } else {
+            writer.writePresence(false)
+        }
     }
 }
 
@@ -1745,6 +1787,17 @@ extension RestartDownload {
     }
 }
 
+extension Saved {
+    init(from reader: inout WireReader) throws(WireError) {
+        let revision = try reader.readInt64()
+        self.init(revision: revision)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeInt64(revision)
+    }
+}
+
 extension SearchEngineLimitReached {
     init(from reader: inout WireReader) throws(WireError) {
         let limit = try reader.readInt()
@@ -1782,6 +1835,46 @@ extension StaleCredentialComparison {
     }
 
     func encode(into writer: inout WireWriter) {
+    }
+}
+
+extension StorageFailed {
+    init(from reader: inout WireReader) throws(WireError) {
+        let reason = try StorageFailure(from: &reader)
+        self.init(reason: reason)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        reason.encode(into: &writer)
+    }
+}
+
+extension StorageFromNewerApp {
+    init(from reader: inout WireReader) throws(WireError) {
+        self.init()
+    }
+
+    func encode(into writer: inout WireWriter) {
+    }
+}
+
+extension StorageRestoreInterrupted {
+    init(from reader: inout WireReader) throws(WireError) {
+        self.init()
+    }
+
+    func encode(into writer: inout WireWriter) {
+    }
+}
+
+extension StorageUnreadable {
+    init(from reader: inout WireReader) throws(WireError) {
+        let reason = try StorageFailure(from: &reader)
+        self.init(reason: reason)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        reason.encode(into: &writer)
     }
 }
 
@@ -2086,6 +2179,20 @@ extension SearchEngineFlaw {
         let rawValue = try reader.readEnum()
         guard let value = SearchEngineFlaw(rawValue: rawValue) else {
             throw WireError.malformed("Unknown SearchEngineFlaw \(rawValue)")
+        }
+        self = value
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeEnum(rawValue)
+    }
+}
+
+extension StorageFailure {
+    init(from reader: inout WireReader) throws(WireError) {
+        let rawValue = try reader.readEnum()
+        guard let value = StorageFailure(rawValue: rawValue) else {
+            throw WireError.malformed("Unknown StorageFailure \(rawValue)")
         }
         self = value
     }

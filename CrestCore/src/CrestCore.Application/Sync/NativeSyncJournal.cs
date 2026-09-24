@@ -41,6 +41,22 @@ public sealed class NativeSyncJournal {
 
     private NativeSyncJournal(JsonObject metadata, Dictionary<string, JsonObject> records, HashSet<string> pending) { this.metadata = metadata; this.records = records; this.pending = pending; encoded = new(Encode, true); }
 
+    /// The journal of a device that has staged nothing yet: no records, the
+    /// clock at zero, and every record category synced.
+    public static NativeSyncJournal Fresh(Guid deviceId) => new(Encoding.UTF8.GetBytes(new JsonObject {
+        ["schemaVersion"] = 1,
+        ["deviceID"] = deviceId.ToString("D").ToUpperInvariant(),
+        ["logicalClock"] = 0,
+        ["preferences"] = new JsonObject {
+            ["savedStructure"] = true,
+            ["currentTabs"] = true,
+            ["historyAndArchive"] = true,
+            ["extensionSettings"] = true
+        },
+        ["records"] = new JsonArray(),
+        ["pendingRecordIDs"] = new JsonArray()
+    }.ToJsonString()));
+
     #endregion
 
     #region Actions - Decoding

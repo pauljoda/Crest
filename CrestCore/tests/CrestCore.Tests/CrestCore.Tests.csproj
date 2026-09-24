@@ -10,5 +10,6 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="Session/Fixtures/*.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="Storage/Fixtures/*.sqlite" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

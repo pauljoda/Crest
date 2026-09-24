@@ -7,7 +7,7 @@ public static class CoreStatus {
 
     public const int Ok = 0, Empty = 1, BufferTooSmall = 2, Timeout = 3, Stopped = 4, Busy = 5, Rejected = 6,
         InvalidArgument = -1, VersionMismatch = -2, InvalidState = -3, InvalidHandle = -4,
-        InvalidMessage = -5, InternalError = -6, LimitExceeded = -7;
+        InvalidMessage = -5, InternalError = -6, LimitExceeded = -7, StorageFailed = -8;
 
     #endregion
 }

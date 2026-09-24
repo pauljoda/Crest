@@ -86,6 +86,7 @@ internal static partial class StoredSessionCodec {
         public const string LastActivatedAt = "lastActivatedAt";
         public const string LastVisitedAt = "lastVisitedAt";
         public const string LegacySearchProvider = "searchProvider";
+        public const string LegacySelectedSpace = "selectedSpaceID";
         public const string LegacySelectedTab = "selectedTabID";
         public const string Location = "location";
         public const string Name = "name";

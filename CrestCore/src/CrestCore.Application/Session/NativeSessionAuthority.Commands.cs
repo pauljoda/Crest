@@ -67,6 +67,12 @@ public sealed partial class NativeSessionAuthority {
         return bytes;
     }
 
+    /// A command that changes nothing and answers `output`, read and released
+    /// with the command API like any other.
+    internal NativeSessionCommand Projection(byte[] output) {
+        lock (Gate) return new(this, Revision, session, output);
+    }
+
     internal ulong CommitCommand(NativeSessionCommand command) {
         lock (Gate) {
             RequireWritable(requireCurrentBorrowedPolicy: false);
@@ -77,6 +83,7 @@ public sealed partial class NativeSessionAuthority {
             if (command.TransientCompletion is { } completed) completedTransients.Add(completed);
             borrowedSourceRevision = command.BorrowedSourceRevision ?? borrowedSourceRevision;
             Revision = nextRevision;
+            storage?.Enqueue(session, Revision);
             return Revision;
         }
     }

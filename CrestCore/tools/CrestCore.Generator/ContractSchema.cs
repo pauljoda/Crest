@@ -83,8 +83,9 @@ internal sealed class ContractSchemaException(string message) : Exception(messag
 /// canonical description.
 ///
 /// The roots are every concrete type assignable to `Intent`, `Change` or
-/// `Rejection`, or deriving from `Query<>`. The closure adds the records,
-/// enums and fixed sets their constructor parameters use.
+/// `Rejection`, or deriving from `Query<>`. Configurations cross once, at
+/// creation, so they join the closure without a tag. The closure adds the
+/// records, enums and fixed sets their constructor parameters use.
 internal sealed class ContractSchema {
     #region Variables
 
@@ -138,6 +139,8 @@ internal sealed class ContractSchema {
         schema.AddRoot(ContractRoot.Change, candidates.Where(typeof(Change).IsAssignableFrom));
         schema.AddRoot(ContractRoot.Rejection, candidates.Where(typeof(Rejection).IsAssignableFrom));
         schema.AddRoot(ContractRoot.Query, candidates.Where(type => QueryAnswer(type) is not null));
+        foreach (var type in candidates.Where(typeof(Configuration).IsAssignableFrom).OrderBy(type => type.Name, StringComparer.Ordinal))
+            schema.DescribeRecord(type);
         schema.Validate();
         schema.Canonical = schema.Describe();
         return schema;

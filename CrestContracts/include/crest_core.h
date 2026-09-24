@@ -42,6 +42,8 @@ typedef int32_t crest_status_t;
 #define CREST_INVALID_MESSAGE   ((crest_status_t)-5)
 #define CREST_INTERNAL_ERROR    ((crest_status_t)-6)
 #define CREST_LIMIT_EXCEEDED    ((crest_status_t)-7)
+/* A durable save to the app's session file failed; nothing was published. */
+#define CREST_STORAGE_FAILED    ((crest_status_t)-8)
 
 /* Returns the ABI major supported by this image. */
 CREST_API uint32_t CREST_CALL crest_core_abi_version(void);
@@ -139,7 +141,10 @@ CREST_API crest_status_t CREST_CALL crest_sync_query_read(
 CREST_API crest_status_t CREST_CALL crest_sync_query_release(uint64_t handle);
 
 /* Native-UI session authority. All calls are exception-contained. Inputs and
- * checkpoint parts are <= 64 MiB; no native objects, disk I/O or callbacks.
+ * checkpoint parts are <= 64 MiB; no native objects or callbacks. A session
+ * created here keeps nothing on disk; the app's persistent session
+ * (crest_app_session) saves every accepted revision behind, on the core's
+ * storage worker, and the durable commits below save before they return.
  * Commits require the last accepted revision. A checkpoint pins an immutable
  * revision; worker threads can read it while editing continues. The session
  * holds browsing data only: Space and tab selection is window state, never
@@ -206,6 +211,20 @@ CREST_API crest_status_t CREST_CALL crest_session_release_command(uint64_t comma
 /* Reserve a prepared semantic command for durable storage before publication. */
 CREST_API crest_status_t CREST_CALL crest_session_reserve_command(uint64_t command,
     uint64_t *replacement, uint64_t *checkpoint);
+/* TRANSITIONAL, removed when session intents land: commits a prepared command
+ * and saves it before returning, with the sealed sync transaction's journal in
+ * the same transaction when sync_transaction is not zero. For commits whose
+ * effects outside the core depend on the file: sync commits and Space
+ * deletion. STORAGE_FAILED leaves the revision, the journal and the file as
+ * they were, and the command can be committed again. */
+CREST_API crest_status_t CREST_CALL crest_session_commit_command_durably(uint64_t command,
+    uint64_t sync_transaction, uint64_t *revision);
+/* TRANSITIONAL, removed when session intents land: applies a value delta and
+ * saves it before returning. With a sealed sync transaction (incoming sync) its
+ * journal is saved and published with the session; without one the delta is a
+ * native value edit. STORAGE_FAILED leaves everything as it was. */
+CREST_API crest_status_t CREST_CALL crest_session_replace_durably(uint64_t session, uint64_t expected_revision,
+    uint64_t sync_transaction, const uint8_t *delta, size_t delta_length, uint64_t *revision);
 
 // Reserve a validated replacement while the platform writes one durable session
 // and journal transaction. Release cancels an uncommitted reservation. The
@@ -223,7 +242,10 @@ CREST_API crest_status_t CREST_CALL crest_session_release_replacement(uint64_t r
 
 // A session's sync component owns journal publication and local revision order.
 // Prepare returning zero handles means the captured local revision is stale.
-// Seal rechecks staleness before storage; commit follows successful storage.
+// Seal rechecks staleness. Commit publishes the journal; when its session keeps
+// a file, commit first saves the journal with the newest accepted session and
+// answers STORAGE_FAILED, leaving the transaction pending, when that fails. A
+// journal a durable session commit already published is left alone.
 CREST_API crest_status_t CREST_CALL crest_sync_authority_create(uint64_t journal, uint64_t *authority);
 CREST_API crest_status_t CREST_CALL crest_sync_authority_release(uint64_t authority);
 CREST_API crest_status_t CREST_CALL crest_session_attach_sync(uint64_t session, uint64_t authority);

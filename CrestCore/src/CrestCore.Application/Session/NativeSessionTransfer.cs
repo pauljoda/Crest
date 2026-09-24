@@ -51,6 +51,20 @@ public sealed class NativeSessionTransfer : IDisposable {
         }
     }
 
+    /// Reserves both revisions, saves the side that keeps a file with the sync
+    /// journal, then publishes both. A failed save cancels both reservations.
+    public (ulong Source, ulong Destination) CommitDurably(NativeSyncTransaction? sync = null) {
+        Reserve(sync);
+        try {
+            source.Storage?.Save(a!.Session, a.Revision, a.SyncTransaction?.Journal);
+            destination.Storage?.Save(b!.Session, b.Revision, b.SyncTransaction?.Journal);
+        } catch {
+            Dispose();
+            throw;
+        }
+        return Commit();
+    }
+
     public void Dispose() {
         lock (NativeSessionAuthority.Gate) { if (completed) return; a?.Dispose(); b?.Dispose(); completed = true; }
     }

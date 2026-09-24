@@ -86,7 +86,12 @@ public static unsafe partial class Exports {
     [UnmanagedCallersOnly(EntryPoint = "crest_sync_transaction_commit", CallConvs = [typeof(CallConvCdecl)])]
     public static int SyncTransactionCommit(ulong handle) {
         if (!SyncTransactions.TryGetValue(handle, out var value)) return CoreStatus.InvalidHandle;
-        try { value.Commit(); return CoreStatus.Ok; } catch (Exception error) { return SyncJournalError(error); }
+        try {
+            value.CommitDurably();
+            return CoreStatus.Ok;
+        } catch (StorageException) {
+            return CoreStatus.StorageFailed;
+        } catch (Exception error) { return SyncJournalError(error); }
     }
 
     [UnmanagedCallersOnly(EntryPoint = "crest_sync_transaction_release", CallConvs = [typeof(CallConvCdecl)])]

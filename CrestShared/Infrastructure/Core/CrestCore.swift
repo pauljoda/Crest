@@ -25,13 +25,46 @@ final class CrestCore {
     // MARK: - Initializers
 
     /// A memory-only core. Nothing it holds is saved.
-    init() {
-        var handle: UInt64 = 0
-        let status = CoreCodec.fingerprint.withUnsafeBufferPointer {
-            crest_app_create($0.baseAddress, $0.count, &handle)
+    convenience init() {
+        do {
+            try self.init(configuration: AppConfiguration(storageDirectory: nil))
+        } catch {
+            preconditionFailure("A memory-only core refused to open: \(error). Rebuild the core.")
         }
-        guard status == CREST_OK else { Self.buildBug(status, "create the core") }
-        self.handle = handle
+    }
+
+    /// A core configured once, at creation. With a storage directory the core
+    /// opens the session file there; it throws the rejection naming why that
+    /// file cannot be used.
+    init(configuration: AppConfiguration) throws(Rejection) {
+        var writer = WireWriter()
+        configuration.encode(into: &writer)
+        var handle: UInt64 = 0
+        var refusal = crest_buffer_t()
+        let status = CoreCodec.fingerprint.withUnsafeBufferPointer { fingerprint in
+            writer.bytes.withUnsafeBufferPointer { settings in
+                crest_app_create(
+                    fingerprint.baseAddress, fingerprint.count, settings.baseAddress, settings.count, &handle, &refusal)
+            }
+        }
+        defer { crest_buffer_free(&refusal) }
+        switch status {
+        case CREST_OK:
+            self.handle = handle
+        case CREST_REJECTED:
+            let length = refusal.length
+            var reader = WireReader(refusal.bytes.map { Array(UnsafeBufferPointer(start: $0, count: length)) } ?? [])
+            let rejection: Rejection
+            do {
+                rejection = try Rejection(from: &reader)
+                try reader.finish()
+            } catch {
+                preconditionFailure("The core's rejection does not decode (\(error)). Rebuild the core.")
+            }
+            throw rejection
+        default:
+            Self.buildBug(status, "create the core")
+        }
     }
 
     deinit {

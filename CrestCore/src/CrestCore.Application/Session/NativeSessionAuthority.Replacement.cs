@@ -7,6 +7,10 @@ public sealed partial class NativeSessionAuthority {
 
     private NativeSyncAuthority? sync;
 
+    /// The file this session keeps, for the saves a sync journal or a
+    /// workspace transfer makes on its behalf; null in memory.
+    internal SessionStorage? Storage => storage;
+
     #endregion
 
     #region Actions - Replacement
@@ -54,10 +58,50 @@ public sealed partial class NativeSessionAuthority {
                 session = value.Session; Revision = value.Revision;
                 borrowedSourceRevision = value.BorrowedSourceRevision ?? borrowedSourceRevision;
                 if (value.TransientCompletion is { } completed) completedTransients.Add(completed);
+                storage?.Enqueue(session, Revision);
             }
             replacement = null;
             return Revision;
         }
+    }
+
+    /// Commits a prepared command with `durability`. A sync transaction's
+    /// journal is saved and published with it, so a command that carries one
+    /// must wait for disk.
+    internal ulong Commit(NativeSessionCommand command, Durability durability, NativeSyncTransaction? transaction) {
+        if (!durability.WaitsForDisk) {
+            if (transaction is not null) throw new ArgumentException("A command that carries a journal waits for disk.", nameof(durability));
+            return CommitCommand(command);
+        }
+        NativeSessionReplacement reserved;
+        lock (Gate) {
+            reserved = ReserveCommand(command);
+            try {
+                if (transaction is not null) reserved.BindSync(transaction);
+            } catch {
+                reserved.Dispose();
+                throw;
+            }
+        }
+        return SaveAndCommit(reserved);
+    }
+
+    /// Replaces the session with the edits `delta` names and saves the result,
+    /// with a sync transaction's journal when one is given, before publishing
+    /// it. A failed save leaves the accepted revision and the file unchanged.
+    public ulong ReplaceDurably(ulong expected, ReadOnlySpan<byte> delta, NativeSyncTransaction? transaction = null) =>
+        SaveAndCommit(ReserveReplacement(expected, delta, transaction, nativeValueEdit: transaction is null));
+
+    /// Saves a reserved revision, then publishes it. No lock is held while
+    /// the file is written, and other writers stay excluded by the reservation.
+    private ulong SaveAndCommit(NativeSessionReplacement reserved) {
+        try {
+            storage?.Save(reserved.Session, reserved.Revision, reserved.SyncTransaction?.Journal);
+        } catch {
+            reserved.Dispose();
+            throw;
+        }
+        return reserved.Commit();
     }
 
     internal NativeSessionReplacement ReserveCommand(NativeSessionCommand command) {

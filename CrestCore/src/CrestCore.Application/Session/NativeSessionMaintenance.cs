@@ -28,16 +28,20 @@ public static class NativeSessionMaintenance {
         if (!double.IsFinite(now)) throw new BrowserRuleException(BrowserRuleCodes.InvalidSavedDate);
         var repaired = Repair(StoredSessionCodec.DecodeSession(source), StoredSessionCodec.Date(now),
             emptySpace is null ? null : StoredSessionCodec.DecodeSpace(emptySpace), ids ?? new SystemIdSource(), out var origins);
-        return new() {
-            ["session"] = StoredSessionCodec.Encode(repaired),
-            ["assets"] = new JsonArray(origins.Select(origin => (JsonNode?)new JsonObject {
-                ["spaceIndex"] = origin.SpaceIndex,
-                ["tabIndex"] = origin.TabIndex,
-                ["sourceSpaceID"] = StoredSessionCodec.WrappedIdentity(origin.SourceSpaceId),
-                ["sourceTabID"] = StoredSessionCodec.WrappedIdentity(origin.SourceTabId)
-            }).ToArray())
-        };
+        return Answer(repaired, origins);
     }
+
+    /// A repaired session with the positional references to the native assets
+    /// each of its tabs keeps: `{"session", "assets"}`.
+    internal static JsonObject Answer(SessionState repaired, IReadOnlyList<TabOrigin> origins) => new() {
+        ["session"] = StoredSessionCodec.Encode(repaired),
+        ["assets"] = new JsonArray(origins.Select(origin => (JsonNode?)new JsonObject {
+            ["spaceIndex"] = origin.SpaceIndex,
+            ["tabIndex"] = origin.TabIndex,
+            ["sourceSpaceID"] = StoredSessionCodec.WrappedIdentity(origin.SourceSpaceId),
+            ["sourceTabID"] = StoredSessionCodec.WrappedIdentity(origin.SourceTabId)
+        }).ToArray())
+    };
 
     /// Gives every Space, profile and tab its own identity, repairs folder trees,
     /// pin limits, split runs and split metadata, keeps a Space that is being

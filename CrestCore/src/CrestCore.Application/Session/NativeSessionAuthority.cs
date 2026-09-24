@@ -27,6 +27,8 @@ public sealed partial class NativeSessionAuthority {
     private NativeSessionReplacement? replacement;
     private readonly BrowserWorkspaceKind workspaceKind;
     private readonly bool privateBrowsing;
+    /// The file a persistent session the core loaded keeps; null in memory.
+    private readonly SessionStorage? storage;
     public ulong Revision { get; private set; } = 1;
     public Adapter? Engine { get; private set; }
 
@@ -45,6 +47,16 @@ public sealed partial class NativeSessionAuthority {
         privateBrowsing = input[PrivateBrowsingField]?.GetValue<bool>() ?? workspaceKind == BrowserWorkspaceKind.Private;
         session = StoredSessionCodec.DecodeSession(input);
         Validate(session);
+    }
+
+    /// The persistent session the core loaded from `storage` and repaired.
+    /// Every revision it accepts is saved there.
+    internal NativeSessionAuthority(SessionState stored, SessionStorage storage) {
+        workspaceKind = BrowserWorkspaceKind.Persistent;
+        session = stored;
+        Validate(session);
+        this.storage = storage;
+        storage.Enqueue(session, Revision);
     }
 
     #endregion
@@ -201,7 +213,9 @@ public sealed partial class NativeSessionAuthority {
         lock (Gate) {
             var next = Prepare(expected, delta, nativeValueEdit: nativeValueEdit);
             var revision = checked(Revision + 1);
-            session = next; Revision = revision; return revision;
+            session = next; Revision = revision;
+            storage?.Enqueue(session, Revision);
+            return revision;
         }
     }
 
@@ -215,6 +229,8 @@ public sealed partial class NativeSessionAuthority {
             var ar = checked(source.Revision + 1); var br = checked(destination.Revision + 1);
             source.session = a; destination.session = b;
             source.Revision = ar; destination.Revision = br;
+            source.storage?.Enqueue(a, ar);
+            destination.storage?.Enqueue(b, br);
             return (ar, br);
         }
     }

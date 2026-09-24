@@ -8,4 +8,9 @@
   <ItemGroup>
     <ProjectReference Include="../CrestCore.Application/CrestCore.Application.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <!-- The session file uses the system SQLite on every Apple platform. -->
+    <DirectPInvoke Include="libsqlite3" />
+    <NativeLibrary Include="-lsqlite3" />
+  </ItemGroup>
 </Project>

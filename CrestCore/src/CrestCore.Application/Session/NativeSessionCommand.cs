@@ -37,6 +37,10 @@ public sealed class NativeSessionCommand {
 
     public ulong Commit() => owner.CommitCommand(this);
 
+    /// Commits with `durability`, saving `transaction`'s journal with the session.
+    public ulong Commit(Durability durability, NativeSyncTransaction? transaction = null) =>
+        owner.Commit(this, durability, transaction);
+
     public NativeSessionReplacement Reserve() => owner.ReserveCommand(this);
 
     #endregion

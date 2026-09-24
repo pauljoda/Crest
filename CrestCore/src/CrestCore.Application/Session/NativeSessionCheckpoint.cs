@@ -9,7 +9,8 @@ namespace CrestCore.Application;
 /// An immutable, encodable revision of the session: the `core` part holds the
 /// Spaces and their records without history, and each Space's history is its
 /// own part, named by the Space's identity. Selection is window state, so no
-/// part carries it.
+/// part carries it. Storage writes these bytes; tests read them to see the
+/// stored format.
 public sealed class NativeSessionCheckpoint {
     #region Variables
 
@@ -28,7 +29,14 @@ public sealed class NativeSessionCheckpoint {
 
     #region Actions - Checkpoint
 
+    /// The part named `core`, or a Space's history named by its identity.
     public byte[] Read(string part) => parts.GetOrAdd(part, Encode);
+
+    /// The session without history.
+    internal byte[] Core() => Read(CorePart);
+
+    /// One Space's history.
+    internal byte[] History(Guid spaceId) => Read(spaceId.ToString());
 
     private byte[] Encode(string part) {
         JsonNode value = part == CorePart

@@ -16,9 +16,12 @@ internal sealed unsafe class AppClient : IDisposable {
 
     #region Constructors
 
-    public AppClient() {
+    /// An app over `storageDirectory`, or in memory without one.
+    public AppClient(string? storageDirectory = null) {
         ulong handle = 0;
-        Assert.Equal(CoreStatus.Ok, Create(ContractCodec.Fingerprint, &handle));
+        var (status, rejection) = Create(ContractCodec.Fingerprint, new AppConfiguration(storageDirectory), &handle);
+        Assert.Null(rejection);
+        Assert.Equal(CoreStatus.Ok, status);
         Handle = handle;
     }
 
@@ -26,13 +29,69 @@ internal sealed unsafe class AppClient : IDisposable {
 
     #region Actions - Lifecycle
 
-    public static int Create(ReadOnlySpan<byte> fingerprint, ulong* handle) {
-        fixed (byte* bytes = fingerprint) return ((delegate* unmanaged[Cdecl]<byte*, nuint, ulong*, int>)&Exports.AppCreate)(bytes, (nuint)fingerprint.Length, handle);
+    /// Creates a memory-only app.
+    public static int Create(ReadOnlySpan<byte> fingerprint, ulong* handle) =>
+        Create(fingerprint, new AppConfiguration(null), handle).Status;
+
+    /// Creates an app and answers the rejection it refused with, if any.
+    public static (int Status, Rejection? Rejection) Create(ReadOnlySpan<byte> fingerprint, AppConfiguration configuration, ulong* handle) {
+        var encoded = Encode(writer => ContractCodec.WriteAppConfiguration(writer, configuration));
+        CrestBuffer buffer;
+        int status;
+        fixed (byte* bytes = fingerprint)
+        fixed (byte* settings = encoded)
+            status = ((delegate* unmanaged[Cdecl]<byte*, nuint, byte*, nuint, ulong*, CrestBuffer*, int>)&Exports.AppCreate)(
+                bytes, (nuint)fingerprint.Length, settings, (nuint)encoded.Length, handle, &buffer);
+        Rejection? rejection = null;
+        if (buffer.Bytes != null) {
+            var reader = new WireReader(new ReadOnlySpan<byte>(buffer.Bytes, (int)buffer.Length).ToArray());
+            rejection = ContractCodec.ReadRejection(reader);
+            reader.EnsureEnd();
+        }
+        ((delegate* unmanaged[Cdecl]<CrestBuffer*, void>)&Exports.BufferFree)(&buffer);
+        return (status, rejection);
     }
 
     public int Destroy() => ((delegate* unmanaged[Cdecl]<ulong, int>)&Exports.AppDestroy)(Handle);
 
     public void Dispose() => Destroy();
+
+    #endregion
+
+    #region Actions - Changes
+
+    /// The changes the core started itself since the last drain.
+    public IReadOnlyList<Change> Drain() {
+        CrestBuffer buffer;
+        Assert.Equal(CoreStatus.Ok, ((delegate* unmanaged[Cdecl]<ulong, CrestBuffer*, int>)&Exports.AppDrain)(Handle, &buffer));
+        var reader = new WireReader(new ReadOnlySpan<byte>(buffer.Bytes, (int)buffer.Length).ToArray());
+        ((delegate* unmanaged[Cdecl]<CrestBuffer*, void>)&Exports.BufferFree)(&buffer);
+        var changes = reader.ReadList(() => ContractCodec.ReadChange(reader));
+        reader.EnsureEnd();
+        return changes;
+    }
+
+    public int SetWake(delegate* unmanaged[Cdecl]<nint, void> callback, nint context) =>
+        ((delegate* unmanaged[Cdecl]<ulong, delegate* unmanaged[Cdecl]<nint, void>, nint, int>)&Exports.AppSetWake)(Handle, callback, context);
+
+    #endregion
+
+    #region Actions - Stored session
+
+    /// The stored session's handles, or EMPTY when the file holds none.
+    public (int Status, ulong Session, ulong Revision, ulong Sync, ulong Projection) Session() {
+        ulong session, revision, sync, projection;
+        int status = ((delegate* unmanaged[Cdecl]<ulong, ulong*, ulong*, ulong*, ulong*, int>)&Exports.AppSession)(
+            Handle, &session, &revision, &sync, &projection);
+        return (status, session, revision, sync, projection);
+    }
+
+    public int Install(ReadOnlySpan<byte> session, ReadOnlySpan<byte> journal) {
+        fixed (byte* sessionBytes = session)
+        fixed (byte* journalBytes = journal)
+            return ((delegate* unmanaged[Cdecl]<ulong, byte*, nuint, byte*, nuint, int>)&Exports.AppInstallSession)(
+                Handle, sessionBytes, (nuint)session.Length, journalBytes, (nuint)journal.Length);
+    }
 
     #endregion
 

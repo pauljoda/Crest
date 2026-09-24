@@ -2149,6 +2149,10 @@
     "download-presentation-on-instances": {
       "category": "internal",
       "message": "Download phases, risk reasons and row actions carry their own titles and symbols, and a finished download is found by searching Completed."
+    },
+    "core-owned-session-file": {
+      "category": "internal",
+      "message": "The core opens and saves the session file itself, with the same format and the saves that must reach disk before they return."
     }
   }
 }

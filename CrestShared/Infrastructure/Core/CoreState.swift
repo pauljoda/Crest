@@ -11,4 +11,9 @@ final class CoreState {
 
     /// This run's download records, newest first.
     var downloads: [DownloadState] = []
+    /// The newest session revision the core has on disk; zero before its
+    /// first save and for a core that keeps nothing.
+    var savedRevision: Int64 = 0
+    /// Why the core's last save failed, until a later save succeeds.
+    var storageFailure: StorageFailure?
 }

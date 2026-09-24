@@ -6,7 +6,10 @@ namespace CrestCore.Application;
 /// changes it published, or throws `Rejected`; a query answers without
 /// changing anything. Each area handles its own intents and queries. One lock
 /// serializes every call on this instance.
-public sealed class CrestApp {
+///
+/// Changes the core starts itself, such as a finished save, wait in a pending
+/// batch the host drains after its wake callback runs.
+public sealed partial class CrestApp : IDisposable {
     #region Variables
 
     private readonly Lock gate = new();
@@ -15,6 +18,29 @@ public sealed class CrestApp {
     private readonly Search search = new();
     private readonly ContentBlocking contentBlocking = new();
     private readonly Links links = new();
+
+    #endregion
+
+    #region Constructors
+
+    /// A core that keeps everything in memory.
+    public CrestApp() : this(new AppConfiguration(null)) { }
+
+    /// A core configured by the host. With a storage directory it opens the
+    /// session file there and loads the session it holds; throws `Rejected`
+    /// when the file cannot be used.
+    public CrestApp(AppConfiguration configuration) {
+        ArgumentNullException.ThrowIfNull(configuration);
+        if (configuration.StorageDirectory is not { } directory) return;
+        storage = SessionStorage.Open(directory, Announce);
+        try {
+            if (storage.Loaded.Session is { } stored) Establish(stored, storage.Loaded.Journal, storage.Loaded.LegacySelection);
+        } catch (Exception error) {
+            storage.Dispose();
+            if (error is Rejected) throw;
+            throw new Rejected(new StorageUnreadable(StorageFailure.Damaged));
+        }
+    }
 
     #endregion
 
@@ -65,6 +91,17 @@ public sealed class CrestApp {
             };
             return (TAnswer)answer;
         }
+    }
+
+    #endregion
+
+    #region Actions - Lifetime
+
+    /// Saves any accepted revision still pending and closes the session file.
+    /// The stored session accepts no edits afterwards.
+    public void Dispose() {
+        Session?.Release();
+        storage?.Dispose();
     }
 
     #endregion

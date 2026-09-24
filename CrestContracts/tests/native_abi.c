@@ -1,3 +1,4 @@
+#define _POSIX_C_SOURCE 200809L
 #include "crest_app.h"
 #include "crest_contracts.h"
 #include "crest_core.h"
@@ -5,6 +6,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
+#include <unistd.h>
 
 static void access_boundary(void) {
     uint64_t access = 0, request = 0;
@@ -28,10 +31,14 @@ static void app_boundary(void) {
     const uint8_t fingerprint[CREST_CONTRACTS_FINGERPRINT_LENGTH] = CREST_CONTRACTS_FINGERPRINT;
     uint8_t stale[CREST_CONTRACTS_FINGERPRINT_LENGTH];
     memcpy(stale, fingerprint, sizeof(stale)); stale[0] ^= 1;
+    /* AppConfiguration(StorageDirectory: null): the optional string is absent. */
+    const uint8_t memory_only[] = { 0 };
     uint64_t app = 0;
     crest_buffer_t buffer = { (uint8_t*)1, 1 };
-    assert(crest_app_create(stale, sizeof(stale), &app) == CREST_VERSION_MISMATCH && app == 0);
-    assert(crest_app_create(fingerprint, sizeof(fingerprint), &app) == CREST_OK && app != 0);
+    assert(crest_app_create(stale, sizeof(stale), memory_only, sizeof(memory_only), &app, &buffer) == CREST_VERSION_MISMATCH
+        && app == 0 && buffer.bytes == NULL);
+    assert(crest_app_create(fingerprint, sizeof(fingerprint), memory_only, sizeof(memory_only), &app, &buffer) == CREST_OK
+        && app != 0 && buffer.bytes == NULL);
     /* A union tag no contract uses is malformed input, not a rejection. */
     const uint8_t garbage[] = { 0x7f, 0x01, 0x02 };
     assert(crest_app_dispatch(app, garbage, sizeof(garbage), &buffer) == CREST_INVALID_MESSAGE);
@@ -310,8 +317,9 @@ static void preferences_boundary(void) {
 static void links_boundary(void) {
     const uint8_t fingerprint[CREST_CONTRACTS_FINGERPRINT_LENGTH] = CREST_CONTRACTS_FINGERPRINT;
     uint64_t app = 0;
+    const uint8_t memory_only[] = { 0 };
     crest_buffer_t buffer = { NULL, 0 };
-    assert(crest_app_create(fingerprint, sizeof(fingerprint), &app) == CREST_OK);
+    assert(crest_app_create(fingerprint, sizeof(fingerprint), memory_only, sizeof(memory_only), &app, &buffer) == CREST_OK);
     /* QuickWindowSite: its tag, the address as a length-prefixed UTF-8 string,
      * then whether Quick Windows remember Spaces by site. */
     const char *url = "https://www.Docs.example.org/crest", *key = "docs.example.org";
@@ -330,6 +338,77 @@ static void links_boundary(void) {
     output[length] = 0;
     assert(strstr((const char*)output, "\"route\":\"source\""));
 }
+static volatile int storage_wakes = 0;
+static void count_wake(void* context) {
+    assert(context == &storage_wakes);
+    storage_wakes++;
+}
+/* AppConfiguration with a storage directory: presence, varint length, UTF-8. */
+static size_t storage_configuration(const char* directory, uint8_t* output, size_t capacity) {
+    size_t length = strlen(directory);
+    assert(length < 128 && length + 2 <= capacity);
+    output[0] = 1;
+    output[1] = (uint8_t)length;
+    memcpy(output + 2, directory, length);
+    return length + 2;
+}
+/* The core opens and owns session.sqlite: an empty file answers EMPTY, the
+ * first session is installed once, and the save it starts wakes the host. */
+static void storage_boundary(void) {
+    const uint8_t fingerprint[CREST_CONTRACTS_FINGERPRINT_LENGTH] = CREST_CONTRACTS_FINGERPRINT;
+    /* The core creates the directory it is given. */
+    char directory[96];
+    snprintf(directory, sizeof(directory), "/tmp/crest-native-abi-%ld-%ld", (long)getpid(), (long)time(NULL));
+    uint8_t configuration[160];
+    size_t configured = storage_configuration(directory, configuration, sizeof(configuration));
+    uint64_t app = 0, session = 0, revision = 0, sync = 0, projection = 0;
+    crest_buffer_t buffer = { NULL, 0 };
+    assert(crest_app_create(fingerprint, sizeof(fingerprint), configuration, configured, &app, &buffer) == CREST_OK && app != 0);
+    assert(crest_app_session(app, &session, &revision, &sync, &projection) == CREST_EMPTY && session == 0);
+    assert(crest_app_set_wake(app, count_wake, (void*)&storage_wakes) == CREST_OK);
+    char json[512];
+    int size = snprintf(json, sizeof(json),
+        "{\"spaces\":[{\"id\":{\"rawValue\":\"%s\"},\"profile\":{\"id\":\"%s\"},\"name\":\"Stored\","
+        "\"tabs\":[],\"folders\":[],\"history\":[],\"archivedTabs\":[]}]}", space_id, profile_id);
+    assert(size > 0 && (size_t)size < sizeof(json));
+    assert(crest_app_install_session(app, (const uint8_t*)json, (size_t)size, NULL, 0) == CREST_OK);
+    assert(crest_app_install_session(app, (const uint8_t*)json, (size_t)size, NULL, 0) == CREST_INVALID_STATE);
+    for (int attempt = 0; attempt < 1000 && storage_wakes == 0; attempt++) {
+        struct timespec pause = { 0, 5000000 };
+        nanosleep(&pause, NULL);
+    }
+    assert(storage_wakes == 1);
+    /* One change: Saved(Revision: 1), a tag and a little-endian int64. */
+    assert(crest_app_drain(app, &buffer) == CREST_OK);
+    assert(buffer.length == 10 && buffer.bytes[0] == 1 && buffer.bytes[1] == CREST_CHANGE_SAVED && buffer.bytes[2] == 1);
+    crest_buffer_free(&buffer);
+    assert(crest_app_set_wake(app, NULL, NULL) == CREST_OK);
+    assert(crest_app_session(app, &session, &revision, &sync, &projection) == CREST_OK && session != 0 && revision == 1);
+    assert(crest_session_release_command(projection) == CREST_OK);
+    assert(crest_sync_authority_release(sync) == CREST_OK);
+    assert(crest_session_destroy(session) == CREST_OK);
+    assert(crest_app_destroy(app) == CREST_OK);
+
+    /* A second launch loads what the first one saved. */
+    assert(crest_app_create(fingerprint, sizeof(fingerprint), configuration, configured, &app, &buffer) == CREST_OK);
+    assert(crest_app_session(app, &session, &revision, &sync, &projection) == CREST_OK && revision == 1);
+    assert(crest_session_release_command(projection) == CREST_OK);
+    assert(crest_sync_authority_release(sync) == CREST_OK);
+    assert(crest_session_destroy(session) == CREST_OK);
+    assert(crest_app_destroy(app) == CREST_OK);
+
+    /* A file that is not a session is refused with a rejection, untouched. */
+    char path[256];
+    snprintf(path, sizeof(path), "%s/session.sqlite", directory);
+    FILE* file = fopen(path, "wb");
+    assert(file != NULL && fputs("not a session", file) >= 0 && fclose(file) == 0);
+    assert(crest_app_create(fingerprint, sizeof(fingerprint), configuration, configured, &app, &buffer) == CREST_REJECTED
+        && app == 0 && buffer.bytes != NULL && buffer.bytes[0] == CREST_REJECTION_STORAGE_UNREADABLE);
+    crest_buffer_free(&buffer);
+    char command[320];
+    snprintf(command, sizeof(command), "rm -rf '%s'", directory);
+    assert(system(command) == 0);
+}
 int main(void) {
     assert(crest_core_abi_version() == CREST_ABI_VERSION);
     policy_boundary();
@@ -338,6 +417,7 @@ int main(void) {
     app_boundary();
     permissions_boundary();
     session_boundary();
+    storage_boundary();
     locked_space_boundary();
     preferences_boundary();
     puts("Native ABI buffer ownership, size retry, handle, session and lock checks passed.");
