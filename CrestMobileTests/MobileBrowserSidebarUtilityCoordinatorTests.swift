@@ -131,7 +131,6 @@ final class MobileBrowserSidebarUtilityCoordinatorTests: XCTestCase {
                 selectedSpaceID: source.id,
                 selectedTabIDsBySpace: [source.id: selectedTab.id]
             ),
-            persistence: InMemoryBrowserSessionPersistence(),
             browsingMode: .privateBrowsing
         )
         let pages = MobileBrowserPageStore(usesEphemeralWebsiteDataStores: true)

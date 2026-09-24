@@ -69,8 +69,7 @@ enum BrowserRootPreviewFixture {
         BrowserStore(
             session: BrowserSession(
                 spaces: [space]
-            ),
-            persistence: InMemoryBrowserSessionPersistence()
+            )
         )
     }
 

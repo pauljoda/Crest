@@ -223,11 +223,10 @@ final class BrowserLaunchEnvironmentTests: XCTestCase {
         ]
 
         for environment in environments {
-            let store = try BrowserStore.production(
-                launchEnvironment: environment
-            )
+            let core = try BrowserStore.launchCore(for: environment)
+            XCTAssertNil(core.storageDirectory, "A fixture launch keeps its session in memory")
+            let store = try BrowserStore.production(core: core, launchEnvironment: environment)
 
-            XCTAssertTrue(store.persistence is InMemoryBrowserSessionPersistence)
             XCTAssertTrue(store.credentialVault is InMemoryCredentialVault)
             XCTAssertNotNil(store.syncCoordinator)
         }

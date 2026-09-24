@@ -12,7 +12,11 @@ is its root's tag followed by the type's fields. `crest_app_dispatch` answers
 `crest_app_query` answers the same way. Both hand back a core-allocated
 `crest_buffer_t` that the caller releases with `crest_buffer_free`.
 `crest_app_create` takes the schema fingerprint and answers
-`CREST_VERSION_MISMATCH` for any other. Everything but the header itself is
+`CREST_VERSION_MISMATCH` for any other. It also takes an encoded
+`AppConfiguration`: with a storage directory the core owns `session.sqlite`
+there, and a file it cannot use is a `CREST_REJECTED` rejection. Changes the
+core starts itself, such as `Saved` and `StorageFailed`, wait for
+`crest_app_drain` after a payload-free `crest_app_set_wake` callback. Everything but the header itself is
 generated: run `Scripts/control-plane/generate-contracts.sh` after changing a
 contract record to rewrite the core's codec, the Swift models and codec, and
 `include/crest_contracts.h` with the tags and the fingerprint. Source code
@@ -28,11 +32,10 @@ The session holds browsing data only; which Space and tab a window shows is
 window state. Session commands take what the requesting window shows as
 read-only `view` context (`{"spaceId", "tabs": [{"spaceId", "tabId"}]}`) and answer
 with a `selection` hint of the same shape that only that window applies.
-`tab.touch` records `lastActivatedAt` and nothing else. Checkpoints
-(`crest_session_checkpoint`, `crest_session_reserve_command`,
-`crest_session_reserve_replacement`) take no selection and never write one; a
-stored document with the older session-level `selectedSpaceID` and per-Space
-`selectedTabID` still loads and loses them. `records.sweep` accepts `keepTabIds`,
+`tab.touch` records `lastActivatedAt` and nothing else. The session file never
+stores a selection; a stored document with the older session-level
+`selectedSpaceID` and per-Space `selectedTabID` still loads, hands them to the
+launch window once through `crest_app_session`, and loses them at the next save. `records.sweep` accepts `keepTabIds`,
 the tabs stored window records show, for launch cleanup.
 `crest_access_*` owns process-local Space unlock grants, shared by the native
 desktop and mobile access controllers. The platform supplies device-authentication
@@ -41,7 +44,7 @@ identity. Relocking invalidates pending results. Grants are never persisted or
 synced. This small synchronous boundary uses 16-byte UUIDs and integer results,
 without message serialization or an executor wait. A session attached with
 `crest_session_attach_access` rejects commands and native value edits
-(`crest_session_reserve_replacement`) that would reach a locked Space with
+(`crest_session_replace_durably` without a journal) that would reach a locked Space with
 `space_locked`; journal-bound sync replacements are not gated. Native UI, page,
 credential and extension callers continue to consult the same access controller.
 

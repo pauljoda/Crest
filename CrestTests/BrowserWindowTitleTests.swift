@@ -107,8 +107,7 @@ final class BrowserWindowTitleTests: XCTestCase {
         return BrowserRootModel(
             browser: browser
                 ?? BrowserStore(
-                    session: BrowserSession(spaces: [space]),
-                    persistence: InMemoryBrowserSessionPersistence()
+                    session: BrowserSession(spaces: [space])
                 ),
             pages: BrowserPagePool(),
             chrome: BrowserChromeState(),

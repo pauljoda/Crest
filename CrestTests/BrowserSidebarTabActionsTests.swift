@@ -292,7 +292,6 @@ final class BrowserSidebarTabActionsTests: XCTestCase {
         return Context(
             browser: BrowserStore(
                 session: BrowserSession(spaces: [space, otherSpace]),
-                persistence: InMemoryBrowserSessionPersistence(),
                 browsingMode: .privateBrowsing
             ),
             access: BrowserSpaceAccessController(

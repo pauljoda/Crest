@@ -42,29 +42,18 @@ public static unsafe partial class Exports {
         value.Output.CopyTo(new Span<byte>(destination, (int)capacity)); return CoreStatus.Ok;
     }
 
-    [UnmanagedCallersOnly(EntryPoint = "crest_session_reserve_transfer", CallConvs = [typeof(CallConvCdecl)])]
-    public static int SessionReserveTransfer(ulong handle, ulong transaction, ulong* sourceCheckpoint, ulong* destinationCheckpoint) {
-        if (sourceCheckpoint == null || destinationCheckpoint == null) return CoreStatus.InvalidArgument;
-        *sourceCheckpoint = 0; *destinationCheckpoint = 0;
-        if (!SessionTransfers.TryGetValue(handle, out var value)) return CoreStatus.InvalidHandle;
-        NativeSyncTransaction? sync = null;
-        if (transaction != 0 && !SyncTransactions.TryGetValue(transaction, out sync)) return CoreStatus.InvalidHandle;
-        ulong a = 0, b = 0;
-        try {
-            value.Reserve(sync);
-            a = checked((ulong)Interlocked.Increment(ref nextHandle)); b = checked((ulong)Interlocked.Increment(ref nextHandle));
-            if (!Checkpoints.TryAdd(a, value.SourceCheckpoint) || !Checkpoints.TryAdd(b, value.DestinationCheckpoint))
-                throw new InvalidOperationException(ProtocolErrorCodes.HandleCollision);
-            *sourceCheckpoint = a; *destinationCheckpoint = b; return CoreStatus.Ok;
-        } catch (Exception e) { Checkpoints.TryRemove(a, out _); Checkpoints.TryRemove(b, out _); value.Dispose(); return SessionError(e); }
-    }
-
     [UnmanagedCallersOnly(EntryPoint = "crest_session_commit_transfer", CallConvs = [typeof(CallConvCdecl)])]
-    public static int SessionCommitTransfer(ulong handle, ulong* sourceRevision, ulong* destinationRevision) {
+    public static int SessionCommitTransfer(ulong handle, ulong transaction, ulong* sourceRevision, ulong* destinationRevision) {
         if (sourceRevision == null || destinationRevision == null) return CoreStatus.InvalidArgument;
         *sourceRevision = 0; *destinationRevision = 0;
         if (!SessionTransfers.TryGetValue(handle, out var value)) return CoreStatus.InvalidHandle;
-        try { var result = value.Commit(); *sourceRevision = result.Source; *destinationRevision = result.Destination; return CoreStatus.Ok; } catch (Exception e) { return SessionError(e); }
+        NativeSyncTransaction? sync = null;
+        if (transaction != 0 && !SyncTransactions.TryGetValue(transaction, out sync)) return CoreStatus.InvalidHandle;
+        try {
+            var result = value.CommitDurably(sync);
+            *sourceRevision = result.Source; *destinationRevision = result.Destination;
+            return CoreStatus.Ok;
+        } catch (Exception e) { return DurableError(e); }
     }
 
     [UnmanagedCallersOnly(EntryPoint = "crest_session_release_transfer", CallConvs = [typeof(CallConvCdecl)])]

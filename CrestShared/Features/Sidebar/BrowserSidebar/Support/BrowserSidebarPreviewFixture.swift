@@ -62,7 +62,6 @@ enum BrowserSidebarPreviewFixture {
             session: BrowserSession(
                 spaces: [space]
             ),
-            persistence: InMemoryBrowserSessionPersistence(),
             browsingMode: .privateBrowsing
         )
     }

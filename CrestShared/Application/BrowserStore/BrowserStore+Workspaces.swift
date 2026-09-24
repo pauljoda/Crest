@@ -13,7 +13,6 @@ extension BrowserStore {
         let workspace = workspaceFamily.authoritativeSession
         return BrowserStore(
             session: workspace,
-            persistence: InMemoryBrowserSessionPersistence(),
             credentialVault: credentialVault,
             syncCoordinator: nil,
             syncCoalescingDelay: syncCoalescingDelay,
@@ -49,7 +48,7 @@ extension BrowserStore {
     @discardableResult
     func reconcileTemporarySource() -> Bool {
         guard family.refreshBorrowed() else { return false }
-        persist(scope: .core)
+        stageSync()
         return true
     }
 
@@ -83,7 +82,7 @@ extension BrowserStore {
         if family === destination.family {
             if selecting {
                 guard destination.activateSessionTab(id, in: destinationAssignment.spaceID) else { return false }
-                destination.persist(syncUrgency: .coalesced, scope: .core)
+                destination.stageSync(urgency: .coalesced)
             }
             return true
         }

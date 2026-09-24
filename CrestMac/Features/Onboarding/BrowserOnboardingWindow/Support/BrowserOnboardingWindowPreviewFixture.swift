@@ -19,8 +19,7 @@ struct BrowserOnboardingWindowPreviewFixture {
             presentationID: Self.requestID
         )
         let browser = BrowserStore(
-            session: Self.session,
-            persistence: InMemoryBrowserSessionPersistence()
+            session: Self.session
         )
         let flow = BrowserOnboardingFlow(
             request: request,

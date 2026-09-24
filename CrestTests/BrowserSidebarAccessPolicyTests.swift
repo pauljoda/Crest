@@ -135,7 +135,6 @@ final class BrowserSidebarAccessPolicyTests: XCTestCase {
         return Context(
             browser: BrowserStore(
                 session: BrowserSession(spaces: [source, destination]),
-                persistence: InMemoryBrowserSessionPersistence(),
                 browsingMode: .privateBrowsing
             ),
             access: BrowserSpaceAccessController(

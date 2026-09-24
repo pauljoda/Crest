@@ -520,7 +520,6 @@ final class BrowserQuickWindowModelTests: XCTestCase {
         let destination = makeSpace(name: "Destination")
         let browser = BrowserStore(
             session: BrowserSession(spaces: [source, destination]),
-            persistence: InMemoryBrowserSessionPersistence(),
             credentialVault: InMemoryCredentialVault(),
             browsingMode: .privateBrowsing
         )

@@ -735,7 +735,6 @@ final class MobileBrowserRootModelTests: XCTestCase {
                 selectedTabIDsBySpace: Dictionary(
                     uniqueKeysWithValues: spaces.compactMap { space in space.tabs.first.map { (space.id, $0.id) } })
             ),
-            persistence: InMemoryBrowserSessionPersistence(),
             browsingMode: browsingMode
         )
         let pages = MobileBrowserPageStore(

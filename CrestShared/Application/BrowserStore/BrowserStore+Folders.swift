@@ -7,7 +7,7 @@ extension BrowserStore {
         guard !deletingSpaceIDs.contains(spaceID),
             let id = createSessionTabFolder(tabs, in: spaceID, detachesSplitMembers: detachesSplitMembers)
         else { return nil }
-        persist(syncUrgency: .coalesced, scope: .core)
+        stageSync(urgency: .coalesced)
         return id
     }
 
@@ -22,7 +22,7 @@ extension BrowserStore {
                 tabs, in: assignment.spaceID, into: folderID, location: location, before: anchor,
                 beforeFolderID: beforeFolderID, detachesSplitMembers: detachesSplitMembers)
         else { return false }
-        persist(syncUrgency: .coalesced, scope: .core)
+        stageSync(urgency: .coalesced)
         return true
     }
 
@@ -37,7 +37,7 @@ extension BrowserStore {
                 id, in: assignment.spaceID, into: parentID, before: siblingID,
                 location: location, beforeTabID: beforeTabID)
         else { return false }
-        persist(syncUrgency: .coalesced, scope: .core)
+        stageSync(urgency: .coalesced)
         return true
     }
 }

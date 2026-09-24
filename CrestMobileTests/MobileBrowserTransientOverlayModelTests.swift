@@ -303,7 +303,6 @@ final class MobileBrowserTransientOverlayModelTests: XCTestCase {
                 selectedSpaceID: source.id,
                 selectedTabIDsBySpace: [source.id: source.tabs[0].id, destination.id: destination.tabs[0].id]
             ),
-            persistence: InMemoryBrowserSessionPersistence(),
             credentialVault: InMemoryCredentialVault(),
             browsingMode: .privateBrowsing
         )
@@ -698,7 +697,6 @@ final class MobileBrowserTransientOverlayModelTests: XCTestCase {
                 selectedSpaceID: source.id,
                 selectedTabIDsBySpace: [source.id: source.tabs[0].id, destination.id: destination.tabs[0].id]
             ),
-            persistence: InMemoryBrowserSessionPersistence(),
             credentialVault: InMemoryCredentialVault(),
             browsingMode: .privateBrowsing
         )
@@ -773,7 +771,6 @@ final class MobileBrowserTransientOverlayModelTests: XCTestCase {
                 selectedSpaceID: source.id,
                 selectedTabIDsBySpace: [source.id: source.tabs[0].id, destination.id: destination.tabs[0].id]
             ),
-            persistence: InMemoryBrowserSessionPersistence(),
             credentialVault: InMemoryCredentialVault(),
             browsingMode: .privateBrowsing
         )

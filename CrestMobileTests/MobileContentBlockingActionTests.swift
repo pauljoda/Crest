@@ -110,8 +110,7 @@ final class MobileContentBlockingActionTests: XCTestCase {
                 selection: BrowserStoreSelection(
                     selectedSpaceID: firstSpace.id,
                     selectedTabIDsBySpace: [firstSpace.id: firstTab.id, secondSpace.id: secondTab.id]
-                ),
-                persistence: InMemoryBrowserSessionPersistence()
+                )
             ),
             firstSpaceID: firstSpace.id,
             secondSpaceID: secondSpace.id,

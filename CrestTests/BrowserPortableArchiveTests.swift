@@ -164,8 +164,7 @@ final class BrowserPortableArchiveTests: XCTestCase {
     }
 
     func testImportAppendsSpacesSelectsFirstImportAndPersists() throws {
-        let persistence = InMemoryBrowserSessionPersistence()
-        let store = BrowserStore(session: .preview, persistence: persistence)
+        let store = BrowserStore(session: .preview)
         let originalIDs = Set(store.session.spaces.map(\.id))
         let imported = try BrowserPortableArchive(
             session: try makePortableFixture()
@@ -179,7 +178,6 @@ final class BrowserPortableArchiveTests: XCTestCase {
         )
         XCTAssertTrue(originalIDs.isSubset(of: store.session.spaces.map(\.id)))
         XCTAssertEqual(store.selectedSpaceID, imported.spaces[0].id)
-        XCTAssertEqual(persistence.session, store.session)
     }
 
     func testUnsupportedSchemaVersionIsRejectedBeforeMaterialization() throws {
@@ -259,8 +257,7 @@ final class BrowserPortableArchiveTests: XCTestCase {
             )
         }
         let fullSession = BrowserSession(spaces: existingSpaces)
-        let persistence = InMemoryBrowserSessionPersistence()
-        let store = BrowserStore(session: fullSession, persistence: persistence)
+        let store = BrowserStore(session: fullSession)
         let imported = try BrowserPortableArchive(
             session: try makePortableFixture()
         ).materialize()
@@ -272,7 +269,6 @@ final class BrowserPortableArchiveTests: XCTestCase {
             )
         }
         XCTAssertEqual(store.session, fullSession)
-        XCTAssertNil(persistence.session)
     }
 
     func testSavedTabWithUnknownFolderIsRejected() throws {

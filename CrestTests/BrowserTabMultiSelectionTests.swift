@@ -155,7 +155,7 @@ final class BrowserTabMultiSelectionTests: XCTestCase {
         let source = session.spaces[0]
         let destination = session.spaces[1]
         let request = BrowserTabBatchRequest(ids: source.tabs.map(\.id), in: source)
-        let browser = BrowserStore(session: session, persistence: InMemoryBrowserSessionPersistence())
+        let browser = BrowserStore(session: session)
         let actions = BrowserTabBatchActions(browser: browser, spaceAccess: BrowserSpaceAccessController())
         browser.updateSpaceAccessPolicy(.deviceOwnerAuthentication, in: destination.id)
         var before = browser.session
@@ -188,7 +188,6 @@ final class BrowserTabMultiSelectionTests: XCTestCase {
                 session.spaces.append(BrowserSession.makeBlankSpace(number: 2))
                 let source = session.spaces[0]
                 let destination = session.spaces[1]
-                let persistence = InMemoryBrowserSessionPersistence()
                 let preferences = BrowserLinkPreferenceStore(persistence: InMemoryBrowserLinkPreferencesPersistence())
                 preferences.followsTabsMovedToAnotherSpace = follows
                 let browser = BrowserStore(
@@ -196,8 +195,8 @@ final class BrowserTabMultiSelectionTests: XCTestCase {
                     selection: BrowserStoreSelection(
                         selectedSpaceID: source.id,
                         selectedTabIDsBySpace: [source.id: source.tabs[0].id, destination.id: destination.tabs[0].id]),
-                    persistence: persistence, browsingMode: mode, linkPreferences: preferences)
-                let initialSaves = persistence.savedScopes.count
+                    browsingMode: mode, linkPreferences: preferences)
+                let initialRevision = browser.family.syncRevision
                 let ids = [source.tabs[2].id, source.tabs[0].id]
                 let actions = BrowserTabBatchActions(browser: browser, spaceAccess: BrowserSpaceAccessController())
                 XCTAssertTrue(
@@ -210,7 +209,7 @@ final class BrowserTabMultiSelectionTests: XCTestCase {
                     browser.selectedTabID(in: destination.id), follows ? source.tabs[0].id : destination.tabs[0].id)
                 XCTAssertEqual(browser.consumeMovedTabActivation(), follows)
                 XCTAssertFalse(browser.consumeMovedTabActivation())
-                XCTAssertEqual(persistence.savedScopes.count, initialSaves + 1)
+                XCTAssertEqual(browser.family.syncRevision, initialRevision.successor())
                 XCTAssertEqual(browser.isPrivateBrowsing, mode.isPrivate)
             }
         }
@@ -245,7 +244,7 @@ final class BrowserTabMultiSelectionTests: XCTestCase {
             }
         }
         let session = makeSession(count: 3), source = session.spaces[0]
-        let browser = BrowserStore(session: session, persistence: InMemoryBrowserSessionPersistence())
+        let browser = BrowserStore(session: session)
         let gate = DeferredDismissal(); browser.family.pageDismissalAuthorizer = gate
         let actions = BrowserTabBatchActions(browser: browser, spaceAccess: BrowserSpaceAccessController())
         let request = BrowserTabBatchRequest(ids: Array(source.tabs.prefix(2).map(\.id)), in: source)
@@ -283,7 +282,7 @@ final class BrowserTabMultiSelectionTests: XCTestCase {
             BrowserTabDragItem(
                 tabID: ids[0], spaceID: source.id, profileID: source.profile.id)
         ).selecting(request)
-        let browser = BrowserStore(session: session, persistence: InMemoryBrowserSessionPersistence())
+        let browser = BrowserStore(session: session)
         let sidebarInteraction = BrowserSidebarInteractionState.connected(to: browser)
         let state = sidebarInteraction.sidebarReorderState
         state.begin(item: item, section: .tabs(placement: .current, folderID: nil), at: .zero)
@@ -324,7 +323,7 @@ final class BrowserTabMultiSelectionTests: XCTestCase {
         XCTAssertEqual(filtered.ids, Array(ids.suffix(2)))
         XCTAssertEqual(selection.selectedIDs, Set(ids.suffix(2)))
         XCTAssertEqual(selection.rejectedPinnedIDs, Set(ids.prefix(2)))
-        let browser = BrowserStore(session: session, persistence: InMemoryBrowserSessionPersistence())
+        let browser = BrowserStore(session: session)
         let commit = BrowserSidebarReorderCommit(browser: browser, spaceAccess: BrowserSpaceAccessController())
         let pins = BrowserTabBatchRequest(ids: Array(ids.prefix(2)), in: source)
         let item = BrowserSidebarReorderItem.tab(
@@ -348,7 +347,7 @@ final class BrowserTabMultiSelectionTests: XCTestCase {
 
     func testUnmountingScrollRowsPreservesLogicalSelectionUntilTabsAreRemoved() async throws {
         let session = makeSession(count: 3)
-        let browser = BrowserStore(session: session, persistence: InMemoryBrowserSessionPersistence())
+        let browser = BrowserStore(session: session)
         let interaction = BrowserSidebarInteractionState.connected(to: browser)
         let reorder = interaction.sidebarReorderState
         let space = session.spaces[0]
@@ -477,7 +476,7 @@ final class BrowserTabMultiSelectionTests: XCTestCase {
         let folder = BrowserFolder(title: "Long folder", location: .current)
         session.spaces[0].folders = [folder]
         for index in session.spaces[0].tabs.indices { session.spaces[0].tabs[index].folderID = folder.id }
-        let browser = BrowserStore(session: session, persistence: InMemoryBrowserSessionPersistence())
+        let browser = BrowserStore(session: session)
         let interaction = BrowserSidebarInteractionState.connected(to: browser)
         let space = try XCTUnwrap(browser.selectedSpace)
         let assignment = BrowserSpaceRuntimeAssignment(space: space)
@@ -560,8 +559,8 @@ final class BrowserTabMultiSelectionTests: XCTestCase {
         session.spaces[0].folders = [folder]
         let ids = session.spaces[0].tabs.map(\.id)
         for index in 0...1 { session.spaces[0].tabs[index].folderID = folder.id }
-        let firstBrowser = BrowserStore(session: session, persistence: InMemoryBrowserSessionPersistence())
-        let secondBrowser = BrowserStore(session: session, persistence: InMemoryBrowserSessionPersistence())
+        let firstBrowser = BrowserStore(session: session)
+        let secondBrowser = BrowserStore(session: session)
         let first = BrowserSidebarInteractionState.connected(to: firstBrowser)
         let second = BrowserSidebarInteractionState.connected(to: secondBrowser)
         var space = session.spaces[0]
@@ -605,7 +604,7 @@ final class BrowserTabMultiSelectionTests: XCTestCase {
     func testLogicalSelectionDoesNotExposeALockedSpaceWithoutLiveAuthorization() throws {
         var session = makeSession(count: 2)
         session.spaces[0].accessPolicy = .deviceOwnerAuthentication
-        let browser = BrowserStore(session: session, persistence: InMemoryBrowserSessionPersistence())
+        let browser = BrowserStore(session: session)
         let interaction = BrowserSidebarInteractionState.connected(to: browser)
         XCTAssertEqual(BrowserSidebarSelection.itemUnits(in: browser, reorder: interaction.sidebarReorderState), [])
         let access = BrowserSpaceAccessController()
@@ -638,7 +637,7 @@ final class BrowserTabMultiSelectionTests: XCTestCase {
         let shown = tabs.isEmpty ? session.spaces[0].tabs.first.map { [spaceID: $0.id] } ?? [:] : tabs
         let selection = BrowserStoreSelection(selectedSpaceID: spaceID, selectedTabIDsBySpace: shown)
         let browser = BrowserStore(
-            session: session, selection: selection, persistence: InMemoryBrowserSessionPersistence(),
+            session: session, selection: selection,
             linkPreferences: preferences)
         if let fallbackTabID {
             var previous = selection

@@ -26,7 +26,6 @@ final class BrowserStore {
     let family: BrowserStoreFamily
     /// The process's core, which every window of every browsing mode shares.
     @ObservationIgnored let core: CrestCore
-    @ObservationIgnored let persistence: any BrowserSessionPersisting
     @ObservationIgnored let credentialVault: any CredentialVault
     @ObservationIgnored let syncCoordinator: BrowserSyncCoordinator?
     @ObservationIgnored let syncCoalescingDelay: Duration
@@ -115,7 +114,6 @@ final class BrowserStore {
     convenience init(
         session: BrowserSession,
         selection: BrowserStoreSelection? = nil,
-        persistence: any BrowserSessionPersisting,
         credentialVault: any CredentialVault = InMemoryCredentialVault(),
         syncCoordinator: BrowserSyncCoordinator? = nil,
         syncCoalescingDelay: Duration = .milliseconds(150),
@@ -126,7 +124,6 @@ final class BrowserStore {
         self.init(
             session: session,
             selection: selection,
-            persistence: persistence,
             credentialVault: credentialVault,
             syncCoordinator: syncCoordinator,
             syncCoalescingDelay: syncCoalescingDelay,
@@ -142,7 +139,6 @@ final class BrowserStore {
     init(
         session: BrowserSession,
         selection: BrowserStoreSelection? = nil,
-        persistence: any BrowserSessionPersisting,
         credentialVault: any CredentialVault,
         syncCoordinator: BrowserSyncCoordinator?,
         syncCoalescingDelay: Duration,
@@ -157,7 +153,6 @@ final class BrowserStore {
         self.linkPreferences = linkPreferences
         self.core = core
         tabSelectionHistory = BrowserTabSelectionHistory(session: session, selection: initial)
-        self.persistence = persistence
         self.credentialVault = credentialVault
         self.syncCoordinator = syncCoordinator
         self.syncCoalescingDelay = syncCoalescingDelay
@@ -186,8 +181,6 @@ extension BrowserStore {
         localSyncErrorDescription = nil
         let revision = family.publish(session, from: self)
         syncCoordinator?.advanceStoreRevision(to: revision)
-        do { try family.save(session, to: persistence) }
-        catch { localSyncErrorDescription = String(describing: error) }
     }
 
     func makeWindowStore(
@@ -215,7 +208,6 @@ extension BrowserStore {
         let store = BrowserStore(
             session: windowSession,
             selection: windowSelection,
-            persistence: persistence,
             credentialVault: credentialVault,
             syncCoordinator: syncCoordinator,
             syncCoalescingDelay: syncCoalescingDelay,
@@ -237,8 +229,9 @@ extension BrowserStore {
         guard let syncCoordinator else { return }
         let revision = family.reserveSyncRevision()
         syncCoordinator.advanceStoreRevision(to: revision)
-        _ = try syncCoordinator.merge(remoteRecords: records, into: session, storeRevision: revision) { next, journal, journalPersistence, transaction in
-            try self.family.installSyncedSession(next, journal: journal, journalPersistence: journalPersistence, transaction: transaction, from: self)
+        _ = try syncCoordinator.merge(remoteRecords: records, into: session, storeRevision: revision) {
+            next, transaction in
+            try self.family.installSyncedSession(next, transaction: transaction, from: self)
         }
         family.publish(session, from: self, at: revision)
         localSyncErrorDescription = nil
@@ -260,8 +253,9 @@ extension BrowserStore {
         guard let syncCoordinator else { return }
         let revision = family.reserveSyncRevision()
         syncCoordinator.advanceStoreRevision(to: revision)
-        _ = try syncCoordinator.replaceLocalWithCloud(remoteRecords, replacing: session, storeRevision: revision) { next, journal, journalPersistence, transaction in
-            try self.family.installSyncedSession(next, journal: journal, journalPersistence: journalPersistence, transaction: transaction, from: self)
+        _ = try syncCoordinator.replaceLocalWithCloud(remoteRecords, replacing: session, storeRevision: revision) {
+            next, transaction in
+            try self.family.installSyncedSession(next, transaction: transaction, from: self)
         }
         family.publish(session, from: self, at: revision)
         localSyncErrorDescription = nil
@@ -276,9 +270,12 @@ extension BrowserStore {
         cloudSyncChangeHandler = handler
     }
 
+    /// Returns once the sync staging this window started has finished and
+    /// every edit accepted before the call is on disk, or a save has failed.
+    /// Quitting and backgrounding wait for it.
     func flushPendingSyncPersistence() async {
-        await persistence.flushPendingSaves()
         await syncStageTask?.value
+        await family.flushPendingSaves()
     }
 
     func beginInitialSyncStaging(
@@ -309,22 +306,19 @@ extension BrowserStore {
         }
     }
 
-    /// Stores the shared session and stages sync after a model mutation.
+    /// Stages sync after an accepted edit. The core already saves every edit
+    /// it accepts; this orders the window's background staging after it, with
+    /// the edit's deletion reason and urgency.
     ///
-    /// `scope` is what the mutation changed. It reaches storage only: the
-    /// published session, the staged sync records, and the coalescing window are
-    /// the same whatever the scope says, because sync stages the in-memory
-    /// session rather than anything that was stored. A caller that cannot say
-    /// what it changed leaves the scope alone and rewrites everything.
-    func persist(
+    /// TRANSITIONAL: staging moves into the core when session intents land,
+    /// because each intent's handler knows its own deletion reason and urgency.
+    /// These call sites then go away.
+    func stageSync(
         deletionReason: BrowserSyncTombstoneReason = .superseded,
-        syncUrgency: BrowserStoreSyncStageUrgency = .immediate,
-        scope: BrowserSessionSaveScope = .everything
+        urgency syncUrgency: BrowserStoreSyncStageUrgency = .immediate
     ) {
         let storeRevision = family.publish(session, from: self)
         syncCoordinator?.advanceStoreRevision(to: storeRevision)
-        do { try family.save(session, to: persistence, scope: scope) }
-        catch { localSyncErrorDescription = String(describing: error); return }
         guard let syncCoordinator, !session.hasDisposableSeedState else { return }
 
         syncStageGeneration += 1
@@ -407,8 +401,9 @@ extension BrowserStore: BrowserCloudSyncModelGateway {
 
     func mergeCloudSyncRecords(_ records: [BrowserSyncRecord]) async throws {
         do {
+            // The merge and its journal are on disk when this returns, so the
+            // transport may keep the server token that covers them.
             try mergeRemoteSyncRecords(records)
-            await persistence.flushPendingSaves()
         } catch {
             localSyncErrorDescription = String(describing: error)
             throw error

@@ -28,7 +28,6 @@ enum BrowserQuickWindowPreviewFixture {
             session: BrowserSession(
                 spaces: [sourceSpace, destinationSpace]
             ),
-            persistence: InMemoryBrowserSessionPersistence(),
             credentialVault: InMemoryCredentialVault(),
             browsingMode: .privateBrowsing
         )

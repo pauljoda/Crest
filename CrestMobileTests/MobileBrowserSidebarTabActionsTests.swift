@@ -83,7 +83,6 @@ final class MobileBrowserSidebarTabActionsTests: XCTestCase {
             browser: BrowserStore(
                 session: BrowserSession(spaces: [space]),
                 selection: BrowserStoreSelection(selectedSpaceID: space.id, selectedTabIDsBySpace: [space.id: tab.id]),
-                persistence: InMemoryBrowserSessionPersistence(),
                 browsingMode: .privateBrowsing
             ),
             pages: MobileBrowserPageStore(usesEphemeralWebsiteDataStores: true),

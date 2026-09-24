@@ -6,7 +6,7 @@ import XCTest
 @MainActor
 final class BrowserStoreWorkspaceTests: XCTestCase {
     func testAnEmptyWindowSelectionSurvivesOtherWindowsPublishingAndDeletingTabs() throws {
-        let first = BrowserStore(session: .preview, persistence: InMemoryBrowserSessionPersistence())
+        let first = BrowserStore(session: .preview)
         let empty = first.makeWindowStore(restoresTabSelection: false)
         let tab = try XCTUnwrap(first.selectedSpace?.tabs.first)
         let ids = first.session.tabIDs
@@ -21,7 +21,7 @@ final class BrowserStoreWorkspaceTests: XCTestCase {
     }
 
     func testAnExplicitEmptyWindowSelectionSurvivesPersistenceAndRestoration() throws {
-        let owner = BrowserStore(session: .preview, persistence: InMemoryBrowserSessionPersistence())
+        let owner = BrowserStore(session: .preview)
         let empty = owner.makeWindowStore(restoresTabSelection: false)
         let captured = BrowserWindowState(restoring: empty.selection, in: empty.session)
         var saved = try JSONDecoder().decode(BrowserWindowState.self, from: JSONEncoder().encode(captured))
@@ -40,9 +40,9 @@ final class BrowserStoreWorkspaceTests: XCTestCase {
         XCTAssertEqual(legacy.selectedTab(in: owner.session)?.id, owner.selectedSpace?.tabs.first?.id)
     }
 
-    func testTemporaryWorkspaceBorrowsItsProfileButKeepsAllBrowsingRecordsLocal() throws {
-        let persistence = InMemoryBrowserSessionPersistence()
-        let source = BrowserStore(session: .preview, persistence: persistence)
+    func testTemporaryWorkspaceBorrowsItsProfileButKeepsAllBrowsingRecordsLocal() async throws {
+        let harness = try BrowserStoredSessionHarness(session: .preview)
+        let source = harness.store
         let sourceSpace = try XCTUnwrap(source.selectedSpace)
         let original = source.session
         let temporary = try XCTUnwrap(
@@ -51,7 +51,6 @@ final class BrowserStoreWorkspaceTests: XCTestCase {
         XCTAssertTrue(temporary.isTemporaryWorkspace)
         XCTAssertFalse(temporary.family === source.family)
         XCTAssertNil(temporary.syncCoordinator)
-        XCTAssertTrue(temporary.persistence is InMemoryBrowserSessionPersistence)
         XCTAssertEqual(temporary.selectedSpace?.profile, sourceSpace.profile)
         XCTAssertEqual(temporary.selectedSpace?.browsingPreferences, sourceSpace.browsingPreferences)
         XCTAssertEqual(temporary.selectedSpace?.credentialPreferences, sourceSpace.credentialPreferences)
@@ -66,14 +65,16 @@ final class BrowserStoreWorkspaceTests: XCTestCase {
         temporary.deleteTab(tabID, in: sourceSpace.id)
 
         XCTAssertEqual(source.session, original)
-        XCTAssertTrue(persistence.savedScopes.isEmpty)
         XCTAssertEqual(temporary.selectedSpace?.history.first?.url, url)
         XCTAssertEqual(temporary.selectedSpace?.archivedTabs.first?.id, tabID)
-        XCTAssertEqual(temporary.persistence.load(), temporary.session)
+        // Nothing the temporary workspace did reaches its source's file.
+        await temporary.flushPendingSyncPersistence()
+        await source.flushPendingSyncPersistence()
+        XCTAssertEqual(try harness.stored().session, original)
     }
 
     func testTemporarySourceRefreshKeepsLocalOrganizationAndRejectsReplacedProfiles() throws {
-        let source = BrowserStore(session: .preview, persistence: InMemoryBrowserSessionPersistence())
+        let source = BrowserStore(session: .preview)
         let assignment = BrowserSpaceRuntimeAssignment(space: try XCTUnwrap(source.selectedSpace))
         let temporary = try XCTUnwrap(source.makeTemporaryWindowStore(in: assignment))
         let url = try XCTUnwrap(URL(string: "https://temporary.crest.test/keep"))
@@ -100,7 +101,7 @@ final class BrowserStoreWorkspaceTests: XCTestCase {
     }
 
     func testTemporaryProfileSettingsUseTheSourceAuthorityImmediately() throws {
-        let source = BrowserStore(session: .preview, persistence: InMemoryBrowserSessionPersistence())
+        let source = BrowserStore(session: .preview)
         let assignment = BrowserSpaceRuntimeAssignment(space: try XCTUnwrap(source.selectedSpace))
         let temporary = try XCTUnwrap(source.makeTemporaryWindowStore(in: assignment))
         let originalTabs = source.session.tabIDs
@@ -129,7 +130,7 @@ final class BrowserStoreWorkspaceTests: XCTestCase {
     }
 
     func testTemporaryWorkspaceCannotDeleteItsBorrowedProfile() async throws {
-        let source = BrowserStore(session: .preview, persistence: InMemoryBrowserSessionPersistence())
+        let source = BrowserStore(session: .preview)
         let assignment = BrowserSpaceRuntimeAssignment(space: try XCTUnwrap(source.selectedSpace))
         let temporary = try XCTUnwrap(source.makeTemporaryWindowStore(in: assignment))
         let deleter = WorkspaceDataDeleter()
@@ -163,8 +164,7 @@ final class BrowserStoreWorkspaceTests: XCTestCase {
         let source = BrowserStore(
             session: BrowserSession(spaces: [space, companion]),
             selection: BrowserStoreSelection(
-                selectedSpaceID: space.id, selectedTabIDsBySpace: [space.id: tab.id, companion.id: companionTab.id]),
-            persistence: InMemoryBrowserSessionPersistence())
+                selectedSpaceID: space.id, selectedTabIDsBySpace: [space.id: tab.id, companion.id: companionTab.id]))
         let assignment = BrowserSpaceRuntimeAssignment(space: space)
         let temporary = try XCTUnwrap(source.makeTemporaryWindowStore(in: assignment))
 
@@ -183,7 +183,7 @@ final class BrowserStoreWorkspaceTests: XCTestCase {
         XCTAssertEqual(temporary.selectedTab?.placement, .current)
         XCTAssertNil(temporary.selectedTab?.folderID)
         XCTAssertNil(temporary.selectedTab?.savedURL)
-        source.persist(scope: .core)
+        source.stageSync()
         XCTAssertNil(source.selectedTab)
         XCTAssertTrue(try XCTUnwrap(source.selectedSpace).tabs.isEmpty)
 
@@ -195,7 +195,7 @@ final class BrowserStoreWorkspaceTests: XCTestCase {
     }
 
     func testTransferRejectsStaleAssignmentsAndDuplicateDestinationIdentityAtomically() throws {
-        let source = BrowserStore(session: .preview, persistence: InMemoryBrowserSessionPersistence())
+        let source = BrowserStore(session: .preview)
         let space = try XCTUnwrap(source.selectedSpace)
         let tab = try XCTUnwrap(space.tabs.first)
         let assignment = BrowserSpaceRuntimeAssignment(space: space)

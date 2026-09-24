@@ -17,6 +17,24 @@ final class BrowserCoreSyncAuthority: @unchecked Sendable {
         self.handle = handle
         projection = journal
     }
+
+    /// Takes over an authority the core created, reading the journal it holds.
+    /// The caller hands over ownership of the handle.
+    init(adopting handle: UInt64) throws {
+        self.handle = handle
+        var snapshot: UInt64 = 0
+        let result = crest_sync_authority_snapshot(handle, &snapshot)
+        guard result == CREST_OK else {
+            crest_sync_authority_release(handle)
+            throw CoreError.rejected(result)
+        }
+        do {
+            projection = try BrowserSyncJournal.acceptingCoreSnapshot(BrowserCoreSyncJournal(adopting: snapshot))
+        } catch {
+            crest_sync_authority_release(handle)
+            throw error
+        }
+    }
     deinit { crest_sync_authority_release(handle) }
 
     func advance(to revision: BrowserStoreSyncRevision) {
@@ -66,6 +84,8 @@ final class BrowserCoreSyncAuthority: @unchecked Sendable {
     enum CoreError: Error {
         case tooLarge
         case rejected(Int32)
+        /// The core could not save the journal.
+        case storageFailed
     }
 }
 
@@ -85,8 +105,14 @@ final class BrowserCoreSyncTransaction {
         guard result == CREST_OK else { throw BrowserCoreSyncAuthority.CoreError.rejected(result) }
         return accepted != 0
     }
-    func publish() {
-        precondition(crest_sync_transaction_commit(handle) == CREST_OK, "Lost core sync storage reservation")
+    /// Publishes the journal. When its session keeps a file the core saves the
+    /// journal first; a failed save leaves the transaction unpublished.
+    func commit() throws {
+        let result = crest_sync_transaction_commit(handle)
+        guard result == CREST_OK else {
+            throw result == CREST_STORAGE_FAILED
+                ? BrowserCoreSyncAuthority.CoreError.storageFailed : BrowserCoreSyncAuthority.CoreError.rejected(result)
+        }
         owner.publish(journal)
     }
 }

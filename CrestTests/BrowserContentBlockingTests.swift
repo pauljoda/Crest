@@ -49,7 +49,7 @@ final class BrowserContentBlockingTests: XCTestCase {
     }
 
     func testContentBlockingPreferenceChangesOnlyTheTargetSpace() throws {
-        let store = BrowserStore(session: .preview, persistence: InMemoryBrowserSessionPersistence())
+        let store = BrowserStore(session: .preview)
         let workID = try XCTUnwrap(store.session.spaces.first?.id)
         let personalID = try XCTUnwrap(store.session.spaces.last?.id)
         var workPreferences = try XCTUnwrap(

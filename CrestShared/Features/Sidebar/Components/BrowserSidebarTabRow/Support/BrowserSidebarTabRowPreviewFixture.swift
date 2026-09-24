@@ -35,7 +35,6 @@ enum BrowserSidebarTabRowPreviewFixture {
             session: BrowserSession(
                 spaces: [space]
             ),
-            persistence: InMemoryBrowserSessionPersistence(),
             browsingMode: .privateBrowsing
         )
         let spaceAccess = BrowserSpaceAccessController(

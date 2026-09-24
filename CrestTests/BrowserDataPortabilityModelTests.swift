@@ -113,8 +113,7 @@ final class BrowserDataPortabilityModelTests: XCTestCase {
         )
         let session = BrowserSession(spaces: [space])
         let browser = BrowserStore(
-            session: session,
-            persistence: InMemoryBrowserSessionPersistence()
+            session: session
         )
         let spaceAccess = BrowserSpaceAccessController(
             authenticator: TestAuthenticator()

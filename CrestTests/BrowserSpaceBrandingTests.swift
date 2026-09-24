@@ -337,7 +337,7 @@ final class BrowserSpaceBrandingTests: XCTestCase {
     }
 
     func testUpdatingBrandingChangesOnlyTheTargetSpace() throws {
-        let store = BrowserStore(session: .preview, persistence: InMemoryBrowserSessionPersistence())
+        let store = BrowserStore(session: .preview)
         let target = try XCTUnwrap(store.session.spaces.first)
         let untouched = try XCTUnwrap(store.session.spaces.last)
         let untouchedBranding = untouched.branding

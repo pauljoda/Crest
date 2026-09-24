@@ -16,7 +16,12 @@ import Foundation
 /// decode through one path and the split stays invisible to the rest of the app:
 /// `load()` joins history and favicons back onto the session it hands out, and
 /// every caller keeps reading `tab.faviconData` and `space.history`.
-final class UserDefaultsBrowserSessionPersistence: BrowserSessionPersisting, @unchecked Sendable {
+///
+/// The installed releases before the core's session file wrote this store.
+/// Launch reads it once, to carry that session into the file; it stays in place
+/// for a rollback. Nothing in the app writes it any more, and tests use `save`
+/// to write what an installed release left behind.
+final class UserDefaultsBrowserSessionPersistence: @unchecked Sendable {
     typealias Encoder = @Sendable (BrowserSession) -> Data?
     typealias Publisher = @Sendable (UserDefaults, String, Data) -> Void
     typealias Remover = @Sendable (UserDefaults, String) -> Void
@@ -125,38 +130,27 @@ final class UserDefaultsBrowserSessionPersistence: BrowserSessionPersisting, @un
             ?? BrowserLegacySessionSelection.decode(defaults.data(forKey: Self.legacyCoreKey))
     }
 
-    func save(_ session: BrowserSession, scope: BrowserSessionSaveScope) {
-        enqueueSave(session, scope: scope, checkpoint: nil)
-    }
-
-    func save(_ session: BrowserSession, scope: BrowserSessionSaveScope, checkpoint: any BrowserSessionCheckpoint) {
-        enqueueSave(session, scope: scope, checkpoint: checkpoint)
-    }
-
-    private func enqueueSave(_ session: BrowserSession, scope: BrowserSessionSaveScope, checkpoint: (any BrowserSessionCheckpoint)?) {
+    /// Writes the whole session the way an installed release did.
+    func save(_ session: BrowserSession) {
         saveQueue.async { [self] in
             latestSession = session
             var writes: [(key: String, data: Data)] = []
             var removals: [String] = []
 
-            if scope.writesCore {
-                let core = Self.core(of: session)
-                if core != lastWrittenCore, let data = checkpoint.map({ $0.coreData() }) ?? encoder(core) {
-                    lastWrittenCore = core
-                    writes.append((Self.coreKey, data))
-                }
-                reconcileHistoryIndex(for: session, writes: &writes, removals: &removals)
+            let core = Self.core(of: session)
+            if core != lastWrittenCore, let data = encoder(core) {
+                lastWrittenCore = core
+                writes.append((Self.coreKey, data))
             }
-            for space in session.spaces where scope.history.covers(space.id) {
+            reconcileHistoryIndex(for: session, writes: &writes, removals: &removals)
+            for space in session.spaces {
                 guard space.history != lastWrittenHistory[space.id],
-                    let data = checkpoint.map({ $0.historyData(in: space.id) }) ?? (try? JSONEncoder().encode(space.history))
+                    let data = try? JSONEncoder().encode(space.history)
                 else { continue }
                 lastWrittenHistory[space.id] = space.history
                 writes.append((Self.historyKey(for: space.id), data))
             }
-            if scope.writesCore || scope.favicons != .nothing {
-                reconcileFavicons(for: session, scope: scope)
-            }
+            reconcileFavicons(for: session)
 
             guard !writes.isEmpty || !removals.isEmpty else { return }
             DispatchQueue.main.async { [self] in
@@ -246,7 +240,7 @@ final class UserDefaultsBrowserSessionPersistence: BrowserSessionPersisting, @un
             preserveUnreadable(data, as: Self.preservedLegacyCoreKey)
             return nil
         }
-        save(session, scope: .everything)
+        save(session)
         defaults.set(true, forKey: Self.legacyMigrationKey)
         return session
     }
@@ -354,12 +348,9 @@ final class UserDefaultsBrowserSessionPersistence: BrowserSessionPersisting, @un
         return Set(identifiers.compactMap(UUID.init(uuidString:)).map(SpaceID.init(rawValue:)))
     }
 
-    private func reconcileFavicons(
-        for session: BrowserSession,
-        scope: BrowserSessionSaveScope
-    ) {
+    private func reconcileFavicons(for session: BrowserSession) {
         for space in session.spaces {
-            for tab in space.tabs where scope.favicons.covers(tab.id) {
+            for tab in space.tabs {
                 faviconStore.reconcile(tab.faviconData, tabID: tab.id)
             }
         }
@@ -367,7 +358,6 @@ final class UserDefaultsBrowserSessionPersistence: BrowserSessionPersisting, @un
         // was assembled without the unreadable core would delete every icon that
         // core still owns.
         guard loadStatus != .preservedUnreadableSession else { return }
-        guard scope.writesCore || scope.favicons.isEverything else { return }
         let tabIDs = Self.faviconOwningTabIDs(of: session)
         defer { storedFaviconTabIDs = tabIDs }
         // Only a shrinking set can orphan a favicon, and comparing sets in

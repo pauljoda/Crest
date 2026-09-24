@@ -30,7 +30,7 @@ final class BrowserDurableTabCloseTests: XCTestCase {
                 XCTAssertEqual(closed, expected)
                 XCTAssertEqual(discardedState, policy == .returnToSavedURL)
                 XCTAssertNil(context.browser.selectedTab)
-                XCTAssertEqual(context.persistence.session?.space(id: context.assignment.spaceID)?.tabs.first, expected)
+                XCTAssertEqual(context.browser.session.space(id: context.assignment.spaceID)?.tabs.first, expected)
                 XCTAssertEqual(context.browser.selectedSpace?.tabs.last, context.copy)
                 XCTAssertEqual(context.browser.selectedSpace?.archivedTabs, context.archived)
             }
@@ -92,7 +92,6 @@ final class BrowserDurableTabCloseTests: XCTestCase {
         XCTAssertTrue(gate.resolve(true))
         XCTAssertFalse(context.browser.selectedSpace!.tabs.contains { $0.id == context.tab.id })
         XCTAssertTrue(context.browser.selectedSpace!.archivedTabs.contains { $0.id == context.tab.id })
-        XCTAssertEqual(context.persistence.session, context.browser.session)
     }
 
     func testDeferredClearDoesNotCloseTabsOpenedWhileConfirmationWasPending() throws {
@@ -166,21 +165,18 @@ final class BrowserDurableTabCloseTests: XCTestCase {
             id: SpaceID(), profile: BrowsingProfile(), name: "Test", symbol: "circle", accent: .indigo,
             folders: [], tabs: [tab, copy], archivedTabs: archived
         )
-        let persistence = InMemoryBrowserSessionPersistence()
         let browser = BrowserStore(
             session: BrowserSession(spaces: [space]),
-            selection: BrowserStoreSelection(selectedSpaceID: space.id, selectedTabIDsBySpace: [space.id: tab.id]),
-            persistence: persistence
+            selection: BrowserStoreSelection(selectedSpaceID: space.id, selectedTabIDsBySpace: [space.id: tab.id])
         )
         return Context(
-            browser: browser, persistence: persistence, tab: tab, copy: copy, archived: archived,
+            browser: browser, tab: tab, copy: copy, archived: archived,
             assignment: BrowserTabRuntimeAssignment(tabID: tab.id, spaceID: space.id, profileID: space.profile.id)
         )
     }
 
     private struct Context {
         let browser: BrowserStore
-        let persistence: InMemoryBrowserSessionPersistence
         let tab: BrowserTab
         let copy: BrowserTab
         let archived: [ArchivedTab]

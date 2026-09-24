@@ -167,8 +167,7 @@ final class BrowserTabPlacementPlanTests: XCTestCase {
         let source = makeSpace(tabs: [moving])
         let destination = makeSpace(tabs: [])
         let store = BrowserStore(
-            session: BrowserSession(spaces: [source, destination]),
-            persistence: InMemoryBrowserSessionPersistence()
+            session: BrowserSession(spaces: [source, destination])
         )
         let original = store.session
         let missingSpaceID = SpaceID()

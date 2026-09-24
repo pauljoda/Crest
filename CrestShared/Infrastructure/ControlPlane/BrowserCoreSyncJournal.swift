@@ -27,6 +27,19 @@ final class BrowserCoreSyncJournal: @unchecked Sendable {
         self.handle = handle
         self.preferences = preferences
     }
+
+    /// Takes over a snapshot handle the core returned, with the preferences
+    /// the snapshot itself records.
+    convenience init(adopting handle: UInt64) throws {
+        let preferences: BrowserSyncPreferences
+        do {
+            preferences = try JSONDecoder().decode(Head.self, from: Self.read(handle)).preferences
+        } catch {
+            crest_sync_journal_release(handle)
+            throw error
+        }
+        self.init(handle: handle, preferences: preferences)
+    }
     deinit { crest_sync_journal_release(handle) }
 
     func applying<Arguments: Encodable>(
@@ -79,7 +92,9 @@ final class BrowserCoreSyncJournal: @unchecked Sendable {
         return (next, materialized)
     }
 
-    func read() throws -> Data {
+    func read() throws -> Data { try Self.read(handle) }
+
+    private static func read(_ handle: UInt64) throws -> Data {
         var length = 0
         let measured = crest_sync_journal_read(handle, nil, 0, &length)
         guard measured == CREST_BUFFER_TOO_SMALL, length > 0, length <= Self.byteLimit else {
@@ -92,6 +107,11 @@ final class BrowserCoreSyncJournal: @unchecked Sendable {
         }
         guard result == CREST_OK, length <= capacity else { throw JournalError.rejected(result) }
         return data.prefix(length)
+    }
+
+    /// The members of a stored journal read before the rest.
+    private struct Head: Decodable {
+        let preferences: BrowserSyncPreferences
     }
 
     private enum JournalError: Error {

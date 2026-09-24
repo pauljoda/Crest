@@ -137,7 +137,7 @@ private final class BrowserAppearancePreviewState {
         browser = BrowserStore(
             session: BrowserSession(spaces: [space]),
             selection: BrowserStoreSelection(selectedSpaceID: space.id, selectedTabIDsBySpace: [space.id: notes.id]),
-            persistence: InMemoryBrowserSessionPersistence(), browsingMode: .privateBrowsing)
+            browsingMode: .privateBrowsing)
         sidebarInteraction = BrowserSidebarInteractionState.connected(to: browser)
     }
 

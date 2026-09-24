@@ -564,8 +564,7 @@ final class MobileBrowserInteropTests: XCTestCase {
         let space = makePopupSpace()
         let store = BrowserStore(
             session: BrowserSession(spaces: [space]),
-            selection: selection(showing: space.id, in: [space]),
-            persistence: InMemoryBrowserSessionPersistence()
+            selection: selection(showing: space.id, in: [space])
         )
         let pages = MobileBrowserPageStore(
             popupTabHost: store.popupTabHost,
@@ -1410,8 +1409,7 @@ final class MobileBrowserInteropTests: XCTestCase {
         let space = makePopupSpace()
         let store = BrowserStore(
             session: BrowserSession(spaces: [space]),
-            selection: selection(showing: space.id, in: [space]),
-            persistence: InMemoryBrowserSessionPersistence()
+            selection: selection(showing: space.id, in: [space])
         )
         let pages = MobileBrowserPageStore(
             browsingMode: browsingMode,

@@ -144,7 +144,7 @@ extension BrowserStore {
         guard let owner = spaceCommandOwner(.spaceCredentialPreferences, in: spaceID),
             owner.session.space(id: spaceID) != nil else { return }
         guard owner.setCoreSpaceValue(.spaceCredentialPreferences, preferences, in: spaceID) else { return }
-        owner.persist(scope: .core)
+        owner.stageSync()
     }
 
     func setCrestPasswordSynchronization(
@@ -179,7 +179,7 @@ extension BrowserStore {
             session.space(id: spaceID)?.credentialPreferences != preferences {
             throw CredentialVaultError.preferenceUpdateFailed
         }
-        persist(scope: .core)
+        stageSync()
     }
 
 }

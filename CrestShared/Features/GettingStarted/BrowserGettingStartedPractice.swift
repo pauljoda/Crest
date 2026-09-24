@@ -45,7 +45,7 @@ final class BrowserGettingStartedPractice {
             branding: .house(.winter, symbol: "leaf.fill"), folders: [],
             tabs: [calendar, reading, mail, trail, packing])
         seed = BrowserSession(spaces: [space])
-        let practiceBrowser = BrowserStore(session: seed, persistence: InMemoryBrowserSessionPersistence())
+        let practiceBrowser = BrowserStore(session: seed)
         browser = practiceBrowser
         sidebarInteraction = BrowserSidebarInteractionState.connected(to: practiceBrowser)
     }
@@ -64,7 +64,7 @@ final class BrowserGettingStartedPractice {
 
     func reset() {
         sidebarInteraction.cancel()
-        browser = BrowserStore(session: seed, persistence: InMemoryBrowserSessionPersistence())
+        browser = BrowserStore(session: seed)
         sidebarInteraction = BrowserSidebarInteractionState.connected(to: browser)
         splitWidthMembers = []
         reconcileSplitWidths()

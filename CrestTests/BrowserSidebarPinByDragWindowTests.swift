@@ -127,8 +127,7 @@ final class BrowserSidebarPinByDragWindowTests: XCTestCase {
         let browser = BrowserStore(
             session: BrowserSession(spaces: [space]),
             selection: BrowserStoreSelection(
-                selectedSpaceID: space.id, selectedTabIDsBySpace: [space.id: presented.id]),
-            persistence: InMemoryBrowserSessionPersistence()
+                selectedSpaceID: space.id, selectedTabIDsBySpace: [space.id: presented.id])
         )
         let model = BrowserRootModel(
             browser: browser,

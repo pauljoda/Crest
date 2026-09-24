@@ -14,7 +14,7 @@ final class BrowserDataRetentionTests: XCTestCase {
         session.spaces[0].history = (0..<1025).map { index in
             Self.history(title: String(index), visitedAt: retained.contains(index) ? cutoff : cutoff.addingTimeInterval(-1))
         }
-        let browser = BrowserStore(session: session, persistence: InMemoryBrowserSessionPersistence())
+        let browser = BrowserStore(session: session)
 
         XCTAssertTrue(browser.sweepExpiredBrowsingData(now: now))
         XCTAssertEqual(browser.session.spaces[0].history.map(\.title), ["0", "511", "512", "1024"])
@@ -33,7 +33,7 @@ final class BrowserDataRetentionTests: XCTestCase {
             Self.history(title: "End", visitedAt: end),
         ]
         session.spaces[1].history = [Self.history(title: "Other Space", visitedAt: start)]
-        let browser = BrowserStore(session: session, persistence: InMemoryBrowserSessionPersistence())
+        let browser = BrowserStore(session: session)
         let assignment = BrowserSpaceRuntimeAssignment(space: try XCTUnwrap(browser.session.space(id: spaceID)))
 
         XCTAssertTrue(browser.deleteHistory(from: start, until: end, matching: assignment))
@@ -87,11 +87,9 @@ final class BrowserDataRetentionTests: XCTestCase {
             Self.archive(title: "Other Space", archivedAt: oldDate)
         ]
 
-        let persistence = InMemoryBrowserSessionPersistence()
-        let browser = BrowserStore(session: session, persistence: persistence)
+        let browser = BrowserStore(session: session)
 
         XCTAssertTrue(browser.sweepExpiredBrowsingData(now: now))
-        XCTAssertEqual(persistence.savedScopes.last, .everything)
         let swept = browser.session
         XCTAssertEqual(
             try XCTUnwrap(swept.space(id: cleanedSpaceID)).history.map(\.title),
@@ -120,14 +118,12 @@ final class BrowserDataRetentionTests: XCTestCase {
         let oldArchive = Self.archive(title: "Expired", archivedAt: oldDate)
         session.spaces[0].history = [oldHistory]
         session.spaces[0].archivedTabs = [oldArchive]
-        let persistence = InMemoryBrowserSessionPersistence()
         let sync = BrowserSyncCoordinator(
             persistence: InMemoryBrowserSyncJournalPersistence()
         )
         try sync.stage(session: session, at: oldDate)
         let browser = BrowserStore(
             session: session,
-            persistence: persistence,
             syncCoordinator: sync,
             syncCoalescingDelay: .zero
         )
@@ -143,10 +139,9 @@ final class BrowserDataRetentionTests: XCTestCase {
         )
         await browser.flushPendingSyncPersistence()
 
-        let savedSpace = try XCTUnwrap(persistence.session?.space(id: spaceID))
+        let savedSpace = try XCTUnwrap(browser.session.space(id: spaceID))
         XCTAssertTrue(savedSpace.history.isEmpty)
         XCTAssertTrue(savedSpace.archivedTabs.isEmpty)
-        XCTAssertEqual(persistence.savedScopes.last, .everything)
         for recordID in [
             BrowserSyncRecordID(kind: .history, value: oldHistory.id),
             BrowserSyncRecordID(kind: .archive, value: oldArchive.id.rawValue),

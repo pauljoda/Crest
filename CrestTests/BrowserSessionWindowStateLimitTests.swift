@@ -59,7 +59,7 @@ final class BrowserSessionWindowStateLimitTests: XCTestCase {
     func testTheFixedMacWindowKeepsExactlyOneRecordAcrossEveryLaunch() async throws {
         let harness = makeHarness()
         let session = BrowserSession.preview
-        let browser = BrowserStore(session: session, persistence: InMemoryBrowserSessionPersistence())
+        let browser = BrowserStore(session: session)
 
         for _ in 0..<50 {
             let store = BrowserWindowStateStore(

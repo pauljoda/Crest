@@ -220,7 +220,13 @@ final class BrowserCoreSessionAuthority {
         }
     }
 
-    private enum CoreError: Error { case rejected(Int32) }
+    private enum CoreError: Error {
+        case rejected(Int32)
+        /// The core could not save the commit; nothing was published.
+        case storageFailed
+
+        init(_ status: Int32) { self = status == CREST_STORAGE_FAILED ? .storageFailed : .rejected(status) }
+    }
 
     private final class SessionHandle: Sendable {
         let value: UInt64
@@ -235,6 +241,9 @@ final class BrowserCoreSessionAuthority {
     @ObservationIgnored private let owner: SessionHandle
     @ObservationIgnored private var borrowedSource: BrowserCoreSessionAuthority?
     @ObservationIgnored private var borrowedSourceRevision: UInt64?
+
+    /// The core's revision of this session, for waiting until it is on disk.
+    var acceptedRevision: UInt64 { revision }
 
     // MARK: - Initializers
 
@@ -261,6 +270,23 @@ final class BrowserCoreSessionAuthority {
             revision = initialRevision
         } catch {
             preconditionFailure("Could not initialize the core session: \(error)")
+        }
+    }
+
+    /// TRANSITIONAL until session intents land: the persistent session the
+    /// core keeps in its file, taken over with the projection it loaded.
+    init(adopting handle: UInt64, revision: UInt64, projection: BrowserSession) {
+        owner = SessionHandle(value: handle)
+        self.revision = revision
+        self.projection = projection
+        do {
+            let descriptor = try BrowserEngineRegistration.current.encoded()
+            let registered = descriptor.withUnsafeBytes {
+                crest_session_register_engine(handle, $0.bindMemory(to: UInt8.self).baseAddress, descriptor.count)
+            }
+            guard registered == CREST_OK else { throw CoreError.rejected(registered) }
+        } catch {
+            preconditionFailure("Could not register the engine with the stored session: \(error)")
         }
     }
 
@@ -318,36 +344,19 @@ final class BrowserCoreSessionAuthority {
 
     // MARK: - Actions - Replacement
 
-    /// The reservation excludes core writes until storage succeeds. A failed
-    /// write releases it without changing the projection or accepted revision.
-    func replaceDurably(
-        with proposed: BrowserSession,
-        sync: BrowserCoreSyncTransaction? = nil,
-        persist: (any BrowserSessionCheckpoint) throws -> Void
-    ) throws {
+    /// Replaces the session and saves it before publishing. With a sync
+    /// transaction its journal is saved and published with the session. A
+    /// failed save leaves the projection and the accepted revision unchanged.
+    func replaceDurably(with proposed: BrowserSession, sync: BrowserCoreSyncTransaction? = nil) throws {
         let next = keepingPreferences(proposed)
         let delta = try JSONEncoder().encode(try delta(to: next))
-        var replacement: UInt64 = 0
-        var checkpoint: UInt64 = 0
-        let result = delta.withUnsafeBytes { bytes in
-            if let sync {
-                return crest_session_reserve_sync_replacement(
-                    owner.value, revision, sync.handle,
-                    bytes.bindMemory(to: UInt8.self).baseAddress, delta.count, &replacement, &checkpoint)
-            }
-            return crest_session_reserve_replacement(
-                owner.value, revision,
-                bytes.bindMemory(to: UInt8.self).baseAddress, delta.count, &replacement, &checkpoint)
-        }
-        guard result == CREST_OK else { throw CoreError.rejected(result) }
-        defer { crest_session_release_replacement(replacement) }
-        let snapshot = BrowserCoreSessionCheckpoint(handle: checkpoint)
-        try persist(snapshot)
         var accepted: UInt64 = 0
-        let committed = crest_session_commit_replacement(replacement, &accepted)
-        // All validation and overflow checks precede the durable write. The
-        // reservation makes publication infallible for this owned handle.
-        precondition(committed == CREST_OK, "Lost core storage reservation")
+        let result = delta.withUnsafeBytes { bytes in
+            crest_session_replace_durably(
+                owner.value, revision, sync?.handle ?? 0,
+                bytes.bindMemory(to: UInt8.self).baseAddress, delta.count, &accepted)
+        }
+        guard result == CREST_OK else { throw CoreError(result) }
         revision = accepted
         projection = next
     }
@@ -446,25 +455,18 @@ final class BrowserCoreSessionAuthority {
         }
     }
 
+    /// Commits a prepared transfer: the core saves the side that keeps a file,
+    /// with the sync journal, before either side is published.
     static func commitTransfer(
         _ prepared: PreparedTransfer,
         source: BrowserCoreSessionAuthority, destination: BrowserCoreSessionAuthority,
-        sync: BrowserCoreSyncTransaction? = nil,
-        persist: (any BrowserSessionCheckpoint, any BrowserSessionCheckpoint) throws -> Void
+        sync: BrowserCoreSyncTransaction? = nil
     ) throws {
-        var sourceHandle: UInt64 = 0
-        var destinationHandle: UInt64 = 0
-        let reserved = crest_session_reserve_transfer(
-            prepared.handle, sync?.handle ?? 0, &sourceHandle, &destinationHandle)
-        guard reserved == CREST_OK else { throw CoreError.rejected(reserved) }
-        defer { crest_session_release_transfer(prepared.handle) }
-        let sourceCheckpoint = BrowserCoreSessionCheckpoint(handle: sourceHandle)
-        let destinationCheckpoint = BrowserCoreSessionCheckpoint(handle: destinationHandle)
-        try persist(sourceCheckpoint, destinationCheckpoint)
         var sourceRevision: UInt64 = 0
         var destinationRevision: UInt64 = 0
-        let committed = crest_session_commit_transfer(prepared.handle, &sourceRevision, &destinationRevision)
-        precondition(committed == CREST_OK, "Lost core transfer reservation")
+        let committed = crest_session_commit_transfer(
+            prepared.handle, sync?.handle ?? 0, &sourceRevision, &destinationRevision)
+        guard committed == CREST_OK else { throw CoreError(committed) }
         source.revision = sourceRevision
         destination.revision = destinationRevision
         source.projection = prepared.source
@@ -653,34 +655,15 @@ final class BrowserCoreSessionAuthority {
         }
     }
 
-    func commitDurably(
-        _ command: PreparedChange, sync: BrowserCoreSyncTransaction? = nil,
-        persist: (any BrowserSessionCheckpoint) throws -> Void
-    ) throws {
-        var replacement: UInt64 = 0
-        var checkpoint: UInt64 = 0
-        let reserved = crest_session_reserve_command(command.handle, &replacement, &checkpoint)
-        guard reserved == CREST_OK else { throw CoreError.rejected(reserved) }
-        defer { crest_session_release_replacement(replacement) }
-        let snapshot = BrowserCoreSessionCheckpoint(handle: checkpoint)
-        if let sync {
-            let bound = crest_session_bind_sync_replacement(replacement, sync.handle)
-            guard bound == CREST_OK else { throw CoreError.rejected(bound) }
-        }
-        try persist(snapshot)
+    /// Commits a prepared command and saves it before publishing, with the sync
+    /// transaction's journal when one is given. A failed save leaves the
+    /// projection and the accepted revision unchanged.
+    func commitDurably(_ command: PreparedChange, sync: BrowserCoreSyncTransaction? = nil) throws {
         var accepted: UInt64 = 0
-        precondition(
-            crest_session_commit_replacement(replacement, &accepted) == CREST_OK,
-            "Lost core command storage reservation")
+        let result = crest_session_commit_command_durably(command.handle, sync?.handle ?? 0, &accepted)
+        guard result == CREST_OK else { throw CoreError(result) }
         revision = accepted
         projection = command.session
-    }
-
-    func checkpoint() throws -> BrowserCoreSessionCheckpoint {
-        var handle: UInt64 = 0
-        let result = crest_session_checkpoint(owner.value, revision, &handle)
-        guard result == CREST_OK else { throw CoreError.rejected(result) }
-        return BrowserCoreSessionCheckpoint(handle: handle)
     }
 
     // MARK: - Actions - Core calls
@@ -851,50 +834,5 @@ extension BrowserCoreSessionAuthority {
         let command = try prepareCommand(try JSONEncoder().encode(request))
         defer { crest_session_release_command(command) }
         return try readCommand(command)
-    }
-}
-
-/// Retains a core revision, not a live session handle. Reading its parts does
-/// not block newer edits and remains valid after the originating window closes.
-final class BrowserCoreSessionCheckpoint: BrowserSessionCheckpoint, Sendable {
-    /// The part of a checkpoint to read. Raw values are the core's part names:
-    /// `core` for the session record, or a Space identity for its history.
-    private struct Part: RawRepresentable {
-        static let core = Part(rawValue: "core")
-
-        let rawValue: String
-
-        static func history(in spaceID: SpaceID) -> Part {
-            Part(rawValue: spaceID.rawValue.uuidString)
-        }
-    }
-
-    private let handle: UInt64
-
-    init(handle: UInt64) { self.handle = handle }
-
-    deinit { crest_session_release_checkpoint(handle) }
-
-    func coreData() -> Data? { read(.core) }
-
-    func historyData(in spaceID: SpaceID) -> Data? { read(.history(in: spaceID)) }
-
-    private func read(_ part: Part) -> Data? {
-        let key = Data(part.rawValue.utf8)
-        var length = 0
-        let measured = key.withUnsafeBytes {
-            crest_session_read_checkpoint(handle, $0.bindMemory(to: UInt8.self).baseAddress, key.count, nil, 0, &length)
-        }
-        guard measured == CREST_BUFFER_TOO_SMALL, length > 0, length <= 64 * 1024 * 1024 else { return nil }
-        let capacity = length
-        var output = Data(count: capacity)
-        let result = output.withUnsafeMutableBytes { target in
-            key.withUnsafeBytes { source in
-                crest_session_read_checkpoint(
-                    handle, source.bindMemory(to: UInt8.self).baseAddress, key.count,
-                    target.bindMemory(to: UInt8.self).baseAddress, capacity, &length)
-            }
-        }
-        return result == CREST_OK ? output : nil
     }
 }

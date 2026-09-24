@@ -460,7 +460,6 @@ final class BrowserPeekModelTests: XCTestCase {
         let browser = BrowserStore(
             session: BrowserSession(spaces: [source, destination]),
             selection: BrowserStoreSelection(selectedSpaceID: source.id, selectedTabIDsBySpace: [source.id: sourceTabID]),
-            persistence: InMemoryBrowserSessionPersistence(),
             credentialVault: InMemoryCredentialVault(),
             browsingMode: .privateBrowsing
         )

@@ -32,9 +32,9 @@ public sealed partial class CrestApp : IDisposable {
     public CrestApp(AppConfiguration configuration) {
         ArgumentNullException.ThrowIfNull(configuration);
         if (configuration.StorageDirectory is not { } directory) return;
-        storage = SessionStorage.Open(directory, Announce);
+        storage = SessionStorage.Open(directory, Announce, out var loaded);
         try {
-            if (storage.Loaded.Session is { } stored) Establish(stored, storage.Loaded.Journal, storage.Loaded.LegacySelection);
+            if (loaded.Session is { } stored) Establish(stored, loaded.Journal, loaded.LegacySelection);
         } catch (Exception error) {
             storage.Dispose();
             if (error is Rejected) throw;

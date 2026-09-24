@@ -13,8 +13,7 @@ final class BrowserSettingsPrivacyPolicyTests: XCTestCase {
             let destination = session.spaces[1]
             var selection = BrowserStoreSelection(launching: session)
             selection.selectSpace(source)
-            let persistence = InMemoryBrowserSessionPersistence()
-            let browser = BrowserStore(session: session, selection: selection, persistence: persistence)
+            let browser = BrowserStore(session: session, selection: selection)
             let action = BrowserSettingsSpaceSelectionAction(
                 browser: browser, spaceAccess: BrowserSpaceAccessController())
             let assignment = BrowserTabRuntimeAssignment(
@@ -45,12 +44,12 @@ final class BrowserSettingsPrivacyPolicyTests: XCTestCase {
                 browser.session.spaces.removeLast()
             }
             let before = browser.session
-            let savedCount = persistence.savedScopes.count
+            let revision = browser.family.syncRevision
 
             XCTAssertNil(action.select(destination.id, matching: assignment), "\(invalidation)")
 
             XCTAssertEqual(browser.session, before, "\(invalidation)")
-            XCTAssertEqual(persistence.savedScopes.count, savedCount, "\(invalidation)")
+            XCTAssertEqual(browser.family.syncRevision, revision, "\(invalidation)")
         }
     }
 
@@ -107,7 +106,6 @@ final class BrowserSettingsPrivacyPolicyTests: XCTestCase {
         let space = session.spaces[0]
         let browser = BrowserStore(
             session: session,
-            persistence: InMemoryBrowserSessionPersistence(),
             credentialVault: InMemoryCredentialVault()
         )
         let url = try XCTUnwrap(URL(string: "https://accounts.example.com/sign-in"))

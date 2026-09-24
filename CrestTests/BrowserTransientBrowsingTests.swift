@@ -551,7 +551,7 @@ final class BrowserTransientBrowsingTests: XCTestCase {
     }
 
     func testMovingTabIntoSavedAreaCapturesRootAndNavigationDoesNotReplaceIt() throws {
-        let browser = BrowserStore(session: .preview, persistence: InMemoryBrowserSessionPersistence())
+        let browser = BrowserStore(session: .preview)
         let destination = try XCTUnwrap(URL(string: "https://example.com/root"))
         let laterURL = try XCTUnwrap(URL(string: "https://example.net/later"))
         let tabID = try XCTUnwrap(browser.openNewTab(url: destination))
@@ -628,7 +628,7 @@ final class BrowserTransientBrowsingTests: XCTestCase {
     }
 
     func testDismissedQuickWindowArchivesAndRecordsHistoryInExactSpace() throws {
-        let browser = BrowserStore(session: .preview, persistence: InMemoryBrowserSessionPersistence())
+        let browser = BrowserStore(session: .preview)
         let personal = try XCTUnwrap(browser.session.spaces.last)
         let work = try XCTUnwrap(browser.session.spaces.first)
         let url = try XCTUnwrap(URL(string: "https://example.com/transient"))
@@ -644,7 +644,7 @@ final class BrowserTransientBrowsingTests: XCTestCase {
     }
 
     func testTransientMutationsRejectAReplacementProfileWithTheSameSpaceID() throws {
-        let source = try XCTUnwrap(BrowserStore(session: .preview, persistence: InMemoryBrowserSessionPersistence()).selectedSpace)
+        let source = try XCTUnwrap(BrowserStore(session: .preview).selectedSpace)
         let assignment = BrowserSpaceRuntimeAssignment(space: source)
         let replacement = BrowserSpace(
             id: source.id,
@@ -664,8 +664,7 @@ final class BrowserTransientBrowsingTests: XCTestCase {
             savedTabsExpansionModifiedAt: source.savedTabsExpansionModifiedAt
         )
         let browser = BrowserStore(
-            session: BrowserSession(spaces: [replacement]),
-            persistence: InMemoryBrowserSessionPersistence()
+            session: BrowserSession(spaces: [replacement])
         )
         let url = try XCTUnwrap(URL(string: "https://example.com/stale-lease"))
 

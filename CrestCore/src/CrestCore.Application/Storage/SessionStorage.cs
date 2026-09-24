@@ -43,30 +43,28 @@ internal sealed class SessionStorage : IDisposable {
     private bool pendingIsNew, stopping, closed;
 
     public string Directory { get; }
-    /// What the file held when it was opened.
-    public StoredSession Loaded { get; }
 
     #endregion
 
     #region Constructors
 
     private SessionStorage(string directory, SqliteConnection connection, Dictionary<string, byte[]> parts,
-        StoredSession loaded, Action<Change> announce) {
+        NativeSyncJournal? journal, Action<Change> announce) {
         Directory = directory;
         this.connection = connection;
         written = parts;
-        Loaded = loaded;
-        writtenJournal = loaded.Journal;
+        writtenJournal = journal;
         this.announce = announce;
         worker = new Thread(Run) { IsBackground = true, Name = "Crest session storage" };
         worker.Start();
     }
 
-    /// Opens `session.sqlite` in `directory`, creating both when absent. An
-    /// existing file is validated read-only first, because a writable
-    /// connection may replay or truncate a damaged WAL that recovery still
-    /// needs. Throws `Rejected` naming why the file cannot be used.
-    public static SessionStorage Open(string directory, Action<Change> announce) {
+    /// Opens `session.sqlite` in `directory`, creating both when absent, and
+    /// answers what it held in `loaded`. An existing file is validated
+    /// read-only first, because a writable connection may replay or truncate a
+    /// damaged WAL that recovery still needs. Throws `Rejected` naming why the
+    /// file cannot be used.
+    public static SessionStorage Open(string directory, Action<Change> announce, out StoredSession loaded) {
         ArgumentException.ThrowIfNullOrWhiteSpace(directory);
         ArgumentNullException.ThrowIfNull(announce);
         string path = Path.Combine(directory, FileName);
@@ -84,8 +82,8 @@ internal sealed class SessionStorage : IDisposable {
                     connection.Execute($"PRAGMA user_version={StorageVersion}");
                 });
                 var parts = ReadAll(connection);
-                var loaded = validated is { } earlier && SameParts(earlier.Parts, parts) ? earlier.Session : StoredSession.Decode(parts);
-                return new(directory, connection, parts, loaded, announce);
+                loaded = validated is { } earlier && SameParts(earlier.Parts, parts) ? earlier.Session : StoredSession.Decode(parts);
+                return new(directory, connection, parts, loaded.Journal, announce);
             } catch {
                 connection.Dispose();
                 throw;

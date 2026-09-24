@@ -12,7 +12,7 @@ extension BrowserStore {
     func addSpace() {
         guard spaceCommandOwner(.spaceCreate) === self else { return }
         guard createCoreSpace() else { return }
-        persist(scope: .core)
+        stageSync()
     }
 
     func deleteSpace(
@@ -91,7 +91,7 @@ extension BrowserStore {
                 arguments: BrowserSessionArguments.SpaceIdentity(name: name, symbol: symbol, accent: accent),
                 from: owner)
         else { return }
-        owner.persist(syncUrgency: .coalesced, scope: .core)
+        owner.stageSync(urgency: .coalesced)
     }
 
     func updateSpaceBranding(
@@ -102,7 +102,7 @@ extension BrowserStore {
             owner.session.space(id: spaceID) != nil else { return }
         // The command applies the core's branding rules to the stored record.
         guard owner.setCoreSpaceValue(.spaceBranding, branding, in: spaceID) else { return }
-        owner.persist(syncUrgency: .coalesced, scope: .core)
+        owner.stageSync(urgency: .coalesced)
     }
 
     func setDefaultSpace(_ spaceID: SpaceID) {
@@ -110,7 +110,7 @@ extension BrowserStore {
             owner.session.space(id: spaceID) != nil else { return }
         guard owner.family.executeSpace(.spaceDefault, in: spaceID, arguments: BrowserCoreNoArguments(), from: owner)
         else { return }
-        owner.persist(syncUrgency: .coalesced, scope: .core)
+        owner.stageSync(urgency: .coalesced)
     }
 
     func updateSpaceAccessPolicy(
@@ -120,7 +120,7 @@ extension BrowserStore {
         guard let owner = spaceCommandOwner(.spaceAccess, in: spaceID),
             owner.session.space(id: spaceID) != nil else { return }
         guard owner.setCoreSpaceValue(.spaceAccess, accessPolicy, in: spaceID) else { return }
-        owner.persist(syncUrgency: .immediate, scope: .core)
+        owner.stageSync(urgency: .immediate)
     }
 
     func moveSpaces(from source: IndexSet, to destination: Int) {
@@ -131,7 +131,7 @@ extension BrowserStore {
                 arguments: BrowserSessionArguments.SpaceReorder(offsets: Array(source), destination: destination),
                 from: self)
         else { return }
-        persist(syncUrgency: .coalesced, scope: .core)
+        stageSync(urgency: .coalesced)
     }
 
     func updateBrowsingPreferences(
@@ -141,7 +141,7 @@ extension BrowserStore {
         guard let owner = spaceCommandOwner(.spaceBrowsingPreferences, in: spaceID),
             owner.session.space(id: spaceID) != nil else { return }
         guard owner.setCoreSpaceValue(.spaceBrowsingPreferences, preferences, in: spaceID) else { return }
-        owner.persist(syncUrgency: .coalesced, scope: .core)
+        owner.stageSync(urgency: .coalesced)
     }
 
     /// Saves a custom search engine through the core, which validates it,
@@ -171,7 +171,7 @@ extension BrowserStore {
                     provider: BrowserCoreSearchProviderRecord(admitted), selects: selects),
                 from: owner)
         else { return }
-        owner.persist(syncUrgency: .coalesced, scope: .core)
+        owner.stageSync(urgency: .coalesced)
     }
 
     /// Removes a custom search engine; the core selects Google if it was chosen.
@@ -183,7 +183,7 @@ extension BrowserStore {
                 .spaceSearchProviderRemove, in: spaceID,
                 arguments: BrowserSessionArguments.SearchProviderRemove(id: id.coreIdentifier), from: owner)
         else { return }
-        owner.persist(syncUrgency: .coalesced, scope: .core)
+        owner.stageSync(urgency: .coalesced)
     }
 
 }
@@ -198,7 +198,7 @@ extension BrowserStore {
     ) -> Bool {
         guard let owner = spaceCommandOwner(.spaceSavedExpansion, in: spaceID),
             owner.setCoreSpaceValue(.spaceSavedExpansion, isExpanded, in: spaceID) else { return false }
-        owner.persist(syncUrgency: .coalesced, scope: .core)
+        owner.stageSync(urgency: .coalesced)
         return true
     }
 
@@ -225,7 +225,7 @@ extension BrowserStore {
         guard family.execute(.folderCreate, in: spaceID, arguments: arguments, from: self, at: .now) != nil else {
             return nil
         }
-        persist(scope: .core)
+        stageSync()
         return folderID
     }
 
@@ -259,7 +259,7 @@ extension BrowserStore {
     @discardableResult
     func renameFolder(_ folderID: FolderID, in spaceID: SpaceID, title: String) -> Bool {
         guard renameSessionFolder(folderID, in: spaceID, title: title) else { return false }
-        persist(syncUrgency: .coalesced, scope: .core)
+        stageSync(urgency: .coalesced)
         return true
     }
 
@@ -287,7 +287,7 @@ extension BrowserStore {
                 arguments: BrowserSessionArguments.FolderValue(folderId: folderID.rawValue, value: color),
                 from: self, at: .now)?.changed == true
         else { return false }
-        persist(syncUrgency: .coalesced, scope: .core)
+        stageSync(urgency: .coalesced)
         return true
     }
 
@@ -319,7 +319,7 @@ extension BrowserStore {
                 arguments: BrowserSessionArguments.FolderValue(folderId: folderID.rawValue, value: symbol),
                 from: self, at: .now)?.changed == true
         else { return false }
-        persist(syncUrgency: .coalesced, scope: .core)
+        stageSync(urgency: .coalesced)
         return true
     }
 
@@ -352,7 +352,7 @@ extension BrowserStore {
                 isCollapsed: isCollapsed
             )
         else { return false }
-        persist(syncUrgency: .coalesced, scope: .core)
+        stageSync(urgency: .coalesced)
         return true
     }
 
@@ -418,7 +418,7 @@ extension BrowserStore {
                 before: siblingID
             )
         else { return false }
-        persist(syncUrgency: .coalesced, scope: .core)
+        stageSync(urgency: .coalesced)
         return true
     }
 
@@ -471,7 +471,7 @@ extension BrowserStore {
     @discardableResult
     func deleteFolder(_ folderID: FolderID, in spaceID: SpaceID) -> Bool {
         guard deleteSessionFolder(folderID, in: spaceID) else { return false }
-        persist(deletionReason: .explicitDelete, scope: .core)
+        stageSync(deletionReason: .explicitDelete)
         return true
     }
 

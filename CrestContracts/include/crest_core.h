@@ -171,18 +171,18 @@ CREST_API crest_status_t CREST_CALL crest_session_create_borrowed(
     uint64_t* out_session, uint64_t* out_revision, uint64_t* out_projection);
 CREST_API crest_status_t CREST_CALL crest_session_prepare_borrowed_refresh(
     uint64_t session, uint64_t expected_revision, uint64_t* out_command);
-/* Semantic same-profile workspace transfer. Reserve excludes both writers until
-   the durable owner's checkpoint and optional sync journal have been saved.
-   Releasing an uncommitted transfer cancels both reservations. */
+/* Semantic same-profile workspace transfer. Commit reserves both revisions,
+   saves the side that keeps a file with the sealed sync transaction's journal
+   (sync_transaction may be zero), then publishes both. STORAGE_FAILED or any
+   other failure cancels both, and the transfer cannot be committed again.
+   Releasing an uncommitted transfer leaves both sessions as they were. */
 CREST_API crest_status_t CREST_CALL crest_session_prepare_transfer(
     uint64_t source, uint64_t source_revision, uint64_t destination, uint64_t destination_revision,
     const uint8_t *bytes, size_t count, uint64_t *transfer);
 CREST_API crest_status_t CREST_CALL crest_session_read_transfer(
     uint64_t transfer, uint8_t *destination, size_t capacity, size_t *length);
-CREST_API crest_status_t CREST_CALL crest_session_reserve_transfer(
-    uint64_t transfer, uint64_t sync_transaction, uint64_t *source_checkpoint, uint64_t *destination_checkpoint);
 CREST_API crest_status_t CREST_CALL crest_session_commit_transfer(
-    uint64_t transfer, uint64_t *source_revision, uint64_t *destination_revision);
+    uint64_t transfer, uint64_t sync_transaction, uint64_t *source_revision, uint64_t *destination_revision);
 CREST_API crest_status_t CREST_CALL crest_session_release_transfer(uint64_t transfer);
 
 CREST_API crest_status_t CREST_CALL crest_session_checkpoint(
@@ -248,6 +248,9 @@ CREST_API crest_status_t CREST_CALL crest_session_release_replacement(uint64_t r
 // journal a durable session commit already published is left alone.
 CREST_API crest_status_t CREST_CALL crest_sync_authority_create(uint64_t journal, uint64_t *authority);
 CREST_API crest_status_t CREST_CALL crest_sync_authority_release(uint64_t authority);
+/* The journal the authority accepted last, as a new snapshot handle the caller
+ * releases with crest_sync_journal_release. */
+CREST_API crest_status_t CREST_CALL crest_sync_authority_snapshot(uint64_t authority, uint64_t *journal);
 CREST_API crest_status_t CREST_CALL crest_session_attach_sync(uint64_t session, uint64_t authority);
 CREST_API crest_status_t CREST_CALL crest_sync_authority_advance(uint64_t authority, uint64_t revision);
 CREST_API crest_status_t CREST_CALL crest_sync_authority_prepare(uint64_t authority,

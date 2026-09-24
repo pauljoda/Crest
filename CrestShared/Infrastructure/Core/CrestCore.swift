@@ -1,6 +1,7 @@
 import CrestCoreABI
 import Foundation
 import Observation
+import Synchronization
 
 /// The app's one connection to the core's typed application API.
 ///
@@ -13,6 +14,10 @@ import Observation
 /// `query` may be called from any thread: it reads only the immutable handle,
 /// the core serializes every call on one app, and a query never changes the
 /// core's state or `state`. Intents stay on the main actor.
+///
+/// Changes the core starts itself, such as a finished save, arrive through a
+/// payload-free wake that hops to the main queue and drains them, at most once
+/// per main-queue turn.
 @MainActor
 @Observable
 final class CrestCore {
@@ -20,7 +25,15 @@ final class CrestCore {
 
     /// The read model. Only the changes the core returns update it.
     let state = CoreState()
-    @ObservationIgnored nonisolated private let handle: UInt64
+    /// Where the core keeps `session.sqlite`; nil when it keeps everything in
+    /// memory.
+    let storageDirectory: URL?
+    /// Called for each save the core started itself and could not finish.
+    @ObservationIgnored var storageFailureHandler: ((StorageFailure) -> Void)?
+    @ObservationIgnored nonisolated let handle: UInt64
+    @ObservationIgnored private let wake = CoreWakeRelay()
+    /// Callers waiting for a revision to reach disk. A drain resumes them.
+    @ObservationIgnored var saveWaiters: [(revision: Int64, continuation: CheckedContinuation<Void, Never>)] = []
 
     // MARK: - Initializers
 
@@ -65,9 +78,15 @@ final class CrestCore {
         default:
             Self.buildBug(status, "create the core")
         }
+        storageDirectory = configuration.storageDirectory.map { URL(fileURLWithPath: $0, isDirectory: true) }
+        wake.core = self
+        let installed = crest_app_set_wake(handle, relayCoreWake, Unmanaged.passUnretained(wake).toOpaque())
+        guard installed == CREST_OK else { Self.buildBug(installed, "set its wake callback") }
     }
 
     deinit {
+        // No wake may reach the relay once the core is gone.
+        crest_app_set_wake(handle, nil, nil)
         crest_app_destroy(handle)
     }
 
@@ -80,18 +99,7 @@ final class CrestCore {
         var writer = WireWriter()
         intent.encodeIntent(into: &writer)
         var reader = try call(crest_app_dispatch, writer, "send \(type(of: intent))")
-        let changes: [Change]
-        do {
-            let count = try reader.readCount()
-            var decoded: [Change] = []
-            decoded.reserveCapacity(count)
-            for _ in 0..<count { decoded.append(try Change(from: &reader)) }
-            try reader.finish()
-            changes = decoded
-        } catch {
-            preconditionFailure(
-                "The core's changes for \(type(of: intent)) do not decode (\(error)). Rebuild the core.")
-        }
+        let changes = decodeChanges(from: &reader, "\(type(of: intent))")
         for change in changes { state.apply(change) }
         return changes
     }
@@ -108,6 +116,37 @@ final class CrestCore {
             return answer
         } catch {
             preconditionFailure("The core's answer to \(Question.self) does not decode (\(error)). Rebuild the core.")
+        }
+    }
+
+    // MARK: - Actions - Changes
+
+    /// Applies the changes the core started itself since the last drain, then
+    /// answers the callers waiting for them.
+    func drain() {
+        var buffer = crest_buffer_t()
+        let status = crest_app_drain(handle, &buffer)
+        defer { crest_buffer_free(&buffer) }
+        guard status == CREST_OK else { Self.buildBug(status, "drain its changes") }
+        let length = buffer.length
+        var reader = WireReader(buffer.bytes.map { Array(UnsafeBufferPointer(start: $0, count: length)) } ?? [])
+        for change in decodeChanges(from: &reader, "its own work") {
+            state.apply(change)
+            if case .storageFailed(let failure) = change { storageFailed(failure.reason) }
+        }
+        resumeSaveWaiters()
+    }
+
+    private func decodeChanges(from reader: inout WireReader, _ source: @autoclosure () -> String) -> [Change] {
+        do {
+            let count = try reader.readCount()
+            var decoded: [Change] = []
+            decoded.reserveCapacity(count)
+            for _ in 0..<count { decoded.append(try Change(from: &reader)) }
+            try reader.finish()
+            return decoded
+        } catch {
+            preconditionFailure("The core's changes for \(source()) do not decode (\(error)). Rebuild the core.")
         }
     }
 
@@ -142,7 +181,7 @@ final class CrestCore {
         }
     }
 
-    nonisolated private static func buildBug(_ status: crest_status_t, _ action: String) -> Never {
+    nonisolated static func buildBug(_ status: crest_status_t, _ action: String) -> Never {
         let name =
             switch status {
             case CREST_INVALID_MESSAGE: "INVALID_MESSAGE"
@@ -157,4 +196,27 @@ final class CrestCore {
             "The core could not \(action): \(name). The app and its core were built from different contracts; rebuild both."
         )
     }
+}
+
+/// Carries the core's wake from whichever thread published a change to one
+/// drain on the main queue. A wake that finds a drain already queued adds
+/// nothing.
+private final class CoreWakeRelay: Sendable {
+    nonisolated(unsafe) weak var core: CrestCore?
+    private let isScheduled = Atomic<Bool>(false)
+
+    func schedule() {
+        guard !isScheduled.exchange(true, ordering: .acquiringAndReleasing) else { return }
+        DispatchQueue.main.async { [self] in
+            isScheduled.store(false, ordering: .releasing)
+            MainActor.assumeIsolated { core?.drain() }
+        }
+    }
+}
+
+/// The core's wake callback. It runs on the core thread that published a
+/// change, outside every core lock, so it only schedules the drain.
+private func relayCoreWake(_ context: UnsafeMutableRawPointer?) {
+    guard let context else { return }
+    Unmanaged<CoreWakeRelay>.fromOpaque(context).takeUnretainedValue().schedule()
 }

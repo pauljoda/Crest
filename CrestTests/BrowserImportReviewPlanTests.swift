@@ -244,12 +244,10 @@ final class BrowserImportReviewPlanTests: XCTestCase {
         XCTAssertNil(preview.space(id: excluded.id))
         XCTAssertFalse(preview.spaces.contains { $0.name == excluded.name })
 
-        let persistence = InMemoryBrowserSessionPersistence()
-        let browser = BrowserStore(session: existing, persistence: persistence)
+        let browser = BrowserStore(session: existing)
         try browser.commitReviewedImport(plan)
 
         XCTAssertEqual(browser.session, preview)
-        XCTAssertEqual(persistence.session, preview)
     }
 
     func testDuplicateOnlySpaceRemainsIncludedUntilItIsExplicitlyDropped() throws {
@@ -309,7 +307,6 @@ final class BrowserImportReviewPlanTests: XCTestCase {
         let vault = InMemoryCredentialVault()
         let browser = BrowserStore(
             session: existing,
-            persistence: InMemoryBrowserSessionPersistence(),
             credentialVault: vault
         )
         let origin = try XCTUnwrap(

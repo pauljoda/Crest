@@ -10,8 +10,7 @@ final class BrowserSpaceOrderActionsTests: XCTestCase {
         let originalSpaces = session.spaces
         let movedID = originalSpaces[0].id
         session.defaultSpaceID = originalSpaces[1].id
-        let persistence = InMemoryBrowserSessionPersistence()
-        let browser = BrowserStore(session: session, persistence: persistence)
+        let browser = BrowserStore(session: session)
         let shownSpaceID = browser.selectedSpaceID
         let actions = BrowserSpaceOrderActions(browser: browser, spaceID: movedID)
         XCTAssertFalse(actions.canMoveUp)
@@ -26,19 +25,17 @@ final class BrowserSpaceOrderActionsTests: XCTestCase {
         for original in originalSpaces {
             XCTAssertEqual(browser.session.space(id: original.id), original)
         }
-        XCTAssertEqual(try XCTUnwrap(persistence.load()), browser.session)
-        XCTAssertEqual(persistence.savedScopes.last, .core)
 
         actions.moveDown()
         XCTAssertEqual(browser.session.spaces.last?.id, movedID)
         XCTAssertFalse(actions.canMoveDown)
-        let savedCount = persistence.savedScopes.count
+        let revision = browser.family.syncRevision
         actions.moveDown()
         let missing = BrowserSpaceOrderActions(browser: browser, spaceID: SpaceID())
         XCTAssertFalse(missing.canMoveUp)
         XCTAssertFalse(missing.canMoveDown)
         missing.moveUp()
         missing.moveDown()
-        XCTAssertEqual(persistence.savedScopes.count, savedCount)
+        XCTAssertEqual(browser.family.syncRevision, revision, "A move that cannot happen stages nothing")
     }
 }

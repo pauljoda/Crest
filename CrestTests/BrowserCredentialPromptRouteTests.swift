@@ -99,7 +99,6 @@ final class BrowserCredentialPromptRouteTests: XCTestCase {
     func testReplacingPromptWhileSystemOfferIsSuspendedCannotMutateTheReplacementSpace() async throws {
         let store = BrowserStore(
             session: .preview,
-            persistence: InMemoryBrowserSessionPersistence(),
             credentialVault: InMemoryCredentialVault()
         )
         let firstSpace = try XCTUnwrap(store.session.spaces.first)
@@ -193,7 +192,6 @@ final class BrowserCredentialPromptRouteTests: XCTestCase {
     func testUpdateTransitionKeepsTheCandidateSpaceBoundAndCommitsOnce() async throws {
         let store = BrowserStore(
             session: .preview,
-            persistence: InMemoryBrowserSessionPersistence(),
             credentialVault: InMemoryCredentialVault()
         )
         let space = try XCTUnwrap(store.session.spaces.first)

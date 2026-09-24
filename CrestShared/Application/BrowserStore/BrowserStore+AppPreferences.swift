@@ -6,7 +6,7 @@ extension BrowserStore {
     @discardableResult
     func applyAppPreferenceCommand(_ request: BrowserAppPreferenceRequest) -> Bool {
         guard family.executePreferences(request, from: self) else { return false }
-        persist(syncUrgency: .coalesced, scope: .core)
+        stageSync(urgency: .coalesced)
         return true
     }
 }

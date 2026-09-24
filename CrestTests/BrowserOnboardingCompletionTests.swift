@@ -128,7 +128,7 @@ final class BrowserOnboardingCompletionTests: XCTestCase {
     private func protectedBrowser() -> BrowserStore {
         var session = BrowserSession.preview
         session.spaces[0].accessPolicy = .deviceOwnerAuthentication
-        return BrowserStore(session: session, persistence: InMemoryBrowserSessionPersistence())
+        return BrowserStore(session: session)
     }
 }
 

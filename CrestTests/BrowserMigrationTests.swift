@@ -334,8 +334,7 @@ final class BrowserMigrationTests: XCTestCase {
     }
 
     func testStoreImportAppendsFreshMigrationSpaceAndPersists() throws {
-        let persistence = InMemoryBrowserSessionPersistence()
-        let store = BrowserStore(session: .preview, persistence: persistence)
+        let store = BrowserStore(session: .preview)
         let html = """
             <!DOCTYPE NETSCAPE-Bookmark-file-1>
             <DL><p><DT><A HREF="https://example.com/">Example</A></DL><p>
@@ -350,7 +349,6 @@ final class BrowserMigrationTests: XCTestCase {
 
         XCTAssertEqual(store.selectedSpace?.name, "Imported Bookmarks")
         XCTAssertEqual(store.selectedTab?.title, "Example")
-        XCTAssertEqual(persistence.session, store.session)
     }
 
     private func makeExportFixture() -> BrowserSession {

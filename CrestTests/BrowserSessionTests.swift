@@ -901,7 +901,7 @@ final class BrowserSessionTests: XCTestCase {
 
     /// A window store over `session` that opens the launch selection.
     private func makeStore(_ session: BrowserSession) -> BrowserStore {
-        BrowserStore(session: session, persistence: InMemoryBrowserSessionPersistence())
+        BrowserStore(session: session)
     }
 
     /// A new window record showing the launch selection of `session`.
@@ -1425,86 +1425,6 @@ final class BrowserSessionStorageSplitTests: XCTestCase {
 
     // MARK: - Dirty tracking
 
-    func testACoreSaveLeavesEveryHistoryKeyAndEveryFaviconAlone() async throws {
-        let session = try makeRichLegacySession()
-        let harness = makeHarness()
-        harness.persistence.save(session)
-        await harness.persistence.flushPendingSaves()
-        harness.recorder.reset()
-        harness.favicons.reset()
-
-        var retitled = session
-        retitled.spaces[0].tabs[0].title = "Renamed by the page"
-        harness.persistence.save(retitled, scope: .core)
-        await harness.persistence.flushPendingSaves()
-
-        XCTAssertEqual(harness.recorder.writtenKeys, [Storage.coreKey])
-        XCTAssertTrue(harness.recorder.removedKeys.isEmpty)
-        XCTAssertTrue(
-            harness.favicons.reconciledTabIDs.isEmpty,
-            "A core save must not touch icon bytes."
-        )
-        XCTAssertTrue(harness.favicons.pruneRequests.isEmpty)
-    }
-
-    func testAHistorySaveWritesOneSpaceAndNotTheCore() async throws {
-        let session = try makeRichLegacySession()
-        let harness = makeHarness()
-        harness.persistence.save(session)
-        await harness.persistence.flushPendingSaves()
-        harness.recorder.reset()
-        harness.favicons.reset()
-
-        var visited = session
-        let visitedSpaceID = visited.spaces[0].id
-        visited.spaces[0].history.append(
-            BrowserHistoryEntry(
-                url: try XCTUnwrap(URL(string: "https://example.com/just-now")),
-                title: "Just now",
-                firstVisitedAt: Date(timeIntervalSince1970: 1_800_000_000),
-                lastVisitedAt: Date(timeIntervalSince1970: 1_800_000_000)
-            )
-        )
-        harness.persistence.save(visited, scope: .history(in: visitedSpaceID))
-        await harness.persistence.flushPendingSaves()
-
-        XCTAssertEqual(harness.recorder.writtenKeys, [Storage.historyKey(for: visitedSpaceID)])
-        XCTAssertTrue(harness.favicons.reconciledTabIDs.isEmpty)
-        let untouchedSpaceID = visited.spaces[1].id
-        XCTAssertEqual(
-            harness.recorder.byteCount(forKey: Storage.historyKey(for: untouchedSpaceID)),
-            0,
-            "Another Space's history is not this visit's business."
-        )
-    }
-
-    func testAFaviconSaveReconcilesOneIconAndNeverRewritesHistory() async throws {
-        let session = try makeRichLegacySession()
-        let harness = makeHarness()
-        harness.persistence.save(session)
-        await harness.persistence.flushPendingSaves()
-        harness.recorder.reset()
-        harness.favicons.reset()
-
-        var captured = session
-        let tabID = captured.spaces[0].tabs[0].id
-        let capturedURL = try XCTUnwrap(captured.spaces[0].tabs[0].url)
-        let capturedIcon = Self.faviconBytes(seed: 200, byteCount: 3_000)
-        captured.spaces[0].tabs[0].faviconData = capturedIcon
-        captured.spaces[0].tabs[0].faviconURL = capturedURL
-        captured.spaces[0].tabs[0].iconAccent = BrowserTabIconAccent(red: 1, green: 0.25, blue: 0)
-        harness.persistence.save(captured, scope: .favicon(for: tabID))
-        await harness.persistence.flushPendingSaves()
-
-        XCTAssertEqual(harness.favicons.reconciledTabIDs, [tabID])
-        XCTAssertEqual(harness.favicons.favicon(tabID: tabID), capturedIcon)
-        XCTAssertEqual(
-            harness.recorder.writtenKeys,
-            [Storage.coreKey],
-            "An icon capture rewrites the core that frames it, and no history."
-        )
-    }
-
     func testMissingFaviconCaptureKeepsTheLastSavedIconForALiveTab() async throws {
         var session = try makeRichLegacySession()
         let harness = makeHarness()
@@ -1516,7 +1436,7 @@ final class BrowserSessionStorageSplitTests: XCTestCase {
         await harness.persistence.flushPendingSaves()
 
         session.spaces[0].tabs[0].faviconData = nil
-        harness.persistence.save(session, scope: .favicon(for: tabID))
+        harness.persistence.save(session)
         await harness.persistence.flushPendingSaves()
 
         let relaunched = makeHarness(
@@ -1527,85 +1447,6 @@ final class BrowserSessionStorageSplitTests: XCTestCase {
         let restoredTab = restored.space(id: spaceID)?.tabs.first { $0.id == tabID }
 
         XCTAssertEqual(restoredTab?.faviconData, icon)
-    }
-
-    func testUnchangedPayloadsAreNotRewritten() async throws {
-        let session = try makeRichLegacySession()
-        let harness = makeHarness()
-        harness.persistence.save(session)
-        await harness.persistence.flushPendingSaves()
-        harness.recorder.reset()
-
-        harness.persistence.save(session)
-        await harness.persistence.flushPendingSaves()
-
-        XCTAssertEqual(
-            harness.recorder.writtenKeys,
-            [],
-            "A save that changed nothing must not write anything."
-        )
-    }
-
-    func testRemovingASpaceDropsItsHistoryAndItsFavicons() async throws {
-        let session = try makeRichLegacySession()
-        let harness = makeHarness()
-        harness.persistence.save(session)
-        await harness.persistence.flushPendingSaves()
-        harness.recorder.reset()
-        harness.favicons.reset()
-
-        var reduced = session
-        let removedSpace = try XCTUnwrap(reduced.spaces.last)
-        let removedTabIDs = Set(
-            removedSpace.tabs.map(\.id) + removedSpace.archivedTabs.map(\.tab.id)
-        )
-        reduced.spaces.removeLast()
-        harness.persistence.save(reduced, scope: .core)
-        await harness.persistence.flushPendingSaves()
-
-        XCTAssertTrue(
-            harness.recorder.removedKeys.contains(Storage.historyKey(for: removedSpace.id))
-        )
-        XCTAssertNil(harness.defaults.data(forKey: Storage.historyKey(for: removedSpace.id)))
-        XCTAssertNotNil(
-            harness.defaults.data(forKey: Storage.historyKey(for: reduced.spaces[0].id)),
-            "A surviving Space keeps its history."
-        )
-        XCTAssertTrue(
-            harness.favicons.storedTabIDs.isDisjoint(with: removedTabIDs),
-            "A deleted Space must not leave its icons behind."
-        )
-    }
-
-    func testClosingATabDropsItsFaviconFileAndKeepsOtherLiveFavicons() async throws {
-        var session = BrowserSession.preview
-        let spaceIndex = 0
-        let closedTabID = try XCTUnwrap(
-            session.spaces[spaceIndex].currentTabs.first(where: { !$0.isStartPage })?.id
-        )
-        let keptTabID = try XCTUnwrap(
-            session.spaces[spaceIndex].tabs.first(where: { $0.id != closedTabID })?.id
-        )
-        let closedIcon = Data("closed-icon".utf8)
-        let keptIcon = Data("kept-icon".utf8)
-        let closedIndex = try XCTUnwrap(
-            session.spaces[spaceIndex].tabs.firstIndex { $0.id == closedTabID }
-        )
-        let keptIndex = try XCTUnwrap(
-            session.spaces[spaceIndex].tabs.firstIndex { $0.id == keptTabID }
-        )
-        session.spaces[spaceIndex].tabs[closedIndex].faviconData = closedIcon
-        session.spaces[spaceIndex].tabs[keptIndex].faviconData = keptIcon
-        let harness = makeHarness()
-        harness.persistence.save(session)
-        await harness.persistence.flushPendingSaves()
-
-        Self.archiveTab(closedTabID, inSpaceAt: spaceIndex, of: &session, at: Date(timeIntervalSince1970: 500))
-        harness.persistence.save(session, scope: .core)
-        await harness.persistence.flushPendingSaves()
-
-        XCTAssertNil(harness.favicons.favicon(tabID: closedTabID))
-        XCTAssertEqual(harness.favicons.favicon(tabID: keptTabID), keptIcon)
     }
 
     // MARK: - Migration
@@ -1671,44 +1512,6 @@ final class BrowserSessionStorageSplitTests: XCTestCase {
     }
 
     // MARK: - Measurement
-
-    func testTheCoreBlobCarriesNeitherHistoryNorIconBytes() async throws {
-        let session = try makeRichLegacySession(
-            historyEntriesPerSpace: 2_000,
-            faviconByteCount: 12 * 1_024
-        )
-        let legacyByteCount = try JSONEncoder().encode(session).count
-
-        let harness = makeHarness()
-        harness.persistence.save(session)
-        await harness.persistence.flushPendingSaves()
-        let coreByteCount = try XCTUnwrap(harness.defaults.data(forKey: Storage.coreKey)).count
-
-        harness.recorder.reset()
-        var retitled = session
-        retitled.spaces[0].tabs[0].title = "Mutated by the page"
-        harness.persistence.save(retitled, scope: .core)
-        await harness.persistence.flushPendingSaves()
-        let titleChangeByteCount = harness.recorder.writtenByteCount
-
-        let tabCount = session.spaces.reduce(0) { $0 + $1.tabs.count }
-        print(
-            """
-            session-split measurement \
-            (\(session.spaces.count) Spaces, \(tabCount) tabs, \
-            2000 history entries per Space, 12 KB favicons)
-              legacy v1 blob, written on every save: \(legacyByteCount) bytes
-              v2 core blob:                          \(coreByteCount) bytes
-              one title-change save now writes:      \(titleChangeByteCount) bytes
-            """)
-
-        XCTAssertLessThan(
-            coreByteCount,
-            legacyByteCount / 10,
-            "The core must be a fraction of the blob it replaces."
-        )
-        XCTAssertLessThan(titleChangeByteCount, legacyByteCount / 10)
-    }
 
     // MARK: - Helpers
 

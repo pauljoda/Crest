@@ -74,8 +74,7 @@ final class BrowserSplitGroupSessionTests: XCTestCase {
         let store = BrowserStore(
             session: BrowserSession(spaces: [source, destination]),
             selection: BrowserStoreSelection(
-                selectedSpaceID: source.id, selectedTabIDsBySpace: [source.id: head.id, destination.id: resident.id]),
-            persistence: InMemoryBrowserSessionPersistence()
+                selectedSpaceID: source.id, selectedTabIDsBySpace: [source.id: head.id, destination.id: resident.id])
         )
 
         XCTAssertTrue(store.moveTab(head.id, from: source.id, into: destination.id))
@@ -205,8 +204,7 @@ final class BrowserSplitGroupSessionTests: XCTestCase {
         let other = makeSpace(name: "Other", tabs: [head, tail])
         let store = BrowserStore(
             session: BrowserSession(spaces: [selected, other]),
-            selection: BrowserStoreSelection(selectedSpaceID: selected.id, selectedTabIDsBySpace: [other.id: head.id]),
-            persistence: InMemoryBrowserSessionPersistence()
+            selection: BrowserStoreSelection(selectedSpaceID: selected.id, selectedTabIDsBySpace: [other.id: head.id])
         )
         let assignment = BrowserSpaceRuntimeAssignment(space: other)
 
@@ -301,8 +299,7 @@ final class BrowserSplitGroupSessionTests: XCTestCase {
         let store = BrowserStore(
             session: BrowserSession(spaces: [selected, other]),
             selection: BrowserStoreSelection(
-                selectedSpaceID: selected.id, selectedTabIDsBySpace: [selected.id: target.id, other.id: foreign.id]),
-            persistence: InMemoryBrowserSessionPersistence()
+                selectedSpaceID: selected.id, selectedTabIDsBySpace: [selected.id: target.id, other.id: foreign.id])
         )
 
         XCTAssertFalse(
@@ -603,8 +600,7 @@ final class BrowserSplitGroupSessionTests: XCTestCase {
         BrowserStore(
             session: BrowserSession(spaces: [space]),
             selection: BrowserStoreSelection(
-                selectedSpaceID: space.id, selectedTabIDsBySpace: selectedTabID.map { [space.id: $0] } ?? [:]),
-            persistence: InMemoryBrowserSessionPersistence()
+                selectedSpaceID: space.id, selectedTabIDsBySpace: selectedTabID.map { [space.id: $0] } ?? [:])
         )
     }
 

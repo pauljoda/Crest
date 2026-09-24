@@ -1,5 +1,6 @@
 import Foundation
 import XCTest
+
 @testable import Crest
 
 @MainActor
@@ -8,10 +9,12 @@ final class BrowserCoreSessionRecoveryTests: XCTestCase {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }
         let url = directory.appendingPathComponent("session.sqlite")
-        let original = BrowserSession.preview
+        // Launch repair names a launch Space; this one already has it.
+        var original = BrowserSession.preview
+        original.defaultSpaceID = original.spaces[0].id
         var journal = BrowserSyncJournal()
         try journal.stage(session: original)
-        try makeCheckpoint(url, session: original, journal: journal)
+        try makeCheckpoint(directory, session: original, journal: journal)
         let broken = Data("unreadable original".utf8)
         try broken.write(to: url)
         let sidecar = URL(fileURLWithPath: url.path + "-wal")
@@ -20,24 +23,28 @@ final class BrowserCoreSessionRecoveryTests: XCTestCase {
         var successfulLaunches = 0
         let launch = BrowserApplicationLaunch {
             do {
-                let storage = try BrowserTransactionalSessionPersistence(url: url, favicons: InMemoryBrowserFaviconStore())
+                let core = try CrestCore(configuration: AppConfiguration(storageDirectory: directory.path))
                 successfulLaunches += 1
-                return storage
+                return core
             } catch { throw BrowserSessionStartupFailure(storeURL: url, underlying: error) }
         }
         XCTAssertNil(launch.value)
         XCTAssertEqual(successfulLaunches, 0)
         XCTAssertNotNil(launch.failure?.checkpointDate)
         launch.restore()
-        let restored = try XCTUnwrap(launch.value)
-        XCTAssertEqual(restored.load(), original)
-        let restoredJournal = try XCTUnwrap(restored.journalPersistence.load())
+        let restored = try XCTUnwrap(
+            BrowserCoreStoredSession.load(core: try XCTUnwrap(launch.value), favicons: InMemoryBrowserFaviconStore()))
+        XCTAssertEqual(restored.authority.projection, original)
+        let restoredJournal = restored.sync.journal
         XCTAssertNotEqual(restoredJournal.deviceID, journal.deviceID)
         XCTAssertEqual(restoredJournal.records, journal.records)
         XCTAssertEqual(restoredJournal.logicalClock, journal.logicalClock)
         XCTAssertEqual(restoredJournal.pendingRecordIDs, journal.pendingRecordIDs)
-        let saved = try XCTUnwrap(FileManager.default.contentsOfDirectory(at: directory,
-            includingPropertiesForKeys: nil).first { $0.lastPathComponent.hasPrefix("Recovery-") })
+        let saved = try XCTUnwrap(
+            FileManager.default.contentsOfDirectory(
+                at: directory,
+                includingPropertiesForKeys: nil
+            ).first { $0.lastPathComponent.hasPrefix("Recovery-") })
         XCTAssertEqual(try Data(contentsOf: saved.appendingPathComponent("session.sqlite")), broken)
         XCTAssertEqual(try Data(contentsOf: saved.appendingPathComponent("session.sqlite-wal")), sidecarBytes)
         XCTAssertTrue(FileManager.default.fileExists(atPath: BrowserSessionRecovery.cloudMarker(for: url).path))
@@ -57,8 +64,9 @@ final class BrowserCoreSessionRecoveryTests: XCTestCase {
         XCTAssertThrowsError(try BrowserSessionRecovery.restore(url))
         XCTAssertEqual(try Data(contentsOf: url), original)
         XCTAssertFalse(FileManager.default.fileExists(atPath: BrowserSessionRecovery.restoreMarker(for: url).path))
-        let failure = BrowserSessionStartupFailure(storeURL: url,
-            underlying: BrowserTransactionalSessionPersistence.StorageError.unsupportedVersion)
+        let failure = BrowserSessionStartupFailure(
+            storeURL: url,
+            underlying: Rejection.storageFromNewerApp(StorageFromNewerApp()))
         XCTAssertTrue(failure.requiresNewerApp)
         XCTAssertNil(failure.checkpointDate)
         XCTAssertThrowsError(try failure.restore())
@@ -68,21 +76,24 @@ final class BrowserCoreSessionRecoveryTests: XCTestCase {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }
         let url = directory.appendingPathComponent("session.sqlite")
-        let original = BrowserSession.preview
+        // Launch repair names a launch Space; this one already has it.
+        var original = BrowserSession.preview
+        original.defaultSpaceID = original.spaces[0].id
         var journal = BrowserSyncJournal()
         try journal.stage(session: original)
-        try makeCheckpoint(url, session: original, journal: journal)
+        try makeCheckpoint(directory, session: original, journal: journal)
         try FileManager.default.removeItem(at: url)
         try Data().write(to: BrowserSessionRecovery.restoreMarker(for: url))
-        XCTAssertThrowsError(try BrowserTransactionalSessionPersistence(url: url, favicons: InMemoryBrowserFaviconStore())) {
-            guard case BrowserTransactionalSessionPersistence.StorageError.interruptedRestore = $0 else {
+        XCTAssertThrowsError(try CrestCore(configuration: AppConfiguration(storageDirectory: directory.path))) {
+            guard case .storageRestoreInterrupted = $0 as? Rejection else {
                 return XCTFail("Expected interrupted restore, got \($0)")
             }
         }
         XCTAssertFalse(FileManager.default.fileExists(atPath: url.path))
         try BrowserSessionRecovery.restore(url)
-        let restored = try BrowserTransactionalSessionPersistence(url: url, favicons: InMemoryBrowserFaviconStore())
-        XCTAssertEqual(restored.load(), original)
+        let core = try CrestCore(configuration: AppConfiguration(storageDirectory: directory.path))
+        let restored = try XCTUnwrap(BrowserCoreStoredSession.load(core: core, favicons: InMemoryBrowserFaviconStore()))
+        XCTAssertEqual(restored.authority.projection, original)
     }
 
     func testRestoredJournalRequiresFullCloudMergeAndRetainsAccountConfirmation() throws {
@@ -113,7 +124,7 @@ final class BrowserCoreSessionRecoveryTests: XCTestCase {
         // Write the installed release's own stores, through its own types.
         let installed = try makeInstalledSession()
         let writer = UserDefaultsBrowserSessionPersistence(defaults: defaults, faviconStore: favicons)
-        writer.save(installed, scope: .everything)
+        writer.save(installed)
         await writer.flushPendingSaves()
         // A journal the installed release had uploaded once, then a Space the
         // reader deleted whose tombstone and pending uploads are still owed.
@@ -130,68 +141,80 @@ final class BrowserCoreSessionRecoveryTests: XCTestCase {
         // Per-window selection is a separate record in the same domain. The
         // upgrade must read it in place rather than carry or clear it.
         let windowStates = UserDefaultsBrowserWindowStatePersistence(defaults: defaults)
-        let windowState = BrowserWindowState(selectedSpaceID: installed.spaces[1].id,
-            selectedTabIDsBySpace: Dictionary(uniqueKeysWithValues: installed.spaces.compactMap { space in
-                space.tabs.first.map { (space.id, $0.id) }
-            }))
+        let windowState = BrowserWindowState(
+            selectedSpaceID: installed.spaces[1].id,
+            selectedTabIDsBySpace: Dictionary(
+                uniqueKeysWithValues: installed.spaces.compactMap { space in
+                    space.tabs.first.map { (space.id, $0.id) }
+                }))
         windowStates.save(windowState)
         await windowStates.flushPendingSaves()
 
         // A launch reads those stores fresh, exactly as the upgraded app does.
-        let storage = try BrowserStore.migratedStorage(directory: directory,
-            legacy: UserDefaultsBrowserSessionPersistence(defaults: defaults, faviconStore: favicons),
-            journal: journalStore, favicons: favicons, environment: .current)
-        let migrated = try XCTUnwrap(storage.load())
-        XCTAssertEqual(migrated, installed)
-        // Spelled out, because each of these is a separate way to "start over".
-        XCTAssertEqual(migrated.spaces.map(\.id), installed.spaces.map(\.id))
-        // Website data, credentials and the tab-state archive are all keyed by
-        // the profile identity, so a new one would orphan every one of them.
-        XCTAssertEqual(migrated.spaces.map(\.profile.id), installed.spaces.map(\.profile.id))
-        XCTAssertEqual(migrated.defaultSpaceID, installed.defaultSpaceID)
-        XCTAssertEqual(migrated.spaces.map(\.accessPolicy), installed.spaces.map(\.accessPolicy))
-        XCTAssertTrue(migrated.spaces.contains { $0.accessPolicy != .open })
-        XCTAssertEqual(migrated.spaces.map { $0.tabs.map(\.id) }, installed.spaces.map { $0.tabs.map(\.id) })
-        XCTAssertEqual(migrated.spaces.map { $0.folders.map(\.id) }, installed.spaces.map { $0.folders.map(\.id) })
-        XCTAssertEqual(migrated.spaces.map(\.splitGroups), installed.spaces.map(\.splitGroups))
-        XCTAssertEqual(migrated.spaces.map { $0.tabs.map(\.splitGroupID) },
-            installed.spaces.map { $0.tabs.map(\.splitGroupID) })
-        XCTAssertEqual(migrated.spaces.map(\.archivedTabs), installed.spaces.map(\.archivedTabs))
-        XCTAssertEqual(migrated.spaces.map(\.history), installed.spaces.map(\.history))
-        XCTAssertFalse(migrated.spaces.flatMap(\.splitGroups).isEmpty)
-        XCTAssertFalse(migrated.spaces.flatMap { $0.tabs.compactMap(\.splitGroupID) }.isEmpty)
-        XCTAssertFalse(migrated.spaces.flatMap(\.archivedTabs).isEmpty)
-        XCTAssertFalse(migrated.spaces.flatMap(\.folders).isEmpty)
-        XCTAssertFalse(migrated.spaces.flatMap(\.history).isEmpty)
-        XCTAssertTrue(migrated.spaces.allSatisfy { $0.tabs.contains { $0.faviconData != nil } })
+        let url = directory.appendingPathComponent(BrowserSessionRecovery.fileName)
+        do {
+            let crest = try CrestCore(configuration: AppConfiguration(storageDirectory: directory.path))
+            let storage = try BrowserStore.migratedStorage(
+                core: crest, legacy: UserDefaultsBrowserSessionPersistence(defaults: defaults, faviconStore: favicons),
+                journal: journalStore, favicons: favicons, seed: .freshInstallSeed, environment: .current)
+            let migrated = storage.authority.projection
+            XCTAssertEqual(migrated, installed)
+            // Spelled out, because each of these is a separate way to "start over".
+            XCTAssertEqual(migrated.spaces.map(\.id), installed.spaces.map(\.id))
+            // Website data, credentials and the tab-state archive are all keyed by
+            // the profile identity, so a new one would orphan every one of them.
+            XCTAssertEqual(migrated.spaces.map(\.profile.id), installed.spaces.map(\.profile.id))
+            XCTAssertEqual(migrated.defaultSpaceID, installed.defaultSpaceID)
+            XCTAssertEqual(migrated.spaces.map(\.accessPolicy), installed.spaces.map(\.accessPolicy))
+            XCTAssertTrue(migrated.spaces.contains { $0.accessPolicy != .open })
+            XCTAssertEqual(migrated.spaces.map { $0.tabs.map(\.id) }, installed.spaces.map { $0.tabs.map(\.id) })
+            XCTAssertEqual(migrated.spaces.map { $0.folders.map(\.id) }, installed.spaces.map { $0.folders.map(\.id) })
+            XCTAssertEqual(migrated.spaces.map(\.splitGroups), installed.spaces.map(\.splitGroups))
+            XCTAssertEqual(
+                migrated.spaces.map { $0.tabs.map(\.splitGroupID) },
+                installed.spaces.map { $0.tabs.map(\.splitGroupID) })
+            XCTAssertEqual(migrated.spaces.map(\.archivedTabs), installed.spaces.map(\.archivedTabs))
+            XCTAssertEqual(migrated.spaces.map(\.history), installed.spaces.map(\.history))
+            XCTAssertFalse(migrated.spaces.flatMap(\.splitGroups).isEmpty)
+            XCTAssertFalse(migrated.spaces.flatMap { $0.tabs.compactMap(\.splitGroupID) }.isEmpty)
+            XCTAssertFalse(migrated.spaces.flatMap(\.archivedTabs).isEmpty)
+            XCTAssertFalse(migrated.spaces.flatMap(\.folders).isEmpty)
+            XCTAssertFalse(migrated.spaces.flatMap(\.history).isEmpty)
+            XCTAssertTrue(migrated.spaces.allSatisfy { $0.tabs.contains { $0.faviconData != nil } })
 
-        // The journal keeps its device identity, clock, records and the uploads
-        // the installed release had not acknowledged yet.
-        let migratedJournal = try XCTUnwrap(try storage.journalPersistence.load())
-        XCTAssertEqual(migratedJournal.deviceID, journal.deviceID)
-        XCTAssertEqual(migratedJournal.logicalClock, journal.logicalClock)
-        XCTAssertEqual(migratedJournal.records, journal.records)
-        XCTAssertEqual(migratedJournal.pendingRecordIDs, journal.pendingRecordIDs)
-        XCTAssertTrue(migratedJournal.records.contains { $0.tombstone != nil })
+            // The journal keeps its device identity, clock, records and the uploads
+            // the installed release had not acknowledged yet.
+            let migratedJournal = storage.sync.journal
+            XCTAssertEqual(migratedJournal.deviceID, journal.deviceID)
+            XCTAssertEqual(migratedJournal.logicalClock, journal.logicalClock)
+            XCTAssertEqual(migratedJournal.records, journal.records)
+            XCTAssertEqual(migratedJournal.pendingRecordIDs, journal.pendingRecordIDs)
+            XCTAssertTrue(migratedJournal.records.contains { $0.tombstone != nil })
 
-        // A recovery copy exists before the app may write anything else.
-        XCTAssertTrue(FileManager.default.fileExists(
-            atPath: BrowserSessionRecovery.checkpointURL(for: storage.url).path))
-        // The installed release's values stay readable for a rollback.
-        XCTAssertNotNil(defaults.data(forKey: UserDefaultsBrowserSessionPersistence.coreKey))
-        XCTAssertNotNil(defaults.data(
-            forKey: UserDefaultsBrowserSessionPersistence.historyKey(for: installed.spaces[0].id)))
-        XCTAssertEqual(windowStates.load(id: windowState.id), windowState)
+            // A recovery copy exists before the app may write anything else.
+            XCTAssertTrue(
+                FileManager.default.fileExists(
+                    atPath: BrowserSessionRecovery.checkpointURL(for: url).path))
+            // The installed release's values stay readable for a rollback.
+            XCTAssertNotNil(defaults.data(forKey: UserDefaultsBrowserSessionPersistence.coreKey))
+            XCTAssertNotNil(
+                defaults.data(
+                    forKey: UserDefaultsBrowserSessionPersistence.historyKey(for: installed.spaces[0].id)))
+            XCTAssertEqual(windowStates.load(id: windowState.id), windowState)
+        }
 
-        // A second launch must keep the accepted checkpoint even when the
+        // A second launch must keep the accepted session even when the
         // retained legacy copy has since changed.
-        defaults.set(try JSONEncoder().encode(BrowserSession.freshInstallSeed),
+        defaults.set(
+            try JSONEncoder().encode(BrowserSession.freshInstallSeed),
             forKey: UserDefaultsBrowserSessionPersistence.coreKey)
-        let relaunched = try BrowserStore.migratedStorage(directory: directory,
+        let relaunchedCore = try CrestCore(configuration: AppConfiguration(storageDirectory: directory.path))
+        let relaunched = try BrowserStore.migratedStorage(
+            core: relaunchedCore,
             legacy: UserDefaultsBrowserSessionPersistence(defaults: defaults, faviconStore: favicons),
-            journal: journalStore, favicons: favicons, environment: .current)
-        XCTAssertEqual(relaunched.load(), installed)
-        XCTAssertEqual(try relaunched.journalPersistence.load()?.records, journal.records)
+            journal: journalStore, favicons: favicons, seed: .freshInstallSeed, environment: .current)
+        XCTAssertEqual(relaunched.authority.projection, installed)
+        XCTAssertEqual(relaunched.sync.journal.records, journal.records)
     }
 
     /// An upgrade that finds a core the installed release could not decode. Its
@@ -210,20 +233,24 @@ final class BrowserCoreSessionRecoveryTests: XCTestCase {
         defaults.set(unreadable, forKey: UserDefaultsBrowserSessionPersistence.coreKey)
 
         let legacy = UserDefaultsBrowserSessionPersistence(defaults: defaults, faviconStore: favicons)
-        let storage = try BrowserStore.migratedStorage(directory: directory, legacy: legacy,
-            journal: UserDefaultsBrowserSyncJournalPersistence(defaults: defaults),
-            favicons: favicons, environment: .current)
+        let crest = try CrestCore(configuration: AppConfiguration(storageDirectory: directory.path))
+        let storage = try BrowserStore.migratedStorage(
+            core: crest, legacy: legacy, journal: UserDefaultsBrowserSyncJournalPersistence(defaults: defaults),
+            favicons: favicons, seed: .freshInstallSeed, environment: .current)
+        let url = directory.appendingPathComponent(BrowserSessionRecovery.fileName)
         // Nothing was carried, so launch seeds a disposable fresh install rather
         // than committing an empty session over the reader's own Space IDs.
-        XCTAssertNil(storage.load())
+        XCTAssertTrue(storage.authority.projection.hasDisposableSeedState)
         XCTAssertEqual(legacy.preservedUnreadableSessionData(), unreadable)
         XCTAssertEqual(defaults.data(forKey: UserDefaultsBrowserSessionPersistence.coreKey), unreadable)
         // The cloud-recovery request stays on disk until a transport consumes it
         // and resets the cursor, so the seed is replaced by a full pull.
-        XCTAssertTrue(FileManager.default.fileExists(
-            atPath: BrowserSessionRecovery.cloudMarker(for: storage.url).path))
-        XCTAssertFalse(FileManager.default.fileExists(
-            atPath: BrowserSessionRecovery.checkpointURL(for: storage.url).path))
+        XCTAssertTrue(
+            FileManager.default.fileExists(
+                atPath: BrowserSessionRecovery.cloudMarker(for: url).path))
+        XCTAssertFalse(
+            FileManager.default.fileExists(
+                atPath: BrowserSessionRecovery.checkpointURL(for: url).path))
     }
 
     /// Spaces with distinct profiles, folders, pinned/saved/current tabs, a
@@ -239,12 +266,18 @@ final class BrowserCoreSessionRecoveryTests: XCTestCase {
             // A split the reader has named, which is stored apart from the
             // membership the tabs carry.
             if let group = session.spaces[index].tabs.compactMap(\.splitGroupID).first {
-                session.spaces[index].splitGroups = [BrowserSplitGroupMetadata(id: group,
-                    customTitle: "Research", titleModifiedAt: epoch)]
+                session.spaces[index].splitGroups = [
+                    BrowserSplitGroupMetadata(
+                        id: group,
+                        customTitle: "Research", titleModifiedAt: epoch)
+                ]
             }
             for tab in session.spaces[index].tabs.indices {
                 session.spaces[index].tabs[tab].faviconData = Data(
                     repeating: UInt8(truncatingIfNeeded: index * 17 + tab), count: 512)
+                // An icon a page supplied names where it came from, as launch
+                // repair records for an icon that does not.
+                session.spaces[index].tabs[tab].faviconURL = session.spaces[index].tabs[tab].url
             }
             session.spaces[index].history = (0..<12).map { entry in
                 BrowserHistoryEntry(
@@ -261,10 +294,12 @@ final class BrowserCoreSessionRecoveryTests: XCTestCase {
         return session
     }
 
-    private func makeCheckpoint(_ url: URL, session: BrowserSession, journal: BrowserSyncJournal) throws {
-        let storage = try BrowserTransactionalSessionPersistence(url: url, favicons: InMemoryBrowserFaviconStore())
-        try storage.migrateIfNeeded(session: session, journal: journal)
-        try storage.saveRecoveryCheckpoint()
+    /// A launch that installed `session` and `journal`: the core writes both
+    /// and preserves the recovery copy, then closes the file.
+    private func makeCheckpoint(_ directory: URL, session: BrowserSession, journal: BrowserSyncJournal) throws {
+        let core = try CrestCore(configuration: AppConfiguration(storageDirectory: directory.path))
+        try core.installSession(
+            JSONEncoder().encode(BrowserCoreSessionAuthority.compact(session)), journal: journal.encodedSnapshot())
     }
 
     private final class CloudState: BrowserCloudSyncStatePersisting, @unchecked Sendable {

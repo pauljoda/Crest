@@ -1,65 +1,61 @@
-import Foundation
 import CryptoKit
+import Foundation
 
 extension BrowserStore {
-    static func production(
-        launchEnvironment: BrowserLaunchEnvironment = .current,
-        core: CrestCore = CrestCore()
-    ) throws -> BrowserStore {
+    /// The store of this launch's session. A launch that needs isolation keeps
+    /// its own directory or a fixture in memory. Otherwise the core's file
+    /// holds the session, carried once from the release before it.
+    static func production(core: CrestCore, launchEnvironment: BrowserLaunchEnvironment = .current) throws
+        -> BrowserStore
+    {
         // Keep the persistence boundary safe even if a future composition root
         // accidentally calls `production` for a fixture or preview launch.
         // Sample Spaces must never replace the installed session or be staged as
         // Cloud tombstones for the user's real Space IDs.
         if launchEnvironment.requiresIsolation {
-            return try isolatedLaunch(launchEnvironment: launchEnvironment, core: core)
+            return try isolatedLaunch(core: core, launchEnvironment: launchEnvironment)
         }
-        let storage = try transactionalStorage(legacy: UserDefaultsBrowserSessionPersistence(),
-            journal: UserDefaultsBrowserSyncJournalPersistence(), isolationID: nil, environment: launchEnvironment)
-        return production(persistence: storage, syncPersistence: storage.journalPersistence,
-            credentialVault: KeychainCredentialVault(), core: core)
+        let favicons: any BrowserFaviconStoring = BrowserFaviconFileStore.production() ?? InMemoryBrowserFaviconStore()
+        let stored = try migratedStorage(
+            core: core, legacy: UserDefaultsBrowserSessionPersistence(),
+            journal: UserDefaultsBrowserSyncJournalPersistence(), favicons: favicons, seed: .freshInstallSeed,
+            environment: launchEnvironment)
+        return production(stored: stored, core: core, favicons: favicons, credentialVault: KeychainCredentialVault())
     }
 
+    /// The store over the session the core loaded. Its sync component is the
+    /// core's own, so every journal it accepts is saved with the session.
     static func production(
-        persistence: any BrowserSessionPersisting,
-        syncPersistence: any BrowserSyncJournalPersisting,
-        credentialVault: any CredentialVault,
-        core: CrestCore = CrestCore()
+        stored: BrowserCoreStoredSession, core: CrestCore, favicons: any BrowserFaviconStoring,
+        credentialVault: any CredentialVault
     ) -> BrowserStore {
-        let session = launchRepair(persistence.load() ?? .freshInstallSeed)
-        let syncCoordinator = BrowserSyncCoordinator(
-            persistence: syncPersistence
-        )
+        let family = BrowserStoreFamily(stored: stored, storage: core, favicons: favicons)
+        let session = family.authoritativeSession
         let store = BrowserStore(
             session: session,
-            selection: persistence.loadLegacySelection()?.launchSelection(in: session),
-            persistence: persistence,
+            selection: stored.legacySelection?.launchSelection(in: session),
             credentialVault: credentialVault,
-            syncCoordinator: syncCoordinator,
+            syncCoordinator: BrowserSyncCoordinator(core: stored.sync),
+            syncCoalescingDelay: .milliseconds(150),
+            browsingMode: .standard,
+            family: family,
             core: core
         )
-        store.saveLaunchCheckpoint()
         store.beginInitialSyncStaging(session: store.session)
         return store
     }
 
-    /// The core's checkpoint repair, accepted before any page is created or the
-    /// session is saved. Launch cannot continue on an unaccepted repair;
-    /// operational sync errors use the throwing bridge before commit.
+    /// The core's checkpoint repair, accepted before any page is created.
+    /// Launch cannot continue on an unaccepted repair; operational sync errors
+    /// use the throwing bridge before commit.
     private static func launchRepair(_ session: BrowserSession) -> BrowserSession {
-        do { return try BrowserCoreSync.repair(session) }
-        catch { preconditionFailure("Core session repair failed before publication: \(error)") }
-    }
-
-    /// Saves the repaired launch session through a core checkpoint before any
-    /// page exists. Repair may have changed what storage holds.
-    func saveLaunchCheckpoint() {
-        do { try family.save(session, to: persistence) }
-        catch { localSyncErrorDescription = String(describing: error) }
+        do { return try BrowserCoreSync.repair(session) } catch {
+            preconditionFailure("Core session repair failed before publication: \(error)")
+        }
     }
 
     /// Launch cleanup and retention, as the core's own `records.sweep` on this
-    /// family's session, so its result reaches storage through a core
-    /// checkpoint. No window is on screen yet, so every tab a stored window
+    /// family's session. No window is on screen yet, so every tab a stored window
     /// record shows is kept along with this store's own selection. It claims the
     /// family's sweep slot, so the first active scene does not repeat it.
     func sweepAtLaunch(keeping windows: [BrowserWindowState], now: Date = .now) {
@@ -71,25 +67,19 @@ extension BrowserStore {
                 .recordsSweep, arguments: BrowserSessionArguments.RecordsSweep(keepTabIds: kept.map(\.rawValue)),
                 from: self, at: now)
         else { return }
-        persist(deletionReason: .retention, scope: .everything)
+        stageSync(deletionReason: .retention)
     }
 
     static func preview() -> BrowserStore {
-        BrowserStore(session: .preview, persistence: InMemoryBrowserSessionPersistence())
+        BrowserStore(session: .preview)
     }
 
-    static func isolatedLaunch(
-        launchEnvironment: BrowserLaunchEnvironment,
-        core: CrestCore = CrestCore()
-    ) throws -> BrowserStore {
-        if let isolationID = launchEnvironment.persistentIsolationID {
-            if let store = try persistentIsolatedLaunch(
-                launchEnvironment: launchEnvironment,
-                isolationID: isolationID,
-                core: core
-            ) {
-                return store
-            }
+    static func isolatedLaunch(core: CrestCore, launchEnvironment: BrowserLaunchEnvironment) throws -> BrowserStore {
+        if let isolationID = launchEnvironment.persistentIsolationID,
+            let store = try persistentIsolatedLaunch(
+                core: core, launchEnvironment: launchEnvironment, isolationID: isolationID)
+        {
+            return store
         }
         return inMemoryIsolatedLaunch(launchEnvironment: launchEnvironment, core: core)
     }
@@ -99,95 +89,109 @@ extension BrowserStore {
         core: CrestCore
     ) -> BrowserStore {
         let session = launchRepair(isolatedFixtureSession(for: launchEnvironment))
-        let syncCoordinator = BrowserSyncCoordinator(
-            persistence: InMemoryBrowserSyncJournalPersistence()
-        )
+        let syncCoordinator = BrowserSyncCoordinator(persistence: InMemoryBrowserSyncJournalPersistence())
         let store = BrowserStore(
             session: session,
-            persistence: InMemoryBrowserSessionPersistence(),
             credentialVault: InMemoryCredentialVault(),
             syncCoordinator: syncCoordinator,
             core: core
         )
-        store.saveLaunchCheckpoint()
         store.beginInitialSyncStaging(session: store.session)
         return store
     }
 
     private static func persistentIsolatedLaunch(
-        launchEnvironment: BrowserLaunchEnvironment,
-        isolationID: String,
-        core: CrestCore
+        core: CrestCore, launchEnvironment: BrowserLaunchEnvironment, isolationID: String
     ) throws -> BrowserStore? {
-        let namespace = BrowserLaunchEnvironment.isolatedDefaultsSuiteName(
-            isolationID: isolationID
-        )
-        guard let defaults = UserDefaults(suiteName: namespace) else { return nil }
+        let namespace = BrowserLaunchEnvironment.isolatedDefaultsSuiteName(isolationID: isolationID)
+        guard let directory = core.storageDirectory, let defaults = UserDefaults(suiteName: namespace) else {
+            return nil
+        }
         let legacy = UserDefaultsBrowserSessionPersistence(
-            defaults: defaults,
-            faviconStore: InMemoryBrowserFaviconStore()
-        )
-        let persistence = try transactionalStorage(legacy: legacy,
-            journal: InMemoryBrowserSyncJournalPersistence(), isolationID: isolationID, environment: launchEnvironment)
-        let session = launchRepair(persistence.load() ?? isolatedFixtureSession(for: launchEnvironment))
-        let syncCoordinator = BrowserSyncCoordinator(persistence: persistence.journalPersistence)
-        let store = BrowserStore(
-            session: session,
-            selection: persistence.loadLegacySelection()?.launchSelection(in: session),
-            persistence: persistence,
-            credentialVault: KeychainCredentialVault(servicePrefix: namespace),
-            syncCoordinator: syncCoordinator,
-            core: core
-        )
-        store.saveLaunchCheckpoint()
-        store.beginInitialSyncStaging(session: store.session)
-        return store
+            defaults: defaults, faviconStore: InMemoryBrowserFaviconStore())
+        let favicons = BrowserFaviconFileStore(
+            rootDirectory: directory.appendingPathComponent("Favicons", isDirectory: true))
+        let stored = try migratedStorage(
+            core: core, legacy: legacy, journal: InMemoryBrowserSyncJournalPersistence(), favicons: favicons,
+            seed: isolatedFixtureSession(for: launchEnvironment), environment: launchEnvironment)
+        return production(
+            stored: stored, core: core, favicons: favicons,
+            credentialVault: KeychainCredentialVault(servicePrefix: namespace))
     }
 
-    private static func transactionalStorage(legacy: UserDefaultsBrowserSessionPersistence,
-        journal: any BrowserSyncJournalPersisting, isolationID: String?,
-        environment: BrowserLaunchEnvironment) throws -> BrowserTransactionalSessionPersistence {
-        var storeURL: URL?
-        do {
-            var directory = try FileManager.default.url(for: .applicationSupportDirectory,
-                in: .userDomainMask, appropriateFor: nil, create: true)
-                .appendingPathComponent(ProductIdentity.storageDirectoryName, isDirectory: true)
-                .appendingPathComponent("ControlPlane", isDirectory: true)
-            if let isolationID {
-                let namespace = SHA256.hash(data: Data(isolationID.utf8)).map { String(format: "%02x", $0) }.joined()
-                directory = directory.appendingPathComponent("Isolated", isDirectory: true)
-                    .appendingPathComponent(namespace, isDirectory: true)
-            }
-            let icons: any BrowserFaviconStoring
-            if isolationID == nil {
-                icons = BrowserFaviconFileStore.production() ?? InMemoryBrowserFaviconStore()
-            } else {
-                icons = BrowserFaviconFileStore(rootDirectory: directory.appendingPathComponent("Favicons", isDirectory: true))
-            }
-            storeURL = directory.appendingPathComponent("session.sqlite")
-            return try migratedStorage(directory: directory, legacy: legacy, journal: journal,
-                favicons: icons, environment: environment)
-        } catch {
-            throw BrowserSessionStartupFailure(storeURL: storeURL, underlying: error)
+    /// Where the core keeps this launch's session file: the installed app's
+    /// directory, or the one a persistent review launch keeps apart from it.
+    /// Nil keeps the session in memory.
+    static func sessionDirectory(for launchEnvironment: BrowserLaunchEnvironment) throws -> URL? {
+        let isolationID = launchEnvironment.persistentIsolationID
+        guard !launchEnvironment.requiresIsolation || isolationID != nil else { return nil }
+        var directory = try FileManager.default.url(
+            for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true
+        )
+        .appendingPathComponent(ProductIdentity.storageDirectoryName, isDirectory: true)
+        .appendingPathComponent("ControlPlane", isDirectory: true)
+        if launchEnvironment.requiresIsolation, let isolationID {
+            let namespace = SHA256.hash(data: Data(isolationID.utf8)).map { String(format: "%02x", $0) }.joined()
+            directory = directory.appendingPathComponent("Isolated", isDirectory: true)
+                .appendingPathComponent(namespace, isDirectory: true)
+        }
+        return directory
+    }
+
+    /// The one core this launch creates, keeping its session in
+    /// `sessionDirectory(for:)`. A file the core cannot use is a startup
+    /// failure the recovery screen answers.
+    static func launchCore(for launchEnvironment: BrowserLaunchEnvironment) throws -> CrestCore {
+        let directory: URL?
+        do { directory = try sessionDirectory(for: launchEnvironment) } catch {
+            throw BrowserSessionStartupFailure(storeURL: nil, underlying: error)
+        }
+        do { return try CrestCore(configuration: AppConfiguration(storageDirectory: directory?.path)) } catch {
+            throw BrowserSessionStartupFailure(
+                storeURL: directory?.appendingPathComponent(BrowserSessionRecovery.fileName), underlying: error)
         }
     }
 
-    /// Opens the core checkpoint under `directory` and, on the first launch that
-    /// finds no checkpoint there, carries the installed release's defaults
-    /// session and sync journal into it. The legacy values are left in place, so
-    /// this is also the seam an upgrade test drives with its own directory,
-    /// defaults suite and favicon store.
-    static func migratedStorage(directory: URL, legacy: UserDefaultsBrowserSessionPersistence,
-        journal: any BrowserSyncJournalPersisting, favicons: any BrowserFaviconStoring,
-        environment: BrowserLaunchEnvironment) throws -> BrowserTransactionalSessionPersistence {
-        let url = directory.appendingPathComponent("session.sqlite")
+    /// Takes over the session `core` keeps. On the first launch whose file
+    /// holds none, it carries the installed release's defaults session and
+    /// sync journal into the file, or installs `seed` when there is nothing to
+    /// carry. The legacy values are left in place, so this is also the seam an
+    /// upgrade test drives with its own directory, defaults suite and favicon
+    /// store.
+    static func migratedStorage(
+        core: CrestCore, legacy: UserDefaultsBrowserSessionPersistence, journal: any BrowserSyncJournalPersisting,
+        favicons: any BrowserFaviconStoring, seed: @autoclosure () -> BrowserSession,
+        environment: BrowserLaunchEnvironment
+    ) throws -> BrowserCoreStoredSession {
+        guard let directory = core.storageDirectory else {
+            preconditionFailure("A core that keeps nothing on disk has no stored session to open.")
+        }
+        let url = directory.appendingPathComponent(BrowserSessionRecovery.fileName)
         do {
-            let storage = try BrowserTransactionalSessionPersistence(url: url, favicons: favicons)
-            try storage.migrateIfNeeded(session: migrationSession(legacy, storeURL: url),
-                journal: journal.load(), legacySelection: legacy.loadLegacySelection())
+            if let stored = try BrowserCoreStoredSession.load(core: core, favicons: favicons) {
+                try BrowserSessionRecovery.prepareCloudRecovery(storeURL: url, environment: environment)
+                return stored
+            }
+            let first: BrowserSession
+            let legacySelection: BrowserLegacySessionSelection?
+            if let installed = try migrationSession(legacy, storeURL: url) {
+                first = installed
+                legacySelection = legacy.loadLegacySelection()
+                try core.installSession(
+                    JSONEncoder().encode(BrowserCoreSessionAuthority.compact(installed)),
+                    journal: (try journal.load() ?? BrowserSyncJournal()).encodedSnapshot())
+            } else {
+                first = seed()
+                legacySelection = nil
+                try core.installSession(JSONEncoder().encode(BrowserCoreSessionAuthority.compact(first)), journal: nil)
+            }
+            for tab in first.spaces.flatMap(\.tabs) { favicons.reconcile(tab.faviconData, tabID: tab.id) }
             try BrowserSessionRecovery.prepareCloudRecovery(storeURL: url, environment: environment)
-            try? storage.saveRecoveryCheckpoint()
-            return storage
+            guard
+                let stored = try BrowserCoreStoredSession.load(
+                    core: core, favicons: favicons, legacySelection: legacySelection)
+            else { throw BrowserCoreStoredSession.LoadError.noSession }
+            return stored
         } catch {
             throw BrowserSessionStartupFailure(storeURL: url, underlying: error)
         }
@@ -204,8 +208,10 @@ extension BrowserStore {
     /// Spaces CloudKit still holds rather than tombstoning them. Refusing to
     /// launch at all is not an option here — there is no checkpoint to restore
     /// on a first upgrade, so the retry would never succeed.
-    private static func migrationSession(_ legacy: UserDefaultsBrowserSessionPersistence,
-        storeURL: URL) throws -> BrowserSession? {
+    private static func migrationSession(
+        _ legacy: UserDefaultsBrowserSessionPersistence,
+        storeURL: URL
+    ) throws -> BrowserSession? {
         let session = legacy.load()
         guard legacy.status != .preservedUnreadableSession else {
             try Data().write(to: BrowserSessionRecovery.cloudMarker(for: storeURL), options: .atomic)
@@ -240,7 +246,6 @@ extension BrowserStore {
     static func privateBrowsing(core: CrestCore = CrestCore()) -> BrowserStore {
         BrowserStore(
             session: .privateBrowsing(),
-            persistence: InMemoryBrowserSessionPersistence(),
             credentialVault: PrivateBrowsingCredentialVault(),
             browsingMode: .privateBrowsing,
             core: core

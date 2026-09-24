@@ -65,7 +65,6 @@ struct MobileBrowserPreviewFixture {
             session: BrowserSession(
                 spaces: [space, alternateSpace]
             ),
-            persistence: InMemoryBrowserSessionPersistence(),
             browsingMode: .privateBrowsing
         )
         let contentRuleListProvider = BrowserContentRuleListProvider(

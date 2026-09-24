@@ -7,7 +7,7 @@ responsibilities:
 | --- | --- |
 | `CrestCore.Domain` | Tab and Space behavior, durable state, navigation, and sync policy. No JSON or native dependencies. |
 | `CrestCore.Contracts` | The typed contract records (intents, changes, rejections, queries and the read models they carry), plus validation and descriptors for the versioned adapter protocol. |
-| `CrestCore.Application` | Session commands, checkpoints, imports, and sync transitions. It owns the JSON-backed native and persistence formats and calls typed domain rules. |
+| `CrestCore.Application` | Session commands, the session file, imports, and sync transitions. It owns the JSON-backed native and persistence formats and the SQLite file they are stored in, and calls typed domain rules. |
 | `CrestCore.Native` | C exports that adapt native callers to the application layer, and the generated wire codec. |
 | `tools/CrestCore.Generator` | Generates the codec, the Swift models and the C tag header from the contract records. |
 | `CrestCore.Tests` | Behavioral contracts for the corresponding source areas. |

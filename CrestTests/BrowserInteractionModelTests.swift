@@ -9,7 +9,7 @@ import struct SwiftUI.Color
 final class BrowserInteractionModelTests: XCTestCase {
 
     func testSpaceIdentityAndOrderingRemainStableAcrossEdits() throws {
-        let browser = BrowserStore(session: .preview, persistence: InMemoryBrowserSessionPersistence())
+        let browser = BrowserStore(session: .preview)
         let profilesBySpaceID = Dictionary(
             uniqueKeysWithValues: browser.session.spaces.map {
                 ($0.id, $0.profile.id)

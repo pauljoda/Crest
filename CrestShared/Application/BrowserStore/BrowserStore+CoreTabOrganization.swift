@@ -43,10 +43,6 @@ extension BrowserStore {
 
     func persistSplitCommand(_ result: BrowserCoreSessionEditing.Result, from space: BrowserSpace) {
         prepareAcceptedCopies(result, from: space)
-        persist(
-            syncUrgency: .coalesced,
-            scope: BrowserSessionSaveScope(
-                writesCore: true,
-                history: .nothing, favicons: .only(Set(result.copies.map { TabID(rawValue: $0.copy) }))))
+        stageSync(urgency: .coalesced)
     }
 }

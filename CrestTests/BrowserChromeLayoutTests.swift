@@ -63,7 +63,6 @@ final class BrowserChromeLayoutTests: XCTestCase {
     func testSettingsPresentationRejectsAReplacementBrowsingProfile() throws {
         let browser = BrowserStore(
             session: .preview,
-            persistence: InMemoryBrowserSessionPersistence(),
             browsingMode: .privateBrowsing
         )
         let original = try XCTUnwrap(browser.selectedSpace)
@@ -129,7 +128,7 @@ final class BrowserChromeLayoutTests: XCTestCase {
 
     @MainActor
     func testSidebarClearHistoryKeepsTheInitiatingSpaceAfterSelectionChanges() throws {
-        let browser = BrowserStore(session: .preview, persistence: InMemoryBrowserSessionPersistence())
+        let browser = BrowserStore(session: .preview)
         let initiatingSpace = try XCTUnwrap(browser.selectedSpace)
         let laterSelectedSpace = try XCTUnwrap(
             browser.session.spaces.first { $0.id != initiatingSpace.id }
@@ -473,8 +472,7 @@ extension BrowserChromeLayoutTests {
             let browser = BrowserStore(
                 session: BrowserSession(spaces: [space]),
                 selection: BrowserStoreSelection(
-                    selectedSpaceID: space.id, selectedTabIDsBySpace: [space.id: selectedTabID]),
-                persistence: InMemoryBrowserSessionPersistence())
+                    selectedSpaceID: space.id, selectedTabIDsBySpace: [space.id: selectedTabID]))
             let pages = BrowserPagePool()
             pages.select(session: browser.presented)
             let model = BrowserRootModel(

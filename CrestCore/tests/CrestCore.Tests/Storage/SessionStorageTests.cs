@@ -129,6 +129,28 @@ public sealed unsafe partial class BrowserContractsTests {
     }
 
     [Fact]
+    public void AnEditWritesOnlyThePartsItChanged() {
+        using var directory = new StorageDirectory();
+        var document = SavedSession().Document["session"]!.AsObject();
+        using var app = new CrestApp(new AppConfiguration(directory.Path));
+        app.InstallSession(Bytes(document), []);
+        _ = DrainUntil(app, changes => changes.OfType<Saved>().Any());
+        // Every write the core makes from here on leaves a `log.` row naming its part.
+        using (var connection = SqliteConnection.Open(directory.File, Sqlite.OpenReadWrite)) {
+            foreach (var operation in new[] { "INSERT", "UPDATE" })
+                connection.Execute($"CREATE TRIGGER log_{operation} AFTER {operation} ON checkpoint WHEN NEW.part NOT LIKE 'log.%' "
+                    + "BEGIN INSERT INTO checkpoint(part, data) VALUES ('log.' || NEW.part || '.' || hex(randomblob(8)), x'01'); END");
+        }
+        var session = app.Session!;
+        session.Commit(1, RenameDelta(document, "Only the title"));
+        _ = DrainUntil(app, changes => changes.OfType<Saved>().Any(saved => saved.Revision == 2));
+
+        var written = StoredParts(directory.File).Keys.Where(part => part.StartsWith("log.", StringComparison.Ordinal))
+            .Select(part => part["log.".Length..part.LastIndexOf('.')]).ToArray();
+        Assert.Equal(["core"], written);
+    }
+
+    [Fact]
     public void ADurableCommitIsOnDiskWithItsJournalBeforeItReturnsOrNeitherChanges() {
         using var directory = new StorageDirectory();
         var fixture = SavedSession();

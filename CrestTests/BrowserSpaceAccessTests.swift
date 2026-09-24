@@ -9,7 +9,7 @@ import XCTest
 final class BrowserSpaceAccessTests: XCTestCase {
 
     func testChosenDefaultSpaceBecomesTheLaunchSelection() throws {
-        let store = BrowserStore(session: .preview, persistence: InMemoryBrowserSessionPersistence())
+        let store = BrowserStore(session: .preview)
         let work = try XCTUnwrap(store.session.spaces.first)
         let personal = try XCTUnwrap(store.session.spaces.last)
 
@@ -255,10 +255,8 @@ final class BrowserSpaceAccessTests: XCTestCase {
     }
 
     func testStorePersistsDefaultAndPrivateSpacePolicies() throws {
-        let persistence = InMemoryBrowserSessionPersistence()
         let store = BrowserStore(
             session: .preview,
-            persistence: persistence,
             syncCoalescingDelay: .zero
         )
         let personal = try XCTUnwrap(store.session.spaces.last)
@@ -266,15 +264,12 @@ final class BrowserSpaceAccessTests: XCTestCase {
         store.setDefaultSpace(personal.id)
         store.updateSpaceAccessPolicy(.deviceOwnerAuthentication, in: personal.id)
 
-        XCTAssertEqual(persistence.session?.defaultSpaceID, personal.id)
-        XCTAssertEqual(
-            persistence.session?.space(id: personal.id)?.accessPolicy,
-            .deviceOwnerAuthentication
-        )
+        XCTAssertEqual(store.session.defaultSpaceID, personal.id)
+        XCTAssertEqual(store.session.space(id: personal.id)?.accessPolicy, .deviceOwnerAuthentication)
     }
 
     func testAuthenticatedPolicyChangeCannotChangeAReplacementProfile() async throws {
-        let store = BrowserStore(session: .preview, persistence: InMemoryBrowserSessionPersistence())
+        let store = BrowserStore(session: .preview)
         let otherWindow = store.makeWindowStore()
         let original = try XCTUnwrap(store.selectedSpace)
         store.updateSpaceAccessPolicy(.deviceOwnerAuthentication, in: original.id)
@@ -303,8 +298,7 @@ final class BrowserSpaceAccessTests: XCTestCase {
         let personal = try XCTUnwrap(session.spaces.last)
         session.defaultSpaceID = personal.id
         let root = BrowserStore(
-            session: session,
-            persistence: InMemoryBrowserSessionPersistence()
+            session: session
         )
         let savedState = BrowserWindowState(
             selectedSpaceID: work.id,

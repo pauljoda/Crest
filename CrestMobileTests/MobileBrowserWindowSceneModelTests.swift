@@ -10,8 +10,7 @@ final class MobileBrowserWindowSceneModelTests: XCTestCase {
             .lastActiveTab,
         ] {
             let rootBrowser = BrowserStore(
-                session: .preview,
-                persistence: InMemoryBrowserSessionPersistence()
+                session: .preview
             )
             let registry = MobileBrowserPageStoreRegistry(
                 primary: MobileBrowserPageStore()
@@ -40,7 +39,7 @@ final class MobileBrowserWindowSceneModelTests: XCTestCase {
     }
 
     func testSetupLoadsItsNativeRuntimeBeforeOpeningTheDefaultStartupBrowser() async throws {
-        let rootBrowser = BrowserStore(session: .preview, persistence: InMemoryBrowserSessionPersistence())
+        let rootBrowser = BrowserStore(session: .preview)
         let registry = MobileBrowserPageStoreRegistry(
             primary: MobileBrowserPageStore(usesEphemeralWebsiteDataStores: true))
         let model = MobileBrowserWindowSceneModel(
@@ -77,8 +76,7 @@ final class MobileBrowserWindowSceneModelTests: XCTestCase {
 
     func testIsolatedWindowModelUsesOnlyEphemeralWebsiteData() throws {
         let rootBrowser = BrowserStore(
-            session: .preview,
-            persistence: InMemoryBrowserSessionPersistence()
+            session: .preview
         )
         let registry = MobileBrowserPageStoreRegistry(
             primary: MobileBrowserPageStore(
@@ -118,8 +116,8 @@ final class MobileBrowserWindowSceneModelTests: XCTestCase {
             folders: [], tabs: [sharedTab, otherTab])
         let root = BrowserStore(
             session: BrowserSession(spaces: [space]),
-            selection: BrowserStoreSelection(selectedSpaceID: space.id, selectedTabIDsBySpace: [space.id: sharedTab.id]),
-            persistence: InMemoryBrowserSessionPersistence())
+            selection: BrowserStoreSelection(
+                selectedSpaceID: space.id, selectedTabIDsBySpace: [space.id: sharedTab.id]))
         let registry = MobileBrowserPageStoreRegistry(
             primary: MobileBrowserPageStore(usesEphemeralWebsiteDataStores: true))
         let permissionCenter = BrowserSitePermissionCenter()

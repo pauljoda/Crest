@@ -217,11 +217,10 @@ final class BrowserCloudRecordCodecTests: XCTestCase {
         let receiverCoordinator = BrowserSyncCoordinator(persistence: InMemoryBrowserSyncJournalPersistence())
         try senderCoordinator.stage(session: session)
         let sender = BrowserStore(
-            session: session, persistence: InMemoryBrowserSessionPersistence(),
+            session: session,
             syncCoordinator: senderCoordinator, syncCoalescingDelay: .zero)
-        let receiverPersistence = InMemoryBrowserSessionPersistence()
         let receiver = BrowserStore(
-            session: session, persistence: receiverPersistence,
+            session: session,
             syncCoordinator: receiverCoordinator, syncCoalescingDelay: .zero)
         let codec = BrowserCloudRecordCodec()
         try receiver.mergeRemoteSyncRecords(
@@ -260,7 +259,7 @@ final class BrowserCloudRecordCodecTests: XCTestCase {
             let expected = try XCTUnwrap(sender.session.space(id: spaceID)?.branding)
             XCTAssertEqual(receiver.session.space(id: spaceID)?.branding, expected, "Charge: \(charge)")
             let reloaded = try JSONDecoder().decode(
-                BrowserSession.self, from: JSONEncoder().encode(XCTUnwrap(receiverPersistence.session)))
+                BrowserSession.self, from: JSONEncoder().encode(receiver.session))
             XCTAssertEqual(reloaded.space(id: spaceID)?.branding, expected)
             XCTAssertEqual(reloaded.space(id: spaceID)?.profile.id, session.spaces[0].profile.id)
         }

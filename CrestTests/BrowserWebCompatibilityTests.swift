@@ -155,8 +155,7 @@ final class BrowserWebCompatibilityTests: XCTestCase {
         let profile = BrowsingProfile()
         let space = makeSpace(profile: profile, tabs: [openerTab])
         let store = BrowserStore(
-            session: BrowserSession(spaces: [space]),
-            persistence: InMemoryBrowserSessionPersistence()
+            session: BrowserSession(spaces: [space])
         )
         let pool = BrowserPagePool(popupTabHost: store.popupTabHost)
 
@@ -228,8 +227,7 @@ final class BrowserWebCompatibilityTests: XCTestCase {
         let profile = BrowsingProfile()
         let space = makeSpace(profile: profile, tabs: [openerTab])
         let store = BrowserStore(
-            session: BrowserSession(spaces: [space]),
-            persistence: InMemoryBrowserSessionPersistence()
+            session: BrowserSession(spaces: [space])
         )
         let pool = BrowserPagePool(
             popupTabHost: store.popupTabHost,
@@ -288,8 +286,7 @@ final class BrowserWebCompatibilityTests: XCTestCase {
         let profile = BrowsingProfile()
         let space = makeSpace(profile: profile, tabs: [openerTab])
         let store = BrowserStore(
-            session: BrowserSession(spaces: [space]),
-            persistence: InMemoryBrowserSessionPersistence()
+            session: BrowserSession(spaces: [space])
         )
         let pool = BrowserPagePool(popupTabHost: store.popupTabHost)
         let siteOrigin = try XCTUnwrap(BrowserSiteOrigin(url: origin))
@@ -336,8 +333,7 @@ final class BrowserWebCompatibilityTests: XCTestCase {
         let profile = BrowsingProfile()
         let space = makeSpace(profile: profile, tabs: [openerTab])
         let store = BrowserStore(
-            session: BrowserSession(spaces: [space]),
-            persistence: InMemoryBrowserSessionPersistence()
+            session: BrowserSession(spaces: [space])
         )
         let pool = BrowserPagePool(popupTabHost: store.popupTabHost)
 
@@ -400,8 +396,7 @@ final class BrowserWebCompatibilityTests: XCTestCase {
         let profile = BrowsingProfile()
         let space = makeSpace(profile: profile, tabs: [openerTab])
         let store = BrowserStore(
-            session: BrowserSession(spaces: [space]),
-            persistence: InMemoryBrowserSessionPersistence()
+            session: BrowserSession(spaces: [space])
         )
         let pool = BrowserPagePool(
             popupTabHost: store.popupTabHost,
@@ -476,8 +471,7 @@ final class BrowserWebCompatibilityTests: XCTestCase {
         let profile = BrowsingProfile()
         let space = makeSpace(profile: profile, tabs: [openerTab])
         let store = BrowserStore(
-            session: BrowserSession(spaces: [space]),
-            persistence: InMemoryBrowserSessionPersistence()
+            session: BrowserSession(spaces: [space])
         )
         let pool = BrowserPagePool(
             popupTabHost: store.popupTabHost,
@@ -556,8 +550,7 @@ final class BrowserWebCompatibilityTests: XCTestCase {
             )
         )
         let store = BrowserStore(
-            session: BrowserSession(spaces: [space]),
-            persistence: InMemoryBrowserSessionPersistence()
+            session: BrowserSession(spaces: [space])
         )
         let pool = BrowserPagePool(
             popupTabHost: store.popupTabHost

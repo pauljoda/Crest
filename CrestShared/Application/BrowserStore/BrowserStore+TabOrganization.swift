@@ -6,7 +6,7 @@ extension BrowserStore {
     func pinSelectedTab() {
         guard let id = selectedTab?.id, let spaceID = selectedSpace?.id,
             moveSessionTab(id, in: spaceID, to: .pinned) else { return }
-        persist(scope: .core)
+        stageSync()
     }
 
     func pinTab(_ id: TabID) {
@@ -18,7 +18,7 @@ extension BrowserStore {
         guard let id = selectedTab?.id, let space = selectedSpace else { return }
         let folderID = space.folders.first { $0.location == .saved }?.id
         guard moveSessionTab(id, in: space.id, to: .saved, folderID: folderID) else { return }
-        persist(scope: .core)
+        stageSync()
     }
 
     func saveTab(_ id: TabID) {
@@ -76,7 +76,7 @@ extension BrowserStore {
         }
         // A drag can cross several rows before it settles. Keep the local session
         // immediately responsive while coalescing the durable sync journal write.
-        if actualSourceSpaceID == selectedSpaceID { persist(syncUrgency: .coalesced, scope: .core) }
+        if actualSourceSpaceID == selectedSpaceID { stageSync(urgency: .coalesced) }
         return true
     }
 
@@ -100,7 +100,7 @@ extension BrowserStore {
                 before: destinationTabID
             )
         else { return false }
-        persist(syncUrgency: .coalesced, scope: .core)
+        stageSync(urgency: .coalesced)
         return true
     }
 
@@ -169,7 +169,7 @@ extension BrowserStore {
         if sourceAssignment != destinationAssignment {
             interactionObserver?.browserDidMoveTab(from: item.runtimeAssignment, to: destinationAssignment)
         }
-        if sourceAssignment == destinationAssignment { persist(syncUrgency: .coalesced, scope: .core) }
+        if sourceAssignment == destinationAssignment { stageSync(urgency: .coalesced) }
         return true
     }
 
@@ -320,7 +320,7 @@ extension BrowserStore {
         else { return nil }
         let duplicateID = TabID(rawValue: rawID)
         prepareAcceptedCopies(result, from: space)
-        persist(scope: .favicon(for: duplicateID))
+        stageSync()
         return duplicateID
     }
 
@@ -392,7 +392,7 @@ extension BrowserStore {
                 .splitLeave, in: space.id, arguments: BrowserSessionArguments.Tab(tabId: tabID.rawValue),
                 from: self, at: .now)?.changed == true
         else { return false }
-        persist(syncUrgency: .coalesced, scope: .core)
+        stageSync(urgency: .coalesced)
         return true
     }
 
@@ -416,7 +416,7 @@ extension BrowserStore {
                 arguments: BrowserSessionArguments.SplitReorder(tabId: tabID.rawValue, index: memberIndex),
                 from: self, at: .now)?.changed == true
         else { return false }
-        persist(syncUrgency: .coalesced, scope: .core)
+        stageSync(urgency: .coalesced)
         return true
     }
 
@@ -438,7 +438,7 @@ extension BrowserStore {
                 arguments: BrowserSessionArguments.SplitReorder(tabId: tabID.rawValue, offset: offset),
                 from: self, at: .now)?.changed == true
         else { return false }
-        persist(syncUrgency: .coalesced, scope: .core)
+        stageSync(urgency: .coalesced)
         return true
     }
 
@@ -478,7 +478,7 @@ extension BrowserStore {
                 .splitDissolve, in: space.id, arguments: BrowserSessionArguments.SplitGroup(groupId: groupID.rawValue),
                 from: self, at: .now)?.changed == true
         else { return false }
-        persist(syncUrgency: .coalesced, scope: .core)
+        stageSync(urgency: .coalesced)
         return true
     }
 
@@ -493,7 +493,7 @@ extension BrowserStore {
                 .splitTitle, in: assignment.spaceID,
                 arguments: BrowserSessionArguments.SplitMetadata(groupId: groupID.rawValue, value: title), from: self)
         else { return false }
-        persist(syncUrgency: .coalesced, scope: .core)
+        stageSync(urgency: .coalesced)
         return true
     }
 
@@ -511,7 +511,7 @@ extension BrowserStore {
                     groupId: groupID.rawValue, value: normalized.map(BrowserIconSymbol.symbol(forEmoji:))),
                 from: self)
         else { return false }
-        persist(syncUrgency: .coalesced, scope: .core)
+        stageSync(urgency: .coalesced)
         return true
     }
 
@@ -526,7 +526,7 @@ extension BrowserStore {
                 .splitTint, in: assignment.spaceID,
                 arguments: BrowserSessionArguments.SplitMetadata(groupId: groupID.rawValue, value: tint), from: self)
         else { return false }
-        persist(syncUrgency: .coalesced, scope: .core)
+        stageSync(urgency: .coalesced)
         return true
     }
 
@@ -696,7 +696,7 @@ extension BrowserStore {
             before: destinationTabID?.rawValue)
         guard family.execute(.splitMove, in: space.id, arguments: arguments, from: self, at: .now)?.changed == true
         else { return false }
-        persist(syncUrgency: .coalesced, scope: .core)
+        stageSync(urgency: .coalesced)
         return true
     }
 }
@@ -748,7 +748,7 @@ extension BrowserStore {
 
     func selectTab(_ id: TabID) {
         guard let space = selectedSpace, activateSessionTab(id, in: space.id) else { return }
-        persist(syncUrgency: .coalesced, scope: .core)
+        stageSync(urgency: .coalesced)
     }
 
     @discardableResult
@@ -759,7 +759,7 @@ extension BrowserStore {
             in: space
         )
         if let fallbackID, activateSessionTab(fallbackID, in: space.id) {
-            persist(syncUrgency: .coalesced, scope: .core)
+            stageSync(urgency: .coalesced)
         } else {
             clearPresentedTabSelection(in: space.id)
         }

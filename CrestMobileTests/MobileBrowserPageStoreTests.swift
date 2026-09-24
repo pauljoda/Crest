@@ -46,8 +46,7 @@ final class MobileBrowserPageStoreTests: XCTestCase {
         let space = try XCTUnwrap(session.spaces.first)
         let browser = BrowserStore(
             session: session,
-            selection: BrowserStoreSelection(selectedSpaceID: space.id, selectedTabIDsBySpace: [space.id: source.id]),
-            persistence: InMemoryBrowserSessionPersistence())
+            selection: BrowserStoreSelection(selectedSpaceID: space.id, selectedTabIDsBySpace: [space.id: source.id]))
         let pages = MobileBrowserPageStore(usesEphemeralWebsiteDataStores: true)
         browser.tabCopying = pages
         pages.select(session: browser.presented)
@@ -90,8 +89,7 @@ final class MobileBrowserPageStoreTests: XCTestCase {
 
     func testStartPageCommandPaletteIssuesOneNavigationForAFreshPage() throws {
         let store = BrowserStore(
-            session: makeSession(index: 0),
-            persistence: InMemoryBrowserSessionPersistence()
+            session: makeSession(index: 0)
         )
         let pages = MobileBrowserPageStore(usesEphemeralWebsiteDataStores: true)
         let url = try XCTUnwrap(URL(string: "https://example.com/search"))
@@ -108,8 +106,7 @@ final class MobileBrowserPageStoreTests: XCTestCase {
 
     func testForegroundModifiedLinkCreatesSelectsAndLoadsOneCurrentSpacePage() throws {
         let store = BrowserStore(
-            session: makeSession(index: 90),
-            persistence: InMemoryBrowserSessionPersistence()
+            session: makeSession(index: 90)
         )
         let pages = makeLinkRoutingPageStore(browser: store)
         let sourceSpaceID = try XCTUnwrap(store.selectedSpace?.id)
@@ -127,8 +124,7 @@ final class MobileBrowserPageStoreTests: XCTestCase {
 
     func testBackgroundModifiedLinkLoadsBeforeSelectionAndIsReused() throws {
         let store = BrowserStore(
-            session: makeSession(index: 91),
-            persistence: InMemoryBrowserSessionPersistence()
+            session: makeSession(index: 91)
         )
         let pages = makeLinkRoutingPageStore(browser: store)
         pages.select(session: store.presented)

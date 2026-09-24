@@ -300,7 +300,7 @@ final class BrowserOnboardingFlowTests: XCTestCase {
         var first = makeSpace(name: "First")
         first.accessPolicy = .deviceOwnerAuthentication
         let session = BrowserSession(spaces: [first])
-        let browser = BrowserStore(session: session, persistence: InMemoryBrowserSessionPersistence())
+        let browser = BrowserStore(session: session)
         let flow = makeFlow(entryPoint: .rerun, browser: browser)
         flow.beginManualSetup()
         var plan = try XCTUnwrap(flow.manualPlan)
@@ -353,8 +353,7 @@ final class BrowserOnboardingFlowTests: XCTestCase {
             request: BrowserOnboardingRequest(entryPoint: entryPoint),
             browser: browser
                 ?? BrowserStore(
-                    session: BrowserSession.preview,
-                    persistence: InMemoryBrowserSessionPersistence()
+                    session: BrowserSession.preview
                 ),
             sourceDiscovery: sourceDiscovery,
             dataAccessProvider: dataAccessProvider,

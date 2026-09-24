@@ -271,6 +271,7 @@ targets:
       - path: CrestTests/BrowserSyncTests.swift
       - path: CrestTests/SuspendingBrowserSpaceDataDeleter.swift
       - path: CrestTests/Support/BrowserPage+WebKitTestAccess.swift
+      - path: CrestTests/Support/BrowserStoredSessionHarness.swift
     dependencies:
       - target: CrestNativeCore
     settings:

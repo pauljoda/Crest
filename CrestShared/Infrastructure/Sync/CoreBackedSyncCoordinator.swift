@@ -4,14 +4,24 @@ import Foundation
 /// neither orders browser revisions nor accepts journal mutations itself.
 final class BrowserSyncCoordinator: @unchecked Sendable {
     private enum CommandError: Error { case superseded }
-    typealias Installation = (
-        BrowserSession, BrowserSyncJournal, any BrowserSyncJournalPersisting, BrowserCoreSyncTransaction
-    ) throws -> Void
+    /// Commits a prepared session with the transaction's journal, both
+    /// durably, before the journal is published.
+    typealias Installation = (BrowserSession, BrowserCoreSyncTransaction) throws -> Void
     let core: BrowserCoreSyncAuthority
     let status: BrowserSyncCoordinatorStatus
-    private let persistence: any BrowserSyncJournalPersisting
+    /// Where a memory-only composition keeps a copy of its journal; nil when
+    /// the core saves the journal in its session file.
+    private let persistence: (any BrowserSyncJournalPersisting)?
     private let mutationLock = NSLock()
     var journal: BrowserSyncJournal { core.journal }
+
+    /// The sync component of the session the core keeps in its file. The core
+    /// saves every journal this component accepts.
+    init(core: BrowserCoreSyncAuthority) {
+        self.core = core
+        persistence = nil
+        status = .ready
+    }
 
     init(
         persistence: any BrowserSyncJournalPersisting, deviceID: UUID = UUID(),
@@ -70,8 +80,9 @@ final class BrowserSyncCoordinator: @unchecked Sendable {
             guard let transaction = try core.prepare(request, revision: revision), try transaction.seal() else {
                 throw CommandError.superseded
             }
-            try install(session, transaction.journal, persistence, transaction)
-            transaction.publish()
+            try install(session, transaction)
+            try persistence?.save(transaction.journal)
+            try transaction.commit()
         }
     }
 
@@ -150,12 +161,9 @@ final class BrowserSyncCoordinator: @unchecked Sendable {
         guard let transaction = try core.prepare(request, revision: revision, session: session),
             try transaction.seal()
         else { return nil }
-        if let install, let next = transaction.session {
-            try install(next, transaction.journal, persistence, transaction)
-        } else {
-            try persistence.save(transaction.journal)
-        }
-        transaction.publish()
+        if let install, let next = transaction.session { try install(next, transaction) }
+        try persistence?.save(transaction.journal)
+        try transaction.commit()
         return transaction
     }
 

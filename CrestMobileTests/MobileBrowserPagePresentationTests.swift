@@ -38,8 +38,7 @@ final class MobileBrowserPagePresentationTests: XCTestCase {
             selection: BrowserStoreSelection(
                 selectedSpaceID: firstSpace.id,
                 selectedTabIDsBySpace: [firstSpace.id: firstTab.id, secondSpace.id: secondTab.id]
-            ),
-            persistence: InMemoryBrowserSessionPersistence()
+            )
         )
         let pages = MobileBrowserPageStore(
             usesEphemeralWebsiteDataStores: true

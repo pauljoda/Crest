@@ -459,7 +459,6 @@ final class BrowserCurrentTabFolderTests: XCTestCase {
     private func makeStore(_ space: BrowserSpace, showing tabID: TabID) -> BrowserStore {
         BrowserStore(
             session: BrowserSession(spaces: [space]),
-            selection: BrowserStoreSelection(selectedSpaceID: space.id, selectedTabIDsBySpace: [space.id: tabID]),
-            persistence: InMemoryBrowserSessionPersistence())
+            selection: BrowserStoreSelection(selectedSpaceID: space.id, selectedTabIDsBySpace: [space.id: tabID]))
     }
 }

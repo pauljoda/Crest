@@ -107,8 +107,8 @@ this browser-record migration.
 
 `NativeSyncSessionTransition` prepares local staging, record merging,
 materialization, repair and retention as one core operation. The session authority
-then reserves the validated replacement while the Apple storage adapter commits
-the matching session, per-Space history and journal in one SQLite transaction.
+then reserves the validated replacement and writes the matching session,
+per-Space history and journal in one SQLite transaction before it publishes.
 Failed storage cancels the reservation; accepted storage publishes the reserved
 revision before native windows reconcile. A restart reads the committed pair.
 Preserve ordering between local edits, incoming batches, durable checkpoints,
@@ -244,13 +244,18 @@ shows, and never resend unchanged history or favicon bytes. Revision checks
 reject stale commands. Transfers between families commit both graphs before either native
 window reconciles its selection.
 
-The core captures immutable checkpoints and encodes the session and per-Space
-history on the native persistence worker. Editing can continue while an older
-checkpoint is being saved. Persistent families store checkpoints through
-`BrowserTransactionalSessionPersistence` in SQLite, after a one-time migration
-from the legacy UserDefaults keys, and keep favicons in their side store.
-Checkpoints hold browsing data only; see "Selection is window state" below.
-Private and temporary families stay in memory.
+The core owns `session.sqlite`. The host passes only the storage directory
+(`AppConfiguration`) when it creates the core, and the core validates, opens and
+loads the file, keeps a recovery copy, and repairs the session as its first save.
+Every accepted revision is saved behind on the core's storage worker, newest
+first, skipping parts whose bytes did not change, so editing continues while an
+older revision is written. Commits whose effects outside the core depend on the
+file save before they return: sync commits with their journal, Space deletion,
+imports, batches, cross-Space moves and workspace transfers. The core publishes
+`Saved(revision)` and `StorageFailed(reason)` through its wake-and-drain path;
+quitting and backgrounding wait for `Saved`. Favicons stay in the native side
+store. Saved parts hold browsing data only; see "Selection is window state"
+below. Private, temporary and borrowed families stay in memory.
 
 ### Selection is window state
 
@@ -408,12 +413,12 @@ original session and journal untouched. Replacing a disposable seed with real
 cloud Spaces clears the seed marker.
 
 `crest_sync_session_prepare` returns a matched session result and immutable journal
-handle after all merge rules succeed. `crest_session_reserve_replacement` validates
+handle after all merge rules succeed. `crest_session_replace_durably` validates
 the replacement before any durable write and excludes competing core writes until
-publication or cancellation. Core-backed persistent compositions use
-`BrowserTransactionalSessionPersistence`; legacy defaults are migrated once and
-retained for rollback. Local saves, incoming sync and upload acknowledgments use
-one serial storage queue.
+the save finishes. Legacy defaults are migrated once, through
+`crest_app_install_session`, and retained for rollback. Local saves, incoming sync
+and upload acknowledgments all write through the core's one connection, and a
+journal is always written in one transaction with the newest accepted session.
 
 ### Upgrading an installed session
 
@@ -436,8 +441,8 @@ move every one of those paths into a container and strand the installed data,
 so the product package must be signed with the Mac target's own entitlements.
 
 `BrowserStore.migratedStorage` performs the carry and is the seam the upgrade
-test drives with its own directory, defaults suite and favicon store.
-`migrateIfNeeded` is a no-op once a checkpoint exists, so a later launch never
+test drives with its own directory, defaults suite and favicon store. It installs
+the legacy session only when the core's file holds none, so a later launch never
 replaces accepted data with the retained legacy copy. A core the installed
 release itself could not decode is copied aside by the legacy store, migrates
 nothing, and requests a full cloud pull, so the disposable seed that stands in
@@ -714,8 +719,8 @@ permissions and session entry points against the built library.
 
 Once a store family attaches the access authority, `NativeSessionAuthority`
 rejects a prepared command that would read or mutate a locked Space. It also
-rejects a native value edit, such as the delta `crest_session_reserve_replacement`
-reserves, that would change or remove a locked Space's records. Sync
+rejects a native value edit, such as the delta `crest_session_replace_durably`
+applies without a journal, that would change or remove a locked Space's records. Sync
 replacements bound to a journal transaction are not gated, so background
 convergence continues. `SpaceLockGateTests` covers commands, value edits,
 sync, borrowing and profile sharing. The native controllers keep their own

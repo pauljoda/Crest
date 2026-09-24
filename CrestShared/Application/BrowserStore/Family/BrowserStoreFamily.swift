@@ -26,6 +26,10 @@ final class BrowserStoreFamily {
     @ObservationIgnored private(set) var spaceCleanupTask: Task<Void, Never>?
     @ObservationIgnored private var lastCleanupSweepAt: Date?
     @ObservationIgnored weak var pageDismissalAuthorizer: (any BrowserPageDismissalAuthorizing)?
+    /// The core that keeps this family's session in its file; nil in memory.
+    @ObservationIgnored private let storage: CrestCore?
+    /// Where tab images are kept beside the session file; nil in memory.
+    @ObservationIgnored private let favicons: (any BrowserFaviconStoring)?
 
     init(
         session: BrowserSession, browsingMode: BrowserBrowsingMode = .standard,
@@ -38,10 +42,29 @@ final class BrowserStoreFamily {
             privateBrowsing: browsingMode.isPrivate)
         self.temporarySourceAssignment = temporarySourceAssignment
         self.temporarySettingsBrowser = temporarySettingsBrowser
+        storage = nil
+        favicons = nil
+    }
+
+    /// The family of the session `storage` keeps in its file. Every image the
+    /// loaded session carries is reconciled with `favicons`, and images of tabs
+    /// it no longer has are pruned, as each later edit does for what it changed.
+    init(stored: BrowserCoreStoredSession, storage: CrestCore, favicons: any BrowserFaviconStoring) {
+        core = stored.authority
+        temporarySourceAssignment = nil
+        temporarySettingsBrowser = nil
+        self.storage = storage
+        self.favicons = favicons
+        let tabs = stored.authority.projection.spaces.flatMap(\.tabs)
+        for tab in tabs { favicons.reconcile(tab.faviconData, tabID: tab.id) }
+        favicons.pruneFavicons(keeping: Set(tabs.map(\.id)))
+        storage.storageFailureHandler = { [weak self] reason in self?.storageDidFail(reason) }
     }
 
     private init(core: BrowserCoreSessionAuthority, assignment: BrowserSpaceRuntimeAssignment, settingsBrowser: BrowserStore) {
         self.core = core; temporarySourceAssignment = assignment; temporarySettingsBrowser = settingsBrowser
+        storage = nil
+        favicons = nil
     }
 
     func makeBorrowed(in assignment: BrowserSpaceRuntimeAssignment, settingsBrowser: BrowserStore) throws -> BrowserStoreFamily {
@@ -109,29 +132,23 @@ final class BrowserStoreFamily {
     #if DEBUG
         func replaceSessionForTesting(_ session: BrowserSession, from source: BrowserStore) {
             let previous = authoritativeSession
-            do { try core.replaceDurably(with: session) { _ in } }
-            catch { source.localSyncErrorDescription = "Core test session update failed: \(error)"; return }
+            do {
+                try core.replaceDurably(with: session)
+            } catch {
+                source.localSyncErrorDescription = "Core test session update failed: \(error)"
+                return
+            }
             reconcileStores(after: previous, from: source)
         }
     #endif
 
-    func installSyncedSession(_ session: BrowserSession, journal: BrowserSyncJournal,
-        journalPersistence: any BrowserSyncJournalPersisting, transaction: BrowserCoreSyncTransaction, from source: BrowserStore) throws {
+    /// An incoming merge: the core saves the session and its journal together
+    /// before either is published.
+    func installSyncedSession(
+        _ session: BrowserSession, transaction: BrowserCoreSyncTransaction, from source: BrowserStore
+    ) throws {
         let previous = authoritativeSession
-        try core.replaceDurably(with: session, sync: transaction) { checkpoint in
-            if let storage = source.persistence as? BrowserTransactionalSessionPersistence {
-                guard storage.owns(journalPersistence) else {
-                    throw BrowserTransactionalSessionPersistence.StorageError.invalidCheckpoint
-                }
-                try storage.commit(session, checkpoint: checkpoint, journal: journal)
-            } else {
-                // Ephemeral workspaces and injected test adapters have no
-                // cross-launch recovery. Live persistent compositions use the
-                // transactional adapter above.
-                try journalPersistence.save(journal)
-                source.persistence.save(session, scope: .everything, checkpoint: checkpoint)
-            }
-        }
+        try core.replaceDurably(with: session, sync: transaction)
         reconcileStores(after: previous, from: source)
         scheduleSpaceDataCleanup()
     }
@@ -173,31 +190,21 @@ final class BrowserStoreFamily {
         try commitPreparedChange(command, previous: authoritativeSession, deletionReason: deletionReason, from: store, at: date)
     }
 
+    /// Space deletion, import, batches and cross-Space moves: the command and
+    /// the journal it stages are saved together before the command returns,
+    /// because an upload follows and Space deletion erases engine data between
+    /// its two commands.
     private func commitPreparedChange(_ command: BrowserCoreSessionAuthority.PreparedChange,
         previous: BrowserSession, deletionReason: BrowserSyncTombstoneReason, from source: BrowserStore, at date: Date) throws {
         let revision = reserveSyncRevision()
         if let sync = source.syncCoordinator {
             sync.advanceStoreRevision(to: revision)
             try sync.installLocalCommand(command.session, deletionReason: deletionReason, at: date, revision: revision) {
-                session, journal, journalPersistence, transaction in
-                try self.core.commitDurably(command, sync: transaction) { checkpoint in
-                    if let storage = source.persistence as? BrowserTransactionalSessionPersistence {
-                        guard storage.owns(journalPersistence) else { throw BrowserTransactionalSessionPersistence.StorageError.invalidCheckpoint }
-                        try storage.commit(session, checkpoint: checkpoint, journal: journal)
-                    } else {
-                        try journalPersistence.save(journal)
-                        source.persistence.save(session, scope: .everything, checkpoint: checkpoint)
-                    }
-                }
+                _, transaction in
+                try self.core.commitDurably(command, sync: transaction)
             }
         } else {
-            try core.commitDurably(command) { checkpoint in
-                if let storage = source.persistence as? BrowserTransactionalSessionPersistence {
-                    try storage.commit(command.session, checkpoint: checkpoint)
-                } else {
-                    source.persistence.save(command.session, scope: .everything, checkpoint: checkpoint)
-                }
-            }
+            try core.commitDurably(command)
         }
         reconcileStores(after: previous, from: source, hint: command.hint)
         source.cloudSyncChangeHandler?()
@@ -279,34 +286,19 @@ final class BrowserStoreFamily {
         source: BrowserStore, destination: BrowserStore) throws {
         let previousSource = source.family.authoritativeSession
         let previousDestination = destination.family.authoritativeSession
-        let sourceIsDurable = !source.isTemporaryWorkspace
-        let durable = sourceIsDurable ? source : destination
-        let next = sourceIsDurable ? prepared.source : prepared.destination
+        let durable = source.isTemporaryWorkspace ? destination : source
+        let next = source.isTemporaryWorkspace ? prepared.destination : prepared.source
         let revision = durable.family.reserveSyncRevision()
-        func commit(journal: BrowserSyncJournal? = nil, journalPersistence: (any BrowserSyncJournalPersisting)? = nil,
-            transaction: BrowserCoreSyncTransaction? = nil) throws {
+        // The core saves the persistent side with its journal before either
+        // side is published; the temporary side keeps nothing.
+        func commit(_ transaction: BrowserCoreSyncTransaction? = nil) throws {
             try BrowserCoreSessionAuthority.commitTransfer(prepared, source: source.family.core,
-                destination: destination.family.core, sync: transaction) { a, b in
-                let checkpoint = sourceIsDurable ? a : b
-                if let storage = durable.persistence as? BrowserTransactionalSessionPersistence {
-                    if let journalPersistence, !storage.owns(journalPersistence) {
-                        throw BrowserTransactionalSessionPersistence.StorageError.invalidCheckpoint
-                    }
-                    try storage.commit(next, checkpoint: checkpoint, journal: journal)
-                } else {
-                    if let journal, let journalPersistence { try journalPersistence.save(journal) }
-                    durable.persistence.save(next, scope: .everything, checkpoint: checkpoint)
-                }
-                let temporary = sourceIsDurable ? destination : source
-                temporary.persistence.save(sourceIsDurable ? prepared.destination : prepared.source,
-                    scope: .everything, checkpoint: sourceIsDurable ? b : a)
-            }
+                destination: destination.family.core, sync: transaction)
         }
         if let sync = durable.syncCoordinator {
             sync.advanceStoreRevision(to: revision)
             try sync.installLocalCommand(next, deletionReason: .superseded, at: .now, revision: revision) {
-                _, journal, persistence, transaction in
-                try commit(journal: journal, journalPersistence: persistence, transaction: transaction)
+                _, transaction in try commit(transaction)
             }
         } else { try commit() }
         source.family.reconcileStores(after: previousSource, from: source, hint: prepared.sourceHint)
@@ -314,10 +306,51 @@ final class BrowserStoreFamily {
         durable.cloudSyncChangeHandler?()
     }
 
-    func save(_ session: BrowserSession, to persistence: any BrowserSessionPersisting,
-        scope: BrowserSessionSaveScope = .everything) throws {
-        let snapshot = try core.checkpoint()
-        persistence.save(session, scope: scope, checkpoint: snapshot)
+    // MARK: - Actions - Storage
+
+    /// Returns once every edit this family has accepted is on disk, or once a
+    /// save has failed. A family in memory has nothing to wait for.
+    func flushPendingSaves() async {
+        guard let storage else { return }
+        await storage.saved(through: Int64(core.acceptedRevision))
+    }
+
+    /// A save the core started itself failed: every window shows it the way
+    /// a failed local save always has, through the sync status.
+    private func storageDidFail(_ reason: StorageFailure) {
+        stores.removeAll { $0.value == nil }
+        for store in stores.compactMap(\.value) {
+            store.localSyncErrorDescription = "The session could not be saved (\(reason))."
+        }
+    }
+
+    /// Keeps the favicon store in step with the session: a tab whose image
+    /// changed is written, and the images of tabs the session no longer has
+    /// are pruned. A family in memory keeps images only in its session.
+    private func persistFavicons(from previous: BrowserSession, to next: BrowserSession) {
+        guard let favicons else { return }
+        let earlier = Dictionary(
+            previous.spaces.flatMap(\.tabs).map { ($0.id, $0.faviconData) }, uniquingKeysWith: { first, _ in first })
+        var current: Set<TabID> = []
+        for tab in next.spaces.flatMap(\.tabs) {
+            current.insert(tab.id)
+            if let known = earlier[tab.id], Self.sameImage(known, tab.faviconData) { continue }
+            favicons.reconcile(tab.faviconData, tabID: tab.id)
+        }
+        if earlier.keys.contains(where: { !current.contains($0) }) { favicons.pruneFavicons(keeping: current) }
+    }
+
+    /// Whether two images are the same bytes, without reading them when they
+    /// share storage.
+    private static func sameImage(_ first: Data?, _ second: Data?) -> Bool {
+        guard let first, let second else { return first == nil && second == nil }
+        guard first.count == second.count else { return false }
+        return first.withUnsafeBytes { a in
+            second.withUnsafeBytes { b in
+                guard let left = a.baseAddress, let right = b.baseAddress else { return true }
+                return left == right || memcmp(left, right, a.count) == 0
+            }
+        }
     }
 
     /// Whether the core would accept a command in one Space, asked without
@@ -339,6 +372,7 @@ final class BrowserStoreFamily {
     /// their own selection, reconciled against what still exists.
     private func reconcileStores(after previous: BrowserSession, from source: BrowserStore?,
         hint: BrowserSelectionHint = .none) {
+        persistFavicons(from: previous, to: authoritativeSession)
         stores.removeAll { $0.value == nil }
         for store in stores.compactMap(\.value) {
             store.receiveFamilySessionChange(

@@ -16,22 +16,24 @@ extension BrowserStore {
         return result?.space.folders.contains(where: { $0.id == id }) == true ? id : nil
     }
 
+    /// Records what a page reports about its tab, and answers whether the tab
+    /// changed.
     func observeSessionTab(
         url: URL?, title: String?, faviconData: Data?,
         iconAccent: BrowserTabIconAccent?, tabID: TabID, in spaceID: SpaceID
-    ) -> BrowserTabObservation? {
+    ) -> Bool {
         guard let tab = session.space(id: spaceID)?.tabs.first(where: { $0.id == tabID }),
             (url ?? tab.url) != tab.url || title != tab.title
                 || faviconData != tab.faviconData || iconAccent != tab.iconAccent
-        else { return nil }
+        else { return false }
         let arguments = BrowserSessionArguments.TabObserve(
             tabId: tabID.rawValue, url: url?.absoluteString, title: title,
             hasFavicon: !(faviconData?.isEmpty ?? true), faviconChanged: faviconData != tab.faviconData,
             iconAccent: iconAccent)
         let result = family.execute(.tabObserve, in: spaceID, arguments: arguments, from: self, at: .now)
-        guard let result, result.changed else { return nil }
-        let assigned = family.applyFavicon(result.favicon, bytes: faviconData, in: spaceID)
-        return BrowserTabObservation(tabID: assigned ?? tabID, changedFavicon: assigned != nil)
+        guard let result, result.changed else { return false }
+        _ = family.applyFavicon(result.favicon, bytes: faviconData, in: spaceID)
+        return true
     }
 
     func setSessionTabIcon(
@@ -89,7 +91,7 @@ extension BrowserStore {
             let result = family.execute(
                 .transientPromote, in: destination.spaceID, arguments: arguments, from: self, at: date)
         else { return nil }
-        persist(scope: .core)
+        stageSync()
         return (result.tabId.map(TabID.init(rawValue:)), result.adoptLivePage == true)
     }
 

@@ -431,7 +431,6 @@ final class BrowserSidebarExactAssignmentTests: XCTestCase {
         )
         let store = BrowserStore(
             session: BrowserSession(spaces: [source, destination]),
-            persistence: InMemoryBrowserSessionPersistence(),
             browsingMode: .privateBrowsing
         )
         return (store, source, destination, sourceTab)

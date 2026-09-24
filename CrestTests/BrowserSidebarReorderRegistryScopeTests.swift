@@ -204,7 +204,6 @@ private struct ReorderRegistryFixture {
         browser = BrowserStore(
             session: BrowserSession(spaces: [own, foreign]),
             selection: firstTabSelection(showing: own, alongside: [foreign]),
-            persistence: InMemoryBrowserSessionPersistence(),
             browsingMode: .privateBrowsing
         )
         sidebarInteraction = BrowserSidebarInteractionState.connected(to: browser)
@@ -389,7 +388,6 @@ private struct SplitCardRegistryFixture {
         browser = BrowserStore(
             session: BrowserSession(spaces: [own, foreign]),
             selection: firstTabSelection(showing: own, alongside: [foreign]),
-            persistence: InMemoryBrowserSessionPersistence(),
             browsingMode: .privateBrowsing
         )
         sidebarInteraction = BrowserSidebarInteractionState.connected(to: browser)

@@ -300,7 +300,6 @@ final class BrowserSidebarUtilityCoordinatorTests: XCTestCase {
         )
         let browser = BrowserStore(
             session: BrowserSession(spaces: [source, destination]),
-            persistence: InMemoryBrowserSessionPersistence(),
             browsingMode: .privateBrowsing
         )
         let downloadCenter = BrowserDownloadCenter()

@@ -69,9 +69,10 @@ private final class BrowserMobileApplication {
         if shouldReset && !usesIsolatedLaunch {
             BrowserLinkPreferenceStore.shared.reset()
         }
-        // One core per process, shared by every window of both browsing modes.
-        let core = CrestCore()
-        let browser = try BrowserStore.production(launchEnvironment: launchEnvironment, core: core)
+        // One core per process, keeping the session file and shared by every
+        // window of both browsing modes.
+        let core = try BrowserStore.launchCore(for: launchEnvironment)
+        let browser = try BrowserStore.production(core: core, launchEnvironment: launchEnvironment)
         BrowserAppPreferenceStore.shared.bind(
             to: browser, legacy: BrowserLegacyAppPreferences.read(for: launchEnvironment))
         let transientBrowsing = BrowserTransientBrowsingCoordinator()

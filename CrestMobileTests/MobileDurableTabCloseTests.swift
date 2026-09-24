@@ -54,8 +54,7 @@ final class MobileDurableTabCloseTests: XCTestCase {
         return Context(
             browser: BrowserStore(
                 session: BrowserSession(spaces: [space]),
-                selection: BrowserStoreSelection(selectedSpaceID: space.id, selectedTabIDsBySpace: [space.id: tab.id]),
-                persistence: InMemoryBrowserSessionPersistence()
+                selection: BrowserStoreSelection(selectedSpaceID: space.id, selectedTabIDsBySpace: [space.id: tab.id])
             ),
             pages: MobileBrowserPageStore(usesEphemeralWebsiteDataStores: true), tab: tab
         )

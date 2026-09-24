@@ -95,7 +95,7 @@ final class MobileTransientBrowsingTests: XCTestCase {
     }
 
     func testMobileCrossSpaceMoveRebuildsTheTabWithTheDestinationProfile() throws {
-        let browser = BrowserStore(session: BrowserSession.preview, persistence: InMemoryBrowserSessionPersistence())
+        let browser = BrowserStore(session: BrowserSession.preview)
         let source = try XCTUnwrap(browser.session.spaces.first)
         let destination = try XCTUnwrap(browser.session.spaces.last)
         let tab = try XCTUnwrap(source.currentTabs.first)

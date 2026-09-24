@@ -29,6 +29,18 @@ public static unsafe partial class Exports {
         } catch (Exception error) { return SyncJournalError(error); }
     }
 
+    [UnmanagedCallersOnly(EntryPoint = "crest_sync_authority_snapshot", CallConvs = [typeof(CallConvCdecl)])]
+    public static int SyncAuthoritySnapshot(ulong handle, ulong* journal) {
+        if (journal == null) return CoreStatus.InvalidArgument;
+        *journal = 0;
+        if (!SyncAuthorities.TryGetValue(handle, out var owner)) return CoreStatus.InvalidHandle;
+        try {
+            var id = checked((ulong)Interlocked.Increment(ref nextHandle));
+            if (!SyncJournals.TryAdd(id, owner.Snapshot)) return CoreStatus.InternalError;
+            *journal = id; return CoreStatus.Ok;
+        } catch (Exception error) { return SyncJournalError(error); }
+    }
+
     [UnmanagedCallersOnly(EntryPoint = "crest_sync_authority_release", CallConvs = [typeof(CallConvCdecl)])]
     public static int SyncAuthorityRelease(ulong handle) => SyncAuthorities.TryRemove(handle, out _) ? CoreStatus.Ok : CoreStatus.InvalidHandle;
 

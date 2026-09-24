@@ -2153,6 +2153,10 @@
     "core-owned-session-file": {
       "category": "internal",
       "message": "The core opens and saves the session file itself, with the same format and the saves that must reach disk before they return."
+    },
+    "swift-stops-saving-session": {
+      "category": "internal",
+      "message": "Swift no longer saves the session; the core writes it and reports each save, and quitting waits for the last one."
     }
   }
 }

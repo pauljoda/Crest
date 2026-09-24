@@ -127,7 +127,6 @@ final class BrowserCommandPaletteActionPolicyTests: XCTestCase {
         BrowserStore(
             session: BrowserSession(spaces: spaces),
             selection: selection,
-            persistence: InMemoryBrowserSessionPersistence(),
             browsingMode: .privateBrowsing
         )
     }

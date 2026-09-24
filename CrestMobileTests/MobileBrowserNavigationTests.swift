@@ -119,8 +119,7 @@ final class MobileBrowserNavigationTests: XCTestCase {
         locked.accessPolicy = .deviceOwnerAuthentication
         let browser = BrowserStore(
             session: BrowserSession(spaces: [locked]),
-            selection: selection(showing: locked.id, in: [locked]),
-            persistence: InMemoryBrowserSessionPersistence()
+            selection: selection(showing: locked.id, in: [locked])
         )
         let pages = MobileBrowserPageStore(usesEphemeralWebsiteDataStores: true)
         let access = BrowserSpaceAccessController()
@@ -416,8 +415,7 @@ final class MobileBrowserNavigationTests: XCTestCase {
             let space = makeSpace(index: 334)
             let browser = BrowserStore(
                 session: BrowserSession(spaces: [space]),
-                selection: selection(showing: space.id, in: [space]),
-                persistence: InMemoryBrowserSessionPersistence()
+                selection: selection(showing: space.id, in: [space])
             )
             let pages = MobileBrowserPageStore(usesEphemeralWebsiteDataStores: true)
             let model = makeModel(browser: browser, pages: pages)
@@ -600,8 +598,8 @@ final class MobileBrowserNavigationTests: XCTestCase {
         let secondSpace = makeSpace(index: 52)
         let browser = BrowserStore(
             session: BrowserSession(spaces: [firstSpace, secondSpace]),
-            selection: selection(showing: firstSpace.id, in: [firstSpace, secondSpace], tabs: [firstSpace.id: tabs[0].id]),
-            persistence: InMemoryBrowserSessionPersistence()
+            selection: selection(
+                showing: firstSpace.id, in: [firstSpace, secondSpace], tabs: [firstSpace.id: tabs[0].id])
         )
         let pages = MobileBrowserPageStore(
             usesEphemeralWebsiteDataStores: true
@@ -643,8 +641,7 @@ final class MobileBrowserNavigationTests: XCTestCase {
         )
         let browser = BrowserStore(
             session: BrowserSession(spaces: [space]),
-            selection: selection(showing: space.id, in: [space], tabs: [space.id: first.id]),
-            persistence: InMemoryBrowserSessionPersistence()
+            selection: selection(showing: space.id, in: [space], tabs: [space.id: first.id])
         )
         let pages = MobileBrowserPageStore(
             usesEphemeralWebsiteDataStores: true
@@ -686,8 +683,7 @@ final class MobileBrowserNavigationTests: XCTestCase {
         )
         let browser = BrowserStore(
             session: BrowserSession(spaces: [space]),
-            selection: selection(showing: space.id, in: [space], tabs: [space.id: pinned.id]),
-            persistence: InMemoryBrowserSessionPersistence()
+            selection: selection(showing: space.id, in: [space], tabs: [space.id: pinned.id])
         )
         let pages = MobileBrowserPageStore(
             usesEphemeralWebsiteDataStores: true
@@ -724,8 +720,7 @@ final class MobileBrowserNavigationTests: XCTestCase {
         )
         let browser = BrowserStore(
             session: BrowserSession(spaces: [space]),
-            selection: selection(showing: space.id, in: [space], tabs: [space.id: source.id]),
-            persistence: InMemoryBrowserSessionPersistence()
+            selection: selection(showing: space.id, in: [space], tabs: [space.id: source.id])
         )
         let pages = MobileBrowserPageStore(
             usesEphemeralWebsiteDataStores: true
@@ -856,8 +851,7 @@ final class MobileBrowserNavigationTests: XCTestCase {
         let secondSpace = makeSpace(index: 14)
         let browser = BrowserStore(
             session: BrowserSession(spaces: [firstSpace, secondSpace]),
-            selection: selection(showing: firstSpace.id, in: [firstSpace, secondSpace]),
-            persistence: InMemoryBrowserSessionPersistence()
+            selection: selection(showing: firstSpace.id, in: [firstSpace, secondSpace])
         )
         let pages = MobileBrowserPageStore(usesEphemeralWebsiteDataStores: true)
         let commands = MobileBrowserCommandController(browser: browser, pages: pages)
@@ -968,8 +962,7 @@ final class MobileBrowserNavigationTests: XCTestCase {
         let secondSpace = makeSpace(index: 16)
         let browser = BrowserStore(
             session: BrowserSession(spaces: [firstSpace, secondSpace]),
-            selection: selection(showing: firstSpace.id, in: [firstSpace, secondSpace]),
-            persistence: InMemoryBrowserSessionPersistence()
+            selection: selection(showing: firstSpace.id, in: [firstSpace, secondSpace])
         )
         let pages = MobileBrowserPageStore(usesEphemeralWebsiteDataStores: true)
         let model = makeModel(browser: browser, pages: pages)
@@ -1053,8 +1046,7 @@ final class MobileBrowserNavigationTests: XCTestCase {
     ) throws -> BrowserStore {
         let browser = BrowserStore(
             session: BrowserSession(spaces: [split.space]),
-            selection: selection(showing: split.space.id, in: [split.space]),
-            persistence: InMemoryBrowserSessionPersistence()
+            selection: selection(showing: split.space.id, in: [split.space])
         )
         let space = try XCTUnwrap(browser.selectedSpace)
         XCTAssertEqual(
@@ -1087,8 +1079,7 @@ final class MobileBrowserNavigationTests: XCTestCase {
         let secondSpace = makeSpace(index: 2)
         let browser = BrowserStore(
             session: BrowserSession(spaces: [firstSpace, secondSpace]),
-            selection: selection(showing: firstSpace.id, in: [firstSpace, secondSpace]),
-            persistence: InMemoryBrowserSessionPersistence()
+            selection: selection(showing: firstSpace.id, in: [firstSpace, secondSpace])
         )
         let pages = MobileBrowserPageStore(
             usesEphemeralWebsiteDataStores: true
@@ -1462,8 +1453,7 @@ final class MobileBrowserNavigationTests: XCTestCase {
         )
         let browser = BrowserStore(
             session: BrowserSession(spaces: [space]),
-            selection: selection(showing: space.id, in: [space], tabs: [space.id: reddit.id]),
-            persistence: InMemoryBrowserSessionPersistence()
+            selection: selection(showing: space.id, in: [space], tabs: [space.id: reddit.id])
         )
         let pages = MobileBrowserPageStore(
             usesEphemeralWebsiteDataStores: true
@@ -1511,8 +1501,7 @@ final class MobileBrowserNavigationTests: XCTestCase {
         )
         let browser = BrowserStore(
             session: BrowserSession(spaces: [space]),
-            selection: selection(showing: space.id, in: [space], tabs: [space.id: pinned.id]),
-            persistence: InMemoryBrowserSessionPersistence()
+            selection: selection(showing: space.id, in: [space], tabs: [space.id: pinned.id])
         )
         let pages = MobileBrowserPageStore(
             usesEphemeralWebsiteDataStores: true
@@ -1604,8 +1593,7 @@ final class MobileBrowserNavigationTests: XCTestCase {
         )
         let browser = BrowserStore(
             session: BrowserSession(spaces: [space]),
-            selection: selection(showing: space.id, in: [space], tabs: [space.id: tabs[0].id]),
-            persistence: InMemoryBrowserSessionPersistence()
+            selection: selection(showing: space.id, in: [space], tabs: [space.id: tabs[0].id])
         )
         let pages = MobileBrowserPageStore(
             usesEphemeralWebsiteDataStores: true
@@ -1647,8 +1635,7 @@ final class MobileBrowserNavigationTests: XCTestCase {
         )
         let browser = BrowserStore(
             session: BrowserSession(spaces: [space]),
-            selection: selection(showing: space.id, in: [space], tabs: [space.id: tabs[0].id]),
-            persistence: InMemoryBrowserSessionPersistence()
+            selection: selection(showing: space.id, in: [space], tabs: [space.id: tabs[0].id])
         )
         let pages = MobileBrowserPageStore(
             usesEphemeralWebsiteDataStores: true
@@ -1700,8 +1687,7 @@ final class MobileBrowserNavigationTests: XCTestCase {
         )
         let browser = BrowserStore(
             session: BrowserSession(spaces: [space]),
-            selection: selection(showing: space.id, in: [space], tabs: [space.id: current[0].id]),
-            persistence: InMemoryBrowserSessionPersistence()
+            selection: selection(showing: space.id, in: [space], tabs: [space.id: current[0].id])
         )
         let pages = MobileBrowserPageStore(
             usesEphemeralWebsiteDataStores: true

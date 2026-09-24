@@ -162,7 +162,6 @@ final class BrowserCredentialFormTests: XCTestCase {
     func testSavePromptModelMovesFromCreateToSavedAndSuppressesTheIdenticalCandidate() async throws {
         let store = BrowserStore(
             session: .preview,
-            persistence: InMemoryBrowserSessionPersistence(),
             credentialVault: InMemoryCredentialVault()
         )
         let work = try XCTUnwrap(store.session.spaces.first)
@@ -211,7 +210,6 @@ final class BrowserCredentialFormTests: XCTestCase {
     func testSystemPasswordOfferRunsOnlyAfterCrestSaveAndRetriesWithoutDuplicatingIt() async throws {
         let store = BrowserStore(
             session: .preview,
-            persistence: InMemoryBrowserSessionPersistence(),
             credentialVault: InMemoryCredentialVault()
         )
         let work = try XCTUnwrap(store.session.spaces.first)

@@ -163,7 +163,6 @@ final class BrowserCredentialTests: XCTestCase {
         let vault = InMemoryCredentialVault()
         let store = BrowserStore(
             session: .preview,
-            persistence: InMemoryBrowserSessionPersistence(),
             credentialVault: vault
         )
         let work = try XCTUnwrap(store.session.spaces.first)
@@ -214,7 +213,6 @@ final class BrowserCredentialTests: XCTestCase {
     func testBrowserStoreNeverSavesOrReusesHTTPAuthenticationOverPlainHTTP() async throws {
         let store = BrowserStore(
             session: .preview,
-            persistence: InMemoryBrowserSessionPersistence(),
             credentialVault: InMemoryCredentialVault()
         )
         let work = try XCTUnwrap(store.session.spaces.first)
@@ -255,7 +253,6 @@ final class BrowserCredentialTests: XCTestCase {
         let vault = InMemoryCredentialVault()
         let store = BrowserStore(
             session: session,
-            persistence: InMemoryBrowserSessionPersistence(),
             credentialVault: vault
         )
         let origin = try XCTUnwrap(
@@ -518,7 +515,6 @@ final class BrowserCredentialTests: XCTestCase {
         let vault = InMemoryCredentialVault()
         let store = BrowserStore(
             session: .preview,
-            persistence: InMemoryBrowserSessionPersistence(),
             credentialVault: vault
         )
         let spaces = store.session.spaces
@@ -563,7 +559,6 @@ final class BrowserCredentialTests: XCTestCase {
         let vault = InMemoryCredentialVault()
         let store = BrowserStore(
             session: .preview,
-            persistence: InMemoryBrowserSessionPersistence(),
             credentialVault: vault
         )
         let work = try XCTUnwrap(store.session.spaces.first)
@@ -603,7 +598,7 @@ final class BrowserCredentialTests: XCTestCase {
         for replacesProfile in [false, true] {
             let vault = CredentialSynchronizationInterleavingVault()
             let store = BrowserStore(
-                session: .preview, persistence: InMemoryBrowserSessionPersistence(), credentialVault: vault)
+                session: .preview, credentialVault: vault)
             let otherWindow = store.makeWindowStore()
             let original = try XCTUnwrap(store.selectedSpace)
             vault.duringSynchronization = {
@@ -636,7 +631,6 @@ final class BrowserCredentialTests: XCTestCase {
     func testBrowserStoreDoesNotSuggestOrSavePasswordsOnHTTP() async throws {
         let store = BrowserStore(
             session: .preview,
-            persistence: InMemoryBrowserSessionPersistence(),
             credentialVault: InMemoryCredentialVault()
         )
         let insecureURL = try XCTUnwrap(URL(string: "http://example.com/login"))
@@ -659,7 +653,6 @@ final class BrowserCredentialTests: XCTestCase {
         let vault = InMemoryCredentialVault()
         let store = BrowserStore(
             session: .preview,
-            persistence: InMemoryBrowserSessionPersistence(),
             credentialVault: vault
         )
         let work = try XCTUnwrap(store.session.spaces.first)
@@ -706,7 +699,6 @@ final class BrowserCredentialTests: XCTestCase {
     func testChangedFormPasswordUpdatesTheExistingRecordWithoutChangingItsIdentity() async throws {
         let store = BrowserStore(
             session: .preview,
-            persistence: InMemoryBrowserSessionPersistence(),
             credentialVault: InMemoryCredentialVault()
         )
         let work = try XCTUnwrap(store.session.spaces.first)
@@ -761,7 +753,6 @@ final class BrowserCredentialTests: XCTestCase {
     func testDeletingACommittedFormCredentialRemovesOnlyTheOwningSpacesSuggestionAndSecret() async throws {
         let store = BrowserStore(
             session: .preview,
-            persistence: InMemoryBrowserSessionPersistence(),
             credentialVault: InMemoryCredentialVault()
         )
         let work = try XCTUnwrap(store.session.spaces.first)
@@ -807,7 +798,6 @@ final class BrowserCredentialTests: XCTestCase {
     func testStaleAndFutureFormCandidatesAreRejectedWithoutWritingToTheVault() async throws {
         let store = BrowserStore(
             session: .preview,
-            persistence: InMemoryBrowserSessionPersistence(),
             credentialVault: InMemoryCredentialVault()
         )
         let work = try XCTUnwrap(store.session.spaces.first)
@@ -855,7 +845,6 @@ final class BrowserCredentialTests: XCTestCase {
     func testConcurrentFormCredentialCommitsCoalesceToOneRecord() async throws {
         let store = BrowserStore(
             session: .preview,
-            persistence: InMemoryBrowserSessionPersistence(),
             credentialVault: InMemoryCredentialVault()
         )
         let work = try XCTUnwrap(store.session.spaces.first)
@@ -897,7 +886,6 @@ final class BrowserCredentialTests: XCTestCase {
         let vault = InMemoryCredentialVault()
         let store = BrowserStore(
             session: .preview,
-            persistence: InMemoryBrowserSessionPersistence(),
             credentialVault: vault
         )
         let work = try XCTUnwrap(store.session.spaces.first)
@@ -954,7 +942,6 @@ final class BrowserCredentialTests: XCTestCase {
         let vault = InMemoryCredentialVault()
         let store = BrowserStore(
             session: .preview,
-            persistence: InMemoryBrowserSessionPersistence(),
             credentialVault: vault
         )
         let work = try XCTUnwrap(store.session.spaces.first)
@@ -1172,7 +1159,6 @@ final class BrowserCredentialCSVImportTests: XCTestCase {
         let vault = InMemoryCredentialVault()
         let browser = BrowserStore(
             session: .preview,
-            persistence: InMemoryBrowserSessionPersistence(),
             credentialVault: vault
         )
         let space = try XCTUnwrap(browser.session.spaces.first)
@@ -1252,7 +1238,6 @@ final class BrowserCredentialCSVImportTests: XCTestCase {
         let vault = InMemoryCredentialVault()
         let browser = BrowserStore(
             session: .preview,
-            persistence: InMemoryBrowserSessionPersistence(),
             credentialVault: vault
         )
         let work = try XCTUnwrap(browser.session.spaces.first)

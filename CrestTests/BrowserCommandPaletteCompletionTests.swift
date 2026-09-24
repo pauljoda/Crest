@@ -43,7 +43,7 @@ final class BrowserCommandPaletteCompletionTests: XCTestCase {
         let browser = BrowserStore(
             session: BrowserSession(spaces: [original, other]),
             selection: BrowserStoreSelection(selectedSpaceID: original.id, selectedTabIDsBySpace: [original.id: tab.id]),
-            persistence: InMemoryBrowserSessionPersistence(), browsingMode: .privateBrowsing)
+            browsingMode: .privateBrowsing)
         let access = BrowserSpaceAccessController()
         let model = BrowserCommandPaletteModel(
             space: original, selectedTabID: tab.id, initialQuery: "", commands: nil, isPrivateBrowsing: true,
@@ -79,8 +79,7 @@ final class BrowserCommandPaletteCompletionTests: XCTestCase {
         let space = makeSpace(tab)
         let browser = BrowserStore(
             session: BrowserSession(spaces: [space]),
-            selection: BrowserStoreSelection(selectedSpaceID: space.id),
-            persistence: InMemoryBrowserSessionPersistence(), browsingMode: .privateBrowsing)
+            selection: BrowserStoreSelection(selectedSpaceID: space.id), browsingMode: .privateBrowsing)
         var explicitSelectionCount = 0
         let actions = BrowserEmptySelectionPaletteActions(
             source: BrowserSpaceRuntimeAssignment(space: space), browser: browser,

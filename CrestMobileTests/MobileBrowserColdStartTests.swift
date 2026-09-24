@@ -19,7 +19,7 @@ final class MobileBrowserColdStartTests: XCTestCase {
         session.spaces[0].tabs[1].placement = .current
         session.spaces[0].tabs[0].splitGroupID = group
         session.spaces[0].tabs[1].splitGroupID = group
-        let root = BrowserStore(session: session, persistence: InMemoryBrowserSessionPersistence())
+        let root = BrowserStore(session: session)
         let id = BrowserWindowID()
         let persistence = InMemoryBrowserWindowStatePersistence()
         persistence.save(

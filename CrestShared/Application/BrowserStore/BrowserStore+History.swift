@@ -7,12 +7,12 @@ extension BrowserStore {
         guard selectedSpace != nil else { return }
         let spaceID = selectedSpaceID
         guard recordSessionVisit(url: url, title: title, in: spaceID) else { return }
-        persist(syncUrgency: .coalesced, scope: .history(in: spaceID))
+        stageSync(urgency: .coalesced)
     }
 
     func recordVisit(url: URL, title: String?, in spaceID: SpaceID) {
         guard recordSessionVisit(url: url, title: title, in: spaceID) else { return }
-        persist(syncUrgency: .coalesced, scope: .history(in: spaceID))
+        stageSync(urgency: .coalesced)
     }
 
     @discardableResult
@@ -23,10 +23,7 @@ extension BrowserStore {
     ) -> Bool {
         guard space(matching: assignment) != nil else { return false }
         guard recordSessionVisit(url: url, title: title, in: assignment.spaceID) else { return false }
-        persist(
-            syncUrgency: .coalesced,
-            scope: .history(in: assignment.spaceID)
-        )
+        stageSync(urgency: .coalesced)
         return true
     }
 
@@ -58,7 +55,7 @@ extension BrowserStore {
                 arguments: BrowserSessionArguments.TransientArchive(requestId: requestID, tab: tab),
                 from: self, at: date) != nil
         else { return false }
-        persist(syncUrgency: .coalesced, scope: .core)
+        stageSync(urgency: .coalesced)
         return true
     }
 
@@ -69,7 +66,7 @@ extension BrowserStore {
 
     func clearHistory(in spaceID: SpaceID) {
         guard family.executeRecords(.historyClear, in: spaceID, from: self) else { return }
-        persist(deletionReason: .explicitDelete, scope: .history(in: spaceID))
+        stageSync(deletionReason: .explicitDelete)
     }
 
     @discardableResult
@@ -78,16 +75,13 @@ extension BrowserStore {
     ) -> Bool {
         guard space(matching: assignment) != nil else { return false }
         guard family.executeRecords(.historyClear, in: assignment.spaceID, from: self) else { return false }
-        persist(
-            deletionReason: .explicitDelete,
-            scope: .history(in: assignment.spaceID)
-        )
+        stageSync(deletionReason: .explicitDelete)
         return true
     }
 
     func cleanupCurrentTabs() {
         guard family.executeRecords(.recordsCleanup, from: self) else { return }
-        persist(deletionReason: .retention, scope: .core)
+        stageSync(deletionReason: .retention)
     }
 
     /// Applies every Space's tab and stored-record retention policies to a
@@ -102,7 +96,7 @@ extension BrowserStore {
     func sweepExpiredBrowsingData(now: Date = .now) -> Bool {
         guard family.beginCleanupSweep(at: now) else { return false }
         guard family.executeRecords(.recordsSweep, from: self, at: now) else { return true }
-        persist(deletionReason: .retention, scope: .everything)
+        stageSync(deletionReason: .retention)
         return true
     }
 
@@ -138,7 +132,7 @@ extension BrowserStore {
     func cleanupCurrentTabs(in spaceID: SpaceID) {
         guard session.space(id: spaceID) != nil else { return }
         guard family.executeRecords(.recordsCleanup, in: spaceID, from: self) else { return }
-        persist(deletionReason: .retention, scope: .core)
+        stageSync(deletionReason: .retention)
     }
 
     func restoreArchivedTab(_ id: TabID) {
@@ -148,7 +142,7 @@ extension BrowserStore {
                 .archiveRestore, in: selectedSpaceID, arguments: BrowserSessionArguments.Tab(tabId: id.rawValue),
                 from: self)
         else { return }
-        persist(deletionReason: .superseded, scope: .core)
+        stageSync(deletionReason: .superseded)
     }
 
     @discardableResult
@@ -165,7 +159,7 @@ extension BrowserStore {
                 .archiveRestore, in: assignment.spaceID, arguments: BrowserSessionArguments.Tab(tabId: id.rawValue),
                 from: self)
         else { return false }
-        persist(deletionReason: .superseded, scope: .core)
+        stageSync(deletionReason: .superseded)
         return true
     }
 }
@@ -190,10 +184,7 @@ extension BrowserStore {
                 .historyRemoveURL, in: assignment.spaceID,
                 arguments: BrowserSessionArguments.HistoryRemoveURL(url: url.absoluteString), from: self)
         else { return false }
-        persist(
-            deletionReason: .explicitDelete,
-            scope: .history(in: assignment.spaceID)
-        )
+        stageSync(deletionReason: .explicitDelete)
         return true
     }
 
@@ -211,10 +202,7 @@ extension BrowserStore {
                     start: startDate.timeIntervalSinceReferenceDate, end: endDate.timeIntervalSinceReferenceDate),
                 from: self)
         else { return false }
-        persist(
-            deletionReason: .explicitDelete,
-            scope: .history(in: assignment.spaceID)
-        )
+        stageSync(deletionReason: .explicitDelete)
         return true
     }
 }
@@ -238,9 +226,6 @@ extension BrowserStore {
         // the core's own sweep then applies it.
         guard setCoreSpaceValue(.spaceBrowsingPreferences, preferences, in: spaceID) else { return }
         let removedRecords = family.executeRecords(.recordsSweep, in: spaceID, from: self, at: now)
-        persist(
-            deletionReason: removedRecords ? .retention : .superseded,
-            scope: removedRecords ? .everything : .core
-        )
+        stageSync(deletionReason: removedRecords ? .retention : .superseded)
     }
 }

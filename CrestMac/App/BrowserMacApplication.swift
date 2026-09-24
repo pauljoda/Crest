@@ -69,10 +69,11 @@ final class BrowserMacApplication {
         if shouldReset && !usesIsolatedLaunch {
             BrowserLinkPreferenceStore.shared.reset()
         }
-        // One core per process. Every window of both browsing modes shares it,
-        // and standard and private windows each share one download center over it.
-        let core = CrestCore()
-        let browser = try BrowserStore.production(launchEnvironment: launchEnvironment, core: core)
+        // One core per process. It keeps the session file, every window of
+        // both browsing modes shares it, and standard and private windows each
+        // share one download center over it.
+        let core = try BrowserStore.launchCore(for: launchEnvironment)
+        let browser = try BrowserStore.production(core: core, launchEnvironment: launchEnvironment)
         BrowserAppPreferenceStore.shared.bind(
             to: browser, legacy: BrowserLegacyAppPreferences.read(for: launchEnvironment))
         BrowserAppPreferenceStore.shared.reconcileWebKitSpellChecking()

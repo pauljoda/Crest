@@ -759,7 +759,6 @@ final class MobileBrowserSidebarReorderPolicyTests: XCTestCase {
                     selectedSpaceID: space.id,
                     selectedTabIDsBySpace: [space.id: cards.first?.id ?? joiner.id]
                 ),
-                persistence: InMemoryBrowserSessionPersistence(),
                 browsingMode: .privateBrowsing
             )
             sidebarInteraction = BrowserSidebarInteractionState.connected(to: browser)

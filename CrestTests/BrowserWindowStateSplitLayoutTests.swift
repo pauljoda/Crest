@@ -145,7 +145,7 @@ final class BrowserWindowStateSplitLayoutTests: XCTestCase {
 
     @MainActor
     private func makeBrowser(_ session: BrowserSession) -> BrowserStore {
-        BrowserStore(session: session, persistence: InMemoryBrowserSessionPersistence())
+        BrowserStore(session: session)
     }
 
     private func makeSession(memberCount: Int, group: SplitGroupID) -> BrowserSession {

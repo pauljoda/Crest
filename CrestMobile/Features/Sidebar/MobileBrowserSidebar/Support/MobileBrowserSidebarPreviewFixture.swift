@@ -92,7 +92,6 @@ struct MobileBrowserSidebarPreviewFixture {
             session: BrowserSession(
                 spaces: [space, protectedSpace]
             ),
-            persistence: InMemoryBrowserSessionPersistence(),
             credentialVault: InMemoryCredentialVault(),
             browsingMode: .privateBrowsing
         )
