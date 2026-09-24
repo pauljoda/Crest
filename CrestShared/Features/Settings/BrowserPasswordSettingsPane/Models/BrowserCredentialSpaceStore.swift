@@ -247,7 +247,8 @@ final class BrowserCredentialSpaceStore {
                 existingCredentials: existing,
                 destination: assignment,
                 synchronizesWithICloud: currentSpace.credentialPreferences
-                    .syncsCrestPasswordsWithICloud
+                    .syncsCrestPasswordsWithICloud,
+                core: browser.core
             )
         } catch let error as BrowserCredentialCSVImportError {
             errorMessage = error.localizedDescription

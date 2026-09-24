@@ -45,7 +45,8 @@ enum BrowserPasswordImportCommitter {
                     existingCredentials: existing,
                     destination: BrowserSpaceRuntimeAssignment(space: space),
                     synchronizesWithICloud: space.credentialPreferences
-                        .syncsCrestPasswordsWithICloud
+                        .syncsCrestPasswordsWithICloud,
+                    core: browser.core
                 )
                 let resolution = try importPlan.resolvedInventory()
                 if resolution.summary.acceptedCount > 0 {

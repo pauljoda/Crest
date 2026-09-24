@@ -12,15 +12,15 @@ enum BrowserPasskeyAccessSystem {
         Bundle.main.object(forInfoDictionaryKey: buildManifestKey) as? Bool == true
     }
 
-    static func deviceConfiguration() -> BrowserPasskeyDeviceConfiguration {
+    static func deviceConfiguration() -> PasskeyDeviceConfiguration {
         BrowserPasskeyAuthorizationSystem.deviceConfiguration()
     }
 
-    static func authorizationState() -> BrowserPasskeyAuthorizationState {
+    static func authorizationState() -> PasskeyAuthorizationState {
         BrowserPasskeyAuthorizationSystem.authorizationState()
     }
 
-    static func requestAuthorization() async -> BrowserPasskeyAuthorizationState {
+    static func requestAuthorization() async -> PasskeyAuthorizationState {
         await BrowserPasskeyAuthorizationSystem.requestAuthorization()
     }
 }

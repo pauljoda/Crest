@@ -4,16 +4,11 @@ import XCTest
 
 @MainActor
 final class BrowserSystemPasswordWriteThroughIsolationTests: XCTestCase {
-    func testOrdinaryLaunchKeepsSystemPasswordWriteThroughAvailable() {
-        XCTAssertEqual(
-            BrowserSystemPasswordWriteThroughSystem.availability(
-                for: BrowserLaunchEnvironment(
-                    values: [:],
-                    isXCTestRuntime: false
-                )
-            ),
-            .available
-        )
+    func testOrdinaryLaunchKeepsSystemPasswordWriteThroughAvailable() throws {
+        let core = CrestCore()
+        let facts = BrowserSystemPasswordWriteThroughSystem.facts(
+            for: BrowserLaunchEnvironment(values: [:], isXCTestRuntime: false))
+        XCTAssertEqual(try core.query(facts).availability, .available)
     }
 
     func testIsolatedLaunchRejectsWriteThroughBeforePresentation() async throws {
@@ -22,19 +17,17 @@ final class BrowserSystemPasswordWriteThroughIsolationTests: XCTestCase {
             isXCTestRuntime: false
         )
 
-        XCTAssertEqual(
-            BrowserSystemPasswordWriteThroughSystem.availability(
-                for: launchEnvironment
-            ),
-            .isolatedLaunch
-        )
+        let core = CrestCore()
+        let availability = try core.query(BrowserSystemPasswordWriteThroughSystem.facts(for: launchEnvironment))
+            .availability
+        XCTAssertEqual(availability, .isolatedLaunch)
 
         do {
             try await BrowserSystemPasswordWriteThroughSystem.offer(
                 candidate: try candidate(),
                 title: "Isolated",
                 anchor: nil,
-                launchEnvironment: launchEnvironment
+                availability: availability
             )
             XCTFail("An isolated launch must not reach ASCredentialDataManager.")
         } catch {

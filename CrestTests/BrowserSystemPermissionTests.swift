@@ -5,7 +5,9 @@ import XCTest
 @MainActor
 final class BrowserSystemPermissionTests: XCTestCase {
     func testPasskeyStatusReadsDoNotBlockTheMainThread() async {
-        let service = BrowserSystemPermissionService {
+        let core = CrestCore()
+        let passkeyAccess = BrowserPasskeyAccessController(core: core)
+        let service = BrowserSystemPermissionService(core: core, passkeyAccess: passkeyAccess) {
             XCTAssertFalse(Thread.isMainThread, "Passkey status can wait synchronously for a system process.")
             return .authorized
         }

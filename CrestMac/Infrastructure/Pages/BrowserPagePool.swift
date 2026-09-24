@@ -100,6 +100,9 @@ final class BrowserPagePool:
     }
     @ObservationIgnored private let monitorsMemoryPressure: Bool
     @ObservationIgnored private let contentRuleListProvider: any BrowserContentRuleListProviding
+    /// The app's passkey access, refreshed as pages navigate. Nil where no
+    /// composition supplied one.
+    @ObservationIgnored private let passkeyAccess: BrowserPasskeyAccessController?
     @ObservationIgnored private let browsingMode: BrowserBrowsingMode
     @ObservationIgnored let usesEphemeralWebsiteDataStores: Bool
     @ObservationIgnored private let pageZoomPreferences: BrowserDefaultPageZoomStore
@@ -163,6 +166,7 @@ final class BrowserPagePool:
         mediaSessionStore: BrowserMediaSessionStore? = nil,
         downloadCenter: BrowserDownloadCenter? = nil,
         core: CrestCore = CrestCore(),
+        passkeyAccess: BrowserPasskeyAccessController? = nil,
         loadHTTPAuthenticationCredential:
             @escaping HTTPAuthenticationCredentialLoader = { _, _ in nil },
         saveHTTPAuthenticationCredential:
@@ -205,6 +209,7 @@ final class BrowserPagePool:
         self.profileDataStores = profileDataStores ?? BrowserPageProfileDataStores()
         self.monitorsMemoryPressure = monitorsMemoryPressure
         self.contentRuleListProvider = contentRuleListProvider
+        self.passkeyAccess = passkeyAccess
         tabState = owner.tabState
         self.permissionCenter = permissionCenter
         self.hostedNotificationCenter = hostedNotificationCenter
@@ -429,7 +434,7 @@ final class BrowserPagePool:
 
             permissionCenter: permissionCenter,
             hostedNotificationCenter: hostedNotificationCenter, mediaSessionStore: mediaSessionStore,
-            downloadCenter: downloadCenter, core: downloadCenter.core,
+            downloadCenter: downloadCenter, core: downloadCenter.core, passkeyAccess: passkeyAccess,
             loadHTTPAuthenticationCredential: { [weak browser] protectionSpace, spaceID in
                 try await browser?.httpAuthenticationCredential(for: protectionSpace, in: spaceID)
             },
@@ -1612,6 +1617,7 @@ final class BrowserPagePool:
             downloadCenter: downloadCenter,
             permissionCenter: permissionCenter,
             hostedNotificationCenter: hostedNotificationCenter,
+            passkeyAccess: passkeyAccess,
             serverTrustOverrides: serverTrustOverrides,
             mediaSessionStore: tabID == nil ? nil : mediaSessionStore,
             spaceID: space.id,

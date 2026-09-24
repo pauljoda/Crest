@@ -92,7 +92,7 @@ final class MobileBrowserWindowSceneModel {
             backgroundPageDidUpdate: { browser.updateBackgroundPage($0) },
             openPeek: { request in transientBrowsing.presentPeek(request) }
         )
-        let privateBrowser = BrowserStore.privateBrowsing()
+        let privateBrowser = BrowserStore.privateBrowsing(core: rootBrowser.core)
         let privateNavigation = MobileBrowserNavigationState(
             regularSidebarIsPresented: sidebarIsPresented
         )

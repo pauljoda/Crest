@@ -7,20 +7,21 @@ import Foundation
 /// secret never leaves the native layer that saves and fills it. One character
 /// comes from every group, the rest from all groups, then the order is shuffled.
 enum BrowserStrongPasswordGenerator {
-    static func generate(length: Int? = nil) throws -> String {
+    static func generate(from recipe: StrongPasswordRecipe) throws -> String {
         var generator = SystemRandomNumberGenerator()
-        return try generate(length: length, using: &generator)
+        return try generate(from: recipe, using: &generator)
     }
 
     static func generate<Generator: RandomNumberGenerator>(
-        length: Int? = nil,
+        from recipe: StrongPasswordRecipe,
         using generator: inout Generator
     ) throws -> String {
-        guard let recipe = BrowserCorePolicy.strongPasswordRecipe(length: length) else {
+        let groups = recipe.groups.map(Array.init)
+        guard !groups.isEmpty, groups.allSatisfy({ !$0.isEmpty }), recipe.length >= groups.count else {
             throw BrowserStrongPasswordGenerationError.unavailable
         }
-        let allCharacters = recipe.groups.flatMap { $0 }
-        var password = recipe.groups.map { characters in
+        let allCharacters = groups.flatMap { $0 }
+        var password = groups.map { characters in
             characters[Int.random(in: characters.indices, using: &generator)]
         }
         while password.count < recipe.length {

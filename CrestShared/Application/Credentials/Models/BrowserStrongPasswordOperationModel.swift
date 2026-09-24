@@ -15,7 +15,7 @@ final class BrowserStrongPasswordOperationModel {
     }
 
     func generateSaveAndFill(
-        generate: PasswordGenerator = { try BrowserStrongPasswordGenerator.generate() },
+        generate: PasswordGenerator,
         save: PasswordSaver,
         fill: PasswordFiller
     ) async {

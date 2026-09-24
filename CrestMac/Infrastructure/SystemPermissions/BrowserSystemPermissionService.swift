@@ -7,13 +7,18 @@ import UserNotifications
 final class BrowserSystemPermissionService: BrowserSystemPermissionServicing {
     private let location = BrowserGeolocationSystemService()
     private let folderAccess = BrowserSystemFolderAccess()
+    private let passkeyAccess: BrowserPasskeyAccessController
     private let readPasskeyStatus: @Sendable () -> BrowserPasskeyAccessStatus
 
+    /// `passkeyAccess` is the app's one passkey controller, which a request
+    /// updates. `readPasskeyStatus` runs off the main actor; without one, the
+    /// service reads the system's passkey facts and asks `core` for the status.
     init(
-        readPasskeyStatus: @escaping @Sendable () -> BrowserPasskeyAccessStatus = BrowserSystemPermissionService
-            .passkeyStatus
+        core: CrestCore, passkeyAccess: BrowserPasskeyAccessController,
+        readPasskeyStatus: (@Sendable () -> BrowserPasskeyAccessStatus)? = nil
     ) {
-        self.readPasskeyStatus = readPasskeyStatus
+        self.passkeyAccess = passkeyAccess
+        self.readPasskeyStatus = readPasskeyStatus ?? { Self.passkeyStatus(asking: core) }
     }
 
     func status(for permission: BrowserSystemPermission, spaceID: SpaceID?) async -> BrowserSystemPermissionStatus {
@@ -92,8 +97,8 @@ final class BrowserSystemPermissionService: BrowserSystemPermissionServicing {
         case .notifications:
             _ = try await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound])
         case .passkeys:
-            BrowserPasskeyAccessController.shared.refreshStatus()
-            await BrowserPasskeyAccessController.shared.requestAccess()
+            passkeyAccess.refreshStatus()
+            await passkeyAccess.requestAccess()
         case .files:
             guard let spaceID else { return }
             try await folderAccess.check(spaceID: spaceID)
@@ -120,13 +125,14 @@ final class BrowserSystemPermissionService: BrowserSystemPermissionServicing {
         return NSWorkspace.shared.open(url)
     }
 
-    nonisolated private static func passkeyStatus() -> BrowserPasskeyAccessStatus {
+    /// The system's passkey facts and the core's status for them. A core that
+    /// cannot answer keeps checking.
+    nonisolated private static func passkeyStatus(asking core: CrestCore) -> BrowserPasskeyAccessStatus {
         guard BrowserPasskeyAccessSystem.hasManagedCapability() else { return .managedCapabilityRequired }
-        return BrowserCorePolicy.passkeyAccessStatus(
-            hasManagedCapability: true,
-            deviceConfiguration: BrowserPasskeyAccessSystem.deviceConfiguration(),
-            authorizationState: BrowserPasskeyAccessSystem.authorizationState()
-        )
+        let access = PasskeyAccess(
+            hasManagedCapability: true, deviceConfiguration: BrowserPasskeyAccessSystem.deviceConfiguration(),
+            authorizationState: BrowserPasskeyAccessSystem.authorizationState())
+        return (try? core.query(access)).map { BrowserPasskeyAccessStatus($0.status) } ?? .checking
     }
 
     private func captureStatus(_ type: AVMediaType) async -> BrowserSystemPermissionStatus {

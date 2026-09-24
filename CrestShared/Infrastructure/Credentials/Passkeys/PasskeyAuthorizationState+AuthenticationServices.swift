@@ -1,6 +1,6 @@
 import AuthenticationServices
 
-extension BrowserPasskeyAuthorizationState {
+extension PasskeyAuthorizationState {
     init(
         _ state: ASAuthorizationWebBrowserPublicKeyCredentialManager.AuthorizationState
     ) {

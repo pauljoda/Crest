@@ -55,4 +55,5 @@ struct MobileBrowserSettingsView: View {
     )
     .environment(fixture.cloudSync)
     .environment(fixture.onboardingCoordinator)
+    .environment(fixture.passkeyAccess)
 }

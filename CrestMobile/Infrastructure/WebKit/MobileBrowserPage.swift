@@ -240,6 +240,7 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, Bro
         self.httpAuthenticationSession = httpAuthenticationSession
         credentialSession = BrowserCredentialSession(
             spaceID: space.id,
+            core: downloadCenter.core,
             supportsAccess: allowsCredentialAccess,
             isEnabled: isCredentialAccessEnabled,
             httpAuthentication: httpAuthenticationSession

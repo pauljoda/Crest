@@ -6,8 +6,9 @@ import XCTest
 final class BrowserPasskeyAccessTests: XCTestCase {
     func testControllerRequestsAccessOnlyAfterAnExplicitEligibleAction() async {
         var requestCount = 0
-        var systemAuthorization = BrowserPasskeyAuthorizationState.notDetermined
+        var systemAuthorization = PasskeyAuthorizationState.notDetermined
         let controller = BrowserPasskeyAccessController(
+            core: CrestCore(),
             capabilityCheck: { true },
             deviceConfigurationCheck: { .configured },
             authorizationCheck: { systemAuthorization },
@@ -39,6 +40,7 @@ final class BrowserPasskeyAccessTests: XCTestCase {
         var authorizationCheckCount = 0
         var requestCount = 0
         let controller = BrowserPasskeyAccessController(
+            core: CrestCore(),
             capabilityCheck: { false },
             deviceConfigurationCheck: {
                 deviceConfigurationCheckCount += 1
@@ -66,9 +68,10 @@ final class BrowserPasskeyAccessTests: XCTestCase {
 
     func testCheckingStatusAcrossRelaunchesNeverRequestsSystemConsent() async {
         var requests = 0
-        for state in [BrowserPasskeyAuthorizationState.notDetermined, .authorized, .denied] {
+        for state in [PasskeyAuthorizationState.notDetermined, .authorized, .denied] {
             for _ in 0..<2 {
                 let controller = BrowserPasskeyAccessController(
+                    core: CrestCore(),
                     capabilityCheck: { true },
                     deviceConfigurationCheck: { .configured },
                     authorizationCheck: { state },

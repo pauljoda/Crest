@@ -24,6 +24,8 @@ final class BrowserStore {
     let browsingMode: BrowserBrowsingMode
     let tabMultiSelection = BrowserTabMultiSelection()
     let family: BrowserStoreFamily
+    /// The process's core, which every window of every browsing mode shares.
+    @ObservationIgnored let core: CrestCore
     @ObservationIgnored let persistence: any BrowserSessionPersisting
     @ObservationIgnored let credentialVault: any CredentialVault
     @ObservationIgnored let syncCoordinator: BrowserSyncCoordinator?
@@ -118,7 +120,8 @@ final class BrowserStore {
         syncCoordinator: BrowserSyncCoordinator? = nil,
         syncCoalescingDelay: Duration = .milliseconds(150),
         browsingMode: BrowserBrowsingMode = .standard,
-        linkPreferences: BrowserLinkPreferenceStore = .shared
+        linkPreferences: BrowserLinkPreferenceStore = .shared,
+        core: CrestCore = CrestCore()
     ) {
         self.init(
             session: session,
@@ -129,7 +132,8 @@ final class BrowserStore {
             syncCoalescingDelay: syncCoalescingDelay,
             browsingMode: browsingMode,
             family: BrowserStoreFamily(session: session, browsingMode: browsingMode),
-            linkPreferences: linkPreferences
+            linkPreferences: linkPreferences,
+            core: core
         )
     }
 
@@ -145,11 +149,13 @@ final class BrowserStore {
         browsingMode: BrowserBrowsingMode,
         family: BrowserStoreFamily,
         cloudSyncChangeHandler: (@Sendable () -> Void)? = nil,
-        linkPreferences: BrowserLinkPreferenceStore = .shared
+        linkPreferences: BrowserLinkPreferenceStore = .shared,
+        core: CrestCore
     ) {
         let initial = selection ?? BrowserStoreSelection(launching: session)
         self.selection = initial
         self.linkPreferences = linkPreferences
+        self.core = core
         tabSelectionHistory = BrowserTabSelectionHistory(session: session, selection: initial)
         self.persistence = persistence
         self.credentialVault = credentialVault
@@ -216,7 +222,8 @@ extension BrowserStore {
             browsingMode: browsingMode,
             family: family,
             cloudSyncChangeHandler: cloudSyncChangeHandler,
-            linkPreferences: linkPreferences
+            linkPreferences: linkPreferences,
+            core: core
         )
         store.localSyncErrorDescription = localSyncErrorDescription
         return store

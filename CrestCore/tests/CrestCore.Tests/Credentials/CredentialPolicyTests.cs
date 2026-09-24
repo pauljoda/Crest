@@ -1,3 +1,4 @@
+using CrestCore.Contracts;
 using CrestCore.Domain;
 
 using Xunit;
@@ -13,6 +14,8 @@ public sealed class CredentialPolicyTests {
         CredentialOrigin? top = null, bool mainFrame = true, bool username = false, bool password = false,
         CredentialPasswordKind? passwordKind = CredentialPasswordKind.Current, bool? visible = null, bool target = true) =>
         new(kind, frame ?? Login, top ?? Login, mainFrame, true, username, password, passwordKind, visible, target);
+
+    private static Rejection Refusal(Func<object?> rule) => Assert.Throws<Rejected>(rule).Rejection;
 
     [Fact]
     public void CaptureRequiresSecureFrameAndTopLevelOrigins() {
@@ -48,13 +51,13 @@ public sealed class CredentialPolicyTests {
     public void ASubmitTakesAnExplicitUsernameThenAnApplicableHintAndOtherwiseClearsTheHint() {
         var hint = new CredentialUsernameHint(Login, Login, 1_000);
         var explicitName = CredentialCapturePolicy.Decide(Facts(CredentialCaptureEvent.Submit, username: true, password: true), hint, null, 1_001);
-        Assert.Equal(new CredentialCaptureDecision(CredentialCaptureAction.CaptureCandidate, CredentialUsernameSource.Explicit), explicitName);
+        Assert.Equal(CredentialCapturePolicy.Decision(CredentialCaptureAction.CaptureCandidate, CredentialUsernameSource.Explicit), explicitName);
 
         var fromHint = CredentialCapturePolicy.Decide(Facts(CredentialCaptureEvent.Submit, password: true), hint, null, 1_001);
         Assert.Equal(CredentialUsernameSource.Hint, fromHint.UsernameSource);
 
         var expired = CredentialCapturePolicy.Decide(Facts(CredentialCaptureEvent.Submit, password: true), hint, null, 2_000);
-        Assert.Equal(new CredentialCaptureDecision(CredentialCaptureAction.Ignore, ClearsUsernameHint: true), expired);
+        Assert.Equal(CredentialCapturePolicy.Decision(CredentialCaptureAction.Ignore, clearsUsernameHint: true), expired);
 
         var framed = CredentialCapturePolicy.Decide(Facts(CredentialCaptureEvent.Submit, frame: Embedded, username: true, password: true), null, null, 0);
         Assert.True(framed.IsCrossOriginFrame);
@@ -70,10 +73,10 @@ public sealed class CredentialPolicyTests {
             CredentialCapturePolicy.Decide(Facts(CredentialCaptureEvent.Focus, target: false), null, null, 0).Action);
 
         var main = CredentialCapturePolicy.Decide(Facts(CredentialCaptureEvent.Focus, username: true), null, null, 0);
-        Assert.Equal(new CredentialCaptureDecision(CredentialCaptureAction.OfferFill, CredentialUsernameSource.Explicit,
-            AnchorsToField: true), main);
+        Assert.Equal(CredentialCapturePolicy.Decision(CredentialCaptureAction.OfferFill, CredentialUsernameSource.Explicit,
+            anchorsToField: true), main);
         var framed = CredentialCapturePolicy.Decide(Facts(CredentialCaptureEvent.Focus, frame: Embedded, mainFrame: false), null, null, 0);
-        Assert.Equal(new CredentialCaptureDecision(CredentialCaptureAction.OfferFill, CredentialUsernameSource.None, true, true), framed);
+        Assert.Equal(CredentialCapturePolicy.Decision(CredentialCaptureAction.OfferFill, CredentialUsernameSource.None, true, true), framed);
     }
 
     [Fact]
@@ -101,7 +104,9 @@ public sealed class CredentialPolicyTests {
         Assert.Equal(CredentialSaveValidity.Stale,
             CredentialCapturePolicy.SaveValidity(Login, Login, 1_000, 1_001 + CredentialCapturePolicy.CandidateLifetime));
         Assert.Equal(CredentialSaveValidity.Stale, CredentialCapturePolicy.SaveValidity(Login, Login, 1_000, 999));
-        Assert.Throws<BrowserRuleException>(() => CredentialCapturePolicy.SaveValidity(Login, Login, double.NaN, 1));
+        Assert.Equal(new InvalidCredentialDate(), Refusal(() => CredentialCapturePolicy.SaveValidity(Login, Login, double.NaN, 1)));
+        Assert.Equal(new InvalidCredentialOrigin(),
+            Refusal(() => CredentialCapturePolicy.SaveValidity(new("ftp", "accounts.example.com", 21), Login, 1, 1)));
     }
 
     [Fact]
@@ -115,9 +120,10 @@ public sealed class CredentialPolicyTests {
         Assert.Null(CredentialRecencyPolicy.MostRecent([]));
 
         var id = Guid.NewGuid();
-        Assert.Throws<BrowserRuleException>(() => CredentialRecencyPolicy.MostRecent([new(id, null, 1, null), new(id, null, 2, null)]));
-        Assert.Throws<BrowserRuleException>(() => CredentialRecencyPolicy.MostRecent(
-            Enumerable.Range(0, CredentialRecencyPolicy.MaximumRecords + 1).Select(_ => new CredentialRecord(Guid.NewGuid(), null, 1, null)).ToArray()));
+        Assert.Equal(new DuplicateCredential(),
+            Refusal(() => CredentialRecencyPolicy.MostRecent([new(id, null, 1, null), new(id, null, 2, null)])));
+        Assert.Equal(new CredentialRecordLimitReached(CredentialRecencyPolicy.MaximumRecords), Refusal(() => CredentialRecencyPolicy.MostRecent(
+            Enumerable.Range(0, CredentialRecencyPolicy.MaximumRecords + 1).Select(_ => new CredentialRecord(Guid.NewGuid(), null, 1, null)).ToArray())));
     }
 
     [Fact]
@@ -131,7 +137,8 @@ public sealed class CredentialPolicyTests {
         var composed = new CredentialRecord(Guid.NewGuid(), "José", 1, null);
         Assert.Equal(composed, CredentialSavePolicy.Match("josé", [composed]));
         Assert.Null(CredentialSavePolicy.Match("person", [new(Guid.NewGuid(), "", 9, null)]));
-        Assert.Throws<BrowserRuleException>(() => CredentialSavePolicy.Match("person", [new(Guid.NewGuid(), null, 1, null)]));
+        Assert.Equal(new InvalidCredentialRecord(), Refusal(() => CredentialSavePolicy.Match("person", [new(Guid.NewGuid(), null, 1, null)])));
+        Assert.Equal(new InvalidCredentialUsername(), Refusal(() => CredentialSavePolicy.Match("", [composed])));
     }
 
     [Fact]
@@ -145,8 +152,8 @@ public sealed class CredentialPolicyTests {
         var changed = CredentialSavePolicy.Plan(id, new(id, PasswordMatches: false));
         Assert.Equal(new CredentialSavePlan(CredentialSavePlanKind.Update, id), changed);
         Assert.True(changed.RequiresConfirmation);
-        Assert.Throws<BrowserRuleException>(() => CredentialSavePolicy.Plan(id, new(Guid.NewGuid(), true)));
-        Assert.Throws<BrowserRuleException>(() => CredentialSavePolicy.Plan(null, new(id, true)));
+        Assert.Equal(new StaleCredentialComparison(), Refusal(() => CredentialSavePolicy.Plan(id, new(Guid.NewGuid(), true))));
+        Assert.Equal(new StaleCredentialComparison(), Refusal(() => CredentialSavePolicy.Plan(null, new(id, true))));
     }
 
     [Fact]
@@ -157,8 +164,8 @@ public sealed class CredentialPolicyTests {
         Assert.All(recipe.Groups, group => Assert.True(group.All(char.IsAscii) && !group.Any(char.IsWhiteSpace)));
         Assert.DoesNotContain(recipe.Groups, group => group.IndexOfAny(['l', 'I', 'O', '0', '1']) >= 0);
         Assert.Equal(64, StrongPasswordPolicy.Recipe(64).Length);
-        Assert.Throws<BrowserRuleException>(() => StrongPasswordPolicy.Recipe(15));
-        Assert.Throws<BrowserRuleException>(() => StrongPasswordPolicy.Recipe(65));
+        Assert.Equal(new InvalidPasswordLength(16, 64), Refusal(() => StrongPasswordPolicy.Recipe(15)));
+        Assert.IsType<InvalidPasswordLength>(Refusal(() => StrongPasswordPolicy.Recipe(65)));
     }
 
     [Fact]

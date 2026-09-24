@@ -1,3 +1,5 @@
+using CrestCore.Contracts;
+
 namespace CrestCore.Domain;
 
 /// When a page's credential form observations become fill offers, save
@@ -16,11 +18,8 @@ public static class CredentialCapturePolicy {
 
     #region Actions - Capture
 
-    public static bool Accepts(CredentialOrigin frameOrigin, CredentialOrigin topLevelOrigin) {
-        ArgumentNullException.ThrowIfNull(frameOrigin);
-        ArgumentNullException.ThrowIfNull(topLevelOrigin);
-        return frameOrigin.IsSecure && topLevelOrigin.IsSecure;
-    }
+    public static bool Accepts(CredentialOrigin frameOrigin, CredentialOrigin topLevelOrigin) =>
+        Valid(frameOrigin).IsSecure && Valid(topLevelOrigin).IsSecure;
 
     /// Saved credentials are offered to current-password fields; generated
     /// passwords only to new-password fields.
@@ -44,7 +43,7 @@ public static class CredentialCapturePolicy {
     public static bool HintApplies(CredentialUsernameHint hint, CredentialOrigin frameOrigin,
         CredentialOrigin topLevelOrigin, double now) {
         ArgumentNullException.ThrowIfNull(hint);
-        return hint.Origin == frameOrigin && hint.TopLevelOrigin == topLevelOrigin
+        return Valid(hint.Origin) == frameOrigin && Valid(hint.TopLevelOrigin) == topLevelOrigin
             && Seconds(now) - Seconds(hint.CapturedAt) <= UsernameHintLifetime;
     }
 
@@ -62,30 +61,37 @@ public static class CredentialCapturePolicy {
         switch (facts.Event) {
             case CredentialCaptureEvent.Username:
             case CredentialCaptureEvent.Filled:
-                return new(accepted && facts.HasUsername ? CredentialCaptureAction.RememberUsername : CredentialCaptureAction.Ignore);
+                return Decision(accepted && facts.HasUsername ? CredentialCaptureAction.RememberUsername : CredentialCaptureAction.Ignore);
             case CredentialCaptureEvent.Focus: {
-                    if (facts.PasswordKind is null) return new(CredentialCaptureAction.DismissFill);
-                    if (!accepted || !facts.HasFormId || !facts.HasFillTarget) return new(CredentialCaptureAction.Ignore);
+                    if (facts.PasswordKind is null) return Decision(CredentialCaptureAction.DismissFill);
+                    if (!accepted || !facts.HasFormId || !facts.HasFillTarget) return Decision(CredentialCaptureAction.Ignore);
                     var source = Username(facts, hint, now);
-                    return new(CredentialCaptureAction.OfferFill, source, source == CredentialUsernameSource.None,
+                    return Decision(CredentialCaptureAction.OfferFill, source, source == CredentialUsernameSource.None,
                         crossOrigin, facts.IsMainFrame);
                 }
             case CredentialCaptureEvent.Submit: {
-                    if (!accepted) return new(CredentialCaptureAction.Ignore);
+                    if (!accepted) return Decision(CredentialCaptureAction.Ignore);
                     var source = Username(facts, hint, now);
-                    if (source == CredentialUsernameSource.None) return new(CredentialCaptureAction.Ignore, ClearsUsernameHint: true);
-                    if (!facts.HasPassword || facts.PasswordKind is null) return new(CredentialCaptureAction.Ignore);
-                    return new(CredentialCaptureAction.CaptureCandidate, source, IsCrossOriginFrame: crossOrigin);
+                    if (source == CredentialUsernameSource.None) return Decision(CredentialCaptureAction.Ignore, clearsUsernameHint: true);
+                    if (!facts.HasPassword || facts.PasswordKind is null) return Decision(CredentialCaptureAction.Ignore);
+                    return Decision(CredentialCaptureAction.CaptureCandidate, source, isCrossOriginFrame: crossOrigin);
                 }
             default: {
                     if (pending is null || facts.HasVisiblePasswordField is not { } visible
-                        || !facts.IsMainFrame && facts.FrameOrigin != pending.Origin) return new(CredentialCaptureAction.Ignore);
-                    if (ShouldOfferSave(pending.SubmittedAt, visible, now)) return new(CredentialCaptureAction.OfferSave);
-                    return new(Seconds(now) - Seconds(pending.SubmittedAt) > CandidateLifetime
+                        || !facts.IsMainFrame && facts.FrameOrigin != Valid(pending.Origin)) return Decision(CredentialCaptureAction.Ignore);
+                    if (ShouldOfferSave(pending.SubmittedAt, visible, now)) return Decision(CredentialCaptureAction.OfferSave);
+                    return Decision(Seconds(now) - Seconds(pending.SubmittedAt) > CandidateLifetime
                         ? CredentialCaptureAction.DiscardPending : CredentialCaptureAction.KeepPending);
                 }
         }
     }
+
+    /// A decision carrying the lifetimes the caller schedules expiry with.
+    public static CredentialCaptureDecision Decision(CredentialCaptureAction action,
+        CredentialUsernameSource usernameSource = CredentialUsernameSource.None, bool clearsUsernameHint = false,
+        bool isCrossOriginFrame = false, bool anchorsToField = false) =>
+        new(action, usernameSource, clearsUsernameHint, isCrossOriginFrame, anchorsToField, CandidateLifetime,
+            UsernameHintLifetime);
 
     /// An explicit username wins; otherwise a remembered one that still applies.
     private static CredentialUsernameSource Username(CredentialFormFacts facts, CredentialUsernameHint? hint, double now) {
@@ -94,8 +100,13 @@ public static class CredentialCapturePolicy {
             ? CredentialUsernameSource.Hint : CredentialUsernameSource.None;
     }
 
+    private static CredentialOrigin Valid(CredentialOrigin origin) {
+        ArgumentNullException.ThrowIfNull(origin);
+        return origin.IsValid ? origin : throw new Rejected(new InvalidCredentialOrigin());
+    }
+
     private static double Seconds(double value) =>
-        double.IsFinite(value) ? value : throw new BrowserRuleException(BrowserRuleCodes.InvalidCredentialDate);
+        double.IsFinite(value) ? value : throw new Rejected(new InvalidCredentialDate());
 
     #endregion
 }

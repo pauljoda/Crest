@@ -19,15 +19,15 @@ enum BrowserPasskeyAccessSystem {
         return value as? Bool == true
     }
 
-    nonisolated static func deviceConfiguration() -> BrowserPasskeyDeviceConfiguration {
+    nonisolated static func deviceConfiguration() -> PasskeyDeviceConfiguration {
         BrowserPasskeyAuthorizationSystem.deviceConfiguration()
     }
 
-    nonisolated static func authorizationState() -> BrowserPasskeyAuthorizationState {
+    nonisolated static func authorizationState() -> PasskeyAuthorizationState {
         BrowserPasskeyAuthorizationSystem.authorizationState()
     }
 
-    static func requestAuthorization() async -> BrowserPasskeyAuthorizationState {
+    static func requestAuthorization() async -> PasskeyAuthorizationState {
         await BrowserPasskeyAuthorizationSystem.requestAuthorization()
     }
 }

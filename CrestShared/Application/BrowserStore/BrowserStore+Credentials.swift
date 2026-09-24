@@ -97,10 +97,40 @@ extension BrowserStore {
             in: spaceID
         )
         // Without a recency answer from the core, nothing is filled.
-        guard let descriptor = try? BrowserCorePolicy.mostRecentCredential(descriptors) else {
+        guard let descriptor = try? core.mostRecentCredential(descriptors) else {
             return nil
         }
         return try await credentialVault.credential(id: descriptor.id, in: spaceID)
+    }
+}
+
+// MARK: - Generated passwords and system Passwords
+
+extension BrowserStore {
+    /// How to compose a generated password. The password itself is drawn
+    /// natively, so it never enters the core.
+    func strongPasswordRecipe() throws -> StrongPasswordRecipe {
+        do {
+            return try core.query(StrongPassword(length: nil))
+        } catch {
+            throw BrowserStrongPasswordGenerationError.unavailable
+        }
+    }
+
+    /// Whether this launch can offer saved passwords to the system's Passwords
+    /// app. A core that refuses the platform's facts reports it unsupported.
+    var systemPasswordWriteThroughAvailability: SystemPasswordWriteThroughAvailability {
+        (try? core.query(BrowserSystemPasswordWriteThroughSystem.facts()))?.availability ?? .unsupportedPlatform
+    }
+
+    /// Whether a save prompt in a Space with these preferences goes on to
+    /// offer the password to the system's Passwords app. A core that cannot
+    /// answer does not offer it.
+    func offersSystemPasswordWriteThrough(for preferences: BrowserCredentialPreferences) -> Bool {
+        let offer = SystemPasswordOffer(
+            spaceOffersSystemPasswords: preferences.alsoOffersSaveToSystemPasswords,
+            availability: systemPasswordWriteThroughAvailability, isPrivateBrowsing: isPrivateBrowsing)
+        return (try? core.query(offer))?.offers ?? false
     }
 }
 
@@ -171,10 +201,12 @@ extension BrowserStore {
             in: spaceID
         )
         try validateCredentialSaveCandidate(candidate, in: spaceID, now: now)
-        let descriptor = try BrowserCorePolicy.credentialSaveMatch(
-            username: candidate.username,
-            in: descriptors
-        )
+        let descriptor: CredentialDescriptor?
+        do {
+            descriptor = try core.credentialSaveMatch(username: candidate.username, in: descriptors)
+        } catch {
+            throw CredentialVaultError.saveDecisionUnavailable
+        }
         var storedPasswordMatches: Bool?
         if let descriptor {
             let credential = try await credentialVault.credential(
@@ -184,11 +216,15 @@ extension BrowserStore {
             try validateCredentialSaveCandidate(candidate, in: spaceID, now: now)
             storedPasswordMatches = credential.map { $0.password == candidate.password }
         }
-        let plan = try BrowserCorePolicy.credentialSavePlan(
-            match: descriptor?.id,
-            storedPasswordMatches: storedPasswordMatches
-        )
-        switch (plan, descriptor) {
+        let stored = descriptor.flatMap { descriptor in
+            storedPasswordMatches.map {
+                CredentialStoredComparison(id: descriptor.id.rawValue, passwordMatches: $0)
+            }
+        }
+        guard let plan = try? core.query(CredentialSave(matchID: descriptor?.id.rawValue, stored: stored)),
+            plan.kind == .create || plan.id == descriptor?.id.rawValue
+        else { throw CredentialVaultError.saveDecisionUnavailable }
+        switch (plan.kind, descriptor) {
         case (.create, _): return .create
         case (.update, let descriptor?): return .update(descriptor)
         case (.alreadyStored, let descriptor?): return .alreadyStored(descriptor)
@@ -486,7 +522,10 @@ extension BrowserStore {
         guard space.credentialPreferences.isEnabled else {
             throw CredentialVaultError.credentialManagerDisabled
         }
-        switch BrowserCorePolicy.credentialSaveValidity(for: candidate, now: now) {
+        let check = CredentialSaveCheck(
+            origin: candidate.origin, topLevelOrigin: candidate.topLevelOrigin,
+            submittedAt: candidate.submittedAt.timeIntervalSince1970, now: now.timeIntervalSince1970)
+        switch (try? core.query(check))?.validity {
         case .accepted: return
         case .insecureOrigin: throw CredentialVaultError.insecureOrigin
         case .stale: throw CredentialVaultError.staleSaveCandidate

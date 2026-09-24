@@ -2125,6 +2125,10 @@
     "core-typed-session-records": {
       "category": "internal",
       "message": "The core holds Space settings and the session as typed records, and workspace import edits them directly."
+    },
+    "credential-typed-queries": {
+      "category": "internal",
+      "message": "Credential and passkey decisions are typed core queries, and each app shares one passkey access controller."
     }
   }
 }

@@ -47,11 +47,11 @@ extension BrowserPage: WKNavigationDelegate {
         refreshNavigationState()
         downloadCenter.resetAutomaticDownloadSequence(for: pageEngine)
         Task { [weak self] in
-            guard let self,
+            guard let self, let passkeyAccess = self.passkeyAccess,
                 self.webKitView?.url?.scheme == "https",
                 self.webKitView?.window?.isKeyWindow == true, NSApp.isActive
             else { return }
-            await BrowserPasskeyAccessController.shared.prepareForBrowsing()
+            await passkeyAccess.prepareForBrowsing()
         }
     }
 

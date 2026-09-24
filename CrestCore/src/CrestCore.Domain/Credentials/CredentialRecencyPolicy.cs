@@ -1,3 +1,5 @@
+using CrestCore.Contracts;
+
 namespace CrestCore.Domain;
 
 /// Which saved credential is the most recent: the latest use, or the latest
@@ -24,9 +26,8 @@ public static class CredentialRecencyPolicy {
     /// the same answer as one batch, so callers may split long lists.
     public static CredentialRecord? MostRecent(IReadOnlyList<CredentialRecord> records) {
         ArgumentNullException.ThrowIfNull(records);
-        if (records.Count > MaximumRecords) throw new BrowserRuleException(BrowserRuleCodes.CredentialRecordLimit);
-        if (records.Select(record => record.Id).Distinct().Count() != records.Count)
-            throw new BrowserRuleException(BrowserRuleCodes.DuplicateCredential);
+        if (records.Count > MaximumRecords) throw new Rejected(new CredentialRecordLimitReached(MaximumRecords));
+        if (records.Select(record => record.Id).Distinct().Count() != records.Count) throw new Rejected(new DuplicateCredential());
         CredentialRecord? best = null;
         foreach (var record in records) {
             _ = Date(record.UpdatedAt);
@@ -36,7 +37,7 @@ public static class CredentialRecencyPolicy {
     }
 
     private static double Date(double value) =>
-        double.IsFinite(value) ? value : throw new BrowserRuleException(BrowserRuleCodes.InvalidCredentialDate);
+        double.IsFinite(value) ? value : throw new Rejected(new InvalidCredentialDate());
 
     #endregion
 }

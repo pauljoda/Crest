@@ -5,7 +5,7 @@ struct BrowserCredentialFillRequest: Identifiable, Equatable, Sendable {
     let origin: CredentialOrigin
     let topLevelOrigin: CredentialOrigin
     let usernameHint: String?
-    let passwordKind: BrowserCredentialPasswordKind
+    let passwordKind: CredentialPasswordKind
     let isCrossOriginFrame: Bool
     let requestedAt: Date
 
@@ -23,7 +23,7 @@ struct BrowserCredentialFillRequest: Identifiable, Equatable, Sendable {
         origin: CredentialOrigin,
         topLevelOrigin: CredentialOrigin,
         usernameHint: String?,
-        passwordKind: BrowserCredentialPasswordKind,
+        passwordKind: CredentialPasswordKind,
         isCrossOriginFrame: Bool,
         requestedAt: Date,
         fieldRect: BrowserCredentialFieldRect? = nil

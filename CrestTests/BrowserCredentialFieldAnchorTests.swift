@@ -68,7 +68,7 @@ final class BrowserCredentialFieldAnchorTests: XCTestCase {
         let spaceID = SpaceID()
         let loginOrigin = try origin("https://accounts.example.com/login")
         let framedOrigin = try origin("https://embedded.example.com/login")
-        let state = BrowserCredentialPageState<String>(spaceID: spaceID)
+        let state = BrowserCredentialPageState<String>(spaceID: spaceID, core: CrestCore())
 
         state.receive(
             try focusMessage(formID: "login-form", x: 40, y: 300),
@@ -119,7 +119,7 @@ final class BrowserCredentialFieldAnchorTests: XCTestCase {
         XCTAssertEqual(followed.requestedAt, request.requestedAt)
 
         // A frame's own rect is never taken for the page's.
-        let framed = BrowserCredentialPageState<String>(spaceID: spaceID)
+        let framed = BrowserCredentialPageState<String>(spaceID: spaceID, core: CrestCore())
         framed.receive(
             try focusMessage(formID: "framed-form", x: 8, y: 12),
             frameOrigin: framedOrigin,
@@ -133,7 +133,7 @@ final class BrowserCredentialFieldAnchorTests: XCTestCase {
 
     func testDismissingAPromptStopsItsFieldFromBeingFollowed() throws {
         let loginOrigin = try origin("https://accounts.example.com/login")
-        let state = BrowserCredentialPageState<String>(spaceID: SpaceID())
+        let state = BrowserCredentialPageState<String>(spaceID: SpaceID(), core: CrestCore())
         state.receive(
             try focusMessage(formID: "login-form", x: 40, y: 300),
             frameOrigin: loginOrigin,

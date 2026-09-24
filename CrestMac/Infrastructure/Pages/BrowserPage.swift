@@ -87,6 +87,8 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
     @ObservationIgnored private var hasTemporaryPageZoomOverride = false
 
     @ObservationIgnored let dialogPresenter: BrowserDialogPresenter
+    /// The app's passkey access, refreshed when a secure page commits.
+    @ObservationIgnored let passkeyAccess: BrowserPasskeyAccessController?
     @ObservationIgnored let fileUploadAccess = BrowserFileUploadAccess()
     @ObservationIgnored var downloadCenter: BrowserDownloadCenter
     let sitePermissionRequests = BrowserPagePermissionController()
@@ -185,6 +187,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
         permissionCenter: BrowserSitePermissionCenter,
         hostedNotificationCenter:
             (any BrowserHostedWebNotificationCentering)? = nil,
+        passkeyAccess: BrowserPasskeyAccessController? = nil,
         recoverNotificationSystemAuthorization:
             (@MainActor () async -> Void)? = nil,
         serverTrustOverrides: BrowserServerTrustOverrideStore = BrowserServerTrustOverrideStore(),
@@ -214,6 +217,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
 
         self.dialogPresenter = dialogPresenter
         self.downloadCenter = downloadCenter
+        self.passkeyAccess = passkeyAccess
         self.permissionCenter = permissionCenter
         self.hostedNotificationCenter = hostedNotificationCenter
         self.recoverNotificationSystemAuthorization =
@@ -250,6 +254,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
         self.httpAuthenticationSession = httpAuthenticationSession
         credentialSession = BrowserCredentialSession(
             spaceID: spaceID,
+            core: downloadCenter.core,
             supportsAccess: allowsCredentialAccess,
             isEnabled: isCredentialAccessEnabled,
             httpAuthentication: httpAuthenticationSession

@@ -45,6 +45,21 @@ static void app_boundary(void) {
     crest_buffer_free(&buffer);
     assert(buffer.bytes == NULL && buffer.length == 0);
     crest_buffer_free(&buffer);
+    /* CredentialSave: the match, then the platform's comparison with it. No
+     * password crosses; an unchanged one is already stored. */
+    uint8_t save[36] = { CREST_QUERY_CREDENTIAL_SAVE, 1 };
+    memset(save + 2, 0x55, 16);
+    save[18] = 1;
+    memset(save + 19, 0x55, 16);
+    save[35] = 1;
+    assert(crest_app_query(app, save, sizeof(save), &buffer) == CREST_OK);
+    assert(buffer.length == 18 && buffer.bytes[0] == 2 && buffer.bytes[1] == 1 && buffer.bytes[17] == 0x55);
+    crest_buffer_free(&buffer);
+    /* A comparison with another record is stale: one rejection, no fields. */
+    memset(save + 19, 0x66, 16);
+    assert(crest_app_query(app, save, sizeof(save), &buffer) == CREST_REJECTED);
+    assert(buffer.length == 1 && buffer.bytes[0] == CREST_REJECTION_STALE_CREDENTIAL_COMPARISON);
+    crest_buffer_free(&buffer);
     assert(crest_app_destroy(app) == CREST_OK);
     assert(crest_app_dispatch(app, acknowledge, sizeof(acknowledge), &buffer) == CREST_INVALID_HANDLE);
     assert(crest_app_destroy(app) == CREST_INVALID_HANDLE);
@@ -105,15 +120,6 @@ static void policy_boundary(void) {
     const uint8_t invalid[] = { 0xff };
     assert(crest_core_evaluate_policy(invalid, sizeof(invalid), output, 256, &length) == CREST_INVALID_MESSAGE);
     assert(length == 0);
-    /* Credential decisions answer from metadata; a request carrying a secret is rejected. */
-    const char *plan = "{\"version\":1,\"operation\":\"credentials.save_plan\",\"matchID\":\"55555555-5555-5555-5555-555555555555\","
-        "\"stored\":{\"id\":\"55555555-5555-5555-5555-555555555555\",\"passwordMatches\":true}}";
-    assert(crest_core_evaluate_policy((const uint8_t*)plan, strlen(plan), output, 256, &length) == CREST_OK);
-    output[length] = 0;
-    assert(strstr((const char*)output, "\"plan\":\"alreadyStored\"") && strstr((const char*)output, "\"requiresConfirmation\":false"));
-    const char *secret = "{\"version\":1,\"operation\":\"credentials.save_plan\",\"matchID\":null,"
-        "\"stored\":null,\"password\":\"hunter2\"}";
-    assert(crest_core_evaluate_policy((const uint8_t*)secret, strlen(secret), output, 256, &length) == CREST_INVALID_MESSAGE);
     /* Window repair answers from presence facts; a captured empty Space stays empty. */
     const char *window = "{\"version\":1,\"operation\":\"window.repair\",\"selectedSpaceID\":\"66666666-6666-6666-6666-666666666666\","
         "\"capturesSelection\":true,"

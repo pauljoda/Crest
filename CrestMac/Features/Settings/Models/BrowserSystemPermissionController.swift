@@ -18,7 +18,7 @@ final class BrowserSystemPermissionController {
     @ObservationIgnored private var refreshID = UUID()
     @ObservationIgnored private var currentSpaceID: SpaceID?
 
-    init(service: any BrowserSystemPermissionServicing = BrowserSystemPermissionService()) {
+    init(service: any BrowserSystemPermissionServicing) {
         self.service = service
     }
 

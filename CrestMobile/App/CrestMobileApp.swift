@@ -32,6 +32,8 @@ private final class BrowserMobileApplication {
     let onboardingCoordinator: BrowserOnboardingCoordinator
     let pages: MobileBrowserPageStore
     let spaceAccess: BrowserSpaceAccessController
+    /// The app's one passkey controller, which settings show.
+    let passkeyAccess: BrowserPasskeyAccessController
     let shortcuts: BrowserShortcutStore
     let sidebarWidgets: BrowserSidebarWidgetRuntime
     let permissionCenter: BrowserSitePermissionCenter
@@ -67,7 +69,9 @@ private final class BrowserMobileApplication {
         if shouldReset && !usesIsolatedLaunch {
             BrowserLinkPreferenceStore.shared.reset()
         }
-        let browser = try BrowserStore.production(launchEnvironment: launchEnvironment)
+        // One core per process, shared by every window of both browsing modes.
+        let core = CrestCore()
+        let browser = try BrowserStore.production(launchEnvironment: launchEnvironment, core: core)
         BrowserAppPreferenceStore.shared.bind(
             to: browser, legacy: BrowserLegacyAppPreferences.read(for: launchEnvironment))
         let transientBrowsing = BrowserTransientBrowsingCoordinator()
@@ -103,7 +107,6 @@ private final class BrowserMobileApplication {
             sources: [mediaSessions],
             preferences: sidebarWidgetPreferences
         )
-        let core = CrestCore()
         if launchEnvironment.presentsShowcaseSession, let profileID = browser.selectedSpace?.profile.id {
             core.addShowcaseDownloads(profileID: profileID)
         }
@@ -181,6 +184,7 @@ private final class BrowserMobileApplication {
         self.onboardingCoordinator = onboardingCoordinator
         self.pages = pages
         self.spaceAccess = spaceAccess
+        passkeyAccess = BrowserPasskeyAccessController(core: core)
         self.sidebarWidgets = sidebarWidgets
         // A hardware keyboard on iPad reads the same rebindable command table
         // the Mac menu bar does, composed exactly the way the Mac composes it.
@@ -245,6 +249,7 @@ private final class BrowserMobileApplication {
         )
         .environment(cloudSync)
         .environment(onboardingCoordinator)
+        .environment(passkeyAccess)
         .environment(
             \.browserSidebarWidgetRuntime,
             sidebarWidgets

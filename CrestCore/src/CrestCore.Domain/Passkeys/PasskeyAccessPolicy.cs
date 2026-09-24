@@ -1,3 +1,5 @@
+using CrestCore.Contracts;
+
 namespace CrestCore.Domain;
 
 /// Passkey access for websites, and the write-through of Crest-saved passwords

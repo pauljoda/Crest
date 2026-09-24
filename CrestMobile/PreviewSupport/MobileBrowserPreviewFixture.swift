@@ -104,6 +104,7 @@ struct MobileBrowserPreviewFixture {
             authenticator: BrowserPreviewAuthenticator(result: false)
         )
         passkeyAccess = BrowserPasskeyAccessController(
+            core: browser.core,
             capabilityCheck: { true },
             deviceConfigurationCheck: { .configured },
             authorizationCheck: { .authorized },

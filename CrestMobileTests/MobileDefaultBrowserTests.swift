@@ -54,22 +54,16 @@ final class MobileDefaultBrowserTests: XCTestCase {
         )
     }
 
-    func testSystemPasswordWriteThroughManifestIsEnabledAfterBrowserApproval() {
+    func testSystemPasswordWriteThroughManifestIsEnabledAfterBrowserApproval() throws {
         XCTAssertEqual(
             Bundle.main.object(
                 forInfoDictionaryKey: "CrestSystemPasswordWriteThroughManagedCapability"
             ) as? Bool,
             true
         )
-        XCTAssertEqual(
-            BrowserSystemPasswordWriteThroughSystem.availability(
-                for: BrowserLaunchEnvironment(
-                    values: [:],
-                    isXCTestRuntime: false
-                )
-            ),
-            .available
-        )
+        let facts = BrowserSystemPasswordWriteThroughSystem.facts(
+            for: BrowserLaunchEnvironment(values: [:], isXCTestRuntime: false))
+        XCTAssertEqual(try CrestCore().query(facts).availability, .available)
     }
 
     func testMobileApplicationRegistersBothWebURLSchemes() throws {

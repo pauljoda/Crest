@@ -11,6 +11,7 @@ public sealed class CrestApp {
 
     private readonly Lock gate = new();
     private readonly Downloads downloads = new();
+    private readonly Credentials credentials = new();
 
     #endregion
 
@@ -43,6 +44,16 @@ public sealed class CrestApp {
             object answer = query switch {
                 DownloadProgress progress => downloads.Answer(progress),
                 DownloadRisk risk => downloads.Answer(risk),
+                CredentialCapture capture => credentials.Answer(capture),
+                CredentialFill fill => credentials.Answer(fill),
+                CredentialSaveCheck check => credentials.Answer(check),
+                MostRecentCredential recency => credentials.Answer(recency),
+                CredentialSaveMatch match => credentials.Answer(match),
+                CredentialSave save => credentials.Answer(save),
+                StrongPassword password => credentials.Answer(password),
+                PasskeyAccess access => credentials.Answer(access),
+                SystemPasswordWriteThrough writeThrough => credentials.Answer(writeThrough),
+                SystemPasswordOffer offer => credentials.Answer(offer),
                 _ => throw new ArgumentOutOfRangeException(nameof(query), query.GetType().Name, "No area answers this query.")
             };
             return (TAnswer)answer;

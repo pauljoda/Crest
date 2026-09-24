@@ -346,9 +346,7 @@ struct BrowserPasswordSettingsPane: View {
             ProgressView("Updating existing credentials…")
         }
 
-        if BrowserSystemPasswordWriteThroughSystem.launchAvailability
-            == .available
-        {
+        if browser.systemPasswordWriteThroughAvailability == .available {
             Toggle(
                 "Offer a copy to Passwords",
                 isOn: browser.credentialPreferenceBinding(
@@ -358,8 +356,7 @@ struct BrowserPasswordSettingsPane: View {
             )
 
             Text(
-                BrowserSystemPasswordWriteThroughSystem.launchAvailability
-                    .detail
+                "After Crest saves in this Space, the system can ask whether to save or update a copy in your preferred password manager."
             )
             .crestFormFootnote()
         }

@@ -19,7 +19,8 @@ extension BrowserStore {
             syncCoalescingDelay: syncCoalescingDelay,
             browsingMode: browsingMode,
             family: workspaceFamily,
-            linkPreferences: linkPreferences
+            linkPreferences: linkPreferences,
+            core: core
         )
     }
 

@@ -8,7 +8,7 @@ struct BrowserCredentialSaveCandidate: Identifiable, Equatable, Sendable, Custom
     let topLevelOrigin: CredentialOrigin
     let username: String
     let password: String
-    let passwordKind: BrowserCredentialPasswordKind
+    let passwordKind: CredentialPasswordKind
     let isCrossOriginFrame: Bool
     let submittedAt: Date
 

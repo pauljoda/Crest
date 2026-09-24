@@ -9,6 +9,10 @@ import Observation
 /// refuses an intent or a query throws its `Rejection`. Every other failure is
 /// a build bug (a core and a Swift client built from different contracts) and
 /// stops the app with a message naming the status.
+///
+/// `query` may be called from any thread: it reads only the immutable handle,
+/// the core serializes every call on one app, and a query never changes the
+/// core's state or `state`. Intents stay on the main actor.
 @MainActor
 @Observable
 final class CrestCore {
@@ -16,7 +20,7 @@ final class CrestCore {
 
     /// The read model. Only the changes the core returns update it.
     let state = CoreState()
-    @ObservationIgnored private let handle: UInt64
+    @ObservationIgnored nonisolated private let handle: UInt64
 
     // MARK: - Initializers
 
@@ -61,7 +65,7 @@ final class CrestCore {
 
     // MARK: - Actions - Queries
 
-    func query<Question: Query>(_ query: Question) throws(Rejection) -> Question.Answer {
+    nonisolated func query<Question: Query>(_ query: Question) throws(Rejection) -> Question.Answer {
         var writer = WireWriter()
         query.encodeQuery(into: &writer)
         var reader = try call(crest_app_query, writer, "answer \(Question.self)")
@@ -81,9 +85,9 @@ final class CrestCore {
 
     /// Calls one entry point and returns a reader over its answer, or throws
     /// the rejection it answered instead.
-    private func call(_ entry: Entry, _ writer: WireWriter, _ action: @autoclosure () -> String) throws(Rejection)
-        -> WireReader
-    {
+    nonisolated private func call(
+        _ entry: Entry, _ writer: WireWriter, _ action: @autoclosure () -> String
+    ) throws(Rejection) -> WireReader {
         var buffer = crest_buffer_t()
         let status = writer.bytes.withUnsafeBufferPointer { entry(handle, $0.baseAddress, $0.count, &buffer) }
         defer { crest_buffer_free(&buffer) }
@@ -105,7 +109,7 @@ final class CrestCore {
         }
     }
 
-    private static func buildBug(_ status: crest_status_t, _ action: String) -> Never {
+    nonisolated private static func buildBug(_ status: crest_status_t, _ action: String) -> Never {
         let name =
             switch status {
             case CREST_INVALID_MESSAGE: "INVALID_MESSAGE"

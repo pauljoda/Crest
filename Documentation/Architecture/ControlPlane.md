@@ -583,15 +583,18 @@ throttle.
 files, prompts and notices, and renders the records in `core.state`. Each
 browsing mode shares one center across its windows. The ledger is not
 persisted.
-Credentials follow the same split. Policy operations decide what a form
-observation means (fill offer, save candidate, save prompt, username hint), which
+Credentials follow the same split. Typed queries on `crest_app_*`
+(`CredentialCapture`, `CredentialFill`, `CredentialSaveCheck`,
+`MostRecentCredential`, `CredentialSaveMatch`, `CredentialSave`,
+`StrongPassword`, `PasskeyAccess`, `SystemPasswordWriteThrough` and
+`SystemPasswordOffer`) decide what a form observation means (fill offer, save candidate, save prompt, username hint), which
 fill a field accepts, whether a candidate is still valid, which saved record is
 the most recent for an account, and whether a save creates, updates or leaves a
 record unchanged, as well as passkey access and system-password write-through.
 They receive origins, dates, record identities and presence flags; passwords
 never cross the boundary. The platform compares a candidate with the matched
 record's stored secret and passes only the answer. The strong-password
-operation returns a recipe, and the native layer draws the password from the
+query returns a recipe, and the native layer draws the password from the
 system's secure random source. Keychain storage, secrets and prompts stay
 native; without a core answer nothing is captured, saved or filled.
 

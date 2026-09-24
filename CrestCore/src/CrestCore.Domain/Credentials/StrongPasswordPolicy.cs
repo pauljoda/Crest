@@ -1,3 +1,5 @@
+using CrestCore.Contracts;
+
 namespace CrestCore.Domain;
 
 /// The composition of Crest's generated passwords. Four explicit groups meet
@@ -24,7 +26,7 @@ public static class StrongPasswordPolicy {
     /// The recipe for a password of `length` characters, or the default length.
     public static StrongPasswordRecipe Recipe(int? length) {
         int resolved = length ?? DefaultLength;
-        if (resolved is < MinimumLength or > MaximumLength) throw new BrowserRuleException(BrowserRuleCodes.InvalidPasswordLength);
+        if (resolved is < MinimumLength or > MaximumLength) throw new Rejected(new InvalidPasswordLength(MinimumLength, MaximumLength));
         return new(resolved, Groups);
     }
 

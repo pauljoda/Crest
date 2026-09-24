@@ -356,7 +356,8 @@ struct MobileBrowserDetailView: View {
                 try await BrowserSystemPasswordWriteThroughSystem.offer(
                     candidate: candidate,
                     title: title,
-                    anchor: page.webView.window
+                    anchor: page.webView.window,
+                    availability: browser.systemPasswordWriteThroughAvailability
                 )
             }
         )

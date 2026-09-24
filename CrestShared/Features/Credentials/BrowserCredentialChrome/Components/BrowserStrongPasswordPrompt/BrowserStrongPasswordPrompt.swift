@@ -45,6 +45,7 @@ struct BrowserStrongPasswordPrompt: View {
     private func generateAndFill() {
         Task { @MainActor in
             await model.generateSaveAndFill(
+                generate: { try BrowserStrongPasswordGenerator.generate(from: browser.strongPasswordRecipe()) },
                 save: { password in
                     let candidate = BrowserCredentialSaveCandidate(
                         id: UUID(),

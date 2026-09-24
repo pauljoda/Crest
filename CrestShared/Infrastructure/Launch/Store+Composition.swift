@@ -3,25 +3,27 @@ import CryptoKit
 
 extension BrowserStore {
     static func production(
-        launchEnvironment: BrowserLaunchEnvironment = .current
+        launchEnvironment: BrowserLaunchEnvironment = .current,
+        core: CrestCore = CrestCore()
     ) throws -> BrowserStore {
         // Keep the persistence boundary safe even if a future composition root
         // accidentally calls `production` for a fixture or preview launch.
         // Sample Spaces must never replace the installed session or be staged as
         // Cloud tombstones for the user's real Space IDs.
         if launchEnvironment.requiresIsolation {
-            return try isolatedLaunch(launchEnvironment: launchEnvironment)
+            return try isolatedLaunch(launchEnvironment: launchEnvironment, core: core)
         }
         let storage = try transactionalStorage(legacy: UserDefaultsBrowserSessionPersistence(),
             journal: UserDefaultsBrowserSyncJournalPersistence(), isolationID: nil, environment: launchEnvironment)
         return production(persistence: storage, syncPersistence: storage.journalPersistence,
-            credentialVault: KeychainCredentialVault())
+            credentialVault: KeychainCredentialVault(), core: core)
     }
 
     static func production(
         persistence: any BrowserSessionPersisting,
         syncPersistence: any BrowserSyncJournalPersisting,
-        credentialVault: any CredentialVault
+        credentialVault: any CredentialVault,
+        core: CrestCore = CrestCore()
     ) -> BrowserStore {
         let session = launchRepair(persistence.load() ?? .freshInstallSeed)
         let syncCoordinator = BrowserSyncCoordinator(
@@ -32,7 +34,8 @@ extension BrowserStore {
             selection: persistence.loadLegacySelection()?.launchSelection(in: session),
             persistence: persistence,
             credentialVault: credentialVault,
-            syncCoordinator: syncCoordinator
+            syncCoordinator: syncCoordinator,
+            core: core
         )
         store.saveLaunchCheckpoint()
         store.beginInitialSyncStaging(session: store.session)
@@ -76,21 +79,24 @@ extension BrowserStore {
     }
 
     static func isolatedLaunch(
-        launchEnvironment: BrowserLaunchEnvironment
+        launchEnvironment: BrowserLaunchEnvironment,
+        core: CrestCore = CrestCore()
     ) throws -> BrowserStore {
         if let isolationID = launchEnvironment.persistentIsolationID {
             if let store = try persistentIsolatedLaunch(
                 launchEnvironment: launchEnvironment,
-                isolationID: isolationID
+                isolationID: isolationID,
+                core: core
             ) {
                 return store
             }
         }
-        return inMemoryIsolatedLaunch(launchEnvironment: launchEnvironment)
+        return inMemoryIsolatedLaunch(launchEnvironment: launchEnvironment, core: core)
     }
 
     private static func inMemoryIsolatedLaunch(
-        launchEnvironment: BrowserLaunchEnvironment
+        launchEnvironment: BrowserLaunchEnvironment,
+        core: CrestCore
     ) -> BrowserStore {
         let session = launchRepair(isolatedFixtureSession(for: launchEnvironment))
         let syncCoordinator = BrowserSyncCoordinator(
@@ -100,7 +106,8 @@ extension BrowserStore {
             session: session,
             persistence: InMemoryBrowserSessionPersistence(),
             credentialVault: InMemoryCredentialVault(),
-            syncCoordinator: syncCoordinator
+            syncCoordinator: syncCoordinator,
+            core: core
         )
         store.saveLaunchCheckpoint()
         store.beginInitialSyncStaging(session: store.session)
@@ -109,7 +116,8 @@ extension BrowserStore {
 
     private static func persistentIsolatedLaunch(
         launchEnvironment: BrowserLaunchEnvironment,
-        isolationID: String
+        isolationID: String,
+        core: CrestCore
     ) throws -> BrowserStore? {
         let namespace = BrowserLaunchEnvironment.isolatedDefaultsSuiteName(
             isolationID: isolationID
@@ -128,7 +136,8 @@ extension BrowserStore {
             selection: persistence.loadLegacySelection()?.launchSelection(in: session),
             persistence: persistence,
             credentialVault: KeychainCredentialVault(servicePrefix: namespace),
-            syncCoordinator: syncCoordinator
+            syncCoordinator: syncCoordinator,
+            core: core
         )
         store.saveLaunchCheckpoint()
         store.beginInitialSyncStaging(session: store.session)
@@ -228,12 +237,13 @@ extension BrowserStore {
         return launchEnvironment.presentsShowcaseSession ? .showcase : .preview
     }
 
-    static func privateBrowsing() -> BrowserStore {
+    static func privateBrowsing(core: CrestCore = CrestCore()) -> BrowserStore {
         BrowserStore(
             session: .privateBrowsing(),
             persistence: InMemoryBrowserSessionPersistence(),
             credentialVault: PrivateBrowsingCredentialVault(),
-            browsingMode: .privateBrowsing
+            browsingMode: .privateBrowsing,
+            core: core
         )
     }
 }

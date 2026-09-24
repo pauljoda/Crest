@@ -7,7 +7,7 @@ import XCTest
 final class BrowserCredentialTests: XCTestCase {
     func testStrongPasswordGeneratorDrawsEveryCharacterClassFromTheCoreRecipe() throws {
         let passwords = try (0..<64).map { _ in
-            try BrowserStrongPasswordGenerator.generate()
+            try BrowserStrongPasswordGenerator.generate(from: CrestCore().query(StrongPassword(length: nil)))
         }
 
         XCTAssertEqual(Set(passwords).count, passwords.count)
@@ -1202,6 +1202,7 @@ final class BrowserCredentialCSVImportTests: XCTestCase {
         XCTAssertTrue(suggestions.isEmpty)
     }
 
+    @MainActor
     func testWarnsForHTTPAndRejectsOnlyBrokenRowsWithoutLosingValidRows() throws {
         let csv = """
             url,username,password
@@ -1230,7 +1231,8 @@ final class BrowserCredentialCSVImportTests: XCTestCase {
                 spaceID: SpaceID(),
                 profileID: UUID()
             ),
-            synchronizesWithICloud: false
+            synchronizesWithICloud: false,
+            core: CrestCore()
         )
         XCTAssertEqual(
             plan.warnings,

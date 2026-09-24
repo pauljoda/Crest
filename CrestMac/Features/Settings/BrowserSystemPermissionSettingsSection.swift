@@ -4,7 +4,27 @@ import SwiftUI
 struct BrowserSystemPermissionSettingsSection: View {
     let browser: BrowserStore
     let spaceAccess: BrowserSpaceAccessController
-    @State private var controller = BrowserSystemPermissionController()
+    @Environment(BrowserPasskeyAccessController.self) private var passkeyAccess
+
+    var body: some View {
+        BrowserSystemPermissionSettingsContent(
+            browser: browser, spaceAccess: spaceAccess,
+            service: BrowserSystemPermissionService(core: browser.core, passkeyAccess: passkeyAccess))
+    }
+}
+
+/// The permission rows over one permission service. The service is made once,
+/// when the section first appears.
+private struct BrowserSystemPermissionSettingsContent: View {
+    let browser: BrowserStore
+    let spaceAccess: BrowserSpaceAccessController
+    @State private var controller: BrowserSystemPermissionController
+
+    init(browser: BrowserStore, spaceAccess: BrowserSpaceAccessController, service: BrowserSystemPermissionService) {
+        self.browser = browser
+        self.spaceAccess = spaceAccess
+        _controller = State(initialValue: BrowserSystemPermissionController(service: service))
+    }
 
     private var spaceID: SpaceID? {
         guard BrowserSettingsPrivacyPolicy.canRevealSpaceData(in: browser.selectedSpace, accessController: spaceAccess)

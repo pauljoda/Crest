@@ -17,11 +17,12 @@ final class BrowserCredentialSession {
 
     init(
         spaceID: SpaceID,
+        core: CrestCore,
         supportsAccess: Bool,
         isEnabled: Bool,
         httpAuthentication: BrowserHTTPAuthenticationSession
     ) {
-        state = BrowserCredentialPageState(spaceID: spaceID)
+        state = BrowserCredentialPageState(spaceID: spaceID, core: core)
         self.supportsAccess = supportsAccess
         self.isEnabled = supportsAccess && isEnabled
         self.httpAuthentication = httpAuthentication

@@ -535,6 +535,7 @@ struct BrowserCredentialImportPlan:
         existingCredentials: [BrowserCredential],
         destination: BrowserSpaceRuntimeAssignment,
         synchronizesWithICloud: Bool,
+        core: CrestCore,
         now: Date = .now
     ) {
         self.format = format
@@ -565,7 +566,7 @@ struct BrowserCredentialImportPlan:
             for record in sortedRecords where !candidates.contains(where: { $0.password == record.password }) {
                 candidates.append(record)
             }
-            let existing = existingByID[id].flatMap(Self.mostRecent)
+            let existing = existingByID[id].flatMap { Self.mostRecent($0, asking: core) }
             let onlyCandidateMatchesExisting =
                 candidates.count == 1
                 && candidates.first?.password == existing?.password
@@ -723,8 +724,8 @@ struct BrowserCredentialImportPlan:
     /// The core names the most recent stored credential for the account. If it
     /// cannot answer, any stored credential still counts as existing, so the
     /// import never treats a stored account as new.
-    private static func mostRecent(_ credentials: [BrowserCredential]) -> BrowserCredential? {
-        guard let descriptor = try? BrowserCorePolicy.mostRecentCredential(credentials.map(\.descriptor)) else {
+    private static func mostRecent(_ credentials: [BrowserCredential], asking core: CrestCore) -> BrowserCredential? {
+        guard let descriptor = try? core.mostRecentCredential(credentials.map(\.descriptor)) else {
             return credentials.first
         }
         return credentials.first { $0.descriptor.id == descriptor.id }

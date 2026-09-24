@@ -85,13 +85,16 @@ file-system-safe filename and type registry facts. The `downloads.automatic`
 policy operation still answers the automatic-download throttle, because it
 reads a site-permission decision.
 
-The `credentials.*` and `passkeys.access_status` policy operations carry no
-credential values. Form observations arrive as event, origins and presence
-flags; recency and account matching take record identities, dates and, for
-matching, usernames; the save plan takes the platform's yes-or-no comparison
-against the stored secret. `credentials.password_recipe` returns a length and
-character groups, and the platform generates the password itself. Record
-batches hold at most 64 entries; callers reduce longer lists batch by batch.
+The credentials area of `crest_app_*` answers typed queries that carry no
+credential values. `CredentialCapture` takes a form observation as its event,
+origins and presence flags; `MostRecentCredential` and `CredentialSaveMatch`
+take record identities, dates and, for matching, usernames; `CredentialSave`
+takes the platform's yes-or-no comparison against the stored secret.
+`StrongPassword` answers a length and character groups, and the platform
+generates the password itself. `CredentialFill`, `CredentialSaveCheck`,
+`PasskeyAccess`, `SystemPasswordWriteThrough` and `SystemPasswordOffer` answer
+the remaining fill, save, passkey and system Passwords rules. Record batches
+hold at most 64 entries; callers reduce longer lists batch by batch.
 
 `crest_permissions_*` owns one process-local site permission ledger per native
 permission center: per-Space saved and session choices, the narrow-then-site-wide

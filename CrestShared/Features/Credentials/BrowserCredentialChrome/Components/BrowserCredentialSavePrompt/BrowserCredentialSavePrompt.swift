@@ -52,13 +52,7 @@ struct BrowserCredentialSavePrompt: View {
     /// A shell that cannot make the offer never asks the policy: leaving the
     /// closure out of the port is the whole of that shell's answer.
     private var shouldOfferSystemPasswords: Bool {
-        port.offerToSystemPasswords != nil
-            && BrowserCorePolicy.offersSystemPasswordWriteThrough(
-                preferences: preferences,
-                availability:
-                    BrowserSystemPasswordWriteThroughSystem.launchAvailability,
-                isPrivateBrowsing: browser.isPrivateBrowsing
-            )
+        port.offerToSystemPasswords != nil && browser.offersSystemPasswordWriteThrough(for: preferences)
     }
 
     private var route: BrowserCredentialPromptRoute {

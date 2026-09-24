@@ -14,7 +14,7 @@ namespace CrestCore.Native;
 public static class ContractCodec {
     /// <summary>SHA-256 of the canonical contract schema.</summary>
     public static ReadOnlySpan<byte> Fingerprint => [
-        0x65, 0x29, 0x7c, 0x99, 0x50, 0xe9, 0x0d, 0xfd, 0xd1, 0x54, 0xa4, 0xd8, 0xb9, 0x36, 0xec, 0x38, 0x24, 0x82, 0x1e, 0x17, 0x4f, 0x57, 0x67, 0x67, 0x49, 0xfd, 0x46, 0xfe, 0xe6, 0x9a, 0x46, 0x2c
+        0xbe, 0x8d, 0xc7, 0x19, 0xba, 0x2e, 0x24, 0x49, 0x59, 0x98, 0x84, 0xc8, 0xbf, 0x4b, 0xc0, 0xbb, 0x81, 0xe0, 0x8b, 0x4c, 0xc3, 0x0c, 0x4e, 0xb7, 0xd5, 0x88, 0x5d, 0xd4, 0xa9, 0x8c, 0xe8, 0x5f
     ];
 
     public static Intent ReadIntent(WireReader reader) {
@@ -130,13 +130,21 @@ public static class ContractCodec {
     public static Rejection ReadRejection(WireReader reader) {
         int tag = reader.ReadTag();
         switch (tag) {
-            case 0: return ReadDownloadLimitReached(reader);
-            case 1: return ReadDuplicateDownload(reader);
-            case 2: return ReadInvalidDownloadIdentity(reader);
-            case 3: return ReadInvalidDownloadProgress(reader);
-            case 4: return ReadInvalidDownloadSample(reader);
-            case 5: return ReadInvalidDownloadText(reader);
-            case 6: return ReadInvalidRetentionLifetime(reader);
+            case 0: return ReadCredentialRecordLimitReached(reader);
+            case 1: return ReadDownloadLimitReached(reader);
+            case 2: return ReadDuplicateCredential(reader);
+            case 3: return ReadDuplicateDownload(reader);
+            case 4: return ReadInvalidCredentialDate(reader);
+            case 5: return ReadInvalidCredentialOrigin(reader);
+            case 6: return ReadInvalidCredentialRecord(reader);
+            case 7: return ReadInvalidCredentialUsername(reader);
+            case 8: return ReadInvalidDownloadIdentity(reader);
+            case 9: return ReadInvalidDownloadProgress(reader);
+            case 10: return ReadInvalidDownloadSample(reader);
+            case 11: return ReadInvalidDownloadText(reader);
+            case 12: return ReadInvalidPasswordLength(reader);
+            case 13: return ReadInvalidRetentionLifetime(reader);
+            case 14: return ReadStaleCredentialComparison(reader);
             default: throw new WireFormatException($"Unknown Rejection tag {tag}.");
         }
     }
@@ -145,33 +153,65 @@ public static class ContractCodec {
         ArgumentNullException.ThrowIfNull(writer);
         ArgumentNullException.ThrowIfNull(value);
         switch (value) {
-            case DownloadLimitReached member:
+            case CredentialRecordLimitReached member:
                 writer.WriteTag(0);
+                WriteCredentialRecordLimitReached(writer, member);
+                break;
+            case DownloadLimitReached member:
+                writer.WriteTag(1);
                 WriteDownloadLimitReached(writer, member);
                 break;
+            case DuplicateCredential member:
+                writer.WriteTag(2);
+                WriteDuplicateCredential(writer, member);
+                break;
             case DuplicateDownload member:
-                writer.WriteTag(1);
+                writer.WriteTag(3);
                 WriteDuplicateDownload(writer, member);
                 break;
+            case InvalidCredentialDate member:
+                writer.WriteTag(4);
+                WriteInvalidCredentialDate(writer, member);
+                break;
+            case InvalidCredentialOrigin member:
+                writer.WriteTag(5);
+                WriteInvalidCredentialOrigin(writer, member);
+                break;
+            case InvalidCredentialRecord member:
+                writer.WriteTag(6);
+                WriteInvalidCredentialRecord(writer, member);
+                break;
+            case InvalidCredentialUsername member:
+                writer.WriteTag(7);
+                WriteInvalidCredentialUsername(writer, member);
+                break;
             case InvalidDownloadIdentity member:
-                writer.WriteTag(2);
+                writer.WriteTag(8);
                 WriteInvalidDownloadIdentity(writer, member);
                 break;
             case InvalidDownloadProgress member:
-                writer.WriteTag(3);
+                writer.WriteTag(9);
                 WriteInvalidDownloadProgress(writer, member);
                 break;
             case InvalidDownloadSample member:
-                writer.WriteTag(4);
+                writer.WriteTag(10);
                 WriteInvalidDownloadSample(writer, member);
                 break;
             case InvalidDownloadText member:
-                writer.WriteTag(5);
+                writer.WriteTag(11);
                 WriteInvalidDownloadText(writer, member);
                 break;
+            case InvalidPasswordLength member:
+                writer.WriteTag(12);
+                WriteInvalidPasswordLength(writer, member);
+                break;
             case InvalidRetentionLifetime member:
-                writer.WriteTag(6);
+                writer.WriteTag(13);
                 WriteInvalidRetentionLifetime(writer, member);
+                break;
+            case StaleCredentialComparison member:
+                writer.WriteTag(14);
+                WriteStaleCredentialComparison(writer, member);
                 break;
             default: throw new ArgumentOutOfRangeException(nameof(value), value.GetType().Name, "Not a contract Rejection.");
         }
@@ -180,8 +220,18 @@ public static class ContractCodec {
     public static object ReadQuery(WireReader reader) {
         int tag = reader.ReadTag();
         switch (tag) {
-            case 0: return ReadDownloadProgress(reader);
-            case 1: return ReadDownloadRisk(reader);
+            case 0: return ReadCredentialCapture(reader);
+            case 1: return ReadCredentialFill(reader);
+            case 2: return ReadCredentialSave(reader);
+            case 3: return ReadCredentialSaveCheck(reader);
+            case 4: return ReadCredentialSaveMatch(reader);
+            case 5: return ReadDownloadProgress(reader);
+            case 6: return ReadDownloadRisk(reader);
+            case 7: return ReadMostRecentCredential(reader);
+            case 8: return ReadPasskeyAccess(reader);
+            case 9: return ReadStrongPassword(reader);
+            case 10: return ReadSystemPasswordOffer(reader);
+            case 11: return ReadSystemPasswordWriteThrough(reader);
             default: throw new WireFormatException($"Unknown Query tag {tag}.");
         }
     }
@@ -190,13 +240,53 @@ public static class ContractCodec {
         ArgumentNullException.ThrowIfNull(writer);
         ArgumentNullException.ThrowIfNull(value);
         switch (value) {
-            case DownloadProgress member:
+            case CredentialCapture member:
                 writer.WriteTag(0);
+                WriteCredentialCapture(writer, member);
+                break;
+            case CredentialFill member:
+                writer.WriteTag(1);
+                WriteCredentialFill(writer, member);
+                break;
+            case CredentialSave member:
+                writer.WriteTag(2);
+                WriteCredentialSave(writer, member);
+                break;
+            case CredentialSaveCheck member:
+                writer.WriteTag(3);
+                WriteCredentialSaveCheck(writer, member);
+                break;
+            case CredentialSaveMatch member:
+                writer.WriteTag(4);
+                WriteCredentialSaveMatch(writer, member);
+                break;
+            case DownloadProgress member:
+                writer.WriteTag(5);
                 WriteDownloadProgress(writer, member);
                 break;
             case DownloadRisk member:
-                writer.WriteTag(1);
+                writer.WriteTag(6);
                 WriteDownloadRisk(writer, member);
+                break;
+            case MostRecentCredential member:
+                writer.WriteTag(7);
+                WriteMostRecentCredential(writer, member);
+                break;
+            case PasskeyAccess member:
+                writer.WriteTag(8);
+                WritePasskeyAccess(writer, member);
+                break;
+            case StrongPassword member:
+                writer.WriteTag(9);
+                WriteStrongPassword(writer, member);
+                break;
+            case SystemPasswordOffer member:
+                writer.WriteTag(10);
+                WriteSystemPasswordOffer(writer, member);
+                break;
+            case SystemPasswordWriteThrough member:
+                writer.WriteTag(11);
+                WriteSystemPasswordWriteThrough(writer, member);
                 break;
             default: throw new ArgumentOutOfRangeException(nameof(value), value.GetType().Name, "Not a contract Query.");
         }
@@ -206,13 +296,53 @@ public static class ContractCodec {
         ArgumentNullException.ThrowIfNull(app);
         ArgumentNullException.ThrowIfNull(query);
         switch (query) {
-            case DownloadProgress question:
+            case CredentialCapture question:
                 var answer0 = app.Query(question);
-                WriteDownloadProgressReading(writer, answer0);
+                WriteCredentialCaptureDecision(writer, answer0);
+                break;
+            case CredentialFill question:
+                var answer1 = app.Query(question);
+                WriteCredentialFillDecision(writer, answer1);
+                break;
+            case CredentialSave question:
+                var answer2 = app.Query(question);
+                WriteCredentialSavePlan(writer, answer2);
+                break;
+            case CredentialSaveCheck question:
+                var answer3 = app.Query(question);
+                WriteCredentialSaveVerdict(writer, answer3);
+                break;
+            case CredentialSaveMatch question:
+                var answer4 = app.Query(question);
+                WriteCredentialChoice(writer, answer4);
+                break;
+            case DownloadProgress question:
+                var answer5 = app.Query(question);
+                WriteDownloadProgressReading(writer, answer5);
                 break;
             case DownloadRisk question:
-                var answer1 = app.Query(question);
-                WriteDownloadRiskVerdict(writer, answer1);
+                var answer6 = app.Query(question);
+                WriteDownloadRiskVerdict(writer, answer6);
+                break;
+            case MostRecentCredential question:
+                var answer7 = app.Query(question);
+                WriteCredentialChoice(writer, answer7);
+                break;
+            case PasskeyAccess question:
+                var answer8 = app.Query(question);
+                WritePasskeyAccessVerdict(writer, answer8);
+                break;
+            case StrongPassword question:
+                var answer9 = app.Query(question);
+                WriteStrongPasswordRecipe(writer, answer9);
+                break;
+            case SystemPasswordOffer question:
+                var answer10 = app.Query(question);
+                WriteSystemPasswordOfferDecision(writer, answer10);
+                break;
+            case SystemPasswordWriteThrough question:
+                var answer11 = app.Query(question);
+                WriteSystemPasswordWriteThroughSupport(writer, answer11);
                 break;
             default: throw new ArgumentOutOfRangeException(nameof(query), query.GetType().Name, "Not a contract Query.");
         }
@@ -300,6 +430,331 @@ public static class ContractCodec {
         ArgumentNullException.ThrowIfNull(value);
         writer.WriteGuid(value.DownloadId);
         writer.WriteString(value.Message);
+    }
+
+    public static CredentialCapture ReadCredentialCapture(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new CredentialCapture(
+            ReadCredentialFormFacts(reader),
+            reader.ReadPresence() ? (CredentialUsernameHint?)ReadCredentialUsernameHint(reader) : null,
+            reader.ReadPresence() ? (CredentialPendingCandidate?)ReadCredentialPendingCandidate(reader) : null,
+            reader.ReadDouble());
+    }
+
+    public static void WriteCredentialCapture(WireWriter writer, CredentialCapture value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        WriteCredentialFormFacts(writer, value.Facts);
+        if (value.Hint is { } presentHint) {
+            writer.WritePresence(true);
+            WriteCredentialUsernameHint(writer, presentHint);
+        } else {
+            writer.WritePresence(false);
+        }
+        if (value.Pending is { } presentPending) {
+            writer.WritePresence(true);
+            WriteCredentialPendingCandidate(writer, presentPending);
+        } else {
+            writer.WritePresence(false);
+        }
+        writer.WriteDouble(value.Now);
+    }
+
+    public static CredentialCaptureDecision ReadCredentialCaptureDecision(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new CredentialCaptureDecision(
+            ReadCredentialCaptureAction(reader),
+            ReadCredentialUsernameSource(reader),
+            reader.ReadBool(),
+            reader.ReadBool(),
+            reader.ReadBool(),
+            reader.ReadDouble(),
+            reader.ReadDouble());
+    }
+
+    public static void WriteCredentialCaptureDecision(WireWriter writer, CredentialCaptureDecision value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        WriteCredentialCaptureAction(writer, value.Action);
+        WriteCredentialUsernameSource(writer, value.UsernameSource);
+        writer.WriteBool(value.ClearsUsernameHint);
+        writer.WriteBool(value.IsCrossOriginFrame);
+        writer.WriteBool(value.AnchorsToField);
+        writer.WriteDouble(value.CandidateLifetime);
+        writer.WriteDouble(value.UsernameHintLifetime);
+    }
+
+    public static CredentialChoice ReadCredentialChoice(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new CredentialChoice(
+            reader.ReadPresence() ? (Guid?)reader.ReadGuid() : null);
+    }
+
+    public static void WriteCredentialChoice(WireWriter writer, CredentialChoice value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        if (value.CredentialId is { } presentCredentialId) {
+            writer.WritePresence(true);
+            writer.WriteGuid(presentCredentialId);
+        } else {
+            writer.WritePresence(false);
+        }
+    }
+
+    public static CredentialFill ReadCredentialFill(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new CredentialFill(
+            ReadCredentialFillSource(reader),
+            ReadCredentialPasswordKind(reader));
+    }
+
+    public static void WriteCredentialFill(WireWriter writer, CredentialFill value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        WriteCredentialFillSource(writer, value.Source);
+        WriteCredentialPasswordKind(writer, value.PasswordKind);
+    }
+
+    public static CredentialFillDecision ReadCredentialFillDecision(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new CredentialFillDecision(
+            reader.ReadBool());
+    }
+
+    public static void WriteCredentialFillDecision(WireWriter writer, CredentialFillDecision value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteBool(value.IsAllowed);
+    }
+
+    public static CredentialFormFacts ReadCredentialFormFacts(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new CredentialFormFacts(
+            ReadCredentialCaptureEvent(reader),
+            ReadCredentialOrigin(reader),
+            ReadCredentialOrigin(reader),
+            reader.ReadBool(),
+            reader.ReadBool(),
+            reader.ReadBool(),
+            reader.ReadBool(),
+            reader.ReadPresence() ? (CredentialPasswordKind?)ReadCredentialPasswordKind(reader) : null,
+            reader.ReadPresence() ? (bool?)reader.ReadBool() : null,
+            reader.ReadBool());
+    }
+
+    public static void WriteCredentialFormFacts(WireWriter writer, CredentialFormFacts value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        WriteCredentialCaptureEvent(writer, value.Event);
+        WriteCredentialOrigin(writer, value.FrameOrigin);
+        WriteCredentialOrigin(writer, value.TopLevelOrigin);
+        writer.WriteBool(value.IsMainFrame);
+        writer.WriteBool(value.HasFormId);
+        writer.WriteBool(value.HasUsername);
+        writer.WriteBool(value.HasPassword);
+        if (value.PasswordKind is { } presentPasswordKind) {
+            writer.WritePresence(true);
+            WriteCredentialPasswordKind(writer, presentPasswordKind);
+        } else {
+            writer.WritePresence(false);
+        }
+        if (value.HasVisiblePasswordField is { } presentHasVisiblePasswordField) {
+            writer.WritePresence(true);
+            writer.WriteBool(presentHasVisiblePasswordField);
+        } else {
+            writer.WritePresence(false);
+        }
+        writer.WriteBool(value.HasFillTarget);
+    }
+
+    public static CredentialOrigin ReadCredentialOrigin(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new CredentialOrigin(
+            reader.ReadString(),
+            reader.ReadString(),
+            reader.ReadInt32());
+    }
+
+    public static void WriteCredentialOrigin(WireWriter writer, CredentialOrigin value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteString(value.Scheme);
+        writer.WriteString(value.Host);
+        writer.WriteInt32(value.Port);
+    }
+
+    public static CredentialPendingCandidate ReadCredentialPendingCandidate(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new CredentialPendingCandidate(
+            ReadCredentialOrigin(reader),
+            reader.ReadDouble());
+    }
+
+    public static void WriteCredentialPendingCandidate(WireWriter writer, CredentialPendingCandidate value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        WriteCredentialOrigin(writer, value.Origin);
+        writer.WriteDouble(value.SubmittedAt);
+    }
+
+    public static CredentialRecord ReadCredentialRecord(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new CredentialRecord(
+            reader.ReadGuid(),
+            reader.ReadPresence() ? (string?)reader.ReadString() : null,
+            reader.ReadDouble(),
+            reader.ReadPresence() ? (double?)reader.ReadDouble() : null);
+    }
+
+    public static void WriteCredentialRecord(WireWriter writer, CredentialRecord value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteGuid(value.Id);
+        if (value.Username is { } presentUsername) {
+            writer.WritePresence(true);
+            writer.WriteString(presentUsername);
+        } else {
+            writer.WritePresence(false);
+        }
+        writer.WriteDouble(value.UpdatedAt);
+        if (value.LastUsedAt is { } presentLastUsedAt) {
+            writer.WritePresence(true);
+            writer.WriteDouble(presentLastUsedAt);
+        } else {
+            writer.WritePresence(false);
+        }
+    }
+
+    public static CredentialRecordLimitReached ReadCredentialRecordLimitReached(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new CredentialRecordLimitReached(
+            reader.ReadInt32());
+    }
+
+    public static void WriteCredentialRecordLimitReached(WireWriter writer, CredentialRecordLimitReached value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteInt32(value.Limit);
+    }
+
+    public static CredentialSave ReadCredentialSave(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new CredentialSave(
+            reader.ReadPresence() ? (Guid?)reader.ReadGuid() : null,
+            reader.ReadPresence() ? (CredentialStoredComparison?)ReadCredentialStoredComparison(reader) : null);
+    }
+
+    public static void WriteCredentialSave(WireWriter writer, CredentialSave value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        if (value.MatchId is { } presentMatchId) {
+            writer.WritePresence(true);
+            writer.WriteGuid(presentMatchId);
+        } else {
+            writer.WritePresence(false);
+        }
+        if (value.Stored is { } presentStored) {
+            writer.WritePresence(true);
+            WriteCredentialStoredComparison(writer, presentStored);
+        } else {
+            writer.WritePresence(false);
+        }
+    }
+
+    public static CredentialSaveCheck ReadCredentialSaveCheck(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new CredentialSaveCheck(
+            ReadCredentialOrigin(reader),
+            ReadCredentialOrigin(reader),
+            reader.ReadDouble(),
+            reader.ReadDouble());
+    }
+
+    public static void WriteCredentialSaveCheck(WireWriter writer, CredentialSaveCheck value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        WriteCredentialOrigin(writer, value.Origin);
+        WriteCredentialOrigin(writer, value.TopLevelOrigin);
+        writer.WriteDouble(value.SubmittedAt);
+        writer.WriteDouble(value.Now);
+    }
+
+    public static CredentialSaveMatch ReadCredentialSaveMatch(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new CredentialSaveMatch(
+            reader.ReadString(),
+            reader.ReadList(() => ReadCredentialRecord(reader)));
+    }
+
+    public static void WriteCredentialSaveMatch(WireWriter writer, CredentialSaveMatch value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteString(value.Username);
+        writer.WriteCount(value.Records.Count);
+        foreach (var itemRecords in value.Records) {
+            WriteCredentialRecord(writer, itemRecords);
+        }
+    }
+
+    public static CredentialSavePlan ReadCredentialSavePlan(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new CredentialSavePlan(
+            ReadCredentialSavePlanKind(reader),
+            reader.ReadPresence() ? (Guid?)reader.ReadGuid() : null);
+    }
+
+    public static void WriteCredentialSavePlan(WireWriter writer, CredentialSavePlan value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        WriteCredentialSavePlanKind(writer, value.Kind);
+        if (value.Id is { } presentId) {
+            writer.WritePresence(true);
+            writer.WriteGuid(presentId);
+        } else {
+            writer.WritePresence(false);
+        }
+    }
+
+    public static CredentialSaveVerdict ReadCredentialSaveVerdict(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new CredentialSaveVerdict(
+            ReadCredentialSaveValidity(reader));
+    }
+
+    public static void WriteCredentialSaveVerdict(WireWriter writer, CredentialSaveVerdict value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        WriteCredentialSaveValidity(writer, value.Validity);
+    }
+
+    public static CredentialStoredComparison ReadCredentialStoredComparison(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new CredentialStoredComparison(
+            reader.ReadGuid(),
+            reader.ReadBool());
+    }
+
+    public static void WriteCredentialStoredComparison(WireWriter writer, CredentialStoredComparison value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteGuid(value.Id);
+        writer.WriteBool(value.PasswordMatches);
+    }
+
+    public static CredentialUsernameHint ReadCredentialUsernameHint(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new CredentialUsernameHint(
+            ReadCredentialOrigin(reader),
+            ReadCredentialOrigin(reader),
+            reader.ReadDouble());
+    }
+
+    public static void WriteCredentialUsernameHint(WireWriter writer, CredentialUsernameHint value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        WriteCredentialOrigin(writer, value.Origin);
+        WriteCredentialOrigin(writer, value.TopLevelOrigin);
+        writer.WriteDouble(value.CapturedAt);
     }
 
     public static DownloadLimitReached ReadDownloadLimitReached(WireReader reader) {
@@ -606,6 +1061,16 @@ public static class ContractCodec {
         }
     }
 
+    public static DuplicateCredential ReadDuplicateCredential(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new DuplicateCredential();
+    }
+
+    public static void WriteDuplicateCredential(WireWriter writer, DuplicateCredential value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+    }
+
     public static DuplicateDownload ReadDuplicateDownload(WireReader reader) {
         ArgumentNullException.ThrowIfNull(reader);
         return new DuplicateDownload();
@@ -666,6 +1131,46 @@ public static class ContractCodec {
         }
     }
 
+    public static InvalidCredentialDate ReadInvalidCredentialDate(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new InvalidCredentialDate();
+    }
+
+    public static void WriteInvalidCredentialDate(WireWriter writer, InvalidCredentialDate value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+    }
+
+    public static InvalidCredentialOrigin ReadInvalidCredentialOrigin(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new InvalidCredentialOrigin();
+    }
+
+    public static void WriteInvalidCredentialOrigin(WireWriter writer, InvalidCredentialOrigin value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+    }
+
+    public static InvalidCredentialRecord ReadInvalidCredentialRecord(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new InvalidCredentialRecord();
+    }
+
+    public static void WriteInvalidCredentialRecord(WireWriter writer, InvalidCredentialRecord value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+    }
+
+    public static InvalidCredentialUsername ReadInvalidCredentialUsername(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new InvalidCredentialUsername();
+    }
+
+    public static void WriteInvalidCredentialUsername(WireWriter writer, InvalidCredentialUsername value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+    }
+
     public static InvalidDownloadIdentity ReadInvalidDownloadIdentity(WireReader reader) {
         ArgumentNullException.ThrowIfNull(reader);
         return new InvalidDownloadIdentity();
@@ -708,6 +1213,20 @@ public static class ContractCodec {
         WriteDownloadTextField(writer, value.Field);
     }
 
+    public static InvalidPasswordLength ReadInvalidPasswordLength(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new InvalidPasswordLength(
+            reader.ReadInt32(),
+            reader.ReadInt32());
+    }
+
+    public static void WriteInvalidPasswordLength(WireWriter writer, InvalidPasswordLength value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteInt32(value.Minimum);
+        writer.WriteInt32(value.Maximum);
+    }
+
     public static InvalidRetentionLifetime ReadInvalidRetentionLifetime(WireReader reader) {
         ArgumentNullException.ThrowIfNull(reader);
         return new InvalidRetentionLifetime();
@@ -716,6 +1235,49 @@ public static class ContractCodec {
     public static void WriteInvalidRetentionLifetime(WireWriter writer, InvalidRetentionLifetime value) {
         ArgumentNullException.ThrowIfNull(writer);
         ArgumentNullException.ThrowIfNull(value);
+    }
+
+    public static MostRecentCredential ReadMostRecentCredential(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new MostRecentCredential(
+            reader.ReadList(() => ReadCredentialRecord(reader)));
+    }
+
+    public static void WriteMostRecentCredential(WireWriter writer, MostRecentCredential value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteCount(value.Records.Count);
+        foreach (var itemRecords in value.Records) {
+            WriteCredentialRecord(writer, itemRecords);
+        }
+    }
+
+    public static PasskeyAccess ReadPasskeyAccess(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new PasskeyAccess(
+            reader.ReadBool(),
+            ReadPasskeyDeviceConfiguration(reader),
+            ReadPasskeyAuthorizationState(reader));
+    }
+
+    public static void WritePasskeyAccess(WireWriter writer, PasskeyAccess value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteBool(value.HasManagedCapability);
+        WritePasskeyDeviceConfiguration(writer, value.DeviceConfiguration);
+        WritePasskeyAuthorizationState(writer, value.AuthorizationState);
+    }
+
+    public static PasskeyAccessVerdict ReadPasskeyAccessVerdict(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new PasskeyAccessVerdict(
+            ReadPasskeyAccessStatus(reader));
+    }
+
+    public static void WritePasskeyAccessVerdict(WireWriter writer, PasskeyAccessVerdict value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        WritePasskeyAccessStatus(writer, value.Status);
     }
 
     public static RecordDownloadTransfer ReadRecordDownloadTransfer(WireReader reader) {
@@ -786,6 +1348,178 @@ public static class ContractCodec {
         writer.WriteString(value.Filename);
     }
 
+    public static StaleCredentialComparison ReadStaleCredentialComparison(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new StaleCredentialComparison();
+    }
+
+    public static void WriteStaleCredentialComparison(WireWriter writer, StaleCredentialComparison value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+    }
+
+    public static StrongPassword ReadStrongPassword(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new StrongPassword(
+            reader.ReadPresence() ? (int?)reader.ReadInt32() : null);
+    }
+
+    public static void WriteStrongPassword(WireWriter writer, StrongPassword value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        if (value.Length is { } presentLength) {
+            writer.WritePresence(true);
+            writer.WriteInt32(presentLength);
+        } else {
+            writer.WritePresence(false);
+        }
+    }
+
+    public static StrongPasswordRecipe ReadStrongPasswordRecipe(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new StrongPasswordRecipe(
+            reader.ReadInt32(),
+            reader.ReadList(() => reader.ReadString()));
+    }
+
+    public static void WriteStrongPasswordRecipe(WireWriter writer, StrongPasswordRecipe value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteInt32(value.Length);
+        writer.WriteCount(value.Groups.Count);
+        foreach (var itemGroups in value.Groups) {
+            writer.WriteString(itemGroups);
+        }
+    }
+
+    public static SystemPasswordOffer ReadSystemPasswordOffer(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new SystemPasswordOffer(
+            reader.ReadBool(),
+            ReadSystemPasswordWriteThroughAvailability(reader),
+            reader.ReadBool());
+    }
+
+    public static void WriteSystemPasswordOffer(WireWriter writer, SystemPasswordOffer value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteBool(value.SpaceOffersSystemPasswords);
+        WriteSystemPasswordWriteThroughAvailability(writer, value.Availability);
+        writer.WriteBool(value.IsPrivateBrowsing);
+    }
+
+    public static SystemPasswordOfferDecision ReadSystemPasswordOfferDecision(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new SystemPasswordOfferDecision(
+            reader.ReadBool());
+    }
+
+    public static void WriteSystemPasswordOfferDecision(WireWriter writer, SystemPasswordOfferDecision value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteBool(value.Offers);
+    }
+
+    public static SystemPasswordWriteThrough ReadSystemPasswordWriteThrough(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new SystemPasswordWriteThrough(
+            reader.ReadBool(),
+            reader.ReadBool(),
+            reader.ReadBool(),
+            reader.ReadBool());
+    }
+
+    public static void WriteSystemPasswordWriteThrough(WireWriter writer, SystemPasswordWriteThrough value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteBool(value.IsMobilePlatform);
+        writer.WriteBool(value.SupportsSystemPasswordSaving);
+        writer.WriteBool(value.HasManagedBrowserCapability);
+        writer.WriteBool(value.IsLaunchIsolated);
+    }
+
+    public static SystemPasswordWriteThroughSupport ReadSystemPasswordWriteThroughSupport(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new SystemPasswordWriteThroughSupport(
+            ReadSystemPasswordWriteThroughAvailability(reader));
+    }
+
+    public static void WriteSystemPasswordWriteThroughSupport(WireWriter writer, SystemPasswordWriteThroughSupport value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        WriteSystemPasswordWriteThroughAvailability(writer, value.Availability);
+    }
+
+    public static CredentialCaptureAction ReadCredentialCaptureAction(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return (CredentialCaptureAction)reader.ReadEnum(8);
+    }
+
+    public static void WriteCredentialCaptureAction(WireWriter writer, CredentialCaptureAction value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        writer.WriteEnum((int)value);
+    }
+
+    public static CredentialCaptureEvent ReadCredentialCaptureEvent(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return (CredentialCaptureEvent)reader.ReadEnum(5);
+    }
+
+    public static void WriteCredentialCaptureEvent(WireWriter writer, CredentialCaptureEvent value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        writer.WriteEnum((int)value);
+    }
+
+    public static CredentialFillSource ReadCredentialFillSource(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return (CredentialFillSource)reader.ReadEnum(2);
+    }
+
+    public static void WriteCredentialFillSource(WireWriter writer, CredentialFillSource value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        writer.WriteEnum((int)value);
+    }
+
+    public static CredentialPasswordKind ReadCredentialPasswordKind(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return (CredentialPasswordKind)reader.ReadEnum(2);
+    }
+
+    public static void WriteCredentialPasswordKind(WireWriter writer, CredentialPasswordKind value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        writer.WriteEnum((int)value);
+    }
+
+    public static CredentialSavePlanKind ReadCredentialSavePlanKind(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return (CredentialSavePlanKind)reader.ReadEnum(3);
+    }
+
+    public static void WriteCredentialSavePlanKind(WireWriter writer, CredentialSavePlanKind value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        writer.WriteEnum((int)value);
+    }
+
+    public static CredentialSaveValidity ReadCredentialSaveValidity(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return (CredentialSaveValidity)reader.ReadEnum(3);
+    }
+
+    public static void WriteCredentialSaveValidity(WireWriter writer, CredentialSaveValidity value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        writer.WriteEnum((int)value);
+    }
+
+    public static CredentialUsernameSource ReadCredentialUsernameSource(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return (CredentialUsernameSource)reader.ReadEnum(3);
+    }
+
+    public static void WriteCredentialUsernameSource(WireWriter writer, CredentialUsernameSource value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        writer.WriteEnum((int)value);
+    }
+
     public static DownloadPhase ReadDownloadPhase(WireReader reader) {
         ArgumentNullException.ThrowIfNull(reader);
         return (DownloadPhase)reader.ReadEnum(7);
@@ -812,6 +1546,46 @@ public static class ContractCodec {
     }
 
     public static void WriteDownloadTextField(WireWriter writer, DownloadTextField value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        writer.WriteEnum((int)value);
+    }
+
+    public static PasskeyAccessStatus ReadPasskeyAccessStatus(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return (PasskeyAccessStatus)reader.ReadEnum(5);
+    }
+
+    public static void WritePasskeyAccessStatus(WireWriter writer, PasskeyAccessStatus value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        writer.WriteEnum((int)value);
+    }
+
+    public static PasskeyAuthorizationState ReadPasskeyAuthorizationState(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return (PasskeyAuthorizationState)reader.ReadEnum(3);
+    }
+
+    public static void WritePasskeyAuthorizationState(WireWriter writer, PasskeyAuthorizationState value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        writer.WriteEnum((int)value);
+    }
+
+    public static PasskeyDeviceConfiguration ReadPasskeyDeviceConfiguration(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return (PasskeyDeviceConfiguration)reader.ReadEnum(3);
+    }
+
+    public static void WritePasskeyDeviceConfiguration(WireWriter writer, PasskeyDeviceConfiguration value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        writer.WriteEnum((int)value);
+    }
+
+    public static SystemPasswordWriteThroughAvailability ReadSystemPasswordWriteThroughAvailability(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return (SystemPasswordWriteThroughAvailability)reader.ReadEnum(5);
+    }
+
+    public static void WriteSystemPasswordWriteThroughAvailability(WireWriter writer, SystemPasswordWriteThroughAvailability value) {
         ArgumentNullException.ThrowIfNull(writer);
         writer.WriteEnum((int)value);
     }

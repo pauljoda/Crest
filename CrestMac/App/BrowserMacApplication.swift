@@ -19,6 +19,8 @@ final class BrowserMacApplication {
     let privateChrome: BrowserChromeState
     let privateTransientBrowsing: BrowserTransientBrowsingCoordinator
     let spaceAccess: BrowserSpaceAccessController
+    /// The app's one passkey controller: pages refresh it and settings show it.
+    let passkeyAccess: BrowserPasskeyAccessController
     let shortcuts: BrowserShortcutStore
     let spaceSettingsPresentation: BrowserSpaceSettingsPresentationState
     let windowTransparency: BrowserWindowTransparencyStore
@@ -67,11 +69,15 @@ final class BrowserMacApplication {
         if shouldReset && !usesIsolatedLaunch {
             BrowserLinkPreferenceStore.shared.reset()
         }
-        let browser = try BrowserStore.production(launchEnvironment: launchEnvironment)
+        // One core per process. Every window of both browsing modes shares it,
+        // and standard and private windows each share one download center over it.
+        let core = CrestCore()
+        let browser = try BrowserStore.production(launchEnvironment: launchEnvironment, core: core)
         BrowserAppPreferenceStore.shared.bind(
             to: browser, legacy: BrowserLegacyAppPreferences.read(for: launchEnvironment))
         BrowserAppPreferenceStore.shared.reconcileWebKitSpellChecking()
-        let privateBrowser = BrowserStore.privateBrowsing()
+        let privateBrowser = BrowserStore.privateBrowsing(core: core)
+        let passkeyAccess = BrowserPasskeyAccessController(core: core)
         let cloudSync =
             usesIsolatedLaunch
             ? BrowserCloudSyncController.isolated(browser: browser)
@@ -136,9 +142,6 @@ final class BrowserMacApplication {
             sources: [softwareUpdates.widgetSource, mediaSessions],
             preferences: sidebarWidgetPreferences
         )
-        // One core per process. Standard and private windows each share one
-        // download center over it.
-        let core = CrestCore()
         if launchEnvironment.presentsShowcaseSession, let profileID = browser.selectedSpace?.profile.id {
             core.addShowcaseDownloads(profileID: profileID)
         }
@@ -149,6 +152,7 @@ final class BrowserMacApplication {
             hostedNotificationCenter: hostedNotificationCenter,
             mediaSessionStore: mediaSessions,
             core: core,
+            passkeyAccess: passkeyAccess,
             loadHTTPAuthenticationCredential: { protectionSpace, spaceID in
                 try await browser.httpAuthenticationCredential(
                     for: protectionSpace,
@@ -206,6 +210,7 @@ final class BrowserMacApplication {
             browsingMode: .privateBrowsing,
             permissionCenter: BrowserSitePermissionCenter(),
             core: core,
+            passkeyAccess: passkeyAccess,
             profileRemover: profileRemover,
             makePageEngine: makePageEngine,
             // The private pool answers to the private store, so a popup from a
@@ -299,6 +304,7 @@ final class BrowserMacApplication {
             reset: shouldReset
         )
         self.shortcuts = shortcuts
+        self.passkeyAccess = passkeyAccess
         self.windowTransparency = BrowserWindowTransparencyStore.launch(
                 usesIsolatedLaunch: usesIsolatedLaunch
             )
@@ -346,6 +352,7 @@ final class BrowserMacApplication {
             )
             .environment(windowTransparency)
             .environment(softwareUpdates)
+            .environment(passkeyAccess)
             .environment(\.browserSidebarWidgetRuntime, sidebarWidgets)
             .environment(\.browserSiteControlAnchor, siteControlAnchor)
             .modifier(BrowserSoftwareUpdateDetailsPresentation())
@@ -368,6 +375,7 @@ final class BrowserMacApplication {
         .modifier(BrowserChromeAppearancePersistence())
         .environment(windowTransparency)
         .environment(softwareUpdates)
+        .environment(passkeyAccess)
         .environment(
             \.browserSidebarWidgetRuntime,
             sidebarWidgets

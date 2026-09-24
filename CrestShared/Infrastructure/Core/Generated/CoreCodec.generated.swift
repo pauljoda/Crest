@@ -7,7 +7,7 @@ import Foundation
 enum CoreCodec {
     /// SHA-256 of the canonical contract schema. The core refuses any other.
     static let fingerprint: [UInt8] = [
-        0x65, 0x29, 0x7c, 0x99, 0x50, 0xe9, 0x0d, 0xfd, 0xd1, 0x54, 0xa4, 0xd8, 0xb9, 0x36, 0xec, 0x38, 0x24, 0x82, 0x1e, 0x17, 0x4f, 0x57, 0x67, 0x67, 0x49, 0xfd, 0x46, 0xfe, 0xe6, 0x9a, 0x46, 0x2c
+        0xbe, 0x8d, 0xc7, 0x19, 0xba, 0x2e, 0x24, 0x49, 0x59, 0x98, 0x84, 0xc8, 0xbf, 0x4b, 0xc0, 0xbb, 0x81, 0xe0, 0x8b, 0x4c, 0xc3, 0x0c, 0x4e, 0xb7, 0xd5, 0x88, 0x5d, 0xd4, 0xa9, 0x8c, 0xe8, 0x5f
     ]
 
     static func decodeIntent(from reader: inout WireReader) throws(WireError) -> any Intent {
@@ -34,8 +34,18 @@ enum CoreCodec {
     static func decodeQuery(from reader: inout WireReader) throws(WireError) -> any Query {
         let tag = try reader.readTag()
         switch tag {
-        case 0: return try DownloadProgress(from: &reader)
-        case 1: return try DownloadRisk(from: &reader)
+        case 0: return try CredentialCapture(from: &reader)
+        case 1: return try CredentialFill(from: &reader)
+        case 2: return try CredentialSave(from: &reader)
+        case 3: return try CredentialSaveCheck(from: &reader)
+        case 4: return try CredentialSaveMatch(from: &reader)
+        case 5: return try DownloadProgress(from: &reader)
+        case 6: return try DownloadRisk(from: &reader)
+        case 7: return try MostRecentCredential(from: &reader)
+        case 8: return try PasskeyAccess(from: &reader)
+        case 9: return try StrongPassword(from: &reader)
+        case 10: return try SystemPasswordOffer(from: &reader)
+        case 11: return try SystemPasswordWriteThrough(from: &reader)
         default: throw WireError.malformed("Unknown Query tag \(tag)")
         }
     }
@@ -67,39 +77,71 @@ extension Rejection {
     init(from reader: inout WireReader) throws(WireError) {
         let tag = try reader.readTag()
         switch tag {
-        case 0: self = .downloadLimitReached(try DownloadLimitReached(from: &reader))
-        case 1: self = .duplicateDownload(try DuplicateDownload(from: &reader))
-        case 2: self = .invalidDownloadIdentity(try InvalidDownloadIdentity(from: &reader))
-        case 3: self = .invalidDownloadProgress(try InvalidDownloadProgress(from: &reader))
-        case 4: self = .invalidDownloadSample(try InvalidDownloadSample(from: &reader))
-        case 5: self = .invalidDownloadText(try InvalidDownloadText(from: &reader))
-        case 6: self = .invalidRetentionLifetime(try InvalidRetentionLifetime(from: &reader))
+        case 0: self = .credentialRecordLimitReached(try CredentialRecordLimitReached(from: &reader))
+        case 1: self = .downloadLimitReached(try DownloadLimitReached(from: &reader))
+        case 2: self = .duplicateCredential(try DuplicateCredential(from: &reader))
+        case 3: self = .duplicateDownload(try DuplicateDownload(from: &reader))
+        case 4: self = .invalidCredentialDate(try InvalidCredentialDate(from: &reader))
+        case 5: self = .invalidCredentialOrigin(try InvalidCredentialOrigin(from: &reader))
+        case 6: self = .invalidCredentialRecord(try InvalidCredentialRecord(from: &reader))
+        case 7: self = .invalidCredentialUsername(try InvalidCredentialUsername(from: &reader))
+        case 8: self = .invalidDownloadIdentity(try InvalidDownloadIdentity(from: &reader))
+        case 9: self = .invalidDownloadProgress(try InvalidDownloadProgress(from: &reader))
+        case 10: self = .invalidDownloadSample(try InvalidDownloadSample(from: &reader))
+        case 11: self = .invalidDownloadText(try InvalidDownloadText(from: &reader))
+        case 12: self = .invalidPasswordLength(try InvalidPasswordLength(from: &reader))
+        case 13: self = .invalidRetentionLifetime(try InvalidRetentionLifetime(from: &reader))
+        case 14: self = .staleCredentialComparison(try StaleCredentialComparison(from: &reader))
         default: throw WireError.malformed("Unknown Rejection tag \(tag)")
         }
     }
 
     func encode(into writer: inout WireWriter) {
         switch self {
-        case .downloadLimitReached(let value):
+        case .credentialRecordLimitReached(let value):
             writer.writeTag(0)
             value.encode(into: &writer)
-        case .duplicateDownload(let value):
+        case .downloadLimitReached(let value):
             writer.writeTag(1)
             value.encode(into: &writer)
-        case .invalidDownloadIdentity(let value):
+        case .duplicateCredential(let value):
             writer.writeTag(2)
             value.encode(into: &writer)
-        case .invalidDownloadProgress(let value):
+        case .duplicateDownload(let value):
             writer.writeTag(3)
             value.encode(into: &writer)
-        case .invalidDownloadSample(let value):
+        case .invalidCredentialDate(let value):
             writer.writeTag(4)
             value.encode(into: &writer)
-        case .invalidDownloadText(let value):
+        case .invalidCredentialOrigin(let value):
             writer.writeTag(5)
             value.encode(into: &writer)
-        case .invalidRetentionLifetime(let value):
+        case .invalidCredentialRecord(let value):
             writer.writeTag(6)
+            value.encode(into: &writer)
+        case .invalidCredentialUsername(let value):
+            writer.writeTag(7)
+            value.encode(into: &writer)
+        case .invalidDownloadIdentity(let value):
+            writer.writeTag(8)
+            value.encode(into: &writer)
+        case .invalidDownloadProgress(let value):
+            writer.writeTag(9)
+            value.encode(into: &writer)
+        case .invalidDownloadSample(let value):
+            writer.writeTag(10)
+            value.encode(into: &writer)
+        case .invalidDownloadText(let value):
+            writer.writeTag(11)
+            value.encode(into: &writer)
+        case .invalidPasswordLength(let value):
+            writer.writeTag(12)
+            value.encode(into: &writer)
+        case .invalidRetentionLifetime(let value):
+            writer.writeTag(13)
+            value.encode(into: &writer)
+        case .staleCredentialComparison(let value):
+            writer.writeTag(14)
             value.encode(into: &writer)
         }
     }
@@ -213,6 +255,430 @@ extension CancelDownload {
     }
 }
 
+extension CredentialCapture {
+    init(from reader: inout WireReader) throws(WireError) {
+        let facts = try CredentialFormFacts(from: &reader)
+        let hint: CredentialUsernameHint?
+        if try reader.readPresence() {
+            let hintValue = try CredentialUsernameHint(from: &reader)
+            hint = hintValue
+        } else {
+            hint = nil
+        }
+        let pending: CredentialPendingCandidate?
+        if try reader.readPresence() {
+            let pendingValue = try CredentialPendingCandidate(from: &reader)
+            pending = pendingValue
+        } else {
+            pending = nil
+        }
+        let now = try reader.readDouble()
+        self.init(facts: facts, hint: hint, pending: pending, now: now)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        facts.encode(into: &writer)
+        if let present0 = hint {
+            writer.writePresence(true)
+            present0.encode(into: &writer)
+        } else {
+            writer.writePresence(false)
+        }
+        if let present0 = pending {
+            writer.writePresence(true)
+            present0.encode(into: &writer)
+        } else {
+            writer.writePresence(false)
+        }
+        writer.writeDouble(now)
+    }
+
+    func encodeQuery(into writer: inout WireWriter) {
+        writer.writeTag(0)
+        encode(into: &writer)
+    }
+
+    static func decodeAnswer(from reader: inout WireReader) throws(WireError) -> CredentialCaptureDecision {
+        let answer = try CredentialCaptureDecision(from: &reader)
+        return answer
+    }
+}
+
+extension CredentialCaptureDecision {
+    init(from reader: inout WireReader) throws(WireError) {
+        let action = try CredentialCaptureAction(from: &reader)
+        let usernameSource = try CredentialUsernameSource(from: &reader)
+        let clearsUsernameHint = try reader.readBool()
+        let isCrossOriginFrame = try reader.readBool()
+        let anchorsToField = try reader.readBool()
+        let candidateLifetime = try reader.readDouble()
+        let usernameHintLifetime = try reader.readDouble()
+        self.init(action: action, usernameSource: usernameSource, clearsUsernameHint: clearsUsernameHint, isCrossOriginFrame: isCrossOriginFrame, anchorsToField: anchorsToField, candidateLifetime: candidateLifetime, usernameHintLifetime: usernameHintLifetime)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        action.encode(into: &writer)
+        usernameSource.encode(into: &writer)
+        writer.writeBool(clearsUsernameHint)
+        writer.writeBool(isCrossOriginFrame)
+        writer.writeBool(anchorsToField)
+        writer.writeDouble(candidateLifetime)
+        writer.writeDouble(usernameHintLifetime)
+    }
+}
+
+extension CredentialChoice {
+    init(from reader: inout WireReader) throws(WireError) {
+        let credentialID: UUID?
+        if try reader.readPresence() {
+            let credentialIDValue = try reader.readUUID()
+            credentialID = credentialIDValue
+        } else {
+            credentialID = nil
+        }
+        self.init(credentialID: credentialID)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        if let present0 = credentialID {
+            writer.writePresence(true)
+            writer.writeUUID(present0)
+        } else {
+            writer.writePresence(false)
+        }
+    }
+}
+
+extension CredentialFill {
+    init(from reader: inout WireReader) throws(WireError) {
+        let source = try CredentialFillSource(from: &reader)
+        let passwordKind = try CredentialPasswordKind(from: &reader)
+        self.init(source: source, passwordKind: passwordKind)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        source.encode(into: &writer)
+        passwordKind.encode(into: &writer)
+    }
+
+    func encodeQuery(into writer: inout WireWriter) {
+        writer.writeTag(1)
+        encode(into: &writer)
+    }
+
+    static func decodeAnswer(from reader: inout WireReader) throws(WireError) -> CredentialFillDecision {
+        let answer = try CredentialFillDecision(from: &reader)
+        return answer
+    }
+}
+
+extension CredentialFillDecision {
+    init(from reader: inout WireReader) throws(WireError) {
+        let isAllowed = try reader.readBool()
+        self.init(isAllowed: isAllowed)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeBool(isAllowed)
+    }
+}
+
+extension CredentialFormFacts {
+    init(from reader: inout WireReader) throws(WireError) {
+        let event = try CredentialCaptureEvent(from: &reader)
+        let frameOrigin = try CredentialOrigin(from: &reader)
+        let topLevelOrigin = try CredentialOrigin(from: &reader)
+        let isMainFrame = try reader.readBool()
+        let hasFormID = try reader.readBool()
+        let hasUsername = try reader.readBool()
+        let hasPassword = try reader.readBool()
+        let passwordKind: CredentialPasswordKind?
+        if try reader.readPresence() {
+            let passwordKindValue = try CredentialPasswordKind(from: &reader)
+            passwordKind = passwordKindValue
+        } else {
+            passwordKind = nil
+        }
+        let hasVisiblePasswordField: Bool?
+        if try reader.readPresence() {
+            let hasVisiblePasswordFieldValue = try reader.readBool()
+            hasVisiblePasswordField = hasVisiblePasswordFieldValue
+        } else {
+            hasVisiblePasswordField = nil
+        }
+        let hasFillTarget = try reader.readBool()
+        self.init(event: event, frameOrigin: frameOrigin, topLevelOrigin: topLevelOrigin, isMainFrame: isMainFrame, hasFormID: hasFormID, hasUsername: hasUsername, hasPassword: hasPassword, passwordKind: passwordKind, hasVisiblePasswordField: hasVisiblePasswordField, hasFillTarget: hasFillTarget)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        event.encode(into: &writer)
+        frameOrigin.encode(into: &writer)
+        topLevelOrigin.encode(into: &writer)
+        writer.writeBool(isMainFrame)
+        writer.writeBool(hasFormID)
+        writer.writeBool(hasUsername)
+        writer.writeBool(hasPassword)
+        if let present0 = passwordKind {
+            writer.writePresence(true)
+            present0.encode(into: &writer)
+        } else {
+            writer.writePresence(false)
+        }
+        if let present0 = hasVisiblePasswordField {
+            writer.writePresence(true)
+            writer.writeBool(present0)
+        } else {
+            writer.writePresence(false)
+        }
+        writer.writeBool(hasFillTarget)
+    }
+}
+
+extension CredentialOrigin {
+    init(from reader: inout WireReader) throws(WireError) {
+        let scheme = try reader.readString()
+        let host = try reader.readString()
+        let port = try reader.readInt()
+        self.init(scheme: scheme, host: host, port: port)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeString(scheme)
+        writer.writeString(host)
+        writer.writeInt(port)
+    }
+}
+
+extension CredentialPendingCandidate {
+    init(from reader: inout WireReader) throws(WireError) {
+        let origin = try CredentialOrigin(from: &reader)
+        let submittedAt = try reader.readDouble()
+        self.init(origin: origin, submittedAt: submittedAt)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        origin.encode(into: &writer)
+        writer.writeDouble(submittedAt)
+    }
+}
+
+extension CredentialRecord {
+    init(from reader: inout WireReader) throws(WireError) {
+        let id = try reader.readUUID()
+        let username: String?
+        if try reader.readPresence() {
+            let usernameValue = try reader.readString()
+            username = usernameValue
+        } else {
+            username = nil
+        }
+        let updatedAt = try reader.readDouble()
+        let lastUsedAt: Double?
+        if try reader.readPresence() {
+            let lastUsedAtValue = try reader.readDouble()
+            lastUsedAt = lastUsedAtValue
+        } else {
+            lastUsedAt = nil
+        }
+        self.init(id: id, username: username, updatedAt: updatedAt, lastUsedAt: lastUsedAt)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeUUID(id)
+        if let present0 = username {
+            writer.writePresence(true)
+            writer.writeString(present0)
+        } else {
+            writer.writePresence(false)
+        }
+        writer.writeDouble(updatedAt)
+        if let present0 = lastUsedAt {
+            writer.writePresence(true)
+            writer.writeDouble(present0)
+        } else {
+            writer.writePresence(false)
+        }
+    }
+}
+
+extension CredentialRecordLimitReached {
+    init(from reader: inout WireReader) throws(WireError) {
+        let limit = try reader.readInt()
+        self.init(limit: limit)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeInt(limit)
+    }
+}
+
+extension CredentialSave {
+    init(from reader: inout WireReader) throws(WireError) {
+        let matchID: UUID?
+        if try reader.readPresence() {
+            let matchIDValue = try reader.readUUID()
+            matchID = matchIDValue
+        } else {
+            matchID = nil
+        }
+        let stored: CredentialStoredComparison?
+        if try reader.readPresence() {
+            let storedValue = try CredentialStoredComparison(from: &reader)
+            stored = storedValue
+        } else {
+            stored = nil
+        }
+        self.init(matchID: matchID, stored: stored)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        if let present0 = matchID {
+            writer.writePresence(true)
+            writer.writeUUID(present0)
+        } else {
+            writer.writePresence(false)
+        }
+        if let present0 = stored {
+            writer.writePresence(true)
+            present0.encode(into: &writer)
+        } else {
+            writer.writePresence(false)
+        }
+    }
+
+    func encodeQuery(into writer: inout WireWriter) {
+        writer.writeTag(2)
+        encode(into: &writer)
+    }
+
+    static func decodeAnswer(from reader: inout WireReader) throws(WireError) -> CredentialSavePlan {
+        let answer = try CredentialSavePlan(from: &reader)
+        return answer
+    }
+}
+
+extension CredentialSaveCheck {
+    init(from reader: inout WireReader) throws(WireError) {
+        let origin = try CredentialOrigin(from: &reader)
+        let topLevelOrigin = try CredentialOrigin(from: &reader)
+        let submittedAt = try reader.readDouble()
+        let now = try reader.readDouble()
+        self.init(origin: origin, topLevelOrigin: topLevelOrigin, submittedAt: submittedAt, now: now)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        origin.encode(into: &writer)
+        topLevelOrigin.encode(into: &writer)
+        writer.writeDouble(submittedAt)
+        writer.writeDouble(now)
+    }
+
+    func encodeQuery(into writer: inout WireWriter) {
+        writer.writeTag(3)
+        encode(into: &writer)
+    }
+
+    static func decodeAnswer(from reader: inout WireReader) throws(WireError) -> CredentialSaveVerdict {
+        let answer = try CredentialSaveVerdict(from: &reader)
+        return answer
+    }
+}
+
+extension CredentialSaveMatch {
+    init(from reader: inout WireReader) throws(WireError) {
+        let username = try reader.readString()
+        let recordsCount = try reader.readCount()
+        var records: [CredentialRecord] = []
+        records.reserveCapacity(recordsCount)
+        for _ in 0..<recordsCount {
+            let recordsElement = try CredentialRecord(from: &reader)
+            records.append(recordsElement)
+        }
+        self.init(username: username, records: records)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeString(username)
+        writer.writeCount(records.count)
+        for element0 in records {
+            element0.encode(into: &writer)
+        }
+    }
+
+    func encodeQuery(into writer: inout WireWriter) {
+        writer.writeTag(4)
+        encode(into: &writer)
+    }
+
+    static func decodeAnswer(from reader: inout WireReader) throws(WireError) -> CredentialChoice {
+        let answer = try CredentialChoice(from: &reader)
+        return answer
+    }
+}
+
+extension CredentialSavePlan {
+    init(from reader: inout WireReader) throws(WireError) {
+        let kind = try CredentialSavePlanKind(from: &reader)
+        let id: UUID?
+        if try reader.readPresence() {
+            let idValue = try reader.readUUID()
+            id = idValue
+        } else {
+            id = nil
+        }
+        self.init(kind: kind, id: id)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        kind.encode(into: &writer)
+        if let present0 = id {
+            writer.writePresence(true)
+            writer.writeUUID(present0)
+        } else {
+            writer.writePresence(false)
+        }
+    }
+}
+
+extension CredentialSaveVerdict {
+    init(from reader: inout WireReader) throws(WireError) {
+        let validity = try CredentialSaveValidity(from: &reader)
+        self.init(validity: validity)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        validity.encode(into: &writer)
+    }
+}
+
+extension CredentialStoredComparison {
+    init(from reader: inout WireReader) throws(WireError) {
+        let id = try reader.readUUID()
+        let passwordMatches = try reader.readBool()
+        self.init(id: id, passwordMatches: passwordMatches)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeUUID(id)
+        writer.writeBool(passwordMatches)
+    }
+}
+
+extension CredentialUsernameHint {
+    init(from reader: inout WireReader) throws(WireError) {
+        let origin = try CredentialOrigin(from: &reader)
+        let topLevelOrigin = try CredentialOrigin(from: &reader)
+        let capturedAt = try reader.readDouble()
+        self.init(origin: origin, topLevelOrigin: topLevelOrigin, capturedAt: capturedAt)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        origin.encode(into: &writer)
+        topLevelOrigin.encode(into: &writer)
+        writer.writeDouble(capturedAt)
+    }
+}
+
 extension DownloadLimitReached {
     init(from reader: inout WireReader) throws(WireError) {
         let limit = try reader.readInt()
@@ -256,7 +722,7 @@ extension DownloadProgress {
     }
 
     func encodeQuery(into writer: inout WireWriter) {
-        writer.writeTag(0)
+        writer.writeTag(5)
         encode(into: &writer)
     }
 
@@ -318,7 +784,7 @@ extension DownloadRisk {
     }
 
     func encodeQuery(into writer: inout WireWriter) {
-        writer.writeTag(1)
+        writer.writeTag(6)
         encode(into: &writer)
     }
 
@@ -620,6 +1086,15 @@ extension DownloadsRemoved {
     }
 }
 
+extension DuplicateCredential {
+    init(from reader: inout WireReader) throws(WireError) {
+        self.init()
+    }
+
+    func encode(into writer: inout WireWriter) {
+    }
+}
+
 extension DuplicateDownload {
     init(from reader: inout WireReader) throws(WireError) {
         self.init()
@@ -703,6 +1178,42 @@ extension FinishDownload {
     }
 }
 
+extension InvalidCredentialDate {
+    init(from reader: inout WireReader) throws(WireError) {
+        self.init()
+    }
+
+    func encode(into writer: inout WireWriter) {
+    }
+}
+
+extension InvalidCredentialOrigin {
+    init(from reader: inout WireReader) throws(WireError) {
+        self.init()
+    }
+
+    func encode(into writer: inout WireWriter) {
+    }
+}
+
+extension InvalidCredentialRecord {
+    init(from reader: inout WireReader) throws(WireError) {
+        self.init()
+    }
+
+    func encode(into writer: inout WireWriter) {
+    }
+}
+
+extension InvalidCredentialUsername {
+    init(from reader: inout WireReader) throws(WireError) {
+        self.init()
+    }
+
+    func encode(into writer: inout WireWriter) {
+    }
+}
+
 extension InvalidDownloadIdentity {
     init(from reader: inout WireReader) throws(WireError) {
         self.init()
@@ -741,12 +1252,91 @@ extension InvalidDownloadText {
     }
 }
 
+extension InvalidPasswordLength {
+    init(from reader: inout WireReader) throws(WireError) {
+        let minimum = try reader.readInt()
+        let maximum = try reader.readInt()
+        self.init(minimum: minimum, maximum: maximum)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeInt(minimum)
+        writer.writeInt(maximum)
+    }
+}
+
 extension InvalidRetentionLifetime {
     init(from reader: inout WireReader) throws(WireError) {
         self.init()
     }
 
     func encode(into writer: inout WireWriter) {
+    }
+}
+
+extension MostRecentCredential {
+    init(from reader: inout WireReader) throws(WireError) {
+        let recordsCount = try reader.readCount()
+        var records: [CredentialRecord] = []
+        records.reserveCapacity(recordsCount)
+        for _ in 0..<recordsCount {
+            let recordsElement = try CredentialRecord(from: &reader)
+            records.append(recordsElement)
+        }
+        self.init(records: records)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeCount(records.count)
+        for element0 in records {
+            element0.encode(into: &writer)
+        }
+    }
+
+    func encodeQuery(into writer: inout WireWriter) {
+        writer.writeTag(7)
+        encode(into: &writer)
+    }
+
+    static func decodeAnswer(from reader: inout WireReader) throws(WireError) -> CredentialChoice {
+        let answer = try CredentialChoice(from: &reader)
+        return answer
+    }
+}
+
+extension PasskeyAccess {
+    init(from reader: inout WireReader) throws(WireError) {
+        let hasManagedCapability = try reader.readBool()
+        let deviceConfiguration = try PasskeyDeviceConfiguration(from: &reader)
+        let authorizationState = try PasskeyAuthorizationState(from: &reader)
+        self.init(hasManagedCapability: hasManagedCapability, deviceConfiguration: deviceConfiguration, authorizationState: authorizationState)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeBool(hasManagedCapability)
+        deviceConfiguration.encode(into: &writer)
+        authorizationState.encode(into: &writer)
+    }
+
+    func encodeQuery(into writer: inout WireWriter) {
+        writer.writeTag(8)
+        encode(into: &writer)
+    }
+
+    static func decodeAnswer(from reader: inout WireReader) throws(WireError) -> PasskeyAccessVerdict {
+        let answer = try PasskeyAccessVerdict(from: &reader)
+        return answer
+    }
+}
+
+extension PasskeyAccessVerdict {
+    init(from reader: inout WireReader) throws(WireError) {
+        let status = try PasskeyAccessStatus(from: &reader)
+        self.init(status: status)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        status.encode(into: &writer)
     }
 }
 
@@ -838,6 +1428,241 @@ extension SetDownloadDestination {
     }
 }
 
+extension StaleCredentialComparison {
+    init(from reader: inout WireReader) throws(WireError) {
+        self.init()
+    }
+
+    func encode(into writer: inout WireWriter) {
+    }
+}
+
+extension StrongPassword {
+    init(from reader: inout WireReader) throws(WireError) {
+        let length: Int?
+        if try reader.readPresence() {
+            let lengthValue = try reader.readInt()
+            length = lengthValue
+        } else {
+            length = nil
+        }
+        self.init(length: length)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        if let present0 = length {
+            writer.writePresence(true)
+            writer.writeInt(present0)
+        } else {
+            writer.writePresence(false)
+        }
+    }
+
+    func encodeQuery(into writer: inout WireWriter) {
+        writer.writeTag(9)
+        encode(into: &writer)
+    }
+
+    static func decodeAnswer(from reader: inout WireReader) throws(WireError) -> StrongPasswordRecipe {
+        let answer = try StrongPasswordRecipe(from: &reader)
+        return answer
+    }
+}
+
+extension StrongPasswordRecipe {
+    init(from reader: inout WireReader) throws(WireError) {
+        let length = try reader.readInt()
+        let groupsCount = try reader.readCount()
+        var groups: [String] = []
+        groups.reserveCapacity(groupsCount)
+        for _ in 0..<groupsCount {
+            let groupsElement = try reader.readString()
+            groups.append(groupsElement)
+        }
+        self.init(length: length, groups: groups)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeInt(length)
+        writer.writeCount(groups.count)
+        for element0 in groups {
+            writer.writeString(element0)
+        }
+    }
+}
+
+extension SystemPasswordOffer {
+    init(from reader: inout WireReader) throws(WireError) {
+        let spaceOffersSystemPasswords = try reader.readBool()
+        let availability = try SystemPasswordWriteThroughAvailability(from: &reader)
+        let isPrivateBrowsing = try reader.readBool()
+        self.init(spaceOffersSystemPasswords: spaceOffersSystemPasswords, availability: availability, isPrivateBrowsing: isPrivateBrowsing)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeBool(spaceOffersSystemPasswords)
+        availability.encode(into: &writer)
+        writer.writeBool(isPrivateBrowsing)
+    }
+
+    func encodeQuery(into writer: inout WireWriter) {
+        writer.writeTag(10)
+        encode(into: &writer)
+    }
+
+    static func decodeAnswer(from reader: inout WireReader) throws(WireError) -> SystemPasswordOfferDecision {
+        let answer = try SystemPasswordOfferDecision(from: &reader)
+        return answer
+    }
+}
+
+extension SystemPasswordOfferDecision {
+    init(from reader: inout WireReader) throws(WireError) {
+        let offers = try reader.readBool()
+        self.init(offers: offers)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeBool(offers)
+    }
+}
+
+extension SystemPasswordWriteThrough {
+    init(from reader: inout WireReader) throws(WireError) {
+        let isMobilePlatform = try reader.readBool()
+        let supportsSystemPasswordSaving = try reader.readBool()
+        let hasManagedBrowserCapability = try reader.readBool()
+        let isLaunchIsolated = try reader.readBool()
+        self.init(isMobilePlatform: isMobilePlatform, supportsSystemPasswordSaving: supportsSystemPasswordSaving, hasManagedBrowserCapability: hasManagedBrowserCapability, isLaunchIsolated: isLaunchIsolated)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeBool(isMobilePlatform)
+        writer.writeBool(supportsSystemPasswordSaving)
+        writer.writeBool(hasManagedBrowserCapability)
+        writer.writeBool(isLaunchIsolated)
+    }
+
+    func encodeQuery(into writer: inout WireWriter) {
+        writer.writeTag(11)
+        encode(into: &writer)
+    }
+
+    static func decodeAnswer(from reader: inout WireReader) throws(WireError) -> SystemPasswordWriteThroughSupport {
+        let answer = try SystemPasswordWriteThroughSupport(from: &reader)
+        return answer
+    }
+}
+
+extension SystemPasswordWriteThroughSupport {
+    init(from reader: inout WireReader) throws(WireError) {
+        let availability = try SystemPasswordWriteThroughAvailability(from: &reader)
+        self.init(availability: availability)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        availability.encode(into: &writer)
+    }
+}
+
+extension CredentialCaptureAction {
+    init(from reader: inout WireReader) throws(WireError) {
+        let rawValue = try reader.readEnum()
+        guard let value = CredentialCaptureAction(rawValue: rawValue) else {
+            throw WireError.malformed("Unknown CredentialCaptureAction \(rawValue)")
+        }
+        self = value
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeEnum(rawValue)
+    }
+}
+
+extension CredentialCaptureEvent {
+    init(from reader: inout WireReader) throws(WireError) {
+        let rawValue = try reader.readEnum()
+        guard let value = CredentialCaptureEvent(rawValue: rawValue) else {
+            throw WireError.malformed("Unknown CredentialCaptureEvent \(rawValue)")
+        }
+        self = value
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeEnum(rawValue)
+    }
+}
+
+extension CredentialFillSource {
+    init(from reader: inout WireReader) throws(WireError) {
+        let rawValue = try reader.readEnum()
+        guard let value = CredentialFillSource(rawValue: rawValue) else {
+            throw WireError.malformed("Unknown CredentialFillSource \(rawValue)")
+        }
+        self = value
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeEnum(rawValue)
+    }
+}
+
+extension CredentialPasswordKind {
+    init(from reader: inout WireReader) throws(WireError) {
+        let rawValue = try reader.readEnum()
+        guard let value = CredentialPasswordKind(rawValue: rawValue) else {
+            throw WireError.malformed("Unknown CredentialPasswordKind \(rawValue)")
+        }
+        self = value
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeEnum(rawValue)
+    }
+}
+
+extension CredentialSavePlanKind {
+    init(from reader: inout WireReader) throws(WireError) {
+        let rawValue = try reader.readEnum()
+        guard let value = CredentialSavePlanKind(rawValue: rawValue) else {
+            throw WireError.malformed("Unknown CredentialSavePlanKind \(rawValue)")
+        }
+        self = value
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeEnum(rawValue)
+    }
+}
+
+extension CredentialSaveValidity {
+    init(from reader: inout WireReader) throws(WireError) {
+        let rawValue = try reader.readEnum()
+        guard let value = CredentialSaveValidity(rawValue: rawValue) else {
+            throw WireError.malformed("Unknown CredentialSaveValidity \(rawValue)")
+        }
+        self = value
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeEnum(rawValue)
+    }
+}
+
+extension CredentialUsernameSource {
+    init(from reader: inout WireReader) throws(WireError) {
+        let rawValue = try reader.readEnum()
+        guard let value = CredentialUsernameSource(rawValue: rawValue) else {
+            throw WireError.malformed("Unknown CredentialUsernameSource \(rawValue)")
+        }
+        self = value
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeEnum(rawValue)
+    }
+}
+
 extension DownloadPhase {
     init(from reader: inout WireReader) throws(WireError) {
         let rawValue = try reader.readEnum()
@@ -871,6 +1696,62 @@ extension DownloadTextField {
         let rawValue = try reader.readEnum()
         guard let value = DownloadTextField(rawValue: rawValue) else {
             throw WireError.malformed("Unknown DownloadTextField \(rawValue)")
+        }
+        self = value
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeEnum(rawValue)
+    }
+}
+
+extension PasskeyAccessStatus {
+    init(from reader: inout WireReader) throws(WireError) {
+        let rawValue = try reader.readEnum()
+        guard let value = PasskeyAccessStatus(rawValue: rawValue) else {
+            throw WireError.malformed("Unknown PasskeyAccessStatus \(rawValue)")
+        }
+        self = value
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeEnum(rawValue)
+    }
+}
+
+extension PasskeyAuthorizationState {
+    init(from reader: inout WireReader) throws(WireError) {
+        let rawValue = try reader.readEnum()
+        guard let value = PasskeyAuthorizationState(rawValue: rawValue) else {
+            throw WireError.malformed("Unknown PasskeyAuthorizationState \(rawValue)")
+        }
+        self = value
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeEnum(rawValue)
+    }
+}
+
+extension PasskeyDeviceConfiguration {
+    init(from reader: inout WireReader) throws(WireError) {
+        let rawValue = try reader.readEnum()
+        guard let value = PasskeyDeviceConfiguration(rawValue: rawValue) else {
+            throw WireError.malformed("Unknown PasskeyDeviceConfiguration \(rawValue)")
+        }
+        self = value
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeEnum(rawValue)
+    }
+}
+
+extension SystemPasswordWriteThroughAvailability {
+    init(from reader: inout WireReader) throws(WireError) {
+        let rawValue = try reader.readEnum()
+        guard let value = SystemPasswordWriteThroughAvailability(rawValue: rawValue) else {
+            throw WireError.malformed("Unknown SystemPasswordWriteThroughAvailability \(rawValue)")
         }
         self = value
     }

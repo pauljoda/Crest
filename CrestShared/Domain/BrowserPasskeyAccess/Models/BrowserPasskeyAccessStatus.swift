@@ -1,12 +1,25 @@
 import Foundation
 
-enum BrowserPasskeyAccessStatus: String, Decodable, Equatable, Sendable {
+/// Passkey access for websites as the settings show it: the core's answer, or
+/// `checking` until one arrives.
+enum BrowserPasskeyAccessStatus: Equatable, Sendable {
     case checking
     case managedCapabilityRequired
     case deviceNotConfigured
     case notDetermined
     case authorized
     case denied
+
+    init(_ status: PasskeyAccessStatus) {
+        self =
+            switch status {
+            case .managedCapabilityRequired: .managedCapabilityRequired
+            case .deviceNotConfigured: .deviceNotConfigured
+            case .notDetermined: .notDetermined
+            case .authorized: .authorized
+            case .denied: .denied
+            }
+    }
 
     var title: String {
         switch self {
@@ -74,20 +87,8 @@ enum BrowserPasskeyAccessStatus: String, Decodable, Equatable, Sendable {
     }
 }
 
-enum BrowserPasskeyAuthorizationState: String, Encodable, Equatable, Sendable {
-    case authorized
-    case denied
-    case notDetermined
-}
-
 enum BrowserPasskeyCredentialAccessScope: Equatable, Sendable {
     case applicationWideSystemProvider
-}
-
-enum BrowserPasskeyDeviceConfiguration: String, Encodable, Equatable, Sendable {
-    case configured
-    case notConfigured
-    case unknown
 }
 
 struct BrowserPasskeyPrivacyBoundary: Equatable, Sendable {

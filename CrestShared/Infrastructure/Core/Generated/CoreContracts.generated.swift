@@ -25,13 +25,21 @@ enum Change: Equatable, Sendable {
 
 /// The rule that refused an intent or a query.
 enum Rejection: Equatable, Error, Sendable {
+    case credentialRecordLimitReached(CredentialRecordLimitReached)
     case downloadLimitReached(DownloadLimitReached)
+    case duplicateCredential(DuplicateCredential)
     case duplicateDownload(DuplicateDownload)
+    case invalidCredentialDate(InvalidCredentialDate)
+    case invalidCredentialOrigin(InvalidCredentialOrigin)
+    case invalidCredentialRecord(InvalidCredentialRecord)
+    case invalidCredentialUsername(InvalidCredentialUsername)
     case invalidDownloadIdentity(InvalidDownloadIdentity)
     case invalidDownloadProgress(InvalidDownloadProgress)
     case invalidDownloadSample(InvalidDownloadSample)
     case invalidDownloadText(InvalidDownloadText)
+    case invalidPasswordLength(InvalidPasswordLength)
     case invalidRetentionLifetime(InvalidRetentionLifetime)
+    case staleCredentialComparison(StaleCredentialComparison)
 }
 
 extension CoreState {
@@ -74,6 +82,118 @@ struct BlockAutomaticDownload: Intent, Equatable, Sendable {
 struct CancelDownload: Intent, Equatable, Sendable {
     let downloadID: UUID
     let message: String
+}
+
+struct CredentialCapture: Query, Equatable, Sendable {
+    typealias Answer = CredentialCaptureDecision
+
+    let facts: CredentialFormFacts
+    let hint: CredentialUsernameHint?
+    let pending: CredentialPendingCandidate?
+    let now: Double
+}
+
+struct CredentialCaptureDecision: Equatable, Sendable {
+    let action: CredentialCaptureAction
+    let usernameSource: CredentialUsernameSource
+    let clearsUsernameHint: Bool
+    let isCrossOriginFrame: Bool
+    let anchorsToField: Bool
+    let candidateLifetime: Double
+    let usernameHintLifetime: Double
+}
+
+struct CredentialChoice: Equatable, Sendable {
+    let credentialID: UUID?
+}
+
+struct CredentialFill: Query, Equatable, Sendable {
+    typealias Answer = CredentialFillDecision
+
+    let source: CredentialFillSource
+    let passwordKind: CredentialPasswordKind
+}
+
+struct CredentialFillDecision: Equatable, Sendable {
+    let isAllowed: Bool
+}
+
+struct CredentialFormFacts: Equatable, Sendable {
+    let event: CredentialCaptureEvent
+    let frameOrigin: CredentialOrigin
+    let topLevelOrigin: CredentialOrigin
+    let isMainFrame: Bool
+    let hasFormID: Bool
+    let hasUsername: Bool
+    let hasPassword: Bool
+    let passwordKind: CredentialPasswordKind?
+    let hasVisiblePasswordField: Bool?
+    let hasFillTarget: Bool
+}
+
+struct CredentialOrigin: Equatable, Sendable {
+    let scheme: String
+    let host: String
+    let port: Int
+}
+
+struct CredentialPendingCandidate: Equatable, Sendable {
+    let origin: CredentialOrigin
+    let submittedAt: Double
+}
+
+struct CredentialRecord: Equatable, Sendable, Identifiable {
+    let id: UUID
+    let username: String?
+    let updatedAt: Double
+    let lastUsedAt: Double?
+}
+
+struct CredentialRecordLimitReached: Equatable, Sendable {
+    let limit: Int
+}
+
+struct CredentialSave: Query, Equatable, Sendable {
+    typealias Answer = CredentialSavePlan
+
+    let matchID: UUID?
+    let stored: CredentialStoredComparison?
+}
+
+struct CredentialSaveCheck: Query, Equatable, Sendable {
+    typealias Answer = CredentialSaveVerdict
+
+    let origin: CredentialOrigin
+    let topLevelOrigin: CredentialOrigin
+    let submittedAt: Double
+    let now: Double
+}
+
+struct CredentialSaveMatch: Query, Equatable, Sendable {
+    typealias Answer = CredentialChoice
+
+    let username: String
+    let records: [CredentialRecord]
+}
+
+struct CredentialSavePlan: Equatable, Sendable, Identifiable {
+    let kind: CredentialSavePlanKind
+    let id: UUID?
+}
+
+struct CredentialSaveVerdict: Equatable, Sendable {
+    let validity: CredentialSaveValidity
+}
+
+struct CredentialStoredComparison: Equatable, Sendable, Identifiable {
+    let id: UUID
+    let passwordMatches: Bool
+}
+
+struct CredentialUsernameHint: Equatable, Sendable {
+    let origin: CredentialOrigin
+    let topLevelOrigin: CredentialOrigin
+    let capturedAt: Double
 }
 
 struct DownloadLimitReached: Equatable, Sendable {
@@ -168,6 +288,9 @@ struct DownloadsRemoved: Equatable, Sendable {
     let downloadIDs: [UUID]
 }
 
+struct DuplicateCredential: Equatable, Sendable {
+}
+
 struct DuplicateDownload: Equatable, Sendable {
 }
 
@@ -186,6 +309,18 @@ struct FinishDownload: Intent, Equatable, Sendable {
     let finalByteCount: Int64?
 }
 
+struct InvalidCredentialDate: Equatable, Sendable {
+}
+
+struct InvalidCredentialOrigin: Equatable, Sendable {
+}
+
+struct InvalidCredentialRecord: Equatable, Sendable {
+}
+
+struct InvalidCredentialUsername: Equatable, Sendable {
+}
+
 struct InvalidDownloadIdentity: Equatable, Sendable {
 }
 
@@ -199,7 +334,30 @@ struct InvalidDownloadText: Equatable, Sendable {
     let field: DownloadTextField
 }
 
+struct InvalidPasswordLength: Equatable, Sendable {
+    let minimum: Int
+    let maximum: Int
+}
+
 struct InvalidRetentionLifetime: Equatable, Sendable {
+}
+
+struct MostRecentCredential: Query, Equatable, Sendable {
+    typealias Answer = CredentialChoice
+
+    let records: [CredentialRecord]
+}
+
+struct PasskeyAccess: Query, Equatable, Sendable {
+    typealias Answer = PasskeyAccessVerdict
+
+    let hasManagedCapability: Bool
+    let deviceConfiguration: PasskeyDeviceConfiguration
+    let authorizationState: PasskeyAuthorizationState
+}
+
+struct PasskeyAccessVerdict: Equatable, Sendable {
+    let status: PasskeyAccessStatus
 }
 
 struct RecordDownloadTransfer: Intent, Equatable, Sendable {
@@ -226,7 +384,93 @@ struct SetDownloadDestination: Intent, Equatable, Sendable {
     let filename: String
 }
 
+struct StaleCredentialComparison: Equatable, Sendable {
+}
+
+struct StrongPassword: Query, Equatable, Sendable {
+    typealias Answer = StrongPasswordRecipe
+
+    let length: Int?
+}
+
+struct StrongPasswordRecipe: Equatable, Sendable {
+    let length: Int
+    let groups: [String]
+}
+
+struct SystemPasswordOffer: Query, Equatable, Sendable {
+    typealias Answer = SystemPasswordOfferDecision
+
+    let spaceOffersSystemPasswords: Bool
+    let availability: SystemPasswordWriteThroughAvailability
+    let isPrivateBrowsing: Bool
+}
+
+struct SystemPasswordOfferDecision: Equatable, Sendable {
+    let offers: Bool
+}
+
+struct SystemPasswordWriteThrough: Query, Equatable, Sendable {
+    typealias Answer = SystemPasswordWriteThroughSupport
+
+    let isMobilePlatform: Bool
+    let supportsSystemPasswordSaving: Bool
+    let hasManagedBrowserCapability: Bool
+    let isLaunchIsolated: Bool
+}
+
+struct SystemPasswordWriteThroughSupport: Equatable, Sendable {
+    let availability: SystemPasswordWriteThroughAvailability
+}
+
 // MARK: - Enums
+
+enum CredentialCaptureAction: Int, CaseIterable, Sendable {
+    case ignore = 0
+    case rememberUsername = 1
+    case dismissFill = 2
+    case offerFill = 3
+    case captureCandidate = 4
+    case offerSave = 5
+    case keepPending = 6
+    case discardPending = 7
+}
+
+enum CredentialCaptureEvent: Int, CaseIterable, Sendable {
+    case username = 0
+    case focus = 1
+    case submit = 2
+    case documentState = 3
+    case filled = 4
+}
+
+enum CredentialFillSource: Int, CaseIterable, Sendable {
+    case saved = 0
+    case generated = 1
+}
+
+enum CredentialPasswordKind: Int, CaseIterable, Sendable {
+    case current = 0
+    case new = 1
+}
+
+enum CredentialSavePlanKind: Int, CaseIterable, Sendable {
+    case create = 0
+    case update = 1
+    case alreadyStored = 2
+}
+
+enum CredentialSaveValidity: Int, CaseIterable, Sendable {
+    case accepted = 0
+    case insecureOrigin = 1
+    case stale = 2
+}
+
+enum CredentialUsernameSource: Int, CaseIterable, Sendable {
+    case none = 0
+    case explicit = 1
+    case hint = 2
+}
 
 enum DownloadPhase: Int, CaseIterable, Sendable {
     case preparing = 0
@@ -249,4 +493,32 @@ enum DownloadTextField: Int, CaseIterable, Sendable {
     case destination = 1
     case message = 2
     case mimeType = 3
+}
+
+enum PasskeyAccessStatus: Int, CaseIterable, Sendable {
+    case managedCapabilityRequired = 0
+    case deviceNotConfigured = 1
+    case notDetermined = 2
+    case authorized = 3
+    case denied = 4
+}
+
+enum PasskeyAuthorizationState: Int, CaseIterable, Sendable {
+    case authorized = 0
+    case denied = 1
+    case notDetermined = 2
+}
+
+enum PasskeyDeviceConfiguration: Int, CaseIterable, Sendable {
+    case configured = 0
+    case notConfigured = 1
+    case unknown = 2
+}
+
+enum SystemPasswordWriteThroughAvailability: Int, CaseIterable, Sendable {
+    case available = 0
+    case unsupportedPlatform = 1
+    case isolatedLaunch = 2
+    case systemVersionRequired = 3
+    case managedBrowserCapabilityRequired = 4
 }

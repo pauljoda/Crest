@@ -6,29 +6,27 @@ enum BrowserSystemPasswordWriteThroughSystem {
     private static let buildManifestKey =
         "CrestSystemPasswordWriteThroughManagedCapability"
 
-    static var launchAvailability: BrowserSystemPasswordWriteThroughAvailability {
-        availability(for: .current)
-    }
-
-    static func availability(
-        for launchEnvironment: BrowserLaunchEnvironment
-    ) -> BrowserSystemPasswordWriteThroughAvailability {
-        BrowserCorePolicy.systemPasswordWriteThroughAvailability(
+    /// This launch's platform facts for the core's write-through rule.
+    static func facts(
+        for launchEnvironment: BrowserLaunchEnvironment = .current
+    ) -> SystemPasswordWriteThrough {
+        SystemPasswordWriteThrough(
             isMobilePlatform: true,
-            supportsSystemAPI: supportsSystemAPI,
+            supportsSystemPasswordSaving: supportsSystemPasswordSaving,
             hasManagedBrowserCapability: hasManagedBrowserCapability,
-            isLaunchIsolated:
-                launchEnvironment.requiresIsolation
+            isLaunchIsolated: launchEnvironment.requiresIsolation
         )
     }
 
+    /// Offers the candidate to the system's Passwords app. `availability` is
+    /// the core's answer for this launch; anything but `available` refuses.
     static func offer(
         candidate: BrowserCredentialSaveCandidate,
         title: String,
         anchor: ASPresentationAnchor?,
-        launchEnvironment: BrowserLaunchEnvironment = .current
+        availability: SystemPasswordWriteThroughAvailability
     ) async throws {
-        guard availability(for: launchEnvironment) == .available else {
+        guard availability == .available else {
             throw BrowserSystemPasswordWriteThroughError.unavailable
         }
         guard let anchor else {
@@ -52,7 +50,7 @@ enum BrowserSystemPasswordWriteThroughSystem {
         )
     }
 
-    private static var supportsSystemAPI: Bool {
+    private static var supportsSystemPasswordSaving: Bool {
         if #available(iOS 26.2, *) {
             true
         } else {

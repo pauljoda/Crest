@@ -1,11 +1,8 @@
 import SwiftUI
 
 struct BrowserPasskeyAccessView: View {
-    @State private var access: BrowserPasskeyAccessController
-
-    init(access: BrowserPasskeyAccessController = .shared) {
-        _access = State(initialValue: access)
-    }
+    /// The app's one passkey controller, shared with the pages that refresh it.
+    @Environment(BrowserPasskeyAccessController.self) private var access
 
     var body: some View {
         VStack(alignment: .leading, spacing: CrestSpacing.medium) {
