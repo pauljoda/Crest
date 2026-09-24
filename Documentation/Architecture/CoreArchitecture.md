@@ -35,7 +35,11 @@ site shows which one it uses.
   through an `EnginePage`: embedding the view, input, scrolling, zoom, find,
   reload, back and forward, DevTools, printing and capture. `EnginePage` has
   no method that changes browser state. What those actions cause, such as a
-  committed navigation, reaches the core as an engine event.
+  committed navigation, reaches the core as an engine event. Presentation
+  values that change constantly and that no rule reads also come straight
+  from `EnginePage`: load progress, find highlights, the hovered link,
+  fullscreen and the zoom value. Routing them through the core would add
+  work on every update and buy nothing.
 
 ```swift
 struct PageCard: View {
@@ -131,7 +135,7 @@ for `EnginePage` lists every direct engine call.
 | --- | --- | --- | --- |
 | `Session` | Spaces, each with its profile, tabs, folders, splits, history and archive | Yes | Yes, as today |
 | `Device` | Windows and what each shows (the Space, and the tab in each Space), split column shares, engine choices per site, device-local preferences | Yes, in the device store | Never |
-| `Pages` | Each open page: its tab, its engine, and live state (URL and title before commit, loading, progress, security, media) | Never | Never |
+| `Pages` | Each open page: its owner (a tab, or a Quick Window or Peek request), its engine, and the live state rules read (URL and title before commit, loading, back and forward availability, security, failure, media activity) | Never | Never |
 | `Prompts` | Permission, authentication and other questions waiting on the person | Never | Never |
 | `Engines` | The registered engine bindings and their capabilities | Never | Never |
 | `Downloads`, `Permissions` | The existing ledgers, with the permission records saved as today | As today | Never |
