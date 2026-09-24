@@ -2377,6 +2377,10 @@
     "closed-blank-window-stays-closed": {
       "category": "internal",
       "message": "A closed Blank Window no longer leaves a hidden workspace behind while its window is torn down."
+    },
+    "generator-narrowed-unions": {
+      "category": "internal",
+      "message": "The contract generator lets a field hold only the intents that derive from one base, so a query can take exactly the intents it answers for."
     }
   }
 }

@@ -81,6 +81,9 @@ public sealed unsafe class ContractCodecTests {
         if (type.IsEnum) return Enum.GetValues(type).Cast<object>().Last();
         if (SetMembers(type) is { } members) return members[^1];
         if (Roots.Contains(type)) return Sample(RootMembers(type).First(), null, optionals);
+        if (type.IsAbstract && Roots.Any(root => root.IsAssignableFrom(type)))
+            return Sample(Contracts.GetExportedTypes().Where(member => member is { IsAbstract: false } && type.IsAssignableFrom(member))
+                .OrderBy(member => member.Name, StringComparer.Ordinal).First(), null, optionals);
         if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(IReadOnlyList<>)) {
             var element = type.GetGenericArguments()[0];
             var items = Array.CreateInstance(element, 2);
@@ -221,6 +224,32 @@ public sealed unsafe class ContractCodecTests {
         Assert.DoesNotContain("tag", swift, StringComparison.Ordinal);
         Assert.DoesNotContain("extension Engine {", SwiftEmitter.EmitCodec(schema), StringComparison.Ordinal);
         Assert.DoesNotContain("ReadEngine(", CSharpCodecEmitter.Emit(schema), StringComparison.Ordinal);
+    }
+
+    /// A field typed as an abstract intent holds only the intents that derive
+    /// from it, travelling with their intent tags, so each side refuses any
+    /// other intent where the field is read.
+    [Fact]
+    public void AFieldTypedAsAUnionBaseHoldsOnlyItsMembersUnderTheirRootTags() {
+        var schema = ContractSchema.Load([typeof(Narrowed.Slide), typeof(Narrowed.Jump), typeof(Narrowed.Resign), typeof(Narrowed.MoveCheck)]);
+        string codec = CSharpCodecEmitter.Emit(schema);
+        string swift = SwiftEmitter.EmitContracts(schema);
+        string swiftCodec = SwiftEmitter.EmitCodec(schema);
+
+        Assert.Contains("record MoveCheck(Move: union:Intent/Move)", schema.Canonical, StringComparison.Ordinal);
+        Assert.Contains("base Move of intent Jump Slide\n", schema.Canonical, StringComparison.Ordinal);
+        Assert.Contains("case 0: return ReadJump(reader);", codec, StringComparison.Ordinal);
+        Assert.Contains("case 2: return ReadSlide(reader);", codec, StringComparison.Ordinal);
+        Assert.Contains("Intent tag {tag} is not a Move.", codec, StringComparison.Ordinal);
+        Assert.Contains("public static void WriteMove(WireWriter writer, Move value) => WriteIntent(writer, value);", codec,
+            StringComparison.Ordinal);
+        Assert.Contains("protocol Move: Intent {}", swift, StringComparison.Ordinal);
+        Assert.Contains("struct Slide: Intent, Move, Equatable, Sendable {", swift, StringComparison.Ordinal);
+        Assert.Contains("struct Resign: Intent, Equatable, Sendable {", swift, StringComparison.Ordinal);
+        Assert.Contains("    let move: any Move\n", swift, StringComparison.Ordinal);
+        Assert.Contains("static func decodeMove(from reader: inout WireReader) throws(WireError) -> any Move {", swiftCodec,
+            StringComparison.Ordinal);
+        Assert.Contains("move.encodeIntent(into: &writer)", swiftCodec, StringComparison.Ordinal);
     }
 
     [Theory]

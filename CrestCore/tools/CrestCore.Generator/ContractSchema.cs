@@ -103,7 +103,10 @@ internal sealed record EnumField(Type Type) : FieldType;
 
 internal sealed record RecordField(Type Type) : FieldType;
 
-internal sealed record RootField(ContractRoot Root) : FieldType;
+/// A union: any member of `Root`, or with `Base` only the members that derive
+/// from that abstract record. Either travels as the root's tag followed by the
+/// member's fields.
+internal sealed record RootField(ContractRoot Root, Type? Base = null) : FieldType;
 
 internal sealed record ListField(FieldType Element) : FieldType;
 
@@ -225,6 +228,8 @@ internal sealed class ContractSchema {
     private readonly Dictionary<Type, ContractEnum> enums = [];
     private readonly Dictionary<Type, ContractSet> sets = [];
     private readonly Dictionary<ContractRoot, List<ContractMember>> roots = [];
+    /// The abstract records a field narrows a root to, with their root.
+    private readonly Dictionary<Type, ContractRoot> bases = [];
     private readonly NullabilityInfoContext nullability = new();
 
     /// Every record, root members included, in ordinal name order.
@@ -233,6 +238,10 @@ internal sealed class ContractSchema {
     public IReadOnlyList<ContractEnum> Enums => [.. enums.Values.OrderBy(item => item.Name, StringComparer.Ordinal)];
 
     public IReadOnlyList<ContractSet> Sets => [.. sets.Values.OrderBy(set => set.Name, StringComparer.Ordinal)];
+
+    /// Every abstract record a field narrows a root to, in ordinal name order.
+    public IReadOnlyList<RootField> Bases =>
+        [.. bases.OrderBy(pair => pair.Key.Name, StringComparer.Ordinal).Select(pair => new RootField(pair.Value, pair.Key))];
 
     public string Canonical { get; private set; } = "";
 
@@ -389,6 +398,7 @@ internal sealed class ContractSchema {
         if (type == typeof(TimeSpan)) return new PrimitiveField(Primitive.Duration);
         if (type == typeof(byte[])) return new PrimitiveField(Primitive.Bytes);
         if (ContractRoot.All.FirstOrDefault(root => root.Type == type) is { } union) return new RootField(union);
+        if (NarrowedUnion(type, where) is { } narrowed) return narrowed;
         if (type.IsEnum) return DescribeEnum(type, where);
         if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(IReadOnlyList<>))
             return new ListField(Resolve(type.GetGenericArguments()[0], info?.GenericTypeArguments.FirstOrDefault(), $"{where}[]"));
@@ -403,6 +413,24 @@ internal sealed class ContractSchema {
             return new RecordField(type);
         }
         throw new ContractSchemaException($"{where}: unsupported type {Display(type)}.");
+    }
+
+    /// A field typed as an abstract contract record that members of a root
+    /// derive from, such as the imports among the intents, holds one of those
+    /// members. Only a root the core reads narrows this way, so the core is
+    /// the one reader that refuses any other member.
+    private RootField? NarrowedUnion(Type type, string where) {
+        if (type is not { IsClass: true, IsAbstract: true }
+            || ContractRoot.All.FirstOrDefault(root => !root.HasAnswer && root.Type != type && root.Type.IsAssignableFrom(type))
+                is not { } root)
+            return null;
+        if (!type.IsPublic || type.IsGenericType)
+            throw new ContractSchemaException($"{where}: union base {type.Name} must be public and non-generic.");
+        if (!root.TravelsToCore)
+            throw new ContractSchemaException($"{where}: {type.Name} narrows {root.Name}, which the core writes; only a root the "
+                + "core reads narrows to a base.");
+        bases[type] = root;
+        return new RootField(root, type);
     }
 
     private EnumField DescribeEnum(Type type, string where) {
@@ -653,13 +681,16 @@ internal sealed class ContractSchema {
 
     private void Validate() {
         var duplicate = records.Keys.Select(type => type.Name).Concat(enums.Keys.Select(type => type.Name))
-            .Concat(sets.Keys.Select(type => type.Name))
+            .Concat(sets.Keys.Select(type => type.Name)).Concat(bases.Keys.Select(type => type.Name))
             .GroupBy(name => name, StringComparer.Ordinal).FirstOrDefault(group => group.Count() > 1);
         if (duplicate is not null)
             throw new ContractSchemaException($"{duplicate.Key}: contract type names must be unique, because Swift has one namespace.");
         foreach (var record in records.Values)
             foreach (var field in record.Wire) ValidateLists(field.Type, $"{record.Name}.{field.Name}");
         foreach (var record in records.Values.Where(record => record.IsObserved)) ValidateObserved(record);
+        foreach (var narrowed in Bases)
+            if (Members(narrowed).Count == 0)
+                throw new ContractSchemaException($"{narrowed.Base!.Name}: a union base needs at least one concrete member of {narrowed.Root}.");
     }
 
     /// An observed model reads its record back through `value` and is told
@@ -714,6 +745,11 @@ internal sealed class ContractSchema {
     /// The root's concrete types in tag order.
     public IReadOnlyList<ContractMember> Members(ContractRoot root) => roots[root];
 
+    /// The concrete types a union field holds, in tag order: every member of
+    /// its root, or those that derive from its base.
+    public IReadOnlyList<ContractMember> Members(RootField union) =>
+        union.Base is { } narrowed ? [.. roots[union.Root].Where(member => narrowed.IsAssignableFrom(member.Record.Type))] : roots[union.Root];
+
     #endregion
 
     #region Actions - Canonical form
@@ -745,6 +781,9 @@ internal sealed class ContractSchema {
                 text.Append(root.Name.ToLowerInvariant()).Append(' ').Append(member.Tag).Append(' ').Append(member.Name)
                     .Append(member.Answer is { } answer ? $" -> {Describe(answer)}" : "")
                     .Append(member.MaximumBytes is { } limit ? $" limit={limit.ToString(CultureInfo.InvariantCulture)}" : "").Append('\n');
+        foreach (var narrowed in Bases)
+            text.Append("base ").Append(narrowed.Base!.Name).Append(" of ").Append(narrowed.Root.Name.ToLowerInvariant())
+                .Append(string.Concat(Members(narrowed).Select(member => $" {member.Name}"))).Append('\n');
         return text.ToString();
     }
 
@@ -755,6 +794,7 @@ internal sealed class ContractSchema {
         LocalizedField => "localized",
         KindsField kinds => $"kinds<{string.Join(", ", Enum.GetNames(kinds.Type))}>",
         RecordField record => $"record:{record.Type.Name}",
+        RootField { Base: { } narrowed } root => $"union:{root.Root}/{narrowed.Name}",
         RootField root => $"union:{root.Root}",
         ListField list => $"list<{Describe(list.Element)}>",
         OptionalField optional => $"optional<{Describe(optional.Value)}>",

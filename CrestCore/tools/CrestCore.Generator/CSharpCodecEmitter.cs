@@ -36,6 +36,7 @@ internal static class CSharpCodecEmitter {
         code.Append("        ").Append(string.Join(", ", schema.EngineFingerprint.Select(value => $"0x{value:x2}"))).Append('\n');
         code.Append("    ];\n");
         foreach (var root in ContractRoot.All) EmitRoot(code, schema, root);
+        foreach (var narrowed in schema.Bases) EmitBase(code, schema, narrowed);
         foreach (var root in ContractRoot.All.Where(root => root.TravelsToCore)) EmitLimits(code, schema, root);
         EmitAnswers(code, schema);
         foreach (var record in schema.Records) EmitRecord(code, record);
@@ -66,6 +67,18 @@ internal static class CSharpCodecEmitter {
         }
         code.Append($"            default: throw new ArgumentOutOfRangeException(nameof(value), value.GetType().Name, \"Not a contract {root}.\");\n");
         code.Append("        }\n    }\n");
+    }
+
+    /// A union base reads only the tags of its root's members that derive
+    /// from it, and writes as its root does.
+    private static void EmitBase(StringBuilder code, ContractSchema schema, RootField narrowed) {
+        string name = narrowed.Base!.Name;
+        code.Append('\n').Append($"    public static {name} Read{name}(WireReader reader) {{\n");
+        code.Append("        int tag = reader.ReadTag();\n        switch (tag) {\n");
+        foreach (var member in schema.Members(narrowed))
+            code.Append($"            case {member.Tag}: return Read{member.Name}(reader);\n");
+        code.Append($"            default: throw new WireFormatException($\"{narrowed.Root} tag {{tag}} is not a {name}.\");\n        }}\n    }}\n");
+        code.Append('\n').Append($"    public static void Write{name}(WireWriter writer, {name} value) => Write{narrowed.Root}(writer, value);\n");
     }
 
     /// The most bytes one encoded message with a tag may take, which the
@@ -155,6 +168,7 @@ internal static class CSharpCodecEmitter {
         EnumField item => $"Read{item.Type.Name}(reader)",
         SetField set => $"Read{set.Type.Name}(reader)",
         RecordField record => $"Read{record.Type.Name}(reader)",
+        RootField { Base: { } narrowed } => $"Read{narrowed.Name}(reader)",
         RootField root => $"Read{root.Root}(reader)",
         ListField list => $"reader.ReadList(() => {Read(list.Element)})",
         OptionalField optional => $"reader.ReadPresence() ? ({TypeName(optional)}){Read(optional.Value)} : null",
@@ -199,6 +213,7 @@ internal static class CSharpCodecEmitter {
         EnumField item => item.Type.Name,
         SetField set => set.Type.Name,
         RecordField record => record.Type.Name,
+        RootField { Base: { } narrowed } => narrowed.Name,
         RootField root => root.Root.ToString(),
         ListField list => $"IReadOnlyList<{TypeName(list.Element)}>",
         OptionalField optional => $"{TypeName(optional.Value)}?",
