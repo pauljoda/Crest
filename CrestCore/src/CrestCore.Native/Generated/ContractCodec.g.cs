@@ -14,7 +14,7 @@ namespace CrestCore.Native;
 public static class ContractCodec {
     /// <summary>SHA-256 of the canonical contract schema.</summary>
     public static ReadOnlySpan<byte> Fingerprint => [
-        0xb8, 0xb1, 0x7c, 0x04, 0xec, 0x13, 0x29, 0x06, 0xb2, 0x57, 0x0e, 0x82, 0xb4, 0x42, 0xf4, 0xef, 0x12, 0x37, 0x8f, 0x54, 0x13, 0xeb, 0xe7, 0x8b, 0x06, 0xf2, 0xd3, 0x47, 0xa7, 0x20, 0xfb, 0x1a
+        0xe0, 0xe4, 0xdf, 0x7e, 0x61, 0x1a, 0xfa, 0xb2, 0x0d, 0x2b, 0xa0, 0x6c, 0xbf, 0x45, 0xd4, 0x20, 0x30, 0x8c, 0x7e, 0x04, 0x46, 0x53, 0x97, 0xad, 0xcf, 0x86, 0xf9, 0x9f, 0xf5, 0x51, 0x2f, 0xac
     ];
 
     public static Intent ReadIntent(WireReader reader) {
@@ -2297,6 +2297,17 @@ public static class ContractCodec {
         writer.WriteEnum(TagOf(LinkRouteMatch.All, value));
     }
 
+    public static MemoryPressureLevel ReadMemoryPressureLevel(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return MemoryPressureLevel.All[reader.ReadEnum(MemoryPressureLevel.All.Count)];
+    }
+
+    public static void WriteMemoryPressureLevel(WireWriter writer, MemoryPressureLevel value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteEnum(TagOf(MemoryPressureLevel.All, value));
+    }
+
     public static NumberedSelectionTarget ReadNumberedSelectionTarget(WireReader reader) {
         ArgumentNullException.ThrowIfNull(reader);
         return NumberedSelectionTarget.All[reader.ReadEnum(NumberedSelectionTarget.All.Count)];
@@ -2339,6 +2350,17 @@ public static class ContractCodec {
         ArgumentNullException.ThrowIfNull(writer);
         ArgumentNullException.ThrowIfNull(value);
         writer.WriteEnum(TagOf(ShortcutSection.All, value));
+    }
+
+    public static ShortcutSpecialKey ReadShortcutSpecialKey(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return ShortcutSpecialKey.All[reader.ReadEnum(ShortcutSpecialKey.All.Count)];
+    }
+
+    public static void WriteShortcutSpecialKey(WireWriter writer, ShortcutSpecialKey value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteEnum(TagOf(ShortcutSpecialKey.All, value));
     }
 
     public static SitePermission ReadSitePermission(WireReader reader) {

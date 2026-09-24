@@ -12,7 +12,7 @@ struct BrowserMemoryPressureCoalescer {
     static let defaultWindow: TimeInterval = 1
 
     private let window: TimeInterval
-    private var handled: (level: BrowserMemoryPressureLevel, time: Date)?
+    private var handled: (level: MemoryPressureLevel, time: Date)?
 
     init(window: TimeInterval = BrowserMemoryPressureCoalescer.defaultWindow) {
         precondition(window >= 0)
@@ -23,7 +23,7 @@ struct BrowserMemoryPressureCoalescer {
     /// is. A clock that jumped either way is treated as a new window rather than
     /// as a reason to skip handling the signal.
     mutating func shouldHandle(
-        _ level: BrowserMemoryPressureLevel,
+        _ level: MemoryPressureLevel,
         at time: Date
     ) -> Bool {
         if let handled,

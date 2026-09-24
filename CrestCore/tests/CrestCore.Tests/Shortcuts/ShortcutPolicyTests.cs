@@ -42,6 +42,14 @@ public sealed class ShortcutPolicyTests {
     private static ShortcutChord? Default(string command, DevicePlatform platform) =>
         ShortcutCommand.Named(command)?.DefaultShortcut(platform) is { } fallback ? ShortcutChord.Of(fallback.Keys) : null;
 
+    /// Persisted overrides name a special key by its name.
+    [Fact]
+    public void EverySpecialKeyKeepsTheNameOverridesArePersistedUnder() => Assert.Equal([
+        "tab", "leftArrow", "rightArrow", "upArrow", "downArrow", "escape", "returnKey", "delete", "forwardDelete", "home", "end",
+        "pageUp", "pageDown", "space", "f1", "f2", "f3", "f4", "f5", "f6", "f7", "f8", "f9", "f10", "f11", "f12", "f13", "f14",
+        "f15", "f16", "f17", "f18", "f19", "f20"
+    ], ShortcutSpecialKey.All.Select(key => key.Name));
+
     [Fact]
     public void EveryCommandKeepsTheNameItsOverridesArePersistedUnder() {
         Assert.Equal(Commands, ShortcutCommand.All.Select(command => command.Name));

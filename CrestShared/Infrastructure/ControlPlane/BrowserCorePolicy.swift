@@ -85,8 +85,8 @@ enum BrowserCorePolicy {
     }
 
     private struct ReleaseLimitRequest: Encodable {
-        let level: BrowserMemoryPressureLevel
-        let platform: BrowserMemoryPressurePlatform
+        let level: MemoryPressureLevel
+        let platform: DevicePlatform
         let eligiblePageCount: Int
     }
 
@@ -103,8 +103,8 @@ enum BrowserCorePolicy {
             @BrowserCoreNullable var presentedIndex: Int?
         }
 
-        let level: BrowserMemoryPressureLevel
-        let platform: BrowserMemoryPressurePlatform
+        let level: MemoryPressureLevel
+        let platform: DevicePlatform
         @BrowserCoreNullable var focusedIndex: Int?
         let candidates: [Candidate]
     }
@@ -222,8 +222,8 @@ enum BrowserCorePolicy {
     /// How many eligible pages this squeeze may take back. A core that cannot
     /// answer releases nothing rather than guessing at a budget.
     static func memoryPressureReleaseLimit(
-        level: BrowserMemoryPressureLevel, eligiblePageCount: Int,
-        platform: BrowserMemoryPressurePlatform
+        level: MemoryPressureLevel, eligiblePageCount: Int,
+        platform: DevicePlatform
     ) -> Int {
         let request = ReleaseLimitRequest(level: level, platform: platform, eligiblePageCount: eligiblePageCount)
         guard let limit = evaluate(.residencyReleaseLimit, request, answer: ReleaseLimitAnswer.self)?.limit,
@@ -237,7 +237,7 @@ enum BrowserCorePolicy {
     /// after every await; `presentedFallback` is only used when the off-screen
     /// sweep released nobody at all.
     static func residencyReleasePlan(
-        level: BrowserMemoryPressureLevel, platform: BrowserMemoryPressurePlatform,
+        level: MemoryPressureLevel, platform: DevicePlatform,
         candidates: [ResidencyCandidate], focusedIndex: Int?
     ) -> (offScreen: [TabID], presentedFallback: [TabID]) {
         let request = ReleasePlanRequest(

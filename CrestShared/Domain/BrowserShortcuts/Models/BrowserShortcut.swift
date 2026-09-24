@@ -8,13 +8,13 @@ struct BrowserShortcut: Codable, Equatable, Hashable, Sendable {
 }
 
 extension BrowserShortcut {
-    /// The chord a catalog default names. The catalog spells special keys the
-    /// way `BrowserShortcutSpecialKey` does, and every other key as the one
-    /// character it types.
+    /// The chord a catalog default names. The catalog names a special key by
+    /// its `ShortcutSpecialKey` name, and every other key as the one character
+    /// it types.
     init(_ keys: KeyCombination) {
         let key: BrowserShortcutKey
         if keys.isSpecialKey {
-            guard let special = BrowserShortcutSpecialKey(rawValue: keys.key) else {
+            guard let special = ShortcutSpecialKey.named(keys.key) else {
                 preconditionFailure("The shortcut catalog names an unknown special key \(keys.key)")
             }
             key = .special(special)
@@ -36,7 +36,7 @@ enum BrowserShortcutAssignmentResult: Equatable, Sendable {
 
 enum BrowserShortcutKey: Codable, Hashable, Sendable {
     case character(Character)
-    case special(BrowserShortcutSpecialKey)
+    case special(ShortcutSpecialKey)
 
     private enum CodingKeys: String, CodingKey {
         case character
@@ -57,7 +57,7 @@ enum BrowserShortcutKey: Codable, Hashable, Sendable {
         }
         self = .special(
             try container.decode(
-                BrowserShortcutSpecialKey.self,
+                ShortcutSpecialKey.self,
                 forKey: .special
             )
         )
@@ -95,47 +95,4 @@ struct BrowserShortcutSearchDocument: Equatable, Sendable {
 
 extension ShortcutSection: Identifiable {
     var id: String { name }
-}
-
-enum BrowserShortcutSpecialKey:
-    String,
-    Codable,
-    CaseIterable,
-    Hashable,
-    Sendable
-{
-    case tab
-    case leftArrow
-    case rightArrow
-    case upArrow
-    case downArrow
-    case escape
-    case returnKey
-    case delete
-    case forwardDelete
-    case home
-    case end
-    case pageUp
-    case pageDown
-    case space
-    case f1
-    case f2
-    case f3
-    case f4
-    case f5
-    case f6
-    case f7
-    case f8
-    case f9
-    case f10
-    case f11
-    case f12
-    case f13
-    case f14
-    case f15
-    case f16
-    case f17
-    case f18
-    case f19
-    case f20
 }

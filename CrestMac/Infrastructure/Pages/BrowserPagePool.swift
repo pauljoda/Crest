@@ -1530,7 +1530,7 @@ final class BrowserPagePool:
     /// pressure. A pressure pass is deliberately asynchronous because WebKit is
     /// the source of truth for media playback and capture activity.
     func handleMemoryPressure(
-        _ level: BrowserMemoryPressureLevel,
+        _ level: MemoryPressureLevel,
         at time: Date = .now
     ) {
         guard memoryPressureCoalescer.shouldHandle(level, at: time) else { return }
@@ -1822,7 +1822,7 @@ final class BrowserPagePool:
     ///
     /// Every presented card is ineligible, not only the focused one: unloading
     /// a web view the person is looking at is never a saving worth making.
-    private func releaseInactivePages(for level: BrowserMemoryPressureLevel) async {
+    private func releaseInactivePages(for level: MemoryPressureLevel) async {
         // The core owns candidate eligibility and order; this store contributes
         // the residency facts and the engine's own veto.
         let candidatePages = inactiveSinceByTabID.reduce(into: [TabID: BrowserPage]()) { pages, entry in
@@ -1898,10 +1898,10 @@ final class BrowserPagePool:
         inactiveSinceByTabID[tabID] = nil
     }
 
-    private func releaseTransientPages(for level: BrowserMemoryPressureLevel) {
+    private func releaseTransientPages(for level: MemoryPressureLevel) {
         pruneTransientLeases()
         for lease in transientLeases.values.compactMap(\.value) {
-            guard level == .critical || !lease.isActive else { continue }
+            guard level.releasesActiveTransientPages || !lease.isActive else { continue }
             lease.releaseForMemoryPressure()
         }
     }

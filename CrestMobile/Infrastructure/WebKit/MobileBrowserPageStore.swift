@@ -1138,7 +1138,7 @@ final class MobileBrowserPageStore:
     /// Mobile leaves ordinary pages resident through warnings and releases one
     /// eligible least-recently-used page at a time under critical pressure.
     func handleMemoryPressure(
-        _ level: BrowserMemoryPressureLevel,
+        _ level: MemoryPressureLevel,
         at time: Date = .now
     ) {
         guard memoryPressureCoalescer.shouldHandle(level, at: time) else { return }
@@ -1360,7 +1360,7 @@ final class MobileBrowserPageStore:
     /// web view somebody is looking at is never a saving worth making. Only when
     /// that sweep finds nobody at all, and only at `.critical`, does the core's
     /// release plan open the far cards of the carousel.
-    private func releaseInactivePages(for level: BrowserMemoryPressureLevel) async {
+    private func releaseInactivePages(for level: MemoryPressureLevel) async {
         // The core owns candidate eligibility and order; this store contributes
         // the residency facts and WebKit's own veto.
         let plan = BrowserCorePolicy.residencyReleasePlan(
@@ -1480,10 +1480,10 @@ final class MobileBrowserPageStore:
         )
     }
 
-    private func releaseTransientPages(for level: BrowserMemoryPressureLevel) {
+    private func releaseTransientPages(for level: MemoryPressureLevel) {
         pruneTransientLeases()
         for lease in transientLeases.values.compactMap(\.value) {
-            guard level == .critical || !lease.isActive else { continue }
+            guard level.releasesActiveTransientPages || !lease.isActive else { continue }
             lease.releaseForMemoryPressure()
         }
     }

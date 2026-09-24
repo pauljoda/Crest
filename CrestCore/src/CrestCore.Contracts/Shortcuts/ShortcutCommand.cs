@@ -130,14 +130,14 @@ public sealed class ShortcutCommand {
     public static readonly ShortcutCommand ArchiveTab = new(Kinds.ArchiveTab, name: "archiveTab", ShortcutSection.Tabs,
         title: "Archive Tab", symbol: "archivebox", shortcuts: Everywhere(Character("e", Command)));
     public static readonly ShortcutCommand PreviousTab = new(Kinds.PreviousTab, name: "previousTab", ShortcutSection.Tabs,
-        title: "Previous Tab", symbol: "chevron.up", shortcuts: Everywhere(Special("upArrow", Command | Option)),
+        title: "Previous Tab", symbol: "chevron.up", shortcuts: Everywhere(Special(ShortcutSpecialKey.UpArrow, Command | Option)),
         searchTerms: "switch cycle tabs up down arrow");
     public static readonly ShortcutCommand NextTab = new(Kinds.NextTab, name: "nextTab", ShortcutSection.Tabs,
-        title: "Next Tab", symbol: "chevron.down", shortcuts: Everywhere(Special("downArrow", Command | Option)),
+        title: "Next Tab", symbol: "chevron.down", shortcuts: Everywhere(Special(ShortcutSpecialKey.DownArrow, Command | Option)),
         searchTerms: "switch cycle tabs up down arrow");
     public static readonly ShortcutCommand MostRecentTab = new(Kinds.MostRecentTab, name: "mostRecentTab",
         ShortcutSection.Tabs, title: "Most Recent Tab", symbol: "arrow.left.arrow.right",
-        shortcuts: Everywhere(Special("tab", Control)), searchTerms: "toggle recent switch tabs");
+        shortcuts: Everywhere(Special(ShortcutSpecialKey.Tab, Control)), searchTerms: "toggle recent switch tabs");
     public static readonly ShortcutCommand SelectTab1 = SelectingTab(name: "selectTab1", number: 1);
     public static readonly ShortcutCommand SelectTab2 = SelectingTab(name: "selectTab2", number: 2);
     public static readonly ShortcutCommand SelectTab3 = SelectingTab(name: "selectTab3", number: 3);
@@ -149,9 +149,9 @@ public sealed class ShortcutCommand {
     public static readonly ShortcutCommand SelectTab9 = SelectingTab(name: "selectTab9", number: 9);
     public static readonly ShortcutCommand PreviousSpace = new(Kinds.PreviousSpace, name: "previousSpace",
         ShortcutSection.Spaces, title: "Previous Space", symbol: "chevron.up",
-        shortcuts: Everywhere(Special("leftArrow", Command | Option)), searchTerms: "switch cycle spaces left right arrow");
+        shortcuts: Everywhere(Special(ShortcutSpecialKey.LeftArrow, Command | Option)), searchTerms: "switch cycle spaces left right arrow");
     public static readonly ShortcutCommand NextSpace = new(Kinds.NextSpace, name: "nextSpace", ShortcutSection.Spaces,
-        title: "Next Space", symbol: "chevron.down", shortcuts: Everywhere(Special("rightArrow", Command | Option)),
+        title: "Next Space", symbol: "chevron.down", shortcuts: Everywhere(Special(ShortcutSpecialKey.RightArrow, Command | Option)),
         searchTerms: "switch cycle spaces left right arrow");
     public static readonly ShortcutCommand SelectSpace1 = SelectingSpace(name: "selectSpace1", number: 1);
     public static readonly ShortcutCommand SelectSpace2 = SelectingSpace(name: "selectSpace2", number: 2);
@@ -214,10 +214,10 @@ public sealed class ShortcutCommand {
     // zoom and ⌘W already closes the focused card.
     public static readonly ShortcutCommand FocusNextSplitCard = new(Kinds.FocusNextSplitCard, name: "focusNextSplitCard",
         ShortcutSection.Tabs, title: "Focus Next Split Card", symbol: "rectangle.righthalf.filled",
-        shortcuts: Everywhere(Special("rightArrow", Control | Command)), searchTerms: "split view cards focus cycle left right arrow");
+        shortcuts: Everywhere(Special(ShortcutSpecialKey.RightArrow, Control | Command)), searchTerms: "split view cards focus cycle left right arrow");
     public static readonly ShortcutCommand FocusPreviousSplitCard = new(Kinds.FocusPreviousSplitCard,
         name: "focusPreviousSplitCard", ShortcutSection.Tabs, title: "Focus Previous Split Card",
-        symbol: "rectangle.lefthalf.filled", shortcuts: Everywhere(Special("leftArrow", Control | Command)),
+        symbol: "rectangle.lefthalf.filled", shortcuts: Everywhere(Special(ShortcutSpecialKey.LeftArrow, Control | Command)),
         searchTerms: "split view cards focus cycle left right arrow");
     public static readonly ShortcutCommand RemoveTabFromSplit = new(Kinds.RemoveTabFromSplit, name: "removeTabFromSplit",
         ShortcutSection.Tabs, title: "Remove Tab From Split", symbol: "minus.rectangle",
@@ -231,11 +231,11 @@ public sealed class ShortcutCommand {
     // is on screen; the menu items carrying it are disabled otherwise.
     public static readonly ShortcutCommand MoveSplitCardLeft = new(Kinds.MoveSplitCardLeft, name: "moveSplitCardLeft",
         ShortcutSection.Tabs, title: "Move Split Card Left", symbol: "arrow.left.square",
-        shortcuts: Everywhere(Special("leftArrow", Command | Shift)),
+        shortcuts: Everywhere(Special(ShortcutSpecialKey.LeftArrow, Command | Shift)),
         searchTerms: "split view cards move reorder rearrange left right arrow");
     public static readonly ShortcutCommand MoveSplitCardRight = new(Kinds.MoveSplitCardRight, name: "moveSplitCardRight",
         ShortcutSection.Tabs, title: "Move Split Card Right", symbol: "arrow.right.square",
-        shortcuts: Everywhere(Special("rightArrow", Command | Shift)),
+        shortcuts: Everywhere(Special(ShortcutSpecialKey.RightArrow, Command | Shift)),
         searchTerms: "split view cards move reorder rearrange left right arrow");
     public static readonly ShortcutCommand ToggleDeveloperToolbar = new(Kinds.ToggleDeveloperToolbar,
         name: "toggleDeveloperToolbar", ShortcutSection.View, title: "Show or Hide Developer Toolbar",
@@ -349,7 +349,7 @@ public sealed class ShortcutCommand {
 
     private static KeyCombination Character(string character, ShortcutModifiers modifiers) => new(character, false, modifiers);
 
-    private static KeyCombination Special(string key, ShortcutModifiers modifiers) => new(key, true, modifiers);
+    private static KeyCombination Special(ShortcutSpecialKey key, ShortcutModifiers modifiers) => new(key.Name, true, modifiers);
 
     private static string Digit(int number) => number.ToString(CultureInfo.InvariantCulture);
 

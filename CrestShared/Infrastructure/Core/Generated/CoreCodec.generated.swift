@@ -7,7 +7,7 @@ import Foundation
 enum CoreCodec {
     /// SHA-256 of the canonical contract schema. The core refuses any other.
     static let fingerprint: [UInt8] = [
-        0xb8, 0xb1, 0x7c, 0x04, 0xec, 0x13, 0x29, 0x06, 0xb2, 0x57, 0x0e, 0x82, 0xb4, 0x42, 0xf4, 0xef, 0x12, 0x37, 0x8f, 0x54, 0x13, 0xeb, 0xe7, 0x8b, 0x06, 0xf2, 0xd3, 0x47, 0xa7, 0x20, 0xfb, 0x1a
+        0xe0, 0xe4, 0xdf, 0x7e, 0x61, 0x1a, 0xfa, 0xb2, 0x0d, 0x2b, 0xa0, 0x6c, 0xbf, 0x45, 0xd4, 0x20, 0x30, 0x8c, 0x7e, 0x04, 0x46, 0x53, 0x97, 0xad, 0xcf, 0x86, 0xf9, 0x9f, 0xf5, 0x51, 0x2f, 0xac
     ]
 
     static func decodeIntent(from reader: inout WireReader) throws(WireError) -> any Intent {
@@ -2556,6 +2556,20 @@ extension LinkRouteMatch {
     }
 }
 
+extension MemoryPressureLevel {
+    init(from reader: inout WireReader) throws(WireError) {
+        let tag = try reader.readEnum()
+        guard Self.all.indices.contains(tag) else {
+            throw WireError.malformed("Unknown MemoryPressureLevel \(tag)")
+        }
+        self = Self.all[tag]
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeEnum(tag)
+    }
+}
+
 extension NumberedSelectionTarget {
     init(from reader: inout WireReader) throws(WireError) {
         let tag = try reader.readEnum()
@@ -2603,6 +2617,20 @@ extension ShortcutSection {
         let tag = try reader.readEnum()
         guard Self.all.indices.contains(tag) else {
             throw WireError.malformed("Unknown ShortcutSection \(tag)")
+        }
+        self = Self.all[tag]
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeEnum(tag)
+    }
+}
+
+extension ShortcutSpecialKey {
+    init(from reader: inout WireReader) throws(WireError) {
+        let tag = try reader.readEnum()
+        guard Self.all.indices.contains(tag) else {
+            throw WireError.malformed("Unknown ShortcutSpecialKey \(tag)")
         }
         self = Self.all[tag]
     }

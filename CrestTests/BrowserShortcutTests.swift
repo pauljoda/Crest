@@ -222,7 +222,7 @@ final class BrowserShortcutTests: XCTestCase {
     }
 
     private func special(
-        _ key: BrowserShortcutSpecialKey,
+        _ key: ShortcutSpecialKey,
         _ modifiers: ShortcutModifiers
     ) -> BrowserShortcut {
         BrowserShortcut(key: .special(key), modifiers: modifiers)

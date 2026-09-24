@@ -187,10 +187,13 @@ struct BrowserCommandActions {
                 }
             }
         case .selectNumbered:
-            switch numberedSelections[command] {
-            case .tab(let index): Route { selectTab(at: index) }
-            case .space(let index): Route { selectSpace(at: index) }
-            case nil: Route(isAvailable: false) {}
+            if let selection = numberedSelections[command] {
+                switch selection.target.kind {
+                case .tab: Route { selectTab(at: selection.index) }
+                case .space: Route { selectSpace(at: selection.index) }
+                }
+            } else {
+                Route(isAvailable: false) {}
             }
         }
     }

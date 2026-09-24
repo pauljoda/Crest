@@ -1,10 +1,10 @@
 import Foundation
 
-/// What a numbered selection command reaches: the zero-based position of a
-/// tab in sidebar order, or of a Space.
-enum BrowserNumberedSelection: Equatable, Sendable {
-    case tab(Int)
-    case space(Int)
+/// What a numbered selection command reaches: what it selects from, and the
+/// zero-based position there.
+struct BrowserNumberedSelection: Equatable, Sendable {
+    let target: NumberedSelectionTarget
+    let index: Int
 }
 
 /// Shortcut rules owned by the portable core: how overrides resolve against
@@ -59,15 +59,9 @@ extension BrowserCorePolicy {
 
     private struct NumberedSelectionAnswer: Decodable {
         struct Selection: Decodable {
-            /// Raw values are the core's numbered selection target spellings.
-            enum Target: String, Decodable {
-                case tab
-                case space
-            }
-
             @BrowserCoreOptional var command: ShortcutCommand?
             @BrowserCoreOptional var index: Int?
-            @BrowserCoreOptional var target: Target?
+            @BrowserCoreOptional var target: NumberedSelectionTarget?
         }
 
         let selections: [Selection]
@@ -126,8 +120,10 @@ extension BrowserCorePolicy {
         }
         var selections: [ShortcutCommand: BrowserNumberedSelection] = [:]
         for selection in answer.selections {
-            guard let command = selection.command, let index = selection.index else { continue }
-            selections[command] = selection.target == .space ? .space(index) : .tab(index)
+            guard let command = selection.command, let index = selection.index, let target = selection.target else {
+                continue
+            }
+            selections[command] = BrowserNumberedSelection(target: target, index: index)
         }
         return selections
     }

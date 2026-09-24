@@ -17,13 +17,6 @@ public sealed record ShortcutChord {
     public const int SupportedModifiers = Command | Option | Control | Shift;
     public const int MaximumCharacterLength = 64;
 
-    public static readonly IReadOnlySet<string> SpecialKeys = new HashSet<string>(StringComparer.Ordinal) {
-        "tab", "leftArrow", "rightArrow", "upArrow", "downArrow", "escape", "returnKey", "delete",
-        "forwardDelete", "home", "end", "pageUp", "pageDown", "space",
-        "f1", "f2", "f3", "f4", "f5", "f6", "f7", "f8", "f9", "f10",
-        "f11", "f12", "f13", "f14", "f15", "f16", "f17", "f18", "f19", "f20"
-    };
-
     public string Key { get; }
     public bool IsSpecial { get; }
     public int Modifiers { get; }
@@ -63,7 +56,7 @@ public sealed record ShortcutChord {
 
     public static ShortcutChord Special(string key, int modifiers) {
         ArgumentNullException.ThrowIfNull(key);
-        if (!SpecialKeys.Contains(key)) throw new BrowserRuleException(BrowserRuleCodes.InvalidShortcut);
+        if (ShortcutSpecialKey.Named(key) is null) throw new BrowserRuleException(BrowserRuleCodes.InvalidShortcut);
         return new(key, true, modifiers);
     }
 

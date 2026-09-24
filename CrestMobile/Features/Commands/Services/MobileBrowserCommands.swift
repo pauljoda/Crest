@@ -289,8 +289,8 @@ struct MobileBrowserCommands: Commands {
             ForEach(1...9, id: \.self) { number in
                 let command = ShortcutCommand.selecting(.tab, number: number)
                 Button("Select Tab \(number)", systemImage: "\(number).square") {
-                    if case .tab(let index)? = command.flatMap({ numberedSelections[$0] }) {
-                        context?.selectTab(index)
+                    if let selection = command.flatMap({ numberedSelections[$0] }) {
+                        context?.selectTab(selection.index)
                     }
                 }
                 .keyboardShortcut(tabSelectionShortcut(number))
@@ -323,8 +323,8 @@ struct MobileBrowserCommands: Commands {
             ForEach(1...9, id: \.self) { number in
                 let command = ShortcutCommand.selecting(.space, number: number)
                 Button("Select Space \(number)", systemImage: "\(number).square") {
-                    if case .space(let index)? = command.flatMap({ numberedSelections[$0] }) {
-                        context?.selectSpace(index)
+                    if let selection = command.flatMap({ numberedSelections[$0] }) {
+                        context?.selectSpace(selection.index)
                     }
                 }
                 .keyboardShortcut(spaceSelectionShortcut(number))

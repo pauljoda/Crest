@@ -42,13 +42,6 @@ extension BrowserLaunchEnvironment {
 extension BrowserCorePolicy {
     // MARK: - Types
 
-    /// The device family whose rules a policy applies. Raw values are the
-    /// core's spellings in `DeviceCodes.cs`.
-    enum DevicePlatform: String, Encodable, Sendable {
-        case desktop
-        case mobile
-    }
-
     /// The launch flags as the core's `launch.plan` environment names them.
     struct LaunchFacts: Encodable, Sendable {
         let testRuntime: Bool

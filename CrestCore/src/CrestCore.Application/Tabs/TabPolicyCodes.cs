@@ -9,16 +9,6 @@ namespace CrestCore.Application;
 /// tab-selection policy operations. They match the native lifecycle models'
 /// case names.
 internal static class TabPolicyCodes {
-    #region Actions - Decoding
-
-    public static MemoryPressureLevel Level(string value) => value switch {
-        "warning" => MemoryPressureLevel.Warning,
-        "critical" => MemoryPressureLevel.Critical,
-        _ => throw new ProtocolException(ProtocolErrorCodes.InvalidPressureLevel)
-    };
-
-    #endregion
-
     #region Actions - Encoding
 
     public static string Recovery(ProcessRecoveryAction action) => action == ProcessRecoveryAction.Reload ? "reload" : "showFailure";

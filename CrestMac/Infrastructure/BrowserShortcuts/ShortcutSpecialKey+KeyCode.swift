@@ -1,4 +1,4 @@
-extension BrowserShortcutSpecialKey {
+extension ShortcutSpecialKey {
     init?(keyCode rawKeyCode: UInt16) {
         guard
             let keyCode = BrowserShortcutHardwareKeyCode(

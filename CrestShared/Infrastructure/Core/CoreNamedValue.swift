@@ -63,6 +63,8 @@ extension AdapterRole: CoreNamedValue {}
 
 extension CapabilityStatus: CoreNamedValue {}
 
+extension DevicePlatform: CoreNamedValue {}
+
 extension EngineCapability: CoreNamedValue {}
 
 extension ExternalLinkDestination: CoreNamedValue {}
@@ -73,7 +75,13 @@ extension LinkPeekModifier: CoreNamedValue {}
 
 extension LinkRouteMatch: CoreNamedValue {}
 
+extension MemoryPressureLevel: CoreNamedValue {}
+
+extension NumberedSelectionTarget: CoreNamedValue {}
+
 extension ShortcutCommand: CoreNamedValue {}
+
+extension ShortcutSpecialKey: CoreNamedValue {}
 
 extension SitePermission: CoreNamedValue {}
 

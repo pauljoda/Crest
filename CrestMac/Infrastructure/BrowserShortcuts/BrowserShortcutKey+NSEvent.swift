@@ -2,7 +2,7 @@ import AppKit
 
 extension BrowserShortcutKey {
     init?(event: NSEvent) {
-        if let specialKey = BrowserShortcutSpecialKey(keyCode: event.keyCode) {
+        if let specialKey = ShortcutSpecialKey(keyCode: event.keyCode) {
             self = .special(specialKey)
             return
         }

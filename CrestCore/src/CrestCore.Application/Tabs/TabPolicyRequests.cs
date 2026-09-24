@@ -75,7 +75,8 @@ internal static class TabPolicyRequests {
         }
     }
 
-    private static MemoryPressureLevel PressureLevel(JsonElement request) => TabPolicyCodes.Level(Protocol.Text(request, "level"));
+    private static MemoryPressureLevel PressureLevel(JsonElement request) =>
+        MemoryPressureLevel.Named(Protocol.Text(request, "level")) ?? throw new ProtocolException(ProtocolErrorCodes.InvalidPressureLevel);
 
     #endregion
 }

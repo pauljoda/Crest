@@ -1410,18 +1410,57 @@ struct LinkRouteMatch: Hashable, Sendable {
     }
 }
 
-/// The members of the core's `NumberedSelectionTarget`. A member's wire tag is its index in `all`.
-struct NumberedSelectionTarget: Hashable, Sendable {
+/// The members of the core's `MemoryPressureLevel`. A member's wire tag is its index in `all`.
+struct MemoryPressureLevel: Hashable, Sendable {
     let tag: Int
     let name: String
+    let severity: Int
+    let releasesActiveTransientPages: Bool
 
-    private init(tag: Int, name: String) {
+    private init(tag: Int, name: String, severity: Int, releasesActiveTransientPages: Bool) {
         self.tag = tag
+        self.name = name
+        self.severity = severity
+        self.releasesActiveTransientPages = releasesActiveTransientPages
+    }
+
+    static let warning = MemoryPressureLevel(tag: 0, name: "warning", severity: 1, releasesActiveTransientPages: false)
+    static let critical = MemoryPressureLevel(tag: 1, name: "critical", severity: 2, releasesActiveTransientPages: true)
+
+    static let all: [MemoryPressureLevel] = [warning, critical]
+
+    static func named(_ name: String?) -> MemoryPressureLevel? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: MemoryPressureLevel, rhs: MemoryPressureLevel) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+}
+
+/// The members of the core's `NumberedSelectionTarget`. A member's wire tag is its index in `all`.
+struct NumberedSelectionTarget: Hashable, Sendable {
+    enum Kinds: Sendable {
+        case tab
+        case space
+    }
+
+    let tag: Int
+    let kind: Kinds
+    let name: String
+
+    private init(tag: Int, kind: Kinds, name: String) {
+        self.tag = tag
+        self.kind = kind
         self.name = name
     }
 
-    static let tab = NumberedSelectionTarget(tag: 0, name: "tab")
-    static let space = NumberedSelectionTarget(tag: 1, name: "space")
+    static let tab = NumberedSelectionTarget(tag: 0, kind: .tab, name: "tab")
+    static let space = NumberedSelectionTarget(tag: 1, kind: .space, name: "space")
 
     static let all: [NumberedSelectionTarget] = [tab, space]
 
@@ -3433,6 +3472,354 @@ struct ShortcutSection: Hashable, Sendable {
     }
 
     static func == (lhs: ShortcutSection, rhs: ShortcutSection) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+}
+
+/// The members of the core's `ShortcutSpecialKey`. A member's wire tag is its index in `all`.
+struct ShortcutSpecialKey: Hashable, Sendable {
+    let tag: Int
+    let name: String
+    let glyph: String?
+    let title: LocalizedStringResource?
+    let spokenName: LocalizedStringResource?
+    let functionKeyNumber: Int?
+
+    private init(
+        tag: Int,
+        name: String,
+        glyph: String?,
+        title: LocalizedStringResource?,
+        spokenName: LocalizedStringResource?,
+        functionKeyNumber: Int?
+    ) {
+        self.tag = tag
+        self.name = name
+        self.glyph = glyph
+        self.title = title
+        self.spokenName = spokenName
+        self.functionKeyNumber = functionKeyNumber
+    }
+
+    static let tab = ShortcutSpecialKey(
+        tag: 0,
+        name: "tab",
+        glyph: "⇥",
+        title: nil,
+        spokenName: LocalizedStringResource("tab"),
+        functionKeyNumber: nil
+    )
+    static let leftArrow = ShortcutSpecialKey(
+        tag: 1,
+        name: "leftArrow",
+        glyph: "←",
+        title: nil,
+        spokenName: LocalizedStringResource("left arrow"),
+        functionKeyNumber: nil
+    )
+    static let rightArrow = ShortcutSpecialKey(
+        tag: 2,
+        name: "rightArrow",
+        glyph: "→",
+        title: nil,
+        spokenName: LocalizedStringResource("right arrow"),
+        functionKeyNumber: nil
+    )
+    static let upArrow = ShortcutSpecialKey(
+        tag: 3,
+        name: "upArrow",
+        glyph: "↑",
+        title: nil,
+        spokenName: LocalizedStringResource("up arrow"),
+        functionKeyNumber: nil
+    )
+    static let downArrow = ShortcutSpecialKey(
+        tag: 4,
+        name: "downArrow",
+        glyph: "↓",
+        title: nil,
+        spokenName: LocalizedStringResource("down arrow"),
+        functionKeyNumber: nil
+    )
+    static let escape = ShortcutSpecialKey(
+        tag: 5,
+        name: "escape",
+        glyph: "⎋",
+        title: nil,
+        spokenName: LocalizedStringResource("escape"),
+        functionKeyNumber: nil
+    )
+    static let returnKey = ShortcutSpecialKey(
+        tag: 6,
+        name: "returnKey",
+        glyph: "↩",
+        title: nil,
+        spokenName: LocalizedStringResource("return"),
+        functionKeyNumber: nil
+    )
+    static let delete = ShortcutSpecialKey(
+        tag: 7,
+        name: "delete",
+        glyph: "⌫",
+        title: nil,
+        spokenName: LocalizedStringResource("delete"),
+        functionKeyNumber: nil
+    )
+    static let forwardDelete = ShortcutSpecialKey(
+        tag: 8,
+        name: "forwardDelete",
+        glyph: "⌦",
+        title: nil,
+        spokenName: LocalizedStringResource("forward delete"),
+        functionKeyNumber: nil
+    )
+    static let home = ShortcutSpecialKey(
+        tag: 9,
+        name: "home",
+        glyph: "↖",
+        title: nil,
+        spokenName: LocalizedStringResource("home"),
+        functionKeyNumber: nil
+    )
+    static let end = ShortcutSpecialKey(
+        tag: 10,
+        name: "end",
+        glyph: "↘",
+        title: nil,
+        spokenName: LocalizedStringResource("end"),
+        functionKeyNumber: nil
+    )
+    static let pageUp = ShortcutSpecialKey(
+        tag: 11,
+        name: "pageUp",
+        glyph: "⇞",
+        title: nil,
+        spokenName: LocalizedStringResource("page up"),
+        functionKeyNumber: nil
+    )
+    static let pageDown = ShortcutSpecialKey(
+        tag: 12,
+        name: "pageDown",
+        glyph: "⇟",
+        title: nil,
+        spokenName: LocalizedStringResource("page down"),
+        functionKeyNumber: nil
+    )
+    static let space = ShortcutSpecialKey(
+        tag: 13,
+        name: "space",
+        glyph: nil,
+        title: LocalizedStringResource("Space"),
+        spokenName: LocalizedStringResource("space"),
+        functionKeyNumber: nil
+    )
+    static let f1 = ShortcutSpecialKey(
+        tag: 14,
+        name: "f1",
+        glyph: "F1",
+        title: nil,
+        spokenName: nil,
+        functionKeyNumber: 1
+    )
+    static let f2 = ShortcutSpecialKey(
+        tag: 15,
+        name: "f2",
+        glyph: "F2",
+        title: nil,
+        spokenName: nil,
+        functionKeyNumber: 2
+    )
+    static let f3 = ShortcutSpecialKey(
+        tag: 16,
+        name: "f3",
+        glyph: "F3",
+        title: nil,
+        spokenName: nil,
+        functionKeyNumber: 3
+    )
+    static let f4 = ShortcutSpecialKey(
+        tag: 17,
+        name: "f4",
+        glyph: "F4",
+        title: nil,
+        spokenName: nil,
+        functionKeyNumber: 4
+    )
+    static let f5 = ShortcutSpecialKey(
+        tag: 18,
+        name: "f5",
+        glyph: "F5",
+        title: nil,
+        spokenName: nil,
+        functionKeyNumber: 5
+    )
+    static let f6 = ShortcutSpecialKey(
+        tag: 19,
+        name: "f6",
+        glyph: "F6",
+        title: nil,
+        spokenName: nil,
+        functionKeyNumber: 6
+    )
+    static let f7 = ShortcutSpecialKey(
+        tag: 20,
+        name: "f7",
+        glyph: "F7",
+        title: nil,
+        spokenName: nil,
+        functionKeyNumber: 7
+    )
+    static let f8 = ShortcutSpecialKey(
+        tag: 21,
+        name: "f8",
+        glyph: "F8",
+        title: nil,
+        spokenName: nil,
+        functionKeyNumber: 8
+    )
+    static let f9 = ShortcutSpecialKey(
+        tag: 22,
+        name: "f9",
+        glyph: "F9",
+        title: nil,
+        spokenName: nil,
+        functionKeyNumber: 9
+    )
+    static let f10 = ShortcutSpecialKey(
+        tag: 23,
+        name: "f10",
+        glyph: "F10",
+        title: nil,
+        spokenName: nil,
+        functionKeyNumber: 10
+    )
+    static let f11 = ShortcutSpecialKey(
+        tag: 24,
+        name: "f11",
+        glyph: "F11",
+        title: nil,
+        spokenName: nil,
+        functionKeyNumber: 11
+    )
+    static let f12 = ShortcutSpecialKey(
+        tag: 25,
+        name: "f12",
+        glyph: "F12",
+        title: nil,
+        spokenName: nil,
+        functionKeyNumber: 12
+    )
+    static let f13 = ShortcutSpecialKey(
+        tag: 26,
+        name: "f13",
+        glyph: "F13",
+        title: nil,
+        spokenName: nil,
+        functionKeyNumber: 13
+    )
+    static let f14 = ShortcutSpecialKey(
+        tag: 27,
+        name: "f14",
+        glyph: "F14",
+        title: nil,
+        spokenName: nil,
+        functionKeyNumber: 14
+    )
+    static let f15 = ShortcutSpecialKey(
+        tag: 28,
+        name: "f15",
+        glyph: "F15",
+        title: nil,
+        spokenName: nil,
+        functionKeyNumber: 15
+    )
+    static let f16 = ShortcutSpecialKey(
+        tag: 29,
+        name: "f16",
+        glyph: "F16",
+        title: nil,
+        spokenName: nil,
+        functionKeyNumber: 16
+    )
+    static let f17 = ShortcutSpecialKey(
+        tag: 30,
+        name: "f17",
+        glyph: "F17",
+        title: nil,
+        spokenName: nil,
+        functionKeyNumber: 17
+    )
+    static let f18 = ShortcutSpecialKey(
+        tag: 31,
+        name: "f18",
+        glyph: "F18",
+        title: nil,
+        spokenName: nil,
+        functionKeyNumber: 18
+    )
+    static let f19 = ShortcutSpecialKey(
+        tag: 32,
+        name: "f19",
+        glyph: "F19",
+        title: nil,
+        spokenName: nil,
+        functionKeyNumber: 19
+    )
+    static let f20 = ShortcutSpecialKey(
+        tag: 33,
+        name: "f20",
+        glyph: "F20",
+        title: nil,
+        spokenName: nil,
+        functionKeyNumber: 20
+    )
+
+    static let all: [ShortcutSpecialKey] = [
+        tab,
+        leftArrow,
+        rightArrow,
+        upArrow,
+        downArrow,
+        escape,
+        returnKey,
+        delete,
+        forwardDelete,
+        home,
+        end,
+        pageUp,
+        pageDown,
+        space,
+        f1,
+        f2,
+        f3,
+        f4,
+        f5,
+        f6,
+        f7,
+        f8,
+        f9,
+        f10,
+        f11,
+        f12,
+        f13,
+        f14,
+        f15,
+        f16,
+        f17,
+        f18,
+        f19,
+        f20
+    ]
+
+    static func named(_ name: String?) -> ShortcutSpecialKey? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: ShortcutSpecialKey, rhs: ShortcutSpecialKey) -> Bool {
         lhs.tag == rhs.tag
     }
 
