@@ -24,4 +24,13 @@ extension BrowserStore {
         page.move(to: window.workspaceID, spaceID: spaceID, tabID: tabID, windowID: windowID)
     }
 
+    /// Whether returning `tabID` to its saved address would change anything,
+    /// as the core answers it for this window: the tab is away from that
+    /// page, or its page here is heading to another.
+    func returnsToSavedAddress(_ tabID: TabID, in spaceID: SpaceID) -> Bool {
+        let question = CanReturnToSavedAddress(
+            workspaceID: window.workspaceID, windowID: windowID.rawValue, spaceID: spaceID.rawValue,
+            tabID: tabID.rawValue)
+        return (try? core.query(question))?.changesPage ?? false
+    }
 }

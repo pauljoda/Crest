@@ -16,9 +16,7 @@ struct MobileSavedLocationRestoreAction {
             !browser.deletingSpaceIDs.contains(space.id),
             !spaceAccess.isLocked(space),
             let tab = space.tabs.first(where: { $0.id == assignment.tabID }),
-            BrowserSavedLocationRestorePolicy.shouldRestore(
-                tab, pendingURL: pages.residentPage(matching: assignment)?.live.pendingNavigationURL
-            ),
+            browser.returnsToSavedAddress(tab.id, in: space.id),
             !pages.containsResidentPage(for: tab.id) || pages.containsResidentPage(matching: assignment)
         else { return false }
 

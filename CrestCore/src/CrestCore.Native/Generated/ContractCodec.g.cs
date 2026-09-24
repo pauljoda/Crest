@@ -14,7 +14,7 @@ namespace CrestCore.Native;
 public static class ContractCodec {
     /// <summary>SHA-256 of the canonical contract schema.</summary>
     public static ReadOnlySpan<byte> Fingerprint => [
-        0xf6, 0x82, 0xd4, 0xea, 0xe7, 0x26, 0xc5, 0xd2, 0xe8, 0x84, 0xcb, 0xbb, 0x51, 0x90, 0xf1, 0x7b, 0x85, 0x1e, 0xd3, 0x24, 0xc7, 0x89, 0x98, 0xf9, 0x69, 0x2c, 0xa0, 0xfa, 0x7c, 0xee, 0x03, 0xe8
+        0x70, 0x98, 0xfd, 0x13, 0xeb, 0x88, 0x62, 0xff, 0x6d, 0x59, 0x3c, 0xeb, 0xe4, 0x65, 0xfc, 0xdc, 0xab, 0x96, 0x73, 0xfc, 0x1f, 0xf1, 0x5a, 0x13, 0x7a, 0x09, 0x7a, 0x93, 0xba, 0xbe, 0x14, 0x69
     ];
 
     /// <summary>SHA-256 of the engine contract alone, which an engine binding registers with.</summary>
@@ -1061,25 +1061,26 @@ public static class ContractCodec {
         int tag = reader.ReadTag();
         switch (tag) {
             case 0: return ReadBalancedProtectionRules(reader);
-            case 1: return ReadCanSend(reader);
-            case 2: return ReadCanTearOff(reader);
-            case 3: return ReadCredentialCapture(reader);
-            case 4: return ReadCredentialFill(reader);
-            case 5: return ReadCredentialSave(reader);
-            case 6: return ReadCredentialSaveCheck(reader);
-            case 7: return ReadCredentialSaveMatch(reader);
-            case 8: return ReadDownloadProgress(reader);
-            case 9: return ReadDownloadRisk(reader);
-            case 10: return ReadExternalLinkRoute(reader);
-            case 11: return ReadFallbackTab(reader);
-            case 12: return ReadLaunchPlan(reader);
-            case 13: return ReadMostRecentCredential(reader);
-            case 14: return ReadPasskeyAccess(reader);
-            case 15: return ReadPendingSave(reader);
-            case 16: return ReadQuickWindowSite(reader);
-            case 17: return ReadStrongPassword(reader);
-            case 18: return ReadSystemPasswordOffer(reader);
-            case 19: return ReadSystemPasswordWriteThrough(reader);
+            case 1: return ReadCanReturnToSavedAddress(reader);
+            case 2: return ReadCanSend(reader);
+            case 3: return ReadCanTearOff(reader);
+            case 4: return ReadCredentialCapture(reader);
+            case 5: return ReadCredentialFill(reader);
+            case 6: return ReadCredentialSave(reader);
+            case 7: return ReadCredentialSaveCheck(reader);
+            case 8: return ReadCredentialSaveMatch(reader);
+            case 9: return ReadDownloadProgress(reader);
+            case 10: return ReadDownloadRisk(reader);
+            case 11: return ReadExternalLinkRoute(reader);
+            case 12: return ReadFallbackTab(reader);
+            case 13: return ReadLaunchPlan(reader);
+            case 14: return ReadMostRecentCredential(reader);
+            case 15: return ReadPasskeyAccess(reader);
+            case 16: return ReadPendingSave(reader);
+            case 17: return ReadQuickWindowSite(reader);
+            case 18: return ReadStrongPassword(reader);
+            case 19: return ReadSystemPasswordOffer(reader);
+            case 20: return ReadSystemPasswordWriteThrough(reader);
             default: throw new WireFormatException($"Unknown Query tag {tag}.");
         }
     }
@@ -1092,80 +1093,84 @@ public static class ContractCodec {
                 writer.WriteTag(0);
                 WriteBalancedProtectionRules(writer, member);
                 break;
-            case CanSend member:
+            case CanReturnToSavedAddress member:
                 writer.WriteTag(1);
+                WriteCanReturnToSavedAddress(writer, member);
+                break;
+            case CanSend member:
+                writer.WriteTag(2);
                 WriteCanSend(writer, member);
                 break;
             case CanTearOff member:
-                writer.WriteTag(2);
+                writer.WriteTag(3);
                 WriteCanTearOff(writer, member);
                 break;
             case CredentialCapture member:
-                writer.WriteTag(3);
+                writer.WriteTag(4);
                 WriteCredentialCapture(writer, member);
                 break;
             case CredentialFill member:
-                writer.WriteTag(4);
+                writer.WriteTag(5);
                 WriteCredentialFill(writer, member);
                 break;
             case CredentialSave member:
-                writer.WriteTag(5);
+                writer.WriteTag(6);
                 WriteCredentialSave(writer, member);
                 break;
             case CredentialSaveCheck member:
-                writer.WriteTag(6);
+                writer.WriteTag(7);
                 WriteCredentialSaveCheck(writer, member);
                 break;
             case CredentialSaveMatch member:
-                writer.WriteTag(7);
+                writer.WriteTag(8);
                 WriteCredentialSaveMatch(writer, member);
                 break;
             case DownloadProgress member:
-                writer.WriteTag(8);
+                writer.WriteTag(9);
                 WriteDownloadProgress(writer, member);
                 break;
             case DownloadRisk member:
-                writer.WriteTag(9);
+                writer.WriteTag(10);
                 WriteDownloadRisk(writer, member);
                 break;
             case ExternalLinkRoute member:
-                writer.WriteTag(10);
+                writer.WriteTag(11);
                 WriteExternalLinkRoute(writer, member);
                 break;
             case FallbackTab member:
-                writer.WriteTag(11);
+                writer.WriteTag(12);
                 WriteFallbackTab(writer, member);
                 break;
             case LaunchPlan member:
-                writer.WriteTag(12);
+                writer.WriteTag(13);
                 WriteLaunchPlan(writer, member);
                 break;
             case MostRecentCredential member:
-                writer.WriteTag(13);
+                writer.WriteTag(14);
                 WriteMostRecentCredential(writer, member);
                 break;
             case PasskeyAccess member:
-                writer.WriteTag(14);
+                writer.WriteTag(15);
                 WritePasskeyAccess(writer, member);
                 break;
             case PendingSave member:
-                writer.WriteTag(15);
+                writer.WriteTag(16);
                 WritePendingSave(writer, member);
                 break;
             case QuickWindowSite member:
-                writer.WriteTag(16);
+                writer.WriteTag(17);
                 WriteQuickWindowSite(writer, member);
                 break;
             case StrongPassword member:
-                writer.WriteTag(17);
+                writer.WriteTag(18);
                 WriteStrongPassword(writer, member);
                 break;
             case SystemPasswordOffer member:
-                writer.WriteTag(18);
+                writer.WriteTag(19);
                 WriteSystemPasswordOffer(writer, member);
                 break;
             case SystemPasswordWriteThrough member:
-                writer.WriteTag(19);
+                writer.WriteTag(20);
                 WriteSystemPasswordWriteThrough(writer, member);
                 break;
             default: throw new ArgumentOutOfRangeException(nameof(value), value.GetType().Name, "Not a contract Query.");
@@ -1286,81 +1291,85 @@ public static class ContractCodec {
                 var answer0 = app.Query(question);
                 WriteContentRuleList(writer, answer0);
                 break;
-            case CanSend question:
+            case CanReturnToSavedAddress question:
                 var answer1 = app.Query(question);
-                WriteSendPermission(writer, answer1);
+                WriteSavedAddressReturn(writer, answer1);
+                break;
+            case CanSend question:
+                var answer2 = app.Query(question);
+                WriteSendPermission(writer, answer2);
                 break;
             case CanTearOff question:
-                var answer2 = app.Query(question);
-                WriteTearOffPermission(writer, answer2);
+                var answer3 = app.Query(question);
+                WriteTearOffPermission(writer, answer3);
                 break;
             case CredentialCapture question:
-                var answer3 = app.Query(question);
-                WriteCredentialCaptureDecision(writer, answer3);
+                var answer4 = app.Query(question);
+                WriteCredentialCaptureDecision(writer, answer4);
                 break;
             case CredentialFill question:
-                var answer4 = app.Query(question);
-                WriteCredentialFillDecision(writer, answer4);
+                var answer5 = app.Query(question);
+                WriteCredentialFillDecision(writer, answer5);
                 break;
             case CredentialSave question:
-                var answer5 = app.Query(question);
-                WriteCredentialSavePlan(writer, answer5);
+                var answer6 = app.Query(question);
+                WriteCredentialSavePlan(writer, answer6);
                 break;
             case CredentialSaveCheck question:
-                var answer6 = app.Query(question);
-                WriteCredentialSaveVerdict(writer, answer6);
+                var answer7 = app.Query(question);
+                WriteCredentialSaveVerdict(writer, answer7);
                 break;
             case CredentialSaveMatch question:
-                var answer7 = app.Query(question);
-                WriteCredentialChoice(writer, answer7);
+                var answer8 = app.Query(question);
+                WriteCredentialChoice(writer, answer8);
                 break;
             case DownloadProgress question:
-                var answer8 = app.Query(question);
-                WriteDownloadProgressReading(writer, answer8);
+                var answer9 = app.Query(question);
+                WriteDownloadProgressReading(writer, answer9);
                 break;
             case DownloadRisk question:
-                var answer9 = app.Query(question);
-                WriteDownloadRiskVerdict(writer, answer9);
+                var answer10 = app.Query(question);
+                WriteDownloadRiskVerdict(writer, answer10);
                 break;
             case ExternalLinkRoute question:
-                var answer10 = app.Query(question);
-                WriteExternalLinkPlacement(writer, answer10);
+                var answer11 = app.Query(question);
+                WriteExternalLinkPlacement(writer, answer11);
                 break;
             case FallbackTab question:
-                var answer11 = app.Query(question);
-                WriteFallbackTabIndex(writer, answer11);
+                var answer12 = app.Query(question);
+                WriteFallbackTabIndex(writer, answer12);
                 break;
             case LaunchPlan question:
-                var answer12 = app.Query(question);
-                WriteLaunchDecision(writer, answer12);
+                var answer13 = app.Query(question);
+                WriteLaunchDecision(writer, answer13);
                 break;
             case MostRecentCredential question:
-                var answer13 = app.Query(question);
-                WriteCredentialChoice(writer, answer13);
+                var answer14 = app.Query(question);
+                WriteCredentialChoice(writer, answer14);
                 break;
             case PasskeyAccess question:
-                var answer14 = app.Query(question);
-                WritePasskeyAccessVerdict(writer, answer14);
+                var answer15 = app.Query(question);
+                WritePasskeyAccessVerdict(writer, answer15);
                 break;
             case PendingSave question:
-                var answer15 = app.Query(question);
-                WritePendingSaveRevision(writer, answer15);
+                var answer16 = app.Query(question);
+                WritePendingSaveRevision(writer, answer16);
                 break;
             case QuickWindowSite question:
-                var answer16 = app.Query(question);
-                WriteQuickWindowSiteKey(writer, answer16);
+                var answer17 = app.Query(question);
+                WriteQuickWindowSiteKey(writer, answer17);
                 break;
             case StrongPassword question:
-                var answer17 = app.Query(question);
-                WriteStrongPasswordRecipe(writer, answer17);
+                var answer18 = app.Query(question);
+                WriteStrongPasswordRecipe(writer, answer18);
                 break;
             case SystemPasswordOffer question:
-                var answer18 = app.Query(question);
-                WriteSystemPasswordOfferDecision(writer, answer18);
+                var answer19 = app.Query(question);
+                WriteSystemPasswordOfferDecision(writer, answer19);
                 break;
             case SystemPasswordWriteThrough question:
-                var answer19 = app.Query(question);
-                WriteSystemPasswordWriteThroughSupport(writer, answer19);
+                var answer20 = app.Query(question);
+                WriteSystemPasswordWriteThroughSupport(writer, answer20);
                 break;
             default: throw new ArgumentOutOfRangeException(nameof(query), query.GetType().Name, "Not a contract Query.");
         }
@@ -1758,6 +1767,24 @@ public static class ContractCodec {
         WriteCurrentTabCleanup(writer, value.CurrentTabCleanup);
         WriteContentBlockingPolicy(writer, value.ContentBlocking);
         WriteDataRetentionPreferences(writer, value.DataRetention);
+    }
+
+    public static CanReturnToSavedAddress ReadCanReturnToSavedAddress(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new CanReturnToSavedAddress(
+            reader.ReadGuid(),
+            reader.ReadGuid(),
+            reader.ReadGuid(),
+            reader.ReadGuid());
+    }
+
+    public static void WriteCanReturnToSavedAddress(WireWriter writer, CanReturnToSavedAddress value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteGuid(value.WorkspaceId);
+        writer.WriteGuid(value.WindowId);
+        writer.WriteGuid(value.SpaceId);
+        writer.WriteGuid(value.TabId);
     }
 
     public static CanSend ReadCanSend(WireReader reader) {
@@ -5264,6 +5291,18 @@ public static class ContractCodec {
         ArgumentNullException.ThrowIfNull(writer);
         ArgumentNullException.ThrowIfNull(value);
         writer.WriteInt64(value.Revision);
+    }
+
+    public static SavedAddressReturn ReadSavedAddressReturn(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new SavedAddressReturn(
+            reader.ReadBool());
+    }
+
+    public static void WriteSavedAddressReturn(WireWriter writer, SavedAddressReturn value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteBool(value.ChangesPage);
     }
 
     public static SearchEngineLimitReached ReadSearchEngineLimitReached(WireReader reader) {

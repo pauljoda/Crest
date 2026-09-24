@@ -2345,6 +2345,10 @@
     "page-live-state": {
       "category": "internal",
       "message": "Each page's address, title, loading, history, security and failure live in the core, which also resolves what the person types before a page loads it."
+    },
+    "saved-address-return-query": {
+      "category": "internal",
+      "message": "The core answers whether a pinned tab can return to its saved address."
     }
   }
 }

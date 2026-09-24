@@ -325,6 +325,15 @@ struct BrowsingPreferences: Equatable, Sendable {
     let dataRetention: DataRetentionPreferences
 }
 
+struct CanReturnToSavedAddress: Query, Equatable, Sendable {
+    typealias Answer = SavedAddressReturn
+
+    let workspaceID: UUID
+    let windowID: UUID
+    let spaceID: UUID
+    let tabID: UUID
+}
+
 struct CanSend: Query, Sendable {
     typealias Answer = SendPermission
 
@@ -1460,6 +1469,10 @@ struct SaveFailed: Equatable, Sendable {
 
 struct Saved: Equatable, Sendable {
     let revision: Int64
+}
+
+struct SavedAddressReturn: Equatable, Sendable {
+    let changesPage: Bool
 }
 
 struct SearchEngineLimitReached: Equatable, Sendable {

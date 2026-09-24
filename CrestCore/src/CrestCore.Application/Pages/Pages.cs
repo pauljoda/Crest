@@ -102,6 +102,21 @@ internal sealed class Pages(Device device, Engines engines, IClock clock, IIdSou
 
     #region Actions - Queries
 
+    /// Whether returning the tab to its saved address changes anything: it is
+    /// away from that page, or its page in the window is heading to another.
+    /// A tab that belongs nowhere, is gone or lives in a locked Space does not.
+    public SavedAddressReturn Answer(CanReturnToSavedAddress question) {
+        ArgumentNullException.ThrowIfNull(question);
+        var workspace = device.Workspace(question.WorkspaceId);
+        if (workspace.Current.Spaces.FirstOrDefault(space => space.Id == question.SpaceId) is not { } space
+            || workspace.IsLocked(space)
+            || space.Tabs.FirstOrDefault(tab => tab.Id == question.TabId) is not { SavedAddress: { } saved } tab)
+            return new(ChangesPage: false);
+        if (tab.IsAwayFromSavedAddress) return new(ChangesPage: true);
+        var heading = Showing(question.WorkspaceId, question.WindowId, tab.Id)?.PendingUrl;
+        return new(ChangesPage: heading is { } pending && !new WebAddress(pending).IsSamePage(new WebAddress(saved)));
+    }
+
     /// The live state of the page that shows `tabId` of a workspace in
     /// `windowId`, or in another window of the workspace when that window
     /// hosts none, or null when no page shows the tab.

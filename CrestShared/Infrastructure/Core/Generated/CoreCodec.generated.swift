@@ -7,7 +7,7 @@ import Foundation
 enum CoreCodec {
     /// SHA-256 of the canonical contract schema. The core refuses any other.
     static let fingerprint: [UInt8] = [
-        0xf6, 0x82, 0xd4, 0xea, 0xe7, 0x26, 0xc5, 0xd2, 0xe8, 0x84, 0xcb, 0xbb, 0x51, 0x90, 0xf1, 0x7b, 0x85, 0x1e, 0xd3, 0x24, 0xc7, 0x89, 0x98, 0xf9, 0x69, 0x2c, 0xa0, 0xfa, 0x7c, 0xee, 0x03, 0xe8
+        0x70, 0x98, 0xfd, 0x13, 0xeb, 0x88, 0x62, 0xff, 0x6d, 0x59, 0x3c, 0xeb, 0xe4, 0x65, 0xfc, 0xdc, 0xab, 0x96, 0x73, 0xfc, 0x1f, 0xf1, 0x5a, 0x13, 0x7a, 0x09, 0x7a, 0x93, 0xba, 0xbe, 0x14, 0x69
     ]
     /// SHA-256 of the engine contract alone, which an engine binding registers with.
     static let engineFingerprint: [UInt8] = [
@@ -113,25 +113,26 @@ enum CoreCodec {
         let tag = try reader.readTag()
         switch tag {
         case 0: return try BalancedProtectionRules(from: &reader)
-        case 1: return try CanSend(from: &reader)
-        case 2: return try CanTearOff(from: &reader)
-        case 3: return try CredentialCapture(from: &reader)
-        case 4: return try CredentialFill(from: &reader)
-        case 5: return try CredentialSave(from: &reader)
-        case 6: return try CredentialSaveCheck(from: &reader)
-        case 7: return try CredentialSaveMatch(from: &reader)
-        case 8: return try DownloadProgress(from: &reader)
-        case 9: return try DownloadRisk(from: &reader)
-        case 10: return try ExternalLinkRoute(from: &reader)
-        case 11: return try FallbackTab(from: &reader)
-        case 12: return try LaunchPlan(from: &reader)
-        case 13: return try MostRecentCredential(from: &reader)
-        case 14: return try PasskeyAccess(from: &reader)
-        case 15: return try PendingSave(from: &reader)
-        case 16: return try QuickWindowSite(from: &reader)
-        case 17: return try StrongPassword(from: &reader)
-        case 18: return try SystemPasswordOffer(from: &reader)
-        case 19: return try SystemPasswordWriteThrough(from: &reader)
+        case 1: return try CanReturnToSavedAddress(from: &reader)
+        case 2: return try CanSend(from: &reader)
+        case 3: return try CanTearOff(from: &reader)
+        case 4: return try CredentialCapture(from: &reader)
+        case 5: return try CredentialFill(from: &reader)
+        case 6: return try CredentialSave(from: &reader)
+        case 7: return try CredentialSaveCheck(from: &reader)
+        case 8: return try CredentialSaveMatch(from: &reader)
+        case 9: return try DownloadProgress(from: &reader)
+        case 10: return try DownloadRisk(from: &reader)
+        case 11: return try ExternalLinkRoute(from: &reader)
+        case 12: return try FallbackTab(from: &reader)
+        case 13: return try LaunchPlan(from: &reader)
+        case 14: return try MostRecentCredential(from: &reader)
+        case 15: return try PasskeyAccess(from: &reader)
+        case 16: return try PendingSave(from: &reader)
+        case 17: return try QuickWindowSite(from: &reader)
+        case 18: return try StrongPassword(from: &reader)
+        case 19: return try SystemPasswordOffer(from: &reader)
+        case 20: return try SystemPasswordWriteThrough(from: &reader)
         default: throw WireError.malformed("Unknown Query tag \(tag)")
         }
     }
@@ -1156,6 +1157,33 @@ extension BrowsingPreferences {
     }
 }
 
+extension CanReturnToSavedAddress {
+    init(from reader: inout WireReader) throws(WireError) {
+        let workspaceID = try reader.readUUID()
+        let windowID = try reader.readUUID()
+        let spaceID = try reader.readUUID()
+        let tabID = try reader.readUUID()
+        self.init(workspaceID: workspaceID, windowID: windowID, spaceID: spaceID, tabID: tabID)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeUUID(workspaceID)
+        writer.writeUUID(windowID)
+        writer.writeUUID(spaceID)
+        writer.writeUUID(tabID)
+    }
+
+    func encodeQuery(into writer: inout WireWriter) {
+        writer.writeTag(1)
+        encode(into: &writer)
+    }
+
+    static func decodeAnswer(from reader: inout WireReader) throws(WireError) -> SavedAddressReturn {
+        let answer = try SavedAddressReturn(from: &reader)
+        return answer
+    }
+}
+
 extension CanSend {
     init(from reader: inout WireReader) throws(WireError) {
         let intent = try CoreCodec.decodeIntent(from: &reader)
@@ -1167,7 +1195,7 @@ extension CanSend {
     }
 
     func encodeQuery(into writer: inout WireWriter) {
-        writer.writeTag(1)
+        writer.writeTag(2)
         encode(into: &writer)
     }
 
@@ -1216,7 +1244,7 @@ extension CanTearOff {
     }
 
     func encodeQuery(into writer: inout WireWriter) {
-        writer.writeTag(2)
+        writer.writeTag(3)
         encode(into: &writer)
     }
 
@@ -1657,7 +1685,7 @@ extension CredentialCapture {
     }
 
     func encodeQuery(into writer: inout WireWriter) {
-        writer.writeTag(3)
+        writer.writeTag(4)
         encode(into: &writer)
     }
 
@@ -1725,7 +1753,7 @@ extension CredentialFill {
     }
 
     func encodeQuery(into writer: inout WireWriter) {
-        writer.writeTag(4)
+        writer.writeTag(5)
         encode(into: &writer)
     }
 
@@ -1925,7 +1953,7 @@ extension CredentialSave {
     }
 
     func encodeQuery(into writer: inout WireWriter) {
-        writer.writeTag(5)
+        writer.writeTag(6)
         encode(into: &writer)
     }
 
@@ -1952,7 +1980,7 @@ extension CredentialSaveCheck {
     }
 
     func encodeQuery(into writer: inout WireWriter) {
-        writer.writeTag(6)
+        writer.writeTag(7)
         encode(into: &writer)
     }
 
@@ -1984,7 +2012,7 @@ extension CredentialSaveMatch {
     }
 
     func encodeQuery(into writer: inout WireWriter) {
-        writer.writeTag(7)
+        writer.writeTag(8)
         encode(into: &writer)
     }
 
@@ -2314,7 +2342,7 @@ extension DownloadProgress {
     }
 
     func encodeQuery(into writer: inout WireWriter) {
-        writer.writeTag(8)
+        writer.writeTag(9)
         encode(into: &writer)
     }
 
@@ -2376,7 +2404,7 @@ extension DownloadRisk {
     }
 
     func encodeQuery(into writer: inout WireWriter) {
-        writer.writeTag(9)
+        writer.writeTag(10)
         encode(into: &writer)
     }
 
@@ -2922,7 +2950,7 @@ extension ExternalLinkRoute {
     }
 
     func encodeQuery(into writer: inout WireWriter) {
-        writer.writeTag(10)
+        writer.writeTag(11)
         encode(into: &writer)
     }
 
@@ -2970,7 +2998,7 @@ extension FallbackTab {
     }
 
     func encodeQuery(into writer: inout WireWriter) {
-        writer.writeTag(11)
+        writer.writeTag(12)
         encode(into: &writer)
     }
 
@@ -3765,7 +3793,7 @@ extension LaunchPlan {
     }
 
     func encodeQuery(into writer: inout WireWriter) {
-        writer.writeTag(12)
+        writer.writeTag(13)
         encode(into: &writer)
     }
 
@@ -4176,7 +4204,7 @@ extension MostRecentCredential {
     }
 
     func encodeQuery(into writer: inout WireWriter) {
-        writer.writeTag(13)
+        writer.writeTag(14)
         encode(into: &writer)
     }
 
@@ -5167,7 +5195,7 @@ extension PasskeyAccess {
     }
 
     func encodeQuery(into writer: inout WireWriter) {
-        writer.writeTag(14)
+        writer.writeTag(15)
         encode(into: &writer)
     }
 
@@ -5197,7 +5225,7 @@ extension PendingSave {
     }
 
     func encodeQuery(into writer: inout WireWriter) {
-        writer.writeTag(15)
+        writer.writeTag(16)
         encode(into: &writer)
     }
 
@@ -5290,7 +5318,7 @@ extension QuickWindowSite {
     }
 
     func encodeQuery(into writer: inout WireWriter) {
-        writer.writeTag(16)
+        writer.writeTag(17)
         encode(into: &writer)
     }
 
@@ -5691,6 +5719,17 @@ extension Saved {
 
     func encode(into writer: inout WireWriter) {
         writer.writeInt64(revision)
+    }
+}
+
+extension SavedAddressReturn {
+    init(from reader: inout WireReader) throws(WireError) {
+        let changesPage = try reader.readBool()
+        self.init(changesPage: changesPage)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeBool(changesPage)
     }
 }
 
@@ -6934,7 +6973,7 @@ extension StrongPassword {
     }
 
     func encodeQuery(into writer: inout WireWriter) {
-        writer.writeTag(17)
+        writer.writeTag(18)
         encode(into: &writer)
     }
 
@@ -7034,7 +7073,7 @@ extension SystemPasswordOffer {
     }
 
     func encodeQuery(into writer: inout WireWriter) {
-        writer.writeTag(18)
+        writer.writeTag(19)
         encode(into: &writer)
     }
 
@@ -7072,7 +7111,7 @@ extension SystemPasswordWriteThrough {
     }
 
     func encodeQuery(into writer: inout WireWriter) {
-        writer.writeTag(19)
+        writer.writeTag(20)
         encode(into: &writer)
     }
 

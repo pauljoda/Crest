@@ -140,6 +140,7 @@ public sealed partial class CrestApp : IDisposable {
                 ExternalLinkRoute route => links.Answer(route),
                 QuickWindowSite site => links.Answer(site),
                 CanTearOff tearOff => device.Answer(tearOff),
+                CanReturnToSavedAddress savedAddress => pages.Answer(savedAddress),
                 FallbackTab fallback => Window.Answer(fallback),
                 PendingSave => new PendingSaveRevision(storage?.PendingRevision is { } revision ? checked((long)revision) : null),
                 CanSend check => Permission(check.Intent),

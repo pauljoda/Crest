@@ -116,6 +116,27 @@ public sealed partial class BrowserContractsTests {
     }
 
     [Fact]
+    public void ASavedTabReturnsHomeWhenItOrItsPageHasLeftIt() {
+        var (app, engine, _, page, workspace, window, space, tab) = LivePage();
+        using var disposal = app;
+        bool Returns() => app.Query(new CanReturnToSavedAddress(workspace, window, space, tab)).ChangesPage;
+
+        // The fixture's saved tab shows another page than the one it was saved at.
+        Assert.True(Returns());
+        app.Send(new ReturnToSavedAddress(workspace, space, tab));
+        Assert.False(Returns());
+
+        // Its page heading within the saved page is still home; heading elsewhere is not.
+        app.Report(engine, new PageStateChanged(page, PageSnapshot.Blank with { PendingUrl = "https://example.com/#top" }));
+        app.Drain();
+        Assert.False(Returns());
+        app.Report(engine, new PageStateChanged(page, PageSnapshot.Blank with { PendingUrl = "https://elsewhere.example/" }));
+        app.Drain();
+        Assert.True(Returns());
+        Assert.False(app.Query(new CanReturnToSavedAddress(workspace, window, space, Guid.NewGuid())).ChangesPage);
+    }
+
+    [Fact]
     public void NavigateLoadsInternalPagesOnlyOnAnEngineThatShowsThemAndNeverInALockedSpace() {
         var session = SavedSession().Document["session"]!;
         var space = SpaceId(session["spaces"]![0]!);
