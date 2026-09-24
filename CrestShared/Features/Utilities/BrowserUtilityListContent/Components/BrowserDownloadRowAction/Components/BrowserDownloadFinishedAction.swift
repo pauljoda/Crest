@@ -3,6 +3,7 @@ import SwiftUI
 
 struct BrowserDownloadFinishedAction: View {
     let itemID: UUID
+    let action: DownloadRowAction
     let destinations: [BrowserUtilityDownloadDestination]
     let perform: (BrowserUtilityDownloadAction) -> Void
 
@@ -19,7 +20,7 @@ struct BrowserDownloadFinishedAction: View {
             )
         } else if !destinations.isEmpty {
             ZStack {
-                Image(systemName: "square.and.arrow.up")
+                Image(systemName: action.symbol)
                     .accessibilityHidden(true)
 
                 Menu {
@@ -45,13 +46,13 @@ struct BrowserDownloadFinishedAction: View {
                     height: BrowserUtilitySwitcherLayout.buttonSize
                 )
                 .clipped()
-                .accessibilityLabel("Download Actions")
+                .accessibilityLabel(Text(action.title))
             }
             .frame(
                 width: BrowserUtilitySwitcherLayout.buttonSize,
                 height: BrowserUtilitySwitcherLayout.buttonSize
             )
-            .help("Download Actions")
+            .help(Text(action.title))
         }
     }
 }

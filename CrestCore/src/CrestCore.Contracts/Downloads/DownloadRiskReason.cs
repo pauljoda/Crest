@@ -10,11 +10,14 @@ public sealed class DownloadRiskReason {
     #region Variables
 
     public static readonly DownloadRiskReason ExecutableOrInstaller = new(name: "executableOrInstaller",
-        applies: facts => facts.RunsCode, confirmsUserInitiated: false);
+        applies: facts => facts.RunsCode, confirmsUserInitiated: false,
+        message: "This file type can install or run software.");
     public static readonly DownloadRiskReason DeceptiveFilename = new(name: "deceptiveFilename",
-        applies: facts => facts.HasDeceptiveFilename, confirmsUserInitiated: true);
+        applies: facts => facts.HasDeceptiveFilename, confirmsUserInitiated: true,
+        message: "The original filename used invisible or direction-changing characters that can disguise its real extension.");
     public static readonly DownloadRiskReason DangerousTypeMismatch = new(name: "dangerousTypeMismatch",
-        applies: facts => facts.RunsCode && facts.TypesRelated == false, confirmsUserInitiated: true);
+        applies: facts => facts.RunsCode && facts.TypesRelated == false, confirmsUserInitiated: true,
+        message: "The server-reported file type does not match the filename and one of those types can run software.");
 
     public static IReadOnlyList<DownloadRiskReason> All { get; } = [ExecutableOrInstaller, DeceptiveFilename, DangerousTypeMismatch];
 
@@ -29,14 +32,19 @@ public sealed class DownloadRiskReason {
     /// download began.
     public bool ConfirmsUserInitiated { get; }
 
+    /// Why the download looks dangerous, as the confirmation tells the person.
+    [Localized]
+    public string Message { get; }
+
     #endregion
 
     #region Constructors
 
-    private DownloadRiskReason(string name, Func<DownloadRiskFacts, bool> applies, bool confirmsUserInitiated) {
+    private DownloadRiskReason(string name, Func<DownloadRiskFacts, bool> applies, bool confirmsUserInitiated, string message) {
         Name = name;
         this.applies = applies;
         ConfirmsUserInitiated = confirmsUserInitiated;
+        Message = message;
     }
 
     #endregion

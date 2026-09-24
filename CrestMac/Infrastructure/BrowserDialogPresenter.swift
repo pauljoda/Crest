@@ -259,7 +259,7 @@ final class BrowserDialogPresenter {
         await withCheckedContinuation { continuation in
             let alert = NSAlert()
             alert.messageText = "Download “\(assessment.sanitizedFilename)”?"
-            var paragraphs = assessment.reasons.map(\.message)
+            var paragraphs = assessment.reasons.map { String(localized: $0.message) }
             if let host = sourceURL?.host() {
                 paragraphs.append("Source: \(host) · Space: \(spaceName)")
             } else {

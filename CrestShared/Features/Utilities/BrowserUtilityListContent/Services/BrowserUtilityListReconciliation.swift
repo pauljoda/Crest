@@ -46,7 +46,7 @@ enum BrowserUtilityListReconciliation {
     ) -> Bool {
         query.isEmpty
             || item.filename.localizedStandardContains(query)
-            || item.utilityStatusText
+            || BrowserDownloadRowPresentation.status(of: item)
                 .resolvedForSearch()
                 .localizedStandardContains(query)
     }

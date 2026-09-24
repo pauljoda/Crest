@@ -14,7 +14,7 @@ namespace CrestCore.Native;
 public static class ContractCodec {
     /// <summary>SHA-256 of the canonical contract schema.</summary>
     public static ReadOnlySpan<byte> Fingerprint => [
-        0xb5, 0x8a, 0xf5, 0xea, 0x8d, 0x77, 0x78, 0x76, 0xbc, 0x7e, 0xdf, 0xbc, 0x3d, 0x18, 0xf5, 0x81, 0x7b, 0x01, 0x6c, 0xf4, 0x92, 0x15, 0xc7, 0x48, 0xb1, 0x27, 0x9a, 0xc3, 0x7b, 0x92, 0xc8, 0xb6
+        0xde, 0xb7, 0x93, 0x7e, 0xb1, 0xbc, 0x94, 0xb3, 0x1f, 0x19, 0x31, 0xa3, 0x4d, 0x25, 0xc1, 0x55, 0x21, 0xf6, 0x92, 0x41, 0xa4, 0x98, 0xa3, 0xf6, 0x42, 0xe3, 0x39, 0x71, 0x4b, 0xd9, 0xca, 0x95
     ];
 
     public static Intent ReadIntent(WireReader reader) {
@@ -1907,6 +1907,17 @@ public static class ContractCodec {
         ArgumentNullException.ThrowIfNull(writer);
         ArgumentNullException.ThrowIfNull(value);
         writer.WriteEnum(TagOf(DownloadRiskReason.All, value));
+    }
+
+    public static DownloadRowAction ReadDownloadRowAction(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return DownloadRowAction.All[reader.ReadEnum(DownloadRowAction.All.Count)];
+    }
+
+    public static void WriteDownloadRowAction(WireWriter writer, DownloadRowAction value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteEnum(TagOf(DownloadRowAction.All, value));
     }
 
     public static DownloadTextField ReadDownloadTextField(WireReader reader) {

@@ -18,14 +18,10 @@ struct BrowserDownloadRowPresentation: Sendable {
         let isActivelyDownloading =
             item.phase.isTransferring
             && !telemetry.isPaused
-        let statusText: BrowserUtilityText
-        if item.phase.isTransferring, telemetry.isPaused {
-            statusText = .localized("Paused")
-        } else if item.phase.isComplete {
-            statusText = .localized("Completed")
-        } else {
-            statusText = item.utilityStatusText
-        }
+        let statusText: BrowserUtilityText =
+            item.phase.isTransferring && telemetry.isPaused
+            ? .localized("Paused")
+            : status(of: item)
         let showsTransferMetrics =
             telemetry.bytesReceived > 0
             || telemetry.totalBytes != nil
@@ -46,6 +42,12 @@ struct BrowserDownloadRowPresentation: Sendable {
             showsStatusAlongsideMetrics: showsTransferMetrics
                 && !isActivelyDownloading
         )
+    }
+
+    /// The phase's title, or the record's own message for a phase without
+    /// one. Search matches it without waiting for transfer telemetry.
+    static func status(of item: DownloadState) -> BrowserUtilityText {
+        item.phase.title.map(BrowserUtilityText.localized) ?? .verbatim(item.message ?? "")
     }
 
     var hasSecondaryTransferMetrics: Bool {

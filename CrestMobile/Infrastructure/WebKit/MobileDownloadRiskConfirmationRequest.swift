@@ -36,7 +36,7 @@ struct MobileDownloadRiskConfirmationRequest: Identifiable, Equatable, Sendable 
     }
 
     var message: String {
-        var paragraphs = assessment.reasons.map(\.message)
+        var paragraphs = assessment.reasons.map { String(localized: $0.message) }
         if let sourceLabel {
             paragraphs.append("Source: \(sourceLabel)")
         }

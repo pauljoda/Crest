@@ -105,7 +105,13 @@ internal static class SwiftEmitter {
         code.Append('\n').Append($"/// The members of the core's `{set.Name}`. A member's wire tag is its index in `all`.\n");
         if (set.CoreOnly.Count > 0)
             code.Append($"/// Core-only behavior, not emitted: {string.Join(", ", set.CoreOnly.Select(name => $"`{name}`"))}.\n");
-        code.Append($"struct {set.Name}: Hashable, Sendable {{\n    let tag: Int\n");
+        code.Append($"struct {set.Name}: Hashable, Sendable {{\n");
+        foreach (var kinds in set.Properties.Select(property => property.Type).OfType<KindsField>()) {
+            code.Append($"    enum {kinds.Type.Name}: Sendable {{\n");
+            foreach (string kind in Enum.GetNames(kinds.Type)) code.Append($"        case {Local(kind)}\n");
+            code.Append("    }\n\n");
+        }
+        code.Append("    let tag: Int\n");
         foreach (var property in properties) code.Append($"    let {property.Name}: {TypeName(property.Type)}\n");
         code.Append('\n').Append(Wrapped("    private init(", ")", [
             "tag: Int", .. properties.Select(property => $"{property.Name}: {TypeName(property.Type)}")]));
@@ -326,6 +332,8 @@ internal static class SwiftEmitter {
         PrimitiveField primitive => Method(primitive.Kind),
         EnumField item => item.Type.Name,
         SetField set => set.Type.Name,
+        LocalizedField => "LocalizedStringResource",
+        KindsField kinds => kinds.Type.Name,
         RecordField record => record.Type.Name,
         RootField { Root: ContractRoot.Intent or ContractRoot.Query } root => $"any {root.Root}",
         RootField root => root.Root.ToString(),
@@ -360,6 +368,10 @@ internal static class SwiftEmitter {
         (PrimitiveField, TimeSpan duration) => DoubleLiteral(duration.TotalSeconds),
         (PrimitiveField, string text) => StringLiteral(text),
         (SetField, SetMemberReference reference) => $"{reference.Set.Name}.{Local(reference.Member)}",
+        (KindsField, Enum kind) => $".{Local(kind.ToString())}",
+        (LocalizedField, LocalizedText text) => text.Comment is { } comment
+            ? $"LocalizedStringResource({StringLiteral(text.Text)}, comment: {StringLiteral(comment)})"
+            : $"LocalizedStringResource({StringLiteral(text.Text)})",
         _ => throw new ContractSchemaException($"Cannot spell {value} as a Swift {TypeName(type)}.")
     };
 

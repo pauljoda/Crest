@@ -7,7 +7,7 @@ import Foundation
 enum CoreCodec {
     /// SHA-256 of the canonical contract schema. The core refuses any other.
     static let fingerprint: [UInt8] = [
-        0xb5, 0x8a, 0xf5, 0xea, 0x8d, 0x77, 0x78, 0x76, 0xbc, 0x7e, 0xdf, 0xbc, 0x3d, 0x18, 0xf5, 0x81, 0x7b, 0x01, 0x6c, 0xf4, 0x92, 0x15, 0xc7, 0x48, 0xb1, 0x27, 0x9a, 0xc3, 0x7b, 0x92, 0xc8, 0xb6
+        0xde, 0xb7, 0x93, 0x7e, 0xb1, 0xbc, 0x94, 0xb3, 0x1f, 0x19, 0x31, 0xa3, 0x4d, 0x25, 0xc1, 0x55, 0x21, 0xf6, 0x92, 0x41, 0xa4, 0x98, 0xa3, 0xf6, 0x42, 0xe3, 0x39, 0x71, 0x4b, 0xd9, 0xca, 0x95
     ]
 
     static func decodeIntent(from reader: inout WireReader) throws(WireError) -> any Intent {
@@ -2128,6 +2128,20 @@ extension DownloadRiskReason {
         let tag = try reader.readEnum()
         guard Self.all.indices.contains(tag) else {
             throw WireError.malformed("Unknown DownloadRiskReason \(tag)")
+        }
+        self = Self.all[tag]
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeEnum(tag)
+    }
+}
+
+extension DownloadRowAction {
+    init(from reader: inout WireReader) throws(WireError) {
+        let tag = try reader.readEnum()
+        guard Self.all.indices.contains(tag) else {
+            throw WireError.malformed("Unknown DownloadRowAction \(tag)")
         }
         self = Self.all[tag]
     }

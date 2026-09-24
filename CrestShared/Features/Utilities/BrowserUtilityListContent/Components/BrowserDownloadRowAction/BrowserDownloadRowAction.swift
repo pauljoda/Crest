@@ -6,41 +6,43 @@ struct BrowserDownloadRowAction: View {
     let destinations: [BrowserUtilityDownloadDestination]
     let perform: (BrowserUtilityDownloadAction) -> Void
 
+    /// The phase chooses the action; this is the one place that turns each
+    /// kind into the command the platform performs.
     var body: some View {
-        if item.phase.canRetry {
-            actionButton("Allow Download", systemImage: "arrow.clockwise") {
-                perform(.retry(item.id))
-            }
-        } else if item.phase.isLive {
-            actionButton("Cancel Download", systemImage: "xmark") {
-                perform(.cancel(item.id))
-            }
-        } else if item.phase.isComplete {
+        let action = item.phase.primaryAction
+        switch action.kind {
+        case .retry:
+            actionButton(action) { perform(.retry(item.id)) }
+        case .cancel:
+            actionButton(action) { perform(.cancel(item.id)) }
+        case .open:
             BrowserDownloadFinishedAction(
                 itemID: item.id,
+                action: action,
                 destinations: destinations,
                 perform: perform
             )
-        } else {
-            actionButton("Remove Download", systemImage: "trash", role: .destructive) {
-                perform(.clear(item.id))
-            }
+        case .remove:
+            actionButton(action) { perform(.clear(item.id)) }
         }
     }
 
     private func actionButton(
-        _ title: LocalizedStringResource,
-        systemImage: String,
-        role: ButtonRole? = nil,
-        action: @escaping () -> Void
+        _ action: DownloadRowAction,
+        perform: @escaping () -> Void
     ) -> some View {
-        Button(title, systemImage: systemImage, role: role, action: action)
-            .labelStyle(.iconOnly)
-            .buttonStyle(.borderless)
-            .frame(
-                width: BrowserUtilitySwitcherLayout.buttonSize,
-                height: BrowserUtilitySwitcherLayout.buttonSize
-            )
+        Button(
+            action.title,
+            systemImage: action.symbol,
+            role: action.isDestructive ? .destructive : nil,
+            action: perform
+        )
+        .labelStyle(.iconOnly)
+        .buttonStyle(.borderless)
+        .frame(
+            width: BrowserUtilitySwitcherLayout.buttonSize,
+            height: BrowserUtilitySwitcherLayout.buttonSize
+        )
     }
 }
 

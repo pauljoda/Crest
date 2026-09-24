@@ -119,7 +119,7 @@ enum BrowserUtilityListPreparation {
                 || entry.url.absoluteString.localizedStandardContains(query)
         case .download(let download):
             return download.filename.localizedStandardContains(query)
-                || download.utilityStatusText
+                || BrowserDownloadRowPresentation.status(of: download)
                     .resolvedForSearch()
                     .localizedStandardContains(query)
         }

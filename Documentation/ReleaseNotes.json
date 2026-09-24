@@ -2145,6 +2145,10 @@
     "download-sets-self-describing": {
       "category": "internal",
       "message": "Download phases, risk reasons and text fields are self-describing sets whose instances carry their own rules."
+    },
+    "download-presentation-on-instances": {
+      "category": "internal",
+      "message": "Download phases, risk reasons and row actions carry their own titles and symbols, and a finished download is found by searching Completed."
     }
   }
 }

@@ -4861,7 +4861,7 @@
       }
     },
     "Completed" : {
-
+      "comment" : "Status of a download whose file is saved."
     },
     "Completed visits from this Space appear here and remain separate from every other Space." : {
       "localizations" : {

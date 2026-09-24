@@ -619,29 +619,41 @@ enum SystemPasswordWriteThroughAvailability: Int, CaseIterable, Sendable {
 struct DownloadPhase: Hashable, Sendable {
     let tag: Int
     let name: String
+    let title: LocalizedStringResource?
+    let symbol: String?
+    let primaryAction: DownloadRowAction
     let isLive: Bool
     let isTransferring: Bool
     let isComplete: Bool
     let needsAttention: Bool
+    let awaitsDecision: Bool
     let canRetry: Bool
     let canFail: Bool
 
     private init(
         tag: Int,
         name: String,
+        title: LocalizedStringResource?,
+        symbol: String?,
+        primaryAction: DownloadRowAction,
         isLive: Bool,
         isTransferring: Bool,
         isComplete: Bool,
         needsAttention: Bool,
+        awaitsDecision: Bool,
         canRetry: Bool,
         canFail: Bool
     ) {
         self.tag = tag
         self.name = name
+        self.title = title
+        self.symbol = symbol
+        self.primaryAction = primaryAction
         self.isLive = isLive
         self.isTransferring = isTransferring
         self.isComplete = isComplete
         self.needsAttention = needsAttention
+        self.awaitsDecision = awaitsDecision
         self.canRetry = canRetry
         self.canFail = canFail
     }
@@ -649,70 +661,98 @@ struct DownloadPhase: Hashable, Sendable {
     static let preparing = DownloadPhase(
         tag: 0,
         name: "preparing",
+        title: LocalizedStringResource("Preparing…"),
+        symbol: nil,
+        primaryAction: DownloadRowAction.cancel,
         isLive: true,
         isTransferring: false,
         isComplete: false,
         needsAttention: false,
+        awaitsDecision: false,
         canRetry: false,
         canFail: true
     )
     static let awaitingApproval = DownloadPhase(
         tag: 1,
         name: "awaitingApproval",
+        title: LocalizedStringResource("Waiting for approval…"),
+        symbol: "exclamationmark.shield.fill",
+        primaryAction: DownloadRowAction.cancel,
         isLive: true,
         isTransferring: false,
         isComplete: false,
         needsAttention: false,
+        awaitsDecision: true,
         canRetry: false,
         canFail: true
     )
     static let downloading = DownloadPhase(
         tag: 2,
         name: "downloading",
+        title: LocalizedStringResource("Downloading…"),
+        symbol: nil,
+        primaryAction: DownloadRowAction.cancel,
         isLive: true,
         isTransferring: true,
         isComplete: false,
         needsAttention: false,
+        awaitsDecision: false,
         canRetry: false,
         canFail: true
     )
     static let finished = DownloadPhase(
         tag: 3,
         name: "finished",
+        title: LocalizedStringResource("Completed", comment: "Status of a download whose file is saved."),
+        symbol: nil,
+        primaryAction: DownloadRowAction.open,
         isLive: false,
         isTransferring: false,
         isComplete: true,
         needsAttention: false,
+        awaitsDecision: false,
         canRetry: false,
         canFail: false
     )
     static let blockedAutomaticDownload = DownloadPhase(
         tag: 4,
         name: "blockedAutomaticDownload",
+        title: LocalizedStringResource("Automatic download blocked. Use Allow Download to retry, or change Automatic Downloads in this site’s permissions."),
+        symbol: "arrow.down.circle.fill",
+        primaryAction: DownloadRowAction.retry,
         isLive: false,
         isTransferring: false,
         isComplete: false,
         needsAttention: true,
+        awaitsDecision: true,
         canRetry: true,
         canFail: true
     )
     static let canceled = DownloadPhase(
         tag: 5,
         name: "canceled",
+        title: nil,
+        symbol: "xmark.circle.fill",
+        primaryAction: DownloadRowAction.remove,
         isLive: false,
         isTransferring: false,
         isComplete: false,
         needsAttention: false,
+        awaitsDecision: false,
         canRetry: false,
         canFail: false
     )
     static let failed = DownloadPhase(
         tag: 6,
         name: "failed",
+        title: nil,
+        symbol: "exclamationmark.triangle.fill",
+        primaryAction: DownloadRowAction.remove,
         isLive: false,
         isTransferring: false,
         isComplete: false,
         needsAttention: true,
+        awaitsDecision: false,
         canRetry: false,
         canFail: false
     )
@@ -746,23 +786,32 @@ struct DownloadRiskReason: Hashable, Sendable {
     let tag: Int
     let name: String
     let confirmsUserInitiated: Bool
+    let message: LocalizedStringResource
 
-    private init(tag: Int, name: String, confirmsUserInitiated: Bool) {
+    private init(tag: Int, name: String, confirmsUserInitiated: Bool, message: LocalizedStringResource) {
         self.tag = tag
         self.name = name
         self.confirmsUserInitiated = confirmsUserInitiated
+        self.message = message
     }
 
     static let executableOrInstaller = DownloadRiskReason(
         tag: 0,
         name: "executableOrInstaller",
-        confirmsUserInitiated: false
+        confirmsUserInitiated: false,
+        message: LocalizedStringResource("This file type can install or run software.")
     )
-    static let deceptiveFilename = DownloadRiskReason(tag: 1, name: "deceptiveFilename", confirmsUserInitiated: true)
+    static let deceptiveFilename = DownloadRiskReason(
+        tag: 1,
+        name: "deceptiveFilename",
+        confirmsUserInitiated: true,
+        message: LocalizedStringResource("The original filename used invisible or direction-changing characters that can disguise its real extension.")
+    )
     static let dangerousTypeMismatch = DownloadRiskReason(
         tag: 2,
         name: "dangerousTypeMismatch",
-        confirmsUserInitiated: true
+        confirmsUserInitiated: true,
+        message: LocalizedStringResource("The server-reported file type does not match the filename and one of those types can run software.")
     )
 
     static let all: [DownloadRiskReason] = [executableOrInstaller, deceptiveFilename, dangerousTypeMismatch]
@@ -772,6 +821,86 @@ struct DownloadRiskReason: Hashable, Sendable {
     }
 
     static func == (lhs: DownloadRiskReason, rhs: DownloadRiskReason) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+}
+
+/// The members of the core's `DownloadRowAction`. A member's wire tag is its index in `all`.
+struct DownloadRowAction: Hashable, Sendable {
+    enum Kinds: Sendable {
+        case retry
+        case cancel
+        case open
+        case remove
+    }
+
+    let tag: Int
+    let kind: Kinds
+    let name: String
+    let title: LocalizedStringResource
+    let symbol: String
+    let isDestructive: Bool
+
+    private init(
+        tag: Int,
+        kind: Kinds,
+        name: String,
+        title: LocalizedStringResource,
+        symbol: String,
+        isDestructive: Bool
+    ) {
+        self.tag = tag
+        self.kind = kind
+        self.name = name
+        self.title = title
+        self.symbol = symbol
+        self.isDestructive = isDestructive
+    }
+
+    static let retry = DownloadRowAction(
+        tag: 0,
+        kind: .retry,
+        name: "retry",
+        title: LocalizedStringResource("Allow Download"),
+        symbol: "arrow.clockwise",
+        isDestructive: false
+    )
+    static let cancel = DownloadRowAction(
+        tag: 1,
+        kind: .cancel,
+        name: "cancel",
+        title: LocalizedStringResource("Cancel Download"),
+        symbol: "xmark",
+        isDestructive: false
+    )
+    static let open = DownloadRowAction(
+        tag: 2,
+        kind: .open,
+        name: "open",
+        title: LocalizedStringResource("Download Actions"),
+        symbol: "square.and.arrow.up",
+        isDestructive: false
+    )
+    static let remove = DownloadRowAction(
+        tag: 3,
+        kind: .remove,
+        name: "remove",
+        title: LocalizedStringResource("Remove Download"),
+        symbol: "trash",
+        isDestructive: true
+    )
+
+    static let all: [DownloadRowAction] = [retry, cancel, open, remove]
+
+    static func named(_ name: String?) -> DownloadRowAction? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: DownloadRowAction, rhs: DownloadRowAction) -> Bool {
         lhs.tag == rhs.tag
     }
 
