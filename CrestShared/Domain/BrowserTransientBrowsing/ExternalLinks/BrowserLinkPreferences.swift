@@ -1,44 +1,12 @@
 import Foundation
 
-enum BrowserExternalLinkDestination:
-    String,
-    Codable,
-    CaseIterable,
-    Equatable,
-    Identifiable,
-    Sendable
-{
-    case quickWindow
-    case mostRecentSpace
-    case chosenSpace
-
-    var id: String { rawValue }
-
-    var title: String {
-        switch self {
-        case .quickWindow: "Quick Window"
-        case .mostRecentSpace: "Most Recent Space"
-        case .chosenSpace: "Chosen Space"
-        }
-    }
-
-    /// The core's kind for this stored destination.
-    var coreDestination: ExternalLinkDestination {
-        switch self {
-        case .quickWindow: .quickWindow
-        case .mostRecentSpace: .mostRecentSpace
-        case .chosenSpace: .chosenSpace
-        }
-    }
-}
-
 struct BrowserLinkPreferences: Codable, Equatable, Sendable {
-    var externalLinkDestination: BrowserExternalLinkDestination
+    var externalLinkDestination: ExternalLinkDestination
     var externalLinkSpaceID: SpaceID?
     var focusesNewTabsOpenedFromLinks: Bool
     var followsTabsMovedToAnotherSpace: Bool
     var automaticallyOpensPeek: Bool
-    var peekClickModifier: BrowserLinkClickModifier
+    var peekClickModifier: LinkPeekModifier
     var dragsLinksToPeek: Bool
     var quickWindowArchivePolicy: BrowserQuickWindowArchivePolicy
     var remembersQuickWindowSpaceBySite: Bool
@@ -72,11 +40,11 @@ struct BrowserLinkPreferences: Codable, Equatable, Sendable {
     }
 
     init(
-        externalLinkDestination: BrowserExternalLinkDestination,
+        externalLinkDestination: ExternalLinkDestination,
         externalLinkSpaceID: SpaceID?,
         focusesNewTabsOpenedFromLinks: Bool,
         automaticallyOpensPeek: Bool,
-        peekClickModifier: BrowserLinkClickModifier,
+        peekClickModifier: LinkPeekModifier,
         quickWindowArchivePolicy: BrowserQuickWindowArchivePolicy,
         remembersQuickWindowSpaceBySite: Bool,
         routes: [BrowserLinkRoute],
@@ -101,7 +69,7 @@ struct BrowserLinkPreferences: Codable, Equatable, Sendable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         externalLinkDestination =
             try container.decodeIfPresent(
-                BrowserExternalLinkDestination.self,
+                ExternalLinkDestination.self,
                 forKey: .externalLinkDestination
             ) ?? .quickWindow
         externalLinkSpaceID = try container.decodeIfPresent(
@@ -122,7 +90,7 @@ struct BrowserLinkPreferences: Codable, Equatable, Sendable {
             ) ?? true
         peekClickModifier =
             try container.decodeIfPresent(
-                BrowserLinkClickModifier.self,
+                LinkPeekModifier.self,
                 forKey: .peekClickModifier
             ) ?? .option
         dragsLinksToPeek = try container.decodeIfPresent(Bool.self, forKey: .dragsLinksToPeek) ?? true

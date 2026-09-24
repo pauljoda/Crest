@@ -3,14 +3,14 @@ import Foundation
 struct BrowserLinkRoute: Codable, Equatable, Identifiable, Sendable {
     let id: UUID
     var isEnabled: Bool
-    var match: BrowserLinkRouteMatch
+    var match: LinkRouteMatch
     var pattern: String
     var destinationSpaceID: SpaceID
 
     init(
         id: UUID = UUID(),
         isEnabled: Bool = true,
-        match: BrowserLinkRouteMatch = .contains,
+        match: LinkRouteMatch = .contains,
         pattern: String,
         destinationSpaceID: SpaceID
     ) {
@@ -24,36 +24,7 @@ struct BrowserLinkRoute: Codable, Equatable, Identifiable, Sendable {
     /// This route as the core's routing rule reads it.
     var coreRoute: LinkRoute {
         LinkRoute(
-            id: id, isEnabled: isEnabled, match: match.coreMatch, pattern: pattern,
+            id: id, isEnabled: isEnabled, match: match, pattern: pattern,
             destinationSpaceID: destinationSpaceID.rawValue)
-    }
-}
-
-enum BrowserLinkRouteMatch:
-    String,
-    Codable,
-    CaseIterable,
-    Equatable,
-    Identifiable,
-    Sendable
-{
-    case contains
-    case exact
-
-    var id: String { rawValue }
-
-    var title: String {
-        switch self {
-        case .contains: "Contains"
-        case .exact: "Is Exactly"
-        }
-    }
-
-    /// The core's kind for this stored match.
-    var coreMatch: LinkRouteMatch {
-        switch self {
-        case .contains: .contains
-        case .exact: .exact
-        }
     }
 }

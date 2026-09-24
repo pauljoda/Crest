@@ -32,17 +32,23 @@ public static partial class NativePolicyEvaluator {
         RouteEdit(() => LinkRoutePolicy.Update(request.Route, request.Field));
 
     private static JsonObject MoveRoute(Requests.RouteMove request) =>
-        LinkCodes.OrderAnswer(LinkRoutePolicy.Move(request.Order, request.Id, request.Offset));
+        new() { ["order"] = Requests.EncodeIdentities(LinkRoutePolicy.Move(request.Order, request.Id, request.Offset)) };
 
     private static JsonObject RemoveRoute(Requests.RouteRemove request) =>
-        LinkCodes.OrderAnswer(LinkRoutePolicy.Remove(request.Order, request.Id));
+        new() { ["order"] = Requests.EncodeIdentities(LinkRoutePolicy.Remove(request.Order, request.Id)) };
 
-    private static JsonObject RemoveRouteSpace(Requests.SpaceRemoved request) => LinkCodes.RemovalAnswer(
-        LinkRoutePolicy.SpaceRemoved(request.SpaceId, request.Routes, request.ChosenSpaceId, request.RememberedSpaceIds));
+    private static JsonObject RemoveRouteSpace(Requests.SpaceRemoved request) {
+        var removal = LinkRoutePolicy.SpaceRemoved(request.SpaceId, request.Routes, request.ChosenSpaceId, request.RememberedSpaceIds);
+        return new() {
+            ["retainedRouteIDs"] = Requests.EncodeIdentities(removal.RetainedRouteIds),
+            ["clearsChosenSpace"] = removal.ClearsChosenSpace,
+            ["forgetsRememberedSites"] = removal.ForgetsRememberedSites
+        };
+    }
 
     private static JsonObject RouteEdit(Func<LinkRoute> edit) {
         try {
-            return LinkCodes.RouteAnswer(edit());
+            return new() { ["route"] = Requests.EncodeRoute(edit()) };
         } catch (BrowserRuleException error) {
             // The settings editor keeps the person's last accepted value.
             return PolicyAnswers.Error(error);

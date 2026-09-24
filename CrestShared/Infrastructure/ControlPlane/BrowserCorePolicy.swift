@@ -50,7 +50,7 @@ enum BrowserCorePolicy {
         var commandModified: Bool?
         var optionModified: Bool?
         var middleClick: Bool?
-        var peekModifier: BrowserLinkClickModifier?
+        var peekModifier: LinkPeekModifier?
         var peekModified: Bool?
         var newTabModified: Bool?
         let shiftModified: Bool
@@ -164,7 +164,7 @@ enum BrowserCorePolicy {
     static func modifiedLinkNavigation(
         destinationURL: URL?, context: BrowserPageNavigationContext?,
         isUserActivatedLink: Bool, isTopLevelNavigation: Bool, isCommandModified: Bool,
-        isOptionModified: Bool, isMiddleClick: Bool, peekModifier: BrowserLinkClickModifier,
+        isOptionModified: Bool, isMiddleClick: Bool, peekModifier: LinkPeekModifier,
         isShiftModified: Bool, focusesNewTabs: Bool
     ) -> BrowserLinkNavigationDecision {
         let request = LinkNavigationRequest(

@@ -2,7 +2,7 @@ import SwiftUI
 
 struct BrowserPlatformLinkSettingsGuidance: View {
     let kind: BrowserLinkSettingsGuidanceKind
-    var peekClickModifier: BrowserLinkClickModifier = .option
+    var peekClickModifier: LinkPeekModifier = .option
 
     @ViewBuilder
     var body: some View {
@@ -19,7 +19,7 @@ struct BrowserPlatformLinkSettingsGuidance: View {
             .crestFormFootnote()
         case .peek:
             CrestFormFootnote(
-                "\(peekClickModifier.clickTitle) opens any web link in Peek. Dismiss with Escape, ⌘W, the close button, or the outside area; ⌘O expands it into a current tab."
+                "\(String(localized: peekClickModifier.clickTitle)) opens any web link in Peek. Dismiss with Escape, ⌘W, the close button, or the outside area; ⌘O expands it into a current tab."
             )
         }
     }

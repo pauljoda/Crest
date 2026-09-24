@@ -2185,6 +2185,10 @@
     "site-permission-sets": {
       "category": "internal",
       "message": "Site permissions and permission decisions are self-describing sets shared by the core and Swift."
+    },
+    "link-sets-self-describing": {
+      "category": "internal",
+      "message": "Link route matches, external link destinations and the Peek key describe themselves."
     }
   }
 }

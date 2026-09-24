@@ -65,7 +65,13 @@ extension CapabilityStatus: CoreNamedValue {}
 
 extension EngineCapability: CoreNamedValue {}
 
+extension ExternalLinkDestination: CoreNamedValue {}
+
 extension HostedNotificationRequestAction: CoreNamedValue {}
+
+extension LinkPeekModifier: CoreNamedValue {}
+
+extension LinkRouteMatch: CoreNamedValue {}
 
 extension ShortcutCommand: CoreNamedValue {}
 

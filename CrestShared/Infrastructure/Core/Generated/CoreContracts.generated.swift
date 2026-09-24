@@ -637,17 +637,6 @@ enum CredentialUsernameSource: Int, CaseIterable, Sendable {
     case hint = 2
 }
 
-enum ExternalLinkDestination: Int, CaseIterable, Sendable {
-    case quickWindow = 0
-    case mostRecentSpace = 1
-    case chosenSpace = 2
-}
-
-enum LinkRouteMatch: Int, CaseIterable, Sendable {
-    case contains = 0
-    case exact = 1
-}
-
 enum PasskeyAccessStatus: Int, CaseIterable, Sendable {
     case managedCapabilityRequired = 0
     case deviceNotConfigured = 1
@@ -1215,6 +1204,60 @@ struct EngineCapability: Hashable, Sendable {
     }
 }
 
+/// The members of the core's `ExternalLinkDestination`. A member's wire tag is its index in `all`.
+/// Core-only behavior, not emitted: `space`.
+struct ExternalLinkDestination: Hashable, Sendable {
+    let tag: Int
+    let name: String
+    let title: LocalizedStringResource
+    let opensQuickWindow: Bool
+    let asksForSpace: Bool
+
+    private init(tag: Int, name: String, title: LocalizedStringResource, opensQuickWindow: Bool, asksForSpace: Bool) {
+        self.tag = tag
+        self.name = name
+        self.title = title
+        self.opensQuickWindow = opensQuickWindow
+        self.asksForSpace = asksForSpace
+    }
+
+    static let quickWindow = ExternalLinkDestination(
+        tag: 0,
+        name: "quickWindow",
+        title: LocalizedStringResource("Quick Window"),
+        opensQuickWindow: true,
+        asksForSpace: false
+    )
+    static let mostRecentSpace = ExternalLinkDestination(
+        tag: 1,
+        name: "mostRecentSpace",
+        title: LocalizedStringResource("Most Recent Space"),
+        opensQuickWindow: false,
+        asksForSpace: false
+    )
+    static let chosenSpace = ExternalLinkDestination(
+        tag: 2,
+        name: "chosenSpace",
+        title: LocalizedStringResource("Chosen Space"),
+        opensQuickWindow: false,
+        asksForSpace: true
+    )
+
+    static let all: [ExternalLinkDestination] = [quickWindow, mostRecentSpace, chosenSpace]
+
+    static func named(_ name: String?) -> ExternalLinkDestination? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: ExternalLinkDestination, rhs: ExternalLinkDestination) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+}
+
 /// The members of the core's `HostedNotificationRequestAction`. A member's wire tag is its index in `all`.
 struct HostedNotificationRequestAction: Hashable, Sendable {
     enum Kinds: Sendable {
@@ -1279,6 +1322,94 @@ struct HostedNotificationRequestAction: Hashable, Sendable {
     }
 
     static func == (lhs: HostedNotificationRequestAction, rhs: HostedNotificationRequestAction) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+}
+
+/// The members of the core's `LinkPeekModifier`. A member's wire tag is its index in `all`.
+struct LinkPeekModifier: Hashable, Sendable {
+    let tag: Int
+    let name: String
+    let title: LocalizedStringResource
+    let clickTitle: LocalizedStringResource
+    let peekKey: ShortcutModifiers
+    let newTabKey: ShortcutModifiers
+
+    private init(
+        tag: Int,
+        name: String,
+        title: LocalizedStringResource,
+        clickTitle: LocalizedStringResource,
+        peekKey: ShortcutModifiers,
+        newTabKey: ShortcutModifiers
+    ) {
+        self.tag = tag
+        self.name = name
+        self.title = title
+        self.clickTitle = clickTitle
+        self.peekKey = peekKey
+        self.newTabKey = newTabKey
+    }
+
+    static let option = LinkPeekModifier(
+        tag: 0,
+        name: "option",
+        title: LocalizedStringResource("Option (⌥)"),
+        clickTitle: LocalizedStringResource("Option-click"),
+        peekKey: [.option],
+        newTabKey: [.command]
+    )
+    static let command = LinkPeekModifier(
+        tag: 1,
+        name: "command",
+        title: LocalizedStringResource("Command (⌘)"),
+        clickTitle: LocalizedStringResource("Command-click"),
+        peekKey: [.command],
+        newTabKey: [.option]
+    )
+
+    static let all: [LinkPeekModifier] = [option, command]
+
+    static func named(_ name: String?) -> LinkPeekModifier? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: LinkPeekModifier, rhs: LinkPeekModifier) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+}
+
+/// The members of the core's `LinkRouteMatch`. A member's wire tag is its index in `all`.
+/// Core-only behavior, not emitted: `matches`.
+struct LinkRouteMatch: Hashable, Sendable {
+    let tag: Int
+    let name: String
+    let title: LocalizedStringResource
+
+    private init(tag: Int, name: String, title: LocalizedStringResource) {
+        self.tag = tag
+        self.name = name
+        self.title = title
+    }
+
+    static let contains = LinkRouteMatch(tag: 0, name: "contains", title: LocalizedStringResource("Contains"))
+    static let exact = LinkRouteMatch(tag: 1, name: "exact", title: LocalizedStringResource("Is Exactly"))
+
+    static let all: [LinkRouteMatch] = [contains, exact]
+
+    static func named(_ name: String?) -> LinkRouteMatch? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: LinkRouteMatch, rhs: LinkRouteMatch) -> Bool {
         lhs.tag == rhs.tag
     }
 

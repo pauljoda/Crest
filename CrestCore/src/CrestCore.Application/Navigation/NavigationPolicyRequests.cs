@@ -29,9 +29,11 @@ internal static class NavigationPolicyRequests {
             Members(request, "url", "userActivatedLink", "topLevel", "commandModified", "optionModified", "middleClick",
                 "peekModifier", "shiftModified", "focusesNewTabs", "hasContext", "placement", "savedUrl",
                 "automaticallyOpensPeek");
-            var preference = NavigationCodes.PeekModifier(Protocol.Text(request, "peekModifier"));
-            var (peek, newTab) = LinkNavigationPolicy.Modifiers(Flag(request, "commandModified"),
-                Flag(request, "optionModified"), Flag(request, "middleClick"), preference);
+            var preference = LinkPeekModifier.Named(Protocol.Text(request, "peekModifier"))
+                ?? throw new ProtocolException(ProtocolErrorCodes.InvalidPeekModifier);
+            var held = (Flag(request, "commandModified") ? ShortcutModifiers.Command : ShortcutModifiers.None)
+                | (Flag(request, "optionModified") ? ShortcutModifiers.Option : ShortcutModifiers.None);
+            var (peek, newTab) = preference.Intent(held, Flag(request, "middleClick"));
             return Facts(request, peek, newTab);
         }
 

@@ -59,6 +59,11 @@ final class BrowserLinkPreferenceOwnershipTests: XCTestCase {
                 "rememberedQuickWindowSpacesBySite",
             ]
         )
+        // The sets' names are the stored spellings.
+        XCTAssertEqual(payload["externalLinkDestination"] as? String, "chosenSpace")
+        XCTAssertEqual(payload["peekClickModifier"] as? String, "command")
+        let storedRoutes = try XCTUnwrap(payload["routes"] as? [[String: Any]])
+        XCTAssertEqual(storedRoutes.first?["match"] as? String, "exact")
         XCTAssertEqual(
             try JSONDecoder().decode(BrowserLinkPreferences.self, from: encoded),
             preferences

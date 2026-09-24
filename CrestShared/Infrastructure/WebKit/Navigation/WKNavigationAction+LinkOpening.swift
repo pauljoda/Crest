@@ -11,13 +11,11 @@ extension WKNavigationAction {
             let option = modifierFlags.contains(.alternate)
             let middle = buttonNumber.rawValue == 1 << 2
         #endif
-        let intent = BrowserLinkClickModifierPolicy.intent(
-            isCommandModified: modifierFlags.contains(.command),
-            isOptionModified: option,
-            peekModifier: preferences.peekClickModifier
-        )
+        var held: ShortcutModifiers = []
+        if modifierFlags.contains(.command) { held.insert(.command) }
+        if option { held.insert(.option) }
         return BrowserLinkOpeningPolicy.selectsNewTab(
-            isNewTabGesture: intent == .newTab || middle,
+            isNewTabGesture: preferences.peekClickModifier.opensNewTab(holding: held) || middle,
             isShiftModified: modifierFlags.contains(.shift),
             focusesNewTabs: preferences.focusesNewTabsOpenedFromLinks
         )

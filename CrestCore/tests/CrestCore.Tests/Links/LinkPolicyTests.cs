@@ -19,13 +19,13 @@ public sealed class LinkPolicyTests {
         return JsonNode.Parse(NativePolicyEvaluator.Evaluate(Encoding.UTF8.GetBytes(request.ToJsonString())))!;
     }
 
-    private static LinkRoute Route(Guid destination, string pattern, LinkRouteMatch match = LinkRouteMatch.Contains,
-        bool enabled = true) => new(Guid.NewGuid(), enabled, match, pattern, destination);
+    private static LinkRoute Route(Guid destination, string pattern, LinkRouteMatch? match = null, bool enabled = true) =>
+        new(Guid.NewGuid(), enabled, match ?? LinkRouteMatch.Contains, pattern, destination);
 
     private static ExternalLinkRoute Routing(string url, LinkRoute[] routes,
-        ExternalLinkDestination destination = ExternalLinkDestination.QuickWindow, Guid? chosen = null, Guid? remembered = null,
+        ExternalLinkDestination? destination = null, Guid? chosen = null, Guid? remembered = null,
         bool remembers = true, Guid[]? unavailable = null, Guid[]? locked = null) =>
-        new(url, new(routes, destination, chosen, remembers, remembered), new([Work, Personal], Work, unavailable ?? []),
+        new(url, new(routes, destination ?? ExternalLinkDestination.QuickWindow, chosen, remembers, remembered), new([Work, Personal], Work, unavailable ?? []),
             locked ?? []);
 
     private static ExternalLinkPlacement Placement(ExternalLinkRoute route) => new Links().Answer(route);
@@ -42,6 +42,15 @@ public sealed class LinkPolicyTests {
         ["pattern"] = pattern,
         ["destinationSpaceID"] = destination.ToString("D")
     };
+
+    /// Link preferences (`crest.link-preferences.v1`) store these sets by
+    /// name, so a renamed member would lose a person's choice.
+    [Fact]
+    public void StoredSpellingsNeverChange() {
+        Assert.Equal(["quickWindow", "mostRecentSpace", "chosenSpace"], ExternalLinkDestination.All.Select(destination => destination.Name));
+        Assert.Equal(["contains", "exact"], LinkRouteMatch.All.Select(match => match.Name));
+        Assert.Equal(["option", "command"], LinkPeekModifier.All.Select(modifier => modifier.Name));
+    }
 
     [Fact]
     public void TheFirstEnabledRouteToAnOpenSpaceWinsAndExactMatchesIgnoreFragmentsAndCase() {

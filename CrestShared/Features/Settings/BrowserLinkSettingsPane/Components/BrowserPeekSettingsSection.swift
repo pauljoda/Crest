@@ -2,7 +2,7 @@ import SwiftUI
 
 struct BrowserPeekSettingsSection: View {
     @Binding var automaticallyOpensPeek: Bool
-    @Binding var clickModifier: BrowserLinkClickModifier
+    @Binding var clickModifier: LinkPeekModifier
 
     var body: some View {
         Section("Peek", systemImage: "rectangle.on.rectangle") {
@@ -13,7 +13,7 @@ struct BrowserPeekSettingsSection: View {
             .accessibilityIdentifier("automatic-peek")
 
             Picker("Open Peek with", selection: $clickModifier) {
-                ForEach(BrowserLinkClickModifier.allCases, id: \.self) { modifier in
+                ForEach(LinkPeekModifier.all, id: \.self) { modifier in
                     Text(modifier.title).tag(modifier)
                 }
             }

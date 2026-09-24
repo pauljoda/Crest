@@ -26,13 +26,8 @@ public static class LinkRoutingPolicy {
         var route = preferences.Routes.FirstOrDefault(candidate => candidate.IsEnabled
             && context.IsAvailable(candidate.DestinationSpaceId) && Matches(candidate, url));
         if (route is not null) return new(false, route.DestinationSpaceId);
-        return preferences.Destination switch {
-            ExternalLinkDestination.MostRecentSpace => new(false, context.Fallback()),
-            ExternalLinkDestination.ChosenSpace => new(false,
-                preferences.ChosenSpaceId is { } chosen && context.IsAvailable(chosen) ? chosen : context.Fallback()),
-            _ => new(true, preferences.RemembersSpaceBySite && preferences.RememberedSpaceId is { } remembered
-                && context.IsAvailable(remembered) ? remembered : context.Fallback())
-        };
+        var destination = preferences.Destination;
+        return new(destination.OpensQuickWindow, destination.Space(preferences, context));
     }
 
     /// The key a Quick Window remembers its Space under: the lowercased host
@@ -45,13 +40,10 @@ public static class LinkRoutingPolicy {
     private static bool Matches(LinkRoute route, string url) {
         string pattern = route.Pattern.Trim();
         if (pattern.Length == 0) return false;
-        string candidate = HistoryPolicy.Normalize(url) ?? url;
-        return route.Match switch {
-            LinkRouteMatch.Exact => string.Equals(candidate, HistoryPolicy.Normalize(pattern) ?? pattern,
-                StringComparison.OrdinalIgnoreCase),
-            _ => candidate.Contains(pattern, StringComparison.OrdinalIgnoreCase)
-        };
+        return route.Match.Matches(Normalized(url), pattern, Normalized);
     }
+
+    private static string Normalized(string address) => HistoryPolicy.Normalize(address) ?? address;
 
     #endregion
 }

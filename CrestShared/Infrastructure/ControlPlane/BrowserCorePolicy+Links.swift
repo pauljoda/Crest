@@ -7,7 +7,7 @@ struct BrowserCoreLinkRouteRecord: Codable, Sendable {
 
     let id: UUID
     let isEnabled: Bool
-    let match: BrowserLinkRouteMatch
+    let match: LinkRouteMatch
     let pattern: String
     let destinationSpaceID: UUID
 

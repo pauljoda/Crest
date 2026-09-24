@@ -73,7 +73,7 @@ struct BrowserLinkSettingsContent: View {
         )
     }
 
-    private var externalDestinationBinding: Binding<BrowserExternalLinkDestination> {
+    private var externalDestinationBinding: Binding<ExternalLinkDestination> {
         Binding {
             links.preferences.externalLinkDestination
         } set: { value in
@@ -118,7 +118,7 @@ struct BrowserLinkSettingsContent: View {
         }
     }
 
-    private var peekClickModifierBinding: Binding<BrowserLinkClickModifier> {
+    private var peekClickModifierBinding: Binding<LinkPeekModifier> {
         Binding {
             links.preferences.peekClickModifier
         } set: { value in

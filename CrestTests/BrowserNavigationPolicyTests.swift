@@ -252,49 +252,6 @@ final class BrowserNavigationPolicyTests: XCTestCase {
         )
     }
 
-    func testPeekClickModifierSwapsCommandAndOptionWithoutLosingNewTabAccess() {
-        XCTAssertEqual(
-            BrowserLinkClickModifierPolicy.intent(
-                isCommandModified: true,
-                isOptionModified: false,
-                peekModifier: .option
-            ),
-            .newTab
-        )
-        XCTAssertEqual(
-            BrowserLinkClickModifierPolicy.intent(
-                isCommandModified: false,
-                isOptionModified: true,
-                peekModifier: .option
-            ),
-            .peek
-        )
-        XCTAssertEqual(
-            BrowserLinkClickModifierPolicy.intent(
-                isCommandModified: true,
-                isOptionModified: false,
-                peekModifier: .command
-            ),
-            .peek
-        )
-        XCTAssertEqual(
-            BrowserLinkClickModifierPolicy.intent(
-                isCommandModified: false,
-                isOptionModified: true,
-                peekModifier: .command
-            ),
-            .newTab
-        )
-        XCTAssertEqual(
-            BrowserLinkClickModifierPolicy.intent(
-                isCommandModified: true,
-                isOptionModified: true,
-                peekModifier: .command
-            ),
-            .peek
-        )
-    }
-
     func testModifiedLinkDispositionRejectsOrdinaryNonLinkAndNonWebNavigation() throws {
         let webURL = try XCTUnwrap(URL(string: "https://example.com/reference"))
         let mailURL = try XCTUnwrap(URL(string: "mailto:person@example.com"))

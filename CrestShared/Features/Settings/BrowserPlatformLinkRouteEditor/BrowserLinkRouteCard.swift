@@ -47,7 +47,7 @@ struct BrowserLinkRouteCard: View {
         HStack(spacing: 8) {
             Text("When URL").fontWeight(.medium)
             Picker("Match", selection: binding(route.match, field: BrowserLinkRouteFieldUpdate.match)) {
-                ForEach(BrowserLinkRouteMatch.allCases) { Text($0.title).tag($0) }
+                ForEach(LinkRouteMatch.all, id: \.self) { Text($0.title).tag($0) }
             }
             .labelsHidden().fixedSize()
         }

@@ -14,7 +14,7 @@ namespace CrestCore.Native;
 public static class ContractCodec {
     /// <summary>SHA-256 of the canonical contract schema.</summary>
     public static ReadOnlySpan<byte> Fingerprint => [
-        0x0b, 0x1f, 0x34, 0xf9, 0x53, 0x4d, 0x48, 0x61, 0x34, 0x2b, 0x7b, 0x4e, 0x3c, 0x70, 0x5a, 0x93, 0x9b, 0xf5, 0xfc, 0x3e, 0x01, 0xc1, 0xf1, 0x03, 0x1b, 0x45, 0xb1, 0x2a, 0x8d, 0x43, 0x9b, 0x3a
+        0x54, 0x54, 0xbb, 0x69, 0x22, 0xdf, 0xa7, 0xb3, 0xd0, 0xe6, 0xc2, 0x54, 0x99, 0xcb, 0xc1, 0x84, 0x4d, 0x30, 0x18, 0x83, 0x3a, 0x8b, 0xfd, 0x17, 0x30, 0xc2, 0xb9, 0x80, 0xd8, 0xec, 0xc6, 0x10
     ];
 
     public static Intent ReadIntent(WireReader reader) {
@@ -2095,26 +2095,6 @@ public static class ContractCodec {
         writer.WriteEnum((int)value);
     }
 
-    public static ExternalLinkDestination ReadExternalLinkDestination(WireReader reader) {
-        ArgumentNullException.ThrowIfNull(reader);
-        return (ExternalLinkDestination)reader.ReadEnum(3);
-    }
-
-    public static void WriteExternalLinkDestination(WireWriter writer, ExternalLinkDestination value) {
-        ArgumentNullException.ThrowIfNull(writer);
-        writer.WriteEnum((int)value);
-    }
-
-    public static LinkRouteMatch ReadLinkRouteMatch(WireReader reader) {
-        ArgumentNullException.ThrowIfNull(reader);
-        return (LinkRouteMatch)reader.ReadEnum(2);
-    }
-
-    public static void WriteLinkRouteMatch(WireWriter writer, LinkRouteMatch value) {
-        ArgumentNullException.ThrowIfNull(writer);
-        writer.WriteEnum((int)value);
-    }
-
     public static PasskeyAccessStatus ReadPasskeyAccessStatus(WireReader reader) {
         ArgumentNullException.ThrowIfNull(reader);
         return (PasskeyAccessStatus)reader.ReadEnum(5);
@@ -2283,6 +2263,17 @@ public static class ContractCodec {
         writer.WriteEnum(TagOf(EngineCapability.All, value));
     }
 
+    public static ExternalLinkDestination ReadExternalLinkDestination(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return ExternalLinkDestination.All[reader.ReadEnum(ExternalLinkDestination.All.Count)];
+    }
+
+    public static void WriteExternalLinkDestination(WireWriter writer, ExternalLinkDestination value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteEnum(TagOf(ExternalLinkDestination.All, value));
+    }
+
     public static HostedNotificationRequestAction ReadHostedNotificationRequestAction(WireReader reader) {
         ArgumentNullException.ThrowIfNull(reader);
         return HostedNotificationRequestAction.All[reader.ReadEnum(HostedNotificationRequestAction.All.Count)];
@@ -2292,6 +2283,28 @@ public static class ContractCodec {
         ArgumentNullException.ThrowIfNull(writer);
         ArgumentNullException.ThrowIfNull(value);
         writer.WriteEnum(TagOf(HostedNotificationRequestAction.All, value));
+    }
+
+    public static LinkPeekModifier ReadLinkPeekModifier(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return LinkPeekModifier.All[reader.ReadEnum(LinkPeekModifier.All.Count)];
+    }
+
+    public static void WriteLinkPeekModifier(WireWriter writer, LinkPeekModifier value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteEnum(TagOf(LinkPeekModifier.All, value));
+    }
+
+    public static LinkRouteMatch ReadLinkRouteMatch(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return LinkRouteMatch.All[reader.ReadEnum(LinkRouteMatch.All.Count)];
+    }
+
+    public static void WriteLinkRouteMatch(WireWriter writer, LinkRouteMatch value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteEnum(TagOf(LinkRouteMatch.All, value));
     }
 
     public static NumberedSelectionTarget ReadNumberedSelectionTarget(WireReader reader) {

@@ -34,17 +34,17 @@ struct BrowserPlatformLinkRouteEditorContent: View {
             Button {
                 presentsMatchChoices = true
             } label: {
-                routeChoiceLabel(title: "Match", value: route.match.title)
+                routeChoiceLabel(title: "Match", value: String(localized: route.match.title))
             }
             .buttonStyle(.plain)
-            .accessibilityValue(route.match.title)
+            .accessibilityValue(Text(route.match.title))
             .accessibilityIdentifier("route-match-\(identifierSuffix)")
             .confirmationDialog(
                 "Match",
                 isPresented: $presentsMatchChoices,
                 titleVisibility: .visible
             ) {
-                ForEach(BrowserLinkRouteMatch.allCases) { match in
+                ForEach(LinkRouteMatch.all, id: \.self) { match in
                     Button(match.title) {
                         update(.match(match))
                     }

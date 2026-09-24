@@ -14,14 +14,15 @@ public static partial class NativePolicyEvaluator {
     private static JsonObject? EvaluateNavigation(PolicyOperation operation, JsonElement request) => operation switch {
         PolicyOperation.NavigationLink => Navigate(Requests.Link.Decode(request)),
         PolicyOperation.NavigationModifiedLink => Navigate(Requests.Link.DecodeModified(request)),
-        PolicyOperation.HistoryNormalize =>
-            NavigationCodes.HistoryAnswer(HistoryPolicy.Normalize(Requests.HistoryNormalize.Decode(request).Url)),
+        PolicyOperation.HistoryNormalize => new() { ["url"] = HistoryPolicy.Normalize(Requests.HistoryNormalize.Decode(request).Url) },
         _ => null
     };
 
-    private static JsonObject Navigate(Requests.Link link) => NavigationCodes.LinkAnswer(LinkNavigationPolicy.Decide(link.Url,
-        link.UserActivatedLink, link.TopLevel, link.PeekModified, link.NewTabModified, link.ShiftModified,
-        link.FocusesNewTabs, link.HasContext, link.Placement, link.SavedUrl, link.AutomaticallyOpensPeek));
+    private static JsonObject Navigate(Requests.Link link) => new() {
+        ["decision"] = LinkNavigationPolicy.Decide(link.Url, link.UserActivatedLink, link.TopLevel, link.PeekModified,
+            link.NewTabModified, link.ShiftModified, link.FocusesNewTabs, link.HasContext, link.Placement, link.SavedUrl,
+            link.AutomaticallyOpensPeek).Name
+    };
 
     #endregion
 }

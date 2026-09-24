@@ -7,18 +7,19 @@ namespace CrestCore.Tests;
 
 public sealed class LinkNavigationPolicyTests {
     [Theory]
-    [InlineData(true, false, false, LinkPeekModifier.Option, LinkNavigationDecision.BackgroundTab)]
-    [InlineData(false, true, false, LinkPeekModifier.Option, LinkNavigationDecision.PeekModifier)]
-    [InlineData(true, false, false, LinkPeekModifier.Command, LinkNavigationDecision.PeekModifier)]
-    [InlineData(false, true, false, LinkPeekModifier.Command, LinkNavigationDecision.BackgroundTab)]
-    [InlineData(true, true, false, LinkPeekModifier.Option, LinkNavigationDecision.PeekModifier)]
-    [InlineData(true, true, false, LinkPeekModifier.Command, LinkNavigationDecision.PeekModifier)]
-    [InlineData(false, false, true, LinkPeekModifier.Option, LinkNavigationDecision.BackgroundTab)]
-    [InlineData(false, false, true, LinkPeekModifier.Command, LinkNavigationDecision.BackgroundTab)]
-    [InlineData(false, true, true, LinkPeekModifier.Option, LinkNavigationDecision.PeekModifier)]
+    [InlineData(true, false, false, "option", "backgroundTab")]
+    [InlineData(false, true, false, "option", "peekModifier")]
+    [InlineData(true, false, false, "command", "peekModifier")]
+    [InlineData(false, true, false, "command", "backgroundTab")]
+    [InlineData(true, true, false, "option", "peekModifier")]
+    [InlineData(true, true, false, "command", "peekModifier")]
+    [InlineData(false, false, true, "option", "backgroundTab")]
+    [InlineData(false, false, true, "command", "backgroundTab")]
+    [InlineData(false, true, true, "option", "peekModifier")]
     public void ConfigurableModifiersAndMiddleClickUseOneNavigationPolicy(bool command, bool option, bool middle,
-        LinkPeekModifier preference, LinkNavigationDecision expected) {
-        var (peek, newTab) = LinkNavigationPolicy.Modifiers(command, option, middle, preference);
+        string preferenceName, string expectedName) {
+        var expected = LinkNavigationDecision.Named(expectedName)!;
+        var (peek, newTab) = LinkPeekModifier.Named(preferenceName)!.Intent(Held(command, option), middle);
         Assert.Equal(expected, Decide(peek: peek, newTab: newTab));
         Assert.Equal(expected == LinkNavigationDecision.BackgroundTab ? LinkNavigationDecision.ForegroundTab : expected,
             Decide(peek: peek, newTab: newTab, shift: true));
@@ -26,32 +27,32 @@ public sealed class LinkNavigationPolicyTests {
 
     [Fact]
     public void HoldingBothKeysDoesNotTurnDeclinedPeekIntoANewTab() {
-        var (peek, newTab) = LinkNavigationPolicy.Modifiers(true, true, false, LinkPeekModifier.Option);
+        var (peek, newTab) = LinkPeekModifier.Option.Intent(Held(true, true), false);
         Assert.Equal(LinkNavigationDecision.Navigate, Decide(peek: peek, newTab: newTab, owned: false));
         Assert.Equal(LinkNavigationDecision.Navigate, Decide(peek: peek, newTab: newTab, topLevel: false));
     }
 
     [Theory]
-    [InlineData("https://www.apple.com/news/", TabPlacement.Saved, true, LinkNavigationDecision.Navigate)]
-    [InlineData("http://APPLE.com:8080/news/", TabPlacement.Pinned, true, LinkNavigationDecision.Navigate)]
-    [InlineData("https://developer.apple.com/", TabPlacement.Saved, true, LinkNavigationDecision.PeekSavedSite)]
-    [InlineData("https://example.com/", TabPlacement.Pinned, true, LinkNavigationDecision.PeekSavedSite)]
-    [InlineData("https://example.com/", null, true, LinkNavigationDecision.Navigate)]
-    [InlineData("https://example.com/", TabPlacement.Saved, false, LinkNavigationDecision.Navigate)]
-    [InlineData("mailto:test@example.com", TabPlacement.Saved, true, LinkNavigationDecision.Navigate)]
-    [InlineData("file:///tmp/example.html", TabPlacement.Saved, true, LinkNavigationDecision.Navigate)]
-    [InlineData("crest://extensions/", TabPlacement.Saved, true, LinkNavigationDecision.Navigate)]
+    [InlineData("https://www.apple.com/news/", TabPlacement.Saved, true, "navigate")]
+    [InlineData("http://APPLE.com:8080/news/", TabPlacement.Pinned, true, "navigate")]
+    [InlineData("https://developer.apple.com/", TabPlacement.Saved, true, "peekSavedSite")]
+    [InlineData("https://example.com/", TabPlacement.Pinned, true, "peekSavedSite")]
+    [InlineData("https://example.com/", null, true, "navigate")]
+    [InlineData("https://example.com/", TabPlacement.Saved, false, "navigate")]
+    [InlineData("mailto:test@example.com", TabPlacement.Saved, true, "navigate")]
+    [InlineData("file:///tmp/example.html", TabPlacement.Saved, true, "navigate")]
+    [InlineData("crest://extensions/", TabPlacement.Saved, true, "navigate")]
     public void SavedSiteProtectionPreservesHostsPlacementAndOptOut(string url, TabPlacement? placement,
-        bool automaticallyOpensPeek, LinkNavigationDecision expected) =>
-        Assert.Equal(expected, Decide(url, placement: placement, automatic: automaticallyOpensPeek));
+        bool automaticallyOpensPeek, string expected) =>
+        Assert.Equal(LinkNavigationDecision.Named(expected), Decide(url, placement: placement, automatic: automaticallyOpensPeek));
 
     [Theory]
-    [InlineData(false, false, LinkNavigationDecision.BackgroundTab)]
-    [InlineData(false, true, LinkNavigationDecision.ForegroundTab)]
-    [InlineData(true, false, LinkNavigationDecision.ForegroundTab)]
-    [InlineData(true, true, LinkNavigationDecision.BackgroundTab)]
-    public void ExplicitNewTabOverridesSavedSiteAndShiftReversesSelection(bool focus, bool shift,
-        LinkNavigationDecision expected) => Assert.Equal(expected, Decide(newTab: true, shift: shift, focus: focus));
+    [InlineData(false, false, "backgroundTab")]
+    [InlineData(false, true, "foregroundTab")]
+    [InlineData(true, false, "foregroundTab")]
+    [InlineData(true, true, "backgroundTab")]
+    public void ExplicitNewTabOverridesSavedSiteAndShiftReversesSelection(bool focus, bool shift, string expected) =>
+        Assert.Equal(LinkNavigationDecision.Named(expected), Decide(newTab: true, shift: shift, focus: focus));
 
     [Fact]
     public void PeekModifierWinsOverNewTabButRequiresAnOwnedTopLevelLink() {
@@ -75,6 +76,9 @@ public sealed class LinkNavigationPolicyTests {
     public void InternationalHostSpellingsDoNotSplitTheSavedSite() =>
         Assert.Equal(LinkNavigationDecision.Navigate, Decide("https://www.xn--bcher-kva.example/page",
             savedUrl: "https://bücher.example/"));
+
+    private static ShortcutModifiers Held(bool command, bool option) =>
+        (command ? ShortcutModifiers.Command : ShortcutModifiers.None) | (option ? ShortcutModifiers.Option : ShortcutModifiers.None);
 
     private static LinkNavigationDecision Decide(string? url = "https://example.com/", bool userLink = true,
         bool topLevel = true, bool peek = false, bool newTab = false, bool shift = false, bool focus = false,

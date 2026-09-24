@@ -2,7 +2,7 @@ import SwiftUI
 
 struct BrowserPlatformLinkSettingsGuidance: View {
     let kind: BrowserLinkSettingsGuidanceKind
-    var peekClickModifier: BrowserLinkClickModifier = .option
+    var peekClickModifier: LinkPeekModifier = .option
 
     @ViewBuilder
     var body: some View {

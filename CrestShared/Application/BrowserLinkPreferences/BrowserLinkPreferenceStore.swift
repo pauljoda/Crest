@@ -57,7 +57,7 @@ final class BrowserLinkPreferenceStore {
         let remembered = site(for: url, asking: core).flatMap { preferences.rememberedQuickWindowSpacesBySite[$0] }
         let routing = LinkRoutingPreferences(
             routes: preferences.routes.map(\.coreRoute),
-            destination: preferences.externalLinkDestination.coreDestination,
+            destination: preferences.externalLinkDestination,
             chosenSpaceID: preferences.externalLinkSpaceID?.rawValue,
             remembersSpaceBySite: preferences.remembersQuickWindowSpaceBySite, rememberedSpaceID: remembered?.rawValue)
         let context = LinkRoutingContext(

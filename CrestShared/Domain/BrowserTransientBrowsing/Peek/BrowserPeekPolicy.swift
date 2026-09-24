@@ -26,7 +26,7 @@ enum BrowserLinkNavigationDecision: String, Decodable {
 
     static func classifyModifiedLink(destinationURL: URL?, context: BrowserPageNavigationContext?,
         isUserActivatedLink: Bool, isTopLevelNavigation: Bool, isCommandModified: Bool,
-        isOptionModified: Bool, isMiddleClick: Bool, peekModifier: BrowserLinkClickModifier,
+        isOptionModified: Bool, isMiddleClick: Bool, peekModifier: LinkPeekModifier,
         isShiftModified: Bool, focusesNewTabs: Bool) -> Self {
         return BrowserCorePolicy.modifiedLinkNavigation(destinationURL: destinationURL, context: context,
             isUserActivatedLink: isUserActivatedLink, isTopLevelNavigation: isTopLevelNavigation,
