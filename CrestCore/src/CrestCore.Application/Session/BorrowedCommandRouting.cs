@@ -13,25 +13,14 @@ internal static class BorrowedCommandRouting {
 
     public static BorrowedCommandRoute Route(SessionOperation operation, bool borrowed) => !borrowed ? BorrowedCommandRoute.Local
         : operation switch {
-            SessionOperation.SpaceAccess
-                or SessionOperation.SpaceBranding
-                or SessionOperation.SpaceBrowsingPreferences
-                or SessionOperation.SpaceCredentialPreferences
-                or SessionOperation.SpaceDefault
-                or SessionOperation.SpaceIdentity
-                or SessionOperation.SpaceSavedExpansion
+            SessionOperation.SpaceBrowsingPreferences
                 or SessionOperation.SpaceSearchProviderRemove
                 or SessionOperation.SpaceSearchProviderUpsert
                 or SessionOperation.LaunchPlan
                 or SessionOperation.PreferencesImport
                 or SessionOperation.PreferencesSet
                 or SessionOperation.PreferencesTranslationRule => BorrowedCommandRoute.Source,
-            SessionOperation.SpaceCreate
-                or SessionOperation.SpaceDeletionBegin
-                or SessionOperation.SpaceRemove
-                or SessionOperation.SpaceReorder
-                or SessionOperation.SpaceResetPrivate
-                or SessionOperation.UnknownSpace
+            SessionOperation.UnknownSpace
                 or SessionOperation.UnknownPreferences
                 or SessionOperation.WorkspaceImport => BorrowedCommandRoute.Rejected,
             _ => BorrowedCommandRoute.Local

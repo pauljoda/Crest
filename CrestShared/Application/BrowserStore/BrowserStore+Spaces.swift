@@ -10,20 +10,20 @@ extension BrowserStore {
     }
 
     func addSpace() {
-        guard spaceCommandOwner(.spaceCreate) === self else { return }
-        guard createCoreSpace() else { return }
+        family.send(
+            CreateSpace(workspaceID: family.workspaceID, windowID: windowID.rawValue, spaceID: UUID()), from: self,
+            failure: "Core Space command failed")
     }
 
+    /// Deletes a Space in two steps the core saves before each returns: the
+    /// deletion begins, the platform erases the profile's data and its
+    /// passwords, then the Space goes. A relaunch resumes a deletion that
+    /// began, with the operation it recorded. Throws the rule the core applied
+    /// or why erasing failed; the Space is then kept.
     func deleteSpace(
         _ id: SpaceID,
         dataDeleter: any BrowserSpaceDataDeleting
     ) async throws {
-        guard spaceCommandOwner(.spaceDeletionBegin, in: id) === self else {
-            throw BrowserSpaceDeletionError.borrowedProfile
-        }
-        guard session.spaces.count > 1 else {
-            throw BrowserSpaceDeletionError.cannotDeleteLastSpace
-        }
         guard let space = session.space(id: id) else {
             throw BrowserSpaceDeletionError.missingSpace
         }
@@ -33,21 +33,19 @@ extension BrowserStore {
         defer { family.finishDeletingSpace(id) }
 
         let operationID = session.spaceDeletions?.first(where: { $0.spaceID == id })?.operationID ?? UUID()
-        try family.commitSpace(
-            .spaceDeletionBegin, in: id, arguments: BrowserSessionArguments.SpaceDeletion(operationID: operationID),
+        try family.commit(
+            BeginDeletingSpace(
+                workspaceID: family.workspaceID, windowID: windowID.rawValue, spaceID: id.rawValue,
+                operationID: operationID),
             from: self)
 
         try await dataDeleter.deleteData(for: space)
         try await credentialVault.deleteAll(in: id)
 
-        guard let currentSpace = session.space(id: id) else {
-            throw BrowserSpaceDeletionError.missingSpace
-        }
-        guard currentSpace.profile.id == space.profile.id else {
-            throw BrowserSpaceDeletionError.spaceChangedDuringDeletion
-        }
-        try family.commitSpace(
-            .spaceRemove, in: id, arguments: BrowserSessionArguments.SpaceDeletion(operationID: operationID),
+        try family.commit(
+            FinishDeletingSpace(
+                workspaceID: family.workspaceID, windowID: windowID.rawValue, spaceID: id.rawValue,
+                operationID: operationID),
             from: self)
         BrowserLinkPreferenceStore.shared.removeReferences(to: id)
     }
@@ -82,50 +80,53 @@ extension BrowserStore {
         symbol: String,
         accent: SpaceAccent
     ) {
-        guard let owner = spaceCommandOwner(.spaceIdentity, in: spaceID),
-            owner.session.space(id: spaceID) != nil else { return }
-        guard
-            owner.family.executeSpace(
-                .spaceIdentity, in: spaceID,
-                arguments: BrowserSessionArguments.SpaceIdentity(name: name, symbol: symbol, accent: accent),
-                from: owner)
-        else { return }
+        sendSpaceSettings(
+            SetSpaceIdentity(
+                workspaceID: profileSettingsBrowser.family.workspaceID, spaceID: spaceID.rawValue, name: name,
+                symbol: symbol, accent: accent))
     }
 
+    /// The core applies its branding rules to the look before it keeps it.
     func updateSpaceBranding(
         _ branding: BrowserSpaceBranding,
         in spaceID: SpaceID
     ) {
-        guard let owner = spaceCommandOwner(.spaceBranding, in: spaceID),
-            owner.session.space(id: spaceID) != nil else { return }
-        // The command applies the core's branding rules to the stored record.
-        guard owner.setCoreSpaceValue(.spaceBranding, branding, in: spaceID) else { return }
+        sendSpaceSettings(
+            SetSpaceBranding(
+                workspaceID: profileSettingsBrowser.family.workspaceID, spaceID: spaceID.rawValue,
+                branding: branding.core))
     }
 
     func setDefaultSpace(_ spaceID: SpaceID) {
-        guard let owner = spaceCommandOwner(.spaceDefault, in: spaceID),
-            owner.session.space(id: spaceID) != nil else { return }
-        guard owner.family.executeSpace(.spaceDefault, in: spaceID, arguments: BrowserCoreNoArguments(), from: owner)
-        else { return }
+        sendSpaceSettings(
+            SetDefaultSpace(workspaceID: profileSettingsBrowser.family.workspaceID, spaceID: spaceID.rawValue))
     }
 
     func updateSpaceAccessPolicy(
         _ accessPolicy: BrowserSpaceAccessPolicy,
         in spaceID: SpaceID
     ) {
-        guard let owner = spaceCommandOwner(.spaceAccess, in: spaceID),
-            owner.session.space(id: spaceID) != nil else { return }
-        guard owner.setCoreSpaceValue(.spaceAccess, accessPolicy, in: spaceID) else { return }
+        sendSpaceSettings(
+            SetSpaceAccess(
+                workspaceID: profileSettingsBrowser.family.workspaceID, spaceID: spaceID.rawValue,
+                policy: SpaceAccessPolicy(copyTerm: accessPolicy) ?? .deviceOwnerAuthentication))
+    }
+
+    /// Sends an intent about a Space's settings to the workspace that owns
+    /// the Space's profile: this one, or the one a borrowed workspace borrows
+    /// its Space from. Answers whether the session changed.
+    @discardableResult
+    func sendSpaceSettings(_ intent: some Intent) -> Bool {
+        let owner = profileSettingsBrowser
+        return owner.family.send(intent, from: owner, failure: "Core Space command failed")
     }
 
     func moveSpaces(from source: IndexSet, to destination: Int) {
-        guard spaceCommandOwner(.spaceReorder) === self else { return }
-        guard
-            family.executeSpace(
-                .spaceReorder,
-                arguments: BrowserSessionArguments.SpaceReorder(offsets: Array(source), destination: destination),
-                from: self)
-        else { return }
+        var order = session.spaces.map(\.id.rawValue)
+        order.move(fromOffsets: source, toOffset: destination)
+        family.send(
+            ReorderSpaces(workspaceID: family.workspaceID, spaceIDs: order), from: self,
+            failure: "Core Space command failed")
     }
 
     func updateBrowsingPreferences(
@@ -187,9 +188,10 @@ extension BrowserStore {
         _ isExpanded: Bool,
         in spaceID: SpaceID
     ) -> Bool {
-        guard let owner = spaceCommandOwner(.spaceSavedExpansion, in: spaceID),
-            owner.setCoreSpaceValue(.spaceSavedExpansion, isExpanded, in: spaceID) else { return false }
-        return true
+        sendSpaceSettings(
+            ExpandSavedTabs(
+                workspaceID: profileSettingsBrowser.family.workspaceID, spaceID: spaceID.rawValue,
+                isExpanded: isExpanded))
     }
 
     @discardableResult

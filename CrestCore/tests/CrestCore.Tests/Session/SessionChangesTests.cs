@@ -143,10 +143,14 @@ public sealed partial class BrowserContractsTests {
                 request["windowId"] = window.ToString();
             }
             IReadOnlyList<Change> changes;
-            if (RecordedIntents.Typed(request, workspace, window) is { } intent) {
+            if (RecordedIntents.Typed(request, workspace, window, authority.Current) is { } intents) {
                 clock.Now = RecordedIntents.Time(request);
                 ids.Supply(RecordedIntents.Identities(request));
-                changes = app.Send(intent);
+                changes = [.. intents.SelectMany(app.Send)];
+                if (RecordedIntents.FollowingCommand(request) is { } following) {
+                    authority.PrepareCommand(Bytes(following)).Commit();
+                    changes = [.. changes, .. app.Drain()];
+                }
             } else if (RecordedIntents.Navigation(request) is { } navigation) {
                 clock.Now = navigation.At;
                 changes = RecordedIntents.Report(app, engine, navigation, workspace, window!.Value);

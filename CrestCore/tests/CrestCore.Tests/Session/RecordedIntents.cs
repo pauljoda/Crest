@@ -44,30 +44,48 @@ internal sealed record RecordedNavigation(Guid SpaceId, string Url, string Title
 internal static class RecordedIntents {
     #region Actions - Reading
 
-    /// The intent a recorded request became, issued in `workspace` from
-    /// `window`, or null for a request that is still a session command.
-    public static SessionIntent? Typed(JsonObject request, Guid workspace, Guid? window) {
+    /// The intents a recorded request became, issued in `workspace` from
+    /// `window` against the session `current` holds, or null for a request
+    /// that is still a session command. A recorded Space creation carried the
+    /// look the Space started with, which the core now picks itself, so it
+    /// becomes the creation and the edits that dress the new Space as the
+    /// recording did.
+    public static IReadOnlyList<SessionIntent>? Typed(JsonObject request, Guid workspace, Guid? window, SessionState current) {
         var arguments = request["arguments"] as JsonObject ?? [];
         Guid Id(string key) => Guid.Parse(request[key]!.GetValue<string>());
         Guid Argument(string key) => Guid.Parse(arguments[key]!.GetValue<string>());
         Guid? Optional(string key) => arguments[key] is { } value ? Guid.Parse(value.GetValue<string>()) : null;
         BrandColor? Color(JsonNode? value) => value is JsonObject color ? StoredSessionCodec.DecodeColor(color) : null;
+        string Text(string key) => arguments[key]!.GetValue<string>();
         return request["operation"]!.GetValue<string>() switch {
-            "tab.open" => Opening(workspace, window ?? Guid.Empty, Id("spaceId"), arguments),
-            "tab.close" => new CloseTab(workspace, window ?? Guid.Empty, Id("spaceId"), Argument("tabId")),
-            "archive.restore" => new RestoreArchivedTab(workspace, window ?? Guid.Empty, Id("spaceId"), Argument("tabId")),
-            "records.sweep" => new SweepExpiredRecords(workspace),
-            "folder.create" => new CreateFolder(workspace, Id("spaceId"), Argument("folderId"),
-                TabPlacement.Named(arguments["placement"]!.GetValue<string>())!, Optional("parentId"), arguments["title"]?.GetValue<string>(),
+            "tab.open" => [Opening(workspace, window ?? Guid.Empty, Id("spaceId"), arguments)],
+            "tab.close" => [new CloseTab(workspace, window ?? Guid.Empty, Id("spaceId"), Argument("tabId"))],
+            "archive.restore" => [new RestoreArchivedTab(workspace, window ?? Guid.Empty, Id("spaceId"), Argument("tabId"))],
+            "records.sweep" => [new SweepExpiredRecords(workspace)],
+            "folder.create" => [new CreateFolder(workspace, Id("spaceId"), Argument("folderId"),
+                TabPlacement.Named(Text("placement"))!, Optional("parentId"), arguments["title"]?.GetValue<string>(),
                 Color(arguments["color"]), arguments["symbol"]?.GetValue<string>(),
                 [.. (arguments["tabIds"] as JsonArray ?? []).Select(id => Guid.Parse(id!.GetValue<string>()))],
-                arguments["detach"]?.GetValue<bool>() == true),
-            "split.join" => new JoinSplit(workspace, window ?? Guid.Empty, Id("spaceId"), Argument("tabId"), Argument("targetId"),
+                arguments["detach"]?.GetValue<bool>() == true)],
+            "split.join" => [new JoinSplit(workspace, window ?? Guid.Empty, Id("spaceId"), Argument("tabId"), Argument("targetId"),
                 arguments["index"]?.GetValue<int>(), [.. (arguments["copyObservations"] as JsonArray ?? []).Select(page =>
                     new SourcePage(Guid.Parse(page!["tabId"]!.GetValue<string>()), page["url"]?.GetValue<string>(),
-                        page["title"]!.GetValue<string>()))]),
-            "split.title" => new NameSplit(workspace, Id("spaceId"), Argument("groupId"), arguments["value"]?.GetValue<string>()),
-            "split.tint" => new TintSplit(workspace, Id("spaceId"), Argument("groupId"), Color(arguments["value"])),
+                        page["title"]!.GetValue<string>()))])],
+            "split.title" => [new NameSplit(workspace, Id("spaceId"), Argument("groupId"), arguments["value"]?.GetValue<string>())],
+            "split.tint" => [new TintSplit(workspace, Id("spaceId"), Argument("groupId"), Color(arguments["value"]))],
+            "space.identity" => [new SetSpaceIdentity(workspace, Id("spaceId"), Text("name"), Text("symbol"),
+                StoredSessionCodec.ParseAccent(Text("accent"))!.Value)],
+            "space.saved_expansion" => [new ExpandSavedTabs(workspace, Id("spaceId"), arguments["value"]!.GetValue<bool>())],
+            "space.branding" => [new SetSpaceBranding(workspace, Id("spaceId"), StoredSessionCodec.DecodeBranding(arguments["value"]))],
+            "space.credential_preferences" => [new SetCredentialPreferences(workspace, Id("spaceId"),
+                StoredSessionCodec.DecodeCredentialPreferences(arguments["value"]))],
+            "space.access" => [new SetSpaceAccess(workspace, Id("spaceId"), StoredSessionCodec.ParseAccessPolicy(Text("value"))!.Value)],
+            "space.default" => [new SetDefaultSpace(workspace, Id("spaceId"))],
+            "space.reorder" => [new ReorderSpaces(workspace, Moved([.. current.Spaces.Select(space => space.Id)],
+                [.. arguments["offsets"]!.AsArray().Select(offset => offset!.GetValue<int>())], arguments["destination"]!.GetValue<int>()))],
+            "space.create" => Created(workspace, window ?? Guid.Empty, StoredSessionCodec.DecodeSpace(arguments["template"]), current),
+            "space.deletion.begin" => [new BeginDeletingSpace(workspace, window ?? Guid.Empty, Id("spaceId"), Argument("operationID"))],
+            "space.remove" => [new FinishDeletingSpace(workspace, window ?? Guid.Empty, Id("spaceId"), Argument("operationID"))],
             _ => null
         };
     }
@@ -107,10 +125,49 @@ internal static class RecordedIntents {
         return changes;
     }
 
+    /// The Spaces a recorded reorder left, which moved the ones at `offsets`
+    /// to before the one at `destination`, as a list's move does.
+    private static IReadOnlyList<Guid> Moved(IReadOnlyList<Guid> spaces, IReadOnlyList<int> offsets, int destination) {
+        var moving = offsets.Distinct().Order().ToArray();
+        var staying = spaces.Where((_, index) => !moving.Contains(index)).ToList();
+        staying.InsertRange(destination - moving.Count(index => index < destination), moving.Select(index => spaces[index]));
+        return staying;
+    }
+
+    /// A recorded creation as the core makes it, then renamed, dressed and
+    /// protected as the recorded template was. The core names the Space
+    /// itself, as it did then.
+    private static IReadOnlyList<SessionIntent> Created(Guid workspace, Guid window, SpaceState template, SessionState current) => [
+        new CreateSpace(workspace, window, template.Id),
+        new SetSpaceIdentity(workspace, template.Id, $"Space {current.Spaces.Count + 1}", template.Settings.Symbol, template.Settings.Accent),
+        new SetSpaceBranding(workspace, template.Id, template.Settings.Branding!),
+        new SetCredentialPreferences(workspace, template.Id, template.Settings.CredentialPreferences)
+    ];
+
+    /// TRANSITIONAL until browsing preferences are an intent: the command a
+    /// recorded Space creation still needs after its intents, which gives
+    /// the new Space the browsing preferences its template carried.
+    public static JsonObject? FollowingCommand(JsonObject request) {
+        if (request["operation"]!.GetValue<string>() != "space.create") return null;
+        var template = request["arguments"]!["template"]!;
+        return new JsonObject {
+            ["version"] = 1,
+            ["operation"] = "space.browsing_preferences",
+            ["spaceId"] = template["id"]!["rawValue"]!.GetValue<string>(),
+            ["profileId"] = template["profile"]!["id"]!.GetValue<string>(),
+            ["arguments"] = new JsonObject { ["value"] = template["browsingPreferences"]!.DeepClone() },
+            ["now"] = request["now"]!.DeepClone()
+        };
+    }
+
     /// The identities a recorded request gave the records it made, which the
-    /// core now gives them itself.
-    public static IEnumerable<Guid> Identities(JsonObject request) =>
-        (request["arguments"]?["ids"] as JsonArray ?? []).Select(id => Guid.Parse(id!.GetValue<string>()));
+    /// core now gives them itself: a copy's, or a new Space's profile and tab.
+    public static IEnumerable<Guid> Identities(JsonObject request) {
+        if (request["arguments"]?["template"] is JsonObject template)
+            return [Guid.Parse(template["profile"]!["id"]!.GetValue<string>()),
+                Guid.Parse(template["tabs"]![0]!["id"]!["rawValue"]!.GetValue<string>())];
+        return (request["arguments"]?["ids"] as JsonArray ?? []).Select(id => Guid.Parse(id!.GetValue<string>()));
+    }
 
     /// When a recorded request ran.
     public static DateTimeOffset Time(JsonObject request) => StoredSessionCodec.Date(request["now"]!.GetValue<double>());

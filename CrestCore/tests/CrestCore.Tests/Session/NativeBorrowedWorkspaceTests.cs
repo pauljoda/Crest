@@ -37,6 +37,7 @@ public sealed partial class BrowserContractsTests {
     public void BorrowedPolicyRefreshPreservesLocalRecordsAndRejectsPreparedEditsAfterOwnerChanges() {
         var session = SavedSession().Document["session"]!;
         var owner = new NativeSessionAuthority(Bytes(session)); var child = Borrow(owner, session);
+        using var device = new TestDevice(owner);
         var initial = JsonNode.Parse(child.Checkpoint().Read("core"))!;
         var localTab = session["spaces"]![0]!["tabs"]![0]!.DeepClone();
         localTab["folderID"] = null; localTab["splitGroupID"] = null; localTab["placement"] = "current";
@@ -49,8 +50,7 @@ public sealed partial class BrowserContractsTests {
         });
         child.Commit(Local(localTab));
         var local = JsonNode.Parse(child.Checkpoint().Read("core"))!;
-        owner.PrepareCommand(SpaceCommand(session, "space.identity",
-            new() { ["name"] = "New canonical name", ["symbol"] = "book", ["accent"] = "teal" })).Commit();
+        device.Send(new SetSpaceIdentity(device.Workspace, SpaceId(session["spaces"]![0]!), "New canonical name", "book", SpaceAccent.Teal));
         Assert.Equal("stale_borrowed_source", Assert.Throws<BrowserRuleException>(() => child.Commit(Local(localTab))).Code);
         var refresh = child.PrepareBorrowedRefresh();
         Assert.Equal(2UL, child.Revision);
@@ -60,7 +60,6 @@ public sealed partial class BrowserContractsTests {
         Assert.Equal("New canonical name", after["spaces"]![0]!["name"]!.GetValue<string>());
 
         // A tab the borrowed workspace opens stays with it.
-        using var device = new TestDevice(owner);
         var borrowed = device.Attach(child);
         device.Send(new OpenTab(borrowed, Guid.NewGuid(), SpaceId(session["spaces"]![0]!), Guid.NewGuid(),
             new TabContent("https://example.org/", null, "Prepared locally", null), TabPlacement.Current, null, false));
@@ -76,11 +75,10 @@ public sealed partial class BrowserContractsTests {
         extra["tabs"] = new JsonArray(); extra["selectedTabID"] = null;
         session["spaces"]!.AsArray().Add(extra);
         var owner = new NativeSessionAuthority(Bytes(session)); var child = Borrow(owner, session);
-        var state = JsonNode.Parse(child.Checkpoint().Read("core"))!;
+        using var device = new TestDevice(owner);
         var old = child.Checkpoint();
         var prepared = child.PrepareBorrowedRefresh();
-        owner.PrepareCommand(SpaceCommand(session, "space.deletion.begin",
-            new() { ["operationID"] = Guid.NewGuid().ToString() })).Commit();
+        device.Send(new BeginDeletingSpace(device.Workspace, Guid.NewGuid(), SpaceId(session["spaces"]![0]!), Guid.NewGuid()));
         Assert.Equal("profile_lease_revoked", Assert.Throws<BrowserRuleException>(() => prepared.Commit()).Code);
         Assert.Equal("profile_lease_revoked", Assert.Throws<BrowserRuleException>(() => child.PrepareBorrowedRefresh()).Code);
         Assert.Equal(old.Read("core"), child.Checkpoint().Read("core"));

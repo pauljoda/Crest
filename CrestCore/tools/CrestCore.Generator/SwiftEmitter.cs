@@ -59,6 +59,11 @@ internal static class SwiftEmitter {
                 code.Append($"    typealias Answer = {TypeName(owner.Member.Answer!)}\n\n");
             foreach (var field in record.Wire)
                 code.Append($"    let {Naming.SwiftIdentifier(Naming.SwiftMember(field.Name))}: {TypeName(field.Type)}\n");
+            foreach (var (text, index) in record.Texts.Select((text, index) => (text, index))) {
+                if (record.Fields.Count > 0 || index > 0) code.Append('\n');
+                code.Append($"    var {Naming.SwiftIdentifier(Naming.SwiftMember(text.Name))}: LocalizedStringResource {{\n");
+                code.Append($"        {RecordTextLiteral(text)}\n    }}\n");
+            }
             code.Append("}\n");
         }
 
@@ -173,13 +178,36 @@ internal static class SwiftEmitter {
     }
 
     /// A root the platform receives becomes an enum with a case per message.
+    /// Each text some of its messages carry is read through the enum as an
+    /// optional, nil for a message without it.
     private static void EmitUnion(StringBuilder code, ContractSchema schema, ContractRoot root, HashSet<Type> equatable) {
         var members = schema.Members(root);
         bool isEquatable = members.All(member => equatable.Contains(member.Record.Type));
         code.Append('\n').Append($"/// {root.SwiftDocumentation}\n");
         code.Append($"enum {root.Name}: {(isEquatable ? "Equatable, " : "")}{root.SwiftConformances} {{\n");
         foreach (var member in members) code.Append($"    case {Naming.SwiftMember(member.Name)}({member.Name})\n");
+        foreach (string name in members.SelectMany(member => member.Record.Texts).Select(text => text.Name).Distinct().Order(StringComparer.Ordinal)) {
+            string property = Naming.SwiftIdentifier(Naming.SwiftMember(name));
+            var carriers = members.Where(member => member.Record.Texts.Any(text => text.Name == name)).ToList();
+            code.Append('\n').Append($"    var {property}: LocalizedStringResource? {{\n        switch self {{\n");
+            foreach (var member in carriers)
+                code.Append($"        case .{Naming.SwiftMember(member.Name)}(let value): value.{property}\n");
+            if (carriers.Count < members.Count) code.Append("        default: nil\n");
+            code.Append("        }\n    }\n");
+        }
         code.Append("}\n");
+    }
+
+    /// A record's text as a `LocalizedStringResource`. Its argument, when it
+    /// has one, is the record's own field, interpolated where the text spells
+    /// `%lld`, so every value shares one catalog key.
+    private static string RecordTextLiteral(RecordText text) {
+        string literal = StringLiteral(text.Text);
+        if (text.Argument is { } argument)
+            literal = literal.Replace("%lld", $"\\({Naming.SwiftIdentifier(Naming.SwiftMember(argument))})", StringComparison.Ordinal);
+        return text.Comment is { } comment
+            ? $"LocalizedStringResource({literal}, comment: {StringLiteral(comment)})"
+            : $"LocalizedStringResource({literal})";
     }
 
     /// A record is Equatable unless it holds, directly or through its fields,

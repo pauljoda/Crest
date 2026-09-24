@@ -336,3 +336,72 @@ extension RawRepresentable where RawValue == String {
         self.init(rawValue: String(describing: term))
     }
 }
+
+// MARK: - Sending the copy's values
+
+extension CaseIterable {
+    /// The core's term for a term of the copy's vocabulary, which spells it
+    /// as the core names it; nil for one the core has no name for.
+    init?(copyTerm term: some RawRepresentable<String>) {
+        guard let match = Self.allCases.first(where: { String(describing: $0) == term.rawValue }) else { return nil }
+        self = match
+    }
+}
+
+extension BrowserSpaceBranding {
+    /// This branding as a Space intent carries it, in today's units.
+    var core: SpaceBranding {
+        SpaceBranding(
+            colors: ColorPalette(colors: colors.map(\.core)),
+            bannerPattern: SpaceBannerPattern(copyTerm: bannerPattern) ?? .solid, bannerStrength: bannerStrength,
+            readabilityFade: readabilityFade, keepsControlsReadable: keepsControlsReadable,
+            themeMode: SpaceThemeMode(copyTerm: themeMode) ?? .banner, gradientAngle: gradientAngle,
+            showsTexture: showsTexture, iconStyle: SpaceIconStyle(copyTerm: iconStyle) ?? .simpleSymbol,
+            symbolColor: symbolColor?.core, crest: crest.core, renderingVersion: renderingVersion,
+            folderColorIntensity: folderColorIntensity,
+            textColorMode: SpaceTextColorMode(copyTerm: textColorMode) ?? .automatic,
+            hasCustomAppearance: hasCustomAppearance)
+    }
+}
+
+extension BrowserSpaceCrest {
+    var core: SpaceCrest {
+        SpaceCrest(
+            backplate: CrestBackplate(copyTerm: backplate) ?? .shield,
+            fieldDivision: CrestFieldDivision(copyTerm: fieldDivision) ?? .plain,
+            ordinary: CrestOrdinary(copyTerm: ordinary) ?? CrestOrdinary.none,
+            trim: CrestTrim(copyTerm: trim) ?? CrestTrim.none, symbol: CrestSymbol(copyTerm: symbol) ?? .mountain,
+            chargeLayout: CrestChargeLayout(copyTerm: chargeLayout) ?? .single,
+            backplateColorIndex: backplateColorIndex, secondaryFieldColorIndex: secondaryFieldColorIndex,
+            ordinaryColorIndex: ordinaryColorIndex, trimColorIndex: trimColorIndex, symbolColorIndex: symbolColorIndex,
+            startingPresetID: startingPresetID, edgeColorIndex: edgeColorIndex,
+            palette: palette.map { ColorPalette(colors: $0.map(\.core)) }, charge: charge?.core, plateScale: plateScale,
+            edgeWidth: edgeWidth, divisionCount: divisionCount, finish: CrestFinish(copyTerm: finish) ?? .flat,
+            ordinaryWidth: ordinaryWidth, trimWeight: trimWeight, trimDetail: trimDetail, chargeScale: chargeScale,
+            chargeOffset: chargeOffset, chargeWeight: CrestChargeWeight(copyTerm: chargeWeight) ?? .bold,
+            sheenAngle: sheenAngle, sealTeeth: sealTeeth, showsOutline: showsOutline,
+            depth: CrestDepth(copyTerm: depth) ?? CrestDepth.none)
+    }
+}
+
+extension BrowserSpaceCrestCharge {
+    var core: CrestCharge {
+        switch self {
+        case .heraldic(let symbol):
+            CrestCharge(kind: .heraldic, symbol: CrestSymbol(copyTerm: symbol), text: nil, style: nil)
+        case .system(let name): CrestCharge(kind: .system, symbol: nil, text: name, style: nil)
+        case .emoji(let emoji): CrestCharge(kind: .emoji, symbol: nil, text: emoji, style: nil)
+        case .monogram(let letters, let style):
+            CrestCharge(kind: .monogram, symbol: nil, text: letters, style: CrestMonogramStyle(copyTerm: style))
+        case .none: CrestCharge(kind: .none, symbol: nil, text: nil, style: nil)
+        }
+    }
+}
+
+extension BrowserCredentialPreferences {
+    var core: CredentialPreferences {
+        CredentialPreferences(
+            isEnabled: isEnabled, syncsCrestPasswordsWithICloud: syncsCrestPasswordsWithICloud,
+            alsoOffersSaveToSystemPasswords: alsoOffersSaveToSystemPasswords)
+    }
+}

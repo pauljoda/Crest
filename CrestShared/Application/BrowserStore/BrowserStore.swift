@@ -207,8 +207,11 @@ extension BrowserStore {
         credentialSaveOperations.removeAll()
         family.resetDeletionState()
         interactionObserver?.browserWillResetSession()
-        let template = BrowserSessionArguments.SpaceTemplate(template: BrowserSession.privateBrowsing().spaces[0])
-        guard family.executeSpace(.spaceResetPrivate, arguments: template, from: self) else { return }
+        guard
+            family.send(
+                ResetPrivateBrowsing(workspaceID: family.workspaceID, windowID: windowID.rawValue), from: self,
+                failure: "Core Space command failed")
+        else { return }
         localSyncErrorDescription = nil
     }
 

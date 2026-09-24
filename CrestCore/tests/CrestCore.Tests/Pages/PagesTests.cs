@@ -121,8 +121,7 @@ public sealed partial class BrowserContractsTests {
         app.Send(new OpenPage(Guid.NewGuid(), workspace, locked.Space, null, window));
 
         // A Space being deleted opens no page, nor does a workspace that borrows it.
-        authority.PrepareCommand(SpaceCommand(session, "space.deletion.begin",
-            new() { ["operationID"] = Guid.NewGuid().ToString("D") }, session["spaces"]![1]!)).Commit();
+        app.Send(new BeginDeletingSpace(workspace, window, open, Guid.NewGuid()));
         Assert.Equal(new SpaceBeingDeleted(open), Refusal(app, new OpenPage(Guid.NewGuid(), workspace, open, null, window)));
         Assert.Equal(new SpaceBeingDeleted(open), Refusal(app, new OpenPage(Guid.NewGuid(), borrowed, open, null, window)));
         Assert.Single(binding.Commands);

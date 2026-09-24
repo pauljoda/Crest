@@ -176,20 +176,26 @@ public sealed unsafe partial class BrowserContractsTests {
         var launched = DrainUntil(app,
             changes => changes.OfType<SyncJournalChanged>().Any() && changes.OfType<Saved>().Any(), answered);
         Assert.Contains(launched, change => change is SyncJournalChanged { PendingRecords: > 0 });
-        var deletion = new JsonObject { ["operationID"] = Guid.NewGuid().ToString("D") };
-        session.PrepareCommand(SpaceCommand(document, "space.deletion.begin", deletion.DeepClone().AsObject(), second)).Commit();
+        var workspace = app.AttachWorkspace(session);
+        var deleting = SpaceId(second);
+        var operation = Guid.NewGuid();
+        app.Send(new BeginDeletingSpace(workspace, Guid.NewGuid(), deleting, operation));
+        // The deletion is on disk before the platform erases the profile's data.
+        Assert.NotNull(JsonNode.Parse(StoredParts(directory.File)["core"])!["spaceDeletions"]);
         var staged = sync.Snapshot;
         var before = StoredParts(directory.File);
 
-        var removal = session.PrepareCommand(SpaceCommand(document, "space.remove", deletion.DeepClone().AsObject(), second));
+        // The platform erased the profile's data; the removal is on disk with
+        // its journal when the intent returns, or neither changes.
         RefuseWrites(directory.File, "journal");
-        Assert.Throws<StorageException>(() => removal.Commit());
+        Assert.IsType<SaveFailed>(Assert.Throws<Rejected>(() =>
+            app.Send(new FinishDeletingSpace(workspace, Guid.NewGuid(), deleting, operation))).Rejection);
         Assert.Equal(2UL, session.Revision);
         Assert.Same(staged, sync.Snapshot);
         AssertSameParts(before, StoredParts(directory.File));
 
         AcceptWrites(directory.File);
-        removal.Commit();
+        app.Send(new FinishDeletingSpace(workspace, Guid.NewGuid(), deleting, operation));
         Assert.Equal(3UL, session.Revision);
         var after = StoredParts(directory.File);
         Assert.True(after["core"].AsSpan().SequenceEqual(session.Checkpoint().Read("core")));

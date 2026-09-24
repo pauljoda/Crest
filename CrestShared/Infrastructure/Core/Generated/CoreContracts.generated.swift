@@ -57,6 +57,8 @@ enum Change: Equatable, Sendable {
 /// The rule that refused an intent or a query.
 enum Rejection: Equatable, Error, Sendable {
     case alreadyInSplit(AlreadyInSplit)
+    case borrowedProfileRequiresOwner(BorrowedProfileRequiresOwner)
+    case cannotDeleteLastSpace(CannotDeleteLastSpace)
     case cannotPinSplit(CannotPinSplit)
     case credentialRecordLimitReached(CredentialRecordLimitReached)
     case defaultEngineAlreadyRegistered(DefaultEngineAlreadyRegistered)
@@ -87,17 +89,21 @@ enum Rejection: Equatable, Error, Sendable {
     case invalidPasswordLength(InvalidPasswordLength)
     case invalidRetentionLifetime(InvalidRetentionLifetime)
     case invalidSearchEngine(InvalidSearchEngine)
+    case invalidSpaceOrder(InvalidSpaceOrder)
     case invalidSplitColumnShares(InvalidSplitColumnShares)
     case invalidTabIcon(InvalidTabIcon)
     case lastStartPage(LastStartPage)
     case noCurrentTabs(NoCurrentTabs)
     case noSavedAddress(NoSavedAddress)
+    case notPrivateWorkspace(NotPrivateWorkspace)
     case pageProfileMismatch(PageProfileMismatch)
     case pinnedTabsFull(PinnedTabsFull)
     case recoveryCheckpointUnusable(RecoveryCheckpointUnusable)
     case saveFailed(SaveFailed)
     case searchEngineLimitReached(SearchEngineLimitReached)
+    case spaceAlreadyExists(SpaceAlreadyExists)
     case spaceBeingDeleted(SpaceBeingDeleted)
+    case spaceLimitReached(SpaceLimitReached)
     case spaceLocked(SpaceLocked)
     case splitBoundary(SplitBoundary)
     case splitLimitReached(SplitLimitReached)
@@ -123,6 +129,14 @@ enum Rejection: Equatable, Error, Sendable {
     case webPagesOnly(WebPagesOnly)
     case windowNotOpen(WindowNotOpen)
     case workspaceBusy(WorkspaceBusy)
+    case wrongDeletionOperation(WrongDeletionOperation)
+
+    var message: LocalizedStringResource? {
+        switch self {
+        case .cannotDeleteLastSpace(let value): value.message
+        default: nil
+        }
+    }
 }
 
 /// What the core asks an engine binding to do, run by `EngineBinding.run`.
@@ -243,6 +257,13 @@ struct BalancedProtectionRules: Query, Equatable, Sendable {
 
 }
 
+struct BeginDeletingSpace: Intent, Equatable, Sendable {
+    let workspaceID: UUID
+    let windowID: UUID
+    let spaceID: UUID
+    let operationID: UUID
+}
+
 struct BeginDownload: Intent, Equatable, Sendable {
     let downloadID: UUID
     let profileID: UUID
@@ -253,6 +274,10 @@ struct BeginDownload: Intent, Equatable, Sendable {
 
 struct BlockAutomaticDownload: Intent, Equatable, Sendable {
     let downloadID: UUID
+}
+
+struct BorrowedProfileRequiresOwner: Equatable, Sendable {
+    let workspaceID: UUID
 }
 
 struct BrandColor: Equatable, Sendable {
@@ -290,6 +315,12 @@ struct CanTearOff: Query, Equatable, Sendable {
 struct CancelDownload: Intent, Equatable, Sendable {
     let downloadID: UUID
     let message: String
+}
+
+struct CannotDeleteLastSpace: Equatable, Sendable {
+    var message: LocalizedStringResource {
+        LocalizedStringResource("Crest needs at least one Space.")
+    }
 }
 
 struct CannotPinSplit: Equatable, Sendable {
@@ -370,6 +401,12 @@ struct CreatePage: Equatable, Sendable {
     let pageID: UUID
     let profileID: UUID
     let isPrivate: Bool
+}
+
+struct CreateSpace: Intent, Equatable, Sendable {
+    let workspaceID: UUID
+    let windowID: UUID
+    let spaceID: UUID
 }
 
 struct CredentialCapture: Query, Equatable, Sendable {
@@ -686,6 +723,12 @@ struct EngineRegistration: Equatable, Sendable {
     let isDefault: Bool
 }
 
+struct ExpandSavedTabs: Intent, Equatable, Sendable {
+    let workspaceID: UUID
+    let spaceID: UUID
+    let isExpanded: Bool
+}
+
 struct ExpireDownloads: Intent, Equatable, Sendable {
     let now: Date
     let retentions: [DownloadRetention]
@@ -730,6 +773,13 @@ struct FileTabs: Intent, Equatable, Sendable {
     let beforeTabID: UUID?
     let beforeFolderID: UUID?
     let leavesSplits: Bool
+}
+
+struct FinishDeletingSpace: Intent, Equatable, Sendable {
+    let workspaceID: UUID
+    let windowID: UUID
+    let spaceID: UUID
+    let operationID: UUID
 }
 
 struct FinishDownload: Intent, Equatable, Sendable {
@@ -839,6 +889,9 @@ struct InvalidRetentionLifetime: Equatable, Sendable {
 
 struct InvalidSearchEngine: Equatable, Sendable {
     let flaw: SearchEngineFlaw
+}
+
+struct InvalidSpaceOrder: Equatable, Sendable {
 }
 
 struct InvalidSplitColumnShares: Equatable, Sendable {
@@ -1024,6 +1077,10 @@ struct NoSavedAddress: Equatable, Sendable {
     let tabID: UUID
 }
 
+struct NotPrivateWorkspace: Equatable, Sendable {
+    let workspaceID: UUID
+}
+
 struct OpenLinkInSplit: Intent, Equatable, Sendable {
     let workspaceID: UUID
     let windowID: UUID
@@ -1203,10 +1260,20 @@ struct RenameTab: Intent, Equatable, Sendable {
     let title: String?
 }
 
+struct ReorderSpaces: Intent, Equatable, Sendable {
+    let workspaceID: UUID
+    let spaceIDs: [UUID]
+}
+
 struct ReplaceSavedAddress: Intent, Equatable, Sendable {
     let workspaceID: UUID
     let spaceID: UUID
     let tabID: UUID
+}
+
+struct ResetPrivateBrowsing: Intent, Equatable, Sendable {
+    let workspaceID: UUID
+    let windowID: UUID
 }
 
 struct ResizeSplitColumns: Intent, Equatable, Sendable {
@@ -1260,6 +1327,17 @@ struct SessionState: Equatable, Sendable {
     let appPreferences: AppPreferences?
 }
 
+struct SetCredentialPreferences: Intent, Equatable, Sendable {
+    let workspaceID: UUID
+    let spaceID: UUID
+    let preferences: CredentialPreferences
+}
+
+struct SetDefaultSpace: Intent, Equatable, Sendable {
+    let workspaceID: UUID
+    let spaceID: UUID
+}
+
 struct SetDownloadDestination: Intent, Equatable, Sendable {
     let downloadID: UUID
     let destination: String
@@ -1278,6 +1356,26 @@ struct SetFolderSymbol: Intent, Equatable, Sendable {
     let spaceID: UUID
     let folderID: UUID
     let symbol: String
+}
+
+struct SetSpaceAccess: Intent, Equatable, Sendable {
+    let workspaceID: UUID
+    let spaceID: UUID
+    let policy: SpaceAccessPolicy
+}
+
+struct SetSpaceBranding: Intent, Equatable, Sendable {
+    let workspaceID: UUID
+    let spaceID: UUID
+    let branding: SpaceBranding
+}
+
+struct SetSpaceIdentity: Intent, Equatable, Sendable {
+    let workspaceID: UUID
+    let spaceID: UUID
+    let name: String
+    let symbol: String
+    let accent: SpaceAccent
 }
 
 struct SetSplitIcon: Intent, Equatable, Sendable {
@@ -1313,6 +1411,10 @@ struct SourcePage: Equatable, Sendable {
     let tabID: UUID
     let address: String?
     let title: String
+}
+
+struct SpaceAlreadyExists: Equatable, Sendable {
+    let spaceID: UUID
 }
 
 struct SpaceBeingDeleted: Equatable, Sendable {
@@ -1373,6 +1475,10 @@ struct SpaceDeletionState: Equatable, Sendable, Identifiable {
     let id: UUID
     let spaceID: UUID
     let profileID: UUID
+}
+
+struct SpaceLimitReached: Equatable, Sendable {
+    let limit: Int
 }
 
 struct SpaceLocked: Equatable, Sendable {
@@ -1718,6 +1824,10 @@ struct WorkspaceOpened: Equatable, Sendable {
     let workspaceID: UUID
     let kind: WorkspaceKind
     let session: SessionState
+}
+
+struct WrongDeletionOperation: Equatable, Sendable {
+    let spaceID: UUID
 }
 
 // MARK: - Enums

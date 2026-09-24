@@ -906,7 +906,7 @@ final class BrowserStoreTests: XCTestCase {
         let deleter = RecordingSpaceDataDeleter()
 
         await assertThrowsErrorAsync(
-            expected: BrowserSpaceDeletionError.cannotDeleteLastSpace
+            expected: Rejection.cannotDeleteLastSpace(CannotDeleteLastSpace())
         ) {
             try await store.deleteSpace(
                 session.spaces[0].id,

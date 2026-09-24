@@ -4,32 +4,43 @@ namespace CrestCore.Domain;
 
 /// Shared rules for Space commands, independent of native models and storage.
 public static class SpaceOrganizationPolicy {
-    #region Actions - Space organization
+    #region Variables
 
-    public static IReadOnlyList<T> Move<T>(IReadOnlyList<T> values, IEnumerable<int> offsets, int destination) {
-        var valid = offsets.Where(i => i >= 0 && i < values.Count).Distinct().Order().ToArray();
-        var selected = valid.ToHashSet();
-        var result = values.Where((_, i) => !selected.Contains(i)).ToList();
-        var index = (int)Math.Clamp((long)destination - valid.Count(i => i < destination), 0, result.Count);
-        result.InsertRange(index, valid.Select(i => values[i]));
-        return result;
-    }
+    /// What a Space named with nothing but blanks is called.
+    private const string UntitledName = "Untitled Space";
+
+    /// The symbol a Space given a blank one wears.
+    private const string DefaultSymbol = "square.grid.2x2";
+
+    #endregion
+
+    #region Actions - Space organization
 
     public static void RequireOwnedProfiles(WorkspaceKind kind) {
         if (kind == WorkspaceKind.Borrowed) throw new BrowserRuleException(BrowserRuleCodes.BorrowedProfile);
     }
 
+    /// Throws `Rejected` with `CannotDeleteLastSpace` unless `count` Spaces
+    /// leave one behind when one goes.
     public static void RequireRemovable(int count) {
-        if (count <= 1) throw new BrowserRuleException(BrowserRuleCodes.CannotDeleteLastSpace);
+        if (count <= 1) throw new Rejected(new CannotDeleteLastSpace());
     }
 
     #endregion
 
     #region Mutators
 
-    public static string Name(string value) => string.IsNullOrWhiteSpace(value) ? "Untitled Space" : value.Trim();
+    public static string Name(string value) => string.IsNullOrWhiteSpace(value) ? UntitledName : value.Trim();
 
-    public static string Symbol(string value) => string.IsNullOrWhiteSpace(value) ? "square.grid.2x2" : value.Trim();
+    /// The name a person gave a Space, trimmed, as `Name` reads it. Throws
+    /// `Rejected` with `InvalidName` for one longer than a Space name holds.
+    public static string ChosenName(string value) {
+        var name = Name(value);
+        if (name.Length > BrowserSpace.MaximumNameLength) throw new Rejected(new InvalidName(BrowserSpace.MaximumNameLength));
+        return name;
+    }
+
+    public static string Symbol(string value) => string.IsNullOrWhiteSpace(value) ? DefaultSymbol : value.Trim();
 
     #endregion
 }

@@ -70,13 +70,12 @@ public sealed partial class BrowserContractsTests {
         Assert.IsType<SpaceLocked>(Assert.Throws<Rejected>(() =>
             device.Send(new RenameTab(device.Workspace, identity.Space, tab, "After relock"))).Rejection);
         // Taking protection away is the decision authentication guards.
-        Assert.Equal("space_locked", Assert.Throws<BrowserRuleException>(() => core.PrepareCommand(
-            SpaceCommand(current, "space.access", new() { ["value"] = "open" }))).Code);
+        Assert.IsType<SpaceLocked>(Assert.Throws<Rejected>(() =>
+            device.Send(new SetSpaceAccess(device.Workspace, identity.Space, SpaceAccessPolicy.Open))).Rejection);
         // Raising it, and retention maintenance, must still reach a locked
         // Space: neither returns its contents to the caller. Clearing its
         // history is an edit the grant guards.
-        core.PrepareCommand(SpaceCommand(current, "space.access",
-            new() { ["value"] = "deviceOwnerAuthentication" })).Commit();
+        device.Send(new SetSpaceAccess(device.Workspace, identity.Space, SpaceAccessPolicy.DeviceOwnerAuthentication));
         Assert.Equal(identity.Space, Assert.IsType<SpaceLocked>(Assert.Throws<Rejected>(() =>
             device.Send(new ClearHistory(device.Workspace, identity.Space))).Rejection).SpaceId);
         device.Send(new SweepExpiredRecords(device.Workspace));
@@ -101,11 +100,9 @@ public sealed partial class BrowserContractsTests {
         Assert.Equal(3UL, core.Revision);
         var current = JsonNode.Parse(core.Checkpoint().Read("core"))!;
         Assert.Equal("Merged again", current["spaces"]![0]!["tabs"]![0]!["title"]!.GetValue<string>());
-        var operation = Guid.NewGuid().ToString();
-        core.PrepareCommand(SpaceCommand(current, "space.deletion.begin",
-            new() { ["operationID"] = operation })).Commit();
         using var device = new TestDevice(core);
         var deleting = Identity(session).Space;
+        device.Send(new BeginDeletingSpace(device.Workspace, Guid.NewGuid(), deleting, Guid.NewGuid()));
         Assert.Equal(deleting, Assert.IsType<SpaceBeingDeleted>(Assert.Throws<Rejected>(() =>
             device.Send(new CleanUpCurrentTabs(device.Workspace, deleting))).Rejection).SpaceId);
     }

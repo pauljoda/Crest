@@ -138,15 +138,11 @@ public sealed class NativePresentationPolicyTests {
             ["command"] = command,
             ["borrowed"] = borrowed
         })["route"]!.GetValue<string>();
-        foreach (var command in new[] {
-            "space.identity", "space.branding", "space.default", "space.access", "space.browsing_preferences",
-            "space.search_provider.upsert", "space.search_provider.remove", "space.credential_preferences", "space.saved_expansion"
-        }) {
+        foreach (var command in new[] { "space.browsing_preferences", "space.search_provider.upsert", "space.search_provider.remove" }) {
             Assert.Equal("source", Route(command, true));
             Assert.Equal("local", Route(command, false));
         }
-        foreach (var command in new[] { "space.create", "space.remove", "space.reorder", "space.deletion.begin", "workspace.import" })
-            Assert.Equal("rejected", Route(command, true));
+        Assert.Equal("rejected", Route("workspace.import", true));
         Assert.Equal("local", Route("tab.transfer", true));
     }
 

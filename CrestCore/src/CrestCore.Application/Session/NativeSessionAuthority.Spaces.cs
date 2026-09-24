@@ -6,21 +6,6 @@ using CrestCore.Domain;
 namespace CrestCore.Application;
 
 public sealed partial class NativeSessionAuthority {
-    #region Variables
-
-    /// What a new Space is called, followed by its position, in an ordinary and
-    /// in a private workspace; a reset private workspace starts over with one.
-    private const string NewSpaceName = "Space";
-    private const string NewPrivateSpaceName = "Private";
-
-    /// The symbol every private Space wears.
-    private const string PrivateSpaceSymbol = "eyeglasses";
-
-    /// A private Space never offers to save or sync passwords.
-    private static readonly CredentialPreferences PrivateCredentialPreferences = new(false, false, false);
-
-    #endregion
-
     #region Actions - Spaces
 
     /// Whether two sets of deletion intents name the same deletions.
@@ -35,143 +20,165 @@ public sealed partial class NativeSessionAuthority {
     private static SpaceState Configured(SpaceState space, SpaceSettings settings) =>
         settings == space.Settings ? space : space with { Settings = settings };
 
+    /// Refuses a Space intent a borrowed workspace cannot apply: the
+    /// workspace it borrows from owns the Space's profile and its settings,
+    /// and makes, orders and deletes Spaces.
+    private void RequireOwnedSpaces() {
+        if (workspaceKind == WorkspaceKind.Borrowed) throw new Rejected(new BorrowedProfileRequiresOwner(workspaceId));
+    }
+
+    /// `basis` with the Space an intent edited in its place.
+    private SessionEdit SettingSpace(SessionState basis, SpaceState space, Func<SpaceSettings, SpaceSettings> edit, SyncStaging staging) =>
+        new(Replacing(basis, Configured(space, edit(space.Settings))), staging);
+
+    private SessionEdit CreatingSpace(SessionState basis, CreateSpace intent, DateTimeOffset now, IIdSource ids) {
+        RequireOwnedSpaces();
+        if (basis.Spaces.Any(space => space.Id == intent.SpaceId)) throw new Rejected(new SpaceAlreadyExists(intent.SpaceId));
+        if (basis.Spaces.Count >= BrowserLimits.Spaces) throw new Rejected(new SpaceLimitReached(BrowserLimits.Spaces));
+        var space = SpaceTemplate.For(workspaceKind == WorkspaceKind.Private)
+            .Make(intent.SpaceId, ids.Next(), ids.Next(), basis.Spaces.Count + 1, now);
+        // A new Space is the one its window shows next, on its only tab.
+        var followUp = new WindowFollowUp(IssuingWindow(intent.WindowId)).ShowSpace(space.Id).ShowTab(space.Id, space.Tabs[0].Id);
+        return new(basis with { Spaces = [.. basis.Spaces, space] }, SyncStaging.Creation, followUp);
+    }
+
+    private SessionEdit SettingIdentity(SessionState basis, SetSpaceIdentity intent) {
+        RequireOwnedSpaces();
+        var space = Editable(basis, intent.SpaceId);
+        var name = SpaceOrganizationPolicy.ChosenName(intent.Name);
+        return SettingSpace(basis, space, settings => settings with {
+            Name = name,
+            Symbol = SpaceOrganizationPolicy.Symbol(intent.Symbol),
+            Accent = intent.Accent
+        }, SyncStaging.Edit);
+    }
+
+    private SessionEdit SettingBranding(SessionState basis, SetSpaceBranding intent) {
+        RequireOwnedSpaces();
+        var branding = SpaceBrandingPolicy.Normalize(intent.Branding);
+        return SettingSpace(basis, Editable(basis, intent.SpaceId), settings => settings with { Branding = branding }, SyncStaging.Edit);
+    }
+
+    private SessionEdit SettingCredentials(SessionState basis, SetCredentialPreferences intent) {
+        RequireOwnedSpaces();
+        return SettingSpace(basis, Editable(basis, intent.SpaceId), settings => settings with { CredentialPreferences = intent.Preferences },
+            SyncStaging.Protection);
+    }
+
+    /// Asking for authentication is always allowed, even for a locked Space;
+    /// letting a Space open freely is the decision authentication guards.
+    private SessionEdit SettingAccess(SessionState basis, SetSpaceAccess intent) {
+        RequireOwnedSpaces();
+        var space = Editable(basis, intent.SpaceId, maintains: intent.Policy != SpaceAccessPolicy.Open);
+        return SettingSpace(basis, space, settings => settings with { AccessPolicy = intent.Policy }, SyncStaging.Protection);
+    }
+
+    private SessionEdit SettingDefault(SessionState basis, SetDefaultSpace intent) {
+        RequireOwnedSpaces();
+        var space = Editable(basis, intent.SpaceId);
+        return new(basis.DefaultSpaceId == space.Id ? basis : basis with { DefaultSpaceId = space.Id }, SyncStaging.Edit);
+    }
+
+    private SessionEdit Reordering(SessionState basis, ReorderSpaces intent) {
+        RequireOwnedSpaces();
+        var byId = basis.Spaces.ToDictionary(space => space.Id);
+        if (intent.SpaceIds.Count != byId.Count || intent.SpaceIds.Distinct().Count() != byId.Count || intent.SpaceIds.Any(id => !byId.ContainsKey(id)))
+            throw new Rejected(new InvalidSpaceOrder());
+        return new(basis.Spaces.Select(space => space.Id).SequenceEqual(intent.SpaceIds)
+            ? basis : basis with { Spaces = [.. intent.SpaceIds.Select(id => byId[id])] }, SyncStaging.Edit);
+    }
+
+    private SessionEdit ExpandingSavedTabs(SessionState basis, ExpandSavedTabs intent, DateTimeOffset now) {
+        RequireOwnedSpaces();
+        var space = Editable(basis, intent.SpaceId);
+        return space.Settings.IsSavedTabsExpanded == intent.IsExpanded ? new(basis, SyncStaging.Edit)
+            : SettingSpace(basis, space, settings => settings with { IsSavedTabsExpanded = intent.IsExpanded, SavedTabsExpansionModifiedAt = now },
+                SyncStaging.Edit);
+    }
+
+    #endregion
+
+    #region Actions - Space deletion
+
+    /// The Space a deletion names, locked or not, and its deletion under way.
+    private static (SpaceState Space, SpaceDeletionState? Pending) Deleting(SessionState basis, Guid spaceId) =>
+        (basis.Spaces.FirstOrDefault(space => space.Id == spaceId) ?? throw new Rejected(new UnknownSpace(spaceId)),
+            PendingDeletion(basis, spaceId));
+
+    /// Records the deletion, which leaves the Space as it is until it is
+    /// removed. The window showing a Space that is going away moves to the
+    /// first one that stays.
+    private SessionEdit BeginningDeletion(SessionState basis, BeginDeletingSpace intent) {
+        RequireOwnedSpaces();
+        var (space, pending) = Deleting(basis, intent.SpaceId);
+        if (pending is not null)
+            return pending.Id == intent.OperationId ? new(basis, SyncStaging.Withdrawal) : throw new Rejected(new WrongDeletionOperation(space.Id));
+        SpaceOrganizationPolicy.RequireRemovable(basis.Spaces.Count - basis.SpaceDeletions.Count);
+        var next = basis with { SpaceDeletions = [.. basis.SpaceDeletions, new(intent.OperationId, space.Id, space.ProfileId)] };
+        var followUp = new WindowFollowUp(IssuingWindow(intent.WindowId));
+        if (followUp.Window?.ShownSpaceId == space.Id)
+            followUp.ShowSpace(next.Spaces.First(candidate => PendingDeletion(next, candidate.Id) is null).Id);
+        return new(next, SyncStaging.Withdrawal, followUp);
+    }
+
+    /// Removes the Space and its deletion. The Space that takes its place is
+    /// where its window goes and, when it was the launch Space, the new one.
+    private SessionEdit FinishingDeletion(SessionState basis, FinishDeletingSpace intent) {
+        RequireOwnedSpaces();
+        var (space, pending) = Deleting(basis, intent.SpaceId);
+        if (pending is null || pending.Id != intent.OperationId) throw new Rejected(new WrongDeletionOperation(space.Id));
+        SpaceOrganizationPolicy.RequireRemovable(basis.Spaces.Count);
+        var index = basis.Spaces.ToList().IndexOf(space);
+        var spaces = basis.Spaces.Where(candidate => candidate.Id != space.Id).ToArray();
+        var neighbor = spaces[Math.Min(index, spaces.Length - 1)].Id;
+        var followUp = new WindowFollowUp(IssuingWindow(intent.WindowId));
+        if (followUp.Window?.ShownSpaceId == space.Id) followUp.ShowSpace(neighbor);
+        return new(basis with {
+            Spaces = spaces,
+            SpaceDeletions = [.. basis.SpaceDeletions.Where(deletion => deletion != pending)],
+            DefaultSpaceId = basis.DefaultSpaceId == space.Id ? neighbor : basis.DefaultSpaceId
+        }, SyncStaging.Removal, followUp);
+    }
+
+    /// A private workspace starts over with one fresh private Space, which
+    /// the window that asked shows. Nothing it held ever synced.
+    private SessionEdit ResettingPrivateBrowsing(SessionState basis, ResetPrivateBrowsing intent, DateTimeOffset now, IIdSource ids) {
+        if (workspaceKind != WorkspaceKind.Private) throw new Rejected(new NotPrivateWorkspace(workspaceId));
+        var space = SpaceTemplate.Private.Make(ids.Next(), ids.Next(), ids.Next(), number: 1, now);
+        var followUp = new WindowFollowUp(IssuingWindow(intent.WindowId)).ShowSpace(space.Id).ShowTab(space.Id, space.Tabs[0].Id);
+        return new(basis with { Spaces = [space], SpaceDeletions = [], DefaultSpaceId = null }, Staging: null, followUp);
+    }
+
+    #endregion
+
+    #region Actions - Space commands
+
+    /// TRANSITIONAL until the search-engine and browsing-preference intents
+    /// land: the Space commands still sent as JSON.
     private NativeSessionCommand PrepareSpaceCommand(JsonObject request) {
         var operation = SessionOperationCodes.Parse(request["operation"]!.GetValue<string>());
         BorrowedCommandRouting.RequireLocal(operation, workspaceKind == WorkspaceKind.Borrowed);
         var args = request["arguments"]!.AsObject();
-        var followUp = new WindowFollowUp(IssuingWindow(request));
+        var id = Id(request["spaceId"]);
         var spaces = session.Spaces.ToList();
-        var deletions = session.SpaceDeletions.ToList();
-        var defaultSpace = session.DefaultSpaceId;
-        Guid? created = null;
-        if (operation is SessionOperation.SpaceCreate or SessionOperation.SpaceResetPrivate) {
-            var template = StoredSessionCodec.DecodeSpace(args["template"]);
-            if (operation == SessionOperation.SpaceResetPrivate) {
-                if (workspaceKind != WorkspaceKind.Private) throw new BrowserRuleException(BrowserRuleCodes.NotPrivateWorkspace);
-                if (spaces.Any(s => s.Id == template.Id || s.ProfileId == template.ProfileId))
-                    throw new BrowserRuleException(BrowserRuleCodes.DuplicateSpaceProfile);
-                spaces.Clear(); deletions.Clear(); defaultSpace = null;
-            }
-            if (spaces.Any(s => s.Id == template.Id || s.ProfileId == template.ProfileId))
-                throw new BrowserRuleException(BrowserRuleCodes.DuplicateSpaceProfile);
-            if (template.History.Count != 0 || template.ArchivedTabs.Count != 0 || template.Folders.Count != 0
-                || template.Tabs.Count != 1 || template.Tabs[0].Url is not null)
-                throw new BrowserRuleException(BrowserRuleCodes.InvalidNewSpace);
-            var space = template with {
-                Settings = template.Settings with {
-                    Name = operation == SessionOperation.SpaceResetPrivate ? NewPrivateSpaceName
-                        : $"{(workspaceKind == WorkspaceKind.Private ? NewPrivateSpaceName : NewSpaceName)} {spaces.Count + 1}"
-                }
-            };
-            if (workspaceKind == WorkspaceKind.Private)
-                space = space with {
-                    Settings = space.Settings with {
-                        Symbol = PrivateSpaceSymbol,
-                        Accent = SpaceAccent.Indigo,
-                        BrowsingPreferences = space.Settings.BrowsingPreferences with {
-                            SelectedSearchProviderId = SearchProvider.DuckDuckGo.Name,
-                            CurrentTabCleanup = CurrentTabCleanup.Never
-                        },
-                        CredentialPreferences = PrivateCredentialPreferences
-                    }
-                };
-            spaces.Add(space);
-            // A new Space is the one its window shows next, on its only tab.
-            followUp.ShowSpace(space.Id).ShowTab(space.Id, space.Tabs[0].Id);
-            created = space.Id;
-        } else if (operation == SessionOperation.SpaceReorder) {
-            spaces = SpaceOrganizationPolicy.Move(spaces,
-                args["offsets"]!.AsArray().Select(n => n!.GetValue<int>()), args["destination"]!.GetValue<int>()).ToList();
-        } else {
-            var id = Id(request["spaceId"]);
-            var index = spaces.FindIndex(s => s.Id == id);
-            if (index < 0) throw new BrowserRuleException(BrowserRuleCodes.UnknownSpace);
-            var space = spaces[index];
-            if (Id(request["profileId"]) != space.ProfileId)
-                throw new BrowserRuleException(BrowserRuleCodes.WrongProfileIdentity);
-            var pending = deletions.FirstOrDefault(deletion => deletion.SpaceId == id);
-            if (pending is not null && operation is not (SessionOperation.SpaceDeletionBegin or SessionOperation.SpaceRemove))
-                throw new BrowserRuleException(BrowserRuleCodes.SpaceDeletionInProgress);
-            switch (operation) {
-                case SessionOperation.SpaceDeletionBegin:
-                    var operationId = Id(args["operationID"]);
-                    if (pending is not null) {
-                        if (pending.Id != operationId) throw new BrowserRuleException(BrowserRuleCodes.WrongDeletionOperation);
-                        break;
-                    }
-                    SpaceOrganizationPolicy.RequireRemovable(spaces.Count - deletions.Count);
-                    deletions.Add(new(operationId, space.Id, space.ProfileId));
-                    // The window showing a Space that is going away moves to the
-                    // first one that stays.
-                    if (followUp.Window?.ShownSpaceId == id)
-                        followUp.ShowSpace(spaces.First(s => deletions.All(deletion => deletion.SpaceId != s.Id)).Id);
-                    break;
-                case SessionOperation.SpaceIdentity:
-                    spaces[index] = Configured(space, space.Settings with {
-                        Name = SpaceOrganizationPolicy.Name(args["name"]!.GetValue<string>()),
-                        Symbol = SpaceOrganizationPolicy.Symbol(args["symbol"]!.GetValue<string>()),
-                        Accent = StoredSessionCodec.ParseAccent(args["accent"]!.GetValue<string>())
-                            ?? throw new BrowserRuleException(BrowserRuleCodes.InvalidAccent)
-                    });
-                    break;
-                case SessionOperation.SpaceBranding:
-                    // The native view supplies its rendering vocabulary; the core
-                    // applies its range rules to it.
-                    spaces[index] = Configured(space, space.Settings with {
-                        Branding = SpaceBrandingPolicy.Normalize(StoredSessionCodec.DecodeBranding(args["value"]))
-                    });
-                    break;
-                case SessionOperation.SpaceBrowsingPreferences:
-                    spaces[index] = Configured(space, space.Settings with {
-                        BrowsingPreferences = StoredSessionCodec.DecodeBrowsingPreferences(args["value"])
-                    });
-                    break;
-                case SessionOperation.SpaceSearchProviderUpsert or SessionOperation.SpaceSearchProviderRemove:
-                    spaces[index] = Configured(space, space.Settings with {
-                        BrowsingPreferences = EditSearchProviders(operation, space.Settings.BrowsingPreferences, args)
-                    });
-                    break;
-                case SessionOperation.SpaceCredentialPreferences:
-                    spaces[index] = Configured(space, space.Settings with {
-                        CredentialPreferences = StoredSessionCodec.DecodeCredentialPreferences(args["value"])
-                    });
-                    break;
-                case SessionOperation.SpaceAccess:
-                    spaces[index] = Configured(space, space.Settings with {
-                        AccessPolicy = StoredSessionCodec.ParseAccessPolicy(args["value"]!.GetValue<string>())
-                            ?? throw new BrowserRuleException(BrowserRuleCodes.InvalidAccessPolicy)
-                    });
-                    break;
-                case SessionOperation.SpaceDefault:
-                    defaultSpace = space.Id;
-                    break;
-                case SessionOperation.SpaceSavedExpansion:
-                    var expanded = args["value"]!.GetValue<bool>();
-                    if (space.Settings.IsSavedTabsExpanded != expanded)
-                        spaces[index] = Configured(space,
-                            space.Settings with { IsSavedTabsExpanded = expanded, SavedTabsExpansionModifiedAt = Now(request) });
-                    break;
-                case SessionOperation.SpaceRemove:
-                    if (pending is null || pending.Id != Id(args["operationID"]))
-                        throw new BrowserRuleException(BrowserRuleCodes.WrongDeletionOperation);
-                    SpaceOrganizationPolicy.RequireRemovable(spaces.Count);
-                    spaces.RemoveAt(index);
-                    deletions.Remove(pending);
-                    // The Space that takes the removed one's place is where its
-                    // window goes and, when it was the launch Space, the new one.
-                    var neighbor = spaces[Math.Min(index, spaces.Count - 1)].Id;
-                    if (followUp.Window?.ShownSpaceId == id) followUp.ShowSpace(neighbor);
-                    if (defaultSpace == id) defaultSpace = neighbor;
-                    break;
-                default: throw new BrowserRuleException(BrowserRuleCodes.UnknownSpaceCommand);
-            }
-        }
-        var next = session with { Spaces = spaces.ToArray(), SpaceDeletions = deletions.ToArray(), DefaultSpaceId = defaultSpace };
+        var index = spaces.FindIndex(s => s.Id == id);
+        if (index < 0) throw new BrowserRuleException(BrowserRuleCodes.UnknownSpace);
+        var space = spaces[index];
+        if (Id(request["profileId"]) != space.ProfileId) throw new BrowserRuleException(BrowserRuleCodes.WrongProfileIdentity);
+        if (PendingDeletion(session, id) is not null) throw new BrowserRuleException(BrowserRuleCodes.SpaceDeletionInProgress);
+        spaces[index] = operation switch {
+            SessionOperation.SpaceBrowsingPreferences => Configured(space, space.Settings with {
+                BrowsingPreferences = StoredSessionCodec.DecodeBrowsingPreferences(args["value"])
+            }),
+            SessionOperation.SpaceSearchProviderUpsert or SessionOperation.SpaceSearchProviderRemove => Configured(space, space.Settings with {
+                BrowsingPreferences = EditSearchProviders(operation, space.Settings.BrowsingPreferences, args)
+            }),
+            _ => throw new BrowserRuleException(BrowserRuleCodes.UnknownSpaceCommand)
+        };
+        var next = session with { Spaces = spaces.ToArray() };
         Validate(next);
-        var projection = StoredSessionCodec.Encode(next with {
-            Spaces = spaces.Select(s => created == s.Id ? s : Settings(s)).ToArray()
-        });
-        return new NativeSessionCommand(this, session, next, Output(new JsonObject { ["session"] = projection }), followUp: followUp);
+        var projection = StoredSessionCodec.Encode(next with { Spaces = spaces.Select(Settings).ToArray() });
+        return new NativeSessionCommand(this, session, next, Output(new JsonObject { ["session"] = projection }));
     }
 
     #endregion

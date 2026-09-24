@@ -13,18 +13,7 @@ internal enum SessionOperation {
     PreferencesImport,
     PreferencesSet,
     PreferencesTranslationRule,
-    SpaceAccess,
-    SpaceBranding,
     SpaceBrowsingPreferences,
-    SpaceCreate,
-    SpaceCredentialPreferences,
-    SpaceDefault,
-    SpaceDeletionBegin,
-    SpaceIdentity,
-    SpaceRemove,
-    SpaceReorder,
-    SpaceResetPrivate,
-    SpaceSavedExpansion,
     SpaceSearchProviderRemove,
     SpaceSearchProviderUpsert,
     TabTransfer,
@@ -40,18 +29,7 @@ internal static class SessionOperationCodes {
         "preferences.import" => SessionOperation.PreferencesImport,
         "preferences.set" => SessionOperation.PreferencesSet,
         "preferences.translation_rule" => SessionOperation.PreferencesTranslationRule,
-        "space.access" => SessionOperation.SpaceAccess,
-        "space.branding" => SessionOperation.SpaceBranding,
         "space.browsing_preferences" => SessionOperation.SpaceBrowsingPreferences,
-        "space.create" => SessionOperation.SpaceCreate,
-        "space.credential_preferences" => SessionOperation.SpaceCredentialPreferences,
-        "space.default" => SessionOperation.SpaceDefault,
-        "space.deletion.begin" => SessionOperation.SpaceDeletionBegin,
-        "space.identity" => SessionOperation.SpaceIdentity,
-        "space.remove" => SessionOperation.SpaceRemove,
-        "space.reorder" => SessionOperation.SpaceReorder,
-        "space.reset_private" => SessionOperation.SpaceResetPrivate,
-        "space.saved_expansion" => SessionOperation.SpaceSavedExpansion,
         "space.search_provider.remove" => SessionOperation.SpaceSearchProviderRemove,
         "space.search_provider.upsert" => SessionOperation.SpaceSearchProviderUpsert,
         "tab.transfer" => SessionOperation.TabTransfer,
@@ -77,14 +55,10 @@ internal static class SessionOperationCodes {
         var explicitDelete = SyncDeletionReason.ExplicitDelete;
         var superseded = SyncDeletionReason.Superseded;
         return operation switch {
-            SessionOperation.SpaceCreate or SessionOperation.SpaceAccess
-                or SessionOperation.SpaceCredentialPreferences => new(superseded, SyncUrgency.Immediate),
-            SessionOperation.SpaceRemove => new(explicitDelete, SyncUrgency.WithSave),
-            SessionOperation.SpaceDeletionBegin or SessionOperation.WorkspaceImport or SessionOperation.TabTransfer =>
-                new(superseded, SyncUrgency.WithSave),
+            SessionOperation.WorkspaceImport or SessionOperation.TabTransfer => new(superseded, SyncUrgency.WithSave),
             SessionOperation.TabsBatch => new(Enum.TryParse<TabBatchKind>(request["arguments"]?["kind"]?.GetValue<string>(), out var kind)
                 && kind == TabBatchKind.Delete ? explicitDelete : superseded, SyncUrgency.WithSave),
-            SessionOperation.LaunchPlan or SessionOperation.SpaceResetPrivate => null,
+            SessionOperation.LaunchPlan => null,
             _ => new(superseded, SyncUrgency.Coalesced)
         };
     }
@@ -103,18 +77,7 @@ internal static class SessionOperationCodes {
 
     public static bool IsSpace(SessionOperation operation) => operation is
         SessionOperation.UnknownSpace
-        or SessionOperation.SpaceAccess
-        or SessionOperation.SpaceBranding
         or SessionOperation.SpaceBrowsingPreferences
-        or SessionOperation.SpaceCreate
-        or SessionOperation.SpaceCredentialPreferences
-        or SessionOperation.SpaceDefault
-        or SessionOperation.SpaceDeletionBegin
-        or SessionOperation.SpaceIdentity
-        or SessionOperation.SpaceRemove
-        or SessionOperation.SpaceReorder
-        or SessionOperation.SpaceResetPrivate
-        or SessionOperation.SpaceSavedExpansion
         or SessionOperation.SpaceSearchProviderRemove
         or SessionOperation.SpaceSearchProviderUpsert;
 

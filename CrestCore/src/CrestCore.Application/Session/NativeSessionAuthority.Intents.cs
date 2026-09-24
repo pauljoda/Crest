@@ -6,11 +6,11 @@ namespace CrestCore.Application;
 public sealed partial class NativeSessionAuthority {
     #region Types
 
-    /// What one session intent changes: the next session, how it stages, what
-    /// the window that issued it shows next, what it did that the two states
-    /// cannot tell, the sweep it records, and the Quick Window or Peek page it
-    /// kept or archived.
-    private sealed record SessionEdit(SessionState Next, SyncStaging Staging, WindowFollowUp? FollowUp = null,
+    /// What one session intent changes: the next session, how it stages (null
+    /// for an edit no journal ever reads), what the window that issued it
+    /// shows next, what it did that the two states cannot tell, the sweep it
+    /// records, and the Quick Window or Peek page it kept or archived.
+    private sealed record SessionEdit(SessionState Next, SyncStaging? Staging, WindowFollowUp? FollowUp = null,
         SessionTabEvents? Events = null, SweepMark? Sweep = null, Guid? Completes = null);
 
     #endregion
@@ -24,7 +24,8 @@ public sealed partial class NativeSessionAuthority {
     /// did that the session cannot tell, such as the image a tab now wears,
     /// and what its window shows next, such as the tab it returns to after
     /// putting a saved tab's page away. Throws `Rejected` naming the rule that
-    /// refused it.
+    /// refused it, or `SaveFailed` for an edit saved before it returns whose
+    /// save failed, which changed nothing.
     internal void Handle(SessionIntent intent, DateTimeOffset now, IIdSource ids, Func<Guid, TransientPage?>? pages = null) {
         ArgumentNullException.ThrowIfNull(intent);
         ArgumentNullException.ThrowIfNull(ids);
@@ -40,8 +41,15 @@ public sealed partial class NativeSessionAuthority {
             else if (edit.Events is not null || edit.FollowUp is not null)
                 unchanged = (session, edit.Events ?? SessionTabEvents.None, edit.FollowUp);
         }
-        if (command is not null) Commit(command);
-        else if (unchanged is { } kept) Published(kept.State, kept.State, kept.FollowUp, kept.Events);
+        if (command is null) {
+            if (unchanged is { } kept) Published(kept.State, kept.State, kept.FollowUp, kept.Events);
+            return;
+        }
+        try {
+            Commit(command);
+        } catch (StorageException error) {
+            throw new Rejected(new SaveFailed(error.Reason));
+        }
     }
 
     /// Throws the `Rejected` that would refuse `intent` at `now`, and changes
@@ -95,6 +103,17 @@ public sealed partial class NativeSessionAuthority {
             ReplaceSavedAddress adoption => ReplacingSavedAddress(basis, adoption),
             ReturnToSavedAddress returning => ReturningToSavedAddress(basis, returning),
             KeepPageLoaded residency => KeepingPageLoaded(basis, residency),
+            CreateSpace creation => CreatingSpace(basis, creation, now, ids),
+            SetSpaceIdentity identity => SettingIdentity(basis, identity),
+            SetSpaceBranding branding => SettingBranding(basis, branding),
+            SetCredentialPreferences credentials => SettingCredentials(basis, credentials),
+            SetSpaceAccess access => SettingAccess(basis, access),
+            SetDefaultSpace choice => SettingDefault(basis, choice),
+            ReorderSpaces order => Reordering(basis, order),
+            ExpandSavedTabs expansion => ExpandingSavedTabs(basis, expansion, now),
+            BeginDeletingSpace deletion => BeginningDeletion(basis, deletion),
+            FinishDeletingSpace deletion => FinishingDeletion(basis, deletion),
+            ResetPrivateBrowsing reset => ResettingPrivateBrowsing(basis, reset, now, ids),
             _ => throw new ArgumentOutOfRangeException(nameof(intent), intent.GetType().Name, "The session does not handle this intent.")
         };
         if (edit is null) return null;

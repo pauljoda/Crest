@@ -123,7 +123,9 @@ final class BrowserStoreWorkspaceTests: XCTestCase {
             try await temporary.deleteSpace(assignment.spaceID, dataDeleter: deleter)
             XCTFail("The workspace must not delete its borrowed profile")
         } catch {
-            XCTAssertEqual(error as? BrowserSpaceDeletionError, .borrowedProfile)
+            XCTAssertEqual(
+                error as? Rejection,
+                .borrowedProfileRequiresOwner(BorrowedProfileRequiresOwner(workspaceID: temporary.family.workspaceID)))
         }
         XCTAssertFalse(deleter.wasCalled)
         XCTAssertEqual(source.session, before)

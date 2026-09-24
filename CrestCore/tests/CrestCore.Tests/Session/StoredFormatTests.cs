@@ -99,10 +99,11 @@ public sealed class StoredFormatTests {
                     RestoresTabs: true));
                 request["windowId"] = issuer.ToString();
             }
-            if (RecordedIntents.Typed(request, workspace, window) is { } intent) {
+            if (RecordedIntents.Typed(request, workspace, window, authority.Current) is { } intents) {
                 clock.Now = RecordedIntents.Time(request);
                 ids.Supply(RecordedIntents.Identities(request));
-                app.Send(intent);
+                foreach (var intent in intents) app.Send(intent);
+                if (RecordedIntents.FollowingCommand(request) is { } following) authority.PrepareCommand(Bytes(following)).Commit();
             } else if (RecordedIntents.Navigation(request) is { } navigation) {
                 clock.Now = navigation.At;
                 RecordedIntents.Report(app, engine, navigation, workspace, window!.Value);

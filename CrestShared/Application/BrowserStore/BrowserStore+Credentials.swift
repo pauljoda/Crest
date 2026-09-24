@@ -141,9 +141,10 @@ extension BrowserStore {
         _ preferences: BrowserCredentialPreferences,
         in spaceID: SpaceID
     ) {
-        guard let owner = spaceCommandOwner(.spaceCredentialPreferences, in: spaceID),
-            owner.session.space(id: spaceID) != nil else { return }
-        guard owner.setCoreSpaceValue(.spaceCredentialPreferences, preferences, in: spaceID) else { return }
+        sendSpaceSettings(
+            SetCredentialPreferences(
+                workspaceID: profileSettingsBrowser.family.workspaceID, spaceID: spaceID.rawValue,
+                preferences: preferences.core))
     }
 
     func setCrestPasswordSynchronization(
@@ -152,9 +153,7 @@ extension BrowserStore {
     ) async throws {
         // The vault write and its preference belong to the store that owns
         // the Space's credential settings, which may be a borrowed source.
-        guard let owner = spaceCommandOwner(.spaceCredentialPreferences, in: spaceID) else {
-            throw CredentialVaultError.missingSpace
-        }
+        let owner = profileSettingsBrowser
         guard owner === self else {
             try await owner.setCrestPasswordSynchronization(isSynchronizable, in: spaceID)
             return
@@ -174,7 +173,9 @@ extension BrowserStore {
         preferences.syncsCrestPasswordsWithICloud = isSynchronizable
         // The native credential operation completed for this profile. Persist
         // its corresponding policy through the same session authority.
-        if !setCoreSpaceValue(.spaceCredentialPreferences, preferences, in: spaceID),
+        let sent = SetCredentialPreferences(
+            workspaceID: family.workspaceID, spaceID: spaceID.rawValue, preferences: preferences.core)
+        if !family.send(sent, from: self, failure: "Core Space command failed"),
             session.space(id: spaceID)?.credentialPreferences != preferences {
             throw CredentialVaultError.preferenceUpdateFailed
         }

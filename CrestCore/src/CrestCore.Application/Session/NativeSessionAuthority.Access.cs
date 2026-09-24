@@ -14,14 +14,6 @@ public sealed partial class NativeSessionAuthority {
     /// an incoming record cannot remove protection this device never unlocked.
     internal SpaceAccessAuthority? Access { get { lock (Gate) return access; } }
 
-    /// Operations that must still work while a Space is locked. Neither
-    /// returns tab, folder, history or archive contents to the caller: they
-    /// are the deletion intents that sync and cleanup depend on. Retention and
-    /// current-tab sweeps are session intents, which reach a locked Space
-    /// themselves.
-    private static readonly SessionOperation[] UnlockedOperations =
-        [SessionOperation.SpaceDeletionBegin, SessionOperation.SpaceRemove];
-
     #endregion
 
     #region Actions - Access
@@ -56,11 +48,6 @@ public sealed partial class NativeSessionAuthority {
     private void RequireAccessibleCommand(JsonObject request) {
         if (access is null) return;
         var operation = SessionOperationCodes.Parse(request["operation"]!.GetValue<string>());
-        if (UnlockedOperations.Contains(operation)) return;
-        // Raising protection on a Space is always allowed. Taking it away is the
-        // decision authentication exists to guard, so it needs the grant.
-        if (operation == SessionOperation.SpaceAccess && (request["arguments"] as JsonObject)?["value"] is JsonValue policy
-            && policy.TryGetValue<string>(out var value) && StoredSessionCodec.ParseAccessPolicy(value) != SpaceAccessPolicy.Open) return;
         foreach (var space in CommandSpaces(request, operation)) RequireAccessible(space);
     }
 

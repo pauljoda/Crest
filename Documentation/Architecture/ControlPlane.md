@@ -698,7 +698,7 @@ else is local. The borrowed authority enforces the same rule, rejecting a
 source-owned command with `borrowed_profile_requires_owner`. The page surface
 for a selected tab (`page.presentation`), the Balanced content-blocking rule
 list (the `BalancedProtectionRules` query) and branding range rules (`branding.normalize`,
-also applied by the `space.branding` command) are core policy; the crest's
+also applied by the `SetSpaceBranding` intent) are core policy; the crest's
 heraldic vocabulary and its composition parameters stay native.
 
 Window state follows the same split. Per-window selection and split column

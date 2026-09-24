@@ -121,10 +121,18 @@ internal sealed record KindsField(Type Type) : FieldType;
 
 internal sealed record ContractField(string Name, FieldType Type);
 
+/// A record's user-facing English text: a `[Localized]` computed property
+/// whose value is the same for every instance, the note for translators, and
+/// the int field whose value it carries where it spells `%lld`. It never
+/// crosses the wire; Swift receives it as a `LocalizedStringResource`.
+internal sealed record RecordText(string Name, string Text, string? Comment, string? Argument);
+
 /// A sealed positional record. Its primary-constructor parameters cross the
 /// wire, followed by the values the core resolves from them: its `[Resolved]`
-/// computed properties, which the core writes and never reads back.
-internal sealed record ContractRecord(Type Type, IReadOnlyList<ContractField> Fields, IReadOnlyList<ContractField> Resolved) {
+/// computed properties, which the core writes and never reads back. Its
+/// `[Localized]` texts never cross it.
+internal sealed record ContractRecord(Type Type, IReadOnlyList<ContractField> Fields, IReadOnlyList<ContractField> Resolved,
+    IReadOnlyList<RecordText> Texts) {
     /// The field that names a record, which an observed model keeps as its identity.
     public const string IdentityField = "Id";
 
@@ -319,7 +327,8 @@ internal sealed class ContractSchema {
         // Register before resolving fields so a record may refer to itself through a list or an optional.
         var fields = new List<ContractField>();
         var resolved = new List<ContractField>();
-        var record = new ContractRecord(type, fields, resolved);
+        var texts = new List<RecordText>();
+        var record = new ContractRecord(type, fields, resolved, texts);
         records[type] = record;
         foreach (var parameter in constructors[0].GetParameters()) {
             string where = $"{type.Name}.{parameter.Name}";
@@ -336,7 +345,31 @@ internal sealed class ContractSchema {
                 throw new ContractSchemaException($"{where}: a [Resolved] value is a get-only computed property, not a field.");
             resolved.Add(new ContractField(property.Name, Resolve(property.PropertyType, nullability.Create(property), where)));
         }
+        texts.AddRange(RecordTexts(type, fields));
         return record;
+    }
+
+    /// A record's `[Localized]` computed properties. Each is the same English
+    /// for every instance, read from one made without its constructor, and
+    /// spells `%lld` exactly once when it names the int field it carries.
+    private static IEnumerable<RecordText> RecordTexts(Type type, IReadOnlyList<ContractField> fields) {
+        var accessors = type.GetProperties(BindingFlags.Public | BindingFlags.Instance).OrderBy(property => property.MetadataToken).ToList();
+        if (!accessors.Any(IsLocalized)) yield break;
+        var comments = TranslatorComments(accessors, type.Name);
+        var instance = System.Runtime.CompilerServices.RuntimeHelpers.GetUninitializedObject(type);
+        foreach (var property in accessors.Where(IsLocalized)) {
+            string at = $"{type.Name}.{property.Name}";
+            if (fields.Any(field => field.Name == property.Name) || property.PropertyType != typeof(string) || property.SetMethod is not null)
+                throw new ContractSchemaException($"{at}: a record's [Localized] text is a get-only string property outside its constructor.");
+            string? argument = property.GetCustomAttribute<LocalizedAttribute>()!.Argument;
+            if (argument is not null && fields.FirstOrDefault(field => field.Name == argument)?.Type is not PrimitiveField { Kind: Primitive.Int })
+                throw new ContractSchemaException($"{at}: its argument {argument} must be an int field of the record.");
+            if (property.GetValue(instance) is not string text || text.Split(ArgumentFormat).Length - 1 != (argument is null ? 0 : 1))
+                throw new ContractSchemaException($"{at}: a record's text is constant English that spells {ArgumentFormat} exactly once "
+                    + "when it names an argument, and never otherwise.");
+            yield return new RecordText(property.Name, text,
+                comments.TryGetValue(property, out var comment) ? (string?)comment.GetValue(instance) : null, argument);
+        }
     }
 
     private FieldType Resolve(Type type, NullabilityInfo? info, string where) {
@@ -703,7 +736,10 @@ internal sealed class ContractSchema {
             text.Append("record ").Append(record.Name).Append('(')
                 .Append(string.Join(", ", record.Fields.Select(field => $"{field.Name}: {Describe(field.Type)}"))).Append(')')
                 .Append(record.Resolved.Count == 0 ? "" : $" resolved({string.Join(", ", record.Resolved.Select(field =>
-                    $"{field.Name}: {Describe(field.Type)}"))})").Append('\n');
+                    $"{field.Name}: {Describe(field.Type)}"))})")
+                .Append(string.Concat(record.Texts.Select(item =>
+                    $" {item.Name}=localized({DescribeValue(item.Text)}, {DescribeValue(item.Comment)}, {DescribeValue(item.Argument)})")))
+                .Append('\n');
         foreach (var root in ContractRoot.All)
             foreach (var member in Members(root))
                 text.Append(root.Name.ToLowerInvariant()).Append(' ').Append(member.Tag).Append(' ').Append(member.Name)
