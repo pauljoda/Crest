@@ -2365,6 +2365,10 @@
     "tab-batch-intents": {
       "category": "internal",
       "message": "Closing, deleting, copying, filing, splitting, keeping loaded and moving several selected tabs are typed core intents, saved before they return."
+    },
+    "tab-move-intents": {
+      "category": "internal",
+      "message": "Moving a tab to another Space or window is a typed core intent, and a move between workspaces changes both or neither."
     }
   }
 }

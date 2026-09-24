@@ -6,7 +6,6 @@ namespace CrestCore.Application;
 
 internal enum SessionOperation {
     Unknown,
-    TabTransfer,
     WorkspaceImport,
 }
 
@@ -14,7 +13,6 @@ internal static class SessionOperationCodes {
     #region Actions - Decoding
 
     public static SessionOperation Parse(string? value) => value switch {
-        "tab.transfer" => SessionOperation.TabTransfer,
         "workspace.import" => SessionOperation.WorkspaceImport,
         _ => SessionOperation.Unknown
     };
@@ -33,7 +31,7 @@ internal static class SessionOperationCodes {
     public static SyncStaging? Staging(SessionOperation operation, JsonObject request) {
         var superseded = SyncDeletionReason.Superseded;
         return operation switch {
-            SessionOperation.WorkspaceImport or SessionOperation.TabTransfer => new(superseded, SyncUrgency.WithSave),
+            SessionOperation.WorkspaceImport => new(superseded, SyncUrgency.WithSave),
             _ => new(superseded, SyncUrgency.Coalesced)
         };
     }

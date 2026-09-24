@@ -10,8 +10,12 @@ extension BrowserStore {
         let settingsBrowser = profileSettingsBrowser.makeWindowStore(
             BrowserWindowOpening(showingSpaceID: assignment.spaceID, restoresTabs: false))
         let workspaceFamily: BrowserStoreFamily
-        do { workspaceFamily = try settingsBrowser.family.makeBorrowed(in: assignment, settingsBrowser: settingsBrowser) }
-        catch { localSyncErrorDescription = "Core workspace creation failed: \(error)"; return nil }
+        do {
+            workspaceFamily = try settingsBrowser.family.makeBorrowed(in: assignment, settingsBrowser: settingsBrowser)
+        } catch {
+            localSyncErrorDescription = "Core workspace creation failed: \(error)"
+            return nil
+        }
         return BrowserStore(
             opening: BrowserWindowOpening(id: id),
             credentialVault: credentialVault,
@@ -35,48 +39,50 @@ extension BrowserStore {
         return true
     }
 
-    /// Transfers data ownership without invoking close/delete or archiving the
-    /// tab. The scene coordinator moves its matching live runtime separately.
+    /// Whether the core would move the tab to `destination`'s window: a window
+    /// over this workspace shows it, and one over a workspace that borrows
+    /// this one's Space, or lends its own, takes it.
     func canTransferTab(
         _ id: TabID,
         matching sourceAssignment: BrowserSpaceRuntimeAssignment,
         to destination: BrowserStore,
         in destinationAssignment: BrowserSpaceRuntimeAssignment
     ) -> Bool {
-        guard sourceAssignment == destinationAssignment, let source = space(matching: sourceAssignment),
-            source.contains(id), destination.space(matching: destinationAssignment) != nil,
-            isPrivateBrowsing == destination.isPrivateBrowsing else { return false }
-        if family === destination.family { return true }
-        return (try? BrowserStoreFamily.prepareTransfer(id, assignment: sourceAssignment,
-            source: self, destination: destination, selecting: false)) != nil
+        guard sourceAssignment == destinationAssignment, space(matching: sourceAssignment) != nil,
+            destination.space(matching: destinationAssignment) != nil
+        else { return false }
+        return family.canSend(movingTab(id, in: sourceAssignment, to: destination), from: self)
     }
 
+    /// Moves the tab to `destination`'s window without closing, archiving or
+    /// copying it. The scene coordinator moves its matching live page
+    /// separately.
     @discardableResult
     func transferTab(
         _ id: TabID,
         matching sourceAssignment: BrowserSpaceRuntimeAssignment,
         to destination: BrowserStore,
-        in destinationAssignment: BrowserSpaceRuntimeAssignment,
-        selecting: Bool = true
+        in destinationAssignment: BrowserSpaceRuntimeAssignment
     ) -> Bool {
-        guard sourceAssignment == destinationAssignment, let source = space(matching: sourceAssignment),
-            source.contains(id), destination.space(matching: destinationAssignment) != nil,
-            isPrivateBrowsing == destination.isPrivateBrowsing else { return false }
-        if family === destination.family {
-            if selecting {
-                guard destination.activateSessionTab(id, in: destinationAssignment.spaceID) else { return false }
-            }
-            return true
-        }
+        guard sourceAssignment == destinationAssignment, space(matching: sourceAssignment) != nil,
+            destination.space(matching: destinationAssignment) != nil
+        else { return false }
         do {
-            let command = try BrowserStoreFamily.prepareTransfer(id, assignment: sourceAssignment,
-                source: self, destination: destination, selecting: selecting)
-            try BrowserStoreFamily.transfer(command, source: self, destination: destination)
-            tabMultiSelection.clear()
-            return true
+            try BrowserStoreFamily.moveTab(
+                movingTab(id, in: sourceAssignment, to: destination), from: self, to: destination)
         } catch {
             localSyncErrorDescription = "Core workspace transfer failed: \(error)"
             return false
         }
+        if family !== destination.family { tabMultiSelection.clear() }
+        return true
+    }
+
+    private func movingTab(_ id: TabID, in assignment: BrowserSpaceRuntimeAssignment, to destination: BrowserStore)
+        -> MoveTabToWindow
+    {
+        MoveTabToWindow(
+            workspaceID: family.workspaceID, windowID: windowID.rawValue, spaceID: assignment.spaceID.rawValue,
+            tabID: id.rawValue, destinationWindowID: destination.windowID.rawValue)
     }
 }

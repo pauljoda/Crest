@@ -22,16 +22,6 @@ final class BrowserCoreSessionAuthority {
         case `private`
     }
 
-    final class PreparedTransfer {
-        fileprivate let handle: UInt64
-
-        fileprivate init(handle: UInt64) {
-            self.handle = handle
-        }
-
-        deinit { crest_session_release_transfer(handle) }
-    }
-
     final class PreparedChange {
         fileprivate let handle: UInt64
         /// TRANSITIONAL until S6.7: the session the command proposes. An
@@ -75,31 +65,6 @@ final class BrowserCoreSessionAuthority {
     private struct Borrowing: Encodable {
         let spaceId: UUID
         let profileId: UUID
-    }
-
-    /// `tab.transfer` between two Spaces of this workspace.
-    private struct TabTransferCommand: Encodable {
-        let version = 1
-        let operation = BrowserSessionOperation.tabTransfer
-        let spaceId: UUID
-        let profileId: UUID
-        let destinationSpaceId: UUID
-        let destinationProfileId: UUID
-        let arguments: BrowserCoreTabTransfer.Arguments
-        @BrowserCoreNullable var windowId: UUID?
-        let now: TimeInterval
-    }
-
-    /// A tab moving between two workspaces, from the window it leaves to the
-    /// one it moves to.
-    private struct WorkspaceTransfer: Encodable {
-        let version = 1
-        let spaceId: UUID
-        let profileId: UUID
-        @BrowserCoreNullable var sourceWindowId: UUID?
-        @BrowserCoreNullable var destinationWindowId: UUID?
-        let arguments: BrowserCoreTabTransfer.Arguments
-        let now: TimeInterval
     }
 
     /// `workspace.import`.
@@ -313,79 +278,6 @@ final class BrowserCoreSessionAuthority {
     func attachSync(_ sync: BrowserCoreSyncAuthority) throws {
         let result = crest_session_attach_sync(owner.value, sync.handle)
         guard result == CREST_OK else { throw CoreError.rejected(result) }
-    }
-
-    // MARK: - Actions - Transfers
-
-    func prepareTabMove(
-        _ tabID: TabID, source: BrowserSpaceRuntimeAssignment,
-        destination: BrowserSpaceRuntimeAssignment, arguments: BrowserCoreTabTransfer.Arguments,
-        window: UUID?, at date: Date
-    ) throws -> PreparedChange {
-        guard let moved = projection.space(id: source.spaceID)?.tabs.first(where: { $0.id == tabID })
-        else { throw CoreError.rejected(CREST_INVALID_ARGUMENT) }
-        let data = try JSONEncoder().encode(
-            TabTransferCommand(
-                spaceId: source.spaceID.rawValue, profileId: source.profileID,
-                destinationSpaceId: destination.spaceID.rawValue, destinationProfileId: destination.profileID,
-                arguments: arguments, windowId: window, now: date.timeIntervalSinceReferenceDate))
-        let handle = try prepareCommand(data)
-        do {
-            let result = try JSONDecoder().decode(BrowserCoreTabTransfer.Result.self, from: readCommand(handle))
-            let intermediate = try BrowserCoreTabTransfer.applying(result.source, to: projection, moved: moved)
-            let next = try BrowserCoreTabTransfer.applying(result.destination, to: intermediate, moved: moved)
-            return PreparedChange(handle: handle, session: next)
-        } catch {
-            crest_session_release_command(handle)
-            throw error
-        }
-    }
-
-    /// Whether the core would accept a cross-Space move. The command is
-    /// prepared, read and released without committing.
-    func acceptsTabMove(
-        _ tabID: TabID, source: BrowserSpaceRuntimeAssignment,
-        destination: BrowserSpaceRuntimeAssignment, window: UUID?
-    ) -> Bool {
-        (try? prepareTabMove(
-            tabID, source: source, destination: destination,
-            arguments: BrowserCoreTabTransfer.Arguments(tabID: tabID), window: window, at: .now)) != nil
-    }
-
-    static func prepareTransfer(
-        source: BrowserCoreSessionAuthority, sourceWindow: UUID?,
-        destination: BrowserCoreSessionAuthority, destinationWindow: UUID?,
-        tabID: TabID, assignment: BrowserSpaceRuntimeAssignment, selecting: Bool
-    ) throws -> PreparedTransfer {
-        guard source.projection.space(id: assignment.spaceID)?.contains(tabID) == true
-        else { throw CoreError.rejected(CREST_INVALID_ARGUMENT) }
-        let input = try JSONEncoder().encode(
-            WorkspaceTransfer(
-                spaceId: assignment.spaceID.rawValue, profileId: assignment.profileID,
-                sourceWindowId: sourceWindow, destinationWindowId: destinationWindow,
-                arguments: BrowserCoreTabTransfer.Arguments(tabID: tabID, selecting: selecting),
-                now: Date.now.timeIntervalSinceReferenceDate))
-        var handle: UInt64 = 0
-        let status = input.withUnsafeBytes { bytes in
-            crest_session_prepare_transfer(
-                source.owner.value, destination.owner.value, bytes.bindMemory(to: UInt8.self).baseAddress,
-                input.count, &handle)
-        }
-        guard status == CREST_OK else { throw CoreError.rejected(status) }
-        return PreparedTransfer(handle: handle)
-    }
-
-    /// Commits a prepared transfer: the core stages the side that syncs and
-    /// saves the side that keeps a file, with that journal, before either side
-    /// is published. Both sides arrive in one batch, so the moved tab keeps
-    /// the image it wore in the workspace it left.
-    static func commitTransfer(
-        _ prepared: PreparedTransfer,
-        source: BrowserCoreSessionAuthority, destination: BrowserCoreSessionAuthority
-    ) throws {
-        let committed = crest_session_commit_transfer(prepared.handle)
-        guard committed == CREST_OK else { throw CoreError(committed) }
-        destination.follow()
     }
 
     // MARK: - Actions - Commands

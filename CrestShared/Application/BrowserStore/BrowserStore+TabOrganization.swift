@@ -180,8 +180,12 @@ extension BrowserStore {
         guard let source = session.space(id: sourceSpaceID), let destination = session.space(id: destinationSpaceID),
             source.contains(id), sourceSpaceID != destinationSpaceID
         else { return false }
-        return family.acceptsTabMove(id, source: BrowserSpaceRuntimeAssignment(space: source),
-            destination: BrowserSpaceRuntimeAssignment(space: destination), from: self)
+        return family.canSend(
+            MoveTabToSpace(
+                workspaceID: family.workspaceID, windowID: windowID.rawValue, spaceID: source.id.rawValue,
+                tabID: id.rawValue, destinationSpaceID: destination.id.rawValue, placement: nil, folderID: nil,
+                beforeTabID: nil, follows: false),
+            from: self)
     }
 
     func canMoveTab(
@@ -251,12 +255,16 @@ extension BrowserStore {
         guard let destination = session.space(id: destinationSpaceID) else { return false }
         let follows = linkPreferences.followsTabsMovedToAnotherSpace
         do {
-            try family.moveTab(id, source: BrowserSpaceRuntimeAssignment(space: source),
-                destination: BrowserSpaceRuntimeAssignment(space: destination),
-                arguments: BrowserCoreTabTransfer.Arguments(
-                    tabID: id, placement: placement, folderID: folderID,
-                    before: destinationTabID, selecting: follows), from: self, at: .now)
-        } catch { localSyncErrorDescription = "Core tab move failed: \(error)"; return false }
+            try family.commit(
+                MoveTabToSpace(
+                    workspaceID: family.workspaceID, windowID: windowID.rawValue, spaceID: source.id.rawValue,
+                    tabID: id.rawValue, destinationSpaceID: destination.id.rawValue, placement: placement,
+                    folderID: folderID?.rawValue, beforeTabID: destinationTabID?.rawValue, follows: follows),
+                from: self)
+        } catch {
+            localSyncErrorDescription = "Core tab move failed: \(error)"
+            return false
+        }
         if follows {
             pendingMovedTabActivation = BrowserTabRuntimeAssignment(
                 tabID: id, spaceID: destination.id, profileID: destination.profile.id)

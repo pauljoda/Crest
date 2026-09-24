@@ -32,10 +32,20 @@ public sealed partial class NativeSessionAuthority {
             RequireWritable();
             SpaceOrganizationPolicy.RequireOwnedProfiles(workspaceKind);
             RequireAccessible(spaceId);
-            var original = TransferSpace(spaceId, profileId);
+            var original = BorrowableSpace(spaceId, profileId);
             var borrowed = original with { Folders = [], Tabs = [], SplitGroups = [], ArchivedTabs = [], History = [] };
             return new(new([borrowed], original.Id, null, [], null), this, spaceId, profileId);
         }
+    }
+
+    /// The Space a workspace borrows, which must be the one `spaceId` names
+    /// with the profile `profileId` names and not being deleted.
+    private SpaceState BorrowableSpace(Guid spaceId, Guid profileId) {
+        if (PendingDeletion(session, spaceId) is not null) throw new BrowserRuleException(BrowserRuleCodes.SpaceDeletionInProgress);
+        var space = session.Spaces.SingleOrDefault(s => s.Id == spaceId)
+            ?? throw new BrowserRuleException(BrowserRuleCodes.UnknownSpace);
+        if (space.ProfileId != profileId) throw new BrowserRuleException(BrowserRuleCodes.WrongProfileIdentity);
+        return space;
     }
 
     private SpaceState RequireBorrowedSource() {

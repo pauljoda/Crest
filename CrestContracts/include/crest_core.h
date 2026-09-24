@@ -135,18 +135,6 @@ CREST_API crest_status_t CREST_CALL crest_session_create(const uint8_t* session,
 CREST_API crest_status_t CREST_CALL crest_session_create_borrowed(
     uint64_t source, const uint8_t* request, size_t length, uint64_t* out_session);
 CREST_API crest_status_t CREST_CALL crest_session_prepare_borrowed_refresh(uint64_t session, uint64_t* out_command);
-/* Semantic same-profile workspace transfer. Commit reserves both states,
-   stages the side whose session syncs, saves the side that keeps a file with
-   that journal, then publishes both. STORAGE_FAILED or any other failure
-   cancels both, and the transfer cannot be committed again. Releasing an
-   uncommitted transfer leaves both sessions as they were. */
-CREST_API crest_status_t CREST_CALL crest_session_prepare_transfer(
-    uint64_t source, uint64_t destination, const uint8_t *bytes, size_t count, uint64_t *transfer);
-CREST_API crest_status_t CREST_CALL crest_session_read_transfer(
-    uint64_t transfer, uint8_t *destination, size_t capacity, size_t *length);
-CREST_API crest_status_t CREST_CALL crest_session_commit_transfer(uint64_t transfer);
-CREST_API crest_status_t CREST_CALL crest_session_release_transfer(uint64_t transfer);
-
 /* Attaches a session to an app's device, so that app's windows may show it,
  * and writes the workspace identity the core gave it (16 RFC 4122 bytes) to
  * out_workspace. A session already attached answers its own. The windows over

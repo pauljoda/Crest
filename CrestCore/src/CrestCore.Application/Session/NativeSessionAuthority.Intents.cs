@@ -29,6 +29,14 @@ public sealed partial class NativeSessionAuthority {
     internal void Handle(SessionIntent intent, DateTimeOffset now, IIdSource ids, Pages? pages = null) {
         ArgumentNullException.ThrowIfNull(intent);
         ArgumentNullException.ThrowIfNull(ids);
+        if (intent is MoveTabToWindow move && Receiving(move) is { } receiving) {
+            try {
+                MovingAcross(receiving, move, Stamp(now), commits: true);
+            } catch (StorageException error) {
+                throw new Rejected(new SaveFailed(error.Reason));
+            }
+            return;
+        }
         NativeSessionCommand? command = null;
         (SessionState State, SessionTabEvents Events, WindowFollowUp? FollowUp)? unchanged = null;
         lock (Gate) {
@@ -57,7 +65,9 @@ public sealed partial class NativeSessionAuthority {
     internal void Check(SessionIntent intent, DateTimeOffset now, IIdSource ids, Pages? pages = null) {
         ArgumentNullException.ThrowIfNull(intent);
         ArgumentNullException.ThrowIfNull(ids);
-        lock (Gate) _ = Edit(intent, Stamp(now), ids, pages);
+        if (intent is MoveTabToWindow move && Receiving(move) is { } receiving)
+            MovingAcross(receiving, move, Stamp(now), commits: false);
+        else lock (Gate) _ = Edit(intent, Stamp(now), ids, pages);
     }
 
     /// The edit an intent makes to the accepted session, validated, or null
@@ -104,6 +114,8 @@ public sealed partial class NativeSessionAuthority {
             SeparateSplits separation => SeparatingSplits(basis, separation, now),
             KeepTabsLoaded residency => KeepingTabsLoaded(basis, residency),
             MoveTabsToSpace move => MovingTabsToSpace(basis, move, now),
+            MoveTabToSpace move => MovingTabToSpace(basis, move, now),
+            MoveTabToWindow move => MovingTabToWindow(basis, move, now),
             FolderTabs folding => FoldingTabs(basis, folding, now, ids),
             FolderTabsAround folding => FoldingTabsAround(basis, folding, now, ids),
             PromoteTransientPage promotion => PromotingTransientPage(basis, promotion, now, ids, pages),

@@ -66,12 +66,8 @@ public sealed partial class NativeSessionAuthority {
     }
 
     private static IEnumerable<Guid> CommandSpaces(JsonObject request, SessionOperation operation) {
-        foreach (var field in new[] { "spaceId", "destinationSpaceId" })
-            if (OptionalSpace(request[field]) is { } id) yield return id;
-        if (request["arguments"] is not JsonObject args) yield break;
-        foreach (var field in new[] { "destinationSpaceId" })
-            if (OptionalSpace(args[field]) is { } id) yield return id;
-        if (operation != SessionOperation.WorkspaceImport) yield break;
+        if (OptionalSpace(request["spaceId"]) is { } space) yield return space;
+        if (request["arguments"] is not JsonObject args || operation != SessionOperation.WorkspaceImport) yield break;
         // Importing into an existing Space writes its tabs and folders. A new
         // Space names no destination and cannot be locked yet.
         var sources = args["sources"] as JsonArray ?? [];

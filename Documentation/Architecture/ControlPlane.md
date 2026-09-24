@@ -618,7 +618,7 @@ and `BrowserWindow` aggregates have been removed. Their former rules now belong 
 | History, archive and retention sweeps | `NativeSessionMaintenance` and `NativeSessionAuthority.Records` |
 | Address, search and link decisions | `SearchProvider`, `SearchPreferences`, `AddressResolution`, `LinkNavigationPolicy` via `NativePolicyEvaluator` |
 | Space locking and device authentication | `SpaceAccessAuthority` behind the Space access intents |
-| Cross-workspace transfer and borrowed workspaces | `NativeTabTransfer` and `NativeSessionAuthority.Borrowing`/`Transfer` |
+| Cross-workspace moves and borrowed workspaces | `NativeSessionAuthority.Moves` and `NativeSessionAuthority.Borrowing` |
 | Sync projection, ordering, conflict and deletion | `NativeSyncAuthority` and the `crest_sync_*` entry points |
 | Correlated completion invariants | Prepare/reserve/commit revisions on the session and sync handles |
 

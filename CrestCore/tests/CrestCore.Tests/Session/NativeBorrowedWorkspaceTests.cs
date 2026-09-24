@@ -9,6 +9,11 @@ using Xunit;
 namespace CrestCore.Tests;
 
 public sealed partial class BrowserContractsTests {
+    /// A workspace that borrows the first Space of `session`, which `owner` holds.
+    private static NativeSessionAuthority Borrow(NativeSessionAuthority owner, JsonNode session) => owner.CreateBorrowed(
+        Guid.Parse(session["spaces"]![0]!["id"]!["rawValue"]!.GetValue<string>()),
+        Guid.Parse(session["spaces"]![0]!["profile"]!["id"]!.GetValue<string>()));
+
     [Fact]
     public void BorrowingUsesOwnedPolicyAndCannotCreateOrRewriteAProfileFromASnapshot() {
         var session = SavedSession().Document["session"]!;

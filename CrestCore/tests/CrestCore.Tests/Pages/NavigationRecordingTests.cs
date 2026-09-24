@@ -178,20 +178,8 @@ public sealed partial class BrowserContractsTests {
         var authority = new NativeSessionAuthority(Bytes(session));
         var (app, engine, page, _) = NavigatingPage(authority, session);
         using var disposal = app;
-        var other = session["spaces"]![1]!;
-        var opened = TabId(other, 0);
-        var moving = authority.PrepareCommand(Bytes(new JsonObject {
-            ["version"] = 1,
-            ["operation"] = "tab.transfer",
-            ["spaceId"] = other["id"]!.DeepClone(),
-            ["profileId"] = other["profile"]!["id"]!.DeepClone(),
-            ["destinationSpaceId"] = session["spaces"]![0]!["id"]!.DeepClone(),
-            ["destinationProfileId"] = session["spaces"]![0]!["profile"]!["id"]!.DeepClone(),
-            ["now"] = 800000001.0,
-            ["arguments"] = new JsonObject { ["tabId"] = opened.ToString(), ["placement"] = "current" }
-        }));
-
-        var reserved = moving.Reserve();
+        // A replacement holds the session while it is saved.
+        var reserved = authority.ReserveReplacement(Bytes(new JsonObject { ["version"] = 1, ["spaces"] = new JsonArray() }));
         app.Report(engine, new NavigationCommitted(page, "https://example.org/during", SameDocument: false));
         app.Report(engine, new NavigationFinished(page, "https://example.org/during", "During"));
         Assert.Empty(Own(app.Drain()));
@@ -200,7 +188,6 @@ public sealed partial class BrowserContractsTests {
         reserved.Commit();
         var changes = Own(app.Drain());
         Assert.Single(changes.OfType<NavigationRecorded>());
-        Assert.Contains(authority.Current.Spaces[0].Tabs, tab => tab.Id == opened);
         Assert.Equal(("https://example.org/during", "During"), (FirstTab(authority).Url, FirstTab(authority).Title));
         Assert.Equal(("https://example.org/during", 1), (History(authority)[0].Url, History(authority)[0].VisitCount));
         app.Report(engine, new NavigationFinished(page, "https://example.org/during", "During"));

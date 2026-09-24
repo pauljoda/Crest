@@ -254,30 +254,17 @@ final class BrowserStoreFamily {
         (try? source.core.query(CanSend(intent: intent)))?.refusal
     }
 
-    func moveTab(_ tabID: TabID, source: BrowserSpaceRuntimeAssignment, destination: BrowserSpaceRuntimeAssignment,
-        arguments: BrowserCoreTabTransfer.Arguments, from store: BrowserStore, at date: Date) throws {
-        let previous = authoritativeSession
-        let command = try core.prepareTabMove(tabID, source: source, destination: destination,
-            arguments: arguments, window: store.windowID.rawValue, at: date)
-        try commitPreparedChange(command, previous: previous, from: store)
-    }
-
-    static func prepareTransfer(_ id: TabID, assignment: BrowserSpaceRuntimeAssignment,
-        source: BrowserStore, destination: BrowserStore, selecting: Bool) throws -> BrowserCoreSessionAuthority.PreparedTransfer {
-        try BrowserCoreSessionAuthority.prepareTransfer(source: source.family.core, sourceWindow: source.windowID.rawValue,
-            destination: destination.family.core, destinationWindow: destination.windowID.rawValue,
-            tabID: id, assignment: assignment, selecting: selecting)
-    }
-
-    static func transfer(_ prepared: BrowserCoreSessionAuthority.PreparedTransfer,
-        source: BrowserStore, destination: BrowserStore) throws {
+    /// Moves a tab from `source`'s window to `destination`'s. The core changes
+    /// both workspaces together, saving the one that keeps a file with its
+    /// journal before it returns, and the windows of both families follow.
+    static func moveTab(
+        _ intent: MoveTabToWindow, from source: BrowserStore, to destination: BrowserStore
+    ) throws(Rejection) {
         let previousSource = source.family.authoritativeSession
         let previousDestination = destination.family.authoritativeSession
-        // The core saves the persistent side with the journal it stages before
-        // either side is published; the temporary side keeps nothing.
-        try BrowserCoreSessionAuthority.commitTransfer(prepared, source: source.family.core,
-            destination: destination.family.core)
+        try source.core.send(intent)
         source.family.reconcileStores(after: previousSource, from: source)
+        guard destination.family !== source.family else { return }
         destination.family.reconcileStores(after: previousDestination, from: destination)
     }
 
@@ -325,13 +312,6 @@ final class BrowserStoreFamily {
                 return left == right || memcmp(left, right, a.count) == 0
             }
         }
-    }
-
-    /// Whether the core would accept moving a tab between two Spaces of this
-    /// workspace, asked without committing anything.
-    func acceptsTabMove(_ tabID: TabID, source: BrowserSpaceRuntimeAssignment,
-        destination: BrowserSpaceRuntimeAssignment, from store: BrowserStore) -> Bool {
-        core.acceptsTabMove(tabID, source: source, destination: destination, window: store.windowID.rawValue)
     }
 
     /// Every window follows the accepted session. The core's device already

@@ -107,6 +107,7 @@ enum Rejection: Equatable, Error, Sendable {
     case pageProfileMismatch(PageProfileMismatch)
     case persistentWorkspaceRequired(PersistentWorkspaceRequired)
     case pinnedTabsFull(PinnedTabsFull)
+    case privateWorkspaceBoundary(PrivateWorkspaceBoundary)
     case recoveryCheckpointUnusable(RecoveryCheckpointUnusable)
     case saveFailed(SaveFailed)
     case searchEngineLimitReached(SearchEngineLimitReached)
@@ -139,6 +140,7 @@ enum Rejection: Equatable, Error, Sendable {
     case unknownSplitGroup(UnknownSplitGroup)
     case unknownTab(UnknownTab)
     case unknownWorkspace(UnknownWorkspace)
+    case unrelatedWorkspaces(UnrelatedWorkspaces)
     case unsavedWorkspace(UnsavedWorkspace)
     case unsupportedAddress(UnsupportedAddress)
     case webPagesOnly(WebPagesOnly)
@@ -1220,6 +1222,26 @@ struct MoveTab: Intent, Equatable, Sendable {
     let leavesSplit: Bool
 }
 
+struct MoveTabToSpace: Intent, Equatable, Sendable {
+    let workspaceID: UUID
+    let windowID: UUID
+    let spaceID: UUID
+    let tabID: UUID
+    let destinationSpaceID: UUID
+    let placement: TabPlacement?
+    let folderID: UUID?
+    let beforeTabID: UUID?
+    let follows: Bool
+}
+
+struct MoveTabToWindow: Intent, Equatable, Sendable {
+    let workspaceID: UUID
+    let windowID: UUID
+    let spaceID: UUID
+    let tabID: UUID
+    let destinationWindowID: UUID
+}
+
 struct MoveTabsToSpace: Intent, Equatable, Sendable {
     let workspaceID: UUID
     let windowID: UUID
@@ -1452,6 +1474,10 @@ struct PinnedTabsFull: Equatable, Sendable {
     var message: LocalizedStringResource {
         LocalizedStringResource("A Space can hold up to \(capacity) pinned tabs. Unpin tabs or select fewer tabs.")
     }
+}
+
+struct PrivateWorkspaceBoundary: Equatable, Sendable {
+    let destinationWorkspaceID: UUID
 }
 
 struct PromoteTransientPage: Intent, Equatable, Sendable {
@@ -2129,6 +2155,10 @@ struct UnknownTab: Equatable, Sendable {
 
 struct UnknownWorkspace: Equatable, Sendable {
     let workspaceID: UUID
+}
+
+struct UnrelatedWorkspaces: Equatable, Sendable {
+    let destinationWorkspaceID: UUID
 }
 
 struct UnsavedWorkspace: Equatable, Sendable {

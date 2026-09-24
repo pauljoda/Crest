@@ -259,39 +259,4 @@ public sealed partial class BrowserContractsTests {
         Assert.Equal(authority.Current, reader.State);
         Assert.Contains(reader.State.Spaces[0].Tabs, tab => tab.Id == opened);
     }
-
-    /// Showing a tab records its use as a change of its own, so a command
-    /// prepared before it no longer describes the session and is refused,
-    /// while one prepared after it commits.
-    [Fact]
-    public void ACommandPreparedBeforeATabWasShownIsStaleAndOnePreparedAfterCommits() {
-        var authority = MaximalSession();
-        using var app = new CrestApp();
-        var workspace = app.AttachWorkspace(authority);
-        TestGrants.UnlockGuarded(app.Send, workspace, authority.Current);
-        var space = authority.Current.Spaces[0];
-        var destination = authority.Current.Spaces[1];
-        var window = Guid.NewGuid();
-        app.Send(new OpenWindow(window, workspace, Saved: false, CopyingWindowId: null, space.Id, [], RestoresTabs: true));
-        var moving = space.Tabs[0].Id;
-        byte[] Move() => Bytes(new JsonObject {
-            ["version"] = 1,
-            ["operation"] = "tab.transfer",
-            ["spaceId"] = space.Id.ToString(),
-            ["profileId"] = space.ProfileId.ToString(),
-            ["destinationSpaceId"] = destination.Id.ToString(),
-            ["destinationProfileId"] = destination.ProfileId.ToString(),
-            ["now"] = 800000001.0,
-            ["arguments"] = new JsonObject { ["tabId"] = moving.ToString() }
-        });
-        var before = authority.PrepareCommand(Move());
-        var touched = app.Send(new ShowTab(window, space.Id, space.Tabs[1].Id));
-        Assert.Single(touched.OfType<TabsChanged>());
-
-        AssertStale(before.Commit);
-        Assert.Contains(authority.Current.Spaces[0].Tabs, tab => tab.Id == moving);
-        authority.PrepareCommand(Move()).Commit();
-        Assert.DoesNotContain(authority.Current.Spaces[0].Tabs, tab => tab.Id == moving);
-        Assert.Contains(authority.Current.Spaces[1].Tabs, tab => tab.Id == moving);
-    }
 }
