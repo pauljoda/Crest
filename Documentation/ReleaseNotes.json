@@ -2253,6 +2253,10 @@
     "pages-through-core": {
       "category": "internal",
       "message": "Every page is opened, moved and released through the core, which refuses pages for locked or deleting Spaces."
+    },
+    "engine-names-catalog": {
+      "category": "internal",
+      "message": "The engine names are in the localization catalog."
     }
   }
 }

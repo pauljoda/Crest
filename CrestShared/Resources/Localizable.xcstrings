@@ -582,6 +582,9 @@
     "Chosen Space" : {
 
     },
+    "Chromium" : {
+      "comment" : "The name of a browser engine. Keep the product name as it is."
+    },
     "Click a shortcut, then press a key with Command, Option, Control, or Shift." : {
 
     },
@@ -19088,6 +19091,9 @@
           }
         }
       }
+    },
+    "WebKit" : {
+      "comment" : "The name of a browser engine. Keep the product name as it is."
     },
     "WebKit can use the system’s passkey providers for the website in the active page." : {
       "localizations" : {
