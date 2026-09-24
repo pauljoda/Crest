@@ -9,16 +9,16 @@ public sealed class SitePermission {
     #region Variables
 
     public static readonly SitePermission Camera = new(name: "camera", title: "Camera", symbol: "video",
-        requestTitle: "Wants to use your camera", isMedia: true);
+        requestTitle: "Wants to use your camera", isMedia: true, isEngineEnforced: true);
     public static readonly SitePermission Microphone = new(name: "microphone", title: "Microphone", symbol: "mic",
-        requestTitle: "Wants to use your microphone", isMedia: true);
+        requestTitle: "Wants to use your microphone", isMedia: true, isEngineEnforced: true);
     public static readonly SitePermission CameraAndMicrophone = new(name: "cameraAndMicrophone", title: "Camera & Microphone",
         symbol: "video.and.waveform", requestTitle: "Wants to use your camera and microphone", isMedia: true,
         components: [Camera, Microphone]);
     public static readonly SitePermission Location = new(name: "location", title: "Location", symbol: "location",
-        requestTitle: "Wants to use your location");
+        requestTitle: "Wants to use your location", isEngineEnforced: true);
     public static readonly SitePermission Notifications = new(name: "notifications", title: "Notifications", symbol: "bell",
-        requestTitle: "Wants to send notifications while this page is open");
+        requestTitle: "Wants to send notifications while this page is open", isEngineEnforced: true);
     // A site gets no automatic pop-ups until the person allows them.
     public static readonly SitePermission Popups = new(name: "popups", title: "Automatic Pop-ups", symbol: "macwindow.on.rectangle",
         requestTitle: "Requests permission", askTitle: "Blocked by Default", askChoiceTitle: "Default (Block)");
@@ -57,6 +57,10 @@ public sealed class SitePermission {
     /// A capture device, or several asked for together.
     public bool IsMedia { get; }
 
+    /// An engine can enforce the capability itself. Crest's per-Space record
+    /// decides it and the engine is told the answer.
+    public bool IsEngineEnforced { get; }
+
     /// The capabilities a combined request asks for together, empty for one
     /// that stands alone. A decision for the combination answers for each of
     /// them, and a block on any of them blocks the combination.
@@ -67,7 +71,8 @@ public sealed class SitePermission {
     #region Constructors
 
     private SitePermission(string name, string title, string symbol, string requestTitle, bool isMedia = false,
-        IReadOnlyList<SitePermission>? components = null, string askTitle = "Ask", string askChoiceTitle = "Ask") {
+        IReadOnlyList<SitePermission>? components = null, string askTitle = "Ask", string askChoiceTitle = "Ask",
+        bool isEngineEnforced = false) {
         Name = name;
         Title = title;
         Symbol = symbol;
@@ -75,6 +80,7 @@ public sealed class SitePermission {
         AskTitle = askTitle;
         AskChoiceTitle = askChoiceTitle;
         IsMedia = isMedia;
+        IsEngineEnforced = isEngineEnforced;
         Components = components ?? [];
     }
 

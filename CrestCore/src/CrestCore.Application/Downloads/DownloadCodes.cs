@@ -8,14 +8,8 @@ namespace CrestCore.Application;
 internal static class DownloadCodes {
     #region Actions - Encoding
 
-    public static string Action(AutomaticDownloadAction action) => action switch {
-        AutomaticDownloadAction.Allow => "allow",
-        AutomaticDownloadAction.Deny => "deny",
-        _ => "requestPermission"
-    };
-
     public static JsonObject AutomaticAnswer(AutomaticDownloadVerdict verdict) => new() {
-        ["action"] = Action(verdict.Action),
+        ["action"] = verdict.Action.Name,
         ["hasAllowedAutomaticDownload"] = verdict.HasAllowedAutomaticDownload
     };
 

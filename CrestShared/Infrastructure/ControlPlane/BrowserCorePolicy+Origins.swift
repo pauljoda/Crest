@@ -29,13 +29,8 @@ extension BrowserCorePolicy {
     }
 
     private struct SchemeAnswer: Decodable {
-        /// The core's disposition spellings; any other answer blocks.
-        enum Disposition: String, Decodable {
-            case engine
-            case handOff
-        }
-
-        @BrowserCoreOptional var disposition: Disposition?
+        /// Any answer this build cannot read blocks.
+        @BrowserCoreOptional var disposition: ExternalSchemeDisposition?
     }
 
     // MARK: - Actions - Origins
@@ -59,14 +54,10 @@ extension BrowserCorePolicy {
     /// Which engine, if any, owns a navigation once its scheme is known. Only
     /// a load Crest itself initiated may keep `file:`.
     static func externalSchemeDisposition(for url: URL?, isAppInitiated: Bool = false)
-        -> BrowserExternalSchemeDisposition
+        -> ExternalSchemeDisposition
     {
         let request = SchemeRequest(scheme: nonEmpty(url?.scheme), appInitiated: isAppInitiated)
-        switch evaluate(.externalScheme, request, answer: SchemeAnswer.self)?.disposition {
-        case .engine: return .webKit
-        case .handOff: return .handOff
-        case nil: return .blocked
-        }
+        return evaluate(.externalScheme, request, answer: SchemeAnswer.self)?.disposition ?? .blocked
     }
 
     /// An empty component crosses as `null`, as a missing one does.

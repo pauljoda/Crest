@@ -78,9 +78,9 @@ extension BrowserPage {
         modifiers: BrowserEngineLinkModifiers,
         navigationToken token: String,
         discard: @escaping @MainActor () -> Void
-    ) -> (BrowserLinkNavigationDecision, (() -> Void)?) {
+    ) -> (LinkNavigationDecision, (() -> Void)?) {
         let preferences = BrowserLinkPreferenceStore.shared.preferences
-        let decision = BrowserLinkNavigationDecision.classifyModifiedLink(
+        let decision = LinkNavigationDecision.classifyModifiedLink(
             destinationURL: destination, context: navigationContext,
             isUserActivatedLink: true, isTopLevelNavigation: true,
             isCommandModified: modifiers.contains(.command), isOptionModified: modifiers.contains(.option),

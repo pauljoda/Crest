@@ -457,7 +457,7 @@ final class BrowserWebKitDownloadTransport: NSObject, BrowserDownloadTransport {
             automaticDownloadAllowances[scope] = automatic.hasAllowedAutomaticDownload
         }
         let automaticDownloadAction = automatic.action
-        switch automaticDownloadAction {
+        switch automaticDownloadAction.kind {
         case .allow:
             break
         case .deny:

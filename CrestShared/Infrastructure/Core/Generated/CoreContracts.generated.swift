@@ -791,22 +791,6 @@ enum PasskeyDeviceConfiguration: Int, CaseIterable, Sendable {
     case unknown = 2
 }
 
-enum SearchEngineFlaw: Int, CaseIterable, Sendable {
-    case invalidIdentity = 0
-    case emptyName = 1
-    case nameTooLong = 2
-    case templateTooLong = 3
-    case missingPlaceholder = 4
-    case ambiguousPlaceholder = 5
-    case invalidTemplate = 6
-    case requiresHttps = 7
-    case unsafeHost = 8
-    case nonstandardPort = 9
-    case credentialsInTemplate = 10
-    case placeholderInFragment = 11
-    case secretInTemplate = 12
-}
-
 struct ShortcutModifiers: OptionSet, Sendable {
     let rawValue: Int
     static let command = ShortcutModifiers(rawValue: 1)
@@ -1064,6 +1048,170 @@ struct ArchiveReason: Hashable, Sendable {
     }
 
     static func == (lhs: ArchiveReason, rhs: ArchiveReason) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+}
+
+/// The members of the core's `AutomaticDownloadAction`. A member's wire tag is its index in `all`.
+struct AutomaticDownloadAction: Hashable, Sendable {
+    enum Kinds: Sendable {
+        case allow
+        case deny
+        case requestPermission
+    }
+
+    let tag: Int
+    let kind: Kinds
+    let name: String
+
+    private init(tag: Int, kind: Kinds, name: String) {
+        self.tag = tag
+        self.kind = kind
+        self.name = name
+    }
+
+    static let allow = AutomaticDownloadAction(tag: 0, kind: .allow, name: "allow")
+    static let deny = AutomaticDownloadAction(tag: 1, kind: .deny, name: "deny")
+    static let requestPermission = AutomaticDownloadAction(tag: 2, kind: .requestPermission, name: "requestPermission")
+
+    static let all: [AutomaticDownloadAction] = [allow, deny, requestPermission]
+
+    static func named(_ name: String?) -> AutomaticDownloadAction? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: AutomaticDownloadAction, rhs: AutomaticDownloadAction) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+}
+
+/// The members of the core's `BlockedPopupEvent`. A member's wire tag is its index in `all`.
+struct BlockedPopupEvent: Hashable, Sendable {
+    let tag: Int
+    let name: String
+    let from: BlockedPopupStatus?
+    let fromAnything: Bool
+    let to: BlockedPopupStatus?
+    let startsIndication: Bool
+
+    private init(
+        tag: Int,
+        name: String,
+        from: BlockedPopupStatus?,
+        fromAnything: Bool,
+        to: BlockedPopupStatus?,
+        startsIndication: Bool
+    ) {
+        self.tag = tag
+        self.name = name
+        self.from = from
+        self.fromAnything = fromAnything
+        self.to = to
+        self.startsIndication = startsIndication
+    }
+
+    static let blocked = BlockedPopupEvent(
+        tag: 0,
+        name: "blocked",
+        from: nil,
+        fromAnything: false,
+        to: BlockedPopupStatus.blocked,
+        startsIndication: true
+    )
+    static let permissionAllowed = BlockedPopupEvent(
+        tag: 1,
+        name: "permission_allowed",
+        from: BlockedPopupStatus.blocked,
+        fromAnything: false,
+        to: BlockedPopupStatus.allowedAwaitingRetry,
+        startsIndication: false
+    )
+    static let permissionBlockedAgain = BlockedPopupEvent(
+        tag: 2,
+        name: "permission_blocked_again",
+        from: BlockedPopupStatus.allowedAwaitingRetry,
+        fromAnything: false,
+        to: BlockedPopupStatus.blocked,
+        startsIndication: false
+    )
+    static let navigation = BlockedPopupEvent(
+        tag: 3,
+        name: "navigation",
+        from: nil,
+        fromAnything: true,
+        to: nil,
+        startsIndication: false
+    )
+    static let popupAllowed = BlockedPopupEvent(
+        tag: 4,
+        name: "popup_allowed",
+        from: BlockedPopupStatus.allowedAwaitingRetry,
+        fromAnything: false,
+        to: nil,
+        startsIndication: false
+    )
+
+    static let all: [BlockedPopupEvent] = [blocked, permissionAllowed, permissionBlockedAgain, navigation, popupAllowed]
+
+    static func named(_ name: String?) -> BlockedPopupEvent? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: BlockedPopupEvent, rhs: BlockedPopupEvent) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+}
+
+/// The members of the core's `BlockedPopupStatus`. A member's wire tag is its index in `all`.
+struct BlockedPopupStatus: Hashable, Sendable {
+    let tag: Int
+    let name: String
+    let symbol: String
+    let guidance: LocalizedStringResource
+    let offersAllow: Bool
+
+    private init(tag: Int, name: String, symbol: String, guidance: LocalizedStringResource, offersAllow: Bool) {
+        self.tag = tag
+        self.name = name
+        self.symbol = symbol
+        self.guidance = guidance
+        self.offersAllow = offersAllow
+    }
+
+    static let blocked = BlockedPopupStatus(
+        tag: 0,
+        name: "blocked",
+        symbol: "macwindow.badge.plus",
+        guidance: LocalizedStringResource("Automatic pop-ups are blocked. Allow them for this site, then retry the action on the page."),
+        offersAllow: true
+    )
+    static let allowedAwaitingRetry = BlockedPopupStatus(
+        tag: 1,
+        name: "allowedAwaitingRetry",
+        symbol: "checkmark.circle",
+        guidance: LocalizedStringResource("Retry the action on the page. Crest did not reopen the blocked pop-up."),
+        offersAllow: false
+    )
+
+    static let all: [BlockedPopupStatus] = [blocked, allowedAwaitingRetry]
+
+    static func named(_ name: String?) -> BlockedPopupStatus? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: BlockedPopupStatus, rhs: BlockedPopupStatus) -> Bool {
         lhs.tag == rhs.tag
     }
 
@@ -1793,6 +1941,43 @@ struct ExternalLinkDestination: Hashable, Sendable {
     }
 }
 
+/// The members of the core's `ExternalSchemeDisposition`. A member's wire tag is its index in `all`.
+struct ExternalSchemeDisposition: Hashable, Sendable {
+    enum Kinds: Sendable {
+        case engine
+        case blocked
+        case handOff
+    }
+
+    let tag: Int
+    let kind: Kinds
+    let name: String
+
+    private init(tag: Int, kind: Kinds, name: String) {
+        self.tag = tag
+        self.kind = kind
+        self.name = name
+    }
+
+    static let engine = ExternalSchemeDisposition(tag: 0, kind: .engine, name: "engine")
+    static let blocked = ExternalSchemeDisposition(tag: 1, kind: .blocked, name: "blocked")
+    static let handOff = ExternalSchemeDisposition(tag: 2, kind: .handOff, name: "handOff")
+
+    static let all: [ExternalSchemeDisposition] = [engine, blocked, handOff]
+
+    static func named(_ name: String?) -> ExternalSchemeDisposition? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: ExternalSchemeDisposition, rhs: ExternalSchemeDisposition) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+}
+
 /// The members of the core's `HostedNotificationRequestAction`. A member's wire tag is its index in `all`.
 struct HostedNotificationRequestAction: Hashable, Sendable {
     enum Kinds: Sendable {
@@ -1857,6 +2042,80 @@ struct HostedNotificationRequestAction: Hashable, Sendable {
     }
 
     static func == (lhs: HostedNotificationRequestAction, rhs: HostedNotificationRequestAction) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+}
+
+/// The members of the core's `LinkNavigationDecision`. A member's wire tag is its index in `all`.
+struct LinkNavigationDecision: Hashable, Sendable {
+    let tag: Int
+    let name: String
+    let opensPeek: Bool
+    let protectsSavedSite: Bool
+    let opensTab: Bool
+    let selectsTab: Bool
+
+    private init(tag: Int, name: String, opensPeek: Bool, protectsSavedSite: Bool, opensTab: Bool, selectsTab: Bool) {
+        self.tag = tag
+        self.name = name
+        self.opensPeek = opensPeek
+        self.protectsSavedSite = protectsSavedSite
+        self.opensTab = opensTab
+        self.selectsTab = selectsTab
+    }
+
+    static let navigate = LinkNavigationDecision(
+        tag: 0,
+        name: "navigate",
+        opensPeek: false,
+        protectsSavedSite: false,
+        opensTab: false,
+        selectsTab: false
+    )
+    static let peekModifier = LinkNavigationDecision(
+        tag: 1,
+        name: "peekModifier",
+        opensPeek: true,
+        protectsSavedSite: false,
+        opensTab: false,
+        selectsTab: false
+    )
+    static let peekSavedSite = LinkNavigationDecision(
+        tag: 2,
+        name: "peekSavedSite",
+        opensPeek: true,
+        protectsSavedSite: true,
+        opensTab: false,
+        selectsTab: false
+    )
+    static let backgroundTab = LinkNavigationDecision(
+        tag: 3,
+        name: "backgroundTab",
+        opensPeek: false,
+        protectsSavedSite: false,
+        opensTab: true,
+        selectsTab: false
+    )
+    static let foregroundTab = LinkNavigationDecision(
+        tag: 4,
+        name: "foregroundTab",
+        opensPeek: false,
+        protectsSavedSite: false,
+        opensTab: true,
+        selectsTab: true
+    )
+
+    static let all: [LinkNavigationDecision] = [navigate, peekModifier, peekSavedSite, backgroundTab, foregroundTab]
+
+    static func named(_ name: String?) -> LinkNavigationDecision? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: LinkNavigationDecision, rhs: LinkNavigationDecision) -> Bool {
         lhs.tag == rhs.tag
     }
 
@@ -2204,6 +2463,113 @@ struct QuickWindowArchivePolicy: Hashable, Sendable {
     }
 
     static func == (lhs: QuickWindowArchivePolicy, rhs: QuickWindowArchivePolicy) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+}
+
+/// The members of the core's `SearchEngineFlaw`. A member's wire tag is its index in `all`.
+struct SearchEngineFlaw: Hashable, Sendable {
+    let tag: Int
+    let name: String
+    let message: LocalizedStringResource
+
+    private init(tag: Int, name: String, message: LocalizedStringResource) {
+        self.tag = tag
+        self.name = name
+        self.message = message
+    }
+
+    static let invalidIdentity = SearchEngineFlaw(
+        tag: 0,
+        name: "invalidIdentity",
+        message: LocalizedStringResource("Enter a valid URL template.")
+    )
+    static let emptyName = SearchEngineFlaw(
+        tag: 1,
+        name: "emptyName",
+        message: LocalizedStringResource("Enter a name for this search engine.")
+    )
+    static let nameTooLong = SearchEngineFlaw(
+        tag: 2,
+        name: "nameTooLong",
+        message: LocalizedStringResource("Search engine names must be 64 characters or fewer.")
+    )
+    static let templateTooLong = SearchEngineFlaw(
+        tag: 3,
+        name: "templateTooLong",
+        message: LocalizedStringResource("URL templates must be 2,048 characters or fewer.")
+    )
+    static let missingPlaceholder = SearchEngineFlaw(
+        tag: 4,
+        name: "missingPlaceholder",
+        message: LocalizedStringResource("Include exactly one %s or {searchTerms} query placeholder.")
+    )
+    static let ambiguousPlaceholder = SearchEngineFlaw(
+        tag: 5,
+        name: "ambiguousPlaceholder",
+        message: LocalizedStringResource("Use exactly one query placeholder.")
+    )
+    static let invalidTemplate = SearchEngineFlaw(
+        tag: 6,
+        name: "invalidTemplate",
+        message: LocalizedStringResource("Enter a valid URL template.")
+    )
+    static let requiresHttps = SearchEngineFlaw(
+        tag: 7,
+        name: "requiresHttps",
+        message: LocalizedStringResource("Search engine templates must use HTTPS.")
+    )
+    static let unsafeHost = SearchEngineFlaw(
+        tag: 8,
+        name: "unsafeHost",
+        message: LocalizedStringResource("Use a public search engine host, not a local or numeric address.")
+    )
+    static let nonstandardPort = SearchEngineFlaw(
+        tag: 9,
+        name: "nonstandardPort",
+        message: LocalizedStringResource("Search engine templates may only use the standard HTTPS port.")
+    )
+    static let credentialsInTemplate = SearchEngineFlaw(
+        tag: 10,
+        name: "credentialsInTemplate",
+        message: LocalizedStringResource("Usernames and passwords cannot be stored in a search template.")
+    )
+    static let placeholderInFragment = SearchEngineFlaw(
+        tag: 11,
+        name: "placeholderInFragment",
+        message: LocalizedStringResource("Put the query placeholder in the path or query, not the fragment.")
+    )
+    static let secretInTemplate = SearchEngineFlaw(
+        tag: 12,
+        name: "secretInTemplate",
+        message: LocalizedStringResource("Authentication tokens and other secrets cannot be stored in a search template. Sign in on the search engine website instead.")
+    )
+
+    static let all: [SearchEngineFlaw] = [
+        invalidIdentity,
+        emptyName,
+        nameTooLong,
+        templateTooLong,
+        missingPlaceholder,
+        ambiguousPlaceholder,
+        invalidTemplate,
+        requiresHttps,
+        unsafeHost,
+        nonstandardPort,
+        credentialsInTemplate,
+        placeholderInFragment,
+        secretInTemplate
+    ]
+
+    static func named(_ name: String?) -> SearchEngineFlaw? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: SearchEngineFlaw, rhs: SearchEngineFlaw) -> Bool {
         lhs.tag == rhs.tag
     }
 
@@ -4441,6 +4807,7 @@ struct SitePermission: Hashable, Sendable {
     let askTitle: LocalizedStringResource
     let askChoiceTitle: LocalizedStringResource
     let isMedia: Bool
+    let isEngineEnforced: Bool
     let components: [SitePermission]
 
     private init(
@@ -4452,6 +4819,7 @@ struct SitePermission: Hashable, Sendable {
         askTitle: LocalizedStringResource,
         askChoiceTitle: LocalizedStringResource,
         isMedia: Bool,
+        isEngineEnforced: Bool,
         components: [SitePermission]
     ) {
         self.tag = tag
@@ -4462,6 +4830,7 @@ struct SitePermission: Hashable, Sendable {
         self.askTitle = askTitle
         self.askChoiceTitle = askChoiceTitle
         self.isMedia = isMedia
+        self.isEngineEnforced = isEngineEnforced
         self.components = components
     }
 
@@ -4474,6 +4843,7 @@ struct SitePermission: Hashable, Sendable {
         askTitle: LocalizedStringResource("Ask"),
         askChoiceTitle: LocalizedStringResource("Ask"),
         isMedia: true,
+        isEngineEnforced: true,
         components: []
     )
     static let microphone = SitePermission(
@@ -4485,6 +4855,7 @@ struct SitePermission: Hashable, Sendable {
         askTitle: LocalizedStringResource("Ask"),
         askChoiceTitle: LocalizedStringResource("Ask"),
         isMedia: true,
+        isEngineEnforced: true,
         components: []
     )
     static let cameraAndMicrophone = SitePermission(
@@ -4496,6 +4867,7 @@ struct SitePermission: Hashable, Sendable {
         askTitle: LocalizedStringResource("Ask"),
         askChoiceTitle: LocalizedStringResource("Ask"),
         isMedia: true,
+        isEngineEnforced: false,
         components: [SitePermission.camera, SitePermission.microphone]
     )
     static let location = SitePermission(
@@ -4507,6 +4879,7 @@ struct SitePermission: Hashable, Sendable {
         askTitle: LocalizedStringResource("Ask"),
         askChoiceTitle: LocalizedStringResource("Ask"),
         isMedia: false,
+        isEngineEnforced: true,
         components: []
     )
     static let notifications = SitePermission(
@@ -4518,6 +4891,7 @@ struct SitePermission: Hashable, Sendable {
         askTitle: LocalizedStringResource("Ask"),
         askChoiceTitle: LocalizedStringResource("Ask"),
         isMedia: false,
+        isEngineEnforced: true,
         components: []
     )
     static let popups = SitePermission(
@@ -4529,6 +4903,7 @@ struct SitePermission: Hashable, Sendable {
         askTitle: LocalizedStringResource("Blocked by Default"),
         askChoiceTitle: LocalizedStringResource("Default (Block)"),
         isMedia: false,
+        isEngineEnforced: false,
         components: []
     )
     static let automaticDownloads = SitePermission(
@@ -4540,6 +4915,7 @@ struct SitePermission: Hashable, Sendable {
         askTitle: LocalizedStringResource("Ask after First"),
         askChoiceTitle: LocalizedStringResource("Default (Ask after First)"),
         isMedia: false,
+        isEngineEnforced: false,
         components: []
     )
     static let externalApplications = SitePermission(
@@ -4551,6 +4927,7 @@ struct SitePermission: Hashable, Sendable {
         askTitle: LocalizedStringResource("Ask"),
         askChoiceTitle: LocalizedStringResource("Ask"),
         isMedia: false,
+        isEngineEnforced: false,
         components: []
     )
 

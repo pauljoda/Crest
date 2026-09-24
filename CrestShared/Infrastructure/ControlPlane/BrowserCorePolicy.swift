@@ -62,7 +62,7 @@ enum BrowserCorePolicy {
     }
 
     private struct LinkNavigationAnswer: Decodable {
-        let decision: BrowserLinkNavigationDecision
+        let decision: LinkNavigationDecision
     }
 
     private struct AddressIntentRequest: Encodable {
@@ -141,7 +141,7 @@ enum BrowserCorePolicy {
 
     private struct AutomaticDownloadAnswer: Decodable {
         let hasAllowedAutomaticDownload: Bool
-        @BrowserCoreOptional var action: BrowserAutomaticDownloadAction?
+        @BrowserCoreOptional var action: AutomaticDownloadAction?
     }
 
     // MARK: - Variables
@@ -156,7 +156,7 @@ enum BrowserCorePolicy {
     /// profile; a script or subframe navigation keeps the engine's own
     /// in-place behavior, which Crest never intercepts.
     private static func unansweredLinkNavigation(isUserActivatedLink: Bool, isTopLevelNavigation: Bool)
-        -> BrowserLinkNavigationDecision
+        -> LinkNavigationDecision
     {
         isUserActivatedLink && isTopLevelNavigation ? .foregroundTab : .navigate
     }
@@ -166,7 +166,7 @@ enum BrowserCorePolicy {
         isUserActivatedLink: Bool, isTopLevelNavigation: Bool, isCommandModified: Bool,
         isOptionModified: Bool, isMiddleClick: Bool, peekModifier: LinkPeekModifier,
         isShiftModified: Bool, focusesNewTabs: Bool
-    ) -> BrowserLinkNavigationDecision {
+    ) -> LinkNavigationDecision {
         let request = LinkNavigationRequest(
             url: destinationURL?.absoluteString, userActivatedLink: isUserActivatedLink,
             topLevel: isTopLevelNavigation, commandModified: isCommandModified, optionModified: isOptionModified,
@@ -185,7 +185,7 @@ enum BrowserCorePolicy {
         destinationURL: URL?, context: BrowserPageNavigationContext?,
         isUserActivatedLink: Bool, isTopLevelNavigation: Bool, isPeekModified: Bool,
         isNewTabModified: Bool, isShiftModified: Bool, focusesNewTabs: Bool
-    ) -> BrowserLinkNavigationDecision {
+    ) -> LinkNavigationDecision {
         let request = LinkNavigationRequest(
             url: destinationURL?.absoluteString, userActivatedLink: isUserActivatedLink,
             topLevel: isTopLevelNavigation, peekModified: isPeekModified, newTabModified: isNewTabModified,
@@ -285,7 +285,7 @@ enum BrowserCorePolicy {
     static func automaticDownload(
         isUserInitiated: Bool, isUserApprovedRetry: Bool,
         savedDecision: SitePermissionDecision, hasAllowedAutomaticDownload: Bool
-    ) -> (action: BrowserAutomaticDownloadAction, hasAllowedAutomaticDownload: Bool) {
+    ) -> (action: AutomaticDownloadAction, hasAllowedAutomaticDownload: Bool) {
         let request = AutomaticDownloadRequest(
             userInitiated: isUserInitiated, userApprovedRetry: isUserApprovedRetry, savedDecision: savedDecision,
             hasAllowedAutomaticDownload: hasAllowedAutomaticDownload)

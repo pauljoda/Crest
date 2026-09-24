@@ -2237,6 +2237,10 @@
     "utility-filter-surfaces": {
       "category": "internal",
       "message": "Utility list filters and surfaces are built from what they show."
+    },
+    "policy-answer-sets": {
+      "category": "internal",
+      "message": "Link, scheme, download and popup decisions and search-engine flaws describe themselves."
     }
   }
 }

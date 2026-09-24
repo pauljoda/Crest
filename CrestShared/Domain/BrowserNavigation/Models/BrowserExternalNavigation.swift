@@ -1,15 +1,5 @@
 import Foundation
 
-/// Which engine, if any, owns a navigation once its URL scheme is known.
-enum BrowserExternalSchemeDisposition: Equatable, Sendable {
-    /// WebKit's to load — or to refuse on its own terms.
-    case webKit
-    /// Neither WebKit nor another app may see it.
-    case blocked
-    /// Another application owns the scheme. Crest cancels and hands it to the OS.
-    case handOff
-}
-
 /// The answer to one external-app prompt. Cancelling is deliberately not a
 /// remembered block: a person declining one hand-off has not asked Crest to
 /// refuse every future one, which Site Permissions is there for.
@@ -33,14 +23,12 @@ enum BrowserModifiedLinkDisposition: Equatable, Sendable {
         focusesNewTabs: Bool = false
     ) -> BrowserModifiedLinkDisposition {
         guard let destinationURL else { return .navigate }
-        switch BrowserLinkNavigationDecision.classify(destinationURL: destinationURL, context: nil,
+        let decision = LinkNavigationDecision.classify(destinationURL: destinationURL, context: nil,
             isUserActivatedLink: isUserActivatedLink, isTopLevelNavigation: true,
             isPeekModified: false, isNewTabModified: isCommandModified || isMiddleClick,
-            isShiftModified: isShiftModified, focusesNewTabs: focusesNewTabs) {
-        case .foregroundTab: return .foregroundTab(destinationURL)
-        case .backgroundTab: return .backgroundTab(destinationURL)
-        default: return .navigate
-        }
+            isShiftModified: isShiftModified, focusesNewTabs: focusesNewTabs)
+        guard decision.opensTab else { return .navigate }
+        return decision.selectsTab ? .foregroundTab(destinationURL) : .backgroundTab(destinationURL)
     }
 }
 

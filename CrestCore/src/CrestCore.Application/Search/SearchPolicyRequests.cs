@@ -34,7 +34,7 @@ internal static class SearchPolicyRequests {
             var provider = SearchCodes.Provider(Element(request, "searchProvider"));
             var query = SearchCodes.Edited(request, "query");
             if (query.Length > MaximumQueryLength) throw new ProtocolException(ProtocolErrorCodes.InvalidString);
-            return new(provider, query, SearchCodes.Purpose(Protocol.Text(request, "purpose", 16)));
+            return new(provider, query, SearchUrlPurpose.Named(Protocol.Text(request, "purpose", 16)) ?? throw new ProtocolException(ProtocolErrorCodes.InvalidInput));
         }
     }
 

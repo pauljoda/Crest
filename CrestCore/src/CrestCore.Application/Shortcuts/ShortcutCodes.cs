@@ -76,12 +76,6 @@ internal static class ShortcutCodes {
     public static JsonArray Names(IEnumerable<string> commands) =>
         new(commands.Select(command => (JsonNode?)JsonValue.Create(command)).ToArray());
 
-    public static string Result(ShortcutAssignmentResult result) => result switch {
-        ShortcutAssignmentResult.Assigned => "assigned",
-        ShortcutAssignmentResult.Conflict => "conflict",
-        _ => "invalid"
-    };
-
     public static JsonObject BindingsAnswer(IEnumerable<ShortcutBinding> bindings) => new() {
         ["bindings"] = new JsonArray(bindings.Select(binding => (JsonNode?)new JsonObject {
             ["command"] = binding.Command,
@@ -93,7 +87,7 @@ internal static class ShortcutCodes {
 
     /// The assignment's outcome; `overrides` is null when nothing changed.
     public static JsonObject AssignmentAnswer(ShortcutAssignment assignment) => new() {
-        ["result"] = Result(assignment.Result),
+        ["result"] = assignment.Result.Name,
         ["conflicts"] = Names(assignment.Conflicts),
         ["overrides"] = assignment.Overrides is { } overrides ? Overrides(overrides) : null
     };

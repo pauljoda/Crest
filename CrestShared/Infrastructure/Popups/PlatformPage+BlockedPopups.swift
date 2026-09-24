@@ -46,7 +46,7 @@ extension BrowserPlatformPage {
 
     func allowAutomaticPopupsForBlockedSite() {
         guard let notice = blockedPopupState.notice,
-            notice.status == .blocked,
+            notice.status.offersAllow,
             let currentURL = displayURL ?? pageEngine.currentURL,
             BrowserSiteOrigin(url: currentURL) == notice.origin
         else { return }

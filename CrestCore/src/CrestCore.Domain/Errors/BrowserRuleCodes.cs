@@ -217,26 +217,30 @@ public static class BrowserRuleCodes {
 
     #region Actions - Search engines
 
-    /// The code a session command reports for a refused custom search engine,
-    /// until those commands answer typed rejections.
+    /// TRANSITIONAL: the code a session command reports for a refused custom
+    /// search engine, until those commands answer typed rejections. Deleted
+    /// with that bridge.
+    private static readonly Dictionary<SearchEngineFlaw, string> SearchEngineFlawCodes = new() {
+        [SearchEngineFlaw.EmptyName] = InvalidSearchName,
+        [SearchEngineFlaw.NameTooLong] = SearchNameTooLong,
+        [SearchEngineFlaw.TemplateTooLong] = SearchTemplateTooLong,
+        [SearchEngineFlaw.MissingPlaceholder] = SearchPlaceholderMissing,
+        [SearchEngineFlaw.AmbiguousPlaceholder] = InvalidSearchPlaceholder,
+        [SearchEngineFlaw.InvalidTemplate] = InvalidSearchTemplate,
+        [SearchEngineFlaw.RequiresHttps] = SearchTemplateRequiresHttps,
+        [SearchEngineFlaw.UnsafeHost] = UnsafeSearchTemplate,
+        [SearchEngineFlaw.NonstandardPort] = SearchTemplatePort,
+        [SearchEngineFlaw.CredentialsInTemplate] = SearchTemplateCredentials,
+        [SearchEngineFlaw.PlaceholderInFragment] = SearchPlaceholderInFragment,
+        [SearchEngineFlaw.SecretInTemplate] = SearchTemplateContainsSecret
+    };
+
+    /// TRANSITIONAL: the code a session command reports for a refused custom
+    /// search engine, until those commands answer typed rejections.
     public static string SearchEngine(Rejection rejection) => rejection switch {
         DuplicateSearchEngineName => DuplicateSearchName,
         SearchEngineLimitReached => SearchProviderLimit,
-        InvalidSearchEngine invalid => invalid.Flaw switch {
-            SearchEngineFlaw.EmptyName => InvalidSearchName,
-            SearchEngineFlaw.NameTooLong => SearchNameTooLong,
-            SearchEngineFlaw.TemplateTooLong => SearchTemplateTooLong,
-            SearchEngineFlaw.MissingPlaceholder => SearchPlaceholderMissing,
-            SearchEngineFlaw.AmbiguousPlaceholder => InvalidSearchPlaceholder,
-            SearchEngineFlaw.InvalidTemplate => InvalidSearchTemplate,
-            SearchEngineFlaw.RequiresHttps => SearchTemplateRequiresHttps,
-            SearchEngineFlaw.UnsafeHost => UnsafeSearchTemplate,
-            SearchEngineFlaw.NonstandardPort => SearchTemplatePort,
-            SearchEngineFlaw.CredentialsInTemplate => SearchTemplateCredentials,
-            SearchEngineFlaw.PlaceholderInFragment => SearchPlaceholderInFragment,
-            SearchEngineFlaw.SecretInTemplate => SearchTemplateContainsSecret,
-            _ => InvalidSearchProvider
-        },
+        InvalidSearchEngine invalid => SearchEngineFlawCodes.GetValueOrDefault(invalid.Flaw, InvalidSearchProvider),
         _ => InvalidSearchProvider
     };
 

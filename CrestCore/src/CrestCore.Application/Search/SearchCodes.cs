@@ -56,12 +56,6 @@ internal static class SearchCodes {
     public static string? OptionalEdited(JsonElement value, string field) =>
         value.TryGetProperty(field, out var member) && member.ValueKind != JsonValueKind.Null ? Edited(value, field) : null;
 
-    public static SearchUrlPurpose Purpose(string value) => value switch {
-        "search" => SearchUrlPurpose.Search,
-        "suggestions" => SearchUrlPurpose.Suggestions,
-        _ => throw new ProtocolException(ProtocolErrorCodes.InvalidInput)
-    };
-
     #endregion
 
     #region Actions - Encoding

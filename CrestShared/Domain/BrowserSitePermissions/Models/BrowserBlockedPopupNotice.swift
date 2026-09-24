@@ -1,14 +1,8 @@
 import Foundation
 
 struct BrowserBlockedPopupNotice: Equatable, Sendable {
-    /// Raw values are the core's `popups.notice` spellings.
-    enum Status: String, Codable, Equatable, Sendable {
-        case blocked
-        case allowedAwaitingRetry
-    }
-
     let origin: BrowserSiteOrigin
-    let status: Status
+    let status: BlockedPopupStatus
 }
 
 /// Document-scoped state for the one blocked-popup indication a page may show.
@@ -48,7 +42,7 @@ struct BrowserBlockedPopupPageState: Equatable, Sendable {
     @discardableResult
     mutating func clearAfterAllowedPopup() -> Bool { apply(.popupAllowed) }
 
-    private mutating func apply(_ event: BrowserCorePolicy.BlockedPopupEvent, documentIdentifier: String? = nil,
+    private mutating func apply(_ event: BlockedPopupEvent, documentIdentifier: String? = nil,
         origin: BrowserSiteOrigin? = nil) -> Bool {
         guard let next = BrowserCorePolicy.blockedPopupState(after: event, from: self,
             documentIdentifier: documentIdentifier, origin: origin) else { return false }

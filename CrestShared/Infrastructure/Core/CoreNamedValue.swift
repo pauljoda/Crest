@@ -61,7 +61,13 @@ private struct NameKey: CodingKey {
 
 extension AdapterRole: CoreNamedValue {}
 
+extension AutomaticDownloadAction: CoreNamedValue {}
+
 extension ArchiveReason: CoreNamedValue {}
+
+extension BlockedPopupEvent: CoreNamedValue {}
+
+extension BlockedPopupStatus: CoreNamedValue {}
 
 extension CapabilityStatus: CoreNamedValue {}
 
@@ -77,7 +83,11 @@ extension EngineCapability: CoreNamedValue {}
 
 extension ExternalLinkDestination: CoreNamedValue {}
 
+extension ExternalSchemeDisposition: CoreNamedValue {}
+
 extension HostedNotificationRequestAction: CoreNamedValue {}
+
+extension LinkNavigationDecision: CoreNamedValue {}
 
 extension LinkPeekModifier: CoreNamedValue {}
 

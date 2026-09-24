@@ -14,7 +14,7 @@ namespace CrestCore.Native;
 public static class ContractCodec {
     /// <summary>SHA-256 of the canonical contract schema.</summary>
     public static ReadOnlySpan<byte> Fingerprint => [
-        0x23, 0xa7, 0x95, 0x86, 0xae, 0x65, 0xac, 0xc7, 0x49, 0x0e, 0x6a, 0x4e, 0xd7, 0xce, 0x17, 0x94, 0xfc, 0x3c, 0x46, 0xe7, 0x44, 0xc5, 0x36, 0x67, 0xc1, 0x6f, 0x6d, 0xc2, 0x68, 0x44, 0xc0, 0xb2
+        0xf6, 0x4a, 0xf6, 0x4a, 0xee, 0x1f, 0x4d, 0x1d, 0xa4, 0x98, 0x53, 0x72, 0x3d, 0x74, 0xb8, 0xff, 0xd0, 0x69, 0xc4, 0x1d, 0xc9, 0x0f, 0x58, 0xe1, 0x03, 0x26, 0xcb, 0xfd, 0xc2, 0x50, 0x01, 0x05
     ];
 
     public static Intent ReadIntent(WireReader reader) {
@@ -2633,16 +2633,6 @@ public static class ContractCodec {
         writer.WriteEnum((int)value);
     }
 
-    public static SearchEngineFlaw ReadSearchEngineFlaw(WireReader reader) {
-        ArgumentNullException.ThrowIfNull(reader);
-        return (SearchEngineFlaw)reader.ReadEnum(13);
-    }
-
-    public static void WriteSearchEngineFlaw(WireWriter writer, SearchEngineFlaw value) {
-        ArgumentNullException.ThrowIfNull(writer);
-        writer.WriteEnum((int)value);
-    }
-
     public static ShortcutModifiers ReadShortcutModifiers(WireReader reader) {
         ArgumentNullException.ThrowIfNull(reader);
         return (ShortcutModifiers)reader.ReadFlags(15);
@@ -2734,6 +2724,39 @@ public static class ContractCodec {
         ArgumentNullException.ThrowIfNull(writer);
         ArgumentNullException.ThrowIfNull(value);
         writer.WriteEnum(TagOf(ArchiveReason.All, value));
+    }
+
+    public static AutomaticDownloadAction ReadAutomaticDownloadAction(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return AutomaticDownloadAction.All[reader.ReadEnum(AutomaticDownloadAction.All.Count)];
+    }
+
+    public static void WriteAutomaticDownloadAction(WireWriter writer, AutomaticDownloadAction value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteEnum(TagOf(AutomaticDownloadAction.All, value));
+    }
+
+    public static BlockedPopupEvent ReadBlockedPopupEvent(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return BlockedPopupEvent.All[reader.ReadEnum(BlockedPopupEvent.All.Count)];
+    }
+
+    public static void WriteBlockedPopupEvent(WireWriter writer, BlockedPopupEvent value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteEnum(TagOf(BlockedPopupEvent.All, value));
+    }
+
+    public static BlockedPopupStatus ReadBlockedPopupStatus(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return BlockedPopupStatus.All[reader.ReadEnum(BlockedPopupStatus.All.Count)];
+    }
+
+    public static void WriteBlockedPopupStatus(WireWriter writer, BlockedPopupStatus value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteEnum(TagOf(BlockedPopupStatus.All, value));
     }
 
     public static CapabilityStatus ReadCapabilityStatus(WireReader reader) {
@@ -2857,6 +2880,17 @@ public static class ContractCodec {
         writer.WriteEnum(TagOf(ExternalLinkDestination.All, value));
     }
 
+    public static ExternalSchemeDisposition ReadExternalSchemeDisposition(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return ExternalSchemeDisposition.All[reader.ReadEnum(ExternalSchemeDisposition.All.Count)];
+    }
+
+    public static void WriteExternalSchemeDisposition(WireWriter writer, ExternalSchemeDisposition value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteEnum(TagOf(ExternalSchemeDisposition.All, value));
+    }
+
     public static HostedNotificationRequestAction ReadHostedNotificationRequestAction(WireReader reader) {
         ArgumentNullException.ThrowIfNull(reader);
         return HostedNotificationRequestAction.All[reader.ReadEnum(HostedNotificationRequestAction.All.Count)];
@@ -2866,6 +2900,17 @@ public static class ContractCodec {
         ArgumentNullException.ThrowIfNull(writer);
         ArgumentNullException.ThrowIfNull(value);
         writer.WriteEnum(TagOf(HostedNotificationRequestAction.All, value));
+    }
+
+    public static LinkNavigationDecision ReadLinkNavigationDecision(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return LinkNavigationDecision.All[reader.ReadEnum(LinkNavigationDecision.All.Count)];
+    }
+
+    public static void WriteLinkNavigationDecision(WireWriter writer, LinkNavigationDecision value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteEnum(TagOf(LinkNavigationDecision.All, value));
     }
 
     public static LinkPeekModifier ReadLinkPeekModifier(WireReader reader) {
@@ -2932,6 +2977,17 @@ public static class ContractCodec {
         ArgumentNullException.ThrowIfNull(writer);
         ArgumentNullException.ThrowIfNull(value);
         writer.WriteEnum(TagOf(QuickWindowArchivePolicy.All, value));
+    }
+
+    public static SearchEngineFlaw ReadSearchEngineFlaw(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return SearchEngineFlaw.All[reader.ReadEnum(SearchEngineFlaw.All.Count)];
+    }
+
+    public static void WriteSearchEngineFlaw(WireWriter writer, SearchEngineFlaw value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteEnum(TagOf(SearchEngineFlaw.All, value));
     }
 
     public static ShortcutCommand ReadShortcutCommand(WireReader reader) {

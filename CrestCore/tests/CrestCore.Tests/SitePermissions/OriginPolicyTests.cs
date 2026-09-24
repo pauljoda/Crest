@@ -19,17 +19,17 @@ public sealed class OriginPolicyTests {
         Assert.Equal(allowed, SecureOriginPolicy.Allows(new(scheme, host, 0)));
 
     [Theory]
-    [InlineData("https", false, ExternalSchemeDisposition.Engine)]
-    [InlineData("DATA", false, ExternalSchemeDisposition.Engine)]
-    [InlineData("blob", false, ExternalSchemeDisposition.Engine)]
-    [InlineData("javascript", true, ExternalSchemeDisposition.Blocked)]
-    [InlineData("file", false, ExternalSchemeDisposition.Blocked)]
-    [InlineData("file", true, ExternalSchemeDisposition.Engine)]
-    [InlineData("mailto", false, ExternalSchemeDisposition.HandOff)]
-    [InlineData("zoommtg", false, ExternalSchemeDisposition.HandOff)]
-    [InlineData(null, false, ExternalSchemeDisposition.Engine)]
-    public void SchemesAreKeptBlockedOrHandedOff(string? scheme, bool appInitiated, ExternalSchemeDisposition expected) =>
-        Assert.Equal(expected, ExternalSchemePolicy.Disposition(scheme, appInitiated));
+    [InlineData("https", false, "engine")]
+    [InlineData("DATA", false, "engine")]
+    [InlineData("blob", false, "engine")]
+    [InlineData("javascript", true, "blocked")]
+    [InlineData("file", false, "blocked")]
+    [InlineData("file", true, "engine")]
+    [InlineData("mailto", false, "handOff")]
+    [InlineData("zoommtg", false, "handOff")]
+    [InlineData(null, false, "engine")]
+    public void SchemesAreKeptBlockedOrHandedOff(string? scheme, bool appInitiated, string expected) =>
+        Assert.Equal(expected, ExternalSchemePolicy.Disposition(scheme, appInitiated).Name);
 
     [Fact]
     public void AnOverlongSchemeIsRefused() =>
@@ -66,23 +66,23 @@ public sealed class OriginPolicyTests {
 
     [Fact]
     public void ADocumentShowsOneBlockedPopupIndicationUntilItNavigates() {
-        var blocked = BlockedPopupEvent.Blocked.Apply(BlockedPopupPageState.Empty, "doc-1", Site)!;
+        var blocked = BlockedPopupPageState.Empty.Apply(BlockedPopupEvent.Blocked, "doc-1", Site)!;
         Assert.Equal(BlockedPopupStatus.Blocked, blocked.Status);
         Assert.Equal(1, blocked.IndicationRevision);
-        Assert.Null(BlockedPopupEvent.Blocked.Apply(blocked, "doc-1", Site));
-        Assert.Null(BlockedPopupEvent.PopupAllowed.Apply(blocked, null, null));
+        Assert.Null(blocked.Apply(BlockedPopupEvent.Blocked, "doc-1", Site));
+        Assert.Null(blocked.Apply(BlockedPopupEvent.PopupAllowed, null, null));
 
-        var allowed = BlockedPopupEvent.PermissionAllowed.Apply(blocked, null, null)!;
+        var allowed = blocked.Apply(BlockedPopupEvent.PermissionAllowed, null, null)!;
         Assert.Equal(BlockedPopupStatus.AllowedAwaitingRetry, allowed.Status);
-        Assert.Equal(BlockedPopupStatus.Blocked, BlockedPopupEvent.PermissionBlockedAgain.Apply(allowed, null, null)!.Status);
+        Assert.Equal(BlockedPopupStatus.Blocked, allowed.Apply(BlockedPopupEvent.PermissionBlockedAgain, null, null)!.Status);
 
-        var cleared = BlockedPopupEvent.PopupAllowed.Apply(allowed, null, null)!;
+        var cleared = allowed.Apply(BlockedPopupEvent.PopupAllowed, null, null)!;
         Assert.Null(cleared.Status);
         Assert.Null(cleared.DocumentIdentifier);
         Assert.Equal(1, cleared.IndicationRevision);
-        Assert.Null(BlockedPopupEvent.Navigation.Apply(cleared, null, null));
-        Assert.Null(BlockedPopupEvent.Navigation.Apply(blocked, null, null)!.Status);
-        Assert.Throws<BrowserRuleException>(() => BlockedPopupEvent.Blocked.Apply(cleared, null, Site));
+        Assert.Null(cleared.Apply(BlockedPopupEvent.Navigation, null, null));
+        Assert.Null(blocked.Apply(BlockedPopupEvent.Navigation, null, null)!.Status);
+        Assert.Throws<BrowserRuleException>(() => cleared.Apply(BlockedPopupEvent.Blocked, null, Site));
     }
 
     [Fact]

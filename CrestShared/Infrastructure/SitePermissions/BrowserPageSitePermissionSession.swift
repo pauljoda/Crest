@@ -27,7 +27,7 @@ final class BrowserPageSitePermissionSession: BrowserSitePermissionObserver {
 
     /// The permissions an engine may enforce itself. Crest's per-Space record
     /// decides them and the engine is told the answer.
-    static let engineEnforcedPermissions: [SitePermission] = [.camera, .microphone, .location, .notifications]
+    static let engineEnforcedPermissions = SitePermission.all.filter(\.isEngineEnforced)
 
     /// The permissions whose changes the page is told about.
     private static let observedPermissions: [SitePermission] = engineEnforcedPermissions + [.popups]

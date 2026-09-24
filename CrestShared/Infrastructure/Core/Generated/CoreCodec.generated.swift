@@ -7,7 +7,7 @@ import Foundation
 enum CoreCodec {
     /// SHA-256 of the canonical contract schema. The core refuses any other.
     static let fingerprint: [UInt8] = [
-        0x23, 0xa7, 0x95, 0x86, 0xae, 0x65, 0xac, 0xc7, 0x49, 0x0e, 0x6a, 0x4e, 0xd7, 0xce, 0x17, 0x94, 0xfc, 0x3c, 0x46, 0xe7, 0x44, 0xc5, 0x36, 0x67, 0xc1, 0x6f, 0x6d, 0xc2, 0x68, 0x44, 0xc0, 0xb2
+        0xf6, 0x4a, 0xf6, 0x4a, 0xee, 0x1f, 0x4d, 0x1d, 0xa4, 0x98, 0x53, 0x72, 0x3d, 0x74, 0xb8, 0xff, 0xd0, 0x69, 0xc4, 0x1d, 0xc9, 0x0f, 0x58, 0xe1, 0x03, 0x26, 0xcb, 0xfd, 0xc2, 0x50, 0x01, 0x05
     ]
 
     static func decodeIntent(from reader: inout WireReader) throws(WireError) -> any Intent {
@@ -2924,20 +2924,6 @@ extension PasskeyDeviceConfiguration {
     }
 }
 
-extension SearchEngineFlaw {
-    init(from reader: inout WireReader) throws(WireError) {
-        let rawValue = try reader.readEnum()
-        guard let value = SearchEngineFlaw(rawValue: rawValue) else {
-            throw WireError.malformed("Unknown SearchEngineFlaw \(rawValue)")
-        }
-        self = value
-    }
-
-    func encode(into writer: inout WireWriter) {
-        writer.writeEnum(rawValue)
-    }
-}
-
 extension ShortcutModifiers {
     init(from reader: inout WireReader) throws(WireError) {
         let rawValue = try reader.readEnum()
@@ -3053,6 +3039,48 @@ extension ArchiveReason {
         let tag = try reader.readEnum()
         guard Self.all.indices.contains(tag) else {
             throw WireError.malformed("Unknown ArchiveReason \(tag)")
+        }
+        self = Self.all[tag]
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeEnum(tag)
+    }
+}
+
+extension AutomaticDownloadAction {
+    init(from reader: inout WireReader) throws(WireError) {
+        let tag = try reader.readEnum()
+        guard Self.all.indices.contains(tag) else {
+            throw WireError.malformed("Unknown AutomaticDownloadAction \(tag)")
+        }
+        self = Self.all[tag]
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeEnum(tag)
+    }
+}
+
+extension BlockedPopupEvent {
+    init(from reader: inout WireReader) throws(WireError) {
+        let tag = try reader.readEnum()
+        guard Self.all.indices.contains(tag) else {
+            throw WireError.malformed("Unknown BlockedPopupEvent \(tag)")
+        }
+        self = Self.all[tag]
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeEnum(tag)
+    }
+}
+
+extension BlockedPopupStatus {
+    init(from reader: inout WireReader) throws(WireError) {
+        let tag = try reader.readEnum()
+        guard Self.all.indices.contains(tag) else {
+            throw WireError.malformed("Unknown BlockedPopupStatus \(tag)")
         }
         self = Self.all[tag]
     }
@@ -3216,11 +3244,39 @@ extension ExternalLinkDestination {
     }
 }
 
+extension ExternalSchemeDisposition {
+    init(from reader: inout WireReader) throws(WireError) {
+        let tag = try reader.readEnum()
+        guard Self.all.indices.contains(tag) else {
+            throw WireError.malformed("Unknown ExternalSchemeDisposition \(tag)")
+        }
+        self = Self.all[tag]
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeEnum(tag)
+    }
+}
+
 extension HostedNotificationRequestAction {
     init(from reader: inout WireReader) throws(WireError) {
         let tag = try reader.readEnum()
         guard Self.all.indices.contains(tag) else {
             throw WireError.malformed("Unknown HostedNotificationRequestAction \(tag)")
+        }
+        self = Self.all[tag]
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeEnum(tag)
+    }
+}
+
+extension LinkNavigationDecision {
+    init(from reader: inout WireReader) throws(WireError) {
+        let tag = try reader.readEnum()
+        guard Self.all.indices.contains(tag) else {
+            throw WireError.malformed("Unknown LinkNavigationDecision \(tag)")
         }
         self = Self.all[tag]
     }
@@ -3305,6 +3361,20 @@ extension QuickWindowArchivePolicy {
         let tag = try reader.readEnum()
         guard Self.all.indices.contains(tag) else {
             throw WireError.malformed("Unknown QuickWindowArchivePolicy \(tag)")
+        }
+        self = Self.all[tag]
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeEnum(tag)
+    }
+}
+
+extension SearchEngineFlaw {
+    init(from reader: inout WireReader) throws(WireError) {
+        let tag = try reader.readEnum()
+        guard Self.all.indices.contains(tag) else {
+            throw WireError.malformed("Unknown SearchEngineFlaw \(tag)")
         }
         self = Self.all[tag]
     }

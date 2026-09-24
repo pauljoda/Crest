@@ -13,12 +13,6 @@ internal static class TabPolicyCodes {
 
     public static string Recovery(ProcessRecoveryAction action) => action == ProcessRecoveryAction.Reload ? "reload" : "showFailure";
 
-    public static string Dismissal(TabDismissalAction action) => action switch {
-        TabDismissalAction.UnloadPage => "unloadPage",
-        TabDismissalAction.CloseTab => "closeTab",
-        _ => "closeWindow"
-    };
-
     public static JsonObject ReleaseLimitAnswer(int limit) => new() { ["limit"] = limit };
 
     public static JsonObject ReleasePlanAnswer(IReadOnlyList<string> offScreen, IReadOnlyList<string> presentedFallback) => new() {
@@ -31,7 +25,7 @@ internal static class TabPolicyCodes {
         ["maximumAutomaticReloads"] = PageProcessRecoveryPolicy.MaximumAutomaticReloads
     };
 
-    public static JsonObject DismissalAnswer(TabDismissalAction action) => new() { ["action"] = Dismissal(action) };
+    public static JsonObject DismissalAnswer(TabDismissalAction action) => new() { ["action"] = action.Name };
 
 
     private static JsonArray Identifiers(IReadOnlyList<string> values) =>

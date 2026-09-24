@@ -21,8 +21,8 @@ enum BrowserNavigationIntent: Equatable {
         switch BrowserCorePolicy.externalSchemeDisposition(
             for: url,
             isAppInitiated: isAppInitiated
-        ) {
-        case .webKit:
+        ).kind {
+        case .engine:
             break
         case .blocked:
             return .blockScheme

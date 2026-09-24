@@ -8,14 +8,6 @@ import Foundation
 extension BrowserCorePolicy {
     // MARK: - Types
 
-    enum BlockedPopupEvent: String, Encodable {
-        case blocked
-        case permissionAllowed = "permission_allowed"
-        case permissionBlockedAgain = "permission_blocked_again"
-        case navigation
-        case popupAllowed = "popup_allowed"
-    }
-
     private struct OriginRequest: Encodable {
         let origin: BrowserSiteOrigin
     }
@@ -35,7 +27,7 @@ extension BrowserCorePolicy {
 
     private struct PopupNoticeRequest: Encodable {
         struct State: Encodable {
-            @BrowserCoreNullable var status: BrowserBlockedPopupNotice.Status?
+            @BrowserCoreNullable var status: BlockedPopupStatus?
             @BrowserCoreNullable var origin: BrowserSiteOrigin?
             @BrowserCoreNullable var documentIdentifier: String?
             let indicationRevision: Int
@@ -56,7 +48,7 @@ extension BrowserCorePolicy {
                 let port: Int
             }
 
-            @BrowserCoreOptional var status: BrowserBlockedPopupNotice.Status?
+            @BrowserCoreOptional var status: BlockedPopupStatus?
             @BrowserCoreOptional var origin: Origin?
             @BrowserCoreOptional var documentIdentifier: String?
             let indicationRevision: Int

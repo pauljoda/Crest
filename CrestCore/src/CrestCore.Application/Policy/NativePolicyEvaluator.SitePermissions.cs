@@ -29,7 +29,7 @@ public static partial class NativePolicyEvaluator {
     /// The page's popup notice after an event; `changed` is false when the
     /// event left the state as it was.
     private static JsonObject PopupNotice(Requests.PopupNotice request) {
-        var next = request.Event.Apply(request.State, request.DocumentIdentifier, request.Origin);
+        var next = request.State.Apply(request.Event, request.DocumentIdentifier, request.Origin);
         var state = next ?? request.State;
         return new() {
             ["changed"] = next is not null,

@@ -108,7 +108,7 @@ extension BrowserPage: WKNavigationDelegate {
                 in: webView
             )
             : nil
-        let decision = BrowserLinkNavigationDecision.classifyModifiedLink(
+        let decision = LinkNavigationDecision.classifyModifiedLink(
             destinationURL: navigationAction.request.url, context: navigationContext,
             isUserActivatedLink: navigationAction.navigationType == .linkActivated,
             isTopLevelNavigation: navigationAction.targetFrame?.isMainFrame ?? true,

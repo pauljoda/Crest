@@ -22,10 +22,8 @@ public static partial class NativePolicyEvaluator {
     private static JsonObject ResolveAddress(Requests.AddressIntent request) => SearchCodes.IntentAnswer(
         AddressResolution.Resolve(request.Input, request.Provider, request.AllowsInternalPages));
 
-    private static JsonObject SearchUrl(Requests.SearchUrl request) => SearchCodes.UrlAnswer(request.Purpose switch {
-        SearchUrlPurpose.Search => request.Provider.Search(request.Query),
-        _ => request.Provider.Suggest(request.Query)
-    });
+    private static JsonObject SearchUrl(Requests.SearchUrl request) =>
+        SearchCodes.UrlAnswer(request.Purpose.Url(request.Provider, request.Query));
 
     private static JsonObject RestoreCustomProviders(Requests.CustomProviders request) {
         var restored = SearchPreferences.Restore(request.SelectedId, request.Stored.Select(entry => entry.Provider), false);

@@ -6,7 +6,7 @@ struct BrowserBlockedPopupSiteControlNotice: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: CrestSpacing.small) {
-            Label(notice.title, systemImage: symbol)
+            Label(notice.title, systemImage: notice.status.symbol)
                 .font(.caption.weight(.semibold))
 
             Text(notice.guidance)
@@ -14,7 +14,7 @@ struct BrowserBlockedPopupSiteControlNotice: View {
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
 
-            if notice.status == .blocked {
+            if notice.status.offersAllow {
                 Button("Allow Automatic Pop-ups") {
                     allow()
                 }
@@ -35,14 +35,5 @@ struct BrowserBlockedPopupSiteControlNotice: View {
         .accessibilityElement(children: .contain)
         .accessibilityLabel(notice.title)
         .accessibilityIdentifier("blocked-popup-site-control-notice")
-    }
-
-    private var symbol: String {
-        switch notice.status {
-        case .blocked:
-            "macwindow.badge.plus"
-        case .allowedAwaitingRetry:
-            "checkmark.circle"
-        }
     }
 }

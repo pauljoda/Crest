@@ -1,6 +1,6 @@
 using System.Text.Json.Nodes;
 
-using CrestCore.Domain;
+using CrestCore.Contracts;
 
 namespace CrestCore.Application;
 
@@ -16,16 +16,10 @@ internal static class ExternalNavigationCodes {
 
     #region Actions - Encoding
 
-    public static string Disposition(ExternalSchemeDisposition disposition) => disposition switch {
-        ExternalSchemeDisposition.Engine => "engine",
-        ExternalSchemeDisposition.HandOff => "handOff",
-        _ => "blocked"
-    };
-
     public static JsonObject AcceptedAnswer(bool accepted) => new() { ["accepted"] = accepted };
 
     public static JsonObject DispositionAnswer(ExternalSchemeDisposition disposition) =>
-        new() { ["disposition"] = Disposition(disposition) };
+        new() { ["disposition"] = disposition.Name };
 
     #endregion
 }

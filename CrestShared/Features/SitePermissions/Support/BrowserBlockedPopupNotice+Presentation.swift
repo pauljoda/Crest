@@ -1,28 +1,16 @@
 import Foundation
 
 extension BrowserBlockedPopupNotice {
+    /// The generator cannot yet carry a string argument on a set's text, so
+    /// the title that names the host stays here.
     var title: String {
-        switch status {
-        case .blocked:
-            String(localized: "Pop-up blocked for \(origin.host)")
-        case .allowedAwaitingRetry:
-            String(localized: "Pop-ups allowed for \(origin.host)")
-        }
+        status.offersAllow
+            ? String(localized: "Pop-up blocked for \(origin.host)")
+            : String(localized: "Pop-ups allowed for \(origin.host)")
     }
 
     var guidance: String {
-        switch status {
-        case .blocked:
-            String(
-                localized:
-                    "Automatic pop-ups are blocked. Allow them for this site, then retry the action on the page."
-            )
-        case .allowedAwaitingRetry:
-            String(
-                localized:
-                    "Retry the action on the page. Crest did not reopen the blocked pop-up."
-            )
-        }
+        String(localized: status.guidance)
     }
 
     var allowActionAccessibilityLabel: String {

@@ -103,26 +103,26 @@ public sealed class SearchPolicyTests {
     [InlineData("https://example.com/search?q=%s", "Example", null)]
     [InlineData("  https://example.com/search?q=%s  ", "  Example  ", null)]
     [InlineData("https://example.com:443/search/%s", "Example", null)]
-    [InlineData("https://example.com/search?q=%s", "   ", SearchEngineFlaw.EmptyName)]
-    [InlineData("https://example.com/search?q=%s", "12345678901234567890123456789012345678901234567890123456789012345", SearchEngineFlaw.NameTooLong)]
-    [InlineData("https://example.com/search", "Example", SearchEngineFlaw.MissingPlaceholder)]
-    [InlineData("https://example.com/?q=%s&again=%s", "Example", SearchEngineFlaw.AmbiguousPlaceholder)]
-    [InlineData("https://example.com/?q=%s&again={searchTerms}", "Example", SearchEngineFlaw.AmbiguousPlaceholder)]
-    [InlineData("https://example.com/?q=%s&bad=%zz", "Example", SearchEngineFlaw.InvalidTemplate)]
-    [InlineData("http://example.com/?q=%s", "Example", SearchEngineFlaw.RequiresHttps)]
-    [InlineData("example.com/?q=%s", "Example", SearchEngineFlaw.RequiresHttps)]
-    [InlineData("https://user:password@example.com/?q=%s", "Example", SearchEngineFlaw.CredentialsInTemplate)]
-    [InlineData("https://example.com:8443/?q=%s", "Example", SearchEngineFlaw.NonstandardPort)]
-    [InlineData("https://%s.example.com/search", "Example", SearchEngineFlaw.UnsafeHost)]
-    [InlineData("https://localhost/search?q=%s", "Example", SearchEngineFlaw.UnsafeHost)]
-    [InlineData("https://printer.local/search?q=%s", "Example", SearchEngineFlaw.UnsafeHost)]
-    [InlineData("https://192.168.1.1/search?q=%s", "Example", SearchEngineFlaw.UnsafeHost)]
-    [InlineData("https://example.com/search#q=%s", "Example", SearchEngineFlaw.PlaceholderInFragment)]
-    [InlineData("https://example.com/search?Token=secret&q=%s", "Example", SearchEngineFlaw.SecretInTemplate)]
-    [InlineData("https://example.com/search?api%5Fkey=secret&q=%s", "Example", SearchEngineFlaw.SecretInTemplate)]
-    public void CustomEngineValidationNamesTheRuleThePersonBroke(string template, string name, SearchEngineFlaw? flaw) {
+    [InlineData("https://example.com/search?q=%s", "   ", "emptyName")]
+    [InlineData("https://example.com/search?q=%s", "12345678901234567890123456789012345678901234567890123456789012345", "nameTooLong")]
+    [InlineData("https://example.com/search", "Example", "missingPlaceholder")]
+    [InlineData("https://example.com/?q=%s&again=%s", "Example", "ambiguousPlaceholder")]
+    [InlineData("https://example.com/?q=%s&again={searchTerms}", "Example", "ambiguousPlaceholder")]
+    [InlineData("https://example.com/?q=%s&bad=%zz", "Example", "invalidTemplate")]
+    [InlineData("http://example.com/?q=%s", "Example", "requiresHttps")]
+    [InlineData("example.com/?q=%s", "Example", "requiresHttps")]
+    [InlineData("https://user:password@example.com/?q=%s", "Example", "credentialsInTemplate")]
+    [InlineData("https://example.com:8443/?q=%s", "Example", "nonstandardPort")]
+    [InlineData("https://%s.example.com/search", "Example", "unsafeHost")]
+    [InlineData("https://localhost/search?q=%s", "Example", "unsafeHost")]
+    [InlineData("https://printer.local/search?q=%s", "Example", "unsafeHost")]
+    [InlineData("https://192.168.1.1/search?q=%s", "Example", "unsafeHost")]
+    [InlineData("https://example.com/search#q=%s", "Example", "placeholderInFragment")]
+    [InlineData("https://example.com/search?Token=secret&q=%s", "Example", "secretInTemplate")]
+    [InlineData("https://example.com/search?api%5Fkey=secret&q=%s", "Example", "secretInTemplate")]
+    public void CustomEngineValidationNamesTheRuleThePersonBroke(string template, string name, string? flaw) {
         var engine = Engine(name, template);
-        Assert.Equal(flaw is { } expected ? new InvalidSearchEngine(expected) : null, Refusal(engine));
+        Assert.Equal(SearchEngineFlaw.Named(flaw) is { } expected ? new InvalidSearchEngine(expected) : null, Refusal(engine));
         if (flaw is null) {
             var admitted = new Search().Answer(new CustomSearchEngineAdmission(engine, []));
             Assert.Equal(new CustomSearchEngine(engine.Id, "Example", template.Trim(), null), admitted);

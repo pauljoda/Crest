@@ -24,14 +24,13 @@ struct MobilePageActionsContent: View {
 
         if let notice = pages.blockedPopupNotice {
             Section("Automatic Pop-ups") {
-                switch notice.status {
-                case .blocked:
+                if notice.status.offersAllow {
                     Button {
                         pages.allowAutomaticPopupsForBlockedSite()
                     } label: {
                         Label(
                             "Allow Automatic Pop-ups",
-                            systemImage: "macwindow.badge.plus"
+                            systemImage: notice.status.symbol
                         )
                     }
                     .accessibilityLabel(
@@ -41,8 +40,8 @@ struct MobilePageActionsContent: View {
                         notice.allowActionAccessibilityHint
                     )
                     .accessibilityIdentifier("allow-blocked-automatic-popups")
-                case .allowedAwaitingRetry:
-                    Label(notice.title, systemImage: "checkmark.circle")
+                } else {
+                    Label(notice.title, systemImage: notice.status.symbol)
                         .accessibilityLabel(
                             Text(verbatim: "\(notice.title). \(notice.guidance)")
                         )

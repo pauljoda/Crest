@@ -28,7 +28,7 @@
                 ChromiumJavaScriptDialogKind, String, String, URL?, @escaping (Bool, String?) -> Void
             ) -> Void = { _, _, _, _, reply in reply(false, nil) }
         var protectedLinkHandler: (URL) -> (() -> Void)? = { _ in nil }
-        var modifiedLinkHandler: (URL, Int, String) -> (BrowserLinkNavigationDecision, (() -> Void)?) = { _, _, _ in
+        var modifiedLinkHandler: (URL, Int, String) -> (LinkNavigationDecision, (() -> Void)?) = { _, _, _ in
             (.navigate, nil)
         }
         private var host: (any CrestChromiumEngineHost)?
@@ -329,7 +329,7 @@
             return true
         }
 
-        private static let enforcedPermissions: [SitePermission] = [.camera, .microphone, .location, .notifications]
+        private static let enforcedPermissions = SitePermission.all.filter(\.isEngineEnforced)
 
         /// Answers the engine's site permission requests from Crest's record and
         /// prompt.
@@ -651,7 +651,7 @@
                 host?.setModifiedLinkHandler(page: id) { [weak self] address, modifiers, token, reply in
                     MainActor.assumeIsolated {
                         guard let self, !self.disposed, let url = URL(string: address) else {
-                            reply(BrowserLinkNavigationDecision.navigate.rawValue, nil)
+                            reply(LinkNavigationDecision.navigate.name, nil)
                             return
                         }
                         let (decision, action) = self.modifiedLinkHandler(url, Int(modifiers), token)
@@ -664,7 +664,7 @@
                                 }
                             }
                         }
-                        reply(decision.rawValue, deferred)
+                        reply(decision.name, deferred)
                     }
                 }
                 attachIfPossible()
