@@ -16,7 +16,11 @@ final class BrowserMacWindowCoordinator {
     let spaceAccess: BrowserSpaceAccessController
     private let windowLayouts: BrowserWindowLayouts
     @ObservationIgnored private var windows: [BrowserWindowID: BrowserMacWindowModel] = [:]
-    @ObservationIgnored private var canceledTransfers: Set<BrowserWindowID> = []
+    /// Temporary windows that closed or whose transfer was canceled. They are
+    /// never restored, so a scene that asks for one again once it went, as
+    /// SwiftUI does while it tears a window down, gets nothing instead of a
+    /// new workspace.
+    @ObservationIgnored private var retiredTemporaryWindows: Set<BrowserWindowID> = []
     @ObservationIgnored private var pendingTransfers: [BrowserWindowID: PendingTransfer] = [:]
     @ObservationIgnored private var transferExpirations: [BrowserWindowID: Task<Void, Never>] = [:]
 
@@ -73,7 +77,7 @@ final class BrowserMacWindowCoordinator {
     }
 
     func model(for request: BrowserMacWindowRequest) -> BrowserMacWindowModel? {
-        guard !canceledTransfers.contains(request.id) else { return nil }
+        guard !retiredTemporaryWindows.contains(request.id) else { return nil }
         if let existing = windows[request.id] { return existing }
         let source = request.sourceWindowID.flatMap { windows[$0]?.browser } ?? browser
         let windowBrowser: BrowserStore
@@ -149,7 +153,10 @@ final class BrowserMacWindowCoordinator {
         }
         model.browser.close()
         // A temporary window's workspace is its own and goes with it.
-        if model.isTemporary { model.browser.family.close() }
+        if model.isTemporary {
+            retiredTemporaryWindows.insert(id)
+            model.browser.family.close()
+        }
     }
 
     /// Closes each temporary window whose workspace the core closed, because
@@ -206,7 +213,7 @@ final class BrowserMacWindowCoordinator {
     func cancelPendingTransfer(to id: BrowserWindowID) {
         transferExpirations.removeValue(forKey: id)?.cancel()
         guard pendingTransfers.removeValue(forKey: id) != nil else { return }
-        canceledTransfers.insert(id)
+        retiredTemporaryWindows.insert(id)
         guard let destination = windows.removeValue(forKey: id) else { return }
         destination.tearOffPlacement?.cancel()
         destination.pages.closeWindowWorkspace()

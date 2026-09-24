@@ -118,6 +118,13 @@ final class BrowserMacWindowCoordinatorTests: XCTestCase {
         XCTAssertFalse(source.browser.session.space(id: space.id)?.tabs.contains { $0.id == tab.id } ?? true)
         XCTAssertNotNil(fixture.coordinator.existingModel(for: source.id))
         XCTAssertTrue(source.browser.selectedSpace?.archivedTabs.isEmpty == true)
+
+        // Closing the window closes its workspace, and a scene that asks for
+        // the window again while SwiftUI tears it down opens nothing.
+        let workspace = destination.browser.family
+        fixture.coordinator.closeWindow(destination.id)
+        XCTAssertFalse(workspace.isOpen)
+        XCTAssertNil(fixture.coordinator.model(for: request))
     }
 
     func testCanceledOrStaleTearOffLeavesTheSourceUntouched() throws {

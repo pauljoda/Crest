@@ -2373,6 +2373,10 @@
     "workspace-intents": {
       "category": "internal",
       "message": "Opening, borrowing and closing workspaces are typed core intents: the core gives each workspace its identity, keeps a temporary window's Space in step with its owner and closes it once the owner stops lending it."
+    },
+    "closed-blank-window-stays-closed": {
+      "category": "internal",
+      "message": "A closed Blank Window no longer leaves a hidden workspace behind while its window is torn down."
     }
   }
 }
