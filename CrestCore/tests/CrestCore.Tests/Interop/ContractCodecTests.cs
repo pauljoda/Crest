@@ -235,6 +235,37 @@ public sealed unsafe class ContractCodecTests {
         Assert.StartsWith(culprit, error.Message, StringComparison.Ordinal);
     }
 
+    /// An observed record reaches Swift as a model whose `update` compares
+    /// every field before assigning it, so an equal field notifies no one; the
+    /// wire and its fingerprint stay as they were.
+    [Fact]
+    public void AnObservedRecordBecomesAModelThatAssignsOnlyTheFieldsThatDiffer() {
+        var schema = ContractSchema.Load([typeof(Watched.Lamp), typeof(Watched.Dimmer)]);
+        string swift = SwiftEmitter.EmitContracts(schema);
+
+        Assert.Contains("@MainActor\n@Observable\nfinal class LampModel: ObservedModel, Identifiable {\n    let id: UUID\n"
+            + "    private(set) var label: String\n    private(set) var isLit: Bool?\n    private(set) var levels: [Int]\n",
+            swift, StringComparison.Ordinal);
+        Assert.Contains("        Lamp(id: id, label: label, isLit: isLit, levels: levels)\n", swift, StringComparison.Ordinal);
+        Assert.Contains("    init(_ value: Lamp) {\n        id = value.id\n        label = value.label\n", swift, StringComparison.Ordinal);
+        Assert.Contains("    func update(_ value: Lamp) {\n        precondition(value.id == id, ", swift, StringComparison.Ordinal);
+        Assert.Contains("        if label != value.label { label = value.label }\n        if isLit != value.isLit { isLit = value.isLit }\n"
+            + "        if levels != value.levels { levels = value.levels }\n    }\n", swift, StringComparison.Ordinal);
+        Assert.DoesNotContain("id = value.id }", swift, StringComparison.Ordinal);
+        Assert.Contains("final class DimmerModel: ObservedModel {\n    private(set) var level: Double\n", swift, StringComparison.Ordinal);
+        Assert.Contains("        if level != value.level { level = value.level }\n", swift, StringComparison.Ordinal);
+        Assert.Equal(ContractSchema.Load([typeof(Unwatched.Lamp), typeof(Unwatched.Dimmer)]).Fingerprint, schema.Fingerprint);
+    }
+
+    [Theory]
+    [InlineData(typeof(Unwatchable.Valued), "Valued.Value:")]
+    [InlineData(typeof(Unwatchable.Numbered), "Numbered.Id:")]
+    [InlineData(typeof(Unwatchable.Unreached), "Unreached:")]
+    public void TheGeneratorRefusesAnObservedRecordItCannotModel(Type type, string culprit) {
+        var error = Assert.Throws<ContractSchemaException>(() => ContractSchema.Load([type]));
+        Assert.StartsWith(culprit, error.Message, StringComparison.Ordinal);
+    }
+
     [Fact]
     public void TheAppOpensOnlyForThisBuildsSchemaFingerprint() {
         Assert.Equal(32, ContractCodec.Fingerprint.Length);

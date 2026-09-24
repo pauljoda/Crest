@@ -4,6 +4,7 @@ namespace CrestCore.Contracts;
 /// Space it has shown, and the column shares of the split groups it has
 /// resized. A Space without an entry has not been shown in this window yet; an
 /// entry without a tab shows nothing.
+[Observed]
 public sealed record WindowState(Guid Id, Guid WorkspaceId, Guid ShownSpaceId, IReadOnlyList<ShownTab> ShownTabs,
     IReadOnlyList<SplitColumnShares> SplitColumnShares) {
     #region Actions - Equality

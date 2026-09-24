@@ -6,6 +6,7 @@ namespace CrestCore.Contracts;
 /// <see cref="Branding"/> is null for a Space stored before branding existed; the
 /// native reader derives that look from the accent and symbol.
 /// </summary>
+[Observed]
 public sealed record SpaceSettings(
     string Name,
     string Symbol,

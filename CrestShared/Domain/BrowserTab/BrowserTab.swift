@@ -91,7 +91,7 @@ struct BrowserTab: Codable, Equatable, Identifiable, Sendable {
         self.keepsPageLoaded = keepsPageLoaded
     }
 
-    /// TRANSITIONAL until S6.1 retires the Swift session copy: a tab as the
+    /// TRANSITIONAL until S6.7 retires the Swift session copy: a tab as the
     /// core publishes it, read the way the decoder reads the core's stored
     /// form, wearing `faviconData`, the image the copy keeps for it. Edit
     /// clocks take the spelling that form gives a whole millisecond.
@@ -177,7 +177,7 @@ struct BrowserTab: Codable, Equatable, Identifiable, Sendable {
         return Date(timeIntervalSince1970: milliseconds / 1_000)
     }
 
-    /// TRANSITIONAL until S6.1: an edit clock as the core's stored form spells
+    /// TRANSITIONAL until S6.7: an edit clock as the core's stored form spells
     /// it. A whole millisecond takes this type's own arithmetic, so the copy
     /// holds the same bits a decoded session does; any other time stays as it
     /// came.

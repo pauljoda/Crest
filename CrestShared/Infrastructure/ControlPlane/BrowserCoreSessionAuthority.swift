@@ -24,15 +24,9 @@ final class BrowserCoreSessionAuthority {
 
     final class PreparedTransfer {
         fileprivate let handle: UInt64
-        /// TRANSITIONAL until S6.1: the sessions the transfer proposes, whose
-        /// tabs' images the commit offers.
-        let source: BrowserSession
-        let destination: BrowserSession
 
-        fileprivate init(handle: UInt64, source: BrowserSession, destination: BrowserSession) {
+        fileprivate init(handle: UInt64) {
             self.handle = handle
-            self.source = source
-            self.destination = destination
         }
 
         deinit { crest_session_release_transfer(handle) }
@@ -40,8 +34,10 @@ final class BrowserCoreSessionAuthority {
 
     final class PreparedChange {
         fileprivate let handle: UInt64
-        /// TRANSITIONAL until S6.1: the session the command proposes, which a
-        /// tab batch previews and whose tabs' images the commit offers.
+        /// TRANSITIONAL until S6.7: the session the command proposes. A tab
+        /// batch previews it, and an import's commit offers the images it gives
+        /// the tabs it brings in; every other tab it places already has its
+        /// image in `FaviconAssets`.
         let session: BrowserSession
 
         fileprivate init(handle: UInt64, session: BrowserSession) {
@@ -52,25 +48,9 @@ final class BrowserCoreSessionAuthority {
         deinit { crest_session_release_command(handle) }
     }
 
-    /// TRANSITIONAL until S6.1: image bytes the issuer of a command holds and
-    /// the core never sees. `assigned` is the image a page reported, for the
-    /// tab the core assigns one to; `placed` are the images of tabs the command
-    /// places, by tab, for tabs the copy did not hold before.
-    struct OfferedImages {
-        var assigned: Data?
-        var placed: [UUID: Data] = [:]
-
-        /// The images every tab and archived tab of `session` wears.
-        init(assigned: Data? = nil, placedFrom sessions: BrowserSession...) {
-            self.assigned = assigned
-            for session in sessions {
-                for space in session.spaces {
-                    for tab in space.tabs { placed[tab.id.rawValue] = tab.faviconData }
-                    for archived in space.archivedTabs { placed[archived.id.rawValue] = archived.tab.faviconData }
-                }
-            }
-        }
-    }
+    /// The images the issuer of a command holds, which `FaviconAssets` places
+    /// while the core's changes for the command are applied.
+    typealias OfferedImages = FaviconAssets.Offer
 
     /// The session a new core session starts from, with its workspace kind
     /// beside the session's own members.
@@ -223,9 +203,6 @@ final class BrowserCoreSessionAuthority {
     /// workspace it gave the session.
     @ObservationIgnored private(set) weak var device: CrestCore?
     @ObservationIgnored private(set) var workspaceID: UUID?
-    /// The images the issuer of the command being committed holds, until the
-    /// core's changes for it are applied.
-    @ObservationIgnored private var offered = OfferedImages()
 
     // MARK: - Initializers
 
@@ -272,7 +249,10 @@ final class BrowserCoreSessionAuthority {
     // MARK: - Actions - Device
 
     /// Attaches this session to `core`'s device so its windows may show it.
-    /// The device publishes the session whole, which the projection takes.
+    /// The device publishes the session whole, which the projection takes,
+    /// wearing the images the session it starts from wears. The persistent
+    /// session is attached when the core loads its file, and may have been
+    /// published already, so its tabs take those images first.
     private func attach(to core: CrestCore) {
         var bytes = [UInt8](repeating: 0, count: 16)
         let status = crest_session_attach_device(owner.value, core.handle, &bytes)
@@ -281,21 +261,24 @@ final class BrowserCoreSessionAuthority {
         device = core
         workspaceID = workspace
         core.state.register(self, for: workspace)
-        core.drain()
+        let images = OfferedImages(placedFrom: projection)
+        core.state.adoptImages(images.placed, in: workspace)
+        follow(offering: images)
     }
 
-    /// TRANSITIONAL until S6.1: one session change the core published for this
-    /// workspace. See `BrowserSession.apply(_:detached:offered:)`.
-    func receive(_ change: Change, detachedImages: inout [UUID: Data]) {
-        projection.apply(change, detached: &detachedImages, offered: offered)
+    /// TRANSITIONAL until S6.7: one session change the core published for this
+    /// workspace. See `BrowserSession.apply(_:images:)`.
+    func receive(_ change: Change, images: FaviconAssets) {
+        projection.apply(change, images: images)
     }
 
     /// Applies what the core published for a commit that just returned, with
     /// the images its issuer offered.
     private func follow(offering images: OfferedImages = OfferedImages()) {
-        offered = images
-        defer { offered = OfferedImages() }
-        device?.drain()
+        guard let device, let workspaceID else { return }
+        device.state.favicons.offer(images, in: workspaceID)
+        defer { device.state.favicons.withdrawOffer(in: workspaceID) }
+        device.drain()
     }
 
     // MARK: - Actions - Borrowing
@@ -402,7 +385,7 @@ final class BrowserCoreSessionAuthority {
         destination: BrowserCoreSessionAuthority, destinationWindow: UUID?,
         tabID: TabID, assignment: BrowserSpaceRuntimeAssignment, selecting: Bool
     ) throws -> PreparedTransfer {
-        guard let moved = source.projection.space(id: assignment.spaceID)?.tabs.first(where: { $0.id == tabID })
+        guard source.projection.space(id: assignment.spaceID)?.contains(tabID) == true
         else { throw CoreError.rejected(CREST_INVALID_ARGUMENT) }
         let input = try JSONEncoder().encode(
             WorkspaceTransfer(
@@ -417,43 +400,20 @@ final class BrowserCoreSessionAuthority {
                 input.count, &handle)
         }
         guard status == CREST_OK else { throw CoreError.rejected(status) }
-        do {
-            var length = 0
-            let measured = crest_session_read_transfer(handle, nil, 0, &length)
-            guard measured == CREST_BUFFER_TOO_SMALL, length > 0, length <= 4 * 1024 * 1024
-            else { throw CoreError.rejected(measured) }
-            let capacity = length
-            var data = Data(count: capacity)
-            let read = data.withUnsafeMutableBytes {
-                crest_session_read_transfer(handle, $0.bindMemory(to: UInt8.self).baseAddress, capacity, &length)
-            }
-            guard read == CREST_OK else { throw CoreError.rejected(read) }
-            let result = try JSONDecoder().decode(BrowserCoreTabTransfer.Result.self, from: data)
-            return PreparedTransfer(
-                handle: handle,
-                source: try BrowserCoreTabTransfer.applying(result.source, to: source.projection, moved: moved),
-                destination: try BrowserCoreTabTransfer.applying(
-                    result.destination, to: destination.projection, moved: moved))
-        } catch {
-            crest_session_release_transfer(handle)
-            throw error
-        }
+        return PreparedTransfer(handle: handle)
     }
 
     /// Commits a prepared transfer: the core stages the side that syncs and
     /// saves the side that keeps a file, with that journal, before either side
-    /// is published. The moved tab keeps the image it wore in the workspace it
-    /// left.
+    /// is published. Both sides arrive in one batch, so the moved tab keeps
+    /// the image it wore in the workspace it left.
     static func commitTransfer(
         _ prepared: PreparedTransfer,
         source: BrowserCoreSessionAuthority, destination: BrowserCoreSessionAuthority
     ) throws {
         let committed = crest_session_commit_transfer(prepared.handle)
         guard committed == CREST_OK else { throw CoreError(committed) }
-        let images = OfferedImages(placedFrom: prepared.source, prepared.destination)
-        source.offered = images
-        destination.follow(offering: images)
-        source.offered = OfferedImages()
+        destination.follow()
     }
 
     // MARK: - Actions - Commands

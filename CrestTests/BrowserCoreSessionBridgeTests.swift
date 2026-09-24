@@ -3,7 +3,7 @@ import XCTest
 
 @testable import Crest
 
-/// TRANSITIONAL until S6.1 retires the Swift session copy: the copy follows
+/// TRANSITIONAL until S6.7 retires the Swift session copy: the copy follows
 /// only the session changes the core publishes, so after any sequence of
 /// commands it holds what a relaunch reads from the core's file, and applying
 /// a batch again changes nothing.
@@ -49,7 +49,7 @@ final class BrowserCoreSessionBridgeTests: XCTestCase {
         // each batch is applied again.
         for batch in batches {
             for change in batch { harness.core.state.apply(change) }
-            harness.core.state.sessionBatchApplied()
+            harness.core.state.finishBatch(batch)
         }
         XCTAssertEqual(store.session, session)
 

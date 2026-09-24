@@ -6,6 +6,7 @@ namespace CrestCore.Contracts;
 /// for a tab that never chose how its icon is filled, which then follows its
 /// <see cref="Symbol"/>. Favicon bytes, live pages and engine history are never part of it.
 /// </summary>
+[Observed]
 public sealed record TabState(
     Guid Id,
     string Title,

@@ -123,7 +123,16 @@ internal sealed record ContractField(string Name, FieldType Type);
 
 /// A sealed positional record. Only its primary-constructor parameters cross the wire.
 internal sealed record ContractRecord(Type Type, IReadOnlyList<ContractField> Fields) {
+    /// The field that names a record, which an observed model keeps as its identity.
+    public const string IdentityField = "Id";
+
     public string Name => Type.Name;
+
+    /// The Apple read model keeps it as an object observed field by field.
+    public bool IsObserved => Type.IsDefined(typeof(ObservedAttribute), inherit: false);
+
+    /// The record has an identity of its own.
+    public bool IsIdentified => Fields.Any(candidate => candidate.Name == IdentityField);
 }
 
 /// One concrete type of a root, with its tag, for a query its answer, and for
@@ -196,6 +205,9 @@ internal sealed class ContractSchema {
     private const string CommentSuffix = "Comment";
     private const string ArgumentFormat = "%lld";
 
+    /// The field name an observed model reserves for reading its record back.
+    private const string ObservedValue = "Value";
+
     private readonly Dictionary<Type, ContractRecord> records = [];
     private readonly Dictionary<Type, ContractEnum> enums = [];
     private readonly Dictionary<Type, ContractSet> sets = [];
@@ -246,6 +258,9 @@ internal sealed class ContractSchema {
         var candidates = types.Where(type => type is { IsClass: true, IsAbstract: false }).ToList();
         var schema = Describing(ApplicationContract, candidates, ContractRoot.All,
             candidates.Where(typeof(Configuration).IsAssignableFrom), candidates.Where(IsFixedSet));
+        if (candidates.FirstOrDefault(type => type.IsDefined(typeof(ObservedAttribute), false) && !schema.records.ContainsKey(type))
+            is { } unreached)
+            throw new ContractSchemaException($"{unreached.Name}: an [Observed] record must be one a contract message carries.");
         schema.EngineCanonical = Describing(EngineContract, candidates, [.. ContractRoot.All.Where(root => root.IsEngine)],
             candidates.Where(type => type == typeof(EngineRegistration)), []).Canonical;
         return schema;
@@ -594,6 +609,18 @@ internal sealed class ContractSchema {
             throw new ContractSchemaException($"{duplicate.Key}: contract type names must be unique, because Swift has one namespace.");
         foreach (var record in records.Values)
             foreach (var field in record.Fields) ValidateLists(field.Type, $"{record.Name}.{field.Name}");
+        foreach (var record in records.Values.Where(record => record.IsObserved)) ValidateObserved(record);
+    }
+
+    /// An observed model reads its record back through `value` and is told
+    /// apart from its siblings by a GUID identity.
+    private static void ValidateObserved(ContractRecord record) {
+        if (record.Fields.FirstOrDefault(field => field.Name == ObservedValue) is { } value)
+            throw new ContractSchemaException($"{record.Name}.{value.Name}: an [Observed] record's model reads the record as `value`; "
+                + "give the field another name.");
+        if (record.Fields.FirstOrDefault(field => field.Name == ContractRecord.IdentityField) is { } identity
+            && identity.Type is not PrimitiveField { Kind: Primitive.Guid })
+            throw new ContractSchemaException($"{record.Name}.{identity.Name}: an [Observed] record's identity is a Guid.");
     }
 
     /// A list's count is checked against the bytes that remain, so every

@@ -6,6 +6,7 @@ namespace CrestCore.Contracts;
 /// <see cref="Symbol"/> and <see cref="Color"/> are null until someone chooses them.
 /// <see cref="OrderAnchorTabId"/> is the tab an empty folder keeps its place before.
 /// </summary>
+[Observed]
 public sealed record FolderState(
     Guid Id,
     TabPlacement Location,

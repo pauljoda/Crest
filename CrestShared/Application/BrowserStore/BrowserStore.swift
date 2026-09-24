@@ -39,7 +39,7 @@ final class BrowserStore {
     @ObservationIgnored private var isClosed = false
 
     /// What the core says this window shows.
-    var window: WindowState { core.state.windows[windowID.rawValue] ?? lastWindow }
+    var window: WindowState { core.state.windows[windowID.rawValue]?.value ?? lastWindow }
 
     var deletingSpaceIDs: Set<SpaceID> { family.deletingSpaceIDs }
     var selectedSpaceID: SpaceID { window.shownSpace }

@@ -6048,3 +6048,237 @@ struct TabPlacement: Hashable, Sendable {
         hasher.combine(tag)
     }
 }
+
+// MARK: - Observed models
+
+/// `FolderState` as an object views observe field by field. `update` assigns only
+/// the fields that differ, so a field that keeps its value notifies no one.
+@MainActor
+@Observable
+final class FolderStateModel: ObservedModel, Identifiable {
+    let id: UUID
+    private(set) var location: TabPlacement
+    private(set) var title: String
+    private(set) var symbol: String?
+    private(set) var color: BrandColor?
+    private(set) var parentID: UUID?
+    private(set) var isCollapsed: Bool
+    private(set) var collapseModifiedAt: Date?
+    private(set) var orderAnchorTabID: UUID?
+
+    var value: FolderState {
+        FolderState(
+            id: id,
+            location: location,
+            title: title,
+            symbol: symbol,
+            color: color,
+            parentID: parentID,
+            isCollapsed: isCollapsed,
+            collapseModifiedAt: collapseModifiedAt,
+            orderAnchorTabID: orderAnchorTabID
+        )
+    }
+
+    init(_ value: FolderState) {
+        id = value.id
+        location = value.location
+        title = value.title
+        symbol = value.symbol
+        color = value.color
+        parentID = value.parentID
+        isCollapsed = value.isCollapsed
+        collapseModifiedAt = value.collapseModifiedAt
+        orderAnchorTabID = value.orderAnchorTabID
+    }
+
+    func update(_ value: FolderState) {
+        precondition(value.id == id, "A FolderStateModel takes only its own FolderState's values.")
+        if location != value.location { location = value.location }
+        if title != value.title { title = value.title }
+        if symbol != value.symbol { symbol = value.symbol }
+        if color != value.color { color = value.color }
+        if parentID != value.parentID { parentID = value.parentID }
+        if isCollapsed != value.isCollapsed { isCollapsed = value.isCollapsed }
+        if collapseModifiedAt != value.collapseModifiedAt { collapseModifiedAt = value.collapseModifiedAt }
+        if orderAnchorTabID != value.orderAnchorTabID { orderAnchorTabID = value.orderAnchorTabID }
+    }
+}
+
+/// `SpaceSettings` as an object views observe field by field. `update` assigns only
+/// the fields that differ, so a field that keeps its value notifies no one.
+@MainActor
+@Observable
+final class SpaceSettingsModel: ObservedModel {
+    private(set) var name: String
+    private(set) var symbol: String
+    private(set) var accent: SpaceAccent
+    private(set) var branding: SpaceBranding?
+    private(set) var browsingPreferences: BrowsingPreferences
+    private(set) var credentialPreferences: CredentialPreferences
+    private(set) var accessPolicy: SpaceAccessPolicy
+    private(set) var isSavedTabsExpanded: Bool
+    private(set) var savedTabsExpansionModifiedAt: Date?
+
+    var value: SpaceSettings {
+        SpaceSettings(
+            name: name,
+            symbol: symbol,
+            accent: accent,
+            branding: branding,
+            browsingPreferences: browsingPreferences,
+            credentialPreferences: credentialPreferences,
+            accessPolicy: accessPolicy,
+            isSavedTabsExpanded: isSavedTabsExpanded,
+            savedTabsExpansionModifiedAt: savedTabsExpansionModifiedAt
+        )
+    }
+
+    init(_ value: SpaceSettings) {
+        name = value.name
+        symbol = value.symbol
+        accent = value.accent
+        branding = value.branding
+        browsingPreferences = value.browsingPreferences
+        credentialPreferences = value.credentialPreferences
+        accessPolicy = value.accessPolicy
+        isSavedTabsExpanded = value.isSavedTabsExpanded
+        savedTabsExpansionModifiedAt = value.savedTabsExpansionModifiedAt
+    }
+
+    func update(_ value: SpaceSettings) {
+        if name != value.name { name = value.name }
+        if symbol != value.symbol { symbol = value.symbol }
+        if accent != value.accent { accent = value.accent }
+        if branding != value.branding { branding = value.branding }
+        if browsingPreferences != value.browsingPreferences { browsingPreferences = value.browsingPreferences }
+        if credentialPreferences != value.credentialPreferences { credentialPreferences = value.credentialPreferences }
+        if accessPolicy != value.accessPolicy { accessPolicy = value.accessPolicy }
+        if isSavedTabsExpanded != value.isSavedTabsExpanded { isSavedTabsExpanded = value.isSavedTabsExpanded }
+        if savedTabsExpansionModifiedAt != value.savedTabsExpansionModifiedAt { savedTabsExpansionModifiedAt = value.savedTabsExpansionModifiedAt }
+    }
+}
+
+/// `TabState` as an object views observe field by field. `update` assigns only
+/// the fields that differ, so a field that keeps its value notifies no one.
+@MainActor
+@Observable
+final class TabStateModel: ObservedModel, Identifiable {
+    let id: UUID
+    private(set) var title: String
+    private(set) var url: String?
+    private(set) var nativeContent: NativeTabContent?
+    private(set) var savedURL: String?
+    private(set) var symbol: String
+    private(set) var faviconURL: String?
+    private(set) var iconAccent: TabIconAccent?
+    private(set) var storedIconMode: TabIconMode?
+    private(set) var placement: TabPlacement
+    private(set) var folderID: UUID?
+    private(set) var splitGroupID: UUID?
+    private(set) var lastActivatedAt: Date
+    private(set) var positionModifiedAt: Date?
+    private(set) var customTitle: String?
+    private(set) var titleModifiedAt: Date?
+    private(set) var keepsPageLoaded: Bool
+
+    var value: TabState {
+        TabState(
+            id: id,
+            title: title,
+            url: url,
+            nativeContent: nativeContent,
+            savedURL: savedURL,
+            symbol: symbol,
+            faviconURL: faviconURL,
+            iconAccent: iconAccent,
+            storedIconMode: storedIconMode,
+            placement: placement,
+            folderID: folderID,
+            splitGroupID: splitGroupID,
+            lastActivatedAt: lastActivatedAt,
+            positionModifiedAt: positionModifiedAt,
+            customTitle: customTitle,
+            titleModifiedAt: titleModifiedAt,
+            keepsPageLoaded: keepsPageLoaded
+        )
+    }
+
+    init(_ value: TabState) {
+        id = value.id
+        title = value.title
+        url = value.url
+        nativeContent = value.nativeContent
+        savedURL = value.savedURL
+        symbol = value.symbol
+        faviconURL = value.faviconURL
+        iconAccent = value.iconAccent
+        storedIconMode = value.storedIconMode
+        placement = value.placement
+        folderID = value.folderID
+        splitGroupID = value.splitGroupID
+        lastActivatedAt = value.lastActivatedAt
+        positionModifiedAt = value.positionModifiedAt
+        customTitle = value.customTitle
+        titleModifiedAt = value.titleModifiedAt
+        keepsPageLoaded = value.keepsPageLoaded
+    }
+
+    func update(_ value: TabState) {
+        precondition(value.id == id, "A TabStateModel takes only its own TabState's values.")
+        if title != value.title { title = value.title }
+        if url != value.url { url = value.url }
+        if nativeContent != value.nativeContent { nativeContent = value.nativeContent }
+        if savedURL != value.savedURL { savedURL = value.savedURL }
+        if symbol != value.symbol { symbol = value.symbol }
+        if faviconURL != value.faviconURL { faviconURL = value.faviconURL }
+        if iconAccent != value.iconAccent { iconAccent = value.iconAccent }
+        if storedIconMode != value.storedIconMode { storedIconMode = value.storedIconMode }
+        if placement != value.placement { placement = value.placement }
+        if folderID != value.folderID { folderID = value.folderID }
+        if splitGroupID != value.splitGroupID { splitGroupID = value.splitGroupID }
+        if lastActivatedAt != value.lastActivatedAt { lastActivatedAt = value.lastActivatedAt }
+        if positionModifiedAt != value.positionModifiedAt { positionModifiedAt = value.positionModifiedAt }
+        if customTitle != value.customTitle { customTitle = value.customTitle }
+        if titleModifiedAt != value.titleModifiedAt { titleModifiedAt = value.titleModifiedAt }
+        if keepsPageLoaded != value.keepsPageLoaded { keepsPageLoaded = value.keepsPageLoaded }
+    }
+}
+
+/// `WindowState` as an object views observe field by field. `update` assigns only
+/// the fields that differ, so a field that keeps its value notifies no one.
+@MainActor
+@Observable
+final class WindowStateModel: ObservedModel, Identifiable {
+    let id: UUID
+    private(set) var workspaceID: UUID
+    private(set) var shownSpaceID: UUID
+    private(set) var shownTabs: [ShownTab]
+    private(set) var splitColumnShares: [SplitColumnShares]
+
+    var value: WindowState {
+        WindowState(
+            id: id,
+            workspaceID: workspaceID,
+            shownSpaceID: shownSpaceID,
+            shownTabs: shownTabs,
+            splitColumnShares: splitColumnShares
+        )
+    }
+
+    init(_ value: WindowState) {
+        id = value.id
+        workspaceID = value.workspaceID
+        shownSpaceID = value.shownSpaceID
+        shownTabs = value.shownTabs
+        splitColumnShares = value.splitColumnShares
+    }
+
+    func update(_ value: WindowState) {
+        precondition(value.id == id, "A WindowStateModel takes only its own WindowState's values.")
+        if workspaceID != value.workspaceID { workspaceID = value.workspaceID }
+        if shownSpaceID != value.shownSpaceID { shownSpaceID = value.shownSpaceID }
+        if shownTabs != value.shownTabs { shownTabs = value.shownTabs }
+        if splitColumnShares != value.splitColumnShares { splitColumnShares = value.splitColumnShares }
+    }
+}

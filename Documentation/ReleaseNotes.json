@@ -2277,6 +2277,10 @@
     "per-record-deletion-reasons": {
       "category": "internal",
       "message": "Each synced deletion carries the reason of the edit that removed it, so a deleted folder followed by a quick edit still syncs as deleted."
+    },
+    "observable-read-model": {
+      "category": "internal",
+      "message": "Each workspace, window, Space, tab and folder has its own observable model that updates only when a value changes, and favicons have one store."
     }
   }
 }

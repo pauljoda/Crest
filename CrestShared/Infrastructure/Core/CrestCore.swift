@@ -148,7 +148,7 @@ final class CrestCore {
             default: break
             }
         }
-        state.sessionBatchApplied()
+        state.finishBatch(changes)
         #if DEBUG
             batchApplied?(changes)
         #endif

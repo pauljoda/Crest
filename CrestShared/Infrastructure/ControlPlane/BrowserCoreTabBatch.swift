@@ -140,9 +140,9 @@ enum BrowserCoreTabBatch {
 
     /// The batch's copies, and the session it proposes.
     ///
-    /// TRANSITIONAL until S6.1: the proposed session is only where the commit
-    /// reads the images the batch's tabs wear. The session copy follows the
-    /// core's changes once it has.
+    /// TRANSITIONAL until S6.7: the proposed session only previews the batch.
+    /// Its copies take their images from `FaviconAssets` through `TabCopied`,
+    /// and the session copy follows the core's changes once it commits.
     static func applying(_ response: Response, to session: BrowserSession) throws
         -> (session: BrowserSession, result: BrowserTabBatchResult)
     {

@@ -1,27 +1,22 @@
 import Foundation
 
-// TRANSITIONAL until S6.1 replaces the Swift session copy with the generated
-// read model, which deletes this file. The copy (`BrowserCoreSessionAuthority
-// .projection`) is written only here: each session change the core publishes
-// for the copy's workspace is applied by the rules its record documents, and
-// the core's records are read into the copy's types the way the decoder reads
-// the core's stored form. Image bytes never reach the core, so a tab keeps the
-// bytes the copy holds for its identity.
+// TRANSITIONAL until S6.7 deletes the Swift session copy, and this file with
+// it. The copy (`BrowserCoreSessionAuthority.projection`) is written only
+// here: each session change the core publishes for the copy's workspace is
+// applied by the rules its record documents, and the core's records are read
+// into the copy's types the way the decoder reads the core's stored form.
+// Image bytes never reach the core: `FaviconAssets` keeps them and applies
+// each change's image rules first, so every tab the copy builds or re-images
+// wears the image `FaviconAssets` holds for it.
 
 // MARK: - Applying changes
 
 extension BrowserSession {
-    /// Applies one change of this session's workspace. A tab keeps the image
-    /// the copy holds for it; the images of tabs a change removes join
-    /// `detached`, where a later change of the same batch, in this workspace
-    /// or another, finds them when it places the tab again; a tab the copy
-    /// never held wears the image its command's issuer `offered`.
-    mutating func apply(
-        _ change: Change, detached: inout [UUID: Data], offered: BrowserCoreSessionAuthority.OfferedImages
-    ) {
-        let before = self
-        let pending = detached
-        let image: (UUID) -> Data? = { before.image(of: $0) ?? pending[$0] ?? offered.placed[$0] }
+    /// Applies one change of this session's workspace, whose image rules
+    /// `images` has already applied.
+    @MainActor
+    mutating func apply(_ change: Change, images: FaviconAssets) {
+        let image: (UUID) -> Data? = { images.image(of: $0) }
         switch change {
         case .workspaceOpened(let opened):
             self = BrowserSession(core: opened.session, image: image)
@@ -35,15 +30,9 @@ extension BrowserSession {
             appPreferences = changed.preferences.map(BrowserAppPreferences.init(core:))
         case .spacesChanged(let changed):
             let removed = Set(changed.removed)
-            for space in spaces where removed.contains(space.id.rawValue) {
-                for tab in space.tabs { Self.detach(tab, into: &detached) }
-                for archived in space.archivedTabs { Self.detach(archived.tab, into: &detached) }
-            }
             spaces.removeAll { removed.contains($0.id.rawValue) }
-            let placed = detached
             for state in changed.added {
-                let space = BrowserSpace(core: state) { before.image(of: $0) ?? placed[$0] ?? offered.placed[$0] }
-                Self.upsert(space, into: &spaces, id: \.id.rawValue)
+                Self.upsert(BrowserSpace(core: state, image: image), into: &spaces, id: \.id.rawValue)
             }
             spaces = Self.ordered(spaces, by: changed.order, id: \.id.rawValue)
         case .spaceSettingsChanged(let changed):
@@ -52,17 +41,14 @@ extension BrowserSession {
             edit(changed.spaceID) { space in
                 space.tabs = Self.rows(
                     space.tabs, updated: changed.updated, removed: changed.removed, order: changed.order,
-                    id: \.id.rawValue, stateID: \.id, detach: { Self.detach($0, into: &detached) }
-                ) { state, existing in
-                    BrowserTab(core: state, faviconData: existing.map(\.faviconData) ?? image(state.id))
-                }
+                    id: \.id.rawValue, stateID: \.id
+                ) { BrowserTab(core: $0, faviconData: image($0.id)) }
             }
         case .foldersChanged(let changed):
             edit(changed.spaceID) { space in
                 space.folders = Self.rows(
                     space.folders, updated: changed.updated, removed: changed.removed, order: changed.order,
-                    id: \.id.rawValue, stateID: \.id, detach: { _ in }
-                ) { state, _ in BrowserFolder(core: state) }
+                    id: \.id.rawValue, stateID: \.id, make: BrowserFolder.init(core:))
             }
         case .splitGroupsChanged(let changed):
             edit(changed.spaceID) { space in
@@ -73,12 +59,11 @@ extension BrowserSession {
             edit(changed.spaceID) { space in
                 space.archivedTabs = Self.rows(
                     space.archivedTabs, updated: changed.archived, removed: changed.removed, order: changed.order,
-                    id: \.id.rawValue, stateID: \.tab.id, detach: { Self.detach($0.tab, into: &detached) }
-                ) { state, existing in
+                    id: \.id.rawValue, stateID: \.tab.id
+                ) {
                     ArchivedTab(
-                        tab: BrowserTab(
-                            core: state.tab, faviconData: existing.map(\.tab.faviconData) ?? image(state.tab.id)),
-                        archivedAt: state.archivedAt, reason: state.reason)
+                        tab: BrowserTab(core: $0.tab, faviconData: image($0.tab.id)), archivedAt: $0.archivedAt,
+                        reason: $0.reason)
                 }
             }
         case .historyChanged(let changed):
@@ -87,30 +72,12 @@ extension BrowserSession {
                     space.history, recorded: changed.recorded, removed: changed.removed, order: changed.order)
             }
         case .tabCopied(let copied):
-            setImage(image(copied.sourceTabID), of: copied.copyTabID)
+            setImage(image(copied.copyTabID), of: copied.copyTabID)
         case .tabFaviconAssigned(let assigned):
-            // A tab that adopts an image wears the one its command's issuer
-            // offered, and keeps the one it wears when none is on offer.
-            if !assigned.adopts {
-                setImage(nil, of: assigned.tabID)
-            } else if let data = offered.assigned {
-                setImage(data, of: assigned.tabID)
-            }
+            setImage(image(assigned.tabID), of: assigned.tabID)
         default:
             break
         }
-    }
-
-    /// The image the copy holds for a tab or archived tab, or nil when it
-    /// holds none or no tab has that identity.
-    fileprivate func image(of tabID: UUID) -> Data? {
-        for space in spaces {
-            if let tab = space.tabs.first(where: { $0.id.rawValue == tabID }) { return tab.faviconData }
-            if let archived = space.archivedTabs.first(where: { $0.id.rawValue == tabID }) {
-                return archived.tab.faviconData
-            }
-        }
-        return nil
     }
 
     private mutating func setImage(_ data: Data?, of tabID: UUID) {
@@ -128,28 +95,20 @@ extension BrowserSession {
         change(&spaces[index])
     }
 
-    private static func detach(_ tab: BrowserTab, into detached: inout [UUID: Data]) {
-        if let data = tab.faviconData { detached[tab.id.rawValue] = data }
-    }
-
     /// A list after one change: the removed rows gone, each updated row in
     /// place of the row with its identity or after the others when it is new,
     /// then the order the change names, when it names one.
     private static func rows<Row, State>(
         _ rows: [Row], updated: [State], removed: [UUID], order: [UUID]?, id: KeyPath<Row, UUID>,
-        stateID: KeyPath<State, UUID>, detach: (Row) -> Void, make: (State, Row?) -> Row
+        stateID: KeyPath<State, UUID>, make: (State) -> Row
     ) -> [Row] {
         let gone = Set(removed)
-        var result: [Row] = []
-        result.reserveCapacity(rows.count + updated.count)
-        for row in rows {
-            if gone.contains(row[keyPath: id]) { detach(row) } else { result.append(row) }
-        }
+        var result = rows.filter { !gone.contains($0[keyPath: id]) }
         for state in updated {
             if let index = result.firstIndex(where: { $0[keyPath: id] == state[keyPath: stateID] }) {
-                result[index] = make(state, result[index])
+                result[index] = make(state)
             } else {
-                result.append(make(state, nil))
+                result.append(make(state))
             }
         }
         return ordered(result, by: order, id: id)
@@ -177,6 +136,21 @@ extension BrowserSession {
         guard let order else { return rows }
         let byID = Dictionary(rows.map { ($0[keyPath: id], $0) }, uniquingKeysWith: { first, _ in first })
         return order.compactMap { byID[$0] }
+    }
+}
+
+// MARK: - Offering images
+
+extension FaviconAssets.Offer {
+    /// The images every tab and archived tab of the sessions wears.
+    init(placedFrom session: BrowserSession, _ others: BrowserSession...) {
+        self.init()
+        for session in [session] + others {
+            for space in session.spaces {
+                for tab in space.tabs { placed[tab.id.rawValue] = tab.faviconData }
+                for archived in space.archivedTabs { placed[archived.id.rawValue] = archived.tab.faviconData }
+            }
+        }
     }
 }
 

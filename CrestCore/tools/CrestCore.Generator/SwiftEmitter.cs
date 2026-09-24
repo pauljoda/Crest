@@ -7,7 +7,8 @@ namespace CrestCore.Generator;
 /// become `Int` enums or option sets, fixed sets become structs of `static let`
 /// members, messages Swift sends (intents, queries, engine events) conform to
 /// their root's protocol, and messages it receives (changes, rejections,
-/// engine commands) become the cases of their root's enum.
+/// engine commands) become the cases of their root's enum. An `[Observed]`
+/// record also becomes the model class the read model keeps for it.
 internal static class SwiftEmitter {
     #region Variables
 
@@ -78,7 +79,41 @@ internal static class SwiftEmitter {
 
         if (schema.Sets.Count > 0) code.Append("\n// MARK: - Fixed sets\n");
         foreach (var set in schema.Sets) EmitSet(code, set);
+
+        var observed = schema.Records.Where(record => record.IsObserved).ToList();
+        if (observed.Count > 0) code.Append("\n// MARK: - Observed models\n");
+        foreach (var record in observed) EmitModel(code, record, equatable);
         return code.ToString();
+    }
+
+    /// An observed record becomes a main-actor observable class with one
+    /// property per field. `update` compares each field before it assigns it,
+    /// so an equal value notifies no observer whatever the Observation
+    /// runtime does with equal writes. The identity is fixed.
+    private static void EmitModel(StringBuilder code, ContractRecord record, HashSet<Type> equatable) {
+        if (!equatable.Contains(record.Type))
+            throw new ContractSchemaException($"{record.Name}: an [Observed] record compares its fields, so none may hold an intent or a query.");
+        string model = $"{record.Name}Model";
+        var fields = record.Fields.Select(field => (Label: Naming.SwiftMember(field.Name), Name: Local(field.Name),
+            Type: TypeName(field.Type), IsIdentity: field.Name == ContractRecord.IdentityField)).ToList();
+        code.Append('\n').Append($"/// `{record.Name}` as an object views observe field by field. `update` assigns only\n");
+        code.Append("/// the fields that differ, so a field that keeps its value notifies no one.\n");
+        code.Append("@MainActor\n@Observable\n");
+        code.Append($"final class {model}: ObservedModel{(record.IsIdentified ? ", Identifiable" : "")} {{\n");
+        foreach (var field in fields)
+            code.Append(field.IsIdentity ? $"    let {field.Name}: {field.Type}\n" : $"    private(set) var {field.Name}: {field.Type}\n");
+        code.Append('\n').Append($"    var value: {record.Name} {{\n");
+        code.Append(Wrapped($"        {record.Name}(", ")", [.. fields.Select(field => $"{field.Label}: {field.Name}")])).Append('\n');
+        code.Append("    }\n");
+        code.Append('\n').Append($"    init(_ value: {record.Name}) {{\n");
+        foreach (var field in fields) code.Append($"        {field.Name} = value.{field.Name}\n");
+        code.Append("    }\n");
+        code.Append('\n').Append($"    func update(_ value: {record.Name}) {{\n");
+        foreach (var field in fields.Where(field => field.IsIdentity))
+            code.Append($"        precondition(value.{field.Name} == {field.Name}, \"A {model} takes only its own {record.Name}'s values.\")\n");
+        foreach (var field in fields.Where(field => !field.IsIdentity))
+            code.Append($"        if {field.Name} != value.{field.Name} {{ {field.Name} = value.{field.Name} }}\n");
+        code.Append("    }\n}\n");
     }
 
     /// A fixed set becomes a struct with one `static let` per member, built
