@@ -50,6 +50,9 @@ public sealed class StoredFormatTests {
         Assert.Equal([null, null, "local", "remote", null, null], ArchiveReason.All.Select(reason => reason.DeletionOrigin));
         Assert.Equal(["automatic", "pulled", "emoji"], TabIconMode.All.Select(mode => mode.Name));
         Assert.Equal("crest.emoji:", TabIconMode.EmojiPrefix);
+        Assert.Equal(["startupBehavior", "offersTranslation", "automaticallyTranslates", "checksSpelling",
+            "automaticallyEntersPictureInPicture", "savedTabClosePolicy", "savedTabFaviconReturnsToSavedURL", "splitFocusFollowsMouse"],
+            BrowserPreference.All.Select(preference => preference.Name));
     }
 
     [Theory]

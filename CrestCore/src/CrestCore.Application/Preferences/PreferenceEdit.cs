@@ -46,19 +46,8 @@ internal sealed record PreferenceEdit(SessionOperation Operation, BrowserPrefere
         };
     }
 
-    private AppPreferences Set(AppPreferences current) => Preference switch {
-        BrowserPreference.Startup => current with {
-            Startup = StoredSessionCodec.ParseStartupBehavior(Value)
-                ?? throw new BrowserRuleException(BrowserRuleCodes.InvalidPreferenceValue)
-        },
-        BrowserPreference.SavedTabClose => current with {
-            SavedTabClose = StoredSessionCodec.ParseSavedTabClosePolicy(Value)
-                ?? throw new BrowserRuleException(BrowserRuleCodes.InvalidPreferenceValue)
-        },
-        { } flag => current.With(flag,
-            PreferenceCodes.Flag(Value) ?? throw new BrowserRuleException(BrowserRuleCodes.InvalidPreferenceValue)),
-        null => throw new BrowserRuleException(BrowserRuleCodes.UnknownPreference)
-    };
+    private AppPreferences Set(AppPreferences current) =>
+        (Preference ?? throw new BrowserRuleException(BrowserRuleCodes.UnknownPreference)).Apply(current, Value);
 
     #endregion
 }

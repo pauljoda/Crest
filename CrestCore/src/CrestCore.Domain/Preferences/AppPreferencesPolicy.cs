@@ -3,7 +3,7 @@ using CrestCore.Contracts;
 namespace CrestCore.Domain;
 
 /// The app-wide behavior preferences a person who never chose starts with, and
-/// how each settings edit changes them.
+/// how a translation rule edit changes them.
 public static class AppPreferencesPolicy {
     #region Variables
 
@@ -16,17 +16,6 @@ public static class AppPreferencesPolicy {
     #endregion
 
     #region Actions - Preferences
-
-    /// Records the new choice for one flag preference.
-    public static AppPreferences With(this AppPreferences preferences, BrowserPreference preference, bool value) => preference switch {
-        BrowserPreference.OffersTranslation => preferences with { OffersTranslation = value },
-        BrowserPreference.AutomaticallyTranslates => preferences with { AutomaticallyTranslates = value },
-        BrowserPreference.ChecksSpelling => preferences with { ChecksSpelling = value },
-        BrowserPreference.AutomaticallyEntersPictureInPicture => preferences with { AutomaticallyEntersPictureInPicture = value },
-        BrowserPreference.SavedTabFaviconReturnsToSavedUrl => preferences with { SavedTabFaviconReturnsToSavedUrl = value },
-        BrowserPreference.SplitFocusFollowsMouse => preferences with { SplitFocusFollowsMouse = value },
-        _ => throw new BrowserRuleException(BrowserRuleCodes.InvalidPreferenceValue)
-    };
 
     /// Records a source language's translation choice through the rule set's
     /// alias rules.

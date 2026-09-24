@@ -2221,6 +2221,10 @@
     "tab-icon-mode-set": {
       "category": "internal",
       "message": "Tab icon modes decide their own inference, favicon use and symbols."
+    },
+    "browser-preference-set": {
+      "category": "internal",
+      "message": "Each app preference records its own value in the core."
     }
   }
 }
