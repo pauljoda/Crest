@@ -13,11 +13,12 @@ public sealed partial class BrowserTabCollection {
 
     #region Actions - Organization
 
-    public void AddFolder(Guid id, string name, TabPlacement location = TabPlacement.Saved, Guid? parent = null) {
+    public void AddFolder(Guid id, string name, TabPlacement? location = null, Guid? parent = null) {
         var tree = new FolderTree(folders);
         if (folders.Count >= FolderTree.MaximumCount) throw new BrowserRuleException(BrowserRuleCodes.FolderLimit);
         if (folders.Any(f => f.Id == id)) throw new BrowserRuleException(BrowserRuleCodes.DuplicateFolder);
-        if (location == TabPlacement.Pinned) throw new BrowserRuleException(BrowserRuleCodes.InvalidFolderPlacement);
+        location ??= TabPlacement.Saved;
+        if (!location.HoldsFolders) throw new BrowserRuleException(BrowserRuleCodes.InvalidFolderPlacement);
         int insertion = folders.Count;
         if (parent is { } p) {
             if (tree.Depth(p) + 1 >= FolderTree.MaximumDepth) throw new BrowserRuleException(BrowserRuleCodes.FolderDepthLimit);
@@ -73,9 +74,7 @@ public sealed partial class BrowserTabCollection {
 
     private static int SectionEnd(List<BrowserTab> remaining, TabPlacement location) {
         int last = remaining.FindLastIndex(t => t.Placement == location);
-        if (last >= 0) return last + 1;
-        int current = remaining.FindIndex(t => t.Placement == TabPlacement.Current);
-        return location == TabPlacement.Saved && current >= 0 ? current : remaining.Count;
+        return last >= 0 ? last + 1 : NextSection(remaining, location);
     }
 
     internal void NormalizeSplits(DateTimeOffset now) {
@@ -86,7 +85,7 @@ public sealed partial class BrowserTabCollection {
 
     public void FileTabs(IReadOnlyCollection<Guid> requested, TabPlacement location, Guid? folder,
         DateTimeOffset now, Guid? before = null, Guid? beforeFolder = null, bool detachSplitMembers = false) {
-        if (requested.Count == 0 || location == TabPlacement.Pinned) throw new BrowserRuleException(BrowserRuleCodes.InvalidFolderPlacement);
+        if (requested.Count == 0 || !location.HoldsFolders) throw new BrowserRuleException(BrowserRuleCodes.InvalidFolderPlacement);
         foreach (var id in requested) _ = Tab(id);
         var tree = new FolderTree(folders);
         if (folder is { } parent && tree.Folder(parent).Location != location) throw new BrowserRuleException(BrowserRuleCodes.InvalidFolderPlacement);
@@ -133,7 +132,7 @@ public sealed partial class BrowserTabCollection {
         if (destinationDepth + movingIds.Max(tree.Depth) - tree.Depth(id) >= FolderTree.MaximumDepth)
             throw new BrowserRuleException(BrowserRuleCodes.FolderDepthLimit);
         var destination = parent is { } owner ? tree.Folder(owner).Location : location ?? source.Location;
-        if (destination == TabPlacement.Pinned) throw new BrowserRuleException(BrowserRuleCodes.InvalidFolderPlacement);
+        if (!destination.HoldsFolders) throw new BrowserRuleException(BrowserRuleCodes.InvalidFolderPlacement);
         if (beforeFolder is { } sibling && (movingIds.Contains(sibling) || tree.Folder(sibling).ParentId != parent
             || tree.Folder(sibling).Location != destination)) throw new BrowserRuleException(BrowserRuleCodes.InvalidFolderAnchor);
         var members = tabs.Where(t => t.FolderId is { } f && movingIds.Contains(f)).ToArray();

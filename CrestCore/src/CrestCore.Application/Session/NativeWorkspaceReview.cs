@@ -55,7 +55,7 @@ public static class NativeWorkspaceReview {
     }
 
     private static TabPlacement Placement(JsonNode? value) =>
-        TabPlacementCodes.Parse(value?.GetValue<string>()) ?? throw new BrowserRuleException(BrowserRuleCodes.InvalidPlacement);
+        TabPlacement.Named(value?.GetValue<string>()) ?? throw new BrowserRuleException(BrowserRuleCodes.InvalidPlacement);
 
     private static JsonArray Ids(IEnumerable<Guid> values) =>
         new(values.Select(value => (JsonNode?)value.ToString("D")).ToArray());

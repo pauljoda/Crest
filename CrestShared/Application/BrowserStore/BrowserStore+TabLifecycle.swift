@@ -367,7 +367,7 @@ extension BrowserStore {
     @discardableResult
     func archiveSelectedTab() -> TabID? {
         guard let tab = selectedTab,
-            tab.placement == .current,
+            !tab.placement.isDurable,
             !tab.isStartPage
         else { return nil }
         guard closeTab(tab.id) else { return nil }

@@ -29,7 +29,7 @@ internal static class SetupPolicyRequests {
     public sealed record Tab(TabPlacement Placement, int ExistingPinnedCount, int AddedPinnedCount, string Url, string? Title) {
         public static Tab Decode(JsonElement request) {
             Members(request, "placement", "existingPinnedCount", "addedPinnedCount", "url", "title");
-            var placement = TabPlacementCodes.Parse(Protocol.Text(request, "placement", 16))
+            var placement = TabPlacement.Named(Protocol.Text(request, "placement", 16))
                 ?? throw new ProtocolException(ProtocolErrorCodes.InvalidPlacement);
             int existing = Integer(request, "existingPinnedCount"), added = Integer(request, "addedPinnedCount");
             var url = Protocol.Text(request, "url", MaximumSetupUrlLength);

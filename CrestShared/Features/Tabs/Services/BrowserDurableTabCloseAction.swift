@@ -14,7 +14,7 @@ struct BrowserDurableTabCloseAction {
                 matching: BrowserSpaceRuntimeAssignment(spaceID: assignment.spaceID, profileID: assignment.profileID),
                 in: browser, accessController: spaceAccess
             ), let tab = space.tabs.first(where: { $0.id == assignment.tabID }),
-            tab.placement != .current
+            tab.placement.isDurable
         else { return false }
         let returnsToRoot = preferences.savedTabClosePolicy == .returnToSavedURL && tab.savedSiteURL != nil
         return browser.performPageDismissal(of: [assignment]) {

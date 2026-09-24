@@ -38,6 +38,12 @@ public sealed class StoredFormatTests {
         return core;
     }
 
+    /// The stored session and the synced records spell each member of these
+    /// sets as its name, so a renamed member would misread a person's data.
+    [Fact]
+    public void StoredSpellingsNeverChange() =>
+        Assert.Equal(["pinned", "saved", "current"], TabPlacement.All.Select(placement => placement.Name));
+
     [Theory]
     [InlineData("maximal-session.json")]
     [InlineData("installed-session.json")]

@@ -73,7 +73,7 @@ struct BrowserTab: Codable, Equatable, Identifiable, Sendable {
         self.title = title
         self.nativeContent = nativeContent
         self.url = nativeContent == nil ? url : nil
-        self.savedURL = nativeContent == nil ? (savedURL ?? (placement == .current ? nil : url)) : nil
+        self.savedURL = nativeContent == nil ? (savedURL ?? (!placement.isDurable ? nil : url)) : nil
         self.symbol = symbol
         self.faviconData = faviconData
         // Property observers do not run inside an initializer.
@@ -113,11 +113,11 @@ struct BrowserTab: Codable, Equatable, Identifiable, Sendable {
     var isWebPage: Bool { nativeContent == nil && url != nil }
 
     var savedSiteURL: URL? {
-        savedURL ?? (placement == .current ? nil : url)
+        savedURL ?? (!placement.isDurable ? nil : url)
     }
 
     var supportsSavedLocationEditing: Bool {
-        placement != .current && savedSiteURL != nil
+        placement.isDurable && savedSiteURL != nil
     }
 
     var isAwayFromSavedLocation: Bool {

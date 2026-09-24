@@ -46,7 +46,7 @@ struct BrowserTabOrganizationAction {
         _ assignment: BrowserTabRuntimeAssignment,
         expectedPlacement: TabPlacement
     ) -> Bool {
-        guard expectedPlacement == .current,
+        guard !expectedPlacement.isDurable,
             let spaceAssignment = liveSpaceAssignment(
                 for: assignment,
                 expectedPlacement: expectedPlacement
@@ -60,7 +60,7 @@ struct BrowserTabOrganizationAction {
         _ assignment: BrowserTabRuntimeAssignment,
         expectedPlacement: TabPlacement
     ) -> Bool {
-        guard expectedPlacement != .current,
+        guard expectedPlacement.isDurable,
             let spaceAssignment = liveSpaceAssignment(
                 for: assignment,
                 expectedPlacement: expectedPlacement

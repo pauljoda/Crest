@@ -140,19 +140,15 @@ public sealed class NativeWorkspaceImport {
                 var added = input.State.Tabs.ToArray();
                 var old = created ? [] : destination.State.Tabs.ToArray();
                 WorkspaceImportPolicy.RequirePinnedCapacity(old.Concat(added).Count(t => t.Placement == TabPlacement.Pinned));
-                var ordered = new[] { TabPlacement.Pinned, TabPlacement.Saved, TabPlacement.Current }
-                    .SelectMany(p => added.Where(t => t.Placement == p)).ToArray();
+                var ordered = added.OrderBy(t => t.Placement.Rank).ToArray();
                 if (created) destination.State = destination.State with { Tabs = ordered };
                 else {
                     var list = old.ToList();
-                    var firstCurrent = list.FindIndex(t => t.Placement == TabPlacement.Current);
-                    if (firstCurrent < 0) firstCurrent = list.Count;
-                    var pinIndex = list.FindIndex(t => t.Placement != TabPlacement.Pinned);
-                    if (pinIndex < 0) pinIndex = list.Count;
-                    var pins = ordered.Where(t => t.Placement == TabPlacement.Pinned).ToArray();
-                    list.InsertRange(pinIndex, pins);
-                    list.InsertRange(firstCurrent + pins.Length, ordered.Where(t => t.Placement == TabPlacement.Saved));
-                    list.AddRange(ordered.Where(t => t.Placement == TabPlacement.Current));
+                    // Each section's imported tabs follow the tabs it already holds.
+                    foreach (var placement in TabPlacement.All) {
+                        int end = list.FindIndex(t => t.Placement.Rank > placement.Rank);
+                        list.InsertRange(end < 0 ? list.Count : end, ordered.Where(t => t.Placement == placement));
+                    }
                     destination.State = destination.State with { Tabs = list.ToArray() };
                 }
                 ShowAdded(destination, created ? added : ordered);
@@ -223,7 +219,7 @@ public sealed class NativeWorkspaceImport {
     private void Import(JsonNode review, Draft input, Draft destination, bool isNew) {
         var included = Items(review, "includedTabIDs").Select(Id).ToHashSet();
         var overrides = Items(review, "placements").ToDictionary(n => Id(n!["tabID"]),
-            n => TabPlacementCodes.Parse(n!["placement"]!.GetValue<string>()) ?? throw new BrowserRuleException(BrowserRuleCodes.InvalidPlacement));
+            n => TabPlacement.Named(n!["placement"]!.GetValue<string>()) ?? throw new BrowserRuleException(BrowserRuleCodes.InvalidPlacement));
         TabPlacement PlacementFor(TabState tab) => overrides.GetValueOrDefault(tab.Id, tab.Placement);
         var additions = input.State.Tabs.Where(t => included.Contains(t.Id)).ToArray();
         var sourceFolders = input.State.Folders;
@@ -272,7 +268,7 @@ public sealed class NativeWorkspaceImport {
             return Copied(tab, tab with {
                 Placement = placement,
                 FolderId = folder,
-                SavedUrl = placement == TabPlacement.Current ? null : tab.SavedUrl ?? tab.Url,
+                SavedUrl = placement.IsDurable ? tab.SavedUrl ?? tab.Url : null,
                 Symbol = placement == TabPlacement.Pinned ? ManualSetupPolicy.PinnedTabSymbol : tab.Symbol
             });
         }).ToArray();

@@ -13,6 +13,6 @@ enum BrowserTabMiddleClickAction: Equatable {
 /// which makes the same gesture an unload rather than a delete.
 enum BrowserTabMiddleClickPolicy {
     static func action(for placement: TabPlacement) -> BrowserTabMiddleClickAction {
-        placement == .current ? .close : .unload
+        placement.isDurable ? .unload : .close
     }
 }

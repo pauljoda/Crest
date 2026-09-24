@@ -35,13 +35,6 @@ enum MobileBrowserSpaceSwitchPolicy {
 enum MobileTabPromotionPolicy {
     static let usesNativeNavigationTransition = true
 
-    static func supports(_ placement: TabPlacement) -> Bool {
-        switch placement {
-        case .pinned, .saved, .current:
-            true
-        }
-    }
-
     static func destinationID(for tabID: TabID) -> String {
         BrowserTabPromotionID.value(for: tabID)
     }
@@ -53,7 +46,7 @@ enum MobileTabPromotionPolicy {
         BrowserTabPromotionSourcePolicy.isPromotionSource(
             tab,
             isSelected: tab.id == selectedTabID
-        ) && supports(tab.placement)
+        )
     }
 
     static func target(

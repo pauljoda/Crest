@@ -22,7 +22,7 @@ struct BrowserSyncPreferences: Codable, Equatable, Sendable {
         case .folder(let folder):
             folder.location == .current ? currentTabs : savedStructure
         case .tab(let tab):
-            tab.placement == .current ? currentTabs : savedStructure
+            !tab.placement.isDurable ? currentTabs : savedStructure
         case .history, .archive:
             historyAndArchive
         }

@@ -19,15 +19,12 @@ struct BrowserTabSections: Equatable, Sendable {
             if let folderID = tab.folderID {
                 tabsByFolderID[folderID, default: []].append(tab)
             }
-            switch tab.placement {
-            case .pinned:
-                pinnedTabs.append(tab)
-            case .saved:
-                if tab.folderID == nil {
-                    unfiledSavedTabs.append(tab)
-                }
-            case .current:
+            if !tab.placement.isDurable {
                 currentTabs.append(tab)
+            } else if !tab.placement.holdsFolders {
+                pinnedTabs.append(tab)
+            } else if tab.folderID == nil {
+                unfiledSavedTabs.append(tab)
             }
         }
 

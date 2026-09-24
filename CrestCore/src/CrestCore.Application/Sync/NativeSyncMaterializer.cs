@@ -85,7 +85,7 @@ public static class NativeSyncMaterializer {
                 ["id"] = SwiftId(Guid.NewGuid()),
                 ["title"] = "Start Page",
                 ["symbol"] = "flag.fill",
-                ["placement"] = TabPlacementCodes.Current,
+                ["placement"] = TabPlacement.Current.Name,
                 ["lastActivatedAt"] = now
             });
             var value = Fields(remote, "id", "name", "symbol", "accent", "branding", "browsingPreferences", "accessPolicy",
@@ -129,9 +129,9 @@ public static class NativeSyncMaterializer {
     private static JsonObject Tab(JsonNode remote, JsonNode? local, bool archived = false) {
         var value = Fields(remote, "id", "title", "url", "nativeContent", "symbol", "lastActivatedAt", "positionModifiedAt",
             "customTitle", "titleModifiedAt", "keepsPageLoaded");
-        value["placement"] = archived ? JsonValue.Create(TabPlacementCodes.Current) : remote["placement"]!.DeepClone();
+        value["placement"] = archived ? JsonValue.Create(TabPlacement.Current.Name) : remote["placement"]!.DeepClone();
         if (!archived) {
-            if (Placement(remote) != TabPlacement.Current && SavedUrl(remote) is { } saved) value["savedURL"] = saved;
+            if (Placement(remote).IsDurable && SavedUrl(remote) is { } saved) value["savedURL"] = saved;
             value["splitGroupID"] = remote["splitGroupID"]?.DeepClone();
         }
         if (local is not null)
@@ -148,7 +148,7 @@ public static class NativeSyncMaterializer {
             .Concat(Local(local, StoredSessionCodec.Key.ArchivedTabs).Where(a => !PortableTab(a["tab"]!)).Select(a => Id(a["tab"]!["id"]))).ToHashSet();
         var synced = Ordered(Payloads(records, SyncRecordKinds.Tab, space)
                 .Where(t => PortableTab(t) && !localOnlyIds.Contains(Id(t["id"])) && policy.Includes(Placement(t))))
-            .OrderBy(t => Placement(t) switch { TabPlacement.Pinned => 0, TabPlacement.Saved => 1, _ => 2 }).ToArray();
+            .OrderBy(t => Placement(t).Rank).ToArray();
         var syncedIds = synced.Select(t => Id(t["id"])).ToHashSet();
         var result = locals.Where(t => PortableTab(t) && !policy.Includes(Placement(t)) && !syncedIds.Contains(Id(t["id"]))).ToList();
         var byId = locals.ToDictionary(t => Id(t["id"]));
@@ -156,15 +156,15 @@ public static class NativeSyncMaterializer {
         var localFolders = LocalFolders(local);
         foreach (var tab in synced) {
             Guid? folder = OptionalId(tab["folderID"]);
-            if (Placement(tab) != TabPlacement.Pinned && folder is { } missing && !folderIds.Contains(missing)) {
+            if (Placement(tab).HoldsFolders && folder is { } missing && !folderIds.Contains(missing)) {
                 if (owners.TryGetValue(missing, out var owner) && owner != space) throw Error(NativeSyncDocumentErrorCodes.DanglingFolder, Id(tab["id"]));
                 if (!SyncFolderMaterialization.TryPromote(missing, folderIds, localFolders, deleted, out folder)) continue;
             }
             var value = Tab(tab, byId.GetValueOrDefault(Id(tab["id"])));
-            if (Placement(tab) != TabPlacement.Pinned && folder is { } resolved) value["folderID"] = SwiftId(resolved);
+            if (Placement(tab).HoldsFolders && folder is { } resolved) value["folderID"] = SwiftId(resolved);
             result.Add(value);
         }
-        if (result.Count(t => Placement(t) == TabPlacement.Pinned) > BrowserLimits.PinnedTabs) throw Error(NativeSyncDocumentErrorCodes.TooManyPinnedTabs, space);
+        if (!TabPlacement.All.All(placement => placement.Holds(result.Count(t => Placement(t) == placement)))) throw Error(NativeSyncDocumentErrorCodes.TooManyPinnedTabs, space);
         foreach (var (tab, index) in localOnly) result.Insert(Math.Min(index, result.Count), tab);
         return result;
     }

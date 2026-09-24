@@ -38,13 +38,13 @@ public sealed partial class BrowserTabCollection {
         switch (action.Kind) {
             case TabBatchKind.File:
                 Require(action.Before is not { } anchor || !selectedIds.Contains(anchor));
-                if (action.Placement == TabPlacement.Pinned) {
-                    Require(groups.Count == 0, BrowserRuleCodes.CannotPinSplit);
-                    Require(tabs.Count(t => t.Placement == TabPlacement.Pinned && !selectedIds.Contains(t.Id)) + members.Length <= BrowserLimits.PinnedTabs,
-                        BrowserRuleCodes.PinnedCapacity);
+                if (!action.Placement.HoldsFolders) {
+                    Require(action.Placement.HoldsSplits || groups.Count == 0, BrowserRuleCodes.CannotPinSplit);
+                    Require(action.Placement.Holds(tabs.Count(t => t.Placement == action.Placement && !selectedIds.Contains(t.Id))
+                        + members.Length), BrowserRuleCodes.PinnedCapacity);
                     Require(action.Folder is null && action.BeforeFolder is null
-                        && (action.Before is not { } before || tabs.Any(t => t.Id == before && t.Placement == TabPlacement.Pinned)));
-                    foreach (var tab in requested) MoveTab(tab, TabPlacement.Pinned, null, action.Before, false, now);
+                        && (action.Before is not { } before || tabs.Any(t => t.Id == before && t.Placement == action.Placement)));
+                    foreach (var tab in requested) MoveTab(tab, action.Placement, null, action.Before, false, now);
                 } else {
                     OrderBatchMembers(requested);
                     FileTabs(requested, action.Placement, action.Folder, now, action.Before, action.BeforeFolder);
@@ -56,7 +56,7 @@ public sealed partial class BrowserTabCollection {
                 if (action.Kind == TabBatchKind.NewFolderAround) {
                     Require(action.Target is not null && !selectedIds.Contains(action.Target.Value));
                     var target = Tab(action.Target!.Value);
-                    Require(target.Placement == TabPlacement.Current && target.FolderId is null
+                    Require(!target.Placement.IsDurable && target.FolderId is null
                         && target.SplitGroupId is null && !target.Content.IsStartPage);
                     wrapped = [target.Id, .. requested];
                 }
@@ -66,12 +66,13 @@ public sealed partial class BrowserTabCollection {
             case TabBatchKind.MoveToSpace:
                 Require(groups.Count == 0, BrowserRuleCodes.CannotMoveSplitAcrossSpaces);
                 Require(destination is not null && !ReferenceEquals(this, destination));
-                Require(destination!.Tabs.Count(t => t.Placement == TabPlacement.Pinned)
-                    + members.Count(t => t.Placement == TabPlacement.Pinned) <= BrowserLimits.PinnedTabs, BrowserRuleCodes.PinnedCapacity);
+                var receiving = destination!;
+                Require(TabPlacement.All.All(placement => placement.Holds(receiving.Tabs.Count(t => t.Placement == placement)
+                    + members.Count(t => t.Placement == placement))), BrowserRuleCodes.PinnedCapacity);
                 var follow = selected is { } active && selectedIds.Contains(active) ? active : requested[0];
                 foreach (var tab in requested)
-                    selected = TransferTo(destination, tab, selected, fallback, null, null, null, false, destinationSelection, now);
-                if (action.Follow) { destination.Tab(follow).Activate(now); destinationSelection = follow; }
+                    selected = TransferTo(receiving, tab, selected, fallback, null, null, null, false, destinationSelection, now);
+                if (action.Follow) { receiving.Tab(follow).Activate(now); destinationSelection = follow; }
                 break;
             case TabBatchKind.Split:
                 var targetId = action.Target ?? requested[0];
@@ -94,7 +95,7 @@ public sealed partial class BrowserTabCollection {
             case TabBatchKind.Close:
             case TabBatchKind.Delete:
                 bool deleting = action.Kind == TabBatchKind.Delete;
-                Require(deleting || members.All(t => t.Placement == TabPlacement.Current), BrowserRuleCodes.CurrentTabsOnly);
+                Require(deleting || members.All(t => !t.Placement.IsDurable), BrowserRuleCodes.CurrentTabsOnly);
                 var previous = selected;
                 selected = DismissTabs(requested, selected, fallback, now, deleting, deleting, deleting);
                 if (deleting && previous is { } removed && selectedIds.Contains(removed))
@@ -132,7 +133,7 @@ public sealed partial class BrowserTabCollection {
     private void FileBatchRoots(TabBatchSelection request, TabBatchAction action, DateTimeOffset now) {
         var folderIds = request.Folders.Select(f => f.Id).ToHashSet();
         var tabIds = request.Tabs.Select(t => t.Id).ToHashSet();
-        if (action.Placement == TabPlacement.Pinned || action.Folder is { } parent && folderIds.Contains(parent)
+        if (!action.Placement.HoldsFolders || action.Folder is { } parent && folderIds.Contains(parent)
             || action.Before is { } before && tabIds.Contains(before)
             || action.BeforeFolder is { } beforeFolder && folderIds.Contains(beforeFolder))
             throw new BrowserRuleException(BrowserRuleCodes.InvalidDestination);

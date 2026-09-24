@@ -16,7 +16,7 @@ public static class SyncDeletionPolicy {
         if (archiveReason is ArchiveReasons.Deleted or ArchiveReasons.DeletedOnAnotherDevice)
             return SyncDeletionReasons.ExplicitDelete;
         if (archiveReason is not null)
-            return placement != TabPlacement.Current ? null : archiveReason == ArchiveReasons.AutoCleanup
+            return placement?.IsDurable != false ? null : archiveReason == ArchiveReasons.AutoCleanup
                 ? SyncDeletionReasons.Retention : SyncDeletionReasons.Superseded;
         return !owningSpaceRemains && fallback == SyncDeletionReasons.ExplicitDelete
             ? SyncDeletionReasons.ExplicitDelete : null;

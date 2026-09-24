@@ -107,7 +107,7 @@ public static class NativeSyncEvaluator {
     }
 
     private static TabPlacement Placement(JsonNode payload)
-        => TabPlacementCodes.Parse(Text(payload, "placement")) ?? throw new BrowserRuleException(BrowserRuleCodes.InvalidSyncPlacement);
+        => TabPlacement.Named(Text(payload, "placement")) ?? throw new BrowserRuleException(BrowserRuleCodes.InvalidSyncPlacement);
 
     private static void Copy(JsonObject to, JsonObject from, params string[] fields) {
         foreach (string field in fields) {
@@ -143,11 +143,12 @@ public static class NativeSyncEvaluator {
                 if (SyncConflictPolicy.Latest(Date(a, "positionModifiedAt"), Date(b, "positionModifiedAt")) is { } position) {
                     var source = position == 0 ? a : b;
                     Copy(payload, source, "placement", "folderID", "orderToken", "positionModifiedAt", "splitGroupID");
-                    if (Placement(source) == TabPlacement.Pinned) { payload.Remove("folderID"); payload.Remove("splitGroupID"); }
+                    if (!Placement(source).HoldsFolders) payload.Remove("folderID");
+                    if (!Placement(source).HoldsSplits) payload.Remove("splitGroupID");
                 } else {
-                    var placement = SyncConflictPolicy.RetainedPlacement(Placement(a), Placement(b));
-                    payload["placement"] = TabPlacementCodes.Name(placement);
-                    if (placement == TabPlacement.Pinned) payload.Remove("folderID");
+                    var placement = Placement(a).Retained(Placement(b));
+                    payload["placement"] = placement.Name;
+                    if (!placement.HoldsFolders) payload.Remove("folderID");
                     else payload["folderID"] ??= (a["folderID"] ?? b["folderID"])?.DeepClone();
                     payload["splitGroupID"] ??= (a["splitGroupID"] ?? b["splitGroupID"])?.DeepClone();
                 }

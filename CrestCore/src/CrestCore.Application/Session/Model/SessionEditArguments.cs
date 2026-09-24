@@ -89,7 +89,7 @@ internal sealed record SessionEditArguments {
             After = Id("after"),
             GroupId = Id("groupId"),
             Placement = Text("placement") is { } placement
-                ? TabPlacementCodes.Parse(placement) ?? throw new ProtocolException(ProtocolErrorCodes.InvalidPlacement) : null,
+                ? TabPlacement.Named(placement) ?? throw new ProtocolException(ProtocolErrorCodes.InvalidPlacement) : null,
             Action = Text("action") is { } action ? SavedLocationActionCodes.Parse(action) : null,
             Index = Read("index")?.GetValue<int>(),
             Offset = Read("offset")?.GetValue<int>(),

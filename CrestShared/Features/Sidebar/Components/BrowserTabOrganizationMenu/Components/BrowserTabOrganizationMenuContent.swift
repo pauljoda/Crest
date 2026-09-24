@@ -82,7 +82,7 @@ struct BrowserTabOrganizationMenuContent: View {
             }
         }
 
-        if tab.placement == .current, !tab.isStartPage {
+        if !tab.placement.isDurable, !tab.isStartPage {
             Menu("Add to Current Tabs Folder", systemImage: "folder.badge.plus") {
                 Group {
                     Button("New Folder", systemImage: "folder.badge.plus") {
@@ -165,7 +165,7 @@ struct BrowserTabOrganizationMenuContent: View {
             .crestMenuActionLabelStyle()
         }
 
-        if tab.placement != .current {
+        if tab.placement.isDurable {
             Button("Move to Current Tabs", systemImage: "rectangle.stack") {
                 performIfCurrent { liveTab in
                     browser.moveTab(
@@ -263,10 +263,10 @@ struct BrowserTabOrganizationMenuContent: View {
 
         }
 
-        if let unload, isLoaded, tab.nativeContent == nil || tab.placement != .current {
+        if let unload, isLoaded, tab.nativeContent == nil || tab.placement.isDurable {
             Button(
-                tab.placement == .current ? "Unload Tab" : "Close Tab",
-                systemImage: tab.placement == .current ? "minus" : "xmark"
+                !tab.placement.isDurable ? "Unload Tab" : "Close Tab",
+                systemImage: !tab.placement.isDurable ? "minus" : "xmark"
             ) {
                 performIfCurrent { liveTab in
                     unload(liveTab.id)
@@ -284,12 +284,12 @@ struct BrowserTabOrganizationMenuContent: View {
         }
 
         Button(
-            tab.placement == .current ? "Close Tab" : "Delete Tab",
-            systemImage: tab.placement == .current ? "xmark" : "trash",
+            !tab.placement.isDurable ? "Close Tab" : "Delete Tab",
+            systemImage: !tab.placement.isDurable ? "xmark" : "trash",
             role: .destructive
         ) {
             performIfCurrent { liveTab in
-                if tab.placement == .current {
+                if !tab.placement.isDurable {
                     organizationAction.close(
                         liveAssignment(for: liveTab),
                         expectedPlacement: tab.placement

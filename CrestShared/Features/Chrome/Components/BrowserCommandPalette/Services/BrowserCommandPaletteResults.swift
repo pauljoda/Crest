@@ -314,7 +314,7 @@ extension BrowserCommandPaletteResults {
         space: BrowserSpace?
     ) -> [BrowserCommandPaletteResult] {
         guard !query.isEmpty, let space else { return [] }
-        let tabs = space.tabs.filter { $0.placement != .current }
+        let tabs = space.tabs.filter { $0.placement.isDurable }
         let tree = space.folderTree
         let tabsByFolder = Dictionary(
             grouping: tabs.compactMap { tab in
@@ -433,7 +433,7 @@ extension BrowserCommandPaletteResults {
                 tabResult($0, in: space, section: .tabs)
             }
         }
-        let candidates = open.filter { $0.placement == .current }
+        let candidates = open.filter { !$0.placement.isDurable }
         return rank(
             candidates,
             limit: BrowserCommandPaletteResultLimits.matchedTabs

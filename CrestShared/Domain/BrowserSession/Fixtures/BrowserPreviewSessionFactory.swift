@@ -111,7 +111,7 @@ extension BrowserSession {
             return session
         }
         for tabIndex in session.spaces[spaceIndex].tabs.indices {
-            if session.spaces[spaceIndex].tabs[tabIndex].placement == .current {
+            if !session.spaces[spaceIndex].tabs[tabIndex].placement.isDurable {
                 session.spaces[spaceIndex].tabs[tabIndex].lastActivatedAt = now.addingTimeInterval(-13 * 60 * 60)
             }
         }

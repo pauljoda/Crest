@@ -837,12 +837,6 @@ enum SystemPasswordWriteThroughAvailability: Int, CaseIterable, Sendable {
     case managedBrowserCapabilityRequired = 4
 }
 
-enum TabPlacement: Int, CaseIterable, Sendable {
-    case current = 0
-    case pinned = 1
-    case saved = 2
-}
-
 enum TearOffRefusal: Int, CaseIterable, Sendable {
     case spaceChanged = 0
     case spaceLocked = 1
@@ -4225,6 +4219,97 @@ struct SitePermissionDecision: Hashable, Sendable {
     }
 
     static func == (lhs: SitePermissionDecision, rhs: SitePermissionDecision) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+}
+
+/// The members of the core's `TabPlacement`. A member's wire tag is its index in `all`.
+struct TabPlacement: Hashable, Sendable {
+    static let pinnedCapacity = 12
+
+    let tag: Int
+    let name: String
+    let title: LocalizedStringResource
+    let symbol: String
+    let rank: Int
+    let fallbackRank: Int
+    let isDurable: Bool
+    let holdsFolders: Bool
+    let holdsSplits: Bool
+    let capacity: Int?
+
+    private init(
+        tag: Int,
+        name: String,
+        title: LocalizedStringResource,
+        symbol: String,
+        rank: Int,
+        fallbackRank: Int,
+        isDurable: Bool,
+        holdsFolders: Bool,
+        holdsSplits: Bool,
+        capacity: Int?
+    ) {
+        self.tag = tag
+        self.name = name
+        self.title = title
+        self.symbol = symbol
+        self.rank = rank
+        self.fallbackRank = fallbackRank
+        self.isDurable = isDurable
+        self.holdsFolders = holdsFolders
+        self.holdsSplits = holdsSplits
+        self.capacity = capacity
+    }
+
+    static let pinned = TabPlacement(
+        tag: 0,
+        name: "pinned",
+        title: LocalizedStringResource("Pinned"),
+        symbol: "pin.fill",
+        rank: 0,
+        fallbackRank: 1,
+        isDurable: true,
+        holdsFolders: false,
+        holdsSplits: false,
+        capacity: 12
+    )
+    static let saved = TabPlacement(
+        tag: 1,
+        name: "saved",
+        title: LocalizedStringResource("Saved"),
+        symbol: "bookmark.fill",
+        rank: 1,
+        fallbackRank: 2,
+        isDurable: true,
+        holdsFolders: true,
+        holdsSplits: true,
+        capacity: nil
+    )
+    static let current = TabPlacement(
+        tag: 2,
+        name: "current",
+        title: LocalizedStringResource("Open"),
+        symbol: "rectangle.stack.fill",
+        rank: 2,
+        fallbackRank: 0,
+        isDurable: false,
+        holdsFolders: true,
+        holdsSplits: true,
+        capacity: nil
+    )
+
+    static let all: [TabPlacement] = [pinned, saved, current]
+
+    static func named(_ name: String?) -> TabPlacement? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: TabPlacement, rhs: TabPlacement) -> Bool {
         lhs.tag == rhs.tag
     }
 

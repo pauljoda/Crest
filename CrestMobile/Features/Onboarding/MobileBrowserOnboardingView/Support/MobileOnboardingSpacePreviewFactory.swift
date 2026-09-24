@@ -21,7 +21,7 @@ enum MobileOnboardingSpacePreviewFactory {
         }
         if space.savedTabs.isEmpty {
             let savedIndex =
-                tabs.firstIndex { $0.placement == .current }
+                tabs.firstIndex { !$0.placement.isDurable }
                 ?? tabs.endIndex
             tabs.insert(
                 contentsOf: MobileOnboardingPreviewFixtures.sampleSavedTabs,

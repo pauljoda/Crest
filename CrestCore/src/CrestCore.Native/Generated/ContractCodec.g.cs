@@ -14,7 +14,7 @@ namespace CrestCore.Native;
 public static class ContractCodec {
     /// <summary>SHA-256 of the canonical contract schema.</summary>
     public static ReadOnlySpan<byte> Fingerprint => [
-        0x0c, 0x1f, 0xac, 0x2b, 0x4f, 0xae, 0x20, 0x67, 0x8c, 0x17, 0x05, 0x95, 0x1a, 0x4a, 0x6e, 0x36, 0xf8, 0x04, 0xfa, 0xf5, 0x7d, 0x3a, 0x76, 0x16, 0xf7, 0xf6, 0xbd, 0x46, 0x2b, 0xec, 0x6f, 0xfe
+        0xeb, 0x79, 0xc7, 0x05, 0x4e, 0xa1, 0x29, 0x95, 0x62, 0x74, 0x44, 0x70, 0x55, 0x4e, 0x9c, 0xbe, 0xe8, 0x2f, 0xab, 0x1e, 0x5b, 0x3f, 0x03, 0x7b, 0x27, 0x00, 0xe8, 0x38, 0x6b, 0x5b, 0x4c, 0x20
     ];
 
     public static Intent ReadIntent(WireReader reader) {
@@ -2683,16 +2683,6 @@ public static class ContractCodec {
         writer.WriteEnum((int)value);
     }
 
-    public static TabPlacement ReadTabPlacement(WireReader reader) {
-        ArgumentNullException.ThrowIfNull(reader);
-        return (TabPlacement)reader.ReadEnum(3);
-    }
-
-    public static void WriteTabPlacement(WireWriter writer, TabPlacement value) {
-        ArgumentNullException.ThrowIfNull(writer);
-        writer.WriteEnum((int)value);
-    }
-
     public static TearOffRefusal ReadTearOffRefusal(WireReader reader) {
         ArgumentNullException.ThrowIfNull(reader);
         return (TearOffRefusal)reader.ReadEnum(4);
@@ -2921,6 +2911,17 @@ public static class ContractCodec {
         ArgumentNullException.ThrowIfNull(writer);
         ArgumentNullException.ThrowIfNull(value);
         writer.WriteEnum(TagOf(SitePermissionDecision.All, value));
+    }
+
+    public static TabPlacement ReadTabPlacement(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return TabPlacement.All[reader.ReadEnum(TabPlacement.All.Count)];
+    }
+
+    public static void WriteTabPlacement(WireWriter writer, TabPlacement value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteEnum(TagOf(TabPlacement.All, value));
     }
 
     /// <summary>A fixed set member's wire tag: its index in the set's <c>All</c>.</summary>

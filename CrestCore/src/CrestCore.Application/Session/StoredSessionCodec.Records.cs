@@ -36,7 +36,7 @@ internal static partial class StoredSessionCodec {
             native is null ? Text(value[Key.SavedUrl]) : null, Text(value[Key.Symbol]) ?? shown.Symbol,
             Text(value[Key.FaviconUrl]), value[Key.IconAccent] is JsonObject accent ? DecodeIconAccent(accent) : null,
             TabIconModeCodes.Parse(Text(value[Key.StoredIconMode])),
-            TabPlacementCodes.Parse(Text(value[Key.Placement])) ?? TabPlacement.Saved,
+            TabPlacement.Named(Text(value[Key.Placement])) ?? TabPlacement.Saved,
             OptionalIdentity(value[Key.FolderId]), OptionalIdentity(value[Key.SplitGroupId]),
             Date(value[Key.LastActivatedAt]), OptionalDate(value[Key.PositionModifiedAt]),
             Text(value[Key.CustomTitle]), OptionalDate(value[Key.TitleModifiedAt]),
@@ -56,7 +56,7 @@ internal static partial class StoredSessionCodec {
         Put(value, Key.FaviconUrl, tab.FaviconUrl);
         if (tab.IconAccent is { } accent) value[Key.IconAccent] = Encode(accent);
         if (tab.StoredIconMode is { } mode) value[Key.StoredIconMode] = TabIconModeCodes.Name(mode);
-        value[Key.Placement] = TabPlacementCodes.Name(tab.Placement);
+        value[Key.Placement] = tab.Placement.Name;
         if (tab.FolderId is { } folder) value[Key.FolderId] = WrappedIdentity(folder);
         if (tab.SplitGroupId is { } group) value[Key.SplitGroupId] = WrappedIdentity(group);
         value[Key.LastActivatedAt] = Seconds(tab.LastActivatedAt);
@@ -127,7 +127,7 @@ internal static partial class StoredSessionCodec {
     internal static FolderState DecodeFolder(JsonNode? node) {
         var value = Object(node);
         return new(Identity(value[Key.Id]),
-            TabPlacementCodes.Parse(Text(value[Key.Location])) == TabPlacement.Current ? TabPlacement.Current : TabPlacement.Saved,
+            TabPlacement.Named(Text(value[Key.Location])) == TabPlacement.Current ? TabPlacement.Current : TabPlacement.Saved,
             Text(value[Key.Title]) ?? UntitledFolder, Text(value[Key.Symbol]),
             value[Key.Color] is JsonObject color ? DecodeColor(color) : null, OptionalIdentity(value[Key.ParentId]),
             Flag(value[Key.IsCollapsed]) ?? false, OptionalDate(value[Key.CollapseModifiedAt]),
@@ -137,7 +137,7 @@ internal static partial class StoredSessionCodec {
     internal static JsonObject Encode(FolderState folder) {
         var value = new JsonObject {
             [Key.Id] = WrappedIdentity(folder.Id),
-            [Key.Location] = TabPlacementCodes.Name(folder.Location),
+            [Key.Location] = folder.Location.Name,
             [Key.Title] = folder.Title
         };
         Put(value, Key.Symbol, folder.Symbol);

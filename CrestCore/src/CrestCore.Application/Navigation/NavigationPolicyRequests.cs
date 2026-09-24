@@ -42,7 +42,7 @@ internal static class NavigationPolicyRequests {
             bool userActivated = Flag(request, "userActivatedLink"), topLevel = Flag(request, "topLevel");
             bool shift = Flag(request, "shiftModified"), focuses = Flag(request, "focusesNewTabs"),
                 hasContext = Flag(request, "hasContext");
-            var placement = TabPlacementCodes.Parse(Element(request, "placement").GetString());
+            var placement = TabPlacement.Named(Element(request, "placement").GetString());
             var savedUrl = Element(request, "savedUrl").GetString();
             return new(url, userActivated, topLevel, peek, newTab, shift, focuses, hasContext, placement, savedUrl,
                 Flag(request, "automaticallyOpensPeek"));

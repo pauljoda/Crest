@@ -86,3 +86,5 @@ extension ShortcutSpecialKey: CoreNamedValue {}
 extension SitePermission: CoreNamedValue {}
 
 extension SitePermissionDecision: CoreNamedValue {}
+
+extension TabPlacement: CoreNamedValue {}

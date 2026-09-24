@@ -154,7 +154,7 @@ struct BrowserCloudRecordCodec: Sendable {
             3
         case .folder(let folder) where folder.location == .current:
             2
-        case .tab(let tab) where tab.placement == .current && tab.folderID != nil:
+        case .tab(let tab) where !tab.placement.isDurable && tab.folderID != nil:
             2
         default:
             1

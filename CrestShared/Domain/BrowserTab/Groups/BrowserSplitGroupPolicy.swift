@@ -23,10 +23,7 @@ enum BrowserSplitGroupPolicy {
     static let minimumRenderableMembers = 2
 
     /// Whether a tab in this placement may carry a group at all.
-    ///
-    /// Pinned tabs are a fixed grid of site shortcuts rather than an ordered
-    /// browsing run, so they never take part in a split.
     static func allowsMembership(placement: TabPlacement) -> Bool {
-        placement != .pinned
+        placement.holdsSplits
     }
 }

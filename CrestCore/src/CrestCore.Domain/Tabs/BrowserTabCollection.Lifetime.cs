@@ -50,7 +50,7 @@ public sealed partial class BrowserTabCollection {
 
     public Guid? CloseDurable(Guid id, Guid? selected, Guid? fallback, bool returnToSavedUrl) {
         var tab = Tab(id);
-        if (tab.Placement == TabPlacement.Current) throw new BrowserRuleException(BrowserRuleCodes.NotDurableTab);
+        if (!tab.Placement.IsDurable) throw new BrowserRuleException(BrowserRuleCodes.NotDurableTab);
         if (returnToSavedUrl) tab.ReturnToSavedUrl();
         return selected == id ? fallback is { } other && other != id && tabs.Any(t => t.Id == other)
             ? other : null : selected;
@@ -60,7 +60,7 @@ public sealed partial class BrowserTabCollection {
     /// shows and any tab in `kept` (tabs other windows show) survive.
     public Guid? CleanupCurrentTabs(Guid? selected, TimeSpan lifetime, DateTimeOffset now,
         IReadOnlyCollection<Guid>? kept = null) {
-        var expired = tabs.Where(t => t.Placement == TabPlacement.Current && !t.Content.IsStartPage
+        var expired = tabs.Where(t => !t.Placement.IsDurable && !t.Content.IsStartPage
             && t.Id != selected && kept?.Contains(t.Id) != true && now - t.LastActivatedAt > lifetime).ToArray();
         var ids = expired.Select(t => t.Id).ToHashSet();
         var nextFolders = new FolderTree(folders).PreserveOrder(ids, tabs);
@@ -71,9 +71,7 @@ public sealed partial class BrowserTabCollection {
         // Maintenance preserves an empty selection and does not dissolve a
         // surviving split. User-driven dismissal has a different contract.
         if (selected is not null && !tabs.Any(t => t.Id == selected))
-            selected = tabs.FirstOrDefault(t => t.Placement == TabPlacement.Current)?.Id
-                ?? tabs.FirstOrDefault(t => t.Placement == TabPlacement.Pinned)?.Id
-                ?? tabs.FirstOrDefault(t => t.Placement == TabPlacement.Saved)?.Id;
+            selected = FallbackSelection();
         return selected;
     }
 

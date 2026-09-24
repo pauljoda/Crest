@@ -23,7 +23,7 @@ extension BrowserSidebarPageAccess {
             unloadPage: { tabID, assignment in
                 guard let tab = browser.space(matching: assignment)?.tabs.first(where: { $0.id == tabID })
                 else { return }
-                if tab.placement == .current {
+                if !tab.placement.isDurable {
                     pages.unloadPage(for: tabID, matching: assignment)
                 } else if BrowserDurableTabCloseAction(
                     browser: browser, spaceAccess: spaceAccess,

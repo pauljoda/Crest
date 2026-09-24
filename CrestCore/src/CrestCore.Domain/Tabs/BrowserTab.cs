@@ -24,9 +24,9 @@ public sealed class BrowserTab {
 
     /// The address a saved or pinned tab belongs to. A current tab has none:
     /// it is wherever browsing took it, which is why it cannot be "away".
-    public string? SavedSiteUrl => SavedUrl ?? (Placement == TabPlacement.Current ? null : Url);
+    public string? SavedSiteUrl => SavedUrl ?? (Placement.IsDurable ? Url : null);
 
-    public bool SupportsSavedLocationEditing => Placement != TabPlacement.Current && SavedSiteUrl is not null;
+    public bool SupportsSavedLocationEditing => Placement.IsDurable && SavedSiteUrl is not null;
 
     public bool IsAwayFromSavedLocation
         => SupportsSavedLocationEditing && Url is not null && !HistoryPolicy.SamePage(Url, SavedSiteUrl);
@@ -132,7 +132,7 @@ public sealed class BrowserTab {
 
     public void Place(TabPlacement placement, Guid? folder, DateTimeOffset? now = null, bool preservesSplit = false) {
         if (Placement == placement && FolderId == folder) return;
-        var savedUrl = placement == TabPlacement.Current ? null : SavedUrl ?? Url;
+        var savedUrl = placement.IsDurable ? SavedUrl ?? Url : null;
         State = State with {
             SavedUrl = savedUrl,
             Placement = placement,

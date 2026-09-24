@@ -7,10 +7,10 @@ namespace CrestCore.Tests;
 
 public sealed class SplitContractsTests {
     private static readonly DateTimeOffset Now = DateTimeOffset.Parse("2026-09-19T12:00:00Z");
-    private static TabState Tab(string title, TabPlacement placement = TabPlacement.Current, Guid? split = null) =>
+    private static TabState Tab(string title, TabPlacement? placement = null, Guid? split = null) =>
         new(Guid.NewGuid(), title, "https://example.com/" + title, null,
-            placement == TabPlacement.Current ? null : "https://saved.example/", "globe", null, null, null, placement, null, split,
-            Now, null, "Custom " + title, null, true);
+            placement?.IsDurable == true ? "https://saved.example/" : null, "globe", null, null, null, placement ?? TabPlacement.Current,
+            null, split, Now, null, "Custom " + title, null, true);
     private static BrowserTabCollection Space(params TabState[] tabs) => BrowserTabCollection.Restore(tabs, [], []);
     private static BrowserTabCollection Restored(BrowserTabCollection space) =>
         BrowserTabCollection.Restore(space.TabStates, space.Folders, space.SplitGroups);

@@ -13,7 +13,7 @@ extension BrowserStore {
         )
         guard let space = space(matching: spaceAssignment),
             let tab = space.tabs.first(where: { $0.id == assignment.tabID }),
-            tab.placement != .current
+            tab.placement.isDurable
         else { return false }
         // The core returns the window to the tab it showed before, skipping the
         // closed tab's split, whose other members would present it again.

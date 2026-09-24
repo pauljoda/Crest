@@ -24,11 +24,11 @@ public sealed partial class BrowserTabCollection {
     });
 
     public BrowserTab DuplicateTab(Guid sourceId, IIdSource ids, DateTimeOffset now,
-        TabPlacement placement = TabPlacement.Current, int? requestedIndex = null) {
+        TabPlacement? placement = null, int? requestedIndex = null) {
         var source = Tab(sourceId);
         if (tabs.Count >= MaximumTabs) throw new BrowserRuleException(BrowserRuleCodes.TabLimit);
         var copy = CopyTab(source, ids.Next(), now);
-        copy.Place(placement, null, now);
+        copy.Place(placement ?? TabPlacement.Current, null, now);
         InsertTab(copy, requestedIndex, duplicate: true);
         return copy;
     }
@@ -43,8 +43,8 @@ public sealed partial class BrowserTabCollection {
         bool sameGroup = targetMembers.Any(t => t.Id == sourceId);
         if (sameGroup && memberIndex is null) throw new BrowserRuleException(BrowserRuleCodes.AlreadyInSplit);
         if (!sameGroup && targetMembers.Count >= MaximumSplitMembers) throw new BrowserRuleException(BrowserRuleCodes.SplitLimit);
-        bool copyTarget = target.Placement != TabPlacement.Current && !sameGroup;
-        bool copySource = source.Placement != TabPlacement.Current && !sameGroup;
+        bool copyTarget = target.Placement.IsDurable && !sameGroup;
+        bool copySource = source.Placement.IsDurable && !sameGroup;
         int copyCount = (copyTarget ? targetMembers.Count : 0) + (copySource ? 1 : 0);
         if (tabs.Count + copyCount > MaximumTabs) throw new BrowserRuleException(BrowserRuleCodes.TabLimit);
 
@@ -71,7 +71,7 @@ public sealed partial class BrowserTabCollection {
         var remaining = tabs.Where(t => !moving.Contains(t.Id)).ToList();
         int insertion;
         if (copyTarget) {
-            insertion = remaining.FindIndex(t => t.Placement == TabPlacement.Current);
+            insertion = remaining.FindIndex(t => !t.Placement.IsDurable);
             if (insertion < 0) insertion = remaining.Count;
         } else {
             int first = tabs.IndexOf(targetMembers[0]);

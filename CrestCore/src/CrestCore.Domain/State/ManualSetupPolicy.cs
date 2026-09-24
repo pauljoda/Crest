@@ -62,7 +62,7 @@ public static class ManualSetupPolicy {
         if (placement == TabPlacement.Pinned && (long)existingPinned + otherAddedPinned >= WorkspaceImportPolicy.MaximumPinnedTabs)
             throw new BrowserRuleException(BrowserRuleCodes.PinnedLimitReached);
         return new(Title(url, title), placement == TabPlacement.Pinned ? PinnedTabSymbol : TabSymbol,
-            placement != TabPlacement.Current);
+            placement.IsDurable);
     }
 
     /// The typed title when there is one, otherwise the site's host without a

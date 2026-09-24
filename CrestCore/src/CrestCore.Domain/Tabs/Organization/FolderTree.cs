@@ -31,7 +31,7 @@ public sealed class FolderTree(IReadOnlyList<FolderState> folders) {
         if (folders.Count > MaximumCount || folders.Select(f => f.Id).Distinct().Count() != folders.Count)
             throw new BrowserRuleException(BrowserRuleCodes.InvalidFolderTree);
         foreach (var folder in folders) {
-            if (folder.Location == TabPlacement.Pinned || folder.ParentId is { } parent && Folder(parent).Location != folder.Location)
+            if (!folder.Location.HoldsFolders || folder.ParentId is { } parent && Folder(parent).Location != folder.Location)
                 throw new BrowserRuleException(BrowserRuleCodes.InvalidFolderTree);
             _ = Depth(folder.Id);
         }

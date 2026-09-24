@@ -79,17 +79,18 @@ public static class NativeSessionMaintenance {
             var folderIds = new RuntimeIdentityRegistry(ids);
             var folders = FolderTree.RepairPreorder(space.Folders.Select(folder => folder with { Id = folderIds.Claim(folder.Id) }).ToArray());
             var locations = folders.ToDictionary(folder => folder.Id, folder => folder.Location);
-            int pinned = 0;
+            var counts = new Dictionary<TabPlacement, int>();
             var tabs = space.Tabs.Select((tab, tabIndex) => {
                 var id = tabIds.Claim(tab.Id);
                 assets.Add(new(spaceIndex, tabIndex, space.Id, tab.Id));
-                var placement = tab.Placement == TabPlacement.Pinned && ++pinned > BrowserLimits.PinnedTabs ? TabPlacement.Saved : tab.Placement;
-                var folder = placement != TabPlacement.Pinned && tab.FolderId is { } folderId
+                counts[tab.Placement] = counts.GetValueOrDefault(tab.Placement) + 1;
+                var placement = tab.Placement.Holds(counts[tab.Placement]) ? tab.Placement : TabPlacement.Saved;
+                var folder = placement.HoldsFolders && tab.FolderId is { } folderId
                     && locations.TryGetValue(folderId, out var location) && location == placement ? tab.FolderId : null;
                 return Normalized(tab with {
                     Id = id,
                     Placement = placement,
-                    SavedUrl = placement == TabPlacement.Current ? null : tab.SavedUrl ?? tab.Url,
+                    SavedUrl = placement.IsDurable ? tab.SavedUrl ?? tab.Url : null,
                     FolderId = folder
                 });
             }).ToList();

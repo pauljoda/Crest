@@ -7,9 +7,7 @@ struct BrowserManualSetupPlacementMenuLabel: View {
     var body: some View {
         HStack(spacing: BrowserManualSetupPlacementMenuMetrics.itemSpacing) {
             Image(systemName: symbol)
-            Text(
-                BrowserManualSetupPlacementPresentation.title(for: placement)
-            )
+            Text(placement.title)
             Image(systemName: "chevron.down")
                 .font(CrestTypography.compactMetadata.weight(.bold))
         }

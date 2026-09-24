@@ -11,7 +11,7 @@ public static class TabDismissalPolicy {
     public static TabDismissalAction Decide(TabPlacement? placement, bool isStartPage, int tabCount) {
         if (tabCount < 0) throw new BrowserRuleException(BrowserRuleCodes.InvalidTabCount);
         if (placement is null) return TabDismissalAction.CloseWindow;
-        if (placement is TabPlacement.Pinned or TabPlacement.Saved) return TabDismissalAction.UnloadPage;
+        if (placement.IsDurable) return TabDismissalAction.UnloadPage;
         return isStartPage && tabCount < 2 ? TabDismissalAction.CloseWindow : TabDismissalAction.CloseTab;
     }
 

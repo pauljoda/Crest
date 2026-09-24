@@ -7,7 +7,7 @@ import Foundation
 enum CoreCodec {
     /// SHA-256 of the canonical contract schema. The core refuses any other.
     static let fingerprint: [UInt8] = [
-        0x0c, 0x1f, 0xac, 0x2b, 0x4f, 0xae, 0x20, 0x67, 0x8c, 0x17, 0x05, 0x95, 0x1a, 0x4a, 0x6e, 0x36, 0xf8, 0x04, 0xfa, 0xf5, 0x7d, 0x3a, 0x76, 0x16, 0xf7, 0xf6, 0xbd, 0x46, 0x2b, 0xec, 0x6f, 0xfe
+        0xeb, 0x79, 0xc7, 0x05, 0x4e, 0xa1, 0x29, 0x95, 0x62, 0x74, 0x44, 0x70, 0x55, 0x4e, 0x9c, 0xbe, 0xe8, 0x2f, 0xab, 0x1e, 0x5b, 0x3f, 0x03, 0x7b, 0x27, 0x00, 0xe8, 0x38, 0x6b, 0x5b, 0x4c, 0x20
     ]
 
     static func decodeIntent(from reader: inout WireReader) throws(WireError) -> any Intent {
@@ -2992,20 +2992,6 @@ extension SystemPasswordWriteThroughAvailability {
     }
 }
 
-extension TabPlacement {
-    init(from reader: inout WireReader) throws(WireError) {
-        let rawValue = try reader.readEnum()
-        guard let value = TabPlacement(rawValue: rawValue) else {
-            throw WireError.malformed("Unknown TabPlacement \(rawValue)")
-        }
-        self = value
-    }
-
-    func encode(into writer: inout WireWriter) {
-        writer.writeEnum(rawValue)
-    }
-}
-
 extension TearOffRefusal {
     init(from reader: inout WireReader) throws(WireError) {
         let rawValue = try reader.readEnum()
@@ -3291,6 +3277,20 @@ extension SitePermissionDecision {
         let tag = try reader.readEnum()
         guard Self.all.indices.contains(tag) else {
             throw WireError.malformed("Unknown SitePermissionDecision \(tag)")
+        }
+        self = Self.all[tag]
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeEnum(tag)
+    }
+}
+
+extension TabPlacement {
+    init(from reader: inout WireReader) throws(WireError) {
+        let tag = try reader.readEnum()
+        guard Self.all.indices.contains(tag) else {
+            throw WireError.malformed("Unknown TabPlacement \(tag)")
         }
         self = Self.all[tag]
     }

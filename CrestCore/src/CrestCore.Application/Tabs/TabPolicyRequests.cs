@@ -51,7 +51,7 @@ internal static class TabPolicyRequests {
         public static Dismissal Decode(JsonElement request) {
             Members(request, "placement", "isStartPage", "tabCount");
             var placement = Optional(request, "placement") is null ? (TabPlacement?)null
-                : TabPlacementCodes.Parse(Protocol.Text(request, "placement")) ?? throw new ProtocolException(ProtocolErrorCodes.InvalidPlacement);
+                : TabPlacement.Named(Protocol.Text(request, "placement")) ?? throw new ProtocolException(ProtocolErrorCodes.InvalidPlacement);
             bool isStartPage = OptionalFlag(request, "isStartPage") ?? false;
             return new(placement, isStartPage, Integer(request, "tabCount"));
         }

@@ -86,16 +86,12 @@ private struct BrowserManualSetupPlacementPicker: View {
                 .font(.subheadline.weight(.medium))
                 .foregroundStyle(.secondary)
             Picker("Put new sites in", selection: $model.placement) {
-                ForEach(
-                    BrowserManualSetupPlacementPresentation.choices,
-                    id: \.self
-                ) { choice in
-                    Label(
-                        BrowserManualSetupPlacementPresentation.label(for: choice),
-                        systemImage:
-                            BrowserManualSetupPlacementPresentation
-                            .symbol(for: choice)
-                    )
+                ForEach(TabPlacement.all, id: \.self) { choice in
+                    Label {
+                        Text(choice.title)
+                    } icon: {
+                        Image(systemName: choice.symbol)
+                    }
                     .tag(choice)
                 }
             }
@@ -243,7 +239,7 @@ private struct BrowserManualSetupSuggestionRow: View {
                 }
                 .buttonStyle(.crestIcon(tint: CrestBrandTheme.accent))
                 .accessibilityLabel(
-                    "Add \(suggestion.title) to \(BrowserManualSetupPlacementPresentation.title(for: suggestion.defaultPlacement))"
+                    "Add \(suggestion.title) to \(String(localized: suggestion.defaultPlacement.title))"
                 )
                 .accessibilityIdentifier(
                     BrowserManualSetupAccessibilityID

@@ -47,9 +47,7 @@ private struct BrowserManualSetupAddedTabRow: View {
                 plan: $plan,
                 tab: tab,
                 spaceID: spaceID,
-                labelSymbol: BrowserManualSetupPlacementPresentation.symbol(
-                    for: tab.placement
-                ),
+                labelSymbol: tab.placement.symbol,
                 accessibilityLabel: Text(
                     "Tab placement for \(tab.title)"
                 ),

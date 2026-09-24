@@ -125,7 +125,7 @@ struct BrowserSidebarReorderCommit {
                 guard action.canMove(item, into: item.spaceAssignment) else { return false }
                 return browser.fileTabs(
                     [item.tabID], matching: item.spaceAssignment, into: folderID,
-                    location: placement == .current ? .current : .saved,
+                    location: !placement.isDurable ? .current : .saved,
                     before: anchorTabID(beforeID, in: item.spaceAssignment, excluding: item.tabID),
                     beforeFolderID: beforeID?.folderID,
                     detachesSplitMembers: detachesFromSplit)
@@ -180,7 +180,7 @@ struct BrowserSidebarReorderCommit {
                 guard placement != .pinned else { return false }
                 return browser.moveFolder(
                     folder.id, matching: item.spaceAssignment,
-                    to: placement == .current ? .current : .saved, into: parentID,
+                    to: !placement.isDurable ? .current : .saved, into: parentID,
                     before: beforeID?.folderID, beforeTabID: anchorTabID(beforeID, in: item.spaceAssignment))
             }
         }
@@ -219,7 +219,7 @@ struct BrowserSidebarReorderCommit {
             }
             return browser.fileTabs(
                 space.splitGroupMembers(of: item.groupID).map(\.id), matching: item.spaceAssignment,
-                into: folderID, location: placement == .current ? .current : .saved,
+                into: folderID, location: !placement.isDurable ? .current : .saved,
                 before: anchor, beforeFolderID: beforeID?.folderID)
         }
     }

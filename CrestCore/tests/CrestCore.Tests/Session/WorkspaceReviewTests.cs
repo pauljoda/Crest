@@ -10,7 +10,8 @@ using Xunit;
 namespace CrestCore.Tests;
 
 public sealed class WorkspaceReviewTests {
-    private static ImportReviewTab Tab(string? url, TabPlacement placement = TabPlacement.Current) => new(Guid.NewGuid(), url, placement);
+    private static ImportReviewTab Tab(string? url, TabPlacement? placement = null) =>
+        new(Guid.NewGuid(), url, placement ?? TabPlacement.Current);
 
     private static ImportReviewChoice Choice(ImportReviewSpace source, Guid? destination, bool included = true,
         IReadOnlyDictionary<Guid, TabPlacement>? placements = null) =>
@@ -75,7 +76,7 @@ public sealed class WorkspaceReviewTests {
     [Fact]
     public void ImportsRejectSplitRunsThatRepairWouldRewrite() {
         Guid group = Guid.NewGuid(), folder = Guid.NewGuid();
-        SplitMember Member(TabPlacement placement = TabPlacement.Current, Guid? inFolder = null) => new(group, placement, inFolder);
+        SplitMember Member(TabPlacement? placement = null, Guid? inFolder = null) => new(group, placement ?? TabPlacement.Current, inFolder);
         WorkspaceImportPolicy.RequireSplitMembership([Member(), Member(), new(null, TabPlacement.Current, null)]);
         WorkspaceImportPolicy.RequireSplitMembership([Member()]);
         Assert.Throws<BrowserRuleException>(() => WorkspaceImportPolicy.RequireSplitMembership([Member(), Member(TabPlacement.Saved)]));

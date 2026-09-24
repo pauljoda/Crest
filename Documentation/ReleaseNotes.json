@@ -2209,6 +2209,10 @@
     "core-decides-window-selection": {
       "category": "internal",
       "message": "Commands name their window, the core decides what every window shows, and switching tabs and Spaces is faster."
+    },
+    "tab-placement-set": {
+      "category": "internal",
+      "message": "Tab placements are one set that ranks and describes its sections."
     }
   }
 }

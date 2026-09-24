@@ -50,12 +50,7 @@ struct BrowserTabPlacementPlan: Equatable, Sendable {
         var placedTab = tab
         placedTab.placement = placement
         placedTab.folderID = folderID
-        switch placement {
-        case .current:
-            placedTab.savedURL = nil
-        case .pinned, .saved:
-            placedTab.savedURL = placedTab.savedURL ?? placedTab.url
-        }
+        placedTab.savedURL = placement.isDurable ? placedTab.savedURL ?? placedTab.url : nil
         return placedTab
     }
 
@@ -64,7 +59,7 @@ struct BrowserTabPlacementPlan: Equatable, Sendable {
         for placement: TabPlacement,
         in destinationSpace: BrowserSpace
     ) -> FolderID? {
-        guard placement != .pinned,
+        guard placement.holdsFolders,
             let requestedFolderID,
             destinationSpace.folders.contains(where: {
                 $0.id == requestedFolderID && $0.location.tabPlacement == placement

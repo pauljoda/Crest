@@ -104,7 +104,7 @@ struct BrowserSidebarTabRowSurface: ViewModifier {
             .browserSidebarReorderZone(
                 .currentTab(configuration.tab.id),
                 state: sidebarInteraction.sidebarReorderState,
-                isActive: configuration.tab.placement == .current
+                isActive: !configuration.tab.placement.isDurable
                     && configuration.tab.folderID == nil
                     && configuration.tab.splitGroupID == nil
                     && configuration.isAvailableForDisplay,

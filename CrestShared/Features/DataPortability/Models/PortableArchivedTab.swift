@@ -17,7 +17,7 @@ struct PortableArchivedTab: Codable, Equatable, Sendable {
             folderIDsBySourceID: [:],
             splitGroupIDsBySourceID: [:]
         )
-        guard materializedTab.placement == .current else {
+        guard !materializedTab.placement.isDurable else {
             throw BrowserPortableArchiveError.invalidContents
         }
         return ArchivedTab(

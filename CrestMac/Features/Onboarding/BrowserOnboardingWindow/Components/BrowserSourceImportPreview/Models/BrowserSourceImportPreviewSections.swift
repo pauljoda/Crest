@@ -13,18 +13,18 @@ struct BrowserSourceImportPreviewSections {
         var unfiledSavedTabs: [BrowserTab] = []
 
         for tab in review.sourceSpace.tabs {
-            switch review.placement(for: tab) {
-            case .pinned:
+            let placement = review.placement(for: tab)
+            if !placement.isDurable {
+                currentTabs.append(tab)
+            } else if !placement.holdsFolders {
                 pinnedTabs.append(tab)
-            case .saved:
+            } else {
                 savedTabs.append(tab)
                 if let folderID = tab.folderID {
                     savedTabsByFolderID[folderID, default: []].append(tab)
                 } else {
                     unfiledSavedTabs.append(tab)
                 }
-            case .current:
-                currentTabs.append(tab)
             }
         }
 

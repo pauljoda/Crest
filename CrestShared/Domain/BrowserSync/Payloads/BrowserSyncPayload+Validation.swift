@@ -91,7 +91,7 @@ extension BrowserSyncPayload {
             // a run of sibling tabs that no single record can see, so
             // the core's split membership repair owns those during runtime repair.
             try BrowserSyncPayload.tab(archive.tab).validate()
-            guard archive.tab.placement == .current, archive.tab.folderID == nil, archive.tab.splitGroupID == nil else {
+            guard !archive.tab.placement.isDurable, archive.tab.folderID == nil, archive.tab.splitGroupID == nil else {
                 throw BrowserSyncError.invalidField("archive.tab")
             }
         }

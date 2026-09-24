@@ -15,7 +15,7 @@ public static class LinkNavigationPolicy {
         if (topLevel && hasContext && peekModified) return LinkNavigationDecision.PeekModifier;
         if (newTabModified)
             return focusesNewTabs != shiftModified ? LinkNavigationDecision.ForegroundTab : LinkNavigationDecision.BackgroundTab;
-        if (topLevel && hasContext && automaticallyOpensPeek && placement is TabPlacement.Pinned or TabPlacement.Saved
+        if (topLevel && hasContext && automaticallyOpensPeek && placement?.IsDurable == true
             && TryWebUrl(savedUrl, out var saved) && NormalizeHost(saved!) != NormalizeHost(target!))
             return LinkNavigationDecision.PeekSavedSite;
         return LinkNavigationDecision.Navigate;

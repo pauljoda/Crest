@@ -102,7 +102,7 @@ enum BrowserPerformanceSoakFixture {
                     folderID: folderID
                 )
             }
-            guard tabs.count == tabCount, tabs.contains(where: { $0.placement == .current })
+            guard tabs.count == tabCount, tabs.contains(where: { !$0.placement.isDurable })
             else { return nil }
             let history = (1...96).compactMap { historyIndex -> BrowserHistoryEntry? in
                 guard

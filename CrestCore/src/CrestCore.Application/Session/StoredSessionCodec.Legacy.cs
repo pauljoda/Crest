@@ -69,7 +69,7 @@ internal static partial class StoredSessionCodec {
             int index = Array.FindIndex(spaces, space => space.Id == spaceId);
             if (index < 0 || spaces[index].Folders.Any(folder => folder.Id == folderId)) continue;
             var space = spaces[index];
-            bool Joins(TabState tab) => members.Contains(tab.Id) && tab.Placement == TabPlacement.Current && tab.FolderId is null;
+            bool Joins(TabState tab) => members.Contains(tab.Id) && !tab.Placement.IsDurable && tab.FolderId is null;
             if (!space.Tabs.Any(Joins)) continue;
             var folder = new FolderState(folderId, TabPlacement.Current, Text(group[Key.Title]) ?? UntitledFolder,
                 LegacyFolderSymbol, LegacyTabGroupColor.Named(TolerantText(group[Key.Color])).Color,

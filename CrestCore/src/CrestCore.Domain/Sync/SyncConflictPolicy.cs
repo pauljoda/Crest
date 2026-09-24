@@ -23,13 +23,9 @@ public static class SyncConflictPolicy {
         return first > second ? 0 : 1;
     }
 
-    public static TabPlacement RetainedPlacement(TabPlacement first, TabPlacement second)
-        => first == TabPlacement.Pinned || second == TabPlacement.Pinned ? TabPlacement.Pinned
-            : first == TabPlacement.Saved || second == TabPlacement.Saved ? TabPlacement.Saved : TabPlacement.Current;
-
     public static bool ActiveTabWins(TabPlacement placement, double activated, SyncVersion tabVersion,
         string archiveReason, double archived, SyncVersion archiveVersion)
-        => placement != TabPlacement.Current || archiveReason is ArchiveReasons.Deleted or ArchiveReasons.DeletedOnAnotherDevice
+        => placement.IsDurable || archiveReason is ArchiveReasons.Deleted or ArchiveReasons.DeletedOnAnotherDevice
             || (archiveReason == ArchiveReasons.AutoCleanup ? activated > archived : tabVersion.CompareTo(archiveVersion) > 0);
 
     #endregion

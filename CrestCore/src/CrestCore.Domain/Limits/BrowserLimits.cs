@@ -1,3 +1,5 @@
+using CrestCore.Contracts;
+
 namespace CrestCore.Domain;
 
 /// The capacity limits the domain enforces, in one place. Native callers read
@@ -5,7 +7,7 @@ namespace CrestCore.Domain;
 public static class BrowserLimits {
     #region Variables
 
-    public const int PinnedTabs = 12;
+    public const int PinnedTabs = TabPlacement.PinnedCapacity;
     public const int Folders = FolderTree.MaximumCount;
     public const int FolderDepth = FolderTree.MaximumDepth;
     public const int HistoryEntries = HistoryPolicy.MaximumEntries;

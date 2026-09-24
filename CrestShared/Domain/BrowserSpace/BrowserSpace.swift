@@ -70,7 +70,7 @@ struct BrowserSpace: Codable, Equatable, Identifiable, Sendable {
     }
 
     var currentTabs: [BrowserTab] {
-        tabs.filter { $0.placement == .current }
+        tabs.filter { !$0.placement.isDurable }
     }
 
     var unfiledSavedTabs: [BrowserTab] {

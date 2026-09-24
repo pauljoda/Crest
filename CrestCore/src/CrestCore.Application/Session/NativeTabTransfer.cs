@@ -20,7 +20,7 @@ internal static class NativeTabTransfer {
             Guid? Optional(string key) => value[key] is { } id ? NativeSessionAuthority.Id(id) : null;
             return new(NativeSessionAuthority.Id(value["tabId"]),
                 value["placement"] is { } placement
-                    ? TabPlacementCodes.Parse(placement.GetValue<string>()) ?? throw new ProtocolException(ProtocolErrorCodes.InvalidPlacement)
+                    ? TabPlacement.Named(placement.GetValue<string>()) ?? throw new ProtocolException(ProtocolErrorCodes.InvalidPlacement)
                     : null,
                 Optional("folderId"), Optional("before"), value["afterSelection"]?.GetValue<bool>() == true,
                 value["select"]?.GetValue<bool>() == true);

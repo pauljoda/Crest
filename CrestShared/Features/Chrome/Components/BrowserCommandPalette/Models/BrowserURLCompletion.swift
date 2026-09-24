@@ -31,11 +31,11 @@ struct BrowserURLCompletion: Equatable, Sendable {
             for tab in space.tabs where !tab.isStartPage {
                 if let url = tab.url,
                     let candidate = Candidate(
-                        url: url, source: tab.placement == .current ? 3 : 2, date: tab.lastActivatedAt, visits: 0)
+                        url: url, source: !tab.placement.isDurable ? 3 : 2, date: tab.lastActivatedAt, visits: 0)
                 {
                     candidates.append(candidate)
                 }
-                if tab.placement != .current, let url = tab.savedSiteURL,
+                if tab.placement.isDurable, let url = tab.savedSiteURL,
                     let candidate = Candidate(url: url, source: 2, date: tab.lastActivatedAt, visits: 0)
                 {
                     candidates.append(candidate)

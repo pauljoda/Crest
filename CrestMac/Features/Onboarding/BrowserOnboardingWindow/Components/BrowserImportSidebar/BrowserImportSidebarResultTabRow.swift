@@ -18,7 +18,7 @@ struct BrowserImportSidebarResultTabRow: View {
                     .font(.caption)
                     .foregroundStyle(BrowserOnboardingPalette.match)
             }
-            if tab.placement == .current, isSelected {
+            if !tab.placement.isDurable, isSelected {
                 Image(systemName: "xmark")
                     .font(.caption)
                     .foregroundStyle(.secondary)

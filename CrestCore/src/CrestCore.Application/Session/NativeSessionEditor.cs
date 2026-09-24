@@ -121,7 +121,7 @@ internal static class NativeSessionEditor {
                         args = args with { TabId = tab.Id }; result = tab.Id;
                     }
                     var target = edited.Tab(args.RequiredTargetId);
-                    if (target.Placement != TabPlacement.Current) sourceGroup = target.SplitGroupId;
+                    if (target.Placement.IsDurable) sourceGroup = target.SplitGroupId;
                     var joined = edited.JoinSplit(args.RequiredTabId, args.RequiredTargetId, index,
                         new SuppliedIds(args.RequiredIds), now);
                     selected = joined.SelectedTab; selectSpace = true;
@@ -199,7 +199,7 @@ internal static class NativeSessionEditor {
             case SessionOperation.TabClearCurrent: {
                     var deleting = operation == SessionOperation.TabDelete;
                     var clear = operation == SessionOperation.TabClearCurrent;
-                    var ids = clear ? edited.Tabs.Where(t => t.Placement == TabPlacement.Current).Select(t => t.Id).ToArray() : [args.RequiredTabId];
+                    var ids = clear ? edited.Tabs.Where(t => !t.Placement.IsDurable).Select(t => t.Id).ToArray() : [args.RequiredTabId];
                     if (ids.Length == 0) throw new BrowserRuleException(BrowserRuleCodes.NoCurrentTabs);
                     selected = edited.DismissTabs(ids, selected, args.FallbackTabId, now, deleting,
                         ensureSelection: deleting || clear, resetArchivePlacement: deleting || args.ResetArchivePlacement == true);

@@ -20,10 +20,10 @@ public static class NativeSyncProjection {
         => new(names.Where(n => source[n] is not null).Select(n => new KeyValuePair<string, JsonNode?>(n, source[n]!.DeepClone())));
 
     internal static TabPlacement Placement(JsonNode value, string field = "placement")
-        => TabPlacementCodes.Parse(Text(value[field])) ?? throw new BrowserRuleException(BrowserRuleCodes.InvalidSyncPlacement);
+        => TabPlacement.Named(Text(value[field])) ?? throw new BrowserRuleException(BrowserRuleCodes.InvalidSyncPlacement);
 
     internal static string? SavedUrl(JsonNode tab) => Text(tab["savedURL"])
-        ?? (Placement(tab) == TabPlacement.Current ? null : Text(tab["url"]));
+        ?? (Placement(tab).IsDurable ? Text(tab["url"]) : null);
 
     internal static bool PortableTab(JsonNode tab) => SyncContentPolicy.IncludesTab(Text(tab["url"]), tab["nativeContent"] is not null, SavedUrl(tab));
 
@@ -120,7 +120,7 @@ public static class NativeSyncProjection {
     private static JsonObject Tab(JsonNode source, JsonNode spaceId, string token, bool archived) {
         var value = Fields(source, "id", "title", "url", "symbol", "lastActivatedAt", "positionModifiedAt", "customTitle", "titleModifiedAt", "keepsPageLoaded");
         value["spaceID"] = spaceId.DeepClone(); value["orderToken"] = token;
-        value["placement"] = archived ? JsonValue.Create(TabPlacementCodes.Current) : source["placement"]!.DeepClone();
+        value["placement"] = archived ? JsonValue.Create(TabPlacement.Current.Name) : source["placement"]!.DeepClone();
         if (!archived) {
             if (SavedUrl(source) is { } saved) value["savedURL"] = saved;
             foreach (string field in new[] { "folderID", "splitGroupID" })

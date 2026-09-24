@@ -20,7 +20,7 @@ enum BrowserSyncRecordReconciler {
             else { continue }
 
             let activeTabWins: Bool
-            if tab.placement != .current {
+            if tab.placement.isDurable {
                 // A routine close/archive is not proof that somebody deleted a
                 // pinned or saved tab. Only its explicit tab tombstone may
                 // remove protected content; until then the live record wins.

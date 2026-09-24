@@ -56,6 +56,21 @@ public sealed partial class BrowserTabCollection {
 
     #endregion
 
+    #region Actions - Sections
+
+    /// Where a later section starts: the first tab whose section comes after
+    /// `placement`'s, or the end.
+    private static int NextSection(List<BrowserTab> tabs, TabPlacement placement) {
+        int index = tabs.FindIndex(tab => tab.Placement.Rank > placement.Rank);
+        return index < 0 ? tabs.Count : index;
+    }
+
+    /// The tab a Space selects once its selection is gone.
+    private Guid? FallbackSelection() =>
+        TabPlacement.Fallback([.. tabs.Select(tab => tab.Placement)]) is { } index ? tabs[index].Id : null;
+
+    #endregion
+
     #region Mutators
 
     public BrowserTab Tab(Guid id) => tabs.Find(t => t.Id == id) ?? throw new BrowserRuleException(BrowserRuleCodes.UnknownTab);

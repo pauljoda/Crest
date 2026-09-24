@@ -209,7 +209,7 @@ public sealed class NativeSyncJournal {
                     else {
                         if (!spaces.Contains(Id(record["spaceID"])) || !AncestryArrived(payload, folderRecords)) continue;
                         string kind = Kind(record);
-                        var placement = kind == SyncRecordKinds.Tab ? Enum.Parse<TabPlacement>(Value(payload)["placement"]!.GetValue<string>(), true) : (TabPlacement?)null;
+                        var placement = kind == SyncRecordKinds.Tab ? TabPlacement.Named(Value(payload)["placement"]!.GetValue<string>()) ?? throw new BrowserRuleException(BrowserRuleCodes.InvalidSyncPlacement) : (TabPlacement?)null;
                         reason = SyncDeletionPolicy.Reason(kind, placement, archiveReasons.GetValueOrDefault(Id(record["id"]!["value"])),
                             desired.ContainsKey(SyncRecordKinds.Space + ":" + Id(record["spaceID"]).ToString("D")), args["deletionReason"]!.GetValue<string>());
                     }
@@ -232,8 +232,8 @@ public sealed class NativeSyncJournal {
 
     private static bool Includes(JsonNode preferences, JsonObject payload) => payload["type"]!.GetValue<string>() switch {
         SyncRecordKinds.Space => true,
-        SyncRecordKinds.Folder => preferences[Value(payload)["location"]!.GetValue<string>() == TabPlacementCodes.Current ? "currentTabs" : "savedStructure"]!.GetValue<bool>(),
-        SyncRecordKinds.Tab => preferences[Value(payload)["placement"]!.GetValue<string>() == TabPlacementCodes.Current ? "currentTabs" : "savedStructure"]!.GetValue<bool>(),
+        SyncRecordKinds.Folder => preferences[TabPlacement.Named(Value(payload)["location"]!.GetValue<string>())?.IsDurable == false ? "currentTabs" : "savedStructure"]!.GetValue<bool>(),
+        SyncRecordKinds.Tab => preferences[TabPlacement.Named(Value(payload)["placement"]!.GetValue<string>())?.IsDurable == false ? "currentTabs" : "savedStructure"]!.GetValue<bool>(),
         _ => preferences["historyAndArchive"]!.GetValue<bool>()
     };
 
@@ -249,7 +249,7 @@ public sealed class NativeSyncJournal {
         var value = Value(payload);
         JsonNode? next = payload["type"]!.GetValue<string>() switch {
             SyncRecordKinds.Folder => value["parentID"],
-            SyncRecordKinds.Tab when value["placement"]!.GetValue<string>() != TabPlacementCodes.Pinned => value["folderID"],
+            SyncRecordKinds.Tab when TabPlacement.Named(value["placement"]!.GetValue<string>())?.HoldsFolders != false => value["folderID"],
             _ => null
         };
         var seen = new HashSet<Guid>();

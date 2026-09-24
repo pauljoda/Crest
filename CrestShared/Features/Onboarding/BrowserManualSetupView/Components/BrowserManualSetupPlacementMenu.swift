@@ -12,18 +12,8 @@ struct BrowserManualSetupPlacementMenu: View {
     var body: some View {
         Menu {
             Group {
-                ForEach(
-                    BrowserManualSetupPlacementPresentation.choices,
-                    id: \.self
-                ) { placement in
-                    Button(
-                        BrowserManualSetupPlacementPresentation.title(
-                            for: placement
-                        ),
-                        systemImage: BrowserManualSetupPlacementPresentation.symbol(
-                            for: placement
-                        )
-                    ) {
+                ForEach(TabPlacement.all, id: \.self) { placement in
+                    Button(placement.title, systemImage: placement.symbol) {
                         setPlacement(placement)
                     }
                 }
@@ -45,13 +35,7 @@ struct BrowserManualSetupPlacementMenu: View {
         .crestMenuActionLabelStyle()
         .buttonStyle(.plain)
         .accessibilityLabel(accessibilityLabel)
-        .accessibilityValue(
-            Text(
-                BrowserManualSetupPlacementPresentation.label(
-                    for: tab.placement
-                )
-            )
-        )
+        .accessibilityValue(Text(tab.placement.title))
         .accessibilityIdentifier(accessibilityIdentifier)
     }
 

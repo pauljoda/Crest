@@ -68,7 +68,7 @@ struct PortableTab: Codable, Equatable, Sendable {
             title: nativeContent == nil && materializedURL == nil ? BrowserTab.startPageTitle : title,
             url: materializedURL,
             nativeContent: nativeContent,
-            savedURL: placement == .current ? nil : materializedSavedURL ?? materializedURL,
+            savedURL: !placement.isDurable ? nil : materializedSavedURL ?? materializedURL,
             symbol: nativeContent == nil && materializedURL == nil ? BrowserTab.startPageSymbol : symbol,
             faviconData: nil,
             placement: placement,

@@ -16,21 +16,16 @@ public sealed partial class BrowserTabCollection {
             throw new BrowserRuleException(BrowserRuleCodes.DuplicateTab);
         if (destination.tabs.Count >= MaximumTabs) throw new BrowserRuleException(BrowserRuleCodes.TabLimit);
         var placement = requestedPlacement ?? tab.Placement;
-        Guid? folder = placement != TabPlacement.Pinned && destination.folders.Any(f => f.Id == requestedFolder && f.Location == placement)
+        Guid? folder = placement.HoldsFolders && destination.folders.Any(f => f.Id == requestedFolder && f.Location == placement)
             ? requestedFolder : null;
-        if (placement == TabPlacement.Pinned && destination.tabs.Count(t => t.Placement == placement) >= BrowserLimits.PinnedTabs)
+        if (!placement.Holds(destination.tabs.Count(t => t.Placement == placement) + 1))
             throw new BrowserRuleException(BrowserRuleCodes.PinnedLimit);
         if (before == id) throw new BrowserRuleException(BrowserRuleCodes.InvalidTabAnchor);
         bool Matches(BrowserTab tab) => tab.Placement == placement && tab.FolderId == folder;
         int insertion = before is { } anchor ? destination.tabs.FindIndex(t => t.Id == anchor && Matches(t)) : -1;
         if (insertion < 0) {
             int last = destination.tabs.FindLastIndex(Matches);
-            insertion = last >= 0 ? last + 1 : placement switch {
-                TabPlacement.Pinned => destination.tabs.FindIndex(t => t.Placement != TabPlacement.Pinned),
-                TabPlacement.Saved => destination.tabs.FindIndex(t => t.Placement == TabPlacement.Current),
-                _ => destination.tabs.Count
-            };
-            if (insertion < 0) insertion = destination.tabs.Count;
+            insertion = last >= 0 ? last + 1 : NextSection(destination.tabs, placement);
         }
         if (afterSelection && destination.tabs.FindIndex(t => t.Id == destinationSelection) is var origin && origin >= 0) {
             insertion = origin + 1;

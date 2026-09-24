@@ -3,9 +3,8 @@ struct BrowserTabPlacementDestinationSection: Equatable, Sendable {
     let folderID: FolderID?
 
     func hasCapacity(in tabs: [BrowserTab]) -> Bool {
-        guard placement == .pinned else { return true }
-        return tabs.lazy.filter { $0.placement == .pinned }.count
-            < BrowserSpace.maximumPinnedTabs
+        guard let capacity = placement.capacity else { return true }
+        return tabs.lazy.filter { $0.placement == placement }.count < capacity
     }
 
     func insertionIndex(
@@ -30,16 +29,8 @@ struct BrowserTabPlacementDestinationSection: Equatable, Sendable {
         return tab.folderID == folderID
     }
 
+    /// A section with no tabs yet starts where the next section does.
     private func emptySectionInsertionIndex(in tabs: [BrowserTab]) -> Int {
-        switch placement {
-        case .pinned:
-            return tabs.firstIndex(where: { $0.placement != .pinned })
-                ?? tabs.endIndex
-        case .saved:
-            return tabs.firstIndex(where: { $0.placement == .current })
-                ?? tabs.endIndex
-        case .current:
-            return tabs.endIndex
-        }
+        tabs.firstIndex(where: { $0.placement.rank > placement.rank }) ?? tabs.endIndex
     }
 }

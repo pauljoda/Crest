@@ -21,7 +21,7 @@ public sealed partial class NativeSessionAuthority {
             Guid? Tab(JsonNode? value) => value is null ? null : Id(value);
             Guid? Folder(JsonNode? value) => value is null ? null : Id(value);
             TabPlacement Placement(JsonNode? value) => value is null ? TabPlacement.Current
-                : TabPlacementCodes.Parse(value.GetValue<string>()) ?? throw new ProtocolException(ProtocolErrorCodes.InvalidPlacement);
+                : TabPlacement.Named(value.GetValue<string>()) ?? throw new ProtocolException(ProtocolErrorCodes.InvalidPlacement);
             var captured = new TabBatchSelection(
                 selection["roots"]!.AsArray().Select(r => new BatchItem(Id(r!["id"]), r["folder"]!.GetValue<bool>())).ToArray(),
                 selection["tabs"]!.AsArray().Select(t => new BatchTab(Id(t!["id"]), Placement(t["placement"]),
