@@ -117,13 +117,7 @@ public sealed class StoredFormatTests {
         foreach (var (name, history) in expected.Where(pair => pair.Key.StartsWith("checkpoint.history.", StringComparison.Ordinal)))
             differences.AddRange(StoredJson.Differences(history,
                 JsonNode.Parse(checkpoint.Read(name["checkpoint.history.".Length..])), StoredJson.Comparison.AsSwiftReads, name));
-        var repair = new JsonObject {
-            ["version"] = 1,
-            ["operation"] = "session.repair",
-            ["session"] = session.DeepClone(),
-            ["now"] = 800000000.0
-        };
-        Compare("session.repair", JsonNode.Parse(NativeSyncQuery.Prepare(Bytes(repair))));
+        Compare("session.repair", new JsonObject { ["value"] = NativeSessionMaintenance.Repair(session.DeepClone().AsObject(), 800000000.0) });
         Assert.True(differences.Count == 0, string.Join(Environment.NewLine, differences));
     }
 }

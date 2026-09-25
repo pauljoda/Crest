@@ -2469,6 +2469,10 @@
     "seed-repair-in-core": {
       "category": "internal",
       "message": "The core repairs a seeded workspace itself."
+    },
+    "sync-json-paths-retired": {
+      "category": "internal",
+      "message": "The core owns the sync journal alone; the Swift sync domain and the JSON sync entry points are gone."
     }
   }
 }

@@ -5,7 +5,7 @@ import XCTest
 
 @MainActor
 final class BrowserCoreSessionAuthorityTests: XCTestCase {
-    func testBatchDeletionCommitsExplicitTombstonesWithSavedTabRemoval() throws {
+    func testBatchDeletionCommitsExplicitTombstonesWithSavedTabRemoval() async throws {
         var original = BrowserSession.preview
         let tabs = Array(original.spaces[0].tabs.filter { $0.url != nil && !$0.isStartPage }.prefix(2))
         XCTAssertEqual(tabs.count, 2)
@@ -15,9 +15,7 @@ final class BrowserCoreSessionAuthorityTests: XCTestCase {
             original.spaces[0].tabs[index].folderID = nil
             original.spaces[0].tabs[index].splitGroupID = nil
         }
-        var journal = BrowserSyncJournal()
-        try journal.stage(session: original)
-        let harness = try BrowserStoredSessionHarness(session: original, journal: journal)
+        let harness = try await BrowserStoredSessionHarness.staged(original)
         let store = harness.store
         store.selectSpace(original.spaces[0].id)
         let request = BrowserTabBatchRequest(ids: tabs.map(\.id), in: store.session.spaces[0])
@@ -28,9 +26,8 @@ final class BrowserCoreSessionAuthorityTests: XCTestCase {
         XCTAssertEqual(saved, store.session)
         XCTAssertTrue(try harness.storedJournalIsPublished())
         for tab in tabs {
-            let id = BrowserSyncRecordID(kind: .tab, value: tab.id.rawValue)
-            let record = try XCTUnwrap(committed?.records.first { $0.id == id })
-            XCTAssertEqual(record.tombstone?.reason, .explicitDelete)
+            let record = try XCTUnwrap(committed?.record(.tab, tab.id.rawValue))
+            XCTAssertEqual(record.deletionReason, .explicitDelete)
         }
     }
 
@@ -98,14 +95,12 @@ final class BrowserCoreSessionAuthorityTests: XCTestCase {
         XCTAssertEqual(try harness.stored().session, source.session)
     }
 
-    func testWorkspaceTransferSavesThePersistentOwnerAndJournalTogetherBeforeReconcilingWindows() throws {
+    func testWorkspaceTransferSavesThePersistentOwnerAndJournalTogetherBeforeReconcilingWindows() async throws {
         var original = BrowserSession.preview
         let spaceID = original.spaces[0].id
         let tabID = original.spaces[0].tabs[0].id
         original.spaces[0].tabs[0].faviconData = Data([5, 8, 13])
-        var journal = BrowserSyncJournal()
-        try journal.stage(session: original)
-        let harness = try BrowserStoredSessionHarness(session: original, journal: journal)
+        let harness = try await BrowserStoredSessionHarness.staged(original)
         let source = harness.store
         let observer = source.makeWindowStore()
         let assignment = BrowserSpaceRuntimeAssignment(space: original.spaces[0])
@@ -127,9 +122,7 @@ final class BrowserCoreSessionAuthorityTests: XCTestCase {
     func testDeletionIntentSurvivesAdapterFailureAndRestartThenCommitsItsTombstoneWithTheSession() async throws {
         let original = BrowserSession.preview
         let target = original.spaces[0]
-        var initialJournal = BrowserSyncJournal()
-        try initialJournal.stage(session: original)
-        let harness = try BrowserStoredSessionHarness(session: original, journal: initialJournal)
+        let harness = try await BrowserStoredSessionHarness.staged(original)
         let store = harness.store
         let other = store.makeWindowStore()
         let failing = DeletionAdapter { space in
@@ -168,19 +161,16 @@ final class BrowserCoreSessionAuthorityTests: XCTestCase {
         XCTAssertNil(restarted.session.spaceDeletions)
         XCTAssertEqual(try relaunched.stored().session, restarted.session)
         XCTAssertTrue(try relaunched.storedJournalIsPublished())
-        let tombstones = try relaunched.storedJournal().records.filter {
-            $0.spaceID == target.id && $0.tombstone != nil
-        }
+        let targetRecords = try relaunched.storedJournal().records.filter { $0.spaceID == target.id.rawValue }
+        let tombstones = targetRecords.filter(\.isTombstone)
         XCTAssertFalse(tombstones.isEmpty)
-        XCTAssertTrue(tombstones.allSatisfy { $0.tombstone?.reason == .explicitDelete })
+        XCTAssertTrue(tombstones.allSatisfy { $0.deletionReason == .explicitDelete })
     }
 
     func testRemoteSpaceDeletionDurablySchedulesTheRegisteredAdapterAndRetriesFailure() async throws {
         let original = BrowserSession.preview
         let target = original.spaces[0]
-        var journal = BrowserSyncJournal()
-        try journal.stage(session: original)
-        let harness = try BrowserStoredSessionHarness(session: original, journal: journal)
+        let harness = try await BrowserStoredSessionHarness.staged(original)
         let store = harness.store
         let other = store.makeWindowStore()
         var fail = true
@@ -188,28 +178,25 @@ final class BrowserCoreSessionAuthorityTests: XCTestCase {
             XCTAssertEqual(space.profile.id, target.profile.id)
             let stored = try harness.stored()
             XCTAssertEqual(stored.session.spaceDeletions?.first?.spaceID, target.id)
-            let records = try XCTUnwrap(stored.journal).records
-            XCTAssertTrue(
-                records.contains {
-                    $0.spaceID == target.id && $0.id.kind == .space && $0.tombstone?.reason == .explicitDelete
-                })
+            let record = try XCTUnwrap(try XCTUnwrap(stored.journal).record(.space, target.id.rawValue))
+            XCTAssertEqual(record.deletionReason, .explicitDelete)
             XCTAssertTrue(other.deletingSpaceIDs.contains(target.id))
             XCTAssertNotEqual(other.selectedSpace?.id, target.id)
             if fail { throw DeletionFailure.interrupted }
         }
         store.family.configureSpaceDataCleanup(adapter, from: store)
-        var remote = original
-        remote.spaces.removeAll { $0.id == target.id }
-        var incoming = journal
-        try incoming.stage(session: remote, deletionReason: .explicitDelete)
+        // Another device that holds the same records deletes the Space.
+        let remote = try await harness.joiningDevice()
+        try await remote.store.deleteSpace(target.id, dataDeleter: DeletionAdapter { _ in })
+        let incoming = try await remote.pendingRecords()
         // The adapter checks that the deletion and its tombstone are on disk
         // before any cleanup runs.
-        try await harness.deliver(MergeSyncRecords(records: incoming.records.map(SyncRecord.init(browser:))))
+        try await harness.deliver(MergeSyncRecords(records: incoming))
         await store.family.spaceCleanupTask?.value
         XCTAssertEqual(adapter.calls, [target.id])
         XCTAssertNotNil(try harness.stored().session.spaceDeletions?.first)
         fail = false
-        try await harness.deliver(MergeSyncRecords(records: incoming.records.map(SyncRecord.init(browser:))))
+        try await harness.deliver(MergeSyncRecords(records: incoming))
         await store.family.spaceCleanupTask?.value
         XCTAssertEqual(adapter.calls, [target.id, target.id])
         XCTAssertNil(store.session.space(id: target.id))
@@ -219,14 +206,12 @@ final class BrowserCoreSessionAuthorityTests: XCTestCase {
         XCTAssertEqual(other.session.spaces.map(\.id), store.session.spaces.map(\.id))
     }
 
-    func testPortableImportPreservesCollidingNativeImagesAndCommitsWithItsSyncJournal() throws {
+    func testPortableImportPreservesCollidingNativeImagesAndCommitsWithItsSyncJournal() async throws {
         var original = BrowserSession.preview
         original.spaces[0].tabs[0].faviconData = Data([1, 2])
         var imported = original.spaces[0]
         imported.tabs[0].faviconData = Data([3, 4])
-        var journal = BrowserSyncJournal()
-        try journal.stage(session: original)
-        let harness = try BrowserStoredSessionHarness(session: original, journal: journal)
+        let harness = try await BrowserStoredSessionHarness.staged(original)
         let store = harness.store
         let other = store.makeWindowStore()
         try store.importPortableArchive(
@@ -263,17 +248,15 @@ final class BrowserCoreSessionAuthorityTests: XCTestCase {
     /// one drain.
     func testIncomingSyncPublishesAndPersistsTheSameSessionAcrossWindows() async throws {
         let original = BrowserSession.preview
-        var journal = BrowserSyncJournal()
-        try journal.stage(session: original)
-        let harness = try BrowserStoredSessionHarness(session: original, journal: journal)
+        let harness = try await BrowserStoredSessionHarness.staged(original)
         let store = harness.store
         let other = store.makeWindowStore()
-        var remote = original
-        remote.spaces[0].name = "Remote Space"
-        var remoteJournal = journal
-        try remoteJournal.stage(session: remote)
+        // Another device that holds the same records renames the Space.
+        let remote = try await harness.joiningDevice()
+        let space = original.spaces[0]
+        remote.store.updateSpaceIdentity(space.id, name: "Remote Space", symbol: space.symbol, accent: space.accent)
         let core = harness.core
-        let merge = MergeSyncRecords(records: try remoteJournal.records.map(SyncRecord.init(browser:)))
+        let merge = MergeSyncRecords(records: try await remote.pendingRecords())
         try await Task.detached { _ = try core.deliver(merge) }.value
         // The merge and its journal are on disk when the merge returns.
         XCTAssertEqual(try harness.stored().session.spaces[0].name, "Remote Space")
@@ -296,14 +279,12 @@ final class BrowserCoreSessionAuthorityTests: XCTestCase {
     /// returns, though a rename stages only after a coalescing delay and a new
     /// tab only once the turn that opened it ends.
     func testFlushLeavesTheLastEditsSavedAndStagedForSync() async throws {
-        var journal = BrowserSyncJournal()
-        try journal.stage(session: .preview)
-        let harness = try BrowserStoredSessionHarness(session: .preview, journal: journal)
+        let harness = try await BrowserStoredSessionHarness.staged(.preview)
         let store = harness.store
         let window = store.makeWindowStore(BrowserWindowOpening(saved: true))
         await store.flushPendingSyncPersistence()
         try harness.acknowledgePendingUploads()
-        XCTAssertEqual(try harness.stored().journal?.pendingRecordIDs, [])
+        XCTAssertEqual(try harness.stored().journal?.pending.isEmpty, true)
         XCTAssertEqual(try harness.storedShownSpace(of: window.windowID), window.selectedSpaceID.rawValue)
 
         let space = store.session.spaces[0]
@@ -318,9 +299,9 @@ final class BrowserCoreSessionAuthorityTests: XCTestCase {
         let stored = try harness.stored()
         XCTAssertEqual(stored.session.space(id: space.id)?.name, "Renamed before quit")
         XCTAssertEqual(stored.session.space(id: space.id)?.tabs.contains { $0.id == opened }, true)
-        let staged = try XCTUnwrap(stored.journal).pendingRecordIDs
-        XCTAssertTrue(staged.contains(BrowserSyncRecordID(kind: .space, value: space.id.rawValue)))
-        XCTAssertTrue(staged.contains(BrowserSyncRecordID(kind: .tab, value: opened.rawValue)))
+        let journal = try XCTUnwrap(stored.journal)
+        XCTAssertTrue(journal.isPending(.space, space.id.rawValue))
+        XCTAssertTrue(journal.isPending(.tab, opened.rawValue))
         XCTAssertEqual(try harness.storedShownSpace(of: window.windowID), shown.id.rawValue)
     }
 
@@ -437,7 +418,7 @@ final class BrowserCoreSessionAuthorityTests: XCTestCase {
             core: crest, legacy: BrowserLegacySessionDefaults(defaults: defaults, journalDefaults: [defaults]),
             favicons: icons, seed: .freshInstallSeed, environment: .current)
         XCTAssertEqual(stored.projection, installed)
-        let store = try BrowserStore.production(
+        let store = BrowserStore.production(
             stored: stored, core: crest, favicons: icons, credentialVault: InMemoryCredentialVault())
         XCTAssertEqual(store.selectedSpaceID, installed.defaultSpaceID)
         XCTAssertEqual(store.selectedTabID(in: space.id), tab.id)
@@ -453,7 +434,7 @@ final class BrowserCoreSessionAuthorityTests: XCTestCase {
         let relaunched = try CrestCore(configuration: AppConfiguration(storageDirectory: directory.path))
         let reopened = try BrowserCoreSessionAuthority.openStored(in: relaunched, favicons: icons)
         XCTAssertEqual(reopened.projection, store.session)
-        let next = try BrowserStore.production(
+        let next = BrowserStore.production(
             stored: reopened, core: relaunched, favicons: icons, credentialVault: InMemoryCredentialVault())
         XCTAssertNil(next.selectedTabID(in: space.id), "The next save must not write the selection back")
     }

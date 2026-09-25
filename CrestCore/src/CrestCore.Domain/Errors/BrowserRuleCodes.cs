@@ -72,7 +72,6 @@ public static class BrowserRuleCodes {
     public const string UnknownCurrentTab = "unknown_current_tab";
     public const string UnknownFolder = "unknown_folder";
     public const string UnknownSearchProvider = "unknown_search_provider";
-    public const string UnknownSyncOperation = "unknown_sync_operation";
     public const string UnsupportedUrl = "unsupported_url";
     public const string VersionMismatch = "version_mismatch";
     public const string WrongSpaceIdentity = "wrong_space_identity";

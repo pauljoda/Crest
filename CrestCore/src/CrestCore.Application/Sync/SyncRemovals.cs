@@ -56,21 +56,21 @@ internal sealed record SyncRemovals(IReadOnlyList<SyncRemovals.Edit> Edits) {
                         // A Space the feed sends again whole names only the records it lost.
                         var resent = spaces.Added.FirstOrDefault(space => space.Id == id);
                         HashSet<string> kept = resent is null ? [] : Records(resent).ToHashSet(StringComparer.Ordinal);
-                        if (resent is null) yield return Name(SyncRecordKinds.Space, id);
+                        if (resent is null) yield return Name(SyncRecordKind.Space, id);
                         foreach (var name in Records(old).Where(name => !kept.Contains(name))) yield return name;
                     }
                     break;
                 case FoldersChanged folders:
-                    foreach (var id in folders.Removed) yield return Name(SyncRecordKinds.Folder, id);
+                    foreach (var id in folders.Removed) yield return Name(SyncRecordKind.Folder, id);
                     break;
                 case TabsChanged tabs:
-                    foreach (var id in tabs.Removed) yield return Name(SyncRecordKinds.Tab, id);
+                    foreach (var id in tabs.Removed) yield return Name(SyncRecordKind.Tab, id);
                     break;
                 case ArchiveChanged archive:
-                    foreach (var id in archive.Removed) yield return Name(SyncRecordKinds.Archive, id);
+                    foreach (var id in archive.Removed) yield return Name(SyncRecordKind.Archive, id);
                     break;
                 case HistoryChanged history:
-                    foreach (var id in history.Removed) yield return Name(SyncRecordKinds.History, id);
+                    foreach (var id in history.Removed) yield return Name(SyncRecordKind.History, id);
                     break;
             }
         }
@@ -78,13 +78,13 @@ internal sealed record SyncRemovals(IReadOnlyList<SyncRemovals.Edit> Edits) {
 
     /// The names of the records a Space holds besides its own.
     private static IEnumerable<string> Records(SpaceState space) =>
-        space.Folders.Select(folder => Name(SyncRecordKinds.Folder, folder.Id))
-            .Concat(space.Tabs.Select(tab => Name(SyncRecordKinds.Tab, tab.Id)))
-            .Concat(space.ArchivedTabs.Select(archived => Name(SyncRecordKinds.Archive, archived.Tab.Id)))
-            .Concat(space.History.Select(entry => Name(SyncRecordKinds.History, entry.Id)));
+        space.Folders.Select(folder => Name(SyncRecordKind.Folder, folder.Id))
+            .Concat(space.Tabs.Select(tab => Name(SyncRecordKind.Tab, tab.Id)))
+            .Concat(space.ArchivedTabs.Select(archived => Name(SyncRecordKind.Archive, archived.Tab.Id)))
+            .Concat(space.History.Select(entry => Name(SyncRecordKind.History, entry.Id)));
 
     /// A record's name in the journal.
-    private static string Name(string kind, Guid id) => kind + ":" + id.ToString("D");
+    private static string Name(SyncRecordKind kind, Guid id) => kind.Name + ":" + id.ToString("D");
 
     #endregion
 }

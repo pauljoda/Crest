@@ -25,7 +25,7 @@ internal sealed class SyncedText {
     public static readonly SyncedText SplitIcon = new(field: "customIconSymbol", limit: 128, standIn: _ => null,
         reads: symbol => EmojiIcon.Parse(symbol) is not null);
     /// A folder's title. A folder the session holds untitled is shown as this.
-    public static readonly SyncedText FolderTitle = new(field: "title", limit: 512, standIn: _ => "Folder");
+    public static readonly SyncedText FolderTitle = new(field: "title", limit: 512, standIn: _ => StoredSessionCodec.UntitledFolder);
     /// A folder's symbol; a folder without one wears the folder symbol.
     public static readonly SyncedText FolderSymbol = new(field: "symbol", limit: 128, standIn: _ => null);
     /// A tab's page title. A page that named itself nothing is shown by its host.

@@ -258,6 +258,27 @@ public sealed partial class BrowserContractsTests {
         Assert.All(device.Journal.Records, record => Assert.NotNull(record["payload"]));
     }
 
+    /// The cloud delivers a batch again: every record resolves against the
+    /// copy the journal already holds at the same version, and nothing waits
+    /// to upload or takes a new version.
+    [Fact]
+    public void ABatchDeliveredAgainResolvesAgainstItselfAndStagesNothing() {
+        var cloudSession = OneSpaceSession(Fixed(960), Fixed(961), Fixed(962));
+        FirstSpace(cloudSession)["history"] = new JsonArray(VisitOf(Fixed(9_963), "again", count: 3));
+        var cloud = new JournalUnderTest(Fixed(963));
+        cloud.Stage(cloudSession, at: 900);
+        using var device = new SyncingDevice(OneSpaceSession(), Fixed(964));
+        device.Merge(cloud.Records);
+        device.MarkUploaded();
+        var clock = device.Journal.Document["logicalClock"]!.GetValue<ulong>();
+
+        var again = device.Merge(cloud.Records);
+
+        Assert.Equal(3, SpaceIn(again, Fixed(960))!["history"]![0]!["visitCount"]!.GetValue<int>());
+        Assert.Empty(device.Journal.Pending);
+        Assert.Equal(clock, device.Journal.Document["logicalClock"]!.GetValue<ulong>());
+    }
+
     /// One level down: a saved tab whose folder has not arrived waits for it
     /// instead of failing the batch it came in.
     [Fact]

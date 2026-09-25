@@ -177,7 +177,7 @@ public sealed partial class NativeSessionAuthority {
         var emptySpace = SpaceTemplate.Ordinary.Make(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), number: 1, now);
         var removals = (transaction.Superseded?.Removals ?? SyncRemovals.None).Reasons(SyncDeletionReason.Superseded);
         var result = NativeSyncSessionTransition.Prepare(journal, StoredSessionCodec.Encode(basis), records.Batch(), replacing,
-            seconds, journal.Preferences, StoredSessionCodec.Encode(emptySpace), Access, ids, removals);
+            seconds, StoredSessionCodec.Encode(emptySpace), Access, ids, removals);
         _ = result.Journal.Read();
         var session = StoredSessionCodec.DecodeSession(result.Materialization["session"]);
         return new(result.Journal, session, new(Copies(basis, session, result.Materialization["assets"]!.AsArray()), Favicon: null));
@@ -260,8 +260,7 @@ public sealed partial class NativeSessionAuthority {
         Rejected { Rejection: InvalidSession } => new(new InvalidSyncRecords(SyncRecordFlaw.Unexpected, null)),
         Rejected rejected => rejected,
         StorageException storage => new(new SaveFailed(storage.Reason)),
-        NativeSyncDocumentException document => new(new InvalidSyncRecords(DocumentFlaw(document.Code),
-            Guid.TryParse(document.Value, out var subject) ? subject : null)),
+        SyncRecordsFlawedException flawed => new(new InvalidSyncRecords(flawed.Flaw, flawed.Subject)),
         BrowserRuleException { Code: BrowserRuleCodes.SyncClockExhausted } => new(new SyncStagingRefused(SyncStagingFailure.ClockExhausted)),
         BrowserRuleException { Code: BrowserRuleCodes.SyncSizeLimit } => new(new SyncStagingRefused(SyncStagingFailure.TooLarge)),
         BrowserRuleException rule => new(new InvalidSyncRecords(RuleFlaw(rule.Code), null)),
@@ -269,21 +268,9 @@ public sealed partial class NativeSessionAuthority {
         _ => new(new InvalidSyncRecords(SyncRecordFlaw.Unexpected, null))
     };
 
-    /// TRANSITIONAL until the materializer names flaws itself (8a commit 4):
-    /// the flaw a sync document failure stands for.
-    private static SyncRecordFlaw DocumentFlaw(string code) => code switch {
-        NativeSyncDocumentErrorCodes.DanglingFolder => SyncRecordFlaw.DanglingFolder,
-        NativeSyncDocumentErrorCodes.DuplicateProfile => SyncRecordFlaw.SharedProfile,
-        NativeSyncDocumentErrorCodes.DuplicateRecord => SyncRecordFlaw.DuplicateRecord,
-        NativeSyncDocumentErrorCodes.ImmutableProfileChanged => SyncRecordFlaw.ProfileChanged,
-        NativeSyncDocumentErrorCodes.InvalidFolderHierarchy => SyncRecordFlaw.InvalidFolderHierarchy,
-        NativeSyncDocumentErrorCodes.RecordLimitExceeded => SyncRecordFlaw.TooManyRecords,
-        NativeSyncDocumentErrorCodes.TooManyPinnedTabs => SyncRecordFlaw.TooManyPinnedTabs,
-        _ => SyncRecordFlaw.Unexpected
-    };
-
-    /// TRANSITIONAL until the sync rules throw flaws themselves (8c): the flaw
-    /// a sync rule's failure stands for.
+    /// The flaw a sync rule's failure stands for. The journal's rules throw
+    /// rule codes because reading a stored journal and staging a session
+    /// share them, and each of those answers them its own way.
     private static SyncRecordFlaw RuleFlaw(string code) => code switch {
         BrowserRuleCodes.DuplicateSyncRecord => SyncRecordFlaw.DuplicateRecord,
         BrowserRuleCodes.SyncRecordLimit => SyncRecordFlaw.TooManyRecords,

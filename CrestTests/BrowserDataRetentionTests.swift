@@ -102,9 +102,7 @@ final class BrowserDataRetentionTests: XCTestCase {
         let oldArchive = Self.archive(title: "Expired", archivedAt: oldDate)
         session.spaces[0].history = [oldHistory]
         session.spaces[0].archivedTabs = [oldArchive]
-        var journal = BrowserSyncJournal()
-        try journal.stage(session: session, at: oldDate)
-        let harness = try BrowserStoredSessionHarness(session: session, journal: journal)
+        let harness = try await BrowserStoredSessionHarness.staged(session)
         let browser = harness.store
 
         browser.updateDataRetentionPreferences(
@@ -120,19 +118,14 @@ final class BrowserDataRetentionTests: XCTestCase {
         let savedSpace = try XCTUnwrap(browser.session.space(id: spaceID))
         XCTAssertTrue(savedSpace.history.isEmpty)
         XCTAssertTrue(savedSpace.archivedTabs.isEmpty)
-        for recordID in [
-            BrowserSyncRecordID(kind: .history, value: oldHistory.id),
-            BrowserSyncRecordID(kind: .archive, value: oldArchive.id.rawValue),
-        ] {
-            let record = try XCTUnwrap(
-                try harness.storedJournal().records.first(where: { $0.id == recordID })
-            )
-            XCTAssertEqual(record.tombstone?.reason, .retention)
+        let journal = try harness.storedJournal()
+        for (kind, id) in [(SyncRecordKind.history, oldHistory.id), (.archive, oldArchive.id.rawValue)] {
+            XCTAssertEqual(try XCTUnwrap(journal.record(kind, id)).deletionReason, .retention)
         }
     }
 
     @MainActor
-    func testExpiredSyncedHistoryCannotReappearAfterMerge() throws {
+    func testExpiredSyncedHistoryCannotReappearAfterMerge() async throws {
         let now = Date(timeIntervalSinceReferenceDate: 30_000_000)
         let oldDate = now.addingTimeInterval(-(31 * 24 * 60 * 60))
         var remoteSession = BrowserSession.preview
@@ -140,20 +133,16 @@ final class BrowserDataRetentionTests: XCTestCase {
         let history = Self.history(title: "Expired Remote", visitedAt: oldDate)
         remoteSession.spaces[0].browsingPreferences.dataRetention.history = .thirtyDays
         remoteSession.spaces[0].history = [history]
-        var remoteJournal = BrowserSyncJournal()
-        try remoteJournal.stage(session: remoteSession, at: oldDate)
+        let remote = try await BrowserStoredSessionHarness.staged(remoteSession)
         var localSession = remoteSession
         localSession.spaces[0].history = []
-        let device = try BrowserSyncingDevice(localSession, journal: BrowserSyncJournal())
+        let device = try await BrowserStoredSessionHarness.staged(localSession)
 
-        let merged = try device.merge(remoteJournal.records)
+        try device.deliverNow(MergeSyncRecords(records: try await remote.pendingRecords()))
 
-        XCTAssertTrue(try XCTUnwrap(merged.space(id: spaceID)).history.isEmpty)
-        let recordID = BrowserSyncRecordID(kind: .history, value: history.id)
-        let record = try XCTUnwrap(
-            device.journal.records.first(where: { $0.id == recordID })
-        )
-        XCTAssertEqual(record.tombstone?.reason, .retention)
+        XCTAssertTrue(try XCTUnwrap(device.store.session.space(id: spaceID)).history.isEmpty)
+        let record = try XCTUnwrap(try device.storedJournal().record(.history, history.id))
+        XCTAssertEqual(record.deletionReason, .retention)
     }
 
     func testDownloadCenterSweepUsesSpacePoliciesAndDeterministicSpacing() {

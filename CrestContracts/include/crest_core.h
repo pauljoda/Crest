@@ -72,42 +72,6 @@ CREST_API crest_status_t CREST_CALL crest_core_evaluate_policy(
     const uint8_t* input_utf8, size_t input_length,
     uint8_t* destination, size_t capacity, size_t* out_length);
 
-/* Pure sync-record evaluation. Preserves the engine-independent wire format.
- * Buffers <= 16 MiB. No cloud I/O, callbacks, retained state or native objects.
- * Capacity probing does not mutate records or advance logical clocks. */
-CREST_API crest_status_t CREST_CALL crest_core_evaluate_sync(
-    const uint8_t* input_utf8, size_t input_length,
-    uint8_t* destination, size_t capacity, size_t* out_length);
-
-/* Immutable sync journal snapshots. Apply creates a new handle without changing
- * the input. Decode and persist the new snapshot before publishing it. All four
- * calls are worker-safe; each handle must be released. JSON inputs/outputs are
- * bounded to 64 MiB. INVALID_STATE from apply means logical clock exhaustion.
- * Read supports the usual BUFFER_TOO_SMALL size probe and does not consume.
- */
-CREST_API crest_status_t CREST_CALL crest_sync_journal_create(
-    const uint8_t* input, size_t input_length, uint64_t* out_handle);
-CREST_API crest_status_t CREST_CALL crest_sync_journal_apply(
-    uint64_t handle, const uint8_t* input, size_t input_length, uint64_t* out_handle);
-/* On semantic failure, checked apply returns INVALID_MESSAGE and an optional
- * query-result handle containing the error. Read/release it with sync_query_*. */
-CREST_API crest_status_t CREST_CALL crest_sync_journal_apply_checked(
-    uint64_t handle, const uint8_t* input, size_t input_length,
-    uint64_t* out_handle, uint64_t* out_error_query);
-CREST_API crest_status_t CREST_CALL crest_sync_journal_read(
-    uint64_t handle, uint8_t* destination, size_t capacity, size_t* out_length);
-CREST_API crest_status_t CREST_CALL crest_sync_journal_release(uint64_t handle);
-
-/* Prepared sync queries evaluate once and retain immutable JSON results.
- * Worker-safe, 64 MiB input/output limit; each handle must be released.
- * Read supports a non-consuming capacity probe. Semantic document errors are
- * encoded in the result envelope; malformed requests return a status error. */
-CREST_API crest_status_t CREST_CALL crest_sync_query_prepare(
-    const uint8_t* input, size_t input_length, uint64_t* out_handle);
-CREST_API crest_status_t CREST_CALL crest_sync_query_read(
-    uint64_t handle, uint8_t* destination, size_t capacity, size_t* out_length);
-CREST_API crest_status_t CREST_CALL crest_sync_query_release(uint64_t handle);
-
 #ifdef __cplusplus
 } /* extern "C" */
 #endif

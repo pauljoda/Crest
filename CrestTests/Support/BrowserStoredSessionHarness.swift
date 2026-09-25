@@ -24,13 +24,32 @@ final class BrowserStoredSessionHarness {
 
     // MARK: - Initializers
 
-    /// Gives a new file `session` and `journal` as its first session, then
+    /// Gives a new file `session` as its first session, with the journal of
+    /// a device that has staged nothing yet, `syncDeviceID` when named, then
     /// opens it with a window on its launch Space.
     convenience init(
-        session: BrowserSession, journal: BrowserSyncJournal? = nil,
+        session: BrowserSession, syncDeviceID: UUID? = nil,
         favicons: InMemoryBrowserFaviconStore = InMemoryBrowserFaviconStore()
     ) throws {
-        try self.init(session: session, journalData: try journal?.encodedSnapshot(), favicons: favicons)
+        try self.init(session: session, journalData: syncDeviceID.map { StoredSyncJournal.fresh(deviceID: $0) }, favicons: favicons)
+    }
+
+    /// A file of device `syncDeviceID` whose first session is `session`, opened
+    /// as above, once its launch staged it: its journal holds every record of
+    /// `session`, none of them uploaded yet.
+    static func staged(_ session: BrowserSession, syncDeviceID: UUID = UUID()) async throws -> BrowserStoredSessionHarness {
+        let harness = try BrowserStoredSessionHarness(session: session, syncDeviceID: syncDeviceID)
+        await harness.core.settleSync()
+        return harness
+    }
+
+    /// A file of device `syncDeviceID` whose first session is `session`, opened
+    /// as above, once the cloud saved everything its launch staged: a device
+    /// that has already uploaded `session`.
+    static func uploaded(_ session: BrowserSession, syncDeviceID: UUID = UUID()) async throws -> BrowserStoredSessionHarness {
+        let harness = try BrowserStoredSessionHarness(session: session, syncDeviceID: syncDeviceID)
+        _ = try await harness.uploadPendingRecords()
+        return harness
     }
 
     /// Gives a new file `session` and the journal `journalData` holds, which
@@ -60,7 +79,7 @@ final class BrowserStoredSessionHarness {
 
     private static func open(_ core: CrestCore, favicons: InMemoryBrowserFaviconStore) throws -> BrowserStore {
         let stored = try BrowserCoreSessionAuthority.openStored(in: core, favicons: favicons)
-        return try BrowserStore.production(
+        return BrowserStore.production(
             stored: stored, core: core, favicons: favicons, credentialVault: InMemoryCredentialVault())
     }
 
@@ -82,7 +101,7 @@ final class BrowserStoredSessionHarness {
     // MARK: - Actions - Reading the file
 
     /// The session and journal the file holds now.
-    func stored() throws -> (session: BrowserSession, journal: BrowserSyncJournal?) {
+    func stored() throws -> (session: BrowserSession, journal: StoredSyncJournal?) {
         try withConnection { connection in
             let core = try XCTUnwrap(try Self.read("core", in: connection))
             var session = try JSONDecoder().decode(BrowserSession.self, from: core)
@@ -95,7 +114,7 @@ final class BrowserStoredSessionHarness {
                         tabID: session.spaces[index].tabs[tab].id)
                 }
             }
-            let journal = try Self.read("journal", in: connection).map(BrowserSyncJournal.decodeSnapshot)
+            let journal = try Self.read("journal", in: connection).map(StoredSyncJournal.init)
             return (session, journal)
         }
     }
@@ -105,19 +124,17 @@ final class BrowserStoredSessionHarness {
         try withConnection { try Self.read(part, in: $0) }
     }
 
-    /// TRANSITIONAL until slice 8c ports the journal contract tests to the
-    /// core: the sync journal the file holds, which is the one the core
-    /// accepted last, since the core saves each journal before it accepts it.
-    func storedJournal() throws -> BrowserSyncJournal {
+    /// The sync journal the file holds, which is the one the core accepted
+    /// last, since the core saves each journal before it accepts it.
+    func storedJournal() throws -> StoredSyncJournal {
         try Self.storedJournal(in: directory)
     }
 
-    /// TRANSITIONAL until slice 8c: the sync journal the session file in
-    /// `directory` holds.
-    static func storedJournal(in directory: URL) throws -> BrowserSyncJournal {
+    /// The sync journal the session file in `directory` holds.
+    static func storedJournal(in directory: URL) throws -> StoredSyncJournal {
         let url = directory.appendingPathComponent("session.sqlite")
         let data = try withConnection(at: url, writable: false) { try read("journal", in: $0) }
-        return try BrowserSyncJournal.decodeSnapshot(try XCTUnwrap(data))
+        return try StoredSyncJournal(try XCTUnwrap(data))
     }
 
     // MARK: - Actions - Cloud sync
@@ -138,6 +155,42 @@ final class BrowserStoredSessionHarness {
         core.drain()
     }
 
+    /// Every record that waits to upload once the stages queued so far
+    /// settled, as the transport uploads them.
+    func pendingRecords() async throws -> [SyncRecord] {
+        await core.settleSync()
+        return try core.query(RecordsToUpload(records: try core.query(PendingUploads()).records)).records
+    }
+
+    /// Uploads every record that waits to upload, as `pendingRecords()` reads
+    /// them, and acknowledges them as the transport does once the cloud saved
+    /// them. Answers what the cloud now holds of them.
+    func uploadPendingRecords() async throws -> [SyncRecord] {
+        let records = try await pendingRecords()
+        try deliverNow(
+            AcknowledgeUploads(
+                records: records.map {
+                    UploadedRecord(record: SyncRecordReference(kind: $0.kind, id: $0.id), version: $0.version)
+                }))
+        return records
+    }
+
+    /// Every record the journal holds that the transport would send, once the
+    /// stages queued so far settled.
+    func heldRecords() async throws -> [SyncRecord] {
+        await core.settleSync()
+        return try core.query(RecordsToUpload(records: try storedJournal().records.map(\.reference))).records
+    }
+
+    /// A second device that took everything this device's journal holds from
+    /// the cloud onto a fresh install, as a device joining the same iCloud
+    /// does.
+    func joiningDevice() async throws -> BrowserStoredSessionHarness {
+        let other = try BrowserStoredSessionHarness(session: .freshInstallSeed)
+        try other.deliverNow(ReplaceSeedWithCloudRecords(records: try await heldRecords()))
+        return other
+    }
+
     /// Acknowledges every record waiting to upload, at the version the journal
     /// holds it at, as the transport does once the cloud saved them.
     func acknowledgePendingUploads() throws {
@@ -155,7 +208,7 @@ final class BrowserStoredSessionHarness {
     func storedJournalIsPublished() throws -> Bool {
         let stored = try storedJournal()
         return core.state.syncJournal?.records == stored.records.count
-            && core.state.syncJournal?.pendingRecords == stored.pendingRecordIDs.count
+            && core.state.syncJournal?.pendingRecords == stored.pending.count
     }
 
     /// The Space the device table the file holds records `window` showing,

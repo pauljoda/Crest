@@ -288,9 +288,9 @@ answer.
 
 Policy requests are typed on both sides. The core decodes each operation's
 request into a record (`*PolicyRequests.cs`) and keeps its codes in `*Codes.cs`
-files. Swift names each call with `BrowserSessionOperation`,
-`BrowserPolicyOperation` or `BrowserSyncOperation`, sends Codable argument
-models, and reads rule failures as `BrowserCoreErrorCode`.
+files. Swift names each call with `BrowserSessionOperation` or
+`BrowserPolicyOperation`, sends Codable argument models, and reads rule
+failures as `BrowserCoreErrorCode`.
 
 Page commits are owned by the core for selected, Split View and background
 pages. Live URL and title observations stay in page presentation, and a

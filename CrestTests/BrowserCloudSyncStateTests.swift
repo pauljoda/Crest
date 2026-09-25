@@ -223,7 +223,7 @@ final class BrowserCloudSyncStateTests: XCTestCase {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }
         let persistence = FileBrowserCloudSyncStatePersistence(fileURL: directory.appendingPathComponent("state.json"))
-        let harness = try BrowserStoredSessionHarness(session: .preview, journal: BrowserSyncJournal())
+        let harness = try BrowserStoredSessionHarness(session: .preview)
         await harness.store.flushPendingSyncPersistence()
         // The core cannot save the merge's journal, so it refuses the merge.
         try harness.refuseWrites(to: "journal")

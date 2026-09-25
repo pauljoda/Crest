@@ -155,8 +155,7 @@ final class BrowserStoreTests: XCTestCase {
 
     func testFreshInstallSeedPersistsButNeverStagesBeforeCloudBootstrap() async throws {
         let harness = try BrowserStoredSessionHarness(
-            session: .freshInstallSeed,
-            journal: BrowserSyncJournal(deviceID: UUID(uuidString: "00000000-0000-0000-0000-000000000099")!))
+            session: .freshInstallSeed, syncDeviceID: UUID(uuidString: "00000000-0000-0000-0000-000000000099")!)
         let store = harness.store
 
         store.openNewTab(
@@ -169,38 +168,37 @@ final class BrowserStoreTests: XCTestCase {
         let encoded = try JSONEncoder().encode(store.session)
         XCTAssertTrue(try JSONDecoder().decode(BrowserSession.self, from: encoded).hasDisposableSeedState)
         XCTAssertTrue(try harness.storedJournal().records.isEmpty)
-        XCTAssertTrue(try harness.storedJournal().pendingRecordIDs.isEmpty)
+        XCTAssertTrue(try harness.storedJournal().pending.isEmpty)
         XCTAssertTrue(outboundPending.isEmpty)
         XCTAssertEqual(store.core.state.syncJournal?.pendingRecords, 0)
         XCTAssertTrue(store.core.state.syncsDisposableSeed)
     }
 
-    func testFirstCloudBootstrapReplacesDisposableSeedInsteadOfMergingIt() throws {
+    func testFirstCloudBootstrapReplacesDisposableSeedInsteadOfMergingIt() async throws {
         let cloudSession = BrowserSession.privateBrowsing()
-        var cloud = BrowserSyncJournal(deviceID: UUID(uuidString: "00000000-0000-0000-0000-000000000098")!)
-        try cloud.stage(session: cloudSession)
-        try cloud.markUploaded(cloud.pendingRecordIDs)
-        let cloudRecords = cloud.records
+        let cloud = try await BrowserStoredSessionHarness.uploaded(
+            cloudSession, syncDeviceID: UUID(uuidString: "00000000-0000-0000-0000-000000000098")!)
+        let cloudRecords = try await cloud.heldRecords()
 
         let harness = try BrowserStoredSessionHarness(
-            session: .freshInstallSeed,
-            journal: BrowserSyncJournal(deviceID: UUID(uuidString: "00000000-0000-0000-0000-000000000097")!))
+            session: .freshInstallSeed, syncDeviceID: UUID(uuidString: "00000000-0000-0000-0000-000000000097")!)
         let store = harness.store
         let seededSpaceIDs = Set(store.session.spaces.map(\.id))
 
-        try harness.deliverNow(ReplaceSeedWithCloudRecords(records: cloudRecords.map(SyncRecord.init(browser:))))
+        try harness.deliverNow(ReplaceSeedWithCloudRecords(records: cloudRecords))
 
         XCTAssertFalse(store.session.hasDisposableSeedState)
         XCTAssertEqual(store.session.spaces.map(\.id), cloudSession.spaces.map(\.id))
         XCTAssertTrue(seededSpaceIDs.isDisjoint(with: store.session.spaces.map(\.id)))
-        XCTAssertEqual(try harness.storedJournal().records, cloudRecords)
-        XCTAssertTrue(try harness.storedJournal().pendingRecordIDs.isEmpty)
+        let held = try harness.storedJournal().records
+        XCTAssertEqual(held.map(\.reference), cloudRecords.map { SyncRecordReference(kind: $0.kind, id: $0.id) })
+        XCTAssertEqual(held.map(\.version), cloudRecords.map(\.version))
+        XCTAssertTrue(try harness.storedJournal().pending.isEmpty)
     }
 
     func testFirstCloudBootstrapClearsDisposableSeedWhenCloudIsEmpty() throws {
         let harness = try BrowserStoredSessionHarness(
-            session: .freshInstallSeed,
-            journal: BrowserSyncJournal(deviceID: UUID(uuidString: "00000000-0000-0000-0000-000000000096")!))
+            session: .freshInstallSeed, syncDeviceID: UUID(uuidString: "00000000-0000-0000-0000-000000000096")!)
         let store = harness.store
         let seededSpaceIDs = Set(store.session.spaces.map(\.id))
 
@@ -211,7 +209,7 @@ final class BrowserStoreTests: XCTestCase {
         XCTAssertEqual(store.selectedSpace?.name, "Space 1")
         XCTAssertTrue(seededSpaceIDs.isDisjoint(with: store.session.spaces.map(\.id)))
         XCTAssertTrue(try harness.storedJournal().records.isEmpty)
-        XCTAssertTrue(try harness.storedJournal().pendingRecordIDs.isEmpty)
+        XCTAssertTrue(try harness.storedJournal().pending.isEmpty)
     }
 
     func testPrivateBrowsingIsEphemeralAndCannotUseCrestPasswords() async throws {
@@ -324,10 +322,7 @@ final class BrowserStoreTests: XCTestCase {
     }
 
     func testUpdatingSpaceBrowsingPreferencesPersistsOnlyThatSpacesChoices() async throws {
-        let harness = try BrowserStoredSessionHarness(
-            session: .preview,
-            journal: try uploadedJournal(
-                of: .preview, deviceID: UUID(uuidString: "00000000-0000-0000-0000-000000000010")!))
+        let harness = try await BrowserStoredSessionHarness.uploaded(.preview, syncDeviceID: UUID(uuidString: "00000000-0000-0000-0000-000000000010")!)
         let store = harness.store
         let selectedSpaceID = store.selectedSpaceID
         let otherSpace = try XCTUnwrap(
@@ -349,28 +344,18 @@ final class BrowserStoreTests: XCTestCase {
             store.session.space(id: otherSpace.id)?.browsingPreferences,
             .default
         )
-        let recordID = BrowserSyncRecordID(
-            kind: .space,
-            value: selectedSpaceID.rawValue
-        )
-        XCTAssertTrue(try harness.storedJournal().pendingRecordIDs.contains(recordID))
+        XCTAssertTrue(try harness.storedJournal().isPending(.space, selectedSpaceID.rawValue))
     }
 
     func testNormalStoreMutationStagesAndPersistsTheLocalSyncJournal() async throws {
-        let harness = try BrowserStoredSessionHarness(
-            session: .preview,
-            journal: try uploadedJournal(
-                of: .preview, deviceID: UUID(uuidString: "00000000-0000-0000-0000-000000000001")!))
+        let harness = try await BrowserStoredSessionHarness.uploaded(.preview, syncDeviceID: UUID(uuidString: "00000000-0000-0000-0000-000000000001")!)
         let store = harness.store
 
         store.openNewTab(url: try XCTUnwrap(URL(string: "https://example.com/synced")))
         await store.flushPendingSyncPersistence()
 
         let selectedID = try XCTUnwrap(store.selectedTab?.id)
-        XCTAssertTrue(
-            try harness.storedJournal().pendingRecordIDs.contains(
-                BrowserSyncRecordID(kind: .tab, value: selectedID.rawValue)
-            ))
+        XCTAssertTrue(try harness.storedJournal().isPending(.tab, selectedID.rawValue))
         XCTAssertTrue(try harness.storedJournalIsPublished())
         XCTAssertNil(store.localSyncErrorDescription)
     }
@@ -387,55 +372,34 @@ final class BrowserStoreTests: XCTestCase {
             )
         ]
         let historyID = try XCTUnwrap(session.spaces[0].history.first?.id)
-        let harness = try BrowserStoredSessionHarness(
-            session: session,
-            journal: try uploadedJournal(
-                of: session, deviceID: UUID(uuidString: "00000000-0000-0000-0000-000000000002")!))
+        let harness = try await BrowserStoredSessionHarness.uploaded(session, syncDeviceID: UUID(uuidString: "00000000-0000-0000-0000-000000000002")!)
         let store = harness.store
 
         store.clearHistory()
         await store.flushPendingSyncPersistence()
 
-        let record = try XCTUnwrap(
-            (try harness.storedJournal()).records.first {
-                $0.id == BrowserSyncRecordID(kind: .history, value: historyID)
-            })
-        XCTAssertEqual(record.tombstone?.reason, .explicitDelete)
-        XCTAssertNil(record.payload)
+        let record = try XCTUnwrap(try harness.storedJournal().record(.history, historyID))
+        XCTAssertEqual(record.deletionReason, .explicitDelete)
+        XCTAssertTrue(record.isTombstone)
     }
 
     func testCloseAndRestoreUseRecoverableSupersessionRatherThanPermanentDelete() async throws {
         let session = BrowserSession.preview
-        let harness = try BrowserStoredSessionHarness(
-            session: session,
-            journal: try uploadedJournal(
-                of: session, deviceID: UUID(uuidString: "00000000-0000-0000-0000-000000000003")!))
+        let harness = try await BrowserStoredSessionHarness.uploaded(session, syncDeviceID: UUID(uuidString: "00000000-0000-0000-0000-000000000003")!)
         let store = harness.store
         let tabID = try XCTUnwrap(store.selectedSpace?.currentTabs.first?.id)
 
         store.closeTab(tabID)
         await store.flushPendingSyncPersistence()
 
-        let tabRecordID = BrowserSyncRecordID(kind: .tab, value: tabID.rawValue)
-        XCTAssertEqual(
-            (try harness.storedJournal()).records.first { $0.id == tabRecordID }?.tombstone?.reason,
-            .superseded
-        )
-        XCTAssertNotNil(
-            (try harness.storedJournal()).records.first {
-                $0.id == BrowserSyncRecordID(kind: .archive, value: tabID.rawValue)
-            }?.payload)
+        XCTAssertEqual(try harness.storedJournal().record(.tab, tabID.rawValue)?.deletionReason, .superseded)
+        XCTAssertEqual(try harness.storedJournal().record(.archive, tabID.rawValue)?.isTombstone, false)
 
         store.restoreArchivedTab(tabID)
         await store.flushPendingSyncPersistence()
 
-        XCTAssertNotNil(try harness.storedJournal().records.first { $0.id == tabRecordID }?.payload)
-        XCTAssertEqual(
-            (try harness.storedJournal()).records.first {
-                $0.id == BrowserSyncRecordID(kind: .archive, value: tabID.rawValue)
-            }?.tombstone?.reason,
-            .superseded
-        )
+        XCTAssertEqual(try harness.storedJournal().record(.tab, tabID.rawValue)?.isTombstone, false)
+        XCTAssertEqual(try harness.storedJournal().record(.archive, tabID.rawValue)?.deletionReason, .superseded)
     }
 
     func testDeletingAPinnedTabStagesItsExplicitTombstoneAndArchiveAudit() async throws {
@@ -447,8 +411,7 @@ final class BrowserStoreTests: XCTestCase {
                 0x44, 0x49, 0x54, 0x00, 0x00, 0x00, 0x00, 0x01
             )
         )
-        let harness = try BrowserStoredSessionHarness(
-            session: session, journal: try uploadedJournal(of: session, deviceID: deviceID))
+        let harness = try await BrowserStoredSessionHarness.uploaded(session, syncDeviceID: deviceID)
         let store = harness.store
 
         store.deleteTab(pinnedTab.id, in: session.spaces[0].id)
@@ -460,28 +423,10 @@ final class BrowserStoreTests: XCTestCase {
             }?.reason,
             .deleted
         )
-        let tabRecordID = BrowserSyncRecordID(
-            kind: .tab,
-            value: pinnedTab.id.rawValue
-        )
-        XCTAssertEqual(
-            (try harness.storedJournal()).records.first { $0.id == tabRecordID }?
-                .tombstone?.reason,
-            .explicitDelete
-        )
-        let archiveRecord = try XCTUnwrap(
-            (try harness.storedJournal()).records.first {
-                $0.id
-                    == BrowserSyncRecordID(
-                        kind: .archive,
-                        value: pinnedTab.id.rawValue
-                    )
-            }
-        )
-        guard case .archive(let archive)? = archiveRecord.payload else {
-            return XCTFail("Expected deletion archive payload")
-        }
-        XCTAssertEqual(archive.reason, .deleted)
+        let journal = try harness.storedJournal()
+        XCTAssertEqual(journal.record(.tab, pinnedTab.id.rawValue)?.deletionReason, .explicitDelete)
+        let archiveRecord = try XCTUnwrap(journal.record(.archive, pinnedTab.id.rawValue))
+        XCTAssertEqual(archiveRecord.value?["reason"] as? String, ArchiveReason.deleted.name)
     }
 
     func testModifiedLinkOpensImmediatelyBelowItsOriginTab() throws {
@@ -689,9 +634,8 @@ final class BrowserStoreTests: XCTestCase {
     /// How many stages a burst makes is the core's (`EditsInQuickSuccessionStageOnceWithTheNewestSession`);
     /// showing a tab is an edit the journal stages with the newest session.
     func testRapidSelectionChangesStageTheLatestSession() async throws {
-        var journal = BrowserSyncJournal(deviceID: UUID(uuidString: "00000000-0000-0000-0000-000000000004")!)
-        try journal.stage(session: .preview)
-        let harness = try BrowserStoredSessionHarness(session: .preview, journal: journal)
+        let harness = try await BrowserStoredSessionHarness.staged(
+            .preview, syncDeviceID: UUID(uuidString: "00000000-0000-0000-0000-000000000004")!)
         let store = harness.store
         let tabs = try XCTUnwrap(store.selectedSpace).tabs
         let selectableTabs = Array(tabs.prefix(3))
@@ -703,21 +647,15 @@ final class BrowserStoreTests: XCTestCase {
         await store.flushPendingSyncPersistence()
 
         let selectedID = try XCTUnwrap(store.selectedTab?.id)
-        let selectedRecord = (try harness.storedJournal()).records.first {
-            $0.id == BrowserSyncRecordID(kind: .tab, value: selectedID.rawValue)
-        }
-        guard case .tab(let syncedTab) = selectedRecord?.payload else {
-            return XCTFail("The latest selected tab should be present in the sync journal.")
-        }
-        XCTAssertEqual(syncedTab.title, store.selectedTab?.title)
-        XCTAssertEqual(syncedTab.url, store.selectedTab?.url)
+        let syncedTab = try XCTUnwrap(
+            try harness.storedJournal().record(.tab, selectedID.rawValue)?.value,
+            "The latest selected tab should be present in the sync journal.")
+        XCTAssertEqual(syncedTab["title"] as? String, store.selectedTab?.title)
+        XCTAssertEqual(syncedTab["url"] as? String, store.selectedTab?.url?.absoluteString)
     }
 
     func testDeletingASpacePurgesCredentialsAndStagesExplicitSyncTombstones() async throws {
-        let harness = try BrowserStoredSessionHarness(
-            session: .preview,
-            journal: try uploadedJournal(
-                of: .preview, deviceID: UUID(uuidString: "00000000-0000-0000-0000-000000000011")!))
+        let harness = try await BrowserStoredSessionHarness.uploaded(.preview, syncDeviceID: UUID(uuidString: "00000000-0000-0000-0000-000000000011")!)
         let store = harness.store
         let vault = try XCTUnwrap(store.credentialVault as? InMemoryCredentialVault)
         let deletedSpace = try XCTUnwrap(store.session.spaces.first)
@@ -754,17 +692,9 @@ final class BrowserStoreTests: XCTestCase {
             retainedDescriptors,
             [retainedCredential.descriptor]
         )
-        let deletedRecord = try XCTUnwrap(
-            (try harness.storedJournal()).records.first {
-                $0.id
-                    == BrowserSyncRecordID(
-                        kind: .space,
-                        value: deletedSpace.id.rawValue
-                    )
-            }
-        )
-        XCTAssertNil(deletedRecord.payload)
-        XCTAssertEqual(deletedRecord.tombstone?.reason, .explicitDelete)
+        let deletedRecord = try XCTUnwrap(try harness.storedJournal().record(.space, deletedSpace.id.rawValue))
+        XCTAssertTrue(deletedRecord.isTombstone)
+        XCTAssertEqual(deletedRecord.deletionReason, .explicitDelete)
         XCTAssertTrue(try harness.storedJournalIsPublished())
     }
 
@@ -1017,8 +947,7 @@ final class BrowserStoreTests: XCTestCase {
                 0x44, 0x4F, 0x57, 0x53, 0x00, 0x00, 0x00, 0x01
             )
         )
-        let harness = try BrowserStoredSessionHarness(
-            session: session, journal: try uploadedJournal(of: session, deviceID: deviceID))
+        let harness = try await BrowserStoredSessionHarness.uploaded(session, syncDeviceID: deviceID)
         let firstWindow = harness.store
         let secondWindow = firstWindow.makeWindowStore()
         let existingTab = try XCTUnwrap(secondWindow.selectedTab)
@@ -1040,34 +969,25 @@ final class BrowserStoreTests: XCTestCase {
         await firstWindow.flushPendingSyncPersistence()
         await secondWindow.flushPendingSyncPersistence()
 
-        let recordID = BrowserSyncRecordID(
-            kind: .tab,
-            value: pinnedTabID.rawValue
-        )
-        let record = try XCTUnwrap(
-            (try harness.storedJournal()).records.first { $0.id == recordID }
-        )
-        XCTAssertNotNil(record.payload)
-        XCTAssertNil(record.tombstone)
+        let record = try XCTUnwrap(try harness.storedJournal().record(.tab, pinnedTabID.rawValue))
+        XCTAssertFalse(record.isTombstone)
+        // Another device that takes everything this one holds shows the tab.
+        let other = try await harness.joiningDevice()
         XCTAssertTrue(
-            try harness.storedJournal()
-                .materializedSession(applyingTo: firstWindow.session)
-                .space(id: firstWindow.selectedSpaceID)?
-                .tabs.contains(where: { $0.id == pinnedTabID }) == true
-        )
+            other.store.session.space(id: firstWindow.selectedSpaceID)?.tabs.contains { $0.id == pinnedTabID } == true)
     }
 
     func testIncomingSyncPreservesCustomizationWaitingForCoalescedPersistence() async throws {
         let session = BrowserSession.preview
-        let uploaded = try uploadedJournal(of: session, deviceID: UUID())
-        var remote = BrowserSyncJournal()
-        try remote.merge(uploaded.records)
-        var remoteSession = session
-        let newTab = BrowserTab(title: "Cloud page", url: URL(string: "http://localhost:3000"), placement: .current)
-        remoteSession.spaces[0].tabs.append(newTab)
-        try remote.stage(session: remoteSession)
+        let harness = try await BrowserStoredSessionHarness.uploaded(session)
+        // Another device that holds what this one uploaded opens a tab.
+        let remote = try await harness.joiningDevice()
+        let newTab = try XCTUnwrap(
+            remote.store.openSessionTab(
+                .page(try XCTUnwrap(URL(string: "http://localhost:3000")), title: "Cloud page"),
+                in: session.spaces[0].id, placement: .current, shouldSelect: false))
+        let incoming = try await remote.pendingRecords()
 
-        let harness = try BrowserStoredSessionHarness(session: session, journal: uploaded)
         let store = harness.store
         let otherWindow = store.makeWindowStore()
         let spaceID = session.spaces[0].id
@@ -1079,18 +999,15 @@ final class BrowserStoreTests: XCTestCase {
 
         // The receiving window must retain an edit from another window before
         // invalidating its delayed stage to apply this CloudKit batch.
-        try harness.deliverNow(MergeSyncRecords(records: remote.records.map(SyncRecord.init(browser:))))
+        try harness.deliverNow(MergeSyncRecords(records: incoming))
         await otherWindow.flushPendingSyncPersistence()
 
         XCTAssertEqual(store.session.space(id: spaceID)?.branding, branding)
         XCTAssertEqual(otherWindow.session.space(id: spaceID)?.branding, branding)
-        XCTAssertTrue(store.session.spaces[0].tabs.contains { $0.id == newTab.id })
-        let spaceRecordID = BrowserSyncRecordID(kind: .space, value: spaceID.rawValue)
-        XCTAssertTrue(try harness.storedJournal().pendingRecordIDs.contains(spaceRecordID))
-        try remote.merge(try harness.storedJournal().records)
-        XCTAssertEqual(
-            try remote.materializedSession(applyingTo: remoteSession).space(id: spaceID)?.branding,
-            branding)
+        XCTAssertTrue(store.session.spaces[0].tabs.contains { $0.id == newTab })
+        XCTAssertTrue(try harness.storedJournal().isPending(.space, spaceID.rawValue))
+        try remote.deliverNow(MergeSyncRecords(records: try await harness.pendingRecords()))
+        XCTAssertEqual(remote.store.session.space(id: spaceID)?.branding, branding)
     }
 
     func testSceneActivationSweepArchivesExpiredCurrentTabsInALongLivedSession() throws {
@@ -1240,14 +1157,6 @@ final class BrowserStoreTests: XCTestCase {
             startPageID: startPage.id,
             neverPolicyTabID: neverPolicyTab.id
         )
-    }
-
-    /// A journal of device `deviceID` that staged `session` and uploaded it.
-    private func uploadedJournal(of session: BrowserSession, deviceID: UUID) throws -> BrowserSyncJournal {
-        var journal = BrowserSyncJournal(deviceID: deviceID)
-        try journal.stage(session: session)
-        try journal.markUploaded(journal.pendingRecordIDs)
-        return journal
     }
 
     private func credential(

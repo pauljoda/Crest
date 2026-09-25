@@ -14,6 +14,9 @@ public static class NativeSyncProjection {
 
     internal static string? Text(JsonNode? value) => value?.GetValue<string>();
 
+    /// The name the journal keeps the record of `type` with identity `id` by.
+    private static string Name(SyncPayloadType type, Guid id) => type.Kind.Name + ":" + id.ToString("D");
+
     internal static JsonArray Items(JsonNode value, string field) => value[field]?.AsArray() ?? [];
 
     internal static JsonObject Fields(JsonNode source, params string[] names)
@@ -49,26 +52,26 @@ public static class NativeSyncProjection {
         var existing = new Dictionary<string, string?>(StringComparer.Ordinal);
         var archiveReasons = new Dictionary<Guid, string?>();
         foreach (var record in existingRecords) {
-            if (record["payload"]?["value"] is not { } value) continue;
-            string kind = record["id"]!["kind"]!.GetValue<string>();
-            string name = kind + ":" + Id(record["id"]!["value"]).ToString("D");
-            existing[name] = Text(kind == SyncRecordKinds.Archive ? value["tab"]?["orderToken"] : value["orderToken"]);
-            if (kind == SyncRecordKinds.Archive) archiveReasons[Id(record["id"]!["value"])] = Text(value["reason"]);
+            if (record["payload"]?["value"] is not JsonObject value) continue;
+            var type = SyncPayloadType.Of(record["payload"]!);
+            var id = Id(record["id"]!["value"]);
+            existing[Name(type, id)] = Text(type.Subject(value)["orderToken"]);
+            if (type == SyncPayloadType.Archive) archiveReasons[id] = Text(value["reason"]);
         }
         var result = new JsonArray();
         var seen = new HashSet<string>(StringComparer.Ordinal);
-        void Add(string kind, JsonObject value) {
-            string name = kind + ":" + Id(kind == SyncRecordKinds.Archive ? value["tab"]!["id"] : value["id"]).ToString("D");
-            if (!seen.Add(name)) throw new NativeSyncDocumentException(NativeSyncDocumentErrorCodes.DuplicateRecord, name);
-            if (seen.Count > NativeSyncJournal.MaximumRecords) throw new NativeSyncDocumentException(NativeSyncDocumentErrorCodes.RecordLimitExceeded, seen.Count.ToString());
-            result.Add((JsonNode)new JsonObject { ["type"] = kind, ["value"] = value });
+        void Add(SyncPayloadType type, JsonObject value) {
+            string name = Name(type, Id(type.Subject(value)["id"]));
+            if (!seen.Add(name)) throw new SyncRecordsFlawedException(SyncRecordFlaw.DuplicateRecord, subject: null);
+            if (seen.Count > NativeSyncJournal.MaximumRecords) throw new SyncRecordsFlawedException(SyncRecordFlaw.TooManyRecords, subject: null);
+            result.Add((JsonNode)new JsonObject { ["type"] = type.Kind.Name, ["value"] = value });
         }
-        IReadOnlyList<string> Tokens(string kind, IReadOnlyList<JsonNode> items, bool archived = false)
-            => SyncOrderTokens.Allocate(items.Select(item => existing.GetValueOrDefault(kind + ":"
-                + Id(archived ? item["tab"]!["id"] : item["id"]).ToString("D"))).ToArray());
+        IReadOnlyList<string> Tokens(SyncPayloadType type, IReadOnlyList<JsonNode> items)
+            => SyncOrderTokens.Allocate(items.Select(item => existing.GetValueOrDefault(Name(type, Id(type.Subject(item.AsObject())["id"]))))
+                .ToArray());
 
         var spaces = Items(session, "spaces").Select(n => n!).ToArray();
-        var spaceTokens = Tokens(SyncRecordKinds.Space, spaces);
+        var spaceTokens = Tokens(SyncPayloadType.Space, spaces);
         for (int i = 0; i < spaces.Length; i++) {
             var space = spaces[i];
             var portable = Items(space, StoredSessionCodec.Key.Tabs).Where(t => PortableTab(t!)).Select(t => t!).ToArray();
@@ -81,19 +84,19 @@ public static class NativeSyncProjection {
             spaceValue["splitGroups"] = new JsonArray(Items(space, "splitGroups")
                 .Where(g => splitIds.Contains(Id(g!["id"]))).DistinctBy(g => Id(g!["id"])).Select(SplitGroup).ToArray());
             spaceValue["orderToken"] = spaceTokens[i];
-            Add(SyncRecordKinds.Space, spaceValue);
+            Add(SyncPayloadType.Space, spaceValue);
 
             if (policy.CurrentTabs || policy.SavedStructure) {
                 var folders = Items(space, StoredSessionCodec.Key.Folders).Where(f => policy.Includes(Placement(f!, "location"))).Select(f => f!).ToArray();
                 var tree = new FolderTree(folders.Select(f => new FolderState(Id(f["id"]), Placement(f, "location"),
                     Text(f["title"])!, ParentId: f["parentID"] is { } parent ? Id(parent) : null)).ToArray());
                 IReadOnlyList<FolderState> display;
-                try { display = tree.DisplayOrder(); } catch (BrowserRuleException) { throw new NativeSyncDocumentException(NativeSyncDocumentErrorCodes.InvalidFolderHierarchy, Id(space["id"]).ToString("D")); }
+                try { display = tree.DisplayOrder(); } catch (BrowserRuleException) { throw new SyncRecordsFlawedException(SyncRecordFlaw.InvalidFolderHierarchy, Id(space["id"])); }
                 var byId = folders.ToDictionary(f => Id(f["id"]));
                 var folderTokens = new Dictionary<Guid, string>();
                 foreach (var parent in new Guid?[] { null }.Concat(display.Select(f => (Guid?)f.Id))) {
                     var children = tree.Children(parent).ToArray();
-                    var tokens = Tokens(SyncRecordKinds.Folder, children.Select(f => byId[f.Id]).ToArray());
+                    var tokens = Tokens(SyncPayloadType.Folder, children.Select(f => byId[f.Id]).ToArray());
                     for (int j = 0; j < children.Length; j++) folderTokens[children[j].Id] = tokens[j];
                 }
                 foreach (var folder in display) {
@@ -103,28 +106,28 @@ public static class NativeSyncProjection {
                     value["orderToken"] = folderTokens[folder.Id];
                     SyncedText.FolderTitle.Fit(value);
                     SyncedText.FolderSymbol.Fit(value);
-                    Add(SyncRecordKinds.Folder, value);
+                    Add(SyncPayloadType.Folder, value);
                 }
             }
 
             var tabs = portable.Where(t => policy.Includes(Placement(t))).ToArray();
-            var tabTokens = Tokens(SyncRecordKinds.Tab, tabs);
-            for (int j = 0; j < tabs.Length; j++) Add(SyncRecordKinds.Tab, Tab(tabs[j], space["id"]!, tabTokens[j], archived: false));
+            var tabTokens = Tokens(SyncPayloadType.Tab, tabs);
+            for (int j = 0; j < tabs.Length; j++) Add(SyncPayloadType.Tab, Tab(tabs[j], space["id"]!, tabTokens[j], archived: false));
             if (!policy.HistoryAndArchive) continue;
             foreach (var history in Items(space, StoredSessionCodec.Key.History).Where(h => SyncContentPolicy.Includes(Text(h!["url"])))) {
                 var value = Fields(history!, "id", "url", "title", "firstVisitedAt", "lastVisitedAt", "visitCount");
                 value["spaceID"] = space["id"]!.DeepClone();
                 Spell(value, "url");
                 Visit(value);
-                Add(SyncRecordKinds.History, value);
+                Add(SyncPayloadType.History, value);
             }
             // Archive presentation sorts by date after a merge. That is not a
             // user reorder: keep accepted positions and append new identities.
             var archive = Items(space, StoredSessionCodec.Key.ArchivedTabs).Where(a => PortableTab(a!["tab"]!)).Select(a => a!)
-                .OrderBy(a => existing.GetValueOrDefault(SyncRecordKinds.Archive + ":" + Id(a["tab"]!["id"]).ToString("D")) ?? "~", StringComparer.Ordinal)
+                .OrderBy(a => existing.GetValueOrDefault(Name(SyncPayloadType.Archive, Id(a["tab"]!["id"]))) ?? "~", StringComparer.Ordinal)
                 .ThenBy(a => Id(a["tab"]!["id"]).ToString("D"), StringComparer.Ordinal).ToArray();
-            var archiveTokens = Tokens(SyncRecordKinds.Archive, archive, archived: true);
-            for (int j = 0; j < archive.Length; j++) Add(SyncRecordKinds.Archive, new JsonObject {
+            var archiveTokens = Tokens(SyncPayloadType.Archive, archive);
+            for (int j = 0; j < archive.Length; j++) Add(SyncPayloadType.Archive, new JsonObject {
                 ["tab"] = Tab(archive[j]["tab"]!, space["id"]!, archiveTokens[j], archived: true),
                 ["archivedAt"] = archive[j]["archivedAt"]!.DeepClone(),
                 ["reason"] = SyncedArchiveReason(archive[j], archiveReasons.GetValueOrDefault(Id(archive[j]["tab"]!["id"])))

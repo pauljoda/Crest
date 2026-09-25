@@ -421,14 +421,21 @@ profile owners. The native coordinator moves the existing page
 through the engine adapter after the state commit, without navigating it again.
 Compact transfer projections exclude history, archive and native image bytes.
 
-`crest_core_evaluate_sync` runs wire-compatible conflict resolution and stable
-fractional ordering in the core. Record identity is validated on both sides of
-the boundary. `NativeSyncJournal` owns immutable journal snapshots: local staging,
-deletion evidence, incoming merges, cloud replacement, logical clocks and upload
-acknowledgements. Swift value copies retain a shared snapshot handle; a mutation
-creates a separate handle and publishes its decoded projection only on success.
-The persistence adapter writes the core-encoded snapshot in the existing format.
-Failed operations leave the original records, clock and pending uploads intact.
+The core resolves conflicts and allocates stable fractional order tokens, and
+validates each record's identity where it arrives. `NativeSyncJournal` owns
+immutable journal snapshots and updates them through typed methods: `Stage`,
+`Merge`, `Replace`, `Overwrite` and `Acknowledge` cover local staging, deletion
+evidence, incoming merges, cloud replacement, logical clocks and upload
+acknowledgements. The rules that differ by kind of record belong to that kind's
+`SyncPayloadType`. The core writes each snapshot in the existing format, and a
+failed update leaves the original records, clock and pending uploads intact.
+
+The core also owns the CloudKit payload codec. `SyncRecordBody` reads and writes
+a record's payload or tombstone in the journal's form and in the CloudKit form
+(sorted keys, dates as seconds since 1970), with the defaults and validation the
+Apple clients apply. It keeps the members this build does not know, and computes
+the schema a record needs. Swift's `CloudRecordCodec` only maps those bytes and
+the envelope fields onto a `CKRecord` and back.
 
 `NativeSyncProjection` maps compact native checkpoints to the existing shared
 record format. Staging projects directly inside the immutable journal transition,
@@ -436,8 +443,9 @@ so projection failures cannot advance its clock. `NativeSyncMaterializer` applie
 reconciled incoming records, preserves device credentials and local-only pages,
 and distinguishes delayed parent folders from tombstoned folders. Domain folder
 resolution holds back incomplete subtrees and rejects cross-Space ancestry.
-Prepared query handles evaluate once and return typed identity-bearing errors.
-Native favicon image bytes stay outside the core and are reattached by the adapter.
+A rule a projection or a materialization breaks is a `SyncRecordFlaw` naming the
+record or Space that breaks it. Native favicon image bytes stay outside the core
+and are reattached by the adapter.
 
 `NativeSessionMaintenance` repairs checkpoint identities, folder structure,
 pin limits and split membership, and applies history/archive retention.
@@ -445,15 +453,18 @@ The same domain split policy serves command edits and checkpoint repair. A repai
 returns native asset references separately from semantic records, preserving each
 tab's images when duplicate identities are replaced. Startup must accept repair
 before creating pages or saving the session; rejected sync preparation leaves the
-original session and journal untouched. Replacing a disposable seed with real
-cloud Spaces clears the seed marker.
+original session and journal untouched. A seed opens repaired in the same way,
+and a tab the repair gave a new identity follows as `TabCopied`. Replacing a
+disposable seed with real cloud Spaces clears the seed marker.
 
 Cloud records arrive as `CloudSyncIntent`s (`MergeSyncRecords`,
-`ReplaceWithCloudRecords`, `ReplaceSeedWithCloudRecords`, `OverwriteCloud`)
-through `crest_app_dispatch`. The core computes the matched session and journal
-after all merge rules succeed, reserves the session so no competing write lands
-while it saves both, and refuses a record it cannot take with
-`InvalidSyncRecords`. Legacy defaults are migrated once, through the
+`MergeCloudSnapshot`, `ReplaceWithCloudRecords`, `ReplaceSeedWithCloudRecords`,
+`OverwriteCloud`) through `crest_app_dispatch`. A record whose payload the core
+cannot read, or whose schema is newer than this build's, is skipped and counted
+in the intent's `SyncRecordsSkipped` receipt; a snapshot with any skipped record
+is refused whole. The core computes the matched session and journal after all
+merge rules succeed, reserves the session so no competing write lands while it
+saves both, and refuses a record it cannot take with `InvalidSyncRecords`. Legacy defaults are migrated once, through the
 `AdoptLegacySession` intent, and retained for rollback. Local saves, incoming sync
 and upload acknowledgments all write through the core's one connection, and a
 journal is always written in one transaction with the newest accepted session.
@@ -624,7 +635,7 @@ and `BrowserWindow` aggregates have been removed. Their former rules now belong 
 | Address, search and link decisions | `SearchProvider`, `SearchPreferences`, `AddressResolution`, `LinkNavigationPolicy` via `NativePolicyEvaluator` |
 | Space locking and device authentication | `SpaceAccessAuthority` behind the Space access intents |
 | Cross-workspace moves and borrowed workspaces | `NativeSessionAuthority.Moves` and `NativeSessionAuthority.Borrowing` |
-| Sync projection, ordering, conflict and deletion | `NativeSyncAuthority` and the `crest_sync_*` entry points |
+| Sync projection, ordering, conflict and deletion | `NativeSyncAuthority`, `NativeSyncJournal` and the cloud sync intents |
 | Correlated completion invariants | Prepare/reserve/commit revisions on the session and sync handles |
 
 Page creation, closure, residency operations and content blocking are native
@@ -768,10 +779,10 @@ Split View code read; a refused or unanswered edit leaves the value as it was.
 WebKit reads its spelling default once per process, so launch reconciles that
 engine copy with the record. Appearance preferences, link preferences,
 shortcut overrides, sync choices and per-Space download locations stay native.
-The C ABI is synchronous: `crest_session_*`, `crest_sync_*`,
-`crest_app_*`, `crest_permissions_*`, `crest_core_evaluate_policy` and
-`crest_core_evaluate_sync`, declared in `CrestContracts/include/crest_core.h`
-and `crest_app.h` and described in `CrestContracts/README.md`.
+The C ABI is synchronous: `crest_session_*`, `crest_app_*`,
+`crest_permissions_*` and `crest_core_evaluate_policy`, declared in
+`CrestContracts/include/crest_core.h` and `crest_app.h` and described in
+`CrestContracts/README.md`.
 `CrestContracts/tests/native_abi.c` exercises the policy, app,
 permissions and session entry points against the built library.
 
@@ -790,9 +801,9 @@ the actual native adapter, not features available in stock Chrome.
 
 Swift names every core call with a typed operation. `BrowserSessionOperation`
 lists session commands and reads, with the spellings of the core's
-`SessionOperation.cs`. `BrowserPolicyOperation` lists pure policy calls
-(`PolicyOperation.cs`), and `BrowserSyncOperation` lists sync journal
-mutations, queries and evaluations (`NativeSyncOperation.cs`).
+`SessionOperation.cs`, and `BrowserPolicyOperation` lists pure policy calls
+(`PolicyOperation.cs`). Sync has no JSON operations: the cloud transport sends
+typed intents and queries.
 
 Requests and answers are Codable models. `BrowserSessionArguments` holds each
 command's `arguments` member. `BrowserCoreNullable` encodes an absent value as
@@ -802,14 +813,13 @@ Swift's typed identifiers such as `TabID` and `SpaceID` encode as
 `{"rawValue":…}` records, so argument models carry plain `UUID`s instead.
 
 `BrowserCoreErrorCode` names the rule an answer's `error` member reports. It
-covers `BrowserRuleCodes.cs` and `NativeSyncDocumentErrorCodes.cs`. The set
+covers `BrowserRuleCodes.cs`. The set
 stays open: a code this build does not know still decodes and falls to the
 caller's generic failure. On the core side, each
 policy operation decodes its request into a typed record (`*PolicyRequests.cs`),
 and each area keeps its wire codes in one `*Codes.cs` file.
 
-A few spellings stay as they are for compatibility. Sync document error codes
-are camelCase while session rule codes are snake_case. Link routes carry
+A few spellings stay as they are for compatibility. Link routes carry
 lowercase UUID strings, while other paths use the native encoder's spelling.
 
 ## Build workflow
@@ -865,8 +875,7 @@ Session inputs and checkpoint parts are limited to 64 MiB. Typed intents and
 queries are limited to 16 MiB, except the one that carries an installed session
 into the file (`AdoptLegacySession`), which may take one session part; the
 limit is data on the contract type, and the dispatcher checks it before reading
-the message. Pure sync evaluation (`crest_core_evaluate_sync`) is limited to
-16 MiB. Large binary metadata must
+the message. Large binary metadata must
 move to a separate blob provider before either budget grows. Nobody has
 validated full UI behavior at the import limits yet, or run the iOS build on a
 physical device.

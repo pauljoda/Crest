@@ -362,10 +362,10 @@ public sealed partial class BrowserContractsTests {
             SavedRecord(SyncRecordKind.Folder, Folder(Fixed(1_031), Fixed(100), Fixed(1_030)), 2, Fixed(1_034)),
             SavedRecord(SyncRecordKind.Folder, Folder(Fixed(1_030), Fixed(1_032), null), 3, Fixed(1_034)));
 
-        var refused = Assert.Throws<NativeSyncDocumentException>(() => journal.Materialize(session));
+        var refused = Assert.Throws<SyncRecordsFlawedException>(() => journal.Materialize(session));
 
-        Assert.Equal("invalidFolderHierarchy", refused.Code);
-        Assert.Equal(Fixed(100).ToString("D"), refused.Value);
+        Assert.Equal(SyncRecordFlaw.InvalidFolderHierarchy, refused.Flaw);
+        Assert.Equal(Fixed(100), refused.Subject);
     }
 
     #endregion

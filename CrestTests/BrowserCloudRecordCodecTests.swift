@@ -14,9 +14,9 @@ final class BrowserCloudRecordCodecTests: XCTestCase {
     @MainActor
     func testAdditiveCloudPayloadSurvivesCoreEditAndUpload() async throws {
         let session = BrowserSession.preview
-        let sender = try BrowserStoredSessionHarness(session: session, journal: BrowserSyncJournal())
+        let sender = try BrowserStoredSessionHarness(session: session)
         await sender.store.flushPendingSyncPersistence()
-        let receiver = try BrowserStoredSessionHarness(session: session, journal: BrowserSyncJournal())
+        let receiver = try BrowserStoredSessionHarness(session: session)
         await receiver.store.flushPendingSyncPersistence()
         let codec = BrowserCloudRecordCodec()
         let space = SyncRecordReference(kind: .space, id: session.spaces[0].id.rawValue)
@@ -59,7 +59,7 @@ final class BrowserCloudRecordCodecTests: XCTestCase {
     func testFullSpaceCustomizationSyncsBetweenStoresAndSurvivesReload() async throws {
         let session = BrowserSession.preview
         let spaceID = session.spaces[0].id
-        let senderHarness = try BrowserStoredSessionHarness(session: session, journal: BrowserSyncJournal())
+        let senderHarness = try BrowserStoredSessionHarness(session: session)
         await senderHarness.store.flushPendingSyncPersistence()
         let receiverHarness = try BrowserStoredSessionHarness(session: session)
         let sender = senderHarness.store

@@ -1,5 +1,6 @@
 using System.Text.Json.Nodes;
 
+using CrestCore.Contracts;
 using CrestCore.Domain;
 
 namespace CrestCore.Application;
@@ -44,13 +45,13 @@ internal static class NativeSyncCompatibility {
         new() { ["id"] = Identity, ["spaceID"] = Identity, ["folderID"] = Identity, ["splitGroupID"] = Identity });
 
     private static readonly Dictionary<string, Shape> Values = new() {
-        [SyncRecordKinds.Space] = new("id profileID name symbol accent branding browsingPreferences accessPolicy isSavedTabsExpanded savedTabsExpansionModifiedAt splitGroups orderToken",
+        [SyncRecordKind.Space.Name] = new("id profileID name symbol accent branding browsingPreferences accessPolicy isSavedTabsExpanded savedTabsExpansionModifiedAt splitGroups orderToken",
             new() { ["id"] = Identity, ["branding"] = Branding, ["browsingPreferences"] = Browsing, ["splitGroups"] = List(Group, true) }),
-        [SyncRecordKinds.Folder] = new("id spaceID title location symbol color parentID isCollapsed collapseModifiedAt orderAnchorTabID orderToken",
+        [SyncRecordKind.Folder.Name] = new("id spaceID title location symbol color parentID isCollapsed collapseModifiedAt orderAnchorTabID orderToken",
             new() { ["id"] = Identity, ["spaceID"] = Identity, ["parentID"] = Identity, ["orderAnchorTabID"] = Identity, ["color"] = Color }),
-        [SyncRecordKinds.Tab] = Tab,
-        [SyncRecordKinds.History] = new("id spaceID url title firstVisitedAt lastVisitedAt visitCount", new() { ["spaceID"] = Identity }),
-        [SyncRecordKinds.Archive] = new("tab archivedAt reason", new() { ["tab"] = Tab })
+        [SyncRecordKind.Tab.Name] = Tab,
+        [SyncRecordKind.History.Name] = new("id spaceID url title firstVisitedAt lastVisitedAt visitCount", new() { ["spaceID"] = Identity }),
+        [SyncRecordKind.Archive.Name] = new("tab archivedAt reason", new() { ["tab"] = Tab })
     };
 
     #endregion

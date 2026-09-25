@@ -168,9 +168,9 @@ public sealed partial class BrowserContractsTests {
         var journal = new JournalUnderTest(Fixed(227));
         var before = journal.Journal.Read();
 
-        var refused = Assert.Throws<NativeSyncDocumentException>(() => journal.Stage(session, at: 200));
+        var refused = Assert.Throws<SyncRecordsFlawedException>(() => journal.Stage(session, at: 200));
 
-        Assert.Equal("duplicateRecord", refused.Code);
+        Assert.Equal(SyncRecordFlaw.DuplicateRecord, refused.Flaw);
         Assert.Equal(before, journal.Journal.Read());
     }
 

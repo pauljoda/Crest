@@ -76,9 +76,8 @@ public sealed partial class BrowserContractsTests {
             Journal = Journal.Stage(Canonical(session), reason ?? SyncDeletionReason.ExplicitDelete, At(at));
 
         /// Merges `records`, in the journal's form, as they arrived from the cloud.
-        public void Merge(IEnumerable<JsonObject> records) => Journal = Journal.Apply(Request("merge", new JsonObject {
-            ["records"] = new JsonArray([.. records.Select(record => (JsonNode?)record.DeepClone())])
-        }));
+        public void Merge(IEnumerable<JsonObject> records) =>
+            Journal = Journal.Merge(new JsonArray([.. records.Select(record => (JsonNode?)record.DeepClone())]));
 
         public void Merge(params JsonObject[] records) => Merge(records.AsEnumerable());
 
@@ -96,19 +95,7 @@ public sealed partial class BrowserContractsTests {
         public void MarkUploaded(string name, JsonNode version) => Acknowledge([(name, version)]);
 
         private void Acknowledge(IReadOnlyList<(string Name, JsonNode Version)> uploads) =>
-            Journal = Journal.Apply(Request("acknowledge", new JsonObject {
-                ["acknowledgements"] = new JsonArray([.. uploads.Select(upload => (JsonNode?)new JsonObject {
-                    ["id"] = Identity(upload.Name),
-                    ["version"] = upload.Version.DeepClone()
-                })])
-            }));
-
-        private byte[] Request(string operation, JsonObject arguments) => Bytes(new JsonObject {
-            ["version"] = 1,
-            ["operation"] = operation,
-            ["preferences"] = Journal.Preferences,
-            ["arguments"] = arguments
-        });
+            Journal = Journal.Acknowledge([.. uploads.Select(upload => new UploadedRecord(Reference(upload.Name), SyncVersionOf(upload.Version)))]);
 
         #endregion
 
@@ -201,11 +188,8 @@ public sealed partial class BrowserContractsTests {
         /// the journal holds it at.
         public void MarkUploaded() {
             var journal = Journal;
-            stored.App.Send(new AcknowledgeUploads([.. journal.Pending.Select(name => {
-                var version = journal.Version(name);
-                return new UploadedRecord(Reference(name),
-                    new SyncVersion(version["logicalClock"]!.GetValue<ulong>(), Guid.Parse(version["deviceID"]!.GetValue<string>())));
-            })]));
+            stored.App.Send(new AcknowledgeUploads([.. journal.Pending.Select(name =>
+                new UploadedRecord(Reference(name), SyncVersionOf(journal.Version(name))))]));
             stored.App.Drain();
         }
 
@@ -251,6 +235,10 @@ public sealed partial class BrowserContractsTests {
         return new(SyncRecordKind.Named(name[..colon])!, Guid.Parse(name[(colon + 1)..]));
     }
 
+    /// The version a journal record's `{logicalClock, deviceID}` spells.
+    private static SyncVersion SyncVersionOf(JsonNode version) =>
+        new(version["logicalClock"]!.GetValue<ulong>(), Guid.Parse(version["deviceID"]!.GetValue<string>()));
+
     /// `session` as the core writes a session it holds.
     private static JsonObject Canonical(JsonObject session) => StoredSessionCodec.Encode(StoredSessionCodec.DecodeSession(session));
 
@@ -261,9 +249,8 @@ public sealed partial class BrowserContractsTests {
         var version = record["version"]!;
         var body = SyncRecordBody.Read(tombstone ?? record["payload"], tombstone is not null, SyncPayloadForm.Journal);
         return new(SyncRecordKind.Named(record["id"]!["kind"]!.GetValue<string>())!, Guid.Parse(record["id"]!["value"]!.GetValue<string>()),
-            StoredSessionCodec.Identity(record["spaceID"]),
-            new SyncVersion(version["logicalClock"]!.GetValue<ulong>(), Guid.Parse(version["deviceID"]!.GetValue<string>())),
-            body.Schema, body.Bytes(SyncPayloadForm.Cloud), tombstone is not null);
+            StoredSessionCodec.Identity(record["spaceID"]), SyncVersionOf(version), body.Schema, body.Bytes(SyncPayloadForm.Cloud),
+            tombstone is not null);
     }
 
     #endregion

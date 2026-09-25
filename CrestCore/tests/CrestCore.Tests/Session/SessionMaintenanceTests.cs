@@ -9,6 +9,12 @@ using Xunit;
 namespace CrestCore.Tests;
 
 public sealed partial class BrowserContractsTests {
+    /// The journal and session merging `records`, records in the journal's
+    /// form, into `session`, or replacing it with them, make at `now`.
+    private static NativeSyncSessionTransition Transition(NativeSyncJournal journal, JsonNode session, JsonNode records, bool replacing,
+        double now) => NativeSyncSessionTransition.Prepare(journal, session.AsObject(), records.AsArray(), replacing, now, emptySpace: null,
+        access: null, ids: null);
+
     [Fact]
     public void SessionRepairIsAtomicAndReidentifiesRuntimeCollisions() {
         var source = SavedSession().Document["session"]!.AsObject();
@@ -88,16 +94,9 @@ public sealed partial class BrowserContractsTests {
             ["payload"] = space.DeepClone(),
             ["version"] = new JsonObject { ["logicalClock"] = 900UL, ["deviceID"] = Guid.NewGuid().ToString("D") }
         };
-        var request = new JsonObject {
-            ["version"] = 1,
-            ["operation"] = "merge",
-            ["session"] = session.DeepClone(),
-            ["preferences"] = SyncProjectionPreferences(),
-            ["records"] = new JsonArray(incoming),
-            ["now"] = 800000000.0
-        };
-        var error = Assert.Throws<NativeSyncDocumentException>(() => NativeSyncSessionTransition.Prepare(journal, Bytes(request)));
-        Assert.Equal("immutableProfileChanged", error.Code);
+        var error = Assert.Throws<SyncRecordsFlawedException>(() =>
+            Transition(journal, session.DeepClone(), new JsonArray(incoming), replacing: false, now: 800000000.0));
+        Assert.Equal(SyncRecordFlaw.ProfileChanged, error.Flaw);
         Assert.Equal(before, journal.Read());
     }
 
@@ -106,17 +105,10 @@ public sealed partial class BrowserContractsTests {
         var fixture = SavedSession(); var session = fixture.Document["session"]!.AsObject();
         var initial = JournalDocument(SyncTabRecord(fixture.Tab, fixture.Space, 1, Guid.NewGuid()));
         var journal = new NativeSyncJournal(Bytes(initial));
-        var staged = journal.Apply(JournalCommand(initial, "stage", new JsonObject { ["session"] = session.DeepClone(), ["deletionReason"] = "superseded", ["now"] = 800000000.0 }));
+        var staged = journal.Stage(session.DeepClone().AsObject(), SyncDeletionReason.Superseded, 800000000.0);
         var records = JsonNode.Parse(staged.Read())!["records"]!.DeepClone();
         session["disposableSeedMarker"] = Guid.NewGuid().ToString("D");
-        var transition = NativeSyncSessionTransition.Prepare(journal, Bytes(new JsonObject {
-            ["version"] = 1,
-            ["operation"] = "replace",
-            ["session"] = session.DeepClone(),
-            ["preferences"] = SyncProjectionPreferences(),
-            ["records"] = records,
-            ["now"] = 800000000.0
-        }));
+        var transition = Transition(journal, session.DeepClone(), records, replacing: true, now: 800000000.0);
         var result = transition.Materialization["session"]!.AsObject();
         Assert.Null(result["disposableSeedMarker"]);
         var payloads = NativeSyncProjection.Project(result, SyncProjectionPreferences(),
@@ -137,14 +129,7 @@ public sealed partial class BrowserContractsTests {
         });
         var initial = JournalDocument(SyncTabRecord(fixture.Tab, fixture.Space, 1, Guid.NewGuid()));
         var journal = new NativeSyncJournal(Bytes(initial));
-        var transition = NativeSyncSessionTransition.Prepare(journal, Bytes(new JsonObject {
-            ["version"] = 1,
-            ["operation"] = "replace",
-            ["session"] = session.DeepClone(),
-            ["preferences"] = SyncProjectionPreferences(),
-            ["records"] = new JsonArray(),
-            ["now"] = 800000000.0
-        }));
+        var transition = Transition(journal, session.DeepClone(), new JsonArray(), replacing: true, now: 800000000.0);
         var result = transition.Materialization["session"]!;
         Assert.True(JsonNode.DeepEquals(session["spaceDeletions"], result["spaceDeletions"]));
         Assert.Equal(2, result["spaces"]!.AsArray().Count);
@@ -159,14 +144,7 @@ public sealed partial class BrowserContractsTests {
             ["version"] = new JsonObject { ["logicalClock"] = 900UL, ["deviceID"] = Guid.NewGuid().ToString("D") },
             ["tombstone"] = new JsonObject { ["reason"] = "explicitDelete", ["deletedAt"] = 800000000.0 }
         };
-        var merged = NativeSyncSessionTransition.Prepare(journal, Bytes(new JsonObject {
-            ["version"] = 1,
-            ["operation"] = "merge",
-            ["session"] = session.DeepClone(),
-            ["preferences"] = SyncProjectionPreferences(),
-            ["records"] = new JsonArray(tombstone),
-            ["now"] = 800000000.0
-        }));
+        var merged = Transition(journal, session.DeepClone(), new JsonArray(tombstone), replacing: false, now: 800000000.0);
         var record = JsonNode.Parse(merged.Journal.Read())!["records"]!.AsArray().Single(r =>
             r!["id"]!["kind"]!.GetValue<string>() == "space" && Guid.Parse(r["id"]!["value"]!.GetValue<string>()) == fixture.Space)!;
         Assert.Equal("explicitDelete", record["tombstone"]!["reason"]!.GetValue<string>());
@@ -190,14 +168,7 @@ public sealed partial class BrowserContractsTests {
             ["version"] = new JsonObject { ["logicalClock"] = 900UL, ["deviceID"] = Guid.NewGuid().ToString("D") },
             ["tombstone"] = new JsonObject { ["reason"] = reason, ["deletedAt"] = 800000000.0 }
         });
-        var transition = NativeSyncSessionTransition.Prepare(journal, Bytes(new JsonObject {
-            ["version"] = 1,
-            ["operation"] = operation,
-            ["session"] = session.DeepClone(),
-            ["preferences"] = SyncProjectionPreferences(),
-            ["records"] = incoming,
-            ["now"] = 800000000.0
-        }));
+        var transition = Transition(journal, session.DeepClone(), incoming, replacing: operation == "replace", now: 800000000.0);
         Assert.Equal(before, Bytes(session));
         var result = transition.Materialization["session"]!;
         Assert.Equal(expected, result["spaceDeletions"] is JsonArray { Count: 1 });

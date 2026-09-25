@@ -84,14 +84,7 @@ public sealed partial class BrowserContractsTests {
         var fixture = SavedSession(); var session = fixture.Document["session"]!.AsObject();
         session["appPreferences"] = new JsonObject { ["startupBehavior"] = "lastActiveTab", ["futureChoice"] = 3 };
         var journal = new NativeSyncJournal(Bytes(JournalDocument(SyncTabRecord(fixture.Tab, fixture.Space, 1, Guid.NewGuid()))));
-        var transition = NativeSyncSessionTransition.Prepare(journal, Bytes(new JsonObject {
-            ["version"] = 1,
-            ["operation"] = "replace",
-            ["session"] = session.DeepClone(),
-            ["preferences"] = SyncProjectionPreferences(),
-            ["records"] = new JsonArray(),
-            ["now"] = 800000000.0
-        }));
+        var transition = Transition(journal, session.DeepClone(), new JsonArray(), replacing: true, now: 800000000.0);
         Assert.True(JsonNode.DeepEquals(session["appPreferences"], transition.Materialization["session"]!["appPreferences"]));
     }
 

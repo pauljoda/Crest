@@ -136,25 +136,19 @@ final class BrowserGettingStartedTests: XCTestCase {
         XCTAssertTrue(converted.isWebPage)
     }
 
-    func testNativeTabsStayLocalWhilePortableExportPreservesContent() throws {
+    func testNativeTabsStayLocalWhilePortableExportPreservesContent() async throws {
         let browser = BrowserStore.preview()
         let id = try XCTUnwrap(browser.openGettingStarted())
-        // Whole-second fixture avoids Date epoch-conversion rounding in the
-        // existing JSON cloud codec; this test checks descriptor preservation.
-        var session = browser.session
-        for spaceIndex in session.spaces.indices {
-            for tabIndex in session.spaces[spaceIndex].tabs.indices {
-                session.spaces[spaceIndex].tabs[tabIndex].lastActivatedAt = Date(timeIntervalSince1970: 1_700_000_000)
-            }
-        }
-        let payloads = try BrowserCoreSync.project(session, preferences: .default, records: [])
-        let records = payloads.map {
-            BrowserSyncRecord.save($0, version: BrowserSyncVersion(logicalClock: 1, deviceID: UUID()))
-        }
-        XCTAssertFalse(records.contains { $0.id.value == id.rawValue })
-        let restored = try BrowserCoreSync.materialize(session, preferences: .default, records: records)
+        let session = browser.session
+        // A device holding the session syncs every tab but the guide, and
+        // keeps the guide through a merge of what it synced.
+        let device = try await BrowserStoredSessionHarness.staged(session)
+        let records = try await device.heldRecords()
+        XCTAssertFalse(records.contains { $0.id == id.rawValue })
+        try device.deliverNow(MergeSyncRecords(records: records))
         XCTAssertEqual(
-            restored.space(id: browser.selectedSpaceID)?.tabs.first { $0.id == id }?.nativeContent, .gettingStarted)
+            device.store.session.space(id: browser.selectedSpaceID)?.tabs.first { $0.id == id }?.nativeContent,
+            .gettingStarted)
         let archive = try JSONDecoder().decode(
             BrowserPortableArchive.self, from: JSONEncoder().encode(BrowserPortableArchive(session: session)))
         let imported = try archive.materialize()

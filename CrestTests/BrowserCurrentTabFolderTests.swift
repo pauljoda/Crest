@@ -47,7 +47,7 @@ final class BrowserCurrentTabFolderTests: XCTestCase {
         }
     }
 
-    func testTabDropBetweenEmptySiblingFoldersCommitsAndRestoresAtTheParentLevel() throws {
+    func testTabDropBetweenEmptySiblingFoldersCommitsAndRestoresAtTheParentLevel() async throws {
         for location in [BrowserFolderLocation.saved, .current] {
             for nested in [false, true] {
                 for sourcePlacement in [TabPlacement.pinned, .saved, .current] {
@@ -79,10 +79,7 @@ final class BrowserCurrentTabFolderTests: XCTestCase {
                             tabs: result.tabs, tree: result.folderTree,
                             location: location, parentID: parent?.id
                         ).map(\.id), [.folder(first.id), .tab(moving.id), .folder(second.id)])
-                    let records = try BrowserCoreSync.project(browser.session, preferences: .default, records: [])
-                        .map { BrowserSyncRecord.save($0, version: .init(logicalClock: 1, deviceID: UUID())) }
-                    let synced = try BrowserCoreSync.materialize(
-                        .freshInstallSeed, preferences: .default, records: records)
+                    let synced = try await syncedToAnotherDevice(browser.session)
                     let syncedSpace = try XCTUnwrap(synced.space(id: space.id))
                     XCTAssertEqual(
                         BrowserSidebarFolderListItem.items(
@@ -344,7 +341,7 @@ final class BrowserCurrentTabFolderTests: XCTestCase {
         XCTAssertEqual(browser.session, before)
     }
 
-    func testNestedCurrentFoldersSyncToAnotherDeviceWithMetadataAndMembership() throws {
+    func testNestedCurrentFoldersSyncToAnotherDeviceWithMetadataAndMembership() async throws {
         let root = BrowserFolder(
             title: "Research", location: .current, color: .ocean, isCollapsed: true,
             collapseModifiedAt: Date(timeIntervalSince1970: 1_800_000_000))
@@ -355,10 +352,7 @@ final class BrowserCurrentTabFolderTests: XCTestCase {
             space.tabs[1].folderID = child
         }
         let space = try XCTUnwrap(browser.selectedSpace)
-        let payloads = try BrowserCoreSync.project(browser.session, preferences: .default, records: [])
-        let records = payloads.map { BrowserSyncRecord.save($0, version: .init(logicalClock: 1, deviceID: UUID())) }
-        for record in records { try record.validate() }
-        let remote = try BrowserCoreSync.materialize(.freshInstallSeed, preferences: .default, records: records)
+        let remote = try await syncedToAnotherDevice(browser.session)
         let restored = try XCTUnwrap(remote.space(id: space.id))
         XCTAssertEqual(restored.folders, browser.session.spaces[0].folders)
         XCTAssertEqual(restored.tabs.first { $0.id == space.currentTabs[0].id }?.folderID, child)
@@ -375,21 +369,18 @@ final class BrowserCurrentTabFolderTests: XCTestCase {
         XCTAssertEqual(legacy.id, folder.id)
     }
 
-    func testSyncPreferencesIncludeEachFolderWithItsSectionAndPreserveDisabledLocalSections() throws {
+    func testSyncPreferencesIncludeEachFolderWithItsSectionAndPreserveDisabledLocalSections() async throws {
         let browser = makeBrowser()
         let space = try XCTUnwrap(browser.selectedSpace)
         let saved = try XCTUnwrap(browser.addFolder(title: "Saved", in: space.id))
         let current = try XCTUnwrap(browser.createTabFolder([space.currentTabs[0].id], in: space.id))
-        var preferences = BrowserSyncPreferences.default
-        preferences.currentTabs = false
-        let payloads = try BrowserCoreSync.project(browser.session, preferences: preferences, records: [])
-        let folderIDs = payloads.compactMap { payload -> FolderID? in
-            if case .folder(let folder) = payload { return folder.id }
-            return nil
-        }
-        XCTAssertEqual(folderIDs, [saved])
-        let records = payloads.map { BrowserSyncRecord.save($0, version: .init(logicalClock: 1, deviceID: UUID())) }
-        let refreshed = try BrowserCoreSync.materialize(browser.session, preferences: preferences, records: records)
+        // A device that does not sync its current tabs.
+        let device = try BrowserStoredSessionHarness(
+            session: browser.session, journalData: StoredSyncJournal.fresh(deviceID: UUID(), syncsCurrentTabs: false))
+        let records = try await device.heldRecords()
+        XCTAssertEqual(records.filter { $0.kind == .folder }.map(\.id), [saved.rawValue])
+        try device.deliverNow(MergeSyncRecords(records: records))
+        let refreshed = device.store.session
         XCTAssertTrue(refreshed.spaces[0].folders.contains { $0.id == current && $0.location == .current })
         XCTAssertEqual(refreshed.spaces[0].tabs.first { $0.id == space.currentTabs[0].id }?.folderID, current)
     }
@@ -423,6 +414,12 @@ final class BrowserCurrentTabFolderTests: XCTestCase {
         }
         configure(&space)
         return makeStore(space, showing: space.tabs[4].id)
+    }
+
+    /// The session another device shows once it takes from the cloud
+    /// everything a device holding `session` staged.
+    private func syncedToAnotherDevice(_ session: BrowserSession) async throws -> BrowserSession {
+        try await BrowserStoredSessionHarness.staged(session).joiningDevice().store.session
     }
 
     /// A window showing `tabID` in the only Space.

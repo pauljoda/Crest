@@ -10,18 +10,20 @@ import XCTest
 /// restore and adoption are the core's own tests.
 @MainActor
 final class BrowserCoreSessionRecoveryTests: XCTestCase {
-    func testTheRecoveryScreenRestoresTheCheckpointAndThenLaunches() throws {
+    func testTheRecoveryScreenRestoresTheCheckpointAndThenLaunches() async throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }
         // Launch repair names a launch Space; this one already has it.
         var original = BrowserSession.preview
         original.defaultSpaceID = original.spaces[0].id
-        var journal = BrowserSyncJournal()
-        try journal.stage(session: original)
+        // The journal of a device that staged the session.
+        let staged = try await BrowserStoredSessionHarness.staged(original)
+        let journalData = try XCTUnwrap(try staged.storedPart("journal"))
+        let journal = try StoredSyncJournal(journalData)
         do {
             let core = try CrestCore(configuration: AppConfiguration(storageDirectory: directory.path))
             try BrowserInstalledRelease.adopt(
-                original, journal: journal, into: core, favicons: InMemoryBrowserFaviconStore())
+                original, journalData: journalData, into: core, favicons: InMemoryBrowserFaviconStore())
         }
         try Data("unreadable original".utf8).write(to: directory.appendingPathComponent("session.sqlite"))
         var successfulLaunches = 0
@@ -46,7 +48,7 @@ final class BrowserCoreSessionRecoveryTests: XCTestCase {
         let recovered = try BrowserStoredSessionHarness.storedJournal(in: directory)
         XCTAssertEqual(restored.projection, original)
         XCTAssertNotEqual(recovered.deviceID, journal.deviceID)
-        XCTAssertEqual(recovered.records, journal.records)
+        XCTAssertEqual(recovered.recordsJSON, journal.recordsJSON)
         XCTAssertTrue(FileManager.default.fileExists(atPath: BrowserSessionRecovery.cloudMarker(in: directory).path))
     }
 
@@ -106,9 +108,11 @@ final class BrowserCoreSessionRecoveryTests: XCTestCase {
         let installed = try makeInstalledSession()
         try BrowserInstalledRelease.write(installed, to: defaults, favicons: favicons)
         await favicons.flushPendingWrites()
-        var journal = BrowserSyncJournal()
-        try journal.stage(session: installed)
-        journalDefaults.set(try journal.encodedSnapshot(), forKey: BrowserLegacySessionDefaults.journalKey)
+        // The journal of a device that staged the installed session.
+        let staged = try await BrowserStoredSessionHarness.staged(installed)
+        let journalData = try XCTUnwrap(try staged.storedPart("journal"))
+        let journal = try StoredSyncJournal(journalData)
+        journalDefaults.set(journalData, forKey: BrowserLegacySessionDefaults.journalKey)
         let legacy = BrowserLegacySessionDefaults(defaults: defaults, journalDefaults: [journalDefaults, defaults])
 
         do {
@@ -119,8 +123,7 @@ final class BrowserCoreSessionRecoveryTests: XCTestCase {
             XCTAssertEqual(storage.projection, installed)
             XCTAssertTrue(storage.projection.spaces.allSatisfy { $0.tabs.contains { $0.faviconData != nil } })
             XCTAssertEqual(carried.deviceID, journal.deviceID)
-            XCTAssertEqual(carried.records, journal.records)
-            XCTAssertEqual(carried.pendingRecordIDs, journal.pendingRecordIDs)
+            XCTAssertEqual(carried.recordsJSON, journal.recordsJSON)
             XCTAssertNotNil(defaults.data(forKey: BrowserLegacySessionDefaults.coreKey))
         }
 

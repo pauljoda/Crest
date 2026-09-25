@@ -82,7 +82,7 @@ final class BrowserCloudSyncControllerTests: XCTestCase {
             configuration: testConfiguration,
             preferences: preferences,
             remoteService: TestBrowserCloudSyncRemoteService(
-                accountState: .available, snapshot: try cloudRecords(of: .privateBrowsing())),
+                accountState: .available, snapshot: try await cloudRecords(of: .privateBrowsing())),
             transportFactory: factory
         )
 
@@ -116,8 +116,9 @@ final class BrowserCloudSyncControllerTests: XCTestCase {
 
     func testDifferentAccountContentPausesForExplicitReconciliation() async throws {
         let device = try await syncedDevice()
-        let local = try device.storedJournal()
-        let cloud = try cloudRecords(of: .privateBrowsing())
+        let local = try device.storedPart("journal")
+        let localRecordCount = try device.storedJournal().records.count
+        let cloud = try await cloudRecords(of: .privateBrowsing())
         let preferences = TestBrowserCloudSyncPreferences(
             requiresAccountConfirmation: true
         )
@@ -140,7 +141,7 @@ final class BrowserCloudSyncControllerTests: XCTestCase {
         XCTAssertEqual(
             controller.conflict,
             BrowserCloudSyncConflictSummary(
-                localRecordCount: local.records.count,
+                localRecordCount: localRecordCount,
                 cloudRecordCount: cloud.count,
                 localSpaceCount: BrowserSession.preview.spaces.count,
                 cloudSpaceCount: 1
@@ -148,7 +149,7 @@ final class BrowserCloudSyncControllerTests: XCTestCase {
         )
         XCTAssertEqual(controller.observedCloudRecordCount, cloud.count)
         XCTAssertTrue(factory.transports.isEmpty)
-        XCTAssertEqual(try device.storedJournal(), local, "Neither copy is replaced or overwritten")
+        XCTAssertEqual(try device.storedPart("journal"), local, "Neither copy is replaced or overwritten")
     }
 
     func testUseICloudResolutionReplacesLocalContentAndClearsThePause() async throws {
@@ -159,7 +160,7 @@ final class BrowserCloudSyncControllerTests: XCTestCase {
         )
         let remote = TestBrowserCloudSyncRemoteService(
             accountState: .available,
-            snapshot: try cloudRecords(of: cloudSession)
+            snapshot: try await cloudRecords(of: cloudSession)
         )
         let factory = TestBrowserCloudSyncTransportFactory()
         let controller = BrowserCloudSyncController(
@@ -190,7 +191,7 @@ final class BrowserCloudSyncControllerTests: XCTestCase {
         )
         let remote = TestBrowserCloudSyncRemoteService(
             accountState: .available,
-            snapshot: try cloudRecords(of: .privateBrowsing())
+            snapshot: try await cloudRecords(of: .privateBrowsing())
         )
         let factory = TestBrowserCloudSyncTransportFactory()
         let controller = BrowserCloudSyncController(
@@ -206,7 +207,8 @@ final class BrowserCloudSyncControllerTests: XCTestCase {
 
         XCTAssertEqual(device.store.session, local)
         let journal = try device.storedJournal()
-        XCTAssertEqual(journal.pendingRecordIDs, Set(journal.records.map(\.id)))
+        XCTAssertEqual(journal.pending.count, journal.records.count)
+        XCTAssertTrue(journal.records.allSatisfy { journal.pending.contains($0.reference) })
         XCTAssertEqual(preferences.savedConflictResolutions, [.useThisDevice])
         XCTAssertNil(controller.conflict)
         XCTAssertEqual(controller.phase, .ready)
@@ -216,7 +218,7 @@ final class BrowserCloudSyncControllerTests: XCTestCase {
     func testDisposableSeedIsReplacedBeforeTransportStarts() async throws {
         let device = try await syncedDevice(.freshInstallSeed)
         let cloudSession = BrowserSession.privateBrowsing()
-        let cloud = try cloudRecords(of: cloudSession)
+        let cloud = try await cloudRecords(of: cloudSession)
         let preferences = TestBrowserCloudSyncPreferences()
         let remote = TestBrowserCloudSyncRemoteService(
             accountState: .available,
@@ -525,7 +527,7 @@ final class BrowserCloudSyncControllerTests: XCTestCase {
 
     func testFailedPullDoesNotReportSuccessOrReplaceEitherCopy() async throws {
         let device = try await syncedDevice()
-        let local = try device.storedJournal()
+        let local = try device.storedPart("journal")
         let controller = BrowserCloudSyncController(
             core: device.core, configuration: testConfiguration,
             preferences: TestBrowserCloudSyncPreferences(),
@@ -538,7 +540,7 @@ final class BrowserCloudSyncControllerTests: XCTestCase {
         XCTAssertNotEqual(controller.phase, .ready)
         XCTAssertNil(controller.lastSuccessAt)
         XCTAssertNil(controller.observedCloudRecordCount)
-        XCTAssertEqual(try device.storedJournal(), local)
+        XCTAssertEqual(try device.storedPart("journal"), local)
     }
 
     private var testConfiguration: BrowserCloudSyncConfiguration {
@@ -548,16 +550,16 @@ final class BrowserCloudSyncControllerTests: XCTestCase {
     /// A device whose file holds `session`, its launch staged: the core the
     /// controller reads and tells.
     private func syncedDevice(_ session: BrowserSession = .preview) async throws -> BrowserStoredSessionHarness {
-        let device = try BrowserStoredSessionHarness(session: session, journal: BrowserSyncJournal())
+        let device = try BrowserStoredSessionHarness(session: session)
         await device.store.flushPendingSyncPersistence()
         return device
     }
 
     /// What another device holding `session` keeps in iCloud.
-    private func cloudRecords(of session: BrowserSession) throws -> [SyncRecord] {
-        var journal = BrowserSyncJournal(deviceID: UUID(uuidString: "30000000-0000-0000-0000-000000000001")!)
-        try journal.stage(session: session)
-        return try journal.records.map(SyncRecord.init(browser:))
+    private func cloudRecords(of session: BrowserSession) async throws -> [SyncRecord] {
+        let other = try BrowserStoredSessionHarness(
+            session: session, syncDeviceID: UUID(uuidString: "30000000-0000-0000-0000-000000000001")!)
+        return try await other.pendingRecords()
     }
 }
 

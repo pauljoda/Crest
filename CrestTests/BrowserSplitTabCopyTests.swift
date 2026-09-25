@@ -151,29 +151,32 @@ final class BrowserSplitTabCopyTests: XCTestCase {
         XCTAssertEqual(store.session, original)
     }
 
-    func testSyncRoundTripKeepsDurableOriginalsAndOpenFolderMembership() throws {
+    func testSyncRoundTripKeepsDurableOriginalsAndOpenFolderMembership() async throws {
         let savedFolder = BrowserFolder(title: "Saved research")
         let currentFolder = BrowserFolder(title: "Open work", location: .current)
         let source = tab("Saved", placement: .saved, folder: savedFolder.id)
         var target = tab("Open", placement: .current)
         target.folderID = currentFolder.id
-        let store = store(tabs: [source, target], folders: [savedFolder, currentFolder], selected: target.id)
+        let space = BrowserSpace(
+            id: SpaceID(), profile: BrowsingProfile(), name: "Work", symbol: "globe", accent: .teal,
+            folders: [savedFolder, currentFolder], tabs: [source, target])
+        let harness = try await BrowserStoredSessionHarness.uploaded(BrowserSession(spaces: [space]))
+        let store = harness.store
+        store.selectTab(target.id)
         let assignment = BrowserSpaceRuntimeAssignment(space: try XCTUnwrap(store.selectedSpace))
-        var journal = BrowserSyncJournal(deviceID: UUID())
-        try journal.stage(session: store.session)
-        try journal.markUploaded(journal.pendingRecordIDs)
         XCTAssertTrue(store.splitTabWithSelectedTab(source.id, matching: assignment))
         let copy = try XCTUnwrap(store.selectedTab)
         XCTAssertEqual(copy.folderID, currentFolder.id)
-        try journal.stage(session: store.session)
-        let materialized = try journal.materializedSession(applyingTo: store.session)
+        let pending = try await harness.pendingRecords()
+        // Another device that takes everything this one holds from the cloud.
+        let materialized = try await harness.joiningDevice().store.session
         let restored = try XCTUnwrap(materialized.space(id: store.selectedSpaceID))
         XCTAssertEqual(restored.tabs.map(\.id), store.selectedSpace?.tabs.map(\.id))
         XCTAssertEqual(restored.tabs.first { $0.id == source.id }?.folderID, savedFolder.id)
         XCTAssertEqual(restored.tabs.first { $0.id == source.id }?.savedURL, source.savedURL)
         XCTAssertEqual(restored.tabs.first { $0.id == copy.id }?.folderID, currentFolder.id)
         XCTAssertEqual(restored.tabs.first { $0.id == copy.id }?.splitGroupID, copy.splitGroupID)
-        XCTAssertFalse(journal.pendingRecordIDs.contains(BrowserSyncRecordID(kind: .tab, value: source.id.rawValue)))
+        XCTAssertFalse(pending.contains { $0.kind == .tab && $0.id == source.id.rawValue })
     }
 
     private func tab(_ title: String, placement: TabPlacement, folder: FolderID? = nil) -> BrowserTab {

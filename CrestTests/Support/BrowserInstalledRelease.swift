@@ -22,18 +22,8 @@ enum BrowserInstalledRelease {
     }
 
     /// The first session of a new file, as a launch gives it one when the
-    /// installed release kept `session` whole with `journal`; the images its
-    /// tabs carried land in `favicons`.
-    @MainActor
-    static func adopt(
-        _ session: BrowserSession, journal: BrowserSyncJournal? = nil, into core: CrestCore,
-        favicons: any BrowserFaviconStoring
-    ) throws {
-        try adopt(session, journalData: try journal?.encodedSnapshot(), into: core, favicons: favicons)
-    }
-
-    /// The first session of a new file, as `adopt(_:journal:into:favicons:)`
-    /// gives it one, with the journal the installed release kept as `journalData`.
+    /// installed release kept `session` whole with the journal `journalData`;
+    /// the images its tabs carried land in `favicons`.
     @MainActor
     static func adopt(
         _ session: BrowserSession, journalData: Data?, into core: CrestCore, favicons: any BrowserFaviconStoring

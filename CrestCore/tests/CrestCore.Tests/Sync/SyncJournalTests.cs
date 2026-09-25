@@ -17,12 +17,11 @@ public sealed partial class BrowserContractsTests {
         ["records"] = new JsonArray(record.DeepClone()),
         ["pendingRecordIDs"] = new JsonArray(record["id"]!.DeepClone())
     };
-    private static byte[] JournalCommand(JsonObject document, string operation, JsonObject arguments) => Bytes(new JsonObject {
-        ["version"] = 1,
-        ["operation"] = operation,
-        ["preferences"] = document["preferences"]!.DeepClone(),
-        ["arguments"] = arguments
-    });
+    /// `journal` after staging `payloads`, everything a session holds that
+    /// syncs, with no tab archived and no Space being deleted.
+    private static NativeSyncJournal Staging(NativeSyncJournal journal, SyncDeletionReason reason, double now, params JsonNode[] payloads) =>
+        journal.Stage(new JsonArray([.. payloads.Select(payload => (JsonNode?)payload.DeepClone())]), new Dictionary<Guid, ArchiveReason>(),
+            new HashSet<Guid>(), reason, now);
 
     [Fact]
     public void UUIDLetterCaseDoesNotCreateEditsButCaseChangesInTitlesStillDo() {
@@ -34,16 +33,10 @@ public sealed partial class BrowserContractsTests {
         var desired = record["payload"]!.DeepClone();
         desired["value"]!["id"]!["rawValue"] = IdForTest(payload["id"]!).ToLowerInvariant();
         desired["value"]!["spaceID"]!["rawValue"] = IdForTest(payload["spaceID"]!).ToLowerInvariant();
-        byte[] Stage() => JournalCommand(document, "stage", new() {
-            ["payloads"] = new JsonArray(desired.DeepClone()),
-            ["archiveReasons"] = new JsonArray(),
-            ["deletionReason"] = "superseded",
-            ["now"] = 100.0
-        });
-        var unchanged = journal.Apply(Stage());
+        var unchanged = Staging(journal, SyncDeletionReason.Superseded, 100, desired);
         Assert.Equal(1UL, JsonNode.Parse(unchanged.Read())!["logicalClock"]!.GetValue<ulong>());
         desired["value"]!["title"] = payload["title"]!.GetValue<string>().ToLowerInvariant();
-        Assert.Equal(2UL, JsonNode.Parse(unchanged.Apply(Stage()).Read())!["logicalClock"]!.GetValue<ulong>());
+        Assert.Equal(2UL, JsonNode.Parse(Staging(unchanged, SyncDeletionReason.Superseded, 100, desired).Read())!["logicalClock"]!.GetValue<ulong>());
         static string IdForTest(JsonNode value) => value["rawValue"]!.GetValue<string>();
     }
 
@@ -55,16 +48,10 @@ public sealed partial class BrowserContractsTests {
         var journal = new NativeSyncJournal(Bytes(document));
         var desired = record["payload"]!.DeepClone();
         desired["value"]!["positionModifiedAt"] = JsonNode.Parse("811615335.98000002");
-        byte[] Stage() => JournalCommand(document, "stage", new() {
-            ["payloads"] = new JsonArray(desired.DeepClone()),
-            ["archiveReasons"] = new JsonArray(),
-            ["deletionReason"] = "superseded",
-            ["now"] = 100.0
-        });
-        var unchanged = journal.Apply(Stage());
+        var unchanged = Staging(journal, SyncDeletionReason.Superseded, 100, desired);
         Assert.Equal(1UL, JsonNode.Parse(unchanged.Read())!["logicalClock"]!.GetValue<ulong>());
         desired["value"]!["positionModifiedAt"] = Math.BitIncrement(811615335.98);
-        Assert.Equal(2UL, JsonNode.Parse(unchanged.Apply(Stage()).Read())!["logicalClock"]!.GetValue<ulong>());
+        Assert.Equal(2UL, JsonNode.Parse(Staging(unchanged, SyncDeletionReason.Superseded, 100, desired).Read())!["logicalClock"]!.GetValue<ulong>());
     }
 
     [Fact]
@@ -95,13 +82,7 @@ public sealed partial class BrowserContractsTests {
         var value = desired["value"]!.AsObject(); value.Remove("futureSpace"); value["name"] = "Renamed";
         value["branding"] = new JsonObject { ["crest"] = new JsonObject { ["symbol"] = "oak" } };
         value["splitGroups"] = new JsonArray(new JsonObject { ["id"] = groupB["id"]!.DeepClone() }, new JsonObject { ["id"] = groupA["id"]!.DeepClone() });
-        var command = JournalCommand(document, "stage", new() {
-            ["payloads"] = new JsonArray(desired),
-            ["archiveReasons"] = new JsonArray(),
-            ["deletionReason"] = "explicitDelete",
-            ["now"] = 100.0
-        });
-        var updated = new NativeSyncJournal(journal.Apply(command).Read());
+        var updated = new NativeSyncJournal(Staging(journal, SyncDeletionReason.ExplicitDelete, 100, desired).Read());
         var result = JsonNode.Parse(updated.Read())!["records"]![0]!;
         Assert.Equal("kept", result["futureRecord"]!.GetValue<string>());
         Assert.True(JsonNode.DeepEquals(payload["futureEnvelope"], result["payload"]!["futureEnvelope"]));
@@ -113,13 +94,8 @@ public sealed partial class BrowserContractsTests {
         Assert.Null(body["branding"]!["symbolColor"]); Assert.Null(body["branding"]!["crest"]!["charge"]);
         Assert.Equal(new[] { "b", "a" }, body["splitGroups"]!.AsArray().Select(g => g!["futureGroup"]!.GetValue<string>()));
         Assert.Null(body["splitGroups"]![1]!["customTitle"]);
-        Assert.Equal(2UL, JsonNode.Parse(updated.Apply(command).Read())!["logicalClock"]!.GetValue<ulong>());
-        var deleted = updated.Apply(JournalCommand(document, "stage", new() {
-            ["payloads"] = new JsonArray(),
-            ["archiveReasons"] = new JsonArray(),
-            ["deletionReason"] = "explicitDelete",
-            ["now"] = 101.0
-        }));
+        Assert.Equal(2UL, JsonNode.Parse(Staging(updated, SyncDeletionReason.ExplicitDelete, 100, desired).Read())!["logicalClock"]!.GetValue<ulong>());
+        var deleted = Staging(updated, SyncDeletionReason.ExplicitDelete, 101);
         Assert.Null(JsonNode.Parse(deleted.Read())!["records"]![0]!["payload"]);
         Assert.Equal("explicitDelete", JsonNode.Parse(deleted.Read())!["records"]![0]!["tombstone"]!["reason"]!.GetValue<string>());
         static string IdForTest(JsonNode value) => value["rawValue"]!.GetValue<string>();
@@ -140,19 +116,13 @@ public sealed partial class BrowserContractsTests {
                 ["reason"] = "closed"
             }
         };
-        byte[] Stage(JsonObject payload) => JournalCommand(document, "stage", new() {
-            ["payloads"] = new JsonArray(payload.DeepClone()),
-            ["archiveReasons"] = new JsonArray(),
-            ["deletionReason"] = "superseded",
-            ["now"] = 200.0
-        });
-        var archived = journal.Apply(Stage(archive));
+        var archived = Staging(journal, SyncDeletionReason.Superseded, 200, archive);
         var records = JsonNode.Parse(archived.Read())!["records"]!.AsArray();
         var archivedRecord = records.Single(r => r!["id"]!["kind"]!.GetValue<string>() == "archive")!;
         Assert.Equal("retained", archivedRecord["payload"]!["value"]!["tab"]!["futureTab"]!.GetValue<string>());
         // Restore on another client that received only the archive record.
-        var restored = new NativeSyncJournal(Bytes(JournalDocument(archivedRecord.AsObject())))
-            .Apply(Stage(new JsonObject { ["type"] = "tab", ["value"] = knownTab }));
+        var restored = Staging(new NativeSyncJournal(Bytes(JournalDocument(archivedRecord.AsObject()))), SyncDeletionReason.Superseded, 200,
+            new JsonObject { ["type"] = "tab", ["value"] = knownTab });
         var restoredTab = JsonNode.Parse(restored.Read())!["records"]!.AsArray().Single(r => r!["id"]!["kind"]!.GetValue<string>() == "tab")!;
         Assert.Equal("retained", restoredTab["payload"]!["value"]!["futureTab"]!.GetValue<string>());
     }
@@ -177,13 +147,8 @@ public sealed partial class BrowserContractsTests {
         var before = journal.Read().ToArray();
         var changed = record["payload"]!.DeepClone(); changed["value"]!["title"] = "New title";
         var added = changed.DeepClone(); added["value"]!["id"] = SwiftId(Guid.NewGuid());
-        var command = JournalCommand(document, "stage", new() {
-            ["payloads"] = new JsonArray(changed, added),
-            ["archiveReasons"] = new JsonArray(),
-            ["deletionReason"] = "superseded",
-            ["now"] = 100.0
-        });
-        Assert.Equal("sync_clock_exhausted", Assert.Throws<BrowserRuleException>(() => journal.Apply(command)).Code);
+        Assert.Equal(BrowserRuleCodes.SyncClockExhausted,
+            Assert.Throws<BrowserRuleException>(() => Staging(journal, SyncDeletionReason.Superseded, 100, changed, added)).Code);
         Assert.Equal(before, journal.Read());
     }
 
@@ -192,11 +157,11 @@ public sealed partial class BrowserContractsTests {
         var record = SyncTabRecord(Guid.NewGuid(), Guid.NewGuid(), 9, Guid.NewGuid());
         var document = JournalDocument(record);
         var journal = new NativeSyncJournal(Bytes(document));
-        var version = record["version"]!.DeepClone(); version["logicalClock"] = 8UL;
-        byte[] Acknowledge(JsonNode version) => JournalCommand(document, "acknowledge", new() { ["acknowledgements"] = new JsonArray(new JsonObject { ["id"] = record["id"]!.DeepClone(), ["version"] = version.DeepClone() }) });
-        var stale = journal.Apply(Acknowledge(version));
+        var reference = new SyncRecordReference(SyncRecordKind.Tab, Guid.Parse(record["id"]!["value"]!.GetValue<string>()));
+        var device = Guid.Parse(record["version"]!["deviceID"]!.GetValue<string>());
+        var stale = journal.Acknowledge([new UploadedRecord(reference, new SyncVersion(8, device))]);
         Assert.Single(JsonNode.Parse(stale.Read())!["pendingRecordIDs"]!.AsArray());
-        var accepted = stale.Apply(Acknowledge(record["version"]!));
+        var accepted = stale.Acknowledge([new UploadedRecord(reference, new SyncVersion(9, device))]);
         Assert.Empty(JsonNode.Parse(accepted.Read())!["pendingRecordIDs"]!.AsArray());
         Assert.Single(JsonNode.Parse(journal.Read())!["pendingRecordIDs"]!.AsArray());
         Assert.Equal(9UL, JsonNode.Parse(accepted.Read())!["logicalClock"]!.GetValue<ulong>());

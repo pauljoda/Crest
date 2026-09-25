@@ -18,7 +18,7 @@ extension BrowserStore {
         let favicons: any BrowserFaviconStoring = BrowserFaviconFileStore.production() ?? InMemoryBrowserFaviconStore()
         let stored = try migratedStorage(
             core: core, legacy: .installed, favicons: favicons, seed: .freshInstallSeed, environment: launchEnvironment)
-        return try production(
+        return production(
             stored: stored, core: core, favicons: favicons, credentialVault: KeychainCredentialVault())
     }
 
@@ -29,7 +29,7 @@ extension BrowserStore {
     static func production(
         stored: BrowserCoreSessionAuthority, core: CrestCore, favicons: any BrowserFaviconStoring,
         credentialVault: any CredentialVault
-    ) throws -> BrowserStore {
+    ) -> BrowserStore {
         BrowserStore(
             credentialVault: credentialVault,
             browsingMode: .standard,
@@ -82,7 +82,7 @@ extension BrowserStore {
         let stored = try migratedStorage(
             core: core, legacy: BrowserLegacySessionDefaults(defaults: defaults, journalDefaults: []),
             favicons: favicons, seed: isolatedFixtureSession(for: launchEnvironment), environment: launchEnvironment)
-        return try production(
+        return production(
             stored: stored, core: core, favicons: favicons,
             credentialVault: KeychainCredentialVault(servicePrefix: namespace))
     }

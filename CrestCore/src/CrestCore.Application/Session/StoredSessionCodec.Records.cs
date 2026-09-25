@@ -8,7 +8,8 @@ namespace CrestCore.Application;
 internal static partial class StoredSessionCodec {
     #region Variables
 
-    private const string UntitledFolder = "Folder";
+    /// What a folder without a title is called.
+    internal const string UntitledFolder = "Folder";
 
     #endregion
 

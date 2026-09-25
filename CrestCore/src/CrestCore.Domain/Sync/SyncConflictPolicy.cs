@@ -11,8 +11,9 @@ public static class SyncConflictPolicy {
             throw new BrowserRuleException(BrowserRuleCodes.SyncIdentityMismatch);
         if (first.DeletionReason?.IsExplicit == true) return 0;
         if (second.DeletionReason?.IsExplicit == true) return 1;
-        if (first.DeletedAt is { } firstDeleted && second.Kind == SyncRecordKinds.Tab && second.ActivatedAt > firstDeleted) return 1;
-        if (second.DeletedAt is { } secondDeleted && first.Kind == SyncRecordKinds.Tab && first.ActivatedAt > secondDeleted) return 0;
+        // A tab shown after the other side deleted it stays open.
+        if (first.DeletedAt is { } firstDeleted && second.ActivatedAt > firstDeleted) return 1;
+        if (second.DeletedAt is { } secondDeleted && first.ActivatedAt > secondDeleted) return 0;
         return first.Version.CompareTo(second.Version) < 0 ? 1 : 0;
     }
 

@@ -54,12 +54,15 @@ never saved or synced.
 builds JSON nodes without reflection. The application and domain have no native
 engine references.
 
-The native Crest apps use the `crest_app_*`, `crest_sync_*` and
-`crest_permissions_*` entry points, plus `crest_core_evaluate_policy` and
-`crest_core_evaluate_sync`. The cloud transport sends its `CloudSyncIntent`s
-through `crest_app_dispatch` from its own thread, and asks `PendingUploads`,
-`RecordsToUpload` and `CloudComparison` through `crest_app_query`; what a
-cloud intent changed arrives in the next `crest_app_drain`.
+The native Crest apps use the `crest_app_*` and `crest_permissions_*` entry
+points, plus `crest_core_evaluate_policy`. The cloud transport sends its
+`CloudSyncIntent`s through `crest_app_dispatch` from its own thread, and asks
+`PendingUploads`, `RecordsToUpload` and `CloudComparison` through
+`crest_app_query`; what a cloud intent changed arrives in the next
+`crest_app_drain`. Each `SyncRecord` carries its payload or tombstone exactly
+as CloudKit stores it, with the schema it needs; the core reads and writes
+those bodies, and a record-taking intent answers `SyncRecordsSkipped` for the
+records it could not read or that a newer build wrote.
 `crest_app_settle_sync` waits off the UI thread for the sync stages already
 requested.
 The session holds browsing data only; which Space and tab a window shows is the
@@ -190,11 +193,11 @@ intent answers the pending batch before its own changes. The
 `FallbackTab` answers the tab a draft Space shows first. `setup.space`, `setup.tab` and `setup.reconcile`
 admit manual-setup draft edits against the import's Space and pinned limits
 and follow Spaces changed elsewhere; `onboarding.completion` and
-`onboarding.guide` decide what finishing setup does. The import review, which
-reads whole Spaces, is the `workspace.review` query on the
-`crest_sync_query_*` path beside `workspace.preview`: without `choices` it
-suggests each imported Space's destination, duplicates and default tabs; with
-them it reports duplicates, matched destination tabs and pinned overflow. The
+`onboarding.guide` decide what finishing setup does. The import review reads
+whole Spaces: `ImportReviewSuggestions` suggests each imported Space's
+destination, duplicates and default tabs, and `ImportReviewAnalysis` reports,
+for the choices a person made, duplicates, matched destination tabs and pinned
+overflow. The
 workspace import rejects a source whose split runs its repair would rewrite.
 
 `shortcuts.bindings` resolves the platform's offered `commands` (at most 128)

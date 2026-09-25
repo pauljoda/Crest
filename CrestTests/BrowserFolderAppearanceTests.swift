@@ -6,7 +6,7 @@ import XCTest
 
 @MainActor
 final class BrowserFolderAppearanceTests: XCTestCase {
-    func testFolderSymbolMutationRejectsStaleOwnershipAndSurvivesSync() throws {
+    func testFolderSymbolMutationRejectsStaleOwnershipAndSurvivesSync() async throws {
         var first = BrowserSession.makeBlankSpace(number: 1)
         let folder = BrowserFolder(title: "Reading")
         first.folders = [folder]
@@ -14,20 +14,25 @@ final class BrowserFolderAppearanceTests: XCTestCase {
         var second = BrowserSession.makeBlankSpace(number: 2)
         second.tabs[0].storedIconMode = .automatic
         let session = BrowserSession(spaces: [first, second], defaultSpaceID: first.id)
-        let browser = BrowserStore(session: session)
+        let harness = try await BrowserStoredSessionHarness.uploaded(session)
+        let browser = harness.store
+        // Another device that holds what this one uploaded.
+        let other = try await harness.joiningDevice()
+        let received = other.store.session
         let emoji = BrowserIconSymbol.symbol(forEmoji: "📚")
         let stale = BrowserSpaceRuntimeAssignment(spaceID: first.id, profileID: UUID())
+        let opened = browser.session
         XCTAssertFalse(browser.setFolderSymbol(folder.id, matching: stale, symbol: emoji))
-        XCTAssertEqual(browser.session, session)
+        XCTAssertEqual(browser.session, opened)
         XCTAssertTrue(browser.setFolderSymbol(folder.id, matching: .init(space: first), symbol: emoji))
         XCTAssertFalse(browser.setFolderSymbol(folder.id, matching: .init(space: first), symbol: emoji))
-        let restored = try JSONDecoder().decode(BrowserSession.self, from: JSONEncoder().encode(browser.session))
-        var journal = BrowserSyncJournal(deviceID: UUID())
-        try journal.stage(session: restored, at: Date())
-        let synced = try journal.materializedSession(applyingTo: session)
+
+        try other.deliverNow(MergeSyncRecords(records: try await harness.pendingRecords()))
+
+        let synced = other.store.session
         XCTAssertEqual(synced.space(id: first.id)?.folders.first?.symbol, emoji)
-        XCTAssertEqual(synced.space(id: first.id)?.tabs, first.tabs)
-        XCTAssertEqual(synced.space(id: second.id), second)
+        XCTAssertEqual(synced.space(id: first.id)?.tabs, received.space(id: first.id)?.tabs)
+        XCTAssertEqual(synced.space(id: second.id), received.space(id: second.id))
     }
 
     func testLegacyBrandingRetainsSubtleFolderColorAndRoundTripsIntensity() throws {

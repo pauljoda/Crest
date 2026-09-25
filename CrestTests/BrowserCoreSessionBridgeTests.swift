@@ -68,26 +68,23 @@ final class BrowserCoreSessionBridgeTests: XCTestCase {
         let icon = Data([9, 9, 9])
         original.spaces[0].tabs[0].faviconData = icon
         original.spaces[0].tabs[0].faviconURL = original.spaces[0].tabs[0].url
-        var journal = BrowserSyncJournal()
-        try journal.stage(session: original)
-        let harness = try BrowserStoredSessionHarness(session: original, journal: journal)
+        let harness = try await BrowserStoredSessionHarness.staged(original)
         let store = harness.store
         let other = store.makeWindowStore()
 
-        var remote = store.session
-        remote.spaces[0].name = "Named elsewhere"
-        let added = BrowserTab(
-            title: "From elsewhere", url: URL(string: "https://elsewhere.example/"), placement: .saved)
-        remote.spaces[0].tabs.append(added)
         // Another device that holds every record this one staged edits it.
-        var remoteJournal = BrowserSyncJournal()
-        try remoteJournal.merge(try harness.storedJournal().records)
-        try remoteJournal.stage(session: remote)
-        try harness.deliverNow(MergeSyncRecords(records: remoteJournal.records.map(SyncRecord.init(browser:))))
+        let remote = try await harness.joiningDevice()
+        let space = original.spaces[0]
+        remote.store.updateSpaceIdentity(space.id, name: "Named elsewhere", symbol: space.symbol, accent: space.accent)
+        let added = try XCTUnwrap(
+            remote.store.openSessionTab(
+                .page(try XCTUnwrap(URL(string: "https://elsewhere.example/")), title: "From elsewhere"),
+                in: space.id, placement: .saved, shouldSelect: false))
+        try harness.deliverNow(MergeSyncRecords(records: try await remote.pendingRecords()))
 
         let merged = try XCTUnwrap(store.session.space(id: original.spaces[0].id))
         XCTAssertEqual(merged.name, "Named elsewhere")
-        XCTAssertTrue(merged.tabs.contains { $0.id == added.id })
+        XCTAssertTrue(merged.tabs.contains { $0.id == added })
         XCTAssertEqual(merged.tabs.first { $0.id == original.spaces[0].tabs[0].id }?.faviconData, icon)
         XCTAssertEqual(other.session, store.session)
         XCTAssertEqual(try harness.stored().session, store.session)

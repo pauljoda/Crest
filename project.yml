@@ -269,10 +269,11 @@ targets:
       - path: CrestTests/BrowserManualSetupPlanTests.swift
       - path: CrestTests/BrowserImportReviewPlanTests.swift
       - path: CrestTests/BrowserPortableArchiveTests.swift
-      - path: CrestTests/BrowserSyncTests.swift
       - path: CrestTests/SuspendingBrowserSpaceDataDeleter.swift
       - path: CrestTests/Support/BrowserPage+WebKitTestAccess.swift
+      - path: CrestTests/Support/BrowserSession+Seed.swift
       - path: CrestTests/Support/BrowserStoredSessionHarness.swift
+      - path: CrestTests/Support/StoredSyncJournal.swift
     dependencies:
       - target: CrestNativeCore
     settings:
