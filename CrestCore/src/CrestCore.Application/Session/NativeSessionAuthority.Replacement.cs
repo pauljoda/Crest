@@ -51,6 +51,10 @@ public sealed partial class NativeSessionAuthority {
         }
     }
 
+    /// Follows the identities the session holds from `previous` to the state
+    /// a reservation just committed. The caller holds the gate.
+    internal void Committed(SessionState previous) => identities.Accepted(previous, session);
+
     /// Saves a state reserved from `previous` with the journal it stages, then
     /// publishes it, all before this returns; a failed stage or save leaves
     /// the session, the journal and the file as they were.

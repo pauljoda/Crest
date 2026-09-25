@@ -165,7 +165,9 @@ public sealed partial class NativeSessionAuthority {
             _ => throw new ArgumentOutOfRangeException(nameof(intent), intent.GetType().Name, "The session does not handle this intent.")
         };
         if (edit is null) return null;
-        Validate(edit.Next);
+        // An import brings Spaces whole, so its session is checked whole.
+        if (intent is ImportWorkspace) Validate(edit.Next);
+        else Validate(basis, edit.Next);
         ValidateBorrowedSession(edit.Next);
         return edit;
     }

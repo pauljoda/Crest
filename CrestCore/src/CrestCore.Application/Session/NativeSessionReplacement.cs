@@ -56,6 +56,7 @@ internal sealed class NativeSessionReplacement : IDisposable {
             if (completed) throw new CrestCore.Domain.BrowserRuleException(CrestCore.Domain.BrowserRuleCodes.InvalidSessionTransaction);
             var previous = owner.CompleteReplacement(this, true)!;
             completed = true;
+            owner.Committed(previous);
             return previous;
         }
     }

@@ -126,9 +126,9 @@ public sealed partial class NativeSessionAuthority {
         arriving.ShowTab(there.Id, intent.TabId).ShowSpace(there.Id);
         var next = Replacing(basis, edited.Capture(space));
         var nextThere = Replacing(theirs, receivingTabs.Capture(there));
-        Validate(next);
+        Validate(basis, next);
         ValidateBorrowedSession(next);
-        Validate(nextThere);
+        receiving.Validate(theirs, nextThere);
         receiving.ValidateBorrowedSession(nextThere);
         return (new(next, leaving), new(nextThere, arriving));
     }

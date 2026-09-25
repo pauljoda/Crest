@@ -22,6 +22,8 @@ public sealed partial class NativeSessionAuthority {
     public const int MaximumBytes = 64 * 1024 * 1024;
     internal static readonly object Gate = new();
     private SessionState session;
+    /// The identities `session` holds, which each edit's state is checked against.
+    private readonly SessionIdentities identities = new();
     private NativeSessionReplacement? replacement;
     private readonly WorkspaceKind workspaceKind;
     private readonly bool privateBrowsing;
@@ -33,6 +35,10 @@ public sealed partial class NativeSessionAuthority {
 
     /// What kind of workspace this session is.
     internal WorkspaceKind Kind => workspaceKind;
+
+    /// The identities the accepted session holds, which each edit is checked
+    /// against. Read it under the gate.
+    internal SessionIdentities Identities => identities;
 
     #endregion
 
@@ -46,7 +52,7 @@ public sealed partial class NativeSessionAuthority {
         workspaceKind = kind;
         privateBrowsing = kind.IsPrivate;
         session = initial;
-        Validate(session);
+        Index(session);
     }
 
     /// The persistent session the core loaded from `storage` and repaired.
@@ -54,7 +60,7 @@ public sealed partial class NativeSessionAuthority {
     internal NativeSessionAuthority(SessionState stored, SessionStorage storage) {
         workspaceKind = WorkspaceKind.Persistent;
         session = stored;
-        Validate(session);
+        Index(session);
         this.storage = storage;
         storage.Enqueue(session, Revision);
     }
@@ -70,39 +76,24 @@ public sealed partial class NativeSessionAuthority {
         return id;
     }
 
-    /// Throws `Rejected` with `InvalidSession` unless `value` is a session a
-    /// workspace can hold; see `Flaw`.
+    /// Throws `Rejected` with `InvalidSession` unless `value`, a session that
+    /// arrives whole, is one a workspace can hold; see `SessionIdentities`.
     private static void Validate(SessionState value) {
-        if (Flaw(value) is { } flaw) throw new Rejected(new InvalidSession(flaw));
+        if (SessionIdentities.Flaw(value) is { } flaw) throw new Rejected(new InvalidSession(flaw));
     }
 
-    /// The first rule `value` breaks that keeps a workspace from holding it, or
-    /// null for a session a workspace can hold.
-    internal static SessionFlaw? Flaw(SessionState value) {
-        var spaces = value.Spaces;
-        var ids = new HashSet<Guid>(); var tabs = new HashSet<Guid>(); var profiles = new HashSet<Guid>();
-        foreach (var space in spaces) {
-            if (space.Id == Guid.Empty || space.ProfileId == Guid.Empty || space.Tabs.Any(tab => tab.Id == Guid.Empty))
-                return SessionFlaw.MissingIdentity;
-            if (!ids.Add(space.Id)) return SessionFlaw.DuplicateSpace;
-            // A Space is exactly one profile and a profile belongs to exactly one
-            // Space. Two Spaces sharing a profile would share cookies, credentials
-            // and extension access across an isolation boundary the user relies on,
-            // and would make "which Space owns this profile" unanswerable.
-            if (!profiles.Add(space.ProfileId)) return SessionFlaw.SharedProfile;
-            foreach (var tab in space.Tabs)
-                if (!tabs.Add(tab.Id)) return SessionFlaw.DuplicateTab;
-        }
-        var pendingIds = new HashSet<Guid>();
-        foreach (var deletion in value.SpaceDeletions) {
-            if (deletion.Id == Guid.Empty || deletion.SpaceId == Guid.Empty || deletion.ProfileId == Guid.Empty)
-                return SessionFlaw.MissingIdentity;
-            if (!pendingIds.Add(deletion.SpaceId) || !spaces.Any(s => s.Id == deletion.SpaceId && s.ProfileId == deletion.ProfileId))
-                return SessionFlaw.UnknownDeletion;
-        }
-        // An empty temporary workspace and a briefly stale window selection are
-        // valid native states. Window reconciliation handles their presentation.
-        return null;
+    /// Throws `Rejected` with `InvalidSession` unless `next`, an edit of
+    /// `basis`, is a session a workspace can hold, reading only what the edit
+    /// changed when `basis` is the accepted state. The caller holds the gate.
+    private void Validate(SessionState basis, SessionState next) {
+        if (identities.Flaw(basis, next) is { } flaw) throw new Rejected(new InvalidSession(flaw));
+    }
+
+    /// Throws `Rejected` with `InvalidSession` unless `value`, the state a
+    /// session opens with, is one a workspace can hold, which each edit is
+    /// then checked against.
+    private void Index(SessionState value) {
+        if (identities.Index(value) is { } flaw) throw new Rejected(new InvalidSession(flaw));
     }
 
     /// A Space's settings without its records, as settings commands answer them.
@@ -133,6 +124,7 @@ public sealed partial class NativeSessionAuthority {
         session = next;
         Revision = checked(Revision + 1);
         storage?.Enqueue(session, Revision);
+        identities.Accepted(previous, next);
         return previous;
     }
 

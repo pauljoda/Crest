@@ -45,7 +45,7 @@ public sealed record SpaceState(
 
     #region Actions - Equality
 
-    public bool Equals(SpaceState? other) => other is not null
+    public bool Equals(SpaceState? other) => ReferenceEquals(this, other) || other is not null
         && Id == other.Id
         && ProfileId == other.ProfileId
         && Settings == other.Settings

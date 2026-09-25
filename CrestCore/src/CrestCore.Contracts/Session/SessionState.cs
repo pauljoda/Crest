@@ -15,7 +15,7 @@ public sealed record SessionState(
     AppPreferences? AppPreferences) {
     #region Actions - Equality
 
-    public bool Equals(SessionState? other) => other is not null
+    public bool Equals(SessionState? other) => ReferenceEquals(this, other) || other is not null
         && Spaces.SequenceEqual(other.Spaces)
         && DefaultSpaceId == other.DefaultSpaceId
         && DisposableSeedMarker == other.DisposableSeedMarker

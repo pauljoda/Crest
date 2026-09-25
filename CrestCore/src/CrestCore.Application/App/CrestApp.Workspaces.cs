@@ -81,9 +81,9 @@ public sealed partial class CrestApp {
         } catch (BrowserRuleException) {
             // A Space whose deletion is under way keeps its identities, so one
             // another Space shares is the seed's to fix.
-            throw new Rejected(new InvalidSession(NativeSessionAuthority.Flaw(session) ?? SessionFlaw.Unreadable));
+            throw new Rejected(new InvalidSession(SessionIdentities.Flaw(session) ?? SessionFlaw.Unreadable));
         }
-        if (NativeSessionAuthority.Flaw(repaired) is { } flaw) throw new Rejected(new InvalidSession(flaw));
+        if (SessionIdentities.Flaw(repaired) is { } flaw) throw new Rejected(new InvalidSession(flaw));
         return (repaired, NativeSessionMaintenance.Copies(repaired, origins));
     }
 

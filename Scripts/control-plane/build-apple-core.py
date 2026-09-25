@@ -50,6 +50,9 @@ def main():
     for path in sorted(inputs):
         digest.update(str(path.relative_to(repo)).encode())
         digest.update(path.read_bytes())
+    # A Debug app's core runs the core's cross-checks, which Release builds leave out.
+    cross_checks = os.environ.get("CONFIGURATION") == "Debug"
+    digest.update(f"cross-checks:{cross_checks}".encode())
     fingerprint = digest.hexdigest()
     output.mkdir(parents=True, exist_ok=True)
     # App and framework targets can request the same core in a parallel build.
@@ -65,7 +68,8 @@ def main():
                         "--check", "--root", str(repo)], cwd=core, env=environment, check=True)
         publish = output / "publish"
         command = [dotnet, "publish", "src/CrestCore.Native", "-c", "Release", "-r", runtimes[platform],
-                   "--artifacts-path", str(output / "intermediates"), "-o", str(publish), "--nologo"]
+                   "--artifacts-path", str(output / "intermediates"), "-o", str(publish), "--nologo",
+                   f"-p:CrestCrossChecks={'true' if cross_checks else 'false'}"]
         if platform != "macosx":
             command += ["-p:PublishAotUsingRuntimePack=true"]
         subprocess.run(command, cwd=core, env=environment, check=True)

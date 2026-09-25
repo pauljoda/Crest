@@ -2529,6 +2529,10 @@
     "space-selector-matching-corners": {
       "category": "improved",
       "message": "The Space selector's outline and its selection now share the same corners."
+    },
+    "session-checks-only-what-an-edit-changed": {
+      "category": "improved",
+      "message": "Editing tabs does less work in large sessions."
     }
   }
 }

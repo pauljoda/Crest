@@ -69,7 +69,7 @@ public sealed partial class NativeSessionAuthority {
         var events = new SessionTabEvents([], edited.Favicon);
         if (edited.Space == original) return (session, session, events);
         var next = Replacing(session, edited.Space);
-        Validate(next);
+        Validate(session, next);
         ValidateBorrowedSession(next);
         return (Accept(next), next, events);
     }

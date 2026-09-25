@@ -25,7 +25,7 @@ public sealed partial class NativeSessionAuthority {
         session = initial; workspaceKind = WorkspaceKind.Borrowed;
         privateBrowsing = source.privateBrowsing; access = source.access;
         borrowedSource = source; borrowedSpace = space; borrowedProfile = profile;
-        Validate(session);
+        Index(session);
     }
 
     #endregion

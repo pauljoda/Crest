@@ -255,6 +255,10 @@ public sealed partial class NativeSessionAuthority {
     /// `InvalidSyncRecords` with its flaw, and a failure no rule names is
     /// `InvalidSyncRecords` with `Unexpected`, never a fault the host sees.
     private static Rejected Refusal(Exception error) => error switch {
+#if CREST_CROSS_CHECKS
+        // A cross-check that disagreed is a fault in the core that tests must see.
+        System.Diagnostics.UnreachableException => throw error,
+#endif
         Rejected { Rejection: InvalidSession { Flaw: SessionFlaw.SharedProfile } } =>
             new(new InvalidSyncRecords(SyncRecordFlaw.SharedProfile, null)),
         Rejected { Rejection: InvalidSession } => new(new InvalidSyncRecords(SyncRecordFlaw.Unexpected, null)),
