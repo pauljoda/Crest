@@ -250,7 +250,7 @@ public sealed partial class BrowserContractsTests {
 
         var held = device.Journal;
         foreach (var child in children)
-            Assert.True(NativeSyncEvaluator.Equivalent(child, held.Records.Single(record => RecordName(record["id"]!) == RecordName(child["id"]!))),
+            Assert.True(SameRecord(child, held.Records.Single(record => RecordName(record["id"]!) == RecordName(child["id"]!))),
                 $"{RecordName(child["id"]!)} did not wait for its Space");
         var restored = SpaceIn(device.Merge(cloud.Records.Where(record => RecordName(record["id"]!) == spaceName)), Fixed(940))!;
         Assert.Equal([Fixed(942)], Ids(restored["tabs"]));
@@ -275,7 +275,7 @@ public sealed partial class BrowserContractsTests {
 
         Assert.Equal([current], Ids(heldBack["tabs"]));
         Assert.Empty(heldBack["folders"]!.AsArray());
-        Assert.True(NativeSyncEvaluator.Equivalent(cloud.Record(SyncRecordKind.Tab, saved), device.Journal.Record(SyncRecordKind.Tab, saved)));
+        Assert.True(SameRecord(cloud.Record(SyncRecordKind.Tab, saved), device.Journal.Record(SyncRecordKind.Tab, saved)));
 
         var restored = SpaceIn(device.Merge(cloud.Records.Where(record => RecordName(record["id"]!) == folderName)), space)!;
 
@@ -337,7 +337,7 @@ public sealed partial class BrowserContractsTests {
         Assert.Empty(waiting["folders"]!.AsArray());
         Assert.Equal([current], Ids(waiting["tabs"]));
         foreach (var (kind, id) in new[] { (SyncRecordKind.Folder, middle), (SyncRecordKind.Folder, leaf), (SyncRecordKind.Tab, saved) })
-            Assert.True(NativeSyncEvaluator.Equivalent(cloud.Record(kind, id), device.Journal.Record(kind, id)), $"{Name(kind, id)} did not wait");
+            Assert.True(SameRecord(cloud.Record(kind, id), device.Journal.Record(kind, id)), $"{Name(kind, id)} did not wait");
 
         var restored = SpaceIn(device.Merge(cloud.Records.Where(record => RecordName(record["id"]!) == rootName)), space)!;
 

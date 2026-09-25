@@ -43,27 +43,40 @@ public sealed partial class NativeSessionAuthority {
     /// returns; see `CloudSyncIntent`. It runs on the transport's thread,
     /// holding no lock. A merge or replacement commits holding `commitGate`,
     /// the lock the host's intents take, so what it publishes joins their
-    /// order whole; an intent about the journal alone never takes it. Throws
-    /// `Rejected`.
-    internal void Handle(CloudSyncIntent intent, DateTimeOffset now, IIdSource ids, Lock commitGate) {
+    /// order whole; an intent about the journal alone never takes it. Answers
+    /// the intent's receipts: `SyncRecordsSkipped` when it left records out.
+    /// Throws `Rejected`.
+    internal IReadOnlyList<Change> Handle(CloudSyncIntent intent, DateTimeOffset now, IIdSource ids, Lock commitGate) {
         ArgumentNullException.ThrowIfNull(intent);
         ArgumentNullException.ThrowIfNull(ids);
         var sync = AttachedSync();
+        IncomingSyncRecords? records = null;
         switch (intent) {
             case MergeSyncRecords merge:
-                Converging(sync, new IncomingSyncRecords(merge.Records), replacing: false, now, ids, commitGate);
+                records = new(merge.Records);
+                if (!records.IsEmpty) Converging(sync, records, replacing: false, now, ids, commitGate);
+                break;
+            case MergeCloudSnapshot snapshot:
+                records = new(snapshot.Records);
+                records.RequireWhole();
+                if (!records.IsEmpty) Converging(sync, records, replacing: false, now, ids, commitGate);
                 break;
             case ReplaceWithCloudRecords replacement:
-                Converging(sync, new IncomingSyncRecords(replacement.Records), replacing: true, now, ids, commitGate);
+                records = new(replacement.Records);
+                Converging(sync, records, replacing: true, now, ids, commitGate);
                 break;
             case ReplaceSeedWithCloudRecords replacement:
-                if (Current.DisposableSeedMarker is null) return;
-                Converging(sync, new IncomingSyncRecords(replacement.Records), replacing: true, now, ids, commitGate, seedOnly: true);
+                records = new(replacement.Records);
+                if (Current.DisposableSeedMarker is not null) Converging(sync, records, replacing: true, now, ids, commitGate, seedOnly: true);
                 break;
-            case OverwriteCloud overwrite: Overwriting(sync, new IncomingSyncRecords(overwrite.Records), now); break;
+            case OverwriteCloud overwrite:
+                records = new(overwrite.Records);
+                Overwriting(sync, records, now);
+                break;
             case AcknowledgeUploads acknowledgement: Acknowledging(sync, acknowledgement.Records); break;
             default: throw new ArgumentOutOfRangeException(nameof(intent), intent.GetType().Name, "The session does not handle this intent.");
         }
+        return records?.Receipt ?? [];
     }
 
     /// The sync component this session stages into. Throws `Rejected` with
@@ -304,8 +317,8 @@ public sealed partial class NativeSessionAuthority {
         var held = new List<SyncRecord>(query.Records.Count);
         var gone = new List<SyncRecordReference>();
         foreach (var reference in query.Records) {
-            if (!uploadsNothing && journal.Uploading(reference) is { } record) held.Add(record);
-            else gone.Add(reference);
+            if (uploadsNothing || !journal.Holds(reference)) gone.Add(reference);
+            else if (journal.Uploading(reference) is { } record) held.Add(record);
         }
         return new(held, gone);
     }

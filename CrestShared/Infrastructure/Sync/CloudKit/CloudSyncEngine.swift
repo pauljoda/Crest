@@ -145,16 +145,16 @@ actor BrowserCloudSyncEngine {
             // events they drove failed, so reporting success from here would
             // paint "Up to date" over records that never landed.
             if let failure = eventFailureDescription {
-                throw BrowserSyncError.remoteChangeNotApplied(failure)
+                throw BrowserCloudSyncError.remoteChangeNotApplied(failure)
             }
             guard !persistedState.requiresFullPull else {
-                throw BrowserSyncError.remoteChangeNotApplied("Pull from iCloud to recover an incomplete download.")
+                throw BrowserCloudSyncError.remoteChangeNotApplied("Pull from iCloud to recover an incomplete download.")
             }
             await enqueueLocalChanges(on: syncEngine)
             try await syncEngine.sendChanges(.init(scope: .zoneIDs([codec.recordZoneID])))
             guard !isStopped else { throw CancellationError() }
             if let failure = eventFailureDescription {
-                throw BrowserSyncError.remoteChangeNotApplied(failure)
+                throw BrowserCloudSyncError.remoteChangeNotApplied(failure)
             }
             await updateStatus(.idle)
         } catch {
@@ -165,20 +165,26 @@ actor BrowserCloudSyncEngine {
 
     func pullFromICloud() async throws -> Int {
         guard !isStopped, !persistedState.requiresAccountConfirmation, !isPullingSnapshot else {
-            throw BrowserSyncError.remoteChangeNotApplied("Sync is paused.")
+            throw BrowserCloudSyncError.remoteChangeNotApplied("Sync is paused.")
         }
         isPullingSnapshot = true
         defer { isPullingSnapshot = false }
         await updateStatus(.syncing)
         do {
-            let records = try await BrowserCloudSnapshotLoader(database: database(), codec: codec)
-                .load(requiresCompleteSnapshot: true)
+            let snapshot = try await BrowserCloudSnapshotLoader(database: database(), codec: codec).load()
+            // An incomplete snapshot must never decide what this device holds;
+            // the core refuses one whose payloads it cannot all read.
+            guard snapshot.unreadable == 0 else {
+                throw BrowserCloudSyncError.remoteChangeNotApplied(
+                    "Some iCloud records could not be read. Update Crest on all devices and try again.")
+            }
+            let records = snapshot.records
             guard !isStopped, !persistedState.requiresAccountConfirmation else {
-                throw BrowserSyncError.remoteChangeNotApplied("The iCloud account changed during the download.")
+                throw BrowserCloudSyncError.remoteChangeNotApplied("The iCloud account changed during the download.")
             }
             try await mergeDownloadedRecords(records, isFullSnapshot: true)
             guard !persistedState.requiresFullPull else {
-                throw BrowserSyncError.remoteChangeNotApplied("Some incoming changes still need to be recovered.")
+                throw BrowserCloudSyncError.remoteChangeNotApplied("Some incoming changes still need to be recovered.")
             }
             eventFailureDescription = nil
             isPullingSnapshot = false
@@ -194,18 +200,26 @@ actor BrowserCloudSyncEngine {
 
     /// Write the recovery marker before applying content. State-update events
     /// may persist a newer cursor even when this merge fails or the app exits.
+    /// A full snapshot is refused whole when the core cannot read all of it.
+    /// Answers the records the core left out.
+    @discardableResult
     func mergeDownloadedRecords(
-        _ records: [BrowserSyncRecord],
+        _ records: [SyncRecord],
         isFullSnapshot: Bool = false
-    ) async throws {
+    ) async throws -> SyncRecordsSkipped? {
         let failuresBeforeMerge = failedMerges
         activeMerges += 1
+        let receipts: [Change]
         do {
             persistedState.requiresFullPull = true
             try persistence.save(persistedState)
-            try await deliver(MergeSyncRecords(records: records.map(SyncRecord.init(browser:))))
+            if isFullSnapshot {
+                receipts = try await deliver(MergeCloudSnapshot(records: records))
+            } else {
+                receipts = try await deliver(MergeSyncRecords(records: records))
+            }
             guard !isStopped, !persistedState.requiresAccountConfirmation else {
-                throw BrowserSyncError.remoteChangeNotApplied("Sync stopped while applying downloaded content.")
+                throw BrowserCloudSyncError.remoteChangeNotApplied("Sync stopped while applying downloaded content.")
             }
             if isFullSnapshot, failedMerges == failuresBeforeMerge {
                 needsRecovery = false
@@ -227,6 +241,10 @@ actor BrowserCloudSyncEngine {
             persistedState.requiresFullPull = true
             throw error
         }
+        return receipts.lazy.compactMap { receipt -> SyncRecordsSkipped? in
+            if case .syncRecordsSkipped(let skipped) = receipt { return skipped }
+            return nil
+        }.first
     }
 
     /// Account switches are deliberately paused. Calling this is the explicit user
@@ -319,9 +337,9 @@ actor BrowserCloudSyncEngine {
         return await CKSyncEngine.RecordZoneChangeBatch(pendingChanges: changes) { recordID in
             switch await source.upload(for: recordID) {
             case .record(let record):
-                // TRANSITIONAL until slice 8c: the codec reads the journal's
-                // form. A record it cannot write stays pending, skipped.
-                return try? codec.encode(BrowserSyncRecord(core: record), reusing: systemFields.record(for: recordID))
+                // A record whose server copy a newer build wrote stays
+                // pending, skipped.
+                return try? codec.record(for: record, reusing: systemFields.record(for: recordID))
             case .gone:
                 syncEngine.state.remove(pendingRecordZoneChanges: [.saveRecord(recordID)])
                 return nil
@@ -373,9 +391,10 @@ actor BrowserCloudSyncEngine {
     /// Sends the core an intent from the cloud on a utility thread: the core
     /// computes it on the thread that sends it, never the main thread, and what
     /// it changed reaches the main thread through its wake.
-    private func deliver(_ intent: some CloudSyncIntent) async throws {
+    @discardableResult
+    private func deliver(_ intent: some CloudSyncIntent) async throws -> [Change] {
         let core = core
-        try await Task.detached(priority: .utility) { _ = try core.deliver(intent) }.value
+        return try await Task.detached(priority: .utility) { try core.deliver(intent) }.value
     }
 
     /// What the person is told of a failure: a refusal in the core's own words,
@@ -389,30 +408,41 @@ actor BrowserCloudSyncEngine {
         syncEngine: CKSyncEngine
     ) async throws {
         guard !persistedState.requiresAccountConfirmation else { return }
-        var fetchedRecords: [CKRecord] = []
+        // Each record is read on its own, so one this build cannot read never
+        // costs the batch it arrived in: the change token advances whether or
+        // not the records were applied, so a batch abandoned that way would
+        // never be offered again.
+        var records: [SyncRecord] = []
+        var unreadable = 0
+        var fromNewerBuild = 0
         for modification in event.modifications {
             guard modification.record.recordID.zoneID == codec.recordZoneID else { continue }
-            fetchedRecords.append(modification.record)
             persistedState.systemFields.update(with: modification.record)
+            if let record = codec.syncRecord(from: modification.record) {
+                records.append(record)
+            } else {
+                unreadable += 1
+            }
         }
-        let batch = Self.fetchedBatch(decoding: fetchedRecords, using: codec)
-        if !batch.records.isEmpty {
+        if !records.isEmpty {
             if BrowserCloudConflictResolutionPolicy.shouldMergeFetchedContent(
                 resolution: persistedState.conflictResolution
-            ) {
-                try await mergeDownloadedRecords(batch.records)
+            ), let skipped = try await mergeDownloadedRecords(records) {
+                unreadable += skipped.unreadable
+                fromNewerBuild += skipped.fromNewerBuild
             }
             await enqueueLocalChanges(on: syncEngine)
-            if !persistedState.requiresFullPull {
-                await activityHandler?(.fetched(recordCount: batch.records.count))
+            let applied = records.count - unreadable - fromNewerBuild
+            if !persistedState.requiresFullPull, applied > 0 {
+                await activityHandler?(.fetched(recordCount: applied))
             }
         }
-        let skippedCount =
-            batch.undecodableRecordNames.count + batch.newerSchemaRecordNames.count
-        if skippedCount > 0 {
+        if unreadable + fromNewerBuild > 0 {
+            // A newer build of Crest wrote some of these; the signal tells the
+            // person why one device is missing something the others have.
             let skipped = BrowserCloudSyncActivity.skippedRecords(
-                count: skippedCount,
-                requiresAppUpdate: !batch.newerSchemaRecordNames.isEmpty
+                count: unreadable + fromNewerBuild,
+                requiresAppUpdate: fromNewerBuild > 0
             )
             await activityHandler?(skipped)
         }
@@ -473,41 +503,6 @@ actor BrowserCloudSyncEngine {
         }
     }
 
-    /// Decodes each record on its own so one unreadable record cannot cost the
-    /// batch it arrived in.
-    ///
-    /// One record CloudKit cannot turn into a journal record — a corrupt payload,
-    /// or a record a newer build of Crest wrote — used to fail the whole event.
-    /// The change token advances whether or not the records were applied, so a
-    /// batch abandoned that way is never offered again.
-    static func fetchedBatch(
-        decoding records: [CKRecord],
-        using codec: BrowserCloudRecordCodec = BrowserCloudRecordCodec()
-    ) -> (
-        records: [BrowserSyncRecord],
-        undecodableRecordNames: [String],
-        newerSchemaRecordNames: [String]
-    ) {
-        var decoded: [BrowserSyncRecord] = []
-        var undecodable: [String] = []
-        var newerSchema: [String] = []
-        for record in records {
-            do {
-                decoded.append(try codec.decode(record))
-            } catch BrowserSyncError.unsupportedSchema(let schema)
-                where schema > BrowserCloudRecordCodec.currentSchemaVersion
-            {
-                // A newer build of Crest wrote this. Leaving it alone keeps the
-                // rest of the batch, and the signal tells the person why one
-                // device is missing something the others have.
-                newerSchema.append(record.recordID.recordName)
-            } catch {
-                undecodable.append(record.recordID.recordName)
-            }
-        }
-        return (decoded, undecodable, newerSchema)
-    }
-
     private func handleSentRecordZoneChanges(
         _ event: CKSyncEngine.Event.SentRecordZoneChanges,
         syncEngine: CKSyncEngine
@@ -537,30 +532,26 @@ actor BrowserCloudSyncEngine {
                         )
                         continue
                     }
-                    let batch = Self.fetchedBatch(
-                        decoding: [serverRecord],
-                        using: codec
-                    )
-                    guard let decoded = batch.records.first else {
-                        // The server copy cannot be applied here — usually a
-                        // newer schema. Leaving the local save pending retries
-                        // the same conflict forever and poisons every atomic
-                        // batch it rides in; yield until the app can decode it.
-                        syncEngine.state.remove(
-                            pendingRecordZoneChanges: [.saveRecord(recordID)]
-                        )
-                        let skipped = BrowserCloudSyncActivity.skippedRecords(
-                            count: 1,
-                            requiresAppUpdate: !batch.newerSchemaRecordNames.isEmpty
-                        )
-                        await activityHandler?(skipped)
+                    // The server copy cannot be applied here when this build
+                    // cannot read it, usually a newer schema. Leaving the local
+                    // save pending retries the same conflict forever and poisons
+                    // every atomic batch it rides in; yield until the app can
+                    // read it.
+                    let merged = codec.syncRecord(from: serverRecord)
+                    let skipped: SyncRecordsSkipped? =
+                        if let merged { try await mergeDownloadedRecords([merged]) } else {
+                            SyncRecordsSkipped(unreadable: 1, fromNewerBuild: 0)
+                        }
+                    if let skipped, skipped.unreadable + skipped.fromNewerBuild > 0 {
+                        syncEngine.state.remove(pendingRecordZoneChanges: [.saveRecord(recordID)])
+                        await activityHandler?(
+                            .skippedRecords(count: 1, requiresAppUpdate: skipped.fromNewerBuild > 0))
                         continue
                     }
                     // CloudKit requires the server copy's change tag as the
                     // retry base. The journal deterministically reconciles the
                     // semantic values, then the refreshed system fields let the
                     // next save target that server version.
-                    try await mergeDownloadedRecords([decoded])
                     await enqueueLocalChanges(on: syncEngine)
                 }
             case .zoneNotFound:

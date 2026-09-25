@@ -254,14 +254,16 @@ public sealed partial class BrowserContractsTests {
     /// `session` as the core writes a session it holds.
     private static JsonObject Canonical(JsonObject session) => StoredSessionCodec.Encode(StoredSessionCodec.DecodeSession(session));
 
-    /// `record`, in the journal's form, as the cloud transport carries it.
+    /// `record`, in the journal's form, as the cloud transport carries it: its
+    /// body in the CloudKit form, at the schema it needs.
     private static SyncRecord Cloud(JsonObject record) {
         var tombstone = record["tombstone"];
         var version = record["version"]!;
+        var body = SyncRecordBody.Read(tombstone ?? record["payload"], tombstone is not null, SyncPayloadForm.Journal);
         return new(SyncRecordKind.Named(record["id"]!["kind"]!.GetValue<string>())!, Guid.Parse(record["id"]!["value"]!.GetValue<string>()),
             StoredSessionCodec.Identity(record["spaceID"]),
             new SyncVersion(version["logicalClock"]!.GetValue<ulong>(), Guid.Parse(version["deviceID"]!.GetValue<string>())),
-            Bytes(tombstone ?? record["payload"]!), tombstone is not null);
+            body.Schema, body.Bytes(SyncPayloadForm.Cloud), tombstone is not null);
     }
 
     #endregion

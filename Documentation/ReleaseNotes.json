@@ -2461,6 +2461,10 @@
     "sync-payload-codec-in-core": {
       "category": "internal",
       "message": "The core reads and writes synced records' payloads."
+    },
+    "sync-cloudkit-bytes-in-core": {
+      "category": "internal",
+      "message": "The sync transport hands CloudKit the core's own payload bytes."
     }
   }
 }

@@ -11,17 +11,17 @@ public sealed partial class CrestApp {
     /// outside the lock and takes it only to commit, so every change it makes
     /// joins the pending batch at once, under the lock, and wakes the host once
     /// it lets go. An intent about the journal alone takes no lock the host's
-    /// intents wait for. Answers the intent's receipts: none of them yet.
+    /// intents wait for. Answers the intent's receipts: `SyncRecordsSkipped`
+    /// when it left records out.
     private IReadOnlyList<Change> Handle(CloudSyncIntent intent) {
         var session = StoredSyncSession();
         if (device.Identity(session) is null) throw new Rejected(new NoStoredSession());
         try {
-            session.Handle(intent, clock.Now, ids, gate);
+            return session.Handle(intent, clock.Now, ids, gate);
         } finally {
             WakeIfOwed();
             WakeForRequestedTurn();
         }
-        return [];
     }
 
     private PendingUploadList Answer(PendingUploads query) => StoredSyncSession().Answer(query);

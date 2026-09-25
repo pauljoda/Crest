@@ -1,4 +1,3 @@
-using System.Text.Json;
 using System.Text.Json.Nodes;
 
 using CrestCore.Contracts;
@@ -6,39 +5,62 @@ using CrestCore.Domain;
 
 namespace CrestCore.Application;
 
-/// Records the cloud transport sent, read into the journal's form and checked
-/// before any of them reaches the journal or the session. A record the core
-/// cannot take refuses the whole batch with `InvalidSyncRecords`: every failure
-/// to read one is its flaw, never a fault of the core's.
+/// Records the cloud transport sent, read from their CloudKit fields into the
+/// journal's form and checked before any of them reaches the journal or the
+/// session. A record no client of this build's schema reads, or one a newer
+/// build wrote for a schema this build does not know, is left out and counted
+/// in the receipt, as the Apple clients skip one. A batch that breaks a rule no
+/// single record carries is refused whole with `InvalidSyncRecords`.
 internal sealed class IncomingSyncRecords {
-    #region Static Variables
-
-    /// How deep a record's body may nest, as the journal reads it.
-    private static readonly JsonDocumentOptions BodyDocument = new() { MaxDepth = 64 };
-
-    #endregion
-
     #region Variables
 
-    /// Each record as the journal holds it, in the order they arrived.
+    /// Each readable record as the journal holds it, in the order they arrived.
     private readonly IReadOnlyList<JsonObject> nodes;
 
-    /// Each record's Space, by its name in the journal.
+    /// Each readable record's Space, by its name in the journal.
     private readonly IReadOnlyDictionary<string, Guid> spaces;
+
+    /// The first record left out, which a refusal of the whole batch names.
+    private readonly Guid? firstSkipped;
+
+    /// How many records no client of this build's schema reads.
+    public int Unreadable { get; }
+
+    /// How many records a newer build wrote for a schema this build does not know.
+    public int FromNewerBuild { get; }
+
+    /// What the transport hears about the records left out: nothing when every
+    /// record was read.
+    public IReadOnlyList<Change> Receipt => Unreadable + FromNewerBuild == 0 ? [] : [new SyncRecordsSkipped(Unreadable, FromNewerBuild)];
+
+    /// Whether every record was read.
+    public bool IsWhole => firstSkipped is null;
+
+    /// Whether no record was read.
+    public bool IsEmpty => nodes.Count == 0;
 
     #endregion
 
     #region Constructors
 
     /// Reads `records`. Throws `Rejected` with `InvalidSyncRecords` for more
-    /// records than a journal keeps, two that share an identity, and one that
-    /// cannot be read or whose contents name another record.
+    /// records than a journal keeps and for two readable ones that share an
+    /// identity.
     public IncomingSyncRecords(IReadOnlyList<SyncRecord> records) {
         if (records.Count > NativeSyncJournal.MaximumRecords) throw Refused(SyncRecordFlaw.TooManyRecords, subject: null);
         var read = new List<JsonObject>(records.Count);
         var names = new Dictionary<string, Guid>(StringComparer.Ordinal);
         foreach (var record in records) {
-            var node = Node(record);
+            if (record.Schema > SyncRecordBody.NewestSchema) {
+                FromNewerBuild++;
+                firstSkipped ??= record.Id;
+                continue;
+            }
+            if (Node(record) is not { } node) {
+                Unreadable++;
+                firstSkipped ??= record.Id;
+                continue;
+            }
             if (!names.TryAdd(Name(record), record.SpaceId)) throw Refused(SyncRecordFlaw.DuplicateRecord, record.Id);
             read.Add(node);
         }
@@ -50,8 +72,14 @@ internal sealed class IncomingSyncRecords {
 
     #region Actions - Reading
 
-    /// The records as a journal request carries them, each a copy.
+    /// The readable records as a journal request carries them, each a copy.
     public JsonArray Batch() => new([.. nodes.Select(node => (JsonNode?)node.DeepClone())]);
+
+    /// Throws `Rejected` with `InvalidSyncRecords` naming `UnreadablePayload`
+    /// unless every record was read.
+    public void RequireWhole() {
+        if (firstSkipped is { } skipped) throw Refused(SyncRecordFlaw.UnreadablePayload, skipped);
+    }
 
     /// Throws `Rejected` with `InvalidSyncRecords` naming `ChangedSpace` for a
     /// record `journal` holds in another Space than the one it arrived in.
@@ -62,17 +90,17 @@ internal sealed class IncomingSyncRecords {
 
     /// `record` as the journal holds it, in the member order and spelling the
     /// Apple clients write: its identity, its Space, its version, then its
-    /// payload or its tombstone.
-    private static JsonObject Node(SyncRecord record) {
-        if (record.Id == Guid.Empty || record.SpaceId == Guid.Empty || record.Version.DeviceId == Guid.Empty)
-            throw Refused(SyncRecordFlaw.MalformedRecord, record.Id);
-        if (record.Kind.NamesItsSpace && record.Id != record.SpaceId) throw Refused(SyncRecordFlaw.IdentityMismatch, record.Id);
+    /// payload or its tombstone in the journal's form. Null when no client of
+    /// this build's schema reads it.
+    private static JsonObject? Node(SyncRecord record) {
+        if (record.Schema < 1 || record.Id == Guid.Empty || record.SpaceId == Guid.Empty || record.Version.DeviceId == Guid.Empty) return null;
         JsonObject body;
         try {
-            body = JsonNode.Parse(record.Body, documentOptions: BodyDocument) as JsonObject
-                ?? throw Refused(SyncRecordFlaw.MalformedRecord, record.Id);
-        } catch (JsonException) {
-            throw Refused(SyncRecordFlaw.MalformedRecord, record.Id);
+            var read = SyncRecordBody.Read(record.Body, record.IsTombstone, SyncPayloadForm.Cloud);
+            read.RequireRecord(record.Kind, record.Id, record.SpaceId);
+            body = read.Write(SyncPayloadForm.Journal);
+        } catch (UnreadableSyncPayloadException) {
+            return null;
         }
         var node = new JsonObject {
             ["id"] = new JsonObject { ["kind"] = record.Kind.Name, ["value"] = Spelled(record.Id) },
@@ -80,13 +108,12 @@ internal sealed class IncomingSyncRecords {
             ["version"] = new JsonObject { ["logicalClock"] = record.Version.Clock, ["deviceID"] = Spelled(record.Version.DeviceId) },
             [record.IsTombstone ? "tombstone" : "payload"] = body
         };
-        // Every rule the journal reads a record by, applied before it does.
+        // Every rule the journal reads a record by, which a record every client
+        // reads keeps; one that breaks one is as unreadable here.
         try {
             NativeSyncEvaluator.ValidateRecord(node);
-        } catch (BrowserRuleException error) when (error.Code == BrowserRuleCodes.SyncIdentityMismatch) {
-            throw Refused(SyncRecordFlaw.IdentityMismatch, record.Id);
-        } catch (Exception error) when (error is not Rejected) {
-            throw Refused(SyncRecordFlaw.MalformedRecord, record.Id);
+        } catch (BrowserRuleException) {
+            return null;
         }
         return node;
     }

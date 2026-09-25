@@ -22,21 +22,24 @@ actor CloudKitBrowserCloudSyncRemoteService: BrowserCloudSyncRemoteService {
         return Self.accountState(for: status)
     }
 
-    func loadSnapshot() async throws -> [BrowserSyncRecord] {
+    /// Every record in Crest's zone the core may read. One whose envelope is
+    /// not Crest's is left out, as the core leaves out one whose payload it
+    /// cannot read.
+    func loadSnapshot() async throws -> [SyncRecord] {
         let database = database ?? cloudContainer().privateCloudDatabase
         self.database = database
         do {
             return try await BrowserCloudSnapshotLoader(
                 database: database,
                 codec: BrowserCloudRecordCodec(zoneName: configuration.zoneName)
-            ).load()
+            ).load().records
         } catch let error as CKError where error.code == .zoneNotFound {
             return []
         }
     }
 
     nonisolated func message(for error: any Error) -> String {
-        if let syncError = error as? BrowserSyncError,
+        if let syncError = error as? BrowserCloudSyncError,
             case .remoteChangeNotApplied = syncError
         {
             return "Crest couldn’t apply the latest changes from iCloud."

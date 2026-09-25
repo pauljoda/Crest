@@ -300,7 +300,7 @@ final class BrowserCloudSyncController {
         }
 
         if comparison.deviceRecords == 0, comparison.cloudRecords > 0 {
-            try await deliver(ReplaceWithCloudRecords(records: remote.map(SyncRecord.init(browser:))))
+            try await deliver(ReplaceWithCloudRecords(records: remote))
         }
         try preferences.resetTransportState()
         try await startTransport(
@@ -315,15 +315,14 @@ final class BrowserCloudSyncController {
         guard core.state.syncsDisposableSeed else { return }
         let remote = try await remoteService.loadSnapshot()
         observedCloudRecordCount = remote.count
-        try await deliver(ReplaceSeedWithCloudRecords(records: remote.map(SyncRecord.init(browser:))))
+        try await deliver(ReplaceSeedWithCloudRecords(records: remote))
         try preferences.resetTransportState()
     }
 
     /// How the stored session's journal compares with `remote`, the cloud's
     /// records, once every stage the core queued has settled. The core
     /// compares them off the main thread.
-    private func compare(with remote: [BrowserSyncRecord]) async throws -> CloudContentComparison {
-        let cloud = try remote.map(SyncRecord.init(browser:))
+    private func compare(with cloud: [SyncRecord]) async throws -> CloudContentComparison {
         let core = core
         return try await Task.detached(priority: .utility) {
             await core.settleSync()
@@ -380,7 +379,7 @@ final class BrowserCloudSyncController {
             let latestRemote = try await remoteService.loadSnapshot()
             guard isCurrentStart(generation) else { return }
             observedCloudRecordCount = latestRemote.count
-            let records = try latestRemote.map(SyncRecord.init(browser:))
+            let records = latestRemote
             if usesCloud {
                 try await deliver(ReplaceWithCloudRecords(records: records))
             } else {

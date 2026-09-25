@@ -375,8 +375,18 @@ public sealed partial class BrowserContractsTests {
     private static void AssertSameRecords(JournalUnderTest first, JournalUnderTest second) {
         var (a, b) = (first.Records, second.Records);
         Assert.Equal(a.Count, b.Count);
-        for (int index = 0; index < a.Count; index++)
-            Assert.True(NativeSyncEvaluator.Equivalent(a[index], b[index]), $"{RecordName(a[index]["id"]!)} differs");
+        for (int index = 0; index < a.Count; index++) Assert.True(SameRecord(a[index], b[index]), $"{RecordName(a[index]["id"]!)} differs");
+    }
+
+    /// Whether two records in the journal's form are the same record at the
+    /// same version, carrying what every client reads the same way: a record
+    /// the cloud brought holds the defaults its reader filled in.
+    private static bool SameRecord(JsonObject? first, JsonObject? second) {
+        if (first is null || second is null) return first is null && second is null;
+        JsonNode Body(JsonObject record) => SyncRecordBody.Read(record["tombstone"] ?? record["payload"], record["tombstone"] is not null,
+            SyncPayloadForm.Journal).Write(SyncPayloadForm.Cloud);
+        return NativeSyncEvaluator.Equivalent(first["id"], second["id"]) && NativeSyncEvaluator.Equivalent(first["spaceID"], second["spaceID"])
+            && NativeSyncEvaluator.Equivalent(first["version"], second["version"]) && NativeSyncEvaluator.Equivalent(Body(first), Body(second));
     }
 
     #endregion

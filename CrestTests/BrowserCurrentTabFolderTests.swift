@@ -356,11 +356,7 @@ final class BrowserCurrentTabFolderTests: XCTestCase {
         }
         let space = try XCTUnwrap(browser.selectedSpace)
         let payloads = try BrowserCoreSync.project(browser.session, preferences: .default, records: [])
-        let codec = BrowserCloudRecordCodec()
-        let records = try payloads.map {
-            let record = BrowserSyncRecord.save($0, version: .init(logicalClock: 1, deviceID: UUID()))
-            return try codec.decode(codec.encode(record))
-        }
+        let records = payloads.map { BrowserSyncRecord.save($0, version: .init(logicalClock: 1, deviceID: UUID())) }
         for record in records { try record.validate() }
         let remote = try BrowserCoreSync.materialize(.freshInstallSeed, preferences: .default, records: records)
         let restored = try XCTUnwrap(remote.space(id: space.id))
@@ -392,11 +388,7 @@ final class BrowserCurrentTabFolderTests: XCTestCase {
             return nil
         }
         XCTAssertEqual(folderIDs, [saved])
-        let codec = BrowserCloudRecordCodec()
-        let records = try payloads.map {
-            let record = BrowserSyncRecord.save($0, version: .init(logicalClock: 1, deviceID: UUID()))
-            return try codec.decode(codec.encode(record))
-        }
+        let records = payloads.map { BrowserSyncRecord.save($0, version: .init(logicalClock: 1, deviceID: UUID())) }
         let refreshed = try BrowserCoreSync.materialize(browser.session, preferences: preferences, records: records)
         XCTAssertTrue(refreshed.spaces[0].folders.contains { $0.id == current && $0.location == .current })
         XCTAssertEqual(refreshed.spaces[0].tabs.first { $0.id == space.currentTabs[0].id }?.folderID, current)

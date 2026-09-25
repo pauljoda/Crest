@@ -66,6 +66,7 @@ enum Change: Equatable, Sendable {
     case splitGroupsChanged(SplitGroupsChanged)
     case storageFailed(StorageFailed)
     case syncJournalChanged(SyncJournalChanged)
+    case syncRecordsSkipped(SyncRecordsSkipped)
     case syncStagingFailed(SyncStagingFailed)
     case tabCopied(TabCopied)
     case tabFaviconAssigned(TabFaviconAssigned)
@@ -241,6 +242,7 @@ extension CoreState {
         case .splitGroupsChanged(let change): apply(change)
         case .storageFailed(let change): apply(change)
         case .syncJournalChanged(let change): apply(change)
+        case .syncRecordsSkipped(let change): apply(change)
         case .syncStagingFailed(let change): apply(change)
         case .tabCopied(let change): apply(change)
         case .tabFaviconAssigned(let change): apply(change)
@@ -1346,6 +1348,10 @@ struct LockSpace: Intent, SpaceAccessIntent, Equatable, Sendable {
     let spaceID: UUID
 }
 
+struct MergeCloudSnapshot: Intent, CloudSyncIntent, Equatable, Sendable {
+    let records: [SyncRecord]
+}
+
 struct MergeSyncRecords: Intent, CloudSyncIntent, Equatable, Sendable {
     let records: [SyncRecord]
 }
@@ -2270,6 +2276,7 @@ struct SyncRecord: Equatable, Sendable, Identifiable {
     let id: UUID
     let spaceID: UUID
     let version: SyncVersion
+    let schema: Int
     let body: Data
     let isTombstone: Bool
 }
@@ -2277,6 +2284,11 @@ struct SyncRecord: Equatable, Sendable, Identifiable {
 struct SyncRecordReference: Equatable, Sendable, Identifiable {
     let kind: SyncRecordKind
     let id: UUID
+}
+
+struct SyncRecordsSkipped: Equatable, Sendable {
+    let unreadable: Int
+    let fromNewerBuild: Int
 }
 
 struct SyncStagingFailed: Equatable, Sendable {
@@ -7462,6 +7474,11 @@ struct SyncRecordFlaw: Hashable, Sendable {
         name: "unexpected",
         title: LocalizedStringResource("Crest hit a problem applying these records.")
     )
+    static let unreadablePayload = SyncRecordFlaw(
+        tag: 11,
+        name: "unreadablePayload",
+        title: LocalizedStringResource("Some iCloud records can’t be read. Update Crest on all your devices and try again.")
+    )
 
     static let all: [SyncRecordFlaw] = [
         duplicateRecord,
@@ -7474,7 +7491,8 @@ struct SyncRecordFlaw: Hashable, Sendable {
         sharedProfile,
         profileChanged,
         tooManyPinnedTabs,
-        unexpected
+        unexpected,
+        unreadablePayload
     ]
 
     static func named(_ name: String?) -> SyncRecordFlaw? {

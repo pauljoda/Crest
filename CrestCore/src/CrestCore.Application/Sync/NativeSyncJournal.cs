@@ -209,6 +209,9 @@ public sealed class NativeSyncJournal {
         if (operation is NativeSyncOperation.Merge or NativeSyncOperation.Replace or NativeSyncOperation.Overwrite) {
             var incoming = RecordMap(args["records"]!.AsArray());
             foreach (var record in incoming.Values) clock = Math.Max(clock, Clock(record));
+            // A record at the last clock would leave this journal no version to
+            // write any later edit at.
+            if (clock == ulong.MaxValue) throw new BrowserRuleException(BrowserRuleCodes.SyncClockExhausted);
             if (operation == NativeSyncOperation.Replace) { next = incoming; queued.Clear(); } else foreach (var (id, remote) in incoming) {
                 if (operation == NativeSyncOperation.Overwrite || !next.TryGetValue(id, out var local)) { next[id] = remote; continue; }
                 var resolved = NativeSyncEvaluator.Resolve(local, remote);
@@ -345,13 +348,25 @@ public sealed class NativeSyncJournal {
     internal IReadOnlyList<SyncRecordReference> PendingReferences() =>
         [.. pending.Order(StringComparer.Ordinal).Select(name => Reference(records[name]))];
 
-    /// The record `reference` names as the cloud transport uploads it, or null
-    /// when the journal holds no such record.
+    /// Whether the journal holds the record `reference` names.
+    internal bool Holds(SyncRecordReference reference) => records.ContainsKey(Name(reference.Kind, reference.Id));
+
+    /// The record `reference` names as the cloud transport uploads it, its
+    /// body in the CloudKit form at the schema it needs, or null when the
+    /// journal holds no such record or holds one this device does not send:
+    /// one no client reads, or one naming an address it cannot spell as every
+    /// client parses it.
     internal SyncRecord? Uploading(SyncRecordReference reference) {
         if (!records.TryGetValue(Name(reference.Kind, reference.Id), out var record)) return null;
         var tombstone = record["tombstone"];
-        var body = Encoding.UTF8.GetBytes((tombstone ?? record["payload"]!).ToJsonString());
-        return new(reference.Kind, reference.Id, Id(record["spaceID"]), Version(record), body, tombstone is not null);
+        var space = Id(record["spaceID"]);
+        try {
+            var body = SyncRecordBody.Read(tombstone ?? record["payload"], tombstone is not null, SyncPayloadForm.Journal);
+            body.RequireSendable(reference.Kind, reference.Id, space);
+            return new(reference.Kind, reference.Id, space, Version(record), body.Schema, body.Bytes(SyncPayloadForm.Cloud), tombstone is not null);
+        } catch (UnreadableSyncPayloadException) {
+            return null;
+        }
     }
 
     /// The journal once the cloud saved `uploaded`: each record it holds at
@@ -369,31 +384,47 @@ public sealed class NativeSyncJournal {
 
     /// How this journal compares with `cloud`, every record the cloud holds;
     /// see `CloudContentComparison`. A journal that `holdsNothing` counts as
-    /// empty. Throws `Rejected` with `InvalidSyncRecords` naming
-    /// `MalformedRecord` for a cloud record whose body cannot be read.
+    /// empty. A cloud record this build cannot read is left out, as the
+    /// transport leaves it out of everything else.
+    ///
+    /// Both sides compare in the CloudKit form. The cloud holds each date as
+    /// the seconds since 1970 some client computed from its journal's seconds
+    /// since 2001, so converting this device's dates the same way reproduces
+    /// the cloud's to the bit when the content is the same: a date this device
+    /// uploaded converts with the same arithmetic, and one it downloaded
+    /// converts back exactly. Comparing in the journal's form would see the
+    /// last bit of a converted date differ where nothing did.
     internal CloudContentComparison Comparing(IReadOnlyList<SyncRecord> cloud, bool holdsNothing) {
         IReadOnlyDictionary<string, JsonObject> device = holdsNothing ? new Dictionary<string, JsonObject>() : records;
         var arrived = new Dictionary<string, (Guid Space, bool IsTombstone, JsonNode Body)>(StringComparer.Ordinal);
-        foreach (var record in cloud) arrived[Name(record.Kind, record.Id)] = (record.SpaceId, record.IsTombstone, Body(record));
+        foreach (var record in cloud) {
+            if (record.Schema is < 1 or > SyncRecordBody.NewestSchema) continue;
+            try {
+                var body = SyncRecordBody.Read(record.Body, record.IsTombstone, SyncPayloadForm.Cloud);
+                body.RequireRecord(record.Kind, record.Id, record.SpaceId);
+                arrived[Name(record.Kind, record.Id)] = (record.SpaceId, record.IsTombstone, body.Write(SyncPayloadForm.Cloud));
+            } catch (UnreadableSyncPayloadException) {
+                // Left out; see the summary.
+            }
+        }
         bool matches = arrived.Count == device.Count && device.All(held =>
             arrived.TryGetValue(held.Key, out var other) && Id(held.Value["spaceID"]) == other.Space
-            && (held.Value["tombstone"] is { } tombstone
-                ? other.IsTombstone && NativeSyncEvaluator.Equivalent(tombstone, other.Body)
-                : !other.IsTombstone && NativeSyncEvaluator.Equivalent(held.Value["payload"], other.Body)));
-        return new(matches, device.Count, cloud.Count,
+            && (held.Value["tombstone"] is not null) == other.IsTombstone
+            && NativeSyncEvaluator.Equivalent(CloudForm(held.Value), other.Body));
+        return new(matches, device.Count, arrived.Count,
             device.Values.Count(record => Kind(record) == SyncRecordKinds.Space && Payload(record) is not null),
-            cloud.Count(record => record.Kind == SyncRecordKind.Space && !record.IsTombstone));
+            arrived.Count(record => record.Key.StartsWith(SyncRecordKind.Space.Name + ":", StringComparison.Ordinal) && !record.Value.IsTombstone));
     }
 
-    /// The body of a record the cloud holds. Throws `Rejected` with
-    /// `InvalidSyncRecords` naming `MalformedRecord` for one that is no JSON
-    /// object.
-    private static JsonNode Body(SyncRecord record) {
+    /// The body of `record`, which this journal holds, in the CloudKit form, or
+    /// as the journal holds it when no client reads it.
+    private static JsonNode? CloudForm(JsonObject record) {
+        var tombstone = record["tombstone"];
         try {
-            if (JsonNode.Parse(record.Body, documentOptions: new() { MaxDepth = 64 }) is JsonObject body) return body;
-        } catch (JsonException) {
+            return SyncRecordBody.Read(tombstone ?? record["payload"], tombstone is not null, SyncPayloadForm.Journal).Write(SyncPayloadForm.Cloud);
+        } catch (UnreadableSyncPayloadException) {
+            return tombstone ?? record["payload"];
         }
-        throw new Rejected(new InvalidSyncRecords(SyncRecordFlaw.MalformedRecord, record.Id));
     }
 
     #endregion

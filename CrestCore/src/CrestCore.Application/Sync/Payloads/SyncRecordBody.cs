@@ -13,6 +13,9 @@ namespace CrestCore.Application;
 internal sealed class SyncRecordBody {
     #region Static Variables
 
+    /// The newest CloudKit schema this build reads and writes.
+    public const int NewestSchema = 3;
+
     /// How deep a body may nest, as the journal reads it.
     private static readonly JsonDocumentOptions Document = new() { MaxDepth = 64 };
 

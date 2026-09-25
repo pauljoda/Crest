@@ -64,7 +64,7 @@ final class BrowserSyncingDevice {
     func markUploaded(_ recordIDs: Set<BrowserSyncRecordID>) throws {
         let uploaded = journal.records.filter { recordIDs.contains($0.id) }.map {
             UploadedRecord(
-                record: SyncRecordReference(kind: SyncRecordKind(browser: $0.id.kind), id: $0.id.value),
+                record: SyncRecordReference(kind: SyncRecordKind.named($0.id.kind.rawValue)!, id: $0.id.value),
                 version: SyncVersion(clock: $0.version.logicalClock, deviceID: $0.version.deviceID))
         }
         try harness.deliverNow(AcknowledgeUploads(records: uploaded))

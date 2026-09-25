@@ -40,10 +40,13 @@ public sealed class SyncRecordFlaw {
     /// Applying the records failed in a way no rule names.
     public static readonly SyncRecordFlaw Unexpected = new(name: "unexpected",
         title: "Crest hit a problem applying these records.");
+    /// A snapshot holds a record this build cannot read, so it is not whole.
+    public static readonly SyncRecordFlaw UnreadablePayload = new(name: "unreadablePayload",
+        title: "Some iCloud records can’t be read. Update Crest on all your devices and try again.");
 
     public static IReadOnlyList<SyncRecordFlaw> All { get; } = [
         DuplicateRecord, TooManyRecords, IdentityMismatch, MalformedRecord, ChangedSpace, InvalidFolderHierarchy, DanglingFolder,
-        SharedProfile, ProfileChanged, TooManyPinnedTabs, Unexpected
+        SharedProfile, ProfileChanged, TooManyPinnedTabs, Unexpected, UnreadablePayload
     ];
 
     #endregion

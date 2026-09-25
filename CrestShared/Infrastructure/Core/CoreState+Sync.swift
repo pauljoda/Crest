@@ -23,4 +23,8 @@ extension CoreState {
     func apply(_ change: SyncStagingFailed) {
         syncStagingFailure = change.reason
     }
+
+    /// A receipt for the cloud transport, which reports what it skipped; the
+    /// read model keeps nothing of it.
+    func apply(_ change: SyncRecordsSkipped) {}
 }

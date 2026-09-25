@@ -113,7 +113,7 @@ final class BrowserCloudSyncStateTests: XCTestCase {
     }
 
     func testSchemaUpgradeDiscardsCursorAndChangeTagsButKeepsAccountDecision() throws {
-        let record = try BrowserCloudRecordCodec().encode(testSpaceRecord(index: 6))
+        let record = try BrowserCloudRecordCodec().record(for: testSpaceRecord(index: 6))
         var fields = BrowserCloudRecordSystemFields()
         fields.update(with: record)
         let state = BrowserCloudSyncState(systemFields: fields, reconciliationReason: .accountChange)
@@ -191,48 +191,6 @@ final class BrowserCloudSyncStateTests: XCTestCase {
         )
     }
 
-    /// The change token advances whether or not a fetched batch was applied, so a
-    /// batch abandoned over one unreadable record is never offered again. Every
-    /// record has to get its own chance.
-    func testOneUnreadableRecordDoesNotCostTheRestOfItsBatch() throws {
-        let codec = BrowserCloudRecordCodec()
-        let first = try codec.encode(testSpaceRecord(index: 1))
-        let broken = try codec.encode(testSpaceRecord(index: 2))
-        let last = try codec.encode(testSpaceRecord(index: 3))
-        broken.encryptedValues["payload"] = Data("not-json".utf8) as CKRecordValue
-
-        let batch = BrowserCloudSyncEngine.fetchedBatch(
-            decoding: [first, broken, last]
-        )
-
-        XCTAssertEqual(
-            batch.records.map(\.id.recordName),
-            [first.recordID.recordName, last.recordID.recordName]
-        )
-        XCTAssertEqual(batch.undecodableRecordNames, [broken.recordID.recordName])
-        XCTAssertTrue(batch.newerSchemaRecordNames.isEmpty)
-    }
-
-    /// One record written by a newer build of Crest used to break sync for every
-    /// older device. It is skipped now, and it says why.
-    func testARecordFromANewerSchemaIsSkippedWithAnUpdateSignal() throws {
-        let codec = BrowserCloudRecordCodec()
-        let current = try codec.encode(testSpaceRecord(index: 4))
-        let newer = try codec.encode(testSpaceRecord(index: 5))
-        newer["schemaVersion"] = NSNumber(
-            value: BrowserCloudRecordCodec.currentSchemaVersion + 1
-        )
-
-        let batch = BrowserCloudSyncEngine.fetchedBatch(decoding: [newer, current])
-
-        XCTAssertEqual(
-            batch.records.map(\.id.recordName),
-            [current.recordID.recordName]
-        )
-        XCTAssertEqual(batch.newerSchemaRecordNames, [newer.recordID.recordName])
-        XCTAssertTrue(batch.undecodableRecordNames.isEmpty)
-    }
-
     func testRemovingCrestsICloudDataIsNotImmediatelyUndone() {
         XCTAssertFalse(
             BrowserCloudSyncEngine.restoresLocalRecords(afterZoneDeletion: .purged)
@@ -255,7 +213,7 @@ final class BrowserCloudSyncStateTests: XCTestCase {
         )
 
         XCTAssertEqual(
-            service.message(for: BrowserSyncError.remoteChangeNotApplied("boom")),
+            service.message(for: BrowserCloudSyncError.remoteChangeNotApplied("boom")),
             "Crest couldn’t apply the latest changes from iCloud."
         )
     }
@@ -291,22 +249,17 @@ final class BrowserCloudSyncStateTests: XCTestCase {
         XCTAssertFalse(try XCTUnwrap(persistence.load()).requiresFullPull)
     }
 
-    private func testSpaceRecord(index: Int) -> BrowserSyncRecord {
-        let space = BrowserSyncSpace(
-            id: SpaceID(rawValue: testUUID(prefix: 5, index: index)),
-            profileID: testUUID(prefix: 6, index: index),
-            name: "Space \(index)",
-            symbol: "square.grid.2x2.fill",
-            accent: .indigo,
-            orderToken: "a"
-        )
-        return .save(
-            .space(space),
-            version: BrowserSyncVersion(
-                logicalClock: UInt64(index),
-                deviceID: testUUID(prefix: 7, index: 1)
-            )
-        )
+    /// A Space record as the cloud stores it.
+    private func testSpaceRecord(index: Int) -> SyncRecord {
+        let id = testUUID(prefix: 5, index: index)
+        let value: [String: Any] = [
+            "id": ["rawValue": id.uuidString], "profileID": testUUID(prefix: 6, index: index).uuidString,
+            "name": "Space \(index)", "symbol": "square.grid.2x2.fill", "accent": "indigo", "orderToken": "a",
+        ]
+        let body = try! JSONSerialization.data(withJSONObject: ["type": "space", "value": value], options: [.sortedKeys])
+        return SyncRecord(
+            kind: .space, id: id, spaceID: id, version: SyncVersion(clock: UInt64(index), deviceID: testUUID(prefix: 7, index: 1)),
+            schema: 1, body: body, isTombstone: false)
     }
 
     private func testUUID(prefix: Int, index: Int) -> UUID {

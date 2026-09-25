@@ -554,10 +554,10 @@ final class BrowserCloudSyncControllerTests: XCTestCase {
     }
 
     /// What another device holding `session` keeps in iCloud.
-    private func cloudRecords(of session: BrowserSession) throws -> [BrowserSyncRecord] {
+    private func cloudRecords(of session: BrowserSession) throws -> [SyncRecord] {
         var journal = BrowserSyncJournal(deviceID: UUID(uuidString: "30000000-0000-0000-0000-000000000001")!)
         try journal.stage(session: session)
-        return journal.records
+        return try journal.records.map(SyncRecord.init(browser:))
     }
 }
 
@@ -604,7 +604,7 @@ private actor TestBrowserCloudSyncRemoteService: BrowserCloudSyncRemoteService {
 
     private let hasEntitlement: Bool
     private var state: BrowserCloudAccountState
-    private let snapshot: [BrowserSyncRecord]
+    private let snapshot: [SyncRecord]
     private let suspendsAccountState: Bool
     private var initialFailures: Int
     private var isSuspended = false
@@ -616,7 +616,7 @@ private actor TestBrowserCloudSyncRemoteService: BrowserCloudSyncRemoteService {
     init(
         hasEntitlement: Bool = true,
         accountState: BrowserCloudAccountState,
-        snapshot: [BrowserSyncRecord] = [],
+        snapshot: [SyncRecord] = [],
         suspendsAccountState: Bool = false,
         initialFailures: Int = 0
     ) {
@@ -642,7 +642,7 @@ private actor TestBrowserCloudSyncRemoteService: BrowserCloudSyncRemoteService {
         return state
     }
 
-    func loadSnapshot() async throws -> [BrowserSyncRecord] { snapshot }
+    func loadSnapshot() async throws -> [SyncRecord] { snapshot }
 
     func release() {
         wasReleased = true

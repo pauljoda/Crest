@@ -55,11 +55,77 @@ public sealed partial class BrowserContractsTests {
         AssertSameParts(parts, StoredParts(directory.File));
     }
 
-    /// Records the cloud may send that no rule lets the core take, each
+    /// Records no client of this build's schema reads, and records a newer
+    /// build wrote, are left out of a merge and counted in its receipt, and a
+    /// merge of nothing else changes nothing. A snapshot that holds one is
+    /// refused whole.
+    [Fact]
+    public void UnreadableCloudRecordsAreSkippedWithAReceiptAndRefuseASnapshot() {
+        using var directory = new StorageDirectory();
+        var fixture = SavedSession();
+        using var stored = StoredSyncing(directory, fixture.Document);
+        JsonObject Body(SyncRecord record) => JsonNode.Parse(record.Body)!.AsObject();
+        SyncRecord With(SyncRecord record, Action<JsonObject> edit) {
+            var body = Body(record);
+            edit(body);
+            return record with { Body = Bytes(body) };
+        }
+        var cases = new Dictionary<string, (SyncRecord Record, SyncRecordsSkipped Receipt)> {
+            ["a body that is no JSON"] = (CloudTab(Guid.NewGuid(), fixture.Space, 5) with { Body = "not json"u8.ToArray() }, new(1, 0)),
+            ["a body that is no object"] = (CloudTab(Guid.NewGuid(), fixture.Space, 5) with { Body = "[1,2]"u8.ToArray() }, new(1, 0)),
+            ["a payload of another kind"] = (With(CloudTab(Guid.NewGuid(), fixture.Space, 5), body => body["type"] = "folder"), new(1, 0)),
+            ["a payload naming another tab"] = (With(CloudTab(Guid.NewGuid(), fixture.Space, 5),
+                body => body["value"]!["id"] = SwiftId(Guid.NewGuid())), new(1, 0)),
+            ["a payload with no identity"] = (With(CloudTab(Guid.NewGuid(), fixture.Space, 5),
+                body => body["value"]!.AsObject().Remove("id")), new(1, 0)),
+            ["a Space record naming another Space"] = (CloudSpace(Guid.NewGuid(), Guid.NewGuid(), 5) with { SpaceId = Guid.NewGuid() }, new(1, 0)),
+            ["an empty identity"] = (CloudTab(Guid.NewGuid(), fixture.Space, 5) with { Id = Guid.Empty }, new(1, 0)),
+            ["a tombstone for no known reason"] = (Tombstone(SyncRecordKind.Tab, Guid.NewGuid(), fixture.Space, 5, reason: "forgotten"), new(1, 0)),
+            ["a tombstone deleted at no date"] = (Tombstone(SyncRecordKind.Tab, Guid.NewGuid(), fixture.Space, 5, deletedAt: "soon"), new(1, 0)),
+            ["a placement no build knows"] = (With(CloudTab(Guid.NewGuid(), fixture.Space, 5), body => body["value"]!["placement"] = "sideways"),
+                new(1, 0)),
+            ["an order token no client reads"] = (With(CloudTab(Guid.NewGuid(), fixture.Space, 5), body => body["value"]!["orderToken"] = "zz"),
+                new(1, 0)),
+            ["a schema before the first"] = (CloudTab(Guid.NewGuid(), fixture.Space, 5) with { Schema = 0 }, new(1, 0)),
+            ["a schema a newer build wrote"] = (CloudTab(Guid.NewGuid(), fixture.Space, 5) with { Schema = 4 }, new(0, 1)),
+        };
+        foreach (var (name, (record, receipt)) in cases) {
+            var (session, journal, parts) = (stored.Session.Current, stored.Sync.Snapshot, StoredParts(directory.File));
+
+            var answer = stored.App.Send(new MergeSyncRecords([record]));
+            var refused = Assert.Throws<Rejected>(() => stored.App.Send(new MergeCloudSnapshot([record, CloudTab(Guid.NewGuid(), fixture.Space, 5)])));
+
+            Assert.Equal([receipt], answer);
+            Assert.True(Same(Invalid(SyncRecordFlaw.UnreadablePayload), refused.Rejection), $"{name}: {refused.Rejection}");
+            Assert.Same(session, stored.Session.Current);
+            Assert.Same(journal, stored.Sync.Snapshot);
+            AssertSameParts(parts, StoredParts(directory.File));
+        }
+    }
+
+    /// The change token advances whether or not a batch was applied, so a
+    /// batch abandoned over one unreadable record would never be offered
+    /// again: every other record in it is merged.
+    [Fact]
+    public void OneUnreadableRecordDoesNotCostTheRestOfItsBatch() {
+        using var directory = new StorageDirectory();
+        var fixture = SavedSession();
+        using var stored = StoredSyncing(directory, fixture.Document);
+        var (first, last) = (Guid.NewGuid(), Guid.NewGuid());
+
+        var answer = stored.App.Send(new MergeSyncRecords([CloudTab(first, fixture.Space, 5),
+            CloudTab(Guid.NewGuid(), fixture.Space, 5) with { Body = "not json"u8.ToArray() }, CloudTab(last, fixture.Space, 5)]));
+
+        Assert.Equal([new SyncRecordsSkipped(1, 0)], answer);
+        Assert.Contains(stored.Session.Current.Spaces.Single().Tabs, tab => tab.Id == first);
+        Assert.Contains(stored.Session.Current.Spaces.Single().Tabs, tab => tab.Id == last);
+    }
+
+    /// Batches the cloud may send that no rule lets the core take, each
     /// refused by the rule it breaks, never by the net for failures no rule
     /// names, and never as a fault.
     [Fact]
-    public void HostileCloudRecordsAreRefusedByTheRuleTheyBreakAndChangeNothing() {
+    public void HostileCloudBatchesAreRefusedByTheRuleTheyBreakAndChangeNothing() {
         using var directory = new StorageDirectory();
         var fixture = SavedSession();
         using var stored = StoredSyncing(directory, fixture.Document);
@@ -68,33 +134,15 @@ public sealed partial class BrowserContractsTests {
         var profile = Guid.NewGuid();
         var folder = Guid.NewGuid();
         var otherFolder = Guid.NewGuid();
-        JsonObject Body(SyncRecord record) => JsonNode.Parse(record.Body)!.AsObject();
         SyncRecord With(SyncRecord record, Action<JsonObject> edit) {
-            var body = Body(record);
+            var body = JsonNode.Parse(record.Body)!.AsObject();
             edit(body);
             return record with { Body = Bytes(body) };
         }
+        var many = CloudTab(Guid.NewGuid(), fixture.Space, 5);
         var cases = new Dictionary<string, (IReadOnlyList<SyncRecord> Records, Rejection Expected)> {
-            ["a body that is no JSON"] = ([CloudTab(Guid.NewGuid(), fixture.Space, 5) with { Body = "not json"u8.ToArray() }],
-                Invalid(SyncRecordFlaw.MalformedRecord)),
-            ["a body that is no object"] = ([CloudTab(Guid.NewGuid(), fixture.Space, 5) with { Body = "[1,2]"u8.ToArray() }],
-                Invalid(SyncRecordFlaw.MalformedRecord)),
-            ["a payload of another kind"] = ([With(CloudTab(Guid.NewGuid(), fixture.Space, 5), body => body["type"] = "folder")],
-                Invalid(SyncRecordFlaw.IdentityMismatch)),
-            ["a payload naming another tab"] = ([With(CloudTab(Guid.NewGuid(), fixture.Space, 5),
-                body => body["value"]!["id"] = SwiftId(Guid.NewGuid()))], Invalid(SyncRecordFlaw.IdentityMismatch)),
-            ["a payload with no identity"] = ([With(CloudTab(Guid.NewGuid(), fixture.Space, 5),
-                body => body["value"]!.AsObject().Remove("id"))], Invalid(SyncRecordFlaw.MalformedRecord)),
-            ["a Space record naming another Space"] = ([CloudSpace(Guid.NewGuid(), profile, 5) with { SpaceId = Guid.NewGuid() }],
-                Invalid(SyncRecordFlaw.IdentityMismatch)),
-            ["an empty identity"] = ([CloudTab(Guid.NewGuid(), fixture.Space, 5) with { Id = Guid.Empty }],
-                Invalid(SyncRecordFlaw.MalformedRecord)),
-            ["a tombstone for no known reason"] = ([Tombstone(SyncRecordKind.Tab, Guid.NewGuid(), fixture.Space, 5, reason: "forgotten")],
-                Invalid(SyncRecordFlaw.MalformedRecord)),
-            ["a tombstone deleted at no date"] = ([Tombstone(SyncRecordKind.Tab, Guid.NewGuid(), fixture.Space, 5, deletedAt: "soon")],
-                Invalid(SyncRecordFlaw.MalformedRecord)),
-            ["a placement no build knows"] = ([With(CloudTab(Guid.NewGuid(), fixture.Space, 5), body => body["value"]!["placement"] = "sideways")],
-                Invalid(SyncRecordFlaw.MalformedRecord)),
+            ["more records than a journal keeps"] = ([.. Enumerable.Repeat(many, NativeSyncJournal.MaximumRecords + 1)],
+                Invalid(SyncRecordFlaw.TooManyRecords)),
             ["two records with one identity"] = ([CloudTab(elsewhere, fixture.Space, 5), CloudTab(elsewhere, fixture.Space, 6)],
                 Invalid(SyncRecordFlaw.DuplicateRecord)),
             ["a record the journal holds in another Space"] = ([CloudTab(held, Guid.NewGuid(), 5)], Invalid(SyncRecordFlaw.ChangedSpace)),
@@ -118,9 +166,9 @@ public sealed partial class BrowserContractsTests {
         foreach (var (name, (records, expected)) in cases) {
             var (session, journal, parts) = (stored.Session.Current, stored.Sync.Snapshot, StoredParts(directory.File));
 
-            var refused = Assert.Throws<Rejected>(() => stored.App.Send(new MergeSyncRecords(records)));
+            var refused = Record.Exception(() => stored.App.Send(new MergeSyncRecords(records)));
 
-            Assert.True(Same(expected, refused.Rejection), $"{name}: {refused.Rejection}");
+            Assert.True(refused is Rejected rejected && Same(expected, rejected.Rejection), $"{name}: {refused}");
             Assert.Same(session, stored.Session.Current);
             Assert.Same(journal, stored.Sync.Snapshot);
             AssertSameParts(parts, StoredParts(directory.File));
@@ -396,7 +444,7 @@ public sealed partial class BrowserContractsTests {
     };
 
     private static SyncRecord CloudTab(Guid id, Guid space, ulong clock) => new(SyncRecordKind.Tab, id, space,
-        new SyncVersion(clock, CloudDevice), Bytes(new JsonObject {
+        new SyncVersion(clock, CloudDevice), Schema: 1, Bytes(new JsonObject {
             ["type"] = "tab",
             ["value"] = new JsonObject {
                 ["id"] = SwiftId(id),
@@ -411,7 +459,7 @@ public sealed partial class BrowserContractsTests {
         }), IsTombstone: false);
 
     private static SyncRecord CloudSpace(Guid id, Guid profile, ulong clock) => new(SyncRecordKind.Space, id, id,
-        new SyncVersion(clock, CloudDevice), Bytes(new JsonObject {
+        new SyncVersion(clock, CloudDevice), Schema: 1, Bytes(new JsonObject {
             ["type"] = "space",
             ["value"] = new JsonObject {
                 ["id"] = SwiftId(id),
@@ -433,12 +481,12 @@ public sealed partial class BrowserContractsTests {
             ["orderToken"] = "8000000000000000"
         };
         if (parent is { } folder) value["parentID"] = SwiftId(folder);
-        return new(SyncRecordKind.Folder, id, space, new SyncVersion(clock, CloudDevice),
+        return new(SyncRecordKind.Folder, id, space, new SyncVersion(clock, CloudDevice), Schema: 1,
             Bytes(new JsonObject { ["type"] = "folder", ["value"] = value }), IsTombstone: false);
     }
 
     private static SyncRecord Tombstone(SyncRecordKind kind, Guid id, Guid space, ulong clock, string reason = "explicitDelete",
-        JsonNode? deletedAt = null) => new(kind, id, space, new SyncVersion(clock, CloudDevice),
+        JsonNode? deletedAt = null) => new(kind, id, space, new SyncVersion(clock, CloudDevice), Schema: 1,
         Bytes(new JsonObject { ["reason"] = reason, ["deletedAt"] = deletedAt ?? 800000060.0 }), IsTombstone: true);
 
     #endregion
