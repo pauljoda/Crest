@@ -266,25 +266,31 @@ public sealed unsafe class ContractCodecTests {
         Assert.StartsWith(culprit, error.Message, StringComparison.Ordinal);
     }
 
-    /// An observed record reaches Swift as a model whose `update` compares
-    /// every field before assigning it, so an equal field notifies no one; the
-    /// wire and its fingerprint stay as they were.
+    /// An observed record reaches Swift as a model that keeps each field in
+    /// storage Observation ignores and whose `update` stores a field that
+    /// differs before it announces the change, so a view rendered during the
+    /// announcement reads the new value and an equal field notifies no one;
+    /// the wire and its fingerprint stay as they were.
     [Fact]
-    public void AnObservedRecordBecomesAModelThatAssignsOnlyTheFieldsThatDiffer() {
+    public void AnObservedRecordBecomesAModelThatStoresEachChangedFieldBeforeAnnouncingIt() {
         var schema = ContractSchema.Load([typeof(Watched.Lamp), typeof(Watched.Dimmer)]);
         string swift = SwiftEmitter.EmitContracts(schema);
 
         Assert.Contains("@MainActor\n@Observable\nfinal class LampModel: ObservedModel, Identifiable {\n    let id: UUID\n"
-            + "    private(set) var label: String\n    private(set) var isLit: Bool?\n    private(set) var levels: [Int]\n",
+            + "    var label: String {\n        access(keyPath: \\.label)\n        return labelStorage\n    }\n"
+            + "    var isLit: Bool? {\n        access(keyPath: \\.isLit)\n        return isLitStorage\n    }\n",
             swift, StringComparison.Ordinal);
+        Assert.Contains("    @ObservationIgnored private var labelStorage: String\n    @ObservationIgnored private var isLitStorage: Bool?\n"
+            + "    @ObservationIgnored private var levelsStorage: [Int]\n", swift, StringComparison.Ordinal);
         Assert.Contains("        Lamp(id: id, label: label, isLit: isLit, levels: levels)\n", swift, StringComparison.Ordinal);
-        Assert.Contains("    init(_ value: Lamp) {\n        id = value.id\n        label = value.label\n", swift, StringComparison.Ordinal);
+        Assert.Contains("    init(_ value: Lamp) {\n        id = value.id\n        labelStorage = value.label\n", swift, StringComparison.Ordinal);
         Assert.Contains("    func update(_ value: Lamp) {\n        precondition(value.id == id, ", swift, StringComparison.Ordinal);
-        Assert.Contains("        if label != value.label { label = value.label }\n        if isLit != value.isLit { isLit = value.isLit }\n"
-            + "        if levels != value.levels { levels = value.levels }\n    }\n", swift, StringComparison.Ordinal);
-        Assert.DoesNotContain("id = value.id }", swift, StringComparison.Ordinal);
-        Assert.Contains("final class DimmerModel: ObservedModel {\n    private(set) var level: Double\n", swift, StringComparison.Ordinal);
-        Assert.Contains("        if level != value.level { level = value.level }\n", swift, StringComparison.Ordinal);
+        Assert.Contains("        if labelStorage != value.label {\n            labelStorage = value.label\n"
+            + "            withMutation(keyPath: \\.label) {}\n        }\n", swift, StringComparison.Ordinal);
+        Assert.DoesNotContain("idStorage", swift, StringComparison.Ordinal);
+        Assert.Contains("final class DimmerModel: ObservedModel {\n    var level: Double {\n", swift, StringComparison.Ordinal);
+        Assert.Contains("        if levelStorage != value.level {\n            levelStorage = value.level\n"
+            + "            withMutation(keyPath: \\.level) {}\n        }\n", swift, StringComparison.Ordinal);
         Assert.Equal(ContractSchema.Load([typeof(Unwatched.Lamp), typeof(Unwatched.Dimmer)]).Fingerprint, schema.Fingerprint);
     }
 

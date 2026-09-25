@@ -5,7 +5,8 @@ import Observation
 /// sees: it records only which tab wears which image. The issuer of a command
 /// offers the images it holds, and each session change places, keeps, copies
 /// or drops them by the rules its record documents. Each tab's image is
-/// observed on its own, so a new favicon redraws only its tab.
+/// observed on its own, so a new favicon redraws only its tab, and each is
+/// stored before it is announced; see `BrowserStoreFirstObservable`.
 @MainActor
 @Observable
 final class FaviconAssets {
@@ -25,11 +26,15 @@ final class FaviconAssets {
     /// One tab's image, observed on its own.
     @MainActor
     @Observable
-    fileprivate final class Slot {
-        var data: Data?
+    fileprivate final class Slot: BrowserStoreFirstObservable {
+        var data: Data? {
+            get { observed(\.dataStorage, as: \.data) }
+            set { publish(newValue, into: \.dataStorage, as: \.data) }
+        }
+        @ObservationIgnored private var dataStorage: Data?
 
         init(data: Data?) {
-            self.data = data
+            dataStorage = data
         }
     }
 
@@ -43,7 +48,11 @@ final class FaviconAssets {
     @ObservationIgnored private var detached: Set<UUID> = []
     /// Counts the tabs that gained an image, so the readers of a tab that had
     /// none hear when it gains one.
-    private var additions = 0
+    private var additions: Int {
+        get { observed(\.additionsStorage, as: \.additions) }
+        set { publish(newValue, into: \.additionsStorage, as: \.additions) }
+    }
+    @ObservationIgnored private var additionsStorage = 0
     /// Hands over the image a page reported, which leaves the store that kept
     /// it until a tab adopted it.
     @ObservationIgnored var takePageImage: (UUID) -> Data? = { _ in nil }
@@ -141,10 +150,12 @@ final class FaviconAssets {
 
     private func setImage(_ data: Data?, of tabID: UUID) {
         if let slot = slots[tabID] {
-            if slot.data != data { slot.data = data }
+            slot.data = data
         } else if let data {
             slots[tabID] = Slot(data: data)
             additions &+= 1
         }
     }
 }
+
+extension FaviconAssets: BrowserStoreFirstObservable {}

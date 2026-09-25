@@ -54,13 +54,16 @@ extension CoreState {
             workspace.apply(change)
         } else {
             favicons.place(change.session.spaces.flatMap(Self.tabIDs), in: change.workspaceID)
-            workspaces[change.workspaceID] = WorkspaceModel(change)
+            publish(WorkspaceModel(change), forKey: change.workspaceID, into: \.workspacesStorage, as: \.workspaces)
         }
         forward(.workspaceOpened(change), to: change.workspaceID)
     }
 
     func apply(_ change: WorkspaceClosed) {
-        if let workspace = workspaces.removeValue(forKey: change.workspaceID) { favicons.detach(workspace.tabIDs) }
+        if let workspace = workspacesStorage[change.workspaceID] {
+            favicons.detach(workspace.tabIDs)
+            publish(nil, forKey: change.workspaceID, into: \.workspacesStorage, as: \.workspaces)
+        }
         forward(.workspaceClosed(change), to: change.workspaceID)
         sessionCopies[change.workspaceID] = nil
     }

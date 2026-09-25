@@ -2,18 +2,24 @@ import Foundation
 import Observation
 
 /// A Space's archived tabs, in order. It is an object of its own so that
-/// archiving notifies the archive's readers and never the sidebar's.
+/// archiving notifies the archive's readers and never the sidebar's. Its
+/// entries are stored before they are announced; see
+/// `BrowserStoreFirstObservable`.
 @MainActor
 @Observable
 final class ArchiveModel {
     // MARK: - Variables
 
-    private(set) var entries: [ArchivedTabState]
+    private(set) var entries: [ArchivedTabState] {
+        get { observed(\.entriesStorage, as: \.entries) }
+        set { publish(newValue, into: \.entriesStorage, as: \.entries) }
+    }
+    @ObservationIgnored private var entriesStorage: [ArchivedTabState]
 
     // MARK: - Initializers
 
     init(_ entries: [ArchivedTabState]) {
-        self.entries = entries
+        entriesStorage = entries
     }
 
     // MARK: - Actions - Reading
@@ -30,7 +36,7 @@ final class ArchiveModel {
     /// new order.
     func apply(_ change: ArchiveChanged) {
         let gone = Set(change.removed)
-        var next = gone.isEmpty ? entries : entries.filter { !gone.contains($0.tab.id) }
+        var next = gone.isEmpty ? entriesStorage : entriesStorage.filter { !gone.contains($0.tab.id) }
         for entry in change.archived {
             if let index = next.firstIndex(where: { $0.tab.id == entry.tab.id }) {
                 next[index] = entry
@@ -46,6 +52,8 @@ final class ArchiveModel {
     }
 
     func replace(with entries: [ArchivedTabState]) {
-        if self.entries != entries { self.entries = entries }
+        self.entries = entries
     }
 }
+
+extension ArchiveModel: BrowserStoreFirstObservable {}

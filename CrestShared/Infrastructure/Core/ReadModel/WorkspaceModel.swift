@@ -4,7 +4,8 @@ import Observation
 /// A workspace attached to this device, as the read model keeps it: what kind
 /// of session it is, its own members and its Spaces in order. Each Space is an
 /// object of its own, so a change inside one Space never notifies the readers
-/// of the Space list.
+/// of the Space list. Each of its own values is stored before it is
+/// announced; see `BrowserStoreFirstObservable`.
 @MainActor
 @Observable
 final class WorkspaceModel: Identifiable {
@@ -14,15 +15,31 @@ final class WorkspaceModel: Identifiable {
     let kind: WorkspaceKind
     let spaces: ObservedList<SpaceModel>
     /// Space deletions under way on this device.
-    private(set) var spaceDeletions: [SpaceDeletionState]
+    private(set) var spaceDeletions: [SpaceDeletionState] {
+        get { observed(\.spaceDeletionsStorage, as: \.spaceDeletions) }
+        set { publish(newValue, into: \.spaceDeletionsStorage, as: \.spaceDeletions) }
+    }
+    @ObservationIgnored private var spaceDeletionsStorage: [SpaceDeletionState]
     /// The app-wide preferences, or nil before the settings kept before the
     /// core owned them are imported. Preferences change together and seldom,
     /// so they are one observed value.
-    private(set) var appPreferences: AppPreferences?
+    private(set) var appPreferences: AppPreferences? {
+        get { observed(\.appPreferencesStorage, as: \.appPreferences) }
+        set { publish(newValue, into: \.appPreferencesStorage, as: \.appPreferences) }
+    }
+    @ObservationIgnored private var appPreferencesStorage: AppPreferences?
     /// The Space a launch opens.
-    private(set) var defaultSpaceID: UUID?
+    private(set) var defaultSpaceID: UUID? {
+        get { observed(\.defaultSpaceIDStorage, as: \.defaultSpaceID) }
+        set { publish(newValue, into: \.defaultSpaceIDStorage, as: \.defaultSpaceID) }
+    }
+    @ObservationIgnored private var defaultSpaceIDStorage: UUID?
     /// The session is still the disposable first-install seed.
-    private(set) var isDisposableSeed: Bool
+    private(set) var isDisposableSeed: Bool {
+        get { observed(\.isDisposableSeedStorage, as: \.isDisposableSeed) }
+        set { publish(newValue, into: \.isDisposableSeedStorage, as: \.isDisposableSeed) }
+    }
+    @ObservationIgnored private var isDisposableSeedStorage: Bool
 
     /// Every tab the workspace holds, open or archived.
     var tabIDs: [UUID] {
@@ -35,10 +52,10 @@ final class WorkspaceModel: Identifiable {
         id = change.workspaceID
         kind = change.kind
         spaces = ObservedList(change.session.spaces)
-        spaceDeletions = change.session.spaceDeletions
-        appPreferences = change.session.appPreferences
-        defaultSpaceID = change.session.defaultSpaceID
-        isDisposableSeed = change.session.disposableSeedMarker != nil
+        spaceDeletionsStorage = change.session.spaceDeletions
+        appPreferencesStorage = change.session.appPreferences
+        defaultSpaceIDStorage = change.session.defaultSpaceID
+        isDisposableSeedStorage = change.session.disposableSeedMarker != nil
     }
 
     // MARK: - Actions - Reading
@@ -69,13 +86,13 @@ final class WorkspaceModel: Identifiable {
     }
 
     func apply(_ change: WorkspaceChanged) {
-        if defaultSpaceID != change.defaultSpaceID { defaultSpaceID = change.defaultSpaceID }
-        if isDisposableSeed != change.isDisposableSeed { isDisposableSeed = change.isDisposableSeed }
-        if spaceDeletions != change.spaceDeletions { spaceDeletions = change.spaceDeletions }
+        defaultSpaceID = change.defaultSpaceID
+        isDisposableSeed = change.isDisposableSeed
+        spaceDeletions = change.spaceDeletions
     }
 
     func apply(_ change: AppPreferencesChanged) {
-        if appPreferences != change.preferences { appPreferences = change.preferences }
+        appPreferences = change.preferences
     }
 
     /// The `removed` Spaces are gone and each `added` Space arrives whole
@@ -90,3 +107,5 @@ final class WorkspaceModel: Identifiable {
         spaces.apply(updated: change.added, removed: change.removed.filter { !arriving.contains($0) }, order: order)
     }
 }
+
+extension WorkspaceModel: BrowserStoreFirstObservable {}

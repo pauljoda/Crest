@@ -4,7 +4,9 @@ import Observation
 /// A Space of the read model. Its settings, each tab and each folder are
 /// objects of their own, and its history and archive are kept apart, so a
 /// change notifies only the readers of what it changed: a tab's new title
-/// redraws that tab's row, and a visit never redraws the sidebar.
+/// redraws that tab's row, and a visit never redraws the sidebar. Each of its
+/// own values is stored before it is announced; see
+/// `BrowserStoreFirstObservable`.
 @MainActor
 @Observable
 final class SpaceModel: ObservedModel, Identifiable {
@@ -16,9 +18,17 @@ final class SpaceModel: ObservedModel, Identifiable {
     let folders: ObservedList<FolderStateModel>
     let history: HistoryModel
     let archive: ArchiveModel
-    private(set) var profileID: UUID
+    private(set) var profileID: UUID {
+        get { observed(\.profileIDStorage, as: \.profileID) }
+        set { publish(newValue, into: \.profileIDStorage, as: \.profileID) }
+    }
+    @ObservationIgnored private var profileIDStorage: UUID
     /// What a person chose for each split. Membership stays on the tabs.
-    private(set) var splitGroups: [SplitGroupState]
+    private(set) var splitGroups: [SplitGroupState] {
+        get { observed(\.splitGroupsStorage, as: \.splitGroups) }
+        set { publish(newValue, into: \.splitGroupsStorage, as: \.splitGroups) }
+    }
+    @ObservationIgnored private var splitGroupsStorage: [SplitGroupState]
 
     var value: SpaceState {
         SpaceState(
@@ -35,11 +45,11 @@ final class SpaceModel: ObservedModel, Identifiable {
 
     init(_ value: SpaceState) {
         id = value.id
-        profileID = value.profileID
+        profileIDStorage = value.profileID
         settings = SpaceSettingsModel(value.settings)
         tabs = ObservedList(value.tabs)
         folders = ObservedList(value.folders)
-        splitGroups = value.splitGroups
+        splitGroupsStorage = value.splitGroups
         history = HistoryModel(value.history)
         archive = ArchiveModel(value.archivedTabs)
     }
@@ -48,11 +58,11 @@ final class SpaceModel: ObservedModel, Identifiable {
     /// still holds.
     func update(_ value: SpaceState) {
         precondition(value.id == id, "A SpaceModel takes only its own Space's values.")
-        if profileID != value.profileID { profileID = value.profileID }
+        profileID = value.profileID
         settings.update(value.settings)
         tabs.replace(with: value.tabs)
         folders.replace(with: value.folders)
-        replaceSplitGroups(with: value.splitGroups)
+        splitGroups = value.splitGroups
         history.replace(with: value.history)
         archive.replace(with: value.archivedTabs)
     }
@@ -79,7 +89,7 @@ final class SpaceModel: ObservedModel, Identifiable {
     }
 
     func apply(_ change: SplitGroupsChanged) {
-        replaceSplitGroups(with: change.groups)
+        splitGroups = change.groups
     }
 
     func apply(_ change: HistoryChanged) {
@@ -89,8 +99,6 @@ final class SpaceModel: ObservedModel, Identifiable {
     func apply(_ change: ArchiveChanged) {
         archive.apply(change)
     }
-
-    private func replaceSplitGroups(with groups: [SplitGroupState]) {
-        if splitGroups != groups { splitGroups = groups }
-    }
 }
+
+extension SpaceModel: BrowserStoreFirstObservable {}

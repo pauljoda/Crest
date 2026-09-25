@@ -42,4 +42,19 @@ extension BrowserStoreFirstObservable {
         self[keyPath: storage] = value
         withMutation(keyPath: property) {}
     }
+
+    /// Stores `object` under `key` in the map `storage`, or removes the key
+    /// when `object` is nil, then announces a change to `property`. The
+    /// object the key already holds, or the removal of a key the map lacks,
+    /// is neither stored nor announced.
+    func publish<Key: Hashable, Object: AnyObject>(
+        _ object: Object?,
+        forKey key: Key,
+        into storage: ReferenceWritableKeyPath<Self, [Key: Object]>,
+        as property: KeyPath<Self, [Key: Object]>
+    ) {
+        guard self[keyPath: storage][key] !== object else { return }
+        self[keyPath: storage][key] = object
+        withMutation(keyPath: property) {}
+    }
 }

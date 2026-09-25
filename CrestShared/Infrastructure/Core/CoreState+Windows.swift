@@ -7,12 +7,12 @@ extension CoreState {
         if let window = windows[change.window.id] {
             window.update(change.window)
         } else {
-            windows[change.window.id] = WindowStateModel(change.window)
+            publish(WindowStateModel(change.window), forKey: change.window.id, into: \.windowsStorage, as: \.windows)
         }
     }
 
     func apply(_ change: WindowClosed) {
-        windows[change.windowID] = nil
+        publish(nil, forKey: change.windowID, into: \.windowsStorage, as: \.windows)
     }
 
     /// The sidebar values the adopted records carried are the platform's own;

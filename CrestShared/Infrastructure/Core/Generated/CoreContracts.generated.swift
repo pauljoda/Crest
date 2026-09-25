@@ -8027,20 +8027,54 @@ struct WorkspaceKind: Hashable, Sendable {
 
 // MARK: - Observed models
 
-/// `FolderState` as an object views observe field by field. `update` assigns only
-/// the fields that differ, so a field that keeps its value notifies no one.
+/// `FolderState` as an object views observe field by field. `update` stores each
+/// field that differs before it announces the change, and announces nothing for a
+/// field that keeps its value.
 @MainActor
 @Observable
 final class FolderStateModel: ObservedModel, Identifiable {
     let id: UUID
-    private(set) var location: TabPlacement
-    private(set) var title: String
-    private(set) var symbol: String?
-    private(set) var color: BrandColor?
-    private(set) var parentID: UUID?
-    private(set) var isCollapsed: Bool
-    private(set) var collapseModifiedAt: Date?
-    private(set) var orderAnchorTabID: UUID?
+    var location: TabPlacement {
+        access(keyPath: \.location)
+        return locationStorage
+    }
+    var title: String {
+        access(keyPath: \.title)
+        return titleStorage
+    }
+    var symbol: String? {
+        access(keyPath: \.symbol)
+        return symbolStorage
+    }
+    var color: BrandColor? {
+        access(keyPath: \.color)
+        return colorStorage
+    }
+    var parentID: UUID? {
+        access(keyPath: \.parentID)
+        return parentIDStorage
+    }
+    var isCollapsed: Bool {
+        access(keyPath: \.isCollapsed)
+        return isCollapsedStorage
+    }
+    var collapseModifiedAt: Date? {
+        access(keyPath: \.collapseModifiedAt)
+        return collapseModifiedAtStorage
+    }
+    var orderAnchorTabID: UUID? {
+        access(keyPath: \.orderAnchorTabID)
+        return orderAnchorTabIDStorage
+    }
+
+    @ObservationIgnored private var locationStorage: TabPlacement
+    @ObservationIgnored private var titleStorage: String
+    @ObservationIgnored private var symbolStorage: String?
+    @ObservationIgnored private var colorStorage: BrandColor?
+    @ObservationIgnored private var parentIDStorage: UUID?
+    @ObservationIgnored private var isCollapsedStorage: Bool
+    @ObservationIgnored private var collapseModifiedAtStorage: Date?
+    @ObservationIgnored private var orderAnchorTabIDStorage: UUID?
 
     var value: FolderState {
         FolderState(
@@ -8058,41 +8092,91 @@ final class FolderStateModel: ObservedModel, Identifiable {
 
     init(_ value: FolderState) {
         id = value.id
-        location = value.location
-        title = value.title
-        symbol = value.symbol
-        color = value.color
-        parentID = value.parentID
-        isCollapsed = value.isCollapsed
-        collapseModifiedAt = value.collapseModifiedAt
-        orderAnchorTabID = value.orderAnchorTabID
+        locationStorage = value.location
+        titleStorage = value.title
+        symbolStorage = value.symbol
+        colorStorage = value.color
+        parentIDStorage = value.parentID
+        isCollapsedStorage = value.isCollapsed
+        collapseModifiedAtStorage = value.collapseModifiedAt
+        orderAnchorTabIDStorage = value.orderAnchorTabID
     }
 
     func update(_ value: FolderState) {
         precondition(value.id == id, "A FolderStateModel takes only its own FolderState's values.")
-        if location != value.location { location = value.location }
-        if title != value.title { title = value.title }
-        if symbol != value.symbol { symbol = value.symbol }
-        if color != value.color { color = value.color }
-        if parentID != value.parentID { parentID = value.parentID }
-        if isCollapsed != value.isCollapsed { isCollapsed = value.isCollapsed }
-        if collapseModifiedAt != value.collapseModifiedAt { collapseModifiedAt = value.collapseModifiedAt }
-        if orderAnchorTabID != value.orderAnchorTabID { orderAnchorTabID = value.orderAnchorTabID }
+        if locationStorage != value.location {
+            locationStorage = value.location
+            withMutation(keyPath: \.location) {}
+        }
+        if titleStorage != value.title {
+            titleStorage = value.title
+            withMutation(keyPath: \.title) {}
+        }
+        if symbolStorage != value.symbol {
+            symbolStorage = value.symbol
+            withMutation(keyPath: \.symbol) {}
+        }
+        if colorStorage != value.color {
+            colorStorage = value.color
+            withMutation(keyPath: \.color) {}
+        }
+        if parentIDStorage != value.parentID {
+            parentIDStorage = value.parentID
+            withMutation(keyPath: \.parentID) {}
+        }
+        if isCollapsedStorage != value.isCollapsed {
+            isCollapsedStorage = value.isCollapsed
+            withMutation(keyPath: \.isCollapsed) {}
+        }
+        if collapseModifiedAtStorage != value.collapseModifiedAt {
+            collapseModifiedAtStorage = value.collapseModifiedAt
+            withMutation(keyPath: \.collapseModifiedAt) {}
+        }
+        if orderAnchorTabIDStorage != value.orderAnchorTabID {
+            orderAnchorTabIDStorage = value.orderAnchorTabID
+            withMutation(keyPath: \.orderAnchorTabID) {}
+        }
     }
 }
 
-/// `PageState` as an object views observe field by field. `update` assigns only
-/// the fields that differ, so a field that keeps its value notifies no one.
+/// `PageState` as an object views observe field by field. `update` stores each
+/// field that differs before it announces the change, and announces nothing for a
+/// field that keeps its value.
 @MainActor
 @Observable
 final class PageStateModel: ObservedModel, Identifiable {
     let id: UUID
-    private(set) var workspaceID: UUID
-    private(set) var spaceID: UUID
-    private(set) var tabID: UUID?
-    private(set) var engine: EngineKind
-    private(set) var phase: PagePhase
-    private(set) var live: PageLiveState
+    var workspaceID: UUID {
+        access(keyPath: \.workspaceID)
+        return workspaceIDStorage
+    }
+    var spaceID: UUID {
+        access(keyPath: \.spaceID)
+        return spaceIDStorage
+    }
+    var tabID: UUID? {
+        access(keyPath: \.tabID)
+        return tabIDStorage
+    }
+    var engine: EngineKind {
+        access(keyPath: \.engine)
+        return engineStorage
+    }
+    var phase: PagePhase {
+        access(keyPath: \.phase)
+        return phaseStorage
+    }
+    var live: PageLiveState {
+        access(keyPath: \.live)
+        return liveStorage
+    }
+
+    @ObservationIgnored private var workspaceIDStorage: UUID
+    @ObservationIgnored private var spaceIDStorage: UUID
+    @ObservationIgnored private var tabIDStorage: UUID?
+    @ObservationIgnored private var engineStorage: EngineKind
+    @ObservationIgnored private var phaseStorage: PagePhase
+    @ObservationIgnored private var liveStorage: PageLiveState
 
     var value: PageState {
         PageState(
@@ -8108,39 +8192,95 @@ final class PageStateModel: ObservedModel, Identifiable {
 
     init(_ value: PageState) {
         id = value.id
-        workspaceID = value.workspaceID
-        spaceID = value.spaceID
-        tabID = value.tabID
-        engine = value.engine
-        phase = value.phase
-        live = value.live
+        workspaceIDStorage = value.workspaceID
+        spaceIDStorage = value.spaceID
+        tabIDStorage = value.tabID
+        engineStorage = value.engine
+        phaseStorage = value.phase
+        liveStorage = value.live
     }
 
     func update(_ value: PageState) {
         precondition(value.id == id, "A PageStateModel takes only its own PageState's values.")
-        if workspaceID != value.workspaceID { workspaceID = value.workspaceID }
-        if spaceID != value.spaceID { spaceID = value.spaceID }
-        if tabID != value.tabID { tabID = value.tabID }
-        if engine != value.engine { engine = value.engine }
-        if phase != value.phase { phase = value.phase }
-        if live != value.live { live = value.live }
+        if workspaceIDStorage != value.workspaceID {
+            workspaceIDStorage = value.workspaceID
+            withMutation(keyPath: \.workspaceID) {}
+        }
+        if spaceIDStorage != value.spaceID {
+            spaceIDStorage = value.spaceID
+            withMutation(keyPath: \.spaceID) {}
+        }
+        if tabIDStorage != value.tabID {
+            tabIDStorage = value.tabID
+            withMutation(keyPath: \.tabID) {}
+        }
+        if engineStorage != value.engine {
+            engineStorage = value.engine
+            withMutation(keyPath: \.engine) {}
+        }
+        if phaseStorage != value.phase {
+            phaseStorage = value.phase
+            withMutation(keyPath: \.phase) {}
+        }
+        if liveStorage != value.live {
+            liveStorage = value.live
+            withMutation(keyPath: \.live) {}
+        }
     }
 }
 
-/// `SpaceSettings` as an object views observe field by field. `update` assigns only
-/// the fields that differ, so a field that keeps its value notifies no one.
+/// `SpaceSettings` as an object views observe field by field. `update` stores each
+/// field that differs before it announces the change, and announces nothing for a
+/// field that keeps its value.
 @MainActor
 @Observable
 final class SpaceSettingsModel: ObservedModel {
-    private(set) var name: String
-    private(set) var symbol: String
-    private(set) var accent: SpaceAccent
-    private(set) var branding: SpaceBranding?
-    private(set) var browsingPreferences: BrowsingPreferences
-    private(set) var credentialPreferences: CredentialPreferences
-    private(set) var accessPolicy: SpaceAccessPolicy
-    private(set) var isSavedTabsExpanded: Bool
-    private(set) var savedTabsExpansionModifiedAt: Date?
+    var name: String {
+        access(keyPath: \.name)
+        return nameStorage
+    }
+    var symbol: String {
+        access(keyPath: \.symbol)
+        return symbolStorage
+    }
+    var accent: SpaceAccent {
+        access(keyPath: \.accent)
+        return accentStorage
+    }
+    var branding: SpaceBranding? {
+        access(keyPath: \.branding)
+        return brandingStorage
+    }
+    var browsingPreferences: BrowsingPreferences {
+        access(keyPath: \.browsingPreferences)
+        return browsingPreferencesStorage
+    }
+    var credentialPreferences: CredentialPreferences {
+        access(keyPath: \.credentialPreferences)
+        return credentialPreferencesStorage
+    }
+    var accessPolicy: SpaceAccessPolicy {
+        access(keyPath: \.accessPolicy)
+        return accessPolicyStorage
+    }
+    var isSavedTabsExpanded: Bool {
+        access(keyPath: \.isSavedTabsExpanded)
+        return isSavedTabsExpandedStorage
+    }
+    var savedTabsExpansionModifiedAt: Date? {
+        access(keyPath: \.savedTabsExpansionModifiedAt)
+        return savedTabsExpansionModifiedAtStorage
+    }
+
+    @ObservationIgnored private var nameStorage: String
+    @ObservationIgnored private var symbolStorage: String
+    @ObservationIgnored private var accentStorage: SpaceAccent
+    @ObservationIgnored private var brandingStorage: SpaceBranding?
+    @ObservationIgnored private var browsingPreferencesStorage: BrowsingPreferences
+    @ObservationIgnored private var credentialPreferencesStorage: CredentialPreferences
+    @ObservationIgnored private var accessPolicyStorage: SpaceAccessPolicy
+    @ObservationIgnored private var isSavedTabsExpandedStorage: Bool
+    @ObservationIgnored private var savedTabsExpansionModifiedAtStorage: Date?
 
     var value: SpaceSettings {
         SpaceSettings(
@@ -8157,56 +8297,165 @@ final class SpaceSettingsModel: ObservedModel {
     }
 
     init(_ value: SpaceSettings) {
-        name = value.name
-        symbol = value.symbol
-        accent = value.accent
-        branding = value.branding
-        browsingPreferences = value.browsingPreferences
-        credentialPreferences = value.credentialPreferences
-        accessPolicy = value.accessPolicy
-        isSavedTabsExpanded = value.isSavedTabsExpanded
-        savedTabsExpansionModifiedAt = value.savedTabsExpansionModifiedAt
+        nameStorage = value.name
+        symbolStorage = value.symbol
+        accentStorage = value.accent
+        brandingStorage = value.branding
+        browsingPreferencesStorage = value.browsingPreferences
+        credentialPreferencesStorage = value.credentialPreferences
+        accessPolicyStorage = value.accessPolicy
+        isSavedTabsExpandedStorage = value.isSavedTabsExpanded
+        savedTabsExpansionModifiedAtStorage = value.savedTabsExpansionModifiedAt
     }
 
     func update(_ value: SpaceSettings) {
-        if name != value.name { name = value.name }
-        if symbol != value.symbol { symbol = value.symbol }
-        if accent != value.accent { accent = value.accent }
-        if branding != value.branding { branding = value.branding }
-        if browsingPreferences != value.browsingPreferences { browsingPreferences = value.browsingPreferences }
-        if credentialPreferences != value.credentialPreferences { credentialPreferences = value.credentialPreferences }
-        if accessPolicy != value.accessPolicy { accessPolicy = value.accessPolicy }
-        if isSavedTabsExpanded != value.isSavedTabsExpanded { isSavedTabsExpanded = value.isSavedTabsExpanded }
-        if savedTabsExpansionModifiedAt != value.savedTabsExpansionModifiedAt { savedTabsExpansionModifiedAt = value.savedTabsExpansionModifiedAt }
+        if nameStorage != value.name {
+            nameStorage = value.name
+            withMutation(keyPath: \.name) {}
+        }
+        if symbolStorage != value.symbol {
+            symbolStorage = value.symbol
+            withMutation(keyPath: \.symbol) {}
+        }
+        if accentStorage != value.accent {
+            accentStorage = value.accent
+            withMutation(keyPath: \.accent) {}
+        }
+        if brandingStorage != value.branding {
+            brandingStorage = value.branding
+            withMutation(keyPath: \.branding) {}
+        }
+        if browsingPreferencesStorage != value.browsingPreferences {
+            browsingPreferencesStorage = value.browsingPreferences
+            withMutation(keyPath: \.browsingPreferences) {}
+        }
+        if credentialPreferencesStorage != value.credentialPreferences {
+            credentialPreferencesStorage = value.credentialPreferences
+            withMutation(keyPath: \.credentialPreferences) {}
+        }
+        if accessPolicyStorage != value.accessPolicy {
+            accessPolicyStorage = value.accessPolicy
+            withMutation(keyPath: \.accessPolicy) {}
+        }
+        if isSavedTabsExpandedStorage != value.isSavedTabsExpanded {
+            isSavedTabsExpandedStorage = value.isSavedTabsExpanded
+            withMutation(keyPath: \.isSavedTabsExpanded) {}
+        }
+        if savedTabsExpansionModifiedAtStorage != value.savedTabsExpansionModifiedAt {
+            savedTabsExpansionModifiedAtStorage = value.savedTabsExpansionModifiedAt
+            withMutation(keyPath: \.savedTabsExpansionModifiedAt) {}
+        }
     }
 }
 
-/// `TabState` as an object views observe field by field. `update` assigns only
-/// the fields that differ, so a field that keeps its value notifies no one.
+/// `TabState` as an object views observe field by field. `update` stores each
+/// field that differs before it announces the change, and announces nothing for a
+/// field that keeps its value.
 @MainActor
 @Observable
 final class TabStateModel: ObservedModel, Identifiable {
     let id: UUID
-    private(set) var title: String
-    private(set) var url: String?
-    private(set) var nativeContent: NativeTabContent?
-    private(set) var savedURL: String?
-    private(set) var symbol: String
-    private(set) var faviconURL: String?
-    private(set) var iconAccent: TabIconAccent?
-    private(set) var storedIconMode: TabIconMode?
-    private(set) var placement: TabPlacement
-    private(set) var folderID: UUID?
-    private(set) var splitGroupID: UUID?
-    private(set) var lastActivatedAt: Date
-    private(set) var positionModifiedAt: Date?
-    private(set) var customTitle: String?
-    private(set) var titleModifiedAt: Date?
-    private(set) var keepsPageLoaded: Bool
-    private(set) var iconMode: TabIconMode
-    private(set) var displayTitle: String
-    private(set) var isAwayFromSavedAddress: Bool
-    private(set) var pageIconIsCurrent: Bool
+    var title: String {
+        access(keyPath: \.title)
+        return titleStorage
+    }
+    var url: String? {
+        access(keyPath: \.url)
+        return urlStorage
+    }
+    var nativeContent: NativeTabContent? {
+        access(keyPath: \.nativeContent)
+        return nativeContentStorage
+    }
+    var savedURL: String? {
+        access(keyPath: \.savedURL)
+        return savedURLStorage
+    }
+    var symbol: String {
+        access(keyPath: \.symbol)
+        return symbolStorage
+    }
+    var faviconURL: String? {
+        access(keyPath: \.faviconURL)
+        return faviconURLStorage
+    }
+    var iconAccent: TabIconAccent? {
+        access(keyPath: \.iconAccent)
+        return iconAccentStorage
+    }
+    var storedIconMode: TabIconMode? {
+        access(keyPath: \.storedIconMode)
+        return storedIconModeStorage
+    }
+    var placement: TabPlacement {
+        access(keyPath: \.placement)
+        return placementStorage
+    }
+    var folderID: UUID? {
+        access(keyPath: \.folderID)
+        return folderIDStorage
+    }
+    var splitGroupID: UUID? {
+        access(keyPath: \.splitGroupID)
+        return splitGroupIDStorage
+    }
+    var lastActivatedAt: Date {
+        access(keyPath: \.lastActivatedAt)
+        return lastActivatedAtStorage
+    }
+    var positionModifiedAt: Date? {
+        access(keyPath: \.positionModifiedAt)
+        return positionModifiedAtStorage
+    }
+    var customTitle: String? {
+        access(keyPath: \.customTitle)
+        return customTitleStorage
+    }
+    var titleModifiedAt: Date? {
+        access(keyPath: \.titleModifiedAt)
+        return titleModifiedAtStorage
+    }
+    var keepsPageLoaded: Bool {
+        access(keyPath: \.keepsPageLoaded)
+        return keepsPageLoadedStorage
+    }
+    var iconMode: TabIconMode {
+        access(keyPath: \.iconMode)
+        return iconModeStorage
+    }
+    var displayTitle: String {
+        access(keyPath: \.displayTitle)
+        return displayTitleStorage
+    }
+    var isAwayFromSavedAddress: Bool {
+        access(keyPath: \.isAwayFromSavedAddress)
+        return isAwayFromSavedAddressStorage
+    }
+    var pageIconIsCurrent: Bool {
+        access(keyPath: \.pageIconIsCurrent)
+        return pageIconIsCurrentStorage
+    }
+
+    @ObservationIgnored private var titleStorage: String
+    @ObservationIgnored private var urlStorage: String?
+    @ObservationIgnored private var nativeContentStorage: NativeTabContent?
+    @ObservationIgnored private var savedURLStorage: String?
+    @ObservationIgnored private var symbolStorage: String
+    @ObservationIgnored private var faviconURLStorage: String?
+    @ObservationIgnored private var iconAccentStorage: TabIconAccent?
+    @ObservationIgnored private var storedIconModeStorage: TabIconMode?
+    @ObservationIgnored private var placementStorage: TabPlacement
+    @ObservationIgnored private var folderIDStorage: UUID?
+    @ObservationIgnored private var splitGroupIDStorage: UUID?
+    @ObservationIgnored private var lastActivatedAtStorage: Date
+    @ObservationIgnored private var positionModifiedAtStorage: Date?
+    @ObservationIgnored private var customTitleStorage: String?
+    @ObservationIgnored private var titleModifiedAtStorage: Date?
+    @ObservationIgnored private var keepsPageLoadedStorage: Bool
+    @ObservationIgnored private var iconModeStorage: TabIconMode
+    @ObservationIgnored private var displayTitleStorage: String
+    @ObservationIgnored private var isAwayFromSavedAddressStorage: Bool
+    @ObservationIgnored private var pageIconIsCurrentStorage: Bool
 
     var value: TabState {
         TabState(
@@ -8236,63 +8485,141 @@ final class TabStateModel: ObservedModel, Identifiable {
 
     init(_ value: TabState) {
         id = value.id
-        title = value.title
-        url = value.url
-        nativeContent = value.nativeContent
-        savedURL = value.savedURL
-        symbol = value.symbol
-        faviconURL = value.faviconURL
-        iconAccent = value.iconAccent
-        storedIconMode = value.storedIconMode
-        placement = value.placement
-        folderID = value.folderID
-        splitGroupID = value.splitGroupID
-        lastActivatedAt = value.lastActivatedAt
-        positionModifiedAt = value.positionModifiedAt
-        customTitle = value.customTitle
-        titleModifiedAt = value.titleModifiedAt
-        keepsPageLoaded = value.keepsPageLoaded
-        iconMode = value.iconMode
-        displayTitle = value.displayTitle
-        isAwayFromSavedAddress = value.isAwayFromSavedAddress
-        pageIconIsCurrent = value.pageIconIsCurrent
+        titleStorage = value.title
+        urlStorage = value.url
+        nativeContentStorage = value.nativeContent
+        savedURLStorage = value.savedURL
+        symbolStorage = value.symbol
+        faviconURLStorage = value.faviconURL
+        iconAccentStorage = value.iconAccent
+        storedIconModeStorage = value.storedIconMode
+        placementStorage = value.placement
+        folderIDStorage = value.folderID
+        splitGroupIDStorage = value.splitGroupID
+        lastActivatedAtStorage = value.lastActivatedAt
+        positionModifiedAtStorage = value.positionModifiedAt
+        customTitleStorage = value.customTitle
+        titleModifiedAtStorage = value.titleModifiedAt
+        keepsPageLoadedStorage = value.keepsPageLoaded
+        iconModeStorage = value.iconMode
+        displayTitleStorage = value.displayTitle
+        isAwayFromSavedAddressStorage = value.isAwayFromSavedAddress
+        pageIconIsCurrentStorage = value.pageIconIsCurrent
     }
 
     func update(_ value: TabState) {
         precondition(value.id == id, "A TabStateModel takes only its own TabState's values.")
-        if title != value.title { title = value.title }
-        if url != value.url { url = value.url }
-        if nativeContent != value.nativeContent { nativeContent = value.nativeContent }
-        if savedURL != value.savedURL { savedURL = value.savedURL }
-        if symbol != value.symbol { symbol = value.symbol }
-        if faviconURL != value.faviconURL { faviconURL = value.faviconURL }
-        if iconAccent != value.iconAccent { iconAccent = value.iconAccent }
-        if storedIconMode != value.storedIconMode { storedIconMode = value.storedIconMode }
-        if placement != value.placement { placement = value.placement }
-        if folderID != value.folderID { folderID = value.folderID }
-        if splitGroupID != value.splitGroupID { splitGroupID = value.splitGroupID }
-        if lastActivatedAt != value.lastActivatedAt { lastActivatedAt = value.lastActivatedAt }
-        if positionModifiedAt != value.positionModifiedAt { positionModifiedAt = value.positionModifiedAt }
-        if customTitle != value.customTitle { customTitle = value.customTitle }
-        if titleModifiedAt != value.titleModifiedAt { titleModifiedAt = value.titleModifiedAt }
-        if keepsPageLoaded != value.keepsPageLoaded { keepsPageLoaded = value.keepsPageLoaded }
-        if iconMode != value.iconMode { iconMode = value.iconMode }
-        if displayTitle != value.displayTitle { displayTitle = value.displayTitle }
-        if isAwayFromSavedAddress != value.isAwayFromSavedAddress { isAwayFromSavedAddress = value.isAwayFromSavedAddress }
-        if pageIconIsCurrent != value.pageIconIsCurrent { pageIconIsCurrent = value.pageIconIsCurrent }
+        if titleStorage != value.title {
+            titleStorage = value.title
+            withMutation(keyPath: \.title) {}
+        }
+        if urlStorage != value.url {
+            urlStorage = value.url
+            withMutation(keyPath: \.url) {}
+        }
+        if nativeContentStorage != value.nativeContent {
+            nativeContentStorage = value.nativeContent
+            withMutation(keyPath: \.nativeContent) {}
+        }
+        if savedURLStorage != value.savedURL {
+            savedURLStorage = value.savedURL
+            withMutation(keyPath: \.savedURL) {}
+        }
+        if symbolStorage != value.symbol {
+            symbolStorage = value.symbol
+            withMutation(keyPath: \.symbol) {}
+        }
+        if faviconURLStorage != value.faviconURL {
+            faviconURLStorage = value.faviconURL
+            withMutation(keyPath: \.faviconURL) {}
+        }
+        if iconAccentStorage != value.iconAccent {
+            iconAccentStorage = value.iconAccent
+            withMutation(keyPath: \.iconAccent) {}
+        }
+        if storedIconModeStorage != value.storedIconMode {
+            storedIconModeStorage = value.storedIconMode
+            withMutation(keyPath: \.storedIconMode) {}
+        }
+        if placementStorage != value.placement {
+            placementStorage = value.placement
+            withMutation(keyPath: \.placement) {}
+        }
+        if folderIDStorage != value.folderID {
+            folderIDStorage = value.folderID
+            withMutation(keyPath: \.folderID) {}
+        }
+        if splitGroupIDStorage != value.splitGroupID {
+            splitGroupIDStorage = value.splitGroupID
+            withMutation(keyPath: \.splitGroupID) {}
+        }
+        if lastActivatedAtStorage != value.lastActivatedAt {
+            lastActivatedAtStorage = value.lastActivatedAt
+            withMutation(keyPath: \.lastActivatedAt) {}
+        }
+        if positionModifiedAtStorage != value.positionModifiedAt {
+            positionModifiedAtStorage = value.positionModifiedAt
+            withMutation(keyPath: \.positionModifiedAt) {}
+        }
+        if customTitleStorage != value.customTitle {
+            customTitleStorage = value.customTitle
+            withMutation(keyPath: \.customTitle) {}
+        }
+        if titleModifiedAtStorage != value.titleModifiedAt {
+            titleModifiedAtStorage = value.titleModifiedAt
+            withMutation(keyPath: \.titleModifiedAt) {}
+        }
+        if keepsPageLoadedStorage != value.keepsPageLoaded {
+            keepsPageLoadedStorage = value.keepsPageLoaded
+            withMutation(keyPath: \.keepsPageLoaded) {}
+        }
+        if iconModeStorage != value.iconMode {
+            iconModeStorage = value.iconMode
+            withMutation(keyPath: \.iconMode) {}
+        }
+        if displayTitleStorage != value.displayTitle {
+            displayTitleStorage = value.displayTitle
+            withMutation(keyPath: \.displayTitle) {}
+        }
+        if isAwayFromSavedAddressStorage != value.isAwayFromSavedAddress {
+            isAwayFromSavedAddressStorage = value.isAwayFromSavedAddress
+            withMutation(keyPath: \.isAwayFromSavedAddress) {}
+        }
+        if pageIconIsCurrentStorage != value.pageIconIsCurrent {
+            pageIconIsCurrentStorage = value.pageIconIsCurrent
+            withMutation(keyPath: \.pageIconIsCurrent) {}
+        }
     }
 }
 
-/// `WindowState` as an object views observe field by field. `update` assigns only
-/// the fields that differ, so a field that keeps its value notifies no one.
+/// `WindowState` as an object views observe field by field. `update` stores each
+/// field that differs before it announces the change, and announces nothing for a
+/// field that keeps its value.
 @MainActor
 @Observable
 final class WindowStateModel: ObservedModel, Identifiable {
     let id: UUID
-    private(set) var workspaceID: UUID
-    private(set) var shownSpaceID: UUID
-    private(set) var shownTabs: [ShownTab]
-    private(set) var splitColumnShares: [SplitColumnShares]
+    var workspaceID: UUID {
+        access(keyPath: \.workspaceID)
+        return workspaceIDStorage
+    }
+    var shownSpaceID: UUID {
+        access(keyPath: \.shownSpaceID)
+        return shownSpaceIDStorage
+    }
+    var shownTabs: [ShownTab] {
+        access(keyPath: \.shownTabs)
+        return shownTabsStorage
+    }
+    var splitColumnShares: [SplitColumnShares] {
+        access(keyPath: \.splitColumnShares)
+        return splitColumnSharesStorage
+    }
+
+    @ObservationIgnored private var workspaceIDStorage: UUID
+    @ObservationIgnored private var shownSpaceIDStorage: UUID
+    @ObservationIgnored private var shownTabsStorage: [ShownTab]
+    @ObservationIgnored private var splitColumnSharesStorage: [SplitColumnShares]
 
     var value: WindowState {
         WindowState(
@@ -8306,17 +8633,29 @@ final class WindowStateModel: ObservedModel, Identifiable {
 
     init(_ value: WindowState) {
         id = value.id
-        workspaceID = value.workspaceID
-        shownSpaceID = value.shownSpaceID
-        shownTabs = value.shownTabs
-        splitColumnShares = value.splitColumnShares
+        workspaceIDStorage = value.workspaceID
+        shownSpaceIDStorage = value.shownSpaceID
+        shownTabsStorage = value.shownTabs
+        splitColumnSharesStorage = value.splitColumnShares
     }
 
     func update(_ value: WindowState) {
         precondition(value.id == id, "A WindowStateModel takes only its own WindowState's values.")
-        if workspaceID != value.workspaceID { workspaceID = value.workspaceID }
-        if shownSpaceID != value.shownSpaceID { shownSpaceID = value.shownSpaceID }
-        if shownTabs != value.shownTabs { shownTabs = value.shownTabs }
-        if splitColumnShares != value.splitColumnShares { splitColumnShares = value.splitColumnShares }
+        if workspaceIDStorage != value.workspaceID {
+            workspaceIDStorage = value.workspaceID
+            withMutation(keyPath: \.workspaceID) {}
+        }
+        if shownSpaceIDStorage != value.shownSpaceID {
+            shownSpaceIDStorage = value.shownSpaceID
+            withMutation(keyPath: \.shownSpaceID) {}
+        }
+        if shownTabsStorage != value.shownTabs {
+            shownTabsStorage = value.shownTabs
+            withMutation(keyPath: \.shownTabs) {}
+        }
+        if splitColumnSharesStorage != value.splitColumnShares {
+            splitColumnSharesStorage = value.splitColumnShares
+            withMutation(keyPath: \.splitColumnShares) {}
+        }
     }
 }

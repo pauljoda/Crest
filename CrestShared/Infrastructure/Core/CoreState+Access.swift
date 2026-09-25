@@ -1,6 +1,6 @@
 import Foundation
 
-extension CoreState: BrowserStoreFirstObservable {
+extension CoreState {
     /// A Space profile that holds no grant and waits on nobody leaves the map.
     func apply(_ change: SpaceLockChanged) {
         var access = spaceAccessStorage

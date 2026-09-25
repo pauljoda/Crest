@@ -2501,6 +2501,10 @@
     "site-origin-one-type": {
       "category": "internal",
       "message": "Site permissions name a site with the core's origin type everywhere, normalized the same way however the app learns of the site."
+    },
+    "read-model-store-first": {
+      "category": "internal",
+      "message": "The core's read model stores each change before it tells views about it, so a view that draws during the change shows the new value."
     }
   }
 }
