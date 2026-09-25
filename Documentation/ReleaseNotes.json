@@ -2425,6 +2425,10 @@
     "cloud-sync-through-core-intents": {
       "category": "internal",
       "message": "Cloud sync merges, replacements and overwrites run through the core's typed sync intents."
+    },
+    "page-reports-without-deferral": {
+      "category": "internal",
+      "message": "Page reports apply directly now that only intents reserve the session."
     }
   }
 }

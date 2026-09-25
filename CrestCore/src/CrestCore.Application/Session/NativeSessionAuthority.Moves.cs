@@ -158,10 +158,8 @@ public sealed partial class NativeSessionAuthority {
             left = leaving.Reserved.Complete();
             arrived = arriving.Reserved.Complete();
         }
-        foreach (var (side, previous) in new[] { (leaving, left), (arriving, arrived) }) {
+        foreach (var (side, previous) in new[] { (leaving, left), (arriving, arrived) })
             side.Workspace.Published(previous, side.Reserved.Session, side.Reserved.FollowUp, side.Reserved.Events);
-            side.Workspace.ApplyDeferredPageEdits();
-        }
         staged?.Owner.AnnounceStaged();
     }
 
