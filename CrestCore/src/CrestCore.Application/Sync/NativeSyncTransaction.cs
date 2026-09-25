@@ -42,6 +42,13 @@ public sealed class NativeSyncTransaction : IDisposable {
         _ = Journal.Read();
     }
 
+    /// Takes the cloud's word that it saved `uploaded`; see
+    /// `NativeSyncJournal.Acknowledge`.
+    internal void Acknowledge(IReadOnlyList<UploadedRecord> uploaded) {
+        Journal = Journal.Acknowledge(uploaded);
+        _ = Journal.Read();
+    }
+
     /// Takes `journal`, computed from this transaction's, as the journal it
     /// commits. Throws when the journal outgrows what sync keeps.
     internal void Adopt(NativeSyncJournal journal) {

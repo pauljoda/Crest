@@ -163,10 +163,15 @@ public sealed class NativeSyncAuthority {
     }
 
     /// Tells the transport what the journal holds now: how many records, and
-    /// how many of them wait to upload. Called with no lock held.
+    /// how many of them wait to upload, which is none while its session is a
+    /// disposable seed. Called with no lock held, or holding the lock the host's
+    /// intents take.
     internal void AnnounceStaged() {
         int pendingRecords, records;
-        lock (NativeSessionAuthority.Gate) (pendingRecords, records) = (journal.PendingCount, journal.RecordCount);
+        lock (NativeSessionAuthority.Gate) {
+            bool uploadsNothing = Session?.IsDisposableSeed == true;
+            (pendingRecords, records) = (uploadsNothing ? 0 : journal.PendingCount, journal.RecordCount);
+        }
         Announce(workspace => new SyncJournalChanged(workspace, pendingRecords, records));
     }
 

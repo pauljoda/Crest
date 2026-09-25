@@ -11,10 +11,12 @@ public sealed partial class CrestApp {
     private readonly SessionStorage? storage;
 
     /// The session this core keeps in its file, as it loaded and repaired it,
-    /// once the file holds one. `OpenWorkspace` opens it.
-    private NativeSessionAuthority? storedSession;
-    /// The sync component the file's session stages into, kept beside it.
-    private NativeSyncAuthority? storedSync;
+    /// once the file holds one. `OpenWorkspace` opens it. Set once, under the
+    /// lock; the cloud transport's calls read it without the lock.
+    private volatile NativeSessionAuthority? storedSession;
+    /// The sync component the file's session stages into, kept beside it. Set
+    /// with `storedSession`.
+    private volatile NativeSyncAuthority? storedSync;
     /// The selection an older release kept in the stored session, which the
     /// windows of the launch that loaded it adopt.
     private JsonObject? storedSelection;
@@ -34,15 +36,6 @@ public sealed partial class CrestApp {
     #endregion
 
     #region Actions - Stored session
-
-    /// Runs one intent from the cloud transport on the session this core keeps
-    /// in its file; see `CloudSyncIntent`. The caller holds the lock.
-    private void Handle(CloudSyncIntent intent) {
-        if (storedSession is not { } session) throw new Rejected(new NoStoredSession());
-        if (session.IsReleased) throw new Rejected(new StoredSessionClosed());
-        if (device.Identity(session) is null) throw new Rejected(new NoStoredSession());
-        session.Handle(intent, clock.Now, ids);
-    }
 
     /// Gives a file that holds no session its first one, before returning:
     /// the installed release's, or the seed. See `AdoptLegacySession`.

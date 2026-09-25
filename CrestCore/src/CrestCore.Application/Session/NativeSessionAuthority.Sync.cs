@@ -24,26 +24,44 @@ public sealed partial class NativeSessionAuthority {
 
     #endregion
 
+    #region Variables
+
+    /// Whether this session is the disposable seed a first launch made, which
+    /// never syncs.
+    internal bool IsDisposableSeed {
+        get {
+            lock (Gate) return session.DisposableSeedMarker is not null;
+        }
+    }
+
+    #endregion
+
     #region Actions - Cloud sync
 
     /// Runs one intent from the cloud transport at `now`, drawing the
-    /// identities repair gives from `ids`, and saves the session and its
-    /// journal together before it returns; see `CloudSyncIntent`. Throws
+    /// identities repair gives from `ids`, and saves what it changed before it
+    /// returns; see `CloudSyncIntent`. It runs on the transport's thread,
+    /// holding no lock. A merge or replacement commits holding `commitGate`,
+    /// the lock the host's intents take, so what it publishes joins their
+    /// order whole; an intent about the journal alone never takes it. Throws
     /// `Rejected`.
-    internal void Handle(CloudSyncIntent intent, DateTimeOffset now, IIdSource ids) {
+    internal void Handle(CloudSyncIntent intent, DateTimeOffset now, IIdSource ids, Lock commitGate) {
         ArgumentNullException.ThrowIfNull(intent);
         ArgumentNullException.ThrowIfNull(ids);
         var sync = AttachedSync();
         switch (intent) {
-            case MergeSyncRecords merge: Converging(sync, new IncomingSyncRecords(merge.Records), replacing: false, now, ids); break;
+            case MergeSyncRecords merge:
+                Converging(sync, new IncomingSyncRecords(merge.Records), replacing: false, now, ids, commitGate);
+                break;
             case ReplaceWithCloudRecords replacement:
-                Converging(sync, new IncomingSyncRecords(replacement.Records), replacing: true, now, ids);
+                Converging(sync, new IncomingSyncRecords(replacement.Records), replacing: true, now, ids, commitGate);
                 break;
             case ReplaceSeedWithCloudRecords replacement:
                 if (Current.DisposableSeedMarker is null) return;
-                Converging(sync, new IncomingSyncRecords(replacement.Records), replacing: true, now, ids, seedOnly: true);
+                Converging(sync, new IncomingSyncRecords(replacement.Records), replacing: true, now, ids, commitGate, seedOnly: true);
                 break;
             case OverwriteCloud overwrite: Overwriting(sync, new IncomingSyncRecords(overwrite.Records), now); break;
+            case AcknowledgeUploads acknowledgement: Acknowledging(sync, acknowledgement.Records); break;
             default: throw new ArgumentOutOfRangeException(nameof(intent), intent.GetType().Name, "The session does not handle this intent.");
         }
     }
@@ -59,46 +77,68 @@ public sealed partial class NativeSessionAuthority {
     }
 
     /// Merges `records` into the session and its journal, or replaces both
-    /// with them. The journal transaction begins before the gate is taken:
+    /// with them. The journal transaction begins before any lock is taken:
     /// waiting for one in progress releases the gate. The result is computed
-    /// outside the gate from the session as it was, and again when the session
-    /// moved meanwhile, a few times, then holding the gate. The stages still
-    /// queued are superseded before each computation, and a merge deletes each
-    /// record their edits removed for the reason of the edit that removed it;
-    /// a transaction that never commits queues them again.
+    /// holding no lock, from the session as it was, and committed holding
+    /// `commitGate`, then the gate, when the session has not moved meanwhile;
+    /// otherwise it is computed again, a few times, then holding both. The
+    /// commit reserves, saves the session and its journal, and publishes both
+    /// before `commitGate` is released. The stages still queued are superseded
+    /// before each computation, and a merge deletes each record their edits
+    /// removed for the reason of the edit that removed it; a transaction that
+    /// never commits queues them again.
     private void Converging(NativeSyncAuthority sync, IncomingSyncRecords records, bool replacing, DateTimeOffset now,
-        IIdSource ids, bool seedOnly = false) {
+        IIdSource ids, Lock commitGate, bool seedOnly = false) {
         var superseded = sync.Supersede();
         var transaction = sync.BeginTransaction();
         transaction.Superseded = superseded;
         NativeSessionReplacement? reserved = null;
         try {
             if (!replacing) records.RequireSameSpaces(transaction.Journal);
-            for (int attempt = 0; reserved is null; attempt++) {
-                SessionState basis;
-                ulong revision;
-                lock (Gate) {
-                    Supersede(sync, transaction);
-                    (basis, revision) = (IntentBasis(), Revision);
-                }
-                if (seedOnly && basis.DisposableSeedMarker is null) {
-                    transaction.Dispose();
-                    return;
-                }
+            for (int attempt = 0; ; attempt++) {
+                Convergence? computed = null;
+                ulong revision = 0;
                 if (attempt < ConvergenceAttempts) {
-                    var computed = Converge(transaction, basis, records, replacing, now, ids);
-                    lock (Gate) if (Revision == revision) reserved = Reserving(transaction, computed);
-                } else {
+                    SessionState basis;
                     lock (Gate) {
                         Supersede(sync, transaction);
-                        reserved = Reserving(transaction, Converge(transaction, IntentBasis(), records, replacing, now, ids));
+                        (basis, revision) = (IntentBasis(), Revision);
                     }
+                    if (seedOnly && basis.DisposableSeedMarker is null) {
+                        transaction.Dispose();
+                        return;
+                    }
+                    computed = Converge(transaction, basis, records, replacing, now, ids);
+                }
+                lock (commitGate) {
+                    lock (Gate) {
+                        if (computed is null) {
+                            Supersede(sync, transaction);
+                            var basis = IntentBasis();
+                            if (seedOnly && basis.DisposableSeedMarker is null) {
+                                transaction.Dispose();
+                                return;
+                            }
+                            computed = Converge(transaction, basis, records, replacing, now, ids);
+                        } else if (Revision != revision) {
+                            continue;
+                        }
+                        reserved = Reserving(transaction, computed);
+                    }
+                    Committing(sync, transaction, reserved);
+                    return;
                 }
             }
-        } catch (Exception error) {
+        } catch (Exception error) when (reserved is null) {
             transaction.Dispose();
             throw Refusal(error);
         }
+    }
+
+    /// Saves `reserved` with the journal `transaction` holds, then publishes
+    /// both. A failed save leaves the session, the journal and the file as they
+    /// were. The caller holds the lock the host's intents take.
+    private void Committing(NativeSyncAuthority sync, NativeSyncTransaction transaction, NativeSessionReplacement reserved) {
         try {
             reserved.BindSync(transaction);
             SaveAndCommit(reserved);
@@ -175,6 +215,21 @@ public sealed partial class NativeSessionAuthority {
         }
     }
 
+    /// Takes the cloud's word that it saved `uploaded`, and saves the journal
+    /// before it returns. The session does not change.
+    private static void Acknowledging(NativeSyncAuthority sync, IReadOnlyList<UploadedRecord> uploaded) {
+        ArgumentNullException.ThrowIfNull(uploaded);
+        var transaction = sync.BeginTransaction();
+        try {
+            transaction.Acknowledge(uploaded);
+            _ = transaction.Seal();
+            transaction.CommitDurably();
+        } catch (Exception error) {
+            transaction.Dispose();
+            throw Refusal(error);
+        }
+    }
+
     /// The rejection `error`, a failure to take the cloud's records, stands
     /// for. A save that failed is `SaveFailed`; a journal that cannot record
     /// the result is `SyncStagingRefused`; a rule a record breaks is
@@ -221,6 +276,50 @@ public sealed partial class NativeSessionAuthority {
             or BrowserRuleCodes.InvalidSavedUrl => SyncRecordFlaw.MalformedRecord,
         _ => SyncRecordFlaw.Unexpected
     };
+
+    #endregion
+
+    #region Actions - Uploads
+
+    /// The records of this session's journal that wait to upload; none while
+    /// it is a disposable seed. Throws `Rejected` as `AttachedSync` does.
+    internal PendingUploadList Answer(PendingUploads query) {
+        ArgumentNullException.ThrowIfNull(query);
+        var (journal, uploadsNothing) = SyncedJournal();
+        return new(uploadsNothing ? [] : journal.PendingReferences());
+    }
+
+    /// The journal's current record for each reference `query` names, and the
+    /// references it no longer holds, which is every one while this session is
+    /// a disposable seed. Throws `Rejected` as `AttachedSync` does.
+    internal UploadBatch Answer(RecordsToUpload query) {
+        ArgumentNullException.ThrowIfNull(query);
+        var (journal, uploadsNothing) = SyncedJournal();
+        var held = new List<SyncRecord>(query.Records.Count);
+        var gone = new List<SyncRecordReference>();
+        foreach (var reference in query.Records) {
+            if (!uploadsNothing && journal.Uploading(reference) is { } record) held.Add(record);
+            else gone.Add(reference);
+        }
+        return new(held, gone);
+    }
+
+    /// How this session's journal compares with the cloud's records, holding
+    /// nothing while this session is a disposable seed. Throws `Rejected` as
+    /// `AttachedSync` does, and with `InvalidSyncRecords` for a cloud record
+    /// whose body cannot be read.
+    internal CloudContentComparison Answer(CloudComparison query) {
+        ArgumentNullException.ThrowIfNull(query);
+        var (journal, holdsNothing) = SyncedJournal();
+        return journal.Comparing(query.Cloud, holdsNothing);
+    }
+
+    /// The journal this session's sync accepted last, and whether this session
+    /// is a disposable seed, which uploads nothing. Throws `Rejected` as
+    /// `AttachedSync` does.
+    private (NativeSyncJournal Journal, bool UploadsNothing) SyncedJournal() {
+        lock (Gate) return (AttachedSync().Snapshot, session.DisposableSeedMarker is not null);
+    }
 
     #endregion
 }

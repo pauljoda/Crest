@@ -55,7 +55,10 @@ CREST_API crest_status_t CREST_CALL crest_app_destroy(uint64_t app);
  * batch first, as crest_app_drain would answer it, then the intent's own.
  * REJECTED: buffer = one rejection.
  * Engine commands the intent caused (crest_engine.h) have run when it returns,
- * unless the dispatch itself runs inside a binding's command. */
+ * unless the dispatch itself runs inside a binding's command.
+ * A cloud sync intent is dispatched from the transport's thread, never the
+ * host's: its buffer holds only its receipts, what it changed waits for the
+ * next crest_app_drain, and the engine commands it caused run there. */
 CREST_API crest_status_t CREST_CALL crest_app_dispatch(uint64_t app, const uint8_t* intent, size_t length, crest_buffer_t* out);
 /* OK: buffer = the answer. REJECTED: buffer = one rejection. */
 CREST_API crest_status_t CREST_CALL crest_app_query(uint64_t app, const uint8_t* query, size_t length, crest_buffer_t* out);
@@ -72,12 +75,19 @@ CREST_API void CREST_CALL crest_buffer_free(crest_buffer_t* buffer);
  * callback; when set_wake returns, no earlier callback is still running. */
 typedef void (CREST_CALL *crest_wake_t)(void* context);
 CREST_API crest_status_t CREST_CALL crest_app_set_wake(uint64_t app, crest_wake_t callback, void* context);
-/* OK: buffer = the pending changes, oldest first (a count, then each change). */
+/* OK: buffer = the pending changes, oldest first (a count, then each change).
+ * Engine commands a cloud sync intent caused have run when it returns. */
 CREST_API crest_status_t CREST_CALL crest_app_drain(uint64_t app, crest_buffer_t* out);
 /* The host finished a turn of its thread: the drain a wake asked for has run.
  * Work queued to follow the turn, such as sync staging, may start, so the
  * edits one turn makes stage once. A drain inside a turn does not end it. */
 CREST_API crest_status_t CREST_CALL crest_app_end_turn(uint64_t app);
+/* Blocks until every sync stage of the session the app keeps in its file that
+ * was requested before the call has committed, failed or been superseded,
+ * without waiting for the host's turn or a coalescing delay; OK at once while
+ * the file holds no session. It takes no lock the host's calls wait for, but
+ * it blocks: never call it on the host's UI thread. */
+CREST_API crest_status_t CREST_CALL crest_app_settle_sync(uint64_t app);
 
 /* TRANSITIONAL until typed sync: the sync component of the session the app
  * keeps in its file, for the journal calls. EMPTY when the app keeps no file or

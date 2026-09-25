@@ -6,13 +6,17 @@ namespace CrestCore.Application;
 /// The core's typed application API. An intent changes state and answers the
 /// changes it published, or throws `Rejected`; a query answers without
 /// changing anything. Each area handles its own intents and queries. One lock
-/// serializes every call on this instance.
+/// serializes every call on this instance, except the cloud transport's: its
+/// intents compute on the transport's thread and take the lock only to
+/// commit, and its queries read the journal without it.
 ///
-/// Changes the core starts itself, such as a finished save, a session commit
-/// or an engine's report, wait in a pending batch the host drains after its
-/// wake callback runs. An intent answers that batch first, so no older change
-/// arrives after a newer one. Commands for engine bindings wait in a queue that
-/// is delivered once the lock is released.
+/// Changes the core starts itself, such as a finished save, a session commit,
+/// a cloud merge or an engine's report, wait in a pending batch the host
+/// drains after its wake callback runs. An intent the host sends answers that
+/// batch first, so no older change arrives after a newer one. Commands for
+/// engine bindings wait in a queue that is delivered once the lock is
+/// released, on the thread of the host's call that caused them, or of its next
+/// drain for those the transport caused.
 public sealed partial class CrestApp : IDisposable {
     #region Variables
 
@@ -81,9 +85,11 @@ public sealed partial class CrestApp : IDisposable {
     /// there, in the order they happened, then the changes the intent itself
     /// published. An intent that does not apply to the current state publishes
     /// none. Engine commands the intent caused have been delivered when this
-    /// returns, unless it runs inside a delivery.
+    /// returns, unless it runs inside a delivery. A `CloudSyncIntent` answers
+    /// only its receipts; see `Handle(CloudSyncIntent)`.
     public IReadOnlyList<Change> Send(Intent intent) {
         ArgumentNullException.ThrowIfNull(intent);
+        if (intent is CloudSyncIntent cloud) return Handle(cloud);
         IReadOnlyList<Change> published;
         lock (gate) {
             var changes = new ChangeFeed();
@@ -111,13 +117,10 @@ public sealed partial class CrestApp : IDisposable {
                 case SpaceAccessIntent grant:
                     access.Handle(grant, changes);
                     break;
-                case CloudSyncIntent cloud:
-                    Handle(cloud);
-                    break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(intent), intent.GetType().Name, "No area handles this intent.");
             }
-            published = [.. Drain(), .. changes.Published];
+            published = [.. TakePending(), .. changes.Published];
         }
         Deliver();
         WakeForRequestedTurn();
@@ -130,6 +133,13 @@ public sealed partial class CrestApp : IDisposable {
 
     public TAnswer Query<TAnswer>(Query<TAnswer> query) {
         ArgumentNullException.ThrowIfNull(query);
+        object? transport = query switch {
+            PendingUploads pending => Answer(pending),
+            RecordsToUpload upload => Answer(upload),
+            CloudComparison comparison => Answer(comparison),
+            _ => null
+        };
+        if (transport is not null) return (TAnswer)transport;
         lock (gate) {
             object answer = query switch {
                 DownloadProgress progress => downloads.Answer(progress),

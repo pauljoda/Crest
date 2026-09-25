@@ -263,7 +263,7 @@ extension BrowserStore {
     /// read the journal sync stays paused. Throws the rule that refused the
     /// records, the save that failed, or the journal this build cannot read;
     /// each changes nothing.
-    private func commitCloudRecords<Cloud: Intent>(
+    private func commitCloudRecords<Cloud: CloudSyncIntent>(
         _ records: [BrowserSyncRecord], as intent: ([SyncRecord]) -> Cloud
     ) throws {
         guard let syncCoordinator else { return }

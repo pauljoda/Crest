@@ -8,6 +8,11 @@ namespace CrestCore.Contracts;
 /// journal before it returns; a save that fails is `SaveFailed` and changes
 /// nothing. A locked Space never refuses one: sync converges in the background.
 ///
+/// The transport sends one from its own thread, never the host's: the core
+/// computes it there, outside its lock, and takes the lock only to commit it.
+/// What it changed reaches the host through the next drain, as one batch after
+/// the wake, never in its answer, which carries only the intent's receipts.
+///
 /// Records the core cannot take are `InvalidSyncRecords`, and a journal that
 /// cannot record the result is `SyncStagingRefused`; either changes nothing.
 public abstract record CloudSyncIntent : Intent;

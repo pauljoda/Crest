@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 
 using CrestCore.Contracts;
@@ -79,6 +80,18 @@ public sealed class NativeSyncJournal {
     private static string Kind(JsonNode record) => record["id"]!["kind"]!.GetValue<string>();
 
     private static string Name(JsonNode id) => id["kind"]!.GetValue<string>() + ":" + Id(id["value"]).ToString("D");
+
+    /// The name of the record a reference names.
+    private static string Name(SyncRecordKind kind, Guid id) => kind.Name + ":" + id.ToString("D");
+
+    private static SyncVersion Version(JsonNode record) {
+        var version = record["version"]!;
+        return new(version["logicalClock"]!.GetValue<ulong>(), Id(version["deviceID"]));
+    }
+
+    private static SyncRecordReference Reference(JsonNode record) =>
+        new(SyncRecordKind.Named(Kind(record)) ?? throw new BrowserRuleException(BrowserRuleCodes.InvalidSyncKind),
+            Id(record["id"]!["value"]));
 
     private static ulong Clock(JsonNode record) => record["version"]!["logicalClock"]!.GetValue<ulong>();
 
@@ -315,6 +328,65 @@ public sealed class NativeSyncJournal {
             next = Value(folder)["parentID"];
         }
         return true;
+    }
+
+    #endregion
+
+    #region Actions - Uploads
+
+    /// The records that wait to upload, in the order of their names.
+    internal IReadOnlyList<SyncRecordReference> PendingReferences() =>
+        [.. pending.Order(StringComparer.Ordinal).Select(name => Reference(records[name]))];
+
+    /// The record `reference` names as the cloud transport uploads it, or null
+    /// when the journal holds no such record.
+    internal SyncRecord? Uploading(SyncRecordReference reference) {
+        if (!records.TryGetValue(Name(reference.Kind, reference.Id), out var record)) return null;
+        var tombstone = record["tombstone"];
+        var body = Encoding.UTF8.GetBytes((tombstone ?? record["payload"]!).ToJsonString());
+        return new(reference.Kind, reference.Id, Id(record["spaceID"]), Version(record), body, tombstone is not null);
+    }
+
+    /// The journal once the cloud saved `uploaded`: each record it holds at
+    /// exactly the version the cloud saved no longer waits to upload. A record
+    /// written again since, or no longer held, is left as it is. The records
+    /// themselves do not change.
+    internal NativeSyncJournal Acknowledge(IReadOnlyList<UploadedRecord> uploaded) {
+        var queued = new HashSet<string>(pending, StringComparer.Ordinal);
+        foreach (var upload in uploaded) {
+            string name = Name(upload.Record.Kind, upload.Record.Id);
+            if (records.TryGetValue(name, out var record) && Version(record) == upload.Version) queued.Remove(name);
+        }
+        return new(metadata.DeepClone().AsObject(), records, queued);
+    }
+
+    /// How this journal compares with `cloud`, every record the cloud holds;
+    /// see `CloudContentComparison`. A journal that `holdsNothing` counts as
+    /// empty. Throws `Rejected` with `InvalidSyncRecords` naming
+    /// `MalformedRecord` for a cloud record whose body cannot be read.
+    internal CloudContentComparison Comparing(IReadOnlyList<SyncRecord> cloud, bool holdsNothing) {
+        IReadOnlyDictionary<string, JsonObject> device = holdsNothing ? new Dictionary<string, JsonObject>() : records;
+        var arrived = new Dictionary<string, (Guid Space, bool IsTombstone, JsonNode Body)>(StringComparer.Ordinal);
+        foreach (var record in cloud) arrived[Name(record.Kind, record.Id)] = (record.SpaceId, record.IsTombstone, Body(record));
+        bool matches = arrived.Count == device.Count && device.All(held =>
+            arrived.TryGetValue(held.Key, out var other) && Id(held.Value["spaceID"]) == other.Space
+            && (held.Value["tombstone"] is { } tombstone
+                ? other.IsTombstone && NativeSyncEvaluator.Equivalent(tombstone, other.Body)
+                : !other.IsTombstone && NativeSyncEvaluator.Equivalent(held.Value["payload"], other.Body)));
+        return new(matches, device.Count, cloud.Count,
+            device.Values.Count(record => Kind(record) == SyncRecordKinds.Space && Payload(record) is not null),
+            cloud.Count(record => record.Kind == SyncRecordKind.Space && !record.IsTombstone));
+    }
+
+    /// The body of a record the cloud holds. Throws `Rejected` with
+    /// `InvalidSyncRecords` naming `MalformedRecord` for one that is no JSON
+    /// object.
+    private static JsonNode Body(SyncRecord record) {
+        try {
+            if (JsonNode.Parse(record.Body, documentOptions: new() { MaxDepth = 64 }) is JsonObject body) return body;
+        } catch (JsonException) {
+        }
+        throw new Rejected(new InvalidSyncRecords(SyncRecordFlaw.MalformedRecord, record.Id));
     }
 
     #endregion

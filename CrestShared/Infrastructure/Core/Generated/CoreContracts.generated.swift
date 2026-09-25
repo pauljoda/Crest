@@ -22,8 +22,29 @@ protocol EngineEvent: Sendable {
     func encodeEngineEvent(into writer: inout WireWriter)
 }
 
-/// The members of `Intent` that derive from the core's `ImportWorkspace`, which a field of that type holds.
+/// The members of `Intent` that derive from the core's `CloudSyncIntent`.
+protocol CloudSyncIntent: Intent {}
+
+/// The members of `Intent` that derive from the core's `DownloadIntent`.
+protocol DownloadIntent: Intent {}
+
+/// The members of `Intent` that derive from the core's `ImportWorkspace`.
 protocol ImportWorkspace: Intent {}
+
+/// The members of `Intent` that derive from the core's `PageIntent`.
+protocol PageIntent: Intent {}
+
+/// The members of `Intent` that derive from the core's `SessionIntent`.
+protocol SessionIntent: Intent {}
+
+/// The members of `Intent` that derive from the core's `SpaceAccessIntent`.
+protocol SpaceAccessIntent: Intent {}
+
+/// The members of `Intent` that derive from the core's `WindowIntent`.
+protocol WindowIntent: Intent {}
+
+/// The members of `Intent` that derive from the core's `WorkspaceIntent`.
+protocol WorkspaceIntent: Intent {}
 
 /// Everything an intent can change. `CoreState.apply` keeps the read model current.
 enum Change: Equatable, Sendable {
@@ -238,11 +259,15 @@ extension CoreState {
 
 // MARK: - Records
 
-struct AcknowledgeDownloads: Intent, Equatable, Sendable {
+struct AcknowledgeDownloads: Intent, DownloadIntent, Equatable, Sendable {
     let profileID: UUID
 }
 
-struct AddSearchEngine: Intent, Equatable, Sendable {
+struct AcknowledgeUploads: Intent, CloudSyncIntent, Equatable, Sendable {
+    let records: [UploadedRecord]
+}
+
+struct AddSearchEngine: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let spaceID: UUID
     let engine: CustomSearchEngine
@@ -254,7 +279,7 @@ struct AdoptLegacySession: Intent, Equatable, Sendable {
     let seed: Data
 }
 
-struct AdoptWindowRecords: Intent, Equatable, Sendable {
+struct AdoptWindowRecords: Intent, WindowIntent, Equatable, Sendable {
     let records: Data?
 }
 
@@ -298,7 +323,7 @@ struct AppPreferencesChanged: Equatable, Sendable {
     let preferences: AppPreferences?
 }
 
-struct ApplyManualSetup: Intent, ImportWorkspace, Equatable, Sendable {
+struct ApplyManualSetup: Intent, ImportWorkspace, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let windowID: UUID
     let spaces: Data
@@ -314,7 +339,7 @@ struct ArchiveChanged: Equatable, Sendable {
     let order: [UUID]?
 }
 
-struct ArchiveTransientPage: Intent, Equatable, Sendable {
+struct ArchiveTransientPage: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let pageID: UUID
     let spaceID: UUID
@@ -326,7 +351,7 @@ struct ArchivedTabState: Equatable, Sendable {
     let reason: ArchiveReason
 }
 
-struct AssessDownloadRisk: Intent, Equatable, Sendable {
+struct AssessDownloadRisk: Intent, DownloadIntent, Equatable, Sendable {
     let downloadID: UUID
     let assessment: DownloadRiskAssessment
 }
@@ -334,7 +359,7 @@ struct AssessDownloadRisk: Intent, Equatable, Sendable {
 struct AuthenticationBusy: Equatable, Sendable {
 }
 
-struct AwaitDownloadApproval: Intent, Equatable, Sendable {
+struct AwaitDownloadApproval: Intent, DownloadIntent, Equatable, Sendable {
     let downloadID: UUID
 }
 
@@ -343,14 +368,14 @@ struct BalancedProtectionRules: Query, Equatable, Sendable {
 
 }
 
-struct BeginDeletingSpace: Intent, Equatable, Sendable {
+struct BeginDeletingSpace: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let windowID: UUID
     let spaceID: UUID
     let operationID: UUID
 }
 
-struct BeginDownload: Intent, Equatable, Sendable {
+struct BeginDownload: Intent, DownloadIntent, Equatable, Sendable {
     let downloadID: UUID
     let profileID: UUID
     let filename: String
@@ -358,17 +383,17 @@ struct BeginDownload: Intent, Equatable, Sendable {
     let isAcknowledged: Bool
 }
 
-struct BeginUnlockingSpace: Intent, Equatable, Sendable {
+struct BeginUnlockingSpace: Intent, SpaceAccessIntent, Equatable, Sendable {
     let workspaceID: UUID
     let spaceID: UUID
     let requestID: UUID
 }
 
-struct BlockAutomaticDownload: Intent, Equatable, Sendable {
+struct BlockAutomaticDownload: Intent, DownloadIntent, Equatable, Sendable {
     let downloadID: UUID
 }
 
-struct BorrowSpace: Intent, Equatable, Sendable {
+struct BorrowSpace: Intent, WorkspaceIntent, Equatable, Sendable {
     let workspaceID: UUID
     let spaceID: UUID
     let profileID: UUID
@@ -424,7 +449,7 @@ struct CanTearOff: Query, Equatable, Sendable {
     let draggedTabs: [UUID]?
 }
 
-struct CancelDownload: Intent, Equatable, Sendable {
+struct CancelDownload: Intent, DownloadIntent, Equatable, Sendable {
     let downloadID: UUID
     let message: String
 }
@@ -451,7 +476,7 @@ struct CannotPinSplit: Equatable, Sendable {
     }
 }
 
-struct ChooseTabIcon: Intent, Equatable, Sendable {
+struct ChooseTabIcon: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let spaceID: UUID
     let tabID: UUID
@@ -460,18 +485,18 @@ struct ChooseTabIcon: Intent, Equatable, Sendable {
     let accent: TabIconAccent?
 }
 
-struct CleanUpCurrentTabs: Intent, Equatable, Sendable {
+struct CleanUpCurrentTabs: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let spaceID: UUID?
 }
 
-struct ClearCurrentTabs: Intent, Equatable, Sendable {
+struct ClearCurrentTabs: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let windowID: UUID
     let spaceID: UUID
 }
 
-struct ClearHistory: Intent, Equatable, Sendable {
+struct ClearHistory: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let spaceID: UUID?
 }
@@ -481,29 +506,43 @@ struct ClosePage: Equatable, Sendable {
     let keepsState: Bool
 }
 
-struct CloseTab: Intent, Equatable, Sendable {
+struct CloseTab: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let windowID: UUID
     let spaceID: UUID
     let tabID: UUID
 }
 
-struct CloseTabs: Intent, Equatable, Sendable {
+struct CloseTabs: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let windowID: UUID
     let spaceID: UUID
     let selection: TabSelection
 }
 
-struct CloseWindow: Intent, Equatable, Sendable {
+struct CloseWindow: Intent, WindowIntent, Equatable, Sendable {
     let windowID: UUID
 }
 
-struct CloseWorkspace: Intent, Equatable, Sendable {
+struct CloseWorkspace: Intent, WorkspaceIntent, Equatable, Sendable {
     let workspaceID: UUID
 }
 
-struct CollapseFolder: Intent, Equatable, Sendable {
+struct CloudComparison: Query, Equatable, Sendable {
+    typealias Answer = CloudContentComparison
+
+    let cloud: [SyncRecord]
+}
+
+struct CloudContentComparison: Equatable, Sendable {
+    let matches: Bool
+    let deviceRecords: Int
+    let cloudRecords: Int
+    let deviceSpaces: Int
+    let cloudSpaces: Int
+}
+
+struct CollapseFolder: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let spaceID: UUID
     let folderID: UUID
@@ -519,7 +558,7 @@ struct ContentRuleList: Equatable, Sendable {
     let source: String
 }
 
-struct CreateFolder: Intent, Equatable, Sendable {
+struct CreateFolder: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let spaceID: UUID
     let folderID: UUID
@@ -538,7 +577,7 @@ struct CreatePage: Equatable, Sendable {
     let isPrivate: Bool
 }
 
-struct CreateSpace: Intent, Equatable, Sendable {
+struct CreateSpace: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let windowID: UUID
     let spaceID: UUID
@@ -701,33 +740,33 @@ struct DefaultEngineAlreadyRegistered: Equatable, Sendable {
     let current: EngineKind
 }
 
-struct DeleteFolder: Intent, Equatable, Sendable {
+struct DeleteFolder: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let spaceID: UUID
     let folderID: UUID
 }
 
-struct DeleteTab: Intent, Equatable, Sendable {
+struct DeleteTab: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let windowID: UUID
     let spaceID: UUID
     let tabID: UUID
 }
 
-struct DeleteTabs: Intent, Equatable, Sendable {
+struct DeleteTabs: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let windowID: UUID
     let spaceID: UUID
     let selection: TabSelection
 }
 
-struct DismissShownTab: Intent, Equatable, Sendable {
+struct DismissShownTab: Intent, WindowIntent, Equatable, Sendable {
     let windowID: UUID
     let spaceID: UUID
     let tabID: UUID
 }
 
-struct DissolveSplit: Intent, Equatable, Sendable {
+struct DissolveSplit: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let spaceID: UUID
     let groupID: UUID
@@ -841,7 +880,7 @@ struct DuplicateSearchEngineName: Equatable, Sendable {
     }
 }
 
-struct DuplicateTab: Intent, Equatable, Sendable {
+struct DuplicateTab: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let windowID: UUID
     let spaceID: UUID
@@ -850,7 +889,7 @@ struct DuplicateTab: Intent, Equatable, Sendable {
     let shows: Bool
 }
 
-struct DuplicateTabs: Intent, Equatable, Sendable {
+struct DuplicateTabs: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let windowID: UUID
     let spaceID: UUID
@@ -875,13 +914,13 @@ struct EngineRegistration: Equatable, Sendable {
     let isDefault: Bool
 }
 
-struct ExpandSavedTabs: Intent, Equatable, Sendable {
+struct ExpandSavedTabs: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let spaceID: UUID
     let isExpanded: Bool
 }
 
-struct ExpireDownloads: Intent, Equatable, Sendable {
+struct ExpireDownloads: Intent, DownloadIntent, Equatable, Sendable {
     let now: Date
     let retentions: [DownloadRetention]
 }
@@ -901,7 +940,7 @@ struct ExternalLinkRoute: Query, Equatable, Sendable {
     let lockedSpaceIDs: [UUID]
 }
 
-struct FailDownload: Intent, Equatable, Sendable {
+struct FailDownload: Intent, DownloadIntent, Equatable, Sendable {
     let downloadID: UUID
     let message: String
 }
@@ -916,7 +955,7 @@ struct FallbackTabIndex: Equatable, Sendable {
     let index: Int?
 }
 
-struct FileTabs: Intent, Equatable, Sendable {
+struct FileTabs: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let windowID: UUID
     let spaceID: UUID
@@ -928,19 +967,19 @@ struct FileTabs: Intent, Equatable, Sendable {
     let leavesSplits: Bool
 }
 
-struct FinishDeletingSpace: Intent, Equatable, Sendable {
+struct FinishDeletingSpace: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let windowID: UUID
     let spaceID: UUID
     let operationID: UUID
 }
 
-struct FinishDownload: Intent, Equatable, Sendable {
+struct FinishDownload: Intent, DownloadIntent, Equatable, Sendable {
     let downloadID: UUID
     let finalByteCount: Int64?
 }
 
-struct FinishUnlockingSpace: Intent, Equatable, Sendable {
+struct FinishUnlockingSpace: Intent, SpaceAccessIntent, Equatable, Sendable {
     let spaceID: UUID
     let requestID: UUID
     let authenticated: Bool
@@ -974,7 +1013,7 @@ struct FolderState: Equatable, Sendable, Identifiable {
     let orderAnchorTabID: UUID?
 }
 
-struct FolderTabs: Intent, Equatable, Sendable {
+struct FolderTabs: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let windowID: UUID
     let spaceID: UUID
@@ -982,7 +1021,7 @@ struct FolderTabs: Intent, Equatable, Sendable {
     let placement: TabPlacement
 }
 
-struct FolderTabsAround: Intent, Equatable, Sendable {
+struct FolderTabsAround: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let windowID: UUID
     let spaceID: UUID
@@ -1015,7 +1054,7 @@ struct HistoryEntryState: Equatable, Sendable, Identifiable {
     let visitCount: Int
 }
 
-struct ImportAppPreferences: Intent, Equatable, Sendable {
+struct ImportAppPreferences: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let legacy: LegacyAppPreferences
 }
@@ -1053,14 +1092,14 @@ struct ImportReviewTab: Equatable, Sendable, Identifiable {
     let placement: TabPlacement
 }
 
-struct ImportReviewedSpaces: Intent, ImportWorkspace, Equatable, Sendable {
+struct ImportReviewedSpaces: Intent, ImportWorkspace, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let windowID: UUID
     let spaces: Data
     let reviews: [SpaceReview]
 }
 
-struct ImportSpaces: Intent, ImportWorkspace, Equatable, Sendable {
+struct ImportSpaces: Intent, ImportWorkspace, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let windowID: UUID
     let spaces: Data
@@ -1168,7 +1207,7 @@ struct InvalidTabIcon: Equatable, Sendable {
     let mode: TabIconMode
 }
 
-struct JoinSplit: Intent, Equatable, Sendable {
+struct JoinSplit: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let windowID: UUID
     let spaceID: UUID
@@ -1177,14 +1216,14 @@ struct JoinSplit: Intent, Equatable, Sendable {
     let index: Int?
 }
 
-struct KeepPageLoaded: Intent, Equatable, Sendable {
+struct KeepPageLoaded: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let spaceID: UUID
     let tabID: UUID
     let keeps: Bool
 }
 
-struct KeepTabsLoaded: Intent, Equatable, Sendable {
+struct KeepTabsLoaded: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let windowID: UUID
     let spaceID: UUID
@@ -1238,11 +1277,11 @@ struct LaunchPlan: Query, Equatable, Sendable {
     let hasActiveLaunchGate: Bool
 }
 
-struct LeavePageFailure: Intent, Equatable, Sendable {
+struct LeavePageFailure: Intent, PageIntent, Equatable, Sendable {
     let pageID: UUID
 }
 
-struct LeaveSplit: Intent, Equatable, Sendable {
+struct LeaveSplit: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let spaceID: UUID
     let tabID: UUID
@@ -1299,15 +1338,15 @@ struct LoadPage: Equatable, Sendable {
     let url: String
 }
 
-struct LockAllSpaces: Intent, Equatable, Sendable {
+struct LockAllSpaces: Intent, SpaceAccessIntent, Equatable, Sendable {
     let sceneWentInactive: Bool
 }
 
-struct LockSpace: Intent, Equatable, Sendable {
+struct LockSpace: Intent, SpaceAccessIntent, Equatable, Sendable {
     let spaceID: UUID
 }
 
-struct MergeSyncRecords: Intent, Equatable, Sendable {
+struct MergeSyncRecords: Intent, CloudSyncIntent, Equatable, Sendable {
     let records: [SyncRecord]
 }
 
@@ -1317,7 +1356,7 @@ struct MostRecentCredential: Query, Equatable, Sendable {
     let records: [CredentialRecord]
 }
 
-struct MoveFolder: Intent, Equatable, Sendable {
+struct MoveFolder: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let spaceID: UUID
     let folderID: UUID
@@ -1327,7 +1366,7 @@ struct MoveFolder: Intent, Equatable, Sendable {
     let beforeTabID: UUID?
 }
 
-struct MovePage: Intent, Equatable, Sendable {
+struct MovePage: Intent, PageIntent, Equatable, Sendable {
     let pageID: UUID
     let workspaceID: UUID
     let spaceID: UUID
@@ -1335,7 +1374,7 @@ struct MovePage: Intent, Equatable, Sendable {
     let windowID: UUID
 }
 
-struct MoveSplit: Intent, Equatable, Sendable {
+struct MoveSplit: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let spaceID: UUID
     let groupID: UUID
@@ -1344,14 +1383,14 @@ struct MoveSplit: Intent, Equatable, Sendable {
     let beforeTabID: UUID?
 }
 
-struct MoveSplitMember: Intent, Equatable, Sendable {
+struct MoveSplitMember: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let spaceID: UUID
     let tabID: UUID
     let index: Int
 }
 
-struct MoveTab: Intent, Equatable, Sendable {
+struct MoveTab: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let spaceID: UUID
     let tabID: UUID
@@ -1361,7 +1400,7 @@ struct MoveTab: Intent, Equatable, Sendable {
     let leavesSplit: Bool
 }
 
-struct MoveTabToSpace: Intent, Equatable, Sendable {
+struct MoveTabToSpace: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let windowID: UUID
     let spaceID: UUID
@@ -1373,7 +1412,7 @@ struct MoveTabToSpace: Intent, Equatable, Sendable {
     let follows: Bool
 }
 
-struct MoveTabToWindow: Intent, Equatable, Sendable {
+struct MoveTabToWindow: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let windowID: UUID
     let spaceID: UUID
@@ -1381,7 +1420,7 @@ struct MoveTabToWindow: Intent, Equatable, Sendable {
     let destinationWindowID: UUID
 }
 
-struct MoveTabsToSpace: Intent, Equatable, Sendable {
+struct MoveTabsToSpace: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let windowID: UUID
     let spaceID: UUID
@@ -1390,7 +1429,7 @@ struct MoveTabsToSpace: Intent, Equatable, Sendable {
     let follows: Bool
 }
 
-struct NameSplit: Intent, Equatable, Sendable {
+struct NameSplit: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let spaceID: UUID
     let groupID: UUID
@@ -1402,12 +1441,12 @@ struct NativeTabContent: Equatable, Sendable {
     let resourceID: UUID?
 }
 
-struct Navigate: Intent, Equatable, Sendable {
+struct Navigate: Intent, PageIntent, Equatable, Sendable {
     let pageID: UUID
     let input: String
 }
 
-struct NavigateTab: Intent, Equatable, Sendable {
+struct NavigateTab: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let spaceID: UUID
     let tabID: UUID
@@ -1466,7 +1505,7 @@ struct NotPrivateWorkspace: Equatable, Sendable {
     let workspaceID: UUID
 }
 
-struct OpenLinkInSplit: Intent, Equatable, Sendable {
+struct OpenLinkInSplit: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let windowID: UUID
     let spaceID: UUID
@@ -1476,7 +1515,7 @@ struct OpenLinkInSplit: Intent, Equatable, Sendable {
     let title: String
 }
 
-struct OpenPage: Intent, Equatable, Sendable {
+struct OpenPage: Intent, PageIntent, Equatable, Sendable {
     let pageID: UUID
     let workspaceID: UUID
     let spaceID: UUID
@@ -1484,7 +1523,7 @@ struct OpenPage: Intent, Equatable, Sendable {
     let windowID: UUID
 }
 
-struct OpenTab: Intent, Equatable, Sendable {
+struct OpenTab: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let windowID: UUID
     let spaceID: UUID
@@ -1495,7 +1534,7 @@ struct OpenTab: Intent, Equatable, Sendable {
     let shows: Bool
 }
 
-struct OpenWindow: Intent, Equatable, Sendable {
+struct OpenWindow: Intent, WindowIntent, Equatable, Sendable {
     let windowID: UUID
     let workspaceID: UUID
     let saved: Bool
@@ -1505,12 +1544,12 @@ struct OpenWindow: Intent, Equatable, Sendable {
     let restoresTabs: Bool
 }
 
-struct OpenWorkspace: Intent, Equatable, Sendable {
+struct OpenWorkspace: Intent, WorkspaceIntent, Equatable, Sendable {
     let kind: WorkspaceKind
     let seed: Data?
 }
 
-struct OverwriteCloud: Intent, Equatable, Sendable {
+struct OverwriteCloud: Intent, CloudSyncIntent, Equatable, Sendable {
     let records: [SyncRecord]
 }
 
@@ -1621,6 +1660,15 @@ struct PendingSaveRevision: Equatable, Sendable {
     let revision: Int64?
 }
 
+struct PendingUploadList: Equatable, Sendable {
+    let records: [SyncRecordReference]
+}
+
+struct PendingUploads: Query, Equatable, Sendable {
+    typealias Answer = PendingUploadList
+
+}
+
 struct PersistentWorkspaceRequired: Equatable, Sendable {
     let workspaceID: UUID
 
@@ -1649,7 +1697,7 @@ struct ProfileInUse: Equatable, Sendable {
     }
 }
 
-struct PromoteTransientPage: Intent, Equatable, Sendable {
+struct PromoteTransientPage: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let windowID: UUID
     let pageID: UUID
@@ -1668,104 +1716,110 @@ struct QuickWindowSiteKey: Equatable, Sendable {
     let site: String?
 }
 
-struct RecordDownloadTransfer: Intent, Equatable, Sendable {
+struct RecordDownloadTransfer: Intent, DownloadIntent, Equatable, Sendable {
     let downloadID: UUID
     let telemetry: DownloadTelemetry
     let progress: Double
+}
+
+struct RecordsToUpload: Query, Equatable, Sendable {
+    typealias Answer = UploadBatch
+
+    let records: [SyncRecordReference]
 }
 
 struct RecoveryCheckpointUnusable: Equatable, Sendable {
     let reason: StorageFailure
 }
 
-struct ReleasePage: Intent, Equatable, Sendable {
+struct ReleasePage: Intent, PageIntent, Equatable, Sendable {
     let pageID: UUID
     let keepsState: Bool
 }
 
-struct RemoveDownload: Intent, Equatable, Sendable {
+struct RemoveDownload: Intent, DownloadIntent, Equatable, Sendable {
     let downloadID: UUID
 }
 
-struct RemoveHistoryAddress: Intent, Equatable, Sendable {
+struct RemoveHistoryAddress: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let spaceID: UUID
     let address: String
 }
 
-struct RemoveHistoryRange: Intent, Equatable, Sendable {
+struct RemoveHistoryRange: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let spaceID: UUID
     let start: Date
     let end: Date
 }
 
-struct RemoveProfileDownloads: Intent, Equatable, Sendable {
+struct RemoveProfileDownloads: Intent, DownloadIntent, Equatable, Sendable {
     let profileID: UUID
 }
 
-struct RemoveSearchEngine: Intent, Equatable, Sendable {
+struct RemoveSearchEngine: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let spaceID: UUID
     let engineID: UUID
 }
 
-struct RenameFolder: Intent, Equatable, Sendable {
+struct RenameFolder: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let spaceID: UUID
     let folderID: UUID
     let title: String
 }
 
-struct RenameTab: Intent, Equatable, Sendable {
+struct RenameTab: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let spaceID: UUID
     let tabID: UUID
     let title: String?
 }
 
-struct ReorderSpaces: Intent, Equatable, Sendable {
+struct ReorderSpaces: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let spaceIDs: [UUID]
 }
 
-struct ReplaceSavedAddress: Intent, Equatable, Sendable {
+struct ReplaceSavedAddress: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let spaceID: UUID
     let tabID: UUID
 }
 
-struct ReplaceSeedWithCloudRecords: Intent, Equatable, Sendable {
+struct ReplaceSeedWithCloudRecords: Intent, CloudSyncIntent, Equatable, Sendable {
     let records: [SyncRecord]
 }
 
-struct ReplaceWithCloudRecords: Intent, Equatable, Sendable {
+struct ReplaceWithCloudRecords: Intent, CloudSyncIntent, Equatable, Sendable {
     let records: [SyncRecord]
 }
 
-struct ResetPrivateBrowsing: Intent, Equatable, Sendable {
+struct ResetPrivateBrowsing: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let windowID: UUID
 }
 
-struct ResizeSplitColumns: Intent, Equatable, Sendable {
+struct ResizeSplitColumns: Intent, WindowIntent, Equatable, Sendable {
     let windowID: UUID
     let groupID: UUID
     let shares: [Double]
 }
 
-struct RestartDownload: Intent, Equatable, Sendable {
+struct RestartDownload: Intent, DownloadIntent, Equatable, Sendable {
     let downloadID: UUID
 }
 
-struct RestoreArchivedTab: Intent, Equatable, Sendable {
+struct RestoreArchivedTab: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let windowID: UUID
     let spaceID: UUID
     let tabID: UUID
 }
 
-struct ReturnToSavedAddress: Intent, Equatable, Sendable {
+struct ReturnToSavedAddress: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let spaceID: UUID
     let tabID: UUID
@@ -1795,7 +1849,7 @@ struct SearchEngineLimitReached: Equatable, Sendable {
     }
 }
 
-struct SelectSearchEngine: Intent, Equatable, Sendable {
+struct SelectSearchEngine: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let spaceID: UUID
     let builtIn: BuiltInSearchEngine?
@@ -1818,7 +1872,7 @@ struct SendPermission: Equatable, Sendable {
     let refusal: Rejection?
 }
 
-struct SeparateSplits: Intent, Equatable, Sendable {
+struct SeparateSplits: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let windowID: UUID
     let spaceID: UUID
@@ -1837,12 +1891,12 @@ struct SessionState: Equatable, Sendable {
     let appPreferences: AppPreferences?
 }
 
-struct SetAppPreferences: Intent, Equatable, Sendable {
+struct SetAppPreferences: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let preferences: AppPreferences
 }
 
-struct SetBrowsingPreferences: Intent, Equatable, Sendable {
+struct SetBrowsingPreferences: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let spaceID: UUID
     let searchSuggestionsEnabled: Bool
@@ -1851,50 +1905,50 @@ struct SetBrowsingPreferences: Intent, Equatable, Sendable {
     let dataRetention: DataRetentionPreferences
 }
 
-struct SetCredentialPreferences: Intent, Equatable, Sendable {
+struct SetCredentialPreferences: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let spaceID: UUID
     let preferences: CredentialPreferences
 }
 
-struct SetDefaultSpace: Intent, Equatable, Sendable {
+struct SetDefaultSpace: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let spaceID: UUID
 }
 
-struct SetDownloadDestination: Intent, Equatable, Sendable {
+struct SetDownloadDestination: Intent, DownloadIntent, Equatable, Sendable {
     let downloadID: UUID
     let destination: String
     let filename: String
 }
 
-struct SetFolderColor: Intent, Equatable, Sendable {
+struct SetFolderColor: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let spaceID: UUID
     let folderID: UUID
     let color: BrandColor
 }
 
-struct SetFolderSymbol: Intent, Equatable, Sendable {
+struct SetFolderSymbol: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let spaceID: UUID
     let folderID: UUID
     let symbol: String
 }
 
-struct SetSpaceAccess: Intent, Equatable, Sendable {
+struct SetSpaceAccess: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let spaceID: UUID
     let policy: SpaceAccessPolicy
 }
 
-struct SetSpaceBranding: Intent, Equatable, Sendable {
+struct SetSpaceBranding: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let spaceID: UUID
     let branding: SpaceBranding
 }
 
-struct SetSpaceIdentity: Intent, Equatable, Sendable {
+struct SetSpaceIdentity: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let spaceID: UUID
     let name: String
@@ -1902,14 +1956,14 @@ struct SetSpaceIdentity: Intent, Equatable, Sendable {
     let accent: SpaceAccent
 }
 
-struct SetSplitIcon: Intent, Equatable, Sendable {
+struct SetSplitIcon: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let spaceID: UUID
     let groupID: UUID
     let symbol: String?
 }
 
-struct SetTranslationRule: Intent, Equatable, Sendable {
+struct SetTranslationRule: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let sourceLanguage: String
     let targetLanguage: String
@@ -1928,12 +1982,12 @@ struct ShortcutDefault: Equatable, Sendable {
     let yieldsToOverrides: Bool
 }
 
-struct ShowSpace: Intent, Equatable, Sendable {
+struct ShowSpace: Intent, WindowIntent, Equatable, Sendable {
     let windowID: UUID
     let spaceID: UUID
 }
 
-struct ShowTab: Intent, Equatable, Sendable {
+struct ShowTab: Intent, WindowIntent, Equatable, Sendable {
     let windowID: UUID
     let spaceID: UUID
     let tabID: UUID?
@@ -2139,7 +2193,7 @@ struct SplitNeedsTwoTabs: Equatable, Sendable {
     }
 }
 
-struct SplitTabs: Intent, Equatable, Sendable {
+struct SplitTabs: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let windowID: UUID
     let spaceID: UUID
@@ -2155,7 +2209,7 @@ struct StaleUnlockRequest: Equatable, Sendable {
     let requestID: UUID
 }
 
-struct StepSplitMember: Intent, Equatable, Sendable {
+struct StepSplitMember: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let spaceID: UUID
     let tabID: UUID
@@ -2201,7 +2255,7 @@ struct SuggestedSpaceReview: Equatable, Sendable {
     let includedTabIDs: [UUID]
 }
 
-struct SweepExpiredRecords: Intent, Equatable, Sendable {
+struct SweepExpiredRecords: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
 }
 
@@ -2218,6 +2272,11 @@ struct SyncRecord: Equatable, Sendable, Identifiable {
     let version: SyncVersion
     let body: Data
     let isTombstone: Bool
+}
+
+struct SyncRecordReference: Equatable, Sendable, Identifiable {
+    let kind: SyncRecordKind
+    let id: UUID
 }
 
 struct SyncStagingFailed: Equatable, Sendable {
@@ -2356,7 +2415,7 @@ struct TearOffPermission: Equatable, Sendable {
     let reason: TearOffRefusal?
 }
 
-struct TintSplit: Intent, Equatable, Sendable {
+struct TintSplit: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let spaceID: UUID
     let groupID: UUID
@@ -2428,10 +2487,20 @@ struct UnsupportedAddress: Equatable, Sendable {
     let url: String
 }
 
-struct UpdateSearchEngine: Intent, Equatable, Sendable {
+struct UpdateSearchEngine: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let spaceID: UUID
     let engine: CustomSearchEngine
+}
+
+struct UploadBatch: Equatable, Sendable {
+    let records: [SyncRecord]
+    let gone: [SyncRecordReference]
+}
+
+struct UploadedRecord: Equatable, Sendable {
+    let record: SyncRecordReference
+    let version: SyncVersion
 }
 
 struct WebPagesOnly: Equatable, Sendable {

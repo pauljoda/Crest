@@ -243,6 +243,18 @@ internal sealed class ContractSchema {
     public IReadOnlyList<RootField> Bases =>
         [.. bases.OrderBy(pair => pair.Key.Name, StringComparer.Ordinal).Select(pair => new RootField(pair.Value, pair.Key))];
 
+    /// Every abstract record that members of a root the core reads derive
+    /// from, in ordinal name order, whether or not a field narrows the root to
+    /// it. Swift receives each as a protocol its members conform to, so a call
+    /// can take one family of messages, such as the cloud transport's intents.
+    public IReadOnlyList<RootField> Families =>
+        [.. roots.Where(pair => pair.Key.TravelsToCore && !pair.Key.HasAnswer)
+            .SelectMany(pair => pair.Value.SelectMany(member => Ancestors(member.Record.Type, pair.Key.Type))
+                .Select(ancestor => (Root: pair.Key, Base: ancestor)))
+            .DistinctBy(family => family.Base)
+            .OrderBy(family => family.Base.Name, StringComparer.Ordinal)
+            .Select(family => new RootField(family.Root, family.Base))];
+
     public string Canonical { get; private set; } = "";
 
     public byte[] Fingerprint => SHA256.HashData(Encoding.UTF8.GetBytes(Canonical));
@@ -751,6 +763,12 @@ internal sealed class ContractSchema {
     /// its root, or those that derive from its base.
     public IReadOnlyList<ContractMember> Members(RootField union) =>
         union.Base is { } narrowed ? [.. roots[union.Root].Where(member => narrowed.IsAssignableFrom(member.Record.Type))] : roots[union.Root];
+
+    /// The abstract records `type` derives from below `root`, nearest first.
+    private static IEnumerable<Type> Ancestors(Type type, Type root) {
+        for (var current = type.BaseType; current is not null && current != root; current = current.BaseType)
+            if (current is { IsAbstract: true, IsPublic: true, IsGenericType: false }) yield return current;
+    }
 
     #endregion
 

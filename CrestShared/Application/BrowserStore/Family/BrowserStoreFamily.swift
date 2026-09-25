@@ -172,8 +172,15 @@ final class BrowserStoreFamily {
     /// with its journal before it returns: every window follows, and a Space
     /// the cloud deleted starts its cleanup. Throws the rule that refused the
     /// records or the save that failed; either changes nothing.
-    func commitCloudRecords(_ intent: some Intent, from source: BrowserStore) throws(Rejection) {
-        try commit(intent, from: source)
+    ///
+    /// TRANSITIONAL until the cloud transport sends its intents itself: the
+    /// core answers a cloud intent with its receipts alone, so what it changed
+    /// is drained here.
+    func commitCloudRecords(_ intent: some CloudSyncIntent, from source: BrowserStore) throws(Rejection) {
+        let previous = authoritativeSession
+        try source.core.send(intent)
+        source.core.drain()
+        if authoritativeSession != previous { reconcileStores(after: previous, from: source) }
         scheduleSpaceDataCleanup()
     }
 

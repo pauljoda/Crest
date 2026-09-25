@@ -30,9 +30,9 @@ internal static class SwiftEmitter {
         var code = new StringBuilder(Header);
         code.Append("\n// MARK: - Roots\n");
         foreach (var root in ContractRoot.All.Where(root => root.TravelsToCore)) EmitProtocol(code, root);
-        foreach (var narrowed in schema.Bases) {
-            code.Append('\n').Append($"/// The members of `{narrowed.Root}` that derive from the core's `{narrowed.Base!.Name}`, which a field of that type holds.\n");
-            code.Append($"protocol {narrowed.Base!.Name}: {narrowed.Root} {{}}\n");
+        foreach (var family in schema.Families) {
+            code.Append('\n').Append($"/// The members of `{family.Root}` that derive from the core's `{family.Base!.Name}`.\n");
+            code.Append($"protocol {family.Base!.Name}: {family.Root} {{}}\n");
         }
         foreach (var root in ContractRoot.All.Where(root => !root.TravelsToCore)) EmitUnion(code, schema, root, equatable);
         code.Append("""
@@ -55,7 +55,7 @@ internal static class SwiftEmitter {
             var conformances = new List<string>();
             bool isSent = roots.TryGetValue(record.Type, out var owner) && owner.Root.TravelsToCore;
             if (isSent) conformances.Add(owner.Root.Name);
-            conformances.AddRange(schema.Bases.Where(narrowed => narrowed.Base!.IsAssignableFrom(record.Type)).Select(narrowed => narrowed.Base!.Name));
+            conformances.AddRange(schema.Families.Where(family => family.Base!.IsAssignableFrom(record.Type)).Select(family => family.Base!.Name));
             if (equatable.Contains(record.Type)) conformances.Add("Equatable");
             conformances.Add("Sendable");
             if (record.Fields.Any(field => field.Name == "Id")) conformances.Add("Identifiable");

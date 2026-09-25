@@ -415,6 +415,9 @@ static void storage_boundary(void) {
     crest_buffer_t buffer = { NULL, 0 };
     assert(crest_app_create(fingerprint, sizeof(fingerprint), configuration, configured, &app, &buffer) == CREST_OK && app != 0);
     assert(crest_app_sync(app, &sync) == CREST_EMPTY && sync == 0);
+    /* With no session in the file there is no stage to settle. */
+    assert(crest_app_settle_sync(app) == CREST_OK);
+    assert(crest_app_settle_sync(0) == CREST_INVALID_HANDLE);
     /* OpenWorkspace for the file's session, without a seed. */
     uint8_t stored[3];
     size_t opening_stored = open_workspace(stored, sizeof(stored), persistent_kind, NULL, 0);
@@ -495,6 +498,8 @@ static void storage_boundary(void) {
         if (!staged) nanosleep(&pause, NULL);
     }
     assert(staged);
+    /* Every stage requested so far has settled, so settling returns at once. */
+    assert(crest_app_settle_sync(app) == CREST_OK);
     assert(crest_app_set_wake(app, NULL, NULL) == CREST_OK);
     /* OpenWindow: its tag, the window, the workspace, Saved, no window to copy,
      * no Space to show, no tabs to show, RestoresTabs. It answers one

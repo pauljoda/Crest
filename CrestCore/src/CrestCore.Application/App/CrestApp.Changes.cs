@@ -21,7 +21,18 @@ public sealed partial class CrestApp {
     #region Actions - Changes
 
     /// The changes the core started itself since the last drain, oldest first.
+    /// Engine commands a call from off the host's thread caused, such as a
+    /// cloud merge closing a borrowed workspace's pages, are delivered on the
+    /// thread that drains, before this returns.
     public IReadOnlyList<Change> Drain() {
+        var drained = TakePending();
+        Deliver();
+        return drained;
+    }
+
+    /// The changes the core started itself since the last drain, oldest first,
+    /// which an intent answers under the lock.
+    private IReadOnlyList<Change> TakePending() {
         lock (pendingGate) {
             var drained = pending.ToArray();
             pending.Clear();
@@ -66,7 +77,7 @@ public sealed partial class CrestApp {
     /// batch goes from empty to not empty; a drain is already due otherwise.
     /// A change announced while this thread holds the lock owes the wake to
     /// the call that holds it: an intent drains the batch before it returns,
-    /// and a report wakes the host once it lets go. An undrained save gives way
+    /// and a report or a cloud intent wakes the host once it lets go. An undrained save gives way
     /// to a newer one and outlasts an older one, which a writer on another
     /// thread can announce after it. A page's newer state replaces its
     /// undrained older one, so a page that changes many times between drains

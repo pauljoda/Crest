@@ -2433,6 +2433,10 @@
     "merge-keeps-deletion-reason": {
       "category": "fixed",
       "message": "A folder or history entry you delete just before iCloud Sync brings in changes stays deleted."
+    },
+    "sync-transport-typed-queries": {
+      "category": "internal",
+      "message": "The cloud transport reads and acknowledges sync uploads through typed core queries, and cloud merges compute off the app's lock."
     }
   }
 }

@@ -19,17 +19,19 @@ public sealed partial class BrowserContractsTests {
     #region Actions - Tests
 
     [Fact]
-    public void AMergeIsOnDiskWithItsJournalBeforeItReturnsAndPublishesBoth() {
+    public void AMergeIsOnDiskWithItsJournalBeforeItReturnsAndPublishesBothInTheNextDrain() {
         using var directory = new StorageDirectory();
         var fixture = SavedSession();
         using var stored = StoredSyncing(directory, fixture.Document);
         var tab = Guid.NewGuid();
 
         var answer = stored.App.Send(new MergeSyncRecords([CloudTab(tab, fixture.Space, clock: 5)]));
+        var drained = stored.App.Drain();
 
+        Assert.Empty(answer);
         Assert.Contains(stored.Session.Current.Spaces.Single().Tabs, held => held.Id == tab);
-        Assert.Contains(answer, change => change is TabsChanged changed && changed.Updated.Any(updated => updated.Id == tab));
-        Assert.Contains(answer, change => change is SyncJournalChanged);
+        Assert.Contains(drained, change => change is TabsChanged changed && changed.Updated.Any(updated => updated.Id == tab));
+        Assert.IsType<SyncJournalChanged>(drained[^1]);
         var parts = StoredParts(directory.File);
         Assert.True(parts["core"].AsSpan().SequenceEqual(stored.Session.Checkpoint().Read("core")));
         Assert.True(parts["journal"].AsSpan().SequenceEqual(stored.Sync.Snapshot.Read()));
@@ -149,9 +151,9 @@ public sealed partial class BrowserContractsTests {
         using var stored = StoredSyncing(directory, fixture.Document);
         var borrower = TestWorkspaces.Borrow(stored.App, stored.Workspace, fixture.Document["session"]!["spaces"]![0]!);
 
-        var answer = stored.App.Send(new MergeSyncRecords([Tombstone(SyncRecordKind.Space, fixture.Space, fixture.Space, ulong.MaxValue / 2)]));
+        stored.App.Send(new MergeSyncRecords([Tombstone(SyncRecordKind.Space, fixture.Space, fixture.Space, ulong.MaxValue / 2)]));
 
-        Assert.Contains(answer, change => change is WorkspaceClosed closed && closed.WorkspaceId == borrower);
+        Assert.Contains(stored.App.Drain(), change => change is WorkspaceClosed closed && closed.WorkspaceId == borrower);
         Assert.Contains(stored.Session.Current.SpaceDeletions, deletion => deletion.SpaceId == fixture.Space);
     }
 
@@ -188,6 +190,154 @@ public sealed partial class BrowserContractsTests {
         Assert.Equal("explicitDelete", FolderTombstoneReason(stored.Sync, folder));
     }
 
+    /// The cloud saved one record at the version the journal holds and
+    /// another at an older one: only the first stops waiting to upload, and
+    /// the journal is on disk before the acknowledgement returns.
+    [Fact]
+    public void AnAcknowledgementClearsOnlyTheVersionsTheCloudSaved() {
+        using var directory = new StorageDirectory();
+        var fixture = SavedSession();
+        using var stored = StoredSyncing(directory, fixture.Document);
+        var pending = stored.App.Query(new PendingUploads()).Records;
+        var records = stored.App.Query(new RecordsToUpload(pending)).Records;
+        var (saved, stale) = (records[0], records[1]);
+        stored.App.Drain();
+
+        var answer = stored.App.Send(new AcknowledgeUploads([
+            new(new(saved.Kind, saved.Id), saved.Version),
+            new(new(stale.Kind, stale.Id), stale.Version with { Clock = stale.Version.Clock - 1 })
+        ]));
+
+        Assert.Empty(answer);
+        var waiting = stored.App.Query(new PendingUploads()).Records;
+        Assert.Equal([.. pending.Where(reference => reference != new SyncRecordReference(saved.Kind, saved.Id))], waiting);
+        Assert.Equal(pending.Count - 1, stored.App.Drain().OfType<SyncJournalChanged>().Single().PendingRecords);
+        Assert.True(StoredParts(directory.File)["journal"].AsSpan().SequenceEqual(stored.Sync.Snapshot.Read()));
+    }
+
+    /// A fetch that brings an older version of a record the cloud already
+    /// acknowledged does not make it wait to upload again.
+    [Fact]
+    public void AnOlderFetchedVersionDoesNotQueueAnAcknowledgedRecordAgain() {
+        using var directory = new StorageDirectory();
+        var fixture = SavedSession();
+        using var stored = StoredSyncing(directory, fixture.Document);
+        var tab = new SyncRecordReference(SyncRecordKind.Tab, fixture.Tab);
+        var local = Assert.Single(stored.App.Query(new RecordsToUpload([tab])).Records);
+        stored.App.Send(new AcknowledgeUploads([new(tab, local.Version)]));
+        var older = JsonNode.Parse(local.Body)!.AsObject();
+        older["value"]!["title"] = "An older title";
+
+        stored.App.Send(new MergeSyncRecords([local with {
+            Version = new(local.Version.Clock - 1, CloudDevice), Body = Bytes(older)
+        }]));
+
+        Assert.DoesNotContain(tab, stored.App.Query(new PendingUploads()).Records);
+        var kept = Assert.Single(stored.App.Query(new RecordsToUpload([tab])).Records);
+        Assert.Equal(local.Version, kept.Version);
+        Assert.True(kept.Body.AsSpan().SequenceEqual(local.Body));
+    }
+
+    [Fact]
+    public void RecordsToUploadNamesTheRecordsTheJournalNoLongerHoldsAsGone() {
+        using var directory = new StorageDirectory();
+        var fixture = SavedSession();
+        using var stored = StoredSyncing(directory, fixture.Document);
+        var tab = new SyncRecordReference(SyncRecordKind.Tab, fixture.Tab);
+        var space = new SyncRecordReference(SyncRecordKind.Space, fixture.Space);
+        var unknown = new SyncRecordReference(SyncRecordKind.Tab, Guid.NewGuid());
+        var archived = new SyncRecordReference(SyncRecordKind.Archive, fixture.Tab);
+
+        var batch = stored.App.Query(new RecordsToUpload([tab, unknown, space, archived]));
+
+        Assert.Equal([tab, space], batch.Records.Select(record => new SyncRecordReference(record.Kind, record.Id)));
+        Assert.Equal([unknown, archived], batch.Gone);
+        Assert.All(batch.Records, record => Assert.False(record.IsTombstone));
+        Assert.Equal(fixture.Space, batch.Records[0].SpaceId);
+    }
+
+    /// The cloud holds the same content when it holds the same records, each
+    /// in its Space with an equivalent payload or tombstone, whatever versions
+    /// wrote them.
+    [Fact]
+    public void ACloudComparisonMatchesTheSameContentWhateverItsVersionsAndCountsBothSides() {
+        using var directory = new StorageDirectory();
+        var fixture = SavedSession();
+        using var stored = StoredSyncing(directory, fixture.Document);
+        var device = stored.App.Query(new RecordsToUpload(stored.App.Query(new PendingUploads()).Records)).Records;
+        var cloud = device.Select(record => record with { Version = new(record.Version.Clock + 7, CloudDevice) }).ToList();
+        int tab = cloud.FindIndex(record => record.Kind == SyncRecordKind.Tab);
+        var retitled = JsonNode.Parse(cloud[tab].Body)!.AsObject();
+        retitled["value"]!["title"] = "Another title";
+
+        var same = stored.App.Query(new CloudComparison(cloud));
+        var edited = stored.App.Query(new CloudComparison([.. cloud.Select((record, index) =>
+            index == tab ? record with { Body = Bytes(retitled) } : record)]));
+        var deleted = stored.App.Query(new CloudComparison([.. cloud.Select((record, index) =>
+            index == tab ? Tombstone(record.Kind, record.Id, record.SpaceId, record.Version.Clock) : record)]));
+        var missing = stored.App.Query(new CloudComparison([.. cloud.Where((_, index) => index != tab)]));
+
+        Assert.Equal(new CloudContentComparison(true, device.Count, device.Count, 1, 1), same);
+        Assert.False(edited.Matches);
+        Assert.False(deleted.Matches);
+        Assert.Equal(new CloudContentComparison(false, device.Count, device.Count - 1, 1, 1), missing);
+    }
+
+    /// An overwrite leaves every record waiting to upload over the cloud's; a
+    /// replacement leaves none.
+    [Fact]
+    public void AnOverwriteLeavesEveryRecordWaitingAndAReplacementNone() {
+        using var directory = new StorageDirectory();
+        var fixture = SavedSession();
+        using var stored = StoredSyncing(directory, fixture.Document);
+        var cloud = Guid.NewGuid();
+        var records = new[] { CloudSpace(cloud, Guid.NewGuid(), 5), CloudTab(Guid.NewGuid(), cloud, 6) };
+        stored.App.Send(new AcknowledgeUploads([.. stored.App.Query(new RecordsToUpload(stored.App.Query(new PendingUploads()).Records))
+            .Records.Select(record => new UploadedRecord(new(record.Kind, record.Id), record.Version))]));
+        Assert.Empty(stored.App.Query(new PendingUploads()).Records);
+        stored.App.Drain();
+
+        stored.App.Send(new OverwriteCloud(records));
+        var overwritten = stored.App.Drain().OfType<SyncJournalChanged>().Single();
+        Assert.Equal(overwritten.Records, stored.App.Query(new PendingUploads()).Records.Count);
+        Assert.Equal(overwritten.Records, overwritten.PendingRecords);
+
+        stored.App.Send(new ReplaceWithCloudRecords(records));
+        Assert.Empty(stored.App.Query(new PendingUploads()).Records);
+        Assert.Equal(0, stored.App.Drain().OfType<SyncJournalChanged>().Last().PendingRecords);
+    }
+
+    /// A first launch's disposable seed uploads nothing, even when the journal
+    /// it carried holds records waiting to upload.
+    [Fact]
+    public void ADisposableSeedUploadsNothingOfTheJournalItCarried() {
+        using var directory = new StorageDirectory();
+        var fixture = SavedSession();
+        var carried = SyncTabRecord(Guid.NewGuid(), fixture.Space, 9, Guid.NewGuid());
+        using var stored = StoredSyncing(directory, fixture.Document, keepsSeed: true, journal: JournalDocument(carried));
+        var reference = new SyncRecordReference(SyncRecordKind.Tab, Guid.Parse(carried["id"]!["value"]!.GetValue<string>()));
+
+        Assert.Empty(stored.App.Query(new PendingUploads()).Records);
+        Assert.Equal([reference], stored.App.Query(new RecordsToUpload([reference])).Gone);
+        Assert.Equal(new CloudContentComparison(true, 0, 0, 0, 0), stored.App.Query(new CloudComparison([])));
+        stored.App.Drain();
+        stored.App.Send(new AcknowledgeUploads([]));
+        Assert.Equal(0, stored.App.Drain().OfType<SyncJournalChanged>().Single().PendingRecords);
+    }
+
+    /// The transport's calls are refused while the file holds no session, not
+    /// read as an empty journal.
+    [Fact]
+    public void TheTransportIsRefusedWhileTheFileHoldsNoSession() {
+        using var directory = new StorageDirectory();
+        using var app = new CrestApp(new AppConfiguration(directory.Path));
+
+        Assert.IsType<NoStoredSession>(Assert.Throws<Rejected>(() => app.Query(new PendingUploads())).Rejection);
+        Assert.IsType<NoStoredSession>(Assert.Throws<Rejected>(() => app.Query(new CloudComparison([]))).Rejection);
+        Assert.IsType<NoStoredSession>(Assert.Throws<Rejected>(() => app.Send(new AcknowledgeUploads([]))).Rejection);
+        app.SettleSync();
+    }
+
     #endregion
 
     #region Actions - Fixtures
@@ -199,18 +349,20 @@ public sealed partial class BrowserContractsTests {
             .Single(record => record!["id"]!["kind"]!.GetValue<string>() == "folder"
                 && Guid.Parse(record["id"]!["value"]!.GetValue<string>()) == folder)!["tombstone"]?["reason"]?.GetValue<string>();
 
-    /// A core keeping `document` in its file, without its seed marker unless it
-    /// `keepsSeed`, opened as a launch opens it once its launch stage settled.
+    /// A core keeping `document` in its file, with `journal` when there is one
+    /// and without its seed marker unless it `keepsSeed`, opened as a launch
+    /// opens it once its launch stage settled.
     private sealed record StoredSync(CrestApp App, Guid Workspace, NativeSessionAuthority Session, NativeSyncAuthority Sync)
         : IDisposable {
         public void Dispose() => App.Dispose();
     }
 
-    private static StoredSync StoredSyncing(StorageDirectory directory, JsonObject document, bool keepsSeed = false) {
+    private static StoredSync StoredSyncing(StorageDirectory directory, JsonObject document, bool keepsSeed = false,
+        JsonObject? journal = null) {
         var session = document["session"]!.AsObject();
         if (!keepsSeed) session.Remove("disposableSeedMarker");
         var app = new CrestApp(new AppConfiguration(directory.Path));
-        var answered = app.Send(Adoption(session));
+        var answered = app.Send(Adoption(session, journal));
         var (workspace, opened) = TestWorkspaces.OpenStored(app);
         var sync = app.StoredSync!;
         sync.Flush();

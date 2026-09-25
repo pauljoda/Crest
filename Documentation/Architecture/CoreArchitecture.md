@@ -163,9 +163,13 @@ Swift and the core always ship in one build, so the binary wire between them
 has no versioning. The app checks a schema fingerprint when it creates the
 core, so a stale prebuilt core fails at launch instead of misreading data.
 
-The core's model changes on the UI thread. Heavy work, such as a sync merge
-or a large import, computes on the core's worker against a snapshot and
-commits on the UI thread with a revision check. The core owns the SQLite
+The UI's intents change the core's model on the UI thread. The cloud
+transport's intents run on the transport's own thread instead: a sync merge
+computes there against a snapshot, outside the core's lock, then takes the lock
+only to commit with a revision check, and what it changed reaches the UI
+through the wake and one drain. Its queries read the journal without the lock,
+and an intent about the journal alone, such as an acknowledged upload, never
+takes it. The core owns the SQLite
 schema and transactions, and the host supplies only a directory. Saves run on
 the worker after the change is published, except where ordering matters:
 sync commits, Space deletion, imports, batches, cross-Space moves and
