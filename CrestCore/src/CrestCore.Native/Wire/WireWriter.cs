@@ -54,6 +54,11 @@ public sealed class WireWriter {
         buffer.Advance(8);
     }
 
+    public void WriteUInt64(ulong value) {
+        BinaryPrimitives.WriteUInt64LittleEndian(buffer.GetSpan(8), value);
+        buffer.Advance(8);
+    }
+
     public void WriteDouble(double value) {
         BinaryPrimitives.WriteDoubleLittleEndian(buffer.GetSpan(8), value);
         buffer.Advance(8);

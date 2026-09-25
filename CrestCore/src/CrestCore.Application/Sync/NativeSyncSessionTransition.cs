@@ -22,11 +22,18 @@ public sealed record NativeSyncSessionTransition(NativeSyncJournal Journal, Json
             NativeSyncOperation.Replace => true,
             _ => throw new BrowserRuleException(BrowserRuleCodes.UnknownSyncOperation)
         };
-        double now = request["now"]!.GetValue<double>();
+        return Prepare(journal, request["session"]!.AsObject(), request["records"]!.AsArray(), replacing,
+            request["now"]!.GetValue<double>(), request["preferences"]!, request["emptySpace"] as JsonObject, access, ids: null);
+    }
+
+    /// The journal and repaired session that merging `incoming`, records in the
+    /// journal's form, into `local`, a whole session in the stored format, or
+    /// replacing it with them, make at `now` in seconds since 2001 under the
+    /// sync category `preferences`. `emptySpace` is the Space a session left
+    /// with none takes, and `ids` gives repaired records new identities.
+    internal static NativeSyncSessionTransition Prepare(NativeSyncJournal journal, JsonObject local, JsonArray incoming,
+        bool replacing, double now, JsonNode preferences, JsonObject? emptySpace, SpaceAccessAuthority? access, IIdSource? ids) {
         if (!double.IsFinite(now)) throw new BrowserRuleException(BrowserRuleCodes.InvalidSavedDate);
-        var preferences = request["preferences"]!;
-        var local = request["session"]!.AsObject();
-        var incoming = request["records"]!.AsArray();
         var next = journal;
         void Apply(NativeSyncOperation operation, JsonObject args) {
             next = next.Apply(Encoding.UTF8.GetBytes(new JsonObject {
@@ -61,7 +68,7 @@ public sealed record NativeSyncSessionTransition(NativeSyncJournal Journal, Json
             ? new JsonObject { ["spaces"] = new JsonArray() }
             : NativeSyncMaterializer.Materialize(local, preferences,
                 NativeSyncEvaluator.Reconcile(next.Records).Select(n => n!.AsObject()).ToArray(), now, access);
-        var repaired = NativeSessionMaintenance.Repair(raw, now, request["emptySpace"] as JsonObject);
+        var repaired = NativeSessionMaintenance.Repair(raw, now, emptySpace, ids);
         var retained = NativeSessionMaintenance.Retain(repaired["session"]!.AsObject(), now);
         bool removed = retained["changed"]!.GetValue<bool>();
         repaired["session"] = retained["session"]!.DeepClone();

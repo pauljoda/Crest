@@ -72,6 +72,8 @@ public sealed unsafe class ContractCodecTests {
         if (type == typeof(bool)) return true;
         if (type == typeof(int)) return -7;
         if (type == typeof(long)) return 1L << 40;
+        // The largest clock a hostile record can carry.
+        if (type == typeof(ulong)) return ulong.MaxValue;
         if (type == typeof(double)) return -0.25;
         if (type == typeof(string)) return "Téléchargement \u202E.pdf";
         if (type == typeof(Guid)) return Guid.Parse("00112233-4455-6677-8899-aabbccddeeff");

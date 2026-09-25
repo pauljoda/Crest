@@ -103,6 +103,8 @@ public sealed class WireReader(ReadOnlyMemory<byte> bytes) {
 
     public long ReadInt64() => BinaryPrimitives.ReadInt64LittleEndian(Take(8));
 
+    public ulong ReadUInt64() => BinaryPrimitives.ReadUInt64LittleEndian(Take(8));
+
     public double ReadDouble() => BinaryPrimitives.ReadDoubleLittleEndian(Take(8));
 
     public string ReadString() {

@@ -48,6 +48,13 @@ public sealed class NativeSyncTransaction : IDisposable {
         _ = Journal.Read();
     }
 
+    /// Takes `journal`, computed from this transaction's, as the journal it
+    /// commits. Throws when the journal outgrows what sync keeps.
+    internal void Adopt(NativeSyncJournal journal) {
+        Journal = journal;
+        _ = Journal.Read();
+    }
+
     /// Stages `session`, deleting each record it lost for the reason `removals`
     /// names for it, else for `reason`, and dating tombstones `now` seconds
     /// since 2001.

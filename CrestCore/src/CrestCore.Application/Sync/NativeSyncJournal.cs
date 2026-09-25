@@ -118,6 +118,21 @@ public sealed class NativeSyncJournal {
 
     public NativeSyncJournal Apply(ReadOnlySpan<byte> bytes) => Apply(Parse(bytes));
 
+    /// The Space the record `name` names belongs to here, or null when the
+    /// journal holds no such record.
+    internal Guid? SpaceOf(string name) => records.TryGetValue(name, out var record) ? Id(record["spaceID"]) : null;
+
+    /// The journal after rebasing above `cloud`, records the cloud holds, from
+    /// `session`, a whole session in the stored format that nothing else holds:
+    /// each record is written above the cloud's and waits to upload. `now` in
+    /// seconds since 2001 dates the tombstones.
+    internal NativeSyncJournal Overwrite(JsonObject session, JsonArray cloud, double now) => Apply(new JsonObject {
+        ["version"] = 1,
+        ["operation"] = NativeSyncOperationCodes.Name(NativeSyncOperation.Overwrite),
+        ["preferences"] = Preferences,
+        ["arguments"] = new JsonObject { ["session"] = session, ["records"] = cloud, ["now"] = now }
+    });
+
     /// The journal after staging `session`, a whole session in the stored
     /// format that nothing else holds, under this journal's preferences.
     /// Records it no longer holds are deleted, where their absence authorizes a

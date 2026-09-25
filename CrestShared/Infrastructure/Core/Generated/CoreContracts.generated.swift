@@ -104,6 +104,7 @@ enum Rejection: Equatable, Error, Sendable {
     case invalidSession(InvalidSession)
     case invalidSpaceOrder(InvalidSpaceOrder)
     case invalidSplitColumnShares(InvalidSplitColumnShares)
+    case invalidSyncRecords(InvalidSyncRecords)
     case invalidTabIcon(InvalidTabIcon)
     case languageTooLong(LanguageTooLong)
     case lastStartPage(LastStartPage)
@@ -168,6 +169,7 @@ enum Rejection: Equatable, Error, Sendable {
         case .duplicateSearchEngineName(let value): value.message
         case .incompleteSplit(let value): value.message
         case .invalidImport(let value): value.message
+        case .invalidSyncRecords(let value): value.message
         case .noIncludedSpaces(let value): value.message
         case .persistentWorkspaceRequired(let value): value.message
         case .pinnedTabsFull(let value): value.message
@@ -1153,6 +1155,15 @@ struct InvalidSpaceOrder: Equatable, Sendable {
 struct InvalidSplitColumnShares: Equatable, Sendable {
 }
 
+struct InvalidSyncRecords: Equatable, Sendable {
+    let flaw: SyncRecordFlaw
+    let subject: UUID?
+
+    var message: LocalizedStringResource {
+        LocalizedStringResource("Crest couldn’t apply the latest changes from iCloud.")
+    }
+}
+
 struct InvalidTabIcon: Equatable, Sendable {
     let mode: TabIconMode
 }
@@ -1294,6 +1305,10 @@ struct LockAllSpaces: Intent, Equatable, Sendable {
 
 struct LockSpace: Intent, Equatable, Sendable {
     let spaceID: UUID
+}
+
+struct MergeSyncRecords: Intent, Equatable, Sendable {
+    let records: [SyncRecord]
 }
 
 struct MostRecentCredential: Query, Equatable, Sendable {
@@ -1493,6 +1508,10 @@ struct OpenWindow: Intent, Equatable, Sendable {
 struct OpenWorkspace: Intent, Equatable, Sendable {
     let kind: WorkspaceKind
     let seed: Data?
+}
+
+struct OverwriteCloud: Intent, Equatable, Sendable {
+    let records: [SyncRecord]
 }
 
 struct PageChanged: Equatable, Sendable {
@@ -1714,6 +1733,14 @@ struct ReplaceSavedAddress: Intent, Equatable, Sendable {
     let workspaceID: UUID
     let spaceID: UUID
     let tabID: UUID
+}
+
+struct ReplaceSeedWithCloudRecords: Intent, Equatable, Sendable {
+    let records: [SyncRecord]
+}
+
+struct ReplaceWithCloudRecords: Intent, Equatable, Sendable {
+    let records: [SyncRecord]
 }
 
 struct ResetPrivateBrowsing: Intent, Equatable, Sendable {
@@ -2184,6 +2211,15 @@ struct SyncJournalChanged: Equatable, Sendable {
     let records: Int
 }
 
+struct SyncRecord: Equatable, Sendable, Identifiable {
+    let kind: SyncRecordKind
+    let id: UUID
+    let spaceID: UUID
+    let version: SyncVersion
+    let body: Data
+    let isTombstone: Bool
+}
+
 struct SyncStagingFailed: Equatable, Sendable {
     let workspaceID: UUID
     let reason: SyncStagingFailure
@@ -2191,6 +2227,11 @@ struct SyncStagingFailed: Equatable, Sendable {
 
 struct SyncStagingRefused: Equatable, Sendable {
     let reason: SyncStagingFailure
+}
+
+struct SyncVersion: Equatable, Sendable {
+    let clock: UInt64
+    let deviceID: UUID
 }
 
 struct SystemPasswordOffer: Query, Equatable, Sendable {
@@ -7277,6 +7318,136 @@ struct SyncDeletionReason: Hashable, Sendable {
     }
 
     static func == (lhs: SyncDeletionReason, rhs: SyncDeletionReason) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+}
+
+/// The members of the core's `SyncRecordFlaw`. A member's wire tag is its index in `all`.
+struct SyncRecordFlaw: Hashable, Sendable {
+    let tag: Int
+    let name: String
+    let title: LocalizedStringResource
+
+    private init(tag: Int, name: String, title: LocalizedStringResource) {
+        self.tag = tag
+        self.name = name
+        self.title = title
+    }
+
+    static let duplicateRecord = SyncRecordFlaw(
+        tag: 0,
+        name: "duplicateRecord",
+        title: LocalizedStringResource("Two records share one identity.")
+    )
+    static let tooManyRecords = SyncRecordFlaw(
+        tag: 1,
+        name: "tooManyRecords",
+        title: LocalizedStringResource("There are more records than sync keeps.")
+    )
+    static let identityMismatch = SyncRecordFlaw(
+        tag: 2,
+        name: "identityMismatch",
+        title: LocalizedStringResource("A record’s contents don’t match its identity.")
+    )
+    static let malformedRecord = SyncRecordFlaw(
+        tag: 3,
+        name: "malformedRecord",
+        title: LocalizedStringResource("A record can’t be read.")
+    )
+    static let changedSpace = SyncRecordFlaw(
+        tag: 4,
+        name: "changedSpace",
+        title: LocalizedStringResource("A record moved to another Space.")
+    )
+    static let invalidFolderHierarchy = SyncRecordFlaw(
+        tag: 5,
+        name: "invalidFolderHierarchy",
+        title: LocalizedStringResource("Folders are nested inside each other.")
+    )
+    static let danglingFolder = SyncRecordFlaw(
+        tag: 6,
+        name: "danglingFolder",
+        title: LocalizedStringResource("A tab names a folder in another Space.")
+    )
+    static let sharedProfile = SyncRecordFlaw(
+        tag: 7,
+        name: "sharedProfile",
+        title: LocalizedStringResource("Two Spaces share a profile.")
+    )
+    static let profileChanged = SyncRecordFlaw(
+        tag: 8,
+        name: "profileChanged",
+        title: LocalizedStringResource("A Space’s profile changed.")
+    )
+    static let tooManyPinnedTabs = SyncRecordFlaw(
+        tag: 9,
+        name: "tooManyPinnedTabs",
+        title: LocalizedStringResource("A Space has more pinned tabs than it can hold.")
+    )
+    static let unexpected = SyncRecordFlaw(
+        tag: 10,
+        name: "unexpected",
+        title: LocalizedStringResource("Crest hit a problem applying these records.")
+    )
+
+    static let all: [SyncRecordFlaw] = [
+        duplicateRecord,
+        tooManyRecords,
+        identityMismatch,
+        malformedRecord,
+        changedSpace,
+        invalidFolderHierarchy,
+        danglingFolder,
+        sharedProfile,
+        profileChanged,
+        tooManyPinnedTabs,
+        unexpected
+    ]
+
+    static func named(_ name: String?) -> SyncRecordFlaw? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: SyncRecordFlaw, rhs: SyncRecordFlaw) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+}
+
+/// The members of the core's `SyncRecordKind`. A member's wire tag is its index in `all`.
+struct SyncRecordKind: Hashable, Sendable {
+    let tag: Int
+    let name: String
+    let cloudRecordType: String
+    let namesItsSpace: Bool
+
+    private init(tag: Int, name: String, cloudRecordType: String, namesItsSpace: Bool) {
+        self.tag = tag
+        self.name = name
+        self.cloudRecordType = cloudRecordType
+        self.namesItsSpace = namesItsSpace
+    }
+
+    static let space = SyncRecordKind(tag: 0, name: "space", cloudRecordType: "CrestSpace", namesItsSpace: true)
+    static let folder = SyncRecordKind(tag: 1, name: "folder", cloudRecordType: "CrestFolder", namesItsSpace: false)
+    static let tab = SyncRecordKind(tag: 2, name: "tab", cloudRecordType: "CrestTab", namesItsSpace: false)
+    static let history = SyncRecordKind(tag: 3, name: "history", cloudRecordType: "CrestHistory", namesItsSpace: false)
+    static let archive = SyncRecordKind(tag: 4, name: "archive", cloudRecordType: "CrestArchive", namesItsSpace: false)
+
+    static let all: [SyncRecordKind] = [space, folder, tab, history, archive]
+
+    static func named(_ name: String?) -> SyncRecordKind? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: SyncRecordKind, rhs: SyncRecordKind) -> Bool {
         lhs.tag == rhs.tag
     }
 

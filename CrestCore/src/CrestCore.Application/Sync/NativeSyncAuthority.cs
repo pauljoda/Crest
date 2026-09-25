@@ -50,6 +50,15 @@ public sealed class NativeSyncAuthority {
         try { value.Build(request, operation); return value; } catch { value.Dispose(); throw; }
     }
 
+    /// A merge, replacement or overwrite stages the session itself, so the
+    /// stages still queued have nothing left to add. Answers the request it
+    /// replaced.
+    internal SyncStager.Request? Supersede() => stager.Supersede();
+
+    /// Starts a transaction the cloud transport asked for once the one in
+    /// progress completes. The caller holds no lock: waiting releases the gate.
+    internal NativeSyncTransaction BeginTransaction() => Begin(sequence: null);
+
     /// Starts a transaction once the one in progress completes. The caller
     /// holds no lock.
     private NativeSyncTransaction Begin(ulong? sequence) {

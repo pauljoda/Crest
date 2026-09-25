@@ -61,6 +61,11 @@ struct WireWriter {
         withUnsafeBytes(of: value.littleEndian) { bytes.append(contentsOf: $0) }
     }
 
+    /// A C# `ulong`: eight bytes.
+    mutating func writeUInt64(_ value: UInt64) {
+        withUnsafeBytes(of: value.littleEndian) { bytes.append(contentsOf: $0) }
+    }
+
     mutating func writeDouble(_ value: Double) {
         withUnsafeBytes(of: value.bitPattern.littleEndian) { bytes.append(contentsOf: $0) }
     }
@@ -186,6 +191,11 @@ struct WireReader {
 
     mutating func readInt64() throws(WireError) -> Int64 {
         Int64(bitPattern: try littleEndian(8))
+    }
+
+    /// A C# `ulong`: eight bytes.
+    mutating func readUInt64() throws(WireError) -> UInt64 {
+        try littleEndian(8)
     }
 
     mutating func readDouble() throws(WireError) -> Double {

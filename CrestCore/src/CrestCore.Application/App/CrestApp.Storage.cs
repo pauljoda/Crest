@@ -35,6 +35,15 @@ public sealed partial class CrestApp {
 
     #region Actions - Stored session
 
+    /// Runs one intent from the cloud transport on the session this core keeps
+    /// in its file; see `CloudSyncIntent`. The caller holds the lock.
+    private void Handle(CloudSyncIntent intent) {
+        if (storedSession is not { } session) throw new Rejected(new NoStoredSession());
+        if (session.IsReleased) throw new Rejected(new StoredSessionClosed());
+        if (device.Identity(session) is null) throw new Rejected(new NoStoredSession());
+        session.Handle(intent, clock.Now, ids);
+    }
+
     /// Gives a file that holds no session its first one, before returning:
     /// the installed release's, or the seed. See `AdoptLegacySession`.
     private void Adopt(AdoptLegacySession adoption, ChangeFeed changes) {

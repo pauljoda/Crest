@@ -111,6 +111,9 @@ public sealed partial class CrestApp : IDisposable {
                 case SpaceAccessIntent grant:
                     access.Handle(grant, changes);
                     break;
+                case CloudSyncIntent cloud:
+                    Handle(cloud);
+                    break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(intent), intent.GetType().Name, "No area handles this intent.");
             }

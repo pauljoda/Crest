@@ -197,6 +197,7 @@ internal static class CSharpCodecEmitter {
     private static string Method(Primitive kind) => kind switch {
         Primitive.Int => "Int32",
         Primitive.Long => "Int64",
+        Primitive.ULong => "UInt64",
         _ => kind.ToString()
     };
 
@@ -204,6 +205,7 @@ internal static class CSharpCodecEmitter {
         PrimitiveField { Kind: Primitive.Bool } => "bool",
         PrimitiveField { Kind: Primitive.Int } => "int",
         PrimitiveField { Kind: Primitive.Long } => "long",
+        PrimitiveField { Kind: Primitive.ULong } => "ulong",
         PrimitiveField { Kind: Primitive.Double } => "double",
         PrimitiveField { Kind: Primitive.String } => "string",
         PrimitiveField { Kind: Primitive.Guid } => "Guid",

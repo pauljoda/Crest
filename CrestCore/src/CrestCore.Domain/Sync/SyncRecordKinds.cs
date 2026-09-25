@@ -1,6 +1,9 @@
 namespace CrestCore.Domain;
 
 /// Stable kinds used to identify portable sync records.
+///
+/// TRANSITIONAL until slice 8c: the sync rules that switch over these
+/// spellings move onto `SyncRecordKind`'s instances with the payload codec.
 public static class SyncRecordKinds {
     #region Variables
 

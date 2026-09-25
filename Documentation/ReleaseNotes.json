@@ -2417,6 +2417,10 @@
     "tests-seed-sessions-through-intents": {
       "category": "internal",
       "message": "Tests set up their sessions by seeding a store or sending intents, without the debug session setter."
+    },
+    "typed-cloud-sync-intents": {
+      "category": "internal",
+      "message": "The core takes cloud sync records through typed intents and refuses a record it cannot take with a named flaw."
     }
   }
 }

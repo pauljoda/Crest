@@ -92,7 +92,7 @@ internal sealed class ContractRoot {
     #endregion
 }
 
-internal enum Primitive { Bool, Int, Long, Double, String, Guid, Date, Duration, Bytes }
+internal enum Primitive { Bool, Int, Long, Double, String, Guid, Date, Duration, Bytes, ULong }
 
 /// The wire shape of one constructor parameter.
 internal abstract record FieldType;
@@ -391,6 +391,7 @@ internal sealed class ContractSchema {
         if (type == typeof(bool)) return new PrimitiveField(Primitive.Bool);
         if (type == typeof(int)) return new PrimitiveField(Primitive.Int);
         if (type == typeof(long)) return new PrimitiveField(Primitive.Long);
+        if (type == typeof(ulong)) return new PrimitiveField(Primitive.ULong);
         if (type == typeof(double)) return new PrimitiveField(Primitive.Double);
         if (type == typeof(string)) return new PrimitiveField(Primitive.String);
         if (type == typeof(Guid)) return new PrimitiveField(Primitive.Guid);
@@ -555,6 +556,7 @@ internal sealed class ContractSchema {
         if (type == typeof(bool)) return new PrimitiveField(Primitive.Bool);
         if (type == typeof(int)) return new PrimitiveField(Primitive.Int);
         if (type == typeof(long)) return new PrimitiveField(Primitive.Long);
+        if (type == typeof(ulong)) return new PrimitiveField(Primitive.ULong);
         if (type == typeof(double)) return new PrimitiveField(Primitive.Double);
         if (type == typeof(string)) return new PrimitiveField(Primitive.String);
         if (type == typeof(TimeSpan)) return new PrimitiveField(Primitive.Duration);
@@ -810,7 +812,7 @@ internal sealed class ContractSchema {
         Enum flags when flags.GetType().IsDefined(typeof(FlagsAttribute), false) =>
             $"{flags.GetType().Name}({Convert.ToInt64(flags, CultureInfo.InvariantCulture).ToString(CultureInfo.InvariantCulture)})",
         Enum kind => kind.ToString(),
-        int or long => Convert.ToString(value, CultureInfo.InvariantCulture)!,
+        int or long or ulong => Convert.ToString(value, CultureInfo.InvariantCulture)!,
         SetMemberReference reference => $"{reference.Set.Name}.{reference.Member}",
         RecordValue record => $"{record.Record.Name}({string.Join(", ", record.Values.Select(DescribeValue))})",
         IReadOnlyList<object?> items => $"[{string.Join(", ", items.Select(DescribeValue))}]",
