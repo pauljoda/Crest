@@ -19,8 +19,21 @@ public static class HistoryPolicy {
         DateTimeOffset now, Guid newId) {
         ArgumentNullException.ThrowIfNull(history);
         if (new WebAddress(url).Normalized is not { } normalized) return null;
-        var visit = Record(normalized, title, now, newId, history.FirstOrDefault(entry => entry.Url == normalized));
-        return [.. new[] { visit }.Concat(history.Where(entry => entry.Id != visit.Id)).Take(MaximumEntries)];
+        // Every recorded navigation reads the whole history, so each pass is a
+        // plain loop.
+        HistoryEntryState? previous = null;
+        foreach (var entry in history)
+            if (entry.Url == normalized) {
+                previous = entry;
+                break;
+            }
+        var visit = Record(normalized, title, now, newId, previous);
+        var visited = new List<HistoryEntryState>(Math.Min(history.Count + 1, MaximumEntries)) { visit };
+        foreach (var entry in history) {
+            if (visited.Count == MaximumEntries) break;
+            if (entry.Id != visit.Id) visited.Add(entry);
+        }
+        return visited;
     }
 
     public static HistoryEntryState Record(string normalizedUrl, string? title, DateTimeOffset now, Guid newId, HistoryEntryState? previous) {

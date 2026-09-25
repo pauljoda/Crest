@@ -2533,6 +2533,10 @@
     "session-checks-only-what-an-edit-changed": {
       "category": "improved",
       "message": "Editing tabs does less work in large sessions."
+    },
+    "navigation-publishes-only-changed-rows": {
+      "category": "improved",
+      "message": "Navigating in a Space with many tabs or a long history does less work."
     }
   }
 }

@@ -1,3 +1,5 @@
+using System.Runtime.CompilerServices;
+
 using CrestCore.Contracts;
 
 namespace CrestCore.Application;
@@ -13,6 +15,20 @@ namespace CrestCore.Application;
 /// Space's own changes in session order, with the lists its sidebar shows
 /// differently after its records, then the workspace's own members.
 internal static class SessionChanges {
+    #region Static Variables
+
+    /// The most identities an edit may bring to one list for the rows it kept
+    /// around its changes to be searched for them; more, and it is read whole.
+    private const int MaximumNewIdentities = 8;
+
+    /// The record lists a check found to hold each identity once. Accepted
+    /// states never change, so a list found so stays so, and the next edit of
+    /// it is read only where it differs.
+    private static readonly ConditionalWeakTable<object, object> Distinct = new();
+    private static readonly object Marker = new();
+
+    #endregion
+
     #region Types
 
     /// One list's changes: the rows that are new or changed, the identities of
@@ -94,10 +110,39 @@ internal static class SessionChanges {
     /// or goes after the others, or, when `recordedFirst`, the new and changed
     /// rows go before every other in their own order, as a newest-first
     /// history records a visit.
+    ///
+    /// Rows an edit kept stay where they stood, the same object or an equal
+    /// one, so the rows before the first and after the last that differ change
+    /// nothing. When `before` is known to hold each identity once, only the
+    /// rows between are read, and the rows around them only for a new identity.
     private static bool TryChange<T>(IReadOnlyList<T> before, IReadOnlyList<T> after, Func<T, Guid> identity, bool recordedFirst,
         out Rows<T>? rows) where T : class {
         rows = null;
-        if (ReferenceEquals(before, after) || before.SequenceEqual(after)) return true;
+        if (ReferenceEquals(before, after)) return true;
+        var distinct = Distinct.TryGetValue(before, out _);
+        var shorter = Math.Min(before.Count, after.Count);
+        var start = 0;
+        while (start < shorter && Same(before[start], after[start])) start++;
+        var end = 0;
+        while (end < shorter - start && Same(before[before.Count - 1 - end], after[after.Count - 1 - end])) end++;
+        var same = start == before.Count && start == after.Count;
+        var changed = same || ((distinct ? Between(before, after, identity, recordedFirst, start, end, out rows) : null)
+            ?? Whole(before, after, identity, recordedFirst, out rows));
+        // A list that holds the rows of one known to hold each identity once
+        // does too, and so does any list either check took.
+        if (changed && (distinct || !same)) Distinct.AddOrUpdate(after, Marker);
+#if CREST_CROSS_CHECKS
+        if (Whole(before, after, identity, recordedFirst, out var whole) != changed || changed && !Alike(whole, rows))
+            throw new System.Diagnostics.UnreachableException("A list's changes read in part differ from its changes read whole.");
+#endif
+        return changed;
+    }
+
+    /// The changes `TryChange` finds, reading every row of both lists.
+    private static bool Whole<T>(IReadOnlyList<T> before, IReadOnlyList<T> after, Func<T, Guid> identity, bool recordedFirst,
+        out Rows<T>? rows) where T : class {
+        rows = null;
+        if (before.SequenceEqual(after)) return true;
         var old = new Dictionary<Guid, T>(before.Count);
         if (!before.All(row => old.TryAdd(identity(row), row))) return false;
         var order = after.Select(identity).ToArray();
@@ -112,6 +157,72 @@ internal static class SessionChanges {
         rows = new(updated, removed, placed.SequenceEqual(order) ? null : order);
         return true;
     }
+
+    /// The changes `TryChange` finds when `before` holds each identity once
+    /// and its rows before `start` and its last `end` rows are the same in
+    /// `after`, reading only the rows between, and the rows around them only
+    /// for a new identity; null when too many identities are new to look for.
+    private static bool? Between<T>(IReadOnlyList<T> before, IReadOnlyList<T> after, Func<T, Guid> identity, bool recordedFirst,
+        int start, int end, out Rows<T>? rows) where T : class {
+        rows = null;
+        var old = new Dictionary<Guid, T>(before.Count - end - start);
+        for (var index = start; index < before.Count - end; index++) old.Add(identity(before[index]), before[index]);
+        var shown = new List<Guid>(after.Count - end - start);
+        var present = new HashSet<Guid>(after.Count - end - start);
+        List<T> updated = [];
+        List<Guid> added = [];
+        for (var index = start; index < after.Count - end; index++) {
+            var row = after[index];
+            var id = identity(row);
+            if (!present.Add(id)) return false;
+            shown.Add(id);
+            if (!old.TryGetValue(id, out var was)) {
+                updated.Add(row);
+                added.Add(id);
+            } else if (!Same(was, row)) {
+                updated.Add(row);
+            }
+        }
+        // A new identity must not be one a row around them keeps.
+        if (added.Count > MaximumNewIdentities) return null;
+        foreach (var id in added) {
+            for (var index = 0; index < start; index++)
+                if (identity(before[index]) == id) return false;
+            for (var index = before.Count - end; index < before.Count; index++)
+                if (identity(before[index]) == id) return false;
+        }
+        List<Guid> removed = [], kept = [];
+        for (var index = start; index < before.Count - end; index++) {
+            var id = identity(before[index]);
+            (present.Contains(id) ? kept : removed).Add(id);
+        }
+        // `Whole` places the rows it read the way `TryChange` describes; the
+        // rows around them are the same, so its order is the new one only when
+        // the rows between come out in the new order, and a row placed at the
+        // front or the back lands there only when no row is kept on that side.
+        bool placed;
+        if (recordedFirst) {
+            var first = updated.Select(identity).ToArray();
+            var moved = first.ToHashSet();
+            placed = first.Length == 0 ? kept.SequenceEqual(shown)
+                : start == 0 && first.Concat(kept.Where(id => !moved.Contains(id))).SequenceEqual(shown);
+        } else {
+            placed = added.Count == 0 ? kept.SequenceEqual(shown) : end == 0 && kept.Concat(added).SequenceEqual(shown);
+        }
+        rows = new(updated, removed, placed ? null : [.. after.Select(identity)]);
+        return true;
+    }
+
+    private static bool Same<T>(T before, T after) where T : class =>
+        ReferenceEquals(before, after) || EqualityComparer<T>.Default.Equals(before, after);
+
+#if CREST_CROSS_CHECKS
+    /// Whether two answers of `TryChange` are the same changes.
+    private static bool Alike<T>(Rows<T>? whole, Rows<T>? part) where T : class =>
+        whole is null ? part is null : part is not null && whole.Updated.SequenceEqual(part.Updated)
+            && whole.Removed.SequenceEqual(part.Removed)
+            && (whole.Order is null ? part.Order is null : part.Order is not null && whole.Order.SequenceEqual(part.Order));
+#endif
 
     #endregion
 }

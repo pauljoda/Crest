@@ -28,9 +28,15 @@ internal abstract record PageEdit(Guid PageId, Guid SpaceId, DateTimeOffset At) 
     #region Actions - Tabs
 
     /// The Space with its tab at `index` replaced by `tab`, or the same Space
-    /// when the tab did not change.
-    protected static SpaceState Replacing(SpaceState space, int index, BrowserTab tab) => tab.State == space.Tabs[index]
-        ? space : space with { Tabs = [.. space.Tabs.Select((existing, at) => at == index ? tab.State : existing)] };
+    /// when the tab did not change. Every recorded navigation copies its
+    /// Space's tabs here, once.
+    protected static SpaceState Replacing(SpaceState space, int index, BrowserTab tab) {
+        var state = tab.State;
+        if (state == space.Tabs[index]) return space;
+        var tabs = space.Tabs.ToArray();
+        tabs[index] = state;
+        return space with { Tabs = tabs };
+    }
 
     protected static int IndexOf(SpaceState space, Guid tabId) {
         for (var index = 0; index < space.Tabs.Count; index++)
