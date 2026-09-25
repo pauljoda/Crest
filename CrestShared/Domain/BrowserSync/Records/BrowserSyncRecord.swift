@@ -50,6 +50,26 @@ struct BrowserSyncRecord: Codable, Equatable, Sendable {
         } else { try values.encodeIfPresent(tombstone, forKey: .tombstone) }
     }
 
+    /// TRANSITIONAL until slice 8c moves the payload codec into the core: the
+    /// payload or tombstone as the journal holds it, spelled as
+    /// `encode(to:)` spells it with the default encoder. A record that holds
+    /// both or neither has no body, which the core refuses as malformed.
+    var journalBody: Data {
+        get throws {
+            let encoder = JSONEncoder()
+            switch (payload, tombstone) {
+            case (let payload?, nil):
+                guard payloadAdditions != nil else { return try encoder.encode(payload) }
+                return try encoder.encode(BrowserSyncJSON.encoded(payload).adding(payloadAdditions))
+            case (nil, let tombstone?):
+                guard tombstoneAdditions != nil else { return try encoder.encode(tombstone) }
+                return try encoder.encode(BrowserSyncJSON.encoded(tombstone).adding(tombstoneAdditions))
+            default:
+                return Data()
+            }
+        }
+    }
+
     func encodedPayload(using encoder: JSONEncoder) throws -> Data? {
         guard let payload else { return nil }
         guard payloadAdditions != nil else { return try encoder.encode(payload) }
@@ -148,5 +168,31 @@ struct BrowserSyncVersion: Codable, Equatable, Comparable, Sendable {
             return lhs.logicalClock < rhs.logicalClock
         }
         return lhs.deviceID.uuidString < rhs.deviceID.uuidString
+    }
+}
+
+// MARK: - Core records
+
+extension SyncRecord {
+    /// TRANSITIONAL until slice 8c: `record` as the core takes it.
+    init(browser record: BrowserSyncRecord) throws {
+        self.init(
+            kind: SyncRecordKind(browser: record.id.kind), id: record.id.value, spaceID: record.spaceID.rawValue,
+            version: SyncVersion(clock: record.version.logicalClock, deviceID: record.version.deviceID),
+            body: try record.journalBody, isTombstone: record.payload == nil)
+    }
+}
+
+extension SyncRecordKind {
+    /// TRANSITIONAL until slice 8c: the kind `kind` names.
+    init(browser kind: BrowserSyncRecordKind) {
+        self =
+            switch kind {
+            case .space: .space
+            case .folder: .folder
+            case .tab: .tab
+            case .history: .history
+            case .archive: .archive
+            }
     }
 }

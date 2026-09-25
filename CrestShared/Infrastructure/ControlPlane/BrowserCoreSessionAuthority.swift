@@ -1,4 +1,3 @@
-import CrestCoreABI
 import Foundation
 import Observation
 
@@ -22,63 +21,6 @@ final class BrowserCoreSessionAuthority {
     /// The images the issuer of a command holds, which `FaviconAssets` places
     /// while the core's changes for the command are applied.
     typealias OfferedImages = FaviconAssets.Offer
-
-    /// TRANSITIONAL until slice 8a (typed sync): the edits that take the
-    /// accepted records to a proposed session, as the durable replacement a
-    /// sync merge commits reads them.
-    private struct Delta: Encodable {
-        let version = 1
-        var metadata: BrowserSession?
-        var spaceOrder: [UUID]?
-        var spaces: [SpaceChange] = []
-    }
-
-    private struct SpaceChange: Encodable {
-        let id: UUID
-        var metadata: BrowserSpace?
-        var tabs: CollectionEdit<BrowserTab>?
-        var folders: CollectionEdit<BrowserFolder>?
-        var history: CollectionEdit<BrowserHistoryEntry>?
-        var archivedTabs: CollectionEdit<ArchivedTab>?
-
-        var isEmpty: Bool {
-            metadata == nil && tabs == nil && folders == nil && history == nil && archivedTabs == nil
-        }
-    }
-
-    /// One collection's edit: a whole replacement, or removals, upserts and an
-    /// order when the order changed.
-    private enum CollectionEdit<Element: Encodable>: Encodable {
-        private enum CodingKeys: String, CodingKey {
-            case replace
-            case remove
-            case upsert
-            case order
-        }
-
-        case replace([Element])
-        case edit(remove: [UUID], upsert: [Element], order: [UUID]?)
-
-        func encode(to encoder: any Encoder) throws {
-            var container = encoder.container(keyedBy: CodingKeys.self)
-            switch self {
-            case .replace(let elements):
-                try container.encode(elements, forKey: .replace)
-            case .edit(let remove, let upsert, let order):
-                try container.encode(remove, forKey: .remove)
-                try container.encode(upsert, forKey: .upsert)
-                try container.encodeIfPresent(order, forKey: .order)
-            }
-        }
-    }
-
-    private enum CoreError: Error {
-        case rejected(Int32)
-        /// The core could not save the commit; nothing was published.
-        case storageFailed
-
-        init(_ status: Int32) { self = status == CREST_STORAGE_FAILED ? .storageFailed : .rejected(status) }
-    }
 
     // MARK: - Variables
 
@@ -190,94 +132,7 @@ final class BrowserCoreSessionAuthority {
         projection.apply(change, images: images)
     }
 
-    /// Applies what the core published for a commit that just returned, with
-    /// the images its issuer offered.
-    private func follow(offering images: OfferedImages = OfferedImages()) {
-        guard let device else { return }
-        device.state.favicons.offer(images, in: workspaceID)
-        defer { device.state.favicons.withdrawOffer(in: workspaceID) }
-        device.drain()
-    }
-
-    // MARK: - Actions - Replacement
-
-    /// Replaces the session and saves it before publishing. With a sync
-    /// transaction its journal is saved and published with the session. A
-    /// failed save leaves the projection and the core's session unchanged.
-    func replaceDurably(with proposed: BrowserSession, sync: BrowserCoreSyncTransaction? = nil) throws {
-        // The delta is measured from the copy, which must hold every change
-        // the core already published.
-        follow()
-        let next = keepingPreferences(proposed)
-        let delta = try JSONEncoder().encode(try delta(to: next))
-        let app = try appHandle()
-        let result = withUnsafeBytes(of: workspaceID.uuid) { workspace in
-            delta.withUnsafeBytes { bytes in
-                crest_session_replace_durably(
-                    app, workspace.bindMemory(to: UInt8.self).baseAddress, sync?.handle ?? 0,
-                    bytes.bindMemory(to: UInt8.self).baseAddress, delta.count)
-            }
-        }
-        guard result == CREST_OK else { throw CoreError(result) }
-        follow(offering: OfferedImages(placedFrom: next))
-    }
-
-    /// The core the workspace is open in, which the durable replacement names
-    /// with it.
-    private func appHandle() throws -> UInt64 {
-        guard let device else { throw CoreError.rejected(CREST_INVALID_HANDLE) }
-        return device.handle
-    }
-
-    // MARK: - Actions - Deltas
-
-    private func delta(to next: BrowserSession) throws -> Delta {
-        var result = Delta()
-        var oldHeader = projection
-        oldHeader.spaces = []
-        var newHeader = next
-        newHeader.spaces = []
-        if oldHeader != newHeader { result.metadata = newHeader }
-        if projection.spaces.map(\.id) != next.spaces.map(\.id) {
-            result.spaceOrder = next.spaces.map(\.id.rawValue)
-        }
-        let oldSpaces = Dictionary(uniqueKeysWithValues: projection.spaces.map { ($0.id, $0) })
-        for space in next.spaces {
-            let previous = oldSpaces[space.id]
-            guard previous != space else { continue }
-            var change = SpaceChange(id: space.id.rawValue)
-            let metadata = Self.metadata(space)
-            if previous.map(Self.metadata) != metadata { change.metadata = metadata }
-            change.tabs = Self.collection(
-                previous?.tabs.map(Self.compactTab) ?? [], space.tabs.map(Self.compactTab), id: \.id.rawValue)
-            change.folders = Self.collection(previous?.folders ?? [], space.folders, id: \.id.rawValue)
-            change.history = Self.collection(previous?.history ?? [], space.history, id: \.id)
-            change.archivedTabs = Self.collection(
-                previous?.archivedTabs.map(Self.compactArchive) ?? [], space.archivedTabs.map(Self.compactArchive),
-                id: \.id.rawValue)
-            if !change.isEmpty { result.spaces.append(change) }
-        }
-        return result
-    }
-
-    private static func collection<T: Encodable & Equatable>(_ previous: [T], _ next: [T], id: (T) -> UUID)
-        -> CollectionEdit<T>?
-    {
-        guard previous != next else { return nil }
-        let oldIDs = previous.map(id)
-        let nextIDs = next.map(id)
-        // Older archives may contain repeated identities. Preserve their exact
-        // order and contents until an archive operation explicitly changes them.
-        guard Set(oldIDs).count == oldIDs.count, Set(nextIDs).count == nextIDs.count else {
-            return .replace(next)
-        }
-        let old = Dictionary(uniqueKeysWithValues: zip(oldIDs, previous))
-        let retained = Set(nextIDs)
-        return .edit(
-            remove: oldIDs.filter { !retained.contains($0) },
-            upsert: next.filter { old[id($0)] != $0 },
-            order: oldIDs != nextIDs ? nextIDs : nil)
-    }
+    // MARK: - Actions - Seeds
 
     private nonisolated static func compactTab(_ source: BrowserTab) -> BrowserTab {
         var tab = source
@@ -291,15 +146,8 @@ final class BrowserCoreSessionAuthority {
         return entry
     }
 
-    private static func metadata(_ source: BrowserSpace) -> BrowserSpace {
-        var space = source
-        space.tabs = []
-        space.folders = []
-        space.history = []
-        space.archivedTabs = []
-        return space
-    }
-
+    /// `source` without the images its tabs wear, which stay native assets,
+    /// as a seed or a sync stage carries it.
     nonisolated static func compact(_ source: BrowserSession) -> BrowserSession {
         var session = source
         for index in session.spaces.indices {
@@ -307,17 +155,5 @@ final class BrowserCoreSessionAuthority {
             session.spaces[index].archivedTabs = session.spaces[index].archivedTabs.map(compactArchive)
         }
         return session
-    }
-}
-
-// MARK: - App preferences
-
-extension BrowserCoreSessionAuthority {
-    /// The core keeps its preference record through value edits and sync
-    /// replacement; the projection follows the same rule.
-    fileprivate func keepingPreferences(_ proposed: BrowserSession) -> BrowserSession {
-        var next = proposed
-        next.appPreferences = projection.appPreferences
-        return next
     }
 }

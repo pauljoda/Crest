@@ -132,6 +132,7 @@ final class BrowserDataRetentionTests: XCTestCase {
         }
     }
 
+    @MainActor
     func testExpiredSyncedHistoryCannotReappearAfterMerge() throws {
         let now = Date(timeIntervalSinceReferenceDate: 30_000_000)
         let oldDate = now.addingTimeInterval(-(31 * 24 * 60 * 60))
@@ -144,20 +145,14 @@ final class BrowserDataRetentionTests: XCTestCase {
         try remoteJournal.stage(session: remoteSession, at: oldDate)
         var localSession = remoteSession
         localSession.spaces[0].history = []
-        let coordinator = BrowserSyncCoordinator(
-            persistence: InMemoryBrowserSyncJournalPersistence()
-        )
+        let device = try BrowserSyncingDevice(localSession, journal: BrowserSyncJournal())
 
-        let merged = try coordinator.merge(
-            remoteRecords: remoteJournal.records,
-            into: localSession,
-            at: now
-        )
+        let merged = try device.merge(remoteJournal.records)
 
         XCTAssertTrue(try XCTUnwrap(merged.space(id: spaceID)).history.isEmpty)
         let recordID = BrowserSyncRecordID(kind: .history, value: history.id)
         let record = try XCTUnwrap(
-            coordinator.journal.records.first(where: { $0.id == recordID })
+            device.journal.records.first(where: { $0.id == recordID })
         )
         XCTAssertEqual(record.tombstone?.reason, .retention)
     }

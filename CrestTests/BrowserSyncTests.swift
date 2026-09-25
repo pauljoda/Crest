@@ -4,6 +4,7 @@ import XCTest
 @testable import Crest
 
 final class BrowserSyncTests: XCTestCase {
+    @MainActor
     func testBlankArchivedPageDoesNotBlockIncomingSpaceChanges() throws {
         var local = oneSpaceSession()
         let blank = BrowserTab(
@@ -14,8 +15,7 @@ final class BrowserSyncTests: XCTestCase {
         local.spaces[0].archivedTabs.append(
             ArchivedTab(tab: blank, archivedAt: fixedDate(100), reason: .closed)
         )
-        let coordinator = BrowserSyncCoordinator(persistence: InMemoryBrowserSyncJournalPersistence())
-        try coordinator.stage(session: local, at: fixedDate(100))
+        let device = try BrowserSyncingDevice(local, stagedAt: fixedDate(100))
         var remote = local.spaces[0]
         remote.branding.crest.symbol = .raven
         let remoteRecord = BrowserSyncRecord.save(
@@ -27,14 +27,14 @@ final class BrowserSyncTests: XCTestCase {
             version: BrowserSyncVersion(logicalClock: 10_000, deviceID: fixedUUID(1_301))
         )
 
-        let merged = try coordinator.merge(remoteRecords: [remoteRecord], into: local, at: fixedDate(200))
+        let merged = try device.merge([remoteRecord])
 
         XCTAssertEqual(merged.spaces[0].branding, remote.branding)
         XCTAssertEqual(merged.spaces[0].tabs.map(\.id), local.spaces[0].tabs.map(\.id))
         XCTAssertEqual(merged.spaces[0].archivedTabs.first?.tab.url, blank.url)
         let reloaded = try JSONDecoder().decode(
-            BrowserSyncJournal.self, from: JSONEncoder().encode(coordinator.journal))
-        XCTAssertEqual(reloaded.records, coordinator.journal.records)
+            BrowserSyncJournal.self, from: JSONEncoder().encode(device.journal))
+        XCTAssertEqual(reloaded.records, device.journal.records)
     }
 
     func testBlankPageAllowanceDoesNotPermitOtherNonWebSyncURLs() throws {
@@ -49,6 +49,7 @@ final class BrowserSyncTests: XCTestCase {
         }
     }
 
+    @MainActor
     func testOnlyWebPagesSyncAndDeviceOnlyContentSurvivesMerges() throws {
         var local = oneSpaceSession()
         let spaceID = local.spaces[0].id
@@ -78,9 +79,8 @@ final class BrowserSyncTests: XCTestCase {
         let start = BrowserTab.startPage(lastActivatedAt: fixedDate(100))
         local.spaces[0].tabs.insert(contentsOf: [settings, guide, start], at: 1)
         local = try BrowserCoreSync.repair(local)
-        let coordinator = BrowserSyncCoordinator(persistence: InMemoryBrowserSyncJournalPersistence())
-        try coordinator.stage(session: local, at: fixedDate(100))
-        let journal = coordinator.journal
+        let device = try BrowserSyncingDevice(local, stagedAt: fixedDate(100))
+        let journal = device.journal
         let syncedTabs = journal.records.filter { $0.id.kind == .tab }
         XCTAssertEqual(syncedTabs.count, 6)
         XCTAssertEqual(journal.records.filter { $0.id.kind == .archive }.count, 5)
@@ -91,12 +91,11 @@ final class BrowserSyncTests: XCTestCase {
             })
         var remoteTab = syncTab(local.spaces[0].tabs[0], spaceID: spaceID)
         remoteTab.title = "Updated elsewhere"
-        let merged = try coordinator.merge(
-            remoteRecords: [
-                .save(
-                    .tab(remoteTab),
-                    version: BrowserSyncVersion(logicalClock: 10_000, deviceID: fixedUUID(1_700)))
-            ], into: local, at: fixedDate(200))
+        let merged = try device.merge([
+            .save(
+                .tab(remoteTab),
+                version: BrowserSyncVersion(logicalClock: 10_000, deviceID: fixedUUID(1_700)))
+        ])
         XCTAssertEqual(merged.spaces[0].tabs.first { $0.id == remoteTab.id }?.title, "Updated elsewhere")
         XCTAssertEqual(
             merged.spaces[0].tabs.filter { !isPortable($0) },
@@ -128,18 +127,20 @@ final class BrowserSyncTests: XCTestCase {
         XCTAssertFalse(merged.spaces[0].archivedTabs.contains { $0.id == settings.id })
     }
 
+    @MainActor
     func testWebTabNavigatedToAnExtensionStaysLocalDespiteRemoteChanges() throws {
         var local = oneSpaceSession()
-        let coordinator = BrowserSyncCoordinator(persistence: InMemoryBrowserSyncJournalPersistence())
-        try coordinator.stage(session: local, at: fixedDate(100))
+        var staged = BrowserSyncJournal()
+        try staged.stage(session: local, at: fixedDate(100))
         let tabID = local.spaces[0].tabs[0].id
         local.spaces[0].tabs[0].url = URL(string: "chrome-extension://test/onboarding.html")
         local = try BrowserCoreSync.repair(local)
+        let device = try BrowserSyncingDevice(local, journal: staged)
         let tombstone = BrowserSyncRecord.delete(
             id: .init(kind: .tab, value: tabID.rawValue),
             spaceID: local.spaces[0].id, version: .init(logicalClock: 10_000, deviceID: fixedUUID(1_702)),
             reason: .explicitDelete, at: fixedDate(150))
-        let merged = try coordinator.merge(remoteRecords: [tombstone], into: local, at: fixedDate(200))
+        let merged = try device.merge([tombstone])
         XCTAssertEqual(merged.spaces[0].tabs, local.spaces[0].tabs)
         XCTAssertTrue(merged.spaces[0].archivedTabs.isEmpty)
 
@@ -147,12 +148,11 @@ final class BrowserSyncTests: XCTestCase {
         local.spaces[0].archivedTabs = [archived]
         local.spaces[0].tabs = [BrowserTab.startPage(lastActivatedAt: fixedDate(200))]
         let oldWebTab = syncTab(oneSpaceSession().spaces[0].tabs[0], spaceID: local.spaces[0].id)
-        let reopened = try coordinator.merge(
-            remoteRecords: [
-                .save(
-                    .tab(oldWebTab),
-                    version: .init(logicalClock: 20_000, deviceID: fixedUUID(1_702)))
-            ], into: local, at: fixedDate(250))
+        let reopened = try BrowserSyncingDevice(local, journal: device.journal).merge([
+            .save(
+                .tab(oldWebTab),
+                version: .init(logicalClock: 20_000, deviceID: fixedUUID(1_702)))
+        ])
         XCTAssertFalse(reopened.spaces[0].tabs.contains { $0.id == tabID })
         XCTAssertEqual(reopened.spaces[0].archivedTabs.first { $0.id == tabID }?.tab.url, archived.tab.url)
     }
@@ -1717,6 +1717,7 @@ final class BrowserSyncTests: XCTestCase {
     /// that lone member's ID — stripping it would re-upload the strip to every
     /// other device — even though nothing renders as a split until the siblings
     /// arrive.
+    @MainActor
     func testALoneSplitMemberSurvivesUntilItsSiblingsArrive() throws {
         let groupID = SplitGroupID(rawValue: fixedUUID(1_160))
         let cloudSpaceID = SpaceID(rawValue: fixedUUID(1_161))
@@ -1743,17 +1744,9 @@ final class BrowserSyncTests: XCTestCase {
         let firstBatch = cloud.records.filter { !laterMemberRecordIDs.contains($0.id) }
         let secondBatch = cloud.records.filter { laterMemberRecordIDs.contains($0.id) }
         let localSession = oneSpaceSession()
-        let coordinator = BrowserSyncCoordinator(
-            persistence: InMemoryBrowserSyncJournalPersistence(),
-            deviceID: fixedUUID(1_163)
-        )
-        try coordinator.stage(session: localSession, at: fixedDate(100))
+        let device = try BrowserSyncingDevice(localSession, deviceID: fixedUUID(1_163), stagedAt: fixedDate(100))
 
-        let afterOne = try coordinator.merge(
-            remoteRecords: firstBatch,
-            into: localSession,
-            at: fixedDate(1_000)
-        )
+        let afterOne = try device.merge(firstBatch)
 
         let lonely = try XCTUnwrap(afterOne.space(id: cloudSpaceID))
         XCTAssertEqual(lonely.tabs.map(\.splitGroupID), [groupID])
@@ -1767,7 +1760,7 @@ final class BrowserSyncTests: XCTestCase {
             "A run of one must not present as a split"
         )
         let staged = try XCTUnwrap(
-            projectedTab(try XCTUnwrap(memberIDs.first), in: coordinator.journal)
+            projectedTab(try XCTUnwrap(memberIDs.first), in: device.journal)
         )
         XCTAssertEqual(
             staged.splitGroupID,
@@ -1775,13 +1768,9 @@ final class BrowserSyncTests: XCTestCase {
             "Repair stripped a lone member and staged the strip for upload"
         )
         XCTAssertEqual(staged.orderToken, projectedTab(memberIDs[0], in: cloud)?.orderToken)
-        XCTAssertNotNil(coordinator.journal.records.first { $0.id == firstMemberRecordID })
+        XCTAssertNotNil(device.journal.records.first { $0.id == firstMemberRecordID })
 
-        let afterAll = try coordinator.merge(
-            remoteRecords: secondBatch,
-            into: afterOne,
-            at: fixedDate(1_100)
-        )
+        let afterAll = try device.merge(secondBatch)
 
         let reconstituted = try XCTUnwrap(afterAll.space(id: cloudSpaceID))
         XCTAssertEqual(reconstituted.tabs.map(\.id), memberIDs)
@@ -1951,16 +1940,13 @@ final class BrowserSyncTests: XCTestCase {
         }
     }
 
+    @MainActor
     func testExplicitRemoteDeleteMovesTheLocalTabIntoDeletionArchive() throws {
         var session = oneSpaceSession()
         session.spaces[0].tabs[0].placement = .pinned
         let tab = try XCTUnwrap(session.spaces.first?.tabs.first)
-        let coordinator = BrowserSyncCoordinator(
-            persistence: InMemoryBrowserSyncJournalPersistence(),
-            deviceID: fixedUUID(1_185)
-        )
-        try coordinator.stage(session: session, at: fixedDate(100))
-        try coordinator.markUploaded(coordinator.journal.pendingRecordIDs)
+        let device = try BrowserSyncingDevice(session, deviceID: fixedUUID(1_185), stagedAt: fixedDate(100))
+        try device.markUploaded(device.journal.pendingRecordIDs)
         let deletion = BrowserSyncRecord.delete(
             id: BrowserSyncRecordID(kind: .tab, value: tab.id.rawValue),
             spaceID: session.spaces[0].id,
@@ -1972,11 +1958,7 @@ final class BrowserSyncTests: XCTestCase {
             at: fixedDate(500)
         )
 
-        let materialized = try coordinator.merge(
-            remoteRecords: [deletion],
-            into: session,
-            at: fixedDate(600)
-        )
+        let materialized = try device.merge([deletion])
 
         let space = try XCTUnwrap(materialized.spaces.first)
         XCTAssertFalse(space.contains(tab.id))
@@ -1986,7 +1968,7 @@ final class BrowserSyncTests: XCTestCase {
         XCTAssertEqual(archive.reason, .deletedOnAnotherDevice)
         XCTAssertEqual(archive.archivedAt, fixedDate(500))
         let archiveRecord = try XCTUnwrap(
-            coordinator.journal.records.first {
+            device.journal.records.first {
                 $0.id
                     == BrowserSyncRecordID(
                         kind: .archive,
@@ -2460,6 +2442,7 @@ final class BrowserSyncTests: XCTestCase {
         XCTAssertEqual(try persistence.load(), coordinator.journal)
     }
 
+    @MainActor
     func testUseThisDeviceRebasesLocalRecordsAboveCloudAndDeletesCloudOnlyContent() throws {
         let localSession = oneSpaceSession()
         var cloudSession = localSession
@@ -2477,19 +2460,11 @@ final class BrowserSyncTests: XCTestCase {
         var cloud = BrowserSyncJournal(deviceID: fixedUUID(911))
         try cloud.stage(session: cloudSession, at: fixedDate(900))
         let remoteMaximumClock = try XCTUnwrap(cloud.records.map(\.version.logicalClock).max())
-        let persistence = InMemoryBrowserSyncJournalPersistence()
-        let coordinator = BrowserSyncCoordinator(
-            persistence: persistence,
-            deviceID: fixedUUID(912)
-        )
+        let device = try BrowserSyncingDevice(localSession, journal: BrowserSyncJournal(deviceID: fixedUUID(912)))
 
-        try coordinator.prepareToOverwriteCloud(
-            with: localSession,
-            remoteRecords: cloud.records,
-            at: fixedDate(1_000)
-        )
+        try device.overwrite(with: cloud.records)
 
-        let journal = coordinator.journal
+        let journal = device.journal
         let spaceRecord = try XCTUnwrap(
             journal.records.first { $0.id.kind == .space }
         )
@@ -2512,9 +2487,9 @@ final class BrowserSyncTests: XCTestCase {
         XCTAssertNotNil(cloudOnlyRecord.tombstone)
         XCTAssertGreaterThan(cloudOnlyRecord.version.logicalClock, remoteMaximumClock)
         XCTAssertEqual(journal.pendingRecordIDs, Set(journal.records.map(\.id)))
-        XCTAssertEqual(persistence.journal, journal)
     }
 
+    @MainActor
     func testUseICloudReplacesTheLocalProjectionWithoutUploadingItBack() throws {
         let localSession = oneSpaceSession()
         var cloudSession = localSession
@@ -2522,47 +2497,30 @@ final class BrowserSyncTests: XCTestCase {
         var cloud = BrowserSyncJournal(deviceID: fixedUUID(920))
         try cloud.stage(session: cloudSession, at: fixedDate(900))
         try cloud.markUploaded(cloud.pendingRecordIDs)
+        let device = try BrowserSyncingDevice(localSession, deviceID: fixedUUID(921), stagedAt: fixedDate(100))
 
-        let persistence = InMemoryBrowserSyncJournalPersistence()
-        let coordinator = BrowserSyncCoordinator(
-            persistence: persistence,
-            deviceID: fixedUUID(921)
-        )
-        try coordinator.stage(session: localSession, at: fixedDate(100))
-
-        let resolved = try coordinator.replaceLocalWithCloud(
-            cloud.records,
-            replacing: localSession
-        )
+        let resolved = try device.replace(with: cloud.records)
 
         XCTAssertEqual(resolved.spaces[0].name, "Chosen from iCloud")
-        XCTAssertTrue(coordinator.journal.pendingRecordIDs.isEmpty)
-        XCTAssertEqual(coordinator.journal.records, cloud.records)
-        XCTAssertEqual(persistence.journal, coordinator.journal)
+        XCTAssertTrue(device.journal.pendingRecordIDs.isEmpty)
+        XCTAssertEqual(device.journal.records, cloud.records)
     }
 
+    @MainActor
     func testUseICloudWithAnEmptyCloudClearsLocalSyncedContent() throws {
         let localSession = oneSpaceSession()
         let localSpaceID = localSession.spaces[0].id
-        let persistence = InMemoryBrowserSyncJournalPersistence()
-        let coordinator = BrowserSyncCoordinator(
-            persistence: persistence,
-            deviceID: fixedUUID(922)
-        )
-        try coordinator.stage(session: localSession, at: fixedDate(100))
+        let device = try BrowserSyncingDevice(localSession, deviceID: fixedUUID(922), stagedAt: fixedDate(100))
 
-        let resolved = try coordinator.replaceLocalWithCloud(
-            [],
-            replacing: localSession
-        )
+        let resolved = try device.replace(with: [])
 
         XCTAssertEqual(resolved.spaces.count, 1)
         XCTAssertNotEqual(resolved.spaces[0].id, localSpaceID)
         XCTAssertEqual(resolved.spaces[0].name, "Space 1")
         XCTAssertEqual(resolved.spaces[0].tabs.count, 1)
         XCTAssertTrue(resolved.spaces[0].tabs[0].isStartPage)
-        XCTAssertTrue(coordinator.journal.records.isEmpty)
-        XCTAssertTrue(coordinator.journal.pendingRecordIDs.isEmpty)
+        XCTAssertTrue(device.journal.records.isEmpty)
+        XCTAssertTrue(device.journal.pendingRecordIDs.isEmpty)
     }
 
     /// CKSyncEngine splits a first sync across events and guarantees no ordering
@@ -2571,6 +2529,7 @@ final class BrowserSyncTests: XCTestCase {
     /// not read the missing parent as a deletion: it restages above the remote
     /// clock, so the tombstones would outrank the real records and delete the
     /// other device's content on every device.
+    @MainActor
     func testChildRecordsArrivingBeforeTheirSpaceAreNotTombstoned() throws {
         let cloudSpaceID = SpaceID(rawValue: fixedUUID(940))
         var cloudSession = oneSpaceSession(
@@ -2592,22 +2551,14 @@ final class BrowserSyncTests: XCTestCase {
         XCTAssertFalse(childRecords.isEmpty)
 
         let localSession = oneSpaceSession()
-        let persistence = InMemoryBrowserSyncJournalPersistence()
-        let coordinator = BrowserSyncCoordinator(
-            persistence: persistence,
-            deviceID: fixedUUID(944)
-        )
-        try coordinator.stage(session: localSession, at: fixedDate(100))
+        let device = try BrowserSyncingDevice(localSession, deviceID: fixedUUID(944), stagedAt: fixedDate(100))
 
-        let afterChildren = try coordinator.merge(
-            remoteRecords: childRecords,
-            into: localSession
-        )
+        let afterChildren = try device.merge(childRecords)
 
         XCTAssertNil(afterChildren.space(id: cloudSpaceID))
         for child in childRecords {
             let stored = try XCTUnwrap(
-                coordinator.journal.records.first { $0.id == child.id }
+                device.journal.records.first { $0.id == child.id }
             )
             XCTAssertEqual(
                 stored,
@@ -2616,10 +2567,7 @@ final class BrowserSyncTests: XCTestCase {
             )
         }
 
-        let afterSpace = try coordinator.merge(
-            remoteRecords: [cloudSpaceRecord],
-            into: afterChildren
-        )
+        let afterSpace = try device.merge([cloudSpaceRecord])
 
         let restored = try XCTUnwrap(afterSpace.space(id: cloudSpaceID))
         XCTAssertEqual(
@@ -2630,7 +2578,7 @@ final class BrowserSyncTests: XCTestCase {
             restored.history.map(\.id),
             cloudSession.spaces[0].history.map(\.id)
         )
-        XCTAssertTrue(coordinator.journal.records.allSatisfy { $0.payload != nil })
+        XCTAssertTrue(device.journal.records.allSatisfy { $0.payload != nil })
     }
 
     func testDeletingASpaceStillTombstonesTheRecordsItOwned() throws {
@@ -2707,6 +2655,7 @@ final class BrowserSyncTests: XCTestCase {
     /// entire merge when its folder record had not arrived yet, and because the
     /// change token advances either way, every record in that batch was lost for
     /// good.
+    @MainActor
     func testSavedTabArrivingBeforeItsFolderSurvivesTheNextBatch() throws {
         let cloudSpaceID = SpaceID(rawValue: fixedUUID(980))
         let folder = BrowserFolder(
@@ -2761,31 +2710,20 @@ final class BrowserSyncTests: XCTestCase {
         let firstBatch = cloud.records.filter { $0.id != folderRecordID }
 
         let localSession = oneSpaceSession()
-        let persistence = InMemoryBrowserSyncJournalPersistence()
-        let coordinator = BrowserSyncCoordinator(
-            persistence: persistence,
-            deviceID: fixedUUID(986)
-        )
-        try coordinator.stage(session: localSession, at: fixedDate(100))
+        let device = try BrowserSyncingDevice(localSession, deviceID: fixedUUID(986), stagedAt: fixedDate(100))
 
-        let afterTabs = try coordinator.merge(
-            remoteRecords: firstBatch,
-            into: localSession
-        )
+        let afterTabs = try device.merge(firstBatch)
 
         let heldBack = try XCTUnwrap(afterTabs.space(id: cloudSpaceID))
         XCTAssertEqual(heldBack.tabs.map(\.id), [currentTab.id])
         XCTAssertTrue(heldBack.folders.isEmpty)
         XCTAssertEqual(
-            coordinator.journal.records.first { $0.id == savedTabRecordID },
+            device.journal.records.first { $0.id == savedTabRecordID },
             firstBatch.first { $0.id == savedTabRecordID },
             "The saved tab did not survive its folder's absence"
         )
 
-        let afterFolder = try coordinator.merge(
-            remoteRecords: [folderRecord],
-            into: afterTabs
-        )
+        let afterFolder = try device.merge([folderRecord])
 
         let restored = try XCTUnwrap(afterFolder.space(id: cloudSpaceID))
         XCTAssertEqual(restored.folders.map(\.id), [folder.id])
@@ -2794,11 +2732,12 @@ final class BrowserSyncTests: XCTestCase {
         )
         XCTAssertEqual(restoredSavedTab.placement, .saved)
         XCTAssertEqual(restoredSavedTab.folderID, folder.id)
-        XCTAssertTrue(coordinator.journal.records.allSatisfy { $0.payload != nil })
+        XCTAssertTrue(device.journal.records.allSatisfy { $0.payload != nil })
     }
 
     /// A folder somebody deleted keeps a tombstone, but the container's content
     /// is promoted rather than deleted with it.
+    @MainActor
     func testFolderDeletionImmediatelyPromotesItsPreservedTab() throws {
         let spaceID = SpaceID(rawValue: fixedUUID(990))
         let folder = BrowserFolder(
@@ -2833,13 +2772,8 @@ final class BrowserSyncTests: XCTestCase {
             tabs: [currentTab, savedTab]
         )
         let session = BrowserSession(spaces: [space])
-        let persistence = InMemoryBrowserSyncJournalPersistence()
-        let coordinator = BrowserSyncCoordinator(
-            persistence: persistence,
-            deviceID: fixedUUID(995)
-        )
-        try coordinator.stage(session: session, at: fixedDate(100))
-        try coordinator.markUploaded(coordinator.journal.pendingRecordIDs)
+        let device = try BrowserSyncingDevice(session, deviceID: fixedUUID(995), stagedAt: fixedDate(100))
+        try device.markUploaded(device.journal.pendingRecordIDs)
         let savedTabRecordID = BrowserSyncRecordID(
             kind: .tab,
             value: savedTab.id.rawValue
@@ -2855,10 +2789,7 @@ final class BrowserSyncTests: XCTestCase {
             at: fixedDate(900)
         )
 
-        let resolved = try coordinator.merge(
-            remoteRecords: [folderDeletion],
-            into: session
-        )
+        let resolved = try device.merge([folderDeletion])
 
         XCTAssertTrue(try XCTUnwrap(resolved.space(id: spaceID)).folders.isEmpty)
         XCTAssertEqual(
@@ -2870,7 +2801,7 @@ final class BrowserSyncTests: XCTestCase {
                 .folderID
         )
         let tabRecord = try XCTUnwrap(
-            coordinator.journal.records.first { $0.id == savedTabRecordID }
+            device.journal.records.first { $0.id == savedTabRecordID }
         )
         XCTAssertNotNil(tabRecord.payload)
         XCTAssertNil(tabRecord.tombstone)
@@ -2878,18 +2809,15 @@ final class BrowserSyncTests: XCTestCase {
         var movedTab = syncTab(savedTab, spaceID: spaceID)
         movedTab.folderID = nil
         movedTab.positionModifiedAt = fixedDate(901)
-        let afterMove = try coordinator.merge(
-            remoteRecords: [
-                BrowserSyncRecord.save(
-                    .tab(movedTab),
-                    version: BrowserSyncVersion(
-                        logicalClock: 901,
-                        deviceID: fixedUUID(996)
-                    )
+        let afterMove = try device.merge([
+            BrowserSyncRecord.save(
+                .tab(movedTab),
+                version: BrowserSyncVersion(
+                    logicalClock: 901,
+                    deviceID: fixedUUID(996)
                 )
-            ],
-            into: resolved
-        )
+            )
+        ])
 
         let restored = try XCTUnwrap(
             afterMove.space(id: spaceID)?.tabs.first { $0.id == savedTab.id }
@@ -2902,6 +2830,7 @@ final class BrowserSyncTests: XCTestCase {
     /// fetch when the folder above it had not arrived, and the protection has to
     /// reach the entire chain: the tab's own folder is present here, and so is
     /// that folder's parent — the record still missing is two levels up.
+    @MainActor
     func testNestedFoldersArrivingBeforeTheirRootSurviveTheNextBatch() throws {
         let cloudSpaceID = SpaceID(rawValue: fixedUUID(1_010))
         let root = BrowserFolder(
@@ -2967,33 +2896,22 @@ final class BrowserSyncTests: XCTestCase {
         ]
 
         let localSession = oneSpaceSession()
-        let persistence = InMemoryBrowserSyncJournalPersistence()
-        let coordinator = BrowserSyncCoordinator(
-            persistence: persistence,
-            deviceID: fixedUUID(1_018)
-        )
-        try coordinator.stage(session: localSession, at: fixedDate(100))
+        let device = try BrowserSyncingDevice(localSession, deviceID: fixedUUID(1_018), stagedAt: fixedDate(100))
 
-        let afterSubtree = try coordinator.merge(
-            remoteRecords: firstBatch,
-            into: localSession
-        )
+        let afterSubtree = try device.merge(firstBatch)
 
         let waiting = try XCTUnwrap(afterSubtree.space(id: cloudSpaceID))
         XCTAssertTrue(waiting.folders.isEmpty)
         XCTAssertEqual(waiting.tabs.map(\.id), [currentTab.id])
         for recordID in heldBackIDs {
             XCTAssertEqual(
-                coordinator.journal.records.first { $0.id == recordID },
+                device.journal.records.first { $0.id == recordID },
                 firstBatch.first { $0.id == recordID },
                 "\(recordID.recordName) did not survive its missing ancestor"
             )
         }
 
-        let afterRoot = try coordinator.merge(
-            remoteRecords: [rootRecord],
-            into: afterSubtree
-        )
+        let afterRoot = try device.merge([rootRecord])
 
         let restored = try XCTUnwrap(afterRoot.space(id: cloudSpaceID))
         XCTAssertEqual(restored.folders.map(\.id), [root.id, middle.id, leaf.id])
@@ -3002,12 +2920,13 @@ final class BrowserSyncTests: XCTestCase {
             restored.tabs.first { $0.id == savedTab.id }
         )
         XCTAssertEqual(restoredSavedTab.folderID, leaf.id)
-        XCTAssertTrue(coordinator.journal.records.allSatisfy { $0.payload != nil })
+        XCTAssertTrue(device.journal.records.allSatisfy { $0.payload != nil })
     }
 
     /// Folder deletion removes only the container. Child records can arrive
     /// before their promoted payloads, so neither they nor their tabs may be
     /// tombstoned while waiting for the rest of the batch.
+    @MainActor
     func testDeletingAParentFolderPreservesItsWaitingSubtreeRecords() throws {
         let spaceID = SpaceID(rawValue: fixedUUID(1_020))
         let root = BrowserFolder(
@@ -3054,12 +2973,8 @@ final class BrowserSyncTests: XCTestCase {
             tabs: [currentTab, savedTab]
         )
         let session = BrowserSession(spaces: [space])
-        let coordinator = BrowserSyncCoordinator(
-            persistence: InMemoryBrowserSyncJournalPersistence(),
-            deviceID: fixedUUID(1_027)
-        )
-        try coordinator.stage(session: session, at: fixedDate(100))
-        try coordinator.markUploaded(coordinator.journal.pendingRecordIDs)
+        let device = try BrowserSyncingDevice(session, deviceID: fixedUUID(1_027), stagedAt: fixedDate(100))
+        try device.markUploaded(device.journal.pendingRecordIDs)
         let middleDeletion = BrowserSyncRecord.delete(
             id: BrowserSyncRecordID(kind: .folder, value: middle.id.rawValue),
             spaceID: spaceID,
@@ -3071,10 +2986,7 @@ final class BrowserSyncTests: XCTestCase {
             at: fixedDate(900)
         )
 
-        let resolved = try coordinator.merge(
-            remoteRecords: [middleDeletion],
-            into: session
-        )
+        let resolved = try device.merge([middleDeletion])
 
         let resolvedSpace = try XCTUnwrap(resolved.space(id: spaceID))
         XCTAssertEqual(resolvedSpace.folders.map(\.id), [root.id, leaf.id])
@@ -3092,7 +3004,7 @@ final class BrowserSyncTests: XCTestCase {
             BrowserSyncRecordID(kind: .tab, value: savedTab.id.rawValue),
         ] {
             let record = try XCTUnwrap(
-                coordinator.journal.records.first { $0.id == recordID }
+                device.journal.records.first { $0.id == recordID }
             )
             XCTAssertNotNil(
                 record.payload,
@@ -3101,7 +3013,7 @@ final class BrowserSyncTests: XCTestCase {
             XCTAssertNil(record.tombstone)
         }
         let rootRecord = try XCTUnwrap(
-            coordinator.journal.records.first {
+            device.journal.records.first {
                 $0.id == BrowserSyncRecordID(kind: .folder, value: root.id.rawValue)
             }
         )
@@ -3159,6 +3071,7 @@ final class BrowserSyncTests: XCTestCase {
 
     /// A folder record that names a different Space cannot be explained by
     /// delivery order, so the merge still refuses it outright.
+    @MainActor
     func testASavedTabReferencingAnotherSpacesFolderStillFailsClosed() throws {
         let session = oneSpaceSession()
         let space = try XCTUnwrap(session.spaces.first)
@@ -3182,10 +3095,7 @@ final class BrowserSyncTests: XCTestCase {
             orderToken: "a",
             lastActivatedAt: fixedDate(1)
         )
-        let coordinator = BrowserSyncCoordinator(
-            persistence: InMemoryBrowserSyncJournalPersistence(),
-            deviceID: fixedUUID(1_000)
-        )
+        let device = try BrowserSyncingDevice(session, journal: BrowserSyncJournal(deviceID: fixedUUID(1_000)))
         let remote = [
             spaceRecord(space, clock: 1),
             BrowserSyncRecord.save(
@@ -3205,9 +3115,11 @@ final class BrowserSyncTests: XCTestCase {
         ]
 
         XCTAssertThrowsError(
-            try coordinator.merge(remoteRecords: remote, into: session)
+            try device.merge(remote)
         ) { error in
-            XCTAssertEqual(error as? BrowserSyncError, .danglingFolder(tabID))
+            XCTAssertEqual(
+                error as? Rejection,
+                .invalidSyncRecords(InvalidSyncRecords(flaw: .danglingFolder, subject: tabID.rawValue)))
         }
     }
 
@@ -3528,5 +3440,70 @@ private final class PausingBrowserSyncJournalPersistence: BrowserSyncJournalPers
 
     func resumeSave() {
         gate.signal()
+    }
+}
+
+/// TRANSITIONAL until slice 8c ports the journal contract tests to the core: a
+/// device whose file holds a session and its journal, opened as a launch opens
+/// it, which takes cloud records through its store as the transport does.
+@MainActor
+final class BrowserSyncingDevice {
+    // MARK: - Variables
+
+    let harness: BrowserStoredSessionHarness
+
+    /// The session the device's store shows.
+    var session: BrowserSession { harness.store.session }
+
+    /// The journal the device's core accepted last.
+    var journal: BrowserSyncJournal { coordinator.journal }
+
+    private var coordinator: BrowserSyncCoordinator {
+        guard let coordinator = harness.store.syncCoordinator else {
+            preconditionFailure("A session the core keeps in its file always syncs.")
+        }
+        return coordinator
+    }
+
+    // MARK: - Initializers
+
+    /// A device whose file holds `session` and `journal`.
+    init(_ session: BrowserSession, journal: BrowserSyncJournal) throws {
+        harness = try BrowserStoredSessionHarness(session: session, journal: journal)
+    }
+
+    /// A device whose file holds `session`, which its journal from `deviceID`
+    /// staged at `date`.
+    convenience init(_ session: BrowserSession, deviceID: UUID = UUID(), stagedAt date: Date) throws {
+        var journal = BrowserSyncJournal(deviceID: deviceID)
+        try journal.stage(session: session, at: date)
+        try self.init(session, journal: journal)
+    }
+
+    // MARK: - Actions
+
+    /// Merges `records` from the cloud, and answers the session the store
+    /// shows then.
+    @discardableResult
+    func merge(_ records: [BrowserSyncRecord]) throws -> BrowserSession {
+        try harness.store.mergeRemoteSyncRecords(records)
+        return session
+    }
+
+    /// Replaces the session with what the cloud holds, and answers the
+    /// session the store shows then.
+    func replace(with records: [BrowserSyncRecord]) throws -> BrowserSession {
+        try harness.store.replaceLocalWithCloud(records)
+        return session
+    }
+
+    /// Rebases the journal above what the cloud holds.
+    func overwrite(with records: [BrowserSyncRecord]) throws {
+        try harness.store.prepareToOverwriteCloud(with: records)
+    }
+
+    /// Acknowledges `recordIDs` as uploaded.
+    func markUploaded(_ recordIDs: Set<BrowserSyncRecordID>) throws {
+        try coordinator.markUploaded(recordIDs)
     }
 }

@@ -38,7 +38,7 @@ internal sealed partial class Device {
     /// Asks the host for a drain on its next turn.
     private readonly Action requestTurn;
     /// Closes a borrowed workspace whose owner no longer lends its Space.
-    private readonly Action<Guid> closeOrphan;
+    private readonly Action<Guid> closeBorrower;
     /// The tabs an older release kept in the session, which a window without a
     /// record adopts during the launch that loaded them.
     private IReadOnlyDictionary<Guid, Guid> legacyTabs = new Dictionary<Guid, Guid>();
@@ -53,20 +53,20 @@ internal sealed partial class Device {
     /// A device whose saved windows `storage` keeps, starting from `records`;
     /// without storage every window lives in memory. Each session it shows
     /// consults `access`. `requestTurn` asks the host for a drain on its next
-    /// turn, and `closeOrphan` closes a borrowed workspace whose owner no
+    /// turn, and `closeBorrower` closes a borrowed workspace whose owner no
     /// longer lends its Space.
     public Device(SessionStorage? storage, DeviceRecords records, SpaceAccessAuthority access, Action<Change> announce,
-        Action requestTurn, Action<Guid> closeOrphan) {
+        Action requestTurn, Action<Guid> closeBorrower) {
         ArgumentNullException.ThrowIfNull(records);
         ArgumentNullException.ThrowIfNull(access);
         ArgumentNullException.ThrowIfNull(announce);
         ArgumentNullException.ThrowIfNull(requestTurn);
-        ArgumentNullException.ThrowIfNull(closeOrphan);
+        ArgumentNullException.ThrowIfNull(closeBorrower);
         this.storage = storage;
         this.access = access;
         this.announce = announce;
         this.requestTurn = requestTurn;
-        this.closeOrphan = closeOrphan;
+        this.closeBorrower = closeBorrower;
         foreach (var record in records.Windows) saved[record.Id] = record;
         lastUse = records.Windows.Count == 0 ? 0 : records.Windows.Max(record => record.Used);
         adoptedWindowRecords = records.AdoptedWindowRecords;
@@ -203,7 +203,7 @@ internal sealed partial class Device {
     private void FollowOwner(NativeSessionAuthority owner) {
         foreach (var borrowerId in Borrowers(owner)) {
             if (Attached(borrowerId) is not { } borrower) continue;
-            if (borrower.LostSource()) closeOrphan(borrowerId);
+            if (borrower.LostSource()) closeBorrower(borrowerId);
             else if (borrower.FollowOwner() is { } followed)
                 SessionPublished(borrowerId, followed.Previous, followed.Next, followUp: null, SessionTabEvents.None);
         }

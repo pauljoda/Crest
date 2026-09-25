@@ -143,17 +143,13 @@ public sealed partial class BrowserContractsTests {
         app.Report(engine, new PageCreationFailed(opening));
         _ = app.Drain();
 
-        // A replacement the owner takes outside an intent, as a sync merge
-        // does, removes the lent Space: its borrower closes, and the engine
-        // hears to close the borrower's page once the replacement returns.
-        app.Workspace(workspace).Commit(Bytes(new JsonObject {
-            ["version"] = 1,
-            ["spaces"] = new JsonArray(),
-            ["spaceOrder"] = new JsonArray(space["id"]!.DeepClone())
-        }));
+        // An owner intent that stops lending the Space, such as starting to
+        // delete it, closes its borrower, and the engine hears to close the
+        // borrower's page once the intent returns.
+        var lending = app.Send(new BeginDeletingSpace(workspace, window, SpaceId(lent), Guid.NewGuid()));
         Assert.Equal(new ClosePage(borrowedPage, KeepsState: false), binding.Commands[^1]);
         Assert.Equal([new PageRemoved(borrowedPage), new WindowClosed(borrowedWindow), new WorkspaceClosed(borrowed)],
-            app.Drain().Where(change => change is PageRemoved or WindowClosed or WorkspaceClosed));
+            lending.Where(change => change is PageRemoved or WindowClosed or WorkspaceClosed));
 
         // Closing a workspace removes every page it has, then its window, and
         // closes on the engine only what the engine still holds.

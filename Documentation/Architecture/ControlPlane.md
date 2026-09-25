@@ -448,10 +448,12 @@ before creating pages or saving the session; rejected sync preparation leaves th
 original session and journal untouched. Replacing a disposable seed with real
 cloud Spaces clears the seed marker.
 
-`crest_sync_session_prepare` returns a matched session result and immutable journal
-handle after all merge rules succeed. `crest_session_replace_durably` validates
-the replacement before any durable write and excludes competing core writes until
-the save finishes. Legacy defaults are migrated once, through the
+Cloud records arrive as `CloudSyncIntent`s (`MergeSyncRecords`,
+`ReplaceWithCloudRecords`, `ReplaceSeedWithCloudRecords`, `OverwriteCloud`)
+through `crest_app_dispatch`. The core computes the matched session and journal
+after all merge rules succeed, reserves the session so no competing write lands
+while it saves both, and refuses a record it cannot take with
+`InvalidSyncRecords`. Legacy defaults are migrated once, through the
 `AdoptLegacySession` intent, and retained for rollback. Local saves, incoming sync
 and upload acknowledgments all write through the core's one connection, and a
 journal is always written in one transaction with the newest accepted session.
@@ -774,12 +776,10 @@ and `crest_app.h` and described in `CrestContracts/README.md`.
 permissions and session entry points against the built library.
 
 Once the device attaches the access authority, `NativeSessionAuthority`
-rejects a prepared command that would read or mutate a locked Space. It also
-rejects a native value edit, such as the delta `crest_session_replace_durably`
-applies without a journal, that would change or remove a locked Space's records. Sync
-replacements bound to a journal transaction are not gated, so background
-convergence continues. `SpaceLockGateTests` covers commands, value edits,
-sync, borrowing and profile sharing. The native controllers keep their own
+rejects a prepared command that would read or mutate a locked Space. Cloud
+sync intents are not gated, so background convergence continues, but a merge
+cannot remove protection this device never unlocked. `SpaceLockGateTests`
+covers commands, sync, borrowing and profile sharing. The native controllers keep their own
 gates, so the core gate is defence in depth rather than the only check.
 
 The outstanding packages are itemized in [Engine abstraction

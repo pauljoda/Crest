@@ -32,30 +32,6 @@ public sealed partial class NativeSessionAuthority {
         if (attached is { DisposableSeedMarker: null }) value.Queue(attached, attached, SyncStaging.Launch);
     }
 
-    /// Reserves a validated revision while it is saved. Other writes are
-    /// rejected until commit or cancellation. No I/O occurs under the core
-    /// lock, and cancellation leaves the authority intact.
-    internal NativeSessionReplacement ReserveReplacement(ReadOnlySpan<byte> delta,
-        NativeSyncTransaction? transaction = null, bool nativeValueEdit = false) {
-        lock (Gate) {
-            IReadOnlyList<CrestCore.Contracts.SpaceDeletionState>? authorizedDeletions = null;
-            if (transaction is not null) {
-                if (!transaction.IsReadyToCommit || !ReferenceEquals(transaction.Owner.Session, this) || transaction.Materialization is null)
-                    throw new CrestCore.Domain.BrowserRuleException(CrestCore.Domain.BrowserRuleCodes.InvalidSyncSessionOwner);
-                authorizedDeletions = transaction.MaterializedSpaceDeletions;
-            }
-            var next = Prepare(delta, authorizedDeletions, nativeValueEdit && transaction is null);
-            var nextRevision = checked(Revision + 1);
-            var checkpoint = new NativeSessionCheckpoint(next);
-            // Validate serialization before granting the lease.
-            _ = checkpoint.Read(NativeSessionCheckpoint.CorePart);
-            var reserved = new NativeSessionReplacement(this, next, nextRevision, checkpoint);
-            if (transaction is not null) reserved.BindSync(transaction);
-            replacement = reserved;
-            return replacement;
-        }
-    }
-
     /// Ends a reservation, accepting its state when `commit`, and answers the
     /// state it replaced; null when it is cancelled.
     internal SessionState? CompleteReplacement(NativeSessionReplacement value, bool commit) {
@@ -114,12 +90,6 @@ public sealed partial class NativeSessionAuthority {
         if (target is null || staging is null || next.DisposableSeedMarker is not null || next.Equals(previous)) return;
         target.Queue(previous, next, staging);
     }
-
-    /// Replaces the session with the edits `delta` names and saves the result,
-    /// with a sync transaction's journal when one is given, before publishing
-    /// it. A failed save leaves the accepted state and the file unchanged.
-    internal void ReplaceDurably(ReadOnlySpan<byte> delta, NativeSyncTransaction? transaction = null) =>
-        SaveAndCommit(ReserveReplacement(delta, transaction, nativeValueEdit: transaction is null));
 
     /// Saves a reserved state, then publishes it. No lock is held while the
     /// file is written, and other writers stay excluded by the reservation.

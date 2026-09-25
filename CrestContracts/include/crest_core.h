@@ -97,13 +97,6 @@ CREST_API crest_status_t CREST_CALL crest_sync_journal_apply_checked(
 CREST_API crest_status_t CREST_CALL crest_sync_journal_read(
     uint64_t handle, uint8_t* destination, size_t capacity, size_t* out_length);
 CREST_API crest_status_t CREST_CALL crest_sync_journal_release(uint64_t handle);
-/* Prepares a matched session and journal after staging, merging, repair and
- * retention. On success both handles are owned by the caller. On semantic
- * failure only out_query may be returned, containing a typed error envelope.
- * The source journal and session authority are never mutated by preparation. */
-CREST_API crest_status_t CREST_CALL crest_sync_session_prepare(
-    uint64_t journal, const uint8_t* input, size_t input_length,
-    uint64_t* out_journal, uint64_t* out_query);
 
 /* Prepared sync queries evaluate once and retain immutable JSON results.
  * Worker-safe, 64 MiB input/output limit; each handle must be released.
@@ -115,31 +108,17 @@ CREST_API crest_status_t CREST_CALL crest_sync_query_read(
     uint64_t handle, uint8_t* destination, size_t capacity, size_t* out_length);
 CREST_API crest_status_t CREST_CALL crest_sync_query_release(uint64_t handle);
 
-/* The durable JSON replacement a sync merge commits. It is exception-contained;
- * its input is <= 64 MiB and carries no native objects or callbacks. It names
- * its app and the workspace it acts on by the 16 RFC 4122 bytes
- * WorkspaceOpened carried; a workspace that is not open answers
- * INVALID_MESSAGE. The accepted state reaches the app's device as typed
- * changes (crest_app_drain). Native projections exclude favicon bytes, which
- * remain platform assets.
- */
-
-/* TRANSITIONAL until slice 8a (typed sync): applies a value delta to
- * the workspace's session and saves it before returning. With a sealed incoming
- * sync transaction, which may authorize local cleanup intents, its journal is
- * saved and published with the session; without one the delta is a native
- * value edit. STORAGE_FAILED leaves everything as it was. */
-CREST_API crest_status_t CREST_CALL crest_session_replace_durably(uint64_t app, const uint8_t* workspace,
-    uint64_t sync_transaction, const uint8_t *delta, size_t delta_length);
-
 // A session's sync component owns journal publication and stages the session's
 // accepted edits itself, reporting SyncJournalChanged to the attached app.
 // Prepare starts a transaction for the transport once any transaction in
-// progress finishes; a merge, replacement or overwrite supersedes the stages
-// still queued. Commit publishes the journal; when its session keeps a file,
-// commit first saves the journal with the newest accepted session and answers
-// STORAGE_FAILED, leaving the transaction pending, when that fails. A journal a
-// durable session commit already published is left alone.
+// progress finishes; an overwrite supersedes the stages still queued. A merge
+// or replacement changes the session with its journal, so it is an intent
+// (crest_app_dispatch) and prepare refuses it. On a semantic failure only
+// query may be returned, containing a typed error envelope. Commit publishes
+// the journal; when its session keeps a file, commit first saves the journal
+// with the newest accepted session and answers STORAGE_FAILED, leaving the
+// transaction pending, when that fails. A journal a session commit already
+// published is left alone.
 CREST_API crest_status_t CREST_CALL crest_sync_authority_create(uint64_t journal, uint64_t *authority);
 CREST_API crest_status_t CREST_CALL crest_sync_authority_release(uint64_t authority);
 /* The journal the authority accepted last, as a new snapshot handle the caller

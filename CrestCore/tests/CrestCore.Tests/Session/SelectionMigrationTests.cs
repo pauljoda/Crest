@@ -21,20 +21,6 @@ public sealed partial class BrowserContractsTests {
         Assert.Null(saved["selectedSpaceID"]);
         Assert.Null(saved["spaces"]![0]!["selectedTabID"]);
 
-        // A value delta from an older writer cannot put selection back.
-        var metadata = session.DeepClone().AsObject(); metadata.Remove("spaces");
-        var space = session["spaces"]![0]!.DeepClone().AsObject();
-        foreach (var section in new[] { "tabs", "folders", "history", "archivedTabs" }) space.Remove(section);
-        using (var replacement = authority.ReserveReplacement(Bytes(new JsonObject {
-            ["version"] = 1,
-            ["metadata"] = metadata,
-            ["spaces"] = new JsonArray(new JsonObject { ["id"] = space["id"]!.DeepClone(), ["metadata"] = space })
-        }))) {
-            var written = JsonNode.Parse(replacement.Checkpoint.Read("core"))!;
-            Assert.Null(written["selectedSpaceID"]);
-            Assert.Null(written["spaces"]![0]!["selectedTabID"]);
-        }
-
         // A window showing a tab only records when it was last used; the
         // document still carries no selection.
         using var device = new TestDevice(session);

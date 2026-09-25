@@ -95,20 +95,6 @@ public sealed partial class BrowserContractsTests {
         Assert.Equal(fixture.Tab, device.Tab(other, fixture.Space));
         Assert.Equal(fixture.Tab, device.Tab(window, fixture.Space));
         Assert.Contains(owner.Current.Spaces[0].Tabs, tab => tab.Id == fixture.Tab);
-
-        // A borrowing workspace that already holds the tab takes no second one.
-        var lendingWorkspace = device.Borrow(space);
-        var lending = device.Session(lendingWorkspace);
-        var lendingWindow = device.OpenIn(lendingWorkspace, fixture.Space);
-        lending.Commit(Bytes(new JsonObject {
-            ["version"] = 1,
-            ["spaces"] = new JsonArray(new JsonObject {
-                ["id"] = space["id"]!.DeepClone(),
-                ["tabs"] = new JsonObject { ["replace"] = space["tabs"]!.DeepClone() }
-            })
-        }));
-        Assert.Equal(fixture.Tab, Assert.IsType<TabAlreadyExists>(Assert.Throws<Rejected>(() =>
-            device.Send(Moving(lendingWindow))).Rejection).TabId);
     }
 
     [Fact]

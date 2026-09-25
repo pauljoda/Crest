@@ -36,18 +36,21 @@ public sealed class NativeSyncAuthority {
 
     #region Actions - Transactions
 
-    /// Prepares one journal mutation or session materialization the transport
-    /// asked for, waiting for any transaction in progress to finish. A merge,
-    /// replacement or overwrite stages the local session itself, so it
-    /// supersedes the stages still queued.
+    /// Prepares one journal mutation the transport asked for, waiting for any
+    /// transaction in progress to finish. An overwrite stages the local
+    /// session itself, so it supersedes the stages still queued. A merge or
+    /// replacement changes the session with its journal, so it comes as a
+    /// `CloudSyncIntent` and is refused here.
     public NativeSyncTransaction Prepare(ReadOnlySpan<byte> input) {
         if (input.Length is 0 or > NativeSyncJournal.MaximumBytes) throw new BrowserRuleException(BrowserRuleCodes.SyncSizeLimit);
         var request = JsonNode.Parse(input, documentOptions: new() { MaxDepth = 64 })!.AsObject();
         var operation = NativeSyncOperationCodes.Parse(request["operation"]?.GetValue<string>());
+        if (operation is NativeSyncOperation.Merge or NativeSyncOperation.Replace)
+            throw new BrowserRuleException(BrowserRuleCodes.UnknownSyncOperation);
         if (NativeSyncOperationCodes.SupersedesStaging(operation)) stager.Supersede();
         var value = Begin(sequence: null);
         // Projection and encoding use immutable inputs outside the gate.
-        try { value.Build(request, operation); return value; } catch { value.Dispose(); throw; }
+        try { value.Apply(request); return value; } catch { value.Dispose(); throw; }
     }
 
     /// A merge, replacement or overwrite stages the session itself, so the

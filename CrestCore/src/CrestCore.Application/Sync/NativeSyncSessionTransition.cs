@@ -12,7 +12,10 @@ namespace CrestCore.Application;
 public sealed record NativeSyncSessionTransition(NativeSyncJournal Journal, JsonObject Materialization) {
     #region Actions - Sync
 
-    public static NativeSyncSessionTransition Prepare(NativeSyncJournal journal, ReadOnlySpan<byte> input,
+    /// TRANSITIONAL until slice 8c ports the journal contract tests: the
+    /// transition a JSON merge or replace request names, for those tests. The
+    /// app takes cloud records through `CloudSyncIntent`.
+    internal static NativeSyncSessionTransition Prepare(NativeSyncJournal journal, ReadOnlySpan<byte> input,
         SpaceAccessAuthority? access = null) {
         if (input.Length is 0 or > NativeSyncJournal.MaximumBytes) throw new BrowserRuleException(BrowserRuleCodes.SyncSizeLimit);
         var request = JsonNode.Parse(input, documentOptions: new() { MaxDepth = 64 })!.AsObject();

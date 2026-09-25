@@ -114,22 +114,11 @@ public sealed partial class BrowserContractsTests {
         app.Send(new ShowSpace(elsewhere, first));
         _ = app.Drain();
 
-        // Another window closes the tab this one shows: it shows nothing in that
+        // Another window deletes the tab this one shows: it shows nothing in that
         // Space, and the window that shows another Space is left alone.
         var session = app.Workspace(workspace);
         var space = session.Current.Spaces[1];
-        session.Commit(Bytes(new JsonObject {
-            ["version"] = 1,
-            ["spaces"] = new JsonArray(new JsonObject {
-                ["id"] = SwiftId(second),
-                ["tabs"] = new JsonObject {
-                    ["remove"] = new JsonArray(shownTab.ToString("D")),
-                    ["upsert"] = new JsonArray(),
-                    ["order"] = new JsonArray([.. space.Tabs.Where(tab => tab.Id != shownTab).Select(tab => (JsonNode)tab.Id.ToString("D"))])
-                }
-            })
-        }));
-        var repaired = Assert.Single(app.Drain().OfType<WindowChanged>()).Window;
+        var repaired = Assert.Single(app.Send(new DeleteTab(workspace, elsewhere, second, shownTab)).OfType<WindowChanged>()).Window;
         Assert.Equal(showing, repaired.Id);
         Assert.Null(ShownTab(repaired, second));
         Assert.Equal(space.Tabs.Count - 1, session.Current.Spaces[1].Tabs.Count);

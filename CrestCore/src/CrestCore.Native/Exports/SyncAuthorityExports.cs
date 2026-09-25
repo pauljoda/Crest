@@ -67,19 +67,17 @@ public static unsafe partial class Exports {
         if (count > NativeSyncJournal.MaximumBytes) return CoreStatus.LimitExceeded;
         if (!SyncAuthorities.TryGetValue(handle, out var owner)) return CoreStatus.InvalidHandle;
         NativeSyncTransaction? value = null;
-        ulong transactionId = 0, journalId = 0, queryId = 0;
+        ulong transactionId = 0, journalId = 0;
         try {
             value = owner.Prepare(new(input, (int)count));
             transactionId = checked((ulong)Interlocked.Increment(ref nextHandle));
             journalId = checked((ulong)Interlocked.Increment(ref nextHandle));
             if (!SyncTransactions.TryAdd(transactionId, value) || !SyncJournals.TryAdd(journalId, value.Journal))
                 throw new InvalidOperationException(ProtocolErrorCodes.HandleCollision);
-            if (value.Materialization is { } bytes) queryId = RetainSyncQuery(bytes);
-            *transaction = transactionId; *journal = journalId; *query = queryId;
+            *transaction = transactionId; *journal = journalId;
             return CoreStatus.Ok;
         } catch (Exception error) {
             SyncTransactions.TryRemove(transactionId, out _); SyncJournals.TryRemove(journalId, out _);
-            if (queryId != 0) SyncQueries.TryRemove(queryId, out _);
             value?.Dispose();
             if (error is NativeSyncDocumentException semantic) {
                 try { *query = RetainSyncQuery(NativeSyncQuery.Failure(semantic)); } catch { return CoreStatus.InternalError; }

@@ -93,35 +93,17 @@ public sealed partial class CrestApp {
         if (ReferenceEquals(session, storedSession)) storedSync?.Stop();
     }
 
-    /// A borrowed workspace whose owner no longer lends its Space closes. An
-    /// owner reaches this while an intent holds the lock, and then the intent
-    /// delivers what the close issued.
-    ///
-    /// TRANSITIONAL until slice 8a (typed sync): the durable JSON replacement
-    /// a sync merge commits reaches an owner's state without the lock, so the
-    /// close takes it itself and delivers its engine commands afterwards. Once
-    /// that replacement is an intent, the lock is always held here.
-    private void CloseOrphan(Guid workspaceId) {
-        var nested = gate.IsHeldByCurrentThread;
-        lock (gate) Close(workspaceId);
-        if (nested) return;
-        WakeIfOwed();
-        Deliver();
+    /// A borrowed workspace whose owner no longer lends its Space closes. Only
+    /// an intent changes an owner's session, so the intent holds the lock here
+    /// and delivers what the close issued once it lets go.
+    private void CloseBorrower(Guid workspaceId) {
+        if (!gate.IsHeldByCurrentThread)
+            throw new InvalidOperationException("A borrowed workspace closes only inside the intent that ended its loan.");
+        Close(workspaceId);
     }
 
-    /// The workspace `workspaceId` names, for the paths that still reach a
-    /// session outside an intent.
+    /// The workspace `workspaceId` names.
     internal NativeSessionAuthority Workspace(Guid workspaceId) => device.Workspace(workspaceId);
-
-    #endregion
-
-    #region Actions - Replacement
-
-    /// TRANSITIONAL until slice 8a (typed sync): replaces the workspace's
-    /// session with the edits `delta` names and saves the result, with a sync
-    /// transaction's journal when one is given, before publishing it.
-    public void ReplaceDurably(Guid workspaceId, ReadOnlySpan<byte> delta, NativeSyncTransaction? transaction) =>
-        device.Workspace(workspaceId).ReplaceDurably(delta, transaction);
 
     #endregion
 }

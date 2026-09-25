@@ -146,83 +146,13 @@ public sealed partial class BrowserContractsTests {
     }
 
     [Fact]
-    public void SyncMaterializationAndDeletionStillReachALockedSpaceWhileItsCommandsStayRejected() {
+    public void DeletionStillReachesALockedSpaceWhileItsCommandsStayRejected() {
         var session = GuardedSession(withOpenSecondSpace: true);
         using var device = new TestDevice(session);
-        var core = device.Authority;
-        // Materialized records commit as a session replacement, never as a
-        // command, so background convergence does not need a grant.
-        using (var reserved = core.ReserveReplacement(RenameDelta(session, "Merged from another device")))
-            reserved.Commit();
-        Assert.Equal(2UL, core.Revision);
-        core.Commit(RenameDelta(session, "Merged again"));
-        Assert.Equal(3UL, core.Revision);
-        var current = JsonNode.Parse(core.Checkpoint().Read("core"))!;
-        Assert.Equal("Merged again", current["spaces"]![0]!["tabs"]![0]!["title"]!.GetValue<string>());
         var deleting = Identity(session).Space;
         device.Send(new BeginDeletingSpace(device.Workspace, Guid.NewGuid(), deleting, Guid.NewGuid()));
         Assert.Equal(deleting, Assert.IsType<SpaceBeingDeleted>(Assert.Throws<Rejected>(() =>
             device.Send(new CleanUpCurrentTabs(device.Workspace, deleting))).Rejection).SpaceId);
-    }
-
-    private static byte[] SpaceTabDelta(JsonNode session, int index, string title) {
-        var space = session["spaces"]![index]!;
-        var tab = space["tabs"]![0]!.DeepClone(); tab["title"] = title;
-        return Bytes(new JsonObject {
-            ["version"] = 1,
-            ["spaces"] = new JsonArray(new JsonObject {
-                ["id"] = space["id"]!.DeepClone(),
-                ["tabs"] = new JsonObject { ["remove"] = new JsonArray(), ["upsert"] = new JsonArray(tab) }
-            })
-        });
-    }
-
-    private static byte[] AccessPolicyDelta(JsonNode session, string policy) {
-        var metadata = session["spaces"]![0]!.DeepClone(); metadata["accessPolicy"] = policy;
-        return Bytes(new JsonObject {
-            ["version"] = 1,
-            ["spaces"] = new JsonArray(new JsonObject {
-                ["id"] = session["spaces"]![0]!["id"]!.DeepClone(),
-                ["metadata"] = metadata
-            })
-        });
-    }
-
-    [Fact]
-    public void ALockedSpacesRecordsRejectANativeValueEditWhileOtherSpacesAndSyncKeepWriting() {
-        var session = GuardedSession(withOpenSecondSpace: true);
-        var access = new SpaceAccessAuthority();
-        var core = TestWorkspaces.Session(session);
-        core.AttachAccess(access);
-        var identity = Identity(session);
-        // A value edit proposes records instead of naming an operation, so the
-        // gate reads what the delta would actually change.
-        foreach (var attempt in new Action[] {
-            () => core.Commit(SpaceTabDelta(session, 0, "Leaked"), nativeValueEdit: true),
-            () => core.ReserveReplacement(SpaceTabDelta(session, 0, "Leaked"), nativeValueEdit: true)
-        }) Assert.Equal("space_locked", Assert.Throws<BrowserRuleException>(attempt).Code);
-        // Removing protection is the decision authentication guards, whether it
-        // arrives as a command or as a proposed record.
-        Assert.Equal("space_locked", Assert.Throws<BrowserRuleException>(
-            () => core.Commit(AccessPolicyDelta(session, "open"), nativeValueEdit: true)).Code);
-        Assert.Equal(1UL, core.Revision);
-
-        // The unlocked Space in the same session stays editable, and raising
-        // protection further on the locked one is allowed as it is for commands.
-        core.Commit(SpaceTabDelta(session, 1, "Second space tab"), nativeValueEdit: true);
-        core.Commit(AccessPolicyDelta(session, "futureStrongerPolicy"), nativeValueEdit: true);
-        Assert.Equal(3UL, core.Revision);
-
-        // Sync materialization commits as a journal-bound replacement rather
-        // than a value edit, so background convergence is still unaffected.
-        var current = JsonNode.Parse(core.Checkpoint().Read("core"))!;
-        core.Commit(SpaceTabDelta(current, 0, "Merged from another device"));
-        Assert.Equal(4UL, core.Revision);
-
-        Grant(access, identity);
-        current = JsonNode.Parse(core.Checkpoint().Read("core"))!;
-        core.Commit(SpaceTabDelta(current, 0, "Mine again"), nativeValueEdit: true);
-        Assert.Equal(5UL, core.Revision);
     }
 
     private static IReadOnlyList<JsonObject> SpaceRecords(JsonNode session) {
@@ -284,7 +214,7 @@ public sealed partial class BrowserContractsTests {
     }
 
     [Fact]
-    public void TwoSpacesCannotShareOneProfileThroughRestore_CommitOrImport() {
+    public void TwoSpacesCannotShareOneProfileThroughRestoreOrImport() {
         var session = SavedSession().Document["session"]!;
         var space = session["spaces"]![0]!;
         var second = space.DeepClone(); second["id"] = SwiftId(Guid.NewGuid());
@@ -295,19 +225,6 @@ public sealed partial class BrowserContractsTests {
         using (var app = new CrestApp())
             Assert.Equal(new InvalidSession(SessionFlaw.SharedProfile), Assert.Throws<Rejected>(
                 () => app.Send(new OpenWorkspace(WorkspaceKind.Persistent, TestWorkspaces.Seed(shared)))).Rejection);
-
-        var core = TestWorkspaces.Session(session);
-        var metadata = second.DeepClone();
-        Assert.Equal(new InvalidSession(SessionFlaw.SharedProfile), Assert.Throws<Rejected>(() => core.Commit(Bytes(new JsonObject {
-            ["version"] = 1,
-            ["spaces"] = new JsonArray(new JsonObject {
-                ["id"] = second["id"]!.DeepClone(),
-                ["metadata"] = metadata,
-                ["tabs"] = new JsonObject { ["replace"] = new JsonArray() }
-            }),
-            ["spaceOrder"] = new JsonArray(space["id"]!.DeepClone(), second["id"]!.DeepClone())
-        }))).Rejection);
-        Assert.Equal(1UL, core.Revision);
 
         // Repair keeps the first occurrence and issues the collision a fresh
         // profile, so an imported archive cannot adopt another Space's data.

@@ -168,14 +168,12 @@ final class BrowserStoreFamily {
         return core.workspaceID
     }
 
-    /// An incoming merge: the core saves the session and its journal together
-    /// before either is published.
-    func installSyncedSession(
-        _ session: BrowserSession, transaction: BrowserCoreSyncTransaction, from source: BrowserStore
-    ) throws {
-        let previous = authoritativeSession
-        try core.replaceDurably(with: session, sync: transaction)
-        reconcileStores(after: previous, from: source)
+    /// Takes records the cloud sent through `intent`, which the core saves
+    /// with its journal before it returns: every window follows, and a Space
+    /// the cloud deleted starts its cleanup. Throws the rule that refused the
+    /// records or the save that failed; either changes nothing.
+    func commitCloudRecords(_ intent: some Intent, from source: BrowserStore) throws(Rejection) {
+        try commit(intent, from: source)
         scheduleSpaceDataCleanup()
     }
 

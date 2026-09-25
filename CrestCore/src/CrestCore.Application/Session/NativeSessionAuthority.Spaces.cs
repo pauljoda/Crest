@@ -6,10 +6,6 @@ namespace CrestCore.Application;
 public sealed partial class NativeSessionAuthority {
     #region Actions - Spaces
 
-    /// Whether two sets of deletion intents name the same deletions.
-    private static bool SameDeletions(IReadOnlyList<SpaceDeletionState> left, IReadOnlyList<SpaceDeletionState> right) =>
-        left.Count == right.Count && left.All(right.Contains);
-
     private static SpaceDeletionState? PendingDeletion(SessionState value, Guid spaceId) =>
         value.SpaceDeletions.FirstOrDefault(deletion => deletion.SpaceId == spaceId);
 

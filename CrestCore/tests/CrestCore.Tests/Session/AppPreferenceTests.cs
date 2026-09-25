@@ -69,11 +69,6 @@ public sealed partial class BrowserContractsTests {
         device.Send(new SetAppPreferences(device.Workspace, preferences));
         Assert.Equal(preferences, owner.Current.AppPreferences);
 
-        // A native value edit whose header omits the record keeps the owned one.
-        var header = session.DeepClone().AsObject(); header.Remove("spaces");
-        owner.Commit(Bytes(new JsonObject { ["version"] = 1, ["metadata"] = header, ["spaces"] = new JsonArray() }));
-        Assert.Equal(preferences, owner.Current.AppPreferences);
-
         var borrowed = device.Borrow(session["spaces"]![0]!);
         var privateWorkspace = device.Attach(session.DeepClone(), WorkspaceKind.Private);
         foreach (var workspace in new[] { borrowed, privateWorkspace }) {

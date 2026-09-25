@@ -11,49 +11,24 @@ namespace CrestCore.Tests;
 
 public sealed partial class BrowserContractsTests {
     private static byte[] Bytes(JsonNode value) => Encoding.UTF8.GetBytes(value.ToJsonString());
-    private static byte[] RenameDelta(JsonNode session, string title) {
-        var space = session["spaces"]![0]!;
-        var tab = space["tabs"]![0]!.DeepClone(); tab["title"] = title;
-        return Bytes(new JsonObject {
-            ["version"] = 1,
-            ["spaces"] = new JsonArray(new JsonObject {
-                ["id"] = space["id"]!.DeepClone(),
-                ["tabs"] = new JsonObject { ["remove"] = new JsonArray(), ["upsert"] = new JsonArray(tab) }
-            })
-        });
-    }
 
-    [Fact]
-    public void DurableReplacementReservesPublicationAndCancellationKeepsTheAcceptedRevision() {
-        var session = SavedSession().Document["session"]!;
-        var authority = TestWorkspaces.Session(session);
-        var original = authority.Checkpoint().Read("core");
-        using (var cancelled = authority.ReserveReplacement(RenameDelta(session, "Not saved"))) {
-            Assert.Equal(original, authority.Checkpoint().Read("core"));
-            Assert.Throws<BrowserRuleException>(() => authority.Commit(RenameDelta(session, "Racing edit")));
-            Assert.Throws<BrowserRuleException>(() => authority.ReserveReplacement(RenameDelta(session, "Racing merge")));
-        }
-        Assert.Equal(1UL, authority.Revision);
-        using var accepted = authority.ReserveReplacement(RenameDelta(session, "Durable"));
-        var persisted = accepted.Checkpoint.Read("core");
-        accepted.Commit();
-        Assert.Equal(2UL, authority.Revision);
-        Assert.Equal(persisted, authority.Checkpoint().Read("core"));
-        Assert.Throws<BrowserRuleException>(() => accepted.Commit());
-        authority.Commit(RenameDelta(session, "Next local edit"));
-        Assert.Equal(3UL, authority.Revision);
+    /// Names the first tab of `session`'s first Space `title`, in `workspace`.
+    private static RenameTab Renaming(Guid workspace, JsonNode session, string title) {
+        var space = session["spaces"]![0]!;
+        return new(workspace, SpaceId(space), SpaceId(space["tabs"]![0]!), title);
     }
 
     [Fact]
     public void NativeAuthorityKeepsEarlierCheckpointStable() {
         var session = SavedSession().Document["session"]!;
-        var authority = TestWorkspaces.Session(session);
+        using var device = new TestDevice(session);
+        var authority = device.Authority;
         var before = authority.Checkpoint();
         var original = before.Read("core");
-        authority.Commit(RenameDelta(session, "Updated native title"));
+        device.Send(Renaming(device.Workspace, session, "Updated native title"));
         Assert.Equal(original, before.Read("core"));
         var after = JsonNode.Parse(authority.Checkpoint().Read("core"))!;
-        Assert.Equal("Updated native title", after["spaces"]![0]!["tabs"]![0]!["title"]!.GetValue<string>());
+        Assert.Equal("Updated native title", after["spaces"]![0]!["tabs"]![0]!["customTitle"]!.GetValue<string>());
         Assert.True(JsonNode.DeepEquals(session["spaces"]![0]!["branding"], after["spaces"]![0]!["branding"]));
         Assert.Empty(after["spaces"]![0]!["history"]!.AsArray());
     }

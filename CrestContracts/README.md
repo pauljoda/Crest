@@ -54,9 +54,10 @@ never saved or synced.
 builds JSON nodes without reflection. The application and domain have no native
 engine references.
 
-The native Crest apps use the `crest_app_*`, `crest_sync_*`,
-`crest_permissions_*` and `crest_session_replace_durably` entry points,
-plus `crest_core_evaluate_policy` and `crest_core_evaluate_sync`.
+The native Crest apps use the `crest_app_*`, `crest_sync_*` and
+`crest_permissions_*` entry points, plus `crest_core_evaluate_policy` and
+`crest_core_evaluate_sync`. Cloud records reach the session as
+`CloudSyncIntent`s through `crest_app_dispatch`.
 The session holds browsing data only; which Space and tab a window shows is the
 device's window state. Workspaces open and close through `crest_app_dispatch`:
 `OpenWorkspace` opens the session the core keeps in its file, a private one from
@@ -82,9 +83,8 @@ profiles it changed. The platform presents the authentication prompt and
 answers with its result; the core accepts only the pending request for the
 exact Space/profile identity, and relocking cancels it. Grants are never
 persisted or synced. The device attaches the grants to every session it shows,
-which then refuses intents with `SpaceLocked`, and native value edits
-(`crest_session_replace_durably` without a journal) that would reach a locked Space with
-`space_locked`; journal-bound sync replacements are not gated.
+which then refuses intents with `SpaceLocked`; cloud sync intents are not
+gated.
 
 The asynchronous message-based kernel (`crest_core_create` through
 `crest_core_destroy`, envelopes and adapter message routing) has been retired.

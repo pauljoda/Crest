@@ -173,28 +173,6 @@ public sealed partial class BrowserContractsTests {
     }
 
     [Fact]
-    public void AFinishThatArrivesDuringATransactionIsRecordedOnceAfterIt() {
-        var session = TwoSpaceSession();
-        var (app, engine, page, workspace) = NavigatingPage(session);
-        var authority = app.Workspace(workspace);
-        using var disposal = app;
-        // A replacement holds the session while it is saved.
-        var reserved = authority.ReserveReplacement(Bytes(new JsonObject { ["version"] = 1, ["spaces"] = new JsonArray() }));
-        app.Report(engine, new NavigationCommitted(page, "https://example.org/during", SameDocument: false));
-        app.Report(engine, new NavigationFinished(page, "https://example.org/during", "During"));
-        Assert.Empty(Own(app.Drain()));
-        Assert.Equal("https://example.com/article#one", FirstTab(authority).Url);
-
-        reserved.Commit();
-        var changes = Own(app.Drain());
-        Assert.Single(changes.OfType<NavigationRecorded>());
-        Assert.Equal(("https://example.org/during", "During"), (FirstTab(authority).Url, FirstTab(authority).Title));
-        Assert.Equal(("https://example.org/during", 1), (History(authority)[0].Url, History(authority)[0].VisitCount));
-        app.Report(engine, new NavigationFinished(page, "https://example.org/during", "During"));
-        Assert.Empty(Own(app.Drain()));
-    }
-
-    [Fact]
     public void ATabWearsItsDocumentsIconOnlyWhileItsIconFollowsThePage() {
         var session = SavedSession().Document["session"]!;
         var (app, engine, page, workspace) = NavigatingPage(session);

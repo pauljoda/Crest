@@ -2421,6 +2421,10 @@
     "typed-cloud-sync-intents": {
       "category": "internal",
       "message": "The core takes cloud sync records through typed intents and refuses a record it cannot take with a named flaw."
+    },
+    "cloud-sync-through-core-intents": {
+      "category": "internal",
+      "message": "Cloud sync merges, replacements and overwrites run through the core's typed sync intents."
     }
   }
 }

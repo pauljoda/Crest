@@ -1,4 +1,3 @@
-using System.Text;
 using System.Text.Json.Nodes;
 
 using CrestCore.Contracts;
@@ -22,8 +21,6 @@ public sealed class NativeSyncTransaction : IDisposable {
     private bool completed, committed;
     internal bool IsReadyToCommit => IsSealed && !completed;
     public NativeSyncJournal Journal { get; private set; }
-    public byte[]? Materialization { get; private set; }
-    internal IReadOnlyList<SpaceDeletionState>? MaterializedSpaceDeletions { get; private set; }
 
     #endregion
 
@@ -37,14 +34,11 @@ public sealed class NativeSyncTransaction : IDisposable {
 
     #region Actions - Sync
 
-    internal void Build(JsonObject request, NativeSyncOperation operation) {
+    /// Applies `request`, a journal mutation the transport asked for, under
+    /// the journal's own preferences.
+    internal void Apply(JsonObject request) {
         request["preferences"] = Journal.Preferences;
-        if (operation is NativeSyncOperation.Merge or NativeSyncOperation.Replace) {
-            var result = NativeSyncSessionTransition.Prepare(Journal, Encoding.UTF8.GetBytes(request.ToJsonString()), Owner.Session?.Access);
-            Journal = result.Journal;
-            MaterializedSpaceDeletions = StoredSessionCodec.DecodeSpaceDeletions(result.Materialization["session"]![StoredSessionCodec.Key.SpaceDeletions]);
-            Materialization = NativeSyncQuery.Success(result.Materialization);
-        } else Journal = Journal.Apply(request);
+        Journal = Journal.Apply(request);
         _ = Journal.Read();
     }
 

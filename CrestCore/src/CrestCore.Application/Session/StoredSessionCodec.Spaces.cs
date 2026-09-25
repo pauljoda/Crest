@@ -100,14 +100,11 @@ internal static partial class StoredSessionCodec {
     internal static SessionState DecodeSession(JsonNode? node) {
         var value = Object(node);
         var spaces = value[Key.Spaces] as JsonArray ?? throw new BrowserRuleException(BrowserRuleCodes.InvalidSavedState);
-        return DecodeSessionSettings(value) with { Spaces = spaces.Select(DecodeSpace).ToArray() };
+        return new(spaces.Select(DecodeSpace).ToArray(),
+            OptionalIdentity(value[Key.DefaultSpaceId]), OptionalIdentity(value[Key.DisposableSeedMarker]),
+            DecodeSpaceDeletions(value[Key.SpaceDeletions]) ?? [],
+            value[Key.AppPreferences] is JsonObject preferences ? DecodeAppPreferences(preferences) : null);
     }
-
-    /// A session's own members without its Spaces, as a value edit supplies them.
-    internal static SessionState DecodeSessionSettings(JsonObject value) => new([],
-        OptionalIdentity(value[Key.DefaultSpaceId]), OptionalIdentity(value[Key.DisposableSeedMarker]),
-        DecodeSpaceDeletions(value[Key.SpaceDeletions]) ?? [],
-        value[Key.AppPreferences] is JsonObject preferences ? DecodeAppPreferences(preferences) : null);
 
     internal static JsonObject Encode(SessionState session) {
         var value = new JsonObject { [Key.Spaces] = EncodeAll(session.Spaces, Encode) };

@@ -5,7 +5,8 @@ import XCTest
 @testable import Crest
 
 final class BrowserCloudRecordCodecTests: XCTestCase {
-    func testAdditiveCloudPayloadSurvivesCoreEditAndJournalRestart() throws {
+    @MainActor
+    func testAdditiveCloudPayloadSurvivesCoreEditAndJournalRestart() async throws {
         let session = BrowserSession.preview
         var journal = BrowserSyncJournal()
         try journal.stage(session: session)
@@ -28,10 +29,13 @@ final class BrowserCloudRecordCodecTests: XCTestCase {
         // A newer writer must advance the record version along with its data.
         cloud["logicalClock"] = NSNumber(value: journal.logicalClock + 1)
 
-        var merged = try journal.prepareSession(session, remoteRecords: records.map { try codec.decode($0) }, at: .now)
-        merged.spaces[0].name = "Renamed by the older client"
-        try journal.stage(session: merged)
-        let restored = try BrowserSyncJournal.decodeSnapshot(journal.encodedSnapshot())
+        let device = try BrowserSyncingDevice(session, journal: journal)
+        try device.merge(records.map { try codec.decode($0) })
+        let space = device.session.spaces[0]
+        device.harness.store.updateSpaceIdentity(
+            space.id, name: "Renamed by the older client", symbol: space.symbol, accent: space.accent)
+        await device.harness.store.flushPendingSyncPersistence()
+        let restored = try BrowserSyncJournal.decodeSnapshot(try XCTUnwrap(try device.harness.storedPart("journal")))
         let saved = try XCTUnwrap(restored.records.first { $0.id == recordID })
         let uploaded = try codec.encode(saved)
         let data = try XCTUnwrap(uploaded.encryptedValues["payload"] as? Data)

@@ -46,42 +46,5 @@ public sealed partial class NativeSessionAuthority {
     /// so only an open Space skips authentication.
     private static bool RequiresAuthentication(SpaceState space) => space.Settings.AccessPolicy != SpaceAccessPolicy.Open;
 
-    /// The command gate answers for semantic commands. A native value edit
-    /// proposes whole records instead, so it is gated on what it actually
-    /// touches: every Space whose metadata, tabs, folders, history, archive,
-    /// splits or selection this delta would change, plus one it would remove.
-    /// Sync materialization does not come through here — it commits as a
-    /// journal-bound replacement — so background convergence stays unaffected.
-    private void RequireAccessibleValueEdit(SessionState next, IEnumerable<Guid> proposed) {
-        if (access is null) return;
-        var retained = next.Spaces.Select(s => s.Id).ToHashSet();
-        var candidates = new HashSet<Guid>(proposed);
-        // Dropping a Space's records is a change even when the delta never
-        // named it, so removal is derived rather than declared.
-        foreach (var space in session.Spaces)
-            if (!retained.Contains(space.Id)) candidates.Add(space.Id);
-        foreach (var id in candidates) {
-            if (session.Spaces.FirstOrDefault(s => s.Id == id) is not { } original) continue;
-            var updated = next.Spaces.FirstOrDefault(s => s.Id == id);
-            if (updated is not null && (original == updated || OnlyRaisesProtection(original, updated))) continue;
-            RequireAccessible(id);
-        }
-    }
-
-    /// Raising protection is always allowed, exactly as it is for the command
-    /// gate. Nothing else may ride along with it.
-    private static bool OnlyRaisesProtection(SpaceState original, SpaceState updated) =>
-        updated.Settings.AccessPolicy != SpaceAccessPolicy.Open
-        && original with { Settings = original.Settings with { AccessPolicy = updated.Settings.AccessPolicy } } == updated;
-
-    private void RequireAccessible(Guid spaceId) {
-        if (access is null) return;
-        // An unknown identity is rejected by the command itself, with the error
-        // that names the real problem.
-        if (session.Spaces.FirstOrDefault(s => s.Id == spaceId) is not { } space) return;
-        var assignment = new SpaceAccessAssignment(spaceId, space.ProfileId);
-        lock (access) access.RequireAccessible(assignment, RequiresAuthentication(space));
-    }
-
     #endregion
 }

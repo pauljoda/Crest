@@ -113,48 +113,32 @@ public sealed partial class BrowserContractsTests {
 
     [Fact]
     public void ASweepWithinAMinuteOfTheLastDoesNothingUnlessRetentionChanged() {
+        const double start = 800000000, day = 86400;
         var f = SavedSession(); var session = f.Document["session"]!; var space = session["spaces"]![0]!;
         space["browsingPreferences"]!["dataRetention"] = new JsonObject { ["history"] = "oneWeek" };
-        space["history"] = new JsonArray();
+        // One visit turns a week old half a minute after the first sweep; the other is two days old.
+        space["history"] = new JsonArray(Visit(start - 7 * day + 30, "https://example.org/expiring"),
+            Visit(start - 2 * day, "https://example.org/recent"));
         using var device = new TestDevice(session);
         var core = device.Authority;
-        const double start = 800000000, day = 86400;
         void SweepAt(double seconds) {
             device.Clock.Now = StoredSessionCodec.Date(seconds);
             device.Send(new SweepExpiredRecords(device.Workspace));
         }
         SweepAt(start);
+        Assert.Equal(2, SavedHistory(core, f.Space).Count);
 
-        core.Commit(FirstVisitDelta(space, Visit(start - 8 * day, "https://example.org/expired")));
         SweepAt(start + 59);
-        Assert.Single(SavedHistory(core, f.Space));
+        Assert.Equal(2, SavedHistory(core, f.Space).Count);
         SweepAt(start + 60);
-        Assert.Empty(SavedHistory(core, f.Space));
+        Assert.Single(SavedHistory(core, f.Space));
 
-        // Shortening retention lets the next sweep apply it straight away.
-        core.Commit(FirstVisitDelta(space, Visit(start - 2 * day, "https://example.org/recent")));
-        var shorter = JsonNode.Parse(core.Checkpoint().Read("core"))!["spaces"]![0]!.DeepClone().AsObject();
-        shorter["browsingPreferences"]!["dataRetention"]!["history"] = "oneDay";
-        core.Commit(Bytes(new JsonObject {
-            ["version"] = 1,
-            ["spaces"] = new JsonArray(new JsonObject { ["id"] = shorter["id"]!.DeepClone(), ["metadata"] = shorter })
-        }));
-        SweepAt(start + 61);
+        // Shortening retention sweeps under it straight away.
+        var preferences = core.Current.Spaces[0].Settings.BrowsingPreferences;
+        device.Send(new SetBrowsingPreferences(device.Workspace, f.Space, preferences.SearchSuggestionsEnabled,
+            preferences.CurrentTabCleanup, preferences.ContentBlocking, preferences.DataRetention with { History = DataRetention.OneDay }));
         Assert.Empty(SavedHistory(core, f.Space));
     }
-
-    /// A value edit that records `entry` in the empty history of `space`.
-    private static byte[] FirstVisitDelta(JsonNode space, JsonObject entry) => Bytes(new JsonObject {
-        ["version"] = 1,
-        ["spaces"] = new JsonArray(new JsonObject {
-            ["id"] = space["id"]!.DeepClone(),
-            ["history"] = new JsonObject {
-                ["remove"] = new JsonArray(),
-                ["upsert"] = new JsonArray(entry),
-                ["order"] = new JsonArray(entry["id"]!.DeepClone())
-            }
-        })
-    });
 
     [Fact]
     public void SplitIdentityEditsKeepIndependentFieldClocksAndRejectMissingGroups() {

@@ -21,17 +21,13 @@ public sealed partial class BrowserContractsTests {
         foreach (var section in new[] { "tabs", "folders", "history", "archivedTabs", "splitGroups" })
             Assert.Empty(space[section]!.AsArray());
         Assert.Null(space["selectedTabID"]);
-        var metadata = space.DeepClone(); metadata["name"] = "Not the owner";
-        Assert.Equal("borrowed_profile_requires_owner", Assert.Throws<BrowserRuleException>(() =>
-            child.Commit(Bytes(new JsonObject {
-                ["version"] = 1,
-                ["spaces"] = new JsonArray(new JsonObject { ["id"] = space["id"]!.DeepClone(), ["metadata"] = metadata })
-            }))).Code);
+        var spaceId = SpaceId(source);
+        Assert.Equal(new BorrowedProfileRequiresOwner(borrowed), Assert.Throws<Rejected>(() =>
+            device.Send(new SetSpaceIdentity(borrowed, spaceId, "Not the owner", "globe", SpaceAccent.Teal))).Rejection);
         Assert.Equal(1UL, child.Revision);
         // A borrowed workspace opens only by borrowing, and only the Space's own profile.
         Assert.Equal(new BorrowedWorkspaceRequiresSpace(WorkspaceKind.Borrowed), Assert.Throws<Rejected>(() =>
             device.Send(new OpenWorkspace(WorkspaceKind.Borrowed, TestWorkspaces.Seed(projected)))).Rejection);
-        var spaceId = SpaceId(source);
         Assert.Equal(new SpaceProfileChanged(spaceId), Assert.Throws<Rejected>(() =>
             device.Send(new BorrowSpace(device.Workspace, spaceId, Guid.NewGuid()))).Rejection);
         Assert.Equal(new BorrowedProfileRequiresOwner(borrowed), Assert.Throws<Rejected>(() =>

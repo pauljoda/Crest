@@ -55,13 +55,13 @@ public sealed partial class CrestApp : IDisposable {
         // consults it, so a borrowed workspace unlocks with its source.
         var grants = new SpaceAccessAuthority();
         if (configuration.StorageDirectory is not { } directory) {
-            device = new(storage: null, DeviceRecords.Empty, grants, Announce, RequestTurn, CloseOrphan);
+            device = new(storage: null, DeviceRecords.Empty, grants, Announce, RequestTurn, CloseBorrower);
             pages = new(device, engines, clock, ids);
             access = new(device, grants);
             return;
         }
         storage = SessionStorage.Open(directory, Announce, out var loaded);
-        device = new(storage, storage.Device, grants, Announce, RequestTurn, CloseOrphan);
+        device = new(storage, storage.Device, grants, Announce, RequestTurn, CloseBorrower);
         pages = new(device, engines, clock, ids);
         access = new(device, grants);
         try {

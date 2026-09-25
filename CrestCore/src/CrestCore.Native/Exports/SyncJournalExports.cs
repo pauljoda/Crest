@@ -87,33 +87,5 @@ public static unsafe partial class Exports {
     [UnmanagedCallersOnly(EntryPoint = "crest_sync_journal_release", CallConvs = [typeof(CallConvCdecl)])]
     public static int SyncJournalRelease(ulong handle) => SyncJournals.TryRemove(handle, out _) ? CoreStatus.Ok : CoreStatus.InvalidHandle;
 
-    [UnmanagedCallersOnly(EntryPoint = "crest_sync_session_prepare", CallConvs = [typeof(CallConvCdecl)])]
-    public static int SyncSessionPrepare(ulong handle, byte* input, nuint count, ulong* nextJournal, ulong* query) {
-        if (nextJournal == null || query == null) return CoreStatus.InvalidArgument;
-        *nextJournal = 0; *query = 0;
-        if (input == null || count == 0) return CoreStatus.InvalidArgument;
-        if (count > NativeSyncJournal.MaximumBytes) return CoreStatus.LimitExceeded;
-        if (!SyncJournals.TryGetValue(handle, out var journal)) return CoreStatus.InvalidHandle;
-        ulong retainedJournal = 0;
-        try {
-            var transition = NativeSyncSessionTransition.Prepare(journal, new(input, (int)count));
-            // Serialize both candidates before publishing either handle. An
-            // oversized result cannot hand the caller half a transition.
-            _ = transition.Journal.Read();
-            var result = NativeSyncQuery.Success(transition.Materialization);
-            var id = checked((ulong)Interlocked.Increment(ref nextHandle));
-            if (!SyncJournals.TryAdd(id, transition.Journal)) return CoreStatus.InternalError;
-            retainedJournal = id;
-            *query = RetainSyncQuery(result); *nextJournal = id;
-            return CoreStatus.Ok;
-        } catch (Exception error) {
-            if (retainedJournal != 0) SyncJournals.TryRemove(retainedJournal, out _);
-            if (error is NativeSyncDocumentException semantic) {
-                try { *query = RetainSyncQuery(NativeSyncQuery.Failure(semantic)); } catch { return CoreStatus.InternalError; }
-            }
-            return SyncJournalError(error);
-        }
-    }
-
     #endregion
 }

@@ -158,30 +158,15 @@ public sealed partial class BrowserContractsTests {
     }
 
     [Fact]
-    public void SessionAndSyncPublishTogetherAndCannotAttachToAnotherOrPrivateWorkspace() {
+    public void ASyncComponentAttachesToOneStoredWorkspaceOnly() {
         var fixture = SavedSession(); var session = fixture.Document["session"]!;
-        var record = SyncTabRecord(fixture.Tab, fixture.Space, 9, Guid.NewGuid());
-        var document = JournalDocument(record);
-        var initial = new NativeSyncJournal(Bytes(document));
+        var initial = new NativeSyncJournal(Bytes(JournalDocument(SyncTabRecord(fixture.Tab, fixture.Space, 9, Guid.NewGuid()))));
         var sync = new NativeSyncAuthority(initial);
         var owner = TestWorkspaces.Session(session);
         owner.AttachSync(sync);
         owner.AttachSync(sync); // A second window shares this family.
         Assert.Throws<BrowserRuleException>(() => TestWorkspaces.Session(session).AttachSync(sync));
         Assert.Throws<BrowserRuleException>(() => TestWorkspaces.Session(session, WorkspaceKind.Private).AttachSync(new(initial)));
-        sync.Flush();
-        var launched = sync.Snapshot;
-        var request = JournalCommand(document, "acknowledge", new() { ["acknowledgements"] = new JsonArray(new JsonObject { ["id"] = record["id"]!.DeepClone() }) });
-        using var transaction = sync.Prepare(request);
-        Assert.True(transaction.Seal());
-        using var replacement = owner.ReserveReplacement(RenameDelta(session, "Durable synced tab"));
-        replacement.BindSync(transaction);
-        Assert.Same(launched, sync.Snapshot);
-        Assert.Equal(1UL, owner.Revision);
-        replacement.Commit();
-        Assert.Equal(2UL, owner.Revision);
-        Assert.Same(transaction.Journal, sync.Snapshot);
-        transaction.Commit(); // Native projection publishes after paired commit.
     }
 
     [Fact]

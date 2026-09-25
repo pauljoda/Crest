@@ -127,14 +127,11 @@ final class BrowserCoreSyncAuthority: @unchecked Sendable {
         precondition(crest_sync_authority_flush(handle) == CREST_OK)
     }
 
-    /// Prepares one journal mutation or session materialization: `request` is a
-    /// `BrowserCoreSync.Mutation`, or a `BrowserCoreSync.Request` carrying a
-    /// `SessionPreparation`. The core waits for a stage in progress first.
-    /// Throws `BrowserSyncError.unreadableJournal`, and prepares nothing, while
-    /// the journal cannot be read.
-    func prepare<Request: Encodable>(
-        _ request: Request, session: BrowserSession? = nil
-    ) throws -> BrowserCoreSyncTransaction {
+    /// Prepares one journal mutation, a `BrowserCoreSync.Mutation`. The core
+    /// waits for a stage in progress first. Throws
+    /// `BrowserSyncError.unreadableJournal`, and prepares nothing, while the
+    /// journal cannot be read.
+    func prepare<Request: Encodable>(_ request: Request) throws -> BrowserCoreSyncTransaction {
         let current = try journal()
         let data = try JSONEncoder().encode(request)
         guard data.count <= 64 * 1024 * 1024 else { throw CoreError.tooLarge }
@@ -152,19 +149,9 @@ final class BrowserCoreSyncAuthority: @unchecked Sendable {
         }
         let value = BrowserCoreSyncTransaction(handle: transaction, owner: self)
         let snapshot = BrowserCoreSyncJournal(handle: journalHandle, preferences: current.preferences)
-        // The query is consumed even if decoding the journal fails.
-        var materialized: BrowserSession?
-        if query != 0 {
-            guard let session else {
-                crest_sync_query_release(query)
-                throw CoreError.rejected(CREST_INVALID_ARGUMENT)
-            }
-            materialized = try BrowserCoreSync.consumeMaterializedSession(query, from: session)
-        }
         let next = try BrowserSyncJournal.acceptingCoreSnapshot(snapshot)
         guard next.deviceID == current.deviceID else { throw CoreError.rejected(CREST_INVALID_MESSAGE) }
         value.journal = next
-        value.session = materialized
         return value
     }
     /// Keeps the journal a transaction published as the core's `version`
@@ -188,7 +175,6 @@ final class BrowserCoreSyncTransaction {
     let handle: UInt64
     private let owner: BrowserCoreSyncAuthority
     fileprivate(set) var journal: BrowserSyncJournal!
-    fileprivate(set) var session: BrowserSession?
     fileprivate init(handle: UInt64, owner: BrowserCoreSyncAuthority) {
         self.handle = handle
         self.owner = owner

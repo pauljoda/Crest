@@ -235,31 +235,41 @@ extension BrowserStore {
 // MARK: - Persistence
 
 extension BrowserStore {
+    /// Merges records the cloud sent into the session and its journal, which
+    /// the core saves together before this returns.
     func mergeRemoteSyncRecords(_ records: [BrowserSyncRecord]) throws {
-        guard let syncCoordinator else { return }
-        _ = try syncCoordinator.merge(remoteRecords: records, into: session) { next, transaction in
-            try self.family.installSyncedSession(next, transaction: transaction, from: self)
-        }
-        localSyncErrorDescription = nil
+        try commitCloudRecords(records) { MergeSyncRecords(records: $0) }
     }
 
+    /// Rebases the journal above the cloud's `remoteRecords`, so this
+    /// device's session uploads over them.
     func prepareToOverwriteCloud(with remoteRecords: [BrowserSyncRecord]) throws {
-        guard let syncCoordinator else { return }
-        try syncCoordinator.prepareToOverwriteCloud(with: session, remoteRecords: remoteRecords)
-        localSyncErrorDescription = nil
+        try commitCloudRecords(remoteRecords) { OverwriteCloud(records: $0) }
     }
 
+    /// Replaces the session and its journal with what the cloud holds.
     func replaceLocalWithCloud(_ remoteRecords: [BrowserSyncRecord]) throws {
-        guard let syncCoordinator else { return }
-        _ = try syncCoordinator.replaceLocalWithCloud(remoteRecords, replacing: session) { next, transaction in
-            try self.family.installSyncedSession(next, transaction: transaction, from: self)
-        }
-        localSyncErrorDescription = nil
+        try commitCloudRecords(remoteRecords) { ReplaceWithCloudRecords(records: $0) }
     }
 
+    /// Replaces the session with what the cloud holds while it is still the
+    /// disposable seed a first launch made; the core leaves any other alone.
     func replaceDisposableSeedWithCloud(_ remoteRecords: [BrowserSyncRecord]) throws {
-        guard session.hasDisposableSeedState else { return }
-        try replaceLocalWithCloud(remoteRecords)
+        try commitCloudRecords(remoteRecords) { ReplaceSeedWithCloudRecords(records: $0) }
+    }
+
+    /// Sends `records` to the core as the cloud intent `intent` makes of
+    /// them. A window without sync sends nothing, and while this build cannot
+    /// read the journal sync stays paused. Throws the rule that refused the
+    /// records, the save that failed, or the journal this build cannot read;
+    /// each changes nothing.
+    private func commitCloudRecords<Cloud: Intent>(
+        _ records: [BrowserSyncRecord], as intent: ([SyncRecord]) -> Cloud
+    ) throws {
+        guard let syncCoordinator else { return }
+        try syncCoordinator.requireReadableJournal()
+        try family.commitCloudRecords(intent(try records.map { try SyncRecord(browser: $0) }), from: self)
+        localSyncErrorDescription = nil
     }
 
     /// Returns once the sync stages the core queued for edits accepted before

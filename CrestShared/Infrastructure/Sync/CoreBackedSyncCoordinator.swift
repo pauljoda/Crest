@@ -4,9 +4,6 @@ import Foundation
 /// sync component. The core stages the session's accepted edits itself; this
 /// adapter neither orders nor stages them.
 final class BrowserSyncCoordinator: @unchecked Sendable {
-    /// Commits a prepared session with the transaction's journal, both
-    /// durably, before the journal is published.
-    typealias Installation = (BrowserSession, BrowserCoreSyncTransaction) throws -> Void
     let core: BrowserCoreSyncAuthority
     let status: BrowserSyncCoordinatorStatus
     /// Where a memory-only composition keeps a copy of its journal; nil when
@@ -88,55 +85,6 @@ final class BrowserSyncCoordinator: @unchecked Sendable {
         }
     }
 
-    func merge(
-        remoteRecords: [BrowserSyncRecord], into localSession: BrowserSession, at date: Date = .now,
-        install: Installation? = nil
-    ) throws -> BrowserSession {
-        try prepareSession(localSession, records: remoteRecords, replacing: false, at: date, install: install)
-    }
-
-    func replaceLocalWithCloud(
-        _ remoteRecords: [BrowserSyncRecord], replacing localSession: BrowserSession,
-        at date: Date = .now, install: Installation? = nil
-    ) throws -> BrowserSession {
-        try prepareSession(localSession, records: remoteRecords, replacing: true, at: date, install: install)
-    }
-
-    private func prepareSession(
-        _ session: BrowserSession, records: [BrowserSyncRecord], replacing: Bool,
-        at date: Date, install: Installation?
-    ) throws -> BrowserSession {
-        try mutationLock.withLock {
-            // Validate the decoded transport boundary before entering the core.
-            try readJournal().validateIncoming(records, checksSpace: !replacing)
-            let emptySpace: BrowserSpace? =
-                if replacing && records.isEmpty {
-                    Self.blankSpace()
-                } else if session.spaces.isEmpty {
-                    BrowserSession.makeBlankSpace(number: 1)
-                } else {
-                    nil
-                }
-            let preparation = BrowserCoreSync.SessionPreparation(
-                session: BrowserCoreSessionAuthority.compact(session), records: records,
-                now: date.timeIntervalSinceReferenceDate, emptySpace: emptySpace)
-            let request = BrowserCoreSync.Request(operation: replacing ? .replace : .merge, arguments: preparation)
-            return try commit(request, session: session, install: install)?.session ?? session
-        }
-    }
-
-    func prepareToOverwriteCloud(
-        with session: BrowserSession, remoteRecords: [BrowserSyncRecord], at date: Date = .now
-    ) throws {
-        try mutationLock.withLock {
-            try readJournal().validateIncoming(remoteRecords, checksSpace: false)
-            _ = try commit(
-                BrowserCoreSync.Mutation(
-                    operation: .overwrite,
-                    arguments: BrowserCoreSync.OverwriteArguments(session: session, records: remoteRecords, at: date)))
-        }
-    }
-
     func markUploaded(_ recordIDs: Set<BrowserSyncRecordID>) throws {
         try acknowledge(BrowserCoreSync.AcknowledgementArguments(recordIDs))
     }
@@ -151,21 +99,11 @@ final class BrowserSyncCoordinator: @unchecked Sendable {
         }
     }
 
-    private func commit<Request: Encodable>(
-        _ request: Request, session: BrowserSession? = nil, install: Installation? = nil
-    ) throws -> BrowserCoreSyncTransaction? {
-        let transaction = try core.prepare(request, session: session)
+    private func commit<Request: Encodable>(_ request: Request) throws -> BrowserCoreSyncTransaction? {
+        let transaction = try core.prepare(request)
         guard try transaction.seal() else { return nil }
-        if let install, let next = transaction.session { try install(next, transaction) }
         try persistence?.save(transaction.journal)
         try transaction.commit()
         return transaction
-    }
-
-    private static func blankSpace() -> BrowserSpace {
-        let tab = BrowserTab.startPage()
-        return BrowserSpace(
-            id: SpaceID(), profile: BrowsingProfile(), name: "Space 1",
-            symbol: "square.grid.2x2.fill", accent: .indigo, folders: [], tabs: [tab])
     }
 }

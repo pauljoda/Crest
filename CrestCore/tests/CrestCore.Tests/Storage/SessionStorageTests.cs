@@ -123,8 +123,8 @@ public sealed unsafe partial class BrowserContractsTests {
         using (var app = new CrestApp(new AppConfiguration(directory.Path))) {
             Assert.Null(app.StoredSync);
             app.Send(Adoption(document));
-            var session = StoredSession(app);
-            for (int edit = 1; edit <= 20; edit++) session.Commit(RenameDelta(document, $"Edit {edit}"));
+            var workspace = TestWorkspaces.OpenStored(app).Workspace;
+            for (int edit = 1; edit <= 20; edit++) app.Send(Renaming(workspace, document, $"Edit {edit}"));
             var announced = DrainUntil(app, changes => changes.OfType<Saved>().Any(saved => saved.Revision == 21));
             var saved = announced.OfType<Saved>().Select(change => change.Revision).ToArray();
             Assert.Equal(21, saved[^1]);
@@ -134,7 +134,7 @@ public sealed unsafe partial class BrowserContractsTests {
         }
         using var reopened = new CrestApp(new AppConfiguration(directory.Path));
         var tabs = StoredDocument(reopened)["spaces"]![0]!["tabs"]!.AsArray();
-        Assert.Equal("Edit 20", tabs[0]!["title"]!.GetValue<string>());
+        Assert.Equal("Edit 20", tabs[0]!["customTitle"]!.GetValue<string>());
     }
 
     [Fact]
@@ -149,8 +149,7 @@ public sealed unsafe partial class BrowserContractsTests {
                 connection.Execute($"CREATE TRIGGER log_{operation} AFTER {operation} ON checkpoint WHEN NEW.part NOT LIKE 'log.%' "
                     + "BEGIN INSERT INTO checkpoint(part, data) VALUES ('log.' || NEW.part || '.' || hex(randomblob(8)), x'01'); END");
         }
-        var session = StoredSession(app);
-        session.Commit(RenameDelta(document, "Only the title"));
+        app.Send(Renaming(TestWorkspaces.OpenStored(app).Workspace, document, "Only the title"));
         _ = DrainUntil(app, changes => changes.OfType<Saved>().Any(saved => saved.Revision == 2));
 
         var written = StoredParts(directory.File).Keys.Where(part => part.StartsWith("log.", StringComparison.Ordinal))
@@ -252,8 +251,7 @@ public sealed unsafe partial class BrowserContractsTests {
         var journal = JournalDocument(record);
         using var app = new CrestApp(new AppConfiguration(directory.Path));
         app.Send(Adoption(document, journal));
-        var session = StoredSession(app);
-        session.Commit(RenameDelta(document, "Edited before staging"));
+        app.Send(Renaming(TestWorkspaces.OpenStored(app).Workspace, document, "Edited before staging"));
         var acknowledge = JournalCommand(journal, "acknowledge",
             new() { ["acknowledgements"] = new JsonArray(new JsonObject { ["id"] = record["id"]!.DeepClone() }) });
         using var transaction = app.StoredSync!.Prepare(acknowledge);
@@ -263,7 +261,7 @@ public sealed unsafe partial class BrowserContractsTests {
         // Whichever write came first, the journal is on disk with the session it followed.
         var stored = StoredParts(directory.File);
         Assert.True(stored["journal"].AsSpan().SequenceEqual(transaction.Journal.Read()));
-        Assert.Equal("Edited before staging", StoredCore(stored)["spaces"]![0]!["tabs"]![0]!["title"]!.GetValue<string>());
+        Assert.Equal("Edited before staging", StoredCore(stored)["spaces"]![0]!["tabs"]![0]!["customTitle"]!.GetValue<string>());
     }
 
     [Fact]

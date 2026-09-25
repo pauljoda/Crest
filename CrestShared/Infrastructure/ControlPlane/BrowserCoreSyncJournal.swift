@@ -65,33 +65,6 @@ final class BrowserCoreSyncJournal: @unchecked Sendable {
         return try applying(.preferences, preferences: preferences, arguments: BrowserCoreNoArguments()).read()
     }
 
-    func preparingSession(
-        _ session: BrowserSession, records: [BrowserSyncRecord], preferences: BrowserSyncPreferences,
-        replacing: Bool, emptySpace: BrowserSpace?, at date: Date
-    ) throws -> (journal: BrowserCoreSyncJournal, session: BrowserSession) {
-        let preparation = BrowserCoreSync.SessionPreparation(
-            session: BrowserCoreSessionAuthority.compact(session), records: records, preferences: preferences,
-            now: date.timeIntervalSinceReferenceDate,
-            emptySpace: emptySpace ?? (session.spaces.isEmpty ? BrowserSession.makeBlankSpace(number: 1) : nil))
-        let data = try JSONEncoder().encode(
-            BrowserCoreSync.Request(operation: replacing ? .replace : .merge, arguments: preparation))
-        guard data.count <= Self.byteLimit else { throw JournalError.tooLarge }
-        var journalHandle: UInt64 = 0
-        var queryHandle: UInt64 = 0
-        let result = data.withUnsafeBytes {
-            crest_sync_session_prepare(
-                handle, $0.bindMemory(to: UInt8.self).baseAddress, data.count, &journalHandle, &queryHandle)
-        }
-        guard result == CREST_OK else {
-            if queryHandle != 0 { let _: Bool = try BrowserCoreSync.readQuery(queryHandle) }
-            if result == CREST_INVALID_STATE { throw BrowserSyncError.logicalClockExhausted }
-            throw JournalError.rejected(result)
-        }
-        let next = BrowserCoreSyncJournal(handle: journalHandle, preferences: preferences)
-        let materialized = try BrowserCoreSync.consumeMaterializedSession(queryHandle, from: session)
-        return (next, materialized)
-    }
-
     func read() throws -> Data { try Self.read(handle) }
 
     private static func read(_ handle: UInt64) throws -> Data {

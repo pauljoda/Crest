@@ -83,16 +83,6 @@ enum BrowserCoreSync {
         }
     }
 
-    /// A materialization of a proposed session against sync records, as the
-    /// journal's session preparation and the sync authority read it.
-    struct SessionPreparation: Encodable {
-        let session: BrowserSession
-        let records: [BrowserSyncRecord]
-        var preferences: BrowserSyncPreferences?
-        let now: TimeInterval
-        var emptySpace: BrowserSpace?
-    }
-
     private struct MaterializeRequest: Encodable {
         let session: BrowserSession
         let preferences: BrowserSyncPreferences
@@ -165,11 +155,6 @@ enum BrowserCoreSync {
             emptySpace: session.spaces.isEmpty ? BrowserSession.makeBlankSpace(number: 1) : nil)
         let result: RepairedSession = try query(.sessionRepair, request)
         return try reattachingAssets(result, from: session, byPosition: true)
-    }
-
-    static func consumeMaterializedSession(_ handle: UInt64, from source: BrowserSession) throws -> BrowserSession {
-        let repaired: RepairedSession = try readQuery(handle)
-        return try reattachingAssets(repaired, from: source, byPosition: false)
     }
 
     private static func reattachingAssets(_ repaired: RepairedSession, from source: BrowserSession, byPosition: Bool)
