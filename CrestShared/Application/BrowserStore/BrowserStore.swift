@@ -65,9 +65,17 @@ final class BrowserStore {
     var isPrivateBrowsing: Bool { browsingMode.isPrivate }
     var isTemporaryWorkspace: Bool { temporarySourceAssignment != nil }
     var temporarySourceAssignment: BrowserSpaceRuntimeAssignment? { family.temporarySourceAssignment }
+    /// How many records of the stored session's sync journal wait to upload,
+    /// as the core last published it. A disposable seed uploads nothing.
     var pendingSyncRecordCount: Int {
-        guard !session.hasDisposableSeedState else { return 0 }
-        return syncCoordinator?.journal.pendingRecordIDs.count ?? 0
+        guard !session.hasDisposableSeedState, syncCoordinator != nil else { return 0 }
+        return core.state.syncJournal?.pendingRecords ?? 0
+    }
+    /// How many records the stored session's sync journal holds, as the core
+    /// last published it.
+    var syncRecordCount: Int {
+        guard syncCoordinator != nil else { return 0 }
+        return core.state.syncJournal?.records ?? 0
     }
     var localSyncCoordinatorStatus: BrowserSyncCoordinatorStatus? { syncCoordinator?.status }
 
@@ -351,9 +359,7 @@ extension BrowserStore: BrowserCloudSyncModelGateway {
 extension BrowserStore: BrowserCloudSyncWorkflowGateway {
     var hasDisposableCloudSyncSeed: Bool { session.hasDisposableSeedState }
 
-    var cloudSyncLocalRecordCount: Int {
-        syncCoordinator?.journal.records.count ?? 0
-    }
+    var cloudSyncLocalRecordCount: Int { syncRecordCount }
 
     var cloudSyncPendingRecordCount: Int { pendingSyncRecordCount }
 

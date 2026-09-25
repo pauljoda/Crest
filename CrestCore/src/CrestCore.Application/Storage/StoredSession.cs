@@ -39,9 +39,11 @@ internal sealed record StoredSession(SessionState? Session, NativeSyncJournal? J
     /// was written by a newer release.
     internal static NativeSyncJournal DecodeJournal(ReadOnlySpan<byte> journal) {
         try {
-            var version = JsonNode.Parse(journal, documentOptions: DocumentOptions)![SchemaVersionField]!.GetValue<int>();
-            if (version > JournalSchemaVersion) throw new Rejected(new StorageFromNewerApp());
-            return new NativeSyncJournal(journal);
+            if (journal.Length is 0 or > NativeSyncJournal.MaximumBytes) throw new Rejected(new StorageUnreadable(StorageFailure.Damaged));
+            // The journal is read once: the version first, then the journal itself.
+            var document = JsonNode.Parse(journal, documentOptions: DocumentOptions)!.AsObject();
+            if (document[SchemaVersionField]!.GetValue<int>() > JournalSchemaVersion) throw new Rejected(new StorageFromNewerApp());
+            return new NativeSyncJournal(document);
         } catch (Exception error) when (IsUndecodable(error)) {
             throw new Rejected(new StorageUnreadable(StorageFailure.Damaged));
         }

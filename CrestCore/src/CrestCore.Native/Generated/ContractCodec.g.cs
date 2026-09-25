@@ -14,7 +14,7 @@ namespace CrestCore.Native;
 public static class ContractCodec {
     /// <summary>SHA-256 of the canonical contract schema.</summary>
     public static ReadOnlySpan<byte> Fingerprint => [
-        0x21, 0xa6, 0x33, 0xc2, 0x0d, 0x8c, 0x40, 0x22, 0x9b, 0xe2, 0x52, 0x07, 0x6e, 0xed, 0xab, 0x8a, 0xd0, 0x05, 0x5b, 0x33, 0x0a, 0x49, 0xae, 0xc5, 0x50, 0x60, 0x7a, 0x73, 0xc3, 0x88, 0x03, 0x2a
+        0x0b, 0x58, 0x7c, 0x7c, 0xa9, 0x13, 0x45, 0x6e, 0x88, 0x7f, 0xb2, 0x81, 0xd3, 0x6d, 0x53, 0x45, 0xde, 0x14, 0xf0, 0x4c, 0x64, 0xa5, 0xb9, 0xc6, 0xfa, 0xf7, 0xa6, 0xcd, 0xa2, 0x0c, 0xfd, 0xc8
     ];
 
     /// <summary>SHA-256 of the engine contract alone, which an engine binding registers with.</summary>
@@ -7302,6 +7302,7 @@ public static class ContractCodec {
         ArgumentNullException.ThrowIfNull(reader);
         return new SyncJournalChanged(
             reader.ReadGuid(),
+            reader.ReadInt32(),
             reader.ReadInt32());
     }
 
@@ -7310,6 +7311,7 @@ public static class ContractCodec {
         ArgumentNullException.ThrowIfNull(value);
         writer.WriteGuid(value.WorkspaceId);
         writer.WriteInt32(value.PendingRecords);
+        writer.WriteInt32(value.Records);
     }
 
     public static SyncStagingFailed ReadSyncStagingFailed(WireReader reader) {

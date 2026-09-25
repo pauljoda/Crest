@@ -147,15 +147,15 @@ public sealed class NativeSyncAuthority {
             Announce(workspace => new SyncStagingFailed(workspace, Failure(error)));
             return true;
         }
-        AnnounceStaged();
         return true;
     }
 
-    /// Tells the transport the journal holds the session's newest stage.
+    /// Tells the transport what the journal holds now: how many records, and
+    /// how many of them wait to upload. Called with no lock held.
     internal void AnnounceStaged() {
-        int pendingRecords;
-        lock (NativeSessionAuthority.Gate) pendingRecords = journal.PendingCount;
-        Announce(workspace => new SyncJournalChanged(workspace, pendingRecords));
+        int pendingRecords, records;
+        lock (NativeSessionAuthority.Gate) (pendingRecords, records) = (journal.PendingCount, journal.RecordCount);
+        Announce(workspace => new SyncJournalChanged(workspace, pendingRecords, records));
     }
 
     /// Returns once every stage requested before the call has committed or

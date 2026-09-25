@@ -15,8 +15,9 @@ public sealed partial class NativeSessionAuthority {
 
     #region Actions - Replacement
 
-    /// Makes `value` this session's sync component. The first time, it stages
-    /// the session as it is, as a launch does.
+    /// Makes `value` this session's sync component and tells the transport
+    /// what its journal holds. The first time, it stages the session as it is,
+    /// as a launch does.
     internal void AttachSync(NativeSyncAuthority value) {
         SessionState? attached = null;
         lock (Gate) {
@@ -27,6 +28,7 @@ public sealed partial class NativeSessionAuthority {
             if (sync is null) attached = session;
             sync = value; value.Session = this;
         }
+        value.AnnounceStaged();
         if (attached is { DisposableSeedMarker: null }) value.Queue(attached, attached, SyncStaging.Launch);
     }
 

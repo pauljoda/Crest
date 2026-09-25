@@ -21,16 +21,22 @@ public sealed class NativeSyncJournal {
     internal JsonNode Preferences => metadata["preferences"]!.DeepClone();
     /// How many records wait to upload.
     internal int PendingCount => pending.Count;
+    /// How many records the journal holds, tombstones included.
+    internal int RecordCount => records.Count;
 
     #endregion
 
     #region Constructors
 
-    public NativeSyncJournal(ReadOnlySpan<byte> bytes) {
-        var source = Parse(bytes);
+    public NativeSyncJournal(ReadOnlySpan<byte> bytes) : this(Parse(bytes)) { }
+
+    /// The journal `source`, a stored journal parsed once, which it takes
+    /// over: nothing else may hold it.
+    internal NativeSyncJournal(JsonObject source) {
         if (source["schemaVersion"]!.GetValue<int>() != 1) throw new BrowserRuleException(BrowserRuleCodes.VersionMismatch);
-        metadata = source.DeepClone().AsObject();
-        metadata.Remove("records"); metadata.Remove("pendingRecordIDs");
+        // Every member but the records, which the journal keeps by name.
+        metadata = new JsonObject(source.Where(member => member.Key is not ("records" or "pendingRecordIDs"))
+            .Select(member => KeyValuePair.Create(member.Key, member.Value?.DeepClone())));
         _ = Id(metadata["deviceID"]);
         records = RecordMap(source["records"]!.AsArray());
         pending = source["pendingRecordIDs"]!.AsArray().Select(n => Name(n!)).ToHashSet(StringComparer.Ordinal);

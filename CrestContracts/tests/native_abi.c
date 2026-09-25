@@ -175,6 +175,13 @@ static void opened_workspace(const crest_buffer_t* buffer, size_t at, uint8_t wo
     assert(buffer->bytes[at + 17] == kind);
     memcpy(workspace, buffer->bytes + at + 1, 16);
 }
+/* Whether a SyncJournalChanged for `workspace` is at `at`: its tag, the
+ * workspace it names, then the journal's pending and record counts, two
+ * int32s. */
+static int journal_changed(const crest_buffer_t* buffer, size_t at, const uint8_t workspace[16]) {
+    return at + 25 <= buffer->length && buffer->bytes[at] == CREST_CHANGE_SYNC_JOURNAL_CHANGED
+        && memcmp(buffer->bytes + at + 1, workspace, 16) == 0;
+}
 /* Opens a workspace of `kind` from `seed` in `app` and answers its identity:
  * the answer is its WorkspaceOpened alone. */
 static void open_seeded(uint64_t app, uint8_t kind, const char* seed, size_t length, uint8_t workspace[16]) {
@@ -463,11 +470,13 @@ static void storage_boundary(void) {
     }
     assert(saves == 1);
     assert(crest_app_sync(app, &sync) == CREST_OK && sync != 0);
-    /* The stored session's workspace, which a saved window shows. Opening it
-     * again while it is open publishes the same identity again. */
+    /* The stored session's workspace, which a saved window shows, then what
+     * the journal it attached holds. Opening it again while it is open
+     * publishes the same identity again, and nothing else. */
     uint8_t workspace[16] = { 0 }, again[16] = { 0 };
-    assert(crest_app_dispatch(app, stored, opening_stored, &buffer) == CREST_OK && buffer.bytes[0] == 1);
+    assert(crest_app_dispatch(app, stored, opening_stored, &buffer) == CREST_OK && buffer.bytes[0] == 2);
     opened_workspace(&buffer, 1, workspace, persistent_kind);
+    assert(journal_changed(&buffer, buffer.length - 25, workspace));
     crest_buffer_free(&buffer);
     assert(crest_app_dispatch(app, stored, opening_stored, &buffer) == CREST_OK && buffer.bytes[0] == 1);
     opened_workspace(&buffer, 1, again, persistent_kind);
@@ -500,20 +509,19 @@ static void storage_boundary(void) {
     assert(crest_sync_authority_release(sync) == CREST_OK);
     assert(crest_app_destroy(app) == CREST_OK);
 
-    /* A second launch opens what the first one saved. Its launch save, which
-     * finds nothing to change, may be announced before or after
-     * WorkspaceOpened: a Saved is its tag and an int64. */
+    /* A second launch opens what the first one saved, then what its journal
+     * holds. Its launch save, which finds nothing to change, may be announced
+     * before WorkspaceOpened, before SyncJournalChanged or after it: a Saved
+     * is its tag and an int64. */
     assert(crest_app_create(fingerprint, sizeof(fingerprint), configuration, configured, &app, &buffer) == CREST_OK);
     assert(crest_app_sync(app, &sync) == CREST_OK && sync != 0);
     assert(crest_app_dispatch(app, stored, opening_stored, &buffer) == CREST_OK);
-    size_t at = 1, announced = 1;
+    size_t at = 1, announced = 2;
     for (; at < buffer.length && buffer.bytes[at] == CREST_CHANGE_SAVED; at += 9) announced++;
-    if (buffer.bytes[0] == announced + 1) {
-        assert(buffer.length > at + 9 && buffer.bytes[buffer.length - 9] == CREST_CHANGE_SAVED);
-        announced++;
-    }
-    assert(buffer.bytes[0] == announced);
+    assert(buffer.bytes[0] == announced || buffer.bytes[0] == announced + 1);
     opened_workspace(&buffer, at, again, persistent_kind);
+    assert(journal_changed(&buffer, buffer.length - 25, again)
+        || (journal_changed(&buffer, buffer.length - 34, again) && buffer.bytes[buffer.length - 9] == CREST_CHANGE_SAVED));
     crest_buffer_free(&buffer);
     assert(crest_sync_authority_release(sync) == CREST_OK);
     assert(crest_app_destroy(app) == CREST_OK);

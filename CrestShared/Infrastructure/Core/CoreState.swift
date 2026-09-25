@@ -34,6 +34,10 @@ final class CoreState {
     /// Why the core could not stage the session's latest edits for sync, until
     /// a later stage succeeds.
     var syncStagingFailure: SyncStagingFailure?
+    /// What the stored session's sync journal holds, as the core last
+    /// published it: its records and those waiting to upload. Nil until the
+    /// core attaches the journal, and for a core that keeps nothing.
+    var syncJournal: SyncJournalChanged?
     /// This process's access to each Space profile that holds a grant or is
     /// waiting on the device owner, as the core last published it. A profile
     /// missing here holds no grant. Stored before it is announced; see

@@ -70,9 +70,10 @@ public sealed class NativeSyncTransaction : IDisposable {
     }
 
     /// Publishes a sealed journal after saving it, with the newest accepted
-    /// session, when its session keeps a file. A journal that a session
-    /// replacement already saved and published is left alone. A failed save
-    /// leaves the transaction pending for the caller to release.
+    /// session, when its session keeps a file, then tells the transport what
+    /// it holds. A journal that a session replacement already saved and
+    /// published is left alone. A failed save leaves the transaction pending
+    /// for the caller to release.
     public void CommitDurably() {
         lock (NativeSessionAuthority.Gate) {
             if (committed) return;
@@ -80,6 +81,7 @@ public sealed class NativeSyncTransaction : IDisposable {
         }
         Owner.Session?.Storage?.SaveJournal(Journal);
         Commit();
+        Owner.AnnounceStaged();
     }
 
     public void Dispose() {

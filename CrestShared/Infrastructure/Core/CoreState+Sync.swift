@@ -1,8 +1,10 @@
 import Foundation
 
 extension CoreState {
-    /// A stage reached the journal, so the last failure no longer stands.
+    /// The journal changed. A stage reached it, so the last failure no longer
+    /// stands.
     func apply(_ change: SyncJournalChanged) {
+        syncJournal = change
         syncStagingFailure = nil
     }
 

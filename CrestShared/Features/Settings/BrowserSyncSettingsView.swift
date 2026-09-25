@@ -98,7 +98,7 @@ struct BrowserSyncSettingsView: View {
                 LabeledContent("Local journal", value: localJournalStatus)
                 LabeledContent(
                     "Local records",
-                    value: (browser.syncCoordinator?.journal.records.count ?? 0).formatted()
+                    value: browser.syncRecordCount.formatted()
                 )
                 LabeledContent(
                     "Pending uploads",

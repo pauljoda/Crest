@@ -2181,6 +2181,7 @@ struct SweepExpiredRecords: Intent, Equatable, Sendable {
 struct SyncJournalChanged: Equatable, Sendable {
     let workspaceID: UUID
     let pendingRecords: Int
+    let records: Int
 }
 
 struct SyncStagingFailed: Equatable, Sendable {

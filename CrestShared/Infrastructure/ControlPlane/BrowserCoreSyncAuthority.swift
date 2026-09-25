@@ -1,26 +1,36 @@
 import CrestCoreABI
 import Foundation
+import OSLog
 
 /// A cached read of the session's core-owned sync component. The core stages
 /// the session's accepted edits itself; this reads the journal it accepted
-/// and runs the transactions the transport asks for.
+/// and runs the transactions the transport asks for. Nothing reads the
+/// journal until the transport first asks for it, so a launch never decodes
+/// it; the counts settings show come from the core's `SyncJournalChanged`.
 final class BrowserCoreSyncAuthority: @unchecked Sendable {
     let handle: UInt64
     private let lock = NSLock()
-    private var projection: BrowserSyncJournal
+    /// The journal as last read; nil until the first read.
+    private var projection: BrowserSyncJournal?
     /// The core's journal version `projection` was read at.
     private var projectedVersion: UInt64
 
-    /// The journal the core accepted last. A stage the core ran since the last
-    /// read is read again first.
+    /// The journal the core accepted last, read on first use. A stage the
+    /// core ran since the last read is read again first. A journal this build
+    /// cannot read keeps the last one it could, or none.
     var journal: BrowserSyncJournal {
         let current = version
         return lock.withLock {
-            if current != projectedVersion, let read = try? Self.read(handle) {
-                projection = read
-                projectedVersion = current
+            if projection == nil || current != projectedVersion {
+                do {
+                    projection = try Self.read(handle)
+                    projectedVersion = current
+                } catch {
+                    Logger(subsystem: "com.pauldavis.crest", category: "Sync")
+                        .error("The sync journal could not be read: \(String(describing: error), privacy: .public)")
+                }
             }
-            return projection
+            return projection ?? BrowserSyncJournal()
         }
     }
 
@@ -41,20 +51,17 @@ final class BrowserCoreSyncAuthority: @unchecked Sendable {
         projectedVersion = 0
     }
 
-    /// Takes over an authority the core created, reading the journal it holds.
-    /// The caller hands over ownership of the handle.
+    /// Takes over an authority the core created, whose journal is read the
+    /// first time it is asked for. The caller hands over ownership of the
+    /// handle.
     init(adopting handle: UInt64) throws {
         self.handle = handle
         var version: UInt64 = 0
-        do {
-            guard crest_sync_authority_version(handle, &version) == CREST_OK else {
-                throw CoreError.rejected(CREST_INVALID_HANDLE)
-            }
-            projection = try Self.read(handle)
-        } catch {
+        guard crest_sync_authority_version(handle, &version) == CREST_OK else {
             crest_sync_authority_release(handle)
-            throw error
+            throw CoreError.rejected(CREST_INVALID_HANDLE)
         }
+        projection = nil
         projectedVersion = version
     }
     deinit { crest_sync_authority_release(handle) }
