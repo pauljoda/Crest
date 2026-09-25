@@ -2477,6 +2477,10 @@
     "sync-json-numbers": {
       "category": "internal",
       "message": "Synced records read their numbers the same however their JSON was built."
+    },
+    "site-permissions-device-store": {
+      "category": "internal",
+      "message": "Site permission choices live in the core's device store, carried once from the saved defaults."
     }
   }
 }

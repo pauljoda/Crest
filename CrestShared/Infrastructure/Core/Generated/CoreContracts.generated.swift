@@ -37,6 +37,9 @@ protocol PageIntent: Intent {}
 /// The members of `Intent` that derive from the core's `SessionIntent`.
 protocol SessionIntent: Intent {}
 
+/// The members of `Intent` that derive from the core's `SitePermissionIntent`.
+protocol SitePermissionIntent: Intent {}
+
 /// The members of `Intent` that derive from the core's `SpaceAccessIntent`.
 protocol SpaceAccessIntent: Intent {}
 
@@ -60,6 +63,7 @@ enum Change: Equatable, Sendable {
     case pageRemoved(PageRemoved)
     case saved(Saved)
     case sessionAdopted(SessionAdopted)
+    case sitePermissionsChanged(SitePermissionsChanged)
     case spaceLockChanged(SpaceLockChanged)
     case spaceSettingsChanged(SpaceSettingsChanged)
     case spacesChanged(SpacesChanged)
@@ -124,6 +128,8 @@ enum Rejection: Equatable, Error, Sendable {
     case invalidRetentionLifetime(InvalidRetentionLifetime)
     case invalidSearchEngine(InvalidSearchEngine)
     case invalidSession(InvalidSession)
+    case invalidSiteOrigin(InvalidSiteOrigin)
+    case invalidSitePermissionDetail(InvalidSitePermissionDetail)
     case invalidSpaceOrder(InvalidSpaceOrder)
     case invalidSplitColumnShares(InvalidSplitColumnShares)
     case invalidSyncRecords(InvalidSyncRecords)
@@ -146,6 +152,7 @@ enum Rejection: Equatable, Error, Sendable {
     case searchEngineLimitReached(SearchEngineLimitReached)
     case selectionChanged(SelectionChanged)
     case selectionHoldsFolders(SelectionHoldsFolders)
+    case sitePermissionLimitReached(SitePermissionLimitReached)
     case spaceAlreadyExists(SpaceAlreadyExists)
     case spaceBeingDeleted(SpaceBeingDeleted)
     case spaceLimitReached(SpaceLimitReached)
@@ -200,6 +207,7 @@ enum Rejection: Equatable, Error, Sendable {
         case .searchEngineLimitReached(let value): value.message
         case .selectionChanged(let value): value.message
         case .selectionHoldsFolders(let value): value.message
+        case .sitePermissionLimitReached(let value): value.message
         case .spaceAlreadyExists(let value): value.message
         case .spaceBeingDeleted(let value): value.message
         case .spaceLimitReached(let value): value.message
@@ -236,6 +244,7 @@ extension CoreState {
         case .pageRemoved(let change): apply(change)
         case .saved(let change): apply(change)
         case .sessionAdopted(let change): apply(change)
+        case .sitePermissionsChanged(let change): apply(change)
         case .spaceLockChanged(let change): apply(change)
         case .spaceSettingsChanged(let change): apply(change)
         case .spacesChanged(let change): apply(change)
@@ -279,6 +288,10 @@ struct AddSearchEngine: Intent, SessionIntent, Equatable, Sendable {
 struct AdoptLegacySession: Intent, Equatable, Sendable {
     let installed: LegacySession
     let seed: Data
+}
+
+struct AdoptSitePermissions: Intent, SitePermissionIntent, Equatable, Sendable {
+    let records: Data?
 }
 
 struct AdoptWindowRecords: Intent, WindowIntent, Equatable, Sendable {
@@ -476,6 +489,14 @@ struct CannotPinSplit: Equatable, Sendable {
     var message: LocalizedStringResource {
         LocalizedStringResource("Split View groups cannot be pinned. Separate the split first.")
     }
+}
+
+struct CaptureDecision: Query, Equatable, Sendable {
+    typealias Answer = SitePermissionAnswer
+
+    let spaceID: UUID
+    let origin: SiteOrigin
+    let media: SitePermission
 }
 
 struct ChooseTabIcon: Intent, SessionIntent, Equatable, Sendable {
@@ -736,6 +757,14 @@ struct DataRetentionPreferences: Equatable, Sendable {
     let history: DataRetention
     let archive: DataRetention
     let downloads: DataRetention
+}
+
+struct DecideSitePermission: Intent, SitePermissionIntent, Equatable, Sendable {
+    let spaceID: UUID
+    let origin: SiteOrigin
+    let permission: SitePermission
+    let detail: String?
+    let decision: SitePermissionDecision
 }
 
 struct DefaultEngineAlreadyRegistered: Equatable, Sendable {
@@ -1188,6 +1217,14 @@ struct InvalidSearchEngine: Equatable, Sendable {
 
 struct InvalidSession: Equatable, Sendable {
     let flaw: SessionFlaw
+}
+
+struct InvalidSiteOrigin: Equatable, Sendable {
+    let origin: SiteOrigin
+}
+
+struct InvalidSitePermissionDetail: Equatable, Sendable {
+    let limit: Int
 }
 
 struct InvalidSpaceOrder: Equatable, Sendable {
@@ -1808,6 +1845,14 @@ struct ResetPrivateBrowsing: Intent, SessionIntent, Equatable, Sendable {
     let windowID: UUID
 }
 
+struct ResetSitePermission: Intent, SitePermissionIntent, Equatable, Sendable {
+    let recordID: UUID
+}
+
+struct ResetSpacePermissions: Intent, SitePermissionIntent, Equatable, Sendable {
+    let spaceID: UUID
+}
+
 struct ResizeSplitColumns: Intent, WindowIntent, Equatable, Sendable {
     let windowID: UUID
     let groupID: UUID
@@ -2002,6 +2047,56 @@ struct ShowTab: Intent, WindowIntent, Equatable, Sendable {
 struct ShownTab: Equatable, Sendable {
     let spaceID: UUID
     let tabID: UUID?
+}
+
+struct SiteDecision: Query, Equatable, Sendable {
+    typealias Answer = SitePermissionAnswer
+
+    let spaceID: UUID
+    let origin: SiteOrigin
+    let permission: SitePermission
+    let detail: String?
+}
+
+struct SiteOrigin: Equatable, Sendable {
+    let scheme: String
+    let host: String
+    let port: Int
+}
+
+struct SitePermissionAnswer: Equatable, Sendable {
+    let decision: SitePermissionDecision
+}
+
+struct SitePermissionLimitReached: Equatable, Sendable {
+    let limit: Int
+
+    var message: LocalizedStringResource {
+        LocalizedStringResource("Crest can keep up to \(limit) saved site permissions. Reset some to save more.")
+    }
+}
+
+struct SitePermissionRecordState: Equatable, Sendable, Identifiable {
+    let id: UUID
+    let spaceID: UUID
+    let origin: SiteOrigin
+    let permission: SitePermission
+    let detail: String?
+    let decision: SitePermissionDecision
+    let siteName: String
+}
+
+struct SitePermissionScope: Equatable, Sendable {
+    let origin: SiteOrigin?
+    let permission: SitePermission?
+    let detail: String?
+    let revokesAuthorization: Bool
+}
+
+struct SitePermissionsChanged: Equatable, Sendable {
+    let spaceID: UUID
+    let records: [SitePermissionRecordState]
+    let touched: [SitePermissionScope]
 }
 
 struct SpaceAlreadyExists: Equatable, Sendable {

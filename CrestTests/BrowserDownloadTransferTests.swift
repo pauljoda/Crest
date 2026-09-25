@@ -153,8 +153,7 @@ final class BrowserDownloadTransferTests: XCTestCase {
         let root = FileManager.default.temporaryDirectory.appending(path: "crest-download-permissions-\(UUID())")
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: root) }
-        let persistence = InMemoryBrowserSitePermissionPersistence()
-        let permissions = BrowserSitePermissionCenter(persistence: persistence)
+        let permissions = BrowserSitePermissionCenter()
         let center = BrowserDownloadCenter(
             permissionCenter: permissions,
             resolveDownloadDestination: { filename, _, _ in
@@ -204,7 +203,7 @@ final class BrowserDownloadTransferTests: XCTestCase {
         owner.sitePermissionRequests.cancelAll()
         try await waitForDownloadCondition { center.items.contains { $0.phase == .blockedAutomaticDownload } }
         XCTAssertEqual(permissions.decision(for: .automaticDownloads, origin: origin, in: spaceID), .ask)
-        XCTAssertTrue(persistence.records.isEmpty)
+        XCTAssertTrue(permissions.records(in: spaceID).isEmpty)
         try await start()
         try await waitForDownloadCondition { owner.sitePermissionRequests.current != nil }
         owner.sitePermissionRequests.resolve(
@@ -213,7 +212,7 @@ final class BrowserDownloadTransferTests: XCTestCase {
         try await start()
         try await waitForDownloadCondition { center.items.filter { $0.phase == .finished }.count == 3 }
         XCTAssertNil(owner.sitePermissionRequests.current)
-        XCTAssertEqual(persistence.records.first?.decision, .grantPersistently)
+        XCTAssertEqual(permissions.records(in: spaceID).first?.decision, .grantPersistently)
     }
 
     @MainActor

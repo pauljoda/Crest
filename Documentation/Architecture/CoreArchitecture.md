@@ -134,11 +134,11 @@ for `EnginePage` lists every direct engine call.
 | Object | Holds | Saved | Synced |
 | --- | --- | --- | --- |
 | `Session` | Spaces, each with its profile, tabs, folders, splits, history and archive | Yes | Yes, as today |
-| `Device` | Windows and what each shows (the Space, and the tab in each Space), split column shares, engine choices per site, device-local preferences | Yes, in the device store | Never |
+| `Device` | Windows and what each shows (the Space, and the tab in each Space), split column shares, engine choices per site, site permission choices, device-local preferences | Yes, in the device store (a private Space's choices stay in memory) | Never |
 | `Pages` | Each open page: its owner (a tab, or a Quick Window or Peek request), its engine, and the live state rules read (URL and title before commit, loading, back and forward availability, security, failure, media activity) | Never | Never |
 | `Prompts` | Permission, authentication and other questions waiting on the person | Never | Never |
 | `Engines` | The registered engine bindings and their capabilities | Never | Never |
-| `Downloads`, `Permissions` | The existing ledgers, with the permission records saved as today | As today | Never |
+| `Downloads` | The existing ledger | As today | Never |
 
 The core publishes typed changes and never resends unchanged state. It
 derives them by comparing each accepted state with the one before, never

@@ -54,35 +54,6 @@ static void app_boundary(void) {
     assert(crest_app_dispatch(app, acknowledge, sizeof(acknowledge), &buffer) == CREST_INVALID_HANDLE);
     assert(crest_app_destroy(app) == CREST_INVALID_HANDLE);
 }
-static void permissions_boundary(void) {
-    const char *set = "{\"version\":1,\"command\":\"set\",\"spaceID\":\"77777777-7777-7777-7777-777777777777\","
-        "\"origin\":{\"scheme\":\"https\",\"host\":\"meet.example\",\"port\":443},\"permission\":\"camera\","
-        "\"decision\":\"grantPersistently\",\"recordID\":\"88888888-8888-8888-8888-888888888888\",\"now\":1,\"locked\":false}";
-    const char *locked = "{\"version\":1,\"command\":\"decision\",\"spaceID\":\"77777777-7777-7777-7777-777777777777\","
-        "\"origin\":{\"scheme\":\"https\",\"host\":\"meet.example\",\"port\":443},\"permission\":\"camera\",\"locked\":true}";
-    const char *unknown = "{\"version\":1,\"command\":\"grant_everything\"}";
-    uint64_t ledger = 0;
-    size_t length = 0, required = 0;
-    uint8_t output[1024]; memset(output, 0xa5, sizeof(output));
-    assert(crest_permissions_create(&ledger) == CREST_OK && ledger != 0);
-    assert(crest_permissions_read(ledger, output, sizeof(output), &length) == CREST_EMPTY && length == 0);
-    assert(crest_permissions_apply(ledger, (const uint8_t*)set, strlen(set), &required) == CREST_OK && required > 0);
-    assert(crest_permissions_read(ledger, NULL, 0, &length) == CREST_BUFFER_TOO_SMALL && length == required);
-    assert(crest_permissions_read(ledger, output, required - 1, &length) == CREST_BUFFER_TOO_SMALL && output[0] == 0xa5);
-    assert(crest_permissions_read(ledger, output, sizeof(output) - 1, &length) == CREST_OK && length == required);
-    assert(output[length] == 0xa5); output[length] = 0;
-    assert(strstr((const char*)output, "\"applied\":true") && strstr((const char*)output, "88888888-8888-8888-8888-888888888888"));
-    /* A locked Space answers Ask even with a saved grant. */
-    assert(crest_permissions_apply(ledger, (const uint8_t*)locked, strlen(locked), &length) == CREST_OK);
-    assert(crest_permissions_read(ledger, output, sizeof(output) - 1, &length) == CREST_OK);
-    output[length] = 0;
-    assert(strcmp((const char*)output, "{\"decision\":\"ask\"}") == 0);
-    /* An unknown command is rejected and leaves nothing to read. */
-    assert(crest_permissions_apply(ledger, (const uint8_t*)unknown, strlen(unknown), &length) == CREST_INVALID_MESSAGE && length == 0);
-    assert(crest_permissions_read(ledger, output, sizeof(output), &length) == CREST_EMPTY);
-    assert(crest_permissions_destroy(ledger) == CREST_OK);
-    assert(crest_permissions_apply(ledger, (const uint8_t*)set, strlen(set), &length) == CREST_INVALID_HANDLE);
-}
 static void policy_boundary(void) {
     const char *request = "{\"version\":1,\"operation\":\"address.intent\",\"input\":\"localhost:8767/profile\",\"searchProvider\":{\"id\":\"duckDuckGo\"}}";
     size_t length = 0;
@@ -552,7 +523,6 @@ int main(void) {
     policy_boundary();
     links_boundary();
     app_boundary();
-    permissions_boundary();
     session_boundary();
     engine_boundary();
     storage_boundary();

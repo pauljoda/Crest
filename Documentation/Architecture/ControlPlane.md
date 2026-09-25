@@ -679,15 +679,18 @@ with it; the editor's explanations stay in Swift. Automatic
 translation rules live in the core's app preferences; `translation.rule` and
 `translation.matches` answer them and the `SetTranslationRule` intent edits them.
 
-Site permissions follow the same split. The process-local core ledger behind
-`crest_permissions_*` owns every Space's saved and session choices, the
-narrow-then-site-wide lookup, the combined camera and microphone rule, listing
-order and which choices persist. `BrowserSitePermissionCenter` keeps its API
-for the engines and the Privacy pane, supplies each Space's lock state, stores
-the saved document the core returns under the existing
-`crest.site-permissions.v1` key without reading it, and notifies observers.
-Session choices never reach that document, and permissions are not synced. A
-locked Space answers Ask, lists nothing and records nothing; resets still
+Site permissions follow the same split. The core's device owns every Space's
+saved and session choices, the narrow-then-site-wide lookup, the combined
+camera and microphone rule, listing order and which choices persist: the device
+store keeps the persistent session's choices beside the session, and every
+other Space's live in memory. `BrowserSitePermissionCenter` keeps its API for
+the engines and the Privacy pane, asks the core the `SiteDecision` and
+`CaptureDecision` queries, sends `DecideSitePermission`, `ResetSitePermission`
+and `ResetSpacePermissions`, reads each Space's choices from the read model,
+and tells observers what each `SitePermissionsChanged` covered. The launch
+adopts the document earlier releases kept under `crest.site-permissions.v1`
+once, and leaves it in place. Session choices are never kept, and permissions
+are not synced. A locked Space answers Ask and refuses a choice; resets still
 apply. Secure-origin rules for location and hosted notifications, the
 notification request action, automatic popups and the blocked-popup notice,
 external schemes and consent, web-link and local-document acceptance, and HTTP
@@ -779,12 +782,12 @@ Split View code read; a refused or unanswered edit leaves the value as it was.
 WebKit reads its spelling default once per process, so launch reconciles that
 engine copy with the record. Appearance preferences, link preferences,
 shortcut overrides, sync choices and per-Space download locations stay native.
-The C ABI is synchronous: `crest_session_*`, `crest_app_*`,
-`crest_permissions_*` and `crest_core_evaluate_policy`, declared in
+The C ABI is synchronous: `crest_session_*`, `crest_app_*` and
+`crest_core_evaluate_policy`, declared in
 `CrestContracts/include/crest_core.h` and `crest_app.h` and described in
 `CrestContracts/README.md`.
-`CrestContracts/tests/native_abi.c` exercises the policy, app,
-permissions and session entry points against the built library.
+`CrestContracts/tests/native_abi.c` exercises the policy, app and session
+entry points against the built library.
 
 Once the device attaches the access authority, `NativeSessionAuthority`
 rejects a prepared command that would read or mutate a locked Space. Cloud

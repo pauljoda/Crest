@@ -88,7 +88,7 @@ struct BrowserPrivacySettingsPane: View {
         }
     }
 
-    private var records: [BrowserSitePermissionRecord] {
+    private var records: [SitePermissionRecordState] {
         guard let selectedSpaceID, canRevealSelectedSpaceData else { return [] }
         return permissionCenter.records(in: selectedSpaceID)
     }

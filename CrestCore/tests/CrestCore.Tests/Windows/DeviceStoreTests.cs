@@ -150,7 +150,7 @@ public sealed partial class BrowserContractsTests {
             app.Send(new CloseWorkspace(memoryWorkspace));
         }
         using var connection = SqliteConnection.Open(directory.File, Sqlite.OpenReadOnly);
-        var stored = connection.ReadDevice("window-records").Windows.Select(record => record.Id).ToHashSet();
+        var stored = connection.ReadDevice().Windows.Select(record => record.Id).ToHashSet();
         Assert.Equal(Device.MaximumSavedWindows, stored.Count);
         Assert.Contains(windows[0], stored);
         Assert.DoesNotContain(windows[1], stored);
@@ -173,13 +173,13 @@ public sealed partial class BrowserContractsTests {
         Assert.Equal(second, Shown(app.Send(new ShowSpace(window, second))).ShownSpaceId);
         Assert.Equal(revision, app.Workspace(workspace).Revision);
         var pending = Assert.NotNull(app.Query(new PendingSave()).Revision);
-        Assert.NotEqual(second, holder.ReadDevice("window-records").Windows.Single(record => record.Id == window).ShownSpaceId);
+        Assert.NotEqual(second, holder.ReadDevice().Windows.Single(record => record.Id == window).ShownSpaceId);
         holder.Execute("ROLLBACK");
 
         var announced = DrainUntil(app, changes => changes.OfType<Saved>().Any(saved => saved.Revision >= pending));
         Assert.Contains(announced, change => change is Saved saved && saved.Revision >= pending);
         Assert.Null(app.Query(new PendingSave()).Revision);
-        Assert.Equal(second, holder.ReadDevice("window-records").Windows.Single(record => record.Id == window).ShownSpaceId);
+        Assert.Equal(second, holder.ReadDevice().Windows.Single(record => record.Id == window).ShownSpaceId);
     }
 
     [Fact]

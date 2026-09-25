@@ -87,7 +87,7 @@ private final class BrowserAppearancePreviewState {
     let browser: BrowserStore
     let spaceAccess = BrowserSpaceAccessController()
     let downloads = BrowserDownloadCenter(
-        permissionCenter: BrowserSitePermissionCenter(persistence: InMemoryBrowserSitePermissionPersistence()))
+        permissionCenter: BrowserSitePermissionCenter())
     /// The color each sample site would hand its pin, keyed the way the shipping
     /// sidebar asks for it.
     private let siteAccents: [TabID: BrowserTabIconAccent]

@@ -54,8 +54,8 @@ never saved or synced.
 builds JSON nodes without reflection. The application and domain have no native
 engine references.
 
-The native Crest apps use the `crest_app_*` and `crest_permissions_*` entry
-points, plus `crest_core_evaluate_policy`. The cloud transport sends its
+The native Crest apps use the `crest_app_*` entry points, plus
+`crest_core_evaluate_policy`. The cloud transport sends its
 `CloudSyncIntent`s through `crest_app_dispatch` from its own thread, and asks
 `PendingUploads`, `RecordsToUpload` and `CloudComparison` through
 `crest_app_query`; what a cloud intent changed arrives in the next
@@ -147,16 +147,17 @@ generates the password itself. `CredentialFill`, `CredentialSaveCheck`,
 the remaining fill, save, passkey and system Passwords rules. Record batches
 hold at most 64 entries; callers reduce longer lists batch by batch.
 
-`crest_permissions_*` owns one process-local site permission ledger per native
-permission center: per-Space saved and session choices, the narrow-then-site-wide
-lookup, the combined camera and microphone rule, listing order and which
-choices persist. `load` restores the saved document exactly as the native store
-has always written it under `crest.site-permissions.v1`; `set`, `reset_record`,
-`reset_space` and `reset_session` answer `applied`, the complete saved
-`document` when it must be written again, and the `changes` observers receive.
-Session choices never appear in the document, and permissions are not synced.
-Every question and write carries the Space's `locked` state: a locked Space
-answers `ask`, lists nothing and records nothing, while resets still apply.
+Site permission choices are device state. `DecideSitePermission`,
+`ResetSitePermission` and `ResetSpacePermissions` change them, and
+`SitePermissionsChanged` carries a Space's kept choices in listing order with
+what the change covered. `SiteDecision` and `CaptureDecision` answer a request:
+the narrow-then-site-wide lookup and the combined camera and microphone rule,
+with session choices first. The device store keeps the persistent session's
+choices beside the session, never in it; private and other Spaces' choices,
+and session choices, live in memory, and nothing here syncs. A locked Space
+answers Ask and refuses writes, while resets still apply. `AdoptSitePermissions`
+carries the document earlier releases kept under `crest.site-permissions.v1`
+into the store once.
 The pure `geolocation.origin`, `notifications.origin`,
 `notifications.permission_request`, `popups.notice`, `external.url`,
 `external.local_document`, `external.scheme`, `authentication.handling`,
@@ -237,7 +238,7 @@ This branch's contract is experimental. Do not advertise external ABI stability
 until the complete contract and compatibility fixtures are ratified.
 
 `tests/native_abi.c` is a native consumer of the actual shared library. It
-exercises the policy, app, engine, permissions and session entry points,
+exercises the policy, app, engine and session entry points,
 checking buffer
 ownership, non-consuming size probes, stale commands and invalid handles. The
 managed suite covers the session, sync and domain rules.

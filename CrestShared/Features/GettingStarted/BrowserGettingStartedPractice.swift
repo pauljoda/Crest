@@ -9,7 +9,7 @@ final class BrowserGettingStartedPractice {
     private(set) var browser: BrowserStore
     let spaceAccess = BrowserSpaceAccessController()
     let downloads = BrowserDownloadCenter(
-        permissionCenter: BrowserSitePermissionCenter(persistence: InMemoryBrowserSitePermissionPersistence()))
+        permissionCenter: BrowserSitePermissionCenter())
     let mailID: TabID
     let trailID: TabID
     let packingID: TabID

@@ -1,11 +1,11 @@
 namespace CrestCore.Domain;
 
-/// The result of one ledger command. `PersistenceChanged` means the saved
-/// document must be written again.
-public sealed record SitePermissionOutcome(bool Applied, bool PersistenceChanged, IReadOnlyList<SitePermissionChange> Changes) {
-    #region Variables
+/// The result of one ledger command: whether the persistent records changed,
+/// and what it touched in each Space.
+public sealed record SitePermissionOutcome(bool PersistenceChanged, IReadOnlyList<SitePermissionChange> Changes) {
+    #region Static Variables
 
-    public static readonly SitePermissionOutcome Rejected = new(false, false, []);
+    public static readonly SitePermissionOutcome Unchanged = new(false, []);
 
     #endregion
 }

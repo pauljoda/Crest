@@ -106,6 +106,9 @@ public sealed partial class CrestApp : IDisposable {
                 case WindowIntent window:
                     device.Handle(window, changes);
                     break;
+                case SitePermissionIntent permission:
+                    device.Handle(permission, changes, clock.Now, ids);
+                    break;
                 case PageIntent page:
                     pages.Handle(page, changes, Issue);
                     break;
@@ -158,6 +161,8 @@ public sealed partial class CrestApp : IDisposable {
                 ExternalLinkRoute route => links.Answer(route),
                 QuickWindowSite site => links.Answer(site),
                 CanTearOff tearOff => device.Answer(tearOff),
+                SiteDecision decision => device.Answer(decision),
+                CaptureDecision capture => device.Answer(capture),
                 CanReturnToSavedAddress savedAddress => pages.Answer(savedAddress),
                 FallbackTab fallback => Window.Answer(fallback),
                 PendingSave => new PendingSaveRevision(storage?.PendingRevision is { } revision ? checked((long)revision) : null),

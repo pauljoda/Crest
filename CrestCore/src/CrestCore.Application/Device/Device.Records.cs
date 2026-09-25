@@ -13,30 +13,32 @@ internal sealed partial class Device {
         Guid workspaceId;
         if (storage is not { } target) return;
         lock (gate) {
-            if (adoptedWindowRecords || persistentWorkspace is not { } persistent) return;
+            if (adopted.Contains(DeviceAdoption.WindowRecords) || persistentWorkspace is not { } persistent) return;
             workspaceId = persistent;
         }
         var spaces = Workspace(workspaceId).Current.Spaces.Select(space => space.Id).ToArray();
         var legacy = LegacyWindowRecord.DecodeAll(intent.Records);
-        DeviceRecords adopted;
+        DeviceRecords carried;
         long used;
         lock (gate) {
             used = lastUse;
             var records = new Dictionary<Guid, SavedWindow>(saved);
             foreach (var record in legacy.Where(record => !records.ContainsKey(record.Id)))
                 records[record.Id] = record.Record(spaces, legacyTabs, ++used);
-            adopted = new([.. records.Values.OrderBy(record => record.Used).TakeLast(MaximumSavedWindows)], AdoptedWindowRecords: true);
+            carried = Records().Adopting(DeviceAdoption.WindowRecords) with {
+                Windows = [.. records.Values.OrderBy(record => record.Used).TakeLast(MaximumSavedWindows)]
+            };
         }
         try {
-            target.SaveDevice(adopted);
+            target.SaveDevice(carried);
         } catch (StorageException error) {
             throw new Rejected(new SaveFailed(error.Reason));
         }
         lock (gate) {
             saved.Clear();
-            foreach (var record in adopted.Windows) saved[record.Id] = record;
+            foreach (var record in carried.Windows) saved[record.Id] = record;
             lastUse = Math.Max(lastUse, used);
-            adoptedWindowRecords = true;
+            adopted.Add(DeviceAdoption.WindowRecords);
         }
         changes.Publish(new WindowRecordsAdopted([.. legacy.Select(record => record.Layout)]));
     }

@@ -50,11 +50,6 @@ final class BrowserGeolocationBridgeTests: XCTestCase {
             let fixture = try makeFixture()
             defer { fixture.page.release(keepingState: false) }
             let origin = try XCTUnwrap(BrowserSiteOrigin(url: fixture.url))
-            if action == .sessionReset {
-                fixture.page.permissionCenter.setDecision(
-                    .grantForSession, for: .location, origin: origin, in: fixture.page.spaceID
-                )
-            }
             try await loadRequests(in: fixture)
             let current = try XCTUnwrap(fixture.service.currentRequests.first?.value)
             let watch = try XCTUnwrap(fixture.service.watchRequests.first?.value)
@@ -71,8 +66,6 @@ final class BrowserGeolocationBridgeTests: XCTestCase {
                     ))
             case .spaceReset:
                 fixture.page.permissionCenter.reset(spaceID: fixture.page.spaceID)
-            case .sessionReset:
-                fixture.page.permissionCenter.resetSession()
             }
             XCTAssertTrue(
                 fixture.service.currentRequests.isEmpty, "\(action) cancels in-flight positions synchronously")
@@ -184,7 +177,7 @@ final class BrowserGeolocationBridgeTests: XCTestCase {
         }
     }
 
-    private enum Revocation: CaseIterable { case block, ask, originReset, spaceReset, sessionReset }
+    private enum Revocation: CaseIterable { case block, ask, originReset, spaceReset }
     /// The page, and the window that opened it through the core, which lives as
     /// long as the page.
     private typealias Fixture = (

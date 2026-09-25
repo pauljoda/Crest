@@ -8,8 +8,7 @@ final class BrowserPagePermissionControllerTests: XCTestCase {
     func testLocationAuthorizationRemembersAllowAndCannotOverrideANewerBlock() async throws {
         let controller = BrowserPagePermissionController()
         controller.setPresentationAvailable(true)
-        let persistence = InMemoryBrowserSitePermissionPersistence()
-        let center = BrowserSitePermissionCenter(persistence: persistence)
+        let center = BrowserSitePermissionCenter()
         let origin = BrowserSiteOrigin(scheme: "https", host: "location.example", port: 443)
         let spaceID = SpaceID()
         func authorize() async -> Bool {
@@ -24,7 +23,7 @@ final class BrowserPagePermissionControllerTests: XCTestCase {
         let remembered = await authorize()
         XCTAssertTrue(remembered)
         XCTAssertNil(controller.current)
-        XCTAssertEqual(persistence.records.first?.decision, .grantPersistently)
+        XCTAssertEqual(center.records(in: spaceID).first?.decision, .grantPersistently)
         center.setDecision(.ask, for: .location, origin: origin, in: spaceID)
         let second = Task { await authorize() }
         let requestID = try await pendingRequest(in: controller)
@@ -32,7 +31,7 @@ final class BrowserPagePermissionControllerTests: XCTestCase {
         controller.resolve(requestID, response: .grantPersistently)
         let secondAllowed = await second.value
         XCTAssertFalse(secondAllowed)
-        XCTAssertEqual(persistence.records.first?.decision, .denyPersistently)
+        XCTAssertEqual(center.records(in: spaceID).first?.decision, .denyPersistently)
     }
 
     func testDownloadAndLocationDismissalAreTemporaryAndExplicitChoicesArePreserved() async throws {

@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct BrowserSavedSitePermissionSection: View {
-    let records: [BrowserSitePermissionRecord]
+    let records: [SitePermissionRecordState]
     let permissionCenter: BrowserSitePermissionCenter
     let resetAll: () -> Void
 

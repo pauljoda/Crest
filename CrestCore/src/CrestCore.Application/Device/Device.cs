@@ -42,9 +42,10 @@ internal sealed partial class Device {
     /// The tabs an older release kept in the session, which a window without a
     /// record adopts during the launch that loaded them.
     private IReadOnlyDictionary<Guid, Guid> legacyTabs = new Dictionary<Guid, Guid>();
+    /// What the device store has adopted from an installed release.
+    private readonly HashSet<DeviceAdoption> adopted = [];
     private Guid? persistentWorkspace;
     private long lastUse;
-    private bool adoptedWindowRecords;
 
     #endregion
 
@@ -69,7 +70,8 @@ internal sealed partial class Device {
         this.closeBorrower = closeBorrower;
         foreach (var record in records.Windows) saved[record.Id] = record;
         lastUse = records.Windows.Count == 0 ? 0 : records.Windows.Max(record => record.Used);
-        adoptedWindowRecords = records.AdoptedWindowRecords;
+        keptPermissions.Restore(records.SitePermissions);
+        adopted.UnionWith(records.Adopted);
     }
 
     #endregion
@@ -259,7 +261,9 @@ internal sealed partial class Device {
         while (saved.Count > MaximumSavedWindows) saved.Remove(saved.Values.MinBy(record => record.Used)!.Id);
     }
 
-    private DeviceRecords Records() => new([.. saved.Values.OrderBy(record => record.Used)], adoptedWindowRecords);
+    /// Everything the device store keeps, as it stands. The caller holds the device lock.
+    private DeviceRecords Records() => new([.. saved.Values.OrderBy(record => record.Used)], [.. keptPermissions.PersistentRecords],
+        new HashSet<DeviceAdoption>(adopted));
 
     #endregion
 }

@@ -86,17 +86,11 @@ private final class BrowserMobileApplication {
         }
         let spaceAccess = BrowserSpaceAccessController()
         browser.attachSpaceAccess(spaceAccess)
-        let permissionCenter =
-            usesIsolatedLaunch
-            ? BrowserSitePermissionCenter()
-            : BrowserSitePermissionCenter.production(reset: shouldReset)
-        // The core ledger never answers or records for a locked Space. A Space
-        // this app does not own has no lock of its own.
-        permissionCenter.attachSpaceLockState { [weak browser, weak spaceAccess] spaceID in
-            guard let spaceAccess else { return true }
-            guard let space = browser?.session.space(id: spaceID) else { return false }
-            return spaceAccess.isLocked(space)
-        }
+        // The core keeps every Space's site permission choices and decides
+        // which ones the device store keeps: never a private Space's.
+        let legacyDevice = BrowserLegacyDeviceDefaults.read(for: launchEnvironment)
+        let permissionCenter = BrowserSitePermissionCenter(core: core)
+        permissionCenter.adoptLegacyRecords(legacyDevice.sitePermissions)
         // An isolated launch keeps its engine session state behind the same
         // boundary as Crest's browser-session and sync owners.
         let tabStateArchive = BrowserTabStateArchive.forLaunch(launchEnvironment)
@@ -131,7 +125,7 @@ private final class BrowserMobileApplication {
         let privateDownloads = MobileBrowserDownloads(
             core: core,
             browsingMode: .privateBrowsing,
-            permissionCenter: BrowserSitePermissionCenter()
+            permissionCenter: permissionCenter
         )
         let pages = MobileBrowserPageStore(
             browser: browser,

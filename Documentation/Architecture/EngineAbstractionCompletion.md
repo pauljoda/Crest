@@ -208,8 +208,9 @@ its extension, and passkeys go through the system sheet.
 
 Done:
 
-- Permission decisions are records in the core ledger behind
-  `crest_permissions_*`. WebKit applies them through Crest's prompts. Chromium
+- Permission decisions are records in the core's device store, changed by
+  typed intents and answered by the `SiteDecision` and `CaptureDecision`
+  queries. WebKit applies them through Crest's prompts. Chromium
   asks Crest through its permission handler, with a typed
   `BrowserEnginePermissionResponse`, and receives decisions as content
   settings. The Privacy pane lists the same records on both engines.
@@ -268,7 +269,7 @@ operations or a bounded export. Swift keeps projections and adapters.
 | --- | --- |
 | Downloads | Typed download intents, changes and the `DownloadProgress` and `DownloadRisk` queries on `crest_app_*`; the `downloads.automatic` operation |
 | Credentials and passkeys | The `CredentialCapture`, `CredentialFill`, `CredentialSaveCheck`, `MostRecentCredential`, `CredentialSaveMatch`, `CredentialSave`, `StrongPassword`, `PasskeyAccess`, `SystemPasswordWriteThrough` and `SystemPasswordOffer` queries on `crest_app_*`. Passwords never cross the boundary |
-| Site permissions and origins | `crest_permissions_*` ledger (`load`, `decision`, `media_decision`, `records`, `set`, `reset_record`, `reset_space`, `reset_session`); `geolocation.origin`, `notifications.origin`, `notifications.permission_request`, `popups.notice`, `external.url`, `external.local_document`, `external.scheme`, `authentication.handling`, `authentication.source_label` and `authentication.fixture_trust` |
+| Site permissions and origins | The `AdoptSitePermissions`, `DecideSitePermission`, `ResetSitePermission` and `ResetSpacePermissions` intents and the `SiteDecision` and `CaptureDecision` queries on `crest_app_*`; `geolocation.origin`, `notifications.origin`, `notifications.permission_request`, `popups.notice`, `external.url`, `external.local_document`, `external.scheme`, `authentication.handling`, `authentication.source_label` and `authentication.fixture_trust` |
 | Search and translation | `SearchProvider`; `search.url`, `search.custom_providers` and `translation.*`; the `AddSearchEngine`, `UpdateSearchEngine`, `RemoveSearchEngine` and `SelectSearchEngine` intents |
 | Windows and plans | The device store's `OpenWindow`, `CloseWindow`, `ShowSpace`, `ShowTab`, `DismissShownTab`, `ResizeSplitColumns` and `AdoptWindowRecords` intents and the `CanTearOff` and `FallbackTab` queries on `crest_app_*`; `setup.space`, `setup.tab`, `setup.reconcile`, `onboarding.completion` and `onboarding.guide`; the `workspace.review` query; split-run validation in the workspace import |
 | Shortcuts, launch and media | `shortcuts.bindings`, `.assign` and `.numbered_selection`; `launch.plan`; `media.session_event` and `media.arbitrate`; the `OpenTab` intent's `AfterTabId` |

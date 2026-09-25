@@ -77,13 +77,8 @@ public static class BrowserRuleCodes {
     public const string WrongSpaceIdentity = "wrong_space_identity";
 
     // Site permissions and origins.
-    public const string DuplicateSitePermissionRecord = "duplicate_site_permission_record";
     public const string InvalidBlockedPopup = "invalid_blocked_popup";
     public const string InvalidSiteOrigin = "invalid_site_origin";
-    public const string InvalidSitePermissionDetail = "invalid_site_permission_detail";
-    public const string SitePermissionLedgerLimit = "site_permission_ledger_limit";
-    public const string SitePermissionRecordLimit = "site_permission_record_limit";
-    public const string UnknownSitePermissionCommand = "unknown_site_permission_command";
 
     #endregion
 

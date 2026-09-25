@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct BrowserSitePermissionRecordRow: View {
-    let record: BrowserSitePermissionRecord
+    let record: SitePermissionRecordState
     let permissionCenter: BrowserSitePermissionCenter
 
     var body: some View {
@@ -12,7 +12,7 @@ struct BrowserSitePermissionRecordRow: View {
                 .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: CrestFormRowMetrics.titleSpacing) {
-                Text(record.origin.displayName)
+                Text(record.siteName)
                     .lineLimit(1)
                 Text(record.displayLabel)
                     .font(CrestTypography.metadata)
@@ -44,7 +44,7 @@ struct BrowserSitePermissionRecordRow: View {
             .crestMenuActionLabelStyle()
             .modifier(BrowserPlatformSitePermissionMenuModifier())
             .accessibilityLabel(
-                "\(record.displayLabel) for \(record.origin.displayName)"
+                "\(record.displayLabel) for \(record.siteName)"
             )
             .accessibilityValue(Text(record.decision.title))
         }
@@ -55,9 +55,9 @@ struct BrowserSitePermissionRecordRow: View {
         permissionCenter.setDecision(
             decision,
             for: record.permission,
-            origin: record.origin,
+            origin: BrowserSiteOrigin(record.origin),
             detail: record.detail,
-            in: record.spaceID
+            in: SpaceID(rawValue: record.spaceID)
         )
     }
 }

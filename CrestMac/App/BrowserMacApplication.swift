@@ -96,17 +96,11 @@ final class BrowserMacApplication {
         privateBrowser.attachSpaceAccess(spaceAccess)
         let spaceSettingsPresentation =
             BrowserSpaceSettingsPresentationState()
-        let permissionCenter =
-            usesIsolatedLaunch
-            ? BrowserSitePermissionCenter()
-            : BrowserSitePermissionCenter.production(reset: shouldReset)
-        // The core ledger never answers or records for a locked Space. A Space
-        // this app does not own has no lock of its own.
-        permissionCenter.attachSpaceLockState { [weak browser, weak privateBrowser, weak spaceAccess] spaceID in
-            guard let spaceAccess else { return true }
-            guard let space = browser?.session.space(id: spaceID) ?? privateBrowser?.session.space(id: spaceID) else { return false }
-            return spaceAccess.isLocked(space)
-        }
+        // The core keeps every Space's site permission choices and decides
+        // which ones the device store keeps: never a private Space's.
+        let legacyDevice = BrowserLegacyDeviceDefaults.read(for: launchEnvironment)
+        let permissionCenter = BrowserSitePermissionCenter(core: core)
+        permissionCenter.adoptLegacyRecords(legacyDevice.sitePermissions)
         let hostedNotificationCenter = BrowserHostedWebNotificationSystemCenter()
         let sidebarDefaults: UserDefaults?
         if usesIsolatedLaunch, let isolationID = launchEnvironment.persistentIsolationID {
@@ -208,7 +202,7 @@ final class BrowserMacApplication {
             // back by reload because it deliberately archives no session state.
             monitorsMemoryPressure: !usesIsolatedLaunch,
             browsingMode: .privateBrowsing,
-            permissionCenter: BrowserSitePermissionCenter(),
+            permissionCenter: permissionCenter,
             passkeyAccess: passkeyAccess,
             profileRemover: profileRemover,
             // The private pool answers to the private store, so a popup from a

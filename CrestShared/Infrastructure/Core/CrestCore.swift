@@ -56,6 +56,10 @@ final class CrestCore {
     @ObservationIgnored private var sessionFollowers: [Follower<Set<UUID>>] = []
     /// Who hears that an intent from the cloud transport committed.
     @ObservationIgnored private var cloudDeliveryFollowers: [Follower<Void>] = []
+    /// Who hears each site permission change once it is applied. Until WP C
+    /// (e) moves live revocation into engine commands, the pages' permission
+    /// plumbing learns this way what a change covered.
+    @ObservationIgnored private var sitePermissionFollowers: [Follower<SitePermissionsChanged>] = []
     #if DEBUG
         /// Hears each batch of changes once `state` has applied it, so a test
         /// can apply the same batch again.
@@ -204,6 +208,7 @@ final class CrestCore {
     /// core started itself.
     private func apply(_ changes: [Change]) {
         var pageRecords = Engines.PageRecords()
+        var permissionChanges: [SitePermissionsChanged] = []
         for change in changes {
             state.apply(change)
             switch change {
@@ -211,6 +216,7 @@ final class CrestCore {
             case .syncJournalChanged: syncJournalChangeHandler?()
             case .navigationRecorded(let recorded): pageRecords.navigations.append(recorded)
             case .tabFaviconAssigned(let assigned) where assigned.pageID != nil: pageRecords.icons.append(assigned)
+            case .sitePermissionsChanged(let changed): permissionChanges.append(changed)
             default: break
             }
         }
@@ -219,6 +225,7 @@ final class CrestCore {
         state.touchedWorkspaces = []
         if !touched.isEmpty { sessionsChanged(touched) }
         if !pageRecords.isEmpty { engines.recordsApplied(pageRecords) }
+        if !permissionChanges.isEmpty { sitePermissionsChanged(permissionChanges) }
         #if DEBUG
             batchApplied?(changes)
         #endif
@@ -232,6 +239,22 @@ final class CrestCore {
     func followSessions(_ owner: AnyObject, _ handler: @escaping @MainActor (Set<UUID>) -> Void) {
         sessionFollowers.removeAll { $0.owner == nil }
         sessionFollowers.append(Follower(owner: owner, handler: handler))
+    }
+
+    /// Calls `handler` with each site permission change once its batch is
+    /// applied, so a decision asked from the handler reads the new choices.
+    /// The registration lasts as long as `owner`.
+    func followSitePermissions(_ owner: AnyObject, _ handler: @escaping @MainActor (SitePermissionsChanged) -> Void) {
+        sitePermissionFollowers.removeAll { $0.owner == nil }
+        sitePermissionFollowers.append(Follower(owner: owner, handler: handler))
+    }
+
+    private func sitePermissionsChanged(_ changes: [SitePermissionsChanged]) {
+        sitePermissionFollowers.removeAll { $0.owner == nil }
+        let followers = sitePermissionFollowers
+        for change in changes {
+            for follower in followers { follower.handler(change) }
+        }
     }
 
     private func sessionsChanged(_ workspaces: Set<UUID>) {

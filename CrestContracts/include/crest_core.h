@@ -47,22 +47,6 @@ typedef int32_t crest_status_t;
 /* Returns the ABI major supported by this image. */
 CREST_API uint32_t CREST_CALL crest_core_abi_version(void);
 
-/* Process-local site permission ledger: per-Space saved and session choices,
- * their lookup, ordering and persistence rules. The native store keeps the
- * saved document the ledger returns; session choices are never in it and
- * nothing here is synced. Apply runs one v1 JSON command exactly once (input
- * <= 4 MiB) and reports the size of its JSON answer; read copies that answer,
- * with a non-consuming BUFFER_TOO_SMALL size probe, until the next apply.
- * Read reports EMPTY after a rejected command. Calls are synchronous and
- * serialized per ledger. Destroy only after draining calls.
- */
-CREST_API crest_status_t CREST_CALL crest_permissions_create(uint64_t* out_handle);
-CREST_API crest_status_t CREST_CALL crest_permissions_apply(
-    uint64_t handle, const uint8_t* input_utf8, size_t input_length, size_t* out_length);
-CREST_API crest_status_t CREST_CALL crest_permissions_read(
-    uint64_t handle, uint8_t* destination, size_t capacity, size_t* out_length);
-CREST_API crest_status_t CREST_CALL crest_permissions_destroy(uint64_t handle);
-
 /* Bounded pure domain evaluation for incremental migration of synchronous
  * native APIs. No core handle, retained state, I/O, callbacks, or executor wait.
  * Input <= 16 KiB, output <= 64 KiB. Capacity 0 reports required size without

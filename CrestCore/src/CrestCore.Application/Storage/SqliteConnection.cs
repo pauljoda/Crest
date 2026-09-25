@@ -1,4 +1,5 @@
 using CrestCore.Contracts;
+using CrestCore.Domain;
 
 namespace CrestCore.Application;
 
@@ -121,6 +122,9 @@ internal sealed class SqliteConnection : IDisposable {
 
     /// Creates the device store's tables beside the checkpoint table. They are
     /// additive: a build that predates them reads the file as before.
+    /// `device_marker` holds the adoptions an older build knows, which it
+    /// rewrites; `device_adoption` holds every adoption, and no older build
+    /// touches it.
     public void CreateDeviceTables() {
         Execute("CREATE TABLE IF NOT EXISTS device_window (id TEXT PRIMARY KEY, shown_space TEXT NOT NULL, used INTEGER NOT NULL)");
         Execute("CREATE TABLE IF NOT EXISTS device_window_tab (window TEXT NOT NULL, space TEXT NOT NULL, tab TEXT, "
@@ -128,11 +132,17 @@ internal sealed class SqliteConnection : IDisposable {
         Execute("CREATE TABLE IF NOT EXISTS device_window_split (window TEXT NOT NULL, split_group TEXT NOT NULL, "
             + "position INTEGER NOT NULL, share REAL NOT NULL, PRIMARY KEY (window, split_group, position))");
         Execute("CREATE TABLE IF NOT EXISTS device_marker (name TEXT PRIMARY KEY)");
+        Execute("CREATE TABLE IF NOT EXISTS device_adoption (name TEXT PRIMARY KEY)");
+        Execute("CREATE TABLE IF NOT EXISTS device_site_permission (id TEXT PRIMARY KEY, space TEXT NOT NULL, scheme TEXT NOT NULL, "
+            + "host TEXT NOT NULL, port INTEGER NOT NULL, permission TEXT NOT NULL, detail TEXT, decision TEXT NOT NULL, "
+            + "modified_at REAL NOT NULL, position INTEGER NOT NULL)");
     }
 
-    /// The saved windows the device store holds, and whether `marker` is set.
-    /// A row whose identities do not read is left out.
-    public DeviceRecords ReadDevice(string marker) {
+    /// Everything the device store holds. A row whose identities or names do
+    /// not read is left out.
+    public DeviceRecords ReadDevice() => new(ReadWindows(), ReadSitePermissions(), ReadAdoptions());
+
+    private List<SavedWindow> ReadWindows() {
         var windows = new Dictionary<Guid, (Guid ShownSpace, long Used)>();
         var tabs = new List<(Guid Window, ShownTab Tab)>();
         var shares = new List<(Guid Window, Guid Group, double Share)>();
@@ -148,27 +158,49 @@ internal sealed class SqliteConnection : IDisposable {
             if (Identity(statement, 0) is { } window && Identity(statement, 1) is { } group)
                 shares.Add((window, group, Sqlite.sqlite3_column_double(statement, 2)));
         });
-        bool adopted = false;
-        Query("SELECT 1 FROM device_marker WHERE name=?", statement => {
-            Bind(statement, marker);
-            int result = Sqlite.sqlite3_step(statement);
-            adopted = result == Sqlite.Row;
-            return result is Sqlite.Row or Sqlite.Done ? result : throw Failure(result);
-        });
-        return new([.. windows.Select(window => new SavedWindow(window.Key, window.Value.ShownSpace,
+        return [.. windows.Select(window => new SavedWindow(window.Key, window.Value.ShownSpace,
             [.. tabs.Where(tab => tab.Window == window.Key).Select(tab => tab.Tab)],
             [.. shares.Where(share => share.Window == window.Key).GroupBy(share => share.Group)
                 .Select(group => new SplitColumnShares(group.Key, [.. group.Select(share => share.Share)]))],
-            window.Value.Used)).OrderBy(record => record.Used)], adopted);
+            window.Value.Used)).OrderBy(record => record.Used)];
     }
 
-    /// Replaces everything the device store holds with `records`, setting
-    /// `marker` when they have adopted an installed release's records. The
-    /// caller runs it inside a transaction.
-    public void WriteDevice(DeviceRecords records, string marker) {
-        foreach (var table in new[] { "device_window", "device_window_tab", "device_window_split", "device_marker" })
-            Execute($"DELETE FROM {table}");
-        foreach (var window in records.Windows) {
+    private List<SitePermissionRecord> ReadSitePermissions() {
+        var records = new List<SitePermissionRecord>();
+        Rows("SELECT id, space, scheme, host, port, permission, detail, decision, modified_at FROM device_site_permission "
+            + "ORDER BY position", statement => {
+                if (Identity(statement, 0) is not { } id || Identity(statement, 1) is not { } space
+                    || SitePermission.Named(Sqlite.ColumnText(statement, 5)) is not { } permission
+                    || SitePermissionDecision.Named(Sqlite.ColumnText(statement, 7)) is not { } decision) return;
+                records.Add(new(id, space,
+                    new SiteOrigin(Sqlite.ColumnText(statement, 2), Sqlite.ColumnText(statement, 3), Sqlite.sqlite3_column_int(statement, 4)),
+                    permission, Sqlite.ColumnIsNull(statement, 6) ? null : Sqlite.ColumnText(statement, 6), decision,
+                    Sqlite.sqlite3_column_double(statement, 8)));
+            });
+        return records;
+    }
+
+    private HashSet<DeviceAdoption> ReadAdoptions() {
+        var adoptions = new HashSet<DeviceAdoption>();
+        foreach (var table in new[] { "device_marker", "device_adoption" })
+            Rows($"SELECT name FROM {table}", statement => {
+                if (DeviceAdoption.Marked(Sqlite.ColumnText(statement, 0)) is { } adoption) adoptions.Add(adoption);
+            });
+        return adoptions;
+    }
+
+    /// Writes `records` over what the device store holds, rewriting only the
+    /// parts that differ from `written`, which the store holds now; with null,
+    /// every part. The caller runs it inside a transaction.
+    public void WriteDevice(DeviceRecords records, DeviceRecords? written) {
+        if (written is null || !records.Windows.SequenceEqual(written.Windows)) WriteWindows(records.Windows);
+        if (written is null || !records.SitePermissions.SequenceEqual(written.SitePermissions)) WriteSitePermissions(records.SitePermissions);
+        if (written is null || !records.Adopted.SetEquals(written.Adopted)) WriteAdoptions(records.Adopted);
+    }
+
+    private void WriteWindows(IReadOnlyList<SavedWindow> windows) {
+        foreach (var table in new[] { "device_window", "device_window_tab", "device_window_split" }) Execute($"DELETE FROM {table}");
+        foreach (var window in windows) {
             Insert("INSERT INTO device_window(id, shown_space, used) VALUES(?,?,?)", statement => {
                 Bind(statement, 1, Spelling(window.Id));
                 Bind(statement, 2, Spelling(window.ShownSpaceId));
@@ -191,8 +223,40 @@ internal sealed class SqliteConnection : IDisposable {
                     });
                 }
         }
-        if (records.AdoptedWindowRecords)
-            Insert("INSERT INTO device_marker(name) VALUES(?)", statement => Bind(statement, 1, marker));
+    }
+
+    /// The choices in storage order, with every value exactly as the record
+    /// holds it: the capability and decision by `Name`, the time as the double
+    /// it was.
+    private void WriteSitePermissions(IReadOnlyList<SitePermissionRecord> records) {
+        Execute("DELETE FROM device_site_permission");
+        for (int position = 0; position < records.Count; position++) {
+            var record = records[position];
+            int index = position;
+            Insert("INSERT INTO device_site_permission(id, space, scheme, host, port, permission, detail, decision, modified_at, position) "
+                + "VALUES(?,?,?,?,?,?,?,?,?,?)", statement => {
+                    Bind(statement, 1, Spelling(record.Id));
+                    Bind(statement, 2, Spelling(record.Space));
+                    Bind(statement, 3, record.Origin.Scheme);
+                    Bind(statement, 4, record.Origin.Host);
+                    Checked(Sqlite.sqlite3_bind_int64(statement, 5, record.Origin.Port));
+                    Bind(statement, 6, record.Permission.Name);
+                    Bind(statement, 7, record.Detail);
+                    Bind(statement, 8, record.Decision.Name);
+                    Checked(Sqlite.sqlite3_bind_double(statement, 9, record.ModifiedAt));
+                    Checked(Sqlite.sqlite3_bind_int64(statement, 10, index));
+                });
+        }
+    }
+
+    /// Every adoption goes into `device_adoption`; the ones an older build
+    /// knows also go into `device_marker`, which that build reads and rewrites.
+    private void WriteAdoptions(IReadOnlySet<DeviceAdoption> adoptions) {
+        foreach (var table in new[] { "device_marker", "device_adoption" }) Execute($"DELETE FROM {table}");
+        foreach (var adoption in DeviceAdoption.All.Where(adoptions.Contains)) {
+            Insert("INSERT INTO device_adoption(name) VALUES(?)", statement => Bind(statement, 1, adoption.Marker));
+            if (adoption.OlderBuildsRead) Insert("INSERT INTO device_marker(name) VALUES(?)", statement => Bind(statement, 1, adoption.Marker));
+        }
     }
 
     private void Rows(string sql, Action<nint> row) => Query(sql, statement => {

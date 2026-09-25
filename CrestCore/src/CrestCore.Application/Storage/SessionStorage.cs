@@ -56,8 +56,6 @@ internal sealed class SessionStorage : IDisposable {
     /// removes it once it has opted in.
     private const string CloudRecoverySuffix = ".cloud-recovery";
     private const string PreservedDirectoryPrefix = "Recovery-";
-    /// The device store's marker that it adopted an installed release's window records.
-    private const string WindowRecordsMarker = "window-records";
     private const string TemporaryExtension = ".sqlite";
     private static readonly string[] SidecarSuffixes = ["-wal", "-shm"];
     /// The rollback journal SQLite keeps beside a checkpoint copy while it writes.
@@ -79,9 +77,10 @@ internal sealed class SessionStorage : IDisposable {
     private NativeSyncJournal? writtenJournal;
     /// The newest accepted session revision not yet written.
     private Unwritten<(SessionState Session, ulong Revision)>? pending;
-    /// The newest device records not yet written, and those the file holds.
+    /// The newest device records not yet written, and those the file holds,
+    /// or null while the file's device store could not be read.
     private Unwritten<DeviceRecords>? pendingDevice;
-    private DeviceRecords writtenDevice;
+    private DeviceRecords? writtenDevice;
     /// The newest session revision handed to the file or saved durably, and
     /// the newest one the file holds.
     private ulong handedRevision, writtenRevision;
@@ -117,11 +116,12 @@ internal sealed class SessionStorage : IDisposable {
     #region Constructors
 
     private SessionStorage(string directory, SqliteConnection connection, Dictionary<string, byte[]> parts,
-        NativeSyncJournal? journal, DeviceRecords device, Action<Change> announce) {
+        NativeSyncJournal? journal, DeviceRecords? device, Action<Change> announce) {
         Directory = directory;
         this.connection = connection;
         written = parts;
-        Device = writtenDevice = device;
+        Device = device ?? DeviceRecords.Empty;
+        writtenDevice = device;
         writtenJournal = journal;
         this.announce = announce;
         worker = new Thread(Run) { IsBackground = true, Name = "Crest session storage" };
@@ -197,13 +197,13 @@ internal sealed class SessionStorage : IDisposable {
         if (version < 0) throw new Rejected(new StorageUnreadable(StorageFailure.Damaged));
     }
 
-    /// The device store, or nothing when it cannot be read: the session
-    /// never depends on it.
-    private static DeviceRecords ReadDevice(SqliteConnection source) {
+    /// The device store, or null when it cannot be read: the session never
+    /// depends on it, and the next write rewrites every part of it.
+    private static DeviceRecords? ReadDevice(SqliteConnection source) {
         try {
-            return source.ReadDevice(WindowRecordsMarker);
+            return source.ReadDevice();
         } catch (StorageException) {
-            return DeviceRecords.Empty;
+            return null;
         }
     }
 
@@ -278,7 +278,7 @@ internal sealed class SessionStorage : IDisposable {
         Saved? saved;
         lock (writing) {
             RequireOpen();
-            connection.InTransaction(() => connection.WriteDevice(records, WindowRecordsMarker));
+            connection.InTransaction(() => connection.WriteDevice(records, writtenDevice));
             writtenDevice = records;
             lock (queue) {
                 if (ReferenceEquals(pendingDevice?.Value, records)) pendingDevice = null;
@@ -311,7 +311,7 @@ internal sealed class SessionStorage : IDisposable {
         try {
             lock (writing) {
                 RequireOpen();
-                if (!records.Equals(writtenDevice)) connection.InTransaction(() => connection.WriteDevice(records, WindowRecordsMarker));
+                if (!records.Equals(writtenDevice)) connection.InTransaction(() => connection.WriteDevice(records, writtenDevice));
                 writtenDevice = records;
                 lock (queue) {
                     pendingDevice = pendingDevice?.After(owed.Revision);
