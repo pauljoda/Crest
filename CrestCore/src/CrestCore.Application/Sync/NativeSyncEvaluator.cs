@@ -14,7 +14,7 @@ public static class NativeSyncEvaluator {
 
     internal static double? Date(JsonNode value, string field) {
         if (value[field] is null) return null;
-        double date = value[field]!.GetValue<double>();
+        double date = SyncJson.Double(value[field]!);
         if (!double.IsFinite(date)) throw new BrowserRuleException(BrowserRuleCodes.InvalidSyncDate);
         return date;
     }
@@ -22,7 +22,7 @@ public static class NativeSyncEvaluator {
     private static Guid Id(JsonNode? value) => NativeSessionAuthority.Id(value);
 
     private static SyncVersion Version(JsonNode value)
-        => new(value["version"]!["logicalClock"]!.GetValue<ulong>(), Id(value["version"]!["deviceID"]));
+        => new(SyncJson.ULong(value["version"]!["logicalClock"]!), Id(value["version"]!["deviceID"]));
 
     private static string Kind(JsonNode value) => Text(value["id"]!, "kind");
 
@@ -74,7 +74,7 @@ public static class NativeSyncEvaluator {
             or "savedTabsExpansionModifiedAt" or "collapseModifiedAt" or "iconModifiedAt" or "tintModifiedAt"
             or "archivedAt" or "deletedAt" or "firstVisitedAt" or "lastVisitedAt";
         if (timestamp && first is JsonValue ad && second is JsonValue bd
-            && ad.TryGetValue<double>(out var aDate) && bd.TryGetValue<double>(out var bDate)) return aDate == bDate;
+            && SyncJson.TryDouble(ad, out var aDate) && SyncJson.TryDouble(bd, out var bDate)) return aDate == bDate;
         return JsonNode.DeepEquals(first, second);
     }
 

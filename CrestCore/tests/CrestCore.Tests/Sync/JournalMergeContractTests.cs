@@ -345,6 +345,37 @@ public sealed partial class BrowserContractsTests {
         Assert.Contains(added, Ids(reconciled["tabs"]));
     }
 
+    /// A record the codec builds in code holds its numbers as the CLR types the
+    /// codec chose, while the same record parsed from text holds them as
+    /// parsed text. Every typed journal update takes either and makes the
+    /// same journal of them.
+    [Fact]
+    public void RecordsTheCodecBuildsReadLikeParsedRecordsInEveryJournalUpdate() {
+        var session = OneSpaceSession(Fixed(1_100), Fixed(1_101), Fixed(1_102));
+        var space = FirstSpace(session);
+        space["history"] = new JsonArray(VisitOf(Fixed(1_103), "visited", count: 4));
+        space["archivedTabs"] = new JsonArray(ArchivedOf(TabOf(Fixed(1_104), "Archived", "https://example.com/archived"), at: 950));
+        var local = new JournalUnderTest(Fixed(1_105));
+        local.Stage(session, at: 900);
+        // Newer copies of every record the journal staged, as the cloud sends them.
+        SyncRecord[] cloud = [.. local.Records.Select(Cloud).Select(record =>
+            record with { Version = new SyncVersion(record.Version.Clock + 1_000, Fixed(1_106)) })];
+        JsonArray Built() => new IncomingSyncRecords(cloud).Batch();
+        JsonArray Parsed() => JsonNode.Parse(Built().ToJsonString())!.AsArray();
+        UploadedRecord[] uploaded = [.. cloud.Select(record => new UploadedRecord(new(record.Kind, record.Id), record.Version))];
+        var canonical = Canonical(session);
+
+        foreach (var update in new Func<JsonArray, NativeSyncJournal>[] {
+            records => local.Journal.Merge(records),
+            records => local.Journal.Replace(records),
+            records => local.Journal.Overwrite(canonical.DeepClone().AsObject(), records, At(1_000)),
+            records => local.Journal.Merge(records).Acknowledge(uploaded),
+            records => local.Journal.Replace(records).Stage(canonical.DeepClone().AsObject(), SyncDeletionReason.Superseded, At(1_000))
+        }) {
+            Assert.Equal(update(Parsed()).Read(), update(Built()).Read());
+        }
+    }
+
     #endregion
 
     #region Actions - Fixtures

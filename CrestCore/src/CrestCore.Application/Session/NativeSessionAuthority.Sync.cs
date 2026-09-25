@@ -189,8 +189,8 @@ public sealed partial class NativeSessionAuthority {
         var held = basis.Spaces.SelectMany(space => space.Tabs.Select(tab => (space.Id, tab.Id))).ToHashSet();
         var copies = new List<SessionTabCopy>();
         foreach (var asset in assets) {
-            var space = next.Spaces[asset!["spaceIndex"]!.GetValue<int>()];
-            var copy = space.Tabs[asset["tabIndex"]!.GetValue<int>()].Id;
+            var space = next.Spaces[SyncJson.Int(asset!["spaceIndex"]!)];
+            var copy = space.Tabs[SyncJson.Int(asset["tabIndex"]!)].Id;
             var source = (StoredSessionCodec.Identity(asset["sourceSpaceID"]), StoredSessionCodec.Identity(asset["sourceTabID"]));
             if (copy != source.Item2 && held.Contains(source)) copies.Add(new(source.Item2, copy));
         }

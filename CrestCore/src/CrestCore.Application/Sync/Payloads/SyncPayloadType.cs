@@ -219,7 +219,7 @@ internal abstract class SyncPayloadType {
                 NativeSyncEvaluator.Date(second, "firstVisitedAt")!.Value);
             result["lastVisitedAt"] = Math.Max(NativeSyncEvaluator.Date(first, "lastVisitedAt")!.Value,
                 NativeSyncEvaluator.Date(second, "lastVisitedAt")!.Value);
-            result["visitCount"] = Math.Max(first["visitCount"]!.GetValue<int>(), second["visitCount"]!.GetValue<int>());
+            result["visitCount"] = Math.Max(SyncJson.Int(first["visitCount"]!), SyncJson.Int(second["visitCount"]!));
         }
     }
 

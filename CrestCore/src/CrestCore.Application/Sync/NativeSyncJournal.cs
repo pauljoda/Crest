@@ -34,7 +34,7 @@ public sealed class NativeSyncJournal {
     /// The journal `source`, a stored journal parsed once, which it takes
     /// over: nothing else may hold it.
     internal NativeSyncJournal(JsonObject source) {
-        if (source["schemaVersion"]!.GetValue<int>() != 1) throw new BrowserRuleException(BrowserRuleCodes.VersionMismatch);
+        if (SyncJson.Int(source["schemaVersion"]!) != 1) throw new BrowserRuleException(BrowserRuleCodes.VersionMismatch);
         // Every member but the records, which the journal keeps by name.
         metadata = new JsonObject(source.Where(member => member.Key is not ("records" or "pendingRecordIDs"))
             .Select(member => KeyValuePair.Create(member.Key, member.Value?.DeepClone())));
@@ -42,7 +42,7 @@ public sealed class NativeSyncJournal {
         records = RecordMap(source["records"]!.AsArray());
         pending = source["pendingRecordIDs"]!.AsArray().Select(n => Name(n!)).ToHashSet(StringComparer.Ordinal);
         if (!pending.IsSubsetOf(records.Keys)) throw new BrowserRuleException(BrowserRuleCodes.InvalidSyncPending);
-        ulong clock = metadata["logicalClock"]!.GetValue<ulong>();
+        ulong clock = SyncJson.ULong(metadata["logicalClock"]!);
         foreach (var record in records.Values) clock = Math.Max(clock, Clock(record));
         metadata["logicalClock"] = clock;
         encoded = new(Encode, true);
@@ -86,14 +86,14 @@ public sealed class NativeSyncJournal {
 
     private static SyncVersion Version(JsonNode record) {
         var version = record["version"]!;
-        return new(version["logicalClock"]!.GetValue<ulong>(), Id(version["deviceID"]));
+        return new(SyncJson.ULong(version["logicalClock"]!), Id(version["deviceID"]));
     }
 
     private static SyncRecordReference Reference(JsonNode record) =>
         new(SyncRecordKind.Named(Kind(record)) ?? throw new BrowserRuleException(BrowserRuleCodes.InvalidSyncKind),
             Id(record["id"]!["value"]));
 
-    private static ulong Clock(JsonNode record) => record["version"]!["logicalClock"]!.GetValue<ulong>();
+    private static ulong Clock(JsonNode record) => SyncJson.ULong(record["version"]!["logicalClock"]!);
 
     private static JsonObject? Payload(JsonNode record) => record["payload"] as JsonObject;
 
@@ -391,23 +391,19 @@ public sealed class NativeSyncJournal {
             fields = journal.metadata.DeepClone().AsObject();
             Records = new(journal.records, StringComparer.Ordinal);
             Pending = new(journal.pending, StringComparer.Ordinal);
-            clock = fields["logicalClock"]!.GetValue<ulong>();
+            clock = SyncJson.ULong(fields["logicalClock"]!);
         }
 
         #endregion
 
         #region Actions - Records
 
-        /// `incoming`, records in the journal's form, by name, with the clock
-        /// past every version they carry. Throws when one holds the last clock,
-        /// which would leave this journal no version to write a later edit at.
-        ///
-        /// The records are read again from their text, as the journal reads
-        /// what it stores: a number parsed from text reads as any numeric type,
-        /// while one a caller built in code reads only as the type it was
-        /// built with.
+        /// Copies of `incoming`, records in the journal's form, by name, with
+        /// the clock past every version they carry. Throws when one holds the
+        /// last clock, which would leave this journal no version to write a
+        /// later edit at.
         public Dictionary<string, JsonObject> Arrive(JsonArray incoming) {
-            var arrived = RecordMap(JsonNode.Parse(incoming.ToJsonString(), documentOptions: new() { MaxDepth = 64 })!.AsArray());
+            var arrived = RecordMap(incoming.DeepClone().AsArray());
             foreach (var record in arrived.Values) clock = Math.Max(clock, Clock(record));
             if (clock == ulong.MaxValue) throw new BrowserRuleException(BrowserRuleCodes.SyncClockExhausted);
             return arrived;

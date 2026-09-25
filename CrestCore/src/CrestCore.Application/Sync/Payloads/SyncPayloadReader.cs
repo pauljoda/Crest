@@ -117,25 +117,16 @@ internal sealed class SyncPayloadReader {
         ? value.GetValue<bool>() : throw new UnreadableSyncPayloadException();
 
     /// A finite number, as a double, whether parsed or placed in a node by code.
-    public static double Number(JsonNode? node) {
-        if (node is JsonValue value && value.GetValueKind() == JsonValueKind.Number) {
-            if (value.TryGetValue(out double number)) return double.IsFinite(number) ? number : throw new UnreadableSyncPayloadException();
-            if (value.TryGetValue(out long whole)) return whole;
-            if (value.TryGetValue(out int small)) return small;
-            if (value.TryGetValue(out ulong large)) return large;
-            if (value.TryGetValue(out decimal exact)) return (double)exact;
-        }
-        throw new UnreadableSyncPayloadException();
-    }
+    public static double Number(JsonNode? node) =>
+        SyncJson.TryDouble(node, out var number) && double.IsFinite(number) ? number : throw new UnreadableSyncPayloadException();
 
     /// A number that is a whole 64-bit integer, however it is spelled.
     public static long Integer(JsonNode? node) {
-        if (node is not JsonValue value || value.GetValueKind() != JsonValueKind.Number) throw new UnreadableSyncPayloadException();
-        if (value.TryGetValue(out long whole)) return whole;
-        if (value.TryGetValue(out int small)) return small;
-        if (value.TryGetValue(out decimal exact) && exact == decimal.Truncate(exact) && exact is >= long.MinValue and <= long.MaxValue)
+        if (SyncJson.TryLong(node, out var whole)) return whole;
+        if (node is JsonValue value && value.TryGetValue(out decimal exact) && exact == decimal.Truncate(exact)
+            && exact is >= long.MinValue and <= long.MaxValue)
             return (long)exact;
-        if (value.TryGetValue(out double number) && number == Math.Floor(number) && number is >= long.MinValue and < long.MaxValue)
+        if (SyncJson.TryDouble(node, out var number) && number == Math.Floor(number) && number is >= long.MinValue and < long.MaxValue)
             return (long)number;
         throw new UnreadableSyncPayloadException();
     }

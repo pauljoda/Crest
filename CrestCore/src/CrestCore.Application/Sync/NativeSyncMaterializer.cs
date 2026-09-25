@@ -209,7 +209,7 @@ public static class NativeSyncMaterializer {
                 ["archivedAt"] = record["tombstone"]?["deletedAt"]?.DeepClone() ?? JsonValue.Create(now)
             });
         }
-        return result.Concat(localOnly).OrderByDescending(a => a["archivedAt"]!.GetValue<double>()).ToList();
+        return result.Concat(localOnly).OrderByDescending(a => SyncJson.Double(a["archivedAt"]!)).ToList();
     }
 
     private static List<JsonNode> History(Guid space, IReadOnlyList<JsonObject> records, SyncPreferences policy, JsonNode? local) {
@@ -217,9 +217,9 @@ public static class NativeSyncMaterializer {
         var localOnly = Local(local, StoredSessionCodec.Key.History).Where(h => !SyncContentPolicy.Includes(Text(h["url"]))).ToArray();
         var localIds = localOnly.Select(h => Id(h["id"])).ToHashSet();
         var synced = Payloads(records, SyncRecordKind.History.Name, space).Where(h => SyncContentPolicy.Includes(Text(h["url"])) && !localIds.Contains(Id(h["id"])))
-            .OrderByDescending(h => h["lastVisitedAt"]!.GetValue<double>()).ThenBy(h => Id(h["id"]).ToString("D"), StringComparer.Ordinal)
+            .OrderByDescending(h => SyncJson.Double(h["lastVisitedAt"]!)).ThenBy(h => Id(h["id"]).ToString("D"), StringComparer.Ordinal)
             .Take(HistoryPolicy.MaximumEntries).Select(h => (JsonNode)Fields(h, "id", "url", "title", "firstVisitedAt", "lastVisitedAt", "visitCount"));
-        return synced.Concat(localOnly).OrderByDescending(h => h["lastVisitedAt"]!.GetValue<double>()).ToList();
+        return synced.Concat(localOnly).OrderByDescending(h => SyncJson.Double(h["lastVisitedAt"]!)).ToList();
     }
 
     #endregion

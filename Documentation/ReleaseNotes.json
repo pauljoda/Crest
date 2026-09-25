@@ -2473,6 +2473,10 @@
     "sync-json-paths-retired": {
       "category": "internal",
       "message": "The core owns the sync journal alone; the Swift sync domain and the JSON sync entry points are gone."
+    },
+    "sync-json-numbers": {
+      "category": "internal",
+      "message": "Synced records read their numbers the same however their JSON was built."
     }
   }
 }

@@ -172,11 +172,10 @@ public static class NativeSyncProjection {
     /// keeps it; only the record is fitted.
     private static void Visit(JsonObject value) {
         SyncedText.HistoryTitle.Fit(value);
-        if (value["visitCount"] is JsonValue count && count.TryGetValue<int>(out var visits) && visits < 1) value["visitCount"] = 1;
-        if (value["firstVisitedAt"] is JsonValue first && value["lastVisitedAt"] is JsonValue last
-            && first.TryGetValue<double>(out var firstVisited) && last.TryGetValue<double>(out var lastVisited)
+        if (SyncJson.TryInt(value["visitCount"], out var visits) && visits < 1) value["visitCount"] = 1;
+        if (SyncJson.TryDouble(value["firstVisitedAt"], out var firstVisited) && SyncJson.TryDouble(value["lastVisitedAt"], out var lastVisited)
             && firstVisited > lastVisited)
-            value["firstVisitedAt"] = last.DeepClone();
+            value["firstVisitedAt"] = value["lastVisitedAt"]!.DeepClone();
     }
 
     #endregion
