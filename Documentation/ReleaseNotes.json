@@ -2569,6 +2569,10 @@
     "sidebar-drags-ask-the-core": {
       "category": "improved",
       "message": "Dragging in the sidebar now says why a spot won't take what you're holding, a whole split can join the tabs on show or drop into a collapsed folder, and selections stay selectable in long lists."
+    },
+    "engine-direct-page-path": {
+      "category": "internal",
+      "message": "The platform asks an engine binding for page view work through typed requests and presentations."
     }
   }
 }

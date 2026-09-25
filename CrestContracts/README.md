@@ -53,7 +53,13 @@ portable C++20 that uses the standard library alone and never throws.
 Chromium's binding, which is C++, registers with its `kFingerprint`, decodes
 its commands and encodes its reports with it, and reports to the core through
 the function `attach` hands it; `tests/engine_abi.cc` does the same against
-the shared library. The
+the shared library. `crest_engine.h` also describes the platform's direct path
+to a binding written outside the platform's language, `crest_engine_pages_t`:
+the `PageRequest`s the UI makes of a page's engine for view work (history,
+find, zoom, capture, export), answered at once, and the `EnginePresentation`s
+the binding sends back when work finishes later. They share the engine
+contract and its fingerprint so every binding answers the same requests, but
+the core never reads or writes them. The
 `OpenPage`, `MovePage`, `ReleasePage`, `Navigate` and `LeavePageFailure`
 intents on `crest_app_*` own page identity and loads: which tab or transient
 request owns each page, which engine hosts it, what an address the person

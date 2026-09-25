@@ -37,6 +37,25 @@ typedef struct {
     void (CREST_CALL *run)(void* context, const uint8_t* command, size_t length);
 } crest_engine_binding_t;
 
+/* The platform's direct path to a binding: what the UI asks of a page's engine
+ * itself (EnginePage), view work that changes no browser state. The core never
+ * calls it; a binding written outside the platform's language hands it to the
+ * platform beside its binding table.
+ *
+ * request receives one encoded PageRequest, borrowed for the call, and answers
+ * OK with the request's encoded answer in out, which release frees, or
+ * INVALID_MESSAGE for bytes that do not decode. present_to names where the
+ * binding sends each encoded EnginePresentation, with ui handed back; NULL
+ * stops them. A binding presents on the thread that makes requests, never on
+ * the stack of a request or of one of its engine's own callbacks. */
+typedef void (CREST_CALL *crest_engine_present_t)(void* ui, const uint8_t* presentation, size_t length);
+typedef struct {
+    void* context;
+    crest_status_t (CREST_CALL *request)(void* context, const uint8_t* request, size_t length, crest_buffer_t* out);
+    void (CREST_CALL *release)(void* context, crest_buffer_t* buffer);
+    void (CREST_CALL *present_to)(void* context, crest_engine_present_t present, void* ui);
+} crest_engine_pages_t;
+
 /* registration is one encoded EngineRegistration. VERSION_MISMATCH when the
  * fingerprint is not this core's engine contract. REJECTED: out_rejection
  * holds one rejection (EngineLacksCapability, EngineAlreadyRegistered,

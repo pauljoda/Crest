@@ -29,7 +29,7 @@ namespace crest::engine {
 // SHA-256 of the engine contract alone. A binding registers with it, so the
 // core refuses an engine built against any other contract.
 inline constexpr std::array<uint8_t, 32> kFingerprint = {
-    0xca, 0xe7, 0x4a, 0xfc, 0xf6, 0x21, 0xbb, 0xec, 0xb1, 0xa0, 0x07, 0x81, 0xd1, 0xa4, 0x53, 0x62, 0xda, 0x4a, 0x38, 0x79, 0x8b, 0xf4, 0xc8, 0xca, 0x97, 0xd3, 0x4c, 0xbd, 0xa7, 0xb8, 0x33, 0x25};
+    0x6c, 0x49, 0x00, 0xb8, 0x58, 0x54, 0x1c, 0xf7, 0x94, 0xfe, 0x77, 0xd8, 0x92, 0xec, 0x60, 0xb5, 0x06, 0xf4, 0xff, 0x77, 0xc3, 0xc6, 0x0b, 0xc2, 0x49, 0x1c, 0x0d, 0x17, 0x50, 0xc5, 0xad, 0x12};
 
 // A GUID in RFC 4122 byte order, as the wire carries it.
 using Guid = std::array<uint8_t, 16>;
@@ -284,6 +284,17 @@ bool Read(WireReader& reader, std::vector<T>& value) {
   return reader.ok();
 }
 
+enum class PageExportFormat : uint32_t {
+  kPdf = 0,
+  kPng = 1,
+  kMhtml = 2,
+};
+inline void Write(WireWriter& writer, PageExportFormat value) { writer.WriteVarint(static_cast<uint32_t>(value)); }
+inline bool Read(WireReader& reader, PageExportFormat& value) {
+  value = static_cast<PageExportFormat>(reader.ReadEnum(3));
+  return reader.ok();
+}
+
 enum class PageMediaActivity : uint32_t {
   kNone = 0,
   kPlaying = 1,
@@ -369,6 +380,22 @@ inline bool Read(WireReader& reader, NavigationError& value) {
   return reader.ok();
 }
 
+enum class PageExportFailure : uint32_t {
+  kBusy = 0,
+  kUnsupported = 1,
+  kClosed = 2,
+  kNavigated = 3,
+  kRendererStopped = 4,
+  kTimedOut = 5,
+  kTooLarge = 6,
+  kFailed = 7,
+};
+inline void Write(WireWriter& writer, PageExportFailure value) { writer.WriteVarint(static_cast<uint32_t>(value)); }
+inline bool Read(WireReader& reader, PageExportFailure& value) {
+  value = static_cast<PageExportFailure>(reader.ReadEnum(8));
+  return reader.ok();
+}
+
 enum class PageSecurity : uint32_t {
   kNone = 0,
   kInsecure = 1,
@@ -381,6 +408,48 @@ inline void Write(WireWriter& writer, PageSecurity value) { writer.WriteVarint(s
 inline bool Read(WireReader& reader, PageSecurity& value) {
   value = static_cast<PageSecurity>(reader.ReadEnum(6));
   return reader.ok();
+}
+
+struct PageArea {
+  double x = 0;
+  double y = 0;
+  double width = 0;
+  double height = 0;
+
+  friend bool operator==(const PageArea&, const PageArea&) = default;
+};
+inline void Write(WireWriter& writer, const PageArea& value) {
+  Write(writer, value.x);
+  Write(writer, value.y);
+  Write(writer, value.width);
+  Write(writer, value.height);
+}
+inline bool Read(WireReader& reader, PageArea& value) {
+  return Read(reader, value.x)
+      && Read(reader, value.y)
+      && Read(reader, value.width)
+      && Read(reader, value.height);
+}
+
+struct CapturePage {
+  Guid page_id = {};
+  Guid capture_id = {};
+  std::optional<PageArea> area;
+  double width = 0;
+
+  friend bool operator==(const CapturePage&, const CapturePage&) = default;
+};
+inline void Write(WireWriter& writer, const CapturePage& value) {
+  Write(writer, value.page_id);
+  Write(writer, value.capture_id);
+  Write(writer, value.area);
+  Write(writer, value.width);
+}
+inline bool Read(WireReader& reader, CapturePage& value) {
+  return Read(reader, value.page_id)
+      && Read(reader, value.capture_id)
+      && Read(reader, value.area)
+      && Read(reader, value.width);
 }
 
 struct ClosePage {
@@ -396,6 +465,18 @@ inline void Write(WireWriter& writer, const ClosePage& value) {
 inline bool Read(WireReader& reader, ClosePage& value) {
   return Read(reader, value.page_id)
       && Read(reader, value.keeps_state);
+}
+
+struct CloseStandalonePage {
+  Guid page_id = {};
+
+  friend bool operator==(const CloseStandalonePage&, const CloseStandalonePage&) = default;
+};
+inline void Write(WireWriter& writer, const CloseStandalonePage& value) {
+  Write(writer, value.page_id);
+}
+inline bool Read(WireReader& reader, CloseStandalonePage& value) {
+  return Read(reader, value.page_id);
 }
 
 struct CreatePage {
@@ -437,6 +518,105 @@ inline bool Read(WireReader& reader, EngineRegistration& value) {
       && Read(reader, value.is_default);
 }
 
+struct ExportPage {
+  Guid page_id = {};
+  Guid export_id = {};
+  PageExportFormat format = {};
+  double width = 0;
+
+  friend bool operator==(const ExportPage&, const ExportPage&) = default;
+};
+inline void Write(WireWriter& writer, const ExportPage& value) {
+  Write(writer, value.page_id);
+  Write(writer, value.export_id);
+  Write(writer, value.format);
+  Write(writer, value.width);
+}
+inline bool Read(WireReader& reader, ExportPage& value) {
+  return Read(reader, value.page_id)
+      && Read(reader, value.export_id)
+      && Read(reader, value.format)
+      && Read(reader, value.width);
+}
+
+struct FindFinished {
+  Guid page_id = {};
+  int32_t matches = 0;
+  int32_t active_match = 0;
+
+  friend bool operator==(const FindFinished&, const FindFinished&) = default;
+};
+inline void Write(WireWriter& writer, const FindFinished& value) {
+  Write(writer, value.page_id);
+  Write(writer, value.matches);
+  Write(writer, value.active_match);
+}
+inline bool Read(WireReader& reader, FindFinished& value) {
+  return Read(reader, value.page_id)
+      && Read(reader, value.matches)
+      && Read(reader, value.active_match);
+}
+
+struct FindInPage {
+  Guid page_id = {};
+  std::string query;
+  bool backwards = false;
+  bool case_sensitive = false;
+
+  friend bool operator==(const FindInPage&, const FindInPage&) = default;
+};
+inline void Write(WireWriter& writer, const FindInPage& value) {
+  Write(writer, value.page_id);
+  Write(writer, value.query);
+  Write(writer, value.backwards);
+  Write(writer, value.case_sensitive);
+}
+inline bool Read(WireReader& reader, FindInPage& value) {
+  return Read(reader, value.page_id)
+      && Read(reader, value.query)
+      && Read(reader, value.backwards)
+      && Read(reader, value.case_sensitive);
+}
+
+struct GoToHistoryOffset {
+  Guid page_id = {};
+  int32_t offset = 0;
+
+  friend bool operator==(const GoToHistoryOffset&, const GoToHistoryOffset&) = default;
+};
+inline void Write(WireWriter& writer, const GoToHistoryOffset& value) {
+  Write(writer, value.page_id);
+  Write(writer, value.offset);
+}
+inline bool Read(WireReader& reader, GoToHistoryOffset& value) {
+  return Read(reader, value.page_id)
+      && Read(reader, value.offset);
+}
+
+struct HidePage {
+  Guid page_id = {};
+
+  friend bool operator==(const HidePage&, const HidePage&) = default;
+};
+inline void Write(WireWriter& writer, const HidePage& value) {
+  Write(writer, value.page_id);
+}
+inline bool Read(WireReader& reader, HidePage& value) {
+  return Read(reader, value.page_id);
+}
+
+struct InteractionState {
+  std::optional<Bytes> state;
+
+  friend bool operator==(const InteractionState&, const InteractionState&) = default;
+};
+inline void Write(WireWriter& writer, const InteractionState& value) {
+  Write(writer, value.state);
+}
+inline bool Read(WireReader& reader, InteractionState& value) {
+  return Read(reader, value.state);
+}
+
 struct LoadPage {
   Guid page_id = {};
   std::string url;
@@ -450,6 +630,21 @@ inline void Write(WireWriter& writer, const LoadPage& value) {
 inline bool Read(WireReader& reader, LoadPage& value) {
   return Read(reader, value.page_id)
       && Read(reader, value.url);
+}
+
+struct MovePageToWindow {
+  Guid page_id = {};
+  Guid window_id = {};
+
+  friend bool operator==(const MovePageToWindow&, const MovePageToWindow&) = default;
+};
+inline void Write(WireWriter& writer, const MovePageToWindow& value) {
+  Write(writer, value.page_id);
+  Write(writer, value.window_id);
+}
+inline bool Read(WireReader& reader, MovePageToWindow& value) {
+  return Read(reader, value.page_id)
+      && Read(reader, value.window_id);
 }
 
 struct NavigationCommitted {
@@ -545,6 +740,45 @@ inline bool Read(WireReader& reader, NavigationStarted& value) {
       && Read(reader, value.same_document);
 }
 
+struct OpenStandalonePage {
+  Guid page_id = {};
+  Guid profile_id = {};
+  Guid window_id = {};
+  std::string url;
+
+  friend bool operator==(const OpenStandalonePage&, const OpenStandalonePage&) = default;
+};
+inline void Write(WireWriter& writer, const OpenStandalonePage& value) {
+  Write(writer, value.page_id);
+  Write(writer, value.profile_id);
+  Write(writer, value.window_id);
+  Write(writer, value.url);
+}
+inline bool Read(WireReader& reader, OpenStandalonePage& value) {
+  return Read(reader, value.page_id)
+      && Read(reader, value.profile_id)
+      && Read(reader, value.window_id)
+      && Read(reader, value.url);
+}
+
+struct PageCaptured {
+  Guid page_id = {};
+  Guid capture_id = {};
+  std::optional<Bytes> png;
+
+  friend bool operator==(const PageCaptured&, const PageCaptured&) = default;
+};
+inline void Write(WireWriter& writer, const PageCaptured& value) {
+  Write(writer, value.page_id);
+  Write(writer, value.capture_id);
+  Write(writer, value.png);
+}
+inline bool Read(WireReader& reader, PageCaptured& value) {
+  return Read(reader, value.page_id)
+      && Read(reader, value.capture_id)
+      && Read(reader, value.png);
+}
+
 struct PageClosed {
   Guid page_id = {};
 
@@ -578,6 +812,39 @@ inline void Write(WireWriter& writer, const PageCreationFailed& value) {
   Write(writer, value.page_id);
 }
 inline bool Read(WireReader& reader, PageCreationFailed& value) {
+  return Read(reader, value.page_id);
+}
+
+struct PageExported {
+  Guid page_id = {};
+  Guid export_id = {};
+  std::optional<Bytes> document;
+  std::optional<PageExportFailure> failure;
+
+  friend bool operator==(const PageExported&, const PageExported&) = default;
+};
+inline void Write(WireWriter& writer, const PageExported& value) {
+  Write(writer, value.page_id);
+  Write(writer, value.export_id);
+  Write(writer, value.document);
+  Write(writer, value.failure);
+}
+inline bool Read(WireReader& reader, PageExported& value) {
+  return Read(reader, value.page_id)
+      && Read(reader, value.export_id)
+      && Read(reader, value.document)
+      && Read(reader, value.failure);
+}
+
+struct PageIcon {
+  Guid page_id = {};
+
+  friend bool operator==(const PageIcon&, const PageIcon&) = default;
+};
+inline void Write(WireWriter& writer, const PageIcon& value) {
+  Write(writer, value.page_id);
+}
+inline bool Read(WireReader& reader, PageIcon& value) {
   return Read(reader, value.page_id);
 }
 
@@ -615,6 +882,18 @@ inline bool Read(WireReader& reader, PageIconChanged& value) {
   return Read(reader, value.page_id)
       && Read(reader, value.url)
       && Read(reader, value.accent);
+}
+
+struct PageIconImage {
+  std::optional<Bytes> image;
+
+  friend bool operator==(const PageIconImage&, const PageIconImage&) = default;
+};
+inline void Write(WireWriter& writer, const PageIconImage& value) {
+  Write(writer, value.image);
+}
+inline bool Read(WireReader& reader, PageIconImage& value) {
+  return Read(reader, value.image);
 }
 
 struct PageSnapshot {
@@ -663,6 +942,90 @@ inline void Write(WireWriter& writer, const PageStateChanged& value) {
 inline bool Read(WireReader& reader, PageStateChanged& value) {
   return Read(reader, value.page_id)
       && Read(reader, value.snapshot);
+}
+
+struct ReloadPage {
+  Guid page_id = {};
+  bool bypasses_cache = false;
+
+  friend bool operator==(const ReloadPage&, const ReloadPage&) = default;
+};
+inline void Write(WireWriter& writer, const ReloadPage& value) {
+  Write(writer, value.page_id);
+  Write(writer, value.bypasses_cache);
+}
+inline bool Read(WireReader& reader, ReloadPage& value) {
+  return Read(reader, value.page_id)
+      && Read(reader, value.bypasses_cache);
+}
+
+struct RestoreInteractionState {
+  Guid page_id = {};
+  Bytes state;
+  std::string expected_url;
+
+  friend bool operator==(const RestoreInteractionState&, const RestoreInteractionState&) = default;
+};
+inline void Write(WireWriter& writer, const RestoreInteractionState& value) {
+  Write(writer, value.page_id);
+  Write(writer, value.state);
+  Write(writer, value.expected_url);
+}
+inline bool Read(WireReader& reader, RestoreInteractionState& value) {
+  return Read(reader, value.page_id)
+      && Read(reader, value.state)
+      && Read(reader, value.expected_url);
+}
+
+struct SaveInteractionState {
+  Guid page_id = {};
+
+  friend bool operator==(const SaveInteractionState&, const SaveInteractionState&) = default;
+};
+inline void Write(WireWriter& writer, const SaveInteractionState& value) {
+  Write(writer, value.page_id);
+}
+inline bool Read(WireReader& reader, SaveInteractionState& value) {
+  return Read(reader, value.page_id);
+}
+
+struct ShowPage {
+  Guid page_id = {};
+
+  friend bool operator==(const ShowPage&, const ShowPage&) = default;
+};
+inline void Write(WireWriter& writer, const ShowPage& value) {
+  Write(writer, value.page_id);
+}
+inline bool Read(WireReader& reader, ShowPage& value) {
+  return Read(reader, value.page_id);
+}
+
+struct StopLoading {
+  Guid page_id = {};
+
+  friend bool operator==(const StopLoading&, const StopLoading&) = default;
+};
+inline void Write(WireWriter& writer, const StopLoading& value) {
+  Write(writer, value.page_id);
+}
+inline bool Read(WireReader& reader, StopLoading& value) {
+  return Read(reader, value.page_id);
+}
+
+struct ZoomPage {
+  Guid page_id = {};
+  double factor = 0;
+
+  friend bool operator==(const ZoomPage&, const ZoomPage&) = default;
+};
+inline void Write(WireWriter& writer, const ZoomPage& value) {
+  Write(writer, value.page_id);
+  Write(writer, value.factor);
+}
+inline bool Read(WireReader& reader, ZoomPage& value) {
+  return Read(reader, value.page_id)
+      && Read(reader, value.factor);
 }
 
 using EngineCommand = std::variant<ClosePage, CreatePage, LoadPage>;
@@ -753,6 +1116,202 @@ inline bool Read(WireReader& reader, EngineEvent& value) {
     }
     case 8: {
       PageStateChanged member;
+      if (!Read(reader, member)) return false;
+      value = std::move(member);
+      return true;
+    }
+    default:
+      reader.Fail();
+      return false;
+  }
+}
+
+using PageRequest = std::variant<CapturePage, CloseStandalonePage, ExportPage, FindInPage, GoToHistoryOffset, HidePage, MovePageToWindow, OpenStandalonePage, PageIcon, ReloadPage, RestoreInteractionState, SaveInteractionState, ShowPage, StopLoading, ZoomPage>;
+template <typename T>
+struct PageRequestAnswer;
+template <>
+struct PageRequestAnswer<CapturePage> {
+  using Type = bool;
+};
+template <>
+struct PageRequestAnswer<CloseStandalonePage> {
+  using Type = bool;
+};
+template <>
+struct PageRequestAnswer<ExportPage> {
+  using Type = bool;
+};
+template <>
+struct PageRequestAnswer<FindInPage> {
+  using Type = bool;
+};
+template <>
+struct PageRequestAnswer<GoToHistoryOffset> {
+  using Type = bool;
+};
+template <>
+struct PageRequestAnswer<HidePage> {
+  using Type = bool;
+};
+template <>
+struct PageRequestAnswer<MovePageToWindow> {
+  using Type = bool;
+};
+template <>
+struct PageRequestAnswer<OpenStandalonePage> {
+  using Type = bool;
+};
+template <>
+struct PageRequestAnswer<PageIcon> {
+  using Type = PageIconImage;
+};
+template <>
+struct PageRequestAnswer<ReloadPage> {
+  using Type = bool;
+};
+template <>
+struct PageRequestAnswer<RestoreInteractionState> {
+  using Type = bool;
+};
+template <>
+struct PageRequestAnswer<SaveInteractionState> {
+  using Type = InteractionState;
+};
+template <>
+struct PageRequestAnswer<ShowPage> {
+  using Type = bool;
+};
+template <>
+struct PageRequestAnswer<StopLoading> {
+  using Type = bool;
+};
+template <>
+struct PageRequestAnswer<ZoomPage> {
+  using Type = bool;
+};
+inline void Write(WireWriter& writer, const PageRequest& value) {
+  writer.WriteVarint(value.index());
+  std::visit([&writer](const auto& member) { Write(writer, member); }, value);
+}
+inline bool Read(WireReader& reader, PageRequest& value) {
+  switch (reader.ReadTag()) {
+    case 0: {
+      CapturePage member;
+      if (!Read(reader, member)) return false;
+      value = std::move(member);
+      return true;
+    }
+    case 1: {
+      CloseStandalonePage member;
+      if (!Read(reader, member)) return false;
+      value = std::move(member);
+      return true;
+    }
+    case 2: {
+      ExportPage member;
+      if (!Read(reader, member)) return false;
+      value = std::move(member);
+      return true;
+    }
+    case 3: {
+      FindInPage member;
+      if (!Read(reader, member)) return false;
+      value = std::move(member);
+      return true;
+    }
+    case 4: {
+      GoToHistoryOffset member;
+      if (!Read(reader, member)) return false;
+      value = std::move(member);
+      return true;
+    }
+    case 5: {
+      HidePage member;
+      if (!Read(reader, member)) return false;
+      value = std::move(member);
+      return true;
+    }
+    case 6: {
+      MovePageToWindow member;
+      if (!Read(reader, member)) return false;
+      value = std::move(member);
+      return true;
+    }
+    case 7: {
+      OpenStandalonePage member;
+      if (!Read(reader, member)) return false;
+      value = std::move(member);
+      return true;
+    }
+    case 8: {
+      PageIcon member;
+      if (!Read(reader, member)) return false;
+      value = std::move(member);
+      return true;
+    }
+    case 9: {
+      ReloadPage member;
+      if (!Read(reader, member)) return false;
+      value = std::move(member);
+      return true;
+    }
+    case 10: {
+      RestoreInteractionState member;
+      if (!Read(reader, member)) return false;
+      value = std::move(member);
+      return true;
+    }
+    case 11: {
+      SaveInteractionState member;
+      if (!Read(reader, member)) return false;
+      value = std::move(member);
+      return true;
+    }
+    case 12: {
+      ShowPage member;
+      if (!Read(reader, member)) return false;
+      value = std::move(member);
+      return true;
+    }
+    case 13: {
+      StopLoading member;
+      if (!Read(reader, member)) return false;
+      value = std::move(member);
+      return true;
+    }
+    case 14: {
+      ZoomPage member;
+      if (!Read(reader, member)) return false;
+      value = std::move(member);
+      return true;
+    }
+    default:
+      reader.Fail();
+      return false;
+  }
+}
+
+using EnginePresentation = std::variant<FindFinished, PageCaptured, PageExported>;
+inline void Write(WireWriter& writer, const EnginePresentation& value) {
+  writer.WriteVarint(value.index());
+  std::visit([&writer](const auto& member) { Write(writer, member); }, value);
+}
+inline bool Read(WireReader& reader, EnginePresentation& value) {
+  switch (reader.ReadTag()) {
+    case 0: {
+      FindFinished member;
+      if (!Read(reader, member)) return false;
+      value = std::move(member);
+      return true;
+    }
+    case 1: {
+      PageCaptured member;
+      if (!Read(reader, member)) return false;
+      value = std::move(member);
+      return true;
+    }
+    case 2: {
+      PageExported member;
       if (!Read(reader, member)) return false;
       value = std::move(member);
       return true;

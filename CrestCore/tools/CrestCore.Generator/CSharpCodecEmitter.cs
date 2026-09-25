@@ -35,11 +35,12 @@ internal static class CSharpCodecEmitter {
         code.Append("    public static ReadOnlySpan<byte> EngineFingerprint => [\n");
         code.Append("        ").Append(string.Join(", ", schema.EngineFingerprint.Select(value => $"0x{value:x2}"))).Append('\n');
         code.Append("    ];\n");
-        foreach (var root in ContractRoot.All) EmitRoot(code, schema, root);
+        foreach (var root in ContractRoot.All.Where(root => root.ReachesCore)) EmitRoot(code, schema, root);
         foreach (var narrowed in schema.Bases) EmitBase(code, schema, narrowed);
         foreach (var root in ContractRoot.All.Where(root => root.TravelsToCore)) EmitLimits(code, schema, root);
         EmitAnswers(code, schema);
-        foreach (var record in schema.Records) EmitRecord(code, record);
+        var direct = DirectOnly(schema);
+        foreach (var record in schema.Records.Where(record => !direct.Contains(record.Type))) EmitRecord(code, record);
         foreach (var item in schema.Enums) EmitEnum(code, item);
         var tagged = schema.Sets.Where(set => !set.IsOpen).ToList();
         foreach (var set in tagged) EmitSet(code, set);
@@ -147,6 +148,38 @@ internal static class CSharpCodecEmitter {
         code.Append("        ArgumentNullException.ThrowIfNull(writer);\n        ArgumentNullException.ThrowIfNull(value);\n");
         code.Append($"        writer.WriteEnum(TagOf({set.Name}.All, value));\n    }}\n");
     }
+
+    /// The records only the platform's direct path to an engine binding
+    /// carries, which never reach the core.
+    private static HashSet<Type> DirectOnly(ContractSchema schema) {
+        var records = schema.Records.ToDictionary(record => record.Type);
+        var direct = Reachable(records, ContractRoot.All.Where(root => !root.ReachesCore)
+            .SelectMany(root => schema.Members(root)).Select(member => member.Record.Type));
+        var core = Reachable(records, schema.Records.Select(record => record.Type).Where(type => !direct.Contains(type))
+            .Concat(ContractRoot.All.Where(root => root.ReachesCore).SelectMany(root => schema.Members(root))
+                .Select(member => member.Record.Type)));
+        direct.ExceptWith(core);
+        return direct;
+    }
+
+    /// `seeds` and every record their fields hold.
+    private static HashSet<Type> Reachable(Dictionary<Type, ContractRecord> records, IEnumerable<Type> seeds) {
+        var reached = new HashSet<Type>();
+        var pending = new Stack<Type>(seeds);
+        while (pending.TryPop(out var type)) {
+            if (!reached.Add(type) || !records.TryGetValue(type, out var record)) continue;
+            foreach (var field in record.Wire)
+                foreach (var held in Held(field.Type)) pending.Push(held);
+        }
+        return reached;
+    }
+
+    private static IEnumerable<Type> Held(FieldType type) => type switch {
+        RecordField record => [record.Type],
+        ListField list => Held(list.Element),
+        OptionalField optional => Held(optional.Value),
+        _ => []
+    };
 
     private static void EmitTagOf(StringBuilder code) => code.Append("""
 

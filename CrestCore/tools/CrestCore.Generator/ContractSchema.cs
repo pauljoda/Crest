@@ -13,10 +13,13 @@ namespace CrestCore.Generator;
 ///
 /// A root travels one way. The core reads what travels to it (intents,
 /// queries and engine events), so each of those is a message on its own with
-/// a byte limit, and a platform encodes it through a protocol. The core writes
-/// the rest (changes, rejections and engine commands), and a platform decodes
-/// each of those as the cases of one enum. The engine roots form the engine
-/// contract, which an engine binding checks by its own fingerprint.
+/// a byte limit. The core writes changes, rejections and engine commands. A
+/// platform encodes what it sends through a protocol and decodes what it
+/// receives as the cases of one enum. The engine roots form the engine
+/// contract, which an engine binding checks by its own fingerprint; two of
+/// them never reach the core, because they carry the platform's direct path to
+/// a binding (`EnginePage`): the requests it makes of a page's engine and what
+/// the binding presents back.
 internal sealed class ContractRoot {
     #region Variables
 
@@ -32,9 +35,16 @@ internal sealed class ContractRoot {
         swiftDocumentation: "What the core asks an engine binding to do, run by `EngineBinding.run`.");
     public static readonly ContractRoot EngineEvent = new(typeof(EngineEvent), travelsToCore: true, isEngine: true,
         swiftDocumentation: "What happened to one of an engine binding's pages, reported with `CrestCore.report`.");
+    public static readonly ContractRoot PageRequest = new(typeof(PageRequest<>), travelsToCore: false, isEngine: true,
+        reachesCore: false, platformSends: true,
+        swiftDocumentation: "What the platform asks a page's engine binding directly, answered at once.");
+    public static readonly ContractRoot EnginePresentation = new(typeof(EnginePresentation), travelsToCore: false, isEngine: true,
+        reachesCore: false, platformSends: false,
+        swiftDocumentation: "What an engine binding tells the platform directly about one of its pages.");
 
     /// Every root, in the order the canonical description lists them.
-    public static IReadOnlyList<ContractRoot> All { get; } = [Intent, Change, Rejection, Query, EngineCommand, EngineEvent];
+    public static IReadOnlyList<ContractRoot> All { get; } =
+        [Intent, Change, Rejection, Query, EngineCommand, EngineEvent, PageRequest, EnginePresentation];
 
     /// The root's C# base type; a query's is the open `Query<>`.
     public Type Type { get; }
@@ -44,6 +54,14 @@ internal sealed class ContractRoot {
 
     /// The core reads messages of this root, each on its own.
     public bool TravelsToCore { get; }
+
+    /// The core reads or writes messages of this root. The platform's direct
+    /// path to an engine binding never reaches it.
+    public bool ReachesCore { get; }
+
+    /// The platform encodes messages of this root and sends them, to the core
+    /// or to an engine binding; it decodes the others.
+    public bool PlatformSends { get; }
 
     /// Part of the engine contract rather than the application API.
     public bool IsEngine { get; }
@@ -63,10 +81,12 @@ internal sealed class ContractRoot {
     #region Constructors
 
     private ContractRoot(Type type, bool travelsToCore, string swiftDocumentation, bool isEngine = false,
-        string swiftConformances = "Sendable") {
+        bool reachesCore = true, bool? platformSends = null, string swiftConformances = "Sendable") {
         Type = type;
         Name = type.IsGenericTypeDefinition ? type.Name[..type.Name.IndexOf('`', StringComparison.Ordinal)] : type.Name;
         TravelsToCore = travelsToCore;
+        ReachesCore = reachesCore;
+        PlatformSends = platformSends ?? travelsToCore;
         IsEngine = isEngine;
         SwiftDocumentation = swiftDocumentation;
         SwiftConformances = swiftConformances;

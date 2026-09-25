@@ -46,12 +46,12 @@ internal static class SwiftEmitter {
         var equatable = EquatableRecords(schema);
         var code = new StringBuilder(Header);
         code.Append("\n// MARK: - Roots\n");
-        foreach (var root in ContractRoot.All.Where(root => root.TravelsToCore)) EmitProtocol(code, root);
+        foreach (var root in ContractRoot.All.Where(root => root.PlatformSends)) EmitProtocol(code, root);
         foreach (var family in schema.Families) {
             code.Append('\n').Append($"/// The members of `{family.Root}` that derive from the core's `{family.Base!.Name}`.\n");
             code.Append($"protocol {family.Base!.Name}: {family.Root} {{}}\n");
         }
-        foreach (var root in ContractRoot.All.Where(root => !root.TravelsToCore)) EmitUnion(code, schema, root, equatable);
+        foreach (var root in ContractRoot.All.Where(root => !root.PlatformSends)) EmitUnion(code, schema, root, equatable);
         code.Append("""
 
             extension CoreState {
@@ -70,7 +70,7 @@ internal static class SwiftEmitter {
         code.Append("\n// MARK: - Records\n");
         foreach (var record in schema.Records) {
             var conformances = new List<string>();
-            bool isSent = roots.TryGetValue(record.Type, out var owner) && owner.Root.TravelsToCore;
+            bool isSent = roots.TryGetValue(record.Type, out var owner) && owner.Root.PlatformSends;
             if (isSent) conformances.Add(owner.Root.Name);
             conformances.AddRange(schema.Families.Where(family => family.Base!.IsAssignableFrom(record.Type)).Select(family => family.Base!.Name));
             if (record.IsNormalizedOnConstruction) conformances.Add("Hashable");
@@ -296,7 +296,7 @@ internal static class SwiftEmitter {
 
     private static bool IsEquatable(FieldType type, HashSet<Type> excluded, ContractSchema schema) => type switch {
         RecordField record => !excluded.Contains(record.Type),
-        RootField { Root.TravelsToCore: true } => false,
+        RootField { Root.PlatformSends: true } => false,
         RootField root => schema.Members(root.Root).All(member => !excluded.Contains(member.Record.Type)),
         ListField list => IsEquatable(list.Element, excluded, schema),
         OptionalField optional => IsEquatable(optional.Value, excluded, schema),
@@ -318,7 +318,7 @@ internal static class SwiftEmitter {
         code.Append("    /// SHA-256 of the engine contract alone, which an engine binding registers with.\n");
         code.Append("    static let engineFingerprint: [UInt8] = [\n        ");
         code.Append(string.Join(", ", schema.EngineFingerprint.Select(value => $"0x{value:x2}"))).Append("\n    ]\n");
-        foreach (var root in ContractRoot.All.Where(root => root.TravelsToCore)) {
+        foreach (var root in ContractRoot.All.Where(root => root.PlatformSends)) {
             code.Append('\n').Append($"    static func decode{root}(from reader: inout WireReader) throws(WireError) -> any {root} {{\n");
             code.Append("        let tag = try reader.readTag()\n        switch tag {\n");
             foreach (var member in schema.Members(root))
@@ -335,7 +335,7 @@ internal static class SwiftEmitter {
         }
         code.Append("}\n");
 
-        foreach (var root in ContractRoot.All.Where(root => !root.TravelsToCore)) {
+        foreach (var root in ContractRoot.All.Where(root => !root.PlatformSends)) {
             var members = schema.Members(root);
             code.Append('\n').Append($"extension {root} {{\n");
             code.Append("    init(from reader: inout WireReader) throws(WireError) {\n");
@@ -352,7 +352,7 @@ internal static class SwiftEmitter {
         }
 
         var tags = new Dictionary<Type, (ContractRoot Root, ContractMember Member)>();
-        foreach (var root in ContractRoot.All.Where(root => root.TravelsToCore))
+        foreach (var root in ContractRoot.All.Where(root => root.PlatformSends))
             foreach (var member in schema.Members(root)) tags[member.Record.Type] = (root, member);
         foreach (var record in schema.Records) {
             code.Append('\n').Append($"extension {record.Name} {{\n");
@@ -514,10 +514,10 @@ internal static class SwiftEmitter {
             case EnumField or SetField or RecordField:
                 lines.Add($"{indent}let {name} = try {TypeName(type)}(from: &reader)");
                 break;
-            case RootField { Root.TravelsToCore: true, Base: { } narrowed }:
+            case RootField { Root.PlatformSends: true, Base: { } narrowed }:
                 lines.Add($"{indent}let {name} = try CoreCodec.decode{narrowed.Name}(from: &reader)");
                 break;
-            case RootField { Root.TravelsToCore: true } root:
+            case RootField { Root.PlatformSends: true } root:
                 lines.Add($"{indent}let {name} = try CoreCodec.decode{root.Root}(from: &reader)");
                 break;
             case RootField root:
@@ -548,7 +548,7 @@ internal static class SwiftEmitter {
 
     private static string Encode(FieldType type, string value, string indent, int depth) => type switch {
         PrimitiveField primitive => $"{indent}writer.write{Method(primitive.Kind)}({value})\n",
-        RootField { Root.TravelsToCore: true } root => $"{indent}{value}.encode{root.Root}(into: &writer)\n",
+        RootField { Root.PlatformSends: true } root => $"{indent}{value}.encode{root.Root}(into: &writer)\n",
         EnumField or SetField or RecordField or RootField => $"{indent}{value}.encode(into: &writer)\n",
         ListField list => $"{indent}writer.writeCount({value}.count)\n"
             + $"{indent}for element{depth} in {value} {{\n"
@@ -582,11 +582,11 @@ internal static class SwiftEmitter {
         LocalizedField => "LocalizedStringResource",
         KindsField kinds => kinds.Type.Name,
         RecordField record => record.Type.Name,
-        RootField { Root.TravelsToCore: true, Base: { } narrowed } => $"any {narrowed.Name}",
-        RootField { Root.TravelsToCore: true } root => $"any {root.Root}",
+        RootField { Root.PlatformSends: true, Base: { } narrowed } => $"any {narrowed.Name}",
+        RootField { Root.PlatformSends: true } root => $"any {root.Root}",
         RootField root => root.Root.ToString(),
         ListField list => $"[{TypeName(list.Element)}]",
-        OptionalField { Value: RootField { Root.TravelsToCore: true } } optional => $"({TypeName(optional.Value)})?",
+        OptionalField { Value: RootField { Root.PlatformSends: true } } optional => $"({TypeName(optional.Value)})?",
         OptionalField optional => $"{TypeName(optional.Value)}?",
         _ => throw new ContractSchemaException($"Unknown field type {type}.")
     };

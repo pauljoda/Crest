@@ -145,8 +145,13 @@ internal static class CppCodecEmitter {
     private static void EmitRoot(StringBuilder code, ContractSchema engine, ContractRoot root) {
         var members = engine.Members(root);
         if (members.Count == 0) return;
-        if (root.HasAnswer) throw new ContractSchemaException($"{root}: an engine root with answers has no C++ codec yet.");
         code.Append($"using {root.Name} = std::variant<{string.Join(", ", members.Select(member => member.Name))}>;\n");
+        if (root.HasAnswer) {
+            // What each message answers with, which the binding encodes on its own.
+            code.Append($"template <typename T>\nstruct {root.Name}Answer;\n");
+            foreach (var member in members)
+                code.Append($"template <>\nstruct {root.Name}Answer<{member.Name}> {{\n  using Type = {TypeName(member.Answer!)};\n}};\n");
+        }
         code.Append($"inline void Write(WireWriter& writer, const {root.Name}& value) {{\n");
         code.Append("  writer.WriteVarint(value.index());\n");
         code.Append("  std::visit([&writer](const auto& member) { Write(writer, member); }, value);\n}\n");

@@ -22,6 +22,13 @@ protocol EngineEvent: Sendable {
     func encodeEngineEvent(into writer: inout WireWriter)
 }
 
+/// What the platform asks a page's engine binding directly, answered at once.
+protocol PageRequest: Sendable {
+    associatedtype Answer: Sendable
+    func encodePageRequest(into writer: inout WireWriter)
+    static func decodeAnswer(from reader: inout WireReader) throws(WireError) -> Answer
+}
+
 /// The members of `Intent` that derive from the core's `CloudSyncIntent`.
 protocol CloudSyncIntent: Intent {}
 
@@ -242,6 +249,13 @@ enum EngineCommand: Equatable, Sendable {
     case closePage(ClosePage)
     case createPage(CreatePage)
     case loadPage(LoadPage)
+}
+
+/// What an engine binding tells the platform directly about one of its pages.
+enum EnginePresentation: Equatable, Sendable {
+    case findFinished(FindFinished)
+    case pageCaptured(PageCaptured)
+    case pageExported(PageExported)
 }
 
 extension CoreState {
@@ -527,6 +541,15 @@ struct CaptureDecision: Query, Equatable, Sendable {
     let media: SitePermission
 }
 
+struct CapturePage: PageRequest, Equatable, Sendable {
+    typealias Answer = Bool
+
+    let pageID: UUID
+    let captureID: UUID
+    let area: PageArea?
+    let width: Double
+}
+
 struct ChooseTabIcon: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let spaceID: UUID
@@ -555,6 +578,12 @@ struct ClearHistory: Intent, SessionIntent, Equatable, Sendable {
 struct ClosePage: Equatable, Sendable {
     let pageID: UUID
     let keepsState: Bool
+}
+
+struct CloseStandalonePage: PageRequest, Equatable, Sendable {
+    typealias Answer = Bool
+
+    let pageID: UUID
 }
 
 struct CloseTab: Intent, SessionIntent, Equatable, Sendable {
@@ -1064,6 +1093,15 @@ struct ExpireDownloads: Intent, DownloadIntent, Equatable, Sendable {
     let retentions: [DownloadRetention]
 }
 
+struct ExportPage: PageRequest, Equatable, Sendable {
+    typealias Answer = Bool
+
+    let pageID: UUID
+    let exportID: UUID
+    let format: PageExportFormat
+    let width: Double
+}
+
 struct ExternalLinkPlacement: Equatable, Sendable {
     let spaceID: UUID?
     let opensQuickWindow: Bool
@@ -1104,6 +1142,21 @@ struct FileTabs: Intent, SessionIntent, Equatable, Sendable {
     let beforeTabID: UUID?
     let beforeFolderID: UUID?
     let leavesSplits: Bool
+}
+
+struct FindFinished: Equatable, Sendable {
+    let pageID: UUID
+    let matches: Int
+    let activeMatch: Int
+}
+
+struct FindInPage: PageRequest, Equatable, Sendable {
+    typealias Answer = Bool
+
+    let pageID: UUID
+    let query: String
+    let backwards: Bool
+    let caseSensitive: Bool
 }
 
 struct FinishDeletingSpace: Intent, SessionIntent, Equatable, Sendable {
@@ -1180,6 +1233,19 @@ struct FoldersChanged: Equatable, Sendable {
     let updated: [FolderState]
     let removed: [UUID]
     let order: [UUID]?
+}
+
+struct GoToHistoryOffset: PageRequest, Equatable, Sendable {
+    typealias Answer = Bool
+
+    let pageID: UUID
+    let offset: Int
+}
+
+struct HidePage: PageRequest, Equatable, Sendable {
+    typealias Answer = Bool
+
+    let pageID: UUID
 }
 
 struct HistoryChanged: Equatable, Sendable {
@@ -1268,6 +1334,10 @@ struct IncompleteSplit: Equatable, Sendable {
     var message: LocalizedStringResource {
         LocalizedStringResource("The split changed. Select the whole group again.")
     }
+}
+
+struct InteractionState: Equatable, Sendable {
+    let state: Data?
 }
 
 struct InvalidCredentialDate: Equatable, Sendable {
@@ -1557,6 +1627,13 @@ struct MovePage: Intent, PageIntent, Equatable, Sendable {
     let windowID: UUID
 }
 
+struct MovePageToWindow: PageRequest, Equatable, Sendable {
+    typealias Answer = Bool
+
+    let pageID: UUID
+    let windowID: UUID
+}
+
 struct MoveSplit: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let spaceID: UUID
@@ -1723,6 +1800,15 @@ struct OpenPage: Intent, PageIntent, Equatable, Sendable {
     let windowID: UUID
 }
 
+struct OpenStandalonePage: PageRequest, Equatable, Sendable {
+    typealias Answer = Bool
+
+    let pageID: UUID
+    let profileID: UUID
+    let windowID: UUID
+    let url: String
+}
+
 struct OpenTab: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let windowID: UUID
@@ -1753,6 +1839,19 @@ struct OverwriteCloud: Intent, CloudSyncIntent, Equatable, Sendable {
     let records: [SyncRecord]
 }
 
+struct PageArea: Equatable, Sendable {
+    let x: Double
+    let y: Double
+    let width: Double
+    let height: Double
+}
+
+struct PageCaptured: Equatable, Sendable {
+    let pageID: UUID
+    let captureID: UUID
+    let png: Data?
+}
+
 struct PageChanged: Equatable, Sendable {
     let page: PageState
 }
@@ -1769,6 +1868,13 @@ struct PageCreationFailed: EngineEvent, Equatable, Sendable {
     let pageID: UUID
 }
 
+struct PageExported: Equatable, Sendable {
+    let pageID: UUID
+    let exportID: UUID
+    let document: Data?
+    let failure: PageExportFailure?
+}
+
 struct PageFailure: Equatable, Sendable {
     let error: NavigationError
     let url: String?
@@ -1777,10 +1883,20 @@ struct PageFailure: Equatable, Sendable {
     let code: Int64
 }
 
+struct PageIcon: PageRequest, Equatable, Sendable {
+    typealias Answer = PageIconImage
+
+    let pageID: UUID
+}
+
 struct PageIconChanged: EngineEvent, Equatable, Sendable {
     let pageID: UUID
     let url: String
     let accent: TabIconAccent?
+}
+
+struct PageIconImage: Equatable, Sendable {
+    let image: Data?
 }
 
 struct PageLiveState: Equatable, Sendable {
@@ -1984,6 +2100,13 @@ struct ReleasePage: Intent, PageIntent, Equatable, Sendable {
     let keepsState: Bool
 }
 
+struct ReloadPage: PageRequest, Equatable, Sendable {
+    typealias Answer = Bool
+
+    let pageID: UUID
+    let bypassesCache: Bool
+}
+
 struct RemoveDownload: Intent, DownloadIntent, Equatable, Sendable {
     let downloadID: UUID
 }
@@ -2081,6 +2204,14 @@ struct RestoreArchivedTab: Intent, SessionIntent, Equatable, Sendable {
     let tabID: UUID
 }
 
+struct RestoreInteractionState: PageRequest, Equatable, Sendable {
+    typealias Answer = Bool
+
+    let pageID: UUID
+    let state: Data
+    let expectedURL: String
+}
+
 struct ReturnToSavedAddress: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let spaceID: UUID
@@ -2093,6 +2224,12 @@ struct SaveFailed: Equatable, Sendable {
     var message: LocalizedStringResource {
         LocalizedStringResource("Crest couldn’t save this change. Try again.")
     }
+}
+
+struct SaveInteractionState: PageRequest, Equatable, Sendable {
+    typealias Answer = InteractionState
+
+    let pageID: UUID
 }
 
 struct Saved: Equatable, Sendable {
@@ -2295,6 +2432,12 @@ struct ShowAdjacentSpace: Intent, WindowIntent, Equatable, Sendable {
 struct ShowAdjacentTab: Intent, WindowIntent, Equatable, Sendable {
     let windowID: UUID
     let direction: AdjacentDirection
+}
+
+struct ShowPage: PageRequest, Equatable, Sendable {
+    typealias Answer = Bool
+
+    let pageID: UUID
 }
 
 struct ShowSpace: Intent, WindowIntent, Equatable, Sendable {
@@ -2648,6 +2791,12 @@ struct StepSplitMember: Intent, SessionIntent, Equatable, Sendable {
     let spaceID: UUID
     let tabID: UUID
     let offset: Int
+}
+
+struct StopLoading: PageRequest, Equatable, Sendable {
+    typealias Answer = Bool
+
+    let pageID: UUID
 }
 
 struct StorageFailed: Equatable, Sendable {
@@ -3010,6 +3159,13 @@ struct WrongDeletionOperation: Equatable, Sendable {
     let spaceID: UUID
 }
 
+struct ZoomPage: PageRequest, Equatable, Sendable {
+    typealias Answer = Bool
+
+    let pageID: UUID
+    let factor: Double
+}
+
 // MARK: - Enums
 
 enum CredentialCaptureAction: Int, CaseIterable, Sendable {
@@ -3226,6 +3382,12 @@ enum ImportFlaw: Int, CaseIterable, Sendable {
     case unreadable = 0
     case malformedSplit = 1
     case unpairedChoices = 2
+}
+
+enum PageExportFormat: Int, CaseIterable, Sendable {
+    case pdf = 0
+    case png = 1
+    case mhtml = 2
 }
 
 struct PageMediaActivity: OptionSet, Sendable {
@@ -4917,6 +5079,83 @@ struct NumberedSelectionTarget: Hashable, Sendable {
     }
 
     static func == (lhs: NumberedSelectionTarget, rhs: NumberedSelectionTarget) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+}
+
+/// The members of the core's `PageExportFailure`. A member's wire tag is its index in `all`.
+struct PageExportFailure: Hashable, Sendable {
+    let tag: Int
+    let name: String
+    let message: LocalizedStringResource
+
+    private init(tag: Int, name: String, message: LocalizedStringResource) {
+        self.tag = tag
+        self.name = name
+        self.message = message
+    }
+
+    static let busy = PageExportFailure(
+        tag: 0,
+        name: "busy",
+        message: LocalizedStringResource("An export is already in progress for this page.")
+    )
+    static let unsupported = PageExportFailure(
+        tag: 1,
+        name: "unsupported",
+        message: LocalizedStringResource("This page cannot be exported.")
+    )
+    static let closed = PageExportFailure(
+        tag: 2,
+        name: "closed",
+        message: LocalizedStringResource("The page was closed.")
+    )
+    static let navigated = PageExportFailure(
+        tag: 3,
+        name: "navigated",
+        message: LocalizedStringResource("The page navigated before its export finished.")
+    )
+    static let rendererStopped = PageExportFailure(
+        tag: 4,
+        name: "rendererStopped",
+        message: LocalizedStringResource("The page renderer stopped.")
+    )
+    static let timedOut = PageExportFailure(
+        tag: 5,
+        name: "timedOut",
+        message: LocalizedStringResource("The page export timed out.")
+    )
+    static let tooLarge = PageExportFailure(
+        tag: 6,
+        name: "tooLarge",
+        message: LocalizedStringResource("The page export is too large.")
+    )
+    static let failed = PageExportFailure(
+        tag: 7,
+        name: "failed",
+        message: LocalizedStringResource("The page could not be exported.")
+    )
+
+    static let all: [PageExportFailure] = [
+        busy,
+        unsupported,
+        closed,
+        navigated,
+        rendererStopped,
+        timedOut,
+        tooLarge,
+        failed
+    ]
+
+    static func named(_ name: String?) -> PageExportFailure? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: PageExportFailure, rhs: PageExportFailure) -> Bool {
         lhs.tag == rhs.tag
     }
 

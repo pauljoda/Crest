@@ -7,11 +7,11 @@ import Foundation
 enum CoreCodec {
     /// SHA-256 of the canonical contract schema. The core refuses any other.
     static let fingerprint: [UInt8] = [
-        0x1b, 0x31, 0x6e, 0xc2, 0xb7, 0xec, 0x96, 0xf3, 0x4f, 0xe5, 0x2e, 0xef, 0x71, 0xc8, 0xea, 0x54, 0xee, 0x04, 0x4b, 0x45, 0x86, 0x31, 0xf0, 0xca, 0x21, 0x55, 0x4e, 0xfd, 0x93, 0xa5, 0x95, 0xe7
+        0x77, 0xc9, 0x73, 0xc8, 0x8d, 0xba, 0x6e, 0x21, 0x1c, 0x7c, 0xc8, 0x2e, 0xb5, 0x1b, 0x9f, 0x38, 0xb9, 0xa7, 0xa8, 0x6c, 0x81, 0xcb, 0xda, 0x26, 0x98, 0x1a, 0xaa, 0xf4, 0xd5, 0xf3, 0xd1, 0x5f
     ]
     /// SHA-256 of the engine contract alone, which an engine binding registers with.
     static let engineFingerprint: [UInt8] = [
-        0xca, 0xe7, 0x4a, 0xfc, 0xf6, 0x21, 0xbb, 0xec, 0xb1, 0xa0, 0x07, 0x81, 0xd1, 0xa4, 0x53, 0x62, 0xda, 0x4a, 0x38, 0x79, 0x8b, 0xf4, 0xc8, 0xca, 0x97, 0xd3, 0x4c, 0xbd, 0xa7, 0xb8, 0x33, 0x25
+        0x6c, 0x49, 0x00, 0xb8, 0x58, 0x54, 0x1c, 0xf7, 0x94, 0xfe, 0x77, 0xd8, 0x92, 0xec, 0x60, 0xb5, 0x06, 0xf4, 0xff, 0x77, 0xc3, 0xc6, 0x0b, 0xc2, 0x49, 0x1c, 0x0d, 0x17, 0x50, 0xc5, 0xad, 0x12
     ]
 
     static func decodeIntent(from reader: inout WireReader) throws(WireError) -> any Intent {
@@ -201,6 +201,28 @@ enum CoreCodec {
         case 7: return try PageIconChanged(from: &reader)
         case 8: return try PageStateChanged(from: &reader)
         default: throw WireError.malformed("Unknown EngineEvent tag \(tag)")
+        }
+    }
+
+    static func decodePageRequest(from reader: inout WireReader) throws(WireError) -> any PageRequest {
+        let tag = try reader.readTag()
+        switch tag {
+        case 0: return try CapturePage(from: &reader)
+        case 1: return try CloseStandalonePage(from: &reader)
+        case 2: return try ExportPage(from: &reader)
+        case 3: return try FindInPage(from: &reader)
+        case 4: return try GoToHistoryOffset(from: &reader)
+        case 5: return try HidePage(from: &reader)
+        case 6: return try MovePageToWindow(from: &reader)
+        case 7: return try OpenStandalonePage(from: &reader)
+        case 8: return try PageIcon(from: &reader)
+        case 9: return try ReloadPage(from: &reader)
+        case 10: return try RestoreInteractionState(from: &reader)
+        case 11: return try SaveInteractionState(from: &reader)
+        case 12: return try ShowPage(from: &reader)
+        case 13: return try StopLoading(from: &reader)
+        case 14: return try ZoomPage(from: &reader)
+        default: throw WireError.malformed("Unknown PageRequest tag \(tag)")
         }
     }
 
@@ -823,6 +845,32 @@ extension EngineCommand {
             writer.writeTag(1)
             value.encode(into: &writer)
         case .loadPage(let value):
+            writer.writeTag(2)
+            value.encode(into: &writer)
+        }
+    }
+}
+
+extension EnginePresentation {
+    init(from reader: inout WireReader) throws(WireError) {
+        let tag = try reader.readTag()
+        switch tag {
+        case 0: self = .findFinished(try FindFinished(from: &reader))
+        case 1: self = .pageCaptured(try PageCaptured(from: &reader))
+        case 2: self = .pageExported(try PageExported(from: &reader))
+        default: throw WireError.malformed("Unknown EnginePresentation tag \(tag)")
+        }
+    }
+
+    func encode(into writer: inout WireWriter) {
+        switch self {
+        case .findFinished(let value):
+            writer.writeTag(0)
+            value.encode(into: &writer)
+        case .pageCaptured(let value):
+            writer.writeTag(1)
+            value.encode(into: &writer)
+        case .pageExported(let value):
             writer.writeTag(2)
             value.encode(into: &writer)
         }
@@ -1732,6 +1780,44 @@ extension CaptureDecision {
     }
 }
 
+extension CapturePage {
+    init(from reader: inout WireReader) throws(WireError) {
+        let pageID = try reader.readUUID()
+        let captureID = try reader.readUUID()
+        let area: PageArea?
+        if try reader.readPresence() {
+            let areaValue = try PageArea(from: &reader)
+            area = areaValue
+        } else {
+            area = nil
+        }
+        let width = try reader.readDouble()
+        self.init(pageID: pageID, captureID: captureID, area: area, width: width)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeUUID(pageID)
+        writer.writeUUID(captureID)
+        if let present0 = area {
+            writer.writePresence(true)
+            present0.encode(into: &writer)
+        } else {
+            writer.writePresence(false)
+        }
+        writer.writeDouble(width)
+    }
+
+    func encodePageRequest(into writer: inout WireWriter) {
+        writer.writeTag(0)
+        encode(into: &writer)
+    }
+
+    static func decodeAnswer(from reader: inout WireReader) throws(WireError) -> Bool {
+        let answer = try reader.readBool()
+        return answer
+    }
+}
+
 extension ChooseTabIcon {
     init(from reader: inout WireReader) throws(WireError) {
         let workspaceID = try reader.readUUID()
@@ -1868,6 +1954,27 @@ extension ClosePage {
     func encode(into writer: inout WireWriter) {
         writer.writeUUID(pageID)
         writer.writeBool(keepsState)
+    }
+}
+
+extension CloseStandalonePage {
+    init(from reader: inout WireReader) throws(WireError) {
+        let pageID = try reader.readUUID()
+        self.init(pageID: pageID)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeUUID(pageID)
+    }
+
+    func encodePageRequest(into writer: inout WireWriter) {
+        writer.writeTag(1)
+        encode(into: &writer)
+    }
+
+    static func decodeAnswer(from reader: inout WireReader) throws(WireError) -> Bool {
+        let answer = try reader.readBool()
+        return answer
     }
 }
 
@@ -3749,6 +3856,33 @@ extension ExpireDownloads {
     }
 }
 
+extension ExportPage {
+    init(from reader: inout WireReader) throws(WireError) {
+        let pageID = try reader.readUUID()
+        let exportID = try reader.readUUID()
+        let format = try PageExportFormat(from: &reader)
+        let width = try reader.readDouble()
+        self.init(pageID: pageID, exportID: exportID, format: format, width: width)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeUUID(pageID)
+        writer.writeUUID(exportID)
+        format.encode(into: &writer)
+        writer.writeDouble(width)
+    }
+
+    func encodePageRequest(into writer: inout WireWriter) {
+        writer.writeTag(2)
+        encode(into: &writer)
+    }
+
+    static func decodeAnswer(from reader: inout WireReader) throws(WireError) -> Bool {
+        let answer = try reader.readBool()
+        return answer
+    }
+}
+
 extension ExternalLinkPlacement {
     init(from reader: inout WireReader) throws(WireError) {
         let spaceID: UUID?
@@ -3943,6 +4077,48 @@ extension FileTabs {
     func encodeIntent(into writer: inout WireWriter) {
         writer.writeTag(44)
         encode(into: &writer)
+    }
+}
+
+extension FindFinished {
+    init(from reader: inout WireReader) throws(WireError) {
+        let pageID = try reader.readUUID()
+        let matches = try reader.readInt()
+        let activeMatch = try reader.readInt()
+        self.init(pageID: pageID, matches: matches, activeMatch: activeMatch)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeUUID(pageID)
+        writer.writeInt(matches)
+        writer.writeInt(activeMatch)
+    }
+}
+
+extension FindInPage {
+    init(from reader: inout WireReader) throws(WireError) {
+        let pageID = try reader.readUUID()
+        let query = try reader.readString()
+        let backwards = try reader.readBool()
+        let caseSensitive = try reader.readBool()
+        self.init(pageID: pageID, query: query, backwards: backwards, caseSensitive: caseSensitive)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeUUID(pageID)
+        writer.writeString(query)
+        writer.writeBool(backwards)
+        writer.writeBool(caseSensitive)
+    }
+
+    func encodePageRequest(into writer: inout WireWriter) {
+        writer.writeTag(3)
+        encode(into: &writer)
+    }
+
+    static func decodeAnswer(from reader: inout WireReader) throws(WireError) -> Bool {
+        let answer = try reader.readBool()
+        return answer
     }
 }
 
@@ -4249,6 +4425,50 @@ extension FoldersChanged {
         } else {
             writer.writePresence(false)
         }
+    }
+}
+
+extension GoToHistoryOffset {
+    init(from reader: inout WireReader) throws(WireError) {
+        let pageID = try reader.readUUID()
+        let offset = try reader.readInt()
+        self.init(pageID: pageID, offset: offset)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeUUID(pageID)
+        writer.writeInt(offset)
+    }
+
+    func encodePageRequest(into writer: inout WireWriter) {
+        writer.writeTag(4)
+        encode(into: &writer)
+    }
+
+    static func decodeAnswer(from reader: inout WireReader) throws(WireError) -> Bool {
+        let answer = try reader.readBool()
+        return answer
+    }
+}
+
+extension HidePage {
+    init(from reader: inout WireReader) throws(WireError) {
+        let pageID = try reader.readUUID()
+        self.init(pageID: pageID)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeUUID(pageID)
+    }
+
+    func encodePageRequest(into writer: inout WireWriter) {
+        writer.writeTag(5)
+        encode(into: &writer)
+    }
+
+    static func decodeAnswer(from reader: inout WireReader) throws(WireError) -> Bool {
+        let answer = try reader.readBool()
+        return answer
     }
 }
 
@@ -4601,6 +4821,28 @@ extension IncompleteSplit {
 
     func encode(into writer: inout WireWriter) {
         writer.writeUUID(groupID)
+    }
+}
+
+extension InteractionState {
+    init(from reader: inout WireReader) throws(WireError) {
+        let state: Data?
+        if try reader.readPresence() {
+            let stateValue = try reader.readData()
+            state = stateValue
+        } else {
+            state = nil
+        }
+        self.init(state: state)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        if let present0 = state {
+            writer.writePresence(true)
+            writer.writeData(present0)
+        } else {
+            writer.writePresence(false)
+        }
     }
 }
 
@@ -5663,6 +5905,29 @@ extension MovePage {
     }
 }
 
+extension MovePageToWindow {
+    init(from reader: inout WireReader) throws(WireError) {
+        let pageID = try reader.readUUID()
+        let windowID = try reader.readUUID()
+        self.init(pageID: pageID, windowID: windowID)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeUUID(pageID)
+        writer.writeUUID(windowID)
+    }
+
+    func encodePageRequest(into writer: inout WireWriter) {
+        writer.writeTag(6)
+        encode(into: &writer)
+    }
+
+    static func decodeAnswer(from reader: inout WireReader) throws(WireError) -> Bool {
+        let answer = try reader.readBool()
+        return answer
+    }
+}
+
 extension MoveSplit {
     init(from reader: inout WireReader) throws(WireError) {
         let workspaceID = try reader.readUUID()
@@ -6286,6 +6551,33 @@ extension OpenPage {
     }
 }
 
+extension OpenStandalonePage {
+    init(from reader: inout WireReader) throws(WireError) {
+        let pageID = try reader.readUUID()
+        let profileID = try reader.readUUID()
+        let windowID = try reader.readUUID()
+        let url = try reader.readString()
+        self.init(pageID: pageID, profileID: profileID, windowID: windowID, url: url)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeUUID(pageID)
+        writer.writeUUID(profileID)
+        writer.writeUUID(windowID)
+        writer.writeString(url)
+    }
+
+    func encodePageRequest(into writer: inout WireWriter) {
+        writer.writeTag(7)
+        encode(into: &writer)
+    }
+
+    static func decodeAnswer(from reader: inout WireReader) throws(WireError) -> Bool {
+        let answer = try reader.readBool()
+        return answer
+    }
+}
+
 extension OpenTab {
     init(from reader: inout WireReader) throws(WireError) {
         let workspaceID = try reader.readUUID()
@@ -6440,6 +6732,49 @@ extension OverwriteCloud {
     }
 }
 
+extension PageArea {
+    init(from reader: inout WireReader) throws(WireError) {
+        let x = try reader.readDouble()
+        let y = try reader.readDouble()
+        let width = try reader.readDouble()
+        let height = try reader.readDouble()
+        self.init(x: x, y: y, width: width, height: height)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeDouble(x)
+        writer.writeDouble(y)
+        writer.writeDouble(width)
+        writer.writeDouble(height)
+    }
+}
+
+extension PageCaptured {
+    init(from reader: inout WireReader) throws(WireError) {
+        let pageID = try reader.readUUID()
+        let captureID = try reader.readUUID()
+        let png: Data?
+        if try reader.readPresence() {
+            let pngValue = try reader.readData()
+            png = pngValue
+        } else {
+            png = nil
+        }
+        self.init(pageID: pageID, captureID: captureID, png: png)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeUUID(pageID)
+        writer.writeUUID(captureID)
+        if let present0 = png {
+            writer.writePresence(true)
+            writer.writeData(present0)
+        } else {
+            writer.writePresence(false)
+        }
+    }
+}
+
 extension PageChanged {
     init(from reader: inout WireReader) throws(WireError) {
         let page = try PageState(from: &reader)
@@ -6499,6 +6834,45 @@ extension PageCreationFailed {
     }
 }
 
+extension PageExported {
+    init(from reader: inout WireReader) throws(WireError) {
+        let pageID = try reader.readUUID()
+        let exportID = try reader.readUUID()
+        let document: Data?
+        if try reader.readPresence() {
+            let documentValue = try reader.readData()
+            document = documentValue
+        } else {
+            document = nil
+        }
+        let failure: PageExportFailure?
+        if try reader.readPresence() {
+            let failureValue = try PageExportFailure(from: &reader)
+            failure = failureValue
+        } else {
+            failure = nil
+        }
+        self.init(pageID: pageID, exportID: exportID, document: document, failure: failure)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeUUID(pageID)
+        writer.writeUUID(exportID)
+        if let present0 = document {
+            writer.writePresence(true)
+            writer.writeData(present0)
+        } else {
+            writer.writePresence(false)
+        }
+        if let present0 = failure {
+            writer.writePresence(true)
+            present0.encode(into: &writer)
+        } else {
+            writer.writePresence(false)
+        }
+    }
+}
+
 extension PageFailure {
     init(from reader: inout WireReader) throws(WireError) {
         let error = try NavigationError(from: &reader)
@@ -6526,6 +6900,27 @@ extension PageFailure {
         writer.writeBool(replacedDocument)
         writer.writeString(domain)
         writer.writeInt64(code)
+    }
+}
+
+extension PageIcon {
+    init(from reader: inout WireReader) throws(WireError) {
+        let pageID = try reader.readUUID()
+        self.init(pageID: pageID)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeUUID(pageID)
+    }
+
+    func encodePageRequest(into writer: inout WireWriter) {
+        writer.writeTag(8)
+        encode(into: &writer)
+    }
+
+    static func decodeAnswer(from reader: inout WireReader) throws(WireError) -> PageIconImage {
+        let answer = try PageIconImage(from: &reader)
+        return answer
     }
 }
 
@@ -6557,6 +6952,28 @@ extension PageIconChanged {
     func encodeEngineEvent(into writer: inout WireWriter) {
         writer.writeTag(7)
         encode(into: &writer)
+    }
+}
+
+extension PageIconImage {
+    init(from reader: inout WireReader) throws(WireError) {
+        let image: Data?
+        if try reader.readPresence() {
+            let imageValue = try reader.readData()
+            image = imageValue
+        } else {
+            image = nil
+        }
+        self.init(image: image)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        if let present0 = image {
+            writer.writePresence(true)
+            writer.writeData(present0)
+        } else {
+            writer.writePresence(false)
+        }
     }
 }
 
@@ -7131,6 +7548,29 @@ extension ReleasePage {
     }
 }
 
+extension ReloadPage {
+    init(from reader: inout WireReader) throws(WireError) {
+        let pageID = try reader.readUUID()
+        let bypassesCache = try reader.readBool()
+        self.init(pageID: pageID, bypassesCache: bypassesCache)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeUUID(pageID)
+        writer.writeBool(bypassesCache)
+    }
+
+    func encodePageRequest(into writer: inout WireWriter) {
+        writer.writeTag(9)
+        encode(into: &writer)
+    }
+
+    static func decodeAnswer(from reader: inout WireReader) throws(WireError) -> Bool {
+        let answer = try reader.readBool()
+        return answer
+    }
+}
+
 extension RemoveDownload {
     init(from reader: inout WireReader) throws(WireError) {
         let downloadID = try reader.readUUID()
@@ -7524,6 +7964,31 @@ extension RestoreArchivedTab {
     }
 }
 
+extension RestoreInteractionState {
+    init(from reader: inout WireReader) throws(WireError) {
+        let pageID = try reader.readUUID()
+        let state = try reader.readData()
+        let expectedURL = try reader.readString()
+        self.init(pageID: pageID, state: state, expectedURL: expectedURL)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeUUID(pageID)
+        writer.writeData(state)
+        writer.writeString(expectedURL)
+    }
+
+    func encodePageRequest(into writer: inout WireWriter) {
+        writer.writeTag(10)
+        encode(into: &writer)
+    }
+
+    static func decodeAnswer(from reader: inout WireReader) throws(WireError) -> Bool {
+        let answer = try reader.readBool()
+        return answer
+    }
+}
+
 extension ReturnToSavedAddress {
     init(from reader: inout WireReader) throws(WireError) {
         let workspaceID = try reader.readUUID()
@@ -7552,6 +8017,27 @@ extension SaveFailed {
 
     func encode(into writer: inout WireWriter) {
         reason.encode(into: &writer)
+    }
+}
+
+extension SaveInteractionState {
+    init(from reader: inout WireReader) throws(WireError) {
+        let pageID = try reader.readUUID()
+        self.init(pageID: pageID)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeUUID(pageID)
+    }
+
+    func encodePageRequest(into writer: inout WireWriter) {
+        writer.writeTag(11)
+        encode(into: &writer)
+    }
+
+    static func decodeAnswer(from reader: inout WireReader) throws(WireError) -> InteractionState {
+        let answer = try InteractionState(from: &reader)
+        return answer
     }
 }
 
@@ -8321,6 +8807,27 @@ extension ShowAdjacentTab {
     func encodeIntent(into writer: inout WireWriter) {
         writer.writeTag(118)
         encode(into: &writer)
+    }
+}
+
+extension ShowPage {
+    init(from reader: inout WireReader) throws(WireError) {
+        let pageID = try reader.readUUID()
+        self.init(pageID: pageID)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeUUID(pageID)
+    }
+
+    func encodePageRequest(into writer: inout WireWriter) {
+        writer.writeTag(12)
+        encode(into: &writer)
+    }
+
+    static func decodeAnswer(from reader: inout WireReader) throws(WireError) -> Bool {
+        let answer = try reader.readBool()
+        return answer
     }
 }
 
@@ -9596,6 +10103,27 @@ extension StepSplitMember {
     func encodeIntent(into writer: inout WireWriter) {
         writer.writeTag(122)
         encode(into: &writer)
+    }
+}
+
+extension StopLoading {
+    init(from reader: inout WireReader) throws(WireError) {
+        let pageID = try reader.readUUID()
+        self.init(pageID: pageID)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeUUID(pageID)
+    }
+
+    func encodePageRequest(into writer: inout WireWriter) {
+        writer.writeTag(13)
+        encode(into: &writer)
+    }
+
+    static func decodeAnswer(from reader: inout WireReader) throws(WireError) -> Bool {
+        let answer = try reader.readBool()
+        return answer
     }
 }
 
@@ -10978,6 +11506,29 @@ extension WrongDeletionOperation {
     }
 }
 
+extension ZoomPage {
+    init(from reader: inout WireReader) throws(WireError) {
+        let pageID = try reader.readUUID()
+        let factor = try reader.readDouble()
+        self.init(pageID: pageID, factor: factor)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeUUID(pageID)
+        writer.writeDouble(factor)
+    }
+
+    func encodePageRequest(into writer: inout WireWriter) {
+        writer.writeTag(14)
+        encode(into: &writer)
+    }
+
+    static func decodeAnswer(from reader: inout WireReader) throws(WireError) -> Bool {
+        let answer = try reader.readBool()
+        return answer
+    }
+}
+
 extension CredentialCaptureAction {
     init(from reader: inout WireReader) throws(WireError) {
         let rawValue = try reader.readEnum()
@@ -11235,6 +11786,20 @@ extension ImportFlaw {
         let rawValue = try reader.readEnum()
         guard let value = ImportFlaw(rawValue: rawValue) else {
             throw WireError.malformed("Unknown ImportFlaw \(rawValue)")
+        }
+        self = value
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeEnum(rawValue)
+    }
+}
+
+extension PageExportFormat {
+    init(from reader: inout WireReader) throws(WireError) {
+        let rawValue = try reader.readEnum()
+        guard let value = PageExportFormat(rawValue: rawValue) else {
+            throw WireError.malformed("Unknown PageExportFormat \(rawValue)")
         }
         self = value
     }
@@ -11847,6 +12412,20 @@ extension NumberedSelectionTarget {
         let tag = try reader.readEnum()
         guard Self.all.indices.contains(tag) else {
             throw WireError.malformed("Unknown NumberedSelectionTarget \(tag)")
+        }
+        self = Self.all[tag]
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeEnum(tag)
+    }
+}
+
+extension PageExportFailure {
+    init(from reader: inout WireReader) throws(WireError) {
+        let tag = try reader.readEnum()
+        guard Self.all.indices.contains(tag) else {
+            throw WireError.malformed("Unknown PageExportFailure \(tag)")
         }
         self = Self.all[tag]
     }

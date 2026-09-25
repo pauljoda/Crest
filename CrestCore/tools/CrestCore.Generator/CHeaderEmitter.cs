@@ -33,7 +33,7 @@ internal static class CHeaderEmitter {
             """);
         code.Append("#define CREST_ENGINE_CONTRACT_FINGERPRINT { ");
         code.Append(string.Join(", ", schema.EngineFingerprint.Select(value => $"0x{value:x2}"))).Append(" }\n");
-        foreach (var root in ContractRoot.All) {
+        foreach (var root in ContractRoot.All.Where(root => root.ReachesCore)) {
             code.Append('\n').Append($"/* {root} tags */\n");
             string prefix = $"CREST_{Naming.UpperSnake(root.Name)}_";
             foreach (var member in schema.Members(root))
