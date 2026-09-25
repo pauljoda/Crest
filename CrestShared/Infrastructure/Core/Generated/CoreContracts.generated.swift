@@ -626,6 +626,7 @@ struct CreatePage: Equatable, Sendable {
     let pageID: UUID
     let profileID: UUID
     let isPrivate: Bool
+    let windowID: UUID
 }
 
 struct CreateSpace: Intent, SessionIntent, Equatable, Sendable {

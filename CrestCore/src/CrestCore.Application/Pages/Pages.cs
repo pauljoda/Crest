@@ -63,7 +63,7 @@ internal sealed class Pages(Device device, Engines engines, IClock clock, IIdSou
         var page = new Page(intent.PageId, engine, space.ProfileId, intent.WorkspaceId, space.Id, intent.TabId, intent.WindowId);
         open[page.Id] = page;
         changes.Publish(new PageOpened(page.State));
-        issue(engine, new CreatePage(page.Id, page.ProfileId, workspace.IsPrivateBrowsing));
+        issue(engine, new CreatePage(page.Id, page.ProfileId, workspace.IsPrivateBrowsing, page.WindowId));
     }
 
     private void Move(MovePage intent, ChangeFeed changes) {

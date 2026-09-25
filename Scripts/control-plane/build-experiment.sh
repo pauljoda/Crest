@@ -19,6 +19,10 @@ clang -std=c11 -Wall -Wextra -Werror -I CrestContracts/include \
     CrestContracts/tests/native_abi.c "$build_root/core/CrestCore.Native.dylib" \
     -Wl,-rpath,"$build_root/core" -o "$build_root/native-abi"
 "$build_root/native-abi"
+clang++ -std=c++20 -Wall -Wextra -Werror -Wconversion -I CrestContracts/include \
+    CrestContracts/tests/engine_abi.cc "$build_root/core/CrestCore.Native.dylib" \
+    -Wl,-rpath,"$build_root/core" -o "$build_root/engine-abi"
+"$build_root/engine-abi"
 xcodebuild -project Crest.xcodeproj -scheme CrestNativeCore -configuration Debug \
     -destination 'platform=macOS' -derivedDataPath "$build_root/DerivedData" \
     CREST_CORE_LIBRARY_DIR="$build_root/core" CODE_SIGN_IDENTITY=- CODE_SIGNING_ALLOWED=YES build

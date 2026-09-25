@@ -66,7 +66,7 @@ public sealed partial class BrowserContractsTests {
 
         var opened = Assert.IsType<PageOpened>(Assert.Single(app.Send(new OpenPage(page, workspace, space, tab, window)))).Page;
         Assert.Equal(new PageState(page, workspace, space, tab, EngineKind.WebKit, PagePhase.Opening, PageLiveState.Blank), opened);
-        Assert.Equal([new CreatePage(page, ProfileId(session["spaces"]![0]!), IsPrivate: false)], binding.Commands);
+        Assert.Equal([new CreatePage(page, ProfileId(session["spaces"]![0]!), IsPrivate: false, window)], binding.Commands);
         app.Report(engine, new PageCreated(page));
         Assert.Equal(opened with { Phase = PagePhase.Live }, Assert.IsType<PageChanged>(Assert.Single(app.Drain())).Page);
 
@@ -231,7 +231,7 @@ public sealed partial class BrowserContractsTests {
         int deliveredWhenNestedSendReturned = -1;
         IReadOnlyList<Change> released = [];
         binding.OnCommand = command => {
-            if (command != new CreatePage(first, profile, IsPrivate: false)) return;
+            if (command != new CreatePage(first, profile, IsPrivate: false, window)) return;
             // Inside a delivery, an intent and a report only add to the queue.
             app.Send(new OpenPage(second, workspace, space, null, window));
             deliveredWhenNestedSendReturned = binding.Commands.Count;
@@ -243,8 +243,8 @@ public sealed partial class BrowserContractsTests {
 
         Assert.Equal(1, deliveredWhenNestedSendReturned);
         Assert.Equal([
-            new CreatePage(first, profile, IsPrivate: false),
-            new CreatePage(second, profile, IsPrivate: false),
+            new CreatePage(first, profile, IsPrivate: false, window),
+            new CreatePage(second, profile, IsPrivate: false, window),
             new ClosePage(first, KeepsState: false)
         ], binding.Commands);
         // The report was pending when the release ran, so the release answers

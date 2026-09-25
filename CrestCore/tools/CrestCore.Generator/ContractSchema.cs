@@ -265,22 +265,34 @@ internal sealed class ContractSchema {
 
     public byte[] Fingerprint => SHA256.HashData(Encoding.UTF8.GetBytes(Canonical));
 
-    /// The canonical description of the engine contract alone: the engine
-    /// roots, the registration an engine hands the core, and what they reach.
-    /// An edit anywhere else in the contracts leaves it, and so an engine built
-    /// against it, unchanged.
-    public string EngineCanonical { get; private set; } = "";
+    /// The engine contract alone: the engine roots, the registration an
+    /// engine hands the core, and what they reach. An engine binding in
+    /// another language, such as Chromium's C++, is generated from it.
+    public ContractSchema Engine { get; private set; } = null!;
+
+    /// The canonical description of the engine contract alone. It describes
+    /// the wire and nothing the wire does not carry, so an edit anywhere else
+    /// in the contracts, or to a fixed set's data and texts, leaves it, and so
+    /// an engine built against it, unchanged.
+    public string EngineCanonical => Engine.Canonical;
 
     public byte[] EngineFingerprint => SHA256.HashData(Encoding.UTF8.GetBytes(EngineCanonical));
 
     /// The contract the canonical description names.
     private readonly string contract;
 
+    /// The canonical description spells fixed sets' data and records' texts,
+    /// which only the platforms that receive them read.
+    private readonly bool describesData;
+
     #endregion
 
     #region Constructors
 
-    private ContractSchema(string contract) => this.contract = contract;
+    private ContractSchema(string contract, bool describesData) {
+        this.contract = contract;
+        this.describesData = describesData;
+    }
 
     #endregion
 
@@ -297,20 +309,20 @@ internal sealed class ContractSchema {
         ArgumentNullException.ThrowIfNull(types);
         var candidates = types.Where(type => type is { IsClass: true, IsAbstract: false }).ToList();
         var schema = Describing(ApplicationContract, candidates, ContractRoot.All,
-            candidates.Where(typeof(Configuration).IsAssignableFrom), candidates.Where(IsFixedSet));
+            candidates.Where(typeof(Configuration).IsAssignableFrom), candidates.Where(IsFixedSet), describesData: true);
         if (candidates.FirstOrDefault(type => type.IsDefined(typeof(ObservedAttribute), false) && !schema.records.ContainsKey(type))
             is { } unreached)
             throw new ContractSchemaException($"{unreached.Name}: an [Observed] record must be one a contract message carries.");
-        schema.EngineCanonical = Describing(EngineContract, candidates, [.. ContractRoot.All.Where(root => root.IsEngine)],
-            candidates.Where(type => type == typeof(EngineRegistration)), []).Canonical;
+        schema.Engine = Describing(EngineContract, candidates, [.. ContractRoot.All.Where(root => root.IsEngine)],
+            candidates.Where(type => type == typeof(EngineRegistration)), [], describesData: false);
         return schema;
     }
 
     /// A schema whose roots are `included`'s members among `candidates`, with
     /// `configurations` and `sets` described whether or not a record names them.
     private static ContractSchema Describing(string contract, List<Type> candidates, IReadOnlyList<ContractRoot> included,
-        IEnumerable<Type> configurations, IEnumerable<Type> sets) {
-        var schema = new ContractSchema(contract);
+        IEnumerable<Type> configurations, IEnumerable<Type> sets, bool describesData) {
+        var schema = new ContractSchema(contract, describesData);
         foreach (var root in ContractRoot.All) schema.AddRoot(root, included.Contains(root) ? candidates.Where(root.Contains) : []);
         foreach (var type in configurations.OrderBy(type => type.Name, StringComparer.Ordinal)) schema.DescribeRecord(type);
         foreach (var set in sets.OrderBy(type => type.Name, StringComparer.Ordinal)) schema.DescribeSet(set, set.Name);
@@ -852,17 +864,24 @@ internal sealed class ContractSchema {
         foreach (var item in Enums)
             text.Append(item.IsFlags ? "flags " : "enum ").Append(item.Name)
                 .Append(string.Concat(item.Members.Select(member => $" {member.Key}={member.Value}"))).Append('\n');
-        foreach (var set in Sets)
+        foreach (var set in Sets) {
+            if (!describesData) {
+                // Only a member's tag crosses the wire.
+                text.Append("set ").Append(set.Name).Append(string.Concat(set.Members.Select(member => $" {member.Name}={member.Tag}")))
+                    .Append('\n');
+                continue;
+            }
             text.Append(set.IsOpen ? "open set " : "set ").Append(set.Name).Append('(')
                 .Append(string.Join(", ", set.Properties.Select(property => $"{property.Name}: {Describe(property.Type)}"))).Append(')')
                 .Append(string.Concat(set.Members.Select(member =>
                     $" {member.Name}={member.Tag}({string.Join(", ", member.Values.Select(DescribeValue))})"))).Append('\n');
+        }
         foreach (var record in Records)
             text.Append("record ").Append(record.Name).Append('(')
                 .Append(string.Join(", ", record.Fields.Select(field => $"{field.Name}: {Describe(field.Type)}"))).Append(')')
                 .Append(record.Resolved.Count == 0 ? "" : $" resolved({string.Join(", ", record.Resolved.Select(field =>
                     $"{field.Name}: {Describe(field.Type)}"))})")
-                .Append(string.Concat(record.Texts.Select(item =>
+                .Append(!describesData ? "" : string.Concat(record.Texts.Select(item =>
                     $" {item.Name}=localized({DescribeValue(item.Text)}, {DescribeValue(item.Comment)}, {DescribeValue(item.Argument)})")))
                 .Append('\n');
         foreach (var root in ContractRoot.All)

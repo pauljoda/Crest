@@ -2553,6 +2553,10 @@
     "sidebar-draws-from-core-read-model": {
       "category": "internal",
       "message": "The sidebar's sections, folders, splits and pinned tabs draw from the core's published sidebar lists, each row redraws only for its own tab, and every list is lazy."
+    },
+    "engine-contract-cpp-codec": {
+      "category": "internal",
+      "message": "The engine contract has a generated C++ codec that engines outside Swift can use."
     }
   }
 }

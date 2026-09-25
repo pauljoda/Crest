@@ -26,9 +26,10 @@ puts the recovery checkpoint back while no app has the directory open. Changes t
 core starts itself, such as `Saved` and `StorageFailed`, wait for
 `crest_app_drain` after a payload-free `crest_app_set_wake` callback. Everything but the header itself is
 generated: run `Scripts/control-plane/generate-contracts.sh` after changing a
-contract record to rewrite the core's codec, the Swift models and codec, and
-`include/crest_contracts.h` with the tags and the fingerprint. Source code
-never spells a wire tag.
+contract record to rewrite the core's codec, the Swift models and codec,
+`include/crest_contracts.h` with the tags and the fingerprint, and the C++
+engine codec `include/crest_engine_contract.h`. Source code never spells a wire
+tag.
 
 `crest_engine.h` is the engine contract. An engine binding registers with an
 app through `crest_engine_register`, passing the engine contract's own
@@ -42,8 +43,17 @@ the stack of the report that caused them. The binding reports `EngineEvent`s
 `PageStateChanged`) with `crest_engine_report`, which never refuses one. A
 binding reports a page's `PageSnapshot` at most once per turn and only when it
 changed; the core keeps it with the page's failure as `PageLiveState` and
-publishes `PageChanged` only when that differs. The engine fingerprint covers only the engine roots and the
-registration, so an edit elsewhere in the contracts leaves it unchanged. The
+publishes `PageChanged` only when that differs. `CreatePage` names the window
+that hosts the page, so a binding creates the page there as soon as the core
+asks. The engine fingerprint covers only the wire of the engine roots and the
+registration, so an edit elsewhere in the contracts, or to a fixed set's data
+and texts, leaves it unchanged. The generator also writes
+`include/crest_engine_contract.h`, the engine contract and its codec in
+portable C++20 that uses the standard library alone and never throws.
+Chromium's binding, which is C++, registers with its `kFingerprint`, decodes
+its commands and encodes its reports with it, and reports to the core through
+the function `attach` hands it; `tests/engine_abi.cc` does the same against
+the shared library. The
 `OpenPage`, `MovePage`, `ReleasePage`, `Navigate` and `LeavePageFailure`
 intents on `crest_app_*` own page identity and loads: which tab or transient
 request owns each page, which engine hosts it, what an address the person

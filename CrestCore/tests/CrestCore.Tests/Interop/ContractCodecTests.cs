@@ -406,7 +406,8 @@ public sealed unsafe class ContractCodecTests {
     }
 
     /// The Chromium engine is built against the engine contract alone, so an
-    /// edit anywhere else must leave its fingerprint as it was.
+    /// edit anywhere else, or to a fixed set's data or texts, which never
+    /// cross the wire, must leave its fingerprint as it was.
     [Fact]
     public void TheEngineContractKeepsItsFingerprintWhenTheApplicationContractChanges() {
         var types = Contracts.GetExportedTypes();
@@ -419,6 +420,8 @@ public sealed unsafe class ContractCodecTests {
         Assert.Contains("record EngineRegistration(", schema.EngineCanonical, StringComparison.Ordinal);
         Assert.Contains("engineevent 4 PageClosed", schema.EngineCanonical, StringComparison.Ordinal);
         Assert.DoesNotContain("intent ", schema.EngineCanonical, StringComparison.Ordinal);
+        Assert.Contains("set PageSecurity None=0 Insecure=1", schema.EngineCanonical, StringComparison.Ordinal);
+        Assert.DoesNotContain("localized", schema.EngineCanonical, StringComparison.Ordinal);
     }
 
     [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
