@@ -40,6 +40,9 @@ protocol SessionIntent: Intent {}
 /// The members of `Intent` that derive from the core's `ShortcutIntent`.
 protocol ShortcutIntent: Intent {}
 
+/// The members of `Intent` that derive from the core's `SidebarDrop`.
+protocol SidebarDrop: Intent {}
+
 /// The members of `Intent` that derive from the core's `SitePermissionIntent`.
 protocol SitePermissionIntent: Intent {}
 
@@ -150,7 +153,10 @@ enum Rejection: Equatable, Error, Sendable {
     case pageNotLoadable(PageNotLoadable)
     case pageProfileMismatch(PageProfileMismatch)
     case persistentWorkspaceRequired(PersistentWorkspaceRequired)
+    case pinnedTabsDragAlone(PinnedTabsDragAlone)
     case pinnedTabsFull(PinnedTabsFull)
+    case pinnedTabsStayPut(PinnedTabsStayPut)
+    case pinsOneTabAtATime(PinsOneTabAtATime)
     case privateWorkspaceBoundary(PrivateWorkspaceBoundary)
     case profileInUse(ProfileInUse)
     case recoveryCheckpointUnusable(RecoveryCheckpointUnusable)
@@ -208,7 +214,10 @@ enum Rejection: Equatable, Error, Sendable {
         case .invalidSyncRecords(let value): value.message
         case .noIncludedSpaces(let value): value.message
         case .persistentWorkspaceRequired(let value): value.message
+        case .pinnedTabsDragAlone(let value): value.message
         case .pinnedTabsFull(let value): value.message
+        case .pinnedTabsStayPut(let value): value.message
+        case .pinsOneTabAtATime(let value): value.message
         case .profileInUse(let value): value.message
         case .saveFailed(let value): value.message
         case .searchEngineLimitReached(let value): value.message
@@ -939,6 +948,60 @@ struct DownloadsRemoved: Equatable, Sendable {
     let downloadIDs: [UUID]
 }
 
+struct DropAroundTab: Intent, SessionIntent, SidebarDrop, Equatable, Sendable {
+    let workspaceID: UUID
+    let windowID: UUID
+    let spaceID: UUID
+    let selection: TabSelection
+    let tabID: UUID
+}
+
+struct DropIntoList: Intent, SessionIntent, SidebarDrop, Equatable, Sendable {
+    let workspaceID: UUID
+    let windowID: UUID
+    let spaceID: UUID
+    let selection: TabSelection
+    let section: TabPlacement
+    let folderID: UUID?
+    let beforeTabID: UUID?
+    let beforeFolderID: UUID?
+}
+
+struct DropIntoSplit: Intent, SessionIntent, SidebarDrop, Equatable, Sendable {
+    let workspaceID: UUID
+    let windowID: UUID
+    let spaceID: UUID
+    let selection: TabSelection
+    let targetTabID: UUID
+    let index: Int?
+}
+
+struct DropOnSpace: Intent, SessionIntent, SidebarDrop, Equatable, Sendable {
+    let workspaceID: UUID
+    let windowID: UUID
+    let spaceID: UUID
+    let selection: TabSelection
+    let destinationSpaceID: UUID
+    let follows: Bool
+}
+
+struct DropTargetList: Equatable, Sendable {
+    let refusal: Rejection?
+    let lists: [ListDropTarget]
+    let spaces: [SpaceDropTarget]
+    let split: SplitDropTarget?
+    let folderAroundTabIDs: [UUID]
+}
+
+struct DropTargets: Query, Equatable, Sendable {
+    typealias Answer = DropTargetList
+
+    let workspaceID: UUID
+    let windowID: UUID
+    let spaceID: UUID
+    let selection: TabSelection
+}
+
 struct DuplicateCredential: Equatable, Sendable {
 }
 
@@ -1442,6 +1505,12 @@ struct LinkRoutingPreferences: Equatable, Sendable {
     let rememberedSpaceID: UUID?
 }
 
+struct ListDropTarget: Equatable, Sendable {
+    let section: TabPlacement
+    let folderID: UUID?
+    let refusal: Rejection?
+}
+
 struct LoadPage: Equatable, Sendable {
     let pageID: UUID
     let url: String
@@ -1831,11 +1900,29 @@ struct PersistentWorkspaceRequired: Equatable, Sendable {
     }
 }
 
+struct PinnedTabsDragAlone: Equatable, Sendable {
+    var message: LocalizedStringResource {
+        LocalizedStringResource("Pinned tabs cannot join a drag with saved or current tabs. Start the drag again.")
+    }
+}
+
 struct PinnedTabsFull: Equatable, Sendable {
     let capacity: Int
 
     var message: LocalizedStringResource {
         LocalizedStringResource("A Space can hold up to \(capacity) pinned tabs. Unpin tabs or select fewer tabs.")
+    }
+}
+
+struct PinnedTabsStayPut: Equatable, Sendable {
+    var message: LocalizedStringResource {
+        LocalizedStringResource("Move selected pinned tabs within their pinned area or into saved or current tabs.")
+    }
+}
+
+struct PinsOneTabAtATime: Equatable, Sendable {
+    var message: LocalizedStringResource {
+        LocalizedStringResource("Drag one tab at a time to pin it.")
     }
 }
 
@@ -2030,6 +2117,25 @@ struct SelectSearchEngine: Intent, SessionIntent, Equatable, Sendable {
     let customEngineID: UUID?
 }
 
+struct SelectedRoot: Equatable, Sendable, Identifiable {
+    let id: UUID
+    let kind: SidebarRowKind
+}
+
+struct SelectedTab: Equatable, Sendable, Identifiable {
+    let id: UUID
+    let placement: TabPlacement
+    let folderID: UUID?
+    let splitGroupID: UUID?
+}
+
+struct SelectedTabs: Equatable, Sendable {
+    let selection: TabSelection
+    let roots: [SelectedRoot]
+    let members: [SelectedTab]
+    let folderIDs: [UUID]
+}
+
 struct SelectionChanged: Equatable, Sendable {
     var message: LocalizedStringResource {
         LocalizedStringResource("The selected items changed. Select them again before continuing.")
@@ -2040,6 +2146,15 @@ struct SelectionHoldsFolders: Equatable, Sendable {
     var message: LocalizedStringResource {
         LocalizedStringResource("Move selected folders into saved or current tabs, or another folder. Use a folder’s own menu for other folder actions.")
     }
+}
+
+struct SelectionPreview: Query, Equatable, Sendable {
+    typealias Answer = SelectedTabs
+
+    let workspaceID: UUID
+    let spaceID: UUID
+    let tabIDs: [UUID]
+    let folderIDs: [UUID]
 }
 
 struct SendPermission: Equatable, Sendable {
@@ -2365,6 +2480,11 @@ struct SpaceDeletionState: Equatable, Sendable, Identifiable {
     let profileID: UUID
 }
 
+struct SpaceDropTarget: Equatable, Sendable {
+    let spaceID: UUID
+    let refusal: Rejection?
+}
+
 struct SpaceLimitReached: Equatable, Sendable {
     let limit: Int
 
@@ -2451,6 +2571,11 @@ struct SplitColumnShares: Equatable, Sendable {
     let shares: [Double]
 }
 
+struct SplitDropTarget: Equatable, Sendable {
+    let tabID: UUID
+    let refusal: Rejection?
+}
+
 struct SplitGroupState: Equatable, Sendable, Identifiable {
     static let minimumShownMembers: Int = 2
 
@@ -2473,6 +2598,16 @@ struct SplitGroupsChanged: Equatable, Sendable {
     let workspaceID: UUID
     let spaceID: UUID
     let groups: [SplitGroupState]
+}
+
+struct SplitJoinCandidate: Query, Equatable, Sendable {
+    typealias Answer = SplitJoinCandidateTab
+
+    let windowID: UUID
+}
+
+struct SplitJoinCandidateTab: Equatable, Sendable {
+    let tabID: UUID?
 }
 
 struct SplitLimitReached: Equatable, Sendable {

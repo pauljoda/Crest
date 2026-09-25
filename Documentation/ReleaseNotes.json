@@ -2545,6 +2545,10 @@
     "tab-order-follows-sidebar": {
       "category": "improved",
       "message": "Next and previous tab, and \u23181\u2013\u23189, now follow the order you see in the sidebar."
+    },
+    "sidebar-drops-and-selection-queries-in-core": {
+      "category": "internal",
+      "message": "The core answers where a sidebar drag may drop, what a sidebar selection holds and which tab Split With Next Tab adds, and decides in one place which edit each drop commits."
     }
   }
 }

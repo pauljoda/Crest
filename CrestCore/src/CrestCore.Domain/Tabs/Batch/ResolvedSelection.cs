@@ -1,13 +1,23 @@
+using CrestCore.Contracts;
+
 namespace CrestCore.Domain;
 
 /// A selection resolved in the Space it was made in: what the person picked
 /// that no picked folder holds, in the order the sidebar lists it, every
 /// folder the selection holds, and the tabs it holds, root by root.
-public sealed class SelectedTabs {
+public sealed class ResolvedSelection {
     #region Types
 
-    /// A picked tab or folder that no picked folder holds.
-    public sealed record Root(Guid Id, bool IsFolder);
+    /// A picked tab or folder that no picked folder holds, as the sidebar row
+    /// that stands for it.
+    public sealed record Root(Guid Id, SidebarRowKind Kind) {
+        #region Variables
+
+        /// The pick is a folder, which moves with everything in it.
+        public bool IsFolder => Kind.OpensList;
+
+        #endregion
+    }
 
     #endregion
 
@@ -33,7 +43,7 @@ public sealed class SelectedTabs {
 
     #region Constructors
 
-    internal SelectedTabs(IReadOnlyList<Root> roots, IReadOnlySet<Guid> folders, IReadOnlyList<BrowserTab> members) {
+    internal ResolvedSelection(IReadOnlyList<Root> roots, IReadOnlySet<Guid> folders, IReadOnlyList<BrowserTab> members) {
         Roots = roots;
         Folders = folders;
         Members = members;

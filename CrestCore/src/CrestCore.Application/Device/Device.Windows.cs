@@ -1,4 +1,5 @@
 using CrestCore.Contracts;
+using CrestCore.Domain;
 
 namespace CrestCore.Application;
 
@@ -156,6 +157,75 @@ internal sealed partial class Device {
         return new(Allowed: true, Reason: null);
 
         static TearOffPermission Refused(TearOffRefusal reason) => new(Allowed: false, reason);
+    }
+
+    /// The tab "Split With Next Tab" adds to the split of the tab a window
+    /// shows: the next free tab row in its sidebar list, when the core would
+    /// join it.
+    public SplitJoinCandidateTab Answer(SplitJoinCandidate question, DateTimeOffset now, Pages pages) {
+        ArgumentNullException.ThrowIfNull(question);
+        var window = Opened(question.WindowId);
+        var authority = Workspace(window.WorkspaceId);
+        Guid spaceId;
+        Guid? shown;
+        lock (gate) {
+            spaceId = window.ShownSpaceId;
+            shown = window.Tab(spaceId);
+        }
+        if (Available(authority.Current, spaceId) is not { } space || shown is not { } tabId
+            || space.SplitCandidate(tabId) is not { } candidate) return new(TabId: null);
+        var joining = new JoinSplit(window.WorkspaceId, question.WindowId, space.Id, candidate, tabId, Index: null);
+        return new(Refusal(authority, joining, now, pages) is null ? candidate : null);
+    }
+
+    /// Where a lift in a window's sidebar may drop: each drop it could commit,
+    /// checked as the drop would be now, at the end of each list.
+    public DropTargetList Answer(DropTargets question, DateTimeOffset now, Pages pages) {
+        ArgumentNullException.ThrowIfNull(question);
+        var window = Opened(question.WindowId);
+        var authority = Workspace(question.WorkspaceId);
+        try {
+            authority.CheckLift(question.WindowId, question.SpaceId, question.Selection);
+        } catch (Rejected refused) {
+            return new(refused.Rejection, [], [], Split: null, []);
+        }
+        var session = authority.Current;
+        var space = session.Spaces.First(candidate => candidate.Id == question.SpaceId);
+        var (workspaceId, windowId, spaceId, selection) = (question.WorkspaceId, question.WindowId, question.SpaceId, question.Selection);
+        ListDropTarget[] lists = [.. space.Sidebar.Lists.Select(list => new ListDropTarget(list.Section, list.FolderId, Refusal(authority,
+            new DropIntoList(workspaceId, windowId, spaceId, selection, list.Section, list.FolderId, BeforeTabId: null, BeforeFolderId: null),
+            now, pages)))];
+        SpaceDropTarget[] spaces = [.. Window.Showable(session).Where(other => other.Id != spaceId).Select(other => new SpaceDropTarget(other.Id,
+            Refusal(authority, new DropOnSpace(workspaceId, windowId, spaceId, selection, other.Id, Follows: false), now, pages)))];
+        Guid? shown;
+        lock (gate) shown = window.Tab(spaceId);
+        var split = shown is { } target
+            ? new SplitDropTarget(target, Refusal(authority, new DropIntoSplit(workspaceId, windowId, spaceId, selection, target, Index: null),
+                now, pages))
+            : null;
+        // Every candidate passes the rule a drop checks of its tab, so the first
+        // answers for all of them what the lift allows.
+        var lifted = selection.MemberTabIds.ToHashSet();
+        var tabs = space.Tabs.ToDictionary(tab => tab.Id);
+        Guid[] around = [.. space.Sidebar.Lists.Where(list => list.FolderId is null && !list.Section.IsDurable)
+            .SelectMany(list => list.Rows)
+            .Where(row => row.Kind == SidebarRowKind.Tab && tabs[row.Id].SplitGroupId is null && !lifted.Contains(row.Id))
+            .Select(row => row.Id)];
+        if (around.Length > 0
+            && Refusal(authority, new DropAroundTab(workspaceId, windowId, spaceId, selection, around[0]), now, pages) is not null)
+            around = [];
+        return new(Refusal: null, lists, spaces, split, around);
+    }
+
+    /// The rule that would refuse `intent` in `authority` now, or null when it
+    /// would be accepted. The identities a check draws are never used.
+    private static Rejection? Refusal(NativeSessionAuthority authority, SessionIntent intent, DateTimeOffset now, Pages pages) {
+        try {
+            authority.Check(intent, now, new SystemIdSource(), pages);
+            return null;
+        } catch (Rejected refused) {
+            return refused.Rejection;
+        }
     }
 
     /// Where each numbered command leads in a window: to the stops of the Space

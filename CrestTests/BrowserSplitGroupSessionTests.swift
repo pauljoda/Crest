@@ -353,53 +353,6 @@ final class BrowserSplitGroupSessionTests: XCTestCase {
         XCTAssertFalse(store.dissolveSplit(containing: target.id, matching: assignment))
     }
 
-    // MARK: - "Split With Next Tab" candidate resolution
-
-    func testJoinCandidateResolutionSkipsGroupedTabsAndStartPages() throws {
-        let group = SplitGroupID()
-        let head = makeTab("Head", group: group)
-        let tail = makeTab("Tail", group: group)
-        let draft = BrowserTab.startPage(lastActivatedAt: Date(timeIntervalSince1970: 0))
-        let free = makeTab("Free")
-        let store = makeStore(
-            tabs: [head, tail, draft, free],
-            selectedTabID: head.id
-        )
-
-        XCTAssertEqual(
-            store.nextSplitJoinCandidate?.id,
-            free.id,
-            "Existing members and uncommitted drafts are not candidates."
-        )
-    }
-
-    func testAFullGroupAndDraftSelectionOfferNoCandidateWhilePinnedTabsCanBeCopied() throws {
-        let group = SplitGroupID()
-        let members = (1...4).map { makeTab("Member \($0)", group: group) }
-        let free = makeTab("Free")
-        let full = makeStore(
-            tabs: members + [free],
-            selectedTabID: members[0].id
-        )
-        XCTAssertNil(full.nextSplitJoinCandidate)
-
-        let pinned = makeTab("Pinned", placement: .pinned)
-        let pinnedNeighbour = makeTab("Neighbour", placement: .pinned)
-        let pinnedStore = makeStore(
-            tabs: [pinned, pinnedNeighbour],
-            selectedTabID: pinned.id
-        )
-        XCTAssertEqual(pinnedStore.nextSplitJoinCandidate?.id, pinnedNeighbour.id)
-
-        let draft = BrowserTab.startPage(lastActivatedAt: Date(timeIntervalSince1970: 0))
-        let follower = makeTab("Follower")
-        let draftStore = makeStore(
-            tabs: [draft, follower],
-            selectedTabID: draft.id
-        )
-        XCTAssertNil(draftStore.nextSplitJoinCandidate)
-    }
-
     // MARK: - "Split with Current Tab" and "Open Link in Split View"
 
     func testSplittingWithTheCurrentTabJoinsTheSubjectAndFocusesIt() throws {

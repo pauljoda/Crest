@@ -60,6 +60,22 @@ public sealed record SpaceState(
     /// or null; see <see cref="SidebarOutline.Step"/>.</summary>
     public Guid? Step(Guid shownTabId, AdjacentDirection direction) => Sidebar.Step(shownTabId, direction, Folders, Shows);
 
+    /// <summary>The tab "Split With Next Tab" would add to the split of the shown tab
+    /// <paramref name="shownTabId"/>: the first tab row after the row that holds it, in
+    /// the same list of the sidebar, whose tab is in no split; or null. A Start Page,
+    /// which the sidebar lists nowhere, has none.</summary>
+    public Guid? SplitCandidate(Guid shownTabId) {
+        foreach (var list in Sidebar.Lists) {
+            int shown = -1;
+            for (int index = 0; index < list.Rows.Count && shown < 0; index++)
+                if (!list.Rows[index].Kind.OpensList && list.Rows[index].Members.Contains(shownTabId)) shown = index;
+            if (shown < 0) continue;
+            var grouped = Tabs.Where(tab => tab.SplitGroupId is not null).Select(tab => tab.Id).ToHashSet();
+            return list.Rows.Skip(shown + 1).FirstOrDefault(row => row.Kind == SidebarRowKind.Tab && !grouped.Contains(row.Id))?.Id;
+        }
+        return null;
+    }
+
     #endregion
 
     #region Actions - Equality

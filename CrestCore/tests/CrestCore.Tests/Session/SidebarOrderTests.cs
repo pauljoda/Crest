@@ -17,7 +17,8 @@ public sealed partial class BrowserContractsTests {
     /// C1, the split A B, the Start Page N, C2, C3 in the open folder Open, C4 in
     /// the collapsed open folder Shut, and C5. Its sidebar shows, in order: P1,
     /// P2, Kept, S2, C1, the split, C2, Open, C3, Shut, C5. Two more Spaces hold
-    /// one tab each.
+    /// one tab each. `extraPinned` more pinned tabs follow P2, and `extraMembers`
+    /// more tabs of the split follow B.
     private sealed class OrderSpace {
         public Guid Space { get; } = Guid.NewGuid();
         public Guid Second { get; } = Guid.NewGuid();
@@ -45,16 +46,18 @@ public sealed partial class BrowserContractsTests {
         /// The tab each stop shows, in order, while the saved section is expanded.
         public Guid[] Stops => [P1, P2, S2, C1, A, C2, C3, C5];
 
-        public OrderSpace(bool savedExpanded = true) {
+        public OrderSpace(bool savedExpanded = true, int extraPinned = 0, int extraMembers = 0) {
             Session = SavedSession().Document["session"]!;
             Session.AsObject().Remove("disposableSeedMarker");
             Session.AsObject().Remove("selectedSpaceID");
             var space = Session["spaces"]![0]!.AsObject();
             space["id"] = SwiftId(Space);
             space["isSavedTabsExpanded"] = savedExpanded;
-            space["tabs"] = new JsonArray(Tab(P1, "pinned"), Tab(P2, "pinned"), Tab(S1, "saved", Kept), Tab(S2, "saved"), Tab(C1, "current"),
-                Tab(A, "current", split: Split), Tab(B, "current", split: Split), Tab(N, "current", startPage: true), Tab(C2, "current"),
-                Tab(C3, "current", Open), Tab(C4, "current", Shut), Tab(C5, "current"));
+            space["tabs"] = new JsonArray([Tab(P1, "pinned"), Tab(P2, "pinned"),
+                .. Enumerable.Range(0, extraPinned).Select(_ => Tab(Guid.NewGuid(), "pinned")), Tab(S1, "saved", Kept), Tab(S2, "saved"),
+                Tab(C1, "current"), Tab(A, "current", split: Split), Tab(B, "current", split: Split),
+                .. Enumerable.Range(0, extraMembers).Select(_ => Tab(Guid.NewGuid(), "current", split: Split)),
+                Tab(N, "current", startPage: true), Tab(C2, "current"), Tab(C3, "current", Open), Tab(C4, "current", Shut), Tab(C5, "current")]);
             space["folders"] = new JsonArray(Folder(Kept, "saved", collapsed: true), Folder(Open, "current", collapsed: false),
                 Folder(Shut, "current", collapsed: true));
             space["splitGroups"] = new JsonArray();

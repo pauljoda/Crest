@@ -11,7 +11,7 @@ public sealed partial class BrowserTabCollection {
     /// Archives the selected open tabs, and answers the tab the window shows
     /// next: `fallback` in place of `shown` when it went, or none. Refused with
     /// `CurrentTabsOnly` for a saved or pinned tab.
-    public Guid? CloseSelected(SelectedTabs selection, Guid? shown, Guid? fallback, DateTimeOffset now) {
+    public Guid? CloseSelected(ResolvedSelection selection, Guid? shown, Guid? fallback, DateTimeOffset now) {
         RequireSelectedTabs(selection);
         if (selection.Members.FirstOrDefault(tab => tab.Placement.IsDurable) is { } durable)
             throw new Rejected(new CurrentTabsOnly(durable.Id));
@@ -22,7 +22,7 @@ public sealed partial class BrowserTabCollection {
     /// Deletes the selected tabs into the archive as open tabs, and answers the
     /// tab the window shows next: `fallback` in place of `shown` when it went,
     /// or none.
-    public Guid? DeleteSelected(SelectedTabs selection, Guid? shown, Guid? fallback, DateTimeOffset now) {
+    public Guid? DeleteSelected(ResolvedSelection selection, Guid? shown, Guid? fallback, DateTimeOffset now) {
         RequireSelectedTabs(selection);
         var next = DismissTabs(selection.MemberIds, shown, fallback, now, deleting: true, ensureSelection: true,
             resetArchivePlacement: true);
@@ -38,7 +38,7 @@ public sealed partial class BrowserTabCollection {
     /// Copies the selected tabs to the end of the open tabs, in order, and
     /// answers each source with its copy. The copies of a split's members form
     /// a split of their own that keeps the source split's name, icon and tint.
-    public IReadOnlyList<(Guid Source, Guid Copy)> DuplicateSelected(SelectedTabs selection, IIdSource ids, DateTimeOffset now) {
+    public IReadOnlyList<(Guid Source, Guid Copy)> DuplicateSelected(ResolvedSelection selection, IIdSource ids, DateTimeOffset now) {
         RequireSelectedTabs(selection);
         List<(Guid Source, Guid Copy)> copies = [];
         foreach (var tab in selection.Members)
@@ -65,7 +65,7 @@ public sealed partial class BrowserTabCollection {
     /// Refused with `WebPagesOnly` for a Start Page target, and
     /// `SplitNeedsTwoTabs` or `SplitLimitReached` for a split that would be
     /// too small or too large.
-    public (Guid? Shown, IReadOnlyList<(Guid Source, Guid Copy)> Copies) SplitSelected(SelectedTabs selection, Guid? target,
+    public (Guid? Shown, IReadOnlyList<(Guid Source, Guid Copy)> Copies) SplitSelected(ResolvedSelection selection, Guid? target,
         int? index, Guid? shown, IIdSource ids, DateTimeOffset now) {
         RequireSelectedTabs(selection);
         var targetId = target ?? selection.MemberIds[0];
@@ -94,7 +94,7 @@ public sealed partial class BrowserTabCollection {
     }
 
     /// Dissolves every split the selected tabs belong to.
-    public void SeparateSelected(SelectedTabs selection, DateTimeOffset now) {
+    public void SeparateSelected(ResolvedSelection selection, DateTimeOffset now) {
         RequireSelectedTabs(selection);
         foreach (var group in SelectedGroups(selection)) DissolveSplit(group, now);
     }
@@ -106,7 +106,7 @@ public sealed partial class BrowserTabCollection {
     /// Keeps the selected tabs' pages loaded while they are not shown, or lets
     /// them unload. A selected folder's tabs are included. Refused with
     /// `WebPagesOnly` for a tab that shows no web page.
-    public void KeepSelectedLoaded(SelectedTabs selection, bool keeps) {
+    public void KeepSelectedLoaded(ResolvedSelection selection, bool keeps) {
         RequireWholeSplits(selection);
         if (selection.Members.FirstOrDefault(tab => !tab.Content.IsWebPage) is { } other) throw new Rejected(new WebPagesOnly(other.Id));
         foreach (var tab in selection.Members) tab.SetResidency(keeps);
@@ -123,7 +123,7 @@ public sealed partial class BrowserTabCollection {
     /// shown tab if it moved, or else the first moved tab. Refused with
     /// `CannotMoveSplitAcrossSpaces` for a split member and `PinnedTabsFull`
     /// when the destination cannot hold them all.
-    public (Guid? Shown, Guid? DestinationShown) MoveSelected(SelectedTabs selection, BrowserTabCollection destination, Guid? shown,
+    public (Guid? Shown, Guid? DestinationShown) MoveSelected(ResolvedSelection selection, BrowserTabCollection destination, Guid? shown,
         Guid? fallback, Guid? destinationShown, bool follows, DateTimeOffset now) {
         ArgumentNullException.ThrowIfNull(destination);
         RequireSelectedTabs(selection);
@@ -150,7 +150,7 @@ public sealed partial class BrowserTabCollection {
     /// split along unless `leavesSplits`. In a section that holds no folders
     /// the tabs move one by one, refused with `CannotPinSplit` for a member
     /// that stays in its split and `PinnedTabsFull` for a full section.
-    public void FileSelected(SelectedTabs selection, TabPlacement placement, Guid? folder, Guid? before, Guid? beforeFolder,
+    public void FileSelected(ResolvedSelection selection, TabPlacement placement, Guid? folder, Guid? before, Guid? beforeFolder,
         bool leavesSplits, DateTimeOffset now) {
         ArgumentNullException.ThrowIfNull(selection);
         ArgumentNullException.ThrowIfNull(placement);
@@ -177,7 +177,7 @@ public sealed partial class BrowserTabCollection {
     /// Makes a folder named `title` in `color` at the top level of
     /// `placement`'s section, with an identity from `ids`, and moves the
     /// selection into it: a selected folder moves in whole.
-    public Guid FolderSelected(SelectedTabs selection, TabPlacement placement, string title, BrandColor color, IIdSource ids,
+    public Guid FolderSelected(ResolvedSelection selection, TabPlacement placement, string title, BrandColor color, IIdSource ids,
         DateTimeOffset now) {
         RequireWholeSplits(selection);
         if (selection.HoldsFolders) {
@@ -196,7 +196,7 @@ public sealed partial class BrowserTabCollection {
     /// then the selection into it. Refused with `InvalidFolderPlacement` when
     /// the tab is saved or pinned, in a folder or a split, a Start Page, or
     /// selected.
-    public Guid FolderSelectedAround(SelectedTabs selection, Guid tabId, string title, BrandColor color, IIdSource ids,
+    public Guid FolderSelectedAround(ResolvedSelection selection, Guid tabId, string title, BrandColor color, IIdSource ids,
         DateTimeOffset now) {
         RequireSelectedTabs(selection);
         if (selection.Holds(tabId)) throw new Rejected(new InvalidFolderPlacement());
@@ -218,7 +218,7 @@ public sealed partial class BrowserTabCollection {
     /// section without folders or an anchor that moves with the selection or
     /// sits elsewhere, and `FolderCycle` for a destination folder the
     /// selection holds.
-    private void FileRoots(SelectedTabs selection, TabPlacement placement, Guid? folder, Guid? before, Guid? beforeFolder,
+    private void FileRoots(ResolvedSelection selection, TabPlacement placement, Guid? folder, Guid? before, Guid? beforeFolder,
         bool leavesSplits, DateTimeOffset now) {
         if (folder is { } parent && selection.Folders.Contains(parent)) throw new Rejected(new FolderCycle(parent));
         if (!placement.HoldsFolders || before is { } tab && selection.Holds(tab)
@@ -229,7 +229,7 @@ public sealed partial class BrowserTabCollection {
             || beforeFolder is null && before is { } anchor && (Tab(anchor).FolderId != folder || Tab(anchor).Placement != placement
                 || SplitMembers(anchor)[0].Id != anchor))
             throw new Rejected(new InvalidFolderPlacement());
-        List<(SelectedTabs.Root Root, Guid[] Tabs)> blocks = [];
+        List<(ResolvedSelection.Root Root, Guid[] Tabs)> blocks = [];
         HashSet<Guid> included = [];
         foreach (var root in selection.Roots) {
             if (root.IsFolder) blocks.Add((root, []));
@@ -282,13 +282,13 @@ public sealed partial class BrowserTabCollection {
 
     /// Refuses a selection holding folders, for an action on tabs alone, and
     /// one holding part of a split.
-    private void RequireSelectedTabs(SelectedTabs selection) {
+    private void RequireSelectedTabs(ResolvedSelection selection) {
         RequireWholeSplits(selection);
         if (selection.HoldsFolders) throw new Rejected(new SelectionHoldsFolders());
     }
 
     /// Refuses a selection holding some members of a split and not the rest.
-    private void RequireWholeSplits(SelectedTabs selection) {
+    private void RequireWholeSplits(ResolvedSelection selection) {
         ArgumentNullException.ThrowIfNull(selection);
         foreach (var tab in selection.Members)
             if (tab.SplitGroupId is { } group && SplitMembers(tab.Id).Any(member => !selection.Holds(member.Id)))
@@ -296,7 +296,7 @@ public sealed partial class BrowserTabCollection {
     }
 
     /// The splits the selected tabs belong to, in the order they come.
-    private static IReadOnlyList<Guid> SelectedGroups(SelectedTabs selection) =>
+    private static IReadOnlyList<Guid> SelectedGroups(ResolvedSelection selection) =>
         [.. selection.Members.Select(tab => tab.SplitGroupId).OfType<Guid>().Distinct()];
 
     #endregion

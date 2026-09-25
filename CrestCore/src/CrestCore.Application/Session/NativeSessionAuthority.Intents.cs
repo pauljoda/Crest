@@ -89,6 +89,7 @@ public sealed partial class NativeSessionAuthority {
     /// `previewed` reads Spaces this process has not unlocked, as a person
     /// sees them before they import. The caller holds the gate.
     private SessionEdit? Edit(SessionIntent intent, DateTimeOffset now, IIdSource ids, Pages? pages, bool previewed = false) {
+        if (intent is SidebarDrop drop) return Edit(Committed(drop, IntentBasis(), ids), now, ids, pages, previewed);
         var basis = IntentBasis();
         var edit = intent switch {
             ClearHistory clear => ClearingHistory(basis, clear),

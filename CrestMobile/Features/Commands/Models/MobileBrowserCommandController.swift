@@ -208,7 +208,7 @@ struct MobileBrowserCommandController {
             let candidate = browser.nextSplitJoinCandidate,
             browser.addTabToSplit(
                 BrowserTabDragItem(
-                    tabID: candidate.id,
+                    tabID: candidate,
                     spaceID: space.id,
                     profileID: space.profile.id
                 ),
@@ -217,7 +217,7 @@ struct MobileBrowserCommandController {
             )
         else { return nil }
         synchronizePages()
-        return candidate.id
+        return candidate
     }
 
     /// Whether the focused card has anywhere to go `offset` slots along its run.

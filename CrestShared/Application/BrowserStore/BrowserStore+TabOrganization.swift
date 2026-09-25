@@ -513,24 +513,11 @@ extension BrowserStore {
             from: self)
     }
 
-    /// The tab "Split With Next Tab" would add: the first tab after the
-    /// selected one in its own sidebar section that is free to join.
-    ///
-    /// Scope is the selected tab's placement and folder, in session order,
-    /// which is exactly the order that section renders in. Tabs already
-    /// carrying a group are skipped rather than stolen — including the selected
-    /// tab's own siblings, so repeating the command grows the group outward
-    /// instead of shuffling its members. Whether the join is allowed at all is
-    /// the core's answer.
-    var nextSplitJoinCandidate: BrowserTab? {
-        guard let space = selectedSpace, let selected = selectedTab,
-            let selectedIndex = space.tabs.firstIndex(where: { $0.id == selected.id })
-        else { return nil }
-        guard let candidate = space.tabs[space.tabs.index(after: selectedIndex)...].first(where: {
-            $0.placement == selected.placement && $0.folderID == selected.folderID && $0.splitGroupID == nil
-                && !$0.isStartPage
-        }) else { return nil }
-        return acceptsSplitJoin(candidate.id, joining: selected.id, in: space) ? candidate : nil
+    /// The tab "Split With Next Tab" would add to the split of the tab this
+    /// window shows, as the core answers it: the next tab row in the shown
+    /// tab's own sidebar list that is in no split, when the core would join it.
+    var nextSplitJoinCandidate: TabID? {
+        (try? core.query(SplitJoinCandidate(windowID: windowID)))?.tabID
     }
 
     /// Whether the tab-list menu's "Split with Current Tab" would do anything:

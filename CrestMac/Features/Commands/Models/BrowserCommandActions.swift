@@ -513,7 +513,7 @@ struct BrowserCommandActions {
             let candidate = browser.nextSplitJoinCandidate,
             browser.addTabToSplit(
                 BrowserTabDragItem(
-                    tabID: candidate.id,
+                    tabID: candidate,
                     spaceID: space.id,
                     profileID: space.profile.id
                 ),
