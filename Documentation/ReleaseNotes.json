@@ -2409,6 +2409,10 @@
     "sync-pauses-on-unreadable-journal": {
       "category": "internal",
       "message": "Sync pauses and reports an error when this build cannot read the device's sync journal, instead of reading it as empty."
+    },
+    "sync-records-fit-client-limits": {
+      "category": "fixed",
+      "message": "iCloud Sync keeps working when a page has a very long title or address."
     }
   }
 }

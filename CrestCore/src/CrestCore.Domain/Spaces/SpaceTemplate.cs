@@ -62,6 +62,9 @@ public sealed class SpaceTemplate {
     /// Whether this is the template of a private workspace's Spaces.
     public bool IsPrivate { get; }
 
+    /// The symbol a new Space of this template wears.
+    public string Symbol => symbol;
+
     private readonly Func<int, string> name;
     private readonly string symbol;
     private readonly Func<int, SpaceAccent> accent;

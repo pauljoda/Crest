@@ -76,13 +76,22 @@ final class BrowserCloudSyncControllerTests: XCTestCase {
     func testAJournalTheDeviceCannotReadKeepsSyncPausedUntilAJournalChangeReadsAgain() async throws {
         var session = BrowserSession.preview
         session.disposableSeedMarker = nil
-        let unreadable = try XCTUnwrap(session.spaces[0].tabs.first { $0.url != nil })
-        let index = try XCTUnwrap(session.spaces[0].tabs.firstIndex { $0.id == unreadable.id })
-        // Longer than a synced title may be, which the core stages but this
-        // build's journal decoder refuses.
-        session.spaces[0].tabs[index].title = String(repeating: "t", count: 3_000)
-        let harness = try BrowserStoredSessionHarness(session: session)
-        harness.core.engines.register(WebKitEngineBinding(), isDefault: true)
+        let space = session.spaces[0]
+        let unreadable = UUID()
+        // A record the core keeps but this build refuses: a tab with no title,
+        // which staging leaves alone while the session holds no such tab.
+        let journal = """
+            {"schemaVersion":1,"deviceID":"\(UUID().uuidString)","logicalClock":5,
+            "preferences":{"savedStructure":true,"currentTabs":true,"historyAndArchive":true,"extensionSettings":true},
+            "records":[{"id":{"kind":"tab","value":"\(unreadable.uuidString)"},
+            "spaceID":{"rawValue":"\(space.id.rawValue.uuidString)"},
+            "version":{"logicalClock":5,"deviceID":"\(UUID().uuidString)"},
+            "payload":{"type":"tab","value":{"id":{"rawValue":"\(unreadable.uuidString)"},
+            "spaceID":{"rawValue":"\(space.id.rawValue.uuidString)"},"title":"","url":"https://unreadable.example/",
+            "symbol":"globe","placement":"current","orderToken":"8000000000000000","lastActivatedAt":800000000}}}],
+            "pendingRecordIDs":[]}
+            """
+        let harness = try BrowserStoredSessionHarness(session: session, journalData: Data(journal.utf8))
         let store = harness.store
         await store.flushPendingSyncPersistence()
         let preferences = TestBrowserCloudSyncPreferences()
@@ -107,11 +116,14 @@ final class BrowserCloudSyncControllerTests: XCTestCase {
             XCTFail("An unreadable journal was read.")
         } catch BrowserSyncError.unreadableJournal {}
 
-        // The tab's page settles on a shorter title, which changes the
-        // journal, and the journal reads again.
-        let page = try XCTUnwrap(store.openReportingPage(for: unreadable.id, in: session.spaces[0].id))
-        store.finishNavigation(of: page, to: try XCTUnwrap(unreadable.url), titled: "Readable")
-        page.release(keepingState: false)
+        // A tab of that identity opens with a title, which stages its record
+        // again, and the journal reads again.
+        try store.core.send(
+            OpenTab(
+                workspaceID: store.family.workspaceID, windowID: store.windowID.rawValue, spaceID: space.id.rawValue,
+                tabID: unreadable,
+                content: TabContent(address: "https://unreadable.example/", view: nil, title: "Readable", symbol: nil),
+                placement: .current, afterTabID: nil, shows: false))
         await store.flushPendingSyncPersistence()
         await controller.localChangesDidStage()
 

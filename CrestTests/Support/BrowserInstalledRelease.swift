@@ -29,9 +29,17 @@ enum BrowserInstalledRelease {
         _ session: BrowserSession, journal: BrowserSyncJournal? = nil, into core: CrestCore,
         favicons: any BrowserFaviconStoring
     ) throws {
+        try adopt(session, journalData: try journal?.encodedSnapshot(), into: core, favicons: favicons)
+    }
+
+    /// The first session of a new file, as `adopt(_:journal:into:favicons:)`
+    /// gives it one, with the journal the installed release kept as `journalData`.
+    @MainActor
+    static func adopt(
+        _ session: BrowserSession, journalData: Data?, into core: CrestCore, favicons: any BrowserFaviconStoring
+    ) throws {
         let whole = try JSONEncoder().encode(session)
-        let installed = LegacySession(
-            core: nil, wholeGraph: whole, history: [], journal: try journal?.encodedSnapshot())
+        let installed = LegacySession(core: nil, wholeGraph: whole, history: [], journal: journalData)
         for case .sessionAdopted(let adopted) in try core.send(AdoptLegacySession(installed: installed, seed: whole)) {
             for favicon in adopted.favicons { favicons.reconcile(favicon.image, tabID: TabID(rawValue: favicon.tabID)) }
         }

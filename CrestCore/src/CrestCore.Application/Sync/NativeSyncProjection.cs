@@ -76,8 +76,10 @@ public static class NativeSyncProjection {
             var spaceValue = Fields(space, "id", "name", "symbol", "accent", "branding", "browsingPreferences",
                 "accessPolicy", "isSavedTabsExpanded", "savedTabsExpansionModifiedAt");
             spaceValue["profileID"] = space["profile"]!["id"]!.DeepClone();
+            SyncedText.SpaceName.Fit(spaceValue);
+            SyncedText.SpaceSymbol.Fit(spaceValue);
             spaceValue["splitGroups"] = new JsonArray(Items(space, "splitGroups")
-                .Where(g => splitIds.Contains(Id(g!["id"]))).Select(g => g!.DeepClone()).ToArray());
+                .Where(g => splitIds.Contains(Id(g!["id"]))).DistinctBy(g => Id(g!["id"])).Select(SplitGroup).ToArray());
             spaceValue["orderToken"] = spaceTokens[i];
             Add(SyncRecordKinds.Space, spaceValue);
 
@@ -99,6 +101,8 @@ public static class NativeSyncProjection {
                         "isCollapsed", "collapseModifiedAt", "orderAnchorTabID");
                     value["spaceID"] = space["id"]!.DeepClone();
                     value["orderToken"] = folderTokens[folder.Id];
+                    SyncedText.FolderTitle.Fit(value);
+                    SyncedText.FolderSymbol.Fit(value);
                     Add(SyncRecordKinds.Folder, value);
                 }
             }
@@ -110,6 +114,7 @@ public static class NativeSyncProjection {
             foreach (var history in Items(space, StoredSessionCodec.Key.History).Where(h => SyncContentPolicy.Includes(Text(h!["url"])))) {
                 var value = Fields(history!, "id", "url", "title", "firstVisitedAt", "lastVisitedAt", "visitCount");
                 value["spaceID"] = space["id"]!.DeepClone();
+                Visit(value);
                 Add(SyncRecordKinds.History, value);
             }
             // Archive presentation sorts by date after a merge. That is not a
@@ -133,10 +138,34 @@ public static class NativeSyncProjection {
         value["placement"] = archived ? JsonValue.Create(TabPlacement.Current.Name) : source["placement"]!.DeepClone();
         if (!archived) {
             if (SavedUrl(source) is { } saved) value["savedURL"] = saved;
-            foreach (string field in new[] { "folderID", "splitGroupID" })
-                if (source[field] is { } content) value[field] = content.DeepClone();
+            // Only a placement that holds folders names one: a pinned tab never does.
+            if (source["folderID"] is { } folder && Placement(source).HoldsFolders) value["folderID"] = folder.DeepClone();
+            if (source["splitGroupID"] is { } split) value["splitGroupID"] = split.DeepClone();
         }
+        SyncedText.TabTitle.Fit(value);
+        SyncedText.TabCustomTitle.Fit(value);
+        SyncedText.TabSymbol.Fit(value);
         return value;
+    }
+
+    /// A split's metadata as every client reads it.
+    private static JsonNode SplitGroup(JsonNode? source) {
+        var group = source!.DeepClone().AsObject();
+        SyncedText.SplitTitle.Fit(group);
+        SyncedText.SplitIcon.Fit(group);
+        return group;
+    }
+
+    /// A visit as every client reads it: titled, counted at least once, and
+    /// first visited no later than last. A session that holds it otherwise
+    /// keeps it; only the record is fitted.
+    private static void Visit(JsonObject value) {
+        SyncedText.HistoryTitle.Fit(value);
+        if (value["visitCount"] is JsonValue count && count.TryGetValue<int>(out var visits) && visits < 1) value["visitCount"] = 1;
+        if (value["firstVisitedAt"] is JsonValue first && value["lastVisitedAt"] is JsonValue last
+            && first.TryGetValue<double>(out var firstVisited) && last.TryGetValue<double>(out var lastVisited)
+            && firstVisited > lastVisited)
+            value["firstVisitedAt"] = last.DeepClone();
     }
 
     #endregion

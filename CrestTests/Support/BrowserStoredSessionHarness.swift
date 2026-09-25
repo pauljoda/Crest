@@ -26,14 +26,23 @@ final class BrowserStoredSessionHarness {
 
     /// Gives a new file `session` and `journal` as its first session, then
     /// opens it with a window on its launch Space.
-    init(
+    convenience init(
         session: BrowserSession, journal: BrowserSyncJournal? = nil,
+        favicons: InMemoryBrowserFaviconStore = InMemoryBrowserFaviconStore()
+    ) throws {
+        try self.init(session: session, journalData: try journal?.encodedSnapshot(), favicons: favicons)
+    }
+
+    /// Gives a new file `session` and the journal `journalData` holds, which
+    /// only the core reads, as its first session, then opens it as above.
+    init(
+        session: BrowserSession, journalData: Data?,
         favicons: InMemoryBrowserFaviconStore = InMemoryBrowserFaviconStore()
     ) throws {
         directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
         self.favicons = favicons
         core = try CrestCore(configuration: AppConfiguration(storageDirectory: directory.path))
-        try BrowserInstalledRelease.adopt(session, journal: journal, into: core, favicons: favicons)
+        try BrowserInstalledRelease.adopt(session, journalData: journalData, into: core, favicons: favicons)
         store = try Self.open(core, favicons: favicons)
     }
 
