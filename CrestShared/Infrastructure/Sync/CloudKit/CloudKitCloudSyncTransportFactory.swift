@@ -1,16 +1,16 @@
 @MainActor
 final class CloudKitBrowserCloudSyncTransportFactory: BrowserCloudSyncTransportFactory {
     private let configuration: BrowserCloudSyncConfiguration
-    private let gateway: any BrowserCloudSyncModelGateway
+    private let core: CrestCore
     private let persistence: any BrowserCloudSyncStatePersisting
 
     init(
         configuration: BrowserCloudSyncConfiguration,
-        gateway: any BrowserCloudSyncModelGateway,
+        core: CrestCore,
         persistence: any BrowserCloudSyncStatePersisting
     ) {
         self.configuration = configuration
-        self.gateway = gateway
+        self.core = core
         self.persistence = persistence
     }
 
@@ -20,7 +20,7 @@ final class CloudKitBrowserCloudSyncTransportFactory: BrowserCloudSyncTransportF
     ) throws -> any BrowserCloudSyncTransport {
         try BrowserCloudSyncEngine(
             configuration: configuration,
-            gateway: gateway,
+            core: core,
             persistence: persistence,
             statusHandler: statusHandler,
             activityHandler: activityHandler

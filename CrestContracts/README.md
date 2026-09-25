@@ -56,16 +56,20 @@ engine references.
 
 The native Crest apps use the `crest_app_*`, `crest_sync_*` and
 `crest_permissions_*` entry points, plus `crest_core_evaluate_policy` and
-`crest_core_evaluate_sync`. Cloud records reach the session as
-`CloudSyncIntent`s through `crest_app_dispatch`.
+`crest_core_evaluate_sync`. The cloud transport sends its `CloudSyncIntent`s
+through `crest_app_dispatch` from its own thread, and asks `PendingUploads`,
+`RecordsToUpload` and `CloudComparison` through `crest_app_query`; what a
+cloud intent changed arrives in the next `crest_app_drain`.
+`crest_app_settle_sync` waits off the UI thread for the sync stages already
+requested.
 The session holds browsing data only; which Space and tab a window shows is the
 device's window state. Workspaces open and close through `crest_app_dispatch`:
 `OpenWorkspace` opens the session the core keeps in its file, a private one from
 its template, or a seed in the stored format for launches without a file;
 `BorrowSpace` opens a workspace over another's Space; `CloseWorkspace` closes one
 and its borrowers. The core gives each its identity in `WorkspaceOpened`, which
-every session intent names. Only the file's workspace saves and syncs;
-`crest_app_sync` hands the transport its sync component. Session intents name
+every session intent names. Only the file's workspace saves and syncs.
+Session intents name
 the window that issued them; when an intent commits, the device moves that
 window to what the intent chose, repairs every other window of that workspace,
 and publishes `WindowChanged` for each window that changed. Imports

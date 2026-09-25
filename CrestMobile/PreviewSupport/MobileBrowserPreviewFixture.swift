@@ -100,7 +100,7 @@ struct MobileBrowserPreviewFixture {
             width: Double(MobileBrowserRootLayout.defaultRegularSidebarWidth),
             isPresented: true
         )
-        cloudSync = .isolated(browser: browser)
+        cloudSync = .isolated(core: browser.core)
         onboardingCoordinator = BrowserOnboardingCoordinator()
         spaceAccess = BrowserSpaceAccessController(
             authenticator: BrowserPreviewAuthenticator(result: false)

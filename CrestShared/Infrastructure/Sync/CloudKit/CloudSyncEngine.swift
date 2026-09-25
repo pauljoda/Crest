@@ -1,9 +1,15 @@
 import CloudKit
 import Foundation
 
+/// Runs CloudKit's sync engine over the journal of the session the core keeps
+/// in its file. It never reads the journal itself: it asks the core which
+/// records wait to upload and for the ones each batch carries, sends the
+/// core what the cloud sent and saved as intents, and hears what changed
+/// through the core's wake, never through their answers. Every call into the
+/// core runs off the main thread.
 actor BrowserCloudSyncEngine {
     private let database: @Sendable () -> CKDatabase
-    private let gateway: any BrowserCloudSyncModelGateway
+    private let core: CrestCore
     private let persistence: any BrowserCloudSyncStatePersisting
     private let codec: BrowserCloudRecordCodec
     private let automaticallySync: Bool
@@ -21,7 +27,7 @@ actor BrowserCloudSyncEngine {
 
     init(
         database: @autoclosure @escaping @Sendable () -> CKDatabase,
-        gateway: any BrowserCloudSyncModelGateway,
+        core: CrestCore,
         persistence: any BrowserCloudSyncStatePersisting = UserDefaultsBrowserCloudSyncStatePersistence(),
         automaticallySync: Bool = true,
         statusHandler: (@Sendable (BrowserCloudSyncStatus) async -> Void)? = nil,
@@ -29,7 +35,7 @@ actor BrowserCloudSyncEngine {
     ) throws {
         self.codec = BrowserCloudRecordCodec()
         self.database = database
-        self.gateway = gateway
+        self.core = core
         self.persistence = persistence
         self.automaticallySync = automaticallySync
         self.statusHandler = statusHandler
@@ -47,7 +53,7 @@ actor BrowserCloudSyncEngine {
 
     init(
         configuration: BrowserCloudSyncConfiguration,
-        gateway: any BrowserCloudSyncModelGateway,
+        core: CrestCore,
         persistence: any BrowserCloudSyncStatePersisting = UserDefaultsBrowserCloudSyncStatePersistence(),
         automaticallySync: Bool = true,
         statusHandler: (@Sendable (BrowserCloudSyncStatus) async -> Void)? = nil,
@@ -57,7 +63,7 @@ actor BrowserCloudSyncEngine {
         self.database = {
             CKContainer(identifier: configuration.containerIdentifier).privateCloudDatabase
         }
-        self.gateway = gateway
+        self.core = core
         self.persistence = persistence
         self.automaticallySync = automaticallySync
         self.statusHandler = statusHandler
@@ -82,7 +88,7 @@ actor BrowserCloudSyncEngine {
         do {
             try await clearCompletedConflictResolutionIfNeeded()
         } catch {
-            await updateStatus(.failed(String(describing: error)))
+            await updateStatus(.failed(Self.describe(error)))
             return
         }
         guard !isStopped else { return }
@@ -91,7 +97,7 @@ actor BrowserCloudSyncEngine {
             do {
                 _ = try await pullFromICloud()
             } catch {
-                await updateStatus(.failed(String(describing: error)))
+                await updateStatus(.failed(Self.describe(error)))
                 return
             }
         }
@@ -152,7 +158,7 @@ actor BrowserCloudSyncEngine {
             }
             await updateStatus(.idle)
         } catch {
-            await updateStatus(.failed(String(describing: error)))
+            await updateStatus(.failed(Self.describe(error)))
             throw error
         }
     }
@@ -181,7 +187,7 @@ actor BrowserCloudSyncEngine {
             await updateStatus(.idle)
             return records.count
         } catch {
-            await updateStatus(.failed(String(describing: error)))
+            await updateStatus(.failed(Self.describe(error)))
             throw error
         }
     }
@@ -197,7 +203,7 @@ actor BrowserCloudSyncEngine {
         do {
             persistedState.requiresFullPull = true
             try persistence.save(persistedState)
-            try await gateway.mergeCloudSyncRecords(records)
+            try await deliver(MergeSyncRecords(records: records.map(SyncRecord.init(browser:))))
             guard !isStopped, !persistedState.requiresAccountConfirmation else {
                 throw BrowserSyncError.remoteChangeNotApplied("Sync stopped while applying downloaded content.")
             }
@@ -266,8 +272,8 @@ actor BrowserCloudSyncEngine {
                 break
             }
         } catch {
-            eventFailureDescription = String(describing: error)
-            await updateStatus(.failed(String(describing: error)))
+            eventFailureDescription = Self.describe(error)
+            await updateStatus(.failed(Self.describe(error)))
         }
     }
 
@@ -295,25 +301,33 @@ actor BrowserCloudSyncEngine {
                 return false
             }
         }
-        // A journal this build cannot read uploads nothing.
-        guard let records = try? await gateway.cloudSyncRecords() else { return nil }
+        // Every stage the core queued settles first, so the batch carries the
+        // newest records. A core that refuses to answer uploads nothing.
+        await core.settleSync()
+        let source = BrowserCloudUploadSource(
+            core: core, codec: codec,
+            saves: changes.compactMap {
+                guard case .saveRecord(let id) = $0 else { return nil }
+                return id
+            })
+        do { try await source.prepare() } catch { return nil }
         guard !isStopped, !persistedState.requiresAccountConfirmation,
             !persistedState.requiresFullPull, !isPullingSnapshot
         else { return nil }
-        var recordsByName: [String: BrowserSyncRecord] = [:]
-        for record in records {
-            recordsByName[record.id.recordName] = record
-        }
-        let immutableRecordsByName = recordsByName
         let systemFields = persistedState.systemFields
         let codec = codec
-
         return await CKSyncEngine.RecordZoneChangeBatch(pendingChanges: changes) { recordID in
-            guard let source = immutableRecordsByName[recordID.recordName] else {
+            switch await source.upload(for: recordID) {
+            case .record(let record):
+                // TRANSITIONAL until slice 8c: the codec reads the journal's
+                // form. A record it cannot write stays pending, skipped.
+                return try? codec.encode(BrowserSyncRecord(core: record), reusing: systemFields.record(for: recordID))
+            case .gone:
                 syncEngine.state.remove(pendingRecordZoneChanges: [.saveRecord(recordID)])
                 return nil
+            case .skipped:
+                return nil
             }
-            return try? codec.encode(source, reusing: systemFields.record(for: recordID))
         }
     }
 
@@ -331,27 +345,43 @@ actor BrowserCloudSyncEngine {
     }
 
     private func enqueueLocalChanges(on syncEngine: CKSyncEngine) async {
-        // A journal this build cannot read queues nothing; the next journal
-        // change tries again.
-        guard let pendingIDs = try? await gateway.cloudSyncPendingRecordIDs() else { return }
+        // A core that refuses to answer queues nothing; the next journal change
+        // asks again.
+        guard let pending = try? await pendingUploads() else { return }
         guard !isStopped, !persistedState.requiresAccountConfirmation else { return }
-        let changes = pendingIDs.map { id in
-            CKSyncEngine.PendingRecordZoneChange.saveRecord(
-                CKRecord.ID(recordName: id.recordName, zoneID: codec.recordZoneID)
-            )
-        }
-        syncEngine.state.add(pendingRecordZoneChanges: changes)
+        syncEngine.state.add(pendingRecordZoneChanges: pending.map { .saveRecord(codec.recordID(for: $0)) })
     }
 
     private func clearCompletedConflictResolutionIfNeeded() async throws {
-        let pendingIDs = try await gateway.cloudSyncPendingRecordIDs()
+        let pending = try await pendingUploads()
         let resolution = BrowserCloudConflictResolutionPolicy.resolutionAfterRestart(
             persistedResolution: persistedState.conflictResolution,
-            hasPendingUploads: !pendingIDs.isEmpty
+            hasPendingUploads: !pending.isEmpty
         )
         guard resolution != persistedState.conflictResolution else { return }
         persistedState.conflictResolution = resolution
         try persistence.save(persistedState)
+    }
+
+    /// The records the core's journal holds waiting to upload, once every
+    /// stage the core queued has settled.
+    private func pendingUploads() async throws -> [SyncRecordReference] {
+        await core.settleSync()
+        return try core.query(PendingUploads()).records
+    }
+
+    /// Sends the core an intent from the cloud on a utility thread: the core
+    /// computes it on the thread that sends it, never the main thread, and what
+    /// it changed reaches the main thread through its wake.
+    private func deliver(_ intent: some CloudSyncIntent) async throws {
+        let core = core
+        try await Task.detached(priority: .utility) { _ = try core.deliver(intent) }.value
+    }
+
+    /// What the person is told of a failure: a refusal in the core's own words,
+    /// anything else as it describes itself.
+    private static func describe(_ error: any Error) -> String {
+        (error as? Rejection)?.explanation ?? String(describing: error)
     }
 
     private func handleFetchedRecordZoneChanges(
@@ -387,16 +417,12 @@ actor BrowserCloudSyncEngine {
             await activityHandler?(skipped)
         }
 
-        if !event.deletions.isEmpty {
-            let localRecords = try await gateway.cloudSyncRecords()
-            let localNames = Set(localRecords.map { $0.id.recordName })
-            for deletion in event.deletions where deletion.recordID.zoneID == codec.recordZoneID {
-                persistedState.systemFields.remove(recordName: deletion.recordID.recordName)
-                if localNames.contains(deletion.recordID.recordName) {
-                    syncEngine.state.add(pendingRecordZoneChanges: [
-                        .saveRecord(deletion.recordID)
-                    ])
-                }
+        // A record somebody deleted from iCloud is saved again; a later batch
+        // drops the save of one the journal no longer holds.
+        for deletion in event.deletions where deletion.recordID.zoneID == codec.recordZoneID {
+            persistedState.systemFields.remove(recordName: deletion.recordID.recordName)
+            if codec.reference(for: deletion.recordID) != nil {
+                syncEngine.state.add(pendingRecordZoneChanges: [.saveRecord(deletion.recordID)])
             }
         }
         try persistence.save(persistedState)
@@ -486,15 +512,13 @@ actor BrowserCloudSyncEngine {
         _ event: CKSyncEngine.Event.SentRecordZoneChanges,
         syncEngine: CKSyncEngine
     ) async throws {
-        var uploaded: [BrowserSyncRecordID: BrowserSyncVersion] = [:]
+        var uploaded: [UploadedRecord] = []
         for record in event.savedRecords where record.recordID.zoneID == codec.recordZoneID {
             persistedState.systemFields.update(with: record)
-            if let decoded = try? codec.decode(record) {
-                uploaded[decoded.id] = decoded.version
-            }
+            if let saved = codec.uploadedRecord(record) { uploaded.append(saved) }
         }
         if !uploaded.isEmpty {
-            try await gateway.markCloudSyncRecordsUploaded(uploaded)
+            try await deliver(AcknowledgeUploads(records: uploaded))
             if !persistedState.requiresFullPull {
                 await activityHandler?(.uploaded(recordCount: uploaded.count))
             }
@@ -559,9 +583,7 @@ actor BrowserCloudSyncEngine {
                 syncEngine.state.add(pendingRecordZoneChanges: [.saveRecord(recordID)])
             }
         }
-        if persistedState.conflictResolution == .useThisDevice,
-            (try? await gateway.cloudSyncPendingRecordIDs())?.isEmpty == true
-        {
+        if persistedState.conflictResolution == .useThisDevice, (try? await pendingUploads())?.isEmpty == true {
             persistedState.conflictResolution = nil
         }
         try persistence.save(persistedState)

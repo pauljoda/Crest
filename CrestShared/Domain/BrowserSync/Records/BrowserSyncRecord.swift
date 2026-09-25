@@ -183,6 +183,34 @@ extension SyncRecord {
     }
 }
 
+extension BrowserSyncRecord {
+    /// TRANSITIONAL until slice 8c: `record`, which the core answered in the
+    /// journal's form, as the CloudKit codec reads it. It decodes exactly as
+    /// the journal's records did, so the fields this build does not know ride
+    /// along.
+    init(core record: SyncRecord) throws {
+        guard let kind = BrowserSyncRecordKind(rawValue: record.kind.name) else {
+            throw BrowserSyncError.invalidRecord(record.kind.name)
+        }
+        let decoder = JSONDecoder()
+        let raw = try decoder.decode(BrowserSyncJSON.self, from: record.body)
+        let id = BrowserSyncRecordID(kind: kind, value: record.id)
+        let spaceID = SpaceID(rawValue: record.spaceID)
+        let version = BrowserSyncVersion(logicalClock: record.version.clock, deviceID: record.version.deviceID)
+        if record.isTombstone {
+            let tombstone = try decoder.decode(BrowserSyncTombstone.self, from: record.body)
+            self.init(
+                id: id, spaceID: spaceID, version: version, payload: nil, tombstone: tombstone,
+                tombstoneAdditions: try raw.additions(to: .encoded(tombstone)))
+        } else {
+            let payload = try decoder.decode(BrowserSyncPayload.self, from: record.body)
+            self.init(
+                id: id, spaceID: spaceID, version: version, payload: payload, tombstone: nil,
+                payloadAdditions: try raw.additions(to: .encoded(payload)))
+        }
+    }
+}
+
 extension SyncRecordKind {
     /// TRANSITIONAL until slice 8c: the kind `kind` names.
     init(browser kind: BrowserSyncRecordKind) {

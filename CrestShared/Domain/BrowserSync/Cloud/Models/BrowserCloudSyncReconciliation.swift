@@ -13,19 +13,13 @@ struct BrowserCloudSyncConflictSummary: Equatable, Sendable {
     let localSpaceCount: Int
     let cloudSpaceCount: Int
 
-    static func comparing(
-        localRecords: [BrowserSyncRecord],
-        cloudRecords: [BrowserSyncRecord]
-    ) -> BrowserCloudSyncConflictSummary {
-        BrowserCloudSyncConflictSummary(
-            localRecordCount: localRecords.count,
-            cloudRecordCount: cloudRecords.count,
-            localSpaceCount: savedSpaceCount(in: localRecords),
-            cloudSpaceCount: savedSpaceCount(in: cloudRecords)
-        )
-    }
+}
 
-    private static func savedSpaceCount(in records: [BrowserSyncRecord]) -> Int {
-        records.filter { $0.id.kind == .space && $0.payload != nil }.count
+extension BrowserCloudSyncConflictSummary {
+    /// The counts the core compared this device's content and the cloud's by.
+    init(_ comparison: CloudContentComparison) {
+        self.init(
+            localRecordCount: comparison.deviceRecords, cloudRecordCount: comparison.cloudRecords,
+            localSpaceCount: comparison.deviceSpaces, cloudSpaceCount: comparison.cloudSpaces)
     }
 }

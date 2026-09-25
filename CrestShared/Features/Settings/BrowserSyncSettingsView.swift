@@ -44,7 +44,7 @@ struct BrowserSyncSettingsView: View {
                         .accessibilityIdentifier("icloud-sync-error")
                 }
 
-                if let localError = browser.cloudSyncLocalErrorDescription {
+                if let localError = cloudSync.localErrorDescription ?? browser.localSyncErrorDescription {
                     Label(localError, systemImage: "exclamationmark.triangle.fill")
                         .foregroundStyle(.red)
                 }
@@ -95,14 +95,13 @@ struct BrowserSyncSettingsView: View {
             }
 
             Section("Sync Monitor", systemImage: "waveform.path") {
-                LabeledContent("Local journal", value: localJournalStatus)
                 LabeledContent(
                     "Local records",
-                    value: browser.syncRecordCount.formatted()
+                    value: cloudSync.localRecordCount.formatted()
                 )
                 LabeledContent(
                     "Pending uploads",
-                    value: browser.pendingSyncRecordCount.formatted()
+                    value: cloudSync.pendingUploadCount.formatted()
                 )
                 LabeledContent(
                     "Cloud records observed",
@@ -209,14 +208,6 @@ struct BrowserSyncSettingsView: View {
         case .needsReconciliation, .waitingForAccount: .orange
         case .failed: .red
         case .disabled: .secondary
-        }
-    }
-
-    private var localJournalStatus: String {
-        switch browser.localSyncCoordinatorStatus {
-        case .ready: "Ready"
-        case .recoveredCorruptLocalJournal: "Recovered after corruption"
-        case nil: "Unavailable"
         }
     }
 

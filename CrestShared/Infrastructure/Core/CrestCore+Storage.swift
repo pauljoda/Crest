@@ -43,23 +43,6 @@ extension CrestCore {
 
     // MARK: - Actions - Stored session
 
-    /// TRANSITIONAL until typed sync (slice 8): the sync component of the
-    /// session the core keeps in its file, which stages that session's edits
-    /// and saves each journal it accepts with the session, or nil while the
-    /// file holds no session yet. Only that session syncs.
-    func storedSync() throws -> BrowserCoreSyncAuthority? {
-        var sync: UInt64 = 0
-        let status = crest_app_sync(handle, &sync)
-        switch status {
-        case CREST_OK:
-            return try BrowserCoreSyncAuthority(adopting: sync)
-        case CREST_EMPTY:
-            return nil
-        default:
-            Self.buildBug(status, "reach its stored session's sync")
-        }
-    }
-
     /// Replaces the session file in `configuration`'s directory with the
     /// recovery checkpoint the last good launch kept. No core may have that
     /// directory open. Throws the rejection naming why it cannot.

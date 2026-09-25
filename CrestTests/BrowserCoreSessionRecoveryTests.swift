@@ -43,10 +43,10 @@ final class BrowserCoreSessionRecoveryTests: XCTestCase {
         let relaunched = try XCTUnwrap(launch.value)
         let restored = try BrowserCoreSessionAuthority.openStored(
             in: relaunched, favicons: InMemoryBrowserFaviconStore())
-        let sync = try XCTUnwrap(try relaunched.storedSync())
+        let recovered = try BrowserStoredSessionHarness.storedJournal(in: directory)
         XCTAssertEqual(restored.projection, original)
-        XCTAssertNotEqual(try sync.journal().deviceID, journal.deviceID)
-        XCTAssertEqual(try sync.journal().records, journal.records)
+        XCTAssertNotEqual(recovered.deviceID, journal.deviceID)
+        XCTAssertEqual(recovered.records, journal.records)
         XCTAssertTrue(FileManager.default.fileExists(atPath: BrowserSessionRecovery.cloudMarker(in: directory).path))
     }
 
@@ -115,12 +115,12 @@ final class BrowserCoreSessionRecoveryTests: XCTestCase {
             let crest = try CrestCore(configuration: AppConfiguration(storageDirectory: directory.path))
             let storage = try BrowserStore.migratedStorage(
                 core: crest, legacy: legacy, favicons: favicons, seed: .freshInstallSeed, environment: .current)
-            let sync = try XCTUnwrap(try crest.storedSync())
+            let carried = try BrowserStoredSessionHarness.storedJournal(in: directory)
             XCTAssertEqual(storage.projection, installed)
             XCTAssertTrue(storage.projection.spaces.allSatisfy { $0.tabs.contains { $0.faviconData != nil } })
-            XCTAssertEqual(try sync.journal().deviceID, journal.deviceID)
-            XCTAssertEqual(try sync.journal().records, journal.records)
-            XCTAssertEqual(try sync.journal().pendingRecordIDs, journal.pendingRecordIDs)
+            XCTAssertEqual(carried.deviceID, journal.deviceID)
+            XCTAssertEqual(carried.records, journal.records)
+            XCTAssertEqual(carried.pendingRecordIDs, journal.pendingRecordIDs)
             XCTAssertNotNil(defaults.data(forKey: BrowserLegacySessionDefaults.coreKey))
         }
 

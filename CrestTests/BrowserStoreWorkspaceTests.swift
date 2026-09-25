@@ -31,7 +31,7 @@ final class BrowserStoreWorkspaceTests: XCTestCase {
 
         XCTAssertTrue(temporary.isTemporaryWorkspace)
         XCTAssertFalse(temporary.family === source.family)
-        XCTAssertNil(temporary.syncCoordinator)
+        XCTAssertFalse(temporary.syncsSession)
         XCTAssertEqual(temporary.selectedSpace?.profile, sourceSpace.profile)
         XCTAssertEqual(temporary.selectedSpace?.browsingPreferences, sourceSpace.browsingPreferences)
         XCTAssertEqual(temporary.selectedSpace?.credentialPreferences, sourceSpace.credentialPreferences)

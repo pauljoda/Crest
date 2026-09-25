@@ -411,10 +411,9 @@ static void storage_boundary(void) {
     snprintf(directory, sizeof(directory), "/tmp/crest-native-abi-%ld-%ld", (long)getpid(), (long)time(NULL));
     uint8_t configuration[160];
     size_t configured = storage_configuration(directory, configuration, sizeof(configuration));
-    uint64_t app = 0, sync = 0;
+    uint64_t app = 0;
     crest_buffer_t buffer = { NULL, 0 };
     assert(crest_app_create(fingerprint, sizeof(fingerprint), configuration, configured, &app, &buffer) == CREST_OK && app != 0);
-    assert(crest_app_sync(app, &sync) == CREST_EMPTY && sync == 0);
     /* With no session in the file there is no stage to settle. */
     assert(crest_app_settle_sync(app) == CREST_OK);
     assert(crest_app_settle_sync(0) == CREST_INVALID_HANDLE);
@@ -472,7 +471,6 @@ static void storage_boundary(void) {
         if (saves == 0) nanosleep(&pause, NULL);
     }
     assert(saves == 1);
-    assert(crest_app_sync(app, &sync) == CREST_OK && sync != 0);
     /* The stored session's workspace, which a saved window shows, then what
      * the journal it attached holds. Opening it again while it is open
      * publishes the same identity again, and nothing else. */
@@ -511,7 +509,6 @@ static void storage_boundary(void) {
     assert(crest_app_dispatch(app, opening, sizeof(opening), &buffer) == CREST_OK);
     assert(buffer.length > 2 && buffer.bytes[0] == 1 && buffer.bytes[1] == CREST_CHANGE_WINDOW_CHANGED);
     crest_buffer_free(&buffer);
-    assert(crest_sync_authority_release(sync) == CREST_OK);
     assert(crest_app_destroy(app) == CREST_OK);
 
     /* A second launch opens what the first one saved, then what its journal
@@ -519,7 +516,6 @@ static void storage_boundary(void) {
      * before WorkspaceOpened, before SyncJournalChanged or after it: a Saved
      * is its tag and an int64. */
     assert(crest_app_create(fingerprint, sizeof(fingerprint), configuration, configured, &app, &buffer) == CREST_OK);
-    assert(crest_app_sync(app, &sync) == CREST_OK && sync != 0);
     assert(crest_app_dispatch(app, stored, opening_stored, &buffer) == CREST_OK);
     size_t at = 1, announced = 2;
     for (; at < buffer.length && buffer.bytes[at] == CREST_CHANGE_SAVED; at += 9) announced++;
@@ -528,7 +524,7 @@ static void storage_boundary(void) {
     assert(journal_changed(&buffer, buffer.length - 25, again)
         || (journal_changed(&buffer, buffer.length - 34, again) && buffer.bytes[buffer.length - 9] == CREST_CHANGE_SAVED));
     crest_buffer_free(&buffer);
-    assert(crest_sync_authority_release(sync) == CREST_OK);
+    assert(crest_app_settle_sync(app) == CREST_OK);
     assert(crest_app_destroy(app) == CREST_OK);
 
     /* A file that is not a session is refused with a rejection, untouched. */

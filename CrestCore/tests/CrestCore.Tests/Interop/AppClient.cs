@@ -99,13 +99,9 @@ internal sealed unsafe class AppClient : IDisposable {
 
     #region Actions - Stored session
 
-    /// The handle of the stored session's sync component, or EMPTY when the
-    /// file holds no session.
-    public (int Status, ulong Sync) Sync() {
-        ulong sync;
-        int status = ((delegate* unmanaged[Cdecl]<ulong, ulong*, int>)&Exports.AppSync)(Handle, &sync);
-        return (status, sync);
-    }
+    /// Settles the stored session's sync stages; OK at once while the file
+    /// holds no session.
+    public int SettleSync() => ((delegate* unmanaged[Cdecl]<ulong, int>)&Exports.AppSettleSync)(Handle);
 
     #endregion
 

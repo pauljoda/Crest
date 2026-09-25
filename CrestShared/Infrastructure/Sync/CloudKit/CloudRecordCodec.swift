@@ -143,6 +143,41 @@ struct BrowserCloudRecordCodec: Sendable {
         return result
     }
 
+    // MARK: - Actions - Envelopes
+
+    /// How CloudKit names the record `reference` names: its kind, then its
+    /// identity in lowercase.
+    func recordName(of reference: SyncRecordReference) -> String {
+        "\(reference.kind.name):\(reference.id.uuidString.lowercased())"
+    }
+
+    /// The CloudKit identity of the record `reference` names, in this codec's
+    /// zone.
+    func recordID(for reference: SyncRecordReference) -> CKRecord.ID {
+        CKRecord.ID(recordName: recordName(of: reference), zoneID: recordZoneID)
+    }
+
+    /// The record a CloudKit identity in this codec's zone names, or nil for an
+    /// identity no record of Crest's has.
+    func reference(for recordID: CKRecord.ID) -> SyncRecordReference? {
+        guard recordID.zoneID == recordZoneID else { return nil }
+        let parts = recordID.recordName.split(separator: ":", omittingEmptySubsequences: false)
+        guard parts.count == 2, let kind = SyncRecordKind.named(String(parts[0])),
+            let id = UUID(uuidString: String(parts[1]))
+        else { return nil }
+        return SyncRecordReference(kind: kind, id: id)
+    }
+
+    /// The record the cloud saved, at the version it saved, read from its
+    /// envelope alone; nil for a record that is not one of Crest's.
+    func uploadedRecord(_ record: CKRecord) -> UploadedRecord? {
+        guard let reference = reference(for: record.recordID), record.recordType == reference.kind.cloudRecordType,
+            let clock = (record[Field.logicalClock] as? NSNumber)?.uint64Value,
+            let device = (record[Field.deviceID] as? String).flatMap(UUID.init(uuidString:))
+        else { return nil }
+        return UploadedRecord(record: reference, version: SyncVersion(clock: clock, deviceID: device))
+    }
+
     /// Older clients can keep syncing familiar records while skipping only
     /// folder locations and memberships they cannot represent. Tombstones use
     /// schema 1 so those clients can still remove a stale local copy.

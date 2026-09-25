@@ -1,6 +1,12 @@
 import Foundation
 import Observation
 
+/// Brings sync up against the signed-in iCloud account and keeps it running:
+/// account checks, the first launch's seed, reconciling with an account it has
+/// not synced with, conflict choices and retries. It reads what the stored
+/// session's journal holds from the core's published state, asks the core
+/// how the cloud's content compares, and sends the core the person's choices
+/// off the main thread; it never reads the journal itself.
 @Observable
 @MainActor
 final class BrowserCloudSyncController {
@@ -26,7 +32,7 @@ final class BrowserCloudSyncController {
 
     let containerIdentifier: String?
 
-    @ObservationIgnored private let workflow: any BrowserCloudSyncWorkflowGateway
+    @ObservationIgnored private let core: CrestCore
     @ObservationIgnored private let configuration: BrowserCloudSyncConfiguration?
     @ObservationIgnored private let preferences: any BrowserCloudSyncPreferences
     @ObservationIgnored private let remoteService: (any BrowserCloudSyncRemoteService)?
@@ -39,24 +45,34 @@ final class BrowserCloudSyncController {
     @ObservationIgnored private var retryTask: Task<Void, Never>?
     @ObservationIgnored private var retryAttempts = 0
     @ObservationIgnored private var accountObservation: (any NSObjectProtocol)?
-    /// The last start stopped because this build cannot read the device's
-    /// sync journal. The next journal change starts again.
-    @ObservationIgnored private var pausedForUnreadableJournal = false
 
     /// Crest only retries a launch that could not reach iCloud a few times. A
     /// signed-out account heals through `accountAvailabilityDidChange` instead of
     /// through polling.
     private static let maximumRetryAttempts = 3
 
+    /// How many records the stored session's journal holds, as the core last
+    /// published it.
+    var localRecordCount: Int { core.state.syncJournal?.records ?? 0 }
+
+    /// How many of them wait to upload, as the core last published it.
+    var pendingUploadCount: Int { core.state.syncJournal?.pendingRecords ?? 0 }
+
+    /// Why this device's changes cannot reach sync: the core could not stage
+    /// the latest edits, or could not save them.
+    var localErrorDescription: String? {
+        core.state.syncStagingFailure.map { String(localized: $0.title) } ?? core.state.storageFailureDescription
+    }
+
     init(
-        workflow: any BrowserCloudSyncWorkflowGateway,
+        core: CrestCore,
         configuration: BrowserCloudSyncConfiguration?,
         preferences: any BrowserCloudSyncPreferences,
         remoteService: (any BrowserCloudSyncRemoteService)?,
         transportFactory: (any BrowserCloudSyncTransportFactory)?,
         retryDelay: Duration = .seconds(30)
     ) {
-        self.workflow = workflow
+        self.core = core
         self.configuration = configuration
         self.preferences = preferences
         self.remoteService = remoteService
@@ -108,10 +124,6 @@ final class BrowserCloudSyncController {
         lastAttemptAt = .now
 
         do {
-            // Nothing reaches iCloud while the journal cannot be read: no
-            // replacement, reconciliation, merge or upload.
-            try await verifyJournal()
-            guard isCurrentStart(generation) else { return }
             let state = try await remoteService.accountState()
             guard isCurrentStart(generation) else { return }
             accountState = state
@@ -174,23 +186,7 @@ final class BrowserCloudSyncController {
 
     func localChangesDidStage() async {
         guard isEnabled, conflict == nil else { return }
-        if pausedForUnreadableJournal, transport == nil, !isRunning {
-            await start()
-            return
-        }
         await transport?.notifyLocalChanges()
-    }
-
-    /// Throws while this build cannot read the device's sync journal, and
-    /// remembers that sync paused for it.
-    private func verifyJournal() async throws {
-        do {
-            try await workflow.verifyCloudSyncJournal()
-            pausedForUnreadableJournal = false
-        } catch {
-            pausedForUnreadableJournal = true
-            throw error
-        }
     }
 
     /// Called only after the settings confirmation. A full pull merges content;
@@ -238,15 +234,14 @@ final class BrowserCloudSyncController {
             isEnabled: isEnabled,
             accountState: accountState,
             phase: phase,
-            localRecordCount: workflow.cloudSyncLocalRecordCount,
-            pendingUploadCount: workflow.cloudSyncPendingRecordCount,
+            localRecordCount: localRecordCount,
+            pendingUploadCount: pendingUploadCount,
             observedCloudRecordCount: observedCloudRecordCount,
             lastAttemptAt: lastAttemptAt,
             lastSuccessAt: lastSuccessAt,
             lastFetchedRecordCount: lastFetchedRecordCount,
             lastUploadedRecordCount: lastUploadedRecordCount,
-            hasError: errorDescription != nil
-                || workflow.cloudSyncLocalErrorDescription != nil,
+            hasError: errorDescription != nil || localErrorDescription != nil,
             requiresReconciliation: conflict != nil,
             skippedRecordCount: skippedRecordCount,
             requiresAppUpdate: requiresAppUpdate,
@@ -294,24 +289,18 @@ final class BrowserCloudSyncController {
         let remote = try await remoteService.loadSnapshot()
         guard isCurrentStart(generation) else { return }
         observedCloudRecordCount = remote.count
-        let local = try await workflow.cloudSyncRecords()
+        // A comparison the core refuses stops here: it never reads as a device
+        // with nothing to keep.
+        let comparison = try await compare(with: remote)
         guard isCurrentStart(generation) else { return }
-        if !local.isEmpty,
-            !BrowserSyncContentComparison.hasEquivalentContent(
-                localRecords: local,
-                remoteRecords: remote
-            )
-        {
-            conflict = BrowserCloudSyncConflictSummary.comparing(
-                localRecords: local,
-                cloudRecords: remote
-            )
+        if comparison.deviceRecords > 0, !comparison.matches {
+            conflict = BrowserCloudSyncConflictSummary(comparison)
             phase = .needsReconciliation
             return
         }
 
-        if local.isEmpty, !remote.isEmpty {
-            try workflow.replaceLocalWithCloud(remote)
+        if comparison.deviceRecords == 0, comparison.cloudRecords > 0 {
+            try await deliver(ReplaceWithCloudRecords(records: remote.map(SyncRecord.init(browser:))))
         }
         try preferences.resetTransportState()
         try await startTransport(
@@ -323,11 +312,31 @@ final class BrowserCloudSyncController {
     private func replaceDisposableSeedStateFromCloudIfNeeded(
         using remoteService: any BrowserCloudSyncRemoteService
     ) async throws {
-        guard workflow.hasDisposableCloudSyncSeed else { return }
+        guard core.state.syncsDisposableSeed else { return }
         let remote = try await remoteService.loadSnapshot()
         observedCloudRecordCount = remote.count
-        try workflow.replaceDisposableSeedWithCloud(remote)
+        try await deliver(ReplaceSeedWithCloudRecords(records: remote.map(SyncRecord.init(browser:))))
         try preferences.resetTransportState()
+    }
+
+    /// How the stored session's journal compares with `remote`, the cloud's
+    /// records, once every stage the core queued has settled. The core
+    /// compares them off the main thread.
+    private func compare(with remote: [BrowserSyncRecord]) async throws -> CloudContentComparison {
+        let cloud = try remote.map(SyncRecord.init(browser:))
+        let core = core
+        return try await Task.detached(priority: .utility) {
+            await core.settleSync()
+            return try core.query(CloudComparison(cloud: cloud))
+        }.value
+    }
+
+    /// Sends the core the person's choice, or what the first launch takes from
+    /// the cloud, off the main thread. What it changed reaches the windows
+    /// through the core's wake.
+    private func deliver(_ intent: some CloudSyncIntent) async throws {
+        let core = core
+        try await Task.detached(priority: .utility) { _ = try core.deliver(intent) }.value
     }
 
     /// Starts CKSyncEngine and lets its system scheduler perform the routine
@@ -368,15 +377,14 @@ final class BrowserCloudSyncController {
         phase = .syncing
         lastAttemptAt = .now
         do {
-            try await verifyJournal()
-            guard isCurrentStart(generation) else { return }
             let latestRemote = try await remoteService.loadSnapshot()
             guard isCurrentStart(generation) else { return }
             observedCloudRecordCount = latestRemote.count
+            let records = try latestRemote.map(SyncRecord.init(browser:))
             if usesCloud {
-                try workflow.replaceLocalWithCloud(latestRemote)
+                try await deliver(ReplaceWithCloudRecords(records: records))
             } else {
-                try workflow.prepareToOverwriteCloud(with: latestRemote)
+                try await deliver(OverwriteCloud(records: records))
             }
             try preferences.saveConflictResolution(
                 usesCloud ? nil : .useThisDevice
@@ -440,7 +448,7 @@ final class BrowserCloudSyncController {
     }
 
     private func recordSuccess() {
-        if let localError = workflow.cloudSyncLocalErrorDescription {
+        if let localError = localErrorDescription {
             phase = .failed("Local changes could not be saved for sync.")
             errorDescription = localError
             return

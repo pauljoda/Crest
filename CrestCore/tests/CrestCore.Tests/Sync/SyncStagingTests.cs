@@ -52,16 +52,16 @@ public sealed partial class BrowserContractsTests {
         var owner = app.Workspace(TestWorkspaces.Open(app, session));
         var sync = Syncing(owner);
         _ = app.Drain();
-        var launched = sync.Version;
+        var launched = sync.Snapshot;
 
         foreach (var title in new[] { "One", "Two" }) Rename(owner, session, fixture.Tab, title);
         Thread.Sleep(400);
-        Assert.Equal(launched, sync.Version);
+        Assert.Same(launched, sync.Snapshot);
 
         app.EndTurn();
         var staged = DrainUntil(app, changes => changes.OfType<SyncJournalChanged>().Any());
         Assert.Single(staged.OfType<SyncJournalChanged>());
-        Assert.Equal(launched + 1, sync.Version);
+        Assert.NotSame(launched, sync.Snapshot);
         var tab = JsonNode.Parse(sync.Snapshot.Read())!["records"]!.AsArray()
             .Single(record => record!["id"]!["kind"]!.GetValue<string>() == "tab")!;
         Assert.Equal("Two", tab["payload"]!["value"]!["customTitle"]!.GetValue<string>());

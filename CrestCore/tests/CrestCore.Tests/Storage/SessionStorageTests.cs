@@ -247,20 +247,16 @@ public sealed unsafe partial class BrowserContractsTests {
         using var directory = new StorageDirectory();
         var fixture = SavedSession();
         var document = fixture.Document["session"]!.AsObject();
-        var record = SyncTabRecord(fixture.Tab, fixture.Space, 9, Guid.NewGuid());
-        var journal = JournalDocument(record);
+        var device = Guid.NewGuid();
+        var journal = JournalDocument(SyncTabRecord(fixture.Tab, fixture.Space, 9, device));
         using var app = new CrestApp(new AppConfiguration(directory.Path));
         app.Send(Adoption(document, journal));
         app.Send(Renaming(TestWorkspaces.OpenStored(app).Workspace, document, "Edited before staging"));
-        var acknowledge = JournalCommand(journal, "acknowledge",
-            new() { ["acknowledgements"] = new JsonArray(new JsonObject { ["id"] = record["id"]!.DeepClone() }) });
-        using var transaction = app.StoredSync!.Prepare(acknowledge);
-        Assert.True(transaction.Seal());
-        transaction.CommitDurably();
+        app.Send(new AcknowledgeUploads([new(new(SyncRecordKind.Tab, fixture.Tab), new SyncVersion(9, device))]));
 
         // Whichever write came first, the journal is on disk with the session it followed.
         var stored = StoredParts(directory.File);
-        Assert.True(stored["journal"].AsSpan().SequenceEqual(transaction.Journal.Read()));
+        Assert.True(stored["journal"].AsSpan().SequenceEqual(app.StoredSync!.Snapshot.Read()));
         Assert.Equal("Edited before staging", StoredCore(stored)["spaces"]![0]!["tabs"]![0]!["customTitle"]!.GetValue<string>());
     }
 
@@ -335,10 +331,12 @@ public sealed unsafe partial class BrowserContractsTests {
     public void TheHostIsWokenOnceForChangesTheCoreStartedAndDrainsThemInOrder() {
         using var directory = new StorageDirectory();
         using var memoryOnly = new AppClient();
-        Assert.Equal(CoreStatus.Empty, memoryOnly.Sync().Status);
+        Assert.Equal(CoreStatus.Ok, memoryOnly.SettleSync());
+        Assert.Equal(new NoStoredSession(), memoryOnly.Refuse(new PendingUploads()));
 
         using var app = new AppClient(directory.Path);
-        Assert.Equal(CoreStatus.Empty, app.Sync().Status);
+        Assert.Equal(CoreStatus.Ok, app.SettleSync());
+        Assert.Equal(new NoStoredSession(), app.Refuse(new PendingUploads()));
         Assert.Equal(new NoStoredSession(), app.Refuse(new OpenWorkspace(WorkspaceKind.Persistent, Seed: null)));
         Volatile.Write(ref wakes, 0);
         Assert.Equal(CoreStatus.Ok, app.SetWake(&CountWake, 42));
@@ -364,8 +362,6 @@ public sealed unsafe partial class BrowserContractsTests {
 
         var opened = Assert.Single(app.Send(new OpenWorkspace(WorkspaceKind.Persistent, Seed: null)).OfType<WorkspaceOpened>());
         Assert.Equal(WorkspaceKind.Persistent, opened.Kind);
-        var (status, sync) = app.Sync();
-        Assert.Equal(CoreStatus.Ok, status);
-        Assert.NotEqual(0UL, sync);
+        Assert.Equal(CoreStatus.Ok, app.SettleSync());
     }
 }

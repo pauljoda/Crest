@@ -26,7 +26,7 @@ final class BrowserCoreSessionAuthorityTests: XCTestCase {
         let (saved, committed) = try harness.stored()
         XCTAssertTrue(saved.spaces[0].tabs.allSatisfy { !ids.contains($0.id) })
         XCTAssertEqual(saved, store.session)
-        XCTAssertEqual(committed, store.syncCoordinator?.journal)
+        XCTAssertTrue(try harness.storedJournalIsPublished())
         for tab in tabs {
             let id = BrowserSyncRecordID(kind: .tab, value: tab.id.rawValue)
             let record = try XCTUnwrap(committed?.records.first { $0.id == id })
@@ -107,21 +107,20 @@ final class BrowserCoreSessionAuthorityTests: XCTestCase {
         try journal.stage(session: original)
         let harness = try BrowserStoredSessionHarness(session: original, journal: journal)
         let source = harness.store
-        let sync = try XCTUnwrap(source.syncCoordinator)
         let observer = source.makeWindowStore()
         let assignment = BrowserSpaceRuntimeAssignment(space: original.spaces[0])
         let temporary = try XCTUnwrap(source.makeTemporaryWindowStore(in: assignment))
         XCTAssertTrue(source.transferTab(tabID, matching: assignment, to: temporary, in: assignment))
         XCTAssertFalse(observer.session.tabIDs.contains(tabID))
         XCTAssertEqual(try harness.stored().session, source.session)
-        XCTAssertEqual(try harness.stored().journal, sync.journal)
+        XCTAssertTrue(try harness.storedJournalIsPublished())
         XCTAssertEqual(temporary.selectedTab?.faviconData, Data([5, 8, 13]))
         XCTAssertFalse(source.session.space(id: spaceID)!.archivedTabs.contains { $0.id == tabID })
         XCTAssertTrue(temporary.transferTab(tabID, matching: assignment, to: source, in: assignment))
         XCTAssertEqual(source.selectedTab?.id, tabID)
         XCTAssertTrue(observer.session.tabIDs.contains(tabID))
         XCTAssertEqual(try harness.stored().session, source.session)
-        XCTAssertEqual(try harness.stored().journal, sync.journal)
+        XCTAssertTrue(try harness.storedJournalIsPublished())
         XCTAssertEqual(source.selectedTab?.faviconData, Data([5, 8, 13]))
     }
 
@@ -160,7 +159,6 @@ final class BrowserCoreSessionAuthorityTests: XCTestCase {
         XCTAssertNil(pages.activePage, "A restored window must not reopen a pending profile")
         let relaunched = try await harness.relaunch()
         let restarted = relaunched.store
-        let restartedSync = try XCTUnwrap(restarted.syncCoordinator)
         XCTAssertTrue(restarted.deletingSpaceIDs.contains(target.id))
         XCTAssertNotEqual(restarted.selectedSpace?.id, target.id)
         let succeeding = DeletionAdapter { space in XCTAssertEqual(space.profile.id, target.profile.id) }
@@ -169,8 +167,10 @@ final class BrowserCoreSessionAuthorityTests: XCTestCase {
         XCTAssertNil(restarted.session.space(id: target.id))
         XCTAssertNil(restarted.session.spaceDeletions)
         XCTAssertEqual(try relaunched.stored().session, restarted.session)
-        XCTAssertEqual(try relaunched.stored().journal, restartedSync.journal)
-        let tombstones = restartedSync.journal.records.filter { $0.spaceID == target.id && $0.tombstone != nil }
+        XCTAssertTrue(try relaunched.storedJournalIsPublished())
+        let tombstones = try relaunched.storedJournal().records.filter {
+            $0.spaceID == target.id && $0.tombstone != nil
+        }
         XCTAssertFalse(tombstones.isEmpty)
         XCTAssertTrue(tombstones.allSatisfy { $0.tombstone?.reason == .explicitDelete })
     }
@@ -182,7 +182,6 @@ final class BrowserCoreSessionAuthorityTests: XCTestCase {
         try journal.stage(session: original)
         let harness = try BrowserStoredSessionHarness(session: original, journal: journal)
         let store = harness.store
-        let sync = try XCTUnwrap(store.syncCoordinator)
         let other = store.makeWindowStore()
         var fail = true
         let adapter = DeletionAdapter { space in
@@ -203,19 +202,20 @@ final class BrowserCoreSessionAuthorityTests: XCTestCase {
         remote.spaces.removeAll { $0.id == target.id }
         var incoming = journal
         try incoming.stage(session: remote, deletionReason: .explicitDelete)
-        try store.mergeRemoteSyncRecords(incoming.records)
-        XCTAssertTrue(adapter.calls.isEmpty, "Cleanup must be scheduled after the durable sync commit")
+        // The adapter checks that the deletion and its tombstone are on disk
+        // before any cleanup runs.
+        try await harness.deliver(MergeSyncRecords(records: incoming.records.map(SyncRecord.init(browser:))))
         await store.family.spaceCleanupTask?.value
         XCTAssertEqual(adapter.calls, [target.id])
         XCTAssertNotNil(try harness.stored().session.spaceDeletions?.first)
         fail = false
-        try store.mergeRemoteSyncRecords(incoming.records)
+        try await harness.deliver(MergeSyncRecords(records: incoming.records.map(SyncRecord.init(browser:))))
         await store.family.spaceCleanupTask?.value
         XCTAssertEqual(adapter.calls, [target.id, target.id])
         XCTAssertNil(store.session.space(id: target.id))
         XCTAssertNil(store.session.spaceDeletions)
         XCTAssertEqual(try harness.stored().session, store.session)
-        XCTAssertEqual(try harness.stored().journal, sync.journal)
+        XCTAssertTrue(try harness.storedJournalIsPublished())
         XCTAssertEqual(other.session.spaces.map(\.id), store.session.spaces.map(\.id))
     }
 
@@ -228,7 +228,6 @@ final class BrowserCoreSessionAuthorityTests: XCTestCase {
         try journal.stage(session: original)
         let harness = try BrowserStoredSessionHarness(session: original, journal: journal)
         let store = harness.store
-        let sync = try XCTUnwrap(store.syncCoordinator)
         let other = store.makeWindowStore()
         try store.importPortableArchive(
             BrowserPortableImport(
@@ -245,7 +244,7 @@ final class BrowserCoreSessionAuthorityTests: XCTestCase {
         XCTAssertEqual(added.tabs[0].faviconData, Data([3, 4]))
         XCTAssertEqual(other.session.spaces, store.session.spaces)
         XCTAssertEqual(try harness.stored().session, store.session)
-        XCTAssertEqual(try harness.stored().journal, sync.journal)
+        XCTAssertTrue(try harness.storedJournalIsPublished())
     }
 
     private enum DeletionFailure: Error { case interrupted }
@@ -259,31 +258,37 @@ final class BrowserCoreSessionAuthorityTests: XCTestCase {
         }
     }
 
+    /// A merge the transport sends from its own thread is on disk with its
+    /// journal when it returns, and reaches every window through the wake and
+    /// one drain.
     func testIncomingSyncPublishesAndPersistsTheSameSessionAcrossWindows() async throws {
         let original = BrowserSession.preview
         var journal = BrowserSyncJournal()
         try journal.stage(session: original)
         let harness = try BrowserStoredSessionHarness(session: original, journal: journal)
         let store = harness.store
-        let coordinator = try XCTUnwrap(store.syncCoordinator)
         let other = store.makeWindowStore()
         var remote = original
         remote.spaces[0].name = "Remote Space"
         var remoteJournal = journal
         try remoteJournal.stage(session: remote)
-        try store.mergeRemoteSyncRecords(remoteJournal.records)
+        let core = harness.core
+        let merge = MergeSyncRecords(records: try remoteJournal.records.map(SyncRecord.init(browser:)))
+        try await Task.detached { _ = try core.deliver(merge) }.value
+        // The merge and its journal are on disk when the merge returns.
+        XCTAssertEqual(try harness.stored().session.spaces[0].name, "Remote Space")
+        await withCheckedContinuation { continuation in DispatchQueue.main.async { continuation.resume() } }
         XCTAssertEqual(store.session.spaces[0].name, "Remote Space")
         XCTAssertEqual(other.session.spaces[0].name, "Remote Space")
-        // The merge and its journal are on disk when the merge returns.
         XCTAssertEqual(try harness.stored().session, store.session)
-        XCTAssertEqual(try harness.stored().journal, coordinator.journal)
+        XCTAssertTrue(try harness.storedJournalIsPublished())
         // A local edit is saved behind; staging it and the flush a window
         // waits for put both on disk.
         store.updateSpaceIdentity(original.spaces[0].id, name: "Local after sync", symbol: "book", accent: .teal)
         await store.flushPendingSyncPersistence()
         let restored = try harness.stored()
         XCTAssertEqual(restored.session.spaces[0].name, "Local after sync")
-        XCTAssertEqual(restored.journal, coordinator.journal)
+        XCTAssertTrue(try harness.storedJournalIsPublished())
     }
 
     /// Quitting and backgrounding wait for this flush and nothing after it:
@@ -296,9 +301,8 @@ final class BrowserCoreSessionAuthorityTests: XCTestCase {
         let harness = try BrowserStoredSessionHarness(session: .preview, journal: journal)
         let store = harness.store
         let window = store.makeWindowStore(BrowserWindowOpening(saved: true))
-        let coordinator = try XCTUnwrap(store.syncCoordinator)
         await store.flushPendingSyncPersistence()
-        try coordinator.markUploaded(coordinator.journal.pendingRecordIDs)
+        try harness.acknowledgePendingUploads()
         XCTAssertEqual(try harness.stored().journal?.pendingRecordIDs, [])
         XCTAssertEqual(try harness.storedShownSpace(of: window.windowID), window.selectedSpaceID.rawValue)
 

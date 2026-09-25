@@ -168,20 +168,6 @@ final class BrowserStoreFamily {
         return core.workspaceID
     }
 
-    /// Takes records the cloud sent through `intent`, which the core saves
-    /// with its journal before it returns. What it changed arrives in the drain
-    /// that follows, which every window follows. Each time records arrive, a
-    /// Space deletion whose cleanup has not finished, such as one the cloud
-    /// began, starts it again. Throws the rule that refused the records or the
-    /// save that failed; either changes nothing.
-    ///
-    /// TRANSITIONAL until the cloud transport sends its intents itself.
-    func commitCloudRecords(_ intent: some CloudSyncIntent, from source: BrowserStore) throws(Rejection) {
-        try source.core.send(intent)
-        source.core.drain()
-        scheduleSpaceDataCleanup()
-    }
-
     /// Runs an import `source`'s window issued, which the core saves with its
     /// journal before it returns. Each tab it places wears the image its tab in
     /// `sources`, the Spaces the import brings, wears. Throws the rule that
@@ -290,7 +276,7 @@ final class BrowserStoreFamily {
     private func storageDidFail(_ reason: StorageFailure) {
         stores.removeAll { $0.value == nil }
         for store in stores.compactMap(\.value) {
-            store.localSyncErrorDescription = "The session could not be saved (\(reason))."
+            store.localSyncErrorDescription = CoreState.description(of: reason)
         }
     }
 
@@ -348,12 +334,16 @@ final class BrowserStoreFamily {
 
     /// Hears each batch of the core's changes that changed this family's
     /// session: a page's navigation or icon it recorded, a cloud merge, or the
-    /// changes an intent answered. Every window follows. TRANSITIONAL until S6.
+    /// changes an intent answered. Every window follows. Each time the cloud
+    /// transport's records commit, a Space deletion whose cleanup has not
+    /// finished, such as one the cloud began, starts it again. TRANSITIONAL
+    /// until S6.
     private func followSession() {
         core.device?.followSessions(self) { [weak self] workspaces in
             guard let self, workspaces.contains(workspaceID) else { return }
             follow()
         }
+        core.device?.followCloudDeliveries(self) { [weak self] in self?.scheduleSpaceDataCleanup() }
     }
 
     func beginDeletingSpace(_ id: SpaceID) -> Bool {

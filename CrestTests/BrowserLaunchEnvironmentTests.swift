@@ -229,7 +229,7 @@ final class BrowserLaunchEnvironmentTests: XCTestCase {
 
             XCTAssertTrue(store.credentialVault is InMemoryCredentialVault)
             // Only the session the core keeps in its file syncs.
-            XCTAssertNil(store.syncCoordinator)
+            XCTAssertFalse(store.syncsSession)
         }
     }
 }

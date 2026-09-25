@@ -265,10 +265,13 @@ final class BrowserCloudSyncStateTests: XCTestCase {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }
         let persistence = FileBrowserCloudSyncStatePersistence(fileURL: directory.appendingPathComponent("state.json"))
-        let gateway = RecoveryTestGateway()
+        let harness = try BrowserStoredSessionHarness(session: .preview, journal: BrowserSyncJournal())
+        await harness.store.flushPendingSyncPersistence()
+        // The core cannot save the merge's journal, so it refuses the merge.
+        try harness.refuseWrites(to: "journal")
         let engine = try BrowserCloudSyncEngine(
             configuration: BrowserCloudSyncConfiguration(containerIdentifier: "iCloud.com.pauldavis.crest"),
-            gateway: gateway, persistence: persistence, automaticallySync: false
+            core: harness.core, persistence: persistence, automaticallySync: false
         )
         do {
             try await engine.mergeDownloadedRecords([testSpaceRecord(index: 1)])
@@ -276,10 +279,10 @@ final class BrowserCloudSyncStateTests: XCTestCase {
         } catch {}
         XCTAssertTrue(try XCTUnwrap(persistence.load()).requiresFullPull)
 
-        gateway.failsMerge = false
+        try harness.acceptWrites()
         let restarted = try BrowserCloudSyncEngine(
             configuration: BrowserCloudSyncConfiguration(containerIdentifier: "iCloud.com.pauldavis.crest"),
-            gateway: gateway, persistence: persistence, automaticallySync: false
+            core: harness.core, persistence: persistence, automaticallySync: false
         )
         try await restarted.mergeDownloadedRecords([testSpaceRecord(index: 2)])
         XCTAssertTrue(try XCTUnwrap(persistence.load()).requiresFullPull)
@@ -384,15 +387,4 @@ final class BrowserCloudSyncStateTests: XCTestCase {
         XCTAssertEqual(reloaded.reconciliationReason, .accountChange)
     }
 
-}
-
-@MainActor
-private final class RecoveryTestGateway: BrowserCloudSyncModelGateway {
-    var failsMerge = true
-    func cloudSyncRecords() async -> [BrowserSyncRecord] { [] }
-    func cloudSyncPendingRecordIDs() async -> Set<BrowserSyncRecordID> { [] }
-    func markCloudSyncRecordsUploaded(_ versions: [BrowserSyncRecordID: BrowserSyncVersion]) async throws {}
-    func mergeCloudSyncRecords(_ records: [BrowserSyncRecord]) async throws {
-        if failsMerge { throw BrowserSyncError.remoteChangeNotApplied("Storage unavailable") }
-    }
 }

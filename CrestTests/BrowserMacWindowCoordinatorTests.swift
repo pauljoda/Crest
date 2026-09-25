@@ -114,7 +114,7 @@ final class BrowserMacWindowCoordinatorTests: XCTestCase {
         XCTAssertTrue(destination.pages.activePage === page)
         XCTAssertEqual(destination.browser.selectedTab?.id, tab.id)
         XCTAssertTrue(destination.browser.isTemporaryWorkspace)
-        XCTAssertNil(destination.browser.syncCoordinator)
+        XCTAssertFalse(destination.browser.syncsSession)
         XCTAssertFalse(source.browser.session.space(id: space.id)?.tabs.contains { $0.id == tab.id } ?? true)
         XCTAssertNotNil(fixture.coordinator.existingModel(for: source.id))
         XCTAssertTrue(source.browser.selectedSpace?.archivedTabs.isEmpty == true)

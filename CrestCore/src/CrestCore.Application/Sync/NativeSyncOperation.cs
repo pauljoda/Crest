@@ -52,15 +52,4 @@ internal static class NativeSyncOperationCodes {
     };
 
     #endregion
-
-    #region Actions - Families
-
-    /// The operations that stage the local session themselves, so a stage
-    /// still queued has nothing left to add.
-    public static bool SupersedesStaging(NativeSyncOperation operation) => operation is
-        NativeSyncOperation.Merge
-        or NativeSyncOperation.Replace
-        or NativeSyncOperation.Overwrite;
-
-    #endregion
 }

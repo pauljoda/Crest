@@ -2383,65 +2383,6 @@ final class BrowserSyncTests: XCTestCase {
         }
     }
 
-    func testCoordinatorRecoversACorruptLocalJournalAndPersistsFreshState() throws {
-        let persistence = CorruptBrowserSyncJournalPersistence()
-        let coordinator = BrowserSyncCoordinator(
-            persistence: persistence,
-            deviceID: fixedUUID(71)
-        )
-
-        XCTAssertEqual(coordinator.status, .recoveredCorruptLocalJournal)
-        try coordinator.stage(session: oneSpaceSession(), at: fixedDate(1))
-
-        XCTAssertNotNil(persistence.savedJournal)
-        XCTAssertFalse(coordinator.journal.records.isEmpty)
-    }
-
-    func testCoordinatorDoesNotPublishAJournalMutationWhenPersistenceFails() {
-        let coordinator = BrowserSyncCoordinator(
-            persistence: FailingSaveBrowserSyncJournalPersistence(),
-            deviceID: fixedUUID(72)
-        )
-        let original = coordinator.journal
-
-        XCTAssertThrowsError(
-            try coordinator.stage(
-                session: oneSpaceSession(),
-                at: fixedDate(1)
-            )
-        )
-
-        XCTAssertEqual(coordinator.journal, original)
-    }
-
-    func testJournalReadsDoNotWaitForBackgroundPersistence() async throws {
-        let saving = expectation(description: "Background journal reached persistence")
-        let persistence = PausingBrowserSyncJournalPersistence { saving.fulfill() }
-        let coordinator = BrowserSyncCoordinator(persistence: persistence)
-        let original = coordinator.journal
-        let session = oneSpaceSession()
-        let stage = Task.detached {
-            try coordinator.stage(session: session)
-        }
-        await fulfillment(of: [saving], timeout: 5)
-
-        let accessed = expectation(description: "The committed snapshot remains available")
-        let access = Task.detached {
-            let snapshot = coordinator.journal
-            accessed.fulfill()
-            return snapshot
-        }
-        await fulfillment(of: [accessed], timeout: 1)
-        persistence.resumeSave()
-
-        let snapshot = await access.value
-        let staged = try await stage.value
-        XCTAssertEqual(snapshot, original, "An unfinished save must not publish its candidate journal.")
-        XCTAssertTrue(staged)
-        XCTAssertFalse(coordinator.journal.records.isEmpty)
-        XCTAssertEqual(try persistence.load(), coordinator.journal)
-    }
-
     @MainActor
     func testUseThisDeviceRebasesLocalRecordsAboveCloudAndDeletesCloudOnlyContent() throws {
         let localSession = oneSpaceSession()
@@ -3387,65 +3328,9 @@ final class BrowserSyncTests: XCTestCase {
     }
 }
 
-private final class CorruptBrowserSyncJournalPersistence: BrowserSyncJournalPersisting {
-    private(set) var savedJournal: BrowserSyncJournal?
-
-    func load() throws -> BrowserSyncJournal? {
-        throw CocoaError(.fileReadCorruptFile)
-    }
-
-    func save(_ journal: BrowserSyncJournal) throws {
-        savedJournal = journal
-    }
-}
-
-private final class FailingSaveBrowserSyncJournalPersistence: BrowserSyncJournalPersisting {
-    enum Failure: Error {
-        case save
-    }
-
-    func load() throws -> BrowserSyncJournal? { nil }
-
-    func save(_ journal: BrowserSyncJournal) throws {
-        throw Failure.save
-    }
-}
-
-private final class PausingBrowserSyncJournalPersistence: BrowserSyncJournalPersisting, @unchecked Sendable {
-    private let lock = NSLock()
-    private let gate = DispatchSemaphore(value: 0)
-    private let didBeginSave: @Sendable () -> Void
-    private var pausesNextSave = true
-    private var savedJournal: BrowserSyncJournal?
-
-    init(didBeginSave: @escaping @Sendable () -> Void) {
-        self.didBeginSave = didBeginSave
-    }
-
-    func load() throws -> BrowserSyncJournal? {
-        lock.withLock { savedJournal }
-    }
-
-    func save(_ journal: BrowserSyncJournal) throws {
-        let shouldPause = lock.withLock {
-            defer { pausesNextSave = false }
-            return pausesNextSave
-        }
-        if shouldPause {
-            didBeginSave()
-            gate.wait()
-        }
-        lock.withLock { savedJournal = journal }
-    }
-
-    func resumeSave() {
-        gate.signal()
-    }
-}
-
 /// TRANSITIONAL until slice 8c ports the journal contract tests to the core: a
 /// device whose file holds a session and its journal, opened as a launch opens
-/// it, which takes cloud records through its store as the transport does.
+/// it, which takes cloud records through its core as the transport does.
 @MainActor
 final class BrowserSyncingDevice {
     // MARK: - Variables
@@ -3455,14 +3340,11 @@ final class BrowserSyncingDevice {
     /// The session the device's store shows.
     var session: BrowserSession { harness.store.session }
 
-    /// The journal the device's core accepted last.
-    var journal: BrowserSyncJournal { coordinator.journal }
-
-    private var coordinator: BrowserSyncCoordinator {
-        guard let coordinator = harness.store.syncCoordinator else {
-            preconditionFailure("A session the core keeps in its file always syncs.")
+    /// The journal the device's core accepted last, as its file holds it.
+    var journal: BrowserSyncJournal {
+        do { return try harness.storedJournal() } catch {
+            preconditionFailure("A session the core keeps in its file always has a journal there: \(error)")
         }
-        return coordinator
     }
 
     // MARK: - Initializers
@@ -3486,24 +3368,30 @@ final class BrowserSyncingDevice {
     /// shows then.
     @discardableResult
     func merge(_ records: [BrowserSyncRecord]) throws -> BrowserSession {
-        try harness.store.mergeRemoteSyncRecords(records)
+        try harness.deliverNow(MergeSyncRecords(records: records.map(SyncRecord.init(browser:))))
         return session
     }
 
     /// Replaces the session with what the cloud holds, and answers the
     /// session the store shows then.
     func replace(with records: [BrowserSyncRecord]) throws -> BrowserSession {
-        try harness.store.replaceLocalWithCloud(records)
+        try harness.deliverNow(ReplaceWithCloudRecords(records: records.map(SyncRecord.init(browser:))))
         return session
     }
 
     /// Rebases the journal above what the cloud holds.
     func overwrite(with records: [BrowserSyncRecord]) throws {
-        try harness.store.prepareToOverwriteCloud(with: records)
+        try harness.deliverNow(OverwriteCloud(records: records.map(SyncRecord.init(browser:))))
     }
 
-    /// Acknowledges `recordIDs` as uploaded.
+    /// Acknowledges `recordIDs` as uploaded, at the versions the journal
+    /// holds them at.
     func markUploaded(_ recordIDs: Set<BrowserSyncRecordID>) throws {
-        try coordinator.markUploaded(recordIDs)
+        let uploaded = journal.records.filter { recordIDs.contains($0.id) }.map {
+            UploadedRecord(
+                record: SyncRecordReference(kind: SyncRecordKind(browser: $0.id.kind), id: $0.id.value),
+                version: SyncVersion(clock: $0.version.logicalClock, deviceID: $0.version.deviceID))
+        }
+        try harness.deliverNow(AcknowledgeUploads(records: uploaded))
     }
 }

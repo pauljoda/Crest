@@ -3,7 +3,7 @@ import Foundation
 
 extension BrowserCloudSyncController {
     convenience init(
-        browser: BrowserStore,
+        core: CrestCore,
         configuration: BrowserCloudSyncConfiguration? = .configured(),
         defaults: UserDefaults? = nil,
         enabledKey: String = UserDefaultsBrowserCloudSyncPreferences.defaultEnabledKey
@@ -12,7 +12,7 @@ extension BrowserCloudSyncController {
             BrowserLaunchEnvironment.current.requiresIsolation
         {
             self.init(
-                workflow: browser,
+                core: core,
                 configuration: nil,
                 preferences: InMemoryBrowserCloudSyncPreferences(),
                 remoteService: nil,
@@ -37,12 +37,12 @@ extension BrowserCloudSyncController {
         let transportFactory = configuration.map {
             CloudKitBrowserCloudSyncTransportFactory(
                 configuration: $0,
-                gateway: browser,
+                core: core,
                 persistence: statePersistence
             )
         }
         self.init(
-            workflow: browser,
+            core: core,
             configuration: configuration,
             preferences: preferences,
             remoteService: remoteService,

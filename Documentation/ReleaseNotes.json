@@ -2445,6 +2445,10 @@
     "space-cleanup-on-cloud-records": {
       "category": "internal",
       "message": "Only arriving cloud records restart an unfinished Space cleanup."
+    },
+    "sync-merges-off-main-thread": {
+      "category": "improved",
+      "message": "Changes from your other devices arrive through iCloud Sync without pausing Crest's windows."
     }
   }
 }

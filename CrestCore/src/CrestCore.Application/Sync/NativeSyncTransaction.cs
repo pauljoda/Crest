@@ -1,11 +1,12 @@
-using System.Text.Json.Nodes;
-
 using CrestCore.Contracts;
 using CrestCore.Domain;
 
 namespace CrestCore.Application;
 
-public sealed class NativeSyncTransaction : IDisposable {
+/// One change of a sync journal, which the authority accepts once it commits.
+/// Its authority begins one at a time; disposing one uncommitted queues the
+/// stage it replaced again.
+internal sealed class NativeSyncTransaction : IDisposable {
     #region Variables
 
     internal NativeSyncAuthority Owner { get; }
@@ -16,11 +17,9 @@ public sealed class NativeSyncTransaction : IDisposable {
     /// commits.
     internal SyncStager.Request? Superseded { get; set; }
     internal bool IsSealed { get; set; }
-    /// The authority's version once it accepted this journal; zero before.
-    public ulong Version { get; internal set; }
     private bool completed, committed;
     internal bool IsReadyToCommit => IsSealed && !completed;
-    public NativeSyncJournal Journal { get; private set; }
+    internal NativeSyncJournal Journal { get; private set; }
 
     #endregion
 
@@ -33,14 +32,6 @@ public sealed class NativeSyncTransaction : IDisposable {
     #endregion
 
     #region Actions - Sync
-
-    /// Applies `request`, a journal mutation the transport asked for, under
-    /// the journal's own preferences.
-    internal void Apply(JsonObject request) {
-        request["preferences"] = Journal.Preferences;
-        Journal = Journal.Apply(request);
-        _ = Journal.Read();
-    }
 
     /// Takes the cloud's word that it saved `uploaded`; see
     /// `NativeSyncJournal.Acknowledge`.
@@ -65,7 +56,7 @@ public sealed class NativeSyncTransaction : IDisposable {
         _ = Journal.Read();
     }
 
-    public bool Seal() => Owner.Seal(this);
+    internal bool Seal() => Owner.Seal(this);
 
     internal void Commit() {
         lock (NativeSessionAuthority.Gate) {
@@ -82,7 +73,7 @@ public sealed class NativeSyncTransaction : IDisposable {
     /// it holds. A journal that a session replacement already saved and
     /// published is left alone. A failed save leaves the transaction pending
     /// for the caller to release.
-    public void CommitDurably() {
+    internal void CommitDurably() {
         lock (NativeSessionAuthority.Gate) {
             if (committed) return;
             if (completed || !IsSealed) throw new BrowserRuleException(BrowserRuleCodes.InvalidSyncTransaction);

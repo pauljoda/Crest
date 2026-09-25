@@ -108,36 +108,6 @@ CREST_API crest_status_t CREST_CALL crest_sync_query_read(
     uint64_t handle, uint8_t* destination, size_t capacity, size_t* out_length);
 CREST_API crest_status_t CREST_CALL crest_sync_query_release(uint64_t handle);
 
-// A session's sync component owns journal publication and stages the session's
-// accepted edits itself, reporting SyncJournalChanged to the attached app.
-// Prepare starts a transaction for the transport once any transaction in
-// progress finishes; an overwrite supersedes the stages still queued. A merge
-// or replacement changes the session with its journal, so it is an intent
-// (crest_app_dispatch) and prepare refuses it. On a semantic failure only
-// query may be returned, containing a typed error envelope. Commit publishes
-// the journal; when its session keeps a file, commit first saves the journal
-// with the newest accepted session and answers STORAGE_FAILED, leaving the
-// transaction pending, when that fails. A journal a session commit already
-// published is left alone.
-CREST_API crest_status_t CREST_CALL crest_sync_authority_create(uint64_t journal, uint64_t *authority);
-CREST_API crest_status_t CREST_CALL crest_sync_authority_release(uint64_t authority);
-/* The journal the authority accepted last, as a new snapshot handle the caller
- * releases with crest_sync_journal_release. */
-CREST_API crest_status_t CREST_CALL crest_sync_authority_snapshot(uint64_t authority, uint64_t *journal);
-/* Counts the journals the authority accepted; a reader holding a snapshot reads
- * again when it changes. */
-CREST_API crest_status_t CREST_CALL crest_sync_authority_version(uint64_t authority, uint64_t *version);
-/* Blocks until every stage requested before the call has committed or failed,
- * without waiting out a coalescing delay. Call it off the UI thread. */
-CREST_API crest_status_t CREST_CALL crest_sync_authority_flush(uint64_t authority);
-CREST_API crest_status_t CREST_CALL crest_sync_authority_prepare(uint64_t authority,
-    const uint8_t *input, size_t length, uint64_t *transaction, uint64_t *journal, uint64_t *query);
-CREST_API crest_status_t CREST_CALL crest_sync_transaction_seal(uint64_t transaction, int32_t *accepted);
-/* Commits a sealed transaction and writes the authority's version of its
- * journal, the one crest_sync_authority_version reported once it was accepted. */
-CREST_API crest_status_t CREST_CALL crest_sync_transaction_commit(uint64_t transaction, uint64_t *version);
-CREST_API crest_status_t CREST_CALL crest_sync_transaction_release(uint64_t transaction);
-
 #ifdef __cplusplus
 } /* extern "C" */
 #endif

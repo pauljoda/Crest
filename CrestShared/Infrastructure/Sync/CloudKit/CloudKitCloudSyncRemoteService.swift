@@ -41,8 +41,8 @@ actor CloudKitBrowserCloudSyncRemoteService: BrowserCloudSyncRemoteService {
         {
             return "Crest couldn’t apply the latest changes from iCloud."
         }
-        if let syncError = error as? BrowserSyncError, case .unreadableJournal = syncError {
-            return BrowserStore.unreadableSyncJournalDescription
+        if let rejection = error as? Rejection {
+            return rejection.explanation
         }
         guard let cloudError = error as? CKError else {
             return String(describing: error)

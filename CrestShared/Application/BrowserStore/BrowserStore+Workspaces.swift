@@ -22,7 +22,6 @@ extension BrowserStore {
         return BrowserStore(
             opening: BrowserWindowOpening(id: id),
             credentialVault: credentialVault,
-            syncCoordinator: nil,
             browsingMode: browsingMode,
             family: workspaceFamily,
             linkPreferences: linkPreferences,

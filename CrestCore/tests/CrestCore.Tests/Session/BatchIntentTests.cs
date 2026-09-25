@@ -110,11 +110,11 @@ public sealed partial class BrowserContractsTests {
         using var device = new TestDevice(f.Session);
         var (core, sync) = (device.Authority, Syncing(device.Authority));
         var window = device.Open(f.Space, (f.Space, f.Saved));
-        var staged = sync.Version;
+        var staged = sync.Snapshot;
 
         device.Send(new DeleteTabs(device.Workspace, window, f.Space, Picking(f.Saved, f.Pinned)));
         // The deletion staged with the intent, not once edits paused.
-        Assert.NotEqual(staged, sync.Version);
+        Assert.NotSame(staged, sync.Snapshot);
         var deleted = core.Current.Spaces[0].ArchivedTabs.TakeLast(2).ToArray();
         Assert.Equal([f.Pinned, f.Saved], deleted.Select(entry => entry.Tab.Id));
         Assert.All(deleted, entry => Assert.Equal((ArchiveReason.Deleted, TabPlacement.Current, (Guid?)null),

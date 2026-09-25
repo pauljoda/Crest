@@ -24,14 +24,9 @@ public sealed partial class CrestApp {
     /// it wears.
     private IReadOnlyList<(Guid Source, Guid Copy)> repairedCopies = [];
 
-    /// TRANSITIONAL until typed sync (slice 8): the sync component of the
-    /// session this core keeps in its file, for the cloud transport's journal
-    /// calls; null while the file holds no session.
-    public NativeSyncAuthority? StoredSync {
-        get {
-            lock (gate) return storedSync;
-        }
-    }
+    /// The sync component of the session this core keeps in its file, which
+    /// the tests read the journal of; null while the file holds no session.
+    internal NativeSyncAuthority? StoredSync => storedSync;
 
     #endregion
 

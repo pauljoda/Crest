@@ -38,7 +38,7 @@ struct BrowserOnboardingWindowPreviewFixture {
 
         self.request = request
         self.browser = browser
-        cloudSync = .isolated(browser: browser)
+        cloudSync = .isolated(core: browser.core)
         progress = BrowserOnboardingProgressStore(
             persistence: InMemoryBrowserOnboardingProgressPersistence(),
             forceWelcome: true

@@ -89,14 +89,6 @@ CREST_API crest_status_t CREST_CALL crest_app_end_turn(uint64_t app);
  * it blocks: never call it on the host's UI thread. */
 CREST_API crest_status_t CREST_CALL crest_app_settle_sync(uint64_t app);
 
-/* TRANSITIONAL until typed sync: the sync component of the session the app
- * keeps in its file, for the journal calls. EMPTY when the app keeps no file or
- * its file holds no session yet. On OK the caller owns the authority handle
- * (crest_sync_authority_release). The session itself opens with the intent
- * OpenWorkspace, which publishes WorkspaceOpened; the component hears that
- * launch stage once the workspace opens. */
-CREST_API crest_status_t CREST_CALL crest_app_sync(uint64_t app, uint64_t* out_sync);
-
 #ifdef __cplusplus
 } /* extern "C" */
 #endif

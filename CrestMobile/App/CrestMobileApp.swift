@@ -79,8 +79,8 @@ private final class BrowserMobileApplication {
         let transientBrowsing = BrowserTransientBrowsingCoordinator()
         let cloudSync =
             usesIsolatedLaunch
-            ? BrowserCloudSyncController.isolated(browser: browser)
-            : BrowserCloudSyncController(browser: browser)
+            ? BrowserCloudSyncController.isolated(core: core)
+            : BrowserCloudSyncController(core: core)
         core.syncJournalChangeHandler = { [weak cloudSync] in
             Task { await cloudSync?.localChangesDidStage() }
         }

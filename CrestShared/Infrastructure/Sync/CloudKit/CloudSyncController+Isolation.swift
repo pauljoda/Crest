@@ -3,7 +3,7 @@ import Foundation
 
 extension BrowserCloudSyncController {
     static func isolated(
-        browser: BrowserStore,
+        core: CrestCore,
         environment: BrowserLaunchEnvironment = .current,
         configuration: BrowserCloudSyncConfiguration? = .configured()
     ) -> BrowserCloudSyncController {
@@ -16,17 +16,17 @@ extension BrowserCloudSyncController {
                 localProfileID: profileID, configuration: configuration)
         else {
             return BrowserCloudSyncController(
-                workflow: browser, configuration: nil,
+                core: core, configuration: nil,
                 preferences: InMemoryBrowserCloudSyncPreferences(),
                 remoteService: nil, transportFactory: nil
             )
         }
         let controller = BrowserCloudSyncController(
-            workflow: browser, configuration: configuration,
+            core: core, configuration: configuration,
             preferences: UserDefaultsBrowserCloudSyncPreferences(defaults: defaults, statePersistence: persistence),
             remoteService: CloudKitBrowserCloudSyncRemoteService(configuration: configuration),
             transportFactory: CloudKitBrowserCloudSyncTransportFactory(
-                configuration: configuration, gateway: browser, persistence: persistence)
+                configuration: configuration, core: core, persistence: persistence)
         )
         controller.observeAccountChanges(named: .CKAccountChanged)
         return controller

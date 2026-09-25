@@ -11,7 +11,7 @@ final class BrowserCloudSyncControllerTests: XCTestCase {
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
         defer { defaults.removePersistentDomain(forName: suiteName) }
         let controller = BrowserCloudSyncController(
-            browser: BrowserStore.preview(),
+            core: CrestCore(),
             configuration: nil,
             defaults: defaults
         )
@@ -36,12 +36,12 @@ final class BrowserCloudSyncControllerTests: XCTestCase {
     }
 
     func testAvailableAccountStartsAutomaticTransportWithoutForcingAManualSync() async throws {
-        let workflow = TestBrowserCloudSyncWorkflowGateway()
+        let core = CrestCore()
         let preferences = TestBrowserCloudSyncPreferences()
         let remote = TestBrowserCloudSyncRemoteService(accountState: .available)
         let factory = TestBrowserCloudSyncTransportFactory()
         let controller = BrowserCloudSyncController(
-            workflow: workflow,
+            core: core,
             configuration: testConfiguration,
             preferences: preferences,
             remoteService: remote,
@@ -71,73 +71,36 @@ final class BrowserCloudSyncControllerTests: XCTestCase {
         XCTAssertEqual(notifyCount, 1)
     }
 
-    /// A journal this build cannot read keeps sync paused: nothing reaches
-    /// iCloud, the window reports it, and the next journal change tries again.
-    func testAJournalTheDeviceCannotReadKeepsSyncPausedUntilAJournalChangeReadsAgain() async throws {
-        var session = BrowserSession.preview
-        session.disposableSeedMarker = nil
-        let space = session.spaces[0]
-        let unreadable = UUID()
-        // A record the core keeps but this build refuses: a tab with no title,
-        // which staging leaves alone while the session holds no such tab.
-        let journal = """
-            {"schemaVersion":1,"deviceID":"\(UUID().uuidString)","logicalClock":5,
-            "preferences":{"savedStructure":true,"currentTabs":true,"historyAndArchive":true,"extensionSettings":true},
-            "records":[{"id":{"kind":"tab","value":"\(unreadable.uuidString)"},
-            "spaceID":{"rawValue":"\(space.id.rawValue.uuidString)"},
-            "version":{"logicalClock":5,"deviceID":"\(UUID().uuidString)"},
-            "payload":{"type":"tab","value":{"id":{"rawValue":"\(unreadable.uuidString)"},
-            "spaceID":{"rawValue":"\(space.id.rawValue.uuidString)"},"title":"","url":"https://unreadable.example/",
-            "symbol":"globe","placement":"current","orderToken":"8000000000000000","lastActivatedAt":800000000}}}],
-            "pendingRecordIDs":[]}
-            """
-        let harness = try BrowserStoredSessionHarness(session: session, journalData: Data(journal.utf8))
-        let store = harness.store
-        await store.flushPendingSyncPersistence()
-        let preferences = TestBrowserCloudSyncPreferences()
+    /// A core that cannot answer for this device's journal stops the start
+    /// before anything reaches iCloud: its refusal never reads as a device
+    /// with nothing to keep, which would take the cloud's content instead.
+    func testAComparisonTheCoreRefusesStopsSyncWithoutTakingTheCloud() async throws {
+        let preferences = TestBrowserCloudSyncPreferences(requiresAccountConfirmation: true)
         let factory = TestBrowserCloudSyncTransportFactory()
         let controller = BrowserCloudSyncController(
-            workflow: store,
+            core: CrestCore(),
             configuration: testConfiguration,
             preferences: preferences,
             remoteService: TestBrowserCloudSyncRemoteService(
-                accountState: .available, snapshot: [testRecord(index: 1)]),
+                accountState: .available, snapshot: try cloudRecords(of: .privateBrowsing())),
             transportFactory: factory
         )
 
         await controller.start()
 
+        guard case .failed = controller.phase else { return XCTFail("Sync started over a refused comparison.") }
         XCTAssertTrue(factory.transports.isEmpty)
-        guard case .failed = controller.phase else { return XCTFail("Sync ran over an unreadable journal.") }
-        XCTAssertEqual(store.cloudSyncLocalErrorDescription, BrowserStore.unreadableSyncJournalDescription)
+        XCTAssertNil(controller.conflict)
         XCTAssertEqual(preferences.resetCount, 0)
-        do {
-            _ = try await store.cloudSyncRecords()
-            XCTFail("An unreadable journal was read.")
-        } catch BrowserSyncError.unreadableJournal {}
-
-        // A tab of that identity opens with a title, which stages its record
-        // again, and the journal reads again.
-        try store.core.send(
-            OpenTab(
-                workspaceID: store.family.workspaceID, windowID: store.windowID.rawValue, spaceID: space.id.rawValue,
-                tabID: unreadable,
-                content: TabContent(address: "https://unreadable.example/", view: nil, title: "Readable", symbol: nil),
-                placement: .current, afterTabID: nil, shows: false))
-        await store.flushPendingSyncPersistence()
-        await controller.localChangesDidStage()
-
-        XCTAssertEqual(factory.transports.count, 1)
-        XCTAssertNil(store.cloudSyncLocalErrorDescription)
     }
 
     func testUnavailableAccountWaitsWithoutCreatingATransport() async {
-        let workflow = TestBrowserCloudSyncWorkflowGateway()
+        let core = CrestCore()
         let preferences = TestBrowserCloudSyncPreferences()
         let remote = TestBrowserCloudSyncRemoteService(accountState: .noAccount)
         let factory = TestBrowserCloudSyncTransportFactory()
         let controller = BrowserCloudSyncController(
-            workflow: workflow,
+            core: core,
             configuration: testConfiguration,
             preferences: preferences,
             remoteService: remote,
@@ -152,19 +115,19 @@ final class BrowserCloudSyncControllerTests: XCTestCase {
     }
 
     func testDifferentAccountContentPausesForExplicitReconciliation() async throws {
-        let local = testRecord(index: 1)
-        let cloud = testRecord(index: 2)
-        let workflow = TestBrowserCloudSyncWorkflowGateway(records: [local])
+        let device = try await syncedDevice()
+        let local = try device.storedJournal()
+        let cloud = try cloudRecords(of: .privateBrowsing())
         let preferences = TestBrowserCloudSyncPreferences(
             requiresAccountConfirmation: true
         )
         let remote = TestBrowserCloudSyncRemoteService(
             accountState: .available,
-            snapshot: [cloud]
+            snapshot: cloud
         )
         let factory = TestBrowserCloudSyncTransportFactory()
         let controller = BrowserCloudSyncController(
-            workflow: workflow,
+            core: device.core,
             configuration: testConfiguration,
             preferences: preferences,
             remoteService: remote,
@@ -177,32 +140,30 @@ final class BrowserCloudSyncControllerTests: XCTestCase {
         XCTAssertEqual(
             controller.conflict,
             BrowserCloudSyncConflictSummary(
-                localRecordCount: 1,
-                cloudRecordCount: 1,
-                localSpaceCount: 0,
-                cloudSpaceCount: 0
+                localRecordCount: local.records.count,
+                cloudRecordCount: cloud.count,
+                localSpaceCount: BrowserSession.preview.spaces.count,
+                cloudSpaceCount: 1
             )
         )
-        XCTAssertEqual(controller.observedCloudRecordCount, 1)
+        XCTAssertEqual(controller.observedCloudRecordCount, cloud.count)
         XCTAssertTrue(factory.transports.isEmpty)
-        XCTAssertTrue(workflow.replacedLocalSnapshots.isEmpty)
-        XCTAssertTrue(workflow.preparedCloudSnapshots.isEmpty)
+        XCTAssertEqual(try device.storedJournal(), local, "Neither copy is replaced or overwritten")
     }
 
     func testUseICloudResolutionReplacesLocalContentAndClearsThePause() async throws {
-        let local = testRecord(index: 1)
-        let cloud = testRecord(index: 2)
-        let workflow = TestBrowserCloudSyncWorkflowGateway(records: [local])
+        let device = try await syncedDevice()
+        let cloudSession = BrowserSession.privateBrowsing()
         let preferences = TestBrowserCloudSyncPreferences(
             requiresAccountConfirmation: true
         )
         let remote = TestBrowserCloudSyncRemoteService(
             accountState: .available,
-            snapshot: [cloud]
+            snapshot: try cloudRecords(of: cloudSession)
         )
         let factory = TestBrowserCloudSyncTransportFactory()
         let controller = BrowserCloudSyncController(
-            workflow: workflow,
+            core: device.core,
             configuration: testConfiguration,
             preferences: preferences,
             remoteService: remote,
@@ -212,8 +173,8 @@ final class BrowserCloudSyncControllerTests: XCTestCase {
 
         await controller.resolveUsingICloud()
 
-        XCTAssertEqual(workflow.replacedLocalSnapshots, [[cloud]])
-        XCTAssertTrue(workflow.preparedCloudSnapshots.isEmpty)
+        XCTAssertEqual(device.store.session.spaces.map(\.id), cloudSession.spaces.map(\.id))
+        XCTAssertTrue(try device.core.query(PendingUploads()).records.isEmpty)
         XCTAssertEqual(preferences.savedConflictResolutions.count, 1)
         XCTAssertNil(preferences.savedConflictResolutions[0])
         XCTAssertNil(controller.conflict)
@@ -222,19 +183,18 @@ final class BrowserCloudSyncControllerTests: XCTestCase {
     }
 
     func testUseThisDeviceResolutionStagesAnOverwriteAndPersistsTheChoice() async throws {
-        let local = testRecord(index: 1)
-        let cloud = testRecord(index: 2)
-        let workflow = TestBrowserCloudSyncWorkflowGateway(records: [local])
+        let device = try await syncedDevice()
+        let local = device.store.session
         let preferences = TestBrowserCloudSyncPreferences(
             requiresAccountConfirmation: true
         )
         let remote = TestBrowserCloudSyncRemoteService(
             accountState: .available,
-            snapshot: [cloud]
+            snapshot: try cloudRecords(of: .privateBrowsing())
         )
         let factory = TestBrowserCloudSyncTransportFactory()
         let controller = BrowserCloudSyncController(
-            workflow: workflow,
+            core: device.core,
             configuration: testConfiguration,
             preferences: preferences,
             remoteService: remote,
@@ -244,8 +204,9 @@ final class BrowserCloudSyncControllerTests: XCTestCase {
 
         await controller.resolveUsingThisDevice()
 
-        XCTAssertTrue(workflow.replacedLocalSnapshots.isEmpty)
-        XCTAssertEqual(workflow.preparedCloudSnapshots, [[cloud]])
+        XCTAssertEqual(device.store.session, local)
+        let journal = try device.storedJournal()
+        XCTAssertEqual(journal.pendingRecordIDs, Set(journal.records.map(\.id)))
         XCTAssertEqual(preferences.savedConflictResolutions, [.useThisDevice])
         XCTAssertNil(controller.conflict)
         XCTAssertEqual(controller.phase, .ready)
@@ -253,40 +214,41 @@ final class BrowserCloudSyncControllerTests: XCTestCase {
     }
 
     func testDisposableSeedIsReplacedBeforeTransportStarts() async throws {
-        let cloud = testRecord(index: 2)
-        let workflow = TestBrowserCloudSyncWorkflowGateway(
-            hasDisposableSeed: true
-        )
+        let device = try await syncedDevice(.freshInstallSeed)
+        let cloudSession = BrowserSession.privateBrowsing()
+        let cloud = try cloudRecords(of: cloudSession)
         let preferences = TestBrowserCloudSyncPreferences()
         let remote = TestBrowserCloudSyncRemoteService(
             accountState: .available,
-            snapshot: [cloud]
+            snapshot: cloud
         )
         let factory = TestBrowserCloudSyncTransportFactory()
         let controller = BrowserCloudSyncController(
-            workflow: workflow,
+            core: device.core,
             configuration: testConfiguration,
             preferences: preferences,
             remoteService: remote,
             transportFactory: factory
         )
+        XCTAssertTrue(device.core.state.syncsDisposableSeed)
 
         await controller.start()
 
-        XCTAssertEqual(workflow.replacedDisposableSeedSnapshots, [[cloud]])
+        XCTAssertFalse(device.core.state.syncsDisposableSeed)
+        XCTAssertEqual(device.store.session.spaces.map(\.id), cloudSession.spaces.map(\.id))
         XCTAssertEqual(preferences.resetCount, 1)
-        XCTAssertEqual(controller.observedCloudRecordCount, 1)
+        XCTAssertEqual(controller.observedCloudRecordCount, cloud.count)
         XCTAssertEqual(controller.phase, .ready)
         XCTAssertEqual(factory.transports.count, 1)
     }
 
     func testAccountChangeDiscardsTheTransportAndRestartsAgainstTheCurrentAccount() async throws {
-        let workflow = TestBrowserCloudSyncWorkflowGateway()
+        let core = CrestCore()
         let preferences = TestBrowserCloudSyncPreferences()
         let remote = TestBrowserCloudSyncRemoteService(accountState: .available)
         let factory = TestBrowserCloudSyncTransportFactory()
         let controller = BrowserCloudSyncController(
-            workflow: workflow,
+            core: core,
             configuration: testConfiguration,
             preferences: preferences,
             remoteService: remote,
@@ -314,7 +276,7 @@ final class BrowserCloudSyncControllerTests: XCTestCase {
             requiresAccountConfirmation: true
         )
         let controller = BrowserCloudSyncController(
-            workflow: TestBrowserCloudSyncWorkflowGateway(),
+            core: CrestCore(),
             configuration: testConfiguration,
             preferences: preferences,
             remoteService: TestBrowserCloudSyncRemoteService(accountState: .available),
@@ -341,7 +303,7 @@ final class BrowserCloudSyncControllerTests: XCTestCase {
         )
         let factory = TestBrowserCloudSyncTransportFactory()
         let controller = BrowserCloudSyncController(
-            workflow: TestBrowserCloudSyncWorkflowGateway(),
+            core: CrestCore(),
             configuration: testConfiguration,
             preferences: TestBrowserCloudSyncPreferences(),
             remoteService: remote,
@@ -371,7 +333,7 @@ final class BrowserCloudSyncControllerTests: XCTestCase {
             syncFailure: TestBrowserCloudSyncRemoteService.TestFailure.unavailable
         )
         let controller = BrowserCloudSyncController(
-            workflow: TestBrowserCloudSyncWorkflowGateway(),
+            core: CrestCore(),
             configuration: testConfiguration,
             preferences: TestBrowserCloudSyncPreferences(),
             remoteService: TestBrowserCloudSyncRemoteService(accountState: .available),
@@ -391,7 +353,7 @@ final class BrowserCloudSyncControllerTests: XCTestCase {
             syncFailure: TestBrowserCloudSyncRemoteService.TestFailure.unavailable
         )
         let controller = BrowserCloudSyncController(
-            workflow: TestBrowserCloudSyncWorkflowGateway(),
+            core: CrestCore(),
             configuration: testConfiguration,
             preferences: TestBrowserCloudSyncPreferences(),
             remoteService: TestBrowserCloudSyncRemoteService(accountState: .available),
@@ -412,7 +374,7 @@ final class BrowserCloudSyncControllerTests: XCTestCase {
     func testAutomaticActivityClearsARecoveredTransientFailure() async throws {
         let factory = TestBrowserCloudSyncTransportFactory()
         let controller = BrowserCloudSyncController(
-            workflow: TestBrowserCloudSyncWorkflowGateway(),
+            core: CrestCore(),
             configuration: testConfiguration,
             preferences: TestBrowserCloudSyncPreferences(),
             remoteService: TestBrowserCloudSyncRemoteService(accountState: .available),
@@ -433,7 +395,7 @@ final class BrowserCloudSyncControllerTests: XCTestCase {
     func testSkippedRecordsAndRemovedCloudDataReachTheDiagnostics() async throws {
         let factory = TestBrowserCloudSyncTransportFactory()
         let controller = BrowserCloudSyncController(
-            workflow: TestBrowserCloudSyncWorkflowGateway(),
+            core: CrestCore(),
             configuration: testConfiguration,
             preferences: TestBrowserCloudSyncPreferences(),
             remoteService: TestBrowserCloudSyncRemoteService(accountState: .available),
@@ -461,7 +423,7 @@ final class BrowserCloudSyncControllerTests: XCTestCase {
         let factory = TestBrowserCloudSyncTransportFactory()
         let remote = TestBrowserCloudSyncRemoteService(accountState: .noAccount)
         let controller = BrowserCloudSyncController(
-            workflow: TestBrowserCloudSyncWorkflowGateway(),
+            core: CrestCore(),
             configuration: testConfiguration,
             preferences: TestBrowserCloudSyncPreferences(),
             remoteService: remote,
@@ -490,7 +452,7 @@ final class BrowserCloudSyncControllerTests: XCTestCase {
         )
         let factory = TestBrowserCloudSyncTransportFactory()
         let controller = BrowserCloudSyncController(
-            workflow: TestBrowserCloudSyncWorkflowGateway(),
+            core: CrestCore(),
             configuration: testConfiguration,
             preferences: TestBrowserCloudSyncPreferences(),
             remoteService: remote,
@@ -510,10 +472,11 @@ final class BrowserCloudSyncControllerTests: XCTestCase {
     }
 
     func testPullUsesFreshSnapshotTransportAndReportsItsCount() async throws {
-        let workflow = TestBrowserCloudSyncWorkflowGateway(records: [testRecord(index: 1)])
+        let device = try await syncedDevice()
+        let local = device.store.session
         let factory = TestBrowserCloudSyncTransportFactory()
         let controller = BrowserCloudSyncController(
-            workflow: workflow, configuration: testConfiguration,
+            core: device.core, configuration: testConfiguration,
             preferences: TestBrowserCloudSyncPreferences(),
             remoteService: TestBrowserCloudSyncRemoteService(accountState: .available),
             transportFactory: factory
@@ -527,8 +490,7 @@ final class BrowserCloudSyncControllerTests: XCTestCase {
         XCTAssertEqual(controller.lastFetchedRecordCount, 4)
         XCTAssertEqual(controller.observedCloudRecordCount, 4)
         XCTAssertNotNil(controller.lastSuccessAt)
-        XCTAssertTrue(workflow.replacedLocalSnapshots.isEmpty)
-        XCTAssertTrue(workflow.preparedCloudSnapshots.isEmpty)
+        XCTAssertEqual(device.store.session, local)
 
         controller.isEnabled = false
         for _ in 0..<100 where await transport.stopCount == 0 { await Task.yield() }
@@ -544,7 +506,7 @@ final class BrowserCloudSyncControllerTests: XCTestCase {
     func testDisablingSyncCancelsASuspendedPullWithoutReportingSuccess() async throws {
         let factory = TestBrowserCloudSyncTransportFactory(suspendsPull: true)
         let controller = BrowserCloudSyncController(
-            workflow: TestBrowserCloudSyncWorkflowGateway(), configuration: testConfiguration,
+            core: CrestCore(), configuration: testConfiguration,
             preferences: TestBrowserCloudSyncPreferences(),
             remoteService: TestBrowserCloudSyncRemoteService(accountState: .available), transportFactory: factory
         )
@@ -561,10 +523,11 @@ final class BrowserCloudSyncControllerTests: XCTestCase {
         XCTAssertNil(controller.observedCloudRecordCount)
     }
 
-    func testFailedPullDoesNotReportSuccessOrReplaceEitherCopy() async {
-        let workflow = TestBrowserCloudSyncWorkflowGateway(records: [testRecord(index: 1)])
+    func testFailedPullDoesNotReportSuccessOrReplaceEitherCopy() async throws {
+        let device = try await syncedDevice()
+        let local = try device.storedJournal()
         let controller = BrowserCloudSyncController(
-            workflow: workflow, configuration: testConfiguration,
+            core: device.core, configuration: testConfiguration,
             preferences: TestBrowserCloudSyncPreferences(),
             remoteService: TestBrowserCloudSyncRemoteService(accountState: .available),
             transportFactory: TestBrowserCloudSyncTransportFactory(
@@ -575,83 +538,26 @@ final class BrowserCloudSyncControllerTests: XCTestCase {
         XCTAssertNotEqual(controller.phase, .ready)
         XCTAssertNil(controller.lastSuccessAt)
         XCTAssertNil(controller.observedCloudRecordCount)
-        XCTAssertTrue(workflow.replacedLocalSnapshots.isEmpty)
-        XCTAssertTrue(workflow.preparedCloudSnapshots.isEmpty)
+        XCTAssertEqual(try device.storedJournal(), local)
     }
 
     private var testConfiguration: BrowserCloudSyncConfiguration {
         BrowserCloudSyncConfiguration(containerIdentifier: "iCloud.com.pauldavis.crest")
     }
 
-    private func testRecord(index: UInt64) -> BrowserSyncRecord {
-        let spaceID = SpaceID(
-            rawValue: UUID(uuidString: "10000000-0000-0000-0000-000000000001")!
-        )
-        let value = UUID(
-            uuidString: String(
-                format: "20000000-0000-0000-0000-%012d",
-                Int(index)
-            )
-        )!
-        return .delete(
-            id: BrowserSyncRecordID(kind: .history, value: value),
-            spaceID: spaceID,
-            version: BrowserSyncVersion(
-                logicalClock: index,
-                deviceID: UUID(uuidString: "30000000-0000-0000-0000-000000000001")!
-            ),
-            reason: .retention,
-            at: Date(timeIntervalSince1970: TimeInterval(index))
-        )
-    }
-}
-
-@MainActor
-private final class TestBrowserCloudSyncWorkflowGateway: BrowserCloudSyncWorkflowGateway {
-    var hasDisposableCloudSyncSeed: Bool
-    var cloudSyncLocalRecordCount: Int { records.count }
-    var cloudSyncPendingRecordCount = 0
-    var cloudSyncLocalErrorDescription: String?
-    private var records: [BrowserSyncRecord]
-    private(set) var replacedLocalSnapshots: [[BrowserSyncRecord]] = []
-    private(set) var replacedDisposableSeedSnapshots: [[BrowserSyncRecord]] = []
-    private(set) var preparedCloudSnapshots: [[BrowserSyncRecord]] = []
-
-    init(
-        records: [BrowserSyncRecord] = [],
-        hasDisposableSeed: Bool = false
-    ) {
-        self.records = records
-        hasDisposableCloudSyncSeed = hasDisposableSeed
+    /// A device whose file holds `session`, its launch staged: the core the
+    /// controller reads and tells.
+    private func syncedDevice(_ session: BrowserSession = .preview) async throws -> BrowserStoredSessionHarness {
+        let device = try BrowserStoredSessionHarness(session: session, journal: BrowserSyncJournal())
+        await device.store.flushPendingSyncPersistence()
+        return device
     }
 
-    func cloudSyncRecords() async -> [BrowserSyncRecord] { records }
-
-    func cloudSyncPendingRecordIDs() async -> Set<BrowserSyncRecordID> { [] }
-
-    func verifyCloudSyncJournal() async throws {}
-
-    func mergeCloudSyncRecords(_ records: [BrowserSyncRecord]) async throws {
-        self.records = records
-    }
-
-    func markCloudSyncRecordsUploaded(
-        _: [BrowserSyncRecordID: BrowserSyncVersion]
-    ) async throws {}
-
-    func replaceLocalWithCloud(_ remoteRecords: [BrowserSyncRecord]) throws {
-        replacedLocalSnapshots.append(remoteRecords)
-        records = remoteRecords
-    }
-
-    func replaceDisposableSeedWithCloud(_ remoteRecords: [BrowserSyncRecord]) throws {
-        replacedDisposableSeedSnapshots.append(remoteRecords)
-        records = remoteRecords
-        hasDisposableCloudSyncSeed = false
-    }
-
-    func prepareToOverwriteCloud(with remoteRecords: [BrowserSyncRecord]) throws {
-        preparedCloudSnapshots.append(remoteRecords)
+    /// What another device holding `session` keeps in iCloud.
+    private func cloudRecords(of session: BrowserSession) throws -> [BrowserSyncRecord] {
+        var journal = BrowserSyncJournal(deviceID: UUID(uuidString: "30000000-0000-0000-0000-000000000001")!)
+        try journal.stage(session: session)
+        return journal.records
     }
 }
 

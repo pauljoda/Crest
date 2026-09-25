@@ -105,6 +105,59 @@ final class BrowserStoredSessionHarness {
         try withConnection { try Self.read(part, in: $0) }
     }
 
+    /// TRANSITIONAL until slice 8c ports the journal contract tests to the
+    /// core: the sync journal the file holds, which is the one the core
+    /// accepted last, since the core saves each journal before it accepts it.
+    func storedJournal() throws -> BrowserSyncJournal {
+        try Self.storedJournal(in: directory)
+    }
+
+    /// TRANSITIONAL until slice 8c: the sync journal the session file in
+    /// `directory` holds.
+    static func storedJournal(in directory: URL) throws -> BrowserSyncJournal {
+        let url = directory.appendingPathComponent("session.sqlite")
+        let data = try withConnection(at: url, writable: false) { try read("journal", in: $0) }
+        return try BrowserSyncJournal.decodeSnapshot(try XCTUnwrap(data))
+    }
+
+    // MARK: - Actions - Cloud sync
+
+    /// Sends `intent` to the core as the cloud transport does, from another
+    /// thread, and returns once the drain that brought what it changed and
+    /// the notice of its delivery have run on the main queue.
+    func deliver(_ intent: some CloudSyncIntent) async throws {
+        let core = core
+        try await Task.detached { _ = try core.deliver(intent) }.value
+        await withCheckedContinuation { continuation in DispatchQueue.main.async { continuation.resume() } }
+    }
+
+    /// Sends `intent` to the core on the main thread, which a test may do,
+    /// and applies what it changed at once.
+    func deliverNow(_ intent: some CloudSyncIntent) throws {
+        try core.deliver(intent)
+        core.drain()
+    }
+
+    /// Acknowledges every record waiting to upload, at the version the journal
+    /// holds it at, as the transport does once the cloud saved them.
+    func acknowledgePendingUploads() throws {
+        let pending = try core.query(PendingUploads()).records
+        let records = try core.query(RecordsToUpload(records: pending)).records
+        try deliverNow(
+            AcknowledgeUploads(
+                records: records.map {
+                    UploadedRecord(record: SyncRecordReference(kind: $0.kind, id: $0.id), version: $0.version)
+                }))
+    }
+
+    /// Whether the journal the file holds is the one the core last told the
+    /// app about: as many records, as many of them waiting to upload.
+    func storedJournalIsPublished() throws -> Bool {
+        let stored = try storedJournal()
+        return core.state.syncJournal?.records == stored.records.count
+            && core.state.syncJournal?.pendingRecords == stored.pendingRecordIDs.count
+    }
+
     /// The Space the device table the file holds records `window` showing,
     /// or nil when it keeps no record of that window.
     func storedShownSpace(of window: BrowserWindowID) throws -> UUID? {
@@ -149,6 +202,11 @@ final class BrowserStoredSessionHarness {
     // MARK: - Actions - SQLite
 
     private func withConnection<T>(writable: Bool = false, _ body: (OpaquePointer) throws -> T) throws -> T {
+        try Self.withConnection(at: url, writable: writable, body)
+    }
+
+    private static func withConnection<T>(at url: URL, writable: Bool, _ body: (OpaquePointer) throws -> T) throws -> T
+    {
         var connection: OpaquePointer?
         let flags = writable ? SQLITE_OPEN_READWRITE : SQLITE_OPEN_READONLY
         let opened = sqlite3_open_v2(url.path, &connection, flags, nil)

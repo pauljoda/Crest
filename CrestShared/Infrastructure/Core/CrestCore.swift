@@ -14,8 +14,9 @@ import Synchronization
 /// stops the app with a message naming the status.
 ///
 /// `query` may be called from any thread: it reads only the immutable handle,
-/// the core serializes every call on one app, and a query never changes the
-/// core's state or `state`. Intents stay on the main actor.
+/// and a query never changes the core's state or `state`. Intents stay on the
+/// main actor, except the cloud transport's, which `deliver` sends from the
+/// transport's own thread.
 ///
 /// Changes the core starts itself, such as a finished save or a cloud merge,
 /// arrive through a payload-free wake that hops to the main queue and drains
@@ -25,11 +26,11 @@ import Synchronization
 final class CrestCore {
     // MARK: - Types
 
-    /// A registration to hear which sessions a batch changed, which lasts as
-    /// long as its owner.
-    private struct SessionFollower {
+    /// A registration to hear something the core did, which lasts as long as
+    /// its owner.
+    struct Follower<Value> {
         weak var owner: AnyObject?
-        let handler: @MainActor (Set<UUID>) -> Void
+        let handler: @MainActor (Value) -> Void
     }
 
     // MARK: - Variables
@@ -52,7 +53,9 @@ final class CrestCore {
     @ObservationIgnored var saveWaiters: [(revision: Int64, continuation: CheckedContinuation<Void, Never>)] = []
     /// TRANSITIONAL until S6: who hears which workspaces' sessions each batch
     /// changed.
-    @ObservationIgnored private var sessionFollowers: [SessionFollower] = []
+    @ObservationIgnored private var sessionFollowers: [Follower<Set<UUID>>] = []
+    /// Who hears that an intent from the cloud transport committed.
+    @ObservationIgnored private var cloudDeliveryFollowers: [Follower<Void>] = []
     #if DEBUG
         /// Hears each batch of changes once `state` has applied it, so a test
         /// can apply the same batch again.
@@ -115,9 +118,56 @@ final class CrestCore {
         var writer = WireWriter()
         intent.encodeIntent(into: &writer)
         var reader = try call(crest_app_dispatch, writer, "send \(type(of: intent))")
-        let changes = decodeChanges(from: &reader, "\(type(of: intent))")
+        let changes = Self.decodeChanges(from: &reader, "\(type(of: intent))")
         apply(changes)
         return changes
+    }
+
+    // MARK: - Actions - Cloud sync
+
+    /// Runs one intent from the cloud transport on the calling thread, which
+    /// the app keeps off the main thread: the core computes it there and takes
+    /// its lock only to commit. It is on disk with its journal when this
+    /// returns. What it changed reaches `state` through the wake and the drain
+    /// after it, as one batch; then whoever follows cloud deliveries hears it.
+    /// Answers the receipts the core answered, none of which change `state`.
+    /// Throws the rule that refused it or the save that failed; either changed
+    /// nothing.
+    @discardableResult
+    nonisolated func deliver(_ intent: some CloudSyncIntent) throws(Rejection) -> [Change] {
+        var writer = WireWriter()
+        intent.encodeIntent(into: &writer)
+        var reader = try call(crest_app_dispatch, writer, "send \(type(of: intent))")
+        let receipts = Self.decodeChanges(from: &reader, "\(type(of: intent))")
+        // The wake queued the drain that brings what the intent changed before
+        // the core answered, so this runs after it.
+        DispatchQueue.main.async { [self] in
+            MainActor.assumeIsolated { cloudIntentDelivered() }
+        }
+        return receipts
+    }
+
+    /// Returns once every sync stage the core queued before the call has
+    /// committed, failed or been superseded, without waiting out a coalescing
+    /// delay. The wait runs off the main thread, which stays free meanwhile.
+    nonisolated func settleSync() async {
+        await Task.detached(priority: .utility) { [handle] in
+            let status = crest_app_settle_sync(handle)
+            guard status == CREST_OK else { Self.buildBug(status, "settle its sync stages") }
+        }.value
+    }
+
+    /// Calls `handler` each time an intent from the cloud transport commits,
+    /// once the drain that brought what it changed has landed. The
+    /// registration lasts as long as `owner`.
+    func followCloudDeliveries(_ owner: AnyObject, _ handler: @escaping @MainActor () -> Void) {
+        cloudDeliveryFollowers.removeAll { $0.owner == nil }
+        cloudDeliveryFollowers.append(Follower(owner: owner, handler: handler))
+    }
+
+    private func cloudIntentDelivered() {
+        cloudDeliveryFollowers.removeAll { $0.owner == nil }
+        for follower in cloudDeliveryFollowers { follower.handler(()) }
     }
 
     // MARK: - Actions - Queries
@@ -146,7 +196,7 @@ final class CrestCore {
         guard status == CREST_OK else { Self.buildBug(status, "drain its changes") }
         let length = buffer.length
         var reader = WireReader(buffer.bytes.map { Array(UnsafeBufferPointer(start: $0, count: length)) } ?? [])
-        apply(decodeChanges(from: &reader, "its own work"))
+        apply(Self.decodeChanges(from: &reader, "its own work"))
         resumeSaveWaiters()
     }
 
@@ -181,7 +231,7 @@ final class CrestCore {
     /// windows over a session follow it this way.
     func followSessions(_ owner: AnyObject, _ handler: @escaping @MainActor (Set<UUID>) -> Void) {
         sessionFollowers.removeAll { $0.owner == nil }
-        sessionFollowers.append(SessionFollower(owner: owner, handler: handler))
+        sessionFollowers.append(Follower(owner: owner, handler: handler))
     }
 
     private func sessionsChanged(_ workspaces: Set<UUID>) {
@@ -196,7 +246,9 @@ final class CrestCore {
         guard status == CREST_OK else { Self.buildBug(status, "end the main queue's turn") }
     }
 
-    private func decodeChanges(from reader: inout WireReader, _ source: @autoclosure () -> String) -> [Change] {
+    nonisolated private static func decodeChanges(from reader: inout WireReader, _ source: @autoclosure () -> String)
+        -> [Change]
+    {
         do {
             let count = try reader.readCount()
             var decoded: [Change] = []

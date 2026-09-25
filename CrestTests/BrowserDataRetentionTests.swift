@@ -106,7 +106,6 @@ final class BrowserDataRetentionTests: XCTestCase {
         try journal.stage(session: session, at: oldDate)
         let harness = try BrowserStoredSessionHarness(session: session, journal: journal)
         let browser = harness.store
-        let sync = try XCTUnwrap(browser.syncCoordinator)
 
         browser.updateDataRetentionPreferences(
             .init(
@@ -126,7 +125,7 @@ final class BrowserDataRetentionTests: XCTestCase {
             BrowserSyncRecordID(kind: .archive, value: oldArchive.id.rawValue),
         ] {
             let record = try XCTUnwrap(
-                sync.journal.records.first(where: { $0.id == recordID })
+                try harness.storedJournal().records.first(where: { $0.id == recordID })
             )
             XCTAssertEqual(record.tombstone?.reason, .retention)
         }

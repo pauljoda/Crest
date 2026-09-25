@@ -81,9 +81,9 @@ final class BrowserCoreSessionBridgeTests: XCTestCase {
         remote.spaces[0].tabs.append(added)
         // Another device that holds every record this one staged edits it.
         var remoteJournal = BrowserSyncJournal()
-        try remoteJournal.merge(try XCTUnwrap(store.syncCoordinator).journal.records)
+        try remoteJournal.merge(try harness.storedJournal().records)
         try remoteJournal.stage(session: remote)
-        try store.mergeRemoteSyncRecords(remoteJournal.records)
+        try harness.deliverNow(MergeSyncRecords(records: remoteJournal.records.map(SyncRecord.init(browser:))))
 
         let merged = try XCTUnwrap(store.session.space(id: original.spaces[0].id))
         XCTAssertEqual(merged.name, "Named elsewhere")

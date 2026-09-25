@@ -1,5 +1,3 @@
-using System.Text.Json.Nodes;
-
 using CrestCore.Contracts;
 using CrestCore.Domain;
 
@@ -8,7 +6,9 @@ namespace CrestCore.Application;
 /// The sync component of a native session. It accepts journals one
 /// transaction at a time and stages the session's accepted revisions itself:
 /// the session hands it each revision with how that revision stages, and the
-/// transport hears `SyncJournalChanged` once the journal holds it.
+/// transport hears `SyncJournalChanged` once the journal holds it. The cloud
+/// transport reaches it only through the session's `CloudSyncIntent`s and
+/// queries.
 public sealed class NativeSyncAuthority {
     #region Variables
 
@@ -16,12 +16,8 @@ public sealed class NativeSyncAuthority {
     private NativeSyncJournal journal;
     private NativeSyncTransaction? pending;
     internal NativeSessionAuthority? Session { get; set; }
-    public NativeSyncJournal Snapshot { get { lock (NativeSessionAuthority.Gate) return journal; } }
-
-    /// Counts the journals this authority accepted, so a reader holding a
-    /// copy knows when to read it again.
-    public ulong Version { get { lock (NativeSessionAuthority.Gate) return version; } }
-    private ulong version;
+    /// The journal this authority accepted last.
+    internal NativeSyncJournal Snapshot { get { lock (NativeSessionAuthority.Gate) return journal; } }
 
     #endregion
 
@@ -35,23 +31,6 @@ public sealed class NativeSyncAuthority {
     #endregion
 
     #region Actions - Transactions
-
-    /// Prepares one journal mutation the transport asked for, waiting for any
-    /// transaction in progress to finish. An overwrite stages the local
-    /// session itself, so it supersedes the stages still queued. A merge or
-    /// replacement changes the session with its journal, so it comes as a
-    /// `CloudSyncIntent` and is refused here.
-    public NativeSyncTransaction Prepare(ReadOnlySpan<byte> input) {
-        if (input.Length is 0 or > NativeSyncJournal.MaximumBytes) throw new BrowserRuleException(BrowserRuleCodes.SyncSizeLimit);
-        var request = JsonNode.Parse(input, documentOptions: new() { MaxDepth = 64 })!.AsObject();
-        var operation = NativeSyncOperationCodes.Parse(request["operation"]?.GetValue<string>());
-        if (operation is NativeSyncOperation.Merge or NativeSyncOperation.Replace)
-            throw new BrowserRuleException(BrowserRuleCodes.UnknownSyncOperation);
-        if (NativeSyncOperationCodes.SupersedesStaging(operation)) stager.Supersede();
-        var value = Begin(sequence: null);
-        // Projection and encoding use immutable inputs outside the gate.
-        try { value.Apply(request); return value; } catch { value.Dispose(); throw; }
-    }
 
     /// A merge, replacement or overwrite stages the session itself, so the
     /// stages still queued have nothing left to add. Answers the request it
@@ -87,7 +66,6 @@ public sealed class NativeSyncAuthority {
             RequirePending(value);
             if (!value.IsSealed) throw new BrowserRuleException(BrowserRuleCodes.SyncTransactionNotSealed);
             journal = value.Journal;
-            value.Version = ++version;
             pending = null;
             Monitor.PulseAll(NativeSessionAuthority.Gate);
         }

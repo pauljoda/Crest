@@ -139,7 +139,7 @@ struct BrowserSettingsView: View {
     BrowserSettingsView(
         browser: browser,
         pages: BrowserPagePool(browser: browser),
-        cloudSync: BrowserCloudSyncController(browser: browser, configuration: nil),
+        cloudSync: BrowserCloudSyncController(core: browser.core, configuration: nil),
         shortcuts: .inMemory(),
         onboardingCoordinator: BrowserOnboardingCoordinator()
     )

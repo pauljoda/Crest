@@ -223,12 +223,16 @@ final class BrowserCloudRecordCodecTests: XCTestCase {
         let receiverHarness = try BrowserStoredSessionHarness(session: session)
         let sender = senderHarness.store
         let receiver = receiverHarness.store
-        let senderCoordinator = try XCTUnwrap(sender.syncCoordinator)
-        let receiverCoordinator = try XCTUnwrap(receiver.syncCoordinator)
         let codec = BrowserCloudRecordCodec()
-        try receiver.mergeRemoteSyncRecords(
-            senderCoordinator.journal.records.map { try codec.decode(codec.encode($0)) })
-        try senderCoordinator.markUploaded(senderCoordinator.journal.pendingRecordIDs)
+        // What one device uploads, as CloudKit hands it to the other.
+        func throughCloud(_ records: [SyncRecord]) throws -> [SyncRecord] {
+            try records.map { try SyncRecord(browser: codec.decode(codec.encode(BrowserSyncRecord(core: $0)))) }
+        }
+        func waiting(_ harness: BrowserStoredSessionHarness) throws -> [SyncRecord] {
+            try harness.core.query(RecordsToUpload(records: harness.core.query(PendingUploads()).records)).records
+        }
+        try receiverHarness.deliverNow(MergeSyncRecords(records: throughCloud(waiting(senderHarness))))
+        try senderHarness.acknowledgePendingUploads()
 
         var branding = BrowserSpaceBranding(
             colors: [.ink, .ocean, .gold], bannerPattern: .lozenges,
@@ -253,12 +257,10 @@ final class BrowserCloudRecordCodecTests: XCTestCase {
             branding.crest.charge = charge
             sender.updateSpaceBranding(branding, in: spaceID)
             await sender.flushPendingSyncPersistence()
-            let pending = senderCoordinator.journal.records.filter {
-                senderCoordinator.journal.pendingRecordIDs.contains($0.id)
-            }
-            XCTAssertEqual(pending.map(\.id.kind), [.space])
-            try receiver.mergeRemoteSyncRecords(pending.map { try codec.decode(codec.encode($0)) })
-            try senderCoordinator.markUploaded(Dictionary(uniqueKeysWithValues: pending.map { ($0.id, $0.version) }))
+            let pending = try waiting(senderHarness)
+            XCTAssertEqual(pending.map(\.kind), [.space])
+            try receiverHarness.deliverNow(MergeSyncRecords(records: throughCloud(pending)))
+            try senderHarness.acknowledgePendingUploads()
 
             let expected = try XCTUnwrap(sender.session.space(id: spaceID)?.branding)
             XCTAssertEqual(receiver.session.space(id: spaceID)?.branding, expected, "Charge: \(charge)")
@@ -277,8 +279,11 @@ final class BrowserCloudRecordCodecTests: XCTestCase {
         receiver.updateSpaceIdentity(spaceID, name: "Garden", symbol: "leaf.fill", accent: .teal)
         receiver.updateSpaceBranding(returnedBranding, in: spaceID)
         await receiver.flushPendingSyncPersistence()
-        try sender.mergeRemoteSyncRecords(
-            receiverCoordinator.journal.records.map { try codec.decode(codec.encode($0)) })
+        try senderHarness.deliverNow(
+            MergeSyncRecords(
+                records: try receiverHarness.storedJournal().records.map {
+                    try SyncRecord(browser: codec.decode(codec.encode($0)))
+                }))
         XCTAssertEqual(sender.session.space(id: spaceID)?.branding, returnedBranding.normalized())
         XCTAssertEqual(sender.session.space(id: spaceID)?.name, "Garden")
         XCTAssertEqual(sender.session.space(id: spaceID)?.symbol, "leaf.fill")

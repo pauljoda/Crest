@@ -23,26 +23,17 @@ extension BrowserStore {
     }
 
     /// The store over the session the core keeps in its file, which `stored`
-    /// opened. Its sync component is the core's own, which staged the session
-    /// when it opened and saves every journal it accepts with the session. A
-    /// journal that cannot be read is a startup failure.
+    /// opened. The core staged the session when it opened and saves every
+    /// journal it accepts with the session; the cloud transport reaches that
+    /// journal through the core alone.
     static func production(
         stored: BrowserCoreSessionAuthority, core: CrestCore, favicons: any BrowserFaviconStoring,
         credentialVault: any CredentialVault
     ) throws -> BrowserStore {
-        let kept: BrowserCoreSyncAuthority?
-        do { kept = try core.storedSync() } catch {
-            throw BrowserSessionStartupFailure(storageDirectory: core.storageDirectory, underlying: error)
-        }
-        guard let sync = kept else {
-            preconditionFailure("The core opened its file's session without the sync component kept beside it.")
-        }
-        let family = BrowserStoreFamily(stored: stored, storage: core, favicons: favicons)
-        return BrowserStore(
+        BrowserStore(
             credentialVault: credentialVault,
-            syncCoordinator: BrowserSyncCoordinator(core: sync),
             browsingMode: .standard,
-            family: family,
+            family: BrowserStoreFamily(stored: stored, storage: core, favicons: favicons),
             core: core
         )
     }
@@ -212,7 +203,6 @@ extension BrowserStore {
     static func privateBrowsing(core: CrestCore = CrestCore()) -> BrowserStore {
         BrowserStore(
             credentialVault: PrivateBrowsingCredentialVault(),
-            syncCoordinator: nil,
             browsingMode: .privateBrowsing,
             family: BrowserStoreFamily(privateIn: core),
             core: core
