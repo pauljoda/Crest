@@ -3,8 +3,9 @@ namespace CrestCore.Contracts;
 /// What one open window shows: the Space on screen, the tab it shows in each
 /// Space it has shown, and the column shares of the split groups it has
 /// resized. A Space without an entry has not been shown in this window yet; an
-/// entry without a tab shows nothing.
-[Observed]
+/// entry without a tab shows nothing. The Apple read model keeps it in a
+/// hand-written `WindowStateModel`, which also observes each shown tab on its
+/// own; a test there fails when this record gains a field the model misses.
 public sealed record WindowState(Guid Id, Guid WorkspaceId, Guid ShownSpaceId, IReadOnlyList<ShownTab> ShownTabs,
     IReadOnlyList<SplitColumnShares> SplitColumnShares) {
     #region Actions - Equality

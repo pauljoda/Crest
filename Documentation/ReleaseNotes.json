@@ -2517,6 +2517,10 @@
     "core-sidebar-outline": {
       "category": "internal",
       "message": "The core decides what each Space's sidebar lists and publishes only the lists an edit changes, so a new title or address changes no list."
+    },
+    "read-model-per-tab-slots": {
+      "category": "internal",
+      "message": "Showing another tab tells only the two rows it concerns, and opening or closing a tab tells only the views that looked that tab up."
     }
   }
 }

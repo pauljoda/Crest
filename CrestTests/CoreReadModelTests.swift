@@ -128,6 +128,39 @@ final class CoreReadModelTests: XCTestCase {
         XCTAssertTrue(store.moveSessionTab(sibling.id, in: space.id, to: sibling.placement, before: renamed.id))
         XCTAssertTrue(order.isTripped)
         XCTAssertFalse(lookup.isTripped)
+
+        // A lookup observes only whether its own tab joins or leaves: another
+        // tab opening and closing never notifies it.
+        let opened = try XCTUnwrap(
+            store.openSessionTab(.page(URL(string: "https://joined.example/")!, title: "Joined"), in: space.id))
+        let openedLookup = tripwire { _ = space.tabs.model(opened) }
+        XCTAssertTrue(store.closeTab(opened, in: space.id))
+        XCTAssertTrue(openedLookup.isTripped)
+        XCTAssertFalse(lookup.isTripped)
+    }
+
+    /// The window's model is written by hand for its per-tab slots, so it must
+    /// carry every field of the core's `WindowState`: each one is stored, and
+    /// a value that differs in every field reads back whole.
+    func testTheWindowModelCarriesEveryFieldOfItsRecord() {
+        let value = WindowState(
+            id: UUID(), workspaceID: UUID(), shownSpaceID: UUID(),
+            shownTabs: [ShownTab(spaceID: UUID(), tabID: UUID())],
+            splitColumnShares: [SplitColumnShares(groupID: UUID(), shares: [0.5, 0.5])])
+        let model = WindowStateModel(value)
+        let stored = Set(Mirror(reflecting: model).children.compactMap(\.label))
+        for case let field? in Mirror(reflecting: value).children.map(\.label) {
+            XCTAssertTrue(
+                stored.contains(field) || stored.contains("\(field)Storage"),
+                "WindowStateModel does not keep WindowState.\(field).")
+        }
+        XCTAssertEqual(model.value, value)
+        let next = WindowState(
+            id: value.id, workspaceID: UUID(), shownSpaceID: UUID(),
+            shownTabs: [ShownTab(spaceID: UUID(), tabID: nil)], splitColumnShares: [])
+        model.update(next)
+        XCTAssertEqual(model.value, next)
+        XCTAssertFalse(model.shownTabIDs.contains(value.shownTabs[0].tabID ?? UUID()))
     }
 
     /// SwiftUI can render while a change is being announced, and a view it
@@ -171,6 +204,16 @@ final class CoreReadModelTests: XCTestCase {
             "WindowStateModel", reading: { window.shownTabs },
             after: {
                 store.activateSessionTab(nextPinned.id, in: space.id)
+            })
+        assertStoredFirst(
+            "ObservedSet", reading: { window.shownTabIDs.contains(pinned.id) },
+            after: {
+                store.activateSessionTab(pinned.id, in: space.id)
+            })
+        assertStoredFirst(
+            "SidebarListModel", reading: { space.sidebar.section(.current).rows.map(\.id) },
+            after: {
+                _ = store.openSessionTab(.page(URL(string: "https://listed.example/")!, title: "Listed"), in: space.id)
             })
         assertStoredFirst(
             "PageStateModel", reading: { pageState.live.title },

@@ -4,10 +4,12 @@ import Observation
 /// An ordered list of read-model objects, one per record identity. A change
 /// updates the object that holds a record in place, so only the observers of
 /// the fields that changed hear of it. The list itself announces two things
-/// apart: its membership, when a record joins or leaves, and its order, which
-/// `models` reads and which a membership change also changes. Each is stored
-/// before it is announced, so a view that renders during the announcement
-/// reads the new list; see `BrowserStoreFirstObservable`.
+/// apart: each record's membership, when that record joins or leaves, and its
+/// order, which `models` reads and which a membership change also changes. A
+/// lookup observes only its own record's membership, so a tab that opens or
+/// closes never redraws a view that looked up another. Each is stored before
+/// it is announced, so a view that renders during the announcement reads the
+/// new list; see `BrowserStoreFirstObservable`.
 @MainActor
 @Observable
 final class ObservedList<Model: ObservedModel & Identifiable>
@@ -21,13 +23,10 @@ where Model.ID == UUID, Model.Value: Identifiable, Model.Value.ID == UUID {
         return modelsStorage
     }
     @ObservationIgnored private var modelsStorage: [Model] = []
-    /// The objects by identity. Reading them observes the list's membership
-    /// only, so a lookup never redraws for a new order.
-    private var membership: [UUID: Model] {
-        access(keyPath: \.membership)
-        return membershipStorage
-    }
-    @ObservationIgnored private var membershipStorage: [UUID: Model] = [:]
+    /// The objects by identity, observed by no one.
+    @ObservationIgnored private var byID: [UUID: Model] = [:]
+    /// Which records the list holds, each observed on its own.
+    private let membership = ObservedSet<UUID>()
 
     /// The records, in order. Reading them observes every field of every object.
     var values: [Model.Value] { models.map(\.value) }
@@ -41,10 +40,10 @@ where Model.ID == UUID, Model.Value: Identifiable, Model.Value.ID == UUID {
     // MARK: - Actions - Reading
 
     /// The object that holds the record with this identity, or nil when the
-    /// list holds none. Reading it observes the list's membership, not its
-    /// order.
+    /// list holds none. Reading it observes only whether that record joins or
+    /// leaves: neither the list's order nor any other record's membership.
     func model(_ id: UUID) -> Model? {
-        membership[id]
+        membership.contains(id) ? byID[id] : nil
     }
 
     func contains(_ id: UUID) -> Bool {
@@ -60,43 +59,44 @@ where Model.ID == UUID, Model.Value: Identifiable, Model.Value.ID == UUID {
     /// stores its new order and membership before it announces either.
     func apply(updated: [Model.Value], removed: [UUID], order: [UUID]?) {
         var next = modelsStorage
-        var byID = membershipStorage
+        var held = byID
+        var joined: [UUID] = []
+        var left: [UUID] = []
         var isRearranged = false
-        var isMembershipChanged = false
         if !removed.isEmpty {
             let gone = Set(removed)
             if next.contains(where: { gone.contains($0.id) }) {
                 next.removeAll { gone.contains($0.id) }
                 isRearranged = true
             }
-            for id in removed where byID.removeValue(forKey: id) != nil { isMembershipChanged = true }
+            for id in removed where held.removeValue(forKey: id) != nil { left.append(id) }
         }
         for value in updated {
-            if let model = byID[value.id] {
+            if let model = held[value.id] {
                 model.update(value)
             } else {
                 let model = Model(value)
-                byID[value.id] = model
+                held[value.id] = model
                 next.append(model)
+                joined.append(value.id)
                 isRearranged = true
-                isMembershipChanged = true
             }
         }
         if let order {
-            let ordered = order.compactMap { byID[$0] }
+            let ordered = order.compactMap { held[$0] }
             if !ordered.elementsEqual(next, by: ===) {
                 let kept = Set(order)
                 for model in next where !kept.contains(model.id) {
-                    byID[model.id] = nil
-                    isMembershipChanged = true
+                    held[model.id] = nil
+                    left.append(model.id)
                 }
                 next = ordered
                 isRearranged = true
             }
         }
-        if isMembershipChanged { membershipStorage = byID }
+        byID = held
         if isRearranged { modelsStorage = next }
-        if isMembershipChanged { withMutation(keyPath: \.membership) {} }
+        membership.update(joining: joined, leaving: left)
         if isRearranged { withMutation(keyPath: \.models) {} }
     }
 
