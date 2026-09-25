@@ -2441,6 +2441,10 @@
     "session-changes-follow-batches": {
       "category": "internal",
       "message": "Store windows follow every batch of the core's changes that touched their session."
+    },
+    "space-cleanup-on-cloud-records": {
+      "category": "internal",
+      "message": "Only arriving cloud records restart an unfinished Space cleanup."
     }
   }
 }

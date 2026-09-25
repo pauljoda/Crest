@@ -174,10 +174,9 @@ final class CrestCore {
         #endif
     }
 
-    /// Calls `handler` with the workspaces whose session or sync journal each
-    /// batch changed, once the batch is applied: a drain's, or the changes an
-    /// intent answered, which carry first any the core made on its own, such
-    /// as a cloud merge.
+    /// Calls `handler` with the workspaces whose session each batch changed,
+    /// once the batch is applied: a drain's, or the changes an intent answered,
+    /// which carry first any the core made on its own, such as a cloud merge.
     /// The registration lasts as long as `owner`. TRANSITIONAL until S6: the
     /// windows over a session follow it this way.
     func followSessions(_ owner: AnyObject, _ handler: @escaping @MainActor (Set<UUID>) -> Void) {

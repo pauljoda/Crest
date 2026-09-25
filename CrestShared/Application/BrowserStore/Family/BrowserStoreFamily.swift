@@ -170,14 +170,16 @@ final class BrowserStoreFamily {
 
     /// Takes records the cloud sent through `intent`, which the core saves
     /// with its journal before it returns. What it changed arrives in the drain
-    /// that follows, which every window follows and which starts the cleanup of
-    /// a Space the cloud deleted. Throws the rule that refused the records or
-    /// the save that failed; either changes nothing.
+    /// that follows, which every window follows. Each time records arrive, a
+    /// Space deletion whose cleanup has not finished, such as one the cloud
+    /// began, starts it again. Throws the rule that refused the records or the
+    /// save that failed; either changes nothing.
     ///
     /// TRANSITIONAL until the cloud transport sends its intents itself.
     func commitCloudRecords(_ intent: some CloudSyncIntent, from source: BrowserStore) throws(Rejection) {
         try source.core.send(intent)
         source.core.drain()
+        scheduleSpaceDataCleanup()
     }
 
     /// Runs an import `source`'s window issued, which the core saves with its
@@ -345,15 +347,12 @@ final class BrowserStoreFamily {
     }
 
     /// Hears each batch of the core's changes that changed this family's
-    /// session or its sync journal: a page's navigation or icon it recorded, a
-    /// cloud merge, or the changes an intent answered. Every window follows,
-    /// and a Space deletion whose cleanup has not finished starts it again.
-    /// TRANSITIONAL until S6.
+    /// session: a page's navigation or icon it recorded, a cloud merge, or the
+    /// changes an intent answered. Every window follows. TRANSITIONAL until S6.
     private func followSession() {
         core.device?.followSessions(self) { [weak self] workspaces in
             guard let self, workspaces.contains(workspaceID) else { return }
             follow()
-            scheduleSpaceDataCleanup()
         }
     }
 
