@@ -16,10 +16,13 @@ final class BrowserSessionTests: XCTestCase {
         XCTAssertTrue(decoded.history.isEmpty)
     }
 
-    func testTabSectionsPartitionLargeFolderedSpaceInOneStableOrder() {
-        let firstFolderID = FolderID()
-        let secondFolderID = FolderID()
-        let tabs = (0..<240).map { index in
+    func testSidebarOutlinePartitionsALargeFolderedSpaceInOneStableOrder() throws {
+        let first = BrowserFolder(title: "First")
+        let second = BrowserFolder(title: "Second")
+        let firstFolderID = first.id
+        let secondFolderID = second.id
+        // Ten pinned tabs stay within the pinned grid's capacity.
+        let tabs = (0..<60).map { index in
             let placement: TabPlacement
             let folderID: FolderID?
             switch index % 6 {
@@ -46,37 +49,44 @@ final class BrowserSessionTests: XCTestCase {
                 folderID: folderID
             )
         }
+        var space = BrowserSession.makeBlankSpace(number: 1)
+        space.folders = [first, second]
+        space.tabs = tabs
+        let store = makeStore(BrowserSession(spaces: [space], defaultSpaceID: space.id))
+        let sidebar = try XCTUnwrap(store.spaceModel(space.id)).sidebar
+        func ids(_ list: SidebarListModel) -> [TabID] { list.rows.filter { !$0.kind.opensList }.map(\.id) }
 
-        let sections = BrowserTabSections(tabs: tabs)
-
-        XCTAssertEqual(sections.pinnedTabs.map(\.id), tabs.filter { $0.placement == .pinned }.map(\.id))
+        XCTAssertEqual(ids(sidebar.section(.pinned)), tabs.filter { $0.placement == .pinned }.map(\.id))
         XCTAssertEqual(
-            sections.savedTabs(in: firstFolderID).map(\.id),
+            ids(sidebar.inside(firstFolderID)),
             tabs.filter { $0.placement == .saved && $0.folderID == firstFolderID }.map(\.id)
         )
         XCTAssertEqual(
-            sections.savedTabs(in: secondFolderID).map(\.id),
+            ids(sidebar.inside(secondFolderID)),
             tabs.filter { $0.placement == .saved && $0.folderID == secondFolderID }.map(\.id)
         )
         XCTAssertEqual(
-            sections.unfiledSavedTabs.map(\.id),
+            ids(sidebar.section(.saved)),
             tabs.filter { $0.placement == .saved && $0.folderID == nil }.map(\.id)
         )
-        XCTAssertEqual(sections.currentTabs.map(\.id), tabs.filter { $0.placement == .current }.map(\.id))
-        XCTAssertTrue(sections.savedTabs(in: FolderID()).isEmpty)
+        XCTAssertEqual(ids(sidebar.section(.current)), tabs.filter { $0.placement == .current }.map(\.id))
+        XCTAssertTrue(sidebar.inside(FolderID()).rows.isEmpty)
     }
 
-    func testStartPageDraftsAreNotPresentedAsSidebarTabs() {
+    func testStartPageDraftsAreNotListedAsSidebarTabs() throws {
         let website = BrowserTab(
             title: "WebKit",
             url: URL(string: "https://webkit.org"),
             placement: .current
         )
         let draft = BrowserTab.startPage()
-        let sections = BrowserTabSections(tabs: [website, draft])
+        var space = BrowserSession.makeBlankSpace(number: 1)
+        space.tabs = [website, draft]
+        let store = makeStore(BrowserSession(spaces: [space], defaultSpaceID: space.id))
+        let model = try XCTUnwrap(store.spaceModel(space.id))
 
-        XCTAssertEqual(sections.currentTabs.map(\.id), [website.id, draft.id])
-        XCTAssertEqual(sections.sidebarCurrentTabs.map(\.id), [website.id])
+        XCTAssertEqual(model.tabs.models.map(\.id), [website.id, draft.id])
+        XCTAssertEqual(model.sidebar.section(.current).rows.map(\.id), [website.id])
     }
 
     func testPopupCloseCannotRemovePinnedTab() throws {
@@ -487,7 +497,7 @@ final class BrowserSessionTests: XCTestCase {
         XCTAssertEqual(decodedTab?.emojiIcon?.count, 1)
     }
 
-    func testFolderTreePreservesPreorderPathsAndAncestorDisclosure() throws {
+    func testFolderTreePreservesPreorderPathsAndChildren() throws {
         let root = BrowserFolder(title: "Projects")
         let child = BrowserFolder(title: "Crest", parentID: root.id)
         let grandchild = BrowserFolder(title: "Research", parentID: child.id)
@@ -498,10 +508,7 @@ final class BrowserSessionTests: XCTestCase {
         XCTAssertEqual(tree.foldersInDisplayOrder.map(\.id), [root.id, child.id, grandchild.id, sibling.id])
         XCTAssertEqual(tree.pathTitle(for: grandchild.id), "Projects › Crest › Research")
         XCTAssertEqual(tree.depth(of: grandchild.id), 2)
-        XCTAssertEqual(
-            tree.flattenedNodes(collapsedFolderIDs: [root.id]).map(\.id),
-            [root.id, sibling.id]
-        )
+        XCTAssertEqual(tree.children(of: root.id).map(\.id), [child.id])
     }
 
     func testFolderCollapseStateChangesOnlyWhenNeeded() throws {
@@ -714,10 +721,14 @@ final class BrowserTabStateArchiveTests: XCTestCase {
 
     func testEngineStateRejectsOtherEnginesAndVersionsWhileKeepingLegacyWebKitArchives() throws {
         let payload = Data("opaque engine history".utf8)
-        let chromium = try XCTUnwrap(BrowserEngineInteractionState(
-            engine: .chromium, version: "1", payload: payload).encoded())
-        let webkit = try XCTUnwrap(BrowserEngineInteractionState(
-            engine: .webKit, version: "os-1", payload: payload).encoded())
+        let chromium = try XCTUnwrap(
+            BrowserEngineInteractionState(
+                engine: .chromium, version: "1", payload: payload
+            ).encoded())
+        let webkit = try XCTUnwrap(
+            BrowserEngineInteractionState(
+                engine: .webKit, version: "os-1", payload: payload
+            ).encoded())
 
         XCTAssertEqual(BrowserEngineInteractionState.payload(chromium, engine: .chromium, version: "1"), payload)
         XCTAssertEqual(BrowserEngineInteractionState.payload(webkit, engine: .webKit, version: "os-1"), payload)
@@ -733,8 +744,11 @@ final class BrowserTabStateArchiveTests: XCTestCase {
 
     func testNamedReviewArchivesStaySeparateFromProductionAndEphemeralLaunches() throws {
         func environment(_ identity: String) -> BrowserLaunchEnvironment {
-            BrowserLaunchEnvironment(values: ["CREST_ISOLATED_SESSION": "1",
-                "CREST_ISOLATED_PERSISTENCE_ID": identity], isXCTestRuntime: false)
+            BrowserLaunchEnvironment(
+                values: [
+                    "CREST_ISOLATED_SESSION": "1",
+                    "CREST_ISOLATED_PERSISTENCE_ID": identity,
+                ], isXCTestRuntime: false)
         }
         let first = try XCTUnwrap(BrowserTabStateArchive.forLaunch(environment("review-one")))
         let same = try XCTUnwrap(BrowserTabStateArchive.forLaunch(environment("review-one")))
@@ -742,13 +756,19 @@ final class BrowserTabStateArchiveTests: XCTestCase {
         XCTAssertEqual(first.rootDirectory, same.rootDirectory)
         XCTAssertNotEqual(first.rootDirectory, other.rootDirectory)
         XCTAssertNotEqual(first.rootDirectory, BrowserTabStateArchive.production()?.rootDirectory)
-        XCTAssertNil(BrowserTabStateArchive.forLaunch(BrowserLaunchEnvironment(
-            values: ["CREST_ISOLATED_SESSION": "1"], isXCTestRuntime: false)))
-        XCTAssertNil(BrowserTabStateArchive.forLaunch(BrowserLaunchEnvironment(
-            values: ["CREST_ISOLATED_PERSISTENCE_ID": "review-one"], isXCTestRuntime: true)))
-        XCTAssertNil(BrowserTabStateArchive.forLaunch(BrowserLaunchEnvironment(
-            values: ["CREST_ISOLATED_PERSISTENCE_ID": "review-one"], isXCTestRuntime: false,
-            isSwiftUIPreviewRuntime: true)))
+        XCTAssertNil(
+            BrowserTabStateArchive.forLaunch(
+                BrowserLaunchEnvironment(
+                    values: ["CREST_ISOLATED_SESSION": "1"], isXCTestRuntime: false)))
+        XCTAssertNil(
+            BrowserTabStateArchive.forLaunch(
+                BrowserLaunchEnvironment(
+                    values: ["CREST_ISOLATED_PERSISTENCE_ID": "review-one"], isXCTestRuntime: true)))
+        XCTAssertNil(
+            BrowserTabStateArchive.forLaunch(
+                BrowserLaunchEnvironment(
+                    values: ["CREST_ISOLATED_PERSISTENCE_ID": "review-one"], isXCTestRuntime: false,
+                    isSwiftUIPreviewRuntime: true)))
     }
 
     func testStateFromAnotherOSBuildOrFormatIsNotRestorable() throws {

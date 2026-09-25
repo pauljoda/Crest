@@ -67,7 +67,6 @@ struct BrowserSidebarReorderContext {
     /// Commits a released lift as the core's drop intent for where it landed.
     func commit(_ drop: BrowserSidebarReorderDrop) {
         guard let plan = drop.plan ?? plan(for: drop.item) else { return }
-        BrowserSidebarDropCommit(browser: browser, spaceAccess: spaceAccess)
-            .commit(drop.target, for: drop.item, plan: plan)
+        BrowserSidebarDropCommit(browser: browser).commit(drop.target, for: drop.item, plan: plan)
     }
 }

@@ -149,13 +149,13 @@ final class BrowserSidebarReorderInputSession {
         let section: BrowserSidebarReorderSection
         var parentItemID: BrowserSidebarReorderItemID?
 
-        /// Whether the row still stands where it was lifted from: the Space is
-        /// unlocked under the same profile and still lists the row there.
+        /// Whether the row still stands where it was lifted from: the Space
+        /// has the same profile and still lists the row there. A locked Space's
+        /// lift is the core's to refuse, in its own words.
         /// Used only for pointer actions, not while rendering or measuring rows.
         func isAvailable(in reorder: BrowserSidebarReorderContext) -> Bool {
             let assignment = item.spaceAssignment
-            guard let space = reorder.browser.spaceModel(assignment.spaceID), space.profileID == assignment.profileID,
-                !reorder.spaceAccess.isLocked(space)
+            guard let space = reorder.browser.spaceModel(assignment.spaceID), space.profileID == assignment.profileID
             else { return false }
             switch item {
             case .tab(let tabItem):

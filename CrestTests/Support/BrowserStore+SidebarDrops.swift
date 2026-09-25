@@ -32,7 +32,7 @@ extension BrowserStore {
         spaceAccess: BrowserSpaceAccessController = BrowserSpaceAccessController()
     ) -> Bool {
         guard let plan = liftPlan(for: item, spaceAccess: spaceAccess) else { return false }
-        return BrowserSidebarDropCommit(browser: self, spaceAccess: spaceAccess)
+        return BrowserSidebarDropCommit(browser: self)
             .commit(BrowserSidebarReorderTarget(kind: target), for: item, plan: plan)
     }
 }

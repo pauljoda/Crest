@@ -21,7 +21,7 @@ enum MobileSplitCardPagerPolicy {
     /// Whether a presented run is long enough to page at all. A run of one is a
     /// plain tab and renders through the ordinary single-page path.
     static func isPagerPresented(memberCount: Int) -> Bool {
-        memberCount >= BrowserSplitGroupPolicy.minimumRenderableMembers
+        memberCount >= SplitGroupState.minimumShownMembers
     }
 
     /// The card one step from `tabID`, clamped at both ends.

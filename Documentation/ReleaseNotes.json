@@ -2577,6 +2577,10 @@
     "chromium-view-work-cpp": {
       "category": "internal",
       "message": "Chromium answers a page's history, zoom, find, capture and export requests from its own C++ binding."
+    },
+    "sidebar-refusals-as-notices": {
+      "category": "improved",
+      "message": "When the sidebar can't take a drop, it tells you in the window's notice instead of an alert you have to dismiss."
     }
   }
 }

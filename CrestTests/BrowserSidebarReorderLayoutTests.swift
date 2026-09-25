@@ -107,7 +107,8 @@ final class BrowserSidebarReorderLayoutTests: XCTestCase {
         }
     }
 
-    func testSavedFolderProjectionRetainsAnUnfiledTabBetweenFolders() {
+    @MainActor
+    func testSavedFolderOutlineRetainsAnUnfiledTabBetweenFolders() {
         let first = BrowserFolder(title: "First")
         let second = BrowserFolder(title: "Second")
         let firstTab = BrowserTab(
@@ -115,9 +116,13 @@ final class BrowserSidebarReorderLayoutTests: XCTestCase {
         let middle = BrowserTab(title: "Between", url: URL(string: "https://example.com/"), placement: .saved)
         let secondTab = BrowserTab(
             title: "Second member", url: URL(string: "https://example.com/"), placement: .saved, folderID: second.id)
-        let items = BrowserSidebarFolderListItem.items(
-            tabs: [firstTab, middle, secondTab], tree: BrowserFolderTree(folders: [first, second]), location: .saved)
-        XCTAssertEqual(items.map(\.id), [.folder(first.id), .tab(middle.id), .folder(second.id)])
+        var space = BrowserSession.makeBlankSpace(number: 1)
+        space.folders = [first, second]
+        space.tabs += [firstTab, middle, secondTab]
+        let session = BrowserSession(spaces: [space], defaultSpaceID: space.id)
+        XCTAssertEqual(
+            session.sidebarRowIDs(in: space.id, location: .saved),
+            [.folder(first.id), .tab(middle.id), .folder(second.id)])
     }
 
     @MainActor

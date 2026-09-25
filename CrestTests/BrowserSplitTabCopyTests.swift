@@ -83,7 +83,8 @@ final class BrowserSplitTabCopyTests: XCTestCase {
         XCTAssertNotEqual(copiedGroup, groupID)
         XCTAssertEqual(
             store.selectedSpace?.splitGroupMembers(of: copiedGroup).map(\.title), ["Head", "Pinned", "Tail"])
-        XCTAssertEqual(store.selectedSpace?.splitGroupMetadata(for: copiedGroup)?.customTitle, "Research pair")
+        XCTAssertEqual(
+            store.selectedSpace?.splitGroups.first(where: { $0.id == copiedGroup })?.customTitle, "Research pair")
         var restored = try JSONDecoder().decode(BrowserSession.self, from: JSONEncoder().encode(store.session))
         restored = try restored.openedAsSeed()
         let restoredSpace = restored.space(id: space.id)
@@ -92,7 +93,9 @@ final class BrowserSplitTabCopyTests: XCTestCase {
             store.selectedSpace?.splitGroupMembers(of: copiedGroup).map(\.id))
         let restoredOriginals = try JSONDecoder().decode(BrowserSpace.self, from: JSONEncoder().encode(originals))
         XCTAssertEqual(restoredSpace?.tabs.filter { $0.placement != .current }, restoredOriginals.tabs)
-        XCTAssertEqual(restoredSpace?.splitGroupMetadata(for: groupID), originals.splitGroupMetadata(for: groupID))
+        XCTAssertEqual(
+            restoredSpace?.splitGroups.first(where: { $0.id == groupID }),
+            originals.splitGroups.first(where: { $0.id == groupID }))
     }
 
     func testFullGroupAndDraftRefuseLinkAndDurableCopiesWithoutMutation() throws {

@@ -1,16 +1,13 @@
 import Foundation
 
+/// TRANSITIONAL until S6.6d moves the window's root and commands onto the
+/// read model: the splits of a Space of the session copy, as the content area
+/// and the commands still read them. The sidebar reads the core's outline.
 extension BrowserSpace {
-    func splitGroupMetadata(
-        for groupID: SplitGroupID
-    ) -> BrowserSplitGroupMetadata? {
-        splitGroups.first { $0.id == groupID }
-    }
-
     /// The renderable split group this tab belongs to, or `nil`.
     ///
-    /// A run shorter than `BrowserSplitGroupPolicy.minimumRenderableMembers`
-    /// answers `nil` on purpose: storage keeps a lone member's ID so a
+    /// A run shorter than `SplitGroupState.minimumShownMembers` answers `nil`
+    /// on purpose: storage keeps a lone member's ID so a
     /// staggered sync can reconstitute the group, while every presentation
     /// surface treats that member as a plain tab until its siblings arrive.
     func splitGroup(containing tabID: TabID) -> SplitGroupID? {
@@ -18,7 +15,7 @@ extension BrowserSpace {
             return nil
         }
         let members = splitGroupMembers(of: groupID)
-        guard members.count >= BrowserSplitGroupPolicy.minimumRenderableMembers,
+        guard members.count >= SplitGroupState.minimumShownMembers,
             members.contains(where: { $0.id == tabID })
         else { return nil }
         return groupID
@@ -49,38 +46,5 @@ extension BrowserSpace {
             return [selectedTab]
         }
         return splitGroupMembers(of: groupID)
-    }
-
-    /// Every group ID whose first contiguous run is long enough to render.
-    /// Device-local stores keyed by `SplitGroupID` repair themselves against
-    /// this set.
-    var liveSplitGroupIDs: Set<SplitGroupID> {
-        var live: Set<SplitGroupID> = []
-        var startedIDs: Set<SplitGroupID> = []
-        var runID: SplitGroupID?
-        var runLength = 0
-
-        for tab in tabs {
-            guard let groupID = tab.splitGroupID else {
-                runID = nil
-                runLength = 0
-                continue
-            }
-            if groupID == runID {
-                runLength += 1
-            } else if startedIDs.insert(groupID).inserted {
-                runID = groupID
-                runLength = 1
-            } else {
-                // A later re-occurrence is not this group's run.
-                runID = nil
-                runLength = 0
-                continue
-            }
-            if runLength >= BrowserSplitGroupPolicy.minimumRenderableMembers {
-                live.insert(groupID)
-            }
-        }
-        return live
     }
 }

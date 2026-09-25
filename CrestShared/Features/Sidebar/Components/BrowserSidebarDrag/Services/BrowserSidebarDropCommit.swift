@@ -1,15 +1,14 @@
 import Foundation
 
 /// Commits a sidebar drop as the core's drop intent for its target. Which
-/// edit a drop makes, and every rule that refuses it, is the core's: this
-/// only names where the lift landed, in the Space the window shows, and shows
-/// the person a refusal's own words.
+/// edit a drop makes, and every rule that refuses it, is the core's, locked
+/// and departing Spaces included: this only names where the lift landed, and
+/// shows the person a refusal's own words.
 @MainActor
 struct BrowserSidebarDropCommit {
     // MARK: - Variables
 
     let browser: BrowserStore
-    let spaceAccess: BrowserSpaceAccessController
 
     // MARK: - Actions - Committing
 
@@ -20,10 +19,10 @@ struct BrowserSidebarDropCommit {
     func commit(
         _ target: BrowserSidebarReorderTarget, for item: BrowserSidebarReorderItem, plan: BrowserSidebarLiftPlan
     ) -> Bool {
+        // The lift names its Space by profile too; a Space replaced under it
+        // is not the one it was lifted from.
         let assignment = item.spaceAssignment
         guard let space = browser.spaceModel(assignment.spaceID), space.profileID == assignment.profileID,
-            browser.selectedSpaceID == space.id, !spaceAccess.isLocked(space),
-            !browser.deletingSpaceIDs.contains(space.id),
             let drop = drop(on: target, lifting: plan.selection, in: space)
         else { return false }
         let source = browser.space(matching: assignment)
@@ -90,11 +89,8 @@ struct BrowserSidebarDropCommit {
                 nil
             )
         case .space(let destination):
-            // Locks, and a deletion still asking the person, are this
-            // process's; a Space under either takes no drop.
             guard let destinationSpace = browser.spaceModel(destination.spaceID),
-                destinationSpace.profileID == destination.profileID, !spaceAccess.isLocked(destinationSpace),
-                !browser.deletingSpaceIDs.contains(destinationSpace.id)
+                destinationSpace.profileID == destination.profileID
             else { return nil }
             let follows = browser.linkPreferences.followsTabsMovedToAnotherSpace
             return (

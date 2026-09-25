@@ -38,10 +38,8 @@ final class BrowserCurrentTabFolderTests: XCTestCase {
                     XCTAssertEqual(result.tabs.first { $0.id == moving.id }?.folderID, parent?.id)
                     XCTAssertEqual(browser.selectedTabID(in: space.id), firstTab.id)
                     XCTAssertEqual(
-                        BrowserSidebarFolderListItem.items(
-                            tabs: result.tabs, tree: result.folderTree,
-                            location: location, parentID: parent?.id
-                        ).map(\.id), [.folder(first.id), .tab(moving.id), .folder(second.id)])
+                        restored.sidebarRowIDs(in: space.id, location: location, parentID: parent?.id),
+                        [.folder(first.id), .tab(moving.id), .folder(second.id)])
                 }
             }
         }
@@ -75,17 +73,13 @@ final class BrowserCurrentTabFolderTests: XCTestCase {
                     XCTAssertEqual(result.tabs.first { $0.id == moving.id }?.folderID, parent?.id)
                     XCTAssertEqual(browser.selectedTabID(in: space.id), moving.id)
                     XCTAssertEqual(
-                        BrowserSidebarFolderListItem.items(
-                            tabs: result.tabs, tree: result.folderTree,
-                            location: location, parentID: parent?.id
-                        ).map(\.id), [.folder(first.id), .tab(moving.id), .folder(second.id)])
+                        restored.sidebarRowIDs(in: space.id, location: location, parentID: parent?.id),
+                        [.folder(first.id), .tab(moving.id), .folder(second.id)])
                     let synced = try await syncedToAnotherDevice(browser.session)
                     let syncedSpace = try XCTUnwrap(synced.space(id: space.id))
                     XCTAssertEqual(
-                        BrowserSidebarFolderListItem.items(
-                            tabs: syncedSpace.tabs, tree: syncedSpace.folderTree,
-                            location: location, parentID: parent?.id
-                        ).map(\.id), [.folder(first.id), .tab(moving.id), .folder(second.id)])
+                        synced.sidebarRowIDs(in: syncedSpace.id, location: location, parentID: parent?.id),
+                        [.folder(first.id), .tab(moving.id), .folder(second.id)])
                     let commit = BrowserSidebarTestDrops(
                         browser: browser, spaceAccess: BrowserSpaceAccessController())
                     let drag = BrowserSidebarReorderItem.tab(
@@ -98,9 +92,8 @@ final class BrowserCurrentTabFolderTests: XCTestCase {
                                     beforeID: .folder(first.id), index: 0)), for: drag))
                     var reordered = try XCTUnwrap(browser.selectedSpace)
                     XCTAssertEqual(
-                        BrowserSidebarFolderListItem.items(
-                            tabs: reordered.tabs, tree: reordered.folderTree, location: location, parentID: parent?.id
-                        ).map(\.id), [.tab(moving.id), .folder(first.id), .folder(second.id)])
+                        browser.sidebarRowIDs(in: reordered.id, location: location, parentID: parent?.id),
+                        [.tab(moving.id), .folder(first.id), .folder(second.id)])
                     XCTAssertTrue(
                         commit.apply(
                             .init(
@@ -109,9 +102,8 @@ final class BrowserCurrentTabFolderTests: XCTestCase {
                                     beforeID: nil, index: 2)), for: drag))
                     reordered = try XCTUnwrap(browser.selectedSpace)
                     XCTAssertEqual(
-                        BrowserSidebarFolderListItem.items(
-                            tabs: reordered.tabs, tree: reordered.folderTree, location: location, parentID: parent?.id
-                        ).map(\.id), [.folder(first.id), .folder(second.id), .tab(moving.id)])
+                        browser.sidebarRowIDs(in: reordered.id, location: location, parentID: parent?.id),
+                        [.folder(first.id), .folder(second.id), .tab(moving.id)])
                 }
             }
         }
@@ -141,8 +133,8 @@ final class BrowserCurrentTabFolderTests: XCTestCase {
             }
             let result = try XCTUnwrap(browser.selectedSpace)
             XCTAssertEqual(
-                BrowserSidebarFolderListItem.items(tabs: result.tabs, tree: result.folderTree, location: location)
-                    .map(\.id), [.folder(second.id), .folder(first.id), .tab(tab.id)])
+                browser.sidebarRowIDs(in: result.id, location: location),
+                [.folder(second.id), .folder(first.id), .tab(tab.id)])
         }
     }
 
@@ -170,9 +162,7 @@ final class BrowserCurrentTabFolderTests: XCTestCase {
                 }
                 let result = try XCTUnwrap(browser.session.space(id: space.id))
                 XCTAssertEqual(
-                    BrowserSidebarFolderListItem.items(
-                        tabs: result.tabs, tree: result.folderTree, location: .current
-                    ).first?.id, .folder(folder.id), operation)
+                    browser.sidebarRowIDs(in: result.id, location: .current).first, .folder(folder.id), operation)
             }
         }
     }
@@ -189,9 +179,9 @@ final class BrowserCurrentTabFolderTests: XCTestCase {
         let importedFolder = try XCTUnwrap(result.folders.first)
         XCTAssertNotEqual(importedTab.id, tab.id)
         XCTAssertEqual(
-            BrowserSidebarFolderListItem.items(
-                tabs: result.tabs, tree: result.folderTree, location: .current
-            ).map(\.id), [.folder(importedFolder.id), .tab(importedTab.id)])
+            BrowserSession(spaces: [result], defaultSpaceID: result.id).sidebarRowIDs(
+                in: result.id, location: .current),
+            [.folder(importedFolder.id), .tab(importedTab.id)])
     }
 
     func testSplitGroupDropsBetweenEmptyFoldersAsOneBlock() throws {
@@ -220,8 +210,8 @@ final class BrowserCurrentTabFolderTests: XCTestCase {
                             memberTabIDs: members.map(\.id)))))
             let result = try XCTUnwrap(browser.selectedSpace)
             XCTAssertEqual(
-                BrowserSidebarFolderListItem.items(tabs: result.tabs, tree: result.folderTree, location: location)
-                    .map(\.id), [.folder(first.id), .splitGroup(groupID), .folder(second.id)])
+                browser.sidebarRowIDs(in: result.id, location: location),
+                [.folder(first.id), .splitGroup(groupID), .folder(second.id)])
         }
     }
 
@@ -242,8 +232,8 @@ final class BrowserCurrentTabFolderTests: XCTestCase {
                 beforeFolderID: populated.id))
         let result = try XCTUnwrap(browser.session.space(id: space.id))
         XCTAssertEqual(
-            BrowserSidebarFolderListItem.items(tabs: result.tabs, tree: result.folderTree, location: .current)
-                .map(\.id), [.folder(empty.id), .tab(moving.id), .folder(populated.id)])
+            browser.sidebarRowIDs(in: result.id, location: .current),
+            [.folder(empty.id), .tab(moving.id), .folder(populated.id)])
     }
 
     func testDropBetweenEmptySavedFoldersKeepsSavedTabsBeforeCurrentTabs() throws {

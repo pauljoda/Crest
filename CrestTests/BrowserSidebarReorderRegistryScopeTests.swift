@@ -83,7 +83,7 @@ final class BrowserSidebarReorderRegistryScopeTests: XCTestCase {
     /// cards measure themselves before SwiftUI runs the departing ones'
     /// `onDisappear`, so a Space change leaves both sets in the registry for as
     /// long as it takes to animate. Two two-card splits is
-    /// `BrowserSplitGroupPolicy.maximumMembers` exactly, so counted together the
+    /// `BrowserCoreLimits.current.splitMembers` exactly, so counted together the
     /// group is full and the drag is refused a split that has two slots free —
     /// refused in silence, since no resolved target means no placeholder, no
     /// insertion line, and no reason given.

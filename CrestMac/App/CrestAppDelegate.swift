@@ -13,14 +13,6 @@ final class CrestAppDelegate: NSObject, NSApplicationDelegate {
         try BrowserMacApplication(pageClosePreparation: BrowserWebKitPageClosePreparer())
     }
 
-    // MARK: - Actions - Launch
-
-    #if CREST_PERFORMANCE_HARNESS
-        func applicationDidFinishLaunching(_ notification: Notification) {
-            ReadModelSpikeRun.startIfRequested()
-        }
-    #endif
-
     // MARK: - Actions - Termination
 
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {

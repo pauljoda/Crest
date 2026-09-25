@@ -11,13 +11,13 @@ import XCTest
 /// hands it.
 extension CoreReadModelTests {
     func testEachChangeRedrawsOnlyTheSidebarBodiesItConcerns() throws {
-        let bench = ReadModelSpikeBench(session: ReadModelSpikeFixture.composed())
+        let bench = SidebarChangeBench(session: SidebarChangeFixture.composed())
         // The window starts on a plain open tab, so showing another moves the
         // shown state between two rows. A split member also redraws its split.
         bench.store.activateSessionTab(bench.currentTabs[11].id, in: bench.space.id)
         let context = try XCTUnwrap(bench.store.sidebarListContext(for: bench.space.id))
         let bodies = SidebarBodies(mirroring: context)
-        for edit in ReadModelSpikeEdit.all {
+        for edit in SidebarChange.all {
             let limits = try XCTUnwrap(SidebarLimits.all[edit.name], "\(edit.name) has no limits.")
             let measured = bodies.measure(edit, on: bench, runs: 2)
             XCTAssertTrue(measured.changed, "\(edit.name) changed nothing.")
@@ -82,7 +82,7 @@ struct SidebarLimits {
 
 // MARK: - Bodies
 
-/// A model of SwiftUI's body evaluations over the spike sidebar. A view reads
+/// A model of SwiftUI's body evaluations over the real sidebar. A view reads
 /// what its body reads under observation tracking and hands each child its
 /// inputs. It evaluates again when something it read changes, or when its
 /// parent evaluates and hands it inputs that differ; a child whose inputs are
@@ -349,7 +349,7 @@ extension SidebarBodies {
 
     /// Runs `edit` `runs` times on `bench`, each after its preparation, and
     /// counts the bodies each run evaluated.
-    func measure(_ edit: ReadModelSpikeEdit, on bench: ReadModelSpikeBench, runs: Int) -> SidebarMeasurement {
+    func measure(_ edit: SidebarChange, on bench: SidebarChangeBench, runs: Int) -> SidebarMeasurement {
         var measurement = SidebarMeasurement(name: edit.name)
         for run in 0..<runs {
             edit.prepare?(bench, run)

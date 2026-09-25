@@ -19,18 +19,24 @@ struct BrowserPinnedExtensionStrip: View {
         // Space that had never opened a page with a row that never filled.
         VStack(spacing: 0) {
             if !actions.isEmpty {
-                BrowserPinnedExtensionStripContent(actions: actions,
+                BrowserPinnedExtensionStripContent(
+                    actions: actions,
                     perform: run,
                     presentMenu: { action, anchor in
-                        store.presentMenu(action, space: space, anchor: anchor,
+                        store.presentMenu(
+                            action, space: space, anchor: anchor,
                             isPrivate: page?.isPrivateBrowsing ?? false,
                             openSidePanel: page.flatMap {
                                 BrowserExtensionSidePanelHost.opener(action, page: $0, host: sidePanel)
                             })
-                    })
-                    .padding(.top, BrowserPinnedExtensionStripLayoutPolicy.adjacentSpacing
-                        + (space.tabSections.pinnedTabs.isEmpty ? 0 : BrowserTabSelectionGlow.outset))
-                    .transition(.opacity)
+                    }
+                )
+                .padding(
+                    .top,
+                    BrowserPinnedExtensionStripLayoutPolicy.adjacentSpacing
+                        + (space.pinnedTabs.isEmpty ? 0 : BrowserTabSelectionGlow.outset)
+                )
+                .transition(.opacity)
             }
         }
         .animation(reduceMotion ? nil : SpacePagerSettlement.standardAnimation, value: actions.map(\.id))
@@ -46,8 +52,10 @@ struct BrowserPinnedExtensionStrip: View {
         let profile: UUID
     }
 
-    private func run(_ action: BrowserExtensionActionPresentation,
-                     anchor: BrowserExtensionPopupAnchor?) {
+    private func run(
+        _ action: BrowserExtensionActionPresentation,
+        anchor: BrowserExtensionPopupAnchor?
+    ) {
         guard let page else {
             store.runPinned(action, space: space, anchor: anchor)
             return
@@ -67,7 +75,8 @@ struct ChromiumExtensionControls: View {
     var body: some View {
         VStack(alignment: .leading, spacing: CrestSpacing.medium) {
             Divider()
-            BrowserSiteExtensionsSection(actions: store.actions(for: page),
+            BrowserSiteExtensionsSection(
+                actions: store.actions(for: page),
                 manageExtensions: { afterDismiss { CrestChromiumRoot.openExtensionSettings() } },
                 perform: { action, anchor in
                     let retained = anchor?.replacingSourceWindow(page.surface.window)
@@ -79,7 +88,8 @@ struct ChromiumExtensionControls: View {
                     let openSidePanel = BrowserExtensionSidePanelHost.opener(
                         action, page: page, host: sidePanel)
                     afterDismiss {
-                        store.presentMenu(action, space: space, anchor: retained,
+                        store.presentMenu(
+                            action, space: space, anchor: retained,
                             isPrivate: page.isPrivateBrowsing, openSidePanel: openSidePanel)
                     }
                 })
@@ -92,6 +102,9 @@ struct ChromiumExtensionControls: View {
     }
     private func afterDismiss(_ action: @escaping @MainActor () -> Void) {
         dismiss()
-        Task { @MainActor in await Task.yield(); action() }
+        Task { @MainActor in
+            await Task.yield()
+            action()
+        }
     }
 }

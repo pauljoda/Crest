@@ -101,10 +101,6 @@ struct MobileBrowserSidebarPreviewFixture {
         )
     }
 
-    var folderNode: BrowserFolderNode {
-        BrowserFolderNode(folder: folder, depth: 0, hasChildren: false)
-    }
-
     private static let epoch = Date(timeIntervalSince1970: 0)
 
     private static func uuid(_ finalByte: UInt8) -> UUID {

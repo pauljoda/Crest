@@ -128,10 +128,10 @@ final class BrowserPortableArchiveTests: XCTestCase {
             [importedGroupID, importedGroupID]
         )
         let importedMetadata = try XCTUnwrap(
-            importedSpace.splitGroupMetadata(for: importedGroupID)
+            importedSpace.splitGroups.first(where: { $0.id == importedGroupID })
         )
-        XCTAssertEqual(importedMetadata.displayTitle, "Portable Pair")
-        XCTAssertEqual(importedMetadata.emojiIcon, emoji)
+        XCTAssertEqual(importedMetadata.customTitle, "Portable Pair")
+        XCTAssertEqual(importedMetadata.customIconSymbol.flatMap(BrowserIconSymbol.emoji(from:)), emoji)
         XCTAssertEqual(importedMetadata.tint, tint)
     }
 

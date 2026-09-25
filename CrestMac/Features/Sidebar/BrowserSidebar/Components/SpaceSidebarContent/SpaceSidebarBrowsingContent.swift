@@ -89,16 +89,12 @@ struct SpaceSidebarBrowsingContent: View {
                 assignment: BrowserSpaceRuntimeAssignment(space: space), activate: activate,
                 ownsFocus: browser.tabMultiSelection.isEngaged && browser.tabMultiSelection.ownsKeyboardFocus)
         }
-        .alert(
-            "Tab Selection",
-            isPresented: Binding(
-                get: { browser.tabMultiSelection.message != nil },
-                set: { if !$0 { browser.tabMultiSelection.message = nil } }
-            )
-        ) {
-            Button("OK", role: .cancel) { browser.tabMultiSelection.message = nil }
-        } message: {
-            Text(browser.tabMultiSelection.message ?? "")
+        // What the core refused is information, not a decision: it shows in
+        // the window's notice capsule and asks nothing of the person.
+        .onChange(of: browser.tabMultiSelection.message) { _, message in
+            guard let message else { return }
+            browser.tabMultiSelection.message = nil
+            BrowserNoticeCenter.shared.post(BrowserNotice(message: message, systemImage: "exclamationmark.triangle"))
         }
     }
 

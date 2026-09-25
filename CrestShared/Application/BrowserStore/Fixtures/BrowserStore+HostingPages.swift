@@ -1,4 +1,4 @@
-#if DEBUG || CREST_PERFORMANCE_HARNESS
+#if DEBUG
     import Foundation
 
     extension CrestCore {

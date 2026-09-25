@@ -190,8 +190,13 @@ final class BrowserTabDragSafetyTests: XCTestCase {
         )
     }
 
+    /// The core refuses a lift from a locked Space, and a drop onto one, as
+    /// the lift begins and again when it lands.
     func testDragRejectsLockedSourceAndDestinationSpaces() {
         let lockedSource = makeContext(sourceAccessPolicy: .deviceOwnerAuthentication)
+        XCTAssertEqual(
+            lockedSource.browser.liftPlan(for: .tab(lockedSource.item))?.targets?.refusal,
+            .spaceLocked(SpaceLocked(spaceID: lockedSource.sourceAssignment.spaceID)))
         XCTAssertFalse(
             lockedSource.browser.sidebarDrop(
                 .tab(lockedSource.item), on: .space(lockedSource.destinationAssignment),
@@ -200,10 +205,19 @@ final class BrowserTabDragSafetyTests: XCTestCase {
         let lockedDestination = makeContext(
             destinationAccessPolicy: .deviceOwnerAuthentication
         )
+        let destinationID = lockedDestination.destinationAssignment.spaceID
+        XCTAssertEqual(
+            lockedDestination.browser.liftPlan(for: .tab(lockedDestination.item))?
+                .verdict(on: BrowserSidebarReorderTarget(kind: .space(lockedDestination.destinationAssignment))),
+            .refused(.spaceLocked(SpaceLocked(spaceID: destinationID))))
         XCTAssertFalse(
             lockedDestination.browser.sidebarDrop(
                 .tab(lockedDestination.item), on: .space(lockedDestination.destinationAssignment),
                 spaceAccess: lockedDestination.spaceAccess))
+        // The core refuses a locked Space, and the window says so in its words.
+        XCTAssertEqual(
+            lockedDestination.browser.tabMultiSelection.message,
+            Rejection.spaceLocked(SpaceLocked(spaceID: destinationID)).placementExplanation)
     }
 
     func testDragRejectsReplacedSourceAndDestinationProfiles() {
@@ -230,38 +244,36 @@ final class BrowserTabDragSafetyTests: XCTestCase {
                 spaceAccess: replacedDestination.spaceAccess))
     }
 
+    /// A Space whose deletion has begun takes no drop, from it or onto it:
+    /// the core refuses both, as it refuses every edit of a departing Space.
     func testDragRejectsDeletingSourceAndDestinationSpaces() {
         let deletingSource = makeContext()
-        XCTAssertTrue(
-            deletingSource.browser.family.beginDeletingSpace(
-                deletingSource.sourceAssignment.spaceID
-            )
-        )
-        defer {
-            deletingSource.browser.family.finishDeletingSpace(
-                deletingSource.sourceAssignment.spaceID
-            )
-        }
+        XCTAssertNoThrow(try beginDeleting(deletingSource.sourceAssignment.spaceID, in: deletingSource.browser))
         XCTAssertFalse(
             deletingSource.browser.sidebarDrop(
                 .tab(deletingSource.item), on: .space(deletingSource.destinationAssignment),
                 spaceAccess: deletingSource.spaceAccess))
 
         let deletingDestination = makeContext()
-        XCTAssertTrue(
-            deletingDestination.browser.family.beginDeletingSpace(
-                deletingDestination.destinationAssignment.spaceID
-            )
-        )
-        defer {
-            deletingDestination.browser.family.finishDeletingSpace(
-                deletingDestination.destinationAssignment.spaceID
-            )
-        }
+        let destinationID = deletingDestination.destinationAssignment.spaceID
+        XCTAssertNoThrow(try beginDeleting(destinationID, in: deletingDestination.browser))
         XCTAssertFalse(
             deletingDestination.browser.sidebarDrop(
                 .tab(deletingDestination.item), on: .space(deletingDestination.destinationAssignment),
                 spaceAccess: deletingDestination.spaceAccess))
+        XCTAssertEqual(
+            deletingDestination.browser.tabMultiSelection.message,
+            Rejection.spaceBeingDeleted(SpaceBeingDeleted(spaceID: destinationID)).placementExplanation)
+    }
+
+    /// Begins deleting a Space in the core, as the first step of deleting it
+    /// does, without erasing anything.
+    private func beginDeleting(_ spaceID: SpaceID, in browser: BrowserStore) throws {
+        try browser.family.commit(
+            BeginDeletingSpace(
+                workspaceID: browser.family.workspaceID, windowID: browser.windowID, spaceID: spaceID,
+                operationID: UUID()),
+            from: browser)
     }
 
     func testStaleDragSessionCannotEndANewerDragWithTheSameTabID() {
@@ -510,11 +522,8 @@ final class BrowserTabDragSafetyTests: XCTestCase {
         let drop = try XCTUnwrap(state.end())
         XCTAssertEqual(drop.item, .splitGroup(context.item))
         XCTAssertTrue(
-            BrowserSidebarDropCommit(
-                browser: context.browser,
-                spaceAccess: context.spaceAccess
-            )
-            .commit(drop.target, for: drop.item, plan: try XCTUnwrap(drop.plan))
+            BrowserSidebarDropCommit(browser: context.browser)
+                .commit(drop.target, for: drop.item, plan: try XCTUnwrap(drop.plan))
         )
 
         let space = try XCTUnwrap(

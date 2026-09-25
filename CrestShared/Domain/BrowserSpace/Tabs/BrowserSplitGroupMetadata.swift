@@ -9,8 +9,6 @@ import Foundation
 /// and a color change made on different devices without treating either as a
 /// rewrite of the other.
 struct BrowserSplitGroupMetadata: Equatable, Identifiable, Sendable {
-    static let defaultTitle = "Split View"
-
     let id: SplitGroupID
     var customTitle: String?
     var titleModifiedAt: Date?
@@ -35,18 +33,6 @@ struct BrowserSplitGroupMetadata: Equatable, Identifiable, Sendable {
         self.iconModifiedAt = iconModifiedAt.map(Self.normalizedTimestamp)
         self.tint = tint
         self.tintModifiedAt = tintModifiedAt.map(Self.normalizedTimestamp)
-    }
-
-    /// TRANSITIONAL until S6.6c1 moves the split row onto the read model's
-    /// `SplitGroupState.displayTitle`, `defaultTitle` and `displayEmojiIcon`,
-    /// which the core resolves; this and `emojiIcon` serve the views that read
-    /// the session copy until then.
-    var displayTitle: String {
-        BrowserTab.resolvedCustomTitle(customTitle) ?? Self.defaultTitle
-    }
-
-    var emojiIcon: String? {
-        customIconSymbol.flatMap(BrowserIconSymbol.emoji(from:))
     }
 
     mutating func setTitle(_ title: String?, at date: Date) {

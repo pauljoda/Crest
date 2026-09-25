@@ -41,37 +41,25 @@ final class BrowserInteractionModelTests: XCTestCase {
         XCTAssertEqual(browser.selectedSpaceID, session.spaces.dropLast().last?.id)
     }
 
-    func testRowInsertionLowerHalfResolvesBeforeTheActualFollowingTab() {
-        let first = BrowserTab(title: "First", url: nil, placement: .current)
-        let second = BrowserTab(title: "Second", url: nil, placement: .current)
-        let third = BrowserTab(title: "Third", url: nil, placement: .current)
-        let tabs = [first, second, third]
+    func testRowInsertionLowerHalfResolvesBeforeTheActualFollowingTab() throws {
+        let first = BrowserTab(title: "First", url: URL(string: "https://example.com/1"), placement: .current)
+        let second = BrowserTab(title: "Second", url: URL(string: "https://example.com/2"), placement: .current)
+        let third = BrowserTab(title: "Third", url: URL(string: "https://example.com/3"), placement: .current)
+        var space = BrowserSession.makeBlankSpace(number: 1)
+        space.tabs = [first, second, third]
+        let browser = BrowserStore(session: BrowserSession(spaces: [space], defaultSpaceID: space.id))
+        let model = try XCTUnwrap(browser.spaceModel(space.id))
+        let items = BrowserSidebarListItem.items(
+            of: model.sidebar.section(.current), in: model, namesFollowingTabs: true)
+        let following = Dictionary(
+            uniqueKeysWithValues: items.compactMap { item in
+                item.id.tabID.map { ($0, item.followingTabID) }
+            })
 
-        XCTAssertEqual(
-            BrowserTabRowInsertionPolicy.followingTabID(
-                after: first.id,
-                in: tabs
-            ),
-            second.id
-        )
-        XCTAssertEqual(
-            BrowserTabRowInsertionPolicy.followingTabID(
-                after: second.id,
-                in: tabs
-            ),
-            third.id
-        )
-        XCTAssertNil(
-            BrowserTabRowInsertionPolicy.followingTabID(
-                after: third.id,
-                in: tabs
-            )
-        )
-
-        XCTAssertEqual(
-            BrowserTabRowInsertionPolicy.followingTabIDs(in: tabs),
-            [first.id: second.id, second.id: third.id]
-        )
+        XCTAssertEqual(following[first.id], second.id)
+        XCTAssertEqual(following[second.id], third.id)
+        XCTAssertNil(following[third.id] ?? nil)
+        XCTAssertEqual(items.map(\.id), [.tab(first.id), .tab(second.id), .tab(third.id)])
     }
 
     func testMobileDragLifecycleUsesTheNativeCompletionOnlyWhereItExists() {

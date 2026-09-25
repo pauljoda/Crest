@@ -262,7 +262,7 @@ final class BrowserSplitGroupSessionTests: XCTestCase {
         let repaired = try XCTUnwrap(session.spaces.first)
         XCTAssertEqual(repaired.tabs[0].splitGroupID, group)
         XCTAssertEqual(repaired.tabs[0].positionModifiedAt, mutationDate)
-        XCTAssertTrue(repaired.liveSplitGroupIDs.isEmpty)
+        XCTAssertNil(repaired.splitGroup(containing: lone.id))
     }
 
     func testMovingAGroupRelocatesItsMembersAsAnOrderedBlock() throws {
@@ -464,10 +464,10 @@ final class BrowserSplitGroupSessionTests: XCTestCase {
             from: JSONEncoder().encode(store.session)
         )
         let metadata = try XCTUnwrap(
-            decoded.space(id: space.id)?.splitGroupMetadata(for: group)
+            decoded.space(id: space.id)?.splitGroups.first(where: { $0.id == group })
         )
-        XCTAssertEqual(metadata.displayTitle, "Research Pair")
-        XCTAssertEqual(metadata.emojiIcon, emoji)
+        XCTAssertEqual(metadata.customTitle, "Research Pair")
+        XCTAssertEqual(metadata.customIconSymbol.flatMap(BrowserIconSymbol.emoji(from:)), emoji)
         XCTAssertEqual(metadata.tint, tint)
         XCTAssertNotNil(metadata.titleModifiedAt)
         XCTAssertNotNil(metadata.iconModifiedAt)
@@ -486,7 +486,7 @@ final class BrowserSplitGroupSessionTests: XCTestCase {
         XCTAssertTrue(store.removeTabFromSplit(tail.id, matching: assignment))
 
         let repaired = try XCTUnwrap(store.session.space(id: space.id))
-        XCTAssertNil(repaired.splitGroupMetadata(for: group))
+        XCTAssertNil(repaired.splitGroups.first(where: { $0.id == group }))
         XCTAssertTrue(repaired.splitGroups.isEmpty)
     }
 

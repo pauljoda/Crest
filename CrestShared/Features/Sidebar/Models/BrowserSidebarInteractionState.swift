@@ -75,31 +75,6 @@ final class BrowserSidebarInteractionState: BrowserStoreInteractionObserving {
         if next != visibility.state { visibility.state = next }
     }
 
-    /// TRANSITIONAL until the sidebar's selection moves onto the outline: the
-    /// same over a Space of the session copy.
-    func reconcileCollapsedFolders(in space: BrowserSpace, selectedTabID: TabID?, residentTabIDs: Set<TabID>) {
-        let sections = space.tabSections
-        for folder in space.folders {
-            let assignment = BrowserFolderRuntimeAssignment(
-                folderID: folder.id, spaceID: space.id, profileID: space.profile.id)
-            let tabs = sections.tabs(in: folder.id)
-            reconcileCollapsedFolder(
-                assignment, isExpanded: !folder.isCollapsed, selectedTabID: selectedTabID,
-                folderTabIDs: tabs.map(\.id),
-                residentFolderTabIDs: tabs.compactMap { residentTabIDs.contains($0.id) ? $0.id : nil })
-        }
-    }
-
-    /// TRANSITIONAL until the sidebar's selection moves onto the outline.
-    func pruneCollapsedFolders(in spaces: [BrowserSpace]) {
-        let kept = spaces.flatMap { space in
-            space.folders.map {
-                BrowserFolderRuntimeAssignment(folderID: $0.id, spaceID: space.id, profileID: space.profile.id)
-            }
-        }
-        prune(keeping: kept)
-    }
-
     /// Forgets the kept rows of folders none of `spaces` holds any longer.
     func pruneCollapsedFolders(keepingFoldersOf spaces: [SpaceModel]) {
         let kept = spaces.flatMap { space in

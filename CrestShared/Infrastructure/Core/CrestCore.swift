@@ -60,9 +60,9 @@ final class CrestCore {
     /// (e) moves live revocation into engine commands, the pages' permission
     /// plumbing learns this way what a change covered.
     @ObservationIgnored private var sitePermissionFollowers: [Follower<SitePermissionsChanged>] = []
-    #if DEBUG || CREST_PERFORMANCE_HARNESS
+    #if DEBUG
         /// Hears each batch of changes once `state` has applied it, so a test
-        /// can apply the same batch again and a performance harness can follow.
+        /// can apply the same batch again.
         @ObservationIgnored var batchApplied: (([Change]) -> Void)?
     #endif
 
@@ -226,7 +226,7 @@ final class CrestCore {
         if !touched.isEmpty { sessionsChanged(touched) }
         if !pageRecords.isEmpty { engines.recordsApplied(pageRecords) }
         if !permissionChanges.isEmpty { sitePermissionsChanged(permissionChanges) }
-        #if DEBUG || CREST_PERFORMANCE_HARNESS
+        #if DEBUG
             batchApplied?(changes)
         #endif
     }

@@ -80,10 +80,6 @@ struct BrowserSpace: Codable, Equatable, Identifiable, Sendable {
         savedTabs.filter { $0.folderID == folderID }
     }
 
-    var tabSections: BrowserTabSections {
-        BrowserTabSections(tabs: tabs)
-    }
-
     var folderTree: BrowserFolderTree {
         BrowserFolderTree(folders: folders)
     }

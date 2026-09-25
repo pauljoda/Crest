@@ -255,7 +255,7 @@ final class BrowserSplitDropPolicyTests: XCTestCase {
     /// and the placeholder would be a promise nobody keeps.
     func testAFullGroupOffersNoInsertionPoint() {
         let state = Self.stateWithCards(
-            count: BrowserSplitGroupPolicy.maximumMembers
+            count: BrowserCoreLimits.current.splitMembers
         )
 
         state.begin(
@@ -263,7 +263,7 @@ final class BrowserSplitDropPolicyTests: XCTestCase {
             section: .tabs(placement: .current, folderID: nil),
             at: CGPoint(x: 100, y: 20),
             plan: Self.plan(
-                splitRefusal: .splitLimitReached(SplitLimitReached(limit: BrowserSplitGroupPolicy.maximumMembers)))
+                splitRefusal: .splitLimitReached(SplitLimitReached(limit: BrowserCoreLimits.current.splitMembers)))
         )
         state.update(pointer: CGPoint(x: 460, y: 300))
 
