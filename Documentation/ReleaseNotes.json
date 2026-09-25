@@ -2505,6 +2505,10 @@
     "read-model-store-first": {
       "category": "internal",
       "message": "The core's read model stores each change before it tells views about it, so a view that draws during the change shows the new value."
+    },
+    "read-model-snapshot-and-view-lint": {
+      "category": "internal",
+      "message": "Tests can read a window's session straight from the core's read model, and views may not read a read-model object's whole record."
     }
   }
 }

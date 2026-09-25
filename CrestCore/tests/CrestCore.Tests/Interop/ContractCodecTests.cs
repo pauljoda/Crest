@@ -334,6 +334,32 @@ public sealed unsafe class ContractCodecTests {
         Assert.Contains("make the value with Badge(name:rank:), which normalizes.", calls[0], StringComparison.Ordinal);
     }
 
+    /// A view that reads a read-model object's whole record observes every
+    /// field, so any change redraws it. The generator finds such reads in view
+    /// sources, through the names and members the sources type as read-model
+    /// objects, and leaves other sources and other `value`s alone.
+    [Fact]
+    public void TheGeneratorFindsEveryWholeRecordReadInAView() {
+        var schema = ContractSchema.Load([typeof(Watched.Lamp), typeof(Watched.Dimmer)]);
+        (string, string)[] sources = [
+            ("App/ReadModel/Room.swift", "final class RoomModel: ObservedModel, Identifiable {\n    let lamps: ObservedList<LampModel>\n"
+                + "    var dimmers: [UUID: DimmerModel] = [:]\n    var value: Room { Room(lamps: lamps.values) }\n}\n"),
+            ("App/Features/Lamps/LampRow.swift", "struct LampRow: View {\n    let lamp: LampModel\n    let room: RoomModel\n"
+                + "    var body: some View {\n        Text(lamp.label)\n        Text(\"\\(lamp.value)\")\n"
+                + "        ForEach(room.lamps.values) { _ in }\n        _ = room.lamps.model(id)?.value\n"
+                + "        _ = room.dimmers[id]?.value\n        _ = room.lamps.models.map(\\.value)\n        _ = room?.value\n"
+                + "        // lamp.value\n        _ = slider.value\n    }\n}\n"),
+            ("App/Application/LampStore.swift", "let lamp: LampModel\n_ = lamp.value\n")
+        ];
+
+        var reads = SwiftEmitter.WholeRecordReads(schema, sources);
+
+        Assert.Equal(["App/Features/Lamps/LampRow.swift:6:", "App/Features/Lamps/LampRow.swift:7:", "App/Features/Lamps/LampRow.swift:8:",
+            "App/Features/Lamps/LampRow.swift:9:", "App/Features/Lamps/LampRow.swift:10:", "App/Features/Lamps/LampRow.swift:11:"],
+            reads.Select(read => read.Split(' ')[0]));
+        Assert.Contains("(lamp.value)", reads[0], StringComparison.Ordinal);
+    }
+
     [Theory]
     [InlineData(typeof(Unnormalizable.Blank), "Blank:")]
     [InlineData(typeof(Unnormalizable.Tinted), "Tinted.Hues:")]
