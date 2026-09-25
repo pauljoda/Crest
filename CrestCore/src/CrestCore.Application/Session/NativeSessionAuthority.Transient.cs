@@ -33,7 +33,7 @@ public sealed partial class NativeSessionAuthority {
         var destination = Editable(basis, intent.SpaceId);
         var edited = BrowserTabCollection.Restore(destination);
         var followUp = new WindowFollowUp(IssuingWindow(intent.WindowId));
-        var tab = BrowserTab.Restore(NewTab(ids.Next(), new TabContent(page.Address, View: null, Title: null, Symbol: null),
+        var tab = BrowserTab.Restore(NewTab(ids.Next(), new TabContent(page.Address, View: null, page.Title, Symbol: null),
             intent.Placement, now));
         edited.InsertTab(tab, followUp.Window?.Tab(destination.Id) is { } shown ? edited.InsertionIndexAfter(shown) : null);
         followUp.ShowTab(destination.Id, tab.Id).ShowSpace(destination.Id);

@@ -2561,6 +2561,10 @@
     "chromium-cpp-binding-reports": {
       "category": "internal",
       "message": "Chromium reports each page's navigations, state and icon to the core from its own C++ binding."
+    },
+    "quick-window-promotion-title": {
+      "category": "fixed",
+      "message": "A Quick Window page you keep as a tab keeps the page's title instead of its site's name."
     }
   }
 }

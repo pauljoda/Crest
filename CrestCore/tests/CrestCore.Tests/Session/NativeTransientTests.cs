@@ -28,7 +28,7 @@ public sealed partial class BrowserContractsTests {
         var promoted = Assert.Single(device.Send(promoting).OfType<TransientPagePromoted>());
         Assert.True(promoted.AdoptsPage);
         var tab = core.Current.Spaces[0].Tabs.Single(candidate => candidate.Id == promoted.TabId);
-        Assert.Equal(("quick.example", "https://quick.example/read", TabPlacement.Current), (tab.Title, tab.Url, tab.Placement));
+        Assert.Equal(("Quick read", "https://quick.example/read", TabPlacement.Current), (tab.Title, tab.Url, tab.Placement));
         Assert.Equal(promoted.TabId, device.Tab(window, first));
 
         Assert.Equal(page, Assert.IsType<TransientAlreadyCompleted>(Assert.Throws<Rejected>(() => device.Send(promoting)).Rejection).PageId);
