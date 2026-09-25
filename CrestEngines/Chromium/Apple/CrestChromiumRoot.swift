@@ -23,6 +23,8 @@ final class CrestChromiumRoot: NSObject, BrowserMacWindowPresenting {
         }
     }
     static var engineHost: (any CrestChromiumEngineHost)? { instance?.host }
+    /// Chromium, while Crest runs over it.
+    static var chromiumEngine: ChromiumEngine? { instance?.chromium }
     /// The browser operations engine requests run through.
     static var hostCommands: (any BrowserEngineHostCommands)? { instance?.application }
     private var commands: any BrowserEngineHostCommands { application }
@@ -81,15 +83,18 @@ final class CrestChromiumRoot: NSObject, BrowserMacWindowPresenting {
 
     /// Starts Crest over the Mac shell's `host`, registering Chromium's C++
     /// `binding`, built against the engine contract `fingerprint` names, with
-    /// the core.
-    static func start(host: any CrestChromiumEngineHost, binding: crest_engine_binding_t, fingerprint: [UInt8]) {
+    /// the core; its pages reach the binding directly through `pages`.
+    static func start(
+        host: any CrestChromiumEngineHost, binding: crest_engine_binding_t, fingerprint: [UInt8],
+        pages: crest_engine_pages_t
+    ) {
         guard instance == nil, launch == nil else { return }
         // The Dock plug-in runs outside the browser process, including after quit.
         // App artwork uses the isolated app's domain, not an environment-only
         // browsing profile name that the Dock cannot discover.
         BrowserMacAppIconPreference.defaults = .standard
         let launch = BrowserApplicationLaunch {
-            try CrestChromiumRoot(host: host, binding: binding, fingerprint: fingerprint)
+            try CrestChromiumRoot(host: host, binding: binding, fingerprint: fingerprint, pages: pages)
         }
         Self.launch = launch
         if let root = launch.value { finishStart(root); return }
@@ -147,9 +152,12 @@ final class CrestChromiumRoot: NSObject, BrowserMacWindowPresenting {
         root.openPendingAuthenticationSessions()
     }
 
-    private init(host: any CrestChromiumEngineHost, binding: crest_engine_binding_t, fingerprint: [UInt8]) throws {
+    private init(
+        host: any CrestChromiumEngineHost, binding: crest_engine_binding_t, fingerprint: [UInt8],
+        pages: crest_engine_pages_t
+    ) throws {
         self.host = host
-        let chromium = ChromiumEngine(host: host, table: binding, fingerprint: fingerprint)
+        let chromium = ChromiumEngine(host: host, table: binding, fingerprint: fingerprint, pages: pages)
         self.chromium = chromium
         application = try BrowserMacApplication(pageClosePreparation: ChromiumPageClosePreparer(host: host),
             profileRemover: ChromiumProfileRemover(host: host),

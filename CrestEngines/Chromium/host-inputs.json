@@ -13,7 +13,7 @@
   },
   "chrome/browser/ui/BUILD.gn": {
     "before": "d00a05b597c3f25aa7e7eea8b777f5fbcebd1e67ace0e4d0e926a75a62f79ee3",
-    "after": "0f2541ad2fe7250f0d82544d114644bb46857eb6451670ba98d96adb0e5ca128"
+    "after": "3ba934d56672322e863d1fea879fd1190e2948890dba1f05c268c0f19455f69c"
   },
   "chrome/browser/ui/tabs/tab_features.cc": {
     "before": "f0f9d57d10312996c1e9cc86c9ce92044d0085afb87270776e2d5ec45b3ce5f3",

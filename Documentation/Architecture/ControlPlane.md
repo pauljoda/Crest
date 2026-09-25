@@ -180,6 +180,11 @@ registers it, and from then on the core's commands reach the binding directly
 and the binding reports to the core itself, with nothing in Swift between them.
 `CreatePage` names the page's window, so Chromium creates the page in that
 window's Browser as soon as the core asks; Swift only hosts the page's view.
+The page's view work (history, reload, find, zoom, capture, export and
+printing, whether it is on screen) goes straight to the binding as a
+`PageRequest` through the table the engine hands the composition beside its
+binding table, and what finishes later, such as a find's count or an export,
+comes back as an `EnginePresentation`.
 Typed addresses, the
 command palette, Open Location and every first load go through `Navigate`, which
 the core resolves by the Space's address and search rules before it issues

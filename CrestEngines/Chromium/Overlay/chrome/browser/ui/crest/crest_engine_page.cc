@@ -1,28 +1,40 @@
 #include "chrome/browser/ui/crest/crest_engine_page.h"
 
 #include <algorithm>
+#include <cmath>
 #include <utility>
 
 #include "base/containers/span.h"
+#include "base/functional/bind.h"
 #include "base/memory/ref_counted_memory.h"
 #include "base/pickle.h"
 #include "base/strings/string_util.h"
 #include "base/strings/utf_string_conversions.h"
 #include "chrome/browser/ui/crest/crest_engine_binding.h"
+#include "chrome/browser/ui/crest/crest_engine_documents.h"
 #include "components/favicon/content/content_favicon_driver.h"
+#include "components/find_in_page/find_tab_helper.h"
+#include "components/find_in_page/find_types.h"
 #include "components/security_state/content/security_state_tab_helper.h"
 #include "components/security_state/core/security_state.h"
 #include "components/sessions/content/content_serialized_navigation_builder.h"
 #include "components/sessions/core/serialized_navigation_entry.h"
+#include "components/viz/common/frame_sinks/copy_output_result.h"
 #include "content/public/browser/navigation_controller.h"
 #include "content/public/browser/navigation_entry.h"
+#include "components/zoom/zoom_controller.h"
 #include "content/public/browser/navigation_handle.h"
+#include "content/public/browser/render_widget_host_view.h"
 #include "content/public/browser/restore_type.h"
 #include "content/public/browser/web_contents.h"
 #include "net/base/net_errors.h"
 #include "net/cert/cert_status_flags.h"
+#include "third_party/blink/public/common/page/page_zoom.h"
+#include "third_party/skia/include/core/SkBitmap.h"
 #include "third_party/skia/include/core/SkColor.h"
 #include "ui/base/page_transition_types.h"
+#include "ui/gfx/codec/png_codec.h"
+#include "ui/gfx/geometry/rect.h"
 #include "ui/gfx/image/image.h"
 #include "url/gurl.h"
 
@@ -41,6 +53,12 @@ constexpr size_t kInteractionStateEntryBytes = 64 * 1024;
 constexpr size_t kInteractionStateBytes = 2 * 1024 * 1024;
 // The largest icon image the page reports.
 constexpr size_t kIconBytes = 512 * 1024;
+// The zoom factors a page takes.
+constexpr double kMinimumZoom = 0.25;
+constexpr double kMaximumZoom = 5;
+// The widest capture, in points, and how long the compositor has to answer.
+constexpr double kMaximumCaptureWidth = 16384;
+constexpr base::TimeDelta kCaptureTimeout = base::Seconds(2);
 
 std::string ReplacingScheme(std::string_view value, std::string_view from, std::string_view to) {
   if (value.size() < from.size() ||
@@ -109,8 +127,9 @@ GURL EngineURL(const std::string& url) {
   return GURL(ReplacingScheme(url, kCrestScheme, kEngineScheme));
 }
 
-EnginePage::EnginePage(EngineBinding& binding, const engine::CreatePage& creation)
+EnginePage::EnginePage(EngineBinding& binding, const engine::CreatePage& creation, bool standalone)
     : binding_(binding),
+      standalone_(standalone),
       id_(creation.page_id),
       key_(GuidText(creation.page_id)),
       profile_(GuidText(creation.profile_id)),
@@ -127,12 +146,22 @@ void EnginePage::Start(content::WebContents* contents) {
   if (auto* driver = favicon::ContentFaviconDriver::FromWebContents(contents)) {
     driver->AddObserver(this);
   }
+  find_helper_ = find_in_page::FindTabHelper::FromWebContents(contents);
+  if (find_helper_) {
+    find_helper_->AddObserver(this);
+  }
+  ApplyZoom();
   UpdateTheme();
   StateChanged();
 }
 
 void EnginePage::Stop() {
   settle_timer_.Stop();
+  documents_.reset();
+  if (find_helper_) {
+    find_helper_->RemoveObserver(this);
+    find_helper_ = nullptr;
+  }
   if (web_contents()) {
     if (auto* driver = favicon::ContentFaviconDriver::FromWebContents(web_contents())) {
       driver->RemoveObserver(this);
@@ -419,6 +448,11 @@ void EnginePage::MediaStoppedPlaying(const MediaPlayerInfo& info,
 
 void EnginePage::WebContentsDestroyed() {
   settle_timer_.Stop();
+  documents_.reset();
+  if (find_helper_) {
+    find_helper_->RemoveObserver(this);
+    find_helper_ = nullptr;
+  }
   if (auto* driver = favicon::ContentFaviconDriver::FromWebContents(web_contents())) {
     driver->RemoveObserver(this);
   }
@@ -684,7 +718,185 @@ bool EnginePage::ShowsInitialBlank(const GURL& url) const {
 }
 
 void EnginePage::Report(engine::EngineEvent event) {
-  binding_->Report(std::move(event));
+  if (!standalone_) {
+    binding_->Report(std::move(event));
+  }
+}
+
+void EnginePage::Present(engine::EnginePresentation presentation) {
+  binding_->Present(std::move(presentation));
+}
+
+// What the platform asks of the page directly.
+
+bool EnginePage::GoToOffset(int offset) {
+  if (!web_contents() || offset == 0) {
+    return false;
+  }
+  auto& controller = web_contents()->GetController();
+  if (!controller.CanGoToOffset(offset)) {
+    return false;
+  }
+  controller.GoToOffset(offset);
+  return true;
+}
+
+bool EnginePage::Reload(bool bypasses_cache) {
+  if (!web_contents()) {
+    return false;
+  }
+  web_contents()->GetController().Reload(
+      bypasses_cache ? content::ReloadType::BYPASSING_CACHE : content::ReloadType::NORMAL, true);
+  return true;
+}
+
+bool EnginePage::StopLoading() {
+  if (!web_contents()) {
+    return false;
+  }
+  web_contents()->Stop();
+  return true;
+}
+
+bool EnginePage::Zoom(double factor) {
+  if (!std::isfinite(factor) || factor < kMinimumZoom || factor > kMaximumZoom) {
+    return false;
+  }
+  zoom_ = factor;
+  ApplyZoom();
+  return true;
+}
+
+void EnginePage::ApplyZoom() {
+  if (!zoom_ || !web_contents()) {
+    return;
+  }
+  auto* zoom = zoom::ZoomController::FromWebContents(web_contents());
+  if (!zoom) {
+    return;
+  }
+  zoom->SetZoomMode(zoom::ZoomController::ZOOM_MODE_ISOLATED);
+  zoom->SetZoomLevel(blink::ZoomFactorToZoomLevel(*zoom_));
+}
+
+bool EnginePage::Find(const std::string& query, bool backwards, bool case_sensitive) {
+  if (!find_helper_) {
+    return false;
+  }
+  if (query.empty()) {
+    find_pending_ = false;
+    find_helper_->StopFinding(find_in_page::SelectionAction::kClear);
+    Present(engine::FindFinished{.page_id = id_});
+    return true;
+  }
+  find_pending_ = true;
+  find_helper_->StartFinding(base::UTF8ToUTF16(query), !backwards, case_sensitive, true);
+  return true;
+}
+
+// The final update of a search carries its total and the ordinal of the
+// match it selected; earlier updates are still counting.
+void EnginePage::OnFindResultAvailable(content::WebContents*) {
+  if (!find_helper_ || !find_pending_ || !find_helper_->find_result().final_update()) {
+    return;
+  }
+  find_pending_ = false;
+  const auto& result = find_helper_->find_result();
+  Present(engine::FindFinished{.page_id = id_,
+                               .matches = std::max(0, result.number_of_matches()),
+                               .active_match = std::max(0, result.active_match_ordinal())});
+}
+
+void EnginePage::OnFindTabHelperDestroyed(find_in_page::FindTabHelper*) {
+  find_helper_ = nullptr;
+  find_pending_ = false;
+}
+
+bool EnginePage::Capture(const engine::Guid& capture_id,
+                         const std::optional<engine::PageArea>& area,
+                         double width) {
+  auto* view = web_contents() ? web_contents()->GetRenderWidgetHostView() : nullptr;
+  if (!view || !std::isfinite(width) || width < 0 || width > kMaximumCaptureWidth) {
+    return false;
+  }
+  gfx::Rect bounds;
+  if (area) {
+    if (!std::isfinite(area->x) || !std::isfinite(area->y) || !std::isfinite(area->width) ||
+        !std::isfinite(area->height)) {
+      return false;
+    }
+    bounds = gfx::Rect(static_cast<int>(area->x), static_cast<int>(area->y), static_cast<int>(area->width),
+                       static_cast<int>(area->height));
+    bounds.Intersect(gfx::Rect(view->GetViewBounds().size()));
+    if (bounds.IsEmpty()) {
+      return false;
+    }
+  }
+  const gfx::Size size = bounds.IsEmpty() ? view->GetViewBounds().size() : bounds.size();
+  if (size.IsEmpty()) {
+    return false;
+  }
+  gfx::Size output;
+  if (width > 0) {
+    output = gfx::Size(std::max(1, static_cast<int>(width)),
+                       std::max(1, static_cast<int>(width * size.height() / size.width())));
+  }
+  view->CopyFromSurface(
+      bounds, output, kCaptureTimeout,
+      base::BindOnce(
+          [](base::WeakPtr<EnginePage> page, engine::Guid capture_id, const content::CopyFromSurfaceResult& result) {
+            if (!page) {
+              return;
+            }
+            std::optional<std::vector<uint8_t>> png;
+            if (result.has_value() && !result->bitmap.drawsNothing()) {
+              png = gfx::PNGCodec::EncodeBGRASkBitmap(result->bitmap, false);
+            }
+            page->Present(engine::PageCaptured{.page_id = page->id_, .capture_id = capture_id, .png = std::move(png)});
+          },
+          weak_factory_.GetWeakPtr(), capture_id));
+  return true;
+}
+
+bool EnginePage::Export(const engine::Guid& export_id, engine::PageExportFormat format, double width) {
+  if (!web_contents()) {
+    return false;
+  }
+  if (!documents_) {
+    documents_ = std::make_unique<PageDocuments>(web_contents());
+  }
+  documents_->Export(
+      format, width,
+      base::BindOnce(
+          [](base::WeakPtr<EnginePage> page, engine::Guid export_id, std::optional<std::vector<uint8_t>> document,
+             std::optional<engine::PageExportFailure> failure) {
+            if (!page) {
+              return;
+            }
+            page->Present(engine::PageExported{
+                .page_id = page->id_, .export_id = export_id, .document = std::move(document), .failure = failure});
+          },
+          weak_factory_.GetWeakPtr(), export_id));
+  return true;
+}
+
+bool EnginePage::Show() {
+  if (!web_contents()) {
+    return false;
+  }
+  web_contents()->WasShown();
+  web_contents()->Focus();
+  StateChanged();
+  return true;
+}
+
+bool EnginePage::Hide() {
+  if (!web_contents()) {
+    return false;
+  }
+  web_contents()->WasHidden();
+  StateChanged();
+  return true;
 }
 
 }  // namespace crest

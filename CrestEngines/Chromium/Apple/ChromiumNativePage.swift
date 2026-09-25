@@ -22,9 +22,11 @@
         /// Chrome Web Store listing installs into. Weak: the composition owns it.
         private weak var hostCommands: (any BrowserEngineHostCommands)?
         /// A Settings page of the engine's own, such as its flags page, which no
-        /// tab owns and the core never hears of: it creates itself once its view
-        /// is in a window. TRANSITIONAL until such pages open through the core.
+        /// tab owns and the core never hears of: it opens once its view is in a
+        /// window. TRANSITIONAL until such pages open through the core.
         private let isStandalone: Bool
+        /// The engine that hosts the page, which its direct requests go to.
+        private weak var engine: ChromiumEngine?
         var observer: (ChromiumPageReport) -> Void
         var linkHandler: (String, URL, String) -> Bool = { _, _, _ in false }
         var contextMenuActions: (URL?, String?) -> [[String: String]] = { _, _ in [] }
@@ -42,40 +44,53 @@
             (.navigate, nil)
         }
         private var host: (any CrestChromiumEngineHost)?
-        /// What a standalone page loads once it exists.
+        /// What a standalone page loads once it opens.
         private var requestedURL: URL?
-        private var zoom: CGFloat = 1
-        private var creating = false
+        private var opening = false
         private var created = false
         private var disposed = false
+        /// What waits for the engine: the latest find, and each capture and
+        /// export by its identity.
+        private var findCompletion: (@MainActor (BrowserFindResult) -> Void)?
+        private var captures: [UUID: @MainActor (NSImage?) -> Void] = [:]
+        private var exports: [UUID: CheckedContinuation<Data, any Error>] = [:]
 
         /// A page the core opened, which Chromium's binding creates.
-        init(id: UUID, host: any CrestChromiumEngineHost, hostCommands: (any BrowserEngineHostCommands)?) {
+        init(id: UUID, engine: ChromiumEngine) {
             pageID = id
             self.id = id.uuidString
-            self.host = host
-            self.hostCommands = hostCommands
+            self.engine = engine
+            host = engine.host
+            hostCommands = engine.hostCommands
             isPrivateBrowsing = false
             isStandalone = false
             observer = { _ in }
             surface.page = self
-            host.observePage(self.id) { [weak self] event, values in
+            engine.host.observePage(self.id) { [weak self] event, values in
                 MainActor.assumeIsolated { self?.receive(event, values: values) }
             }
         }
 
-        /// A Settings page of the engine's own in `profileID`, which creates
-        /// itself.
-        init(standaloneIn profileID: UUID) {
+        /// A Settings page of the engine's own in `profileID`, which opens once
+        /// its view is in a window.
+        init(standaloneIn profileID: UUID, engine: ChromiumEngine) {
             let id = UUID()
             pageID = id
             self.id = id.uuidString
             self.profileID = profileID
+            self.engine = engine
+            host = engine.host
             isPrivateBrowsing = false
             isStandalone = true
             observer = { _ in }
             surface.page = self
+            engine.host.observePage(self.id) { [weak self] event, values in
+                MainActor.assumeIsolated { self?.receive(event, values: values) }
+            }
         }
+
+        /// The page's direct path to the binding, while the engine is running.
+        private var pages: NativeEnginePages? { disposed ? nil : engine?.pages }
 
         var nativeView: NSView { surface }
         func stageNavigation(_ navigation: BrowserEngineNavigation, expecting url: URL) -> Bool {
@@ -114,7 +129,9 @@
             return .opened(panel == .network ? nil : panel)
         }
         var interactionState: Data? {
-            guard created, !disposed, let host, let state = host.interactionState(forPage: id) else { return nil }
+            guard created, let host, let state = pages?.request(SaveInteractionState(pageID: pageID)).state else {
+                return nil
+            }
             return BrowserEngineInteractionState(engine: .chromium, version: host.engineVersion(), payload: state)
                 .encoded()
         }
@@ -122,11 +139,12 @@
         /// The binding restores the history in place of the page's first load,
         /// once the page exists.
         func restoreInteractionState(_ state: Data, expecting url: URL) -> Bool {
-            guard !isStandalone, !disposed, let host,
+            guard !isStandalone, let host, let pages,
                 let payload = BrowserEngineInteractionState.payload(
                     state, engine: .chromium, version: host.engineVersion())
             else { return false }
-            return host.restorePage(id, interactionState: payload, expectedURL: url.absoluteString)
+            return pages.request(
+                RestoreInteractionState(pageID: pageID, state: payload, expectedURL: url.absoluteString))
         }
         private(set) var backHistory: [BrowserNavigationHistoryItem] = []
         private(set) var forwardHistory: [BrowserNavigationHistoryItem] = []
@@ -150,71 +168,85 @@
             return host.command(ChromiumPageHostCommand.pictureInPictureEnter.rawValue, page: id, url: nil)
         }
         func transferOwnership(to windowID: BrowserWindowID) -> Bool {
-            guard created, !disposed, let host else { return false }
-            return host.preparePage(id, forWindow: windowID.uuidString)
+            guard created, let pages else { return false }
+            return pages.request(MovePageToWindow(pageID: pageID, windowID: windowID))
         }
 
         func capture(rect: CGRect?, width: CGFloat?, completion: @escaping @MainActor (NSImage?) -> Void) {
-            guard created, !disposed, let host else {
+            let captureID = UUID()
+            let area = rect.flatMap { $0.isEmpty ? nil : $0 }.map {
+                PageArea(x: $0.origin.x, y: $0.origin.y, width: $0.size.width, height: $0.size.height)
+            }
+            guard created, let pages,
+                pages.request(CapturePage(pageID: pageID, captureID: captureID, area: area, width: width ?? 0))
+            else {
                 completion(nil)
                 return
             }
-            host.capturePage(id, rect: rect ?? .zero, width: width ?? 0) { image in
-                MainActor.assumeIsolated { completion(image) }
-            }
+            captures[captureID] = completion
         }
+
+        /// The capture the engine made for this page.
+        func receive(_ captured: PageCaptured) {
+            captures.removeValue(forKey: captured.captureID)?(captured.png.flatMap(NSImage.init(data:)))
+        }
+
         func load(_ request: URLRequest) {
             guard let url = request.url else { return }
             load(url)
         }
         func navigateHistory(by offset: Int) {
-            guard created, !disposed, offset != 0 else { return }
-            _ = host?.command(ChromiumPageHostCommand.history.rawValue, page: id, url: String(offset))
+            guard created, offset != 0 else { return }
+            pages?.request(GoToHistoryOffset(pageID: pageID, offset: offset))
         }
         func reload(bypassingCache: Bool) {
-            command(bypassingCache ? .reloadFromOrigin : .reload)
+            guard created else { return }
+            pages?.request(ReloadPage(pageID: pageID, bypassesCache: bypassingCache))
         }
-        func stop() { command(.stop) }
+        func stop() {
+            guard created else { return }
+            pages?.request(StopLoading(pageID: pageID))
+        }
 
         /// The app's own load of `url`, which the binding runs as it runs the
-        /// core's LoadPage.
+        /// core's LoadPage. A standalone page opens at it.
         func load(_ url: URL) {
             guard !disposed else { return }
-            guard isStandalone else {
+            guard isStandalone, !opening else {
                 host?.loadPage(id, url: url.absoluteString)
                 return
             }
             requestedURL = url
-            if created { navigatePendingURL() } else { attachIfPossible() }
+            attachIfPossible()
         }
 
         func attachIfPossible() {
-            guard !disposed, let windowID = surface.window?.identifier?.rawValue,
-                let host = CrestChromiumRoot.engineHost
+            guard !disposed, let windowID = surface.window?.identifier.flatMap({ UUID(uuidString: $0.rawValue) }),
+                let pages
             else { return }
-            self.host = host
             if created {
-                guard host.preparePage(id, forWindow: windowID), let view = host.view(forPage: id) else { return }
+                guard pages.request(MovePageToWindow(pageID: pageID, windowID: windowID)),
+                    let view = host?.view(forPage: id)
+                else { return }
                 if view.superview !== surface {
                     view.removeFromSuperview()
                     view.frame = surface.bounds
                     view.autoresizingMask = [.width, .height]
                     surface.addSubview(view)
                 }
-                host.didAttachPage(id, window: windowID)
+                pages.request(ShowPage(pageID: pageID))
                 return
             }
-            // The binding creates a page the core opened; only a standalone page
-            // creates itself.
-            guard isStandalone, !creating, let profileID else { return }
-            creating = true
-            if !host.createPage(
-                id, profile: profileID.uuidString, window: windowID, privateMode: false, sourceProfile: nil,
-                observer: { [weak self] event, values in
-                    MainActor.assumeIsolated { self?.receive(event, values: values) }
-                })
-            {
-                creating = false
+            // The binding creates a page the core opened; a standalone page
+            // opens itself, in its window's part of the engine.
+            guard isStandalone, !opening, let profileID, let requestedURL else { return }
+            opening = true
+            let opened = pages.request(
+                OpenStandalonePage(
+                    pageID: pageID, profileID: profileID, windowID: windowID,
+                    url: ChromiumInternalURL.engine(requestedURL.absoluteString)))
+            if !opened {
+                opening = false
                 observer(ChromiumPageReport(.creationFailed))
             }
         }
@@ -234,19 +266,25 @@
             _ query: String, configuration: BrowserFindConfiguration,
             completion: @escaping @MainActor (BrowserFindResult) -> Void
         ) {
-            guard created, !disposed, let host,
-                host.find(
-                    inPage: id, query: query, backwards: configuration.backwards,
-                    caseSensitive: configuration.caseSensitive,
-                    completion: { total, active in
-                        MainActor.assumeIsolated {
-                            completion(BrowserFindResult(matchCount: total, activeMatch: active))
-                        }
-                    })
+            // A new find replaces the one waiting for its count.
+            findCompletion = nil
+            guard created, let pages,
+                pages.request(
+                    FindInPage(
+                        pageID: pageID, query: query, backwards: configuration.backwards,
+                        caseSensitive: configuration.caseSensitive))
             else {
                 completion(.notFound)
                 return
             }
+            findCompletion = completion
+        }
+
+        /// The engine counted the page's latest find.
+        func receive(_ finished: FindFinished) {
+            let completion = findCompletion
+            findCompletion = nil
+            completion?(BrowserFindResult(matchCount: Int(finished.matches), activeMatch: Int(finished.activeMatch)))
         }
 
         // MARK: Content bridges
@@ -459,36 +497,30 @@
             return id
         }
 
+        /// A page still being created takes the zoom once it exists.
         func setZoom(_ zoom: CGFloat) {
-            self.zoom = zoom
-            if created { _ = host?.command(ChromiumPageHostCommand.zoom.rawValue, page: id, url: String(Double(zoom))) }
+            pages?.request(ZoomPage(pageID: pageID, factor: Double(zoom)))
         }
 
-        func detach() { if created { host?.didDetachPage(id) } }
-
-        private func command(_ command: ChromiumPageHostCommand) {
-            guard created, !disposed else { return }
-            _ = host?.command(command.rawValue, page: id, url: nil)
+        func detach() {
+            guard created else { return }
+            pages?.request(HidePage(pageID: pageID))
         }
 
         /// The page's owner let it go. The core's ClosePage has the binding
         /// close what the engine holds; only a standalone page closes itself.
         func dispose() {
             guard !disposed else { return }
+            if isStandalone { engine?.pages.request(CloseStandalonePage(pageID: pageID)) }
             disposed = true
             surface.devToolsView = nil
             for subview in surface.subviews { subview.removeFromSuperview() }
-            if isStandalone { host?.disposePages([id], windows: [], releaseProfiles: []) }
             host = nil
-        }
-
-        /// Loads what a standalone page was asked to, once it exists.
-        private func navigatePendingURL() {
-            guard isStandalone, let requestedURL else { return }
-            self.requestedURL = nil
-            _ = host?.command(
-                ChromiumPageHostCommand.navigate.rawValue, page: id,
-                url: ChromiumInternalURL.engine(requestedURL.absoluteString))
+            findCompletion = nil
+            for (_, completion) in captures { completion(nil) }
+            captures = [:]
+            for (_, export) in exports { export.resume(throwing: BrowserPageExportError.pageUnavailable) }
+            exports = [:]
         }
 
         private func history(_ entries: [ChromiumPageChange.HistoryEntry]?) -> [BrowserNavigationHistoryItem] {
@@ -535,7 +567,7 @@
             let values = report.values
             if event == .created {
                 created = true
-                creating = false
+                opening = false
                 for script in contentScripts {
                     _ = host?.addContentScript(script.source, page: id, mainFrameOnly: script.mainFrameOnly)
                 }
@@ -638,10 +670,8 @@
                     }
                 }
                 attachIfPossible()
-                setZoom(zoom)
-                navigatePendingURL()
             } else if event == .creationFailed {
-                creating = false
+                opening = false
             } else if event == .storeInstall || event == .storeRemove {
                 performStoreRequest(event, values)
             } else if event == .linkUnavailable {
@@ -666,7 +696,7 @@
 
         func fullPageSnapshot(width: CGFloat?) async throws -> NSImage {
             let backingScale = surface.window?.backingScaleFactor ?? 1
-            let data = try await exportData(format: "png", width: width ?? 0)
+            let data = try await exportData(format: .png, width: width ?? 0)
             guard let image = NSImage(data: data) else {
                 throw BrowserPageExportError.renderingFailed("The page capture could not be decoded.")
             }
@@ -676,8 +706,8 @@
             return image
         }
 
-        func pdfData() async throws -> Data { try await exportData(format: "pdf") }
-        func webArchiveData() async throws -> Data { try await exportData(format: "mhtml") }
+        func pdfData() async throws -> Data { try await exportData(format: .pdf) }
+        func webArchiveData() async throws -> Data { try await exportData(format: .mhtml) }
 
         func printOperation(with info: NSPrintInfo) async throws -> NSPrintOperation {
             let data = try await pdfData()
@@ -689,20 +719,27 @@
             return operation
         }
 
-        private func exportData(format: String, width: CGFloat = 0) async throws -> Data {
-            guard created, !disposed, let host else { throw BrowserPageExportError.pageUnavailable }
+        private func exportData(format: PageExportFormat, width: CGFloat = 0) async throws -> Data {
+            guard created, let pages else { throw BrowserPageExportError.pageUnavailable }
+            let exportID = UUID()
             return try await withCheckedThrowingContinuation { continuation in
-                host.exportPage(id, format: format, width: width) { data, error in
-                    MainActor.assumeIsolated {
-                        if let data {
-                            continuation.resume(returning: data)
-                        } else {
-                            continuation.resume(
-                                throwing: BrowserPageExportError.renderingFailed(
-                                    error ?? "The page could not be exported."))
-                        }
-                    }
+                guard pages.request(ExportPage(pageID: pageID, exportID: exportID, format: format, width: width)) else {
+                    continuation.resume(throwing: BrowserPageExportError.pageUnavailable)
+                    return
                 }
+                exports[exportID] = continuation
+            }
+        }
+
+        /// The export the engine made for this page, or why there is none.
+        func receive(_ exported: PageExported) {
+            guard let continuation = exports.removeValue(forKey: exported.exportID) else { return }
+            if let document = exported.document {
+                continuation.resume(returning: document)
+            } else {
+                let failure = exported.failure ?? PageExportFailure.failed
+                continuation.resume(
+                    throwing: BrowserPageExportError.renderingFailed(String(localized: failure.message)))
             }
         }
     }
@@ -855,18 +892,10 @@
         case inspectElements = "engine.inspect_elements"
         case inspectNetwork = "engine.inspect_network"
         case pictureInPictureEnter = "engine.picture_in_picture_enter"
-        case history = "engine.history"
-        case reload = "engine.reload"
-        case reloadFromOrigin = "engine.reload_from_origin"
-        case stop = "engine.stop"
         case infoBar = "engine.infobar"
         case faviconRefresh = "engine.favicon_refresh"
         case showBlockedPopups = "engine.show_blocked_popups"
         case storeState = "engine.store_state"
-        case zoom = "engine.zoom"
-        /// A standalone page's load. TRANSITIONAL until such pages open through
-        /// the core.
-        case navigate = "engine.navigate"
         case mediaActivate = "engine.media_activate"
         case mediaAction = "engine.media_action"
         case mediaMute = "engine.media_mute"

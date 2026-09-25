@@ -984,108 +984,6 @@ class ExtensionStateObserver
 
 void AdvancePageClosePreparation(uint64_t generation, bool allowed);
 
-// Fixed, in-process export commands for exactly one WebContents. This opens no
-// debugging socket and exposes no general protocol/evaluation entry point to UI.
-class PageDocumentService final : public content::WebContentsObserver,
-                                  public content::DevToolsAgentHostClient {
- public:
-  explicit PageDocumentService(content::WebContents* contents)
-      : content::WebContentsObserver(contents) {}
-  ~PageDocumentService() override { Finish(nil, @"The page was closed."); }
-
-  void Export(NSString* format, CGFloat width, void (^completion)(NSData*, NSString*)) {
-    if (completion_) { completion(nil, @"An export is already in progress for this page."); return; }
-    if (!web_contents() || !std::isfinite(width) || width < 0 || width > 6000 ||
-        !([format isEqualToString:@"pdf"] || [format isEqualToString:@"png"] || [format isEqualToString:@"mhtml"])) {
-      completion(nil, @"This page cannot be exported."); return;
-    }
-    format_ = [format copy]; width_ = width; completion_ = [completion copy];
-    agent_ = content::DevToolsAgentHost::GetOrCreateFor(web_contents());
-    attached_ = agent_ && agent_->AttachClient(this);
-    if (!attached_) { Finish(nil, @"The renderer could not prepare the export."); return; }
-    timer_.Start(FROM_HERE, base::Seconds(45), base::BindOnce(
-        [](PageDocumentService* service) { service->Finish(nil, @"The page export timed out."); },
-        base::Unretained(this)));
-    if ([format isEqualToString:@"pdf"]) {
-      Send("Page.printToPDF", base::DictValue().Set("printBackground", true)
-          .Set("preferCSSPageSize", true).Set("generateTaggedPDF", true));
-    } else if ([format isEqualToString:@"mhtml"]) {
-      Send("Page.captureSnapshot", base::DictValue().Set("format", "mhtml"));
-    } else {
-      measuring_ = true;
-      Send("Page.getLayoutMetrics", base::DictValue());
-    }
-  }
-
-  void DispatchProtocolMessage(content::DevToolsAgentHost*, base::span<const uint8_t> message) override {
-    if (!completion_) return;
-    if (message.size() > 96 * 1024 * 1024) { Finish(nil, @"The page export is too large."); return; }
-    auto response = base::JSONReader::ReadDict(base::as_string_view(message), base::JSON_PARSE_RFC);
-    if (!response || response->FindInt("id") != sequence_) return;
-    const auto* result = response->FindDict("result");
-    if (!result) { Finish(nil, @"Chromium could not export this document."); return; }
-    if (measuring_) {
-      measuring_ = false;
-      const auto* dimensions = result->FindDict("cssContentSize");
-      double width = dimensions ? dimensions->FindDouble("width").value_or(0) : 0;
-      double height = dimensions ? dimensions->FindDouble("height").value_or(0) : 0;
-      if (!std::isfinite(width) || !std::isfinite(height) || width <= 0 || height <= 0) {
-        Finish(nil, @"The page dimensions are unavailable."); return;
-      }
-      width = std::min(width, 6000.0); height = std::min(height, 24000.0);
-      const double target = width_ > 0 ? width_ : std::min(width, 1600.0);
-      auto clip = base::DictValue().Set("x", 0).Set("y", 0)
-          .Set("width", width).Set("height", height).Set("scale", target / width);
-      Send("Page.captureScreenshot", base::DictValue().Set("format", "png")
-          .Set("fromSurface", true).Set("captureBeyondViewport", true).Set("clip", std::move(clip)));
-      return;
-    }
-    const auto* encoded = result->FindString("data");
-    if (!encoded) { Finish(nil, @"Chromium returned an empty document."); return; }
-    NSString* text = base::SysUTF8ToNSString(*encoded);
-    NSData* data = [format_ isEqualToString:@"mhtml"] ? [text dataUsingEncoding:NSUTF8StringEncoding]
-        : [[NSData alloc] initWithBase64EncodedString:text options:0];
-    if (!data.length || data.length > 64 * 1024 * 1024) { Finish(nil, @"The page export is empty or too large."); return; }
-    Finish(data, nil);
-  }
-  void AgentHostClosed(content::DevToolsAgentHost*) override {
-    attached_ = false; agent_.reset(); Finish(nil, @"The page was closed.");
-  }
-  void DidStartNavigation(content::NavigationHandle* navigation) override {
-    if (navigation->IsInPrimaryMainFrame() && !navigation->IsSameDocument())
-      Finish(nil, @"The page navigated before its export finished.");
-  }
-  void PrimaryMainFrameRenderProcessGone(base::TerminationStatus) override {
-    Finish(nil, @"The page renderer stopped.");
-  }
-  void WebContentsDestroyed() override { Finish(nil, @"The page was closed."); Observe(nullptr); }
-
- private:
-  void Send(const char* method, base::DictValue params) {
-    if (!completion_ || !agent_) return;
-    auto json = base::WriteJson(base::DictValue().Set("id", ++sequence_)
-        .Set("method", method).Set("params", std::move(params)));
-    if (!json) { Finish(nil, @"The page export could not start."); return; }
-    agent_->DispatchProtocolMessage(this, base::as_byte_span(*json));
-  }
-  void Finish(NSData* data, NSString* error) {
-    auto completion = completion_;
-    completion_ = nil; measuring_ = false; timer_.Stop();
-    if (attached_ && agent_) { attached_ = false; agent_->DetachClient(this); }
-    agent_.reset();
-    // Swift may dispose this page from the completion; leave the protocol stack first.
-    if (completion) dispatch_async(dispatch_get_main_queue(), ^{ completion(data, error); });
-  }
-  scoped_refptr<content::DevToolsAgentHost> agent_;
-  base::OneShotTimer timer_;
-  bool attached_ = false;
-  bool measuring_ = false;
-  int sequence_ = 0;
-  CGFloat width_ = 0;
-  NSString* format_ = nil;
-  void (^completion_)(NSData*, NSString*) = nil;
-};
-
 // Chrome Web Store listings. The store's own Add to Chrome button is inert in
 // this baseline, so Crest owns that affordance: a script in an isolated world
 // on the store's own host relabels the button and asks the core to run Crest's
@@ -1332,7 +1230,7 @@ void DisableEnginePasswordManager(content::WebContents* contents) {
   }
 }
 
-struct Page final : content::WebContentsObserver, find_in_page::FindResultObserver,
+struct Page final : content::WebContentsObserver,
                     favicon::FaviconDriverObserver, infobars::InfoBarManager::Observer,
                     media_session::mojom::MediaSessionObserver {
   Page(content::WebContents* contents, Browser* owner, std::string profile_id,
@@ -1341,8 +1239,6 @@ struct Page final : content::WebContentsObserver, find_in_page::FindResultObserv
         profile(std::move(profile_id)),
         observation(static_cast<Observation>([(observer ?: ^(NSString*, NSDictionary<NSString*, id>*) {}) copy])) {
     DisableEnginePasswordManager(contents);
-    find_helper = find_in_page::FindTabHelper::FromWebContents(contents);
-    if (find_helper) find_helper->AddObserver(this);
     if (auto* driver = favicon::ContentFaviconDriver::FromWebContents(contents)) driver->AddObserver(this);
     if (auto* media_session = content::MediaSession::Get(contents))
       media_session->AddObserver(media_receiver.BindNewPipeAndPassRemote());
@@ -1366,7 +1262,6 @@ struct Page final : content::WebContentsObserver, find_in_page::FindResultObserv
     std::erase_if(State().pending_link_navigations, [&](const auto& entry) {
       return !entry.second.source || entry.second.source.get() == web_contents();
     });
-    if (find_helper) find_helper->RemoveObserver(this);
     RemoveFaviconObservation();
   }
   // The platform's observer, which may arrive after the page exists: it hears
@@ -1406,18 +1301,6 @@ struct Page final : content::WebContentsObserver, find_in_page::FindResultObserv
                        const GURL&, bool, const gfx::Image& image) override {
     PublishFavicon(image);
   }
-  find_in_page::FindTabHelper* find_helper = nullptr;
-  void (^find_completion)(NSInteger, NSInteger) = nil;
-  void OnFindTabHelperDestroyed(find_in_page::FindTabHelper*) override { find_helper = nullptr; find_completion = nil; }
-  // The final update of a search carries its total and the ordinal of the
-  // match it selected; earlier updates are still counting.
-  void OnFindResultAvailable(content::WebContents*) override {
-    if (!find_helper || !find_completion || !find_helper->find_result().final_update()) return;
-    auto completion = find_completion;
-    find_completion = nil;
-    const auto& result = find_helper->find_result();
-    completion(std::max(0, result.number_of_matches()), std::max(0, result.active_match_ordinal()));
-  }
   Browser* browser;
   std::string profile;
   Observation observation;
@@ -1446,7 +1329,6 @@ struct Page final : content::WebContentsObserver, find_in_page::FindResultObserv
   // permanently switched to Views drawing there, so re-docking must replace it
   // rather than mount it again.
   base::WeakPtr<content::WebContents> undocked_devtools;
-  std::unique_ptr<PageDocumentService> document_service;
   // Content bridge sources, in install order, and whether each is limited to
   // the main frame.
   std::vector<std::pair<std::string, bool>> content_scripts;
@@ -2313,6 +2195,34 @@ class MacShell final : public crest::EngineBinding::Shell {
     State().pending_link_navigations.erase(token);
   }
 
+  bool MoveToWindow(const std::string& page_id, const std::string& window_id) override {
+    Page* page = FindPage(base::SysUTF8ToNSString(page_id));
+    if (!page || !page->web_contents() || page->closing) return false;
+    Browser* target = BrowserFor(page->profile, window_id);
+    if (!target) return false;
+    if (page->browser != target) {
+      TabStripModel* source = page->browser->tab_strip_model();
+      const int index = source->GetIndexOfWebContents(page->web_contents());
+      if (index < 0) return false;
+      // Preserve TabModel, navigation history, renderer and extension identity.
+      auto tab = source->DetachTabAtForInsertion(index);
+      page->browser = target;
+      target->tab_strip_model()->InsertDetachedTabAt(
+          target->tab_strip_model()->count(), std::move(tab), AddTabTypes::ADD_ACTIVE);
+    }
+    const int index = target->tab_strip_model()->GetIndexOfWebContents(page->web_contents());
+    if (index < 0) return false;
+    target->tab_strip_model()->ActivateTabAt(index);
+    return true;
+  }
+
+  void VisibilityChanged(const std::string& page_id, bool visible) override {
+    Page* page = FindPage(base::SysUTF8ToNSString(page_id));
+    if (!page || !page->web_contents()) return;
+    // A video playing when the page left the screen still counts as playing.
+    page->video_was_playing_when_detached = !visible && !page->playing_videos.empty();
+  }
+
   crest::engine::PageMediaActivity MediaActivity(const std::string& page_id) override {
     using crest::engine::PageMediaActivity;
     Page* page = FindPage(base::SysUTF8ToNSString(page_id));
@@ -2408,7 +2318,8 @@ void DeliverExtensionCommand(Profile* profile, const extensions::Extension& exte
 // The UI framework's entry point: the shell's host, and the engine binding
 // the framework registers with its core.
 using CrestChromiumUIStart = void (*)(id<CrestChromiumEngineHost> host, const crest_engine_binding_t* binding,
-                                      const uint8_t* fingerprint, size_t fingerprint_length);
+                                      const uint8_t* fingerprint, size_t fingerprint_length,
+                                      const crest_engine_pages_t* pages);
 
 @implementation CrestChromiumHost
 - (void)setBrowserObserver:(void (^)(NSDictionary<NSString*, id>*))observer {
@@ -2467,11 +2378,6 @@ using CrestChromiumUIStart = void (*)(id<CrestChromiumEngineHost> host, const cr
   CHECK(NSThread.isMainThread);
   crest::EngineBinding::Get().Load(base::SysNSStringToUTF8(pageID), base::SysNSStringToUTF8(url));
 }
-- (NSData*)iconForPage:(NSString*)pageID {
-  CHECK(NSThread.isMainThread);
-  auto icon = crest::EngineBinding::Get().Icon(base::SysNSStringToUTF8(pageID));
-  return icon ? [NSData dataWithBytes:icon->data() length:icon->size()] : nil;
-}
 - (void)setPrivateSourceProfile:(NSString*)profileID {
   CHECK(NSThread.isMainThread);
   State().private_source_profile = base::SysNSStringToUTF8(profileID);
@@ -2487,27 +2393,6 @@ using CrestChromiumUIStart = void (*)(id<CrestChromiumEngineHost> host, const cr
     int index = owner->strip ? owner->strip->GetIndexOfWebContents(contents.get()) : -1;
     if (index >= 0) { owner->strip->DetachAndDeleteWebContentsAt(index); return; }
   }
-}
-// A Settings page of the engine's own, such as its flags page, which no tab
-// owns and the core never hears of. TRANSITIONAL until such pages open
-// through the core.
-- (BOOL)createPage:(NSString*)pageID profile:(NSString*)profileID window:(NSString*)windowID
-      privateMode:(BOOL)privateMode sourceProfile:(NSString*)sourceProfileID
-         observer:(Observation)observer {
-  CHECK(NSThread.isMainThread);
-  const std::string key = base::SysNSStringToUTF8(pageID);
-  if (State().pages.contains(key) || State().creating_pages.contains(key)) return NO;
-  State().pending_observers[key] = [observer copy];
-  CreatePageContents(key, base::SysNSStringToUTF8(profileID), privateMode,
-      base::SysNSStringToUTF8(sourceProfileID ?: @""), base::SysNSStringToUTF8(windowID),
-      base::BindOnce([](std::string key, content::WebContents* contents) {
-        if (contents) {
-          if (Page* page = FindPage(base::SysUTF8ToNSString(key))) page->Announce();
-          return;
-        }
-        if (auto waiting = State().pending_observers.extract(key)) waiting.mapped()(@"creation_failed", @{});
-      }, key));
-  return YES;
 }
 - (NSView*)viewForPage:(NSString*)pageID {
   CHECK(NSThread.isMainThread);
@@ -2550,81 +2435,12 @@ using CrestChromiumUIStart = void (*)(id<CrestChromiumEngineHost> host, const cr
   CHECK(NSThread.isMainThread);
   State().pending_link_navigations.erase(base::SysNSStringToUTF8(token));
 }
-- (NSData*)interactionStateForPage:(NSString*)pageID {
-  CHECK(NSThread.isMainThread);
-  auto state = crest::EngineBinding::Get().SaveInteractionState(base::SysNSStringToUTF8(pageID));
-  return state ? [NSData dataWithBytes:state->data() length:state->size()] : nil;
-}
-- (BOOL)restorePage:(NSString*)pageID interactionState:(NSData*)data expectedURL:(NSString*)url {
-  CHECK(NSThread.isMainThread);
-  if (!data.length) return NO;
-  const auto bytes = base::apple::NSDataToSpan(data);
-  return crest::EngineBinding::Get().Restore(base::SysNSStringToUTF8(pageID),
-      std::vector<uint8_t>(bytes.begin(), bytes.end()), base::SysNSStringToUTF8(url));
-}
-- (BOOL)preparePage:(NSString*)pageID forWindow:(NSString*)windowID {
-  CHECK(NSThread.isMainThread);
-  Page* page = FindPage(pageID);
-  if (!page || !page->web_contents() || page->closing) return NO;
-  Browser* target = BrowserFor(page->profile, base::SysNSStringToUTF8(windowID));
-  if (!target) return NO;
-  if (page->browser != target) {
-    TabStripModel* source = page->browser->tab_strip_model();
-    const int index = source->GetIndexOfWebContents(page->web_contents());
-    if (index < 0) return NO;
-    // Preserve TabModel, navigation history, renderer and extension identity.
-    auto tab = source->DetachTabAtForInsertion(index);
-    page->browser = target;
-    target->tab_strip_model()->InsertDetachedTabAt(
-        target->tab_strip_model()->count(), std::move(tab), AddTabTypes::ADD_ACTIVE);
-  }
-  const int index = target->tab_strip_model()->GetIndexOfWebContents(page->web_contents());
-  if (index < 0) return NO;
-  target->tab_strip_model()->ActivateTabAt(index);
-  return YES;
-}
-- (void)didAttachPage:(NSString*)pageID window:(NSString*)windowID {
-  CHECK(NSThread.isMainThread);
-  if (Page* page = FindPage(pageID); page && page->web_contents()) {
-    page->video_was_playing_when_detached = false;
-    page->web_contents()->WasShown();
-    page->web_contents()->Focus();
-    crest::EngineBinding::Get().StateChanged(base::SysNSStringToUTF8(pageID));
-  }
-}
-- (void)didDetachPage:(NSString*)pageID {
-  CHECK(NSThread.isMainThread);
-  if (Page* page = FindPage(pageID); page && page->web_contents()) {
-    page->video_was_playing_when_detached = !page->playing_videos.empty();
-    page->web_contents()->WasHidden();
-    crest::EngineBinding::Get().StateChanged(base::SysNSStringToUTF8(pageID));
-  }
-}
 - (BOOL)command:(NSString*)command page:(NSString*)pageID url:(NSString*)url {
   CHECK(NSThread.isMainThread);
   Page* page = FindPage(pageID);
   if (!page || !page->web_contents()) return NO;
   auto* contents = page->web_contents();
-  auto& controller = contents->GetController();
-  if ([command isEqualToString:@"engine.navigate"]) {
-    GURL target(base::SysNSStringToUTF8(url ?: @""));
-    if (!target.is_valid()) return NO;
-    controller.LoadURL(target, content::Referrer(), ui::PAGE_TRANSITION_TYPED, std::string());
-  } else if ([command isEqualToString:@"engine.back"]) {
-    if (controller.CanGoBack()) controller.GoBack();
-  } else if ([command isEqualToString:@"engine.forward"]) {
-    if (controller.CanGoForward()) controller.GoForward();
-  } else if ([command isEqualToString:@"engine.history"]) {
-    const int offset = url.intValue;
-    if (offset == 0 || !controller.CanGoToOffset(offset)) return NO;
-    controller.GoToOffset(offset);
-  } else if ([command isEqualToString:@"engine.reload"] ||
-             [command isEqualToString:@"engine.reload_from_origin"]) {
-    controller.Reload([command isEqualToString:@"engine.reload_from_origin"]
-        ? content::ReloadType::BYPASSING_CACHE : content::ReloadType::NORMAL, true);
-  } else if ([command isEqualToString:@"engine.stop"]) {
-    contents->Stop();
-  } else if ([command isEqualToString:@"engine.picture_in_picture_enter"]) {
+  if ([command isEqualToString:@"engine.picture_in_picture_enter"]) {
     // The browser Media Session chooses the active video player and asks its
     // renderer to enter PiP. Do not synthesize a page gesture in JavaScript.
     if ((!page->video_was_playing_when_detached && page->playing_videos.empty() &&
@@ -2711,22 +2527,11 @@ using CrestChromiumUIStart = void (*)(id<CrestChromiumEngineHost> host, const cr
     content::WebContents* frontend = inspector->GetDevToolsWebContents();
     if (!frontend) return NO;
     frontend->Close();
-  } else if ([command isEqualToString:@"engine.zoom"]) {
-    const double factor = url.doubleValue;
-    auto* zoom = zoom::ZoomController::FromWebContents(contents);
-    if (!zoom || !std::isfinite(factor) || factor < 0.25 || factor > 5) return NO;
-    zoom->SetZoomMode(zoom::ZoomController::ZOOM_MODE_ISOLATED);
-    zoom->SetZoomLevel(blink::ZoomFactorToZoomLevel(factor));
   } else if ([command isEqualToString:@"engine.store_state"]) {
     // The core finished or abandoned an install review; the listing's own
     // button goes back to the state Chromium's registry reports.
     page->store_request_open = false;
     page->PublishStoreState();
-  } else if ([command isEqualToString:@"engine.close_page"]) {
-    const int index = page->browser->tab_strip_model()->GetIndexOfWebContents(contents);
-    if (index < 0 || page->closing) return NO;
-    page->closing = true;
-    page->browser->tab_strip_model()->CloseWebContentsAt(index, 0);
   } else { return NO; }
   return YES;
 }
@@ -3133,51 +2938,6 @@ using CrestChromiumUIStart = void (*)(id<CrestChromiumEngineHost> host, const cr
     @"pictureInPicture": @(contents->HasPictureInPictureVideo() || contents->HasPictureInPictureDocument())
   };
 }
-- (void)capturePage:(NSString*)pageID rect:(NSRect)rect width:(CGFloat)width
-         completion:(void (^)(NSImage*))completion {
-  CHECK(NSThread.isMainThread);
-  Page* page = FindPage(pageID);
-  auto* view = page && page->web_contents() ? page->web_contents()->GetRenderWidgetHostView() : nullptr;
-  if (!view || !std::isfinite(width) || width < 0 || width > 16384 ||
-      !std::isfinite(rect.origin.x) || !std::isfinite(rect.origin.y) ||
-      !std::isfinite(rect.size.width) || !std::isfinite(rect.size.height)) {
-    completion(nil);
-    return;
-  }
-  gfx::Rect area = NSIsEmptyRect(rect) ? gfx::Rect() : gfx::Rect(
-      static_cast<int>(rect.origin.x), static_cast<int>(rect.origin.y),
-      static_cast<int>(rect.size.width), static_cast<int>(rect.size.height));
-  if (!area.IsEmpty()) area.Intersect(gfx::Rect(view->GetViewBounds().size()));
-  if (!NSIsEmptyRect(rect) && area.IsEmpty()) { completion(nil); return; }
-  gfx::Size size = area.IsEmpty() ? view->GetViewBounds().size() : area.size();
-  if (size.IsEmpty()) { completion(nil); return; }
-  gfx::Size output;
-  if (width > 0) output = gfx::Size(std::max(1, static_cast<int>(width)),
-      std::max(1, static_cast<int>(width * size.height() / size.width())));
-  auto reply = [completion copy];
-  view->CopyFromSurface(area, output, base::Seconds(2), base::BindOnce(
-      [](void (^reply)(NSImage*), const content::CopyFromSurfaceResult& result) {
-        if (!result.has_value()) {
-          dispatch_async(dispatch_get_main_queue(), ^{ reply(nil); });
-          return;
-        }
-        SkBitmap bitmap = result->bitmap;
-        dispatch_async(dispatch_get_main_queue(), ^{
-          reply(bitmap.drawsNothing() ? nil : gfx::Image::CreateFrom1xBitmap(bitmap).ToNSImage());
-        });
-      }, reply));
-}
-- (void)exportPage:(NSString*)pageID format:(NSString*)format width:(CGFloat)width
-        completion:(void (^)(NSData*, NSString*))completion {
-  CHECK(NSThread.isMainThread);
-  Page* page = FindPage(pageID);
-  if (!page || !page->web_contents() || page->closing || State().disposing) {
-    completion(nil, @"The page is unavailable."); return;
-  }
-  if (!page->document_service)
-    page->document_service = std::make_unique<PageDocumentService>(page->web_contents());
-  page->document_service->Export(format, width, completion);
-}
 - (BOOL)addContentScript:(NSString*)source page:(NSString*)pageID mainFrameOnly:(BOOL)mainFrameOnly {
   CHECK(NSThread.isMainThread);
   Page* page = FindPage(pageID);
@@ -3223,21 +2983,6 @@ using CrestChromiumUIStart = void (*)(id<CrestChromiumEngineHost> host, const cr
             auto json = base::WriteJson(value);
             reply(json ? base::SysUTF8ToNSString(*json) : nil);
           }, reply), base::Value()), crest::kContentWorldID);
-}
-- (BOOL)findInPage:(NSString*)pageID query:(NSString*)query backwards:(BOOL)backwards
-     caseSensitive:(BOOL)caseSensitive completion:(void (^)(NSInteger, NSInteger))completion {
-  CHECK(NSThread.isMainThread);
-  Page* page = FindPage(pageID);
-  if (!page || !page->find_helper) return NO;
-  page->find_completion = nil;
-  if (!query.length) {
-    page->find_helper->StopFinding(find_in_page::SelectionAction::kClear);
-    completion(0, 0);
-  } else {
-    page->find_completion = [completion copy];
-    page->find_helper->StartFinding(base::SysNSStringToUTF16(query), !backwards, caseSensitive, true);
-  }
-  return YES;
 }
 - (void)disposePages:(NSArray<NSString*>*)pageIDs windows:(NSArray<NSString*>*)windowIDs
     releaseProfiles:(NSArray<NSString*>*)profileIDs {
@@ -4088,8 +3833,9 @@ void EnsureCrestUIStarted(Browser* browser) {
   auto& binding = crest::EngineBinding::Get();
   binding.SetShell(shell.get());
   const crest_engine_binding_t table = binding.Table();
+  const crest_engine_pages_t pages = binding.Pages();
   const auto& fingerprint = crest::EngineBinding::Fingerprint();
-  start([[CrestChromiumHost alloc] init], &table, fingerprint.data(), fingerprint.size());
+  start([[CrestChromiumHost alloc] init], &table, fingerprint.data(), fingerprint.size(), &pages);
   auto pending = std::move(State().pending_authentication_sessions);
   State().pending_authentication_sessions.clear();
   for (ASWebAuthenticationSessionRequest* request : pending) StartAuthenticationSession(request);

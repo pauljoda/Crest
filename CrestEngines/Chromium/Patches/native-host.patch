@@ -156,7 +156,7 @@
        // If the web authentication request is still pending, remove it from the
 --- a/chrome/browser/ui/BUILD.gn
 +++ b/chrome/browser/ui/BUILD.gn
-@@ -3448,6 +3448,19 @@
+@@ -3448,6 +3448,21 @@
        "browser_mac.h",
        "fullscreen_util_mac.cc",
        "fullscreen_util_mac.h",
@@ -170,6 +170,8 @@
 +      "crest/crest_engine_binding.cc",
 +      "crest/crest_engine_binding.h",
 +      "crest/crest_engine_contract.h",
++      "crest/crest_engine_documents.cc",
++      "crest/crest_engine_documents.h",
 +      "crest/crest_engine_page.cc",
 +      "crest/crest_engine_page.h",
 +      "crest/CrestChromiumHost.h",

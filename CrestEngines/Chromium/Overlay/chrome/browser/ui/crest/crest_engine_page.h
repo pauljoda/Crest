@@ -2,16 +2,20 @@
 #define CHROME_BROWSER_UI_CREST_CREST_ENGINE_PAGE_H_
 
 #include <cstdint>
+#include <memory>
 #include <optional>
 #include <string>
 #include <utility>
 #include <vector>
 
+#include "base/memory/raw_ptr.h"
 #include "base/memory/raw_ref.h"
+#include "base/memory/weak_ptr.h"
 #include "base/time/time.h"
 #include "base/timer/timer.h"
 #include "chrome/browser/ui/crest/crest_engine_contract.h"
 #include "components/favicon/core/favicon_driver_observer.h"
+#include "components/find_in_page/find_result_observer.h"
 #include "content/public/browser/web_contents_observer.h"
 
 class GURL;
@@ -19,6 +23,7 @@ class GURL;
 namespace crest {
 
 class EngineBinding;
+class PageDocuments;
 
 // One page the core asked Chromium to create, from its CreatePage until the
 // engine lets it go. It turns the WebContents' own callbacks into the core's
@@ -38,8 +43,14 @@ class EngineBinding;
 // The core decides what each event records; this only decides when the
 // engine's callbacks amount to one. Addresses are in Crest's namespace, where
 // the engine's own `chrome://` pages are `crest://` pages.
+//
+// It also answers what the platform asks of the page directly: its history,
+// reload, find, zoom, capture, export and whether it is on screen. A
+// standalone page, one of the engine's own that Settings shows, answers those
+// and reports nothing to the core.
 class EnginePage final : public content::WebContentsObserver,
-                         public favicon::FaviconDriverObserver {
+                         public favicon::FaviconDriverObserver,
+                         public find_in_page::FindResultObserver {
  public:
   // Where the page stands on the engine.
   enum class Phase {
@@ -61,7 +72,7 @@ class EnginePage final : public content::WebContentsObserver,
   // the move, so a page whose title never stops changing still records.
   static constexpr base::TimeDelta kTitleSettleLimit = base::Seconds(2);
 
-  EnginePage(EngineBinding& binding, const engine::CreatePage& creation);
+  EnginePage(EngineBinding& binding, const engine::CreatePage& creation, bool standalone = false);
   EnginePage(const EnginePage&) = delete;
   EnginePage& operator=(const EnginePage&) = delete;
   ~EnginePage() override;
@@ -71,6 +82,9 @@ class EnginePage final : public content::WebContentsObserver,
   const std::string& key() const { return key_; }
   const std::string& profile() const { return profile_; }
   bool is_private() const { return is_private_; }
+  // One of the engine's own pages that Settings shows, which the core never
+  // hears of.
+  bool standalone() const { return standalone_; }
   const std::string& window() const { return window_; }
   Phase phase() const { return phase_; }
   void set_phase(Phase phase) { phase_ = phase; }
@@ -102,6 +116,18 @@ class EnginePage final : public content::WebContentsObserver,
 
   // The icon the engine found for the page's document.
   std::optional<std::vector<uint8_t>> icon() const;
+
+  // What the platform asks of the page directly. Each answers whether the
+  // page took it; what finishes later is presented.
+  bool GoToOffset(int offset);
+  bool Reload(bool bypasses_cache);
+  bool StopLoading();
+  bool Zoom(double factor);
+  bool Find(const std::string& query, bool backwards, bool case_sensitive);
+  bool Capture(const engine::Guid& capture_id, const std::optional<engine::PageArea>& area, double width);
+  bool Export(const engine::Guid& export_id, engine::PageExportFormat format, double width);
+  bool Show();
+  bool Hide();
 
   // What the page shows changed; it reports once this turn ends.
   void StateChanged();
@@ -143,6 +169,13 @@ class EnginePage final : public content::WebContentsObserver,
                         bool icon_url_changed,
                         const gfx::Image& image) override;
 
+  // find_in_page::FindResultObserver:
+  void OnFindResultAvailable(content::WebContents* contents) override;
+  void OnFindTabHelperDestroyed(find_in_page::FindTabHelper* helper) override;
+
+  void ApplyZoom();
+  void Present(engine::EnginePresentation presentation);
+
   // The engine's own callbacks, as navigation events.
   void Navigate(const std::string& url);
   bool RestoreNow(const std::vector<uint8_t>& state, const std::string& expected_url);
@@ -169,6 +202,7 @@ class EnginePage final : public content::WebContentsObserver,
   bool ShowsInitialBlank(const GURL& url) const;
 
   const raw_ref<EngineBinding> binding_;
+  const bool standalone_;
   const engine::Guid id_;
   const std::string key_;
   const std::string profile_;
@@ -203,6 +237,15 @@ class EnginePage final : public content::WebContentsObserver,
   // The page changed since its last snapshot, which is due when the turn ends.
   bool report_due_ = false;
   std::optional<engine::PageSnapshot> reported_;
+
+  // The zoom the platform asked for, which a page still being created takes
+  // once it exists.
+  std::optional<double> zoom_;
+  // The engine's find, and whether a find waits for its count.
+  raw_ptr<find_in_page::FindTabHelper> find_helper_ = nullptr;
+  bool find_pending_ = false;
+  std::unique_ptr<PageDocuments> documents_;
+  base::WeakPtrFactory<EnginePage> weak_factory_{this};
 };
 
 // An engine address in Crest's namespace, where `chrome://` is `crest://`.

@@ -28,7 +28,7 @@
         func makeCoordinator() -> Coordinator { Coordinator(profileID: profileID) }
 
         func makeNSView(context: Context) -> ChromiumNativePageView {
-            let page = context.coordinator.page
+            guard let page = context.coordinator.page else { return ChromiumNativePageView() }
             guard let url = URL(string: "chrome://flags/") else {
                 preconditionFailure("Invalid Chromium flags address")
             }
@@ -39,17 +39,17 @@
         func updateNSView(_ view: ChromiumNativePageView, context: Context) {}
 
         static func dismantleNSView(_ view: ChromiumNativePageView, coordinator: Coordinator) {
-            coordinator.page.dispose()
+            coordinator.page?.dispose()
         }
 
         /// The flags page is a Settings surface, not a page a tab or a transient
         /// request owns, so it is Chromium's alone and the core never hears of it.
         @MainActor
         final class Coordinator {
-            let page: ChromiumNativePage
+            let page: ChromiumNativePage?
 
             init(profileID: UUID) {
-                page = ChromiumNativePage(standaloneIn: profileID)
+                page = CrestChromiumRoot.chromiumEngine?.standalonePage(in: profileID)
             }
         }
     }

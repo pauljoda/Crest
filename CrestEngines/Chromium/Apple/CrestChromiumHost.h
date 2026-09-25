@@ -24,24 +24,18 @@ typedef NS_ENUM(NSInteger, CrestSidePanelRequest) {
 // TRANSITIONAL until page presentation travels as EnginePresentations.
 - (void)observePage:(NSString *)pageID
            observer:(void (^)(NSString *event, NSDictionary<NSString *, id> *values))observer;
-// A Settings page of the engine's own, such as its flags page, which no tab
-// owns and the core never hears of. TRANSITIONAL until such pages open through
-// the core.
-- (BOOL)createPage:(NSString *)pageID profile:(NSString *)profileID window:(NSString *)windowID
-      privateMode:(BOOL)privateMode sourceProfile:(nullable NSString *)sourceProfileID
-         observer:(void (^)(NSString *event, NSDictionary<NSString *, id> *values))observer;
 // Makes a page the engine offered the page the core is opening, instead of a
 // new one.
 - (BOOL)adoptPage:(NSString *)adoptionID asPage:(NSString *)pageID
          observer:(void (^)(NSString *event, NSDictionary<NSString *, id> *values))observer;
 - (void)rejectAdoption:(NSString *)adoptionID;
-// What the platform asks of a page directly. TRANSITIONAL until the direct
-// path's PageRequests: the app's own load, a link navigation staged for the
-// page's first load, the icon the engine found for its document, and the
-// regular profile a private window's pages derive from.
+// What the platform asks of a page directly that no PageRequest carries yet.
+// TRANSITIONAL until engine-offered pages and link routing move (WP C (l)): the
+// app's own load and a link navigation staged for the page's first load; and
+// until the core owns the private window's profile: the regular profile a
+// private window's pages derive from.
 - (void)loadPage:(NSString *)pageID url:(NSString *)url;
 - (BOOL)stageNavigation:(NSString *)token page:(NSString *)pageID url:(NSString *)url;
-- (nullable NSData *)iconForPage:(NSString *)pageID;
 - (void)setPrivateSourceProfile:(NSString *)profileID;
 - (nullable NSView *)viewForPage:(NSString *)pageID;
 - (void)setLinkHandlerForPage:(NSString *)pageID
@@ -67,16 +61,7 @@ typedef NS_ENUM(NSInteger, CrestSidePanelRequest) {
         void (^reply)(NSString *decision, CrestDeferredNavigation _Nullable present)))handler
     NS_SWIFT_NAME(setModifiedLinkHandler(page:handler:));
 - (void)discardPendingNavigation:(NSString *)token;
-- (nullable NSData *)interactionStateForPage:(NSString *)pageID;
-- (BOOL)restorePage:(NSString *)pageID interactionState:(NSData *)state expectedURL:(NSString *)url;
-- (BOOL)preparePage:(NSString *)pageID forWindow:(NSString *)windowID;
-- (void)didAttachPage:(NSString *)pageID window:(NSString *)windowID;
-- (void)didDetachPage:(NSString *)pageID;
 - (nullable NSDictionary<NSString *, id> *)mediaActivityForPage:(NSString *)pageID;
-- (void)capturePage:(NSString *)pageID rect:(NSRect)rect width:(CGFloat)width
-         completion:(void (^)(NSImage * _Nullable image))completion;
-- (void)exportPage:(NSString *)pageID format:(NSString *)format width:(CGFloat)width
-        completion:(void (^)(NSData * _Nullable data, NSString * _Nullable error))completion;
 - (BOOL)command:(NSString *)command page:(NSString *)pageID url:(nullable NSString *)url;
 // The DER certificate chain of the page's visible entry, leaf first; empty
 // when the page was not loaded over a verified TLS connection.
@@ -147,12 +132,6 @@ typedef NS_ENUM(NSInteger, CrestSidePanelRequest) {
 - (NSString *)engineVersion;
 - (BOOL)installExtension:(NSString *)extensionID package:(NSString *)path profile:(NSString *)profileID window:(NSString *)windowID
               completion:(void (^)(BOOL installed, NSString *message))completion;
-// Finds the next match, always wrapping at the end of the page. The completion
-// receives the total number of matches and the 1-based ordinal of the selected
-// one; zero matches means nothing was found.
-- (BOOL)findInPage:(NSString *)pageID query:(NSString *)query backwards:(BOOL)backwards
-     caseSensitive:(BOOL)caseSensitive
-        completion:(void (^)(NSInteger matches, NSInteger activeMatch))completion;
 - (void)disposePages;
 - (void)disposePages:(NSArray<NSString *> *)pageIDs windows:(NSArray<NSString *> *)windowIDs
     releaseProfiles:(NSArray<NSString *> *)profileIDs;

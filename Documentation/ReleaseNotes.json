@@ -2573,6 +2573,10 @@
     "engine-direct-page-path": {
       "category": "internal",
       "message": "The platform asks an engine binding for page view work through typed requests and presentations."
+    },
+    "chromium-view-work-cpp": {
+      "category": "internal",
+      "message": "Chromium answers a page's history, zoom, find, capture and export requests from its own C++ binding."
     }
   }
 }
