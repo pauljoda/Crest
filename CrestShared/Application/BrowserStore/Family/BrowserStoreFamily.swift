@@ -12,8 +12,8 @@ final class BrowserStoreFamily {
     private let core: BrowserCoreSessionAuthority
     private struct WeakFamily { weak var value: BrowserStoreFamily? }
     private var borrowedFamilies: [WeakFamily] = []
-    /// The session every window of this family followed last, which a
-    /// borrowed family's windows follow from when its owner's edit reaches it.
+    /// The session every window of this family followed last, which they
+    /// follow from when the next change to it reaches them.
     @ObservationIgnored private var followedSession: BrowserSession
     var authoritativeSession: BrowserSession { core.projection }
     let temporarySourceAssignment: BrowserSpaceRuntimeAssignment?
@@ -68,7 +68,7 @@ final class BrowserStoreFamily {
         temporarySettingsBrowser = nil
         storage = nil
         favicons = nil
-        observePageRecords()
+        followSession()
     }
 
     /// The family of the session `storage` keeps in its file, opened by
@@ -86,7 +86,7 @@ final class BrowserStoreFamily {
         for tab in tabs { favicons.reconcile(tab.faviconData, tabID: tab.id) }
         favicons.pruneFavicons(keeping: Set(tabs.map(\.id)))
         storage.storageFailureHandler = { [weak self] reason in self?.storageDidFail(reason) }
-        observePageRecords()
+        followSession()
     }
 
     private init(
@@ -98,7 +98,7 @@ final class BrowserStoreFamily {
         followedSession = core.projection
         storage = nil
         favicons = nil
-        observePageRecords()
+        followSession()
     }
 
     /// A family over a workspace that borrows the Space `assignment` names
@@ -169,19 +169,15 @@ final class BrowserStoreFamily {
     }
 
     /// Takes records the cloud sent through `intent`, which the core saves
-    /// with its journal before it returns: every window follows, and a Space
-    /// the cloud deleted starts its cleanup. Throws the rule that refused the
-    /// records or the save that failed; either changes nothing.
+    /// with its journal before it returns. What it changed arrives in the drain
+    /// that follows, which every window follows and which starts the cleanup of
+    /// a Space the cloud deleted. Throws the rule that refused the records or
+    /// the save that failed; either changes nothing.
     ///
-    /// TRANSITIONAL until the cloud transport sends its intents itself: the
-    /// core answers a cloud intent with its receipts alone, so what it changed
-    /// is drained here.
+    /// TRANSITIONAL until the cloud transport sends its intents itself.
     func commitCloudRecords(_ intent: some CloudSyncIntent, from source: BrowserStore) throws(Rejection) {
-        let previous = authoritativeSession
         try source.core.send(intent)
         source.core.drain()
-        if authoritativeSession != previous { reconcileStores(after: previous, from: source) }
-        scheduleSpaceDataCleanup()
     }
 
     /// Runs an import `source`'s window issued, which the core saves with its
@@ -197,7 +193,7 @@ final class BrowserStoreFamily {
         defer { favicons.withdrawOffer(in: workspaceID) }
         _ = try source.core.send(intent)
         guard authoritativeSession != previous else { return }
-        reconcileStores(after: previous, from: source)
+        follow()
     }
 
     /// Runs one session intent that `source`'s window issued. What it changed
@@ -233,7 +229,7 @@ final class BrowserStoreFamily {
             return nil
         }
         guard authoritativeSession != previous else { return (changes, false) }
-        reconcileStores(after: previous, from: source)
+        follow()
         return (changes, true)
     }
 
@@ -246,7 +242,7 @@ final class BrowserStoreFamily {
         let previous = authoritativeSession
         let changes = try source.core.send(intent)
         guard authoritativeSession != previous else { return changes }
-        reconcileStores(after: previous, from: source)
+        follow()
         return changes
     }
 
@@ -268,16 +264,15 @@ final class BrowserStoreFamily {
 
     /// Moves a tab from `source`'s window to `destination`'s. The core changes
     /// both workspaces together, saving the one that keeps a file with its
-    /// journal before it returns, and the windows of both families follow.
+    /// journal before it returns, and the windows of both families follow,
+    /// even when only what they show changed.
     static func moveTab(
         _ intent: MoveTabToWindow, from source: BrowserStore, to destination: BrowserStore
     ) throws(Rejection) {
-        let previousSource = source.family.authoritativeSession
-        let previousDestination = destination.family.authoritativeSession
         try source.core.send(intent)
-        source.family.reconcileStores(after: previousSource, from: source)
+        source.family.follow(always: true)
         guard destination.family !== source.family else { return }
-        destination.family.reconcileStores(after: previousDestination, from: destination)
+        destination.family.follow(always: true)
     }
 
     // MARK: - Actions - Storage
@@ -329,7 +324,7 @@ final class BrowserStoreFamily {
     /// Every window follows the accepted session. The core's device already
     /// moved the window that issued the command and repaired the others, and
     /// the session copy already holds what the core published for it.
-    private func reconcileStores(after previous: BrowserSession, from source: BrowserStore?) {
+    private func reconcileStores(after previous: BrowserSession) {
         persistFavicons(from: previous, to: authoritativeSession)
         followedSession = authoritativeSession
         stores.removeAll { $0.value == nil }
@@ -337,42 +332,29 @@ final class BrowserStoreFamily {
             store.receiveFamilySessionChange(from: previous, to: authoritativeSession)
         }
         borrowedFamilies.removeAll { $0.value == nil }
-        for child in borrowedFamilies.compactMap(\.value) { child.followOwner() }
+        for child in borrowedFamilies.compactMap(\.value) { child.follow() }
     }
 
-    /// The core brought this borrowed family's Space up to date with its
-    /// owner's in the owner's own answer: its windows follow what changed.
-    private func followOwner() {
+    /// Every window follows the accepted session from the one they followed
+    /// last, which keeps the images tabs took beside the session file. Unless
+    /// `always`, nothing happens while they already follow it.
+    private func follow(always: Bool = false) {
         let previous = followedSession
-        guard authoritativeSession != previous else { return }
-        reconcileStores(after: previous, from: nil)
+        guard always || authoritativeSession != previous else { return }
+        reconcileStores(after: previous)
     }
 
-    /// Hears what the core records from the pages of this family's workspace,
-    /// which changes the session without a command of the family's.
-    private func observePageRecords() {
-        core.device?.engines.observeRecords(self) { [weak self] in self?.pageRecordsApplied($0) }
-    }
-
-    /// The core recorded a page's navigation or gave a tab its page's icon:
-    /// the images tabs took are kept beside the session file, and every window
-    /// reconciles with the session as it does after a command.
-    private func pageRecordsApplied(_ records: Engines.PageRecords) {
-        let workspace = core.workspaceID
-        guard
-            records.navigations.contains(where: { $0.workspaceID == workspace })
-                || records.icons.contains(where: { $0.workspaceID == workspace })
-        else { return }
-        let session = authoritativeSession
-        followedSession = session
-        if let favicons {
-            let adopted = Set(records.icons.filter { $0.workspaceID == workspace }.map(\.tabID))
-            for tab in session.spaces.flatMap(\.tabs) where adopted.contains(tab.id.rawValue) {
-                favicons.reconcile(tab.faviconData, tabID: tab.id)
-            }
+    /// Hears each batch of the core's changes that changed this family's
+    /// session or its sync journal: a page's navigation or icon it recorded, a
+    /// cloud merge, or the changes an intent answered. Every window follows,
+    /// and a Space deletion whose cleanup has not finished starts it again.
+    /// TRANSITIONAL until S6.
+    private func followSession() {
+        core.device?.followSessions(self) { [weak self] workspaces in
+            guard let self, workspaces.contains(workspaceID) else { return }
+            follow()
+            scheduleSpaceDataCleanup()
         }
-        stores.removeAll { $0.value == nil }
-        for store in stores.compactMap(\.value) { store.receiveFamilySessionChange(from: session, to: session) }
     }
 
     func beginDeletingSpace(_ id: SpaceID) -> Bool {

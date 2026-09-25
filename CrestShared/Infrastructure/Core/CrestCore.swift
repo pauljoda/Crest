@@ -17,12 +17,21 @@ import Synchronization
 /// the core serializes every call on one app, and a query never changes the
 /// core's state or `state`. Intents stay on the main actor.
 ///
-/// Changes the core starts itself, such as a finished save, arrive through a
-/// payload-free wake that hops to the main queue and drains them, at most once
-/// per main-queue turn.
+/// Changes the core starts itself, such as a finished save or a cloud merge,
+/// arrive through a payload-free wake that hops to the main queue and drains
+/// them, at most once per main-queue turn.
 @MainActor
 @Observable
 final class CrestCore {
+    // MARK: - Types
+
+    /// A registration to hear which sessions a batch changed, which lasts as
+    /// long as its owner.
+    private struct SessionFollower {
+        weak var owner: AnyObject?
+        let handler: @MainActor (Set<UUID>) -> Void
+    }
+
     // MARK: - Variables
 
     /// The read model. Only the changes the core returns update it.
@@ -41,6 +50,9 @@ final class CrestCore {
     @ObservationIgnored private let wake = CoreWakeRelay()
     /// Callers waiting for a revision to reach disk. A drain resumes them.
     @ObservationIgnored var saveWaiters: [(revision: Int64, continuation: CheckedContinuation<Void, Never>)] = []
+    /// TRANSITIONAL until S6: who hears which workspaces' sessions each batch
+    /// changed.
+    @ObservationIgnored private var sessionFollowers: [SessionFollower] = []
     #if DEBUG
         /// Hears each batch of changes once `state` has applied it, so a test
         /// can apply the same batch again.
@@ -153,10 +165,29 @@ final class CrestCore {
             }
         }
         state.finishBatch(changes)
+        let touched = state.touchedWorkspaces
+        state.touchedWorkspaces = []
+        if !touched.isEmpty { sessionsChanged(touched) }
         if !pageRecords.isEmpty { engines.recordsApplied(pageRecords) }
         #if DEBUG
             batchApplied?(changes)
         #endif
+    }
+
+    /// Calls `handler` with the workspaces whose session or sync journal each
+    /// batch changed, once the batch is applied: a drain's, or the changes an
+    /// intent answered, which carry first any the core made on its own, such
+    /// as a cloud merge.
+    /// The registration lasts as long as `owner`. TRANSITIONAL until S6: the
+    /// windows over a session follow it this way.
+    func followSessions(_ owner: AnyObject, _ handler: @escaping @MainActor (Set<UUID>) -> Void) {
+        sessionFollowers.removeAll { $0.owner == nil }
+        sessionFollowers.append(SessionFollower(owner: owner, handler: handler))
+    }
+
+    private func sessionsChanged(_ workspaces: Set<UUID>) {
+        sessionFollowers.removeAll { $0.owner == nil }
+        for follower in sessionFollowers { follower.handler(workspaces) }
     }
 
     /// Tells the core the main queue finished the turn a wake's drain followed,

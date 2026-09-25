@@ -2437,6 +2437,10 @@
     "sync-transport-typed-queries": {
       "category": "internal",
       "message": "The cloud transport reads and acknowledges sync uploads through typed core queries, and cloud merges compute off the app's lock."
+    },
+    "session-changes-follow-batches": {
+      "category": "internal",
+      "message": "Store windows follow every batch of the core's changes that touched their session."
     }
   }
 }

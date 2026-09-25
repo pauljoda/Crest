@@ -164,6 +164,7 @@ extension CoreState {
     }
 
     private func forward(_ change: Change, to workspace: UUID) {
+        touchedWorkspaces.insert(workspace)
         sessionCopies[workspace]?.authority?.receive(change, images: favicons)
     }
 }
