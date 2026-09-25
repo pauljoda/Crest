@@ -6,6 +6,9 @@
     enum ReadModelSpikeBody: String, CaseIterable {
         case list
         case sectionHeader
+        /// The rows of one list the core publishes: a section's top level or
+        /// a folder's inside.
+        case section
         case row
         case header
         case switcher
@@ -47,7 +50,7 @@
                 titled: "Navigated \(run)")
         }
         static let startPageNavigation = ReadModelSpikeEdit(
-            name: "E2 Start Page to web page", allowed: [.list: 1, .row: 3], mounts: [.row: 1],
+            name: "E2 Start Page to web page", allowed: [.section: 1, .row: 3], mounts: [.row: 1],
             prepare: { bench, _ in
                 guard let tabID = bench.store.openSessionTab(.startPage, in: bench.space.id, shouldSelect: false),
                     let page = bench.store.openReportingPage(for: tabID, in: bench.space.id)
@@ -70,19 +73,18 @@
             bench.store.finishNavigation(
                 of: bench.visitPage, to: URL(string: "https://visited-\(run).example/")!, titled: "Visited \(run)")
         }
-        static let showAnotherTab = ReadModelSpikeEdit(name: "E5 show another tab", allowed: [.list: 1, .row: 2]) {
+        static let showAnotherTab = ReadModelSpikeEdit(name: "E5 show another tab", allowed: [.row: 2]) {
             bench, run in
             bench.store.activateSessionTab(bench.currentTabs[10 + run % 2].id, in: bench.space.id)
         }
-        static let moveWithinSection = ReadModelSpikeEdit(
-            name: "E6 move within section", allowed: [.list: 1, .sectionHeader: 2]
-        ) { bench, run in
+        static let moveWithinSection = ReadModelSpikeEdit(name: "E6 move within section", allowed: [.section: 1]) {
+            bench, run in
             let anchor = bench.currentTabs[run.isMultiple(of: 2) ? 1 : 25]
             _ = bench.store.moveSessionTab(
                 bench.currentTabs[20].id, in: bench.space.id, to: .current, before: anchor.id)
         }
         static let collapseFolder = ReadModelSpikeEdit(
-            name: "E7 collapse folder", allowed: [.list: 1, .sectionHeader: 2, .row: 1], mounts: [.row: .max]
+            name: "E7 collapse folder", allowed: [.row: 1], mounts: [.section: .max, .row: .max]
         ) { bench, run in
             guard let folder = bench.space.folders.models.first(where: { $0.parentID == nil }) else { return }
             bench.store.setFolderCollapsed(folder.id, in: bench.space.id, isCollapsed: run.isMultiple(of: 2))

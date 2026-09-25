@@ -140,8 +140,8 @@
             windows.append(
                 show(
                     ReadModelSpikeSidebar(
-                        workspace: bench.workspace, space: bench.space, window: bench.window, outline: bench.outline,
-                        state: bench.core.state, isLazy: isLazy),
+                        workspace: bench.workspace, space: bench.space, window: bench.window, state: bench.core.state,
+                        isLazy: isLazy),
                     title: "Read model spike", origin: CGPoint(x: 40, y: 80)))
             try? await Task.sleep(for: delay)
             measureItems()
@@ -244,11 +244,9 @@
             else {
                 return
             }
-            let outline = ReadModelSpikeOutline(space: space, workspaceID: workspace.id)
             windows.append(
                 show(
-                    ReadModelSpikeSidebar(
-                        workspace: workspace, space: space, window: bench.window, outline: outline, state: state),
+                    ReadModelSpikeSidebar(workspace: workspace, space: space, window: bench.window, state: state),
                     title: "Reopened", origin: CGPoint(x: 360, y: 80)))
             try? await Task.sleep(for: .seconds(1))
             _ = await nextCommit()
@@ -256,7 +254,6 @@
             let interval = Self.signposter.beginInterval("Reopen")
             let start = ContinuousClock.now
             Self.apply(retitled, to: state)
-            outline.receive([.workspaceOpened(retitled)])
             let committed = await nextCommit()
             Self.signposter.endInterval("Reopen", interval)
             series.append(
@@ -265,21 +262,19 @@
                     milliseconds: [Self.milliseconds(start.duration(to: committed))]))
         }
 
-        /// What building the list's items costs alone, for the Space's rows.
+        /// What building one list's rows costs alone, for the Space's
+        /// longest list, its open tabs' top level.
         private func measureItems() {
             var durations: [Double] = []
             var count = 0
+            let list = bench.space.sidebar.section(.current)
             for _ in 0..<100 {
                 durations.append(
                     Self.time {
-                        count =
-                            ReadModelSpikeList.items(
-                                space: bench.space, window: bench.window, outline: bench.outline,
-                                state: bench.core.state
-                            ).count
+                        count = ReadModelSpikeRows.items(list: list, space: bench.space, state: bench.core.state).count
                     })
             }
-            series.append(Series(name: "List items, \(count) items", milliseconds: durations))
+            series.append(Series(name: "Open section rows, \(count) items", milliseconds: durations))
         }
 
         private func write() {

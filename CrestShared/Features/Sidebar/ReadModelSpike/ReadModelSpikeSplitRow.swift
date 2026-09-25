@@ -2,7 +2,7 @@
     import SwiftUI
 
     /// S6.4 spike, DEBUG and performance builds only: a split's sidebar row,
-    /// one card per member.
+    /// one card per member, shown while its window shows any member.
     struct ReadModelSpikeSplitRow: View {
         // MARK: - Types
 
@@ -21,19 +21,21 @@
             let titles: [String]
             let symbols: [String]
             let images: [Data?]
+            let isShown: Bool
 
             @MainActor
-            init(members: Members, favicons: FaviconAssets) {
+            init(members: Members, window: WindowStateModel, favicons: FaviconAssets) {
                 titles = members.tabs.map(\.displayTitle)
                 symbols = members.tabs.map(\.symbol)
                 images = members.tabs.map { favicons.image(of: $0.id) }
+                isShown = members.tabs.map { window.shownTabIDs.contains($0.id) }.contains(true)
             }
         }
 
         // MARK: - Variables
 
         let members: Members
-        let isSelected: Bool
+        let window: WindowStateModel
         let depth: Int
         let favicons: FaviconAssets
 
@@ -41,7 +43,7 @@
             #if CREST_PERFORMANCE_HARNESS
                 let _ = ReadModelSpikeBodyCount.count(.row)
             #endif
-            let shown = Shown(members: members, favicons: favicons)
+            let shown = Shown(members: members, window: window, favicons: favicons)
             HStack(spacing: 4) {
                 ForEach(shown.titles.indices, id: \.self) { index in
                     HStack(spacing: 4) {
@@ -53,7 +55,7 @@
             }
             .padding(.leading, CGFloat(depth) * 12)
             .padding(.vertical, 3)
-            .background(isSelected ? Color.accentColor.opacity(0.2) : Color.clear, in: .rect(cornerRadius: 6))
+            .background(shown.isShown ? Color.accentColor.opacity(0.2) : Color.clear, in: .rect(cornerRadius: 6))
         }
     }
 #endif

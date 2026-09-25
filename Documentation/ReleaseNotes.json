@@ -2521,6 +2521,10 @@
     "read-model-per-tab-slots": {
       "category": "internal",
       "message": "Showing another tab tells only the two rows it concerns, and opening or closing a tab tells only the views that looked that tab up."
+    },
+    "read-model-sidebar-spike-on-core-outline": {
+      "category": "internal",
+      "message": "The debug-only sidebar harness draws the core's published sidebar lists and shown-tab slots, and its checks hold the tighter redraw limits they allow."
     }
   }
 }

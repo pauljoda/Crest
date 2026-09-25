@@ -9,7 +9,6 @@
         let workspace: WorkspaceModel
         let space: SpaceModel
         let window: WindowStateModel
-        let outline: ReadModelSpikeOutline
         let state: CoreState
         var isLazy = true
 
@@ -17,7 +16,7 @@
             VStack(alignment: .leading, spacing: 8) {
                 ReadModelSpikeSwitcher(workspace: workspace, shownSpaceID: space.id)
                 ReadModelSpikeHeader(settings: space.settings)
-                ReadModelSpikeList(space: space, window: window, outline: outline, state: state, isLazy: isLazy)
+                ReadModelSpikeList(space: space, window: window, state: state, isLazy: isLazy)
             }
             .padding(10)
             .frame(width: 280)

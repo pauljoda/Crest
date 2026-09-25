@@ -166,9 +166,7 @@ extension SidebarBodies {
     /// The views `ReadModelSpikeSidebar` draws over the bench's Space, each
     /// reading what its body reads.
     convenience init(mirroring bench: ReadModelSpikeBench) {
-        let (workspace, space, window, outline, state) = (
-            bench.workspace, bench.space, bench.window, bench.outline, bench.core.state
-        )
+        let (workspace, space, window, state) = (bench.workspace, bench.space, bench.window, bench.core.state)
         self.init(
             root: Node(kind: nil) {
                 [
@@ -194,31 +192,61 @@ extension SidebarBodies {
                     Child(
                         key: "list", input: AnyEquatable("list"),
                         node: Node(kind: .list) {
-                            ReadModelSpikeList.items(space: space, window: window, outline: outline, state: state).map {
-                                Child(key: $0.id, input: AnyEquatable($0), node: Self.node(for: $0, state: state))
+                            ReadModelSpikeList.sections(space: space).flatMap { section in
+                                var children = [
+                                    Child(
+                                        key: "section-header-\(section.id)", input: AnyEquatable(section),
+                                        node: Node(kind: .sectionHeader) { [] })
+                                ]
+                                if section.isExpanded {
+                                    children.append(
+                                        SidebarBodies.rows(
+                                            space.sidebar.section(section.placement), key: "section-\(section.id)",
+                                            space: space, window: window, state: state))
+                                }
+                                return children
                             }
                         }),
                 ]
             })
     }
 
-    private static func node(for item: ReadModelSpikeList.Item, state: CoreState) -> Node {
+    /// The rows of one list the core publishes, handed the list itself.
+    private static func rows(
+        _ list: SidebarListModel, key: String, space: SpaceModel, window: WindowStateModel, state: CoreState
+    ) -> Child {
+        Child(
+            key: key, input: AnyEquatable(ObjectIdentifier(list)),
+            node: Node(kind: .section) {
+                ReadModelSpikeRows.items(list: list, space: space, state: state).map {
+                    Child(
+                        key: "\(key)-\($0.id)", input: AnyEquatable($0),
+                        node: node(for: $0, space: space, window: window, state: state))
+                }
+            })
+    }
+
+    private static func node(
+        for item: ReadModelSpikeRows.Item, space: SpaceModel, window: WindowStateModel, state: CoreState
+    ) -> Node {
         switch item.content {
-        case .header:
-            Node(kind: .sectionHeader) { [] }
         case .tab(let tab, let page):
             Node(kind: .row) {
-                _ = ReadModelSpikeTabRow.Shown(tab: tab, page: page, favicons: state.favicons)
+                _ = ReadModelSpikeTabRow.Shown(tab: tab, page: page, window: window, favicons: state.favicons)
                 return []
             }
         case .folder(let folder):
             Node(kind: .row) {
-                _ = ReadModelSpikeFolderRow.Shown(folder: folder)
-                return []
+                guard !ReadModelSpikeFolderRow.Shown(folder: folder).isCollapsed else { return [] }
+                return [
+                    rows(
+                        space.sidebar.inside(folder.id), key: "folder-\(folder.id)", space: space, window: window,
+                        state: state)
+                ]
             }
         case .split(let members):
             Node(kind: .row) {
-                _ = ReadModelSpikeSplitRow.Shown(members: members, favicons: state.favicons)
+                _ = ReadModelSpikeSplitRow.Shown(members: members, window: window, favicons: state.favicons)
                 return []
             }
         }

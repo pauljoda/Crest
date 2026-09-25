@@ -16,7 +16,6 @@
         let workspace: WorkspaceModel
         let space: SpaceModel
         let window: WindowStateModel
-        let outline: ReadModelSpikeOutline
         /// The Space's current tabs outside splits, and a page showing each of
         /// the first ones at its address.
         let currentTabs: [TabStateModel]
@@ -53,7 +52,6 @@
                 preconditionFailure("The spike's window is not open.")
             }
             self.window = window
-            outline = ReadModelSpikeOutline(space: space, workspaceID: workspace.id)
             currentTabs = space.tabs.models.filter { $0.placement == .current && $0.splitGroupID == nil }
             pages = currentTabs.prefix(pageCount).map { tab in
                 guard let page = store.openReportingPage(for: tab.id, in: space.id),
@@ -68,7 +66,6 @@
             self.visitPage = visitPage
             core.batchApplied = { [weak self] changes in
                 guard let self else { return }
-                outline.receive(changes)
                 changeKinds.formUnion(changes.map { change in Mirror(reflecting: change).children.first?.label ?? "?" })
             }
         }
