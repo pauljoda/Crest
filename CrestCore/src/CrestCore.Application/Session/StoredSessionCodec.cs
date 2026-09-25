@@ -159,7 +159,7 @@ internal static partial class StoredSessionCodec {
 
     /// One closed set's stored spellings, read and written through the same pairs.
     /// A spelling this build does not know reads as null, for the caller's default.
-    private sealed class StoredSpellings<T>(IReadOnlyList<(T Value, string Spelling)> pairs) where T : struct, Enum {
+    internal sealed class StoredSpellings<T>(IReadOnlyList<(T Value, string Spelling)> pairs) where T : struct, Enum {
         #region Variables
 
         private readonly Dictionary<string, T> values = pairs.ToDictionary(pair => pair.Spelling, pair => pair.Value, StringComparer.Ordinal);

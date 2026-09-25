@@ -48,7 +48,7 @@ internal static partial class StoredSessionCodec {
 
     /// The engine a stored selection names: a built-in's spelling, or `custom:`
     /// and a custom engine's identity. One this build cannot read selects Google.
-    private static (BuiltInSearchEngine? BuiltIn, Guid? Custom) SearchSelection(string? spelling) =>
+    internal static (BuiltInSearchEngine? BuiltIn, Guid? Custom) SearchSelection(string? spelling) =>
         spelling is not null && spelling.StartsWith(SearchProvider.CustomPrefix, StringComparison.Ordinal)
             && Guid.TryParseExact(spelling[SearchProvider.CustomPrefix.Length..], "D", out var custom)
             ? (null, custom) : (BuiltInSearchEngine.Named(spelling) ?? BuiltInSearchEngine.Google, null);

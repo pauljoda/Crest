@@ -114,6 +114,7 @@ public static class NativeSyncProjection {
             foreach (var history in Items(space, StoredSessionCodec.Key.History).Where(h => SyncContentPolicy.Includes(Text(h!["url"])))) {
                 var value = Fields(history!, "id", "url", "title", "firstVisitedAt", "lastVisitedAt", "visitCount");
                 value["spaceID"] = space["id"]!.DeepClone();
+                Spell(value, "url");
                 Visit(value);
                 Add(SyncRecordKinds.History, value);
             }
@@ -135,9 +136,10 @@ public static class NativeSyncProjection {
     private static JsonObject Tab(JsonNode source, JsonNode spaceId, string token, bool archived) {
         var value = Fields(source, "id", "title", "url", "symbol", "lastActivatedAt", "positionModifiedAt", "customTitle", "titleModifiedAt", "keepsPageLoaded");
         value["spaceID"] = spaceId.DeepClone(); value["orderToken"] = token;
+        Spell(value, "url");
         value["placement"] = archived ? JsonValue.Create(TabPlacement.Current.Name) : source["placement"]!.DeepClone();
         if (!archived) {
-            if (SavedUrl(source) is { } saved) value["savedURL"] = saved;
+            if (SavedUrl(source) is { } saved) value["savedURL"] = new SyncedAddress(saved).Spelled ?? saved;
             // Only a placement that holds folders names one: a pinned tab never does.
             if (source["folderID"] is { } folder && Placement(source).HoldsFolders) value["folderID"] = folder.DeepClone();
             if (source["splitGroupID"] is { } split) value["splitGroupID"] = split.DeepClone();
@@ -146,6 +148,12 @@ public static class NativeSyncProjection {
         SyncedText.TabCustomTitle.Fit(value);
         SyncedText.TabSymbol.Fit(value);
         return value;
+    }
+
+    /// Writes the address `field` holds as every client parses it.
+    private static void Spell(JsonObject value, string field) {
+        if (value[field] is JsonValue address && address.TryGetValue<string>(out var text) && new SyncedAddress(text).Spelled is { } spelled
+            && spelled != text) value[field] = spelled;
     }
 
     /// A split's metadata as every client reads it.

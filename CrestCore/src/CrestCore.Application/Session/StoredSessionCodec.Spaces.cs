@@ -8,11 +8,11 @@ namespace CrestCore.Application;
 internal static partial class StoredSessionCodec {
     #region Variables
 
-    private static readonly StoredSpellings<SpaceAccent> SpaceAccents = new([
+    internal static readonly StoredSpellings<SpaceAccent> SpaceAccents = new([
         (SpaceAccent.Indigo, "indigo"), (SpaceAccent.Orange, "orange"), (SpaceAccent.Teal, "teal"),
         (SpaceAccent.Rose, "rose")
     ]);
-    private static readonly StoredSpellings<SpaceAccessPolicy> SpaceAccessPolicies = new([
+    internal static readonly StoredSpellings<SpaceAccessPolicy> SpaceAccessPolicies = new([
         (SpaceAccessPolicy.Open, "open"), (SpaceAccessPolicy.DeviceOwnerAuthentication, "deviceOwnerAuthentication")
     ]);
 

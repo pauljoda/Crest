@@ -20,7 +20,7 @@ public sealed partial class BrowserContractsTests {
     /// One character of 25 UTF-8 bytes, which a cut must keep whole.
     private const string Family = "👨‍👩‍👧‍👦";
 
-    private static readonly string LongAddress = "https://example.com/" + new string('a', SyncContentPolicy.MaximumAddressBytes);
+    private static readonly string LongAddress = "https://example.com/" + new string('a', SyncedAddress.MaximumBytes);
 
     /// Each way a session can hold what no client reads in a record, and what
     /// its staged records carry instead.
@@ -141,7 +141,7 @@ public sealed partial class BrowserContractsTests {
         }
         void Address(JsonNode? address, string field) {
             var text = address?.GetValue<string>();
-            if (text is null || Encoding.UTF8.GetByteCount(text) > SyncContentPolicy.MaximumAddressBytes
+            if (text is null || Encoding.UTF8.GetByteCount(text) > SyncedAddress.MaximumBytes
                 || !Uri.TryCreate(text, UriKind.Absolute, out var parsed) || parsed.Scheme is not ("http" or "https"))
                 refusals.Add(field);
         }

@@ -16,6 +16,20 @@ public static class SpaceBrandingPolicy {
     /// The most letters a monogram figure shows.
     public const int MaximumMonogramLength = 2;
 
+    /// The rendering vocabulary every shipped build draws.
+    public const int BaselineRenderingVersion = 2;
+    /// The vocabulary that adds the expanded heraldic charges.
+    public const int ExpandedChargeRenderingVersion = 3;
+    /// The vocabulary that adds the customization surfaces and backplates.
+    public const int CustomizationRenderingVersion = 4;
+    /// The Crest Studio vocabulary: parametric shapes, own tinctures, custom
+    /// charges, finishes and depth.
+    public const int StudioRenderingVersion = 5;
+    /// How many pieces a counted field division draws unless set.
+    public const int DefaultDivisionCount = 4;
+    /// How much detail a counted trim draws unless set.
+    public const int DefaultTrimDetail = 12;
+
     /// The Space color used when a branding record has none.
     public static BrandColor DefaultColor { get; } = new(0.29, 0.25, 0.58);
 
@@ -116,6 +130,62 @@ public static class SpaceBrandingPolicy {
 
     private static BrandColor Color(BrandColor color) =>
         new(Unit(color.Red), Unit(color.Green), Unit(color.Blue), Unit(color.Alpha, 1));
+
+    #endregion
+
+    #region Actions - Rendering vocabulary
+
+    /// The rendering vocabulary `branding` needs, which is the version it
+    /// announces: the shipped baseline unless it wears a term, a symbol color
+    /// or a Studio parameter that a later vocabulary added. Every Apple client
+    /// computes it this way when it writes a branding.
+    public static int RenderingVersion(SpaceBranding branding) {
+        ArgumentNullException.ThrowIfNull(branding);
+        var crest = branding.Crest;
+        return new[] {
+            branding.SymbolColor is null ? BaselineRenderingVersion : CustomizationRenderingVersion,
+            branding.BannerPattern is SpaceBannerPattern.Stripes or SpaceBannerPattern.Checkered or SpaceBannerPattern.Lozenges
+                ? CustomizationRenderingVersion : BaselineRenderingVersion,
+            Introduced(crest.Symbol),
+            crest.Backplate switch {
+                CrestBackplate.Octagon or CrestBackplate.RoundedSquare => CustomizationRenderingVersion,
+                CrestBackplate.FrenchShield or CrestBackplate.Oval or CrestBackplate.Banner or CrestBackplate.Badge => StudioRenderingVersion,
+                _ => BaselineRenderingVersion
+            },
+            crest.FieldDivision is CrestFieldDivision.PerSaltire || IsCounted(crest.FieldDivision) ? StudioRenderingVersion : BaselineRenderingVersion,
+            crest.Ordinary is CrestOrdinary.Pall or CrestOrdinary.Pile or CrestOrdinary.Canton or CrestOrdinary.Roundel
+                ? StudioRenderingVersion : BaselineRenderingVersion,
+            crest.Trim is CrestTrim.Line or CrestTrim.DoubleLine or CrestTrim.Beaded ? StudioRenderingVersion : BaselineRenderingVersion,
+            crest.ChargeLayout is CrestChargeLayout.Quad or CrestChargeLayout.Ring ? StudioRenderingVersion : BaselineRenderingVersion,
+            UsesStudioParameters(crest) ? StudioRenderingVersion : BaselineRenderingVersion
+        }.Max();
+    }
+
+    /// The vocabulary that first drew `symbol`.
+    private static int Introduced(CrestSymbol symbol) => symbol switch {
+        CrestSymbol.Dragon or CrestSymbol.Direwolf or CrestSymbol.Lion or CrestSymbol.Stag or CrestSymbol.Raven or CrestSymbol.Griffin
+            or CrestSymbol.Eagle or CrestSymbol.Bear or CrestSymbol.Boar or CrestSymbol.Fox or CrestSymbol.Horse or CrestSymbol.Unicorn
+            or CrestSymbol.Wyvern or CrestSymbol.Hydra or CrestSymbol.Serpent or CrestSymbol.Kraken or CrestSymbol.Seahorse
+            or CrestSymbol.Scorpion or CrestSymbol.Bat or CrestSymbol.Falcon or CrestSymbol.Rose or CrestSymbol.Lily or CrestSymbol.Pine
+            or CrestSymbol.Willow or CrestSymbol.Swords or CrestSymbol.Axes or CrestSymbol.Sword or CrestSymbol.Trident
+            or CrestSymbol.Anchor or CrestSymbol.Castle or CrestSymbol.Scales or CrestSymbol.DragonHead => StudioRenderingVersion,
+        CrestSymbol.Paw or CrestSymbol.Hound or CrestSymbol.Crown or CrestSymbol.RisingSun or CrestSymbol.CrossedBanners
+            or CrestSymbol.Flower or CrestSymbol.Drop or CrestSymbol.Snowflake or CrestSymbol.Horn => ExpandedChargeRenderingVersion,
+        _ => BaselineRenderingVersion
+    };
+
+    /// Whether a field division draws a counted number of pieces.
+    private static bool IsCounted(CrestFieldDivision division) =>
+        division is CrestFieldDivision.Gyronny or CrestFieldDivision.Barry or CrestFieldDivision.Paly or CrestFieldDivision.Checky;
+
+    /// Whether the crest uses a control only the Studio vocabulary draws.
+    private static bool UsesStudioParameters(SpaceCrest crest) =>
+        crest.Palette is not null || crest.Charge is not null || crest.PlateScale != 1 || crest.EdgeWidth != 0
+        || (IsCounted(crest.FieldDivision) && crest.DivisionCount != DefaultDivisionCount) || crest.Finish != CrestFinish.Flat
+        || crest.SheenAngle != 45 || crest.ShowsOutline || (crest.Backplate == CrestBackplate.Seal && crest.SealTeeth != 12)
+        || crest.OrdinaryWidth != 1 || crest.TrimWeight != 1
+        || (crest.Trim is CrestTrim.Sunburst or CrestTrim.Beaded && crest.TrimDetail != DefaultTrimDetail)
+        || crest.ChargeScale != 1 || crest.ChargeOffset != 0 || crest.ChargeWeight != CrestChargeWeight.Bold || crest.Depth != CrestDepth.None;
 
     #endregion
 }

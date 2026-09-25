@@ -2457,6 +2457,10 @@
     "sync-journal-contracts-in-core": {
       "category": "internal",
       "message": "The sync journal's contract tests run against the core."
+    },
+    "sync-payload-codec-in-core": {
+      "category": "internal",
+      "message": "The core reads and writes synced records' payloads."
     }
   }
 }

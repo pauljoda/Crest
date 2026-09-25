@@ -7,49 +7,49 @@ namespace CrestCore.Application;
 internal static partial class StoredSessionCodec {
     #region Variables
 
-    private static readonly StoredSpellings<SpaceBannerPattern> SpaceBannerPatterns = new([
+    internal static readonly StoredSpellings<SpaceBannerPattern> SpaceBannerPatterns = new([
         (SpaceBannerPattern.Solid, "solid"), (SpaceBannerPattern.Split, "split"), (SpaceBannerPattern.Bands, "bands"),
         (SpaceBannerPattern.Diagonal, "diagonal"), (SpaceBannerPattern.Chevron, "chevron"),
         (SpaceBannerPattern.Quartered, "quartered"), (SpaceBannerPattern.Stripes, "stripes"),
         (SpaceBannerPattern.Checkered, "checkered"), (SpaceBannerPattern.Lozenges, "lozenges")
     ]);
-    private static readonly StoredSpellings<SpaceThemeMode> SpaceThemeModes = new([
+    internal static readonly StoredSpellings<SpaceThemeMode> SpaceThemeModes = new([
         (SpaceThemeMode.Banner, "banner"), (SpaceThemeMode.Gradient, "gradient")
     ]);
-    private static readonly StoredSpellings<SpaceIconStyle> SpaceIconStyles = new([
+    internal static readonly StoredSpellings<SpaceIconStyle> SpaceIconStyles = new([
         (SpaceIconStyle.SimpleSymbol, "simpleSymbol"), (SpaceIconStyle.LayeredCrest, "layeredCrest")
     ]);
-    private static readonly StoredSpellings<SpaceTextColorMode> SpaceTextColorModes = new([
+    internal static readonly StoredSpellings<SpaceTextColorMode> SpaceTextColorModes = new([
         (SpaceTextColorMode.Automatic, "automatic"), (SpaceTextColorMode.Light, "light"),
         (SpaceTextColorMode.Dark, "dark")
     ]);
-    private static readonly StoredSpellings<CrestBackplate> CrestBackplates = new([
+    internal static readonly StoredSpellings<CrestBackplate> CrestBackplates = new([
         (CrestBackplate.None, "none"), (CrestBackplate.Circle, "circle"), (CrestBackplate.Shield, "shield"),
         (CrestBackplate.FrenchShield, "frenchShield"), (CrestBackplate.Diamond, "diamond"),
         (CrestBackplate.Seal, "seal"), (CrestBackplate.Hexagon, "hexagon"), (CrestBackplate.Octagon, "octagon"),
         (CrestBackplate.RoundedSquare, "roundedSquare"), (CrestBackplate.Oval, "oval"),
         (CrestBackplate.Banner, "banner"), (CrestBackplate.Badge, "badge")
     ]);
-    private static readonly StoredSpellings<CrestFieldDivision> CrestFieldDivisions = new([
+    internal static readonly StoredSpellings<CrestFieldDivision> CrestFieldDivisions = new([
         (CrestFieldDivision.Plain, "plain"), (CrestFieldDivision.PerPale, "perPale"),
         (CrestFieldDivision.PerFess, "perFess"), (CrestFieldDivision.PerBend, "perBend"),
         (CrestFieldDivision.PerChevron, "perChevron"), (CrestFieldDivision.Quarterly, "quarterly"),
         (CrestFieldDivision.PerSaltire, "perSaltire"), (CrestFieldDivision.Gyronny, "gyronny"),
         (CrestFieldDivision.Barry, "barry"), (CrestFieldDivision.Paly, "paly"), (CrestFieldDivision.Checky, "checky")
     ]);
-    private static readonly StoredSpellings<CrestOrdinary> CrestOrdinaries = new([
+    internal static readonly StoredSpellings<CrestOrdinary> CrestOrdinaries = new([
         (CrestOrdinary.None, "none"), (CrestOrdinary.Pale, "pale"), (CrestOrdinary.Fess, "fess"),
         (CrestOrdinary.Bend, "bend"), (CrestOrdinary.Chevron, "chevron"), (CrestOrdinary.Cross, "cross"),
         (CrestOrdinary.Saltire, "saltire"), (CrestOrdinary.Chief, "chief"), (CrestOrdinary.Bordure, "bordure"),
         (CrestOrdinary.Pall, "pall"), (CrestOrdinary.Pile, "pile"), (CrestOrdinary.Canton, "canton"),
         (CrestOrdinary.Roundel, "roundel")
     ]);
-    private static readonly StoredSpellings<CrestTrim> CrestTrims = new([
+    internal static readonly StoredSpellings<CrestTrim> CrestTrims = new([
         (CrestTrim.None, "none"), (CrestTrim.Shield, "shield"), (CrestTrim.Line, "line"),
         (CrestTrim.DoubleLine, "doubleLine"), (CrestTrim.Laurel, "laurel"), (CrestTrim.Sunburst, "sunburst"),
         (CrestTrim.DoubleRing, "doubleRing"), (CrestTrim.Seal, "seal"), (CrestTrim.Beaded, "beaded")
     ]);
-    private static readonly StoredSpellings<CrestSymbol> CrestSymbols = new([
+    internal static readonly StoredSpellings<CrestSymbol> CrestSymbols = new([
         (CrestSymbol.Dragon, "dragon"), (CrestSymbol.Direwolf, "direwolf"), (CrestSymbol.Lion, "lion"),
         (CrestSymbol.Stag, "stag"), (CrestSymbol.Raven, "raven"), (CrestSymbol.Griffin, "griffin"),
         (CrestSymbol.Eagle, "eagle"), (CrestSymbol.Bear, "bear"), (CrestSymbol.Boar, "boar"),
@@ -72,23 +72,23 @@ internal static partial class StoredSessionCodec {
         (CrestSymbol.Compass, "compass"), (CrestSymbol.Sailboat, "sailboat"), (CrestSymbol.Crown, "crown"),
         (CrestSymbol.Horn, "horn"), (CrestSymbol.CrossedBanners, "crossedBanners")
     ]);
-    private static readonly StoredSpellings<CrestChargeLayout> CrestChargeLayouts = new([
+    internal static readonly StoredSpellings<CrestChargeLayout> CrestChargeLayouts = new([
         (CrestChargeLayout.Single, "single"), (CrestChargeLayout.Paired, "paired"), (CrestChargeLayout.Trio, "trio"),
         (CrestChargeLayout.Quad, "quad"), (CrestChargeLayout.Ring, "ring")
     ]);
-    private static readonly StoredSpellings<CrestFinish> CrestFinishes = new([
+    internal static readonly StoredSpellings<CrestFinish> CrestFinishes = new([
         (CrestFinish.Flat, "flat"), (CrestFinish.Sheen, "sheen"), (CrestFinish.Embossed, "embossed")
     ]);
-    private static readonly StoredSpellings<CrestDepth> CrestDepths = new([
+    internal static readonly StoredSpellings<CrestDepth> CrestDepths = new([
         (CrestDepth.None, "none"), (CrestDepth.Soft, "soft"), (CrestDepth.Lifted, "lifted")
     ]);
-    private static readonly StoredSpellings<CrestChargeWeight> CrestChargeWeights = new([
+    internal static readonly StoredSpellings<CrestChargeWeight> CrestChargeWeights = new([
         (CrestChargeWeight.Light, "light"), (CrestChargeWeight.Regular, "regular"), (CrestChargeWeight.Bold, "bold")
     ]);
-    private static readonly StoredSpellings<CrestMonogramStyle> CrestMonogramStyles = new([
+    internal static readonly StoredSpellings<CrestMonogramStyle> CrestMonogramStyles = new([
         (CrestMonogramStyle.Serif, "serif"), (CrestMonogramStyle.Sans, "sans")
     ]);
-    private static readonly StoredSpellings<CrestChargeKind> CrestChargeKinds = new([
+    internal static readonly StoredSpellings<CrestChargeKind> CrestChargeKinds = new([
         (CrestChargeKind.Heraldic, "heraldic"), (CrestChargeKind.System, "system"), (CrestChargeKind.Emoji, "emoji"),
         (CrestChargeKind.Monogram, "monogram"), (CrestChargeKind.None, "none")
     ]);
