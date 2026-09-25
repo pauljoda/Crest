@@ -2453,6 +2453,10 @@
     "overwrite-keeps-deletion-reason": {
       "category": "fixed",
       "message": "A folder you delete just before choosing this device's copy over iCloud's stays deleted on your other devices."
+    },
+    "sync-journal-contracts-in-core": {
+      "category": "internal",
+      "message": "The sync journal's contract tests run against the core."
     }
   }
 }
