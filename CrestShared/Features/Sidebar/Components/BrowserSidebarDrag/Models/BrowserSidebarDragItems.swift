@@ -31,7 +31,7 @@ struct BrowserFolderDragItem: Codable, Equatable, Transferable, Sendable {
     let profileID: UUID
     /// Snapshot of the whole subtree; detects membership changes during a lift.
     var memberTabIDs: [TabID]? = nil
-    var selection: BrowserTabBatchRequest? = nil
+    var selection: BrowserCapturedSelection? = nil
 
     var spaceAssignment: BrowserSpaceRuntimeAssignment {
         BrowserSpaceRuntimeAssignment(
@@ -42,6 +42,12 @@ struct BrowserFolderDragItem: Codable, Equatable, Transferable, Sendable {
 
     static var transferRepresentation: some TransferRepresentation {
         CodableRepresentation(contentType: .json)
+    }
+
+    /// The selection a lift captures stays with the lift; the payload names
+    /// only the folder.
+    private enum CodingKeys: String, CodingKey {
+        case folderID, spaceID, profileID, memberTabIDs
     }
 }
 
@@ -59,7 +65,7 @@ struct BrowserSplitGroupDragItem: Codable, Equatable, Transferable, Sendable {
     let spaceID: SpaceID
     let profileID: UUID
     let memberTabIDs: [TabID]
-    var selection: BrowserTabBatchRequest? = nil
+    var selection: BrowserCapturedSelection? = nil
 
     var spaceAssignment: BrowserSpaceRuntimeAssignment {
         BrowserSpaceRuntimeAssignment(
@@ -73,13 +79,19 @@ struct BrowserSplitGroupDragItem: Codable, Equatable, Transferable, Sendable {
         // reordering gesture, exactly as the tab payload does.
         CodableRepresentation(contentType: .json)
     }
+
+    /// The selection a lift captures stays with the lift; the payload names
+    /// only the split and its members.
+    private enum CodingKeys: String, CodingKey {
+        case groupID, spaceID, profileID, memberTabIDs
+    }
 }
 
 struct BrowserTabDragItem: Codable, Equatable, Transferable, Sendable {
     let tabID: TabID
     let spaceID: SpaceID
     let profileID: UUID
-    var selection: BrowserTabBatchRequest? = nil
+    var selection: BrowserCapturedSelection? = nil
 
     var runtimeAssignment: BrowserTabRuntimeAssignment {
         BrowserTabRuntimeAssignment(
@@ -100,5 +112,11 @@ struct BrowserTabDragItem: Codable, Equatable, Transferable, Sendable {
         // This payload never leaves Crest. JSON avoids advertising a document
         // type for an internal sidebar-reordering gesture.
         CodableRepresentation(contentType: .json)
+    }
+
+    /// The selection a lift captures stays with the lift; the payload names
+    /// only the tab.
+    private enum CodingKeys: String, CodingKey {
+        case tabID, spaceID, profileID
     }
 }

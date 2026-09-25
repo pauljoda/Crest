@@ -36,7 +36,8 @@ struct BrowserPlatformFolderDragSourceModifier: ViewModifier {
                 .browserMobileDraggable {
                     reorder.state.stage(
                         item: .folder(item),
-                        section: folder.reorderSection
+                        section: folder.reorderSection,
+                        plan: reorder.plan(for: .folder(item))
                     )
                     let payload = (try? JSONEncoder().encode(item)) ?? Data()
                     let provider = NSItemProvider(

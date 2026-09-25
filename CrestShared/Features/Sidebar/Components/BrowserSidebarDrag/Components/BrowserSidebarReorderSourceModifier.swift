@@ -63,57 +63,12 @@ struct BrowserSidebarReorderSourceModifier: ViewModifier {
             switch phase {
             case .moved(let startLocation, let location):
                 if !state.hasLiftInFlight {
-                    let firstID: BrowserSelectionItemID? =
-                        switch item {
-                        case .tab(let tab): .tab(tab.tabID)
-                        case .splitGroup(let group): group.memberTabIDs.first.map(BrowserSelectionItemID.tab)
-                        case .folder(let folder): .folder(folder.folderID)
-                        }
-                    var request = firstID.flatMap {
-                        BrowserSidebarSelection.request(for: $0, browser: reorder.browser, reorder: reorder.state)
+                    guard let (lifted, liftedSection) = liftedItem(in: reorder) else {
+                        input.rejectedGesture = true
+                        return
                     }
-                    if let captured = request, let space = reorder.browser.selectedSpace {
-                        request = reorder.browser.tabMultiSelection.prepareForDrag(captured, in: space)
-                        if let id = firstID?.tabID, request?.ids.contains(id) != true {
-                            input.rejectedGesture = true
-                            return
-                        }
-                    }
-                    var lifted = item.selecting(request)
-                    var liftedSection = section
-                    if let request, let parentItemID, case .splitGroup(let groupID) = parentItemID,
-                        lifted.selectionRowIDs.contains(parentItemID), let space = reorder.browser.selectedSpace
-                    {
-                        lifted = .splitGroup(
-                            BrowserSplitGroupDragItem(
-                                groupID: groupID, spaceID: space.id, profileID: space.profile.id,
-                                memberTabIDs: space.splitGroupMembers(of: groupID).map(\.id), selection: request))
-                    }
-                    if let request, !lifted.selectionRowIDs.contains(item.id),
-                        let space = reorder.browser.selectedSpace,
-                        let root = request.rootItems.compactMap(\.folderID).first(where: { root in
-                            let subtree = space.folderTree.descendants(of: root).union([root])
-                            if let folder = firstID?.folderID { return subtree.contains(folder) }
-                            return space.tabs.contains {
-                                $0.id == firstID?.tabID && $0.folderID.map(subtree.contains) == true
-                            }
-                        }), let folder = space.folders.first(where: { $0.id == root })
-                    {
-                        lifted = .folder(
-                            BrowserFolderDragItem(
-                                folderID: root, spaceID: space.id,
-                                profileID: space.profile.id, selection: request))
-                        liftedSection = folder.reorderSection
-                    }
-                    state.batchValidation = {
-                        [weak browser = reorder.browser, weak access = reorder.spaceAccess] target, request in
-                        guard let browser, let access else {
-                            return String(localized: "The Space is no longer available.")
-                        }
-                        return BrowserSidebarReorderCommit(browser: browser, spaceAccess: access).batchReason(
-                            target, request: request)
-                    }
-                    state.begin(item: lifted, section: liftedSection, at: startLocation)
+                    state.begin(
+                        item: lifted, section: liftedSection, at: startLocation, plan: reorder.plan(for: lifted))
                     input.liftSessionToken = state.sessionToken
                     #if os(macOS)
                         input.retainPointerContinuation(source: source, reorder: reorder, windowDrop: windowDrop)
@@ -128,6 +83,55 @@ struct BrowserSidebarReorderSourceModifier: ViewModifier {
 
     private var source: BrowserSidebarReorderInputSession.Source {
         .init(item: item, section: section, parentItemID: parentItemID)
+    }
+
+    /// What pulling this row lifts: the row alone, or the window's selection
+    /// when it holds the row, as the core previews it. A selection lifts as
+    /// the split or folder around this row when one of its picks is that
+    /// split or holds this row. Pinned tabs a selection would carry with
+    /// others are let go first; nil when that leaves this row behind.
+    private func liftedItem(
+        in reorder: BrowserSidebarReorderContext
+    ) -> (BrowserSidebarReorderItem, BrowserSidebarReorderSection)? {
+        let browser = reorder.browser
+        let firstID: BrowserSelectionItemID? =
+            switch item {
+            case .tab(let tab): .tab(tab.tabID)
+            case .splitGroup(let group): group.memberTabIDs.first.map(BrowserSelectionItemID.tab)
+            case .folder(let folder): .folder(folder.folderID)
+            }
+        guard let firstID, var captured = BrowserSidebarSelection.capture(for: firstID, in: browser) else {
+            return (item, section)
+        }
+        if let remaining = browser.tabMultiSelection.releasePinnedTabs(from: captured) {
+            guard let recaptured = BrowserSidebarSelection.capture(remaining, in: browser),
+                firstID.tabID.map(recaptured.ids.contains) ?? true
+            else { return nil }
+            captured = recaptured
+        }
+        guard let space = browser.spaceModel(item.spaceAssignment.spaceID) else { return nil }
+        var lifted = item.selecting(captured)
+        var liftedSection = section
+        if let parentItemID, case .splitGroup(let groupID) = parentItemID, lifted.selectionRowIDs.contains(parentItemID)
+        {
+            lifted = .splitGroup(
+                BrowserSplitGroupDragItem(
+                    groupID: groupID, spaceID: space.id, profileID: space.profileID,
+                    memberTabIDs: space.splitMembers(of: groupID).map(\.id), selection: captured))
+        }
+        if !lifted.selectionRowIDs.contains(item.id),
+            let root = captured.rootItems.compactMap(\.folderID).first(where: { root in
+                let holds = Set(space.folderChoices(inside: root).map(\.id)).union([root])
+                if let folder = firstID.folderID { return holds.contains(folder) }
+                return space.tabIDs(inFolder: root).contains { $0 == firstID.tabID }
+            }), let folder = space.folders.model(root)
+        {
+            lifted = .folder(
+                BrowserFolderDragItem(
+                    folderID: root, spaceID: space.id, profileID: space.profileID, selection: captured))
+            liftedSection = folder.reorderSection
+        }
+        return (lifted, liftedSection)
     }
 
 }
@@ -145,27 +149,25 @@ final class BrowserSidebarReorderInputSession {
         let section: BrowserSidebarReorderSection
         var parentItemID: BrowserSidebarReorderItemID?
 
+        /// Whether the row still stands where it was lifted from: the Space is
+        /// unlocked under the same profile and still lists the row there.
         /// Used only for pointer actions, not while rendering or measuring rows.
         func isAvailable(in reorder: BrowserSidebarReorderContext) -> Bool {
-            guard
-                let space = BrowserSidebarAccessPolicy.unlockedSpace(
-                    matching: item.spaceAssignment, in: reorder.browser, accessController: reorder.spaceAccess)
+            let assignment = item.spaceAssignment
+            guard let space = reorder.browser.spaceModel(assignment.spaceID), space.profileID == assignment.profileID,
+                !reorder.spaceAccess.isLocked(space)
             else { return false }
             switch item {
             case .tab(let tabItem):
-                guard let tab = space.tabs.first(where: { $0.id == tabItem.tabID }) else { return false }
-                guard space.splitGroup(containing: tab.id).map(BrowserSidebarReorderItemID.splitGroup) == parentItemID
-                else {
-                    return false
-                }
+                guard let tab = space.tabs.model(tabItem.tabID),
+                    space.shownSplit(containing: tab.id).map(BrowserSidebarReorderItemID.splitGroup) == parentItemID
+                else { return false }
                 return section == .tabs(placement: tab.placement, folderID: tab.folderID)
             case .folder(let folderItem):
-                return space.folders.first(where: { $0.id == folderItem.folderID })?.reorderSection == section
+                return space.folders.model(folderItem.folderID)?.reorderSection == section
             case .splitGroup(let groupItem):
-                let members = space.splitGroupMembers(of: groupItem.groupID)
-                guard let first = members.first,
-                    members.map(\.id) == groupItem.memberTabIDs
-                else { return false }
+                let members = space.splitMembers(of: groupItem.groupID)
+                guard let first = members.first, members.map(\.id) == groupItem.memberTabIDs else { return false }
                 return section == .tabs(placement: first.placement, folderID: first.folderID)
             }
         }
@@ -225,7 +227,7 @@ final class BrowserSidebarReorderInputSession {
             transaction.disablesAnimations = true
             withTransaction(transaction) {
                 guard let drop = state.end(retainingPreview: previewOwner == .application) else { return }
-                reorder.commit(drop.target, for: drop.item)
+                reorder.commit(drop)
             }
         }
     }

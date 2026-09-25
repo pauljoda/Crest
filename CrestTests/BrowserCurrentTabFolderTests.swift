@@ -28,7 +28,7 @@ final class BrowserCurrentTabFolderTests: XCTestCase {
                             section: .tabs(placement: location.tabPlacement, folderID: parent?.id),
                             beforeID: .folder(second.id), index: 1))
                     XCTAssertTrue(
-                        BrowserSidebarReorderCommit(browser: browser, spaceAccess: BrowserSpaceAccessController())
+                        BrowserSidebarTestDrops(browser: browser, spaceAccess: BrowserSpaceAccessController())
                             .apply(
                                 target,
                                 for: .tab(.init(tabID: moving.id, spaceID: space.id, profileID: space.profile.id))))
@@ -65,7 +65,7 @@ final class BrowserCurrentTabFolderTests: XCTestCase {
                             section: .tabs(placement: location.tabPlacement, folderID: parent?.id),
                             beforeID: .folder(second.id), index: 1))
                     XCTAssertTrue(
-                        BrowserSidebarReorderCommit(browser: browser, spaceAccess: BrowserSpaceAccessController())
+                        BrowserSidebarTestDrops(browser: browser, spaceAccess: BrowserSpaceAccessController())
                             .apply(
                                 target,
                                 for: .tab(.init(tabID: moving.id, spaceID: space.id, profileID: space.profile.id))))
@@ -86,7 +86,7 @@ final class BrowserCurrentTabFolderTests: XCTestCase {
                             tabs: syncedSpace.tabs, tree: syncedSpace.folderTree,
                             location: location, parentID: parent?.id
                         ).map(\.id), [.folder(first.id), .tab(moving.id), .folder(second.id)])
-                    let commit = BrowserSidebarReorderCommit(
+                    let commit = BrowserSidebarTestDrops(
                         browser: browser, spaceAccess: BrowserSpaceAccessController())
                     let drag = BrowserSidebarReorderItem.tab(
                         .init(tabID: moving.id, spaceID: space.id, profileID: space.profile.id))
@@ -127,7 +127,7 @@ final class BrowserCurrentTabFolderTests: XCTestCase {
             space.folders = [first, second]
             space.tabs = [tab]
             let browser = makeStore(space, showing: tab.id)
-            let commit = BrowserSidebarReorderCommit(browser: browser, spaceAccess: BrowserSpaceAccessController())
+            let commit = BrowserSidebarTestDrops(browser: browser, spaceAccess: BrowserSpaceAccessController())
             for (folder, before) in [(first, BrowserSidebarReorderItemID.tab(tab.id)), (second, .folder(first.id))] {
                 XCTAssertTrue(
                     commit.apply(
@@ -209,7 +209,7 @@ final class BrowserCurrentTabFolderTests: XCTestCase {
             space.tabs = members
             let browser = makeStore(space, showing: members[0].id)
             XCTAssertTrue(
-                BrowserSidebarReorderCommit(browser: browser, spaceAccess: BrowserSpaceAccessController()).apply(
+                BrowserSidebarTestDrops(browser: browser, spaceAccess: BrowserSpaceAccessController()).apply(
                     .init(
                         kind: .insert(
                             section: .tabs(placement: location.tabPlacement, folderID: nil),
@@ -281,7 +281,7 @@ final class BrowserCurrentTabFolderTests: XCTestCase {
         let original = browser.selectedSpace?.folders
         let item = BrowserSidebarReorderItem.folder(
             .init(folderID: root, spaceID: space.id, profileID: space.profile.id))
-        let commit = BrowserSidebarReorderCommit(browser: browser, spaceAccess: BrowserSpaceAccessController())
+        let commit = BrowserSidebarTestDrops(browser: browser, spaceAccess: BrowserSpaceAccessController())
         XCTAssertTrue(
             commit.apply(
                 .init(kind: .insert(section: .tabs(placement: .current, folderID: nil), beforeID: nil, index: 0)),
@@ -336,7 +336,7 @@ final class BrowserCurrentTabFolderTests: XCTestCase {
         let stale = BrowserSidebarReorderItem.folder(
             .init(folderID: first, spaceID: space.id, profileID: space.profile.id, memberTabIDs: [ids[0]]))
         XCTAssertFalse(
-            BrowserSidebarReorderCommit(browser: browser, spaceAccess: BrowserSpaceAccessController()).apply(
+            BrowserSidebarTestDrops(browser: browser, spaceAccess: BrowserSpaceAccessController()).apply(
                 .init(kind: .insert(section: .folders(parentID: nil), beforeID: nil, index: 0)), for: stale))
         XCTAssertEqual(browser.session, before)
     }

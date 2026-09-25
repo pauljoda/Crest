@@ -15,7 +15,7 @@ enum BrowserSidebarReorderItem: Equatable, Sendable {
         }
     }
 
-    var selection: BrowserTabBatchRequest? {
+    var selection: BrowserCapturedSelection? {
         switch self {
         case .tab(let item): item.selection
         case .splitGroup(let item): item.selection
@@ -23,7 +23,7 @@ enum BrowserSidebarReorderItem: Equatable, Sendable {
         }
     }
 
-    func selecting(_ request: BrowserTabBatchRequest?) -> Self {
+    func selecting(_ request: BrowserCapturedSelection?) -> Self {
         switch self {
         case .tab(var item):
             item.selection = request

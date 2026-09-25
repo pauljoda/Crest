@@ -2565,6 +2565,10 @@
     "quick-window-promotion-title": {
       "category": "fixed",
       "message": "A Quick Window page you keep as a tab keeps the page's title instead of its site's name."
+    },
+    "sidebar-drags-ask-the-core": {
+      "category": "improved",
+      "message": "Dragging in the sidebar now says why a spot won't take what you're holding, a whole split can join the tabs on show or drop into a collapsed folder, and selections stay selectable in long lists."
     }
   }
 }

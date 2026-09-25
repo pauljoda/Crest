@@ -3,7 +3,7 @@ import SwiftUI
 struct BrowserTabBatchMenu: View {
     @Environment(BrowserSidebarInteractionState.self) private var sidebarInteraction
 
-    let request: BrowserTabBatchRequest
+    let request: BrowserCapturedSelection
     let browser: BrowserStore
     let spaceAccess: BrowserSpaceAccessController
     var unload: ((TabID) -> Void)? = nil
@@ -30,12 +30,8 @@ struct BrowserTabBatchMenu: View {
             action("New Current Tabs Folder", browser.filingInNewFolder(request, in: .current))
             action("New Saved Folder", browser.filingInNewFolder(request, in: .saved))
             action("Saved Tabs", browser.filing(request, .saved))
-            if let space = browser.space(matching: request.assignment) {
-                ForEach(space.folderTree.flattenedNodes(collapsedFolderIDs: [])) { node in
-                    action(
-                        named: space.folderTree.pathTitle(for: node.id) ?? node.folder.title,
-                        browser.filing(request, node.folder.location.tabPlacement, folder: node.id))
-                }
+            ForEach(folderChoices) { choice in
+                action(named: choice.pathTitle, browser.filing(request, choice.folder.location, folder: choice.id))
             }
         }
         Menu("Move to Space", systemImage: "square.grid.2x2") {
@@ -78,7 +74,7 @@ struct BrowserTabBatchMenu: View {
         Divider()
         Button("Select All Tabs") {
             browser.tabMultiSelection.selectAll(
-                units: BrowserSidebarSelection.itemUnits(in: browser, reorder: sidebarInteraction.sidebarReorderState))
+                units: BrowserSidebarSelection.itemUnits(in: browser))
         }
         Button("Deselect All") { browser.tabMultiSelection.clear() }
     }
@@ -99,23 +95,14 @@ struct BrowserTabBatchMenu: View {
             Menu("Move to Folder", systemImage: "folder") {
                 action("New Current Tabs Folder", browser.filingInNewFolder(request, in: .current))
                 action("New Saved Folder", browser.filingInNewFolder(request, in: .saved))
-                if let space = browser.space(matching: request.assignment) {
-                    ForEach(
-                        space.folderTree.flattenedNodes(collapsedFolderIDs: []).filter {
-                            !request.folderIDs.contains($0.id)
-                        }
-                    ) { node in
-                        action(
-                            named: space.folderTree.pathTitle(for: node.id) ?? node.folder.title,
-                            browser.filing(request, node.folder.location.tabPlacement, folder: node.id))
-                    }
+                ForEach(folderChoices.filter { !request.folderIDs.contains($0.id) }) { choice in
+                    action(named: choice.pathTitle, browser.filing(request, choice.folder.location, folder: choice.id))
                 }
             }
             Divider()
             Button("Select All Items") {
                 browser.tabMultiSelection.selectAll(
-                    units: BrowserSidebarSelection.itemUnits(
-                        in: browser, reorder: sidebarInteraction.sidebarReorderState))
+                    units: BrowserSidebarSelection.itemUnits(in: browser))
             }
             Button("Deselect All") { browser.tabMultiSelection.clear() }
         }
@@ -143,4 +130,10 @@ struct BrowserTabBatchMenu: View {
     }
 
     private func copyLinks() { actions.copyLinks(request) }
+
+    /// Every folder of the selection's Space, saved first, in the order the
+    /// sidebar lists them.
+    private var folderChoices: [SpaceModel.FolderChoice] {
+        browser.spaceModel(request.spaceID)?.folderChoices(in: [.saved, .current]) ?? []
+    }
 }

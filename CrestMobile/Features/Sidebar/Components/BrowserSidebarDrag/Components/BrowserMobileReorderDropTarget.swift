@@ -22,7 +22,7 @@ struct BrowserMobileReorderDropTarget: UIViewRepresentable {
 
 final class BrowserMobileReorderDropView: UIView, UIDropInteractionDelegate {
     var state: BrowserSidebarReorderState?
-    var commit: ((BrowserSidebarReorderTarget, BrowserSidebarReorderItem) -> Void)?
+    var commit: ((BrowserSidebarReorderDrop) -> Void)?
     var globalOrigin = CGPoint.zero
     init() {
         super.init(frame: .zero)
@@ -59,7 +59,7 @@ final class BrowserMobileReorderDropView: UIView, UIDropInteractionDelegate {
             // UIKit has already cancelled the source button's touch. Only the
             // simultaneous pointer gesture needs a post-release click guard.
             guard let drop = state.end(suppressReleaseActivation: false) else { return }
-            commit?(drop.target, drop.item)
+            commit?(drop)
         }
         window?.layoutIfNeeded()
     }

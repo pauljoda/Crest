@@ -65,21 +65,19 @@ private struct BrowserSidebarSelectionAccessibilityActions: ViewModifier {
 
     @ViewBuilder
     func body(content: Content) -> some View {
-        if capabilities.allowsMultiSelection, let browser, let sidebarInteraction {
+        if capabilities.allowsMultiSelection, let browser, sidebarInteraction != nil {
             content
                 .accessibilityAction(
                     named: browser.tabMultiSelection.contains(item) ? "Remove from Selection" : "Add to Selection"
                 ) {
                     browser.tabMultiSelection.click(
                         item,
-                        units: BrowserSidebarSelection.itemUnits(
-                            in: browser, reorder: sidebarInteraction.sidebarReorderState), command: true)
+                        units: BrowserSidebarSelection.itemUnits(in: browser), command: true)
                 }
                 .accessibilityAction(named: "Select Range to Here") {
                     browser.tabMultiSelection.click(
                         item,
-                        units: BrowserSidebarSelection.itemUnits(
-                            in: browser, reorder: sidebarInteraction.sidebarReorderState), command: true, shift: true)
+                        units: BrowserSidebarSelection.itemUnits(in: browser), command: true, shift: true)
                 }
         } else {
             content

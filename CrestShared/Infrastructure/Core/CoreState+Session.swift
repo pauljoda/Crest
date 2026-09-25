@@ -42,7 +42,6 @@ extension CoreState {
         favicons.finishBatch { tabID in workspaces.values.contains { $0.holds(tabID: tabID) } }
         #if DEBUG
             checkSessionCopies(after: changes)
-            checkSidebarOutlines(after: changes)
         #endif
     }
 

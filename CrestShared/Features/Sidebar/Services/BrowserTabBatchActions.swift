@@ -22,7 +22,7 @@ struct BrowserTabBatchActions {
     /// Performs the action, and answers whether the core took it; a refusal
     /// is shown in the selection's message instead.
     @discardableResult
-    func perform(_ batch: BrowserTabBatch, for request: BrowserTabBatchRequest) -> Bool {
+    func perform(_ batch: BrowserTabBatch, for request: BrowserCapturedSelection) -> Bool {
         guard batch.closesPages else { return send(batch, for: request) }
         if let reason = reason(batch) {
             browser.tabMultiSelection.message = reason
@@ -35,7 +35,7 @@ struct BrowserTabBatchActions {
         return browser.performPageDismissal(of: assignments) { send(batch, for: request) }
     }
 
-    private func send(_ batch: BrowserTabBatch, for request: BrowserTabBatchRequest) -> Bool {
+    private func send(_ batch: BrowserTabBatch, for request: BrowserCapturedSelection) -> Bool {
         do {
             try browser.send(batch, for: request)
             return true
@@ -47,7 +47,7 @@ struct BrowserTabBatchActions {
 
     /// Copies the selected pages' addresses, when every selected tab is a
     /// page the core would keep loaded.
-    func copyLinks(_ request: BrowserTabBatchRequest) {
+    func copyLinks(_ request: BrowserCapturedSelection) {
         if let reason = reason(browser.keepingLoaded(request, false)) {
             browser.tabMultiSelection.message = reason
             return

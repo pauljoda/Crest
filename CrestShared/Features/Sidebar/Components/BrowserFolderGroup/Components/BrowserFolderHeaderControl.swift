@@ -51,8 +51,7 @@ struct BrowserFolderHeaderControl: View {
                     guard !sidebarInteraction.sidebarReorderState.suppressesActivation else { return }
                     configuration.browser.tabMultiSelection.click(
                         .folder(folder.id),
-                        units: BrowserSidebarSelection.itemUnits(
-                            in: configuration.browser, reorder: sidebarInteraction.sidebarReorderState))
+                        units: BrowserSidebarSelection.itemUnits(in: configuration.browser))
                     interaction.toggleExpansion()
                 } label: {
                     HStack(spacing: 7) {

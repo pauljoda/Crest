@@ -131,7 +131,7 @@ struct SpaceSidebarBrowsingContent: View {
     private func activate(_ tabID: TabID) {
         browser.tabMultiSelection.click(
             tabID,
-            units: BrowserSidebarSelection.itemUnits(in: browser, reorder: sidebarInteraction.sidebarReorderState))
+            units: BrowserSidebarSelection.itemUnits(in: browser))
         BrowserTabActivationPolicy.activate(
             tabID,
             selectTab: browser.selectTab,
@@ -196,8 +196,7 @@ private struct BrowserSidebarSelectionReconciler: View {
             !interaction.sidebarReorderState.hasLiftInFlight
         else { return }
         browser.tabMultiSelection.reconcile(
-            units: BrowserSidebarSelection.itemUnits(
-                in: browser, reorder: interaction.sidebarReorderState))
+            units: BrowserSidebarSelection.itemUnits(in: browser))
     }
 
     /// What reconciling reads, observed here rather than by any row: the

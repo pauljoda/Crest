@@ -78,12 +78,17 @@ enum BrowserSidebarReorderPolicy {
         frame.insetBy(dx: 0, dy: frame.height * (1 - folderNestBand) / 2)
     }
 
+    /// The zone the pointer aims `item` at. Only zones the item's kind takes
+    /// compete, and of those, only the ones the lift's plan says the core
+    /// offers a drop for, so a target the core has no drop for never hides
+    /// the section behind it.
     static func zone(
         at point: CGPoint,
         in zones: [BrowserSidebarReorderZone],
-        accepting item: BrowserSidebarReorderItem
+        accepting item: BrowserSidebarReorderItem,
+        plan: BrowserSidebarLiftPlan? = nil
     ) -> BrowserSidebarReorderZone? {
-        let usable = zones.filter { accepts(item: item, in: $0) }
+        let usable = zones.filter { accepts(item: item, in: $0) && plan?.offers($0.target) != false }
         let containing = usable.filter { zone in
             var frame = zone.frame
             if case .section(let section) = zone.target, section.parentFolderID != nil {
@@ -129,29 +134,23 @@ enum BrowserSidebarReorderPolicy {
         case .section(let section):
             return accepts(item: item, in: section)
         case .currentTab(let tabID):
-            if case .tab(let tab) = item { return tab.tabID != tabID }
-            return false
-        case .currentFolder:
-            if case .tab = item { return true }
-            return false
-        case .folder, .space:
-            // A split group moves as one block inside its own Space: it never
-            // nests into a folder row and never crosses to another Space in this
-            // release. Refusing those zones outright lets the section behind them
-            // resolve instead of offering a drop that would do nothing.
             switch item {
-            case .tab, .folder: return true
-            case .splitGroup: return false
+            case .tab(let tab): return tab.tabID != tabID
+            case .splitGroup(let group): return !group.memberTabIDs.contains(tabID)
+            case .folder: return false
             }
+        case .folder, .space:
+            return true
         case .splitContent(let assignment):
             // Only a tab becomes a card. A folder has no page to show, and
             // dragging a whole group into the content area — which would have to
             // mean "present these four instead of those" — is not a gesture this
-            // release defines. Splits never span Spaces either, so a tab from
-            // elsewhere is refused here rather than relocated first.
+            // release defines. A split joins the cards on show as one block,
+            // as a selection of it does. Splits never span Spaces, so a lift
+            // from elsewhere is refused here rather than relocated first.
             switch item {
-            case .tab: return item.spaceAssignment == assignment
-            case .folder, .splitGroup: return false
+            case .tab, .splitGroup: return item.spaceAssignment == assignment
+            case .folder: return false
             }
         }
     }
@@ -230,30 +229,12 @@ enum BrowserSidebarReorderPolicy {
         return switch (item, section) {
         case (.tab, .tabs): true
         case (.splitGroup, .tabs(let placement, _)):
-            BrowserSplitGroupPolicy.allowsMembership(placement: placement)
+            placement.holdsSplits
         case (.folder, .folders): true
         case (.folder, .tabs(let placement, _)):
             placement != .pinned
         default: false
         }
-    }
-
-    /// Whether a section has room for a row arriving from elsewhere.
-    ///
-    /// The pinned grid is capped, and the model refuses a move past the cap. Without
-    /// this the drag would show a perfectly good insertion point and then quietly
-    /// do nothing on release. Rows already in the section are only reordering, so
-    /// they never consume a new slot.
-    static func hasRoom(
-        for item: BrowserSidebarReorderItem,
-        in section: BrowserSidebarReorderSection,
-        existingCount: Int,
-        isAlreadyInSection: Bool
-    ) -> Bool {
-        guard case .tabs(placement: .pinned, folderID: _) = section,
-            !isAlreadyInSection
-        else { return true }
-        return existingCount < TabPlacement.pinnedCapacity
     }
 
     /// Rows belonging to `section`, in their current visual order.

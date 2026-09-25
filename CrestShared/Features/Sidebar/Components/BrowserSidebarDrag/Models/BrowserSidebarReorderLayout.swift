@@ -62,7 +62,7 @@ struct BrowserSidebarReorderLayout: Equatable {
         guard isActive else { return zone.frame }
         switch zone.target {
         case .space, .splitContent: return zone.frame
-        case .folder(let id), .currentFolder(let id):
+        case .folder(let id):
             guard !hiddenIDs.contains(.folder(id)) else { return nil }
         case .currentTab(let id):
             guard !hiddenIDs.contains(.tab(id)) else { return nil }

@@ -854,22 +854,22 @@ final class MobileBrowserSidebarReorderPolicyTests: XCTestCase {
             registerZone()
         }
 
+        /// Stages the lift as the sidebar does, asking the core where it may
+        /// land.
         func stageTheLift() {
-            state.stage(item: liftItem, section: section)
+            state.stage(item: liftItem, section: section, plan: reorder.plan(for: liftItem))
         }
 
-        func commit(
-            _ drop: (
-                item: BrowserSidebarReorderItem,
-                target: BrowserSidebarReorderTarget
-            )
-        ) {
+        func commit(_ drop: BrowserSidebarReorderDrop) {
+            reorder.commit(drop)
+        }
+
+        private var reorder: BrowserSidebarReorderContext {
             BrowserSidebarReorderContext(
                 browser: browser,
                 spaceAccess: spaceAccess,
                 state: state
             )
-            .commit(drop.target, for: drop.item)
         }
 
         private var liftItem: BrowserSidebarReorderItem {

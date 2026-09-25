@@ -140,7 +140,7 @@ struct BrowserTabSelectionMonitor: View {
                 selection.clear()
                 return event
             }
-            let units = BrowserSidebarSelection.itemUnits(in: browser, reorder: sidebarInteraction.sidebarReorderState)
+            let units = BrowserSidebarSelection.itemUnits(in: browser)
             selection.reconcile(units: units)
             if event.type == .rightMouseDown || event.modifierFlags.contains(.control) {
                 if !selection.contains(id) { selection.clear() }
@@ -163,7 +163,7 @@ struct BrowserTabSelectionMonitor: View {
         private func handleKey(_ event: NSEvent, browser: BrowserStore) -> NSEvent? {
             guard let sidebarInteraction else { return event }
             let selection = browser.tabMultiSelection
-            let units = BrowserSidebarSelection.itemUnits(in: browser, reorder: sidebarInteraction.sidebarReorderState)
+            let units = BrowserSidebarSelection.itemUnits(in: browser)
             selection.reconcile(units: units)
             let command = event.modifierFlags.contains(.command)
             let shift = event.modifierFlags.contains(.shift)
@@ -178,8 +178,7 @@ struct BrowserTabSelectionMonitor: View {
             }
             if command, !shift, !event.modifierFlags.contains(.option),
                 !event.modifierFlags.contains(.control), let id = selection.focusedItem,
-                let request = BrowserSidebarSelection.request(
-                    for: id, browser: browser, reorder: sidebarInteraction.sidebarReorderState), let spaceAccess
+                let request = BrowserSidebarSelection.capture(for: id, in: browser), let spaceAccess
             {
                 let actions = BrowserTabBatchActions(browser: browser, spaceAccess: spaceAccess)
                 switch event.charactersIgnoringModifiers?.lowercased() {
@@ -227,9 +226,9 @@ struct BrowserTabSelectionMonitor: View {
         }
 
         override func selectAll(_ sender: Any?) {
-            guard let browser, let sidebarInteraction else { return }
+            guard let browser, sidebarInteraction != nil else { return }
             browser.tabMultiSelection.selectAll(
-                units: BrowserSidebarSelection.itemUnits(in: browser, reorder: sidebarInteraction.sidebarReorderState))
+                units: BrowserSidebarSelection.itemUnits(in: browser))
         }
     }
 }

@@ -43,7 +43,8 @@ struct BrowserPlatformSplitGroupDragSourceModifier: ViewModifier {
                 registersContainer: false
             )
             .browserMobileDraggable {
-                reorder.state.stage(item: .splitGroup(item), section: section)
+                reorder.state.stage(
+                    item: .splitGroup(item), section: section, plan: reorder.plan(for: .splitGroup(item)))
                 let payload = (try? JSONEncoder().encode(item)) ?? Data()
                 let provider = NSItemProvider(
                     item: payload as NSData,

@@ -18,7 +18,7 @@ final class BrowserCoreSessionAuthorityTests: XCTestCase {
         let harness = try await BrowserStoredSessionHarness.staged(original)
         let store = harness.store
         store.selectSpace(original.spaces[0].id)
-        let request = BrowserTabBatchRequest(ids: tabs.map(\.id), in: store.session.spaces[0])
+        let request = try XCTUnwrap(store.capturedSelection(ids: tabs.map(\.id)))
         try store.send(store.deleting(request), for: request)
         // The batch is on disk with its journal when the command returns.
         let (saved, committed) = try harness.stored()

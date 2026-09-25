@@ -50,8 +50,8 @@ final class BrowserSidebarReorderRegistryScopeTests: XCTestCase {
 
     /// The cap still bites where it is meant to. Scoping the count must not
     /// become a way of ignoring it: a grid already full of this Space's own tabs
-    /// has nowhere to put another, so the drag resolves nothing rather than
-    /// opening a slot the release would decline.
+    /// has nowhere to put another, so the lift over it says why in the core's
+    /// words, and releasing there commits nothing.
     func testAGridFullOfItsOwnTabsStillRefusesAnIncomingPin() {
         let fixture = ReorderRegistryFixture(
             ownPinCount: TabPlacement.pinnedCapacity
@@ -61,15 +61,15 @@ final class BrowserSidebarReorderRegistryScopeTests: XCTestCase {
 
         fixture.liftTheJoiner(in: state, to: CGPoint(x: 144, y: 92))
 
-        XCTAssertNil(
-            state.resolvedTarget,
-            "A grid at the cap has to refuse the drop instead of promising a "
-                + "slot the commit would decline."
-        )
         XCTAssertEqual(
-            state.liftTargetShape,
-            .row,
-            "Nothing resolved, so the lift holds the row shape it started as."
+            state.constraintMessage,
+            Rejection.pinnedTabsFull(PinnedTabsFull(capacity: TabPlacement.pinnedCapacity)).placementExplanation,
+            "A grid at the cap has to refuse the drop, and say why, instead of "
+                + "promising a slot the commit would decline."
+        )
+        XCTAssertNil(
+            state.end(),
+            "Releasing over a refused target commits nothing."
         )
     }
 
@@ -283,20 +283,24 @@ private struct ReorderRegistryFixture {
     }
 
     /// Lifts the current tab out of its row and holds the pointer at `pointer`.
+    /// Lifts the joiner as the sidebar does, asking the core where it may
+    /// land as the lift begins.
     func liftTheJoiner(
         in state: BrowserSidebarReorderState,
         to pointer: CGPoint
     ) {
+        let item = BrowserSidebarReorderItem.tab(
+            BrowserTabDragItem(
+                tabID: joiner.id,
+                spaceID: ownSpaceID,
+                profileID: ownProfileID
+            )
+        )
         state.begin(
-            item: .tab(
-                BrowserTabDragItem(
-                    tabID: joiner.id,
-                    spaceID: ownSpaceID,
-                    profileID: ownProfileID
-                )
-            ),
+            item: item,
             section: currentSection,
-            at: CGPoint(x: joinerRow.midX, y: joinerRow.midY)
+            at: CGPoint(x: joinerRow.midX, y: joinerRow.midY),
+            plan: browser.liftPlan(for: item)
         )
         state.update(pointer: pointer)
     }

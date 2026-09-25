@@ -7,72 +7,72 @@ extension BrowserStore {
     // MARK: - Actions - Batches
 
     /// Archives the selected open tabs.
-    func closing(_ request: BrowserTabBatchRequest) -> BrowserTabBatch {
+    func closing(_ request: BrowserCapturedSelection) -> BrowserTabBatch {
         BrowserTabBatch(
             CloseTabs(
-                workspaceID: family.workspaceID, windowID: windowID, spaceID: request.space,
-                selection: request.core),
+                workspaceID: family.workspaceID, windowID: windowID, spaceID: request.spaceID,
+                selection: request.selection),
             reselection: .cleared, closesPages: true)
     }
 
     /// Deletes the selected tabs, saved and pinned ones included.
-    func deleting(_ request: BrowserTabBatchRequest) -> BrowserTabBatch {
+    func deleting(_ request: BrowserCapturedSelection) -> BrowserTabBatch {
         BrowserTabBatch(
             DeleteTabs(
-                workspaceID: family.workspaceID, windowID: windowID, spaceID: request.space,
-                selection: request.core),
+                workspaceID: family.workspaceID, windowID: windowID, spaceID: request.spaceID,
+                selection: request.selection),
             reselection: .cleared, closesPages: true)
     }
 
     /// Copies the selected tabs to the end of the open tabs.
-    func duplicating(_ request: BrowserTabBatchRequest) -> BrowserTabBatch {
+    func duplicating(_ request: BrowserCapturedSelection) -> BrowserTabBatch {
         BrowserTabBatch(
             DuplicateTabs(
-                workspaceID: family.workspaceID, windowID: windowID, spaceID: request.space,
-                selection: request.core),
+                workspaceID: family.workspaceID, windowID: windowID, spaceID: request.spaceID,
+                selection: request.selection),
             reselection: .copies)
     }
 
     /// Combines the selected tabs in the split of `target`, or of the first
     /// selected tab, from member `index` on.
-    func splitting(_ request: BrowserTabBatchRequest, joining target: TabID? = nil, at index: Int? = nil)
+    func splitting(_ request: BrowserCapturedSelection, joining target: TabID? = nil, at index: Int? = nil)
         -> BrowserTabBatch
     {
         BrowserTabBatch(
             SplitTabs(
-                workspaceID: family.workspaceID, windowID: windowID, spaceID: request.space,
-                selection: request.core,
+                workspaceID: family.workspaceID, windowID: windowID, spaceID: request.spaceID,
+                selection: request.selection,
                 targetTabID: target, index: index),
             reselection: .items)
     }
 
     /// Dissolves the splits the selected tabs belong to.
-    func separatingSplits(_ request: BrowserTabBatchRequest) -> BrowserTabBatch {
+    func separatingSplits(_ request: BrowserCapturedSelection) -> BrowserTabBatch {
         BrowserTabBatch(
             SeparateSplits(
-                workspaceID: family.workspaceID, windowID: windowID, spaceID: request.space,
-                selection: request.core),
+                workspaceID: family.workspaceID, windowID: windowID, spaceID: request.spaceID,
+                selection: request.selection),
             reselection: .items)
     }
 
     /// Keeps the selected tabs' pages loaded, or lets them unload.
-    func keepingLoaded(_ request: BrowserTabBatchRequest, _ keeps: Bool) -> BrowserTabBatch {
+    func keepingLoaded(_ request: BrowserCapturedSelection, _ keeps: Bool) -> BrowserTabBatch {
         BrowserTabBatch(
             KeepTabsLoaded(
-                workspaceID: family.workspaceID, windowID: windowID, spaceID: request.space,
-                selection: request.core,
+                workspaceID: family.workspaceID, windowID: windowID, spaceID: request.spaceID,
+                selection: request.selection,
                 keeps: keeps),
             reselection: .items)
     }
 
     /// Moves the selected tabs to another Space, which the window follows
     /// them to when the person's link preferences say so.
-    func moving(_ request: BrowserTabBatchRequest, to destination: BrowserSpaceRuntimeAssignment) -> BrowserTabBatch {
+    func moving(_ request: BrowserCapturedSelection, to destination: BrowserSpaceRuntimeAssignment) -> BrowserTabBatch {
         let follows = linkPreferences.followsTabsMovedToAnotherSpace
         return BrowserTabBatch(
             MoveTabsToSpace(
-                workspaceID: family.workspaceID, windowID: windowID, spaceID: request.space,
-                selection: request.core,
+                workspaceID: family.workspaceID, windowID: windowID, spaceID: request.spaceID,
+                selection: request.selection,
                 destinationSpaceID: destination.spaceID, follows: follows),
             reselection: .cleared, following: follows ? destination : nil)
     }
@@ -80,35 +80,35 @@ extension BrowserStore {
     /// Files the selection into `folder` or at the top level of `placement`'s
     /// section, before the tab `before` or the folder `beforeFolder`.
     func filing(
-        _ request: BrowserTabBatchRequest, _ placement: TabPlacement, folder: FolderID? = nil, before: TabID? = nil,
+        _ request: BrowserCapturedSelection, _ placement: TabPlacement, folder: FolderID? = nil, before: TabID? = nil,
         beforeFolder: FolderID? = nil
     ) -> BrowserTabBatch {
         BrowserTabBatch(
             FileTabs(
-                workspaceID: family.workspaceID, windowID: windowID, spaceID: request.space,
-                selection: request.core,
+                workspaceID: family.workspaceID, windowID: windowID, spaceID: request.spaceID,
+                selection: request.selection,
                 placement: placement, folderID: folder, beforeTabID: before,
                 beforeFolderID: beforeFolder, leavesSplits: false),
             reselection: .items)
     }
 
     /// Files the selection into a new folder at the top level of `placement`'s section.
-    func filingInNewFolder(_ request: BrowserTabBatchRequest, in placement: TabPlacement) -> BrowserTabBatch {
+    func filingInNewFolder(_ request: BrowserCapturedSelection, in placement: TabPlacement) -> BrowserTabBatch {
         BrowserTabBatch(
             FolderTabs(
-                workspaceID: family.workspaceID, windowID: windowID, spaceID: request.space,
-                selection: request.core,
+                workspaceID: family.workspaceID, windowID: windowID, spaceID: request.spaceID,
+                selection: request.selection,
                 placement: placement),
             reselection: .items)
     }
 
     /// Files the open tab `tabID` and then the selection into a new folder in
     /// that tab's place.
-    func filingInNewFolder(_ request: BrowserTabBatchRequest, around tabID: TabID) -> BrowserTabBatch {
+    func filingInNewFolder(_ request: BrowserCapturedSelection, around tabID: TabID) -> BrowserTabBatch {
         BrowserTabBatch(
             FolderTabsAround(
-                workspaceID: family.workspaceID, windowID: windowID, spaceID: request.space,
-                selection: request.core,
+                workspaceID: family.workspaceID, windowID: windowID, spaceID: request.spaceID,
+                selection: request.selection,
                 tabID: tabID),
             reselection: .items)
     }
@@ -124,7 +124,7 @@ extension BrowserStore {
     /// Sends the action, and then prepares the pages of the copies it made,
     /// selects what the action leaves selected, and remembers the tab the
     /// window follows to another Space. Throws the rule that refused it.
-    func send(_ batch: BrowserTabBatch, for request: BrowserTabBatchRequest) throws(Rejection) {
+    func send(_ batch: BrowserTabBatch, for request: BrowserCapturedSelection) throws(Rejection) {
         let source = space(matching: request.assignment)
         let changes = try family.commit(batch.intent, from: self)
         let copies: [TabCopied] = changes.compactMap {
@@ -149,9 +149,4 @@ extension BrowserStore {
                 })
         }
     }
-}
-
-extension BrowserTabBatchRequest {
-    /// The Space the selection was made in, as intents name it.
-    fileprivate var space: UUID { assignment.spaceID }
 }

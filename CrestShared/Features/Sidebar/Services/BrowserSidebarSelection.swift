@@ -1,91 +1,93 @@
 import Foundation
 
+/// The window's sidebar selection over what the sidebar shows: the units a
+/// click, a range or Select All takes, in the order the core's outline lists
+/// them, and what the selected picks hold, as the core previews it.
 @MainActor
 enum BrowserSidebarSelection {
-    /// Logical row order survives lazy view removal. Pointer targeting still
-    /// uses the platform's live view bounds independently of this projection.
-    static func logicalItems(
-        in space: BrowserSpace, keptTabID: (FolderID) -> TabID?
-    ) -> [BrowserSelectionItemID] {
-        let sections = space.tabSections
-        let tree = space.folderTree
-        var result = sections.pinnedTabs.filter { !$0.isStartPage }.map { BrowserSelectionItemID.tab($0.id) }
+    // MARK: - Actions - Units
 
-        func append(_ items: [BrowserSidebarFolderListItem], from projection: BrowserSidebarFolderListItem.Projection) {
-            for item in items {
-                switch item {
-                case .tabs(let row):
-                    result.append(contentsOf: row.tabs.filter { !$0.isStartPage }.map { .tab($0.id) })
-                case .folder(let node):
-                    result.append(.folder(node.id))
-                    if !node.folder.isCollapsed {
-                        append(projection.items(in: node.id), from: projection)
-                    } else if let id = keptTabID(node.id),
-                        let row = BrowserSidebarTabListItemPolicy.collapsedItem(
-                            keeping: id, in: sections.tabs(in: node.id))
-                    {
-                        result.append(contentsOf: row.tabs.filter { !$0.isStartPage }.map { .tab($0.id) })
-                    }
+    /// The items a person can select in the Space the window shows, in the
+    /// order the sidebar shows them, each unit what one click selects: a tab,
+    /// a folder, or the members of a split. It follows the core's outline:
+    /// pinned tabs, the saved section while it is open, then the open tabs;
+    /// the inside of an open folder after its row, and the row a collapsed
+    /// folder keeps on screen. A locked Space offers none.
+    static func itemUnits(in browser: BrowserStore) -> [[BrowserSelectionItemID]] {
+        guard let space = browser.spaceModel(browser.selectedSpaceID) else { return [] }
+        let interaction = browser.interactionObserver as? BrowserSidebarInteractionState
+        if space.settings.accessPolicy == .deviceOwnerAuthentication {
+            guard let access = interaction?.sidebarSpaceAccess, !access.isLocked(space) else { return [] }
+        }
+        var units: [[BrowserSelectionItemID]] = []
+        func unit(of row: SidebarRow) -> [BrowserSelectionItemID] {
+            row.kind.groupsTabs ? row.members.map(BrowserSelectionItemID.tab) : [.tab(row.id)]
+        }
+        func walk(_ list: SidebarListModel) {
+            for row in list.rows {
+                guard row.kind.opensList else {
+                    units.append(unit(of: row))
+                    continue
+                }
+                units.append([.folder(row.id)])
+                let inside = space.sidebar.inside(row.id)
+                guard space.folders.model(row.id)?.isCollapsed == true else {
+                    walk(inside)
+                    continue
+                }
+                let kept = interaction?.collapsedFolderVisibility(
+                    for: BrowserFolderRuntimeAssignment(folderID: row.id, spaceID: space.id, profileID: space.profileID)
+                ).state.keptTabID
+                if let kept, let keptRow = inside.rows.first(where: { !$0.kind.opensList && $0.members.contains(kept) })
+                {
+                    units.append(unit(of: keptRow))
                 }
             }
         }
-
-        if space.isSavedTabsExpanded {
-            let saved = BrowserSidebarFolderListItem.Projection(tabs: space.tabs, tree: tree, location: .saved)
-            append(saved.items(), from: saved)
-        }
-        let current = BrowserSidebarFolderListItem.Projection(
-            tabs: sections.sidebarCurrentTabs, tree: tree, location: .current)
-        append(current.items(), from: current)
-        return result
+        walk(space.sidebar.section(.pinned))
+        if space.settings.isSavedTabsExpanded { walk(space.sidebar.section(.saved)) }
+        walk(space.sidebar.section(.current))
+        return units
     }
 
-    static func units(in browser: BrowserStore, reorder: BrowserSidebarReorderState) -> [[TabID]] {
-        itemUnits(in: browser, reorder: reorder).map { $0.compactMap(\.tabID) }.filter { !$0.isEmpty }
+    /// The same units, of tabs alone.
+    static func units(in browser: BrowserStore) -> [[TabID]] {
+        itemUnits(in: browser).map { $0.compactMap(\.tabID) }.filter { !$0.isEmpty }
     }
 
-    static func itemUnits(in browser: BrowserStore, reorder: BrowserSidebarReorderState) -> [[BrowserSelectionItemID]] {
-        guard let space = browser.selectedSpace else { return [] }
-        let assignment = BrowserSpaceRuntimeAssignment(space: space)
-        let items =
-            BrowserPlatformSidebarSelectionOrder.orderedItems(in: browser, assignment: assignment)
-            ?? registeredItems(in: browser, assignment: assignment, reorder: reorder)
-        let tabsByID = Dictionary(uniqueKeysWithValues: space.tabs.map { ($0.id, $0) })
-        let folderIDs = Set(space.folders.map(\.id))
-        var included: Set<BrowserSelectionItemID> = []
-        return items.compactMap { item in
-            guard !included.contains(item) else { return nil }
-            let unit: [BrowserSelectionItemID]
-            switch item {
-            case .folder(let id):
-                guard folderIDs.contains(id) else { return nil }
-                unit = [item]
-            case .tab(let id):
-                guard let tab = tabsByID[id], !tab.isStartPage else { return nil }
-                unit = tab.splitGroupID.map { space.splitGroupMembers(of: $0).map { .tab($0.id) } } ?? [item]
-            }
-            included.formUnion(unit)
-            return unit
-        }
+    // MARK: - Actions - Capture
+
+    /// What the selection holds, as the core previews it, when it holds
+    /// `item`: the Space the window shows, and the picks the selection holds
+    /// in sidebar order. Nil when the selection does not hold the item.
+    static func capture(for item: BrowserSelectionItemID, in browser: BrowserStore) -> BrowserCapturedSelection? {
+        let selection = browser.tabMultiSelection
+        guard selection.contains(item) else { return nil }
+        let items = itemUnits(in: browser).flatMap { $0 }.filter { selection.selectedItems.contains($0) }
+        guard items.contains(item) else { return nil }
+        return capture(items, in: browser)
     }
 
-    private static func registeredItems(
-        in browser: BrowserStore, assignment: BrowserSpaceRuntimeAssignment, reorder: BrowserSidebarReorderState
-    )
-        -> [BrowserSelectionItemID]
-    {
-        reorder.selectionRows(in: assignment).compactMap {
-            switch $0.id {
-            case .tab(let id): .tab(id)
-            case .folder(let id): .folder(id)
-            case .splitGroup(let id): browser.selectedSpace?.splitGroupMembers(of: id).first.map { .tab($0.id) }
-            }
-        }
+    /// What `items`, picked in the Space the window shows, hold there, as the
+    /// core previews it.
+    static func capture(_ items: [BrowserSelectionItemID], in browser: BrowserStore) -> BrowserCapturedSelection? {
+        guard let space = browser.spaceModel(browser.selectedSpaceID),
+            let selected = try? browser.core.query(
+                SelectionPreview(
+                    workspaceID: browser.family.workspaceID, spaceID: space.id, tabIDs: items.compactMap(\.tabID),
+                    folderIDs: items.compactMap(\.folderID)))
+        else { return nil }
+        return BrowserCapturedSelection(
+            assignment: BrowserSpaceRuntimeAssignment(spaceID: space.id, profileID: space.profileID),
+            selected: selected)
     }
+
+    // MARK: - Actions - Showing
 
     /// Whether a row draws itself selected for tab actions: the window's
     /// selection holds it and no selected folder around it does. Reading it
-    /// observes the selection, and the row's folders only while it is selected.
+    /// observes the item's own membership, and the row's folders only while
+    /// it is selected.
     static func showsSelected(_ item: BrowserSelectionItemID, in context: BrowserSidebarListContext) -> Bool {
         let selection = context.browser.tabMultiSelection
         guard selection.contains(item) else { return false }
@@ -108,38 +110,5 @@ enum BrowserSidebarSelection {
             parent = space.folders.model(id)?.parentID
         }
         return false
-    }
-
-    static func isCoveredBySelectedFolder(_ item: BrowserSelectionItemID, in browser: BrowserStore) -> Bool {
-        guard let space = browser.selectedSpace, browser.tabMultiSelection.isEngaged else { return false }
-        var parent: FolderID?
-        switch item {
-        case .tab(let id): parent = space.tabs.first { $0.id == id }?.folderID
-        case .folder(let id): parent = space.folders.first { $0.id == id }?.parentID
-        }
-        var visited: Set<FolderID> = []
-        while let id = parent, visited.insert(id).inserted {
-            if browser.tabMultiSelection.contains(.folder(id)) { return true }
-            parent = space.folders.first { $0.id == id }?.parentID
-        }
-        return false
-    }
-
-    static func request(for id: TabID, browser: BrowserStore, reorder: BrowserSidebarReorderState)
-        -> BrowserTabBatchRequest?
-    {
-        request(for: .tab(id), browser: browser, reorder: reorder)
-    }
-
-    static func request(for item: BrowserSelectionItemID, browser: BrowserStore, reorder: BrowserSidebarReorderState)
-        -> BrowserTabBatchRequest?
-    {
-        let selection = browser.tabMultiSelection
-        guard selection.contains(item), let space = browser.selectedSpace else { return nil }
-        let items = itemUnits(in: browser, reorder: reorder).flatMap { $0 }.filter {
-            selection.selectedItems.contains($0)
-        }
-        guard items.contains(item) else { return nil }
-        return BrowserTabBatchRequest(items: items, in: space)
     }
 }

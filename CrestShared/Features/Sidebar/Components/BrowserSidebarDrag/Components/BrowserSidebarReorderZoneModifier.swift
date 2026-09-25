@@ -66,7 +66,7 @@ struct BrowserSidebarReorderZoneModifier: ViewModifier {
         _ frame: CGRect, target: BrowserSidebarReorderZone.Target, topInset: CGFloat
     ) -> CGRect {
         switch target {
-        case .folder, .currentFolder, .currentTab:
+        case .folder, .currentTab:
             return BrowserSidebarReorderPolicy.nestingFrame(for: frame)
         default: break
         }

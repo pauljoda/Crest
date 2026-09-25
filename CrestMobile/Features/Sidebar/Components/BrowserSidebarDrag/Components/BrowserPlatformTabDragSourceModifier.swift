@@ -45,7 +45,8 @@ struct BrowserPlatformTabDragSourceModifier: ViewModifier {
                         section: .tabs(
                             placement: tab.placement,
                             folderID: tab.folderID
-                        )
+                        ),
+                        plan: reorder.plan(for: .tab(item))
                     )
                     let payload = (try? JSONEncoder().encode(item)) ?? Data()
                     let provider = NSItemProvider(

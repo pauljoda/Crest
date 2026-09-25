@@ -1,7 +1,6 @@
 import SwiftUI
 
 struct BrowserFolderOrganizationMenu: View {
-    @Environment(BrowserSidebarInteractionState.self) private var sidebarInteraction
 
     let folder: FolderStateModel
     let context: BrowserSidebarListContext
@@ -17,9 +16,7 @@ struct BrowserFolderOrganizationMenu: View {
     var body: some View {
         Group {
             if capabilities.allowsMultiSelection,
-                let request = BrowserSidebarSelection.request(
-                    for: .folder(folder.id), browser: context.browser,
-                    reorder: sidebarInteraction.sidebarReorderState)
+                let request = BrowserSidebarSelection.capture(for: .folder(folder.id), in: context.browser)
             {
                 BrowserTabBatchMenu(request: request, browser: context.browser, spaceAccess: context.spaceAccess)
             } else {

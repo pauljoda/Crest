@@ -776,9 +776,9 @@ final class BrowserInteractionModelTests: XCTestCase {
         )
     }
 
-    /// Folder-nesting and Space zones outrank the sections behind them. A group
-    /// cannot land in either, so it must fall through to the section instead of
-    /// resolving a target its commit would refuse.
+    /// Folder-nesting and Space zones outrank the sections behind them. When
+    /// the core offers a group no drop into either, it must fall through to the
+    /// section instead of resolving a target the lift cannot take.
     func testSplitGroupDragsFallThroughFolderAndSpaceZonesToTheSection() {
         let frame = CGRect(x: 0, y: 0, width: 200, height: 40)
         let point = CGPoint(x: 100, y: 20)
@@ -811,11 +811,18 @@ final class BrowserInteractionModelTests: XCTestCase {
             )
         )
 
+        let plan = BrowserSidebarLiftPlan(
+            selection: TabSelection(tabIDs: [], folderIDs: [], memberTabIDs: []),
+            targets: DropTargetList(
+                refusal: nil, lists: [ListDropTarget(section: .saved, folderID: nil, refusal: nil)], spaces: [],
+                split: nil, folderAroundTabIDs: []))
+
         XCTAssertEqual(
             BrowserSidebarReorderPolicy.zone(
                 at: point,
                 in: zones,
-                accepting: group
+                accepting: group,
+                plan: plan
             )?
             .target,
             .section(section)

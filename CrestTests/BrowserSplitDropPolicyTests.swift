@@ -39,11 +39,13 @@ final class BrowserSplitDropPolicyTests: XCTestCase {
                 accepting: Self.folderItem(in: assignment)
             )
         )
+        // A split joins the cards on show only when the core offers it.
         XCTAssertNil(
             BrowserSidebarReorderPolicy.zone(
                 at: point,
                 in: zones,
-                accepting: Self.groupItem(in: assignment)
+                accepting: Self.groupItem(in: assignment),
+                plan: Self.plan(splitRefusal: .alreadyInSplit(AlreadyInSplit(tabID: TabID())))
             )
         )
     }
@@ -224,8 +226,9 @@ final class BrowserSplitDropPolicyTests: XCTestCase {
 
     // MARK: - Acceptance: what the presented cards refuse
 
-    /// A tab already on show has nothing to join. That covers the lone tab in an
-    /// unsplit window dropped onto itself as much as a member of a live split.
+    /// A tab already on show has nothing to join, and the core refuses the join.
+    /// That covers the lone tab in an unsplit window dropped onto itself as much
+    /// as a member of a live split.
     func testAPresentedTabIsRefusedByItsOwnContentArea() {
         let presented = TabID()
         let state = Self.stateWithCards(count: 2, firstTabID: presented)
@@ -233,7 +236,8 @@ final class BrowserSplitDropPolicyTests: XCTestCase {
         state.begin(
             item: Self.tabItem(in: Self.assignment, tabID: presented),
             section: .tabs(placement: .current, folderID: nil),
-            at: CGPoint(x: 100, y: 20)
+            at: CGPoint(x: 100, y: 20),
+            plan: Self.plan(splitRefusal: .alreadyInSplit(AlreadyInSplit(tabID: presented)))
         )
         state.update(pointer: CGPoint(x: 460, y: 300))
 
@@ -247,8 +251,8 @@ final class BrowserSplitDropPolicyTests: XCTestCase {
         state.cancel()
     }
 
-    /// A full group shows no insertion point, because the model would refuse the
-    /// join and the placeholder would be a promise nobody keeps.
+    /// A full group shows no insertion point, because the core refuses the join
+    /// and the placeholder would be a promise nobody keeps.
     func testAFullGroupOffersNoInsertionPoint() {
         let state = Self.stateWithCards(
             count: BrowserSplitGroupPolicy.maximumMembers
@@ -257,7 +261,9 @@ final class BrowserSplitDropPolicyTests: XCTestCase {
         state.begin(
             item: Self.tabItem(in: Self.assignment),
             section: .tabs(placement: .current, folderID: nil),
-            at: CGPoint(x: 100, y: 20)
+            at: CGPoint(x: 100, y: 20),
+            plan: Self.plan(
+                splitRefusal: .splitLimitReached(SplitLimitReached(limit: BrowserSplitGroupPolicy.maximumMembers)))
         )
         state.update(pointer: CGPoint(x: 460, y: 300))
 
@@ -440,6 +446,16 @@ final class BrowserSplitDropPolicyTests: XCTestCase {
             )
         }
         return state
+    }
+
+    /// A lift the core lets into the current tabs, and into the cards on show
+    /// only as `splitRefusal` says.
+    private static func plan(splitRefusal: Rejection?) -> BrowserSidebarLiftPlan {
+        BrowserSidebarLiftPlan(
+            selection: TabSelection(tabIDs: [], folderIDs: [], memberTabIDs: []),
+            targets: DropTargetList(
+                refusal: nil, lists: [ListDropTarget(section: .current, folderID: nil, refusal: nil)], spaces: [],
+                split: SplitDropTarget(tabID: TabID(), refusal: splitRefusal), folderAroundTabIDs: []))
     }
 
     private static func tabItem(

@@ -118,7 +118,7 @@ final class BrowserSplitDragToSplitWindowTests: XCTestCase {
         fixture.model.browser.tabMultiSelection.clear()
         fixture.model.browser.tabMultiSelection.click(
             fixture.joiner.id,
-            units: BrowserSidebarSelection.units(in: fixture.model.browser, reorder: state), command: true)
+            units: BrowserSidebarSelection.units(in: fixture.model.browser), command: true)
         XCTAssertTrue(members.allSatisfy { fixture.model.browser.tabMultiSelection.contains($0.id) })
         let selectedMemberFrame = try XCTUnwrap(state.frame(ofRow: .tab(fixture.joiner.id)))
         fixture.beginDrag(from: CGPoint(x: selectedMemberFrame.midX, y: selectedMemberFrame.midY), to: drop)

@@ -298,24 +298,29 @@ final class BrowserMacWindowCoordinatorTests: XCTestCase {
             request)
     }
 
-    /// A lifted row's payload comes back as the same item, selection included.
+    /// A lifted row's payload comes back as the same row; the selection the
+    /// lift captured stays with the lift and never enters the payload.
     func testDragItemsSurviveTheirTransferEncoding() throws {
-        let space = BrowserSession.preview.spaces[0]
-        let tabs = space.tabs.prefix(2).map(\.id)
-        let selection = BrowserTabBatchRequest(ids: tabs, in: space)
-        let tab = BrowserTabDragItem(
+        let browser = BrowserStore(session: .preview)
+        let space = try XCTUnwrap(browser.selectedSpace)
+        let tabs = space.tabs.filter { !$0.isStartPage }.prefix(2).map(\.id)
+        let selection = try XCTUnwrap(browser.capturedSelection(ids: tabs))
+        var tab = BrowserTabDragItem(
             tabID: tabs[0], spaceID: space.id, profileID: space.profile.id, selection: selection)
-        let folder = BrowserFolderDragItem(
+        var folder = BrowserFolderDragItem(
             folderID: FolderID(), spaceID: space.id, profileID: space.profile.id, memberTabIDs: tabs,
             selection: selection)
-        let split = BrowserSplitGroupDragItem(
-            groupID: SplitGroupID(), spaceID: space.id, profileID: space.profile.id, memberTabIDs: tabs)
+        var split = BrowserSplitGroupDragItem(
+            groupID: SplitGroupID(), spaceID: space.id, profileID: space.profile.id, memberTabIDs: tabs,
+            selection: selection)
+        let decodedTab = try JSONDecoder().decode(BrowserTabDragItem.self, from: JSONEncoder().encode(tab))
+        let decodedFolder = try JSONDecoder().decode(BrowserFolderDragItem.self, from: JSONEncoder().encode(folder))
+        let decodedSplit = try JSONDecoder().decode(BrowserSplitGroupDragItem.self, from: JSONEncoder().encode(split))
+        (tab.selection, folder.selection, split.selection) = (nil, nil, nil)
 
-        XCTAssertEqual(try JSONDecoder().decode(BrowserTabDragItem.self, from: JSONEncoder().encode(tab)), tab)
-        XCTAssertEqual(
-            try JSONDecoder().decode(BrowserFolderDragItem.self, from: JSONEncoder().encode(folder)), folder)
-        XCTAssertEqual(
-            try JSONDecoder().decode(BrowserSplitGroupDragItem.self, from: JSONEncoder().encode(split)), split)
+        XCTAssertEqual(decodedTab, tab)
+        XCTAssertEqual(decodedFolder, folder)
+        XCTAssertEqual(decodedSplit, split)
     }
 
     private func makeNativeWindow() -> NSWindow {
