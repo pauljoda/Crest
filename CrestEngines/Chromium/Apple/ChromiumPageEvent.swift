@@ -1,9 +1,12 @@
 #if CREST_CHROMIUM_HOST
     import Foundation
 
-    /// The page observations the engine host reports, in the host's spelling. The
-    /// host names each one in `crest_chrome_host.mm`; `creationFailed` and
-    /// `developerPanel` are also raised by `ChromiumNativePage` itself.
+    /// The page observations the engine host reports for the platform to
+    /// present, in the host's spelling. The host names each one in
+    /// `crest_chrome_host.mm`; `creationFailed` and `developerPanel` are also
+    /// raised by `ChromiumNativePage` itself. What the core records, Chromium's
+    /// binding reports to it directly. TRANSITIONAL until presentation travels
+    /// as EnginePresentations.
     enum ChromiumPageEvent: String, Sendable {
         case created
         case creationFailed = "creation_failed"
@@ -21,6 +24,8 @@
         case developerPanel = "developer_panel"
         case storeInstall = "store_install"
         case storeRemove = "store_remove"
+        /// A link staged for the page's first load no longer applies.
+        case linkUnavailable = "link_unavailable"
         case closeCanceled = "close_canceled"
         case closed
     }
@@ -68,7 +73,6 @@
         /// own navigation, such as the one a stale staged link carries.
         var failure: String?
         var errorCode: Int?
-        var security: String?
         /// The page's declared theme colour as 0xAARRGGBB.
         var themeColor: UInt32?
 

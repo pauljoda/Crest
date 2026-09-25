@@ -5,8 +5,9 @@ The engine — Chromium with Crest's host patch and overlay compiled in — take
 hours to build and cannot be built on a hosted runner, so releases download a
 prebuilt engine published once per engine revision. Its key hashes every input
 that is compiled into the engine: the pinned source lock, the host patch and
-its reviewed input hashes, the overlay sources, the host header copied into
-the tree, and the scripts that prepare, configure and build it. Anything else
+its reviewed input hashes, the overlay sources, the host header and the
+engine contract headers copied into the tree, and the scripts that prepare,
+configure and build it. Anything else
 — the Swift UI framework, the native core, packaging — is built per release.
 """
 import argparse
@@ -19,6 +20,10 @@ INPUTS = (
     "CrestEngines/Chromium/Patches",
     "CrestEngines/Chromium/Overlay",
     "CrestEngines/Chromium/Apple/CrestChromiumHost.h",
+    "CrestContracts/include/crest_core.h",
+    "CrestContracts/include/crest_app.h",
+    "CrestContracts/include/crest_engine.h",
+    "CrestContracts/include/crest_engine_contract.h",
     "Scripts/control-plane/prepare-chromium.py",
     "Scripts/control-plane/apply-chromium-host.py",
     "Scripts/control-plane/configure-chromium.py",

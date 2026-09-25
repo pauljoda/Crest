@@ -71,6 +71,9 @@ final class Engines {
 
     /// The registered bindings, by kind.
     private(set) var bindings: [EngineKind: any EngineBinding] = [:]
+    /// The registered bindings the core runs directly, by kind. Their commands
+    /// and reports never pass through here.
+    @ObservationIgnored private var natives: [EngineKind: any NativeEngineBinding] = [:]
     /// The core's handle for each registered engine, and its relay, which the
     /// core addresses while the engine stays registered.
     @ObservationIgnored private var registered: [EngineKind: (engine: UInt64, relay: Relay)] = [:]
@@ -109,6 +112,21 @@ final class Engines {
         }
     }
 
+    /// Registers a binding the core runs directly, as the engine new pages
+    /// open on when `isDefault`. A refusal is a composition bug, or an engine
+    /// built against another engine contract.
+    func register(_ binding: any NativeEngineBinding, isDefault: Bool) {
+        let kind = binding.integration.kind
+        do {
+            _ = try core.registerEngine(
+                binding.integration.registration(isDefault: isDefault), table: binding.table,
+                fingerprint: binding.fingerprint)
+            natives[kind] = binding
+        } catch {
+            preconditionFailure("The core refused the \(kind.name) engine: \(error)")
+        }
+    }
+
     // MARK: - Actions - Pages
 
     /// Opens a page through the core and answers it with what its engine built,
@@ -124,12 +142,19 @@ final class Engines {
             Self.logger.debug("The core opened no page: \(String(describing: error))")
             return nil
         }
-        guard let built = request.built else {
+        guard let built = request.built ?? nativeHost(for: request.page) else {
             request.page.release(keepingState: false)
             return nil
         }
         opened[intent.pageID] = WeakPage(value: request.page)
         return OpenedPage(page: request.page, built: built)
+    }
+
+    /// What the platform hosts for a page the core opened on an engine it runs
+    /// directly, which creates the page on its own.
+    private func nativeHost(for page: CorePage) -> AnyObject? {
+        guard let kind = page.state?.engine, let binding = natives[kind] else { return nil }
+        return binding.host(page)
     }
 
     /// The page the core opened as `pageID`, while its owner keeps it.
@@ -158,7 +183,9 @@ final class Engines {
     /// The icon `pageID` reported, which leaves this store for the tab that
     /// adopts it.
     func takeIcon(of pageID: UUID) -> Data? {
-        pageIcons.removeValue(forKey: pageID)
+        if let icon = pageIcons.removeValue(forKey: pageID) { return icon }
+        // An engine the core runs directly keeps its pages' icons itself.
+        return natives.values.lazy.compactMap { $0.icon(of: pageID) }.first
     }
 
     /// The page is gone, and nothing it reported waits here any longer.

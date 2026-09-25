@@ -2557,6 +2557,10 @@
     "engine-contract-cpp-codec": {
       "category": "internal",
       "message": "The engine contract has a generated C++ codec that engines outside Swift can use."
+    },
+    "chromium-cpp-binding-reports": {
+      "category": "internal",
+      "message": "Chromium reports each page's navigations, state and icon to the core from its own C++ binding."
     }
   }
 }

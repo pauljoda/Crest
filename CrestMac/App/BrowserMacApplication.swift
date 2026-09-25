@@ -42,7 +42,7 @@ final class BrowserMacApplication {
     ///     composition keeps, so each engine's review app has its own.
     init(pageClosePreparation: (any BrowserPageClosePreparing)? = nil,
         profileRemover: any BrowserEngineProfileRemoving = WebKitBrowserWebsiteDataStoreRemover(),
-        defaultEngine: (any EngineBinding)? = nil,
+        defaultEngine: (any NativeEngineBinding)? = nil,
         siteControlAnchor: BrowserSiteControlAnchor? = nil,
         reviewPersistenceID: String = "core-native-ui-review") throws {
         self.siteControlAnchor = siteControlAnchor

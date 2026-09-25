@@ -26,7 +26,8 @@
         var readerModeSession: BrowserReaderModeSession? { nil }
         var faviconSession: BrowserFaviconSession? { nil }
         var isContentBlockingActive: Bool { false }
-        var reporter: EnginePageReporter? { native.reporter }
+        /// Chromium's binding reports the page's navigations to the core itself.
+        var reporter: EnginePageReporter? { nil }
         /// Fills go through the engine's content scripting.
         var credentialEvaluator: BrowserCredentialSession.Evaluate? { nil }
 
@@ -43,6 +44,7 @@
 
         func attach(to page: BrowserPage, allowsCredentialAccess: Bool) {
             self.page = page
+            native.profileID = page.profileID
             native.permissionHandler = { [weak page] permission, origin, topLevelOrigin in
                 await page?.resolveEngineSitePermission(permission, origin: origin, topLevelOrigin: topLevelOrigin)
                     ?? .dismiss
@@ -199,7 +201,7 @@
             case .closed: return .closeRequested
             case .creationFailed:
                 return .creationFailed(message: String(localized: "Chromium couldn’t create this page."))
-            case .created, .contentMessage, .storeInstall, .storeRemove, .closeCanceled: return nil
+            case .created, .contentMessage, .storeInstall, .storeRemove, .closeCanceled, .linkUnavailable: return nil
             }
         }
     }

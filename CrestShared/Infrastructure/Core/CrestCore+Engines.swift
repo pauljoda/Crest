@@ -32,6 +32,38 @@ extension CrestCore {
         }
     }
 
+    /// Registers an engine whose binding the core runs directly, through the
+    /// binding's own function table, and answers the core's handle for it.
+    /// The binding reports to the core itself. `fingerprint` names the engine
+    /// contract the binding was built against.
+    func registerEngine(_ registration: EngineRegistration, table: crest_engine_binding_t, fingerprint: [UInt8])
+        throws(Rejection) -> UInt64
+    {
+        var writer = WireWriter()
+        registration.encode(into: &writer)
+        var engine: UInt64 = 0
+        var refusal = crest_buffer_t()
+        var binding = table
+        let status = fingerprint.withUnsafeBufferPointer { fingerprint in
+            writer.bytes.withUnsafeBufferPointer { settings in
+                crest_engine_register(
+                    handle, fingerprint.baseAddress, fingerprint.count, settings.baseAddress, settings.count, &binding,
+                    &engine, &refusal)
+            }
+        }
+        defer { crest_buffer_free(&refusal) }
+        switch status {
+        case CREST_OK:
+            return engine
+        case CREST_REJECTED:
+            throw Self.rejection(in: refusal)
+        case CREST_VERSION_MISMATCH:
+            preconditionFailure("The engine was built against another engine contract. Rebuild or download the engine.")
+        default:
+            Self.buildBug(status, "register an engine")
+        }
+    }
+
     /// Reports what happened to one of an engine's pages. What it changed
     /// arrives with the next drain.
     func report(_ event: some EngineEvent, engine: UInt64) {

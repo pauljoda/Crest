@@ -11,7 +11,9 @@
 #include <set>
 #include <vector>
 #include "base/check.h"
+#include "base/apple/bridging.h"
 #include "base/apple/foundation_util.h"
+#include "base/apple/scoped_cftyperef.h"
 #include "base/pickle.h"
 #include "base/json/json_reader.h"
 #include "base/json/json_writer.h"
@@ -133,6 +135,7 @@
 #include "chrome/browser/ui/navigator/browser_navigator.h"
 #include "chrome/browser/ui/navigator/browser_navigator_params.h"
 #include "chrome/browser/ui/crest/crest_chrome_hooks.h"
+#include "chrome/browser/ui/crest/crest_engine_binding.h"
 #include "chrome/browser/ui/tabs/tab_strip_model.h"
 #include "chrome/browser/ui/tabs/tab_strip_model_observer.h"
 #include "components/tabs/public/tab_interface.h"
@@ -167,7 +170,6 @@
 #include "ui/base/page_transition_types.h"
 
 @interface CrestRoot : NSObject
-+ (void)startWithHost:(id<CrestChromiumEngineHost>)host;
 + (NSWindow*)windowForIdentifier:(NSString*)identifier;
 + (NSDictionary<NSString*, NSString*>*)reserveEngineWindowForProfile:(NSString*)profileID;
 + (void)presentEngineWindow:(NSString*)windowID space:(NSString*)spaceID focused:(BOOL)focused;
@@ -575,6 +577,15 @@ struct HostState {
   std::unique_ptr<ExtensionPopup> space_extension_popup;
   std::map<std::string, NativeAdoption> adoptions;
   std::map<std::string, PendingLinkNavigation> pending_link_navigations;
+  // The platform's observers of pages the binding is still creating, and the
+  // pages it could not create, which a late observer hears about.
+  // TRANSITIONAL until page presentation travels as EnginePresentations.
+  std::map<std::string, Observation> pending_observers;
+  std::set<std::string> failed_pages;
+  // The regular profile a private window's pages are derived from, which the
+  // window names when it opens. TRANSITIONAL: which profile it is is a rule
+  // for the core.
+  std::string private_source_profile;
   void (^browser_observation)(NSDictionary<NSString*, id>*);
   void (^download_observation)(NSDictionary<NSString*, id>*);
   void (^download_destination)(NSDictionary<NSString*, id>*, void (^)(NSString*));
@@ -1327,7 +1338,8 @@ struct Page final : content::WebContentsObserver, find_in_page::FindResultObserv
   Page(content::WebContents* contents, Browser* owner, std::string profile_id,
        Observation observer)
       : content::WebContentsObserver(contents), browser(owner),
-        profile(std::move(profile_id)), observation([observer copy]) {
+        profile(std::move(profile_id)),
+        observation(static_cast<Observation>([(observer ?: ^(NSString*, NSDictionary<NSString*, id>*) {}) copy])) {
     DisableEnginePasswordManager(contents);
     find_helper = find_in_page::FindTabHelper::FromWebContents(contents);
     if (find_helper) find_helper->AddObserver(this);
@@ -1356,6 +1368,25 @@ struct Page final : content::WebContentsObserver, find_in_page::FindResultObserv
     });
     if (find_helper) find_helper->RemoveObserver(this);
     RemoveFaviconObservation();
+  }
+  // The platform's observer, which may arrive after the page exists: it hears
+  // the page is created once the binding has it. TRANSITIONAL until page
+  // presentation travels as EnginePresentations.
+  void SetObserver(Observation observer) {
+    observation = [observer copy];
+    if (announced) Announce();
+  }
+  void Announce() {
+    announced = true;
+    observation(@"created", @{});
+    Publish();
+  }
+  bool announced = false;
+  // The page's identity, as the platform spells it.
+  std::string Key() const {
+    for (const auto& [id, page] : State().pages)
+      if (page.get() == this) return id;
+    return std::string();
   }
   void RemoveFaviconObservation() {
     if (web_contents())
@@ -1536,6 +1567,7 @@ struct Page final : content::WebContentsObserver, find_in_page::FindResultObserv
     auto text = [](const std::u16string& value) -> id {
       return value.empty() ? (id)NSNull.null : base::SysUTF16ToNSString(value);
     };
+    crest::EngineBinding::Get().StateChanged(Key());
     observation(@"media_session", @{ @"body": @{
       @"version": @1, @"documentIdentifier": base::SysUTF8ToNSString(media_document),
       @"sequence": @(++media_sequence),
@@ -1621,40 +1653,12 @@ struct Page final : content::WebContentsObserver, find_in_page::FindResultObserv
       @"canGoBack": @(controller.CanGoBack()), @"canGoForward": @(controller.CanGoForward()),
       @"backHistory": History(-1), @"forwardHistory": History(1),
       @"committed": @(committed), @"failure": failure ?: (id)NSNull.null, @"errorCode": @(error_code),
-      @"security": SecurityState(), @"themeColor": ThemeColor() });
+      @"themeColor": ThemeColor() });
   }
   // The page's declared theme colour, as 0xAARRGGBB, for Crest's tab accents.
   id ThemeColor() {
     const auto color = web_contents()->GetThemeColor();
     return color ? @(static_cast<uint32_t>(*color)) : (id)NSNull.null;
-  }
-  // The engine's own verdict on the visible document's connection, in the
-  // spelling of Crest's `BrowserPageSecurityState`. Only a secure transport
-  // with no mixed content and no certificate problem is reported as secure; a
-  // page the engine flags as malicious outranks everything else, and a
-  // certificate error — the interstitial, or a page reached past it — outranks
-  // mixed content.
-  NSString* SecurityState() {
-    auto* helper = web_contents() ? SecurityStateTabHelper::FromWebContents(web_contents()) : nullptr;
-    if (!helper) return @"none";
-    const auto visible = helper->GetVisibleSecurityState();
-    const auto level = helper->GetSecurityLevel();
-    if (!visible) return @"none";
-    if (visible->malicious_content_status != security_state::MALICIOUS_CONTENT_STATUS_NONE) return @"dangerous";
-    if (net::IsCertStatusError(visible->cert_status)) return @"certificate_error";
-    // Any other failed load shows Crest's own failure view, not a connection.
-    if (visible->is_error_page) return @"none";
-    if (!security_state::IsSchemeCryptographic(visible->url))
-      return level == security_state::WARNING || level == security_state::DANGEROUS ? @"insecure" : @"none";
-    // An HTTPS entry that has not connected yet has no connection to judge.
-    if (!visible->connection_info_initialized) return @"none";
-    if (level == security_state::SECURE) return @"secure";
-    if (visible->ran_mixed_content || visible->displayed_mixed_content || visible->contained_mixed_form ||
-        visible->ran_content_with_cert_errors || visible->displayed_content_with_cert_errors)
-      return @"mixed_content";
-    if (level == security_state::DANGEROUS) return @"dangerous";
-    // A cryptographic scheme the engine still warns about, such as legacy TLS.
-    return @"insecure";
   }
   // Chrome Web Store support. Regular profiles only: a private window must
   // not change a Space's persistent extension state, so its store pages keep
@@ -2165,6 +2169,188 @@ Page* FindPage(NSString* identifier) {
   auto found = State().pages.find(base::SysNSStringToUTF8(identifier));
   return found == State().pages.end() ? nullptr : found->second.get();
 }
+// Creates `page_id`'s WebContents in its engine profile, inside the Browser of
+// `window_id`, with the platform's presentation of it attached, and answers
+// it, or nullptr. A private page's profile is derived from `source_id`, the
+// regular profile its window was opened from.
+void CreatePageContents(const std::string& page_id, const std::string& profile_id, bool private_mode,
+                        const std::string& source_profile, const std::string& window_id,
+                        base::OnceCallback<void(content::WebContents*)> done) {
+  auto& state = State();
+  if (!state.root_profile || state.disposing || state.pages.contains(page_id) ||
+      state.creating_pages.contains(page_id)) {
+    std::move(done).Run(nullptr);
+    return;
+  }
+  // Reclaim observers only after their WebContents destruction callback returned.
+  std::erase_if(state.pages, [](const auto& pair) { return !pair.second->web_contents(); });
+  const std::string source_id = private_mode ? source_profile : profile_id;
+  if (!base::Uuid::ParseCaseInsensitive(profile_id).is_valid() || state.deleting_profiles.contains(profile_id) ||
+      !base::Uuid::ParseCaseInsensitive(source_id).is_valid() || state.deleting_profiles.contains(source_id)) {
+    std::move(done).Run(nullptr);
+    return;
+  }
+  state.creating_pages.emplace(page_id, profile_id);
+  auto* manager = g_browser_process->profile_manager();
+  CHECK(manager);
+  const base::FilePath path = manager->user_data_dir().AppendASCII("Crest-" + source_id);
+  manager->CreateProfileAsync(path, base::BindOnce(
+      [](std::string page_id, std::string profile_id, std::string source_id, std::string window_id,
+         bool private_mode, base::OnceCallback<void(content::WebContents*)> done, Profile* profile) {
+        auto& state = State();
+        if (!state.creating_pages.erase(page_id) || !profile || state.disposing ||
+            state.deleting_profiles.contains(profile_id) || state.deleting_profiles.contains(source_id)) {
+          std::move(done).Run(nullptr);
+          return;
+        }
+        if (!state.profiles.contains(profile_id)) {
+          // The regular source owns the OTR profile and must outlive it. No
+          // private profile path, session checkpoint, or browsing history is created.
+          state.profile_leases[profile_id] = std::make_unique<ScopedProfileKeepAlive>(
+              profile, ProfileKeepAliveOrigin::kAppWindow);
+          state.profiles[profile_id] = private_mode ? profile->GetOffTheRecordProfile(
+              Profile::OTRProfileID::CreateUnique("Crest::Private::" + profile_id), true) : profile;
+        }
+        Browser* browser = BrowserFor(profile_id, window_id);
+        if (!browser) {
+          std::move(done).Run(nullptr);
+          return;
+        }
+        // Keep the controller's initial entry until the binding supplies its
+        // first URL or restored history. Navigating to about:blank here races
+        // restoration and can leave a spurious Back entry in ordinary tabs.
+        content::WebContents::CreateParams params(state.profiles[profile_id]);
+        params.initially_hidden = true;
+        params.desired_renderer_state = content::WebContents::CreateParams::kNoRendererProcess;
+        auto owned_contents = content::WebContents::Create(params);
+        auto* contents = owned_contents.get();
+        browser->tab_strip_model()->AddWebContents(std::move(owned_contents), -1,
+            ui::PAGE_TRANSITION_AUTO_TOPLEVEL, AddTabTypes::ADD_NONE);
+        Observation observer = nil;
+        if (auto waiting = state.pending_observers.extract(page_id)) observer = waiting.mapped();
+        state.pages.emplace(page_id, std::make_unique<Page>(contents, browser, profile_id, observer));
+        std::move(done).Run(contents);
+      }, page_id, profile_id, source_id, window_id, private_mode, std::move(done)));
+}
+
+// Lets a page go: the platform stops hearing it, then its WebContents is destroyed.
+void DisposePage(const std::string& id) {
+  auto& state = State();
+  state.creating_pages.erase(id);
+  state.pending_observers.erase(id);
+  state.failed_pages.erase(id);
+  auto found = state.pages.find(id);
+  if (found == state.pages.end()) return;
+  auto* contents = found->second->web_contents();
+  Browser* browser = found->second->browser;
+  state.pages.erase(found);  // Remove callbacks before destroying WebContents.
+  if (!contents) return;
+  TabStripModel* strip = browser->tab_strip_model();
+  const int index = strip->GetIndexOfWebContents(contents);
+  if (index >= 0) strip->DetachAndDeleteWebContentsAt(index);
+}
+
+// What the Mac shell does for the portable binding. TRANSITIONAL: each part
+// moves into the binding with its area, and the platform's presentation with
+// the EnginePresentations.
+class MacShell final : public crest::EngineBinding::Shell {
+ public:
+  void CreateContents(const std::string& page, const std::string& profile, bool is_private,
+                      const std::string& window,
+                      base::OnceCallback<void(content::WebContents*)> created) override {
+    CreatePageContents(page, profile, is_private, State().private_source_profile, window, std::move(created));
+  }
+
+  content::WebContents* AdoptContents(const std::string& page, const std::string& token,
+                                      const std::string& profile) override {
+    auto& state = State();
+    const auto found = state.adoptions.find(token);
+    if (state.disposing || found == state.adoptions.end() || !found->second.contents ||
+        state.pages.contains(page) || found->second.profile != profile) return nullptr;
+    auto* contents = found->second.contents.get();
+    Browser* browser = nullptr;
+    for (const auto& [id, owner] : state.browsers)
+      if (owner->strip && owner->strip->GetIndexOfWebContents(contents) >= 0) { browser = owner->browser; break; }
+    if (!browser) return nullptr;
+    Observation observer = nil;
+    if (auto waiting = state.pending_observers.extract(page)) observer = waiting.mapped();
+    state.pages.emplace(page, std::make_unique<Page>(contents, browser, profile, observer));
+    state.adoptions.erase(found);
+    return contents;
+  }
+
+  void ContentsCreated(const std::string& page) override {
+    if (Page* created = FindPage(base::SysUTF8ToNSString(page))) created->Announce();
+  }
+
+  void CreationFailed(const std::string& page) override {
+    auto& state = State();
+    if (auto waiting = state.pending_observers.extract(page)) {
+      waiting.mapped()(@"creation_failed", @{});
+      return;
+    }
+    state.failed_pages.insert(page);
+  }
+
+  void DestroyContents(const std::string& page) override { DisposePage(page); }
+
+  bool LoadStagedNavigation(const std::string& page_id, const std::string& token, const GURL& url) override {
+    auto& pending = State().pending_link_navigations;
+    auto found = pending.find(token);
+    Page* page = FindPage(base::SysUTF8ToNSString(page_id));
+    bool loaded = false;
+    if (found != pending.end()) {
+      auto navigation = std::move(found->second);
+      pending.erase(found);  // Tokens can be consumed only once, including failures.
+      loaded = LoadLinkNavigation(page, navigation, url);
+    }
+    // The platform shows the link is gone rather than retry it as a bare address.
+    if (!loaded && page) page->observation(@"link_unavailable", @{});
+    return loaded;
+  }
+
+  void DiscardStagedNavigation(const std::string& token) override {
+    State().pending_link_navigations.erase(token);
+  }
+
+  crest::engine::PageMediaActivity MediaActivity(const std::string& page_id) override {
+    using crest::engine::PageMediaActivity;
+    Page* page = FindPage(base::SysUTF8ToNSString(page_id));
+    auto* contents = page ? page->web_contents() : nullptr;
+    if (!contents) return PageMediaActivity::kNone;
+    auto indicator = MediaCaptureDevicesDispatcher::GetInstance()->GetMediaStreamCaptureIndicator();
+    PageMediaActivity activity = PageMediaActivity::kNone;
+    if (page->video_was_playing_when_detached || !page->playing_videos.empty() || page->media_last_playing ||
+        contents->IsCurrentlyAudible() || contents->GetCurrentlyPlayingVideoCount() > 0)
+      activity |= PageMediaActivity::kPlaying;
+    if (contents->IsBeingCaptured() || indicator->IsCapturingUserMedia(contents) || indicator->IsCapturingTab(contents) ||
+        indicator->IsCapturingWindow(contents) || indicator->IsCapturingDisplay(contents))
+      activity |= PageMediaActivity::kCapturing;
+    if (contents->HasPictureInPictureVideo() || contents->HasPictureInPictureDocument())
+      activity |= PageMediaActivity::kPictureInPicture;
+    return activity;
+  }
+
+ private:
+  // Loads a link navigation Chromium verified in the page that staged it, as
+  // its first load, while that page still shows the document the link was in.
+  static bool LoadLinkNavigation(Page* page, const PendingLinkNavigation& navigation, const GURL& url) {
+    if (State().disposing || !page || page->closing || !page->web_contents() || !navigation.source ||
+        page->profile != navigation.profile || navigation.request.url != url ||
+        !page->web_contents()->GetController().IsInitialNavigation()) return false;
+    bool current_source = false;
+    for (const auto& [id, source] : State().pages) {
+      if (source->web_contents() == navigation.source.get() && source->browser == page->browser &&
+          !source->closing && source->navigation_revision == navigation.revision &&
+          source->navigation_generation == navigation.generation) { current_source = true; break; }
+    }
+    if (!current_source) return false;
+    // Keep Chromium's verified referrer, initiator, headers and SiteInstance.
+    content::NavigationController::LoadURLParams load(navigation.request);
+    page->web_contents()->GetController().LoadURLWithParams(load);
+    return true;
+  }
+};
 // The extension, only if a side panel is available for this page's own tab.
 // Crest resolves the panel itself: `SidePanelService::OpenSidePanelForTab`
 // drives Chrome's Views side-panel UI, which this build never creates. An
@@ -2219,6 +2405,11 @@ void DeliverExtensionCommand(Profile* profile, const extensions::Extension& exte
 @interface CrestChromiumHost : NSObject <CrestChromiumEngineHost>
 @end
 
+// The UI framework's entry point: the shell's host, and the engine binding
+// the framework registers with its core.
+using CrestChromiumUIStart = void (*)(id<CrestChromiumEngineHost> host, const crest_engine_binding_t* binding,
+                                      const uint8_t* fingerprint, size_t fingerprint_length);
+
 @implementation CrestChromiumHost
 - (void)setBrowserObserver:(void (^)(NSDictionary<NSString*, id>*))observer {
   CHECK(NSThread.isMainThread);
@@ -2250,23 +2441,40 @@ void DeliverExtensionCommand(Profile* profile, const extensions::Extension& exte
     if (auto* item = FindDownload(profileID, downloadID)) item->Remove();
   });
 }
-- (BOOL)adoptPage:(NSString*)adoptionID asPage:(NSString*)pageID profile:(NSString*)profileID observer:(Observation)observer {
+- (void)observePage:(NSString*)pageID observer:(Observation)observer {
   CHECK(NSThread.isMainThread);
   auto& state = State();
-  const auto found = state.adoptions.find(base::SysNSStringToUTF8(adoptionID));
-  const auto key = base::SysNSStringToUTF8(pageID);
-  if (state.disposing || found == state.adoptions.end() || !found->second.contents || state.pages.contains(key)
-      || found->second.profile != base::SysNSStringToUTF8(profileID)) return NO;
-  auto* contents = found->second.contents.get();
-  Browser* browser = nullptr;
-  for (const auto& [id, owner] : state.browsers)
-    if (owner->strip && owner->strip->GetIndexOfWebContents(contents) >= 0) { browser = owner->browser; break; }
-  if (!browser) return NO;
-  auto page = std::make_unique<Page>(contents, browser, found->second.profile, observer);
-  state.pages.emplace(key, std::move(page)); state.adoptions.erase(found);
-  observer(@"created", @{});
-  if (Page* adopted = FindPage(pageID)) adopted->Publish();
-  return YES;
+  const std::string key = base::SysNSStringToUTF8(pageID);
+  if (Page* page = FindPage(pageID)) {
+    page->SetObserver(observer);
+  } else if (state.failed_pages.erase(key)) {
+    observer(@"creation_failed", @{});
+  } else {
+    state.pending_observers[key] = [observer copy];
+  }
+}
+- (BOOL)adoptPage:(NSString*)adoptionID asPage:(NSString*)pageID observer:(Observation)observer {
+  CHECK(NSThread.isMainThread);
+  State().pending_observers[base::SysNSStringToUTF8(pageID)] = [observer copy];
+  return crest::EngineBinding::Get().Adopt(base::SysNSStringToUTF8(pageID), base::SysNSStringToUTF8(adoptionID));
+}
+- (BOOL)stageNavigation:(NSString*)token page:(NSString*)pageID url:(NSString*)url {
+  CHECK(NSThread.isMainThread);
+  return crest::EngineBinding::Get().Stage(base::SysNSStringToUTF8(pageID), base::SysNSStringToUTF8(token),
+                                           base::SysNSStringToUTF8(url));
+}
+- (void)loadPage:(NSString*)pageID url:(NSString*)url {
+  CHECK(NSThread.isMainThread);
+  crest::EngineBinding::Get().Load(base::SysNSStringToUTF8(pageID), base::SysNSStringToUTF8(url));
+}
+- (NSData*)iconForPage:(NSString*)pageID {
+  CHECK(NSThread.isMainThread);
+  auto icon = crest::EngineBinding::Get().Icon(base::SysNSStringToUTF8(pageID));
+  return icon ? [NSData dataWithBytes:icon->data() length:icon->size()] : nil;
+}
+- (void)setPrivateSourceProfile:(NSString*)profileID {
+  CHECK(NSThread.isMainThread);
+  State().private_source_profile = base::SysNSStringToUTF8(profileID);
 }
 - (void)rejectAdoption:(NSString*)adoptionID {
   CHECK(NSThread.isMainThread);
@@ -2280,57 +2488,25 @@ void DeliverExtensionCommand(Profile* profile, const extensions::Extension& exte
     if (index >= 0) { owner->strip->DetachAndDeleteWebContentsAt(index); return; }
   }
 }
+// A Settings page of the engine's own, such as its flags page, which no tab
+// owns and the core never hears of. TRANSITIONAL until such pages open
+// through the core.
 - (BOOL)createPage:(NSString*)pageID profile:(NSString*)profileID window:(NSString*)windowID
       privateMode:(BOOL)privateMode sourceProfile:(NSString*)sourceProfileID
          observer:(Observation)observer {
   CHECK(NSThread.isMainThread);
-  auto& state = State();
   const std::string key = base::SysNSStringToUTF8(pageID);
-  if (!state.root_profile || state.disposing || state.pages.contains(key) || state.creating_pages.contains(key)) return NO;
-  // Reclaim observers only after their WebContents destruction callback returned.
-  std::erase_if(state.pages, [](const auto& pair) { return !pair.second->web_contents(); });
-  const std::string profile_id = base::SysNSStringToUTF8(profileID);
-  if (!base::Uuid::ParseCaseInsensitive(profile_id).is_valid() || state.deleting_profiles.contains(profile_id)) return NO;
-  state.creating_pages.emplace(key, profile_id);
-  auto* manager = g_browser_process->profile_manager();
-  CHECK(manager);
-  if (privateMode && !sourceProfileID.length) { state.creating_pages.erase(key); return NO; }
-  const std::string source_id = privateMode ? base::SysNSStringToUTF8(sourceProfileID) : profile_id;
-  if (!base::Uuid::ParseCaseInsensitive(source_id).is_valid() || state.deleting_profiles.contains(source_id)) {
-    state.creating_pages.erase(key); return NO;
-  }
-  const base::FilePath path = manager->user_data_dir().AppendASCII("Crest-" + source_id);
-  manager->CreateProfileAsync(path, base::BindOnce(
-      [](std::string page_id, std::string profile_id, std::string source_id, std::string window_id,
-         bool private_mode, Observation observer, Profile* profile) {
-        auto& state = State();
-        if (!state.creating_pages.erase(page_id)) return;
-        if (!profile || state.disposing || state.deleting_profiles.contains(profile_id) || state.deleting_profiles.contains(source_id)) {
-          observer(@"creation_failed", @{}); return;
+  if (State().pages.contains(key) || State().creating_pages.contains(key)) return NO;
+  State().pending_observers[key] = [observer copy];
+  CreatePageContents(key, base::SysNSStringToUTF8(profileID), privateMode,
+      base::SysNSStringToUTF8(sourceProfileID ?: @""), base::SysNSStringToUTF8(windowID),
+      base::BindOnce([](std::string key, content::WebContents* contents) {
+        if (contents) {
+          if (Page* page = FindPage(base::SysUTF8ToNSString(key))) page->Announce();
+          return;
         }
-        if (!state.profiles.contains(profile_id)) {
-          // The regular source owns the OTR profile and must outlive it. No
-          // private profile path, session checkpoint, or browsing history is created.
-          state.profile_leases[profile_id] = std::make_unique<ScopedProfileKeepAlive>(
-              profile, ProfileKeepAliveOrigin::kAppWindow);
-          state.profiles[profile_id] = private_mode ? profile->GetOffTheRecordProfile(
-              Profile::OTRProfileID::CreateUnique("Crest::Private::" + profile_id), true) : profile;
-        }
-        Browser* browser = BrowserFor(profile_id, window_id);
-        if (!browser) { observer(@"creation_failed", @{}); return; }
-        // Keep the controller's initial entry until the adapter supplies its
-        // first URL or restored history. Navigating to about:blank here races
-        // restoration and can leave a spurious Back entry in ordinary tabs.
-        content::WebContents::CreateParams params(state.profiles[profile_id]);
-        params.initially_hidden = true;
-        params.desired_renderer_state = content::WebContents::CreateParams::kNoRendererProcess;
-        auto owned_contents = content::WebContents::Create(params);
-        auto* contents = owned_contents.get();
-        browser->tab_strip_model()->AddWebContents(std::move(owned_contents), -1,
-            ui::PAGE_TRANSITION_AUTO_TOPLEVEL, AddTabTypes::ADD_NONE);
-        state.pages.emplace(page_id, std::make_unique<Page>(contents, browser, profile_id, observer));
-        observer(@"created", @{});
-      }, key, profile_id, source_id, base::SysNSStringToUTF8(windowID), static_cast<bool>(privateMode), [observer copy]));
+        if (auto waiting = State().pending_observers.extract(key)) waiting.mapped()(@"creation_failed", @{});
+      }, key));
   return YES;
 }
 - (NSView*)viewForPage:(NSString*)pageID {
@@ -2374,85 +2550,17 @@ void DeliverExtensionCommand(Profile* profile, const extensions::Extension& exte
   CHECK(NSThread.isMainThread);
   State().pending_link_navigations.erase(base::SysNSStringToUTF8(token));
 }
-- (BOOL)loadPendingNavigation:(NSString*)token page:(NSString*)pageID expectedURL:(NSString*)url {
-  CHECK(NSThread.isMainThread);
-  auto& pending = State().pending_link_navigations;
-  auto found = pending.find(base::SysNSStringToUTF8(token));
-  if (found == pending.end()) return NO;
-  auto navigation = std::move(found->second);
-  pending.erase(found);  // Tokens can be consumed only once, including failures.
-  Page* page = FindPage(pageID);
-  if (State().disposing || !page || page->closing || !page->web_contents() || !navigation.source ||
-      page->profile != navigation.profile || navigation.request.url != GURL(base::SysNSStringToUTF8(url)) ||
-      !page->web_contents()->GetController().IsInitialNavigation()) return NO;
-  bool current_source = false;
-  for (const auto& [id, source] : State().pages) {
-    if (source->web_contents() == navigation.source.get() && source->browser == page->browser &&
-        !source->closing && source->navigation_revision == navigation.revision &&
-        source->navigation_generation == navigation.generation) { current_source = true; break; }
-  }
-  if (!current_source) return NO;
-  // Keep Chromium's verified referrer, initiator, headers and SiteInstance.
-  content::NavigationController::LoadURLParams load(navigation.request);
-  page->web_contents()->GetController().LoadURLWithParams(load);
-  return YES;
-}
 - (NSData*)interactionStateForPage:(NSString*)pageID {
   CHECK(NSThread.isMainThread);
-  Page* page = FindPage(pageID);
-  if (!page || !page->web_contents()) return nil;
-  auto& controller = page->web_contents()->GetController();
-  if (controller.IsInitialNavigation() || !controller.GetLastCommittedEntry() ||
-      controller.GetEntryCount() > 100 || controller.GetLastCommittedEntryIndex() < 0) return nil;
-  base::Pickle pickle;
-  pickle.WriteString("crest.navigation.v1");
-  pickle.WriteString(page->profile);
-  pickle.WriteInt(controller.GetLastCommittedEntryIndex());
-  pickle.WriteInt(controller.GetEntryCount());
-  for (int i = 0; i < controller.GetEntryCount(); ++i) {
-    auto navigation = sessions::ContentSerializedNavigationBuilder::FromNavigationEntry(i, controller.GetEntryAtIndex(i));
-    base::Pickle entry;
-    // Chromium's session serializer sanitizes password data before writing.
-    navigation.WriteToPickle(64 * 1024, &entry);
-    pickle.WriteData(entry.AsBytes());
-    if (pickle.AsBytes().size() > 2 * 1024 * 1024) return nil;
-  }
-  return [NSData dataWithBytes:pickle.AsBytes().data() length:pickle.AsBytes().size()];
+  auto state = crest::EngineBinding::Get().SaveInteractionState(base::SysNSStringToUTF8(pageID));
+  return state ? [NSData dataWithBytes:state->data() length:state->size()] : nil;
 }
 - (BOOL)restorePage:(NSString*)pageID interactionState:(NSData*)data expectedURL:(NSString*)url {
   CHECK(NSThread.isMainThread);
-  Page* page = FindPage(pageID);
-  if (!page || !page->web_contents() || !data.length || data.length > 2 * 1024 * 1024) return NO;
-  auto& controller = page->web_contents()->GetController();
-  // Restoration is only for a new native page, never a replacement of live work.
-  if (!controller.IsInitialNavigation()) return NO;
-  auto iterator = base::PickleIterator::WithData(base::apple::NSDataToSpan(data));
-  std::string magic, profile;
-  int selected, count;
-  if (!iterator.ReadString(&magic) || magic != "crest.navigation.v1" ||
-      !iterator.ReadString(&profile) || profile != page->profile ||
-      !iterator.ReadInt(&selected) || !iterator.ReadInt(&count) || count < 1 || count > 100 ||
-      selected < 0 || selected >= count) return NO;
-  std::vector<sessions::SerializedNavigationEntry> saved;
-  for (int i = 0; i < count; ++i) {
-    auto bytes = iterator.ReadData();
-    if (!bytes || bytes->size() > 68 * 1024) return NO;
-    auto entry = base::PickleIterator::WithData(*bytes);
-    sessions::SerializedNavigationEntry navigation;
-    if (!navigation.ReadFromPickle(&entry) || !navigation.virtual_url().is_valid()) return NO;
-    saved.push_back(std::move(navigation));
-  }
-  const GURL expected(base::SysNSStringToUTF8(url));
-  if (!iterator.ReachedEnd() || !expected.is_valid() ||
-      saved[selected].virtual_url().GetWithoutRef() != expected.GetWithoutRef()) return NO;
-  auto entries = sessions::ContentSerializedNavigationBuilder::ToNavigationEntries(saved, page->web_contents()->GetBrowserContext());
-  if (entries.size() != saved.size() || std::any_of(entries.begin(), entries.end(), [](const auto& entry) { return !entry; })) return NO;
-  page->web_contents()->Stop();
-  controller.DiscardNonCommittedEntries();
-  controller.Restore(selected, content::RestoreType::kRestored, &entries);
-  controller.LoadIfNecessary();
-  page->Publish();
-  return YES;
+  if (!data.length) return NO;
+  const auto bytes = base::apple::NSDataToSpan(data);
+  return crest::EngineBinding::Get().Restore(base::SysNSStringToUTF8(pageID),
+      std::vector<uint8_t>(bytes.begin(), bytes.end()), base::SysNSStringToUTF8(url));
 }
 - (BOOL)preparePage:(NSString*)pageID forWindow:(NSString*)windowID {
   CHECK(NSThread.isMainThread);
@@ -2481,6 +2589,7 @@ void DeliverExtensionCommand(Profile* profile, const extensions::Extension& exte
     page->video_was_playing_when_detached = false;
     page->web_contents()->WasShown();
     page->web_contents()->Focus();
+    crest::EngineBinding::Get().StateChanged(base::SysNSStringToUTF8(pageID));
   }
 }
 - (void)didDetachPage:(NSString*)pageID {
@@ -2488,6 +2597,7 @@ void DeliverExtensionCommand(Profile* profile, const extensions::Extension& exte
   if (Page* page = FindPage(pageID); page && page->web_contents()) {
     page->video_was_playing_when_detached = !page->playing_videos.empty();
     page->web_contents()->WasHidden();
+    crest::EngineBinding::Get().StateChanged(base::SysNSStringToUTF8(pageID));
   }
 }
 - (BOOL)command:(NSString*)command page:(NSString*)pageID url:(NSString*)url {
@@ -3136,19 +3246,7 @@ void DeliverExtensionCommand(Profile* profile, const extensions::Extension& exte
   // A Space-scoped popup is anchored in one of the windows or profiles being
   // released, and nothing else would close it.
   if (windowIDs.count || profileIDs.count) state.space_extension_popup.reset();
-  for (NSString* identifier in pageIDs) {
-    state.creating_pages.erase(base::SysNSStringToUTF8(identifier));
-    auto found = state.pages.find(base::SysNSStringToUTF8(identifier));
-    if (found == state.pages.end()) continue;
-    auto* contents = found->second->web_contents();
-    Browser* browser = found->second->browser;
-    state.pages.erase(found);  // Remove callbacks before destroying WebContents.
-    if (contents) {
-      TabStripModel* strip = browser->tab_strip_model();
-      int index = strip->GetIndexOfWebContents(contents);
-      if (index >= 0) strip->DetachAndDeleteWebContentsAt(index);
-    }
-  }
+  for (NSString* identifier in pageIDs) DisposePage(base::SysNSStringToUTF8(identifier));
   for (NSString* identifier in windowIDs) {
     const auto id = base::SysNSStringToUTF8(identifier);
     // A sign-in window closed before its page reached the callback.
@@ -3238,6 +3336,7 @@ void DeliverExtensionCommand(Profile* profile, const extensions::Extension& exte
   CHECK(NSThread.isMainThread);
   auto& state = State();
   state.disposing = true;
+  crest::EngineBinding::Get().Dispose();
   CancelAllAuthenticationSessions();
   state.browser_observation = nil;
   state.space_extension_popup.reset();
@@ -3977,9 +4076,20 @@ void EnsureCrestUIStarted(Browser* browser) {
   CHECK(bundle);
   NSError* error = nil;
   CHECK([bundle loadAndReturnError:&error]) << base::SysNSStringToUTF8(error.description);
-  CHECK(NSClassFromString(@"CrestRoot"));
+  // The framework's one entry point. It registers the binding with the core
+  // the framework creates, and keeps the shell for what only AppKit does.
+  base::apple::ScopedCFTypeRef<CFBundleRef> framework(
+      CFBundleCreate(kCFAllocatorDefault, base::apple::NSToCFPtrCast(bundle.bundleURL)));
+  auto start = reinterpret_cast<CrestChromiumUIStart>(
+      CFBundleGetFunctionPointerForName(framework.get(), CFSTR("crest_chromium_ui_start")));
+  CHECK(start);
   State().started = true;
-  [NSClassFromString(@"CrestRoot") startWithHost:[[CrestChromiumHost alloc] init]];
+  static base::NoDestructor<MacShell> shell;
+  auto& binding = crest::EngineBinding::Get();
+  binding.SetShell(shell.get());
+  const crest_engine_binding_t table = binding.Table();
+  const auto& fingerprint = crest::EngineBinding::Fingerprint();
+  start([[CrestChromiumHost alloc] init], &table, fingerprint.data(), fingerprint.size());
   auto pending = std::move(State().pending_authentication_sessions);
   State().pending_authentication_sessions.clear();
   for (ASWebAuthenticationSessionRequest* request : pending) StartAuthenticationSession(request);

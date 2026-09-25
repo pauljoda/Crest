@@ -18,12 +18,31 @@ typedef NS_ENUM(NSInteger, CrestSidePanelRequest) {
 - (void)removeDownload:(NSString *)downloadID profile:(NSString *)profileID;
 - (void)approveDownload:(NSString *)downloadID profile:(NSString *)profileID warning:(NSString *)token;
 - (void)deleteProfile:(NSString *)profileID ephemeral:(BOOL)ephemeral completion:(void (^)(BOOL deleted))completion;
+// The engine binding creates, loads and closes the pages the core opens, and
+// reports what they do straight to the core. The platform observes each one's
+// presentation, which may begin before the binding has created it.
+// TRANSITIONAL until page presentation travels as EnginePresentations.
+- (void)observePage:(NSString *)pageID
+           observer:(void (^)(NSString *event, NSDictionary<NSString *, id> *values))observer;
+// A Settings page of the engine's own, such as its flags page, which no tab
+// owns and the core never hears of. TRANSITIONAL until such pages open through
+// the core.
 - (BOOL)createPage:(NSString *)pageID profile:(NSString *)profileID window:(NSString *)windowID
       privateMode:(BOOL)privateMode sourceProfile:(nullable NSString *)sourceProfileID
          observer:(void (^)(NSString *event, NSDictionary<NSString *, id> *values))observer;
-- (BOOL)adoptPage:(NSString *)adoptionID asPage:(NSString *)pageID profile:(NSString *)profileID
+// Makes a page the engine offered the page the core is opening, instead of a
+// new one.
+- (BOOL)adoptPage:(NSString *)adoptionID asPage:(NSString *)pageID
          observer:(void (^)(NSString *event, NSDictionary<NSString *, id> *values))observer;
 - (void)rejectAdoption:(NSString *)adoptionID;
+// What the platform asks of a page directly. TRANSITIONAL until the direct
+// path's PageRequests: the app's own load, a link navigation staged for the
+// page's first load, the icon the engine found for its document, and the
+// regular profile a private window's pages derive from.
+- (void)loadPage:(NSString *)pageID url:(NSString *)url;
+- (BOOL)stageNavigation:(NSString *)token page:(NSString *)pageID url:(NSString *)url;
+- (nullable NSData *)iconForPage:(NSString *)pageID;
+- (void)setPrivateSourceProfile:(NSString *)profileID;
 - (nullable NSView *)viewForPage:(NSString *)pageID;
 - (void)setLinkHandlerForPage:(NSString *)pageID
                      handler:(BOOL (^)(NSString *action, NSString *url, NSString *label))handler
@@ -47,7 +66,6 @@ typedef NS_ENUM(NSInteger, CrestSidePanelRequest) {
     handler:(void (^)(NSString *url, NSUInteger modifiers, NSString *token,
         void (^reply)(NSString *decision, CrestDeferredNavigation _Nullable present)))handler
     NS_SWIFT_NAME(setModifiedLinkHandler(page:handler:));
-- (BOOL)loadPendingNavigation:(NSString *)token page:(NSString *)pageID expectedURL:(NSString *)url;
 - (void)discardPendingNavigation:(NSString *)token;
 - (nullable NSData *)interactionStateForPage:(NSString *)pageID;
 - (BOOL)restorePage:(NSString *)pageID interactionState:(NSData *)state expectedURL:(NSString *)url;

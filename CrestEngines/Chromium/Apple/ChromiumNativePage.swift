@@ -3,9 +3,10 @@
     import Observation
     import PDFKit
 
-    /// Owns the WebContents behind the original Crest page card. The shell and
-    /// portable session retain their tab identities; this object owns only a
-    /// page, which the engine names with the identity the core gave it.
+    /// Hosts the view of one Chromium page and makes the page's direct calls:
+    /// history, find, zoom, capture and the rest. Chromium's C++ binding creates,
+    /// loads and closes the page when the core asks, under the identity the
+    /// core gave it, and tells the core what it does; this reports nothing.
     @Observable @MainActor
     final class ChromiumNativePage: BrowserPageEngine {
         let registration = BrowserEngineRegistration.chromium
@@ -15,13 +16,15 @@
         let id: String
         let surface = ChromiumNativePageView()
         var isPrivateBrowsing: Bool
-        private let profileID: UUID
+        /// The profile of the page's Space, once its owner names it.
+        var profileID: UUID?
         /// The browser operations this page may ask for, such as the Space a
         /// Chrome Web Store listing installs into. Weak: the composition owns it.
         private weak var hostCommands: (any BrowserEngineHostCommands)?
-        /// The binding that built the page, which reports what the engine does
-        /// with it.
-        private weak var binding: ChromiumEngineBinding?
+        /// A Settings page of the engine's own, such as its flags page, which no
+        /// tab owns and the core never hears of: it creates itself once its view
+        /// is in a window. TRANSITIONAL until such pages open through the core.
+        private let isStandalone: Bool
         var observer: (ChromiumPageReport) -> Void
         var linkHandler: (String, URL, String) -> Bool = { _, _, _ in false }
         var contextMenuActions: (URL?, String?) -> [[String: String]] = { _, _ in [] }
@@ -39,65 +42,48 @@
             (.navigate, nil)
         }
         private var host: (any CrestChromiumEngineHost)?
+        /// What a standalone page loads once it exists.
         private var requestedURL: URL?
-        private var pendingInteractionState: Data?
-        private var pendingNavigation: (token: String, url: URL)?
         private var zoom: CGFloat = 1
         private var creating = false
         private var created = false
         private var disposed = false
-        /// Tells the core what the page shows and what its navigations and
-        /// icon do.
-        @ObservationIgnored private(set) lazy var reporter = EnginePageReporter(
-            pageID: pageID,
-            snapshot: { [weak self] pendingURL in
-                PageSnapshot(
-                    url: self?.currentURL?.absoluteString, pendingURL: pendingURL, title: self?.reportedTitle ?? "",
-                    isLoading: self?.isLoading ?? false, canGoBack: self?.canGoBack ?? false,
-                    canGoForward: self?.canGoForward ?? false, security: self?.security ?? PageSecurity.none,
-                    media: self?.currentMediaActivity ?? [])
-            },
-            report: { [weak self] event, icon in
-                guard let self else { return }
-                self.binding?.pageReported(event, icon: icon.map { (self.pageID, $0) })
-            })
-        /// The page's title, as the last `changed` report gave it.
-        @ObservationIgnored private var reportedTitle = ""
-        /// Whether the page loads, as the last `changed` report said.
-        @ObservationIgnored private var isLoading = false
-        /// The engine's judgment of the page's connection, as the last
-        /// `changed` report gave it; a spelling this build does not know
-        /// claims nothing.
-        @ObservationIgnored private var security = PageSecurity.none
-        /// The engine started a navigation to a new document since the last
-        /// commit. The host reports no start for a move within the document,
-        /// so a commit without one is such a move.
-        @ObservationIgnored private var startedSinceCommit = false
-        /// A new document committed and has not finished loading.
-        @ObservationIgnored private var awaitsFinish = false
 
-        init(
-            id: UUID, profileID: UUID, isPrivateBrowsing: Bool, hostCommands: (any BrowserEngineHostCommands)?,
-            binding: ChromiumEngineBinding?, observer: @escaping (ChromiumPageReport) -> Void = { _ in }
-        ) {
+        /// A page the core opened, which Chromium's binding creates.
+        init(id: UUID, host: any CrestChromiumEngineHost, hostCommands: (any BrowserEngineHostCommands)?) {
+            pageID = id
+            self.id = id.uuidString
+            self.host = host
+            self.hostCommands = hostCommands
+            isPrivateBrowsing = false
+            isStandalone = false
+            observer = { _ in }
+            surface.page = self
+            host.observePage(self.id) { [weak self] event, values in
+                MainActor.assumeIsolated { self?.receive(event, values: values) }
+            }
+        }
+
+        /// A Settings page of the engine's own in `profileID`, which creates
+        /// itself.
+        init(standaloneIn profileID: UUID) {
+            let id = UUID()
             pageID = id
             self.id = id.uuidString
             self.profileID = profileID
-            self.isPrivateBrowsing = isPrivateBrowsing
-            self.hostCommands = hostCommands
-            self.binding = binding
-            self.observer = observer
+            isPrivateBrowsing = false
+            isStandalone = true
+            observer = { _ in }
             surface.page = self
         }
 
         var nativeView: NSView { surface }
         func stageNavigation(_ navigation: BrowserEngineNavigation, expecting url: URL) -> Bool {
-            guard !created, !creating, !disposed, pendingNavigation == nil,
+            guard !isStandalone, !created, !disposed, let host,
                 navigation.implementation == registration.implementationId,
                 UUID(uuidString: navigation.token) != nil
             else { return false }
-            pendingNavigation = (navigation.token, url)
-            return true
+            return host.stageNavigation(navigation.token, page: id, url: url.absoluteString)
         }
         func discardNavigation(_ token: String) {
             (host ?? CrestChromiumRoot.engineHost)?.discardPendingNavigation(token)
@@ -133,19 +119,14 @@
                 .encoded()
         }
 
+        /// The binding restores the history in place of the page's first load,
+        /// once the page exists.
         func restoreInteractionState(_ state: Data, expecting url: URL) -> Bool {
-            guard !disposed, let host = host ?? CrestChromiumRoot.engineHost,
+            guard !isStandalone, !disposed, let host,
                 let payload = BrowserEngineInteractionState.payload(
                     state, engine: .chromium, version: host.engineVersion())
             else { return false }
-            if created {
-                return host.restorePage(
-                    id, interactionState: payload, expectedURL: ChromiumInternalURL.engine(url.absoluteString))
-            }
-            requestedURL = url
-            pendingInteractionState = payload
-            attachIfPossible()
-            return true
+            return host.restorePage(id, interactionState: payload, expectedURL: url.absoluteString)
         }
         private(set) var backHistory: [BrowserNavigationHistoryItem] = []
         private(set) var forwardHistory: [BrowserNavigationHistoryItem] = []
@@ -195,18 +176,14 @@
         }
         func stop() { command(.stop) }
 
-        /// Loads `url` as the core asked, and shows the page heading there.
-        func loadRequested(_ url: URL) {
-            reporter.heading(to: url)
-            load(url)
-        }
-
+        /// The app's own load of `url`, which the binding runs as it runs the
+        /// core's LoadPage.
         func load(_ url: URL) {
-            if let pendingNavigation, pendingNavigation.url != url {
-                discardNavigation(pendingNavigation.token)
-                self.pendingNavigation = nil
+            guard !disposed else { return }
+            guard isStandalone else {
+                host?.loadPage(id, url: url.absoluteString)
+                return
             }
-            pendingInteractionState = nil
             requestedURL = url
             if created { navigatePendingURL() } else { attachIfPossible() }
         }
@@ -227,41 +204,28 @@
                 host.didAttachPage(id, window: windowID)
                 return
             }
-            guard !creating else { return }
-            let sourceProfile = isPrivateBrowsing ? CrestChromiumRoot.privateSourceProfileID : nil
-            guard !isPrivateBrowsing || sourceProfile != nil else {
-                failCreation()
-                return
-            }
+            // The binding creates a page the core opened; only a standalone page
+            // creates itself.
+            guard isStandalone, !creating, let profileID else { return }
             creating = true
             if !host.createPage(
-                id, profile: profileID.uuidString, window: windowID,
-                privateMode: isPrivateBrowsing, sourceProfile: sourceProfile?.uuidString,
+                id, profile: profileID.uuidString, window: windowID, privateMode: false, sourceProfile: nil,
                 observer: { [weak self] event, values in
                     MainActor.assumeIsolated { self?.receive(event, values: values) }
                 })
             {
                 creating = false
-                failCreation()
+                observer(ChromiumPageReport(.creationFailed))
             }
         }
 
-        /// The page could not be created: its owner hears it, and the core does.
-        private func failCreation() {
-            observer(ChromiumPageReport(.creationFailed))
-            binding?.pageCreationFailed(self)
-        }
-
+        /// Makes the page the engine offered as `token` this page, which the
+        /// binding then follows instead of creating one.
         func adopt(_ token: String) -> Bool {
-            guard !created, !creating, !disposed, let host = CrestChromiumRoot.engineHost else { return false }
-            self.host = host
-            creating = true
-            let accepted = host.adoptPage(token, asPage: id, profile: profileID.uuidString) {
-                [weak self] event, values in
+            guard !isStandalone, !created, !disposed, let host else { return false }
+            return host.adoptPage(token, asPage: id) { [weak self] event, values in
                 MainActor.assumeIsolated { self?.receive(event, values: values) }
             }
-            if !accepted { creating = false }
-            return accepted
         }
 
         /// The engine's find wraps at the end of the page, as Crest's find always
@@ -465,7 +429,7 @@
         /// private window, which keeps no persistent extension state.
         private func performStoreRequest(_ event: ChromiumPageEvent, _ values: [String: Any]) {
             let store = CrestChromiumRoot.extensions
-            guard !isPrivateBrowsing, let id = values["id"] as? String,
+            guard !isPrivateBrowsing, let id = values["id"] as? String, let profileID,
                 let space = hostCommands?.extensionSpace(forProfile: profileID)
             else {
                 refreshStoreState()
@@ -507,64 +471,24 @@
             _ = host?.command(command.rawValue, page: id, url: nil)
         }
 
+        /// The page's owner let it go. The core's ClosePage has the binding
+        /// close what the engine holds; only a standalone page closes itself.
         func dispose() {
             guard !disposed else { return }
-            if let pendingNavigation { discardNavigation(pendingNavigation.token) }
-            pendingNavigation = nil
             disposed = true
             surface.devToolsView = nil
             for subview in surface.subviews { subview.removeFromSuperview() }
-            host?.disposePages([id], windows: [], releaseProfiles: [])
+            if isStandalone { host?.disposePages([id], windows: [], releaseProfiles: []) }
             host = nil
         }
 
+        /// Loads what a standalone page was asked to, once it exists.
         private func navigatePendingURL() {
-            guard let requestedURL else { return }
+            guard isStandalone, let requestedURL else { return }
             self.requestedURL = nil
-            if let navigation = pendingNavigation {
-                pendingNavigation = nil
-                pendingInteractionState = nil
-                if host?.loadPendingNavigation(
-                    navigation.token, page: id,
-                    expectedURL: ChromiumInternalURL.engine(requestedURL.absoluteString)) != true
-                {
-                    // A stale request must not be retried as a bare URL, which loses
-                    // the initiating frame's security and referrer information.
-                    observer(
-                        ChromiumPageReport(
-                            .changed,
-                            change: ChromiumPageChange(
-                                url: requestedURL.absoluteString, isLoading: false,
-                                failure: String(
-                                    localized: "This link is no longer available. Open it again from its original page."
-                                ))))
-                }
-                return
-            }
-            let state = pendingInteractionState
-            pendingInteractionState = nil
-            if let state,
-                host?.restorePage(
-                    id, interactionState: state,
-                    expectedURL: ChromiumInternalURL.engine(requestedURL.absoluteString)) == true
-            {
-                return
-            }
             _ = host?.command(
                 ChromiumPageHostCommand.navigate.rawValue, page: id,
                 url: ChromiumInternalURL.engine(requestedURL.absoluteString))
-        }
-
-        /// An icon the engine found, for the document it names when that is
-        /// still the one the page shows.
-        private func reportIcon(_ values: [String: Any]) {
-            let source = (values["url"] as? String).flatMap(URL.init(string:))
-            if let source, let currentURL,
-                !BrowserTabStateRestorePolicy.restoresArchivedState(archivedURL: source, tabURL: currentURL)
-            {
-                return
-            }
-            reporter.foundIcon(values["data"] as? Data, at: source ?? currentURL)
         }
 
         private func history(_ entries: [ChromiumPageChange.HistoryEntry]?) -> [BrowserNavigationHistoryItem] {
@@ -595,67 +519,15 @@
         }
 
         private func receive(_ change: ChromiumPageChange) {
-            // The engine creates a blank document before it loads the address
-            // the page was asked for, which is nothing the page shows.
-            if change.url == "about:blank", reporter.pendingURL != nil { return }
             backHistory = history(change.backHistory)
             forwardHistory = history(change.forwardHistory)
             canGoBack = change.canGoBack ?? false
             canGoForward = change.canGoForward ?? false
             currentURL = change.url.map(ChromiumInternalURL.presented).flatMap(URL.init(string:))
-            isLoading = change.isLoading ?? false
-            security = change.security.flatMap(PageSecurity.named) ?? PageSecurity.none
             if change.committed == true { surface.layoutEngineView() }
             pageHost = change.url.flatMap(URL.init(string:))?.host()
             mediaSessionLocation = change.url
-            reportNavigation(change)
-            reporter.stateChanged()
             observer(ChromiumPageReport(.changed, change: change.presented()))
-        }
-
-        /// Turns a `changed` report into the core's navigation events: a commit
-        /// after a start begins a new document, which finishes the first time
-        /// the engine stops loading it; a commit without one is a move within
-        /// the document.
-        private func reportNavigation(_ change: ChromiumPageChange) {
-            if let color = change.themeColor, color >> 24 > 0 {
-                reporter.themeChanged(
-                    BrowserTabIconAccent(
-                        red: Double((color >> 16) & 0xFF) / 255, green: Double((color >> 8) & 0xFF) / 255,
-                        blue: Double(color & 0xFF) / 255))
-            } else {
-                reporter.themeChanged(nil)
-            }
-            guard let url = currentURL else { return }
-            switch change.pageFailure {
-            case .navigationFailed:
-                awaitsFinish = false
-                reporter.failed(PageFailure(chromiumNetError: change.errorCode ?? 0, failingURL: url))
-                return
-            case .processTerminated:
-                awaitsFinish = false
-                reporter.interrupted()
-                return
-            case nil:
-                break
-            }
-            if change.committed == true {
-                if startedSinceCommit {
-                    startedSinceCommit = false
-                    awaitsFinish = true
-                    reporter.committed(url)
-                } else {
-                    reporter.movedWithinDocument(to: url)
-                }
-            }
-            if change.title ?? "" != reportedTitle {
-                reportedTitle = change.title ?? ""
-                reporter.titleChanged()
-            }
-            if awaitsFinish, change.isLoading != true {
-                awaitsFinish = false
-                reporter.finished(url, title: change.title)
-            }
         }
 
         private func receive(_ report: ChromiumPageReport) {
@@ -768,22 +640,21 @@
                 attachIfPossible()
                 setZoom(zoom)
                 navigatePendingURL()
-                binding?.pageCreated(self)
             } else if event == .creationFailed {
                 creating = false
-                binding?.pageCreationFailed(self)
-            } else if event == .closed {
-                binding?.pageClosed(self)
             } else if event == .storeInstall || event == .storeRemove {
                 performStoreRequest(event, values)
-            } else if event == .navigationStarted {
-                startedSinceCommit = true
-                reporter.started(nil)
-            } else if event == .favicon {
-                reportIcon(values)
-            } else if event == .mediaSession {
-                // Playback and Picture in Picture move with the page's session.
-                reporter.stateChanged()
+            } else if event == .linkUnavailable {
+                // A stale link is never retried as a bare address, which would
+                // lose the initiating frame's security and referrer.
+                observer(
+                    ChromiumPageReport(
+                        .changed,
+                        change: ChromiumPageChange(
+                            url: currentURL?.absoluteString, isLoading: false,
+                            failure: String(
+                                localized: "This link is no longer available. Open it again from its original page."))))
+                return
             }
             observer(report)
         }
@@ -993,6 +864,8 @@
         case showBlockedPopups = "engine.show_blocked_popups"
         case storeState = "engine.store_state"
         case zoom = "engine.zoom"
+        /// A standalone page's load. TRANSITIONAL until such pages open through
+        /// the core.
         case navigate = "engine.navigate"
         case mediaActivate = "engine.media_activate"
         case mediaAction = "engine.media_action"

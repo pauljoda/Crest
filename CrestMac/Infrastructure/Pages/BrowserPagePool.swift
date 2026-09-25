@@ -1605,7 +1605,8 @@ final class BrowserPagePool:
         guard !page.isAwaitingPopupNavigation else { return }
         // A page its engine shows something in, or that is already heading
         // somewhere, has had its first navigation.
-        guard page.pageEngine.currentURL == nil, page.navigationReporter?.pendingURL == nil, let url = tab.url
+        guard page.pageEngine.currentURL == nil, page.navigationReporter?.pendingURL == nil,
+            page.live.pendingURL == nil, let url = tab.url
         else { return }
         let interval = Self.lifecycleSignposter.beginInterval("Start Initial Navigation")
         // The adapter restores its own navigation state instead of a plain load.

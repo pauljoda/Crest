@@ -173,7 +173,14 @@ owner (`MovePage`) and releases it (`ReleasePage`), and the core refuses a page
 in a locked Space, in one being deleted or for a tab that already has one. It
 asks the page's engine to create, load and close the engine's page, and the
 binding reports what the engine did, including a `PageSnapshot` of what the page
-shows, which the core keeps as the page's `PageLiveState`. Typed addresses, the
+shows, which the core keeps as the page's `PageLiveState`. Chromium's binding is
+the engine's own C++ (`crest_engine_binding.cc`): the engine hands the Chromium
+composition its function table when the UI framework starts, the composition
+registers it, and from then on the core's commands reach the binding directly
+and the binding reports to the core itself, with nothing in Swift between them.
+`CreatePage` names the page's window, so Chromium creates the page in that
+window's Browser as soon as the core asks; Swift only hosts the page's view.
+Typed addresses, the
 command palette, Open Location and every first load go through `Navigate`, which
 the core resolves by the Space's address and search rules before it issues
 `LoadPage`. Document export, printing, full-page capture and inspector commands

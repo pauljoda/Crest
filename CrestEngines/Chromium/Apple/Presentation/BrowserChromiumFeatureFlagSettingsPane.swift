@@ -49,8 +49,7 @@
             let page: ChromiumNativePage
 
             init(profileID: UUID) {
-                page = ChromiumNativePage(
-                    id: UUID(), profileID: profileID, isPrivateBrowsing: false, hostCommands: nil, binding: nil)
+                page = ChromiumNativePage(standaloneIn: profileID)
             }
         }
     }

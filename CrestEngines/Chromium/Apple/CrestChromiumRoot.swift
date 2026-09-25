@@ -1,5 +1,6 @@
 #if CREST_CHROMIUM_HOST
 import AppKit
+import CrestCoreABI
 import SwiftUI
 
 /// Chromium owns the process and AppController. Crest owns the same window
@@ -31,9 +32,9 @@ final class CrestChromiumRoot: NSObject, BrowserMacWindowPresenting {
     private static var pendingExternalURLs: [URL] = []
     private static var pendingAuthenticationSessions: [(url: URL, id: UUID)] = []
     private let host: any CrestChromiumEngineHost
-    /// Chromium's binding, the default engine, which knows each live page by
-    /// the name the engine gives it.
-    private let chromium: ChromiumEngineBinding
+    /// Chromium, the default engine, which knows each live page by the name
+    /// the engine gives it.
+    private let chromium: ChromiumEngine
     private let application: BrowserMacApplication
     private var downloads: ChromiumDownloadAdapter?
     private var windows: [BrowserWindowID: NSWindow] = [:]
@@ -65,7 +66,6 @@ final class CrestChromiumRoot: NSObject, BrowserMacWindowPresenting {
     private var softwareUpdateDetailsWindow: NSWindow?
     private var privateWindow: NSWindow?
     private var privateSourceProfile: UUID?
-    static var privateSourceProfileID: UUID? { instance?.privateSourceProfile }
     private var eventMonitor: Any?
     private var browserMenu: CrestChromiumMenu?
     private var quitting = false
@@ -79,14 +79,18 @@ final class CrestChromiumRoot: NSObject, BrowserMacWindowPresenting {
     private let restorationDefaults: UserDefaults?
     private static let restorableWindowsKey = "crest.chromium.windows.v1"
 
-    @objc(startWithHost:)
-    static func start(host: any CrestChromiumEngineHost) {
+    /// Starts Crest over the Mac shell's `host`, registering Chromium's C++
+    /// `binding`, built against the engine contract `fingerprint` names, with
+    /// the core.
+    static func start(host: any CrestChromiumEngineHost, binding: crest_engine_binding_t, fingerprint: [UInt8]) {
         guard instance == nil, launch == nil else { return }
         // The Dock plug-in runs outside the browser process, including after quit.
         // App artwork uses the isolated app's domain, not an environment-only
         // browsing profile name that the Dock cannot discover.
         BrowserMacAppIconPreference.defaults = .standard
-        let launch = BrowserApplicationLaunch { try CrestChromiumRoot(host: host) }
+        let launch = BrowserApplicationLaunch {
+            try CrestChromiumRoot(host: host, binding: binding, fingerprint: fingerprint)
+        }
         Self.launch = launch
         if let root = launch.value { finishStart(root); return }
         let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 580, height: 380),
@@ -143,9 +147,9 @@ final class CrestChromiumRoot: NSObject, BrowserMacWindowPresenting {
         root.openPendingAuthenticationSessions()
     }
 
-    private init(host: any CrestChromiumEngineHost) throws {
+    private init(host: any CrestChromiumEngineHost, binding: crest_engine_binding_t, fingerprint: [UInt8]) throws {
         self.host = host
-        let chromium = ChromiumEngineBinding()
+        let chromium = ChromiumEngine(host: host, table: binding, fingerprint: fingerprint)
         self.chromium = chromium
         application = try BrowserMacApplication(pageClosePreparation: ChromiumPageClosePreparer(host: host),
             profileRemover: ChromiumProfileRemover(host: host),
@@ -303,6 +307,7 @@ final class CrestChromiumRoot: NSObject, BrowserMacWindowPresenting {
         guard let source = activeModel?.browser.selectedSpace?.profile.id
             ?? application.browser.selectedSpace?.profile.id else { return }
         privateSourceProfile = source
+        host.setPrivateSourceProfile(source.uuidString)
         let window = CrestChromiumWindow(contentRect: NSRect(x: 0, y: 0, width: 1200, height: 820),
             styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
             backing: .buffered, defer: false)
