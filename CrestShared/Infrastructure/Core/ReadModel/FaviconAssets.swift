@@ -46,8 +46,11 @@ final class FaviconAssets {
     /// Tabs a change of the batch being applied removed, whose images stay
     /// for a later change that places them again.
     @ObservationIgnored private var detached: Set<UUID> = []
-    /// Counts the tabs that gained an image, so the readers of a tab that had
-    /// none hear when it gains one.
+    /// Counts the tabs that gained an image without a slot of their own, so
+    /// the readers of a tab the read model does not hold yet hear when it
+    /// gains one. Every tab a change places gets a slot, even an empty one,
+    /// so a tab the read model holds is observed through its slot alone and
+    /// an image another tab gains never redraws it.
     private var additions: Int {
         get { observed(\.additionsStorage, as: \.additions) }
         set { publish(newValue, into: \.additionsStorage, as: \.additions) }
@@ -84,13 +87,13 @@ final class FaviconAssets {
 
     /// Tabs a change placed where they were not before: each keeps the image
     /// it wore, even one a change earlier in the batch removed, and a tab that
-    /// wore none takes the one the issuer offered.
+    /// wore none takes the one the issuer offered, or an empty slot.
     func place(_ tabIDs: some Sequence<UUID>, in workspaceID: UUID) {
         let offer = offers[workspaceID]
         for tabID in tabIDs {
             detached.remove(tabID)
-            guard slots[tabID]?.data == nil, let offered = offer?.placed[tabID] else { continue }
-            setImage(offered, of: tabID)
+            guard slots[tabID]?.data == nil else { continue }
+            setImage(offer?.placed[tabID], of: tabID)
         }
     }
 
@@ -151,9 +154,9 @@ final class FaviconAssets {
     private func setImage(_ data: Data?, of tabID: UUID) {
         if let slot = slots[tabID] {
             slot.data = data
-        } else if let data {
+        } else {
             slots[tabID] = Slot(data: data)
-            additions &+= 1
+            if data != nil { additions &+= 1 }
         }
     }
 }

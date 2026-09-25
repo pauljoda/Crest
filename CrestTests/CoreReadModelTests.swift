@@ -69,7 +69,7 @@ final class CoreReadModelTests: XCTestCase {
         XCTAssertEqual(replayed.appPreferences.map(BrowserAppPreferences.init(core:)), session.appPreferences)
         // What tests read through the snapshot is what the read model holds.
         XCTAssertEqual(store.snapshot.spaces, live.spaces.values)
-        XCTAssertEqual(store.shownTab?.id, store.selectedTab?.id)
+        XCTAssertEqual(store.shownTabState?.id, store.selectedTab?.id)
     }
 
     func testAChangeNotifiesOnlyTheObjectsWhoseValuesItChanges() throws {
