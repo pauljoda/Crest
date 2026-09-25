@@ -3,12 +3,12 @@ import os
 
 struct BrowserSitePermissionChange {
     var spaceID: SpaceID?
-    var origin: BrowserSiteOrigin?
+    var origin: SiteOrigin?
     var permission: SitePermission?
     var detail: String?
     var revokesAuthorization: Bool
 
-    func affects(_ permission: SitePermission, origin: BrowserSiteOrigin, in spaceID: SpaceID) -> Bool {
+    func affects(_ permission: SitePermission, origin: SiteOrigin, in spaceID: SpaceID) -> Bool {
         (self.spaceID == nil || self.spaceID == spaceID)
             && (self.origin == nil || self.origin == origin)
             && (self.permission == nil || self.permission == permission)
@@ -81,24 +81,24 @@ final class BrowserSitePermissionCenter {
     /// site can ask for more than one way.
     func decision(
         for permission: SitePermission,
-        origin: BrowserSiteOrigin,
+        origin: SiteOrigin,
         detail: String? = nil,
         in spaceID: SpaceID
     ) -> SitePermissionDecision {
         _ = core.state.sitePermissionRevision
         let question = SiteDecision(
-            spaceID: spaceID, origin: origin.core, permission: permission, detail: detail)
+            spaceID: spaceID, origin: origin, permission: permission, detail: detail)
         return (try? core.query(question))?.decision ?? .ask
     }
 
     /// Combined capture must respect a block on either device.
     func mediaDecision(
         for media: SitePermission,
-        origin: BrowserSiteOrigin,
+        origin: SiteOrigin,
         in spaceID: SpaceID
     ) -> SitePermissionDecision {
         _ = core.state.sitePermissionRevision
-        let question = CaptureDecision(spaceID: spaceID, origin: origin.core, media: media)
+        let question = CaptureDecision(spaceID: spaceID, origin: origin, media: media)
         return (try? core.query(question))?.decision ?? .ask
     }
 
@@ -122,7 +122,7 @@ final class BrowserSitePermissionCenter {
         let current = observers.compactMap(\.value)
         for scope in change.touched {
             let touched = BrowserSitePermissionChange(
-                spaceID: change.spaceID, origin: scope.origin.map(BrowserSiteOrigin.init),
+                spaceID: change.spaceID, origin: scope.origin,
                 permission: scope.permission, detail: scope.detail, revokesAuthorization: scope.revokesAuthorization)
             for observer in current { observer.sitePermissionsDidChange(touched) }
         }
@@ -133,13 +133,13 @@ final class BrowserSitePermissionCenter {
     func setDecision(
         _ decision: SitePermissionDecision,
         for permission: SitePermission,
-        origin: BrowserSiteOrigin,
+        origin: SiteOrigin,
         detail: String? = nil,
         in spaceID: SpaceID
     ) {
         send(
             DecideSitePermission(
-                spaceID: spaceID, origin: origin.core, permission: permission, detail: detail,
+                spaceID: spaceID, origin: origin, permission: permission, detail: detail,
                 decision: decision))
     }
 

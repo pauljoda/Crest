@@ -36,8 +36,8 @@ struct BrowserSiteSettingsContent: View {
         .accessibilityLabel("Site Settings")
     }
 
-    private var origin: BrowserSiteOrigin? {
-        page.live.displayURL.flatMap(BrowserSiteOrigin.init(url:))
+    private var origin: SiteOrigin? {
+        page.live.displayURL.flatMap(SiteOrigin.init(url:))
     }
 }
 

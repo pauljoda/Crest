@@ -18,9 +18,9 @@ extension BrowserPlatformPage {
             !documentIdentifier.isEmpty,
             documentIdentifier.count <= 128,
             let frameURL = message.frameInfo.request.url,
-            let origin = BrowserSiteOrigin(url: frameURL),
+            let origin = SiteOrigin(url: frameURL),
             let currentURL = webKitView?.url,
-            BrowserSiteOrigin(url: currentURL) == origin,
+            SiteOrigin(url: currentURL) == origin,
             !permissionCenter.decision(for: .popups, origin: origin, in: spaceID).grants
         else { return }
 

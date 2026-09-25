@@ -12,7 +12,7 @@ enum BrowserSiteSettingsPreviewFixture {
         }
         return url
     }()
-    static let origin = BrowserSiteOrigin(
+    static let origin = SiteOrigin(
         scheme: "https",
         host: "example.com",
         port: 443

@@ -1072,8 +1072,8 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
     /// saved for the Space.
     func resolveEngineSitePermission(
         _ permission: SitePermission,
-        origin: BrowserSiteOrigin,
-        topLevelOrigin: BrowserSiteOrigin
+        origin: SiteOrigin,
+        topLevelOrigin: SiteOrigin
     ) async -> BrowserEnginePermissionResponse {
         let decision = permissionCenter.decision(for: permission, origin: origin, in: spaceID)
         guard decision.verdict == .ask else { return decision.grants ? .allow : .block }

@@ -168,7 +168,7 @@ final class BrowserWebKitPageAdapter: BrowserPageEngineAdapter {
                 guard let page else { return .denyOnce }
                 return await page.sitePermissionRequests.response(
                     to: .location, origin: origin,
-                    topLevelOrigin: topLevelURL.flatMap(BrowserSiteOrigin.init(url:)) ?? origin,
+                    topLevelOrigin: topLevelURL.flatMap(SiteOrigin.init(url:)) ?? origin,
                     spaceName: requestedSpaceName
                 )
             },

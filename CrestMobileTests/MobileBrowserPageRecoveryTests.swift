@@ -134,7 +134,7 @@ private final class MobileReplayNavigationAction: WKNavigationAction,
     override var request: URLRequest { stubRequest }
     override var navigationType: WKNavigationType { .other }
     override var targetFrame: WKFrameInfo? { nil }
-    var browserSourceOrigin: BrowserSiteOrigin? {
-        BrowserSiteOrigin(scheme: "https", host: "replay.crest.test", port: 443)
+    var browserSourceOrigin: SiteOrigin? {
+        SiteOrigin(scheme: "https", host: "replay.crest.test", port: 443)
     }
 }

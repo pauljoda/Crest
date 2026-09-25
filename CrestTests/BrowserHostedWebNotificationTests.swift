@@ -7,7 +7,7 @@ import XCTest
 final class BrowserHostedWebNotificationTests: XCTestCase {
     func testLivePageBridgeReportsPermissionDeliversAndReceivesClicks() async throws {
         let originURL = try XCTUnwrap(URL(string: "https://notifications.crest.test/"))
-        let origin = try XCTUnwrap(BrowserSiteOrigin(url: originURL))
+        let origin = try XCTUnwrap(SiteOrigin(url: originURL))
         let tab = BrowserTab(
             title: "Notifications",
             url: nil,

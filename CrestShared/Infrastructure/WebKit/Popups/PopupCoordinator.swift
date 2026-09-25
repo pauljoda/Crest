@@ -9,7 +9,7 @@ final class BrowserPopupCoordinator {
         @MainActor (
             URL,
             BrowserPopupTrigger,
-            BrowserSiteOrigin?
+            SiteOrigin?
         ) -> Void
 
     private let openNewTab: (URL) -> Void
@@ -82,20 +82,20 @@ final class BrowserPopupCoordinator {
     private func sourceOrigin(
         for navigationAction: WKNavigationAction,
         currentURL: URL?
-    ) -> BrowserSiteOrigin? {
+    ) -> SiteOrigin? {
         if let provider = navigationAction
             as? any BrowserNavigationActionSourceOriginProviding
         {
             return provider.browserSourceOrigin
-                ?? currentURL.flatMap(BrowserSiteOrigin.init(url:))
+                ?? currentURL.flatMap(SiteOrigin.init(url:))
         }
         let sourceFrame: WKFrameInfo? = navigationAction.sourceFrame
         if let sourceFrame {
-            let frameOrigin = BrowserSiteOrigin(sourceFrame.securityOrigin)
+            let frameOrigin = SiteOrigin(sourceFrame.securityOrigin)
             if !frameOrigin.host.isEmpty {
                 return frameOrigin
             }
         }
-        return currentURL.flatMap(BrowserSiteOrigin.init(url:))
+        return currentURL.flatMap(SiteOrigin.init(url:))
     }
 }

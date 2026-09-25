@@ -2,7 +2,7 @@ import SwiftUI
 
 struct BrowserSiteOriginSettings: View {
     let page: BrowserPage
-    let origin: BrowserSiteOrigin
+    let origin: SiteOrigin
     var reviewCertificate: (() -> Void)?
     let permissionCenter: BrowserSitePermissionCenter
     @Binding var isExpanded: Bool

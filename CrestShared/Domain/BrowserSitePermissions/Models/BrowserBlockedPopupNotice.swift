@@ -1,7 +1,7 @@
 import Foundation
 
 struct BrowserBlockedPopupNotice: Equatable, Sendable {
-    let origin: BrowserSiteOrigin
+    let origin: SiteOrigin
     let status: BlockedPopupStatus
 }
 
@@ -26,7 +26,7 @@ struct BrowserBlockedPopupPageState: Equatable, Sendable {
     }
 
     @discardableResult
-    mutating func recordBlockedAttempt(documentIdentifier: String, origin: BrowserSiteOrigin) -> Bool {
+    mutating func recordBlockedAttempt(documentIdentifier: String, origin: SiteOrigin) -> Bool {
         apply(.blocked, documentIdentifier: documentIdentifier, origin: origin)
     }
 
@@ -43,7 +43,7 @@ struct BrowserBlockedPopupPageState: Equatable, Sendable {
     mutating func clearAfterAllowedPopup() -> Bool { apply(.popupAllowed) }
 
     private mutating func apply(_ event: BlockedPopupEvent, documentIdentifier: String? = nil,
-        origin: BrowserSiteOrigin? = nil) -> Bool {
+        origin: SiteOrigin? = nil) -> Bool {
         guard let next = BrowserCorePolicy.blockedPopupState(after: event, from: self,
             documentIdentifier: documentIdentifier, origin: origin) else { return false }
         self = next

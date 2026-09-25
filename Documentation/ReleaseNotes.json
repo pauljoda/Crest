@@ -2497,6 +2497,10 @@
     "command-palette-address-morph": {
       "category": "improved",
       "message": "The command palette now opens out of the address field and closes back into it."
+    },
+    "site-origin-one-type": {
+      "category": "internal",
+      "message": "Site permissions name a site with the core's origin type everywhere, normalized the same way however the app learns of the site."
     }
   }
 }

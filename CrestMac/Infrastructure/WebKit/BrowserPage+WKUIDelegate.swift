@@ -191,13 +191,13 @@ extension BrowserPage: WKUIDelegate {
         decisionHandler: @escaping @MainActor @Sendable (WKPermissionDecision) -> Void
     ) {
         guard webView === self.webKitView,
-            let topLevelOrigin = webView.url.flatMap(BrowserSiteOrigin.init(url:))
+            let topLevelOrigin = webView.url.flatMap(SiteOrigin.init(url:))
         else {
             decisionHandler(.deny)
             return
         }
         SitePermission(type).resolve(
-            origin: BrowserSiteOrigin(origin),
+            origin: SiteOrigin(origin),
             topLevelOrigin: topLevelOrigin,
             spaceID: spaceID,
             spaceName: spaceName,
@@ -206,7 +206,7 @@ extension BrowserPage: WKUIDelegate {
         ) { [weak self] decision in
             if decision == .grant {
                 self?.sitePermissionSession.recordMediaGrant(
-                    SitePermission(type), origin: BrowserSiteOrigin(origin))
+                    SitePermission(type), origin: SiteOrigin(origin))
             }
             decisionHandler(decision)
         }
@@ -220,12 +220,12 @@ extension BrowserPage: WKUIDelegate {
         decisionHandler: @escaping @MainActor @Sendable (WKPermissionDecision) -> Void
     ) {
         guard frame.webView === webView,
-            let topLevelOrigin = webView.url.flatMap(BrowserSiteOrigin.init(url:))
+            let topLevelOrigin = webView.url.flatMap(SiteOrigin.init(url:))
         else {
             decisionHandler(.deny)
             return
         }
-        let siteOrigin = BrowserSiteOrigin(origin)
+        let siteOrigin = SiteOrigin(origin)
         Task { @MainActor [weak self] in
             guard let self else {
                 decisionHandler(.deny)

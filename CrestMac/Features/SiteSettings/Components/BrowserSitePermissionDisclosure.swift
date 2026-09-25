@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct BrowserSitePermissionDisclosure: View {
-    let origin: BrowserSiteOrigin
+    let origin: SiteOrigin
     let spaceID: SpaceID
     let permissionCenter: BrowserSitePermissionCenter
     @Binding var isExpanded: Bool

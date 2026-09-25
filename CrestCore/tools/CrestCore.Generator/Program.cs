@@ -6,7 +6,8 @@ namespace CrestCore.Generator;
 ///
 /// `dotnet run --project CrestCore/tools/CrestCore.Generator [-- --check] [--root PATH]`
 /// writes the C# codec, the two Swift files and the C tag header. With
-/// `--check` it writes nothing and fails when any output is stale.
+/// `--check` it writes nothing and fails when any output is stale. Either way
+/// it fails when a Swift source other than its own calls a wire initializer.
 internal static class Program {
     #region Variables
 
@@ -28,7 +29,10 @@ internal static class Program {
                 ["CrestShared/Infrastructure/Core/Generated/CoreCodec.generated.swift"] = SwiftEmitter.EmitCodec(schema),
                 ["CrestContracts/include/crest_contracts.h"] = CHeaderEmitter.Emit(schema)
             };
-            return check ? Check(root, outputs) : Write(root, outputs);
+            int result = check ? Check(root, outputs) : Write(root, outputs);
+            var calls = SwiftEmitter.WireInitializerCalls(schema, SwiftSources(root, outputs.Keys));
+            foreach (var call in calls) Console.Error.WriteLine($"error: {call}");
+            return calls.Count == 0 ? result : 1;
         } catch (ContractSchemaException error) {
             Console.Error.WriteLine($"error: {error.Message}");
             return 2;
@@ -55,6 +59,22 @@ internal static class Program {
         foreach (var path in stale) Console.Error.WriteLine($"error: {path} is stale. Run Scripts/control-plane/generate-contracts.sh.");
         if (stale.Count == 0) Console.WriteLine("Contract sources are current.");
         return stale.Count == 0 ? 0 : 1;
+    }
+
+    /// Every Swift source under the root except the generator's own outputs,
+    /// by its path from the root. Hidden directories, such as `.git` and
+    /// `.build`, and linked ones are skipped.
+    private static IEnumerable<(string Path, string Text)> SwiftSources(string root, IEnumerable<string> outputs) {
+        var generated = outputs.ToHashSet(StringComparer.Ordinal);
+        var options = new EnumerationOptions {
+            RecurseSubdirectories = true,
+            AttributesToSkip = FileAttributes.Hidden | FileAttributes.System | FileAttributes.ReparsePoint
+        };
+        return Directory.EnumerateFiles(root, "*.swift", options)
+            .Select(file => Path.GetRelativePath(root, file).Replace(Path.DirectorySeparatorChar, '/'))
+            .Where(path => !generated.Contains(path))
+            .Order(StringComparer.Ordinal)
+            .Select(path => (path, File.ReadAllText(Path.Combine(root, path))));
     }
 
     /// The `--root` argument, or the nearest directory above the working

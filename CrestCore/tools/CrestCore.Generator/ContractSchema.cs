@@ -147,6 +147,10 @@ internal sealed record ContractRecord(Type Type, IReadOnlyList<ContractField> Fi
     /// The Apple read model keeps it as an object observed field by field.
     public bool IsObserved => Type.IsDefined(typeof(ObservedAttribute), inherit: false);
 
+    /// Its constructor normalizes its fields, so the platform makes it through
+    /// an initializer of its own and the wire through a labeled one.
+    public bool IsNormalizedOnConstruction => Type.IsDefined(typeof(NormalizedOnConstructionAttribute), inherit: false);
+
     /// The record has an identity of its own.
     public bool IsIdentified => Fields.Any(candidate => candidate.Name == IdentityField);
 }
@@ -593,7 +597,7 @@ internal sealed class ContractSchema {
         type is { IsClass: true, IsAbstract: false } && type.Assembly == set.Assembly
         && type.GetProperty("EqualityContract", BindingFlags.NonPublic | BindingFlags.Instance) is not null;
 
-    /// A record held as set data is spelled with its memberwise initializer,
+    /// A record held as set data is spelled with its initializer,
     /// so each of its fields must itself be a value Swift can spell.
     private void EnsureSpellable(FieldType type, string where, HashSet<Type> visiting) {
         switch (type) {
@@ -702,6 +706,7 @@ internal sealed class ContractSchema {
         foreach (var record in records.Values)
             foreach (var field in record.Wire) ValidateLists(field.Type, $"{record.Name}.{field.Name}");
         foreach (var record in records.Values.Where(record => record.IsObserved)) ValidateObserved(record);
+        foreach (var record in records.Values.Where(record => record.IsNormalizedOnConstruction)) ValidateNormalized(record);
         foreach (var narrowed in Bases)
             if (Members(narrowed).Count == 0)
                 throw new ContractSchemaException($"{narrowed.Base!.Name}: a union base needs at least one concrete member of {narrowed.Root}.");
@@ -717,6 +722,31 @@ internal sealed class ContractSchema {
             && identity.Type is not PrimitiveField { Kind: Primitive.Guid })
             throw new ContractSchemaException($"{record.Name}.{identity.Name}: an [Observed] record's identity is a Guid.");
     }
+
+    /// A record normalized on construction reaches Swift with a labeled wire
+    /// initializer, whose label needs a field to go on, and as `Hashable` over
+    /// its fields, so each of them must be a value Swift can hash.
+    private void ValidateNormalized(ContractRecord record) {
+        if (record.Wire.Count == 0)
+            throw new ContractSchemaException($"{record.Name}: a [NormalizedOnConstruction] record needs a field to normalize.");
+        if (record.Wire.FirstOrDefault(field => !IsHashable(field.Type)) is { } field)
+            throw new ContractSchemaException($"{record.Name}.{field.Name}: a [NormalizedOnConstruction] record is Hashable in Swift, "
+                + $"so its fields are primitives, plain enums, fixed sets, other such records or lists of them, and "
+                + $"{Describe(field.Type)} is none of them.");
+    }
+
+    /// Swift hashes primitives, plain enums, fixed sets and records normalized
+    /// on construction, and lists and optionals of them; an option set or a
+    /// union it only compares.
+    private bool IsHashable(FieldType type) => type switch {
+        PrimitiveField => true,
+        EnumField item => !enums[item.Type].IsFlags,
+        SetField => true,
+        RecordField record => records[record.Type].IsNormalizedOnConstruction,
+        ListField list => IsHashable(list.Element),
+        OptionalField optional => IsHashable(optional.Value),
+        _ => false
+    };
 
     /// A list's count is checked against the bytes that remain, so every
     /// element must occupy at least one byte.

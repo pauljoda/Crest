@@ -1472,7 +1472,7 @@ final class BrowserPagePoolTests: XCTestCase {
             permissionCenter: permissionCenter,
             profileRemover: remover
         )
-        let origin = BrowserSiteOrigin(
+        let origin = SiteOrigin(
             scheme: "https",
             host: "camera.crest.test",
             port: 443
@@ -3176,7 +3176,7 @@ final class StubPopupNavigationAction: WKNavigationAction,
     override var targetFrame: WKFrameInfo? { nil }
     override var modifierFlags: NSEvent.ModifierFlags { stubModifierFlags }
     override var buttonNumber: Int { 0 }
-    var browserSourceOrigin: BrowserSiteOrigin? { nil }
+    var browserSourceOrigin: SiteOrigin? { nil }
 }
 
 private final class StubModifiedLinkNavigationAction: WKNavigationAction,
@@ -3202,7 +3202,7 @@ private final class StubModifiedLinkNavigationAction: WKNavigationAction,
     override var targetFrame: WKFrameInfo? { nil }
     override var modifierFlags: NSEvent.ModifierFlags { stubModifierFlags }
     override var buttonNumber: Int { stubButtonNumber }
-    var browserSourceOrigin: BrowserSiteOrigin? { nil }
+    var browserSourceOrigin: SiteOrigin? { nil }
 }
 
 @MainActor

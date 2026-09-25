@@ -55,7 +55,7 @@ struct BrowserSitePermissionRecordRow: View {
         permissionCenter.setDecision(
             decision,
             for: record.permission,
-            origin: BrowserSiteOrigin(record.origin),
+            origin: record.origin,
             detail: record.detail,
             in: record.spaceID
         )

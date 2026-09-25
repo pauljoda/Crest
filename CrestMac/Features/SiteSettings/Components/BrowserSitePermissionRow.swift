@@ -2,7 +2,7 @@ import SwiftUI
 
 struct BrowserSitePermissionRow: View {
     let permission: SitePermission
-    let origin: BrowserSiteOrigin
+    let origin: SiteOrigin
     let spaceID: SpaceID
     let permissionCenter: BrowserSitePermissionCenter
 

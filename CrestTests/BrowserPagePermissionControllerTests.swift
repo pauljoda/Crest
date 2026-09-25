@@ -9,7 +9,7 @@ final class BrowserPagePermissionControllerTests: XCTestCase {
         let controller = BrowserPagePermissionController()
         controller.setPresentationAvailable(true)
         let center = BrowserSitePermissionCenter()
-        let origin = BrowserSiteOrigin(scheme: "https", host: "location.example", port: 443)
+        let origin = SiteOrigin(scheme: "https", host: "location.example", port: 443)
         let spaceID = SpaceID()
         func authorize() async -> Bool {
             await controller.authorize(
@@ -36,7 +36,7 @@ final class BrowserPagePermissionControllerTests: XCTestCase {
 
     func testDownloadAndLocationDismissalAreTemporaryAndExplicitChoicesArePreserved() async throws {
         let controller = BrowserPagePermissionController()
-        let origin = BrowserSiteOrigin(scheme: "https", host: "files.example", port: 443)
+        let origin = SiteOrigin(scheme: "https", host: "files.example", port: 443)
         for permission in [SitePermission.automaticDownloads, .location] {
             let unavailable = await controller.response(
                 to: permission, origin: origin, topLevelOrigin: origin, spaceName: "Work")
@@ -72,7 +72,7 @@ final class BrowserPagePermissionControllerTests: XCTestCase {
         let view = RecordingCaptureWebView()
         let center = BrowserSitePermissionCenter()
         let spaceID = SpaceID()
-        let origin = BrowserSiteOrigin(scheme: "https", host: "media.example", port: 443)
+        let origin = SiteOrigin(scheme: "https", host: "media.example", port: 443)
         center.setDecision(.grantPersistently, for: .camera, origin: origin, in: spaceID)
         center.setDecision(.grantPersistently, for: .microphone, origin: origin, in: spaceID)
         let session = BrowserPageSitePermissionSession(
@@ -90,8 +90,8 @@ final class BrowserPagePermissionControllerTests: XCTestCase {
         let center = BrowserSitePermissionCenter()
         let spaceID = SpaceID()
         let page = URL(string: "https://maps.example/route")!
-        let origin = BrowserSiteOrigin(scheme: "https", host: "maps.example", port: 443)
-        let other = BrowserSiteOrigin(scheme: "https", host: "other.example", port: 443)
+        let origin = SiteOrigin(scheme: "https", host: "maps.example", port: 443)
+        let other = SiteOrigin(scheme: "https", host: "other.example", port: 443)
         let session = BrowserPageSitePermissionSession(engine: engine, permissionCenter: center, spaceID: spaceID)
         session.siteURL = { page }
         var refreshed: [SitePermission] = []
@@ -112,7 +112,7 @@ final class BrowserPagePermissionControllerTests: XCTestCase {
         controller.setPresentationAvailable(true)
         let center = BrowserSitePermissionCenter()
         let spaceID = SpaceID()
-        let origin = BrowserSiteOrigin(scheme: "https", host: "media.example", port: 443)
+        let origin = SiteOrigin(scheme: "https", host: "media.example", port: 443)
         var decisions: [WKPermissionDecision] = []
         SitePermission.camera.resolve(
             origin: origin, topLevelOrigin: origin, spaceID: spaceID, spaceName: "Work",
@@ -135,7 +135,7 @@ final class BrowserPagePermissionControllerTests: XCTestCase {
     func testDismissalCancelsQueueWithoutSavingDenialsOrAnsweringLaterRequests() throws {
         let controller = BrowserPagePermissionController()
         controller.setPresentationAvailable(true)
-        let origin = BrowserSiteOrigin(scheme: "https", host: "camera.example", port: 443)
+        let origin = SiteOrigin(scheme: "https", host: "camera.example", port: 443)
         var responses: [BrowserSitePermissionPromptResponse?] = []
         for permission in [SitePermission.camera, .notifications] {
             controller.request(permission, origin: origin, topLevelOrigin: origin, spaceName: "Work") {
@@ -158,8 +158,8 @@ final class BrowserPagePermissionControllerTests: XCTestCase {
 
     func testOriginsAndPermissionsRemainSeparateAndUnavailablePagesDenyTransiently() throws {
         let controller = BrowserPagePermissionController()
-        let top = BrowserSiteOrigin(scheme: "https", host: "top.example", port: 443)
-        let frame = BrowserSiteOrigin(scheme: "https", host: "frame.example", port: 443)
+        let top = SiteOrigin(scheme: "https", host: "top.example", port: 443)
+        let frame = SiteOrigin(scheme: "https", host: "frame.example", port: 443)
         var count = 0
         controller.request(.camera, origin: frame, topLevelOrigin: top, spaceName: "Work") {
             XCTAssertNil($0)

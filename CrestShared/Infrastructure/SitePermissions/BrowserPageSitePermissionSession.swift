@@ -20,7 +20,7 @@ final class BrowserPageSitePermissionSession: BrowserSitePermissionObserver {
 
     private struct MediaGrant: Hashable {
         let permission: SitePermission
-        let origin: BrowserSiteOrigin
+        let origin: SiteOrigin
     }
 
     // MARK: - Variables
@@ -58,7 +58,7 @@ final class BrowserPageSitePermissionSession: BrowserSitePermissionObserver {
 
     /// Remembers capture the page was allowed, with the decision that allowed
     /// it, so a later withdrawal of that decision ends the capture.
-    func recordMediaGrant(_ permission: SitePermission, origin: BrowserSiteOrigin) {
+    func recordMediaGrant(_ permission: SitePermission, origin: SiteOrigin) {
         mediaGrants[MediaGrant(permission: permission, origin: origin)] = permissionCenter.mediaDecision(
             for: permission, origin: origin, in: spaceID)
     }
@@ -86,14 +86,14 @@ final class BrowserPageSitePermissionSession: BrowserSitePermissionObserver {
     /// Applies Crest's record for `url`'s site, or the page's current site, to
     /// an engine that enforces site permissions itself.
     func synchronize(for url: URL? = nil) {
-        guard let origin = (url ?? siteURL()).flatMap(BrowserSiteOrigin.init(url:)) else { return }
+        guard let origin = (url ?? siteURL()).flatMap(SiteOrigin.init(url:)) else { return }
         for permission in Self.engineEnforcedPermissions {
             apply(permission, origin: origin)
         }
     }
 
     /// A device without its own answer follows a combined capture record.
-    private func apply(_ permission: SitePermission, origin: BrowserSiteOrigin) {
+    private func apply(_ permission: SitePermission, origin: SiteOrigin) {
         let decision = ([permission] + permission.combinations).lazy
             .map { self.permissionCenter.decision(for: $0, origin: origin, in: self.spaceID) }
             .first { $0.verdict != .ask }
@@ -103,7 +103,7 @@ final class BrowserPageSitePermissionSession: BrowserSitePermissionObserver {
     private func affects(
         _ change: BrowserSitePermissionChange,
         _ permission: SitePermission,
-        origin: BrowserSiteOrigin
+        origin: SiteOrigin
     ) -> Bool {
         // A combined capture record answers each of its devices.
         ([permission] + permission.combinations).contains { change.affects($0, origin: origin, in: spaceID) }
@@ -113,7 +113,7 @@ final class BrowserPageSitePermissionSession: BrowserSitePermissionObserver {
 
     func sitePermissionsDidChange(_ change: BrowserSitePermissionChange) {
         revokeChangedMediaGrants()
-        guard let origin = siteURL().flatMap(BrowserSiteOrigin.init(url:)) else { return }
+        guard let origin = siteURL().flatMap(SiteOrigin.init(url:)) else { return }
         for permission in Self.observedPermissions where affects(change, permission, origin: origin) {
             if Self.engineEnforcedPermissions.contains(permission) {
                 apply(permission, origin: origin)

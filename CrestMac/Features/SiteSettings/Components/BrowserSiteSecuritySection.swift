@@ -2,7 +2,7 @@ import SwiftUI
 
 struct BrowserSiteSecuritySection: View {
     let page: BrowserPage
-    let origin: BrowserSiteOrigin
+    let origin: SiteOrigin
     var reviewCertificate: (() -> Void)?
 
     var body: some View {

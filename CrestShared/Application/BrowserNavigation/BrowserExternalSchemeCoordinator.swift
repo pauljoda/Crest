@@ -7,7 +7,7 @@ import Foundation
 final class BrowserExternalSchemeCoordinator {
     typealias Prompt =
         @MainActor (
-            BrowserSiteOrigin,
+            SiteOrigin,
             URL,
             String
         ) async -> BrowserExternalSchemePromptResponse
@@ -37,7 +37,7 @@ final class BrowserExternalSchemeCoordinator {
     func handOff(
         destinationURL: URL,
         trigger: BrowserPopupTrigger,
-        origin: BrowserSiteOrigin?
+        origin: SiteOrigin?
     ) {
         Task { [weak self] in
             await self?.resolve(
@@ -53,7 +53,7 @@ final class BrowserExternalSchemeCoordinator {
     func resolve(
         destinationURL: URL,
         trigger: BrowserPopupTrigger,
-        origin: BrowserSiteOrigin?
+        origin: SiteOrigin?
     ) async {
         // Without an origin there is nothing to attribute or remember a choice
         // against, so the safe answer is to do nothing at all.

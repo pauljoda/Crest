@@ -490,7 +490,7 @@ final class BrowserExternalSchemeCoordinatorTests: XCTestCase {
     @MainActor
     private final class Harness {
         let spaceID = SpaceID()
-        let origin = BrowserSiteOrigin(scheme: "https", host: "mail.example", port: 443)
+        let origin = SiteOrigin(scheme: "https", host: "mail.example", port: 443)
         let permissionCenter = BrowserSitePermissionCenter()
         let coordinator: BrowserExternalSchemeCoordinator
         private(set) var opened: [URL] = []
@@ -615,7 +615,7 @@ final class BrowserPopupSchemeRoutingTests: XCTestCase {
         XCTAssertEqual(harness.handedOff.first?.trigger, .explicitUserNavigation)
         XCTAssertEqual(
             harness.handedOff.first?.origin,
-            BrowserSiteOrigin(scheme: "https", host: "mail.example", port: 443)
+            SiteOrigin(scheme: "https", host: "mail.example", port: 443)
         )
         XCTAssertEqual(
             harness.adoptedURLs.count,
@@ -683,7 +683,7 @@ final class BrowserPopupSchemeRoutingTests: XCTestCase {
         struct HandOff: Equatable {
             let url: URL
             let trigger: BrowserPopupTrigger
-            let origin: BrowserSiteOrigin?
+            let origin: SiteOrigin?
         }
 
         let coordinator: BrowserPopupCoordinator
@@ -744,7 +744,7 @@ private final class StubNewWindowNavigationAction: WKNavigationAction,
     override var request: URLRequest { stubRequest }
     override var navigationType: WKNavigationType { stubNavigationType }
     override var targetFrame: WKFrameInfo? { nil }
-    var browserSourceOrigin: BrowserSiteOrigin? { nil }
+    var browserSourceOrigin: SiteOrigin? { nil }
 }
 
 private final class StubKnownDownloadNavigationAction: WKNavigationAction,
@@ -761,7 +761,7 @@ private final class StubKnownDownloadNavigationAction: WKNavigationAction,
     override var navigationType: WKNavigationType { .linkActivated }
     override var targetFrame: WKFrameInfo? { nil }
     override var shouldPerformDownload: Bool { true }
-    var browserSourceOrigin: BrowserSiteOrigin? { nil }
+    var browserSourceOrigin: SiteOrigin? { nil }
 }
 
 @MainActor

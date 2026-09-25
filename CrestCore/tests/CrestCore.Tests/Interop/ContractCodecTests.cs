@@ -297,6 +297,45 @@ public sealed unsafe class ContractCodecTests {
         Assert.StartsWith(culprit, error.Message, StringComparison.Ordinal);
     }
 
+    /// A record normalized on construction reaches Swift as `Hashable` with
+    /// only a labeled wire initializer, which the codec calls, so the natural
+    /// spelling is left to the platform's normalizing initializer; the wire and
+    /// its fingerprint stay as they were.
+    [Fact]
+    public void ANormalizedRecordReachesSwiftWithOnlyItsWireInitializer() {
+        var schema = ContractSchema.Load([typeof(Normalized.Badge)]);
+        string swift = SwiftEmitter.EmitContracts(schema);
+
+        Assert.Contains("struct Badge: Hashable, Sendable {\n    let name: String\n    let rank: Int\n", swift, StringComparison.Ordinal);
+        Assert.Contains("    init(normalized name: String, rank: Int) {\n        self.name = name\n        self.rank = rank\n    }\n",
+            swift, StringComparison.Ordinal);
+        Assert.Contains("        self.init(normalized: name, rank: rank)\n", SwiftEmitter.EmitCodec(schema), StringComparison.Ordinal);
+        Assert.Equal(ContractSchema.Load([typeof(Unnormalized.Badge)]).Fingerprint, schema.Fingerprint);
+    }
+
+    /// Only the generated codec may call a wire initializer: a value made
+    /// through one anywhere else was never normalized.
+    [Fact]
+    public void TheGeneratorFindsEveryWireInitializerCallOutsideTheCodec() {
+        var schema = ContractSchema.Load([typeof(Normalized.Badge)]);
+        var calls = SwiftEmitter.WireInitializerCalls(schema, [
+            ("Made.swift", "let badge = Badge(name: \"Gold\", rank: 1)\n// Badge(normalized: \"gold\", rank: 1)\n"),
+            ("Called.swift", "let a = Badge(normalized: \"gold\", rank: 1)\nlet b = Badge.init(\n    normalized: \"gold\", rank: 2)\n"
+                + "let c: Badge = .init(normalized: \"gold\", rank: 3)\n")
+        ]);
+
+        Assert.Equal(["Called.swift:1:", "Called.swift:2:", "Called.swift:4:"], calls.Select(call => call.Split(' ')[0]));
+        Assert.Contains("make the value with Badge(name:rank:), which normalizes.", calls[0], StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData(typeof(Unnormalizable.Blank), "Blank:")]
+    [InlineData(typeof(Unnormalizable.Tinted), "Tinted.Hues:")]
+    public void TheGeneratorRefusesANormalizedRecordSwiftCannotHash(Type type, string culprit) {
+        var error = Assert.Throws<ContractSchemaException>(() => ContractSchema.Load([type]));
+        Assert.StartsWith(culprit, error.Message, StringComparison.Ordinal);
+    }
+
     [Fact]
     public void TheAppOpensOnlyForThisBuildsSchemaFingerprint() {
         Assert.Equal(32, ContractCodec.Fingerprint.Length);

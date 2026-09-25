@@ -369,8 +369,7 @@
 
         /// Answers the engine's site permission requests from Crest's record and
         /// prompt.
-        var permissionHandler:
-            ((SitePermission, BrowserSiteOrigin, BrowserSiteOrigin) async -> BrowserEnginePermissionResponse)?
+        var permissionHandler: ((SitePermission, SiteOrigin, SiteOrigin) async -> BrowserEnginePermissionResponse)?
 
         /// The engine clears the site its page is showing.
         func clearSiteData(for url: URL) async -> Bool {
@@ -674,14 +673,14 @@
                             let permission = (request["permission"] as? String).flatMap(
                                 SitePermission.named),
                             let origin = (request["origin"] as? String).flatMap(URL.init(string:)).flatMap(
-                                BrowserSiteOrigin.init(url:))
+                                SiteOrigin.init(url:))
                         else {
                             reply(BrowserEnginePermissionResponse.dismiss.hostCode)
                             return
                         }
                         let topLevel =
                             (request["topLevelOrigin"] as? String).flatMap(URL.init(string:))
-                            .flatMap(BrowserSiteOrigin.init(url:)) ?? origin
+                            .flatMap(SiteOrigin.init(url:)) ?? origin
                         Task { @MainActor in reply(await handler(permission, origin, topLevel).hostCode) }
                     }
                 }

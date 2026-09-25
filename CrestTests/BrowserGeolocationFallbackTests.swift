@@ -8,7 +8,7 @@ final class BrowserGeolocationBridgeTests: XCTestCase {
     func testDismissingLocationPromptKeepsAskAndRememberedAllowSkipsTheNextPrompt() async throws {
         let fixture = try makeFixture()
         defer { fixture.page.release(keepingState: false) }
-        let origin = try XCTUnwrap(BrowserSiteOrigin(url: fixture.url))
+        let origin = try XCTUnwrap(SiteOrigin(url: fixture.url))
         fixture.page.permissionCenter.setDecision(.ask, for: .location, origin: origin, in: fixture.page.spaceID)
         fixture.page.sitePermissionRequests.setPresentationAvailable(true)
         fixture.page.webView.loadSimulatedRequest(URLRequest(url: fixture.url), responseHTML: "<title>Location</title>")
@@ -49,7 +49,7 @@ final class BrowserGeolocationBridgeTests: XCTestCase {
         for action in Revocation.allCases {
             let fixture = try makeFixture()
             defer { fixture.page.release(keepingState: false) }
-            let origin = try XCTUnwrap(BrowserSiteOrigin(url: fixture.url))
+            let origin = try XCTUnwrap(SiteOrigin(url: fixture.url))
             try await loadRequests(in: fixture)
             let current = try XCTUnwrap(fixture.service.currentRequests.first?.value)
             let watch = try XCTUnwrap(fixture.service.watchRequests.first?.value)
@@ -88,7 +88,7 @@ final class BrowserGeolocationBridgeTests: XCTestCase {
     func testAllowOnceSurvivesOrdinaryUseButAskAgainRevokesItAndFreshRequestsAsk() async throws {
         let fixture = try makeFixture()
         defer { fixture.page.release(keepingState: false) }
-        let origin = try XCTUnwrap(BrowserSiteOrigin(url: fixture.url))
+        let origin = try XCTUnwrap(SiteOrigin(url: fixture.url))
         fixture.page.permissionCenter.setDecision(.ask, for: .location, origin: origin, in: fixture.page.spaceID)
         fixture.page.sitePermissionRequests.setPresentationAvailable(true)
         try await loadRequests(in: fixture, startsAuthorized: false, watchOnly: true)
@@ -122,7 +122,7 @@ final class BrowserGeolocationBridgeTests: XCTestCase {
         for awaitsSystem in [false, true] {
             let fixture = try makeFixture(systemAuthorization: awaitsSystem ? .notDetermined : .authorized)
             defer { fixture.page.release(keepingState: false) }
-            let origin = try XCTUnwrap(BrowserSiteOrigin(url: fixture.url))
+            let origin = try XCTUnwrap(SiteOrigin(url: fixture.url))
             fixture.page.permissionCenter.setDecision(.ask, for: .location, origin: origin, in: fixture.page.spaceID)
             fixture.page.sitePermissionRequests.setPresentationAvailable(true)
             fixture.service.delaysAuthorization = awaitsSystem
@@ -243,7 +243,7 @@ final class BrowserGeolocationBridgeTests: XCTestCase {
         space: BrowserSpace? = nil
     ) throws -> Fixture {
         let url = try XCTUnwrap(url ?? URL(string: "https://location.crest.test/"))
-        let origin = try XCTUnwrap(BrowserSiteOrigin(url: url))
+        let origin = try XCTUnwrap(SiteOrigin(url: url))
         let space = try XCTUnwrap(space ?? BrowserSession.preview.spaces.first)
         let permissionCenter = center ?? BrowserSitePermissionCenter()
         permissionCenter.setDecision(

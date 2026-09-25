@@ -1338,7 +1338,7 @@ final class MobileBrowserNavigationTests: XCTestCase {
             permissionCenter: permissionCenter,
             profileRemover: remover
         )
-        let origin = BrowserSiteOrigin(
+        let origin = SiteOrigin(
             scheme: "https",
             host: "camera.crest.test",
             port: 443

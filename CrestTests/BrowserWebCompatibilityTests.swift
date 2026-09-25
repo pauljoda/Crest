@@ -190,7 +190,7 @@ final class BrowserWebCompatibilityTests: XCTestCase {
             XCTAssertEqual(
                 opener.blockedPopupState.notice,
                 BrowserBlockedPopupNotice(
-                    origin: try XCTUnwrap(BrowserSiteOrigin(url: origin)),
+                    origin: try XCTUnwrap(SiteOrigin(url: origin)),
                     status: .blocked
                 )
             )
@@ -271,7 +271,7 @@ final class BrowserWebCompatibilityTests: XCTestCase {
             XCTAssertEqual(
                 opener.blockedPopupState.notice,
                 BrowserBlockedPopupNotice(
-                    origin: try XCTUnwrap(BrowserSiteOrigin(url: origin)),
+                    origin: try XCTUnwrap(SiteOrigin(url: origin)),
                     status: .blocked
                 )
             )
@@ -290,7 +290,7 @@ final class BrowserWebCompatibilityTests: XCTestCase {
             BrowserSession(spaces: [space])
         )
         let pool = BrowserPagePool(browser: store, popupTabHost: store.popupTabHost)
-        let siteOrigin = try XCTUnwrap(BrowserSiteOrigin(url: origin))
+        let siteOrigin = try XCTUnwrap(SiteOrigin(url: origin))
 
         do {
             pool.permissionCenter.setDecision(
@@ -568,7 +568,7 @@ final class BrowserWebCompatibilityTests: XCTestCase {
             pool.permissionCenter.setDecision(
                 .grantPersistently,
                 for: .popups,
-                origin: try XCTUnwrap(BrowserSiteOrigin(url: origin)),
+                origin: try XCTUnwrap(SiteOrigin(url: origin)),
                 in: space.id
             )
             opener.synchronizePopupPermission(for: origin)

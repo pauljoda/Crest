@@ -3,8 +3,8 @@ import WebKit
 extension SitePermission {
     @MainActor
     func resolve(
-        origin: BrowserSiteOrigin,
-        topLevelOrigin: BrowserSiteOrigin,
+        origin: SiteOrigin,
+        topLevelOrigin: SiteOrigin,
         spaceID: SpaceID,
         spaceName: String,
         permissionCenter: BrowserSitePermissionCenter,

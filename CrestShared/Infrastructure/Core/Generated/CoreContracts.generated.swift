@@ -2123,10 +2123,18 @@ struct SiteDecision: Query, Equatable, Sendable {
     let detail: String?
 }
 
-struct SiteOrigin: Equatable, Sendable {
+struct SiteOrigin: Hashable, Sendable {
     let scheme: String
     let host: String
     let port: Int
+
+    /// The wire's initializer: the codec's alone, for values the core wrote after
+    /// normalizing them. Anything else makes one with `init(scheme:host:port:)`, which normalizes.
+    init(normalized scheme: String, host: String, port: Int) {
+        self.scheme = scheme
+        self.host = host
+        self.port = port
+    }
 }
 
 struct SitePermissionAnswer: Equatable, Sendable {
@@ -7908,6 +7916,36 @@ struct TabPlacement: Hashable, Sendable {
     }
 
     static func == (lhs: TabPlacement, rhs: TabPlacement) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+}
+
+/// The members of the core's `WebScheme`. A member's wire tag is its index in `all`.
+struct WebScheme: Hashable, Sendable {
+    let tag: Int
+    let name: String
+    let defaultPort: Int
+
+    private init(tag: Int, name: String, defaultPort: Int) {
+        self.tag = tag
+        self.name = name
+        self.defaultPort = defaultPort
+    }
+
+    static let http = WebScheme(tag: 0, name: "http", defaultPort: 80)
+    static let https = WebScheme(tag: 1, name: "https", defaultPort: 443)
+
+    static let all: [WebScheme] = [http, https]
+
+    static func named(_ name: String?) -> WebScheme? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: WebScheme, rhs: WebScheme) -> Bool {
         lhs.tag == rhs.tag
     }
 

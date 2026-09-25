@@ -244,7 +244,7 @@ private final class StubExternalNavigationAction: WKNavigationAction,
     override var request: URLRequest { stubRequest }
     override var navigationType: WKNavigationType { stubNavigationType }
     override var targetFrame: WKFrameInfo? { nil }
-    var browserSourceOrigin: BrowserSiteOrigin? { nil }
+    var browserSourceOrigin: SiteOrigin? { nil }
 }
 
 /// A `@Sendable` decision handler cannot capture a mutable local, so the policy

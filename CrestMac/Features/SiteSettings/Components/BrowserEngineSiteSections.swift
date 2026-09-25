@@ -14,7 +14,7 @@ import SwiftUI
 /// `BrowserPageSitePermissionSession` carries a change to the page at once.
 struct BrowserEngineSitePermissionsSection: View {
     let page: BrowserPage
-    let origin: BrowserSiteOrigin
+    let origin: SiteOrigin
     let permissionCenter: BrowserSitePermissionCenter
     @Binding var isExpanded: Bool
 

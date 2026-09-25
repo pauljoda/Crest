@@ -182,7 +182,7 @@ final class BrowserDownloadTransferTests: XCTestCase {
                 """)
         let spaceID = SpaceID()
         let profileID = UUID()
-        let origin = try XCTUnwrap(BrowserSiteOrigin(url: url))
+        let origin = try XCTUnwrap(SiteOrigin(url: url))
         try await waitForDownloadCondition { web.url == url && !web.isLoading }
         owner.receiveDownload = { download in
             XCTAssertFalse(download.isUserInitiated)

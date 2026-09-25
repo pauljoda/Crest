@@ -4,7 +4,7 @@ extension BrowserPlatformPage {
     /// Applies Crest's popup decision for the page's site to its engine.
     func synchronizePopupPermission(for url: URL? = nil) {
         let origin = (url ?? live.displayURL ?? pageEngine.currentURL)
-            .flatMap(BrowserSiteOrigin.init(url:))
+            .flatMap(SiteOrigin.init(url:))
         let allowsAutomaticPopups =
             origin.map { permissionCenter.decision(for: .popups, origin: $0, in: spaceID).grants } ?? false
         _ = pageEngine.applyAutomaticPopups(allowsAutomaticPopups)
@@ -24,7 +24,7 @@ extension BrowserPlatformPage {
 
     /// A popup the engine's own blocker held back in the current document.
     func recordEngineBlockedPopup(pageURL: URL, documentIdentifier: String) {
-        guard let origin = BrowserSiteOrigin(url: pageURL),
+        guard let origin = SiteOrigin(url: pageURL),
             !permissionCenter.decision(for: .popups, origin: origin, in: spaceID).grants
         else { return }
         var nextState = blockedPopupState
@@ -48,7 +48,7 @@ extension BrowserPlatformPage {
         guard let notice = blockedPopupState.notice,
             notice.status.offersAllow,
             let currentURL = live.displayURL ?? pageEngine.currentURL,
-            BrowserSiteOrigin(url: currentURL) == notice.origin
+            SiteOrigin(url: currentURL) == notice.origin
         else { return }
 
         permissionCenter.setDecision(
@@ -65,7 +65,7 @@ extension BrowserPlatformPage {
 
     func recordPopupPermissionSynchronized(
         allowsAutomaticPopups: Bool,
-        origin: BrowserSiteOrigin?
+        origin: SiteOrigin?
     ) {
         guard let origin,
             blockedPopupState.notice?.origin == origin

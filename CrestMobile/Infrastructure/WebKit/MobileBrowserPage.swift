@@ -349,7 +349,7 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, Bro
                 guard let self else { return .denyOnce }
                 return await self.sitePermissionRequests.response(
                     to: .location, origin: origin,
-                    topLevelOrigin: topLevelURL.flatMap(BrowserSiteOrigin.init(url:)) ?? origin,
+                    topLevelOrigin: topLevelURL.flatMap(SiteOrigin.init(url:)) ?? origin,
                     spaceName: requestedSpaceName
                 )
             },

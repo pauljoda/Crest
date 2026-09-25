@@ -7,7 +7,7 @@ import Foundation
 enum CoreCodec {
     /// SHA-256 of the canonical contract schema. The core refuses any other.
     static let fingerprint: [UInt8] = [
-        0x8d, 0xba, 0x0a, 0xaf, 0x5f, 0x75, 0x2c, 0x15, 0x01, 0x0b, 0xb9, 0xaf, 0x79, 0x38, 0x50, 0xd7, 0x1e, 0x76, 0x3a, 0xed, 0x8e, 0x4c, 0x3f, 0x55, 0x06, 0xb4, 0xe9, 0xc5, 0x31, 0x4f, 0x1f, 0x7d
+        0x84, 0xa9, 0x2c, 0xaa, 0x83, 0x6f, 0xe6, 0xc6, 0x14, 0xa1, 0x62, 0xc8, 0x4e, 0xab, 0x08, 0xc7, 0xa4, 0xbe, 0x24, 0x22, 0x76, 0x1f, 0xb4, 0xb0, 0x45, 0xe1, 0xe6, 0x48, 0xf8, 0x0a, 0xa0, 0xbe
     ]
     /// SHA-256 of the engine contract alone, which an engine binding registers with.
     static let engineFingerprint: [UInt8] = [
@@ -7912,7 +7912,7 @@ extension SiteOrigin {
         let scheme = try reader.readString()
         let host = try reader.readString()
         let port = try reader.readInt()
-        self.init(scheme: scheme, host: host, port: port)
+        self.init(normalized: scheme, host: host, port: port)
     }
 
     func encode(into writer: inout WireWriter) {
@@ -11293,6 +11293,20 @@ extension TabPlacement {
         let tag = try reader.readEnum()
         guard Self.all.indices.contains(tag) else {
             throw WireError.malformed("Unknown TabPlacement \(tag)")
+        }
+        self = Self.all[tag]
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeEnum(tag)
+    }
+}
+
+extension WebScheme {
+    init(from reader: inout WireReader) throws(WireError) {
+        let tag = try reader.readEnum()
+        guard Self.all.indices.contains(tag) else {
+            throw WireError.malformed("Unknown WebScheme \(tag)")
         }
         self = Self.all[tag]
     }

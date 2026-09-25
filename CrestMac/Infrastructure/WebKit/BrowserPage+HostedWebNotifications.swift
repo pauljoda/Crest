@@ -19,14 +19,14 @@ extension BrowserPage {
     /// permission removes what the document posted, and the document is told
     /// the permission it now has.
     func refreshHostedWebNotificationPermission() {
-        if let url = webKitView?.url, let origin = BrowserSiteOrigin(url: url) {
+        if let url = webKitView?.url, let origin = SiteOrigin(url: url) {
             let decision = permissionCenter.decision(for: .notifications, origin: origin, in: spaceID)
             if decision != .grantPersistently && decision != .grantForSession {
                 removeHostedWebNotifications()
             }
         }
         guard let currentURL = live.displayURL ?? webKitView?.url,
-            let origin = BrowserSiteOrigin(url: currentURL)
+            let origin = SiteOrigin(url: currentURL)
         else {
             return
         }
@@ -51,8 +51,8 @@ extension BrowserPage {
             message.webView === webKitView,
             message.frameInfo.isMainFrame,
             let requestURL = message.frameInfo.request.url,
-            let origin = BrowserSiteOrigin(url: requestURL),
-            BrowserSiteOrigin(message.frameInfo.securityOrigin) == origin,
+            let origin = SiteOrigin(url: requestURL),
+            SiteOrigin(message.frameInfo.securityOrigin) == origin,
             BrowserCorePolicy.allowsHostedNotifications(for: origin),
             let body = message.body as? [String: Any],
             (body["version"] as? Int) == 1,
@@ -142,7 +142,7 @@ extension BrowserPage {
 
     private func resolveHostedNotificationPermission(
         requestID: String,
-        origin: BrowserSiteOrigin,
+        origin: SiteOrigin,
         hasUserActivation: Bool,
         documentIdentifier: String,
         frame: WKFrameInfo
@@ -270,7 +270,7 @@ extension BrowserPage {
 
     private func sendHostedNotificationPermission(
         requestID: String,
-        origin: BrowserSiteOrigin,
+        origin: SiteOrigin,
         requestsSystemAuthorization: Bool,
         documentIdentifier: String,
         frame: WKFrameInfo?
@@ -335,7 +335,7 @@ extension BrowserPage {
         title: String,
         body: String,
         isSilent: Bool,
-        origin: BrowserSiteOrigin,
+        origin: SiteOrigin,
         documentIdentifier: String
     ) async {
         let siteDecision = permissionCenter.decision(
@@ -443,7 +443,7 @@ extension BrowserPage {
         }
     }
 
-    private func allowsHostedNotificationDelivery(origin: BrowserSiteOrigin) -> Bool {
+    private func allowsHostedNotificationDelivery(origin: SiteOrigin) -> Bool {
         permissionCenter.decision(for: .notifications, origin: origin, in: spaceID).grants
     }
 
@@ -472,7 +472,7 @@ extension BrowserPage {
         requestID: String,
         permission: String,
         documentIdentifier: String,
-        origin: BrowserSiteOrigin,
+        origin: SiteOrigin,
         frame: WKFrameInfo?
     ) {
         sendHostedNotificationMessage(
@@ -491,7 +491,7 @@ extension BrowserPage {
         identifier: String,
         event: String,
         documentIdentifier: String,
-        origin: BrowserSiteOrigin
+        origin: SiteOrigin
     ) {
         sendHostedNotificationMessage(
             [
@@ -508,7 +508,7 @@ extension BrowserPage {
     private func sendHostedNotificationMessage(
         _ message: [String: Any],
         documentIdentifier: String,
-        origin: BrowserSiteOrigin,
+        origin: SiteOrigin,
         frame: WKFrameInfo?
     ) {
         guard
@@ -536,11 +536,11 @@ extension BrowserPage {
 
     private func isCurrentHostedNotificationDocument(
         _ documentIdentifier: String,
-        origin: BrowserSiteOrigin
+        origin: SiteOrigin
     ) -> Bool {
         guard documentIdentifier == hostedNotificationDocumentIdentifier,
             let currentURL = webKitView?.url ?? live.displayURL,
-            let currentOrigin = BrowserSiteOrigin(url: currentURL)
+            let currentOrigin = SiteOrigin(url: currentURL)
         else { return false }
         return currentOrigin == origin
     }

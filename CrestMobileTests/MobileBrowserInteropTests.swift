@@ -134,7 +134,7 @@ final class MobileBrowserInteropTests: XCTestCase {
             permissionCenter: permissionCenter
         )
         let privateSpace = try XCTUnwrap(browser.selectedSpace)
-        let sourceOrigin = try XCTUnwrap(BrowserSiteOrigin(url: sourceURL))
+        let sourceOrigin = try XCTUnwrap(SiteOrigin(url: sourceURL))
         permissionCenter.setDecision(
             .grantForSession,
             for: .automaticDownloads,
@@ -457,7 +457,7 @@ final class MobileBrowserInteropTests: XCTestCase {
     func testAutomaticPopupBridgeBlocksCoalescesAndAllowsOnlyANewAttempt() async throws {
         let context = try makePopupContext()
         let origin = try XCTUnwrap(URL(string: "https://mobile-popups.crest.test/"))
-        let siteOrigin = try XCTUnwrap(BrowserSiteOrigin(url: origin))
+        let siteOrigin = try XCTUnwrap(SiteOrigin(url: origin))
         context.opener.webView.frame = CGRect(x: 0, y: 0, width: 390, height: 700)
         context.opener.webView.loadSimulatedRequest(
             URLRequest(url: origin),
@@ -665,7 +665,7 @@ final class MobileBrowserInteropTests: XCTestCase {
     func testBlockedPopupStateDoesNotLeakIntoAPrivateSession() throws {
         let regular = try makePopupContext()
         let privateContext = try makePopupContext(browsingMode: .privateBrowsing)
-        let origin = BrowserSiteOrigin(
+        let origin = SiteOrigin(
             scheme: "https",
             host: "private-popups.example",
             port: 443
@@ -1565,7 +1565,7 @@ private final class StubPopupNavigationAction: WKNavigationAction,
     override var targetFrame: WKFrameInfo? { nil }
     override var modifierFlags: UIKeyModifierFlags { stubModifierFlags }
     override var buttonNumber: UIEvent.ButtonMask { stubButtonNumber }
-    var browserSourceOrigin: BrowserSiteOrigin? { nil }
+    var browserSourceOrigin: SiteOrigin? { nil }
 }
 
 private enum MobileBrowserInteropTestError: Error {

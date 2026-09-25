@@ -9,7 +9,7 @@ extension BrowserCorePolicy {
     // MARK: - Types
 
     private struct OriginRequest: Encodable {
-        let origin: BrowserSiteOrigin
+        let origin: SiteOrigin
     }
 
     private struct AllowedAnswer: Decodable {
@@ -28,28 +28,21 @@ extension BrowserCorePolicy {
     private struct PopupNoticeRequest: Encodable {
         struct State: Encodable {
             @BrowserCoreNullable var status: BlockedPopupStatus?
-            @BrowserCoreNullable var origin: BrowserSiteOrigin?
+            @BrowserCoreNullable var origin: SiteOrigin?
             @BrowserCoreNullable var documentIdentifier: String?
             let indicationRevision: Int
         }
 
         let event: BlockedPopupEvent
         @BrowserCoreNullable var documentIdentifier: String?
-        @BrowserCoreNullable var origin: BrowserSiteOrigin?
+        @BrowserCoreNullable var origin: SiteOrigin?
         let state: State
     }
 
     private struct PopupNoticeAnswer: Decodable {
         struct State: Decodable {
-            /// An origin as the core spells it, normalized as any other origin.
-            struct Origin: Decodable {
-                let scheme: String
-                let host: String
-                let port: Int
-            }
-
             @BrowserCoreOptional var status: BlockedPopupStatus?
-            @BrowserCoreOptional var origin: Origin?
+            @BrowserCoreOptional var origin: SiteOrigin?
             @BrowserCoreOptional var documentIdentifier: String?
             let indicationRevision: Int
         }
@@ -61,12 +54,12 @@ extension BrowserCorePolicy {
     // MARK: - Actions - Site permissions
 
     /// Whether a site may use location at all. An unavailable core refuses.
-    static func allowsGeolocation(for origin: BrowserSiteOrigin) -> Bool {
+    static func allowsGeolocation(for origin: SiteOrigin) -> Bool {
         evaluate(.geolocationOrigin, OriginRequest(origin: origin), answer: AllowedAnswer.self)?.allowed ?? false
     }
 
     /// Whether a site may post hosted web notifications at all. An unavailable core refuses.
-    static func allowsHostedNotifications(for origin: BrowserSiteOrigin) -> Bool {
+    static func allowsHostedNotifications(for origin: SiteOrigin) -> Bool {
         evaluate(.notificationsOrigin, OriginRequest(origin: origin), answer: AllowedAnswer.self)?.allowed ?? false
     }
 
@@ -85,7 +78,7 @@ extension BrowserCorePolicy {
     /// new indication.
     static func blockedPopupState(
         after event: BlockedPopupEvent, from state: BrowserBlockedPopupPageState,
-        documentIdentifier: String? = nil, origin: BrowserSiteOrigin? = nil
+        documentIdentifier: String? = nil, origin: SiteOrigin? = nil
     ) -> BrowserBlockedPopupPageState? {
         let request = PopupNoticeRequest(
             event: event, documentIdentifier: nonEmpty(documentIdentifier), origin: origin,
@@ -99,9 +92,7 @@ extension BrowserCorePolicy {
         let next = answer.state
         var notice: BrowserBlockedPopupNotice?
         if let status = next.status, let origin = next.origin {
-            notice = BrowserBlockedPopupNotice(
-                origin: BrowserSiteOrigin(scheme: origin.scheme, host: origin.host, port: origin.port),
-                status: status)
+            notice = BrowserBlockedPopupNotice(origin: origin, status: status)
         }
         return BrowserBlockedPopupPageState(
             notice: notice, documentIdentifier: next.documentIdentifier,

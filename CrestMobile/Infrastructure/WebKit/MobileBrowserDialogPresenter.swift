@@ -103,7 +103,7 @@ enum MobileBrowserDialogPresenter {
     /// is not offered as a saved block, so declining refuses this one hand-off
     /// rather than silently muting the site for good.
     static func presentExternalApplicationPermission(
-        origin: BrowserSiteOrigin,
+        origin: SiteOrigin,
         destinationURL: URL,
         spaceName: String
     ) async -> BrowserExternalSchemePromptResponse {

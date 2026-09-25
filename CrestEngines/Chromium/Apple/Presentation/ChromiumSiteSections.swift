@@ -11,7 +11,7 @@ import SwiftUI
 /// at once rather than on the next page load.
 struct BrowserEngineSitePermissionsSection: View {
     let page: BrowserPage
-    let origin: BrowserSiteOrigin
+    let origin: SiteOrigin
     let permissionCenter: BrowserSitePermissionCenter
     @Binding var isExpanded: Bool
 

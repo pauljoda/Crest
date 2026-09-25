@@ -6,5 +6,5 @@ import WebKit
 /// to read WebKit's missing internal state.
 @MainActor
 protocol BrowserNavigationActionSourceOriginProviding: AnyObject {
-    var browserSourceOrigin: BrowserSiteOrigin? { get }
+    var browserSourceOrigin: SiteOrigin? { get }
 }

@@ -113,7 +113,12 @@ for `EnginePage` lists every direct engine call.
    `SplitGroupID` and `BrowserWindowID` wrappers retire with the Swift session
    copy.
 5. A wrapper type is justified only when it carries behavior or an invariant,
-   as `SiteOrigin` does with normalization.
+   as `SiteOrigin` does with normalization. A record whose constructor
+   normalizes its fields is marked `[NormalizedOnConstruction]`. Swift receives
+   it as `Hashable` with only a labeled wire initializer, `init(normalized …)`,
+   which the codec alone calls; the generator refuses any other caller. The
+   platform's initializer with the natural labels normalizes the same way,
+   reading the same fixed-set data, such as `WebScheme.defaultPort`.
 6. The core keeps no JSON in its model. JSON remains only where a stored or
    synced format already requires it, and those formats have hand-written
    codecs. The generator never defines a stored or synced key, because

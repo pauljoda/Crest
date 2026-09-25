@@ -14,8 +14,8 @@ final class BrowserPagePermissionController {
     struct Request: Identifiable, Equatable {
         let id = UUID()
         let permission: SitePermission
-        let origin: BrowserSiteOrigin
-        let topLevelOrigin: BrowserSiteOrigin
+        let origin: SiteOrigin
+        let topLevelOrigin: SiteOrigin
         let spaceName: String
     }
 
@@ -32,8 +32,8 @@ final class BrowserPagePermissionController {
 
     func request(
         _ permission: SitePermission,
-        origin: BrowserSiteOrigin,
-        topLevelOrigin: BrowserSiteOrigin,
+        origin: SiteOrigin,
+        topLevelOrigin: SiteOrigin,
         spaceName: String,
         completion: @escaping (BrowserSitePermissionPromptResponse?) -> Void
     ) {
@@ -67,8 +67,8 @@ final class BrowserPagePermissionController {
 
     func response(
         to permission: SitePermission,
-        origin: BrowserSiteOrigin,
-        topLevelOrigin: BrowserSiteOrigin,
+        origin: SiteOrigin,
+        topLevelOrigin: SiteOrigin,
         spaceName: String
     ) async -> BrowserSitePermissionPromptResponse {
         await withCheckedContinuation { continuation in
@@ -80,8 +80,8 @@ final class BrowserPagePermissionController {
 
     func authorize(
         _ permission: SitePermission,
-        origin: BrowserSiteOrigin,
-        topLevelOrigin: BrowserSiteOrigin,
+        origin: SiteOrigin,
+        topLevelOrigin: SiteOrigin,
         spaceID: SpaceID,
         spaceName: String,
         permissionCenter: BrowserSitePermissionCenter

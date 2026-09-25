@@ -12,7 +12,7 @@ final class BrowserWebKitDownloadTransport: NSObject, BrowserDownloadTransport {
 
     private struct AutomaticDownloadScope: Hashable {
         let webViewID: ObjectIdentifier
-        let origin: BrowserSiteOrigin
+        let origin: SiteOrigin
         let spaceID: SpaceID
     }
 
@@ -30,7 +30,7 @@ final class BrowserWebKitDownloadTransport: NSObject, BrowserDownloadTransport {
     private var spaceNames: [ObjectIdentifier: String] = [:]
     private var spaceIDs: [ObjectIdentifier: SpaceID] = [:]
     private var profileIDs: [ObjectIdentifier: UUID] = [:]
-    private var sourceOrigins: [ObjectIdentifier: BrowserSiteOrigin] = [:]
+    private var sourceOrigins: [ObjectIdentifier: SiteOrigin] = [:]
     private var permissionRequests:
         [ObjectIdentifier: (controller: BrowserPagePermissionController, generation: UUID)] = [:]
     private var sourceWebViewIDs: [ObjectIdentifier: ObjectIdentifier] = [:]
@@ -331,15 +331,15 @@ final class BrowserWebKitDownloadTransport: NSObject, BrowserDownloadTransport {
         if let controller = (sourceWebView.uiDelegate as? any BrowserPagePermissionProviding)?.sitePermissionRequests {
             permissionRequests[key] = (controller, controller.generation)
         }
-        let frameOrigin = BrowserSiteOrigin(download.originatingFrame.securityOrigin)
+        let frameOrigin = SiteOrigin(download.originatingFrame.securityOrigin)
         // Automatic downloads belong to the visible site, including files served
         // by its embedded frames or a CDN, so site controls can change the rule.
-        if let origin = sourceWebView.url.flatMap(BrowserSiteOrigin.init(url:)) {
+        if let origin = sourceWebView.url.flatMap(SiteOrigin.init(url:)) {
             sourceOrigins[key] = origin
         } else if !frameOrigin.host.isEmpty {
             sourceOrigins[key] = frameOrigin
         } else if let sourceURL = download.originalRequest?.url,
-            let sourceOrigin = BrowserSiteOrigin(url: sourceURL)
+            let sourceOrigin = SiteOrigin(url: sourceURL)
         {
             sourceOrigins[key] = sourceOrigin
         }

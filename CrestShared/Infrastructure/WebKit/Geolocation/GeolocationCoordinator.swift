@@ -8,7 +8,7 @@ import WebKit
 final class BrowserGeolocationCoordinator: BrowserSitePermissionObserver {
     typealias Prompt =
         @MainActor (
-            _ origin: BrowserSiteOrigin,
+            _ origin: SiteOrigin,
             _ topLevelURL: URL?,
             _ spaceName: String
         ) async -> BrowserSitePermissionPromptResponse
@@ -28,7 +28,7 @@ final class BrowserGeolocationCoordinator: BrowserSitePermissionObserver {
     private final class Request {
         let nativeIdentifier: String
         let identifier: String
-        let origin: BrowserSiteOrigin
+        let origin: SiteOrigin
         let documentIdentifier: String
         let frameDocumentIdentifier: String
         let frame: WKFrameInfo
@@ -37,7 +37,7 @@ final class BrowserGeolocationCoordinator: BrowserSitePermissionObserver {
         var isAuthorized = false
         var isCompleting = false
 
-        init(identifier: String, origin: BrowserSiteOrigin, documentIdentifier: String,
+        init(identifier: String, origin: SiteOrigin, documentIdentifier: String,
              frameDocumentIdentifier: String, frame: WKFrameInfo, watchesPosition: Bool) {
             self.identifier = identifier
             self.origin = origin
@@ -73,7 +73,7 @@ final class BrowserGeolocationCoordinator: BrowserSitePermissionObserver {
     func receive(_ message: WKScriptMessage) {
         guard message.webView === webView,
             let requestURL = message.frameInfo.request.url,
-            let origin = BrowserSiteOrigin(url: requestURL),
+            let origin = SiteOrigin(url: requestURL),
             BrowserCorePolicy.allowsGeolocation(for: origin),
             let body = message.body as? [String: Any],
             (body["version"] as? Int) == 1,
@@ -121,7 +121,7 @@ final class BrowserGeolocationCoordinator: BrowserSitePermissionObserver {
 
     func synchronizeMainFramePermission() {
         guard let currentURL = webView.url,
-            let origin = BrowserSiteOrigin(url: currentURL)
+            let origin = SiteOrigin(url: currentURL)
         else { return }
         sendPermission(
             origin: origin,
@@ -150,7 +150,7 @@ final class BrowserGeolocationCoordinator: BrowserSitePermissionObserver {
                 frame: request.frame, frameDocumentIdentifier: request.frameDocumentIdentifier
             )
         }
-        if let url = webView.url, let origin = BrowserSiteOrigin(url: url),
+        if let url = webView.url, let origin = SiteOrigin(url: url),
             change.affects(.location, origin: origin, in: spaceID) {
             synchronizeMainFramePermission()
         }
@@ -160,7 +160,7 @@ final class BrowserGeolocationCoordinator: BrowserSitePermissionObserver {
         identifier: String,
         watchesPosition: Bool,
         options: BrowserGeolocationRequestOptions,
-        origin: BrowserSiteOrigin,
+        origin: SiteOrigin,
         documentIdentifier: String,
         frame: WKFrameInfo,
         frameDocumentIdentifier: String
@@ -277,7 +277,7 @@ final class BrowserGeolocationCoordinator: BrowserSitePermissionObserver {
     }
 
     private func sendPermission(
-        origin: BrowserSiteOrigin,
+        origin: SiteOrigin,
         documentIdentifier: String,
         frame: WKFrameInfo?,
         frameDocumentIdentifier: String? = nil
