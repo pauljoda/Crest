@@ -152,7 +152,8 @@ public sealed partial class BrowserContractsTests {
             Assert.Equal(guarded, reset.SpaceId);
             Assert.Empty(reset.Records);
             Assert.Equal([new SitePermissionScope(null, null, null, RevokesAuthorization: true)], reset.Touched);
-            Assert.Empty(app.Send(new ResetSpacePermissions(guarded)).OfType<SitePermissionsChanged>());
+            // A Space that keeps nothing still tells its pages to withdraw, so a request waiting for an answer ends.
+            Assert.Equal(reset.Touched, Assert.Single(app.Send(new ResetSpacePermissions(guarded)).OfType<SitePermissionsChanged>()).Touched);
 
             // Forgetting one choice revokes it; one that is gone changes nothing.
             Assert.Empty(app.Send(new ResetSitePermission(Guid.NewGuid())).OfType<SitePermissionsChanged>());

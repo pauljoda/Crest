@@ -2485,6 +2485,10 @@
     "shortcuts-device-store": {
       "category": "internal",
       "message": "Keyboard shortcut choices live in the core's device store, carried once from the saved defaults."
+    },
+    "space-permission-reset-revokes": {
+      "category": "internal",
+      "message": "Resetting a Space's site permissions always tells its pages to withdraw what they were given."
     }
   }
 }

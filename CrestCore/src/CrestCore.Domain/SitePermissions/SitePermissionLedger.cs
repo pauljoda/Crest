@@ -137,12 +137,13 @@ public sealed class SitePermissionLedger {
         return new(true, [new(record.Space, new(record.Origin, record.Permission, record.Detail, true))]);
     }
 
-    /// Clears every saved and session choice in one Space. A Space that holds
-    /// none changes nothing.
+    /// Clears every saved and session choice in one Space. It always touches
+    /// the whole Space, so a page withdraws what it was given and cancels a
+    /// request still waiting for an answer, even when no choice was kept.
     public SitePermissionOutcome ResetSpace(Guid space) {
-        bool heldSession = session.Remove(space, out var choices) && choices.Count > 0;
+        session.Remove(space);
         bool removed = persistent.RemoveAll(record => record.Space == space) > 0;
-        return heldSession || removed ? new(removed, [new(space, new(null, null, null, true))]) : SitePermissionOutcome.Unchanged;
+        return new(removed, [new(space, new(null, null, null, true))]);
     }
 
     #endregion

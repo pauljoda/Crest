@@ -127,7 +127,10 @@ public sealed class SitePermissionLedgerTests {
         // Removal still applies, so a locked Space can be reset or deleted.
         Assert.True(ledger.ResetSpace(space).PersistenceChanged);
         Assert.Equal(SitePermissionDecision.Ask, ledger.Decision(space, Meet, SitePermission.Microphone, null, false));
-        Assert.Empty(ledger.ResetSpace(space).Changes);
+        // A Space that keeps nothing still tells its pages to withdraw.
+        var again = ledger.ResetSpace(space);
+        Assert.False(again.PersistenceChanged);
+        Assert.True(Assert.Single(again.Changes).Scope.RevokesAuthorization);
     }
 
     [Fact]
