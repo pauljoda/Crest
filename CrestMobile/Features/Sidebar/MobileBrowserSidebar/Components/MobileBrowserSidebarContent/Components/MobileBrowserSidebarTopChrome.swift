@@ -115,8 +115,11 @@ struct MobileBrowserSidebarTopChrome: View {
             ?? configuration.context.browser.selectedTab?.url
     }
 
+    /// Never the palette's `crest-address-command-` identity: the field used
+    /// to spell a Space's ID wrapper, so the palette has never taken the
+    /// field's frame, and this keeps it so.
     private var morphID: String {
-        "crest-address-command-\(configuration.context.browser.selectedSpaceID)"
+        "crest-sidebar-address-\(configuration.context.browser.selectedSpaceID.uuidString)"
     }
 
     /// The toolbar sits above the pager, so the Space it clears is the selected

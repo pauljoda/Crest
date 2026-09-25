@@ -216,7 +216,7 @@ extension BrowserCredentialDetailModelTests {
         )
         return CredentialDescriptor(
             id: CredentialID(rawValue: fixedUUID(1)),
-            spaceID: SpaceID(rawValue: fixedUUID(2)),
+            spaceID: fixedUUID(2),
             origin: origin,
             username: "person@example.com",
             createdAt: Date(timeIntervalSince1970: 1_000)

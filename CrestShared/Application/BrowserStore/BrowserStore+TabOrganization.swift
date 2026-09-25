@@ -182,8 +182,8 @@ extension BrowserStore {
         else { return false }
         return family.canSend(
             MoveTabToSpace(
-                workspaceID: family.workspaceID, windowID: windowID.rawValue, spaceID: source.id.rawValue,
-                tabID: id.rawValue, destinationSpaceID: destination.id.rawValue, placement: nil, folderID: nil,
+                workspaceID: family.workspaceID, windowID: windowID, spaceID: source.id,
+                tabID: id, destinationSpaceID: destination.id, placement: nil, folderID: nil,
                 beforeTabID: nil, follows: false),
             from: self)
     }
@@ -257,9 +257,9 @@ extension BrowserStore {
         do {
             try family.commit(
                 MoveTabToSpace(
-                    workspaceID: family.workspaceID, windowID: windowID.rawValue, spaceID: source.id.rawValue,
-                    tabID: id.rawValue, destinationSpaceID: destination.id.rawValue, placement: placement,
-                    folderID: folderID?.rawValue, beforeTabID: destinationTabID?.rawValue, follows: follows),
+                    workspaceID: family.workspaceID, windowID: windowID, spaceID: source.id,
+                    tabID: id, destinationSpaceID: destination.id, placement: placement,
+                    folderID: folderID, beforeTabID: destinationTabID, follows: follows),
                 from: self)
         } catch {
             localSyncErrorDescription = "Core tab move failed: \(error)"
@@ -314,11 +314,11 @@ extension BrowserStore {
         guard let space = session.space(id: spaceID),
             let copy = sendCopying(
                 DuplicateTab(
-                    workspaceID: family.workspaceID, windowID: windowID.rawValue, spaceID: spaceID.rawValue,
-                    tabID: id.rawValue, placement: nil, shows: true),
+                    workspaceID: family.workspaceID, windowID: windowID, spaceID: spaceID,
+                    tabID: id, placement: nil, shows: true),
                 in: space)?.first
         else { return nil }
-        return TabID(rawValue: copy.copyTabID)
+        return copy.copyTabID
     }
 
     @discardableResult
@@ -365,8 +365,8 @@ extension BrowserStore {
         else { return false }
         return sendCopying(
             JoinSplit(
-                workspaceID: family.workspaceID, windowID: windowID.rawValue, spaceID: space.id.rawValue,
-                tabID: item.tabID.rawValue, targetTabID: targetTabID.rawValue, index: memberIndex),
+                workspaceID: family.workspaceID, windowID: windowID, spaceID: space.id,
+                tabID: item.tabID, targetTabID: targetTabID, index: memberIndex),
             in: space) != nil
     }
 
@@ -382,7 +382,7 @@ extension BrowserStore {
             space.tabs.contains(where: { $0.id == tabID })
         else { return false }
         return family.send(
-            LeaveSplit(workspaceID: family.workspaceID, spaceID: space.id.rawValue, tabID: tabID.rawValue), from: self)
+            LeaveSplit(workspaceID: family.workspaceID, spaceID: space.id, tabID: tabID), from: self)
     }
 
     /// Drops a card into an explicit slot of its own split run.
@@ -401,7 +401,7 @@ extension BrowserStore {
         else { return false }
         return family.send(
             MoveSplitMember(
-                workspaceID: family.workspaceID, spaceID: space.id.rawValue, tabID: tabID.rawValue, index: memberIndex),
+                workspaceID: family.workspaceID, spaceID: space.id, tabID: tabID, index: memberIndex),
             from: self)
     }
 
@@ -419,7 +419,7 @@ extension BrowserStore {
         else { return false }
         return family.send(
             StepSplitMember(
-                workspaceID: family.workspaceID, spaceID: space.id.rawValue, tabID: tabID.rawValue, offset: offset),
+                workspaceID: family.workspaceID, spaceID: space.id, tabID: tabID, offset: offset),
             from: self)
     }
 
@@ -455,7 +455,7 @@ extension BrowserStore {
             let groupID = space.tabs.first(where: { $0.id == tabID })?.splitGroupID
         else { return false }
         return family.send(
-            DissolveSplit(workspaceID: family.workspaceID, spaceID: space.id.rawValue, groupID: groupID.rawValue),
+            DissolveSplit(workspaceID: family.workspaceID, spaceID: space.id, groupID: groupID),
             from: self)
     }
 
@@ -468,7 +468,7 @@ extension BrowserStore {
         guard space(matching: assignment) != nil else { return false }
         return family.send(
             NameSplit(
-                workspaceID: family.workspaceID, spaceID: assignment.spaceID.rawValue, groupID: groupID.rawValue,
+                workspaceID: family.workspaceID, spaceID: assignment.spaceID, groupID: groupID,
                 name: title),
             from: self, failure: "Core record command failed")
     }
@@ -483,7 +483,7 @@ extension BrowserStore {
         guard emoji == nil || normalized != nil, space(matching: assignment) != nil else { return false }
         return family.send(
             SetSplitIcon(
-                workspaceID: family.workspaceID, spaceID: assignment.spaceID.rawValue, groupID: groupID.rawValue,
+                workspaceID: family.workspaceID, spaceID: assignment.spaceID, groupID: groupID,
                 symbol: normalized.map(BrowserIconSymbol.symbol(forEmoji:))),
             from: self, failure: "Core record command failed")
     }
@@ -497,7 +497,7 @@ extension BrowserStore {
         guard space(matching: assignment) != nil else { return false }
         return family.send(
             TintSplit(
-                workspaceID: family.workspaceID, spaceID: assignment.spaceID.rawValue, groupID: groupID.rawValue,
+                workspaceID: family.workspaceID, spaceID: assignment.spaceID, groupID: groupID,
                 tint: tint?.core),
             from: self, failure: "Core record command failed")
     }
@@ -508,8 +508,8 @@ extension BrowserStore {
     private func acceptsSplitJoin(_ tabID: TabID, joining targetTabID: TabID, in space: BrowserSpace) -> Bool {
         family.canSend(
             JoinSplit(
-                workspaceID: family.workspaceID, windowID: windowID.rawValue, spaceID: space.id.rawValue,
-                tabID: tabID.rawValue, targetTabID: targetTabID.rawValue, index: nil),
+                workspaceID: family.workspaceID, windowID: windowID, spaceID: space.id,
+                tabID: tabID, targetTabID: targetTabID, index: nil),
             from: self)
     }
 
@@ -588,8 +588,8 @@ extension BrowserStore {
         guard
             sendCopying(
                 OpenLinkInSplit(
-                    workspaceID: family.workspaceID, windowID: windowID.rawValue, spaceID: space.id.rawValue,
-                    tabID: openedID.rawValue, targetTabID: targetTabID.rawValue, address: url.absoluteString,
+                    workspaceID: family.workspaceID, windowID: windowID, spaceID: space.id,
+                    tabID: openedID, targetTabID: targetTabID, address: url.absoluteString,
                     title: url.host() ?? url.absoluteString),
                 in: space) != nil
         else { return nil }
@@ -615,8 +615,8 @@ extension BrowserStore {
         else { return false }
         return family.canSend(
             OpenLinkInSplit(
-                workspaceID: family.workspaceID, windowID: windowID.rawValue, spaceID: space.id.rawValue, tabID: UUID(),
-                targetTabID: tabID.rawValue, address: "about:blank", title: ""),
+                workspaceID: family.workspaceID, windowID: windowID, spaceID: space.id, tabID: UUID(),
+                targetTabID: tabID, address: "about:blank", title: ""),
             from: self)
     }
 
@@ -662,8 +662,8 @@ extension BrowserStore {
         else { return false }
         return family.send(
             MoveSplit(
-                workspaceID: family.workspaceID, spaceID: space.id.rawValue, groupID: groupID.rawValue,
-                placement: placement, folderID: folderID?.rawValue, beforeTabID: destinationTabID?.rawValue),
+                workspaceID: family.workspaceID, spaceID: space.id, groupID: groupID,
+                placement: placement, folderID: folderID, beforeTabID: destinationTabID),
             from: self)
     }
 }

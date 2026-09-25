@@ -8,7 +8,7 @@ private func padTab(id: TabID, title: String) -> BrowserTab {
     BrowserTab(
         id: id,
         title: title,
-        url: URL(string: "https://\(id.rawValue.uuidString).crest.test"),
+        url: URL(string: "https://\(id.uuidString).crest.test"),
         placement: .current,
         lastActivatedAt: Date(timeIntervalSince1970: 1_700_000_000)
     )
@@ -723,7 +723,7 @@ final class MobileBrowserSidebarReorderPolicyTests: XCTestCase {
         )
 
         private let sidebarIsFloating: Bool
-        private let spaceID = SpaceID(rawValue: padUUID(0x01))
+        private let spaceID = padUUID(0x01)
         private let profileID = padUUID(0x02)
 
         /// A 13-inch iPad in landscape, with the sidebar width the shell defaults
@@ -736,12 +736,12 @@ final class MobileBrowserSidebarReorderPolicyTests: XCTestCase {
             self.sidebarIsFloating = sidebarIsFloating
             cards = (0..<cardCount).map { index in
                 padTab(
-                    id: TabID(rawValue: padUUID(UInt8(0x10 + index))),
+                    id: padUUID(UInt8(0x10 + index)),
                     title: "Card \(index)"
                 )
             }
             joiner = padTab(
-                id: TabID(rawValue: padUUID(0x30)),
+                id: padUUID(0x30),
                 title: "Joiner"
             )
             let space = BrowserSpace(

@@ -141,7 +141,7 @@ extension BrowserStore {
                 let adoption = AdoptLegacySession(installed: legacy.values, seed: try JSONEncoder().encode(seed()))
                 for case .sessionAdopted(let adopted) in try core.send(adoption) {
                     for favicon in adopted.favicons {
-                        favicons.reconcile(favicon.image, tabID: TabID(rawValue: favicon.tabID))
+                        favicons.reconcile(favicon.image, tabID: favicon.tabID)
                     }
                 }
                 stored = try BrowserCoreSessionAuthority.openStored(in: core, favicons: favicons)

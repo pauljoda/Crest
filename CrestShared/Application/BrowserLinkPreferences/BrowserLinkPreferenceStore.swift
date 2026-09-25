@@ -58,15 +58,15 @@ final class BrowserLinkPreferenceStore {
         let routing = LinkRoutingPreferences(
             routes: preferences.routes.map(\.coreRoute),
             destination: preferences.externalLinkDestination,
-            chosenSpaceID: preferences.externalLinkSpaceID?.rawValue,
-            remembersSpaceBySite: preferences.remembersQuickWindowSpaceBySite, rememberedSpaceID: remembered?.rawValue)
+            chosenSpaceID: preferences.externalLinkSpaceID,
+            remembersSpaceBySite: preferences.remembersQuickWindowSpaceBySite, rememberedSpaceID: remembered)
         let context = LinkRoutingContext(
-            spaces: session.spaces.map(\.id.rawValue), selectedSpaceID: session.selectedSpaceID.rawValue,
-            unavailableSpaceIDs: unavailableSpaceIDs.map(\.rawValue))
+            spaces: session.spaces.map(\.id), selectedSpaceID: session.selectedSpaceID,
+            unavailableSpaceIDs: Array(unavailableSpaceIDs))
         let route = ExternalLinkRoute(
             url: url.absoluteString, preferences: routing, context: context,
-            lockedSpaceIDs: lockedSpaceIDs.map(\.rawValue))
-        guard let placement = try? core.query(route), let spaceID = placement.spaceID.map(SpaceID.init(rawValue:))
+            lockedSpaceIDs: Array(lockedSpaceIDs))
+        guard let placement = try? core.query(route), let spaceID = placement.spaceID
         else { return nil }
         return placement.opensQuickWindow ? .quickWindow(spaceID: spaceID) : .space(spaceID)
     }

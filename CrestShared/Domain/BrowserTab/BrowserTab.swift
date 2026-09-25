@@ -119,7 +119,7 @@ struct BrowserTab: Codable, Identifiable, Sendable {
     /// form, wearing `faviconData`, the image the copy keeps for it. Edit
     /// clocks take the spelling that form gives a whole millisecond.
     init(core state: TabState, faviconData: Data?) {
-        id = TabID(rawValue: state.id)
+        id = state.id
         title = state.title
         nativeContent = state.nativeContent.map { BrowserNativeTabContent(kind: $0.kind, resourceID: $0.resourceID) }
         url = state.nativeContent == nil ? state.url.flatMap(URL.init(string:)) : nil
@@ -131,8 +131,8 @@ struct BrowserTab: Codable, Identifiable, Sendable {
         iconAccent = state.iconAccent.map { BrowserTabIconAccent(red: $0.red, green: $0.green, blue: $0.blue) }
         storedIconMode = state.storedIconMode
         placement = state.placement
-        folderID = state.folderID.map(FolderID.init(rawValue:))
-        splitGroupID = state.splitGroupID.map(SplitGroupID.init(rawValue:))
+        folderID = state.folderID
+        splitGroupID = state.splitGroupID
         lastActivatedAt = state.lastActivatedAt
         positionModifiedAt = state.positionModifiedAt.map(Self.storedEditClock)
         customTitle = state.customTitle
@@ -265,7 +265,7 @@ struct BrowserTab: Codable, Identifiable, Sendable {
     /// vocabulary term below therefore resolves rather than throws.
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        id = try container.decode(TabID.self, forKey: .id)
+        id = try container.decodeIdentity(forKey: .id)
         title = try container.decode(String.self, forKey: .title)
         nativeContent = try container.decodeIfPresent(BrowserNativeTabContent.self, forKey: .nativeContent)
         url = nativeContent == nil ? try container.decodeIfPresent(URL.self, forKey: .url) : nil
@@ -295,11 +295,8 @@ struct BrowserTab: Codable, Identifiable, Sendable {
         // faithfully: a saved tab keeps its address, is never swept by current-tab
         // cleanup, and is not subject to the pinned-tab limit.
         placement = (try? container.decodeIfPresent(TabPlacement.self, forKey: .placement)).flatMap { $0 } ?? .saved
-        folderID = try container.decodeIfPresent(FolderID.self, forKey: .folderID)
-        splitGroupID = try container.decodeIfPresent(
-            SplitGroupID.self,
-            forKey: .splitGroupID
-        )
+        folderID = try container.decodeIdentityIfPresent(forKey: .folderID)
+        splitGroupID = try container.decodeIdentityIfPresent(forKey: .splitGroupID)
         lastActivatedAt = try container.decode(Date.self, forKey: .lastActivatedAt)
         positionModifiedAt = try container.decodeIfPresent(
             Date.self,
@@ -316,6 +313,28 @@ struct BrowserTab: Codable, Identifiable, Sendable {
         displayTitle = customTitle ?? title
         isAwayFromSavedLocation = false
         pageIconIsCurrent = false
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encodeStoredIdentity(id, forKey: .id)
+        try container.encode(title, forKey: .title)
+        try container.encodeIfPresent(url, forKey: .url)
+        try container.encodeIfPresent(nativeContent, forKey: .nativeContent)
+        try container.encodeIfPresent(savedURL, forKey: .savedURL)
+        try container.encode(symbol, forKey: .symbol)
+        try container.encodeIfPresent(faviconData, forKey: .faviconData)
+        try container.encodeIfPresent(faviconURL, forKey: .faviconURL)
+        try container.encodeIfPresent(iconAccent, forKey: .iconAccent)
+        try container.encodeIfPresent(storedIconMode, forKey: .storedIconMode)
+        try container.encode(placement, forKey: .placement)
+        try container.encodeStoredIdentityIfPresent(folderID, forKey: .folderID)
+        try container.encodeStoredIdentityIfPresent(splitGroupID, forKey: .splitGroupID)
+        try container.encode(lastActivatedAt, forKey: .lastActivatedAt)
+        try container.encodeIfPresent(positionModifiedAt, forKey: .positionModifiedAt)
+        try container.encodeIfPresent(customTitle, forKey: .customTitle)
+        try container.encodeIfPresent(titleModifiedAt, forKey: .titleModifiedAt)
+        try container.encode(keepsPageLoaded, forKey: .keepsPageLoaded)
     }
 }
 

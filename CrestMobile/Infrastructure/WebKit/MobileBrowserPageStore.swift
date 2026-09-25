@@ -648,7 +648,7 @@ final class MobileBrowserPageStore:
     private func restyleVisitedLinks(after records: Engines.PageRecords) {
         guard let page = activePage,
             records.navigations.contains(where: {
-                $0.workspaceID == browser.window.workspaceID && $0.spaceID == page.spaceID.rawValue
+                $0.workspaceID == browser.window.workspaceID && $0.spaceID == page.spaceID
             }),
             let space = browser.session.space(id: page.spaceID)
         else { return }

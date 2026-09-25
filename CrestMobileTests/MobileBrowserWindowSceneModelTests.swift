@@ -4,6 +4,20 @@ import XCTest
 
 @MainActor
 final class MobileBrowserWindowSceneModelTests: XCTestCase {
+    /// iPadOS restores a window scene with the value an earlier build saved,
+    /// `{"rawValue": UUID}`. It restores the same window, a bare identity
+    /// reads too, and this build saves the spelling an earlier build restores.
+    func testAWindowRequestKeepsTheStoredIdentitySpellingAndReadsABareOne() throws {
+        let id = UUID()
+        let earlier = Data(#"{"rawValue":"\#(id.uuidString)"}"#.utf8)
+        let bare = Data(#""\#(id.uuidString)""#.utf8)
+
+        XCTAssertEqual(try JSONDecoder().decode(MobileWindowRequest.self, from: earlier).id, id)
+        XCTAssertEqual(try JSONDecoder().decode(MobileWindowRequest.self, from: bare).id, id)
+        let stored = try JSONSerialization.jsonObject(with: JSONEncoder().encode(MobileWindowRequest(id: id)))
+        XCTAssertEqual(stored as? [String: String], ["rawValue": id.uuidString])
+    }
+
     func testColdStartupLeavesTabsUnselectedRegardlessOfLegacyPreference() {
         for behavior in [
             BrowserStartupBehavior.showStartPage,

@@ -87,7 +87,7 @@ final class BrowserSitePermissionCenter {
     ) -> SitePermissionDecision {
         _ = core.state.sitePermissionRevision
         let question = SiteDecision(
-            spaceID: spaceID.rawValue, origin: origin.core, permission: permission, detail: detail)
+            spaceID: spaceID, origin: origin.core, permission: permission, detail: detail)
         return (try? core.query(question))?.decision ?? .ask
     }
 
@@ -98,13 +98,13 @@ final class BrowserSitePermissionCenter {
         in spaceID: SpaceID
     ) -> SitePermissionDecision {
         _ = core.state.sitePermissionRevision
-        let question = CaptureDecision(spaceID: spaceID.rawValue, origin: origin.core, media: media)
+        let question = CaptureDecision(spaceID: spaceID, origin: origin.core, media: media)
         return (try? core.query(question))?.decision ?? .ask
     }
 
     /// The choices a Space keeps, in the order the settings list them.
     func records(in spaceID: SpaceID) -> [SitePermissionRecordState] {
-        core.state.sitePermissions[spaceID.rawValue] ?? []
+        core.state.sitePermissions[spaceID] ?? []
     }
 
     // MARK: - Actions - Observers
@@ -122,7 +122,7 @@ final class BrowserSitePermissionCenter {
         let current = observers.compactMap(\.value)
         for scope in change.touched {
             let touched = BrowserSitePermissionChange(
-                spaceID: SpaceID(rawValue: change.spaceID), origin: scope.origin.map(BrowserSiteOrigin.init),
+                spaceID: change.spaceID, origin: scope.origin.map(BrowserSiteOrigin.init),
                 permission: scope.permission, detail: scope.detail, revokesAuthorization: scope.revokesAuthorization)
             for observer in current { observer.sitePermissionsDidChange(touched) }
         }
@@ -139,7 +139,7 @@ final class BrowserSitePermissionCenter {
     ) {
         send(
             DecideSitePermission(
-                spaceID: spaceID.rawValue, origin: origin.core, permission: permission, detail: detail,
+                spaceID: spaceID, origin: origin.core, permission: permission, detail: detail,
                 decision: decision))
     }
 
@@ -148,7 +148,7 @@ final class BrowserSitePermissionCenter {
     }
 
     func reset(spaceID: SpaceID) {
-        send(ResetSpacePermissions(spaceID: spaceID.rawValue))
+        send(ResetSpacePermissions(spaceID: spaceID))
     }
 
     private func send(_ intent: some SitePermissionIntent) {

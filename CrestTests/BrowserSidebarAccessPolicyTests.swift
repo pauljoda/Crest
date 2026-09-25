@@ -144,7 +144,7 @@ final class BrowserSidebarAccessPolicyTests: XCTestCase {
         isProtected: Bool
     ) -> BrowserSpace {
         BrowserSpace(
-            id: SpaceID(rawValue: Self.uuid(id)),
+            id: Self.uuid(id),
             profile: BrowsingProfile(id: Self.uuid(profileID)),
             name: name,
             symbol: "square.grid.2x2",

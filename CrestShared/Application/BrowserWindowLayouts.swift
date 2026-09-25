@@ -64,10 +64,10 @@ final class BrowserWindowLayouts {
             return
         }
         for case .windowRecordsAdopted(let adopted) in changes {
-            for layout in adopted.layouts where self.layout(for: BrowserWindowID(rawValue: layout.windowID)) == nil {
+            for layout in adopted.layouts where self.layout(for: layout.windowID) == nil {
                 save(
                     BrowserWindowState(
-                        id: BrowserWindowID(rawValue: layout.windowID), sidebarWidth: layout.sidebarWidth,
+                        id: layout.windowID, sidebarWidth: layout.sidebarWidth,
                         sidebarIsPresented: layout.sidebarIsPresented))
             }
         }

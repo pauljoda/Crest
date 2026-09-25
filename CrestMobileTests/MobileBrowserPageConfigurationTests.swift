@@ -118,11 +118,11 @@ final class MobileBrowserPageConfigurationTests: XCTestCase {
 
     private func makeSpace(index: Int) -> BrowserSpace {
         let tab = BrowserTab.startPage(
-            id: TabID(rawValue: fixedUUID(index * 10 + 1)),
+            id: fixedUUID(index * 10 + 1),
             placement: .current
         )
         return BrowserSpace(
-            id: SpaceID(rawValue: fixedUUID(index * 10 + 2)),
+            id: fixedUUID(index * 10 + 2),
             profile: BrowsingProfile(id: fixedUUID(index * 10 + 3)),
             name: "Space \(index)",
             symbol: "circle",

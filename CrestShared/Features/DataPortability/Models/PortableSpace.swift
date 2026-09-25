@@ -141,7 +141,7 @@ struct PortableSpace: Codable, Equatable, Sendable {
             branding: branding,
             folders: folderTree.foldersInDisplayOrder.map { source in
                 var folder = source
-                folder.orderAnchorTabID = source.orderAnchorTabID.flatMap { tabIDsBySourceID[$0.rawValue] }
+                folder.orderAnchorTabID = source.orderAnchorTabID.flatMap { tabIDsBySourceID[$0] }
                 return folder
             },
             tabs: materializedTabs,
@@ -205,7 +205,7 @@ struct PortableSplitGroupMetadata: Codable, Equatable, Sendable {
     let tintModifiedAt: Date?
 
     init(_ metadata: BrowserSplitGroupMetadata) {
-        id = metadata.id.rawValue
+        id = metadata.id
         customTitle = metadata.customTitle
         titleModifiedAt = metadata.titleModifiedAt
         customIconSymbol = metadata.customIconSymbol

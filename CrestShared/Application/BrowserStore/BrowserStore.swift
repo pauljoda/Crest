@@ -29,7 +29,7 @@ final class BrowserStore {
     @ObservationIgnored private var isClosed = false
 
     /// What the core says this window shows.
-    var window: WindowState { core.state.windows[windowID.rawValue]?.value ?? lastWindow }
+    var window: WindowState { core.state.windows[windowID]?.value ?? lastWindow }
 
     var deletingSpaceIDs: Set<SpaceID> { family.deletingSpaceIDs }
     var selectedSpaceID: SpaceID { window.shownSpace }
@@ -60,13 +60,13 @@ final class BrowserStore {
     /// Space's fallback.
     func selectPresentedSpace(_ id: SpaceID) {
         guard !deletingSpaceIDs.contains(id), session.space(id: id) != nil else { return }
-        guard sendWindowIntent(ShowSpace(windowID: windowID.rawValue, spaceID: id.rawValue)) else { return }
+        guard sendWindowIntent(ShowSpace(windowID: windowID, spaceID: id)) else { return }
         tabMultiSelection.clear()
         sessionRevision &+= 1
     }
 
     func clearPresentedTabSelection(in spaceID: SpaceID) {
-        guard sendWindowIntent(ShowTab(windowID: windowID.rawValue, spaceID: spaceID.rawValue, tabID: nil)) else {
+        guard sendWindowIntent(ShowTab(windowID: windowID, spaceID: spaceID, tabID: nil)) else {
             return
         }
         sessionRevision &+= 1
@@ -77,7 +77,7 @@ final class BrowserStore {
     @discardableResult
     func activateSessionTab(_ id: TabID, in spaceID: SpaceID) -> Bool {
         guard !deletingSpaceIDs.contains(spaceID), session.space(id: spaceID)?.contains(id) == true,
-            sendWindowIntent(ShowTab(windowID: windowID.rawValue, spaceID: spaceID.rawValue, tabID: id.rawValue))
+            sendWindowIntent(ShowTab(windowID: windowID, spaceID: spaceID, tabID: id))
         else { return false }
         sessionRevision &+= 1
         return true
@@ -88,14 +88,14 @@ final class BrowserStore {
     func dismissShownTab(_ id: TabID, in spaceID: SpaceID) {
         guard
             sendWindowIntent(
-                DismissShownTab(windowID: windowID.rawValue, spaceID: spaceID.rawValue, tabID: id.rawValue))
+                DismissShownTab(windowID: windowID, spaceID: spaceID, tabID: id))
         else { return }
         sessionRevision &+= 1
     }
 
     /// The column shares this window keeps for a split group it resized.
     func resizeSplitColumns(_ fractions: [Double], for groupID: SplitGroupID) {
-        sendWindowIntent(ResizeSplitColumns(windowID: windowID.rawValue, groupID: groupID.rawValue, shares: fractions))
+        sendWindowIntent(ResizeSplitColumns(windowID: windowID, groupID: groupID, shares: fractions))
     }
 
     /// Runs one intent about this window. What it changed, including a tab
@@ -148,16 +148,16 @@ final class BrowserStore {
         self.family = family
         localSyncErrorDescription = nil
         lastWindow = WindowState(
-            id: opening.id.rawValue, workspaceID: UUID(), shownSpaceID: UUID(), shownTabs: [], splitColumnShares: [])
+            id: opening.id, workspaceID: UUID(), shownSpaceID: UUID(), shownTabs: [], splitColumnShares: [])
         let workspace = family.register(self)
         do {
             try core.send(
                 OpenWindow(
-                    windowID: opening.id.rawValue, workspaceID: workspace,
-                    saved: opening.saved && family.keepsWindowRecords, copyingWindowID: opening.copying?.rawValue,
-                    showingSpaceID: opening.showingSpaceID?.rawValue,
+                    windowID: opening.id, workspaceID: workspace,
+                    saved: opening.saved && family.keepsWindowRecords, copyingWindowID: opening.copying,
+                    showingSpaceID: opening.showingSpaceID,
                     showingTabs: opening.showingTabs.map {
-                        ShownTab(spaceID: $0.key.rawValue, tabID: $0.value.rawValue)
+                        ShownTab(spaceID: $0.key, tabID: $0.value)
                     },
                     restoresTabs: opening.restoresTabs))
         } catch {
@@ -172,7 +172,7 @@ final class BrowserStore {
         guard !isClosed else { return }
         isClosed = true
         lastWindow = window
-        _ = try? core.send(CloseWindow(windowID: windowID.rawValue))
+        _ = try? core.send(CloseWindow(windowID: windowID))
     }
 
     isolated deinit {
@@ -190,7 +190,7 @@ extension BrowserStore {
         interactionObserver?.browserWillResetSession()
         guard
             family.send(
-                ResetPrivateBrowsing(workspaceID: family.workspaceID, windowID: windowID.rawValue), from: self,
+                ResetPrivateBrowsing(workspaceID: family.workspaceID, windowID: windowID), from: self,
                 failure: "Core Space command failed")
         else { return }
         localSyncErrorDescription = nil

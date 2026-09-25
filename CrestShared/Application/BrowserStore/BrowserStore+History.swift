@@ -11,7 +11,7 @@ extension BrowserStore {
     func archiveTransientPage(_ pageID: UUID, matching assignment: BrowserSpaceRuntimeAssignment) -> Bool {
         guard space(matching: assignment) != nil else { return false }
         return family.perform(
-            ArchiveTransientPage(workspaceID: family.workspaceID, pageID: pageID, spaceID: assignment.spaceID.rawValue),
+            ArchiveTransientPage(workspaceID: family.workspaceID, pageID: pageID, spaceID: assignment.spaceID),
             from: self) != nil
     }
 
@@ -21,7 +21,7 @@ extension BrowserStore {
     }
 
     func clearHistory(in spaceID: SpaceID) {
-        sendRecords(ClearHistory(workspaceID: family.workspaceID, spaceID: spaceID.rawValue))
+        sendRecords(ClearHistory(workspaceID: family.workspaceID, spaceID: spaceID))
     }
 
     @discardableResult
@@ -29,7 +29,7 @@ extension BrowserStore {
         matching assignment: BrowserSpaceRuntimeAssignment
     ) -> Bool {
         guard space(matching: assignment) != nil else { return false }
-        return sendRecords(ClearHistory(workspaceID: family.workspaceID, spaceID: assignment.spaceID.rawValue))
+        return sendRecords(ClearHistory(workspaceID: family.workspaceID, spaceID: assignment.spaceID))
     }
 
     func cleanupCurrentTabs() {
@@ -71,15 +71,15 @@ extension BrowserStore {
 
     func cleanupCurrentTabs(in spaceID: SpaceID) {
         guard session.space(id: spaceID) != nil else { return }
-        sendRecords(CleanUpCurrentTabs(workspaceID: family.workspaceID, spaceID: spaceID.rawValue))
+        sendRecords(CleanUpCurrentTabs(workspaceID: family.workspaceID, spaceID: spaceID))
     }
 
     func restoreArchivedTab(_ id: TabID) {
         guard selectedSpace != nil else { return }
         sendRecords(
             RestoreArchivedTab(
-                workspaceID: family.workspaceID, windowID: windowID.rawValue, spaceID: selectedSpaceID.rawValue,
-                tabID: id.rawValue))
+                workspaceID: family.workspaceID, windowID: windowID, spaceID: selectedSpaceID,
+                tabID: id))
     }
 
     @discardableResult
@@ -93,8 +93,8 @@ extension BrowserStore {
         else { return false }
         return sendRecords(
             RestoreArchivedTab(
-                workspaceID: family.workspaceID, windowID: windowID.rawValue, spaceID: assignment.spaceID.rawValue,
-                tabID: id.rawValue))
+                workspaceID: family.workspaceID, windowID: windowID, spaceID: assignment.spaceID,
+                tabID: id))
     }
 
     /// Runs a history, archive or retention intent from this window, and
@@ -122,7 +122,7 @@ extension BrowserStore {
         guard space(matching: assignment) != nil else { return false }
         return sendRecords(
             RemoveHistoryAddress(
-                workspaceID: family.workspaceID, spaceID: assignment.spaceID.rawValue, address: url.absoluteString))
+                workspaceID: family.workspaceID, spaceID: assignment.spaceID, address: url.absoluteString))
     }
 
     @discardableResult
@@ -134,7 +134,7 @@ extension BrowserStore {
         guard space(matching: assignment) != nil else { return false }
         return sendRecords(
             RemoveHistoryRange(
-                workspaceID: family.workspaceID, spaceID: assignment.spaceID.rawValue, start: startDate, end: endDate))
+                workspaceID: family.workspaceID, spaceID: assignment.spaceID, start: startDate, end: endDate))
     }
 }
 

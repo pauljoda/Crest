@@ -85,8 +85,8 @@ final class BrowserDownloadDestinationTests: XCTestCase {
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
         defer { defaults.removePersistentDomain(forName: suiteName) }
         let preferences = BrowserPlatformDownloadPreferences(defaults: defaults)
-        let work = SpaceID(rawValue: UUID())
-        let personal = SpaceID(rawValue: UUID())
+        let work = SpaceID()
+        let personal = SpaceID()
 
         preferences.setAsksWhereToSave(true, for: work)
         preferences.setDirectoryMetadata(

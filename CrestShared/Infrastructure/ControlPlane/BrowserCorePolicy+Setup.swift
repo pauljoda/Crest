@@ -86,7 +86,7 @@ extension BrowserCorePolicy {
             let profileID: String
 
             init(_ assignment: BrowserSpaceRuntimeAssignment) {
-                spaceID = assignment.spaceID.rawValue.coreIdentifier
+                spaceID = assignment.spaceID.coreIdentifier
                 profileID = assignment.profileID.coreIdentifier
             }
         }
@@ -144,8 +144,8 @@ extension BrowserCorePolicy {
         -> [(draft: Int?, existing: Int?)]?
     {
         let request = ReconcileRequest(
-            drafts: drafts.map { ReconcileRequest.Draft(id: $0.id.rawValue.coreIdentifier, isNew: $0.isNew) },
-            existing: existing.map { $0.rawValue.coreIdentifier })
+            drafts: drafts.map { ReconcileRequest.Draft(id: $0.id.coreIdentifier, isNew: $0.isNew) },
+            existing: existing.map { $0.coreIdentifier })
         guard let answer = evaluate(.setupReconcile, request, answer: ReconcileAnswer.self) else { return nil }
         var result: [(draft: Int?, existing: Int?)] = []
         for entry in answer.entries {

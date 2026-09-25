@@ -5,7 +5,7 @@ extension CoreState: BrowserStoreFirstObservable {
     func apply(_ change: SpaceLockChanged) {
         var access = spaceAccessStorage
         let assignment = BrowserSpaceRuntimeAssignment(
-            spaceID: SpaceID(rawValue: change.spaceID), profileID: change.profileID)
+            spaceID: change.spaceID, profileID: change.profileID)
         access[assignment] = change.isUnlocked || change.isAuthenticating ? change : nil
         publish(access, into: \.spaceAccessStorage, as: \.spaceAccess)
     }

@@ -78,7 +78,7 @@ final class BrowserPageAssignmentTests: XCTestCase {
         XCTAssertNil(
             pool.activePage(
                 matching: BrowserTabRuntimeAssignment(
-                    tabID: TabID(rawValue: UUID()),
+                    tabID: TabID(),
                     spaceID: space.id,
                     profileID: space.profile.id
                 )
@@ -88,7 +88,7 @@ final class BrowserPageAssignmentTests: XCTestCase {
             pool.activePage(
                 matching: BrowserTabRuntimeAssignment(
                     tabID: tab.id,
-                    spaceID: SpaceID(rawValue: UUID()),
+                    spaceID: SpaceID(),
                     profileID: space.profile.id
                 )
             )

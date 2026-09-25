@@ -2489,6 +2489,10 @@
     "space-permission-reset-revokes": {
       "category": "internal",
       "message": "Resetting a Space's site permissions always tells its pages to withdraw what they were given."
+    },
+    "id-names-plain-uuids": {
+      "category": "internal",
+      "message": "Tab, Space, folder, split and window identities are plain UUIDs in Swift, and everything Crest stores keeps the identity spelling earlier builds read."
     }
   }
 }

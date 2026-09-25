@@ -79,7 +79,7 @@ final class BrowserQuickWindowGeometryHostView: NSView {
         }
         let sourceWindowFrame = targetWindowID.flatMap { targetWindowID in
             NSApp.windows.first {
-                $0 !== window && $0.identifier?.rawValue == targetWindowID.rawValue.uuidString
+                $0 !== window && $0.identifier?.rawValue == targetWindowID.uuidString
             }?.frame
         }
         let frame = Self.targetFrame(

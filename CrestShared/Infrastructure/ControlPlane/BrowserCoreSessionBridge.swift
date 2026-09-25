@@ -21,7 +21,7 @@ extension BrowserSession {
         case .workspaceOpened(let opened):
             self = BrowserSession(core: opened.session, image: image)
         case .workspaceChanged(let changed):
-            defaultSpaceID = changed.defaultSpaceID.map(SpaceID.init(rawValue:))
+            defaultSpaceID = changed.defaultSpaceID
             disposableSeedMarker = changed.isDisposableSeed ? disposableSeedMarker ?? UUID() : nil
             spaceDeletions =
                 changed.spaceDeletions.isEmpty
@@ -30,25 +30,25 @@ extension BrowserSession {
             appPreferences = changed.preferences.map(BrowserAppPreferences.init(core:))
         case .spacesChanged(let changed):
             let removed = Set(changed.removed)
-            spaces.removeAll { removed.contains($0.id.rawValue) }
+            spaces.removeAll { removed.contains($0.id) }
             for state in changed.added {
-                Self.upsert(BrowserSpace(core: state, image: image), into: &spaces, id: \.id.rawValue)
+                Self.upsert(BrowserSpace(core: state, image: image), into: &spaces, id: \.id)
             }
-            spaces = Self.ordered(spaces, by: changed.order, id: \.id.rawValue)
+            spaces = Self.ordered(spaces, by: changed.order, id: \.id)
         case .spaceSettingsChanged(let changed):
             edit(changed.spaceID) { $0.configure(core: changed.settings) }
         case .tabsChanged(let changed):
             edit(changed.spaceID) { space in
                 space.tabs = Self.rows(
                     space.tabs, updated: changed.updated, removed: changed.removed, order: changed.order,
-                    id: \.id.rawValue, stateID: \.id
+                    id: \.id, stateID: \.id
                 ) { BrowserTab(core: $0, faviconData: image($0.id)) }
             }
         case .foldersChanged(let changed):
             edit(changed.spaceID) { space in
                 space.folders = Self.rows(
                     space.folders, updated: changed.updated, removed: changed.removed, order: changed.order,
-                    id: \.id.rawValue, stateID: \.id, make: BrowserFolder.init(core:))
+                    id: \.id, stateID: \.id, make: BrowserFolder.init(core:))
             }
         case .splitGroupsChanged(let changed):
             edit(changed.spaceID) { space in
@@ -59,7 +59,7 @@ extension BrowserSession {
             edit(changed.spaceID) { space in
                 space.archivedTabs = Self.rows(
                     space.archivedTabs, updated: changed.archived, removed: changed.removed, order: changed.order,
-                    id: \.id.rawValue, stateID: \.tab.id
+                    id: \.id, stateID: \.tab.id
                 ) {
                     ArchivedTab(
                         tab: BrowserTab(core: $0.tab, faviconData: image($0.tab.id)), archivedAt: $0.archivedAt,
@@ -85,11 +85,11 @@ extension BrowserSession {
     /// The tab, open or archived, wears `data`.
     private mutating func setImage(_ data: Data?, of tabID: UUID) {
         for spaceIndex in spaces.indices {
-            if let tabIndex = spaces[spaceIndex].tabs.firstIndex(where: { $0.id.rawValue == tabID }) {
+            if let tabIndex = spaces[spaceIndex].tabs.firstIndex(where: { $0.id == tabID }) {
                 spaces[spaceIndex].tabs[tabIndex].faviconData = data
                 return
             }
-            if let archiveIndex = spaces[spaceIndex].archivedTabs.firstIndex(where: { $0.tab.id.rawValue == tabID }) {
+            if let archiveIndex = spaces[spaceIndex].archivedTabs.firstIndex(where: { $0.tab.id == tabID }) {
                 spaces[spaceIndex].archivedTabs[archiveIndex].tab.faviconData = data
                 return
             }
@@ -97,7 +97,7 @@ extension BrowserSession {
     }
 
     private mutating func edit(_ spaceID: UUID, _ change: (inout BrowserSpace) -> Void) {
-        guard let index = spaces.firstIndex(where: { $0.id.rawValue == spaceID }) else { return }
+        guard let index = spaces.firstIndex(where: { $0.id == spaceID }) else { return }
         change(&spaces[index])
     }
 
@@ -153,8 +153,8 @@ extension FaviconAssets.Offer {
         self.init()
         for session in [session] + others {
             for space in session.spaces {
-                for tab in space.tabs { placed[tab.id.rawValue] = tab.faviconData }
-                for archived in space.archivedTabs { placed[archived.id.rawValue] = archived.tab.faviconData }
+                for tab in space.tabs { placed[tab.id] = tab.faviconData }
+                for archived in space.archivedTabs { placed[archived.id] = archived.tab.faviconData }
             }
         }
     }
@@ -167,8 +167,8 @@ extension FaviconAssets.Offer {
         self.init()
         imported = spaces.map { space in
             var images: [UUID: Data] = [:]
-            for tab in space.tabs { images[tab.id.rawValue] = tab.faviconData }
-            for archived in space.archivedTabs { images[archived.id.rawValue] = archived.tab.faviconData }
+            for tab in space.tabs { images[tab.id] = tab.faviconData }
+            for archived in space.archivedTabs { images[archived.id] = archived.tab.faviconData }
             return images
         }
     }
@@ -198,9 +198,9 @@ extension ImportReviewSpace {
     /// A Space as the review of an import reads it.
     init(_ space: BrowserSpace) {
         self.init(
-            id: space.id.rawValue, name: space.name,
+            id: space.id, name: space.name,
             tabs: space.tabs.map {
-                ImportReviewTab(id: $0.id.rawValue, url: $0.url?.absoluteString, placement: $0.placement)
+                ImportReviewTab(id: $0.id, url: $0.url?.absoluteString, placement: $0.placement)
             })
     }
 }
@@ -234,7 +234,7 @@ extension BrowserSession {
     init(core state: SessionState, image: (UUID) -> Data?) {
         self.init(
             spaces: state.spaces.map { BrowserSpace(core: $0, image: image) },
-            defaultSpaceID: state.defaultSpaceID.map(SpaceID.init(rawValue:)),
+            defaultSpaceID: state.defaultSpaceID,
             disposableSeedMarker: state.disposableSeedMarker,
             spaceDeletions: state.spaceDeletions.isEmpty
                 ? nil : state.spaceDeletions.map(BrowserSpaceDeletionIntent.init(core:)),
@@ -244,14 +244,14 @@ extension BrowserSession {
 
 extension BrowserSpaceDeletionIntent {
     init(core deletion: SpaceDeletionState) {
-        self.init(spaceID: SpaceID(rawValue: deletion.spaceID), profileID: deletion.profileID, operationID: deletion.id)
+        self.init(spaceID: deletion.spaceID, profileID: deletion.profileID, operationID: deletion.id)
     }
 }
 
 extension BrowserSpace {
     init(core state: SpaceState, image: (UUID) -> Data?) {
         self.init(
-            id: SpaceID(rawValue: state.id), profile: BrowsingProfile(id: state.profileID), name: state.settings.name,
+            id: state.id, profile: BrowsingProfile(id: state.profileID), name: state.settings.name,
             symbol: state.settings.symbol, accent: state.settings.accent,
             folders: state.folders.map(BrowserFolder.init(core:)),
             tabs: state.tabs.map { BrowserTab(core: $0, faviconData: image($0.id)) },
@@ -289,19 +289,19 @@ extension BrowserSpace {
 extension BrowserFolder {
     init(core state: FolderState) {
         self.init(
-            id: FolderID(rawValue: state.id), title: state.title,
+            id: state.id, title: state.title,
             location: BrowserFolderLocation(rawValue: state.location.name) ?? .saved, symbol: state.symbol ?? "folder",
             color: state.color.map(BrowserSpaceBrandColor.init(core:)) ?? .folderDefault,
-            parentID: state.parentID.map(FolderID.init(rawValue:)), isCollapsed: state.isCollapsed,
+            parentID: state.parentID, isCollapsed: state.isCollapsed,
             collapseModifiedAt: state.collapseModifiedAt,
-            orderAnchorTabID: state.orderAnchorTabID.map(TabID.init(rawValue:)))
+            orderAnchorTabID: state.orderAnchorTabID)
     }
 }
 
 extension BrowserSplitGroupMetadata {
     init(core state: SplitGroupState) {
         self.init(
-            id: SplitGroupID(rawValue: state.id), customTitle: state.customTitle,
+            id: state.id, customTitle: state.customTitle,
             titleModifiedAt: state.titleModifiedAt,
             customIconSymbol: state.customIconSymbol, iconModifiedAt: state.iconModifiedAt,
             tint: state.tint.map(BrowserSpaceBrandColor.init(core:)), tintModifiedAt: state.tintModifiedAt)

@@ -144,7 +144,7 @@ final class BrowserGettingStartedTests: XCTestCase {
         // keeps the guide through a merge of what it synced.
         let device = try await BrowserStoredSessionHarness.staged(session)
         let records = try await device.heldRecords()
-        XCTAssertFalse(records.contains { $0.id == id.rawValue })
+        XCTAssertFalse(records.contains { $0.id == id })
         try device.deliverNow(MergeSyncRecords(records: records))
         XCTAssertEqual(
             device.store.session.space(id: browser.selectedSpaceID)?.tabs.first { $0.id == id }?.nativeContent,

@@ -7,18 +7,18 @@ import XCTest
 final class BrowserCommandPaletteModelActivationTests: XCTestCase {
     func testActivationCarriesExactAssignmentsAndRejectsAStaleSource() throws {
         let sourceTab = BrowserTab.startPage(
-            id: TabID(rawValue: uuid(0x11)),
+            id: uuid(0x11),
             lastActivatedAt: fixedDate
         )
         let targetTab = BrowserTab(
-            id: TabID(rawValue: uuid(0x12)),
+            id: uuid(0x12),
             title: "Target",
             url: URL(fileURLWithPath: "/palette-target"),
             placement: .current,
             lastActivatedAt: fixedDate
         )
         let space = BrowserSpace(
-            id: SpaceID(rawValue: uuid(0x21)),
+            id: uuid(0x21),
             profile: BrowsingProfile(id: uuid(0x31)),
             name: "Palette",
             symbol: "command",
@@ -143,11 +143,11 @@ final class BrowserCommandPaletteModelActivationTests: XCTestCase {
         searchSuggestionsEnabled: Bool
     ) -> (space: BrowserSpace, sourceTab: BrowserTab) {
         let sourceTab = BrowserTab.startPage(
-            id: TabID(rawValue: uuid(0x41)),
+            id: uuid(0x41),
             lastActivatedAt: fixedDate
         )
         let localTab = BrowserTab(
-            id: TabID(rawValue: uuid(0x42)),
+            id: uuid(0x42),
             title: "Local Crest tab",
             url: URL(string: "https://example.com/crest"),
             placement: .current,
@@ -156,7 +156,7 @@ final class BrowserCommandPaletteModelActivationTests: XCTestCase {
         var preferences = BrowserSpaceBrowsingPreferences.default
         preferences.searchSuggestionsEnabled = searchSuggestionsEnabled
         let space = BrowserSpace(
-            id: SpaceID(rawValue: uuid(0x51)),
+            id: uuid(0x51),
             profile: BrowsingProfile(id: uuid(0x61)),
             name: "Suggestions",
             symbol: "magnifyingglass",

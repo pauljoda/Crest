@@ -2,10 +2,10 @@ import Foundation
 
 @MainActor
 enum BrowserManualSetupPreviewFixture {
-    static let spaceID = SpaceID(rawValue: uuid(finalByte: 0x11))
+    static let spaceID = uuid(finalByte: 0x11)
     static let profileID = uuid(finalByte: 0x21)
     static let pinnedTab = BrowserTab(
-        id: TabID(rawValue: uuid(finalByte: 0x31)),
+        id: uuid(finalByte: 0x31),
         title: "Crest",
         url: url("https://crestbrowser.com"),
         symbol: "pin.fill",
@@ -13,21 +13,21 @@ enum BrowserManualSetupPreviewFixture {
         lastActivatedAt: date(offset: 400)
     )
     static let savedTab = BrowserTab(
-        id: TabID(rawValue: uuid(finalByte: 0x32)),
+        id: uuid(finalByte: 0x32),
         title: "Swift",
         url: url("https://swift.org"),
         placement: .saved,
         lastActivatedAt: date(offset: 300)
     )
     static let openTab = BrowserTab(
-        id: TabID(rawValue: uuid(finalByte: 0x33)),
+        id: uuid(finalByte: 0x33),
         title: "Apple Developer",
         url: url("https://developer.apple.com"),
         placement: .current,
         lastActivatedAt: date(offset: 200)
     )
     static let manualTab = BrowserTab(
-        id: TabID(rawValue: uuid(finalByte: 0x34)),
+        id: uuid(finalByte: 0x34),
         title: "Example",
         url: url("https://example.com"),
         placement: .saved,

@@ -10,7 +10,7 @@ extension BrowserStore {
     func closing(_ request: BrowserTabBatchRequest) -> BrowserTabBatch {
         BrowserTabBatch(
             CloseTabs(
-                workspaceID: family.workspaceID, windowID: windowID.rawValue, spaceID: request.space,
+                workspaceID: family.workspaceID, windowID: windowID, spaceID: request.space,
                 selection: request.core),
             reselection: .cleared, closesPages: true)
     }
@@ -19,7 +19,7 @@ extension BrowserStore {
     func deleting(_ request: BrowserTabBatchRequest) -> BrowserTabBatch {
         BrowserTabBatch(
             DeleteTabs(
-                workspaceID: family.workspaceID, windowID: windowID.rawValue, spaceID: request.space,
+                workspaceID: family.workspaceID, windowID: windowID, spaceID: request.space,
                 selection: request.core),
             reselection: .cleared, closesPages: true)
     }
@@ -28,7 +28,7 @@ extension BrowserStore {
     func duplicating(_ request: BrowserTabBatchRequest) -> BrowserTabBatch {
         BrowserTabBatch(
             DuplicateTabs(
-                workspaceID: family.workspaceID, windowID: windowID.rawValue, spaceID: request.space,
+                workspaceID: family.workspaceID, windowID: windowID, spaceID: request.space,
                 selection: request.core),
             reselection: .copies)
     }
@@ -40,9 +40,9 @@ extension BrowserStore {
     {
         BrowserTabBatch(
             SplitTabs(
-                workspaceID: family.workspaceID, windowID: windowID.rawValue, spaceID: request.space,
+                workspaceID: family.workspaceID, windowID: windowID, spaceID: request.space,
                 selection: request.core,
-                targetTabID: target?.rawValue, index: index),
+                targetTabID: target, index: index),
             reselection: .items)
     }
 
@@ -50,7 +50,7 @@ extension BrowserStore {
     func separatingSplits(_ request: BrowserTabBatchRequest) -> BrowserTabBatch {
         BrowserTabBatch(
             SeparateSplits(
-                workspaceID: family.workspaceID, windowID: windowID.rawValue, spaceID: request.space,
+                workspaceID: family.workspaceID, windowID: windowID, spaceID: request.space,
                 selection: request.core),
             reselection: .items)
     }
@@ -59,7 +59,7 @@ extension BrowserStore {
     func keepingLoaded(_ request: BrowserTabBatchRequest, _ keeps: Bool) -> BrowserTabBatch {
         BrowserTabBatch(
             KeepTabsLoaded(
-                workspaceID: family.workspaceID, windowID: windowID.rawValue, spaceID: request.space,
+                workspaceID: family.workspaceID, windowID: windowID, spaceID: request.space,
                 selection: request.core,
                 keeps: keeps),
             reselection: .items)
@@ -71,9 +71,9 @@ extension BrowserStore {
         let follows = linkPreferences.followsTabsMovedToAnotherSpace
         return BrowserTabBatch(
             MoveTabsToSpace(
-                workspaceID: family.workspaceID, windowID: windowID.rawValue, spaceID: request.space,
+                workspaceID: family.workspaceID, windowID: windowID, spaceID: request.space,
                 selection: request.core,
-                destinationSpaceID: destination.spaceID.rawValue, follows: follows),
+                destinationSpaceID: destination.spaceID, follows: follows),
             reselection: .cleared, following: follows ? destination : nil)
     }
 
@@ -85,10 +85,10 @@ extension BrowserStore {
     ) -> BrowserTabBatch {
         BrowserTabBatch(
             FileTabs(
-                workspaceID: family.workspaceID, windowID: windowID.rawValue, spaceID: request.space,
+                workspaceID: family.workspaceID, windowID: windowID, spaceID: request.space,
                 selection: request.core,
-                placement: placement, folderID: folder?.rawValue, beforeTabID: before?.rawValue,
-                beforeFolderID: beforeFolder?.rawValue, leavesSplits: false),
+                placement: placement, folderID: folder, beforeTabID: before,
+                beforeFolderID: beforeFolder, leavesSplits: false),
             reselection: .items)
     }
 
@@ -96,7 +96,7 @@ extension BrowserStore {
     func filingInNewFolder(_ request: BrowserTabBatchRequest, in placement: TabPlacement) -> BrowserTabBatch {
         BrowserTabBatch(
             FolderTabs(
-                workspaceID: family.workspaceID, windowID: windowID.rawValue, spaceID: request.space,
+                workspaceID: family.workspaceID, windowID: windowID, spaceID: request.space,
                 selection: request.core,
                 placement: placement),
             reselection: .items)
@@ -107,9 +107,9 @@ extension BrowserStore {
     func filingInNewFolder(_ request: BrowserTabBatchRequest, around tabID: TabID) -> BrowserTabBatch {
         BrowserTabBatch(
             FolderTabsAround(
-                workspaceID: family.workspaceID, windowID: windowID.rawValue, spaceID: request.space,
+                workspaceID: family.workspaceID, windowID: windowID, spaceID: request.space,
                 selection: request.core,
-                tabID: tabID.rawValue),
+                tabID: tabID),
             reselection: .items)
     }
 
@@ -139,13 +139,13 @@ extension BrowserStore {
         }
         switch batch.reselection {
         case .cleared: tabMultiSelection.clear()
-        case .copies: tabMultiSelection.selectAll(units: copies.map { [.tab(TabID(rawValue: $0.copyTabID))] })
+        case .copies: tabMultiSelection.selectAll(units: copies.map { [.tab($0.copyTabID)] })
         case .items:
             let copied = Dictionary(uniqueKeysWithValues: copies.map { ($0.sourceTabID, $0.copyTabID) })
             tabMultiSelection.selectAll(
                 units: request.rootItems.map { item in
-                    guard case .tab(let id) = item, let copy = copied[id.rawValue] else { return [item] }
-                    return [.tab(TabID(rawValue: copy))]
+                    guard case .tab(let id) = item, let copy = copied[id] else { return [item] }
+                    return [.tab(copy)]
                 })
         }
     }
@@ -153,5 +153,5 @@ extension BrowserStore {
 
 extension BrowserTabBatchRequest {
     /// The Space the selection was made in, as intents name it.
-    fileprivate var space: UUID { assignment.spaceID.rawValue }
+    fileprivate var space: UUID { assignment.spaceID }
 }

@@ -49,7 +49,7 @@ struct BrowserFolder: Codable, Equatable, Identifiable, Sendable {
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         self.init(
-            id: try container.decode(FolderID.self, forKey: .id),
+            id: try container.decodeIdentity(forKey: .id),
             title: try container.decode(String.self, forKey: .title),
             location: try container.decodeIfPresent(BrowserFolderLocation.self, forKey: .location) ?? .saved,
             symbol: try container.decodeIfPresent(String.self, forKey: .symbol) ?? "folder",
@@ -57,7 +57,7 @@ struct BrowserFolder: Codable, Equatable, Identifiable, Sendable {
                 BrowserSpaceBrandColor.self,
                 forKey: .color
             ) ?? .folderDefault,
-            parentID: try container.decodeIfPresent(FolderID.self, forKey: .parentID),
+            parentID: try container.decodeIdentityIfPresent(forKey: .parentID),
             isCollapsed: try container.decodeIfPresent(
                 Bool.self,
                 forKey: .isCollapsed
@@ -66,7 +66,20 @@ struct BrowserFolder: Codable, Equatable, Identifiable, Sendable {
                 Date.self,
                 forKey: .collapseModifiedAt
             ),
-            orderAnchorTabID: try container.decodeIfPresent(TabID.self, forKey: .orderAnchorTabID)
+            orderAnchorTabID: try container.decodeIdentityIfPresent(forKey: .orderAnchorTabID)
         )
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encodeStoredIdentity(id, forKey: .id)
+        try container.encode(location, forKey: .location)
+        try container.encode(title, forKey: .title)
+        try container.encode(symbol, forKey: .symbol)
+        try container.encode(color, forKey: .color)
+        try container.encodeStoredIdentityIfPresent(parentID, forKey: .parentID)
+        try container.encode(isCollapsed, forKey: .isCollapsed)
+        try container.encodeIfPresent(collapseModifiedAt, forKey: .collapseModifiedAt)
+        try container.encodeStoredIdentityIfPresent(orderAnchorTabID, forKey: .orderAnchorTabID)
     }
 }

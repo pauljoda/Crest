@@ -378,7 +378,7 @@ final class BrowserCurrentTabFolderTests: XCTestCase {
         let device = try BrowserStoredSessionHarness(
             session: browser.session, journalData: StoredSyncJournal.fresh(deviceID: UUID(), syncsCurrentTabs: false))
         let records = try await device.heldRecords()
-        XCTAssertEqual(records.filter { $0.kind == .folder }.map(\.id), [saved.rawValue])
+        XCTAssertEqual(records.filter { $0.kind == .folder }.map(\.id), [saved])
         try device.deliverNow(MergeSyncRecords(records: records))
         let refreshed = device.store.session
         XCTAssertTrue(refreshed.spaces[0].folders.contains { $0.id == current && $0.location == .current })

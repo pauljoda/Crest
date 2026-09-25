@@ -22,21 +22,21 @@ enum BrowserMobileAccessibilityID {
     static func spacePreview(_ id: SpaceID) -> String {
         BrowserAccessibilityID.identifier(
             prefix: "mobile-manual-space-preview",
-            id: id.rawValue
+            id: id
         )
     }
 
     static func removeSpace(_ id: SpaceID) -> String {
         BrowserAccessibilityID.identifier(
             prefix: "mobile-space-remove",
-            id: id.rawValue
+            id: id
         )
     }
 
     static func customizeSpace(_ id: SpaceID) -> String {
         BrowserAccessibilityID.identifier(
             prefix: "mobile-space-customize",
-            id: id.rawValue
+            id: id
         )
     }
 }

@@ -309,7 +309,7 @@ final class CrestChromiumRoot: NSObject, BrowserMacWindowPresenting {
         privateWindow = window
         application.pagePoolRegistry.register(application.privatePages, browser: application.privateBrowser,
             for: application.privatePages.windowID)
-        window.identifier = NSUserInterfaceItemIdentifier(application.privatePages.windowID.rawValue.uuidString)
+        window.identifier = NSUserInterfaceItemIdentifier(application.privatePages.windowID.uuidString)
         window.title = "Private Browsing"
         window.titleVisibility = .hidden
         window.titlebarAppearsTransparent = true
@@ -413,11 +413,11 @@ final class CrestChromiumRoot: NSObject, BrowserMacWindowPresenting {
 
     private static func storedRestorableWindowIDs(in defaults: UserDefaults?) -> [BrowserWindowID] {
         guard let stored = defaults?.array(forKey: restorableWindowsKey) as? [String] else { return [] }
-        return stored.compactMap(UUID.init(uuidString:)).map(BrowserWindowID.init(rawValue:))
+        return stored.compactMap(UUID.init(uuidString:))
     }
 
     private func persistRestorableWindowIDs() {
-        restorationDefaults?.set(restorableWindowIDs.map { $0.rawValue.uuidString }, forKey: Self.restorableWindowsKey)
+        restorationDefaults?.set(restorableWindowIDs.map { $0.uuidString }, forKey: Self.restorableWindowsKey)
     }
 
     /// Reopens the normal windows the previous session left open. Private and
@@ -425,7 +425,7 @@ final class CrestChromiumRoot: NSObject, BrowserMacWindowPresenting {
     private func restoreWindows() {
         let restored = restorableWindowIDs
         restorableWindowIDs = []
-        for id in restored { openWindow(id == .main ? .initial : BrowserMacWindowRequest(id: id, kind: .normal)) }
+        for id in restored { openWindow(.reopening(id)) }
         if windows.isEmpty { openWindow(.initial) }
         let front = restored.first { windows[$0] != nil } ?? windows.keys.first
         if let front, let window = windows[front] { window.makeKeyAndOrderFront(nil) }
@@ -595,7 +595,7 @@ final class CrestChromiumRoot: NSObject, BrowserMacWindowPresenting {
             contentRect: NSRect(x: 0, y: 0, width: 1200, height: 820),
             styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
             backing: .buffered, defer: false)
-        window.identifier = NSUserInterfaceItemIdentifier(request.id.rawValue.uuidString)
+        window.identifier = NSUserInterfaceItemIdentifier(request.id.uuidString)
         window.title = "Crest"
         window.titleVisibility = .hidden
         window.titlebarAppearsTransparent = true
@@ -612,7 +612,7 @@ final class CrestChromiumRoot: NSObject, BrowserMacWindowPresenting {
         if request.kind == .normal {
             // Frames belong to AppKit's autosave records, as they do for the
             // SwiftUI scene. Tear-off windows keep their drop placement.
-            let autosaveName = "crest.chromium.window.\(request.id.rawValue.uuidString)"
+            let autosaveName = "crest.chromium.window.\(request.id.uuidString)"
             if !window.setFrameUsingName(autosaveName) { window.center() }
             window.setFrameAutosaveName(autosaveName)
             restorableWindowIDs.removeAll { $0 == request.id }
@@ -681,7 +681,7 @@ final class CrestChromiumRoot: NSObject, BrowserMacWindowPresenting {
             let profiles = application.privateBrowser.session.spaces.map { $0.profile.id.uuidString }
             application.pagePoolRegistry.unregister(application.privatePages, for: application.privatePages.windowID)
             commands.closePrivateBrowsing()
-            host.disposePages([], windows: [application.privatePages.windowID.rawValue.uuidString], releaseProfiles: profiles)
+            host.disposePages([], windows: [application.privatePages.windowID.uuidString], releaseProfiles: profiles)
             privateWindow = nil
             privateSourceProfile = nil
             NotificationCenter.default.removeObserver(self, name: NSWindow.willCloseNotification, object: window)
@@ -731,10 +731,10 @@ final class CrestChromiumRoot: NSObject, BrowserMacWindowPresenting {
             guard let space = host(in: privateBrowser),
                 let identifier = instance.privateWindow?.identifier?.rawValue
             else { return nil }
-            return ["windowId": identifier, "spaceId": space.id.rawValue.uuidString]
+            return ["windowId": identifier, "spaceId": space.id.uuidString]
         }
         guard let space = host(in: instance.application.browser) else { return nil }
-        return ["windowId": BrowserWindowID().rawValue.uuidString, "spaceId": space.id.rawValue.uuidString]
+        return ["windowId": BrowserWindowID().uuidString, "spaceId": space.id.uuidString]
     }
 
     /// Opens the window reserved for an engine-created Browser, just before its
@@ -742,12 +742,12 @@ final class CrestChromiumRoot: NSObject, BrowserMacWindowPresenting {
     @objc(presentEngineWindow:space:focused:)
     static func presentEngineWindow(_ windowID: String, space spaceID: String, focused: Bool) {
         guard let instance, !instance.quitting, let identifier = UUID(uuidString: windowID),
-            let space = UUID(uuidString: spaceID).map(SpaceID.init(rawValue:)) else { return }
+            let space = UUID(uuidString: spaceID) else { return }
         if let window = instance.privateWindow, window.identifier?.rawValue == windowID {
             if focused { window.makeKeyAndOrderFront(nil) }
             return
         }
-        let id = BrowserWindowID(rawValue: identifier)
+        let id = identifier
         if instance.windows[id] == nil { instance.openWindow(BrowserMacWindowRequest(id: id, kind: .normal)) }
         guard let window = instance.windows[id] else { return }
         instance.commands.selectSpace(space, in: id)

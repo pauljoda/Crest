@@ -2,9 +2,9 @@ import SwiftUI
 
 @MainActor
 enum BrowserSidebarTabRowPreviewFixture {
-    static let spaceID = SpaceID(rawValue: uuid(0x71))
+    static let spaceID = uuid(0x71)
     static let profileID = uuid(0x72)
-    static let tabID = TabID(rawValue: uuid(0x73))
+    static let tabID = uuid(0x73)
     static let fixedDate = Date(timeIntervalSince1970: 1_700_000_000)
 
     static func configuration(

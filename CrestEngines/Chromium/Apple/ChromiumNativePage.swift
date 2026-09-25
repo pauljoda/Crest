@@ -170,7 +170,7 @@
         }
         func transferOwnership(to windowID: BrowserWindowID) -> Bool {
             guard created, !disposed, let host else { return false }
-            return host.preparePage(id, forWindow: windowID.rawValue.uuidString)
+            return host.preparePage(id, forWindow: windowID.uuidString)
         }
 
         func capture(rect: CGRect?, width: CGFloat?, completion: @escaping @MainActor (NSImage?) -> Void) {

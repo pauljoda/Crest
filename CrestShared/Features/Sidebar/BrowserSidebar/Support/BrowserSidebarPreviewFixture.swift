@@ -7,8 +7,8 @@ import Foundation
 /// without touching a page store, the filesystem, or the network — which is what
 /// lets a preview of the sidebar render the same way twice.
 enum BrowserSidebarPreviewFixture {
-    static let folderID = FolderID(rawValue: uuid(0x31))
-    static let spaceID = SpaceID(rawValue: uuid(0x21))
+    static let folderID = uuid(0x31)
+    static let spaceID = uuid(0x21)
     static let space = BrowserSpace(
         id: spaceID,
         profile: BrowsingProfile(id: uuid(0x11)),
@@ -50,7 +50,7 @@ enum BrowserSidebarPreviewFixture {
                 placement: .current
             ),
             BrowserTab.startPage(
-                id: TabID(rawValue: uuid(0x44)),
+                id: uuid(0x44),
                 lastActivatedAt: Date(timeIntervalSince1970: 0)
             ),
         ]
@@ -148,7 +148,7 @@ enum BrowserSidebarPreviewFixture {
         folderID: FolderID? = nil
     ) -> BrowserTab {
         BrowserTab(
-            id: TabID(rawValue: uuid(idByte)),
+            id: uuid(idByte),
             title: title,
             url: URL(fileURLWithPath: path),
             symbol: symbol,

@@ -10,8 +10,8 @@ extension BrowserStore {
     ) -> Bool {
         family.send(
             MoveTab(
-                workspaceID: family.workspaceID, spaceID: spaceID.rawValue, tabID: id.rawValue, placement: placement,
-                folderID: folderID?.rawValue, beforeTabID: anchor?.rawValue, leavesSplit: detachesFromSplit),
+                workspaceID: family.workspaceID, spaceID: spaceID, tabID: id, placement: placement,
+                folderID: folderID, beforeTabID: anchor, leavesSplit: detachesFromSplit),
             from: self)
     }
 
@@ -20,8 +20,8 @@ extension BrowserStore {
     func prepareAcceptedCopies(_ copies: [TabCopied], from space: BrowserSpace) {
         let tabs = session.space(id: space.id)?.tabs ?? []
         for pair in copies {
-            guard let source = space.tabs.first(where: { $0.id.rawValue == pair.sourceTabID }),
-                var copy = tabs.first(where: { $0.id.rawValue == pair.copyTabID })
+            guard let source = space.tabs.first(where: { $0.id == pair.sourceTabID }),
+                var copy = tabs.first(where: { $0.id == pair.copyTabID })
             else { continue }
             tabCopying?.prepareTabCopy(from: source, to: &copy, in: space)
         }

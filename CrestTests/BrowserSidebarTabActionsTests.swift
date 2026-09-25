@@ -255,20 +255,20 @@ final class BrowserSidebarTabActionsTests: XCTestCase {
 
     private func makeContext(isProtected: Bool = false, placement: TabPlacement = .saved) -> Context {
         let tab = BrowserTab(
-            id: TabID(rawValue: Self.uuid(1)),
+            id: Self.uuid(1),
             title: "Exact tab",
             url: URL(string: "https://sidebar.crest.test"),
             placement: placement
         )
         let currentTab = BrowserTab(
-            id: TabID(rawValue: Self.uuid(5)),
+            id: Self.uuid(5),
             title: "Current tab",
             url: URL(string: "https://sidebar.crest.test/current"),
             placement: .current,
             lastActivatedAt: Date(timeIntervalSince1970: 1_700_000_000)
         )
         let space = BrowserSpace(
-            id: SpaceID(rawValue: Self.uuid(2)),
+            id: Self.uuid(2),
             profile: BrowsingProfile(id: Self.uuid(3)),
             name: "Exact Space",
             symbol: "sidebar.left",
@@ -278,7 +278,7 @@ final class BrowserSidebarTabActionsTests: XCTestCase {
             accessPolicy: isProtected ? .deviceOwnerAuthentication : .open
         )
         let otherSpace = BrowserSpace(
-            id: SpaceID(rawValue: Self.uuid(6)),
+            id: Self.uuid(6),
             profile: BrowsingProfile(id: Self.uuid(7)),
             name: "Other Space",
             symbol: "square.grid.2x2",

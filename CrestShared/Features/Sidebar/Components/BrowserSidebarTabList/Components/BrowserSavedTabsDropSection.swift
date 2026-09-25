@@ -179,10 +179,10 @@ struct BrowserSavedTabsDropSection: View {
     }
 
     private var collectionMotionIDs: [String] {
-        folderNodes.map { "folder-\($0.id.rawValue.uuidString)" }
+        folderNodes.map { "folder-\($0.id.uuidString)" }
             + space.tabs
             .filter { $0.placement == .saved && $0.folderID != nil }
-            .map { "tab-\($0.id.rawValue.uuidString)" }
+            .map { "tab-\($0.id.uuidString)" }
             + unfiledItems.map(\.collectionMotionID)
     }
 

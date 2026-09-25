@@ -97,10 +97,10 @@ final class BrowserCoreSessionAuthority {
         let opened = Self.opened(by: changes)
         var images: [UUID: Data] = [:]
         for space in opened.session.spaces {
-            for tab in space.tabs { images[tab.id] = favicons.favicon(tabID: TabID(rawValue: tab.id)) }
+            for tab in space.tabs { images[tab.id] = favicons.favicon(tabID: tab.id) }
         }
         for case .tabCopied(let copied) in changes where copied.workspaceID == opened.workspaceID {
-            images[copied.copyTabID] = favicons.favicon(tabID: TabID(rawValue: copied.sourceTabID))
+            images[copied.copyTabID] = favicons.favicon(tabID: copied.sourceTabID)
         }
         core.state.adoptImages(images, in: opened.workspaceID)
         return BrowserCoreSessionAuthority(opened: opened, core: core)
@@ -113,7 +113,7 @@ final class BrowserCoreSessionAuthority {
     func borrow(_ assignment: BrowserSpaceRuntimeAssignment) throws(Rejection) -> BrowserCoreSessionAuthority {
         guard let device else { preconditionFailure("A workspace lends its Space only while its core exists.") }
         let changes = try device.send(
-            BorrowSpace(workspaceID: workspaceID, spaceID: assignment.spaceID.rawValue, profileID: assignment.profileID)
+            BorrowSpace(workspaceID: workspaceID, spaceID: assignment.spaceID, profileID: assignment.profileID)
         )
         return BrowserCoreSessionAuthority(opened: Self.opened(by: changes), core: device)
     }

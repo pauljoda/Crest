@@ -113,7 +113,7 @@ struct BrowserSpace: Codable, Equatable, Identifiable, Sendable {
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        id = try container.decode(SpaceID.self, forKey: .id)
+        id = try container.decodeIdentity(forKey: .id)
         profile = try container.decode(BrowsingProfile.self, forKey: .profile)
         name = try container.decode(String.self, forKey: .name)
         symbol = try container.decode(String.self, forKey: .symbol)
@@ -170,5 +170,25 @@ struct BrowserSpace: Codable, Equatable, Identifiable, Sendable {
             Date.self,
             forKey: .savedTabsExpansionModifiedAt
         )
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encodeStoredIdentity(id, forKey: .id)
+        try container.encode(profile, forKey: .profile)
+        try container.encode(name, forKey: .name)
+        try container.encode(symbol, forKey: .symbol)
+        try container.encode(accent, forKey: .accent)
+        try container.encode(branding, forKey: .branding)
+        try container.encode(folders, forKey: .folders)
+        try container.encode(tabs, forKey: .tabs)
+        try container.encode(splitGroups, forKey: .splitGroups)
+        try container.encode(archivedTabs, forKey: .archivedTabs)
+        try container.encode(history, forKey: .history)
+        try container.encode(browsingPreferences, forKey: .browsingPreferences)
+        try container.encode(credentialPreferences, forKey: .credentialPreferences)
+        try container.encode(accessPolicy, forKey: .accessPolicy)
+        try container.encode(isSavedTabsExpanded, forKey: .isSavedTabsExpanded)
+        try container.encodeIfPresent(savedTabsExpansionModifiedAt, forKey: .savedTabsExpansionModifiedAt)
     }
 }

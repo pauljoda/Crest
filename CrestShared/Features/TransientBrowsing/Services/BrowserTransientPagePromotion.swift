@@ -37,7 +37,7 @@ struct BrowserTransientPagePromotion {
         else { return nil }
         let adoptedLivePage =
             supportsLiveAdoption && promoted.adoptsPage
-            && adoptPage(TabID(rawValue: promoted.tabID), currentDestination)
+            && adoptPage(promoted.tabID, currentDestination)
         return adoptedLivePage ? .adoptedLivePage : .openedNewPage
     }
 }

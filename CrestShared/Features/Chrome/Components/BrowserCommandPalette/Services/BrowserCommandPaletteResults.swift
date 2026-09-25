@@ -335,7 +335,7 @@ extension BrowserCommandPaletteResults {
                 (
                     BrowserCommandPaletteResult(
                         section: .saved,
-                        id: "saved-\(tab.id.id.uuidString)",
+                        id: "saved-\(tab.id.uuidString)",
                         title: tab.displayTitle,
                         subtitle: savedSubtitle(for: tab, in: tree),
                         symbol: tab.placement == .pinned ? "pin.fill" : "bookmark",
@@ -367,7 +367,7 @@ extension BrowserCommandPaletteResults {
                 (
                     BrowserCommandPaletteResult(
                         section: .saved,
-                        id: "folder-\(folder.id.id.uuidString)",
+                        id: "folder-\(folder.id.uuidString)",
                         title: folder.title,
                         subtitle: folderSubtitle(
                             count: contents.count,
@@ -454,7 +454,7 @@ extension BrowserCommandPaletteResults {
     ) -> BrowserCommandPaletteResult {
         BrowserCommandPaletteResult(
             section: section,
-            id: "tab-\(tab.id.id.uuidString)",
+            id: "tab-\(tab.id.uuidString)",
             title: tab.displayTitle,
             subtitle: tab.url?.host() ?? tab.url?.absoluteString ?? "",
             symbol: "globe",

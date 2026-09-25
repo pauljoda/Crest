@@ -20,7 +20,7 @@ struct BrowserPageContextMenuAction {
                 guard identifier.hasPrefix("space:"),
                     let id = UUID(uuidString: String(identifier.dropFirst("space:".count)))
                 else { return nil }
-                self = .space(SpaceID(rawValue: id))
+                self = .space(id)
             }
         }
 
@@ -29,7 +29,7 @@ struct BrowserPageContextMenuAction {
             case .search: "search"
             case .peek: "peek"
             case .split: "split"
-            case .space(let id): "space:\(id.rawValue.uuidString)"
+            case .space(let id): "space:\(id.uuidString)"
             }
         }
     }

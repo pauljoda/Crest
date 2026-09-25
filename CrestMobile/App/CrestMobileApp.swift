@@ -5,16 +5,16 @@ struct CrestMobileApp: App {
     @State private var launch = BrowserApplicationLaunch { try BrowserMobileApplication() }
 
     var body: some Scene {
-        WindowGroup(for: BrowserWindowID.self) { $windowID in
+        WindowGroup(for: MobileWindowRequest.self) { $request in
             if let application = launch.value, application.presentsInstalledApplicationUI {
-                application.windowContent(id: windowID)
+                application.windowContent(id: request.id)
             } else if launch.failure != nil {
                 BrowserSessionRecoveryView(launch: launch)
             } else {
                 EmptyView()
             }
         } defaultValue: {
-            BrowserWindowID()
+            MobileWindowRequest()
         }
         .commands {
             if let application = launch.value {

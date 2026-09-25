@@ -14,12 +14,10 @@ struct MobileBrowserPreviewFixture {
 
     init() {
         let space = BrowserSpace(
-            id: SpaceID(
-                rawValue: UUID(
-                    uuid: (
-                        0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x40, 0x00,
-                        0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01
-                    )
+            id: UUID(
+                uuid: (
+                    0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x40, 0x00,
+                    0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01
                 )
             ),
             profile: BrowsingProfile(
@@ -38,12 +36,10 @@ struct MobileBrowserPreviewFixture {
             tabs: []
         )
         let alternateSpace = BrowserSpace(
-            id: SpaceID(
-                rawValue: UUID(
-                    uuid: (
-                        0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x40, 0x00,
-                        0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02
-                    )
+            id: UUID(
+                uuid: (
+                    0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x40, 0x00,
+                    0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02
                 )
             ),
             profile: BrowsingProfile(
@@ -85,12 +81,10 @@ struct MobileBrowserPreviewFixture {
         self.browser = browser
         self.pages = pages
         windowState = BrowserWindowStateStore(
-            id: BrowserWindowID(
-                rawValue: UUID(
-                    uuid: (
-                        0x30, 0x00, 0x00, 0x00, 0x00, 0x00, 0x40, 0x00,
-                        0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01
-                    )
+            id: UUID(
+                uuid: (
+                    0x30, 0x00, 0x00, 0x00, 0x00, 0x00, 0x40, 0x00,
+                    0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01
                 )
             ),
             browser: browser,

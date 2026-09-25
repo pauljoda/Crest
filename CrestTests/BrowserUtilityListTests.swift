@@ -8,7 +8,7 @@ final class BrowserUtilityListTests: XCTestCase {
         let id = UUID()
         let profileID = UUID()
         let assignment = BrowserSpaceRuntimeAssignment(
-            spaceID: SpaceID(rawValue: UUID()),
+            spaceID: SpaceID(),
             profileID: profileID
         )
         let createdAt = Date.now
@@ -55,12 +55,11 @@ final class BrowserUtilityListTests: XCTestCase {
     }
 
     func testUtilityPreparationIdentityIncludesTheExactSpaceProfileAssignment() {
-        let spaceID = SpaceID(
-            rawValue: UUID(
-                uuid: (
-                    0x43, 0x52, 0x45, 0x53, 0x54, 0x55, 0x54, 0x49,
-                    0x4C, 0x49, 0x54, 0x59, 0x53, 0x50, 0x41, 0x43
-                )))
+        let spaceID = UUID(
+            uuid: (
+                0x43, 0x52, 0x45, 0x53, 0x54, 0x55, 0x54, 0x49,
+                0x4C, 0x49, 0x54, 0x59, 0x53, 0x50, 0x41, 0x43
+            ))
         let first = BrowserUtilityListRequest(
             surface: .history,
             assignment: BrowserSpaceRuntimeAssignment(
@@ -368,7 +367,7 @@ final class BrowserUtilityListTests: XCTestCase {
         let request = BrowserUtilityListRequest(
             surface: .history,
             assignment: BrowserSpaceRuntimeAssignment(
-                spaceID: SpaceID(rawValue: UUID()),
+                spaceID: SpaceID(),
                 profileID: UUID()
             ),
             archivedTabs: [],
@@ -460,7 +459,7 @@ final class BrowserUtilityListTests: XCTestCase {
         let now = Date(timeIntervalSinceReferenceDate: 900)
         let older = ArchivedTab(
             tab: BrowserTab(
-                id: TabID(rawValue: identifier(0x73)),
+                id: identifier(0x73),
                 title: "Older",
                 url: URL(string: "https://example.com/older"),
                 symbol: "globe",
@@ -472,7 +471,7 @@ final class BrowserUtilityListTests: XCTestCase {
         )
         let newer = ArchivedTab(
             tab: BrowserTab(
-                id: TabID(rawValue: identifier(0x74)),
+                id: identifier(0x74),
                 title: "Newer",
                 url: URL(string: "https://example.com/newer"),
                 symbol: "globe",
@@ -524,7 +523,7 @@ final class BrowserUtilityListTests: XCTestCase {
         section: (DownloadState) -> BrowserUtilityListSection
     ) {
         let assignment = BrowserSpaceRuntimeAssignment(
-            spaceID: SpaceID(rawValue: identifier(0x61)),
+            spaceID: identifier(0x61),
             profileID: identifier(0x62)
         )
         let now = Date(timeIntervalSinceReferenceDate: 807_969_600)

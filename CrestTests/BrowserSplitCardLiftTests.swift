@@ -680,13 +680,13 @@ private enum BrowserSplitCardTestFixture {
         member(id: trailingTabID, title: "Split View Spec"),
     ]
 
-    private static let groupID = SplitGroupID(rawValue: uuid(0x01))
+    private static let groupID = uuid(0x01)
 
     private static func member(id: TabID, title: String) -> BrowserTab {
         BrowserTab(
             id: id,
             title: title,
-            url: URL(fileURLWithPath: "/split-card-tests/\(id.rawValue.uuidString)"),
+            url: URL(fileURLWithPath: "/split-card-tests/\(id.uuidString)"),
             symbol: "globe",
             placement: .current,
             splitGroupID: groupID,
@@ -695,7 +695,7 @@ private enum BrowserSplitCardTestFixture {
     }
 
     private static func tabID(_ finalByte: UInt8) -> TabID {
-        TabID(rawValue: uuid(finalByte))
+        uuid(finalByte)
     }
 
     private static func uuid(_ finalByte: UInt8) -> UUID {

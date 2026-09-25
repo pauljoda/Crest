@@ -7,15 +7,15 @@
         /// captured before it may still do.
         func removeSpaceForTesting(_ spaceID: SpaceID) {
             let operation = UUID()
-            let window = windowID.rawValue
+            let window = windowID
             do {
                 try family.commit(
                     BeginDeletingSpace(
-                        workspaceID: family.workspaceID, windowID: window, spaceID: spaceID.rawValue,
+                        workspaceID: family.workspaceID, windowID: window, spaceID: spaceID,
                         operationID: operation), from: self)
                 try family.commit(
                     FinishDeletingSpace(
-                        workspaceID: family.workspaceID, windowID: window, spaceID: spaceID.rawValue,
+                        workspaceID: family.workspaceID, windowID: window, spaceID: spaceID,
                         operationID: operation), from: self)
             } catch {
                 preconditionFailure("The core refused to remove a Space for a test: \(error)")
@@ -32,7 +32,7 @@
             guard let space = session.space(id: spaceID) else {
                 preconditionFailure("A test replaced the profile of a Space the session does not hold.")
             }
-            let order = session.spaces.map(\.id.rawValue)
+            let order = session.spaces.map(\.id)
             let shownSpace = selectedSpaceID
             let shownTab = selectedTabID(in: spaceID)
             let replacement = BrowserSpace(
@@ -47,14 +47,14 @@
             if session.spaces.count == 1 {
                 _ = family.send(
                     CreateSpace(
-                        workspaceID: family.workspaceID, windowID: windowID.rawValue, spaceID: placeholder.rawValue),
+                        workspaceID: family.workspaceID, windowID: windowID, spaceID: placeholder),
                     from: self)
             }
             removeSpaceForTesting(spaceID)
             do {
                 try family.importSpaces(
                     ImportSpaces(
-                        workspaceID: family.workspaceID, windowID: windowID.rawValue,
+                        workspaceID: family.workspaceID, windowID: windowID,
                         spaces: try BrowserSpace.storedFormat([replacement])),
                     from: [replacement], issuedBy: self)
             } catch {

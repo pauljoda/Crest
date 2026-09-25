@@ -123,7 +123,7 @@ final class BrowserFaviconRenderSafetyTests: XCTestCase {
     }
 
     private func tabID(tail: UInt8) -> TabID {
-        TabID(rawValue: fixedUUID(tail: tail))
+        fixedUUID(tail: tail)
     }
 
     private func fixedUUID(tail: UInt8) -> UUID {

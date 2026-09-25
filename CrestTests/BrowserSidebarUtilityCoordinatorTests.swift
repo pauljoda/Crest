@@ -253,14 +253,14 @@ final class BrowserSidebarUtilityCoordinatorTests: XCTestCase {
 
     private func makeContext(isProtected: Bool = false) -> Context {
         let selectedTab = BrowserTab(
-            id: TabID(rawValue: Self.uuid(1)),
+            id: Self.uuid(1),
             title: "Selected",
             url: URL(string: "about:blank"),
             placement: .current,
             lastActivatedAt: Date(timeIntervalSince1970: 1_700_000_000)
         )
         let archivedTab = BrowserTab(
-            id: TabID(rawValue: Self.uuid(2)),
+            id: Self.uuid(2),
             title: "Archived",
             url: URL(string: "about:blank#archived"),
             placement: .current,
@@ -278,7 +278,7 @@ final class BrowserSidebarUtilityCoordinatorTests: XCTestCase {
             lastVisitedAt: Date(timeIntervalSince1970: 1_700_000_003)
         )
         let source = BrowserSpace(
-            id: SpaceID(rawValue: Self.uuid(3)),
+            id: Self.uuid(3),
             profile: BrowsingProfile(id: Self.uuid(4)),
             name: "Source",
             symbol: "sidebar.left",
@@ -290,7 +290,7 @@ final class BrowserSidebarUtilityCoordinatorTests: XCTestCase {
             accessPolicy: isProtected ? .deviceOwnerAuthentication : .open
         )
         let destination = BrowserSpace(
-            id: SpaceID(rawValue: Self.uuid(5)),
+            id: Self.uuid(5),
             profile: BrowsingProfile(id: Self.uuid(6)),
             name: "Destination",
             symbol: "square.grid.2x2",

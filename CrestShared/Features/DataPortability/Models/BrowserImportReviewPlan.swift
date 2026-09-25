@@ -30,17 +30,17 @@ struct BrowserImportReviewPlan: Codable, Equatable, Sendable {
             .spaces ?? []
         let suggested = Dictionary(suggestions.map { ($0.sourceSpaceID, $0) }, uniquingKeysWith: { first, _ in first })
         spaces = imported.spaces.map { sourceSpace in
-            let suggestion = suggested[sourceSpace.id.rawValue]
-            let matchingSpace = suggestion?.destinationID.flatMap { existing.space(id: SpaceID(rawValue: $0)) }
+            let suggestion = suggested[sourceSpace.id]
+            let matchingSpace = suggestion?.destinationID.flatMap { existing.space(id: $0) }
             return BrowserImportSpaceReview(
                 sourceSpace: sourceSpace,
                 destination: matchingSpace.map { .existing($0.id) } ?? .newSpace,
                 customization: BrowserImportSpaceCustomization(
                     space: matchingSpace ?? sourceSpace
                 ),
-                includedTabIDs: suggestion.map { Set($0.includedTabIDs.map(TabID.init(rawValue:))) }
+                includedTabIDs: suggestion.map { Set($0.includedTabIDs) }
                     ?? Set(sourceSpace.tabs.map(\.id)),
-                duplicateTabIDs: Set(suggestion?.duplicateTabIDs.map(TabID.init(rawValue:)) ?? []),
+                duplicateTabIDs: Set(suggestion?.duplicateTabIDs ?? []),
                 placementOverrides: [:],
                 spaceInclusionOverride: nil,
                 passwordInclusionOverride: nil
@@ -184,11 +184,11 @@ struct BrowserImportReviewPlan: Codable, Equatable, Sendable {
         guard let answer = try? browser.core.query(query) else { return BrowserImportReviewAnalysis() }
         var analysis = BrowserImportReviewAnalysis()
         for space in answer.spaces {
-            analysis.duplicateTabIDs.formUnion(space.duplicateTabIDs.map(TabID.init(rawValue:)))
-            analysis.matchedTabIDsBySourceSpace[SpaceID(rawValue: space.sourceSpaceID)] =
-                Set(space.matchedTabIDs.map(TabID.init(rawValue:)))
+            analysis.duplicateTabIDs.formUnion(space.duplicateTabIDs)
+            analysis.matchedTabIDsBySourceSpace[space.sourceSpaceID] =
+                Set(space.matchedTabIDs)
         }
-        analysis.overflowTabIDs = Set(answer.overflowTabIDs.map(TabID.init(rawValue:)))
+        analysis.overflowTabIDs = Set(answer.overflowTabIDs)
         return analysis
     }
 
@@ -203,7 +203,7 @@ struct BrowserImportReviewPlan: Codable, Equatable, Sendable {
     @MainActor
     func intent(in browser: BrowserStore) throws -> ImportReviewedSpaces {
         ImportReviewedSpaces(
-            workspaceID: browser.family.workspaceID, windowID: browser.windowID.rawValue,
+            workspaceID: browser.family.workspaceID, windowID: browser.windowID,
             spaces: try BrowserSpace.storedFormat(sources), reviews: reviews)
     }
 
@@ -213,13 +213,13 @@ struct BrowserImportReviewPlan: Codable, Equatable, Sendable {
             let destinationID: UUID? =
                 switch review.destination {
                 case .newSpace: nil
-                case .existing(let id): id.rawValue
+                case .existing(let id): id
                 }
             return SpaceReview(
-                sourceSpaceID: review.id.rawValue, included: review.isIncluded, destinationID: destinationID,
-                customization: review.customization.core, includedTabIDs: review.includedTabIDs.map(\.rawValue),
+                sourceSpaceID: review.id, included: review.isIncluded, destinationID: destinationID,
+                customization: review.customization.core, includedTabIDs: Array(review.includedTabIDs),
                 placements: review.placementOverrides.map {
-                    TabPlacementChoice(tabID: $0.key.rawValue, placement: $0.value)
+                    TabPlacementChoice(tabID: $0.key, placement: $0.value)
                 })
         }
     }

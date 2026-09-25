@@ -11,7 +11,7 @@ struct MobileBrowserCommands: Commands {
                 "New Window",
                 systemImage: ShortcutCommand.newWindow.symbol
             ) {
-                openWindow(value: BrowserWindowID())
+                openWindow(value: MobileWindowRequest())
             }
             .keyboardShortcut(shortcut(.newWindow))
 

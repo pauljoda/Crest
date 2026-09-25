@@ -56,7 +56,7 @@ struct MobileBrowserSpacePage: View {
                 capabilities: capabilities,
                 actions: BrowserSpaceHeaderActions(
                     openNewTab: openNewTab,
-                    openNewWindow: { openWindow(value: BrowserWindowID()) },
+                    openNewWindow: { openWindow(value: MobileWindowRequest()) },
                     createFolder: beginCreatingFolder,
                     showHistory: showHistory,
                     showPasswords: showPasswords,

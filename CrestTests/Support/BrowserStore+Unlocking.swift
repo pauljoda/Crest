@@ -9,8 +9,8 @@ extension BrowserStore {
     func unlockForTesting(_ space: BrowserSpace) {
         let request = UUID()
         _ = try? core.send(
-            BeginUnlockingSpace(workspaceID: family.workspaceID, spaceID: space.id.rawValue, requestID: request))
-        _ = try? core.send(FinishUnlockingSpace(spaceID: space.id.rawValue, requestID: request, authenticated: true))
+            BeginUnlockingSpace(workspaceID: family.workspaceID, spaceID: space.id, requestID: request))
+        _ = try? core.send(FinishUnlockingSpace(spaceID: space.id, requestID: request, authenticated: true))
     }
 
     /// Whether this window's session is the one whose journal syncs: only the

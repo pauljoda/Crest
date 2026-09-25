@@ -191,7 +191,7 @@ final class BrowserPlatformDownloadPreferences {
 
     private func key(_ suffix: String, for spaceID: SpaceID) -> String {
         Self.keyPrefix
-            + spaceID.rawValue.uuidString.lowercased()
+            + spaceID.uuidString.lowercased()
             + "."
             + suffix
     }

@@ -263,7 +263,7 @@ struct BrowserMediaSessionID: Hashable, Identifiable, Sendable {
     let documentIdentifier: String
 
     var id: String {
-        "\(tabID.rawValue.uuidString.lowercased()):\(documentIdentifier)"
+        "\(tabID.uuidString.lowercased()):\(documentIdentifier)"
     }
 }
 

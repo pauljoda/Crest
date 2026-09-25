@@ -50,8 +50,8 @@ final class CorePage {
         do {
             try core.send(
                 MovePage(
-                    pageID: id, workspaceID: workspaceID, spaceID: spaceID.rawValue, tabID: tabID?.rawValue,
-                    windowID: windowID.rawValue))
+                    pageID: id, workspaceID: workspaceID, spaceID: spaceID, tabID: tabID,
+                    windowID: windowID))
             return true
         } catch {
             Self.logger.debug(

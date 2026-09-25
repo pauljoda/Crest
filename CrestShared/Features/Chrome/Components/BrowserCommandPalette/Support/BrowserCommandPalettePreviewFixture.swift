@@ -2,10 +2,10 @@ import Foundation
 
 @MainActor
 enum BrowserCommandPalettePreviewFixture {
-    static let selectedTabID = TabID(rawValue: uuid(finalByte: 0x11))
+    static let selectedTabID = uuid(finalByte: 0x11)
 
     static let currentSpace = BrowserSpace(
-        id: SpaceID(rawValue: uuid(finalByte: 0x21)),
+        id: uuid(finalByte: 0x21),
         profile: BrowsingProfile(id: uuid(finalByte: 0x31)),
         name: "Work",
         symbol: "briefcase.fill",
@@ -21,7 +21,7 @@ enum BrowserCommandPalettePreviewFixture {
                 lastActivatedAt: date(offset: 400)
             ),
             BrowserTab(
-                id: TabID(rawValue: uuid(finalByte: 0x12)),
+                id: uuid(finalByte: 0x12),
                 title: "Swift Evolution",
                 url: url("https://www.swift.org/swift-evolution"),
                 faviconData: faviconData,
@@ -29,7 +29,7 @@ enum BrowserCommandPalettePreviewFixture {
                 lastActivatedAt: date(offset: 300)
             ),
             BrowserTab(
-                id: TabID(rawValue: uuid(finalByte: 0x13)),
+                id: uuid(finalByte: 0x13),
                 title: "GitHub",
                 url: url("https://github.com"),
                 faviconData: faviconData,
@@ -81,7 +81,7 @@ enum BrowserCommandPalettePreviewFixture {
         trailing: "Switch to Tab",
         target: .tab(
             BrowserTabRuntimeAssignment(
-                tabID: TabID(rawValue: uuid(finalByte: 0x12)),
+                tabID: uuid(finalByte: 0x12),
                 spaceID: currentSpace.id,
                 profileID: currentSpace.profile.id
             )

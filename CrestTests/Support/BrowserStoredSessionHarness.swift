@@ -107,7 +107,7 @@ final class BrowserStoredSessionHarness {
             var session = try JSONDecoder().decode(BrowserSession.self, from: core)
             for index in session.spaces.indices {
                 let history = try XCTUnwrap(
-                    try Self.read("history." + session.spaces[index].id.rawValue.uuidString, in: connection))
+                    try Self.read("history." + session.spaces[index].id.uuidString, in: connection))
                 session.spaces[index].history = try JSONDecoder().decode([BrowserHistoryEntry].self, from: history)
                 for tab in session.spaces[index].tabs.indices {
                     session.spaces[index].tabs[tab].faviconData = favicons.favicon(
@@ -221,7 +221,7 @@ final class BrowserStoredSessionHarness {
             guard prepared == SQLITE_OK, let statement else { throw HarnessError.sqlite(prepared) }
             defer { sqlite3_finalize(statement) }
             sqlite3_bind_text(
-                statement, 1, window.rawValue.uuidString, -1, unsafeBitCast(-1, to: sqlite3_destructor_type.self))
+                statement, 1, window.uuidString, -1, unsafeBitCast(-1, to: sqlite3_destructor_type.self))
             let result = sqlite3_step(statement)
             if result == SQLITE_DONE { return nil }
             guard result == SQLITE_ROW, let shown = sqlite3_column_text(statement, 0) else {

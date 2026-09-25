@@ -5,7 +5,7 @@ import XCTest
 
 final class BrowserSidebarTabListItemPolicyTests: XCTestCase {
     func testAContiguousRunFoldsIntoOneGroupRow() {
-        let group = SplitGroupID(rawValue: Self.uuid(0x01))
+        let group = Self.uuid(0x01)
         let first = makeTab(0x11, "First", group: group)
         let second = makeTab(0x12, "Second", group: group)
         let third = makeTab(0x13, "Third", group: group)
@@ -25,7 +25,7 @@ final class BrowserSidebarTabListItemPolicyTests: XCTestCase {
     /// Storage keeps a lone member's ID so a staggered sync can reconstitute the
     /// group; the sidebar must still draw it as an ordinary tab.
     func testASingletonMemberStaysAPlainTab() {
-        let group = SplitGroupID(rawValue: Self.uuid(0x02))
+        let group = Self.uuid(0x02)
         let lone = makeTab(0x21, "Lone", group: group)
         let plain = makeTab(0x22, "Plain")
 
@@ -36,7 +36,7 @@ final class BrowserSidebarTabListItemPolicyTests: XCTestCase {
     }
 
     func testRowOrderAndMembershipFollowTheSessionArray() {
-        let group = SplitGroupID(rawValue: Self.uuid(0x03))
+        let group = Self.uuid(0x03)
         let leading = makeTab(0x31, "Leading")
         let head = makeTab(0x32, "Head", group: group)
         let tail = makeTab(0x33, "Tail", group: group)
@@ -65,7 +65,7 @@ final class BrowserSidebarTabListItemPolicyTests: XCTestCase {
     /// list carrying one is malformed. It must never produce two rows claiming
     /// the same identity — `ForEach` would then have duplicate IDs.
     func testARepeatedGroupIDNeverProducesASecondGroupRow() {
-        let group = SplitGroupID(rawValue: Self.uuid(0x06))
+        let group = Self.uuid(0x06)
         let head = makeTab(0x51, "Head", group: group)
         let tail = makeTab(0x52, "Tail", group: group)
         let interloper = makeTab(0x53, "Interloper")
@@ -97,7 +97,7 @@ final class BrowserSidebarTabListItemPolicyTests: XCTestCase {
     /// `followingTabIDs` exactly this way; an anchor landing inside the run is
     /// what would drop a foreign tab between two members and split the group.
     func testAGroupRowsTrailingDropAnchorSkipsPastEveryMember() {
-        let group = SplitGroupID(rawValue: Self.uuid(0x0C))
+        let group = Self.uuid(0x0C)
         let leading = makeTab(0xB1, "Leading")
         let head = makeTab(0xB2, "Head", group: group)
         let middle = makeTab(0xB3, "Middle", group: group)
@@ -130,7 +130,7 @@ final class BrowserSidebarTabListItemPolicyTests: XCTestCase {
     /// indicator is the only one drawn there — the same ownership rule an
     /// ordinary last row follows.
     func testAGroupClosingASectionHasNoFollowingRow() {
-        let group = SplitGroupID(rawValue: Self.uuid(0x0D))
+        let group = Self.uuid(0x0D)
         let head = makeTab(0xC1, "Head", group: group)
         let tail = makeTab(0xC2, "Tail", group: group)
         let tabs = [head, tail]
@@ -152,7 +152,7 @@ final class BrowserSidebarTabListItemPolicyTests: XCTestCase {
     }
 
     func testCollapsedFolderKeepsTheWholeSelectedSplitGroupVisible() throws {
-        let group = SplitGroupID(rawValue: Self.uuid(0x0E))
+        let group = Self.uuid(0x0E)
         let head = makeTab(0xD1, "Head", group: group, placement: .saved)
         let selected = makeTab(
             0xD2,
@@ -183,7 +183,7 @@ final class BrowserSidebarTabListItemPolicyTests: XCTestCase {
         placement: TabPlacement = .current
     ) -> BrowserTab {
         BrowserTab(
-            id: TabID(rawValue: Self.uuid(finalByte)),
+            id: Self.uuid(finalByte),
             title: title,
             url: URL(fileURLWithPath: "/crest-sidebar-item-policy/\(title)"),
             placement: placement,

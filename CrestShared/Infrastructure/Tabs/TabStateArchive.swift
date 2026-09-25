@@ -74,7 +74,7 @@ final class BrowserTabStateArchive: BrowserTabStateArchiving, @unchecked Sendabl
 
     func stateFileURL(profileID: UUID, tabID: TabID) -> URL {
         directory(profileID: profileID)
-            .appendingPathComponent(tabID.rawValue.uuidString)
+            .appendingPathComponent(tabID.uuidString)
             .appendingPathExtension(Self.fileExtension)
     }
 
@@ -127,7 +127,7 @@ final class BrowserTabStateArchive: BrowserTabStateArchiving, @unchecked Sendabl
         writeQueue.async { [self] in
             for (profileID, tabIDs) in tabIDsByProfileID {
                 let directory = directory(profileID: profileID)
-                let retainedNames = Set(tabIDs.map(\.rawValue.uuidString))
+                let retainedNames = Set(tabIDs.map(\.uuidString))
                 for url in stateFiles(in: directory)
                 where !retainedNames.contains(url.deletingPathExtension().lastPathComponent) {
                     try? fileManager.removeItem(at: url)

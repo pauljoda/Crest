@@ -12,8 +12,8 @@ extension BrowserStore {
     ) -> Engines.OpenedPage? {
         core.engines.open(
             OpenPage(
-                pageID: UUID(), workspaceID: window.workspaceID, spaceID: spaceID.rawValue, tabID: tabID?.rawValue,
-                windowID: windowID.rawValue),
+                pageID: UUID(), workspaceID: window.workspaceID, spaceID: spaceID, tabID: tabID,
+                windowID: windowID),
             webKit: webKit)
     }
 
@@ -29,8 +29,8 @@ extension BrowserStore {
     /// page, or its page here is heading to another.
     func returnsToSavedAddress(_ tabID: TabID, in spaceID: SpaceID) -> Bool {
         let question = CanReturnToSavedAddress(
-            workspaceID: window.workspaceID, windowID: windowID.rawValue, spaceID: spaceID.rawValue,
-            tabID: tabID.rawValue)
+            workspaceID: window.workspaceID, windowID: windowID, spaceID: spaceID,
+            tabID: tabID)
         return (try? core.query(question))?.changesPage ?? false
     }
 }

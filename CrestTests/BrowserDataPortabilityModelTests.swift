@@ -102,7 +102,7 @@ final class BrowserDataPortabilityModelTests: XCTestCase {
         operations: TestOperations = TestOperations()
     ) -> Context {
         let space = BrowserSpace(
-            id: SpaceID(rawValue: Self.uuid(1)),
+            id: Self.uuid(1),
             profile: BrowsingProfile(id: Self.uuid(2)),
             name: "Existing",
             symbol: "briefcase.fill",
@@ -134,7 +134,7 @@ final class BrowserDataPortabilityModelTests: XCTestCase {
 
     private func makeImport() -> BrowserPortableImport {
         let importedSpace = BrowserSpace(
-            id: SpaceID(rawValue: Self.uuid(11)),
+            id: Self.uuid(11),
             profile: BrowsingProfile(id: Self.uuid(12)),
             name: "Imported",
             symbol: "shippingbox.fill",

@@ -64,7 +64,7 @@ final class BrowserFaviconFileStore: BrowserFaviconStoring, @unchecked Sendable 
 
     func faviconFileURL(tabID: TabID) -> URL {
         rootDirectory
-            .appendingPathComponent(tabID.rawValue.uuidString)
+            .appendingPathComponent(tabID.uuidString)
             .appendingPathExtension(Self.fileExtension)
     }
 
@@ -99,7 +99,7 @@ final class BrowserFaviconFileStore: BrowserFaviconStoring, @unchecked Sendable 
 
     func pruneFavicons(keeping tabIDs: Set<TabID>) {
         writeQueue.async { [self] in
-            let retainedNames = Set(tabIDs.map(\.rawValue.uuidString))
+            let retainedNames = Set(tabIDs.map(\.uuidString))
             for url in faviconFiles()
             where !retainedNames.contains(url.deletingPathExtension().lastPathComponent) {
                 try? fileManager.removeItem(at: url)

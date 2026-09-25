@@ -112,7 +112,9 @@ final class BrowserMacWindowCoordinator {
     /// starts as the initial window shows. Its model exists before the scene
     /// renders it, so no two scenes ever present one window.
     func defaultWindowRequest() -> BrowserMacWindowRequest {
-        let request: BrowserMacWindowRequest = windows[.main] == nil ? .initial : .normal(sourceWindowID: .main)
+        let request: BrowserMacWindowRequest =
+            windows[BrowserMacWindowRequest.initial.id] == nil
+            ? .initial : .normal(sourceWindowID: BrowserMacWindowRequest.initial.id)
         _ = model(for: request)
         return request
     }
@@ -256,8 +258,8 @@ final class BrowserMacWindowCoordinator {
     private func canTearOff(_ item: BrowserTabDragItem, from model: BrowserMacWindowModel) -> Bool {
         guard model.browser.space(matching: item.spaceAssignment) != nil else { return false }
         let question = CanTearOff(
-            windowID: model.browser.windowID.rawValue, spaceID: item.spaceID.rawValue, profileID: item.profileID,
-            tabID: item.tabID.rawValue, draggedTabs: item.selection?.ids.map(\.rawValue))
+            windowID: model.browser.windowID, spaceID: item.spaceID, profileID: item.profileID,
+            tabID: item.tabID, draggedTabs: item.selection?.ids)
         return (try? model.browser.core.query(question))?.allowed == true
     }
 

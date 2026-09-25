@@ -14,7 +14,7 @@ struct BrowserCoreLinkRouteRecord: Codable, Sendable {
     var route: BrowserLinkRoute {
         BrowserLinkRoute(
             id: id, isEnabled: isEnabled, match: match, pattern: pattern,
-            destinationSpaceID: SpaceID(rawValue: destinationSpaceID))
+            destinationSpaceID: destinationSpaceID)
     }
 
     // MARK: - Initializers
@@ -24,7 +24,7 @@ struct BrowserCoreLinkRouteRecord: Codable, Sendable {
         isEnabled = route.isEnabled
         match = route.match
         pattern = route.pattern
-        destinationSpaceID = route.destinationSpaceID.rawValue
+        destinationSpaceID = route.destinationSpaceID
     }
 }
 
@@ -71,7 +71,7 @@ extension BrowserCorePolicy {
             case .match(let value): try container.encode(value, forKey: .match)
             case .pattern(let value): try container.encode(value, forKey: .pattern)
             case .destinationSpaceID(let value):
-                try container.encode(value.rawValue.coreIdentifier, forKey: .destinationSpaceID)
+                try container.encode(value.coreIdentifier, forKey: .destinationSpaceID)
             }
         }
     }
@@ -137,7 +137,7 @@ extension BrowserCorePolicy {
 
             init(_ url: URL, _ assignment: BrowserSpaceRuntimeAssignment) {
                 self.url = url.absoluteString
-                spaceID = assignment.spaceID.rawValue.coreIdentifier
+                spaceID = assignment.spaceID.coreIdentifier
                 profileID = assignment.profileID.coreIdentifier
             }
         }
@@ -159,7 +159,7 @@ extension BrowserCorePolicy {
     static func createdLinkRoute(existing: [BrowserLinkRoute], destinationSpaceID: SpaceID) -> BrowserLinkRoute? {
         let request = RouteCreateRequest(
             existing: existing.map { $0.id.coreIdentifier }, id: UUID().coreIdentifier,
-            destinationSpaceID: destinationSpaceID.rawValue.coreIdentifier)
+            destinationSpaceID: destinationSpaceID.coreIdentifier)
         return evaluate(.linksRouteCreate, request, answer: RouteRecordAnswer.self)?.route?.route
     }
 
@@ -192,14 +192,14 @@ extension BrowserCorePolicy {
         -> BrowserLinkPreferences?
     {
         let request = SpaceRemovedRequest(
-            spaceID: spaceID.rawValue.coreIdentifier,
+            spaceID: spaceID.coreIdentifier,
             routes: preferences.routes.map {
                 SpaceRemovedRequest.Route(
-                    id: $0.id.coreIdentifier, destinationSpaceID: $0.destinationSpaceID.rawValue.coreIdentifier)
+                    id: $0.id.coreIdentifier, destinationSpaceID: $0.destinationSpaceID.coreIdentifier)
             },
-            chosenSpaceID: preferences.externalLinkSpaceID?.rawValue.coreIdentifier,
+            chosenSpaceID: preferences.externalLinkSpaceID?.coreIdentifier,
             rememberedSpaceIDs: Set(preferences.rememberedQuickWindowSpacesBySite.values).map {
-                $0.rawValue.coreIdentifier
+                $0.coreIdentifier
             })
         guard let answer = evaluate(.linksSpaceRemoved, request, answer: SpaceRemovedAnswer.self),
             let routes = linkRoutes(preferences.routes, retaining: answer.retainedRouteIDs)

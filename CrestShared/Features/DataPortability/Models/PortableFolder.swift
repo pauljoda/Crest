@@ -11,14 +11,14 @@ struct PortableFolder: Codable, Equatable, Sendable {
     let orderAnchorTabID: UUID?
 
     init(_ folder: BrowserFolder) {
-        id = folder.id.rawValue
+        id = folder.id
         location = folder.location
         title = folder.title
         symbol = folder.symbol
         color = folder.color
-        parentID = folder.parentID?.rawValue
+        parentID = folder.parentID
         isCollapsed = folder.isCollapsed
-        orderAnchorTabID = folder.orderAnchorTabID?.rawValue
+        orderAnchorTabID = folder.orderAnchorTabID
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -63,7 +63,7 @@ struct PortableFolder: Codable, Equatable, Sendable {
             color: color,
             parentID: parentID,
             isCollapsed: isCollapsed,
-            orderAnchorTabID: orderAnchorTabID.map { TabID(rawValue: $0) }
+            orderAnchorTabID: orderAnchorTabID
         )
     }
 }

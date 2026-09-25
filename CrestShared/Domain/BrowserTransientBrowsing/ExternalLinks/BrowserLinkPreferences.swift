@@ -72,10 +72,7 @@ struct BrowserLinkPreferences: Codable, Equatable, Sendable {
                 ExternalLinkDestination.self,
                 forKey: .externalLinkDestination
             ) ?? .quickWindow
-        externalLinkSpaceID = try container.decodeIfPresent(
-            SpaceID.self,
-            forKey: .externalLinkSpaceID
-        )
+        externalLinkSpaceID = try container.decodeIdentityIfPresent(forKey: .externalLinkSpaceID)
         focusesNewTabsOpenedFromLinks =
             try container.decodeIfPresent(
                 Bool.self,
@@ -110,9 +107,24 @@ struct BrowserLinkPreferences: Codable, Equatable, Sendable {
                 forKey: .routes
             ) ?? []
         rememberedQuickWindowSpacesBySite =
-            try container.decodeIfPresent(
-                [String: SpaceID].self,
-                forKey: .rememberedQuickWindowSpacesBySite
-            ) ?? [:]
+            try container.decodeIdentitiesByNameIfPresent(forKey: .rememberedQuickWindowSpacesBySite) ?? [:]
+    }
+
+    /// The defaults keep these preferences, so their Spaces keep the stored
+    /// identity spelling a build before S6.2 reads.
+    func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(externalLinkDestination, forKey: .externalLinkDestination)
+        try container.encodeStoredIdentityIfPresent(externalLinkSpaceID, forKey: .externalLinkSpaceID)
+        try container.encode(focusesNewTabsOpenedFromLinks, forKey: .focusesNewTabsOpenedFromLinks)
+        try container.encode(followsTabsMovedToAnotherSpace, forKey: .followsTabsMovedToAnotherSpace)
+        try container.encode(automaticallyOpensPeek, forKey: .automaticallyOpensPeek)
+        try container.encode(peekClickModifier, forKey: .peekClickModifier)
+        try container.encode(dragsLinksToPeek, forKey: .dragsLinksToPeek)
+        try container.encode(quickWindowArchivePolicy, forKey: .quickWindowArchivePolicy)
+        try container.encode(remembersQuickWindowSpaceBySite, forKey: .remembersQuickWindowSpaceBySite)
+        try container.encode(routes, forKey: .routes)
+        try container.encodeStoredIdentitiesByName(
+            rememberedQuickWindowSpacesBySite, forKey: .rememberedQuickWindowSpacesBySite)
     }
 }

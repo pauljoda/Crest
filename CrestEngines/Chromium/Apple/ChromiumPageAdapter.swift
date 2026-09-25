@@ -271,9 +271,8 @@
                 token: token,
                 profileID: profileID,
                 sourcePageID: values["sourcePageId"] as? String,
-                windowID: (values["windowId"] as? String).flatMap(UUID.init(uuidString:)).map(
-                    BrowserWindowID.init(rawValue:)),
-                spaceID: (values["spaceId"] as? String).flatMap(UUID.init(uuidString:)).map(SpaceID.init(rawValue:)),
+                windowID: (values["windowId"] as? String).flatMap(UUID.init(uuidString:)),
+                spaceID: (values["spaceId"] as? String).flatMap(UUID.init(uuidString:)),
                 url: (values["url"] as? String).flatMap(URL.init(string:)),
                 foreground: values["foreground"] as? Bool ?? true
             )

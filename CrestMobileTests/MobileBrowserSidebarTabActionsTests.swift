@@ -64,14 +64,14 @@ final class MobileBrowserSidebarTabActionsTests: XCTestCase {
 
     private func makeContext() -> Context {
         let tab = BrowserTab(
-            id: TabID(rawValue: Self.uuid(1)),
+            id: Self.uuid(1),
             title: "Current tab",
             url: URL(string: "https://sidebar.crest.test"),
             placement: .current,
             lastActivatedAt: Date(timeIntervalSince1970: 1_700_000_000)
         )
         let space = BrowserSpace(
-            id: SpaceID(rawValue: Self.uuid(2)),
+            id: Self.uuid(2),
             profile: BrowsingProfile(id: Self.uuid(3)),
             name: "Exact Space",
             symbol: "sidebar.left",

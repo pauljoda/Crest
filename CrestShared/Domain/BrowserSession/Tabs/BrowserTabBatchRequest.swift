@@ -46,9 +46,9 @@ struct BrowserTabBatchRequest: Codable, Equatable, Sendable {
     /// and the tabs the window saw the selection hold.
     var core: TabSelection {
         TabSelection(
-            tabIDs: rootItems.compactMap(\.tabID).map(\.rawValue),
-            folderIDs: rootItems.compactMap(\.folderID).map(\.rawValue),
-            memberTabIDs: ids.map(\.rawValue))
+            tabIDs: rootItems.compactMap(\.tabID),
+            folderIDs: rootItems.compactMap(\.folderID),
+            memberTabIDs: ids)
     }
 
     // MARK: - Initializers

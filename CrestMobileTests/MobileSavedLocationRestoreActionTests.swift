@@ -56,14 +56,14 @@ final class MobileSavedLocationRestoreActionTests: XCTestCase {
         let savedURL = URL(string: "about:blank#saved")!
         let awayURL = URL(string: "about:blank#away")!
         let tab = BrowserTab(
-            id: TabID(rawValue: Self.uuid(3)),
+            id: Self.uuid(3),
             title: "Saved",
             url: awayURL,
             savedURL: savedURL,
             placement: .saved
         )
         let source = BrowserSpace(
-            id: SpaceID(rawValue: Self.uuid(1)),
+            id: Self.uuid(1),
             profile: BrowsingProfile(id: Self.uuid(2)),
             name: "Source",
             symbol: "1.circle",
@@ -72,13 +72,13 @@ final class MobileSavedLocationRestoreActionTests: XCTestCase {
             tabs: [tab]
         )
         let destinationTab = BrowserTab(
-            id: TabID(rawValue: Self.uuid(6)),
+            id: Self.uuid(6),
             title: "Destination",
             url: URL(string: "about:blank#destination"),
             placement: .current
         )
         let destination = BrowserSpace(
-            id: SpaceID(rawValue: Self.uuid(4)),
+            id: Self.uuid(4),
             profile: BrowsingProfile(id: Self.uuid(5)),
             name: "Destination",
             symbol: "2.circle",

@@ -26,7 +26,7 @@ final class BrowserCoreSessionAuthorityTests: XCTestCase {
         XCTAssertEqual(saved, store.session)
         XCTAssertTrue(try harness.storedJournalIsPublished())
         for tab in tabs {
-            let record = try XCTUnwrap(committed?.record(.tab, tab.id.rawValue))
+            let record = try XCTUnwrap(committed?.record(.tab, tab.id))
             XCTAssertEqual(record.deletionReason, .explicitDelete)
         }
     }
@@ -161,7 +161,7 @@ final class BrowserCoreSessionAuthorityTests: XCTestCase {
         XCTAssertNil(restarted.session.spaceDeletions)
         XCTAssertEqual(try relaunched.stored().session, restarted.session)
         XCTAssertTrue(try relaunched.storedJournalIsPublished())
-        let targetRecords = try relaunched.storedJournal().records.filter { $0.spaceID == target.id.rawValue }
+        let targetRecords = try relaunched.storedJournal().records.filter { $0.spaceID == target.id }
         let tombstones = targetRecords.filter(\.isTombstone)
         XCTAssertFalse(tombstones.isEmpty)
         XCTAssertTrue(tombstones.allSatisfy { $0.deletionReason == .explicitDelete })
@@ -178,7 +178,7 @@ final class BrowserCoreSessionAuthorityTests: XCTestCase {
             XCTAssertEqual(space.profile.id, target.profile.id)
             let stored = try harness.stored()
             XCTAssertEqual(stored.session.spaceDeletions?.first?.spaceID, target.id)
-            let record = try XCTUnwrap(try XCTUnwrap(stored.journal).record(.space, target.id.rawValue))
+            let record = try XCTUnwrap(try XCTUnwrap(stored.journal).record(.space, target.id))
             XCTAssertEqual(record.deletionReason, .explicitDelete)
             XCTAssertTrue(other.deletingSpaceIDs.contains(target.id))
             XCTAssertNotEqual(other.selectedSpace?.id, target.id)
@@ -285,7 +285,7 @@ final class BrowserCoreSessionAuthorityTests: XCTestCase {
         await store.flushPendingSyncPersistence()
         try harness.acknowledgePendingUploads()
         XCTAssertEqual(try harness.stored().journal?.pending.isEmpty, true)
-        XCTAssertEqual(try harness.storedShownSpace(of: window.windowID), window.selectedSpaceID.rawValue)
+        XCTAssertEqual(try harness.storedShownSpace(of: window.windowID), window.selectedSpaceID)
 
         let space = store.session.spaces[0]
         store.updateSpaceIdentity(space.id, name: "Renamed before quit", symbol: "book", accent: .teal)
@@ -300,9 +300,9 @@ final class BrowserCoreSessionAuthorityTests: XCTestCase {
         XCTAssertEqual(stored.session.space(id: space.id)?.name, "Renamed before quit")
         XCTAssertEqual(stored.session.space(id: space.id)?.tabs.contains { $0.id == opened }, true)
         let journal = try XCTUnwrap(stored.journal)
-        XCTAssertTrue(journal.isPending(.space, space.id.rawValue))
-        XCTAssertTrue(journal.isPending(.tab, opened.rawValue))
-        XCTAssertEqual(try harness.storedShownSpace(of: window.windowID), shown.id.rawValue)
+        XCTAssertTrue(journal.isPending(.space, space.id))
+        XCTAssertTrue(journal.isPending(.tab, opened))
+        XCTAssertEqual(try harness.storedShownSpace(of: window.windowID), shown.id)
     }
 
     func testCoreRepairPreservesAssetOwnershipWhenIdentitiesCollide() throws {
@@ -405,8 +405,8 @@ final class BrowserCoreSessionAuthorityTests: XCTestCase {
         // A window record written before windows remembered their Spaces.
         let recorded = BrowserWindowID()
         let record: [String: Any] = [
-            "id": ["rawValue": recorded.rawValue.uuidString],
-            "selectedSpaceID": ["rawValue": space.id.rawValue.uuidString],
+            "id": ["rawValue": recorded.uuidString],
+            "selectedSpaceID": ["rawValue": space.id.uuidString],
             "selectedTabIDsBySpace": [Any](),
             "sidebarWidth": 289.0,
         ]

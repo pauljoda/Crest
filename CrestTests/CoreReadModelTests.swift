@@ -42,9 +42,9 @@ final class CoreReadModelTests: XCTestCase {
 
         // The images move with their tabs: the pulled image survives the
         // archive and the restore, and the copy wears its source's.
-        XCTAssertEqual(core.state.favicons.image(of: first.rawValue), icon)
-        XCTAssertEqual(core.state.favicons.image(of: opened.rawValue), pulled)
-        XCTAssertEqual(core.state.favicons.image(of: copy.rawValue), pulled)
+        XCTAssertEqual(core.state.favicons.image(of: first), icon)
+        XCTAssertEqual(core.state.favicons.image(of: opened), pulled)
+        XCTAssertEqual(core.state.favicons.image(of: copy), pulled)
         XCTAssertEqual(store.session.space(id: spaceID)?.tabs.first { $0.id == copy }?.faviconData, pulled)
 
         let workspaceID = store.window.workspaceID
@@ -60,11 +60,11 @@ final class CoreReadModelTests: XCTestCase {
         let replayed = try XCTUnwrap(replay.workspaces[workspaceID])
         XCTAssertEqual(Self.values(of: replay, workspaceID), Self.values(of: core.state, workspaceID))
         XCTAssertEqual(replayed.spaces.models.count, original.spaces.count + 1)
-        XCTAssertEqual(live.spaces.model(spaceID.rawValue)?.settings.name, "Renamed Space")
+        XCTAssertEqual(live.spaces.model(spaceID)?.settings.name, "Renamed Space")
         // The replay was offered no images, so it matches the copy without them.
         let session = BrowserCoreSessionAuthority.compact(store.session)
         XCTAssertEqual(replayed.spaces.values.map { BrowserSpace(core: $0) { _ in nil } }, session.spaces)
-        XCTAssertEqual(replayed.defaultSpaceID, session.defaultSpaceID?.rawValue)
+        XCTAssertEqual(replayed.defaultSpaceID, session.defaultSpaceID)
         XCTAssertEqual(replayed.isDisposableSeed, session.disposableSeedMarker != nil)
         XCTAssertEqual(replayed.appPreferences.map(BrowserAppPreferences.init(core:)), session.appPreferences)
     }
@@ -101,9 +101,9 @@ final class CoreReadModelTests: XCTestCase {
             _ = space.archive.entries
             _ = space.folders.models
         }
-        let otherWindow = tripwire { _ = core.state.windows[other.windowID.rawValue]?.value }
+        let otherWindow = tripwire { _ = core.state.windows[other.windowID]?.value }
         XCTAssertTrue(
-            store.setTabCustomTitle("Renamed", for: TabID(rawValue: renamed.id), in: SpaceID(rawValue: space.id)))
+            store.setTabCustomTitle("Renamed", for: renamed.id, in: space.id))
         XCTAssertEqual(renamed.customTitle, "Renamed")
         XCTAssertTrue(customTitle.isTripped)
         XCTAssertFalse(renamedURL.isTripped)
@@ -113,8 +113,8 @@ final class CoreReadModelTests: XCTestCase {
         XCTAssertFalse(records.isTripped)
 
         // Showing a tab in one window never notifies another window's readers.
-        let shown = tripwire { _ = core.state.windows[store.windowID.rawValue]?.value }
-        XCTAssertTrue(store.activateSessionTab(TabID(rawValue: sibling.id), in: SpaceID(rawValue: space.id)))
+        let shown = tripwire { _ = core.state.windows[store.windowID]?.value }
+        XCTAssertTrue(store.activateSessionTab(sibling.id, in: space.id))
         XCTAssertTrue(shown.isTripped)
         XCTAssertFalse(otherWindow.isTripped)
     }

@@ -812,7 +812,7 @@ final class BrowserTabDragSafetyTests: XCTestCase {
             for destination in SplitMemberDropDestination.allCases {
                 let member = Self.makeTab(
                     id: Self.tabID(56), title: "Moved Member", placement: .current,
-                    splitGroupID: SplitGroupID(rawValue: Self.uuid(50)))
+                    splitGroupID: Self.uuid(50))
                 let context = makeSplitContext(adding: member, at: memberIndex)
                 let folder = try XCTUnwrap(context.browser.addFolder(in: context.space.id))
                 let originalMembers = context.members
@@ -954,7 +954,7 @@ final class BrowserTabDragSafetyTests: XCTestCase {
         XCTAssertFalse(
             foreignAction.canMove(
                 BrowserSplitGroupDragItem(
-                    groupID: SplitGroupID(rawValue: Self.uuid(61)),
+                    groupID: Self.uuid(61),
                     spaceID: foreign.assignment.spaceID,
                     profileID: foreign.assignment.profileID,
                     memberTabIDs: foreign.item.memberTabIDs
@@ -1327,7 +1327,7 @@ final class BrowserTabDragSafetyTests: XCTestCase {
     private func makeSplitContext(
         accessPolicy: BrowserSpaceAccessPolicy = .open, adding member: BrowserTab? = nil, at index: Int = 0
     ) -> SplitContext {
-        let groupID = SplitGroupID(rawValue: Self.uuid(50))
+        let groupID = Self.uuid(50)
         let head = Self.makeTab(
             id: Self.tabID(51),
             title: "Head",
@@ -1465,11 +1465,11 @@ final class BrowserTabDragSafetyTests: XCTestCase {
     }
 
     private static func tabID(_ finalByte: UInt8) -> TabID {
-        TabID(rawValue: uuid(finalByte))
+        uuid(finalByte)
     }
 
     private static func spaceID(_ finalByte: UInt8) -> SpaceID {
-        SpaceID(rawValue: uuid(finalByte))
+        uuid(finalByte)
     }
 
     private static func uuid(_ finalByte: UInt8) -> UUID {

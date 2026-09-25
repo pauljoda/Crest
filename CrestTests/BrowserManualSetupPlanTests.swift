@@ -102,6 +102,27 @@ final class BrowserManualSetupPlanTests: XCTestCase {
         XCTAssertEqual(created.currentTabs.map(\.url), [URL(string: "https://example.com")])
     }
 
+    /// A setup in progress waits in the defaults: its Spaces and the tabs it
+    /// adds keep the identity spelling an earlier build resumes, and a bare
+    /// identity reads too.
+    func testASavedDraftKeepsTheStoredIdentitySpellingAndReadsABareOne() throws {
+        var plan = BrowserManualSetupPlan(existing: makeSession())
+        let spaceID = try plan.addSpace()
+        let tabID = try plan.addTab(
+            input: "swift.org", placement: .saved, to: spaceID, at: Date(timeIntervalSince1970: 1_000))
+
+        let stored = try XCTUnwrap(StoredIdentityJSON.document(of: plan) as? [String: Any])
+        let draft = try XCTUnwrap((stored["spaces"] as? [[String: Any]])?.last)
+        XCTAssertEqual(draft["id"] as? [String: String], StoredIdentityJSON.wrapped(spaceID))
+        let tab = try XCTUnwrap((draft["addedTabs"] as? [[String: Any]])?.first)
+        XCTAssertEqual(tab["id"] as? [String: String], StoredIdentityJSON.wrapped(tabID))
+        for document in [stored, StoredIdentityJSON.bare(stored)] {
+            let resumed = try StoredIdentityJSON.decode(BrowserManualSetupPlan.self, from: document)
+            XCTAssertEqual(resumed.spaces.map(\.id), plan.spaces.map(\.id))
+            XCTAssertEqual(resumed.spaces.last?.addedTabs, plan.spaces.last?.addedTabs)
+        }
+    }
+
     func testRemovingANewSpaceDoesNotAllowRemovingAnExistingSpace() throws {
         let existing = makeSession()
         let existingID = try XCTUnwrap(existing.spaces.first?.id)

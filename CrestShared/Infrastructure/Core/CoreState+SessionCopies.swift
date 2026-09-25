@@ -46,7 +46,7 @@
                 var problems = touched.isWhole || touched.hasMembers ? memberProblems(workspace, copy) : []
                 var parts = touched.spaces
                 if touched.isWhole || touched.hasTabsEverywhere {
-                    let every = Set(workspace.spaces.models.map(\.id)).union(copy.spaces.map(\.id.rawValue))
+                    let every = Set(workspace.spaces.models.map(\.id)).union(copy.spaces.map(\.id))
                     for spaceID in every { parts[spaceID, default: []].formUnion(touched.isWhole ? .all : .tabs) }
                 }
                 for (spaceID, touchedParts) in parts {
@@ -107,9 +107,9 @@
         private func memberProblems(_ workspace: WorkspaceModel, _ copy: BrowserSession) -> [String] {
             var problems: [String] = []
             let order = workspace.spaces.models.map(\.id)
-            let copyOrder = copy.spaces.map(\.id.rawValue)
+            let copyOrder = copy.spaces.map(\.id)
             if order != copyOrder { problems.append("Spaces: read model \(order), copy \(copyOrder)") }
-            if workspace.defaultSpaceID != copy.defaultSpaceID?.rawValue {
+            if workspace.defaultSpaceID != copy.defaultSpaceID {
                 problems.append(
                     "default Space: read model \(String(describing: workspace.defaultSpaceID)), "
                         + "copy \(String(describing: copy.defaultSpaceID))")
@@ -139,7 +139,7 @@
             _ spaceID: UUID, parts: SpaceParts, in workspace: WorkspaceModel, copy: BrowserSession
         ) -> [String] {
             let space = workspace.spaces.model(spaceID)
-            let copySpace = copy.space(id: SpaceID(rawValue: spaceID))
+            let copySpace = copy.space(id: spaceID)
             guard let space, let copySpace else {
                 if space == nil && copySpace == nil { return [] }
                 return ["Space \(spaceID): only the \(space == nil ? "copy" : "read model") holds it"]
@@ -158,18 +158,18 @@
             }
             if parts.contains(.tabs) {
                 let tabs = space.tabs.models.map { BrowserTab(core: $0.value, faviconData: favicons.image(of: $0.id)) }
-                problems += Self.rowProblems("Space \(spaceID) tabs", tabs, copySpace.tabs) { $0.id.rawValue }
+                problems += Self.rowProblems("Space \(spaceID) tabs", tabs, copySpace.tabs) { $0.id }
             }
             if parts.contains(.folders) {
                 let folders = space.folders.models.map { BrowserFolder(core: $0.value) }
-                problems += Self.rowProblems("Space \(spaceID) folders", folders, copySpace.folders) { $0.id.rawValue }
+                problems += Self.rowProblems("Space \(spaceID) folders", folders, copySpace.folders) { $0.id }
             }
             if parts.contains(.splits) {
                 let splits = BrowserSplitGroupMetadata.normalized(
                     space.splitGroups.map(BrowserSplitGroupMetadata.init(core:)))
                 problems += Self.rowProblems(
                     "Space \(spaceID) splits", splits, BrowserSplitGroupMetadata.normalized(copySpace.splitGroups)
-                ) { $0.id.rawValue }
+                ) { $0.id }
             }
             if parts.contains(.history) {
                 let history = space.history.entries.compactMap(BrowserHistoryEntry.init(core:))
@@ -182,7 +182,7 @@
                         archivedAt: $0.archivedAt, reason: $0.reason)
                 }
                 problems += Self.rowProblems("Space \(spaceID) archive", archive, copySpace.archivedTabs) {
-                    $0.id.rawValue
+                    $0.id
                 }
             }
             return problems

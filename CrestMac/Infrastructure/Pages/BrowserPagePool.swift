@@ -952,7 +952,7 @@ final class BrowserPagePool:
         let workspace = browser.window.workspaceID
         let spaceIDs = Set(records.navigations.filter { $0.workspaceID == workspace }.map(\.spaceID))
         for spaceID in spaceIDs {
-            guard let space = browser.session.space(id: SpaceID(rawValue: spaceID)) else { continue }
+            guard let space = browser.session.space(id: spaceID) else { continue }
             Task { @MainActor [weak self] in await self?.styleVisitedLinks(in: space) }
         }
     }

@@ -11,14 +11,14 @@ enum BrowserManualSetupAccessibilityID {
     static func spaceName(_ id: SpaceID) -> String {
         BrowserAccessibilityID.identifier(
             prefix: "manual-setup-space-name",
-            id: id.rawValue
+            id: id
         )
     }
 
     static func placement(_ id: TabID) -> String {
         BrowserAccessibilityID.identifier(
             prefix: "manual-setup-placement",
-            id: id.rawValue
+            id: id
         )
     }
 

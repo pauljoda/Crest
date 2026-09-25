@@ -13,7 +13,7 @@ struct PortableTab: Codable, Equatable, Sendable {
     let lastActivatedAt: Date
 
     init(_ tab: BrowserTab) {
-        id = tab.id.rawValue
+        id = tab.id
         nativeContent = tab.nativeContent
         title = tab.title
         url =
@@ -26,8 +26,8 @@ struct PortableTab: Codable, Equatable, Sendable {
             )?.absoluteString
         symbol = tab.symbol
         placement = tab.placement
-        folderID = tab.folderID?.rawValue
-        splitGroupID = tab.splitGroupID?.rawValue
+        folderID = tab.folderID
+        splitGroupID = tab.splitGroupID
         lastActivatedAt = tab.lastActivatedAt
     }
 

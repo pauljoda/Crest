@@ -384,7 +384,7 @@ final class MobileBrowserPageStoreTests: XCTestCase {
         )
         XCTAssertNil(
             pages.prepareResidentPage(
-                for: TabID(rawValue: fixedUUID(0xDEAD)),
+                for: fixedUUID(0xDEAD),
                 in: session
             )
         )
@@ -632,10 +632,10 @@ final class MobileBrowserPageStoreTests: XCTestCase {
         memberCount: Int,
         selectedIndex: Int
     ) -> SplitFixture {
-        let groupID = SplitGroupID(rawValue: fixedUUID(0x5000))
+        let groupID = fixedUUID(0x5000)
         let members = (0..<memberCount).map { index in
             BrowserTab(
-                id: TabID(rawValue: fixedUUID(0x5100 + index)),
+                id: fixedUUID(0x5100 + index),
                 title: "Card \(index)",
                 url: URL(string: "https://cards.crest.test/\(index)"),
                 placement: .current,
@@ -644,14 +644,14 @@ final class MobileBrowserPageStoreTests: XCTestCase {
             )
         }
         let background = BrowserTab(
-            id: TabID(rawValue: fixedUUID(0x5200)),
+            id: fixedUUID(0x5200),
             title: "Background",
             url: URL(string: "https://background.crest.test"),
             placement: .current,
             lastActivatedAt: fixedDate(0)
         )
         let space = BrowserSpace(
-            id: SpaceID(rawValue: fixedUUID(0x5300)),
+            id: fixedUUID(0x5300),
             profile: BrowsingProfile(id: fixedUUID(0x5400)),
             name: "Split",
             symbol: "rectangle.split.2x1",
@@ -734,13 +734,13 @@ final class MobileBrowserPageStoreTests: XCTestCase {
         savesCredentials: Bool
     ) -> BrowserSpace {
         let tab = BrowserTab.startPage(
-            id: TabID(rawValue: fixedUUID(index * 10 + 1)),
+            id: fixedUUID(index * 10 + 1),
             placement: .current
         )
         var credentialPreferences = BrowserCredentialPreferences.default
         credentialPreferences.isEnabled = savesCredentials
         return BrowserSpace(
-            id: SpaceID(rawValue: fixedUUID(index * 10 + 2)),
+            id: fixedUUID(index * 10 + 2),
             profile: BrowsingProfile(id: fixedUUID(index * 10 + 3)),
             name: "Space \(index)",
             symbol: "circle",

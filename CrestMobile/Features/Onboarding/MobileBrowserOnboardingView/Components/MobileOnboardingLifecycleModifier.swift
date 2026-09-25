@@ -23,12 +23,19 @@ struct MobileOnboardingLifecycleModifier: ViewModifier {
                 requestChanged(request)
             }
             .interactiveDismissDisabled(request.entryPoint == .firstRun)
-            .sheet(item: $customizedSpaceID) { spaceID in
+            .sheet(item: customizedDraft) { draft in
                 MobileOnboardingSpaceCustomizationSheet(
-                    spaceID: spaceID,
+                    spaceID: draft.id,
                     plan: $plan,
                     browser: browser
                 )
             }
+    }
+
+    /// The draft of the Space being customized, which presents its sheet.
+    private var customizedDraft: Binding<BrowserManualSetupSpaceDraft?> {
+        Binding(
+            get: { customizedSpaceID.flatMap { id in plan.spaces.first { $0.id == id } } },
+            set: { customizedSpaceID = $0?.id })
     }
 }

@@ -285,12 +285,12 @@ final class MobileBrowserRootModelTests: XCTestCase {
     }
 
     func testSelectionChangeClassifiesRevisionTabSpaceAndProfileTransitions() {
-        let firstSpaceID = SpaceID(rawValue: fixedUUID(1))
-        let secondSpaceID = SpaceID(rawValue: fixedUUID(2))
+        let firstSpaceID = fixedUUID(1)
+        let secondSpaceID = fixedUUID(2)
         let firstProfileID = fixedUUID(3)
         let secondProfileID = fixedUUID(4)
-        let firstTabID = TabID(rawValue: fixedUUID(5))
-        let secondTabID = TabID(rawValue: fixedUUID(6))
+        let firstTabID = fixedUUID(5)
+        let secondTabID = fixedUUID(6)
         let original = selectionSnapshot(
             revision: 1,
             tabID: firstTabID,
@@ -419,7 +419,7 @@ final class MobileBrowserRootModelTests: XCTestCase {
     {
         var space = makeSpace(index: 25)
         let deferredTab = BrowserTab(
-            id: TabID(rawValue: fixedUUID(254)),
+            id: fixedUUID(254),
             title: "Deferred",
             url: URL(string: "https://example.com/deferred"),
             placement: .current
@@ -461,7 +461,7 @@ final class MobileBrowserRootModelTests: XCTestCase {
             URL(string: "https://example.com/command-destination")
         )
         let destinationTab = BrowserTab(
-            id: TabID(rawValue: fixedUUID(274)),
+            id: fixedUUID(274),
             title: "Command destination",
             url: destinationURL,
             placement: .current
@@ -751,11 +751,11 @@ final class MobileBrowserRootModelTests: XCTestCase {
 
     private func makeSpace(index: Int) -> BrowserSpace {
         let tab = BrowserTab.startPage(
-            id: TabID(rawValue: fixedUUID(index * 10 + 1)),
+            id: fixedUUID(index * 10 + 1),
             placement: .current
         )
         return BrowserSpace(
-            id: SpaceID(rawValue: fixedUUID(index * 10 + 2)),
+            id: fixedUUID(index * 10 + 2),
             profile: BrowsingProfile(id: fixedUUID(index * 10 + 3)),
             name: "Space \(index)",
             symbol: "circle",

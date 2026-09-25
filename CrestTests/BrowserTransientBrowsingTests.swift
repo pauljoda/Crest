@@ -128,16 +128,39 @@ final class BrowserTransientBrowsingTests: XCTestCase {
                 spaceID: SpaceID(),
                 profileID: UUID()
             ),
-            targetWindowID: .main
+            targetWindowID: BrowserMacWindowRequest.initial.id
         )
 
-        XCTAssertEqual(request.targetWindowID, .main)
+        XCTAssertEqual(request.targetWindowID, BrowserMacWindowRequest.initial.id)
 
         let restored = try JSONDecoder().decode(
             BrowserQuickWindowRequest.self,
             from: JSONEncoder().encode(request)
         )
-        XCTAssertEqual(restored.targetWindowID, .main)
+        XCTAssertEqual(restored.targetWindowID, BrowserMacWindowRequest.initial.id)
+    }
+
+    /// SwiftUI saves a Quick Window's request with the window: its target
+    /// window and Space keep the spelling an earlier build restores, and a
+    /// bare identity reads too.
+    func testQuickWindowRequestKeepsTheStoredIdentitySpellingAndReadsABareOne() throws {
+        let spaceID = SpaceID()
+        let windowID = BrowserWindowID()
+        let request = BrowserQuickWindowRequest(
+            url: try XCTUnwrap(URL(string: "https://example.com/reference")),
+            spaceAssignment: BrowserSpaceRuntimeAssignment(spaceID: spaceID, profileID: UUID()),
+            targetWindowID: windowID)
+
+        let stored = try XCTUnwrap(StoredIdentityJSON.document(of: request) as? [String: Any])
+        XCTAssertEqual(stored["targetWindowID"] as? [String: String], StoredIdentityJSON.wrapped(windowID))
+        let assignment = try XCTUnwrap(stored["spaceAssignment"] as? [String: Any])
+        XCTAssertEqual(assignment["spaceID"] as? [String: String], StoredIdentityJSON.wrapped(spaceID))
+        for document in [stored, StoredIdentityJSON.bare(stored)] {
+            let restored = try StoredIdentityJSON.decode(BrowserQuickWindowRequest.self, from: document)
+            XCTAssertEqual(restored.id, request.id)
+            XCTAssertEqual(restored.targetWindowID, windowID)
+            XCTAssertEqual(restored.spaceAssignment, request.spaceAssignment)
+        }
     }
 
     func testQuickWindowPresentationIdentityFocusesAnExactURLInTheSameSpace() throws {

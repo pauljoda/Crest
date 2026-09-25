@@ -12,7 +12,7 @@ extension BrowserStore {
 
     func addSpace() {
         family.send(
-            CreateSpace(workspaceID: family.workspaceID, windowID: windowID.rawValue, spaceID: UUID()), from: self,
+            CreateSpace(workspaceID: family.workspaceID, windowID: windowID, spaceID: UUID()), from: self,
             failure: "Core Space command failed")
     }
 
@@ -36,7 +36,7 @@ extension BrowserStore {
         let operationID = session.spaceDeletions?.first(where: { $0.spaceID == id })?.operationID ?? UUID()
         try family.commit(
             BeginDeletingSpace(
-                workspaceID: family.workspaceID, windowID: windowID.rawValue, spaceID: id.rawValue,
+                workspaceID: family.workspaceID, windowID: windowID, spaceID: id,
                 operationID: operationID),
             from: self)
 
@@ -45,7 +45,7 @@ extension BrowserStore {
 
         try family.commit(
             FinishDeletingSpace(
-                workspaceID: family.workspaceID, windowID: windowID.rawValue, spaceID: id.rawValue,
+                workspaceID: family.workspaceID, windowID: windowID, spaceID: id,
                 operationID: operationID),
             from: self)
         BrowserLinkPreferenceStore.shared.removeReferences(to: id)
@@ -67,7 +67,7 @@ extension BrowserStore {
     func importPortableArchive(_ imported: BrowserPortableImport) throws {
         guard !imported.spaces.isEmpty else { return }
         let intent = ImportSpaces(
-            workspaceID: family.workspaceID, windowID: windowID.rawValue,
+            workspaceID: family.workspaceID, windowID: windowID,
             spaces: try BrowserSpace.storedFormat(imported.spaces))
         try family.importSpaces(intent, from: imported.spaces, issuedBy: self)
     }
@@ -98,7 +98,7 @@ extension BrowserStore {
     ) {
         sendSpaceSettings(
             SetSpaceIdentity(
-                workspaceID: profileSettingsBrowser.family.workspaceID, spaceID: spaceID.rawValue, name: name,
+                workspaceID: profileSettingsBrowser.family.workspaceID, spaceID: spaceID, name: name,
                 symbol: symbol, accent: accent))
     }
 
@@ -109,13 +109,13 @@ extension BrowserStore {
     ) {
         sendSpaceSettings(
             SetSpaceBranding(
-                workspaceID: profileSettingsBrowser.family.workspaceID, spaceID: spaceID.rawValue,
+                workspaceID: profileSettingsBrowser.family.workspaceID, spaceID: spaceID,
                 branding: branding.core))
     }
 
     func setDefaultSpace(_ spaceID: SpaceID) {
         sendSpaceSettings(
-            SetDefaultSpace(workspaceID: profileSettingsBrowser.family.workspaceID, spaceID: spaceID.rawValue))
+            SetDefaultSpace(workspaceID: profileSettingsBrowser.family.workspaceID, spaceID: spaceID))
     }
 
     func updateSpaceAccessPolicy(
@@ -124,7 +124,7 @@ extension BrowserStore {
     ) {
         sendSpaceSettings(
             SetSpaceAccess(
-                workspaceID: profileSettingsBrowser.family.workspaceID, spaceID: spaceID.rawValue,
+                workspaceID: profileSettingsBrowser.family.workspaceID, spaceID: spaceID,
                 policy: SpaceAccessPolicy(copyTerm: accessPolicy) ?? .deviceOwnerAuthentication))
     }
 
@@ -138,7 +138,7 @@ extension BrowserStore {
     }
 
     func moveSpaces(from source: IndexSet, to destination: Int) {
-        var order = session.spaces.map(\.id.rawValue)
+        var order = session.spaces.map(\.id)
         order.move(fromOffsets: source, toOffset: destination)
         family.send(
             ReorderSpaces(workspaceID: family.workspaceID, spaceIDs: order), from: self,
@@ -162,7 +162,7 @@ extension BrowserStore {
         {
             sendSpaceSettings(
                 SetBrowsingPreferences(
-                    workspaceID: workspaceID, spaceID: spaceID.rawValue,
+                    workspaceID: workspaceID, spaceID: spaceID,
                     searchSuggestionsEnabled: preferences.searchSuggestionsEnabled,
                     currentTabCleanup: preferences.currentTabCleanupPolicy,
                     contentBlocking: preferences.contentBlockingPolicy, dataRetention: preferences.dataRetention.core))
@@ -171,7 +171,7 @@ extension BrowserStore {
             let selection = preferences.searchProvider.selection
             sendSpaceSettings(
                 SelectSearchEngine(
-                    workspaceID: workspaceID, spaceID: spaceID.rawValue, builtIn: selection.builtIn,
+                    workspaceID: workspaceID, spaceID: spaceID, builtIn: selection.builtIn,
                     customEngineID: selection.customEngineID))
         }
     }
@@ -191,19 +191,19 @@ extension BrowserStore {
         do throws(Rejection) {
             if space.browsingPreferences.customSearchProviders.contains(where: { $0.id == provider.id }) {
                 try owner.family.commit(
-                    UpdateSearchEngine(workspaceID: workspaceID, spaceID: spaceID.rawValue, engine: provider.engine),
+                    UpdateSearchEngine(workspaceID: workspaceID, spaceID: spaceID, engine: provider.engine),
                     from: owner)
                 if selects {
                     try owner.family.commit(
                         SelectSearchEngine(
-                            workspaceID: workspaceID, spaceID: spaceID.rawValue, builtIn: nil,
+                            workspaceID: workspaceID, spaceID: spaceID, builtIn: nil,
                             customEngineID: provider.id),
                         from: owner)
                 }
             } else {
                 try owner.family.commit(
                     AddSearchEngine(
-                        workspaceID: workspaceID, spaceID: spaceID.rawValue, engine: provider.engine,
+                        workspaceID: workspaceID, spaceID: spaceID, engine: provider.engine,
                         selects: selects),
                     from: owner)
             }
@@ -221,7 +221,7 @@ extension BrowserStore {
     func removeCustomSearchProvider(id: UUID, in spaceID: SpaceID) {
         sendSpaceSettings(
             RemoveSearchEngine(
-                workspaceID: profileSettingsBrowser.family.workspaceID, spaceID: spaceID.rawValue, engineID: id))
+                workspaceID: profileSettingsBrowser.family.workspaceID, spaceID: spaceID, engineID: id))
     }
 }
 
@@ -235,7 +235,7 @@ extension BrowserStore {
     ) -> Bool {
         sendSpaceSettings(
             ExpandSavedTabs(
-                workspaceID: profileSettingsBrowser.family.workspaceID, spaceID: spaceID.rawValue,
+                workspaceID: profileSettingsBrowser.family.workspaceID, spaceID: spaceID,
                 isExpanded: isExpanded))
     }
 
@@ -259,8 +259,8 @@ extension BrowserStore {
         guard
             family.send(
                 CreateFolder(
-                    workspaceID: family.workspaceID, spaceID: spaceID.rawValue, folderID: folderID.rawValue,
-                    placement: .saved, parentID: parentID?.rawValue, title: title, color: color.core, symbol: "folder",
+                    workspaceID: family.workspaceID, spaceID: spaceID, folderID: folderID,
+                    placement: .saved, parentID: parentID, title: title, color: color.core, symbol: "folder",
                     tabIDs: [], leavesSplits: false),
                 from: self)
         else { return nil }
@@ -273,8 +273,8 @@ extension BrowserStore {
         guard space(matching: assignment) != nil else { return false }
         return family.canSend(
             CreateFolder(
-                workspaceID: family.workspaceID, spaceID: assignment.spaceID.rawValue, folderID: UUID(),
-                placement: .saved, parentID: parentID.rawValue, title: nil, color: nil, symbol: nil, tabIDs: [],
+                workspaceID: family.workspaceID, spaceID: assignment.spaceID, folderID: UUID(),
+                placement: .saved, parentID: parentID, title: nil, color: nil, symbol: nil, tabIDs: [],
                 leavesSplits: false),
             from: self)
     }
@@ -321,7 +321,7 @@ extension BrowserStore {
     ) -> Bool {
         family.send(
             SetFolderColor(
-                workspaceID: family.workspaceID, spaceID: spaceID.rawValue, folderID: folderID.rawValue,
+                workspaceID: family.workspaceID, spaceID: spaceID, folderID: folderID,
                 color: color.core),
             from: self)
     }
@@ -350,7 +350,7 @@ extension BrowserStore {
     ) -> Bool {
         family.send(
             SetFolderSymbol(
-                workspaceID: family.workspaceID, spaceID: spaceID.rawValue, folderID: folderID.rawValue,
+                workspaceID: family.workspaceID, spaceID: spaceID, folderID: folderID,
                 symbol: symbol),
             from: self)
     }
@@ -413,8 +413,8 @@ extension BrowserStore {
         guard !deletingSpaceIDs.contains(spaceID) else { return false }
         return family.canSend(
             MoveFolder(
-                workspaceID: family.workspaceID, spaceID: spaceID.rawValue, folderID: folderID.rawValue, placement: nil,
-                parentID: parentID?.rawValue, beforeFolderID: nil, beforeTabID: nil),
+                workspaceID: family.workspaceID, spaceID: spaceID, folderID: folderID, placement: nil,
+                parentID: parentID, beforeFolderID: nil, beforeTabID: nil),
             from: self)
     }
 

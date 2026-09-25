@@ -16,7 +16,7 @@ enum BrowserInstalledRelease {
         for space in session.spaces {
             defaults.set(
                 try JSONEncoder().encode(space.history),
-                forKey: BrowserLegacySessionDefaults.historyKeyPrefix + space.id.rawValue.uuidString)
+                forKey: BrowserLegacySessionDefaults.historyKeyPrefix + space.id.uuidString)
             for tab in space.tabs { favicons.reconcile(tab.faviconData, tabID: tab.id) }
         }
     }
@@ -31,7 +31,7 @@ enum BrowserInstalledRelease {
         let whole = try JSONEncoder().encode(session)
         let installed = LegacySession(core: nil, wholeGraph: whole, history: [], journal: journalData)
         for case .sessionAdopted(let adopted) in try core.send(AdoptLegacySession(installed: installed, seed: whole)) {
-            for favicon in adopted.favicons { favicons.reconcile(favicon.image, tabID: TabID(rawValue: favicon.tabID)) }
+            for favicon in adopted.favicons { favicons.reconcile(favicon.image, tabID: favicon.tabID) }
         }
     }
 }

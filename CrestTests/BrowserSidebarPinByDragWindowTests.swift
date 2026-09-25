@@ -102,7 +102,7 @@ final class BrowserSidebarPinByDragWindowTests: XCTestCase {
             _ placement: Crest.TabPlacement
         ) -> BrowserTab {
             BrowserTab(
-                id: TabID(rawValue: Self.uuid(byte)),
+                id: Self.uuid(byte),
                 title: title,
                 url: URL(string: "about:blank"),
                 symbol: "globe",
@@ -115,7 +115,7 @@ final class BrowserSidebarPinByDragWindowTests: XCTestCase {
         let presented = makeTab(0x03, "Presented", .current)
         let joiner = makeTab(0x04, "Joiner", .current)
         let space = BrowserSpace(
-            id: SpaceID(rawValue: Self.uuid(0x05)),
+            id: Self.uuid(0x05),
             profile: BrowsingProfile(id: Self.uuid(0x06)),
             name: "Pin By Drag",
             symbol: "books.vertical.fill",

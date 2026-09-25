@@ -22,12 +22,10 @@ enum MobileOnboardingPreviewFixtures {
 
     static let samplePinnedTabs = [
         BrowserTab(
-            id: TabID(
-                rawValue: UUID(
-                    uuid: (
-                        0x5C, 0xD5, 0x3A, 0xCD, 0xF3, 0xDC, 0x4D, 0x50,
-                        0x88, 0x11, 0x79, 0x0D, 0x7A, 0x46, 0xA1, 0x05
-                    )
+            id: UUID(
+                uuid: (
+                    0x5C, 0xD5, 0x3A, 0xCD, 0xF3, 0xDC, 0x4D, 0x50,
+                    0x88, 0x11, 0x79, 0x0D, 0x7A, 0x46, 0xA1, 0x05
                 )
             ),
             title: "Mail",
@@ -37,12 +35,10 @@ enum MobileOnboardingPreviewFixtures {
             lastActivatedAt: Date(timeIntervalSince1970: 0)
         ),
         BrowserTab(
-            id: TabID(
-                rawValue: UUID(
-                    uuid: (
-                        0x77, 0xC0, 0x2B, 0xCD, 0x04, 0x1C, 0x47, 0xEB,
-                        0x92, 0x48, 0x4B, 0x12, 0xE6, 0xFB, 0x24, 0x32
-                    )
+            id: UUID(
+                uuid: (
+                    0x77, 0xC0, 0x2B, 0xCD, 0x04, 0x1C, 0x47, 0xEB,
+                    0x92, 0x48, 0x4B, 0x12, 0xE6, 0xFB, 0x24, 0x32
                 )
             ),
             title: "Calendar",
@@ -55,12 +51,10 @@ enum MobileOnboardingPreviewFixtures {
 
     static let sampleSavedTabs = [
         BrowserTab(
-            id: TabID(
-                rawValue: UUID(
-                    uuid: (
-                        0xC7, 0xE3, 0x17, 0x32, 0xA7, 0xA3, 0x41, 0x9D,
-                        0x86, 0xDB, 0x4E, 0xE7, 0xC2, 0x8C, 0xE3, 0xB5
-                    )
+            id: UUID(
+                uuid: (
+                    0xC7, 0xE3, 0x17, 0x32, 0xA7, 0xA3, 0x41, 0x9D,
+                    0x86, 0xDB, 0x4E, 0xE7, 0xC2, 0x8C, 0xE3, 0xB5
                 )
             ),
             title: "Project notes",
@@ -70,12 +64,10 @@ enum MobileOnboardingPreviewFixtures {
             lastActivatedAt: Date(timeIntervalSince1970: 0)
         ),
         BrowserTab(
-            id: TabID(
-                rawValue: UUID(
-                    uuid: (
-                        0x68, 0x61, 0x14, 0xE8, 0x23, 0x88, 0x44, 0x54,
-                        0xA0, 0x1A, 0x20, 0x7F, 0xA1, 0x3A, 0xA2, 0xC6
-                    )
+            id: UUID(
+                uuid: (
+                    0x68, 0x61, 0x14, 0xE8, 0x23, 0x88, 0x44, 0x54,
+                    0xA0, 0x1A, 0x20, 0x7F, 0xA1, 0x3A, 0xA2, 0xC6
                 )
             ),
             title: "Reading list",

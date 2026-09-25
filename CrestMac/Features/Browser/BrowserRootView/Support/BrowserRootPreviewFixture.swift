@@ -1,8 +1,8 @@
 import Foundation
 
 enum BrowserRootPreviewFixture {
-    static let spaceID = SpaceID(rawValue: uuid(0x21))
-    static let startTabID = TabID(rawValue: uuid(0x41))
+    static let spaceID = uuid(0x21)
+    static let startTabID = uuid(0x41)
     static let space = BrowserSpace(
         id: spaceID,
         profile: BrowsingProfile(id: uuid(0x11)),
@@ -16,7 +16,7 @@ enum BrowserRootPreviewFixture {
         folders: [],
         tabs: [
             BrowserTab(
-                id: TabID(rawValue: uuid(0x42)),
+                id: uuid(0x42),
                 title: "Apple Developer",
                 url: URL(fileURLWithPath: "/preview/apple-developer"),
                 symbol: "apple.logo",
@@ -24,7 +24,7 @@ enum BrowserRootPreviewFixture {
                 lastActivatedAt: Date(timeIntervalSince1970: 0)
             ),
             BrowserTab(
-                id: TabID(rawValue: uuid(0x43)),
+                id: uuid(0x43),
                 title: "WebKit Notes",
                 url: URL(fileURLWithPath: "/preview/webkit-notes"),
                 symbol: "safari.fill",
@@ -38,14 +38,14 @@ enum BrowserRootPreviewFixture {
         ]
     )
 
-    static let splitGroupID = SplitGroupID(rawValue: uuid(0x61))
+    static let splitGroupID = uuid(0x61)
 
     /// Two grouped current tabs, for previewing the split content area. Kept
     /// beside the fixture Space rather than inside it so every existing preview
     /// keeps rendering the single-page path it was written for.
     static let splitMembers: [BrowserTab] = [
         BrowserTab(
-            id: TabID(rawValue: uuid(0x62)),
+            id: uuid(0x62),
             title: "WebKit Notes",
             url: URL(fileURLWithPath: "/preview/webkit-notes"),
             symbol: "safari.fill",
@@ -54,7 +54,7 @@ enum BrowserRootPreviewFixture {
             lastActivatedAt: Date(timeIntervalSince1970: 0)
         ),
         BrowserTab(
-            id: TabID(rawValue: uuid(0x63)),
+            id: uuid(0x63),
             title: "Layout Research",
             url: URL(fileURLWithPath: "/preview/layout-research"),
             symbol: "ruler.fill",
@@ -105,7 +105,7 @@ enum BrowserRootPreviewFixture {
         browser: BrowserStore
     ) -> BrowserWindowStateStore {
         let windowState = BrowserWindowStateStore(
-            id: BrowserWindowID(rawValue: uuid(0x51)),
+            id: uuid(0x51),
             browser: browser,
             layouts: BrowserWindowLayouts(defaults: nil)
         )

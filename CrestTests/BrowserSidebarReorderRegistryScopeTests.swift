@@ -162,15 +162,15 @@ private struct ReorderRegistryFixture {
     let foreignPins: [BrowserTab]
     let joiner: BrowserTab
 
-    private let ownSpaceID = SpaceID(rawValue: uuid(0x01))
+    private let ownSpaceID = uuid(0x01)
     private let ownProfileID = uuid(0x02)
-    private let foreignSpaceID = SpaceID(rawValue: uuid(0x03))
+    private let foreignSpaceID = uuid(0x03)
     private let foreignProfileID = uuid(0x04)
 
     init(ownPinCount: Int) {
         ownPins = (0..<ownPinCount).map { index in
             makeTab(
-                id: TabID(rawValue: uuid(UInt8(0x10 + index))),
+                id: uuid(UInt8(0x10 + index)),
                 title: "Own Pin \(index)",
                 placement: .pinned
             )
@@ -179,13 +179,13 @@ private struct ReorderRegistryFixture {
         // full — only the sum of two grids is.
         foreignPins = (0..<(TabPlacement.pinnedCapacity - 1)).map { index in
             makeTab(
-                id: TabID(rawValue: uuid(UInt8(0x50 + index))),
+                id: uuid(UInt8(0x50 + index)),
                 title: "Foreign Pin \(index)",
                 placement: .pinned
             )
         }
         joiner = makeTab(
-            id: TabID(rawValue: uuid(0x40)),
+            id: uuid(0x40),
             title: "Joiner",
             placement: .current
         )
@@ -346,9 +346,9 @@ private struct SplitCardRegistryFixture {
 
     private let ownCardCount: Int
     private let foreignCardCount: Int
-    private let ownSpaceID = SpaceID(rawValue: uuid(0x05))
+    private let ownSpaceID = uuid(0x05)
     private let ownProfileID = uuid(0x06)
-    private let foreignSpaceID = SpaceID(rawValue: uuid(0x07))
+    private let foreignSpaceID = uuid(0x07)
     private let foreignProfileID = uuid(0x08)
 
     init(ownCardCount: Int, foreignCardCount: Int) {
@@ -356,20 +356,20 @@ private struct SplitCardRegistryFixture {
         self.foreignCardCount = foreignCardCount
         ownCards = (0..<ownCardCount).map { index in
             makeTab(
-                id: TabID(rawValue: uuid(UInt8(0x60 + index))),
+                id: uuid(UInt8(0x60 + index)),
                 title: "Own Card \(index)",
                 placement: .current
             )
         }
         foreignCards = (0..<foreignCardCount).map { index in
             makeTab(
-                id: TabID(rawValue: uuid(UInt8(0x70 + index))),
+                id: uuid(UInt8(0x70 + index)),
                 title: "Foreign Card \(index)",
                 placement: .current
             )
         }
         joiner = makeTab(
-            id: TabID(rawValue: uuid(0x6F)),
+            id: uuid(0x6F),
             title: "Joiner",
             placement: .current
         )

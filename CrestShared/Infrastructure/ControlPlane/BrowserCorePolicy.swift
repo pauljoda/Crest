@@ -234,7 +234,7 @@ enum BrowserCorePolicy {
             level: level, platform: platform, focusedIndex: focusedIndex,
             candidates: candidates.map { candidate in
                 ReleasePlanRequest.Candidate(
-                    tabID: candidate.tabID.rawValue.coreIdentifier,
+                    tabID: candidate.tabID.coreIdentifier,
                     inactiveSince: candidate.inactiveSince?.timeIntervalSinceReferenceDate,
                     keepsPageLoaded: candidate.keepsPageLoaded, isPresented: candidate.presentedIndex != nil,
                     presentedIndex: candidate.presentedIndex)
@@ -244,7 +244,7 @@ enum BrowserCorePolicy {
         }
         let known = Dictionary(
             uniqueKeysWithValues: candidates.map {
-                ($0.tabID.rawValue.coreIdentifier, $0.tabID)
+                ($0.tabID.coreIdentifier, $0.tabID)
             })
         func tabIDs(_ identifiers: [String]?) -> [TabID] {
             (identifiers ?? []).compactMap { known[$0] }

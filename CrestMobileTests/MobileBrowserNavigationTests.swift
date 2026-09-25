@@ -586,7 +586,7 @@ final class MobileBrowserNavigationTests: XCTestCase {
     func testMobileBrowserCommandControllerCyclesTabsAndSpaces() throws {
         let tabs = (1...3).map { index in
             BrowserTab(
-                id: TabID(rawValue: fixedUUID(500 + index)),
+                id: fixedUUID(500 + index),
                 title: "Tab \(index)",
                 url: nil,
                 symbol: "globe",
@@ -594,7 +594,7 @@ final class MobileBrowserNavigationTests: XCTestCase {
             )
         }
         let firstSpace = BrowserSpace(
-            id: SpaceID(rawValue: fixedUUID(510)),
+            id: fixedUUID(510),
             profile: BrowsingProfile(id: fixedUUID(511)),
             name: "Commands",
             symbol: "keyboard",
@@ -639,7 +639,7 @@ final class MobileBrowserNavigationTests: XCTestCase {
             placement: .current
         )
         let space = BrowserSpace(
-            id: SpaceID(rawValue: fixedUUID(530)),
+            id: fixedUUID(530),
             profile: BrowsingProfile(id: fixedUUID(531)),
             name: "Commands",
             symbol: "keyboard",
@@ -683,7 +683,7 @@ final class MobileBrowserNavigationTests: XCTestCase {
             lastActivatedAt: Date(timeIntervalSince1970: 110)
         )
         let space = BrowserSpace(
-            id: SpaceID(rawValue: fixedUUID(532)),
+            id: fixedUUID(532),
             profile: BrowsingProfile(id: fixedUUID(533)),
             name: "Commands",
             symbol: "keyboard",
@@ -1025,10 +1025,10 @@ final class MobileBrowserNavigationTests: XCTestCase {
     private func makeSplitFixture(
         selectedIndex: Int
     ) -> (space: BrowserSpace, members: [BrowserTab]) {
-        let groupID = SplitGroupID(rawValue: fixedUUID(0x6000))
+        let groupID = fixedUUID(0x6000)
         let members = (0..<3).map { index in
             BrowserTab(
-                id: TabID(rawValue: fixedUUID(0x6100 + index)),
+                id: fixedUUID(0x6100 + index),
                 title: "Card \(index)",
                 url: URL(string: "https://cards.crest.test/\(index)"),
                 placement: .current,
@@ -1036,7 +1036,7 @@ final class MobileBrowserNavigationTests: XCTestCase {
             )
         }
         let space = BrowserSpace(
-            id: SpaceID(rawValue: fixedUUID(0x6200)),
+            id: fixedUUID(0x6200),
             profile: BrowsingProfile(id: fixedUUID(0x6300)),
             name: "Split",
             symbol: "rectangle.split.2x1",
@@ -1500,21 +1500,21 @@ final class MobileBrowserNavigationTests: XCTestCase {
 
     func testPageStoreUnloadsAndRehydratesAPinnedTabWithoutRemovingItsModel() {
         let pinned = BrowserTab(
-            id: TabID(rawValue: fixedUUID(330)),
+            id: fixedUUID(330),
             title: "Pinned",
             url: nil,
             symbol: "globe",
             placement: .pinned
         )
         let current = BrowserTab(
-            id: TabID(rawValue: fixedUUID(331)),
+            id: fixedUUID(331),
             title: "Current",
             url: nil,
             symbol: "globe",
             placement: .current
         )
         let space = BrowserSpace(
-            id: SpaceID(rawValue: fixedUUID(332)),
+            id: fixedUUID(332),
             profile: BrowsingProfile(id: fixedUUID(333)),
             name: "Unload",
             symbol: "minus.circle",
@@ -1548,14 +1548,14 @@ final class MobileBrowserNavigationTests: XCTestCase {
 
     func testCapturedMobileUnloadRejectsAReplacementResidentPageAssignment() {
         let pinned = BrowserTab(
-            id: TabID(rawValue: fixedUUID(334)),
+            id: fixedUUID(334),
             title: "Replacement resident",
             url: nil,
             symbol: "globe",
             placement: .pinned
         )
         let original = BrowserSpace(
-            id: SpaceID(rawValue: fixedUUID(335)),
+            id: fixedUUID(335),
             profile: BrowsingProfile(id: fixedUUID(336)),
             name: "Original",
             symbol: "minus.circle",
@@ -1601,7 +1601,7 @@ final class MobileBrowserNavigationTests: XCTestCase {
     func testPageStoreWarningPressureKeepsOrdinaryTabsResident() async throws {
         let tabs = (1...4).map { index in
             BrowserTab(
-                id: TabID(rawValue: fixedUUID(400 + index)),
+                id: fixedUUID(400 + index),
                 title: "Tab \(index)",
                 url: nil,
                 symbol: "globe",
@@ -1609,7 +1609,7 @@ final class MobileBrowserNavigationTests: XCTestCase {
             )
         }
         let space = BrowserSpace(
-            id: SpaceID(rawValue: fixedUUID(450)),
+            id: fixedUUID(450),
             profile: BrowsingProfile(id: fixedUUID(451)),
             name: "Pressure",
             symbol: "memorychip",
@@ -1645,7 +1645,7 @@ final class MobileBrowserNavigationTests: XCTestCase {
     func testPageStoreCriticalPressureUnloadsOnlyTheOldestEligibleTab() async throws {
         let tabs = (1...8).map { index in
             BrowserTab(
-                id: TabID(rawValue: fixedUUID(460 + index)),
+                id: fixedUUID(460 + index),
                 title: "Tab \(index)",
                 url: nil,
                 symbol: "globe",
@@ -1653,7 +1653,7 @@ final class MobileBrowserNavigationTests: XCTestCase {
             )
         }
         let space = BrowserSpace(
-            id: SpaceID(rawValue: fixedUUID(470)),
+            id: fixedUUID(470),
             profile: BrowsingProfile(id: fixedUUID(471)),
             name: "Coalescing",
             symbol: "memorychip",
@@ -1689,7 +1689,7 @@ final class MobileBrowserNavigationTests: XCTestCase {
     func testPageStoreCriticalPressureHonorsManualKeepLoaded() async throws {
         let pinned = (1...2).map { index in
             BrowserTab(
-                id: TabID(rawValue: fixedUUID(480 + index)),
+                id: fixedUUID(480 + index),
                 title: "Pinned \(index)",
                 url: nil,
                 symbol: "pin",
@@ -1699,7 +1699,7 @@ final class MobileBrowserNavigationTests: XCTestCase {
         }
         let current = (1...3).map { index in
             BrowserTab(
-                id: TabID(rawValue: fixedUUID(490 + index)),
+                id: fixedUUID(490 + index),
                 title: "Current \(index)",
                 url: nil,
                 symbol: "globe",
@@ -1707,7 +1707,7 @@ final class MobileBrowserNavigationTests: XCTestCase {
             )
         }
         let space = BrowserSpace(
-            id: SpaceID(rawValue: fixedUUID(500)),
+            id: fixedUUID(500),
             profile: BrowsingProfile(id: fixedUUID(501)),
             name: "Pinned pressure",
             symbol: "memorychip",
@@ -2027,7 +2027,7 @@ final class MobileBrowserNavigationTests: XCTestCase {
     private func beginDeleting(_ spaceID: SpaceID, in browser: BrowserStore) throws {
         try browser.family.commit(
             BeginDeletingSpace(
-                workspaceID: browser.family.workspaceID, windowID: browser.windowID.rawValue, spaceID: spaceID.rawValue,
+                workspaceID: browser.family.workspaceID, windowID: browser.windowID, spaceID: spaceID,
                 operationID: UUID()),
             from: browser
         )
@@ -2035,11 +2035,11 @@ final class MobileBrowserNavigationTests: XCTestCase {
 
     private func makeSpace(index: Int) -> BrowserSpace {
         let tab = BrowserTab.startPage(
-            id: TabID(rawValue: fixedUUID(index * 10 + 1)),
+            id: fixedUUID(index * 10 + 1),
             placement: .current
         )
         return BrowserSpace(
-            id: SpaceID(rawValue: fixedUUID(index * 10 + 2)),
+            id: fixedUUID(index * 10 + 2),
             profile: BrowsingProfile(id: fixedUUID(index * 10 + 3)),
             name: "Space \(index)",
             symbol: "circle",

@@ -91,7 +91,7 @@ final class BrowserSpaceAccessController {
         }
         let request = UUID()
         do throws(Rejection) {
-            try core.send(BeginUnlockingSpace(workspaceID: workspace, spaceID: space.id.rawValue, requestID: request))
+            try core.send(BeginUnlockingSpace(workspaceID: workspace, spaceID: space.id, requestID: request))
         } catch {
             if case .authenticationBusy = error { return false }
             failure = .authenticationUnavailable
@@ -119,7 +119,7 @@ final class BrowserSpaceAccessController {
     }
 
     func lock(_ spaceID: SpaceID) {
-        _ = try? core?.send(LockSpace(spaceID: spaceID.rawValue))
+        _ = try? core?.send(LockSpace(spaceID: spaceID))
     }
 
     /// The scene went inactive, which the system's own authentication prompt
@@ -136,7 +136,7 @@ final class BrowserSpaceAccessController {
     /// waiting.
     private func finish(_ request: UUID, for space: BrowserSpace, authenticated: Bool) -> Bool {
         (try? core?.send(
-            FinishUnlockingSpace(spaceID: space.id.rawValue, requestID: request, authenticated: authenticated))) != nil
+            FinishUnlockingSpace(spaceID: space.id, requestID: request, authenticated: authenticated))) != nil
     }
 
     /// The workspace of an attached store that shows the Space profile.

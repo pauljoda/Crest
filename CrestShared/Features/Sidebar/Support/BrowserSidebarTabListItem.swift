@@ -33,8 +33,8 @@ enum BrowserSidebarTabListItem: Equatable, Identifiable, Sendable {
     /// which is what makes the change animate.
     var collectionMotionID: String {
         switch self {
-        case let .tab(tab): "tab-\(tab.id.rawValue.uuidString)"
-        case let .splitGroup(id, _): "split-\(id.rawValue.uuidString)"
+        case let .tab(tab): "tab-\(tab.id.uuidString)"
+        case let .splitGroup(id, _): "split-\(id.uuidString)"
         }
     }
 }

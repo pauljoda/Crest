@@ -206,10 +206,10 @@ struct BrowserManualSetupPlan: Codable, Equatable, Sendable {
     @MainActor
     func intent(in browser: BrowserStore) throws -> ApplyManualSetup {
         ApplyManualSetup(
-            workspaceID: browser.family.workspaceID, windowID: browser.windowID.rawValue,
+            workspaceID: browser.family.workspaceID, windowID: browser.windowID,
             spaces: try BrowserSpace.storedFormat(sources),
             drafts: spaces.map {
-                SetupSpace(spaceID: $0.id.rawValue, isNew: $0.isNew, customization: $0.customization.core)
+                SetupSpace(spaceID: $0.id, isNew: $0.isNew, customization: $0.customization.core)
             },
             orderWasEdited: spaceOrderWasEdited == true)
     }

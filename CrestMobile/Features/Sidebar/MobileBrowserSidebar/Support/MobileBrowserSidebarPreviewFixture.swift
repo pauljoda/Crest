@@ -15,7 +15,7 @@ struct MobileBrowserSidebarPreviewFixture {
 
     init() {
         let folder = BrowserFolder(
-            id: FolderID(rawValue: Self.uuid(0x21)),
+            id: Self.uuid(0x21),
             title: "Reading",
             color: .ocean,
             isCollapsed: false,
@@ -44,12 +44,12 @@ struct MobileBrowserSidebarPreviewFixture {
             placement: .saved
         )
         let currentTab = BrowserTab.startPage(
-            id: TabID(rawValue: Self.uuid(0x34)),
+            id: Self.uuid(0x34),
             placement: .current,
             lastActivatedAt: Self.epoch
         )
         let space = BrowserSpace(
-            id: SpaceID(rawValue: Self.uuid(0x11)),
+            id: Self.uuid(0x11),
             profile: BrowsingProfile(id: Self.uuid(0x12)),
             name: "Work",
             symbol: "briefcase.fill",
@@ -69,7 +69,7 @@ struct MobileBrowserSidebarPreviewFixture {
             ]
         )
         let protectedSpace = BrowserSpace(
-            id: SpaceID(rawValue: Self.uuid(0x13)),
+            id: Self.uuid(0x13),
             profile: BrowsingProfile(id: Self.uuid(0x14)),
             name: "Personal",
             symbol: "lock.fill",
@@ -125,7 +125,7 @@ struct MobileBrowserSidebarPreviewFixture {
         folderID: FolderID? = nil
     ) -> BrowserTab {
         BrowserTab(
-            id: TabID(rawValue: uuid(id)),
+            id: uuid(id),
             title: title,
             url: URL(filePath: path),
             symbol: BrowserTab.symbol(forEmoji: emoji),

@@ -7,6 +7,6 @@ enum CredentialKeychainNamespace {
         for spaceID: SpaceID,
         prefix: String = productionPrefix
     ) -> String {
-        "\(prefix).space.\(spaceID.rawValue.uuidString.lowercased()).credential"
+        "\(prefix).space.\(spaceID.uuidString.lowercased()).credential"
     }
 }

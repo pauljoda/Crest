@@ -56,7 +56,7 @@ final class BrowserDownloadRetryTests: XCTestCase {
         let leaseID = fixedID(0x11)
         let itemID = fixedID(0x12)
         let profileID = fixedID(0x13)
-        let spaceID = SpaceID(rawValue: fixedID(0x14))
+        let spaceID = fixedID(0x14)
         let lease = BrowserDownloadRetryLease(
             id: leaseID,
             itemID: itemID,
@@ -80,7 +80,7 @@ final class BrowserDownloadRetryTests: XCTestCase {
     func testRetryRegistrationRejectsDeletedReplacedAndStaleState() {
         let itemID = fixedID(0x21)
         let profileID = fixedID(0x22)
-        let spaceID = SpaceID(rawValue: fixedID(0x23))
+        let spaceID = fixedID(0x23)
         let lease = BrowserDownloadRetryLease(
             id: fixedID(0x24),
             itemID: itemID,

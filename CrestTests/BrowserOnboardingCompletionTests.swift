@@ -89,13 +89,13 @@ final class BrowserOnboardingCompletionTests: XCTestCase {
                 let operation = UUID()
                 try browser.family.commit(
                     BeginDeletingSpace(
-                        workspaceID: browser.family.workspaceID, windowID: browser.windowID.rawValue,
-                        spaceID: first.id.rawValue, operationID: operation),
+                        workspaceID: browser.family.workspaceID, windowID: browser.windowID,
+                        spaceID: first.id, operationID: operation),
                     from: browser)
                 try browser.family.commit(
                     FinishDeletingSpace(
-                        workspaceID: browser.family.workspaceID, windowID: browser.windowID.rawValue,
-                        spaceID: first.id.rawValue, operationID: operation),
+                        workspaceID: browser.family.workspaceID, windowID: browser.windowID,
+                        spaceID: first.id, operationID: operation),
                     from: browser)
             }
             let beforeResolution = browser.session

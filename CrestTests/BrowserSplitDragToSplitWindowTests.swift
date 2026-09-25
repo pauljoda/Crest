@@ -183,7 +183,7 @@ final class BrowserSplitDragToSplitWindowTests: XCTestCase {
     ) throws -> HostedWindow {
         let date = Date(timeIntervalSince1970: 1_700_000_000)
         let presented = BrowserTab(
-            id: TabID(rawValue: Self.uuid(0x01)),
+            id: Self.uuid(0x01),
             title: "Presented",
             url: URL(string: "about:blank"),
             symbol: "globe",
@@ -191,7 +191,7 @@ final class BrowserSplitDragToSplitWindowTests: XCTestCase {
             lastActivatedAt: date
         )
         var joiner = BrowserTab(
-            id: TabID(rawValue: Self.uuid(0x02)),
+            id: Self.uuid(0x02),
             title: "Joiner",
             url: URL(string: "about:blank"),
             symbol: "globe",
@@ -212,7 +212,7 @@ final class BrowserSplitDragToSplitWindowTests: XCTestCase {
             }
         }
         let space = BrowserSpace(
-            id: SpaceID(rawValue: Self.uuid(0x03)),
+            id: Self.uuid(0x03),
             profile: BrowsingProfile(id: Self.uuid(0x04)),
             name: "Drag To Split",
             symbol: "books.vertical.fill",

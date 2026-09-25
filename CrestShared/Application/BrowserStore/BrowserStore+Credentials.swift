@@ -143,7 +143,7 @@ extension BrowserStore {
     ) {
         sendSpaceSettings(
             SetCredentialPreferences(
-                workspaceID: profileSettingsBrowser.family.workspaceID, spaceID: spaceID.rawValue,
+                workspaceID: profileSettingsBrowser.family.workspaceID, spaceID: spaceID,
                 preferences: preferences.core))
     }
 
@@ -174,7 +174,7 @@ extension BrowserStore {
         // The native credential operation completed for this profile. Persist
         // its corresponding policy through the same session authority.
         let sent = SetCredentialPreferences(
-            workspaceID: family.workspaceID, spaceID: spaceID.rawValue, preferences: preferences.core)
+            workspaceID: family.workspaceID, spaceID: spaceID, preferences: preferences.core)
         if !family.send(sent, from: self, failure: "Core Space command failed"),
             session.space(id: spaceID)?.credentialPreferences != preferences {
             throw CredentialVaultError.preferenceUpdateFailed

@@ -61,7 +61,7 @@ struct BrowserTabBatchActions {
                         tabID: id, spaceID: request.assignment.spaceID, profileID: request.assignment.profileID))
             else {
                 browser.tabMultiSelection.message =
-                    Rejection.webPagesOnly(WebPagesOnly(tabID: id.rawValue)).placementExplanation
+                    Rejection.webPagesOnly(WebPagesOnly(tabID: id)).placementExplanation
                 return
             }
             urls.append(url)

@@ -300,10 +300,10 @@ final class BrowserSessionTests: XCTestCase {
     }
 
     func testTabWrittenBeforeRenamingDecodesWithoutACustomTitle() throws {
-        let tabID = TabID(rawValue: try XCTUnwrap(UUID(uuidString: "F0000000-0000-0000-0000-000000000001")))
+        let tabID = try XCTUnwrap(UUID(uuidString: "F0000000-0000-0000-0000-000000000001"))
         let json = """
             {
-              "id": {"rawValue": "\(tabID.rawValue.uuidString)"},
+              "id": {"rawValue": "\(tabID.uuidString)"},
               "title": "Docs",
               "url": "https://example.com/docs",
               "savedURL": "https://example.com/docs",

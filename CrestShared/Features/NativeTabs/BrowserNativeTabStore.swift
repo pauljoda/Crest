@@ -106,7 +106,7 @@ final class BrowserNativeTabStore {
         runtimes.values.filter { !presented.contains($0.assignment.tabID) }
             .sorted {
                 if $0.lastPresented != $1.lastPresented { return $0.lastPresented < $1.lastPresented }
-                return $0.assignment.tabID.rawValue.uuidString < $1.assignment.tabID.rawValue.uuidString
+                return $0.assignment.tabID.uuidString < $1.assignment.tabID.uuidString
             }
             .map(\.assignment.tabID)
     }

@@ -16,7 +16,7 @@ final class MobileBrowserPagePresentationTests: XCTestCase {
             placement: .current
         )
         let firstSpace = BrowserSpace(
-            id: SpaceID(rawValue: UUID()),
+            id: SpaceID(),
             profile: BrowsingProfile(),
             name: "First Space",
             symbol: "1.circle",
@@ -25,7 +25,7 @@ final class MobileBrowserPagePresentationTests: XCTestCase {
             tabs: [firstTab]
         )
         let secondSpace = BrowserSpace(
-            id: SpaceID(rawValue: UUID()),
+            id: SpaceID(),
             profile: BrowsingProfile(),
             name: "Second Space",
             symbol: "2.circle",

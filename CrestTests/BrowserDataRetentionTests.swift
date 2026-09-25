@@ -119,7 +119,7 @@ final class BrowserDataRetentionTests: XCTestCase {
         XCTAssertTrue(savedSpace.history.isEmpty)
         XCTAssertTrue(savedSpace.archivedTabs.isEmpty)
         let journal = try harness.storedJournal()
-        for (kind, id) in [(SyncRecordKind.history, oldHistory.id), (.archive, oldArchive.id.rawValue)] {
+        for (kind, id) in [(SyncRecordKind.history, oldHistory.id), (.archive, oldArchive.id)] {
             XCTAssertEqual(try XCTUnwrap(journal.record(kind, id)).deletionReason, .retention)
         }
     }

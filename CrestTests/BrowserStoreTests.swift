@@ -344,7 +344,7 @@ final class BrowserStoreTests: XCTestCase {
             store.session.space(id: otherSpace.id)?.browsingPreferences,
             .default
         )
-        XCTAssertTrue(try harness.storedJournal().isPending(.space, selectedSpaceID.rawValue))
+        XCTAssertTrue(try harness.storedJournal().isPending(.space, selectedSpaceID))
     }
 
     func testNormalStoreMutationStagesAndPersistsTheLocalSyncJournal() async throws {
@@ -355,7 +355,7 @@ final class BrowserStoreTests: XCTestCase {
         await store.flushPendingSyncPersistence()
 
         let selectedID = try XCTUnwrap(store.selectedTab?.id)
-        XCTAssertTrue(try harness.storedJournal().isPending(.tab, selectedID.rawValue))
+        XCTAssertTrue(try harness.storedJournal().isPending(.tab, selectedID))
         XCTAssertTrue(try harness.storedJournalIsPublished())
         XCTAssertNil(store.localSyncErrorDescription)
     }
@@ -392,14 +392,14 @@ final class BrowserStoreTests: XCTestCase {
         store.closeTab(tabID)
         await store.flushPendingSyncPersistence()
 
-        XCTAssertEqual(try harness.storedJournal().record(.tab, tabID.rawValue)?.deletionReason, .superseded)
-        XCTAssertEqual(try harness.storedJournal().record(.archive, tabID.rawValue)?.isTombstone, false)
+        XCTAssertEqual(try harness.storedJournal().record(.tab, tabID)?.deletionReason, .superseded)
+        XCTAssertEqual(try harness.storedJournal().record(.archive, tabID)?.isTombstone, false)
 
         store.restoreArchivedTab(tabID)
         await store.flushPendingSyncPersistence()
 
-        XCTAssertEqual(try harness.storedJournal().record(.tab, tabID.rawValue)?.isTombstone, false)
-        XCTAssertEqual(try harness.storedJournal().record(.archive, tabID.rawValue)?.deletionReason, .superseded)
+        XCTAssertEqual(try harness.storedJournal().record(.tab, tabID)?.isTombstone, false)
+        XCTAssertEqual(try harness.storedJournal().record(.archive, tabID)?.deletionReason, .superseded)
     }
 
     func testDeletingAPinnedTabStagesItsExplicitTombstoneAndArchiveAudit() async throws {
@@ -424,8 +424,8 @@ final class BrowserStoreTests: XCTestCase {
             .deleted
         )
         let journal = try harness.storedJournal()
-        XCTAssertEqual(journal.record(.tab, pinnedTab.id.rawValue)?.deletionReason, .explicitDelete)
-        let archiveRecord = try XCTUnwrap(journal.record(.archive, pinnedTab.id.rawValue))
+        XCTAssertEqual(journal.record(.tab, pinnedTab.id)?.deletionReason, .explicitDelete)
+        let archiveRecord = try XCTUnwrap(journal.record(.archive, pinnedTab.id))
         XCTAssertEqual(archiveRecord.value?["reason"] as? String, ArchiveReason.deleted.name)
     }
 
@@ -648,7 +648,7 @@ final class BrowserStoreTests: XCTestCase {
 
         let selectedID = try XCTUnwrap(store.selectedTab?.id)
         let syncedTab = try XCTUnwrap(
-            try harness.storedJournal().record(.tab, selectedID.rawValue)?.value,
+            try harness.storedJournal().record(.tab, selectedID)?.value,
             "The latest selected tab should be present in the sync journal.")
         XCTAssertEqual(syncedTab["title"] as? String, store.selectedTab?.title)
         XCTAssertEqual(syncedTab["url"] as? String, store.selectedTab?.url?.absoluteString)
@@ -692,7 +692,7 @@ final class BrowserStoreTests: XCTestCase {
             retainedDescriptors,
             [retainedCredential.descriptor]
         )
-        let deletedRecord = try XCTUnwrap(try harness.storedJournal().record(.space, deletedSpace.id.rawValue))
+        let deletedRecord = try XCTUnwrap(try harness.storedJournal().record(.space, deletedSpace.id))
         XCTAssertTrue(deletedRecord.isTombstone)
         XCTAssertEqual(deletedRecord.deletionReason, .explicitDelete)
         XCTAssertTrue(try harness.storedJournalIsPublished())
@@ -969,7 +969,7 @@ final class BrowserStoreTests: XCTestCase {
         await firstWindow.flushPendingSyncPersistence()
         await secondWindow.flushPendingSyncPersistence()
 
-        let record = try XCTUnwrap(try harness.storedJournal().record(.tab, pinnedTabID.rawValue))
+        let record = try XCTUnwrap(try harness.storedJournal().record(.tab, pinnedTabID))
         XCTAssertFalse(record.isTombstone)
         // Another device that takes everything this one holds shows the tab.
         let other = try await harness.joiningDevice()
@@ -1005,7 +1005,7 @@ final class BrowserStoreTests: XCTestCase {
         XCTAssertEqual(store.session.space(id: spaceID)?.branding, branding)
         XCTAssertEqual(otherWindow.session.space(id: spaceID)?.branding, branding)
         XCTAssertTrue(store.session.spaces[0].tabs.contains { $0.id == newTab })
-        XCTAssertTrue(try harness.storedJournal().isPending(.space, spaceID.rawValue))
+        XCTAssertTrue(try harness.storedJournal().isPending(.space, spaceID))
         try remote.deliverNow(MergeSyncRecords(records: try await harness.pendingRecords()))
         XCTAssertEqual(remote.store.session.space(id: spaceID)?.branding, branding)
     }

@@ -55,9 +55,9 @@ enum BrowserQuickWindowPreviewFixture {
         symbol: String,
         accent: SpaceAccent
     ) -> BrowserSpace {
-        let tabID = TabID(rawValue: uuid(tabByte))
+        let tabID = uuid(tabByte)
         return BrowserSpace(
-            id: SpaceID(rawValue: uuid(idByte)),
+            id: uuid(idByte),
             profile: BrowsingProfile(id: uuid(profileByte)),
             name: name,
             symbol: symbol,

@@ -57,7 +57,7 @@ struct BrowserSitePermissionRecordRow: View {
             for: record.permission,
             origin: BrowserSiteOrigin(record.origin),
             detail: record.detail,
-            in: SpaceID(rawValue: record.spaceID)
+            in: record.spaceID
         )
     }
 }

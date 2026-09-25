@@ -264,7 +264,7 @@ final class BrowserMacWindowCoordinatorTests: XCTestCase {
         let initial = try XCTUnwrap(coordinator.model(for: XCTUnwrap(initialRequest)))
 
         XCTAssertEqual(restored.id, second.id)
-        XCTAssertEqual(initial.id, .main)
+        XCTAssertEqual(initial.id, BrowserMacWindowRequest.initial.id)
         XCTAssertEqual(restored.browser.selectedSpaceID, space.id)
         XCTAssertEqual(restored.browser.selectedTab?.id, tab.id)
         XCTAssertEqual(initial.browser.selectedSpaceID, session.spaces[0].id)
@@ -272,8 +272,50 @@ final class BrowserMacWindowCoordinatorTests: XCTestCase {
         // presents a window of its own.
         let anotherRequest = await restoration.window(presentedBy: { nil }, in: coordinator)
         let another = try XCTUnwrap(anotherRequest)
-        XCTAssertFalse([BrowserWindowID.main, second.id].contains(another.id))
+        XCTAssertFalse([BrowserMacWindowRequest.initial.id, second.id].contains(another.id))
         XCTAssertFalse(coordinator.model(for: another) === initial)
+    }
+
+    /// SwiftUI saves a window's request with the window. A request an earlier
+    /// build saved restores here, a bare identity reads too, and this build
+    /// saves the spelling an earlier build restores.
+    func testAWindowRequestKeepsTheStoredIdentitySpellingAndReadsABareOne() throws {
+        let spaceID = SpaceID()
+        let request = BrowserMacWindowRequest.temporary(
+            sourceWindowID: BrowserMacWindowRequest.initial.id,
+            assignment: BrowserSpaceRuntimeAssignment(spaceID: spaceID, profileID: UUID()))
+
+        let stored = try XCTUnwrap(StoredIdentityJSON.document(of: request) as? [String: Any])
+        XCTAssertEqual(stored["id"] as? [String: String], StoredIdentityJSON.wrapped(request.id))
+        XCTAssertEqual(
+            stored["sourceWindowID"] as? [String: String],
+            StoredIdentityJSON.wrapped(BrowserMacWindowRequest.initial.id))
+        let assignment = try XCTUnwrap(stored["sourceAssignment"] as? [String: Any])
+        XCTAssertEqual(assignment["spaceID"] as? [String: String], StoredIdentityJSON.wrapped(spaceID))
+        XCTAssertEqual(try StoredIdentityJSON.decode(BrowserMacWindowRequest.self, from: stored), request)
+        XCTAssertEqual(
+            try StoredIdentityJSON.decode(BrowserMacWindowRequest.self, from: StoredIdentityJSON.bare(stored)),
+            request)
+    }
+
+    /// A lifted row's payload comes back as the same item, selection included.
+    func testDragItemsSurviveTheirTransferEncoding() throws {
+        let space = BrowserSession.preview.spaces[0]
+        let tabs = space.tabs.prefix(2).map(\.id)
+        let selection = BrowserTabBatchRequest(ids: tabs, in: space)
+        let tab = BrowserTabDragItem(
+            tabID: tabs[0], spaceID: space.id, profileID: space.profile.id, selection: selection)
+        let folder = BrowserFolderDragItem(
+            folderID: FolderID(), spaceID: space.id, profileID: space.profile.id, memberTabIDs: tabs,
+            selection: selection)
+        let split = BrowserSplitGroupDragItem(
+            groupID: SplitGroupID(), spaceID: space.id, profileID: space.profile.id, memberTabIDs: tabs)
+
+        XCTAssertEqual(try JSONDecoder().decode(BrowserTabDragItem.self, from: JSONEncoder().encode(tab)), tab)
+        XCTAssertEqual(
+            try JSONDecoder().decode(BrowserFolderDragItem.self, from: JSONEncoder().encode(folder)), folder)
+        XCTAssertEqual(
+            try JSONDecoder().decode(BrowserSplitGroupDragItem.self, from: JSONEncoder().encode(split)), split)
     }
 
     private func makeNativeWindow() -> NSWindow {

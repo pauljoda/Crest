@@ -17,10 +17,33 @@ struct BrowserSession: Codable, Equatable, Sendable {
     static var maximumHistoryEntriesPerSpace: Int { BrowserCoreLimits.current.historyEntries }
 }
 
-struct BrowserSpaceDeletionIntent: Codable, Equatable, Sendable {
+struct BrowserSpaceDeletionIntent: Equatable, Sendable {
     let spaceID: SpaceID
     let profileID: UUID
     let operationID: UUID
+}
+
+extension BrowserSpaceDeletionIntent: Codable {
+    private enum CodingKeys: String, CodingKey {
+        case spaceID
+        case profileID
+        case operationID
+    }
+
+    init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.init(
+            spaceID: try container.decodeIdentity(forKey: .spaceID),
+            profileID: try container.decode(UUID.self, forKey: .profileID),
+            operationID: try container.decode(UUID.self, forKey: .operationID))
+    }
+
+    func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encodeStoredIdentity(spaceID, forKey: .spaceID)
+        try container.encode(profileID, forKey: .profileID)
+        try container.encode(operationID, forKey: .operationID)
+    }
 }
 
 // MARK: - Factories

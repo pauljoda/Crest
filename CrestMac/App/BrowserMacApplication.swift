@@ -257,8 +257,9 @@ final class BrowserMacApplication {
         self.cloudSync = cloudSync
         self.onboardingProgress = onboardingProgress
         self.onboardingCoordinator = BrowserOnboardingCoordinator()
+        let initialLayout = windowLayouts.layout(for: BrowserMacWindowRequest.initial.id)
         self.chrome = BrowserChromeState(
-                sidebarIsPresented: windowLayouts.layout(for: .main)?.sidebarIsPresented ?? true,
+                sidebarIsPresented: initialLayout?.sidebarIsPresented ?? true,
                 utilityPresentation: BrowserUtilityPresentationState(
                     defaults: utilityDefaults
                 )

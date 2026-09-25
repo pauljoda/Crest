@@ -46,4 +46,33 @@ final class BrowserWindowLayoutsTests: XCTestCase {
         XCTAssertEqual(relaunched.layout(for: ids[2])?.sidebarWidth, 202)
         XCTAssertEqual(relaunched.layout(for: ids[BrowserWindowLayouts.maximumCount])?.sidebarWidth, 280)
     }
+
+    /// Layouts an earlier build wrote keep their windows, a bare identity
+    /// reads too, and the layouts go back in the spelling earlier builds read.
+    func testLayoutsReadEitherIdentitySpellingAndWriteTheStoredOne() throws {
+        let suiteName = "crest.window-layouts-test.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let key = "crest.windowLayouts.v1"
+        let earlier = BrowserWindowID()
+        let bare = BrowserWindowID()
+        defaults.set(
+            Data(
+                """
+                [{"id":{"rawValue":"\(earlier.uuidString)"},"sidebarWidth":240,"sidebarIsPresented":false},
+                 {"id":"\(bare.uuidString)","sidebarWidth":300}]
+                """.utf8), forKey: key)
+
+        let layouts = BrowserWindowLayouts(defaults: defaults)
+        XCTAssertEqual(layouts.layout(for: earlier)?.sidebarWidth, 240)
+        XCTAssertEqual(layouts.layout(for: earlier)?.sidebarIsPresented, false)
+        XCTAssertEqual(layouts.layout(for: bare)?.sidebarWidth, 300)
+
+        layouts.save(BrowserWindowState(id: bare, sidebarWidth: 310))
+        let stored = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: XCTUnwrap(defaults.data(forKey: key))) as? [[String: Any]])
+        XCTAssertEqual(
+            stored.map { $0["id"] as? [String: String] },
+            [StoredIdentityJSON.wrapped(earlier), StoredIdentityJSON.wrapped(bare)])
+    }
 }

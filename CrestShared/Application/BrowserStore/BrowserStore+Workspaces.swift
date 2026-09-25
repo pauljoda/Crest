@@ -76,7 +76,7 @@ extension BrowserStore {
         -> MoveTabToWindow
     {
         MoveTabToWindow(
-            workspaceID: family.workspaceID, windowID: windowID.rawValue, spaceID: assignment.spaceID.rawValue,
-            tabID: id.rawValue, destinationWindowID: destination.windowID.rawValue)
+            workspaceID: family.workspaceID, windowID: windowID, spaceID: assignment.spaceID,
+            tabID: id, destinationWindowID: destination.windowID)
     }
 }

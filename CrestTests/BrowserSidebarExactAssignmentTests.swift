@@ -390,18 +390,18 @@ final class BrowserSidebarExactAssignmentTests: XCTestCase {
         sourceTab: BrowserTab
     ) {
         let sourceTab = BrowserTab(
-            id: TabID(rawValue: fixedUUID(1)),
+            id: fixedUUID(1),
             title: "Source tab",
             url: nil,
             placement: .current,
             lastActivatedAt: Date(timeIntervalSince1970: 1_700_000_000)
         )
         let destinationTab = BrowserTab.startPage(
-            id: TabID(rawValue: fixedUUID(2)),
+            id: fixedUUID(2),
             lastActivatedAt: Date(timeIntervalSince1970: 1_700_000_001)
         )
         let source = BrowserSpace(
-            id: SpaceID(rawValue: fixedUUID(3)),
+            id: fixedUUID(3),
             profile: BrowsingProfile(id: fixedUUID(4)),
             name: "Source",
             symbol: "1.circle",
@@ -413,7 +413,7 @@ final class BrowserSidebarExactAssignmentTests: XCTestCase {
                 : .open
         )
         let destination = BrowserSpace(
-            id: SpaceID(rawValue: fixedUUID(5)),
+            id: fixedUUID(5),
             profile: BrowsingProfile(id: fixedUUID(6)),
             name: "Destination",
             symbol: "2.circle",

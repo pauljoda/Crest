@@ -355,14 +355,14 @@ final class BrowserSplitDropPolicyTests: XCTestCase {
     // MARK: - Fixtures
 
     private static let assignment = BrowserSpaceRuntimeAssignment(
-        spaceID: SpaceID(rawValue: uuid(1)),
+        spaceID: uuid(1),
         profileID: uuid(2)
     )
 
     /// A Space this window is not presenting: the one it switched away from, or
     /// the one it is switching to while the change animates.
     private static let otherAssignment = BrowserSpaceRuntimeAssignment(
-        spaceID: SpaceID(rawValue: uuid(3)),
+        spaceID: uuid(3),
         profileID: uuid(4)
     )
 

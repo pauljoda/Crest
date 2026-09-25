@@ -127,13 +127,13 @@ final class BrowserCommandPaletteActionPolicyTests: XCTestCase {
 
     private func makeSpace(index: UInt8) -> BrowserSpace {
         let tab = BrowserTab(
-            id: TabID(rawValue: uuid(index &+ 1)),
+            id: uuid(index &+ 1),
             title: "Tab \(index)",
             url: URL(fileURLWithPath: "/palette-\(index)"),
             placement: .current
         )
         return BrowserSpace(
-            id: SpaceID(rawValue: uuid(index &+ 2)),
+            id: uuid(index &+ 2),
             profile: BrowsingProfile(id: uuid(index &+ 3)),
             name: "Space \(index)",
             symbol: "circle",

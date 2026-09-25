@@ -19,7 +19,7 @@ final class BrowserCloudRecordCodecTests: XCTestCase {
         let receiver = try BrowserStoredSessionHarness(session: session)
         await receiver.store.flushPendingSyncPersistence()
         let codec = BrowserCloudRecordCodec()
-        let space = SyncRecordReference(kind: .space, id: session.spaces[0].id.rawValue)
+        let space = SyncRecordReference(kind: .space, id: session.spaces[0].id)
         let upload = try XCTUnwrap(try sender.core.query(RecordsToUpload(records: [space])).records.first)
         let cloud = try codec.record(for: upload)
         var raw = try XCTUnwrap(

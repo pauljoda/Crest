@@ -8,7 +8,7 @@ import Foundation
 /// or tint with a derived row. Per-field timestamps let sync merge a rename
 /// and a color change made on different devices without treating either as a
 /// rewrite of the other.
-struct BrowserSplitGroupMetadata: Codable, Equatable, Identifiable, Sendable {
+struct BrowserSplitGroupMetadata: Equatable, Identifiable, Sendable {
     static let defaultTitle = "Split View"
 
     let id: SplitGroupID
@@ -141,5 +141,42 @@ struct BrowserSplitGroupMetadata: Codable, Equatable, Identifiable, Sendable {
     private static func normalizedTimestamp(_ date: Date) -> Date {
         let milliseconds = (date.timeIntervalSince1970 * 1_000).rounded()
         return Date(timeIntervalSince1970: milliseconds / 1_000)
+    }
+}
+
+// MARK: - Codable
+
+extension BrowserSplitGroupMetadata: Codable {
+    private enum CodingKeys: String, CodingKey {
+        case id
+        case customTitle
+        case titleModifiedAt
+        case customIconSymbol
+        case iconModifiedAt
+        case tint
+        case tintModifiedAt
+    }
+
+    /// Reads the stored values as they are; only `init(id:…)` resolves them.
+    init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decodeIdentity(forKey: .id)
+        customTitle = try container.decodeIfPresent(String.self, forKey: .customTitle)
+        titleModifiedAt = try container.decodeIfPresent(Date.self, forKey: .titleModifiedAt)
+        customIconSymbol = try container.decodeIfPresent(String.self, forKey: .customIconSymbol)
+        iconModifiedAt = try container.decodeIfPresent(Date.self, forKey: .iconModifiedAt)
+        tint = try container.decodeIfPresent(BrowserSpaceBrandColor.self, forKey: .tint)
+        tintModifiedAt = try container.decodeIfPresent(Date.self, forKey: .tintModifiedAt)
+    }
+
+    func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encodeStoredIdentity(id, forKey: .id)
+        try container.encodeIfPresent(customTitle, forKey: .customTitle)
+        try container.encodeIfPresent(titleModifiedAt, forKey: .titleModifiedAt)
+        try container.encodeIfPresent(customIconSymbol, forKey: .customIconSymbol)
+        try container.encodeIfPresent(iconModifiedAt, forKey: .iconModifiedAt)
+        try container.encodeIfPresent(tint, forKey: .tint)
+        try container.encodeIfPresent(tintModifiedAt, forKey: .tintModifiedAt)
     }
 }

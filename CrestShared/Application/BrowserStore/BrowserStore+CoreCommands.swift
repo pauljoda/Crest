@@ -10,9 +10,9 @@ extension BrowserStore {
         guard !tabIDs.isEmpty else { return nil }
         let id = FolderID()
         let creation = CreateFolder(
-            workspaceID: family.workspaceID, spaceID: spaceID.rawValue, folderID: id.rawValue, placement: .current,
+            workspaceID: family.workspaceID, spaceID: spaceID, folderID: id, placement: .current,
             parentID: nil, title: nil, color: BrowserSpaceBrandColor.folderDefault.core, symbol: "folder",
-            tabIDs: tabIDs.map(\.rawValue), leavesSplits: detachesSplitMembers)
+            tabIDs: tabIDs, leavesSplits: detachesSplitMembers)
         guard family.send(creation, from: self) else { return nil }
         return session.space(id: spaceID)?.folders.contains(where: { $0.id == id }) == true ? id : nil
     }
@@ -26,7 +26,7 @@ extension BrowserStore {
     ) -> Bool {
         guard !mode.requiresFavicon || faviconData?.isEmpty == false else { return false }
         let choice = ChooseTabIcon(
-            workspaceID: family.workspaceID, spaceID: spaceID.rawValue, tabID: tabID.rawValue, mode: mode, emoji: emoji,
+            workspaceID: family.workspaceID, spaceID: spaceID, tabID: tabID, mode: mode, emoji: emoji,
             accent: iconAccent.map { TabIconAccent(red: $0.red, green: $0.green, blue: $0.blue) })
         return family.perform(choice, from: self, offering: faviconData) != nil
     }
@@ -35,7 +35,7 @@ extension BrowserStore {
     /// answers whether that changed its saved address.
     func replaceSessionSavedAddress(tabID: TabID, in spaceID: SpaceID) -> Bool {
         family.send(
-            ReplaceSavedAddress(workspaceID: family.workspaceID, spaceID: spaceID.rawValue, tabID: tabID.rawValue),
+            ReplaceSavedAddress(workspaceID: family.workspaceID, spaceID: spaceID, tabID: tabID),
             from: self)
     }
 
@@ -43,7 +43,7 @@ extension BrowserStore {
     /// whether the core accepted it, including for a tab already there.
     func returnSessionTabToSavedAddress(tabID: TabID, in spaceID: SpaceID) -> Bool {
         family.perform(
-            ReturnToSavedAddress(workspaceID: family.workspaceID, spaceID: spaceID.rawValue, tabID: tabID.rawValue),
+            ReturnToSavedAddress(workspaceID: family.workspaceID, spaceID: spaceID, tabID: tabID),
             from: self) != nil
     }
 
@@ -54,7 +54,7 @@ extension BrowserStore {
     /// already kept.
     func promoteTransientPage(_ page: CorePage, into spaceID: SpaceID) -> TransientPagePromoted? {
         let promotion = PromoteTransientPage(
-            workspaceID: family.workspaceID, windowID: windowID.rawValue, pageID: page.id, spaceID: spaceID.rawValue,
+            workspaceID: family.workspaceID, windowID: windowID, pageID: page.id, spaceID: spaceID,
             placement: .current)
         return family.perform(promotion, from: self)?.changes.lazy.compactMap {
             guard case .transientPagePromoted(let promoted) = $0, promoted.pageID == page.id else { return nil }
@@ -73,8 +73,8 @@ extension BrowserStore {
     ) -> TabID? {
         let id = TabID()
         let opening = OpenTab(
-            workspaceID: family.workspaceID, windowID: windowID.rawValue, spaceID: spaceID.rawValue, tabID: id.rawValue,
-            content: content, placement: placement, afterTabID: origin?.rawValue, shows: shouldSelect)
+            workspaceID: family.workspaceID, windowID: windowID, spaceID: spaceID, tabID: id,
+            content: content, placement: placement, afterTabID: origin, shows: shouldSelect)
         return family.perform(opening, from: self) == nil ? nil : id
     }
 
@@ -85,8 +85,8 @@ extension BrowserStore {
     func closeSessionTab(_ id: TabID, in spaceID: SpaceID) -> Bool {
         family.perform(
             CloseTab(
-                workspaceID: family.workspaceID, windowID: windowID.rawValue, spaceID: spaceID.rawValue,
-                tabID: id.rawValue),
+                workspaceID: family.workspaceID, windowID: windowID, spaceID: spaceID,
+                tabID: id),
             from: self) != nil
     }
 
@@ -94,7 +94,7 @@ extension BrowserStore {
     /// the Start Page that is its Space's only tab.
     func closingLeavesOnlyTheWindow(_ id: TabID, in spaceID: SpaceID) -> Bool {
         let closing = CloseTab(
-            workspaceID: family.workspaceID, windowID: windowID.rawValue, spaceID: spaceID.rawValue, tabID: id.rawValue)
+            workspaceID: family.workspaceID, windowID: windowID, spaceID: spaceID, tabID: id)
         guard case .lastStartPage = family.refusal(of: closing, from: self) else { return false }
         return true
     }
@@ -103,48 +103,48 @@ extension BrowserStore {
     func deleteSessionTab(_ id: TabID, in spaceID: SpaceID) -> Bool {
         family.perform(
             DeleteTab(
-                workspaceID: family.workspaceID, windowID: windowID.rawValue, spaceID: spaceID.rawValue,
-                tabID: id.rawValue),
+                workspaceID: family.workspaceID, windowID: windowID, spaceID: spaceID,
+                tabID: id),
             from: self) != nil
     }
 
     func clearSessionTabs(in spaceID: SpaceID) -> Bool {
         family.perform(
-            ClearCurrentTabs(workspaceID: family.workspaceID, windowID: windowID.rawValue, spaceID: spaceID.rawValue),
+            ClearCurrentTabs(workspaceID: family.workspaceID, windowID: windowID, spaceID: spaceID),
             from: self) != nil
     }
 
     func renameSessionTab(_ title: String?, tabID: TabID, in spaceID: SpaceID) -> Bool {
         family.send(
-            RenameTab(workspaceID: family.workspaceID, spaceID: spaceID.rawValue, tabID: tabID.rawValue, title: title),
+            RenameTab(workspaceID: family.workspaceID, spaceID: spaceID, tabID: tabID, title: title),
             from: self)
     }
 
     func setSessionTabResidency(_ keep: Bool, tabID: TabID, in spaceID: SpaceID) -> Bool {
         family.send(
             KeepPageLoaded(
-                workspaceID: family.workspaceID, spaceID: spaceID.rawValue, tabID: tabID.rawValue, keeps: keep),
+                workspaceID: family.workspaceID, spaceID: spaceID, tabID: tabID, keeps: keep),
             from: self)
     }
 
     func renameSessionFolder(_ id: FolderID, in spaceID: SpaceID, title: String) -> Bool {
         family.send(
             RenameFolder(
-                workspaceID: family.workspaceID, spaceID: spaceID.rawValue, folderID: id.rawValue, title: title),
+                workspaceID: family.workspaceID, spaceID: spaceID, folderID: id, title: title),
             from: self)
     }
 
     func collapseSessionFolder(_ id: FolderID, in spaceID: SpaceID, isCollapsed: Bool) -> Bool {
         family.send(
             CollapseFolder(
-                workspaceID: family.workspaceID, spaceID: spaceID.rawValue, folderID: id.rawValue,
+                workspaceID: family.workspaceID, spaceID: spaceID, folderID: id,
                 collapsed: isCollapsed),
             from: self)
     }
 
     func deleteSessionFolder(_ id: FolderID, in spaceID: SpaceID) -> Bool {
         family.send(
-            DeleteFolder(workspaceID: family.workspaceID, spaceID: spaceID.rawValue, folderID: id.rawValue),
+            DeleteFolder(workspaceID: family.workspaceID, spaceID: spaceID, folderID: id),
             from: self)
     }
 
@@ -154,9 +154,9 @@ extension BrowserStore {
     ) -> Bool {
         family.send(
             MoveFolder(
-                workspaceID: family.workspaceID, spaceID: spaceID.rawValue, folderID: id.rawValue,
-                placement: location?.tabPlacement, parentID: parentID?.rawValue, beforeFolderID: siblingID?.rawValue,
-                beforeTabID: beforeTabID?.rawValue),
+                workspaceID: family.workspaceID, spaceID: spaceID, folderID: id,
+                placement: location?.tabPlacement, parentID: parentID, beforeFolderID: siblingID,
+                beforeTabID: beforeTabID),
             from: self)
     }
 
@@ -167,10 +167,10 @@ extension BrowserStore {
     ) -> Bool {
         family.send(
             FileTabs(
-                workspaceID: family.workspaceID, windowID: windowID.rawValue, spaceID: spaceID.rawValue,
-                selection: TabSelection(tabIDs: ids.map(\.rawValue), folderIDs: [], memberTabIDs: ids.map(\.rawValue)),
-                placement: location.tabPlacement, folderID: folderID?.rawValue, beforeTabID: anchor?.rawValue,
-                beforeFolderID: beforeFolderID?.rawValue, leavesSplits: detachesSplitMembers),
+                workspaceID: family.workspaceID, windowID: windowID, spaceID: spaceID,
+                selection: TabSelection(tabIDs: ids, folderIDs: [], memberTabIDs: ids),
+                placement: location.tabPlacement, folderID: folderID, beforeTabID: anchor,
+                beforeFolderID: beforeFolderID, leavesSplits: detachesSplitMembers),
             from: self)
     }
 }

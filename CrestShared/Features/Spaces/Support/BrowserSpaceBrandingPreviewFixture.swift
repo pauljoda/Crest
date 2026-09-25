@@ -72,7 +72,7 @@ enum BrowserSpaceBrandingPreviewFixture {
         accessPolicy: BrowserSpaceAccessPolicy
     ) -> BrowserSpace {
         BrowserSpace(
-            id: SpaceID(rawValue: deterministicUUID(finalByte: idByte)),
+            id: deterministicUUID(finalByte: idByte),
             profile: BrowsingProfile(id: deterministicUUID(finalByte: profileByte)),
             name: name,
             symbol: symbol,

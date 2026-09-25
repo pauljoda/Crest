@@ -37,7 +37,7 @@ struct MobileBrowserCommandPaletteLayer: View {
                 openURL: { source, url in openURL(source, url, mode) },
                 dismiss: dismiss,
                 morphNamespace: morphNamespace,
-                morphID: "crest-address-command-\(space?.id.id.uuidString ?? "none")",
+                morphID: "crest-address-command-\(space?.id.uuidString ?? "none")",
                 overlayContentInsets: overlayContentInsets
             )
             .id(

@@ -50,7 +50,7 @@ final class MobileSplitCardPagerPolicyTests: XCTestCase {
 
     func testAdjacentMemberIgnoresATabThatIsNoLongerAMember() {
         let members = memberIDs(count: 2)
-        let closedMember = TabID(rawValue: fixedUUID(0xDE))
+        let closedMember = fixedUUID(0xDE)
 
         XCTAssertNil(
             MobileSplitCardPagerPolicy.adjacentMember(
@@ -65,7 +65,7 @@ final class MobileSplitCardPagerPolicyTests: XCTestCase {
     // MARK: - Helpers
 
     private func memberIDs(count: Int) -> [TabID] {
-        (0..<count).map { TabID(rawValue: fixedUUID($0 + 1)) }
+        (0..<count).map { fixedUUID($0 + 1) }
     }
 
     private func fixedUUID(_ value: Int) -> UUID {

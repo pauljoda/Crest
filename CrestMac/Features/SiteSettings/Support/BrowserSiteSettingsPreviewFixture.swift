@@ -2,9 +2,9 @@ import Foundation
 
 @MainActor
 enum BrowserSiteSettingsPreviewFixture {
-    static let spaceID = SpaceID(rawValue: uuid(0x51))
+    static let spaceID = uuid(0x51)
     static let profileID = uuid(0x52)
-    static let tabID = TabID(rawValue: uuid(0x53))
+    static let tabID = uuid(0x53)
     static let fixedDate = Date(timeIntervalSince1970: 1_700_000_000)
     static let pageURL: URL = {
         guard let url = URL(string: "https://example.com") else {

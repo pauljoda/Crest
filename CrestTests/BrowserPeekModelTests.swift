@@ -445,7 +445,7 @@ final class BrowserPeekModelTests: XCTestCase {
         context.browser.family.send(
             ReorderSpaces(
                 workspaceID: context.browser.family.workspaceID,
-                spaceIDs: [context.destination.id.rawValue, inserted.id.rawValue, source.id.rawValue]),
+                spaceIDs: [context.destination.id, inserted.id, source.id]),
             from: context.browser)
         context.browser.selectSpace(source.id)
         let renamedSource = try XCTUnwrap(context.browser.session.space(id: source.id))

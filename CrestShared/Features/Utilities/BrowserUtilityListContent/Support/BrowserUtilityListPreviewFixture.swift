@@ -3,7 +3,7 @@ import Foundation
 enum BrowserUtilityListPreviewFixture {
     static let referenceDate = Date(timeIntervalSinceReferenceDate: 807_969_600)
     static let assignment = BrowserSpaceRuntimeAssignment(
-        spaceID: SpaceID(rawValue: identifier(0x21)),
+        spaceID: identifier(0x21),
         profileID: identifier(0x11)
     )
 
@@ -18,7 +18,7 @@ enum BrowserUtilityListPreviewFixture {
 
     static let archivedTab = ArchivedTab(
         tab: BrowserTab(
-            id: TabID(rawValue: identifier(0x41)),
+            id: identifier(0x41),
             title: "Architecture Notes",
             url: previewURL("archive"),
             symbol: "doc.text.fill",
@@ -40,7 +40,7 @@ enum BrowserUtilityListPreviewFixture {
         folders: [],
         tabs: [
             BrowserTab(
-                id: TabID(rawValue: identifier(0x42)),
+                id: identifier(0x42),
                 title: "Current Notes",
                 url: previewURL("current"),
                 symbol: "doc.text",

@@ -176,7 +176,7 @@ final class BrowserSplitTabCopyTests: XCTestCase {
         XCTAssertEqual(restored.tabs.first { $0.id == source.id }?.savedURL, source.savedURL)
         XCTAssertEqual(restored.tabs.first { $0.id == copy.id }?.folderID, currentFolder.id)
         XCTAssertEqual(restored.tabs.first { $0.id == copy.id }?.splitGroupID, copy.splitGroupID)
-        XCTAssertFalse(pending.contains { $0.kind == .tab && $0.id == source.id.rawValue })
+        XCTAssertFalse(pending.contains { $0.kind == .tab && $0.id == source.id })
     }
 
     private func tab(_ title: String, placement: TabPlacement, folder: FolderID? = nil) -> BrowserTab {

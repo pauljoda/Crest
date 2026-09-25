@@ -20,7 +20,7 @@ struct SpaceSidebarUtilityContent: View {
                 searchText: $searchText,
                 filter: $filter,
                 morphNamespace: commandSurfaceNamespace,
-                morphID: "crest-address-command-\(space.id)",
+                morphID: BrowserRootCommandSurfaceID.sidebarAddress(spaceID: space.id),
                 clearHistory: clearHistory
             )
             .padding(.horizontal, BrowserChromeLayout.sidebarHorizontalInset)
