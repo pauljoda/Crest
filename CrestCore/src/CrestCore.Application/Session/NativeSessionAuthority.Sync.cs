@@ -196,17 +196,23 @@ public sealed partial class NativeSessionAuthority {
 
     /// Rebases the journal above `records`, the cloud's, from the session as
     /// it is, so every record waits to upload, and saves the journal. The
-    /// session does not change. A transaction that never commits queues the
-    /// stages it superseded again.
+    /// session does not change. The stages still queued are superseded first,
+    /// and each record their edits removed is deleted for the reason of the
+    /// edit that removed it; a transaction that never commits queues them
+    /// again.
     private void Overwriting(NativeSyncAuthority sync, IncomingSyncRecords records, DateTimeOffset now) {
         var superseded = sync.Supersede();
         var transaction = sync.BeginTransaction();
         transaction.Superseded = superseded;
         try {
             SessionState basis;
-            lock (Gate) basis = IntentBasis();
+            lock (Gate) {
+                Supersede(sync, transaction);
+                basis = IntentBasis();
+            }
+            var removals = (transaction.Superseded?.Removals ?? SyncRemovals.None).Reasons(SyncDeletionReason.Superseded);
             transaction.Adopt(transaction.Journal.Overwrite(StoredSessionCodec.Encode(basis), records.Batch(),
-                StoredSessionCodec.Seconds(now)));
+                StoredSessionCodec.Seconds(now), removals));
             _ = transaction.Seal();
             transaction.CommitDurably();
         } catch (Exception error) {

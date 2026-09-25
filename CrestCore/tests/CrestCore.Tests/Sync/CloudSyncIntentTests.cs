@@ -174,6 +174,22 @@ public sealed partial class BrowserContractsTests {
         Assert.DoesNotContain(stored.Session.Current.Spaces.Single().Folders, held => held.Id == folder);
     }
 
+    /// An overwrite that lands before the stage of a folder's deletion runs
+    /// deletes the folder's record as the person did, so the overwrite that
+    /// reaches every device keeps it deleted there too.
+    [Fact]
+    public void AnOverwriteKeepsTheReasonOfADeletionItStagesInsteadOfItsQueuedStage() {
+        using var directory = new StorageDirectory();
+        var fixture = SavedSession();
+        using var stored = StoredSyncing(directory, fixture.Document);
+        var folder = SpaceId(fixture.Document["session"]!["spaces"]![0]!["folders"]![0]!);
+
+        stored.App.Send(new DeleteFolder(stored.Workspace, fixture.Space, folder));
+        stored.App.Send(new OverwriteCloud([CloudTab(Guid.NewGuid(), fixture.Space, clock: 5)]));
+
+        Assert.Equal("explicitDelete", FolderTombstoneReason(stored.Sync, folder));
+    }
+
     /// A merge the core refuses leaves the stage it superseded to run as it
     /// would have.
     [Fact]

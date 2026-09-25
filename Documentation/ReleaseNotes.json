@@ -2449,6 +2449,10 @@
     "sync-merges-off-main-thread": {
       "category": "improved",
       "message": "Changes from your other devices arrive through iCloud Sync without pausing Crest's windows."
+    },
+    "overwrite-keeps-deletion-reason": {
+      "category": "fixed",
+      "message": "A folder you delete just before choosing this device's copy over iCloud's stays deleted on your other devices."
     }
   }
 }

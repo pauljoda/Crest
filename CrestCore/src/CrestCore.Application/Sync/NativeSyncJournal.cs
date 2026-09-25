@@ -142,14 +142,20 @@ public sealed class NativeSyncJournal {
 
     /// The journal after rebasing above `cloud`, records the cloud holds, from
     /// `session`, a whole session in the stored format that nothing else holds:
-    /// each record is written above the cloud's and waits to upload. `now` in
-    /// seconds since 2001 dates the tombstones.
-    internal NativeSyncJournal Overwrite(JsonObject session, JsonArray cloud, double now) => Apply(new JsonObject {
-        ["version"] = 1,
-        ["operation"] = NativeSyncOperationCodes.Name(NativeSyncOperation.Overwrite),
-        ["preferences"] = Preferences,
-        ["arguments"] = new JsonObject { ["session"] = session, ["records"] = cloud, ["now"] = now }
-    });
+    /// each record is written above the cloud's and waits to upload. A record
+    /// the session no longer holds is deleted for the reason `removals` names
+    /// for it, else as superseded; `now` in seconds since 2001 dates the
+    /// tombstones.
+    internal NativeSyncJournal Overwrite(JsonObject session, JsonArray cloud, double now,
+        IReadOnlyDictionary<string, SyncDeletionReason>? removals = null) {
+        var request = new JsonObject {
+            ["version"] = 1,
+            ["operation"] = NativeSyncOperationCodes.Name(NativeSyncOperation.Overwrite),
+            ["preferences"] = Preferences,
+            ["arguments"] = new JsonObject { ["session"] = session, ["records"] = cloud, ["now"] = now }
+        };
+        return Apply(request, removals);
+    }
 
     /// The journal after staging `session`, a whole session in the stored
     /// format that nothing else holds, under this journal's preferences.
@@ -167,8 +173,9 @@ public sealed class NativeSyncJournal {
         return Apply(request, removals);
     }
 
-    /// The journal after `request`. A stage deletes each record it removes for
-    /// the reason `removals` names for it, else for the request's own.
+    /// The journal after `request`. A stage or an overwrite deletes each record
+    /// it removes for the reason `removals` names for it, else for the
+    /// request's own, or as superseded.
     internal NativeSyncJournal Apply(JsonObject request, IReadOnlyDictionary<string, SyncDeletionReason>? removals = null) {
         if (request["version"]!.GetValue<int>() != 1) throw new BrowserRuleException(BrowserRuleCodes.VersionMismatch);
         var fields = metadata.DeepClone().AsObject();
@@ -249,7 +256,7 @@ public sealed class NativeSyncJournal {
                     if (desired.TryGetValue(id, out var payload)) next[id] = Save(payload);
                     else {
                         if (Payload(next[id]) is { } old && !Includes(fields["preferences"]!, old)) continue;
-                        next[id] = Delete(next[id], SyncDeletionReason.Superseded);
+                        next[id] = Delete(next[id], removals?.GetValueOrDefault(id) ?? SyncDeletionReason.Superseded);
                     }
                     queued.Add(id);
                 }
