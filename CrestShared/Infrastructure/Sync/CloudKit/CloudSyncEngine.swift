@@ -295,7 +295,8 @@ actor BrowserCloudSyncEngine {
                 return false
             }
         }
-        let records = await gateway.cloudSyncRecords()
+        // A journal this build cannot read uploads nothing.
+        guard let records = try? await gateway.cloudSyncRecords() else { return nil }
         guard !isStopped, !persistedState.requiresAccountConfirmation,
             !persistedState.requiresFullPull, !isPullingSnapshot
         else { return nil }
@@ -330,7 +331,9 @@ actor BrowserCloudSyncEngine {
     }
 
     private func enqueueLocalChanges(on syncEngine: CKSyncEngine) async {
-        let pendingIDs = await gateway.cloudSyncPendingRecordIDs()
+        // A journal this build cannot read queues nothing; the next journal
+        // change tries again.
+        guard let pendingIDs = try? await gateway.cloudSyncPendingRecordIDs() else { return }
         guard !isStopped, !persistedState.requiresAccountConfirmation else { return }
         let changes = pendingIDs.map { id in
             CKSyncEngine.PendingRecordZoneChange.saveRecord(
@@ -341,7 +344,7 @@ actor BrowserCloudSyncEngine {
     }
 
     private func clearCompletedConflictResolutionIfNeeded() async throws {
-        let pendingIDs = await gateway.cloudSyncPendingRecordIDs()
+        let pendingIDs = try await gateway.cloudSyncPendingRecordIDs()
         let resolution = BrowserCloudConflictResolutionPolicy.resolutionAfterRestart(
             persistedResolution: persistedState.conflictResolution,
             hasPendingUploads: !pendingIDs.isEmpty
@@ -385,7 +388,7 @@ actor BrowserCloudSyncEngine {
         }
 
         if !event.deletions.isEmpty {
-            let localRecords = await gateway.cloudSyncRecords()
+            let localRecords = try await gateway.cloudSyncRecords()
             let localNames = Set(localRecords.map { $0.id.recordName })
             for deletion in event.deletions where deletion.recordID.zoneID == codec.recordZoneID {
                 persistedState.systemFields.remove(recordName: deletion.recordID.recordName)
@@ -557,7 +560,7 @@ actor BrowserCloudSyncEngine {
             }
         }
         if persistedState.conflictResolution == .useThisDevice,
-            await gateway.cloudSyncPendingRecordIDs().isEmpty
+            (try? await gateway.cloudSyncPendingRecordIDs())?.isEmpty == true
         {
             persistedState.conflictResolution = nil
         }

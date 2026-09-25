@@ -7,30 +7,78 @@ import OSLog
 /// and runs the transactions the transport asks for. Nothing reads the
 /// journal until the transport first asks for it, so a launch never decodes
 /// it; the counts settings show come from the core's `SyncJournalChanged`.
+///
+/// A journal this build cannot read pauses the transport: every read throws
+/// `BrowserSyncError.unreadableJournal` and nothing stands in for it, neither
+/// an empty journal nor an earlier one. The next journal the core accepts is
+/// read again.
 final class BrowserCoreSyncAuthority: @unchecked Sendable {
     let handle: UInt64
     private let lock = NSLock()
-    /// The journal as last read; nil until the first read.
+    /// The journal as last read; nil until the first read and while the
+    /// journal cannot be read.
     private var projection: BrowserSyncJournal?
     /// The core's journal version `projection` was read at.
     private var projectedVersion: UInt64
+    /// The version the last read failed at and why; nil once a read succeeds.
+    private var unreadable: (version: UInt64, error: BrowserSyncError)?
 
-    /// The journal the core accepted last, read on first use. A stage the
-    /// core ran since the last read is read again first. A journal this build
-    /// cannot read keeps the last one it could, or none.
-    var journal: BrowserSyncJournal {
+    /// The journal the core accepted last, read on first use and again after
+    /// each journal the core accepts. Throws `BrowserSyncError.unreadableJournal`
+    /// when this build cannot read it, without reading a journal it already
+    /// failed to read again.
+    func journal() throws -> BrowserSyncJournal {
         let current = version
-        return lock.withLock {
-            if projection == nil || current != projectedVersion {
-                do {
-                    projection = try Self.read(handle)
-                    projectedVersion = current
-                } catch {
-                    Logger(subsystem: "com.pauldavis.crest", category: "Sync")
-                        .error("The sync journal could not be read: \(String(describing: error), privacy: .public)")
-                }
+        return try lock.withLock {
+            if let projection, projectedVersion == current { return projection }
+            if let unreadable, unreadable.version == current { throw unreadable.error }
+            do {
+                let read = try Self.read(handle)
+                projection = read
+                projectedVersion = current
+                unreadable = nil
+                return read
+            } catch {
+                let reason = Self.reason(error)
+                let failure = BrowserSyncError.unreadableJournal(reason)
+                projection = nil
+                unreadable = (current, failure)
+                Logger(subsystem: "com.pauldavis.crest", category: "Sync")
+                    .error("The sync journal could not be read, so sync is paused: \(reason, privacy: .public)")
+                throw failure
             }
-            return projection ?? BrowserSyncJournal()
+        }
+    }
+
+    /// Throws the failure that paused the transport, until the core accepts a
+    /// journal this build can read. A journal that changed since the failure
+    /// is read again, so this blocks; while nothing failed it reads nothing.
+    func requireReadable() throws {
+        guard lock.withLock({ unreadable != nil }) else { return }
+        _ = try journal()
+    }
+
+    /// Why a journal could not be read, naming a record or a field but never
+    /// what a record holds.
+    private static func reason(_ error: any Error) -> String {
+        switch error {
+        case BrowserSyncError.invalidURL:
+            return "a record holds an address sync does not carry"
+        case let error as BrowserSyncError:
+            return String(describing: error)
+        case let error as DecodingError:
+            let context: DecodingError.Context
+            switch error {
+            case .typeMismatch(_, let found), .valueNotFound(_, let found), .keyNotFound(_, let found),
+                .dataCorrupted(let found):
+                context = found
+            @unknown default:
+                return "a value does not decode"
+            }
+            let path = context.codingPath.map { $0.intValue.map(String.init) ?? $0.stringValue }
+            return "a value does not decode at \(path.joined(separator: "."))"
+        default:
+            return String(describing: type(of: error))
         }
     }
 
@@ -82,9 +130,12 @@ final class BrowserCoreSyncAuthority: @unchecked Sendable {
     /// Prepares one journal mutation or session materialization: `request` is a
     /// `BrowserCoreSync.Mutation`, or a `BrowserCoreSync.Request` carrying a
     /// `SessionPreparation`. The core waits for a stage in progress first.
+    /// Throws `BrowserSyncError.unreadableJournal`, and prepares nothing, while
+    /// the journal cannot be read.
     func prepare<Request: Encodable>(
         _ request: Request, session: BrowserSession? = nil
     ) throws -> BrowserCoreSyncTransaction {
+        let current = try journal()
         let data = try JSONEncoder().encode(request)
         guard data.count <= 64 * 1024 * 1024 else { throw CoreError.tooLarge }
         var transaction: UInt64 = 0
@@ -100,7 +151,7 @@ final class BrowserCoreSyncAuthority: @unchecked Sendable {
             throw CoreError.rejected(result)
         }
         let value = BrowserCoreSyncTransaction(handle: transaction, owner: self)
-        let snapshot = BrowserCoreSyncJournal(handle: journalHandle, preferences: journal.preferences)
+        let snapshot = BrowserCoreSyncJournal(handle: journalHandle, preferences: current.preferences)
         // The query is consumed even if decoding the journal fails.
         var materialized: BrowserSession?
         if query != 0 {
@@ -111,7 +162,7 @@ final class BrowserCoreSyncAuthority: @unchecked Sendable {
             materialized = try BrowserCoreSync.consumeMaterializedSession(query, from: session)
         }
         let next = try BrowserSyncJournal.acceptingCoreSnapshot(snapshot)
-        guard next.deviceID == journal.deviceID else { throw CoreError.rejected(CREST_INVALID_MESSAGE) }
+        guard next.deviceID == current.deviceID else { throw CoreError.rejected(CREST_INVALID_MESSAGE) }
         value.journal = next
         value.session = materialized
         return value
@@ -122,6 +173,7 @@ final class BrowserCoreSyncAuthority: @unchecked Sendable {
         lock.withLock {
             projection = journal
             projectedVersion = version
+            unreadable = nil
         }
     }
     enum CoreError: Error {

@@ -13,7 +13,27 @@ final class BrowserSyncCoordinator: @unchecked Sendable {
     /// the core saves the journal in its session file.
     private let persistence: (any BrowserSyncJournalPersisting)?
     private let mutationLock = NSLock()
-    var journal: BrowserSyncJournal { core.journal }
+
+    #if DEBUG
+        /// The journal, for the journal contract tests, which never hold one
+        /// this build cannot read. TRANSITIONAL until slice 8c ports them to
+        /// the core.
+        var journal: BrowserSyncJournal {
+            do { return try core.journal() } catch {
+                preconditionFailure("A journal contract test holds a journal it cannot read: \(error)")
+            }
+        }
+    #endif
+
+    /// The journal the core accepted last. Throws
+    /// `BrowserSyncError.unreadableJournal` while this build cannot read it,
+    /// which pauses the transport.
+    func readJournal() throws -> BrowserSyncJournal { try core.journal() }
+
+    /// Throws the failure that paused the transport until the core accepts a
+    /// journal this build can read. It may read the journal, so callers run
+    /// it off the main actor.
+    func requireReadableJournal() throws { try core.requireReadable() }
 
     /// The sync component of the session the core keeps in its file. The core
     /// saves every journal this component accepts.
@@ -48,7 +68,7 @@ final class BrowserSyncCoordinator: @unchecked Sendable {
         await Task.detached(priority: .utility) { [self] in
             core.flush()
             guard let persistence else { return }
-            mutationLock.withLock { try? persistence.save(journal) }
+            mutationLock.withLock { if let journal = try? readJournal() { try? persistence.save(journal) } }
         }.value
     }
 
@@ -88,7 +108,7 @@ final class BrowserSyncCoordinator: @unchecked Sendable {
     ) throws -> BrowserSession {
         try mutationLock.withLock {
             // Validate the decoded transport boundary before entering the core.
-            try journal.validateIncoming(records, checksSpace: !replacing)
+            try readJournal().validateIncoming(records, checksSpace: !replacing)
             let emptySpace: BrowserSpace? =
                 if replacing && records.isEmpty {
                     Self.blankSpace()
@@ -109,7 +129,7 @@ final class BrowserSyncCoordinator: @unchecked Sendable {
         with session: BrowserSession, remoteRecords: [BrowserSyncRecord], at date: Date = .now
     ) throws {
         try mutationLock.withLock {
-            try journal.validateIncoming(remoteRecords, checksSpace: false)
+            try readJournal().validateIncoming(remoteRecords, checksSpace: false)
             _ = try commit(
                 BrowserCoreSync.Mutation(
                     operation: .overwrite,

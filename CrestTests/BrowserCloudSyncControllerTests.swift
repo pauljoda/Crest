@@ -71,6 +71,54 @@ final class BrowserCloudSyncControllerTests: XCTestCase {
         XCTAssertEqual(notifyCount, 1)
     }
 
+    /// A journal this build cannot read keeps sync paused: nothing reaches
+    /// iCloud, the window reports it, and the next journal change tries again.
+    func testAJournalTheDeviceCannotReadKeepsSyncPausedUntilAJournalChangeReadsAgain() async throws {
+        var session = BrowserSession.preview
+        session.disposableSeedMarker = nil
+        let unreadable = try XCTUnwrap(session.spaces[0].tabs.first { $0.url != nil })
+        let index = try XCTUnwrap(session.spaces[0].tabs.firstIndex { $0.id == unreadable.id })
+        // Longer than a synced title may be, which the core stages but this
+        // build's journal decoder refuses.
+        session.spaces[0].tabs[index].title = String(repeating: "t", count: 3_000)
+        let harness = try BrowserStoredSessionHarness(session: session)
+        harness.core.engines.register(WebKitEngineBinding(), isDefault: true)
+        let store = harness.store
+        await store.flushPendingSyncPersistence()
+        let preferences = TestBrowserCloudSyncPreferences()
+        let factory = TestBrowserCloudSyncTransportFactory()
+        let controller = BrowserCloudSyncController(
+            workflow: store,
+            configuration: testConfiguration,
+            preferences: preferences,
+            remoteService: TestBrowserCloudSyncRemoteService(
+                accountState: .available, snapshot: [testRecord(index: 1)]),
+            transportFactory: factory
+        )
+
+        await controller.start()
+
+        XCTAssertTrue(factory.transports.isEmpty)
+        guard case .failed = controller.phase else { return XCTFail("Sync ran over an unreadable journal.") }
+        XCTAssertEqual(store.cloudSyncLocalErrorDescription, BrowserStore.unreadableSyncJournalDescription)
+        XCTAssertEqual(preferences.resetCount, 0)
+        do {
+            _ = try await store.cloudSyncRecords()
+            XCTFail("An unreadable journal was read.")
+        } catch BrowserSyncError.unreadableJournal {}
+
+        // The tab's page settles on a shorter title, which changes the
+        // journal, and the journal reads again.
+        let page = try XCTUnwrap(store.openReportingPage(for: unreadable.id, in: session.spaces[0].id))
+        store.finishNavigation(of: page, to: try XCTUnwrap(unreadable.url), titled: "Readable")
+        page.release(keepingState: false)
+        await store.flushPendingSyncPersistence()
+        await controller.localChangesDidStage()
+
+        XCTAssertEqual(factory.transports.count, 1)
+        XCTAssertNil(store.cloudSyncLocalErrorDescription)
+    }
+
     func testUnavailableAccountWaitsWithoutCreatingATransport() async {
         let workflow = TestBrowserCloudSyncWorkflowGateway()
         let preferences = TestBrowserCloudSyncPreferences()
@@ -568,6 +616,8 @@ private final class TestBrowserCloudSyncWorkflowGateway: BrowserCloudSyncWorkflo
     func cloudSyncRecords() async -> [BrowserSyncRecord] { records }
 
     func cloudSyncPendingRecordIDs() async -> Set<BrowserSyncRecordID> { [] }
+
+    func verifyCloudSyncJournal() async throws {}
 
     func mergeCloudSyncRecords(_ records: [BrowserSyncRecord]) async throws {
         self.records = records

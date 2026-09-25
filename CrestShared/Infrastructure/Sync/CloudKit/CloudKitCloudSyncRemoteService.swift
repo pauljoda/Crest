@@ -26,8 +26,10 @@ actor CloudKitBrowserCloudSyncRemoteService: BrowserCloudSyncRemoteService {
         let database = database ?? cloudContainer().privateCloudDatabase
         self.database = database
         do {
-            return try await BrowserCloudSnapshotLoader(database: database,
-                codec: BrowserCloudRecordCodec(zoneName: configuration.zoneName)).load()
+            return try await BrowserCloudSnapshotLoader(
+                database: database,
+                codec: BrowserCloudRecordCodec(zoneName: configuration.zoneName)
+            ).load()
         } catch let error as CKError where error.code == .zoneNotFound {
             return []
         }
@@ -38,6 +40,9 @@ actor CloudKitBrowserCloudSyncRemoteService: BrowserCloudSyncRemoteService {
             case .remoteChangeNotApplied = syncError
         {
             return "Crest couldn’t apply the latest changes from iCloud."
+        }
+        if let syncError = error as? BrowserSyncError, case .unreadableJournal = syncError {
+            return BrowserStore.unreadableSyncJournalDescription
         }
         guard let cloudError = error as? CKError else {
             return String(describing: error)

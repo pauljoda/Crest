@@ -164,8 +164,8 @@ final class BrowserStoreTests: XCTestCase {
             url: try XCTUnwrap(URL(string: "https://example.com/before-first-sync"))
         )
         await store.flushPendingSyncPersistence()
-        let outboundRecords = await store.cloudSyncRecords()
-        let outboundPendingRecordIDs = await store.cloudSyncPendingRecordIDs()
+        let outboundRecords = try await store.cloudSyncRecords()
+        let outboundPendingRecordIDs = try await store.cloudSyncPendingRecordIDs()
 
         XCTAssertTrue(store.session.hasDisposableSeedState)
         let encoded = try JSONEncoder().encode(store.session)

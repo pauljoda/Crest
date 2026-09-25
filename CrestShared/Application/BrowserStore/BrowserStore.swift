@@ -320,19 +320,22 @@ extension BrowserStore {
 
 @MainActor
 extension BrowserStore: BrowserCloudSyncModelGateway {
-    func cloudSyncRecords() async -> [BrowserSyncRecord] {
+    func cloudSyncRecords() async throws -> [BrowserSyncRecord] {
         guard !session.hasDisposableSeedState, let syncCoordinator else { return [] }
         await syncCoordinator.staged()
-        return await Task.detached(priority: .utility) { syncCoordinator.journal.records }.value
+        return try await readingSyncJournal { try syncCoordinator.readJournal().records }
     }
 
-    func cloudSyncPendingRecordIDs() async -> Set<BrowserSyncRecordID> {
+    func cloudSyncPendingRecordIDs() async throws -> Set<BrowserSyncRecordID> {
         guard !session.hasDisposableSeedState, let syncCoordinator else { return [] }
         await syncCoordinator.staged()
-        return await Task.detached(priority: .utility) { syncCoordinator.journal.pendingRecordIDs }.value
+        return try await readingSyncJournal { try syncCoordinator.readJournal().pendingRecordIDs }
     }
 
     func mergeCloudSyncRecords(_ records: [BrowserSyncRecord]) async throws {
+        if let syncCoordinator {
+            try await readingSyncJournal { try syncCoordinator.requireReadableJournal() }
+        }
         do {
             // The merge and its journal are on disk when this returns, so the
             // transport may keep the server token that covers them.
@@ -367,5 +370,34 @@ extension BrowserStore: BrowserCloudSyncWorkflowGateway {
     /// local sync failure this window saw.
     var cloudSyncLocalErrorDescription: String? {
         core.state.syncStagingFailure.map { String(localized: $0.title) } ?? localSyncErrorDescription
+    }
+
+    func verifyCloudSyncJournal() async throws {
+        guard !session.hasDisposableSeedState, let syncCoordinator else { return }
+        _ = try await readingSyncJournal { try syncCoordinator.readJournal() }
+    }
+}
+
+// MARK: - Cloud Sync Journal
+
+extension BrowserStore {
+    /// What a window reports while this build cannot read the sync journal.
+    nonisolated static let unreadableSyncJournalDescription =
+        "Crest can’t read this device’s sync journal, so iCloud Sync is paused."
+
+    /// Runs `read` over the sync journal off the main actor. A journal this
+    /// build cannot read is this window's local sync failure until a read
+    /// succeeds again.
+    fileprivate func readingSyncJournal<Value: Sendable>(
+        _ read: @escaping @Sendable () throws -> Value
+    ) async throws -> Value {
+        do {
+            let value = try await Task.detached(priority: .utility, operation: read).value
+            if localSyncErrorDescription == Self.unreadableSyncJournalDescription { localSyncErrorDescription = nil }
+            return value
+        } catch BrowserSyncError.unreadableJournal(let reason) {
+            localSyncErrorDescription = Self.unreadableSyncJournalDescription
+            throw BrowserSyncError.unreadableJournal(reason)
+        }
     }
 }

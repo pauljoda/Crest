@@ -2405,6 +2405,10 @@
     "sync-journal-off-launch": {
       "category": "improved",
       "message": "Crest opens faster with a large sync history."
+    },
+    "sync-pauses-on-unreadable-journal": {
+      "category": "internal",
+      "message": "Sync pauses and reports an error when this build cannot read the device's sync journal, instead of reading it as empty."
     }
   }
 }

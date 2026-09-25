@@ -45,8 +45,8 @@ final class BrowserCoreSessionRecoveryTests: XCTestCase {
             in: relaunched, favicons: InMemoryBrowserFaviconStore())
         let sync = try XCTUnwrap(try relaunched.storedSync())
         XCTAssertEqual(restored.projection, original)
-        XCTAssertNotEqual(sync.journal.deviceID, journal.deviceID)
-        XCTAssertEqual(sync.journal.records, journal.records)
+        XCTAssertNotEqual(try sync.journal().deviceID, journal.deviceID)
+        XCTAssertEqual(try sync.journal().records, journal.records)
         XCTAssertTrue(FileManager.default.fileExists(atPath: BrowserSessionRecovery.cloudMarker(in: directory).path))
     }
 
@@ -118,9 +118,9 @@ final class BrowserCoreSessionRecoveryTests: XCTestCase {
             let sync = try XCTUnwrap(try crest.storedSync())
             XCTAssertEqual(storage.projection, installed)
             XCTAssertTrue(storage.projection.spaces.allSatisfy { $0.tabs.contains { $0.faviconData != nil } })
-            XCTAssertEqual(sync.journal.deviceID, journal.deviceID)
-            XCTAssertEqual(sync.journal.records, journal.records)
-            XCTAssertEqual(sync.journal.pendingRecordIDs, journal.pendingRecordIDs)
+            XCTAssertEqual(try sync.journal().deviceID, journal.deviceID)
+            XCTAssertEqual(try sync.journal().records, journal.records)
+            XCTAssertEqual(try sync.journal().pendingRecordIDs, journal.pendingRecordIDs)
             XCTAssertNotNil(defaults.data(forKey: BrowserLegacySessionDefaults.coreKey))
         }
 

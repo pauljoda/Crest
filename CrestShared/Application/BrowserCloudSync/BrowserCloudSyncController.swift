@@ -39,6 +39,9 @@ final class BrowserCloudSyncController {
     @ObservationIgnored private var retryTask: Task<Void, Never>?
     @ObservationIgnored private var retryAttempts = 0
     @ObservationIgnored private var accountObservation: (any NSObjectProtocol)?
+    /// The last start stopped because this build cannot read the device's
+    /// sync journal. The next journal change starts again.
+    @ObservationIgnored private var pausedForUnreadableJournal = false
 
     /// Crest only retries a launch that could not reach iCloud a few times. A
     /// signed-out account heals through `accountAvailabilityDidChange` instead of
@@ -105,6 +108,10 @@ final class BrowserCloudSyncController {
         lastAttemptAt = .now
 
         do {
+            // Nothing reaches iCloud while the journal cannot be read: no
+            // replacement, reconciliation, merge or upload.
+            try await verifyJournal()
+            guard isCurrentStart(generation) else { return }
             let state = try await remoteService.accountState()
             guard isCurrentStart(generation) else { return }
             accountState = state
@@ -167,7 +174,23 @@ final class BrowserCloudSyncController {
 
     func localChangesDidStage() async {
         guard isEnabled, conflict == nil else { return }
+        if pausedForUnreadableJournal, transport == nil, !isRunning {
+            await start()
+            return
+        }
         await transport?.notifyLocalChanges()
+    }
+
+    /// Throws while this build cannot read the device's sync journal, and
+    /// remembers that sync paused for it.
+    private func verifyJournal() async throws {
+        do {
+            try await workflow.verifyCloudSyncJournal()
+            pausedForUnreadableJournal = false
+        } catch {
+            pausedForUnreadableJournal = true
+            throw error
+        }
     }
 
     /// Called only after the settings confirmation. A full pull merges content;
@@ -271,7 +294,7 @@ final class BrowserCloudSyncController {
         let remote = try await remoteService.loadSnapshot()
         guard isCurrentStart(generation) else { return }
         observedCloudRecordCount = remote.count
-        let local = await workflow.cloudSyncRecords()
+        let local = try await workflow.cloudSyncRecords()
         guard isCurrentStart(generation) else { return }
         if !local.isEmpty,
             !BrowserSyncContentComparison.hasEquivalentContent(
@@ -345,6 +368,8 @@ final class BrowserCloudSyncController {
         phase = .syncing
         lastAttemptAt = .now
         do {
+            try await verifyJournal()
+            guard isCurrentStart(generation) else { return }
             let latestRemote = try await remoteService.loadSnapshot()
             guard isCurrentStart(generation) else { return }
             observedCloudRecordCount = latestRemote.count
