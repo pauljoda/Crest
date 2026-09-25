@@ -34,9 +34,8 @@ final class MobileDurableTabCloseTests: XCTestCase {
     func testLockedSpaceCommandCannotResetOrCloseItsDurableTab() throws {
         let context = try makeContext(placement: .saved)
         defer { context.pages.reconcile(validTabIDs: []) }
-        var space = try XCTUnwrap(context.browser.selectedSpace)
-        space.accessPolicy = .deviceOwnerAuthentication
-        context.browser.session = BrowserSession(spaces: [space])
+        let space = try XCTUnwrap(context.browser.selectedSpace)
+        context.browser.updateSpaceAccessPolicy(.deviceOwnerAuthentication, in: space.id)
         let original = context.browser.session
         let commands = MobileBrowserCommandController(browser: context.browser, pages: context.pages)
         XCTAssertNil(commands.dismissSelectedTab())

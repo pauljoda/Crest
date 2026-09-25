@@ -26,11 +26,11 @@ final class MobileBrowserTransientOverlayModelTests: XCTestCase {
     }
 
     func testReplacementProfileInvalidatesTheExactTransientRuntime() throws {
-        let context = try makeContext()
+        let context = try makeContext(browsingMode: .standard)
         context.model.preparePage(isActive: true)
         let lease = try XCTUnwrap(context.model.pageLease)
-        let replacement = replacingProfile(of: context.source)
-        context.browser.session = BrowserSession(spaces: [replacement, context.destination])
+        context.browser.replaceProfileForTesting(of: context.source.id)
+        let replacement = try XCTUnwrap(context.browser.session.space(id: context.source.id))
 
         context.model.setSourceAvailable(context.model.space != nil)
         XCTAssertNil(lease.page)
@@ -40,11 +40,11 @@ final class MobileBrowserTransientOverlayModelTests: XCTestCase {
     }
 
     func testStaleSourcePromotionCannotMutateEitherSpace() throws {
-        let context = try makeContext()
+        let context = try makeContext(browsingMode: .standard)
         context.model.preparePage(isActive: true)
         let lease = try XCTUnwrap(context.model.pageLease)
-        let replacement = replacingProfile(of: context.source)
-        context.browser.session = BrowserSession(spaces: [replacement, context.destination])
+        context.browser.replaceProfileForTesting(of: context.source.id)
+        let replacement = try XCTUnwrap(context.browser.session.space(id: context.source.id))
 
         XCTAssertFalse(context.model.promote(to: context.request.assignment))
         XCTAssertEqual(
@@ -169,13 +169,13 @@ final class MobileBrowserTransientOverlayModelTests: XCTestCase {
     }
 
     func testReplacementDestinationProfileRejectsTheCapturedMenuAssignment() throws {
-        let context = try makeContext()
+        let context = try makeContext(browsingMode: .standard)
         context.model.preparePage(isActive: true)
         let destinationAssignment = BrowserSpaceRuntimeAssignment(
             space: context.destination
         )
-        let replacement = replacingProfile(of: context.destination)
-        context.browser.session = BrowserSession(spaces: [context.source, replacement])
+        context.browser.replaceProfileForTesting(of: context.destination.id)
+        let replacement = try XCTUnwrap(context.browser.session.space(id: context.destination.id))
 
         XCTAssertFalse(context.model.promote(to: destinationAssignment))
         XCTAssertEqual(
@@ -191,9 +191,8 @@ final class MobileBrowserTransientOverlayModelTests: XCTestCase {
         let destinationAssignment = BrowserSpaceRuntimeAssignment(
             space: context.destination
         )
-        var lockedDestination = context.destination
-        lockedDestination.accessPolicy = .deviceOwnerAuthentication
-        context.browser.session = BrowserSession(spaces: [context.source, lockedDestination])
+        context.browser.updateSpaceAccessPolicy(.deviceOwnerAuthentication, in: context.destination.id)
+        let lockedDestination = try XCTUnwrap(context.browser.session.space(id: context.destination.id))
 
         XCTAssertFalse(context.model.promote(to: destinationAssignment))
         XCTAssertEqual(
@@ -207,9 +206,8 @@ final class MobileBrowserTransientOverlayModelTests: XCTestCase {
         let context = try makeContext()
         context.model.preparePage(isActive: true)
         let lease = try XCTUnwrap(context.model.pageLease)
-        var lockedSource = context.source
-        lockedSource.accessPolicy = .deviceOwnerAuthentication
-        context.browser.session = BrowserSession(spaces: [lockedSource, context.destination])
+        context.browser.updateSpaceAccessPolicy(.deviceOwnerAuthentication, in: context.source.id)
+        let lockedSource = try XCTUnwrap(context.browser.session.space(id: context.source.id))
 
         XCTAssertFalse(
             context.model.promote(
@@ -234,9 +232,7 @@ final class MobileBrowserTransientOverlayModelTests: XCTestCase {
     func testRelockedCapturedSwitchDestinationCannotChangeSpaces() throws {
         let context = try makeContext()
         let assignment = BrowserSpaceRuntimeAssignment(space: context.destination)
-        var relockedDestination = context.destination
-        relockedDestination.accessPolicy = .deviceOwnerAuthentication
-        context.browser.session = BrowserSession(spaces: [context.source, relockedDestination])
+        context.browser.updateSpaceAccessPolicy(.deviceOwnerAuthentication, in: context.destination.id)
 
         context.model.selectLockedSpace(assignment)
 
@@ -457,10 +453,10 @@ final class MobileBrowserTransientOverlayModelTests: XCTestCase {
     }
 
     func testQuickWindowReplacementProfileCannotArchiveTheStaleLease() throws {
-        let context = try makeQuickWindowContext()
+        let context = try makeQuickWindowContext(browsingMode: .standard)
         context.model.preparePage(isActive: true)
-        let replacement = replacingProfile(of: context.source)
-        context.browser.session = BrowserSession(spaces: [replacement, context.destination])
+        context.browser.replaceProfileForTesting(of: context.source.id)
+        let replacement = try XCTUnwrap(context.browser.session.space(id: context.source.id))
 
         XCTAssertFalse(context.model.preparePage(isActive: true))
         context.model.handleDisappearance()
@@ -499,9 +495,8 @@ final class MobileBrowserTransientOverlayModelTests: XCTestCase {
         let context = try makeQuickWindowContext()
         context.model.preparePage(isActive: true)
         let originalLease = try XCTUnwrap(context.model.pageLease)
-        var lockedSource = context.source
-        lockedSource.accessPolicy = .deviceOwnerAuthentication
-        context.browser.session = BrowserSession(spaces: [lockedSource, context.destination])
+        context.browser.updateSpaceAccessPolicy(.deviceOwnerAuthentication, in: context.source.id)
+        let lockedSource = try XCTUnwrap(context.browser.session.space(id: context.source.id))
         context.model.setSourceLocked(true)
 
         XCTAssertFalse(context.model.preparePage(isActive: true))
@@ -539,9 +534,8 @@ final class MobileBrowserTransientOverlayModelTests: XCTestCase {
             page.completedNavigationCount > startingCount
                 && page.live.documentURL?.host() == currentURL.host()
         }
-        var lockedSource = context.source
-        lockedSource.accessPolicy = .deviceOwnerAuthentication
-        context.browser.session = BrowserSession(spaces: [lockedSource, context.destination])
+        context.browser.updateSpaceAccessPolicy(.deviceOwnerAuthentication, in: context.source.id)
+        let lockedSource = try XCTUnwrap(context.browser.session.space(id: context.source.id))
 
         context.model.setActive(false)
 
@@ -589,7 +583,7 @@ final class MobileBrowserTransientOverlayModelTests: XCTestCase {
     }
 
     private func makeContext(
-        didPromote: @escaping () -> Void = {}
+        didPromote: @escaping () -> Void = {}, browsingMode: BrowserBrowsingMode = .privateBrowsing
     ) throws -> (
         source: BrowserSpace,
         destination: BrowserSpace,
@@ -606,12 +600,12 @@ final class MobileBrowserTransientOverlayModelTests: XCTestCase {
             session: BrowserSession(spaces: [source, destination]),
             showing: source.id, tabs: [source.id: source.tabs[0].id, destination.id: destination.tabs[0].id],
             credentialVault: InMemoryCredentialVault(),
-            browsingMode: .privateBrowsing,
+            browsingMode: browsingMode,
             core: .hostingPages()
         )
         let pages = MobileBrowserPageStore(
             browser: browser,
-            browsingMode: .privateBrowsing,
+            browsingMode: browsingMode,
             usesEphemeralWebsiteDataStores: true
         )
         let request = BrowserPeekRequest(
@@ -663,7 +657,8 @@ final class MobileBrowserTransientOverlayModelTests: XCTestCase {
     }
 
     private func makeQuickWindowContext(
-        preferences: BrowserTransientBrowsingPreferences = .isolated
+        preferences: BrowserTransientBrowsingPreferences = .isolated,
+        browsingMode: BrowserBrowsingMode = .privateBrowsing
     ) throws -> (
         source: BrowserSpace,
         destination: BrowserSpace,
@@ -680,12 +675,12 @@ final class MobileBrowserTransientOverlayModelTests: XCTestCase {
             session: BrowserSession(spaces: [source, destination]),
             showing: source.id, tabs: [source.id: source.tabs[0].id, destination.id: destination.tabs[0].id],
             credentialVault: InMemoryCredentialVault(),
-            browsingMode: .privateBrowsing,
+            browsingMode: browsingMode,
             core: .hostingPages()
         )
         let pages = MobileBrowserPageStore(
             browser: browser,
-            browsingMode: .privateBrowsing,
+            browsingMode: browsingMode,
             usesEphemeralWebsiteDataStores: true
         )
         let request = BrowserQuickWindowRequest(
@@ -727,26 +722,6 @@ final class MobileBrowserTransientOverlayModelTests: XCTestCase {
             accent: .indigo,
             folders: [],
             tabs: [tab]
-        )
-    }
-
-    private func replacingProfile(of source: BrowserSpace) -> BrowserSpace {
-        BrowserSpace(
-            id: source.id,
-            profile: BrowsingProfile(),
-            name: source.name,
-            symbol: source.symbol,
-            accent: source.accent,
-            branding: source.branding,
-            folders: source.folders,
-            tabs: source.tabs,
-            archivedTabs: source.archivedTabs,
-            history: source.history,
-            browsingPreferences: source.browsingPreferences,
-            credentialPreferences: source.credentialPreferences,
-            accessPolicy: source.accessPolicy,
-            isSavedTabsExpanded: source.isSavedTabsExpanded,
-            savedTabsExpansionModifiedAt: source.savedTabsExpansionModifiedAt
         )
     }
 }

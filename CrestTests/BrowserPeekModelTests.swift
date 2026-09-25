@@ -56,7 +56,7 @@ final class BrowserPeekModelTests: XCTestCase {
         XCTAssertTrue(context.model.preparePage(isActive: true))
         XCTAssertTrue(context.model.pageLease === firstLease)
 
-        context.browser.session.spaces[0].tabs.removeAll { $0.id == context.request.sourceTabID }
+        context.browser.deleteTab(context.request.sourceTabID, in: context.source.id)
         context.coordinator.reconcilePeeks(in: context.browser.session)
         context.pages.retainPeekPages(for: context.coordinator.peekRequests)
         XCTAssertEqual(context.coordinator.peekRequests, [secondRequest])
@@ -133,11 +133,11 @@ final class BrowserPeekModelTests: XCTestCase {
     }
 
     func testReplacementProfileInvalidatesTheExactPeekRuntime() throws {
-        let context = try makeContext()
+        // A profile is replaced only in a persistent workspace, by the cloud.
+        let context = try makeContext(browsingMode: .standard)
         context.model.preparePage(isActive: true)
         let lease = try XCTUnwrap(context.model.pageLease)
-        let replacement = replacingProfile(of: context.source)
-        context.browser.session = BrowserSession(spaces: [replacement, context.destination])
+        context.browser.replaceProfileForTesting(of: context.source.id)
 
         context.model.setSourceAvailable(context.model.space != nil)
         XCTAssertNil(lease.page)
@@ -147,11 +147,11 @@ final class BrowserPeekModelTests: XCTestCase {
     }
 
     func testStaleSourcePromotionCannotMutateEitherSpace() throws {
-        let context = try makeContext()
+        let context = try makeContext(browsingMode: .standard)
         context.model.preparePage(isActive: true)
         let lease = try XCTUnwrap(context.model.pageLease)
-        let replacement = replacingProfile(of: context.source)
-        context.browser.session = BrowserSession(spaces: [replacement, context.destination])
+        context.browser.replaceProfileForTesting(of: context.source.id)
+        let replacement = try XCTUnwrap(context.browser.session.space(id: context.source.id))
 
         XCTAssertFalse(context.model.promote(to: context.request.assignment))
         XCTAssertEqual(
@@ -229,13 +229,13 @@ final class BrowserPeekModelTests: XCTestCase {
     }
 
     func testReplacementDestinationProfileRejectsTheCapturedMenuAssignment() throws {
-        let context = try makeContext()
+        let context = try makeContext(browsingMode: .standard)
         context.model.preparePage(isActive: true)
         let destinationAssignment = BrowserSpaceRuntimeAssignment(
             space: context.destination
         )
-        let replacement = replacingProfile(of: context.destination)
-        context.browser.session = BrowserSession(spaces: [context.source, replacement])
+        context.browser.replaceProfileForTesting(of: context.destination.id)
+        let replacement = try XCTUnwrap(context.browser.session.space(id: context.destination.id))
 
         XCTAssertFalse(context.model.promote(to: destinationAssignment))
         XCTAssertEqual(
@@ -251,9 +251,8 @@ final class BrowserPeekModelTests: XCTestCase {
         let destinationAssignment = BrowserSpaceRuntimeAssignment(
             space: context.destination
         )
-        var lockedDestination = context.destination
-        lockedDestination.accessPolicy = .deviceOwnerAuthentication
-        context.browser.session = BrowserSession(spaces: [context.source, lockedDestination])
+        context.browser.updateSpaceAccessPolicy(.deviceOwnerAuthentication, in: context.destination.id)
+        let lockedDestination = try XCTUnwrap(context.browser.session.space(id: context.destination.id))
 
         XCTAssertFalse(context.model.promote(to: destinationAssignment))
         XCTAssertEqual(
@@ -267,9 +266,8 @@ final class BrowserPeekModelTests: XCTestCase {
         let context = try makeContext()
         context.model.preparePage(isActive: true)
         let lease = try XCTUnwrap(context.model.pageLease)
-        var lockedSource = context.source
-        lockedSource.accessPolicy = .deviceOwnerAuthentication
-        context.browser.session = BrowserSession(spaces: [lockedSource, context.destination])
+        context.browser.updateSpaceAccessPolicy(.deviceOwnerAuthentication, in: context.source.id)
+        let lockedSource = try XCTUnwrap(context.browser.session.space(id: context.source.id))
 
         XCTAssertFalse(
             context.model.promote(
@@ -301,9 +299,7 @@ final class BrowserPeekModelTests: XCTestCase {
     func testRelockedCapturedSwitchDestinationCannotChangeSpaces() throws {
         let context = try makeContext()
         let assignment = BrowserSpaceRuntimeAssignment(space: context.destination)
-        var relockedDestination = context.destination
-        relockedDestination.accessPolicy = .deviceOwnerAuthentication
-        context.browser.session = BrowserSession(spaces: [context.source, relockedDestination])
+        context.browser.updateSpaceAccessPolicy(.deviceOwnerAuthentication, in: context.destination.id)
 
         context.model.selectLockedSpace(assignment)
 
@@ -441,10 +437,18 @@ final class BrowserPeekModelTests: XCTestCase {
         context.model.preparePage(isActive: true)
         let lease = try XCTUnwrap(context.model.pageLease)
         let page = try XCTUnwrap(lease.page)
-        var renamedSource = context.source
-        renamedSource.name = "Renamed Source"
-        let inserted = makeSpace(name: "Inserted")
-        context.browser.session = BrowserSession(spaces: [context.destination, inserted, renamedSource])
+        let source = context.source
+        context.browser.updateSpaceIdentity(
+            source.id, name: "Renamed Source", symbol: source.symbol, accent: source.accent)
+        context.browser.addSpace()
+        let inserted = try XCTUnwrap(context.browser.session.spaces.last)
+        context.browser.family.send(
+            ReorderSpaces(
+                workspaceID: context.browser.family.workspaceID,
+                spaceIDs: [context.destination.id.rawValue, inserted.id.rawValue, source.id.rawValue]),
+            from: context.browser)
+        context.browser.selectSpace(source.id)
+        let renamedSource = try XCTUnwrap(context.browser.session.space(id: source.id))
 
         XCTAssertTrue(context.model.preparePage(isActive: true))
         XCTAssertTrue(context.model.pageLease === lease)
@@ -452,7 +456,7 @@ final class BrowserPeekModelTests: XCTestCase {
         XCTAssertEqual(context.model.page?.profileID, renamedSource.profile.id)
     }
 
-    private func makeContext() throws -> PeekTestContext {
+    private func makeContext(browsingMode: BrowserBrowsingMode = .privateBrowsing) throws -> PeekTestContext {
         let source = makeSpace(name: "Source")
         let destination = makeSpace(name: "Destination")
         let sourceTabID = try XCTUnwrap(source.tabs.first?.id)
@@ -460,12 +464,12 @@ final class BrowserPeekModelTests: XCTestCase {
             session: BrowserSession(spaces: [source, destination]),
             showing: source.id, tabs: [source.id: sourceTabID],
             credentialVault: InMemoryCredentialVault(),
-            browsingMode: .privateBrowsing,
+            browsingMode: browsingMode,
             core: .hostingPages()
         )
         let pages = BrowserPagePool(
             browser: browser,
-            browsingMode: .privateBrowsing,
+            browsingMode: browsingMode,
             usesEphemeralWebsiteDataStores: true,
             popupTabHost: browser.popupTabHost,
             openNewTab: { url in
@@ -529,26 +533,6 @@ final class BrowserPeekModelTests: XCTestCase {
             accent: .indigo,
             folders: [],
             tabs: [tab]
-        )
-    }
-
-    private func replacingProfile(of source: BrowserSpace) -> BrowserSpace {
-        BrowserSpace(
-            id: source.id,
-            profile: BrowsingProfile(),
-            name: source.name,
-            symbol: source.symbol,
-            accent: source.accent,
-            branding: source.branding,
-            folders: source.folders,
-            tabs: source.tabs,
-            archivedTabs: source.archivedTabs,
-            history: source.history,
-            browsingPreferences: source.browsingPreferences,
-            credentialPreferences: source.credentialPreferences,
-            accessPolicy: source.accessPolicy,
-            isSavedTabsExpanded: source.isSavedTabsExpanded,
-            savedTabsExpansionModifiedAt: source.savedTabsExpansionModifiedAt
         )
     }
 

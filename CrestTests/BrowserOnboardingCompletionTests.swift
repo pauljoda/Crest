@@ -120,10 +120,11 @@ final class BrowserOnboardingCompletionTests: XCTestCase {
                 request: .firstRun, browser: browser, progress: progress, spaceAccess: access, manualPlan: plan)
         }
         await authenticator.waitForRequest()
-        browser.session.spaces[1].tabs[0].title = "Updated during setup"
+        let updated = browser.session.spaces[1]
+        XCTAssertTrue(browser.setTabCustomTitle("Updated during setup", for: updated.tabs[0].id, in: updated.id))
         authenticator.resolve(true)
         guard case .completed = await task.value else { return XCTFail("Setup did not complete") }
-        XCTAssertEqual(browser.session.spaces[1].tabs[0].title, "Updated during setup")
+        XCTAssertEqual(browser.session.space(id: updated.id)?.tabs[0].customTitle, "Updated during setup")
         XCTAssertEqual(browser.session.spaces.filter { $0.id == addedID }.count, 1)
     }
 

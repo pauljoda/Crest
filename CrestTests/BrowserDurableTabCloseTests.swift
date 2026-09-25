@@ -60,9 +60,7 @@ final class BrowserDurableTabCloseTests: XCTestCase {
             if placement == .current { XCTAssertFalse(action.perform(context.assignment)) }
             XCTAssertEqual(context.browser.session, original)
 
-            var locked = try XCTUnwrap(context.browser.selectedSpace)
-            locked.accessPolicy = .deviceOwnerAuthentication
-            context.browser.session = BrowserSession(spaces: [locked])
+            context.browser.updateSpaceAccessPolicy(.deviceOwnerAuthentication, in: context.assignment.spaceID)
             XCTAssertFalse(action.perform(context.assignment))
             XCTAssertEqual(closeCount, 0)
         }

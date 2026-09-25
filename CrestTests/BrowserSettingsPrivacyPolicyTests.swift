@@ -8,7 +8,14 @@ final class BrowserSettingsPrivacyPolicyTests: XCTestCase {
         for invalidation in SettingsSelectionInvalidation.allCases {
             var session = BrowserSession.preview
             let settings = BrowserTab(title: "Settings", url: nil, nativeContent: .settings, placement: .current)
-            session.spaces[0].tabs.append(settings)
+            // A tab that shows something else now, under the identity the
+            // Settings tab had when the selection was captured.
+            session.spaces[0].tabs.append(
+                invalidation == .replacedTabContent
+                    ? BrowserTab(
+                        id: settings.id, title: "Getting Started", url: nil, nativeContent: .gettingStarted,
+                        placement: .current)
+                    : settings)
             let source = session.spaces[0]
             let destination = session.spaces[1]
             let browser = BrowserStore(session: session)
@@ -19,28 +26,23 @@ final class BrowserSettingsPrivacyPolicyTests: XCTestCase {
                 tabID: settings.id, spaceID: source.id, profileID: source.profile.id)
             switch invalidation {
             case .removedTab:
-                browser.session.spaces[0].tabs.removeAll { $0.id == settings.id }
+                browser.deleteTab(settings.id, in: source.id)
             case .replacedTabContent:
-                browser.session.spaces[0].tabs[browser.session.spaces[0].tabs.count - 1] = BrowserTab(
-                    id: settings.id, title: "Getting Started", url: nil, nativeContent: .gettingStarted,
-                    placement: .current)
+                break
             case .replacedProfile:
-                browser.session.spaces[0] = BrowserSpace(
-                    id: source.id, profile: BrowsingProfile(id: UUID()), name: source.name,
-                    symbol: source.symbol, accent: source.accent, folders: source.folders,
-                    tabs: source.tabs)
+                browser.replaceProfileForTesting(of: source.id)
             case .lockedSource:
-                browser.session.spaces[0].accessPolicy = .deviceOwnerAuthentication
+                browser.updateSpaceAccessPolicy(.deviceOwnerAuthentication, in: source.id)
             case .unselectedSource:
                 browser.selectPresentedSpace(destination.id)
             case .deletingSource:
                 _ = browser.family.beginDeletingSpace(source.id)
             case .lockedDestination:
-                browser.session.spaces[1].accessPolicy = .deviceOwnerAuthentication
+                browser.updateSpaceAccessPolicy(.deviceOwnerAuthentication, in: destination.id)
             case .deletingDestination:
                 _ = browser.family.beginDeletingSpace(destination.id)
             case .missingDestination:
-                browser.session.spaces.removeLast()
+                browser.removeSpaceForTesting(destination.id)
             }
             let before = browser.session
             let revision = browser.sessionRevision

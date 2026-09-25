@@ -399,19 +399,6 @@ final class BrowserTabDragSafetyTests: XCTestCase {
         XCTAssertEqual(currentDestination.tabs.first?.placement, .pinned)
     }
 
-    func testDuplicateTabProposalCannotChangeTheLiveFamily() {
-        let source = Self.makeSpace(id: Self.spaceID(38), profileID: Self.uuid(39), name: "Source",
-            tabs: [Self.makeTab(id: Self.tabID(37), title: "Source", placement: .current)])
-        let destination = Self.makeSpace(id: Self.spaceID(40), profileID: Self.uuid(41), name: "Destination", tabs: [])
-        let browser = Self.makeBrowser(spaces: [source, destination], selectedSpaceID: destination.id)
-        let original = browser.session
-        let observer = browser.makeWindowStore()
-        browser.session.spaces[1].tabs.append(source.tabs[0])
-        XCTAssertEqual(browser.session, original)
-        XCTAssertEqual(observer.session.tabIDs, original.tabIDs)
-        XCTAssertNotNil(browser.localSyncErrorDescription)
-    }
-
     func testStaleMenuCloseAndDeleteActionsRejectChangedPlacement() throws {
         let closeContext = makeContext(sourcePlacement: .current)
         let closeAction = BrowserTabOrganizationAction(
@@ -823,10 +810,10 @@ final class BrowserTabDragSafetyTests: XCTestCase {
     func testIndividualMemberDropsDetachWithoutMovingTheSurvivingSplit() throws {
         for memberIndex in 0...1 {
             for destination in SplitMemberDropDestination.allCases {
-                let context = makeSplitContext()
                 let member = Self.makeTab(
-                    id: Self.tabID(56), title: "Moved Member", placement: .current, splitGroupID: context.groupID)
-                context.browser.session.spaces[0].tabs.insert(member, at: memberIndex)
+                    id: Self.tabID(56), title: "Moved Member", placement: .current,
+                    splitGroupID: SplitGroupID(rawValue: Self.uuid(50)))
+                let context = makeSplitContext(adding: member, at: memberIndex)
                 let folder = try XCTUnwrap(context.browser.addFolder(in: context.space.id))
                 let originalMembers = context.members
                 let item = BrowserTabDragItem(
@@ -853,7 +840,7 @@ final class BrowserTabDragSafetyTests: XCTestCase {
                 let moved = try XCTUnwrap(updated.tabs.first { $0.id == member.id })
                 XCTAssertNil(moved.splitGroupID, "\(destination)")
                 XCTAssertEqual(moved.url, member.url)
-                XCTAssertEqual(updated.tabs.count, context.space.tabs.count + 1)
+                XCTAssertEqual(updated.tabs.count, context.space.tabs.count)
                 switch destination {
                 case .beforeGroup: XCTAssertEqual(updated.tabs.first?.id, member.id)
                 case .beforeFolder: XCTAssertEqual(moved.placement, .saved)
@@ -1335,8 +1322,10 @@ final class BrowserTabDragSafetyTests: XCTestCase {
         )
     }
 
+    /// A Space whose first tabs, Head and Tail, are one split, then Outsider;
+    /// `member` joins the split at `index` among them when given.
     private func makeSplitContext(
-        accessPolicy: BrowserSpaceAccessPolicy = .open
+        accessPolicy: BrowserSpaceAccessPolicy = .open, adding member: BrowserTab? = nil, at index: Int = 0
     ) -> SplitContext {
         let groupID = SplitGroupID(rawValue: Self.uuid(50))
         let head = Self.makeTab(
@@ -1356,11 +1345,13 @@ final class BrowserTabDragSafetyTests: XCTestCase {
             title: "Outsider",
             placement: .current
         )
+        var tabs = [head, tail, outsider]
+        if let member { tabs.insert(member, at: index) }
         let space = Self.makeSpace(
             id: Self.spaceID(54),
             profileID: Self.uuid(55),
             name: "Split Source",
-            tabs: [head, tail, outsider],
+            tabs: tabs,
             accessPolicy: accessPolicy
         )
         return SplitContext(
@@ -1419,22 +1410,7 @@ final class BrowserTabDragSafetyTests: XCTestCase {
         with profileID: UUID,
         in browser: BrowserStore
     ) {
-        guard
-            let index = browser.session.spaces.firstIndex(where: {
-                $0.id == assignment.spaceID
-            })
-        else {
-            XCTFail("Expected the captured Space.")
-            return
-        }
-        let space = browser.session.spaces[index]
-        browser.session.spaces[index] = Self.makeSpace(
-            id: space.id,
-            profileID: profileID,
-            name: space.name,
-            tabs: space.tabs,
-            accessPolicy: space.accessPolicy
-        )
+        browser.replaceProfileForTesting(of: assignment.spaceID, with: profileID)
     }
 
     /// A window showing `selectedSpaceID` (else the first Space), with every
@@ -1449,8 +1425,7 @@ final class BrowserTabDragSafetyTests: XCTestCase {
         }
         return BrowserStore(
             session: BrowserSession(spaces: spaces),
-            showing: selectedSpaceID ?? spaces.first?.id ?? SpaceID(), tabs: tabs,
-            browsingMode: .privateBrowsing
+            showing: selectedSpaceID ?? spaces.first?.id ?? SpaceID(), tabs: tabs
         )
     }
 

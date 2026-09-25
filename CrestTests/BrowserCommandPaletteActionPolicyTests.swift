@@ -40,16 +40,16 @@ final class BrowserCommandPaletteActionPolicyTests: XCTestCase {
         browser.clearPresentedTabSelection(in: source.id)
         XCTAssertTrue(actions.isAvailable)
 
-        var lockedSource = source
-        lockedSource.accessPolicy = .deviceOwnerAuthentication
-        for session in [
-            BrowserSession(spaces: [replacingProfile(in: source), other]),
-            BrowserSession(spaces: [lockedSource, other]),
-            BrowserSession(spaces: [other]),
-        ] {
-            browser.session = session
-            assertUnavailable()
-        }
+        // Its profile was replaced.
+        browser.replaceProfileForTesting(of: source.id, with: uuid(0xF0))
+        assertUnavailable()
+        // It has its profile back, but asks for authentication.
+        browser.replaceProfileForTesting(of: source.id, with: source.profile.id)
+        browser.updateSpaceAccessPolicy(.deviceOwnerAuthentication, in: source.id)
+        assertUnavailable()
+        // It is gone.
+        browser.removeSpaceForTesting(source.id)
+        assertUnavailable()
         XCTAssertEqual(selectionCount, 0)
     }
 
@@ -86,7 +86,7 @@ final class BrowserCommandPaletteActionPolicyTests: XCTestCase {
             )
         )
 
-        browser.session = BrowserSession(spaces: [replacingProfile(in: source), destination])
+        browser.replaceProfileForTesting(of: source.id, with: uuid(0xF0))
 
         XCTAssertFalse(
             BrowserCommandPaletteActionPolicy.isSourceAvailable(
@@ -104,9 +104,9 @@ final class BrowserCommandPaletteActionPolicyTests: XCTestCase {
             )
         )
 
-        var protectedSource = source
-        protectedSource.accessPolicy = .deviceOwnerAuthentication
-        browser.session = BrowserSession(spaces: [protectedSource, destination])
+        browser.replaceProfileForTesting(of: source.id, with: source.profile.id)
+        browser.updateSpaceAccessPolicy(.deviceOwnerAuthentication, in: source.id)
+        let protectedSource = try XCTUnwrap(browser.session.space(id: source.id))
         XCTAssertNil(
             BrowserCommandPaletteActionPolicy.target(
                 try assignment(for: protectedSource),
@@ -122,12 +122,7 @@ final class BrowserCommandPaletteActionPolicyTests: XCTestCase {
         showing spaceID: SpaceID,
         tabs: [SpaceID: TabID] = [:]
     ) -> BrowserStore {
-        BrowserStore(
-            session: BrowserSession(spaces: spaces),
-            showing: spaceID,
-            tabs: tabs,
-            browsingMode: .privateBrowsing
-        )
+        BrowserStore(session: BrowserSession(spaces: spaces), showing: spaceID, tabs: tabs)
     }
 
     private func makeSpace(index: UInt8) -> BrowserSpace {
@@ -155,26 +150,6 @@ final class BrowserCommandPaletteActionPolicyTests: XCTestCase {
             tabID: try XCTUnwrap(space.tabs.first?.id),
             spaceID: space.id,
             profileID: space.profile.id
-        )
-    }
-
-    private func replacingProfile(in space: BrowserSpace) -> BrowserSpace {
-        BrowserSpace(
-            id: space.id,
-            profile: BrowsingProfile(id: uuid(0xF0)),
-            name: space.name,
-            symbol: space.symbol,
-            accent: space.accent,
-            branding: space.branding,
-            folders: space.folders,
-            tabs: space.tabs,
-            archivedTabs: space.archivedTabs,
-            history: space.history,
-            browsingPreferences: space.browsingPreferences,
-            credentialPreferences: space.credentialPreferences,
-            accessPolicy: space.accessPolicy,
-            isSavedTabsExpanded: space.isSavedTabsExpanded,
-            savedTabsExpansionModifiedAt: space.savedTabsExpansionModifiedAt
         )
     }
 

@@ -22,10 +22,7 @@ final class BrowserSidebarAccessPolicyTests: XCTestCase {
             )
         )
 
-        context.browser.session.spaces[0] = replacingProfile(
-            in: context.source,
-            with: Self.uuid(9)
-        )
+        context.browser.replaceProfileForTesting(of: context.source.id, with: Self.uuid(9))
         XCTAssertFalse(
             BrowserSidebarAccessPolicy.showsSelectedSpaceActions(
                 in: context.browser,
@@ -93,10 +90,7 @@ final class BrowserSidebarAccessPolicyTests: XCTestCase {
             [context.destination.id]
         )
 
-        context.browser.session.spaces[1] = replacingProfile(
-            in: context.destination,
-            with: Self.uuid(9)
-        )
+        context.browser.replaceProfileForTesting(of: context.destination.id, with: Self.uuid(9))
         XCTAssertTrue(
             BrowserSidebarAccessPolicy.availableTabMoveDestinationSpaces(
                 from: sourceAssignment,
@@ -132,10 +126,7 @@ final class BrowserSidebarAccessPolicyTests: XCTestCase {
             name: "Destination",
             isProtected: destinationIsProtected
         )
-        let browser = BrowserStore(
-            session: BrowserSession(spaces: [source, destination]),
-            browsingMode: .privateBrowsing
-        )
+        let browser = BrowserStore(session: BrowserSession(spaces: [source, destination]))
         let access = BrowserSpaceAccessController(authenticator: AcceptingAuthenticator())
         browser.attachSpaceAccess(access)
         return Context(
@@ -161,29 +152,6 @@ final class BrowserSidebarAccessPolicyTests: XCTestCase {
             folders: [],
             tabs: [],
             accessPolicy: isProtected ? .deviceOwnerAuthentication : .open
-        )
-    }
-
-    private func replacingProfile(
-        in space: BrowserSpace,
-        with profileID: UUID
-    ) -> BrowserSpace {
-        BrowserSpace(
-            id: space.id,
-            profile: BrowsingProfile(id: profileID),
-            name: space.name,
-            symbol: space.symbol,
-            accent: space.accent,
-            branding: space.branding,
-            folders: space.folders,
-            tabs: space.tabs,
-            archivedTabs: space.archivedTabs,
-            history: space.history,
-            browsingPreferences: space.browsingPreferences,
-            credentialPreferences: space.credentialPreferences,
-            accessPolicy: space.accessPolicy,
-            isSavedTabsExpanded: space.isSavedTabsExpanded,
-            savedTabsExpansionModifiedAt: space.savedTabsExpansionModifiedAt
         )
     }
 

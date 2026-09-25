@@ -61,45 +61,16 @@ final class BrowserChromeLayoutTests: XCTestCase {
 
     @MainActor
     func testSettingsPresentationRejectsAReplacementBrowsingProfile() throws {
-        let browser = BrowserStore(
-            session: .preview,
-            browsingMode: .privateBrowsing
-        )
+        let browser = BrowserStore(session: .preview)
         let original = try XCTUnwrap(browser.selectedSpace)
         let presentation = BrowserSpaceSettingsPresentationState()
         presentation.present(
             assignment: BrowserSpaceRuntimeAssignment(space: original)
         )
-        let replacement = BrowserSpace(
-            id: original.id,
-            profile: BrowsingProfile(),
-            name: original.name,
-            symbol: original.symbol,
-            accent: original.accent,
-            branding: original.branding,
-            folders: original.folders,
-            tabs: original.tabs,
-            archivedTabs: original.archivedTabs,
-            history: original.history,
-            browsingPreferences: original.browsingPreferences,
-            credentialPreferences: original.credentialPreferences,
-            accessPolicy: original.accessPolicy,
-            isSavedTabsExpanded: original.isSavedTabsExpanded,
-            savedTabsExpansionModifiedAt: original.savedTabsExpansionModifiedAt
-        )
-        let index = try XCTUnwrap(
-            browser.session.spaces.firstIndex { $0.id == original.id }
-        )
-        browser.session.spaces[index] = replacement
+        browser.replaceProfileForTesting(of: original.id)
 
         XCTAssertNil(presentation.requestedSpaceID(in: browser))
     }
-
-
-
-
-
-
 
     func testCertificateReviewRequiresHTTPSAndServerTrust() {
         XCTAssertTrue(
@@ -121,10 +92,6 @@ final class BrowserChromeLayoutTests: XCTestCase {
             )
         )
     }
-
-
-
-
 
     @MainActor
     func testSidebarClearHistoryKeepsTheInitiatingSpaceAfterSelectionChanges() throws {

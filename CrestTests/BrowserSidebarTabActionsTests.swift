@@ -12,17 +12,13 @@ final class BrowserSidebarTabActionsTests: XCTestCase {
         let invalidations: [(Context) -> Void] = [
             { $0.browser.selectSpace($0.otherSpace.id) },
             { $0.browser.updateSpaceAccessPolicy(.deviceOwnerAuthentication, in: $0.space.id) },
-            { $0.browser.session.spaces[0] = self.replacingProfile(in: $0.browser.session.spaces[0]) },
-            { $0.browser.session.spaces[0].tabs.removeFirst() },
-            { $0.browser.session.spaces[0].tabs[0].placement = .saved },
-            {
-                let moved = $0.browser.session.spaces[0].tabs.removeFirst()
-                $0.browser.session.spaces[1].tabs.append(moved)
-            },
+            { $0.browser.replaceProfileForTesting(of: $0.space.id, with: Self.uuid(4)) },
+            { $0.browser.deleteTab($0.tab.id, in: $0.space.id) },
+            { $0.browser.moveTab($0.tab.id, to: .saved) },
+            { $0.browser.moveTab($0.tab.id, from: $0.space.id, into: $0.otherSpace.id) },
         ]
         for invalidate in invalidations {
-            let context = makeContext()
-            context.browser.session.spaces[0].tabs[0].placement = .pinned
+            let context = makeContext(placement: .pinned)
             let assignment = BrowserTabRuntimeAssignment(
                 tabID: context.tab.id, spaceID: context.space.id, profileID: context.space.profile.id)
             let action = BrowserTabOrganizationAction(browser: context.browser, spaceAccess: context.access)
@@ -49,10 +45,10 @@ final class BrowserSidebarTabActionsTests: XCTestCase {
         context.browser.updateSpaceAccessPolicy(.deviceOwnerAuthentication, in: context.space.id)
         XCTAssertNil(action.linkURL(for: assignment))
         context.browser.updateSpaceAccessPolicy(.open, in: context.space.id)
-        context.browser.session.spaces[0] = replacingProfile(in: context.space)
+        context.browser.replaceProfileForTesting(of: context.space.id, with: Self.uuid(4))
         XCTAssertNil(action.linkURL(for: assignment))
-        context.browser.session.spaces[0] = context.space
-        context.browser.session.spaces[0].tabs.removeAll()
+        context.browser.replaceProfileForTesting(of: context.space.id, with: context.space.profile.id)
+        for tab in context.space.tabs { context.browser.deleteTab(tab.id, in: context.space.id) }
         XCTAssertNil(action.linkURL(for: assignment))
     }
 
@@ -92,17 +88,20 @@ final class BrowserSidebarTabActionsTests: XCTestCase {
         XCTAssertTrue(host.otherSpaces(from: source).isEmpty)
         XCTAssertFalse(host.openLink(url, from: source, in: destination))
         context.browser.updateSpaceAccessPolicy(.open, in: context.otherSpace.id)
-        context.browser.session.spaces[0] = replacingProfile(in: context.space)
+        context.browser.replaceProfileForTesting(of: context.space.id, with: Self.uuid(4))
+        let destinationTabs = context.browser.session.space(id: destination.spaceID)?.tabs
         XCTAssertFalse(host.openLink(url, from: source, in: destination))
-        XCTAssertEqual(context.browser.session.space(id: destination.spaceID)?.tabs.count, 0)
+        XCTAssertEqual(context.browser.session.space(id: destination.spaceID)?.tabs, destinationTabs)
     }
 
     func testSelectionSearchRejectsEmptyOrInvalidatedSources() throws {
         let invalidations: [(Context) -> Void] = [
             { $0.browser.selectSpace($0.otherSpace.id) },
             { $0.browser.updateSpaceAccessPolicy(.deviceOwnerAuthentication, in: $0.space.id) },
-            { $0.browser.session.spaces[0] = self.replacingProfile(in: $0.space) },
-            { $0.browser.session.spaces[0].tabs.removeAll() },
+            { $0.browser.replaceProfileForTesting(of: $0.space.id, with: Self.uuid(4)) },
+            { context in
+                for tab in context.space.tabs { context.browser.deleteTab(tab.id, in: context.space.id) }
+            },
         ]
         for invalidate in invalidations {
             let context = makeContext()
@@ -125,7 +124,7 @@ final class BrowserSidebarTabActionsTests: XCTestCase {
     func testNewTabIsRefusedAfterTheProfileIsReplaced() {
         let context = makeContext()
         let action = makeActions(context, pullFavicon: { _, _ in nil })
-        context.browser.session.spaces[0] = replacingProfile(in: context.space)
+        context.browser.replaceProfileForTesting(of: context.space.id, with: Self.uuid(4))
         var invocationCount = 0
 
         XCTAssertFalse(action.openNewTab { invocationCount += 1 })
@@ -137,9 +136,7 @@ final class BrowserSidebarTabActionsTests: XCTestCase {
         let context = makeContext()
         let expectedData = Data("replacement-race".utf8)
         let action = makeActions(context) { _, _ in
-            context.browser.session.spaces[0] = self.replacingProfile(
-                in: context.space
-            )
+            context.browser.replaceProfileForTesting(of: context.space.id, with: Self.uuid(4))
             return (expectedData, nil)
         }
 
@@ -256,12 +253,12 @@ final class BrowserSidebarTabActionsTests: XCTestCase {
         )
     }
 
-    private func makeContext(isProtected: Bool = false) -> Context {
+    private func makeContext(isProtected: Bool = false, placement: TabPlacement = .saved) -> Context {
         let tab = BrowserTab(
             id: TabID(rawValue: Self.uuid(1)),
             title: "Exact tab",
             url: URL(string: "https://sidebar.crest.test"),
-            placement: .saved
+            placement: placement
         )
         let currentTab = BrowserTab(
             id: TabID(rawValue: Self.uuid(5)),
@@ -289,10 +286,7 @@ final class BrowserSidebarTabActionsTests: XCTestCase {
             folders: [],
             tabs: []
         )
-        let browser = BrowserStore(
-            session: BrowserSession(spaces: [space, otherSpace]),
-            browsingMode: .privateBrowsing
-        )
+        let browser = BrowserStore(session: BrowserSession(spaces: [space, otherSpace]))
         let access = BrowserSpaceAccessController(authenticator: AcceptingAuthenticator())
         browser.attachSpaceAccess(access)
         return Context(
@@ -301,26 +295,6 @@ final class BrowserSidebarTabActionsTests: XCTestCase {
             space: space,
             otherSpace: otherSpace,
             tab: tab
-        )
-    }
-
-    private func replacingProfile(in space: BrowserSpace) -> BrowserSpace {
-        BrowserSpace(
-            id: space.id,
-            profile: BrowsingProfile(id: Self.uuid(4)),
-            name: space.name,
-            symbol: space.symbol,
-            accent: space.accent,
-            branding: space.branding,
-            folders: space.folders,
-            tabs: space.tabs,
-            archivedTabs: space.archivedTabs,
-            history: space.history,
-            browsingPreferences: space.browsingPreferences,
-            credentialPreferences: space.credentialPreferences,
-            accessPolicy: space.accessPolicy,
-            isSavedTabsExpanded: space.isSavedTabsExpanded,
-            savedTabsExpansionModifiedAt: space.savedTabsExpansionModifiedAt
         )
     }
 

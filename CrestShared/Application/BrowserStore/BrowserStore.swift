@@ -5,17 +5,8 @@ import Observation
 @MainActor
 final class BrowserStore {
     /// The core-owned browsing data. It carries no selection; what this window
-    /// shows is `window`.
-    #if DEBUG
-        var session: BrowserSession {
-            get { family.currentSession }
-            // Existing test fixtures replace synthetic sessions. Release
-            // compositions expose only the core-owned read projection.
-            set { family.replaceSessionForTesting(newValue, from: self) }
-        }
-    #else
-        var session: BrowserSession { family.currentSession }
-    #endif
+    /// shows is `window`. Only intents change it.
+    var session: BrowserSession { family.currentSession }
     /// This window in the core's device, which owns what it shows.
     let windowID: BrowserWindowID
     private(set) var sessionRevision = 0

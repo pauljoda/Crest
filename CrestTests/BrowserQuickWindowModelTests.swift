@@ -13,7 +13,9 @@ final class BrowserQuickWindowModelTests: XCTestCase {
         page.webView.loadHTMLString("<title>Quick page</title>", baseURL: context.model.presentedRequest.url)
         try await waitUntil { page.live.title == "Quick page" && !page.live.isLoading }
         XCTAssertEqual(context.model.windowTitle(for: context.requestBinding.request), "Quick page")
-        context.browser.seedSelectedTabNavigation(to: nil, titled: "Unrelated selected tab")
+        let selected = try XCTUnwrap(context.browser.selectedTab)
+        XCTAssertTrue(
+            context.browser.setTabCustomTitle("Unrelated selected tab", for: selected.id, in: context.source.id))
         XCTAssertEqual(context.model.windowTitle(for: context.requestBinding.request), "Quick page")
         let changed = expectation(description: "Quick Window observes document title")
         withObservationTracking {
@@ -24,7 +26,7 @@ final class BrowserQuickWindowModelTests: XCTestCase {
         try await page.webView.evaluateJavaScript("document.title = 'Updated quick page'")
         await fulfillment(of: [changed], timeout: 2)
         XCTAssertEqual(context.model.windowTitle(for: context.requestBinding.request), "Updated quick page")
-        context.browser.session.spaces[0].accessPolicy = .deviceOwnerAuthentication
+        context.browser.updateSpaceAccessPolicy(.deviceOwnerAuthentication, in: context.source.id)
         XCTAssertEqual(
             context.model.windowTitle(for: context.requestBinding.request), String(localized: "Quick Window"))
     }
@@ -112,12 +114,13 @@ final class BrowserQuickWindowModelTests: XCTestCase {
     }
 
     func testReplacementProfileInvalidatesTheLeaseWithoutRetargeting() throws {
-        let context = try makeContext()
+        // A profile is replaced only in a persistent workspace, by the cloud.
+        let context = try makeContext(browsingMode: .standard)
         let model = context.model
         model.preparePage(isActive: true)
         let lease = try XCTUnwrap(model.pageLease)
-        let replacement = replacingProfile(of: context.source)
-        context.browser.session = BrowserSession(spaces: [replacement, context.destination])
+        context.browser.replaceProfileForTesting(of: context.source.id)
+        let replacement = try XCTUnwrap(context.browser.session.space(id: context.source.id))
 
         model.preparePage(isActive: true)
 
@@ -201,9 +204,8 @@ final class BrowserQuickWindowModelTests: XCTestCase {
         let context = try makeContext()
         context.model.preparePage(isActive: true)
         let originalLease = try XCTUnwrap(context.model.pageLease)
-        var lockedSource = context.source
-        lockedSource.accessPolicy = .deviceOwnerAuthentication
-        context.browser.session = BrowserSession(spaces: [lockedSource, context.destination])
+        context.browser.updateSpaceAccessPolicy(.deviceOwnerAuthentication, in: context.source.id)
+        let lockedSource = try XCTUnwrap(context.browser.session.space(id: context.source.id))
         context.model.releaseForUnavailableSpace()
 
         context.model.preparePage(isActive: true)
@@ -231,9 +233,7 @@ final class BrowserQuickWindowModelTests: XCTestCase {
         let context = try makeContext()
         context.model.preparePage(isActive: true)
         let lease = try XCTUnwrap(context.model.pageLease)
-        var lockedSource = context.source
-        lockedSource.accessPolicy = .deviceOwnerAuthentication
-        context.browser.session = BrowserSession(spaces: [lockedSource, context.destination])
+        context.browser.updateSpaceAccessPolicy(.deviceOwnerAuthentication, in: context.source.id)
 
         XCTAssertFalse(context.model.promote(to: context.destination))
         XCTAssertEqual(
@@ -312,9 +312,8 @@ final class BrowserQuickWindowModelTests: XCTestCase {
     func testProtectedDestinationCannotBeSelectedOrPromotedWhileLocked() throws {
         let context = try makeContext()
         context.model.preparePage(isActive: true)
-        var protectedDestination = context.destination
-        protectedDestination.accessPolicy = .deviceOwnerAuthentication
-        context.browser.session = BrowserSession(spaces: [context.source, protectedDestination])
+        context.browser.updateSpaceAccessPolicy(.deviceOwnerAuthentication, in: context.destination.id)
+        let protectedDestination = try XCTUnwrap(context.browser.session.space(id: context.destination.id))
 
         XCTAssertFalse(
             context.model.availableSpaces.contains {
@@ -337,9 +336,7 @@ final class BrowserQuickWindowModelTests: XCTestCase {
     func testCapturedDestinationCannotBeSelectedAfterItRelocks() throws {
         let context = try makeContext()
         let capturedDestination = context.destination
-        var relockedDestination = context.destination
-        relockedDestination.accessPolicy = .deviceOwnerAuthentication
-        context.browser.session = BrowserSession(spaces: [context.source, relockedDestination])
+        context.browser.updateSpaceAccessPolicy(.deviceOwnerAuthentication, in: context.destination.id)
 
         context.model.selectSpace(capturedDestination)
 
@@ -516,19 +513,20 @@ final class BrowserQuickWindowModelTests: XCTestCase {
 
     private func makeContext(
         startsEmpty: Bool = false,
-        supportsLivePagePromotion: Bool = false
+        supportsLivePagePromotion: Bool = false,
+        browsingMode: BrowserBrowsingMode = .privateBrowsing
     ) throws -> QuickWindowTestContext {
         let source = makeSpace(name: "Source")
         let destination = makeSpace(name: "Destination")
         let browser = BrowserStore(
             session: BrowserSession(spaces: [source, destination]),
             credentialVault: InMemoryCredentialVault(),
-            browsingMode: .privateBrowsing,
+            browsingMode: browsingMode,
             core: .hostingPages()
         )
         let pages = BrowserPagePool(
             browser: browser,
-            browsingMode: .privateBrowsing,
+            browsingMode: browsingMode,
             usesEphemeralWebsiteDataStores: true,
             popupTabHost: browser.popupTabHost,
             openNewTab: { url in

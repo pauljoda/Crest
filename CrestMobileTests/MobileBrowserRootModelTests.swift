@@ -191,8 +191,7 @@ final class MobileBrowserRootModelTests: XCTestCase {
         other.model.presentationChanged(to: .compact)
         other.model.openSettings()
         let previousState = other.model.settings.state
-        let replacement = replacingProfile(of: ordinary, with: BrowsingProfile(id: fixedUUID(999)))
-        other.browser.session = BrowserSession(spaces: [replacement])
+        other.browser.replaceProfileForTesting(of: ordinary.id, with: fixedUUID(999))
         other.model.settings.reconcile()
         XCTAssertFalse(other.model.showsSettings)
         XCTAssertFalse(other.model.settings.state === previousState)
@@ -391,12 +390,7 @@ final class MobileBrowserRootModelTests: XCTestCase {
         fixture.model.presentationChanged(to: .regular)
         let replacementProfile = BrowsingProfile(id: fixedUUID(99))
         let beforeProfileChange = fixture.model.selectionSnapshot
-        var session = fixture.browser.session
-        session.spaces[0] = replacingProfile(
-            of: originalSpace,
-            with: replacementProfile
-        )
-        fixture.browser.session = session
+        fixture.browser.replaceProfileForTesting(of: originalSpace.id, with: replacementProfile.id)
         let afterProfileChange = fixture.model.selectionSnapshot
 
         XCTAssertEqual(
@@ -700,11 +694,7 @@ final class MobileBrowserRootModelTests: XCTestCase {
         XCTAssertEqual(fixture.browser.selectedTab?.id, targetTab.id)
         XCTAssertEqual(fixture.pages.activePage?.profileID, source.profile.id)
 
-        let replacement = replacingProfile(
-            of: source,
-            with: BrowsingProfile(id: fixedUUID(0xFE))
-        )
-        fixture.browser.session = BrowserSession(spaces: [replacement, otherSpace])
+        fixture.browser.replaceProfileForTesting(of: source.id, with: fixedUUID(0xFE))
         let replacementURL = fixture.browser.selectedTab?.url
 
         XCTAssertFalse(
@@ -716,7 +706,7 @@ final class MobileBrowserRootModelTests: XCTestCase {
         )
         XCTAssertEqual(fixture.browser.selectedTab?.url, replacementURL)
         XCTAssertFalse(fixture.model.selectPaletteTab(from: sourceAssignment, to: destinationAssignment))
-        XCTAssertEqual(fixture.browser.selectedSpace?.profile.id, replacement.profile.id)
+        XCTAssertEqual(fixture.browser.selectedSpace?.profile.id, fixedUUID(0xFE))
     }
 
     private func makeFixture(
@@ -772,29 +762,6 @@ final class MobileBrowserRootModelTests: XCTestCase {
             accent: .indigo,
             folders: [],
             tabs: [tab]
-        )
-    }
-
-    private func replacingProfile(
-        of space: BrowserSpace,
-        with profile: BrowsingProfile
-    ) -> BrowserSpace {
-        BrowserSpace(
-            id: space.id,
-            profile: profile,
-            name: space.name,
-            symbol: space.symbol,
-            accent: space.accent,
-            branding: space.branding,
-            folders: space.folders,
-            tabs: space.tabs,
-            archivedTabs: space.archivedTabs,
-            history: space.history,
-            browsingPreferences: space.browsingPreferences,
-            credentialPreferences: space.credentialPreferences,
-            accessPolicy: space.accessPolicy,
-            isSavedTabsExpanded: space.isSavedTabsExpanded,
-            savedTabsExpansionModifiedAt: space.savedTabsExpansionModifiedAt
         )
     }
 

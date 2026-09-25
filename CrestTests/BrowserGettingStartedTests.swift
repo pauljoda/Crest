@@ -141,22 +141,22 @@ final class BrowserGettingStartedTests: XCTestCase {
         let id = try XCTUnwrap(browser.openGettingStarted())
         // Whole-second fixture avoids Date epoch-conversion rounding in the
         // existing JSON cloud codec; this test checks descriptor preservation.
-        for spaceIndex in browser.session.spaces.indices {
-            for tabIndex in browser.session.spaces[spaceIndex].tabs.indices {
-                browser.session.spaces[spaceIndex].tabs[tabIndex].lastActivatedAt = Date(
-                    timeIntervalSince1970: 1_700_000_000)
+        var session = browser.session
+        for spaceIndex in session.spaces.indices {
+            for tabIndex in session.spaces[spaceIndex].tabs.indices {
+                session.spaces[spaceIndex].tabs[tabIndex].lastActivatedAt = Date(timeIntervalSince1970: 1_700_000_000)
             }
         }
-        let payloads = try BrowserCoreSync.project(browser.session, preferences: .default, records: [])
+        let payloads = try BrowserCoreSync.project(session, preferences: .default, records: [])
         let records = payloads.map {
             BrowserSyncRecord.save($0, version: BrowserSyncVersion(logicalClock: 1, deviceID: UUID()))
         }
         XCTAssertFalse(records.contains { $0.id.value == id.rawValue })
-        let restored = try BrowserCoreSync.materialize(browser.session, preferences: .default, records: records)
+        let restored = try BrowserCoreSync.materialize(session, preferences: .default, records: records)
         XCTAssertEqual(
             restored.space(id: browser.selectedSpaceID)?.tabs.first { $0.id == id }?.nativeContent, .gettingStarted)
         let archive = try JSONDecoder().decode(
-            BrowserPortableArchive.self, from: JSONEncoder().encode(BrowserPortableArchive(session: browser.session)))
+            BrowserPortableArchive.self, from: JSONEncoder().encode(BrowserPortableArchive(session: session)))
         let imported = try archive.materialize()
         XCTAssertEqual(imported.spaces.flatMap(\.tabs).filter { $0.nativeContent == .gettingStarted }.count, 1)
     }

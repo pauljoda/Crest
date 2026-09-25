@@ -266,17 +266,20 @@ final class BrowserCurrentTabFolderTests: XCTestCase {
     }
 
     func testSavedSubtreeMovesBothDirectionsAndRestoresWithoutLosingIdentityOrSplitMembership() throws {
-        let browser = makeBrowser()
-        let space = try XCTUnwrap(browser.selectedSpace)
-        let root = try XCTUnwrap(browser.addFolder(title: "🧪 Research", color: .ocean, in: space.id))
-        let child = try XCTUnwrap(browser.addFolder(title: "Child", color: .rose, parentID: root, in: space.id))
+        let rootFolder = BrowserFolder(title: "🧪 Research")
+        let childFolder = BrowserFolder(title: "Child", parentID: rootFolder.id)
+        let (root, child) = (rootFolder.id, childFolder.id)
         let split = SplitGroupID()
-        let ids = Array(space.tabs.prefix(2).map(\.id))
-        for i in browser.session.spaces[0].tabs.indices where ids.contains(browser.session.spaces[0].tabs[i].id) {
-            browser.session.spaces[0].tabs[i].placement = .saved
-            browser.session.spaces[0].tabs[i].folderID = child
-            browser.session.spaces[0].tabs[i].splitGroupID = split
+        let browser = makeBrowser { space in
+            space.folders = [rootFolder, childFolder]
+            for i in 0..<2 {
+                space.tabs[i].placement = .saved
+                space.tabs[i].folderID = child
+                space.tabs[i].splitGroupID = split
+            }
         }
+        let space = try XCTUnwrap(browser.selectedSpace)
+        let ids = Array(space.tabs.prefix(2).map(\.id))
         XCTAssertTrue(browser.setFolderCollapsed(child, in: space.id, isCollapsed: true))
         let original = browser.selectedSpace?.folders
         let item = BrowserSidebarReorderItem.folder(
@@ -304,14 +307,13 @@ final class BrowserCurrentTabFolderTests: XCTestCase {
     }
 
     func testJoiningFolderRetainsDestinationPositionAndMovesWholeSplit() throws {
-        let browser = makeBrowser()
+        let split = SplitGroupID()
+        // The first two open tabs are one split.
+        let browser = makeBrowser { space in
+            for i in 1...2 { space.tabs[i].splitGroupID = split }
+        }
         let space = try XCTUnwrap(browser.selectedSpace)
         let ids = space.currentTabs.map(\.id)
-        let split = SplitGroupID()
-        for i in browser.session.spaces[0].tabs.indices
-        where ids.prefix(2).contains(browser.session.spaces[0].tabs[i].id) {
-            browser.session.spaces[0].tabs[i].splitGroupID = split
-        }
         let first = try XCTUnwrap(browser.createTabFolder([ids[0]], in: space.id))
         let second = try XCTUnwrap(browser.createTabFolder([ids[2]], in: space.id))
         XCTAssertTrue(browser.fileTabs([ids[0]], matching: .init(space: space), into: second, location: .current))
@@ -418,7 +420,6 @@ final class BrowserCurrentTabFolderTests: XCTestCase {
         XCTAssertTrue(imported.folders.allSatisfy { $0.location == .current })
         XCTAssertEqual(imported.tabs.first { $0.title == space.currentTabs[0].title }?.folderID, importedChild.id)
     }
-
 
     /// One saved tab followed by four open tabs, showing the last one.
     private func makeBrowser(_ configure: (inout BrowserSpace) -> Void = { _ in }) -> BrowserStore {

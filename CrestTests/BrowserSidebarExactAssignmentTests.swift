@@ -421,10 +421,7 @@ final class BrowserSidebarExactAssignmentTests: XCTestCase {
             folders: [],
             tabs: [destinationTab]
         )
-        let store = BrowserStore(
-            session: BrowserSession(spaces: [source, destination]),
-            browsingMode: .privateBrowsing
-        )
+        let store = BrowserStore(session: BrowserSession(spaces: [source, destination]), core: .hostingPages())
         return (store, source, destination, sourceTab)
     }
 
@@ -443,36 +440,7 @@ final class BrowserSidebarExactAssignmentTests: XCTestCase {
         of space: BrowserSpace,
         in store: BrowserStore
     ) {
-        guard let current = store.session.space(id: space.id) else {
-            XCTFail("Expected the captured Space to remain in the session.")
-            return
-        }
-        let replacement = BrowserSpace(
-            id: current.id,
-            profile: BrowsingProfile(id: fixedUUID(7)),
-            name: current.name,
-            symbol: current.symbol,
-            accent: current.accent,
-            branding: current.branding,
-            folders: current.folders,
-            tabs: current.tabs,
-            archivedTabs: current.archivedTabs,
-            history: current.history,
-            browsingPreferences: current.browsingPreferences,
-            credentialPreferences: current.credentialPreferences,
-            accessPolicy: current.accessPolicy,
-            isSavedTabsExpanded: current.isSavedTabsExpanded,
-            savedTabsExpansionModifiedAt: current.savedTabsExpansionModifiedAt
-        )
-        guard
-            let index = store.session.spaces.firstIndex(where: {
-                $0.id == space.id
-            })
-        else {
-            XCTFail("Expected the captured Space to remain in the session.")
-            return
-        }
-        store.session.spaces[index] = replacement
+        store.replaceProfileForTesting(of: space.id, with: fixedUUID(7))
     }
 
     private func fixedUUID(_ suffix: UInt8) -> UUID {

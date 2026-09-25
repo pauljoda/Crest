@@ -298,10 +298,7 @@ final class BrowserSidebarUtilityCoordinatorTests: XCTestCase {
             folders: [],
             tabs: []
         )
-        let browser = BrowserStore(
-            session: BrowserSession(spaces: [source, destination]),
-            browsingMode: .privateBrowsing
-        )
+        let browser = BrowserStore(session: BrowserSession(spaces: [source, destination]))
         let downloadCenter = BrowserDownloadCenter()
         let downloadItemID = downloadCenter.begin(
             profileID: source.profile.id,
@@ -323,32 +320,7 @@ final class BrowserSidebarUtilityCoordinatorTests: XCTestCase {
     }
 
     private func replaceProfile(of space: BrowserSpace, in browser: BrowserStore) {
-        guard
-            let index = browser.session.spaces.firstIndex(where: {
-                $0.id == space.id
-            })
-        else {
-            XCTFail("Expected the captured Space.")
-            return
-        }
-        let current = browser.session.spaces[index]
-        browser.session.spaces[index] = BrowserSpace(
-            id: current.id,
-            profile: BrowsingProfile(id: Self.uuid(7)),
-            name: current.name,
-            symbol: current.symbol,
-            accent: current.accent,
-            branding: current.branding,
-            folders: current.folders,
-            tabs: current.tabs,
-            archivedTabs: current.archivedTabs,
-            history: current.history,
-            browsingPreferences: current.browsingPreferences,
-            credentialPreferences: current.credentialPreferences,
-            accessPolicy: current.accessPolicy,
-            isSavedTabsExpanded: current.isSavedTabsExpanded,
-            savedTabsExpansionModifiedAt: current.savedTabsExpansionModifiedAt
-        )
+        browser.replaceProfileForTesting(of: space.id, with: Self.uuid(7))
     }
 
     private func downloadItem(profileID: UUID, id: UUID) -> DownloadState {

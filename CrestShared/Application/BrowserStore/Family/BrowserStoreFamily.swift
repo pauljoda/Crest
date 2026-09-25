@@ -168,19 +168,6 @@ final class BrowserStoreFamily {
         return core.workspaceID
     }
 
-    #if DEBUG
-        func replaceSessionForTesting(_ session: BrowserSession, from source: BrowserStore) {
-            let previous = authoritativeSession
-            do {
-                try core.replaceDurably(with: session)
-            } catch {
-                source.localSyncErrorDescription = "Core test session update failed: \(error)"
-                return
-            }
-            reconcileStores(after: previous, from: source)
-        }
-    #endif
-
     /// An incoming merge: the core saves the session and its journal together
     /// before either is published.
     func installSyncedSession(

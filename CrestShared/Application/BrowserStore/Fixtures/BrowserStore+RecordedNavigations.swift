@@ -2,27 +2,28 @@
     import Foundation
 
     extension BrowserStore {
-        /// Puts a visit to `url` first in the history of `spaceID`, the Space
-        /// this window shows unless named, as the core records one when a page
-        /// finishes loading, for tests that need history without a page.
-        func seedVisit(to url: URL, titled title: String, in spaceID: SpaceID? = nil, at date: Date = .now) {
-            guard let index = session.spaces.firstIndex(where: { $0.id == (spaceID ?? selectedSpaceID) }) else {
-                return
+        /// Records a visit to `url` in `spaceID`, the Space this window shows
+        /// unless named, as the core records one when a page finishes loading,
+        /// for tests that need history without a page. The core must host
+        /// pages, as `CrestCore.hostingPages()` does.
+        func seedVisit(to url: URL, titled title: String, in spaceID: SpaceID? = nil) {
+            guard let page = openReportingPage(for: nil, in: spaceID) else {
+                preconditionFailure("A test recorded a visit on a core that hosts no pages.")
             }
-            session.spaces[index].history.insert(
-                BrowserHistoryEntry(url: url, title: title, firstVisitedAt: date, lastVisitedAt: date), at: 0)
+            finishNavigation(of: page, to: url, titled: title)
+            page.release(keepingState: false)
         }
 
         /// Gives the tab this window shows the address and title a page's
-        /// recorded navigation would, for tests of what windows show. A nil
-        /// `url` keeps the tab's address.
+        /// recorded navigation would, as the core records one, for tests of
+        /// what windows show. A nil `url` keeps the tab's address. The core must
+        /// host pages, as `CrestCore.hostingPages()` does.
         func seedSelectedTabNavigation(to url: URL?, titled title: String) {
-            guard let spaceIndex = session.spaces.firstIndex(where: { $0.id == selectedSpaceID }),
-                let tabID = selectedTab?.id,
-                let tabIndex = session.spaces[spaceIndex].tabs.firstIndex(where: { $0.id == tabID })
-            else { return }
-            if let url { session.spaces[spaceIndex].tabs[tabIndex].url = url }
-            session.spaces[spaceIndex].tabs[tabIndex].title = title
+            guard let tab = selectedTab, let address = url ?? tab.url,
+                let page = openReportingPage(for: tab.id)
+            else { preconditionFailure("A test navigated a tab it cannot show on a core that hosts pages.") }
+            finishNavigation(of: page, to: address, titled: title)
+            page.release(keepingState: false)
         }
 
         /// Opens a page through the core for `tabID` in `spaceID`, or for a

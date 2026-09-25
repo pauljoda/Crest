@@ -6,7 +6,7 @@ import XCTest
 @MainActor
 final class BrowserStoreWorkspaceTests: XCTestCase {
     func testAnEmptyWindowSelectionSurvivesOtherWindowsPublishingAndDeletingTabs() throws {
-        let first = BrowserStore(session: .preview)
+        let first = BrowserStore(session: .preview, core: .hostingPages())
         let empty = first.makeWindowStore(BrowserWindowOpening(restoresTabs: false))
         let tab = try XCTUnwrap(first.selectedSpace?.tabs.first)
         let ids = first.session.tabIDs
@@ -73,12 +73,8 @@ final class BrowserStoreWorkspaceTests: XCTestCase {
         XCTAssertEqual(temporary.selectedSpace?.pinnedTabs.map(\.id), [tabID])
         XCTAssertEqual(temporary.selectedSpace?.folders.map(\.id), [folderID])
         let before = temporary.session
-        var replacement = source.session
-        replacement.spaces[0] = BrowserSpace(
-            id: assignment.spaceID, profile: BrowsingProfile(), name: "Replacement", symbol: "globe", accent: .indigo,
-            folders: [], tabs: [])
-        // A replacement outside an intent, as a sync merge makes, closes it.
-        source.session = replacement
+        // A replacement of the Space's profile, as only the cloud makes, closes it.
+        source.replaceProfileForTesting(of: assignment.spaceID)
         XCTAssertFalse(temporary.family.isOpen)
         XCTAssertTrue(temporary.session.spaces.isEmpty)
         // Revocation hides access, but must not rewrite the local browsing records.
@@ -179,7 +175,7 @@ final class BrowserStoreWorkspaceTests: XCTestCase {
         XCTAssertTrue(try XCTUnwrap(temporary.selectedSpace).archivedTabs.isEmpty)
     }
 
-    func testTransferRejectsStaleAssignmentsAndDuplicateDestinationIdentityAtomically() throws {
+    func testTransferRejectsStaleAssignmentsAtomically() throws {
         let source = BrowserStore(session: .preview)
         let space = try XCTUnwrap(source.selectedSpace)
         let tab = try XCTUnwrap(space.tabs.first)
@@ -195,13 +191,6 @@ final class BrowserStoreWorkspaceTests: XCTestCase {
         XCTAssertFalse(source.transferTab(tab.id, matching: assignment, to: destination, in: stale))
         XCTAssertEqual(source.session, beforeSource)
         XCTAssertEqual(destination.session, beforeDestination)
-
-        destination.session.spaces[0].tabs.append(tab)
-        let duplicateDestination = destination.session
-        XCTAssertFalse(source.canTransferTab(tab.id, matching: assignment, to: destination, in: assignment))
-        XCTAssertFalse(source.transferTab(tab.id, matching: assignment, to: destination, in: assignment))
-        XCTAssertEqual(source.session, beforeSource)
-        XCTAssertEqual(destination.session, duplicateDestination)
     }
 
 }

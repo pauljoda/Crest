@@ -116,14 +116,12 @@ final class BrowserPagePoolTests: XCTestCase {
             ))
         XCTAssertEqual(browser.selectedTab, draft)
 
-        var locked = space
-        locked.accessPolicy = .deviceOwnerAuthentication
-        browser.session = BrowserSession(spaces: [locked])
+        browser.updateSpaceAccessPolicy(.deviceOwnerAuthentication, in: space.id)
         XCTAssertFalse(action.perform(assignment, url: url))
         XCTAssertEqual(browser.selectedTab, draft)
 
-        browser.unlockForTesting(locked)
-        browser.session = BrowserSession(spaces: [space])
+        browser.unlockForTesting(space)
+        browser.updateSpaceAccessPolicy(.open, in: space.id)
         let previousURL = try XCTUnwrap(URL(string: "about:blank#already-navigated"))
         browser.navigateSelectedTab(to: previousURL.absoluteString)
         XCTAssertFalse(action.perform(assignment, url: url))

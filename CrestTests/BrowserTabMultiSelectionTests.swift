@@ -95,11 +95,11 @@ final class BrowserTabMultiSelectionTests: XCTestCase {
         gate.operation = nil // Native cancellation never commits a subset.
         XCTAssertEqual(browser.session, session)
         XCTAssertFalse(actions.perform(browser.closing(request), for: request))
-        browser.session.spaces[0].tabs[0].placement = .saved
+        XCTAssertTrue(browser.moveTab(source.tabs[0].id, to: .saved))
         let changed = browser.session
         XCTAssertFalse(try XCTUnwrap(gate.operation)())
         XCTAssertEqual(browser.session, changed)
-        browser.session = session
+        XCTAssertTrue(browser.moveTab(source.tabs[0].id, to: .current, before: source.tabs[1].id))
         XCTAssertFalse(actions.perform(browser.closing(request), for: request))
         XCTAssertTrue(try XCTUnwrap(gate.operation)())
         XCTAssertEqual(browser.session.spaces[0].archivedTabs.count, 2)

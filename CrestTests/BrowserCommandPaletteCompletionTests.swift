@@ -42,8 +42,7 @@ final class BrowserCommandPaletteCompletionTests: XCTestCase {
             BrowserTab(title: "Private", url: URL(string: "https://secret.example/path"), placement: .current))
         let browser = BrowserStore(
             session: BrowserSession(spaces: [original, other]),
-            showing: original.id, tabs: [original.id: tab.id],
-            browsingMode: .privateBrowsing)
+            showing: original.id, tabs: [original.id: tab.id])
         let access = BrowserSpaceAccessController()
         let model = BrowserCommandPaletteModel(
             space: original, selectedTabID: tab.id, initialQuery: "", commands: nil, isPrivateBrowsing: true,
@@ -57,18 +56,15 @@ final class BrowserCommandPaletteCompletionTests: XCTestCase {
         browser.selectPresentedSpace(other.id)
         XCTAssertNil(model.urlCompletion)
         XCTAssertFalse(model.acceptURLCompletion())
-        var locked = original
-        locked.accessPolicy = .deviceOwnerAuthentication
-        browser.session = BrowserSession(spaces: [locked])
+        browser.removeSpaceForTesting(other.id)
+        browser.updateSpaceAccessPolicy(.deviceOwnerAuthentication, in: original.id)
         XCTAssertNil(model.urlCompletion)
         XCTAssertFalse(model.acceptURLCompletion())
-        browser.session = BrowserSession(spaces: [original])
+        browser.unlockForTesting(original)
+        browser.updateSpaceAccessPolicy(.open, in: original.id)
         browser.clearPresentedTabSelection(in: original.id)
         XCTAssertNil(model.urlCompletion)
-        let replacement = BrowserSpace(
-            id: original.id, profile: BrowsingProfile(), name: original.name, symbol: original.symbol,
-            accent: original.accent, folders: [], tabs: original.tabs)
-        browser.session = BrowserSession(spaces: [replacement])
+        browser.replaceProfileForTesting(of: original.id)
         browser.activateSessionTab(tab.id, in: original.id)
         XCTAssertNil(model.urlCompletion)
         XCTAssertFalse(model.acceptURLCompletion())

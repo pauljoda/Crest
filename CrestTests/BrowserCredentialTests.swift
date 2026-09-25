@@ -604,14 +604,8 @@ final class BrowserCredentialTests: XCTestCase {
             vault.duringSynchronization = {
                 var preferences = original.credentialPreferences
                 preferences.isEnabled = false
-                if replacesProfile {
-                    otherWindow.session.spaces[0] = BrowserSpace(
-                        id: original.id, profile: BrowsingProfile(), name: "Replacement", symbol: original.symbol,
-                        accent: original.accent,
-                        folders: [], tabs: original.tabs, credentialPreferences: preferences)
-                } else {
-                    otherWindow.updateCredentialPreferences(preferences, in: original.id)
-                }
+                if replacesProfile { otherWindow.replaceProfileForTesting(of: original.id) }
+                otherWindow.updateCredentialPreferences(preferences, in: original.id)
             }
 
             do {
@@ -622,7 +616,7 @@ final class BrowserCredentialTests: XCTestCase {
                 XCTAssertEqual(error as? CredentialVaultError, .missingSpace)
             }
 
-            let preferences = try XCTUnwrap(store.selectedSpace).credentialPreferences
+            let preferences = try XCTUnwrap(store.session.space(id: original.id)).credentialPreferences
             XCTAssertFalse(preferences.isEnabled)
             XCTAssertEqual(preferences.syncsCrestPasswordsWithICloud, replacesProfile)
         }

@@ -222,7 +222,7 @@ final class BrowserStoreTests: XCTestCase {
     }
 
     func testPrivateBrowsingIsEphemeralAndCannotUseCrestPasswords() async throws {
-        let store = BrowserStore.privateBrowsing()
+        let store = BrowserStore.privateBrowsing(core: .hostingPages())
         let originalSpaceID = store.selectedSpaceID
         let originalProfileID = try XCTUnwrap(store.selectedSpace?.profile.id)
         let originalTabID = try XCTUnwrap(store.selectedTab?.id)
@@ -953,10 +953,7 @@ final class BrowserStoreTests: XCTestCase {
     }
 
     func testStaleDragCannotMoveATabFromAReplacementBrowsingProfile() throws {
-        let store = BrowserStore(
-            session: .preview,
-            browsingMode: .privateBrowsing
-        )
+        let store = BrowserStore(session: .preview)
         let source = try XCTUnwrap(store.session.spaces.first)
         let destination = try XCTUnwrap(
             store.session.spaces.first { $0.id != source.id }
@@ -967,27 +964,7 @@ final class BrowserStoreTests: XCTestCase {
             spaceID: source.id,
             profileID: source.profile.id
         )
-        let replacement = BrowserSpace(
-            id: source.id,
-            profile: BrowsingProfile(),
-            name: source.name,
-            symbol: source.symbol,
-            accent: source.accent,
-            branding: source.branding,
-            folders: source.folders,
-            tabs: source.tabs,
-            archivedTabs: source.archivedTabs,
-            history: source.history,
-            browsingPreferences: source.browsingPreferences,
-            credentialPreferences: source.credentialPreferences,
-            accessPolicy: source.accessPolicy,
-            isSavedTabsExpanded: source.isSavedTabsExpanded,
-            savedTabsExpansionModifiedAt: source.savedTabsExpansionModifiedAt
-        )
-        let sourceIndex = try XCTUnwrap(
-            store.session.spaces.firstIndex { $0.id == source.id }
-        )
-        store.session.spaces[sourceIndex] = replacement
+        store.replaceProfileForTesting(of: source.id)
 
         XCTAssertFalse(
             store.moveTab(
@@ -1384,7 +1361,7 @@ final class BrowserStoreMutationTests: XCTestCase {
     }
 
     func testClearingHistoryEmptiesOnlyTheSelectedSpace() throws {
-        let store = BrowserStore(session: .preview)
+        let store = BrowserStore(session: .preview, core: .hostingPages())
         let selectedSpaceID = store.selectedSpaceID
         store.seedVisit(
             to: try XCTUnwrap(URL(string: "https://example.com/read")),
@@ -1397,7 +1374,7 @@ final class BrowserStoreMutationTests: XCTestCase {
     }
 
     func testClearingCapturedSpaceHistoryDoesNotRetargetAfterSelectionChanges() throws {
-        let store = BrowserStore(session: .preview)
+        let store = BrowserStore(session: .preview, core: .hostingPages())
         let initiatingSpace = try XCTUnwrap(store.selectedSpace)
         let laterSelectedSpace = try XCTUnwrap(
             store.session.spaces.first { $0.id != initiatingSpace.id }
@@ -1432,10 +1409,7 @@ final class BrowserStoreMutationTests: XCTestCase {
     }
 
     func testClearingCapturedHistoryRejectsAReplacementBrowsingProfile() throws {
-        let store = BrowserStore(
-            session: .preview,
-            browsingMode: .privateBrowsing
-        )
+        let store = BrowserStore(session: .preview, core: .hostingPages())
         let initiatingSpace = try XCTUnwrap(store.selectedSpace)
         store.seedVisit(
             to: try XCTUnwrap(URL(string: "https://example.com/private")),
@@ -1446,35 +1420,8 @@ final class BrowserStoreMutationTests: XCTestCase {
             spaceName: initiatingSpace.name
         )
         let currentSpace = try XCTUnwrap(store.selectedSpace)
-        let replacement = BrowserSpace(
-            id: currentSpace.id,
-            profile: BrowsingProfile(
-                id: UUID(
-                    uuid: (
-                        0x43, 0x4C, 0x45, 0x41, 0x52, 0x48, 0x49, 0x53,
-                        0x54, 0x4F, 0x52, 0x59, 0x00, 0x00, 0x00, 0x01
-                    )
-                )
-            ),
-            name: currentSpace.name,
-            symbol: currentSpace.symbol,
-            accent: currentSpace.accent,
-            branding: currentSpace.branding,
-            folders: currentSpace.folders,
-            tabs: currentSpace.tabs,
-            archivedTabs: currentSpace.archivedTabs,
-            history: currentSpace.history,
-            browsingPreferences: currentSpace.browsingPreferences,
-            credentialPreferences: currentSpace.credentialPreferences,
-            accessPolicy: currentSpace.accessPolicy,
-            isSavedTabsExpanded: currentSpace.isSavedTabsExpanded,
-            savedTabsExpansionModifiedAt:
-                currentSpace.savedTabsExpansionModifiedAt
-        )
-        let spaceIndex = try XCTUnwrap(
-            store.session.spaces.firstIndex { $0.id == initiatingSpace.id }
-        )
-        store.session.spaces[spaceIndex] = replacement
+        store.replaceProfileForTesting(of: currentSpace.id)
+        let replacement = try XCTUnwrap(store.session.space(id: currentSpace.id))
 
         XCTAssertFalse(store.clearHistory(matching: request.assignment))
         XCTAssertEqual(
@@ -1484,37 +1431,14 @@ final class BrowserStoreMutationTests: XCTestCase {
     }
 
     func testRestoringCapturedArchiveRejectsAReplacementBrowsingProfile() throws {
-        let store = BrowserStore(
-            session: .preview,
-            browsingMode: .privateBrowsing
-        )
+        let store = BrowserStore(session: .preview)
         let url = try XCTUnwrap(URL(string: "https://example.com/archive"))
         let tabID = try XCTUnwrap(store.openNewTab(url: url))
         store.closeTab(tabID)
         let original = try XCTUnwrap(store.selectedSpace)
         let assignment = BrowserSpaceRuntimeAssignment(space: original)
         XCTAssertTrue(original.archivedTabs.contains(where: { $0.id == tabID }))
-        let replacement = BrowserSpace(
-            id: original.id,
-            profile: BrowsingProfile(),
-            name: original.name,
-            symbol: original.symbol,
-            accent: original.accent,
-            branding: original.branding,
-            folders: original.folders,
-            tabs: original.tabs,
-            archivedTabs: original.archivedTabs,
-            history: original.history,
-            browsingPreferences: original.browsingPreferences,
-            credentialPreferences: original.credentialPreferences,
-            accessPolicy: original.accessPolicy,
-            isSavedTabsExpanded: original.isSavedTabsExpanded,
-            savedTabsExpansionModifiedAt: original.savedTabsExpansionModifiedAt
-        )
-        let index = try XCTUnwrap(
-            store.session.spaces.firstIndex { $0.id == original.id }
-        )
-        store.session.spaces[index] = replacement
+        store.replaceProfileForTesting(of: original.id)
 
         XCTAssertFalse(store.restoreArchivedTab(tabID, matching: assignment))
         XCTAssertTrue(

@@ -68,13 +68,9 @@ final class BrowserCoreSessionAuthorityTests: XCTestCase {
         XCTAssertEqual(other.selectedSpace?.id, otherSpace)
         XCTAssertEqual(other.selectedTab?.id, otherTab)
 
-        // Two days pass without anyone using the restored tab.
+        // Closing the restored tab archives it again, with its image.
         store.selectTab(original.spaces[0].tabs[0].id)
-        var aged = store.session
-        let restored = try XCTUnwrap(aged.spaces[0].tabs.firstIndex(where: { $0.id == archived.id }))
-        aged.spaces[0].tabs[restored].lastActivatedAt = .now.addingTimeInterval(-86400 * 2)
-        store.session = aged
-        store.sweepExpiredBrowsingData()
+        XCTAssertTrue(store.closeTab(archived.id, in: spaceID))
         XCTAssertEqual(
             store.session.space(id: spaceID)?.archivedTabs.first(where: { $0.id == archived.id })?.tab.faviconData,
             archived.faviconData)
