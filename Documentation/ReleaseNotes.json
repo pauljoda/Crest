@@ -2397,6 +2397,10 @@
     "import-skips-unchanged-locked-spaces": {
       "category": "improved",
       "message": "Importing no longer stops at a locked Space the import leaves unchanged."
+    },
+    "manual-setup-preview-memo": {
+      "category": "internal",
+      "message": "The manual setup previews ask the core again only when the plan or the session changes."
     }
   }
 }

@@ -1,16 +1,14 @@
 @MainActor
 enum MobileOnboardingSpacePreviewFactory {
+    /// `draft`'s Space as `previewSession`, the session the setup would leave,
+    /// holds it, or as the draft describes it when the core would refuse the
+    /// setup.
     static func preview(
         draft: BrowserManualSetupSpaceDraft,
-        plan: BrowserManualSetupPlan,
-        browser: BrowserStore,
+        previewSession: BrowserSession?,
         includesSamples: Bool
     ) -> BrowserSpace {
-        var space = resolvedSpace(
-            draft: draft,
-            plan: plan,
-            browser: browser
-        )
+        var space = resolvedSpace(draft: draft, previewSession: previewSession)
         guard includesSamples else { return space }
 
         var tabs = space.tabs
@@ -35,12 +33,9 @@ enum MobileOnboardingSpacePreviewFactory {
 
     private static func resolvedSpace(
         draft: BrowserManualSetupSpaceDraft,
-        plan: BrowserManualSetupPlan,
-        browser: BrowserStore
+        previewSession: BrowserSession?
     ) -> BrowserSpace {
-        if let preview = try? plan.preview(in: browser),
-            let space = preview.space(id: draft.id)
-        {
+        if let space = previewSession?.space(id: draft.id) {
             return space
         }
         return BrowserSpace(

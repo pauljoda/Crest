@@ -15,15 +15,6 @@ extension BrowserManualSetupModel {
         plan.spaces.first { $0.id == spaceID }
     }
 
-    /// The session the setup would leave `browser`'s workspace with, or nil
-    /// when the core would refuse it.
-    func previewSession(
-        for plan: BrowserManualSetupPlan,
-        in browser: BrowserStore
-    ) -> BrowserSession? {
-        try? plan.preview(in: browser)
-    }
-
     func previewSpace(
         for draft: BrowserManualSetupSpaceDraft,
         in previewSession: BrowserSession?

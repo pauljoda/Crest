@@ -6,6 +6,7 @@ struct MobileOnboardingSpaceCustomizationSheet: View {
     let browser: BrowserStore
 
     @Environment(\.dismiss) private var dismiss
+    @State private var model = BrowserManualSetupModel()
 
     var body: some View {
         NavigationStack {
@@ -29,8 +30,7 @@ struct MobileOnboardingSpaceCustomizationSheet: View {
                         BrowserSpaceSidebarPreview(
                             space: MobileOnboardingSpacePreviewFactory.preview(
                                 draft: draft,
-                                plan: plan,
-                                browser: browser,
+                                previewSession: model.previewSession(for: plan, in: browser),
                                 includesSamples: true
                             )
                         )
