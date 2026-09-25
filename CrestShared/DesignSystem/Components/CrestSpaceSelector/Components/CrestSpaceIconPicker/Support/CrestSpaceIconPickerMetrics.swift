@@ -21,7 +21,12 @@ enum CrestSpaceIconPickerStyle {
     var height: CGFloat {
         self == .touch ? 48 : CrestSpaceIconPickerMetrics.segmentHeight + 2 * CrestSpaceIconPickerMetrics.trackPadding
     }
-    var cornerRadius: CGFloat { self == .touch ? height / 2 : CrestSpaceIconPickerMetrics.cornerRadius }
+    /// The corner radius of a part of the picker `height` tall: the compact
+    /// radius, or for touch half the height, so every part is a capsule.
+    /// `CrestSpaceIconPickerShape` draws every part with it.
+    func cornerRadius(forHeight height: CGFloat) -> CGFloat {
+        self == .touch ? height / 2 : CrestSpaceIconPickerMetrics.cornerRadius
+    }
     var minimumSegmentWidth: CGFloat { self == .touch ? 52 : CrestSpaceIconPickerMetrics.segmentWidth }
     var dividerWidth: CGFloat { self == .touch ? 0 : CrestLayout.hairline }
     var overflowButtonWidth: CGFloat { self == .touch ? 44 : CrestSpaceIconPickerMetrics.overflowButtonWidth }

@@ -75,7 +75,7 @@ struct BrowserSpaceSwitcherCompactPicker: View {
         .scrollIndicators(.never)
         .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
         .frame(width: allocation.scrollViewportWidth, height: style.height)
-        .clipShape(.rect(cornerRadius: style.cornerRadius))
+        .clipShape(CrestSpaceIconPickerShape(style: style))
         .onGeometryChange(for: CGRect.self) {
             $0.frame(in: .global)
         } action: {

@@ -2525,6 +2525,10 @@
     "read-model-sidebar-spike-on-core-outline": {
       "category": "internal",
       "message": "The debug-only sidebar harness draws the core's published sidebar lists and shown-tab slots, and its checks hold the tighter redraw limits they allow."
+    },
+    "space-selector-matching-corners": {
+      "category": "improved",
+      "message": "The Space selector's outline and its selection now share the same corners."
     }
   }
 }

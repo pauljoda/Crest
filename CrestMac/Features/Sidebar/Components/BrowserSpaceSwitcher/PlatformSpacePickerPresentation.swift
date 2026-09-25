@@ -6,6 +6,7 @@ import SwiftUI
 /// scroll viewport with the page layers' actual presentation.
 struct PlatformSpacePickerPresentation: NSViewRepresentable {
     let presentation: SpacePagerPresentation
+    let style: CrestSpaceIconPickerStyle
     let spaces: [BrowserSpace]
     let selectedSpaceID: SpaceID?
     let frames: [SpaceID: CGRect]
@@ -17,7 +18,7 @@ struct PlatformSpacePickerPresentation: NSViewRepresentable {
 
     func updateNSView(_ view: SpacePickerPresentationView, context: Context) {
         view.update(
-            presentation: presentation, spaces: spaces,
+            presentation: presentation, style: style, spaces: spaces,
             selectedSpaceID: selectedSpaceID, frames: frames, selectionTint: selectionTint)
     }
 
@@ -31,6 +32,7 @@ final class SpacePickerPresentationView: NSView {
 
     private let highlight = CAShapeLayer()
     private var presentation: SpacePagerPresentation?
+    private var style = CrestSpaceIconPickerStyle.compact
     private weak var clipView: NSClipView?
     private var spaceIDs: [SpaceID] = []
     private var frames: [SpaceID: CGRect] = [:]
@@ -76,13 +78,14 @@ final class SpacePickerPresentationView: NSView {
     }
 
     func update(
-        presentation: SpacePagerPresentation, spaces: [BrowserSpace],
+        presentation: SpacePagerPresentation, style: CrestSpaceIconPickerStyle, spaces: [BrowserSpace],
         selectedSpaceID: SpaceID?, frames: [SpaceID: CGRect], selectionTint: Color?
     ) {
         if self.presentation !== presentation {
             disconnect()
             self.presentation = presentation
         }
+        self.style = style
         let ids = spaces.map(\.id)
         if spaceIDs != ids {
             lastSnapshot = nil
@@ -235,10 +238,11 @@ final class SpacePickerPresentationView: NSView {
         highlight.isHidden = false
         highlight.frame = frame
         let stroke = CrestLayout.hairline
-        highlight.path = CGPath(
-            roundedRect: CGRect(origin: .zero, size: frame.size).insetBy(dx: stroke / 2, dy: stroke / 2),
-            cornerWidth: CrestSpaceIconPickerMetrics.cornerRadius,
-            cornerHeight: CrestSpaceIconPickerMetrics.cornerRadius, transform: nil)
+        highlight.path =
+            CrestSpaceIconPickerShape(style: style)
+            .inset(by: stroke / 2)
+            .path(in: CGRect(origin: .zero, size: frame.size))
+            .cgPath
         highlight.fillColor =
             color.withAlphaComponent(
                 color.alphaComponent * CrestSpaceIconPickerMetrics.selectionFillOpacity

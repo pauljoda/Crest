@@ -40,6 +40,7 @@ struct CrestSpaceIconPicker<SegmentContent: View>: View {
                 GeometryReader { geometry in
                     PlatformSpacePickerPresentation(
                         presentation: selectionPresentation,
+                        style: style,
                         spaces: spaces,
                         selectedSpaceID: selectedSpaceID,
                         frames: anchors.mapValues { geometry[$0] },
@@ -49,21 +50,15 @@ struct CrestSpaceIconPicker<SegmentContent: View>: View {
             }
         }
         .background {
-            RoundedRectangle(
-                cornerRadius: style.cornerRadius,
-                style: .continuous
-            )
-            .fill(.primary.opacity(style == .touch ? 0.08 : CrestSpaceIconPickerMetrics.trackFillOpacity))
+            CrestSpaceIconPickerShape(style: style)
+                .fill(.primary.opacity(style == .touch ? 0.08 : CrestSpaceIconPickerMetrics.trackFillOpacity))
         }
         .overlay {
-            RoundedRectangle(
-                cornerRadius: style.cornerRadius,
-                style: .continuous
-            )
-            .strokeBorder(
-                .primary.opacity(style == .touch ? 0 : CrestSpaceIconPickerMetrics.trackBorderOpacity),
-                lineWidth: CrestLayout.hairline / 2
-            )
+            CrestSpaceIconPickerShape(style: style)
+                .strokeBorder(
+                    .primary.opacity(style == .touch ? 0 : CrestSpaceIconPickerMetrics.trackBorderOpacity),
+                    lineWidth: CrestLayout.hairline / 2
+                )
         }
         .fixedSize(horizontal: true, vertical: false)
         .background {
@@ -157,22 +152,16 @@ struct CrestSpaceIconPicker<SegmentContent: View>: View {
                 .contentShape(.rect)
                 .background {
                     if isSelected && selectionPresentation == nil {
-                        RoundedRectangle(
-                            cornerRadius: style.cornerRadius,
-                            style: .continuous
-                        )
-                        .fill(
-                            style == .touch
-                                ? Color.primary.opacity(0.22)
-                                : tint.opacity(CrestSpaceIconPickerMetrics.selectionFillOpacity)
-                        )
-                        .overlay {
-                            RoundedRectangle(
-                                cornerRadius: style.cornerRadius,
-                                style: .continuous
+                        CrestSpaceIconPickerShape(style: style)
+                            .fill(
+                                style == .touch
+                                    ? Color.primary.opacity(0.22)
+                                    : tint.opacity(CrestSpaceIconPickerMetrics.selectionFillOpacity)
                             )
-                            .strokeBorder(style == .touch ? .clear : tint, lineWidth: CrestLayout.hairline)
-                        }
+                            .overlay {
+                                CrestSpaceIconPickerShape(style: style)
+                                    .strokeBorder(style == .touch ? .clear : tint, lineWidth: CrestLayout.hairline)
+                            }
                     }
                 }
         }
