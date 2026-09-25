@@ -155,9 +155,49 @@ public sealed partial class BrowserContractsTests {
         Assert.Contains(stored.Session.Current.SpaceDeletions, deletion => deletion.SpaceId == fixture.Space);
     }
 
+    /// A merge that lands before the stage of a folder's deletion runs still
+    /// deletes the folder's record as the person did, so the folder stays
+    /// deleted on every device.
+    [Fact]
+    public void AMergeKeepsTheReasonOfADeletionItStagesInsteadOfItsQueuedStage() {
+        using var directory = new StorageDirectory();
+        var fixture = SavedSession();
+        using var stored = StoredSyncing(directory, fixture.Document);
+        var folder = SpaceId(fixture.Document["session"]!["spaces"]![0]!["folders"]![0]!);
+
+        stored.App.Send(new DeleteFolder(stored.Workspace, fixture.Space, folder));
+        stored.App.Send(new MergeSyncRecords([CloudTab(Guid.NewGuid(), fixture.Space, clock: 5)]));
+
+        Assert.Equal("explicitDelete", FolderTombstoneReason(stored.Sync, folder));
+        Assert.DoesNotContain(stored.Session.Current.Spaces.Single().Folders, held => held.Id == folder);
+    }
+
+    /// A merge the core refuses leaves the stage it superseded to run as it
+    /// would have.
+    [Fact]
+    public void ARefusedMergeQueuesTheStageItSupersededAgain() {
+        using var directory = new StorageDirectory();
+        var fixture = SavedSession();
+        using var stored = StoredSyncing(directory, fixture.Document);
+        var folder = SpaceId(fixture.Document["session"]!["spaces"]![0]!["folders"]![0]!);
+
+        stored.App.Send(new DeleteFolder(stored.Workspace, fixture.Space, folder));
+        Assert.Throws<Rejected>(() => stored.App.Send(new MergeSyncRecords([CloudTab(fixture.Tab, Guid.NewGuid(), clock: 5)])));
+        stored.Sync.Flush();
+
+        Assert.Equal("explicitDelete", FolderTombstoneReason(stored.Sync, folder));
+    }
+
     #endregion
 
     #region Actions - Fixtures
+
+    /// Why the journal `sync` holds deletes `folder`'s record, or null while it
+    /// holds no tombstone for it.
+    private static string? FolderTombstoneReason(NativeSyncAuthority sync, Guid folder) =>
+        JsonNode.Parse(sync.Snapshot.Read())!["records"]!.AsArray()
+            .Single(record => record!["id"]!["kind"]!.GetValue<string>() == "folder"
+                && Guid.Parse(record["id"]!["value"]!.GetValue<string>()) == folder)!["tombstone"]?["reason"]?.GetValue<string>();
 
     /// A core keeping `document` in its file, without its seed marker unless it
     /// `keepsSeed`, opened as a launch opens it once its launch stage settled.

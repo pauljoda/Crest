@@ -62,27 +62,37 @@ public sealed partial class NativeSessionAuthority {
     /// with them. The journal transaction begins before the gate is taken:
     /// waiting for one in progress releases the gate. The result is computed
     /// outside the gate from the session as it was, and again when the session
-    /// moved meanwhile, a few times, then holding the gate.
+    /// moved meanwhile, a few times, then holding the gate. The stages still
+    /// queued are superseded before each computation, and a merge deletes each
+    /// record their edits removed for the reason of the edit that removed it;
+    /// a transaction that never commits queues them again.
     private void Converging(NativeSyncAuthority sync, IncomingSyncRecords records, bool replacing, DateTimeOffset now,
         IIdSource ids, bool seedOnly = false) {
-        _ = sync.Supersede();
+        var superseded = sync.Supersede();
         var transaction = sync.BeginTransaction();
+        transaction.Superseded = superseded;
         NativeSessionReplacement? reserved = null;
         try {
             if (!replacing) records.RequireSameSpaces(transaction.Journal);
             for (int attempt = 0; reserved is null; attempt++) {
                 SessionState basis;
                 ulong revision;
-                lock (Gate) (basis, revision) = (IntentBasis(), Revision);
+                lock (Gate) {
+                    Supersede(sync, transaction);
+                    (basis, revision) = (IntentBasis(), Revision);
+                }
                 if (seedOnly && basis.DisposableSeedMarker is null) {
                     transaction.Dispose();
                     return;
                 }
                 if (attempt < ConvergenceAttempts) {
-                    var computed = Converge(transaction.Journal, basis, records, replacing, now, ids);
+                    var computed = Converge(transaction, basis, records, replacing, now, ids);
                     lock (Gate) if (Revision == revision) reserved = Reserving(transaction, computed);
                 } else {
-                    lock (Gate) reserved = Reserving(transaction, Converge(transaction.Journal, IntentBasis(), records, replacing, now, ids));
+                    lock (Gate) {
+                        Supersede(sync, transaction);
+                        reserved = Reserving(transaction, Converge(transaction, IntentBasis(), records, replacing, now, ids));
+                    }
                 }
             }
         } catch (Exception error) {
@@ -100,14 +110,21 @@ public sealed partial class NativeSessionAuthority {
         sync.AnnounceStaged();
     }
 
-    /// The journal and session `records` make of `basis` and `journal`, at
-    /// `now`, with the tabs repair gave a new identity.
-    private Convergence Converge(NativeSyncJournal journal, SessionState basis, IncomingSyncRecords records, bool replacing,
-        DateTimeOffset now, IIdSource ids) {
+    /// Makes `transaction` cover the stages queued since it last superseded
+    /// them. The caller holds the gate.
+    private static void Supersede(NativeSyncAuthority sync, NativeSyncTransaction transaction) =>
+        transaction.Superseded = SyncStager.Request.Covering(transaction.Superseded, sync.Supersede());
+
+    /// The journal and session `records` make of `basis` and the journal
+    /// `transaction` holds, at `now`, with the tabs repair gave a new identity.
+    private Convergence Converge(NativeSyncTransaction transaction, SessionState basis, IncomingSyncRecords records,
+        bool replacing, DateTimeOffset now, IIdSource ids) {
+        var journal = transaction.Journal;
         var seconds = StoredSessionCodec.Seconds(now);
         var emptySpace = SpaceTemplate.Ordinary.Make(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), number: 1, now);
+        var removals = (transaction.Superseded?.Removals ?? SyncRemovals.None).Reasons(SyncDeletionReason.Superseded);
         var result = NativeSyncSessionTransition.Prepare(journal, StoredSessionCodec.Encode(basis), records.Batch(), replacing,
-            seconds, journal.Preferences, StoredSessionCodec.Encode(emptySpace), Access, ids);
+            seconds, journal.Preferences, StoredSessionCodec.Encode(emptySpace), Access, ids, removals);
         _ = result.Journal.Read();
         var session = StoredSessionCodec.DecodeSession(result.Materialization["session"]);
         return new(result.Journal, session, new(Copies(basis, session, result.Materialization["assets"]!.AsArray()), Favicon: null));
@@ -139,10 +156,12 @@ public sealed partial class NativeSessionAuthority {
 
     /// Rebases the journal above `records`, the cloud's, from the session as
     /// it is, so every record waits to upload, and saves the journal. The
-    /// session does not change.
+    /// session does not change. A transaction that never commits queues the
+    /// stages it superseded again.
     private void Overwriting(NativeSyncAuthority sync, IncomingSyncRecords records, DateTimeOffset now) {
-        _ = sync.Supersede();
+        var superseded = sync.Supersede();
         var transaction = sync.BeginTransaction();
+        transaction.Superseded = superseded;
         try {
             SessionState basis;
             lock (Gate) basis = IntentBasis();

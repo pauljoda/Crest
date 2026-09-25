@@ -2429,6 +2429,10 @@
     "page-reports-without-deferral": {
       "category": "internal",
       "message": "Page reports apply directly now that only intents reserve the session."
+    },
+    "merge-keeps-deletion-reason": {
+      "category": "fixed",
+      "message": "A folder or history entry you delete just before iCloud Sync brings in changes stays deleted."
     }
   }
 }

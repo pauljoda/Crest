@@ -26,7 +26,18 @@ internal sealed class SyncStager {
     /// when its delay ends, the host turn it was queued in and its place among
     /// requests.
     internal sealed record Request(SessionState Session, SyncDeletionReason Reason, SyncRemovals Removals, DateTimeOffset Due,
-        ulong Turn, ulong Sequence);
+        ulong Turn, ulong Sequence) {
+        #region Actions - Supersession
+
+        /// The request that covers the edits of `earlier`, which a stage
+        /// outside the worker replaced, and of `later`, which it replaced
+        /// after: `later` taking over `earlier`'s edits, or whichever is
+        /// not null.
+        public static Request? Covering(Request? earlier, Request? later) =>
+            earlier is null ? later : later is null ? earlier : later with { Removals = earlier.Removals.Joining(later.Removals) };
+
+        #endregion
+    }
 
     #endregion
 

@@ -32,22 +32,28 @@ public sealed record NativeSyncSessionTransition(NativeSyncJournal Journal, Json
     /// The journal and repaired session that merging `incoming`, records in the
     /// journal's form, into `local`, a whole session in the stored format, or
     /// replacing it with them, make at `now` in seconds since 2001 under the
-    /// sync category `preferences`. `emptySpace` is the Space a session left
+    /// sync category `preferences`. A merge first stages `local`, deleting
+    /// each record the edits it covers removed for the reason `removals` names
+    /// for it, else as superseded. `emptySpace` is the Space a session left
     /// with none takes, and `ids` gives repaired records new identities.
     internal static NativeSyncSessionTransition Prepare(NativeSyncJournal journal, JsonObject local, JsonArray incoming,
-        bool replacing, double now, JsonNode preferences, JsonObject? emptySpace, SpaceAccessAuthority? access, IIdSource? ids) {
+        bool replacing, double now, JsonNode preferences, JsonObject? emptySpace, SpaceAccessAuthority? access, IIdSource? ids,
+        IReadOnlyDictionary<string, SyncDeletionReason>? removals = null) {
         if (!double.IsFinite(now)) throw new BrowserRuleException(BrowserRuleCodes.InvalidSavedDate);
         var next = journal;
-        void Apply(NativeSyncOperation operation, JsonObject args) {
-            next = next.Apply(Encoding.UTF8.GetBytes(new JsonObject {
+        void Apply(NativeSyncOperation operation, JsonObject args, IReadOnlyDictionary<string, SyncDeletionReason>? named = null) {
+            var request = Encoding.UTF8.GetBytes(new JsonObject {
                 ["version"] = 1,
                 ["operation"] = NativeSyncOperationCodes.Name(operation),
                 ["preferences"] = preferences.DeepClone(),
                 ["arguments"] = args
-            }.ToJsonString()));
+            }.ToJsonString());
+            next = named is null ? next.Apply(request) : next.Apply(request, named);
         }
-        void Stage(JsonObject session, SyncDeletionReason reason) => Apply(NativeSyncOperation.Stage, new JsonObject { ["session"] = session.DeepClone(), ["deletionReason"] = reason.Name, ["now"] = now });
-        if (!replacing && local["disposableSeedMarker"] is null) Stage(local, SyncDeletionReason.Superseded);
+        void Stage(JsonObject session, SyncDeletionReason reason, IReadOnlyDictionary<string, SyncDeletionReason>? named = null) =>
+            Apply(NativeSyncOperation.Stage, new JsonObject { ["session"] = session.DeepClone(), ["deletionReason"] = reason.Name, ["now"] = now },
+                named);
+        if (!replacing && local["disposableSeedMarker"] is null) Stage(local, SyncDeletionReason.Superseded, removals);
         Apply(replacing ? NativeSyncOperation.Replace : NativeSyncOperation.Merge, new JsonObject { ["records"] = incoming.DeepClone() });
         // Only an accepted explicit Space tombstone authorizes deleting this
         // device's profile. Missing records, tab deletion and retention do not.

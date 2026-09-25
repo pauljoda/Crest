@@ -30,6 +30,9 @@ internal sealed record SyncRemovals(IReadOnlyList<SyncRemovals.Edit> Edits) {
     /// These edits followed by `edit`.
     public SyncRemovals Adding(Edit edit) => new([.. Edits, edit]);
 
+    /// These edits, joined by those of `later` they do not already hold.
+    public SyncRemovals Joining(SyncRemovals later) => new([.. Edits, .. later.Edits.Where(edit => !Edits.Contains(edit))]);
+
     /// The reason each record the edits removed is deleted for, by its record
     /// name: the reason of the newest edit that removed it. Empty when every
     /// edit was made for `reason`, which the stage then gives each removal.

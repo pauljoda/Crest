@@ -118,6 +118,11 @@ public sealed class NativeSyncJournal {
 
     public NativeSyncJournal Apply(ReadOnlySpan<byte> bytes) => Apply(Parse(bytes));
 
+    /// The journal after the request `bytes` hold, a stage deleting each
+    /// record it removes for the reason `removals` names for it.
+    internal NativeSyncJournal Apply(ReadOnlySpan<byte> bytes, IReadOnlyDictionary<string, SyncDeletionReason> removals) =>
+        Apply(Parse(bytes), removals);
+
     /// The Space the record `name` names belongs to here, or null when the
     /// journal holds no such record.
     internal Guid? SpaceOf(string name) => records.TryGetValue(name, out var record) ? Id(record["spaceID"]) : null;
