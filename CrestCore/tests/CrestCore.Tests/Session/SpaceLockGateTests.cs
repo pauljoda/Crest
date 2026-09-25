@@ -44,7 +44,7 @@ public sealed partial class BrowserContractsTests {
         Assert.IsType<SpaceLocked>(Assert.Throws<Rejected>(() =>
             device.Send(new RenameTab(device.Workspace, identity.Space, tab, "Leaked"))).Rejection);
         Assert.Equal(1UL, core.Revision);
-        // A locked Space must not even be named as an import destination.
+        // A setup that would add tabs to a locked Space and rename it is refused.
         var draft = session["spaces"]![0]!.DeepClone();
         var setup = new ApplyManualSetup(device.Workspace, Guid.NewGuid(), Encoding.UTF8.GetBytes(new JsonArray(draft).ToJsonString()),
             [new(identity.Space, false, new("Renamed", "book", SpaceAccent.Indigo, StoredSessionCodec.DecodeBranding(new JsonObject())))],
@@ -76,6 +76,73 @@ public sealed partial class BrowserContractsTests {
         Unlock(device.Send, device.Workspace, identity.Space);
         device.Send(new RenameTab(device.Workspace, identity.Space, tab, "After relock"));
         Assert.Equal("After relock", core.Current.Spaces[0].Tabs[0].CustomTitle);
+    }
+
+    /// A Space as the stored format writes it, byte for byte.
+    private static string Stored(SpaceState space) => StoredSessionCodec.Encode(space).ToJsonString();
+
+    /// The name and look a Space already has, as a draft left unchanged carries them.
+    private static SpaceCustomization OwnCustomization(SpaceState space) =>
+        new(space.Settings.Name, space.Settings.Symbol, space.Settings.Accent, space.Settings.Branding!);
+
+    [Fact]
+    public void AReviewedImportIsRefusedOnlyWhenItWouldJoinTabsIntoALockedSpace() {
+        var session = GuardedSession(withOpenSecondSpace: true).AsObject();
+        session.Remove("disposableSeedMarker");
+        using var device = new TestDevice(session);
+        var window = device.Showing(session);
+        var locked = device.Authority.Current.Spaces[0];
+        var kept = Stored(locked);
+        // The core matched "Reading" to the locked Space; "Travel" is new.
+        var matched = ImportedSpace("Reading", ImportedTab("https://matched.example/"));
+        var fresh = ImportedSpace("Travel", ImportedTab("https://travel.example/"));
+        ImportReviewedSpaces Review(bool joinsLocked) => new(device.Workspace, window, ImportedSpaces(matched, fresh), [
+            new(SpaceId(matched), joinsLocked, locked.Id, OwnCustomization(locked), [TabId(matched["tabs"]![0]!)], []),
+            new(SpaceId(fresh), true, null, Customization("Trips"), [TabId(fresh["tabs"]![0]!)], [])
+        ]);
+
+        var before = device.Authority.Current;
+        Assert.Equal(new SpaceLocked(locked.Id), Assert.Throws<Rejected>(() => device.Send(Review(joinsLocked: true))).Rejection);
+        Assert.Same(before, device.Authority.Current);
+
+        // Left out, the match changes nothing, so the rest imports.
+        device.Send(Review(joinsLocked: false));
+        var current = device.Authority.Current;
+        Assert.Equal(3, current.Spaces.Count);
+        Assert.Equal(kept, Stored(current.Spaces[0]));
+        Assert.Equal("Trips", current.Spaces[2].Settings.Name);
+    }
+
+    [Fact]
+    public void AManualSetupIsRefusedOnlyWhenItsDraftWouldChangeALockedSpace() {
+        var session = GuardedSession(withOpenSecondSpace: true);
+        using var device = new TestDevice(session);
+        var window = device.Showing(session);
+        var (locked, open) = (device.Authority.Current.Spaces[0], device.Authority.Current.Spaces[1]);
+        var kept = Stored(locked);
+        JsonObject Draft(SpaceState space, params JsonObject[] tabs) {
+            var draft = ImportedSpace(space.Settings.Name, tabs);
+            draft["id"] = SwiftId(space.Id);
+            draft["profile"]!["id"] = space.ProfileId.ToString();
+            return draft;
+        }
+        // Every existing Space is a draft; the open one gains a tab and a name,
+        // and the drafts' order moves the locked Space second.
+        ApplyManualSetup Setup(SpaceCustomization lockedLook) => new(device.Workspace, window,
+            ImportedSpaces(Draft(open, ImportedTab("https://added.example/")), Draft(locked)),
+            [new(open.Id, false, Customization("Renamed")), new(locked.Id, false, lockedLook)], OrderWasEdited: true);
+
+        var before = device.Authority.Current;
+        Assert.Equal(new SpaceLocked(locked.Id), Assert.Throws<Rejected>(() => device.Send(Setup(Customization("Also renamed")))).Rejection);
+        Assert.Same(before, device.Authority.Current);
+
+        // Moving a Space in the order changes no Space, as ReorderSpaces moves a locked one too.
+        device.Send(Setup(OwnCustomization(locked)));
+        var current = device.Authority.Current;
+        Assert.Equal([open.Id, locked.Id], current.Spaces.Select(space => space.Id));
+        Assert.Equal(kept, Stored(current.Spaces[1]));
+        Assert.Equal("Renamed", current.Spaces[0].Settings.Name);
+        Assert.Contains(current.Spaces[0].Tabs, tab => tab.Url == "https://added.example/");
     }
 
     [Fact]

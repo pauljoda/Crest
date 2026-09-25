@@ -31,7 +31,13 @@ internal sealed class NativeWorkspaceImport {
     /// Space keeps its place in the import as its record is replaced.
     private sealed class Draft(SpaceState state, bool isOriginal) {
         public SpaceState State { get; set; } = state;
-        public bool IsOriginal { get; } = isOriginal;
+        /// The record the session held for its own Space, or null for a Space
+        /// the import brings.
+        public SpaceState? Original { get; } = isOriginal ? state : null;
+        public bool IsOriginal => Original is not null;
+        /// Whether the import changed the session's own Space: gave it tabs or
+        /// folders, or another name or look.
+        public bool IsChanged => Original is { } original && !State.Equals(original);
         public Guid Id => State.Id;
 
         // The tab this Space should show first. It is a hint for the window that
@@ -62,6 +68,13 @@ internal sealed class NativeWorkspaceImport {
     private Guid? seedMarker;
     /// The first Space the import brought or changed, which the window shows.
     private Draft? affected;
+
+    /// The session's own Spaces the import changes, as the session holds them:
+    /// each it gives tabs or folders, or another name or look. Moving a Space in
+    /// the order changes no Space, as `ReorderSpaces` moves a locked one too,
+    /// and neither does replacing a first launch's disposable Spaces, which
+    /// removes them as a deletion removes a locked Space.
+    internal IReadOnlyList<SpaceState> Changed => [.. spaces.Where(space => space.IsChanged).Select(space => space.Original!)];
 
     #endregion
 
@@ -360,13 +373,24 @@ internal sealed class NativeWorkspaceImport {
 
     #region Actions - Rules
 
-    private static void Customize(Draft space, SpaceCustomization customization) => space.State = space.State with {
-        Settings = space.State.Settings with {
-            Name = SpaceOrganizationPolicy.Name(customization.Name),
-            Symbol = SpaceOrganizationPolicy.Symbol(customization.Symbol),
-            Accent = customization.Accent,
-            Branding = SpaceBrandingPolicy.Normalize(customization.Branding)
-        }
+    /// Gives `space` the name and look `customization` chooses. The session's
+    /// own Space keeps its settings when the choice reads as the name and look
+    /// it already has, so a draft left as it was changes nothing.
+    private static void Customize(Draft space, SpaceCustomization customization) {
+        var settings = space.State.Settings;
+        var chosen = Customized(settings, customization);
+        if (space.IsOriginal && settings.Branding is { } branding
+            && chosen == Customized(settings, new(settings.Name, settings.Symbol, settings.Accent, branding))) return;
+        space.State = space.State with { Settings = chosen };
+    }
+
+    /// `settings` with the name and look `customization` chooses, as the core
+    /// keeps them.
+    private static SpaceSettings Customized(SpaceSettings settings, SpaceCustomization customization) => settings with {
+        Name = SpaceOrganizationPolicy.Name(customization.Name),
+        Symbol = SpaceOrganizationPolicy.Symbol(customization.Symbol),
+        Accent = customization.Accent,
+        Branding = SpaceBrandingPolicy.Normalize(customization.Branding)
     };
 
     /// Throws `Rejected` with `SpaceBeingDeleted` when `id` is going away.

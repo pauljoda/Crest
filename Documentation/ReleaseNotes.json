@@ -2393,6 +2393,10 @@
     "abi-invalid-session": {
       "category": "internal",
       "message": "The C ABI program checks a refused seed against the renamed InvalidSession rejection."
+    },
+    "import-skips-unchanged-locked-spaces": {
+      "category": "improved",
+      "message": "Importing no longer stops at a locked Space the import leaves unchanged."
     }
   }
 }

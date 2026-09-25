@@ -159,7 +159,7 @@ public sealed partial class NativeSessionAuthority {
             UpdateSearchEngine engine => UpdatingSearchEngine(basis, engine),
             RemoveSearchEngine engine => RemovingSearchEngine(basis, engine),
             SelectSearchEngine engine => SelectingSearchEngine(basis, engine),
-            ImportSpaces import => ImportingSpaces(basis, import, now, ids),
+            ImportSpaces import => ImportingSpaces(basis, import, now, ids, previewed),
             ImportReviewedSpaces import => ImportingReviewedSpaces(basis, import, now, ids, previewed),
             ApplyManualSetup setup => ApplyingManualSetup(basis, setup, now, ids, previewed),
             _ => throw new ArgumentOutOfRangeException(nameof(intent), intent.GetType().Name, "The session does not handle this intent.")

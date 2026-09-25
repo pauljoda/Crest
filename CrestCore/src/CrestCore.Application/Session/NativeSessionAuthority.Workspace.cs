@@ -6,33 +6,30 @@ namespace CrestCore.Application;
 public sealed partial class NativeSessionAuthority {
     #region Actions - Imports
 
-    private SessionEdit ImportingSpaces(SessionState basis, ImportSpaces intent, DateTimeOffset now, IIdSource ids) =>
-        Importing(basis, intent, intent.Spaces, destinations: [], now, ids, import => import.AddSpaces());
+    private SessionEdit ImportingSpaces(SessionState basis, ImportSpaces intent, DateTimeOffset now, IIdSource ids, bool previewed) =>
+        Importing(basis, intent, intent.Spaces, previewed, now, ids, import => import.AddSpaces());
 
     private SessionEdit ImportingReviewedSpaces(SessionState basis, ImportReviewedSpaces intent, DateTimeOffset now, IIdSource ids,
         bool previewed) =>
-        Importing(basis, intent, intent.Spaces, previewed ? [] : intent.Reviews.Select(review => review.DestinationId).OfType<Guid>(),
-            now, ids, import => import.ImportReviewed(intent.Reviews, ids));
+        Importing(basis, intent, intent.Spaces, previewed, now, ids, import => import.ImportReviewed(intent.Reviews, ids));
 
     private SessionEdit ApplyingManualSetup(SessionState basis, ApplyManualSetup intent, DateTimeOffset now, IIdSource ids,
         bool previewed) =>
-        Importing(basis, intent, intent.Spaces, previewed ? [] : intent.Drafts.Where(draft => !draft.IsNew).Select(draft => draft.SpaceId),
-            now, ids, import => import.ApplyDrafts(intent.Drafts, intent.OrderWasEdited));
+        Importing(basis, intent, intent.Spaces, previewed, now, ids, import => import.ApplyDrafts(intent.Drafts, intent.OrderWasEdited));
 
-    /// An import's work: no Space among `destinations`, the ones it writes
-    /// into, may be locked, and only the persistent workspace takes one. `apply` runs the
-    /// intent's own rules over the Spaces read from `spaces`, then every
-    /// record takes the identity sync needs and the issuing window shows what
-    /// the import brought.
-    private SessionEdit Importing(SessionState basis, ImportWorkspace intent, byte[] spaces, IEnumerable<Guid> destinations,
-        DateTimeOffset now, IIdSource ids, Action<NativeWorkspaceImport> apply) {
-        foreach (var id in destinations)
-            if (basis.Spaces.FirstOrDefault(space => space.Id == id) is { } destination && IsLockedUnderGate(destination))
-                throw new Rejected(new SpaceLocked(id));
+    /// An import's work, which only the persistent workspace takes: `apply`
+    /// runs the intent's own rules over the Spaces read from `spaces`, then
+    /// every record takes the identity sync needs and the issuing window shows
+    /// what the import brought. Unless the import is only `previewed`, no Space
+    /// it changes may be locked; a locked Space it leaves as it was never
+    /// refuses it.
+    private SessionEdit Importing(SessionState basis, ImportWorkspace intent, byte[] spaces, bool previewed, DateTimeOffset now,
+        IIdSource ids, Action<NativeWorkspaceImport> apply) {
         if (!workspaceKind.KeepsAppPreferences) throw new Rejected(new PersistentWorkspaceRequired(workspaceId));
         var followUp = new WindowFollowUp(IssuingWindow(intent.WindowId));
         var import = new NativeWorkspaceImport(basis, spaces);
         apply(import);
+        if (!previewed && import.Changed.FirstOrDefault(IsLockedUnderGate) is { } locked) throw new Rejected(new SpaceLocked(locked.Id));
         var result = import.Finish(now, ids, followUp);
         return new(result.Session, SyncStaging.Import, followUp,
             new SessionTabEvents(result.Copied, Favicon: null, Imported: result.Imported));
