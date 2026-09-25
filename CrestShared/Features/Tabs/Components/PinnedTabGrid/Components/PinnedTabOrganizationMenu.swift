@@ -1,58 +1,25 @@
 import SwiftUI
 
 struct PinnedTabOrganizationMenu: View {
-    let tab: BrowserTab
+    let tab: TabStateModel
+    let context: BrowserSidebarListContext
     let assignment: BrowserTabRuntimeAssignment
-    let browser: BrowserStore
-    let spaceAccess: BrowserSpaceAccessController
     let isLoaded: Bool
     let dragState: BrowserTabDragState?
-    let unload: ((BrowserTabRuntimeAssignment) -> Void)?
-    let pullNewIcon: ((BrowserTabRuntimeAssignment) -> Void)?
-    let restoreSavedLocation: ((BrowserTabRuntimeAssignment) -> Void)?
     let renameTab: () -> Void
     let changeIcon: () -> Void
 
     var body: some View {
         BrowserTabOrganizationMenu(
             tab: tab,
+            context: context,
             assignment: assignment,
-            browser: browser,
-            spaceAccess: spaceAccess,
             isLoaded: isLoaded,
-            unload: unloadAction,
-            pullNewIcon: pullNewIconAction,
-            restoreSavedLocation: restoreSavedLocationAction,
             renameTab: renameTab,
             changeIcon: changeIcon
         )
         .tint(.primary)
-        .onAppear(perform: contextMenuDidOpen)
-        .onDisappear(perform: contextMenuDidClose)
-    }
-
-    private var unloadAction: ((TabID) -> Void)? {
-        guard let unload else { return nil }
-        return { id in
-            unload(BrowserTabRuntimeAssignment(tabID: id, spaceID: assignment.spaceID, profileID: assignment.profileID))
-        }
-    }
-
-    private var pullNewIconAction: (() -> Void)? {
-        guard let pullNewIcon else { return nil }
-        return { pullNewIcon(assignment) }
-    }
-
-    private var restoreSavedLocationAction: (() -> Void)? {
-        guard let restoreSavedLocation else { return nil }
-        return { restoreSavedLocation(assignment) }
-    }
-
-    private func contextMenuDidOpen() {
-        dragState?.contextMenuDidOpen(for: assignment)
-    }
-
-    private func contextMenuDidClose() {
-        dragState?.contextMenuDidClose(for: assignment)
+        .onAppear { dragState?.contextMenuDidOpen(for: assignment) }
+        .onDisappear { dragState?.contextMenuDidClose(for: assignment) }
     }
 }

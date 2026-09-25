@@ -181,22 +181,24 @@
             }
 
             private var liftContent: BrowserDragPreviewWindowContent? {
-                guard let lift = practice.sidebarInteraction.sidebarReorderState.liftPreview else { return nil }
+                guard let lift = practice.sidebarInteraction.sidebarReorderState.liftPreview,
+                    let space = practice.browser.workspaceModel?.spaces.models.first
+                else { return nil }
                 let subject: BrowserSidebarLiftPreviewSubject?
                 switch lift.item {
                 case .tab(let item):
-                    subject = practice.space.tabs.first { $0.id == item.tabID }.map(
-                        BrowserSidebarLiftPreviewSubject.tab)
+                    subject = space.tabs.model(item.tabID).map(BrowserSidebarLiftPreviewSubject.tab)
                 case .folder(let item):
-                    subject = practice.space.folders.first { $0.id == item.folderID }.map { .folder($0, rows: []) }
+                    subject = space.folders.model(item.folderID).map { .folder($0, rows: []) }
                 case .splitGroup(let item):
-                    subject = .splitGroup(practice.space.splitGroupMembers(of: item.groupID))
+                    subject = .splitGroup(space.splitMembers(of: item.groupID))
                 }
                 guard let subject else { return nil }
                 return .sidebarLift(
                     BrowserSidebarLiftPreviewContent(
-                        subject: subject, lift: lift, reduceMotion: reduceMotion,
-                        selectedTabID: practice.selectedTabID, loadedTabIDs: Set(practice.space.tabs.map(\.id))))
+                        subject: subject, favicons: practice.browser.core.state.favicons, lift: lift,
+                        reduceMotion: reduceMotion, selectedTabID: practice.selectedTabID,
+                        loadedTabIDs: Set(space.tabs.models.map(\.id))))
             }
         #endif
     }

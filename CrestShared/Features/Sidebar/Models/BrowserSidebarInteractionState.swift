@@ -7,6 +7,9 @@ final class BrowserSidebarInteractionState: BrowserStoreInteractionObserving {
     let tabDragState = BrowserTabDragState()
     let folderDragState = BrowserFolderDragState()
     let sidebarReorderState = BrowserSidebarReorderState()
+    /// The folder whose title the window's sidebar is editing, such as one it
+    /// just made. The folder's row starts editing when it appears.
+    var editingFolderRequest: BrowserFolderRuntimeAssignment?
     @ObservationIgnored weak var sidebarSpaceAccess: BrowserSpaceAccessController?
     @ObservationIgnored private var collapsedFolders: [BrowserFolderRuntimeAssignment: BrowserSidebarFolderVisibility] =
         [:]
@@ -29,7 +32,7 @@ final class BrowserSidebarInteractionState: BrowserStoreInteractionObserving {
 
     func browserWillResetSession() {
         cancel()
-        pruneCollapsedFolders(in: [])
+        prune(keeping: [])
     }
 
     /// A folder's kept resident row belongs to the window, not a disposable
@@ -41,16 +44,18 @@ final class BrowserSidebarInteractionState: BrowserStoreInteractionObserving {
         return visibility
     }
 
-    func reconcileCollapsedFolders(in space: BrowserSpace, selectedTabID: TabID?, residentTabIDs: Set<TabID>) {
-        let sections = space.tabSections
-        for folder in space.folders {
+    /// Brings every folder's kept row in step with the Space as the read
+    /// model holds it: the tabs each folder holds directly, the shown tab and
+    /// which tabs hold a page.
+    func reconcileCollapsedFolders(in space: SpaceModel, selectedTabID: TabID?, residentTabIDs: Set<TabID>) {
+        for folder in space.folders.models {
             let assignment = BrowserFolderRuntimeAssignment(
-                folderID: folder.id, spaceID: space.id, profileID: space.profile.id)
-            let tabs = sections.tabs(in: folder.id)
+                folderID: folder.id, spaceID: space.id, profileID: space.profileID)
+            let tabIDs = space.sidebar.inside(folder.id).rows.filter { !$0.kind.opensList }.flatMap(\.members)
             reconcileCollapsedFolder(
                 assignment, isExpanded: !folder.isCollapsed, selectedTabID: selectedTabID,
-                folderTabIDs: tabs.map(\.id),
-                residentFolderTabIDs: tabs.compactMap { residentTabIDs.contains($0.id) ? $0.id : nil })
+                folderTabIDs: tabIDs,
+                residentFolderTabIDs: tabIDs.filter { residentTabIDs.contains($0) })
         }
     }
 
@@ -70,14 +75,43 @@ final class BrowserSidebarInteractionState: BrowserStoreInteractionObserving {
         if next != visibility.state { visibility.state = next }
     }
 
+    /// TRANSITIONAL until the sidebar's selection moves onto the outline: the
+    /// same over a Space of the session copy.
+    func reconcileCollapsedFolders(in space: BrowserSpace, selectedTabID: TabID?, residentTabIDs: Set<TabID>) {
+        let sections = space.tabSections
+        for folder in space.folders {
+            let assignment = BrowserFolderRuntimeAssignment(
+                folderID: folder.id, spaceID: space.id, profileID: space.profile.id)
+            let tabs = sections.tabs(in: folder.id)
+            reconcileCollapsedFolder(
+                assignment, isExpanded: !folder.isCollapsed, selectedTabID: selectedTabID,
+                folderTabIDs: tabs.map(\.id),
+                residentFolderTabIDs: tabs.compactMap { residentTabIDs.contains($0.id) ? $0.id : nil })
+        }
+    }
+
+    /// TRANSITIONAL until the sidebar's selection moves onto the outline.
     func pruneCollapsedFolders(in spaces: [BrowserSpace]) {
-        let valid = Set(
-            spaces.flatMap { space in
-                space.folders.map {
-                    BrowserFolderRuntimeAssignment(
-                        folderID: $0.id, spaceID: space.id, profileID: space.profile.id)
-                }
-            })
+        let kept = spaces.flatMap { space in
+            space.folders.map {
+                BrowserFolderRuntimeAssignment(folderID: $0.id, spaceID: space.id, profileID: space.profile.id)
+            }
+        }
+        prune(keeping: kept)
+    }
+
+    /// Forgets the kept rows of folders none of `spaces` holds any longer.
+    func pruneCollapsedFolders(keepingFoldersOf spaces: [SpaceModel]) {
+        let kept = spaces.flatMap { space in
+            space.folders.models.map {
+                BrowserFolderRuntimeAssignment(folderID: $0.id, spaceID: space.id, profileID: space.profileID)
+            }
+        }
+        prune(keeping: kept)
+    }
+
+    private func prune(keeping kept: [BrowserFolderRuntimeAssignment]) {
+        let valid = Set(kept)
         for assignment in Array(collapsedFolders.keys) where !valid.contains(assignment) {
             let removed = collapsedFolders.removeValue(forKey: assignment)
             removed?.state = BrowserCollapsedFolderTabVisibilityState()

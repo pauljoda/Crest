@@ -21,8 +21,6 @@ struct SpaceSidebarContent: View {
     let dismissUtilityOnBlankSpace: () -> Void
     let clearHistory: () -> Void
 
-    @State private var editingFolderRequest: BrowserFolderRuntimeAssignment?
-
     var body: some View {
         VStack(spacing: 0) {
             if utilitySurface == nil {
@@ -45,7 +43,6 @@ struct SpaceSidebarContent: View {
                 } else {
                     SpaceSidebarBrowsingContent(
                         space: space,
-                        tabSections: space.tabSections,
                         browser: browser,
                         pages: pages,
                         spaceAccess: spaceAccess,
@@ -55,7 +52,6 @@ struct SpaceSidebarContent: View {
                         openNewTab: openNewTab,
                         beginCreatingFolder: beginCreatingFolder,
                         showHistory: showHistory,
-                        editingFolderRequest: $editingFolderRequest,
                         tabPromotionNamespace: tabPromotionNamespace,
                         editSpace: editSpace,
                         createSpace: createSpace
@@ -74,7 +70,7 @@ struct SpaceSidebarContent: View {
             let folderID = browser.addFolder(matching: assignment)
         else { return }
         browser.setSavedTabsExpanded(true, matching: assignment)
-        editingFolderRequest = BrowserFolderRuntimeAssignment(
+        sidebarInteraction.editingFolderRequest = BrowserFolderRuntimeAssignment(
             folderID: folderID,
             spaceID: assignment.spaceID,
             profileID: assignment.profileID

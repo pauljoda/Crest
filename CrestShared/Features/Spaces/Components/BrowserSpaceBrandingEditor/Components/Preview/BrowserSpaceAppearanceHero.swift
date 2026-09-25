@@ -63,12 +63,10 @@ struct BrowserSpaceAppearanceHero: View {
                         .allowsHitTesting(false)
                         .accessibilityHidden(true)
                 #else
-                    PinnedTabGrid(
-                        tabs: preview.pinnedTabs, assignment: BrowserSpaceRuntimeAssignment(space: preview),
-                        selectedTabID: nil, select: { _ in }
-                    )
-                    .padding(.horizontal, 14).padding(.bottom, 12)
-                    .allowsHitTesting(false)
+                    let assignment = BrowserSpaceRuntimeAssignment(space: preview)
+                    PinnedTabGrid(drafts: preview.pinnedTabs, assignment: assignment)
+                        .padding(.horizontal, 14).padding(.bottom, 12)
+                        .allowsHitTesting(false)
                 #endif
             }
             if let spacePicker {

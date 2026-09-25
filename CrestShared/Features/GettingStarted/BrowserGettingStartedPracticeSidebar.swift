@@ -4,11 +4,9 @@ import SwiftUI
 struct BrowserGettingStartedPracticeSidebar: View {
     let practice: BrowserGettingStartedPractice
     let capabilities: BrowserInteractionCapabilities
-    @State private var editingFolder: BrowserFolderRuntimeAssignment?
 
     var body: some View {
         let space = practice.space
-        let sections = BrowserTabSections(tabs: space.tabs)
         return ScrollView {
             VStack(alignment: .leading, spacing: 12) {
                 HStack(spacing: 9) {
@@ -33,20 +31,14 @@ struct BrowserGettingStartedPracticeSidebar: View {
                         .accessibilityLabel("Practice Space actions")
                     }
                 }.padding(.horizontal, 10).padding(.top, 12)
-                BrowserPinnedTabsDropSection(
-                    space: space, tabSections: sections, browser: practice.browser,
-                    spaceAccess: practice.spaceAccess, pageAccess: practice.pageAccess,
-                    tabActions: practice.tabActions,
-                    capabilities: capabilities, restoreSavedLocation: { _ in }, select: practice.browser.selectTab)
-                Text("Saved").font(.caption.weight(.semibold)).foregroundStyle(.secondary).padding(.horizontal, 14)
-                BrowserSidebarTabList(
-                    space: space, tabSections: sections, browser: practice.browser,
-                    spaceAccess: practice.spaceAccess, pageAccess: practice.pageAccess,
-                    tabActions: practice.tabActions,
-                    capabilities: capabilities, isSavedTabsExpanded: true, showsClearAction: true,
-                    restoreSavedLocation: { _ in }, select: practice.browser.selectTab,
-                    openNewTab: practice.openExampleTab,
-                    editingFolderRequest: $editingFolder)
+                if let context = practice.listContext(capabilities: capabilities) {
+                    BrowserPinnedTabsDropSection(context: context)
+                    Text("Saved").font(.caption.weight(.semibold)).foregroundStyle(.secondary).padding(
+                        .horizontal, 14)
+                    BrowserSidebarTabList(
+                        context: context, alwaysShowsSavedTabs: true, showsClearAction: true,
+                        openNewTab: practice.openExampleTab)
+                }
             }.padding(8)
         }
         .environment(practice.sidebarInteraction)

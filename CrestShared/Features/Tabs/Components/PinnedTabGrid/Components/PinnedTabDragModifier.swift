@@ -1,19 +1,18 @@
 import SwiftUI
 
 struct PinnedTabDragModifier: ViewModifier {
-    let tab: BrowserTab
+    let tab: TabStateModel
+    let favicons: FaviconAssets
     let assignment: BrowserSpaceRuntimeAssignment
-    let moveTab: ((BrowserTabDragItem, TabID?) -> Bool)?
     let dragState: BrowserTabDragState?
     var reorder: BrowserSidebarReorderContext?
 
-    @State private var isDropTargeted = false
-
     func body(content: Content) -> some View {
-        if moveTab != nil, let dragState {
+        if let reorder, let dragState {
             content
                 .browserTabDraggable(
                     tab: tab,
+                    favicons: favicons,
                     profileID: assignment.profileID,
                     spaceID: assignment.spaceID,
                     dragState: dragState,

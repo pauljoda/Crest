@@ -4,100 +4,65 @@ import SwiftUI
 struct BrowserPinnedTabsDropSection: View {
     @Environment(BrowserSidebarInteractionState.self) private var sidebarInteraction
 
-    let space: BrowserSpace
-    let tabSections: BrowserTabSections
-    let browser: BrowserStore
-    let spaceAccess: BrowserSpaceAccessController
-    let pageAccess: BrowserSidebarPageAccess
-    let tabActions: BrowserSidebarTabActions
-    let capabilities: BrowserInteractionCapabilities
-    var promotionNamespace: Namespace.ID? = nil
-    /// How a pinned tab gets back to the page it was saved from. The two shells
-    /// answer that differently, so the host binds it.
-    let restoreSavedLocation: (TabID) -> Void
-    /// What opening a pinned tab means to the host. The section decides
-    /// *whether*; the host decides what appears.
-    let select: (TabID) -> Void
+    let context: BrowserSidebarListContext
 
     var body: some View {
-        Group {
-            PinnedTabGrid(
-                tabs: tabSections.pinnedTabs,
-                assignment: assignment,
-                selectedTabID: browser.selectedTabID(in: space.id),
-                select: { runtimeAssignment in
-                    guard isCurrentAndUnlocked else { return }
-                    select(runtimeAssignment.tabID)
-                },
-                moveTab: move,
-                dragState: sidebarInteraction.tabDragState,
-                browser: browser,
-                spaceAccess: spaceAccess,
-                isLoaded: pageAccess.containsResidentPageMatching,
-                unload: { runtimeAssignment in
-                    pageAccess.unloadPage(runtimeAssignment.tabID, assignment)
-                },
-                pullNewIcon: { pullNewIcon($0.tabID) },
-                restoreSavedLocation: { restoreSavedLocation($0.tabID) },
-                siteThemeAccent: pageAccess.siteThemeIconAccent,
-                promotionNamespace: promotionNamespace,
-                capabilities: capabilities
+        BrowserPinnedTabsGrid(context: context)
+            .frame(minHeight: metrics.sectionEndBandHeight)
+            .contentShape(.rect)
+            .browserSidebarReorderSectionIndicator(
+                .tabs(placement: .pinned, folderID: nil),
+                state: sidebarInteraction.sidebarReorderState
             )
-        }
-        .frame(minHeight: metrics.sectionEndBandHeight)
-        .contentShape(.rect)
-        .browserSidebarReorderSectionIndicator(
-            .tabs(placement: .pinned, folderID: nil),
-            state: sidebarInteraction.sidebarReorderState
-        )
-        // On the whole section, not just the empty placeholder: a zone inside
-        // one branch vanishes the moment any tab is pinned, and dragging into a
-        // populated grid becomes impossible.
-        .browserSidebarReorderZone(
-            .section(.tabs(placement: .pinned, folderID: nil)),
-            state: sidebarInteraction.sidebarReorderState,
-            minimumHeight: metrics.sectionEndBandHeight
-        )
-        .accessibilityHint("Drop a tab here to pin it")
-        .environment(\.browserInteractionCapabilities, capabilities)
+            // On the whole section, not just the empty placeholder: a zone inside
+            // one branch vanishes the moment any tab is pinned, and dragging into a
+            // populated grid becomes impossible.
+            .browserSidebarReorderZone(
+                .section(.tabs(placement: .pinned, folderID: nil)),
+                state: sidebarInteraction.sidebarReorderState,
+                minimumHeight: metrics.sectionEndBandHeight
+            )
+            .accessibilityHint("Drop a tab here to pin it")
+            .environment(\.browserInteractionCapabilities, context.capabilities)
     }
 
     private var metrics: BrowserSidebarTabListMetrics {
-        BrowserSidebarInteractionPolicy.tabListMetrics(capabilities)
+        BrowserSidebarInteractionPolicy.tabListMetrics(context.capabilities)
     }
+}
 
-    private func move(
-        _ item: BrowserTabDragItem,
-        before tabID: TabID?
-    ) -> Bool {
-        guard isCurrentAndUnlocked else { return false }
-        return BrowserTabDragAction(
-            browser: browser,
-            spaceAccess: spaceAccess
-        ).move(
-            item,
-            to: .pinned,
-            before: tabID,
-            matching: assignment
+/// The pinned tabs the core lists, as a grid. It reads only the pinned list
+/// and the tabs it names; each tile reads the rest.
+private struct BrowserPinnedTabsGrid: View {
+    @Environment(BrowserSidebarInteractionState.self) private var sidebarInteraction
+
+    let context: BrowserSidebarListContext
+
+    var body: some View {
+        let space = context.space
+        PinnedTabGrid(
+            tabs: space.sidebar.section(.pinned).rows.compactMap { space.tabs.model($0.id) },
+            favicons: context.favicons,
+            assignment: context.assignment,
+            window: context.window,
+            select: { runtimeAssignment in
+                guard context.isCurrentAndUnlocked else { return }
+                context.select(runtimeAssignment.tabID)
+            },
+            context: context,
+            dragState: sidebarInteraction.tabDragState,
+            siteThemeAccent: context.pageAccess.siteThemeIconAccent,
+            promotionNamespace: context.promotionNamespace(for: .pinned),
+            capabilities: context.capabilities
         )
     }
+}
 
-    private func pullNewIcon(_ tabID: TabID) {
-        let actions = tabActions
-        Task {
-            await actions.pullNewIcon(for: tabID)
-        }
-    }
-
-    private var assignment: BrowserSpaceRuntimeAssignment {
-        BrowserSpaceRuntimeAssignment(space: space)
-    }
-
-    private var isCurrentAndUnlocked: Bool {
-        BrowserSidebarAccessPolicy.selectedUnlockedSpace(
-            matching: assignment,
-            in: browser,
-            accessController: spaceAccess
-        ) != nil
+extension BrowserPinnedTabsDropSection: Equatable {
+    /// The section is equal to one over the same Space and window, as SwiftUI
+    /// compares a view's inputs: a page that redraws for anything else leaves
+    /// the grid alone.
+    nonisolated static func == (lhs: BrowserPinnedTabsDropSection, rhs: BrowserPinnedTabsDropSection) -> Bool {
+        lhs.context == rhs.context
     }
 }

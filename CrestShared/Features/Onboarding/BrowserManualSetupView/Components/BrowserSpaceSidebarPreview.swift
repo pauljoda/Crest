@@ -45,12 +45,9 @@ struct BrowserSpaceSidebarPreview: View {
                     ) {
                         if !space.pinnedTabs.isEmpty {
                             PinnedTabGrid(
-                                tabs: space.pinnedTabs,
-                                assignment: BrowserSpaceRuntimeAssignment(
-                                    space: space
-                                ),
+                                drafts: space.pinnedTabs,
+                                assignment: BrowserSpaceRuntimeAssignment(space: space),
                                 selectedTabID: selectedTabID,
-                                select: { _ in },
                                 capabilities: capabilities
                             )
                         }

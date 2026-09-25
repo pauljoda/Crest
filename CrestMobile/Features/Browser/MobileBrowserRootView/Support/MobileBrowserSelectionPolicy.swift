@@ -64,6 +64,14 @@ enum MobileTabPromotionPolicy {
         )
     }
 
+    /// The target the shown tab of the read model promotes from: the tab the
+    /// window shows, unless it is a Start Page, which has no row.
+    @MainActor
+    static func target(for shownTab: TabStateModel) -> MobileTabPromotionTarget? {
+        guard !shownTab.isStartPage else { return nil }
+        return MobileTabPromotionTarget(tabID: shownTab.id, placement: shownTab.placement)
+    }
+
     static func shouldPreposition(
         previous: MobileTabPromotionTarget?,
         current: MobileTabPromotionTarget?,

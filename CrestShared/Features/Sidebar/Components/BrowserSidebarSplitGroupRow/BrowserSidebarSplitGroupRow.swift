@@ -17,27 +17,13 @@ import SwiftUI
 struct BrowserSidebarSplitGroupRow: View {
     @Environment(BrowserSidebarInteractionState.self) private var sidebarInteraction
     let groupID: SplitGroupID
-    let members: [BrowserTab]
-    let spaceID: SpaceID
-    let profileID: UUID
-    let selectedTabID: TabID?
-    let canClose: Bool
-    let browser: BrowserStore
-    let spaceAccess: BrowserSpaceAccessController
-    let capabilities: BrowserInteractionCapabilities
-    var isLoaded: (TabID) -> Bool = { _ in true }
-    var unload: ((TabID) -> Void)? = nil
-    var pullNewIcon: ((TabID) -> Void)? = nil
-    var restoreSavedLocation: ((TabID) -> Void)? = nil
-    var promotionNamespace: Namespace.ID? = nil
+    /// The members the sidebar shows in the row, in order.
+    let members: [TabStateModel]
+    let context: BrowserSidebarListContext
     /// The row a drop below this group would land in front of, skipping past
     /// the whole run. Only read where the shell draws its insertion line on the
     /// rows themselves.
     var followingTabID: TabID? = nil
-    var hasVisibleFollowingRow = false
-    /// What opening a member means to the host, matching the tab row: the group
-    /// decides *whether* and *which*, the host decides what appears.
-    let select: (TabID) -> Void
 
     @Environment(\.sidebarSpacePresentation) private var spacePresentation
     @State private var renameRequest: BrowserSplitGroupRuntimeAssignment?
@@ -61,7 +47,7 @@ struct BrowserSidebarSplitGroupRow: View {
             BrowserFolderColorPicker(
                 color: interaction.tint,
                 title: "Split View Color",
-                showsReset: configuration.displayMetadata.tint != nil,
+                showsReset: configuration.tint != nil,
                 resetTitle: "Use Default Color",
                 reset: interaction.resetTint
             )
@@ -85,21 +71,8 @@ struct BrowserSidebarSplitGroupRow: View {
             sidebarInteraction: sidebarInteraction,
             groupID: groupID,
             members: members,
-            spaceID: spaceID,
-            profileID: profileID,
-            selectedTabID: selectedTabID,
-            canClose: canClose,
-            browser: browser,
-            spaceAccess: spaceAccess,
-            capabilities: capabilities,
-            isLoaded: isLoaded,
-            unload: unload,
-            pullNewIcon: pullNewIcon,
-            restoreSavedLocation: restoreSavedLocation,
-            promotionNamespace: promotionNamespace,
+            context: context,
             followingTabID: followingTabID,
-            hasVisibleFollowingRow: hasVisibleFollowingRow,
-            select: select,
             spacePresentation: spacePresentation
         )
     }
@@ -135,7 +108,7 @@ struct BrowserSidebarSplitGroupRow: View {
             let memberID = configuration.focusedMemberID
                 ?? configuration.members.first?.id
         else { return }
-        configuration.select(memberID)
+        context.select(memberID)
     }
 
     private func closeSplit() {
@@ -152,7 +125,7 @@ struct BrowserSidebarSplitGroupRow: View {
 
     private func beginRenaming() {
         guard configuration.isCurrentAndUnlocked else { return }
-        draftTitle = configuration.metadata.displayTitle
+        draftTitle = configuration.shownTitle
         renameRequest = configuration.runtimeAssignment
         Task { @MainActor in isTitleFocused = true }
     }
@@ -171,7 +144,7 @@ struct BrowserSidebarSplitGroupRow: View {
     }
 
     private func cancelTitleEditing() {
-        draftTitle = configuration.metadata.displayTitle
+        draftTitle = configuration.shownTitle
         renameRequest = nil
         isTitleFocused = false
     }
@@ -212,7 +185,7 @@ struct BrowserSidebarSplitGroupRow: View {
 
     private var tintBinding: Binding<BrowserSpaceBrandColor> {
         Binding {
-            configuration.displayMetadata.tint ?? .folderDefault
+            configuration.tint ?? .folderDefault
         } set: { tint in
             guard tintRequest == configuration.runtimeAssignment,
                 configuration.isCurrentAndUnlocked
@@ -263,5 +236,14 @@ struct BrowserSidebarSplitGroupRow: View {
         cancelTitleEditing()
         iconRequest = nil
         tintRequest = nil
+    }
+}
+
+extension BrowserSidebarSplitGroupRow: Equatable {
+    /// Rows are equal when they stand for the same members in the same place,
+    /// as SwiftUI compares a view's inputs: a list that redraws leaves them be.
+    nonisolated static func == (lhs: BrowserSidebarSplitGroupRow, rhs: BrowserSidebarSplitGroupRow) -> Bool {
+        lhs.groupID == rhs.groupID && lhs.members.elementsEqual(rhs.members, by: ===) && lhs.context == rhs.context
+            && lhs.followingTabID == rhs.followingTabID
     }
 }

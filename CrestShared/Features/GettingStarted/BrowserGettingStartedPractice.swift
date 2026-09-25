@@ -109,6 +109,18 @@ final class BrowserGettingStartedPractice {
         _ = browser.moveSplitMember(id, by: offset, matching: assignment)
     }
 
+    /// The practice Space as the read model holds it, and what its rows act
+    /// through, in the practice's own memory-only store.
+    func listContext(capabilities: BrowserInteractionCapabilities) -> BrowserSidebarListContext? {
+        guard let space = browser.workspaceModel?.spaces.models.first, let window = browser.windowModel else {
+            return nil
+        }
+        return BrowserSidebarListContext(
+            space: space, window: window, favicons: browser.core.state.favicons, browser: browser,
+            spaceAccess: spaceAccess, pageAccess: pageAccess, tabActions: tabActions, capabilities: capabilities,
+            select: { [browser] in browser.selectTab($0) }, restoreSavedLocation: { _ in })
+    }
+
     var pageAccess: BrowserSidebarPageAccess {
         BrowserSidebarPageAccess(
             containsResidentPage: { _ in true }, containsResidentPageMatching: { _ in true },

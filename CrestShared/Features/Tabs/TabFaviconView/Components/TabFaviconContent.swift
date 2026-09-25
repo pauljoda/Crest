@@ -1,23 +1,23 @@
 import SwiftUI
 
 struct TabFaviconContent: View {
-    let tab: BrowserTab
+    let subject: BrowserTabFaviconSubject
     let size: CGFloat
     let requestIdentity: BrowserFaviconTaskIdentity
     let renderedImage: BrowserFaviconRenderedImage?
 
     var body: some View {
         Group {
-            if tab.isStartPage {
+            if subject.isStartPage {
                 CrestStartPageMark()
-            } else if let emoji = tab.emojiIcon {
+            } else if let emoji = subject.emoji {
                 Text(emoji)
                     .font(.system(size: size * TabFaviconMetrics.emojiSizeRatio))
                     .minimumScaleFactor(TabFaviconMetrics.emojiMinimumScaleFactor)
-            } else if tab.nativeContent == .gettingStarted {
+            } else if subject.nativeContent == .gettingStarted {
                 PlatformGettingStartedIcon()
-            } else if tab.nativeContent != nil {
-                Image(systemName: tab.symbol).symbolRenderingMode(.hierarchical)
+            } else if subject.nativeContent != nil {
+                Image(systemName: subject.symbol).symbolRenderingMode(.hierarchical)
             } else if let image = renderedImage?.image(matching: requestIdentity) {
                 image
                     .resizable()

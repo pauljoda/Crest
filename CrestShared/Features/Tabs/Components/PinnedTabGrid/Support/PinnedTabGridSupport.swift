@@ -4,12 +4,6 @@ enum BrowserPinnedDropTargetPolicy {
     static let trailingTargetWidth = CrestSpacing.extraLarge
 }
 
-enum BrowserPinnedTabInteraction {
-    static func shouldRestoreSavedLocation(for tab: BrowserTab) -> Bool {
-        tab.placement == .pinned && tab.supportsSavedLocationEditing
-    }
-}
-
 enum PinnedTabGridLayout {
     static let maximumColumns = 4
 

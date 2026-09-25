@@ -8,10 +8,20 @@ import Foundation
 /// carries only identifiers.
 struct BrowserSidebarLiftPreviewContent: Equatable {
     let subject: BrowserSidebarLiftPreviewSubject
+    /// The images the lifted tabs wear.
+    let favicons: FaviconAssets
     let lift: BrowserSidebarFloatingLift
     /// Passed in rather than read from the environment: the preview is hosted in
     /// a window of its own, which inherits nothing from the browser's.
     let reduceMotion: Bool
     var selectedTabID: TabID?
     var loadedTabIDs: Set<TabID> = []
+}
+
+extension BrowserSidebarLiftPreviewContent {
+    static func == (lhs: Self, rhs: Self) -> Bool {
+        lhs.subject == rhs.subject && lhs.favicons === rhs.favicons && lhs.lift == rhs.lift
+            && lhs.reduceMotion == rhs.reduceMotion && lhs.selectedTabID == rhs.selectedTabID
+            && lhs.loadedTabIDs == rhs.loadedTabIDs
+    }
 }

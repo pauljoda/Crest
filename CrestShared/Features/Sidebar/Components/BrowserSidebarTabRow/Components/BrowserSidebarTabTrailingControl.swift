@@ -9,12 +9,10 @@ struct BrowserSidebarTabTrailingControl: View {
     @ViewBuilder
     var body: some View {
         if configuration.tab.placement == .saved {
-            if configuration.unload != nil {
-                BrowserSidebarTabUnloadButton(
-                    configuration: configuration,
-                    isVisible: configuration.isLoaded && isRevealed
-                )
-            }
+            BrowserSidebarTabUnloadButton(
+                configuration: configuration,
+                isVisible: configuration.isLoaded && isRevealed
+            )
         } else {
             BrowserSidebarTabCloseButton(
                 configuration: configuration,
@@ -73,7 +71,7 @@ private struct BrowserSidebarTabUnloadButton: View {
     var body: some View {
         Button {
             guard configuration.isCurrentAndUnlocked else { return }
-            configuration.unload?(configuration.tab.id)
+            configuration.context.unload(configuration.tab.id)
         } label: {
             BrowserSidebarTabTrailingControlLabel(
                 systemName: "minus",
@@ -125,15 +123,3 @@ private struct BrowserSidebarTabTrailingControlStyle: ViewModifier {
         }
     }
 }
-
-#if DEBUG
-    #Preview("Close and unload") {
-        HStack(spacing: 20) {
-            BrowserSidebarTabTrailingControl(
-                configuration: BrowserSidebarTabRowPreviewFixture.configuration(), isHovering: .constant(true))
-            BrowserSidebarTabTrailingControl(
-                configuration: BrowserSidebarTabRowPreviewFixture.configuration(placement: .saved),
-                isHovering: .constant(true))
-        }.padding()
-    }
-#endif

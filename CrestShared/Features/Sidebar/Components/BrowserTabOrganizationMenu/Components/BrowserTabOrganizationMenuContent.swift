@@ -1,14 +1,10 @@
 import SwiftUI
 
 struct BrowserTabOrganizationMenuContent: View {
-    let tab: BrowserTab
+    let tab: TabStateModel
+    let context: BrowserSidebarListContext
     let assignment: BrowserTabRuntimeAssignment
-    let browser: BrowserStore
-    let spaceAccess: BrowserSpaceAccessController
     var isLoaded = true
-    var unload: ((TabID) -> Void)? = nil
-    var pullNewIcon: (() -> Void)? = nil
-    var restoreSavedLocation: (() -> Void)? = nil
     var renameTab: (() -> Void)? = nil
     var changeIcon: (() -> Void)? = nil
 
@@ -16,30 +12,29 @@ struct BrowserTabOrganizationMenuContent: View {
 
     init(menu: BrowserTabOrganizationMenu) {
         tab = menu.tab
+        context = menu.context
         assignment = menu.assignment
-        browser = menu.browser
-        spaceAccess = menu.spaceAccess
         isLoaded = menu.isLoaded
-        unload = menu.unload
-        pullNewIcon = menu.pullNewIcon
-        restoreSavedLocation = menu.restoreSavedLocation
         renameTab = menu.renameTab
         changeIcon = menu.changeIcon
     }
+
+    private var browser: BrowserStore { context.browser }
+    private var spaceAccess: BrowserSpaceAccessController { context.spaceAccess }
 
     var body: some View {
         if tab.isWebPage {
             Button("Copy Link URL", systemImage: "link") {
                 organizationAction.copyLinkURL(for: assignment)
             }
-            .disabled(organizationAction.linkURL(for: assignment) == nil)
+            .disabled(!context.isCurrent(sourceAssignment))
 
             Divider()
         }
 
         if let renameTab {
             Button("Rename Tab…", systemImage: "pencil") {
-                performIfCurrent { _ in renameTab() }
+                performIfCurrent { renameTab() }
             }
 
             Divider()
@@ -48,23 +43,24 @@ struct BrowserTabOrganizationMenuContent: View {
         if !tab.isStartPage {
             BrowserTabEditActions(
                 tab: tab,
+                favicons: context.favicons,
                 isLoaded: isLoaded,
-                pullNewIcon: pullNewIcon,
-                restoreSavedLocation: restoreSavedLocation,
+                pullNewIcon: { context.pullNewIcon(tab.id) },
+                restoreSavedLocation: context.restoreSavedLocation.map { restore in { restore(tab.id) } },
                 performIfCurrent: performIfCurrent,
-                replaceSavedLocation: { liveTab in
+                replaceSavedLocation: {
                     browser.replaceTabSavedLocationWithCurrent(
-                        liveTab.id,
+                        tab.id,
                         in: assignment.spaceID
                     )
                 },
-                clearIcon: { liveTab in
+                clearIcon: {
                     browser.clearTabIcon(
-                        for: liveTab.id,
+                        for: tab.id,
                         matching: sourceAssignment
                     )
                 },
-                changeIcon: { _ in changeIcon?() }
+                changeIcon: { changeIcon?() }
             )
 
             Divider()
@@ -72,9 +68,9 @@ struct BrowserTabOrganizationMenuContent: View {
 
         if tab.placement != .pinned {
             Button("Pin Tab", systemImage: "pin") {
-                performIfCurrent { liveTab in
+                performIfCurrent {
                     browser.moveTab(
-                        liveTab.id,
+                        tab.id,
                         matching: sourceAssignment,
                         to: .pinned
                     )
@@ -86,25 +82,23 @@ struct BrowserTabOrganizationMenuContent: View {
             Menu("Add to Current Tabs Folder", systemImage: "folder.badge.plus") {
                 Group {
                     Button("New Folder", systemImage: "folder.badge.plus") {
-                        performIfCurrent { liveTab in
-                            browser.createTabFolder([liveTab.id], in: assignment.spaceID)
+                        performIfCurrent {
+                            browser.createTabFolder([tab.id], in: assignment.spaceID)
                         }
                     }
-                    let folders =
-                        browser.space(matching: sourceAssignment)?.folders.filter { $0.location == .current } ?? []
+                    let folders = context.space.folderChoices(in: [.current]).map(\.folder)
                     if !folders.isEmpty { Divider() }
                     ForEach(folders, id: \.id) { folder in
                         Button {
-                            performIfCurrent { liveTab in
+                            performIfCurrent {
                                 browser.fileTabs(
-                                    [liveTab.id], matching: sourceAssignment, into: folder.id, location: .current)
+                                    [tab.id], matching: sourceAssignment, into: folder.id, location: .current)
                             }
                         } label: {
                             Label {
-                                Text(
-                                    verbatim: folder.title.isEmpty ? String(localized: "Folder") : folder.title)
+                                Text(verbatim: folder.shownTitle)
                             } icon: {
-                                BrowserFolderMenuIcon(systemName: "folder.fill", color: folder.color)
+                                BrowserFolderMenuIcon(systemName: "folder.fill", color: folder.artworkColor)
                             }
                         }
                         .disabled(folder.id == tab.folderID)
@@ -114,8 +108,8 @@ struct BrowserTabOrganizationMenuContent: View {
             }
             if tab.folderID != nil {
                 Button("Remove from Folder", systemImage: "folder.badge.minus") {
-                    performIfCurrent { liveTab in
-                        browser.fileTabs([liveTab.id], matching: sourceAssignment, into: nil, location: .current)
+                    performIfCurrent {
+                        browser.fileTabs([tab.id], matching: sourceAssignment, into: nil, location: .current)
                     }
                 }
             }
@@ -124,9 +118,9 @@ struct BrowserTabOrganizationMenuContent: View {
         Menu("Save in Folder", systemImage: "folder") {
             Group {
                 Button("Saved Tabs", systemImage: "bookmark") {
-                    performIfCurrent { liveTab in
+                    performIfCurrent {
                         browser.moveTab(
-                            liveTab.id,
+                            tab.id,
                             matching: sourceAssignment,
                             to: .saved
                         )
@@ -134,30 +128,29 @@ struct BrowserTabOrganizationMenuContent: View {
                 }
                 .disabled(tab.placement == .saved && tab.folderID == nil)
 
-                if let space = browser.space(matching: sourceAssignment),
-                    !space.folders.isEmpty
-                {
+                let savedFolders = context.space.folderChoices(in: [.saved])
+                if !savedFolders.isEmpty {
                     Divider()
-                    let tree = BrowserFolderTree(folders: space.folders.filter { $0.location == .saved })
-                    ForEach(tree.flattenedNodes(collapsedFolderIDs: [])) { node in
+                    ForEach(savedFolders) { choice in
                         Button {
-                            performIfCurrent { liveTab in
+                            performIfCurrent {
                                 browser.moveTab(
-                                    liveTab.id,
+                                    tab.id,
                                     matching: sourceAssignment,
                                     to: .saved,
-                                    folderID: node.id
+                                    folderID: choice.id
                                 )
                             }
                         } label: {
                             Label {
-                                Text(tree.pathTitle(for: node.id) ?? node.folder.title)
+                                Text(choice.pathTitle)
                             } icon: {
-                                BrowserFolderArtwork(symbol: node.folder.symbol, color: node.folder.color)
+                                BrowserFolderArtwork(
+                                    symbol: choice.folder.displaySymbol, color: choice.folder.artworkColor)
                             }
                         }
                         .disabled(
-                            tab.placement == .saved && tab.folderID == node.id
+                            tab.placement == .saved && tab.folderID == choice.id
                         )
                     }
                 }
@@ -167,9 +160,9 @@ struct BrowserTabOrganizationMenuContent: View {
 
         if tab.placement.isDurable {
             Button("Move to Current Tabs", systemImage: "rectangle.stack") {
-                performIfCurrent { liveTab in
+                performIfCurrent {
                     browser.moveTab(
-                        liveTab.id,
+                        tab.id,
                         matching: sourceAssignment,
                         to: .current
                     )
@@ -182,7 +175,7 @@ struct BrowserTabOrganizationMenuContent: View {
             Menu("Move to Space", systemImage: "square.grid.2x2") {
                 ForEach(otherSpaces) { space in
                     Button {
-                        performIfCurrent { liveTab in
+                        performIfCurrent {
                             let destinationAssignment =
                                 BrowserSpaceRuntimeAssignment(space: space)
                             guard
@@ -193,7 +186,7 @@ struct BrowserTabOrganizationMenuContent: View {
                                 ) != nil
                             else { return }
                             browser.moveTab(
-                                liveTab.id,
+                                tab.id,
                                 matching: sourceAssignment,
                                 into: destinationAssignment
                             )
@@ -217,9 +210,9 @@ struct BrowserTabOrganizationMenuContent: View {
         Divider()
 
         Button("Split with Current Tab", systemImage: "rectangle.split.2x1") {
-            performIfCurrent { liveTab in
+            performIfCurrent {
                 browser.splitTabWithSelectedTab(
-                    liveTab.id,
+                    tab.id,
                     matching: sourceAssignment
                 )
             }
@@ -236,9 +229,9 @@ struct BrowserTabOrganizationMenuContent: View {
             moveButton(.right, title: "Move Right", systemImage: "arrow.right")
 
             Button("Remove from Split", systemImage: "rectangle.badge.minus") {
-                performIfCurrent { liveTab in
+                performIfCurrent {
                     browser.removeTabFromSplit(
-                        liveTab.id,
+                        tab.id,
                         matching: sourceAssignment
                     )
                 }
@@ -252,10 +245,10 @@ struct BrowserTabOrganizationMenuContent: View {
                 tab.keepsPageLoaded ? "Stop Keeping Loaded" : "Keep Loaded",
                 systemImage: tab.keepsPageLoaded ? "lock.open" : "lock"
             ) {
-                performIfCurrent { liveTab in
+                performIfCurrent {
                     browser.setTabKeepsPageLoaded(
-                        !liveTab.keepsPageLoaded,
-                        for: liveTab.id,
+                        !tab.keepsPageLoaded,
+                        for: tab.id,
                         matching: sourceAssignment
                     )
                 }
@@ -263,21 +256,21 @@ struct BrowserTabOrganizationMenuContent: View {
 
         }
 
-        if let unload, isLoaded, tab.nativeContent == nil || tab.placement.isDurable {
+        if isLoaded, tab.nativeContent == nil || tab.placement.isDurable {
             Button(
                 !tab.placement.isDurable ? "Unload Tab" : "Close Tab",
                 systemImage: !tab.placement.isDurable ? "minus" : "xmark"
             ) {
-                performIfCurrent { liveTab in
-                    unload(liveTab.id)
+                performIfCurrent {
+                    context.unload(tab.id)
                 }
             }
         }
 
         Button("Duplicate Tab", systemImage: "plus.square.on.square") {
-            performIfCurrent { liveTab in
+            performIfCurrent {
                 browser.duplicateTab(
-                    liveTab.id,
+                    tab.id,
                     matching: sourceAssignment
                 )
             }
@@ -288,17 +281,12 @@ struct BrowserTabOrganizationMenuContent: View {
             systemImage: !tab.placement.isDurable ? "xmark" : "trash",
             role: .destructive
         ) {
-            performIfCurrent { liveTab in
-                if !tab.placement.isDurable {
-                    organizationAction.close(
-                        liveAssignment(for: liveTab),
-                        expectedPlacement: tab.placement
-                    )
+            let placement = tab.placement
+            performIfCurrent {
+                if !placement.isDurable {
+                    organizationAction.close(assignment, expectedPlacement: placement)
                 } else {
-                    organizationAction.delete(
-                        liveAssignment(for: liveTab),
-                        expectedPlacement: tab.placement
-                    )
+                    organizationAction.delete(assignment, expectedPlacement: placement)
                 }
             }
         }
@@ -318,21 +306,15 @@ struct BrowserTabOrganizationMenuContent: View {
     ) -> some View {
         let offset = direction.memberOffset(layoutDirection: layoutDirection)
         return Button(title, systemImage: systemImage) {
-            performIfCurrent { liveTab in
+            performIfCurrent {
                 browser.moveSplitMember(
-                    liveTab.id,
+                    tab.id,
                     by: offset,
                     matching: sourceAssignment
                 )
             }
         }
-        .disabled(
-            !browser.canMoveSplitMember(
-                assignment.tabID,
-                by: offset,
-                matching: sourceAssignment
-            )
-        )
+        .disabled(!canStepSplitMember(by: offset))
     }
 
     private var sourceAssignment: BrowserSpaceRuntimeAssignment {
@@ -351,8 +333,17 @@ struct BrowserTabOrganizationMenuContent: View {
     /// item is absent rather than dimmed — every other tab in the list is a
     /// tab this menu can act on the same way.
     private var isRenderableSplitMember: Bool {
-        browser.space(matching: sourceAssignment)?
-            .splitGroup(containing: assignment.tabID) != nil
+        context.space.shownSplit(containing: tab.id) != nil
+    }
+
+    /// Whether the card has another card `offset` places along its split.
+    private func canStepSplitMember(by offset: Int) -> Bool {
+        guard offset != 0, context.isCurrent(sourceAssignment),
+            let groupID = context.space.shownSplit(containing: tab.id)
+        else { return false }
+        let members = context.space.splitMembers(of: groupID)
+        guard let index = members.firstIndex(where: { $0.id == tab.id }) else { return false }
+        return members.indices.contains(index + offset)
     }
 
     private var availableDestinationSpaces: [BrowserSpace] {
@@ -363,34 +354,18 @@ struct BrowserTabOrganizationMenuContent: View {
         )
     }
 
-    private func performIfCurrent(_ action: (BrowserTab) -> Void) {
-        guard
-            let space = BrowserSidebarAccessPolicy.selectedUnlockedSpace(
-                matching: sourceAssignment,
-                in: browser,
-                accessController: spaceAccess
-            ),
-            let liveTab = space.tabs.first(where: {
-                $0.id == assignment.tabID
-            })
-        else { return }
-        action(liveTab)
+    /// Runs a menu action only while the window shows the tab's Space,
+    /// unlocked, with the profile the menu was built for, and the Space still
+    /// holds the tab.
+    private func performIfCurrent(_ action: () -> Void) {
+        guard context.isCurrent(sourceAssignment), context.space.tabs.contains(tab.id) else { return }
+        action()
     }
 
     private var organizationAction: BrowserTabOrganizationAction {
         BrowserTabOrganizationAction(
             browser: browser,
             spaceAccess: spaceAccess
-        )
-    }
-
-    private func liveAssignment(
-        for liveTab: BrowserTab
-    ) -> BrowserTabRuntimeAssignment {
-        BrowserTabRuntimeAssignment(
-            tabID: liveTab.id,
-            spaceID: assignment.spaceID,
-            profileID: assignment.profileID
         )
     }
 }

@@ -18,6 +18,7 @@ import SwiftUI
 /// presentation of the one drag rather than a copy of it.
 struct BrowserSidebarLiftFloatingPreview: View {
     let subject: BrowserSidebarLiftPreviewSubject
+    let favicons: FaviconAssets
     let lift: BrowserSidebarFloatingLift
     /// Passed in rather than read from the environment: this view is hosted in a
     /// window of its own, which inherits nothing from the browser's.
@@ -143,6 +144,7 @@ struct BrowserSidebarLiftFloatingPreview: View {
         case .tab(let tab):
             BrowserTabDragPreview(
                 tab: tab,
+                favicons: favicons,
                 profileID: lift.profileID,
                 targetShape: lift.shape,
                 progress: lift.progress,
@@ -153,7 +155,7 @@ struct BrowserSidebarLiftFloatingPreview: View {
             )
         case .folder(let folder, let rows):
             BrowserFolderDragPreview(
-                folder: folder, rowWidth: rowWidth,
+                folder: folder, favicons: favicons, rowWidth: rowWidth,
                 sourceHeight: lift.sourceSize.height, rows: rows, profileID: lift.profileID,
                 loadedTabIDs: loadedTabIDs)
         case .selection(let rows):
@@ -161,6 +163,7 @@ struct BrowserSidebarLiftFloatingPreview: View {
         case .splitGroup(let members):
             BrowserSplitGroupDragPreview(
                 members: members,
+                favicons: favicons,
                 profileID: lift.profileID,
                 rowWidth: rowWidth
             )
@@ -198,15 +201,15 @@ struct BrowserSidebarLiftFloatingPreview: View {
     private func selectionRow(_ row: BrowserSidebarSelectionPreviewRow) -> some View {
         if let folder = row.folder {
             BrowserFolderDragPreview(
-                folder: folder, rowWidth: rowWidth, sourceHeight: row.frame.height,
+                folder: folder, favicons: favicons, rowWidth: rowWidth, sourceHeight: row.frame.height,
                 rows: row.folderRows, profileID: lift.profileID, loadedTabIDs: loadedTabIDs)
         } else if row.isSplit {
             BrowserSplitGroupDragPreview(
-                members: row.tabs, profileID: lift.profileID, rowWidth: rowWidth,
+                members: row.tabs, favicons: favicons, profileID: lift.profileID, rowWidth: rowWidth,
                 sourceHeight: row.frame.height, loadedTabIDs: loadedTabIDs)
         } else if let tab = row.tabs.first {
             BrowserTabDragPreview(
-                tab: tab, profileID: lift.profileID,
+                tab: tab, favicons: favicons, profileID: lift.profileID,
                 targetShape: lift.shape == .pinnedTile ? .pinnedTile : .row,
                 progress: lift.shape == .pinnedTile ? 1 : 0,
                 rowWidth: rowWidth, pinnedSize: pinnedSize,

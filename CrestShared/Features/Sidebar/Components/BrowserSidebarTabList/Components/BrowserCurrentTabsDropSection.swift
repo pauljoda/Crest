@@ -9,51 +9,31 @@ import SwiftUI
 struct BrowserCurrentTabsDropSection: View {
     @Environment(BrowserSidebarInteractionState.self) private var sidebarInteraction
 
-    let space: BrowserSpace
-    let tabSections: BrowserTabSections
-    let browser: BrowserStore
-    let spaceAccess: BrowserSpaceAccessController
-    let pageAccess: BrowserSidebarPageAccess
-    let tabActions: BrowserSidebarTabActions
-    let capabilities: BrowserInteractionCapabilities
-    var promotionNamespace: Namespace.ID? = nil
-    /// What opening a tab means to the host. The rows decide *whether*; the host
-    /// decides what appears.
-    let select: (TabID) -> Void
+    let context: BrowserSidebarListContext
     let openNewTab: () -> Void
-
-    @Environment(\.sidebarSpacePresentation) private var spacePresentation
-    @State private var editingFolderRequest: BrowserFolderRuntimeAssignment?
-
-    private var tabs: [BrowserTab] { tabSections.sidebarCurrentTabs }
 
     private var section: BrowserSidebarReorderSection {
         .tabs(placement: .current, folderID: nil)
     }
 
     var body: some View {
+        let list = context.space.sidebar.section(.current)
         VStack(spacing: 0) {
-            BrowserNewTabRow(capabilities: capabilities, action: openNewTab)
+            BrowserNewTabRow(capabilities: context.capabilities, action: openNewTab)
 
-            if capabilities.showsRowDropIndicators {
-                BrowserSidebarRowsStack { rows }
+            if context.capabilities.showsRowDropIndicators {
+                BrowserSidebarListRows(list: list, context: context).equatable()
 
                 // Also the band a cleared list draws its insertion line in: it
                 // sits directly below the new-tab row, where the first current
                 // tab would appear.
-                BrowserCurrentTabsEndDropTarget(
-                    tabs: tabs,
-                    browser: browser,
-                    capabilities: capabilities
-                )
-                .browserSidebarReorderSectionIndicator(
-                    section,
-                    state: sidebarInteraction.sidebarReorderState
-                )
+                BrowserCurrentTabsEndDropTarget(list: list, context: context)
+                    .browserSidebarReorderSectionIndicator(
+                        section,
+                        state: sidebarInteraction.sidebarReorderState
+                    )
             } else {
-                BrowserSidebarRowsStack {
-                    rows
-
+                BrowserSidebarListRows(list: list, context: context) { items in
                     // A cleared list has no row to draw the seam on, so it
                     // keeps a band under the new-tab row for the line to stand
                     // in.
@@ -64,13 +44,13 @@ struct BrowserCurrentTabsDropSection: View {
                             .accessibilityHidden(true)
                     }
                 }
+                .equatable()
                 .browserSidebarReorderSectionIndicator(
                     section,
                     state: sidebarInteraction.sidebarReorderState
                 )
             }
         }
-        .crestCollectionMotion(ids: items.map(\.id))
         .contentShape(.rect)
         .browserSidebarReorderZone(
             .section(section),
@@ -80,124 +60,13 @@ struct BrowserCurrentTabsDropSection: View {
             BrowserSidebarSectionReservation(
                 section: section,
                 state: sidebarInteraction.sidebarReorderState,
-                capabilities: capabilities
+                capabilities: context.capabilities
             )
         )
         .accessibilityHint("Drop a tab here to make it a current tab")
     }
 
-    @ViewBuilder
-    private var rows: some View {
-        let currentTabs = tabs
-        let tree = space.folderTree
-        let ordering = BrowserSidebarFolderListItem.Projection(tabs: currentTabs, tree: tree, location: .current)
-        // All unfiled rows share one map; sections without row indicators use their own zone.
-        let followingTabIDs =
-            capabilities.showsRowDropIndicators
-            ? BrowserTabRowInsertionPolicy.followingTabIDs(in: currentTabs) : [:]
-        ForEach(ordering.items()) { item in
-            switch item {
-            case .folder(let node):
-                BrowserFolderGroup(
-                    node: node, tree: tree, ordering: ordering, tabSections: tabSections,
-                    spaceID: space.id, profileID: space.profile.id, selectedTabID: browser.selectedTabID(in: space.id),
-                    browser: browser, pageAccess: pageAccess, spaceAccess: spaceAccess, capabilities: capabilities,
-                    promotionNamespace: promotionNamespace, pullNewIcon: pullNewIcon, select: select,
-                    isExpanded: Binding {
-                        if let spacePresentation {
-                            return spacePresentation.assignment == assignment
-                                && spacePresentation.folderIDs.contains(node.id) && !node.folder.isCollapsed
-                        }
-                        return
-                            !(browser.space(matching: assignment)?.folders.first { $0.id == node.id }?.isCollapsed
-                            ?? true)
-                    } set: { expanded in
-                        guard
-                            BrowserSidebarAccessPolicy.selectedUnlockedSpace(
-                                matching: assignment, in: browser, accessController: spaceAccess) != nil
-                        else { return }
-                        browser.setFolderCollapsed(node.id, matching: assignment, isCollapsed: !expanded)
-                    }, editingFolderRequest: $editingFolderRequest)
-            case .tabs(let row):
-                renderRows([row], followingTabIDs: followingTabIDs)
-            }
-        }
-    }
-
-    @ViewBuilder
-    private func renderRows(_ rows: [BrowserSidebarTabListItem], followingTabIDs: [TabID: TabID]) -> some View {
-        ForEach(rows) { item in
-            switch item {
-            case .tab(let tab):
-                let followingTabID = followingTabIDs[tab.id]
-                BrowserSidebarTabRow(
-                    tab: tab,
-                    spaceID: space.id,
-                    profileID: space.profile.id,
-                    isSelected: tab.id == browser.selectedTabID(in: space.id),
-                    canClose: true,
-                    browser: browser,
-                    spaceAccess: spaceAccess,
-                    capabilities: capabilities,
-                    isLoaded: pageAccess.containsResidentPage(tab.id),
-                    unload: { pageAccess.unloadPage($0, assignment) },
-                    pullNewIcon: { pullNewIcon(tab.id) },
-                    promotionNamespace: promotionNamespace,
-                    followingTabID: followingTabID,
-                    hasVisibleFollowingRow: followingTabID != nil,
-                    select: select
-                )
-                #if os(macOS)
-                    // Resolve collection movement once for the whole row, including
-                    // native controls and SwiftUI drawing layers.
-                    .geometryGroup()
-                #endif
-                .id(tab.id)
-            case .splitGroup(let groupID, let members):
-                let followingTabID = members.last.flatMap {
-                    followingTabIDs[$0.id]
-                }
-                BrowserSidebarSplitGroupRow(
-                    groupID: groupID,
-                    members: members,
-                    spaceID: space.id,
-                    profileID: space.profile.id,
-                    selectedTabID: browser.selectedTabID(in: space.id),
-                    canClose: true,
-                    browser: browser,
-                    spaceAccess: spaceAccess,
-                    capabilities: capabilities,
-                    isLoaded: pageAccess.containsResidentPage,
-                    unload: { pageAccess.unloadPage($0, assignment) },
-                    pullNewIcon: pullNewIcon,
-                    promotionNamespace: promotionNamespace,
-                    followingTabID: followingTabID,
-                    hasVisibleFollowingRow: followingTabID != nil,
-                    select: select
-                )
-                #if os(macOS)
-                    .geometryGroup()
-                #endif
-            }
-        }
-    }
-
-    private var items: [BrowserSidebarTabListItem] {
-        BrowserSidebarTabListItemPolicy.items(for: tabs)
-    }
-
     private var metrics: BrowserSidebarTabListMetrics {
-        BrowserSidebarInteractionPolicy.tabListMetrics(capabilities)
-    }
-
-    private func pullNewIcon(_ tabID: TabID) {
-        let actions = tabActions
-        Task {
-            await actions.pullNewIcon(for: tabID)
-        }
-    }
-
-    private var assignment: BrowserSpaceRuntimeAssignment {
-        BrowserSpaceRuntimeAssignment(space: space)
+        BrowserSidebarInteractionPolicy.tabListMetrics(context.capabilities)
     }
 }

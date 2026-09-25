@@ -55,6 +55,14 @@ final class BrowserSpaceAccessController {
         return core?.state.spaceAccess[BrowserSpaceRuntimeAssignment(space: space)]?.isUnlocked != true
     }
 
+    /// A Space of the read model that asks for authentication shows only
+    /// while this process holds the grant for its profile.
+    func isLocked(_ space: SpaceModel) -> Bool {
+        guard space.settings.accessPolicy == .deviceOwnerAuthentication else { return false }
+        let assignment = BrowserSpaceRuntimeAssignment(spaceID: space.id, profileID: space.profileID)
+        return core?.state.spaceAccess[assignment]?.isUnlocked != true
+    }
+
     func isAuthenticating(_ space: BrowserSpace) -> Bool {
         core?.state.spaceAccess[BrowserSpaceRuntimeAssignment(space: space)]?.isAuthenticating == true
     }

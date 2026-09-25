@@ -2,7 +2,8 @@ import SwiftUI
 
 extension View {
     func browserTabDraggable(
-        tab: BrowserTab,
+        tab: TabStateModel,
+        favicons: FaviconAssets,
         profileID: UUID,
         spaceID: SpaceID,
         dragState: BrowserTabDragState,
@@ -14,6 +15,7 @@ extension View {
         modifier(
             BrowserTabDragSourceModifier(
                 tab: tab,
+                favicons: favicons,
                 profileID: profileID,
                 spaceID: spaceID,
                 dragState: dragState,
@@ -29,7 +31,8 @@ extension View {
     ///   their own lift preview. macOS lifts the row itself and passes nothing.
     func browserSplitGroupDraggable(
         item: BrowserSplitGroupDragItem,
-        members: [BrowserTab] = [],
+        members: [TabStateModel] = [],
+        favicons: FaviconAssets? = nil,
         placement: TabPlacement,
         folderID: FolderID?,
         reorder: BrowserSidebarReorderContext? = nil,
@@ -40,6 +43,7 @@ extension View {
             BrowserSplitGroupDragSourceModifier(
                 item: item,
                 members: members,
+                favicons: favicons,
                 placement: placement,
                 folderID: folderID,
                 reorder: reorder,
@@ -50,7 +54,7 @@ extension View {
     }
 
     func browserFolderDraggable(
-        folder: BrowserFolder,
+        folder: FolderStateModel,
         profileID: UUID,
         spaceID: SpaceID,
         dragState: BrowserFolderDragState,

@@ -23,18 +23,41 @@ final class FaviconAssets {
         var imported: [[UUID: Data]] = []
     }
 
+    /// An image a tab wears, with the fingerprint of its bytes, taken once
+    /// when the image is set so a view compares images without reading them.
+    struct Image: Equatable {
+        let data: Data
+        let identity: BrowserFaviconPayloadIdentity
+
+        init(_ data: Data) {
+            self.init(data: data, identity: BrowserFaviconPayloadIdentity(hashing: data))
+        }
+
+        /// An image whose fingerprint was already taken.
+        init(data: Data, identity: BrowserFaviconPayloadIdentity) {
+            self.data = data
+            self.identity = identity
+        }
+
+        static func == (lhs: Image, rhs: Image) -> Bool {
+            lhs.identity == rhs.identity
+        }
+    }
+
     /// One tab's image, observed on its own.
     @MainActor
     @Observable
     fileprivate final class Slot: BrowserStoreFirstObservable {
-        var data: Data? {
-            get { observed(\.dataStorage, as: \.data) }
-            set { publish(newValue, into: \.dataStorage, as: \.data) }
+        var image: Image? {
+            get { observed(\.imageStorage, as: \.image) }
+            set { publish(newValue, into: \.imageStorage, as: \.image) }
         }
-        @ObservationIgnored private var dataStorage: Data?
+        @ObservationIgnored private var imageStorage: Image?
+
+        var data: Data? { image?.data }
 
         init(data: Data?) {
-            dataStorage = data
+            imageStorage = data.map(Image.init)
         }
     }
 
@@ -64,11 +87,17 @@ final class FaviconAssets {
 
     /// The image the tab wears, or nil when it wears none.
     func image(of tabID: UUID) -> Data? {
+        icon(of: tabID)?.data
+    }
+
+    /// The image the tab wears with its fingerprint, or nil when it wears
+    /// none. Reading it observes only the tab's own slot.
+    func icon(of tabID: UUID) -> Image? {
         guard let slot = slots[tabID] else {
             _ = additions
             return nil
         }
-        return slot.data
+        return slot.image
     }
 
     // MARK: - Actions - Offers
@@ -146,14 +175,15 @@ final class FaviconAssets {
     /// any longer loses its image.
     func finishBatch(holding holds: (UUID) -> Bool) {
         for tabID in detached where !holds(tabID) {
-            slots.removeValue(forKey: tabID)?.data = nil
+            slots.removeValue(forKey: tabID)?.image = nil
         }
         detached.removeAll()
     }
 
     private func setImage(_ data: Data?, of tabID: UUID) {
         if let slot = slots[tabID] {
-            slot.data = data
+            guard slot.data != data else { return }
+            slot.image = data.map(Image.init)
         } else {
             slots[tabID] = Slot(data: data)
             if data != nil { additions &+= 1 }

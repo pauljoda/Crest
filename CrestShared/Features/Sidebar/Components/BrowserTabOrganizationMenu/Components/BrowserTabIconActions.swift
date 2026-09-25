@@ -1,17 +1,18 @@
 import SwiftUI
 
 struct BrowserTabIconActions: View {
-    let tab: BrowserTab
+    let tab: TabStateModel
+    let favicons: FaviconAssets
     let isLoaded: Bool
     let pullNewIcon: (() -> Void)?
-    let performIfCurrent: ((BrowserTab) -> Void) -> Void
-    let clearIcon: (BrowserTab) -> Void
-    let changeIcon: (BrowserTab) -> Void
+    let performIfCurrent: (() -> Void) -> Void
+    let clearIcon: () -> Void
+    let changeIcon: () -> Void
 
     var body: some View {
         if tab.nativeContent == nil {
             Button("Pull New Icon", systemImage: "arrow.clockwise.circle") {
-                performIfCurrent { _ in pullNewIcon?() }
+                performIfCurrent { pullNewIcon?() }
             }
             .disabled(!isLoaded || pullNewIcon == nil)
 
@@ -20,7 +21,7 @@ struct BrowserTabIconActions: View {
         Button("Clear Icon", systemImage: "xmark.circle") {
             performIfCurrent(clearIcon)
         }
-        .disabled(tab.iconMode.followsPage && tab.faviconData == nil)
+        .disabled(tab.iconMode.followsPage && favicons.icon(of: tab.id) == nil)
 
         Button("Change Icon…", systemImage: "face.smiling") {
             performIfCurrent(changeIcon)
@@ -30,7 +31,7 @@ struct BrowserTabIconActions: View {
 
 enum BrowserTabIconCustomizationPolicy {
     /// Reset applies to explicit icon overrides.
-    static func showsReset(for tab: BrowserTab) -> Bool {
-        !tab.iconMode.followsPage
+    static func showsReset(iconMode: TabIconMode) -> Bool {
+        !iconMode.followsPage
     }
 }

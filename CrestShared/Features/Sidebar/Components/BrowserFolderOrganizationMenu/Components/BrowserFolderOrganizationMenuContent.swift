@@ -1,10 +1,9 @@
 import SwiftUI
 
 struct BrowserFolderOrganizationMenuContent: View {
-    let folder: BrowserFolder
+    let folder: FolderStateModel
+    let context: BrowserSidebarListContext
     let assignment: BrowserFolderRuntimeAssignment
-    let browser: BrowserStore
-    let spaceAccess: BrowserSpaceAccessController
     let createNestedFolder: () -> Void
     let renameFolder: () -> Void
     let changeColor: () -> Void
@@ -13,15 +12,16 @@ struct BrowserFolderOrganizationMenuContent: View {
 
     init(menu: BrowserFolderOrganizationMenu) {
         folder = menu.folder
+        context = menu.context
         assignment = menu.assignment
-        browser = menu.browser
-        spaceAccess = menu.spaceAccess
         createNestedFolder = menu.createNestedFolder
         renameFolder = menu.renameFolder
         changeColor = menu.changeColor
         changeIcon = menu.changeIcon
         deleteFolder = menu.deleteFolder
     }
+
+    private var browser: BrowserStore { context.browser }
 
     var body: some View {
         Button("New Nested Folder", systemImage: "folder.badge.plus") {
@@ -65,15 +65,16 @@ struct BrowserFolderOrganizationMenuContent: View {
                 }
                 .disabled(folder.parentID == nil)
 
-                if !moveDestinations.isEmpty {
+                let destinations = moveDestinations
+                if !destinations.isEmpty {
                     Divider()
-                    ForEach(moveDestinations) { destination in
+                    ForEach(destinations) { destination in
                         Button {
                             performIfCurrent {
                                 browser.moveFolder(
                                     folder.id,
                                     matching: assignment.spaceAssignment,
-                                    into: destination.node.id
+                                    into: destination.folder.id
                                 )
                             }
                         } label: {
@@ -81,10 +82,10 @@ struct BrowserFolderOrganizationMenuContent: View {
                                 Text(destination.path)
                             } icon: {
                                 BrowserFolderArtwork(
-                                    symbol: destination.node.folder.symbol, color: destination.node.folder.color)
+                                    symbol: destination.folder.displaySymbol, color: destination.folder.artworkColor)
                             }
                         }
-                        .disabled(folder.parentID == destination.node.id)
+                        .disabled(folder.parentID == destination.folder.id)
                     }
                 }
             }
@@ -97,48 +98,34 @@ struct BrowserFolderOrganizationMenuContent: View {
         }
     }
 
+    private var isCurrentAndUnlocked: Bool {
+        context.isCurrent(assignment.spaceAssignment) && context.space.folders.contains(folder.id)
+    }
+
     private var canCreateNestedFolder: Bool {
-        guard currentUnlockedSpace != nil else { return false }
+        guard isCurrentAndUnlocked else { return false }
         return browser.canAddFolder(inside: folder.id, matching: assignment.spaceAssignment)
     }
 
+    /// Every other folder the core would take this one into, saved folders
+    /// first, each named by its section and the folders around it.
     private var moveDestinations: [BrowserFolderMoveDestination] {
-        guard let space = currentUnlockedSpace else { return [] }
-        let tree = space.folderTree
-        let excluded = tree.descendants(of: folder.id).union([folder.id])
-        return tree.flattenedNodes(collapsedFolderIDs: []).compactMap { node in
-            guard !excluded.contains(node.id),
-                browser.canMoveFolder(
-                    folder.id,
-                    matching: assignment.spaceAssignment,
-                    into: node.id
-                )
-            else {
-                return nil
-            }
-            return BrowserFolderMoveDestination(
-                node: node,
-                path: (node.folder.location == .saved
-                    ? String(localized: "Saved Tabs") : String(localized: "Current Tabs"))
-                    + " › " + (tree.pathTitle(for: node.id) ?? node.folder.title)
-            )
+        guard isCurrentAndUnlocked else { return [] }
+        let space = context.space
+        let excluded = Set(space.folderChoices(inside: folder.id).map(\.id)).union([folder.id])
+        return space.folderChoices(in: [.saved, .current]).compactMap { choice in
+            guard !excluded.contains(choice.id),
+                browser.canMoveFolder(folder.id, matching: assignment.spaceAssignment, into: choice.id)
+            else { return nil }
+            let section =
+                choice.folder.location == .saved
+                ? String(localized: "Saved Tabs") : String(localized: "Current Tabs")
+            return BrowserFolderMoveDestination(folder: choice.folder, path: section + " › " + choice.pathTitle)
         }
     }
 
-    private var currentUnlockedSpace: BrowserSpace? {
-        guard
-            let space = BrowserSidebarAccessPolicy.selectedUnlockedSpace(
-                matching: assignment.spaceAssignment,
-                in: browser,
-                accessController: spaceAccess
-            ),
-            space.folders.contains(where: { $0.id == folder.id })
-        else { return nil }
-        return space
-    }
-
     private func performIfCurrent(_ action: () -> Void) {
-        guard currentUnlockedSpace != nil else { return }
+        guard isCurrentAndUnlocked else { return }
         action()
     }
 }

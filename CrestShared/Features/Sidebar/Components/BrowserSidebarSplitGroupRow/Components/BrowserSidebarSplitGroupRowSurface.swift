@@ -16,7 +16,7 @@ struct BrowserSidebarSplitGroupRowSurface: ViewModifier {
                     .fill(groupTint)
                     .overlay { if isMultiSelected { containerShape.fill(CrestColor.hover) } }
                     .overlay {
-                        if let tint = configuration.displayMetadata.tint {
+                        if let tint = configuration.tint {
                             containerShape.fill(
                                 tint.color.opacity(
                                     configuration.isPresented ? 0.16 : 0.10
@@ -56,8 +56,7 @@ struct BrowserSidebarSplitGroupRowSurface: ViewModifier {
 
     private var isMultiSelected: Bool {
         configuration.members.contains {
-            configuration.browser.tabMultiSelection.contains($0.id)
-                && !BrowserSidebarSelection.isCoveredBySelectedFolder(.tab($0.id), in: configuration.browser)
+            BrowserSidebarSelection.showsSelected(.tab($0.id), in: configuration.context)
         }
     }
 

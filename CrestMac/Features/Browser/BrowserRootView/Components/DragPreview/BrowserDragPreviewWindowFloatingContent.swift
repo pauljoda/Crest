@@ -24,6 +24,7 @@ struct BrowserDragPreviewWindowFloatingContent: View {
         case .sidebarLift(let sidebar):
             BrowserSidebarLiftFloatingPreview(
                 subject: sidebar.subject,
+                favicons: sidebar.favicons,
                 lift: sidebar.lift,
                 reduceMotion: sidebar.reduceMotion,
                 onLandingComplete: presentation.onSidebarLandingComplete,

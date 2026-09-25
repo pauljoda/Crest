@@ -7,20 +7,12 @@ struct BrowserFolderGroupSurface: View {
 
     let configuration: BrowserFolderGroupConfiguration
     let interaction: BrowserFolderGroupInteractionContext
-    var showsExpandedRows = true
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    private var folder: BrowserFolder { configuration.folder }
+    private var folder: FolderStateModel { configuration.folder }
 
-    private var dragItem: BrowserFolderDragItem {
-        BrowserFolderDragItem(
-            folderID: folder.id,
-            spaceID: configuration.spaceID,
-            profileID: configuration.profileID,
-            memberTabIDs: configuration.subtreeTabIDs
-        )
-    }
+    private var dragItem: BrowserFolderDragItem { configuration.dragItem }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -29,17 +21,16 @@ struct BrowserFolderGroupSurface: View {
                 interaction: interaction
             )
 
-            if showsExpandedRows || !interaction.isExpanded.wrappedValue {
-                BrowserFolderTabRows(configuration: configuration, interaction: interaction)
+            if !interaction.isExpanded.wrappedValue {
+                BrowserFolderKeptRow(configuration: configuration, interaction: interaction)
             }
         }
         .contextMenu {
             if configuration.capabilities.supportsOrganization {
                 BrowserFolderOrganizationMenu(
                     folder: folder,
+                    context: configuration.context,
                     assignment: configuration.folderRuntimeAssignment,
-                    browser: configuration.browser,
-                    spaceAccess: configuration.spaceAccess,
                     createNestedFolder: interaction.beginCreatingChild,
                     renameFolder: interaction.beginRenaming,
                     changeColor: {
@@ -84,9 +75,10 @@ struct BrowserFolderGroupSurface: View {
             BrowserIconCustomizationPresentation(
                 isPresented: interaction.isChoosingIcon,
                 title: "Folder Icon",
-                currentEmoji: BrowserIconSymbol.emoji(from: folder.symbol),
-                currentSystemSymbol: BrowserIconSymbol.emoji(from: folder.symbol) == nil ? folder.symbol : nil,
-                showsReset: folder.symbol != "folder" && folder.symbol != "folder.fill",
+                currentEmoji: BrowserIconSymbol.emoji(from: folder.displaySymbol),
+                currentSystemSymbol: BrowserIconSymbol.emoji(from: folder.displaySymbol) == nil
+                    ? folder.displaySymbol : nil,
+                showsReset: folder.displaySymbol != "folder" && folder.displaySymbol != "folder.fill",
                 resetTitle: "Use Folder Icon",
                 setEmoji: { interaction.folderSymbol.wrappedValue = BrowserIconSymbol.symbol(forEmoji: $0) },
                 setSystemSymbol: { interaction.folderSymbol.wrappedValue = $0 },
@@ -94,7 +86,7 @@ struct BrowserFolderGroupSurface: View {
             )
         )
         .confirmationDialog(
-            "Delete \(folder.title)?",
+            "Delete \(folder.shownTitle)?",
             isPresented: interaction.isConfirmingDeletion,
             titleVisibility: .visible
         ) {
@@ -110,7 +102,7 @@ struct BrowserFolderGroupSurface: View {
                 CrestMotion.collection,
                 reduceMotion: reduceMotion
             ),
-            value: configuration.tabs.map(\.id)
+            value: folder.isCollapsed
         )
         .onAppear(perform: interaction.beginTitleEditingIfNeeded)
         .modifier(BrowserFolderCollapsedVisibilityUpdates(configuration: configuration, interaction: interaction))
@@ -142,7 +134,7 @@ private struct BrowserFolderCollapsedVisibilityUpdates: ViewModifier {
                 // practice surfaces. Reconciliation is idempotent on remount;
                 // the retained host updates folders while these views are absent.
                 .onChange(of: interaction.isExpanded.wrappedValue, initial: true) { _, _ in reconcileVisibility() }
-                .onChange(of: configuration.selectedTabID) { _, _ in reconcileVisibility() }
+                .onChange(of: configuration.shownFolderTabID) { _, _ in reconcileVisibility() }
                 .onChange(of: configuration.residencyRevision, initial: true) { _, _ in reconcileVisibility() }
         #else
             content
@@ -152,21 +144,21 @@ private struct BrowserFolderCollapsedVisibilityUpdates: ViewModifier {
                 ) { _, isExpanded in
                     interaction.collapsedTabVisibility.wrappedValue.expansionDidChange(
                         isExpanded: isExpanded,
-                        selectedTabID: configuration.selectedTabID,
-                        folderTabIDs: configuration.tabs.map(\.id)
+                        selectedTabID: configuration.shownFolderTabID,
+                        folderTabIDs: configuration.folderTabIDs
                     )
                 }
-                .onChange(of: configuration.selectedTabID) { _, selectedTabID in
+                .onChange(of: configuration.shownFolderTabID) { _, selectedTabID in
                     interaction.collapsedTabVisibility.wrappedValue.selectionDidChange(
                         isExpanded: interaction.isExpanded.wrappedValue,
                         selectedTabID: selectedTabID,
-                        folderTabIDs: configuration.tabs.map(\.id)
+                        folderTabIDs: configuration.folderTabIDs
                     )
                 }
                 .onChange(of: configuration.residencyRevision, initial: true) { _, _ in
                     interaction.collapsedTabVisibility.wrappedValue.residencyDidChange(
                         isExpanded: interaction.isExpanded.wrappedValue,
-                        selectedTabID: configuration.selectedTabID,
+                        selectedTabID: configuration.shownFolderTabID,
                         residentFolderTabIDs: configuration.residentFolderTabIDs
                     )
                 }
@@ -175,19 +167,13 @@ private struct BrowserFolderCollapsedVisibilityUpdates: ViewModifier {
 
     #if os(macOS)
         private func reconcileVisibility() {
-            guard let space = configuration.browser.space(matching: configuration.assignment),
-                !configuration.spaceAccess.isLocked(space),
-                let folder = space.folders.first(where: { $0.id == configuration.folder.id })
+            guard configuration.context.space.folders.contains(configuration.folder.id),
+                !configuration.spaceAccess.isLocked(configuration.context.space)
             else { return }
-            let tabs = space.tabSections.tabs(in: folder.id)
             configuration.sidebarInteraction.reconcileCollapsedFolder(
-                configuration.folderRuntimeAssignment, isExpanded: !folder.isCollapsed,
-                selectedTabID: configuration.browser.selectedTabID(in: space.id), folderTabIDs: tabs.map(\.id),
-                residentFolderTabIDs: tabs.compactMap { tab in
-                    configuration.pageAccess.containsResidentPageMatching(
-                        BrowserTabRuntimeAssignment(
-                            tabID: tab.id, spaceID: space.id, profileID: space.profile.id)) ? tab.id : nil
-                })
+                configuration.folderRuntimeAssignment, isExpanded: !configuration.folder.isCollapsed,
+                selectedTabID: configuration.shownFolderTabID, folderTabIDs: configuration.folderTabIDs,
+                residentFolderTabIDs: configuration.residentFolderTabIDs)
         }
     #endif
 }

@@ -38,6 +38,13 @@ final class SidebarModel {
         return list
     }
 
+    /// Every list the model holds: the sections' top levels, then the folder
+    /// insides it has made, in no particular order. Reading it observes
+    /// nothing; reading a list's rows observes that list.
+    var lists: [SidebarListModel] {
+        sections + Array(insides.values)
+    }
+
     /// The outline the lists hold, with the insides of `folders` in their
     /// order. Reading it observes every list it names.
     func outline(folders: [FolderStateModel]) -> SidebarOutline {

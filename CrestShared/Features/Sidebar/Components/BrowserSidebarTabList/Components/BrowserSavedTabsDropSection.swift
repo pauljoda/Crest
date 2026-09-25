@@ -1,70 +1,50 @@
 import SwiftUI
 
-/// Saved folders and unfiled tabs share one ordered run, using the same
-/// projection as Current so a tab can remain between sibling folders.
+/// The saved section's top level: its folders and unfiled tabs in the one
+/// order the core publishes, so a tab can stay between sibling folders.
 struct BrowserSavedTabsDropSection: View {
     @Environment(BrowserSidebarInteractionState.self) private var sidebarInteraction
 
-    let space: BrowserSpace
-    let tabSections: BrowserTabSections
-    let browser: BrowserStore
-    let spaceAccess: BrowserSpaceAccessController
-    let pageAccess: BrowserSidebarPageAccess
-    let tabActions: BrowserSidebarTabActions
-    let capabilities: BrowserInteractionCapabilities
-    var promotionNamespace: Namespace.ID? = nil
-    /// How a saved tab gets back to the page it was saved from. The two shells
-    /// answer that differently, so the host binds it.
-    let restoreSavedLocation: (TabID) -> Void
-    /// What opening a tab means to the host. The rows decide *whether*; the host
-    /// decides what appears.
-    let select: (TabID) -> Void
-    @Environment(\.sidebarSpacePresentation) private var spacePresentation
-    @Binding var editingFolderRequest: BrowserFolderRuntimeAssignment?
+    let context: BrowserSidebarListContext
 
     private var section: BrowserSidebarReorderSection {
         .tabs(placement: .saved, folderID: nil)
     }
 
     var body: some View {
+        let list = context.space.sidebar.section(.saved)
         VStack(spacing: 0) {
-            if capabilities.showsRowDropIndicators {
-                BrowserSidebarRowsStack { rows }
+            if context.capabilities.showsRowDropIndicators {
+                BrowserSidebarListRows(list: list, context: context).equatable()
 
                 // Also the band an empty unfiled run draws its insertion line
                 // in: it sits directly below the folder groups, where that
                 // run's first row would appear.
-                BrowserSavedTabsEndDropTarget(
-                    tabs: tabSections.unfiledSavedTabs,
-                    browser: browser,
-                    capabilities: capabilities
-                )
-                .browserSidebarReorderSectionIndicator(
-                    section,
-                    state: sidebarInteraction.sidebarReorderState
-                )
+                BrowserSavedTabsEndDropTarget(list: list, context: context)
+                    .browserSidebarReorderSectionIndicator(
+                        section,
+                        state: sidebarInteraction.sidebarReorderState
+                    )
             } else {
-                BrowserSidebarRowsStack {
-                    rows
-
+                BrowserSidebarListRows(list: list, context: context) { items in
                     // A Space whose every saved tab lives in a folder still has
                     // an unfiled run. Without a band of its own that run has no
                     // region to aim at, nowhere to draw its insertion line, and
                     // no way to take a tab that belongs outside the folders.
-                    if unfiledItems.isEmpty {
+                    if !items.contains(where: { $0.firstTabID != nil }) {
                         Color.clear
                             .frame(height: metrics.savedSectionEndBandHeight)
                             .contentShape(.rect)
                             .accessibilityHidden(true)
                     }
                 }
+                .equatable()
                 .browserSidebarReorderSectionIndicator(
                     section,
                     state: sidebarInteraction.sidebarReorderState
                 )
             }
         }
-        .crestCollectionMotion(ids: collectionMotionIDs)
         .contentShape(.rect)
         .browserSidebarReorderZone(
             .section(section),
@@ -74,158 +54,13 @@ struct BrowserSavedTabsDropSection: View {
             BrowserSidebarSectionReservation(
                 section: section,
                 state: sidebarInteraction.sidebarReorderState,
-                capabilities: capabilities
+                capabilities: context.capabilities
             )
         )
         .accessibilityHint("Drop a tab here to save it")
     }
 
-    @ViewBuilder
-    private var rows: some View {
-        let tree = space.folderTree
-        let ordering = BrowserSidebarFolderListItem.Projection(tabs: space.tabs, tree: tree, location: .saved)
-        // All unfiled rows share one map; sections without row indicators use their own zone.
-        let followingTabIDs =
-            capabilities.showsRowDropIndicators
-            ? BrowserTabRowInsertionPolicy.followingTabIDs(in: tabSections.unfiledSavedTabs) : [:]
-        ForEach(ordering.items()) { entry in
-            switch entry {
-            case .folder(let node):
-                BrowserFolderGroup(
-                    node: node,
-                    tree: tree, ordering: ordering, tabSections: tabSections,
-                    spaceID: space.id,
-                    profileID: space.profile.id,
-                    selectedTabID: browser.selectedTabID(in: space.id),
-                    browser: browser,
-                    pageAccess: pageAccess,
-                    spaceAccess: spaceAccess,
-                    capabilities: capabilities,
-                    promotionNamespace: promotionNamespace,
-                    pullNewIcon: pullNewIcon,
-                    restoreSavedLocation: restoreSavedLocation,
-                    select: select,
-                    isExpanded: expansionBinding(for: node.folder),
-                    editingFolderRequest: $editingFolderRequest
-                )
-            case .tabs(let item):
-                renderRows([item], followingTabIDs: followingTabIDs)
-            }
-        }
-    }
-
-    @ViewBuilder
-    private func renderRows(_ items: [BrowserSidebarTabListItem], followingTabIDs: [TabID: TabID]) -> some View {
-        ForEach(items) { item in
-            switch item {
-            case .tab(let tab):
-                let followingTabID = followingTabIDs[tab.id]
-                BrowserSidebarTabRow(
-                    tab: tab,
-                    spaceID: space.id,
-                    profileID: space.profile.id,
-                    isSelected: tab.id == browser.selectedTabID(in: space.id),
-                    canClose: false,
-                    browser: browser,
-                    spaceAccess: spaceAccess,
-                    capabilities: capabilities,
-                    isLoaded: pageAccess.containsResidentPage(tab.id),
-                    unload: { pageAccess.unloadPage($0, assignment) },
-                    pullNewIcon: { pullNewIcon(tab.id) },
-                    restoreSavedLocation: { restoreSavedLocation(tab.id) },
-                    promotionNamespace: promotionNamespace,
-                    followingTabID: followingTabID,
-                    hasVisibleFollowingRow: followingTabID != nil,
-                    select: select
-                )
-                .id(tab.id)
-            case .splitGroup(let groupID, let members):
-                let followingTabID = members.last.flatMap {
-                    followingTabIDs[$0.id]
-                }
-                BrowserSidebarSplitGroupRow(
-                    groupID: groupID,
-                    members: members,
-                    spaceID: space.id,
-                    profileID: space.profile.id,
-                    selectedTabID: browser.selectedTabID(in: space.id),
-                    canClose: false,
-                    browser: browser,
-                    spaceAccess: spaceAccess,
-                    capabilities: capabilities,
-                    isLoaded: pageAccess.containsResidentPage,
-                    unload: { pageAccess.unloadPage($0, assignment) },
-                    pullNewIcon: pullNewIcon,
-                    restoreSavedLocation: restoreSavedLocation,
-                    promotionNamespace: promotionNamespace,
-                    followingTabID: followingTabID,
-                    hasVisibleFollowingRow: followingTabID != nil,
-                    select: select
-                )
-            }
-        }
-    }
-
-    private var folderNodes: [BrowserFolderNode] {
-        space.folderTree.flattenedNodes(
-            collapsedFolderIDs: Set(
-                space.folders.lazy.filter(\.isCollapsed).map(\.id)
-            )
-        )
-    }
-
-    private var unfiledItems: [BrowserSidebarTabListItem] {
-        BrowserSidebarTabListItemPolicy.items(for: tabSections.unfiledSavedTabs)
-    }
-
-    private var collectionMotionIDs: [String] {
-        folderNodes.map { "folder-\($0.id.uuidString)" }
-            + space.tabs
-            .filter { $0.placement == .saved && $0.folderID != nil }
-            .map { "tab-\($0.id.uuidString)" }
-            + unfiledItems.map(\.collectionMotionID)
-    }
-
     private var metrics: BrowserSidebarTabListMetrics {
-        BrowserSidebarInteractionPolicy.tabListMetrics(capabilities)
-    }
-
-    private func pullNewIcon(_ tabID: TabID) {
-        let actions = tabActions
-        Task {
-            await actions.pullNewIcon(for: tabID)
-        }
-    }
-
-    private func expansionBinding(for folder: BrowserFolder) -> Binding<Bool> {
-        Binding {
-            if let spacePresentation {
-                return spacePresentation.assignment == assignment
-                    && spacePresentation.folderIDs.contains(folder.id) && !folder.isCollapsed
-            }
-            return
-                !(browser.session.space(id: space.id)?.folders.first(where: {
-                    $0.id == folder.id
-                })?.isCollapsed ?? false)
-        } set: { isExpanded in
-            guard isCurrentAndUnlocked else { return }
-            browser.setFolderCollapsed(
-                folder.id,
-                matching: assignment,
-                isCollapsed: !isExpanded
-            )
-        }
-    }
-
-    private var assignment: BrowserSpaceRuntimeAssignment {
-        BrowserSpaceRuntimeAssignment(space: space)
-    }
-
-    private var isCurrentAndUnlocked: Bool {
-        BrowserSidebarAccessPolicy.selectedUnlockedSpace(
-            matching: assignment,
-            in: browser,
-            accessController: spaceAccess
-        ) != nil
+        BrowserSidebarInteractionPolicy.tabListMetrics(context.capabilities)
     }
 }

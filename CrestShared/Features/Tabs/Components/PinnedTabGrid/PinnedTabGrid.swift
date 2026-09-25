@@ -1,18 +1,24 @@
 import SwiftUI
 
+/// The pinned tabs as a grid of tiles, on every shell and in the previews
+/// that show one.
+///
+/// Each tile reads its own tab, whether its window shows it and whether it is
+/// selected, so showing another tab redraws the two tiles it concerns and the
+/// grid itself redraws only when the pinned tabs change.
 struct PinnedTabGrid: View {
-    let tabs: [BrowserTab]
+    let tabs: [TabStateModel]
+    let favicons: FaviconAssets
     let assignment: BrowserSpaceRuntimeAssignment
-    let selectedTabID: TabID?
+    /// The window whose shown tab a tile marks, or nil for a preview, which
+    /// marks `selectedTabID`.
+    var window: WindowStateModel? = nil
+    var selectedTabID: TabID? = nil
     let select: (BrowserTabRuntimeAssignment) -> Void
-    var moveTab: ((BrowserTabDragItem, TabID?) -> Bool)? = nil
+    /// The live sidebar's lists, which organize, drag and unload tiles; nil
+    /// for a preview that is only for looking at.
+    var context: BrowserSidebarListContext? = nil
     var dragState: BrowserTabDragState? = nil
-    var browser: BrowserStore? = nil
-    var spaceAccess: BrowserSpaceAccessController? = nil
-    var isLoaded: (BrowserTabRuntimeAssignment) -> Bool = { _ in true }
-    var unload: ((BrowserTabRuntimeAssignment) -> Void)? = nil
-    var pullNewIcon: ((BrowserTabRuntimeAssignment) -> Void)? = nil
-    var restoreSavedLocation: ((BrowserTabRuntimeAssignment) -> Void)? = nil
     var siteThemeAccent: (BrowserTabRuntimeAssignment) -> BrowserTabIconAccent? = {
         _ in nil
     }

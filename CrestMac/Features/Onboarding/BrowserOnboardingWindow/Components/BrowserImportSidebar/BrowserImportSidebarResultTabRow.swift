@@ -49,12 +49,13 @@ struct BrowserImportSidebarResultTabRow: View {
 
 #if DEBUG
     #Preview("Selected and matched import") {
-        let configuration = BrowserSidebarTabRowPreviewFixture.configuration()
+        let tab = BrowserSidebarTabRowPreviewFixture.tab()
+        let profileID = BrowserSidebarTabRowPreviewFixture.profileID
         VStack {
             BrowserImportSidebarResultTabRow(
-                tab: configuration.tab, profileID: configuration.profileID, isSelected: true)
+                tab: tab, profileID: profileID, isSelected: true)
             BrowserImportSidebarResultTabRow(
-                tab: configuration.tab, profileID: configuration.profileID, isSelected: false, isMatched: true)
+                tab: tab, profileID: profileID, isSelected: false, isMatched: true)
         }.padding().frame(width: 320)
     }
 #endif

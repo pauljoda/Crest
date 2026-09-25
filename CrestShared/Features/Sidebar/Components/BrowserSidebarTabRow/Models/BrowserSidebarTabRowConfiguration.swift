@@ -3,19 +3,18 @@ import SwiftUI
 /// Everything a sidebar tab row is told, and the answers that follow from it.
 @MainActor
 struct BrowserSidebarTabRowConfiguration {
-    let tab: BrowserTab
-    let spaceID: SpaceID
-    let profileID: UUID
+    // MARK: - Variables
+
+    let tab: TabStateModel
+    let context: BrowserSidebarListContext
+    /// The Space the row was drawn for, as it stood then. An action checks it
+    /// against the live Space, so a row drawn before a profile was replaced
+    /// can never act for the replacement.
+    let assignment: BrowserSpaceRuntimeAssignment
+    /// Whether the window shows this tab: its own slot of the window's shown
+    /// tabs, read by the row and handed to its parts as a value.
     let isSelected: Bool
-    let canClose: Bool
-    let browser: BrowserStore
-    let spaceAccess: BrowserSpaceAccessController
-    let capabilities: BrowserInteractionCapabilities
     let isLoaded: Bool
-    let unload: ((TabID) -> Void)?
-    let pullNewIcon: (() -> Void)?
-    let restoreSavedLocation: (() -> Void)?
-    let promotionNamespace: Namespace.ID?
     /// Whether this row is drawn inside a split group's container rather than
     /// standing on its own in the tab list.
     ///
@@ -25,9 +24,43 @@ struct BrowserSidebarTabRowConfiguration {
     /// provides.
     let isSplitGroupMember: Bool
     let followingTabID: TabID?
-    let hasVisibleFollowingRow: Bool
-    let select: (TabID) -> Void
     var spacePresentation: SidebarSpacePresentation? = nil
+
+    var spaceID: SpaceID { assignment.spaceID }
+    var profileID: UUID { assignment.profileID }
+    var browser: BrowserStore { context.browser }
+    var spaceAccess: BrowserSpaceAccessController { context.spaceAccess }
+    var capabilities: BrowserInteractionCapabilities { context.capabilities }
+    var favicons: FaviconAssets { context.favicons }
+    var placement: TabPlacement { tab.placement }
+
+    /// A tab the session keeps closes; one it outlives only unloads.
+    var canClose: Bool { !tab.placement.isDurable }
+
+    var hasVisibleFollowingRow: Bool { followingTabID != nil }
+
+    var promotionNamespace: Namespace.ID? {
+        context.promotionNamespace(for: tab.placement)
+    }
+
+    var unload: ((TabID) -> Void)? {
+        let context = context
+        return { context.unload($0) }
+    }
+
+    var pullNewIcon: (() -> Void)? {
+        let context = context
+        let tabID = tab.id
+        return { context.pullNewIcon(tabID) }
+    }
+
+    var restoreSavedLocation: (() -> Void)? {
+        guard let restore = context.restoreSavedLocation else { return nil }
+        let tabID = tab.id
+        return { restore(tabID) }
+    }
+
+    var select: (TabID) -> Void { context.select }
 
     var metrics: BrowserSidebarTabRowMetrics {
         BrowserSidebarInteractionPolicy.tabRowMetrics(capabilities)
@@ -60,10 +93,7 @@ struct BrowserSidebarTabRowConfiguration {
     }
 
     var isPromotionSource: Bool {
-        BrowserTabPromotionSourcePolicy.isPromotionSource(
-            tab,
-            isSelected: isSelected
-        )
+        isSelected && !tab.isStartPage
     }
 
     var beforeDropLocation: BrowserTabDropLocation {
@@ -84,10 +114,6 @@ struct BrowserSidebarTabRowConfiguration {
         )
     }
 
-    var assignment: BrowserSpaceRuntimeAssignment {
-        BrowserSpaceRuntimeAssignment(spaceID: spaceID, profileID: profileID)
-    }
-
     var runtimeAssignment: BrowserTabRuntimeAssignment {
         BrowserTabRuntimeAssignment(
             tabID: tab.id,
@@ -100,18 +126,30 @@ struct BrowserSidebarTabRowConfiguration {
     /// remain guarded by the live selected Space below.
     var isAvailableForDisplay: Bool {
         guard let spacePresentation else { return isCurrentAndUnlocked }
-        return spacePresentation.isAvailable(matching: assignment)
-            && spacePresentation.tabIDs.contains(tab.id)
+        return spacePresentation.isAvailable(matching: assignment) && context.space.tabs.contains(tab.id)
     }
 
+    /// Every action this row offers is refused unless the window shows the
+    /// Space the row was drawn for, unlocked, with the same profile, and the
+    /// Space still holds the tab.
     var isCurrentAndUnlocked: Bool {
-        guard
-            let space = BrowserSidebarAccessPolicy.selectedUnlockedSpace(
-                matching: assignment,
-                in: browser,
-                accessController: spaceAccess
-            )
-        else { return false }
-        return space.tabs.contains(where: { $0.id == tab.id })
+        context.isCurrent(assignment) && context.space.tabs.contains(tab.id)
+    }
+
+    // MARK: - Initializers
+
+    init(
+        tab: TabStateModel, context: BrowserSidebarListContext, isSelected: Bool, isLoaded: Bool,
+        isSplitGroupMember: Bool = false, followingTabID: TabID? = nil,
+        spacePresentation: SidebarSpacePresentation? = nil
+    ) {
+        self.tab = tab
+        self.context = context
+        assignment = context.assignment
+        self.isSelected = isSelected
+        self.isLoaded = isLoaded
+        self.isSplitGroupMember = isSplitGroupMember
+        self.followingTabID = followingTabID
+        self.spacePresentation = spacePresentation
     }
 }

@@ -1,7 +1,8 @@
 import SwiftUI
 
 struct BrowserPlatformTabDragSourceModifier: ViewModifier {
-    let tab: BrowserTab
+    let tab: TabStateModel
+    let favicons: FaviconAssets
     let profileID: UUID
     let spaceID: SpaceID
     let dragState: BrowserTabDragState

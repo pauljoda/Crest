@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct BrowserPlatformFolderDragSourceModifier: ViewModifier {
-    let folder: BrowserFolder
+    let folder: FolderStateModel
     let profileID: UUID
     let spaceID: SpaceID
     let dragState: BrowserFolderDragState

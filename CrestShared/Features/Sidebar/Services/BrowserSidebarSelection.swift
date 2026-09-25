@@ -83,6 +83,33 @@ enum BrowserSidebarSelection {
         }
     }
 
+    /// Whether a row draws itself selected for tab actions: the window's
+    /// selection holds it and no selected folder around it does. Reading it
+    /// observes the selection, and the row's folders only while it is selected.
+    static func showsSelected(_ item: BrowserSelectionItemID, in context: BrowserSidebarListContext) -> Bool {
+        let selection = context.browser.tabMultiSelection
+        guard selection.contains(item) else { return false }
+        return !isCoveredBySelectedFolder(item, in: context.space, selection: selection)
+    }
+
+    /// Whether a selected folder holds the item, however deep.
+    static func isCoveredBySelectedFolder(
+        _ item: BrowserSelectionItemID, in space: SpaceModel, selection: BrowserTabMultiSelection
+    ) -> Bool {
+        guard selection.isEngaged else { return false }
+        var parent: FolderID? =
+            switch item {
+            case .tab(let id): space.tabs.model(id)?.folderID
+            case .folder(let id): space.folders.model(id)?.parentID
+            }
+        var visited: Set<FolderID> = []
+        while let id = parent, visited.insert(id).inserted {
+            if selection.contains(.folder(id)) { return true }
+            parent = space.folders.model(id)?.parentID
+        }
+        return false
+    }
+
     static func isCoveredBySelectedFolder(_ item: BrowserSelectionItemID, in browser: BrowserStore) -> Bool {
         guard let space = browser.selectedSpace, browser.tabMultiSelection.isEngaged else { return false }
         var parent: FolderID?

@@ -91,7 +91,7 @@ struct BrowserSidebarSpacePage: View {
         )
         .environment(
             \.sidebarSpacePresentation,
-            SidebarSpacePresentation(space: space, isUnlocked: !isLocked)
+            browser.spaceModel(space.id).map { SidebarSpacePresentation(space: $0, isUnlocked: !isLocked) }
         )
         .environment(\.sidebarSpaceIsSelected, isSelected)
         // Blur and redaction are drawing effects; rows still run their tasks.

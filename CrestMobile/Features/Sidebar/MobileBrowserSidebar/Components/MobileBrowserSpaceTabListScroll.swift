@@ -4,16 +4,14 @@ import SwiftUI
 ///
 /// What belongs to this shell rather than to the list is the prepositioning: the
 /// page a row opens grows out of that row in place, so the row has to be on
-/// screen with a real resting frame before the morph starts. The stack is eager
-/// for the same reason — a row that materializes offscreen has no frame for the
-/// transition to grow from.
+/// screen with a real resting frame before the morph starts. The lists are lazy,
+/// and scrolling to the shown tab's row by its identity makes that row before
+/// the morph reads its frame.
 struct MobileBrowserSpaceTabListScroll<Content: View>: View {
     @Environment(BrowserSidebarInteractionState.self) private var sidebarInteraction
 
-    let space: BrowserSpace
-    let browser: BrowserStore
+    let context: BrowserSidebarListContext
     let compactPageIsFullyPresented: Bool
-    let tabActions: BrowserSidebarTabActions
     let openNewTab: () -> Void
     @ViewBuilder let content: () -> Content
 
@@ -22,7 +20,7 @@ struct MobileBrowserSpaceTabListScroll<Content: View>: View {
             ScrollViewReader { proxy in
                 ScrollView {
                     VStack(spacing: 0) {
-                        VStack(spacing: 0) {
+                        LazyVStack(spacing: 0) {
                             content()
                         }
                         .sidebarScrollContent()
@@ -32,7 +30,7 @@ struct MobileBrowserSpaceTabListScroll<Content: View>: View {
                             .contentShape(.rect)
                             .modifier(
                                 BrowserSidebarEmptySpaceNewTabGesture(
-                                    tabActions: tabActions,
+                                    tabActions: context.tabActions,
                                     openNewTab: openNewTab
                                 )
                             )
@@ -56,7 +54,7 @@ struct MobileBrowserSpaceTabListScroll<Content: View>: View {
                 )
                 .accessibilityLabel("Saved and current tabs")
                 .accessibilityIdentifier(
-                    BrowserSpaceAccessibilityID.tabs(space.id)
+                    BrowserSpaceAccessibilityID.tabs(context.space.id)
                 )
                 .onChange(of: selectedPromotionTarget) { previous, current in
                     guard
@@ -77,15 +75,13 @@ struct MobileBrowserSpaceTabListScroll<Content: View>: View {
         }
     }
 
-    private var selectedTab: BrowserTab? {
-        guard let selectedTabID = browser.selectedTabID(in: space.id) else { return nil }
-        return space.tabs.first { $0.id == selectedTabID }
-    }
-
+    /// Where the page the window shows would grow out of, which reads only the
+    /// Space's shown tab, not any list.
     private var selectedPromotionTarget: MobileTabPromotionTarget? {
-        MobileTabPromotionPolicy.target(
-            for: selectedTab,
-            selectedTabID: browser.selectedTabID(in: space.id)
-        )
+        let spaceID = context.space.id
+        guard let tabID = context.window.shownTabs.first(where: { $0.spaceID == spaceID })?.tabID,
+            let tab = context.space.tabs.model(tabID)
+        else { return nil }
+        return MobileTabPromotionPolicy.target(for: tab)
     }
 }

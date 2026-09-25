@@ -9,34 +9,31 @@ import SwiftUI
 /// of them.
 @MainActor
 struct BrowserSidebarSplitGroupRowConfiguration {
+    // MARK: - Variables
+
     let sidebarInteraction: BrowserSidebarInteractionState
     let groupID: SplitGroupID
-    let members: [BrowserTab]
-    let spaceID: SpaceID
-    let profileID: UUID
-    let selectedTabID: TabID?
-    let canClose: Bool
-    let browser: BrowserStore
-    let spaceAccess: BrowserSpaceAccessController
-    let capabilities: BrowserInteractionCapabilities
-    let isLoaded: (TabID) -> Bool
-    /// The per-tab hooks an ordinary row takes, keyed by member. The group is
-    /// one row to the list and several rows to a person, so the section hands
-    /// it the same actions it hands a loose tab and the group routes each to
-    /// the member the row stands for.
-    let unload: ((TabID) -> Void)?
-    let pullNewIcon: ((TabID) -> Void)?
-    let restoreSavedLocation: ((TabID) -> Void)?
-    let promotionNamespace: Namespace.ID?
+    let members: [TabStateModel]
+    let context: BrowserSidebarListContext
+    /// The Space the row was drawn for, as it stood then. An action checks it
+    /// against the live Space, so a row drawn before a profile was replaced
+    /// can never act for the replacement.
+    let assignment: BrowserSpaceRuntimeAssignment
+    /// The member the window shows, and the only row that takes the selection
+    /// accent. `nil` while the group is not presented at all.
+    let focusedMemberID: TabID?
     /// The tab following the group's *last* member, or `nil` at the end of the
     /// section. The group is one row, so its trailing drop anchor skips past
     /// every member rather than landing between two of them.
     let followingTabID: TabID?
-    let hasVisibleFollowingRow: Bool
-    /// What opening a member means to the host. The group decides *which*
-    /// member opens; the host decides what appears when it does.
-    let select: (TabID) -> Void
     var spacePresentation: SidebarSpacePresentation? = nil
+
+    var spaceID: SpaceID { assignment.spaceID }
+    var profileID: UUID { assignment.profileID }
+    var browser: BrowserStore { context.browser }
+    var spaceAccess: BrowserSpaceAccessController { context.spaceAccess }
+    var capabilities: BrowserInteractionCapabilities { context.capabilities }
+    var hasVisibleFollowingRow: Bool { followingTabID != nil }
 
     var metrics: BrowserSidebarSplitGroupRowMetrics {
         BrowserSidebarInteractionPolicy.splitGroupRowMetrics(capabilities)
@@ -62,10 +59,6 @@ struct BrowserSidebarSplitGroupRowConfiguration {
         tabRowMetrics.contentLeadingInset
     }
 
-    var assignment: BrowserSpaceRuntimeAssignment {
-        BrowserSpaceRuntimeAssignment(spaceID: spaceID, profileID: profileID)
-    }
-
     var runtimeAssignment: BrowserSplitGroupRuntimeAssignment {
         BrowserSplitGroupRuntimeAssignment(
             groupID: groupID,
@@ -74,45 +67,22 @@ struct BrowserSidebarSplitGroupRowConfiguration {
         )
     }
 
-    var displayMetadata: BrowserSplitGroupMetadata {
-        guard let spacePresentation else { return metadata }
-        guard spacePresentation.assignment == assignment,
-            spacePresentation.splitGroupIDs.contains(groupID)
-        else { return BrowserSplitGroupMetadata(id: groupID) }
-        return spacePresentation.splitGroups.first { $0.id == groupID }
-            ?? BrowserSplitGroupMetadata(id: groupID)
+    /// What a person chose for the split, as the core resolved it. Reading it
+    /// observes the Space's splits.
+    var choices: SplitGroupState {
+        context.space.splitGroups.first { $0.id == groupID } ?? .unchosen(groupID)
     }
 
-    var metadata: BrowserSplitGroupMetadata {
-        browser.space(matching: assignment)?
-            .splitGroupMetadata(for: groupID)
-            ?? BrowserSplitGroupMetadata(id: groupID)
-    }
+    var shownTitle: String { choices.shownTitle }
+    var emojiIcon: String? { choices.displayEmojiIcon }
+    var tint: BrowserSpaceBrandColor? { choices.shownTint }
 
     /// Selecting any member presents the whole split, so the container reads as
-    /// presented whenever the Space's selection is one of its members.
-    var isPresented: Bool {
-        members.contains { $0.id == selectedTabID }
-    }
+    /// presented whenever the window shows one of its members.
+    var isPresented: Bool { focusedMemberID != nil }
 
-    /// The member the content area focuses, and the only row that takes the
-    /// selection accent. `nil` while the group is not presented at all.
-    var focusedMemberID: TabID? {
-        isPresented ? selectedTabID : nil
-    }
-
-    func isFocused(_ member: BrowserTab) -> Bool {
+    func isFocused(_ member: TabStateModel) -> Bool {
         member.id == focusedMemberID
-    }
-
-    func pullNewIcon(for member: BrowserTab) -> (() -> Void)? {
-        guard let pullNewIcon else { return nil }
-        return { pullNewIcon(member.id) }
-    }
-
-    func restoreSavedLocation(for member: BrowserTab) -> (() -> Void)? {
-        guard let restoreSavedLocation else { return nil }
-        return { restoreSavedLocation(member.id) }
     }
 
     /// The run is uniform by construction — the normalizer clears any member
@@ -125,6 +95,9 @@ struct BrowserSidebarSplitGroupRowConfiguration {
     var folderID: FolderID? {
         members.first?.folderID
     }
+
+    /// A split of open tabs closes; one the session keeps does not.
+    var canClose: Bool { !placement.isDurable }
 
     /// Where a row dropped above this group lands: in front of its first member.
     var beforeDropLocation: BrowserTabDropLocation {
@@ -168,21 +141,34 @@ struct BrowserSidebarSplitGroupRowConfiguration {
     /// remain guarded by the live selected Space below.
     var isAvailableForDisplay: Bool {
         guard let spacePresentation else { return isCurrentAndUnlocked }
-        return spacePresentation.isAvailable(matching: assignment)
-            && spacePresentation.splitGroupIDs.contains(groupID)
+        return spacePresentation.isAvailable(matching: assignment) && holdsMembers
     }
 
-    /// Every mutation this row offers is refused unless the Space is the selected
-    /// unlocked one and still holds the group.
+    /// Every mutation this row offers is refused unless the window shows the
+    /// Space the row was drawn for, unlocked, and the Space still holds the
+    /// group.
     var isCurrentAndUnlocked: Bool {
-        guard
-            let space = BrowserSidebarAccessPolicy.selectedUnlockedSpace(
-                matching: assignment,
-                in: browser,
-                accessController: spaceAccess
-            )
-        else { return false }
-        return space.tabs.contains { $0.splitGroupID == groupID }
+        context.isCurrent(assignment) && holdsMembers
+    }
+
+    private var holdsMembers: Bool {
+        members.contains { context.space.tabs.contains($0.id) }
+    }
+
+    // MARK: - Initializers
+
+    init(
+        sidebarInteraction: BrowserSidebarInteractionState, groupID: SplitGroupID, members: [TabStateModel],
+        context: BrowserSidebarListContext, followingTabID: TabID?, spacePresentation: SidebarSpacePresentation?
+    ) {
+        self.sidebarInteraction = sidebarInteraction
+        self.groupID = groupID
+        self.members = members
+        self.context = context
+        assignment = context.assignment
+        focusedMemberID = members.first { context.window.shownTabIDs.contains($0.id) }?.id
+        self.followingTabID = followingTabID
+        self.spacePresentation = spacePresentation
     }
 }
 

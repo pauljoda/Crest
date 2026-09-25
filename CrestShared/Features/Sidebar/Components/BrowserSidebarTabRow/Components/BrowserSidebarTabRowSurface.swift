@@ -80,6 +80,7 @@ struct BrowserSidebarTabRowSurface: ViewModifier {
             )
             .browserTabDraggable(
                 tab: configuration.tab,
+                favicons: configuration.favicons,
                 profileID: configuration.profileID,
                 spaceID: configuration.spaceID,
                 dragState: sidebarInteraction.tabDragState,
@@ -104,9 +105,9 @@ struct BrowserSidebarTabRowSurface: ViewModifier {
             .browserSidebarReorderZone(
                 .currentTab(configuration.tab.id),
                 state: sidebarInteraction.sidebarReorderState,
-                isActive: !configuration.tab.placement.isDurable
+                isActive: configuration.tab.splitGroupID == nil
+                    && !configuration.tab.placement.isDurable
                     && configuration.tab.folderID == nil
-                    && configuration.tab.splitGroupID == nil
                     && configuration.isAvailableForDisplay,
                 requiresSelectedSpace: true
             )
@@ -135,13 +136,9 @@ struct BrowserSidebarTabRowSurface: ViewModifier {
     private var organizationMenu: some View {
         BrowserTabOrganizationMenu(
             tab: configuration.tab,
+            context: configuration.context,
             assignment: configuration.runtimeAssignment,
-            browser: configuration.browser,
-            spaceAccess: configuration.spaceAccess,
             isLoaded: configuration.isLoaded,
-            unload: configuration.unload,
-            pullNewIcon: configuration.pullNewIcon,
-            restoreSavedLocation: configuration.restoreSavedLocation,
             renameTab: interaction.beginRenaming,
             changeIcon: interaction.beginChangingIcon
         )
@@ -194,16 +191,15 @@ private struct BrowserSidebarTabRowAppearance: ViewModifier {
                 isPinned: false,
                 isSelected: configuration.isSelected,
                 isHovering: isHovering
-                    || (configuration.tab.splitGroupID == nil
-                        && configuration.browser.tabMultiSelection.contains(configuration.tab.id)
-                        && !BrowserSidebarSelection.isCoveredBySelectedFolder(
-                            .tab(configuration.tab.id), in: configuration.browser))
+                    || (!configuration.isSplitGroupMember
+                        && BrowserSidebarSelection.showsSelected(
+                            .tab(configuration.tab.id), in: configuration.context))
             )
         )
     }
 
     private var branding: BrowserSpaceBranding? {
         configuration.spacePresentation?.branding
-            ?? configuration.browser.session.space(id: configuration.spaceID)?.branding
+            ?? BrowserSpaceBranding(look: configuration.context.space.settings.look)
     }
 }

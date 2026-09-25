@@ -1,7 +1,8 @@
 import SwiftUI
 
 struct BrowserTabDragPreview: View {
-    let tab: BrowserTab
+    let tab: TabStateModel
+    let favicons: FaviconAssets
     let profileID: UUID
     /// The shape the preview is `progress` of the way toward. It always starts
     /// from the row, because the row is the shape the drag machinery measures a
@@ -41,7 +42,7 @@ struct BrowserTabDragPreview: View {
             Button {
             } label: {
                 BrowserSidebarTabLabel(
-                    tab: tab, profileID: profileID, isSelected: isSelected,
+                    tab: tab, favicons: favicons, profileID: profileID, isSelected: isSelected,
                     isLoaded: isLoaded, metrics: rowMetrics,
                     leadingInset: rowMetrics.surfaceHorizontalInset + rowMetrics.contentLeadingInset,
                     titleOpacity: metrics.titleOpacity,
@@ -76,7 +77,7 @@ struct BrowserTabDragPreview: View {
     /// to be captured from a web view mid-drag, which this release does not do.
     private var cardContent: some View {
         VStack(spacing: CrestSpacing.small) {
-            TabFaviconView(tab: tab, profileID: profileID, size: 32)
+            TabStateFaviconView(tab: tab, favicons: favicons, profileID: profileID, size: 32)
             Text(tab.displayTitle)
                 .font(CrestTypography.controlTitle)
                 .lineLimit(2)

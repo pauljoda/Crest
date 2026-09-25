@@ -7,11 +7,8 @@ import SwiftUI
 /// Escape abandons the edit, and an empty commit hands the tab back to its
 /// page title.
 struct BrowserSidebarTabRenameField: View {
-    let tab: BrowserTab
-    /// The Space the row is listed in. Carried for the same reason the favicon
-    /// is: renaming a tab does not release the side panel bound to it, so the
-    /// icon keeps its badge while the title is being edited.
-    let spaceID: SpaceID
+    let tab: TabStateModel
+    let favicons: FaviconAssets
     let profileID: UUID
     let metrics: BrowserSidebarTabRowMetrics
     var leadingInset: CGFloat = 0
@@ -35,6 +32,7 @@ struct BrowserSidebarTabRenameField: View {
         } icon: {
             BrowserSidebarTabFavicon(
                 tab: tab,
+                favicons: favicons,
                 profileID: profileID,
                 metrics: metrics
             )
@@ -47,21 +45,3 @@ struct BrowserSidebarTabRenameField: View {
         )
     }
 }
-
-#if DEBUG
-    #Preview("Rename a tab") {
-        @Previewable @State var title = "Example"
-        @Previewable @FocusState var focused: Bool
-        let configuration = BrowserSidebarTabRowPreviewFixture.configuration()
-        BrowserSidebarTabRenameField(
-            tab: configuration.tab, spaceID: configuration.spaceID, profileID: configuration.profileID,
-            metrics: configuration.metrics, draftTitle: $title, isTitleFocused: $focused,
-            commitTitle: { focused = false },
-            cancelTitleEditing: {
-                title = "Example"
-                focused = false
-            }
-        )
-        .padding().frame(width: 320)
-    }
-#endif

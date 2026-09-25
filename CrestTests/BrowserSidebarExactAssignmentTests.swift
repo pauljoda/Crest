@@ -5,20 +5,16 @@ import XCTest
 
 @MainActor
 final class BrowserSidebarExactAssignmentTests: XCTestCase {
-    func testRetainedRowPresentationNeverAuthorizesAStaleSpace() {
+    func testRetainedRowPresentationNeverAuthorizesAStaleSpace() throws {
         let context = makeContext()
         let access = BrowserSpaceAccessController(authenticator: AcceptingAuthenticator())
         context.store.attachSpaceAccess(access)
-        var row = BrowserSidebarTabRowConfiguration(
-            tab: context.sourceTab, spaceID: context.source.id, profileID: context.source.profile.id,
-            isSelected: true, canClose: true, browser: context.store, spaceAccess: access,
-            capabilities: BrowserInteractionCapabilities(), isLoaded: true,
-            unload: nil, pullNewIcon: nil, restoreSavedLocation: nil, promotionNamespace: nil,
-            isSplitGroupMember: false,
-            followingTabID: nil, hasVisibleFollowingRow: false, select: { _ in })
+        let lists = try XCTUnwrap(context.store.sidebarListContext(for: context.source.id, spaceAccess: access))
+        let tab = try XCTUnwrap(lists.space.tabs.model(context.sourceTab.id))
+        var row = BrowserSidebarTabRowConfiguration(tab: tab, context: lists, isSelected: true, isLoaded: true)
         XCTAssertTrue(row.isAvailableForDisplay, "The unprovided presentation keeps the live fallback")
         XCTAssertTrue(SidebarSpaceRole.permitsInteraction(isSelected: nil, isAvailable: row.isAvailableForDisplay))
-        row.spacePresentation = SidebarSpacePresentation(space: context.source, isUnlocked: true)
+        row.spacePresentation = SidebarSpacePresentation(space: lists.space, isUnlocked: true)
 
         context.store.selectSpace(context.destination.id)
         XCTAssertTrue(row.isAvailableForDisplay)
@@ -37,23 +33,28 @@ final class BrowserSidebarExactAssignmentTests: XCTestCase {
         XCTAssertFalse(SidebarSpaceRole.permitsInteraction(isSelected: nil, isAvailable: row.isAvailableForDisplay))
 
         context.store.selectSpace(context.source.id)
-        row.spacePresentation = SidebarSpacePresentation(space: context.source, isUnlocked: true)
+        row.spacePresentation = SidebarSpacePresentation(space: lists.space, isUnlocked: true)
         XCTAssertTrue(row.isCurrentAndUnlocked)
         replaceProfile(of: context.source, in: context.store)
         XCTAssertFalse(row.isCurrentAndUnlocked, "A cached render value cannot authorize a replaced profile")
 
-        row.spacePresentation = SidebarSpacePresentation(space: context.destination, isUnlocked: true)
+        let destination = try XCTUnwrap(context.store.spaceModel(context.destination.id))
+        row.spacePresentation = SidebarSpacePresentation(space: destination, isUnlocked: true)
         XCTAssertFalse(row.isAvailableForDisplay, "A supplied foreign assignment must fail closed")
         XCTAssertFalse(SidebarSpaceRole.permitsInteraction(isSelected: true, isAvailable: row.isAvailableForDisplay))
         row.spacePresentation = SidebarSpacePresentation(space: context.source, isUnlocked: false)
         XCTAssertFalse(row.isAvailableForDisplay)
         XCTAssertFalse(SidebarSpaceRole.permitsInteraction(isSelected: true, isAvailable: row.isAvailableForDisplay))
 
-        var removedMember = context.source
-        removedMember.tabs = []
-        row.spacePresentation = SidebarSpacePresentation(space: removedMember, isUnlocked: true)
-        XCTAssertFalse(row.isAvailableForDisplay, "A removed member cannot remain enabled in a refreshed root")
-        XCTAssertFalse(SidebarSpaceRole.permitsInteraction(isSelected: true, isAvailable: row.isAvailableForDisplay))
+        let replaced = try XCTUnwrap(context.store.sidebarListContext(for: context.source.id, spaceAccess: access))
+        var refreshed = BrowserSidebarTabRowConfiguration(
+            tab: try XCTUnwrap(replaced.space.tabs.model(context.sourceTab.id)), context: replaced, isSelected: true,
+            isLoaded: true)
+        _ = context.store.deleteTab(context.sourceTab.id, matching: replaced.assignment)
+        refreshed.spacePresentation = SidebarSpacePresentation(space: replaced.space, isUnlocked: true)
+        XCTAssertFalse(refreshed.isAvailableForDisplay, "A removed member cannot remain enabled in a refreshed root")
+        XCTAssertFalse(
+            SidebarSpaceRole.permitsInteraction(isSelected: true, isAvailable: refreshed.isAvailableForDisplay))
     }
 
     func testCapturedTabCloseRejectsAReplacementBrowsingProfile() throws {

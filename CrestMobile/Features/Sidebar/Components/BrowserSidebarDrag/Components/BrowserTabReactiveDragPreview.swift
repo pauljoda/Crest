@@ -1,7 +1,8 @@
 import SwiftUI
 
 struct BrowserTabReactiveDragPreview: View {
-    let tab: BrowserTab
+    let tab: TabStateModel
+    let favicons: FaviconAssets
     let profileID: UUID
     let dragState: BrowserTabDragState
     var reduceMotionOverride: Bool? = nil
@@ -11,6 +12,7 @@ struct BrowserTabReactiveDragPreview: View {
     var body: some View {
         BrowserTabDragPreview(
             tab: tab,
+            favicons: favicons,
             profileID: profileID,
             progress: BrowserTabDragPreviewLayout.progress(
                 for: dragState.currentPlacement ?? tab.placement

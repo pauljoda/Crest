@@ -20,8 +20,8 @@ struct BrowserSidebarSplitGroupHeader: View {
                     BrowserIconCustomizationPresentation(
                         isPresented: interaction.isChoosingIcon,
                         title: "Split View Icon",
-                        currentEmoji: configuration.displayMetadata.emojiIcon,
-                        showsReset: configuration.displayMetadata.emojiIcon != nil,
+                        currentEmoji: configuration.emojiIcon,
+                        showsReset: configuration.emojiIcon != nil,
                         resetTitle: "Use Stacked Icons",
                         setEmoji: interaction.setEmojiIcon,
                         reset: interaction.resetIcon
@@ -41,7 +41,7 @@ struct BrowserSidebarSplitGroupHeader: View {
                     .accessibilityIdentifier("split-group-rename-field")
             } else {
                 Button(action: interaction.activate) {
-                    Text(configuration.displayMetadata.displayTitle)
+                    Text(configuration.shownTitle)
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(.primary)
                         .lineLimit(1)
@@ -54,7 +54,7 @@ struct BrowserSidebarSplitGroupHeader: View {
                         perform: configuration.canClose ? interaction.closeSplit : nil
                     )
                 )
-                .accessibilityLabel(configuration.displayMetadata.displayTitle)
+                .accessibilityLabel(configuration.shownTitle)
                 .accessibilityValue(
                     "Split View with \(configuration.members.count) tabs"
                 )
@@ -91,6 +91,7 @@ struct BrowserSidebarSplitGroupHeader: View {
         .browserSplitGroupDraggable(
             item: configuration.dragItem,
             members: configuration.members,
+            favicons: configuration.context.favicons,
             placement: configuration.placement,
             folderID: configuration.folderID,
             reorder: configuration.reorderContext,
@@ -122,7 +123,7 @@ private struct BrowserSidebarSplitGroupIcon: View {
 
     var body: some View {
         Group {
-            if let emoji = configuration.displayMetadata.emojiIcon {
+            if let emoji = configuration.emojiIcon {
                 Text(emoji)
                     .font(.system(size: configuration.metrics.headerGlyphSize))
             } else {
@@ -145,8 +146,9 @@ private struct BrowserSidebarSplitGroupIcon: View {
                 let isFocused = member.id == configuration.focusedMemberID
                 let shouldAnimateLift = !reduceMotion
 
-                TabFaviconView(
+                TabStateFaviconView(
                     tab: member,
+                    favicons: configuration.context.favicons,
                     profileID: configuration.profileID,
                     size: configuration.metrics.headerGlyphSize * 0.78
                 )
@@ -192,7 +194,7 @@ private struct BrowserSidebarSplitGroupIcon: View {
         }
     }
 
-    private var deckMembers: [BrowserTab] {
+    private var deckMembers: [TabStateModel] {
         BrowserSidebarSplitGroupIconDeck.orderedMembers(
             configuration.members,
             focusedMemberID: configuration.focusedMemberID
@@ -234,11 +236,11 @@ private struct BrowserSidebarSplitGroupIcon: View {
 enum BrowserSidebarSplitGroupIconDeck {
     static let visibleLimit = 3
 
-    static func orderedMembers(
-        _ members: [BrowserTab],
+    static func orderedMembers<Member: Identifiable>(
+        _ members: [Member],
         focusedMemberID: TabID?,
         limit: Int = visibleLimit
-    ) -> [BrowserTab] {
+    ) -> [Member] where Member.ID == TabID {
         guard limit > 0 else { return [] }
 
         var visible = Array(members.prefix(limit))

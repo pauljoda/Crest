@@ -1,14 +1,15 @@
 import SwiftUI
 
 struct BrowserTabEditActions: View {
-    let tab: BrowserTab
+    let tab: TabStateModel
+    let favicons: FaviconAssets
     let isLoaded: Bool
     let pullNewIcon: (() -> Void)?
     let restoreSavedLocation: (() -> Void)?
-    let performIfCurrent: ((BrowserTab) -> Void) -> Void
-    let replaceSavedLocation: (BrowserTab) -> Void
-    let clearIcon: (BrowserTab) -> Void
-    let changeIcon: (BrowserTab) -> Void
+    let performIfCurrent: (() -> Void) -> Void
+    let replaceSavedLocation: () -> Void
+    let clearIcon: () -> Void
+    let changeIcon: () -> Void
 
     var body: some View {
         if tab.supportsSavedLocationEditing {
@@ -20,40 +21,38 @@ struct BrowserTabEditActions: View {
                     ) {
                         performIfCurrent(replaceSavedLocation)
                     }
-                    .disabled(!tab.isAwayFromSavedLocation)
+                    .disabled(!tab.isAwayFromSavedAddress)
 
                     Button(
                         "Return to Saved URL",
                         systemImage: "arrow.uturn.backward"
                     ) {
-                        performIfCurrent { _ in restoreSavedLocation?() }
+                        performIfCurrent { restoreSavedLocation?() }
                     }
                     .disabled(
-                        !tab.isAwayFromSavedLocation
+                        !tab.isAwayFromSavedAddress
                             || restoreSavedLocation == nil
                     )
 
                     Divider()
-                    BrowserTabIconActions(
-                        tab: tab,
-                        isLoaded: isLoaded,
-                        pullNewIcon: pullNewIcon,
-                        performIfCurrent: performIfCurrent,
-                        clearIcon: clearIcon,
-                        changeIcon: changeIcon
-                    )
+                    iconActions
                 }
                 .crestMenuActionLabelStyle()
             }
         } else {
-            BrowserTabIconActions(
-                tab: tab,
-                isLoaded: isLoaded,
-                pullNewIcon: pullNewIcon,
-                performIfCurrent: performIfCurrent,
-                clearIcon: clearIcon,
-                changeIcon: changeIcon
-            )
+            iconActions
         }
+    }
+
+    private var iconActions: some View {
+        BrowserTabIconActions(
+            tab: tab,
+            favicons: favicons,
+            isLoaded: isLoaded,
+            pullNewIcon: pullNewIcon,
+            performIfCurrent: performIfCurrent,
+            clearIcon: clearIcon,
+            changeIcon: changeIcon
+        )
     }
 }

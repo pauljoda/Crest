@@ -7,8 +7,8 @@ import SwiftUI
 /// their own insets inside a group's container.
 struct BrowserSidebarTabActivationButton: View {
     @Environment(BrowserSidebarInteractionState.self) private var sidebarInteraction
-    let tab: BrowserTab
-    let spaceID: SpaceID
+    let tab: TabStateModel
+    let favicons: FaviconAssets
     let profileID: UUID
     let isSelected: Bool
     let isLoaded: Bool
@@ -24,7 +24,7 @@ struct BrowserSidebarTabActivationButton: View {
     var body: some View {
         Button(action: select) {
             BrowserSidebarTabLabel(
-                tab: tab, profileID: profileID, isSelected: isSelected,
+                tab: tab, favicons: favicons, profileID: profileID, isSelected: isSelected,
                 isLoaded: isLoaded, metrics: metrics, leadingInset: leadingInset,
                 restoreSavedLocation: restoreSavedLocation, faviconPrimaryClick: faviconPrimaryClick)
         }
@@ -69,7 +69,7 @@ struct BrowserSidebarTabActivationButton: View {
     private var faviconPrimaryClick: (() -> Void)? {
         #if os(macOS)
             guard BrowserAppPreferenceStore.shared.returnsToSavedURLOnFaviconClick,
-                tab.placement == .saved, tab.isAwayFromSavedLocation,
+                tab.placement == .saved, tab.isAwayFromSavedAddress,
                 let restoreSavedLocation
             else { return nil }
             return {

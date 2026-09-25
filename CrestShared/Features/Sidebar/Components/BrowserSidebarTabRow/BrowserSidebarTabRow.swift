@@ -11,29 +11,14 @@ import SwiftUI
 struct BrowserSidebarTabRow: View {
     @Environment(BrowserSidebarInteractionState.self) private var sidebarInteraction
 
-    let tab: BrowserTab
-    let spaceID: SpaceID
-    let profileID: UUID
-    let isSelected: Bool
-    let canClose: Bool
-    let browser: BrowserStore
-    let spaceAccess: BrowserSpaceAccessController
-    let capabilities: BrowserInteractionCapabilities
-    var isLoaded = true
-    var unload: ((TabID) -> Void)? = nil
-    var pullNewIcon: (() -> Void)? = nil
-    var restoreSavedLocation: (() -> Void)? = nil
-    var promotionNamespace: Namespace.ID? = nil
+    let tab: TabStateModel
+    let context: BrowserSidebarListContext
     /// Set by the container that nests this row inside a split group. See
     /// `BrowserSidebarTabRowConfiguration.isSplitGroupMember`.
     var isSplitGroupMember = false
     /// The row a drop below this one would land in front of. Only read where
     /// the shell draws its insertion line on the rows themselves.
     var followingTabID: TabID? = nil
-    var hasVisibleFollowingRow = false
-    /// What opening this tab means to the host. The row decides *whether* the
-    /// tab opens; the host decides what appears when it does.
-    let select: (TabID) -> Void
 
     @Environment(\.sidebarSpacePresentation) private var spacePresentation
     @State private var isHovering = false
@@ -57,7 +42,7 @@ struct BrowserSidebarTabRow: View {
                 interaction: interaction
             )
         )
-        .environment(\.browserInteractionCapabilities, capabilities)
+        .environment(\.browserInteractionCapabilities, context.capabilities)
         .onChange(of: runtimeAssignment) { _, assignment in
             guard renameRequest != assignment else { return }
             cancelTitleEditing()
@@ -75,25 +60,16 @@ struct BrowserSidebarTabRow: View {
         )
     }
 
+    /// What the row draws from: its own tab, whether its window shows that
+    /// tab, and whether the tab holds a page.
     private var configuration: BrowserSidebarTabRowConfiguration {
         BrowserSidebarTabRowConfiguration(
             tab: tab,
-            spaceID: spaceID,
-            profileID: profileID,
-            isSelected: isSelected,
-            canClose: canClose,
-            browser: browser,
-            spaceAccess: spaceAccess,
-            capabilities: capabilities,
-            isLoaded: isLoaded,
-            unload: unload,
-            pullNewIcon: pullNewIcon,
-            restoreSavedLocation: restoreSavedLocation,
-            promotionNamespace: promotionNamespace,
+            context: context,
+            isSelected: context.window.shownTabIDs.contains(tab.id),
+            isLoaded: context.isLoaded(tab.id),
             isSplitGroupMember: isSplitGroupMember,
             followingTabID: followingTabID,
-            hasVisibleFollowingRow: hasVisibleFollowingRow,
-            select: select,
             spacePresentation: spacePresentation
         )
     }
@@ -125,7 +101,7 @@ struct BrowserSidebarTabRow: View {
         // reorder also arrives here. Reject it rather than opening the tab that
         // was just moved.
         guard !sidebarInteraction.sidebarReorderState.suppressesActivation else { return }
-        select(tab.id)
+        context.select(tab.id)
     }
 
     private func beginRenaming() {
@@ -160,7 +136,7 @@ struct BrowserSidebarTabRow: View {
             request == runtimeAssignment,
             configuration.isCurrentAndUnlocked
         else { return }
-        browser.setTabEmojiIcon(
+        context.browser.setTabEmojiIcon(
             emoji,
             for: request.tabID,
             matching: configuration.assignment
@@ -172,7 +148,7 @@ struct BrowserSidebarTabRow: View {
             request == runtimeAssignment,
             configuration.isCurrentAndUnlocked
         else { return }
-        browser.clearTabIcon(
+        context.browser.clearTabIcon(
             for: request.tabID,
             matching: configuration.assignment
         )
@@ -184,7 +160,7 @@ struct BrowserSidebarTabRow: View {
         guard request == runtimeAssignment,
             configuration.isCurrentAndUnlocked
         else { return }
-        browser.setTabCustomTitle(
+        context.browser.setTabCustomTitle(
             draftTitle,
             for: request.tabID,
             matching: BrowserSpaceRuntimeAssignment(
@@ -204,10 +180,10 @@ struct BrowserSidebarTabRow: View {
         guard configuration.isCurrentAndUnlocked else { return }
         switch BrowserTabMiddleClickPolicy.action(for: tab.placement) {
         case .close:
-            browser.closeTab(tab.id, matching: configuration.assignment)
+            context.browser.closeTab(tab.id, matching: configuration.assignment)
         case .unload:
-            guard isLoaded else { return }
-            unload?(tab.id)
+            guard configuration.isLoaded else { return }
+            context.unload(tab.id)
         }
     }
 
@@ -217,30 +193,15 @@ struct BrowserSidebarTabRow: View {
     }
 
     private var runtimeAssignment: BrowserTabRuntimeAssignment {
-        BrowserTabRuntimeAssignment(
-            tabID: tab.id,
-            spaceID: spaceID,
-            profileID: profileID
-        )
+        BrowserTabRuntimeAssignment(tabID: tab.id, spaceID: context.space.id, profileID: context.space.profileID)
     }
 }
 
-#Preview {
-    @Previewable @Namespace var promotionNamespace
-    let configuration = BrowserSidebarTabRowPreviewFixture.configuration()
-
-    BrowserSidebarTabRow(
-        tab: configuration.tab,
-        spaceID: configuration.spaceID,
-        profileID: configuration.profileID,
-        isSelected: configuration.isSelected,
-        canClose: configuration.canClose,
-        browser: configuration.browser,
-        spaceAccess: configuration.spaceAccess,
-        capabilities: configuration.capabilities,
-        promotionNamespace: promotionNamespace,
-        select: { _ in }
-    )
-    .frame(width: 320)
-    .padding()
+extension BrowserSidebarTabRow: Equatable {
+    /// Rows are equal when they stand for the same tab in the same place, as
+    /// SwiftUI compares a view's inputs: a list that redraws leaves them be.
+    nonisolated static func == (lhs: BrowserSidebarTabRow, rhs: BrowserSidebarTabRow) -> Bool {
+        lhs.tab === rhs.tab && lhs.context == rhs.context && lhs.isSplitGroupMember == rhs.isSplitGroupMember
+            && lhs.followingTabID == rhs.followingTabID
+    }
 }

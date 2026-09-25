@@ -1,22 +1,33 @@
 import SwiftUI
 
 struct TabFaviconView: View {
-    let tab: BrowserTab
+    let subject: BrowserTabFaviconSubject
     var profileID: UUID? = nil
     var size: CGFloat = TabFaviconMetrics.defaultSize
 
     @State private var renderState = BrowserFaviconRenderState()
     @Environment(\.browserSpaceContentIsLocked) private var isLocked
 
+    init(subject: BrowserTabFaviconSubject, profileID: UUID? = nil, size: CGFloat = TabFaviconMetrics.defaultSize) {
+        self.subject = subject
+        self.profileID = profileID
+        self.size = size
+    }
+
+    /// TRANSITIONAL until S6.6d/S6.6e: a tab of the session copy or a draft.
+    init(tab: BrowserTab, profileID: UUID? = nil, size: CGFloat = TabFaviconMetrics.defaultSize) {
+        self.init(subject: BrowserTabFaviconSubject(tab: tab), profileID: profileID, size: size)
+    }
+
     var body: some View {
         let request = BrowserFaviconTaskIdentityPolicy.renderRequest(
-            for: tab,
+            for: subject,
             profileID: profileID,
             maximumPixelSize: TabFaviconMetrics.maximumDecodedPixelSize(for: size),
             isUnlocked: !isLocked
         )
         TabFaviconContent(
-            tab: tab,
+            subject: subject,
             size: size,
             requestIdentity: request.identity,
             renderedImage: renderState.renderedImage
@@ -43,5 +54,20 @@ struct TabFaviconView: View {
             for: request.identity,
             isCancelled: Task.isCancelled
         )
+    }
+}
+
+/// A tab of the read model's icon: the row reads its own tab's fields and
+/// image slot, so a new icon redraws only this tab's icon.
+struct TabStateFaviconView: View {
+    let tab: TabStateModel
+    let favicons: FaviconAssets
+    var profileID: UUID? = nil
+    var size: CGFloat = TabFaviconMetrics.defaultSize
+
+    var body: some View {
+        TabFaviconView(
+            subject: BrowserTabFaviconSubject(tab: tab, image: favicons.icon(of: tab.id)), profileID: profileID,
+            size: size)
     }
 }

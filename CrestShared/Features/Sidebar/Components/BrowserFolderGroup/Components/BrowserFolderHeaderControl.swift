@@ -7,9 +7,8 @@ struct BrowserFolderHeaderControl: View {
     let configuration: BrowserFolderGroupConfiguration
     let interaction: BrowserFolderGroupInteractionContext
 
-    private var folder: BrowserFolder { configuration.folder }
+    private var folder: FolderStateModel { configuration.folder }
     @Environment(\.browserInteractionCapabilities) private var capabilities
-    @Environment(\.colorScheme) private var colorScheme
     @AppStorage(BrowserFolderAppearancePreference.showsTabCountsKey, store: BrowserFolderAppearancePreference.defaults)
     private var showsTabCounts = true
     @AppStorage(BrowserFolderAppearancePreference.alwaysVisibleKey, store: BrowserFolderAppearancePreference.defaults)
@@ -63,24 +62,15 @@ struct BrowserFolderHeaderControl: View {
                             metrics: configuration.headerMetrics
                         )
 
-                        Text(folder.title.isEmpty ? String(localized: "Folder") : folder.title)
-                            .foregroundStyle(
-                                tintsTitle
-                                    ? BrowserFolderAppearancePolicy.titleColor(
-                                        folder.color, onDarkBackground: colorScheme == .dark
-                                    ).color
-                                    : .primary
-                            )
-                            .fontWeight(tintsTitle || containsCurrentTab ? .semibold : .regular)
-                            .lineLimit(1)
-                            .modifier(BrowserFolderTitlePressFeedback())
+                        BrowserFolderHeaderTitle(
+                            folder: folder, context: configuration.context, tintsTitle: tintsTitle,
+                            emphasizesShownTab: alwaysVisible
+                        )
+                        .equatable()
 
                         Spacer(minLength: 8)
                         if showsTabCounts {
-                            Text(configuration.subtreeTabIDs.count, format: .number)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                                .modifier(BrowserFolderTitlePressFeedback())
+                            BrowserFolderTabCount(folder: folder, space: configuration.context.space).equatable()
                         }
                     }
                     .browserSavedFolderHeaderLayout(configuration: configuration)
@@ -92,9 +82,60 @@ struct BrowserFolderHeaderControl: View {
         .modifier(BrowserSidebarDensityFont(scale: textScale, supportsTouch: capabilities.supportsTouch))
     }
 
-    private var containsCurrentTab: Bool {
-        guard alwaysVisible, let selected = configuration.selectedTabID else { return false }
-        return configuration.subtreeTabIDs.contains(selected)
+}
+
+/// The folder's title, in its color where the person asked for it, and bold
+/// while the folder holds the shown tab where every folder stays visible. It
+/// reads the folder's tabs only for that emphasis, so the rest of the header
+/// redraws for neither.
+private struct BrowserFolderHeaderTitle: View, Equatable {
+    let folder: FolderStateModel
+    let context: BrowserSidebarListContext
+    let tintsTitle: Bool
+    let emphasizesShownTab: Bool
+
+    @Environment(\.colorScheme) private var colorScheme
+
+    var body: some View {
+        Text(folder.shownTitle)
+            .foregroundStyle(
+                tintsTitle
+                    ? BrowserFolderAppearancePolicy.titleColor(
+                        folder.artworkColor, onDarkBackground: colorScheme == .dark
+                    ).color
+                    : .primary
+            )
+            .fontWeight(tintsTitle || holdsShownTab ? .semibold : .regular)
+            .lineLimit(1)
+            .modifier(BrowserFolderTitlePressFeedback())
+    }
+
+    private var holdsShownTab: Bool {
+        guard emphasizesShownTab else { return false }
+        return context.space.tabIDs(inFolder: folder.id).contains { context.window.shownTabIDs.contains($0) }
+    }
+
+    nonisolated static func == (lhs: Self, rhs: Self) -> Bool {
+        lhs.folder === rhs.folder && lhs.context == rhs.context && lhs.tintsTitle == rhs.tintsTitle
+            && lhs.emphasizesShownTab == rhs.emphasizesShownTab
+    }
+}
+
+/// How many tabs the folder holds, however deep. It reads the folder's lists,
+/// so a tab arriving or leaving redraws this count and not the header.
+private struct BrowserFolderTabCount: View, Equatable {
+    let folder: FolderStateModel
+    let space: SpaceModel
+
+    var body: some View {
+        Text(space.tabIDs(inFolder: folder.id).count, format: .number)
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            .modifier(BrowserFolderTitlePressFeedback())
+    }
+
+    nonisolated static func == (lhs: Self, rhs: Self) -> Bool {
+        lhs.folder === rhs.folder && lhs.space === rhs.space
     }
 }
 

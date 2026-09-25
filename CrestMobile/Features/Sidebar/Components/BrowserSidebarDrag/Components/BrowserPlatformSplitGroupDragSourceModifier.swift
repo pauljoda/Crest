@@ -14,7 +14,8 @@ import UniformTypeIdentifiers
 struct BrowserPlatformSplitGroupDragSourceModifier: ViewModifier {
     let item: BrowserSplitGroupDragItem
     /// The run this row stands for, used only to draw the lift preview.
-    let members: [BrowserTab]
+    let members: [TabStateModel]
+    let favicons: FaviconAssets?
     let placement: TabPlacement
     let folderID: FolderID?
     let reorder: BrowserSidebarReorderContext
@@ -54,10 +55,13 @@ struct BrowserPlatformSplitGroupDragSourceModifier: ViewModifier {
                     reorder.state.cancel(session: token)
                 }
             } preview: { _ in
-                BrowserSplitGroupDragPreview(
-                    members: members,
-                    profileID: item.profileID
-                )
+                if let favicons {
+                    BrowserSplitGroupDragPreview(
+                        members: members,
+                        favicons: favicons,
+                        profileID: item.profileID
+                    )
+                }
             }
     }
 }

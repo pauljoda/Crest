@@ -3,14 +3,10 @@ import SwiftUI
 struct BrowserTabOrganizationMenu: View {
     @Environment(BrowserSidebarInteractionState.self) private var sidebarInteraction
 
-    let tab: BrowserTab
+    let tab: TabStateModel
+    let context: BrowserSidebarListContext
     let assignment: BrowserTabRuntimeAssignment
-    let browser: BrowserStore
-    let spaceAccess: BrowserSpaceAccessController
     var isLoaded = true
-    var unload: ((TabID) -> Void)? = nil
-    var pullNewIcon: (() -> Void)? = nil
-    var restoreSavedLocation: (() -> Void)? = nil
     var renameTab: (() -> Void)? = nil
     var changeIcon: (() -> Void)? = nil
 
@@ -20,12 +16,14 @@ struct BrowserTabOrganizationMenu: View {
         Group {
             if capabilities.allowsMultiSelection,
                 let request = BrowserSidebarSelection.request(
-                    for: tab.id, browser: browser, reorder: sidebarInteraction.sidebarReorderState)
+                    for: tab.id, browser: context.browser, reorder: sidebarInteraction.sidebarReorderState)
             {
-                BrowserTabBatchMenu(request: request, browser: browser, spaceAccess: spaceAccess, unload: unload)
+                BrowserTabBatchMenu(
+                    request: request, browser: context.browser, spaceAccess: context.spaceAccess,
+                    unload: { context.unload($0) })
             } else {
                 BrowserTabOrganizationMenuContent(menu: self)
-                BrowserSidebarSelectionMenu(item: .tab(tab.id), browser: browser)
+                BrowserSidebarSelectionMenu(item: .tab(tab.id), browser: context.browser)
             }
         }
         .crestMenuActionLabelStyle()

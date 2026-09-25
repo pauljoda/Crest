@@ -24,30 +24,23 @@ struct MobileBrowserSpacePage: View {
     let compactPageIsFullyPresented: Bool
 
     @Environment(\.openWindow) private var openWindow
-    @State private var editingFolderRequest: BrowserFolderRuntimeAssignment?
 
     var body: some View {
-        let tabSections = space.tabSections
+        if let listContext {
+            content(listContext)
+        }
+    }
 
+    private func content(_ listContext: BrowserSidebarListContext) -> some View {
         VStack(spacing: 0) {
-            BrowserPinnedTabsDropSection(
-                space: space,
-                tabSections: tabSections,
-                browser: browser,
-                spaceAccess: spaceAccess,
-                pageAccess: pageAccess,
-                tabActions: tabActions,
-                capabilities: capabilities,
-                promotionNamespace: tabPromotionNamespace,
-                restoreSavedLocation: restoreSavedLocation,
-                select: selectTab
-            )
             // The bounded pinned grid keeps its intrinsic height. Compressing
             // its wrapper when the keyboard appears lets fixed-height tiles
             // overflow upward into the Space picker.
-            .fixedSize(horizontal: false, vertical: true)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 10)
+            BrowserPinnedTabsDropSection(context: listContext)
+                .equatable()
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 10)
 
             BrowserSpaceHeader(
                 space: space,
@@ -67,28 +60,12 @@ struct MobileBrowserSpacePage: View {
             )
 
             MobileBrowserSpaceTabListScroll(
-                space: space,
-                browser: browser,
+                context: listContext,
                 compactPageIsFullyPresented: compactPageIsFullyPresented,
-                tabActions: tabActions,
                 openNewTab: openNewTab
             ) {
-                BrowserSidebarTabList(
-                    space: space,
-                    tabSections: tabSections,
-                    browser: browser,
-                    spaceAccess: spaceAccess,
-                    pageAccess: pageAccess,
-                    tabActions: tabActions,
-                    capabilities: capabilities,
-                    isSavedTabsExpanded: space.isSavedTabsExpanded,
-                    promotionNamespace: tabPromotionNamespace,
-                    savedPromotionNamespace: tabPromotionNamespace,
-                    restoreSavedLocation: restoreSavedLocation,
-                    select: selectTab,
-                    openNewTab: openNewTabIfAvailable,
-                    editingFolderRequest: $editingFolderRequest
-                )
+                BrowserSidebarTabList(context: listContext, openNewTab: openNewTabIfAvailable)
+                    .equatable()
             }
         }
         .modifier(
@@ -102,6 +79,19 @@ struct MobileBrowserSpacePage: View {
             BrowserSpaceAccessibilityID.sidebar(space.id)
         )
         .accessibilityLabel("\(space.name) Space sidebar")
+    }
+
+    /// The Space and this window as the read model keeps them, and what the
+    /// rows act through. Every section anchors its rows' pages here.
+    private var listContext: BrowserSidebarListContext? {
+        guard let spaceModel = browser.spaceModel(space.id), let window = browser.windowModel else { return nil }
+        return BrowserSidebarListContext(
+            space: spaceModel, window: window, favicons: browser.core.state.favicons, browser: browser,
+            spaceAccess: spaceAccess, pageAccess: pageAccess, tabActions: tabActions, capabilities: capabilities,
+            promotionNamespaces: [
+                .pinned: tabPromotionNamespace, .saved: tabPromotionNamespace, .current: tabPromotionNamespace,
+            ],
+            select: selectTab, restoreSavedLocation: restoreSavedLocation)
     }
 
     private var pageAccess: BrowserSidebarPageAccess {
@@ -143,7 +133,7 @@ struct MobileBrowserSpacePage: View {
             let folderID = browser.addFolder(matching: assignment)
         else { return }
         browser.setSavedTabsExpanded(true, matching: assignment)
-        editingFolderRequest = BrowserFolderRuntimeAssignment(
+        sidebarInteraction.editingFolderRequest = BrowserFolderRuntimeAssignment(
             folderID: folderID,
             spaceID: assignment.spaceID,
             profileID: assignment.profileID

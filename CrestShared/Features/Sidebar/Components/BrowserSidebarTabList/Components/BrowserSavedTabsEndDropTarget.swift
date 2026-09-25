@@ -10,9 +10,12 @@ import SwiftUI
 struct BrowserSavedTabsEndDropTarget: View {
     @Environment(BrowserSidebarInteractionState.self) private var sidebarInteraction
 
-    let tabs: [BrowserTab]
-    let browser: BrowserStore
-    let capabilities: BrowserInteractionCapabilities
+    /// The saved section's top level, whose unfiled rows decide whether the
+    /// band draws the line past the last of them.
+    let list: SidebarListModel
+    let context: BrowserSidebarListContext
+
+    private var capabilities: BrowserInteractionCapabilities { context.capabilities }
 
     var body: some View {
         Color.clear
@@ -20,7 +23,7 @@ struct BrowserSavedTabsEndDropTarget: View {
             .contentShape(.rect)
             .overlay(alignment: .top) {
                 if BrowserTabRowIndicatorOwnershipPolicy.showsSectionEndIndicator(
-                    hasVisibleRows: !tabs.isEmpty
+                    hasVisibleRows: list.holdsTabRows
                 ) {
                     BrowserTabDropIndicator(
                         location: tabLocation,

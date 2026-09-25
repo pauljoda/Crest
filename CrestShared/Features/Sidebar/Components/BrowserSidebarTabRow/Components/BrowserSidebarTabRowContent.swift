@@ -22,7 +22,7 @@ struct BrowserSidebarTabRowContent: View {
         if interaction.isRenaming {
             BrowserSidebarTabRenameField(
                 tab: configuration.tab,
-                spaceID: configuration.spaceID,
+                favicons: configuration.favicons,
                 profileID: configuration.profileID,
                 metrics: configuration.metrics,
                 leadingInset: configuration.metrics.contentLeadingInset,
@@ -34,7 +34,7 @@ struct BrowserSidebarTabRowContent: View {
         } else {
             BrowserSidebarTabActivationButton(
                 tab: configuration.tab,
-                spaceID: configuration.spaceID,
+                favicons: configuration.favicons,
                 profileID: configuration.profileID,
                 isSelected: configuration.isSelected,
                 isLoaded: configuration.isLoaded,
@@ -46,7 +46,7 @@ struct BrowserSidebarTabRowContent: View {
                     title: "Tab Icon",
                     currentEmoji: configuration.tab.emojiIcon,
                     showsReset: BrowserTabIconCustomizationPolicy.showsReset(
-                        for: configuration.tab
+                        iconMode: configuration.tab.iconMode
                     ),
                     resetTitle: "Use Website Icon",
                     setEmoji: interaction.setEmojiIcon,

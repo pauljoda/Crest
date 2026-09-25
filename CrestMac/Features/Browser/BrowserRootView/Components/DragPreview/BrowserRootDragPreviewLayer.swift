@@ -52,11 +52,12 @@ struct BrowserRootDragPreviewLayer: View {
     /// point is one of these by construction.
     private var sidebarLiftContent: BrowserSidebarLiftPreviewContent? {
         guard let lift = model.sidebarInteraction.sidebarReorderState.liftPreview,
-            let space = model.browser.selectedSpace,
+            let space = model.browser.spaceModel(model.browser.selectedSpaceID),
             let subject = subject(for: lift.item, in: space)
         else { return nil }
         return BrowserSidebarLiftPreviewContent(
             subject: subject,
+            favicons: model.browser.core.state.favicons,
             lift: lift,
             reduceMotion: reduceMotion,
             selectedTabID: model.browser.selectedTabID(in: space.id),
@@ -66,32 +67,30 @@ struct BrowserRootDragPreviewLayer: View {
 
     private func subject(
         for item: BrowserSidebarReorderItem,
-        in space: BrowserSpace
+        in space: SpaceModel
     ) -> BrowserSidebarLiftPreviewSubject? {
         if item.selection != nil, let lift = model.sidebarInteraction.sidebarReorderState.liftPreview {
             let rows = BrowserSidebarSelectionPreviewRow.resolve(lift.previewRows, in: space) { folderID in
                 model.sidebarInteraction.sidebarReorderState.folderPreviewRows(
                     for: .folder(
                         BrowserFolderDragItem(
-                            folderID: folderID, spaceID: space.id, profileID: space.profile.id)))
+                            folderID: folderID, spaceID: space.id, profileID: space.profileID)))
             }
             return rows.isEmpty ? nil : .selection(rows)
         }
         switch item {
         case .tab(let tab):
-            return space.tabs.first { $0.id == tab.tabID }
-                .map(BrowserSidebarLiftPreviewSubject.tab)
+            return space.tabs.model(tab.tabID).map(BrowserSidebarLiftPreviewSubject.tab)
         case .folder(let folder):
             let rows = BrowserFolderDragPreviewRow.resolve(
                 model.sidebarInteraction.sidebarReorderState.liftPreview?.previewRows ?? [],
                 in: space, rootFolderID: folder.folderID)
 
-            return space.folders.first { $0.id == folder.folderID }
-                .map { .folder($0, rows: rows) }
+            return space.folders.model(folder.folderID).map { .folder($0, rows: rows) }
         case .splitGroup(let group):
             // A run that has already lost its members has nothing to draw; the
             // drag itself is ended by the same change.
-            let members = space.splitGroupMembers(of: group.groupID)
+            let members = space.splitMembers(of: group.groupID)
             return members.isEmpty ? nil : .splitGroup(members)
         }
     }

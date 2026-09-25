@@ -47,13 +47,14 @@ struct BrowserSpaceSidebarTabRowContent: View {
 
 #if DEBUG
     #Preview("Setup tab rows") {
-        let configuration = BrowserSidebarTabRowPreviewFixture.configuration()
+        let tab = BrowserSidebarTabRowPreviewFixture.tab()
+        let profileID = BrowserSidebarTabRowPreviewFixture.profileID
         VStack(spacing: 12) {
             BrowserSpaceSidebarTabRowContent(
-                tab: configuration.tab, profileID: configuration.profileID, isSelected: true, tabScale: 1,
+                tab: tab, profileID: profileID, isSelected: true, tabScale: 1,
                 appearance: BrowserTabAppearance())
             BrowserSpaceSidebarTabRowContent(
-                tab: configuration.tab, profileID: configuration.profileID, isSelected: false, tabScale: 1,
+                tab: tab, profileID: profileID, isSelected: false, tabScale: 1,
                 appearance: BrowserTabAppearance())
         }.padding().frame(width: 320)
     }

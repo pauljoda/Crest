@@ -2,18 +2,19 @@ import SwiftUI
 
 /// The folder's symbol, in the same column the rows below give their favicons.
 struct BrowserFolderIcon: View {
-    let folder: BrowserFolder
+    let folder: FolderStateModel
     let isExpanded: Bool
     let metrics: BrowserFolderHeaderMetrics
     @AppStorage(BrowserFolderAppearancePreference.iconOnlyKey, store: BrowserFolderAppearancePreference.defaults)
     private var iconOnly = BrowserLookAndFeelDefaults.foldersIconOnly
 
     var body: some View {
-        BrowserFolderArtwork(symbol: folder.symbol, color: folder.color, isExpanded: isExpanded)
+        BrowserFolderArtwork(symbol: folder.displaySymbol, color: folder.artworkColor, isExpanded: isExpanded)
             .modifier(
                 BrowserFolderIconColumn(
                     metrics: metrics,
-                    isExpanded: isExpanded && !(iconOnly && BrowserFolderArtwork.customGlyph(for: folder.symbol) != nil)
+                    isExpanded: isExpanded
+                        && !(iconOnly && BrowserFolderArtwork.customGlyph(for: folder.displaySymbol) != nil)
                 )
             )
             .accessibilityHidden(true)

@@ -20,7 +20,7 @@ struct BrowserSidebarSplitGroupContextMenu: View {
             {
                 BrowserTabBatchMenu(
                     request: request, browser: configuration.browser,
-                    spaceAccess: configuration.spaceAccess, unload: configuration.unload)
+                    spaceAccess: configuration.spaceAccess, unload: { configuration.context.unload($0) })
             } else {
                 Button("Rename Split View…", systemImage: "pencil") {
                     interaction.beginRenaming()

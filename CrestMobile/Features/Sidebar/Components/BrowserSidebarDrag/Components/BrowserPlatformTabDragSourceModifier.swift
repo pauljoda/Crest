@@ -2,7 +2,8 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 struct BrowserPlatformTabDragSourceModifier: ViewModifier {
-    let tab: BrowserTab
+    let tab: TabStateModel
+    let favicons: FaviconAssets
     let profileID: UUID
     let spaceID: SpaceID
     let dragState: BrowserTabDragState
@@ -59,6 +60,7 @@ struct BrowserPlatformTabDragSourceModifier: ViewModifier {
                 } preview: { sourceWidth in
                     BrowserTabDragPreview(
                         tab: tab,
+                        favicons: favicons,
                         profileID: profileID,
                         targetShape: shape,
                         progress: shape == .row ? 0 : 1,
@@ -95,6 +97,7 @@ struct BrowserPlatformTabDragSourceModifier: ViewModifier {
             } preview: {
                 BrowserTabReactiveDragPreview(
                     tab: tab,
+                    favicons: favicons,
                     profileID: profileID,
                     dragState: dragState
                 )

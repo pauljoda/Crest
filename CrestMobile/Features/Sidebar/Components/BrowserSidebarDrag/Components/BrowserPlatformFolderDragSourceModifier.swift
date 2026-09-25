@@ -2,7 +2,7 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 struct BrowserPlatformFolderDragSourceModifier: ViewModifier {
-    let folder: BrowserFolder
+    let folder: FolderStateModel
     let profileID: UUID
     let spaceID: SpaceID
     let dragState: BrowserFolderDragState
@@ -51,9 +51,10 @@ struct BrowserPlatformFolderDragSourceModifier: ViewModifier {
                 } preview: { _ in
                     BrowserFolderDragPreview(
                         folder: folder,
+                        favicons: reorder.browser.core.state.favicons,
                         sourceHeight: reorder.state.frame(ofRow: .folder(folder.id))?.height
                             ?? BrowserFolderDragPreviewLayout.height,
-                        rows: reorder.browser.session.space(id: spaceID).map {
+                        rows: reorder.browser.spaceModel(spaceID).map {
                             BrowserFolderDragPreviewRow.resolve(
                                 reorder.state.folderPreviewRows(for: .folder(item)),
                                 in: $0, rootFolderID: folder.id)

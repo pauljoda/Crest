@@ -10,7 +10,6 @@ struct SpaceSidebarBrowsingContent: View {
     @Environment(BrowserSidebarInteractionState.self) private var sidebarInteraction
 
     let space: BrowserSpace
-    let tabSections: BrowserTabSections
     let browser: BrowserStore
     let pages: BrowserPagePool
     let spaceAccess: BrowserSpaceAccessController
@@ -20,7 +19,6 @@ struct SpaceSidebarBrowsingContent: View {
     let openNewTab: () -> Void
     let beginCreatingFolder: () -> Void
     let showHistory: () -> Void
-    @Binding var editingFolderRequest: BrowserFolderRuntimeAssignment?
     let tabPromotionNamespace: Namespace.ID
     let editSpace: () -> Void
     let createSpace: (() -> Void)?
@@ -31,22 +29,21 @@ struct SpaceSidebarBrowsingContent: View {
     @State private var isHoveringTabList = false
 
     var body: some View {
-        BrowserPinnedTabsDropSection(
-            space: space,
-            tabSections: tabSections,
-            browser: browser,
-            spaceAccess: spaceAccess,
-            pageAccess: pageAccess,
-            tabActions: tabActions,
-            capabilities: capabilities,
-            restoreSavedLocation: restoreSavedLocation,
-            select: activate
-        )
-        .padding(.horizontal, CrestSpacing.small)
-        // The native Space host clips at this section's top edge. Keep the
-        // glow's drawing margin inside it, including below extension toolbars.
-        .padding(.top, tabSections.pinnedTabs.isEmpty ? 0 : BrowserTabSelectionGlow.outset)
-        .padding(.bottom, pinnedTabsBottomInset)
+        if let listContext {
+            content(listContext)
+        }
+    }
+
+    @ViewBuilder
+    private func content(_ listContext: BrowserSidebarListContext) -> some View {
+        let hasPinnedTabs = !listContext.space.sidebar.section(.pinned).isEmpty
+        BrowserPinnedTabsDropSection(context: listContext)
+            .equatable()
+            .padding(.horizontal, CrestSpacing.small)
+            // The native Space host clips at this section's top edge. Keep the
+            // glow's drawing margin inside it, including below extension toolbars.
+            .padding(.top, hasPinnedTabs ? BrowserTabSelectionGlow.outset : 0)
+            .padding(.bottom, hasPinnedTabs ? BrowserSidebarMetrics.pinnedTabsBottomInset : 0)
 
         BrowserSpaceHeader(
             space: space,
@@ -75,27 +72,16 @@ struct SpaceSidebarBrowsingContent: View {
             )
         } content: {
             BrowserSidebarTabList(
-                space: space,
-                tabSections: tabSections,
-                browser: browser,
-                spaceAccess: spaceAccess,
-                pageAccess: pageAccess,
-                tabActions: tabActions,
-                capabilities: capabilities,
-                isSavedTabsExpanded: isSavedTabsExpanded,
-                promotionNamespace: tabPromotionNamespace,
+                context: listContext,
                 showsClearAction: isHoveringTabList,
-                restoreSavedLocation: restoreSavedLocation,
-                select: activate,
-                openNewTab: openNewTab,
-                editingFolderRequest: $editingFolderRequest
+                openNewTab: openNewTab
             )
+            .equatable()
         }
         .onHover { isHoveringTabList = $0 }
         .background {
             BrowserSidebarSelectionReconciler(
-                assignment: BrowserSpaceRuntimeAssignment(space: space), browser: browser,
-                pageAccess: pageAccess, spaceAccess: spaceAccess, interaction: sidebarInteraction)
+                context: listContext, interaction: sidebarInteraction)
         }
         .background {
             BrowserTabSelectionMonitor(
@@ -114,6 +100,17 @@ struct SpaceSidebarBrowsingContent: View {
         } message: {
             Text(browser.tabMultiSelection.message ?? "")
         }
+    }
+
+    /// The Space and this window as the read model keeps them, and what the
+    /// rows act through.
+    private var listContext: BrowserSidebarListContext? {
+        guard let spaceModel = browser.spaceModel(space.id), let window = browser.windowModel else { return nil }
+        return BrowserSidebarListContext(
+            space: spaceModel, window: window, favicons: browser.core.state.favicons, browser: browser,
+            spaceAccess: spaceAccess, pageAccess: pageAccess, tabActions: tabActions, capabilities: capabilities,
+            promotionNamespaces: [.current: tabPromotionNamespace], select: activate,
+            restoreSavedLocation: restoreSavedLocation)
     }
 
     private var pageAccess: BrowserSidebarPageAccess {
@@ -155,21 +152,13 @@ struct SpaceSidebarBrowsingContent: View {
             )
         )
     }
-
-    private var pinnedTabsBottomInset: CGFloat {
-        tabSections.pinnedTabs.isEmpty
-            ? 0
-            : BrowserSidebarMetrics.pinnedTabsBottomInset
-    }
 }
 
-/// Model and residency changes reconcile selection even when folder rows are
-/// not mounted. This leaf keeps observation out of the scrolling row hierarchy.
+/// Model and residency changes reconcile selection and the rows collapsed
+/// folders keep, even when folder rows are not mounted. This leaf keeps that
+/// observation out of the scrolling row hierarchy.
 private struct BrowserSidebarSelectionReconciler: View {
-    let assignment: BrowserSpaceRuntimeAssignment
-    let browser: BrowserStore
-    let pageAccess: BrowserSidebarPageAccess
-    let spaceAccess: BrowserSpaceAccessController
+    let context: BrowserSidebarListContext
     let interaction: BrowserSidebarInteractionState
 
     var body: some View {
@@ -183,18 +172,27 @@ private struct BrowserSidebarSelectionReconciler: View {
     }
 
     private func reconcile() {
-        interaction.sidebarSpaceAccess = spaceAccess
-        interaction.pruneCollapsedFolders(in: browser.session.spaces.filter { !spaceAccess.isLocked($0) })
-        guard let space = browser.space(matching: assignment), !spaceAccess.isLocked(space) else { return }
-        let resident = Set(
-            space.tabs.compactMap { tab in
-                pageAccess.containsResidentPageMatching(
-                    BrowserTabRuntimeAssignment(
-                        tabID: tab.id, spaceID: assignment.spaceID, profileID: assignment.profileID)) ? tab.id : nil
-            })
-        interaction.reconcileCollapsedFolders(in: space, selectedTabID: browser.selectedTabID(in: space.id),
-            residentTabIDs: resident)
-        guard browser.selectedSpaceID == assignment.spaceID,
+        let browser = context.browser
+        interaction.sidebarSpaceAccess = context.spaceAccess
+        if let workspace = browser.workspaceModel {
+            interaction.pruneCollapsedFolders(
+                keepingFoldersOf: workspace.spaces.models.filter { !context.spaceAccess.isLocked($0) })
+        }
+        let space = context.space
+        guard browser.spaceModel(space.id) === space, !context.spaceAccess.isLocked(space) else { return }
+        for folder in space.folders.models {
+            let folderTabIDs = space.sidebar.inside(folder.id).rows.filter { !$0.kind.opensList }.flatMap(\.members)
+            interaction.reconcileCollapsedFolder(
+                BrowserFolderRuntimeAssignment(folderID: folder.id, spaceID: space.id, profileID: space.profileID),
+                isExpanded: !folder.isCollapsed,
+                selectedTabID: folderTabIDs.first { context.window.shownTabIDs.contains($0) },
+                folderTabIDs: folderTabIDs,
+                residentFolderTabIDs: folderTabIDs.filter {
+                    context.pageAccess.containsResidentPageMatching(
+                        BrowserTabRuntimeAssignment(tabID: $0, spaceID: space.id, profileID: space.profileID))
+                })
+        }
+        guard browser.selectedSpaceID == space.id,
             !interaction.sidebarReorderState.hasLiftInFlight
         else { return }
         browser.tabMultiSelection.reconcile(
@@ -202,48 +200,38 @@ private struct BrowserSidebarSelectionReconciler: View {
                 in: browser, reorder: interaction.sidebarReorderState))
     }
 
+    /// What reconciling reads, observed here rather than by any row: the
+    /// Space's lists and folders, which of its tabs the window shows, whether
+    /// it is shown and unlocked, and residency.
     private var snapshot: Snapshot {
-        let space = browser.space(matching: assignment)
+        let space = context.space
+        let lists = space.sidebar.lists.map(\.rows)
+        let listed = lists.flatMap { $0.flatMap(\.members) }
         return Snapshot(
-            tabs: space?.tabs.map {
-                Snapshot.Tab(
-                    id: $0.id, placement: $0.placement, folderID: $0.folderID,
-                    splitGroupID: $0.splitGroupID, isStartPage: $0.isStartPage)
-            } ?? [],
-            folders: space?.folders ?? [], selectedTabID: browser.selectedTabID(in: assignment.spaceID),
-            isSavedTabsExpanded: space?.isSavedTabsExpanded ?? false,
-            isSelected: browser.selectedSpaceID == assignment.spaceID,
-            isUnlocked: space.map { !spaceAccess.isLocked($0) } ?? false,
-            residencyRevision: pageAccess.residencyRevision(),
-            spaceMembership: browser.session.spaces.map {
-                Snapshot.SpaceMembership(
-                    assignment: BrowserSpaceRuntimeAssignment(space: $0),
-                    folderIDs: $0.folders.map(\.id), isUnlocked: !spaceAccess.isLocked($0))
-            })
+            lists: lists,
+            folders: space.folders.models.map { Snapshot.Folder(id: $0.id, isCollapsed: $0.isCollapsed) },
+            shownTabIDs: listed.filter { context.window.shownTabIDs.contains($0) },
+            isSavedTabsExpanded: space.settings.isSavedTabsExpanded,
+            isSelected: context.window.shownSpaceID == space.id,
+            isUnlocked: !context.spaceAccess.isLocked(space),
+            residencyRevision: context.pageAccess.residencyRevision(),
+            spaceIDs: context.browser.workspaceModel?.spaces.models.map(\.id) ?? [])
     }
 
     private struct Snapshot: Equatable {
-        struct Tab: Equatable {
-            let id: TabID
-            let placement: TabPlacement
-            let folderID: FolderID?
-            let splitGroupID: SplitGroupID?
-            let isStartPage: Bool
+        struct Folder: Equatable {
+            let id: FolderID
+            let isCollapsed: Bool
         }
-        /// Evicted Space hosts still need their retained visibility pruned when
-        /// folders disappear, assignments change, or access is revoked.
-        struct SpaceMembership: Equatable {
-            let assignment: BrowserSpaceRuntimeAssignment
-            let folderIDs: [FolderID]
-            let isUnlocked: Bool
-        }
-        let tabs: [Tab]
-        let folders: [BrowserFolder]
-        let selectedTabID: TabID?
+        let lists: [[SidebarRow]]
+        let folders: [Folder]
+        let shownTabIDs: [TabID]
         let isSavedTabsExpanded: Bool
         let isSelected: Bool
         let isUnlocked: Bool
         let residencyRevision: Int
-        let spaceMembership: [SpaceMembership]
+        /// Evicted Space hosts still need their retained visibility pruned when
+        /// Spaces disappear or access is revoked.
+        let spaceIDs: [SpaceID]
     }
 }
