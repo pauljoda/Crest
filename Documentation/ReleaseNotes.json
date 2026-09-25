@@ -2541,6 +2541,10 @@
     "space-look-and-accent-from-core": {
       "category": "internal",
       "message": "The core resolves the branding each Space wears and describes each accent's tint, legacy palette and house look, and generated records carry the core's constants and named values."
+    },
+    "tab-order-follows-sidebar": {
+      "category": "improved",
+      "message": "Next and previous tab, and \u23181\u2013\u23189, now follow the order you see in the sidebar."
     }
   }
 }

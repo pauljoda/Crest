@@ -7,7 +7,7 @@ import Foundation
 enum CoreCodec {
     /// SHA-256 of the canonical contract schema. The core refuses any other.
     static let fingerprint: [UInt8] = [
-        0xcb, 0x09, 0x44, 0x1a, 0x10, 0xd0, 0xa9, 0x51, 0xae, 0xfd, 0xa4, 0xb7, 0x9e, 0x98, 0x2f, 0x31, 0x87, 0xad, 0x2d, 0x16, 0x48, 0x2a, 0x16, 0x25, 0xba, 0xa0, 0xe9, 0x81, 0x65, 0xe9, 0x9c, 0xd1
+        0xe7, 0x3c, 0x6f, 0x9e, 0xb6, 0x88, 0xf1, 0x99, 0x24, 0x75, 0x96, 0x09, 0xbd, 0xdb, 0x36, 0xd3, 0xac, 0x0a, 0x36, 0xd1, 0x3f, 0x31, 0x0f, 0xe6, 0x7d, 0x1e, 0x86, 0x91, 0xd2, 0xf3, 0xb3, 0x5e
     ]
     /// SHA-256 of the engine contract alone, which an engine binding registers with.
     static let engineFingerprint: [UInt8] = [
@@ -130,14 +130,16 @@ enum CoreCodec {
         case 110: return try SetSpaceIdentity(from: &reader)
         case 111: return try SetSplitIcon(from: &reader)
         case 112: return try SetTranslationRule(from: &reader)
-        case 113: return try ShowSpace(from: &reader)
-        case 114: return try ShowTab(from: &reader)
-        case 115: return try SplitTabs(from: &reader)
-        case 116: return try StepSplitMember(from: &reader)
-        case 117: return try SweepExpiredRecords(from: &reader)
-        case 118: return try TintSplit(from: &reader)
-        case 119: return try UnassignShortcut(from: &reader)
-        case 120: return try UpdateSearchEngine(from: &reader)
+        case 113: return try ShowAdjacentSpace(from: &reader)
+        case 114: return try ShowAdjacentTab(from: &reader)
+        case 115: return try ShowSpace(from: &reader)
+        case 116: return try ShowTab(from: &reader)
+        case 117: return try SplitTabs(from: &reader)
+        case 118: return try StepSplitMember(from: &reader)
+        case 119: return try SweepExpiredRecords(from: &reader)
+        case 120: return try TintSplit(from: &reader)
+        case 121: return try UnassignShortcut(from: &reader)
+        case 122: return try UpdateSearchEngine(from: &reader)
         default: throw WireError.malformed("Unknown Intent tag \(tag)")
         }
     }
@@ -5853,14 +5855,27 @@ extension NumberedSelection {
     init(from reader: inout WireReader) throws(WireError) {
         let command = try ShortcutCommand(from: &reader)
         let target = try NumberedSelectionTarget(from: &reader)
-        let index = try reader.readInt()
-        self.init(command: command, target: target, index: index)
+        let spaceID = try reader.readUUID()
+        let tabID: UUID?
+        if try reader.readPresence() {
+            let tabIDValue = try reader.readUUID()
+            tabID = tabIDValue
+        } else {
+            tabID = nil
+        }
+        self.init(command: command, target: target, spaceID: spaceID, tabID: tabID)
     }
 
     func encode(into writer: inout WireWriter) {
         command.encode(into: &writer)
         target.encode(into: &writer)
-        writer.writeInt(index)
+        writer.writeUUID(spaceID)
+        if let present0 = tabID {
+            writer.writePresence(true)
+            writer.writeUUID(present0)
+        } else {
+            writer.writePresence(false)
+        }
     }
 }
 
@@ -5886,14 +5901,12 @@ extension NumberedSelectionList {
 
 extension NumberedSelections {
     init(from reader: inout WireReader) throws(WireError) {
-        let tabCount = try reader.readInt()
-        let spaceCount = try reader.readInt()
-        self.init(tabCount: tabCount, spaceCount: spaceCount)
+        let windowID = try reader.readUUID()
+        self.init(windowID: windowID)
     }
 
     func encode(into writer: inout WireWriter) {
-        writer.writeInt(tabCount)
-        writer.writeInt(spaceCount)
+        writer.writeUUID(windowID)
     }
 
     func encodeQuery(into writer: inout WireWriter) {
@@ -7804,6 +7817,42 @@ extension ShortcutsChanged {
     }
 }
 
+extension ShowAdjacentSpace {
+    init(from reader: inout WireReader) throws(WireError) {
+        let windowID = try reader.readUUID()
+        let direction = try AdjacentDirection(from: &reader)
+        self.init(windowID: windowID, direction: direction)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeUUID(windowID)
+        direction.encode(into: &writer)
+    }
+
+    func encodeIntent(into writer: inout WireWriter) {
+        writer.writeTag(113)
+        encode(into: &writer)
+    }
+}
+
+extension ShowAdjacentTab {
+    init(from reader: inout WireReader) throws(WireError) {
+        let windowID = try reader.readUUID()
+        let direction = try AdjacentDirection(from: &reader)
+        self.init(windowID: windowID, direction: direction)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeUUID(windowID)
+        direction.encode(into: &writer)
+    }
+
+    func encodeIntent(into writer: inout WireWriter) {
+        writer.writeTag(114)
+        encode(into: &writer)
+    }
+}
+
 extension ShowSpace {
     init(from reader: inout WireReader) throws(WireError) {
         let windowID = try reader.readUUID()
@@ -7817,7 +7866,7 @@ extension ShowSpace {
     }
 
     func encodeIntent(into writer: inout WireWriter) {
-        writer.writeTag(113)
+        writer.writeTag(115)
         encode(into: &writer)
     }
 }
@@ -7848,7 +7897,7 @@ extension ShowTab {
     }
 
     func encodeIntent(into writer: inout WireWriter) {
-        writer.writeTag(114)
+        writer.writeTag(116)
         encode(into: &writer)
     }
 }
@@ -8941,7 +8990,7 @@ extension SplitTabs {
     }
 
     func encodeIntent(into writer: inout WireWriter) {
-        writer.writeTag(115)
+        writer.writeTag(117)
         encode(into: &writer)
     }
 }
@@ -8983,7 +9032,7 @@ extension StepSplitMember {
     }
 
     func encodeIntent(into writer: inout WireWriter) {
-        writer.writeTag(116)
+        writer.writeTag(118)
         encode(into: &writer)
     }
 }
@@ -9168,7 +9217,7 @@ extension SweepExpiredRecords {
     }
 
     func encodeIntent(into writer: inout WireWriter) {
-        writer.writeTag(117)
+        writer.writeTag(119)
         encode(into: &writer)
     }
 }
@@ -9873,7 +9922,7 @@ extension TintSplit {
     }
 
     func encodeIntent(into writer: inout WireWriter) {
-        writer.writeTag(118)
+        writer.writeTag(120)
         encode(into: &writer)
     }
 }
@@ -9943,7 +9992,7 @@ extension UnassignShortcut {
     }
 
     func encodeIntent(into writer: inout WireWriter) {
-        writer.writeTag(119)
+        writer.writeTag(121)
         encode(into: &writer)
     }
 }
@@ -10095,7 +10144,7 @@ extension UpdateSearchEngine {
     }
 
     func encodeIntent(into writer: inout WireWriter) {
-        writer.writeTag(120)
+        writer.writeTag(122)
         encode(into: &writer)
     }
 }
@@ -10864,6 +10913,20 @@ extension TearOffRefusal {
 
     func encode(into writer: inout WireWriter) {
         writer.writeEnum(rawValue)
+    }
+}
+
+extension AdjacentDirection {
+    init(from reader: inout WireReader) throws(WireError) {
+        let tag = try reader.readEnum()
+        guard Self.all.indices.contains(tag) else {
+            throw WireError.malformed("Unknown AdjacentDirection \(tag)")
+        }
+        self = Self.all[tag]
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeEnum(tag)
     }
 }
 

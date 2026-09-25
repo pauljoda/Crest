@@ -14,6 +14,8 @@ internal sealed partial class Device {
             case CloseWindow closing: Close(closing, changes); break;
             case ShowSpace showing: Show(showing, changes); break;
             case ShowTab showing: Show(showing, changes); break;
+            case ShowAdjacentTab stepping: Show(stepping, changes); break;
+            case ShowAdjacentSpace stepping: Show(stepping, changes); break;
             case DismissShownTab dismissing: Dismiss(dismissing, changes); break;
             case ResizeSplitColumns resizing: Resize(resizing, changes); break;
             case AdoptWindowRecords adoption: Adopt(adoption, changes); break;
@@ -76,6 +78,33 @@ internal sealed partial class Device {
         lock (gate) Publish(Changing([window], shown => shown.ShowTab(intent.SpaceId, intent.TabId, moves: true)), changes);
     }
 
+    /// Steps the window's tab through its Space's sidebar, showing the tab the
+    /// step reaches the way `ShowTab` does.
+    private void Show(ShowAdjacentTab intent, ChangeFeed changes) {
+        var window = Opened(intent.WindowId);
+        var session = Workspace(window.WorkspaceId).Current;
+        Guid spaceId;
+        Guid? shown;
+        lock (gate) {
+            spaceId = window.ShownSpaceId;
+            shown = window.Tab(spaceId);
+        }
+        if (Available(session, spaceId) is not { } space || shown is not { } tabId || space.Step(tabId, intent.Direction) is not { } next)
+            return;
+        Show(new ShowTab(intent.WindowId, space.Id, next), changes);
+    }
+
+    /// Steps the window through the Spaces it may show, showing the one the
+    /// step reaches the way `ShowSpace` does.
+    private void Show(ShowAdjacentSpace intent, ChangeFeed changes) {
+        var window = Opened(intent.WindowId);
+        var spaces = Window.Showable(Workspace(window.WorkspaceId).Current).ToList();
+        int shown;
+        lock (gate) shown = spaces.FindIndex(space => space.Id == window.ShownSpaceId);
+        if (spaces.Count < 2 || shown < 0) return;
+        Show(new ShowSpace(intent.WindowId, spaces[intent.Direction.From(shown, spaces.Count)].Id), changes);
+    }
+
     /// The window returns to the tab it showed before, recording its use the
     /// way showing a tab does, or shows nothing in that Space.
     private void Dismiss(DismissShownTab intent, ChangeFeed changes) {
@@ -127,6 +156,19 @@ internal sealed partial class Device {
         return new(Allowed: true, Reason: null);
 
         static TearOffPermission Refused(TearOffRefusal reason) => new(Allowed: false, reason);
+    }
+
+    /// Where each numbered command leads in a window: to the stops of the Space
+    /// it shows, each to its first tab, and to the Spaces it may show.
+    public NumberedSelectionList Answer(NumberedSelections question) {
+        ArgumentNullException.ThrowIfNull(question);
+        var window = Opened(question.WindowId);
+        var session = Workspace(window.WorkspaceId).Current;
+        Guid spaceId;
+        lock (gate) spaceId = window.ShownSpaceId;
+        var choices = new NumberedChoices(spaceId, Available(session, spaceId) is { } space ? [.. space.Stops().Select(stop => stop.Members[0])] : [],
+            [.. Window.Showable(session).Select(showable => showable.Id)]);
+        return new([.. ShortcutCommand.All.Select(command => command.Selecting(choices)).OfType<NumberedSelection>()]);
     }
 
     #endregion

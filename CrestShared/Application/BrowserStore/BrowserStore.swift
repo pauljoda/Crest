@@ -65,6 +65,31 @@ final class BrowserStore {
         sessionRevision &+= 1
     }
 
+    /// Shows the Space before or after this window's, wrapping, among the
+    /// Spaces it may show, and answers it; nil when the core showed no other.
+    @discardableResult
+    func selectAdjacentSpace(_ direction: BrowserSpaceSwipeDirection) -> SpaceID? {
+        let shown = selectedSpaceID
+        guard sendWindowIntent(ShowAdjacentSpace(windowID: windowID, direction: direction.core)),
+            selectedSpaceID != shown
+        else { return nil }
+        tabMultiSelection.clear()
+        sessionRevision &+= 1
+        return selectedSpaceID
+    }
+
+    /// Shows the tab one stop from this window's in the order its sidebar
+    /// shows them, wrapping, and answers it; nil when the core showed no other.
+    @discardableResult
+    func selectAdjacentTab(_ direction: AdjacentDirection) -> TabID? {
+        let shown = selectedTab?.id
+        guard sendWindowIntent(ShowAdjacentTab(windowID: windowID, direction: direction)),
+            let next = selectedTab?.id, next != shown
+        else { return nil }
+        sessionRevision &+= 1
+        return next
+    }
+
     func clearPresentedTabSelection(in spaceID: SpaceID) {
         guard sendWindowIntent(ShowTab(windowID: windowID, spaceID: spaceID, tabID: nil)) else {
             return

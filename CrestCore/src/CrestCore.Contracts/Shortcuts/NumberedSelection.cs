@@ -1,4 +1,5 @@
 namespace CrestCore.Contracts;
 
-/// A numbered command, what it selects from, and the zero-based position it selects there.
-public sealed record NumberedSelection(ShortcutCommand Command, NumberedSelectionTarget Target, int Index);
+/// A numbered command, what it selects from, and where it leads: the Space
+/// `SpaceId`, and for a tab the tab `TabId` the window shows there.
+public sealed record NumberedSelection(ShortcutCommand Command, NumberedSelectionTarget Target, Guid SpaceId, Guid? TabId);

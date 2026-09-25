@@ -320,7 +320,7 @@ public sealed class ShortcutCommand {
         DefaultShortcuts = shortcuts ?? [];
     }
 
-    /// ⌘1–⌘9 select the Nth tab in sidebar order.
+    /// ⌘1–⌘9 select the Nth stop of the shown Space's sidebar.
     private static ShortcutCommand SelectingTab(string name, int number) => new(Kinds.SelectNumbered, name, ShortcutSection.Tabs,
         title: "Select Tab %lld", symbol: "square.on.square", shortcuts: Everywhere(Character(Digit(number), Command)),
         selects: NumberedSelectionTarget.Tab, number: number);
@@ -344,10 +344,11 @@ public sealed class ShortcutCommand {
     /// command: it needs no capability, or its capability is supported.
     public bool IsOffered(Func<EngineCapability, bool> supports) => RequiredCapability is not { } required || supports(required);
 
-    /// The position a numbered command selects for `question`, or null when
-    /// there is nothing at its number or it selects nothing.
-    public NumberedSelection? Selecting(NumberedSelections question) =>
-        Selects is { } target && Number is { } number && number <= target.Count(question) ? new(this, target, number - 1) : null;
+    /// Where a numbered command leads among `choices`, or null when there is
+    /// nothing at its number or it selects nothing.
+    public NumberedSelection? Selecting(NumberedChoices choices) =>
+        Selects is { } target && Number is { } number && target.Choose(choices, number - 1) is { } choice
+            ? new(this, target, choice.SpaceId, choice.TabId) : null;
 
     #endregion
 

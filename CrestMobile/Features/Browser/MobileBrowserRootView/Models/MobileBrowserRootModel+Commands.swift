@@ -40,6 +40,7 @@ extension MobileBrowserRootModel {
             canReopenClosedTab: controller.canReopenClosedTab,
             tabCount: controller.orderedTabs.count,
             spaceCount: browser.session.spaces.count,
+            numberedSelections: browser.core.numberedSelections(windowID: browser.windowID),
             isSelectedTabInSplit: controller.isSelectedTabInSplit,
             canSplitWithNextTab: controller.canSplitWithNextTab,
             layoutDirection: layoutDirection,
@@ -103,9 +104,9 @@ extension MobileBrowserRootModel {
                     beforeSynchronization: prepareForSelectionSynchronization
                 )
             },
-            selectTab: { index in
+            selectTab: { tabID in
                 _ = self.selectTabFromCommand(
-                    index,
+                    tabID,
                     beforeSynchronization: prepareForSelectionSynchronization
                 )
             },
@@ -152,9 +153,9 @@ extension MobileBrowserRootModel {
                     beforeSynchronization: prepareForSelectionSynchronization
                 )
             },
-            selectSpace: { index in
+            selectSpace: { spaceID in
                 _ = self.selectSpaceFromCommand(
-                    index,
+                    spaceID,
                     beforeSynchronization: prepareForSelectionSynchronization
                 )
             },
@@ -273,10 +274,10 @@ extension MobileBrowserRootModel {
 
     @discardableResult
     func selectTabFromCommand(
-        _ index: Int,
+        _ tabID: TabID,
         beforeSynchronization: () -> Void = {}
     ) -> Bool {
-        guard commandController.selectTab(at: index) != nil else { return false }
+        guard commandController.selectNumberedTab(tabID) != nil else { return false }
         beforeSynchronization()
         synchronizeAfterCommandSelection()
         return true
@@ -304,10 +305,10 @@ extension MobileBrowserRootModel {
 
     @discardableResult
     func selectSpaceFromCommand(
-        _ index: Int,
+        _ spaceID: SpaceID,
         beforeSynchronization: () -> Void = {}
     ) -> Bool {
-        guard commandController.selectSpace(at: index) != nil else { return false }
+        guard commandController.selectNumberedSpace(spaceID) != nil else { return false }
         beforeSynchronization()
         synchronizeAfterCommandSelection()
         return true

@@ -1,7 +1,7 @@
 namespace CrestCore.Contracts;
 
-/// The ordered collection a numbered shortcut selects from: the tabs in
-/// sidebar order, or the Spaces.
+/// The ordered collection a numbered shortcut selects from: the stops of the
+/// shown Space's sidebar, or the Spaces a window may show.
 public sealed class NumberedSelectionTarget {
     #region Types
 
@@ -11,27 +11,34 @@ public sealed class NumberedSelectionTarget {
 
     #endregion
 
-    #region Variables
+    #region Static Variables
 
-    public static readonly NumberedSelectionTarget Tab = new(Kinds.Tab, name: "tab", counting: question => question.TabCount);
-    public static readonly NumberedSelectionTarget Space = new(Kinds.Space, name: "space", counting: question => question.SpaceCount);
+    public static readonly NumberedSelectionTarget Tab = new(Kinds.Tab, name: "tab",
+        choosing: (choices, index) => index < choices.Tabs.Count ? (choices.ShownSpaceId, choices.Tabs[index]) : null);
+    public static readonly NumberedSelectionTarget Space = new(Kinds.Space, name: "space",
+        choosing: (choices, index) => index < choices.Spaces.Count ? (choices.Spaces[index], null) : null);
 
     public static IReadOnlyList<NumberedSelectionTarget> All { get; } = [Tab, Space];
+
+    #endregion
+
+    #region Variables
 
     public Kinds Kind { get; }
     public string Name { get; }
 
-    /// How many items a numbered selection question says there are to select from.
-    private readonly Func<NumberedSelections, int> counting;
+    /// The Space, and the tab in it for a tab, at a zero-based position among
+    /// what a window chooses from, or null when there is nothing there.
+    private readonly Func<NumberedChoices, int, (Guid SpaceId, Guid? TabId)?> choosing;
 
     #endregion
 
     #region Constructors
 
-    private NumberedSelectionTarget(Kinds kind, string name, Func<NumberedSelections, int> counting) {
+    private NumberedSelectionTarget(Kinds kind, string name, Func<NumberedChoices, int, (Guid SpaceId, Guid? TabId)?> choosing) {
         Kind = kind;
         Name = name;
-        this.counting = counting;
+        this.choosing = choosing;
     }
 
     #endregion
@@ -40,8 +47,12 @@ public sealed class NumberedSelectionTarget {
 
     public static NumberedSelectionTarget? Named(string? name) => All.FirstOrDefault(target => target.Name == name);
 
-    /// How many items `question` says there are to select from.
-    public int Count(NumberedSelections question) => counting(question);
+    /// The Space, and the tab in it for a tab, at the zero-based `index` among
+    /// `choices`, or null when there is nothing there.
+    public (Guid SpaceId, Guid? TabId)? Choose(NumberedChoices choices, int index) {
+        ArgumentNullException.ThrowIfNull(choices);
+        return choosing(choices, index);
+    }
 
     #endregion
 }

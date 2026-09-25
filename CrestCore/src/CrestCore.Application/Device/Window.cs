@@ -60,7 +60,7 @@ internal sealed class Window {
     /// release kept in the session, which a window without a record adopts.
     public static Window Launching(Guid id, Guid workspaceId, bool saved, SessionState session,
         IReadOnlyDictionary<Guid, Guid> legacyTabs) {
-        var available = Available(session).ToArray();
+        var available = Showable(session).ToArray();
         var launch = available.FirstOrDefault(space => space.Id == session.DefaultSpaceId) ?? available.FirstOrDefault();
         var window = new Window(id, workspaceId, saved, launch?.Id ?? Guid.Empty,
             legacyTabs.Where(entry => session.Spaces.Any(space => space.Id == entry.Key && Contains(space, entry.Value)))
@@ -141,7 +141,7 @@ internal sealed class Window {
             if (!spaces.TryGetValue(spaceId, out var space)) tabs.Remove(spaceId);
             else if (tabId is not null && !Contains(space, tabId)) tabs[spaceId] = null;
         }
-        if (!Available(session).Any(space => space.Id == ShownSpaceId) && Available(session).FirstOrDefault() is { } fallback)
+        if (!Showable(session).Any(space => space.Id == ShownSpaceId) && Showable(session).FirstOrDefault() is { } fallback)
             ShowSpace(fallback);
         foreach (var groupId in shares.Keys.ToArray())
             if (!session.Spaces.Any(space => RenderedColumns(space, groupId) == shares[groupId].Count)) shares.Remove(groupId);
@@ -201,8 +201,8 @@ internal sealed class Window {
         return Math.Abs(total - 1) <= tolerance ? [.. requested] : [.. requested.Select(value => value / total)];
     }
 
-    /// The Spaces a window may show: every one not being deleted.
-    private static IEnumerable<SpaceState> Available(SessionState session) =>
+    /// The Spaces a window may show, in the session's order: every one not being deleted.
+    internal static IEnumerable<SpaceState> Showable(SessionState session) =>
         session.Spaces.Where(space => session.SpaceDeletions.All(deletion => deletion.SpaceId != space.Id));
 
     private static bool Contains(SpaceState space, Guid? tabId) => tabId is { } id && space.Tabs.Any(tab => tab.Id == id);

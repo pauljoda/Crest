@@ -691,28 +691,6 @@ extension BrowserStore {
         selectPresentedSpace(id)
     }
 
-    @discardableResult
-    func selectAdjacentSpace(_ direction: BrowserSpaceSwipeDirection) -> SpaceID? {
-        let spaces = session.spaces.filter {
-            !deletingSpaceIDs.contains($0.id)
-        }
-        guard spaces.count > 1,
-            let currentIndex = spaces.firstIndex(where: { $0.id == selectedSpaceID })
-        else {
-            return nil
-        }
-        let nextIndex: Int
-        switch direction {
-        case .previous:
-            nextIndex = (currentIndex - 1 + spaces.count) % spaces.count
-        case .next:
-            nextIndex = (currentIndex + 1) % spaces.count
-        }
-        let nextID = spaces[nextIndex].id
-        selectSpace(nextID)
-        return nextID
-    }
-
     func selectTab(_ id: TabID) {
         guard let space = selectedSpace, activateSessionTab(id, in: space.id) else { return }
     }
@@ -722,21 +700,5 @@ extension BrowserStore {
     func selectDismissalFallback(afterDismissing id: TabID) {
         guard let space = selectedSpace else { return }
         dismissShownTab(id, in: space.id)
-    }
-
-    @discardableResult
-    func selectAdjacentTab(offset: Int) -> TabID? {
-        guard let tabs = selectedSpace?.tabs,
-            !tabs.isEmpty,
-            let selectedID = selectedTab?.id,
-            let selectedIndex = tabs.firstIndex(where: { $0.id == selectedID })
-        else {
-            return nil
-        }
-        let count = tabs.count
-        let wrappedIndex = (selectedIndex + offset % count + count) % count
-        let nextID = tabs[wrappedIndex].id
-        selectTab(nextID)
-        return nextID
     }
 }

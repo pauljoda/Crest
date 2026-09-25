@@ -13,11 +13,11 @@ public sealed class TabPlacement {
     public const int PinnedCapacity = 12;
 
     public static readonly TabPlacement Pinned = new(name: "pinned", title: "Pinned", symbol: "pin.fill", rank: 0, fallbackRank: 1,
-        isDurable: true, holdsFolders: false, holdsSplits: false, capacity: PinnedCapacity);
+        isDurable: true, holdsFolders: false, holdsSplits: false, isCollapsible: false, capacity: PinnedCapacity);
     public static readonly TabPlacement Saved = new(name: "saved", title: "Saved", symbol: "bookmark.fill", rank: 1, fallbackRank: 2,
-        isDurable: true, holdsFolders: true, holdsSplits: true, capacity: null);
+        isDurable: true, holdsFolders: true, holdsSplits: true, isCollapsible: true, capacity: null);
     public static readonly TabPlacement Current = new(name: "current", title: "Open", symbol: "rectangle.stack.fill", rank: 2,
-        fallbackRank: 0, isDurable: false, holdsFolders: true, holdsSplits: true, capacity: null);
+        fallbackRank: 0, isDurable: false, holdsFolders: true, holdsSplits: true, isCollapsible: false, capacity: null);
 
     public static IReadOnlyList<TabPlacement> All { get; } = [Pinned, Saved, Current];
 
@@ -48,6 +48,10 @@ public sealed class TabPlacement {
     /// A tab in the section may join a split.
     public bool HoldsSplits { get; }
 
+    /// A person may collapse the section in the sidebar, which a Space's
+    /// settings remember as whether its saved tabs are expanded.
+    public bool IsCollapsible { get; }
+
     /// The most tabs the section holds in one Space, or null for no limit
     /// beyond the Space's own.
     public int? Capacity { get; }
@@ -57,7 +61,7 @@ public sealed class TabPlacement {
     #region Constructors
 
     private TabPlacement(string name, string title, string symbol, int rank, int fallbackRank, bool isDurable, bool holdsFolders,
-        bool holdsSplits, int? capacity) {
+        bool holdsSplits, bool isCollapsible, int? capacity) {
         Name = name;
         Title = title;
         Symbol = symbol;
@@ -66,6 +70,7 @@ public sealed class TabPlacement {
         IsDurable = isDurable;
         HoldsFolders = holdsFolders;
         HoldsSplits = holdsSplits;
+        IsCollapsible = isCollapsible;
         Capacity = capacity;
     }
 

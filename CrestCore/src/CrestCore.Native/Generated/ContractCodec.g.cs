@@ -14,7 +14,7 @@ namespace CrestCore.Native;
 public static class ContractCodec {
     /// <summary>SHA-256 of the canonical contract schema.</summary>
     public static ReadOnlySpan<byte> Fingerprint => [
-        0xcb, 0x09, 0x44, 0x1a, 0x10, 0xd0, 0xa9, 0x51, 0xae, 0xfd, 0xa4, 0xb7, 0x9e, 0x98, 0x2f, 0x31, 0x87, 0xad, 0x2d, 0x16, 0x48, 0x2a, 0x16, 0x25, 0xba, 0xa0, 0xe9, 0x81, 0x65, 0xe9, 0x9c, 0xd1
+        0xe7, 0x3c, 0x6f, 0x9e, 0xb6, 0x88, 0xf1, 0x99, 0x24, 0x75, 0x96, 0x09, 0xbd, 0xdb, 0x36, 0xd3, 0xac, 0x0a, 0x36, 0xd1, 0x3f, 0x31, 0x0f, 0xe6, 0x7d, 0x1e, 0x86, 0x91, 0xd2, 0xf3, 0xb3, 0x5e
     ];
 
     /// <summary>SHA-256 of the engine contract alone, which an engine binding registers with.</summary>
@@ -138,14 +138,16 @@ public static class ContractCodec {
             case 110: return ReadSetSpaceIdentity(reader);
             case 111: return ReadSetSplitIcon(reader);
             case 112: return ReadSetTranslationRule(reader);
-            case 113: return ReadShowSpace(reader);
-            case 114: return ReadShowTab(reader);
-            case 115: return ReadSplitTabs(reader);
-            case 116: return ReadStepSplitMember(reader);
-            case 117: return ReadSweepExpiredRecords(reader);
-            case 118: return ReadTintSplit(reader);
-            case 119: return ReadUnassignShortcut(reader);
-            case 120: return ReadUpdateSearchEngine(reader);
+            case 113: return ReadShowAdjacentSpace(reader);
+            case 114: return ReadShowAdjacentTab(reader);
+            case 115: return ReadShowSpace(reader);
+            case 116: return ReadShowTab(reader);
+            case 117: return ReadSplitTabs(reader);
+            case 118: return ReadStepSplitMember(reader);
+            case 119: return ReadSweepExpiredRecords(reader);
+            case 120: return ReadTintSplit(reader);
+            case 121: return ReadUnassignShortcut(reader);
+            case 122: return ReadUpdateSearchEngine(reader);
             default: throw new WireFormatException($"Unknown Intent tag {tag}.");
         }
     }
@@ -606,36 +608,44 @@ public static class ContractCodec {
                 writer.WriteTag(112);
                 WriteSetTranslationRule(writer, member);
                 break;
-            case ShowSpace member:
+            case ShowAdjacentSpace member:
                 writer.WriteTag(113);
+                WriteShowAdjacentSpace(writer, member);
+                break;
+            case ShowAdjacentTab member:
+                writer.WriteTag(114);
+                WriteShowAdjacentTab(writer, member);
+                break;
+            case ShowSpace member:
+                writer.WriteTag(115);
                 WriteShowSpace(writer, member);
                 break;
             case ShowTab member:
-                writer.WriteTag(114);
+                writer.WriteTag(116);
                 WriteShowTab(writer, member);
                 break;
             case SplitTabs member:
-                writer.WriteTag(115);
+                writer.WriteTag(117);
                 WriteSplitTabs(writer, member);
                 break;
             case StepSplitMember member:
-                writer.WriteTag(116);
+                writer.WriteTag(118);
                 WriteStepSplitMember(writer, member);
                 break;
             case SweepExpiredRecords member:
-                writer.WriteTag(117);
+                writer.WriteTag(119);
                 WriteSweepExpiredRecords(writer, member);
                 break;
             case TintSplit member:
-                writer.WriteTag(118);
+                writer.WriteTag(120);
                 WriteTintSplit(writer, member);
                 break;
             case UnassignShortcut member:
-                writer.WriteTag(119);
+                writer.WriteTag(121);
                 WriteUnassignShortcut(writer, member);
                 break;
             case UpdateSearchEngine member:
-                writer.WriteTag(120);
+                writer.WriteTag(122);
                 WriteUpdateSearchEngine(writer, member);
                 break;
             default: throw new ArgumentOutOfRangeException(nameof(value), value.GetType().Name, "Not a contract Intent.");
@@ -5662,7 +5672,8 @@ public static class ContractCodec {
         return new NumberedSelection(
             ReadShortcutCommand(reader),
             ReadNumberedSelectionTarget(reader),
-            reader.ReadInt32());
+            reader.ReadGuid(),
+            reader.ReadPresence() ? (Guid?)reader.ReadGuid() : null);
     }
 
     public static void WriteNumberedSelection(WireWriter writer, NumberedSelection value) {
@@ -5670,7 +5681,13 @@ public static class ContractCodec {
         ArgumentNullException.ThrowIfNull(value);
         WriteShortcutCommand(writer, value.Command);
         WriteNumberedSelectionTarget(writer, value.Target);
-        writer.WriteInt32(value.Index);
+        writer.WriteGuid(value.SpaceId);
+        if (value.TabId is { } presentTabId) {
+            writer.WritePresence(true);
+            writer.WriteGuid(presentTabId);
+        } else {
+            writer.WritePresence(false);
+        }
     }
 
     public static NumberedSelectionList ReadNumberedSelectionList(WireReader reader) {
@@ -5691,15 +5708,13 @@ public static class ContractCodec {
     public static NumberedSelections ReadNumberedSelections(WireReader reader) {
         ArgumentNullException.ThrowIfNull(reader);
         return new NumberedSelections(
-            reader.ReadInt32(),
-            reader.ReadInt32());
+            reader.ReadGuid());
     }
 
     public static void WriteNumberedSelections(WireWriter writer, NumberedSelections value) {
         ArgumentNullException.ThrowIfNull(writer);
         ArgumentNullException.ThrowIfNull(value);
-        writer.WriteInt32(value.TabCount);
-        writer.WriteInt32(value.SpaceCount);
+        writer.WriteGuid(value.WindowId);
     }
 
     public static OpenLinkInSplit ReadOpenLinkInSplit(WireReader reader) {
@@ -7161,6 +7176,34 @@ public static class ContractCodec {
             WriteShortcutBinding(writer, itemBindings);
         }
         writer.WriteBool(value.IsCustomized);
+    }
+
+    public static ShowAdjacentSpace ReadShowAdjacentSpace(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new ShowAdjacentSpace(
+            reader.ReadGuid(),
+            ReadAdjacentDirection(reader));
+    }
+
+    public static void WriteShowAdjacentSpace(WireWriter writer, ShowAdjacentSpace value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteGuid(value.WindowId);
+        WriteAdjacentDirection(writer, value.Direction);
+    }
+
+    public static ShowAdjacentTab ReadShowAdjacentTab(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new ShowAdjacentTab(
+            reader.ReadGuid(),
+            ReadAdjacentDirection(reader));
+    }
+
+    public static void WriteShowAdjacentTab(WireWriter writer, ShowAdjacentTab value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteGuid(value.WindowId);
+        WriteAdjacentDirection(writer, value.Direction);
     }
 
     public static ShowSpace ReadShowSpace(WireReader reader) {
@@ -9581,6 +9624,17 @@ public static class ContractCodec {
     public static void WriteTearOffRefusal(WireWriter writer, TearOffRefusal value) {
         ArgumentNullException.ThrowIfNull(writer);
         writer.WriteEnum((int)value);
+    }
+
+    public static AdjacentDirection ReadAdjacentDirection(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return AdjacentDirection.All[reader.ReadEnum(AdjacentDirection.All.Count)];
+    }
+
+    public static void WriteAdjacentDirection(WireWriter writer, AdjacentDirection value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteEnum(TagOf(AdjacentDirection.All, value));
     }
 
     public static ArchiveFilterGroup ReadArchiveFilterGroup(WireReader reader) {

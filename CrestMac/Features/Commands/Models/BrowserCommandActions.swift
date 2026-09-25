@@ -189,8 +189,8 @@ struct BrowserCommandActions {
         case .selectNumbered:
             if let selection = numberedSelections[command] {
                 switch selection.target.kind {
-                case .tab: Route { selectTab(at: selection.index) }
-                case .space: Route { selectSpace(at: selection.index) }
+                case .tab: Route { selectTab(selection.tabID, in: selection.spaceID) }
+                case .space: Route { selectSpace(selection.spaceID) }
                 }
             } else {
                 Route(isAvailable: false) {}
@@ -217,7 +217,7 @@ struct BrowserCommandActions {
 
     /// Where each numbered selection command leads right now, per the core.
     var numberedSelections: [ShortcutCommand: NumberedSelection] {
-        browser.core.numberedSelections(tabCount: orderedTabs.count, spaceCount: browser.session.spaces.count)
+        browser.core.numberedSelections(windowID: browser.windowID)
     }
 
     // MARK: - Windows
@@ -458,11 +458,11 @@ struct BrowserCommandActions {
     }
 
     func selectPreviousTab() {
-        selectTab(offset: -1)
+        selectAdjacentTab(.previous)
     }
 
     func selectNextTab() {
-        selectTab(offset: 1)
+        selectAdjacentTab(.next)
     }
 
     func selectMostRecentTab() {
@@ -476,14 +476,15 @@ struct BrowserCommandActions {
         pages.select(session: browser.presented)
     }
 
-    func selectTab(offset: Int) {
-        guard browser.selectAdjacentTab(offset: offset) != nil else { return }
+    func selectAdjacentTab(_ direction: AdjacentDirection) {
+        guard browser.selectAdjacentTab(direction) != nil else { return }
         pages.select(session: browser.presented)
     }
 
-    func selectTab(at index: Int) {
-        guard orderedTabs.indices.contains(index) else { return }
-        browser.selectTab(orderedTabs[index].id)
+    /// Shows the tab a numbered command leads to, in the Space this window shows.
+    func selectTab(_ tabID: TabID?, in spaceID: SpaceID) {
+        guard let tabID, spaceID == browser.selectedSpaceID else { return }
+        browser.selectTab(tabID)
         pages.select(session: browser.presented)
     }
 
@@ -624,9 +625,8 @@ struct BrowserCommandActions {
         pages.selectSpace(in: browser)
     }
 
-    func selectSpace(at index: Int) {
-        guard browser.session.spaces.indices.contains(index) else { return }
-        browser.selectSpace(browser.session.spaces[index].id)
+    func selectSpace(_ spaceID: SpaceID) {
+        browser.selectSpace(spaceID)
         pages.selectSpace(in: browser)
     }
 }

@@ -1621,7 +1621,8 @@ struct NotPrivateWorkspace: Equatable, Sendable {
 struct NumberedSelection: Equatable, Sendable {
     let command: ShortcutCommand
     let target: NumberedSelectionTarget
-    let index: Int
+    let spaceID: UUID
+    let tabID: UUID?
 }
 
 struct NumberedSelectionList: Equatable, Sendable {
@@ -1631,8 +1632,7 @@ struct NumberedSelectionList: Equatable, Sendable {
 struct NumberedSelections: Query, Equatable, Sendable {
     typealias Answer = NumberedSelectionList
 
-    let tabCount: Int
-    let spaceCount: Int
+    let windowID: UUID
 }
 
 struct OpenLinkInSplit: Intent, SessionIntent, Equatable, Sendable {
@@ -2169,6 +2169,16 @@ struct ShortcutInUse: Equatable, Sendable {
 struct ShortcutsChanged: Equatable, Sendable {
     let bindings: [ShortcutBinding]
     let isCustomized: Bool
+}
+
+struct ShowAdjacentSpace: Intent, WindowIntent, Equatable, Sendable {
+    let windowID: UUID
+    let direction: AdjacentDirection
+}
+
+struct ShowAdjacentTab: Intent, WindowIntent, Equatable, Sendable {
+    let windowID: UUID
+    let direction: AdjacentDirection
 }
 
 struct ShowSpace: Intent, WindowIntent, Equatable, Sendable {
@@ -3201,6 +3211,36 @@ enum TearOffRefusal: Int, CaseIterable, Sendable {
 }
 
 // MARK: - Fixed sets
+
+/// The members of the core's `AdjacentDirection`. A member's wire tag is its index in `all`.
+struct AdjacentDirection: Hashable, Sendable {
+    let tag: Int
+    let name: String
+    let step: Int
+
+    private init(tag: Int, name: String, step: Int) {
+        self.tag = tag
+        self.name = name
+        self.step = step
+    }
+
+    static let previous = AdjacentDirection(tag: 0, name: "previous", step: -1)
+    static let next = AdjacentDirection(tag: 1, name: "next", step: 1)
+
+    static let all: [AdjacentDirection] = [previous, next]
+
+    static func named(_ name: String?) -> AdjacentDirection? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: AdjacentDirection, rhs: AdjacentDirection) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+}
 
 /// The members of the core's `ArchiveFilterGroup`. A member's wire tag is its index in `all`.
 struct ArchiveFilterGroup: Hashable, Sendable {
@@ -4714,7 +4754,7 @@ struct NavigationError: Hashable, Sendable {
 }
 
 /// The members of the core's `NumberedSelectionTarget`. A member's wire tag is its index in `all`.
-/// Core-only behavior, not emitted: `counting`.
+/// Core-only behavior, not emitted: `choosing`.
 struct NumberedSelectionTarget: Hashable, Sendable {
     enum Kinds: Sendable {
         case tab
@@ -8273,6 +8313,7 @@ struct TabPlacement: Hashable, Sendable {
     let isDurable: Bool
     let holdsFolders: Bool
     let holdsSplits: Bool
+    let isCollapsible: Bool
     let capacity: Int?
 
     private init(
@@ -8285,6 +8326,7 @@ struct TabPlacement: Hashable, Sendable {
         isDurable: Bool,
         holdsFolders: Bool,
         holdsSplits: Bool,
+        isCollapsible: Bool,
         capacity: Int?
     ) {
         self.tag = tag
@@ -8296,6 +8338,7 @@ struct TabPlacement: Hashable, Sendable {
         self.isDurable = isDurable
         self.holdsFolders = holdsFolders
         self.holdsSplits = holdsSplits
+        self.isCollapsible = isCollapsible
         self.capacity = capacity
     }
 
@@ -8309,6 +8352,7 @@ struct TabPlacement: Hashable, Sendable {
         isDurable: true,
         holdsFolders: false,
         holdsSplits: false,
+        isCollapsible: false,
         capacity: 12
     )
     static let saved = TabPlacement(
@@ -8321,6 +8365,7 @@ struct TabPlacement: Hashable, Sendable {
         isDurable: true,
         holdsFolders: true,
         holdsSplits: true,
+        isCollapsible: true,
         capacity: nil
     )
     static let current = TabPlacement(
@@ -8333,6 +8378,7 @@ struct TabPlacement: Hashable, Sendable {
         isDurable: false,
         holdsFolders: true,
         holdsSplits: true,
+        isCollapsible: false,
         capacity: nil
     )
 

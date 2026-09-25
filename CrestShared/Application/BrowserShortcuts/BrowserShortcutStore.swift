@@ -64,12 +64,6 @@ final class BrowserShortcutStore {
         return core.state.shortcutBindings.filter { $0.keys == keys }.map(\.command)
     }
 
-    /// Where each numbered selection command leads for these counts. A command
-    /// with nowhere to go is absent.
-    func numberedSelections(tabCount: Int, spaceCount: Int) -> [ShortcutCommand: NumberedSelection] {
-        core.numberedSelections(tabCount: tabCount, spaceCount: spaceCount)
-    }
-
     // MARK: - Actions - Changes
 
     /// Binds `shortcut` to `command` unless another command holds it.

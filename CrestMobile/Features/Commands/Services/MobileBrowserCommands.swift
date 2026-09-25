@@ -289,8 +289,8 @@ struct MobileBrowserCommands: Commands {
             ForEach(1...9, id: \.self) { number in
                 let command = ShortcutCommand.selecting(.tab, number: number)
                 Button("Select Tab \(number)", systemImage: "\(number).square") {
-                    if let selection = command.flatMap({ numberedSelections[$0] }) {
-                        context?.selectTab(selection.index)
+                    if let tabID = command.flatMap({ numberedSelections[$0]?.tabID }) {
+                        context?.selectTab(tabID)
                     }
                 }
                 .keyboardShortcut(tabSelectionShortcut(number))
@@ -324,7 +324,7 @@ struct MobileBrowserCommands: Commands {
                 let command = ShortcutCommand.selecting(.space, number: number)
                 Button("Select Space \(number)", systemImage: "\(number).square") {
                     if let selection = command.flatMap({ numberedSelections[$0] }) {
-                        context?.selectSpace(selection.index)
+                        context?.selectSpace(selection.spaceID)
                     }
                 }
                 .keyboardShortcut(spaceSelectionShortcut(number))
@@ -483,7 +483,7 @@ struct MobileBrowserCommands: Commands {
 
     /// Where each numbered selection command leads right now, per the core.
     private var numberedSelections: [ShortcutCommand: NumberedSelection] {
-        shortcuts.numberedSelections(tabCount: context?.tabCount ?? 0, spaceCount: context?.spaceCount ?? 0)
+        context?.numberedSelections ?? [:]
     }
 
     private func tabSelectionShortcut(_ number: Int) -> KeyboardShortcut? {

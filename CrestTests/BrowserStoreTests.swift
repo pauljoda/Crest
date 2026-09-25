@@ -534,9 +534,9 @@ final class BrowserStoreTests: XCTestCase {
             showing: selectedSpace.id, tabs: [selectedSpace.id: tabs[0].id, untouchedSpace.id: untouchedTab.id]
         )
 
-        XCTAssertEqual(store.selectAdjacentTab(offset: -1), tabs[2].id)
+        XCTAssertEqual(store.selectAdjacentTab(.previous), tabs[2].id)
         XCTAssertEqual(store.selectedTab?.id, tabs[2].id)
-        XCTAssertEqual(store.selectAdjacentTab(offset: 1), tabs[0].id)
+        XCTAssertEqual(store.selectAdjacentTab(.next), tabs[0].id)
         XCTAssertEqual(store.selectedTab?.id, tabs[0].id)
         XCTAssertEqual(
             store.selectedTabID(in: untouchedSpace.id),

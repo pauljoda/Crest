@@ -183,24 +183,68 @@ public sealed record SidebarOutline(IReadOnlyList<SidebarList> Lists) {
     }
 
     /// <summary>The tabs and folders a person sees, in order: the sections
-    /// <paramref name="isSectionExpanded"/> answers for, skipping the inside of every
-    /// folder of <paramref name="folders"/> that is collapsed.</summary>
+    /// <paramref name="isSectionExpanded"/> answers for, skipping the inside of every folder
+    /// of <paramref name="folders"/> that is collapsed.</summary>
     public IEnumerable<Guid> Shown(IReadOnlyList<FolderState> folders, Func<TabPlacement, bool> isSectionExpanded) {
         ArgumentNullException.ThrowIfNull(folders);
         ArgumentNullException.ThrowIfNull(isSectionExpanded);
-        var collapsed = folders.Where(folder => folder.IsCollapsed).Select(folder => folder.Id).ToHashSet();
+        var collapsed = Collapsed(folders);
         return Walk(isSectionExpanded, id => !collapsed.Contains(id));
     }
 
-    private IEnumerable<Guid> Walk(Func<TabPlacement, bool> isSectionExpanded, Func<Guid, bool> isFolderExpanded) {
+    /// <summary>The rows a person steps through, in the order the sidebar shows them: each
+    /// tab and split row of the sections <paramref name="isSectionExpanded"/> answers for,
+    /// skipping the inside of every folder of <paramref name="folders"/> that is collapsed.
+    /// A split is one stop; a folder and a Start Page are none.</summary>
+    public IReadOnlyList<SidebarRow> Stops(IReadOnlyList<FolderState> folders, Func<TabPlacement, bool> isSectionExpanded) {
+        ArgumentNullException.ThrowIfNull(folders);
+        ArgumentNullException.ThrowIfNull(isSectionExpanded);
+        var collapsed = Collapsed(folders);
+        return [.. Rows(isSectionExpanded, id => !collapsed.Contains(id)).Where(row => !row.Kind.OpensList)];
+    }
+
+    /// <summary>The tab one step in <paramref name="direction"/> from the shown tab
+    /// <paramref name="shownTabId"/> shows among the <see cref="Stops"/>, wrapping at both
+    /// ends: the first tab of the stop the step reaches, or null when there is no stop or
+    /// the step reaches the stop that shows it. A tab no stop shows steps from where it
+    /// lives in the sidebar's order, inside a collapsed folder or section, or from the ends
+    /// when it has no place there, as a Start Page has none.</summary>
+    public Guid? Step(Guid shownTabId, AdjacentDirection direction, IReadOnlyList<FolderState> folders,
+        Func<TabPlacement, bool> isSectionExpanded) {
+        ArgumentNullException.ThrowIfNull(direction);
+        var stops = Stops(folders, isSectionExpanded);
+        if (stops.Count == 0) return null;
+        int shown = -1;
+        for (int index = 0; index < stops.Count && shown < 0; index++)
+            if (stops[index].Members.Contains(shownTabId)) shown = index;
+        int reached;
+        if (shown >= 0) {
+            reached = direction.From(shown, stops.Count);
+        } else {
+            var positions = Positions();
+            int gap = positions.TryGetValue(shownTabId, out int place) ? stops.Count(stop => positions[stop.Members[0]] < place) : 0;
+            reached = direction.FromGap(gap, stops.Count);
+        }
+        return reached == shown ? null : stops[reached].Members[0];
+    }
+
+    private static HashSet<Guid> Collapsed(IReadOnlyList<FolderState> folders) =>
+        folders.Where(folder => folder.IsCollapsed).Select(folder => folder.Id).ToHashSet();
+
+    private IEnumerable<Guid> Walk(Func<TabPlacement, bool> isSectionExpanded, Func<Guid, bool> isFolderExpanded) =>
+        Rows(isSectionExpanded, isFolderExpanded).SelectMany(row => row.Listed);
+
+    /// Every row of the sections `isSectionExpanded` answers for, in order, each
+    /// folder row followed by its inside when `isFolderExpanded` answers for it.
+    private IEnumerable<SidebarRow> Rows(Func<TabPlacement, bool> isSectionExpanded, Func<Guid, bool> isFolderExpanded) {
         var insides = new Dictionary<Guid, SidebarList>();
         foreach (var list in Lists)
             if (list.FolderId is { } id) insides.TryAdd(id, list);
-        IEnumerable<Guid> List(IReadOnlyList<SidebarRow> rows) {
+        IEnumerable<SidebarRow> List(IReadOnlyList<SidebarRow> rows) {
             foreach (var row in rows) {
-                foreach (var id in row.Listed) yield return id;
+                yield return row;
                 if (row.Kind.OpensList && isFolderExpanded(row.Id) && insides.TryGetValue(row.Id, out var inside))
-                    foreach (var id in List(inside.Rows)) yield return id;
+                    foreach (var nested in List(inside.Rows)) yield return nested;
             }
         }
         return Lists.Where(list => list.FolderId is null && isSectionExpanded(list.Section)).SelectMany(list => List(list.Rows));

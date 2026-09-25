@@ -166,8 +166,7 @@ public sealed partial class CrestApp : IDisposable {
                 CanTearOff tearOff => device.Answer(tearOff),
                 SiteDecision decision => device.Answer(decision),
                 CaptureDecision capture => device.Answer(capture),
-                NumberedSelections numbered => new NumberedSelectionList([.. ShortcutCommand.All.Select(command => command.Selecting(numbered))
-                    .OfType<NumberedSelection>()]),
+                NumberedSelections numbered => device.Answer(numbered),
                 CanReturnToSavedAddress savedAddress => pages.Answer(savedAddress),
                 FallbackTab fallback => Window.Answer(fallback),
                 PendingSave => new PendingSaveRevision(storage?.PendingRevision is { } revision ? checked((long)revision) : null),

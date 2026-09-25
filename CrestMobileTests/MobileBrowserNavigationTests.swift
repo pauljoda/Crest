@@ -584,11 +584,12 @@ final class MobileBrowserNavigationTests: XCTestCase {
     }
 
     func testMobileBrowserCommandControllerCyclesTabsAndSpaces() throws {
+        // Web pages: the sidebar lists no Start Page, so stepping skips one.
         let tabs = (1...3).map { index in
             BrowserTab(
                 id: fixedUUID(500 + index),
                 title: "Tab \(index)",
-                url: nil,
+                url: URL(string: "https://example.com/\(index)"),
                 symbol: "globe",
                 placement: .current
             )

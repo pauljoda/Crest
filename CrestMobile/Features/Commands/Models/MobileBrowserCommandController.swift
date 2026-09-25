@@ -98,12 +98,12 @@ struct MobileBrowserCommandController {
 
     @discardableResult
     func selectPreviousTab() -> TabID? {
-        selectTab(offset: -1)
+        selectAdjacentTab(.previous)
     }
 
     @discardableResult
     func selectNextTab() -> TabID? {
-        selectTab(offset: 1)
+        selectAdjacentTab(.next)
     }
 
     @discardableResult
@@ -119,10 +119,11 @@ struct MobileBrowserCommandController {
         return selectTab(recent.id)
     }
 
+    /// Shows the tab a numbered command leads to, in the Space this window shows.
     @discardableResult
-    func selectTab(at index: Int) -> TabID? {
-        guard orderedTabs.indices.contains(index) else { return nil }
-        return selectTab(orderedTabs[index].id)
+    func selectNumberedTab(_ tabID: TabID) -> TabID? {
+        guard browser.selectedSpace?.contains(tabID) == true else { return nil }
+        return selectTab(tabID)
     }
 
     @discardableResult
@@ -135,17 +136,17 @@ struct MobileBrowserCommandController {
         selectSpace(.next)
     }
 
+    /// Shows the Space a numbered command leads to.
     @discardableResult
-    func selectSpace(at index: Int) -> SpaceID? {
-        guard browser.session.spaces.indices.contains(index) else { return nil }
-        let id = browser.session.spaces[index].id
-        browser.selectSpace(id)
+    func selectNumberedSpace(_ spaceID: SpaceID) -> SpaceID? {
+        browser.selectSpace(spaceID)
+        guard browser.selectedSpaceID == spaceID else { return nil }
         synchronizePages()
-        return id
+        return spaceID
     }
 
-    private func selectTab(offset: Int) -> TabID? {
-        guard let id = browser.selectAdjacentTab(offset: offset) else { return nil }
+    private func selectAdjacentTab(_ direction: AdjacentDirection) -> TabID? {
+        guard let id = browser.selectAdjacentTab(direction) else { return nil }
         synchronizePages()
         return id
     }

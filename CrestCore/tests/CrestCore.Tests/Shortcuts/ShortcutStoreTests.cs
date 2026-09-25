@@ -134,19 +134,6 @@ public sealed partial class BrowserContractsTests {
     }
 
     [Fact]
-    public void NumberedCommandsReachTheNthTabOrSpaceOnlyWhenItExists() {
-        using var app = new CrestApp(new AppConfiguration(null, DevicePlatform.Desktop));
-        var selections = app.Query(new NumberedSelections(TabCount: 3, SpaceCount: 0)).Selections;
-        Assert.Equal([ShortcutCommand.SelectTab1, ShortcutCommand.SelectTab2, ShortcutCommand.SelectTab3],
-            selections.Select(selection => selection.Command));
-        Assert.Equal([0, 1, 2], selections.Select(selection => selection.Index));
-        Assert.All(selections, selection => Assert.Same(NumberedSelectionTarget.Tab, selection.Target));
-        var spaces = app.Query(new NumberedSelections(TabCount: 0, SpaceCount: 20)).Selections;
-        Assert.Equal(9, spaces.Count);
-        Assert.Equal(8, spaces.Single(selection => selection.Command == ShortcutCommand.SelectSpace9).Index);
-    }
-
-    [Fact]
     public void OnlyCommandsTheDefaultEngineOffersHoldKeys() {
         using var app = new CrestApp(new AppConfiguration(null, DevicePlatform.Desktop));
         var reader = Typed("r", ShortcutModifiers.Command | ShortcutModifiers.Option);

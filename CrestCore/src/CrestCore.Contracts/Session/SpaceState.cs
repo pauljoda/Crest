@@ -43,6 +43,25 @@ public sealed record SpaceState(
 
     #endregion
 
+    #region Actions - Sidebar
+
+    /// <summary>Whether the Space's sidebar shows the section's rows: a section a person
+    /// may collapse shows them while the Space keeps its saved tabs expanded.</summary>
+    public bool Shows(TabPlacement section) {
+        ArgumentNullException.ThrowIfNull(section);
+        return !section.IsCollapsible || Settings.IsSavedTabsExpanded;
+    }
+
+    /// <summary>The rows a person steps through in the Space's sidebar, in order; see
+    /// <see cref="SidebarOutline.Stops"/>.</summary>
+    public IReadOnlyList<SidebarRow> Stops() => Sidebar.Stops(Folders, Shows);
+
+    /// <summary>The tab one step in <paramref name="direction"/> from the shown tab shows,
+    /// or null; see <see cref="SidebarOutline.Step"/>.</summary>
+    public Guid? Step(Guid shownTabId, AdjacentDirection direction) => Sidebar.Step(shownTabId, direction, Folders, Shows);
+
+    #endregion
+
     #region Actions - Equality
 
     public bool Equals(SpaceState? other) => ReferenceEquals(this, other) || other is not null

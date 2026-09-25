@@ -13,6 +13,8 @@ struct MobileBrowserCommandContext {
     let canReopenClosedTab: Bool
     let tabCount: Int
     let spaceCount: Int
+    /// Where each numbered command leads in this window, per the core.
+    let numberedSelections: [ShortcutCommand: NumberedSelection]
     let isSelectedTabInSplit: Bool
     let canSplitWithNextTab: Bool
     /// Which way the cards are laid out, so a command that names a side of the
@@ -41,7 +43,7 @@ struct MobileBrowserCommandContext {
     let selectPreviousTab: () -> Void
     let selectNextTab: () -> Void
     let selectMostRecentTab: () -> Void
-    let selectTab: (Int) -> Void
+    let selectTab: (TabID) -> Void
     let splitWithNextTab: () -> Void
     let focusNextSplitCard: () -> Void
     let focusPreviousSplitCard: () -> Void
@@ -51,7 +53,7 @@ struct MobileBrowserCommandContext {
     let moveFocusedSplitCard: (Int) -> Void
     let selectPreviousSpace: () -> Void
     let selectNextSpace: () -> Void
-    let selectSpace: (Int) -> Void
+    let selectSpace: (SpaceID) -> Void
     let toggleReaderMode: () -> Void
     let setTranslationToolbarVisible: (Bool) -> Void
     let toggleContentBlocking: () async -> Void
