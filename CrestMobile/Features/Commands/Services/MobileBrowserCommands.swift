@@ -482,8 +482,8 @@ struct MobileBrowserCommands: Commands {
     }
 
     /// Where each numbered selection command leads right now, per the core.
-    private var numberedSelections: [ShortcutCommand: BrowserNumberedSelection] {
-        BrowserCorePolicy.numberedSelections(tabCount: context?.tabCount ?? 0, spaceCount: context?.spaceCount ?? 0)
+    private var numberedSelections: [ShortcutCommand: NumberedSelection] {
+        shortcuts.numberedSelections(tabCount: context?.tabCount ?? 0, spaceCount: context?.spaceCount ?? 0)
     }
 
     private func tabSelectionShortcut(_ number: Int) -> KeyboardShortcut? {

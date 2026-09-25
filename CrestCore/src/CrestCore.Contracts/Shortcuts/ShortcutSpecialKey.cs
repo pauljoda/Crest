@@ -5,8 +5,8 @@ namespace CrestCore.Contracts;
 /// A key a shortcut can use that types no character, with how a shortcut list
 /// shows it and how assistive technology reads it.
 ///
-/// Persisted shortcut overrides and the shortcut policies spell a key as its
-/// `Name`, so a name never changes. `All` is append-only.
+/// The device store and the shortcut choices earlier releases kept spell a key
+/// as its `Name`, so a name never changes. `All` is append-only.
 public sealed class ShortcutSpecialKey {
     #region Variables
 

@@ -201,15 +201,17 @@ for the choices a person made, duplicates, matched destination tabs and pinned
 overflow. The
 workspace import rejects a source whose split runs its repair would rewrite.
 
-`shortcuts.bindings` resolves the platform's offered `commands` (at most 128)
-against the person's `overrides` (a command name to a chord, or null when left
-unassigned) and returns each command's live chord and catalog default; chords use
-the native persisted shape `{"key":{"character":"n"},"modifiers":1}`, and
-overrides for commands the core does not know are carried through verbatim.
-`shortcuts.assign` binds or clears one command and returns `assigned` with the
-complete revised overrides, `conflict` with the offered commands already holding
-the chord, or `invalid`. `shortcuts.numbered_selection` maps each numbered
-selection command to the zero-based tab or Space it reaches for the given counts.
+Shortcut choices are device state too. `AssignShortcut` binds keys to a
+command and is refused with `ShortcutInUse` naming the offered commands that
+already answer to them; `ReassignShortcut` takes them from those commands;
+`UnassignShortcut`, `ResetShortcut` and `ResetShortcuts` clear or forget
+choices. `ShortcutsChanged` carries every offered command's keys, and the
+commands offered are those the default engine can perform. `AdoptShortcuts`
+carries the choices earlier releases kept under `crest.keyboard-shortcuts.v1`
+into the device store once, keeping those for commands the core does not know.
+The `NumberedSelections` query maps each numbered command to the zero-based
+tab or Space it reaches for the given counts. `AppConfiguration` names the
+device's platform, whose defaults the shortcut rules read.
 `launch.plan` takes the platform's parsed launch flags and whether first-run
 setup owns the first window, and answers isolation, ephemeral profile storage,
 installed-app presentation and the startup behavior for a person who never

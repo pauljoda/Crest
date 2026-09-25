@@ -26,7 +26,7 @@ public sealed partial class BrowserContractsTests {
         /// A device with a workspace of `kind`, persistent unless named, opened
         /// from `session`, a document in the stored format.
         public TestDevice(JsonNode session, WorkspaceKind? kind = null) {
-            app = new(new AppConfiguration(null), Clock, Ids);
+            app = new(new AppConfiguration(null, DevicePlatform.Desktop), Clock, Ids);
             Workspace = TestWorkspaces.Open(app, session, kind);
         }
 

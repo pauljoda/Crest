@@ -26,6 +26,28 @@ extension BrowserShortcut {
         }
         self.init(key: key, modifiers: keys.modifiers)
     }
+
+    /// The keys a command is bound to in the core's read model, or nil for
+    /// keys no shortcut here can spell.
+    init?(boundKeys keys: KeyCombination) {
+        if keys.isSpecialKey {
+            guard let special = ShortcutSpecialKey.named(keys.key) else { return nil }
+            self.init(key: .special(special), modifiers: keys.modifiers)
+        } else {
+            guard keys.key.count == 1, let character = keys.key.first else { return nil }
+            self.init(key: .character(character), modifiers: keys.modifiers)
+        }
+    }
+
+    /// The shortcut as the core's rules read it.
+    var keys: KeyCombination {
+        switch key {
+        case .character(let character):
+            KeyCombination(key: String(character), isSpecialKey: false, modifiers: modifiers)
+        case .special(let special):
+            KeyCombination(key: special.name, isSpecialKey: true, modifiers: modifiers)
+        }
+    }
 }
 
 enum BrowserShortcutAssignmentResult: Equatable, Sendable {
@@ -82,11 +104,6 @@ extension ShortcutModifiers: Codable, Hashable {
         .control,
         .shift,
     ]
-}
-
-enum BrowserShortcutOverride: Equatable, Sendable {
-    case custom(BrowserShortcut)
-    case unassigned
 }
 
 struct BrowserShortcutSearchDocument: Equatable, Sendable {

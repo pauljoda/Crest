@@ -63,15 +63,9 @@ final class BrowserShortcutSettingsModelTests: XCTestCase {
     }
 
     private func makeFixture() -> (shortcuts: BrowserShortcutStore, model: BrowserShortcutSettingsModel) {
-        let shortcuts = BrowserShortcutStore(persistence: ShortcutPersistence())
+        let shortcuts = BrowserShortcutStore()
         let model = BrowserShortcutSettingsModel(shortcuts: shortcuts, browser: .preview(), searchProvider: SearchProvider())
         return (shortcuts, model)
-    }
-    private final class ShortcutPersistence: BrowserShortcutPersisting {
-        var overrides: [String: BrowserShortcutOverride]?
-        func load() -> [String: BrowserShortcutOverride]? { overrides }
-        func save(_ overrides: [String: BrowserShortcutOverride]) { self.overrides = overrides }
-        func remove() { overrides = nil }
     }
     private struct SearchProvider: BrowserShortcutSearchProviding {
         func matches(_ command: ShortcutCommand, currentShortcut: BrowserShortcut?, query: String) -> Bool {

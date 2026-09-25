@@ -53,7 +53,7 @@ public sealed partial class BrowserContractsTests {
             space["history"] = JsonNode.Parse(installed.History.Single(part => part.SpaceId == SpaceId(space)).Entries);
         }
 
-        using (var app = new CrestApp(new AppConfiguration(directory.Path))) {
+        using (var app = new CrestApp(new AppConfiguration(directory.Path, DevicePlatform.Desktop))) {
             Assert.Null(app.StoredSync);
             var adopted = Assert.Single(app.Send(new AdoptLegacySession(installed, SeedDocument())).OfType<SessionAdopted>());
             // The split layout kept images in the platform's own store.
@@ -85,7 +85,7 @@ public sealed partial class BrowserContractsTests {
         // A later launch keeps the accepted session, even when the retained
         // defaults have since changed.
         var changed = new LegacySession(SeedDocument(), WholeGraph: null, [], installed.Journal);
-        using var relaunched = new CrestApp(new AppConfiguration(directory.Path));
+        using var relaunched = new CrestApp(new AppConfiguration(directory.Path, DevicePlatform.Desktop));
         relaunched.Drain();
         Assert.Empty(Own(relaunched.Send(new AdoptLegacySession(changed, SeedDocument()))));
         AssertSameSession(expected, StoredDocument(relaunched));
@@ -140,7 +140,7 @@ public sealed partial class BrowserContractsTests {
                 ["color"] = "a color from later"
             });
 
-        using var app = new CrestApp(new AppConfiguration(directory.Path));
+        using var app = new CrestApp(new AppConfiguration(directory.Path, DevicePlatform.Desktop));
         var adopted = Assert.Single(app.Send(new AdoptLegacySession(
             new LegacySession(Core: null, Bytes(document), [], Journal: null), SeedDocument())).OfType<SessionAdopted>());
 
@@ -174,7 +174,7 @@ public sealed partial class BrowserContractsTests {
         tab["storedIconMode"] = "generated";
         core["spaces"]![0]!.AsObject().Remove("accessPolicy");
 
-        using var app = new CrestApp(new AppConfiguration(directory.Path));
+        using var app = new CrestApp(new AppConfiguration(directory.Path, DevicePlatform.Desktop));
         app.Send(new AdoptLegacySession(installed with { Core = Bytes(core) }, SeedDocument()));
 
         var spaces = StoredDocument(app)["spaces"]!.AsArray();
@@ -198,7 +198,7 @@ public sealed partial class BrowserContractsTests {
             // The whole graph is never read while a core is present.
             var unreadable = new LegacySession(Bytes(JsonValue.Create("a core a later build may read")!), installed.Core, installed.History,
                 installed.Journal);
-            using var app = new CrestApp(new AppConfiguration(directory.Path));
+            using var app = new CrestApp(new AppConfiguration(directory.Path, DevicePlatform.Desktop));
             Assert.Single(app.Send(new AdoptLegacySession(unreadable, Bytes(seed))).OfType<SessionAdopted>());
             Assert.Equal(Guid.Parse(seed["disposableSeedMarker"]!.GetValue<string>()),
                 Guid.Parse(StoredDocument(app)["disposableSeedMarker"]!.GetValue<string>()));
@@ -207,7 +207,7 @@ public sealed partial class BrowserContractsTests {
             Assert.False(File.Exists(directory.Recovery));
         }
         using (var directory = new StorageDirectory()) {
-            using var app = new CrestApp(new AppConfiguration(directory.Path));
+            using var app = new CrestApp(new AppConfiguration(directory.Path, DevicePlatform.Desktop));
             app.Send(new AdoptLegacySession(new LegacySession(null, null, [], installed.Journal), Bytes(seed)));
             Assert.Equal(SpaceId(seed["spaces"]![0]!), SpaceId(StoredDocument(app)["spaces"]![0]!));
             Assert.False(File.Exists(directory.File + ".cloud-recovery"));
@@ -219,7 +219,7 @@ public sealed partial class BrowserContractsTests {
         using var directory = new StorageDirectory();
         var (_, installed, journal) = InstalledDefaults();
         journal["schemaVersion"] = 2;
-        using var app = new CrestApp(new AppConfiguration(directory.Path));
+        using var app = new CrestApp(new AppConfiguration(directory.Path, DevicePlatform.Desktop));
         var refused = Assert.Throws<Rejected>(() => app.Send(new AdoptLegacySession(installed with { Journal = Bytes(journal) }, SeedDocument())));
         Assert.IsType<StorageFromNewerApp>(refused.Rejection);
         Assert.Null(app.StoredSync);
@@ -230,7 +230,7 @@ public sealed partial class BrowserContractsTests {
     public void ARestoreReplacesAFileTheCoreCannotOpenWithTheCheckpointAndPreservesIt() {
         using var directory = new StorageDirectory();
         var (_, installed, journal) = InstalledDefaults();
-        var configuration = new AppConfiguration(directory.Path);
+        var configuration = new AppConfiguration(directory.Path, DevicePlatform.Desktop);
         JsonNode expected;
         using (var app = new CrestApp(configuration)) {
             app.Send(new AdoptLegacySession(installed, SeedDocument()));
@@ -263,7 +263,7 @@ public sealed partial class BrowserContractsTests {
     public void AnUnusableCheckpointLeavesTheFileAloneAndAnInterruptedRestoreCanResume() {
         using var directory = new StorageDirectory();
         var (_, installed, _) = InstalledDefaults();
-        var configuration = new AppConfiguration(directory.Path);
+        var configuration = new AppConfiguration(directory.Path, DevicePlatform.Desktop);
         Assert.Equal((CoreStatus.Rejected, (Rejection?)new RecoveryCheckpointUnusable(StorageFailure.Unavailable)), AppClient.Restore(configuration));
         using (var app = new CrestApp(configuration)) app.Send(new AdoptLegacySession(installed, SeedDocument()));
         var checkpoint = File.ReadAllBytes(directory.Recovery);

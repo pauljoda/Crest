@@ -41,7 +41,7 @@ public sealed partial class CrestApp : IDisposable {
     #region Constructors
 
     /// A core that keeps everything in memory.
-    public CrestApp() : this(new AppConfiguration(null)) { }
+    public CrestApp() : this(new AppConfiguration(null, DevicePlatform.Desktop)) { }
 
     /// A core configured by the host. With a storage directory it opens the
     /// session file there and loads the session it holds; throws `Rejected`
@@ -59,13 +59,13 @@ public sealed partial class CrestApp : IDisposable {
         // consults it, so a borrowed workspace unlocks with its source.
         var grants = new SpaceAccessAuthority();
         if (configuration.StorageDirectory is not { } directory) {
-            device = new(storage: null, DeviceRecords.Empty, grants, Announce, RequestTurn, CloseBorrower);
+            device = new(configuration.Platform, storage: null, DeviceRecords.Empty, grants, Announce, RequestTurn, CloseBorrower);
             pages = new(device, engines, clock, ids);
             access = new(device, grants);
             return;
         }
         storage = SessionStorage.Open(directory, Announce, out var loaded);
-        device = new(storage, storage.Device, grants, Announce, RequestTurn, CloseBorrower);
+        device = new(configuration.Platform, storage, storage.Device, grants, Announce, RequestTurn, CloseBorrower);
         pages = new(device, engines, clock, ids);
         access = new(device, grants);
         try {
@@ -108,6 +108,9 @@ public sealed partial class CrestApp : IDisposable {
                     break;
                 case SitePermissionIntent permission:
                     device.Handle(permission, changes, clock.Now, ids);
+                    break;
+                case ShortcutIntent shortcut:
+                    device.Handle(shortcut, engines.OfferedCommands(), changes);
                     break;
                 case PageIntent page:
                     pages.Handle(page, changes, Issue);
@@ -163,6 +166,8 @@ public sealed partial class CrestApp : IDisposable {
                 CanTearOff tearOff => device.Answer(tearOff),
                 SiteDecision decision => device.Answer(decision),
                 CaptureDecision capture => device.Answer(capture),
+                NumberedSelections numbered => new NumberedSelectionList([.. ShortcutCommand.All.Select(command => command.Selecting(numbered))
+                    .OfType<NumberedSelection>()]),
                 CanReturnToSavedAddress savedAddress => pages.Answer(savedAddress),
                 FallbackTab fallback => Window.Answer(fallback),
                 PendingSave => new PendingSaveRevision(storage?.PendingRevision is { } revision ? checked((long)revision) : null),

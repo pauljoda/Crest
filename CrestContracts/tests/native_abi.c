@@ -14,8 +14,9 @@ static void app_boundary(void) {
     const uint8_t fingerprint[CREST_CONTRACTS_FINGERPRINT_LENGTH] = CREST_CONTRACTS_FINGERPRINT;
     uint8_t stale[CREST_CONTRACTS_FINGERPRINT_LENGTH];
     memcpy(stale, fingerprint, sizeof(stale)); stale[0] ^= 1;
-    /* AppConfiguration(StorageDirectory: null): the optional string is absent. */
-    const uint8_t memory_only[] = { 0 };
+    /* AppConfiguration(StorageDirectory: null, Platform: Desktop): the optional
+     * string is absent, then the platform's index in DevicePlatform.All. */
+    const uint8_t memory_only[] = { 0, 0 };
     uint64_t app = 0;
     crest_buffer_t buffer = { (uint8_t*)1, 1 };
     assert(crest_app_create(stale, sizeof(stale), memory_only, sizeof(memory_only), &app, &buffer) == CREST_VERSION_MISMATCH
@@ -86,14 +87,8 @@ static void policy_boundary(void) {
     assert(crest_core_evaluate_policy((const uint8_t*)setup, strlen(setup), output, 256, &length) == CREST_OK);
     output[length] = 0;
     assert(strstr((const char*)output, "\"error\":\"pinned_limit_reached\""));
-    /* Shortcut conflicts, launch isolation and media arbitration are core rules. */
+    /* Launch isolation and media arbitration are core rules. */
     char answer[2048];
-    const char *conflict = "{\"version\":1,\"operation\":\"shortcuts.assign\",\"platform\":\"desktop\","
-        "\"commands\":[\"newTab\",\"findInPage\"],\"overrides\":{},\"command\":\"newTab\","
-        "\"shortcut\":{\"key\":{\"character\":\"f\"},\"modifiers\":1},\"replacingConflicts\":false}";
-    assert(crest_core_evaluate_policy((const uint8_t*)conflict, strlen(conflict), (uint8_t*)answer, sizeof(answer) - 1, &length) == CREST_OK);
-    answer[length] = 0;
-    assert(strstr(answer, "\"result\":\"conflict\"") && strstr(answer, "\"conflicts\":[\"findInPage\"]"));
     const char *launch = "{\"version\":1,\"operation\":\"launch.plan\",\"platform\":\"mobile\",\"environment\":{"
         "\"testRuntime\":false,\"previewRuntime\":false,\"isolatedSession\":false,\"namedProfile\":false,"
         "\"isolatedCloudSync\":false,\"resetSession\":true,\"showcase\":false,\"inMemoryCredentials\":false,"
@@ -168,7 +163,7 @@ static void open_seeded(uint64_t app, uint8_t kind, const char* seed, size_t len
  * its borrowers first. */
 static void session_boundary(void) {
     const uint8_t fingerprint[CREST_CONTRACTS_FINGERPRINT_LENGTH] = CREST_CONTRACTS_FINGERPRINT;
-    const uint8_t memory_only[] = { 0 };
+    const uint8_t memory_only[] = { 0, 0 };
     uint64_t app = 0;
     crest_buffer_t buffer = { NULL, 0 };
     assert(crest_app_create(fingerprint, sizeof(fingerprint), memory_only, sizeof(memory_only), &app, &buffer) == CREST_OK);
@@ -244,7 +239,7 @@ static void CREST_CALL run_engine(void* context, const uint8_t* command, size_t 
 static void engine_boundary(void) {
     const uint8_t fingerprint[CREST_CONTRACTS_FINGERPRINT_LENGTH] = CREST_CONTRACTS_FINGERPRINT;
     const uint8_t engine_fingerprint[CREST_ENGINE_CONTRACT_FINGERPRINT_LENGTH] = CREST_ENGINE_CONTRACT_FINGERPRINT;
-    const uint8_t memory_only[] = { 0 };
+    const uint8_t memory_only[] = { 0, 0 };
     uint64_t app = 0, engine = 0;
     crest_buffer_t buffer = { NULL, 0 };
     assert(crest_app_create(fingerprint, sizeof(fingerprint), memory_only, sizeof(memory_only), &app, &buffer) == CREST_OK);
@@ -263,6 +258,11 @@ static void engine_boundary(void) {
         &binding, &engine, &buffer) == CREST_REJECTED && buffer.bytes[0] == CREST_REJECTION_ENGINE_ALREADY_REGISTERED);
     crest_buffer_free(&buffer);
     engine = fixture.engine;
+    /* The engine lacks Reader, content blocking and translation, so the
+     * commands that need them are no longer offered: the shortcut bindings
+     * that change wait in the next drain. */
+    assert(crest_app_drain(app, &buffer) == CREST_OK && buffer.bytes[0] == 1 && buffer.bytes[1] == CREST_CHANGE_SHORTCUTS_CHANGED);
+    crest_buffer_free(&buffer);
 
     /* A workspace opened from a seed, with a window open over it. */
     char json[1024];
@@ -325,7 +325,7 @@ static void engine_boundary(void) {
 static void links_boundary(void) {
     const uint8_t fingerprint[CREST_CONTRACTS_FINGERPRINT_LENGTH] = CREST_CONTRACTS_FINGERPRINT;
     uint64_t app = 0;
-    const uint8_t memory_only[] = { 0 };
+    const uint8_t memory_only[] = { 0, 0 };
     crest_buffer_t buffer = { NULL, 0 };
     assert(crest_app_create(fingerprint, sizeof(fingerprint), memory_only, sizeof(memory_only), &app, &buffer) == CREST_OK);
     /* QuickWindowSite: its tag, the address as a length-prefixed UTF-8 string,
@@ -349,11 +349,13 @@ static void count_wake(void* context) {
 /* AppConfiguration with a storage directory: presence, varint length, UTF-8. */
 static size_t storage_configuration(const char* directory, uint8_t* output, size_t capacity) {
     size_t length = strlen(directory);
-    assert(length < 128 && length + 2 <= capacity);
+    assert(length < 128 && length + 3 <= capacity);
     output[0] = 1;
     output[1] = (uint8_t)length;
     memcpy(output + 2, directory, length);
-    return length + 2;
+    /* The platform: Desktop, the first of DevicePlatform.All. */
+    output[length + 2] = 0;
+    return length + 3;
 }
 /* Saved(Revision: 1): its tag, then the file revision as a little-endian
  * int64. An adoption hands the file its first revision. The storage worker

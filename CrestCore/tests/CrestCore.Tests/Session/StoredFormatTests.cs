@@ -76,7 +76,7 @@ public sealed class StoredFormatTests {
         var expected = Fixture("session-answers.json");
         var clock = new TestClock(DateTimeOffset.UnixEpoch);
         var ids = new TestIds();
-        using var app = new CrestApp(new AppConfiguration(null), clock, ids);
+        using var app = new CrestApp(new AppConfiguration(null, DevicePlatform.Desktop), clock, ids);
         var engine = RecordedIntents.PageEngine(app);
         var workspace = TestWorkspaces.Open(app, session);
         var authority = app.Workspace(workspace);

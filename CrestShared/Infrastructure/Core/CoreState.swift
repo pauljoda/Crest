@@ -45,6 +45,14 @@ final class CoreState {
     /// Advances with every site permission change the core publishes, so a
     /// view that asks the core for a decision redraws when any choice changes.
     var sitePermissionRevision: UInt64 = 0
+    /// The keys each command this device offers answers to, in the order the
+    /// settings list them, as the core last published them.
+    var shortcutBindings: [ShortcutBinding] = []
+    /// The same bindings, by command.
+    var shortcuts: [ShortcutCommand: ShortcutBinding] = [:]
+    /// Whether the person changed any shortcut, including one this device
+    /// does not offer.
+    var shortcutsAreCustomized = false
     /// This process's access to each Space profile that holds a grant or is
     /// waiting on the device owner, as the core last published it. A profile
     /// missing here holds no grant. Stored before it is announced; see

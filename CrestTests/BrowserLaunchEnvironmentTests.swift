@@ -31,6 +31,36 @@ final class BrowserLaunchEnvironmentTests: XCTestCase {
         }
     }
 
+    func testIsolatedLaunchesNeverAdoptTheInstalledDeviceChoices() throws {
+        let installedName = "BrowserLaunchEnvironmentTests.installed.\(UUID().uuidString)"
+        let installed = try XCTUnwrap(UserDefaults(suiteName: installedName))
+        let isolationID = "device-choices-\(UUID().uuidString.prefix(8).lowercased())"
+        let isolatedName = BrowserLaunchEnvironment.isolatedDefaultsSuiteName(isolationID: isolationID)
+        let isolated = try XCTUnwrap(UserDefaults(suiteName: isolatedName))
+        defer {
+            installed.removePersistentDomain(forName: installedName)
+            isolated.removePersistentDomain(forName: isolatedName)
+        }
+        installed.set(Data("installed".utf8), forKey: BrowserLegacyDeviceDefaults.sitePermissionsKey)
+        installed.set(Data("installed".utf8), forKey: BrowserLegacyDeviceDefaults.shortcutsKey)
+        isolated.set(Data("isolated".utf8), forKey: BrowserLegacyDeviceDefaults.shortcutsKey)
+
+        let product = BrowserLegacyDeviceDefaults.read(
+            for: BrowserLaunchEnvironment(values: [:], isXCTestRuntime: false), standard: installed)
+        XCTAssertEqual(product.sitePermissions, Data("installed".utf8))
+        XCTAssertEqual(product.shortcuts, Data("installed".utf8))
+        let namedLaunch = BrowserLaunchEnvironment(
+            values: ["CREST_ISOLATED_SESSION": "1", "CREST_ISOLATED_PERSISTENCE_ID": isolationID],
+            isXCTestRuntime: false)
+        let named = BrowserLegacyDeviceDefaults.read(for: namedLaunch, standard: installed)
+        XCTAssertNil(named.sitePermissions)
+        XCTAssertEqual(named.shortcuts, Data("isolated".utf8))
+        let memoryOnlyLaunch = BrowserLaunchEnvironment(
+            values: ["CREST_ISOLATED_SESSION": "1"], isXCTestRuntime: false)
+        let memoryOnly = BrowserLegacyDeviceDefaults.read(for: memoryOnlyLaunch, standard: installed)
+        XCTAssertEqual(memoryOnly, BrowserLegacyDeviceDefaults())
+    }
+
     func testParsesEveryOwnedLaunchValueWithoutLosingRawFixtureInputs() {
         let environment = BrowserLaunchEnvironment(
             values: [

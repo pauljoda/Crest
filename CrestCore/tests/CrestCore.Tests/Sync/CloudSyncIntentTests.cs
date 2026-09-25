@@ -394,7 +394,7 @@ public sealed partial class BrowserContractsTests {
     [Fact]
     public void TheTransportIsRefusedWhileTheFileHoldsNoSession() {
         using var directory = new StorageDirectory();
-        using var app = new CrestApp(new AppConfiguration(directory.Path));
+        using var app = new CrestApp(new AppConfiguration(directory.Path, DevicePlatform.Desktop));
 
         Assert.IsType<NoStoredSession>(Assert.Throws<Rejected>(() => app.Query(new PendingUploads())).Rejection);
         Assert.IsType<NoStoredSession>(Assert.Throws<Rejected>(() => app.Query(new CloudComparison([]))).Rejection);
@@ -425,7 +425,7 @@ public sealed partial class BrowserContractsTests {
         JsonObject? journal = null) {
         var session = document["session"]!.AsObject();
         if (!keepsSeed) session.Remove("disposableSeedMarker");
-        var app = new CrestApp(new AppConfiguration(directory.Path));
+        var app = new CrestApp(new AppConfiguration(directory.Path, DevicePlatform.Desktop));
         var answered = app.Send(Adoption(session, journal));
         var (workspace, opened) = TestWorkspaces.OpenStored(app);
         var sync = app.StoredSync!;

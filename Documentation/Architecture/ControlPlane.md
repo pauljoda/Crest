@@ -780,8 +780,11 @@ language packs installed on each device. `BrowserAppPreferenceStore` is the
 Swift projection that settings, translation, Picture in Picture, saved-tab and
 Split View code read; a refused or unanswered edit leaves the value as it was.
 WebKit reads its spelling default once per process, so launch reconciles that
-engine copy with the record. Appearance preferences, link preferences,
-shortcut overrides, sync choices and per-Space download locations stay native.
+engine copy with the record. Shortcut choices are the core device's, changed
+through `AssignShortcut`, `ReassignShortcut`, `UnassignShortcut`,
+`ResetShortcut` and `ResetShortcuts` and read from `ShortcutsChanged`.
+Appearance preferences, link preferences, sync choices and per-Space download
+locations stay native.
 The C ABI is synchronous: `crest_session_*`, `crest_app_*` and
 `crest_core_evaluate_policy`, declared in
 `CrestContracts/include/crest_core.h` and `crest_app.h` and described in

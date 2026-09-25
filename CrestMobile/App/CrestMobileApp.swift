@@ -184,10 +184,7 @@ private final class BrowserMobileApplication {
         self.sidebarWidgets = sidebarWidgets
         // A hardware keyboard on iPad reads the same rebindable command table
         // the Mac menu bar does, composed exactly the way the Mac composes it.
-        shortcuts = BrowserShortcutStore.launch(
-            usesIsolatedLaunch: usesIsolatedLaunch,
-            reset: shouldReset
-        )
+        shortcuts = BrowserShortcutStore(core: core, legacyOverrides: legacyDevice.shortcuts)
         self.permissionCenter = permissionCenter
         pageStoreRegistry = MobileBrowserPageStoreRegistry(primary: pages)
         self.mediaSessions = mediaSessions

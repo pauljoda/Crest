@@ -25,9 +25,12 @@ public sealed record ShortcutChord {
     /// reaching the focused text field.
     public bool IsValid => (Modifiers & SupportedModifiers) != 0;
 
+    /// The chord as the platform reads it.
+    public KeyCombination Keys => new(Key, IsSpecial, (ShortcutModifiers)Modifiers);
+
     #endregion
 
-    #region Initialization
+    #region Constructors
 
     private ShortcutChord(string key, bool isSpecial, int modifiers) {
         Key = key;
@@ -46,6 +49,16 @@ public sealed record ShortcutChord {
         if (character.Length == 0 || character.Length > MaximumCharacterLength)
             throw new BrowserRuleException(BrowserRuleCodes.InvalidShortcut);
         return new(character.Normalize(NormalizationForm.FormC), false, modifiers);
+    }
+
+    /// The chord `keys` spell when a person may bind it: a character of usable
+    /// length or a special key this build knows, held with at least one
+    /// supported modifier. Null for keys that can never be a shortcut.
+    public static ShortcutChord? Usable(KeyCombination keys) {
+        ArgumentNullException.ThrowIfNull(keys);
+        if (keys.IsSpecialKey ? ShortcutSpecialKey.Named(keys.Key) is null : keys.Key.Length is 0 or > MaximumCharacterLength) return null;
+        var chord = Of(keys);
+        return chord.IsValid ? chord : null;
     }
 
     /// The chord a catalog default names.

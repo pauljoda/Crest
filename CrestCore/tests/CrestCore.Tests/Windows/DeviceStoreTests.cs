@@ -16,7 +16,7 @@ public sealed partial class BrowserContractsTests {
     /// An app over a new file holding the installed session, with its
     /// persistent workspace and the session's Spaces.
     private static (CrestApp App, Guid Workspace, JsonArray Spaces) DeviceApp(StorageDirectory directory, JsonObject? core = null) {
-        var app = new CrestApp(new AppConfiguration(directory.Path));
+        var app = new CrestApp(new AppConfiguration(directory.Path, DevicePlatform.Desktop));
         var (installedCore, installed, _) = InstalledDefaults();
         var session = core ?? installedCore;
         if (app.StoredSync is null) app.Send(new AdoptLegacySession(installed with { Core = Bytes(session) }, SeedDocument()));

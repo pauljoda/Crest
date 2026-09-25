@@ -51,7 +51,7 @@ final class BrowserShortcutSettingsModel {
     }
 
     var commandGroups: [BrowserShortcutCommandGroup] {
-        let matches = ShortcutCommand.offered.filter {
+        let matches = shortcuts.offeredCommands.filter {
             searchProvider.matches(
                 $0,
                 currentShortcut: shortcuts.shortcut(for: $0),
@@ -100,10 +100,9 @@ final class BrowserShortcutSettingsModel {
 
     func replacePendingConflict() {
         guard let pendingConflict else { return }
-        _ = shortcuts.assign(
+        _ = shortcuts.reassign(
             pendingConflict.shortcut,
-            to: pendingConflict.command,
-            replacingConflicts: true
+            to: pendingConflict.command
         )
         self.pendingConflict = nil
         validationIssue = nil
@@ -130,6 +129,4 @@ final class BrowserShortcutSettingsModel {
     func clearValidationIssue() {
         validationIssue = nil
     }
-
-
 }

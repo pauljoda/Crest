@@ -12,11 +12,14 @@ struct BrowserLegacyDeviceDefaults: Equatable, Sendable {
     // MARK: - Static Variables
 
     static let sitePermissionsKey = "crest.site-permissions.v1"
+    static let shortcutsKey = "crest.keyboard-shortcuts.v1"
 
     // MARK: - Variables
 
     /// The saved site permission document, or nil when none was saved.
     var sitePermissions: Data?
+    /// The saved shortcut choices, or nil when none were saved.
+    var shortcuts: Data?
 
     // MARK: - Actions - Reading
 
@@ -30,6 +33,8 @@ struct BrowserLegacyDeviceDefaults: Equatable, Sendable {
                 UserDefaults(suiteName: BrowserLaunchEnvironment.isolatedDefaultsSuiteName(isolationID: $0))
             }
             : standard
-        return BrowserLegacyDeviceDefaults(sitePermissions: defaults?.data(forKey: sitePermissionsKey))
+        return BrowserLegacyDeviceDefaults(
+            sitePermissions: defaults?.data(forKey: sitePermissionsKey),
+            shortcuts: defaults?.data(forKey: shortcutsKey))
     }
 }

@@ -140,7 +140,7 @@ struct BrowserSettingsView: View {
         browser: browser,
         pages: BrowserPagePool(browser: browser),
         cloudSync: BrowserCloudSyncController(core: browser.core, configuration: nil),
-        shortcuts: .inMemory(),
+        shortcuts: BrowserShortcutStore(),
         onboardingCoordinator: BrowserOnboardingCoordinator()
     )
     .environment(BrowserWindowTransparencyPreviewFixture.makeStore())

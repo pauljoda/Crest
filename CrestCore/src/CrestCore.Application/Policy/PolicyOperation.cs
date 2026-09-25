@@ -31,9 +31,6 @@ internal enum PolicyOperation {
     SetupReconcile,
     SetupSpace,
     SetupTab,
-    ShortcutsAssign,
-    ShortcutsBindings,
-    ShortcutsNumberedSelection,
     TranslationMatches,
     TranslationRule,
     // Links, Quick Windows, presentation, branding and workspace routing.
@@ -81,9 +78,6 @@ internal static class PolicyOperationCodes {
         "setup.reconcile" => PolicyOperation.SetupReconcile,
         "setup.space" => PolicyOperation.SetupSpace,
         "setup.tab" => PolicyOperation.SetupTab,
-        "shortcuts.assign" => PolicyOperation.ShortcutsAssign,
-        "shortcuts.bindings" => PolicyOperation.ShortcutsBindings,
-        "shortcuts.numbered_selection" => PolicyOperation.ShortcutsNumberedSelection,
         "translation.matches" => PolicyOperation.TranslationMatches,
         "translation.rule" => PolicyOperation.TranslationRule,
         // Links, Quick Windows, presentation, branding and workspace routing.

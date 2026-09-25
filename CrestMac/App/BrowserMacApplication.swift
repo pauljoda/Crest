@@ -275,10 +275,7 @@ final class BrowserMacApplication {
         self.privateTransientBrowsing = privateTransientBrowsing
         self.spaceAccess = spaceAccess
         self.spaceSettingsPresentation = spaceSettingsPresentation
-        let shortcuts = BrowserShortcutStore.launch(
-            usesIsolatedLaunch: usesIsolatedLaunch,
-            reset: shouldReset
-        )
+        let shortcuts = BrowserShortcutStore(core: core, legacyOverrides: legacyDevice.shortcuts)
         self.shortcuts = shortcuts
         self.passkeyAccess = passkeyAccess
         self.windowTransparency = BrowserWindowTransparencyStore.launch(

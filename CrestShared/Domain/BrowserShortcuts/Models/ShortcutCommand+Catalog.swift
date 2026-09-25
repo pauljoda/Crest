@@ -6,12 +6,11 @@ import Foundation
 extension ShortcutCommand {
     // MARK: - Variables
 
-    /// The commands this process offers anywhere a person can find one: the
-    /// menu bar, the launcher and the shortcut settings list. A command whose
-    /// whole feature the running engine declares absent is left out rather
-    /// than shown permanently dimmed, and it cannot claim a chord either.
-    static let offered = all.filter { $0.isOffered(by: BrowserEngineRegistration.current) }
-
+    /// Whether the running engine offers the command anywhere a person can
+    /// find one: the menu bar and the launcher. A command whose whole feature
+    /// the engine declares absent is left out rather than shown permanently
+    /// dimmed. The core applies the same rule to the commands that may hold a
+    /// chord, which the shortcut settings list.
     var isOfferedByCurrentEngine: Bool {
         isOffered(by: BrowserEngineRegistration.current)
     }
@@ -30,7 +29,7 @@ extension ShortcutCommand {
     // MARK: - Actions - Numbered selection
 
     /// The command that selects the `number`th item of `target`, counting from
-    /// one. What it reaches is the core's `shortcuts.numbered_selection` rule.
+    /// one. What it reaches is the core's `NumberedSelections` answer.
     static func selecting(_ target: NumberedSelectionTarget, number: Int) -> ShortcutCommand? {
         all.first { $0.selects == target && $0.number == number }
     }

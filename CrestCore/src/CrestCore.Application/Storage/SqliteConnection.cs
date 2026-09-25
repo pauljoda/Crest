@@ -136,11 +136,13 @@ internal sealed class SqliteConnection : IDisposable {
         Execute("CREATE TABLE IF NOT EXISTS device_site_permission (id TEXT PRIMARY KEY, space TEXT NOT NULL, scheme TEXT NOT NULL, "
             + "host TEXT NOT NULL, port INTEGER NOT NULL, permission TEXT NOT NULL, detail TEXT, decision TEXT NOT NULL, "
             + "modified_at REAL NOT NULL, position INTEGER NOT NULL)");
+        Execute("CREATE TABLE IF NOT EXISTS device_shortcut (command TEXT PRIMARY KEY, key TEXT, special INTEGER NOT NULL, "
+            + "modifiers INTEGER NOT NULL)");
     }
 
     /// Everything the device store holds. A row whose identities or names do
     /// not read is left out.
-    public DeviceRecords ReadDevice() => new(ReadWindows(), ReadSitePermissions(), ReadAdoptions());
+    public DeviceRecords ReadDevice() => new(ReadWindows(), ReadSitePermissions(), ReadShortcuts(), ReadAdoptions());
 
     private List<SavedWindow> ReadWindows() {
         var windows = new Dictionary<Guid, (Guid ShownSpace, long Used)>();
@@ -180,6 +182,24 @@ internal sealed class SqliteConnection : IDisposable {
         return records;
     }
 
+    /// Each command's choice: no key is a command left without one.
+    private ShortcutOverrides ReadShortcuts() {
+        var choices = new List<KeyValuePair<string, ShortcutChord?>>();
+        Rows("SELECT command, key, special, modifiers FROM device_shortcut ORDER BY command", statement => {
+            string command = Sqlite.ColumnText(statement, 0);
+            if (Sqlite.ColumnIsNull(statement, 1)) {
+                choices.Add(new(command, null));
+                return;
+            }
+            string key = Sqlite.ColumnText(statement, 1);
+            int modifiers = Sqlite.sqlite3_column_int(statement, 3);
+            bool special = Sqlite.sqlite3_column_int(statement, 2) != 0;
+            if (special ? ShortcutSpecialKey.Named(key) is null : key.Length is 0 or > ShortcutChord.MaximumCharacterLength) return;
+            choices.Add(new(command, special ? ShortcutChord.Special(key, modifiers) : ShortcutChord.Character(key, modifiers)));
+        });
+        return ShortcutOverrides.Restore(choices);
+    }
+
     private HashSet<DeviceAdoption> ReadAdoptions() {
         var adoptions = new HashSet<DeviceAdoption>();
         foreach (var table in new[] { "device_marker", "device_adoption" })
@@ -195,6 +215,7 @@ internal sealed class SqliteConnection : IDisposable {
     public void WriteDevice(DeviceRecords records, DeviceRecords? written) {
         if (written is null || !records.Windows.SequenceEqual(written.Windows)) WriteWindows(records.Windows);
         if (written is null || !records.SitePermissions.SequenceEqual(written.SitePermissions)) WriteSitePermissions(records.SitePermissions);
+        if (written is null || !records.Shortcuts.SameAs(written.Shortcuts)) WriteShortcuts(records.Shortcuts);
         if (written is null || !records.Adopted.SetEquals(written.Adopted)) WriteAdoptions(records.Adopted);
     }
 
@@ -247,6 +268,19 @@ internal sealed class SqliteConnection : IDisposable {
                     Checked(Sqlite.sqlite3_bind_int64(statement, 10, index));
                 });
         }
+    }
+
+    /// Each command's choice, with the modifier mask's every bit; a command
+    /// left without a chord has no key.
+    private void WriteShortcuts(ShortcutOverrides shortcuts) {
+        Execute("DELETE FROM device_shortcut");
+        foreach (var (command, chord) in shortcuts.Chords)
+            Insert("INSERT INTO device_shortcut(command, key, special, modifiers) VALUES(?,?,?,?)", statement => {
+                Bind(statement, 1, command);
+                Bind(statement, 2, chord?.Key);
+                Checked(Sqlite.sqlite3_bind_int64(statement, 3, chord?.IsSpecial == true ? 1 : 0));
+                Checked(Sqlite.sqlite3_bind_int64(statement, 4, chord?.Modifiers ?? 0));
+            });
     }
 
     /// Every adoption goes into `device_adoption`; the ones an older build

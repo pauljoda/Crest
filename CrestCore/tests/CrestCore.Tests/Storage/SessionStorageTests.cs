@@ -100,7 +100,7 @@ public sealed unsafe partial class BrowserContractsTests {
         File.Copy(Path.Combine(AppContext.BaseDirectory, "Storage", "Fixtures", "installed-session.sqlite"), directory.File);
         var original = StoredParts(directory.File);
 
-        using (var app = new CrestApp(new AppConfiguration(directory.Path))) {
+        using (var app = new CrestApp(new AppConfiguration(directory.Path, DevicePlatform.Desktop))) {
             var spaces = StoredDocument(app)["spaces"]!.AsArray();
             Assert.Equal(["Work", "Personal"], spaces.Select(space => space!["name"]!.GetValue<string>()));
             Assert.Equal("deviceOwnerAuthentication", spaces[1]!["accessPolicy"]!.GetValue<string>());
@@ -120,7 +120,7 @@ public sealed unsafe partial class BrowserContractsTests {
     public void AcceptedEditsAreSavedBehindInOrderAndOnlyNewerRevisionsAreAnnounced() {
         using var directory = new StorageDirectory();
         var document = SavedSession().Document["session"]!.AsObject();
-        using (var app = new CrestApp(new AppConfiguration(directory.Path))) {
+        using (var app = new CrestApp(new AppConfiguration(directory.Path, DevicePlatform.Desktop))) {
             Assert.Null(app.StoredSync);
             app.Send(Adoption(document));
             var workspace = TestWorkspaces.OpenStored(app).Workspace;
@@ -132,7 +132,7 @@ public sealed unsafe partial class BrowserContractsTests {
             Assert.Equal(saved.Distinct(), saved);
             Assert.DoesNotContain(announced, change => change is StorageFailed);
         }
-        using var reopened = new CrestApp(new AppConfiguration(directory.Path));
+        using var reopened = new CrestApp(new AppConfiguration(directory.Path, DevicePlatform.Desktop));
         var tabs = StoredDocument(reopened)["spaces"]![0]!["tabs"]!.AsArray();
         Assert.Equal("Edit 20", tabs[0]!["customTitle"]!.GetValue<string>());
     }
@@ -141,7 +141,7 @@ public sealed unsafe partial class BrowserContractsTests {
     public void AnEditWritesOnlyThePartsItChanged() {
         using var directory = new StorageDirectory();
         var document = SavedSession().Document["session"]!.AsObject();
-        using var app = new CrestApp(new AppConfiguration(directory.Path));
+        using var app = new CrestApp(new AppConfiguration(directory.Path, DevicePlatform.Desktop));
         _ = DrainUntil(app, changes => changes.OfType<Saved>().Any(), app.Send(Adoption(document)));
         // Every write the core makes from here on leaves a `log.` row naming its part.
         using (var connection = SqliteConnection.Open(directory.File, Sqlite.OpenReadWrite)) {
@@ -166,7 +166,7 @@ public sealed unsafe partial class BrowserContractsTests {
         second["id"] = SwiftId(Guid.NewGuid()); second["profile"]!["id"] = Guid.NewGuid().ToString();
         second["tabs"] = new JsonArray(); second["folders"] = new JsonArray(); second["history"] = new JsonArray();
         document["spaces"]!.AsArray().Add(second);
-        using var app = new CrestApp(new AppConfiguration(directory.Path));
+        using var app = new CrestApp(new AppConfiguration(directory.Path, DevicePlatform.Desktop));
         var answered = app.Send(Adoption(document));
         var (workspace, opened) = TestWorkspaces.OpenStored(app);
         var session = app.Workspace(workspace);
@@ -209,7 +209,7 @@ public sealed unsafe partial class BrowserContractsTests {
         var document = SavedSession().Document["session"]!.AsObject();
         document.Remove("disposableSeedMarker");
         Dictionary<string, byte[]> before;
-        using (var app = new CrestApp(new AppConfiguration(directory.Path))) {
+        using (var app = new CrestApp(new AppConfiguration(directory.Path, DevicePlatform.Desktop))) {
             var answered = app.Send(Adoption(document));
             var (_, opened) = TestWorkspaces.OpenStored(app);
             var sync = app.StoredSync!;
@@ -249,7 +249,7 @@ public sealed unsafe partial class BrowserContractsTests {
         var document = fixture.Document["session"]!.AsObject();
         var device = Guid.NewGuid();
         var journal = JournalDocument(SyncTabRecord(fixture.Tab, fixture.Space, 9, device));
-        using var app = new CrestApp(new AppConfiguration(directory.Path));
+        using var app = new CrestApp(new AppConfiguration(directory.Path, DevicePlatform.Desktop));
         app.Send(Adoption(document, journal));
         app.Send(Renaming(TestWorkspaces.OpenStored(app).Workspace, document, "Edited before staging"));
         app.Send(new AcknowledgeUploads([new(new(SyncRecordKind.Tab, fixture.Tab), new SyncVersion(9, device))]));
@@ -273,7 +273,7 @@ public sealed unsafe partial class BrowserContractsTests {
         WriteStoredFile(directory.File, document, JournalDocument(SyncTabRecord(fixture.Tab, fixture.Space, 1, Guid.NewGuid())));
         var written = StoredParts(directory.File);
 
-        using (var app = new CrestApp(new AppConfiguration(directory.Path))) {
+        using (var app = new CrestApp(new AppConfiguration(directory.Path, DevicePlatform.Desktop))) {
             AssertSameParts(written, StoredParts(directory.Recovery));
             var (workspace, opened) = TestWorkspaces.OpenStored(app);
             var spaces = app.Workspace(workspace).Current.Spaces;
@@ -299,7 +299,7 @@ public sealed unsafe partial class BrowserContractsTests {
         using (var newer = new StorageDirectory()) {
             WriteStoredFile(newer.File, document, journal, version: 2);
             var bytes = File.ReadAllBytes(newer.File);
-            Assert.IsType<StorageFromNewerApp>(Assert.Throws<Rejected>(() => new CrestApp(new AppConfiguration(newer.Path))).Rejection);
+            Assert.IsType<StorageFromNewerApp>(Assert.Throws<Rejected>(() => new CrestApp(new AppConfiguration(newer.Path, DevicePlatform.Desktop))).Rejection);
             Assert.Equal(bytes, File.ReadAllBytes(newer.File));
         }
         using (var newerJournal = new StorageDirectory()) {
@@ -307,14 +307,14 @@ public sealed unsafe partial class BrowserContractsTests {
             future["schemaVersion"] = 2;
             WriteStoredFile(newerJournal.File, document, future);
             Assert.IsType<StorageFromNewerApp>(
-                Assert.Throws<Rejected>(() => new CrestApp(new AppConfiguration(newerJournal.Path))).Rejection);
+                Assert.Throws<Rejected>(() => new CrestApp(new AppConfiguration(newerJournal.Path, DevicePlatform.Desktop))).Rejection);
         }
         using (var incomplete = new StorageDirectory()) {
             WriteStoredFile(incomplete.File, document, journal);
             using (var connection = SqliteConnection.Open(incomplete.File, Sqlite.OpenReadWrite))
                 connection.Execute("DELETE FROM checkpoint WHERE part LIKE 'history.%'");
             var bytes = File.ReadAllBytes(incomplete.File);
-            var refused = Assert.Throws<Rejected>(() => new CrestApp(new AppConfiguration(incomplete.Path))).Rejection;
+            var refused = Assert.Throws<Rejected>(() => new CrestApp(new AppConfiguration(incomplete.Path, DevicePlatform.Desktop))).Rejection;
             Assert.Equal(new StorageUnreadable(StorageFailure.Damaged), refused);
             Assert.Equal(bytes, File.ReadAllBytes(incomplete.File));
             Assert.False(File.Exists(incomplete.Recovery));
@@ -322,7 +322,7 @@ public sealed unsafe partial class BrowserContractsTests {
         using (var restoring = new StorageDirectory()) {
             File.WriteAllBytes(restoring.File + ".restore-pending", []);
             Assert.IsType<StorageRestoreInterrupted>(
-                Assert.Throws<Rejected>(() => new CrestApp(new AppConfiguration(restoring.Path))).Rejection);
+                Assert.Throws<Rejected>(() => new CrestApp(new AppConfiguration(restoring.Path, DevicePlatform.Desktop))).Rejection);
             Assert.False(File.Exists(restoring.File));
         }
     }

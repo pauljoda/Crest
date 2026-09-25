@@ -263,7 +263,7 @@ public sealed class ShortcutCommand {
 
     public Kinds Kind { get; }
 
-    /// The spelling persisted overrides and JSON policy requests use.
+    /// The spelling the device store keys the person's choice for the command by.
     public string Name { get; }
 
     public ShortcutSection Section { get; }
@@ -339,6 +339,15 @@ public sealed class ShortcutCommand {
     /// The command's default on `platform`, or null when it has none there.
     public ShortcutDefault? DefaultShortcut(DevicePlatform platform) =>
         DefaultShortcuts.FirstOrDefault(shortcut => shortcut.Platform == platform);
+
+    /// Whether an engine that supports what `supports` names offers the
+    /// command: it needs no capability, or its capability is supported.
+    public bool IsOffered(Func<EngineCapability, bool> supports) => RequiredCapability is not { } required || supports(required);
+
+    /// The position a numbered command selects for `question`, or null when
+    /// there is nothing at its number or it selects nothing.
+    public NumberedSelection? Selecting(NumberedSelections question) =>
+        Selects is { } target && Number is { } number && number <= target.Count(question) ? new(this, target, number - 1) : null;
 
     #endregion
 

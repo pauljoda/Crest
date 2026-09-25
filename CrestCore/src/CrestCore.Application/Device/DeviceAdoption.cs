@@ -8,8 +8,9 @@ internal sealed class DeviceAdoption {
 
     public static readonly DeviceAdoption WindowRecords = new(marker: "window-records", olderBuildsRead: true);
     public static readonly DeviceAdoption SitePermissions = new(marker: "site-permissions", olderBuildsRead: false);
+    public static readonly DeviceAdoption Shortcuts = new(marker: "shortcuts", olderBuildsRead: false);
 
-    public static IReadOnlyList<DeviceAdoption> All { get; } = [WindowRecords, SitePermissions];
+    public static IReadOnlyList<DeviceAdoption> All { get; } = [WindowRecords, SitePermissions, Shortcuts];
 
     #endregion
 

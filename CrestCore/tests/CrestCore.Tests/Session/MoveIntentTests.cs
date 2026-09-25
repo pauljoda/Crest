@@ -17,7 +17,7 @@ public sealed partial class BrowserContractsTests {
         var fixture = SavedSession();
         var document = fixture.Document["session"]!.AsObject();
         document.Remove("disposableSeedMarker");
-        using var app = new CrestApp(new AppConfiguration(directory.Path));
+        using var app = new CrestApp(new AppConfiguration(directory.Path, DevicePlatform.Desktop));
         var answered = app.Send(Adoption(document));
         var (workspace, opened) = TestWorkspaces.OpenStored(app);
         var owner = app.Workspace(workspace);

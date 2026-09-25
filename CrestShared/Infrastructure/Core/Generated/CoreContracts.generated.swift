@@ -37,6 +37,9 @@ protocol PageIntent: Intent {}
 /// The members of `Intent` that derive from the core's `SessionIntent`.
 protocol SessionIntent: Intent {}
 
+/// The members of `Intent` that derive from the core's `ShortcutIntent`.
+protocol ShortcutIntent: Intent {}
+
 /// The members of `Intent` that derive from the core's `SitePermissionIntent`.
 protocol SitePermissionIntent: Intent {}
 
@@ -63,6 +66,7 @@ enum Change: Equatable, Sendable {
     case pageRemoved(PageRemoved)
     case saved(Saved)
     case sessionAdopted(SessionAdopted)
+    case shortcutsChanged(ShortcutsChanged)
     case sitePermissionsChanged(SitePermissionsChanged)
     case spaceLockChanged(SpaceLockChanged)
     case spaceSettingsChanged(SpaceSettingsChanged)
@@ -128,6 +132,7 @@ enum Rejection: Equatable, Error, Sendable {
     case invalidRetentionLifetime(InvalidRetentionLifetime)
     case invalidSearchEngine(InvalidSearchEngine)
     case invalidSession(InvalidSession)
+    case invalidShortcut(InvalidShortcut)
     case invalidSiteOrigin(InvalidSiteOrigin)
     case invalidSitePermissionDetail(InvalidSitePermissionDetail)
     case invalidSpaceOrder(InvalidSpaceOrder)
@@ -152,6 +157,7 @@ enum Rejection: Equatable, Error, Sendable {
     case searchEngineLimitReached(SearchEngineLimitReached)
     case selectionChanged(SelectionChanged)
     case selectionHoldsFolders(SelectionHoldsFolders)
+    case shortcutInUse(ShortcutInUse)
     case sitePermissionLimitReached(SitePermissionLimitReached)
     case spaceAlreadyExists(SpaceAlreadyExists)
     case spaceBeingDeleted(SpaceBeingDeleted)
@@ -244,6 +250,7 @@ extension CoreState {
         case .pageRemoved(let change): apply(change)
         case .saved(let change): apply(change)
         case .sessionAdopted(let change): apply(change)
+        case .shortcutsChanged(let change): apply(change)
         case .sitePermissionsChanged(let change): apply(change)
         case .spaceLockChanged(let change): apply(change)
         case .spaceSettingsChanged(let change): apply(change)
@@ -290,6 +297,10 @@ struct AdoptLegacySession: Intent, Equatable, Sendable {
     let seed: Data
 }
 
+struct AdoptShortcuts: Intent, ShortcutIntent, Equatable, Sendable {
+    let overrides: Data?
+}
+
 struct AdoptSitePermissions: Intent, SitePermissionIntent, Equatable, Sendable {
     let records: Data?
 }
@@ -319,6 +330,7 @@ struct AnalyzedSpaceReview: Equatable, Sendable {
 
 struct AppConfiguration: Equatable, Sendable {
     let storageDirectory: String?
+    let platform: DevicePlatform
 }
 
 struct AppPreferences: Equatable, Sendable {
@@ -369,6 +381,11 @@ struct ArchivedTabState: Equatable, Sendable {
 struct AssessDownloadRisk: Intent, DownloadIntent, Equatable, Sendable {
     let downloadID: UUID
     let assessment: DownloadRiskAssessment
+}
+
+struct AssignShortcut: Intent, ShortcutIntent, Equatable, Sendable {
+    let command: ShortcutCommand
+    let keys: KeyCombination
 }
 
 struct AuthenticationBusy: Equatable, Sendable {
@@ -1219,6 +1236,10 @@ struct InvalidSession: Equatable, Sendable {
     let flaw: SessionFlaw
 }
 
+struct InvalidShortcut: Equatable, Sendable {
+    let keys: KeyCombination
+}
+
 struct InvalidSiteOrigin: Equatable, Sendable {
     let origin: SiteOrigin
 }
@@ -1548,6 +1569,23 @@ struct NotPrivateWorkspace: Equatable, Sendable {
     let workspaceID: UUID
 }
 
+struct NumberedSelection: Equatable, Sendable {
+    let command: ShortcutCommand
+    let target: NumberedSelectionTarget
+    let index: Int
+}
+
+struct NumberedSelectionList: Equatable, Sendable {
+    let selections: [NumberedSelection]
+}
+
+struct NumberedSelections: Query, Equatable, Sendable {
+    typealias Answer = NumberedSelectionList
+
+    let tabCount: Int
+    let spaceCount: Int
+}
+
 struct OpenLinkInSplit: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let windowID: UUID
@@ -1759,6 +1797,11 @@ struct QuickWindowSiteKey: Equatable, Sendable {
     let site: String?
 }
 
+struct ReassignShortcut: Intent, ShortcutIntent, Equatable, Sendable {
+    let command: ShortcutCommand
+    let keys: KeyCombination
+}
+
 struct RecordDownloadTransfer: Intent, DownloadIntent, Equatable, Sendable {
     let downloadID: UUID
     let telemetry: DownloadTelemetry
@@ -1843,6 +1886,13 @@ struct ReplaceWithCloudRecords: Intent, CloudSyncIntent, Equatable, Sendable {
 struct ResetPrivateBrowsing: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let windowID: UUID
+}
+
+struct ResetShortcut: Intent, ShortcutIntent, Equatable, Sendable {
+    let command: ShortcutCommand
+}
+
+struct ResetShortcuts: Intent, ShortcutIntent, Equatable, Sendable {
 }
 
 struct ResetSitePermission: Intent, SitePermissionIntent, Equatable, Sendable {
@@ -2027,10 +2077,25 @@ struct SetupSpace: Equatable, Sendable {
     let customization: SpaceCustomization
 }
 
+struct ShortcutBinding: Equatable, Sendable {
+    let command: ShortcutCommand
+    let keys: KeyCombination?
+    let isCustomized: Bool
+}
+
 struct ShortcutDefault: Equatable, Sendable {
     let platform: DevicePlatform
     let keys: KeyCombination
     let yieldsToOverrides: Bool
+}
+
+struct ShortcutInUse: Equatable, Sendable {
+    let commands: [ShortcutCommand]
+}
+
+struct ShortcutsChanged: Equatable, Sendable {
+    let bindings: [ShortcutBinding]
+    let isCustomized: Bool
 }
 
 struct ShowSpace: Intent, WindowIntent, Equatable, Sendable {
@@ -2548,6 +2613,10 @@ struct TranslationRule: Equatable, Sendable {
 
 struct TranslationRuleLimitReached: Equatable, Sendable {
     let limit: Int
+}
+
+struct UnassignShortcut: Intent, ShortcutIntent, Equatable, Sendable {
+    let command: ShortcutCommand
 }
 
 struct UnknownArchivedTab: Equatable, Sendable {
@@ -4527,6 +4596,7 @@ struct NavigationError: Hashable, Sendable {
 }
 
 /// The members of the core's `NumberedSelectionTarget`. A member's wire tag is its index in `all`.
+/// Core-only behavior, not emitted: `counting`.
 struct NumberedSelectionTarget: Hashable, Sendable {
     enum Kinds: Sendable {
         case tab

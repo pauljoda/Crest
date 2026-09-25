@@ -39,6 +39,8 @@ internal sealed partial class Device {
     private readonly Action requestTurn;
     /// Closes a borrowed workspace whose owner no longer lends its Space.
     private readonly Action<Guid> closeBorrower;
+    /// The device class whose defaults the device's rules apply.
+    private readonly DevicePlatform platform;
     /// The tabs an older release kept in the session, which a window without a
     /// record adopts during the launch that loaded them.
     private IReadOnlyDictionary<Guid, Guid> legacyTabs = new Dictionary<Guid, Guid>();
@@ -51,18 +53,20 @@ internal sealed partial class Device {
 
     #region Constructors
 
-    /// A device whose saved windows `storage` keeps, starting from `records`;
-    /// without storage every window lives in memory. Each session it shows
-    /// consults `access`. `requestTurn` asks the host for a drain on its next
-    /// turn, and `closeBorrower` closes a borrowed workspace whose owner no
-    /// longer lends its Space.
-    public Device(SessionStorage? storage, DeviceRecords records, SpaceAccessAuthority access, Action<Change> announce,
-        Action requestTurn, Action<Guid> closeBorrower) {
+    /// A device of `platform` whose saved windows and choices `storage` keeps,
+    /// starting from `records`; without storage everything lives in memory.
+    /// Each session it shows consults `access`. `requestTurn` asks the host
+    /// for a drain on its next turn, and `closeBorrower` closes a borrowed
+    /// workspace whose owner no longer lends its Space.
+    public Device(DevicePlatform platform, SessionStorage? storage, DeviceRecords records, SpaceAccessAuthority access,
+        Action<Change> announce, Action requestTurn, Action<Guid> closeBorrower) {
+        ArgumentNullException.ThrowIfNull(platform);
         ArgumentNullException.ThrowIfNull(records);
         ArgumentNullException.ThrowIfNull(access);
         ArgumentNullException.ThrowIfNull(announce);
         ArgumentNullException.ThrowIfNull(requestTurn);
         ArgumentNullException.ThrowIfNull(closeBorrower);
+        this.platform = platform;
         this.storage = storage;
         this.access = access;
         this.announce = announce;
@@ -71,6 +75,7 @@ internal sealed partial class Device {
         foreach (var record in records.Windows) saved[record.Id] = record;
         lastUse = records.Windows.Count == 0 ? 0 : records.Windows.Max(record => record.Used);
         keptPermissions.Restore(records.SitePermissions);
+        shortcuts = records.Shortcuts;
         adopted.UnionWith(records.Adopted);
     }
 
@@ -263,7 +268,7 @@ internal sealed partial class Device {
 
     /// Everything the device store keeps, as it stands. The caller holds the device lock.
     private DeviceRecords Records() => new([.. saved.Values.OrderBy(record => record.Used)], [.. keptPermissions.PersistentRecords],
-        new HashSet<DeviceAdoption>(adopted));
+        shortcuts, new HashSet<DeviceAdoption>(adopted));
 
     #endregion
 }

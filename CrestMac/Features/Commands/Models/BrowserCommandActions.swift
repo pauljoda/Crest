@@ -216,8 +216,8 @@ struct BrowserCommandActions {
     }
 
     /// Where each numbered selection command leads right now, per the core.
-    var numberedSelections: [ShortcutCommand: BrowserNumberedSelection] {
-        BrowserCorePolicy.numberedSelections(tabCount: orderedTabs.count, spaceCount: browser.session.spaces.count)
+    var numberedSelections: [ShortcutCommand: NumberedSelection] {
+        browser.core.numberedSelections(tabCount: orderedTabs.count, spaceCount: browser.session.spaces.count)
     }
 
     // MARK: - Windows

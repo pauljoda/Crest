@@ -121,7 +121,7 @@ public sealed partial class BrowserContractsTests {
     public void AReaderOfTheChangesHoldsTheCoresStateAfterEveryCommand() {
         var clock = new TestClock(DateTimeOffset.UnixEpoch);
         var ids = new TestIds();
-        using var app = new CrestApp(new AppConfiguration(null), clock, ids);
+        using var app = new CrestApp(new AppConfiguration(null, DevicePlatform.Desktop), clock, ids);
         var engine = RecordedIntents.PageEngine(app);
         var opening = app.Send(new OpenWorkspace(WorkspaceKind.Persistent, TestWorkspaces.Seed(MaximalDocument())));
         var workspace = TestWorkspaces.Opened(opening);

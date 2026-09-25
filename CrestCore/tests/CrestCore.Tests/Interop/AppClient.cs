@@ -19,7 +19,7 @@ internal sealed unsafe class AppClient : IDisposable {
     /// An app over `storageDirectory`, or in memory without one.
     public AppClient(string? storageDirectory = null) {
         ulong handle = 0;
-        var (status, rejection) = Create(ContractCodec.Fingerprint, new AppConfiguration(storageDirectory), &handle);
+        var (status, rejection) = Create(ContractCodec.Fingerprint, new AppConfiguration(storageDirectory, DevicePlatform.Desktop), &handle);
         Assert.Null(rejection);
         Assert.Equal(CoreStatus.Ok, status);
         Handle = handle;
@@ -31,7 +31,7 @@ internal sealed unsafe class AppClient : IDisposable {
 
     /// Creates a memory-only app.
     public static int Create(ReadOnlySpan<byte> fingerprint, ulong* handle) =>
-        Create(fingerprint, new AppConfiguration(null), handle).Status;
+        Create(fingerprint, new AppConfiguration(null, DevicePlatform.Desktop), handle).Status;
 
     /// Creates an app and answers the rejection it refused with, if any.
     public static (int Status, Rejection? Rejection) Create(ReadOnlySpan<byte> fingerprint, AppConfiguration configuration, ulong* handle) {

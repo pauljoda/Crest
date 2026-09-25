@@ -2481,6 +2481,10 @@
     "site-permissions-device-store": {
       "category": "internal",
       "message": "Site permission choices live in the core's device store, carried once from the saved defaults."
+    },
+    "shortcuts-device-store": {
+      "category": "internal",
+      "message": "Keyboard shortcut choices live in the core's device store, carried once from the saved defaults."
     }
   }
 }

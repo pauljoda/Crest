@@ -9,7 +9,6 @@ public static class BrowserRuleCodes {
     public const string DeletionRequiresCommand = "deletion_requires_command";
     public const string DuplicateMediaSession = "duplicate_media_session";
     public const string DuplicateResidencyCandidate = "duplicate_residency_candidate";
-    public const string DuplicateShortcutCommand = "duplicate_shortcut_command";
     public const string DuplicateSyncRecord = "duplicate_sync_record";
     public const string InvalidAddress = "invalid_address";
     public const string InvalidDeletionIntent = "invalid_deletion_intent";
@@ -36,7 +35,6 @@ public static class BrowserRuleCodes {
     public const string InvalidSavedUrl = "invalid_saved_url";
     public const string InvalidSessionTransaction = "invalid_session_transaction";
     public const string InvalidShortcut = "invalid_shortcut";
-    public const string InvalidSpaceCount = "invalid_space_count";
     public const string InvalidSpaceOrder = "invalid_space_order";
     public const string InvalidSplit = "invalid_split";
     public const string InvalidSyncDate = "invalid_sync_date";
@@ -59,7 +57,6 @@ public static class BrowserRuleCodes {
     public const string SessionReleased = "session_released";
     public const string SessionSizeLimit = "session_size_limit";
     public const string SessionTransactionInProgress = "session_transaction_in_progress";
-    public const string ShortcutCommandLimit = "shortcut_command_limit";
     public const string SpaceDeletionInProgress = "space_deletion_in_progress";
     public const string SpaceLimitReached = "space_limit_reached";
     public const string SpaceLocked = "space_locked";

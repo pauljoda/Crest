@@ -24,13 +24,33 @@ public sealed partial class CrestApp {
     /// in the order it issued them, never while it holds a lock. Throws
     /// `Rejected` when the engine lacks a required capability, is already
     /// registered, or asks to be the default beside another default.
+    /// The commands this device offers follow the default engine, so the
+    /// bindings are published again when they change.
     public Engine RegisterEngine(EngineRegistration registration, Action<EngineCommand> run) {
-        lock (gate) return engines.Register(registration, run);
+        Engine engine;
+        lock (gate) {
+            var offered = engines.OfferedCommands();
+            engine = engines.Register(registration, run);
+            AnnounceOffered(offered);
+        }
+        WakeIfOwed();
+        return engine;
     }
 
     /// Removes a binding. Commands still waiting for it are dropped.
     public void UnregisterEngine(Engine engine) {
-        lock (gate) engines.Unregister(engine);
+        lock (gate) {
+            var offered = engines.OfferedCommands();
+            engines.Unregister(engine);
+            AnnounceOffered(offered);
+        }
+        WakeIfOwed();
+    }
+
+    /// Announces the bindings when the commands this device offers are no
+    /// longer `before`. The caller holds the lock.
+    private void AnnounceOffered(IReadOnlyList<ShortcutCommand> before) {
+        if (device.ShortcutsAfter(before, engines.OfferedCommands()) is { } changed) Announce(changed);
     }
 
     /// Applies what an engine saw happen to one of its pages. A report is

@@ -1,105 +1,112 @@
-import Observation
+import Foundation
+import os
 
-/// The person's shortcut overrides and the live chords the core resolves from
-/// them. The core owns the catalog, conflicts and the override rules; this
-/// store persists the overrides and keeps the resolved table for dispatch.
-@Observable
+/// The platform's side of the core's shortcut bindings.
+///
+/// The core owns the catalog, the person's choices, conflicts, which commands
+/// this device offers, and what the numbered commands reach; the device store
+/// keeps the choices. This store reads each offered command's live chord from
+/// the read model and sends the person's changes as intents.
 @MainActor
 final class BrowserShortcutStore {
-    private var overrides: [String: BrowserShortcutOverride]
-    private var bindings: [ShortcutCommand: BrowserShortcut]
-    @ObservationIgnored private let persistence: any BrowserShortcutPersisting
+    // MARK: - Static Variables
 
-    init(
-        persistence: any BrowserShortcutPersisting,
-        reset: Bool = false
-    ) {
-        self.persistence = persistence
-        if reset {
-            persistence.remove()
-        }
-        let overrides = persistence.load() ?? [:]
-        self.overrides = overrides
-        bindings = Self.resolve(overrides)
-    }
+    private static let logger = Logger(subsystem: "com.pauldavis.crest", category: "Shortcuts")
 
+    // MARK: - Variables
+
+    private let core: CrestCore
+
+    /// Whether the person changed any shortcut, including one this device does
+    /// not offer.
     var hasCustomizations: Bool {
-        !overrides.isEmpty
+        core.state.shortcutsAreCustomized
     }
+
+    /// The commands this device offers, in the order the settings list them.
+    var offeredCommands: [ShortcutCommand] {
+        core.state.shortcutBindings.map(\.command)
+    }
+
+    // MARK: - Initializers
+
+    /// A store over `core`. It carries the choices an installed release kept
+    /// under `crest.keyboard-shortcuts.v1`, `legacyOverrides`, into the core's
+    /// device store once, and reads every offered command's chord.
+    init(core: CrestCore, legacyOverrides: Data? = nil) {
+        self.core = core
+        do {
+            try core.send(AdoptShortcuts(overrides: legacyOverrides))
+        } catch {
+            Self.logger.error(
+                "The core could not adopt the saved shortcuts: \(String(describing: error), privacy: .public)")
+        }
+    }
+
+    /// A store over a memory-only core of its own, as previews and tests
+    /// use, which keeps nothing.
+    convenience init() {
+        self.init(core: CrestCore())
+    }
+
+    // MARK: - Actions - Bindings
 
     func shortcut(for command: ShortcutCommand) -> BrowserShortcut? {
-        bindings[command]
+        core.state.shortcuts[command]?.keys.flatMap(BrowserShortcut.init(boundKeys:))
     }
 
     func isCustomized(_ command: ShortcutCommand) -> Bool {
-        overrides[command.name] != nil
+        core.state.shortcuts[command]?.isCustomized == true
     }
 
-    func commands(
-        assignedTo shortcut: BrowserShortcut
-    ) -> [ShortcutCommand] {
-        ShortcutCommand.offered.filter {
-            bindings[$0] == shortcut
-        }
+    func commands(assignedTo shortcut: BrowserShortcut) -> [ShortcutCommand] {
+        let keys = shortcut.keys
+        return core.state.shortcutBindings.filter { $0.keys == keys }.map(\.command)
     }
 
-    func assign(
-        _ shortcut: BrowserShortcut,
-        to command: ShortcutCommand,
-        replacingConflicts: Bool = false
-    ) -> BrowserShortcutAssignmentResult {
-        let answer = BrowserCorePolicy.assignShortcut(
-            shortcut,
-            to: command,
-            replacingConflicts: replacingConflicts,
-            overrides: overrides,
-            commands: ShortcutCommand.offered
-        )
-        if let revised = answer.overrides { save(revised) }
-        return answer.result
+    /// Where each numbered selection command leads for these counts. A command
+    /// with nowhere to go is absent.
+    func numberedSelections(tabCount: Int, spaceCount: Int) -> [ShortcutCommand: NumberedSelection] {
+        core.numberedSelections(tabCount: tabCount, spaceCount: spaceCount)
+    }
+
+    // MARK: - Actions - Changes
+
+    /// Binds `shortcut` to `command` unless another command holds it.
+    func assign(_ shortcut: BrowserShortcut, to command: ShortcutCommand) -> BrowserShortcutAssignmentResult {
+        answer(AssignShortcut(command: command, keys: shortcut.keys))
+    }
+
+    /// Binds `shortcut` to `command`, taking it from every command that holds it.
+    func reassign(_ shortcut: BrowserShortcut, to command: ShortcutCommand) -> BrowserShortcutAssignmentResult {
+        answer(ReassignShortcut(command: command, keys: shortcut.keys))
     }
 
     func clearShortcut(for command: ShortcutCommand) {
-        let answer = BrowserCorePolicy.assignShortcut(
-            nil,
-            to: command,
-            replacingConflicts: false,
-            overrides: overrides,
-            commands: ShortcutCommand.offered
-        )
-        if let revised = answer.overrides { save(revised) }
+        _ = answer(UnassignShortcut(command: command))
     }
 
     func reset(_ command: ShortcutCommand) {
-        var revised = overrides
-        revised.removeValue(forKey: command.name)
-        save(revised)
+        _ = answer(ResetShortcut(command: command))
     }
 
     func resetAll() {
-        guard !overrides.isEmpty else { return }
-        overrides = [:]
-        bindings = Self.resolve([:])
-        persistence.remove()
+        _ = answer(ResetShortcuts())
     }
 
-    private static func resolve(
-        _ overrides: [String: BrowserShortcutOverride]
-    ) -> [ShortcutCommand: BrowserShortcut] {
-        BrowserCorePolicy.shortcutBindings(
-            overrides: overrides,
-            commands: ShortcutCommand.offered
-        ) ?? [:]
-    }
-
-    private func save(_ revised: [String: BrowserShortcutOverride]) {
-        guard revised != overrides else { return }
-        overrides = revised
-        bindings = Self.resolve(revised)
-        guard !revised.isEmpty else {
-            persistence.remove()
-            return
+    private func answer(_ intent: some ShortcutIntent) -> BrowserShortcutAssignmentResult {
+        do {
+            try core.send(intent)
+            return .assigned
+        } catch .shortcutInUse(let refusal) {
+            return .conflict(commands: refusal.commands)
+        } catch .invalidShortcut {
+            return .invalid
+        } catch {
+            Self.logger.error(
+                "The core refused \(String(describing: type(of: intent)), privacy: .public): \(String(describing: error), privacy: .public)"
+            )
+            return .invalid
         }
-        persistence.save(revised)
     }
 }
