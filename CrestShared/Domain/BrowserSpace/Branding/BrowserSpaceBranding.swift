@@ -90,20 +90,13 @@ struct BrowserSpaceBranding: Codable, Equatable, Sendable {
         self.hasCustomAppearance = hasCustomAppearance
     }
 
+    /// The look a Space stored without branding wears, as the core's
+    /// `SpaceSettings.look` resolves it. TRANSITIONAL until S6.8 turns the
+    /// session copy's seeds into stored-format builders: only the copy's
+    /// seeds and decoder dress a Space here.
     static func legacy(accent: SpaceAccent, symbol: String) -> BrowserSpaceBranding {
-        let colors: [BrowserSpaceBrandColor]
-        switch accent {
-        case .indigo:
-            colors = [.ink, .ocean, .gold]
-        case .orange:
-            colors = [.ember, .gold, .ocean]
-        case .teal:
-            colors = [.teal, .ocean, .sand]
-        case .rose:
-            colors = [.rose, .indigo, .sand]
-        }
-        return BrowserSpaceBranding(
-            colors: colors,
+        BrowserSpaceBranding(
+            colors: accent.legacyColors.map(BrowserSpaceBrandColor.init(core:)),
             bannerPattern: .diagonal,
             bannerStrength: 1,
             keepsControlsReadable: true,
@@ -112,15 +105,10 @@ struct BrowserSpaceBranding: Codable, Equatable, Sendable {
         )
     }
 
+    /// The house look a new Space of `accent` wears, which the core keeps on
+    /// the accent. Every accent's house look ignores the Space's symbol.
     static func initial(accent: SpaceAccent, symbol: String) -> BrowserSpaceBranding {
-        let palette: BrowserSpaceHousePalette
-        switch accent {
-        case .indigo: palette = .winter
-        case .orange: palette = .sun
-        case .teal: palette = .meadow
-        case .rose: palette = .lion
-        }
-        return house(palette, symbol: symbol)
+        BrowserSpaceBranding(look: accent.house)
     }
 
     /// Creates new branding from a complete preset. Decoding never applies it.
@@ -279,7 +267,8 @@ struct BrowserSpaceBranding: Codable, Equatable, Sendable {
         try container.encodeIfPresent(symbolColor, forKey: .symbolColor)
         try container.encode(crest, forKey: .crest)
         try container.encode(renderingVersion, forKey: .renderingVersion)
-        try container.encode(folderColorIntensity.isFinite ? min(max(folderColorIntensity, 0), 1) : 0, forKey: .folderColorIntensity)
+        try container.encode(
+            folderColorIntensity.isFinite ? min(max(folderColorIntensity, 0), 1) : 0, forKey: .folderColorIntensity)
         try container.encode(textColorMode, forKey: .textColorMode)
         try container.encodeIfPresent(hasCustomAppearance, forKey: .hasCustomAppearance)
     }

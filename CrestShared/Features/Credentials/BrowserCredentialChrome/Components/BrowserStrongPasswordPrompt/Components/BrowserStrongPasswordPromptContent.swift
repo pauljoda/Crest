@@ -32,7 +32,7 @@ struct BrowserStrongPasswordPromptContent: View {
             )
             BrowserStrongPasswordActionButton(
                 isWorking: model.isWorking,
-                tint: space?.accent.color ?? .accentColor,
+                tint: space?.accent.tint.color ?? .accentColor,
                 metrics: metrics,
                 action: generateAndFill
             )

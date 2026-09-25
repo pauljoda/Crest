@@ -2537,6 +2537,10 @@
     "navigation-publishes-only-changed-rows": {
       "category": "improved",
       "message": "Navigating in a Space with many tabs or a long history does less work."
+    },
+    "space-look-and-accent-from-core": {
+      "category": "internal",
+      "message": "The core resolves the branding each Space wears and describes each accent's tint, legacy palette and house look, and generated records carry the core's constants and named values."
     }
   }
 }

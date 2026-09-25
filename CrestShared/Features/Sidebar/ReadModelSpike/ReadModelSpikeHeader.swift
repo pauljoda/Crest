@@ -31,7 +31,7 @@
             #endif
             let shown = Shown(settings: settings)
             HStack(spacing: 8) {
-                Image(systemName: shown.symbol).foregroundStyle(shown.accent.color)
+                Image(systemName: shown.symbol).foregroundStyle(shown.accent.tint.color)
                 Text(shown.name).font(.headline).lineLimit(1)
                 Spacer(minLength: 0)
                 if shown.branding != nil { Image(systemName: "paintpalette").font(.caption) }

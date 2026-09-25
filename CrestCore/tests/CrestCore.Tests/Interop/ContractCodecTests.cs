@@ -319,6 +319,29 @@ public sealed unsafe class ContractCodecTests {
         Assert.Equal(ContractSchema.Load([typeof(Unnormalized.Badge)]).Fingerprint, schema.Fingerprint);
     }
 
+    /// A record's public constants and static values reach Swift as static
+    /// literals at the top of its struct, a record spelled with its resolved
+    /// values as the core computed them; they never cross the wire.
+    [Fact]
+    public void ARecordsStaticsReachSwiftAsLiteralsAndStayOffTheWire() {
+        var schema = ContractSchema.Load([typeof(Statics.Gauge)]);
+        string swift = SwiftEmitter.EmitContracts(schema);
+
+        Assert.Contains("struct Gauge: Equatable, Sendable {\n    static let limit: Int = 3\n    static let full: Double = 100\n"
+            + "    static let empty = Gauge(label: \"\", level: 0, tint: nil, share: 0)\n"
+            + "    static let tinted = Gauge(label: \"tinted\", level: 25, tint: BrandColor(red: 0.5, green: 0.25, blue: 0.125, alpha: 1), share: 0.25)\n\n"
+            + "    let label: String\n", swift, StringComparison.Ordinal);
+        Assert.Equal(ContractSchema.Load([typeof(Unstatic.Gauge)]).Fingerprint, schema.Fingerprint);
+    }
+
+    [Theory]
+    [InlineData(typeof(Unspellable.Stamped), "Stamped.Nobody:")]
+    [InlineData(typeof(Unspellable.Settable), "Settable.Current:")]
+    public void TheGeneratorRefusesAPublicStaticSwiftCannotSpell(Type type, string culprit) {
+        var error = Assert.Throws<ContractSchemaException>(() => ContractSchema.Load([type]));
+        Assert.StartsWith(culprit, error.Message, StringComparison.Ordinal);
+    }
+
     /// Only the generated codec may call a wire initializer: a value made
     /// through one anywhere else was never normalized.
     [Fact]

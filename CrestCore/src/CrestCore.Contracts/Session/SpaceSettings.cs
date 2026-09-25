@@ -3,8 +3,8 @@ namespace CrestCore.Contracts;
 /// <summary>
 /// What a person chose for a Space apart from its records: its name, look and
 /// preferences, who may open it, and whether its saved tabs are expanded.
-/// <see cref="Branding"/> is null for a Space stored before branding existed; the
-/// native reader derives that look from the accent and symbol.
+/// <see cref="Branding"/> is null for a Space stored before branding existed, which
+/// wears the look its accent and symbol give it; <see cref="Look"/> is what it wears.
 /// </summary>
 [Observed]
 public sealed record SpaceSettings(
@@ -16,4 +16,14 @@ public sealed record SpaceSettings(
     CredentialPreferences CredentialPreferences,
     SpaceAccessPolicy AccessPolicy,
     bool IsSavedTabsExpanded,
-    DateTimeOffset? SavedTabsExpansionModifiedAt);
+    DateTimeOffset? SavedTabsExpansionModifiedAt) {
+    #region Variables
+
+    /// <summary>The branding the Space wears: its own, with a banner strength stored
+    /// before the baseline vocabulary in today's units, or for a Space stored before
+    /// branding existed, the legacy look of its accent and symbol.</summary>
+    [Resolved]
+    public SpaceBranding Look => Branding?.InTodaysUnits() ?? SpaceBranding.Legacy(Accent, Symbol);
+
+    #endregion
+}

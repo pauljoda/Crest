@@ -48,9 +48,9 @@ internal sealed partial record SpacePayload(
     /// opinion about any.
     public static SpacePayload Read(SyncPayloadReader value) {
         string name = value.Text("name"), symbol = value.Text("symbol");
-        var accent = StoredSessionCodec.ParseAccent(value.Text("accent")) ?? throw new UnreadableSyncPayloadException();
+        var accent = SpaceAccent.Named(value.Text("accent")) ?? throw new UnreadableSyncPayloadException();
         return new(value.WrappedIdentity("id"), value.Identity("profileID"), name, symbol, accent,
-            value.OptionalNested("branding") is { } branding ? ReadBranding(branding) : LegacyBranding(accent, symbol),
+            value.OptionalNested("branding") is { } branding ? ReadBranding(branding) : SpaceBranding.Legacy(accent, symbol),
             value.OptionalNested("browsingPreferences") is { } browsing ? ReadBrowsingPreferences(browsing)
                 : StoredSessionCodec.DefaultBrowsingPreferences,
             value.OptionalText("accessPolicy") is { } access
@@ -67,7 +67,7 @@ internal sealed partial record SpacePayload(
             ["profileID"] = StoredSessionCodec.BareIdentity(ProfileId),
             ["name"] = Name,
             ["symbol"] = Symbol,
-            ["accent"] = StoredSessionCodec.Spelling(Accent),
+            ["accent"] = Accent.Name,
             ["branding"] = EncodeBranding(Branding),
             ["browsingPreferences"] = StoredSessionCodec.Encode(BrowsingPreferences),
             ["accessPolicy"] = StoredSessionCodec.SpaceAccessPolicies.Name(AccessPolicy),

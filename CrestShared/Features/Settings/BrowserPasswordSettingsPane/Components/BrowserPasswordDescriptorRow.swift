@@ -107,13 +107,13 @@ struct BrowserPasswordDescriptorRow: View {
                 .font(.title3)
                 .foregroundStyle(
                     isSelected
-                        ? (space?.accent.color ?? CrestBrandTheme.accent)
+                        ? (space?.accent.tint.color ?? CrestBrandTheme.accent)
                         : .secondary
                 )
                 .accessibilityHidden(true)
         } else {
             Image(systemName: "key.fill")
-                .foregroundStyle(space?.accent.color ?? CrestBrandTheme.accent)
+                .foregroundStyle(space?.accent.tint.color ?? CrestBrandTheme.accent)
                 .frame(width: 22)
                 .accessibilityHidden(true)
         }

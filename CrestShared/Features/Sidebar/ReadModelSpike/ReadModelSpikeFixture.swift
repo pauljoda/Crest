@@ -46,7 +46,7 @@
             }
             return BrowserSpace(
                 id: SpaceID(), profile: BrowsingProfile(), name: "Space \(index)", symbol: "square.stack",
-                accent: SpaceAccent.allCases[index % SpaceAccent.allCases.count], folders: folders, tabs: tabs,
+                accent: SpaceAccent.all[index % SpaceAccent.all.count], folders: folders, tabs: tabs,
                 history: history)
         }
 

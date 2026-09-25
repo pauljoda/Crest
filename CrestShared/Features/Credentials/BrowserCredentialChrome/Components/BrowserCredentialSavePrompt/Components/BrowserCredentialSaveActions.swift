@@ -51,7 +51,7 @@ struct BrowserCredentialSaveActions: View {
                 Text(title)
             }
             .buttonStyle(.borderedProminent)
-            .tint(space?.accent.color ?? .accentColor)
+            .tint(space?.accent.tint.color ?? .accentColor)
         }
     }
 }

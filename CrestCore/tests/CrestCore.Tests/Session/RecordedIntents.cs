@@ -98,7 +98,7 @@ internal static class RecordedIntents {
             "split.title" => [new NameSplit(workspace, Id("spaceId"), Argument("groupId"), arguments["value"]?.GetValue<string>())],
             "split.tint" => [new TintSplit(workspace, Id("spaceId"), Argument("groupId"), Color(arguments["value"]))],
             "space.identity" => [new SetSpaceIdentity(workspace, Id("spaceId"), Text("name"), Text("symbol"),
-                StoredSessionCodec.ParseAccent(Text("accent"))!.Value)],
+                SpaceAccent.Named(Text("accent"))!)],
             "space.saved_expansion" => [new ExpandSavedTabs(workspace, Id("spaceId"), arguments["value"]!.GetValue<bool>())],
             "space.branding" => [new SetSpaceBranding(workspace, Id("spaceId"), StoredSessionCodec.DecodeBranding(arguments["value"]))],
             "space.credential_preferences" => [new SetCredentialPreferences(workspace, Id("spaceId"),

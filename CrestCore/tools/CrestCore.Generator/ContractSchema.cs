@@ -133,9 +133,10 @@ internal sealed record RecordText(string Name, string Text, string? Comment, str
 /// A sealed positional record. Its primary-constructor parameters cross the
 /// wire, followed by the values the core resolves from them: its `[Resolved]`
 /// computed properties, which the core writes and never reads back. Its
-/// `[Localized]` texts never cross it.
+/// `[Localized]` texts never cross it, and neither do its `Statics`: its public
+/// constants and static values, which Swift receives as static literals.
 internal sealed record ContractRecord(Type Type, IReadOnlyList<ContractField> Fields, IReadOnlyList<ContractField> Resolved,
-    IReadOnlyList<RecordText> Texts) {
+    IReadOnlyList<RecordText> Texts, IReadOnlyList<ContractConstant> Statics) {
     /// The field that names a record, which an observed model keeps as its identity.
     public const string IdentityField = "Id";
 
@@ -177,7 +178,8 @@ internal sealed record ContractSet(Type Type, IReadOnlyList<ContractField> Prope
     public string Name => Type.Name;
 }
 
-/// A fixed set's public constant: its name, its primitive type and its value.
+/// A fixed set's public constant, or a record's public constant or static
+/// value: its name, its type and its value, spelled as set data is.
 internal sealed record ContractConstant(string Name, FieldType Type, object Value);
 
 /// One member of a fixed set: the name of its static field, its wire tag, and
@@ -353,7 +355,8 @@ internal sealed class ContractSchema {
         var fields = new List<ContractField>();
         var resolved = new List<ContractField>();
         var texts = new List<RecordText>();
-        var record = new ContractRecord(type, fields, resolved, texts);
+        var statics = new List<ContractConstant>();
+        var record = new ContractRecord(type, fields, resolved, texts, statics);
         records[type] = record;
         foreach (var parameter in constructors[0].GetParameters()) {
             string where = $"{type.Name}.{parameter.Name}";
@@ -371,7 +374,38 @@ internal sealed class ContractSchema {
             resolved.Add(new ContractField(property.Name, Resolve(property.PropertyType, nullability.Create(property), where)));
         }
         texts.AddRange(RecordTexts(type, fields));
+        statics.AddRange(RecordStatics(type));
         return record;
+    }
+
+    /// A record's public constants, then its public static values, each in the
+    /// order it declares them. Swift spells each as a literal, a record through
+    /// the initializer generated code makes it with, its resolved values read
+    /// from the core's own instance, so a value the core names is written once.
+    /// A static Swift cannot spell stops the generator; keep it non-public.
+    private IEnumerable<ContractConstant> RecordStatics(Type type) {
+        const BindingFlags declared = BindingFlags.Public | BindingFlags.Static | BindingFlags.DeclaredOnly;
+        var fields = type.GetFields(declared).OrderBy(field => field.MetadataToken)
+            .Select(field => (field.Name, Type: field.FieldType, Info: nullability.Create(field),
+                Value: field.IsLiteral ? field.GetRawConstantValue() : field.GetValue(null), Writable: !field.IsLiteral && !field.IsInitOnly));
+        var properties = type.GetProperties(declared).Where(property => property.GetIndexParameters().Length == 0)
+            .OrderBy(property => property.MetadataToken)
+            .Select(property => (property.Name, Type: property.PropertyType, Info: nullability.Create(property), Value: property.GetValue(null),
+                Writable: property.SetMethod is { IsPublic: true }));
+        foreach (var member in fields.Concat(properties)) {
+            string at = $"{type.Name}.{member.Name}";
+            if (member.Writable)
+                throw new ContractSchemaException($"{at}: a record's public static value reaches Swift as a literal, so it cannot change.");
+            FieldType resolved;
+            try {
+                resolved = ResolveSetData(member.Type, member.Info, at, type, allowsResolved: true);
+            } catch (ContractSchemaException error) {
+                throw new ContractSchemaException($"{at}: a record's public static value reaches Swift as a literal, and Swift cannot "
+                    + $"spell this one ({error.Message}). Make it non-public.");
+            }
+            yield return new ContractConstant(member.Name, resolved, SetData(resolved, member.Value, at)
+                ?? throw new ContractSchemaException($"{at}: a record's public static value holds null."));
+        }
     }
 
     /// A record's `[Localized]` computed properties. Each is the same English
@@ -566,9 +600,11 @@ internal sealed class ContractSchema {
     /// A data member Swift can spell as a literal: a primitive, a duration, an
     /// enum, another fixed set, the set's own `Kinds`, a contract record whose
     /// fields are all spellable, or a list of any of them, each optional.
-    private FieldType ResolveSetData(Type type, NullabilityInfo? info, string where, Type set) {
-        if (Nullable.GetUnderlyingType(type) is { } underlying) return new OptionalField(ResolveSetData(underlying, null, where, set));
-        if (!type.IsValueType && info?.ReadState == NullabilityState.Nullable) return new OptionalField(ResolveSetData(type, null, where, set));
+    private FieldType ResolveSetData(Type type, NullabilityInfo? info, string where, Type set, bool allowsResolved = false) {
+        if (Nullable.GetUnderlyingType(type) is { } underlying)
+            return new OptionalField(ResolveSetData(underlying, null, where, set, allowsResolved));
+        if (!type.IsValueType && info?.ReadState == NullabilityState.Nullable)
+            return new OptionalField(ResolveSetData(type, null, where, set, allowsResolved));
         if (type == typeof(bool)) return new PrimitiveField(Primitive.Bool);
         if (type == typeof(int)) return new PrimitiveField(Primitive.Int);
         if (type == typeof(long)) return new PrimitiveField(Primitive.Long);
@@ -579,12 +615,13 @@ internal sealed class ContractSchema {
         if (type.IsEnum && type.DeclaringType == set && type.Name == SetKinds) return new KindsField(type);
         if (type.IsEnum) return DescribeEnum(type, where);
         if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(IReadOnlyList<>))
-            return new ListField(ResolveSetData(type.GetGenericArguments()[0], info?.GenericTypeArguments.FirstOrDefault(), $"{where}[]", set));
+            return new ListField(ResolveSetData(type.GetGenericArguments()[0], info?.GenericTypeArguments.FirstOrDefault(), $"{where}[]", set,
+                allowsResolved));
         if (IsFixedSet(type)) return DescribeSet(type, where);
         if (IsRecordOf(type, set)) {
             DescribeRecord(type);
             var record = new RecordField(type);
-            EnsureSpellable(record, where, []);
+            EnsureSpellable(record, where, [], allowsResolved);
             return record;
         }
         throw new ContractSchemaException($"{where}: a fixed set's data members are bool, int, long, double, string, TimeSpan, an enum, "
@@ -598,8 +635,10 @@ internal sealed class ContractSchema {
         && type.GetProperty("EqualityContract", BindingFlags.NonPublic | BindingFlags.Instance) is not null;
 
     /// A record held as set data is spelled with its initializer,
-    /// so each of its fields must itself be a value Swift can spell.
-    private void EnsureSpellable(FieldType type, string where, HashSet<Type> visiting) {
+    /// so each of its fields must itself be a value Swift can spell. Set data
+    /// cannot hold [Resolved] values, which only the core computes; a record's
+    /// static value can, since the generator reads them from the core's instance.
+    private void EnsureSpellable(FieldType type, string where, HashSet<Type> visiting, bool allowsResolved) {
         switch (type) {
             case PrimitiveField { Kind: Primitive.Guid or Primitive.Date }:
                 throw new ContractSchemaException($"{where}: a record held as set data cannot hold a {Describe(type)}, which Swift "
@@ -609,18 +648,18 @@ internal sealed class ContractSchema {
             case RecordField record:
                 if (!visiting.Add(record.Type))
                     throw new ContractSchemaException($"{where}: a record held as set data cannot contain itself.");
-                if (records[record.Type].Resolved.Count > 0)
+                if (!allowsResolved && records[record.Type].Resolved.Count > 0)
                     throw new ContractSchemaException($"{where}: a record held as set data cannot have [Resolved] values, which "
                         + "only the core computes.");
-                foreach (var field in records[record.Type].Fields)
-                    EnsureSpellable(field.Type, $"{record.Type.Name}.{field.Name}", visiting);
+                foreach (var field in records[record.Type].Wire)
+                    EnsureSpellable(field.Type, $"{record.Type.Name}.{field.Name}", visiting, allowsResolved);
                 visiting.Remove(record.Type);
                 break;
             case ListField list:
-                EnsureSpellable(list.Element, where, visiting);
+                EnsureSpellable(list.Element, where, visiting, allowsResolved);
                 break;
             case OptionalField optional:
-                EnsureSpellable(optional.Value, where, visiting);
+                EnsureSpellable(optional.Value, where, visiting, allowsResolved);
                 break;
         }
     }
@@ -681,7 +720,7 @@ internal sealed class ContractSchema {
         _ => value
     };
 
-    private RecordValue RecordData(ContractRecord record, object value, string where) => new(record, [.. record.Fields.Select(field =>
+    private RecordValue RecordData(ContractRecord record, object value, string where) => new(record, [.. record.Wire.Select(field =>
         SetData(field.Type, record.Type.GetProperty(field.Name)!.GetValue(value), $"{where}.{field.Name}"))]);
 
     private static string MemberName(Type set, object instance, string where) =>

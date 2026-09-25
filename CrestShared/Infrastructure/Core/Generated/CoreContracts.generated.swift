@@ -673,6 +673,8 @@ struct CredentialFormFacts: Equatable, Sendable {
 }
 
 struct CredentialOrigin: Equatable, Sendable {
+    static let maximumHostLength: Int = 1024
+
     let scheme: String
     let host: String
     let port: Int
@@ -861,6 +863,8 @@ struct DownloadRiskAssessment: Equatable, Sendable {
 }
 
 struct DownloadRiskFacts: Equatable, Sendable {
+    static let maximumSuggestedFilenameLength: Int = 4096
+
     let suggestedFilename: String
     let sanitizedFilename: String
     let mimeType: String?
@@ -889,6 +893,14 @@ struct DownloadState: Equatable, Sendable, Identifiable {
 }
 
 struct DownloadTelemetry: Equatable, Sendable {
+    static let empty = DownloadTelemetry(
+        bytesReceived: 0,
+        totalBytes: nil,
+        bytesPerSecond: nil,
+        estimatedTimeRemaining: nil,
+        isPaused: false
+    )
+
     let bytesReceived: Int64
     let totalBytes: Int64?
     let bytesPerSecond: Double?
@@ -897,6 +909,19 @@ struct DownloadTelemetry: Equatable, Sendable {
 }
 
 struct DownloadTransferEstimator: Equatable, Sendable {
+    static let minimumRateInterval: Double = 0.15
+    static let smoothingWeight: Double = 0.25
+    static let minimumUsefulEstimate: Double = 0.5
+    static let maximumUsefulEstimate: Double = 604800
+    static let initial = DownloadTransferEstimator(
+        publishedBytes: 0,
+        knownTotalBytes: nil,
+        totalIsUnreliable: false,
+        measurementBytes: nil,
+        measurementUptime: nil,
+        smoothedBytesPerSecond: nil
+    )
+
     let publishedBytes: Int64
     let knownTotalBytes: Int64?
     let totalIsUnreliable: Bool
@@ -1052,6 +1077,10 @@ struct FolderLimitReached: Equatable, Sendable {
 }
 
 struct FolderState: Equatable, Sendable, Identifiable {
+    static let maximumDepth: Int = 16
+    static let defaultSymbol: String = "folder"
+    static let defaultColor = BrandColor(red: 0.43, green: 0.48, blue: 0.54, alpha: 1)
+
     let id: UUID
     let location: TabPlacement
     let title: String
@@ -1317,6 +1346,22 @@ struct LaunchDecision: Equatable, Sendable {
 }
 
 struct LaunchEnvironment: Equatable, Sendable {
+    static let installed = LaunchEnvironment(
+        isTestRuntime: false,
+        isPreviewRuntime: false,
+        requestsIsolatedSession: false,
+        hasNamedProfile: false,
+        requestsIsolatedCloudSync: false,
+        resetsSession: false,
+        presentsShowcase: false,
+        usesInMemoryCredentials: false,
+        forcesOnboardingWelcome: false,
+        forcesDesktopSetup: false,
+        forcesMobileSetup: false,
+        runsPerformanceHarness: false,
+        usesUpdateTestFeed: false
+    )
+
     let isTestRuntime: Bool
     let isPreviewRuntime: Bool
     let requestsIsolatedSession: Bool
@@ -1669,6 +1714,19 @@ struct PageIconChanged: EngineEvent, Equatable, Sendable {
 }
 
 struct PageLiveState: Equatable, Sendable {
+    static let blank = PageLiveState(
+        url: nil,
+        pendingURL: nil,
+        title: "",
+        isLoading: false,
+        canGoBack: false,
+        canGoForward: false,
+        security: PageSecurity.none,
+        failure: nil,
+        media: [],
+        address: nil
+    )
+
     let url: String?
     let pendingURL: String?
     let title: String
@@ -1699,6 +1757,17 @@ struct PageRemoved: Equatable, Sendable {
 }
 
 struct PageSnapshot: Equatable, Sendable {
+    static let blank = PageSnapshot(
+        url: nil,
+        pendingURL: nil,
+        title: "",
+        isLoading: false,
+        canGoBack: false,
+        canGoForward: false,
+        security: PageSecurity.none,
+        media: []
+    )
+
     let url: String?
     let pendingURL: String?
     let title: String
@@ -2153,6 +2222,9 @@ struct SiteDecision: Query, Equatable, Sendable {
 }
 
 struct SiteOrigin: Hashable, Sendable {
+    static let maximumSchemeLength: Int = 64
+    static let maximumHostLength: Int = 1024
+
     let scheme: String
     let host: String
     let port: Int
@@ -2218,6 +2290,9 @@ struct SpaceBeingDeleted: Equatable, Sendable {
 }
 
 struct SpaceBranding: Equatable, Sendable {
+    static let baselineRenderingVersion: Int = 2
+    static let legacyReadabilityFade: Double = 0.25
+
     let colors: ColorPalette
     let bannerPattern: SpaceBannerPattern
     let bannerStrength: Double
@@ -2330,6 +2405,7 @@ struct SpaceSettings: Equatable, Sendable {
     let accessPolicy: SpaceAccessPolicy
     let isSavedTabsExpanded: Bool
     let savedTabsExpansionModifiedAt: Date?
+    let look: SpaceBranding
 }
 
 struct SpaceSettingsChanged: Equatable, Sendable {
@@ -2366,6 +2442,8 @@ struct SplitColumnShares: Equatable, Sendable {
 }
 
 struct SplitGroupState: Equatable, Sendable, Identifiable {
+    static let minimumShownMembers: Int = 2
+
     let id: UUID
     let customTitle: String?
     let titleModifiedAt: Date?
@@ -3051,13 +3129,6 @@ enum SitePermissionVerdict: Int, CaseIterable, Sendable {
     case deny = 2
 }
 
-enum SpaceAccent: Int, CaseIterable, Sendable {
-    case indigo = 0
-    case orange = 1
-    case teal = 2
-    case rose = 3
-}
-
 enum SpaceAccessPolicy: Int, CaseIterable, Sendable {
     case open = 0
     case deviceOwnerAuthentication = 1
@@ -3117,6 +3188,9 @@ enum SystemTint: Int, CaseIterable, Sendable {
     case orange = 1
     case purple = 2
     case blue = 3
+    case indigo = 4
+    case teal = 5
+    case pink = 6
 }
 
 enum TearOffRefusal: Int, CaseIterable, Sendable {
@@ -7618,6 +7692,290 @@ struct SitePermissionDecision: Hashable, Sendable {
     }
 }
 
+/// The members of the core's `SpaceAccent`. A member's wire tag is its index in `all`.
+struct SpaceAccent: Hashable, Sendable {
+    let tag: Int
+    let name: String
+    let tint: SystemTint
+    let legacyColors: [BrandColor]
+    let house: SpaceBranding
+
+    private init(tag: Int, name: String, tint: SystemTint, legacyColors: [BrandColor], house: SpaceBranding) {
+        self.tag = tag
+        self.name = name
+        self.tint = tint
+        self.legacyColors = legacyColors
+        self.house = house
+    }
+
+    static let indigo = SpaceAccent(
+        tag: 0,
+        name: "indigo",
+        tint: .indigo,
+        legacyColors: [
+            BrandColor(red: 0.08, green: 0.15, blue: 0.23, alpha: 1),
+            BrandColor(red: 0.22, green: 0.42, blue: 0.64, alpha: 1),
+            BrandColor(red: 0.88, green: 0.67, blue: 0.25, alpha: 1)
+        ],
+        house: SpaceBranding(
+            colors: ColorPalette(
+                colors: [
+                    BrandColor(red: 0.118, green: 0.157, blue: 0.2, alpha: 1),
+                    BrandColor(red: 0.243, green: 0.306, blue: 0.369, alpha: 1),
+                    BrandColor(red: 0.525, green: 0.678, blue: 0.769, alpha: 1)
+                ]
+            ),
+            bannerPattern: .diagonal,
+            bannerStrength: 1,
+            readabilityFade: 0.45,
+            keepsControlsReadable: true,
+            themeMode: .banner,
+            gradientAngle: 0,
+            showsTexture: false,
+            iconStyle: .layeredCrest,
+            symbolColor: nil,
+            crest: SpaceCrest(
+                backplate: .frenchShield,
+                fieldDivision: .plain,
+                ordinary: .none,
+                trim: .line,
+                symbol: .direwolf,
+                chargeLayout: .single,
+                backplateColorIndex: 0,
+                secondaryFieldColorIndex: 1,
+                ordinaryColorIndex: 1,
+                trimColorIndex: 2,
+                symbolColorIndex: 2,
+                startingPresetID: nil,
+                edgeColorIndex: 2,
+                palette: nil,
+                charge: nil,
+                plateScale: 1,
+                edgeWidth: 0,
+                divisionCount: 4,
+                finish: .flat,
+                ordinaryWidth: 1,
+                trimWeight: 0.75,
+                trimDetail: 12,
+                chargeScale: 1.2,
+                chargeOffset: 0,
+                chargeWeight: .bold,
+                sheenAngle: 45,
+                sealTeeth: 12,
+                showsOutline: false,
+                depth: .none
+            ),
+            renderingVersion: 5,
+            folderColorIntensity: 0,
+            textColorMode: .automatic,
+            hasCustomAppearance: false
+        )
+    )
+    static let orange = SpaceAccent(
+        tag: 1,
+        name: "orange",
+        tint: .orange,
+        legacyColors: [
+            BrandColor(red: 0.85, green: 0.27, blue: 0.2, alpha: 1),
+            BrandColor(red: 0.88, green: 0.67, blue: 0.25, alpha: 1),
+            BrandColor(red: 0.22, green: 0.42, blue: 0.64, alpha: 1)
+        ],
+        house: SpaceBranding(
+            colors: ColorPalette(
+                colors: [
+                    BrandColor(red: 0.208, green: 0.086, blue: 0.043, alpha: 1),
+                    BrandColor(red: 0.545, green: 0.239, blue: 0.106, alpha: 1),
+                    BrandColor(red: 0.816, green: 0.62, blue: 0.396, alpha: 1)
+                ]
+            ),
+            bannerPattern: .diagonal,
+            bannerStrength: 1,
+            readabilityFade: 0.45,
+            keepsControlsReadable: true,
+            themeMode: .banner,
+            gradientAngle: 0,
+            showsTexture: false,
+            iconStyle: .layeredCrest,
+            symbolColor: nil,
+            crest: SpaceCrest(
+                backplate: .circle,
+                fieldDivision: .plain,
+                ordinary: .none,
+                trim: .sunburst,
+                symbol: .sun,
+                chargeLayout: .single,
+                backplateColorIndex: 0,
+                secondaryFieldColorIndex: 1,
+                ordinaryColorIndex: 1,
+                trimColorIndex: 2,
+                symbolColorIndex: 2,
+                startingPresetID: nil,
+                edgeColorIndex: 2,
+                palette: nil,
+                charge: nil,
+                plateScale: 1,
+                edgeWidth: 0,
+                divisionCount: 4,
+                finish: .flat,
+                ordinaryWidth: 1,
+                trimWeight: 0.75,
+                trimDetail: 12,
+                chargeScale: 1.2,
+                chargeOffset: 0,
+                chargeWeight: .bold,
+                sheenAngle: 45,
+                sealTeeth: 12,
+                showsOutline: false,
+                depth: .none
+            ),
+            renderingVersion: 5,
+            folderColorIntensity: 0,
+            textColorMode: .automatic,
+            hasCustomAppearance: false
+        )
+    )
+    static let teal = SpaceAccent(
+        tag: 2,
+        name: "teal",
+        tint: .teal,
+        legacyColors: [
+            BrandColor(red: 0.12, green: 0.49, blue: 0.52, alpha: 1),
+            BrandColor(red: 0.22, green: 0.42, blue: 0.64, alpha: 1),
+            BrandColor(red: 0.82, green: 0.72, blue: 0.56, alpha: 1)
+        ],
+        house: SpaceBranding(
+            colors: ColorPalette(
+                colors: [
+                    BrandColor(red: 0.082, green: 0.137, blue: 0.094, alpha: 1),
+                    BrandColor(red: 0.204, green: 0.341, blue: 0.22, alpha: 1),
+                    BrandColor(red: 0.737, green: 0.655, blue: 0.4, alpha: 1)
+                ]
+            ),
+            bannerPattern: .diagonal,
+            bannerStrength: 1,
+            readabilityFade: 0.45,
+            keepsControlsReadable: true,
+            themeMode: .banner,
+            gradientAngle: 0,
+            showsTexture: false,
+            iconStyle: .layeredCrest,
+            symbolColor: nil,
+            crest: SpaceCrest(
+                backplate: .circle,
+                fieldDivision: .plain,
+                ordinary: .none,
+                trim: .laurel,
+                symbol: .rose,
+                chargeLayout: .single,
+                backplateColorIndex: 0,
+                secondaryFieldColorIndex: 1,
+                ordinaryColorIndex: 1,
+                trimColorIndex: 2,
+                symbolColorIndex: 2,
+                startingPresetID: nil,
+                edgeColorIndex: 2,
+                palette: nil,
+                charge: nil,
+                plateScale: 1,
+                edgeWidth: 0,
+                divisionCount: 4,
+                finish: .flat,
+                ordinaryWidth: 1,
+                trimWeight: 0.75,
+                trimDetail: 12,
+                chargeScale: 1.2,
+                chargeOffset: 0,
+                chargeWeight: .bold,
+                sheenAngle: 45,
+                sealTeeth: 12,
+                showsOutline: false,
+                depth: .none
+            ),
+            renderingVersion: 5,
+            folderColorIntensity: 0,
+            textColorMode: .automatic,
+            hasCustomAppearance: false
+        )
+    )
+    static let rose = SpaceAccent(
+        tag: 3,
+        name: "rose",
+        tint: .pink,
+        legacyColors: [
+            BrandColor(red: 0.72, green: 0.25, blue: 0.42, alpha: 1),
+            BrandColor(red: 0.29, green: 0.25, blue: 0.58, alpha: 1),
+            BrandColor(red: 0.82, green: 0.72, blue: 0.56, alpha: 1)
+        ],
+        house: SpaceBranding(
+            colors: ColorPalette(
+                colors: [
+                    BrandColor(red: 0.235, green: 0.055, blue: 0.102, alpha: 1),
+                    BrandColor(red: 0.447, green: 0.125, blue: 0.188, alpha: 1),
+                    BrandColor(red: 0.788, green: 0.635, blue: 0.329, alpha: 1)
+                ]
+            ),
+            bannerPattern: .diagonal,
+            bannerStrength: 1,
+            readabilityFade: 0.45,
+            keepsControlsReadable: true,
+            themeMode: .banner,
+            gradientAngle: 0,
+            showsTexture: false,
+            iconStyle: .layeredCrest,
+            symbolColor: nil,
+            crest: SpaceCrest(
+                backplate: .shield,
+                fieldDivision: .plain,
+                ordinary: .none,
+                trim: .line,
+                symbol: .lion,
+                chargeLayout: .single,
+                backplateColorIndex: 0,
+                secondaryFieldColorIndex: 1,
+                ordinaryColorIndex: 1,
+                trimColorIndex: 2,
+                symbolColorIndex: 2,
+                startingPresetID: nil,
+                edgeColorIndex: 2,
+                palette: nil,
+                charge: nil,
+                plateScale: 1,
+                edgeWidth: 0,
+                divisionCount: 4,
+                finish: .flat,
+                ordinaryWidth: 1,
+                trimWeight: 0.75,
+                trimDetail: 12,
+                chargeScale: 1.2,
+                chargeOffset: 0,
+                chargeWeight: .bold,
+                sheenAngle: 45,
+                sealTeeth: 12,
+                showsOutline: false,
+                depth: .none
+            ),
+            renderingVersion: 5,
+            folderColorIntensity: 0,
+            textColorMode: .automatic,
+            hasCustomAppearance: false
+        )
+    )
+
+    static let all: [SpaceAccent] = [indigo, orange, teal, rose]
+
+    static func named(_ name: String?) -> SpaceAccent? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: SpaceAccent, rhs: SpaceAccent) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+}
+
 /// The members of the core's `SyncDeletionReason`. A member's wire tag is its index in `all`.
 struct SyncDeletionReason: Hashable, Sendable {
     let tag: Int
@@ -8362,6 +8720,10 @@ final class SpaceSettingsModel: ObservedModel {
         access(keyPath: \.savedTabsExpansionModifiedAt)
         return savedTabsExpansionModifiedAtStorage
     }
+    var look: SpaceBranding {
+        access(keyPath: \.look)
+        return lookStorage
+    }
 
     @ObservationIgnored private var nameStorage: String
     @ObservationIgnored private var symbolStorage: String
@@ -8372,6 +8734,7 @@ final class SpaceSettingsModel: ObservedModel {
     @ObservationIgnored private var accessPolicyStorage: SpaceAccessPolicy
     @ObservationIgnored private var isSavedTabsExpandedStorage: Bool
     @ObservationIgnored private var savedTabsExpansionModifiedAtStorage: Date?
+    @ObservationIgnored private var lookStorage: SpaceBranding
 
     var value: SpaceSettings {
         SpaceSettings(
@@ -8383,7 +8746,8 @@ final class SpaceSettingsModel: ObservedModel {
             credentialPreferences: credentialPreferences,
             accessPolicy: accessPolicy,
             isSavedTabsExpanded: isSavedTabsExpanded,
-            savedTabsExpansionModifiedAt: savedTabsExpansionModifiedAt
+            savedTabsExpansionModifiedAt: savedTabsExpansionModifiedAt,
+            look: look
         )
     }
 
@@ -8397,6 +8761,7 @@ final class SpaceSettingsModel: ObservedModel {
         accessPolicyStorage = value.accessPolicy
         isSavedTabsExpandedStorage = value.isSavedTabsExpanded
         savedTabsExpansionModifiedAtStorage = value.savedTabsExpansionModifiedAt
+        lookStorage = value.look
     }
 
     func update(_ value: SpaceSettings) {
@@ -8435,6 +8800,10 @@ final class SpaceSettingsModel: ObservedModel {
         if savedTabsExpansionModifiedAtStorage != value.savedTabsExpansionModifiedAt {
             savedTabsExpansionModifiedAtStorage = value.savedTabsExpansionModifiedAt
             withMutation(keyPath: \.savedTabsExpansionModifiedAt) {}
+        }
+        if lookStorage != value.look {
+            lookStorage = value.look
+            withMutation(keyPath: \.look) {}
         }
     }
 }

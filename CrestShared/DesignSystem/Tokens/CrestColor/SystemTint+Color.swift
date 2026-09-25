@@ -9,6 +9,9 @@ extension SystemTint {
         case .orange: .orange
         case .purple: .purple
         case .blue: .blue
+        case .indigo: .indigo
+        case .teal: .teal
+        case .pink: .pink
         }
     }
 }

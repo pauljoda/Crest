@@ -20,7 +20,7 @@ struct BrowserCredentialSavePromptHeader: View {
                     ? "key.horizontal.fill" : "key.fill"
             )
             .font(.title3)
-            .foregroundStyle(space?.accent.color ?? .accentColor)
+            .foregroundStyle(space?.accent.tint.color ?? .accentColor)
             .accessibilityHidden(true)
 
             VStack(

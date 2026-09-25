@@ -17,7 +17,7 @@ public static class SpaceBrandingPolicy {
     public const int MaximumMonogramLength = 2;
 
     /// The rendering vocabulary every shipped build draws.
-    public const int BaselineRenderingVersion = 2;
+    public const int BaselineRenderingVersion = SpaceBranding.BaselineRenderingVersion;
     /// The vocabulary that adds the expanded heraldic charges.
     public const int ExpandedChargeRenderingVersion = 3;
     /// The vocabulary that adds the customization surfaces and backplates.

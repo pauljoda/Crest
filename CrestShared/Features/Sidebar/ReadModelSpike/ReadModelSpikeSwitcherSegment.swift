@@ -31,7 +31,7 @@
             #endif
             let shown = Shown(settings: settings)
             Image(systemName: shown.symbol)
-                .foregroundStyle(isShown ? shown.accent.color : .secondary)
+                .foregroundStyle(isShown ? shown.accent.tint.color : .secondary)
                 .frame(width: 24, height: 24)
                 .accessibilityLabel(shown.name)
         }

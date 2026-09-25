@@ -101,6 +101,8 @@ extension SitePermission: CoreNamedValue {}
 
 extension SitePermissionDecision: CoreNamedValue {}
 
+extension SpaceAccent: CoreNamedValue {}
+
 extension SyncDeletionReason: CoreNamedValue {}
 
 extension TabIconMode: CoreNamedValue {}

@@ -9,13 +9,6 @@ namespace CrestCore.Application;
 /// Wire spellings for the manual-setup and onboarding policy operations. They
 /// match the native onboarding models' case names.
 internal static class SetupCodes {
-    #region Variables
-
-    /// New draft Spaces take the accents in this order, then repeat.
-    private static readonly SpaceAccent[] Accents = [SpaceAccent.Indigo, SpaceAccent.Orange, SpaceAccent.Teal, SpaceAccent.Rose];
-
-    #endregion
-
     #region Actions - Decoding
 
     public static OnboardingEntryPoint EntryPoint(string value) => value switch {
@@ -36,7 +29,8 @@ internal static class SetupCodes {
 
     #region Actions - Encoding
 
-    public static string Accent(int number) => StoredSessionCodec.Spelling(Accents[(number - 1) % Accents.Length]);
+    /// The accent a new draft Space takes: each in turn, then repeating.
+    public static string Accent(int number) => SpaceAccent.All[(number - 1) % SpaceAccent.All.Count].Name;
 
     public static string Outcome(OnboardingCompletion outcome) => outcome switch {
         OnboardingCompletion.Complete => "complete",

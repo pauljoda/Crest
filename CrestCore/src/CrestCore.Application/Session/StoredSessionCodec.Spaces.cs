@@ -8,10 +8,6 @@ namespace CrestCore.Application;
 internal static partial class StoredSessionCodec {
     #region Variables
 
-    internal static readonly StoredSpellings<SpaceAccent> SpaceAccents = new([
-        (SpaceAccent.Indigo, "indigo"), (SpaceAccent.Orange, "orange"), (SpaceAccent.Teal, "teal"),
-        (SpaceAccent.Rose, "rose")
-    ]);
     internal static readonly StoredSpellings<SpaceAccessPolicy> SpaceAccessPolicies = new([
         (SpaceAccessPolicy.Open, "open"), (SpaceAccessPolicy.DeviceOwnerAuthentication, "deviceOwnerAuthentication")
     ]);
@@ -53,7 +49,7 @@ internal static partial class StoredSessionCodec {
             [Key.Profile] = new JsonObject { [Key.Id] = BareIdentity(space.ProfileId) },
             [Key.Name] = settings.Name,
             [Key.Symbol] = settings.Symbol,
-            [Key.Accent] = SpaceAccents.Name(settings.Accent)
+            [Key.Accent] = settings.Accent.Name
         };
         if (settings.Branding is { } branding) value[Key.Branding] = Encode(branding);
         value[Key.Folders] = EncodeAll(space.Folders, Encode);
@@ -76,13 +72,7 @@ internal static partial class StoredSessionCodec {
     internal static Guid? LegacySelectedTab(JsonNode? node) => OptionalIdentity(Object(node)[Key.LegacySelectedTab]);
 
     /// A stored accent; one this build cannot name is indigo.
-    internal static SpaceAccent DecodeAccent(JsonNode? node) => SpaceAccents.Parse(TolerantText(node)) ?? SpaceAccent.Indigo;
-
-    /// An accent a command names, or null when this build cannot name it.
-    internal static SpaceAccent? ParseAccent(string? spelling) => SpaceAccents.Parse(spelling);
-
-    /// An accent's stored spelling, which setup answers also use.
-    internal static string Spelling(SpaceAccent accent) => SpaceAccents.Name(accent);
+    internal static SpaceAccent DecodeAccent(JsonNode? node) => SpaceAccent.Named(TolerantText(node)) ?? SpaceAccent.Indigo;
 
     /// A stored access policy. None is open; a policy this build cannot name was
     /// somebody restricting the Space, so it resolves to the guarded side.

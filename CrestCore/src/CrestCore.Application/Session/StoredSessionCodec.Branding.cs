@@ -93,9 +93,6 @@ internal static partial class StoredSessionCodec {
         (CrestChargeKind.Monogram, "monogram"), (CrestChargeKind.None, "none")
     ]);
 
-    /// A branding stored before the readability fade reads its old switch as this fade.
-    private const double LegacyReadabilityFade = 0.25;
-
     /// Branding stored before rendering versions were recorded is version one.
     private const int FirstRenderingVersion = 1;
 
@@ -110,7 +107,7 @@ internal static partial class StoredSessionCodec {
         var value = Object(node);
         var fade = OptionalNumber(value[Key.ReadabilityFade]);
         var keepsReadable = Flag(value[Key.KeepsControlsReadable]);
-        fade ??= keepsReadable ?? true ? LegacyReadabilityFade : 0;
+        fade ??= keepsReadable ?? true ? SpaceBranding.LegacyReadabilityFade : 0;
         return new(Palette(value[Key.Colors]) ?? new([]),
             SpaceBannerPatterns.Parse(Text(value[Key.BannerPattern])) ?? SpaceBannerPattern.Solid,
             OptionalNumber(value[Key.BannerStrength]) ?? 1, fade.Value, keepsReadable ?? fade > 0,

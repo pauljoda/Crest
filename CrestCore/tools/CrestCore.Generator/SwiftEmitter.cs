@@ -80,6 +80,11 @@ internal static class SwiftEmitter {
             code.Append('\n').Append($"struct {record.Name}: {string.Join(", ", conformances)} {{\n");
             if (isSent && owner.Root.HasAnswer)
                 code.Append($"    typealias Answer = {TypeName(owner.Member.Answer!)}\n\n");
+            // A primitive names its type, so a whole-valued double stays a Double.
+            foreach (var constant in record.Statics)
+                code.Append($"    static let {Local(constant.Name)}{(constant.Type is PrimitiveField ? $": {TypeName(constant.Type)}" : "")} = "
+                    + $"{Literal(constant.Type, constant.Value, StaticIndent)}\n");
+            if (record.Statics.Count > 0 && record.Wire.Count > 0) code.Append('\n');
             foreach (var field in record.Wire)
                 code.Append($"    let {Naming.SwiftIdentifier(Naming.SwiftMember(field.Name))}: {TypeName(field.Type)}\n");
             if (record.IsNormalizedOnConstruction) EmitWireInitializer(code, record);
@@ -595,6 +600,9 @@ internal static class SwiftEmitter {
     /// Where a member's data values start: inside `static let … = Set(`.
     private const string MemberIndent = "        ";
 
+    /// The indentation of a record's static value: one level inside its struct.
+    private const string StaticIndent = "    ";
+
     /// `open` and `close` around the items on one line when it fits, or one
     /// item per line, indented one level deeper than `open`.
     private static string Wrapped(string open, string close, IReadOnlyList<string> items) {
@@ -626,7 +634,7 @@ internal static class SwiftEmitter {
         (ListField list, IReadOnlyList<object?> items) =>
             Wrapped(indent, "[", "]", [.. items.Select(item => Literal(list.Element, item, indent + "    "))]),
         (RecordField, RecordValue record) => Wrapped(indent, $"{record.Record.Name}(", ")", [
-            .. record.Record.Fields.Select((field, index) =>
+            .. record.Record.Wire.Select((field, index) =>
                 $"{InitializerLabels(record.Record)[index]}: {Literal(field.Type, record.Values[index], indent + "    ")}")]),
         (LocalizedField, LocalizedText text) => LocalizedLiteral(text),
         _ => throw new ContractSchemaException($"Cannot spell {value} as a Swift {TypeName(type)}.")

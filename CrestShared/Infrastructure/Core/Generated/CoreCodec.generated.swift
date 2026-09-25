@@ -7,7 +7,7 @@ import Foundation
 enum CoreCodec {
     /// SHA-256 of the canonical contract schema. The core refuses any other.
     static let fingerprint: [UInt8] = [
-        0x40, 0x3b, 0xdb, 0x03, 0xc5, 0xc7, 0xa5, 0x7c, 0x1b, 0x2d, 0x33, 0xfb, 0x16, 0xb2, 0x3b, 0xd5, 0x50, 0xd8, 0x79, 0x92, 0xeb, 0xfb, 0xc6, 0xb2, 0xff, 0x42, 0xd8, 0xd8, 0xed, 0x2c, 0x4b, 0xca
+        0xcb, 0x09, 0x44, 0x1a, 0x10, 0xd0, 0xa9, 0x51, 0xae, 0xfd, 0xa4, 0xb7, 0x9e, 0x98, 0x2f, 0x31, 0x87, 0xad, 0x2d, 0x16, 0x48, 0x2a, 0x16, 0x25, 0xba, 0xa0, 0xe9, 0x81, 0x65, 0xe9, 0x9c, 0xd1
     ]
     /// SHA-256 of the engine contract alone, which an engine binding registers with.
     static let engineFingerprint: [UInt8] = [
@@ -8536,7 +8536,8 @@ extension SpaceSettings {
         } else {
             savedTabsExpansionModifiedAt = nil
         }
-        self.init(name: name, symbol: symbol, accent: accent, branding: branding, browsingPreferences: browsingPreferences, credentialPreferences: credentialPreferences, accessPolicy: accessPolicy, isSavedTabsExpanded: isSavedTabsExpanded, savedTabsExpansionModifiedAt: savedTabsExpansionModifiedAt)
+        let look = try SpaceBranding(from: &reader)
+        self.init(name: name, symbol: symbol, accent: accent, branding: branding, browsingPreferences: browsingPreferences, credentialPreferences: credentialPreferences, accessPolicy: accessPolicy, isSavedTabsExpanded: isSavedTabsExpanded, savedTabsExpansionModifiedAt: savedTabsExpansionModifiedAt, look: look)
     }
 
     func encode(into writer: inout WireWriter) {
@@ -8559,6 +8560,7 @@ extension SpaceSettings {
         } else {
             writer.writePresence(false)
         }
+        look.encode(into: &writer)
     }
 }
 
@@ -10725,20 +10727,6 @@ extension SitePermissionVerdict {
     }
 }
 
-extension SpaceAccent {
-    init(from reader: inout WireReader) throws(WireError) {
-        let rawValue = try reader.readEnum()
-        guard let value = SpaceAccent(rawValue: rawValue) else {
-            throw WireError.malformed("Unknown SpaceAccent \(rawValue)")
-        }
-        self = value
-    }
-
-    func encode(into writer: inout WireWriter) {
-        writer.writeEnum(rawValue)
-    }
-}
-
 extension SpaceAccessPolicy {
     init(from reader: inout WireReader) throws(WireError) {
         let rawValue = try reader.readEnum()
@@ -11388,6 +11376,20 @@ extension SitePermissionDecision {
         let tag = try reader.readEnum()
         guard Self.all.indices.contains(tag) else {
             throw WireError.malformed("Unknown SitePermissionDecision \(tag)")
+        }
+        self = Self.all[tag]
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeEnum(tag)
+    }
+}
+
+extension SpaceAccent {
+    init(from reader: inout WireReader) throws(WireError) {
+        let tag = try reader.readEnum()
+        guard Self.all.indices.contains(tag) else {
+            throw WireError.malformed("Unknown SpaceAccent \(tag)")
         }
         self = Self.all[tag]
     }

@@ -34,4 +34,21 @@ public sealed record SpaceCrest(
     double SheenAngle,
     int SealTeeth,
     bool ShowsOutline,
-    CrestDepth Depth);
+    CrestDepth Depth) {
+    #region Actions - Compositions
+
+    /// <summary>A plain-field crest with no ordinary, charged with <paramref name="figure"/>.
+    /// <paramref name="layers"/> addresses, in order, the backplate, the second field, the
+    /// ordinary, the trim, the figure and the edge; every other parameter is neutral.</summary>
+    public static SpaceCrest PlainField(CrestBackplate backplate, CrestSymbol figure, CrestTrim trim, IReadOnlyList<int> layers,
+        double trimWeight, double chargeScale) {
+        ArgumentNullException.ThrowIfNull(layers);
+        return new(backplate, CrestFieldDivision.Plain, CrestOrdinary.None, trim, figure, CrestChargeLayout.Single,
+            BackplateColorIndex: layers[0], SecondaryFieldColorIndex: layers[1], OrdinaryColorIndex: layers[2], TrimColorIndex: layers[3],
+            SymbolColorIndex: layers[4], StartingPresetId: null, EdgeColorIndex: layers[5], Palette: null, Charge: null, PlateScale: 1,
+            EdgeWidth: 0, DivisionCount: 4, CrestFinish.Flat, OrdinaryWidth: 1, trimWeight, TrimDetail: 12, chargeScale, ChargeOffset: 0,
+            CrestChargeWeight.Bold, SheenAngle: 45, SealTeeth: 12, ShowsOutline: false, CrestDepth.None);
+    }
+
+    #endregion
+}

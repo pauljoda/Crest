@@ -50,7 +50,7 @@ extension BrowserSpaceDeletionIntent: Codable {
 
 extension BrowserSession {
     static func makeBlankSpace(number: Int) -> BrowserSpace {
-        let accent = SpaceAccent.allCases[(number - 1) % SpaceAccent.allCases.count]
+        let accent = SpaceAccent.all[(number - 1) % SpaceAccent.all.count]
         let tab = BrowserTab.startPage()
         return BrowserSpace(
             id: SpaceID(),

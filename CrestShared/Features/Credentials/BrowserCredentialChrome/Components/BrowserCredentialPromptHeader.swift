@@ -16,7 +16,7 @@ struct BrowserCredentialPromptHeader: View {
                 kind: kind,
                 iconData: siteIconData,
                 showsSiteIcon: !request.isCrossOriginFrame,
-                tint: space?.accent.color ?? .accentColor
+                tint: space?.accent.tint.color ?? .accentColor
             )
             VStack(
                 alignment: .leading,

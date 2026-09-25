@@ -14,7 +14,7 @@ namespace CrestCore.Native;
 public static class ContractCodec {
     /// <summary>SHA-256 of the canonical contract schema.</summary>
     public static ReadOnlySpan<byte> Fingerprint => [
-        0x40, 0x3b, 0xdb, 0x03, 0xc5, 0xc7, 0xa5, 0x7c, 0x1b, 0x2d, 0x33, 0xfb, 0x16, 0xb2, 0x3b, 0xd5, 0x50, 0xd8, 0x79, 0x92, 0xeb, 0xfb, 0xc6, 0xb2, 0xff, 0x42, 0xd8, 0xd8, 0xed, 0x2c, 0x4b, 0xca
+        0xcb, 0x09, 0x44, 0x1a, 0x10, 0xd0, 0xa9, 0x51, 0xae, 0xfd, 0xa4, 0xb7, 0x9e, 0x98, 0x2f, 0x31, 0x87, 0xad, 0x2d, 0x16, 0x48, 0x2a, 0x16, 0x25, 0xba, 0xa0, 0xe9, 0x81, 0x65, 0xe9, 0x9c, 0xd1
     ];
 
     /// <summary>SHA-256 of the engine contract alone, which an engine binding registers with.</summary>
@@ -7736,7 +7736,7 @@ public static class ContractCodec {
 
     public static SpaceSettings ReadSpaceSettings(WireReader reader) {
         ArgumentNullException.ThrowIfNull(reader);
-        return new SpaceSettings(
+        var value = new SpaceSettings(
             reader.ReadString(),
             reader.ReadString(),
             ReadSpaceAccent(reader),
@@ -7746,6 +7746,8 @@ public static class ContractCodec {
             ReadSpaceAccessPolicy(reader),
             reader.ReadBool(),
             reader.ReadPresence() ? (DateTimeOffset?)reader.ReadDate() : null);
+        _ = ReadSpaceBranding(reader);
+        return value;
     }
 
     public static void WriteSpaceSettings(WireWriter writer, SpaceSettings value) {
@@ -7770,6 +7772,7 @@ public static class ContractCodec {
         } else {
             writer.WritePresence(false);
         }
+        WriteSpaceBranding(writer, value.Look);
     }
 
     public static SpaceSettingsChanged ReadSpaceSettingsChanged(WireReader reader) {
@@ -9480,16 +9483,6 @@ public static class ContractCodec {
         writer.WriteEnum((int)value);
     }
 
-    public static SpaceAccent ReadSpaceAccent(WireReader reader) {
-        ArgumentNullException.ThrowIfNull(reader);
-        return (SpaceAccent)reader.ReadEnum(4);
-    }
-
-    public static void WriteSpaceAccent(WireWriter writer, SpaceAccent value) {
-        ArgumentNullException.ThrowIfNull(writer);
-        writer.WriteEnum((int)value);
-    }
-
     public static SpaceAccessPolicy ReadSpaceAccessPolicy(WireReader reader) {
         ArgumentNullException.ThrowIfNull(reader);
         return (SpaceAccessPolicy)reader.ReadEnum(2);
@@ -9572,7 +9565,7 @@ public static class ContractCodec {
 
     public static SystemTint ReadSystemTint(WireReader reader) {
         ArgumentNullException.ThrowIfNull(reader);
-        return (SystemTint)reader.ReadEnum(4);
+        return (SystemTint)reader.ReadEnum(7);
     }
 
     public static void WriteSystemTint(WireWriter writer, SystemTint value) {
@@ -9995,6 +9988,17 @@ public static class ContractCodec {
         ArgumentNullException.ThrowIfNull(writer);
         ArgumentNullException.ThrowIfNull(value);
         writer.WriteEnum(TagOf(SitePermissionDecision.All, value));
+    }
+
+    public static SpaceAccent ReadSpaceAccent(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return SpaceAccent.All[reader.ReadEnum(SpaceAccent.All.Count)];
+    }
+
+    public static void WriteSpaceAccent(WireWriter writer, SpaceAccent value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteEnum(TagOf(SpaceAccent.All, value));
     }
 
     public static SyncDeletionReason ReadSyncDeletionReason(WireReader reader) {

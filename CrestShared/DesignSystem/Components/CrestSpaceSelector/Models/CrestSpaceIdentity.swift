@@ -14,7 +14,7 @@ struct CrestSpaceIdentity: Identifiable, Equatable {
 
     var id: SpaceID { space.id }
     var name: String { displayName ?? space.name }
-    var tint: Color { tintOverride ?? space.accent.color }
+    var tint: Color { tintOverride ?? space.accent.tint.color }
 
     init(space: BrowserSpace, displayName: String? = nil, tint: Color? = nil) {
         self.space = space

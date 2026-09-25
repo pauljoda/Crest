@@ -23,9 +23,6 @@ internal sealed partial record SpacePayload {
         ["sand"] = new(0.82, 0.72, 0.56)
     };
 
-    /// The fade a branding stored before fades takes for its old switch.
-    private const double LegacyReadabilityFade = 0.25;
-
     /// Branding stored before rendering versions were recorded is version one.
     private const int FirstRenderingVersion = 1;
 
@@ -39,10 +36,10 @@ internal sealed partial record SpacePayload {
     /// before rendering versions keeps its old banner strength's look.
     private static SpaceBranding ReadBranding(SyncPayloadReader value) {
         bool keepsReadable = value.OptionalFlag("keepsControlsReadable") ?? true;
-        double fade = value.OptionalNumber("readabilityFade") ?? (keepsReadable ? LegacyReadabilityFade : 0);
+        double fade = value.OptionalNumber("readabilityFade") ?? (keepsReadable ? SpaceBranding.LegacyReadabilityFade : 0);
         double strength = value.Number("bannerStrength");
         long version = value.OptionalInteger("renderingVersion") ?? FirstRenderingVersion;
-        if (version < SpaceBrandingPolicy.BaselineRenderingVersion) strength = Math.Min(1, 0.72 + strength * 0.28);
+        if (version < SpaceBranding.BaselineRenderingVersion) strength = Math.Min(1, 0.72 + strength * 0.28);
         var colors = value.Array("colors").Select(Color).ToArray();
         var branding = new SpaceBranding(new(colors),
             StoredSessionCodec.SpaceBannerPatterns.Parse(value.TolerantText("bannerPattern")) ?? SpaceBannerPattern.Solid,
@@ -120,35 +117,6 @@ internal sealed partial record SpacePayload {
         return new(Unit(value.Number("red")), Unit(value.Number("green")), Unit(value.Number("blue")),
             Unit(value.OptionalNumber("alpha") ?? 1));
     }
-
-    /// The branding a Space wore before brandings synced, which its accent and
-    /// the keywords of its symbol decide.
-    private static SpaceBranding LegacyBranding(SpaceAccent accent, string symbol) {
-        string[] palette = accent switch {
-            SpaceAccent.Orange => ["ember", "gold", "ocean"],
-            SpaceAccent.Teal => ["teal", "ocean", "sand"],
-            SpaceAccent.Rose => ["rose", "indigo", "sand"],
-            _ => ["ink", "ocean", "gold"]
-        };
-        var crest = new SpaceCrest(CrestBackplate.Shield, CrestFieldDivision.Plain, CrestOrdinary.None, CrestTrim.None, LegacyCrestSymbol(symbol),
-            CrestChargeLayout.Single, BackplateColorIndex: 1, SecondaryFieldColorIndex: 1, OrdinaryColorIndex: 2, TrimColorIndex: 1,
-            SymbolColorIndex: 2, StartingPresetId: null, EdgeColorIndex: 1, Palette: null, Charge: null, PlateScale: 1, EdgeWidth: 0,
-            SpaceBrandingPolicy.DefaultDivisionCount, CrestFinish.Flat, OrdinaryWidth: 1, TrimWeight: 1, SpaceBrandingPolicy.DefaultTrimDetail,
-            ChargeScale: 1, ChargeOffset: 0, CrestChargeWeight.Bold, SheenAngle: 45, SealTeeth: 12, ShowsOutline: false, CrestDepth.None);
-        return Resolved(new SpaceBranding(new([.. palette.Select(name => NamedColors[name])]), SpaceBannerPattern.Diagonal, 1,
-            LegacyReadabilityFade, true, SpaceThemeMode.Banner, 0, false, SpaceIconStyle.SimpleSymbol, null, crest, FirstRenderingVersion, 0,
-            SpaceTextColorMode.Automatic, null));
-    }
-
-    /// The crest symbol an SF Symbol name suggested before crests had their own.
-    private static CrestSymbol LegacyCrestSymbol(string symbol) =>
-        symbol.Contains("leaf", StringComparison.Ordinal) ? CrestSymbol.Leaf
-        : symbol.Contains("book", StringComparison.Ordinal) || symbol.Contains("graduation", StringComparison.Ordinal) ? CrestSymbol.Book
-        : symbol.Contains("key", StringComparison.Ordinal) ? CrestSymbol.Key
-        : symbol.Contains("flame", StringComparison.Ordinal) ? CrestSymbol.Flame
-        : symbol.Contains("compass", StringComparison.Ordinal) || symbol.Contains("location", StringComparison.Ordinal) ? CrestSymbol.Compass
-        : symbol.Contains("sun", StringComparison.Ordinal) ? CrestSymbol.Sun
-        : CrestSymbol.Mountain;
 
     /// `branding` within the ranges the renderer draws, announcing the
     /// rendering vocabulary it needs and whether its controls stay readable.

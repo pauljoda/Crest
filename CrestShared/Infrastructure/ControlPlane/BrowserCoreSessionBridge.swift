@@ -265,16 +265,14 @@ extension BrowserSpace {
         configure(core: state.settings)
     }
 
-    /// Takes the settings the core published, as the decoder reads them: a
-    /// Space without branding wears the look its accent and symbol give it,
-    /// and an access policy this build cannot name asks for authentication.
+    /// Takes the settings the core published: the Space wears the look the
+    /// core resolved, and an access policy this build cannot name asks for
+    /// authentication.
     mutating func configure(core settings: SpaceSettings) {
         name = settings.name
         symbol = settings.symbol
         accent = settings.accent
-        branding =
-            settings.branding.map(BrowserSpaceBranding.init(core:))
-            ?? .legacy(accent: settings.accent, symbol: settings.symbol)
+        branding = BrowserSpaceBranding(look: settings.look)
         browsingPreferences = BrowserSpaceBrowsingPreferences(core: settings.browsingPreferences)
         credentialPreferences = BrowserCredentialPreferences(
             isEnabled: settings.credentialPreferences.isEnabled,
@@ -342,14 +340,15 @@ extension BrowserSpaceBrandColor {
 }
 
 extension BrowserSpaceBranding {
-    /// Branding as the decoder reads it: strengths stored before the baseline
-    /// vocabulary take today's units.
-    init(core branding: SpaceBranding) {
+    /// The render adapter over a look the core resolved, such as
+    /// `SpaceSettings.look`, in the vocabulary the views draw. The core has
+    /// already put its strengths in today's units. TRANSITIONAL for S6: the
+    /// branding vocabulary folds into the generated types after S6.
+    init(look branding: SpaceBranding) {
         self.init(
             colors: branding.colors.colors.map(BrowserSpaceBrandColor.init(core:)),
             bannerPattern: BrowserSpaceBannerPattern(coreTerm: branding.bannerPattern) ?? .solid,
-            bannerStrength: branding.renderingVersion >= Self.baselineRenderingVersion
-                ? branding.bannerStrength : min(1, 0.72 + branding.bannerStrength * 0.28),
+            bannerStrength: branding.bannerStrength,
             readabilityFade: branding.readabilityFade,
             themeMode: BrowserSpaceThemeMode(coreTerm: branding.themeMode) ?? .banner,
             gradientAngle: branding.gradientAngle, showsTexture: branding.showsTexture,
