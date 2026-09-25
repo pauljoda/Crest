@@ -1,9 +1,7 @@
 using System.Globalization;
 using System.Text;
 
-using CrestCore.Contracts;
-
-namespace CrestCore.Domain;
+namespace CrestCore.Contracts;
 
 /// An emoji chosen as an icon, which a symbol spells as `crest.emoji:` and
 /// the emoji. Every client reads the first character after the prefix, once

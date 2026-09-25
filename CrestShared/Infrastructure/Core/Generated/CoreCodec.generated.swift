@@ -7,7 +7,7 @@ import Foundation
 enum CoreCodec {
     /// SHA-256 of the canonical contract schema. The core refuses any other.
     static let fingerprint: [UInt8] = [
-        0x84, 0xa9, 0x2c, 0xaa, 0x83, 0x6f, 0xe6, 0xc6, 0x14, 0xa1, 0x62, 0xc8, 0x4e, 0xab, 0x08, 0xc7, 0xa4, 0xbe, 0x24, 0x22, 0x76, 0x1f, 0xb4, 0xb0, 0x45, 0xe1, 0xe6, 0x48, 0xf8, 0x0a, 0xa0, 0xbe
+        0x40, 0x3b, 0xdb, 0x03, 0xc5, 0xc7, 0xa5, 0x7c, 0x1b, 0x2d, 0x33, 0xfb, 0x16, 0xb2, 0x3b, 0xd5, 0x50, 0xd8, 0x79, 0x92, 0xeb, 0xfb, 0xc6, 0xb2, 0xff, 0x42, 0xd8, 0xd8, 0xed, 0x2c, 0x4b, 0xca
     ]
     /// SHA-256 of the engine contract alone, which an engine binding registers with.
     static let engineFingerprint: [UInt8] = [
@@ -223,26 +223,27 @@ extension Change {
         case 10: self = .saved(try Saved(from: &reader))
         case 11: self = .sessionAdopted(try SessionAdopted(from: &reader))
         case 12: self = .shortcutsChanged(try ShortcutsChanged(from: &reader))
-        case 13: self = .sitePermissionsChanged(try SitePermissionsChanged(from: &reader))
-        case 14: self = .spaceLockChanged(try SpaceLockChanged(from: &reader))
-        case 15: self = .spaceSettingsChanged(try SpaceSettingsChanged(from: &reader))
-        case 16: self = .spacesChanged(try SpacesChanged(from: &reader))
-        case 17: self = .splitGroupsChanged(try SplitGroupsChanged(from: &reader))
-        case 18: self = .storageFailed(try StorageFailed(from: &reader))
-        case 19: self = .syncJournalChanged(try SyncJournalChanged(from: &reader))
-        case 20: self = .syncRecordsSkipped(try SyncRecordsSkipped(from: &reader))
-        case 21: self = .syncStagingFailed(try SyncStagingFailed(from: &reader))
-        case 22: self = .tabCopied(try TabCopied(from: &reader))
-        case 23: self = .tabFaviconAssigned(try TabFaviconAssigned(from: &reader))
-        case 24: self = .tabsChanged(try TabsChanged(from: &reader))
-        case 25: self = .tabsImported(try TabsImported(from: &reader))
-        case 26: self = .transientPagePromoted(try TransientPagePromoted(from: &reader))
-        case 27: self = .windowChanged(try WindowChanged(from: &reader))
-        case 28: self = .windowClosed(try WindowClosed(from: &reader))
-        case 29: self = .windowRecordsAdopted(try WindowRecordsAdopted(from: &reader))
-        case 30: self = .workspaceChanged(try WorkspaceChanged(from: &reader))
-        case 31: self = .workspaceClosed(try WorkspaceClosed(from: &reader))
-        case 32: self = .workspaceOpened(try WorkspaceOpened(from: &reader))
+        case 13: self = .sidebarChanged(try SidebarChanged(from: &reader))
+        case 14: self = .sitePermissionsChanged(try SitePermissionsChanged(from: &reader))
+        case 15: self = .spaceLockChanged(try SpaceLockChanged(from: &reader))
+        case 16: self = .spaceSettingsChanged(try SpaceSettingsChanged(from: &reader))
+        case 17: self = .spacesChanged(try SpacesChanged(from: &reader))
+        case 18: self = .splitGroupsChanged(try SplitGroupsChanged(from: &reader))
+        case 19: self = .storageFailed(try StorageFailed(from: &reader))
+        case 20: self = .syncJournalChanged(try SyncJournalChanged(from: &reader))
+        case 21: self = .syncRecordsSkipped(try SyncRecordsSkipped(from: &reader))
+        case 22: self = .syncStagingFailed(try SyncStagingFailed(from: &reader))
+        case 23: self = .tabCopied(try TabCopied(from: &reader))
+        case 24: self = .tabFaviconAssigned(try TabFaviconAssigned(from: &reader))
+        case 25: self = .tabsChanged(try TabsChanged(from: &reader))
+        case 26: self = .tabsImported(try TabsImported(from: &reader))
+        case 27: self = .transientPagePromoted(try TransientPagePromoted(from: &reader))
+        case 28: self = .windowChanged(try WindowChanged(from: &reader))
+        case 29: self = .windowClosed(try WindowClosed(from: &reader))
+        case 30: self = .windowRecordsAdopted(try WindowRecordsAdopted(from: &reader))
+        case 31: self = .workspaceChanged(try WorkspaceChanged(from: &reader))
+        case 32: self = .workspaceClosed(try WorkspaceClosed(from: &reader))
+        case 33: self = .workspaceOpened(try WorkspaceOpened(from: &reader))
         default: throw WireError.malformed("Unknown Change tag \(tag)")
         }
     }
@@ -288,65 +289,68 @@ extension Change {
         case .shortcutsChanged(let value):
             writer.writeTag(12)
             value.encode(into: &writer)
-        case .sitePermissionsChanged(let value):
+        case .sidebarChanged(let value):
             writer.writeTag(13)
             value.encode(into: &writer)
-        case .spaceLockChanged(let value):
+        case .sitePermissionsChanged(let value):
             writer.writeTag(14)
             value.encode(into: &writer)
-        case .spaceSettingsChanged(let value):
+        case .spaceLockChanged(let value):
             writer.writeTag(15)
             value.encode(into: &writer)
-        case .spacesChanged(let value):
+        case .spaceSettingsChanged(let value):
             writer.writeTag(16)
             value.encode(into: &writer)
-        case .splitGroupsChanged(let value):
+        case .spacesChanged(let value):
             writer.writeTag(17)
             value.encode(into: &writer)
-        case .storageFailed(let value):
+        case .splitGroupsChanged(let value):
             writer.writeTag(18)
             value.encode(into: &writer)
-        case .syncJournalChanged(let value):
+        case .storageFailed(let value):
             writer.writeTag(19)
             value.encode(into: &writer)
-        case .syncRecordsSkipped(let value):
+        case .syncJournalChanged(let value):
             writer.writeTag(20)
             value.encode(into: &writer)
-        case .syncStagingFailed(let value):
+        case .syncRecordsSkipped(let value):
             writer.writeTag(21)
             value.encode(into: &writer)
-        case .tabCopied(let value):
+        case .syncStagingFailed(let value):
             writer.writeTag(22)
             value.encode(into: &writer)
-        case .tabFaviconAssigned(let value):
+        case .tabCopied(let value):
             writer.writeTag(23)
             value.encode(into: &writer)
-        case .tabsChanged(let value):
+        case .tabFaviconAssigned(let value):
             writer.writeTag(24)
             value.encode(into: &writer)
-        case .tabsImported(let value):
+        case .tabsChanged(let value):
             writer.writeTag(25)
             value.encode(into: &writer)
-        case .transientPagePromoted(let value):
+        case .tabsImported(let value):
             writer.writeTag(26)
             value.encode(into: &writer)
-        case .windowChanged(let value):
+        case .transientPagePromoted(let value):
             writer.writeTag(27)
             value.encode(into: &writer)
-        case .windowClosed(let value):
+        case .windowChanged(let value):
             writer.writeTag(28)
             value.encode(into: &writer)
-        case .windowRecordsAdopted(let value):
+        case .windowClosed(let value):
             writer.writeTag(29)
             value.encode(into: &writer)
-        case .workspaceChanged(let value):
+        case .windowRecordsAdopted(let value):
             writer.writeTag(30)
             value.encode(into: &writer)
-        case .workspaceClosed(let value):
+        case .workspaceChanged(let value):
             writer.writeTag(31)
             value.encode(into: &writer)
-        case .workspaceOpened(let value):
+        case .workspaceClosed(let value):
             writer.writeTag(32)
+            value.encode(into: &writer)
+        case .workspaceOpened(let value):
+            writer.writeTag(33)
             value.encode(into: &writer)
         }
     }
@@ -3830,7 +3834,9 @@ extension FolderState {
         } else {
             orderAnchorTabID = nil
         }
-        self.init(id: id, location: location, title: title, symbol: symbol, color: color, parentID: parentID, isCollapsed: isCollapsed, collapseModifiedAt: collapseModifiedAt, orderAnchorTabID: orderAnchorTabID)
+        let displaySymbol = try reader.readString()
+        let displayColor = try BrandColor(from: &reader)
+        self.init(id: id, location: location, title: title, symbol: symbol, color: color, parentID: parentID, isCollapsed: isCollapsed, collapseModifiedAt: collapseModifiedAt, orderAnchorTabID: orderAnchorTabID, displaySymbol: displaySymbol, displayColor: displayColor)
     }
 
     func encode(into writer: inout WireWriter) {
@@ -3868,6 +3874,8 @@ extension FolderState {
         } else {
             writer.writePresence(false)
         }
+        writer.writeString(displaySymbol)
+        displayColor.encode(into: &writer)
     }
 }
 
@@ -7869,6 +7877,135 @@ extension ShownTab {
     }
 }
 
+extension SidebarChanged {
+    init(from reader: inout WireReader) throws(WireError) {
+        let workspaceID = try reader.readUUID()
+        let spaceID = try reader.readUUID()
+        let listsCount = try reader.readCount()
+        var lists: [SidebarList] = []
+        lists.reserveCapacity(listsCount)
+        for _ in 0..<listsCount {
+            let listsElement = try SidebarList(from: &reader)
+            lists.append(listsElement)
+        }
+        let removedFolderIDsCount = try reader.readCount()
+        var removedFolderIDs: [UUID] = []
+        removedFolderIDs.reserveCapacity(removedFolderIDsCount)
+        for _ in 0..<removedFolderIDsCount {
+            let removedFolderIDsElement = try reader.readUUID()
+            removedFolderIDs.append(removedFolderIDsElement)
+        }
+        self.init(workspaceID: workspaceID, spaceID: spaceID, lists: lists, removedFolderIDs: removedFolderIDs)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeUUID(workspaceID)
+        writer.writeUUID(spaceID)
+        writer.writeCount(lists.count)
+        for element0 in lists {
+            element0.encode(into: &writer)
+        }
+        writer.writeCount(removedFolderIDs.count)
+        for element0 in removedFolderIDs {
+            writer.writeUUID(element0)
+        }
+    }
+}
+
+extension SidebarList {
+    init(from reader: inout WireReader) throws(WireError) {
+        let section = try TabPlacement(from: &reader)
+        let folderID: UUID?
+        if try reader.readPresence() {
+            let folderIDValue = try reader.readUUID()
+            folderID = folderIDValue
+        } else {
+            folderID = nil
+        }
+        let rowsCount = try reader.readCount()
+        var rows: [SidebarRow] = []
+        rows.reserveCapacity(rowsCount)
+        for _ in 0..<rowsCount {
+            let rowsElement = try SidebarRow(from: &reader)
+            rows.append(rowsElement)
+        }
+        self.init(section: section, folderID: folderID, rows: rows)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        section.encode(into: &writer)
+        if let present0 = folderID {
+            writer.writePresence(true)
+            writer.writeUUID(present0)
+        } else {
+            writer.writePresence(false)
+        }
+        writer.writeCount(rows.count)
+        for element0 in rows {
+            element0.encode(into: &writer)
+        }
+    }
+}
+
+extension SidebarOutline {
+    init(from reader: inout WireReader) throws(WireError) {
+        let listsCount = try reader.readCount()
+        var lists: [SidebarList] = []
+        lists.reserveCapacity(listsCount)
+        for _ in 0..<listsCount {
+            let listsElement = try SidebarList(from: &reader)
+            lists.append(listsElement)
+        }
+        self.init(lists: lists)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeCount(lists.count)
+        for element0 in lists {
+            element0.encode(into: &writer)
+        }
+    }
+}
+
+extension SidebarRow {
+    init(from reader: inout WireReader) throws(WireError) {
+        let id = try reader.readUUID()
+        let kind = try SidebarRowKind(from: &reader)
+        let parentFolderID: UUID?
+        if try reader.readPresence() {
+            let parentFolderIDValue = try reader.readUUID()
+            parentFolderID = parentFolderIDValue
+        } else {
+            parentFolderID = nil
+        }
+        let depth = try reader.readInt()
+        let membersCount = try reader.readCount()
+        var members: [UUID] = []
+        members.reserveCapacity(membersCount)
+        for _ in 0..<membersCount {
+            let membersElement = try reader.readUUID()
+            members.append(membersElement)
+        }
+        self.init(id: id, kind: kind, parentFolderID: parentFolderID, depth: depth, members: members)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeUUID(id)
+        kind.encode(into: &writer)
+        if let present0 = parentFolderID {
+            writer.writePresence(true)
+            writer.writeUUID(present0)
+        } else {
+            writer.writePresence(false)
+        }
+        writer.writeInt(depth)
+        writer.writeCount(members.count)
+        for element0 in members {
+            writer.writeUUID(element0)
+        }
+    }
+}
+
 extension SiteDecision {
     init(from reader: inout WireReader) throws(WireError) {
         let spaceID = try reader.readUUID()
@@ -8480,7 +8617,8 @@ extension SpaceState {
             let historyElement = try HistoryEntryState(from: &reader)
             history.append(historyElement)
         }
-        self.init(id: id, profileID: profileID, settings: settings, folders: folders, tabs: tabs, splitGroups: splitGroups, archivedTabs: archivedTabs, history: history)
+        let sidebar = try SidebarOutline(from: &reader)
+        self.init(id: id, profileID: profileID, settings: settings, folders: folders, tabs: tabs, splitGroups: splitGroups, archivedTabs: archivedTabs, history: history, sidebar: sidebar)
     }
 
     func encode(into writer: inout WireWriter) {
@@ -8507,6 +8645,7 @@ extension SpaceState {
         for element0 in history {
             element0.encode(into: &writer)
         }
+        sidebar.encode(into: &writer)
     }
 }
 
@@ -8641,7 +8780,21 @@ extension SplitGroupState {
         } else {
             tintModifiedAt = nil
         }
-        self.init(id: id, customTitle: customTitle, titleModifiedAt: titleModifiedAt, customIconSymbol: customIconSymbol, iconModifiedAt: iconModifiedAt, tint: tint, tintModifiedAt: tintModifiedAt)
+        let displayTitle: String?
+        if try reader.readPresence() {
+            let displayTitleValue = try reader.readString()
+            displayTitle = displayTitleValue
+        } else {
+            displayTitle = nil
+        }
+        let displayEmojiIcon: String?
+        if try reader.readPresence() {
+            let displayEmojiIconValue = try reader.readString()
+            displayEmojiIcon = displayEmojiIconValue
+        } else {
+            displayEmojiIcon = nil
+        }
+        self.init(id: id, customTitle: customTitle, titleModifiedAt: titleModifiedAt, customIconSymbol: customIconSymbol, iconModifiedAt: iconModifiedAt, tint: tint, tintModifiedAt: tintModifiedAt, displayTitle: displayTitle, displayEmojiIcon: displayEmojiIcon)
     }
 
     func encode(into writer: inout WireWriter) {
@@ -8679,6 +8832,18 @@ extension SplitGroupState {
         if let present0 = tintModifiedAt {
             writer.writePresence(true)
             writer.writeDate(present0)
+        } else {
+            writer.writePresence(false)
+        }
+        if let present0 = displayTitle {
+            writer.writePresence(true)
+            writer.writeString(present0)
+        } else {
+            writer.writePresence(false)
+        }
+        if let present0 = displayEmojiIcon {
+            writer.writePresence(true)
+            writer.writeString(present0)
         } else {
             writer.writePresence(false)
         }
@@ -11181,6 +11346,20 @@ extension ShortcutSpecialKey {
         let tag = try reader.readEnum()
         guard Self.all.indices.contains(tag) else {
             throw WireError.malformed("Unknown ShortcutSpecialKey \(tag)")
+        }
+        self = Self.all[tag]
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeEnum(tag)
+    }
+}
+
+extension SidebarRowKind {
+    init(from reader: inout WireReader) throws(WireError) {
+        let tag = try reader.readEnum()
+        guard Self.all.indices.contains(tag) else {
+            throw WireError.malformed("Unknown SidebarRowKind \(tag)")
         }
         self = Self.all[tag]
     }

@@ -6,7 +6,7 @@ namespace CrestCore.Domain;
 public sealed class FolderTree(IReadOnlyList<FolderState> folders) {
     #region Variables
 
-    public const int MaximumDepth = 16;
+    public const int MaximumDepth = FolderState.MaximumDepth;
     public const int MaximumCount = 500;
 
     #endregion

@@ -2513,6 +2513,10 @@
     "read-model-sidebar-spike": {
       "category": "internal",
       "message": "A tab's new favicon redraws only that tab's row, and a debug-only sidebar harness measures what each kind of change redraws."
+    },
+    "core-sidebar-outline": {
+      "category": "internal",
+      "message": "The core decides what each Space's sidebar lists and publishes only the lists an edit changes, so a new title or address changes no list."
     }
   }
 }

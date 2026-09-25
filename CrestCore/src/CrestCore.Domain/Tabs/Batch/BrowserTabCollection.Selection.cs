@@ -3,13 +3,6 @@ using CrestCore.Contracts;
 namespace CrestCore.Domain;
 
 public sealed partial class BrowserTabCollection {
-    #region Types
-
-    /// A tab or folder in the list the sidebar shows.
-    private sealed record SidebarRow(Guid Id, bool IsFolder);
-
-    #endregion
-
     #region Actions - Selection
 
     /// `selection` resolved in this Space: a picked tab or folder inside a
@@ -46,62 +39,9 @@ public sealed partial class BrowserTabCollection {
     }
 
     /// Where each tab and folder falls in the list the Space's sidebar shows,
-    /// counting from zero: the pinned tabs, then each section that holds
-    /// folders, as `SectionOutline` lists it. Start Pages, which the sidebar
-    /// does not list, have no place.
-    private Dictionary<Guid, int> SidebarPositions() {
-        var positions = new Dictionary<Guid, int>();
-        var display = new FolderTree(folders).DisplayOrder();
-        foreach (var placement in TabPlacement.All.OrderBy(placement => placement.Rank)) {
-            BrowserTab[] listed = [.. tabs.Where(tab => tab.Placement == placement && !tab.Content.IsStartPage)];
-            var outline = placement.HoldsFolders
-                ? SectionOutline([.. display.Where(folder => folder.Location == placement)], listed)
-                : listed.Select(tab => tab.Id);
-            foreach (var id in outline) positions.TryAdd(id, positions.Count);
-        }
-        return positions;
-    }
-
-    /// One section's tabs and folders as the sidebar lists them. A folder
-    /// takes the place of its first tab in the Space's order and lists its
-    /// own folders and tabs there; a folder holding no tab keeps its place
-    /// before the tab it anchors to, or else ends its list.
-    private List<Guid> SectionOutline(IReadOnlyList<FolderState> sectionFolders, IReadOnlyList<BrowserTab> listed) {
-        var paths = new Dictionary<Guid, Guid[]>();
-        foreach (var folder in sectionFolders)
-            paths[folder.Id] = [.. folder.ParentId is { } parent && paths.TryGetValue(parent, out var above) ? above : [], folder.Id];
-        var top = new List<SidebarRow>();
-        var nested = new Dictionary<Guid, List<SidebarRow>>();
-        List<SidebarRow> Rows(Guid? parent) =>
-            parent is not { } id ? top : nested.TryGetValue(id, out var rows) ? rows : nested[id] = [];
-        var placed = new HashSet<Guid>();
-        foreach (var tab in listed) {
-            Guid? above = null;
-            foreach (var folder in tab.FolderId is { } id && paths.TryGetValue(id, out var path) ? path : []) {
-                if (placed.Add(folder)) Rows(above).Add(new(folder, IsFolder: true));
-                above = folder;
-            }
-            Rows(tab.FolderId).Add(new(tab.Id, IsFolder: false));
-        }
-        foreach (var folder in sectionFolders.Where(folder => !placed.Contains(folder.Id))) {
-            var rows = Rows(folder.ParentId);
-            var anchor = folder.OrderAnchorTabId is { } anchored ? tabs.Find(tab => tab.Id == anchored) : null;
-            var anchorPath = anchor?.FolderId is { } anchorFolder && paths.TryGetValue(anchorFolder, out var path) ? path : [];
-            int index = anchor is null ? -1 : rows.FindIndex(row => row.IsFolder
-                ? anchorPath.Contains(row.Id)
-                : SplitMembers(row.Id).Any(member => member.Id == anchor.Id));
-            rows.Insert(index < 0 ? rows.Count : index, new(folder.Id, IsFolder: true));
-        }
-        var outline = new List<Guid>();
-        void List(IReadOnlyList<SidebarRow> rows) {
-            foreach (var row in rows) {
-                outline.Add(row.Id);
-                if (row.IsFolder && nested.TryGetValue(row.Id, out var inside)) List(inside);
-            }
-        }
-        List(top);
-        return outline;
-    }
+    /// counting from zero, as its outline orders them. Start Pages, which the
+    /// sidebar does not list, have no place.
+    private Dictionary<Guid, int> SidebarPositions() => SidebarOutline.Of(TabStates, folders).Positions();
 
     #endregion
 }

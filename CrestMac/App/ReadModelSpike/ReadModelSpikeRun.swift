@@ -354,7 +354,8 @@
                             displayTitle: tab.displayTitle + mark, isAwayFromSavedAddress: tab.isAwayFromSavedAddress,
                             pageIconIsCurrent: tab.pageIconIsCurrent)
                     },
-                    splitGroups: space.splitGroups, archivedTabs: space.archivedTabs, history: space.history)
+                    splitGroups: space.splitGroups, archivedTabs: space.archivedTabs, history: space.history,
+                    sidebar: space.sidebar)
             }
             return WorkspaceOpened(
                 workspaceID: opening.workspaceID, kind: opening.kind,

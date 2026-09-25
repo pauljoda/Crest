@@ -42,6 +42,7 @@ extension CoreState {
         favicons.finishBatch { tabID in workspaces.values.contains { $0.holds(tabID: tabID) } }
         #if DEBUG
             checkSessionCopies(after: changes)
+            checkSidebarOutlines(after: changes)
         #endif
     }
 
@@ -112,6 +113,12 @@ extension CoreState {
     func apply(_ change: SplitGroupsChanged) {
         space(change.spaceID, in: change.workspaceID)?.apply(change)
         forward(.splitGroupsChanged(change), to: change.workspaceID)
+    }
+
+    /// The session copy keeps no sidebar lists, so the change reaches only the
+    /// read model.
+    func apply(_ change: SidebarChanged) {
+        space(change.spaceID, in: change.workspaceID)?.apply(change)
     }
 
     func apply(_ change: HistoryChanged) {

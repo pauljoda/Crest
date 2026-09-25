@@ -19,8 +19,27 @@ public sealed record FolderState(
     Guid? OrderAnchorTabId = null) {
     #region Static Variables
 
-    /// The color a folder the core makes for a person's tabs is drawn in.
+    /// The most folders deep a folder may nest, counting the folder itself.
+    public const int MaximumDepth = 16;
+
+    /// The SF Symbol a folder shows until someone chooses one.
+    public const string DefaultSymbol = "folder";
+
+    /// The color a folder the core makes for a person's tabs is drawn in, and the one
+    /// a folder shows until someone chooses one.
     public static BrandColor DefaultColor { get; } = new(0.43, 0.48, 0.54);
+
+    #endregion
+
+    #region Variables
+
+    /// The symbol the folder shows: the one chosen, or <see cref="DefaultSymbol"/>.
+    [Resolved]
+    public string DisplaySymbol => Symbol ?? DefaultSymbol;
+
+    /// The color the folder is drawn in: the one chosen, or <see cref="DefaultColor"/>.
+    [Resolved]
+    public BrandColor DisplayColor => Color ?? DefaultColor;
 
     #endregion
 }

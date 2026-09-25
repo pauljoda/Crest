@@ -37,6 +37,10 @@ struct BrowserSplitGroupMetadata: Equatable, Identifiable, Sendable {
         self.tintModifiedAt = tintModifiedAt.map(Self.normalizedTimestamp)
     }
 
+    /// TRANSITIONAL until S6.6c1 moves the split row onto the read model's
+    /// `SplitGroupState.displayTitle`, `defaultTitle` and `displayEmojiIcon`,
+    /// which the core resolves; this and `emojiIcon` serve the views that read
+    /// the session copy until then.
     var displayTitle: String {
         BrowserTab.resolvedCustomTitle(customTitle) ?? Self.defaultTitle
     }

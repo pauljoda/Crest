@@ -67,6 +67,7 @@ enum Change: Equatable, Sendable {
     case saved(Saved)
     case sessionAdopted(SessionAdopted)
     case shortcutsChanged(ShortcutsChanged)
+    case sidebarChanged(SidebarChanged)
     case sitePermissionsChanged(SitePermissionsChanged)
     case spaceLockChanged(SpaceLockChanged)
     case spaceSettingsChanged(SpaceSettingsChanged)
@@ -251,6 +252,7 @@ extension CoreState {
         case .saved(let change): apply(change)
         case .sessionAdopted(let change): apply(change)
         case .shortcutsChanged(let change): apply(change)
+        case .sidebarChanged(let change): apply(change)
         case .sitePermissionsChanged(let change): apply(change)
         case .spaceLockChanged(let change): apply(change)
         case .spaceSettingsChanged(let change): apply(change)
@@ -1059,6 +1061,8 @@ struct FolderState: Equatable, Sendable, Identifiable {
     let isCollapsed: Bool
     let collapseModifiedAt: Date?
     let orderAnchorTabID: UUID?
+    let displaySymbol: String
+    let displayColor: BrandColor
 }
 
 struct FolderTabs: Intent, SessionIntent, Equatable, Sendable {
@@ -2114,6 +2118,31 @@ struct ShownTab: Equatable, Sendable {
     let tabID: UUID?
 }
 
+struct SidebarChanged: Equatable, Sendable {
+    let workspaceID: UUID
+    let spaceID: UUID
+    let lists: [SidebarList]
+    let removedFolderIDs: [UUID]
+}
+
+struct SidebarList: Equatable, Sendable {
+    let section: TabPlacement
+    let folderID: UUID?
+    let rows: [SidebarRow]
+}
+
+struct SidebarOutline: Equatable, Sendable {
+    let lists: [SidebarList]
+}
+
+struct SidebarRow: Equatable, Sendable, Identifiable {
+    let id: UUID
+    let kind: SidebarRowKind
+    let parentFolderID: UUID?
+    let depth: Int
+    let members: [UUID]
+}
+
 struct SiteDecision: Query, Equatable, Sendable {
     typealias Answer = SitePermissionAnswer
 
@@ -2318,6 +2347,7 @@ struct SpaceState: Equatable, Sendable, Identifiable {
     let splitGroups: [SplitGroupState]
     let archivedTabs: [ArchivedTabState]
     let history: [HistoryEntryState]
+    let sidebar: SidebarOutline
 }
 
 struct SpacesChanged: Equatable, Sendable {
@@ -2343,6 +2373,12 @@ struct SplitGroupState: Equatable, Sendable, Identifiable {
     let iconModifiedAt: Date?
     let tint: BrandColor?
     let tintModifiedAt: Date?
+    let displayTitle: String?
+    let displayEmojiIcon: String?
+
+    var defaultTitle: LocalizedStringResource {
+        LocalizedStringResource("Split View", comment: "The title of a split view no one has named.")
+    }
 }
 
 struct SplitGroupsChanged: Equatable, Sendable {
@@ -7288,6 +7324,39 @@ struct ShortcutSpecialKey: Hashable, Sendable {
     }
 }
 
+/// The members of the core's `SidebarRowKind`. A member's wire tag is its index in `all`.
+struct SidebarRowKind: Hashable, Sendable {
+    let tag: Int
+    let name: String
+    let opensList: Bool
+    let groupsTabs: Bool
+
+    private init(tag: Int, name: String, opensList: Bool, groupsTabs: Bool) {
+        self.tag = tag
+        self.name = name
+        self.opensList = opensList
+        self.groupsTabs = groupsTabs
+    }
+
+    static let tab = SidebarRowKind(tag: 0, name: "tab", opensList: false, groupsTabs: false)
+    static let folder = SidebarRowKind(tag: 1, name: "folder", opensList: true, groupsTabs: false)
+    static let split = SidebarRowKind(tag: 2, name: "split", opensList: false, groupsTabs: true)
+
+    static let all: [SidebarRowKind] = [tab, folder, split]
+
+    static func named(_ name: String?) -> SidebarRowKind? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: SidebarRowKind, rhs: SidebarRowKind) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+}
+
 /// The members of the core's `SitePermission`. A member's wire tag is its index in `all`.
 struct SitePermission: Hashable, Sendable {
     let tag: Int
@@ -8066,6 +8135,14 @@ final class FolderStateModel: ObservedModel, Identifiable {
         access(keyPath: \.orderAnchorTabID)
         return orderAnchorTabIDStorage
     }
+    var displaySymbol: String {
+        access(keyPath: \.displaySymbol)
+        return displaySymbolStorage
+    }
+    var displayColor: BrandColor {
+        access(keyPath: \.displayColor)
+        return displayColorStorage
+    }
 
     @ObservationIgnored private var locationStorage: TabPlacement
     @ObservationIgnored private var titleStorage: String
@@ -8075,6 +8152,8 @@ final class FolderStateModel: ObservedModel, Identifiable {
     @ObservationIgnored private var isCollapsedStorage: Bool
     @ObservationIgnored private var collapseModifiedAtStorage: Date?
     @ObservationIgnored private var orderAnchorTabIDStorage: UUID?
+    @ObservationIgnored private var displaySymbolStorage: String
+    @ObservationIgnored private var displayColorStorage: BrandColor
 
     var value: FolderState {
         FolderState(
@@ -8086,7 +8165,9 @@ final class FolderStateModel: ObservedModel, Identifiable {
             parentID: parentID,
             isCollapsed: isCollapsed,
             collapseModifiedAt: collapseModifiedAt,
-            orderAnchorTabID: orderAnchorTabID
+            orderAnchorTabID: orderAnchorTabID,
+            displaySymbol: displaySymbol,
+            displayColor: displayColor
         )
     }
 
@@ -8100,6 +8181,8 @@ final class FolderStateModel: ObservedModel, Identifiable {
         isCollapsedStorage = value.isCollapsed
         collapseModifiedAtStorage = value.collapseModifiedAt
         orderAnchorTabIDStorage = value.orderAnchorTabID
+        displaySymbolStorage = value.displaySymbol
+        displayColorStorage = value.displayColor
     }
 
     func update(_ value: FolderState) {
@@ -8135,6 +8218,14 @@ final class FolderStateModel: ObservedModel, Identifiable {
         if orderAnchorTabIDStorage != value.orderAnchorTabID {
             orderAnchorTabIDStorage = value.orderAnchorTabID
             withMutation(keyPath: \.orderAnchorTabID) {}
+        }
+        if displaySymbolStorage != value.displaySymbol {
+            displaySymbolStorage = value.displaySymbol
+            withMutation(keyPath: \.displaySymbol) {}
+        }
+        if displayColorStorage != value.displayColor {
+            displayColorStorage = value.displayColor
+            withMutation(keyPath: \.displayColor) {}
         }
     }
 }

@@ -2,9 +2,11 @@ import Foundation
 import Observation
 
 /// A Space of the read model. Its settings, each tab and each folder are
-/// objects of their own, and its history and archive are kept apart, so a
-/// change notifies only the readers of what it changed: a tab's new title
-/// redraws that tab's row, and a visit never redraws the sidebar. Each of its
+/// objects of their own, its sidebar lists are observed apart, and its
+/// history and archive are kept apart, so a change notifies only the readers
+/// of what it changed: a tab's new title redraws that tab's row, a move
+/// redraws the one list it moves within, and a visit never redraws the
+/// sidebar. Each of its
 /// own values is stored before it is announced; see
 /// `BrowserStoreFirstObservable`.
 @MainActor
@@ -16,6 +18,8 @@ final class SpaceModel: ObservedModel, Identifiable {
     let settings: SpaceSettingsModel
     let tabs: ObservedList<TabStateModel>
     let folders: ObservedList<FolderStateModel>
+    /// What the sidebar lists, as the core publishes it.
+    let sidebar: SidebarModel
     let history: HistoryModel
     let archive: ArchiveModel
     private(set) var profileID: UUID {
@@ -33,7 +37,8 @@ final class SpaceModel: ObservedModel, Identifiable {
     var value: SpaceState {
         SpaceState(
             id: id, profileID: profileID, settings: settings.value, folders: folders.values, tabs: tabs.values,
-            splitGroups: splitGroups, archivedTabs: archive.entries, history: history.entries)
+            splitGroups: splitGroups, archivedTabs: archive.entries, history: history.entries,
+            sidebar: sidebar.outline(folders: folders.models))
     }
 
     /// Every tab the Space holds, open or archived.
@@ -49,6 +54,7 @@ final class SpaceModel: ObservedModel, Identifiable {
         settings = SpaceSettingsModel(value.settings)
         tabs = ObservedList(value.tabs)
         folders = ObservedList(value.folders)
+        sidebar = SidebarModel(value.sidebar)
         splitGroupsStorage = value.splitGroups
         history = HistoryModel(value.history)
         archive = ArchiveModel(value.archivedTabs)
@@ -62,6 +68,7 @@ final class SpaceModel: ObservedModel, Identifiable {
         settings.update(value.settings)
         tabs.replace(with: value.tabs)
         folders.replace(with: value.folders)
+        sidebar.replace(with: value.sidebar)
         splitGroups = value.splitGroups
         history.replace(with: value.history)
         archive.replace(with: value.archivedTabs)
@@ -90,6 +97,10 @@ final class SpaceModel: ObservedModel, Identifiable {
 
     func apply(_ change: SplitGroupsChanged) {
         splitGroups = change.groups
+    }
+
+    func apply(_ change: SidebarChanged) {
+        sidebar.apply(change)
     }
 
     func apply(_ change: HistoryChanged) {

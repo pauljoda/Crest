@@ -10,7 +10,8 @@ namespace CrestCore.Application;
 ///
 /// Every change is idempotent: a reader that applies a batch twice holds the
 /// same state as one that applies it once. The Spaces arrive first, then each
-/// Space's own changes in session order, then the workspace's own members.
+/// Space's own changes in session order, with the lists its sidebar shows
+/// differently after its records, then the workspace's own members.
 internal static class SessionChanges {
     #region Types
 
@@ -70,12 +71,22 @@ internal static class SessionChanges {
         if (tabs is not null) changes.Add(new TabsChanged(workspaceId, space.Id, tabs.Updated, tabs.Removed, tabs.Order));
         if (!ReferenceEquals(old.SplitGroups, space.SplitGroups) && !old.SplitGroups.SequenceEqual(space.SplitGroups))
             changes.Add(new SplitGroupsChanged(workspaceId, space.Id, space.SplitGroups));
+        if (ChangedSidebar(workspaceId, old, space) is { } sidebar) changes.Add(sidebar);
         if (!TryChange(old.ArchivedTabs, space.ArchivedTabs, archived => archived.Tab.Id, recordedFirst: false, out var archive))
             return null;
         if (archive is not null) changes.Add(new ArchiveChanged(workspaceId, space.Id, archive.Updated, archive.Removed, archive.Order));
         if (!TryChange(old.History, space.History, entry => entry.Id, recordedFirst: true, out var history)) return null;
         if (history is not null) changes.Add(new HistoryChanged(workspaceId, space.Id, history.Updated, history.Removed, history.Order));
         return changes;
+    }
+
+    /// The lists of a retained Space's sidebar that its edit changed, or null when it
+    /// lists what it listed. Only an edit to what the sidebar reads of its tabs and
+    /// folders builds the outline; a new title, address or icon never does.
+    private static SidebarChanged? ChangedSidebar(Guid workspaceId, SpaceState old, SpaceState space) {
+        if (SidebarOutline.ListsAlike(old.Tabs, space.Tabs, old.Folders, space.Folders)) return null;
+        var (lists, removed) = space.Sidebar.Since(old.Sidebar);
+        return lists.Count == 0 && removed.Count == 0 ? null : new(workspaceId, space.Id, lists, removed);
     }
 
     /// A list's changes, null when it holds the same rows; false when two of

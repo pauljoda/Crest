@@ -16163,6 +16163,7 @@
       }
     },
     "Split View" : {
+      "comment" : "The title of a split view no one has named.",
       "localizations" : {
         "ar" : {
           "stringUnit" : {

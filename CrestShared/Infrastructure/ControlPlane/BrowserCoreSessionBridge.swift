@@ -290,8 +290,8 @@ extension BrowserFolder {
     init(core state: FolderState) {
         self.init(
             id: state.id, title: state.title,
-            location: BrowserFolderLocation(rawValue: state.location.name) ?? .saved, symbol: state.symbol ?? "folder",
-            color: state.color.map(BrowserSpaceBrandColor.init(core:)) ?? .folderDefault,
+            location: BrowserFolderLocation(rawValue: state.location.name) ?? .saved, symbol: state.displaySymbol,
+            color: BrowserSpaceBrandColor(core: state.displayColor),
             parentID: state.parentID, isCollapsed: state.isCollapsed,
             collapseModifiedAt: state.collapseModifiedAt,
             orderAnchorTabID: state.orderAnchorTabID)

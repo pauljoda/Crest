@@ -14,7 +14,7 @@ namespace CrestCore.Native;
 public static class ContractCodec {
     /// <summary>SHA-256 of the canonical contract schema.</summary>
     public static ReadOnlySpan<byte> Fingerprint => [
-        0x84, 0xa9, 0x2c, 0xaa, 0x83, 0x6f, 0xe6, 0xc6, 0x14, 0xa1, 0x62, 0xc8, 0x4e, 0xab, 0x08, 0xc7, 0xa4, 0xbe, 0x24, 0x22, 0x76, 0x1f, 0xb4, 0xb0, 0x45, 0xe1, 0xe6, 0x48, 0xf8, 0x0a, 0xa0, 0xbe
+        0x40, 0x3b, 0xdb, 0x03, 0xc5, 0xc7, 0xa5, 0x7c, 0x1b, 0x2d, 0x33, 0xfb, 0x16, 0xb2, 0x3b, 0xd5, 0x50, 0xd8, 0x79, 0x92, 0xeb, 0xfb, 0xc6, 0xb2, 0xff, 0x42, 0xd8, 0xd8, 0xed, 0x2c, 0x4b, 0xca
     ];
 
     /// <summary>SHA-256 of the engine contract alone, which an engine binding registers with.</summary>
@@ -658,26 +658,27 @@ public static class ContractCodec {
             case 10: return ReadSaved(reader);
             case 11: return ReadSessionAdopted(reader);
             case 12: return ReadShortcutsChanged(reader);
-            case 13: return ReadSitePermissionsChanged(reader);
-            case 14: return ReadSpaceLockChanged(reader);
-            case 15: return ReadSpaceSettingsChanged(reader);
-            case 16: return ReadSpacesChanged(reader);
-            case 17: return ReadSplitGroupsChanged(reader);
-            case 18: return ReadStorageFailed(reader);
-            case 19: return ReadSyncJournalChanged(reader);
-            case 20: return ReadSyncRecordsSkipped(reader);
-            case 21: return ReadSyncStagingFailed(reader);
-            case 22: return ReadTabCopied(reader);
-            case 23: return ReadTabFaviconAssigned(reader);
-            case 24: return ReadTabsChanged(reader);
-            case 25: return ReadTabsImported(reader);
-            case 26: return ReadTransientPagePromoted(reader);
-            case 27: return ReadWindowChanged(reader);
-            case 28: return ReadWindowClosed(reader);
-            case 29: return ReadWindowRecordsAdopted(reader);
-            case 30: return ReadWorkspaceChanged(reader);
-            case 31: return ReadWorkspaceClosed(reader);
-            case 32: return ReadWorkspaceOpened(reader);
+            case 13: return ReadSidebarChanged(reader);
+            case 14: return ReadSitePermissionsChanged(reader);
+            case 15: return ReadSpaceLockChanged(reader);
+            case 16: return ReadSpaceSettingsChanged(reader);
+            case 17: return ReadSpacesChanged(reader);
+            case 18: return ReadSplitGroupsChanged(reader);
+            case 19: return ReadStorageFailed(reader);
+            case 20: return ReadSyncJournalChanged(reader);
+            case 21: return ReadSyncRecordsSkipped(reader);
+            case 22: return ReadSyncStagingFailed(reader);
+            case 23: return ReadTabCopied(reader);
+            case 24: return ReadTabFaviconAssigned(reader);
+            case 25: return ReadTabsChanged(reader);
+            case 26: return ReadTabsImported(reader);
+            case 27: return ReadTransientPagePromoted(reader);
+            case 28: return ReadWindowChanged(reader);
+            case 29: return ReadWindowClosed(reader);
+            case 30: return ReadWindowRecordsAdopted(reader);
+            case 31: return ReadWorkspaceChanged(reader);
+            case 32: return ReadWorkspaceClosed(reader);
+            case 33: return ReadWorkspaceOpened(reader);
             default: throw new WireFormatException($"Unknown Change tag {tag}.");
         }
     }
@@ -738,84 +739,88 @@ public static class ContractCodec {
                 writer.WriteTag(12);
                 WriteShortcutsChanged(writer, member);
                 break;
-            case SitePermissionsChanged member:
+            case SidebarChanged member:
                 writer.WriteTag(13);
+                WriteSidebarChanged(writer, member);
+                break;
+            case SitePermissionsChanged member:
+                writer.WriteTag(14);
                 WriteSitePermissionsChanged(writer, member);
                 break;
             case SpaceLockChanged member:
-                writer.WriteTag(14);
+                writer.WriteTag(15);
                 WriteSpaceLockChanged(writer, member);
                 break;
             case SpaceSettingsChanged member:
-                writer.WriteTag(15);
+                writer.WriteTag(16);
                 WriteSpaceSettingsChanged(writer, member);
                 break;
             case SpacesChanged member:
-                writer.WriteTag(16);
+                writer.WriteTag(17);
                 WriteSpacesChanged(writer, member);
                 break;
             case SplitGroupsChanged member:
-                writer.WriteTag(17);
+                writer.WriteTag(18);
                 WriteSplitGroupsChanged(writer, member);
                 break;
             case StorageFailed member:
-                writer.WriteTag(18);
+                writer.WriteTag(19);
                 WriteStorageFailed(writer, member);
                 break;
             case SyncJournalChanged member:
-                writer.WriteTag(19);
+                writer.WriteTag(20);
                 WriteSyncJournalChanged(writer, member);
                 break;
             case SyncRecordsSkipped member:
-                writer.WriteTag(20);
+                writer.WriteTag(21);
                 WriteSyncRecordsSkipped(writer, member);
                 break;
             case SyncStagingFailed member:
-                writer.WriteTag(21);
+                writer.WriteTag(22);
                 WriteSyncStagingFailed(writer, member);
                 break;
             case TabCopied member:
-                writer.WriteTag(22);
+                writer.WriteTag(23);
                 WriteTabCopied(writer, member);
                 break;
             case TabFaviconAssigned member:
-                writer.WriteTag(23);
+                writer.WriteTag(24);
                 WriteTabFaviconAssigned(writer, member);
                 break;
             case TabsChanged member:
-                writer.WriteTag(24);
+                writer.WriteTag(25);
                 WriteTabsChanged(writer, member);
                 break;
             case TabsImported member:
-                writer.WriteTag(25);
+                writer.WriteTag(26);
                 WriteTabsImported(writer, member);
                 break;
             case TransientPagePromoted member:
-                writer.WriteTag(26);
+                writer.WriteTag(27);
                 WriteTransientPagePromoted(writer, member);
                 break;
             case WindowChanged member:
-                writer.WriteTag(27);
+                writer.WriteTag(28);
                 WriteWindowChanged(writer, member);
                 break;
             case WindowClosed member:
-                writer.WriteTag(28);
+                writer.WriteTag(29);
                 WriteWindowClosed(writer, member);
                 break;
             case WindowRecordsAdopted member:
-                writer.WriteTag(29);
+                writer.WriteTag(30);
                 WriteWindowRecordsAdopted(writer, member);
                 break;
             case WorkspaceChanged member:
-                writer.WriteTag(30);
+                writer.WriteTag(31);
                 WriteWorkspaceChanged(writer, member);
                 break;
             case WorkspaceClosed member:
-                writer.WriteTag(31);
+                writer.WriteTag(32);
                 WriteWorkspaceClosed(writer, member);
                 break;
             case WorkspaceOpened member:
-                writer.WriteTag(32);
+                writer.WriteTag(33);
                 WriteWorkspaceOpened(writer, member);
                 break;
             default: throw new ArgumentOutOfRangeException(nameof(value), value.GetType().Name, "Not a contract Change.");
@@ -4060,7 +4065,7 @@ public static class ContractCodec {
 
     public static FolderState ReadFolderState(WireReader reader) {
         ArgumentNullException.ThrowIfNull(reader);
-        return new FolderState(
+        var value = new FolderState(
             reader.ReadGuid(),
             ReadTabPlacement(reader),
             reader.ReadString(),
@@ -4070,6 +4075,9 @@ public static class ContractCodec {
             reader.ReadBool(),
             reader.ReadPresence() ? (DateTimeOffset?)reader.ReadDate() : null,
             reader.ReadPresence() ? (Guid?)reader.ReadGuid() : null);
+        _ = reader.ReadString();
+        _ = ReadBrandColor(reader);
+        return value;
     }
 
     public static void WriteFolderState(WireWriter writer, FolderState value) {
@@ -4109,6 +4117,8 @@ public static class ContractCodec {
         } else {
             writer.WritePresence(false);
         }
+        writer.WriteString(value.DisplaySymbol);
+        WriteBrandColor(writer, value.DisplayColor);
     }
 
     public static FolderTabs ReadFolderTabs(WireReader reader) {
@@ -7207,6 +7217,97 @@ public static class ContractCodec {
         }
     }
 
+    public static SidebarChanged ReadSidebarChanged(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new SidebarChanged(
+            reader.ReadGuid(),
+            reader.ReadGuid(),
+            reader.ReadList(() => ReadSidebarList(reader)),
+            reader.ReadList(() => reader.ReadGuid()));
+    }
+
+    public static void WriteSidebarChanged(WireWriter writer, SidebarChanged value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteGuid(value.WorkspaceId);
+        writer.WriteGuid(value.SpaceId);
+        writer.WriteCount(value.Lists.Count);
+        foreach (var itemLists in value.Lists) {
+            WriteSidebarList(writer, itemLists);
+        }
+        writer.WriteCount(value.RemovedFolderIds.Count);
+        foreach (var itemRemovedFolderIds in value.RemovedFolderIds) {
+            writer.WriteGuid(itemRemovedFolderIds);
+        }
+    }
+
+    public static SidebarList ReadSidebarList(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new SidebarList(
+            ReadTabPlacement(reader),
+            reader.ReadPresence() ? (Guid?)reader.ReadGuid() : null,
+            reader.ReadList(() => ReadSidebarRow(reader)));
+    }
+
+    public static void WriteSidebarList(WireWriter writer, SidebarList value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        WriteTabPlacement(writer, value.Section);
+        if (value.FolderId is { } presentFolderId) {
+            writer.WritePresence(true);
+            writer.WriteGuid(presentFolderId);
+        } else {
+            writer.WritePresence(false);
+        }
+        writer.WriteCount(value.Rows.Count);
+        foreach (var itemRows in value.Rows) {
+            WriteSidebarRow(writer, itemRows);
+        }
+    }
+
+    public static SidebarOutline ReadSidebarOutline(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new SidebarOutline(
+            reader.ReadList(() => ReadSidebarList(reader)));
+    }
+
+    public static void WriteSidebarOutline(WireWriter writer, SidebarOutline value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteCount(value.Lists.Count);
+        foreach (var itemLists in value.Lists) {
+            WriteSidebarList(writer, itemLists);
+        }
+    }
+
+    public static SidebarRow ReadSidebarRow(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new SidebarRow(
+            reader.ReadGuid(),
+            ReadSidebarRowKind(reader),
+            reader.ReadPresence() ? (Guid?)reader.ReadGuid() : null,
+            reader.ReadInt32(),
+            reader.ReadList(() => reader.ReadGuid()));
+    }
+
+    public static void WriteSidebarRow(WireWriter writer, SidebarRow value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteGuid(value.Id);
+        WriteSidebarRowKind(writer, value.Kind);
+        if (value.ParentFolderId is { } presentParentFolderId) {
+            writer.WritePresence(true);
+            writer.WriteGuid(presentParentFolderId);
+        } else {
+            writer.WritePresence(false);
+        }
+        writer.WriteInt32(value.Depth);
+        writer.WriteCount(value.Members.Count);
+        foreach (var itemMembers in value.Members) {
+            writer.WriteGuid(itemMembers);
+        }
+    }
+
     public static SiteDecision ReadSiteDecision(WireReader reader) {
         ArgumentNullException.ThrowIfNull(reader);
         return new SiteDecision(
@@ -7689,7 +7790,7 @@ public static class ContractCodec {
 
     public static SpaceState ReadSpaceState(WireReader reader) {
         ArgumentNullException.ThrowIfNull(reader);
-        return new SpaceState(
+        var value = new SpaceState(
             reader.ReadGuid(),
             reader.ReadGuid(),
             ReadSpaceSettings(reader),
@@ -7698,6 +7799,8 @@ public static class ContractCodec {
             reader.ReadList(() => ReadSplitGroupState(reader)),
             reader.ReadList(() => ReadArchivedTabState(reader)),
             reader.ReadList(() => ReadHistoryEntryState(reader)));
+        _ = ReadSidebarOutline(reader);
+        return value;
     }
 
     public static void WriteSpaceState(WireWriter writer, SpaceState value) {
@@ -7726,6 +7829,7 @@ public static class ContractCodec {
         foreach (var itemHistory in value.History) {
             WriteHistoryEntryState(writer, itemHistory);
         }
+        WriteSidebarOutline(writer, value.Sidebar);
     }
 
     public static SpacesChanged ReadSpacesChanged(WireReader reader) {
@@ -7789,7 +7893,7 @@ public static class ContractCodec {
 
     public static SplitGroupState ReadSplitGroupState(WireReader reader) {
         ArgumentNullException.ThrowIfNull(reader);
-        return new SplitGroupState(
+        var value = new SplitGroupState(
             reader.ReadGuid(),
             reader.ReadPresence() ? (string?)reader.ReadString() : null,
             reader.ReadPresence() ? (DateTimeOffset?)reader.ReadDate() : null,
@@ -7797,6 +7901,9 @@ public static class ContractCodec {
             reader.ReadPresence() ? (DateTimeOffset?)reader.ReadDate() : null,
             reader.ReadPresence() ? (BrandColor?)ReadBrandColor(reader) : null,
             reader.ReadPresence() ? (DateTimeOffset?)reader.ReadDate() : null);
+        _ = reader.ReadPresence() ? (string?)reader.ReadString() : null;
+        _ = reader.ReadPresence() ? (string?)reader.ReadString() : null;
+        return value;
     }
 
     public static void WriteSplitGroupState(WireWriter writer, SplitGroupState value) {
@@ -7836,6 +7943,18 @@ public static class ContractCodec {
         if (value.TintModifiedAt is { } presentTintModifiedAt) {
             writer.WritePresence(true);
             writer.WriteDate(presentTintModifiedAt);
+        } else {
+            writer.WritePresence(false);
+        }
+        if (value.DisplayTitle is { } presentDisplayTitle) {
+            writer.WritePresence(true);
+            writer.WriteString(presentDisplayTitle);
+        } else {
+            writer.WritePresence(false);
+        }
+        if (value.DisplayEmojiIcon is { } presentDisplayEmojiIcon) {
+            writer.WritePresence(true);
+            writer.WriteString(presentDisplayEmojiIcon);
         } else {
             writer.WritePresence(false);
         }
@@ -9843,6 +9962,17 @@ public static class ContractCodec {
         ArgumentNullException.ThrowIfNull(writer);
         ArgumentNullException.ThrowIfNull(value);
         writer.WriteEnum(TagOf(ShortcutSpecialKey.All, value));
+    }
+
+    public static SidebarRowKind ReadSidebarRowKind(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return SidebarRowKind.All[reader.ReadEnum(SidebarRowKind.All.Count)];
+    }
+
+    public static void WriteSidebarRowKind(WireWriter writer, SidebarRowKind value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteEnum(TagOf(SidebarRowKind.All, value));
     }
 
     public static SitePermission ReadSitePermission(WireReader reader) {

@@ -17,6 +17,11 @@ public sealed partial class BrowserContractsTests {
     private sealed class SessionReader(Guid workspace, SessionState opened) {
         public SessionState State { get; private set; } = opened;
 
+        /// Each Space's sidebar lists, by section for a section's top level and by
+        /// folder for a folder's inside.
+        private readonly Dictionary<Guid, Dictionary<(TabPlacement?, Guid?), SidebarList>> sidebars =
+            opened.Spaces.ToDictionary(space => space.Id, space => Keyed(space.Sidebar.Lists));
+
         /// A reader of the workspace a batch opens.
         public static SessionReader Opening(IEnumerable<Change> changes) {
             var opened = Assert.Single(changes.OfType<WorkspaceOpened>());
@@ -31,11 +36,20 @@ public sealed partial class BrowserContractsTests {
             switch (change) {
                 case WorkspaceOpened opened when opened.WorkspaceId == workspace:
                     State = opened.Session;
+                    sidebars.Clear();
+                    foreach (var space in opened.Session.Spaces) sidebars[space.Id] = Keyed(space.Sidebar.Lists);
                     break;
                 case SpacesChanged spaces when spaces.WorkspaceId == workspace:
                     var kept = State.Spaces.Where(space => !spaces.Removed.Contains(space.Id)).ToList();
                     foreach (var added in spaces.Added) Upsert(kept, added, space => space.Id);
                     State = State with { Spaces = Ordered(kept, spaces.Order, space => space.Id) };
+                    foreach (var id in spaces.Removed) sidebars.Remove(id);
+                    foreach (var added in spaces.Added) sidebars[added.Id] = Keyed(added.Sidebar.Lists);
+                    break;
+                case SidebarChanged sidebar when sidebar.WorkspaceId == workspace:
+                    var lists = sidebars[sidebar.SpaceId];
+                    foreach (var id in sidebar.RemovedFolderIds) lists.Remove((null, id));
+                    foreach (var list in sidebar.Lists) lists[Key(list)] = list;
                     break;
                 case SpaceSettingsChanged settings when settings.WorkspaceId == workspace:
                     Edit(settings.SpaceId, space => space with { Settings = settings.Settings });
@@ -76,6 +90,23 @@ public sealed partial class BrowserContractsTests {
                     break;
             }
         }
+
+        /// Asserts that the sidebar lists the reader applied are the ones each Space
+        /// of `state` resolves.
+        public void AssertSidebars(SessionState state) {
+            Assert.Equal(state.Spaces.Select(space => space.Id).Order(), sidebars.Keys.Order());
+            foreach (var space in state.Spaces) {
+                var expected = Keyed(space.Sidebar.Lists);
+                var applied = sidebars[space.Id];
+                Assert.Equal(expected.Keys.ToHashSet(), applied.Keys.ToHashSet());
+                foreach (var (key, list) in expected) Assert.Equal(list, applied[key]);
+            }
+        }
+
+        private static (TabPlacement?, Guid?) Key(SidebarList list) => list.FolderId is { } id ? (null, id) : (list.Section, null);
+
+        private static Dictionary<(TabPlacement?, Guid?), SidebarList> Keyed(IEnumerable<SidebarList> lists) =>
+            lists.ToDictionary(Key);
 
         private void Edit(Guid spaceId, Func<SpaceState, SpaceState> edit) =>
             State = State with { Spaces = [.. State.Spaces.Select(space => space.Id == spaceId ? edit(space) : space)] };
@@ -164,14 +195,16 @@ public sealed partial class BrowserContractsTests {
             published.UnionWith(changes.Select(change => change.GetType()));
             reader.Apply(changes);
             Assert.Equal(authority.Current, reader.State);
+            reader.AssertSidebars(authority.Current);
             reader.Apply(changes);
             Assert.Equal(authority.Current, reader.State);
+            reader.AssertSidebars(authority.Current);
             if (window is { } opened) app.Send(new CloseWindow(opened));
         }
         Assert.Superset(new HashSet<Type> {
             typeof(SpacesChanged), typeof(SpaceSettingsChanged), typeof(TabsChanged), typeof(FoldersChanged),
             typeof(SplitGroupsChanged), typeof(HistoryChanged), typeof(ArchiveChanged), typeof(WorkspaceChanged),
-            typeof(AppPreferencesChanged), typeof(TabCopied)
+            typeof(AppPreferencesChanged), typeof(TabCopied), typeof(SidebarChanged)
         }, published);
     }
 
@@ -226,6 +259,44 @@ public sealed partial class BrowserContractsTests {
         Assert.Equal([.. space.Tabs.Skip(1).Select(tab => tab.Id), space.Tabs[0].Id], moved.Order);
     }
 
+    /// An edit publishes only the sidebar lists it changes: a move publishes the list
+    /// it moves within, a collapse and a new title or address publish none, a Start
+    /// Page that becomes a web page publishes its section, and a deleted folder takes
+    /// its list with it.
+    [Fact]
+    public void AnEditPublishesOnlyTheSidebarListsItChanges() {
+        var session = MaximalSession().Current;
+        var workspace = Guid.NewGuid();
+        var folder = new FolderState(Guid.NewGuid(), TabPlacement.Current, "Folder");
+        TabState Tab(string title, Guid? folderId = null, bool startPage = false) => new(Guid.NewGuid(), title,
+            startPage ? null : $"https://example.com/{title}", null, null, "globe", null, null, null, TabPlacement.Current, folderId, null,
+            DateTimeOffset.UnixEpoch, null, null, null, false);
+        TabState[] loose = [Tab("first"), Tab("second"), Tab("third")];
+        TabState[] filed = [Tab("inside", folder.Id), Tab("also inside", folder.Id)];
+        var draft = Tab("draft", startPage: true);
+        var start = session.Spaces[0] with { Tabs = [.. loose, .. filed, draft], Folders = [folder] };
+        IReadOnlyList<Change> Published(SpaceState edited) =>
+            SessionChanges.Publish(workspace, session with { Spaces = [start] }, session with { Spaces = [edited] });
+        IEnumerable<(TabPlacement, Guid?)> Lists(SpaceState edited) =>
+            Assert.Single(Published(edited).OfType<SidebarChanged>()).Lists.Select(list => (list.Section, list.FolderId));
+
+        Assert.Equal([(TabPlacement.Current, null)], Lists(start with { Tabs = [loose[2], loose[0], loose[1], .. filed, draft] }));
+        Assert.Equal([(TabPlacement.Current, folder.Id)], Lists(start with { Tabs = [.. loose, filed[1], filed[0], draft] }));
+        Assert.Equal([(TabPlacement.Current, null)],
+            Lists(start with { Tabs = [.. loose, .. filed, draft with { Url = "https://example.com/started" }] }));
+        Assert.Equal([typeof(FoldersChanged)],
+            Published(start with { Folders = [folder with { IsCollapsed = true }] }).Select(change => change.GetType()));
+        Assert.Equal([typeof(TabsChanged)], Published(start with {
+            Tabs = [loose[0] with { Title = "Retitled", Url = "https://example.com/moved-on" }, .. loose[1..], .. filed, draft]
+        }).Select(change => change.GetType()));
+        var deleted = Assert.Single(Published(start with {
+            Tabs = [.. loose, .. filed.Select(tab => tab with { FolderId = null }), draft],
+            Folders = []
+        }).OfType<SidebarChanged>());
+        Assert.Equal([(TabPlacement.Current, (Guid?)null)], deleted.Lists.Select(list => (list.Section, list.FolderId)));
+        Assert.Equal([folder.Id], deleted.RemovedFolderIds);
+    }
+
     /// A tab a window opens outside an intent the app runs, as a session's own
     /// work does: its changes wait in the pending batch, and the next intent
     /// answers them before its own, so a reader shows the new tab before the
@@ -248,12 +319,12 @@ public sealed partial class BrowserContractsTests {
 
         var answered = app.Send(new ShowTab(window, space.Id, space.Tabs[0].Id));
 
-        Assert.Equal([typeof(TabsChanged), typeof(WindowChanged), typeof(TabsChanged), typeof(WindowChanged)],
+        Assert.Equal([typeof(TabsChanged), typeof(SidebarChanged), typeof(WindowChanged), typeof(TabsChanged), typeof(WindowChanged)],
             answered.Select(change => change.GetType()));
         Assert.Contains(((TabsChanged)answered[0]).Updated, tab => tab.Id == opened);
-        Assert.Equal(opened, ((WindowChanged)answered[1]).Window.ShownTabs.Single(tab => tab.SpaceId == space.Id).TabId);
-        Assert.Equal(space.Tabs[0].Id, Assert.Single(((TabsChanged)answered[2]).Updated).Id);
-        Assert.Equal(space.Tabs[0].Id, ((WindowChanged)answered[3]).Window.ShownTabs.Single(tab => tab.SpaceId == space.Id).TabId);
+        Assert.Equal(opened, ((WindowChanged)answered[2]).Window.ShownTabs.Single(tab => tab.SpaceId == space.Id).TabId);
+        Assert.Equal(space.Tabs[0].Id, Assert.Single(((TabsChanged)answered[3]).Updated).Id);
+        Assert.Equal(space.Tabs[0].Id, ((WindowChanged)answered[4]).Window.ShownTabs.Single(tab => tab.SpaceId == space.Id).TabId);
         reader.Apply(answered);
         Assert.Equal(authority.Current, reader.State);
         Assert.Contains(reader.State.Spaces[0].Tabs, tab => tab.Id == opened);
