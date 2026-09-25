@@ -70,8 +70,20 @@ final class BrowserCoreSessionAuthority {
     {
         let bytes = try seed.map { try JSONEncoder().encode(compact($0)) }
         let opened = Self.opened(by: try core.send(OpenWorkspace(kind: kind, seed: bytes)))
-        if let seed { core.state.adoptImages(OfferedImages(placedFrom: seed).placed, in: opened.workspaceID) }
+        if let seed { core.state.adoptImages(images(of: seed, openedAs: opened.session), in: opened.workspaceID) }
         return BrowserCoreSessionAuthority(opened: opened, core: core)
+    }
+
+    /// The images `seed`'s tabs wear once the core opened it as `session`.
+    /// The core's repair keeps every Space and tab in its place, so a tab
+    /// wears the image of the seed's tab in its place, even when the repair
+    /// gave it a new identity because another tab shared its own.
+    private static func images(of seed: BrowserSession, openedAs session: SessionState) -> [UUID: Data] {
+        var images = OfferedImages(placedFrom: seed).placed
+        for (space, seeded) in zip(session.spaces, seed.spaces) {
+            for (tab, source) in zip(space.tabs, seeded.tabs) { images[tab.id] = source.faviconData }
+        }
+        return images
     }
 
     /// Opens the session `core` keeps in its file, as it loaded and repaired

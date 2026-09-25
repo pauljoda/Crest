@@ -360,7 +360,7 @@ final class BrowserTabDragSafetyTests: XCTestCase {
             tabs: []
         )
         var restored = BrowserSession(spaces: [decoy, capturedSource, destination])
-        restored = try BrowserCoreSync.repair(restored)
+        restored = try restored.openedAsSeed()
         let browser = BrowserStore(
             session: restored, showing: destination.id)
         let repairedID = try XCTUnwrap(restored.space(id: capturedSource.id)?.tabs.first?.id)

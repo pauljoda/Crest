@@ -85,7 +85,7 @@ final class BrowserSplitTabCopyTests: XCTestCase {
             store.selectedSpace?.splitGroupMembers(of: copiedGroup).map(\.title), ["Head", "Pinned", "Tail"])
         XCTAssertEqual(store.selectedSpace?.splitGroupMetadata(for: copiedGroup)?.customTitle, "Research pair")
         var restored = try JSONDecoder().decode(BrowserSession.self, from: JSONEncoder().encode(store.session))
-        restored = try BrowserCoreSync.repair(restored)
+        restored = try restored.openedAsSeed()
         let restoredSpace = restored.space(id: space.id)
         XCTAssertEqual(
             restoredSpace?.splitGroupMembers(of: copiedGroup).map(\.id),

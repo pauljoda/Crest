@@ -2465,6 +2465,10 @@
     "sync-cloudkit-bytes-in-core": {
       "category": "internal",
       "message": "The sync transport hands CloudKit the core's own payload bytes."
+    },
+    "seed-repair-in-core": {
+      "category": "internal",
+      "message": "The core repairs a seeded workspace itself."
     }
   }
 }

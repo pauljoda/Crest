@@ -331,7 +331,7 @@ final class BrowserCoreSessionAuthorityTests: XCTestCase {
         var second = first
         second.tabs[0].faviconData = Data([2])
         let original = BrowserSession(spaces: [first, second])
-        let repaired = try BrowserCoreSync.repair(original)
+        let repaired = try original.openedAsSeed()
         XCTAssertNotEqual(repaired.spaces[0].id, repaired.spaces[1].id)
         XCTAssertNotEqual(repaired.spaces[0].profile.id, repaired.spaces[1].profile.id)
         XCTAssertNotEqual(repaired.spaces[0].tabs[0].id, repaired.spaces[1].tabs[0].id)

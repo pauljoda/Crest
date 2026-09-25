@@ -222,9 +222,13 @@ public sealed partial class BrowserContractsTests {
         second["history"] = new JsonArray(); second["archivedTabs"] = new JsonArray();
         var shared = session.DeepClone();
         shared["spaces"] = new JsonArray(space.DeepClone(), second.DeepClone());
-        using (var app = new CrestApp())
-            Assert.Equal(new InvalidSession(SessionFlaw.SharedProfile), Assert.Throws<Rejected>(
-                () => app.Send(new OpenWorkspace(WorkspaceKind.Persistent, TestWorkspaces.Seed(shared)))).Rejection);
+        // A seed opens repaired, as a restored file does: the second Space
+        // wears a profile of its own.
+        using (var app = new CrestApp()) {
+            var opened = Assert.Single(app.Send(new OpenWorkspace(WorkspaceKind.Persistent, TestWorkspaces.Seed(shared)))
+                .OfType<WorkspaceOpened>());
+            Assert.Equal(2, opened.Session.Spaces.Select(s => s.ProfileId).Distinct().Count());
+        }
 
         // Repair keeps the first occurrence and issues the collision a fresh
         // profile, so an imported archive cannot adopt another Space's data.

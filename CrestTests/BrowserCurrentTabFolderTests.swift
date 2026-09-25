@@ -294,7 +294,7 @@ final class BrowserCurrentTabFolderTests: XCTestCase {
         XCTAssertEqual(browser.selectedSpace?.tabs.filter { $0.folderID == child }.map(\.id), ids)
         XCTAssertEqual(browser.selectedSpace?.splitGroupMembers(of: split).map(\.id), ids)
         var restored = try JSONDecoder().decode(BrowserSession.self, from: JSONEncoder().encode(browser.session))
-        restored = try BrowserCoreSync.repair(restored)
+        restored = try restored.openedAsSeed()
         XCTAssertEqual(restored.spaces[0].folders, browser.selectedSpace?.folders)
         XCTAssertEqual(restored.spaces[0].tabs.filter { $0.folderID == child }.map(\.id), ids)
         XCTAssertTrue(

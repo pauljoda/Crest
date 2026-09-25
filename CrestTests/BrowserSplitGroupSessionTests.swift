@@ -257,7 +257,7 @@ final class BrowserSplitGroupSessionTests: XCTestCase {
         let space = makeSpace(tabs: [lone])
         var session = BrowserSession(spaces: [space])
 
-        session = try BrowserCoreSync.repair(session)
+        session = try session.openedAsSeed()
 
         let repaired = try XCTUnwrap(session.spaces.first)
         XCTAssertEqual(repaired.tabs[0].splitGroupID, group)

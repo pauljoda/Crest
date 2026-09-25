@@ -38,15 +38,6 @@ extension BrowserStore {
         )
     }
 
-    /// The core's checkpoint repair, accepted before any page is created.
-    /// Launch cannot continue on an unaccepted repair; operational sync errors
-    /// use the throwing bridge before commit.
-    private static func launchRepair(_ session: BrowserSession) -> BrowserSession {
-        do { return try BrowserCoreSync.repair(session) } catch {
-            preconditionFailure("Core session repair failed before publication: \(error)")
-        }
-    }
-
     /// Launch cleanup and retention: the core sweeps this family's session
     /// before any scene is on screen, keeping every tab an open window shows
     /// and every tab a saved window's record shows. The core remembers the
@@ -73,10 +64,10 @@ extension BrowserStore {
         launchEnvironment: BrowserLaunchEnvironment,
         core: CrestCore
     ) -> BrowserStore {
-        // The fixture opens as a seed, which is never saved or synced: only
-        // the session the core keeps in its file syncs.
-        let session = launchRepair(isolatedFixtureSession(for: launchEnvironment))
-        return BrowserStore(session: session, credentialVault: InMemoryCredentialVault(), core: core)
+        // The fixture opens as a seed, which the core repairs and never saves
+        // or syncs: only the session the core keeps in its file syncs.
+        return BrowserStore(
+            session: isolatedFixtureSession(for: launchEnvironment), credentialVault: InMemoryCredentialVault(), core: core)
     }
 
     private static func persistentIsolatedLaunch(

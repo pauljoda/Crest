@@ -256,7 +256,7 @@ final class BrowserPortableArchiveTests: XCTestCase {
                 ).materialize().spaces
             )
         }
-        let fullSession = BrowserSession(spaces: existingSpaces)
+        let fullSession = BrowserSession(spaces: existingSpaces, defaultSpaceID: existingSpaces.first?.id)
         let store = BrowserStore(session: fullSession)
         let imported = try BrowserPortableArchive(
             session: try makePortableFixture()

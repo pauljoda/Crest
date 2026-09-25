@@ -490,7 +490,7 @@ final class BrowserImportReviewPlanTests: XCTestCase {
         let preview = try plan.preview(
             in: store(BrowserSession(spaces: []))
         )
-        let created = try XCTUnwrap(preview.spaces.first)
+        let created = try XCTUnwrap(preview.space(id: importedSpace.id))
         XCTAssertEqual(created.folders, [usedFolder])
         XCTAssertEqual(created.savedTabs.map(\.id), [includedTab.id])
     }
@@ -582,7 +582,7 @@ final class BrowserImportReviewPlanTests: XCTestCase {
     }
 
     private func makeSeededSession() throws -> BrowserSession {
-        try BrowserCoreSync.repair(BrowserSession.freshInstallSeed)
+        try BrowserSession.freshInstallSeed.openedAsSeed()
     }
 
     private func makeResearchSpace() -> BrowserSpace {

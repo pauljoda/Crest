@@ -35,7 +35,7 @@ final class BrowserSpaceAccessTests: XCTestCase {
         let legacyData = try JSONSerialization.data(withJSONObject: object)
 
         var decoded = try JSONDecoder().decode(BrowserSession.self, from: legacyData)
-        decoded = try BrowserCoreSync.repair(decoded)
+        decoded = try decoded.openedAsSeed()
 
         XCTAssertEqual(decoded.defaultSpaceID, decoded.spaces.first?.id)
         XCTAssertTrue(decoded.spaces.allSatisfy { $0.accessPolicy == .open })

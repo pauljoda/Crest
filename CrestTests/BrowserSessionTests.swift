@@ -165,7 +165,7 @@ final class BrowserSessionTests: XCTestCase {
             ),
         ]
 
-        session = try BrowserCoreSync.repair(session)
+        session = try session.openedAsSeed()
 
         let archive = try XCTUnwrap(session.spaces.first).archivedTabs
         XCTAssertEqual(archive.map(\.tab.title), ["Recoverable"])
@@ -348,7 +348,7 @@ final class BrowserSessionTests: XCTestCase {
             BrowserSession.self,
             from: try JSONEncoder().encode(session)
         )
-        decoded = try BrowserCoreSync.repair(decoded)
+        decoded = try decoded.openedAsSeed()
 
         let tab = try XCTUnwrap(
             decoded.space(id: spaceID)?.tabs.first(where: { $0.id == renamed.id })
@@ -600,7 +600,7 @@ final class BrowserSessionTests: XCTestCase {
             tabs: [secondTab]
         )
 
-        let session = try BrowserCoreSync.repair(BrowserSession(spaces: [first, second]))
+        let session = try BrowserSession(spaces: [first, second]).openedAsSeed()
 
         XCTAssertEqual(session.spaces.map(\.id), [first.id, second.id])
         XCTAssertEqual(Set(session.spaces.map(\.profile.id)).count, 2)
@@ -618,7 +618,7 @@ final class BrowserSessionTests: XCTestCase {
             tabs: []
         )
 
-        let session = try BrowserCoreSync.repair(BrowserSession(spaces: [emptySpace]))
+        let session = try BrowserSession(spaces: [emptySpace]).openedAsSeed()
 
         let repaired = try XCTUnwrap(session.space(id: emptySpace.id))
         XCTAssertEqual(repaired.tabs.count, 1)
@@ -629,7 +629,7 @@ final class BrowserSessionTests: XCTestCase {
         XCTAssertEqual(launchTab.symbol, BrowserTab.startPageSymbol)
         XCTAssertEqual(launchTab.placement, .current)
 
-        let noSpaces = try BrowserCoreSync.repair(BrowserSession(spaces: []))
+        let noSpaces = try BrowserSession(spaces: []).openedAsSeed()
         XCTAssertEqual(noSpaces.spaces.count, 1)
         XCTAssertNotNil(BrowserStore(session: noSpaces).selectedTab)
     }
@@ -680,7 +680,7 @@ final class BrowserSessionTests: XCTestCase {
             history: history
         )
 
-        let session = try BrowserCoreSync.repair(BrowserSession(spaces: [space]))
+        let session = try BrowserSession(spaces: [space]).openedAsSeed()
 
         let repaired = try XCTUnwrap(session.spaces.first)
         XCTAssertEqual(Set(repaired.folders.map(\.id)).count, 5)

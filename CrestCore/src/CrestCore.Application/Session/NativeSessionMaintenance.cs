@@ -43,6 +43,12 @@ public static class NativeSessionMaintenance {
         }).ToArray())
     };
 
+    /// Each tab of `repaired` whose identity `Repair` changed, with the tab
+    /// whose native assets it keeps.
+    internal static IReadOnlyList<(Guid Source, Guid Copy)> Copies(SessionState repaired, IReadOnlyList<TabOrigin> origins) => [.. origins
+        .Select(origin => (Source: origin.SourceTabId, Copy: repaired.Spaces[origin.SpaceIndex].Tabs[origin.TabIndex].Id))
+        .Where(pair => pair.Source != pair.Copy)];
+
     /// Gives every Space, profile and tab its own identity, repairs folder trees,
     /// pin limits, split runs and split metadata, keeps a Space that is being
     /// deleted exactly as it was, and adds a Space when none would remain.

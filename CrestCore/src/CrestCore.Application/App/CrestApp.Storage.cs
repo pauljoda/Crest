@@ -86,9 +86,7 @@ public sealed partial class CrestApp {
         storedSession = new NativeSessionAuthority(repaired, target);
         storedSync = new NativeSyncAuthority(journal ?? NativeSyncJournal.Fresh(Guid.NewGuid()));
         storedSelection = legacySelection;
-        repairedCopies = [.. origins
-            .Select(origin => (Source: origin.SourceTabId, Copy: repaired.Spaces[origin.SpaceIndex].Tabs[origin.TabIndex].Id))
-            .Where(pair => pair.Source != pair.Copy)];
+        repairedCopies = NativeSessionMaintenance.Copies(repaired, origins);
     }
 
     #endregion

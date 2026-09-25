@@ -31,9 +31,19 @@ public sealed partial class CrestApp {
 
     private void Open(OpenWorkspace intent) {
         if (!intent.Kind.OpensDirectly) throw new Rejected(new BorrowedWorkspaceRequiresSpace(intent.Kind));
-        if (intent.Seed is { } seed) device.Attach(new NativeSessionAuthority(intent.Kind, Seeded(seed)), ids.Next());
+        if (intent.Seed is { } seed) OpenSeeded(intent.Kind, seed);
         else if (intent.Kind.KeepsFile) OpenStored();
         else device.Attach(new NativeSessionAuthority(intent.Kind, Template(intent.Kind)), ids.Next());
+    }
+
+    /// Opens a workspace over `seed`, repaired as the file's session is when
+    /// it loads. A tab the repair gave a new identity follows as `TabCopied`
+    /// from the tab whose image it wears.
+    private void OpenSeeded(WorkspaceKind kind, byte[] seed) {
+        var (session, copies) = Seeded(seed);
+        var workspaceId = ids.Next();
+        device.Attach(new NativeSessionAuthority(kind, session), workspaceId);
+        foreach (var (source, copy) in copies) Announce(new TabCopied(workspaceId, source, copy));
     }
 
     /// Opens the session this core keeps in its file, then attaches the sync
@@ -52,16 +62,29 @@ public sealed partial class CrestApp {
         foreach (var (source, copy) in repairedCopies) Announce(new TabCopied(workspaceId, source, copy));
     }
 
-    /// A seed in the stored format, as a session a workspace can hold. Throws
-    /// `Rejected` with `InvalidSession` naming the first rule it breaks.
-    private static SessionState Seeded(byte[] seed) {
+    /// A seed in the stored format, repaired as the file's session is when it
+    /// loads, with each tab the repair gave a new identity and the tab it
+    /// came from. Throws `Rejected` with `InvalidSession` naming the first
+    /// rule it breaks that the repair cannot mend.
+    private (SessionState Session, IReadOnlyList<(Guid Source, Guid Copy)> Copies) Seeded(byte[] seed) {
         SessionState session;
         try {
             session = StoredSessionCodec.DecodeSession(JsonNode.Parse(seed, documentOptions: SeedDocument));
         } catch (Exception error) when (StoredSession.IsUndecodable(error)) {
             throw new Rejected(new InvalidSession(SessionFlaw.Unreadable));
         }
-        return NativeSessionAuthority.Flaw(session) is { } flaw ? throw new Rejected(new InvalidSession(flaw)) : session;
+        var now = StoredSessionCodec.Date(StoredSessionCodec.Seconds(clock.Now));
+        SessionState repaired;
+        IReadOnlyList<NativeSessionMaintenance.TabOrigin> origins;
+        try {
+            repaired = NativeSessionMaintenance.Repair(session, now, null, ids, out origins);
+        } catch (BrowserRuleException) {
+            // A Space whose deletion is under way keeps its identities, so one
+            // another Space shares is the seed's to fix.
+            throw new Rejected(new InvalidSession(NativeSessionAuthority.Flaw(session) ?? SessionFlaw.Unreadable));
+        }
+        if (NativeSessionAuthority.Flaw(repaired) is { } flaw) throw new Rejected(new InvalidSession(flaw));
+        return (repaired, NativeSessionMaintenance.Copies(repaired, origins));
     }
 
     /// The session a workspace of `kind` starts with when it keeps no file and

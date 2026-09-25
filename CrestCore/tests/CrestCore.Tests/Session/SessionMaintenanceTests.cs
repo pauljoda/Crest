@@ -1,6 +1,7 @@
 using System.Text.Json.Nodes;
 
 using CrestCore.Application;
+using CrestCore.Contracts;
 using CrestCore.Domain;
 
 using Xunit;
@@ -21,6 +22,32 @@ public sealed partial class BrowserContractsTests {
         Assert.NotEqual(result["spaces"]![0]!["tabs"]![0]!["id"]!.ToJsonString(), result["spaces"]![1]!["tabs"]![0]!["id"]!.ToJsonString());
         Assert.Equal(1, output["assets"]!.AsArray().Last()!["spaceIndex"]!.GetValue<int>());
         Assert.True(JsonNode.DeepEquals(result, NativeSessionMaintenance.Repair(result.AsObject(), 800000001)["session"]));
+    }
+
+    [Fact]
+    public void ASeedOpensRepairedAsTheFileDoesAndEachReidentifiedTabFollowsAsACopy() {
+        var fixture = SavedSession();
+        var document = fixture.Document["session"]!.AsObject();
+        // A twin of the first Space that keeps its identity, profile and tab,
+        // and whose tab sits in a folder the twin does not hold.
+        var twin = document["spaces"]![0]!.DeepClone().AsObject();
+        twin["folders"] = new JsonArray();
+        document["spaces"]!.AsArray().Add(twin);
+
+        using var app = new CrestApp();
+        var changes = app.Send(new OpenWorkspace(WorkspaceKind.Persistent, TestWorkspaces.Seed(document)));
+        var opened = Assert.Single(changes.OfType<WorkspaceOpened>());
+        var spaces = opened.Session.Spaces;
+        Assert.Equal(fixture.Space, spaces[0].Id);
+        Assert.Equal(fixture.Tab, spaces[0].Tabs[0].Id);
+        Assert.NotEqual(spaces[0].Id, spaces[1].Id);
+        Assert.NotEqual(spaces[0].ProfileId, spaces[1].ProfileId);
+        var copy = spaces[1].Tabs[0];
+        Assert.NotEqual(fixture.Tab, copy.Id);
+        Assert.Null(copy.FolderId);
+        var copied = Assert.Single(changes.OfType<TabCopied>());
+        Assert.Equal(new TabCopied(opened.WorkspaceId, fixture.Tab, copy.Id), copied);
+        Assert.True(changes.ToList().IndexOf(opened) < changes.ToList().IndexOf(copied));
     }
 
     [Fact]

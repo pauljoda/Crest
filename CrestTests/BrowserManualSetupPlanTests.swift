@@ -14,7 +14,7 @@ final class BrowserManualSetupPlanTests: XCTestCase {
         let second = BrowserSession.makeBlankSpace(number: 2)
         existing.spaces.append(second)
         let secondID = second.id
-        existing = try BrowserCoreSync.repair(existing)
+        existing = try existing.openedAsSeed()
         var plan = BrowserManualSetupPlan(existing: existing)
 
         plan.moveSpace(secondID, to: firstID)

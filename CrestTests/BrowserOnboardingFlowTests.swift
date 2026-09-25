@@ -299,7 +299,7 @@ final class BrowserOnboardingFlowTests: XCTestCase {
     func testDeniedGuideAuthorizationKeepsManualDraftPendingUntilSuccessfulRetry() async throws {
         var first = makeSpace(name: "First")
         first.accessPolicy = .deviceOwnerAuthentication
-        let session = BrowserSession(spaces: [first])
+        let session = BrowserSession(spaces: [first], defaultSpaceID: first.id)
         let browser = BrowserStore(session: session)
         let flow = makeFlow(entryPoint: .rerun, browser: browser)
         flow.beginManualSetup()

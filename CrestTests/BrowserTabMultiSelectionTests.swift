@@ -446,6 +446,7 @@ final class BrowserTabMultiSelectionTests: XCTestCase {
                 title: "Tab \(index)", url: URL(string: "https://example.com/\(index)"), symbol: "globe",
                 placement: .current)
         }
-        return BrowserSession(spaces: [space])
+        // A session as the core opens it names its launch Space.
+        return BrowserSession(spaces: [space], defaultSpaceID: space.id)
     }
 }

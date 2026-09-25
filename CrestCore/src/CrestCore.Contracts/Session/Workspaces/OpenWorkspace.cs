@@ -13,8 +13,9 @@ namespace CrestCore.Contracts;
 /// template of its kind, such as the one Space a private workspace starts with.
 ///
 /// `Seed` is a session in the stored format, for launches without a file
-/// (isolated runs, previews, tests). A seeded workspace keeps nothing: it is
-/// never saved or synced.
+/// (isolated runs, previews, tests). It opens repaired as the file's session
+/// does, with `TabCopied` for each tab the repair gave a new identity. A
+/// seeded workspace keeps nothing: it is never saved or synced.
 ///
 /// Refused with `BorrowedWorkspaceRequiresSpace` for a kind that opens only by
 /// borrowing, `NoStoredSession` when the core keeps no file or its file holds
