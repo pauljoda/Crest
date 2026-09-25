@@ -20,6 +20,7 @@ struct BrowserSidebarLoadedContent: View {
     let sidebarToggleAction: BrowserSidebarToggleAction
     let toggleSidebar: () -> Void
     let commandSurfaceNamespace: Namespace.ID
+    let commandPaletteHandoff: BrowserCommandPaletteHandoff
     let tabPromotionNamespace: Namespace.ID
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -41,7 +42,8 @@ struct BrowserSidebarLoadedContent: View {
                 addressFocusRequest: addressFocusRequest,
                 activateAddress: activateAddress,
                 submitAddress: submitAddress,
-                commandSurfaceNamespace: commandSurfaceNamespace
+                commandSurfaceNamespace: commandSurfaceNamespace,
+                commandPaletteHandoff: commandPaletteHandoff
             )
             .onGeometryChange(for: CGFloat.self) {
                 $0.size.height
@@ -417,6 +419,7 @@ final class BrowserSidebarWidgetDeckScrollObserverView: NSView {
             sidebarToggleAction: .hide,
             toggleSidebar: {},
             commandSurfaceNamespace: commandSurfaceNamespace,
+            commandPaletteHandoff: .neither,
             tabPromotionNamespace: tabPromotionNamespace
         )
     }

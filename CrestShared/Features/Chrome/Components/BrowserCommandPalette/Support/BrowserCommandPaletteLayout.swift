@@ -48,6 +48,15 @@ enum BrowserCommandPaletteLayout {
         )
     }
 
+    /// The overlay card's width in the space its layer leaves it: as wide as
+    /// the palette allows, less the padding around the card.
+    static func overlayCardWidth(availableWidth: CGFloat) -> CGFloat {
+        min(
+            BrowserCommandPaletteMetrics.maximumCardWidth,
+            max(0, availableWidth - BrowserCommandPaletteMetrics.overlayCardPadding * 2)
+        )
+    }
+
     static func overlayResultAreaHeight(availableHeight: CGFloat) -> CGFloat {
         max(
             BrowserCommandPaletteMetrics.minimumOverlayResultHeight,

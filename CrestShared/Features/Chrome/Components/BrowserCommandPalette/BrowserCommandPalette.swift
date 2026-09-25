@@ -4,8 +4,10 @@ import SwiftUI
 @MainActor
 struct BrowserCommandPalette: View {
     let presentation: BrowserCommandPalettePresentation
+    /// The window's command-surface namespace, in which an overlay palette
+    /// grows out of its Space's address field. Absent where the palette
+    /// appears in place.
     let morphNamespace: Namespace.ID?
-    let morphID: String?
     let overlayContentLeadingInset: CGFloat
     let overlayContentInsets: EdgeInsets?
 
@@ -27,14 +29,12 @@ struct BrowserCommandPalette: View {
         dismiss: @escaping () -> Void,
         presentation: BrowserCommandPalettePresentation = .overlay,
         morphNamespace: Namespace.ID? = nil,
-        morphID: String? = nil,
         overlayContentLeadingInset: CGFloat = 0,
         overlayContentInsets: EdgeInsets? = nil,
         emptySelectionActions: BrowserEmptySelectionPaletteActions? = nil
     ) {
         self.presentation = presentation
         self.morphNamespace = morphNamespace
-        self.morphID = morphID
         self.overlayContentLeadingInset = overlayContentLeadingInset
         self.overlayContentInsets = overlayContentInsets
         _model = State(
@@ -57,7 +57,6 @@ struct BrowserCommandPalette: View {
             model: model,
             presentation: presentation,
             morphNamespace: morphNamespace,
-            morphID: morphID,
             overlayContentLeadingInset: overlayContentLeadingInset,
             overlayContentInsets: overlayContentInsets
         )

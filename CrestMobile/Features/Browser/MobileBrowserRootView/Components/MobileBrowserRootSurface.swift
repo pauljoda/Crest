@@ -96,7 +96,7 @@ struct MobileBrowserRootSurface<Compact: View, Regular: View, Palette: View>:
             }
         }
         .animation(
-            chromeAnimation(CrestMotion.pane),
+            chromeAnimation(BrowserCommandSurfaceMorph.animation),
             value: isCommandPalettePresented
         )
     }

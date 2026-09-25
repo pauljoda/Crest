@@ -179,8 +179,8 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
             value: model.isSidebarApproachingDock
         )
         .animation(
-            chromeAnimation(CrestMotion.pane),
-            value: model.chrome.isCommandPalettePresented
+            chromeAnimation(BrowserCommandSurfaceMorph.animation),
+            value: model.isCommandPaletteShown
         )
         .onChange(
             of: model.chrome.utilityPresentation.isSidebarInteractionActive

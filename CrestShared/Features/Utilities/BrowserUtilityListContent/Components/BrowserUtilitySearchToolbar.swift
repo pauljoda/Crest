@@ -5,7 +5,9 @@ struct BrowserUtilitySearchToolbar: View {
     @Binding var searchText: String
     @Binding var filter: BrowserUtilityListFilter
     let morphNamespace: Namespace.ID
-    let morphID: String
+    /// The identity the toolbar shares with the address field it stands in
+    /// for.
+    let morph: BrowserCommandSurfaceMorph
     var clearHistory: (() -> Void)?
 
     var body: some View {
@@ -35,7 +37,7 @@ struct BrowserUtilitySearchToolbar: View {
                 in: .rect(cornerRadius: BrowserChromeLayout.addressCornerRadius)
             )
             .matchedGeometryEffect(
-                id: morphID,
+                id: morph,
                 in: morphNamespace,
                 properties: .frame,
                 anchor: .center,
@@ -58,7 +60,8 @@ struct BrowserUtilitySearchToolbar: View {
         @Previewable @State var filter: BrowserUtilityListFilter = .all
         @Previewable @Namespace var namespace
         BrowserUtilitySearchToolbar(
-            surface: .history, searchText: $query, filter: $filter, morphNamespace: namespace, morphID: "preview",
+            surface: .history, searchText: $query, filter: $filter, morphNamespace: namespace,
+            morph: .utilitySearch(spaceID: BrowserSession.preview.spaces[0].id),
             clearHistory: {}
         )
         .padding().frame(width: 360)

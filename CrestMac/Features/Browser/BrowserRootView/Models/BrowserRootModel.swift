@@ -594,6 +594,42 @@ extension BrowserRootModel {
 // MARK: - Command Palette
 
 extension BrowserRootModel {
+    /// Whether this window shows its command palette: one was asked for, and
+    /// the selected tab, or the empty selection of an unlocked Space, can act
+    /// on it.
+    var isCommandPaletteShown: Bool {
+        guard chrome.isCommandPalettePresented else { return false }
+        if let source = selectedTabAssignment {
+            return isPaletteSourceAvailable(source)
+        }
+        return emptySelectionPaletteActions?.isAvailable == true
+    }
+
+    /// The New Tab actions of a selected Space with no tab selected.
+    var emptySelectionPaletteActions: BrowserEmptySelectionPaletteActions? {
+        guard let space = browser.selectedSpace, browser.selectedTab == nil else { return nil }
+        return BrowserEmptySelectionPaletteActions(
+            source: BrowserSpaceRuntimeAssignment(space: space),
+            browser: browser,
+            accessController: spaceAccess,
+            didSelectTab: { [weak self] in
+                guard let self else { return }
+                self.pages.select(session: self.browser.presented)
+                self.address = self.browser.selectedTab?.url?.absoluteString ?? ""
+            }
+        )
+    }
+
+    /// Which side of the field-to-palette morph holds the shared identity. The
+    /// field is on screen whenever the sidebar is, docked or floating.
+    func commandPaletteHandoff(reduceMotion: Bool) -> BrowserCommandPaletteHandoff {
+        .resolve(
+            isPaletteShown: isCommandPaletteShown,
+            isFieldOnScreen: sidebarPresentation.showsSidebar,
+            reduceMotion: reduceMotion
+        )
+    }
+
     var selectedTabAssignment: BrowserTabRuntimeAssignment? {
         guard let space = browser.selectedSpace, let tab = browser.selectedTab else {
             return nil

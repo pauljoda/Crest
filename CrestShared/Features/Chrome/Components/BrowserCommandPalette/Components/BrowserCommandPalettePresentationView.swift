@@ -4,7 +4,6 @@ struct BrowserCommandPalettePresentationView: View {
     let model: BrowserCommandPaletteModel
     let presentation: BrowserCommandPalettePresentation
     let morphNamespace: Namespace.ID?
-    let morphID: String?
     let overlayContentLeadingInset: CGFloat
     var overlayContentInsets: EdgeInsets? = nil
     let queryIsFocused: FocusState<Bool>.Binding
@@ -14,7 +13,7 @@ struct BrowserCommandPalettePresentationView: View {
         if presentation == .overlay {
             GeometryReader { proxy in
                 let availableHeight =
-                    proxy.size.height - (overlayContentInsets?.top ?? 0) - (overlayContentInsets?.bottom ?? 0)
+                    proxy.size.height - contentInsets.top - contentInsets.bottom
                 let maximumResultAreaHeight =
                     BrowserCommandPaletteLayout
                     .overlayResultAreaHeight(availableHeight: availableHeight)
@@ -26,14 +25,14 @@ struct BrowserCommandPalettePresentationView: View {
                         presentation: presentation,
                         maximumResultAreaHeight: maximumResultAreaHeight,
                         morphNamespace: morphNamespace,
-                        morphID: morphID,
+                        restingWidth: BrowserCommandPaletteLayout.overlayCardWidth(
+                            availableWidth: proxy.size.width - contentInsets.leading - contentInsets.trailing
+                        ),
                         queryIsFocused: queryIsFocused
                     )
                     .padding(BrowserCommandPaletteMetrics.overlayCardPadding)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .padding(
-                        overlayContentInsets
-                            ?? EdgeInsets(top: 0, leading: overlayContentLeadingInset, bottom: 0, trailing: 0))
+                    .padding(contentInsets)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
@@ -42,10 +41,17 @@ struct BrowserCommandPalettePresentationView: View {
                 model: model,
                 presentation: presentation,
                 maximumResultAreaHeight: BrowserCommandPaletteLayout.maximumResultAreaHeight,
-                morphNamespace: morphNamespace,
-                morphID: morphID,
+                morphNamespace: nil,
+                restingWidth: nil,
                 queryIsFocused: queryIsFocused
             )
         }
+    }
+
+    /// The part of the overlay the page's chrome keeps, which the card and
+    /// its results stay clear of.
+    private var contentInsets: EdgeInsets {
+        overlayContentInsets
+            ?? EdgeInsets(top: 0, leading: overlayContentLeadingInset, bottom: 0, trailing: 0)
     }
 }

@@ -4,7 +4,6 @@ struct BrowserCommandPaletteContent: View {
     let model: BrowserCommandPaletteModel
     let presentation: BrowserCommandPalettePresentation
     let morphNamespace: Namespace.ID?
-    let morphID: String?
     let overlayContentLeadingInset: CGFloat
     var overlayContentInsets: EdgeInsets? = nil
 
@@ -19,7 +18,6 @@ struct BrowserCommandPaletteContent: View {
             model: model,
             presentation: presentation,
             morphNamespace: morphNamespace,
-            morphID: morphID,
             overlayContentLeadingInset: overlayContentLeadingInset,
             overlayContentInsets: overlayContentInsets,
             queryIsFocused: $queryIsFocused

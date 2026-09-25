@@ -11,6 +11,7 @@ struct SidebarChrome: View {
     let activateAddress: () -> Void
     let submitAddress: () -> Void
     let commandSurfaceNamespace: Namespace.ID
+    let commandPaletteHandoff: BrowserCommandPaletteHandoff
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -50,6 +51,7 @@ struct SidebarChrome: View {
                         activateAddress: activateAddress,
                         submitAddress: submitAddress,
                         commandSurfaceNamespace: commandSurfaceNamespace,
+                        commandPaletteHandoff: commandPaletteHandoff,
                         siteControlPresentationChanged: {
                             context.utilityPresentation.setSiteControlPresented($0)
                         },

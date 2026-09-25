@@ -40,7 +40,7 @@ struct MobileBrowserSidebarTopChrome: View {
                     searchText: configuration.context.utilitySearchText,
                     filter: configuration.context.utilityFilter,
                     morphNamespace: configuration.compactChromeNamespace,
-                    morphID: morphID,
+                    morph: .utilitySearch(spaceID: selectedSpaceID),
                     clearHistory: confirmClearHistory
                 )
                 .padding(.horizontal, 12)
@@ -97,7 +97,8 @@ struct MobileBrowserSidebarTopChrome: View {
             activate: configuration.activateAddress,
             submit: configuration.submitAddress,
             morphNamespace: configuration.compactChromeNamespace,
-            morphID: morphID,
+            spaceID: selectedSpaceID,
+            commandPaletteHandoff: configuration.commandPaletteHandoff,
             branding: configuration.context.browser.selectedSpace?.branding
         )
     }
@@ -115,11 +116,10 @@ struct MobileBrowserSidebarTopChrome: View {
             ?? configuration.context.browser.selectedTab?.url
     }
 
-    /// Never the palette's `crest-address-command-` identity: the field used
-    /// to spell a Space's ID wrapper, so the palette has never taken the
-    /// field's frame, and this keeps it so.
-    private var morphID: String {
-        "crest-sidebar-address-\(configuration.context.browser.selectedSpaceID.uuidString)"
+    /// The chrome sits above the pager, so the field and the toolbar belong
+    /// to the selected Space.
+    private var selectedSpaceID: UUID {
+        configuration.context.browser.selectedSpaceID
     }
 
     /// The toolbar sits above the pager, so the Space it clears is the selected

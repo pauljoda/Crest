@@ -20,7 +20,7 @@ struct SpaceSidebarUtilityContent: View {
                 searchText: $searchText,
                 filter: $filter,
                 morphNamespace: commandSurfaceNamespace,
-                morphID: BrowserRootCommandSurfaceID.sidebarAddress(spaceID: space.id),
+                morph: .utilitySearch(spaceID: space.id),
                 clearHistory: clearHistory
             )
             .padding(.horizontal, BrowserChromeLayout.sidebarHorizontalInset)

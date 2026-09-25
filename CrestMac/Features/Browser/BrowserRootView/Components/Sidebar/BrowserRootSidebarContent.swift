@@ -42,6 +42,7 @@ struct BrowserRootSidebarContent: View {
                     model.toggleSidebar(reduceMotion: reduceMotion)
                 },
                 commandSurfaceNamespace: commandSurfaceNamespace,
+                commandPaletteHandoff: model.commandPaletteHandoff(reduceMotion: reduceMotion),
                 tabPromotionNamespace: tabPromotionNamespace
             )
         }
@@ -81,7 +82,6 @@ struct BrowserRootSidebarContent: View {
         model.browser.openSettings()
         model.pages.select(session: model.browser.presented)
     }
-
 
     private func createSpace() {
         model.browser.addSpace()

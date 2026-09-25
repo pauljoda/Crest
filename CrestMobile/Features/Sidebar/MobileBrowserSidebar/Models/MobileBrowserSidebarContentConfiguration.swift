@@ -11,6 +11,9 @@ struct MobileBrowserSidebarContentConfiguration {
     let context: BrowserSidebarContext
     let pages: MobileBrowserPageStore
     let compactChromeNamespace: Namespace.ID
+    /// Whether the address field holds its identity for the command palette
+    /// or has handed it to the open palette.
+    let commandPaletteHandoff: BrowserCommandPaletteHandoff
     let tabPromotionNamespace: Namespace.ID
     let address: Binding<String>
     let isAddressEditing: Binding<Bool>

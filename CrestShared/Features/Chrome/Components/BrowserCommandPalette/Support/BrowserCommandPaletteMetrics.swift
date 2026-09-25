@@ -17,6 +17,9 @@ enum BrowserCommandPaletteMetrics {
     static let minimumOverlayResultHeight: CGFloat = 82
     static let maximumCardWidth: CGFloat = 720
     static let cardCornerRadius: CGFloat = 26
+    /// How far below full size the card's contents start while the card grows
+    /// out of the address field, and end while it shrinks back.
+    static let morphContentScale: CGFloat = 0.97
 
     static let searchFieldSpacing: CGFloat = 12
     static let searchFieldHorizontalPadding: CGFloat = 20

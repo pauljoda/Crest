@@ -7,6 +7,9 @@ struct BrowserLookAndFeelAddressPreview: View {
     var showsBackground = true
 
     @Namespace private var namespace
+    /// The Space a preview without one names. Nothing else lives in the
+    /// preview's own namespace, so any stable identity will do.
+    @State private var standInSpaceID = UUID()
 
     @Environment(\.browserInteractionCapabilities) private var capabilities
 
@@ -37,7 +40,7 @@ struct BrowserLookAndFeelAddressPreview: View {
                 activate: {},
                 submit: {},
                 morphNamespace: namespace,
-                morphID: "look-and-feel-address-preview",
+                spaceID: space?.id ?? standInSpaceID,
                 branding: branding)
         )
         .labelsHidden()

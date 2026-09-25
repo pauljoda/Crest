@@ -2,6 +2,7 @@ import SwiftUI
 
 struct BrowserCommandPaletteScrim: View {
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @Environment(\.browserCommandPaletteTransitionPhase) private var transitionPhase
 
     let dismiss: () -> Void
 
@@ -17,6 +18,7 @@ struct BrowserCommandPaletteScrim: View {
         }
         .buttonStyle(.plain)
         .ignoresSafeArea(.container, edges: .all)
+        .opacity(transitionPhase.isIdentity ? 1 : 0)
         .accessibilityHidden(true)
     }
 }

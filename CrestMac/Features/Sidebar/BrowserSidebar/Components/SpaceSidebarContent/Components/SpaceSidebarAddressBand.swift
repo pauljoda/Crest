@@ -14,6 +14,7 @@ struct SpaceSidebarAddressBand: View {
     let activateAddress: () -> Void
     let submitAddress: () -> Void
     let commandSurfaceNamespace: Namespace.ID
+    let commandPaletteHandoff: BrowserCommandPaletteHandoff
     let siteControlPresentationChanged: (Bool) -> Void
     let siteControlContextMenuPresentationChanged: (Bool) -> Void
 
@@ -56,7 +57,8 @@ struct SpaceSidebarAddressBand: View {
             activate: activateAddress,
             submit: submitAddress,
             morphNamespace: commandSurfaceNamespace,
-            morphID: BrowserRootCommandSurfaceID.sidebarAddress(spaceID: space.id),
+            spaceID: space.id,
+            commandPaletteHandoff: commandPaletteHandoff,
             branding: space.branding
         )
     }

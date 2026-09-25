@@ -2493,6 +2493,10 @@
     "id-names-plain-uuids": {
       "category": "internal",
       "message": "Tab, Space, folder, split and window identities are plain UUIDs in Swift, and everything Crest stores keeps the identity spelling earlier builds read."
+    },
+    "command-palette-address-morph": {
+      "category": "improved",
+      "message": "The command palette now opens out of the address field and closes back into it."
     }
   }
 }

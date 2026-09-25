@@ -38,6 +38,10 @@ struct MobileBrowserSidebarSurface: View {
     let usesNativeNavigationTransition: Bool
 
     let compactChromeNamespace: Namespace.ID
+    /// Whether the address field holds its identity for the command palette
+    /// or has handed it to the open palette. Only a placement beside an
+    /// overlay palette takes part.
+    let commandPaletteHandoff: BrowserCommandPaletteHandoff
     let tabPromotionNamespace: Namespace.ID
     @Binding var address: String
     @Binding var isAddressEditing: Bool
@@ -149,6 +153,7 @@ struct MobileBrowserSidebarSurface: View {
             context: context,
             pages: pages,
             compactChromeNamespace: compactChromeNamespace,
+            commandPaletteHandoff: commandPaletteHandoff,
             tabPromotionNamespace: tabPromotionNamespace,
             address: $address,
             isAddressEditing: $isAddressEditing,
@@ -262,6 +267,7 @@ struct MobileBrowserSidebarSurface: View {
         sidebarToggleUndocks: false,
         usesNativeNavigationTransition: false,
         compactChromeNamespace: compactChromeNamespace,
+        commandPaletteHandoff: .neither,
         tabPromotionNamespace: tabPromotionNamespace,
         address: $address,
         isAddressEditing: $isAddressEditing,

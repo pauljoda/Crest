@@ -12,7 +12,7 @@ struct BrowserRootCommandPaletteLayer: View {
     @ViewBuilder
     var body: some View {
         if let mode = model.chrome.commandPaletteMode,
-            isSourceAvailable
+            model.isCommandPaletteShown
         {
             BrowserCommandPalette(
                 space: model.browser.selectedSpace,
@@ -27,11 +27,8 @@ struct BrowserRootCommandPaletteLayer: View {
                 },
                 dismiss: model.chrome.dismissCommandPalette,
                 morphNamespace: commandSurfaceNamespace,
-                morphID: BrowserRootCommandSurfaceID.address(
-                    spaceID: model.browser.selectedSpace?.id
-                ),
                 overlayContentInsets: contentInsets,
-                emptySelectionActions: emptySelectionActions
+                emptySelectionActions: model.emptySelectionPaletteActions
             )
             .id(
                 BrowserCommandPalettePresentationIdentity(
@@ -43,26 +40,6 @@ struct BrowserRootCommandPaletteLayer: View {
             .transition(.browserCommandPaletteOverlay)
             .zIndex(BrowserRootMetrics.commandPaletteZIndex)
         }
-    }
-
-    private var isSourceAvailable: Bool {
-        if let source = model.selectedTabAssignment {
-            return model.isPaletteSourceAvailable(source)
-        }
-        return emptySelectionActions?.isAvailable == true
-    }
-
-    private var emptySelectionActions: BrowserEmptySelectionPaletteActions? {
-        guard let space = model.browser.selectedSpace, model.browser.selectedTab == nil else { return nil }
-        return BrowserEmptySelectionPaletteActions(
-            source: BrowserSpaceRuntimeAssignment(space: space),
-            browser: model.browser,
-            accessController: model.spaceAccess,
-            didSelectTab: {
-                model.pages.select(session: model.browser.presented)
-                model.address = model.browser.selectedTab?.url?.absoluteString ?? ""
-            }
-        )
     }
 
     private var commandActions: BrowserCommandActions {
