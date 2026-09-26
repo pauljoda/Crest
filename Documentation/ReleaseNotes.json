@@ -2581,6 +2581,10 @@
     "sidebar-refusals-as-notices": {
       "category": "improved",
       "message": "When the sidebar can't take a drop, it tells you in the window's notice instead of an alert you have to dismiss."
+    },
+    "sidebar-moved-tabs-drag-again": {
+      "category": "fixed",
+      "message": "Tabs moved together in the sidebar can be dragged again right away."
     }
   }
 }

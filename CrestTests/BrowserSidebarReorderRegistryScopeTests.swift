@@ -91,6 +91,31 @@ final class BrowserSidebarReorderRegistryScopeTests: XCTestCase {
     /// Geometry cannot separate them. Both Spaces lay their cards out in the
     /// same content area, and the content area does not move an inch when the
     /// Space in it changes, so the two sets occupy the very same rectangles.
+    /// A row that moves between lists is two views for a moment. The one
+    /// leaving can measure itself again during its exit, after the arriving
+    /// one did; when it leaves, the row keeps the arriving view's frame
+    /// instead of losing its registration until something moves it again.
+    func testARowKeepsItsFrameWhenTheViewItLeftMeasuresLast() {
+        let state = BrowserSidebarReorderState()
+        let space = BrowserSpaceRuntimeAssignment(spaceID: SpaceID(), profileID: UUID())
+        let id = BrowserSidebarReorderItemID.tab(TabID())
+        let (leaving, arriving) = (UUID(), UUID())
+        func row(y: CGFloat, folderID: FolderID? = nil) -> BrowserSidebarReorderRow {
+            BrowserSidebarReorderRow(
+                id: id, space: space, section: .tabs(placement: .current, folderID: folderID),
+                frame: CGRect(x: 0, y: y, width: 240, height: 40))
+        }
+        let folder = FolderID()
+        state.register(row: row(y: 200, folderID: folder), owner: leaving)
+        state.register(row: row(y: 40), owner: arriving)
+        state.register(row: row(y: 190, folderID: folder), owner: leaving)
+        state.removeRow(id, owner: leaving)
+
+        XCTAssertEqual(state.frame(ofRow: id), CGRect(x: 0, y: 40, width: 240, height: 40))
+        state.removeRow(id, owner: arriving)
+        XCTAssertNil(state.frame(ofRow: id), "The row goes once no view shows it.")
+    }
+
     func testAnotherSpacesCardsCannotFillThisDragsSplit() {
         let fixture = SplitCardRegistryFixture(
             ownCardCount: 2,

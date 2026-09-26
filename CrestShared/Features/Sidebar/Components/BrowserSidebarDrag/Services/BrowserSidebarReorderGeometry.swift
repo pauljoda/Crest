@@ -26,20 +26,43 @@ final class BrowserSidebarReorderGeometry {
 
     private(set) var selectionRowsRevision = 0
     @ObservationIgnored private(set) var rows: [BrowserSidebarReorderItemID: RegisteredRow] = [:]
+    /// Registrations a later one replaced while their view was still on
+    /// screen, by item and view. A row that moves between lists is two views
+    /// for a moment, and the departing one can measure itself again during its
+    /// exit, after the arriving one did; when it leaves, the item falls back to
+    /// the view that stays instead of losing its frame.
+    @ObservationIgnored private var replacedRows: [BrowserSidebarReorderItemID: [UUID: RegisteredRow]] = [:]
     @ObservationIgnored private(set) var zones: [UUID: RegisteredZone] = [:]
     @ObservationIgnored private(set) var scrollRegions: [UUID: CGRect] = [:]
     @ObservationIgnored private(set) var sidebarViewports: [UUID: CGRect] = [:]
     @ObservationIgnored private(set) var splitCards: [TabID: SplitCard] = [:]
 
     func register(row: BrowserSidebarReorderRow, owner: UUID, scrollRegionID: UUID?) {
-        if rows[row.id] == nil { selectionRowsRevision &+= 1 }
+        if let current = rows[row.id] {
+            if current.owner != owner { replacedRows[row.id, default: [:]][current.owner] = current }
+        } else {
+            selectionRowsRevision &+= 1
+        }
+        replacedRows[row.id]?[owner] = nil
         rows[row.id] = RegisteredRow(owner: owner, row: row, scrollRegionID: scrollRegionID)
     }
 
+    /// Forgets `owner`'s registration of the item. When it was the one in
+    /// use, the item keeps the registration of a view still showing it, if
+    /// any.
     func removeRow(_ id: BrowserSidebarReorderItemID, owner: UUID) {
-        guard rows[id]?.owner == owner else { return }
-        rows[id] = nil
-        selectionRowsRevision &+= 1
+        defer { if replacedRows[id]?.isEmpty == true { replacedRows[id] = nil } }
+        guard rows[id]?.owner == owner else {
+            replacedRows[id]?[owner] = nil
+            return
+        }
+        if let remaining = replacedRows[id]?.first?.value {
+            replacedRows[id]?[remaining.owner] = nil
+            rows[id] = remaining
+        } else {
+            rows[id] = nil
+            selectionRowsRevision &+= 1
+        }
     }
 
     func registeredRows(in space: BrowserSpaceRuntimeAssignment) -> [BrowserSidebarReorderRow] {
@@ -79,19 +102,30 @@ final class BrowserSidebarReorderGeometry {
         scrollRegions[id] = nil
         let previousCount = rows.count
         rows = rows.filter { $0.value.scrollRegionID != id }
+        replacedRows = replacedRows.compactMapValues { views in
+            let kept = views.filter { $0.value.scrollRegionID != id }
+            return kept.isEmpty ? nil : kept
+        }
         if rows.count != previousCount { selectionRowsRevision &+= 1 }
         zones = zones.filter { $0.value.scrollRegionID != id }
     }
 
     /// Scrolling translates frozen measurements uniformly during a lift.
     func scrollableContentDidMove(in id: UUID, by offsetY: CGFloat) {
-        for key in Array(rows.keys) where rows[key]?.scrollRegionID == id {
-            guard var registration = rows[key] else { continue }
+        func moved(_ registration: RegisteredRow) -> RegisteredRow {
+            var registration = registration
             registration.row = BrowserSidebarReorderRow(
                 id: registration.row.id, space: registration.row.space, section: registration.row.section,
                 frame: registration.row.frame.offsetBy(dx: 0, dy: offsetY),
                 parentItemID: registration.row.parentItemID)
-            rows[key] = registration
+            return registration
+        }
+        for key in Array(rows.keys) where rows[key]?.scrollRegionID == id {
+            guard let registration = rows[key] else { continue }
+            rows[key] = moved(registration)
+        }
+        replacedRows = replacedRows.mapValues { views in
+            views.mapValues { $0.scrollRegionID == id ? moved($0) : $0 }
         }
         for key in Array(zones.keys) where zones[key]?.scrollRegionID == id {
             guard var registration = zones[key] else { continue }
