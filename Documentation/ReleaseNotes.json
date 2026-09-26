@@ -2585,6 +2585,10 @@
     "sidebar-moved-tabs-drag-again": {
       "category": "fixed",
       "message": "Tabs moved together in the sidebar can be dragged again right away."
+    },
+    "2026-09-25-chromium-release-entry-export": {
+      "category": "fixed",
+      "message": "Fix the Chromium build crashing on launch when built for release"
     }
   }
 }

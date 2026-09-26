@@ -90,10 +90,11 @@
     /// The framework's entry point, which Chromium calls on its UI thread, the
     /// main thread, once it loads the framework: the Mac shell's host, the
     /// engine binding to register with the core the framework creates, and the
-    /// pages' direct path to it.
+    /// pages' direct path to it. Public so a Release build, which hides
+    /// internal symbols, still exports it for Chromium's lookup by name.
     @MainActor
     @_cdecl("crest_chromium_ui_start")
-    func crestChromiumUIStart(
+    public func crestChromiumUIStart(
         _ host: any CrestChromiumEngineHost, _ binding: UnsafePointer<crest_engine_binding_t>,
         _ fingerprint: UnsafePointer<UInt8>, _ fingerprintLength: Int, _ pages: UnsafePointer<crest_engine_pages_t>
     ) {
