@@ -120,6 +120,22 @@ def clone_recipe(destination, lock):
             raise ValueError(f"Wrong upstream commit in {destination / relative}")
 
 
+def restore_host_base(source, previous, desired):
+    # A legacy build may already have installed the desired reviewed patch
+    # without updating our marker. Accept that exact state, but no local edits.
+    target_states = {name: set(hashes.values()) for name, hashes in desired.items()}
+    target_states.update({name: {hashes["before"]} for name, hashes in previous["inputs"].items()
+                          if name not in desired})
+    if all((source / name).is_file() and sha256(source / name) in hashes
+           for name, hashes in target_states.items()):
+        return
+    for name, hashes in previous["inputs"].items():
+        if not (source / name).is_file() or sha256(source / name) != hashes["after"]:
+            raise ValueError(f"Locally modified host source: {name}")
+    subprocess.run(["patch", "--batch", "--fuzz=0", "-R", "-p1"],
+                   input=previous["patch"], cwd=source, text=True, check=True)
+
+
 class Workspace:
     def __init__(self, root, repo=REPO):
         self.root = validate_workspace(root, repo)
@@ -160,11 +176,7 @@ class Workspace:
         if installed.exists():
             previous = read_json(installed)
             if previous["patch"] != patch.read_text():
-                for name, hashes in previous["inputs"].items():
-                    if sha256(self.source / name) != hashes["after"]:
-                        raise ValueError(f"Locally modified host source: {name}")
-                subprocess.run(["patch", "--batch", "--fuzz=0", "-R", "-p1"],
-                               input=previous["patch"], cwd=self.source, text=True, check=True)
+                restore_host_base(self.source, previous, inputs)
             current_files = {p.relative_to(self.repo / ENGINE / "Overlay").as_posix()
                              for p in (self.repo / ENGINE / "Overlay").rglob("*") if p.is_file()}
             for name, checksum in previous.get("overlay", {}).items():

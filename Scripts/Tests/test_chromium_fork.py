@@ -9,7 +9,7 @@ import unittest
 
 SCRIPTS = Path(__file__).resolve().parents[1] / "control-plane"
 sys.path.insert(0, str(SCRIPTS))
-from chromium_fork import exclusive_workspace, refresh_host_inputs, select_update, validate_workspace
+from chromium_fork import exclusive_workspace, refresh_host_inputs, restore_host_base, select_update, sha256, validate_workspace
 from chromium_artifact import release_ready
 from chromium_engine import asset_name
 
@@ -37,6 +37,27 @@ class UpstreamSelectionTests(unittest.TestCase):
 
 
 class WorkspaceTests(unittest.TestCase):
+    def test_switching_host_revisions_accepts_an_exact_legacy_install_but_preserves_local_edits(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary)
+            path = source / "sample.cc"
+            hashes = {}
+            for state in ("base", "old", "desired"):
+                path.write_text(f"{state}\n")
+                hashes[state] = sha256(path)
+            previous = {"patch": "--- a/sample.cc\n+++ b/sample.cc\n@@ -1 +1 @@\n-base\n+old\n",
+                        "inputs": {"sample.cc": {"before": hashes["base"], "after": hashes["old"]}}}
+            desired = {"sample.cc": {"before": hashes["base"], "after": hashes["desired"]}}
+            restore_host_base(source, previous, desired)
+            self.assertEqual(path.read_text(), "desired\n")
+            path.write_text("old\n")
+            restore_host_base(source, previous, desired)
+            self.assertEqual(path.read_text(), "base\n")
+            path.write_text("unreviewed local edit\n")
+            with self.assertRaisesRegex(ValueError, "Locally modified"):
+                restore_host_base(source, previous, desired)
+            self.assertEqual(path.read_text(), "unreviewed local edit\n")
+
     def test_independent_operations_cannot_share_a_locked_workspace(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
