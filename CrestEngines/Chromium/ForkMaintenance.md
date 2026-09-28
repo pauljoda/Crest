@@ -1,0 +1,147 @@
+# Maintaining Crest's Chromium fork
+
+The fork is the pinned recipe and patch set in Crest. `~/Dev/CrestChromium` is its
+durable build workspace. A separate Git repository is unnecessary while the
+Chromium host and Crest's C ABI evolve together. No product code belongs only in
+the expanded Chromium tree: make changes in the overlay or patch set first.
+
+## Build workspace
+
+Install Python 3.11 or newer, Go, Xcode and its Metal toolchain. Retain the macOS
+SDK named by `performanceInputs.macSDKVersion` in `source.lock.json`. Use one
+tools environment and one source/output directory per pinned upstream recipe:
+
+```sh
+python3 -m venv ~/Dev/CrestChromium/tools
+~/Dev/CrestChromium/tools/bin/python -m pip install schema==0.7.8 ninja==1.13.0
+export PATH="$HOME/Dev/CrestChromium/tools/bin:/opt/homebrew/bin:$PATH"
+python Scripts/control-plane/chromium-fork.py status
+python Scripts/control-plane/chromium-fork.py build \
+  --sdk /Library/Developer/CommandLineTools/SDKs/MacOSX26.5.sdk
+```
+
+The command verifies upstream pins, prepares missing source, applies Crest's
+host, configures the performance build, compiles, and checks JavaScript execution
+in a headless browser with a temporary profile. It does not use installed Crest
+or personal browser state. This smoke check covers engine startup and rendering;
+native window, Space, input, extension, and persistence acceptance remains part
+of approving the Chromium product for stable distribution.
+
+The workspace contains `sources/<preparation-key>/upstream`, `profiles`, `tools`,
+and the Actions runner. App and ABI updates reuse the same upstream build.
+Changing the upstream recipe gets a new directory and preserves the previous
+working engine. Preparation requires 50 GiB free; compilation keeps a 15 GiB
+reserve. These are minimum gates, not a maximum disk budget. Inspect incomplete
+preparations before resuming them. Remove obsolete source directories only when
+no process uses them and the previous working engine is published.
+
+To adopt an existing completed source/build directory on the same volume:
+
+```sh
+python Scripts/control-plane/chromium-fork.py adopt --upstream /path/to/ungoogled-chromium-macos
+```
+
+Adoption verifies the recipe and host before moving it, and leaves a compatibility
+symlink at the previous path for references in generated build files. Keep that
+link until the generated paths have been migrated and checked. Existing builds
+may need a one-time rebuild if the relocation changes compiler arguments.
+Subsequent builds reuse the managed workspace. Run maintenance through the
+workspace command, which locks out other managed operations. Stop older direct
+Ninja commands before changing the shared source; those commands predate the
+workspace lock.
+
+## Upstream updates
+
+```sh
+python Scripts/control-plane/chromium-fork.py check-upstream
+python Scripts/control-plane/chromium-fork.py update \
+  --tag 152.0.7977.82-1.2 \
+  --sdk /Library/Developer/CommandLineTools/SDKs/MacOSX26.5.sdk
+```
+
+Use a real newer tag reported by `check-upstream`; the tag above illustrates the
+syntax. Start updates from a clean Crest checkout. The updater resolves the
+released macOS recipe and its ungoogled submodule, pins the source checksum and
+patch files, refreshes host hashes only after strict patch application, and pins
+the new source's PGO profile. It restores the source lock and host hashes if
+preparation fails. Build failures leave the candidate available for inspection.
+An esbuild version change stops for a toolchain review instead of using a stale
+toolchain. New milestones need `--allow-major` and do not automatically ship.
+After validating milestone updates, `fork.json.automaticMajorUpdates` can opt
+those updates into the same automated build and release gates.
+
+The immediate upstream is ungoogled-chromium for macOS. Updates therefore follow
+its releases, not the first Google Chrome announcement. Pulling a Google security
+fix ahead of that release requires a deliberate patch and normal engine review.
+
+## GitHub Actions
+
+Install the repository-scoped runner on the build Mac:
+
+```sh
+python Scripts/control-plane/install-chromium-runner.py
+```
+
+This verifies GitHub's runner archive checksum and installs a user LaunchAgent
+with the `crest-chromium` label. It starts at login; the Mac must remain awake and
+online to accept builds. Use `~/Dev/CrestChromium/runner/svc.sh stop` and `start`
+from that directory to control it. Signing keys stay in the existing release
+environment. The maintenance workflow has no pull-request trigger; never run
+untrusted pull-request code on this persistent personal Mac.
+
+Configure these repository variables:
+
+| Variable | Purpose |
+| --- | --- |
+| `CHROMIUM_WORKSPACE` | Absolute persistent workspace path on the Mac |
+| `CHROMIUM_INTEGRATION_BRANCH` | Branch containing the fork policy and scripts, initially `chromium-control-plane` |
+| `CHROMIUM_SDK` | Absolute path to the SDK pinned by the source lock |
+| `CHROMIUM_BUILD_JOBS` | Compiler parallelism, default 4 |
+| `CHROMIUM_CI_ENABLED` | `true` allows manual and scheduled engine builds |
+| `CHROMIUM_UPSTREAM_ENABLED` | `true` builds eligible upstream updates every six hours |
+| `CHROMIUM_AUTO_RELEASE` | `true` permits successful updates to merge and publish stable |
+| `CHROMIUM_STABLE_READY` | `true` confirms the Chromium product is accepted for stable |
+| `CREST_MACOS_ENGINE` | `chromium` selects Chromium for standard app releases; defaults to `webkit` |
+
+The workflow must be present on the default branch for its schedule to run. Its
+`fork.json` integration branch must also contain the maintenance scripts. Use the
+Actions UI or `gh workflow run chromium.yml --ref <workflow-branch> -f operation=check`
+to check upstream. `operation=build` builds and publishes the pinned engine;
+`operation=update` builds a released update and opens a PR. `upstream_tag` can
+select a specific release, and `allow_major=true` allows manual milestone review.
+The repository must allow Actions to create pull requests, and automatic merging
+must be enabled before automatic stable publication can merge update PRs.
+
+An update PR contains the new pins, host hashes, a patch version increment, and
+a release-note entry. Its engine is published before the branch is pushed.
+App release jobs consume only the artifact whose engine key matches their own
+source. No signing job reads a mutable local build directory.
+
+## Enabling automatic stable releases
+
+Keep `CHROMIUM_AUTO_RELEASE=false` while Chromium is experimental. Approve the
+native Chromium product, merge it and this workflow into the default branch, and
+set `fork.json.integrationBranch` and `CHROMIUM_INTEGRATION_BRANCH` to that branch. Configure required checks and
+review rules for the integration branch; automation uses normal PR merge rules
+and never uses an administrator bypass.
+
+Set `CREST_MACOS_ENGINE=chromium` and verify a signed, notarized development
+release through the standard release workflow. Once that path is accepted, set
+`CHROMIUM_STABLE_READY=true`, `CHROMIUM_CI_ENABLED=true`, and
+`CHROMIUM_UPSTREAM_ENABLED=true`. Finally set `CHROMIUM_AUTO_RELEASE=true`.
+
+An eligible update then builds, passes the engine smoke check, publishes its
+engine, opens and merges its PR after required checks, creates the matching
+version tag, and explicitly dispatches the stable release workflow. Explicit
+dispatch is needed because tags created with `GITHUB_TOKEN` do not start another
+workflow. Stable dispatch still requires a version tag matching
+`Config/Version.xcconfig`; it cannot publish an arbitrary branch as stable.
+Signing, notarization, attestation, and the Sparkle appcast use the existing
+production workflow. The appcast changes only after release publication succeeds.
+
+Turn `CHROMIUM_AUTO_RELEASE=false` to stop future automatic publication, or
+`CHROMIUM_CI_ENABLED=false` to stop new engine builds. Cancel a running workflow
+separately if it must stop immediately. Failed or conflicting updates keep the
+previous appcast in service. To roll back an engine, restore its reviewed pins
+in a new patch-version commit and publish a newer app build; do not replace an
+existing engine artifact or decrease the Sparkle build number.

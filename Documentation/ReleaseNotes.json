@@ -3249,6 +3249,10 @@
     "fixture-server-trust-query-removed": {
       "category": "internal",
       "message": "The core's fixture certificate trust query and the Chromium page's unused main-frame script call are gone, since nothing asks for them any more."
+    },
+    "managed-chromium-fork-and-upstream-release-pipeline": {
+      "category": "internal",
+      "message": "Chromium builds use a managed workspace and a CI workflow with reviewed upstream updates and opt-in stable publication."
     }
   }
 }

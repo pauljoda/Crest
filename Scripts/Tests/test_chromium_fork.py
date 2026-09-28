@@ -1,0 +1,102 @@
+"""Protect upstream selection, persistent build ownership, and publication gates."""
+import importlib.util
+import json
+from pathlib import Path
+import sys
+import subprocess
+import tempfile
+import unittest
+
+SCRIPTS = Path(__file__).resolve().parents[1] / "control-plane"
+sys.path.insert(0, str(SCRIPTS))
+from chromium_fork import exclusive_workspace, refresh_host_inputs, select_update, validate_workspace
+
+spec = importlib.util.spec_from_file_location("publish_chromium_update", SCRIPTS / "publish-chromium-update.py")
+publication = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(publication)
+
+
+class UpstreamSelectionTests(unittest.TestCase):
+    def test_patch_releases_stay_eligible_after_the_next_milestone_ships(self):
+        releases = [{"tag_name": tag} for tag in ("154.0.8000.10-1.1", "152.0.7977.90-1.1", "152.0.7977.82-1.1")]
+        releases += [{"tag_name": "152.0.7977.99-1.1", "draft": True},
+                     {"tag_name": "152.0.7977.98-1.1", "prerelease": True},
+                     {"tag_name": "unrecognized-tag"}]
+        result = select_update("152.0.7977.82-1.1", releases)
+        self.assertEqual(result["candidate"], "152.0.7977.90-1.1")
+        self.assertEqual(result["latest"], "154.0.8000.10-1.1")
+        self.assertTrue(result["majorReviewRequired"])
+        self.assertEqual(select_update("152.0.7977.82-1.1", releases, True)["candidate"], "154.0.8000.10-1.1")
+
+    def test_revision_updates_advance_but_downgrades_and_equal_versions_do_not(self):
+        releases = [{"tag_name": tag} for tag in ("152.0.7977.82-1.2", "152.0.7977.81-1.1")]
+        self.assertEqual(select_update("152.0.7977.82-1.1", releases)["candidate"], "152.0.7977.82-1.2")
+        self.assertIsNone(select_update("152.0.7977.82-1.2", releases)["candidate"])
+
+
+class WorkspaceTests(unittest.TestCase):
+    def test_independent_operations_cannot_share_a_locked_workspace(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            with exclusive_workspace(root):
+                with self.assertRaisesRegex(ValueError, "Another Chromium operation"):
+                    with exclusive_workspace(root):
+                        self.fail("Second writer obtained the lock")
+            with exclusive_workspace(root):
+                pass
+
+    def test_workspace_cannot_alias_or_contain_the_product_checkout(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            repo = root / "Crest"
+            repo.mkdir()
+            alias = root / "alias"
+            alias.symlink_to(repo, target_is_directory=True)
+            for workspace in (root, repo, repo / "build", alias / "build"):
+                with self.subTest(workspace=workspace), self.assertRaises(ValueError):
+                    validate_workspace(workspace, repo)
+            self.assertEqual(validate_workspace(root / "CrestChromium", repo), (root / "CrestChromium").resolve())
+
+    def test_host_refresh_requires_every_patch_hunk_and_preserves_source(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            repo, source = root / "repo", root / "src"
+            host = repo / "CrestEngines/Chromium"
+            (host / "Patches").mkdir(parents=True)
+            source.mkdir()
+            patch = "--- a/sample.cc\n+++ b/sample.cc\n@@ -1,3 +1,3 @@\n context\n-old\n+new\n tail\n"
+            (host / "Patches/native-host.patch").write_text(patch)
+            original = "context\nold\ntail\n"
+            (source / "sample.cc").write_text(original)
+            refresh_host_inputs(repo, source)
+            pinned = (host / "host-inputs.json").read_text()
+            hashes = json.loads(pinned)["sample.cc"]
+            self.assertNotEqual(hashes["before"], hashes["after"])
+            self.assertEqual((source / "sample.cc").read_text(), original)
+            installed = root / "host.json"
+            installed.write_text(json.dumps({"patch": patch, "inputs": json.loads(pinned)}))
+            (source / "sample.cc").write_text("context\nnew\ntail\n")
+            refresh_host_inputs(repo, source, installed)
+            self.assertEqual((host / "host-inputs.json").read_text(), pinned)
+            self.assertEqual((source / "sample.cc").read_text(), "context\nnew\ntail\n")
+            (source / "sample.cc").write_text("changed context\nold\ntail\n")
+            with self.assertRaises(subprocess.CalledProcessError):
+                refresh_host_inputs(repo, source)
+            self.assertEqual((host / "host-inputs.json").read_text(), pinned)
+
+
+class PromotionTests(unittest.TestCase):
+    def test_automatic_stable_needs_every_gate_and_the_default_integration_branch(self):
+        policy = {"automaticChannel": "stable", "integrationBranch": "main", "automaticMajorUpdates": False}
+        arguments = dict(enabled="true", stable_ready="true", engine="chromium", default_branch="main", major_update=False)
+        self.assertTrue(publication.automatic_release_allowed(policy, **arguments))
+        for name, value in (("enabled", "false"), ("stable_ready", None), ("engine", "webkit"),
+                            ("default_branch", "release"), ("major_update", True)):
+            with self.subTest(gate=name):
+                self.assertFalse(publication.automatic_release_allowed(policy, **(arguments | {name: value})))
+        policy["integrationBranch"] = "chromium-control-plane"
+        self.assertFalse(publication.automatic_release_allowed(policy, **arguments))
+
+
+if __name__ == "__main__":
+    unittest.main()

@@ -164,9 +164,9 @@ class ReleasePreflightTests(unittest.TestCase):
         self.assertEqual(outputs["release_tag"], "v0.5.25")
         self.assertEqual(outputs["previous_commit"], self.previous_commit)
 
-    def test_stable_dispatch_branch_push_and_mismatched_tags_are_rejected(self) -> None:
+    def test_stable_branch_dispatch_branch_push_and_mismatched_tags_are_rejected(self) -> None:
         scenarios = (
-            {"GITHUB_EVENT_NAME": "workflow_dispatch", "REQUESTED_CHANNEL": "stable", "GITHUB_REF_TYPE": "tag", "GITHUB_REF_NAME": "v0.5.25"},
+            {"GITHUB_EVENT_NAME": "workflow_dispatch", "REQUESTED_CHANNEL": "stable"},
             {"GITHUB_EVENT_NAME": "push"},
             {"GITHUB_EVENT_NAME": "push", "GITHUB_REF_TYPE": "tag", "GITHUB_REF_NAME": "v0.5.24"},
         )
@@ -175,6 +175,21 @@ class ReleasePreflightTests(unittest.TestCase):
                 result, outputs = self.preflight(**environment)
                 self.assertNotEqual(result.returncode, 0)
                 self.assertEqual(outputs, {})
+
+    def test_stable_tag_dispatch_uses_the_same_tag_gate_as_a_push(self) -> None:
+        result, outputs = self.preflight(GITHUB_EVENT_NAME="workflow_dispatch", REQUESTED_CHANNEL="stable",
+                                         GITHUB_REF_TYPE="tag", GITHUB_REF_NAME="v0.5.25")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(outputs["release_tag"], "v0.5.25")
+
+    def test_chromium_stable_requires_readiness_and_keeps_the_selected_engine(self) -> None:
+        for readiness in ("", "false", "true"):
+            with self.subTest(readiness=readiness):
+                result, outputs = self.preflight(GITHUB_EVENT_NAME="push", GITHUB_REF_TYPE="tag",
+                    GITHUB_REF_NAME="v0.5.25", REQUESTED_ENGINE="chromium", CHROMIUM_STABLE_READY=readiness)
+                self.assertEqual(result.returncode == 0, readiness == "true", result.stderr)
+                if readiness == "true":
+                    self.assertEqual(outputs["engine"], "chromium")
 
     def test_reruns_and_queued_runs_advance_past_every_published_channel_build(self) -> None:
         self.publish_appcast("nightly", self.previous_commit, "nightly-build", build=1070)

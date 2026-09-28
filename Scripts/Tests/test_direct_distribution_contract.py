@@ -65,7 +65,10 @@ class DirectDistributionContractTests(unittest.TestCase):
             with self.subTest(required=required):
                 self.assertIn(required, workflow)
 
-        self.assertNotIn("CODE_SIGNING_ALLOWED=NO", workflow)
+        # The native Chromium UI framework is signed by the distribution packager.
+        # The exported app must still carry the production provisioning entitlements.
+        archive_command = workflow.split("xcodebuild archive", 1)[1].split("xcodebuild -exportArchive", 1)[0]
+        self.assertNotIn("CODE_SIGNING_ALLOWED=NO", archive_command)
         self.assertNotIn("CODE_SIGN_STYLE=Automatic", workflow)
         self.assertNotIn("hdiutil create", workflow)
 

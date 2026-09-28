@@ -1,11 +1,30 @@
 # Chromium source preparation
 
+## Maintained fork
+
+Crest maintains a patch fork in this repository. The upstream source archive,
+ungoogled revisions, Crest patches, overlay, and C ABI headers form one versioned
+engine definition. The expanded source and compiled output live in a persistent
+workspace outside the checkout, by default `~/Dev/CrestChromium`. They are build
+products, not the source of truth. Keeping the fork here lets a change to the
+engine contract and its Swift caller be reviewed together.
+
+`fork.json` defines the upstream repository, integration branch, and eventual
+automatic release channel. `source.lock.json` pins the complete upstream recipe;
+`host-inputs.json` records the inputs and outputs of Crest's host patch. A new
+upstream release must apply every existing Crest hunk without fuzz. A conflict,
+new toolchain requirement, failed build, or failed smoke check stops publication.
+Milestone changes require an explicit `--allow-major` update and manual review.
+
+See [Fork maintenance](ForkMaintenance.md) for the workspace commands, build Mac
+setup, CI switches, and stable release activation procedure.
+
 `source.lock.json` pins the Chromium archive, ungoogled macOS revisions, upstream
 patches, and Crest build adjustments. It records source preparation inputs. It
 does not identify a released engine artifact or establish host capabilities.
 
 The source build requires Apple Silicon, Xcode with the matching Metal toolchain,
-Python 3.10 or newer with `schema`, Ninja, and Go. Keep the Chromium checkout and
+Python 3.11 or newer with `schema`, Ninja, and Go. Keep the Chromium checkout and
 products outside Crest. The source archive alone expands to roughly 10 GB;
 toolchains and compilation products require additional space.
 
@@ -436,8 +455,9 @@ host restores its core-managed Spaces directly, without Chrome's profile picker.
 
 ## Releasing
 
-The engine, Chromium with this host's patch and overlay compiled in, cannot
-be built on a hosted runner, so releases download a prebuilt engine.
+The engine, Chromium with this host's patch and overlay compiled in, is built by
+the separate `Maintain Chromium fork` workflow on the registered Apple Silicon
+build Mac. App release jobs download the published engine and build Crest's UI.
 `Scripts/control-plane/chromium_engine.py` names it by a key over every engine
 input: the source lock, the host patch and its input hashes, the overlay, the
 host header and the scripts that prepare, configure and build it. After
@@ -448,9 +468,11 @@ python3 Scripts/control-plane/publish-chromium-engine.py \
   --source <chromium src> --ninja <chromium-tools>/bin/ninja
 ```
 
-It refuses to publish unless the checkout holds this branch's patch output and
-overlay and the build has nothing left to do, then uploads the zipped
-`Chromium.app` once as the `chromium-engine-<key>` prerelease. The experimental
+It refuses to publish unless the checkout holds this branch's patch output,
+overlay, and contract headers, uses the pinned performance configuration, and
+the build has nothing left to do. It uploads the zipped `Chromium.app`, checksum,
+and provenance into a draft, then publishes `chromium-engine-<key>` only when all
+uploads succeed. Published artifacts are never overwritten. The experimental
 release workflow downloads the engine matching its branch, builds the native
 core and `CrestChromiumUIProduct`, and packages the product with
 `package-chromium-host.py --product --distribution`: every executable, library
@@ -461,4 +483,3 @@ WebKit export built in the same run, over Chromium's device entitlements. The
 workflow then notarizes the app and its disk image. The Chromium build is the default download on `appcast-experimental.xml`; the
 WebKit build is published beside it as an alternate on
 `appcast-experimental-webkit.xml`, and each follows only its own feed.
-
