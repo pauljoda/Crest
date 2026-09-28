@@ -16,7 +16,6 @@ on:
         options:
           - development
           - nightly
-          - stable
 
 permissions:
   contents: write
@@ -36,7 +35,6 @@ jobs:
       asset_base: ${{ steps.release.outputs.asset_base }}
       build_number: ${{ steps.release.outputs.build_number }}
       channel: ${{ steps.release.outputs.channel }}
-      engine: ${{ steps.release.outputs.engine }}
       marketing_version: ${{ steps.release.outputs.marketing_version }}
       previous_commit: ${{ steps.release.outputs.previous_commit }}
       release_note_marker: ${{ steps.release.outputs.release_note_marker }}
@@ -54,8 +52,6 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           REQUESTED_CHANNEL: ${{ inputs.channel }}
-          REQUESTED_ENGINE: ${{ vars.CREST_MACOS_ENGINE || 'webkit' }}
-          CHROMIUM_STABLE_READY: ${{ vars.CHROMIUM_STABLE_READY }}
         run: |
           set -euo pipefail
 
@@ -77,12 +73,6 @@ jobs:
             done
           }
 
-          engine="${REQUESTED_ENGINE:-webkit}"
-          if [[ "$engine" != webkit && "$engine" != chromium ]]; then
-            printf 'Unknown release engine: %s\n' "$engine" >&2
-            exit 1
-          fi
-
           marketing_version="$(sed -nE 's/^MARKETING_VERSION[[:space:]]*=[[:space:]]*([^[:space:]]+)$/\1/p' Config/Version.xcconfig)"
           # Preserve Sparkle ordering across the move to the public repository,
           # whose Actions run counter restarted below already-installed builds.
@@ -102,8 +92,8 @@ jobs:
             channel=stable
           elif [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
             channel="$REQUESTED_CHANNEL"
-            if [[ "$channel" != "development" && "$channel" != "nightly" && "$channel" != "stable" ]]; then
-              printf 'Manual publication supports development, nightly, or a stable version tag.\n' >&2
+            if [[ "$channel" != "development" && "$channel" != "nightly" ]]; then
+              printf 'Manual publication supports only development or nightly.\n' >&2
               exit 1
             fi
           else
@@ -111,10 +101,6 @@ jobs:
           fi
 
           if [[ "$channel" == "stable" ]]; then
-            if [[ "$engine" == chromium && "${CHROMIUM_STABLE_READY:-false}" != true ]]; then
-              printf 'Chromium stable publication has not been enabled.\n' >&2
-              exit 1
-            fi
             expected_tag="v${marketing_version}"
             if [[ "$GITHUB_REF_TYPE" != "tag" || "$GITHUB_REF_NAME" != "$expected_tag" ]]; then
               printf 'Stable releases must run from the %s tag.\n' "$expected_tag" >&2
@@ -200,7 +186,6 @@ jobs:
             printf 'asset_base=%s\n' "$asset_base"
             printf 'build_number=%s\n' "$build_number"
             printf 'channel=%s\n' "$channel"
-            printf 'engine=%s\n' "$engine"
             printf 'marketing_version=%s\n' "$marketing_version"
             printf 'previous_commit=%s\n' "$previous_commit"
             printf 'release_note_marker=%s\n' "$release_note_marker"
@@ -214,7 +199,7 @@ jobs:
     needs: preflight
     if: needs.preflight.outputs.should_publish == 'true'
     runs-on: xcode-27
-    timeout-minutes: 180
+    timeout-minutes: 90
     environment: production
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -242,8 +227,6 @@ jobs:
           RELEASE_ASSET_BASE: ${{ needs.preflight.outputs.asset_base }}
           RELEASE_BUILD_NUMBER: ${{ needs.preflight.outputs.build_number }}
           RELEASE_CHANNEL: ${{ needs.preflight.outputs.channel }}
-          RELEASE_ENGINE: ${{ needs.preflight.outputs.engine }}
-          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
 
@@ -350,40 +333,6 @@ jobs:
           test "$(/usr/libexec/PlistBuddy -c 'Print :keychain-access-groups:0' "$exported_entitlements")" \
             = "3U2R97HLXF.com.pauldavis.crest"
 
-          symbols_path="$archive_path/dSYMs/Crest.app.dSYM"
-          if [[ "$RELEASE_ENGINE" == chromium ]]; then
-            engine_root="$release_root/engine"
-            engine_tag="$(python3 Scripts/control-plane/chromium_engine.py tag)"
-            engine_asset="$(python3 Scripts/control-plane/chromium_engine.py asset)"
-            mkdir -p "$engine_root"
-            gh release download "$engine_tag" --repo "$GITHUB_REPOSITORY" \
-              --pattern "$engine_asset" --pattern "${engine_asset}.sha256" --dir "$engine_root"
-            (cd "$engine_root" && shasum -a 256 -c "${engine_asset}.sha256")
-            ditto -x -k "$engine_root/$engine_asset" "$engine_root"
-            (cd CrestCore && "$HOME/.dotnet/dotnet" publish src/CrestCore.Native \
-              -c Release -r osx-arm64 --nologo)
-            core_library="$PWD/CrestCore/src/CrestCore.Native/bin/Release/net10.0/osx-arm64/publish/CrestCore.Native.dylib"
-            xcodebuild build \
-              -project Crest.xcodeproj -scheme CrestChromiumUIProduct \
-              -configuration Release -destination 'generic/platform=macOS' \
-              -derivedDataPath "$RUNNER_TEMP/crest-release-derived-data" \
-              CURRENT_PROJECT_VERSION="$RELEASE_BUILD_NUMBER" \
-              CREST_DEFAULT_UPDATE_CHANNEL="$RELEASE_CHANNEL" CODE_SIGNING_ALLOWED=NO
-            ui_framework="$RUNNER_TEMP/crest-release-derived-data/Build/Products/Release/CrestChromiumUIProduct.framework"
-            mkdir -p "$release_root/chromium"
-            app_path="$release_root/chromium/Crest.app"
-            CREST_DEFAULT_UPDATE_CHANNEL="$RELEASE_CHANNEL" python3 Scripts/control-plane/package-chromium-host.py \
-              --browser "$engine_root/Chromium.app" --product --distribution \
-              --ui "$ui_framework" --core "$core_library" \
-              --entitlements "$exported_entitlements" --provisioning-profile "$profile_path" \
-              --signing-identity "$identity_hash" --output "$app_path"
-            codesign --verify --deep --strict --verbose=2 "$app_path"
-            test "$(defaults read "$app_path/Contents/Info" CFBundleIdentifier)" = "com.pauldavis.crest"
-            test "$(defaults read "$app_path/Contents/Info" CrestDefaultUpdateChannel)" = "$RELEASE_CHANNEL"
-            test "$(defaults read "$app_path/Contents/Info" CFBundleVersion)" = "$RELEASE_BUILD_NUMBER"
-            symbols_path="$ui_framework.dSYM"
-          fi
-
           notarization_zip="$release_root/Crest-notarization.zip"
           ditto -c -k --sequesterRsrc --keepParent "$app_path" "$notarization_zip"
           xcrun notarytool submit "$notarization_zip" \
@@ -414,7 +363,7 @@ jobs:
           spctl --assess --type open --context context:primary-signature --verbose=4 "$dmg_path"
 
           ditto -c -k --keepParent \
-            "$symbols_path" \
+            "$archive_path/dSYMs/Crest.app.dSYM" \
             "$publish_path/$symbols_name"
           (
             cd "$publish_path"

@@ -3253,6 +3253,10 @@
     "managed-chromium-fork-and-upstream-release-pipeline": {
       "category": "internal",
       "message": "Chromium builds use a managed workspace and a CI workflow with reviewed upstream updates and opt-in stable publication."
+    },
+    "experimental-release-builds-missing-chromium-engine": {
+      "category": "internal",
+      "message": "Experimental releases build missing Chromium engines on the registered Mac and package one verified source revision. Automatic upstream publication is limited to experimental."
     }
   }
 }

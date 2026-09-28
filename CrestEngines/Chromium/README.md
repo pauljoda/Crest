@@ -9,7 +9,7 @@ workspace outside the checkout, by default `~/Dev/CrestChromium`. They are build
 products, not the source of truth. Keeping the fork here lets a change to the
 engine contract and its Swift caller be reviewed together.
 
-`fork.json` defines the upstream repository, integration branch, and eventual
+`fork.json` defines the upstream repository, integration branch, and
 automatic release channel. `source.lock.json` pins the complete upstream recipe;
 `host-inputs.json` records the inputs and outputs of Crest's host patch. A new
 upstream release must apply every existing Crest hunk without fuzz. A conflict,
@@ -17,7 +17,7 @@ new toolchain requirement, failed build, or failed smoke check stops publication
 Milestone changes require an explicit `--allow-major` update and manual review.
 
 See [Fork maintenance](ForkMaintenance.md) for the workspace commands, build Mac
-setup, CI switches, and stable release activation procedure.
+setup, CI switches, and experimental release procedure.
 
 `source.lock.json` pins the Chromium archive, ungoogled macOS revisions, upstream
 patches, and Crest build adjustments. It records source preparation inputs. It
@@ -455,9 +455,10 @@ host restores its core-managed Spaces directly, without Chrome's profile picker.
 
 ## Releasing
 
-The engine, Chromium with this host's patch and overlay compiled in, is built by
-the separate `Maintain Chromium fork` workflow on the registered Apple Silicon
-build Mac. App release jobs download the published engine and build Crest's UI.
+The experimental release checks for the engine matching its selected commit.
+If missing, `Ensure Chromium engine` builds it on the registered Apple Silicon
+Mac. `Maintain Chromium fork` can also build engines and upstream update PRs.
+App signing jobs download the published engine and build Crest's UI.
 `Scripts/control-plane/chromium_engine.py` names it by a key over every engine
 input: the source lock, the host patch and its input hashes, the overlay, the
 host header and the scripts that prepare, configure and build it. After

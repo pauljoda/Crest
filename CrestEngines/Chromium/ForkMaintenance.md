@@ -99,9 +99,7 @@ Configure these repository variables:
 | `CHROMIUM_BUILD_JOBS` | Compiler parallelism, default 4 |
 | `CHROMIUM_CI_ENABLED` | `true` allows manual and scheduled engine builds |
 | `CHROMIUM_UPSTREAM_ENABLED` | `true` builds eligible upstream updates every six hours |
-| `CHROMIUM_AUTO_RELEASE` | `true` permits successful updates to merge and publish stable |
-| `CHROMIUM_STABLE_READY` | `true` confirms the Chromium product is accepted for stable |
-| `CREST_MACOS_ENGINE` | `chromium` selects Chromium for standard app releases; defaults to `webkit` |
+| `CHROMIUM_AUTO_RELEASE` | `true` permits successful updates to merge and publish experimental |
 
 The workflow must be present on the default branch for its schedule to run. Its
 `fork.json` integration branch must also contain the maintenance scripts. Use the
@@ -110,38 +108,55 @@ to check upstream. `operation=build` builds and publishes the pinned engine;
 `operation=update` builds a released update and opens a PR. `upstream_tag` can
 select a specific release, and `allow_major=true` allows manual milestone review.
 The repository must allow Actions to create pull requests, and automatic merging
-must be enabled before automatic stable publication can merge update PRs.
+must be enabled before automatic experimental publication can merge update PRs.
 
 An update PR contains the new pins, host hashes, a patch version increment, and
 a release-note entry. Its engine is published before the branch is pushed.
 App release jobs consume only the artifact whose engine key matches their own
 source. No signing job reads a mutable local build directory.
 
-## Enabling automatic stable releases
+## Publishing experimental builds
 
-Keep `CHROMIUM_AUTO_RELEASE=false` while Chromium is experimental. Approve the
-native Chromium product, merge it and this workflow into the default branch, and
-set `fork.json.integrationBranch` and `CHROMIUM_INTEGRATION_BRANCH` to that branch. Configure required checks and
-review rules for the integration branch; automation uses normal PR merge rules
-and never uses an administrator bypass.
+Enable `CHROMIUM_CI_ENABLED=true` after registering the Mac, then publish the
+experimental branch with its own workflow definition:
 
-Set `CREST_MACOS_ENGINE=chromium` and verify a signed, notarized development
-release through the standard release workflow. Once that path is accepted, set
-`CHROMIUM_STABLE_READY=true`, `CHROMIUM_CI_ENABLED=true`, and
-`CHROMIUM_UPSTREAM_ENABLED=true`. Finally set `CHROMIUM_AUTO_RELEASE=true`.
+```sh
+gh workflow run experimental-release.yml --ref chromium-control-plane \
+  -f source_ref=chromium-control-plane
+```
 
-An eligible update then builds, passes the engine smoke check, publishes its
-engine, opens and merges its PR after required checks, creates the matching
-version tag, and explicitly dispatches the stable release workflow. Explicit
-dispatch is needed because tags created with `GITHUB_TOKEN` do not start another
-workflow. Stable dispatch still requires a version tag matching
-`Config/Version.xcconfig`; it cannot publish an arbitrary branch as stable.
-Signing, notarization, attestation, and the Sparkle appcast use the existing
-production workflow. The appcast changes only after release publication succeeds.
+The release resolves the branch to one commit. The reusable `Ensure Chromium
+engine` workflow checks for its published engine, including the full input key,
+archive, and checksum. If missing, it builds and publishes that engine on the
+Mac. An existing artifact skips the Mac entirely. The signing job then downloads
+that engine, verifies its checksum, builds Crest's native core and UI from the
+same commit, and signs and notarizes the installers. It publishes the Chromium
+and WebKit experimental feeds. Stable and development workflows are unchanged.
+
+## Enabling automatic upstream releases
+
+Keep `CHROMIUM_UPSTREAM_ENABLED=false` and `CHROMIUM_AUTO_RELEASE=false` during
+initial setup. Manual upstream updates can still build a candidate for review.
+The six-hour schedule becomes active only when `chromium.yml` also exists on the
+repository's default branch. Installing that controller does not require moving
+the Chromium product to the default branch. Its integration branch remains
+`chromium-control-plane`.
+
+Configure required checks and review rules for the integration branch, then set
+`CHROMIUM_UPSTREAM_ENABLED=true` to build eligible updates and open PRs. Set
+`CHROMIUM_AUTO_RELEASE=true` when those updates may also merge and ship to
+experimental. Automation uses normal PR merge rules. It checks the PR head has
+not changed, then explicitly dispatches the experimental release at the merged
+commit. Publication fails if the branch moves again before release preflight.
+New milestones still require review unless `automaticMajorUpdates` is enabled.
+
+Stable and development Chromium releases need a separate readiness decision and
+implementation. Changing `automaticChannel` to either one fails the current gate.
 
 Turn `CHROMIUM_AUTO_RELEASE=false` to stop future automatic publication, or
 `CHROMIUM_CI_ENABLED=false` to stop new engine builds. Cancel a running workflow
 separately if it must stop immediately. Failed or conflicting updates keep the
 previous appcast in service. To roll back an engine, restore its reviewed pins
 in a new patch-version commit and publish a newer app build; do not replace an
-existing engine artifact or decrease the Sparkle build number.
+existing engine artifact or decrease the Sparkle build number. Toggle values
+apply to newly started runs; cancel an in-progress run to stop it immediately.

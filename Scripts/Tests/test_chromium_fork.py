@@ -10,6 +10,8 @@ import unittest
 SCRIPTS = Path(__file__).resolve().parents[1] / "control-plane"
 sys.path.insert(0, str(SCRIPTS))
 from chromium_fork import exclusive_workspace, refresh_host_inputs, select_update, validate_workspace
+from chromium_artifact import release_ready
+from chromium_engine import asset_name
 
 spec = importlib.util.spec_from_file_location("publish_chromium_update", SCRIPTS / "publish-chromium-update.py")
 publication = importlib.util.module_from_spec(spec)
@@ -86,16 +88,32 @@ class WorkspaceTests(unittest.TestCase):
 
 
 class PromotionTests(unittest.TestCase):
-    def test_automatic_stable_needs_every_gate_and_the_default_integration_branch(self):
-        policy = {"automaticChannel": "stable", "integrationBranch": "main", "automaticMajorUpdates": False}
-        arguments = dict(enabled="true", stable_ready="true", engine="chromium", default_branch="main", major_update=False)
+    def test_automatic_publication_requires_opt_in_and_stays_on_experimental(self):
+        policy = {"automaticChannel": "experimental", "integrationBranch": "chromium-control-plane", "automaticMajorUpdates": False}
+        arguments = dict(enabled="true", default_branch="main", major_update=False)
         self.assertTrue(publication.automatic_release_allowed(policy, **arguments))
-        for name, value in (("enabled", "false"), ("stable_ready", None), ("engine", "webkit"),
-                            ("default_branch", "release"), ("major_update", True)):
+        for name, value in (("enabled", "false"), ("enabled", None),
+                            ("default_branch", "chromium-control-plane"), ("major_update", True)):
             with self.subTest(gate=name):
                 self.assertFalse(publication.automatic_release_allowed(policy, **(arguments | {name: value})))
-        policy["integrationBranch"] = "chromium-control-plane"
-        self.assertFalse(publication.automatic_release_allowed(policy, **arguments))
+        for channel in ("stable", "development", "nightly"):
+            with self.subTest(channel=channel):
+                self.assertFalse(publication.automatic_release_allowed(policy | {"automaticChannel": channel}, **arguments))
+
+    def test_engine_must_be_complete_and_match_the_full_key(self):
+        key = "a" * 64
+        asset = asset_name(key)
+        release = {"draft": False, "body": f"Engine key `{key}`", "assets": [
+            {"name": name, "size": 100, "state": "uploaded"} for name in (asset, f"{asset}.sha256")]}
+        self.assertTrue(release_ready(release, key))
+        self.assertFalse(release_ready(None, key))
+        self.assertFalse(release_ready(release | {"draft": True}, key))
+        for incomplete in (release | {"assets": release["assets"][:1]},
+                           release | {"body": "a" * 16 + "b" * 48},
+                           release | {"assets": [item | {"state": "new"} for item in release["assets"]]},
+                           release | {"assets": [item | {"size": 0} for item in release["assets"]]}):
+            with self.subTest(release=incomplete), self.assertRaises(ValueError):
+                release_ready(incomplete, key)
 
 
 if __name__ == "__main__":

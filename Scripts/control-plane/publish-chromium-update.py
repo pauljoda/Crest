@@ -11,10 +11,10 @@ from chromium_fork import ENGINE, REPO, read_json, run, write_json
 import chromium_engine
 
 
-def automatic_release_allowed(policy, *, enabled, stable_ready, engine, default_branch, major_update):
-    return (enabled == "true" and stable_ready == "true" and engine == "chromium"
-            and policy["automaticChannel"] == "stable"
-            and policy["integrationBranch"] == default_branch
+def automatic_release_allowed(policy, *, enabled, default_branch, major_update):
+    return (enabled == "true"
+            and policy["automaticChannel"] == "experimental"
+            and policy["integrationBranch"] != default_branch
             and (not major_update or policy["automaticMajorUpdates"]))
 
 
@@ -70,7 +70,6 @@ def main():
         "--base", base, "--head", branch, "--title", f"Update Chromium to {tag}", "--body", body, capture=True).strip()
     default_branch = json.loads(run("gh", "api", f"repos/{args.repository}", capture=True))["default_branch"]
     promote = automatic_release_allowed(policy, enabled=os.environ.get("CHROMIUM_AUTO_RELEASE"),
-        stable_ready=os.environ.get("CHROMIUM_STABLE_READY"), engine=os.environ.get("CREST_MACOS_ENGINE"),
         default_branch=default_branch, major_update=args.major_update)
     print(url)
     if output := os.environ.get("GITHUB_OUTPUT"):

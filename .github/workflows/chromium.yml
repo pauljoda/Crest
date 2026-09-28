@@ -2,6 +2,9 @@ name: Maintain Chromium fork
 run-name: Chromium ${{ inputs.operation || 'check' }}
 
 on:
+  push:
+    branches: [chromium-control-plane]
+    paths: [.github/workflows/chromium.yml]
   schedule:
     - cron: '41 */6 * * *'
   workflow_dispatch:
@@ -155,8 +158,6 @@ jobs:
           BASE_SHA: ${{ needs.resolve.outputs.base_sha }}
           MAJOR: ${{ needs.resolve.outputs.major }}
           CHROMIUM_AUTO_RELEASE: ${{ vars.CHROMIUM_AUTO_RELEASE }}
-          CHROMIUM_STABLE_READY: ${{ vars.CHROMIUM_STABLE_READY }}
-          CREST_MACOS_ENGINE: ${{ vars.CREST_MACOS_ENGINE }}
         run: |
           git config --local credential.https://github.com.helper '!gh auth git-credential'
           args=(--source "$ENGINE_SOURCE" --ninja "$CREST_CHROMIUM_WORKSPACE/tools/bin/ninja"
@@ -174,7 +175,7 @@ jobs:
       pull-requests: write
       actions: write
     steps:
-      - name: Merge the verified update and dispatch its stable tag
+      - name: Merge the verified update and publish it to experimental
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
@@ -185,7 +186,7 @@ jobs:
             gh pr merge "$UPDATE_PR" --squash --auto --match-head-commit "$UPDATE_HEAD"
           fi
           python3 - <<'PY'
-          import base64, json, os, re, subprocess, time
+          import base64, json, os, subprocess, time
           def gh(*args):
               return subprocess.check_output(['gh', *args], text=True).strip()
           for attempt in range(330):
@@ -197,19 +198,14 @@ jobs:
               time.sleep(10)
           else: raise SystemExit('Update is waiting for required checks or review; no release was dispatched')
           repo, sha = os.environ['GH_REPO'], pr['mergeCommit']['oid']
-          def variable(name):
-              return json.loads(gh('api', f'repos/{repo}/actions/variables/{name}'))['value']
-          if variable('CHROMIUM_AUTO_RELEASE') != 'true' or variable('CHROMIUM_STABLE_READY') != 'true' or variable('CREST_MACOS_ENGINE') != 'chromium':
-              raise SystemExit('Automatic stable publication was disabled while the update waited')
-          content = json.loads(gh('api', f'repos/{repo}/contents/Config/Version.xcconfig?ref={sha}'))
-          version = re.search(r'^MARKETING_VERSION = ([0-9]+\.[0-9]+\.[0-9]+)$', base64.b64decode(content['content']).decode(), re.M)[1]
-          tag = f'v{version}'
-          found = subprocess.run(['gh', 'api', f'repos/{repo}/git/ref/tags/{tag}'], capture_output=True, text=True)
-          if found.returncode == 0:
-              if json.loads(found.stdout)['object']['sha'] != sha:
-                  raise SystemExit('The version tag already names a different commit')
-          else:
-              gh('api', f'repos/{repo}/git/refs', '-f', f'ref=refs/tags/{tag}', '-f', f'sha={sha}')
-          # GITHUB_TOKEN tag pushes do not start another workflow. Dispatch explicitly.
-          gh('workflow', 'run', 'release.yml', '--ref', tag, '-f', 'channel=stable')
+          content = json.loads(gh('api', f'repos/{repo}/contents/CrestEngines/Chromium/fork.json?ref={sha}'))
+          policy = json.loads(base64.b64decode(content['content']))
+          default = json.loads(gh('api', f'repos/{repo}'))['default_branch']
+          branch = policy['integrationBranch']
+          if policy['automaticChannel'] != 'experimental' or branch == default:
+              raise SystemExit('Automatic publication is only supported for the experimental branch')
+          # Dispatch explicitly because GITHUB_TOKEN pushes do not trigger workflows.
+          # The release preflight refuses a branch that moved after this merge.
+          gh('workflow', 'run', 'experimental-release.yml', '--ref', branch,
+             '-f', f'source_ref={branch}', '-f', f'expected_sha={sha}')
           PY

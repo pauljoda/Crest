@@ -8,6 +8,9 @@ on:
         description: Branch to publish to the experimental channel
         required: true
         type: string
+      expected_sha:
+        description: Optional expected branch commit; refuse publication if the branch moved
+        type: string
 
 permissions:
   contents: write
@@ -37,7 +40,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          # The workflow itself lives on the default branch; this checkout is the branch being published.
+          # Dispatch with --ref chromium-control-plane to use its Chromium pipeline.
           ref: ${{ inputs.source_ref }}
           fetch-depth: 0
 
@@ -47,6 +50,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           SOURCE_REF: ${{ inputs.source_ref }}
+          EXPECTED_SHA: ${{ inputs.expected_sha }}
         run: |
           set -euo pipefail
 
@@ -111,6 +115,10 @@ jobs:
           build_number="$((build_epoch + GITHUB_RUN_NUMBER))"
           release_date="$(date -u +%Y-%m-%d)"
           source_sha="$(git rev-parse HEAD)"
+          if [[ -n "$EXPECTED_SHA" && "$source_sha" != "$EXPECTED_SHA" ]]; then
+            echo 'The experimental branch moved from the verified commit; refusing publication.' >&2
+            exit 1
+          fi
           short_sha="$(git rev-parse --short=7 "$source_sha")"
           branch_name="$SOURCE_REF"
           branch_slug="$(
@@ -218,9 +226,18 @@ jobs:
             printf -- '- Build: `%s`\n' "$build_number"
           } >> "$GITHUB_STEP_SUMMARY"
 
+  engine:
+    name: Prepare Chromium engine
+    needs: preflight
+    uses: ./.github/workflows/chromium-engine.yml
+    permissions:
+      contents: write
+    with:
+      source_sha: ${{ needs.preflight.outputs.source_sha }}
+
   release:
     name: Sign, notarize, and publish
-    needs: preflight
+    needs: [preflight, engine]
     runs-on: xcode-27
     # Two apps and two disk images are notarized.
     timeout-minutes: 180
