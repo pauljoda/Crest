@@ -1,255 +1,7 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
-    "A Space can contain up to %lld custom search engines." : {
-
-    },
-    "A Space can hold up to %lld pinned tabs. Unpin tabs or select fewer tabs." : {
-
-    },
-    "A Space has more pinned tabs than it can hold." : {
-
-    },
-    "A Space’s profile changed." : {
-
-    },
-    "A record can’t be read." : {
-
-    },
-    "A record moved to another Space." : {
-
-    },
-    "A record’s contents don’t match its identity." : {
-
-    },
-    "A tab names a folder in another Space." : {
-
-    },
-    "An export is already in progress for this page." : {
-
-    },
-    "Capitalize" : {
-
-    },
-    "Check Document Now" : {
-
-    },
-    "Check Grammar With Spelling" : {
-
-    },
-    "Check Spelling While Typing" : {
-
-    },
-    "Correct Spelling Automatically" : {
-
-    },
-    "Crest can keep up to %lld saved site permissions. Reset some to save more." : {
-
-    },
-    "Crest couldn’t apply the latest changes from iCloud." : {
-
-    },
-    "Crest couldn’t read the iCloud sync state an earlier version saved." : {
-
-    },
-    "Crest hit a problem applying these records." : {
-
-    },
-    "Crest lost track of an iCloud download it was applying." : {
-
-    },
-    "Crest needs at least one Space." : {
-
-    },
-    "Crest will quit once the Space is deleted." : {
-
-    },
-    "Data Detectors" : {
-
-    },
-    "Find" : {
-
-    },
-    "Find Next" : {
-
-    },
-    "Find Previous" : {
-
-    },
-    "Find…" : {
-
-    },
-    "Folders are nested inside each other." : {
-
-    },
-    "Jump to Selection" : {
-
-    },
-    "Make Lower Case" : {
-
-    },
-    "Make Upper Case" : {
-
-    },
-    "Screen Sharing" : {
-
-    },
-    "Show Spelling and Grammar" : {
-
-    },
-    "Show Substitutions" : {
-
-    },
-    "Smart Copy/Paste" : {
-
-    },
-    "Smart Dashes" : {
-
-    },
-    "Smart Links" : {
-
-    },
-    "Smart Quotes" : {
-
-    },
-    "Some iCloud records can’t be read. Update Crest on all your devices and try again." : {
-
-    },
-    "Speech" : {
-
-    },
-    "Spelling and Grammar" : {
-
-    },
-    "Split View needs 2 to %lld tabs. Select fewer tabs or use a smaller split." : {
-
-    },
-    "Start Speaking" : {
-
-    },
-    "Stop Speaking" : {
-
-    },
-    "Substitutions" : {
-
-    },
-    "Text Replacement" : {
-
-    },
-    "The page could not be exported." : {
-
-    },
-    "The page export is too large." : {
-
-    },
-    "The page export timed out." : {
-
-    },
-    "The page navigated before its export finished." : {
-
-    },
-    "The page renderer stopped." : {
-
-    },
-    "The page was closed." : {
-
-    },
-    "There are more records than sync keeps." : {
-
-    },
-    "This page cannot be exported." : {
-
-    },
-    "Transformations" : {
-
-    },
-    "Two Spaces share a profile." : {
-
-    },
-    "Two records share one identity." : {
-
-    },
-    "Quit and cancel the download in progress?" : {
-
-    },
-    "Quit and cancel %lld downloads in progress?" : {
-
-    },
-    "Keep Browsing" : {
-
-    },
-    "Quit" : {
-
-    },
-    "The download was interrupted." : {
-
-    },
-    "The download stopped because of a network problem." : {
-
-    },
-    "The server couldn’t provide the file." : {
-
-    },
-    "There isn’t enough disk space to save the file." : {
-
-    },
-    "The file couldn’t be saved in its folder." : {
-
-    },
-    "The download folder is unavailable. Choose another folder in Space settings." : {
-
-    },
-    "This download was blocked because it could harm your computer." : {
-
-    },
-    "This download was blocked because it came over an insecure connection." : {
-
-    },
-    "This download was blocked by a safety or organization policy." : {
-
-    },
     "" : {
-
-    },
-    "Another Space already uses this Space’s browsing data." : {
-
-    },
-    "Crest couldn’t complete that. Try again." : {
-
-    },
-    "Crest couldn’t read the Spaces to import." : {
-
-    },
-    "Crest couldn’t save this change. Try again." : {
-
-    },
-    "Crest supports up to %lld Spaces." : {
-
-    },
-    "%lld of %lld" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$lld of %2$lld"
-          }
-        }
-      }
-    },
-    "%lld tabs" : {
-
-    },
-    "%lld/%lld" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$lld/%2$lld"
-          }
-        }
-      }
-    },
-    "Use Selection for Find" : {
 
     },
     "·" : {
@@ -642,214 +394,6 @@
         }
       }
     },
-    "1 Day" : {
-
-    },
-    "1 Week" : {
-
-    },
-    "1 Year" : {
-
-    },
-    "30 Days" : {
-
-    },
-    "90 Days" : {
-
-    },
-    "A patterned band behind the sidebar." : {
-
-    },
-    "A recovery checkpoint is available from %@." : {
-
-    },
-    "After 1 Hour" : {
-
-    },
-    "After 12 Hours" : {
-
-    },
-    "After 24 Hours" : {
-
-    },
-    "After 30 Days" : {
-
-    },
-    "After 6 Hours" : {
-
-    },
-    "After 7 Days" : {
-
-    },
-    "Allowed for Session" : {
-
-    },
-    "Apple Translation requires a physical device. It is not available in Simulator." : {
-
-    },
-    "Ask after First" : {
-
-    },
-    "Automatic Downloads" : {
-
-    },
-    "Background tab activity" : {
-
-    },
-    "Balanced" : {
-
-    },
-    "Block known trackers" : {
-
-    },
-    "Blocked by Default" : {
-
-    },
-    "Blocked for Session" : {
-
-    },
-    "Camera & Microphone" : {
-
-    },
-    "Certificate Not Trusted" : {
-
-    },
-    "Changes couldn’t be saved for sync." : {
-
-    },
-    "Changes made after this checkpoint may be missing. Crest will keep a separate copy of the current files and fetch current iCloud records before uploading again." : {
-
-    },
-    "Check your internet connection and try again." : {
-
-    },
-    "Choose which accounts to import." : {
-
-    },
-    "Choose which blocklists a Space loads" : {
-
-    },
-    "Choose which blocklists this Space loads" : {
-
-    },
-    "Chosen Space" : {
-
-    },
-    "Chromium" : {
-      "comment" : "The name of a browser engine. Keep the product name as it is."
-    },
-    "Click a shortcut, then press a key with Command, Option, Control, or Shift." : {
-
-    },
-    "Command (⌘)" : {
-
-    },
-    "Command-click" : {
-
-    },
-    "Connection Details Unavailable" : {
-
-    },
-    "Connection Secure" : {
-
-    },
-    "Contains" : {
-
-    },
-    "Control your browsing data" : {
-
-    },
-    "Crest couldn't open your session" : {
-
-    },
-    "crestbrowser.com" : {
-
-    },
-    "Customize how your Space looks." : {
-
-    },
-    "Cut" : {
-
-    },
-    "Dangerous Site" : {
-
-    },
-    "Default (Ask after First)" : {
-
-    },
-    "Default (Block)" : {
-
-    },
-    "Disabled and selected" : {
-
-    },
-    "Engine experiments" : {
-
-    },
-    "extensions permissions Chromium Chrome Web Store install copies Spaces" : {
-
-    },
-    "External Apps" : {
-
-    },
-    "Forever" : {
-
-    },
-    "Glow" : {
-
-    },
-    "Imported password" : {
-
-    },
-    "Is Exactly" : {
-
-    },
-    "Loading" : {
-
-    },
-    "Make Crest your own" : {
-
-    },
-    "Manage Filter Lists" : {
-
-    },
-    "Match %lld of %lld" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Match %1$lld of %2$lld"
-          }
-        }
-      }
-    },
-    "Most Recent Space" : {
-
-    },
-    "No recovery checkpoint is available. Retry after checking that your disk is available and has free space." : {
-
-    },
-    "Opacity" : {
-
-    },
-    "Open System Settings" : {
-
-    },
-    "Open a regular window to do this." : {
-
-    },
-    "Open Link in Peek" : {
-
-    },
-    "open local file document html pdf archive webarchive mhtml" : {
-
-    },
-    "Option (⌥)" : {
-
-    },
-    "Option-click" : {
-
-    },
     "%@/s" : {
 
     },
@@ -1134,6 +678,16 @@
     "%lld items selected" : {
 
     },
+    "%lld of %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld of %2$lld"
+          }
+        }
+      }
+    },
     "%lld of %lld selected" : {
       "localizations" : {
         "en" : {
@@ -1226,6 +780,9 @@
 
     },
     "%lld symbols" : {
+
+    },
+    "%lld tabs" : {
 
     },
     "%lld tabs selected" : {
@@ -1871,6 +1428,16 @@
         }
       }
     },
+    "%lld/%lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld/%2$lld"
+          }
+        }
+      }
+    },
     "%lld°" : {
 
     },
@@ -1903,6 +1470,9 @@
         }
       }
     },
+    "1 Day" : {
+
+    },
     "1 identical duplicate will be skipped." : {
 
     },
@@ -1915,10 +1485,25 @@
     "1 warning" : {
 
     },
+    "1 Week" : {
+
+    },
+    "1 Year" : {
+
+    },
     "02 — Your Spaces" : {
 
     },
+    "30 Days" : {
+
+    },
+    "90 Days" : {
+
+    },
     "A custom search engine already uses this name." : {
+
+    },
+    "A field in this password file is too large to import safely." : {
 
     },
     "A firewall, filter, or device policy may also be responsible." : {
@@ -1935,6 +1520,18 @@
 
     },
     "A place for every tab" : {
+
+    },
+    "A record can’t be read." : {
+
+    },
+    "A record moved to another Space." : {
+
+    },
+    "A record’s contents don’t match its identity." : {
+
+    },
+    "A recovery checkpoint is available from %@." : {
 
     },
     "A secure connection couldn’t be made" : {
@@ -1958,6 +1555,21 @@
       }
     },
     "A simplified Crest branding preview" : {
+
+    },
+    "A Space can contain up to %lld custom search engines." : {
+
+    },
+    "A Space can hold up to %lld pinned tabs. Unpin tabs or select fewer tabs." : {
+
+    },
+    "A Space has more pinned tabs than it can hold." : {
+
+    },
+    "A Space’s profile changed." : {
+
+    },
+    "A tab names a folder in another Space." : {
 
     },
     "About" : {
@@ -2011,7 +1623,6 @@
 
     },
     "Actions" : {
-      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -2118,6 +1729,7 @@
       }
     },
     "Add site" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -2224,6 +1836,24 @@
     "AFTER" : {
 
     },
+    "After 1 Hour" : {
+
+    },
+    "After 6 Hours" : {
+
+    },
+    "After 7 Days" : {
+
+    },
+    "After 12 Hours" : {
+
+    },
+    "After 24 Hours" : {
+
+    },
+    "After 30 Days" : {
+
+    },
     "After closing" : {
 
     },
@@ -2285,10 +1915,10 @@
     "Allow Automatic Pop-ups" : {
 
     },
-    "Allow Crest in Screen & System Audio Recording to capture your screen" : {
+    "Allow automatic pop-ups for %@" : {
 
     },
-    "Allow automatic pop-ups for %@" : {
+    "Allow Crest in Screen & System Audio Recording to capture your screen" : {
 
     },
     "Allow Crest to Use Passkeys…" : {
@@ -2327,6 +1957,9 @@
     "Allowed" : {
 
     },
+    "Allowed for Session" : {
+
+    },
     "Already saved" : {
 
     },
@@ -2334,6 +1967,9 @@
 
     },
     "Always Translate %@" : {
+
+    },
+    "An export is already in progress for this page." : {
 
     },
     "An open source browser for Mac, iPhone, and iPad." : {
@@ -2354,6 +1990,9 @@
 
     },
     "Animate pages when switching Spaces" : {
+
+    },
+    "Another Space already uses this Space’s browsing data." : {
 
     },
     "App icon" : {
@@ -2469,6 +2108,9 @@
           }
         }
       }
+    },
+    "Ask after First" : {
+
     },
     "Ask Again" : {
       "localizations" : {
@@ -2629,6 +2271,9 @@
     "Automatic download blocked. Use Allow Download to retry, or change Automatic Downloads in this site’s permissions." : {
 
     },
+    "Automatic Downloads" : {
+
+    },
     "Automatic Pop-ups" : {
 
     },
@@ -2772,8 +2417,14 @@
         }
       }
     },
+    "Background tab activity" : {
+
+    },
     "Badge" : {
       "extractionState" : "manual"
+    },
+    "Balanced" : {
+
     },
     "Balanced rows" : {
 
@@ -2907,6 +2558,9 @@
         }
       }
     },
+    "Bitwarden CSV" : {
+
+    },
     "Block" : {
       "localizations" : {
         "ar" : {
@@ -2918,6 +2572,12 @@
       }
     },
     "Block known ads and trackers" : {
+
+    },
+    "Blocked by Default" : {
+
+    },
+    "Blocked for Session" : {
 
     },
     "Blocking ads and trackers comes from the extensions you install." : {
@@ -2948,6 +2608,9 @@
         }
       }
     },
+    "BOOKMARKS" : {
+      "comment" : "A section heading in a browser import review. Keep it uppercase."
+    },
     "Bookmarks exported." : {
       "localizations" : {
         "ar" : {
@@ -2957,6 +2620,9 @@
           }
         }
       }
+    },
+    "Bookmarks, windows, and open tabs" : {
+      "comment" : "What importing from another browser brings. Keep product names as they are."
     },
     "Border" : {
       "localizations" : {
@@ -3042,6 +2708,12 @@
         }
       }
     },
+    "Browser %lld of %lld" : {
+
+    },
+    "Browser CSV" : {
+
+    },
     "Browser data exported." : {
       "localizations" : {
         "ar" : {
@@ -3096,6 +2768,9 @@
     "Camera" : {
 
     },
+    "Camera & Microphone" : {
+
+    },
     "Cancel" : {
       "localizations" : {
         "ar" : {
@@ -3121,6 +2796,9 @@
     },
     "Canton" : {
       "extractionState" : "manual"
+    },
+    "Capitalize" : {
+
     },
     "Capsule" : {
 
@@ -3151,6 +2829,9 @@
     "Certificate" : {
 
     },
+    "Certificate Not Trusted" : {
+
+    },
     "Change Color…" : {
 
     },
@@ -3177,6 +2858,12 @@
       "extractionState" : "manual"
     },
     "Changes appear live in your Space." : {
+
+    },
+    "Changes couldn’t be saved for sync." : {
+
+    },
+    "Changes made after this checkpoint may be missing. Crest will keep a separate copy of the current files and fetch current iCloud records before uploading again." : {
 
     },
     "Charge" : {
@@ -3206,13 +2893,22 @@
     "Check Automatically" : {
 
     },
+    "Check Document Now" : {
+
+    },
     "Check for updates automatically" : {
 
     },
     "Check for Updates…" : {
 
     },
+    "Check Grammar With Spelling" : {
+
+    },
     "Check spelling on webpages" : {
+
+    },
+    "Check Spelling While Typing" : {
 
     },
     "Check that your device’s date and time are correct." : {
@@ -3436,7 +3132,16 @@
     "Choose which optional cards appear at the bottom of the sidebar." : {
 
     },
+    "Chosen Space" : {
+
+    },
+    "Chromium" : {
+      "comment" : "The name of a browser engine. Keep the product name as it is."
+    },
     "Chromium could not complete this action. Check the extension’s details for policy or permission requirements." : {
+
+    },
+    "Chromium WebKit hybrid default browser engine websites rules protected video DRM compatibility" : {
 
     },
     "clean tidy archive unpinned tabs" : {
@@ -3554,6 +3259,9 @@
           }
         }
       }
+    },
+    "Click a shortcut, then press a key with Command, Option, Control, or Shift." : {
+
     },
     "Click anything you don’t want" : {
 
@@ -3845,6 +3553,9 @@
         }
       }
     },
+    "Command (⌘)" : {
+
+    },
     "Command Palette" : {
       "localizations" : {
         "ar" : {
@@ -3854,6 +3565,9 @@
           }
         }
       }
+    },
+    "Command-click" : {
+
     },
     "Common Lists" : {
 
@@ -3904,7 +3618,16 @@
     "Confirm what Crest will change before anything is saved." : {
 
     },
+    "Connection Details Unavailable" : {
+
+    },
     "Connection Not Secure" : {
+
+    },
+    "Connection Secure" : {
+
+    },
+    "Contains" : {
 
     },
     "Content blocking" : {
@@ -4036,6 +3759,9 @@
       }
     },
     "Corner radius" : {
+
+    },
+    "Correct Spelling Automatically" : {
 
     },
     "Could not open language downloads. Open your device’s language settings to manage downloaded translation languages." : {
@@ -4293,6 +4019,9 @@
     "Crest %@ sidebar after import" : {
 
     },
+    "Crest can keep up to %lld saved site permissions. Reset some to save more." : {
+
+    },
     "Crest can save files in %@." : {
 
     },
@@ -4378,6 +4107,9 @@
     "Crest could not update its icon. Please try again." : {
 
     },
+    "Crest couldn’t apply the latest changes from iCloud." : {
+
+    },
     "Crest couldn’t authenticate and read that password from this Space." : {
       "localizations" : {
         "ar" : {
@@ -4397,6 +4129,9 @@
           }
         }
       }
+    },
+    "Crest couldn’t complete that. Try again." : {
+
     },
     "Crest couldn’t copy that password." : {
       "localizations" : {
@@ -4418,6 +4153,15 @@
         }
       }
     },
+    "Crest couldn't open your session" : {
+
+    },
+    "Crest couldn’t read the iCloud sync state an earlier version saved." : {
+
+    },
+    "Crest couldn’t read the Spaces to import." : {
+
+    },
     "Crest couldn’t read this Space’s passwords." : {
       "localizations" : {
         "ar" : {
@@ -4429,6 +4173,9 @@
       }
     },
     "Crest couldn’t save a strong password. Nothing was filled." : {
+
+    },
+    "Crest couldn’t save this change. Try again." : {
 
     },
     "Crest couldn’t save this password to the %@ Space." : {
@@ -4494,6 +4241,9 @@
     "Crest found these browsers on your Mac. You’ll review every Space and tab next." : {
 
     },
+    "Crest hit a problem applying these records." : {
+
+    },
     "Crest iCloud Sync Diagnostics" : {
       "localizations" : {
         "ar" : {
@@ -4528,6 +4278,12 @@
 
     },
     "Crest locates the browser data folder and asks for one-time read access" : {
+
+    },
+    "Crest lost track of an iCloud download it was applying." : {
+
+    },
+    "Crest needs at least one Space." : {
 
     },
     "Crest password suggestions" : {
@@ -4648,6 +4404,9 @@
         }
       }
     },
+    "Crest supports up to %lld Spaces." : {
+
+    },
     "Crest translates page text in place, including headings, links, labels, and buttons. Editable fields, code, embedded pages, and text in images are left unchanged. Translated text may take more space." : {
 
     },
@@ -4665,6 +4424,9 @@
       }
     },
     "Crest will download all synced Spaces and browser content and merge them with this device. Newer changes and synced deletions will be applied. Content found only on this device will be kept unless it was explicitly deleted on another device." : {
+
+    },
+    "Crest will quit once the Space is deleted." : {
 
     },
     "Crest will replace the synced Spaces and browser content on this device with the current iCloud copy." : {
@@ -4808,7 +4570,16 @@
         }
       }
     },
+    "Cut" : {
+
+    },
+    "Dangerous Site" : {
+
+    },
     "Dark" : {
+
+    },
+    "Data Detectors" : {
 
     },
     "Data retention" : {
@@ -4831,6 +4602,12 @@
         }
       }
     },
+    "Default (Ask after First)" : {
+
+    },
+    "Default (Block)" : {
+
+    },
     "Default (Off)" : {
 
     },
@@ -4846,6 +4623,9 @@
           }
         }
       }
+    },
+    "Default engine and website rules" : {
+
     },
     "Default page zoom" : {
 
@@ -5580,6 +5360,12 @@
         }
       }
     },
+    "Engine experiments" : {
+
+    },
+    "Engines" : {
+
+    },
     "Enter a name for this search engine." : {
 
     },
@@ -5621,6 +5407,9 @@
           }
         }
       }
+    },
+    "ESSENTIALS" : {
+      "comment" : "A section heading in a browser import review. Keep it uppercase."
     },
     "Every accepted credential will be stored only in this Space’s Keychain inventory." : {
 
@@ -5829,6 +5618,12 @@
         }
       }
     },
+    "extensions permissions Chromium Chrome Web Store install copies Spaces" : {
+
+    },
+    "External Apps" : {
+
+    },
     "external apps Quick Window Peek pinned saved routing open" : {
       "localizations" : {
         "ar" : {
@@ -5859,6 +5654,9 @@
           }
         }
       }
+    },
+    "FAVORITES" : {
+      "comment" : "A section heading in a browser import review. Keep it uppercase."
     },
     "Feature Flags" : {
 
@@ -5960,6 +5758,9 @@
         }
       }
     },
+    "Find" : {
+
+    },
     "Find an emblem" : {
 
     },
@@ -5972,6 +5773,15 @@
           }
         }
       }
+    },
+    "Find Next" : {
+
+    },
+    "Find Previous" : {
+
+    },
+    "Find…" : {
+
     },
     "Finish" : {
       "localizations" : {
@@ -6008,6 +5818,9 @@
           }
         }
       }
+    },
+    "Firefox CSV" : {
+
     },
     "Fish" : {
       "extractionState" : "stale",
@@ -6156,6 +5969,9 @@
     "Folders" : {
 
     },
+    "Folders are nested inside each other." : {
+
+    },
     "Folders can hold tabs and other folders. Add Weekends, then put Ideas inside it. You can also use folders below the line for open tabs." : {
 
     },
@@ -6189,6 +6005,9 @@
           }
         }
       }
+    },
+    "Forever" : {
+
     },
     "Forward" : {
       "localizations" : {
@@ -7355,10 +7174,19 @@
         }
       }
     },
+    "Is Exactly" : {
+
+    },
     "Its content is still saved. Update Crest to open it." : {
 
     },
     "Its tabs stay in this section, and any nested folders move up one level." : {
+
+    },
+    "Jump to Selection" : {
+
+    },
+    "Keep Browsing" : {
 
     },
     "Keep Crest Up to Date" : {
@@ -7681,6 +7509,9 @@
     "macOS has not returned a location decision. Respond to its prompt, or open System Settings > Privacy & Security > Location Services to allow Crest." : {
 
     },
+    "Make Lower Case" : {
+
+    },
     "Make this Space yours" : {
       "localizations" : {
         "ar" : {
@@ -7691,6 +7522,9 @@
         }
       }
     },
+    "Make Upper Case" : {
+
+    },
     "Makes every site ask again in this Space" : {
       "localizations" : {
         "ar" : {
@@ -7700,6 +7534,9 @@
           }
         }
       }
+    },
+    "Manage Extension…" : {
+
     },
     "Manage Extensions" : {
 
@@ -7715,9 +7552,6 @@
       }
     },
     "Manage Extensions…" : {
-
-    },
-    "Manage Extension…" : {
 
     },
     "Manage Saved Passwords…" : {
@@ -7756,6 +7590,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "مطابقة"
+          }
+        }
+      }
+    },
+    "Match %lld of %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Match %1$lld of %2$lld"
           }
         }
       }
@@ -7811,6 +7655,9 @@
     "More Languages" : {
 
     },
+    "Most Recent Space" : {
+
+    },
     "Most Recent Tab" : {
       "localizations" : {
         "ar" : {
@@ -7831,6 +7678,9 @@
           }
         }
       }
+    },
+    "Move Back" : {
+
     },
     "Move Down" : {
       "localizations" : {
@@ -7923,6 +7773,9 @@
           }
         }
       }
+    },
+    "Moved to %@ to play protected video" : {
+
     },
     "Moves all current tabs to Archive" : {
 
@@ -8328,6 +8181,9 @@
     "No passwords saved for this site" : {
 
     },
+    "No recovery checkpoint is available. Retry after checking that your disk is available and has free space." : {
+
+    },
     "No Results" : {
       "localizations" : {
         "ar" : {
@@ -8558,6 +8414,9 @@
         }
       }
     },
+    "Open a regular window to do this." : {
+
+    },
     "Open Crest" : {
       "localizations" : {
         "ar" : {
@@ -8591,7 +8450,6 @@
 
     },
     "Open First Tab" : {
-      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -8685,6 +8543,9 @@
         }
       }
     },
+    "Open Link in Peek" : {
+
+    },
     "Open Link in Split View" : {
       "localizations" : {
         "ar" : {
@@ -8704,6 +8565,9 @@
           }
         }
       }
+    },
+    "open local file document html pdf archive webarchive mhtml" : {
+
     },
     "Open Location" : {
       "localizations" : {
@@ -8741,8 +8605,10 @@
         }
       }
     },
+    "Open System Settings" : {
+
+    },
     "Open Tabs" : {
-      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -8751,6 +8617,9 @@
           }
         }
       }
+    },
+    "OPEN TABS" : {
+
     },
     "Open tabs cleared" : {
 
@@ -8835,6 +8704,9 @@
         }
       }
     },
+    "Opens in" : {
+
+    },
     "Opens the address field for editing" : {
       "localizations" : {
         "ar" : {
@@ -8865,6 +8737,12 @@
         }
       }
     },
+    "Option (⌥)" : {
+
+    },
+    "Option-click" : {
+
+    },
     "Order" : {
 
     },
@@ -8893,9 +8771,6 @@
     },
     "Oval" : {
       "extractionState" : "manual"
-    },
-    "Package" : {
-
     },
     "Packing list" : {
 
@@ -9370,8 +9245,10 @@
         }
       }
     },
+    "PINNED" : {
+      "comment" : "A section heading in a browser import review. Keep it uppercase."
+    },
     "Pinned & Saved" : {
-      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -9673,6 +9550,9 @@
         }
       }
     },
+    "Profiles, bookmarks, open tabs, and passwords" : {
+      "comment" : "What importing from another browser brings. Keep product names as they are."
+    },
     "Protected capabilities ask first. Automatic pop-ups are blocked, and a site can download one file before asking to send more." : {
 
     },
@@ -9696,6 +9576,7 @@
 
     },
     "Put new sites in" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -9802,6 +9683,15 @@
           }
         }
       }
+    },
+    "Quit" : {
+
+    },
+    "Quit and cancel %lld downloads in progress?" : {
+
+    },
+    "Quit and cancel the download in progress?" : {
+
     },
     "Quit Crest" : {
 
@@ -10014,9 +9904,6 @@
       }
     },
     "Remember in %@" : {
-
-    },
-    "Remember in this Space" : {
 
     },
     "Remember the chosen Space for each site" : {
@@ -10422,9 +10309,6 @@
     "Reset every WebKit feature flag?" : {
 
     },
-    "Reset Icon" : {
-
-    },
     "Reset practice" : {
 
     },
@@ -10614,9 +10498,6 @@
     "Review Password Import" : {
 
     },
-    "Review Passwords" : {
-
-    },
     "Review this Space’s content and network settings." : {
       "localizations" : {
         "ar" : {
@@ -10727,6 +10608,9 @@
         }
       }
     },
+    "Safari CSV" : {
+
+    },
     "Sailboat" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -10817,9 +10701,6 @@
         }
       }
     },
-    "Save Setup" : {
-
-    },
     "Save this tab" : {
 
     },
@@ -10862,6 +10743,9 @@
           }
         }
       }
+    },
+    "SAVED" : {
+      "comment" : "A section heading in a browser import review. Keep it uppercase."
     },
     "Saved and current tabs" : {
       "localizations" : {
@@ -10986,6 +10870,9 @@
           }
         }
       }
+    },
+    "Screen Sharing" : {
+
     },
     "Seahorse" : {
       "extractionState" : "manual",
@@ -11113,9 +11000,6 @@
       }
     },
     "Search passwords" : {
-
-    },
-    "Search Passwords" : {
 
     },
     "Search saved passwords" : {
@@ -11407,6 +11291,12 @@
         }
       }
     },
+    "Setup is no longer in progress. Start it again." : {
+
+    },
+    "Setup is no longer open. Open it again." : {
+
+    },
     "Setup progress" : {
 
     },
@@ -11655,13 +11545,16 @@
     "Show Saved Files" : {
 
     },
-    "Show sidebar" : {
-
-    },
     "Show Sidebar Temporarily" : {
 
     },
+    "Show Spelling and Grammar" : {
+
+    },
     "Show Start Page" : {
+
+    },
+    "Show Substitutions" : {
 
     },
     "Show Tab" : {
@@ -11774,6 +11667,18 @@
     "Skip This Version" : {
 
     },
+    "Smart Copy/Paste" : {
+
+    },
+    "Smart Dashes" : {
+
+    },
+    "Smart Links" : {
+
+    },
+    "Smart Quotes" : {
+
+    },
     "Smileys & People" : {
 
     },
@@ -11818,6 +11723,9 @@
 
     },
     "Some iCloud changes could not be read. Update Crest on all devices, then pull from iCloud." : {
+
+    },
+    "Some iCloud records can’t be read. Update Crest on all your devices and try again." : {
 
     },
     "Some of this browsing session can’t be synced." : {
@@ -11946,6 +11854,12 @@
         }
       }
     },
+    "Spaces, Essentials, pinned tabs, folders, open tabs, and colors" : {
+      "comment" : "What importing from another browser brings. Keep product names as they are."
+    },
+    "Spaces, tabs, folders, colors, icons, and passwords" : {
+      "comment" : "What importing from another browser brings. Keep product names as they are."
+    },
     "Sparkles" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -11956,6 +11870,12 @@
           }
         }
       }
+    },
+    "Speech" : {
+
+    },
+    "Spelling and Grammar" : {
+
     },
     "Split" : {
       "extractionState" : "stale",
@@ -12058,6 +11978,9 @@
 
     },
     "Split View Name" : {
+
+    },
+    "Split View needs 2 to %lld tabs. Select fewer tabs or use a smaller split." : {
 
     },
     "SPLIT VIEW PRACTICE" : {
@@ -12185,6 +12108,9 @@
         }
       }
     },
+    "Start Speaking" : {
+
+    },
     "Startup" : {
       "localizations" : {
         "ar" : {
@@ -12253,6 +12179,9 @@
           }
         }
       }
+    },
+    "Stop Speaking" : {
+
     },
     "Stored only in %@, with Crest iCloud sync" : {
       "localizations" : {
@@ -12352,6 +12281,9 @@
         }
       }
     },
+    "Substitutions" : {
+
+    },
     "Suggestion URL" : {
 
     },
@@ -12430,7 +12362,6 @@
       }
     },
     "Switch to Tab" : {
-      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -12708,6 +12639,9 @@
     "Text color" : {
 
     },
+    "Text Replacement" : {
+
+    },
     "Text, icons, and spacing scale together, and pins balance across rows." : {
 
     },
@@ -12829,7 +12763,25 @@
         }
       }
     },
+    "The download folder is unavailable. Choose another folder in Space settings." : {
+
+    },
+    "The download stopped because of a network problem." : {
+
+    },
+    "The download was interrupted." : {
+
+    },
     "The endpoint must return an OpenSearch JSON array. Leave this blank when the engine does not offer suggestions." : {
+
+    },
+    "The engine blocked this download because of its safety or organization policy verdict." : {
+
+    },
+    "The engine blocked this insecure download." : {
+
+    },
+    "The file couldn’t be saved in its folder." : {
 
     },
     "The first matching route wins. Other links use your default destination." : {
@@ -12855,16 +12807,40 @@
         }
       }
     },
+    "The page could not be exported." : {
+
+    },
     "The page could not be restored. Reload to show the original document." : {
 
     },
-    "The password could not be saved. Try again." : {
+    "The page export is too large." : {
+
+    },
+    "The page export timed out." : {
+
+    },
+    "The page navigated before its export finished." : {
+
+    },
+    "The page renderer stopped." : {
+
+    },
+    "The page was closed." : {
+
+    },
+    "The password is empty." : {
 
     },
     "The password is saved in this Space, but the form changed before Crest could fill it." : {
 
     },
+    "The row does not match the detected columns." : {
+
+    },
     "The selected items changed. Select them again before continuing." : {
+
+    },
+    "The server couldn’t provide the file." : {
 
     },
     "The server-reported file type does not match the filename and one of those types can run software." : {
@@ -12876,6 +12852,9 @@
           }
         }
       }
+    },
+    "The site is not a valid web address." : {
+
     },
     "The Space is locked or no longer active. Unlock it and select the tabs again." : {
 
@@ -12908,6 +12887,12 @@
           }
         }
       }
+    },
+    "There are more records than sync keeps." : {
+
+    },
+    "There isn’t enough disk space to save the file." : {
+
     },
     "These credentials are valid and will be imported. Review the security limitation before continuing." : {
 
@@ -13006,6 +12991,15 @@
         }
       }
     },
+    "This download was blocked because it came over an insecure connection." : {
+
+    },
+    "This download was blocked because it could harm your computer." : {
+
+    },
+    "This download was blocked by a safety or organization policy." : {
+
+    },
     "This extension will be installed in %@. Select any additional Spaces below." : {
 
     },
@@ -13039,6 +13033,12 @@
         }
       }
     },
+    "This file is not commonly downloaded. The engine could not confirm that it is safe." : {
+
+    },
+    "This file may change your browser or computer settings without your permission." : {
+
+    },
     "This file type can install or run software." : {
       "localizations" : {
         "ar" : {
@@ -13049,7 +13049,13 @@
         }
       }
     },
+    "This file was transferred over an insecure connection and could have been changed by someone else. Keep it only if you trust its source." : {
+
+    },
     "This guide stays in your Saved tabs." : {
+
+    },
+    "This HTTP site is not encrypted. Crest will import the password for manual access but will not autofill it on an insecure connection." : {
 
     },
     "This immediately and permanently deletes %@ older than %@ in this Space, including synced copies. Downloaded files stay on disk." : {
@@ -13079,6 +13085,9 @@
       }
     },
     "This location belongs only to %@ on this Mac. Opening a finished download opens the file directly; its menu also includes Show in Finder." : {
+
+    },
+    "This page cannot be exported." : {
 
     },
     "This page could not be presented in Reader Mode." : {
@@ -13141,6 +13150,45 @@
         }
       }
     },
+    "This password file contains malformed CSV quoting or columns." : {
+
+    },
+    "This password file contains more than 10,000 credential rows." : {
+
+    },
+    "This password file contains supported headers but no credential rows." : {
+
+    },
+    "This password file contains too many columns." : {
+
+    },
+    "This password file has more than one possible password column. Remove the ambiguity and try again." : {
+
+    },
+    "This password file has more than one possible site column. Remove the ambiguity and try again." : {
+
+    },
+    "This password file has more than one possible username column. Remove the ambiguity and try again." : {
+
+    },
+    "This password file has no supported password column." : {
+
+    },
+    "This password file has no supported site column." : {
+
+    },
+    "This password file has no supported username column." : {
+
+    },
+    "This password file is empty." : {
+
+    },
+    "This password file is larger than Crest’s 16 MB import limit." : {
+
+    },
+    "This password file is not valid UTF-8 text." : {
+
+    },
     "This password was imported from an insecure HTTP site. Crest keeps it available to view or copy but will not autofill it on an insecure connection." : {
 
     },
@@ -13190,9 +13238,6 @@
     "This session was saved by a newer version of Crest. Update Crest before opening it." : {
 
     },
-    "This sign-in form belongs to a different website." : {
-
-    },
     "This site can’t be reached" : {
       "localizations" : {
         "ar" : {
@@ -13220,6 +13265,9 @@
 
     },
     "This tab needs a newer Crest" : {
+
+    },
+    "This type of file can change your computer. Keep it only if you trust its source." : {
 
     },
     "Three" : {
@@ -13317,6 +13365,9 @@
           }
         }
       }
+    },
+    "Transformations" : {
+
     },
     "Translate" : {
 
@@ -13561,6 +13612,12 @@
         }
       }
     },
+    "Two records share one identity." : {
+
+    },
+    "Two Spaces share a profile." : {
+
+    },
     "Type" : {
       "localizations" : {
         "ar" : {
@@ -13581,6 +13638,7 @@
 
     },
     "unassigned" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -13701,6 +13759,9 @@
       }
     },
     "Unlock to view your tabs." : {
+
+    },
+    "Unlock your first Space to open Getting Started." : {
 
     },
     "Unmute" : {
@@ -13990,6 +14051,9 @@
     "Use imported password %lld" : {
 
     },
+    "Use Selection for Find" : {
+
+    },
     "Use Stacked Icons" : {
 
     },
@@ -14153,6 +14217,9 @@
           }
         }
       }
+    },
+    "Wait for setup to finish reading or importing." : {
+
     },
     "Waiting for approval…" : {
       "localizations" : {
@@ -14320,6 +14387,9 @@
     "Window, tab, address field, folder, and app icon choices return to their defaults." : {
 
     },
+    "Windows, open tabs, and pinned tabs" : {
+      "comment" : "What importing from another browser brings. Keep product names as they are."
+    },
     "Winter" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -14340,9 +14410,6 @@
           }
         }
       }
-    },
-    "Working" : {
-
     },
     "Wyvern" : {
       "extractionState" : "manual",
@@ -14383,12 +14450,6 @@
     "You can still set up Spaces manually." : {
 
     },
-    "Your saved files are preserved. Browsing and iCloud sync will stay stopped until your session can be opened." : {
-
-    },
-    "Your Spaces are ready." : {
-
-    },
     "You’re offline" : {
       "localizations" : {
         "ar" : {
@@ -14406,6 +14467,9 @@
 
     },
     "Your pinned and saved tabs are still in the sidebar." : {
+
+    },
+    "Your saved files are preserved. Browsing and iCloud sync will stay stopped until your session can be opened." : {
 
     },
     "Your Space" : {
@@ -14446,147 +14510,6 @@
           }
         }
       }
-    },
-    "BOOKMARKS" : {
-
-    },
-    "Bookmarks, windows, and open tabs" : {
-
-    },
-    "ESSENTIALS" : {
-
-    },
-    "FAVORITES" : {
-
-    },
-    "OPEN TABS" : {
-
-    },
-    "PINNED" : {
-
-    },
-    "Profiles, bookmarks, open tabs, and passwords" : {
-
-    },
-    "SAVED" : {
-
-    },
-    "Spaces, Essentials, pinned tabs, folders, open tabs, and colors" : {
-
-    },
-    "Spaces, tabs, folders, colors, icons, and passwords" : {
-
-    },
-    "Windows, open tabs, and pinned tabs" : {
-
-    },
-    "Setup is no longer in progress. Start it again." : {
-
-    },
-    "Browser %lld of %lld" : {
-
-    },
-    "Setup is no longer open. Open it again." : {
-
-    },
-    "Unlock your first Space to open Getting Started." : {
-
-    },
-    "Wait for setup to finish reading or importing." : {
-
-    },
-    "A field in this password file is too large to import safely." : {
-
-    },
-    "Bitwarden CSV" : {
-
-    },
-    "Browser CSV" : {
-
-    },
-    "Firefox CSV" : {
-
-    },
-    "Safari CSV" : {
-
-    },
-    "The password is empty." : {
-
-    },
-    "The row does not match the detected columns." : {
-
-    },
-    "The site is not a valid web address." : {
-
-    },
-    "This HTTP site is not encrypted. Crest will import the password for manual access but will not autofill it on an insecure connection." : {
-
-    },
-    "This password file contains malformed CSV quoting or columns." : {
-
-    },
-    "This password file contains more than 10,000 credential rows." : {
-
-    },
-    "This password file contains supported headers but no credential rows." : {
-
-    },
-    "This password file contains too many columns." : {
-
-    },
-    "This password file has more than one possible password column. Remove the ambiguity and try again." : {
-
-    },
-    "This password file has more than one possible site column. Remove the ambiguity and try again." : {
-
-    },
-    "This password file has more than one possible username column. Remove the ambiguity and try again." : {
-
-    },
-    "This password file has no supported password column." : {
-
-    },
-    "This password file has no supported site column." : {
-
-    },
-    "This password file has no supported username column." : {
-
-    },
-    "This password file is empty." : {
-
-    },
-    "This password file is larger than Crest’s 16 MB import limit." : {
-
-    },
-    "This password file is not valid UTF-8 text." : {
-
-    },
-    "Moved to %@ to play protected video" : {
-
-    },
-    "Move Back" : {
-
-    },
-    "Opens in" : {
-
-    },
-    "This file was transferred over an insecure connection and could have been changed by someone else. Keep it only if you trust its source." : {
-
-    },
-    "This type of file can change your computer. Keep it only if you trust its source." : {
-
-    },
-    "This file is not commonly downloaded. The engine could not confirm that it is safe." : {
-
-    },
-    "This file may change your browser or computer settings without your permission." : {
-
-    },
-    "The engine blocked this insecure download." : {
-
-    },
-    "The engine blocked this download because of its safety or organization policy verdict." : {
-
     }
   },
   "version" : "1.3"

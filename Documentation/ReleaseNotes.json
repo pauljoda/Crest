@@ -3437,6 +3437,10 @@
     "experimental-updates-continue-on-development": {
       "category": "improved",
       "message": "The final experimental update moves your update preference to Development so future Crest updates continue there."
+    },
+    "engine-settings-localization-catalog": {
+      "category": "internal",
+      "message": "Refresh generated localization metadata for engine settings while preserving existing translations."
     }
   }
 }
