@@ -267,15 +267,18 @@ default. Set `CREST_ISOLATED_PERSISTENCE_ID` to a different name and provide a
 separate `--user-data-dir` for an independent session, including benchmark runs.
 Use the Release configuration of `CrestChromiumUI` for performance comparisons.
 
-The Swift framework contains no application entry point. Once Chromium has
-started, the host loads it and calls its exported `crest_chromium_ui_start`,
-which attaches `ChromiumMacUI` to Chromium's Mac shell and hands
-`ChromiumComposition` the engine binding and the page-request table.
-`CrestChromiumUI` compiles Crest's shared and macOS UI, and `ChromiumComposition`
-builds the engine and the application and starts the Mac shell both products
-share (`CrestMac/App/Shell`), which mounts `BrowserMacApplication` in its AppKit
-windows and builds the menu bar from the core's `ShortcutMenu` layout. A local key
-monitor runs Crest's shortcuts before Chromium's content view takes them.
+The launcher loads the Swift framework and calls `crest_native_host_run`
+before loading Chromium's framework. `ChromiumComposition` starts Crest's
+`NSApplication` delegate and the Mac shell both products share
+(`CrestMac/App/Shell`). That shell mounts `BrowserMacApplication` in its AppKit
+windows and builds the menu bar from the core's `ShortcutMenu` layout.
+`CrestChromiumUI` compiles Crest's shared and macOS UI. Its deferred engine
+starts Chromium on the first Chromium page or explicit extension action;
+a WebKit-only session never loads the Chromium framework or its services.
+Once requested, Chromium stays initialized until Crest quits. Its
+`crest_chromium_ui_start` callback attaches `ChromiumMacUI` and supplies the
+engine binding and page-request table to the application's existing core.
+A local key monitor runs Crest's shortcuts before Chromium's content view takes them.
 `ChromiumShellHost` answers the little the shell asks of Chromium: the About
 credits, releasing a closed window's engine state and profiles, and an extension
 shortcut no Crest command claimed. `ChromiumNativePage` supplies the WebContents
