@@ -132,10 +132,16 @@ struct BrowserFindBar: View {
 
     private var query: String { port.query() }
 
+    /// Typing searches; writing back the same query does not. macOS hands the
+    /// unchanged text to the binding three times on Return, ahead of
+    /// `onSubmit`, and each of those would otherwise step to another match.
     private var queryBinding: Binding<String> {
         Binding(
             get: { port.query() },
-            set: { port.find($0, .forward) }
+            set: { query in
+                guard query != port.query() else { return }
+                port.find(query, .forward)
+            }
         )
     }
 

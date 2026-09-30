@@ -3445,6 +3445,10 @@
     "chromium-space-swipe-keeps-pages-rendering": {
       "category": "fixed",
       "message": "Chromium pages keep rendering while you swipe between Spaces instead of turning gray."
+    },
+    "find-return-steps-one-match": {
+      "category": "fixed",
+      "message": "Pressing Return in Find moves to the next match instead of skipping several ahead."
     }
   }
 }
