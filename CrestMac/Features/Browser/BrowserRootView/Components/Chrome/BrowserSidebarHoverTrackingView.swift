@@ -1,18 +1,72 @@
 import AppKit
 
 /// Owns hover across the sidebar's full region, including its leading inset.
+///
+/// Hover is the pointer resting on the region, held open for as long as
+/// something the sidebar opened is still in use: a menu started inside it, a
+/// popover or sheet it presented, an extension popup that took the keyboard
+/// from its window, or a field of its own being typed into. A hold only keeps a
+/// hover the pointer started; it never reveals the sidebar on its own.
+///
 /// Menu tracking can leave an exit queued after the pointer has returned to
-/// the sidebar. Sample the current position instead of trusting that event,
-/// and hold the region open until a menu started inside it finishes tracking.
+/// the sidebar. Sample the current position instead of trusting that event.
 @MainActor
 final class BrowserSidebarHoverTrackingView: NSView {
+    // MARK: - Static Variables
+
+    /// How long the region stays held after its last hold lets go. A menu item
+    /// or a popover often opens its successor — a popover, a sheet, a rename
+    /// field — a moment after it closes, and the sidebar that anchors it
+    /// should still be there when it arrives.
+    static let holdReleaseDelay: TimeInterval = 0.15
+
+    // MARK: - Variables
+
     var onHoverChange: @MainActor @Sendable (Bool) -> Void
 
     private let notificationCenter: NotificationCenter
     private let pointerLocation: @MainActor () -> NSPoint
+    private let heldPopovers = NSHashTable<NSPopover>.weakObjects()
+    private let heldWindows = NSHashTable<NSWindow>.weakObjects()
     private var trackingArea: NSTrackingArea?
+    private var firstResponderObservation: NSKeyValueObservation?
     private var trackingMenus: Set<ObjectIdentifier> = []
+    private var holdReleaseRevision = 0
+    private var isReleasingHold = false
     private var lastReportedHover: Bool?
+
+    private var isPointerInside: Bool {
+        guard let window, window.isKeyWindow, !isHiddenOrHasHiddenAncestor else { return false }
+        let location = convert(window.convertPoint(fromScreen: pointerLocation()), from: nil)
+        return trackedRect.contains(location)
+    }
+
+    private var isHeldOpen: Bool {
+        !trackingMenus.isEmpty
+            || !heldPopovers.allObjects.isEmpty
+            || !heldWindows.allObjects.isEmpty
+            || isReleasingHold
+            || isEditingInside
+    }
+
+    /// Whether a field of the sidebar's own is being typed into. The window's
+    /// field editor stands in for whichever text field it is editing, and web
+    /// content never answers as one.
+    private var isEditingInside: Bool {
+        guard let window, let editor = window.firstResponder as? NSTextView else { return false }
+        let field = editor.isFieldEditor ? (editor.delegate as? NSView) ?? editor : editor
+        guard field.window === window, !field.isHiddenOrHasHiddenAncestor else { return false }
+        // Contained rather than overlapping: a floating card covers part of the
+        // page, and a field of the page's own chrome lying partly beneath it is
+        // not one of the sidebar's.
+        return trackedRect.contains(convert(field.convert(field.bounds, to: nil), from: nil))
+    }
+
+    private var trackedRect: NSRect {
+        bounds.intersection(visibleRect)
+    }
+
+    // MARK: - Initializers
 
     init(
         notificationCenter: NotificationCenter = .default,
@@ -33,6 +87,8 @@ final class BrowserSidebarHoverTrackingView: NSView {
         fatalError("init(coder:) has not been implemented")
     }
 
+    // MARK: - Actions - Hover
+
     override func hitTest(_ point: NSPoint) -> NSView? {
         nil
     }
@@ -40,21 +96,32 @@ final class BrowserSidebarHoverTrackingView: NSView {
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
         notificationCenter.removeObserver(self)
+        firstResponderObservation = nil
         trackingMenus.removeAll()
+        heldPopovers.removeAllObjects()
+        heldWindows.removeAllObjects()
+        holdReleaseRevision += 1
+        isReleasingHold = false
         lastReportedHover = nil
         guard let window else { return }
-        notificationCenter.addObserver(
-            self, selector: #selector(menuTrackingBegan),
-            name: NSMenu.didBeginTrackingNotification, object: nil
-        )
-        notificationCenter.addObserver(
-            self, selector: #selector(menuTrackingEnded),
-            name: NSMenu.didEndTrackingNotification, object: nil
-        )
-        notificationCenter.addObserver(
-            self, selector: #selector(windowResignedKey),
-            name: NSWindow.didResignKeyNotification, object: window
-        )
+        let observations: [(Selector, Notification.Name, NSWindow?)] = [
+            (#selector(menuTrackingBegan), NSMenu.didBeginTrackingNotification, nil),
+            (#selector(menuTrackingEnded), NSMenu.didEndTrackingNotification, nil),
+            (#selector(popoverWillShow), NSPopover.willShowNotification, nil),
+            (#selector(popoverWillClose), NSPopover.willCloseNotification, nil),
+            (#selector(anyWindowWillClose), NSWindow.willCloseNotification, nil),
+            (#selector(windowResignedKey), NSWindow.didResignKeyNotification, window),
+            (#selector(windowBecameKey), NSWindow.didBecomeKeyNotification, window),
+        ]
+        for (selector, name, object) in observations {
+            notificationCenter.addObserver(self, selector: selector, name: name, object: object)
+        }
+        firstResponderObservation = window.observe(\.firstResponder) { [weak self] _, _ in
+            // Settle after the field editor finishes taking over or handing back.
+            DispatchQueue.main.async { [weak self] in
+                self?.refreshPointerHover()
+            }
+        }
         schedulePointerRefresh()
     }
 
@@ -83,7 +150,8 @@ final class BrowserSidebarHoverTrackingView: NSView {
 
     func refreshPointerHover() {
         guard window != nil else { return }
-        let isHovering = !trackingMenus.isEmpty || isPointerInside
+        releaseWindowsNoLongerShown()
+        let isHovering = isPointerInside || (lastReportedHover == true && isHeldOpen)
         // A newly revealed sidebar starts offscreen while it slides in.
         // Absence before its first entry is not a pointer exit.
         guard isHovering || lastReportedHover != nil else { return }
@@ -100,11 +168,7 @@ final class BrowserSidebarHoverTrackingView: NSView {
         }
     }
 
-    private var isPointerInside: Bool {
-        guard let window, window.isKeyWindow, !isHiddenOrHasHiddenAncestor else { return false }
-        let location = convert(window.convertPoint(fromScreen: pointerLocation()), from: nil)
-        return bounds.intersection(visibleRect).contains(location)
-    }
+    // MARK: - Actions - Holds
 
     @objc private func menuTrackingBegan(_ notification: Notification) {
         guard let menu = notification.object as? NSMenu,
@@ -120,10 +184,72 @@ final class BrowserSidebarHoverTrackingView: NSView {
         else { return }
         // This also covers Escape and selecting an action. Neither needs to
         // produce another mouse event to resolve the sidebar's visibility.
-        refreshPointerHover()
+        beginHoldRelease()
+    }
+
+    /// Popovers are child windows that leave their parent key, so they are
+    /// claimed as they open rather than when the keyboard moves. The window
+    /// is not placed yet, so the keyboard stands in for where it came from.
+    @objc private func popoverWillShow(_ notification: Notification) {
+        guard let popover = notification.object as? NSPopover,
+            lastReportedHover == true,
+            let window,
+            let keyWindow = NSApp.keyWindow,
+            keyWindow === window || isOpened(byThisWindow: keyWindow)
+        else { return }
+        heldPopovers.add(popover)
+    }
+
+    @objc private func popoverWillClose(_ notification: Notification) {
+        guard let popover = notification.object as? NSPopover, heldPopovers.contains(popover) else { return }
+        heldPopovers.remove(popover)
+        beginHoldRelease()
+    }
+
+    @objc private func anyWindowWillClose(_ notification: Notification) {
+        guard let closing = notification.object as? NSWindow, heldWindows.contains(closing) else { return }
+        heldWindows.remove(closing)
+        beginHoldRelease()
     }
 
     @objc private func windowResignedKey(_ notification: Notification) {
+        // AppKit has already made the next window key. One this window opened —
+        // an extension's popup, a sheet, a popover taking typing — belongs to
+        // whatever in the sidebar opened it.
+        if lastReportedHover == true, let keyWindow = NSApp.keyWindow, isOpened(byThisWindow: keyWindow) {
+            heldWindows.add(keyWindow)
+        }
         refreshPointerHover()
+    }
+
+    @objc private func windowBecameKey(_ notification: Notification) {
+        // A popup that held the keyboard has been ordered out by now, even when
+        // its close notification is still to come.
+        refreshPointerHover()
+    }
+
+    private func isOpened(byThisWindow candidate: NSWindow) -> Bool {
+        guard let window, candidate !== window else { return false }
+        return sequence(first: candidate, next: { $0.parent ?? $0.sheetParent })
+            .dropFirst()
+            .contains { $0 === window }
+    }
+
+    private func releaseWindowsNoLongerShown() {
+        let hidden = heldWindows.allObjects.filter { !$0.isVisible }
+        guard !hidden.isEmpty else { return }
+        hidden.forEach(heldWindows.remove)
+        beginHoldRelease()
+    }
+
+    private func beginHoldRelease() {
+        holdReleaseRevision += 1
+        let revision = holdReleaseRevision
+        isReleasingHold = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.holdReleaseDelay) { [weak self] in
+            guard let self, self.holdReleaseRevision == revision else { return }
+            self.isReleasingHold = false
+            self.refreshPointerHover()
+        }
     }
 }

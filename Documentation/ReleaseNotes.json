@@ -3469,6 +3469,10 @@
     "updates-install-after-restart": {
       "category": "fixed",
       "message": "Restarting to install an update, or choosing Quit from the Dock, quits Crest so the update installs instead of waiting forever."
+    },
+    "floating-sidebar-stays-for-its-popups": {
+      "category": "fixed",
+      "message": "A hidden sidebar you've revealed stays open while something you opened from it is still on screen, like an extension popup, a folder color picker, or a confirmation, and while you're renaming something in it."
     }
   }
 }
