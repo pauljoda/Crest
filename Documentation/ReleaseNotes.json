@@ -3505,6 +3505,10 @@
     "space-page-takes-input-after-late-switch": {
       "category": "fixed",
       "message": "A page you send from a Quick Window to another Space responds to clicks and typing as soon as it appears, instead of only after you switch tabs."
+    },
+    "hidden-sidebar-reveals-only-in-front-window": {
+      "category": "fixed",
+      "message": "A hidden sidebar slides out at the window's edge only when that window is in front. Moving the pointer over a window in the background no longer opens its sidebar and leaves it stuck open."
     }
   }
 }

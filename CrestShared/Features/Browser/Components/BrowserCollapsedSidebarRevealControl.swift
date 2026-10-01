@@ -8,10 +8,16 @@ import SwiftUI
 /// never rests on the edge, Full Keyboard Access, VoiceOver. What each shell's
 /// inputs add on top of the button is capability-driven: a resting pointer
 /// where there is one, an inward swipe where there are fingers.
+///
+/// A resting pointer reveals the sidebar only in the focused window. A pointer
+/// crossing the edge of a window behind another is on its way somewhere else,
+/// and the sidebar it brought out would stay until that window was focused
+/// again, because nothing in a background window reports the pointer leaving.
 struct BrowserCollapsedSidebarRevealControl: View {
     let capabilities: BrowserInteractionCapabilities
     let showSidebar: () -> Void
     var edge: HorizontalEdge = .leading
+    var isWindowFocused = true
 
     @Environment(\.layoutDirection) private var layoutDirection
 
@@ -29,7 +35,7 @@ struct BrowserCollapsedSidebarRevealControl: View {
         .accessibilityIdentifier("show-sidebar")
         .help(hint)
         .onHover { isHovering in
-            guard metrics.revealsOnHover, isHovering else { return }
+            guard metrics.revealsOnHover, isWindowFocused, isHovering else { return }
             showSidebar()
         }
         .frame(width: metrics.width)

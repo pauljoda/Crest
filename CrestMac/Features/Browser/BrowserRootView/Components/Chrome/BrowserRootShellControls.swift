@@ -15,7 +15,8 @@ struct BrowserRootShellControls: View {
             BrowserCollapsedSidebarRevealControl(
                 capabilities: interactionCapabilities,
                 showSidebar: presentFloatingSidebar,
-                edge: sidebarEdge
+                edge: sidebarEdge,
+                isWindowFocused: model.isWindowFocused
             )
             // The shared control keeps its capability-driven hover behavior for
             // every pointer shell. The Mac shell also listens through AppKit so
@@ -56,7 +57,7 @@ struct BrowserRootShellControls: View {
     }
 
     private func collapsedSidebarHoverChanged(_ isHovering: Bool) {
-        guard isHovering else { return }
+        guard isHovering, model.isWindowFocused else { return }
         presentFloatingSidebar()
     }
 
