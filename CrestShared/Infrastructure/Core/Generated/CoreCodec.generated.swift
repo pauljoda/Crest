@@ -7,7 +7,7 @@ import Foundation
 enum CoreCodec {
     /// SHA-256 of the canonical contract schema. The core refuses any other.
     static let fingerprint: [UInt8] = [
-        0x00, 0x2c, 0xda, 0x2e, 0x2e, 0x33, 0x93, 0x44, 0xbf, 0x45, 0xb8, 0x72, 0x42, 0x3c, 0xd3, 0xfe, 0x70, 0xe9, 0x52, 0x50, 0x6e, 0x4d, 0xd4, 0xdc, 0x52, 0x9f, 0xc3, 0x29, 0x51, 0x28, 0x05, 0x2e
+        0x14, 0xf7, 0x4d, 0xc6, 0x1b, 0xa6, 0xd1, 0x8c, 0xa3, 0xf5, 0x72, 0xd6, 0x9b, 0x3b, 0x77, 0x7e, 0x85, 0xd3, 0xd6, 0xf3, 0xde, 0xa3, 0x1e, 0x7b, 0xec, 0x40, 0x4e, 0xd7, 0x20, 0xcb, 0x3f, 0x43
     ]
     /// SHA-256 of the engine contract alone, which an engine binding registers with.
     static let engineFingerprint: [UInt8] = [
@@ -2216,7 +2216,8 @@ extension AppPreferences {
         let savedTabClose = try SavedTabClosePolicy(from: &reader)
         let savedTabFaviconReturnsToSavedURL = try reader.readBool()
         let splitFocusFollowsMouse = try reader.readBool()
-        self.init(startup: startup, offersTranslation: offersTranslation, automaticallyTranslates: automaticallyTranslates, translationRules: translationRules, checksSpelling: checksSpelling, automaticallyEntersPictureInPicture: automaticallyEntersPictureInPicture, savedTabClose: savedTabClose, savedTabFaviconReturnsToSavedURL: savedTabFaviconReturnsToSavedURL, splitFocusFollowsMouse: splitFocusFollowsMouse)
+        let automaticallyShowsDeveloperToolbar = try reader.readBool()
+        self.init(startup: startup, offersTranslation: offersTranslation, automaticallyTranslates: automaticallyTranslates, translationRules: translationRules, checksSpelling: checksSpelling, automaticallyEntersPictureInPicture: automaticallyEntersPictureInPicture, savedTabClose: savedTabClose, savedTabFaviconReturnsToSavedURL: savedTabFaviconReturnsToSavedURL, splitFocusFollowsMouse: splitFocusFollowsMouse, automaticallyShowsDeveloperToolbar: automaticallyShowsDeveloperToolbar)
     }
 
     func encode(into writer: inout WireWriter) {
@@ -2232,6 +2233,7 @@ extension AppPreferences {
         savedTabClose.encode(into: &writer)
         writer.writeBool(savedTabFaviconReturnsToSavedURL)
         writer.writeBool(splitFocusFollowsMouse)
+        writer.writeBool(automaticallyShowsDeveloperToolbar)
     }
 }
 

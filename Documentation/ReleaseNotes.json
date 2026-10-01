@@ -3513,6 +3513,10 @@
     "drag-window-by-page-frame": {
       "category": "improved",
       "message": "Drag the frame around a page on any edge to move the window, as you can from the sidebar. The gap around a floating sidebar moves the window too. Borderless windows have no frame, so every click still reaches the page."
+    },
+    "developer-toolbar-local-pages-setting": {
+      "category": "new",
+      "message": "A new General setting keeps the developer toolbar from opening by itself on local pages. Shift-Command-I still shows it on any page."
     }
   }
 }

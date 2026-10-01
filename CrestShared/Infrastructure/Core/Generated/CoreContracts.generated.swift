@@ -716,7 +716,8 @@ struct AppPreferences: Equatable, Sendable {
         automaticallyEntersPictureInPicture: true,
         savedTabClose: SavedTabClosePolicy.resumeLastLocation,
         savedTabFaviconReturnsToSavedURL: false,
-        splitFocusFollowsMouse: false
+        splitFocusFollowsMouse: false,
+        automaticallyShowsDeveloperToolbar: true
     )
 
     var startup: StartupBehavior
@@ -728,6 +729,7 @@ struct AppPreferences: Equatable, Sendable {
     var savedTabClose: SavedTabClosePolicy
     var savedTabFaviconReturnsToSavedURL: Bool
     var splitFocusFollowsMouse: Bool
+    var automaticallyShowsDeveloperToolbar: Bool
 }
 
 struct AppPreferencesChanged: Equatable, Sendable {

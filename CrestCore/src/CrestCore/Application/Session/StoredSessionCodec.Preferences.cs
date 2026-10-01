@@ -117,7 +117,8 @@ internal static partial class StoredSessionCodec {
             TolerantFlag(value[Key.AutomaticallyEntersPictureInPicture]) ?? defaults.AutomaticallyEntersPictureInPicture,
             SavedTabClosePolicy.Named(TolerantText(value[Key.SavedTabClosePolicy])) ?? defaults.SavedTabClose,
             TolerantFlag(value[Key.SavedTabFaviconReturnsToSavedUrl]) ?? defaults.SavedTabFaviconReturnsToSavedUrl,
-            TolerantFlag(value[Key.SplitFocusFollowsMouse]) ?? defaults.SplitFocusFollowsMouse);
+            TolerantFlag(value[Key.SplitFocusFollowsMouse]) ?? defaults.SplitFocusFollowsMouse,
+            TolerantFlag(value[Key.AutomaticallyShowsDeveloperToolbar]) ?? defaults.AutomaticallyShowsDeveloperToolbar);
     }
 
     internal static JsonObject Encode(AppPreferences preferences) => new() {
@@ -129,7 +130,8 @@ internal static partial class StoredSessionCodec {
         [Key.AutomaticallyEntersPictureInPicture] = preferences.AutomaticallyEntersPictureInPicture,
         [Key.SavedTabClosePolicy] = preferences.SavedTabClose.Name,
         [Key.SavedTabFaviconReturnsToSavedUrl] = preferences.SavedTabFaviconReturnsToSavedUrl,
-        [Key.SplitFocusFollowsMouse] = preferences.SplitFocusFollowsMouse
+        [Key.SplitFocusFollowsMouse] = preferences.SplitFocusFollowsMouse,
+        [Key.AutomaticallyShowsDeveloperToolbar] = preferences.AutomaticallyShowsDeveloperToolbar
     };
 
     /// The values the native settings stored before the core owned them, each

@@ -9,7 +9,7 @@ keywords: [localhost, developer mode, viewport, responsive, Web Inspector, DevTo
 
 On Mac, Crest automatically shows its developer toolbar for local development addresses. This includes `localhost`, loopback and private-network addresses, single-label hosts, common local suffixes such as `.local` and `.test`, and file URLs.
 
-Use **Shift-Command-I** to show or hide the toolbar on any website.
+Use **Shift-Command-I** to show or hide the toolbar on any website. To stop the toolbar opening by itself on local addresses, turn off **Show developer toolbar on local pages** in **Settings > General**. The shortcut still shows it whenever you want it.
 
 ## Preview a different viewport
 

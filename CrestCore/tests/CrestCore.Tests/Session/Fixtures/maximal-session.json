@@ -750,6 +750,7 @@
     "offersTranslation" : false,
     "automaticallyTranslates" : true,
     "splitFocusFollowsMouse" : true,
+    "automaticallyShowsDeveloperToolbar" : false,
     "savedTabClosePolicy" : "returnToSavedURL",
     "translationRules" : {
       "sources" : {

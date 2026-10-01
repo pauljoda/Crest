@@ -246,7 +246,8 @@ The persistent session's `appPreferences` record holds the app-wide behavior
 preferences (`startupBehavior`, `offersTranslation`, `automaticallyTranslates`,
 `translationRules`, `checksSpelling`, `automaticallyEntersPictureInPicture`,
 `savedTabClosePolicy`, `savedTabFaviconReturnsToSavedURL`,
-`splitFocusFollowsMouse`), using the raw values the native settings stored.
+`splitFocusFollowsMouse`, `automaticallyShowsDeveloperToolbar`), using the raw
+values the native settings stored.
 `SetAppPreferences` sets the record, `SetTranslationRule` edits one source
 language's rule, and `ImportAppPreferences` takes the old defaults values
 (translation rules as their stored JSON text), applied only while the session

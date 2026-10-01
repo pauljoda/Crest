@@ -40,7 +40,7 @@ struct BrowserSettingsDestination: Hashable, Identifiable, Sendable {
     static let general = BrowserSettingsDestination(
         kind: .general, name: "general", title: "General", subtitle: "Browsing and startup",
         searchTerms:
-            "browser startup default Space typing spelling spell check text editing focus new tabs follow move between Spaces Command-click middle-click pinned saved close resume restore root URL mouse translation system permissions access camera microphone location notifications passkeys files folders downloads allow blocked repair sidebar widgets Now Playing media cards",
+            "browser startup default Space typing spelling spell check text editing focus new tabs follow move between Spaces Command-click middle-click pinned saved close resume restore root URL mouse developer toolbar localhost local pages translation system permissions access camera microphone location notifications passkeys files folders downloads allow blocked repair sidebar widgets Now Playing media cards",
         symbol: "gearshape", color: CrestBrandPalette.inkSoft)
     static let lookAndFeel = BrowserSettingsDestination(
         kind: .lookAndFeel, name: "lookAndFeel", title: "Look and Feel", subtitle: "Appearance, zoom, and motion",

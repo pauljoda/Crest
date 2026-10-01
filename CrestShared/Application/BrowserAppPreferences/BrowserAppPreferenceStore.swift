@@ -71,6 +71,11 @@ final class BrowserAppPreferenceStore {
         set { set { $0.splitFocusFollowsMouse = newValue } }
     }
 
+    var automaticallyShowsDeveloperToolbar: Bool {
+        get { preferences.automaticallyShowsDeveloperToolbar }
+        set { set { $0.automaticallyShowsDeveloperToolbar = newValue } }
+    }
+
     // MARK: - Initializers
 
     init(preferences: AppPreferences = .default) {

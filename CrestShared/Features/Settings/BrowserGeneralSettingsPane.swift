@@ -72,6 +72,7 @@ struct BrowserGeneralSettingsPane: View {
                 BrowserSystemPermissionSettingsSection(browser: browser, spaceAccess: spaceAccess)
                 BrowserPictureInPictureSettingsSection()
                 BrowserSpellCheckingSettingsSection()
+                BrowserDeveloperToolbarSettingsSection()
             #endif
 
             Section("Default browser", systemImage: "globe") {

@@ -181,8 +181,14 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     var renderedPageZoom: CGFloat { developerViewport == nil ? pageZoom : 1 }
 
     var isDeveloperModeEnabled: Bool {
-        developerToolbarVisibilityOverride
-            ?? (developerViewport != nil || BrowserDeveloperModePolicy.isAutomatic(for: live.displayURL))
+        developerToolbarVisibilityOverride ?? (developerViewport != nil || isDeveloperModeAutomatic)
+    }
+
+    /// Whether this page's address turns the developer toolbar on by itself:
+    /// a local development address, while the person keeps that preference on.
+    var isDeveloperModeAutomatic: Bool {
+        BrowserAppPreferenceStore.shared.automaticallyShowsDeveloperToolbar
+            && BrowserDeveloperModePolicy.isAutomatic(for: live.displayURL)
     }
 
     /// The tab that owns this page's Media Session, read when the session

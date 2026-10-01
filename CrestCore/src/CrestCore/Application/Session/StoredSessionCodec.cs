@@ -29,6 +29,7 @@ internal static partial class StoredSessionCodec {
         public const string ArchivedAt = "archivedAt";
         public const string ArchivedTabs = "archivedTabs";
         public const string AutomaticallyEntersPictureInPicture = "automaticallyEntersPictureInPicture";
+        public const string AutomaticallyShowsDeveloperToolbar = "automaticallyShowsDeveloperToolbar";
         public const string AutomaticallyTranslates = "automaticallyTranslates";
         public const string Backplate = "backplate";
         public const string BackplateColorIndex = "backplateColorIndex";
