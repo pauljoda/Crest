@@ -40,10 +40,27 @@ public static class HistoryPolicy {
         return visited;
     }
 
+    /// The history with the newest entry for `url` titled `title`, in its
+    /// place and with its visits as they were. Null for a blank title, an
+    /// address history keeps no entry for, or an entry already titled so.
+    public static IReadOnlyList<HistoryEntryState>? Retitle(IReadOnlyList<HistoryEntryState> history, string url, string title) {
+        ArgumentNullException.ThrowIfNull(history);
+        if (string.IsNullOrEmpty(title) || new WebAddress(url).Normalized is not { } normalized
+            || AddressIndex.Of(history).Entry(normalized) is not { } entry || entry.Title == title) return null;
+        var retitled = entry with { Title = title };
+        var edited = history.Select(existing => existing.Id == entry.Id ? retitled : existing).ToList();
+        AddressIndex.Visited(history, edited, retitled, entry, []);
+        return edited;
+    }
+
+    /// The entry a visit to `normalizedUrl` titled `title` leaves: `previous`
+    /// with one more visit, or a new entry taking `newId`. A blank title is
+    /// the page saying nothing, so the entry keeps its title, and a new one
+    /// takes the address's host.
     public static HistoryEntryState Record(string normalizedUrl, string? title, DateTimeOffset now, Guid newId, HistoryEntryState? previous) {
         if (new WebAddress(normalizedUrl).Normalized != normalizedUrl || newId == Guid.Empty
             || previous is not null && previous.Url != normalizedUrl) throw new BrowserRuleException(BrowserRuleCodes.InvalidHistoryVisit);
-        string resolvedTitle = string.IsNullOrEmpty(title) ? new Uri(normalizedUrl).Host : title;
+        string resolvedTitle = !string.IsNullOrEmpty(title) ? title : previous?.Title ?? new Uri(normalizedUrl).Host;
         if (resolvedTitle.Length == 0) resolvedTitle = normalizedUrl;
         return previous is null ? new(newId, normalizedUrl, resolvedTitle, now, now, 1)
             : previous with { Title = resolvedTitle, LastVisitedAt = now, VisitCount = checked(previous.VisitCount + 1) };

@@ -321,18 +321,20 @@ extension BrowserPage: WKNavigationDelegate {
         #endif
         guard isCurrentNavigation(navigation) else { return }
         activeNavigation = nil
-        let completedURL = webView.url
         let committedNavigation = committedNavigationCount
         Task { @MainActor [weak self, weak webView] in
             guard let self, let webView else { return }
             let documentTitle = try? await webView.evaluateJavaScript("document.title") as? String
+            // A move within the document while its title was read, such as a
+            // script router's first `replaceState`, belongs to this load,
+            // which finishes where the document is now.
             guard self.activeNavigation == nil,
                 self.committedNavigationCount == committedNavigation,
-                webView.url == completedURL
+                let finishedURL = webView.url
             else { return }
             let title = documentTitle?.isEmpty == false ? documentTitle : webView.title
             self.completedNavigationCount += 1
-            if let completedURL { self.webKitAdapter?.reporter?.finished(completedURL, title: title) }
+            self.webKitAdapter?.reporter?.finished(finishedURL, title: title)
         }
         updateUnderPageBackground()
         mediaSessionCoordinator?.didFinishNavigation()

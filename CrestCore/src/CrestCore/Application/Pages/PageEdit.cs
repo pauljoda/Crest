@@ -72,6 +72,33 @@ internal sealed record NavigationRecord(Guid PageId, Guid SpaceId, DateTimeOffse
     #endregion
 }
 
+/// A page whose document is recorded at `Url` gave it the title `Title`
+/// since. The page's tab, while it still shows that page, takes it, and so
+/// does the address's history entry when `Visit`, without another visit.
+internal sealed record TitleRecord(Guid PageId, Guid SpaceId, DateTimeOffset At, Guid? TabId, string Url, string Title, bool Visit)
+    : PageEdit(PageId, SpaceId, At) {
+    #region Actions - Editing
+
+    public override (SpaceState Space, SessionFaviconUpdate? Favicon)? Apply(SpaceState space, DateTimeOffset now) {
+        if (TabId is { } tabId) {
+            var index = IndexOf(space, tabId);
+            if (index < 0) return null;
+            var tab = BrowserTab.Restore(space.Tabs[index]);
+            // The tab may have been sent to another address since.
+            if (tab.Url is { } shown && new WebAddress(shown).IsSamePage(new WebAddress(Url))) {
+                tab.ObserveAppearance(url: null, Title);
+                space = Replacing(space, index, tab);
+            }
+        }
+        if (Visit && HistoryPolicy.Retitle(space.History, Url, Title) is { } history) space = space with { History = history };
+        return (space, null);
+    }
+
+    public override IEnumerable<Change> Announced(Guid workspaceId) => [];
+
+    #endregion
+}
+
 /// A page whose document is recorded reported an icon for it, which its tab
 /// wears while it shows that page and its icon follows the page.
 internal sealed record IconAdoption(Guid PageId, Guid SpaceId, DateTimeOffset At, Guid TabId, PageIcon Icon)

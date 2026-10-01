@@ -9,6 +9,18 @@ namespace CrestCore.Application;
 /// between Spaces of that profile. It may move to another engine, which
 /// creates it anew in that profile.
 internal sealed class Page {
+    #region Static Variables
+
+    /// How long after its document is recorded the page's visit still takes
+    /// the titles the page gives itself, and how many. A page that names
+    /// itself as it settles names its visit; one that later flashes news in
+    /// its title, such as unread mail, leaves history alone. Its tab follows
+    /// every title.
+    public static readonly TimeSpan HistoryTitleWindow = TimeSpan.FromSeconds(5);
+    public const int HistoryTitleChanges = 5;
+
+    #endregion
+
     #region Variables
 
     public Guid Id { get; }
@@ -75,6 +87,11 @@ internal sealed class Page {
 
     /// The document's navigation is recorded, or ended with nothing to record.
     private bool isRecorded;
+
+    /// The document's record, while its title follows the page's: the title
+    /// it last gave the tab and history, empty when the page had none, when
+    /// it was recorded, and how often its visit took a later title.
+    private (string Title, DateTimeOffset At, int VisitTitles)? record;
 
     /// How many documents the page has shown, so a question it answered can
     /// tell whether that document is still the one it shows.
@@ -164,6 +181,7 @@ internal sealed class Page {
         failure = null;
         documentUrl = null;
         isRecorded = false;
+        record = null;
         Icon = null;
         crashes = 0;
         stoppedUnseen = null;
@@ -197,17 +215,36 @@ internal sealed class Page {
         if (sameDocument && documentUrl is { } shown && new WebAddress(shown).IsSamePage(new WebAddress(url))) return;
         documentUrl = url;
         isRecorded = false;
+        record = null;
         if (!sameDocument) Icon = null;
     }
 
-    /// A navigation finished at `url`. Answers whether it is the first finish
-    /// of its document, which the core records; a later one records nothing.
-    public bool Finish(string url) {
+    /// A navigation finished at `url`, titled `title`, at `now`. Answers
+    /// whether it is the first finish of its document, which the core
+    /// records; a later one records nothing.
+    public bool Finish(string url, string title, DateTimeOffset now) {
         crashes = 0;
         if (isRecorded) return false;
         documentUrl = url;
         isRecorded = true;
+        record = (title, now, 0);
         return true;
+    }
+
+    /// The title the page gave its recorded document since, which its tab
+    /// and, while `HistoryTitleWindow` and `HistoryTitleChanges` allow, its
+    /// visit take at `now`: the address of the record, the title, and whether
+    /// the visit takes it. A visit recorded without a title takes the first
+    /// one the page gives whenever it comes, as a page loaded out of sight
+    /// names itself only once it is shown. Null while the page shows no title,
+    /// the one recorded, or another page than the one recorded.
+    public (string Url, string Title, bool Visit)? Retitle(DateTimeOffset now) {
+        if (record is not var (recorded, at, visitTitles) || documentUrl is not { } url || string.IsNullOrEmpty(shown.Title)
+            || shown.Title == recorded || shown.Url is not { } address || !new WebAddress(address).IsSamePage(new WebAddress(url)))
+            return null;
+        var visit = recorded.Length == 0 || now - at <= HistoryTitleWindow && visitTitles < HistoryTitleChanges;
+        record = (shown.Title, at, visit ? visitTitles + 1 : visitTitles);
+        return (url, shown.Title, visit);
     }
 
     /// A navigation failed as `reason` describes, so the document it was
@@ -215,6 +252,7 @@ internal sealed class Page {
     /// where it was heading.
     public void Fail(PageFailure reason) {
         isRecorded = true;
+        record = null;
         failure = reason;
         shown = shown with { PendingUrl = null };
     }

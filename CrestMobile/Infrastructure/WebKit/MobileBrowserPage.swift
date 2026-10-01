@@ -893,20 +893,22 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     /// The session keeps only the metadata a completed navigation reports, and
     /// `webView.title` can still be empty when WebKit finishes a new document.
     /// Read the settled document title first, then count the completion unless
-    /// another navigation has replaced this document meanwhile.
+    /// another navigation has replaced this document meanwhile. A move within
+    /// the document while its title was read, such as a script router's first
+    /// `replaceState`, belongs to this load, which finishes where the document
+    /// is now.
     private func publishCompletedNavigation() {
-        let completedURL = webView.url
         let committedNavigation = committedNavigationCount
         Task { @MainActor [weak self, weak webView] in
             guard let self, let webView else { return }
             let documentTitle = try? await webView.evaluateJavaScript("document.title") as? String
             guard activeNavigation == nil,
                 committedNavigationCount == committedNavigation,
-                webView.url == completedURL
+                let finishedURL = webView.url
             else { return }
             let title = documentTitle?.isEmpty == false ? documentTitle : webView.title
             completedNavigationCount &+= 1
-            if let completedURL { reporter.finished(completedURL, title: title) }
+            reporter.finished(finishedURL, title: title)
             updateUnderPageBackground()
         }
     }

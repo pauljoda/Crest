@@ -153,6 +153,48 @@ public sealed partial class BrowserContractsTests {
     }
 
     [Fact]
+    public void ATitleThePageGivesItsRecordedDocumentLaterNamesItsTabAndItsVisitWhileThePageSettles() {
+        var (app, engine, _, clock, workspace, window, space, tab) = ResidentHost();
+        var authority = app.Workspace(workspace);
+        using var disposal = app;
+        var page = Guid.NewGuid();
+        app.Send(new OpenPage(page, workspace, space, tab, window));
+        app.Report(engine, new PageCreated(page));
+        void Titled(string url, string title, TimeSpan after) {
+            clock.Now += after;
+            app.Report(engine, new PageStateChanged(page, Showing(url, title)));
+            app.Drain();
+        }
+        (string Tab, string Visit) Names(string url) =>
+            (authority.Current.Spaces[0].Tabs.Single(shown => shown.Id == tab).Title, History(authority).First(entry => entry.Url == url).Title);
+
+        // A page built in script names itself after it finished loading, through
+        // a placeholder, and its tab and visit follow.
+        Browse(app, engine, page, "https://app.example/", "");
+        Assert.Equal("app.example", Names("https://app.example/").Visit);
+        Titled("https://app.example/", "Loading…", TimeSpan.FromSeconds(1));
+        Titled("https://app.example/", "Inbox", TimeSpan.FromSeconds(1));
+        Assert.Equal(("Inbox", "Inbox"), Names("https://app.example/"));
+
+        // Once the page settled, only its tab follows a title flashing news.
+        Titled("https://app.example/", "(1) Inbox", TimeSpan.FromSeconds(10));
+        Assert.Equal(("(1) Inbox", "Inbox"), Names("https://app.example/"));
+
+        // A title shown while the page heads elsewhere names nothing.
+        Titled("https://elsewhere.example/", "Elsewhere", TimeSpan.Zero);
+        Assert.Equal(("(1) Inbox", "Inbox"), Names("https://app.example/"));
+
+        // A page loaded out of sight names itself once shown, however much later.
+        Browse(app, engine, page, "https://later.example/", "");
+        Titled("https://later.example/", "Later", TimeSpan.FromMinutes(5));
+        Assert.Equal(("Later", "Later"), Names("https://later.example/"));
+
+        // Reloaded out of sight, it says nothing yet and keeps both names.
+        Browse(app, engine, page, "https://later.example/", "");
+        Assert.Equal(("Later", "Later"), Names("https://later.example/"));
+    }
+
+    [Fact]
     public void AFailedNavigationRecordsNothingAndTheNextDocumentDoes() {
         var session = SavedSession().Document["session"]!;
         var (app, engine, page, workspace) = NavigatingPage(session);

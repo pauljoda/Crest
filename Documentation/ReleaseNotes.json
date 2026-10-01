@@ -3521,6 +3521,10 @@
     "chromium-screen-sharing-without-click": {
       "category": "fixed",
       "message": "Screen sharing works in Slack huddles and in Slack's call test on pages that run in Chromium. As in Chrome, a site can ask to share your screen without a click of its own, and macOS still asks what to share."
+    },
+    "tab-titles-follow-late-page-titles": {
+      "category": "fixed",
+      "message": "Tabs take the title a page gives itself after it finishes loading. A link you open in the background with Command-click, or a page that shows \u201cLoading\u2026\u201d first, no longer stays named by its address or placeholder."
     }
   }
 }
