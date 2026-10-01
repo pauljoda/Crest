@@ -168,12 +168,28 @@ struct BrowserFolderGroup: View {
         else {
             return
         }
+        if inheritedKeptTabID != nil { expandFoldersAround() }
         isExpanded.wrappedValue = true
         sidebarInteraction.editingFolderRequest = BrowserFolderRuntimeAssignment(
             folderID: childID,
             spaceID: configuration.spaceID,
             profileID: configuration.profileID
         )
+    }
+
+    /// Opens every collapsed folder that holds this one. A folder drawn on a
+    /// collapsed folder's way to its kept tab shows only that way, so a child
+    /// made here would stay hidden, and its title could never start editing,
+    /// until the folders around it open.
+    private func expandFoldersAround() {
+        var parentID = folder.parentID
+        var visited: Set<UUID> = []
+        while let id = parentID, visited.insert(id).inserted, let parent = context.space.folders.model(id) {
+            if parent.isCollapsed {
+                context.browser.setFolderCollapsed(id, matching: configuration.assignment, isCollapsed: false)
+            }
+            parentID = parent.parentID
+        }
     }
 
     private func unloadKeptCollapsedTab(_ tabID: UUID) {

@@ -3493,6 +3493,10 @@
     "collapsed-folder-keeps-nested-tab": {
       "category": "fixed",
       "message": "Collapsing a folder keeps the tab you're on visible even when it sits in a folder inside it, shown under each folder that holds it."
+    },
+    "nested-folder-from-kept-path-opens-parents": {
+      "category": "internal",
+      "message": "Making a nested folder from a folder shown on a collapsed folder's way to its kept tab opens the folders around it, so the new folder appears ready to name."
     }
   }
 }
