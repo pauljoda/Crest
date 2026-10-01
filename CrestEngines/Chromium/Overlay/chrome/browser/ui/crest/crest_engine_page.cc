@@ -811,8 +811,21 @@ engine::PageSnapshot EnginePage::Snapshot() const {
   return snapshot;
 }
 
+// The title the page gave itself, or nothing yet. The engine shows a page
+// without one by its address, which is no title of the page's, so Crest
+// names that page itself and a later title replaces nothing the page said.
 std::string EnginePage::Title() const {
-  return web_contents() ? base::UTF16ToUTF8(web_contents()->GetTitle()) : std::string();
+  if (!web_contents()) {
+    return std::string();
+  }
+  const std::u16string& title = web_contents()->GetTitle();
+  auto& controller = web_contents()->GetController();
+  for (content::NavigationEntry* entry : {controller.GetLastCommittedEntry(), controller.GetVisibleEntry()}) {
+    if (entry && entry->GetTitle().empty() && title == entry->GetTitleForDisplay()) {
+      return std::string();
+    }
+  }
+  return base::UTF16ToUTF8(title);
 }
 
 // The engine's own verdict on the visible document's connection. Only a
