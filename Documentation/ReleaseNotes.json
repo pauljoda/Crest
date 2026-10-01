@@ -3509,6 +3509,10 @@
     "hidden-sidebar-reveals-only-in-front-window": {
       "category": "fixed",
       "message": "A hidden sidebar slides out at the window's edge only when that window is in front. Moving the pointer over a window in the background no longer opens its sidebar and leaves it stuck open."
+    },
+    "drag-window-by-page-frame": {
+      "category": "improved",
+      "message": "Drag the frame around a page on any edge to move the window, as you can from the sidebar. The gap around a floating sidebar moves the window too. Borderless windows have no frame, so every click still reaches the page."
     }
   }
 }

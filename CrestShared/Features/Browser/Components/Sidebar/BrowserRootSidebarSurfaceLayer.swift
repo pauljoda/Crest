@@ -37,6 +37,15 @@ struct BrowserRootSidebarSurfaceLayer<Content: View>: View {
             .padding(surfaceInset)
             .frame(width: surfaceRegionWidth)
             .frame(maxHeight: .infinity)
+            #if os(macOS)
+                .background {
+                    // The gap around a floating card stands over the window's
+                    // frame, and moves the window as the frame does.
+                    if usesFloatingCardAppearance, presentation.showsSidebar {
+                        BrowserWindowTitleBarSurface().accessibilityHidden(true)
+                    }
+                }
+            #endif
             .contentShape(.interaction, .rect)
             #if os(macOS)
                 .overlay {

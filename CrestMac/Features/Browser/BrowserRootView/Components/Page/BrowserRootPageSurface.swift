@@ -60,9 +60,16 @@ struct BrowserRootPageSurface: View {
         )
     }
 
+    /// The window's frame around this Space's pages. Every edge of it moves
+    /// the window, except where Peek covers it.
+    private var frameInsets: EdgeInsets {
+        appearance.pageInsets(docked: model.sidebarPresentation.reservesSidebarWidth, direction: layoutDirection)
+    }
+
     var body: some View {
         let presentation = pageSurfacePresentation
         return surface(presentation)
+            .overlay { BrowserPageFrameTitleBarSurface(insets: frameInsets) }
             .overlay {
                 BrowserRootPeekLayer(model: model, transientBrowsing: transientBrowsing, space: space)
             }
@@ -112,8 +119,7 @@ struct BrowserRootPageSurface: View {
                     model.chrome.utilityPresentation
                         .handleInteraction(.webContent)
                 },
-                frameInsets: appearance.pageInsets(
-                    docked: model.sidebarPresentation.reservesSidebarWidth, direction: layoutDirection),
+                frameInsets: frameInsets,
                 content: Group {
                     if model.spaceAccess.isLocked(space) {
                         BrowserSpaceAccessView(
