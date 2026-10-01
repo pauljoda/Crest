@@ -444,6 +444,21 @@
             guard let view = engineView else { return super.becomeFirstResponder() }
             return window?.makeFirstResponder(view) ?? false
         }
+        override func viewWillMove(toWindow newWindow: NSWindow?) {
+            // AppKit takes first responder from a view leaving its window without
+            // telling it. Chromium's page view, still thinking it has focus, then
+            // deactivates the page, and that can land after the page is focused
+            // again in its next host, leaving it focused but inactive: it ignores
+            // cursor changes made without the pointer moving, such as a fullscreen
+            // video hiding the idle pointer. Giving up focus first makes leaving
+            // an ordinary loss of focus.
+            if let window, newWindow !== window, let responder = window.firstResponder as? NSView,
+                responder.isDescendant(of: self)
+            {
+                window.makeFirstResponder(nil)
+            }
+            super.viewWillMove(toWindow: newWindow)
+        }
         override func viewDidMoveToWindow() {
             super.viewDidMoveToWindow()
             if window != nil { page?.attachIfPossible() } else { page?.detach() }

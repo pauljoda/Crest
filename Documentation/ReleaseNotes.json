@@ -3497,6 +3497,10 @@
     "nested-folder-from-kept-path-opens-parents": {
       "category": "internal",
       "message": "Making a nested folder from a folder shown on a collapsed folder's way to its kept tab opens the folders around it, so the new folder appears ready to name."
+    },
+    "chromium-fullscreen-video-hides-idle-pointer": {
+      "category": "fixed",
+      "message": "Full-screen videos in the Chromium engine hide the pointer when you stop moving it, as they do in WebKit."
     }
   }
 }
