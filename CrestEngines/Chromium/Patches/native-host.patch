@@ -2271,20 +2271,19 @@
  #if BUILDFLAG(IS_CHROMEOS)
  #include "chrome/common/channel_info.h"
  #include "chromeos/ash/services/multidevice_setup/public/cpp/first_run_field_trial.h"
-@@ -115,6 +119,18 @@
+@@ -115,6 +119,17 @@
  void ChromeBrowserFieldTrials::RegisterFeatureOverrides(
      base::FeatureList* feature_list) {
    variations::FeatureOverrides feature_overrides(*feature_list);
 +
 +#if BUILDFLAG(IS_MAC)
 +  // Crest shares a page's screen through the system's own picker, which asks
-+  // the person what to share and needs no Screen Recording access, and a page
-+  // asks only in response to the person, as in Safari. A command line can
-+  // still turn either off.
++  // the person what to share and needs no Screen Recording access. As in
++  // Chrome, a page may ask without a click of its own, since sites built for
++  // Chrome ask from a timer or from a click in another of their windows. A
++  // command line can still turn the picker off.
 +  if (base::CommandLine::ForCurrentProcess()->HasSwitch("crest-control-plane")) {
 +    feature_overrides.EnableFeature(media::kUseSCContentSharingPicker);
-+    feature_overrides.EnableFeature(
-+        blink::features::kGetDisplayMediaRequiresUserActivation);
 +  }
 +#endif  // BUILDFLAG(IS_MAC)
  

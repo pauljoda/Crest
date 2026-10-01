@@ -3517,6 +3517,10 @@
     "developer-toolbar-local-pages-setting": {
       "category": "new",
       "message": "A new General setting keeps the developer toolbar from opening by itself on local pages. Shift-Command-I still shows it on any page."
+    },
+    "chromium-screen-sharing-without-click": {
+      "category": "fixed",
+      "message": "Screen sharing works in Slack huddles and in Slack's call test on pages that run in Chromium. As in Chrome, a site can ask to share your screen without a click of its own, and macOS still asks what to share."
     }
   }
 }
