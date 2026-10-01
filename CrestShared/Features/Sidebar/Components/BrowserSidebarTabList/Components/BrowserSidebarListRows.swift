@@ -52,6 +52,9 @@ struct BrowserSidebarListRow: View {
 
     let item: BrowserSidebarListItem
     let context: BrowserSidebarListContext
+    /// The tab a collapsed folder around the row keeps on screen, which a
+    /// folder row shows in place of its contents.
+    var keptTabID: UUID? = nil
 
     var body: some View {
         switch item.content {
@@ -76,7 +79,7 @@ struct BrowserSidebarListRow: View {
                 .geometryGroup()
             #endif
         case .folder(let folder):
-            BrowserFolderGroup(folder: folder, depth: item.depth, context: context)
+            BrowserFolderGroup(folder: folder, depth: item.depth, context: context, inheritedKeptTabID: keptTabID)
                 .equatable()
                 .padding(.trailing, item.depth > 0 ? BrowserFolderLayout.contentsInset : 0)
                 .crestCollectionItemTransition()
@@ -89,7 +92,7 @@ extension BrowserSidebarListRow: @MainActor Equatable {
     /// as SwiftUI compares a view's inputs, so a list that redraws leaves every
     /// unchanged row alone.
     static func == (lhs: BrowserSidebarListRow, rhs: BrowserSidebarListRow) -> Bool {
-        lhs.item == rhs.item && lhs.context == rhs.context
+        lhs.item == rhs.item && lhs.context == rhs.context && lhs.keptTabID == rhs.keptTabID
     }
 }
 

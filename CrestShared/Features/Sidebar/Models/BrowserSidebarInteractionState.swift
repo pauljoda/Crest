@@ -46,13 +46,13 @@ final class BrowserSidebarInteractionState: BrowserStoreInteractionObserving {
     }
 
     /// Brings every folder's kept row in step with the Space as the read
-    /// model holds it: the tabs each folder holds directly, the shown tab and
-    /// which tabs hold a page.
+    /// model holds it: the tabs each folder holds however deep, the shown tab
+    /// and which tabs hold a page.
     func reconcileCollapsedFolders(in space: SpaceModel, selectedTabID: UUID?, residentTabIDs: Set<UUID>) {
         for folder in space.folders.models {
             let assignment = BrowserFolderRuntimeAssignment(
                 folderID: folder.id, spaceID: space.id, profileID: space.profileID)
-            let tabIDs = space.sidebar.inside(folder.id).rows.filter { !$0.kind.opensList }.flatMap(\.members)
+            let tabIDs = space.tabIDs(inFolder: folder.id)
             reconcileCollapsedFolder(
                 assignment, isExpanded: !folder.isCollapsed, selectedTabID: selectedTabID,
                 folderTabIDs: tabIDs,

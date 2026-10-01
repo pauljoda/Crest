@@ -21,7 +21,7 @@ struct BrowserFolderGroupSurface: View {
                 interaction: interaction
             )
 
-            if !interaction.isExpanded.wrappedValue {
+            if !configuration.showsContents {
                 BrowserFolderKeptRow(configuration: configuration, interaction: interaction)
             }
         }

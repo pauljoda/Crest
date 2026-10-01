@@ -3489,6 +3489,10 @@
     "web-store-button-every-language": {
       "category": "fixed",
       "message": "Add to Crest works on Chrome Web Store pages in every language, including an extension's reviews and support pages, and the store's prompts to switch to Chrome stay hidden."
+    },
+    "collapsed-folder-keeps-nested-tab": {
+      "category": "fixed",
+      "message": "Collapsing a folder keeps the tab you're on visible even when it sits in a folder inside it, shown under each folder that holds it."
     }
   }
 }

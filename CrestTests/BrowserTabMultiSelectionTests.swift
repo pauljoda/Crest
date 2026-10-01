@@ -341,6 +341,16 @@ final class BrowserTabMultiSelectionTests: XCTestCase {
                 [.tab(ids[0])], [.folder(empty.id)], [.tab(ids[1])], [.folder(parent.id)], [.folder(child.id)],
                 [.tab(ids[2]), .tab(ids[3])], [.tab(ids[4])], [.tab(ids[5])], [.tab(ids[6])],
             ])
+        // A collapsed folder keeps the shown tab on screen inside every folder that holds it.
+        XCTAssertTrue(browser.setFolderCollapsed(parent.id, in: space.id, isCollapsed: true))
+        interaction.reconcileCollapsedFolders(
+            in: space, selectedTabID: browser.selectedTabID(in: space.id), residentTabIDs: [ids[2], ids[3]])
+        XCTAssertEqual(
+            BrowserSidebarSelection.itemUnits(in: browser),
+            [
+                [.tab(ids[0])], [.folder(empty.id)], [.tab(ids[1])], [.folder(parent.id)], [.folder(child.id)],
+                [.tab(ids[2]), .tab(ids[3])], [.tab(ids[5])], [.tab(ids[6])],
+            ])
         browser.setSavedTabsExpanded(false, matching: assignment)
         XCTAssertEqual(BrowserSidebarSelection.units(in: browser), [[ids[0]], [ids[5]], [ids[6]]])
         // A capture holds only the picks the sidebar still shows.

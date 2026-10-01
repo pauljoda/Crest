@@ -21,6 +21,9 @@ struct BrowserFolderGroupConfiguration {
     /// replaced can never act for the replacement.
     let assignment: BrowserSpaceRuntimeAssignment
     var spacePresentation: SidebarSpacePresentation? = nil
+    /// The tab a collapsed folder around this one keeps on screen, which this
+    /// folder shows in place of its contents, or nil when it draws as itself.
+    let inheritedKeptTabID: UUID?
 
     var spaceID: UUID { assignment.spaceID }
     var profileID: UUID { assignment.profileID }
@@ -31,6 +34,10 @@ struct BrowserFolderGroupConfiguration {
 
     /// The list of what the folder holds, as the core publishes it.
     var inside: SidebarListModel { context.space.sidebar.inside(folder.id) }
+
+    /// Whether the folder draws everything it holds: it is open, and no
+    /// collapsed folder around it is showing only the way to its kept tab.
+    var showsContents: Bool { !folder.isCollapsed && inheritedKeptTabID == nil }
 
     var displayBranding: SpaceBranding? {
         guard let spacePresentation else { return context.space.settings.look }
@@ -84,7 +91,8 @@ struct BrowserFolderGroupConfiguration {
 
     init(
         sidebarInteraction: BrowserSidebarInteractionState, folder: FolderStateModel, depth: Int,
-        context: BrowserSidebarListContext, spacePresentation: SidebarSpacePresentation?
+        context: BrowserSidebarListContext, spacePresentation: SidebarSpacePresentation?,
+        inheritedKeptTabID: UUID? = nil
     ) {
         self.sidebarInteraction = sidebarInteraction
         self.folder = folder
@@ -92,18 +100,19 @@ struct BrowserFolderGroupConfiguration {
         self.context = context
         assignment = context.assignment
         self.spacePresentation = spacePresentation
+        self.inheritedKeptTabID = inheritedKeptTabID
     }
 
     // MARK: - Actions - Contents
 
-    /// The tabs the folder holds directly, the ones its own list shows, in
-    /// order. Reading it observes the folder's list.
+    /// Every tab the folder holds, however deep, in the order the sidebar
+    /// lists them. Reading it observes the folder's lists.
     var folderTabIDs: [UUID] {
-        inside.rows.filter { !$0.kind.opensList }.flatMap(\.members)
+        context.space.tabIDs(inFolder: folder.id)
     }
 
-    /// The tab the window shows, when the folder holds it directly. Reading it
-    /// observes only this folder's tabs' slots of the window's shown tabs.
+    /// The tab the window shows, when the folder holds it. Reading it observes
+    /// only this folder's tabs' slots of the window's shown tabs.
     var shownFolderTabID: UUID? {
         folderTabIDs.first { context.window.shownTabIDs.contains($0) }
     }
@@ -118,18 +127,29 @@ struct BrowserFolderGroupConfiguration {
         pageAccess.residencyRevision()
     }
 
-    /// The one row a collapsed folder keeps on screen, the row of its own list
-    /// that holds the tab it kept, while that tab still holds a page. A folder
-    /// that collapses over the shown tab does not evict it, so the row stays
-    /// reachable rather than disappearing under the header. If the tab belongs
-    /// to a split the sidebar shows as a row, the whole split stays.
-    func keptCollapsedItem(for state: BrowserCollapsedFolderTabVisibilityState) -> BrowserSidebarListItem? {
-        guard let keptTabID = state.keptTabID, pageAccess.containsResidentPage(keptTabID) else { return nil }
+    /// The tab the folder keeps on screen in place of its contents, while that
+    /// tab still holds a page: the one a collapsed folder around it keeps, or
+    /// the one it kept itself when it collapsed. A folder that collapses over
+    /// the shown tab does not evict it, so the tab stays reachable rather than
+    /// disappearing under the header. Nil while the folder draws its contents.
+    func keptTabID(for state: BrowserCollapsedFolderTabVisibilityState) -> UUID? {
+        guard let keptTabID = inheritedKeptTabID ?? (folder.isCollapsed ? state.keptTabID : nil),
+            pageAccess.containsResidentPage(keptTabID)
+        else { return nil }
+        return keptTabID
+    }
+
+    /// The one row of the folder's own list a collapsed folder keeps on
+    /// screen: the row on the way to its kept tab. That is the tab's own row,
+    /// the split the sidebar shows it in, or the folder inside this one that
+    /// holds it, however deep, which in turn shows only the way to the tab.
+    func keptItem(for state: BrowserCollapsedFolderTabVisibilityState) -> BrowserSidebarListItem? {
+        guard let keptTabID = keptTabID(for: state) else { return nil }
         return BrowserSidebarListItem.items(of: inside, in: context.space).first { item in
             switch item.content {
             case .tab(let tab): tab.id == keptTabID
             case .split(_, let members): members.contains { $0.id == keptTabID }
-            case .folder: false
+            case .folder(let folder): context.space.tabIDs(inFolder: folder.id).contains(keptTabID)
             }
         }
     }

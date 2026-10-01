@@ -299,7 +299,7 @@ extension SidebarBodies {
 
     private static func node(
         for item: BrowserSidebarListItem, context: BrowserSidebarListContext,
-        interaction: BrowserSidebarInteractionState
+        interaction: BrowserSidebarInteractionState, keptTabID: UUID? = nil
     ) -> Node {
         switch item.content {
         case .tab(let tab):
@@ -322,7 +322,7 @@ extension SidebarBodies {
         case .folder(let folder):
             Node(kind: .row) {
                 let configuration = SidebarReads.folderRow(
-                    folder, depth: item.depth, in: context, interaction: interaction)
+                    folder, depth: item.depth, in: context, interaction: interaction, inheritedKeptTabID: keptTabID)
                 var children = [
                     Child(
                         key: "count-\(folder.id)", input: AnyEquatable(ObjectIdentifier(folder)),
@@ -331,16 +331,17 @@ extension SidebarBodies {
                             return []
                         })
                 ]
-                if !folder.isCollapsed {
+                let state = interaction.collapsedFolderVisibility(for: configuration.folderRuntimeAssignment).state
+                if configuration.showsContents {
                     let key = "folder-\(folder.id)"
                     children.append(rows(configuration.inside, key: key, context: context, interaction: interaction))
-                } else if let kept = configuration.keptCollapsedItem(
-                    for: interaction.collapsedFolderVisibility(for: configuration.folderRuntimeAssignment).state)
-                {
+                } else if let kept = configuration.keptItem(for: state) {
+                    let keptTabID = configuration.keptTabID(for: state)
                     children.append(
                         Child(
-                            key: "kept-\(folder.id)", input: AnyEquatable(kept),
-                            node: node(for: kept, context: context, interaction: interaction)))
+                            key: "kept-\(folder.id)",
+                            input: AnyEquatable([AnyEquatable(kept), AnyEquatable(keptTabID)]),
+                            node: node(for: kept, context: context, interaction: interaction, keptTabID: keptTabID)))
                 }
                 return children
             }
@@ -437,10 +438,11 @@ enum SidebarReads {
     /// kept row's bookkeeping, and whether it may act.
     static func folderRow(
         _ folder: FolderStateModel, depth: Int, in context: BrowserSidebarListContext,
-        interaction: BrowserSidebarInteractionState
+        interaction: BrowserSidebarInteractionState, inheritedKeptTabID: UUID? = nil
     ) -> BrowserFolderGroupConfiguration {
         let configuration = BrowserFolderGroupConfiguration(
-            sidebarInteraction: interaction, folder: folder, depth: depth, context: context, spacePresentation: nil)
+            sidebarInteraction: interaction, folder: folder, depth: depth, context: context, spacePresentation: nil,
+            inheritedKeptTabID: inheritedKeptTabID)
         _ = (folder.title, folder.displaySymbol, folder.displayColor, folder.isCollapsed, folder.location)
         _ = (configuration.displayBranding, configuration.isAvailableForDisplay)
         _ = BrowserSidebarSelection.showsSelected(.folder(folder.id), in: context)

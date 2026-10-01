@@ -177,7 +177,7 @@ private struct BrowserSidebarSelectionReconciler: View {
         let space = context.space
         guard browser.spaceModel(space.id) === space, !context.spaceAccess.isLocked(space) else { return }
         for folder in space.folders.models {
-            let folderTabIDs = space.sidebar.inside(folder.id).rows.filter { !$0.kind.opensList }.flatMap(\.members)
+            let folderTabIDs = space.tabIDs(inFolder: folder.id)
             interaction.reconcileCollapsedFolder(
                 BrowserFolderRuntimeAssignment(folderID: folder.id, spaceID: space.id, profileID: space.profileID),
                 isExpanded: !folder.isCollapsed,

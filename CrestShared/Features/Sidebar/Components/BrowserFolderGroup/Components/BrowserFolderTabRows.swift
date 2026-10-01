@@ -1,7 +1,9 @@
 import SwiftUI
 
 /// What a collapsed folder still shows: the one row it kept on screen, the row
-/// of its own list that holds the tab it kept while that tab holds a page.
+/// of its own list on the way to the tab it kept while that tab holds a page.
+/// When that row is a folder, it shows only the way on to the tab, so the tab
+/// stays on screen inside every folder that holds it.
 ///
 /// It reads the folder's list only while a tab is kept, so a folder that
 /// collapses over nothing redraws only its header.
@@ -10,10 +12,13 @@ struct BrowserFolderKeptRow: View {
     let interaction: BrowserFolderGroupInteractionContext
 
     var body: some View {
-        if let item = configuration.keptCollapsedItem(for: interaction.collapsedTabVisibility.wrappedValue) {
-            BrowserSidebarListRow(item: item, context: configuration.context)
-                .frame(maxWidth: .infinity)
-                .transition(.opacity)
+        let state = interaction.collapsedTabVisibility.wrappedValue
+        if let item = configuration.keptItem(for: state) {
+            BrowserSidebarListRow(
+                item: item, context: configuration.context, keptTabID: configuration.keptTabID(for: state)
+            )
+            .frame(maxWidth: .infinity)
+            .transition(.opacity)
         }
     }
 }
