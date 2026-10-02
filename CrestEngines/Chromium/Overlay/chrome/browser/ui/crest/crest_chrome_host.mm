@@ -147,7 +147,6 @@
 #include "content/public/common/drop_data.h"
 #include "net/base/apple/url_conversions.h"
 #include "components/password_manager/core/common/password_manager_pref_names.h"
-#include "components/security_state/content/security_state_tab_helper.h"
 #include "mojo/public/cpp/bindings/receiver.h"
 #include "components/security_state/core/security_state.h"
 #include "content/public/browser/ssl_status.h"
@@ -474,7 +473,6 @@ class NativePermissionPrompt final : public permissions::PermissionPrompt {
   permissions::PermissionPromptDisposition GetPromptDisposition() const override { return permissions::PermissionPromptDisposition::ANCHORED_BUBBLE; }
   bool IsAskPrompt() const override { return true; }
   std::optional<gfx::Rect> GetViewBoundsInScreen() const override { return std::nullopt; }
-  bool ShouldFinalizeRequestAfterDecided() const override { return true; }
   std::vector<permissions::ElementAnchoredBubbleVariant> GetPromptVariants() const override { return {}; }
   std::optional<permissions::feature_params::PermissionElementPromptPosition> GetPromptPosition() const override { return std::nullopt; }
  private:
@@ -1127,7 +1125,7 @@ std::unique_ptr<permissions::PermissionPrompt> CreatePermissionPrompt(
   // the decision is recorded per Space and listed in Privacy.
   if (auto prompt = crest::EngineBinding::Get().PermissionPrompt(contents, delegate)) return prompt;
   BrowserWindowInterface* browser = GlobalBrowserCollection::GetInstance()->FindBrowserWithTab(contents);
-  NSWindow* window = browser ? WindowForBrowser(browser->GetBrowserForMigrationOnly()) : nil;
+  NSWindow* window = browser ? WindowForBrowser(static_cast<Browser*>(browser)) : nil;
   if (!window || window.attachedSheet) return nullptr;
   return std::make_unique<NativePermissionPrompt>(window, delegate);
 }

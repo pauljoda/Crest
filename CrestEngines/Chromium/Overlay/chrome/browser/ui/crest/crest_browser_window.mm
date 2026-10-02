@@ -211,6 +211,18 @@ class CrestAutofillBubbleHandler final : public autofill::AutofillBubbleHandler 
     Unavailable(CrestUnavailableFeaturePaymentAutofill);
     return nullptr;
   }
+
+  autofill::AutofillBubbleBase* ShowPaymentsChurnedUsersConfirmationBubble(
+      content::WebContents*, autofill::PaymentsChurnedUsersBubbleController*) override {
+    Unavailable(CrestUnavailableFeaturePaymentAutofill);
+    return nullptr;
+  }
+
+  autofill::AutofillBubbleBase* ShowWalletReminderNoticeBubble(
+      content::WebContents*, autofill::WalletReminderNoticeBubbleController*, bool) override {
+    Unavailable(CrestUnavailableFeaturePaymentAutofill);
+    return nullptr;
+  }
  private:
   static void Unavailable(CrestUnavailableFeature feature) {
     [crest::MacUI() showUnavailableFeature:feature];
@@ -296,6 +308,10 @@ views::Widget* CrestFindBar::GetHostWidget() {
 void CrestLocationBar::FocusLocation(bool is_user_initiated, bool clear_focus_if_failed) {}
 
 void CrestLocationBar::FocusSearch() {}
+
+// Chromium announces omnibox changes through its own location bar, which Crest
+// never shows; Crest's address field speaks for itself.
+void CrestLocationBar::AnnounceAlert(const std::u16string& announcement) {}
 
 void CrestLocationBar::UpdateFocusBehavior(bool toolbar_visible) {}
 
@@ -481,7 +497,10 @@ void CrestExclusiveAccessContext::WindowFullscreenChanged(bool entered) {
   // Chromium's own windows report every transition, as the fullscreen
   // controller expects: entering shows its disclosure, and leaving ends the
   // page's fullscreen however the window left.
-  browser_->WindowFullscreenStateChanged();
+  browser_->GetFeatures()
+      .exclusive_access_manager()
+      ->fullscreen_controller()
+      ->WindowFullscreenStateChanged();
   if (!entered) {
     EndContentFullscreen();
   }
@@ -806,14 +825,10 @@ gfx::Size CrestBrowserWindow::GetContentsSize() const {
 
 void CrestBrowserWindow::SetContentsSize(const gfx::Size& size) {}
 
-void CrestBrowserWindow::UpdatePageActionIcon(PageActionIconType type) {}
-
 autofill::AutofillBubbleHandler* CrestBrowserWindow::GetAutofillBubbleHandler() {
   static CrestAutofillBubbleHandler* handler = new CrestAutofillBubbleHandler();
   return handler;
 }
-
-void CrestBrowserWindow::ExecutePageActionIconForTesting(PageActionIconType type) {}
 
 LocationBar* CrestBrowserWindow::GetLocationBar() const {
   return const_cast<CrestLocationBar*>(&location_bar_);

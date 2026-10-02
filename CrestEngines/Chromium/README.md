@@ -62,8 +62,11 @@ then compare a shipping configuration against a matching browser version.
 
 The bindgen patch uses Apple's linker for Xcode SDK TAPI
 compatibility. Preparation also supplies the loader-relative LLVM alias omitted
-from the pinned Rust archive and retrieves DevTools' exact esbuild CIPD package.
-These are build adjustments, not browser-behavior changes.
+from the pinned Rust archive, checks out bindgen at the revision Chromium pins,
+and retrieves the exact esbuild and TypeScript compiler CIPD packages Chromium
+names. Ungoogled points DevTools and WebUI at Homebrew's tools instead;
+`pinned-host-tools.patch` points them back at those pinned packages. These are
+build adjustments, not browser-behavior changes.
 
 The pinned LLD 23.1.0 cannot parse the `arm64e.x1` targets in the Xcode 27
 macOS SDK's `libSystem.tbd`. Use the macOS 26.5 SDK for the performance preset;

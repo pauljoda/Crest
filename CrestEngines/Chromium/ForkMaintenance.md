@@ -65,8 +65,8 @@ released macOS recipe and its ungoogled submodule, pins the source checksum and
 patch files, refreshes host hashes only after strict patch application, and pins
 the new source's PGO profile. It restores the source lock and host hashes if
 preparation fails. Build failures leave the candidate available for inspection.
-An esbuild version change stops for a toolchain review instead of using a stale
-toolchain. New milestones need `--allow-major` here. The schedule builds a new
+An esbuild or TypeScript compiler version change stops for a toolchain review
+instead of using a stale toolchain. New milestones need `--allow-major` here. The schedule builds a new
 milestone for review once the pinned one has no newer fix, but it ships only when
 its PR is merged. `fork.json.automaticMajorUpdates` can also let milestone
 updates release automatically.

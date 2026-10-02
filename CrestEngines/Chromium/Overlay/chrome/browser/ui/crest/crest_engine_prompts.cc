@@ -159,7 +159,6 @@ class EnginePrompts::PermissionPrompt final : public permissions::PermissionProm
   }
   bool IsAskPrompt() const override { return true; }
   std::optional<gfx::Rect> GetViewBoundsInScreen() const override { return std::nullopt; }
-  bool ShouldFinalizeRequestAfterDecided() const override { return true; }
   std::vector<permissions::ElementAnchoredBubbleVariant> GetPromptVariants() const override { return {}; }
   std::optional<permissions::feature_params::PermissionElementPromptPosition> GetPromptPosition() const override {
     return std::nullopt;

@@ -20,6 +20,7 @@
 #include "chrome/browser/ui/crest/crest_engine_store.h"
 #include "chrome/browser/content_settings/host_content_settings_map_factory.h"
 #include "chrome/browser/profiles/profile.h"
+#include "chrome/browser/ssl/chrome_security_state_util.h"
 #include "components/blocked_content/popup_blocker_tab_helper.h"
 #include "components/content_settings/core/browser/host_content_settings_map.h"
 #include "content/public/browser/ssl_status.h"
@@ -28,7 +29,6 @@
 #include "components/favicon/content/content_favicon_driver.h"
 #include "components/find_in_page/find_tab_helper.h"
 #include "components/find_in_page/find_types.h"
-#include "components/security_state/content/security_state_tab_helper.h"
 #include "components/security_state/core/security_state.h"
 #include "components/sessions/content/content_serialized_navigation_builder.h"
 #include "components/sessions/core/serialized_navigation_entry.h"
@@ -833,12 +833,11 @@ std::string EnginePage::Title() const {
 // secure; a page the engine flags as malicious outranks everything else, and
 // a certificate error outranks mixed content.
 engine::PageSecurity EnginePage::Security() const {
-  auto* helper = web_contents() ? SecurityStateTabHelper::FromWebContents(web_contents()) : nullptr;
-  if (!helper) {
+  if (!web_contents()) {
     return engine::PageSecurity::kNone;
   }
-  const auto visible = helper->GetVisibleSecurityState();
-  const auto level = helper->GetSecurityLevel();
+  const auto visible = chrome_security_state::GetVisibleSecurityState(web_contents());
+  const auto level = chrome_security_state::GetSecurityLevel(web_contents());
   if (!visible) {
     return engine::PageSecurity::kNone;
   }

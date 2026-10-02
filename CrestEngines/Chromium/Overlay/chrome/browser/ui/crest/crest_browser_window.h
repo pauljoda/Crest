@@ -85,6 +85,7 @@ class CrestLocationBar : public LocationBar {
 
   void FocusLocation(bool is_user_initiated, bool clear_focus_if_failed) override;
   void FocusSearch() override;
+  void AnnounceAlert(const std::u16string& announcement) override;
   void UpdateFocusBehavior(bool toolbar_visible) override;
   void UpdateContentSettingsIcons() override;
   void SaveStateToContents(content::WebContents* contents) override;
@@ -242,9 +243,7 @@ class CrestBrowserWindow : public BrowserWindow {
   void OnTabDetached(content::WebContents* contents, bool was_active) override;
   gfx::Size GetContentsSize() const override;
   void SetContentsSize(const gfx::Size& size) override;
-  void UpdatePageActionIcon(PageActionIconType type) override;
   autofill::AutofillBubbleHandler* GetAutofillBubbleHandler() override;
-  void ExecutePageActionIconForTesting(PageActionIconType type) override;
   LocationBar* GetLocationBar() const override;
   void SetFocusToLocationBar(bool is_user_initiated) override;
   void UpdateReloadStopState(bool is_loading, bool force) override;

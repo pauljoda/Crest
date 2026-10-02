@@ -72,19 +72,25 @@ def main():
     if not alias.exists():
         alias.symlink_to(os.path.relpath(llvm, alias.parent.resolve()))
 
-    esbuild = lock["esbuild"]
-    download = upstream / "build/download_cache/crest-esbuild.zip"
-    urllib.request.urlretrieve(esbuild["url"], download)
-    if digest(download) != esbuild["sha256"]:
-        parser.error("esbuild archive digest does not match the lock")
-    destination = source / "third_party/devtools-frontend/src/third_party/esbuild"
-    with zipfile.ZipFile(download) as archive:
-        for item in archive.infolist():
-            resolved = (destination / item.filename).resolve()
-            if destination.resolve() not in resolved.parents:
-                parser.error("Invalid esbuild archive member")
-        archive.extractall(destination)
-    (destination / "esbuild").chmod(0o755)
+    # Chromium fetches these host tools from CIPD. The source archive omits
+    # them, and ungoogled points the build at Homebrew; Crest pins Chromium's
+    # own packages instead.
+    tools = (("esbuild", "third_party/devtools-frontend/src/third_party/esbuild", "esbuild"),
+             ("typescript", "third_party/typescript/mac-arm64/src", "lib/tsc"))
+    for name, relative, executable in tools:
+        package = lock[name]
+        download = upstream / f"build/download_cache/crest-{name}.zip"
+        urllib.request.urlretrieve(package["url"], download)
+        if digest(download) != package["sha256"]:
+            parser.error(f"{name} archive digest does not match the lock")
+        destination = source / relative
+        with zipfile.ZipFile(download) as archive:
+            for item in archive.infolist():
+                resolved = (destination / item.filename).resolve()
+                if destination.resolve() not in resolved.parents:
+                    parser.error(f"Invalid {name} archive member")
+            archive.extractall(destination)
+        (destination / executable).chmod(0o755)
     output = source / "out/CrestBaseline"
     output.mkdir(parents=True, exist_ok=True)
     flags = (upstream / "ungoogled-chromium/flags.gn").read_text() + "\n" + (upstream / "flags.macos.gn").read_text()
@@ -92,7 +98,8 @@ def main():
         flags += f"\n{key}={json.dumps(value)}"
     (output / "args.gn").write_text(flags + "\n")
     run([python, source / "tools/gn/bootstrap/bootstrap.py", "-o", "out/CrestBaseline/gn", "--skip-generate-buildfiles"], source)
-    run([python, source / "tools/rust/build_bindgen.py", "--skip-test", "--skip-checkout"], source)
+    # Checks out the bindgen revision the script pins, as upstream's build does.
+    run([python, source / "tools/rust/build_bindgen.py", "--skip-test"], source)
     run([output / "gn", "gen", "out/CrestBaseline", "--fail-on-unused-args"], source)
     print("Source prepared. Run build-chromium-baseline.py against build/src.")
 

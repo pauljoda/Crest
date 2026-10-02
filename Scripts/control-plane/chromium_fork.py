@@ -25,7 +25,8 @@ ENGINE = Path("CrestEngines/Chromium")
 # The directory the workspace's Actions runner works in.
 RUNNER_WORK = "runner-work"
 TAG = re.compile(r"([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+)-([0-9]+)\.([0-9]+)")
-PREPARATION_FIELDS = ("chromium", "ungoogledMac", "ungoogled", "inputs", "patches", "crestPatches", "esbuild")
+PREPARATION_FIELDS = ("chromium", "ungoogledMac", "ungoogled", "inputs", "patches", "crestPatches", "esbuild",
+                      "typescript")
 
 
 def run(*args, cwd=None, capture=False):
@@ -413,12 +414,16 @@ def prepare_update(repo, root, tag):
         write_json(lock_path, lock)
         workspace = Workspace(root, repo)
         workspace.prepare()
-        # New DevTools versions may require a different esbuild package. Stop before
-        # compilation rather than silently compiling with the previous toolchain.
+        # New versions may require different esbuild or TypeScript packages. Stop
+        # before compilation rather than silently compiling with the previous toolchain.
         deps = (workspace.source / "third_party/devtools-frontend/src/DEPS").read_text()
         package = re.search(r"'package':\s*'infra/3pp/tools/esbuild/[^']+',\s*'version':\s*'([^']+)'", deps)
         if not package or not lock["esbuild"]["url"].endswith("/+/" + package[1]):
             raise ValueError("DevTools esbuild changed; review and update its source lock before retrying")
+        deps = (workspace.source / "DEPS").read_text()
+        package = re.search(r"'package':\s*'chromium/third_party/typescript/mac-arm64',\s*'version':\s*'([^']+)'", deps)
+        if not package or not lock["typescript"]["url"].endswith("/+/" + package[1]):
+            raise ValueError("Chromium's TypeScript compiler changed; review and update its source lock before retrying")
         refresh_host_inputs(repo, workspace.source, workspace.directory / "host.json")
         profile_name = (workspace.source / "chrome/build/mac-arm.pgo.txt").read_text().strip()
         profile = download_profile(root, {"pgoProfile": profile_name})

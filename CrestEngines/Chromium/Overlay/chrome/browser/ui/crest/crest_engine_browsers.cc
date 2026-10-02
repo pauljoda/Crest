@@ -9,6 +9,8 @@
 #include "base/task/sequenced_task_runner.h"
 #include "chrome/browser/profiles/profile.h"
 #include "chrome/browser/ui/browser.h"
+#include "chrome/browser/ui/browser_manager_service.h"
+#include "chrome/browser/ui/browser_window/public/create_browser_window.h"
 #include "chrome/browser/ui/crest/crest_chrome_hooks.h"
 #include "chrome/browser/ui/crest/crest_engine_binding.h"
 #include "chrome/browser/ui/crest/crest_engine_profiles.h"
@@ -182,11 +184,12 @@ Browser* EngineBrowsers::ForWindow(const std::string& profile_id, const std::str
   // Named before the status check as well as the creation: a window Crest
   // opens for itself is never subject to `MayCreate`.
   creating_window_ = window;
-  if (Browser::GetCreationStatusForProfile(profile) != BrowserWindowInterface::CreationStatus::kOk) {
+  if (GetBrowserWindowCreationStatusForProfile(*profile) != BrowserWindowInterface::CreationStatus::kOk) {
     creating_window_.clear();
     return nullptr;
   }
-  Browser* browser = Browser::Create(Browser::CreateParams(profile, false));
+  // Browser is the only desktop BrowserWindowInterface.
+  Browser* browser = static_cast<Browser*>(CreateBrowserWindow(BrowserWindowCreateParams(profile, false)));
   creating_window_.clear();
   kept_.push_back(std::make_unique<KeptBrowser>(*this, browser, profile_id, window, /*holds_window_pages=*/true));
   return browser;
@@ -225,7 +228,7 @@ void EngineBrowsers::Close(base::FunctionRef<bool(const KeptBrowser&)> matches) 
     Browser* browser = (*found)->browser;
     TabStripModel* strip = browser->tab_strip_model();
     if (strip->empty()) {
-      browser->SynchronouslyDestroyBrowser();
+      BrowserManagerService::SynchronouslyDestroyBrowser(browser);
       continue;
     }
     for (int index = strip->count() - 1; index >= 0; --index) {
@@ -344,7 +347,7 @@ EngineBrowsers::KeptBrowser* EngineBrowsers::WindowBrowser(const std::string& pr
 bool EngineBrowsers::Place(Browser* browser) {
   const bool requested = own_window_profile_ == browser->GetProfile();
   own_window_profile_ = nullptr;
-  const bool keeps_tabs = requested && !browser->is_type_normal();
+  const bool keeps_tabs = requested && browser->GetType() != BrowserWindowInterface::Type::TYPE_NORMAL;
   const bool own_window = requested && !keeps_tabs;
   const EngineProfiles& profiles = binding_->Profiles();
   const std::string profile_id = profiles.IdFor(browser->GetProfile());

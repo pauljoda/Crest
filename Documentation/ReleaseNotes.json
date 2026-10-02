@@ -3541,6 +3541,10 @@
     "chromium-pages-retain-requested-zoom": {
       "category": "fixed",
       "message": "Chromium pages use your default zoom when they open and keep your chosen zoom as you navigate."
+    },
+    "chromium-upstream-154-0-8037-57-1-1-1c2db5a842a1": {
+      "category": "fixed",
+      "message": "Chromium is updated to 154.0.8037.57 with upstream security and compatibility fixes."
     }
   }
 }
