@@ -2296,18 +2296,19 @@
  
 --- a/chrome/browser/chrome_browser_field_trials.cc
 +++ b/chrome/browser/chrome_browser_field_trials.cc
-@@ -56,6 +56,10 @@
+@@ -56,6 +56,11 @@
  #include "ui/gl/gl_switches.h"
  #endif
  
 +#if BUILDFLAG(IS_MAC)
++#include "content/public/common/content_features.h"
 +#include "media/base/media_switches.h"
 +#endif
 +
  #if BUILDFLAG(IS_CHROMEOS)
  #include "chromeos/ash/services/multidevice_setup/public/cpp/first_run_field_trial.h"
  #endif
-@@ -127,6 +131,17 @@
+@@ -127,6 +132,22 @@
      base::FeatureList* feature_list) {
    variations::FeatureOverrides feature_overrides(*feature_list);
  
@@ -2319,6 +2320,11 @@
 +  // command line can still turn the picker off.
 +  if (base::CommandLine::ForCurrentProcess()->HasSwitch("crest-control-plane")) {
 +    feature_overrides.EnableFeature(media::kUseSCContentSharingPicker);
++    // Federated sign-in (FedCM) stays off, as ungoogled-chromium intends.
++    // Disabling it explicitly also hides the API from pages, which otherwise
++    // keep it, so sites sign in through their own pop-up or redirect, as in
++    // Safari. Crest has no account chooser to show for such a request.
++    feature_overrides.DisableFeature(features::kFedCm);
 +  }
 +#endif  // BUILDFLAG(IS_MAC)
 +
@@ -2950,3 +2956,17 @@
 +      [[CrestApplicationEvents alloc] init]];
 +}
 +}
+--- a/content/browser/webid/request.cc
++++ b/content/browser/webid/request.cc
+@@ -389,7 +389,10 @@
+ 
+   FederatedApiPermissionStatus permission_status = GetApiPermissionStatus();
+ 
+-  if (!CanBypassPermissionStatusCheck(rp_mode_, mediation_requirement_)) {
++  // A click lifts embargo and site settings, but not a build that has FedCM
++  // turned off: such a browser may have no account chooser to show.
++  if (permission_status == FederatedApiPermissionStatus::BLOCKED_VARIATIONS ||
++      !CanBypassPermissionStatusCheck(rp_mode_, mediation_requirement_)) {
+     if (permission_status != FederatedApiPermissionStatus::GRANTED) {
+       std::pair<FederatedRequestResult, TokenStatus> resultAndTokenStatus =
+           PermissionStatusToRequestResultAndTokenStatus(permission_status);

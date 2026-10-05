@@ -18,22 +18,6 @@ the live status for each issue.
 
 ### [0.7](https://github.com/pauljoda/Crest/milestone/3)
 
-#### Planned and in progress
-
-- [ ] [Investigate compatible browser extensions on iPhone and iPad](https://github.com/pauljoda/Crest/issues/53)
-- [ ] [feature: Swipping Tab Gesture On iphone](https://github.com/pauljoda/Crest/issues/54)
-- [ ] [feature: Decouple pinned tab options and regular tab options](https://github.com/pauljoda/Crest/issues/138)
-- [ ] [Organize shared browsing sessions with Sub-Spaces](https://github.com/pauljoda/Crest/issues/144)
-- [ ] [Choose a default Space using Focus](https://github.com/pauljoda/Crest/issues/145)
-- [ ] [Separate selection outlines from tab highlight colors](https://github.com/pauljoda/Crest/issues/146)
-- [ ] [Choose which browsing data syncs across devices](https://github.com/pauljoda/Crest/issues/149)
-- [ ] [Add common browsing actions to the macOS Dock menu](https://github.com/pauljoda/Crest/issues/152)
-- [ ] [Switch the active Space in a Quick Window](https://github.com/pauljoda/Crest/issues/161)
-- [ ] [Dim only the content behind Peek](https://github.com/pauljoda/Crest/issues/164)
-- [ ] [Clear browsing data by Space and time range](https://github.com/pauljoda/Crest/issues/170)
-- [ ] [Reveal the collapsed iPad sidebar on pointer hover](https://github.com/pauljoda/Crest/issues/176)
-- [ ] [Add privacy-preserving analytics and opt-in diagnostics](https://github.com/pauljoda/Crest/issues/179)
-
 #### Completed
 
 - [x] [Keep active location access consistent with site permissions](https://github.com/pauljoda/Crest/issues/141)
@@ -55,6 +39,50 @@ the live status for each issue.
 #### Not planned
 
 - [x] [Use a thinner scrollbar that fades when idle](https://github.com/pauljoda/Crest/issues/148)
+
+### [0.8](https://github.com/pauljoda/Crest/milestone/4)
+
+#### Planned and in progress
+
+- [ ] [Investigate compatible browser extensions on iPhone and iPad](https://github.com/pauljoda/Crest/issues/53)
+- [ ] [feature: Swipping Tab Gesture On iphone](https://github.com/pauljoda/Crest/issues/54)
+- [ ] [feature: Decouple pinned tab options and regular tab options](https://github.com/pauljoda/Crest/issues/138)
+- [ ] [Organize shared browsing sessions with Sub-Spaces](https://github.com/pauljoda/Crest/issues/144)
+- [ ] [Choose a default Space using Focus](https://github.com/pauljoda/Crest/issues/145)
+- [ ] [Separate selection outlines from tab highlight colors](https://github.com/pauljoda/Crest/issues/146)
+- [ ] [Choose which browsing data syncs across devices](https://github.com/pauljoda/Crest/issues/149)
+- [ ] [Add common browsing actions to the macOS Dock menu](https://github.com/pauljoda/Crest/issues/152)
+- [ ] [Switch the active Space in a Quick Window](https://github.com/pauljoda/Crest/issues/161)
+- [ ] [Dim only the content behind Peek](https://github.com/pauljoda/Crest/issues/164)
+- [ ] [Clear browsing data by Space and time range](https://github.com/pauljoda/Crest/issues/170)
+- [ ] [Reveal the collapsed iPad sidebar on pointer hover](https://github.com/pauljoda/Crest/issues/176)
+- [ ] [Add privacy-preserving analytics and opt-in diagnostics](https://github.com/pauljoda/Crest/issues/179)
+- [ ] [bug: bad colors on new tab](https://github.com/pauljoda/Crest/issues/185)
+- [ ] [bug: The Manage Search Engines button doesn't work](https://github.com/pauljoda/Crest/issues/194)
+- [ ] [bug: Quick Window does not prompt macOS for camera/microphone access](https://github.com/pauljoda/Crest/issues/214)
+- [ ] [bug: Pin icon looks blurry or poor quality](https://github.com/pauljoda/Crest/issues/217)
+- [ ] [feature: Add Edit Pinned URL menu option and dialogue](https://github.com/pauljoda/Crest/issues/218)
+- [ ] [feature: Make Tab Groups visible](https://github.com/pauljoda/Crest/issues/220)
+- [ ] [feature: Install Crest with Homebrew (tap first, then homebrew-cask)](https://github.com/pauljoda/Crest/issues/222)
+- [ ] [bug: Quitting Crest creates an empty ~/Library/Application Support/Chromium](https://github.com/pauljoda/Crest/issues/223)
+- [ ] [bug: Crest 0.7.2 crashes when clicking a website's Login button on macOS](https://github.com/pauljoda/Crest/issues/224)
+- [ ] [Investigate a reported crash when signing in to Pinterest on Mac](https://github.com/pauljoda/Crest/issues/225)
+- [ ] [Investigate reported passkey failures in both engines](https://github.com/pauljoda/Crest/issues/226)
+- [ ] [Investigate mouse side buttons ignoring the sidebar's Space switching](https://github.com/pauljoda/Crest/issues/227)
+- [ ] [Make Quick Windows practical for short browsing sessions](https://github.com/pauljoda/Crest/issues/228)
+- [ ] [Show sync status and Sync Now in the sidebar](https://github.com/pauljoda/Crest/issues/229)
+- [ ] [Recover safely from an accidentally repeated browser import](https://github.com/pauljoda/Crest/issues/230)
+- [ ] [Keep tabs opened inside collapsed folders visible](https://github.com/pauljoda/Crest/issues/231)
+- [ ] [Choose one search engine for every Space](https://github.com/pauljoda/Crest/issues/232)
+- [ ] [Evaluate picture-in-picture placement, styling and captions](https://github.com/pauljoda/Crest/issues/233)
+- [ ] [Make borderless windows easier to move](https://github.com/pauljoda/Crest/issues/234)
+- [ ] [Evaluate a swipe gesture for History and Downloads on Mac](https://github.com/pauljoda/Crest/issues/235)
+- [ ] [Return a pinned tab to its saved address from the mobile menu](https://github.com/pauljoda/Crest/issues/236)
+
+#### Completed
+
+- [x] [bug: Default Page Zoom deosn't work](https://github.com/pauljoda/Crest/issues/212)
+- [x] [bug: Cant install Keeper as Extension in Chromium](https://github.com/pauljoda/Crest/issues/219)
 
 <!-- crest-roadmap-sync:end -->
 

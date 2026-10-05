@@ -309,7 +309,7 @@
   },
   "chrome/browser/chrome_browser_field_trials.cc": {
     "before": "fdf354d86813c4485ccbbcb0aa1a67ebcd2bf81b5a4d5f89c4fd362db0761142",
-    "after": "e567532c25dc333ecc0a02561ef7f1cd39279564efe417fa5f2f53c93358a574"
+    "after": "e7df097b7ed0c1e453ddd6d3287ddabe2ee24f299d65732b178c15f8a31c1718"
   },
   "chrome/browser/media/webrtc/display_media_access_handler.cc": {
     "before": "06d96012fdfe68905b1542b2a414a883f1dfaf3a40ffe151a109fce85d874b2f",
@@ -338,5 +338,9 @@
   "chrome/browser/chrome_browser_application_mac.mm": {
     "before": "4e35e033d61fd132be0be0e0990226cb3f06fb4caf407e93d670c33db5303faa",
     "after": "e5e88dd4e447305525edf6293e908f788e98bb302c30e3baeedbf18d72d112ea"
+  },
+  "content/browser/webid/request.cc": {
+    "before": "d9fc7f3f0a53cb8496b0eaf1f4f4a1427d2e6ccefde8fffaedf09de9b779ef02",
+    "after": "393ccd44066d2dc0928c1338af6fa3643df3a7109cce821569ede7f05cf37a5b"
   }
 }
