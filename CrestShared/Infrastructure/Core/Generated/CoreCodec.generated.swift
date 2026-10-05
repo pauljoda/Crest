@@ -7,11 +7,11 @@ import Foundation
 enum CoreCodec {
     /// SHA-256 of the canonical contract schema. The core refuses any other.
     static let fingerprint: [UInt8] = [
-        0x36, 0xe5, 0x09, 0x02, 0xa1, 0xba, 0x2e, 0xb6, 0xf7, 0x19, 0x38, 0x4b, 0xb1, 0xce, 0xd5, 0x10, 0xbe, 0x4a, 0xd2, 0x02, 0x5d, 0x67, 0x19, 0xfa, 0x01, 0x84, 0x1e, 0xdb, 0x15, 0x21, 0xb0, 0xae
+        0x0d, 0x7d, 0xf4, 0x42, 0xe5, 0xb0, 0x80, 0xf6, 0x89, 0x32, 0xdb, 0x0a, 0xd6, 0xba, 0xe7, 0x53, 0xd7, 0x59, 0x6a, 0x09, 0x3f, 0x09, 0xd8, 0x49, 0xcf, 0xed, 0x6c, 0xbb, 0x28, 0x9c, 0xbb, 0x80
     ]
     /// SHA-256 of the engine contract alone, which an engine binding registers with.
     static let engineFingerprint: [UInt8] = [
-        0x60, 0xc6, 0xeb, 0x25, 0xb1, 0x38, 0xc0, 0xad, 0xe2, 0xa3, 0x3b, 0x86, 0x15, 0xa5, 0x89, 0xf9, 0xea, 0x9e, 0x73, 0x22, 0x2d, 0x77, 0xeb, 0x6f, 0x8a, 0x4b, 0x81, 0xf2, 0x59, 0x73, 0x32, 0xd3
+        0xe1, 0xaf, 0x26, 0x61, 0x34, 0xe8, 0xaf, 0x5a, 0x7a, 0x7f, 0xc2, 0x66, 0xb5, 0x05, 0xea, 0xd7, 0x25, 0xf5, 0x33, 0xa6, 0xab, 0x28, 0x59, 0x2d, 0x9f, 0x4b, 0x6f, 0xd0, 0xf2, 0xfe, 0x24, 0x60
     ]
 
     static func decodeIntent(from reader: inout WireReader) throws(WireError) -> any Intent {
@@ -343,15 +343,16 @@ enum CoreCodec {
         case 12: return try PageCrashed(from: &reader)
         case 13: return try PageCreated(from: &reader)
         case 14: return try PageCreationFailed(from: &reader)
-        case 15: return try PageIconChanged(from: &reader)
-        case 16: return try PageOffered(from: &reader)
-        case 17: return try PageStateChanged(from: &reader)
-        case 18: return try PermissionRequested(from: &reader)
-        case 19: return try PictureInPictureReturned(from: &reader)
-        case 20: return try PromptWithdrawn(from: &reader)
-        case 21: return try ProtectedMediaUnavailable(from: &reader)
-        case 22: return try ScriptDialogOpened(from: &reader)
-        case 23: return try StagedLinkUnavailable(from: &reader)
+        case 15: return try PageGroupChanged(from: &reader)
+        case 16: return try PageIconChanged(from: &reader)
+        case 17: return try PageOffered(from: &reader)
+        case 18: return try PageStateChanged(from: &reader)
+        case 19: return try PermissionRequested(from: &reader)
+        case 20: return try PictureInPictureReturned(from: &reader)
+        case 21: return try PromptWithdrawn(from: &reader)
+        case 22: return try ProtectedMediaUnavailable(from: &reader)
+        case 23: return try ScriptDialogOpened(from: &reader)
+        case 24: return try StagedLinkUnavailable(from: &reader)
         default: throw WireError.malformed("Unknown EngineEvent tag \(tag)")
         }
     }
@@ -1308,18 +1309,19 @@ extension EngineCommand {
         case 7: self = .eraseProfileData(try EraseProfileData(from: &reader))
         case 8: self = .eraseSiteData(try EraseSiteData(from: &reader))
         case 9: self = .exitPictureInPicture(try ExitPictureInPicture(from: &reader))
-        case 10: self = .loadPage(try LoadPage(from: &reader))
-        case 11: self = .pauseEngineDownload(try PauseEngineDownload(from: &reader))
-        case 12: self = .recoverPage(try RecoverPage(from: &reader))
-        case 13: self = .rejectOfferedPage(try RejectOfferedPage(from: &reader))
-        case 14: self = .removeEngineDownload(try RemoveEngineDownload(from: &reader))
-        case 15: self = .resumeEngineDownload(try ResumeEngineDownload(from: &reader))
-        case 16: self = .settleAuthentication(try SettleAuthentication(from: &reader))
-        case 17: self = .settleDownloadDestination(try SettleDownloadDestination(from: &reader))
-        case 18: self = .settleExtensionInstall(try SettleExtensionInstall(from: &reader))
-        case 19: self = .settlePermission(try SettlePermission(from: &reader))
-        case 20: self = .settleScriptDialog(try SettleScriptDialog(from: &reader))
-        case 21: self = .stageNavigation(try StageNavigation(from: &reader))
+        case 10: self = .groupPages(try GroupPages(from: &reader))
+        case 11: self = .loadPage(try LoadPage(from: &reader))
+        case 12: self = .pauseEngineDownload(try PauseEngineDownload(from: &reader))
+        case 13: self = .recoverPage(try RecoverPage(from: &reader))
+        case 14: self = .rejectOfferedPage(try RejectOfferedPage(from: &reader))
+        case 15: self = .removeEngineDownload(try RemoveEngineDownload(from: &reader))
+        case 16: self = .resumeEngineDownload(try ResumeEngineDownload(from: &reader))
+        case 17: self = .settleAuthentication(try SettleAuthentication(from: &reader))
+        case 18: self = .settleDownloadDestination(try SettleDownloadDestination(from: &reader))
+        case 19: self = .settleExtensionInstall(try SettleExtensionInstall(from: &reader))
+        case 20: self = .settlePermission(try SettlePermission(from: &reader))
+        case 21: self = .settleScriptDialog(try SettleScriptDialog(from: &reader))
+        case 22: self = .stageNavigation(try StageNavigation(from: &reader))
         default: throw WireError.malformed("Unknown EngineCommand tag \(tag)")
         }
     }
@@ -1356,41 +1358,44 @@ extension EngineCommand {
         case .exitPictureInPicture(let value):
             writer.writeTag(9)
             value.encode(into: &writer)
-        case .loadPage(let value):
+        case .groupPages(let value):
             writer.writeTag(10)
             value.encode(into: &writer)
-        case .pauseEngineDownload(let value):
+        case .loadPage(let value):
             writer.writeTag(11)
             value.encode(into: &writer)
-        case .recoverPage(let value):
+        case .pauseEngineDownload(let value):
             writer.writeTag(12)
             value.encode(into: &writer)
-        case .rejectOfferedPage(let value):
+        case .recoverPage(let value):
             writer.writeTag(13)
             value.encode(into: &writer)
-        case .removeEngineDownload(let value):
+        case .rejectOfferedPage(let value):
             writer.writeTag(14)
             value.encode(into: &writer)
-        case .resumeEngineDownload(let value):
+        case .removeEngineDownload(let value):
             writer.writeTag(15)
             value.encode(into: &writer)
-        case .settleAuthentication(let value):
+        case .resumeEngineDownload(let value):
             writer.writeTag(16)
             value.encode(into: &writer)
-        case .settleDownloadDestination(let value):
+        case .settleAuthentication(let value):
             writer.writeTag(17)
             value.encode(into: &writer)
-        case .settleExtensionInstall(let value):
+        case .settleDownloadDestination(let value):
             writer.writeTag(18)
             value.encode(into: &writer)
-        case .settlePermission(let value):
+        case .settleExtensionInstall(let value):
             writer.writeTag(19)
             value.encode(into: &writer)
-        case .settleScriptDialog(let value):
+        case .settlePermission(let value):
             writer.writeTag(20)
             value.encode(into: &writer)
-        case .stageNavigation(let value):
+        case .settleScriptDialog(let value):
             writer.writeTag(21)
+            value.encode(into: &writer)
+        case .stageNavigation(let value):
+            writer.writeTag(22)
             value.encode(into: &writer)
         }
     }
@@ -8711,6 +8716,34 @@ extension GoToHistoryOffset {
     }
 }
 
+extension GroupPages {
+    init(from reader: inout WireReader) throws(WireError) {
+        let groupID = try reader.readUUID()
+        let title = try reader.readString()
+        let color = try TabGroupColor(from: &reader)
+        let isCollapsed = try reader.readBool()
+        let pageIDsCount = try reader.readCount()
+        var pageIDs: [UUID] = []
+        pageIDs.reserveCapacity(pageIDsCount)
+        for _ in 0..<pageIDsCount {
+            let pageIDsElement = try reader.readUUID()
+            pageIDs.append(pageIDsElement)
+        }
+        self.init(groupID: groupID, title: title, color: color, isCollapsed: isCollapsed, pageIDs: pageIDs)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeUUID(groupID)
+        writer.writeString(title)
+        color.encode(into: &writer)
+        writer.writeBool(isCollapsed)
+        writer.writeCount(pageIDs.count)
+        for element0 in pageIDs {
+            writer.writeUUID(element0)
+        }
+    }
+}
+
 extension GuideSpaceLocked {
     init(from reader: inout WireReader) throws(WireError) {
         let spaceID = try reader.readUUID()
@@ -12960,6 +12993,41 @@ extension PageFailure {
     }
 }
 
+extension PageGroupChanged {
+    init(from reader: inout WireReader) throws(WireError) {
+        let groupID = try reader.readUUID()
+        let windowID = try reader.readUUID()
+        let title = try reader.readString()
+        let color = try TabGroupColor(from: &reader)
+        let isCollapsed = try reader.readBool()
+        let pageIDsCount = try reader.readCount()
+        var pageIDs: [UUID] = []
+        pageIDs.reserveCapacity(pageIDsCount)
+        for _ in 0..<pageIDsCount {
+            let pageIDsElement = try reader.readUUID()
+            pageIDs.append(pageIDsElement)
+        }
+        self.init(groupID: groupID, windowID: windowID, title: title, color: color, isCollapsed: isCollapsed, pageIDs: pageIDs)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeUUID(groupID)
+        writer.writeUUID(windowID)
+        writer.writeString(title)
+        color.encode(into: &writer)
+        writer.writeBool(isCollapsed)
+        writer.writeCount(pageIDs.count)
+        for element0 in pageIDs {
+            writer.writeUUID(element0)
+        }
+    }
+
+    func encodeEngineEvent(into writer: inout WireWriter) {
+        writer.writeTag(15)
+        encode(into: &writer)
+    }
+}
+
 extension PageHistoryChanged {
     init(from reader: inout WireReader) throws(WireError) {
         let pageID = try reader.readUUID()
@@ -13053,7 +13121,7 @@ extension PageIconChanged {
     }
 
     func encodeEngineEvent(into writer: inout WireWriter) {
-        writer.writeTag(15)
+        writer.writeTag(16)
         encode(into: &writer)
     }
 }
@@ -13345,7 +13413,7 @@ extension PageOffered {
     }
 
     func encodeEngineEvent(into writer: inout WireWriter) {
-        writer.writeTag(16)
+        writer.writeTag(17)
         encode(into: &writer)
     }
 }
@@ -13546,7 +13614,7 @@ extension PageStateChanged {
     }
 
     func encodeEngineEvent(into writer: inout WireWriter) {
-        writer.writeTag(17)
+        writer.writeTag(18)
         encode(into: &writer)
     }
 }
@@ -14130,7 +14198,7 @@ extension PermissionRequested {
     }
 
     func encodeEngineEvent(into writer: inout WireWriter) {
-        writer.writeTag(18)
+        writer.writeTag(19)
         encode(into: &writer)
     }
 }
@@ -14157,7 +14225,7 @@ extension PictureInPictureReturned {
     }
 
     func encodeEngineEvent(into writer: inout WireWriter) {
-        writer.writeTag(19)
+        writer.writeTag(20)
         encode(into: &writer)
     }
 }
@@ -14551,7 +14619,7 @@ extension PromptWithdrawn {
     }
 
     func encodeEngineEvent(into writer: inout WireWriter) {
-        writer.writeTag(20)
+        writer.writeTag(21)
         encode(into: &writer)
     }
 }
@@ -14569,7 +14637,7 @@ extension ProtectedMediaUnavailable {
     }
 
     func encodeEngineEvent(into writer: inout WireWriter) {
-        writer.writeTag(21)
+        writer.writeTag(22)
         encode(into: &writer)
     }
 }
@@ -15932,7 +16000,7 @@ extension ScriptDialogOpened {
     }
 
     func encodeEngineEvent(into writer: inout WireWriter) {
-        writer.writeTag(22)
+        writer.writeTag(23)
         encode(into: &writer)
     }
 }
@@ -19238,7 +19306,7 @@ extension StagedLinkUnavailable {
     }
 
     func encodeEngineEvent(into writer: inout WireWriter) {
-        writer.writeTag(23)
+        writer.writeTag(24)
         encode(into: &writer)
     }
 }
@@ -23015,6 +23083,20 @@ extension SyncStagingFailure {
         let tag = try reader.readEnum()
         guard Self.all.indices.contains(tag) else {
             throw WireError.malformed("Unknown SyncStagingFailure \(tag)")
+        }
+        self = Self.all[tag]
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeEnum(tag)
+    }
+}
+
+extension TabGroupColor {
+    init(from reader: inout WireReader) throws(WireError) {
+        let tag = try reader.readEnum()
+        guard Self.all.indices.contains(tag) else {
+            throw WireError.malformed("Unknown TabGroupColor \(tag)")
         }
         self = Self.all[tag]
     }

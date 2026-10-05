@@ -386,6 +386,34 @@ button past the card's edge, and hides the store's prompts to switch to Chrome.
 Crest mode also restores Chromium's declared-URL extension update requests;
 signature and permission checks remain owned by Chromium.
 
+An extension's tab groups, made with `chrome.tabs.group` and `chrome.tabGroups`,
+live in the tab strip of the Browser that holds the Space's pages, and Crest
+shows each one as a folder in the Space's open tabs. Once the turn ends, the
+binding reports what an extension changed, after the pages it names: a group
+made, renamed, recolored or collapsed, or a tab grouped or ungrouped. The core
+files the open tabs of the grouped pages into the folder that carries the
+group's identity, with the group's title and color. A person's edits to that
+folder reach the group through `GroupPages`, which the binding applies without
+reporting back, so the extension sees the same events and `Tab.groupId` as in
+Chrome. A tab that leaves its strip because its page closed, was put away or
+moved to another window has not left the group. Its tab stays in the folder,
+and its next page rejoins the group, which is made again under the same token
+so the group ID the extension knew still works. Pinned and saved tabs, and
+Quick Window pages, stay where they are and stay in the extension's group.
+The engine forgets its groups when it quits. For the persistent session,
+Crest's device store keeps each group with its title and color, and never
+syncs it. Once the folder's tabs have pages again after a launch, the group is
+made again under the same token, as Chrome restores a group with its tabs.
+A private window's groups are kept in memory only. Folder membership grants
+an extension nothing.
+
+`chrome.identity.getRedirectURL()` and `launchWebAuthFlow` use Chromium's own
+`https://<extension ID>.chromiumapp.org/` address. Domain substitution had
+replaced that host with a name no sign-in provider registers. An extension
+that signs back in on its own at startup, as Claude does, therefore asked for
+a sign-in at every launch. As in Chrome, the flow catches the redirect when its
+navigation starts.
+
 Companion apps such as Apple's Passwords helper and 1Password register their
 native-messaging hosts for Google Chrome and do not know Crest's directories. In
 Crest mode only, when the regular Chromium lookup finds no manifest, the host

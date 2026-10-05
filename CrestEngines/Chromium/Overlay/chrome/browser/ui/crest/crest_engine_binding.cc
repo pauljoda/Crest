@@ -23,6 +23,7 @@
 #include "chrome/browser/ui/crest/crest_engine_page.h"
 #include "chrome/browser/ui/crest/crest_engine_profiles.h"
 #include "chrome/browser/ui/crest/crest_engine_prompts.h"
+#include "chrome/browser/ui/crest/crest_engine_tab_groups.h"
 #include "components/password_manager/core/common/password_manager_pref_names.h"
 #include "components/prefs/pref_service.h"
 #include "net/base/auth.h"
@@ -211,6 +212,9 @@ void EngineBinding::Dispose() {
   disposing_ = true;
   queue_.clear();
   due_.clear();
+  if (tab_groups_) {
+    tab_groups_->Clear();
+  }
   offers_.clear();
   staged_links_.clear();
   extensions_.reset();
@@ -376,6 +380,10 @@ void EngineBinding::Handle(const engine::RejectOfferedPage& command) {
 
 void EngineBinding::Handle(const engine::StageNavigation& command) {
   Stage(command);
+}
+
+void EngineBinding::Handle(const engine::GroupPages& command) {
+  TabGroups().Apply(command);
 }
 
 void EngineBinding::Handle(const engine::DropStagedLink& command) {
@@ -1267,6 +1275,12 @@ void EngineBinding::Present(engine::EnginePresentation presentation) {
   ScheduleFlush();
 }
 
+void EngineBinding::ReportTabGroupsSoon() {
+  if (!disposing_) {
+    ScheduleFlush();
+  }
+}
+
 void EngineBinding::ReportStateSoon(const std::string& key) {
   if (disposing_) {
     return;
@@ -1286,13 +1300,18 @@ void EngineBinding::ScheduleFlush() {
       FROM_HERE, base::BindOnce(&EngineBinding::Flush, weak_factory_.GetWeakPtr()));
 }
 
-// Sends what is queued, oldest first, then the snapshots due this turn. A
-// report can make the core deliver a command, which can queue more; those go
-// out in the same pass.
+// Sends what is queued, oldest first, then the tab groups an extension
+// changed, then the snapshots due this turn. A report can make the core
+// deliver a command, which can queue more; those go out in the same pass. A
+// group is reported after its pages, so the core knows the pages it names.
 void EngineBinding::Flush() {
   flush_posted_ = false;
   flushing_ = true;
-  while (!disposing_ && (!queue_.empty() || !due_.empty())) {
+  while (!disposing_ && (!queue_.empty() || (tab_groups_ && tab_groups_->HasDue()) || !due_.empty())) {
+    if (queue_.empty() && tab_groups_ && tab_groups_->HasDue()) {
+      tab_groups_->ReportDue();
+      continue;
+    }
     if (queue_.empty()) {
       std::vector<std::string> due = std::move(due_);
       due_.clear();
@@ -1354,6 +1373,13 @@ EngineBrowsers& EngineBinding::Browsers() {
     browsers_ = std::make_unique<EngineBrowsers>(*this);
   }
   return *browsers_;
+}
+
+EngineTabGroups& EngineBinding::TabGroups() {
+  if (!tab_groups_) {
+    tab_groups_ = std::make_unique<EngineTabGroups>(*this);
+  }
+  return *tab_groups_;
 }
 
 // The engine's own hooks, for the pages that follow the WebContents they name.

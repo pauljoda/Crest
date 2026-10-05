@@ -41,6 +41,7 @@ class EngineNotifications;
 class EnginePage;
 class EngineProfiles;
 class EnginePrompts;
+class EngineTabGroups;
 
 // Chromium's engine binding: the portable half of Crest's Chromium host, in
 // C++ and Chromium's own types with no Objective-C, so it serves every
@@ -172,6 +173,10 @@ class EngineBinding {
   void ReleaseProfile(const std::string& profile);
   // The Browsers the binding keeps.
   EngineBrowsers& Browsers();
+  // The tab groups in their tab strips.
+  EngineTabGroups& TabGroups();
+  // The tab groups an extension changed report once the turn ends.
+  void ReportTabGroupsSoon();
   // The engine's extensions changed, which Chrome Web Store listings show.
   void RefreshStoreListings();
   // The shell hosts the view of the inspector docked on `page`, or none.
@@ -309,6 +314,7 @@ class EngineBinding {
   void Handle(const engine::RejectOfferedPage& command);
   void Handle(const engine::StageNavigation& command);
   void Handle(const engine::DropStagedLink& command);
+  void Handle(const engine::GroupPages& command);
   std::vector<uint8_t> Answer(const engine::PageRequest& request);
   void Create(const engine::CreatePage& creation);
   void Load(const std::string& page, const std::string& url);
@@ -367,6 +373,7 @@ class EngineBinding {
   std::vector<std::pair<std::string, std::string>> routed_tabs_;
   std::unique_ptr<EngineProfiles> profiles_;
   std::unique_ptr<EngineBrowsers> browsers_;
+  std::unique_ptr<EngineTabGroups> tab_groups_;
   std::unique_ptr<EngineExtensions> extensions_;
   std::unique_ptr<EngineDownloads> downloads_;
   std::unique_ptr<EnginePrompts> prompts_;

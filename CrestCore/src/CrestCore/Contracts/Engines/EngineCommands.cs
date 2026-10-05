@@ -54,6 +54,21 @@ public sealed record RejectOfferedPage(Guid OfferId) : EngineCommand;
 
 #endregion
 
+#region Tab Groups
+
+/// Makes the engine's tab group `GroupId` hold the pages `PageIds` names, in
+/// that order, with `Title`, `Color` and its collapsed state, as the folder
+/// that shows the group stands. A page the group holds that the list leaves
+/// out leaves it, and an empty list takes out every page, which closes the
+/// group. A group the engine no longer holds is made again with the same
+/// identity, in the window of the first page, so an extension still finds it
+/// under the identity it knew. A page the engine has no tab for is skipped.
+/// The binding reports nothing of what it changes.
+public sealed record GroupPages(Guid GroupId, string Title, TabGroupColor Color, bool IsCollapsed, IReadOnlyList<Guid> PageIds)
+    : EngineCommand;
+
+#endregion
+
 #region Navigation
 
 /// Forgets the link the engine staged as `StagedLinkId`, which no page will load.

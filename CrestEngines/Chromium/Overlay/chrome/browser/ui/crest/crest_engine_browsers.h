@@ -9,6 +9,7 @@
 #include "base/memory/raw_ptr.h"
 #include "base/memory/raw_ref.h"
 #include "base/memory/weak_ptr.h"
+#include "components/tab_groups/tab_group_id.h"
 
 class Browser;
 class Profile;
@@ -65,6 +66,8 @@ class EngineBrowsers final {
 
   // The Browser that holds `contents`, or nullptr.
   Browser* Holding(content::WebContents* contents) const;
+  // The Browser whose tab strip holds the tab group `group`, or nullptr.
+  Browser* HoldingGroup(const tab_groups::TabGroupId& group) const;
   // The Browser of `profile_id`'s pages in the Crest window `window`, created
   // when it has none, or nullptr when the profile is not loaded or the engine
   // refuses a Browser for it.

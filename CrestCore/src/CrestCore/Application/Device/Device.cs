@@ -67,6 +67,8 @@ internal sealed partial class Device {
     /// What the device store has adopted from an installed release.
     private readonly HashSet<DeviceAdoption> adopted = [];
     internal HashSet<DeviceAdoption> Adopted => adopted;
+    /// The tab groups of the persistent session whose folders follow them.
+    private readonly List<TabGroupRecord> keptTabGroups = [];
     private Guid? persistentWorkspace;
     internal Guid? PersistentWorkspace => persistentWorkspace;
     private long lastUse;
@@ -106,6 +108,7 @@ internal sealed partial class Device {
         keptSetupDraft = platform.KeepsSetupDraft ? records.SetupDraft : null;
         setupCompleted = records.SetupCompleted;
         adopted.UnionWith(records.Adopted);
+        keptTabGroups.AddRange(records.TabGroups);
     }
 
     #endregion
@@ -301,6 +304,23 @@ internal sealed partial class Device {
         storage?.EnqueueDevice(Records());
     }
 
+    /// The tab groups of the persistent session whose folders follow them, as
+    /// the device store keeps them.
+    internal IReadOnlyList<TabGroupRecord> KeptTabGroups() {
+        lock (gate) return [.. keptTabGroups];
+    }
+
+    /// Keeps `groups` as the tab groups whose folders follow them, saved when
+    /// they changed.
+    internal void KeepTabGroups(IReadOnlyList<TabGroupRecord> groups) {
+        lock (gate) {
+            if (keptTabGroups.SequenceEqual(groups)) return;
+            keptTabGroups.Clear();
+            keptTabGroups.AddRange(groups);
+            storage?.EnqueueDevice(Records());
+        }
+    }
+
     private void Forget() {
         while (saved.Count > MaximumSavedWindows) saved.Remove(saved.Values.MinBy(record => record.Used)!.Id);
     }
@@ -308,7 +328,7 @@ internal sealed partial class Device {
     /// Everything the device store keeps, as it stands. The caller holds the device lock.
     internal DeviceRecords Records() => new([.. saved.Values.OrderBy(record => record.Used)], [.. reopening],
         [.. keptPermissions.PersistentRecords], [.. keptEngines.Choices], shortcuts, links, keptSetupDraft, setupCompleted,
-        new HashSet<DeviceAdoption>(adopted), defaultEngine);
+        new HashSet<DeviceAdoption>(adopted), [.. keptTabGroups], defaultEngine);
 
     #endregion
 
