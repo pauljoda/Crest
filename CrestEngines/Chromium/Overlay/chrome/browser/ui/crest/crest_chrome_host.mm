@@ -56,7 +56,18 @@
 #include "extensions/common/permissions/permission_message.h"
 
 #include "extensions/browser/install/crx_install_error.h"
+#include "base/strings/escape.h"
+#include "base/task/thread_pool.h"
+#include "components/crx_file/id_util.h"
+#include "components/update_client/update_query_params.h"
 #include "components/version_info/version_info.h"
+#include "content/public/browser/storage_partition.h"
+#include "net/http/http_response_headers.h"
+#include "net/traffic_annotation/network_traffic_annotation.h"
+#include "services/network/public/cpp/resource_request.h"
+#include "services/network/public/cpp/shared_url_loader_factory.h"
+#include "services/network/public/cpp/simple_url_loader.h"
+#include "services/network/public/mojom/url_response_head.mojom.h"
 #include "chrome/browser/content_settings/host_content_settings_map_factory.h"
 #include "components/content_settings/core/browser/host_content_settings_map.h"
 #include "components/permissions/permission_request.h"
@@ -704,6 +715,76 @@ void DeliverExtensionCommand(Profile* profile, const extensions::Extension& exte
   event->user_gesture = extensions::EventRouter::UserGestureState::kEnabled;
   extensions::EventRouter::Get(profile)->DispatchEventToExtension(extension.id(), std::move(event));
 }
+
+// One Chrome Web Store package download, made by the Space's own profile with
+// the request Chromium's Web Store installer sends. The ungoogled baseline
+// empties that installer and rewrites Google's hosts in its sources, so the
+// update service is named here. Chromium's CrxInstaller judges the package;
+// nothing here limits or inspects it. Deletes itself once it has reported.
+class WebStoreDownload {
+ public:
+  WebStoreDownload(void (^progress)(double), void (^completion)(NSString*, NSString*))
+      : progress_(progress), completion_(completion) {}
+
+  void Start(Profile* profile, const std::string& extension_id) {
+    auto request = std::make_unique<network::ResourceRequest>();
+    request->url = GURL("https://clients2.google.com/service/update2/crx?response=redirect&" +
+        update_client::UpdateQueryParams::Get(update_client::UpdateQueryParams::CRX) + "&x=" +
+        base::EscapeQueryParamValue("id=" + extension_id + "&installsource=ondemand&uc", true));
+    request->credentials_mode = network::mojom::CredentialsMode::kOmit;
+    loader_ = network::SimpleURLLoader::Create(std::move(request), kAnnotation);
+    loader_->SetOnResponseStartedCallback(
+        base::BindOnce(&WebStoreDownload::Started, base::Unretained(this)));
+    loader_->SetOnDownloadProgressCallback(
+        base::BindRepeating(&WebStoreDownload::Progressed, base::Unretained(this)));
+    loader_->DownloadToTempFile(
+        profile->GetDefaultStoragePartition()->GetURLLoaderFactoryForBrowserProcess().get(),
+        base::BindOnce(&WebStoreDownload::Finished, base::Unretained(this)));
+  }
+
+ private:
+  static constexpr net::NetworkTrafficAnnotationTag kAnnotation =
+      net::DefineNetworkTrafficAnnotation("crest_web_store_download", R"(
+        semantics {
+          sender: "Crest Web Store install"
+          description: "Downloads a Chrome Web Store extension package for installation."
+          trigger: "The person installs an extension from a Chrome Web Store listing."
+          data: "The extension's ID and Chromium's version, platform and language."
+          destination: GOOGLE_OWNED_SERVICE
+        }
+        policy {
+          cookies_allowed: NO
+          setting: "Only runs when the person installs an extension."
+        })");
+
+  void Started(const GURL&, const network::mojom::URLResponseHead& head) { length_ = head.content_length; }
+
+  void Progressed(uint64_t received) {
+    if (length_ > 0) progress_(std::min(1.0, static_cast<double>(received) / static_cast<double>(length_)));
+  }
+
+  void Finished(base::FilePath path) {
+    const network::mojom::URLResponseHead* head = loader_->ResponseInfo();
+    const int status = head && head->headers ? head->headers->response_code() : 0;
+    if (!path.empty() && status == 200) {
+      completion_(base::apple::FilePathToNSString(path), @"");
+    } else {
+      // A successful status other than 200 carries no package: the service
+      // answers 204 for an extension it will not serve to this browser.
+      if (!path.empty()) {
+        base::ThreadPool::PostTask(FROM_HERE, {base::MayBlock()}, base::GetDeleteFileCallback(path));
+      }
+      completion_(nil, status && status != 200 ? base::SysUTF8ToNSString("HTTP " + base::NumberToString(status))
+                                               : base::SysUTF8ToNSString(net::ErrorToString(loader_->NetError())));
+    }
+    delete this;
+  }
+
+  std::unique_ptr<network::SimpleURLLoader> loader_;
+  int64_t length_ = -1;
+  void (^progress_)(double);
+  void (^completion_)(NSString*, NSString*);
+};
 }  // namespace
 
 @interface CrestChromiumMacShell : NSObject <CrestMacShell>
@@ -858,14 +939,23 @@ using CrestChromiumUIStart = void (*)(id<CrestMacShell> shell, const crest_engin
   CHECK(NSThread.isMainThread);
   State().ui = ui;
 }
+- (BOOL)downloadExtension:(NSString*)extensionID profile:(NSUUID*)profileID
+                 progress:(void (^)(double))progress
+               completion:(void (^)(NSString*, NSString*))completion {
+  CHECK(NSThread.isMainThread);
+  const std::string id = base::SysNSStringToUTF8(extensionID);
+  Profile* profile = crest::EngineBinding::Get().Profiles().Find(KeyFor(profileID));
+  if (!profile || profile->IsOffTheRecord() || !crx_file::id_util::IdIsValid(id)) return NO;
+  (new WebStoreDownload(progress, completion))->Start(profile, id);
+  return YES;
+}
 - (BOOL)installExtension:(NSString*)extensionID package:(NSString*)path profile:(NSUUID*)profileID
                   window:(NSUUID*)windowID completion:(void (^)(BOOL, NSString*))completion {
   CHECK(NSThread.isMainThread);
   const std::string id = base::SysNSStringToUTF8(extensionID);
   Profile* profile = crest::EngineBinding::Get().Profiles().Find(KeyFor(profileID));
   NSWindow* window = [UI() windowWithID:windowID];
-  if (!profile || profile->IsOffTheRecord() || !window ||
-      id.size() != 32 || id.find_first_not_of("abcdefghijklmnop") != std::string::npos) return NO;
+  if (!profile || profile->IsOffTheRecord() || !window || !crx_file::id_util::IdIsValid(id)) return NO;
   auto prompt = std::make_unique<ExtensionInstallPrompt>(profile, gfx::NativeWindow(window),
       std::make_unique<extensions::InstallPromptData>(extensions::InstallPromptData::UNSET_PROMPT_TYPE));
   prompt->SetSkipPostInstallUI(true);

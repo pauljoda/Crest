@@ -154,6 +154,15 @@ NS_SWIFT_UI_ACTOR
 - (nullable id<CrestExtensionShortcut>)dispatchExtensionShortcut:(NSEvent *)event
     page:(NSUUID *)pageID NS_SWIFT_NAME(dispatchExtensionShortcut(_:page:));
 - (NSString *)engineVersion;
+// Downloads a Chrome Web Store extension's package through the profile's own
+// network stack, with the request Chromium's Web Store installer makes.
+// `progress` reports the fraction received while the response names its
+// length. `completion` receives the package file, which the caller then owns,
+// or nil and the failure. Returns NO when the profile or identifier is unusable.
+- (BOOL)downloadExtension:(NSString *)extensionID profile:(NSUUID *)profileID
+                 progress:(void (^)(double fraction))progress
+               completion:(void (^)(NSString *_Nullable package, NSString *message))completion
+    NS_SWIFT_NAME(downloadExtension(_:profile:progress:completion:));
 - (BOOL)installExtension:(NSString *)extensionID package:(NSString *)path profile:(NSUUID *)profileID
                   window:(NSUUID *)windowID completion:(void (^)(BOOL installed, NSString *message))completion;
 - (void)disposePages;

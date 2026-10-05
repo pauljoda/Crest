@@ -352,9 +352,11 @@ Chromium's per-profile toolbar preferences.
 
 On a Chrome Web Store listing, the listing's own install button reads **Add to
 Crest** and runs Crest's install; **Install Extension…** in Site Controls does
-the same thing from the toolbar. Both download
-the CRX3 package from Google's update service. Chromium verifies the publisher
-proof and expected ID before Crest shows the original install review layout.
+the same thing from the toolbar. Both have the Space's engine profile download
+the CRX3 package from Google's update service with the request Chromium's own
+Web Store installer makes, which the ungoogled baseline empties; Crest sets no
+size or format limits of its own. Chromium verifies the publisher proof and
+expected ID before Crest shows the original install review layout.
 The review displays Chromium's permission warnings and offers website-access
 withholding where supported. Required API permissions use Chromium's install
 consent semantics rather than the retired WebKit permission emulation.

@@ -29,9 +29,13 @@ struct BrowserChromeWebStoreInstallView: View {
                     Spacer(minLength: CrestSpacing.medium)
                 }
                 if model.preparing {
-                    HStack(spacing: CrestSpacing.medium) {
-                        ProgressView().controlSize(.small)
-                        Text("Preparing extension…").foregroundStyle(.secondary)
+                    if let downloaded = model.downloaded, downloaded < 1 {
+                        ProgressView("Downloading extension…", value: downloaded).foregroundStyle(.secondary)
+                    } else {
+                        HStack(spacing: CrestSpacing.medium) {
+                            ProgressView().controlSize(.small)
+                            Text("Preparing extension…").foregroundStyle(.secondary)
+                        }
                     }
                 } else if model.completed {
                     Label(
