@@ -118,6 +118,26 @@ public sealed partial class BrowserContractsTests {
     }
 
     [Fact]
+    public void ZenPinnedSplitViewsAreSavedInTheFolderHoldingThem() {
+        // Zen keeps each split view as a group of its own: one inside a folder
+        // among the folders, naming no Space, and one among the pinned tabs
+        // only among its groups.
+        var space = Assert.Single(ReadSession("zen", "zen-splits", Path.Combine("profile", "zen-sessions.jsonlz4")));
+
+        Assert.Equal([
+            ("Essential", TabPlacement.Pinned, "https://essential.example/", null),
+            ("Split Left", TabPlacement.Saved, "https://left.example/", null),
+            ("Split Right", TabPlacement.Saved, "https://right.example/", null),
+            ("Doc", TabPlacement.Saved, "https://docs.example/", "Docs"),
+            ("Split Top", TabPlacement.Saved, "https://top.example/", "Docs"),
+            ("Split Bottom", TabPlacement.Saved, "https://bottom.example/", "Docs"),
+            ("Open One", TabPlacement.Current, "https://open-one.example/", null),
+            ("Open Two", TabPlacement.Current, "https://open-two.example/", null)
+        ], TabsOf(space));
+        Assert.Equal([("Docs", null)], FoldersOf(space));
+    }
+
+    [Fact]
     public void PinnedTabsPastWhatCrestPinsAreSavedInAFolderOfTheirOwn() {
         var space = Assert.Single(ReadSession("zen", "zen-overflow", Path.Combine("profile", "zen-sessions.jsonlz4")));
 
@@ -182,6 +202,7 @@ public sealed partial class BrowserContractsTests {
     [InlineData("safari", "safari-garbage", "LastSession.plist", typeof(SessionUnrecognized))]
     [InlineData("arc", "arc-garbage", "StorableSidebar.json", typeof(SessionUnrecognized))]
     [InlineData("zen", "zen-empty", "profile/zen-sessions.jsonlz4", typeof(SessionUnrecognized))]
+    [InlineData("zen", "zen-too-many-spaces", "profile/zen-sessions.jsonlz4", typeof(SessionOverLimits))]
     [InlineData("safari", "safari-windows", "Missing.plist", typeof(SessionUnrecognized))]
     public void ASessionCrestCannotReadIsRefusedWithWhatIsWrong(string source, string name, string file, Type refusal) =>
         Assert.IsType(refusal, Assert.Throws<Rejected>(() => ReadSession(source, name, file)).Rejection);

@@ -3617,6 +3617,10 @@
     "back-forward-history-menu-responsive": {
       "category": "fixed",
       "message": "The back and forward history menus open at once and no longer freeze Crest on Mac when you move the pointer over them. Each lists the 12 nearest pages, with Show Full History at the end for everything else."
+    },
+    "zen-import-pinned-split-views": {
+      "category": "fixed",
+      "message": "Importing from Zen no longer fails with \u201cCrest could not recognize this browser\u2019s tab-session data\u201d when a Space has pinned tabs in a split view. Those tabs now come over as saved tabs in the folder that held the split, and a Zen session too large to import now says so."
     }
   }
 }

@@ -74,7 +74,17 @@ the live status for each issue.
 - [ ] [Make borderless windows easier to move](https://github.com/pauljoda/Crest/issues/234)
 - [ ] [Evaluate a swipe gesture for History and Downloads on Mac](https://github.com/pauljoda/Crest/issues/235)
 - [ ] [Return a pinned tab to its saved address from the mobile menu](https://github.com/pauljoda/Crest/issues/236)
-- [ ] [Keep the back and forward history menu fast on long-lived tabs](https://github.com/pauljoda/Crest/issues/244)
+- [ ] [bug: Site Settings/Extension Menu unreliable in opening](https://github.com/pauljoda/Crest/issues/239)
+- [ ] [feature: Control Crest from the command line for scripts and AI agents](https://github.com/pauljoda/Crest/issues/240)
+- [ ] [feature: Delete a Space from the sidebar instead of the bottom of Settings](https://github.com/pauljoda/Crest/issues/241)
+- [ ] [bug: white flash between loading screen in dark mode](https://github.com/pauljoda/Crest/issues/246)
+- [ ] [bug: Crest crash eah time using 1password autofill extension](https://github.com/pauljoda/Crest/issues/248)
+- [ ] [feature: have a top url bar when in fullscreen mode](https://github.com/pauljoda/Crest/issues/249)
+- [ ] [bug: Unable to import spaces from Zen](https://github.com/pauljoda/Crest/issues/252)
+- [ ] [Keep a tab's back and forward history after relaunching](https://github.com/pauljoda/Crest/issues/253)
+- [ ] [Evaluate a visual recent-tab switcher on Mac](https://github.com/pauljoda/Crest/issues/254)
+- [ ] [Evaluate site-specific search from the command palette](https://github.com/pauljoda/Crest/issues/255)
+- [ ] [Link the Crest Discord from the website](https://github.com/pauljoda/Crest/issues/256)
 
 #### Completed
 
@@ -85,6 +95,7 @@ the live status for each issue.
 - [x] [bug: Crest 0.7.2 crashes when clicking a website's Login button on macOS](https://github.com/pauljoda/Crest/issues/224)
 - [x] [Investigate a reported crash when signing in to Pinterest on Mac](https://github.com/pauljoda/Crest/issues/225) — [`606000ce`](https://github.com/pauljoda/Crest/commit/606000ce4b006e04dee412926366ebb355bcc186)
 - [x] [Keep the Claude extension signed in after relaunching Crest](https://github.com/pauljoda/Crest/issues/238) — [`1222cfab`](https://github.com/pauljoda/Crest/commit/1222cfab91e205f9325b814fb7224a35f2d9872c)
+- [x] [Keep the back and forward history menu fast on long-lived tabs](https://github.com/pauljoda/Crest/issues/244) — [`86f5d23c`](https://github.com/pauljoda/Crest/commit/86f5d23cd6995e2d8790311bff1d09dbafa00bc5)
 
 <!-- crest-roadmap-sync:end -->
 
