@@ -86,9 +86,10 @@ public sealed partial class CrestApp {
 
     /// A report that moved a page to another engine, or offered one that may
     /// be the first a registered engine hosts, changes what the engines offer,
-    /// and what a page that went had asked no longer waits. The caller holds
-    /// the lock.
+    /// a tab group follows the pages and folders that show it, and what a page
+    /// that went had asked no longer waits. The caller holds the lock.
     internal void AfterPageReport(ChangeFeed changes) {
+        pages.ReconcileGroups(Issue);
         PublishEngines(changes.Publish);
         prompts.Prune(changes);
         closePreparations.Prune(changes, Issue);

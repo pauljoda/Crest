@@ -136,7 +136,8 @@ public sealed partial class CrestApp : IQueryAnswers, IDisposable {
 
     /// Runs `apply` in one turn under the core's lock, with the feed it
     /// publishes to, and answers the changes still pending and then those it
-    /// published. Afterwards the pages windows show are stamped, and one shown
+    /// published. Afterwards each engine tab group follows the folder that
+    /// shows it, the pages windows show are stamped, and one shown
     /// again or of a Space this process may not show ends its Picture in
     /// Picture; closed tabs let go of what they kept, and what a page that
     /// went had asked no longer waits. The engine commands the turn caused
@@ -146,6 +147,8 @@ public sealed partial class CrestApp : IQueryAnswers, IDisposable {
         lock (gate) {
             var changes = new ChangeFeed();
             apply(changes);
+            // What the folders that show the engines' tab groups hold now.
+            pages.ReconcileGroups(Issue);
             // Which pages windows show now, ending the Picture in Picture of
             // one shown again or of a locked Space, and what closed tabs no
             // longer keep.

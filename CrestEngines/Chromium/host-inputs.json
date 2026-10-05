@@ -13,7 +13,7 @@
   },
   "chrome/browser/ui/BUILD.gn": {
     "before": "ba3df68bc08591e6b7598d5c146a6353c8d2a026f2aa538936519e61dfdf5b59",
-    "after": "ef76a202707e14748a5884fa6184371d52b4e04a15faf3b7466658047b19d17c"
+    "after": "7e542a6a6a83176ae4cfc50373448dc4eb73c5e5183f7de3713d162b3851fa0f"
   },
   "chrome/browser/ui/tabs/tab_features.cc": {
     "before": "b40bccb7a821ed1ca4d7ecaf32fe11fcd771b2691fc473a15bfbd8cf3302a08e",
@@ -342,5 +342,13 @@
   "content/browser/webid/request.cc": {
     "before": "d9fc7f3f0a53cb8496b0eaf1f4f4a1427d2e6ccefde8fffaedf09de9b779ef02",
     "after": "393ccd44066d2dc0928c1338af6fa3643df3a7109cce821569ede7f05cf37a5b"
+  },
+  "chrome/browser/extensions/api/identity/identity_launch_web_auth_flow_function.cc": {
+    "before": "f95ebc59ad79deb38c5cca815d2d6e3c77fb6ceaabc335c7ac96357470c1b1a3",
+    "after": "7c4bd9ebe109b1afebae46f5976fbb961fb52955222b0c98ae981565a3c9cd3e"
+  },
+  "chrome/renderer/resources/extensions/identity_custom_bindings.js": {
+    "before": "64c0685f826a4ce834cdde56c3944f7eb90aeeb53927529ec613a271fdf04774",
+    "after": "82eafcec187a26f9721b22d76a99bdde8008a01a92fc3d89f598c37f36592eb9"
   }
 }

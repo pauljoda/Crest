@@ -154,12 +154,14 @@ internal sealed class SqliteConnection : IDisposable {
         Execute("CREATE TABLE IF NOT EXISTS device_cloud_record (name TEXT PRIMARY KEY, fields BLOB NOT NULL, schema_version INTEGER)");
         Execute("CREATE TABLE IF NOT EXISTS device_setup_draft (id INTEGER PRIMARY KEY CHECK (id = 0), document TEXT NOT NULL)");
         Execute("CREATE TABLE IF NOT EXISTS device_setup (id INTEGER PRIMARY KEY CHECK (id = 0), completed INTEGER NOT NULL)");
+        Execute("CREATE TABLE IF NOT EXISTS device_tab_group (id TEXT PRIMARY KEY, space TEXT NOT NULL, engine TEXT NOT NULL, "
+            + "title TEXT NOT NULL, color TEXT NOT NULL, position INTEGER NOT NULL)");
     }
 
     /// Everything the device store holds. A row whose identities or names do
     /// not read is left out.
     public DeviceRecords ReadDevice() => new(ReadWindows(), ReadReopening(), ReadSitePermissions(), ReadSiteEngines(), ReadShortcuts(),
-        ReadLinks(), ReadSetupDraft(), ReadSetupCompleted(), ReadAdoptions(), ReadDefaultEngine());
+        ReadLinks(), ReadSetupDraft(), ReadSetupCompleted(), ReadAdoptions(), ReadTabGroups(), ReadDefaultEngine());
 
     /// The person's preference remains available even in a single-engine product.
     private EngineKind? ReadDefaultEngine() {
@@ -213,6 +215,20 @@ internal sealed class SqliteConnection : IDisposable {
                     Sqlite.sqlite3_column_double(statement, 8)));
             });
         return records;
+    }
+
+    /// The tab groups whose folders follow them, in storage order. A group a
+    /// later release names by an engine or color this one cannot read is left
+    /// out.
+    private List<TabGroupRecord> ReadTabGroups() {
+        var groups = new List<TabGroupRecord>();
+        Rows("SELECT id, space, engine, title, color FROM device_tab_group ORDER BY position", statement => {
+            if (Identity(statement, 0) is { } id && Identity(statement, 1) is { } space
+                && EngineKind.Named(Sqlite.ColumnText(statement, 2)) is { } engine
+                && TabGroupColor.Named(Sqlite.ColumnText(statement, 4)) is { } color)
+                groups.Add(new(id, space, engine, Sqlite.ColumnText(statement, 3), color));
+        });
+        return groups;
     }
 
     /// The site engine choices, least recent first. A row naming an engine
@@ -311,6 +327,24 @@ internal sealed class SqliteConnection : IDisposable {
         if (written is null || !KeptSetupDraft.Same(records.SetupDraft, written.SetupDraft)) WriteSetupDraft(records.SetupDraft);
         if (written is null || records.SetupCompleted != written.SetupCompleted) WriteSetupCompleted(records.SetupCompleted);
         if (written is null || !records.Adopted.SetEquals(written.Adopted)) WriteAdoptions(records.Adopted);
+        if (written is null || !records.TabGroups.SequenceEqual(written.TabGroups)) WriteTabGroups(records.TabGroups);
+    }
+
+    /// The tab groups in order, each engine and color by its `Name`.
+    private void WriteTabGroups(IReadOnlyList<TabGroupRecord> groups) {
+        Execute("DELETE FROM device_tab_group");
+        for (int position = 0; position < groups.Count; position++) {
+            var group = groups[position];
+            int index = position;
+            Insert("INSERT INTO device_tab_group(id, space, engine, title, color, position) VALUES(?,?,?,?,?,?)", statement => {
+                Bind(statement, 1, Spelling(group.Id));
+                Bind(statement, 2, Spelling(group.SpaceId));
+                Bind(statement, 3, group.Engine.Name);
+                Bind(statement, 4, group.Title);
+                Bind(statement, 5, group.Color.Name);
+                Checked(Sqlite.sqlite3_bind_int64(statement, 6, index));
+            });
+        }
     }
 
     private void WriteWindows(IReadOnlyList<SavedWindow> windows) {

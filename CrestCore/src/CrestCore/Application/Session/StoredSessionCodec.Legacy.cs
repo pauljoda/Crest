@@ -12,44 +12,6 @@ internal static partial class StoredSessionCodec {
     private const string FaviconData = "faviconData";
     private const string LegacyFolderSymbol = "folder";
 
-    /// The colors of the tab groups releases before folders stored, which
-    /// each become the color of the open folder the group turns into.
-    private sealed class LegacyTabGroupColor {
-        #region Variables
-
-        public static readonly LegacyTabGroupColor Grey = new("grey", new(0.56, 0.56, 0.58));
-        public static readonly LegacyTabGroupColor Blue = new("blue", new(0.04, 0.52, 1));
-        public static readonly LegacyTabGroupColor Red = new("red", new(1, 0.27, 0.23));
-        public static readonly LegacyTabGroupColor Yellow = new("yellow", new(1, 0.84, 0.04));
-        public static readonly LegacyTabGroupColor Green = new("green", new(0.19, 0.82, 0.35));
-        public static readonly LegacyTabGroupColor Pink = new("pink", new(1, 0.22, 0.37));
-        public static readonly LegacyTabGroupColor Purple = new("purple", new(0.75, 0.35, 0.95));
-        public static readonly LegacyTabGroupColor Cyan = new("cyan", new(0.39, 0.82, 1));
-        public static readonly LegacyTabGroupColor Orange = new("orange", new(0.91, 0.43, 0.23));
-        public static IReadOnlyList<LegacyTabGroupColor> All { get; } = [Grey, Blue, Red, Yellow, Green, Pink, Purple, Cyan, Orange];
-
-        public string Name { get; }
-        public BrandColor Color { get; }
-
-        #endregion
-
-        #region Constructors
-
-        private LegacyTabGroupColor(string name, BrandColor color) {
-            Name = name;
-            Color = color;
-        }
-
-        #endregion
-
-        #region Actions - Lookup
-
-        /// The stored color, or grey when the group stored one this build cannot name.
-        public static LegacyTabGroupColor Named(string? name) => All.FirstOrDefault(color => color.Name == name) ?? Grey;
-
-        #endregion
-    }
-
     #endregion
 
     #region Actions - Installed releases
@@ -72,7 +34,7 @@ internal static partial class StoredSessionCodec {
             bool Joins(TabState tab) => members.Contains(tab.Id) && !tab.Placement.IsDurable && tab.FolderId is null;
             if (!space.Tabs.Any(Joins)) continue;
             var folder = new FolderState(folderId, TabPlacement.Current, Text(group[Key.Title]) ?? UntitledFolder,
-                LegacyFolderSymbol, LegacyTabGroupColor.Named(TolerantText(group[Key.Color])).Color,
+                LegacyFolderSymbol, (TabGroupColor.Named(TolerantText(group[Key.Color])) ?? TabGroupColor.Grey).Color,
                 IsCollapsed: TolerantFlag(group[Key.IsCollapsed]) ?? false);
             spaces[index] = space with {
                 Folders = [.. space.Folders, folder],

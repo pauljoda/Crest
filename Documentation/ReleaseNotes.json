@@ -3601,6 +3601,14 @@
     "login-button-federated-sign-in-crash": {
       "category": "fixed",
       "message": "Crest on Mac no longer quits when you press a site\u2019s Login or Continue with Google button. Crest doesn\u2019t offer Chrome\u2019s federated sign-in, so these sites use their own sign-in pop-up or page where they have one, as they do in Safari."
+    },
+    "extension-sign-in-survives-relaunch": {
+      "category": "fixed",
+      "message": "Extensions that sign you back in on their own when the browser starts, such as Claude, now stay signed in after Crest restarts on Mac, as they do in Chrome."
+    },
+    "extension-tab-groups-as-folders": {
+      "category": "new",
+      "message": "Tab groups that extensions make, such as the tabs Claude works in, now appear on Mac as folders in the Space\u2019s open tabs, in the group\u2019s name and color. Renaming, recoloring, collapsing or deleting the folder, or moving tabs in or out, changes the group the extension sees, and the folder keeps following the group after Crest restarts."
     }
   }
 }

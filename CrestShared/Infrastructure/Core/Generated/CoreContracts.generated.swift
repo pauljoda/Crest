@@ -391,6 +391,7 @@ enum EngineCommand: Equatable, Sendable {
     case eraseProfileData(EraseProfileData)
     case eraseSiteData(EraseSiteData)
     case exitPictureInPicture(ExitPictureInPicture)
+    case groupPages(GroupPages)
     case loadPage(LoadPage)
     case pauseEngineDownload(PauseEngineDownload)
     case recoverPage(RecoverPage)
@@ -2491,6 +2492,14 @@ struct GoToHistoryOffset: PageRequest, Equatable, Sendable {
     let offset: Int
 }
 
+struct GroupPages: Equatable, Sendable {
+    let groupID: UUID
+    let title: String
+    let color: TabGroupColor
+    let isCollapsed: Bool
+    let pageIDs: [UUID]
+}
+
 struct GuideSpaceLocked: Equatable, Sendable {
     let spaceID: UUID
 
@@ -3617,6 +3626,15 @@ struct PageFailure: Equatable, Sendable {
     var replacedDocument: Bool
     var domain: String
     var code: Int64
+}
+
+struct PageGroupChanged: EngineEvent, Equatable, Sendable {
+    let groupID: UUID
+    let windowID: UUID
+    let title: String
+    let color: TabGroupColor
+    let isCollapsed: Bool
+    let pageIDs: [UUID]
 }
 
 struct PageHistoryChanged: Equatable, Sendable {
@@ -13616,6 +13634,63 @@ struct SyncStagingFailure: Hashable, Sendable {
     }
 
     static func == (lhs: SyncStagingFailure, rhs: SyncStagingFailure) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+}
+
+/// The members of the core's `TabGroupColor`. A member's wire tag is its index in `all`.
+struct TabGroupColor: Hashable, Sendable {
+    let tag: Int
+    let name: String
+    let color: BrandColor
+
+    private init(tag: Int, name: String, color: BrandColor) {
+        self.tag = tag
+        self.name = name
+        self.color = color
+    }
+
+    static let grey = TabGroupColor(
+        tag: 0,
+        name: "grey",
+        color: BrandColor(red: 0.56, green: 0.56, blue: 0.58, alpha: 1)
+    )
+    static let blue = TabGroupColor(tag: 1, name: "blue", color: BrandColor(red: 0.04, green: 0.52, blue: 1, alpha: 1))
+    static let red = TabGroupColor(tag: 2, name: "red", color: BrandColor(red: 1, green: 0.27, blue: 0.23, alpha: 1))
+    static let yellow = TabGroupColor(
+        tag: 3,
+        name: "yellow",
+        color: BrandColor(red: 1, green: 0.84, blue: 0.04, alpha: 1)
+    )
+    static let green = TabGroupColor(
+        tag: 4,
+        name: "green",
+        color: BrandColor(red: 0.19, green: 0.82, blue: 0.35, alpha: 1)
+    )
+    static let pink = TabGroupColor(tag: 5, name: "pink", color: BrandColor(red: 1, green: 0.22, blue: 0.37, alpha: 1))
+    static let purple = TabGroupColor(
+        tag: 6,
+        name: "purple",
+        color: BrandColor(red: 0.75, green: 0.35, blue: 0.95, alpha: 1)
+    )
+    static let cyan = TabGroupColor(tag: 7, name: "cyan", color: BrandColor(red: 0.39, green: 0.82, blue: 1, alpha: 1))
+    static let orange = TabGroupColor(
+        tag: 8,
+        name: "orange",
+        color: BrandColor(red: 0.91, green: 0.43, blue: 0.23, alpha: 1)
+    )
+
+    static let all: [TabGroupColor] = [grey, blue, red, yellow, green, pink, purple, cyan, orange]
+
+    static func named(_ name: String?) -> TabGroupColor? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: TabGroupColor, rhs: TabGroupColor) -> Bool {
         lhs.tag == rhs.tag
     }
 

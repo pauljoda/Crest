@@ -64,6 +64,11 @@ internal sealed class Pages(Device device, Engines engines, IClock clock, IIdSou
     /// they are gone.
     private readonly Dictionary<Guid, (Engine Engine, Guid WorkspaceId, Guid SpaceId, Guid TabId)> keeping = [];
     private readonly List<(Guid WorkspaceId, Guid TabId)> restoreOrder = [];
+    /// The tab groups extensions made of the pages, by identity, each shown as
+    /// the folder of the same identity, starting from those of the persistent
+    /// session the device store kept; see `PageGroup`.
+    private readonly Dictionary<Guid, PageGroup> groups =
+        device.KeptTabGroups().ToDictionary(record => record.Id, record => new PageGroup(record));
 
     /// The device whose workspaces and windows the pages belong to, and whose
     /// site choices pick their engines.
@@ -169,6 +174,10 @@ internal sealed class Pages(Device device, Engines engines, IClock clock, IIdSou
         foreach (var remembered in unloaded.Values.Where(remembered => remembered.WorkspaceId == workspaceId).ToArray())
             unloaded.Remove(remembered.Id);
         foreach (var key in restoreStates.Keys.Where(key => key.WorkspaceId == workspaceId).ToArray()) Forget(key);
+        foreach (var group in groups.Values.Where(group => group.WorkspaceId == workspaceId).ToArray()) {
+            if (group.Persists) group.Detach();
+            else groups.Remove(group.Id);
+        }
     }
 
     #endregion
@@ -354,6 +363,27 @@ internal sealed class Pages(Device device, Engines engines, IClock clock, IIdSou
         device.Attached(workspaceId) is { } workspace && !workspace.IsDeleting(spaceId)
             && workspace.Current.Spaces.FirstOrDefault(space => space.Id == spaceId) is { } space
             ? space.Tabs.FirstOrDefault(tab => tab.Id == tabId) : null;
+
+    #endregion
+
+    #region Actions - Tab groups
+
+    /// The tab group `groupId` names while the core follows it, or null.
+    internal PageGroup? Group(Guid groupId) => groups.GetValueOrDefault(groupId);
+
+    /// The core follows `group` from now on.
+    internal void Follow(PageGroup group) => groups[group.Id] = group;
+
+    /// Asks the engines for what the folders that show their tab groups hold
+    /// now, which `issue` hands them, stops following a group whose folder or
+    /// Space went, and has the device store keep the persistent session's; see
+    /// `PageGroup.Reconcile`.
+    public void ReconcileGroups(Action<Engine, EngineCommand> issue) {
+        ArgumentNullException.ThrowIfNull(issue);
+        foreach (var group in groups.Values.ToArray())
+            if (!group.Reconcile(this, issue)) groups.Remove(group.Id);
+        device.KeepTabGroups([.. groups.Values.Select(group => group.Record()).OfType<TabGroupRecord>()]);
+    }
 
     #endregion
 

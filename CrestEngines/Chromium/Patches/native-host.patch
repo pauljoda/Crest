@@ -230,7 +230,7 @@
        // If the web authentication request is still pending, remove it from the
 --- a/chrome/browser/ui/BUILD.gn
 +++ b/chrome/browser/ui/BUILD.gn
-@@ -2318,6 +2318,45 @@
+@@ -2318,6 +2318,47 @@
      sources += [
        "browser_commands_mac.h",
        "browser_commands_mac.mm",
@@ -272,11 +272,13 @@
 +      "crest/crest_engine_screen_sharing.h",
 +      "crest/crest_engine_store.cc",
 +      "crest/crest_engine_store.h",
++      "crest/crest_engine_tab_groups.cc",
++      "crest/crest_engine_tab_groups.h",
 +      "crest/CrestChromiumHost.h",
        "views/frame/browser_frame_view_factory_mac.mm",
        "views/frame/browser_frame_view_mac.h",
        "views/frame/browser_frame_view_mac.mm",
-@@ -2358,6 +2397,13 @@
+@@ -2358,6 +2399,13 @@
        "//components/remote_cocoa/browser",
      ]
      include_dirs = [ "$target_gen_dir" ]
@@ -2970,3 +2972,32 @@
      if (permission_status != FederatedApiPermissionStatus::GRANTED) {
        std::pair<FederatedRequestResult, TokenStatus> resultAndTokenStatus =
            PermissionStatusToRequestResultAndTokenStatus(permission_status);
+--- a/chrome/browser/extensions/api/identity/identity_launch_web_auth_flow_function.cc
++++ b/chrome/browser/extensions/api/identity/identity_launch_web_auth_flow_function.cc
+@@ -32,8 +32,13 @@
+ 
+ namespace {
+ 
++// Crest restores the redirect host Chromium gives every extension. Domain
++// substitution had replaced it with a name no sign-in provider registers,
++// so a flow could never return to the address `getRedirectURL()` names, and
++// an extension that signs in again silently at startup asked at every launch.
++// The flow takes the redirect at the start of its navigation, as in Chrome.
+ static const char kChromiumDomainRedirectUrlPattern[] =
+-    "https://%s.ch40m1umapp.qjz9zk/";
++    "https://%s.chromiumapp.org/";
+ 
+ IdentityLaunchWebAuthFlowFunction::Error WebAuthFlowFailureToError(
+     WebAuthFlow::Failure failure) {
+--- a/chrome/renderer/resources/extensions/identity_custom_bindings.js
++++ b/chrome/renderer/resources/extensions/identity_custom_bindings.js
+@@ -16,6 +16,8 @@
+     if (path[0] !== '/') {
+       path = '/' + path;
+     }
+-    return 'https://' + id + '.ch40m1umapp.qjz9zk' + path;
++    // Crest: Chromium's own redirect host, which launchWebAuthFlow takes
++    // back; domain substitution had replaced it.
++    return 'https://' + id + '.chromiumapp.org' + path;
+   });
+ });

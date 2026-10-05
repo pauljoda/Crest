@@ -15,6 +15,9 @@ extension EngineCommand {
         case .eraseProfileData(let command): command.perform(on: binding)
         case .eraseSiteData(let command): command.perform(on: binding)
         case .exitPictureInPicture(let command): command.perform(on: binding)
+        case .groupPages:
+            // WebKit reports no tab groups, so the core never asks it for one.
+            break
         case .loadPage(let command): command.perform(on: binding)
         case .pauseEngineDownload, .resumeEngineDownload:
             // WebKit downloads do not advertise these controls.

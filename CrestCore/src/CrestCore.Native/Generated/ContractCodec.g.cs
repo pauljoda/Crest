@@ -14,12 +14,12 @@ namespace CrestCore.Native;
 public static class ContractCodec {
     /// <summary>SHA-256 of the canonical contract schema.</summary>
     public static ReadOnlySpan<byte> Fingerprint => [
-        0x36, 0xe5, 0x09, 0x02, 0xa1, 0xba, 0x2e, 0xb6, 0xf7, 0x19, 0x38, 0x4b, 0xb1, 0xce, 0xd5, 0x10, 0xbe, 0x4a, 0xd2, 0x02, 0x5d, 0x67, 0x19, 0xfa, 0x01, 0x84, 0x1e, 0xdb, 0x15, 0x21, 0xb0, 0xae
+        0x0d, 0x7d, 0xf4, 0x42, 0xe5, 0xb0, 0x80, 0xf6, 0x89, 0x32, 0xdb, 0x0a, 0xd6, 0xba, 0xe7, 0x53, 0xd7, 0x59, 0x6a, 0x09, 0x3f, 0x09, 0xd8, 0x49, 0xcf, 0xed, 0x6c, 0xbb, 0x28, 0x9c, 0xbb, 0x80
     ];
 
     /// <summary>SHA-256 of the engine contract alone, which an engine binding registers with.</summary>
     public static ReadOnlySpan<byte> EngineFingerprint => [
-        0x60, 0xc6, 0xeb, 0x25, 0xb1, 0x38, 0xc0, 0xad, 0xe2, 0xa3, 0x3b, 0x86, 0x15, 0xa5, 0x89, 0xf9, 0xea, 0x9e, 0x73, 0x22, 0x2d, 0x77, 0xeb, 0x6f, 0x8a, 0x4b, 0x81, 0xf2, 0x59, 0x73, 0x32, 0xd3
+        0xe1, 0xaf, 0x26, 0x61, 0x34, 0xe8, 0xaf, 0x5a, 0x7a, 0x7f, 0xc2, 0x66, 0xb5, 0x05, 0xea, 0xd7, 0x25, 0xf5, 0x33, 0xa6, 0xab, 0x28, 0x59, 0x2d, 0x9f, 0x4b, 0x6f, 0xd0, 0xf2, 0xfe, 0x24, 0x60
     ];
 
     public static Intent ReadIntent(WireReader reader) {
@@ -2635,18 +2635,19 @@ public static class ContractCodec {
             case 7: return ReadEraseProfileData(reader);
             case 8: return ReadEraseSiteData(reader);
             case 9: return ReadExitPictureInPicture(reader);
-            case 10: return ReadLoadPage(reader);
-            case 11: return ReadPauseEngineDownload(reader);
-            case 12: return ReadRecoverPage(reader);
-            case 13: return ReadRejectOfferedPage(reader);
-            case 14: return ReadRemoveEngineDownload(reader);
-            case 15: return ReadResumeEngineDownload(reader);
-            case 16: return ReadSettleAuthentication(reader);
-            case 17: return ReadSettleDownloadDestination(reader);
-            case 18: return ReadSettleExtensionInstall(reader);
-            case 19: return ReadSettlePermission(reader);
-            case 20: return ReadSettleScriptDialog(reader);
-            case 21: return ReadStageNavigation(reader);
+            case 10: return ReadGroupPages(reader);
+            case 11: return ReadLoadPage(reader);
+            case 12: return ReadPauseEngineDownload(reader);
+            case 13: return ReadRecoverPage(reader);
+            case 14: return ReadRejectOfferedPage(reader);
+            case 15: return ReadRemoveEngineDownload(reader);
+            case 16: return ReadResumeEngineDownload(reader);
+            case 17: return ReadSettleAuthentication(reader);
+            case 18: return ReadSettleDownloadDestination(reader);
+            case 19: return ReadSettleExtensionInstall(reader);
+            case 20: return ReadSettlePermission(reader);
+            case 21: return ReadSettleScriptDialog(reader);
+            case 22: return ReadStageNavigation(reader);
             default: throw new WireFormatException($"Unknown EngineCommand tag {tag}.");
         }
     }
@@ -2695,52 +2696,56 @@ public static class ContractCodec {
                 writer.WriteTag(9);
                 WriteExitPictureInPicture(writer, member);
                 break;
-            case LoadPage member:
+            case GroupPages member:
                 writer.WriteTag(10);
+                WriteGroupPages(writer, member);
+                break;
+            case LoadPage member:
+                writer.WriteTag(11);
                 WriteLoadPage(writer, member);
                 break;
             case PauseEngineDownload member:
-                writer.WriteTag(11);
+                writer.WriteTag(12);
                 WritePauseEngineDownload(writer, member);
                 break;
             case RecoverPage member:
-                writer.WriteTag(12);
+                writer.WriteTag(13);
                 WriteRecoverPage(writer, member);
                 break;
             case RejectOfferedPage member:
-                writer.WriteTag(13);
+                writer.WriteTag(14);
                 WriteRejectOfferedPage(writer, member);
                 break;
             case RemoveEngineDownload member:
-                writer.WriteTag(14);
+                writer.WriteTag(15);
                 WriteRemoveEngineDownload(writer, member);
                 break;
             case ResumeEngineDownload member:
-                writer.WriteTag(15);
+                writer.WriteTag(16);
                 WriteResumeEngineDownload(writer, member);
                 break;
             case SettleAuthentication member:
-                writer.WriteTag(16);
+                writer.WriteTag(17);
                 WriteSettleAuthentication(writer, member);
                 break;
             case SettleDownloadDestination member:
-                writer.WriteTag(17);
+                writer.WriteTag(18);
                 WriteSettleDownloadDestination(writer, member);
                 break;
             case SettleExtensionInstall member:
-                writer.WriteTag(18);
+                writer.WriteTag(19);
                 WriteSettleExtensionInstall(writer, member);
                 break;
             case SettlePermission member:
-                writer.WriteTag(19);
+                writer.WriteTag(20);
                 WriteSettlePermission(writer, member);
                 break;
             case SettleScriptDialog member:
-                writer.WriteTag(20);
+                writer.WriteTag(21);
                 WriteSettleScriptDialog(writer, member);
                 break;
             case StageNavigation member:
-                writer.WriteTag(21);
+                writer.WriteTag(22);
                 WriteStageNavigation(writer, member);
                 break;
             default: throw new ArgumentOutOfRangeException(nameof(value), value.GetType().Name, "Not a contract EngineCommand.");
@@ -2765,15 +2770,16 @@ public static class ContractCodec {
             case 12: return ReadPageCrashed(reader);
             case 13: return ReadPageCreated(reader);
             case 14: return ReadPageCreationFailed(reader);
-            case 15: return ReadPageIconChanged(reader);
-            case 16: return ReadPageOffered(reader);
-            case 17: return ReadPageStateChanged(reader);
-            case 18: return ReadPermissionRequested(reader);
-            case 19: return ReadPictureInPictureReturned(reader);
-            case 20: return ReadPromptWithdrawn(reader);
-            case 21: return ReadProtectedMediaUnavailable(reader);
-            case 22: return ReadScriptDialogOpened(reader);
-            case 23: return ReadStagedLinkUnavailable(reader);
+            case 15: return ReadPageGroupChanged(reader);
+            case 16: return ReadPageIconChanged(reader);
+            case 17: return ReadPageOffered(reader);
+            case 18: return ReadPageStateChanged(reader);
+            case 19: return ReadPermissionRequested(reader);
+            case 20: return ReadPictureInPictureReturned(reader);
+            case 21: return ReadPromptWithdrawn(reader);
+            case 22: return ReadProtectedMediaUnavailable(reader);
+            case 23: return ReadScriptDialogOpened(reader);
+            case 24: return ReadStagedLinkUnavailable(reader);
             default: throw new WireFormatException($"Unknown EngineEvent tag {tag}.");
         }
     }
@@ -2842,40 +2848,44 @@ public static class ContractCodec {
                 writer.WriteTag(14);
                 WritePageCreationFailed(writer, member);
                 break;
-            case PageIconChanged member:
+            case PageGroupChanged member:
                 writer.WriteTag(15);
+                WritePageGroupChanged(writer, member);
+                break;
+            case PageIconChanged member:
+                writer.WriteTag(16);
                 WritePageIconChanged(writer, member);
                 break;
             case PageOffered member:
-                writer.WriteTag(16);
+                writer.WriteTag(17);
                 WritePageOffered(writer, member);
                 break;
             case PageStateChanged member:
-                writer.WriteTag(17);
+                writer.WriteTag(18);
                 WritePageStateChanged(writer, member);
                 break;
             case PermissionRequested member:
-                writer.WriteTag(18);
+                writer.WriteTag(19);
                 WritePermissionRequested(writer, member);
                 break;
             case PictureInPictureReturned member:
-                writer.WriteTag(19);
+                writer.WriteTag(20);
                 WritePictureInPictureReturned(writer, member);
                 break;
             case PromptWithdrawn member:
-                writer.WriteTag(20);
+                writer.WriteTag(21);
                 WritePromptWithdrawn(writer, member);
                 break;
             case ProtectedMediaUnavailable member:
-                writer.WriteTag(21);
+                writer.WriteTag(22);
                 WriteProtectedMediaUnavailable(writer, member);
                 break;
             case ScriptDialogOpened member:
-                writer.WriteTag(22);
+                writer.WriteTag(23);
                 WriteScriptDialogOpened(writer, member);
                 break;
             case StagedLinkUnavailable member:
-                writer.WriteTag(23);
+                writer.WriteTag(24);
                 WriteStagedLinkUnavailable(writer, member);
                 break;
             default: throw new ArgumentOutOfRangeException(nameof(value), value.GetType().Name, "Not a contract EngineEvent.");
@@ -8274,6 +8284,29 @@ public static class ContractCodec {
         ArgumentNullException.ThrowIfNull(value);
     }
 
+    public static GroupPages ReadGroupPages(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new GroupPages(
+            reader.ReadGuid(),
+            reader.ReadString(),
+            ReadTabGroupColor(reader),
+            reader.ReadBool(),
+            reader.ReadList(() => reader.ReadGuid()));
+    }
+
+    public static void WriteGroupPages(WireWriter writer, GroupPages value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteGuid(value.GroupId);
+        writer.WriteString(value.Title);
+        WriteTabGroupColor(writer, value.Color);
+        writer.WriteBool(value.IsCollapsed);
+        writer.WriteCount(value.PageIds.Count);
+        foreach (var itemPageIds in value.PageIds) {
+            writer.WriteGuid(itemPageIds);
+        }
+    }
+
     public static GuideSpaceLocked ReadGuideSpaceLocked(WireReader reader) {
         ArgumentNullException.ThrowIfNull(reader);
         return new GuideSpaceLocked(
@@ -11107,6 +11140,31 @@ public static class ContractCodec {
         writer.WriteBool(value.ReplacedDocument);
         writer.WriteString(value.Domain);
         writer.WriteInt64(value.Code);
+    }
+
+    public static PageGroupChanged ReadPageGroupChanged(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new PageGroupChanged(
+            reader.ReadGuid(),
+            reader.ReadGuid(),
+            reader.ReadString(),
+            ReadTabGroupColor(reader),
+            reader.ReadBool(),
+            reader.ReadList(() => reader.ReadGuid()));
+    }
+
+    public static void WritePageGroupChanged(WireWriter writer, PageGroupChanged value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteGuid(value.GroupId);
+        writer.WriteGuid(value.WindowId);
+        writer.WriteString(value.Title);
+        WriteTabGroupColor(writer, value.Color);
+        writer.WriteBool(value.IsCollapsed);
+        writer.WriteCount(value.PageIds.Count);
+        foreach (var itemPageIds in value.PageIds) {
+            writer.WriteGuid(itemPageIds);
+        }
     }
 
     public static PageIconChanged ReadPageIconChanged(WireReader reader) {
@@ -18116,6 +18174,17 @@ public static class ContractCodec {
         ArgumentNullException.ThrowIfNull(writer);
         ArgumentNullException.ThrowIfNull(value);
         writer.WriteEnum(TagOf(SyncStagingFailure.All, value));
+    }
+
+    public static TabGroupColor ReadTabGroupColor(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return TabGroupColor.All[reader.ReadEnum(TabGroupColor.All.Count)];
+    }
+
+    public static void WriteTabGroupColor(WireWriter writer, TabGroupColor value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteEnum(TagOf(TabGroupColor.All, value));
     }
 
     public static TabIconMode ReadTabIconMode(WireReader reader) {

@@ -14,6 +14,8 @@
 #include "chrome/browser/ui/crest/crest_chrome_hooks.h"
 #include "chrome/browser/ui/crest/crest_engine_binding.h"
 #include "chrome/browser/ui/crest/crest_engine_profiles.h"
+#include "chrome/browser/ui/crest/crest_engine_tab_groups.h"
+#include "chrome/browser/ui/tabs/tab_group_model.h"
 #include "chrome/browser/ui/tabs/tab_enums.h"
 #include "chrome/browser/ui/tabs/tab_strip_model.h"
 #include "chrome/browser/ui/tabs/tab_strip_model_observer.h"
@@ -67,6 +69,20 @@ struct EngineBrowsers::KeptBrowser final : TabStripModelObserver {
     }
     for (const auto& inserted : change.GetInsert()->contents) {
       owner->OfferSoon(inserted.contents, selection.new_contents == inserted.contents);
+    }
+  }
+  void TabGroupedStateChanged(TabStripModel*,
+                              std::optional<tab_groups::TabGroupId> old_group,
+                              std::optional<tab_groups::TabGroupId> new_group,
+                              tabs::TabInterface* tab,
+                              int) override {
+    if (!owner->binding_->disposing()) {
+      owner->binding_->TabGroups().GroupedStateChanged(browser, old_group, new_group, tab);
+    }
+  }
+  void OnTabGroupChanged(const TabGroupChange& change) override {
+    if (!owner->binding_->disposing()) {
+      owner->binding_->TabGroups().GroupChanged(browser, change);
     }
   }
   void OnTabStripModelDestroyed(TabStripModel*) override { strip = nullptr; }
@@ -171,6 +187,15 @@ void EngineBrowsers::Destroy(content::WebContents* contents) {
 Browser* EngineBrowsers::Holding(content::WebContents* contents) const {
   KeptBrowser* kept = HoldingKept(contents);
   return kept ? kept->browser.get() : nullptr;
+}
+
+Browser* EngineBrowsers::HoldingGroup(const tab_groups::TabGroupId& group) const {
+  for (const auto& kept : kept_) {
+    if (kept->strip && kept->strip->group_model() && kept->strip->group_model()->ContainsTabGroup(group)) {
+      return kept->browser;
+    }
+  }
+  return nullptr;
 }
 
 Browser* EngineBrowsers::ForWindow(const std::string& profile_id, const std::string& window) {
