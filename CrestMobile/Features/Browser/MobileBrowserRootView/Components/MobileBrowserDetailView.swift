@@ -26,6 +26,9 @@ struct MobileBrowserDetailView: View {
     let compactTransitionEnded: (CGSize) -> Void
     var transientBrowsing: BrowserTransientBrowsingCoordinator?
     var didPromoteTransientPage: () -> Void = {}
+    /// Opens History from the compact toolbar's history menus; a detail without
+    /// that toolbar never calls it.
+    var showHistory: () -> Void = {}
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.layoutDirection) private var layoutDirection
@@ -177,6 +180,7 @@ struct MobileBrowserDetailView: View {
                         submitAddress: submitAddress,
                         beginNewTab: beginNewTab,
                         showTabViewer: showTabViewer,
+                        showHistory: showHistory,
                         hideToolbar: hideCompactToolbar,
                         handleSwipe: handleToolbarSwipe,
                         compactTransitionEnded: compactTransitionEnded

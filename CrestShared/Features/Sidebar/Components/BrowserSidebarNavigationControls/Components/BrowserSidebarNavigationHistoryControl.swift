@@ -15,14 +15,14 @@ struct BrowserSidebarNavigationHistoryControl: View {
         .accessibilityIdentifier(direction.accessibilityIdentifier)
         .disabled(!direction.isAvailable(port))
         .help(Text(direction.tooltip))
-        .contextMenu {
-            BrowserNavigationHistoryMenu(
-                items: direction.history(port),
+        .modifier(
+            BrowserPlatformNavigationHistoryMenuModifier(
+                items: { direction.history(port) },
                 emptyTitle: direction.emptyHistoryTitle,
-                action: navigate(to:)
+                choose: navigate(to:),
+                showFullHistory: port.showHistory
             )
-            .tint(.primary)
-        }
+        )
     }
 
     private func navigate() {

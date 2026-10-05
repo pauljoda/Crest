@@ -24,6 +24,7 @@ struct MobileBrowserDetailSurface: View {
     let compactTransitionEnded: (CGSize) -> Void
     var transientBrowsing: BrowserTransientBrowsingCoordinator?
     var didPromoteTransientPage: () -> Void = {}
+    var showHistory: () -> Void = {}
 
     var body: some View {
         MobileBrowserDetailView(
@@ -49,7 +50,8 @@ struct MobileBrowserDetailSurface: View {
             selectSplitCard: selectSplitCard,
             compactTransitionEnded: compactTransitionEnded,
             transientBrowsing: transientBrowsing,
-            didPromoteTransientPage: didPromoteTransientPage
+            didPromoteTransientPage: didPromoteTransientPage,
+            showHistory: showHistory
         )
     }
 }

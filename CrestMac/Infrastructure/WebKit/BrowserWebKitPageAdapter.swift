@@ -388,8 +388,8 @@ final class BrowserWebKitPageAdapter: BrowserPageEngineAdapter {
             pendingURL: pendingURL,
             title: webView.title ?? "",
             isLoading: webView.isLoading,
-            canGoBack: !webKit.backHistory.isEmpty || webView.canGoBack,
-            canGoForward: !webKit.forwardHistory.isEmpty || webView.canGoForward,
+            canGoBack: !webKit.history.backItems.isEmpty || webView.canGoBack,
+            canGoForward: !webKit.history.forwardItems.isEmpty || webView.canGoForward,
             security: PageSecurity(
                 webKitURL: webView.url,
                 hasOnlySecureContent: webView.hasOnlySecureContent,

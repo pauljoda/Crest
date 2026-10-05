@@ -15,6 +15,14 @@ import WebKit
 ///   shown, so the page the person just left by going back stays reachable.
 @MainActor
 struct BrowserPageNavigationHistory {
+    // MARK: - Static Variables
+
+    /// WebKit's own back-forward list capacity (`WebBackForwardList`'s
+    /// `DefaultCapacity`). WebKit drops its oldest entry past it when a page
+    /// commits, and its swipe gestures walk that list directly, so the
+    /// supplement never keeps more than WebKit does.
+    static let capacity = 100
+
     // MARK: - Variables
 
     private var entries: [WKBackForwardListItem] = []
@@ -95,11 +103,11 @@ struct BrowserPageNavigationHistory {
         }
         // Match WebKit's bounded session list instead of retaining old items
         // after its oldest entries have been evicted.
-        if entries.count > 100 {
-            let removed = min(entries.count - 100, currentIndex)
+        if entries.count > Self.capacity {
+            let removed = min(entries.count - Self.capacity, currentIndex)
             entries.removeFirst(removed)
             currentIndex -= removed
-            entries = Array(entries.prefix(100))
+            entries = Array(entries.prefix(Self.capacity))
         }
         let retained = Set(entries.map(ObjectIdentifier.init))
         linkItems.formIntersection(retained)

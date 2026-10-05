@@ -60,7 +60,6 @@ the live status for each issue.
 - [ ] [bug: bad colors on new tab](https://github.com/pauljoda/Crest/issues/185)
 - [ ] [bug: The Manage Search Engines button doesn't work](https://github.com/pauljoda/Crest/issues/194)
 - [ ] [bug: Quick Window does not prompt macOS for camera/microphone access](https://github.com/pauljoda/Crest/issues/214)
-- [ ] [bug: Pin icon looks blurry or poor quality](https://github.com/pauljoda/Crest/issues/217)
 - [ ] [feature: Add Edit Pinned URL menu option and dialogue](https://github.com/pauljoda/Crest/issues/218)
 - [ ] [feature: Install Crest with Homebrew (tap first, then homebrew-cask)](https://github.com/pauljoda/Crest/issues/222)
 - [ ] [bug: Quitting Crest creates an empty ~/Library/Application Support/Chromium](https://github.com/pauljoda/Crest/issues/223)
@@ -80,6 +79,7 @@ the live status for each issue.
 #### Completed
 
 - [x] [bug: Default Page Zoom deosn't work](https://github.com/pauljoda/Crest/issues/212)
+- [x] [bug: Pin icon looks blurry or poor quality](https://github.com/pauljoda/Crest/issues/217)
 - [x] [bug: Cant install Keeper as Extension in Chromium](https://github.com/pauljoda/Crest/issues/219)
 - [x] [feature: Make Tab Groups visible](https://github.com/pauljoda/Crest/issues/220)
 - [x] [bug: Crest 0.7.2 crashes when clicking a website's Login button on macOS](https://github.com/pauljoda/Crest/issues/224)

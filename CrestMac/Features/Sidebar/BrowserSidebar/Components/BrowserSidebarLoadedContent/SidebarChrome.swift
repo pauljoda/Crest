@@ -21,7 +21,8 @@ struct SidebarChrome: View {
 
             VStack(spacing: 0) {
                 BrowserSidebarNavigationControls(
-                    port: BrowserSidebarNavigationPort(pages: pages, browser: context.browser),
+                    port: BrowserSidebarNavigationPort(
+                        pages: pages, browser: context.browser, showHistory: context.chromeActions.presentHistory),
                     capabilities: context.capabilities
                 )
                 .contentTransition(.opacity)

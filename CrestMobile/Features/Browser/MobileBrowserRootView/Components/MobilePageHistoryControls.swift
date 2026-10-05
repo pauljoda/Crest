@@ -3,6 +3,9 @@ import SwiftUI
 struct MobilePageHistoryControls: View {
     let pageActions: MobileSelectedPageActionPort?
 
+    /// Opens History from the end of either history menu.
+    let showHistory: () -> Void
+
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
@@ -72,7 +75,8 @@ struct MobilePageHistoryControls: View {
             BrowserNavigationHistoryMenu(
                 items: pageActions.backHistory,
                 emptyTitle: "No Earlier Pages",
-                action: pageActions.goBack(to:)
+                action: pageActions.goBack(to:),
+                showFullHistory: showHistory
             )
             .tint(.primary)
         }
@@ -91,7 +95,8 @@ struct MobilePageHistoryControls: View {
             BrowserNavigationHistoryMenu(
                 items: pageActions.forwardHistory,
                 emptyTitle: "No Later Pages",
-                action: pageActions.goForward(to:)
+                action: pageActions.goForward(to:),
+                showFullHistory: showHistory
             )
             .tint(.primary)
         }

@@ -9,6 +9,7 @@ struct MobileCompactPageToolbar: View {
     let submitAddress: () -> Void
     let beginNewTab: () -> Void
     let showTabViewer: () -> Void
+    let showHistory: () -> Void
     let hideToolbar: () -> Void
     let handleSwipe: (BrowserSpaceSwipeDirection) -> Void
     let compactTransitionEnded: (CGSize) -> Void
@@ -16,7 +17,7 @@ struct MobileCompactPageToolbar: View {
     var body: some View {
         HStack(spacing: MobileBrowserChromeLayout.compactToolbarSpacing) {
             GlassEffectContainer(spacing: 0) {
-                MobilePageHistoryControls(pageActions: pageActions)
+                MobilePageHistoryControls(pageActions: pageActions, showHistory: showHistory)
             }
 
             GlassEffectContainer(spacing: 0) {

@@ -12,7 +12,7 @@
 
         /// The entries as the page's history menus list them, nearest first.
         private static func items(_ entries: [PageHistoryEntry]) -> [BrowserNavigationHistoryItem] {
-            entries.enumerated().compactMap { index, entry in
+            entries.prefix(BrowserNavigationHistoryItem.listedLimit).enumerated().compactMap { index, entry in
                 guard let url = URL(string: entry.url) else { return nil }
                 let title = entry.title.trimmingCharacters(in: .whitespacesAndNewlines)
                 return BrowserNavigationHistoryItem(

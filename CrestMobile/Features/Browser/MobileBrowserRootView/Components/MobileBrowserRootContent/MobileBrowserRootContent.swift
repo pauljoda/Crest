@@ -219,7 +219,8 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
                         selectSplitCard: selectSplitCard,
                         compactTransitionEnded: finishCompactTransition,
                         transientBrowsing: transientBrowsing,
-                        didPromoteTransientPage: model.activateSelectedTab
+                        didPromoteTransientPage: model.activateSelectedTab,
+                        showHistory: presentHistoryFromCommand
                     )
                 )
             ),

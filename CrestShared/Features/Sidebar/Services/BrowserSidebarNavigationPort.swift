@@ -45,6 +45,9 @@ struct BrowserSidebarNavigationPort {
 
     let goForwardToHistoryItem: (BrowserNavigationHistoryItem) -> Void
 
+    /// Opens History, which keeps every visit the history menus leave out.
+    let showHistory: () -> Void
+
     /// Whether the current page is still loading, which is what turns the
     /// reload control into a stop control.
     let isLoading: () -> Bool

@@ -8,7 +8,7 @@ extension BrowserSidebarNavigationPort {
     /// states and its reload glyph inside Observation's tracking. Reload is the
     /// one thing the pool cannot answer alone — it reloads *the session's*
     /// selected page — so the store rides along for that.
-    init(pages: BrowserPagePool, browser: BrowserStore) {
+    init(pages: BrowserPagePool, browser: BrowserStore, showHistory: @escaping () -> Void) {
         self.init(
             canGoBack: { pages.canGoBack },
             canGoForward: { pages.canGoForward },
@@ -18,6 +18,7 @@ extension BrowserSidebarNavigationPort {
             goForward: { pages.goForward() },
             goBackToHistoryItem: { item in pages.goBack(to: item) },
             goForwardToHistoryItem: { item in pages.goForward(to: item) },
+            showHistory: showHistory,
             isLoading: { pages.activePage?.live.isLoading == true },
             hasActivePage: { pages.activePage != nil },
             activeURL: { pages.activePage?.live.displayURL },

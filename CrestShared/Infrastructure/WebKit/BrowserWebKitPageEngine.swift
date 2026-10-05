@@ -70,10 +70,14 @@ final class BrowserWebKitPageEngine: BrowserPageEngine {
     }
 
     var backHistory: [BrowserNavigationHistoryItem] {
-        history.backItems.reversed().enumerated().map { Self.item($0.element, depth: $0.offset + 1) }
+        history.backItems.suffix(BrowserNavigationHistoryItem.listedLimit).reversed().enumerated().map {
+            Self.item($0.element, depth: $0.offset + 1)
+        }
     }
     var forwardHistory: [BrowserNavigationHistoryItem] {
-        history.forwardItems.enumerated().map { Self.item($0.element, depth: $0.offset + 1) }
+        history.forwardItems.prefix(BrowserNavigationHistoryItem.listedLimit).enumerated().map {
+            Self.item($0.element, depth: $0.offset + 1)
+        }
     }
     func load(_ request: URLRequest) {
         if let staged = stagedRequest {

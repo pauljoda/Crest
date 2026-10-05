@@ -13,7 +13,7 @@ extension BrowserSidebarNavigationPort {
     /// The actions are optional because the compact shell has no page at all
     /// between tabs. Absent, every question answers the way an empty strip
     /// needs it to.
-    init(pageActions: (any MobilePageActions)?) {
+    init(pageActions: (any MobilePageActions)?, showHistory: @escaping () -> Void) {
         self.init(
             canGoBack: { pageActions?.canGoBack == true },
             canGoForward: { pageActions?.canGoForward == true },
@@ -25,6 +25,7 @@ extension BrowserSidebarNavigationPort {
             goForwardToHistoryItem: { item in
                 pageActions?.goForward(to: item)
             },
+            showHistory: showHistory,
             isLoading: { pageActions?.activePage?.live.isLoading == true },
             hasActivePage: { pageActions?.isAvailable == true },
             activeURL: { pageActions?.activeURL },

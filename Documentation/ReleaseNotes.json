@@ -3613,6 +3613,10 @@
     "retina-tab-icons": {
       "category": "fixed",
       "message": "Site icons in tabs and pinned tabs on Mac are now sharp on Retina displays instead of blurry."
+    },
+    "back-forward-history-menu-responsive": {
+      "category": "fixed",
+      "message": "The back and forward history menus open at once and no longer freeze Crest on Mac when you move the pointer over them. Each lists the 12 nearest pages, with Show Full History at the end for everything else."
     }
   }
 }

@@ -7,7 +7,9 @@ struct MobileBrowserSidebarTopChrome: View {
         if configuration.utilityPresentationStyle == .inline {
             BrowserSidebarNavigationControls(
                 port: BrowserSidebarNavigationPort(
-                    pageActions: selectedPageActions
+                    pageActions: selectedPageActions,
+                    showHistory: configuration.context.chromeActions
+                        .presentHistory
                 ),
                 capabilities: configuration.context.capabilities,
                 hidesUnavailableForwardControl: true

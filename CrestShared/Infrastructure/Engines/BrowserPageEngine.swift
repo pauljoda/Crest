@@ -7,6 +7,9 @@ import Foundation
 protocol BrowserPageEngine: AnyObject {
     var registration: BrowserAdapterRegistration { get }
     var nativeView: BrowserEngineView { get }
+    /// The entries behind and ahead of the current one, nearest first, up to
+    /// `BrowserNavigationHistoryItem.listedLimit` each, however long the
+    /// engine's own list is.
     var backHistory: [BrowserNavigationHistoryItem] { get }
     var forwardHistory: [BrowserNavigationHistoryItem] { get }
     /// The engine's own document URL, which can run ahead of the URL the page
