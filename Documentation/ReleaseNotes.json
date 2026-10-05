@@ -3609,6 +3609,10 @@
     "extension-tab-groups-as-folders": {
       "category": "new",
       "message": "Tab groups that extensions make, such as the tabs Claude works in, now appear on Mac as folders in the Space\u2019s open tabs, in the group\u2019s name and color. Renaming, recoloring, collapsing or deleting the folder, or moving tabs in or out, changes the group the extension sees, and the folder keeps following the group after Crest restarts."
+    },
+    "retina-tab-icons": {
+      "category": "fixed",
+      "message": "Site icons in tabs and pinned tabs on Mac are now sharp on Retina displays instead of blurry."
     }
   }
 }

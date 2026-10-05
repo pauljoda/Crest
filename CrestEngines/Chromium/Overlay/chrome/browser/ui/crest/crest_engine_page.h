@@ -18,8 +18,9 @@
 #include "components/favicon/core/favicon_driver_observer.h"
 #include "components/find_in_page/find_result_observer.h"
 #include "content/public/browser/web_contents_observer.h"
+#include "url/gurl.h"
 
-class GURL;
+class SkBitmap;
 
 namespace crest {
 
@@ -214,6 +215,9 @@ class EnginePage final : public content::WebContentsObserver,
   struct FoundIcon {
     std::vector<uint8_t> png;
     std::string url;
+    // The icon file the image shows, and its longest edge in pixels.
+    GURL source;
+    int pixels = 0;
   };
 
   // content::WebContentsObserver:
@@ -270,7 +274,9 @@ class EnginePage final : public content::WebContentsObserver,
   void FinishIfLoaded();
   void Settle();
   void CancelSettling();
-  void PublishIcon(const gfx::Image& image);
+  void PublishIcon(const gfx::Image& image, const GURL& icon_url);
+  void FetchSharperIcon(const GURL& icon_url, int pixels);
+  void SetIcon(const SkBitmap& bitmap, const GURL& icon_url);
   void UpdateTheme();
   void ReportIcon();
   void Report(engine::EngineEvent event);
@@ -319,6 +325,9 @@ class EnginePage final : public content::WebContentsObserver,
   // theme puts behind it.
   std::optional<FoundIcon> icon_;
   std::optional<engine::TabIconAccent> accent_;
+  // The latest icon or document, which a sharper copy of an earlier icon no
+  // longer stands for.
+  uint64_t icon_generation_ = 0;
   // The page changed since its last snapshot, which is due when the turn ends.
   bool report_due_ = false;
   std::optional<engine::PageSnapshot> reported_;

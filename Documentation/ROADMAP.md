@@ -62,7 +62,6 @@ the live status for each issue.
 - [ ] [bug: Quick Window does not prompt macOS for camera/microphone access](https://github.com/pauljoda/Crest/issues/214)
 - [ ] [bug: Pin icon looks blurry or poor quality](https://github.com/pauljoda/Crest/issues/217)
 - [ ] [feature: Add Edit Pinned URL menu option and dialogue](https://github.com/pauljoda/Crest/issues/218)
-- [ ] [feature: Make Tab Groups visible](https://github.com/pauljoda/Crest/issues/220)
 - [ ] [feature: Install Crest with Homebrew (tap first, then homebrew-cask)](https://github.com/pauljoda/Crest/issues/222)
 - [ ] [bug: Quitting Crest creates an empty ~/Library/Application Support/Chromium](https://github.com/pauljoda/Crest/issues/223)
 - [ ] [Investigate reported passkey failures in both engines](https://github.com/pauljoda/Crest/issues/226)
@@ -76,14 +75,16 @@ the live status for each issue.
 - [ ] [Make borderless windows easier to move](https://github.com/pauljoda/Crest/issues/234)
 - [ ] [Evaluate a swipe gesture for History and Downloads on Mac](https://github.com/pauljoda/Crest/issues/235)
 - [ ] [Return a pinned tab to its saved address from the mobile menu](https://github.com/pauljoda/Crest/issues/236)
-- [ ] [Keep the Claude extension signed in after relaunching Crest](https://github.com/pauljoda/Crest/issues/238)
+- [ ] [Keep the back and forward history menu fast on long-lived tabs](https://github.com/pauljoda/Crest/issues/244)
 
 #### Completed
 
 - [x] [bug: Default Page Zoom deosn't work](https://github.com/pauljoda/Crest/issues/212)
 - [x] [bug: Cant install Keeper as Extension in Chromium](https://github.com/pauljoda/Crest/issues/219)
+- [x] [feature: Make Tab Groups visible](https://github.com/pauljoda/Crest/issues/220)
 - [x] [bug: Crest 0.7.2 crashes when clicking a website's Login button on macOS](https://github.com/pauljoda/Crest/issues/224)
 - [x] [Investigate a reported crash when signing in to Pinterest on Mac](https://github.com/pauljoda/Crest/issues/225) — [`606000ce`](https://github.com/pauljoda/Crest/commit/606000ce4b006e04dee412926366ebb355bcc186)
+- [x] [Keep the Claude extension signed in after relaunching Crest](https://github.com/pauljoda/Crest/issues/238) — [`1222cfab`](https://github.com/pauljoda/Crest/commit/1222cfab91e205f9325b814fb7224a35f2d9872c)
 
 <!-- crest-roadmap-sync:end -->
 

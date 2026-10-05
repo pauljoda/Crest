@@ -33,6 +33,7 @@
 #include "components/sessions/content/content_serialized_navigation_builder.h"
 #include "components/sessions/core/serialized_navigation_entry.h"
 #include "components/viz/common/frame_sinks/copy_output_result.h"
+#include "content/public/browser/favicon_status.h"
 #include "content/public/browser/navigation_controller.h"
 #include "content/public/browser/navigation_entry.h"
 #include "components/zoom/zoom_controller.h"
@@ -51,6 +52,7 @@
 #include "ui/base/page_transition_types.h"
 #include "ui/gfx/codec/png_codec.h"
 #include "ui/gfx/geometry/rect.h"
+#include "ui/gfx/geometry/size.h"
 #include "ui/gfx/image/image.h"
 #include "ui/gfx/image/image_skia.h"
 #include "ui/gfx/image/image_skia_rep.h"
@@ -74,6 +76,10 @@ constexpr size_t kIconBytes = 512 * 1024;
 // The scale the page reports its icon at. Crest draws tab icons at 18 points
 // or more, so Chromium's 1x favicon, 16 pixels, blurs on a Retina display.
 constexpr float kIconScale = 2.0f;
+// The longest edge, in pixels, the page fetches its icon again at. Larger
+// sidebars draw tab icons at up to 27 points, more than the 2x favicon's 32
+// pixels fill on a Retina display.
+constexpr int kIconPixels = 64;
 // The key systems a page asks for by name that another engine plays through
 // the platform: Widevine and every PlayReady variant.
 constexpr std::string_view kWidevinePrefix = "com.widevine.alpha";
@@ -140,6 +146,11 @@ engine::NavigationError NavigationErrorFor(int code) {
 // only in their fragments.
 bool SameDocument(const GURL& lhs, const GURL& rhs) {
   return lhs == rhs || (lhs.is_valid() && rhs.is_valid() && lhs.GetWithoutRef() == rhs.GetWithoutRef());
+}
+
+// An icon image's longest edge, in pixels.
+int IconPixels(const SkBitmap& bitmap) {
+  return std::max(bitmap.width(), bitmap.height());
 }
 
 }  // namespace
@@ -475,8 +486,12 @@ void EnginePage::DidStopLoading() {
   NoteTitle();
   FinishIfLoaded();
   StateChanged();
-  if (auto* driver = favicon::ContentFaviconDriver::FromWebContents(web_contents())) {
-    PublishIcon(driver->GetFavicon());
+  // The icon the engine found before the document committed, which no update
+  // reported. A document that has one keeps it, and its sharper copy.
+  if (!icon_) {
+    if (auto* entry = web_contents()->GetController().GetLastCommittedEntry()) {
+      PublishIcon(entry->GetFavicon().image, entry->GetFavicon().url);
+    }
   }
 }
 
@@ -619,7 +634,11 @@ void EnginePage::OnFaviconUpdated(favicon::FaviconDriver* driver,
                                   const GURL& icon_url,
                                   bool icon_url_changed,
                                   const gfx::Image& image) {
-  PublishIcon(image);
+  // The tab's icon. Touch and largest icons are home-screen artwork, which
+  // Chromium only looks for on phones.
+  if (type == NON_TOUCH_16_DIP) {
+    PublishIcon(image, icon_url);
+  }
 }
 
 // Navigation events.
@@ -636,6 +655,7 @@ void EnginePage::Committed(const std::string& url) {
   document_url_ = url;
   pending_url_.reset();
   icon_.reset();
+  ++icon_generation_;
   StateChanged();
   Report(engine::NavigationCommitted{.page_id = id_, .url = url, .same_document = false});
 }
@@ -723,8 +743,53 @@ void EnginePage::CancelSettling() {
 
 // The icon.
 
-void EnginePage::PublishIcon(const gfx::Image& image) {
-  if (!web_contents() || image.IsEmpty()) {
+void EnginePage::PublishIcon(const gfx::Image& image, const GURL& icon_url) {
+  if (image.IsEmpty()) {
+    return;
+  }
+  // The Retina representation, or the closest one the icon has.
+  const gfx::ImageSkia skia = image.AsImageSkia();
+  const gfx::ImageSkiaRep& rep = skia.GetRepresentation(kIconScale);
+  if (rep.is_null()) {
+    return;
+  }
+  const SkBitmap& bitmap = rep.GetBitmap();
+  // A sharper copy of the same icon stays until the fetch below brings the
+  // icon's current pixels.
+  if (!icon_ || icon_->source != icon_url || icon_->pixels <= IconPixels(bitmap)) {
+    SetIcon(bitmap, icon_url);
+  }
+  FetchSharperIcon(icon_url, IconPixels(bitmap));
+}
+
+// Fetches the icon file again at the size Crest draws it, which an SVG, or an
+// ICO or PNG with more pixels, fills better than the engine's favicon. Like the
+// engine's own fetch it sends no cookies, and it usually comes from the cache.
+void EnginePage::FetchSharperIcon(const GURL& icon_url, int pixels) {
+  const uint64_t generation = ++icon_generation_;
+  if (!web_contents() || !icon_url.is_valid()) {
+    return;
+  }
+  web_contents()->DownloadImage(
+      icon_url, /*is_favicon=*/true, gfx::Size(kIconPixels, kIconPixels), kIconPixels, /*bypass_cache=*/false,
+      base::BindOnce(
+          [](base::WeakPtr<EnginePage> page, uint64_t generation, GURL icon_url, int pixels, int /*id*/,
+             int /*status*/, const GURL& /*image_url*/, const std::vector<SkBitmap>& bitmaps,
+             const std::vector<gfx::Size>& /*sizes*/) {
+            // A later icon, or a later document, replaced the one this fetched.
+            if (!page || generation != page->icon_generation_) {
+              return;
+            }
+            const auto sharpest = std::ranges::max_element(bitmaps, {}, &IconPixels);
+            if (sharpest != bitmaps.end() && IconPixels(*sharpest) > pixels) {
+              page->SetIcon(*sharpest, icon_url);
+            }
+          },
+          weak_factory_.GetWeakPtr(), generation, icon_url, pixels));
+}
+
+void EnginePage::SetIcon(const SkBitmap& bitmap, const GURL& icon_url) {
+  if (!web_contents()) {
     return;
   }
   auto* driver = favicon::ContentFaviconDriver::FromWebContents(web_contents());
@@ -736,18 +801,13 @@ void EnginePage::PublishIcon(const gfx::Image& image) {
   if (source.is_valid() && !SameDocument(source, web_contents()->GetLastCommittedURL())) {
     return;
   }
-  // The Retina representation, or the closest one the icon has.
-  const gfx::ImageSkia skia = image.AsImageSkia();
-  const gfx::ImageSkiaRep& rep = skia.GetRepresentation(kIconScale);
-  if (rep.is_null()) {
-    return;
-  }
-  auto png = gfx::PNGCodec::EncodeBGRASkBitmap(rep.GetBitmap(), /*discard_transparency=*/false);
+  auto png = gfx::PNGCodec::EncodeBGRASkBitmap(bitmap, /*discard_transparency=*/false);
   if (!png || png->size() == 0 || png->size() > kIconBytes) {
     return;
   }
   icon_ = FoundIcon{std::move(*png),
-                    PresentedURL(source.is_valid() ? source : web_contents()->GetLastCommittedURL())};
+                    PresentedURL(source.is_valid() ? source : web_contents()->GetLastCommittedURL()), icon_url,
+                    IconPixels(bitmap)};
   ReportIcon();
 }
 
