@@ -52,6 +52,8 @@
 #include "ui/gfx/codec/png_codec.h"
 #include "ui/gfx/geometry/rect.h"
 #include "ui/gfx/image/image.h"
+#include "ui/gfx/image/image_skia.h"
+#include "ui/gfx/image/image_skia_rep.h"
 #include "url/gurl.h"
 
 namespace crest {
@@ -69,6 +71,9 @@ constexpr size_t kInteractionStateEntryBytes = 64 * 1024;
 constexpr size_t kInteractionStateBytes = 2 * 1024 * 1024;
 // The largest icon image the page reports.
 constexpr size_t kIconBytes = 512 * 1024;
+// The scale the page reports its icon at. Crest draws tab icons at 18 points
+// or more, so Chromium's 1x favicon, 16 pixels, blurs on a Retina display.
+constexpr float kIconScale = 2.0f;
 // The key systems a page asks for by name that another engine plays through
 // the platform: Widevine and every PlayReady variant.
 constexpr std::string_view kWidevinePrefix = "com.widevine.alpha";
@@ -731,11 +736,17 @@ void EnginePage::PublishIcon(const gfx::Image& image) {
   if (source.is_valid() && !SameDocument(source, web_contents()->GetLastCommittedURL())) {
     return;
   }
-  auto png = image.As1xPNGBytes();
+  // The Retina representation, or the closest one the icon has.
+  const gfx::ImageSkia skia = image.AsImageSkia();
+  const gfx::ImageSkiaRep& rep = skia.GetRepresentation(kIconScale);
+  if (rep.is_null()) {
+    return;
+  }
+  auto png = gfx::PNGCodec::EncodeBGRASkBitmap(rep.GetBitmap(), /*discard_transparency=*/false);
   if (!png || png->size() == 0 || png->size() > kIconBytes) {
     return;
   }
-  icon_ = FoundIcon{std::vector<uint8_t>(png->begin(), png->end()),
+  icon_ = FoundIcon{std::move(*png),
                     PresentedURL(source.is_valid() ? source : web_contents()->GetLastCommittedURL())};
   ReportIcon();
 }
