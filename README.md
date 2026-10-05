@@ -228,6 +228,14 @@ claims need verification before they become part of a contribution.
 
 ## Contributing
 
+Want to help? Please do! While I feel confident doing actual dev work, there are some reas 
+that desperately need help. 
+- Designer: If you are a designer, I would love any input or help with the website, promotional material, and feedback on the apps UI itself.
+- Security: I have some background in cyber security, but mainly from a red team/blue team, and some as a dev so I welcome any and all security audits and improvements, please report using the built in security reporting
+- Engine Guru: If you have lots of experience working with chromium and browser engines in general, I would love any input or help.
+
+While those are the larger needed roles, anyone is free to contribute, please follow the guidelines and ensure your work is well done and aligns with the product, if you have a more drastic change you can always fork it to try it out, and perhaps share to see if it would be a good fit to merge in. 
+
 See [CONTRIBUTING.md](CONTRIBUTING.md) for setup and change discipline,
 [GOVERNANCE.md](GOVERNANCE.md) for project ownership, and the
 [documentation index](Documentation/README.md) for engineering references.
