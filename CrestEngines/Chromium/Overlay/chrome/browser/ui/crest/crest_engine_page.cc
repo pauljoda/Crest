@@ -56,6 +56,7 @@
 #include "ui/gfx/image/image.h"
 #include "ui/gfx/image/image_skia.h"
 #include "ui/gfx/image/image_skia_rep.h"
+#include "ui/gfx/skia_util.h"
 #include "url/gurl.h"
 
 namespace crest {
@@ -753,19 +754,21 @@ void EnginePage::PublishIcon(const gfx::Image& image, const GURL& icon_url) {
   if (rep.is_null()) {
     return;
   }
-  const SkBitmap& bitmap = rep.GetBitmap();
-  // A sharper copy of the same icon stays until the fetch below brings the
-  // icon's current pixels.
-  if (!icon_ || icon_->source != icon_url || icon_->pixels <= IconPixels(bitmap)) {
-    SetIcon(bitmap, icon_url);
+  const SkBitmap& artwork = rep.GetBitmap();
+  // The same artwork again keeps its sharper copy. New artwork shows at once,
+  // even from the same file, and its sharper copy follows.
+  if (icon_ && icon_->source == icon_url && icon_->pixels > IconPixels(artwork) &&
+      gfx::BitmapsAreEqual(icon_->artwork, artwork)) {
+    return;
   }
-  FetchSharperIcon(icon_url, IconPixels(bitmap));
+  SetIcon(artwork, icon_url, artwork);
+  FetchSharperIcon(icon_url, artwork);
 }
 
 // Fetches the icon file again at the size Crest draws it, which an SVG, or an
 // ICO or PNG with more pixels, fills better than the engine's favicon. Like the
 // engine's own fetch it sends no cookies, and it usually comes from the cache.
-void EnginePage::FetchSharperIcon(const GURL& icon_url, int pixels) {
+void EnginePage::FetchSharperIcon(const GURL& icon_url, const SkBitmap& artwork) {
   const uint64_t generation = ++icon_generation_;
   if (!web_contents() || !icon_url.is_valid()) {
     return;
@@ -773,7 +776,7 @@ void EnginePage::FetchSharperIcon(const GURL& icon_url, int pixels) {
   web_contents()->DownloadImage(
       icon_url, /*is_favicon=*/true, gfx::Size(kIconPixels, kIconPixels), kIconPixels, /*bypass_cache=*/false,
       base::BindOnce(
-          [](base::WeakPtr<EnginePage> page, uint64_t generation, GURL icon_url, int pixels, int /*id*/,
+          [](base::WeakPtr<EnginePage> page, uint64_t generation, GURL icon_url, SkBitmap artwork, int /*id*/,
              int /*status*/, const GURL& /*image_url*/, const std::vector<SkBitmap>& bitmaps,
              const std::vector<gfx::Size>& /*sizes*/) {
             // A later icon, or a later document, replaced the one this fetched.
@@ -781,14 +784,14 @@ void EnginePage::FetchSharperIcon(const GURL& icon_url, int pixels) {
               return;
             }
             const auto sharpest = std::ranges::max_element(bitmaps, {}, &IconPixels);
-            if (sharpest != bitmaps.end() && IconPixels(*sharpest) > pixels) {
-              page->SetIcon(*sharpest, icon_url);
+            if (sharpest != bitmaps.end() && IconPixels(*sharpest) > IconPixels(artwork)) {
+              page->SetIcon(*sharpest, icon_url, artwork);
             }
           },
-          weak_factory_.GetWeakPtr(), generation, icon_url, pixels));
+          weak_factory_.GetWeakPtr(), generation, icon_url, artwork));
 }
 
-void EnginePage::SetIcon(const SkBitmap& bitmap, const GURL& icon_url) {
+void EnginePage::SetIcon(const SkBitmap& bitmap, const GURL& icon_url, const SkBitmap& artwork) {
   if (!web_contents()) {
     return;
   }
@@ -807,7 +810,7 @@ void EnginePage::SetIcon(const SkBitmap& bitmap, const GURL& icon_url) {
   }
   icon_ = FoundIcon{std::move(*png),
                     PresentedURL(source.is_valid() ? source : web_contents()->GetLastCommittedURL()), icon_url,
-                    IconPixels(bitmap)};
+                    artwork, IconPixels(bitmap)};
   ReportIcon();
 }
 

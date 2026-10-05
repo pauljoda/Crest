@@ -18,9 +18,8 @@
 #include "components/favicon/core/favicon_driver_observer.h"
 #include "components/find_in_page/find_result_observer.h"
 #include "content/public/browser/web_contents_observer.h"
+#include "third_party/skia/include/core/SkBitmap.h"
 #include "url/gurl.h"
-
-class SkBitmap;
 
 namespace crest {
 
@@ -215,8 +214,10 @@ class EnginePage final : public content::WebContentsObserver,
   struct FoundIcon {
     std::vector<uint8_t> png;
     std::string url;
-    // The icon file the image shows, and its longest edge in pixels.
+    // The icon file the image shows, the engine's own image of that file
+    // when it reported it, and the image's longest edge in pixels.
     GURL source;
+    SkBitmap artwork;
     int pixels = 0;
   };
 
@@ -275,8 +276,8 @@ class EnginePage final : public content::WebContentsObserver,
   void Settle();
   void CancelSettling();
   void PublishIcon(const gfx::Image& image, const GURL& icon_url);
-  void FetchSharperIcon(const GURL& icon_url, int pixels);
-  void SetIcon(const SkBitmap& bitmap, const GURL& icon_url);
+  void FetchSharperIcon(const GURL& icon_url, const SkBitmap& artwork);
+  void SetIcon(const SkBitmap& bitmap, const GURL& icon_url, const SkBitmap& artwork);
   void UpdateTheme();
   void ReportIcon();
   void Report(engine::EngineEvent event);
