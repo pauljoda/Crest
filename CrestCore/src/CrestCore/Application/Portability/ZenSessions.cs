@@ -42,9 +42,8 @@ internal static class ZenSessions {
         if (spaces is null || tabs is null || spaces.Count == 0) throw new Rejected(new SessionUnrecognized());
         if (spaces.Count > BrowserDataFile.MaximumSpaces || tabs.Count > SessionDraft.MaximumTabs * spaces.Count)
             throw new Rejected(new SessionOverLimits());
-        var folders = ImportJson.Array(ImportJson.Member(root, "folders")) ?? [];
-        if (folders.Count > FolderTree.MaximumCount * spaces.Count) throw new Rejected(new SessionOverLimits());
-        var all = folders.Select(Folder).OfType<Group>().ToArray();
+        var all = (ImportJson.Array(ImportJson.Member(root, "folders")) ?? []).Select(Folder).OfType<Group>().ToArray();
+        if (all.Count(group => !group.IsSplit) > FolderTree.MaximumCount * spaces.Count) throw new Rejected(new SessionOverLimits());
         Dictionary<string, Group> groups = new(StringComparer.Ordinal);
         foreach (var group in all) groups.TryAdd(group.Id, group);
 
