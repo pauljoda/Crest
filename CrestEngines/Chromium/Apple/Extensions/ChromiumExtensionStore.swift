@@ -438,6 +438,8 @@ final class ChromiumExtensionInstallation {
     @ObservationIgnored private var approvedIdentity: [String]?
     @ObservationIgnored private var approvedDestinations: [BrowserSpaceIdentity] = []
     @ObservationIgnored private var package: URL?
+    /// The package download while it runs, so closing the review stops it.
+    @ObservationIgnored private var transfer: (any CrestExtensionDownload)?
     @ObservationIgnored private var canceled = false
     @ObservationIgnored private var targetSpace: BrowserSpaceIdentity?
 
@@ -484,16 +486,15 @@ final class ChromiumExtensionInstallation {
     private func download() async throws -> URL {
         guard let host = ChromiumComposition.engineHost else { throw URLError(.cancelled) }
         let result: (String?, String) = await withCheckedContinuation { continuation in
-            if !host.downloadExtension(
+            transfer = host.downloadExtension(
                 id, profile: space.profileID,
                 progress: { [weak self] fraction in self?.downloaded = fraction },
                 completion: { package, message in
                     continuation.resume(returning: (package, message))
                 })
-            {
-                continuation.resume(returning: (nil, ""))
-            }
+            if transfer == nil { continuation.resume(returning: (nil, "")) }
         }
+        transfer = nil
         guard let package = result.0 else {
             throw NSError(
                 domain: "CrestExtension", code: 2,
@@ -559,6 +560,9 @@ final class ChromiumExtensionInstallation {
     }
     func cancel() {
         canceled = true
+        // The download then reports failure, which a canceled review ignores.
+        transfer?.cancel()
+        transfer = nil
         let callback = consent
         consent = nil
         callback?(false, false)

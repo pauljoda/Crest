@@ -3593,6 +3593,10 @@
     "web-store-large-extensions": {
       "category": "fixed",
       "message": "Large Chrome Web Store extensions such as Keeper now install on Mac. Extensions download through the Space's own connection, as they do in Chrome, and the install review shows download progress."
+    },
+    "web-store-download-cancel": {
+      "category": "internal",
+      "message": "Stop an extension package download when its install review closes."
     }
   }
 }

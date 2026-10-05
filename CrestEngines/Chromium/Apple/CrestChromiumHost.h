@@ -118,6 +118,13 @@ NS_SWIFT_UI_ACTOR
 @property(nonatomic, readonly, nullable) NSString *actionExtensionID;
 @end
 
+// A Chrome Web Store package download in progress. Canceling it stops the
+// request, discards what was received and reports the download as failed;
+// once the download has reported, canceling does nothing.
+@protocol CrestExtensionDownload <NSObject>
+- (void)cancel;
+@end
+
 // Chromium's Mac shell: what only AppKit does for the engine. It hosts each
 // page's view and the views an extension or the inspector puts beside it,
 // shows extension popups, runs system sign-in and answers the close and quit
@@ -157,11 +164,13 @@ NS_SWIFT_UI_ACTOR
 // Downloads a Chrome Web Store extension's package through the profile's own
 // network stack, with the request Chromium's Web Store installer makes.
 // `progress` reports the fraction received while the response names its
-// length. `completion` receives the package file, which the caller then owns,
-// or nil and the failure. Returns NO when the profile or identifier is unusable.
-- (BOOL)downloadExtension:(NSString *)extensionID profile:(NSUUID *)profileID
-                 progress:(void (^)(double fraction))progress
-               completion:(void (^)(NSString *_Nullable package, NSString *message))completion
+// length. `completion` runs once, with the package file, which the caller then
+// owns, or with nil and the failure. Returns nil, without calling either block,
+// when the profile or identifier is unusable.
+- (nullable id<CrestExtensionDownload>)downloadExtension:(NSString *)extensionID profile:(NSUUID *)profileID
+                                                progress:(void (^)(double fraction))progress
+                                              completion:(void (^)(NSString *_Nullable package,
+                                                                   NSString *message))completion
     NS_SWIFT_NAME(downloadExtension(_:profile:progress:completion:));
 - (BOOL)installExtension:(NSString *)extensionID package:(NSString *)path profile:(NSUUID *)profileID
                   window:(NSUUID *)windowID completion:(void (^)(BOOL installed, NSString *message))completion;

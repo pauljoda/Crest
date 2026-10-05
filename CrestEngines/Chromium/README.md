@@ -355,7 +355,8 @@ Crest** and runs Crest's install; **Install Extension…** in Site Controls does
 the same thing from the toolbar. Both have the Space's engine profile download
 the CRX3 package from Google's update service with the request Chromium's own
 Web Store installer makes, which the ungoogled baseline empties; Crest sets no
-size or format limits of its own. Chromium verifies the publisher proof and
+size or format limits of its own, and closing the review stops the download.
+Chromium verifies the publisher proof and
 expected ID before Crest shows the original install review layout.
 The review displays Chromium's permission warnings and offers website-access
 withholding where supported. Required API permissions use Chromium's install

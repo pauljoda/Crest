@@ -56,6 +56,7 @@
 #include "extensions/common/permissions/permission_message.h"
 
 #include "extensions/browser/install/crx_install_error.h"
+#include "base/memory/weak_ptr.h"
 #include "base/strings/escape.h"
 #include "base/task/thread_pool.h"
 #include "components/crx_file/id_util.h"
@@ -726,6 +727,16 @@ class WebStoreDownload {
   WebStoreDownload(void (^progress)(double), void (^completion)(NSString*, NSString*))
       : progress_(progress), completion_(completion) {}
 
+  base::WeakPtr<WebStoreDownload> GetWeakPtr() { return weak_factory_.GetWeakPtr(); }
+
+  // Destroying the loader stops the request and deletes what it received.
+  void Cancel() {
+    weak_factory_.InvalidateWeakPtrs();
+    loader_.reset();
+    completion_(nil, base::SysUTF8ToNSString(net::ErrorToString(net::ERR_ABORTED)));
+    delete this;
+  }
+
   void Start(Profile* profile, const std::string& extension_id) {
     auto request = std::make_unique<network::ResourceRequest>();
     request->url = GURL("https://clients2.google.com/service/update2/crx?response=redirect&" +
@@ -764,6 +775,7 @@ class WebStoreDownload {
   }
 
   void Finished(base::FilePath path) {
+    weak_factory_.InvalidateWeakPtrs();
     const network::mojom::URLResponseHead* head = loader_->ResponseInfo();
     const int status = head && head->headers ? head->headers->response_code() : 0;
     if (!path.empty() && status == 200) {
@@ -784,8 +796,25 @@ class WebStoreDownload {
   int64_t length_ = -1;
   void (^progress_)(double);
   void (^completion_)(NSString*, NSString*);
+  base::WeakPtrFactory<WebStoreDownload> weak_factory_{this};
 };
 }  // namespace
+
+// The platform's handle on a Web Store download, which outlives the download.
+@interface CrestWebStoreDownloadHandle : NSObject <CrestExtensionDownload>
+@end
+@implementation CrestWebStoreDownloadHandle {
+  base::WeakPtr<WebStoreDownload> _download;
+}
+- (instancetype)initWithDownload:(base::WeakPtr<WebStoreDownload>)download {
+  if ((self = [super init])) _download = download;
+  return self;
+}
+- (void)cancel {
+  CHECK(NSThread.isMainThread);
+  if (_download) _download->Cancel();
+}
+@end
 
 @interface CrestChromiumMacShell : NSObject <CrestMacShell>
 @end
@@ -939,15 +968,17 @@ using CrestChromiumUIStart = void (*)(id<CrestMacShell> shell, const crest_engin
   CHECK(NSThread.isMainThread);
   State().ui = ui;
 }
-- (BOOL)downloadExtension:(NSString*)extensionID profile:(NSUUID*)profileID
-                 progress:(void (^)(double))progress
-               completion:(void (^)(NSString*, NSString*))completion {
+- (id<CrestExtensionDownload>)downloadExtension:(NSString*)extensionID profile:(NSUUID*)profileID
+                                       progress:(void (^)(double))progress
+                                     completion:(void (^)(NSString*, NSString*))completion {
   CHECK(NSThread.isMainThread);
   const std::string id = base::SysNSStringToUTF8(extensionID);
   Profile* profile = crest::EngineBinding::Get().Profiles().Find(KeyFor(profileID));
-  if (!profile || profile->IsOffTheRecord() || !crx_file::id_util::IdIsValid(id)) return NO;
-  (new WebStoreDownload(progress, completion))->Start(profile, id);
-  return YES;
+  if (!profile || profile->IsOffTheRecord() || !crx_file::id_util::IdIsValid(id)) return nil;
+  auto* download = new WebStoreDownload(progress, completion);
+  CrestWebStoreDownloadHandle* handle = [[CrestWebStoreDownloadHandle alloc] initWithDownload:download->GetWeakPtr()];
+  download->Start(profile, id);
+  return handle;
 }
 - (BOOL)installExtension:(NSString*)extensionID package:(NSString*)path profile:(NSUUID*)profileID
                   window:(NSUUID*)windowID completion:(void (^)(BOOL, NSString*))completion {
