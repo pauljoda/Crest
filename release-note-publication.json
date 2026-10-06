@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "channels": {
     "stable": "window-focus-bridge-release-format",
-    "development": "site-controls-full-screen",
+    "development": "extension-download-startup-hold",
     "nightly": "site-controls-full-screen"
   }
 }
