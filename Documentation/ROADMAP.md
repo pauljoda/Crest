@@ -80,7 +80,6 @@ the live status for each issue.
 - [ ] [bug: white flash between loading screen in dark mode](https://github.com/pauljoda/Crest/issues/246)
 - [ ] [bug: Crest crash eah time using 1password autofill extension](https://github.com/pauljoda/Crest/issues/248)
 - [ ] [feature: have a top url bar when in fullscreen mode](https://github.com/pauljoda/Crest/issues/249)
-- [ ] [bug: Unable to import spaces from Zen](https://github.com/pauljoda/Crest/issues/252)
 - [ ] [Keep a tab's back and forward history after relaunching](https://github.com/pauljoda/Crest/issues/253)
 - [ ] [Evaluate a visual recent-tab switcher on Mac](https://github.com/pauljoda/Crest/issues/254)
 - [ ] [Evaluate site-specific search from the command palette](https://github.com/pauljoda/Crest/issues/255)
@@ -96,6 +95,7 @@ the live status for each issue.
 - [x] [Investigate a reported crash when signing in to Pinterest on Mac](https://github.com/pauljoda/Crest/issues/225) — [`606000ce`](https://github.com/pauljoda/Crest/commit/606000ce4b006e04dee412926366ebb355bcc186)
 - [x] [Keep the Claude extension signed in after relaunching Crest](https://github.com/pauljoda/Crest/issues/238) — [`1222cfab`](https://github.com/pauljoda/Crest/commit/1222cfab91e205f9325b814fb7224a35f2d9872c)
 - [x] [Keep the back and forward history menu fast on long-lived tabs](https://github.com/pauljoda/Crest/issues/244) — [`86f5d23c`](https://github.com/pauljoda/Crest/commit/86f5d23cd6995e2d8790311bff1d09dbafa00bc5)
+- [x] [bug: Unable to import spaces from Zen](https://github.com/pauljoda/Crest/issues/252)
 
 <!-- crest-roadmap-sync:end -->
 

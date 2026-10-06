@@ -3621,6 +3621,10 @@
     "zen-import-pinned-split-views": {
       "category": "fixed",
       "message": "Importing from Zen no longer fails with \u201cCrest could not recognize this browser\u2019s tab-session data\u201d when a Space has pinned tabs in a split view. Those tabs now come over as saved tabs: in the folder that held the split, or outside any folder when the split sat among the Space\u2019s pinned tabs. A Zen session too large to import now says so."
+    },
+    "site-controls-full-screen": {
+      "category": "fixed",
+      "message": "Site Controls and the extensions it lists now open on Mac when the window is in full screen, instead of closing as soon as you click the button."
     }
   }
 }

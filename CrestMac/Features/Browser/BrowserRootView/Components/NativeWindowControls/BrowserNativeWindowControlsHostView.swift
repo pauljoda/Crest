@@ -31,7 +31,7 @@ final class BrowserNativeWindowControlsHostView: NSView {
     // MARK: - Variables
 
     private var originalChrome: BrowserNativeWindowChromeSnapshot?
-    private var chromeToolbar: NSToolbar?
+    private var chromeToolbar: BrowserChromeToolbar?
     /// Follows the toolbar's visibility, which SwiftUI's bar appearance sets
     /// to shown whenever the window's content changes its bar preferences.
     private var toolbarVisibilityObservation: NSKeyValueObservation?
@@ -189,11 +189,11 @@ final class BrowserNativeWindowControlsHostView: NSView {
 
     private func applySystemToolbarMetrics(to window: NSWindow) {
         window.contentView?.superview?.clipsToBounds = true
-        let toolbar: NSToolbar
+        let toolbar: BrowserChromeToolbar
         if let chromeToolbar {
             toolbar = chromeToolbar
         } else {
-            toolbar = NSToolbar(
+            toolbar = BrowserChromeToolbar(
                 identifier: BrowserNativeWindowControlsPolicy.toolbarIdentifier
             )
             toolbar.allowsUserCustomization = false
@@ -209,6 +209,7 @@ final class BrowserNativeWindowControlsHostView: NSView {
             }
         }
 
+        toolbar.chromeWindow = window
         if window.toolbar !== toolbar {
             window.toolbar = toolbar
         }
