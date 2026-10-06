@@ -291,7 +291,8 @@ final class BrowserOnboardingFlow {
             _ = try browser.core.send(
                 ReviewImport(
                     source: application, spaces: output.imported.map(\.seed),
-                    passwords: output.passwordCandidates.map(\.routingSource)))
+                    passwords: output.passwordCandidates.map(\.routingSource),
+                    extensions: output.extensions))
         } catch {
             send(FailImport(source: application, reason: .read, detail: error.personFacingDescription))
         }
@@ -321,6 +322,10 @@ final class BrowserOnboardingFlow {
 
     func setPasswordsIncluded(_ isIncluded: Bool, in sourceSpaceID: UUID) {
         send(IncludeImportPasswords(sourceSpaceID: sourceSpaceID, included: isIncluded))
+    }
+
+    func setExtensionIncluded(_ extensionID: String, _ isIncluded: Bool, in sourceSpaceID: UUID) {
+        send(IncludeImportExtension(sourceSpaceID: sourceSpaceID, extensionID: extensionID, included: isIncluded))
     }
 
     /// Gives the reviewed Space `sourceSpaceID` `customization`, which the
@@ -461,6 +466,7 @@ final class BrowserOnboardingFlow {
             switch outcome {
             case .success(let passwords):
                 currentImportPayload = nil
+                BrowserImportedExtensionInstaller.install(brought: review)
                 send(FinishImportCommit(passwordCount: passwords.importedCount))
                 readCurrentSource()
             case .failure(let error):

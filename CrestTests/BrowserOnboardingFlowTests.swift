@@ -34,6 +34,90 @@ final class BrowserOnboardingFlowTests: XCTestCase {
         XCTAssertEqual(flow.browser.spaceModels.filter { $0.settings.name == "Imported" }.count, 1)
     }
 
+    /// The extensions a review leaves on, and only those, go to the installer
+    /// once the import has made their Space.
+    func testExtensionsLeftOnAreHandedToTheInstallerWhenTheImportLands() async throws {
+        let (first, second) = ("cjpalhdlnbpafiamejdnhcphjbkeiagm", "eimadpbcbfnmbkopoojfekhnkhdbieeh")
+        var output = readOutput(application: .chrome, spaces: [makeSpace(name: "Extension Import Space")])
+        let spaceID = try XCTUnwrap(output.imported.first?.id)
+        output.extensions = [
+            ImportSpaceExtensions(
+                spaceID: spaceID,
+                extensions: [
+                    ImportExtension(extensionID: first, name: "uBlock Origin"),
+                    ImportExtension(extensionID: second, name: "Dark Reader"),
+                ])
+        ]
+        var installs: [[BrowserImportedExtensionInstall]] = []
+        BrowserImportedExtensionInstaller.handler = { installs.append($0) }
+        defer { BrowserImportedExtensionInstaller.handler = nil }
+
+        let flow = makeFlow(
+            sourceDiscovery: StubSourceDiscovery(sources: [source(.chrome)]),
+            reader: SequencedImportReader(results: [.success(output)]))
+        flow.start()
+        flow.discoverInstalledSources()
+        flow.toggleImportSelection(.chrome)
+        flow.continueImportQueue()
+        await waitUntil { flow.step == .review }
+        XCTAssertEqual(flow.review?.includedExtensionCount, 2)
+
+        flow.setExtensionIncluded(second, false, in: spaceID)
+        XCTAssertEqual(flow.review?.includedExtensionCount, 1)
+        XCTAssertTrue(installs.isEmpty)
+
+        flow.commitReviewedImport()
+        await waitUntil { flow.step == .complete }
+        XCTAssertEqual(
+            installs,
+            [[BrowserImportedExtensionInstall(extensionID: first, name: "uBlock Origin", spaceIDs: [spaceID])]])
+    }
+
+    /// An extension several imported Spaces share is one install that names
+    /// every Space, not one install for each Space.
+    func testAnExtensionSharedByManySpacesIsOneInstallForAllOfThem() async throws {
+        let (shared, onlyFirst) = ("cjpalhdlnbpafiamejdnhcphjbkeiagm", "eimadpbcbfnmbkopoojfekhnkhdbieeh")
+        var output = readOutput(
+            application: .arc,
+            spaces: [makeSpace(name: "Shared Import One"), makeSpace(name: "Shared Import Two")])
+        let ids = output.imported.map(\.id)
+        XCTAssertEqual(ids.count, 2)
+        output.extensions = [
+            ImportSpaceExtensions(
+                spaceID: ids[0],
+                extensions: [
+                    ImportExtension(extensionID: shared, name: "uBlock Origin"),
+                    ImportExtension(extensionID: onlyFirst, name: "Dark Reader"),
+                ]),
+            ImportSpaceExtensions(
+                spaceID: ids[1], extensions: [ImportExtension(extensionID: shared, name: "uBlock Origin")]),
+        ]
+        var installs: [[BrowserImportedExtensionInstall]] = []
+        BrowserImportedExtensionInstaller.handler = { installs.append($0) }
+        defer { BrowserImportedExtensionInstaller.handler = nil }
+
+        let flow = makeFlow(
+            sourceDiscovery: StubSourceDiscovery(sources: [source(.arc)]),
+            reader: SequencedImportReader(results: [.success(output)]))
+        flow.start()
+        flow.discoverInstalledSources()
+        flow.toggleImportSelection(.arc)
+        flow.continueImportQueue()
+        await waitUntil { flow.step == .review }
+        flow.commitReviewedImport()
+        await waitUntil { flow.step == .complete }
+
+        // One hand-off, the shared extension once with both Spaces.
+        XCTAssertEqual(
+            installs,
+            [
+                [
+                    BrowserImportedExtensionInstall(extensionID: shared, name: "uBlock Origin", spaceIDs: ids),
+                    BrowserImportedExtensionInstall(extensionID: onlyFirst, name: "Dark Reader", spaceIDs: [ids[0]]),
+                ]
+            ])
+    }
+
     func testCancellationPreventsALateReadFromPublishingAReview() async {
         let reader = SuspendedFlowImportReader()
         let flow = makeFlow(sourceDiscovery: StubSourceDiscovery(sources: [source(.arc)]), reader: reader)

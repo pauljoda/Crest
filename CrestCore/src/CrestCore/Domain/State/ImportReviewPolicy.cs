@@ -42,21 +42,27 @@ public static class ImportReviewPolicy {
     /// the same name, taking its name and look and leaving out the tabs it
     /// holds, or comes in as a new Space with its own. A first launch's
     /// disposable Spaces are no destination, so everything comes in new.
-    /// `passwords` counts the saved passwords that belong with each Space.
+    /// `passwords` counts the saved passwords that belong with each Space, and
+    /// `extensions` lists the extensions each Space offers, all of them left on.
     public static SetupImportReview Started(ImportSource source, IReadOnlyList<SpaceState> spaces,
-        IReadOnlyDictionary<Guid, int> passwords, SessionState session) {
+        IReadOnlyDictionary<Guid, int> passwords, IReadOnlyList<ImportSpaceExtensions> extensions, SessionState session) {
         ArgumentNullException.ThrowIfNull(source);
         ArgumentNullException.ThrowIfNull(spaces);
         ArgumentNullException.ThrowIfNull(passwords);
+        ArgumentNullException.ThrowIfNull(extensions);
         ArgumentNullException.ThrowIfNull(session);
         var destinations = Destinations(session);
+        var offers = extensions.GroupBy(entry => entry.SpaceId).ToDictionary(group => group.Key,
+            group => (IReadOnlyList<ImportExtension>)[.. group.SelectMany(entry => entry.Extensions)
+                .DistinctBy(extension => extension.ExtensionId, StringComparer.Ordinal)]);
         var reviews = spaces.Select(space => {
+            var offered = offers.GetValueOrDefault(space.Id) ?? [];
             string key = SpaceMatchKey(space.Settings.Name);
             var match = key.Length == 0 ? null : destinations.FirstOrDefault(existing => SpaceMatchKey(existing.Settings.Name) == key);
             var duplicates = match is null ? [] : Duplicates(space, match).ToHashSet();
             return new SetupReviewSpace(space, Included: true, match?.Id, Customization(match ?? space),
                 [.. space.Tabs.Where(tab => !duplicates.Contains(tab.Id)).Select(tab => tab.Id)], [], [], [], IncludesPasswords: true,
-                passwords.GetValueOrDefault(space.Id));
+                passwords.GetValueOrDefault(space.Id), offered, [.. offered.Select(extension => extension.ExtensionId)]);
         }).ToArray();
         return Analyzed(new SetupImportReview(source, reviews, [], spaces.FirstOrDefault()?.Id), session);
     }
@@ -121,6 +127,18 @@ public static class ImportReviewPolicy {
     /// `review` bringing the saved passwords of `sourceId`, or leaving them out.
     public static SetupImportReview IncludingPasswords(SetupImportReview review, Guid sourceId, bool included, SessionState session) =>
         Editing(review, sourceId, session, space => space with { IncludesPasswords = included });
+
+    /// `review` installing the extension `extensionId` that `sourceId` offers,
+    /// or leaving it out. An extension the Space does not offer changes nothing.
+    public static SetupImportReview IncludingExtension(SetupImportReview review, Guid sourceId, string extensionId, bool included,
+        SessionState session) {
+        ArgumentNullException.ThrowIfNull(extensionId);
+        return Editing(review, sourceId, session, space => {
+            if (space.Extensions.All(extension => extension.ExtensionId != extensionId)) return space;
+            var kept = space.IncludedExtensionIds.Where(id => id != extensionId);
+            return space with { IncludedExtensionIds = [.. included ? kept.Append(extensionId) : kept] };
+        });
+    }
 
     /// `review` with `sourceId` taking the name and look of `customization`,
     /// its look kept within the ranges every device draws.

@@ -1,7 +1,7 @@
 import Foundation
 
 /// Reads an installed browser's data for review: the core reads its profiles'
-/// bookmarks and sessions away from the main thread, and the password stores
+/// bookmarks, sessions and installed extensions away from the main thread, and the password stores
 /// are counted where the browser keeps passwords Crest imports.
 struct LiveBrowserOnboardingImportReader: BrowserOnboardingImportReading {
     let core: CrestCore
@@ -26,7 +26,8 @@ struct LiveBrowserOnboardingImportReader: BrowserOnboardingImportReading {
         return BrowserOnboardingImportReadOutput(
             payload: payload,
             imported: imported.spaces,
-            passwordCandidates: passwordCandidates
+            passwordCandidates: passwordCandidates,
+            extensions: imported.extensions
         )
     }
 }

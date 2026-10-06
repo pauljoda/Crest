@@ -2558,6 +2558,11 @@ struct ImportData: Equatable, Sendable {
     let passwordStores: [ImportPasswordStore]
 }
 
+struct ImportExtension: Equatable, Sendable {
+    var extensionID: String
+    var name: String
+}
+
 struct ImportPasswordDestinations: Query, Equatable, Sendable {
     typealias Answer = ImportPasswordRoutes
 
@@ -2595,11 +2600,17 @@ struct ImportProfile: Equatable, Sendable, Identifiable {
     var name: String
     var bookmarksPath: String?
     var sessionPath: String?
+    var profilePath: String?
 }
 
 struct ImportReviewedSpaces: Intent, ImportWorkspace, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let windowID: UUID
+}
+
+struct ImportSpaceExtensions: Equatable, Sendable {
+    var spaceID: UUID
+    var extensions: [ImportExtension]
 }
 
 struct ImportSpaceNames: Equatable, Sendable {
@@ -2624,6 +2635,7 @@ struct ImportedCredential: Equatable, Sendable {
 
 struct ImportedSpaces: Equatable, Sendable {
     let spaces: [SpaceState]
+    let extensions: [ImportSpaceExtensions]
 }
 
 struct ImportedTab: Equatable, Sendable {
@@ -2636,6 +2648,12 @@ struct ImportedWorkspace: Equatable, Sendable {
     let session: SessionState
     let imported: [ImportedTab]
     let copied: [TabCopied]
+}
+
+struct IncludeImportExtension: Intent, SetupFlowIntent, Equatable, Sendable {
+    let sourceSpaceID: UUID
+    let extensionID: String
+    let included: Bool
 }
 
 struct IncludeImportPasswords: Intent, SetupFlowIntent, Equatable, Sendable {
@@ -4393,6 +4411,7 @@ struct ReviewImport: Intent, SetupFlowIntent, Equatable, Sendable {
     let source: ImportSource
     let spaces: [SpaceState.Seed]
     let passwords: [ImportPasswordSource]
+    let extensions: [ImportSpaceExtensions]?
 }
 
 struct RouteExternalLink: Query, Equatable, Sendable {
@@ -4836,6 +4855,7 @@ struct SetupImportReview: Equatable, Sendable {
     let nextSpaceID: UUID?
     let showsLastSpace: Bool
     let includedPasswordCount: Int
+    let includedExtensionCount: Int
 }
 
 struct SetupReviewSpace: Equatable, Sendable {
@@ -4849,8 +4869,11 @@ struct SetupReviewSpace: Equatable, Sendable {
     let placements: [TabPlacementChoice]
     let includesPasswords: Bool
     let passwordCount: Int
+    let extensions: [ImportExtension]
+    let includedExtensionIDs: [String]
     let shownName: String
     let bringsPasswords: Bool
+    let broughtExtensions: [ImportExtension]
 }
 
 struct SetupSummary: Equatable, Sendable {

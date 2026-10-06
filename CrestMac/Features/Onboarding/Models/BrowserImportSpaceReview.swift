@@ -28,6 +28,9 @@ struct BrowserImportSpaceReview: Identifiable, Equatable {
     var id: UUID { record.source.id }
     var isIncluded: Bool { record.included }
     var includesPasswords: Bool { record.includesPasswords }
+    /// The extensions the Space offers to install, and those left on.
+    var extensions: [ImportExtension] { record.extensions }
+    var includedExtensionIDs: Set<String> { Set(record.includedExtensionIDs) }
     var includedTabIDs: Set<UUID> { Set(record.includedTabIDs) }
     var duplicateTabIDs: Set<UUID> { Set(record.duplicateTabIDs) }
     var destination: BrowserImportDestination {

@@ -14,12 +14,24 @@ public sealed record ImportPasswordStore(string Id, string ProfileName, string P
 
 /// One profile of a browser: `Id`, the name the browser keeps it under, the
 /// `Name` the person gave it, and the paths of its bookmarks and of its latest
-/// session, where it keeps either. A profile keeps at least one.
-public sealed record ImportProfile(string Id, string Name, string? BookmarksPath, string? SessionPath);
+/// session, where it keeps either. A profile keeps at least one. A browser
+/// built on Chromium also names the profile's own folder, `ProfilePath`,
+/// where its installed extensions are kept.
+public sealed record ImportProfile(string Id, string Name, string? BookmarksPath, string? SessionPath, string? ProfilePath = null);
 
 /// The Spaces an import would bring, in order, each with new identities, the
-/// way `ImportSpaces` takes them.
-public sealed record ImportedSpaces(IReadOnlyList<SpaceState> Spaces);
+/// way `ImportSpaces` takes them, and the extensions each of those Spaces
+/// offers, for those that offer any.
+public sealed record ImportedSpaces(IReadOnlyList<SpaceState> Spaces, IReadOnlyList<ImportSpaceExtensions> Extensions);
+
+/// The extensions another browser had installed where the Space `SpaceId`
+/// comes from, in the order the browser lists them by name.
+public sealed record ImportSpaceExtensions(Guid SpaceId, IReadOnlyList<ImportExtension> Extensions);
+
+/// An extension from the Chrome Web Store: its `ExtensionId`, which is all
+/// that is needed to install it again, and the `Name` it shows, or its
+/// identifier when it names none.
+public sealed record ImportExtension(string ExtensionId, string Name);
 
 #region Models
 

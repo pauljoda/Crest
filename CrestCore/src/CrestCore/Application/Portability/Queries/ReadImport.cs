@@ -11,7 +11,8 @@ namespace CrestCore.Contracts;
 ///
 /// The platform holds any access the files need while the core reads them,
 /// and asks away from the main thread: the core answers without waiting for
-/// any other work. Refused with the rejection of the last file that could not
+/// any other work. Chrome's and Arc's Spaces also offer the extensions their
+/// profile has installed from the Chrome Web Store. Refused with the rejection of the last file that could not
 /// be read, such as `SessionUnrecognized` or `BookmarksOverLimits`, when
 /// nothing could be brought, `SessionHasNoTabs` when no profile names a file,
 /// and `SessionOverLimits` when the source brings more Spaces than a
@@ -28,7 +29,7 @@ public sealed record ReadImport(ImportSource Source, IReadOnlyList<ImportProfile
 
     internal override ImportedSpaces Answer(CrestApp app) {
         var portability = app.Portability;
-        return new(InstalledBrowser.Of(Source).Read(Profiles, portability.Names(Source), portability.Ids, portability.Clock.Now));
+        return InstalledBrowser.Of(Source).Read(Profiles, portability.Names(Source), portability.Ids, portability.Clock.Now);
     }
 
     #endregion

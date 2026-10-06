@@ -34,5 +34,9 @@ public sealed record SetupImportReview(ImportSource Source, IReadOnlyList<SetupR
     [Resolved]
     public int IncludedPasswordCount => Spaces.Where(space => space.Included && space.IncludesPasswords).Sum(space => space.PasswordCount);
 
+    /// How many extensions the review installs.
+    [Resolved]
+    public int IncludedExtensionCount => Spaces.Sum(space => space.BroughtExtensions.Count);
+
     #endregion
 }

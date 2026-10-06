@@ -6,6 +6,9 @@ struct BrowserOnboardingImportReadOutput: Sendable {
     /// The Spaces the core read, with new identities.
     let imported: [SpaceState]
     let passwordCandidates: [BrowserPasswordImportCandidate]
+    /// The extensions each Space offers to install, for the browsers that
+    /// keep them where Crest reads them.
+    var extensions: [ImportSpaceExtensions] = []
 }
 
 enum BrowserOnboardingImportReadPhase: Equatable {

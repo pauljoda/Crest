@@ -25,7 +25,7 @@ public sealed record ReadArchive(string Path) : Query<ImportedSpaces> {
     internal override ImportedSpaces Answer(CrestApp app) {
         var contents = ImportFile.Read(Path, BrowserDataFile.MaximumBytes, new ArchiveTooLarge(), new FileUnreadable());
         var now = app.Portability.Clock.Now;
-        return new([.. BrowserDataFile.Read(contents).Select(space => space.Materialize(app.Portability.Ids, now))]);
+        return new([.. BrowserDataFile.Read(contents).Select(space => space.Materialize(app.Portability.Ids, now))], []);
     }
 
     #endregion

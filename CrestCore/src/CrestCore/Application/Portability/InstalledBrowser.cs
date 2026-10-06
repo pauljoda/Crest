@@ -13,10 +13,10 @@ internal sealed class InstalledBrowser {
     #region Static Variables
 
     public static readonly InstalledBrowser Arc = new(ImportSource.Arc, ArcProfiles, folder => ChromiumPasswordStores(folder.Child("User Data")),
-        ArcSidebar.Read, bookmarks: null);
+        ArcSidebar.Read, bookmarks: null, extensions: true);
     public static readonly InstalledBrowser Zen = new(ImportSource.Zen, ZenProfiles, _ => [], ZenSessions.Read, bookmarks: null);
     public static readonly InstalledBrowser Chrome = new(ImportSource.Chrome, ChromiumProfiles, ChromiumPasswordStores,
-        (contents, importedAt) => ChromiumSession.Read(contents, importedAt), ChromeBookmarks.Read);
+        (contents, importedAt) => ChromiumSession.Read(contents, importedAt), ChromeBookmarks.Read, extensions: true);
     public static readonly InstalledBrowser Safari = new(ImportSource.Safari, SafariProfiles, _ => [], SafariSession.Read,
         SafariBookmarks.Read);
     public static readonly InstalledBrowser Firefox = new(ImportSource.Firefox, FirefoxProfiles, _ => [], FirefoxSession.Read,
@@ -56,14 +56,17 @@ internal sealed class InstalledBrowser {
     private readonly Func<ImportFolder, IReadOnlyList<ImportPasswordStore>> passwordStores;
     private readonly SessionReader sessions;
     private readonly BookmarkReader? bookmarks;
+    private readonly bool offersExtensions;
 
     #endregion
 
     #region Constructors
 
     private InstalledBrowser(ImportSource source, Func<ImportFolder, IReadOnlyList<ImportProfile>> profiles,
-        Func<ImportFolder, IReadOnlyList<ImportPasswordStore>> passwordStores, SessionReader sessions, BookmarkReader? bookmarks) {
+        Func<ImportFolder, IReadOnlyList<ImportPasswordStore>> passwordStores, SessionReader sessions, BookmarkReader? bookmarks,
+        bool extensions = false) {
         Source = source;
+        offersExtensions = extensions;
         this.profiles = profiles;
         this.passwordStores = passwordStores;
         this.sessions = sessions;
@@ -87,7 +90,8 @@ internal sealed class InstalledBrowser {
     }
 
     private static IReadOnlyList<ImportProfile> ArcProfiles(ImportFolder folder) =>
-        folder.File("StorableSidebar.json") is { } sidebar ? [new ImportProfile("arc", ImportSource.Arc.Title, null, sidebar)] : [];
+        folder.File("StorableSidebar.json") is { } sidebar
+            ? [new ImportProfile("arc", ImportSource.Arc.Title, null, sidebar, folder.Child("User Data").Child(ChromiumDefaultProfile).Path)] : [];
 
     private static IReadOnlyList<ImportProfile> ZenProfiles(ImportFolder folder) =>
         folder.Newest(["zen-sessions.jsonlz4"]) is { } session
@@ -113,7 +117,7 @@ internal sealed class InstalledBrowser {
             string? bookmarks = profile.File("Bookmarks");
             string? session = profile.Child("Sessions").Newest(ChromiumSessionNames, ChromiumSessionPrefixes);
             return bookmarks is null && session is null ? null
-                : new ImportProfile(directory, ChromiumProfileName(names, directory), bookmarks, session);
+                : new ImportProfile(directory, ChromiumProfileName(names, directory), bookmarks, session, profile.Path);
         }).OfType<ImportProfile>()];
     }
 
@@ -148,13 +152,18 @@ internal sealed class InstalledBrowser {
     #region Actions - Reading
 
     /// The Spaces `profiles` bring. See `ReadImport`.
-    public IReadOnlyList<SpaceState> Read(IReadOnlyList<ImportProfile> profiles, ImportSpaceNames names, IIdSource ids,
+    public ImportedSpaces Read(IReadOnlyList<ImportProfile> profiles, ImportSpaceNames names, IIdSource ids,
         DateTimeOffset now) {
         List<SpaceState> spaces = [];
+        List<ImportSpaceExtensions> extensions = [];
         Rejection? lastFailure = null;
         foreach (var profile in profiles) {
             if (Source.NamesItsSpaces) {
-                if (profile.SessionPath is { } path) spaces.AddRange(SessionDraft.Spaces(Sessions(path, now), Source, names, ids, now));
+                if (profile.SessionPath is not { } path) continue;
+                var named = SessionDraft.Spaces(Sessions(path, now), Source, names, ids, now);
+                spaces.AddRange(named);
+                // The sidebar's Spaces share the browser's profile, so each offers what it has installed.
+                AddExtensions(extensions, profile, named);
                 continue;
             }
             SpaceState? combined = null;
@@ -172,11 +181,22 @@ internal sealed class InstalledBrowser {
                     lastFailure = rejected.Rejection;
                 }
             }
-            if (combined is not null)
-                spaces.Add(combined with { Settings = combined.Settings with { Name = profile.Name, Symbol = Source.Symbol, Accent = Source.Accent } });
+            if (combined is null) continue;
+            var space = combined with { Settings = combined.Settings with { Name = profile.Name, Symbol = Source.Symbol, Accent = Source.Accent } };
+            spaces.Add(space);
+            AddExtensions(extensions, profile, [space]);
         }
         if (spaces.Count == 0) throw new Rejected(lastFailure ?? new SessionHasNoTabs());
-        return spaces.Count > BrowserDataFile.MaximumSpaces ? throw new Rejected(new SessionOverLimits()) : spaces;
+        return spaces.Count > BrowserDataFile.MaximumSpaces ? throw new Rejected(new SessionOverLimits()) : new(spaces, extensions);
+    }
+
+    /// Offers `spaces` the Web Store extensions `profile` has installed, when
+    /// the browser keeps them where Crest reads them and the profile has any.
+    private void AddExtensions(List<ImportSpaceExtensions> offers, ImportProfile profile, IEnumerable<SpaceState> spaces) {
+        if (!offersExtensions || profile.ProfilePath is not { } path) return;
+        var installed = ChromiumExtensions.Read(new ImportFolder(path));
+        if (installed.Count == 0) return;
+        offers.AddRange(spaces.Select(space => new ImportSpaceExtensions(space.Id, installed)));
     }
 
     private IReadOnlyList<SessionDraft> Sessions(string path, DateTimeOffset now) {

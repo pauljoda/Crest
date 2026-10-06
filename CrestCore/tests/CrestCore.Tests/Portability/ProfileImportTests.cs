@@ -51,9 +51,9 @@ public sealed partial class BrowserContractsTests {
         // The first profile is first and the rest follow their numbers; a
         // profile without bookmarks or a session brings nothing.
         Assert.Equal([
-            new ImportProfile("Default", "Personal", personal, null),
-            new ImportProfile("Profile 2", "Two", null, newest),
-            new ImportProfile("Profile 10", "Ten", null, ten)
+            new ImportProfile("Default", "Personal", personal, null, Path.Combine(chrome.Path, "Default")),
+            new ImportProfile("Profile 2", "Two", null, newest, Path.Combine(chrome.Path, "Profile 2")),
+            new ImportProfile("Profile 10", "Ten", null, ten, Path.Combine(chrome.Path, "Profile 10"))
         ], found.Profiles);
         Assert.Equal([new ImportPasswordStore("Profile 2", "Two", store)], found.PasswordStores);
     }
@@ -64,7 +64,7 @@ public sealed partial class BrowserContractsTests {
         string sidebar = arc.Write("StorableSidebar.json", "{}");
         string arcStore = arc.Write(Path.Combine("User Data", "Profile 1", "Login Data"));
         var arcData = Found(ImportSource.Arc, arc.Path);
-        Assert.Equal([new ImportProfile("arc", "Arc", null, sidebar)], arcData.Profiles);
+        Assert.Equal([new ImportProfile("arc", "Arc", null, sidebar, Path.Combine(arc.Path, "User Data", "Default"))], arcData.Profiles);
         Assert.Equal([new ImportPasswordStore("Profile 1", "Profile 1", arcStore)], arcData.PasswordStores);
 
         using var zen = new BrowserDataFolder();

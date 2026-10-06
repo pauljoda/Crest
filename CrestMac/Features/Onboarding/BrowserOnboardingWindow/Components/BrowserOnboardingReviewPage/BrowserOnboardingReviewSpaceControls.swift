@@ -79,6 +79,14 @@ struct BrowserOnboardingReviewSpaceControls: View {
                     review.includesPasswords ? "On" : "Off"
                 )
             }
+
+            if !review.extensions.isEmpty {
+                Divider()
+                    .frame(width: 74)
+                    .padding(.vertical, 4)
+
+                BrowserOnboardingReviewExtensions(flow: flow, review: review)
+            }
         }
         .frame(width: 228)
     }
@@ -106,6 +114,71 @@ struct BrowserOnboardingReviewSpaceControls: View {
 
     private func toggleSpaceInclusion() {
         flow.setSpaceIncluded(!review.isIncluded, in: review.id)
+    }
+}
+
+/// The extensions a reviewed Space offers to install in Crest, each turned on
+/// until the person turns it off. Crest asks about each one when it installs.
+private struct BrowserOnboardingReviewExtensions: View {
+    let flow: BrowserOnboardingFlow
+    let review: BrowserImportSpaceReview
+    @State private var isListShown = false
+
+    var body: some View {
+        Button {
+            isListShown = true
+        } label: {
+            Label(
+                BrowserOnboardingSummary.extensionCount(
+                    included: review.includedExtensionIDs.count,
+                    total: review.extensions.count
+                ),
+                systemImage: "puzzlepiece.extension.fill"
+            )
+        }
+        .buttonStyle(.plain)
+        .font(BrowserOnboardingTypography.sans(10, weight: .bold))
+        .foregroundStyle(BrowserOnboardingPalette.inkSoft)
+        .disabled(!review.isIncluded)
+        .accessibilityHint("Choose which extensions to install")
+        .popover(isPresented: $isListShown, arrowEdge: .leading) {
+            list
+        }
+    }
+
+    private var list: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Install these extensions in Crest")
+                    .font(BrowserOnboardingTypography.sans(11, weight: .bold))
+                    .foregroundStyle(BrowserOnboardingPalette.inkSoft)
+
+                ForEach(review.extensions, id: \.extensionID) { item in
+                    Toggle(isOn: binding(for: item)) {
+                        Text(item.name)
+                            .font(BrowserOnboardingTypography.sans(12, weight: .medium))
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                    }
+                    .toggleStyle(.switch)
+                    .tint(BrowserOnboardingPalette.coral)
+                }
+
+                Text("Crest asks you to confirm each one.")
+                    .font(.caption)
+                    .foregroundStyle(BrowserOnboardingPalette.inkSoft)
+            }
+            .padding(14)
+        }
+        .frame(width: 280)
+        .frame(maxHeight: 320)
+    }
+
+    private func binding(for item: ImportExtension) -> Binding<Bool> {
+        Binding(
+            get: { review.includedExtensionIDs.contains(item.extensionID) },
+            set: { flow.setExtensionIncluded(item.extensionID, $0, in: review.id) }
+        )
     }
 }
 

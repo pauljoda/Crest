@@ -31,6 +31,9 @@ final class ChromiumExtensionStore {
     var revision = 0
     private(set) var installed: [UUID: [Installed]] = [:]
     private(set) var installation: ChromiumExtensionInstallation?
+    /// The extensions an import brought that still await their install review.
+    @ObservationIgnored private var pendingImports: [BrowserImportedExtensionInstall] = []
+    @ObservationIgnored private var importsTask: Task<Void, Never>?
     @ObservationIgnored private var popover: NSPopover?
     @ObservationIgnored private var windowClosed: NSObjectProtocol?
     /// The one-point view the install review is anchored to. It belongs to the
@@ -318,6 +321,68 @@ final class ChromiumExtensionStore {
                         "Couldn’t complete that extension action. Check its details for policy or permission requirements."
                 ),
                 systemImage: "exclamationmark.triangle"))
+    }
+    /// Installs the extensions an import brought, one at a time, each through
+    /// the same review the Web Store page opens, so the person confirms every
+    /// one. An extension that goes into several Spaces is downloaded and
+    /// reviewed once, then installed in each of them. It waits for the Spaces
+    /// and a browser window to exist, and leaves out a Space that already has
+    /// the extension. Closing a review moves on to the next extension.
+    func installImported(_ installs: [BrowserImportedExtensionInstall]) {
+        pendingImports += installs
+        guard importsTask == nil else { return }
+        importsTask = Task { [weak self] in
+            await self?.runPendingImports()
+            self?.importsTask = nil
+        }
+    }
+    private func runPendingImports() async {
+        while !pendingImports.isEmpty, !Task.isCancelled {
+            let next = pendingImports.removeFirst()
+            var wanted: [BrowserSpaceIdentity] = []
+            for id in next.spaceIDs {
+                guard let space = await importedSpace(id) else { continue }
+                await load(space)
+                let alreadyHas = installed[space.profileID]?.contains { $0.id == next.extensionID } == true
+                if !alreadyHas, !wanted.contains(where: { $0.id == space.id }) { wanted.append(space) }
+            }
+            // One review is open at a time and it needs a browser window to appear in. Either can change
+            // while this waits, so the Spaces still within reach are chosen when the install starts, with
+            // nothing awaited between that check and the call.
+            while !Task.isCancelled {
+                let reachable = wanted.filter { space in
+                    authorized(space) && installed[space.profileID]?.contains { $0.id == next.extensionID } != true
+                }
+                guard let first = reachable.first else { break }
+                if installation == nil, ChromiumComposition.activeNativeWindow != nil {
+                    let copies = Set(reachable.dropFirst().map(\.id))
+                    await withCheckedContinuation { continuation in
+                        install(next.extensionID, in: first, anchor: nil, copies: copies) { continuation.resume() }
+                    }
+                    break
+                }
+                try? await Task.sleep(for: .milliseconds(250))
+            }
+        }
+    }
+    /// The Space `id` once the engine may act in it and a browser window is
+    /// open to present the review. It waits for the window however long that
+    /// takes, since setup holds the browser's windows back until the person
+    /// opens Crest, and gives up only on a Space that never appears or stays
+    /// out of reach.
+    private func importedSpace(_ id: UUID) async -> BrowserSpaceIdentity? {
+        var missing = 0
+        while !Task.isCancelled {
+            if let space = spaces.first(where: { $0.id == id }), authorized(space) {
+                if ChromiumComposition.activeNativeWindow != nil { return space }
+                missing = 0
+            } else {
+                missing += 1
+                if missing >= 60 { return nil }
+            }
+            try? await Task.sleep(for: .milliseconds(500))
+        }
+        return nil
     }
     func install(
         _ id: String, in space: BrowserSpaceIdentity, anchor: NSView?, copies: Set<UUID> = [],

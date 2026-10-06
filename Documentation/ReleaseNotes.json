@@ -3625,6 +3625,10 @@
     "site-controls-full-screen": {
       "category": "fixed",
       "message": "Site Controls and the extensions it lists now open on Mac when the window is in full screen, instead of closing as soon as you click the button."
+    },
+    "import-chrome-arc-extensions": {
+      "category": "new",
+      "message": "Importing from Chrome or Arc now lists the extensions you installed from the Chrome Web Store. Choose which to bring for each Space, and Crest installs them after the import, asking you to confirm each one."
     }
   }
 }
