@@ -678,12 +678,48 @@
     "%lld items selected" : {
 
     },
+    "%lld left out" : {
+      "comment" : "How many of a browser's profiles or Spaces an import cannot bring, shown in the import review."
+    },
     "%lld of %lld" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
             "value" : "%1$lld of %2$lld"
+          }
+        }
+      }
+    },
+    "%lld of %lld extensions" : {
+      "comment" : "Extension count shown while reviewing a browser import. The first count is how many are on.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld of %2$#@extensions@"
+          },
+          "substitutions" : {
+            "extensions" : {
+              "argNum" : 2,
+              "formatSpecifier" : "lld",
+              "variations" : {
+                "plural" : {
+                  "one" : {
+                    "stringUnit" : {
+                      "state" : "translated",
+                      "value" : "%arg extension"
+                    }
+                  },
+                  "other" : {
+                    "stringUnit" : {
+                      "state" : "translated",
+                      "value" : "%arg extensions"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -2727,6 +2763,9 @@
     "Browser data found · Review it" : {
 
     },
+    "Browser not listed?" : {
+
+    },
     "browser startup default Space typing spelling spell check text editing focus new tabs follow move between Spaces Command-click middle-click pinned saved close resume restore root URL mouse translation system permissions access camera microphone location notifications passkeys files folders downloads allow blocked repair sidebar widgets Now Playing media cards" : {
 
     },
@@ -4142,6 +4181,9 @@
           }
         }
       }
+    },
+    "Crest couldn’t find another browser. Not every browser can be found." : {
+
     },
     "Crest couldn’t find the server for %@." : {
       "localizations" : {
@@ -5618,6 +5660,9 @@
         }
       }
     },
+    "EXTENSIONS" : {
+
+    },
     "extensions permissions Chromium Chrome Web Store install copies Spaces" : {
 
     },
@@ -6625,6 +6670,9 @@
         }
       }
     },
+    "Import Space" : {
+
+    },
     "Import this Space" : {
 
     },
@@ -7099,6 +7147,9 @@
 
     },
     "Include this Space" : {
+      "extractionState" : "stale"
+    },
+    "Included" : {
 
     },
     "incognito private browsing" : {
@@ -7130,6 +7181,9 @@
 
     },
     "Install and Relaunch" : {
+
+    },
+    "Install extensions for %@" : {
 
     },
     "Install In" : {
@@ -7489,6 +7543,9 @@
     "Look and Feel" : {
 
     },
+    "Looks for other browsers built on Chromium" : {
+
+    },
     "Lozenge" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -7708,7 +7765,7 @@
 
     },
     "Move Space" : {
-
+      "extractionState" : "stale"
     },
     "Move Split Card Left" : {
 
@@ -8191,6 +8248,9 @@
         }
       }
     },
+    "No room for another Space" : {
+
+    },
     "No routes yet. Add a URL rule to open matching links in a specific Space." : {
 
     },
@@ -8257,6 +8317,9 @@
 
     },
     "Not checked" : {
+
+    },
+    "Not included" : {
 
     },
     "Not loaded" : {
@@ -9547,6 +9610,9 @@
         }
       }
     },
+    "Profiles, bookmarks, and open tabs" : {
+      "comment" : "What importing from another browser brings. Keep product names as they are."
+    },
     "Profiles, bookmarks, open tabs, and passwords" : {
       "comment" : "What importing from another browser brings. Keep product names as they are."
     },
@@ -10212,6 +10278,9 @@
       }
     },
     "Report an Issue" : {
+
+    },
+    "Request a browser" : {
 
     },
     "Request Desktop Website" : {
@@ -11595,6 +11664,9 @@
     "Shows recent changes" : {
 
     },
+    "Shows what the import leaves out and why" : {
+
+    },
     "Shuffle" : {
 
     },
@@ -11656,13 +11728,13 @@
 
     },
     "Skip Space" : {
-
+      "extractionState" : "stale"
     },
     "Skip this account" : {
 
     },
     "Skip this Space" : {
-
+      "extractionState" : "stale"
     },
     "Skip This Version" : {
 
@@ -13592,11 +13664,14 @@
         }
       }
     },
+    "Turn on Import Space to include it." : {
+
+    },
     "Turn on Location Services for this Mac, then allow Crest." : {
 
     },
     "Turn on Move Space to include it in this import." : {
-
+      "extractionState" : "stale"
     },
     "Two" : {
       "extractionState" : "stale",

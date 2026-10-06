@@ -18,4 +18,8 @@ protocol BrowserMacEngineHost: AnyObject {
     /// `page`, the active page, such as an extension's shortcut. Answers
     /// whether the engine took it.
     func handleUnclaimedShortcut(_ event: NSEvent, page: BrowserPage) -> Bool
+
+    /// What installs the extensions an import brings, or nil for an engine
+    /// that runs none.
+    var importedExtensionInstaller: (any BrowserImportedExtensionInstalling)? { get }
 }

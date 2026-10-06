@@ -2326,6 +2326,13 @@ struct FileUnreadable: Equatable, Sendable {
     }
 }
 
+struct FindChromiumBrowsers: Query, Equatable, Sendable {
+    typealias Answer = [ImportFoundBrowser]
+
+    let home: String
+    let apps: [ImportBrowserApp]
+}
+
 struct FindFinished: Equatable, Sendable {
     let pageID: UUID
     let matches: Int?
@@ -2553,6 +2560,11 @@ struct ImportAppPreferences: Intent, SessionIntent, Equatable, Sendable {
     let legacy: LegacyAppPreferences
 }
 
+struct ImportBrowserApp: Equatable, Sendable {
+    var bundleIdentifier: String
+    var name: String
+}
+
 struct ImportData: Equatable, Sendable {
     let profiles: [ImportProfile]
     let passwordStores: [ImportPasswordStore]
@@ -2561,6 +2573,26 @@ struct ImportData: Equatable, Sendable {
 struct ImportExtension: Equatable, Sendable {
     var extensionID: String
     var name: String
+    var iconPath: String?
+}
+
+struct ImportExtensionInstall: Equatable, Sendable {
+    let extensionID: String
+    let name: String
+    let iconPath: String?
+    let spaceIDs: [UUID]
+}
+
+struct ImportFoundBrowser: Equatable, Sendable {
+    let bundleIdentifier: String
+    let name: String
+    let dataFolder: String
+    let data: ImportData
+}
+
+struct ImportLeftOut: Equatable, Sendable {
+    var name: String
+    var reason: Rejection
 }
 
 struct ImportPasswordDestinations: Query, Equatable, Sendable {
@@ -2636,6 +2668,7 @@ struct ImportedCredential: Equatable, Sendable {
 struct ImportedSpaces: Equatable, Sendable {
     let spaces: [SpaceState]
     let extensions: [ImportSpaceExtensions]
+    let leftOut: [ImportLeftOut]
 }
 
 struct ImportedTab: Equatable, Sendable {
@@ -4412,6 +4445,8 @@ struct ReviewImport: Intent, SetupFlowIntent, Equatable, Sendable {
     let spaces: [SpaceState.Seed]
     let passwords: [ImportPasswordSource]
     let extensions: [ImportSpaceExtensions]?
+    let leftOut: [ImportLeftOut]?
+    let title: String?
 }
 
 struct RouteExternalLink: Query, Equatable, Sendable {
@@ -4850,12 +4885,18 @@ struct SetupImportReview: Equatable, Sendable {
     let spaces: [SetupReviewSpace]
     let overflowTabIDs: [UUID]
     let shownSpaceID: UUID?
+    let leftOut: [ImportLeftOut]
+    let spaceRoom: Int
+    let browserTitle: String?
+    let title: String
     let hasIncludedSpaces: Bool
     let includedTabCount: Int
     let nextSpaceID: UUID?
     let showsLastSpace: Bool
     let includedPasswordCount: Int
     let includedExtensionCount: Int
+    let newSpaceCapacity: Int
+    let extensionInstalls: [ImportExtensionInstall]
 }
 
 struct SetupReviewSpace: Equatable, Sendable {
@@ -8775,8 +8816,274 @@ struct ImportSource: Hashable, Sendable {
         numberedSpaceName: nil,
         namesItsSpaces: false
     )
+    static let chromeBeta = ImportSource(
+        tag: 5,
+        name: "chromeBeta",
+        title: "Chrome Beta",
+        bundleIdentifier: "com.google.Chrome.beta",
+        dataFolder: "Library/Application Support/Google/Chrome Beta",
+        description: LocalizedStringResource("Profiles, bookmarks, open tabs, and passwords", comment: "What importing from another browser brings. Keep product names as they are."),
+        symbol: "globe",
+        accent: SpaceAccent.orange,
+        safeStorageService: "Chrome Safe Storage",
+        suppliesPasswords: true,
+        spaceHeaderStyle: .identity,
+        pinnedSectionTitle: LocalizedStringResource("PINNED", comment: "A section heading in a browser import review. Keep it uppercase."),
+        savedSectionTitle: LocalizedStringResource("BOOKMARKS", comment: "A section heading in a browser import review. Keep it uppercase."),
+        listsNewTab: false,
+        spaceName: nil,
+        numberedSpaceName: nil,
+        namesItsSpaces: false
+    )
+    static let chromeDev = ImportSource(
+        tag: 6,
+        name: "chromeDev",
+        title: "Chrome Dev",
+        bundleIdentifier: "com.google.Chrome.dev",
+        dataFolder: "Library/Application Support/Google/Chrome Dev",
+        description: LocalizedStringResource("Profiles, bookmarks, open tabs, and passwords", comment: "What importing from another browser brings. Keep product names as they are."),
+        symbol: "globe",
+        accent: SpaceAccent.orange,
+        safeStorageService: "Chrome Safe Storage",
+        suppliesPasswords: true,
+        spaceHeaderStyle: .identity,
+        pinnedSectionTitle: LocalizedStringResource("PINNED", comment: "A section heading in a browser import review. Keep it uppercase."),
+        savedSectionTitle: LocalizedStringResource("BOOKMARKS", comment: "A section heading in a browser import review. Keep it uppercase."),
+        listsNewTab: false,
+        spaceName: nil,
+        numberedSpaceName: nil,
+        namesItsSpaces: false
+    )
+    static let chromeCanary = ImportSource(
+        tag: 7,
+        name: "chromeCanary",
+        title: "Chrome Canary",
+        bundleIdentifier: "com.google.Chrome.canary",
+        dataFolder: "Library/Application Support/Google/Chrome Canary",
+        description: LocalizedStringResource("Profiles, bookmarks, open tabs, and passwords", comment: "What importing from another browser brings. Keep product names as they are."),
+        symbol: "bird",
+        accent: SpaceAccent.orange,
+        safeStorageService: "Chrome Safe Storage",
+        suppliesPasswords: true,
+        spaceHeaderStyle: .identity,
+        pinnedSectionTitle: LocalizedStringResource("PINNED", comment: "A section heading in a browser import review. Keep it uppercase."),
+        savedSectionTitle: LocalizedStringResource("BOOKMARKS", comment: "A section heading in a browser import review. Keep it uppercase."),
+        listsNewTab: false,
+        spaceName: nil,
+        numberedSpaceName: nil,
+        namesItsSpaces: false
+    )
+    static let chromium = ImportSource(
+        tag: 8,
+        name: "chromium",
+        title: "Chromium",
+        bundleIdentifier: "org.chromium.Chromium",
+        dataFolder: "Library/Application Support/Chromium",
+        description: LocalizedStringResource("Profiles, bookmarks, open tabs, and passwords", comment: "What importing from another browser brings. Keep product names as they are."),
+        symbol: "circle.circle",
+        accent: SpaceAccent.teal,
+        safeStorageService: "Chromium Safe Storage",
+        suppliesPasswords: true,
+        spaceHeaderStyle: .identity,
+        pinnedSectionTitle: LocalizedStringResource("PINNED", comment: "A section heading in a browser import review. Keep it uppercase."),
+        savedSectionTitle: LocalizedStringResource("BOOKMARKS", comment: "A section heading in a browser import review. Keep it uppercase."),
+        listsNewTab: false,
+        spaceName: nil,
+        numberedSpaceName: nil,
+        namesItsSpaces: false
+    )
+    static let brave = ImportSource(
+        tag: 9,
+        name: "brave",
+        title: "Brave",
+        bundleIdentifier: "com.brave.Browser",
+        dataFolder: "Library/Application Support/BraveSoftware/Brave-Browser",
+        description: LocalizedStringResource("Profiles, bookmarks, open tabs, and passwords", comment: "What importing from another browser brings. Keep product names as they are."),
+        symbol: "shield.lefthalf.filled",
+        accent: SpaceAccent.orange,
+        safeStorageService: "Brave Safe Storage",
+        suppliesPasswords: true,
+        spaceHeaderStyle: .identity,
+        pinnedSectionTitle: LocalizedStringResource("PINNED", comment: "A section heading in a browser import review. Keep it uppercase."),
+        savedSectionTitle: LocalizedStringResource("BOOKMARKS", comment: "A section heading in a browser import review. Keep it uppercase."),
+        listsNewTab: false,
+        spaceName: nil,
+        numberedSpaceName: nil,
+        namesItsSpaces: false
+    )
+    static let edge = ImportSource(
+        tag: 10,
+        name: "edge",
+        title: "Microsoft Edge",
+        bundleIdentifier: "com.microsoft.edgemac",
+        dataFolder: "Library/Application Support/Microsoft Edge",
+        description: LocalizedStringResource("Profiles, bookmarks, open tabs, and passwords", comment: "What importing from another browser brings. Keep product names as they are."),
+        symbol: "water.waves",
+        accent: SpaceAccent.teal,
+        safeStorageService: "Microsoft Edge Safe Storage",
+        suppliesPasswords: true,
+        spaceHeaderStyle: .identity,
+        pinnedSectionTitle: LocalizedStringResource("PINNED", comment: "A section heading in a browser import review. Keep it uppercase."),
+        savedSectionTitle: LocalizedStringResource("BOOKMARKS", comment: "A section heading in a browser import review. Keep it uppercase."),
+        listsNewTab: false,
+        spaceName: nil,
+        numberedSpaceName: nil,
+        namesItsSpaces: false
+    )
+    static let vivaldi = ImportSource(
+        tag: 11,
+        name: "vivaldi",
+        title: "Vivaldi",
+        bundleIdentifier: "com.vivaldi.Vivaldi",
+        dataFolder: "Library/Application Support/Vivaldi",
+        description: LocalizedStringResource("Profiles, bookmarks, open tabs, and passwords", comment: "What importing from another browser brings. Keep product names as they are."),
+        symbol: "v.circle.fill",
+        accent: SpaceAccent.rose,
+        safeStorageService: "Vivaldi Safe Storage",
+        suppliesPasswords: true,
+        spaceHeaderStyle: .identity,
+        pinnedSectionTitle: LocalizedStringResource("PINNED", comment: "A section heading in a browser import review. Keep it uppercase."),
+        savedSectionTitle: LocalizedStringResource("BOOKMARKS", comment: "A section heading in a browser import review. Keep it uppercase."),
+        listsNewTab: false,
+        spaceName: nil,
+        numberedSpaceName: nil,
+        namesItsSpaces: false
+    )
+    static let opera = ImportSource(
+        tag: 12,
+        name: "opera",
+        title: "Opera",
+        bundleIdentifier: "com.operasoftware.Opera",
+        dataFolder: "Library/Application Support/com.operasoftware.Opera",
+        description: LocalizedStringResource("Profiles, bookmarks, open tabs, and passwords", comment: "What importing from another browser brings. Keep product names as they are."),
+        symbol: "o.circle",
+        accent: SpaceAccent.rose,
+        safeStorageService: "Opera Safe Storage",
+        suppliesPasswords: true,
+        spaceHeaderStyle: .identity,
+        pinnedSectionTitle: LocalizedStringResource("PINNED", comment: "A section heading in a browser import review. Keep it uppercase."),
+        savedSectionTitle: LocalizedStringResource("BOOKMARKS", comment: "A section heading in a browser import review. Keep it uppercase."),
+        listsNewTab: false,
+        spaceName: nil,
+        numberedSpaceName: nil,
+        namesItsSpaces: false
+    )
+    static let dia = ImportSource(
+        tag: 13,
+        name: "dia",
+        title: "Dia",
+        bundleIdentifier: "company.thebrowser.dia",
+        dataFolder: "Library/Application Support/Dia/User Data",
+        description: LocalizedStringResource("Profiles, bookmarks, open tabs, and passwords", comment: "What importing from another browser brings. Keep product names as they are."),
+        symbol: "sparkles",
+        accent: SpaceAccent.indigo,
+        safeStorageService: "Dia Safe Storage",
+        suppliesPasswords: true,
+        spaceHeaderStyle: .identity,
+        pinnedSectionTitle: LocalizedStringResource("PINNED", comment: "A section heading in a browser import review. Keep it uppercase."),
+        savedSectionTitle: LocalizedStringResource("BOOKMARKS", comment: "A section heading in a browser import review. Keep it uppercase."),
+        listsNewTab: false,
+        spaceName: nil,
+        numberedSpaceName: nil,
+        namesItsSpaces: false
+    )
+    static let comet = ImportSource(
+        tag: 14,
+        name: "comet",
+        title: "Comet",
+        bundleIdentifier: "ai.perplexity.comet",
+        dataFolder: "Library/Application Support/Comet",
+        description: LocalizedStringResource("Profiles, bookmarks, open tabs, and passwords", comment: "What importing from another browser brings. Keep product names as they are."),
+        symbol: "sparkle.magnifyingglass",
+        accent: SpaceAccent.teal,
+        safeStorageService: "Comet Safe Storage",
+        suppliesPasswords: true,
+        spaceHeaderStyle: .identity,
+        pinnedSectionTitle: LocalizedStringResource("PINNED", comment: "A section heading in a browser import review. Keep it uppercase."),
+        savedSectionTitle: LocalizedStringResource("BOOKMARKS", comment: "A section heading in a browser import review. Keep it uppercase."),
+        listsNewTab: false,
+        spaceName: nil,
+        numberedSpaceName: nil,
+        namesItsSpaces: false
+    )
+    static let aside = ImportSource(
+        tag: 15,
+        name: "aside",
+        title: "Aside",
+        bundleIdentifier: "at.studio.AsideBrowser",
+        dataFolder: "Library/Application Support/Aside",
+        description: LocalizedStringResource("Profiles, bookmarks, open tabs, and passwords", comment: "What importing from another browser brings. Keep product names as they are."),
+        symbol: "sidebar.right",
+        accent: SpaceAccent.indigo,
+        safeStorageService: "Aside Safe Storage",
+        suppliesPasswords: true,
+        spaceHeaderStyle: .identity,
+        pinnedSectionTitle: LocalizedStringResource("PINNED", comment: "A section heading in a browser import review. Keep it uppercase."),
+        savedSectionTitle: LocalizedStringResource("BOOKMARKS", comment: "A section heading in a browser import review. Keep it uppercase."),
+        listsNewTab: false,
+        spaceName: nil,
+        numberedSpaceName: nil,
+        namesItsSpaces: false
+    )
+    static let egoLite = ImportSource(
+        tag: 16,
+        name: "egoLite",
+        title: "ego lite",
+        bundleIdentifier: "com.citrolabs.ego.lite",
+        dataFolder: "Library/Application Support/Citro Labs/ego lite",
+        description: LocalizedStringResource("Profiles, bookmarks, open tabs, and passwords", comment: "What importing from another browser brings. Keep product names as they are."),
+        symbol: "e.circle",
+        accent: SpaceAccent.indigo,
+        safeStorageService: "Chromium Safe Storage",
+        suppliesPasswords: true,
+        spaceHeaderStyle: .identity,
+        pinnedSectionTitle: LocalizedStringResource("PINNED", comment: "A section heading in a browser import review. Keep it uppercase."),
+        savedSectionTitle: LocalizedStringResource("BOOKMARKS", comment: "A section heading in a browser import review. Keep it uppercase."),
+        listsNewTab: false,
+        spaceName: nil,
+        numberedSpaceName: nil,
+        namesItsSpaces: false
+    )
+    static let otherChromium = ImportSource(
+        tag: 17,
+        name: "otherChromium",
+        title: "Chromium-based browser",
+        bundleIdentifier: "",
+        dataFolder: "Library/Application Support",
+        description: LocalizedStringResource("Profiles, bookmarks, and open tabs", comment: "What importing from another browser brings. Keep product names as they are."),
+        symbol: "globe",
+        accent: SpaceAccent.teal,
+        safeStorageService: nil,
+        suppliesPasswords: false,
+        spaceHeaderStyle: .identity,
+        pinnedSectionTitle: LocalizedStringResource("PINNED", comment: "A section heading in a browser import review. Keep it uppercase."),
+        savedSectionTitle: LocalizedStringResource("BOOKMARKS", comment: "A section heading in a browser import review. Keep it uppercase."),
+        listsNewTab: false,
+        spaceName: nil,
+        numberedSpaceName: nil,
+        namesItsSpaces: false
+    )
 
-    static let all: [ImportSource] = [arc, zen, chrome, safari, firefox]
+    static let all: [ImportSource] = [
+        arc,
+        zen,
+        chrome,
+        safari,
+        firefox,
+        chromeBeta,
+        chromeDev,
+        chromeCanary,
+        chromium,
+        brave,
+        edge,
+        vivaldi,
+        opera,
+        dia,
+        comet,
+        aside,
+        egoLite,
+        otherChromium
+    ]
 
     static func named(_ name: String?) -> ImportSource? {
         all.first { $0.name == name }

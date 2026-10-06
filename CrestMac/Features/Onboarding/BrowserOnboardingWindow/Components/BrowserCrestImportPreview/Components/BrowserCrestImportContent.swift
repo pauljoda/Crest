@@ -4,6 +4,8 @@ struct BrowserCrestImportContent: View {
     let space: SpaceModel
     let favicons: FaviconAssets
     let matchedTabIDs: Set<UUID>
+    var extensions: [ImportExtension] = []
+    var extensionIcons: [String: NSImage] = [:]
     @Environment(CrestCore.self) private var core: CrestCore?
 
     /// No window shows an imported Space yet, so it highlights the tab the
@@ -13,6 +15,12 @@ struct BrowserCrestImportContent: View {
     var body: some View {
         VStack(spacing: 0) {
             BrowserCrestImportChrome(space: space, highlightedTabID: highlightedTabID)
+
+            if !extensions.isEmpty {
+                BrowserImportSidebarExtensionStrip(extensions: extensions, icons: extensionIcons)
+                    .padding(.horizontal, 10)
+                    .padding(.top, 7)
+            }
 
             if !space.pinnedTabs.isEmpty {
                 BrowserCrestImportPinnedGrid(

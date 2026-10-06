@@ -5,16 +5,18 @@ namespace CrestCore.Contracts;
 
 /// The Spaces `Source` brings, as `ReadImport` answered them, with where each
 /// of its saved passwords belongs, from which setup counts the passwords that
-/// belong with each Space, and the extensions each Space offers to install.
-/// Setup reviews them: each Space joins
-/// the existing Space of the same name, leaving out the tabs that Space holds,
-/// or else comes in as a new Space, and the person looks at the first.
+/// belong with each Space, the extensions each Space offers to install, and
+/// what the read left out, which the review shows. Setup reviews them: each
+/// Space joins the existing Space of the same name, leaving out the tabs that
+/// Space holds, or else comes in as a new Space while the workspace has room
+/// for it, and the person looks at the first.
 ///
 /// Refused with `InvalidImport` for Spaces that repeat an identity or hold a
 /// split repair would rewrite.
 [MessageLimit(64 * 1024 * 1024)]
 public sealed record ReviewImport(ImportSource Source, IReadOnlyList<SpaceState> Spaces, IReadOnlyList<ImportPasswordSource> Passwords,
-    IReadOnlyList<ImportSpaceExtensions>? Extensions = null) : SetupFlowIntent {
+    IReadOnlyList<ImportSpaceExtensions>? Extensions = null, IReadOnlyList<ImportLeftOut>? LeftOut = null, string? Title = null)
+    : SetupFlowIntent {
     #region Actions - Device
 
     /// The flow reviews the Spaces the browser it reads brings. A read it no
@@ -33,7 +35,7 @@ public sealed record ReviewImport(ImportSource Source, IReadOnlyList<SpaceState>
             Step = SetupStep.Review,
             Phase = SetupPhase.Reviewing,
             Review = ImportReviewPolicy.Started(Source, Spaces, ImportPasswordRouting.Counts(Source, Passwords, Spaces),
-                Extensions ?? [], session),
+                Extensions ?? [], LeftOut ?? [], session) with { BrowserTitle = Title },
             Failure = null
         };
     });

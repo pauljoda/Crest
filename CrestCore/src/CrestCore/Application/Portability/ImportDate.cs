@@ -44,6 +44,12 @@ internal static class ImportDate {
         _ => FromUnixSeconds(value)
     };
 
+    /// A time given in seconds or milliseconds since 1970 or, when it is too
+    /// small to be a time since 2001 counted that way, in seconds since 2001,
+    /// as apps on Apple's platforms keep them.
+    public static DateTimeOffset? FromUnixOrReferenceSeconds(double value) =>
+        value is > 0 and < ReferenceOffset ? FromReferenceSeconds(value) : FromUnixSecondsOrMilliseconds(value);
+
     /// A time given in seconds since 2001, as property lists keep them.
     public static DateTimeOffset? FromReferenceSeconds(double seconds) =>
         double.IsFinite(seconds) ? StoredSessionCodec.Date(seconds) : null;

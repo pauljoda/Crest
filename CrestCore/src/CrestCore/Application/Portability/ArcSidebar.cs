@@ -8,8 +8,9 @@ namespace CrestCore.Application;
 /// Arc's sidebar, `StorableSidebar.json`: containers of items, and Spaces
 /// whose sections list the items they hold. Each Space brings its favorites
 /// as pinned tabs, its pinned section as saved tabs in their folders, and its
-/// unpinned section as open tabs, with its name, icon and colors. A Chromium
-/// session file Arc wrote is read as one.
+/// unpinned section as open tabs, with its name, icon and colors, and each
+/// split view as a split of its tabs. A Chromium session file Arc wrote is
+/// read as one.
 internal static class ArcSidebar {
     #region Static Variables
 
@@ -32,11 +33,12 @@ internal static class ArcSidebar {
 
     private sealed record Item(string? Title, IReadOnlyList<string> Children, Content? Content);
 
-    private sealed record Content(ArcTab? Tab, bool IsFolder);
+    private sealed record Content(ArcTab? Tab, bool IsFolder, bool IsSplit);
 
     private sealed record ArcTab(string Title, string? Url, JsonElement? LastActive);
 
-    private sealed record Space(string? Title, IReadOnlyList<string> Sections, string ProfileKey, JsonElement? CustomInfo);
+    private sealed record Space(string? Title, IReadOnlyList<string> Sections, string ProfileKey, string? ProfileFolder,
+        JsonElement? CustomInfo);
 
     private sealed class Draft {
         public List<SessionFolder> Folders { get; } = [];
@@ -48,9 +50,11 @@ internal static class ArcSidebar {
 
     #region Actions - Reading
 
-    /// The Spaces the sidebar holds, in order. Throws `Rejected` with
-    /// `SessionUnrecognized` for a file that is not Arc's sidebar, and
-    /// `SessionOverLimits` for a Space holding more than Crest keeps.
+    /// The Spaces the sidebar holds, in order, however many: those past the
+    /// most a workspace holds with their names alone, which an import leaves
+    /// out. A Space holding more than a Space keeps holds one tab or folder
+    /// past it, so an import leaves it out. Throws `Rejected` with
+    /// `SessionUnrecognized` for a file that is not Arc's sidebar.
     public static IReadOnlyList<SessionDraft> Read(byte[] contents, DateTimeOffset importedAt) {
         if (ChromiumSession.Recognizes(contents)) return ChromiumSession.Read(contents, importedAt);
         using var document = ImportJson.Parse(contents) ?? throw new Rejected(new SessionUnrecognized());
@@ -67,6 +71,12 @@ internal static class ArcSidebar {
             int spaceIndex = 0;
             foreach (var (value, _) in Objects(ImportJson.Member(container, "spaces"))) {
                 var space = ReadSpace(value);
+                spaceIndex++;
+                string name = space.Title ?? $"Arc Space {spaceIndex}";
+                if (drafts.Count >= BrowserDataFile.MaximumSpaces) {
+                    drafts.Add(new SessionDraft(drafts.Count + 1, name, [], []));
+                    continue;
+                }
                 var draft = new Draft();
                 if (favorites.TryGetValue(space.ProfileKey, out var favoriteRoot))
                     Append(favoriteRoot, TabPlacement.Pinned, parent: null, depth: 0, items, draft, importedAt);
@@ -78,9 +88,8 @@ internal static class ArcSidebar {
                 }
                 string symbol = Symbol(space.CustomInfo);
                 var colors = Colors(space.CustomInfo);
-                drafts.Add(new SessionDraft(drafts.Count + 1, space.Title ?? $"Arc Space {spaceIndex + 1}", draft.Folders, draft.Tabs,
-                    symbol, colors.Count == 0 ? null : SpaceAccent.Nearest(colors[0]), Look(colors)));
-                spaceIndex++;
+                drafts.Add(new SessionDraft(drafts.Count + 1, name, draft.Folders, draft.Tabs,
+                    symbol, colors.Count == 0 ? null : SpaceAccent.Nearest(colors[0]), Look(colors), space.ProfileFolder));
             }
         }
         return drafts;
@@ -116,7 +125,8 @@ internal static class ArcSidebar {
                 ImportJson.Text(ImportJson.Member(tab, "savedTitle")) ?? ImportJson.Text(ImportJson.Member(value, "title")) ?? "",
                 ImportJson.Text(ImportJson.Member(tab, "savedURL")),
                 ImportJson.Member(tab, "timeLastActiveAt") ?? ImportJson.Member(value, "createdAt")),
-                ImportJson.Object(ImportJson.Member(data, "list")) is not null);
+                ImportJson.Object(ImportJson.Member(data, "list")) is not null,
+                ImportJson.Object(ImportJson.Member(data, "splitView")) is not null);
         }
         return new(ImportJson.Text(ImportJson.Member(value, "title")), Strings(ImportJson.Member(value, "childrenIds")), content);
     }
@@ -125,7 +135,8 @@ internal static class ArcSidebar {
         var sections = Strings(ImportJson.Member(value, "containerIDs"));
         return new(ImportJson.Text(ImportJson.Member(value, "title")),
             sections.Count == 0 ? Strings(ImportJson.Member(value, "newContainerIDs")) : sections,
-            ProfileKey(ImportJson.Member(value, "profile")), ImportJson.Object(ImportJson.Member(value, "customInfo")));
+            ProfileKey(ImportJson.Member(value, "profile")), ProfileFolder(ImportJson.Member(value, "profile")),
+            ImportJson.Object(ImportJson.Member(value, "customInfo")));
     }
 
     /// The favorites root of each profile, from pairs of a profile and its
@@ -147,6 +158,14 @@ internal static class ArcSidebar {
             + $"{ImportJson.Text(ImportJson.Member(details, "directoryBasename")) ?? ""}";
     }
 
+    /// The folder in Arc's `User Data` of the profile a value names, other
+    /// than the first, where its name is a plain folder name.
+    private static string? ProfileFolder(JsonElement? value) {
+        var details = ImportJson.Member(ImportJson.Member(value, "custom"), "_0");
+        string? name = ImportJson.Text(ImportJson.Member(details, "directoryBasename"));
+        return name is { Length: > 0 } && name != "." && name != ".." && name.IndexOfAny(['/', '\\']) < 0 ? name : null;
+    }
+
     private static List<string> Strings(JsonElement? value) =>
         [.. (ImportJson.Array(value) ?? []).Select(item => ImportJson.Text(item)).OfType<string>()];
 
@@ -155,22 +174,26 @@ internal static class ArcSidebar {
     #region Actions - Tabs
 
     /// Adds the item `id` names: a tab where it is one, a folder holding its
-    /// children where it is a folder in the pinned section, and otherwise its
-    /// children in its place.
+    /// children where it is a folder in the pinned section, the tabs of a
+    /// split view in that split, and otherwise its children in its place.
     private static void Append(string id, TabPlacement placement, string? parent, int depth, IReadOnlyDictionary<string, Item> items,
-        Draft draft, DateTimeOffset importedAt) {
+        Draft draft, DateTimeOffset importedAt, string? split = null) {
         if (depth >= FolderTree.MaximumDepth || !draft.Visited.Add(id) || !items.TryGetValue(id, out var item)
             || item.Content is not { } content) return;
         if (content.Tab is { Url: { } url } tab && ImportAddress.Read(url) is { } address) {
-            if (draft.Tabs.Count >= SessionDraft.MaximumTabs) throw new Rejected(new SessionOverLimits());
-            var time = ImportJson.Number(tab.LastActive) is { } raw && double.IsFinite(raw) ? ImportDate.FromUnixSecondsOrMilliseconds(raw)
+            if (draft.Tabs.Count > SessionDraft.MaximumTabs) return;
+            var time = ImportJson.Number(tab.LastActive) is { } raw && double.IsFinite(raw) ? ImportDate.FromUnixOrReferenceSeconds(raw)
                 : null;
             draft.Tabs.Add(new SessionTab(tab.Title, address, placement, placement == TabPlacement.Saved ? parent : null,
-                time ?? importedAt));
+                time ?? importedAt, split));
+            return;
+        }
+        if (content.IsSplit) {
+            foreach (var child in item.Children) Append(child, placement, parent, depth, items, draft, importedAt, id);
             return;
         }
         if (content.IsFolder && placement == TabPlacement.Saved) {
-            if (draft.Folders.Count >= FolderTree.MaximumCount) throw new Rejected(new SessionOverLimits());
+            if (draft.Folders.Count > FolderTree.MaximumCount) return;
             draft.Folders.Add(new SessionFolder(id, item.Title ?? UntitledFolder, parent));
             foreach (var child in item.Children) Append(child, placement, id, depth + 1, items, draft, importedAt);
             return;

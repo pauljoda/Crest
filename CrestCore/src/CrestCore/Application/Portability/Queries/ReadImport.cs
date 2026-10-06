@@ -4,19 +4,25 @@ namespace CrestCore.Contracts;
 
 /// The Spaces an import of `Profiles` from `Source` brings, read from the
 /// files each profile names, without importing anything. A source that names
-/// its own Spaces brings them as named there; any other brings one Space for
-/// each profile, holding its bookmarks as saved tabs and its open tabs, and
-/// named after it. A file that cannot be read is skipped while another brings
-/// a Space.
+/// its own Spaces brings them as named there, those without tabs too; any
+/// other brings one Space for each profile, holding its open tabs and as many
+/// of its bookmarks, as saved tabs, as fit beside them, and named after it.
+/// Chrome's and Arc's Spaces also offer the extensions their profile has
+/// installed from the Chrome Web Store.
+///
+/// What fits is kept: the Spaces past the most a workspace holds, a Space
+/// holding more than a Space keeps, a window that does not fit beside a
+/// profile's others, bookmarks that do not fit, and a file that cannot be
+/// read are each left out in `LeftOut`, named for their profile or Space, with
+/// why, such as `SessionOverLimits`, `BookmarksOverLimits` or
+/// `SessionUnrecognized`, while the rest come. When Chrome's latest session
+/// cannot be read or holds no tab, the session before it is read instead.
 ///
 /// The platform holds any access the files need while the core reads them,
 /// and asks away from the main thread: the core answers without waiting for
-/// any other work. Chrome's and Arc's Spaces also offer the extensions their
-/// profile has installed from the Chrome Web Store. Refused with the rejection of the last file that could not
-/// be read, such as `SessionUnrecognized` or `BookmarksOverLimits`, when
-/// nothing could be brought, `SessionHasNoTabs` when no profile names a file,
-/// and `SessionOverLimits` when the source brings more Spaces than a
-/// workspace keeps.
+/// any other work. Refused only when nothing could be brought: with the
+/// reason the last profile or Space was left out, or `SessionHasNoTabs` when
+/// no profile names a file.
 public sealed record ReadImport(ImportSource Source, IReadOnlyList<ImportProfile> Profiles) : Query<ImportedSpaces> {
     #region Variables
 

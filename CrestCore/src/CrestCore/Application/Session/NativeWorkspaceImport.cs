@@ -15,6 +15,9 @@ namespace CrestCore.Application;
 internal sealed class NativeWorkspaceImport {
     #region Static Variables
 
+    /// The fewest tabs a split brings.
+    private const int MinimumSplitMembers = 2;
+
     /// How deep an imported Space may nest, as the stored format reads it.
     private static readonly JsonDocumentOptions SpacesDocument = new() { MaxDepth = 64 };
 
@@ -64,6 +67,9 @@ internal sealed class NativeWorkspaceImport {
     // Tab and archive records by reference, so two records that share an identity
     // keep their own origins.
     private readonly Dictionary<object, Origin> origins = new(ReferenceEqualityComparer.Instance);
+    /// The tabs a reviewed import of another browser brings, by where they
+    /// came from, which the import counts as used.
+    private readonly HashSet<Origin> reviewed = [];
     private Guid? defaultSpace;
     private Guid? seedMarker;
     /// The first Space the import brought or changed, which the window shows.
@@ -137,9 +143,19 @@ internal sealed class NativeWorkspaceImport {
     #region Actions - Imports
 
     /// A file's Spaces join after the session's own, each showing its first
-    /// tab. Throws `Rejected` with `SpaceLimitReached` when they do not fit.
+    /// tab. A first launch's disposable Spaces never count against the limit:
+    /// they stay while the file's Spaces fit beside them, and otherwise make
+    /// way for them, as they do for a reviewed import. Throws `Rejected` with
+    /// `SpaceLimitReached` when the file's Spaces do not fit, and
+    /// `SpaceBeingDeleted` when disposable Spaces must make way while one is
+    /// going away.
     internal void AddSpaces() {
-        WorkspaceImportPolicy.RequireSpaceCapacity(spaces.Count, inputs.Count);
+        bool replaceSeed = seedMarker is not null && (long)spaces.Count + inputs.Count > WorkspaceImportPolicy.MaximumSpaces;
+        WorkspaceImportPolicy.RequireSpaceCapacity(replaceSeed ? 0 : spaces.Count, inputs.Count);
+        if (replaceSeed) {
+            ReplaceSeed();
+            seedMarker = null;
+        }
         foreach (var input in inputs) {
             if (input.State.Tabs.FirstOrDefault() is { } first) input.ShownTab = first.Id;
             spaces.Add(input);
@@ -194,10 +210,7 @@ internal sealed class NativeWorkspaceImport {
         bool replaceSeed = seedMarker is not null;
         WorkspaceImportPolicy.RequireSpaceCapacity(replaceSeed ? 0 : spaces.Count,
             included.Count(pair => pair.Choice.DestinationId is null));
-        if (replaceSeed) {
-            if (session.SpaceDeletions.Count > 0) throw new Rejected(new SpaceBeingDeleted(session.SpaceDeletions[0].SpaceId));
-            spaces.Clear(); defaultSpace = null;
-        }
+        if (replaceSeed) ReplaceSeed();
         foreach (var (input, review) in included) {
             var destination = review.DestinationId is { } destinationId ? spaces.FirstOrDefault(s => s.Id == destinationId) : input;
             if (destination is null) continue;
@@ -210,23 +223,37 @@ internal sealed class NativeWorkspaceImport {
         if (affected is not null) seedMarker = null;
     }
 
+    /// Removes a first launch's disposable Spaces, which an import takes the
+    /// place of. Throws `Rejected` with `SpaceBeingDeleted` while one is going
+    /// away.
+    private void ReplaceSeed() {
+        if (session.SpaceDeletions.Count > 0) throw new Rejected(new SpaceBeingDeleted(session.SpaceDeletions[0].SpaceId));
+        spaces.Clear();
+        defaultSpace = null;
+    }
+
     #endregion
 
     #region Actions - Reviewed tabs
 
     /// A reviewed Space's included tabs, in the placements the review chose, with
-    /// the saved folders they need. Pinned tabs past the limit become saved tabs
-    /// in the overflow folder. New identities come from `ids`.
+    /// the folders they need where they stay in a folder's place, saved tabs or
+    /// a tab group's open tabs, and the splits whose tabs still come together.
+    /// Pinned tabs past the limit become saved tabs in the overflow folder. New
+    /// identities come from `ids`.
     private void Import(SetupReviewSpace review, Draft input, Draft destination, bool isNew, IIdSource ids) {
         var included = review.IncludedTabIds.ToHashSet();
         var overrides = review.Placements.GroupBy(choice => choice.TabId).ToDictionary(group => group.Key, group => group.Last().Placement);
         TabPlacement PlacementFor(TabState tab) => overrides.GetValueOrDefault(tab.Id, tab.Placement);
-        var additions = input.State.Tabs.Where(t => included.Contains(t.Id)).ToArray();
+        var additions = Fitting([.. input.State.Tabs.Where(t => included.Contains(t.Id))], PlacementFor,
+            BrowserSpace.MaximumTabs - (isNew ? 0 : destination.State.Tabs.Count));
         var sourceFolders = input.State.Folders;
         var folders = isNew ? [] : destination.State.Folders.ToList();
-        var required = additions.Where(t => PlacementFor(t) == TabPlacement.Saved && t.FolderId is not null)
-            .Select(t => t.FolderId!.Value).ToHashSet();
         var byId = sourceFolders.GroupBy(f => f.Id).ToDictionary(g => g.Key, g => g.First());
+        // A tab keeps its folder while it stays in the folder's place.
+        bool Kept(TabState tab) => tab.FolderId is { } id && byId.TryGetValue(id, out var held) && held.Location == PlacementFor(tab)
+            && held.Location.HoldsFolders;
+        var required = additions.Where(Kept).Select(t => t.FolderId!.Value).ToHashSet();
         var pending = new Stack<Guid>(required);
         while (pending.TryPop(out var id))
             if (byId.TryGetValue(id, out var f) && f.ParentId is { } parent && required.Add(parent)) pending.Push(parent);
@@ -263,7 +290,7 @@ internal sealed class NativeWorkspaceImport {
                     folders.Add(overflowFolder);
                 }
                 folder = overflowFolder?.Id;
-            } else folder = placement == TabPlacement.Saved && tab.FolderId is { } old && mapping.TryGetValue(old, out var copied)
+            } else folder = Kept(tab) && tab.FolderId is { } old && mapping.TryGetValue(old, out var copied)
                   ? copied : null;
             return Copied(tab, tab with {
                 Placement = placement,
@@ -273,9 +300,53 @@ internal sealed class NativeWorkspaceImport {
             });
         }).ToArray();
         var existing = isNew ? [] : destination.State.Tabs;
-        destination.State = destination.State with { Folders = [.. folders], Tabs = [.. existing, .. edited] };
+        foreach (var tab in edited)
+            if (origins.TryGetValue(tab, out var origin)) reviewed.Add(origin);
+        var (split, splits) = Split(input, destination, isNew, existing, edited, ids);
+        destination.State = destination.State with { Folders = [.. folders], Tabs = [.. existing, .. split], SplitGroups = splits };
         // A new Space shows its first imported tab.
         if (isNew && edited.FirstOrDefault() is { } first) destination.ShownTab = first.Id;
+    }
+
+    /// As many of `tabs` as `room` holds, in their order, the pinned and open
+    /// ones first, then the saved ones in order, so a Space joining another
+    /// never holds more tabs than a Space keeps.
+    private static TabState[] Fitting(TabState[] tabs, Func<TabState, TabPlacement> placement, int room) {
+        if (tabs.Length <= room) return tabs;
+        var kept = tabs.Select((tab, index) => (Tab: tab, Index: index)).OrderBy(entry => placement(entry.Tab) == TabPlacement.Saved ? 1 : 0)
+            .Take(Math.Max(0, room)).Select(entry => entry.Index).ToHashSet();
+        return [.. tabs.Where((_, index) => kept.Contains(index))];
+    }
+
+    /// `edited`, the tabs a reviewed Space brings after `existing`, each in the
+    /// split it came in where that split still holds together beside the
+    /// destination's tabs, and the destination's splits with those it brings.
+    /// A split that no longer holds, because the review left out or moved one
+    /// of its tabs, leaves its tabs on their own.
+    private (TabState[] Tabs, IReadOnlyList<SplitGroupState> Splits) Split(Draft input, Draft destination, bool isNew,
+        IReadOnlyList<TabState> existing, TabState[] edited, IIdSource ids) {
+        var held = isNew ? [] : destination.State.SplitGroups.ToList();
+        var sources = input.State.SplitGroups.GroupBy(split => split.Id).ToDictionary(group => group.Key, group => group.First());
+        Dictionary<Guid, Guid> identities = [];
+        Guid? Mapped(Guid? id) {
+            if (id is not { } source || !sources.ContainsKey(source)) return null;
+            if (identities.TryGetValue(source, out var mapped)) return mapped;
+            var identity = source;
+            while (held.Any(split => split.Id == identity) || identities.ContainsValue(identity)) identity = ids.Next();
+            return identities[source] = identity;
+        }
+        var asked = edited.Select(tab => Mapped(tab.SplitGroupId)).ToArray();
+        var all = existing.Select(tab => new SplitMember(tab.SplitGroupId, tab.Placement, tab.FolderId))
+            .Concat(edited.Select((tab, index) => new SplitMember(asked[index], tab.Placement, tab.FolderId))).ToArray();
+        var repaired = SplitMembershipPolicy.Repair(all).Skip(existing.Count).ToArray();
+        var counts = repaired.OfType<Guid>().GroupBy(id => id).ToDictionary(group => group.Key, group => group.Count());
+        var tabs = edited.Select((tab, index) => {
+            Guid? kept = repaired[index] is { } joined && joined == asked[index] && counts[joined] >= MinimumSplitMembers ? joined : null;
+            return tab.SplitGroupId == kept ? tab : Copied(tab, tab with { SplitGroupId = kept });
+        }).ToArray();
+        foreach (var (source, identity) in identities)
+            if (tabs.Any(tab => tab.SplitGroupId == identity)) held.Add(sources[source] with { Id = identity });
+        return (tabs, held);
     }
 
     #endregion
@@ -295,6 +366,13 @@ internal sealed class NativeWorkspaceImport {
         var historyIds = originalHistoryIds.Values.SelectMany(set => set).ToHashSet();
         foreach (var space in spaces) Reserve(space, space.IsOriginal ? originalFolderIds[space] : null,
             space.IsOriginal ? originalHistoryIds[space] : null, folderIds, historyIds, ids);
+        // A reviewed import counts as using the open tabs it brings, so cleanup
+        // never archives them for how long ago the other browser last showed
+        // them. A file of Crest's own keeps the times it saved.
+        foreach (var space in spaces) space.State = space.State with {
+            Tabs = [.. space.State.Tabs.Select(tab => origins.TryGetValue(tab, out var origin) && reviewed.Contains(origin)
+                && !tab.Placement.IsDurable && tab.LastActivatedAt < now ? Copied(tab, tab with { LastActivatedAt = now }) : tab)]
+        };
         int affectedIndex = affected is null ? -1 : spaces.IndexOf(affected);
         // Repair may replace colliding identities, so hints and origins travel by position.
         var shown = new List<(int Space, int Tab)>();

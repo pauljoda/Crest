@@ -34,6 +34,11 @@ enum BrowserAboutLinks {
         url("https://github.com/pauljoda/Crest/issues/new/choose")
     }
 
+    /// Where to ask Crest to import from a browser it does not list.
+    static var browserRequest: URL {
+        url("https://github.com/pauljoda/Crest/issues/new?template=feature_request.yml&title=Import%20from%20")
+    }
+
     static var roadmap: URL {
         url("https://github.com/users/pauljoda/projects/3")
     }

@@ -29,5 +29,9 @@ public sealed record SetupReviewSpace(SpaceState Source, bool Included, Guid? De
     public IReadOnlyList<ImportExtension> BroughtExtensions => Included
         ? [.. Extensions.Where(extension => IncludedExtensionIds.Contains(extension.ExtensionId))] : [];
 
+    /// Whether the Space comes in as a new Space, taking room in the
+    /// workspace, rather than joining one it holds.
+    internal bool MakesNewSpace => Included && DestinationId is null;
+
     #endregion
 }

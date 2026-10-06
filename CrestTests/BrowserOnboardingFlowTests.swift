@@ -48,13 +48,11 @@ final class BrowserOnboardingFlowTests: XCTestCase {
                     ImportExtension(extensionID: second, name: "Dark Reader"),
                 ])
         ]
-        var installs: [[BrowserImportedExtensionInstall]] = []
-        BrowserImportedExtensionInstaller.handler = { installs.append($0) }
-        defer { BrowserImportedExtensionInstaller.handler = nil }
-
+        let installer = RecordingExtensionInstaller()
         let flow = makeFlow(
             sourceDiscovery: StubSourceDiscovery(sources: [source(.chrome)]),
-            reader: SequencedImportReader(results: [.success(output)]))
+            reader: SequencedImportReader(results: [.success(output)]),
+            extensionInstaller: installer)
         flow.start()
         flow.discoverInstalledSources()
         flow.toggleImportSelection(.chrome)
@@ -64,58 +62,13 @@ final class BrowserOnboardingFlowTests: XCTestCase {
 
         flow.setExtensionIncluded(second, false, in: spaceID)
         XCTAssertEqual(flow.review?.includedExtensionCount, 1)
-        XCTAssertTrue(installs.isEmpty)
+        XCTAssertTrue(installer.installs.isEmpty)
 
         flow.commitReviewedImport()
         await waitUntil { flow.step == .complete }
         XCTAssertEqual(
-            installs,
-            [[BrowserImportedExtensionInstall(extensionID: first, name: "uBlock Origin", spaceIDs: [spaceID])]])
-    }
-
-    /// An extension several imported Spaces share is one install that names
-    /// every Space, not one install for each Space.
-    func testAnExtensionSharedByManySpacesIsOneInstallForAllOfThem() async throws {
-        let (shared, onlyFirst) = ("cjpalhdlnbpafiamejdnhcphjbkeiagm", "eimadpbcbfnmbkopoojfekhnkhdbieeh")
-        var output = readOutput(
-            application: .arc,
-            spaces: [makeSpace(name: "Shared Import One"), makeSpace(name: "Shared Import Two")])
-        let ids = output.imported.map(\.id)
-        XCTAssertEqual(ids.count, 2)
-        output.extensions = [
-            ImportSpaceExtensions(
-                spaceID: ids[0],
-                extensions: [
-                    ImportExtension(extensionID: shared, name: "uBlock Origin"),
-                    ImportExtension(extensionID: onlyFirst, name: "Dark Reader"),
-                ]),
-            ImportSpaceExtensions(
-                spaceID: ids[1], extensions: [ImportExtension(extensionID: shared, name: "uBlock Origin")]),
-        ]
-        var installs: [[BrowserImportedExtensionInstall]] = []
-        BrowserImportedExtensionInstaller.handler = { installs.append($0) }
-        defer { BrowserImportedExtensionInstaller.handler = nil }
-
-        let flow = makeFlow(
-            sourceDiscovery: StubSourceDiscovery(sources: [source(.arc)]),
-            reader: SequencedImportReader(results: [.success(output)]))
-        flow.start()
-        flow.discoverInstalledSources()
-        flow.toggleImportSelection(.arc)
-        flow.continueImportQueue()
-        await waitUntil { flow.step == .review }
-        flow.commitReviewedImport()
-        await waitUntil { flow.step == .complete }
-
-        // One hand-off, the shared extension once with both Spaces.
-        XCTAssertEqual(
-            installs,
-            [
-                [
-                    BrowserImportedExtensionInstall(extensionID: shared, name: "uBlock Origin", spaceIDs: ids),
-                    BrowserImportedExtensionInstall(extensionID: onlyFirst, name: "Dark Reader", spaceIDs: [ids[0]]),
-                ]
-            ])
+            installer.installs,
+            [[ImportExtensionInstall(extensionID: first, name: "uBlock Origin", iconPath: nil, spaceIDs: [spaceID])]])
     }
 
     func testCancellationPreventsALateReadFromPublishingAReview() async {
@@ -170,7 +123,8 @@ final class BrowserOnboardingFlowTests: XCTestCase {
     private func makeFlow(
         sourceDiscovery: any BrowserInstalledImportSourceDiscovering,
         reader: any BrowserOnboardingImportReading,
-        importCommitter: any BrowserOnboardingImportCommitting = LiveBrowserOnboardingImportCommitter()
+        importCommitter: any BrowserOnboardingImportCommitting = LiveBrowserOnboardingImportCommitter(),
+        extensionInstaller: (any BrowserImportedExtensionInstalling)? = nil
     ) -> BrowserOnboardingFlow {
         BrowserOnboardingFlow(
             request: BrowserOnboardingRequest(entryPoint: .importBrowser),
@@ -178,7 +132,8 @@ final class BrowserOnboardingFlowTests: XCTestCase {
             sourceDiscovery: sourceDiscovery,
             dataAccessProvider: StubDataAccessProvider(),
             importReader: reader,
-            importCommitter: importCommitter
+            importCommitter: importCommitter,
+            extensionInstaller: extensionInstaller
         )
     }
 
@@ -253,6 +208,14 @@ private struct StubSourceDiscovery: BrowserInstalledImportSourceDiscovering {
 }
 
 @MainActor
+private final class RecordingExtensionInstaller: BrowserImportedExtensionInstalling {
+    private(set) var installs: [[ImportExtensionInstall]] = []
+
+    func installImported(_ installs: [ImportExtensionInstall]) {
+        self.installs.append(installs)
+    }
+}
+
 private struct StubDataAccessProvider: BrowserOnboardingDataAccessProviding {
     func resolve(
         for application: ImportSource

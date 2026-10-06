@@ -32,7 +32,7 @@ final class ChromiumExtensionStore {
     private(set) var installed: [UUID: [Installed]] = [:]
     private(set) var installation: ChromiumExtensionInstallation?
     /// The extensions an import brought that still await their install review.
-    @ObservationIgnored private var pendingImports: [BrowserImportedExtensionInstall] = []
+    @ObservationIgnored private var pendingImports: [ImportExtensionInstall] = []
     @ObservationIgnored private var importsTask: Task<Void, Never>?
     @ObservationIgnored private var popover: NSPopover?
     @ObservationIgnored private var windowClosed: NSObjectProtocol?
@@ -313,6 +313,24 @@ final class ChromiumExtensionStore {
             }
         }
     }
+    /// Says what an import's extensions came to: those installed, and those
+    /// that could not be.
+    private func reportImportedInstalls(added: [String], failed: [String]) {
+        if !added.isEmpty {
+            BrowserNoticeCenter.shared.post(
+                BrowserNotice(
+                    message: added.count == 1
+                        ? String(localized: "Installed \(added[0])")
+                        : String(localized: "Installed \(added.count) extensions"),
+                    systemImage: "puzzlepiece.extension.fill"))
+        }
+        if !failed.isEmpty {
+            BrowserNoticeCenter.shared.post(
+                BrowserNotice(
+                    message: String(localized: "Couldn’t install \(failed.formatted(.list(type: .and)))"),
+                    systemImage: "exclamationmark.triangle"))
+        }
+    }
     private func reportFailure() {
         BrowserNoticeCenter.shared.post(
             BrowserNotice(
@@ -322,13 +340,14 @@ final class ChromiumExtensionStore {
                 ),
                 systemImage: "exclamationmark.triangle"))
     }
-    /// Installs the extensions an import brought, one at a time, each through
-    /// the same review the Web Store page opens, so the person confirms every
-    /// one. An extension that goes into several Spaces is downloaded and
-    /// reviewed once, then installed in each of them. It waits for the Spaces
-    /// and a browser window to exist, and leaves out a Space that already has
-    /// the extension. Closing a review moves on to the next extension.
-    func installImported(_ installs: [BrowserImportedExtensionInstall]) {
+    /// Installs the extensions an import brought, one at a time and without
+    /// asking again: the person chose each when they reviewed the import.
+    /// Chromium still verifies every package for each Space it goes into. An
+    /// extension that goes into several Spaces is downloaded once, then
+    /// installed in each of them. It waits for the Spaces and a browser window
+    /// to exist, leaves out a Space that already has the extension, and says
+    /// once, when the queue empties, what it installed and what it could not.
+    func installImported(_ installs: [ImportExtensionInstall]) {
         pendingImports += installs
         guard importsTask == nil else { return }
         importsTask = Task { [weak self] in
@@ -337,6 +356,9 @@ final class ChromiumExtensionStore {
         }
     }
     private func runPendingImports() async {
+        var added: [String] = []
+        var failed: [String] = []
+        defer { reportImportedInstalls(added: added, failed: failed) }
         while !pendingImports.isEmpty, !Task.isCancelled {
             let next = pendingImports.removeFirst()
             var wanted: [BrowserSpaceIdentity] = []
@@ -346,19 +368,22 @@ final class ChromiumExtensionStore {
                 let alreadyHas = installed[space.profileID]?.contains { $0.id == next.extensionID } == true
                 if !alreadyHas, !wanted.contains(where: { $0.id == space.id }) { wanted.append(space) }
             }
-            // One review is open at a time and it needs a browser window to appear in. Either can change
-            // while this waits, so the Spaces still within reach are chosen when the install starts, with
-            // nothing awaited between that check and the call.
+            // One install runs at a time and the engine routes its consent through a browser window. Either
+            // can change while this waits, so the Spaces still within reach are chosen when the install
+            // starts, with nothing awaited between that check and the call.
             while !Task.isCancelled {
                 let reachable = wanted.filter { space in
                     authorized(space) && installed[space.profileID]?.contains { $0.id == next.extensionID } != true
                 }
                 guard let first = reachable.first else { break }
-                if installation == nil, ChromiumComposition.activeNativeWindow != nil {
-                    let copies = Set(reachable.dropFirst().map(\.id))
-                    await withCheckedContinuation { continuation in
-                        install(next.extensionID, in: first, anchor: nil, copies: copies) { continuation.resume() }
-                    }
+                if installation == nil, let window = ChromiumComposition.activeNativeWindow {
+                    let job = ChromiumExtensionInstallation(
+                        id: next.extensionID, space: first, window: window, store: self, approvesItself: true)
+                    job.selectedSpaces = Set(reachable.dropFirst().map(\.id))
+                    installation = job
+                    await job.start()
+                    if installation === job { installation = nil }
+                    if job.completed { added.append(job.questionName ?? next.name) } else { failed.append(next.name) }
                     break
                 }
                 try? await Task.sleep(for: .milliseconds(250))
@@ -457,6 +482,8 @@ final class ChromiumExtensionStore {
     }
 }
 
+extension ChromiumExtensionStore: BrowserImportedExtensionInstalling {}
+
 /// Owns the menu item closures; `NSMenuItem.target` is weak, so this has to
 /// outlive the menu's tracking loop.
 @MainActor private final class ExtensionMenuHandler: NSObject {
@@ -508,11 +535,19 @@ final class ChromiumExtensionInstallation {
     @ObservationIgnored private var canceled = false
     @ObservationIgnored private var targetSpace: BrowserSpaceIdentity?
 
-    init(id: String, space: BrowserSpaceIdentity, window: NSWindow, store: ChromiumExtensionStore) {
+    /// Whether the install accepts the engine's question itself, as an
+    /// import's does: the person chose the extension when they reviewed it.
+    private let approvesItself: Bool
+
+    init(
+        id: String, space: BrowserSpaceIdentity, window: NSWindow, store: ChromiumExtensionStore,
+        approvesItself: Bool = false
+    ) {
         self.id = id
         self.space = space
         self.window = window
         self.store = store
+        self.approvesItself = approvesItself
     }
     var isAuthorized: Bool { store.authorized(space) && (targetSpace.map { store.authorized($0) } ?? true) }
     var destinations: [BrowserSpaceIdentity] {
@@ -532,10 +567,11 @@ final class ChromiumExtensionInstallation {
             try await installPackage(in: space)
             installedCount = 1
             // Freeze the explicitly reviewed targets and package; every copy is
-            // independently verified by Chromium and keeps its own profile data.
+            // independently verified by Chromium and keeps its own profile data,
+            // so a Space that refuses its copy leaves the others to install.
             for target in approvedDestinations {
                 guard !canceled else { return }
-                try await installPackage(in: target)
+                guard (try? await installPackage(in: target)) != nil else { continue }
                 installedCount += 1
             }
             completed = true
@@ -608,6 +644,13 @@ final class ChromiumExtensionInstallation {
         question = review
         canWithhold = review.canWithholdSiteAccess
         withhold = review.withholdsSiteAccess
+        if approvesItself {
+            approvedIdentity = Self.consentIdentity(of: review)
+            approvedDestinations = destinations.filter { selectedSpaces.contains($0.id) }
+            installing = true
+            reply(true, withhold)
+            return
+        }
         consent = reply
         preparing = false
         Task { @MainActor [weak self] in

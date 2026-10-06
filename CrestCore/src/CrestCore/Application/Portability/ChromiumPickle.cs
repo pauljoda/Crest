@@ -39,6 +39,13 @@ internal ref struct ChromiumPickle {
         return value;
     }
 
+    public ulong? UInt64() {
+        if (position + 8 > contents.Length || position + 8 > end) return null;
+        ulong value = BinaryPrimitives.ReadUInt64LittleEndian(contents[position..]);
+        position += 8;
+        return value;
+    }
+
     /// A UTF-8 string of at most `maximumBytes`.
     public string? Utf8(int maximumBytes) {
         if (Int32() is not { } length || length < 0 || length > maximumBytes || length > end - position) return null;

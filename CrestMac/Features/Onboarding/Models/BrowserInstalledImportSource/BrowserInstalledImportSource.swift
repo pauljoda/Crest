@@ -20,13 +20,29 @@ struct BrowserDetectedImportPayload: Equatable, Sendable {
     }
 }
 
+/// A browser setup can import from: one Crest knows, or another browser built
+/// on Chromium that setup found by looking, which reads as `ImportSource.otherChromium`
+/// under its own name and icon.
 struct BrowserInstalledImportSource: Identifiable {
     let application: ImportSource
     let applicationURL: URL
     let detectedPayload: BrowserDetectedImportPayload
     let icon: NSImage
+    /// The name the browser goes by.
+    let title: String
 
-    var id: ImportSource { application }
+    init(
+        application: ImportSource, applicationURL: URL, detectedPayload: BrowserDetectedImportPayload, icon: NSImage,
+        title: String? = nil
+    ) {
+        self.application = application
+        self.applicationURL = applicationURL
+        self.detectedPayload = detectedPayload
+        self.icon = icon
+        self.title = title ?? application.title
+    }
+
+    var id: URL { applicationURL }
 
     var hasDetectedData: Bool {
         detectedPayload.profiles.contains {

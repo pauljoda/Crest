@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import Observation
 
@@ -18,14 +19,23 @@ final class BrowserOnboardingFlow {
 
     private(set) var request: BrowserOnboardingRequest
     private(set) var installedSources: [BrowserInstalledImportSource] = []
+    /// The browsers setup found by looking, once the person asked it to look.
+    private(set) var unlistedSources: [BrowserInstalledImportSource] = []
+    private(set) var hasLookedForUnlistedSources = false
+    /// The found browser `ImportSource.otherChromium` imports, by its app.
+    private(set) var chosenUnlistedSourceURL: URL?
     private(set) var isChoosingDataAccess = false
     private(set) var isCompletingSetup = false
     private(set) var completionFailure: String?
+    /// The icons the extensions the browsers read offer wear, by identifier.
+    private(set) var extensionIcons: [String: NSImage] = [:]
 
     @ObservationIgnored private let sourceDiscovery: any BrowserInstalledImportSourceDiscovering
     @ObservationIgnored private let dataAccessProvider: any BrowserOnboardingDataAccessProviding
     @ObservationIgnored private let importCommitter: any BrowserOnboardingImportCommitting
     @ObservationIgnored private let importReadCoordinator: BrowserOnboardingImportReadCoordinator
+    /// What installs the extensions an import brings, when the engine runs any.
+    @ObservationIgnored private let extensionInstaller: (any BrowserImportedExtensionInstalling)?
     /// The data of the browser being read, which its passwords come from.
     @ObservationIgnored private var currentImportPayload: BrowserDetectedImportPayload?
     @ObservationIgnored private var commitTask: Task<Void, Never>?
@@ -96,13 +106,15 @@ final class BrowserOnboardingFlow {
         sourceDiscovery: any BrowserInstalledImportSourceDiscovering = LiveBrowserInstalledImportSourceDiscovery(),
         dataAccessProvider: any BrowserOnboardingDataAccessProviding = LiveBrowserOnboardingDataAccessProvider(),
         importReader: (any BrowserOnboardingImportReading)? = nil,
-        importCommitter: any BrowserOnboardingImportCommitting = LiveBrowserOnboardingImportCommitter()
+        importCommitter: any BrowserOnboardingImportCommitting = LiveBrowserOnboardingImportCommitter(),
+        extensionInstaller: (any BrowserImportedExtensionInstalling)? = nil
     ) {
         self.request = request
         self.browser = browser
         self.sourceDiscovery = sourceDiscovery
         self.dataAccessProvider = dataAccessProvider
         self.importCommitter = importCommitter
+        self.extensionInstaller = extensionInstaller
         importReadCoordinator = BrowserOnboardingImportReadCoordinator(
             reader: importReader ?? LiveBrowserOnboardingImportReader(core: browser.core))
         manualSetup = BrowserManualSetupModel(core: browser.core)
@@ -124,7 +136,50 @@ final class BrowserOnboardingFlow {
 
     private func offerInstalledSources() {
         guard state != nil else { return }
-        send(OfferImportSources(installed: installedSources.map(\.application)))
+        let unlisted: [ImportSource] = unlistedSources.isEmpty ? [] : [.otherChromium]
+        send(OfferImportSources(installed: installedSources.map(\.application) + unlisted))
+    }
+
+    /// Looks for the browsers built on Chromium that setup does not list, and
+    /// offers them beside the listed ones.
+    func lookForUnlistedSources() {
+        guard !isImportSelectionLocked else { return }
+        unlistedSources = sourceDiscovery.unlistedSources()
+        hasLookedForUnlistedSources = true
+        offerInstalledSources()
+    }
+
+    /// Every browser setup offers: the listed ones, then those it found.
+    var offeredSources: [BrowserInstalledImportSource] { installedSources + unlistedSources }
+
+    func isSelected(_ source: BrowserInstalledImportSource) -> Bool {
+        guard selectedImportApplications.contains(source.application) else { return false }
+        return source.application != .otherChromium || source.applicationURL == chosenUnlistedSourceURL
+    }
+
+    /// Chooses `source` or leaves it out. One found browser imports at a time,
+    /// so choosing another found browser takes its place.
+    func toggleSelection(_ source: BrowserInstalledImportSource) {
+        guard !isImportSelectionLocked else { return }
+        guard source.application == .otherChromium else {
+            toggleImportSelection(source.application)
+            return
+        }
+        let isChosen = selectedImportApplications.contains(.otherChromium)
+        if isChosen, source.applicationURL != chosenUnlistedSourceURL {
+            chosenUnlistedSourceURL = source.applicationURL
+            return
+        }
+        chosenUnlistedSourceURL = isChosen ? nil : source.applicationURL
+        toggleImportSelection(.otherChromium)
+    }
+
+    /// The browser `application` reads from: the listed one, or the found one chosen.
+    func offeredSource(_ application: ImportSource) -> BrowserInstalledImportSource? {
+        guard application == .otherChromium else {
+            return installedSources.first { $0.application == application }
+        }
+        return unlistedSources.first { $0.applicationURL == chosenUnlistedSourceURL }
     }
 
     func reset(for request: BrowserOnboardingRequest) {
@@ -220,7 +275,7 @@ final class BrowserOnboardingFlow {
     /// Reads the browser the core is on, when it is reading one.
     private func readCurrentSource() {
         guard let state, state.phase == .reading, let application = state.source else { return }
-        guard let source = installedSources.first(where: { $0.application == application }) else {
+        guard let source = offeredSource(application) else {
             send(FailImport(source: application, reason: .sourceUnavailable, detail: nil))
             return
         }
@@ -288,11 +343,15 @@ final class BrowserOnboardingFlow {
     ) {
         do {
             let output = try result.get()
+            extensionIcons.merge(output.extensionIcons.compactMapValues(NSImage.init(data:))) { _, read in read }
             _ = try browser.core.send(
                 ReviewImport(
                     source: application, spaces: output.imported.map(\.seed),
                     passwords: output.passwordCandidates.map(\.routingSource),
-                    extensions: output.extensions))
+                    // An engine that runs no extensions is offered none to install.
+                    extensions: extensionInstaller == nil ? [] : output.extensions,
+                    leftOut: output.leftOut,
+                    title: offeredSource(application)?.title))
         } catch {
             send(FailImport(source: application, reason: .read, detail: error.personFacingDescription))
         }
@@ -326,6 +385,14 @@ final class BrowserOnboardingFlow {
 
     func setExtensionIncluded(_ extensionID: String, _ isIncluded: Bool, in sourceSpaceID: UUID) {
         send(IncludeImportExtension(sourceSpaceID: sourceSpaceID, extensionID: extensionID, included: isIncluded))
+    }
+
+    /// Turns every extension the reviewed Space `sourceSpaceID` offers on or off.
+    func setExtensionsIncluded(_ isIncluded: Bool, in sourceSpaceID: UUID) {
+        guard let review = reviewSpaces.first(where: { $0.id == sourceSpaceID }) else { return }
+        for item in review.extensions where review.includedExtensionIDs.contains(item.extensionID) != isIncluded {
+            setExtensionIncluded(item.extensionID, isIncluded, in: sourceSpaceID)
+        }
     }
 
     /// Gives the reviewed Space `sourceSpaceID` `customization`, which the
@@ -466,7 +533,9 @@ final class BrowserOnboardingFlow {
             switch outcome {
             case .success(let passwords):
                 currentImportPayload = nil
-                BrowserImportedExtensionInstaller.install(brought: review)
+                if let extensionInstaller, !review.extensionInstalls.isEmpty {
+                    extensionInstaller.installImported(review.extensionInstalls)
+                }
                 send(FinishImportCommit(passwordCount: passwords.importedCount))
                 readCurrentSource()
             case .failure(let error):

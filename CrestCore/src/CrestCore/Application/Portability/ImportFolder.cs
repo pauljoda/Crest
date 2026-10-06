@@ -58,11 +58,34 @@ internal readonly record struct ImportFolder(string Path) {
                     return names.Contains(name) || (prefixes ?? []).Any(prefix => name.StartsWith(prefix, StringComparison.Ordinal));
                 })
                 .Order(StringComparer.Ordinal)
-                .Select(path => (Path: path, Changed: System.IO.File.GetLastWriteTimeUtc(path)))
+                .Select(path => (Path: path, Changed: Changed(path)))
                 .Aggregate(((string Path, DateTime Changed)?)null, (newest, file) => newest is null || file.Changed > newest.Value.Changed
                     ? file : newest)?.Path;
         } catch (Exception error) when (error is IOException or UnauthorizedAccessException) {
             return null;
+        }
+    }
+
+    /// The files directly inside this folder whose names `named` accepts, the
+    /// most recently changed first, and in the order of their names when
+    /// changed at once.
+    public IReadOnlyList<string> Recent(Func<string, bool> named) {
+        ArgumentNullException.ThrowIfNull(named);
+        try {
+            return [.. Directory.EnumerateFiles(Path, "*", Flat).Where(path => named(System.IO.Path.GetFileName(path)))
+                .Order(StringComparer.Ordinal).OrderByDescending(Changed)];
+        } catch (Exception error) when (error is IOException or UnauthorizedAccessException) {
+            return [];
+        }
+    }
+
+    /// When the file at `path` last changed, or never when that cannot be
+    /// read.
+    public static DateTime Changed(string path) {
+        try {
+            return System.IO.File.GetLastWriteTimeUtc(path);
+        } catch (Exception error) when (error is IOException or UnauthorizedAccessException or ArgumentException) {
+            return DateTime.MinValue;
         }
     }
 

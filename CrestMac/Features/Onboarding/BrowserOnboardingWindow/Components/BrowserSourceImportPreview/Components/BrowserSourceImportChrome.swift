@@ -2,6 +2,8 @@ import SwiftUI
 
 struct BrowserSourceImportChrome: View {
     let application: ImportSource?
+    /// The name of the browser the review brings from.
+    var title: String?
 
     var body: some View {
         VStack(spacing: 7) {
@@ -11,7 +13,7 @@ struct BrowserSourceImportChrome: View {
                     .opacity(0.45)
                 Spacer()
                 Label(
-                    application?.title ?? "Browser",
+                    title ?? application?.title ?? "Browser",
                     systemImage: application?.symbol ?? "globe"
                 )
                 .labelStyle(.iconOnly)

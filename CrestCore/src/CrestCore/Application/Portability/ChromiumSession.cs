@@ -4,7 +4,8 @@ using CrestCore.Contracts;
 
 namespace CrestCore.Application;
 
-/// A Chromium session file, as Chrome and Arc write it: `SNSS`, version 3,
+/// A Chromium session file, as Chrome, Arc and the other browsers built on
+/// Chromium write it: `SNSS`, version 3,
 /// then commands that each change a window or tab, replayed in order. A
 /// version 5 file is encrypted with its profile's key and cannot be read
 /// outside its browser.
@@ -21,6 +22,11 @@ internal sealed class ChromiumSession {
     /// The page state a navigation carries, which a reader skips.
     private const int MaximumPageStateBytes = 8 * 1024 * 1024;
     private const int MaximumWindowTitleBytes = 4_096;
+    private const int MaximumGroupTitleUnits = 4_096;
+    /// Where a tab's group or split token and whether it has one sit in the
+    /// command that sets it, as Chromium lays its struct out.
+    private const int TokenOffset = 8;
+    private const int TokenFlagOffset = 24;
 
     #endregion
 
@@ -33,7 +39,12 @@ internal sealed class ChromiumSession {
         public Dictionary<int, Navigation> Navigations { get; set; } = [];
         public bool IsPinned { get; set; }
         public DateTimeOffset LastActivatedAt { get; set; } = lastActivatedAt;
+        /// The tab group and split view the tab is in, by their tokens.
+        public string? Group { get; set; }
+        public string? Split { get; set; }
     }
+
+    private sealed record Group(string Title, TabGroupColor Color);
 
     private sealed class Window {
         public int SelectedVisualIndex { get; set; }
@@ -51,6 +62,7 @@ internal sealed class ChromiumSession {
     private readonly Dictionary<int, Window> windows = [];
     private readonly HashSet<int> closedTabs = [];
     private readonly HashSet<int> closedWindows = [];
+    private readonly Dictionary<string, Group> groups = new(StringComparer.Ordinal);
     private int? activeWindow;
     private bool hasInitialState;
 
@@ -71,7 +83,9 @@ internal sealed class ChromiumSession {
     /// its tabs in order. A tab not active since the session began is dated
     /// `importedAt`. Throws `Rejected` with `SessionEncrypted` or
     /// `SessionUnrecognized`.
-    public static IReadOnlyList<SessionDraft> Read(ReadOnlySpan<byte> contents, DateTimeOffset importedAt) {
+    public static IReadOnlyList<SessionDraft> Read(ReadOnlySpan<byte> contents, DateTimeOffset importedAt,
+        ChromiumSessionDialect? dialect = null) {
+        dialect ??= ChromiumSessionDialect.Chromium;
         if (contents.Length < 8 || !Recognizes(contents)) throw new Rejected(new SessionUnrecognized());
         uint version = BinaryPrimitives.ReadUInt32LittleEndian(contents[4..]);
         if (version == EncryptedVersion) throw new Rejected(new SessionEncrypted());
@@ -82,9 +96,9 @@ internal sealed class ChromiumSession {
             if (contents.Length - position < 2) throw new Rejected(new SessionUnrecognized());
             int size = BinaryPrimitives.ReadUInt16LittleEndian(contents[position..]);
             if (size < 1 || size > contents.Length - position - 2) throw new Rejected(new SessionUnrecognized());
-            byte command = contents[position + 2];
             var payload = contents.Slice(position + 3, size - 1);
-            if (ChromiumSessionCommand.Of(command) is { } known && !known.Apply(session, payload))
+            if (dialect.Command(contents[position + 2]) is { } command && ChromiumSessionCommand.Of(command) is { } known
+                && !known.Apply(session, payload))
                 throw new Rejected(new SessionUnrecognized());
             position += 2 + size;
         }
@@ -102,10 +116,16 @@ internal sealed class ChromiumSession {
                 .Select(pair => (Tab: pair.Value, Navigation: Selected(pair.Value)))
                 .Where(pair => pair.Navigation is not null)
                 .Select(pair => new SessionTab(pair.Navigation!.Title, pair.Navigation.Address,
-                    pair.Tab.IsPinned ? TabPlacement.Pinned : TabPlacement.Current, FolderSourceId: null, pair.Tab.LastActivatedAt))
+                    pair.Tab.IsPinned ? TabPlacement.Pinned : TabPlacement.Current, pair.Tab.IsPinned ? null : pair.Tab.Group,
+                    pair.Tab.LastActivatedAt, pair.Tab.Split))
                 .ToArray();
             if (shown.Length == 0) continue;
-            drafts.Add(new SessionDraft(ordinals[windowId], windows[windowId].Title, [], shown));
+            // Each tab group the window's open tabs are in becomes a folder among them, in the group's color.
+            SessionFolder[] folders = [.. shown.Select(tab => tab.FolderSourceId).OfType<string>().Distinct(StringComparer.Ordinal)
+                .Select(token => groups.TryGetValue(token, out var group)
+                    ? new SessionFolder(token, group.Title, ParentSourceId: null, TabPlacement.Current, group.Color)
+                    : new SessionFolder(token, "", ParentSourceId: null, TabPlacement.Current, TabGroupColor.Grey))];
+            drafts.Add(new SessionDraft(ordinals[windowId], windows[windowId].Title, folders, shown));
         }
         if (activeWindow is { } active && ordinals.TryGetValue(active, out int ordinal)
             && drafts.FindIndex(draft => draft.Ordinal == ordinal) is > 0 and var index) {
@@ -207,6 +227,34 @@ internal sealed class ChromiumSession {
         return true;
     }
 
+    /// The tab group a tab joins or leaves. A payload Chromium does not lay
+    /// out this way, as another browser built on it may write under the same
+    /// command, changes nothing.
+    internal bool SetTabGroup(ReadOnlySpan<byte> payload) => SetToken(payload, (tab, token) => tab.Group = token);
+
+    /// The split view a tab joins or leaves, read as `SetTabGroup` is.
+    internal bool SetSplitTab(ReadOnlySpan<byte> payload) => SetToken(payload, (tab, token) => tab.Split = token);
+
+    /// A tab group's title and color. One that does not read as Chromium
+    /// writes it changes nothing.
+    internal bool SetTabGroupMetadata(ReadOnlySpan<byte> payload) {
+        var pickle = new ChromiumPickle(payload);
+        if (pickle.IsValid && pickle.UInt64() is { } high && pickle.UInt64() is { } low && pickle.Utf16(MaximumGroupTitleUnits) is { } title
+            && pickle.Int32() is { } color)
+            groups[Token(high, low)] = new Group(title, color >= 0 && color < TabGroupColor.All.Count ? TabGroupColor.All[color] : TabGroupColor.Grey);
+        return true;
+    }
+
+    private bool SetToken(ReadOnlySpan<byte> payload, Action<Tab, string?> set) {
+        if (Int32(payload, 0) is not { } tab || payload.Length <= TokenFlagOffset) return true;
+        string? token = payload[TokenFlagOffset] == 0 ? null
+            : Token(BinaryPrimitives.ReadUInt64LittleEndian(payload[TokenOffset..]), BinaryPrimitives.ReadUInt64LittleEndian(payload[(TokenOffset + 8)..]));
+        EditTab(tab, value => set(value, token));
+        return true;
+    }
+
+    private static string Token(ulong high, ulong low) => $"{high:x16}{low:x16}";
+
     internal bool SetWindowTitle(ReadOnlySpan<byte> payload) {
         var pickle = new ChromiumPickle(payload);
         if (!pickle.IsValid || pickle.Int32() is not { } window || pickle.Utf8(MaximumWindowTitleBytes) is not { } title) return false;
@@ -214,9 +262,11 @@ internal sealed class ChromiumSession {
         return true;
     }
 
+    /// Chromium's marker that the commands before it restore the session is
+    /// empty. Opera writes its own records under the same command, which
+    /// carry data and mark nothing.
     internal bool MarkInitialState(ReadOnlySpan<byte> payload) {
-        if (!payload.IsEmpty) return false;
-        hasInitialState = true;
+        if (payload.IsEmpty) hasInitialState = true;
         return true;
     }
 

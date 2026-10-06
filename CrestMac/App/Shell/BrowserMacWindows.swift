@@ -348,7 +348,8 @@ final class BrowserMacWindows {
                 BrowserOnboardingWindow(
                     request: request, browser: source?.browser ?? application.browser,
                     cloudSync: application.cloudSync, progress: application.onboardingProgress,
-                    spaceAccess: application.spaceAccess, closeWindow: { [weak window] in window?.close() },
+                    spaceAccess: application.spaceAccess, extensionInstaller: engineHost.importedExtensionInstaller,
+                    closeWindow: { [weak window] in window?.close() },
                     openBrowser: { [weak self] in self?.openBrowser(after: source?.id) })
             },
             closed: { [weak self] controller in self?.forget(controller) })

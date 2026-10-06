@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 
@@ -10,7 +11,9 @@ namespace CrestCore.Application;
 /// `Preferences` files keep for each extension, and from the extension's own
 /// manifest for a name the settings do not spell out. Those turned off, built
 /// in, loaded from a folder, or that are themes or apps are left out, as
-/// Crest installs only what the Web Store gives it by identifier.
+/// Crest installs only what the Web Store gives it by identifier; so is one
+/// that updates from another browser's store, whose identifiers are not the
+/// Web Store's. Opera keeps its settings under `extensions.opsettings`.
 internal static partial class ChromiumExtensions {
     #region Static Variables
 
@@ -19,13 +22,19 @@ internal static partial class ChromiumExtensions {
     /// The largest settings or message file an import reads.
     private const long MaximumBytes = 50L * 1024 * 1024;
     private const long MaximumMessageBytes = 1024 * 1024;
+    /// The largest icon an offer wears, in pixels: enough for a toolbar tile.
+    private const int MaximumIconSize = 128;
     /// Chrome's `ManifestLocation::kInternal`, where it puts what the person
     /// installed from the Web Store.
     private const long InternalLocation = 1;
     private const string MessagePrefix = "__MSG_";
     private const string MessageSuffix = "__";
 
+    /// The Web Store's update service, which a manifest the store served names.
+    private const string WebStoreUpdateHost = "clients2.google.com";
+
     private static readonly string[] SettingsFiles = ["Preferences", "Secure Preferences"];
+    private static readonly string[] SettingsKeys = ["settings", "opsettings"];
     private static readonly string[] FallbackLocales = ["en", "en_US", "en_GB"];
 
     #endregion
@@ -42,12 +51,13 @@ internal static partial class ChromiumExtensions {
             foreach (string name in SettingsFiles) {
                 if (Document(profile, name) is not { } document) continue;
                 documents.Add(document);
-                var entries = ImportJson.Member(ImportJson.Member(document.RootElement, "extensions"), "settings");
-                foreach (var entry in ImportJson.Members(entries))
-                    if (IsIdentifier(entry.Name) && entry.Value.ValueKind == JsonValueKind.Object) settings[entry.Name] = entry.Value;
+                var extensions = ImportJson.Member(document.RootElement, "extensions");
+                foreach (string key in SettingsKeys)
+                    foreach (var entry in ImportJson.Members(ImportJson.Member(extensions, key)))
+                        if (IsIdentifier(entry.Name) && entry.Value.ValueKind == JsonValueKind.Object) settings[entry.Name] = entry.Value;
             }
             return [.. settings.Where(entry => IsWebStoreExtension(entry.Value))
-                .Select(entry => new ImportExtension(entry.Key, Name(profile, entry.Key, entry.Value)))
+                .Select(entry => Offer(profile, entry.Key, entry.Value)).OfType<ImportExtension>()
                 .OrderBy(extension => extension.Name, StringComparer.CurrentCultureIgnoreCase)
                 .ThenBy(extension => extension.ExtensionId, StringComparer.Ordinal).Take(MaximumCount)];
         } finally {
@@ -80,23 +90,36 @@ internal static partial class ChromiumExtensions {
 
     #endregion
 
-    #region Actions - Names
+    #region Actions - Offers
+
+    /// The extension `id` offers, as its settings and its installed folder
+    /// describe it, or null for one another store serves. The settings keep a
+    /// copy of the manifest that may leave out what the extension's own
+    /// manifest file says.
+    private static ImportExtension? Offer(ImportFolder profile, string id, JsonElement settings) {
+        var manifest = ImportJson.Member(settings, "manifest");
+        var folder = Installed(profile, id, ImportJson.Text(ImportJson.Member(manifest, "version")));
+        using var stored = folder is { } installed ? Read(installed, "manifest.json", MaximumMessageBytes) : null;
+        var file = stored?.RootElement;
+        if (!UpdatesFromWebStore(manifest, file)) return null;
+        return new(id, Name(folder, id, manifest, file), folder is { } kept ? Icon(kept, manifest, file) : null);
+    }
+
+    /// Whether the manifest names the Web Store's update service, or none: a
+    /// browser with its own store, as Edge has, marks what it installs from
+    /// there as from its store too.
+    private static bool UpdatesFromWebStore(JsonElement? manifest, JsonElement? stored) =>
+        (ImportJson.Text(ImportJson.Member(manifest, "update_url")) ?? ImportJson.Text(ImportJson.Member(stored, "update_url"))) is not { } url
+        || (Uri.TryCreate(url, UriKind.Absolute, out var address)
+            && string.Equals(address.Host, WebStoreUpdateHost, StringComparison.OrdinalIgnoreCase));
 
     /// The name `id` shows: its manifest's, with a message in the manifest's
-    /// own language, or `id` itself when nothing names it. The settings keep
-    /// a copy of the manifest that may leave out what the extension's own
-    /// manifest file says.
-    private static string Name(ImportFolder profile, string id, JsonElement settings) {
-        var manifest = ImportJson.Member(settings, "manifest");
-        string? name = ImportJson.Text(ImportJson.Member(manifest, "name"));
-        string? version = ImportJson.Text(ImportJson.Member(manifest, "version"));
-        string? locale = ImportJson.Text(ImportJson.Member(manifest, "default_locale"));
-        if (name is null || (Message(name) is not null && locale is null)) {
-            using var stored = Manifest(profile, id, version);
-            name ??= ImportJson.Text(ImportJson.Member(stored?.RootElement, "name"));
-            locale ??= ImportJson.Text(ImportJson.Member(stored?.RootElement, "default_locale"));
-        }
-        if (name is not null && Message(name) is { } key) name = Localized(profile, id, version, locale, key);
+    /// own language, or `id` itself when nothing names it.
+    private static string Name(ImportFolder? folder, string id, JsonElement? manifest, JsonElement? stored) {
+        string? name = ImportJson.Text(ImportJson.Member(manifest, "name")) ?? ImportJson.Text(ImportJson.Member(stored, "name"));
+        string? locale = ImportJson.Text(ImportJson.Member(manifest, "default_locale"))
+            ?? ImportJson.Text(ImportJson.Member(stored, "default_locale"));
+        if (name is not null && Message(name) is { } key) name = folder is { } installed ? Localized(installed, locale, key) : null;
         return name?.Trim() is { Length: > 0 } trimmed ? trimmed : id;
     }
 
@@ -107,8 +130,7 @@ internal static partial class ChromiumExtensions {
 
     /// What the message `key` says in `locale`, the extension's default
     /// language, or in English, or null when its files do not say.
-    private static string? Localized(ImportFolder profile, string id, string? version, string? locale, string key) {
-        if (Installed(profile, id, version) is not { } folder) return null;
+    private static string? Localized(ImportFolder folder, string? locale, string key) {
         List<string> locales = [];
         if (locale is not null) locales.Add(locale);
         locales.AddRange(FallbackLocales);
@@ -121,6 +143,19 @@ internal static partial class ChromiumExtensions {
                     && ImportJson.Text(ImportJson.Member(entry.Value, "message")) is { } message) return message;
         }
         return null;
+    }
+
+    /// The largest icon up to `MaximumIconSize` pixels the manifest lists that
+    /// is a file inside `folder`, or null when it lists none.
+    private static string? Icon(ImportFolder folder, JsonElement? manifest, JsonElement? stored) {
+        var icons = ImportJson.Object(ImportJson.Member(manifest, "icons")) ?? ImportJson.Object(ImportJson.Member(stored, "icons"));
+        return ImportJson.Members(icons)
+            .Select(entry => (Size: int.TryParse(entry.Name, NumberStyles.None, CultureInfo.InvariantCulture, out int size) ? size : 0,
+                Path: ImportJson.Text(entry.Value)))
+            .Where(icon => icon.Size is > 0 and <= MaximumIconSize && icon.Path is { Length: > 0 })
+            .OrderByDescending(icon => icon.Size)
+            .Select(icon => Within(folder, icon.Path!))
+            .FirstOrDefault(path => path is not null);
     }
 
     #endregion
@@ -142,8 +177,14 @@ internal static partial class ChromiumExtensions {
     private static bool IsUnsafe(string name) =>
         name.Contains('/') || name.Contains('\\') || name.Contains("..", StringComparison.Ordinal);
 
-    private static JsonDocument? Manifest(ImportFolder profile, string id, string? version) =>
-        Installed(profile, id, version) is { } folder ? Read(folder, "manifest.json", MaximumMessageBytes) : null;
+    /// The file `relative` names inside `folder`, where it is one there.
+    private static string? Within(ImportFolder folder, string relative) {
+        string[] parts = relative.Split('/', '\\', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length == 0 || parts.Any(part => part == "..")) return null;
+        string root = Path.GetFullPath(folder.Path);
+        string path = Path.GetFullPath(Path.Combine([root, .. parts]));
+        return path.StartsWith(root + Path.DirectorySeparatorChar, StringComparison.Ordinal) && File.Exists(path) ? path : null;
+    }
 
     private static JsonDocument? Document(ImportFolder profile, string name) => Read(profile, name, MaximumBytes);
 

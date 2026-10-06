@@ -13,8 +13,17 @@ namespace CrestCore.Contracts;
 /// profiles, named after the profile.
 ///
 /// A source travels as its index in `All`, so `All` is append-only.
+///
+/// The browsers built on Chromium keep Chrome's layout, each in its own
+/// folder and Keychain item. `OtherChromium` stands for one such browser Crest
+/// does not list, which setup finds by looking: the platform names and shows
+/// it as that browser, and reads it where the core found its data. Its
+/// passwords stay where they are, since no Keychain item is known for it.
 public sealed class ImportSource {
     #region Static Variables
+
+    /// Where a Mac keeps applications' data, relative to the person's home folder.
+    private const string ApplicationSupport = "Library/Application Support";
 
     public static readonly ImportSource Arc = new(name: "arc", title: "Arc", bundleIdentifier: "company.thebrowser.Browser",
         dataFolder: "Library/Application Support/Arc", description: "Spaces, tabs, folders, colors, icons, and passwords",
@@ -36,8 +45,39 @@ public sealed class ImportSource {
     public static readonly ImportSource Firefox = new(name: "firefox", title: "Firefox", bundleIdentifier: "org.mozilla.firefox",
         dataFolder: "Library/Application Support/Firefox/Profiles", description: "Windows, open tabs, and pinned tabs",
         symbol: "flame", accent: SpaceAccent.Rose, spaceHeaderStyle: ImportSpaceHeaderStyle.Identity);
+    public static readonly ImportSource ChromeBeta = ChromiumFamily(name: "chromeBeta", title: "Chrome Beta",
+        bundleIdentifier: "com.google.Chrome.beta", dataFolder: "Google/Chrome Beta", safeStorageService: "Chrome Safe Storage",
+        symbol: "globe", accent: SpaceAccent.Orange);
+    public static readonly ImportSource ChromeDev = ChromiumFamily(name: "chromeDev", title: "Chrome Dev", bundleIdentifier: "com.google.Chrome.dev",
+        dataFolder: "Google/Chrome Dev", safeStorageService: "Chrome Safe Storage", symbol: "globe", accent: SpaceAccent.Orange);
+    public static readonly ImportSource ChromeCanary = ChromiumFamily(name: "chromeCanary", title: "Chrome Canary",
+        bundleIdentifier: "com.google.Chrome.canary", dataFolder: "Google/Chrome Canary", safeStorageService: "Chrome Safe Storage",
+        symbol: "bird", accent: SpaceAccent.Orange);
+    public static readonly ImportSource Chromium = ChromiumFamily(name: "chromium", title: "Chromium", bundleIdentifier: "org.chromium.Chromium",
+        dataFolder: "Chromium", safeStorageService: "Chromium Safe Storage", symbol: "circle.circle", accent: SpaceAccent.Teal);
+    public static readonly ImportSource Brave = ChromiumFamily(name: "brave", title: "Brave", bundleIdentifier: "com.brave.Browser",
+        dataFolder: "BraveSoftware/Brave-Browser", safeStorageService: "Brave Safe Storage", symbol: "shield.lefthalf.filled",
+        accent: SpaceAccent.Orange);
+    public static readonly ImportSource Edge = ChromiumFamily(name: "edge", title: "Microsoft Edge", bundleIdentifier: "com.microsoft.edgemac",
+        dataFolder: "Microsoft Edge", safeStorageService: "Microsoft Edge Safe Storage", symbol: "water.waves", accent: SpaceAccent.Teal);
+    public static readonly ImportSource Vivaldi = ChromiumFamily(name: "vivaldi", title: "Vivaldi", bundleIdentifier: "com.vivaldi.Vivaldi",
+        dataFolder: "Vivaldi", safeStorageService: "Vivaldi Safe Storage", symbol: "v.circle.fill", accent: SpaceAccent.Rose);
+    public static readonly ImportSource Opera = ChromiumFamily(name: "opera", title: "Opera", bundleIdentifier: "com.operasoftware.Opera",
+        dataFolder: "com.operasoftware.Opera", safeStorageService: "Opera Safe Storage", symbol: "o.circle", accent: SpaceAccent.Rose);
+    public static readonly ImportSource Dia = ChromiumFamily(name: "dia", title: "Dia", bundleIdentifier: "company.thebrowser.dia",
+        dataFolder: "Dia/User Data", safeStorageService: "Dia Safe Storage", symbol: "sparkles", accent: SpaceAccent.Indigo);
+    public static readonly ImportSource Comet = ChromiumFamily(name: "comet", title: "Comet", bundleIdentifier: "ai.perplexity.comet",
+        dataFolder: "Comet", safeStorageService: "Comet Safe Storage", symbol: "sparkle.magnifyingglass", accent: SpaceAccent.Teal);
+    public static readonly ImportSource Aside = ChromiumFamily(name: "aside", title: "Aside", bundleIdentifier: "at.studio.AsideBrowser",
+        dataFolder: "Aside", safeStorageService: "Aside Safe Storage", symbol: "sidebar.right", accent: SpaceAccent.Indigo);
+    public static readonly ImportSource EgoLite = ChromiumFamily(name: "egoLite", title: "ego lite", bundleIdentifier: "com.citrolabs.ego.lite",
+        dataFolder: "Citro Labs/ego lite", safeStorageService: "Chromium Safe Storage", symbol: "e.circle", accent: SpaceAccent.Indigo);
+    public static readonly ImportSource OtherChromium = new(name: "otherChromium", title: "Chromium-based browser", bundleIdentifier: "",
+        dataFolder: ApplicationSupport, description: "Profiles, bookmarks, and open tabs", symbol: "globe", accent: SpaceAccent.Teal,
+        spaceHeaderStyle: ImportSpaceHeaderStyle.Identity, savedSectionTitle: "BOOKMARKS");
 
-    public static IReadOnlyList<ImportSource> All { get; } = [Arc, Zen, Chrome, Safari, Firefox];
+    public static IReadOnlyList<ImportSource> All { get; } = [Arc, Zen, Chrome, Safari, Firefox, ChromeBeta, ChromeDev, ChromeCanary,
+        Chromium, Brave, Edge, Vivaldi, Opera, Dia, Comet, Aside, EgoLite, OtherChromium];
 
     #endregion
 
@@ -138,6 +178,19 @@ public sealed class ImportSource {
     #region Actions - Lookup
 
     public static ImportSource? Named(string? name) => All.FirstOrDefault(source => source.Name == name);
+
+    #endregion
+
+    #region Actions - Construction
+
+    /// A browser built on Chromium that keeps Chrome's layout in `dataFolder`
+    /// below Application Support, and the key to its passwords in the
+    /// Keychain item `safeStorageService`.
+    private static ImportSource ChromiumFamily(string name, string title, string bundleIdentifier, string dataFolder, string safeStorageService,
+        string symbol, SpaceAccent accent) =>
+        new(name: name, title: title, bundleIdentifier: bundleIdentifier, dataFolder: $"{ApplicationSupport}/{dataFolder}",
+            description: "Profiles, bookmarks, open tabs, and passwords", symbol: symbol, accent: accent,
+            spaceHeaderStyle: ImportSpaceHeaderStyle.Identity, safeStorageService: safeStorageService, savedSectionTitle: "BOOKMARKS");
 
     #endregion
 }

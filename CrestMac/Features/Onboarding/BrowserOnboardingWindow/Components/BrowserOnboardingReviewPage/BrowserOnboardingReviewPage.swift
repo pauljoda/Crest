@@ -5,7 +5,6 @@ struct BrowserOnboardingReviewPage: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     let flow: BrowserOnboardingFlow
-    let sources: [BrowserInstalledImportSource]
     @Binding var customizationSpaceID: UUID?
     let back: BrowserOnboardingBackAction
 
@@ -18,6 +17,7 @@ struct BrowserOnboardingReviewPage: View {
                 BrowserOnboardingReviewToolbar(
                     icon: sourceIcon,
                     progressLabel: flow.reviewProgressLabel(for: review),
+                    leftOut: setupReview.leftOut,
                     customize: { customizationSpaceID = review.id }
                 )
                 .disabled(flow.isCommittingImport)
@@ -76,7 +76,7 @@ struct BrowserOnboardingReviewPage: View {
     }
 
     private var sourceIcon: NSImage? {
-        sources.first { $0.application == flow.review?.source }?.icon
+        flow.review.flatMap { flow.offeredSource($0.source) }?.icon
     }
 
     /// The Space the person is looking at, which setup holds.
@@ -117,6 +117,8 @@ struct BrowserOnboardingReviewPage: View {
 private struct BrowserOnboardingReviewToolbar: View {
     let icon: NSImage?
     let progressLabel: String
+    /// What the browser held that the import cannot bring, and why.
+    let leftOut: [ImportLeftOut]
     let customize: () -> Void
 
     var body: some View {
@@ -133,9 +135,16 @@ private struct BrowserOnboardingReviewToolbar: View {
                         BrowserOnboardingTypography.sans(14, weight: .bold)
                     )
                     .foregroundStyle(BrowserOnboardingPalette.ink)
-                Text(progressLabel)
-                    .font(.caption)
-                    .foregroundStyle(BrowserOnboardingPalette.inkSoft)
+                HStack(spacing: 6) {
+                    Text(progressLabel)
+                        .foregroundStyle(BrowserOnboardingPalette.inkSoft)
+                    if !leftOut.isEmpty {
+                        Text(verbatim: "·")
+                            .foregroundStyle(BrowserOnboardingPalette.inkSoft)
+                        BrowserOnboardingReviewLeftOutMenu(leftOut: leftOut)
+                    }
+                }
+                .font(.caption)
             }
 
             Spacer(minLength: 8)
@@ -265,5 +274,29 @@ private struct BrowserOnboardingReviewFooter: View {
                 .fill(BrowserOnboardingPalette.line)
                 .frame(height: 1)
         }
+    }
+}
+
+/// What an import leaves out, behind a count: each profile or Space the
+/// browser held that Crest cannot bring, with why.
+private struct BrowserOnboardingReviewLeftOutMenu: View {
+    let leftOut: [ImportLeftOut]
+
+    var body: some View {
+        Menu {
+            ForEach(Array(leftOut.enumerated()), id: \.offset) { _, item in
+                Section(item.name) {
+                    Text(item.reason.explanation)
+                }
+            }
+        } label: {
+            Text(BrowserOnboardingSummary.leftOutCount(leftOut.count))
+                .foregroundStyle(BrowserOnboardingPalette.coral)
+        }
+        .menuStyle(.button)
+        .buttonStyle(.plain)
+        .menuIndicator(.hidden)
+        .fixedSize()
+        .accessibilityHint("Shows what the import leaves out and why")
     }
 }

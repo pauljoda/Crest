@@ -23,14 +23,16 @@ internal static class SafariSession {
     private static readonly string[] SessionTitleKeys = ["Title", "Name"];
     private static readonly string[] PinnedKeys = ["Pinned", "IsPinned", "pinned"];
     private static readonly string[] TimeKeys = ["LastActive", "LastAccessed", "DateVisited", "lastAccessed"];
+    /// Where Safari keeps the pinned tabs every window shows. Private ones
+    /// stay where they are.
+    private const string PinnedTabsKey = "SessionPinnedTabs";
 
     #endregion
 
     #region Actions - Reading
 
     /// The windows the session holds. Throws `Rejected` with
-    /// `SessionUnrecognized` for a file that is not a property list, and
-    /// `SessionOverLimits` for a window holding more than Crest keeps.
+    /// `SessionUnrecognized` for a file that is not a property list.
     public static IReadOnlyList<SessionDraft> Read(byte[] contents, DateTimeOffset importedAt) {
         var list = PropertyList.Read(contents) ?? throw new Rejected(new SessionUnrecognized());
         var root = Dictionary(list);
@@ -38,7 +40,7 @@ internal static class SafariSession {
             List<SessionDraft> drafts = [];
             for (int index = 0; index < windows.Count; index++)
                 if (Dictionary(windows[index]) is { } window) drafts.Add(Window(window, index + 1, importedAt));
-            return Reordered(drafts, root is null ? null : FirstInteger(root, SelectedWindowKeys));
+            return Pinned(Reordered(drafts, root is null ? null : FirstInteger(root, SelectedWindowKeys)), root, importedAt);
         }
         List<IReadOnlyDictionary<string, object>> found = [];
         Collect(list, depth: 0, found);
@@ -46,9 +48,19 @@ internal static class SafariSession {
             [.. found.Select(tab => Tab(tab, importedAt)).OfType<SessionTab>()])];
     }
 
+    /// `drafts` with the pinned tabs Safari keeps for every window pinned in
+    /// the first.
+    private static IReadOnlyList<SessionDraft> Pinned(IReadOnlyList<SessionDraft> drafts, IReadOnlyDictionary<string, object>? root,
+        DateTimeOffset importedAt) {
+        var pinned = (Array(Member(root, PinnedTabsKey)) ?? []).Select(tab => Dictionary(tab) is { } found ? Tab(found, importedAt) : null)
+            .OfType<SessionTab>().Select(tab => tab with { Placement = TabPlacement.Pinned }).ToArray();
+        if (pinned.Length == 0) return drafts;
+        if (drafts.Count == 0) return [new SessionDraft(1, null, [], pinned)];
+        return [drafts[0] with { Tabs = [.. pinned, .. drafts[0].Tabs] }, .. drafts.Skip(1)];
+    }
+
     private static SessionDraft Window(IReadOnlyDictionary<string, object> window, int ordinal, DateTimeOffset importedAt) {
         var tabs = FirstArray(window, TabKeys) ?? [];
-        if (tabs.Count > SessionDraft.MaximumTabs) throw new Rejected(new SessionOverLimits());
         return new SessionDraft(ordinal, FirstText(window, WindowTitleKeys), [],
             [.. tabs.Select(tab => Dictionary(tab) is { } found ? Tab(found, importedAt) : null).OfType<SessionTab>()]);
     }

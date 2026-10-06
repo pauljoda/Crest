@@ -42,7 +42,16 @@ struct BrowserOnboardingReviewSpacePage: View {
                             for: tabID,
                             in: review.id
                         )
-                    }
+                    },
+                    extensionIcons: flow.extensionIcons,
+                    setExtensionIncluded: { extensionID, isIncluded in
+                        flow.setExtensionIncluded(
+                            extensionID,
+                            isIncluded,
+                            in: review.id
+                        )
+                    },
+                    title: flow.review?.title
                 )
                 .frame(width: 340)
                 .frame(maxHeight: .infinity)
@@ -68,9 +77,11 @@ struct BrowserOnboardingReviewSpacePage: View {
                 BrowserCrestImportPreview(
                     space: flow.previewDestinationSpace(for: review),
                     favicons: flow.previewFavicons,
-                    sourceName: application?.title ?? "Browser",
+                    sourceName: flow.review?.title ?? application?.title ?? "Browser",
                     isSpaceIncluded: review.isIncluded,
-                    matchedTabIDs: analysis.matchedTabIDs(for: review.id)
+                    matchedTabIDs: analysis.matchedTabIDs(for: review.id),
+                    extensions: review.record.broughtExtensions,
+                    extensionIcons: flow.extensionIcons
                 )
                 .frame(width: 340)
                 .frame(maxHeight: .infinity)

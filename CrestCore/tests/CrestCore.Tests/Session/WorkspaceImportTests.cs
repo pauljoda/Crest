@@ -69,6 +69,66 @@ public sealed partial class BrowserContractsTests {
     }
 
     [Fact]
+    public void AReviewedImportKeepsItsTabGroupsAndTheSplitsThatStillHoldTogether() {
+        var session = SavedSession().Document["session"]!;
+        using var device = new TestDevice(session);
+        var window = device.Showing(session);
+        Guid group = Guid.NewGuid(), kept = Guid.NewGuid(), broken = Guid.NewGuid();
+        JsonObject InSplit(JsonObject tab, Guid split) {
+            tab["splitGroupID"] = SwiftId(split);
+            return tab;
+        }
+        var moved = InSplit(ImportedTab("https://broken-two.example/"), broken);
+        var space = ImportedSpace("Grouped", ImportedTab("https://group-one.example/", folder: group),
+            ImportedTab("https://group-two.example/", folder: group), InSplit(ImportedTab("https://left.example/"), kept),
+            InSplit(ImportedTab("https://right.example/"), kept), InSplit(ImportedTab("https://broken-one.example/"), broken), moved);
+        space["folders"] = new JsonArray(new JsonObject { ["id"] = SwiftId(group), ["title"] = "Research", ["location"] = "current" });
+        space["splitGroups"] = new JsonArray(new JsonObject { ["id"] = SwiftId(kept) }, new JsonObject { ["id"] = SwiftId(broken) });
+        Reviewing(device, space);
+        // Saving one tab of a split leaves its other tab on its own.
+        device.Send(new PlaceImportTab(SpaceId(space), TabId(moved), TabPlacement.Saved));
+        device.Send(new BeginImportCommit());
+
+        device.Send(new ImportReviewedSpaces(device.Workspace, window));
+
+        var grouped = device.Authority.Current.Spaces.Single(candidate => candidate.Settings.Name == "Grouped");
+        var research = Assert.Single(grouped.Folders, folder => folder.Title == "Research");
+        Assert.Equal(TabPlacement.Current, research.Location);
+        Assert.Equal(["https://group-one.example/", "https://group-two.example/"],
+            grouped.Tabs.Where(tab => tab.FolderId == research.Id).Select(tab => tab.Url));
+        var split = Assert.Single(grouped.SplitGroups);
+        Assert.Equal(["https://left.example/", "https://right.example/"], grouped.Tabs.Where(tab => tab.SplitGroupId == split.Id).Select(tab => tab.Url));
+        Assert.All(grouped.Tabs.Where(tab => tab.Url!.Contains("broken", StringComparison.Ordinal)), tab => Assert.Null(tab.SplitGroupId));
+        // The import counts as using the open tabs it brings, however long ago
+        // the other browser last showed them, so cleanup leaves them open.
+        Assert.All(grouped.Tabs.Where(tab => tab.Placement == TabPlacement.Current),
+            tab => Assert.InRange(tab.LastActivatedAt, device.Clock.Now.AddMilliseconds(-1), device.Clock.Now.AddMilliseconds(1)));
+    }
+
+    [Fact]
+    public void AReviewedSpaceJoiningAnotherBringsOnlyTheTabsItHasRoomFor() {
+        var fixture = SavedSession();
+        var session = fixture.Document["session"]!.AsObject();
+        session.Remove("disposableSeedMarker");
+        using var device = new TestDevice(session);
+        var window = device.Showing(session);
+        int held = device.Authority.Current.Spaces.Single(space => space.Id == fixture.Space).Tabs.Count;
+        int room = BrowserSpace.MaximumTabs - held;
+        // A saved tab is the first to stay behind; an open one comes along.
+        var joining = ImportedSpace("reading", [.. Enumerable.Range(0, room).Select(index => ImportedTab($"https://saved.example/{index}", "saved")),
+            ImportedTab("https://open.example/")]);
+        Reviewing(device, joining);
+        device.Send(new BeginImportCommit());
+
+        device.Send(new ImportReviewedSpaces(device.Workspace, window));
+
+        var reading = device.Authority.Current.Spaces.Single(space => space.Id == fixture.Space);
+        Assert.Equal(BrowserSpace.MaximumTabs, reading.Tabs.Count);
+        Assert.Contains(reading.Tabs, tab => tab.Url == "https://open.example/");
+        Assert.DoesNotContain(reading.Tabs, tab => tab.SavedUrl == $"https://saved.example/{room - 1}");
+    }
+
+    [Fact]
     public void AFileImportAddsItsSpacesWholeGivingCollidingRecordsNewIdentities() {
         var session = SavedSession().Document["session"]!;
         using var device = new TestDevice(session);
@@ -94,9 +154,16 @@ public sealed partial class BrowserContractsTests {
         // left the session's own tabs as they were.
         Assert.Equal([new ImportedTab(tab.Id, 0, original.Tabs[0].Id)], changes.OfType<TabsImported>().Single().Tabs);
         Assert.DoesNotContain(changes, change => change is TabCopied);
-        // A file keeps a first launch's Spaces disposable.
+        // A file that fits beside a first launch's Spaces keeps them disposable.
         Assert.NotNull(current.DisposableSeedMarker);
         Assert.Equal((imported.Id, (Guid?)tab.Id), (device.Space(window), device.Tab(window, imported.Id)));
+
+        // One that does not fit beside them takes their place, as a reviewed import does.
+        var full = ReadSpaces([.. Enumerable.Range(0, WorkspaceImportPolicy.MaximumSpaces)
+            .Select(index => ImportedSpace($"Many {index}", ImportedTab($"https://many.example/{index}")))]);
+        device.Send(new ImportSpaces(device.Workspace, window, full));
+        Assert.Equal((WorkspaceImportPolicy.MaximumSpaces, (Guid?)null), (device.Authority.Current.Spaces.Count,
+            device.Authority.Current.DisposableSeedMarker));
     }
 
     [Fact]
@@ -227,7 +294,7 @@ public sealed partial class BrowserContractsTests {
         foreach (var tab in split["tabs"]!.AsArray()) tab!["splitGroupID"] = group.DeepClone();
         Assert.Equal(new InvalidImport(ImportFlaw.MalformedSplit), Refusal(new ImportSpaces(device.Workspace, window, ReadSpaces(split))));
         Assert.Equal(new SpaceLimitReached(WorkspaceImportPolicy.MaximumSpaces), Refusal(new ImportSpaces(device.Workspace, window,
-            ReadSpaces([.. Enumerable.Range(0, WorkspaceImportPolicy.MaximumSpaces).Select(_ => ImportedSpace("Many"))]))));
+            ReadSpaces([.. Enumerable.Range(0, WorkspaceImportPolicy.MaximumSpaces + 1).Select(_ => ImportedSpace("Many"))]))));
         Reviewing(device, space);
         device.Send(new IncludeImportSpace(SpaceId(space), Included: false));
         Assert.Equal(new NoIncludedSpaces(), Refusal(new BeginImportCommit()));

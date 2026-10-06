@@ -10,10 +10,24 @@ struct BrowserSourceImportContent: View {
     let setIncluded: (UUID, Bool) -> Void
     let setSectionIncluded: (Set<UUID>, Bool) -> Void
     let setPlacement: (UUID, TabPlacement) -> Void
+    let extensionIcons: [String: NSImage]
+    let setExtensionIncluded: ((String, Bool) -> Void)?
+    let title: String?
 
     var body: some View {
         VStack(spacing: 0) {
-            BrowserSourceImportChrome(application: application)
+            BrowserSourceImportChrome(application: application, title: title)
+
+            if !review.extensions.isEmpty {
+                BrowserImportSidebarExtensionStrip(
+                    extensions: review.extensions,
+                    icons: extensionIcons,
+                    includedIDs: review.includedExtensionIDs,
+                    setIncluded: setExtensionIncluded
+                )
+                .padding(.horizontal, 10)
+                .padding(.top, 7)
+            }
 
             if !sections.pinnedTabs.isEmpty {
                 BrowserSourceImportSectionHeader(
@@ -39,6 +53,7 @@ struct BrowserSourceImportContent: View {
 
             BrowserSourceImportSpaceHeader(
                 application: application,
+                title: title,
                 space: review.sourceSpace
             )
 

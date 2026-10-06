@@ -40,6 +40,13 @@ enum BrowserOnboardingSummary {
         )
     }
 
+    static func leftOutCount(_ count: Int) -> LocalizedStringResource {
+        LocalizedStringResource(
+            "\(max(count, 0)) left out",
+            comment: "How many of a browser's profiles or Spaces an import cannot bring, shown in the import review."
+        )
+    }
+
     static func review(
         tabCount: Int,
         passwordCount: Int,

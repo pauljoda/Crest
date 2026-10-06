@@ -2,10 +2,10 @@ import SwiftUI
 
 struct BrowserInstalledImportSourceGrid: View {
     let sources: [BrowserInstalledImportSource]
-    let selectedApplications: Set<ImportSource>
+    let isSelected: (BrowserInstalledImportSource) -> Bool
     let isLocked: Bool
     let accessLabel: (BrowserInstalledImportSource) -> String
-    let toggleSelection: (ImportSource) -> Void
+    let toggleSelection: (BrowserInstalledImportSource) -> Void
 
     private var rows: [[BrowserInstalledImportSource]] {
         stride(from: 0, to: sources.count, by: 3).map { start in
@@ -16,22 +16,21 @@ struct BrowserInstalledImportSourceGrid: View {
     var body: some View {
         VStack(spacing: 16) {
             ForEach(rows, id: \.first?.id) { row in
-                HStack(spacing: 16) {
+                HStack(alignment: .top, spacing: 16) {
                     ForEach(row) { source in
                         BrowserInstalledImportSourceCard(
                             source: source,
-                            isSelected: selectedApplications.contains(
-                                source.application
-                            ),
+                            isSelected: isSelected(source),
                             isLocked: isLocked,
                             accessLabel: accessLabel(source),
                             toggleSelection: {
-                                toggleSelection(source.application)
+                                toggleSelection(source)
                             }
                         )
                         .frame(width: 260)
                     }
                 }
+                .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: .infinity, alignment: .center)
             }
         }
@@ -63,7 +62,7 @@ private struct BrowserInstalledImportSourceCard: View {
                             .accessibilityHidden(true)
                     }
                 }
-                Text(source.application.title)
+                Text(source.title)
                     .font(
                         BrowserOnboardingTypography.sans(17, weight: .bold)
                     )
@@ -81,7 +80,7 @@ private struct BrowserInstalledImportSourceCard: View {
                     )
                     .foregroundStyle(BrowserOnboardingPalette.coral)
             }
-            .frame(maxWidth: .infinity, minHeight: 172, alignment: .leading)
+            .frame(maxWidth: .infinity, minHeight: 172, maxHeight: .infinity, alignment: .topLeading)
             .padding(18)
             .contentShape(.rect)
             .background {
@@ -104,7 +103,7 @@ private struct BrowserInstalledImportSourceCard: View {
         }
         .buttonStyle(.plain)
         .disabled(isLocked)
-        .accessibilityLabel("Import from \(source.application.title)")
+        .accessibilityLabel("Import from \(source.title)")
         .accessibilityValue(isSelected ? "Selected" : "Not selected")
         .accessibilityAddTraits(isSelected ? .isSelected : [])
         .accessibilityHint(

@@ -11,20 +11,26 @@ internal static class SafariBookmarks {
 
     private const string LeafType = "WebBookmarkTypeLeaf";
 
+    /// The names Safari shows for the lists it keeps at the top, which its
+    /// file spells another way.
+    private static readonly IReadOnlyDictionary<string, string> ShownTitles = new Dictionary<string, string>(StringComparer.Ordinal) {
+        ["BookmarksBar"] = "Favorites",
+        ["BookmarksMenu"] = "Bookmarks Menu",
+        ["com.apple.ReadingList"] = "Reading List"
+    };
+
     #endregion
 
     #region Actions - Reading
 
-    /// The bookmarks the file holds. A link without a usable time is dated
-    /// `importedAt`. Throws `Rejected` with `BookmarksUnrecognized` for a file
-    /// that is not Safari's bookmarks, and `BookmarksOverLimits` for one
-    /// holding more than Crest keeps.
-    public static BookmarkDraft Read(byte[] contents, DateTimeOffset importedAt) {
+    /// Adds the bookmarks the file holds to `draft`. A link without a usable
+    /// time is dated `importedAt`. Throws `Rejected` with
+    /// `BookmarksUnrecognized` for a file that is not Safari's bookmarks.
+    public static void Read(byte[] contents, DateTimeOffset importedAt, BookmarkDraft draft) {
+        ArgumentNullException.ThrowIfNull(draft);
         var root = Dictionary(PropertyList.Read(contents));
         var children = Array(Member(root, "Children")) ?? throw new Rejected(new BookmarksUnrecognized());
-        var draft = new BookmarkDraft();
         Append(children, parent: null, depth: 0, draft, importedAt);
-        return draft;
     }
 
     private static void Append(IReadOnlyList<object> children, Guid? parent, int depth, BookmarkDraft draft, DateTimeOffset importedAt) {
@@ -36,8 +42,10 @@ internal static class SafariBookmarks {
                 continue;
             }
             if (Array(Member(child, "Children")) is not { } nested) continue;
-            var folder = draft.AppendFolder(Text(Member(child, "Title")), parent, depth);
-            Append(nested, folder, depth + 1, draft, importedAt);
+            string? name = Text(Member(child, "Title"));
+            if (depth == 0 && name is not null && ShownTitles.TryGetValue(name, out var shown)) name = shown;
+            if (draft.AppendFolder(name, parent, depth) is { } folder)
+                Append(nested, folder, depth + 1, draft, importedAt);
         }
     }
 

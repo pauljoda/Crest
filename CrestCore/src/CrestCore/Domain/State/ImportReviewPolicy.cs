@@ -5,9 +5,10 @@ namespace CrestCore.Domain;
 /// Rules for reviewing an import before the workspace import applies it. An
 /// imported Space joins the existing Space with the same name, tabs its
 /// destination already holds are left out until the person asks for them,
-/// and pinned tabs past a destination's limit move to a saved folder. Each
-/// edit answers the review as it leaves it, with what its choices mean against
-/// the session worked out again.
+/// pinned tabs past a destination's limit move to a saved folder, and no
+/// choice brings more new Spaces than the workspace has room for. Each edit
+/// answers the review as it leaves it, with what its choices mean against the
+/// session worked out again.
 public static class ImportReviewPolicy {
     #region Actions - Matching
 
@@ -40,31 +41,43 @@ public static class ImportReviewPolicy {
     /// The review a person starts from for the Spaces `source` brings, against
     /// `session`, looking at the first: each Space joins the existing Space of
     /// the same name, taking its name and look and leaving out the tabs it
-    /// holds, or comes in as a new Space with its own. A first launch's
-    /// disposable Spaces are no destination, so everything comes in new.
-    /// `passwords` counts the saved passwords that belong with each Space, and
-    /// `extensions` lists the extensions each Space offers, all of them left on.
+    /// holds, or comes in as a new Space with its own. Each existing Space is
+    /// joined by the first Space that matches it only, and a Space that would
+    /// come in new once the workspace is full starts left out. A first
+    /// launch's disposable Spaces are no destination, so everything comes in
+    /// new in their place. `passwords` counts the saved passwords that belong
+    /// with each Space, `extensions` lists the extensions each Space offers,
+    /// all of them left on, and `leftOut` is what the read could not bring.
     public static SetupImportReview Started(ImportSource source, IReadOnlyList<SpaceState> spaces,
-        IReadOnlyDictionary<Guid, int> passwords, IReadOnlyList<ImportSpaceExtensions> extensions, SessionState session) {
+        IReadOnlyDictionary<Guid, int> passwords, IReadOnlyList<ImportSpaceExtensions> extensions, IReadOnlyList<ImportLeftOut> leftOut,
+        SessionState session) {
         ArgumentNullException.ThrowIfNull(source);
         ArgumentNullException.ThrowIfNull(spaces);
         ArgumentNullException.ThrowIfNull(passwords);
         ArgumentNullException.ThrowIfNull(extensions);
+        ArgumentNullException.ThrowIfNull(leftOut);
         ArgumentNullException.ThrowIfNull(session);
         var destinations = Destinations(session);
         var offers = extensions.GroupBy(entry => entry.SpaceId).ToDictionary(group => group.Key,
             group => (IReadOnlyList<ImportExtension>)[.. group.SelectMany(entry => entry.Extensions)
                 .DistinctBy(extension => extension.ExtensionId, StringComparer.Ordinal)]);
-        var reviews = spaces.Select(space => {
+        int room = Room(session), created = 0;
+        HashSet<Guid> joined = [];
+        List<SetupReviewSpace> reviews = [];
+        foreach (var space in spaces) {
             var offered = offers.GetValueOrDefault(space.Id) ?? [];
             string key = SpaceMatchKey(space.Settings.Name);
-            var match = key.Length == 0 ? null : destinations.FirstOrDefault(existing => SpaceMatchKey(existing.Settings.Name) == key);
+            var match = key.Length == 0 ? null
+                : destinations.FirstOrDefault(existing => !joined.Contains(existing.Id) && SpaceMatchKey(existing.Settings.Name) == key);
+            if (match is not null) joined.Add(match.Id);
+            bool included = match is not null || created < room;
+            if (included && match is null) created++;
             var duplicates = match is null ? [] : Duplicates(space, match).ToHashSet();
-            return new SetupReviewSpace(space, Included: true, match?.Id, Customization(match ?? space),
-                [.. space.Tabs.Where(tab => !duplicates.Contains(tab.Id)).Select(tab => tab.Id)], [], [], [], IncludesPasswords: true,
-                passwords.GetValueOrDefault(space.Id), offered, [.. offered.Select(extension => extension.ExtensionId)]);
-        }).ToArray();
-        return Analyzed(new SetupImportReview(source, reviews, [], spaces.FirstOrDefault()?.Id), session);
+            reviews.Add(new SetupReviewSpace(space, included, match?.Id, Customization(match ?? space),
+                included ? [.. space.Tabs.Where(tab => !duplicates.Contains(tab.Id)).Select(tab => tab.Id)] : [], [], [], [],
+                IncludesPasswords: true, passwords.GetValueOrDefault(space.Id), offered, [.. offered.Select(extension => extension.ExtensionId)]));
+        }
+        return Analyzed(new SetupImportReview(source, reviews, [], spaces.FirstOrDefault()?.Id, leftOut, room), session);
     }
 
     /// The name and look `space` has, as a review offers them.
@@ -155,12 +168,18 @@ public static class ImportReviewPolicy {
         return review.Spaces.Any(space => space.Source.Id == sourceId) ? review with { ShownSpaceId = sourceId } : review;
     }
 
+    /// `review` with `edit` made to `sourceId`, unless it would bring the
+    /// Space in new once the workspace is full, which changes nothing.
     private static SetupImportReview Editing(SetupImportReview review, Guid sourceId, SessionState session,
         Func<SetupReviewSpace, SetupReviewSpace> edit) {
         ArgumentNullException.ThrowIfNull(review);
-        if (review.Spaces.All(space => space.Source.Id != sourceId)) return review;
+        ArgumentNullException.ThrowIfNull(session);
+        if (review.Spaces.FirstOrDefault(space => space.Source.Id == sourceId) is not { } current) return review;
+        var edited = edit(current);
+        if (edited.MakesNewSpace && !current.MakesNewSpace && review.Spaces.Count(space => space.MakesNewSpace) >= Room(session))
+            return review;
         return Analyzed(review with {
-            Spaces = [.. review.Spaces.Select(space => space.Source.Id == sourceId ? edit(space) : space)]
+            Spaces = [.. review.Spaces.Select(space => space.Source.Id == sourceId ? edited : space)]
         }, session);
     }
 
@@ -176,7 +195,8 @@ public static class ImportReviewPolicy {
 
     /// `review` with what its choices mean against `session`: each Space's
     /// tabs its destination already holds and the destination's tabs it
-    /// matches, and the pinned tabs past each destination's limit.
+    /// matches, the pinned tabs past each destination's limit, and the room
+    /// the workspace has for new Spaces.
     public static SetupImportReview Analyzed(SetupImportReview review, SessionState session) {
         ArgumentNullException.ThrowIfNull(review);
         ArgumentNullException.ThrowIfNull(session);
@@ -203,8 +223,14 @@ public static class ImportReviewPolicy {
             }
             return analyzed;
         }).ToArray();
-        return review with { Spaces = spaces, OverflowTabIds = overflow };
+        return review with { Spaces = spaces, OverflowTabIds = overflow, SpaceRoom = Room(session) };
     }
+
+    /// How many new Spaces an import into `session` has room for, as
+    /// `ImportReviewedSpaces` counts them: a first launch's disposable Spaces
+    /// make way for the import, and every other Space counts.
+    private static int Room(SessionState session) =>
+        Math.Max(0, WorkspaceImportPolicy.MaximumSpaces - (session.DisposableSeedMarker is null ? session.Spaces.Count : 0));
 
     /// The Spaces an import may join: none over a first launch's disposable
     /// Spaces, and never one going away.

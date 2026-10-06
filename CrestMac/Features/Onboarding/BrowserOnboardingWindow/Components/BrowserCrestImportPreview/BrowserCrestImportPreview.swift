@@ -7,6 +7,9 @@ struct BrowserCrestImportPreview: View {
     let sourceName: String
     var isSpaceIncluded = true
     var matchedTabIDs: Set<UUID> = []
+    /// The extensions the import installs in the Space, and their icons.
+    var extensions: [ImportExtension] = []
+    var extensionIcons: [String: NSImage] = [:]
 
     var body: some View {
         if !isSpaceIncluded {
@@ -16,7 +19,7 @@ struct BrowserCrestImportPreview: View {
                 ContentUnavailableView(
                     "Space Skipped",
                     systemImage: "rectangle.stack.badge.minus",
-                    description: Text("Turn on Move Space to include it in this import.")
+                    description: Text("Turn on Import Space to include it.")
                 )
             }
             .accessibilityLabel("Space skipped")
@@ -25,7 +28,9 @@ struct BrowserCrestImportPreview: View {
                 BrowserCrestImportContent(
                     space: space,
                     favicons: favicons,
-                    matchedTabIDs: matchedTabIDs
+                    matchedTabIDs: matchedTabIDs,
+                    extensions: extensions,
+                    extensionIcons: extensionIcons
                 )
             }
             .accessibilityElement(children: .contain)

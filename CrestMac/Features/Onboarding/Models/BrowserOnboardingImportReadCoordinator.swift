@@ -9,6 +9,10 @@ struct BrowserOnboardingImportReadOutput: Sendable {
     /// The extensions each Space offers to install, for the browsers that
     /// keep them where Crest reads them.
     var extensions: [ImportSpaceExtensions] = []
+    /// The icon each offered extension wears, by its identifier.
+    var extensionIcons: [String: Data] = [:]
+    /// What the browser held that the import cannot bring, and why.
+    var leftOut: [ImportLeftOut] = []
 }
 
 enum BrowserOnboardingImportReadPhase: Equatable {

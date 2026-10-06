@@ -2,6 +2,8 @@ import SwiftUI
 
 struct BrowserSourceImportSpaceHeader: View {
     let application: ImportSource?
+    /// The name of the browser the review brings from.
+    var title: String?
     let space: SpaceModel
 
     @ViewBuilder
@@ -20,7 +22,7 @@ struct BrowserSourceImportSpaceHeader: View {
                 VStack(alignment: .leading, spacing: 1) {
                     Text(space.settings.name)
                         .font(.callout.weight(.semibold))
-                    Text(application?.title ?? "Browser")
+                    Text(title ?? application?.title ?? "Browser")
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                 }

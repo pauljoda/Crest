@@ -3536,7 +3536,7 @@
     },
     "downloads-follow-page-site-choice": {
       "category": "fixed",
-      "message": "Downloads follow the Automatic Downloads choice of the site you’re on, including files it serves from another address, such as GitHub release files. A blocked download’s message no longer appears twice."
+      "message": "Downloads follow the Automatic Downloads choice of the site you\u2019re on, including files it serves from another address, such as GitHub release files. A blocked download\u2019s message no longer appears twice."
     },
     "chromium-pages-retain-requested-zoom": {
       "category": "fixed",
@@ -3628,7 +3628,47 @@
     },
     "import-chrome-arc-extensions": {
       "category": "new",
-      "message": "Importing from Chrome or Arc now lists the extensions you installed from the Chrome Web Store. Choose which to bring for each Space, and Crest installs them after the import, asking you to confirm each one."
+      "message": "Importing from Chrome, Arc, or another Chromium browser now lists the extensions you installed from the Chrome Web Store beneath each Space\u2019s address bar. Choose which ones each Space brings, and Crest installs them when the import finishes, without asking about each one."
+    },
+    "import-more-chromium-browsers": {
+      "category": "new",
+      "message": "You can now import from Brave, Microsoft Edge, Vivaldi, Opera, Dia, Comet, Aside, ego lite, Chromium, and Chrome Beta, Dev, and Canary. If your browser isn\u2019t listed, choose \u201cBrowser not listed?\u201d to have Crest look for other Chromium-based browsers on your Mac."
+    },
+    "import-split-views-and-tab-groups": {
+      "category": "improved",
+      "message": "Importing now keeps split views from Chrome and other Chromium browsers, Arc, and Zen, and turns tab groups from Chromium browsers and Firefox into folders with the same names and colors."
+    },
+    "import-chrome-closed-profile-tabs": {
+      "category": "fixed",
+      "message": "Importing from Chrome no longer leaves out a profile, or brings its recently closed tabs instead of the ones it had open."
+    },
+    "import-passwords-stay-with-their-profile": {
+      "category": "fixed",
+      "message": "Passwords imported from a browser profile now go only to that profile\u2019s Space, so turning off passwords for one profile no longer sends them to another. Arc passwords also reach Spaces whose tabs are on a subdomain of the password\u2019s site."
+    },
+    "import-keeps-what-fits": {
+      "category": "improved",
+      "message": "When an import holds more than Crest can keep, it now brings as many Spaces, tabs, folders, and bookmarks as fit and lists what it left out, instead of stopping. A Space that joins one of yours brings only the tabs it has room for."
+    },
+    "import-signed-in-chrome-bookmarks": {
+      "category": "fixed",
+      "message": "Importing a Chrome profile signed in to a Google account now brings the bookmarks and passwords saved to that account, and bookmarks in a browser\u2019s trash are no longer imported."
+    },
+    "import-zen-firefox-profiles": {
+      "category": "improved",
+      "message": "Importing from Zen or Firefox now brings every profile that has open tabs, each under the name you gave it, and Zen Spaces keep their icons and colors."
+    },
+    "import-safari-pinned-tabs": {
+      "category": "fixed",
+      "message": "Importing from Safari now brings your pinned tabs, and its bookmark folders keep the names Safari shows, such as Favorites and Reading List."
+    },
+    "import-open-tabs-stay-open": {
+      "category": "fixed",
+      "message": "Tabs that were open in the browser you import from now stay open instead of being archived by automatic cleanup soon after the import, and Arc tabs keep their real dates."
+    },
+    "import-review-design": {
+      "category": "improved",
+      "message": "The import review has matching From and Into menus and one card for each Space\u2019s choices, and says when there\u2019s no room for another Space. The list of browsers scrolls when it doesn\u2019t fit the window."
     }
   }
 }

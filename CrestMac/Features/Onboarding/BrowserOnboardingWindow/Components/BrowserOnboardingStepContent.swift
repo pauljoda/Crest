@@ -32,13 +32,16 @@ struct BrowserOnboardingStepContent: View {
             )
         case .importBrowser:
             BrowserOnboardingImportPage(
-                sources: flow.installedSources,
-                selectedApplications: flow.selectedImportApplications,
+                sources: flow.offeredSources,
+                isSelected: flow.isSelected,
+                hasLookedForUnlisted: flow.hasLookedForUnlistedSources,
+                unlistedCount: flow.unlistedSources.count,
                 isReading: flow.isReading,
                 isLocked: flow.isImportSelectionLocked,
                 failure: flow.failure?.message,
                 accessLabel: flow.importAccessLabel,
-                toggleSelection: flow.toggleImportSelection,
+                toggleSelection: flow.toggleSelection,
+                lookForUnlisted: flow.lookForUnlistedSources,
                 beginManualSetup: beginManualSetup,
                 continueImport: flow.continueImportQueue,
                 back: back
@@ -46,7 +49,6 @@ struct BrowserOnboardingStepContent: View {
         case .review:
             BrowserOnboardingReviewPage(
                 flow: flow,
-                sources: flow.installedSources,
                 customizationSpaceID: $customizationSpaceID,
                 back: back
             )

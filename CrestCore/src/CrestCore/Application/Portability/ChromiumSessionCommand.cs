@@ -22,14 +22,21 @@ internal sealed class ChromiumSessionCommand {
     public static readonly ChromiumSessionCommand SetActiveWindow = new(20, (session, payload) => session.SetActiveWindow(payload));
     public static readonly ChromiumSessionCommand LastActiveTime = new(21, (session, payload) => session.SetLastActiveTime(payload));
     public static readonly ChromiumSessionCommand TabNavigationPathPruned = new(24, (session, payload) => session.PruneRange(payload));
+    public static readonly ChromiumSessionCommand SetTabGroup = new(25, (session, payload) => session.SetTabGroup(payload));
+    public static readonly ChromiumSessionCommand SetTabGroupMetadata = new(27, (session, payload) => session.SetTabGroupMetadata(payload));
     public static readonly ChromiumSessionCommand SetWindowTitle = new(31, (session, payload) => session.SetWindowTitle(payload));
+    public static readonly ChromiumSessionCommand SetSplitTab = new(36, (session, payload) => session.SetSplitTab(payload));
     public static readonly ChromiumSessionCommand InitialStateMarker = new(255,
+        (session, payload) => session.MarkInitialState(payload));
+    /// Opera keeps the marker at 252, since it writes records of its own at 255.
+    public static readonly ChromiumSessionCommand OperaInitialStateMarker = new(252,
         (session, payload) => session.MarkInitialState(payload));
 
     public static IReadOnlyList<ChromiumSessionCommand> All { get; } = [SetTabWindow, SetTabIndexInWindow,
         TabNavigationPathPrunedFromBack, UpdateTabNavigation, SetSelectedNavigationIndex, SetSelectedTabInIndex,
         TabNavigationPathPrunedFromFront, SetPinnedState, TabClosed, WindowClosed, SetActiveWindow, LastActiveTime,
-        TabNavigationPathPruned, SetWindowTitle, InitialStateMarker];
+        TabNavigationPathPruned, SetTabGroup, SetTabGroupMetadata, SetWindowTitle, SetSplitTab, InitialStateMarker,
+        OperaInitialStateMarker];
 
     #endregion
 

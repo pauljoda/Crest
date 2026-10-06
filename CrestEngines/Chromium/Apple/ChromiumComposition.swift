@@ -60,7 +60,6 @@
                     reviewPersistenceID: "chromium-native-ui-review")
                 chromium.follow(application)
                 chromiumEngine = chromium
-                installsImportedExtensions()
                 adoptLegacyWindowList(into: application)
                 return application
             }
@@ -96,7 +95,6 @@
                     reviewPersistenceID: "chromium-native-ui-review")
                 runtime.engine.follow(application)
                 chromiumEngine = runtime.engine
-                installsImportedExtensions()
                 adoptLegacyWindowList(into: application)
                 return application
             }
@@ -145,14 +143,6 @@
         /// is not affected.
         static func profileReleased(_ released: ProfileReleased) {
             extensions.refresh()
-        }
-
-        /// Lets an import install the extensions it brought, which only this
-        /// engine runs.
-        private static func installsImportedExtensions() {
-            BrowserImportedExtensionInstaller.handler = { installs in
-                Self.extensions.installImported(installs)
-            }
         }
 
         static var extensionSpaces: [BrowserSpaceIdentity] { shell?.application?.extensionSpaces ?? [] }
