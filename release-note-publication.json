@@ -3,6 +3,6 @@
   "channels": {
     "stable": "window-focus-bridge-release-format",
     "development": "site-controls-full-screen",
-    "nightly": "retina-tab-icons"
+    "nightly": "site-controls-full-screen"
   }
 }

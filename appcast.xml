@@ -6,41 +6,31 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.7.8</title>
-            <pubDate>Mon, 05 Oct 2026 18:01:50 +0000</pubDate>
+            <title>0.7.11</title>
+            <pubDate>Tue, 06 Oct 2026 15:50:58 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>nightly</sparkle:channel>
-            <sparkle:version>1181</sparkle:version>
-            <sparkle:shortVersionString>0.7.8</sparkle:shortVersionString>
+            <sparkle:version>1185</sparkle:version>
+            <sparkle:shortVersionString>0.7.11</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
-### New
-
-- Tab groups that extensions make, such as the tabs Claude works in, now appear on Mac as folders in the Space’s open tabs, in the group’s name and color. Renaming, recoloring, collapsing or deleting the folder, or moving tabs in or out, changes the group the extension sees, and the folder keeps following the group after Crest restarts.
-
-### Improved
-
-- Switching tabs on Mac uses a fraction of the CPU and energy it did. The window no longer redraws or animates everything on each switch, and tab use and page visits now sync in batches in the background.
-
 ### Fixed
 
-- Switching tabs on Mac no longer flashes a blank page in between, and a tab loading for the first time keeps a plain page background instead of flashing the Space's colors.
-- Large Chrome Web Store extensions such as Keeper now install on Mac. Extensions download through the Space's own connection, as they do in Chrome, and the install review shows download progress.
-- Crest on Mac no longer quits when you press a site’s Login or Continue with Google button. Crest doesn’t offer Chrome’s federated sign-in, so these sites use their own sign-in pop-up or page where they have one, as they do in Safari.
-- Extensions that sign you back in on their own when the browser starts, such as Claude, now stay signed in after Crest restarts on Mac, as they do in Chrome.
-- Site icons in tabs and pinned tabs on Mac are now sharp on Retina displays instead of blurry.
+- The back and forward history menus open at once and no longer freeze Crest on Mac when you move the pointer over them. Each lists the 12 nearest pages, with Show Full History at the end for everything else.
+- Importing from Zen no longer fails with “Crest could not recognize this browser’s tab-session data” when a Space has pinned tabs in a split view. Those tabs now come over as saved tabs: in the folder that held the split, or outside any folder when the split sat among the Space’s pinned tabs. A Zen session too large to import now says so.
+- Site Controls and the extensions it lists now open on Mac when the window is in full screen, instead of closing as soon as you click the button.
 
 ---
 
 Nightly builds contain the newest changes and may be less reliable than stable releases.
 
-[View all changes](https://github.com/pauljoda/Crest/compare/c1af6dc1bcc9f43eb86fa8be18e557d0e7733247...eece44049ac5ad9fb5c2f60379940d9988eb117d) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/nightly-0.7.8-2026-10-05-1181-r181.1/Installer-Crest-0.7.8-nightly-2026-10-05-eece440-arm64.dmg)
+[View all changes](https://github.com/pauljoda/Crest/compare/eece44049ac5ad9fb5c2f60379940d9988eb117d...4e59eafd9c21c765a19e28d27dd2d145b24ab260) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/nightly-0.7.11-2026-10-06-1185-r185.1/Installer-Crest-0.7.11-nightly-2026-10-06-4e59eaf-arm64.dmg)
 
 [Browse Nightly releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Nightly+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/nightly-0.7.8-2026-10-05-1181-r181.1/Installer-Crest-0.7.8-nightly-2026-10-05-eece440-arm64.dmg" length="215471740" type="application/octet-stream" sparkle:edSignature="C6tZQia2/YF8xGmX23b2p5eopd5sEy0Ch11OglO8dqEUb/ujEik7yPMtLwp2eQ5IGbMQFWCQ/J9HRjB5tSaRCQ=="/>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/nightly-0.7.11-2026-10-06-1185-r185.1/Installer-Crest-0.7.11-nightly-2026-10-06-4e59eaf-arm64.dmg" length="215468668" type="application/octet-stream" sparkle:edSignature="9M6bpV+zO9yCV7mKA/fau6UILBqUMs/CnJHPvtdR6VPj5MAK+sX8UPpJnl9CDILg3Fh8wpHDikondBiwAIlpAg=="/>
         </item>
         <item>
             <title>0.7.2</title>
@@ -107,6 +97,6 @@ Nightly builds contain the newest changes and may be less reliable than stable r
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: yhXR5bUgSu8rHckfCyj73vPg6R1f5ya85o3W+/69viiSmhl1VUnaOzjxHApt1H8Mj4Z5WZ6DIZglQrKaj1apDg==
-length: 7798
+edSignature: rAIm8DpKOp7+SReohteEGPoVxevwYR1PUSeZiPwPtQ7dICtHnxTGqLtH5wllC9OFK0SeZJ8VyhPcxlRJj/SGAw==
+length: 7069
 -->
