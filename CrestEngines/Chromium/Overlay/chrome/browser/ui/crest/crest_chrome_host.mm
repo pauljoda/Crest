@@ -743,6 +743,11 @@ class WebStoreDownload {
         update_client::UpdateQueryParams::Get(update_client::UpdateQueryParams::CRX) + "&x=" +
         base::EscapeQueryParamValue("id=" + extension_id + "&installsource=ondemand&uc", true));
     request->credentials_mode = network::mojom::CredentialsMode::kOmit;
+    // Someone is waiting on this download, as on Chromium's own foreground
+    // extension fetches. At the default idle priority the loader writes the
+    // package on best-effort tasks, which Chromium holds until it counts
+    // startup as complete: up to three minutes when no page has loaded.
+    request->priority = net::MEDIUM;
     loader_ = network::SimpleURLLoader::Create(std::move(request), kAnnotation);
     loader_->SetOnResponseStartedCallback(
         base::BindOnce(&WebStoreDownload::Started, base::Unretained(this)));

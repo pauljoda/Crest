@@ -3625,6 +3625,10 @@
     "site-controls-full-screen": {
       "category": "fixed",
       "message": "Site Controls and the extensions it lists now open on Mac when the window is in full screen, instead of closing as soon as you click the button."
+    },
+    "extension-download-startup-hold": {
+      "category": "fixed",
+      "message": "Installing an extension right after Crest opens no longer stays on \u201cPreparing extension\u2026\u201d for up to three minutes."
     }
   }
 }
