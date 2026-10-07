@@ -79,7 +79,6 @@ public sealed record NativeSyncSessionTransition {
             }
             repaired = repaired with { Spaces = spaces, SpaceDeletions = pending };
         }
-        repaired = repaired with { AppPreferences = local.AppPreferences };
         if (!replacing || removed)
             next = next.Stage(StoredSessionCodec.Encode(repaired), removed ? SyncDeletionReason.Retention : SyncDeletionReason.Superseded, seconds);
         return new(next, repaired, origins);

@@ -16,8 +16,9 @@ internal abstract class SyncPayloadType {
     public static readonly SyncPayloadType Tab = new TabType();
     public static readonly SyncPayloadType History = new HistoryType();
     public static readonly SyncPayloadType Archive = new ArchiveType();
+    public static readonly SyncPayloadType AppPreferences = new AppPreferencesType();
 
-    public static IReadOnlyList<SyncPayloadType> All { get; } = [Space, Folder, Tab, History, Archive];
+    public static IReadOnlyList<SyncPayloadType> All { get; } = [Space, Folder, Tab, History, Archive, AppPreferences];
 
     #endregion
 
@@ -231,6 +232,15 @@ internal abstract class SyncPayloadType {
         public override bool IsPortable(JsonObject value) => PortableTab(Subject(value));
 
         public override JsonObject Holding(JsonNode tab) => new() { ["tab"] = tab.DeepClone() };
+    }
+
+    private sealed class AppPreferencesType() : SyncPayloadType(SyncRecordKind.AppPreferences, AppPreferencesPayload.Read) {
+        public override bool SyncsUnder(JsonNode preferences, JsonObject value) => true;
+
+        /// The preferences are never deleted: a device that holds none says
+        /// nothing about the ones the cloud holds.
+        public override SyncDeletionReason? DeletionReason(JsonObject value, ArchiveReason? archiveReason, bool owningSpaceRemains,
+            SyncDeletionReason removal) => null;
     }
 
     #endregion

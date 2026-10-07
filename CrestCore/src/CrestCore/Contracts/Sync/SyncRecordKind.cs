@@ -2,7 +2,7 @@ namespace CrestCore.Contracts;
 
 /// A kind of record sync carries: its name, which a record's identity and the
 /// journal spell, the CloudKit record type it travels as, and whether a record
-/// of the kind is its Space.
+/// of the kind is its Space, or, for the app's preferences, belongs to no Space.
 ///
 /// A kind travels as its index in `All`, so `All` is append-only.
 public sealed class SyncRecordKind {
@@ -14,7 +14,11 @@ public sealed class SyncRecordKind {
     public static readonly SyncRecordKind History = new(name: "history", cloudRecordType: "CrestHistory", namesItsSpace: false);
     public static readonly SyncRecordKind Archive = new(name: "archive", cloudRecordType: "CrestArchive", namesItsSpace: false);
 
-    public static IReadOnlyList<SyncRecordKind> All { get; } = [Space, Folder, Tab, History, Archive];
+    /// The app's behavior preferences, one record for the whole account. It
+    /// belongs to no Space, so it names itself: its identity is its Space.
+    public static readonly SyncRecordKind AppPreferences = new(name: "appPreferences", cloudRecordType: "CrestAppPreferences", namesItsSpace: true);
+
+    public static IReadOnlyList<SyncRecordKind> All { get; } = [Space, Folder, Tab, History, Archive, AppPreferences];
 
     #endregion
 

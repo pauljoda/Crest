@@ -67,6 +67,15 @@ public static class NativeSyncProjection {
             => SyncOrderTokens.Allocate(items.Select(item => existing.GetValueOrDefault(type.Kind.RecordName(Id(type.Subject(item.AsObject())["id"]))))
                 .ToArray());
 
+        // The preferences stay off the cloud until a person changes them from the
+        // defaults or the cloud already holds them, so a device that never chose
+        // cannot write defaults over the choices another device made.
+        if (session[StoredSessionCodec.Key.AppPreferences] is JsonObject stored
+            && StoredSessionCodec.DecodeAppPreferences(stored) is var appPreferences
+            && (appPreferences != AppPreferences.Default
+                || existing.ContainsKey(SyncRecordKind.AppPreferences.RecordName(AppPreferencesPayload.RecordId))))
+            Add(SyncPayloadType.AppPreferences, new AppPreferencesPayload(appPreferences).EncodeValue(SyncPayloadForm.Journal));
+
         var spaces = Items(session, "spaces").Select(n => n!).ToArray();
         var spaceTokens = Tokens(SyncPayloadType.Space, spaces);
         for (int i = 0; i < spaces.Length; i++) {

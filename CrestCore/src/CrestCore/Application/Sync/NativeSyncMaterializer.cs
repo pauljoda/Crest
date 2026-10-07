@@ -50,7 +50,9 @@ public static class NativeSyncMaterializer {
             if (!profiles.Add(local.ProfileId)) throw Error(SyncRecordFlaw.SharedProfile, local.ProfileId);
             spaces.Add(local);
         }
-        return spaces.Count == 0 ? session : session with { Spaces = spaces, DisposableSeedMarker = null };
+        var materialized = spaces.Count == 0 ? session : session with { Spaces = spaces, DisposableSeedMarker = null };
+        return Payloads<AppPreferencesPayload>(records).FirstOrDefault() is { } preferences
+            ? materialized with { AppPreferences = preferences.Preferences } : materialized;
     }
 
     private static IEnumerable<T> Payloads<T>(IReadOnlyList<SyncSessionRecord> records, Guid? space = null) where T : SyncPayload =>

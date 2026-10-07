@@ -345,8 +345,12 @@ records, merging, ordering, scheduling and the payload codec.
 ### Cross-engine sync contract
 
 The CloudKit format is engine independent: Space and profile identifiers,
-Space appearance and browsing preferences, folders, HTTP and HTTPS tabs with
-their saved and pinned placement, split membership, history and archive. The
+Space appearance and browsing preferences, the app's behavior preferences,
+folders, HTTP and HTTPS tabs with their saved and pinned placement, split
+membership, history and archive. The app's preferences are one record for the
+account, the later write winning whole; it travels at CloudKit schema 4, so
+older builds leave it alone, and a device that never changed them from the
+defaults does not write it over another device's choices. The
 same tab can be a Chromium page on the Mac and a WebKit page on an iPhone. A
 profile UUID is the shared identity; its Chromium directory or WebKit data
 store is the binding's detail.

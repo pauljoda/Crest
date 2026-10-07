@@ -14,7 +14,9 @@ internal static class NativeSyncCheckpointCodec {
         var answer = NativeSessionMaintenance.Answer(sessionState, origins);
         if (legacyLocal is null) return answer;
         var session = answer["session"]!.AsObject();
-        if (legacyLocal[StoredSessionCodec.Key.AppPreferences] is { } preferences)
+        // Preferences a sync did not change keep the members this build does not know.
+        if (legacyLocal[StoredSessionCodec.Key.AppPreferences] is { } preferences
+            && sessionState.AppPreferences == StoredSessionCodec.DecodeAppPreferences(preferences))
             session[StoredSessionCodec.Key.AppPreferences] = preferences.DeepClone();
         foreach (var intent in (session["spaceDeletions"] as JsonArray ?? [])) {
             var spaceId = StoredSessionCodec.Identity(intent!["spaceID"]);

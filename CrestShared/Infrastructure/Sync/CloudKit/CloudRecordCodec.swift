@@ -20,7 +20,7 @@ struct BrowserCloudRecordCodec: Sendable {
 
     /// The newest schema this build writes, which a base record from a newer
     /// build exceeds.
-    static let currentSchemaVersion = 3
+    static let currentSchemaVersion = 4
 
     static let zoneName = BrowserCloudSyncConfiguration.defaultZoneName
     static let zoneID = CKRecordZone.ID(zoneName: zoneName)

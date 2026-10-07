@@ -51,7 +51,10 @@ internal static class NativeSyncCompatibility {
             new() { ["id"] = Identity, ["spaceID"] = Identity, ["parentID"] = Identity, ["orderAnchorTabID"] = Identity, ["color"] = Color }),
         [SyncRecordKind.Tab.Name] = Tab,
         [SyncRecordKind.History.Name] = new("id spaceID url title firstVisitedAt lastVisitedAt visitCount", new() { ["spaceID"] = Identity }),
-        [SyncRecordKind.Archive.Name] = new("tab archivedAt reason", new() { ["tab"] = Tab })
+        [SyncRecordKind.Archive.Name] = new("tab archivedAt reason", new() { ["tab"] = Tab }),
+        [SyncRecordKind.AppPreferences.Name] = new(
+            "id startupBehavior offersTranslation automaticallyTranslates translationRules checksSpelling automaticallyEntersPictureInPicture savedTabClosePolicy savedTabFaviconReturnsToSavedUrl splitFocusFollowsMouse automaticallyShowsDeveloperToolbar",
+            new() { ["id"] = Identity })
     };
 
     #endregion

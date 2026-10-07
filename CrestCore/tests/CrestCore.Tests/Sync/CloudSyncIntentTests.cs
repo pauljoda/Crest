@@ -87,7 +87,7 @@ public sealed partial class BrowserContractsTests {
             ["an order token no client reads"] = (With(CloudTab(Guid.NewGuid(), fixture.Space, 5), body => body["value"]!["orderToken"] = "zz"),
                 new(1, 0)),
             ["a schema before the first"] = (CloudTab(Guid.NewGuid(), fixture.Space, 5) with { Schema = 0 }, new(1, 0)),
-            ["a schema a newer build wrote"] = (CloudTab(Guid.NewGuid(), fixture.Space, 5) with { Schema = 4 }, new(0, 1)),
+            ["a schema a newer build wrote"] = (CloudTab(Guid.NewGuid(), fixture.Space, 5) with { Schema = 5 }, new(0, 1)),
         };
         foreach (var (name, (record, receipt)) in cases) {
             var (session, journal, parts) = (stored.Session.Current, stored.Sync.Snapshot, StoredParts(directory.File));

@@ -5,7 +5,7 @@ namespace CrestCore.Contracts;
 /// page translation and its per-language rules, spelling, automatic Picture in
 /// Picture, what closing a saved tab does, whether Split View focus follows the
 /// pointer and whether local pages open with the developer toolbar. Translation rules are in ordinal order of their source language. They
-/// stay on this device and never become sync records.
+/// sync as one record for the whole account, the later write winning whole.
 /// </summary>
 public sealed record AppPreferences(StartupBehavior Startup, bool OffersTranslation, bool AutomaticallyTranslates,
     IReadOnlyList<TranslationRule> TranslationRules, bool ChecksSpelling, bool AutomaticallyEntersPictureInPicture,

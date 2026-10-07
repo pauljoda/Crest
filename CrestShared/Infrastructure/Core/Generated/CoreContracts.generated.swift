@@ -17012,8 +17012,14 @@ struct SyncRecordKind: Hashable, Sendable {
     static let tab = SyncRecordKind(tag: 2, name: "tab", cloudRecordType: "CrestTab", namesItsSpace: false)
     static let history = SyncRecordKind(tag: 3, name: "history", cloudRecordType: "CrestHistory", namesItsSpace: false)
     static let archive = SyncRecordKind(tag: 4, name: "archive", cloudRecordType: "CrestArchive", namesItsSpace: false)
+    static let appPreferences = SyncRecordKind(
+        tag: 5,
+        name: "appPreferences",
+        cloudRecordType: "CrestAppPreferences",
+        namesItsSpace: true
+    )
 
-    static let all: [SyncRecordKind] = [space, folder, tab, history, archive]
+    static let all: [SyncRecordKind] = [space, folder, tab, history, archive, appPreferences]
 
     static func named(_ name: String?) -> SyncRecordKind? {
         all.first { $0.name == name }
