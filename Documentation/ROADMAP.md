@@ -95,6 +95,8 @@ the live status for each issue.
 - [ ] [Show a designed window when opening the Mac installer](https://github.com/pauljoda/Crest/issues/280)
 - [ ] [bug: Extension keyboard shortcuts act on a different tab than the one being viewed](https://github.com/pauljoda/Crest/issues/290)
 - [ ] [Evaluate tab and folder previews when hovering the sidebar](https://github.com/pauljoda/Crest/issues/294)
+- [ ] [Show page loading in the address bar instead of on the page card](https://github.com/pauljoda/Crest/issues/296)
+- [ ] [Move whole folders between Spaces](https://github.com/pauljoda/Crest/issues/298)
 
 #### Completed
 

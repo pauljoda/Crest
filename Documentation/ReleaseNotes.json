@@ -3713,6 +3713,10 @@
     "mobile-launch-crash": {
       "category": "fixed",
       "message": "Crest on iPhone and iPad opens again instead of closing as soon as it starts."
+    },
+    "camera-microphone-allow-crash": {
+      "category": "fixed",
+      "message": "Allowing a site to use your camera or microphone no longer quits Crest."
     }
   }
 }
