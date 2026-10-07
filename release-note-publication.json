@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "channels": {
     "stable": "window-focus-bridge-release-format",
-    "development": "extension-download-startup-hold",
+    "development": "ipad-single-tap-controls",
     "nightly": "site-controls-full-screen"
   }
 }

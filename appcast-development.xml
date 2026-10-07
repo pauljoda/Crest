@@ -6,29 +6,48 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.7.12</title>
-            <pubDate>Tue, 06 Oct 2026 16:54:44 +0000</pubDate>
+            <title>0.7.14</title>
+            <pubDate>Wed, 07 Oct 2026 13:55:10 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>development</sparkle:channel>
-            <sparkle:version>1186</sparkle:version>
-            <sparkle:shortVersionString>0.7.12</sparkle:shortVersionString>
+            <sparkle:version>1190</sparkle:version>
+            <sparkle:shortVersionString>0.7.14</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
+Showing the 12 most recent highlights from 17 user-facing changes.
+
+### New
+
+- Crest Studio shows your crest on your Space’s own background, names every color by what it paints, and walks you through shape, field, band, emblem, border, finish and sidebar with previews of your crest. Each part of a crest can now have its own color.
+
+### Improved
+
+- When an import holds more than Crest can keep, it now brings as many Spaces, tabs, folders, and bookmarks as fit and lists what it left out, instead of stopping. A Space that joins one of yours brings only the tabs it has room for.
+- Importing from Zen or Firefox now brings every profile that has open tabs, each under the name you gave it, and Zen Spaces keep their icons and colors.
+- The import review has matching From and Into menus and one card for each Space’s choices, and says when there’s no room for another Space. The list of browsers scrolls when it doesn’t fit the window.
+- Settings has a cleaner, native look with less text. Each Space has its own page in the Settings sidebar, where you can add, rename, rearrange, lock and delete Spaces, and tab options have their own Tabs page.
+- Every Space template has new arms in colors of their own, from a grey wolf on snow to a pale raven on black, and Shuffle now changes every part of a crest and its sidebar.
+
 ### Fixed
 
-- Installing an extension right after Crest opens no longer stays on “Preparing extension…” for up to three minutes.
+- Importing a Chrome profile signed in to a Google account now brings the bookmarks and passwords saved to that account, and bookmarks in a browser’s trash are no longer imported.
+- Importing from Safari now brings your pinned tabs, and its bookmark folders keep the names Safari shows, such as Favorites and Reading List.
+- Tabs that were open in the browser you import from now stay open instead of being archived by automatic cleanup soon after the import, and Arc tabs keep their real dates.
+- Switching Spaces with Settings open is now as quick as with a webpage, and Settings pages scroll smoothly.
+- Tabs with very long addresses, or addresses that aren’t ordinary web links, open where they were instead of turning into a search.
+- On iPad, buttons and menus such as Manage Search Engines respond to a single tap or click instead of needing a long press.
 
 ---
 
 Development builds contain the newest changes and may be less reliable than stable releases.
 
-[View all changes](https://github.com/pauljoda/Crest/compare/4e59eafd9c21c765a19e28d27dd2d145b24ab260...2dd611181c2bbca658d6def07d73631259a7fc7b) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.7.12-2026-10-06-1186-r186.1/Installer-Crest-0.7.12-development-2026-10-06-2dd6111-arm64.dmg)
+[View all changes](https://github.com/pauljoda/Crest/compare/2dd611181c2bbca658d6def07d73631259a7fc7b...c29557594b7e0c6932569079bec80278267326b5) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.7.14-2026-10-07-1190-r190.1/Installer-Crest-0.7.14-development-2026-10-07-c295575-arm64.dmg)
 
 [Browse Development releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Development+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.7.12-2026-10-06-1186-r186.1/Installer-Crest-0.7.12-development-2026-10-06-2dd6111-arm64.dmg" length="215470213" type="application/octet-stream" sparkle:edSignature="Y/Y9zFkhbmaPyuKhjgK5yOi0u/aX7I6twAlHHSKxMGqS43HnvpElVQtN5ogfsLBuonYWXaw70Rwd0TSlHtpoDw=="/>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.7.14-2026-10-07-1190-r190.1/Installer-Crest-0.7.14-development-2026-10-07-c295575-arm64.dmg" length="217763460" type="application/octet-stream" sparkle:edSignature="dW5pXBuRsCCFG77KB4k29V9pXwBdHNwBTswMM/azE3/+6nMnIcyKSj+7ckC0MKocjMnILi4jlJyJcExgVYYqAw=="/>
         </item>
         <item>
             <title>0.6.484</title>
@@ -60,6 +79,6 @@ Development builds contain the newest changes and may be less reliable than stab
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: LU0w/2mURy7ejpPxPcnBNBxwsgZnCDMvgOFEdksjm2Dss4dDc2I3LXUQT+2zGxZHMevI2al7l99oMquVDmsCDA==
-length: 4013
+edSignature: +rqKX/n5MWkktBfHLX1RcTUd+fFZzZnlKUm9G+dxqGgUndP+f50Yn2vY9hBuZF1IoLbmfcWk3p/Nk3EA30WZBQ==
+length: 6089
 -->
