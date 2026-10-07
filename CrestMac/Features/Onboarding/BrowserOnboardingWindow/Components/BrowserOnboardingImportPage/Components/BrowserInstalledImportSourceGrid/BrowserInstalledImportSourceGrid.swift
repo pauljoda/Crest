@@ -108,10 +108,18 @@ private struct BrowserInstalledImportSourceCard: View {
         .accessibilityLabel("Import from \(source.title)")
         .accessibilityValue(isSelected ? "Selected" : "Not selected")
         .accessibilityAddTraits(isSelected ? .isSelected : [])
-        .accessibilityHint(
-            source.detectedPayload == nil || source.hasDetectedData
-                ? "Review its Spaces and tabs"
-                : "Crest locates the browser data folder and asks for one-time read access"
-        )
+        .accessibilityHint(accessibilityHint)
+    }
+
+    /// What going on with this browser does: an unscanned browser's data is
+    /// read then and may need access, found data is reviewed, and otherwise
+    /// Crest asks for the folder.
+    private var accessibilityHint: Text {
+        guard source.detectedPayload != nil else {
+            return Text("Crest reads its data when you continue, which may ask for access")
+        }
+        return source.hasDetectedData
+            ? Text("Review its Spaces and tabs")
+            : Text("Crest locates the browser data folder and asks for one-time read access")
     }
 }
