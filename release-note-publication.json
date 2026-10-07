@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "channels": {
     "stable": "window-focus-bridge-release-format",
-    "development": "camera-microphone-allow-crash",
+    "development": "onboarding-scan-for-more",
     "nightly": "ipad-single-tap-controls"
   }
 }

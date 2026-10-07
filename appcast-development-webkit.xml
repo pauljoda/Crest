@@ -6,35 +6,29 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.7.18</title>
-            <pubDate>Wed, 07 Oct 2026 19:34:07 +0000</pubDate>
+            <title>0.7.19</title>
+            <pubDate>Wed, 07 Oct 2026 22:27:36 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>development</sparkle:channel>
-            <sparkle:version>1200</sparkle:version>
-            <sparkle:shortVersionString>0.7.18</sparkle:shortVersionString>
+            <sparkle:version>1201</sparkle:version>
+            <sparkle:shortVersionString>0.7.19</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
-### New
+### Improved
 
-- Choose how wide the edge of the window is that shows a hidden sidebar, in Appearance settings. The edge lights up while you adjust it.
-
-### Fixed
-
-- The strip along the top of a full-screen window no longer flickers when the sidebar opens.
-- Crest on iPhone and iPad opens again instead of closing as soon as it starts.
-- Allowing a site to use your camera or microphone no longer quits Crest.
+- Setup no longer looks through other browsers’ data when Crest first opens. It reads a browser only when you choose it to import, or everything when you press Scan for more.
 
 ---
 
 Development builds contain the newest changes and may be less reliable than stable releases.
 
-[View all changes](https://github.com/pauljoda/Crest/compare/c29557594b7e0c6932569079bec80278267326b5...372a6bf1e08fa06740df88aa45cebafd65fbfcf0) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.7.18-2026-10-07-1200-r200.1/Installer-Crest-0.7.18-development-2026-10-07-372a6bf-arm64.dmg)
+[View all changes](https://github.com/pauljoda/Crest/compare/372a6bf1e08fa06740df88aa45cebafd65fbfcf0...0f1abca415ed5a2bea1848c25f222577e22588d2) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.7.19-2026-10-07-1201-r201.1/Installer-Crest-0.7.19-development-2026-10-07-0f1abca-arm64.dmg)
 
 [Browse Development releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Development+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.7.18-2026-10-07-1200-r200.1/Installer-Crest-0.7.18-development-2026-10-07-372a6bf-arm64.dmg" length="215998597" type="application/octet-stream" sparkle:edSignature="XHh3lnf/h6JpL55CAYYFR2KLuX4H9QEHHXjYXkbDhglggK8u29w/qdhldXwP2qFW8o12AbFgrVzAnnsBj+k7DQ=="/>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.7.19-2026-10-07-1201-r201.1/Installer-Crest-0.7.19-development-2026-10-07-0f1abca-arm64.dmg" length="215979141" type="application/octet-stream" sparkle:edSignature="K9IEvukQb34DzSPgnJUWo8fwWM/7NgoCZI7nPsaJqmFZ1x7WIcVraXLAbsGBUtbHthKHpuIs2upBnfMBbrvhDg=="/>
         </item>
         <item>
             <title>0.6.484</title>
@@ -66,6 +60,6 @@ Development builds contain the newest changes and may be less reliable than stab
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: BCiTDcGl1kpK4BUTdg/91Z6J64g8YL1o3sKGKYiWjQSqWhn9/eMfI1oMIBs3hJKC4Xfg1Zd7lUrAb0zP5o7ECw==
-length: 4284
+edSignature: +MjZPxQcC72vwaceEBnmwMjAEBmumAGj+9+oeC5ZzHRRz6WjowwlGBh80YErG7AdlIhpqT1JAIRAYTqPvhtzBw==
+length: 4070
 -->
