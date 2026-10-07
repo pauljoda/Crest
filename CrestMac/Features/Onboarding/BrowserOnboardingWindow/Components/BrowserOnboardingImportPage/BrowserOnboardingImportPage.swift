@@ -3,15 +3,16 @@ import SwiftUI
 struct BrowserOnboardingImportPage: View {
     let sources: [BrowserInstalledImportSource]
     let isSelected: (BrowserInstalledImportSource) -> Bool
-    /// Whether setup looked for browsers it does not list, and how many it found.
-    let hasLookedForUnlisted: Bool
+    /// Whether the person asked setup to scan, and how many browsers it does
+    /// not list the scan found.
+    let hasScanned: Bool
     let unlistedCount: Int
     let isReading: Bool
     let isLocked: Bool
     let failure: BrowserOnboardingFailureText?
-    let accessLabel: (BrowserInstalledImportSource) -> String
+    let accessLabel: (BrowserInstalledImportSource) -> String?
     let toggleSelection: (BrowserInstalledImportSource) -> Void
-    let lookForUnlisted: () -> Void
+    let scanForMore: () -> Void
     let beginManualSetup: () -> Void
     let continueImport: () -> Void
     let back: BrowserOnboardingBackAction
@@ -88,7 +89,7 @@ struct BrowserOnboardingImportPage: View {
                 .multilineTextAlignment(.center)
             }
 
-            if sources.isEmpty, hasLookedForUnlisted {
+            if sources.isEmpty, hasScanned {
                 ContentUnavailableView(
                     "No Supported Browsers Found",
                     systemImage: "square.stack.3d.up.slash",
@@ -106,11 +107,11 @@ struct BrowserOnboardingImportPage: View {
                 )
             }
 
-            BrowserOnboardingUnlistedBrowsers(
-                hasLooked: hasLookedForUnlisted,
+            BrowserOnboardingScanForMore(
+                hasScanned: hasScanned,
                 foundCount: unlistedCount,
                 isLocked: isLocked,
-                look: lookForUnlisted
+                scan: scanForMore
             )
 
             if isReading {
@@ -132,20 +133,22 @@ struct BrowserOnboardingImportPage: View {
     }
 }
 
-/// Looks for browsers setup does not list, and says where to ask for one it
+/// Scans the browsers' data on the person's say-so, since macOS may say Crest
+/// looked at other apps' data, and says where to ask for a browser the scan
 /// cannot find.
-private struct BrowserOnboardingUnlistedBrowsers: View {
-    let hasLooked: Bool
+private struct BrowserOnboardingScanForMore: View {
+    let hasScanned: Bool
     let foundCount: Int
     let isLocked: Bool
-    let look: () -> Void
+    let scan: () -> Void
 
     var body: some View {
-        if !hasLooked {
-            Button("Browser not listed?", systemImage: "magnifyingglass", action: look)
+        if !hasScanned {
+            Button("Scan for more", systemImage: "magnifyingglass", action: scan)
                 .buttonStyle(BrowserOnboardingSecondaryButtonStyle())
                 .disabled(isLocked)
-                .accessibilityHint("Looks for other browsers built on Chromium")
+                .accessibilityHint("Looks through other browsers’ data on this Mac")
+                .accessibilityIdentifier("onboarding-import-scan")
         } else {
             VStack(spacing: 6) {
                 if foundCount == 0 {

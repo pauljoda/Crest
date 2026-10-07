@@ -34,14 +34,14 @@ struct BrowserOnboardingStepContent: View {
             BrowserOnboardingImportPage(
                 sources: flow.offeredSources,
                 isSelected: flow.isSelected,
-                hasLookedForUnlisted: flow.hasLookedForUnlistedSources,
+                hasScanned: flow.hasScanned,
                 unlistedCount: flow.unlistedSources.count,
                 isReading: flow.isReading,
                 isLocked: flow.isImportSelectionLocked,
                 failure: flow.failure?.message,
                 accessLabel: flow.importAccessLabel,
                 toggleSelection: flow.toggleSelection,
-                lookForUnlisted: flow.lookForUnlistedSources,
+                scanForMore: flow.scanForMore,
                 beginManualSetup: beginManualSetup,
                 continueImport: flow.continueImportQueue,
                 back: back

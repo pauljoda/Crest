@@ -2761,9 +2761,6 @@
     "Browser data found · Review it" : {
 
     },
-    "Browser not listed?" : {
-
-    },
     "browser startup default Space typing spelling spell check text editing Picture in Picture video developer toolbar localhost local pages translation system permissions access camera microphone location notifications passkeys files folders downloads allow blocked repair" : {
 
     },
@@ -7536,7 +7533,7 @@
     "look and feel theme accent color transparency page zoom percentage sidebar left right borderless window fullscreen layout interface animation motion page cards folder highlights counts borders preview density spacing padding scale icons" : {
 
     },
-    "Looks for other browsers built on Chromium" : {
+    "Looks through other browsers’ data on this Mac" : {
 
     },
     "Lozenge" : {
@@ -10916,6 +10913,9 @@
           }
         }
       }
+    },
+    "Scan for more" : {
+
     },
     "Scarlet" : {
 

@@ -24,35 +24,29 @@ struct BrowserDetectedImportPayload: Equatable, Sendable {
 /// on Chromium that setup found by looking, which reads as `ImportSource.otherChromium`
 /// under its own name and icon.
 struct BrowserInstalledImportSource: Identifiable {
+    // MARK: - Variables
+
     let application: ImportSource
     let applicationURL: URL
-    let detectedPayload: BrowserDetectedImportPayload
+    /// What the core found in the browser's data folder, or nil until setup
+    /// reads it: when the person scans, or chooses this browser and goes on.
+    let detectedPayload: BrowserDetectedImportPayload?
     let icon: NSImage
     /// The name the browser goes by.
     let title: String
 
-    init(
-        application: ImportSource, applicationURL: URL, detectedPayload: BrowserDetectedImportPayload, icon: NSImage,
-        title: String? = nil
-    ) {
-        self.application = application
-        self.applicationURL = applicationURL
-        self.detectedPayload = detectedPayload
-        self.icon = icon
-        self.title = title ?? application.title
-    }
-
     var id: URL { applicationURL }
 
     var hasDetectedData: Bool {
-        detectedPayload.profiles.contains {
+        detectedPayload?.profiles.contains {
             $0.bookmarksPath != nil || $0.sessionPath != nil
-        }
+        } ?? false
     }
 
     /// Whether this process may already read every file the core found,
     /// without asking the person for access to the data folder.
     var hasReadableDetectedData: Bool {
+        guard let detectedPayload else { return false }
         let paths =
             detectedPayload.profiles.flatMap { profile in
                 [profile.bookmarksPath, profile.sessionPath].compactMap { $0 }
@@ -61,5 +55,27 @@ struct BrowserInstalledImportSource: Identifiable {
             && paths.allSatisfy {
                 FileManager.default.isReadableFile(atPath: $0)
             }
+    }
+
+    // MARK: - Initializers
+
+    init(
+        application: ImportSource, applicationURL: URL, detectedPayload: BrowserDetectedImportPayload? = nil,
+        icon: NSImage, title: String? = nil
+    ) {
+        self.application = application
+        self.applicationURL = applicationURL
+        self.detectedPayload = detectedPayload
+        self.icon = icon
+        self.title = title ?? application.title
+    }
+
+    // MARK: - Actions - Reading
+
+    /// This browser with `payload`, what the core found in its data folder.
+    func detecting(_ payload: BrowserDetectedImportPayload) -> BrowserInstalledImportSource {
+        BrowserInstalledImportSource(
+            application: application, applicationURL: applicationURL, detectedPayload: payload, icon: icon,
+            title: title)
     }
 }

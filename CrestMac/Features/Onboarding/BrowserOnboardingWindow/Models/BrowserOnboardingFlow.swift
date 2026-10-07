@@ -19,9 +19,11 @@ final class BrowserOnboardingFlow {
 
     private(set) var request: BrowserOnboardingRequest
     private(set) var installedSources: [BrowserInstalledImportSource] = []
-    /// The browsers setup found by looking, once the person asked it to look.
+    /// The browsers setup found by looking, once the person asked it to scan.
     private(set) var unlistedSources: [BrowserInstalledImportSource] = []
-    private(set) var hasLookedForUnlistedSources = false
+    /// Whether the person asked setup to scan the browsers' data. Until then
+    /// setup reads only the browser the person chooses, when they go on.
+    private(set) var hasScanned = false
     /// The found browser `ImportSource.otherChromium` imports, by its app.
     private(set) var chosenUnlistedSourceURL: URL?
     private(set) var isChoosingDataAccess = false
@@ -128,7 +130,8 @@ final class BrowserOnboardingFlow {
         offerInstalledSources()
     }
 
-    /// Finds the browsers installed on this Mac and offers them to setup.
+    /// Finds the browsers installed on this Mac by their apps, reading none
+    /// of their data, and offers them to setup.
     func discoverInstalledSources() {
         installedSources = sourceDiscovery.installedSources()
         offerInstalledSources()
@@ -140,12 +143,15 @@ final class BrowserOnboardingFlow {
         send(OfferImportSources(installed: installedSources.map(\.application) + unlisted))
     }
 
-    /// Looks for the browsers built on Chromium that setup does not list, and
-    /// offers them beside the listed ones.
-    func lookForUnlistedSources() {
+    /// Reads what each listed browser keeps, and looks for the browsers built
+    /// on Chromium that setup does not list, offering them beside the listed
+    /// ones. macOS may say Crest looked at other apps' data, so setup scans
+    /// only when the person asks.
+    func scanForMore() {
         guard !isImportSelectionLocked else { return }
+        installedSources = installedSources.map(sourceDiscovery.scanned)
         unlistedSources = sourceDiscovery.unlistedSources()
-        hasLookedForUnlistedSources = true
+        hasScanned = true
         offerInstalledSources()
     }
 
@@ -272,15 +278,18 @@ final class BrowserOnboardingFlow {
 
     // MARK: - Actions - Reading
 
-    /// Reads the browser the core is on, when it is reading one.
+    /// Reads the browser the core is on, when it is reading one: from what a
+    /// scan found, then a folder the person gave access to, then the browser's
+    /// own folder when nothing has read it yet, and otherwise the folder the
+    /// person picks.
     private func readCurrentSource() {
         guard let state, state.phase == .reading, let application = state.source else { return }
         guard let source = offeredSource(application) else {
             send(FailImport(source: application, reason: .sourceUnavailable, detail: nil))
             return
         }
-        if source.hasReadableDetectedData {
-            readImport(source.detectedPayload)
+        if source.hasReadableDetectedData, let payload = source.detectedPayload {
+            readImport(payload)
             return
         }
         if let access = dataAccessProvider.resolve(for: application) {
@@ -293,7 +302,24 @@ final class BrowserOnboardingFlow {
             access.stopAccessing()
             dataAccessProvider.clear(for: application)
         }
+        if source.detectedPayload == nil {
+            let scanned = scannedSource(source)
+            if scanned.hasReadableDetectedData, let payload = scanned.detectedPayload {
+                readImport(payload)
+                return
+            }
+        }
         chooseBrowserDataAccess(for: application)
+    }
+
+    /// `source` with its data folder read now, kept among the browsers setup
+    /// offers.
+    private func scannedSource(_ source: BrowserInstalledImportSource) -> BrowserInstalledImportSource {
+        let scanned = sourceDiscovery.scanned(source)
+        if let index = installedSources.firstIndex(where: { $0.id == source.id }) {
+            installedSources[index] = scanned
+        }
+        return scanned
     }
 
     private func chooseBrowserDataAccess(for application: ImportSource) {
@@ -472,9 +498,10 @@ final class BrowserOnboardingFlow {
         return String(localized: "\(browserProgress) · \(spaceProgress)")
     }
 
-    func importAccessLabel(for source: BrowserInstalledImportSource) -> String {
-        if source.hasReadableDetectedData {
-            let count = source.detectedPayload.profiles.count
+    /// What reading `source` takes, or nil before setup has read its data.
+    func importAccessLabel(for source: BrowserInstalledImportSource) -> String? {
+        if source.hasReadableDetectedData, let payload = source.detectedPayload {
+            let count = payload.profiles.count
             return count > 1
                 ? String(localized: "\(count) profiles found · Review them")
                 : String(localized: "Browser data found · Review it")
@@ -482,6 +509,7 @@ final class BrowserOnboardingFlow {
         if dataAccessProvider.hasSavedAccess(for: source.application) {
             return String(localized: "Access saved · Ready to review")
         }
+        guard source.detectedPayload != nil else { return nil }
         return String(localized: "One-time macOS permission · No folder search")
     }
 

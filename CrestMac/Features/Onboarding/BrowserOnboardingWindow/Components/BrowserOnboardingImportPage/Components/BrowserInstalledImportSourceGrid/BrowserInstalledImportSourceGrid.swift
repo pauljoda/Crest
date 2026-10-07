@@ -4,7 +4,7 @@ struct BrowserInstalledImportSourceGrid: View {
     let sources: [BrowserInstalledImportSource]
     let isSelected: (BrowserInstalledImportSource) -> Bool
     let isLocked: Bool
-    let accessLabel: (BrowserInstalledImportSource) -> String
+    let accessLabel: (BrowserInstalledImportSource) -> String?
     let toggleSelection: (BrowserInstalledImportSource) -> Void
 
     private var rows: [[BrowserInstalledImportSource]] {
@@ -42,7 +42,7 @@ private struct BrowserInstalledImportSourceCard: View {
     let source: BrowserInstalledImportSource
     let isSelected: Bool
     let isLocked: Bool
-    let accessLabel: String
+    let accessLabel: String?
     let toggleSelection: () -> Void
 
     var body: some View {
@@ -74,11 +74,13 @@ private struct BrowserInstalledImportSourceCard: View {
                     .foregroundStyle(BrowserOnboardingPalette.inkSoft)
                     .multilineTextAlignment(.leading)
                     .lineLimit(3)
-                Text(accessLabel)
-                    .font(
-                        BrowserOnboardingTypography.sans(11, weight: .bold)
-                    )
-                    .foregroundStyle(BrowserOnboardingPalette.coral)
+                if let accessLabel {
+                    Text(accessLabel)
+                        .font(
+                            BrowserOnboardingTypography.sans(11, weight: .bold)
+                        )
+                        .foregroundStyle(BrowserOnboardingPalette.coral)
+                }
             }
             .frame(maxWidth: .infinity, minHeight: 172, maxHeight: .infinity, alignment: .topLeading)
             .padding(18)
@@ -107,7 +109,7 @@ private struct BrowserInstalledImportSourceCard: View {
         .accessibilityValue(isSelected ? "Selected" : "Not selected")
         .accessibilityAddTraits(isSelected ? .isSelected : [])
         .accessibilityHint(
-            source.hasDetectedData
+            source.detectedPayload == nil || source.hasDetectedData
                 ? "Review its Spaces and tabs"
                 : "Crest locates the browser data folder and asks for one-time read access"
         )
