@@ -9,17 +9,17 @@ public sealed record CredentialOrigin(string Scheme, string Host, int Port) {
 
     public const int MaximumHostLength = 1_024;
 
-    public bool IsValid => Scheme is "https" or "http" && !string.IsNullOrEmpty(Host) && Host.Length <= MaximumHostLength
+    public bool IsValid => WebScheme.Named(Scheme) is not null && !string.IsNullOrEmpty(Host) && Host.Length <= MaximumHostLength
         && Port is >= 1 and <= 65_535;
 
-    public bool IsSecure => Scheme == "https";
+    public bool IsSecure => WebScheme.Named(Scheme)?.IsSecure == true;
 
     /// The origin as an address spells it: its scheme and host, an IPv6 host
     /// in brackets, and its port only where it is not the scheme's default.
     public string Spelling {
         get {
             string host = Host.Contains(':', StringComparison.Ordinal) ? $"[{Host}]" : Host;
-            return Port == (IsSecure ? 443 : 80) ? $"{Scheme}://{host}" : $"{Scheme}://{host}:{Port}";
+            return WebScheme.Named(Scheme)?.DefaultPort == Port ? $"{Scheme}://{host}" : $"{Scheme}://{host}:{Port}";
         }
     }
 

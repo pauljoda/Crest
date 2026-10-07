@@ -6,16 +6,10 @@ struct BrowserSavedSitePermissionSection: View {
     let resetAll: () -> Void
 
     var body: some View {
-        Section("Saved decisions", systemImage: "checkmark.shield") {
+        Section("Site permissions") {
             if records.isEmpty {
-                ContentUnavailableView(
-                    "No Saved Permissions",
-                    systemImage: "hand.raised.slash",
-                    description: Text(
-                        "Protected capabilities ask first. Automatic pop-ups are blocked, and a site can download one file before asking to send more."
-                    )
-                )
-                .frame(maxWidth: .infinity)
+                Text("No saved permissions")
+                    .foregroundStyle(.secondary)
             } else {
                 ForEach(records) { record in
                     BrowserSitePermissionRecordRow(
@@ -23,15 +17,12 @@ struct BrowserSavedSitePermissionSection: View {
                         permissionCenter: permissionCenter
                     )
                 }
-            }
-
-            if !records.isEmpty {
-                Button("Reset All", role: .destructive, action: resetAll)
-                    .buttonStyle(.crestDestructive)
-                    .disabled(records.isEmpty)
-                    .accessibilityHint("Restores each site's default permission behavior")
+                HStack {
+                    Spacer()
+                    Button("Reset All…", role: .destructive, action: resetAll)
+                        .accessibilityHint("Restores each site's default permission behavior")
+                }
             }
         }
-        .containerValue(\.settingsFullWidth, true)
     }
 }

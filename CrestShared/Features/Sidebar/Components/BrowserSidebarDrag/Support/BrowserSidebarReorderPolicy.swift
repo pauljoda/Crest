@@ -232,7 +232,7 @@ enum BrowserSidebarReorderPolicy {
             placement.holdsSplits
         case (.folder, .folders): true
         case (.folder, .tabs(let placement, _)):
-            placement != .pinned
+            placement.holdsFolders
         default: false
         }
     }

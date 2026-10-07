@@ -29,7 +29,7 @@ public static class NativeSessionMaintenance {
 
     /// The repaired session and positional asset references: `{"session", "assets"}`.
     public static JsonObject Repair(JsonObject source, double now, JsonObject? emptySpace = null, IIdSource? ids = null) {
-        if (!double.IsFinite(now)) throw new BrowserRuleException(BrowserRuleCodes.InvalidSavedDate);
+        if (!double.IsFinite(now)) throw new BrowserRuleException(BrowserRule.InvalidSavedDate);
         var repaired = Repair(StoredSessionCodec.DecodeSession(source), StoredSessionCodec.Date(now),
             emptySpace is null ? null : StoredSessionCodec.DecodeSpace(emptySpace), ids ?? new SystemIdSource(), out var origins);
         return Answer(repaired, origins);
@@ -77,7 +77,7 @@ public static class NativeSessionMaintenance {
             // its identities stay claimed so no other Space can take them.
             if (pending.Contains(space.Id)) {
                 if (spaceIds.Claim(space.Id) != space.Id || profiles.Claim(space.ProfileId) != space.ProfileId)
-                    throw new BrowserRuleException(BrowserRuleCodes.InvalidDeletionIntent);
+                    throw new BrowserRuleException(BrowserRule.InvalidDeletionIntent);
                 foreach (var (tab, tabIndex) in space.Tabs.Select((tab, index) => (tab, index))) {
                     _ = tabIds.Claim(tab.Id);
                     assets.Add(new(spaceIndex, tabIndex, space.Id, tab.Id));
@@ -94,7 +94,7 @@ public static class NativeSessionMaintenance {
                 var id = tabIds.Claim(tab.Id);
                 assets.Add(new(spaceIndex, tabIndex, space.Id, tab.Id));
                 counts[tab.Placement] = counts.GetValueOrDefault(tab.Placement) + 1;
-                var placement = tab.Placement.Holds(counts[tab.Placement]) ? tab.Placement : TabPlacement.Saved;
+                var placement = tab.Placement.Fitting(counts[tab.Placement]);
                 var folder = placement.HoldsFolders && tab.FolderId is { } folderId
                     && locations.TryGetValue(folderId, out var location) && location == placement ? tab.FolderId : null;
                 return Normalized(tab with {
@@ -134,7 +134,7 @@ public static class NativeSessionMaintenance {
     /// Removes history and archive records older than each Space keeps them;
     /// a Space that is being deleted keeps everything. `{"session", "changed"}`.
     public static JsonObject Retain(JsonObject source, double now) {
-        if (!double.IsFinite(now)) throw new BrowserRuleException(BrowserRuleCodes.InvalidSavedDate);
+        if (!double.IsFinite(now)) throw new BrowserRuleException(BrowserRule.InvalidSavedDate);
         var retained = Retain(StoredSessionCodec.DecodeSession(source), StoredSessionCodec.Date(now), out var changed);
         return new() { ["session"] = StoredSessionCodec.Encode(retained), ["changed"] = changed };
     }

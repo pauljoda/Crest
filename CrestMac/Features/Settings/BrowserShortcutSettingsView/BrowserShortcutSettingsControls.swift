@@ -27,18 +27,13 @@ struct BrowserShortcutSettingsControls: View {
             identifier: BrowserShortcutSettingsAccessibilityID.search
         )
         .frame(maxWidth: .infinity)
-        .frame(height: 36)
     }
 
     private var actions: some View {
         HStack(spacing: 12) {
-            Button(
-                BrowserShortcutSettingsPresentation.resetCrest,
-                systemImage: "arrow.counterclockwise", action: requestReset
-            )
-            .buttonStyle(.bordered)
-            .disabled(!canReset)
-            .accessibilityIdentifier(BrowserShortcutSettingsAccessibilityID.resetAll)
+            Button(BrowserShortcutSettingsPresentation.resetCrest, action: requestReset)
+                .disabled(!canReset)
+                .accessibilityIdentifier(BrowserShortcutSettingsAccessibilityID.resetAll)
         }
         .fixedSize()
     }
@@ -59,7 +54,7 @@ private struct BrowserShortcutSearchField: NSViewRepresentable {
 
     func makeNSView(context: Context) -> NSSearchField {
         let field = NSSearchField()
-        field.controlSize = .large
+        field.controlSize = .regular
         field.placeholderString = BrowserShortcutLocalization.string(
             placeholder,
             locale: locale

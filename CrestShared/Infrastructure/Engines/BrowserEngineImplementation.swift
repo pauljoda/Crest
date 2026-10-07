@@ -9,11 +9,65 @@ enum BrowserEngineImplementation: String, Codable, Sendable {
 
     // MARK: - Types
 
-    /// The engine an identity, download or saved page state belongs to. Raw
-    /// values are the engine tags persisted interaction state carries.
-    enum Family: String, Codable, Hashable, Sendable {
-        case webKit = "webkit"
-        case chromium
+    /// The engine an identity, download or saved page state belongs to.
+    struct Family: Codable, Hashable, Identifiable, Sendable {
+        // MARK: - Static Variables
+
+        static let webKit = Family(name: "webkit", appcastSuffix: "-webkit", mainAppcastName: "appcast-webkit")
+        static let chromium = Family(name: "chromium", appcastSuffix: "", mainAppcastName: nil)
+
+        /// Every engine family.
+        static let all: [Family] = [webKit, chromium]
+
+        // MARK: - Variables
+
+        /// The engine tag persisted interaction state carries.
+        let name: String
+
+        /// What the product built on this engine adds to the name of a
+        /// channel's own update feed.
+        let appcastSuffix: String
+
+        /// The product's own feed for the channels without one, or `nil` where
+        /// the feed bundled in the app serves them.
+        let mainAppcastName: String?
+
+        var id: String { name }
+
+        // MARK: - Initializers
+
+        private init(name: String, appcastSuffix: String, mainAppcastName: String?) {
+            self.name = name
+            self.appcastSuffix = appcastSuffix
+            self.mainAppcastName = mainAppcastName
+        }
+
+        init(from decoder: any Decoder) throws {
+            let container = try decoder.singleValueContainer()
+            let name = try container.decode(String.self)
+            guard let family = Self.all.first(where: { $0.name == name }) else {
+                throw DecodingError.dataCorruptedError(
+                    in: container, debugDescription: "Unknown engine family \(name)")
+            }
+            self = family
+        }
+
+        // MARK: - Actions - Coding
+
+        func encode(to encoder: any Encoder) throws {
+            var container = encoder.singleValueContainer()
+            try container.encode(name)
+        }
+
+        // MARK: - Actions - Identity
+
+        static func == (lhs: Family, rhs: Family) -> Bool {
+            lhs.name == rhs.name
+        }
+
+        func hash(into hasher: inout Hasher) {
+            hasher.combine(name)
+        }
     }
 
     // MARK: - Variables

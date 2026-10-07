@@ -5,7 +5,7 @@ struct MobileSpaceSelectionSection: View {
     @Binding var selectedSpaceID: UUID?
 
     var body: some View {
-        Section("Space", systemImage: "square.grid.2x2") {
+        Section("Space") {
             Picker("Edit", selection: $selectedSpaceID) {
                 ForEach(browser.spaceModels) { space in
                     BrowserSpaceIdentityLabel(space: space)

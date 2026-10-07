@@ -25,7 +25,7 @@ struct MobileBrowserRegularSettingsLayout: View {
                 spaceAccess: spaceAccess,
                 dataDeleter: dataDeleter
             )
-            .navigationTitle("")
+            .navigationTitle(Text(selection.title))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { MobileBrowserSettingsToolbar(dismiss: dismiss) }
         }

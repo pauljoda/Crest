@@ -6,6 +6,8 @@ struct BrowserInlineSpaceName: View {
     @Binding var name: String
     var size: CGFloat = 30
     var titleFont: Font? = nil
+    /// Set to put the name into editing; the view clears it once it has.
+    var requestsEditing: Binding<Bool> = .constant(false)
     @State private var draftName = ""
     @State private var isEditing = false
     @State private var isHovering = false
@@ -72,15 +74,20 @@ struct BrowserInlineSpaceName: View {
                     .accessibilityLabel("Edit Space name: \(name)")
                 }
             #endif
-            Button(action: { if isEditing { finish() } else { edit() } }) {
-                Image(systemName: isEditing ? "checkmark.circle.fill" : "pencil")
+            // While the name is being edited it's an ordinary field: Return,
+            // Done or a click elsewhere finishes, and the pencil's place stays
+            // so nothing moves.
+            Button(action: edit) {
+                Image(systemName: "pencil")
                     .font(.system(size: size <= 18 ? 14 : 18, weight: .medium))
-                    .foregroundStyle(isEditing ? Color.green : Color.secondary)
+                    .foregroundStyle(.secondary)
                     .frame(width: usesTouch ? 44 : size <= 18 ? 24 : 32, height: usesTouch ? 44 : 32)
-                    .opacity(usesTouch || isEditing || isHovering ? 1 : 0)
+                    .opacity(!isEditing && (usesTouch || isHovering) ? 1 : 0)
             }
             .buttonStyle(.plain)
-            .accessibilityLabel(isEditing ? "Finish editing name" : "Edit Space name")
+            .disabled(isEditing)
+            .accessibilityHidden(isEditing)
+            .accessibilityLabel("Edit Space name")
         }
         .font(titleFont ?? CrestTypography.display(size))
         .frame(minHeight: size <= 18 ? 32 : 44)
@@ -92,10 +99,15 @@ struct BrowserInlineSpaceName: View {
         )
         .overlay {
             RoundedRectangle(cornerRadius: 10).strokeBorder(
-                isEditing ? Color.green.opacity(0.38) : Color.primary.opacity(isHovering ? 0.12 : 0))
+                Color.primary.opacity(isEditing ? 0.18 : isHovering ? 0.12 : 0))
         }
         .onHover { isHovering = $0 }
         .onChange(of: isFocused) { _, focused in if !focused { isEditing = false } }
+        .onChange(of: requestsEditing.wrappedValue, initial: true) { _, requested in
+            guard requested else { return }
+            requestsEditing.wrappedValue = false
+            edit()
+        }
         .background { PlatformInlineSpaceNameDismissal(isEditing: isEditing, finish: finish) }
         .padding(.leading, size <= 18 ? -4 : -10)
         .frame(maxWidth: .infinity, alignment: .leading)

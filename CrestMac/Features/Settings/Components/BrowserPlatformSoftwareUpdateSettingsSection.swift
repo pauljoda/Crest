@@ -4,7 +4,7 @@ struct BrowserPlatformSoftwareUpdateSettingsSection: View {
     @Environment(BrowserSoftwareUpdateService.self) private var softwareUpdates
 
     var body: some View {
-        Section("Software updates", systemImage: "arrow.triangle.2.circlepath") {
+        Section {
             Toggle(
                 "Check for updates automatically",
                 isOn: Binding(
@@ -29,27 +29,31 @@ struct BrowserPlatformSoftwareUpdateSettingsSection: View {
                     set: { softwareUpdates.channel = $0 }
                 )
             ) {
-                ForEach(BrowserSoftwareUpdateChannel.allCases) { channel in
+                ForEach(BrowserSoftwareUpdateChannel.offered) { channel in
                     Text(channel.title).tag(channel)
                 }
             }
 
-            Text(softwareUpdates.channel.guidance)
-                .crestFormFootnote()
-
-            Button("Check for Updates…") {
-                softwareUpdates.checkForUpdates()
+            HStack {
+                Spacer()
+                Button("Check for Updates…") {
+                    softwareUpdates.checkForUpdates()
+                }
+                .disabled(!softwareUpdates.isEnabled)
             }
-            .disabled(!softwareUpdates.isEnabled)
 
             if let startErrorDescription = softwareUpdates.startErrorDescription {
                 Label(
                     startErrorDescription,
                     systemImage: "exclamationmark.triangle.fill"
                 )
-                .crestFormFootnote()
+                .font(.footnote)
                 .foregroundStyle(.orange)
             }
+        } header: {
+            Text("Software updates")
+        } footer: {
+            Text(softwareUpdates.channel.guidance).crestFormFootnote()
         }
     }
 }

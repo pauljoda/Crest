@@ -4,27 +4,60 @@ import UIKit
 import UniformTypeIdentifiers
 import WebKit
 
-enum MobileBrowserFileExportDestination: CaseIterable, Equatable, Identifiable, Sendable {
-    case share
-    case files
+/// Where an exported page or a finished download goes on a device without a
+/// Finder: the share sheet or the Files picker.
+struct MobileBrowserFileExportDestination: Hashable, Identifiable, Sendable {
+    // MARK: - Types
 
-    var id: Self { self }
-
-    var title: String {
-        switch self {
-        case .share:
-            "Share…"
-        case .files:
-            "Save to Files…"
-        }
+    /// Each destination presents its own system controller, so the presenter
+    /// switches over the kind.
+    enum Kinds: Sendable {
+        case share
+        case files
     }
 
-    var systemImage: String {
-        switch self {
-        case .share:
-            "square.and.arrow.up"
-        case .files:
-            "folder.badge.plus"
-        }
+    // MARK: - Static Variables
+
+    static let share = MobileBrowserFileExportDestination(kind: .share, download: .share)
+    static let files = MobileBrowserFileExportDestination(kind: .files, download: .files)
+
+    /// Every destination, in menu order.
+    static let all: [MobileBrowserFileExportDestination] = [share, files]
+
+    // MARK: - Variables
+
+    let kind: Kinds
+
+    /// The download row destination that exports this way, whose title and
+    /// symbol this destination shares.
+    let download: BrowserUtilityDownloadDestination
+
+    var name: String { download.name }
+    var title: LocalizedStringResource { download.title }
+    var symbol: String { download.symbol }
+    var id: String { name }
+
+    // MARK: - Initializers
+
+    private init(kind: Kinds, download: BrowserUtilityDownloadDestination) {
+        self.kind = kind
+        self.download = download
+    }
+
+    // MARK: - Actions - Lookup
+
+    /// The export a download row's destination asks for, if it is one.
+    static func exporting(_ download: BrowserUtilityDownloadDestination) -> MobileBrowserFileExportDestination? {
+        all.first { $0.download == download }
+    }
+
+    // MARK: - Actions - Identity
+
+    static func == (lhs: MobileBrowserFileExportDestination, rhs: MobileBrowserFileExportDestination) -> Bool {
+        lhs.name == rhs.name
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(name)
     }
 }

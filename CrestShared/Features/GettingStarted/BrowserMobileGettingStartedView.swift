@@ -6,7 +6,7 @@
         var showsCompactNavigation = false
         @Bindable var state: BrowserGettingStartedState
         private var practice: BrowserGettingStartedPractice { state.practice }
-        private var lesson: Int {
+        private var lesson: BrowserGettingStartedLesson {
             get { state.lesson }
             nonmutating set { state.lesson = newValue }
         }
@@ -28,7 +28,7 @@
                             Spacer()
                             Button("Reset practice", systemImage: "arrow.counterclockwise") {
                                 practice.reset()
-                                lesson = 0
+                                lesson = .pin
                             }
                             .labelStyle(.iconOnly)
                             .frame(width: 44, height: 44)
@@ -96,26 +96,27 @@
                 HStack {
                     Text("Tabs & folders").font(.subheadline.weight(.semibold)).foregroundStyle(.secondary)
                     Spacer()
-                    Text("\(lesson + 1) / 4").font(.caption.monospacedDigit()).foregroundStyle(.secondary)
+                    Text("\(lesson.number) / \(BrowserGettingStartedLesson.all.count)")
+                        .font(.caption.monospacedDigit()).foregroundStyle(.secondary)
                 }
-                Text(lessonTitle).font(CrestTypography.display(28))
-                Text(lessonDetail).font(.subheadline).foregroundStyle(.secondary)
+                Text(lesson.touchTitle).font(CrestTypography.display(28))
+                Text(lesson.touchDetail).font(.subheadline).foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
                 ViewThatFits(in: .horizontal) {
                     HStack(spacing: 12) { lessonActions }
                     VStack(alignment: .leading, spacing: 12) { lessonActions }
                 }
                 HStack {
-                    if lesson > 0 {
-                        Button("Previous") { lesson -= 1 }.frame(minHeight: 44)
+                    if let previous = lesson.previous {
+                        Button("Previous") { lesson = previous }.frame(minHeight: 44)
                     }
                     Spacer()
-                    Button(lesson == 3 ? "Practice again" : "Next", systemImage: "arrow.right") {
-                        if lesson < 3 {
-                            lesson += 1
+                    Button(lesson.next == nil ? "Practice again" : "Next", systemImage: "arrow.right") {
+                        if let next = lesson.next {
+                            lesson = next
                         } else {
                             practice.reset()
-                            lesson = 0
+                            lesson = .pin
                         }
                     }
                     .frame(minHeight: 44)
@@ -124,45 +125,24 @@
             }
         }
 
-        private var lessonTitle: LocalizedStringKey {
-            switch lesson {
-            case 0: "Pin everyday apps"
-            case 1: "Save a tab"
-            case 2: "Organize with folders"
-            default: "Clear open tabs"
-            }
-        }
-
-        private var lessonDetail: LocalizedStringKey {
-            switch lesson {
-            case 0: "Touch and hold Gmail, then choose Pin Tab. Pinned tabs stay at the top for your everyday apps."
-            case 1:
-                "Saved tabs stay above the line until you delete them. The minus button unloads a saved tab while keeping it in your sidebar."
-            case 2:
-                "Folders hold tabs and other folders. Add Weekends, then nest Ideas inside it. Folders also work below the line with open tabs."
-            default:
-                "Tabs below the line close automatically on your Space’s cleanup schedule. Open the Space’s ••• menu and choose Clean Up Current Tabs to archive them now. Pinned and saved tabs stay."
-            }
-        }
-
         @ViewBuilder private var lessonActions: some View {
-            switch lesson {
-            case 0:
+            switch lesson.kind {
+            case .pin:
                 Button("Pin Gmail", systemImage: "pin.fill") {
                     if let mail = practice.tabID(.mail) { practice.browser.pinTab(mail) }
                 }
                 .buttonStyle(.crestPrimary(tint: CrestBrandPalette.butter))
-            case 1:
+            case .save:
                 Button("Save A weekend away", systemImage: "bookmark") {
                     if let trail = practice.tabID(.trail) { practice.browser.saveTab(trail) }
                 }
                 .buttonStyle(.crestPrimary(tint: CrestBrandPalette.butter))
-            case 2:
+            case .folders:
                 Button("Add folder", systemImage: "folder.badge.plus") { practice.addFolder(nested: false) }
                     .buttonStyle(.crestSecondary)
                 Button("Nest a folder", systemImage: "folder") { practice.addFolder(nested: true) }
                     .buttonStyle(.crestSecondary)
-            default:
+            case .clear:
                 Button("Clean Up Current Tabs", systemImage: "sparkles") {
                     _ = practice.tabActions.clearCurrentTabs()
                 }

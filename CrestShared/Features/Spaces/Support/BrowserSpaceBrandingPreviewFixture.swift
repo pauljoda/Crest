@@ -3,14 +3,14 @@ import Foundation
 enum BrowserSpaceBrandingPreviewFixture {
     /// The Winter house look, drawn with its simple symbol.
     static let bannerBranding: SpaceBranding = {
-        var look = BrowserSpaceHousePalette.winter.look
+        var look = SpaceHouse.winter.look
         look.iconStyle = .simpleSymbol
         return look
     }()
 
     /// The Storm house look as a textured gradient, drawn with its simple symbol.
     static let gradientBranding: SpaceBranding = {
-        var look = BrowserSpaceHousePalette.storm.look
+        var look = SpaceHouse.storm.look
         look.bannerStrength = 0.82
         look.readabilityFade = 0.2
         look.themeMode = .gradient
@@ -22,7 +22,7 @@ enum BrowserSpaceBrandingPreviewFixture {
 
     /// The Lion house look quartered, under a crowned crest.
     static let crestBranding: SpaceBranding = {
-        var look = BrowserSpaceHousePalette.lion.look
+        var look = SpaceHouse.lion.look
         look.bannerPattern = .quartered
         look.crest.backplate = .shield
         look.crest.fieldDivision = .quarterly

@@ -126,7 +126,7 @@ internal sealed record SessionDraft(int Ordinal, string? Name, IReadOnlyList<Ses
         var folderPlaces = folders.ToDictionary(folder => folder.Id, folder => folder.Location);
         if (!IsForest(folders)) throw new Rejected(new SessionOverLimits());
 
-        int pinned = 0;
+        var counts = new Dictionary<TabPlacement, int>();
         Guid? overflow = null;
         List<BrowserDataTab> tabs = [];
         var ordered = Gathered(Tabs);
@@ -135,15 +135,14 @@ internal sealed record SessionDraft(int Ordinal, string? Name, IReadOnlyList<Ses
             Guid? folder = tab.FolderSourceId is { } folderSource && folderIds.TryGetValue(folderSource, out var mapped) ? mapped : null;
             if (placement == TabPlacement.Saved && tab.FolderSourceId is not null && folder is null)
                 throw new Rejected(new SessionUnrecognized());
-            if (placement == TabPlacement.Pinned && pinned < TabPlacement.PinnedCapacity) {
-                pinned++;
-            } else if (placement == TabPlacement.Pinned) {
-                placement = TabPlacement.Saved;
+            counts[placement] = counts.GetValueOrDefault(placement) + 1;
+            if (placement.Fitting(counts[placement]) is var spill && spill != placement) {
+                placement = spill;
                 if (overflow is null && folders.Count < FolderTree.MaximumCount) {
                     overflow = ids.Next();
                     folders.Add(Folder(overflow.Value, WorkspaceImportPolicy.OverflowFolderTitle, WorkspaceImportPolicy.OverflowFolderSymbol,
-                        parent: null));
-                    folderPlaces[overflow.Value] = TabPlacement.Saved;
+                        parent: null, spill));
+                    folderPlaces[overflow.Value] = spill;
                 }
                 folder = overflow;
             }
@@ -152,7 +151,7 @@ internal sealed record SessionDraft(int Ordinal, string? Name, IReadOnlyList<Ses
             string url = tab.Address.Spelling;
             bool fits = folder is { } held && folderPlaces.TryGetValue(held, out var place) && place == placement;
             tabs.Add(new(ids.Next(), title, NativeContent: null, url, placement.IsDurable ? url : null,
-                placement == TabPlacement.Pinned ? WorkspaceImportPolicy.PinnedTabSymbol : TabIconMode.WebSymbol, placement,
+                placement.ImportedSymbol ?? TabIconMode.WebSymbol, placement,
                 fits ? folder : null, SplitGroupId: null, tab.LastActivatedAt ?? importedAt));
         }
         var splits = Split(ordered, tabs, ids);

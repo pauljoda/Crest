@@ -17,7 +17,7 @@ final class BrowserSoftwareUpdateService {
     var channel: BrowserSoftwareUpdateChannel {
         didSet {
             userDriver.channel = channel
-            preferences?.set(channel.rawValue, forKey: Self.channelPreferenceKey)
+            preferences?.set(channel.name, forKey: Self.channelPreferenceKey)
             guard isEnabled else { return }
             refreshCoordinator.channelDidChange()
         }
@@ -36,8 +36,8 @@ final class BrowserSoftwareUpdateService {
     ) {
         let bundledDefaultChannel =
             defaultChannel
-            ?? BrowserSoftwareUpdateChannel(
-                rawValue: Bundle.main.object(
+            ?? BrowserSoftwareUpdateChannel.named(
+                Bundle.main.object(
                     forInfoDictionaryKey: Self.defaultChannelInfoKey
                 ) as? String ?? ""
             )
@@ -216,19 +216,19 @@ final class BrowserSoftwareUpdateService {
         let previousBundledChannel = preferences?.string(
             forKey: bundledChannelPreferenceKey
         )
-        guard previousBundledChannel == bundledDefault.rawValue else {
+        guard previousBundledChannel == bundledDefault.name else {
             preferences?.set(
-                bundledDefault.rawValue,
+                bundledDefault.name,
                 forKey: bundledChannelPreferenceKey
             )
             preferences?.set(
-                bundledDefault.rawValue,
+                bundledDefault.name,
                 forKey: channelPreferenceKey
             )
             return bundledDefault
         }
-        return BrowserSoftwareUpdateChannel(
-            rawValue: preferences?.string(
+        return BrowserSoftwareUpdateChannel.named(
+            preferences?.string(
                 forKey: channelPreferenceKey
             ) ?? ""
         ) ?? bundledDefault

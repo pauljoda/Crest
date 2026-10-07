@@ -16,7 +16,8 @@ public static class AuthenticationPolicy {
     /// Proxy and non-HTTP challenges keep the system's handling. Basic and
     /// Digest prompt until the server has refused three attempts, then cancel.
     public static AuthenticationHandling Handling(AuthenticationMethod method, bool isProxy, int previousFailureCount) {
-        if (isProxy || method == AuthenticationMethod.Other) return AuthenticationHandling.PerformDefaultHandling;
+        ArgumentNullException.ThrowIfNull(method);
+        if (isProxy || !method.PromptsForCredentials) return AuthenticationHandling.PerformDefaultHandling;
         return previousFailureCount < MaximumCredentialAttempts
             ? AuthenticationHandling.PromptForCredentials : AuthenticationHandling.Cancel;
     }
@@ -27,12 +28,7 @@ public static class AuthenticationPolicy {
     public static string? SourceLabel(string host, int port, string? scheme) {
         ArgumentNullException.ThrowIfNull(host);
         if (host.Length == 0) return null;
-        bool isDefault = scheme?.ToLowerInvariant() switch {
-            "http" => port == 80,
-            "https" => port == 443,
-            _ => false
-        };
-        return isDefault ? host : $"{host}:{port}";
+        return WebScheme.Spelled(scheme)?.DefaultPort == port ? host : $"{host}:{port}";
     }
 
     #endregion

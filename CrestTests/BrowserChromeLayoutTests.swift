@@ -26,7 +26,7 @@ final class BrowserChromeLayoutTests: XCTestCase {
 
         XCTAssertEqual(presentation.requestedSpaceID, second)
         XCTAssertEqual(presentation.requestedAssignment, secondAssignment)
-        XCTAssertEqual(presentation.requestedDestination, .shortcuts)
+        XCTAssertEqual(presentation.request, .destination(.shortcuts))
         XCTAssertEqual(presentation.revision, 2)
     }
 
@@ -42,7 +42,7 @@ final class BrowserChromeLayoutTests: XCTestCase {
         presentation.present(.shortcuts, assignment: assignment)
         presentation.present(.shortcuts, assignment: assignment)
 
-        XCTAssertEqual(presentation.requestedDestination, .shortcuts)
+        XCTAssertEqual(presentation.request, .destination(.shortcuts))
         XCTAssertEqual(presentation.requestedSpaceID, spaceID)
         XCTAssertEqual(presentation.revision, 2)
     }

@@ -12,12 +12,15 @@ public sealed class TabPlacement {
     /// The most pinned tabs one Space holds.
     public const int PinnedCapacity = 12;
 
-    public static readonly TabPlacement Pinned = new(name: "pinned", title: "Pinned", symbol: "pin.fill", rank: 0, fallbackRank: 1,
-        isDurable: true, holdsFolders: false, holdsSplits: false, isCollapsible: false, capacity: PinnedCapacity);
+    // Saved is made before Pinned, which overflows to it; `All` keeps the sections' order.
     public static readonly TabPlacement Saved = new(name: "saved", title: "Saved", symbol: "bookmark.fill", rank: 1, fallbackRank: 2,
-        isDurable: true, holdsFolders: true, holdsSplits: true, isCollapsible: true, capacity: null);
+        isDurable: true, holdsFolders: true, holdsSplits: true, isCollapsible: true, capacity: null, paletteRow: PaletteRowKind.SavedTab);
+    public static readonly TabPlacement Pinned = new(name: "pinned", title: "Pinned", symbol: "pin.fill", rank: 0, fallbackRank: 1,
+        isDurable: true, holdsFolders: false, holdsSplits: false, isCollapsible: false, capacity: PinnedCapacity,
+        paletteRow: PaletteRowKind.PinnedTab, overflowsTo: Saved, importedSymbol: "pin.fill", isGrid: true);
     public static readonly TabPlacement Current = new(name: "current", title: "Open", symbol: "rectangle.stack.fill", rank: 2,
-        fallbackRank: 0, isDurable: false, holdsFolders: true, holdsSplits: true, isCollapsible: false, capacity: null);
+        fallbackRank: 0, isDurable: false, holdsFolders: true, holdsSplits: true, isCollapsible: false, capacity: null,
+        paletteRow: PaletteRowKind.Tab);
 
     public static IReadOnlyList<TabPlacement> All { get; } = [Pinned, Saved, Current];
 
@@ -56,12 +59,30 @@ public sealed class TabPlacement {
     /// beyond the Space's own.
     public int? Capacity { get; }
 
+    /// Where a tab goes that the section has no room for, such as an imported
+    /// one past its capacity, or null for a section with no limit. The core's
+    /// own rule, which no platform reads; a Swift struct cannot hold its own
+    /// type.
+    internal TabPlacement? OverflowsTo { get; }
+
+    /// The symbol a tab imported into the section wears in place of its own,
+    /// or null where it keeps its own.
+    public string? ImportedSymbol { get; }
+
+    /// The section lays its tabs out as a grid of tiles rather than a list of
+    /// rows, so ordering and dropping in it run across columns as well.
+    public bool IsGrid { get; }
+
+    /// The row a palette search shows a tab of the section as.
+    public PaletteRowKind PaletteRow { get; }
+
     #endregion
 
     #region Constructors
 
     private TabPlacement(string name, string title, string symbol, int rank, int fallbackRank, bool isDurable, bool holdsFolders,
-        bool holdsSplits, bool isCollapsible, int? capacity) {
+        bool holdsSplits, bool isCollapsible, int? capacity, PaletteRowKind paletteRow, TabPlacement? overflowsTo = null,
+        string? importedSymbol = null, bool isGrid = false) {
         Name = name;
         Title = title;
         Symbol = symbol;
@@ -72,6 +93,10 @@ public sealed class TabPlacement {
         HoldsSplits = holdsSplits;
         IsCollapsible = isCollapsible;
         Capacity = capacity;
+        PaletteRow = paletteRow;
+        OverflowsTo = overflowsTo;
+        ImportedSymbol = importedSymbol;
+        IsGrid = isGrid;
     }
 
     #endregion
@@ -92,6 +117,10 @@ public sealed class TabPlacement {
 
     /// Whether the section can hold `count` tabs in one Space.
     public bool Holds(int count) => Capacity is not { } capacity || count <= capacity;
+
+    /// The section the `count`th tab placed in this one in a Space goes to:
+    /// this one while it holds that many, else the one it overflows to.
+    public TabPlacement Fitting(int count) => Holds(count) ? this : OverflowsTo ?? this;
 
     /// The index of the tab a Space falls back to, given its tabs' placements
     /// in Space order: the first tab of the section with the lowest

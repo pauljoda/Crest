@@ -9,16 +9,12 @@ struct BrowserPlatformAppIconSettingsSection: View {
     var body: some View {
         CrestSettingsGroup(
             "App icon",
-            systemImage: "app.badge",
-            settings: [resettable],
-            footnote:
-                "Choose a palette for Crest’s Home Screen icon. Your device controls its light, dark, tinted, or clear appearance."
+            settings: [resettable]
         ) {
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 78), spacing: 12)], spacing: 16) {
                 iconChoice(name: nil, title: "Crest", preview: nil)
-                ForEach(BrowserSpaceHousePalette.allCases, id: \.self) { palette in
-                    let name = "Crest" + palette.rawValue.capitalized
-                    iconChoice(name: name, title: LocalizedStringKey(palette.name), preview: name + "Preview")
+                ForEach(SpaceHouse.all, id: \.self) { house in
+                    iconChoice(name: house.appIconName, title: house.title, preview: house.appIconName + "Preview")
                 }
             }
             .padding(.vertical, 8)
@@ -55,7 +51,7 @@ struct BrowserPlatformAppIconSettingsSection: View {
         }
     }
 
-    private func iconChoice(name: String?, title: LocalizedStringKey, preview: String?) -> some View {
+    private func iconChoice(name: String?, title: LocalizedStringResource, preview: String?) -> some View {
         Button {
             select(name)
         } label: {

@@ -15,7 +15,7 @@ struct BrowserSpaceCrestDivisionShape: Shape {
             CGPoint(x: rect.minX + x * w, y: rect.minY + y * h)
         }
         var path = Path()
-        switch division {
+        switch division.kind {
         case .plain:
             break
         case .perPale:

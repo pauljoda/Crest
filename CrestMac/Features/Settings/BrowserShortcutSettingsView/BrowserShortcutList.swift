@@ -30,8 +30,6 @@ struct BrowserShortcutList: View {
             .browserNativeListScrollState(tabState?.scroll(for: .shortcuts) ?? standaloneScroll)
             .listStyle(.inset)
             .scrollContentBackground(.hidden)
-            .background(BrowserSettingsCanvas.card, in: .rect(cornerRadius: 12))
-            .clipShape(.rect(cornerRadius: 12))
             .overlay {
                 if model.commandGroups.isEmpty {
                     ContentUnavailableView.search(text: model.searchText)

@@ -61,7 +61,7 @@ final class BrowserCloudSyncControllerTests: XCTestCase {
 
         await controller.start()
 
-        guard case .failed = controller.phase else { return XCTFail("Sync started over a refused comparison.") }
+        guard controller.phase == .failed else { return XCTFail("Sync started over a refused comparison.") }
         XCTAssertTrue(factory.transports.isEmpty)
         XCTAssertNil(controller.conflict)
         XCTAssertTrue(try core.query(CloudTransport()).awaitsAccountDecision)
@@ -335,7 +335,8 @@ final class BrowserCloudSyncControllerTests: XCTestCase {
 
         await controller.start()
 
-        XCTAssertEqual(controller.phase, .failed(String(describing: BrowserCloudSyncError.accountCheckUnanswered)))
+        XCTAssertEqual(controller.phase, .failed)
+        XCTAssertEqual(controller.errorDescription, String(describing: BrowserCloudSyncError.accountCheckUnanswered))
         XCTAssertTrue(factory.transports.isEmpty)
         for _ in 0..<300 where controller.phase != .ready {
             try? await Task.sleep(for: .milliseconds(10))

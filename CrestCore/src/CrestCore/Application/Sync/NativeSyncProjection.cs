@@ -20,7 +20,7 @@ public static class NativeSyncProjection {
         => new(names.Where(n => source[n] is not null).Select(n => new KeyValuePair<string, JsonNode?>(n, source[n]!.DeepClone())));
 
     internal static TabPlacement Placement(JsonNode value, string field = "placement")
-        => TabPlacement.Named(Text(value[field])) ?? throw new BrowserRuleException(BrowserRuleCodes.InvalidSyncPlacement);
+        => TabPlacement.Named(Text(value[field])) ?? throw new BrowserRuleException(BrowserRule.InvalidSyncPlacement);
 
     internal static string? SavedUrl(JsonNode tab) => Text(tab["savedURL"])
         ?? (Placement(tab).IsDurable ? Text(tab["url"]) : null);

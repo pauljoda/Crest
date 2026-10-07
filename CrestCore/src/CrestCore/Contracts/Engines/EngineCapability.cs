@@ -22,7 +22,7 @@ public sealed class EngineCapability {
     public static readonly EngineCapability Translation = new(name: "translation");
     public static readonly EngineCapability SelectionTranslation = new(name: "selection-translation");
     public static readonly EngineCapability LocalFiles = new(name: "local-files");
-    public static readonly EngineCapability Extensions = new(name: "extensions");
+    public static readonly EngineCapability Extensions = new(name: "extensions", startsEngineOnDemand: true);
     public static readonly EngineCapability ViewportCapture = new(name: "viewport-capture");
     public static readonly EngineCapability FullPageCapture = new(name: "full-page-capture");
     public static readonly EngineCapability Pdf = new(name: "pdf");
@@ -54,13 +54,18 @@ public sealed class EngineCapability {
     /// engine without profiles or their deletion cannot host a session at all.
     public bool IsRequired { get; }
 
+    /// The device offers the capability while any registered engine supports
+    /// it, even one no page is open on, because using it starts that engine.
+    public bool StartsEngineOnDemand { get; }
+
     #endregion
 
     #region Constructors
 
-    private EngineCapability(string name, bool isRequired = false) {
+    private EngineCapability(string name, bool isRequired = false, bool startsEngineOnDemand = false) {
         Name = name;
         IsRequired = isRequired;
+        StartsEngineOnDemand = startsEngineOnDemand;
     }
 
     #endregion

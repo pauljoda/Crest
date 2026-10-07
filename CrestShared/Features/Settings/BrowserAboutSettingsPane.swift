@@ -50,75 +50,59 @@ struct BrowserAboutSettingsPane: View {
                 }
             }
 
-            Section("Community & support", systemImage: "bubble.left.and.bubble.right") {
+            Section {
                 BrowserAboutLink(
                     title: "Share Feedback on r/CrestBrowser",
-                    subtitle: "Ask questions, compare experiences, and discuss ideas",
                     imageName: "AboutReddit",
                     destination: BrowserAboutLinks.feedback,
                     identifier: "about-feedback-link"
                 )
                 BrowserAboutLink(
                     title: "Report an Issue",
-                    subtitle: "Send a reproducible bug report through GitHub Issues",
                     imageName: "AboutGitHub",
                     destination: BrowserAboutLinks.issues,
                     identifier: "about-issues-link"
                 )
                 BrowserAboutLink(
-                    title: "View the Crest Roadmap",
-                    subtitle: "Follow planned and completed public work on GitHub",
+                    title: "View the Roadmap",
                     imageName: "AboutGitHub",
                     destination: BrowserAboutLinks.roadmap,
                     identifier: "about-roadmap-link"
                 )
-
-                CrestFormFootnote(
-                    "Reddit is public. Remove passwords, private URLs, browsing history, and other sensitive information before posting. Use GitHub Issues for reports with a Crest version, Apple platform, and repeatable steps."
-                )
+            } header: {
+                Text("Community and support")
+            } footer: {
+                CrestFormFootnote("Reddit is public. Leave out private details.")
             }
-
         }
     }
 
     private var appIdentity: some View {
-        HStack(alignment: .top, spacing: 20) {
+        HStack(spacing: 14) {
             BrowserPlatformCurrentAppIcon()
-                .frame(width: 80, height: 80)
-                .clipShape(.rect(cornerRadius: 18))
+                .frame(width: 56, height: 56)
+                .clipShape(.rect(cornerRadius: 13))
                 .accessibilityHidden(true)
 
-            VStack(alignment: .leading, spacing: 12) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(ProductIdentity.name)
-                        .font(CrestTypography.display(32, relativeTo: .title))
-                        .accessibilityAddTraits(.isHeader)
-                    Text("An open source browser for Mac, iPhone, and iPad.")
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-
-                Text("Version \(buildInformation.version)")
-                    .font(.caption.monospacedDigit())
-                    .textSelection(.enabled)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 5)
-                    .background(.primary.opacity(0.045), in: .capsule)
-
+            VStack(alignment: .leading, spacing: 2) {
+                Text(ProductIdentity.name)
+                    .font(.title3.weight(.semibold))
+                    .accessibilityAddTraits(.isHeader)
                 // Selectable text is an AppKit view: a label with no value recurses when assistive apps read it.
-                Text("Build \(buildInformation.build) · \(buildInformation.bundleIdentifier)")
-                    .font(.caption)
+                Text("Version \(buildInformation.version) (\(buildInformation.build))")
+                    .font(.callout.monospacedDigit())
                     .foregroundStyle(.secondary)
                     .textSelection(.enabled)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .accessibilityLabel("Build")
+                    .accessibilityLabel("Version")
                     .accessibilityValue(
-                        Text("\(buildInformation.build), bundle identifier: \(buildInformation.bundleIdentifier)")
+                        Text(
+                            "\(buildInformation.version), build \(buildInformation.build), bundle identifier: \(buildInformation.bundleIdentifier)"
+                        )
                     )
+                    .help(buildInformation.bundleIdentifier)
             }
         }
-        .padding(.vertical, 4)
+        .padding(.vertical, 2)
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
@@ -165,7 +149,6 @@ private struct BrowserAboutWhatsNewDisclosureStyle: DisclosureGroupStyle {
 
 private struct BrowserAboutLink: View {
     let title: LocalizedStringResource
-    let subtitle: LocalizedStringResource
     let imageName: String
     let destination: URL
     let identifier: String
@@ -177,29 +160,20 @@ private struct BrowserAboutLink: View {
                     .renderingMode(.original)
                     .resizable()
                     .scaledToFit()
-                    .frame(width: 24, height: 24)
+                    .frame(width: 18, height: 18)
                     .accessibilityHidden(true)
-
-                VStack(alignment: .leading, spacing: CrestSpacing.extraSmall) {
-                    Text(title)
-                        .font(.body.weight(.medium))
-                    Text(subtitle)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-
+                Text(title)
+                    .foregroundStyle(.primary)
                 Spacer(minLength: CrestSpacing.small)
-
                 Image(systemName: "arrow.up.right")
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(.secondary)
                     .accessibilityHidden(true)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.vertical, CrestSpacing.small)
+            .contentShape(.rect)
         }
-        .buttonStyle(.crestTertiary)
+        .buttonStyle(.plain)
         .accessibilityIdentifier(identifier)
     }
 }
@@ -208,9 +182,10 @@ private struct BrowserAboutReleaseNoteRow: View {
     let releaseNote: BrowserAboutReleaseNote
 
     var body: some View {
+        let mark = BrowserAboutReleaseNoteMark.marking(releaseNote.category)
         HStack(alignment: .firstTextBaseline, spacing: CrestSpacing.small) {
-            Image(systemName: symbol)
-                .foregroundStyle(color)
+            Image(systemName: mark.symbol)
+                .foregroundStyle(mark.color)
                 .frame(width: 18)
                 .accessibilityHidden(true)
             Text(releaseNote.message)
@@ -218,22 +193,32 @@ private struct BrowserAboutReleaseNoteRow: View {
         }
         .accessibilityElement(children: .combine)
     }
+}
 
-    private var symbol: String {
-        switch releaseNote.category {
-        case .new: "sparkles"
-        case .improved: "arrow.up.circle.fill"
-        case .fixed: "checkmark.circle.fill"
-        case .internal: "wrench.and.screwdriver.fill"
-        }
-    }
+/// The glyph that marks each kind of release note in What's New.
+private struct BrowserAboutReleaseNoteMark: Sendable {
+    // MARK: - Static Variables
 
-    private var color: Color {
-        switch releaseNote.category {
-        case .new: CrestBrandPalette.sky
-        case .improved: CrestBrandPalette.butter
-        case .fixed: CrestBrandPalette.sage
-        case .internal: .secondary
-        }
+    static let new = BrowserAboutReleaseNoteMark(category: .new, symbol: "sparkles", color: CrestBrandPalette.sky)
+    static let improved = BrowserAboutReleaseNoteMark(
+        category: .improved, symbol: "arrow.up.circle.fill", color: CrestBrandPalette.butter)
+    static let fixed = BrowserAboutReleaseNoteMark(
+        category: .fixed, symbol: "checkmark.circle.fill", color: CrestBrandPalette.sage)
+    static let `internal` = BrowserAboutReleaseNoteMark(
+        category: .internal, symbol: "wrench.and.screwdriver.fill", color: .secondary)
+
+    /// A mark for every category.
+    static let all: [BrowserAboutReleaseNoteMark] = [new, improved, fixed, `internal`]
+
+    // MARK: - Variables
+
+    let category: BrowserAboutReleaseNoteCategory
+    let symbol: String
+    let color: Color
+
+    // MARK: - Actions - Lookup
+
+    static func marking(_ category: BrowserAboutReleaseNoteCategory) -> BrowserAboutReleaseNoteMark {
+        all.first { $0.category == category } ?? .internal
     }
 }

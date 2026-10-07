@@ -285,9 +285,6 @@
         }
       }
     },
-    "%@ opens any web link in Peek. Dismiss with Escape, ⌘W, the close button, or the outside area; ⌘O expands it into a current tab." : {
-
-    },
     "%@ per second" : {
 
     },
@@ -364,15 +361,8 @@
         }
       }
     },
-    "%@, bundle identifier: %@" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@, bundle identifier: %2$@"
-          }
-        }
-      }
+    "%@, build %@, bundle identifier: %@" : {
+
     },
     "%@, color %lld" : {
       "localizations" : {
@@ -528,7 +518,7 @@
         }
       }
     },
-    "%lld / 4" : {
+    "%lld / %lld" : {
 
     },
     "%lld additional rejected rows are included in the final count." : {
@@ -1555,6 +1545,9 @@
     "A little room to read" : {
 
     },
+    "A patterned band behind the sidebar." : {
+
+    },
     "A place for every tab" : {
 
     },
@@ -1568,6 +1561,9 @@
 
     },
     "A recovery checkpoint is available from %@." : {
+
+    },
+    "A rule for a site doesn’t include its subdomains." : {
 
     },
     "A secure connection couldn’t be made" : {
@@ -1703,7 +1699,7 @@
         }
       }
     },
-    "Add an HTTPS search URL containing %s or {searchTerms}." : {
+    "Add Accent Color" : {
 
     },
     "Add another Space" : {
@@ -1735,34 +1731,17 @@
     "Add folder" : {
 
     },
-    "Add languages in System Settings → General → Language & Region → Translation Languages, then refresh this list." : {
+    "Add languages in System Settings › General › Language & Region." : {
 
     },
     "Add Packing list" : {
 
     },
-    "Add Primary Color" : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "إضافة اللون الرئيسي"
-          }
-        }
-      }
+    "Add Pattern Color" : {
+
     },
     "Add Search Engine" : {
 
-    },
-    "Add Secondary Color" : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "إضافة اللون الثانوي"
-          }
-        }
-      }
     },
     "Add site" : {
       "extractionState" : "stale",
@@ -1800,6 +1779,12 @@
           }
         }
       }
+    },
+    "Add Website Rule" : {
+
+    },
+    "Add Website Rule…" : {
+
     },
     "Adding extension" : {
 
@@ -1844,9 +1829,6 @@
       }
     },
     "Adds or removes this password from the selection." : {
-
-    },
-    "Adjust folder color intensity and Space text color in each Space's appearance." : {
 
     },
     "ads trackers privacy protection" : {
@@ -1899,16 +1881,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "بعد بدء تحميل المحتوى"
-          }
-        }
-      }
-    },
-    "After Crest saves in this Space, the system can ask whether to save or update a copy in your preferred password manager." : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "بعد أن يحفظ Crest كلمة المرور في هذه المساحة، يمكن للنظام أن يسأل عما إذا كنت تريد حفظ نسخة أو تحديثها في مدير كلمات المرور المفضّل لديك."
           }
         }
       }
@@ -2008,9 +1980,6 @@
     "An export is already in progress for this page." : {
 
     },
-    "An open source browser for Mac, iPhone, and iPad." : {
-
-    },
     "Anchor" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -2025,10 +1994,19 @@
     "Animals & Nature" : {
 
     },
+    "Animate into command palette" : {
+
+    },
     "Animate pages when switching Spaces" : {
 
     },
+    "Another browser" : {
+
+    },
     "Another Space already uses this Space’s browsing data." : {
+
+    },
+    "Antique Gold" : {
 
     },
     "App icon" : {
@@ -2044,23 +2022,19 @@
         }
       }
     },
-    "appearance theme transparency page zoom percentage sidebar left right borderless window fullscreen layout interface animation motion page cards folder highlights counts borders preview density spacing padding scale icons" : {
-
-    },
-    "Appearance, zoom, and motion" : {
-
-    },
-    "Apple doesn’t expose the iCloud account email to Crest. Confirm both devices use the same Apple Account in System Settings; this page should show iCloud account Available on each device." : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "لا تكشف Apple عنوان البريد الإلكتروني لحساب iCloud إلى Crest. تأكد من أن كلا الجهازين يستخدمان حساب Apple نفسه في إعدادات النظام؛ يجب أن تعرض هذه الصفحة حالة حساب iCloud «متاح» على كل جهاز."
-          }
-        }
-      }
-    },
     "Apple translates page text on this device. Languages may need to download first; Apple asks before downloading. Downloaded languages are shared with other apps and remain available after Private Browsing ends." : {
+
+    },
+    "Apple Translation requires a physical device. It is not available in Simulator." : {
+
+    },
+    "Apple’s native web engine, with system integration and protected media playback." : {
+
+    },
+    "Applies to %@" : {
+
+    },
+    "Applies to every Space on this device. Doesn’t sync." : {
 
     },
     "Apply Custom Viewport" : {
@@ -2099,6 +2073,9 @@
         }
       }
     },
+    "Archive Now" : {
+
+    },
     "Archive Selected Tabs" : {
 
     },
@@ -2122,6 +2099,15 @@
         }
       }
     },
+    "archived tabs" : {
+
+    },
+    "Archived Tabs" : {
+
+    },
+    "Argent" : {
+
+    },
     "Arrangement" : {
       "localizations" : {
         "ar" : {
@@ -2133,6 +2119,12 @@
       }
     },
     "Artwork credits" : {
+
+    },
+    "Artwork Credits" : {
+
+    },
+    "Ash" : {
 
     },
     "Ask" : {
@@ -2157,9 +2149,6 @@
           }
         }
       }
-    },
-    "Ask questions, compare experiences, and discuss ideas" : {
-
     },
     "Ask where to save" : {
 
@@ -2339,12 +2328,6 @@
         }
       }
     },
-    "Automatically enter Picture in Picture" : {
-
-    },
-    "Automatically Translate" : {
-
-    },
     "Automatically Translate is off by default. Choose which languages to translate and their destination languages in Settings → General → Page Translation. Only enabled language mappings with downloaded languages translate automatically. Automatic translation never opens a translation bar or asks to download languages. Open the translation controls to check status or download missing languages. Turn off Offer to Translate to stop automatic offers. Show Original keeps that page in its original language until you navigate or reload." : {
 
     },
@@ -2366,6 +2349,9 @@
           }
         }
       }
+    },
+    "Available" : {
+
     },
     "Available destination" : {
 
@@ -2410,6 +2396,9 @@
         }
       }
     },
+    "Azure" : {
+
+    },
     "Back" : {
       "localizations" : {
         "ar" : {
@@ -2439,6 +2428,9 @@
           }
         }
       }
+    },
+    "Back to %@" : {
+
     },
     "Back to review" : {
 
@@ -2610,13 +2602,16 @@
     "Block known ads and trackers" : {
 
     },
+    "Block known trackers" : {
+
+    },
     "Blocked by Default" : {
 
     },
     "Blocked for Session" : {
 
     },
-    "Blocking ads and trackers comes from the extensions you install." : {
+    "Blood" : {
 
     },
     "Boar" : {
@@ -2632,6 +2627,9 @@
     },
     "Bold" : {
       "extractionState" : "manual"
+    },
+    "Bone" : {
+
     },
     "Book" : {
       "extractionState" : "stale",
@@ -2686,9 +2684,6 @@
     "Borderless" : {
 
     },
-    "Borderless lets pages reach the window's edges." : {
-
-    },
     "Bordure" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -2723,6 +2718,9 @@
           }
         }
       }
+    },
+    "Brass" : {
+
     },
     "Bring All to Front" : {
 
@@ -2766,7 +2764,7 @@
     "Browser not listed?" : {
 
     },
-    "browser startup default Space typing spelling spell check text editing focus new tabs follow move between Spaces Command-click middle-click pinned saved close resume restore root URL mouse translation system permissions access camera microphone location notifications passkeys files folders downloads allow blocked repair sidebar widgets Now Playing media cards" : {
+    "browser startup default Space typing spelling spell check text editing Picture in Picture video developer toolbar localhost local pages translation system permissions access camera microphone location notifications passkeys files folders downloads allow blocked repair" : {
 
     },
     "Browser window preview" : {
@@ -2785,23 +2783,13 @@
     "Browsing and startup" : {
 
     },
-    "Build" : {
-
-    },
-    "Build %@ · %@" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Build %1$@ · %2$@"
-          }
-        }
-      }
-    },
     "Building your review…" : {
 
     },
-    "Built-In" : {
+    "Built on ungoogled-chromium, with Google integrations removed. Smooth browsing and extensions." : {
+
+    },
+    "Built-in" : {
 
     },
     "Camera" : {
@@ -2905,6 +2893,12 @@
     "Changes made after this checkpoint may be missing. Crest will keep a separate copy of the current files and fetch current iCloud records before uploading again." : {
 
     },
+    "Char" : {
+
+    },
+    "Charcoal" : {
+
+    },
     "Charge" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -2944,7 +2938,7 @@
     "Check Grammar With Spelling" : {
 
     },
-    "Check spelling on webpages" : {
+    "Check spelling" : {
 
     },
     "Check Spelling While Typing" : {
@@ -2993,13 +2987,19 @@
         }
       }
     },
+    "Check your internet connection and try again." : {
+
+    },
     "Checkered" : {
       "extractionState" : "manual"
+    },
+    "Checking" : {
+
     },
     "Checking for Updates" : {
 
     },
-    "Checking Languages…" : {
+    "Checking iCloud" : {
 
     },
     "Checking passkey access" : {
@@ -3055,9 +3055,6 @@
     "Checks" : {
       "extractionState" : "manual"
     },
-    "Checks the download folder for %@. Other files are approved when you choose them." : {
-
-    },
     "Chevron" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -3080,15 +3077,11 @@
         }
       }
     },
-    "Choices are stored separately for each exact site, port, capability, and Space. Camera and microphone access also require macOS privacy consent." : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "تُخزّن الخيارات بشكل منفصل لكل موقع ومنفذ وإمكانية ومساحة بالضبط. ويتطلب الوصول إلى الكاميرا والميكروفون أيضًا موافقة الخصوصية في macOS."
-          }
-        }
-      }
+    "Choose a band to color it" : {
+
+    },
+    "Choose a border to color it" : {
+
     },
     "Choose a browser session to build an import review." : {
 
@@ -3096,23 +3089,13 @@
     "Choose a name, crest, and theme. Add more Spaces whenever you need them." : {
 
     },
-    "Choose a palette for Crest’s Dock icon. Your device controls its light, dark, tinted, or clear appearance." : {
+    "Choose a shape to color its field" : {
 
-    },
-    "Choose a palette for Crest’s Home Screen icon. Your device controls its light, dark, tinted, or clear appearance." : {
-
-    },
-    "Choose a Space to edit its identity and privacy policy." : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "اختر مساحة لتعديل هويتها وسياسة الخصوصية الخاصة بها."
-          }
-        }
-      }
     },
     "Choose a starting point, then make it yours. Reset controls return to this preset." : {
+
+    },
+    "Choose an emblem to color it" : {
 
     },
     "Choose an emoji" : {
@@ -3122,6 +3105,9 @@
 
     },
     "Choose at least one Space to import." : {
+
+    },
+    "Choose Crest under Emblem to color the crest" : {
 
     },
     "Choose Destination Space" : {
@@ -3155,30 +3141,26 @@
     "Choose what to bring over" : {
 
     },
-    "Choose where pinned and saved tabs open after you close them. Switching Spaces or unloading inactive pages keeps your last location." : {
+    "Choose which accounts to import." : {
 
     },
-    "Choose Which Copy to Keep" : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "اختر النسخة التي تريد الاحتفاظ بها"
-          }
-        }
-      }
+    "Choose which blocklists a Space loads" : {
+
     },
-    "Choose which optional cards appear at the bottom of the sidebar." : {
+    "Choose which blocklists this Space loads" : {
+
+    },
+    "Choose which copy to keep" : {
 
     },
     "Chosen Space" : {
 
     },
+    "Chrome Web Store extensions" : {
+
+    },
     "Chromium" : {
       "comment" : "The name of a browser engine. Keep the product name as it is."
-    },
-    "Chromium could not complete this action. Check the extension’s details for policy or permission requirements." : {
-
     },
     "Chromium WebKit hybrid default browser engine websites rules protected video DRM compatibility" : {
 
@@ -3199,16 +3181,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "تنظيف علامات التبويب الحالية"
-          }
-        }
-      }
-    },
-    "Clean Up Eligible Tabs Now" : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "تنظيف علامات التبويب المؤهلة الآن"
           }
         }
       }
@@ -3299,13 +3271,16 @@
         }
       }
     },
-    "Click a shortcut, then press a key with Command, Option, Control, or Shift." : {
+    "Click a shortcut, then press the new keys." : {
 
     },
     "Click anything you don’t want" : {
 
     },
     "Click either card. Its border shows which page receives your keyboard commands." : {
+
+    },
+    "Click the favicon to return to the saved URL" : {
 
     },
     "Click the name to rename" : {
@@ -3611,7 +3586,7 @@
     "Common Lists" : {
 
     },
-    "Community & support" : {
+    "Community and support" : {
 
     },
     "Compact" : {
@@ -3712,6 +3687,12 @@
         }
       }
     },
+    "Control your browsing data" : {
+
+    },
+    "Cookies and website data" : {
+
+    },
     "Copied locally for 60 seconds" : {
       "localizations" : {
         "ar" : {
@@ -3803,7 +3784,7 @@
     "Correct Spelling Automatically" : {
 
     },
-    "Could not open language downloads. Open your device’s language settings to manage downloaded translation languages." : {
+    "Could not determine" : {
 
     },
     "Couldn’t change app icon" : {
@@ -3828,6 +3809,12 @@
           }
         }
       }
+    },
+    "Couldn’t Delete Space" : {
+
+    },
+    "Couldn’t open language downloads." : {
+
     },
     "Couldn’t Save Search Engine" : {
 
@@ -4058,6 +4045,9 @@
     "Crest %@ sidebar after import" : {
 
     },
+    "Crest Browser" : {
+
+    },
     "Crest can keep up to %lld saved site permissions. Reset some to save more." : {
 
     },
@@ -4270,16 +4260,6 @@
         }
       }
     },
-    "Crest found different content on this device and in iCloud. Sync is paused so neither copy is combined or overwritten without your choice." : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "عثر Crest على محتوى مختلف على هذا الجهاز وفي iCloud. تم إيقاف المزامنة مؤقتًا حتى لا يتم دمج أي نسخة أو استبدالها من دون اختيارك."
-          }
-        }
-      }
-    },
     "Crest found these browsers on your Mac. You’ll review every Space and tab next." : {
 
     },
@@ -4348,31 +4328,8 @@
         }
       }
     },
-    "Crest Passwords remain private to this Space. System Passwords and passkeys are provider-managed and may appear in any Space for the matching site." : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "تظل كلمات مرور Crest خاصة بهذه المساحة. تُدار «كلمات السر» ومفاتيح المرور بواسطة موفري النظام وقد تظهر في أي مساحة للموقع المطابق."
-          }
-        }
-      }
-    },
-    "Crest Passwords stay in this Space. They never enter another Space’s suggestions or records." : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "تبقى كلمات مرور Crest في هذه المساحة. ولا تدخل مطلقًا في اقتراحات أو سجلات مساحة أخرى."
-          }
-        }
-      }
-    },
     "Crest preview" : {
       "extractionState" : "manual"
-    },
-    "Crest reads this catalog from the WebKit framework installed on this Mac. Feature availability and defaults may change when macOS updates." : {
-
     },
     "Crest Recovery" : {
 
@@ -4423,16 +4380,6 @@
     "Crest Setup" : {
 
     },
-    "Crest shows descriptor metadata only. Password values stay in the active Space’s Data Protection Keychain and never enter session or CloudKit data." : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "يعرض Crest بيانات وصفية فقط. تبقى قيم كلمات المرور في سلسلة مفاتيح حماية البيانات للمساحة النشطة ولا تدخل مطلقًا في بيانات الجلسة أو CloudKit."
-          }
-        }
-      }
-    },
     "Crest software update" : {
 
     },
@@ -4446,24 +4393,17 @@
         }
       }
     },
+    "crest studio name icon emblem colors theme banner background sidebar pattern gradient accent" : {
+
+    },
+    "Crest Studio step" : {
+
+    },
     "Crest supports up to %lld Spaces." : {
 
     },
     "Crest translates page text in place, including headings, links, labels, and buttons. Editable fields, code, embedded pages, and text in images are left unchanged. Translated text may take more space." : {
 
-    },
-    "Crest uses a small built-in protection set. Install a content-blocking extension for broader coverage or custom lists." : {
-
-    },
-    "Crest uses Face ID, Touch ID, or the normal device passcode or password. Private Spaces lock again when Crest leaves the foreground." : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "يستخدم Crest بصمة الوجه أو بصمة الإصبع أو رمز دخول الجهاز أو كلمة مروره المعتادة. تُقفل المساحات الخاصة مرة أخرى عندما يغادر Crest الواجهة الأمامية."
-          }
-        }
-      }
     },
     "Crest will download all synced Spaces and browser content and merge them with this device. Newer changes and synced deletions will be applied. Content found only on this device will be kept unless it was explicitly deleted on another device." : {
 
@@ -4493,6 +4433,12 @@
           }
         }
       }
+    },
+    "crestbrowser.com" : {
+
+    },
+    "Crimson" : {
+
     },
     "Cross" : {
       "extractionState" : "stale",
@@ -4586,9 +4532,6 @@
         }
       }
     },
-    "Custom engines belong to this Space and sync with it. Crest loads their favicon from the engine’s website; the image itself is not synced. Sign in on the engine’s website instead of putting a token in a URL template." : {
-
-    },
     "Customize" : {
       "localizations" : {
         "ar" : {
@@ -4615,6 +4558,9 @@
     "Cut" : {
 
     },
+    "Daily builds. May be less reliable." : {
+
+    },
     "Dangerous Site" : {
 
     },
@@ -4623,16 +4569,6 @@
     },
     "Data Detectors" : {
 
-    },
-    "Data retention" : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "الاحتفاظ بالبيانات"
-          }
-        }
-      }
     },
     "Default" : {
       "localizations" : {
@@ -4666,6 +4602,9 @@
         }
       }
     },
+    "Default engine" : {
+
+    },
     "Default engine and website rules" : {
 
     },
@@ -4681,9 +4620,6 @@
           }
         }
       }
-    },
-    "Defaults" : {
-
     },
     "delete" : {
       "localizations" : {
@@ -4715,6 +4651,9 @@
         }
       }
     },
+    "Delete “%@”…" : {
+
+    },
     "Delete “%arg”?" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -4732,16 +4671,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "هل تريد حذف %@؟"
-          }
-        }
-      }
-    },
-    "Delete %@…" : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "حذف %@…"
           }
         }
       }
@@ -4812,16 +4741,6 @@
     "Delete Selected Passwords?" : {
 
     },
-    "Delete Space" : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "حذف المساحة"
-          }
-        }
-      }
-    },
     "Delete Space and Data" : {
       "localizations" : {
         "ar" : {
@@ -4846,6 +4765,9 @@
 
     },
     "Deleted on another device" : {
+
+    },
+    "Deletes everything in this Space except downloaded files." : {
 
     },
     "Deleting Space…" : {
@@ -4926,6 +4848,9 @@
     "Developer Toolbar" : {
 
     },
+    "Developer toolbar on local pages" : {
+
+    },
     "developer toolbar viewport preview responsive custom size" : {
 
     },
@@ -4943,6 +4868,9 @@
       }
     },
     "Developer URL" : {
+
+    },
+    "Development" : {
 
     },
     "Diagnostics" : {
@@ -4986,6 +4914,9 @@
     "Disabled" : {
 
     },
+    "Disabled and selected" : {
+
+    },
     "Dismiss" : {
 
     },
@@ -4996,6 +4927,9 @@
 
     },
     "Distance: 4.2 miles\nDuration: 2 hours\nRoute: lakeside loop" : {
+
+    },
+    "Divide the field to use a second color" : {
 
     },
     "Divider %lld" : {
@@ -5014,6 +4948,9 @@
     "Dock Sidebar" : {
 
     },
+    "Don’t put sign-in tokens in a search URL. It syncs with this Space." : {
+
+    },
     "Done" : {
       "localizations" : {
         "ar" : {
@@ -5025,9 +4962,6 @@
       }
     },
     "Done Customizing" : {
-
-    },
-    "Done Selecting" : {
 
     },
     "Double Line" : {
@@ -5083,10 +5017,7 @@
     "Download and install updates automatically" : {
 
     },
-    "Download both languages in Apple’s Translate app, then refresh this list." : {
-
-    },
-    "Download both languages to use this mapping" : {
+    "Download both languages to translate" : {
 
     },
     "download files transfers" : {
@@ -5099,10 +5030,16 @@
         }
       }
     },
+    "Download folder for %@" : {
+
+    },
     "Download folder: %@. Check Access verifies that Crest can save a file there." : {
 
     },
     "Download Languages" : {
+
+    },
+    "Download languages in the Translate app." : {
 
     },
     "Download languages to translate automatically. Tap Translate to continue." : {
@@ -5127,6 +5064,12 @@
         }
       }
     },
+    "download records" : {
+
+    },
+    "Download Records" : {
+
+    },
     "Download started" : {
 
     },
@@ -5134,6 +5077,9 @@
 
     },
     "Downloaded" : {
+
+    },
+    "Downloading" : {
 
     },
     "Downloading Update" : {
@@ -5178,9 +5124,6 @@
     "Draft" : {
 
     },
-    "Drag a link to pull out Peek. Hold Option to drag the link normally. Turn off to reverse these gestures." : {
-
-    },
     "Drag a rectangle to copy that part of the page" : {
 
     },
@@ -5200,6 +5143,9 @@
 
     },
     "Drag to move the window or open Space actions" : {
+
+    },
+    "Drag to reorder" : {
 
     },
     "Dragon" : {
@@ -5265,6 +5211,9 @@
         }
       }
     },
+    "Dune" : {
+
+    },
     "Duplicate %lld Tabs" : {
 
     },
@@ -5281,6 +5230,9 @@
     "Each Space gets an independent copy with the permissions you choose. Extension data stays separate." : {
 
     },
+    "Each Space keeps its own history, site permissions and blocking." : {
+
+    },
     "Eagle" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -5291,6 +5243,9 @@
           }
         }
       }
+    },
+    "Edge" : {
+
     },
     "Edge & outline" : {
 
@@ -5308,6 +5263,12 @@
         }
       }
     },
+    "Edit %@, %@" : {
+
+    },
+    "Edit Crest…" : {
+
+    },
     "Edit Search Engine" : {
 
     },
@@ -5315,6 +5276,9 @@
 
     },
     "Edit Space name: %@" : {
+
+    },
+    "Edit Space…" : {
 
     },
     "Edit Tab" : {
@@ -5326,6 +5290,9 @@
           }
         }
       }
+    },
+    "Edit Website Rule" : {
+
     },
     "Embedded password form from %@" : {
       "localizations" : {
@@ -5346,6 +5313,9 @@
           }
         }
       }
+    },
+    "Ember" : {
+
     },
     "Emblem" : {
       "localizations" : {
@@ -5402,6 +5372,9 @@
         }
       }
     },
+    "Engine" : {
+
+    },
     "Engine experiments" : {
 
     },
@@ -5412,6 +5385,9 @@
 
     },
     "Enter a valid URL template." : {
+
+    },
+    "Enter an HTTP or HTTPS website." : {
 
     },
     "Enter Full Screen" : {
@@ -5461,16 +5437,6 @@
     },
     "Every Crest command will return to its default shortcut." : {
 
-    },
-    "Every exact site, port, capability, and Space has its own choice. Camera and microphone access also require device-level privacy consent." : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "لكل موقع ومنفذ وإمكانية ومساحة بالضبط خيار مستقل. ويتطلب الوصول إلى الكاميرا والميكروفون أيضًا موافقة الخصوصية على مستوى الجهاز."
-          }
-        }
-      }
     },
     "Everyday Use" : {
       "localizations" : {
@@ -5543,6 +5509,9 @@
           }
         }
       }
+    },
+    "Experimental" : {
+
     },
     "Export as PDF" : {
       "localizations" : {
@@ -5624,15 +5593,8 @@
         }
       }
     },
-    "Exports Spaces, folders, saved and current tabs, Archive, history, and browsing preferences. Passwords, cookies, website storage, permissions, downloads, favicons, and extensions are never included." : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "يُصدّر المساحات والمجلدات وعلامات التبويب المحفوظة والحالية والأرشيف والسجل وتفضيلات التصفح. لا يتم تضمين كلمات المرور وملفات تعريف الارتباط وتخزين مواقع الويب والأذونات والتنزيلات والأيقونات المفضلة والامتدادات مطلقًا."
-          }
-        }
-      }
+    "Exports never include passwords, cookies, website data or extensions." : {
+
     },
     "Extension Settings" : {
       "localizations" : {
@@ -5663,6 +5625,9 @@
     "EXTENSIONS" : {
 
     },
+    "extensions add-ons Chrome Web Store install remove" : {
+
+    },
     "extensions permissions Chromium Chrome Web Store install copies Spaces" : {
 
     },
@@ -5678,6 +5643,9 @@
           }
         }
       }
+    },
+    "FairPlay protected video" : {
+
     },
     "Falcon" : {
       "extractionState" : "manual",
@@ -5838,9 +5806,6 @@
         }
       }
     },
-    "Finish editing name" : {
-
-    },
     "Finish setting up passkeys in System Settings, then check again." : {
 
     },
@@ -5853,6 +5818,9 @@
           }
         }
       }
+    },
+    "Fire" : {
+
     },
     "Firefox" : {
       "localizations" : {
@@ -5920,17 +5888,7 @@
         }
       }
     },
-    "Focus Follows Mouse in Split View" : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "التركيز يتبع الماوس في العرض المنقسم"
-          }
-        }
-      }
-    },
-    "Focus new tabs opened from links" : {
+    "Focus follows pointer" : {
 
     },
     "Focus Next Split Card" : {
@@ -5952,6 +5910,9 @@
           }
         }
       }
+    },
+    "focus switch new tabs follow move between Spaces Command-click middle-click Shift pinned saved close resume restore root URL favicon Split View focus follows mouse pointer sidebar widgets Now Playing media cards" : {
+
     },
     "Focus this card" : {
 
@@ -5992,6 +5953,9 @@
         }
       }
     },
+    "Folder colors" : {
+
+    },
     "Folder Icon" : {
 
     },
@@ -6020,9 +5984,6 @@
     "Folders hold tabs and other folders. Add Weekends, then nest Ideas inside it. Folders also work below the line with open tabs." : {
 
     },
-    "Follow planned and completed public work on GitHub" : {
-
-    },
     "Follow Space accent" : {
 
     },
@@ -6047,6 +6008,9 @@
           }
         }
       }
+    },
+    "Forest" : {
+
     },
     "Forever" : {
 
@@ -6174,6 +6138,12 @@
         }
       }
     },
+    "Give the shape an edge to color it" : {
+
+    },
+    "Glow" : {
+
+    },
     "Go Back" : {
       "localizations" : {
         "ar" : {
@@ -6183,6 +6153,9 @@
           }
         }
       }
+    },
+    "Gold" : {
+
     },
     "Google will become this Space’s search engine." : {
 
@@ -6230,6 +6203,12 @@
           }
         }
       }
+    },
+    "Gules" : {
+
+    },
+    "Gunmetal" : {
+
     },
     "Hammer" : {
       "extractionState" : "stale",
@@ -6349,9 +6328,6 @@
     "Hides recent changes" : {
 
     },
-    "Highlights misspelled words without changing what you type. Changes take effect the next time Crest opens." : {
-
-    },
     "History" : {
       "localizations" : {
         "ar" : {
@@ -6362,6 +6338,9 @@
         }
       }
     },
+    "history entries" : {
+
+    },
     "History in other Spaces is not affected." : {
       "localizations" : {
         "ar" : {
@@ -6371,6 +6350,9 @@
           }
         }
       }
+    },
+    "Hold Shift as you open a link to do the opposite." : {
+
     },
     "home" : {
       "localizations" : {
@@ -6442,6 +6424,9 @@
     "HTTP" : {
 
     },
+    "https://example.com" : {
+
+    },
     "Hydra" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -6452,6 +6437,9 @@
           }
         }
       }
+    },
+    "Ice" : {
+
     },
     "iCloud" : {
       "localizations" : {
@@ -6483,22 +6471,15 @@
         }
       }
     },
+    "iCloud Keychain, per Space" : {
+
+    },
     "iCloud setup and status" : {
       "localizations" : {
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "إعداد iCloud وحالته"
-          }
-        }
-      }
-    },
-    "iCloud Sync" : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "مزامنة iCloud"
           }
         }
       }
@@ -6598,15 +6579,8 @@
         }
       }
     },
-    "Import & Export" : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "الاستيراد والتصدير"
-          }
-        }
-      }
+    "Import and export" : {
+
     },
     "Import Browser Data…" : {
       "localizations" : {
@@ -6631,26 +6605,16 @@
     "Import from %@" : {
 
     },
-    "Import from another browser requires Crest for macOS. Once imported, your Spaces and tabs sync to this device with iCloud." : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "يتطلب الاستيراد من متصفح آخر تطبيق Crest لنظام macOS. بعد الاستيراد، تتم مزامنة المساحات وعلامات التبويب إلى هذا الجهاز عبر iCloud."
-          }
-        }
-      }
-    },
     "Import from Another Browser…" : {
-
-    },
-    "Import into %@…" : {
 
     },
     "Import No Longer Available" : {
 
     },
     "Import passwords for %@" : {
+
+    },
+    "Import Passwords…" : {
 
     },
     "Import Reviewed Data" : {
@@ -7098,6 +7062,9 @@
     "Imported from an insecure HTTP site. Crest keeps it available for manual access but does not autofill it on insecure connections." : {
 
     },
+    "Imported password" : {
+
+    },
     "Imported Zen Space %lld" : {
       "localizations" : {
         "ar" : {
@@ -7117,6 +7084,9 @@
           }
         }
       }
+    },
+    "Importing from another browser needs Crest for Mac. Imported Spaces sync here with iCloud." : {
+
     },
     "Importing into" : {
 
@@ -7162,6 +7132,12 @@
         }
       }
     },
+    "Indigo" : {
+
+    },
+    "Ink" : {
+
+    },
     "Inserts any emoji through the system text input experience." : {
 
     },
@@ -7195,17 +7171,16 @@
     "Install in other Spaces…" : {
 
     },
-    "Installed in this Space" : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "مثبتة في هذه المساحة"
-          }
-        }
-      }
+    "Installed" : {
+
+    },
+    "Installing" : {
+
     },
     "Installing Update" : {
+
+    },
+    "Intensity" : {
 
     },
     "Interactive sidebar preview" : {
@@ -7237,6 +7212,9 @@
     "Jump to Selection" : {
 
     },
+    "Keep" : {
+
+    },
     "Keep Browsing" : {
 
     },
@@ -7257,9 +7235,6 @@
       }
     },
     "Keep Pages Loaded" : {
-
-    },
-    "Keep playing videos visible when you switch tabs. Background videos are skipped, and an existing Picture in Picture session is never replaced." : {
 
     },
     "Keep work, personal browsing, and projects in separate Spaces." : {
@@ -7307,10 +7282,16 @@
         }
       }
     },
+    "Kraken Gold" : {
+
+    },
     "Languages" : {
 
     },
     "Languages confirmed as downloaded appear first. Other choices may need a download; choose a language and tap Translate to let Apple prepare it." : {
+
+    },
+    "Lapis" : {
 
     },
     "Large Phone" : {
@@ -7412,9 +7393,6 @@
         }
       }
     },
-    "Let page animations use higher refresh rates on supported displays. May reduce scrolling smoothness." : {
-
-    },
     "Letter style" : {
 
     },
@@ -7439,9 +7417,6 @@
       "extractionState" : "manual"
     },
     "Link destination" : {
-
-    },
-    "Link dragging" : {
 
     },
     "Links" : {
@@ -7499,6 +7474,9 @@
         }
       }
     },
+    "Loading" : {
+
+    },
     "Loading Languages…" : {
 
     },
@@ -7521,6 +7499,9 @@
     "Loading…" : {
 
     },
+    "Local pages are localhost, private network addresses, .local, .test and files." : {
+
+    },
     "Local records" : {
       "localizations" : {
         "ar" : {
@@ -7534,13 +7515,25 @@
     "Location" : {
 
     },
+    "Lock" : {
+
+    },
+    "Lock Space" : {
+
+    },
+    "Locked" : {
+
+    },
+    "Locks again when Crest goes to the background." : {
+
+    },
     "Long press or open the context menu for skin tone variations." : {
 
     },
     "Long press to choose a skin tone variation." : {
 
     },
-    "Look and Feel" : {
+    "look and feel theme accent color transparency page zoom percentage sidebar left right borderless window fullscreen layout interface animation motion page cards folder highlights counts borders preview density spacing padding scale icons" : {
 
     },
     "Looks for other browsers built on Chromium" : {
@@ -7561,6 +7554,12 @@
       "extractionState" : "manual"
     },
     "macOS has not returned a location decision. Respond to its prompt, or open System Settings > Privacy & Security > Location Services to allow Crest." : {
+
+    },
+    "Make Crest your own" : {
+
+    },
+    "Make Default" : {
 
     },
     "Make Lower Case" : {
@@ -7589,23 +7588,19 @@
         }
       }
     },
+    "Manage" : {
+
+    },
     "Manage Extension…" : {
 
     },
     "Manage Extensions" : {
 
     },
-    "Manage extensions for" : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "إدارة الإضافات لـ"
-          }
-        }
-      }
-    },
     "Manage Extensions…" : {
+
+    },
+    "Manage Filter Lists" : {
 
     },
     "Manage Saved Passwords…" : {
@@ -7619,9 +7614,6 @@
       }
     },
     "Manage Search Engines…" : {
-
-    },
-    "Manage…" : {
 
     },
     "Manual access only for insecure HTTP site" : {
@@ -7689,6 +7681,9 @@
     "Microphone" : {
 
     },
+    "Midnight" : {
+
+    },
     "Minimize" : {
 
     },
@@ -7707,6 +7702,9 @@
 
     },
     "More Languages" : {
+
+    },
+    "Moss" : {
 
     },
     "Most Recent Space" : {
@@ -7828,21 +7826,11 @@
         }
       }
     },
-    "Moved to %@ to play protected video" : {
-
-    },
     "Moves all current tabs to Archive" : {
 
     },
-    "Moving the pointer over a card makes it the card the address bar, Find, and keyboard shortcuts speak for. Clicking a card always focuses it, whether or not this is on. Focus never moves while you are typing in the address bar." : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "يؤدي تحريك المؤشر فوق بطاقة إلى جعلها البطاقة التي يعمل عليها شريط العنوان والبحث واختصارات لوحة المفاتيح. ويؤدي النقر على بطاقة دائمًا إلى التركيز عليها، سواء كان هذا الخيار مفعّلاً أم لا. ولا ينتقل التركيز أبدًا أثناء الكتابة في شريط العنوان."
-          }
-        }
-      }
+    "Must return an OpenSearch JSON array." : {
+
     },
     "Mute" : {
 
@@ -7866,6 +7854,9 @@
     "Name, crest, colors, and background" : {
 
     },
+    "Native macOS handling" : {
+
+    },
     "Navigate" : {
       "localizations" : {
         "ar" : {
@@ -7875,6 +7866,9 @@
           }
         }
       }
+    },
+    "Navy" : {
+
     },
     "Need review" : {
 
@@ -7990,6 +7984,9 @@
         }
       }
     },
+    "New Space…" : {
+
+    },
     "New tab" : {
       "localizations" : {
         "ar" : {
@@ -8020,6 +8017,9 @@
         }
       }
     },
+    "New tabs" : {
+
+    },
     "New Window" : {
       "localizations" : {
         "ar" : {
@@ -8029,6 +8029,9 @@
           }
         }
       }
+    },
+    "New, pinned and saved tabs" : {
+
     },
     "Next" : {
 
@@ -8093,6 +8096,12 @@
     "Next Widget" : {
 
     },
+    "Night" : {
+
+    },
+    "Nightly" : {
+
+    },
     "No Archived Tabs" : {
       "localizations" : {
         "ar" : {
@@ -8123,10 +8132,10 @@
         }
       }
     },
-    "No Custom Search Engines" : {
+    "No custom search engines" : {
 
     },
-    "No downloaded language pairs" : {
+    "No downloaded languages" : {
 
     },
     "No Downloads" : {
@@ -8210,6 +8219,9 @@
         }
       }
     },
+    "No matches" : {
+
+    },
     "No matching emblems. Try an SF Symbol or a monogram." : {
 
     },
@@ -8218,16 +8230,6 @@
     },
     "No Matching Feature Flags" : {
 
-    },
-    "No Matching Passwords" : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "لا توجد كلمات مرور مطابقة"
-          }
-        }
-      }
     },
     "No other Spaces are available. Unlock a Space to include it; Spaces that already have this extension are excluded." : {
 
@@ -8251,28 +8253,14 @@
     "No room for another Space" : {
 
     },
-    "No routes yet. Add a URL rule to open matching links in a specific Space." : {
+    "No routes yet." : {
 
     },
-    "No Saved Passwords" : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "لا توجد كلمات مرور محفوظة"
-          }
-        }
-      }
+    "No saved passwords" : {
+
     },
-    "No Saved Permissions" : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "لا توجد أذونات محفوظة"
-          }
-        }
-      }
+    "No saved permissions" : {
+
     },
     "No Space" : {
       "localizations" : {
@@ -8303,6 +8291,9 @@
     "No username" : {
 
     },
+    "No website rules" : {
+
+    },
     "None" : {
       "localizations" : {
         "ar" : {
@@ -8317,6 +8308,9 @@
 
     },
     "Not checked" : {
+
+    },
+    "Not configured" : {
 
     },
     "Not included" : {
@@ -8359,6 +8353,9 @@
         }
       }
     },
+    "Not signed in" : {
+
+    },
     "Nothing to Review" : {
 
     },
@@ -8385,6 +8382,9 @@
     "Objects" : {
 
     },
+    "Ocean" : {
+
+    },
     "Octagon" : {
       "extractionState" : "manual"
     },
@@ -8409,6 +8409,9 @@
       }
     },
     "Offer to Translate" : {
+
+    },
+    "Offer to translate pages" : {
 
     },
     "OK" : {
@@ -8454,6 +8457,12 @@
     "One-time macOS permission · No folder search" : {
 
     },
+    "Onyx" : {
+
+    },
+    "Opacity" : {
+
+    },
     "Open" : {
       "localizations" : {
         "ar" : {
@@ -8496,9 +8505,6 @@
           }
         }
       }
-    },
-    "Open Default Apps Settings…" : {
-
     },
     "Open Emoji Picker" : {
 
@@ -8642,6 +8648,9 @@
     "Open Page in %@" : {
 
     },
+    "Open pages keep their engine." : {
+
+    },
     "Open Peek with" : {
       "localizations" : {
         "ar" : {
@@ -8653,6 +8662,9 @@
       }
     },
     "Open Settings" : {
+
+    },
+    "Open Settings…" : {
 
     },
     "Open Space" : {
@@ -8687,18 +8699,11 @@
     "Open Translate…" : {
 
     },
+    "Opened in %@ for protected video" : {
+
+    },
     "Opening %@…" : {
       "comment" : "Initial page loading status; the value is the destination host."
-    },
-    "Opening in another Space reloads the page inside that Space’s independent website-data store." : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "يؤدي الفتح في مساحة أخرى إلى إعادة تحميل الصفحة داخل مخزن بيانات مواقع الويب المستقل لتلك المساحة."
-          }
-        }
-      }
     },
     "Opening page…" : {
       "comment" : "Initial status while a web page begins navigating."
@@ -8803,6 +8808,9 @@
     "Option-click" : {
 
     },
+    "Or" : {
+
+    },
     "Order" : {
 
     },
@@ -8831,6 +8839,9 @@
     },
     "Oval" : {
       "extractionState" : "manual"
+    },
+    "Oxblood" : {
+
     },
     "Packing list" : {
 
@@ -8907,9 +8918,6 @@
         }
       }
     },
-    "Pages using the default update immediately. Page Zoom commands override it while you browse, and Actual Size returns here." : {
-
-    },
     "Pale" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -8950,15 +8958,8 @@
         }
       }
     },
-    "Passkeys belong to the system account and may appear in any Space. The page’s cookies and sign-in session remain in the active Space." : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "تنتمي مفاتيح المرور إلى حساب النظام وقد تظهر في أي مساحة. وتظل ملفات تعريف الارتباط وجلسة تسجيل الدخول الخاصة بالصفحة في المساحة النشطة."
-          }
-        }
-      }
+    "Passkeys can appear in every Space." : {
+
     },
     "Password" : {
       "localizations" : {
@@ -9012,15 +9013,8 @@
         }
       }
     },
-    "Passwords for" : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "كلمات المرور لـ"
-          }
-        }
-      }
+    "passwords credentials autofill iCloud Keychain import export" : {
+
     },
     "Passwords in %@" : {
       "localizations" : {
@@ -9082,6 +9076,9 @@
     "Paste and Match Style" : {
 
     },
+    "Patina" : {
+
+    },
     "Pattern" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -9094,6 +9091,9 @@
       }
     },
     "Pause" : {
+
+    },
+    "Pause Download" : {
 
     },
     "Paused" : {
@@ -9210,16 +9210,6 @@
         }
       }
     },
-    "Permissions for" : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "أذونات لـ"
-          }
-        }
-      }
-    },
     "Personal" : {
       "localizations" : {
         "ar" : {
@@ -9230,7 +9220,13 @@
         }
       }
     },
+    "Pewter" : {
+
+    },
     "Phone" : {
+
+    },
+    "Picture in Picture when switching tabs" : {
 
     },
     "Pile" : {
@@ -9386,6 +9382,9 @@
     "Practice window" : {
 
     },
+    "Preparing" : {
+
+    },
     "Preparing bookmarks…" : {
       "localizations" : {
         "ar" : {
@@ -9507,16 +9506,6 @@
     "Previous Widget" : {
 
     },
-    "Primary" : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "الرئيسي"
-          }
-        }
-      }
-    },
     "Print Page" : {
       "localizations" : {
         "ar" : {
@@ -9556,6 +9545,9 @@
           }
         }
       }
+    },
+    "privacy lock Touch ID password private history retention archive downloads records content blocking ads trackers site permissions camera microphone location notifications" : {
+
     },
     "Private" : {
       "localizations" : {
@@ -9615,9 +9607,6 @@
     },
     "Profiles, bookmarks, open tabs, and passwords" : {
       "comment" : "What importing from another browser brings. Keep product names as they are."
-    },
-    "Protected capabilities ask first. Automatic pop-ups are blocked, and a site can download one file before asking to send more." : {
-
     },
     "Pull and Merge" : {
 
@@ -9693,26 +9682,6 @@
         }
       }
     },
-    "Quick Window keeps the link transient while using the most recent Space’s cookies and Crest Passwords. Most Recent Space creates a current tab immediately." : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "تحافظ النافذة السريعة على الرابط مؤقتًا مع استخدام ملفات تعريف الارتباط وكلمات مرور Crest الخاصة بأحدث مساحة. تنشئ «أحدث مساحة» علامة تبويب حالية فورًا."
-          }
-        }
-      }
-    },
-    "Quick Window opens a transient page using the most recent Space’s cookies and Crest Passwords. Most Recent Space creates a current tab immediately." : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "تفتح النافذة السريعة صفحة مؤقتة باستخدام ملفات تعريف الارتباط وكلمات مرور Crest الخاصة بأحدث مساحة. تنشئ «أحدث مساحة» علامة تبويب حالية فورًا."
-          }
-        }
-      }
-    },
     "Quick Window Released" : {
       "localizations" : {
         "ar" : {
@@ -9780,6 +9749,9 @@
         }
       }
     },
+    "Reader and page translation" : {
+
+    },
     "Reader Mode" : {
       "localizations" : {
         "ar" : {
@@ -9833,6 +9805,9 @@
         }
       }
     },
+    "Ready" : {
+
+    },
     "Ready for %@" : {
 
     },
@@ -9846,7 +9821,13 @@
         }
       }
     },
+    "Ready to download" : {
+
+    },
     "Ready to import" : {
+
+    },
+    "Ready to install" : {
 
     },
     "Ready to Install" : {
@@ -9855,7 +9836,16 @@
     "Rearrange cards" : {
 
     },
+    "Rearrange Spaces" : {
+
+    },
     "Recipes" : {
+
+    },
+    "Recommended" : {
+
+    },
+    "Recommended for everyday use." : {
 
     },
     "Reconnect to Wi-Fi or Ethernet, then try again." : {
@@ -9868,13 +9858,13 @@
         }
       }
     },
-    "Reddit is public. Remove passwords, private URLs, browsing history, and other sensitive information before posting. Use GitHub Issues for reports with a Crest version, Apple platform, and repeatable steps." : {
+    "Reddit is public. Leave out private details." : {
 
     },
     "Redo" : {
 
     },
-    "Refresh Languages" : {
+    "Refresh" : {
 
     },
     "Regular" : {
@@ -9969,6 +9959,9 @@
     "Remember in %@" : {
 
     },
+    "Remember in this Space" : {
+
+    },
     "Remember the chosen Space for each site" : {
       "localizations" : {
         "ar" : {
@@ -10000,6 +9993,9 @@
       }
     },
     "Remove %@?" : {
+
+    },
+    "Remove Accent Color" : {
 
     },
     "Remove Background Color" : {
@@ -10085,28 +10081,14 @@
     "Remove last color" : {
 
     },
-    "Remove Primary Color" : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "إزالة اللون الرئيسي"
-          }
-        }
-      }
+    "Remove Pattern Color" : {
+
+    },
+    "Remove Rule" : {
+
     },
     "Remove Search Engine?" : {
 
-    },
-    "Remove Secondary Color" : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "إزالة اللون الثانوي"
-          }
-        }
-      }
     },
     "Remove Space" : {
       "localizations" : {
@@ -10127,6 +10109,9 @@
           }
         }
       }
+    },
+    "Removing download records doesn’t delete the files." : {
+
     },
     "Removing private browser data…" : {
       "localizations" : {
@@ -10316,15 +10301,8 @@
     "Requests permission" : {
 
     },
-    "Require device authentication to view this Space" : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "طلب مصادقة الجهاز لعرض هذه المساحة"
-          }
-        }
-      }
+    "Require Touch ID or password" : {
+
     },
     "Rerun onboarding" : {
 
@@ -10360,19 +10338,22 @@
     "Reset all Look and Feel settings?" : {
 
     },
-    "Reset All Look and Feel…" : {
+    "Reset All…" : {
+
+    },
+    "Reset Appearance" : {
 
     },
     "Reset appearance to starting point" : {
-
-    },
-    "Reset Crest" : {
 
     },
     "Reset Crest Shortcuts" : {
 
     },
     "Reset every WebKit feature flag?" : {
+
+    },
+    "Reset Icon" : {
 
     },
     "Reset practice" : {
@@ -10420,7 +10401,7 @@
     "Restart and Update" : {
 
     },
-    "Restart Crest to apply these changes reliably to every page." : {
+    "Restart Crest to apply these changes." : {
 
     },
     "Restart setup from the welcome screen" : {
@@ -10456,21 +10437,17 @@
     "Restores each site's default permission behavior" : {
 
     },
+    "Restricted" : {
+
+    },
     "Restricted by macOS" : {
+
+    },
+    "Resume Download" : {
 
     },
     "Resume last location" : {
 
-    },
-    "Retention is set separately for this Space. Crest checks when it opens, after sync, and every 15 minutes while active. Download cleanup removes Crest’s record only; downloaded files stay on disk." : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "يُضبط الاحتفاظ بشكل منفصل لهذه المساحة. يتحقق Crest عند فتحه وبعد المزامنة وكل 15 دقيقة أثناء النشاط. تزيل عملية تنظيف التنزيلات سجل Crest فقط؛ وتبقى الملفات المنزلة على القرص."
-          }
-        }
-      }
     },
     "Retries the failed address" : {
       "localizations" : {
@@ -10498,6 +10475,9 @@
         }
       }
     },
+    "Return this website to the default engine" : {
+
+    },
     "Return to saved URL" : {
 
     },
@@ -10510,9 +10490,6 @@
           }
         }
       }
-    },
-    "Return to saved URL with one favicon click" : {
-
     },
     "Return to your tabs" : {
 
@@ -10562,6 +10539,9 @@
 
     },
     "Review Password Import" : {
+
+    },
+    "Review Passwords" : {
 
     },
     "Review this Space’s content and network settings." : {
@@ -10615,6 +10595,9 @@
         }
       }
     },
+    "River Red" : {
+
+    },
     "Rose" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -10625,6 +10608,9 @@
           }
         }
       }
+    },
+    "Rose Gold" : {
+
     },
     "Round" : {
       "localizations" : {
@@ -10664,6 +10650,12 @@
     "Runs in WebKit" : {
       "comment" : "Said of a tab whose page runs in this browser engine rather than the default one. Keep the product name as it is."
     },
+    "Rust" : {
+
+    },
+    "Sable" : {
+
+    },
     "Safari" : {
       "localizations" : {
         "ar" : {
@@ -10675,6 +10667,12 @@
       }
     },
     "Safari CSV" : {
+
+    },
+    "Saffron" : {
+
+    },
+    "Sage" : {
 
     },
     "Sailboat" : {
@@ -10700,6 +10698,9 @@
       }
     },
     "Sample page" : {
+
+    },
+    "Sand" : {
 
     },
     "Sans" : {
@@ -10767,6 +10768,9 @@
         }
       }
     },
+    "Save Setup" : {
+
+    },
     "Save this tab" : {
 
     },
@@ -10823,16 +10827,6 @@
         }
       }
     },
-    "Saved decisions" : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "القرارات المحفوظة"
-          }
-        }
-      }
-    },
     "Saved in %@" : {
       "localizations" : {
         "ar" : {
@@ -10883,9 +10877,6 @@
         }
       }
     },
-    "Saved passwords stay in this Space and can still be viewed or deleted from Passwords settings." : {
-
-    },
     "Saved Tabs" : {
       "localizations" : {
         "ar" : {
@@ -10925,6 +10916,9 @@
           }
         }
       }
+    },
+    "Scarlet" : {
+
     },
     "Scorpion" : {
       "extractionState" : "manual",
@@ -11005,10 +10999,10 @@
         }
       }
     },
-    "Search Engine" : {
+    "Search engine names must be 64 characters or fewer." : {
 
     },
-    "Search engine names must be 64 characters or fewer." : {
+    "search engine suggestions archive tabs cleanup downloads folder save location delete Space" : {
 
     },
     "Search engine templates may only use the standard HTTPS port." : {
@@ -11065,7 +11059,7 @@
         }
       }
     },
-    "Search passwords" : {
+    "Search Passwords" : {
 
     },
     "Search saved passwords" : {
@@ -11088,6 +11082,9 @@
 
     },
     "Search Suggestions" : {
+
+    },
+    "Search suggestions send what you type to the search engine." : {
 
     },
     "Search symbols" : {
@@ -11123,16 +11120,6 @@
     "Second field" : {
 
     },
-    "Secondary" : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "الثانوي"
-          }
-        }
-      }
-    },
     "Secure" : {
 
     },
@@ -11146,6 +11133,9 @@
           }
         }
       }
+    },
+    "Select" : {
+
     },
     "Select a Space" : {
       "localizations" : {
@@ -11167,12 +11157,6 @@
 
     },
     "Select All Tabs" : {
-
-    },
-    "Select an unlocked Space to check its download folder." : {
-
-    },
-    "Select Passwords" : {
 
     },
     "Select Range to Here" : {
@@ -11249,6 +11233,9 @@
     "Selected tab glow" : {
 
     },
+    "Selected tabs, pins, the address field and the Space picker" : {
+
+    },
     "Selected, Open Space" : {
       "localizations" : {
         "ar" : {
@@ -11268,12 +11255,6 @@
           }
         }
       }
-    },
-    "Selects tabs opened with Command-click or middle-click when the webpage supports it. Add Shift to reverse this choice. Background tabs load immediately." : {
-
-    },
-    "Send a reproducible bug report through GitHub Issues" : {
-
     },
     "Separate All Tabs" : {
       "localizations" : {
@@ -11313,9 +11294,6 @@
       }
     },
     "Services" : {
-
-    },
-    "Set as Default…" : {
 
     },
     "Set Up Without iCloud" : {
@@ -11403,16 +11381,6 @@
         }
       }
     },
-    "Share Diagnostics" : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "مشاركة التشخيصات"
-          }
-        }
-      }
-    },
     "Share Feedback on r/CrestBrowser" : {
 
     },
@@ -11425,6 +11393,9 @@
           }
         }
       }
+    },
+    "Share Report" : {
+
     },
     "Share your location with websites you allow." : {
 
@@ -11614,6 +11585,9 @@
     "Show Saved Files" : {
 
     },
+    "Show sidebar" : {
+
+    },
     "Show Sidebar Temporarily" : {
 
     },
@@ -11661,6 +11635,9 @@
         }
       }
     },
+    "Show…" : {
+
+    },
     "Shows recent changes" : {
 
     },
@@ -11668,6 +11645,9 @@
 
     },
     "Shuffle" : {
+
+    },
+    "Sidebar" : {
 
     },
     "Sidebar background" : {
@@ -11686,6 +11666,9 @@
 
     },
     "Sign in to websites using passkeys saved with your system providers." : {
+
+    },
+    "Silver" : {
 
     },
     "Simple Symbol" : {
@@ -11710,6 +11693,9 @@
       }
     },
     "Site Controls" : {
+
+    },
+    "Site permissions" : {
 
     },
     "Site Permissions" : {
@@ -11739,6 +11725,12 @@
     "Skip This Version" : {
 
     },
+    "Sky" : {
+
+    },
+    "Slate" : {
+
+    },
     "Smart Copy/Paste" : {
 
     },
@@ -11752,6 +11744,9 @@
 
     },
     "Smileys & People" : {
+
+    },
+    "Smooth webpage performance" : {
 
     },
     "Snowflake" : {
@@ -11791,10 +11786,10 @@
         }
       }
     },
-    "Some content on this page was not delivered securely." : {
+    "Some changes couldn’t be read. Update Crest on every device, then pull from iCloud." : {
 
     },
-    "Some iCloud changes could not be read. Update Crest on all devices, then pull from iCloud." : {
+    "Some content on this page was not delivered securely." : {
 
     },
     "Some iCloud records can’t be read. Update Crest on all your devices and try again." : {
@@ -11929,6 +11924,9 @@
     "Spaces, Essentials, pinned tabs, folders, open tabs, and colors" : {
       "comment" : "What importing from another browser brings. Keep product names as they are."
     },
+    "Spaces, tabs and history" : {
+
+    },
     "Spaces, tabs, folders, colors, icons, and passwords" : {
       "comment" : "What importing from another browser brings. Keep product names as they are."
     },
@@ -11947,6 +11945,9 @@
 
     },
     "Spelling and Grammar" : {
+
+    },
+    "Spelling changes apply after Crest restarts." : {
 
     },
     "Split" : {
@@ -12145,6 +12146,9 @@
     "Square" : {
 
     },
+    "Stable" : {
+
+    },
     "Stag" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -12215,6 +12219,9 @@
           }
         }
       }
+    },
+    "Steel" : {
+
     },
     "Step %lld of 3" : {
 
@@ -12317,6 +12324,9 @@
         }
       }
     },
+    "Storm Gold" : {
+
+    },
     "Stripes" : {
       "extractionState" : "manual"
     },
@@ -12359,7 +12369,7 @@
     "Suggestion URL" : {
 
     },
-    "Suggestions (Optional)" : {
+    "Suggestions (optional)" : {
 
     },
     "Sun" : {
@@ -12384,10 +12394,10 @@
         }
       }
     },
-    "Suspend" : {
+    "Sunset Red" : {
 
     },
-    "Suspend pauses inactive tabs. Throttle lets them continue limited work, which may improve responsiveness while using more resources. Changes apply to new tabs; restart Crest to apply to all open tabs." : {
+    "Suspend" : {
 
     },
     "Swipe between Spaces" : {
@@ -12443,7 +12453,7 @@
         }
       }
     },
-    "Switch to the destination Space and open the moved tab. Turn off to keep browsing without following the tab." : {
+    "Switch to tabs opened from links" : {
 
     },
     "Sword" : {
@@ -12484,25 +12494,11 @@
     "Sync can’t record more changes on this device." : {
 
     },
-    "Sync Crest with iCloud" : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "مزامنة Crest مع iCloud"
-          }
-        }
-      }
+    "Sync Diagnostics" : {
+
     },
-    "Sync Monitor" : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "مراقبة المزامنة"
-          }
-        }
-      }
+    "Sync is paused until you choose." : {
+
     },
     "Sync Now" : {
       "localizations" : {
@@ -12514,15 +12510,8 @@
         }
       }
     },
-    "Sync this Space’s Crest passwords with iCloud Keychain" : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "مزامنة كلمات مرور Crest في هذه المساحة مع سلسلة مفاتيح iCloud"
-          }
-        }
-      }
+    "Sync with iCloud" : {
+
     },
     "Sync with iCloud Keychain" : {
       "localizations" : {
@@ -12564,6 +12553,9 @@
         }
       }
     },
+    "Syncing" : {
+
+    },
     "System passkeys" : {
       "localizations" : {
         "ar" : {
@@ -12595,7 +12587,7 @@
         }
       }
     },
-    "System Permissions" : {
+    "System permissions" : {
 
     },
     "System Settings could not open. Open it from the Apple menu and choose Privacy & Security." : {
@@ -12683,6 +12675,9 @@
     "Tap the name to rename" : {
 
     },
+    "Teal" : {
+
+    },
     "Technical Details" : {
       "localizations" : {
         "ar" : {
@@ -12696,13 +12691,25 @@
     "Teeth" : {
 
     },
+    "Temporarily unavailable" : {
+
+    },
     "temporary disposable unsynced window" : {
+
+    },
+    "Tenné" : {
+
+    },
+    "Terracotta" : {
 
     },
     "TEST" : {
 
     },
     "Test fixture" : {
+
+    },
+    "Text" : {
 
     },
     "Text and images grow together. Choose a comfortable size for your everyday browsing." : {
@@ -12712,9 +12719,6 @@
 
     },
     "Text Replacement" : {
-
-    },
-    "Text, icons, and spacing scale together, and pins balance across rows." : {
 
     },
     "Texture" : {
@@ -12762,6 +12766,9 @@
           }
         }
       }
+    },
+    "The app is missing access to Crest’s CloudKit container." : {
+
     },
     "The connection to %@ ended before the page finished loading." : {
       "localizations" : {
@@ -12825,16 +12832,6 @@
     "The destination Space changed. Choose the file again." : {
 
     },
-    "The diagnostics report contains sync status and record counts, not URLs, titles, browsing history, passwords, or account identifiers." : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "يتضمن تقرير التشخيص حالة المزامنة وأعداد السجلات، ولا يتضمن عناوين URL أو العناوين أو سجل التصفح أو كلمات السر أو معرّفات الحساب."
-          }
-        }
-      }
-    },
     "The download folder is unavailable. Choose another folder in Space settings." : {
 
     },
@@ -12842,9 +12839,6 @@
 
     },
     "The download was interrupted." : {
-
-    },
-    "The endpoint must return an OpenSearch JSON array. Leave this blank when the engine does not offer suggestions." : {
 
     },
     "The engine blocked this download because of its safety or organization policy verdict." : {
@@ -12856,7 +12850,7 @@
     "The file couldn’t be saved in its folder." : {
 
     },
-    "The first matching route wins. Other links use your default destination." : {
+    "The first matching route wins." : {
 
     },
     "The original filename used invisible or direction-changing characters that can disguise its real extension." : {
@@ -12869,15 +12863,11 @@
         }
       }
     },
-    "The other modifier opens the link in a new tab." : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "يفتح المُعدِّل الآخر الرابط في علامة تبويب جديدة."
-          }
-        }
-      }
+    "The other key opens a new tab. Hold Option to drag the link itself." : {
+
+    },
+    "The other key opens the link in a new tab." : {
+
     },
     "The page could not be exported." : {
 
@@ -12900,10 +12890,19 @@
     "The page was closed." : {
 
     },
+    "The password could not be saved. Try again." : {
+
+    },
     "The password is empty." : {
 
     },
     "The password is saved in this Space, but the form changed before Crest could fill it." : {
+
+    },
+    "The pattern’s last band and the gradient’s end" : {
+
+    },
+    "The report has counts only: no URLs, titles or passwords." : {
 
     },
     "The row does not match the detected columns." : {
@@ -12924,6 +12923,9 @@
           }
         }
       }
+    },
+    "The sidebar behind your tabs" : {
+
     },
     "The site is not a valid web address." : {
 
@@ -12973,9 +12975,6 @@
 
     },
     "These rows are excluded from the import. Correct the source file to import them later." : {
-
-    },
-    "These settings apply to every Space on this device and don't sync." : {
 
     },
     "This action requires webpage tabs. Deselect built-in pages first." : {
@@ -13062,6 +13061,9 @@
           }
         }
       }
+    },
+    "This device only" : {
+
     },
     "This download was blocked because it came over an insecure connection." : {
 
@@ -13155,9 +13157,6 @@
           }
         }
       }
-    },
-    "This location belongs only to %@ on this Mac. Opening a finished download opens the file directly; its menu also includes Show in Finder." : {
-
     },
     "This page cannot be exported." : {
 
@@ -13264,9 +13263,6 @@
     "This password was imported from an insecure HTTP site. Crest keeps it available to view or copy but will not autofill it on an insecure connection." : {
 
     },
-    "This policy applies only to %@. Eligible tabs remain recoverable from Archive." : {
-
-    },
     "This policy applies only to %arg. Eligible tabs remain recoverable from Archive." : {
       "extractionState" : "stale",
       "localizations" : {
@@ -13308,6 +13304,9 @@
       }
     },
     "This session was saved by a newer version of Crest. Update Crest before opening it." : {
+
+    },
+    "This sign-in form belongs to a different website." : {
 
     },
     "This site can’t be reached" : {
@@ -13354,6 +13353,9 @@
       }
     },
     "Throttle" : {
+
+    },
+    "Throttle keeps background tabs working and uses more power. Applies to new tabs." : {
 
     },
     "Tint Folder Title" : {
@@ -13447,13 +13449,16 @@
     "Translate %@ to" : {
 
     },
+    "Translate automatically" : {
+
+    },
+    "Translate automatically from" : {
+
+    },
     "Translate From" : {
 
     },
     "Translate Now" : {
-
-    },
-    "Translate only the languages you turn on below, using their chosen destination. Other languages stay unchanged. Automatic translation never shows a popup or downloads languages." : {
 
     },
     "Translate Page" : {
@@ -13486,6 +13491,9 @@
           }
         }
       }
+    },
+    "Translation" : {
+
     },
     "Translation cancelled. Original text restored." : {
 
@@ -13703,10 +13711,10 @@
     "Type Shortcut" : {
 
     },
-    "Typing" : {
+    "Ultrawide" : {
 
     },
-    "Ultrawide" : {
+    "Umber" : {
 
     },
     "unassigned" : {
@@ -13734,6 +13742,9 @@
       }
     },
     "Unavailable" : {
+
+    },
+    "Unavailable in this build" : {
 
     },
     "Undo" : {
@@ -13810,25 +13821,14 @@
         }
       }
     },
-    "Unlock every private Space before exporting browser data or bookmarks that include its tabs and history." : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ألغِ قفل كل مساحة خاصة قبل تصدير بيانات المتصفح أو العلامات المرجعية التي تتضمن علامات تبويبها وسجلها."
-          }
-        }
-      }
+    "Unlock a Space to check its download folder" : {
+
     },
-    "Unlock the private Spaces below before viewing or changing URL route patterns that target them." : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ألغِ قفل المساحات الخاصة أدناه قبل عرض أو تغيير أنماط مسارات العناوين التي تستهدفها."
-          }
-        }
-      }
+    "Unlock these Spaces to export their tabs and history." : {
+
+    },
+    "Unlock these Spaces to see the routes that open in them." : {
+
     },
     "Unlock to view your tabs." : {
 
@@ -13846,6 +13846,9 @@
 
     },
     "Unpin from Toolbar" : {
+
+    },
+    "Untitled Space" : {
 
     },
     "up arrow" : {
@@ -13877,10 +13880,16 @@
         }
       }
     },
+    "Update Available" : {
+
+    },
     "Update channel" : {
 
     },
     "Update Check Failed" : {
+
+    },
+    "Update error" : {
 
     },
     "Update in %@" : {
@@ -14001,22 +14010,15 @@
         }
       }
     },
+    "Updates several times a day." : {
+
+    },
     "Updating existing credentials…" : {
       "localizations" : {
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "جارٍ تحديث بيانات الاعتماد الموجودة…"
-          }
-        }
-      }
-    },
-    "Updating existing Keychain items…" : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "جارٍ تحديث عناصر سلسلة المفاتيح الموجودة…"
           }
         }
       }
@@ -14067,6 +14069,9 @@
         }
       }
     },
+    "Use %s or {searchTerms} where the search goes. HTTPS only." : {
+
+    },
     "Use a public search engine host, not a local or numeric address." : {
 
     },
@@ -14076,15 +14081,8 @@
     "Use Clear on the line in the practice sidebar." : {
 
     },
-    "Use Crest Passwords in this Space" : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "استخدام كلمات مرور Crest في هذه المساحة"
-          }
-        }
-      }
+    "Use Crest Passwords" : {
+
     },
     "Use Default Color" : {
 
@@ -14093,9 +14091,6 @@
 
     },
     "Use Emoji Keyboard" : {
-
-    },
-    "Use exactly one %s or {searchTerms} where the encoded search should appear. HTTPS is required." : {
 
     },
     "Use exactly one query placeholder." : {
@@ -14121,6 +14116,9 @@
 
     },
     "Use imported password %lld" : {
+
+    },
+    "Use Recommended" : {
 
     },
     "Use Selection for Find" : {
@@ -14193,10 +14191,16 @@
     "Version %@" : {
 
     },
+    "Version %@ (%@)" : {
+
+    },
     "version build updates changelog what's new feedback Reddit GitHub issues roadmap support community" : {
 
     },
     "Version, updates, and support" : {
+
+    },
+    "Vert" : {
 
     },
     "Vertical" : {
@@ -14211,9 +14215,6 @@
       }
     },
     "Vertical offset" : {
-
-    },
-    "Video" : {
 
     },
     "View" : {
@@ -14251,10 +14252,10 @@
     "View Release" : {
 
     },
-    "View the Crest Roadmap" : {
+    "View the full release notes" : {
 
     },
-    "View the full release notes" : {
+    "View the Roadmap" : {
 
     },
     "Viewport" : {
@@ -14303,10 +14304,13 @@
         }
       }
     },
+    "Waiting for iCloud" : {
+
+    },
     "Wants to download multiple files automatically" : {
 
     },
-    "Wants to send notifications while this page is open" : {
+    "Wants to send notifications" : {
 
     },
     "Wants to share your screen" : {
@@ -14354,6 +14358,12 @@
     "WebKit Chromium experimental preview testable developer stable runtime flags features" : {
 
     },
+    "WebKit fallback for protected video" : {
+
+    },
+    "Webpages" : {
+
+    },
     "Website" : {
       "localizations" : {
         "ar" : {
@@ -14365,6 +14375,12 @@
       }
     },
     "Website colors for pins" : {
+
+    },
+    "Website release" : {
+
+    },
+    "Website rules" : {
 
     },
     "Wedges" : {
@@ -14389,15 +14405,8 @@
         }
       }
     },
-    "What Syncs" : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ما تتم مزامنته"
-          }
-        }
-      }
+    "What syncs" : {
+
     },
     "What's New" : {
 
@@ -14408,7 +14417,7 @@
     "What's New in Crest %@" : {
 
     },
-    "When a saved tab shows /, click its favicon once to return to its saved URL. Double-clicking the tab still returns it." : {
+    "Wheat" : {
 
     },
     "When Crest opens" : {
@@ -14420,9 +14429,6 @@
           }
         }
       }
-    },
-    "When enabled, typed searches are sent to this Space’s search engine after a short delay. Crest never requests suggestions in Private Browsing." : {
-
     },
     "When URL" : {
 
@@ -14459,6 +14465,9 @@
     "Window, tab, address field, folder, and app icon choices return to their defaults." : {
 
     },
+    "Window, tabs, zoom and motion" : {
+
+    },
     "Windows, open tabs, and pinned tabs" : {
       "comment" : "What importing from another browser brings. Keep product names as they are."
     },
@@ -14473,6 +14482,9 @@
         }
       }
     },
+    "Wolf Grey" : {
+
+    },
     "Work" : {
       "localizations" : {
         "ar" : {
@@ -14482,6 +14494,12 @@
           }
         }
       }
+    },
+    "Work in testing before it reaches Development." : {
+
+    },
+    "Working" : {
+
     },
     "Wyvern" : {
       "extractionState" : "manual",
@@ -14555,6 +14573,9 @@
       }
     },
     "Your Spaces are ready" : {
+
+    },
+    "Your Spaces are ready." : {
 
     },
     "Yours on every device" : {

@@ -13,20 +13,28 @@ Crest Passwords are private to the Space that owns them. You can stop using Cres
 
 ## Change the setting
 
-1. Open **Crest Settings → Passwords**.
-2. Under **Space**, choose **Passwords for** and select the Space you want to change.
-3. Under **Crest Passwords**, turn **Use Crest Passwords in this Space** on or off.
+On Mac:
+
+1. Open **Crest Settings** and select the Space in the sidebar.
+2. Select **Passwords**.
+3. Turn **Use Crest Passwords** on or off.
+
+On iPhone and iPad:
+
+1. Open **Settings → Passwords**.
+2. Choose the Space you want to change from the **Space** menu.
+3. Turn **Use Crest Passwords** on or off.
 
 When Crest Passwords is off, saved passwords remain in that Space until you delete them. Turning the setting back on makes them available to matching sites again.
 
 ## Related controls
 
-When Crest Passwords is on, supported Mac builds can also show:
+The same page lists the Space’s saved passwords, with **Import Passwords…** and **Export Passwords…**. When Crest Passwords is on, supported Mac builds can also show:
 
 - **Sync with iCloud Keychain**, which updates whether existing and future Crest credentials in that Space synchronize through the system Keychain.
 - **Offer a copy to Passwords**, which lets the system Passwords app ask separately for a copy after Crest saves in the Space.
 
-System Passwords and passkeys are provider-managed and may appear in any Space for a matching site. They are separate from Crest Passwords’ Space-local records.
+System Passwords and passkeys are provider-managed and may appear in any Space for a matching site. They are separate from Crest Passwords’ Space-local records. On Mac, check Crest’s access to system passkeys in **Settings → Privacy → System permissions → Passkeys**.
 
 :::info What turning it off does not do
 It does not delete saved passwords, export them, move them to another Space, or place password values in CloudKit session data.

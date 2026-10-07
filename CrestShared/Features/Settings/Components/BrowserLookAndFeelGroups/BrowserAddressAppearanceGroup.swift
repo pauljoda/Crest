@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// The address field's color, fill, border, and how it opens the command
-/// palette, on every Space on this device.
+/// The address field's fill, border, and how it opens the command palette,
+/// on every Space on this device.
 struct BrowserAddressAppearanceGroup: View {
     var space: BrowserSpaceAppearance?
     var showsPreview = false
@@ -9,16 +9,11 @@ struct BrowserAddressAppearanceGroup: View {
     @Bindable private var appearance = BrowserDeviceAppearanceStore.shared
 
     var body: some View {
-        CrestSettingsGroup("Address field", systemImage: "magnifyingglass", settings: settings) {
+        CrestSettingsGroup("Address field", settings: settings) {
             if showsPreview {
                 BrowserLookAndFeelPreview(space: space, focus: .addressField)
             }
         } content: {
-            BrowserAppearanceAccentRow(
-                color: accent,
-                fallback: space?.branding.primaryColor ?? .indigo,
-                identifier: "address-follows-space-accent"
-            )
             CrestSettingSlider("Color fill", value: fill, readout: .percent(zero: "None", full: "Strong"))
             CrestSettingSlider("Border", value: border, readout: .percent(zero: "None", full: "Strong"))
             CrestSettingRow(
@@ -36,10 +31,6 @@ struct BrowserAddressAppearanceGroup: View {
                     .labelsHidden()
             }
         }
-    }
-
-    private var accent: CrestSettingValue<BrandColor?> {
-        CrestSettingValue($appearance.address.color)
     }
 
     private var fill: CrestSettingValue<Double> {
@@ -64,7 +55,6 @@ struct BrowserAddressAppearanceGroup: View {
 
     private var settings: [CrestResettableSetting] {
         [
-            accent.resettable("Follow Space accent"),
             fill.resettable("Color fill"),
             border.resettable("Border"),
             outline.resettable("Accent outline while editing"),

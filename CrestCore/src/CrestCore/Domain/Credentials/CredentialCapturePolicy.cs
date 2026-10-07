@@ -23,10 +23,10 @@ public static class CredentialCapturePolicy {
 
     /// Saved credentials are offered to current-password fields; generated
     /// passwords only to new-password fields.
-    public static bool Offers(CredentialFillSource source, CredentialPasswordKind passwordKind) => source switch {
-        CredentialFillSource.Saved => passwordKind == CredentialPasswordKind.Current,
-        _ => passwordKind == CredentialPasswordKind.New
-    };
+    public static bool Offers(CredentialFillSource source, CredentialPasswordKind passwordKind) {
+        ArgumentNullException.ThrowIfNull(source);
+        return source.Fills == passwordKind;
+    }
 
     /// A candidate is current from its submission until its lifetime ends. A
     /// candidate from the future is never current.

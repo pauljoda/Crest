@@ -15,7 +15,7 @@ public static class NativeSyncEvaluator {
     internal static double? Date(JsonNode value, string field) {
         if (value[field] is null) return null;
         double date = SyncJson.Double(value[field]!);
-        if (!double.IsFinite(date)) throw new BrowserRuleException(BrowserRuleCodes.InvalidSyncDate);
+        if (!double.IsFinite(date)) throw new BrowserRuleException(BrowserRule.InvalidSyncDate);
         return date;
     }
 
@@ -31,19 +31,19 @@ public static class NativeSyncEvaluator {
     private static JsonObject? Payload(JsonNode value) => value["payload"]?["value"]?.AsObject();
 
     private static SyncRecordStamp Stamp(JsonNode record) {
-        var type = SyncPayloadType.Named(Kind(record)) ?? throw new BrowserRuleException(BrowserRuleCodes.InvalidSyncKind);
+        var type = SyncPayloadType.Named(Kind(record)) ?? throw new BrowserRuleException(BrowserRule.InvalidSyncKind);
         var payload = Payload(record);
         var tombstone = record["tombstone"];
-        if ((payload is null) == (tombstone is null)) throw new BrowserRuleException(BrowserRuleCodes.InvalidSyncRecord);
+        if ((payload is null) == (tombstone is null)) throw new BrowserRuleException(BrowserRule.InvalidSyncRecord);
         if (payload is not null && Text(record["payload"]!, "type") != type.Kind.Name)
-            throw new BrowserRuleException(BrowserRuleCodes.SyncIdentityMismatch);
+            throw new BrowserRuleException(BrowserRule.SyncIdentityMismatch);
         var recordId = Id(record["id"]!["value"]);
         var spaceId = Id(record["spaceID"]);
-        if (type.Kind.NamesItsSpace && recordId != spaceId) throw new BrowserRuleException(BrowserRuleCodes.SyncIdentityMismatch);
+        if (type.Kind.NamesItsSpace && recordId != spaceId) throw new BrowserRuleException(BrowserRule.SyncIdentityMismatch);
         if (payload is not null && (Id(type.Subject(payload)["id"]) != recordId || Id(type.SpaceIdentity(payload)) != spaceId))
-            throw new BrowserRuleException(BrowserRuleCodes.SyncIdentityMismatch);
+            throw new BrowserRuleException(BrowserRule.SyncIdentityMismatch);
         var reason = tombstone is null ? null : SyncDeletionReason.Named(tombstone["reason"]?.GetValue<string>())
-            ?? throw new BrowserRuleException(BrowserRuleCodes.InvalidSyncDeletion);
+            ?? throw new BrowserRuleException(BrowserRule.InvalidSyncDeletion);
         return new(type.Kind, recordId, spaceId, Version(record), reason,
             tombstone is null ? null : Date(tombstone, "deletedAt"), payload is null ? null : type.ActivatedAt(payload));
     }
@@ -61,25 +61,19 @@ public static class NativeSyncEvaluator {
                 Equivalent(a[key], b[key], key == "value" && a["kind"] is not null ? "id" : key));
         if (first is JsonArray x && second is JsonArray y)
             return x.Count == y.Count && x.Zip(y).All(pair => Equivalent(pair.First, pair.Second, field));
-        bool identity = field is "id" or "rawValue" or "profileID" or "spaceID" or "deviceID"
-            or "folderID" or "parentID" or "orderAnchorTabID" or "splitGroupID";
-        if (identity && first is JsonValue av && second is JsonValue bv
+        var kind = SyncWireField.Named(field)?.Kind;
+        if (kind == SyncWireField.Kinds.Identity && first is JsonValue av && second is JsonValue bv
             && av.TryGetValue<string>(out var at) && bv.TryGetValue<string>(out var bt)
             && Guid.TryParse(at, out var aid) && Guid.TryParse(bt, out var bid)) return aid == bid;
-        // JSONEncoder and JSONSerialization can spell the same binary Date
-        // differently (811615335.98 vs 811615335.98000002). Compare timestamp
-        // values exactly as doubles, without rounding away real edits. Clocks
-        // and other integer fields must retain their full integer precision.
-        bool timestamp = field is "lastActivatedAt" or "positionModifiedAt" or "titleModifiedAt"
-            or "savedTabsExpansionModifiedAt" or "collapseModifiedAt" or "iconModifiedAt" or "tintModifiedAt"
-            or "archivedAt" or "deletedAt" or "firstVisitedAt" or "lastVisitedAt";
-        if (timestamp && first is JsonValue ad && second is JsonValue bd
+        // Clocks and other integer fields must retain their full integer
+        // precision, so only a timestamp compares as a double.
+        if (kind == SyncWireField.Kinds.Timestamp && first is JsonValue ad && second is JsonValue bd
             && SyncJson.TryDouble(ad, out var aDate) && SyncJson.TryDouble(bd, out var bDate)) return aDate == bDate;
         return JsonNode.DeepEquals(first, second);
     }
 
     internal static TabPlacement Placement(JsonNode payload)
-        => TabPlacement.Named(Text(payload, "placement")) ?? throw new BrowserRuleException(BrowserRuleCodes.InvalidSyncPlacement);
+        => TabPlacement.Named(Text(payload, "placement")) ?? throw new BrowserRuleException(BrowserRule.InvalidSyncPlacement);
 
     /// The record `first` and `second`, two versions of one record, resolve
     /// to: the winner's, with the fields each side last changed.

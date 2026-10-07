@@ -57,6 +57,11 @@ final class BrowserMacWindows {
 
     private unowned let application: BrowserMacApplication
     private unowned let engineHost: any BrowserMacEngineHost
+
+    /// The engine and version the build runs pages in, where it names one,
+    /// as About Crest credits it.
+    var engineCredits: String? { engineHost.aboutCredits }
+
     /// The windows open now, in the order they opened.
     private var controllers: [BrowserMacWindowController] = []
     /// The content of each Quick Window open now, by its identity.

@@ -3,31 +3,32 @@ import SwiftUI
 struct BrowserExtensionSettingsPane: View {
     let browser: BrowserStore
     let spaceAccess: BrowserSpaceAccessController
-    var requestedSpaceID: UUID?
-    var requestRevision = 0
+    /// The one Space whose extensions the pane shows, or nil to pick one.
+    var fixedSpaceID: UUID?
     @State private var selectedSpaceID: UUID?
     private var store: ChromiumExtensionStore { ChromiumComposition.extensions }
     private var space: BrowserSpaceIdentity? {
-        browser.spaceModel(selectedSpaceID ?? browser.selectedSpaceID)?.identity
+        browser.spaceModel(fixedSpaceID ?? selectedSpaceID ?? browser.selectedSpaceID)?.identity
     }
 
     var body: some View {
         BrowserSettingsPane(.extensions) {
-            Section("Space", systemImage: "square.grid.2x2") {
-                CrestSpaceMenuPicker(
-                    "Manage extensions for", selection: $selectedSpaceID,
-                    spaces: CrestSpaceIdentity.list(browser.spaceModels))
+            if fixedSpaceID == nil {
+                Section {
+                    CrestSpaceMenuPicker(
+                        "Space", selection: $selectedSpaceID,
+                        spaces: CrestSpaceIdentity.list(browser.spaceModels))
+                }
             }
             if let space, !spaceAccess.isLocked(space) {
                 BrowserExtensionsView(space: space, store: store).id(space.profileID)
             } else if let space {
                 BrowserSettingsPrivateSpaceAccessSection(
                     space: space, accessController: spaceAccess,
-                    detail: "Unlock this Space before viewing or changing its installed extensions.")
+                    detail: "Unlock this Space to see its extensions.")
             }
         }
-        .onAppear { if selectedSpaceID == nil { selectedSpaceID = requestedSpaceID ?? browser.selectedSpaceID } }
-        .onChange(of: requestRevision) { selectedSpaceID = requestedSpaceID ?? browser.selectedSpaceID }
+        .onAppear { if selectedSpaceID == nil { selectedSpaceID = browser.selectedSpaceID } }
         .onChange(of: browser.spaceModels.map(\.id)) {
             if !browser.spaceModels.contains(where: { $0.id == selectedSpaceID }) {
                 selectedSpaceID = browser.selectedSpaceID
@@ -51,16 +52,15 @@ struct BrowserExtensionsView: View {
     var body: some View {
         Group {
             if !usesLiveSidebar { installedExtensions }
-            Section("Add Extensions", systemImage: "plus.app") {
-                Button("Open Chrome Web Store", systemImage: "arrow.up.right.square") { run(.store) }
-                Text(
-                    "Choose an extension, then use Install Extension in Site Controls to review its permissions and select Spaces."
-                )
-                .font(.callout).foregroundStyle(.secondary)
-                Button("Open Chromium Extension Manager", systemImage: "arrow.up.right.square") { run(.manage) }
-                // Extension shortcuts are the engine's own bindings: Crest routes an
-                // unclaimed key equivalent to them but does not own their list.
-                Button("Keyboard Shortcuts…", systemImage: "keyboard") { run(.shortcuts) }
+            Section("Add extensions") {
+                HStack(spacing: 12) {
+                    Button("Open Chrome Web Store") { run(.store) }
+                    Button("Chromium Extension Manager") { run(.manage) }
+                    Spacer(minLength: 0)
+                    // Extension shortcuts are the engine's own bindings: Crest routes an
+                    // unclaimed key equivalent to them but does not own their list.
+                    Button("Shortcuts…") { run(.shortcuts) }
+                }
             }
             if usesLiveSidebar { installedExtensions }
         }
@@ -84,20 +84,17 @@ struct BrowserExtensionsView: View {
             }
             Button("Cancel", role: .cancel) { pendingRemoval = nil }
         } message: { item in
-            Text("\(item.name) and its Space-local data will be removed. Other Spaces are unchanged.")
+            Text("\(item.name) and its data are removed from this Space only.")
         }
         .sheet(item: $pendingCopy) { item in BrowserExtensionCopySheet(item: item, space: space, store: store) }
     }
     private var installedExtensions: some View {
-        Section("Installed in this Space", systemImage: "puzzlepiece.extension") {
-            Label("Extensions and their data belong to \(space.name).", systemImage: "square.grid.2x2")
-                .font(.callout).foregroundStyle(.secondary)
+        Section("Installed") {
             if store.installed[space.profileID] == nil {
                 ProgressView()
             } else if extensions.isEmpty {
-                ContentUnavailableView(
-                    "No Extensions", systemImage: "puzzlepiece.extension",
-                    description: Text("Install an extension for this Space to get started."))
+                Text("No extensions")
+                    .foregroundStyle(.secondary)
             } else {
                 ForEach(extensions) { item in
                     BrowserExtensionRow(
@@ -106,12 +103,11 @@ struct BrowserExtensionsView: View {
                         remove: { pendingRemoval = item }, copy: { pendingCopy = item })
                 }
             }
-        }.containerValue(\.settingsFullWidth, true)
+        }
     }
     private func run(_ command: ExtensionCommand, _ id: String = "") {
         if !store.command(command, extensionID: id, space: space) {
-            failure =
-                "Chromium could not complete this action. Check the extension’s details for policy or permission requirements."
+            failure = "Check the extension’s details for policy or permission requirements."
         }
     }
 }

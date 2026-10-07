@@ -24,7 +24,7 @@ struct BrowserSpacePaletteSlot: View {
                     PlatformSpacePaletteColorWell(selection: color)
                         .accessibilityLabel(Text(role.title))
                         .accessibilityIdentifier(
-                            "space-branding-\(role.accessibilityIdentifierComponent)-color-picker")
+                            "space-branding-\(role.name)-color-picker")
                 } else {
                     Button(action: addColor) {
                         Image(systemName: "plus")
@@ -42,8 +42,8 @@ struct BrowserSpacePaletteSlot: View {
                     .buttonStyle(.plain)
                     .disabled(!canAdd)
                     .opacity(canAdd ? 1 : CrestOpacity.disabled)
-                    .accessibilityLabel(Text(role.addColorTitle))
-                    .accessibilityIdentifier("space-branding-add-\(role.accessibilityIdentifierComponent)-color")
+                    .accessibilityLabel(Text(role.addTitle))
+                    .accessibilityIdentifier("space-branding-add-\(role.name)-color")
                 }
             }
             .frame(height: compact ? 56 : 64)
@@ -64,8 +64,8 @@ struct BrowserSpacePaletteSlot: View {
                     .frame(width: usesTouch ? 44 : 22, height: usesTouch ? 44 : 22)
                     .contentShape(.rect)
                     .offset(x: usesTouch ? 11 : 5, y: usesTouch ? -11 : -5)
-                    .accessibilityLabel(Text(role.removeColorTitle))
-                    .accessibilityIdentifier("space-branding-remove-\(role.accessibilityIdentifierComponent)-color")
+                    .accessibilityLabel(Text(role.removeTitle))
+                    .accessibilityIdentifier("space-branding-remove-\(role.name)-color")
                 }
             }
             Text(role.title)

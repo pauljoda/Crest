@@ -61,7 +61,8 @@ public sealed class AppCredentialTests {
         var pending = new Queue<Type>(queries);
         var text = new SortedSet<string>(StringComparer.Ordinal);
         while (pending.TryDequeue(out var type)) {
-            if (!found.Add(type)) continue;
+            // A fixed set travels as its index in `All`, so it carries no text.
+            if (!found.Add(type) || type.GetProperty("All") is not null) continue;
             foreach (var parameter in type.GetConstructors().Single().GetParameters()) {
                 var parameterType = Nullable.GetUnderlyingType(parameter.ParameterType) ?? parameter.ParameterType;
                 if (parameterType.IsGenericType) parameterType = parameterType.GetGenericArguments()[0];

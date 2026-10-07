@@ -5,11 +5,11 @@
         let openURL: (URL) -> Void
         @Bindable var state: BrowserGettingStartedState
         private var practice: BrowserGettingStartedPractice { state.practice }
-        private var chapter: Int {
+        private var chapter: BrowserGettingStartedChapter {
             get { state.chapter }
             nonmutating set { state.chapter = newValue }
         }
-        private var lesson: Int {
+        private var lesson: BrowserGettingStartedLesson {
             get { state.lesson }
             nonmutating set { state.lesson = newValue }
         }
@@ -39,7 +39,6 @@
                 .background(CrestBrandTheme.canvas)
             }
             .environment(practice.sidebarInteraction)
-            .onAppear { chapter = min(max(chapter, 0), 1) }
             .onDisappear { practice.sidebarInteraction.cancel() }
             .font(CrestTypography.sans(14))
             .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: chapter)
@@ -51,10 +50,10 @@
         private func practiceStage(wide: Bool, height: CGFloat) -> some View {
             GeometryReader { stage in
                 let instructionsWidth: CGFloat = wide ? 280 : 220
-                let windowX: CGFloat = chapter == 0 && wide ? instructionsWidth + 28 : 0
-                let windowY: CGFloat = chapter == 0 && !wide ? 310 : 0
+                let windowX: CGFloat = chapter.showsLessons && wide ? instructionsWidth + 28 : 0
+                let windowY: CGFloat = chapter.showsLessons && !wide ? 310 : 0
                 ZStack(alignment: .topLeading) {
-                    if chapter == 0 {
+                    if chapter.showsLessons {
                         VStack(alignment: .leading, spacing: 24) {
                             heading
                             tabLesson
@@ -63,23 +62,24 @@
                         .frame(height: wide ? height : 290, alignment: .center)
                         .transition(.opacity)
                     }
-                    BrowserGettingStartedPracticeWindow(practice: practice, showsSplit: chapter == 1)
+                    BrowserGettingStartedPracticeWindow(practice: practice, showsSplit: chapter.showsSplit)
                         .frame(
-                            width: chapter == 0 && wide ? max(760, stage.size.width - windowX) : stage.size.width,
+                            width: chapter.showsLessons && wide
+                                ? max(760, stage.size.width - windowX) : stage.size.width,
                             height: height
                         )
                         .offset(x: windowX, y: windowY)
                 }
                 .animation(reduceMotion ? nil : .spring(response: 0.55, dampingFraction: 0.9), value: chapter)
             }
-            .frame(height: height + (chapter == 0 && !wide ? 310 : 0))
+            .frame(height: height + (chapter.showsLessons && !wide ? 310 : 0))
             .clipped()
         }
 
         private var heading: some View {
             VStack(alignment: .leading, spacing: 10) {
-                Text(title).font(CrestTypography.display(34))
-                Text(introduction).font(CrestTypography.sans(14)).foregroundStyle(.secondary)
+                Text(chapter.title).font(CrestTypography.display(34))
+                Text(chapter.introduction).font(CrestTypography.sans(14)).foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
@@ -89,52 +89,37 @@
                 CrestStartPageMark().frame(width: 24, height: 28)
                 Text("Getting Started").font(CrestTypography.sans(13, weight: .semibold))
                 Spacer()
-                if chapter < 2 {
-                    Button("Reset practice", systemImage: "arrow.counterclockwise") {
-                        practice.reset()
-                        lesson = 0
-                    }
-                    .buttonStyle(.plain).foregroundStyle(.secondary)
+                Button("Reset practice", systemImage: "arrow.counterclockwise") {
+                    practice.reset()
+                    lesson = .pin
                 }
+                .buttonStyle(.plain).foregroundStyle(.secondary)
             }
         }
 
         private var chapterPicker: some View {
             HStack(spacing: 8) {
-                chapterButton("01", "Tabs & folders", index: 0)
-                chapterButton("02", "Split View", index: 1)
+                ForEach(BrowserGettingStartedChapter.all) { option in
+                    chapterButton(option)
+                }
             }
         }
 
-        private func chapterButton(_ number: String, _ title: LocalizedStringKey, index: Int) -> some View {
+        private func chapterButton(_ option: BrowserGettingStartedChapter) -> some View {
             Button {
-                selectChapter(index)
+                selectChapter(option)
             } label: {
                 HStack(spacing: 7) {
-                    Text(number).font(.caption.monospacedDigit()).opacity(0.6)
-                    Text(title).font(CrestTypography.sans(13, weight: .semibold))
+                    Text(verbatim: String(format: "%02d", option.number)).font(.caption.monospacedDigit()).opacity(0.6)
+                    Text(option.pickerTitle).font(CrestTypography.sans(13, weight: .semibold))
                 }
                 .frame(maxWidth: .infinity, minHeight: 42)
-                .foregroundStyle(chapter == index ? CrestBrandPalette.ink : .primary)
+                .foregroundStyle(chapter == option ? CrestBrandPalette.ink : .primary)
                 .background(
-                    chapter == index ? CrestBrandPalette.butter : .primary.opacity(0.04), in: .rect(cornerRadius: 12))
+                    chapter == option ? CrestBrandPalette.butter : .primary.opacity(0.04), in: .rect(cornerRadius: 12))
             }
             .buttonStyle(.plain)
-            .accessibilityAddTraits(chapter == index ? .isSelected : [])
-        }
-
-        private var title: LocalizedStringKey {
-            switch chapter {
-            case 0: "Tabs and folders"
-            default: "Split View"
-            }
-        }
-
-        private var introduction: LocalizedStringKey {
-            switch chapter {
-            case 0: "Pinned apps stay at the top, saved tabs above the line, and open tabs below it."
-            default: "View pages side by side, change focus, and rearrange cards."
-            }
+            .accessibilityAddTraits(chapter == option ? .isSelected : [])
         }
 
         private var tabLesson: some View {
@@ -143,10 +128,11 @@
                     Text("TRY IT").font(CrestTypography.sans(10, weight: .bold)).tracking(1.5).foregroundStyle(
                         .secondary)
                     Spacer()
-                    Text("\(lesson + 1) / 4").font(.caption.monospacedDigit()).foregroundStyle(.secondary)
+                    Text("\(lesson.number) / \(BrowserGettingStartedLesson.all.count)").font(.caption.monospacedDigit())
+                        .foregroundStyle(.secondary)
                 }
-                Text(lessonTitle).font(CrestTypography.display(25))
-                Text(lessonDetail).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                Text(lesson.title).font(CrestTypography.display(25))
+                Text(lesson.detail).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                 ViewThatFits(in: .horizontal) {
                     HStack {
                         lessonActions
@@ -162,64 +148,42 @@
 
         }
 
-        private var lessonTitle: LocalizedStringKey {
-            switch lesson {
-            case 0: "Pin everyday apps"
-            case 1: "Save a tab"
-            case 2: "Create folders and nested folders"
-            default: "Clear open tabs"
-            }
-        }
-
-        private var lessonDetail: LocalizedStringKey {
-            switch lesson {
-            case 0:
-                "Pinned tabs live at the top and are for your everyday apps. Right-click Gmail and choose Pin Tab, or use the button below."
-            case 1:
-                "Saved tabs stay below your pins until you delete them. Save A weekend away and watch it move above the line."
-            case 2:
-                "Folders can hold tabs and other folders. Add Weekends, then put Ideas inside it. You can also use folders below the line for open tabs."
-            default:
-                "Below the line are open tabs. They close automatically on your Space's cleanup schedule. Clear sends them to Archive in one click; your pinned and saved tabs stay put."
-            }
-        }
-
         @ViewBuilder private var lessonActions: some View {
-            switch lesson {
-            case 0:
+            switch lesson.kind {
+            case .pin:
                 Button("Pin Gmail", systemImage: "pin.fill") {
                     if let mail = practice.tabID(.mail) { practice.browser.pinTab(mail) }
                 }
                 .buttonStyle(.crestPrimary(tint: CrestBrandPalette.butter))
-            case 1:
+            case .save:
                 Button("Save this tab", systemImage: "bookmark.fill") {
                     if let trail = practice.tabID(.trail) { practice.browser.saveTab(trail) }
                 }
                 .buttonStyle(.crestPrimary(tint: CrestBrandPalette.butter))
-            case 2:
+            case .folders:
                 HStack {
                     Button("Add folder", systemImage: "folder.badge.plus") { practice.addFolder(nested: false) }
                     Button("Nest a folder", systemImage: "folder") { practice.addFolder(nested: true) }
                 }.buttonStyle(.crestSecondary)
-            default:
+            case .clear:
                 Text("Use Clear on the line in the practice sidebar.")
                     .font(CrestTypography.sans(12)).foregroundStyle(.secondary)
             }
         }
 
         private var nextLesson: some View {
-            Button(lesson == 3 ? "Try Split View" : "Next", systemImage: "arrow.right") {
-                if lesson < 3 {
-                    lesson += 1
+            Button(lesson.next == nil ? "Try Split View" : "Next", systemImage: "arrow.right") {
+                if let next = lesson.next {
+                    lesson = next
                 } else {
-                    selectChapter(1)
+                    selectChapter(.splitView)
                 }
             }.buttonStyle(.crestSecondary)
         }
 
-        private func selectChapter(_ index: Int) {
-            if index == 1 && chapter != 1 { practice.reset() }
-            chapter = min(max(index, 0), 1)
+        private func selectChapter(_ next: BrowserGettingStartedChapter) {
+            if next.showsSplit && chapter != next { practice.reset() }
+            chapter = next
         }
 
         private var footer: some View {
@@ -227,9 +191,8 @@
                 Text("Practice changes affect only this example Space.").font(CrestTypography.sans(12)).foregroundStyle(
                     .secondary)
                 Spacer()
-                if chapter < 1 {
-                    Button("Next chapter", systemImage: "arrow.right") { selectChapter(chapter + 1) }.buttonStyle(
-                        .plain)
+                if let next = chapter.next {
+                    Button("Next chapter", systemImage: "arrow.right") { selectChapter(next) }.buttonStyle(.plain)
                 } else {
                     Text("This guide stays in your Saved tabs.").font(CrestTypography.sans(12, weight: .semibold))
                 }

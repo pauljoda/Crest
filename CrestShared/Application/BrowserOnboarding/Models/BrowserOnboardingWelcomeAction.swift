@@ -39,7 +39,7 @@ struct BrowserOnboardingWelcomeAction: Hashable, Sendable {
     /// waits until setup opens, which it does as the welcome appears.
     init(
         flow: SetupFlowState?,
-        cloudPhase: BrowserCloudSyncPhase,
+        cloudPhase: CloudSyncPhase,
         wait: BrowserOnboardingCloudWait.Stage,
         forcesSetup: Bool = false
     ) {

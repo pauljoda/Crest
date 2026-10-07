@@ -39,7 +39,7 @@ final class BrowserSoftwareUpdateTests: XCTestCase {
         // channel the app understands, or updates would fall back silently.
         XCTAssertNotNil(
             (Bundle.main.object(forInfoDictionaryKey: "CrestDefaultUpdateChannel") as? String)
-                .flatMap(BrowserSoftwareUpdateChannel.init(rawValue:))
+                .flatMap(BrowserSoftwareUpdateChannel.named)
         )
     }
 
@@ -90,7 +90,7 @@ final class BrowserSoftwareUpdateTests: XCTestCase {
             preferences.string(
                 forKey: BrowserSoftwareUpdateService.channelPreferenceKey
             ),
-            BrowserSoftwareUpdateChannel.nightly.rawValue
+            BrowserSoftwareUpdateChannel.nightly.name
         )
     }
 
@@ -99,11 +99,11 @@ final class BrowserSoftwareUpdateTests: XCTestCase {
         let preferences = UserDefaults(suiteName: suiteName)!
         defer { preferences.removePersistentDomain(forName: suiteName) }
         preferences.set(
-            BrowserSoftwareUpdateChannel.stable.rawValue,
+            BrowserSoftwareUpdateChannel.stable.name,
             forKey: BrowserSoftwareUpdateService.channelPreferenceKey
         )
         preferences.set(
-            BrowserSoftwareUpdateChannel.stable.rawValue,
+            BrowserSoftwareUpdateChannel.stable.name,
             forKey: BrowserSoftwareUpdateService.bundledChannelPreferenceKey
         )
 
@@ -118,7 +118,7 @@ final class BrowserSoftwareUpdateTests: XCTestCase {
             preferences.string(
                 forKey: BrowserSoftwareUpdateService.channelPreferenceKey
             ),
-            BrowserSoftwareUpdateChannel.development.rawValue
+            BrowserSoftwareUpdateChannel.development.name
         )
     }
 
@@ -127,11 +127,11 @@ final class BrowserSoftwareUpdateTests: XCTestCase {
         let preferences = UserDefaults(suiteName: suiteName)!
         defer { preferences.removePersistentDomain(forName: suiteName) }
         preferences.set(
-            BrowserSoftwareUpdateChannel.nightly.rawValue,
+            BrowserSoftwareUpdateChannel.nightly.name,
             forKey: BrowserSoftwareUpdateService.channelPreferenceKey
         )
         preferences.set(
-            BrowserSoftwareUpdateChannel.development.rawValue,
+            BrowserSoftwareUpdateChannel.development.name,
             forKey: BrowserSoftwareUpdateService.bundledChannelPreferenceKey
         )
 

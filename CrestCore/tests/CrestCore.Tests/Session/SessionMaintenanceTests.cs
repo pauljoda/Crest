@@ -70,8 +70,8 @@ public sealed partial class BrowserContractsTests {
         });
         space["archivedTabs"] = new JsonArray(new JsonObject { ["tab"] = space["tabs"]![0]!.DeepClone(), ["archivedAt"] = "invalid" });
         var before = Bytes(source);
-        Assert.Equal(BrowserRuleCodes.InvalidSavedState,
-            Assert.Throws<BrowserRuleException>(() => NativeSessionMaintenance.Retain(source, 800000000)).Code);
+        Assert.Equal(BrowserRule.InvalidSavedState,
+            Assert.Throws<BrowserRuleException>(() => NativeSessionMaintenance.Retain(source, 800000000)).Rule);
         Assert.Equal(before, Bytes(source));
         space["archivedTabs"] = new JsonArray();
         var retained = NativeSessionMaintenance.Retain(source, 800000000);

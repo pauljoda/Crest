@@ -46,7 +46,7 @@ public sealed record TabKind {
     public static TabKind Of(NativeView view) => Views[view];
 
     public static TabKind Native(string kind, string title, string symbol = "square") {
-        if (string.IsNullOrWhiteSpace(kind)) throw new BrowserRuleException(BrowserRuleCodes.InvalidNativeKind);
+        if (string.IsNullOrWhiteSpace(kind)) throw new BrowserRuleException(BrowserRule.InvalidNativeKind);
         return NativeView.Named(kind) is { } view
             ? Of(view)
             : new(string.IsNullOrWhiteSpace(title) ? "Native Tab" : title, TabRenderType.UiNative, kind, symbol);

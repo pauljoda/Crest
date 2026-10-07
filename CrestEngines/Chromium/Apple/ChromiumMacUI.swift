@@ -86,7 +86,8 @@
         func showTabSearch() { shell?.showTabSearch() }
 
         func showUnavailable(_ feature: UnavailableEngineFeature) {
-            ChromiumComposition.showNativeNotice(feature.message, icon: feature.symbol)
+            let notice = ChromiumUnavailableFeatureNotice.notice(for: feature)
+            ChromiumComposition.showNativeNotice(String(localized: notice.message), icon: notice.symbol)
         }
 
         func showEngineNotice(_ message: String, kind: EngineNoticeKind) {
@@ -104,44 +105,65 @@
         }
     }
 
-    extension UnavailableEngineFeature {
-        fileprivate var message: String {
-            switch self {
-            case .autofill: String(localized: "Autofill is not connected in Crest yet.")
-            case .addressAutofill: String(localized: "Address autofill is not available in Crest yet.")
-            case .addressAutofillSignIn: String(localized: "Address autofill sign-in is not available in Crest yet.")
-            case .autofillAI: String(localized: "Autofill with AI is not available in Crest yet.")
-            case .autofillOffers: String(localized: "Autofill offers are not available in Crest yet.")
-            case .autofillReauthentication:
-                String(localized: "Autofill reauthentication is not available in Crest yet.")
-            case .paymentAutofill: String(localized: "Payment autofill is not available in Crest yet.")
-            case .virtualCardEnrollment: String(localized: "Virtual card enrollment is not available in Crest yet.")
-            case .profiles: String(localized: "Profiles are not available in Crest yet.")
-            case .eyeDropper: String(localized: "The eye dropper is not available in Crest yet.")
-            case .caretBrowsing: String(localized: "Caret browsing is not available in Crest yet.")
-            case .privateBrowsing: String(localized: "This private browsing option is not available in Crest yet.")
-            case .chromeLabs: String(localized: "Chrome Labs is not available in Crest.")
-            @unknown default: String(localized: "This is not available in Crest yet.")
-            }
-        }
+    /// What Crest says, and the symbol it shows, for a Chromium feature whose
+    /// own UI this build never shows.
+    private struct ChromiumUnavailableFeatureNotice: Sendable {
+        // MARK: - Static Variables
 
-        fileprivate var symbol: String {
-            switch self {
-            case .autofill: "person"
-            case .addressAutofill: "person.text.rectangle"
-            case .addressAutofillSignIn: "person.crop.circle.badge.plus"
-            case .autofillAI: "sparkles"
-            case .autofillOffers: "tag"
-            case .autofillReauthentication: "lock.shield"
-            case .paymentAutofill: "creditcard"
-            case .virtualCardEnrollment: "creditcard.trianglebadge.exclamationmark"
-            case .profiles: "person.crop.circle"
-            case .eyeDropper: "eyedropper"
-            case .caretBrowsing: "text.cursor"
-            case .privateBrowsing: "eye.slash"
-            case .chromeLabs: "flask"
-            @unknown default: "info.circle"
-            }
+        static let autofill = ChromiumUnavailableFeatureNotice(
+            feature: .autofill, message: "Autofill is not connected in Crest yet.", symbol: "person")
+        static let addressAutofill = ChromiumUnavailableFeatureNotice(
+            feature: .addressAutofill, message: "Address autofill is not available in Crest yet.",
+            symbol: "person.text.rectangle")
+        static let addressAutofillSignIn = ChromiumUnavailableFeatureNotice(
+            feature: .addressAutofillSignIn, message: "Address autofill sign-in is not available in Crest yet.",
+            symbol: "person.crop.circle.badge.plus")
+        static let autofillAI = ChromiumUnavailableFeatureNotice(
+            feature: .autofillAI, message: "Autofill with AI is not available in Crest yet.", symbol: "sparkles")
+        static let autofillOffers = ChromiumUnavailableFeatureNotice(
+            feature: .autofillOffers, message: "Autofill offers are not available in Crest yet.", symbol: "tag")
+        static let autofillReauthentication = ChromiumUnavailableFeatureNotice(
+            feature: .autofillReauthentication, message: "Autofill reauthentication is not available in Crest yet.",
+            symbol: "lock.shield")
+        static let paymentAutofill = ChromiumUnavailableFeatureNotice(
+            feature: .paymentAutofill, message: "Payment autofill is not available in Crest yet.",
+            symbol: "creditcard")
+        static let virtualCardEnrollment = ChromiumUnavailableFeatureNotice(
+            feature: .virtualCardEnrollment, message: "Virtual card enrollment is not available in Crest yet.",
+            symbol: "creditcard.trianglebadge.exclamationmark")
+        static let profiles = ChromiumUnavailableFeatureNotice(
+            feature: .profiles, message: "Profiles are not available in Crest yet.", symbol: "person.crop.circle")
+        static let eyeDropper = ChromiumUnavailableFeatureNotice(
+            feature: .eyeDropper, message: "The eye dropper is not available in Crest yet.", symbol: "eyedropper")
+        static let caretBrowsing = ChromiumUnavailableFeatureNotice(
+            feature: .caretBrowsing, message: "Caret browsing is not available in Crest yet.", symbol: "text.cursor")
+        static let privateBrowsing = ChromiumUnavailableFeatureNotice(
+            feature: .privateBrowsing, message: "This private browsing option is not available in Crest yet.",
+            symbol: "eye.slash")
+        static let chromeLabs = ChromiumUnavailableFeatureNotice(
+            feature: .chromeLabs, message: "Chrome Labs is not available in Crest.", symbol: "flask")
+
+        /// Every feature the host header names, each with its notice.
+        static let all: [ChromiumUnavailableFeatureNotice] = [
+            autofill, addressAutofill, addressAutofillSignIn, autofillAI, autofillOffers, autofillReauthentication,
+            paymentAutofill, virtualCardEnrollment, profiles, eyeDropper, caretBrowsing, privateBrowsing, chromeLabs,
+        ]
+
+        /// The notice for a feature a newer host names before Crest has words
+        /// for it.
+        static let fallback = ChromiumUnavailableFeatureNotice(
+            feature: nil, message: "This is not available in Crest yet.", symbol: "info.circle")
+
+        // MARK: - Variables
+
+        let feature: UnavailableEngineFeature?
+        let message: LocalizedStringResource
+        let symbol: String
+
+        // MARK: - Actions - Lookup
+
+        static func notice(for feature: UnavailableEngineFeature) -> ChromiumUnavailableFeatureNotice {
+            all.first { $0.feature == feature } ?? fallback
         }
     }
 #endif

@@ -1,13 +1,62 @@
+import CoreGraphics
 import Foundation
 
 /// CSS viewport presets, not hardware or user-agent emulation.
-enum BrowserDeveloperViewport: Hashable, Identifiable {
-    case compactPhone, phone, largePhone, desktop, wideDesktop, ultrawide
-    case custom(width: Int, height: Int)
+struct BrowserDeveloperViewport: Hashable, Identifiable, Sendable {
+    // MARK: - Static Variables
 
-    static let presets: [Self] = [.compactPhone, .phone, .largePhone, .desktop, .wideDesktop, .ultrawide]
+    static let compactPhone = BrowserDeveloperViewport(
+        name: "compactPhone", title: "Compact Phone", symbol: "iphone", width: 375, height: 667)
+    static let phone = BrowserDeveloperViewport(
+        name: "phone", title: "Phone", symbol: "iphone", width: 390, height: 844)
+    static let largePhone = BrowserDeveloperViewport(
+        name: "largePhone", title: "Large Phone", symbol: "iphone", width: 430, height: 932)
+    static let desktop = BrowserDeveloperViewport(
+        name: "desktop", title: "Desktop", symbol: "laptopcomputer", width: 1280, height: 800)
+    static let wideDesktop = BrowserDeveloperViewport(
+        name: "wideDesktop", title: "Wide Desktop", symbol: "display", width: 1920, height: 1080)
+    static let ultrawide = BrowserDeveloperViewport(
+        name: "ultrawide", title: "Ultrawide", symbol: "display", width: 2560, height: 1080)
 
-    static func customSize(width: String, height: String) -> Self? {
+    /// Every preset, smallest first.
+    static let presets: [BrowserDeveloperViewport] = [
+        compactPhone, phone, largePhone, desktop, wideDesktop, ultrawide,
+    ]
+
+    // MARK: - Variables
+
+    let name: String
+    let title: LocalizedStringResource
+    let symbol: String
+    let size: CGSize
+
+    /// Whether the person typed the size in rather than choosing a preset.
+    let isCustom: Bool
+
+    var id: String { name }
+
+    var dimensions: String { "\(Int(size.width)) × \(Int(size.height))" }
+
+    // MARK: - Initializers
+
+    private init(
+        name: String, title: LocalizedStringResource, symbol: String, width: Int, height: Int, isCustom: Bool = false
+    ) {
+        self.name = name
+        self.title = title
+        self.symbol = symbol
+        self.size = CGSize(width: width, height: height)
+        self.isCustom = isCustom
+    }
+
+    // MARK: - Actions - Building
+
+    static func custom(width: Int, height: Int) -> BrowserDeveloperViewport {
+        BrowserDeveloperViewport(
+            name: "custom", title: "Custom", symbol: "ruler", width: width, height: height, isCustom: true)
+    }
+
+    static func customSize(width: String, height: String) -> BrowserDeveloperViewport? {
         guard let width = Int(width.trimmingCharacters(in: .whitespacesAndNewlines)),
             let height = Int(height.trimmingCharacters(in: .whitespacesAndNewlines)),
             (1...8192).contains(width), (1...8192).contains(height)
@@ -15,47 +64,18 @@ enum BrowserDeveloperViewport: Hashable, Identifiable {
         return .custom(width: width, height: height)
     }
 
-    var isCustom: Bool {
-        if case .custom = self { return true }
-        return false
+    // MARK: - Actions - Identity
+
+    /// A custom viewport is equal to another only at the same size.
+    static func == (lhs: BrowserDeveloperViewport, rhs: BrowserDeveloperViewport) -> Bool {
+        lhs.name == rhs.name && lhs.size == rhs.size
     }
 
-    var id: Self { self }
-
-    var systemImage: String {
-        switch self {
-        case .compactPhone, .phone, .largePhone: "iphone"
-        case .desktop: "laptopcomputer"
-        case .wideDesktop, .ultrawide: "display"
-        case .custom: "ruler"
-        }
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(name)
+        hasher.combine(size.width)
+        hasher.combine(size.height)
     }
-
-    var title: String {
-        switch self {
-        case .compactPhone: String(localized: "Compact Phone")
-        case .phone: String(localized: "Phone")
-        case .largePhone: String(localized: "Large Phone")
-        case .desktop: String(localized: "Desktop")
-        case .wideDesktop: String(localized: "Wide Desktop")
-        case .ultrawide: String(localized: "Ultrawide")
-        case .custom: String(localized: "Custom")
-        }
-    }
-
-    var size: CGSize {
-        switch self {
-        case .compactPhone: CGSize(width: 375, height: 667)
-        case .phone: CGSize(width: 390, height: 844)
-        case .largePhone: CGSize(width: 430, height: 932)
-        case .desktop: CGSize(width: 1280, height: 800)
-        case .wideDesktop: CGSize(width: 1920, height: 1080)
-        case .ultrawide: CGSize(width: 2560, height: 1080)
-        case .custom(let width, let height): CGSize(width: width, height: height)
-        }
-    }
-
-    var dimensions: String { "\(Int(size.width)) × \(Int(size.height))" }
 }
 
 /// Preserve the CSS layout size while fitting its presentation into the Space.

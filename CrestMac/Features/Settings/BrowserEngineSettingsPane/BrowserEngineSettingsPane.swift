@@ -20,31 +20,28 @@ struct BrowserEngineSettingsPane: View {
 
     var body: some View {
         BrowserSettingsPane(.engines) {
-            ForEach(BrowserEngineOption.all) { option in
-                Section {
+            Section {
+                ForEach(BrowserEngineOption.all) { option in
                     BrowserEngineOptionCard(
                         option: option, isSelected: defaultEngine == option.engine,
                         isRecommended: BrowserEngineRegistration.current.kind == option.engine,
                         isAvailable: availableEngines.contains(option.engine)
                     ) { selectDefault(option.engine) }
                 }
+                if preferences.defaultEngine != nil {
+                    HStack {
+                        Spacer()
+                        Button("Use Recommended") { selectDefault(nil) }
+                    }
+                }
+            } header: {
+                Text("Default engine")
+            } footer: {
+                CrestFormFootnote("Open pages keep their engine.")
             }
             Section {
-                CrestFormFootnote(
-                    "Website rules override your default. Links opened by a page stay on that page’s engine. Existing pages keep their engine."
-                )
-                if availableEngines.contains(.chromium) {
-                    CrestFormFootnote(
-                        "A WebKit-only session leaves Chromium unloaded. Opening a Chromium website or extension loads it for the rest of the session."
-                    )
-                }
-                Button("Use Recommended Default") { selectDefault(nil) }
-                    .disabled(preferences.defaultEngine == nil)
-            }
-            .containerValue(\.settingsFullWidth, true)
-            Section("Website rules", systemImage: "globe") {
                 if preferences.rules.isEmpty {
-                    Text("No website rules. Websites use your default engine.")
+                    Text("No website rules")
                         .foregroundStyle(.secondary)
                 }
                 ForEach(preferences.rules.sorted { $0.origin.displayName < $1.origin.displayName }, id: \.origin) {
@@ -69,15 +66,18 @@ struct BrowserEngineSettingsPane: View {
                             .help("Return this website to the default engine")
                     }
                 }
-                Button("Add Website Rule…", systemImage: "plus") {
-                    editing = BrowserEngineRuleDraft(engine: defaultEngine)
+                HStack {
+                    Spacer()
+                    Button("Add Website Rule…") {
+                        editing = BrowserEngineRuleDraft(engine: defaultEngine)
+                    }
+                    .accessibilityIdentifier("add-engine-rule")
                 }
-                .accessibilityIdentifier("add-engine-rule")
-                CrestFormFootnote(
-                    "Rules match the website’s scheme, host, and port. A rule for example.com does not include its subdomains. Choices made in a page’s menu and protected-video fallback appear here. Private-page choices stay private."
-                )
+            } header: {
+                Text("Website rules")
+            } footer: {
+                CrestFormFootnote("A rule for a site doesn’t include its subdomains.")
             }
-            .containerValue(\.settingsFullWidth, true)
             if let failure { Text(failure).foregroundStyle(.red) }
         }
         .sheet(item: $editing) { draft in

@@ -47,7 +47,7 @@ extension BrowserPlatformPage {
             await corePage.eraseSiteData(host: host, profileID: profileID)
         else { return }
         if pageEngine.currentURL == nil {
-            corePage.navigate(to: targetURL.absoluteString)
+            corePage.load(targetURL)
         } else {
             enginePage.reload(bypassingCache: true)
         }
@@ -65,7 +65,7 @@ extension BrowserPlatformPage {
 
     func retryAfterNavigationFailure() {
         guard let url = live.displayURL else { return }
-        corePage.navigate(to: url.absoluteString)
+        corePage.load(url)
     }
 
     var canProceedAfterCertificateFailure: Bool {

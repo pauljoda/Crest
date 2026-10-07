@@ -29,15 +29,12 @@ struct CrestSettingSliderReadout: Sendable {
             value <= 0 ? String(localized: zero) : String(localized: "\(Int(value.rounded())) pt")
         }
     }
-
-    /// A multiplier reported as the percentage of normal size it produces.
-    static let multiplier = CrestSettingSliderReadout {
-        $0.formatted(.percent.precision(.fractionLength(0)))
-    }
 }
 
-/// Shared by settings and Space appearance: title, reset, and live value above
-/// a full-width native slider. Readouts can name endpoints such as "Borderless".
+/// Shared by settings and Space appearance. On the Mac the title and reset sit
+/// on one line with a fixed track and its live value; narrow screens keep the
+/// value above a full-width track. Readouts can name endpoints such as
+/// "Borderless".
 struct CrestSettingSlider: View {
     private let title: LocalizedStringKey
     private let value: CrestSettingValue<Double>
@@ -66,15 +63,28 @@ struct CrestSettingSlider: View {
     }
 
     var body: some View {
-        VStack(spacing: CrestSettingRowMetrics.sliderSpacing) {
+        #if os(macOS)
             CrestSettingRow(title, setting: value.resettable(title)) {
-                Text(valueLabel)
-                    .foregroundStyle(.secondary)
-                    .monospacedDigit()
+                HStack(spacing: CrestSpacing.small) {
+                    slider
+                        .frame(width: CrestSettingRowMetrics.inlineSliderWidth)
+                    Text(valueLabel)
+                        .foregroundStyle(.secondary)
+                        .monospacedDigit()
+                        .frame(minWidth: CrestSettingRowMetrics.sliderReadoutWidth, alignment: .trailing)
+                }
             }
-            slider
-        }
-        .frame(maxWidth: .infinity)
+        #else
+            VStack(spacing: CrestSettingRowMetrics.sliderSpacing) {
+                CrestSettingRow(title, setting: value.resettable(title)) {
+                    Text(valueLabel)
+                        .foregroundStyle(.secondary)
+                        .monospacedDigit()
+                }
+                slider
+            }
+            .frame(maxWidth: .infinity)
+        #endif
     }
 
     private var slider: some View {

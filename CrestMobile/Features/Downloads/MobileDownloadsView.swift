@@ -38,13 +38,8 @@ struct MobileDownloadsView: View {
         else { return }
         switch action {
         case .open(let itemID, let destination):
-            switch destination {
-            case .share:
-                pages.exportDownload(itemID, to: .share)
-            case .files:
-                pages.exportDownload(itemID, to: .files)
-            case .open, .revealInFinder:
-                break
+            if let export = MobileBrowserFileExportDestination.exporting(destination) {
+                pages.exportDownload(itemID, to: export)
             }
         case .retry(let itemID):
             pages.downloadCenter.retryAutomaticDownload(itemID, matching: assignment) { expectedAssignment in

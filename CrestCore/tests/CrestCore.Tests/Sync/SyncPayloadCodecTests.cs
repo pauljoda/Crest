@@ -134,6 +134,42 @@ public sealed partial class BrowserContractsTests {
         Assert.Equal(kept, StoredSessionCodec.DecodeBranding(StoredSessionCodec.Encode(kept)).InTodaysUnits());
     }
 
+    /// A crest that gives each of its six layers a color of its own keeps all
+    /// six, and every layer keeps pointing at its own, through normalization,
+    /// both sync forms and the stored session.
+    [Fact]
+    public void ACrestWithAColorForEachLayerKeepsAllSixWhereverItTravels() {
+        var (_, _, value) = CodecValue("space");
+        var house = SpaceAccent.Indigo.House;
+        var colors = Enumerable.Range(0, 6).Select(index => new BrandColor(index / 10.0, 0.5, 1 - index / 10.0)).ToArray();
+        var look = house with {
+            Crest = house.Crest with {
+                Palette = new ColorPalette(colors),
+                BackplateColorIndex = 0,
+                SecondaryFieldColorIndex = 1,
+                OrdinaryColorIndex = 2,
+                SymbolColorIndex = 3,
+                TrimColorIndex = 4,
+                EdgeColorIndex = 5
+            }
+        };
+
+        var kept = SpaceBrandingPolicy.Normalize(look);
+        value["branding"] = StoredSessionCodec.Encode(kept);
+        var cloud = SyncRecordBody.Read(CodecBody("space", value), isTombstone: false, SyncPayloadForm.Journal)
+            .Write(SyncPayloadForm.Cloud);
+        var synced = Assert.IsType<SpacePayload>(
+            SyncRecordBody.Read(Bytes(cloud), isTombstone: false, SyncPayloadForm.Cloud).Payload).Branding;
+
+        Assert.Equal(colors, kept.Crest.Palette!.Colors);
+        Assert.Equal([0, 1, 2, 3, 4, 5], new[] {
+            kept.Crest.BackplateColorIndex, kept.Crest.SecondaryFieldColorIndex, kept.Crest.OrdinaryColorIndex,
+            kept.Crest.SymbolColorIndex, kept.Crest.TrimColorIndex, kept.Crest.EdgeColorIndex
+        });
+        Assert.Equal(kept, synced);
+        Assert.Equal(kept, StoredSessionCodec.DecodeBranding(StoredSessionCodec.Encode(kept)).InTodaysUnits());
+    }
+
     /// Members a newer build writes that this one does not know survive both
     /// forms, around the envelope, inside the value, inside a nested member,
     /// and on a list's member, which follows its identity.

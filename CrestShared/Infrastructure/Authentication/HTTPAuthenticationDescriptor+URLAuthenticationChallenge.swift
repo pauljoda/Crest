@@ -7,7 +7,7 @@ extension BrowserHTTPAuthenticationDescriptor {
             source: Self.sourceLabel(for: protectionSpace),
             realm: protectionSpace.realm,
             authenticationMethod: protectionSpace.authenticationMethod,
-            isSecureTransport: protectionSpace.protocol?.lowercased() == "https",
+            isSecureTransport: WebScheme.named(protectionSpace.protocol?.lowercased())?.isSecure == true,
             previousFailureCount: challenge.previousFailureCount
         )
     }

@@ -39,7 +39,7 @@ public static class LaunchPolicy {
     /// staged; everyone else gets their saved choice.
     private static StartupBehavior Startup(LaunchEnvironment facts, DevicePlatform platform, bool isolated,
         StartupBehavior? stored, bool hasActiveLaunchGate) {
-        if (platform == DevicePlatform.Mobile && facts.PresentsShowcase) return StartupBehavior.ShowStartPage;
+        if (platform.ShowcaseOpensStartPage && facts.PresentsShowcase) return StartupBehavior.ShowStartPage;
         if (hasActiveLaunchGate || isolated) return StartupBehavior.LastActiveTab;
         return stored ?? DefaultStartup;
     }

@@ -1,42 +1,57 @@
 import Foundation
 import SwiftUI
 
-enum BrowserEmojiCategory: String, CaseIterable, Decodable, Identifiable, Sendable {
-    case people
-    case nature
-    case food
-    case activity
-    case travel
-    case objects
-    case symbols
-    case flags
+/// The groups of the emoji catalog, as the category bar offers them.
+///
+/// `name` is the category the generated catalog files each emoji under.
+struct BrowserEmojiCategory: Decodable, Hashable, Identifiable, Sendable {
+    // MARK: - Static Variables
 
-    var id: String { rawValue }
+    static let people = BrowserEmojiCategory(name: "people", title: "Smileys & People", symbol: "face.smiling")
+    static let nature = BrowserEmojiCategory(name: "nature", title: "Animals & Nature", symbol: "pawprint")
+    static let food = BrowserEmojiCategory(name: "food", title: "Food & Drink", symbol: "cup.and.saucer")
+    static let activity = BrowserEmojiCategory(name: "activity", title: "Activity", symbol: "medal")
+    static let travel = BrowserEmojiCategory(name: "travel", title: "Travel & Places", symbol: "bus")
+    static let objects = BrowserEmojiCategory(name: "objects", title: "Objects", symbol: "gift")
+    static let symbols = BrowserEmojiCategory(name: "symbols", title: "Symbols", symbol: "heart")
+    static let flags = BrowserEmojiCategory(name: "flags", title: "Flags", symbol: "flag")
 
-    var title: LocalizedStringKey {
-        switch self {
-        case .people: "Smileys & People"
-        case .nature: "Animals & Nature"
-        case .food: "Food & Drink"
-        case .activity: "Activity"
-        case .travel: "Travel & Places"
-        case .objects: "Objects"
-        case .symbols: "Symbols"
-        case .flags: "Flags"
-        }
+    /// Every category, in the category bar's order.
+    static let all: [BrowserEmojiCategory] = [people, nature, food, activity, travel, objects, symbols, flags]
+
+    // MARK: - Variables
+
+    let name: String
+    let title: LocalizedStringResource
+    let symbol: String
+
+    var id: String { name }
+
+    // MARK: - Initializers
+
+    private init(name: String, title: LocalizedStringResource, symbol: String) {
+        self.name = name
+        self.title = title
+        self.symbol = symbol
     }
 
-    var systemImage: String {
-        switch self {
-        case .people: "face.smiling"
-        case .nature: "pawprint"
-        case .food: "cup.and.saucer"
-        case .activity: "medal"
-        case .travel: "bus"
-        case .objects: "gift"
-        case .symbols: "heart"
-        case .flags: "flag"
+    init(from decoder: any Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let name = try container.decode(String.self)
+        guard let category = Self.all.first(where: { $0.name == name }) else {
+            throw DecodingError.dataCorruptedError(in: container, debugDescription: "Unknown emoji category \(name)")
         }
+        self = category
+    }
+
+    // MARK: - Actions - Identity
+
+    static func == (lhs: BrowserEmojiCategory, rhs: BrowserEmojiCategory) -> Bool {
+        lhs.name == rhs.name
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(name)
     }
 }
 
@@ -152,7 +167,7 @@ enum BrowserTabEmojiChoices {
         )
 
     private static let currentGroupedSections = Dictionary(
-        uniqueKeysWithValues: BrowserEmojiCategory.allCases.map { category in
+        uniqueKeysWithValues: BrowserEmojiCategory.all.map { category in
             (
                 category,
                 groupedChoices(
@@ -225,7 +240,7 @@ enum BrowserTabEmojiChoices {
     private static func variationGroupKey(
         for entry: BrowserEmojiCatalogEntry
     ) -> String {
-        entry.category.rawValue + "|" + nameWithoutSkinTones(entry.name)
+        entry.category.name + "|" + nameWithoutSkinTones(entry.name)
     }
 
     private static func nameWithoutSkinTones(_ name: String) -> String {

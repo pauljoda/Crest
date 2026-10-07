@@ -70,12 +70,10 @@ private struct BrowserShortcutSettingsContent: View {
                 .font(.footnote)
                 .foregroundStyle(.secondary)
         }
-        .frame(
-            maxWidth: .infinity,
-            maxHeight: .infinity,
-            alignment: .topLeading
-        )
-        .padding(24)
+        .frame(maxWidth: BrowserSettingsVisualPolicy.formColumnWidth, maxHeight: .infinity, alignment: .topLeading)
+        .padding(.vertical, 20)
+        .padding(.horizontal, BrowserSettingsVisualPolicy.formMinimumInset)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .alert(
             BrowserShortcutSettingsPresentation.shortcutAlreadyInUse,
             isPresented: $model.isPresentingConflict

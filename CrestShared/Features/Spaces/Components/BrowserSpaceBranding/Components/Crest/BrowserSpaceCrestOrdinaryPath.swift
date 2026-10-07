@@ -21,7 +21,7 @@ struct BrowserSpaceCrestOrdinaryPath: Shape {
             build(&line)
             return line.strokedPath(StrokeStyle(lineWidth: band, lineCap: .butt, lineJoin: .miter))
         }
-        switch ordinary {
+        switch ordinary.kind {
         case .none:
             return Path()
         case .pale:

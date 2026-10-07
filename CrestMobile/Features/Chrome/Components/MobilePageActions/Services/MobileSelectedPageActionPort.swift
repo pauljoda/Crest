@@ -74,7 +74,7 @@ struct MobileSelectedPageActionPort: MobilePageActions {
     }
 
     var readerModeActionTitle: LocalizedStringResource {
-        readerModeState.isActive ? "Hide Reader" : "Show Reader"
+        readerModeState.actionTitle
     }
 
     var readerModeState: BrowserReaderModeState {

@@ -391,7 +391,7 @@ extension BrowserRootModel {
     }
 
     func toggleSidebar(reduceMotion: Bool) {
-        switch sidebarPresentation.sidebarToggleAction {
+        switch sidebarPresentation.sidebarToggleAction.kind {
         case .hide:
             hideSidebar(reduceMotion: reduceMotion)
         case .dock:
@@ -689,7 +689,7 @@ extension BrowserRootModel {
             guard browser.openAddress(url, in: source.spaceID) else { return false }
         }
         pages.select()
-        pages.navigate(to: url.absoluteString)
+        pages.load(url)
         address = url.absoluteString
         return true
     }

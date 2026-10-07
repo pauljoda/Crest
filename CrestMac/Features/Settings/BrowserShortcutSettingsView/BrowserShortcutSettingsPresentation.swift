@@ -4,7 +4,7 @@ import Foundation
 enum BrowserShortcutSettingsPresentation {
     static let emptyShortcutGlyph = "—"
     static let searchPrompt: LocalizedStringResource = "Search shortcuts"
-    static let resetCrest: LocalizedStringResource = "Reset Crest"
+    static let resetCrest: LocalizedStringResource = "Reset All…"
     static let custom: LocalizedStringResource = "Custom"
     static let clearShortcut: LocalizedStringResource = "Clear Shortcut"
     static let resetToDefault: LocalizedStringResource = "Reset to Default"
@@ -23,7 +23,7 @@ enum BrowserShortcutSettingsPresentation {
     static let resetAllDetail: LocalizedStringResource =
         "Every Crest command will return to its default shortcut."
     static let guidance: LocalizedStringResource =
-        "Click a shortcut, then press a key with Command, Option, Control, or Shift."
+        "Click a shortcut, then press the new keys."
     static let invalidShortcut: LocalizedStringResource =
         "Use a supported key with Command, Option, Control, or Shift."
     static let typeShortcut: LocalizedStringResource = "Type Shortcut"

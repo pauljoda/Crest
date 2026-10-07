@@ -5,16 +5,14 @@ struct BrowserDataPortabilityExportControls: View {
 
     var body: some View {
         if model.lockedSpaces.isEmpty {
-            Button("Export Browser Data…", systemImage: "square.and.arrow.up") {
+            Button("Export Browser Data…") {
                 model.prepareExport(.browserData)
             }
             .disabled(model.preparingFormat != nil)
             .accessibilityIdentifier("export-browser-data")
         } else {
-            Text(
-                "Unlock every private Space before exporting browser data or bookmarks that include its tabs and history."
-            )
-            .crestFormFootnote()
+            Text("Unlock these Spaces to export their tabs and history.")
+                .foregroundStyle(.secondary)
 
             ForEach(model.lockedSpaces) { space in
                 BrowserSettingsPrivateSpaceAccessRow(
@@ -24,13 +22,13 @@ struct BrowserDataPortabilityExportControls: View {
             }
         }
 
-        Button("Import Browser Data…", systemImage: "square.and.arrow.down") {
+        Button("Import Browser Data…") {
             model.beginImport()
         }
         .accessibilityIdentifier("import-browser-data")
 
         if model.lockedSpaces.isEmpty {
-            Button("Export Bookmarks as HTML…", systemImage: "book.closed") {
+            Button("Export Bookmarks as HTML…") {
                 model.prepareExport(.bookmarks)
             }
             .disabled(model.preparingFormat != nil)

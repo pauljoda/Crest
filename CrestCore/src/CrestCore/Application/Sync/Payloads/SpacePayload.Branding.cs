@@ -8,21 +8,6 @@ namespace CrestCore.Application;
 internal sealed partial record SpacePayload {
     #region Static Variables
 
-    /// The palette colors builds before stored colors named, which a record may
-    /// still spell by name.
-    internal static readonly IReadOnlyDictionary<string, BrandColor> NamedColors = new Dictionary<string, BrandColor>(StringComparer.Ordinal) {
-        ["ink"] = new(0.08, 0.15, 0.23),
-        ["indigo"] = new(0.29, 0.25, 0.58),
-        ["ocean"] = new(0.22, 0.42, 0.64),
-        ["sky"] = new(0.35, 0.66, 0.84),
-        ["teal"] = new(0.12, 0.49, 0.52),
-        ["sage"] = new(0.39, 0.56, 0.42),
-        ["gold"] = new(0.88, 0.67, 0.25),
-        ["ember"] = new(0.85, 0.27, 0.20),
-        ["rose"] = new(0.72, 0.25, 0.42),
-        ["sand"] = new(0.82, 0.72, 0.56)
-    };
-
     /// Branding stored before rendering versions were recorded is version one.
     private const int FirstRenderingVersion = 1;
 
@@ -42,14 +27,14 @@ internal sealed partial record SpacePayload {
         int version = Whole(value.OptionalInteger("renderingVersion") ?? FirstRenderingVersion);
         var colors = value.Array("colors").Select(Color).ToArray();
         var branding = new SpaceBranding(new(colors),
-            StoredSessionCodec.SpaceBannerPatterns.Parse(value.TolerantText("bannerPattern")) ?? SpaceBannerPattern.Solid,
+            SpaceBannerPattern.Named(value.TolerantText("bannerPattern")) ?? SpaceBannerPattern.Solid,
             value.Number("bannerStrength"), fade, fade > 0,
-            StoredSessionCodec.SpaceThemeModes.Parse(value.TolerantText("themeMode")) ?? SpaceThemeMode.Banner,
+            SpaceThemeMode.Named(value.TolerantText("themeMode")) ?? SpaceThemeMode.Banner,
             value.OptionalNumber("gradientAngle") ?? 0, value.OptionalFlag("showsTexture") ?? false,
-            StoredSessionCodec.SpaceIconStyles.Parse(value.TolerantText("iconStyle")) ?? SpaceIconStyle.SimpleSymbol,
+            SpaceIconStyle.Named(value.TolerantText("iconStyle")) ?? SpaceIconStyle.SimpleSymbol,
             value.Value["symbolColor"] is { } symbolColor ? Color(symbolColor) : null,
             ReadCrest(value.Nested("crest")), version, value.TolerantNumber("folderColorIntensity") ?? 0,
-            StoredSessionCodec.SpaceTextColorModes.Parse(value.TolerantText("textColorMode")) ?? SpaceTextColorMode.Automatic,
+            SpaceTextColorMode.Named(value.TolerantText("textColorMode")) ?? SpaceTextColorMode.Automatic,
             value.OptionalFlag("hasCustomAppearance"));
         return SpaceBrandingPolicy.Normalize(branding);
     }
@@ -58,23 +43,24 @@ internal sealed partial record SpacePayload {
     /// neutral value, and a figure it cannot read is none.
     private static SpaceCrest ReadCrest(SyncPayloadReader value) {
         int Index(string key, int fallback = 0) => Whole(value.TolerantInteger(key) ?? fallback);
-        double Measure(string key, double fallback) => value.TolerantNumber(key) ?? fallback;
-        return new(StoredSessionCodec.CrestBackplates.Parse(value.TolerantText("backplate")) ?? CrestBackplate.Shield,
-            StoredSessionCodec.CrestFieldDivisions.Parse(value.TolerantText("fieldDivision")) ?? CrestFieldDivision.Plain,
-            StoredSessionCodec.CrestOrdinaries.Parse(value.TolerantText("ordinary")) ?? CrestOrdinary.None,
-            StoredSessionCodec.CrestTrims.Parse(value.TolerantText("trim")) ?? CrestTrim.None,
-            StoredSessionCodec.CrestSymbols.Parse(value.TolerantText("symbol")) ?? CrestSymbol.Mountain,
-            StoredSessionCodec.CrestChargeLayouts.Parse(value.TolerantText("chargeLayout")) ?? CrestChargeLayout.Single,
+        double Measure(CrestMeasure measure) => value.TolerantNumber(measure.Name) ?? measure.Default;
+        int Count(CrestMeasure measure) => Whole(value.TolerantInteger(measure.Name) ?? (int)measure.Default);
+        return new(CrestBackplate.Named(value.TolerantText("backplate")) ?? CrestBackplate.Shield,
+            CrestFieldDivision.Named(value.TolerantText("fieldDivision")) ?? CrestFieldDivision.Plain,
+            CrestOrdinary.Named(value.TolerantText("ordinary")) ?? CrestOrdinary.None,
+            CrestTrim.Named(value.TolerantText("trim")) ?? CrestTrim.None,
+            CrestSymbol.Named(value.TolerantText("symbol")) ?? CrestSymbol.Fallback,
+            CrestChargeLayout.Named(value.TolerantText("chargeLayout")) ?? CrestChargeLayout.Single,
             Index("backplateColorIndex"), Index("secondaryFieldColorIndex"), Index("ordinaryColorIndex"), Index("trimColorIndex"),
             Index("symbolColorIndex"), value.TolerantText("startingPresetID"), Index("edgeColorIndex", Index("trimColorIndex")),
             Palette(value.Value["palette"]), Charge(value.Value["charge"]),
-            Measure("plateScale", 1), Measure("edgeWidth", 0), Index("divisionCount", SpaceBrandingPolicy.DefaultDivisionCount),
-            StoredSessionCodec.CrestFinishes.Parse(value.TolerantText("finish")) ?? CrestFinish.Flat,
-            Measure("ordinaryWidth", 1), Measure("trimWeight", 1), Index("trimDetail", SpaceBrandingPolicy.DefaultTrimDetail),
-            Measure("chargeScale", 1), Measure("chargeOffset", 0),
-            StoredSessionCodec.CrestChargeWeights.Parse(value.TolerantText("chargeWeight")) ?? CrestChargeWeight.Bold,
-            Measure("sheenAngle", 45), Index("sealTeeth", 12), value.TolerantFlag("showsOutline") ?? false,
-            StoredSessionCodec.CrestDepths.Parse(value.TolerantText("depth")) ?? CrestDepth.None);
+            Measure(CrestMeasure.PlateScale), Measure(CrestMeasure.EdgeWidth), Count(CrestMeasure.DivisionCount),
+            CrestFinish.Named(value.TolerantText("finish")) ?? CrestFinish.Flat,
+            Measure(CrestMeasure.OrdinaryWidth), Measure(CrestMeasure.TrimWeight), Count(CrestMeasure.TrimDetail),
+            Measure(CrestMeasure.ChargeScale), Measure(CrestMeasure.ChargeOffset),
+            CrestChargeWeight.Named(value.TolerantText("chargeWeight")) ?? CrestChargeWeight.Bold,
+            Measure(CrestMeasure.SheenAngle), Count(CrestMeasure.SealTeeth), value.TolerantFlag("showsOutline") ?? false,
+            CrestDepth.Named(value.TolerantText("depth")) ?? CrestDepth.None);
     }
 
     /// A crest's own palette, or null when it has none every client reads.
@@ -95,12 +81,12 @@ internal sealed partial record SpacePayload {
         try {
             var value = new SyncPayloadReader(node, SyncPayloadForm.Journal);
             string text = value.OptionalText("value") ?? "";
-            return (StoredSessionCodec.CrestChargeKinds.Parse(value.TolerantText("kind")) ?? CrestChargeKind.None) switch {
-                CrestChargeKind.Heraldic => new(CrestChargeKind.Heraldic, StoredSessionCodec.CrestSymbols.Parse(text) ?? CrestSymbol.Mountain),
-                CrestChargeKind.System => new(CrestChargeKind.System, Text: text),
-                CrestChargeKind.Emoji => new(CrestChargeKind.Emoji, Text: text),
-                CrestChargeKind.Monogram => new(CrestChargeKind.Monogram, Text: text,
-                    Style: StoredSessionCodec.CrestMonogramStyles.Parse(value.TolerantText("style")) ?? CrestMonogramStyle.Serif),
+            var kind = CrestChargeKind.Named(value.TolerantText("kind")) ?? CrestChargeKind.None;
+            return kind.Kind switch {
+                CrestChargeKind.Kinds.Heraldic => new(kind, CrestSymbol.Named(text) ?? CrestSymbol.Fallback),
+                CrestChargeKind.Kinds.System or CrestChargeKind.Kinds.Emoji => new(kind, Text: text),
+                CrestChargeKind.Kinds.Monogram => new(kind, Text: text,
+                    Style: CrestMonogramStyle.Named(value.TolerantText("style")) ?? CrestMonogramStyle.Serif),
                 _ => new(CrestChargeKind.None)
             };
         } catch (UnreadableSyncPayloadException) {
@@ -108,11 +94,12 @@ internal sealed partial record SpacePayload {
         }
     }
 
-    /// A color a record spells by name or by component, each component kept
+    /// A color a record spells by component, or by the name of a tincture as
+    /// builds before stored colors whole did, each component kept
     /// within 0 through 1 and alpha opaque unless it says.
     internal static BrandColor Color(JsonNode? node) {
         if (node is JsonValue named && named.GetValueKind() == System.Text.Json.JsonValueKind.String
-            && NamedColors.TryGetValue(named.GetValue<string>(), out var color)) return color;
+            && Tincture.Named(named.GetValue<string>()) is { } tincture) return tincture.Color;
         var value = new SyncPayloadReader(node, SyncPayloadForm.Journal);
         return new(Unit(value.Number("red")), Unit(value.Number("green")), Unit(value.Number("blue")),
             Unit(value.OptionalNumber("alpha") ?? 1));

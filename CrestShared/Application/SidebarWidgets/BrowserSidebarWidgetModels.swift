@@ -282,22 +282,154 @@ struct BrowserMediaSessionSnapshot: Equatable, Identifiable, Sendable {
     }
 }
 
-enum BrowserSoftwareUpdateWidgetPhase: Equatable, Sendable {
-    case permission
-    case checking
-    case available
-    case downloading
-    case extracting
-    case readyToInstall
-    case installing
-    case upToDate
-    case failed
-    case installed
-    case unavailable
+/// Where a software update stands, from asking to check through to the
+/// installed build, with how the update window and the sidebar card say so.
+struct BrowserSoftwareUpdatePhase: Hashable, Identifiable, Sendable {
+    // MARK: - Types
+
+    /// Each phase offers its own actions, so the places that build a phase's
+    /// actions switch over the kind.
+    enum Kinds: Sendable {
+        case idle
+        case permission
+        case checking
+        case available
+        case downloading
+        case extracting
+        case readyToInstall
+        case installing
+        case upToDate
+        case failed
+        case installed
+        case unavailable
+    }
+
+    /// The color a phase's symbol takes, which the view that draws it names.
+    enum Tones: Sendable {
+        case accent
+        case success
+        case warning
+    }
+
+    // MARK: - Static Variables
+
+    private static let waitingSymbol = "arrow.trianglehead.2.clockwise.rotate.90"
+    private static let installSymbol = "arrow.trianglehead.2.clockwise.rotate.90.circle.fill"
+    private static let settledSymbol = "checkmark.circle.fill"
+
+    /// Nothing is under way, so there is nothing to show.
+    static let idle = BrowserSoftwareUpdatePhase(
+        kind: .idle, name: "idle", title: "Software Update", statusLabel: "Software Update")
+    static let permission = BrowserSoftwareUpdatePhase(
+        kind: .permission, name: "permission", title: "Keep Crest Up to Date", statusLabel: "Permission required")
+    static let checking = BrowserSoftwareUpdatePhase(
+        kind: .checking, name: "checking", title: "Checking for Updates", statusLabel: "Checking",
+        showsMessage: false, isWorking: true, windowShowsActivity: true)
+    static let available = BrowserSoftwareUpdatePhase(
+        kind: .available, name: "available", title: "Update Available", statusLabel: "Ready to download",
+        informationOnlyStatusLabel: "Website release", isTitledByUpdate: true)
+    static let downloading = BrowserSoftwareUpdatePhase(
+        kind: .downloading, name: "downloading", title: "Downloading Update", statusLabel: "Downloading",
+        symbol: "arrow.down.circle.fill", showsMessage: false, isTransferring: true, isWorking: true)
+    static let extracting = BrowserSoftwareUpdatePhase(
+        kind: .extracting, name: "extracting", title: "Preparing Update", statusLabel: "Preparing",
+        showsMessage: false, isTransferring: true, isWorking: true, windowShowsActivity: true)
+    static let readyToInstall = BrowserSoftwareUpdatePhase(
+        kind: .readyToInstall, name: "readyToInstall", title: "Ready to Install", statusLabel: "Ready to install",
+        symbol: installSymbol)
+    static let installing = BrowserSoftwareUpdatePhase(
+        kind: .installing, name: "installing", title: "Installing Update", statusLabel: "Installing",
+        symbol: installSymbol, isWorking: true, windowShowsActivity: true)
+    static let upToDate = BrowserSoftwareUpdatePhase(
+        kind: .upToDate, name: "upToDate", title: "Crest Is Up to Date", statusLabel: "Up to date",
+        symbol: settledSymbol, tone: .success)
+    static let failed = BrowserSoftwareUpdatePhase(
+        kind: .failed, name: "failed", title: "Update Check Failed", statusLabel: "Update error",
+        symbol: "exclamationmark.triangle.fill", tone: .warning)
+    static let installed = BrowserSoftwareUpdatePhase(
+        kind: .installed, name: "installed", title: "Update Installed", statusLabel: "Installed",
+        symbol: settledSymbol, tone: .success)
+    /// Updates can't run in this build at all.
+    static let unavailable = BrowserSoftwareUpdatePhase(
+        kind: .unavailable, name: "unavailable", title: "Software Update Unavailable", statusLabel: "Unavailable")
+
+    /// Every phase, in the order an update moves through them.
+    static let all: [BrowserSoftwareUpdatePhase] = [
+        idle, permission, checking, available, downloading, extracting, readyToInstall, installing, upToDate, failed,
+        installed, unavailable,
+    ]
+
+    // MARK: - Variables
+
+    let kind: Kinds
+    let name: String
+    let title: LocalizedStringResource
+
+    /// Whether the update's own title, when it has one, stands in for the
+    /// phase's.
+    let isTitledByUpdate: Bool
+
+    /// The phase in a word or two, beside the card's progress.
+    let statusLabel: LocalizedStringResource
+
+    /// The status of a release offered only on the website, where it differs.
+    let informationOnlyStatusLabel: LocalizedStringResource?
+
+    let symbol: String
+    let tone: Tones
+
+    /// Whether the card shows the update's message under the phase. A phase
+    /// whose progress says enough leaves it out.
+    let showsMessage: Bool
+
+    /// Whether bytes are moving, so a measured progress has something to
+    /// measure.
+    let isTransferring: Bool
+
+    /// Whether the card shows that work is under way.
+    let isWorking: Bool
+
+    /// Whether the update window shows work under way while it has no
+    /// measured progress.
+    let windowShowsActivity: Bool
+
+    var id: String { name }
+
+    // MARK: - Initializers
+
+    private init(
+        kind: Kinds, name: String, title: LocalizedStringResource, statusLabel: LocalizedStringResource,
+        informationOnlyStatusLabel: LocalizedStringResource? = nil, isTitledByUpdate: Bool = false,
+        symbol: String = BrowserSoftwareUpdatePhase.waitingSymbol, tone: Tones = .accent, showsMessage: Bool = true,
+        isTransferring: Bool = false, isWorking: Bool = false, windowShowsActivity: Bool = false
+    ) {
+        self.kind = kind
+        self.name = name
+        self.title = title
+        self.isTitledByUpdate = isTitledByUpdate
+        self.statusLabel = statusLabel
+        self.informationOnlyStatusLabel = informationOnlyStatusLabel
+        self.symbol = symbol
+        self.tone = tone
+        self.showsMessage = showsMessage
+        self.isTransferring = isTransferring
+        self.isWorking = isWorking
+        self.windowShowsActivity = windowShowsActivity
+    }
+
+    // MARK: - Actions - Identity
+
+    static func == (lhs: BrowserSoftwareUpdatePhase, rhs: BrowserSoftwareUpdatePhase) -> Bool {
+        lhs.name == rhs.name
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(name)
+    }
 }
 
 struct BrowserSoftwareUpdateWidgetSnapshot: Equatable, Sendable {
-    let phase: BrowserSoftwareUpdateWidgetPhase
+    let phase: BrowserSoftwareUpdatePhase
     let title: String
     let version: String?
     let build: String?

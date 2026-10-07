@@ -3,7 +3,6 @@ import SwiftUI
 
 struct BrowserSettingsView: View {
     @Environment(\.scenePhase) private var scenePhase
-    @Environment(\.spaceContentPresentation) private var contentPresentation
     let browser: BrowserStore
     let pages: BrowserPagePool
     let cloudSync: BrowserCloudSyncController
@@ -43,55 +42,26 @@ struct BrowserSettingsView: View {
 
     var body: some View {
         HStack(spacing: 0) {
-            BrowserSettingsSidebar(navigation: $tabState.navigation, state: browser.core.state)
-                .frame(width: 224)
+            BrowserSettingsSidebar(
+                tabState: tabState, browser: browser, spaceAccess: spaceAccess, dataDeleter: dataDeleter,
+                openSpace: openSpaceAction, addSpace: addSpace
+            )
+            .frame(width: 224)
             Divider()
 
-            Group {
-                // Transition participants retain the selected destination even
-                // before they own input. Idle cached Spaces still omit forms.
-                if contentPresentation != .inactive {
-                    BrowserSettingsDestinationPage(
-                        destination: tabState.navigation.selection,
-                        tabAssignment: tabAssignment,
-                        browser: browser,
-                        pages: pages,
-                        cloudSync: cloudSync,
-                        spaceAccess: spaceAccess,
-                        dataDeleter: dataDeleter,
-                        shortcuts: shortcuts,
-                        spaceSettingsPresentation: spaceSettingsPresentation,
-                        searchText: $tabState.navigation.searchText
-                    )
-                    .id(tabState.navigation.selection)
-                }
-            }
-            .frame(
-                minWidth: 320,
-                maxWidth: .infinity,
-                maxHeight: .infinity
-            )
+            // The page stays built while its Space is off screen, as a webpage
+            // does, so switching to this Space doesn't rebuild the form.
+            page
+                .id(tabState.navigation.selection)
+                .frame(minWidth: 320, maxWidth: .infinity, maxHeight: .infinity)
         }
         .ignoresSafeArea(.container, edges: .top)
         .background(BrowserSettingsCanvas.background)
-        .tint(CrestBrandTheme.accent)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .environment(\.browserSettingsTabState, tabState)
-        .environment(\.browserSettingsSelections, tabState.selections)
         .environment(\.browserSettingsIsTab, true)
         .environment(\.browserSettingsUsesLiveSidebar, usesLiveSidebar)
-        .environment(
-            \.browserSettingsSelectLiveSpace,
-            BrowserSettingsLiveSpaceSelection { id in
-                guard usesLiveSidebar, let tabAssignment,
-                    let selected = BrowserSettingsSpaceSelectionAction(browser: browser, spaceAccess: spaceAccess)
-                        .select(id, matching: tabAssignment)
-                else { return }
-                spaceSettingsPresentation.present(
-                    assignment: BrowserSpaceRuntimeAssignment(spaceID: selected.spaceID, profileID: selected.profileID))
-                pages.select()
-            }
-        )
+        .environment(\.browserSettingsOpenSpace, openSpaceAction)
         .onChange(of: scenePhase) { previousPhase, phase in
             lockPrivateSettings(previousPhase, phase)
         }
@@ -105,10 +75,90 @@ struct BrowserSettingsView: View {
                 return
             }
             tabState.applyExternalRoute(
-                spaceSettingsPresentation.requestedDestination,
+                spaceSettingsPresentation.request,
+                spaceID: spaceSettingsPresentation.requestedSpaceID(in: browser),
+                searchText: spaceSettingsPresentation.searchText,
                 revision: revision
             )
         }
+        .onChange(of: browser.spaceModels.map(\.id)) { _, ids in
+            if case .space(let id) = tabState.navigation.selection, !ids.contains(id) {
+                tabState.navigation.selection = .destination(.general)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var page: some View {
+        switch tabState.navigation.selection {
+        case .destination(let destination):
+            BrowserSettingsDestinationPage(
+                destination: destination,
+                tabAssignment: tabAssignment,
+                browser: browser,
+                pages: pages,
+                cloudSync: cloudSync,
+                spaceAccess: spaceAccess,
+                dataDeleter: dataDeleter,
+                shortcuts: shortcuts,
+                spaceSettingsPresentation: spaceSettingsPresentation,
+                select: { tabState.navigation.selection = .destination($0) }
+            )
+        case .space(let id):
+            if let space = browser.spaceModel(id) {
+                BrowserSettingsSpacePage(
+                    browser: browser, pages: pages, space: space, spaceAccess: spaceAccess,
+                    dataDeleter: dataDeleter, tabState: tabState, openSpace: openSpaceAction
+                )
+            }
+        }
+    }
+
+    // MARK: - Spaces
+
+    private var openSpaceAction: BrowserSettingsOpenSpaceAction {
+        BrowserSettingsOpenSpaceAction { id, tab, intent in
+            openSpace(id, tab: tab ?? tabState.spaceTab, intent: intent)
+        }
+    }
+
+    /// Shows a Space's page. Settings in a window follows the Space: the
+    /// window switches to it and its own Settings tab opens on the page.
+    private func openSpace(_ id: UUID, tab: BrowserSpaceSettingsTab, intent: BrowserSettingsSpaceIntent) {
+        guard let space = browser.spaceModel(id) else { return }
+        guard usesLiveSidebar, let tabAssignment, id != tabAssignment.spaceID else {
+            tabState.showSpace(id, tab: tab, intent: intent)
+            return
+        }
+        guard
+            let selected = BrowserSettingsSpaceSelectionAction(browser: browser, spaceAccess: spaceAccess)
+                .select(id, matching: tabAssignment)
+        else {
+            // A locked Space asks to be unlocked in the window first.
+            if spaceAccess.isLocked(space) { browser.selectSpace(id) }
+            return
+        }
+        spaceSettingsPresentation.present(
+            .space(tab, intent: intent),
+            assignment: BrowserSpaceRuntimeAssignment(spaceID: selected.spaceID, profileID: selected.profileID),
+            searchText: tabState.navigation.searchText
+        )
+        pages.select()
+    }
+
+    /// Adds a Space and opens its Appearance page with its name ready to type.
+    private func addSpace() {
+        tabState.isArrangingSpaces = false
+        browser.addSpace()
+        guard let space = browser.spaceModel(browser.selectedSpaceID) else { return }
+        guard usesLiveSidebar, tabAssignment != nil else {
+            tabState.showSpace(space.id, tab: .appearance, intent: .newSpace)
+            return
+        }
+        spaceSettingsPresentation.present(
+            .space(.appearance, intent: .newSpace), assignment: BrowserSpaceRuntimeAssignment(space: space))
+        browser.openSettings()
+        pages.select()
     }
 
     private func lockPrivateSettings(

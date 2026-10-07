@@ -63,8 +63,12 @@ struct BrowserCrestStudioContext {
         let value = crest(path)
         return CrestSettingRow(title, setting: value.resettable(title)) {
             Picker(title, selection: value.binding) {
-                ForEach(options, id: \.self) { Text($0.titleKey).tag($0) }
-            }.labelsHidden().fixedSize()
+                ForEach(options, id: \.self) { Text($0.title).tag($0) }
+            }
+            .labelsHidden()
+            #if os(macOS)
+                .fixedSize()
+            #endif
         }
     }
 }
@@ -86,16 +90,38 @@ struct BrowserCrestStudioSlider: View {
 
 /// Small cards keep one scroll owner in Settings and in onboarding.
 struct BrowserCrestStudioGroup<Content: View>: View {
-    let title: LocalizedStringKey
+    let title: LocalizedStringResource
     let systemImage: String
     var preview: SpaceBranding? = nil
     var symbol: String = "sparkles"
     @ViewBuilder var content: Content
 
+    init(
+        title: LocalizedStringResource, systemImage: String, preview: SpaceBranding? = nil, symbol: String = "sparkles",
+        @ViewBuilder content: () -> Content
+    ) {
+        self.title = title
+        self.systemImage = systemImage
+        self.preview = preview
+        self.symbol = symbol
+        self.content = content()
+    }
+
+    /// The group for one step of making a crest, named and marked as the step is.
+    init(
+        step: BrowserCrestStudioStep, preview: SpaceBranding? = nil, symbol: String = "sparkles",
+        @ViewBuilder content: () -> Content
+    ) {
+        self.init(title: step.title, systemImage: step.symbol, preview: preview, symbol: symbol, content: content)
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack {
-                CrestSettingsSectionHeading(title: title, systemImage: systemImage)
+                Text(title)
+                    .font(.headline)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityAddTraits(.isHeader)
                 Spacer()
                 if let preview {
                     BrowserCrestStudioMark(branding: preview, symbol: symbol, size: 56)
@@ -105,7 +131,8 @@ struct BrowserCrestStudioGroup<Content: View>: View {
                         .accessibilityHidden(true)
                 }
             }
-            .crestSettingsCardHeader()
+            .padding(.horizontal, 20)
+            .padding(.top, 16)
             VStack(alignment: .leading, spacing: 16) { content }
                 .padding(20)
         }
@@ -132,11 +159,11 @@ struct BrowserCrestStudioGallery<Option: Hashable & BrowserSpaceHeraldicTerm>: V
         let value = context.crest(path)
         VStack(alignment: .leading, spacing: 10) {
             CrestSettingRow(title, setting: value.resettable(title)) {
-                Text(value.wrappedValue.titleKey).foregroundStyle(.secondary)
+                Text(value.wrappedValue.title).foregroundStyle(.secondary)
             }
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 84), spacing: 10)], spacing: 10) {
                 ForEach(options, id: \.self) { option in
-                    BrowserCrestStudioChoice(title: option.titleKey, selected: option == value.wrappedValue) {
+                    BrowserCrestStudioChoice(title: option.title, selected: option == value.wrappedValue) {
                         value.binding.wrappedValue = option
                     } artwork: {
                         BrowserSpaceCrestIcon(
@@ -163,8 +190,10 @@ struct BrowserCrestStudioEditingAction {
 }
 
 struct BrowserCrestStudioChoice<Artwork: View>: View {
-    let title: LocalizedStringKey
+    let title: LocalizedStringResource
     let selected: Bool
+    /// The color that marks the chosen tile.
+    var tint: Color = CrestBrandTheme.accent
     let select: () -> Void
     @ViewBuilder var artwork: Artwork
 
@@ -178,11 +207,11 @@ struct BrowserCrestStudioChoice<Artwork: View>: View {
             .frame(maxWidth: .infinity)
             .padding(.vertical, 6)
             .background(
-                selected ? CrestBrandTheme.accent.opacity(0.12) : .primary.opacity(0.035), in: .rect(cornerRadius: 12)
+                selected ? tint.opacity(0.12) : .primary.opacity(0.035), in: .rect(cornerRadius: 12)
             )
             .overlay {
                 RoundedRectangle(cornerRadius: 12).strokeBorder(
-                    selected ? CrestBrandTheme.accent : .clear, lineWidth: 2)
+                    selected ? tint : .clear, lineWidth: 2)
             }
             .contentShape(.rect(cornerRadius: 12))
         }

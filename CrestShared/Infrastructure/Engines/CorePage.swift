@@ -126,6 +126,22 @@ final class CorePage {
         }
     }
 
+    /// Asks the core to load `url`, an address Crest already holds such as
+    /// the tab's stored location, as it is rather than as typed words. False
+    /// when a rule refuses it.
+    @discardableResult
+    func load(_ url: URL) -> Bool {
+        guard !isReleased, let core else { return false }
+        do {
+            try core.send(LoadAddress(pageID: id, url: url.absoluteString))
+            return true
+        } catch {
+            Self.logger.debug(
+                "The core loaded nothing in page \(self.id, privacy: .public): \(String(describing: error))")
+            return false
+        }
+    }
+
     /// This device's link preferences, as the core last published them.
     var linkPreferences: LinkPreferences? { core?.state.linkPreferences }
 

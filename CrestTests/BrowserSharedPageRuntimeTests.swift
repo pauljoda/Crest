@@ -230,12 +230,13 @@ final class BrowserSharedPageRuntimeTests: XCTestCase {
         let assignment = BrowserTabRuntimeAssignment(tabID: tab.id, spaceID: space.id, profileID: space.profileID)
         let runtime = try XCTUnwrap(source.nativeTabs.runtime(matching: assignment, content: .gettingStarted))
         let model = runtime.model(BrowserGettingStartedState.self) { BrowserGettingStartedState() }
-        model.chapter = 2
+        model.chapter = .splitView
         XCTAssertTrue(try transfer(assignment, from: source, to: destination))
         destination.present(tab: tab.id, in: space.id)
         XCTAssertFalse(source.nativeTabs.contains(assignment))
         XCTAssertTrue(destination.nativeTabs.runtime(matching: assignment, content: .gettingStarted) === runtime)
-        XCTAssertEqual(runtime.model(BrowserGettingStartedState.self) { BrowserGettingStartedState() }.chapter, 2)
+        XCTAssertEqual(
+            runtime.model(BrowserGettingStartedState.self) { BrowserGettingStartedState() }.chapter, .splitView)
     }
 
     func testAnUnloadedTabTransfersItsArchivedHistoryWithoutLeavingSourceState() async throws {

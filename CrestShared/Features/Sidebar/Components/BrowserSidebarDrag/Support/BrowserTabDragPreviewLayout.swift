@@ -89,7 +89,7 @@ enum BrowserTabDragPreviewLayout {
     }
 
     static func progress(for placement: TabPlacement) -> CGFloat {
-        placement == .pinned ? 1 : 0
+        placement.isGrid ? 1 : 0
     }
 
     /// The fraction of the preview held by the pointer, along one axis.

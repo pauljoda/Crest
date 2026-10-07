@@ -15,9 +15,9 @@ struct BrowserSpaceAccessPolicySection: View {
     @State private var isUpdating = false
 
     var body: some View {
-        Section("Private Space", systemImage: "lock.shield") {
+        Section {
             Toggle(
-                "Require device authentication to view this Space",
+                "Require Touch ID or password",
                 isOn: requiresAuthentication
             )
             .disabled(isUpdating)
@@ -28,11 +28,10 @@ struct BrowserSpaceAccessPolicySection: View {
                     .controlSize(.small)
             }
 
-            Text(
-                "Crest uses Face ID, Touch ID, or the normal device passcode or password. Private Spaces lock again when Crest leaves the foreground."
-            )
-            .font(.footnote)
-            .foregroundStyle(.secondary)
+        } header: {
+            Text("Lock")
+        } footer: {
+            CrestFormFootnote("Locks again when Crest goes to the background.")
         }
     }
 

@@ -5,12 +5,15 @@ struct BrowserDataPortabilityContent: View {
     let showsMacOSImportRequirement: Bool
 
     var body: some View {
-        Section("Import & Export", systemImage: "square.and.arrow.up.on.square") {
+        Section {
             if showsMacOSImportRequirement {
                 BrowserDataPortabilityMacRequirement()
             }
             BrowserDataPortabilityExportControls(model: model)
             BrowserDataPortabilityProgressStatus(model: model)
+        } header: {
+            Text("Import and export")
+        } footer: {
             BrowserDataPortabilityFootnotes()
         }
     }

@@ -2,7 +2,7 @@ import SwiftUI
 
 extension Binding where Value == SpaceBranding {
     func editorColor(for role: BrowserSpaceBrandColorRole) -> Binding<Color>? {
-        let index = role.rawValue
+        let index = role.slot
         guard wrappedValue.colors.indices.contains(index) else { return nil }
 
         return Binding<Color>(
@@ -22,14 +22,14 @@ extension Binding where Value == SpaceBranding {
     func editorRemoveColor(for role: BrowserSpaceBrandColorRole) {
         editorUpdate { branding in
             guard branding.colors.count > 1,
-                role.rawValue == branding.colors.count - 1
+                role.slot == branding.colors.count - 1
             else { return }
             branding.colors.removeLast()
         }
     }
 
     func editorAddColor(for role: BrowserSpaceBrandColorRole) {
-        guard role.rawValue == wrappedValue.colors.count else { return }
+        guard role.slot == wrappedValue.colors.count else { return }
         let next =
             BrandColor.presets.first {
                 !wrappedValue.colors.contains($0)

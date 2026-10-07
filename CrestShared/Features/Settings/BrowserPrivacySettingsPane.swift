@@ -7,28 +7,31 @@ struct BrowserPrivacySettingsPane: View {
     let spaceAccess: BrowserSpaceAccessController
     let permissionCenter: BrowserSitePermissionCenter
     let contentBlockingErrorDescription: String?
+    /// The one Space whose privacy the pane shows, with its lock, or nil to
+    /// pick one.
+    var fixedSpaceID: UUID? = nil
 
-    @Environment(\.browserSettingsSelections) private var selections
-    @State private var localSelectedSpaceID: UUID?
-    private var selectedSpaceID: UUID? {
-        get { if let selections { selections.privacySpaceID } else { localSelectedSpaceID } }
-        nonmutating set {
-            if let selections { selections.privacySpaceID = newValue } else { localSelectedSpaceID = newValue }
-        }
-    }
+    @State private var pickedSpaceID: UUID?
+    private var selectedSpaceID: UUID? { fixedSpaceID ?? pickedSpaceID }
     private var selectedSpaceBinding: Binding<UUID?> {
-        Binding(get: { selectedSpaceID }, set: { selectedSpaceID = $0 })
+        Binding(get: { selectedSpaceID }, set: { if fixedSpaceID == nil { pickedSpaceID = $0 } })
     }
     @State private var confirmsReset = false
 
     var body: some View {
         BrowserSettingsPane(.privacy) {
-            BrowserPrivacySpaceSection(
-                selectedSpaceID: selectedSpaceBinding,
-                spaces: browser.spaceModels
-            )
+            if fixedSpaceID == nil {
+                BrowserPrivacySpaceSection(
+                    selectedSpaceID: selectedSpaceBinding,
+                    spaces: browser.spaceModels
+                )
+            }
 
             if canRevealSelectedSpaceData {
+                if fixedSpaceID != nil, let selectedSpace {
+                    BrowserSpaceAccessPolicySection(browser: browser, space: selectedSpace, spaceAccess: spaceAccess)
+                }
+
                 if let selectedSpaceID {
                     BrowserDataRetentionSettingsSection(
                         browser: browser,
@@ -37,16 +40,13 @@ struct BrowserPrivacySettingsPane: View {
                     )
                 }
 
+                // Where blocking comes only from extensions, a toggle could reach
+                // no page, so the section is left out.
                 if supportsContentBlocking {
                     BrowserContentBlockingSettingsSection(
                         policy: contentBlockingPolicyBinding,
                         errorDescription: contentBlockingErrorDescription
                     )
-                } else {
-                    Section("Content blocking", systemImage: "hand.raised.slash") {
-                        Text("Blocking ads and trackers comes from the extensions you install.")
-                            .crestFormFootnote()
-                    }
                 }
 
                 if browser.core.state.offers(.permissions) {
@@ -56,17 +56,11 @@ struct BrowserPrivacySettingsPane: View {
                         resetAll: { confirmsReset = true }
                     )
                 }
-
-                Section {
-                    BrowserPlatformPrivacyScopeFootnote()
-                }
-                .containerValue(\.settingsFullWidth, true)
             } else if let selectedSpace {
                 BrowserSettingsPrivateSpaceAccessSection(
                     space: selectedSpace,
                     accessController: spaceAccess,
-                    detail:
-                        "Unlock this Space before viewing site names, saved permissions, or content-blocking settings."
+                    detail: "Unlock this Space to see its privacy settings."
                 )
             }
         }
@@ -105,8 +99,7 @@ struct BrowserPrivacySettingsPane: View {
 
     /// Crest's own blocking is a WebKit content-rule list. An engine either
     /// applies it or it does not, and a preference that cannot reach any page
-    /// is worse than an absent one: where blocking comes only from an extension,
-    /// the section says so instead.
+    /// is worse than an absent one.
     private var supportsContentBlocking: Bool {
         browser.core.state.offers(.contentBlocking)
     }

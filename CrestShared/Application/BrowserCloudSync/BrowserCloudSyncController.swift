@@ -32,17 +32,7 @@ final class BrowserCloudSyncController {
 
     var accountState: CloudAccountState { status.account }
 
-    var phase: BrowserCloudSyncPhase {
-        switch status.phase {
-        case .disabled: .disabled
-        case .ready: .ready
-        case .syncing: .syncing
-        case .needsReconciliation: .needsReconciliation
-        case .waitingForAccount: .waitingForAccount
-        case .failed: .failed(failureMessage)
-        default: .checking
-        }
-    }
+    var phase: CloudSyncPhase { status.phase }
 
     var lastAttemptAt: Date? { status.lastAttemptAt }
     var lastSuccessAt: Date? { status.lastSuccessAt }
@@ -55,14 +45,12 @@ final class BrowserCloudSyncController {
     var conflict: BrowserCloudSyncConflictSummary? { status.conflict.map(BrowserCloudSyncConflictSummary.init) }
 
     /// What the error line says: a failure in the platform's own words, or
-    /// the words for the reason the core found.
+    /// the words for the reason the core found, which for this device's
+    /// unsaved changes are what the platform knows of them.
     var errorDescription: String? {
-        switch status.problem {
-        case nil: status.failureMessage
-        case .entitlementMissing?: "The app is missing access to Crest’s CloudKit container."
-        case .localChangesUnsaved?: localErrorDescription
-        default: nil
-        }
+        guard let problem = status.problem else { return status.failureMessage }
+        guard problem.reportsError else { return nil }
+        return problem.message.map { String(localized: $0) } ?? localErrorDescription
     }
 
     /// How many records the stored session's journal holds, as the core last
@@ -97,16 +85,6 @@ final class BrowserCloudSyncController {
             requiresAppUpdate: requiresAppUpdate,
             cloudDataWasRemoved: cloudDataWasRemoved
         ).report
-    }
-
-    /// What the status says for a failed phase.
-    private var failureMessage: String {
-        switch status.problem {
-        case .notConfigured?: "Crest’s CloudKit container is not configured."
-        case .entitlementMissing?: "iCloud Sync is unavailable in this build of Crest."
-        case .localChangesUnsaved?: "Local changes could not be saved for sync."
-        default: status.failureMessage ?? ""
-        }
     }
 
     @ObservationIgnored private let core: CrestCore

@@ -52,7 +52,7 @@ internal abstract class SyncPayloadType {
     /// The type of `payload`, a `{"type", "value"}` envelope as the journal
     /// holds it. Throws `BrowserRuleException` for a type no client knows.
     public static SyncPayloadType Of(JsonNode payload) =>
-        Named(payload["type"]?.GetValue<string>()) ?? throw new BrowserRuleException(BrowserRuleCodes.InvalidSyncKind);
+        Named(payload["type"]?.GetValue<string>()) ?? throw new BrowserRuleException(BrowserRule.InvalidSyncKind);
 
     /// The payload `value` holds. Throws `UnreadableSyncPayloadException` for
     /// one no client reads.

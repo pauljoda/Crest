@@ -1,6 +1,8 @@
 using System.Globalization;
 using System.Text;
 
+using CrestCore.Contracts;
+
 namespace CrestCore.Domain;
 
 /// An address a synced tab or visit carries, as its record holds it.
@@ -133,8 +135,7 @@ public readonly record struct SyncedAddress(string Text) {
         return text[..colon];
     }
 
-    private static bool IsWeb(string? scheme) =>
-        string.Equals(scheme, "http", StringComparison.OrdinalIgnoreCase) || string.Equals(scheme, "https", StringComparison.OrdinalIgnoreCase);
+    private static bool IsWeb(string? scheme) => WebScheme.Spelled(scheme) is not null;
 
     /// A host as clients spell it: an IP literal as it is, a name in punycode
     /// when it is not ASCII, or null when it holds a character no host allows.

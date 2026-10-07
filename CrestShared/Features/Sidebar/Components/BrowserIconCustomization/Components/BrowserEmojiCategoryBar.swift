@@ -11,11 +11,11 @@ struct BrowserEmojiCategoryBar: View {
 
             ScrollView(.horizontal) {
                 HStack(spacing: CrestSpacing.extraSmall) {
-                    ForEach(BrowserEmojiCategory.allCases) { option in
+                    ForEach(BrowserEmojiCategory.all) { option in
                         Button {
                             category = option
                         } label: {
-                            Image(systemName: option.systemImage)
+                            Image(systemName: option.symbol)
                                 .frame(
                                     width: CrestLayout.minimumHitTarget,
                                     height: CrestLayout.minimumHitTarget

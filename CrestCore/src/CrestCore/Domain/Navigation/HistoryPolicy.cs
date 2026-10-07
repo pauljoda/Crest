@@ -59,7 +59,7 @@ public static class HistoryPolicy {
     /// takes the address's host.
     public static HistoryEntryState Record(string normalizedUrl, string? title, DateTimeOffset now, Guid newId, HistoryEntryState? previous) {
         if (new WebAddress(normalizedUrl).Normalized != normalizedUrl || newId == Guid.Empty
-            || previous is not null && previous.Url != normalizedUrl) throw new BrowserRuleException(BrowserRuleCodes.InvalidHistoryVisit);
+            || previous is not null && previous.Url != normalizedUrl) throw new BrowserRuleException(BrowserRule.InvalidHistoryVisit);
         string resolvedTitle = !string.IsNullOrEmpty(title) ? title : previous?.Title ?? new Uri(normalizedUrl).Host;
         if (resolvedTitle.Length == 0) resolvedTitle = normalizedUrl;
         return previous is null ? new(newId, normalizedUrl, resolvedTitle, now, now, 1)

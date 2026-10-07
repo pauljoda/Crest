@@ -26,7 +26,7 @@ public sealed record DownloadRiskVerdict(DownloadRiskAssessment Assessment, bool
 /// engine warned about it. `SpaceId` is the Space it belongs to and
 /// `SourceHost` the host it came from, when known.
 public sealed record DownloadApprovalAsked(Guid PromptId, Guid DownloadId, Guid? SpaceId, string Filename,
-    IReadOnlyList<DownloadRiskReason> Reasons, EngineDownloadWarning? Warning, string? SourceHost) : Change;
+    IReadOnlyList<DownloadRiskReason> Reasons, DownloadWarning? Warning, string? SourceHost) : Change;
 
 /// Where the file of the download `DownloadId` goes waits on the platform: the
 /// download folder of the Space `SpaceId`, or the person's choice when

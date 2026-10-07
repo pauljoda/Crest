@@ -184,7 +184,7 @@ final class MobileBrowserNavigationState {
     }
 
     func toggleRegularSidebar() {
-        switch regularSidebarPresentation {
+        switch regularSidebarPresentation.kind {
         case .collapsed:
             showRegularSidebar()
         case .floating:
@@ -197,7 +197,7 @@ final class MobileBrowserNavigationState {
     /// Uses the same three sidebar states as regular-width windows while
     /// adapting only what "docked" means on a narrow phone.
     func toggleCompactSidebar() {
-        switch compactSidebarPresentation {
+        switch compactSidebarPresentation.kind {
         case .docked:
             showRegularSidebar()
             compactToolbarIsHidden = false

@@ -42,7 +42,7 @@ public sealed class BrowserTab {
     public static BrowserTab Restore(TabState state) {
         var restored = state with { CustomTitle = string.IsNullOrWhiteSpace(state.CustomTitle) ? null : state.CustomTitle.Trim() };
         var content = TabKind.FromStored(restored.NativeContent?.Kind, restored.Url, restored.Title);
-        if (content.IsWebPage != (restored.Url is not null)) throw new BrowserRuleException(BrowserRuleCodes.InvalidTabContent);
+        if (content.IsWebPage != (restored.Url is not null)) throw new BrowserRuleException(BrowserRule.InvalidTabContent);
         return new(restored);
     }
 

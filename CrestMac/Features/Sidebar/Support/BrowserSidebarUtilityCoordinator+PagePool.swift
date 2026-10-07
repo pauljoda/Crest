@@ -23,7 +23,7 @@ extension BrowserSidebarUtilityCoordinator {
                     guard browser.openNewTab(url: url, matching: assignment) != nil
                     else { return }
                     pages.select()
-                    pages.navigate(to: url.absoluteString)
+                    pages.load(url)
                 },
                 selectRestoredTab: { tabID in
                     browser.selectTab(tabID)
@@ -33,7 +33,7 @@ extension BrowserSidebarUtilityCoordinator {
                     guard item.phase.isComplete,
                         let destinationURL = item.destinationURL
                     else { return }
-                    switch destination {
+                    switch destination.kind {
                     case .open:
                         NSWorkspace.shared.open(destinationURL)
                     case .revealInFinder:

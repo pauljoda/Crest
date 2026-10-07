@@ -29,11 +29,11 @@ Downloaded language packs are shared with other apps and remain on the device af
 - **Find in Page** uses **Command-F**. Step through matches and close Find when finished. On a Chromium page, Find shows how many matches there are and which one is selected; on a WebKit page, it shows whether there is a match.
 - **Zoom In**, **Zoom Out**, and **Actual Size** use **Command-+**, **Command--**, and **Command-0**.
 
-Set a default zoom for pages in **Settings → Look and Feel**, from **25% to 500%**.
+Set a default zoom for pages in **Settings → Appearance**, from **50% to 300%**.
 
 ## Video and audio
 
-Use the sidebar’s Now Playing controls for eligible active media. On Mac, supported videos can open in **Picture in Picture**, with an optional automatic PiP setting. Availability depends on the website and its player.
+Use the sidebar’s Now Playing controls for eligible active media. On Mac, supported videos can open in **Picture in Picture**. Turn on **Picture in Picture when switching tabs** in **Settings → General** to start it automatically. Availability depends on the website and its player.
 
 ## Copy and share
 

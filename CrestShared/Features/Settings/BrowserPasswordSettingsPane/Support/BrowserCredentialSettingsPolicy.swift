@@ -42,14 +42,8 @@ enum BrowserCredentialSettingsPolicy {
             "Delete \(descriptor.username)’s password for \(descriptor.origin.description)\(scope) from \(spaceName)?\(synchronizationWarning) This cannot be undone."
     }
 
-    static func emptyDescription(isSearching: Bool) -> String {
-        isSearching
-            ? "Try another account name or site."
-            : "Passwords offered after a successful sign-in will be stored only in this Space."
-    }
-
     static let disabledDescription =
-        "Crest Passwords is off in this Space. Saved passwords remain here until you delete them."
+        "Saved passwords stay here until you delete them."
 
     private static func displayOrder(
         _ lhs: CredentialDescriptor,

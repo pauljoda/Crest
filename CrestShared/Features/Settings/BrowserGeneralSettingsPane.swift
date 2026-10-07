@@ -19,7 +19,35 @@ struct BrowserGeneralSettingsPane: View {
 
     var body: some View {
         BrowserSettingsPane(.general) {
-            Section("Startup", systemImage: "power") {
+            Section {
+                // The Mac keeps the status and its action on one line; a
+                // phone's row is too narrow, so the action takes a row of
+                // its own there.
+                #if os(macOS)
+                    LabeledContent("Default browser") {
+                        HStack(spacing: CrestSpacing.small) {
+                            defaultBrowserStatus
+                            defaultBrowserActions
+                            checkAgainButton
+                        }
+                    }
+                #else
+                    HStack(spacing: CrestSpacing.small) {
+                        Text("Default browser")
+                        Spacer(minLength: CrestSpacing.small)
+                        defaultBrowserStatus
+                        checkAgainButton
+                    }
+                    .alignmentGuide(.listRowSeparatorLeading) { $0[.leading] }
+                    defaultBrowserActions
+                #endif
+            } footer: {
+                if let message = defaultBrowser.status.message {
+                    Text(message).crestFormFootnote()
+                }
+            }
+
+            Section("Startup") {
                 #if os(macOS)
                     Picker("When Crest opens", selection: $appPreferences.startupBehavior) {
                         ForEach(StartupBehavior.settingsOrder, id: \.self) { behavior in
@@ -34,33 +62,7 @@ struct BrowserGeneralSettingsPane: View {
                     spaces: CrestSpaceIdentity.list(browser.spaceModels),
                     accessibilityIdentifier: "default-space-picker"
                 )
-
-                CrestFormFootnote(
-                    "Startup choices take effect the next time Crest opens a window."
-                )
             }
-
-            BrowserNewTabSettingsSection(preferences: linkPreferences)
-
-            BrowserDurableTabSettingsSection(preferences: appPreferences)
-
-            if let sidebarWidgets {
-                BrowserSidebarWidgetSettingsSection(runtime: sidebarWidgets)
-            }
-
-            #if os(macOS)
-                BrowserSplitFocusSettingsSection()
-                Section("Link dragging", systemImage: "cursorarrow.motionlines") {
-                    Toggle(
-                        "Drag links to Peek",
-                        isOn: linkPreferences.binding(.dragsLinksToPeek, reading: \.dragsLinksToPeek)
-                    )
-                    .accessibilityIdentifier("drag-links-to-peek-toggle")
-                    CrestFormFootnote(
-                        "Drag a link to pull out Peek. Hold Option to drag the link normally. Turn off to reverse these gestures."
-                    )
-                }
-            #endif
 
             // Whole-page translation preferences, which reach only the pages of
             // an engine with page translation.
@@ -69,34 +71,16 @@ struct BrowserGeneralSettingsPane: View {
             }
 
             #if os(macOS)
-                BrowserSystemPermissionSettingsSection(browser: browser, spaceAccess: spaceAccess)
-                BrowserPictureInPictureSettingsSection()
-                BrowserSpellCheckingSettingsSection()
+                Section {
+                    BrowserSpellCheckingToggle()
+                    BrowserPictureInPictureToggle()
+                } header: {
+                    Text("Webpages")
+                } footer: {
+                    CrestFormFootnote("Spelling changes apply after Crest restarts.")
+                }
                 BrowserDeveloperToolbarSettingsSection()
             #endif
-
-            Section("Default browser", systemImage: "globe") {
-                HStack(spacing: 12) {
-                    defaultBrowserStatus
-                    Spacer(minLength: 8)
-                    Button {
-                        Task { await refreshDefaultBrowserStatus() }
-                    } label: {
-                        Image(systemName: "arrow.clockwise")
-                            .frame(width: 28, height: 28)
-                            .contentShape(.rect)
-                    }
-                    .buttonStyle(.borderless)
-                    .help("Check Again")
-                    .accessibilityLabel("Check Again")
-                    .disabled(isCheckingDefaultBrowser || defaultBrowser.isWorking)
-                    .accessibilityIdentifier("check-default-browser-status")
-                }
-                if case .unavailable(let message) = defaultBrowser.status {
-                    Text(message).crestFormFootnote()
-                }
-                defaultBrowserActions
-            }
         }
         .task {
             guard defaultBrowser.status == .unknown else {
@@ -123,12 +107,26 @@ struct BrowserGeneralSettingsPane: View {
             .accessibilityIdentifier("default-browser-status")
         } else {
             Label(
-                defaultBrowserStatusTitle,
-                systemImage: defaultBrowserStatusSymbol
+                defaultBrowser.status.title,
+                systemImage: defaultBrowser.status.symbol
             )
             .foregroundStyle(defaultBrowserStatusStyle)
             .accessibilityIdentifier("default-browser-status")
         }
+    }
+
+    private var checkAgainButton: some View {
+        Button {
+            Task { await refreshDefaultBrowserStatus() }
+        } label: {
+            Image(systemName: "arrow.clockwise")
+                .contentShape(.rect)
+        }
+        .buttonStyle(.borderless)
+        .help("Check Again")
+        .accessibilityLabel("Check Again")
+        .disabled(isCheckingDefaultBrowser || defaultBrowser.isWorking)
+        .accessibilityIdentifier("check-default-browser-status")
     }
 
     @ViewBuilder
@@ -136,19 +134,19 @@ struct BrowserGeneralSettingsPane: View {
         switch defaultBrowser.requestStyle {
         case .direct:
             if defaultBrowser.status != .isDefault {
-                Button("Set as Default…") {
+                Button("Make Default") {
                     Task { await defaultBrowser.requestDefault() }
                 }
-                .buttonStyle(.bordered)
                 .disabled(defaultBrowser.isWorking)
                 .accessibilityIdentifier("make-default-browser")
             }
         case .systemSettings:
-            Button("Open Default Apps Settings…", systemImage: "arrow.up.forward") {
-                defaultBrowser.openSystemSettings()
+            if defaultBrowser.status != .isDefault {
+                Button("Open Settings…") {
+                    defaultBrowser.openSystemSettings()
+                }
+                .accessibilityIdentifier("open-default-apps-settings")
             }
-            .buttonStyle(.bordered)
-            .accessibilityIdentifier("open-default-apps-settings")
         }
     }
 
@@ -161,107 +159,23 @@ struct BrowserGeneralSettingsPane: View {
         defaultBrowser.refreshStatus()
     }
 
-    private var defaultBrowserStatusTitle: String {
-        switch defaultBrowser.status {
-        case .unknown: "Not checked"
-        case .isDefault: "Crest is the default"
-        case .notDefault: "Crest is not the default"
-        case .unavailable: "Status unavailable"
-        }
-    }
-
-    private var defaultBrowserStatusSymbol: String {
-        switch defaultBrowser.status {
-        case .unknown: "circle.dotted"
-        case .isDefault: "checkmark.circle.fill"
-        case .notDefault: "circle"
-        case .unavailable: "exclamationmark.circle"
-        }
-    }
-
     private var defaultBrowserStatusStyle: AnyShapeStyle {
-        switch defaultBrowser.status {
-        case .isDefault: AnyShapeStyle(.green)
-        case .unavailable: AnyShapeStyle(.orange)
-        default: AnyShapeStyle(.secondary)
-        }
-    }
-}
-
-struct BrowserSidebarWidgetSettingsSection: View {
-    let runtime: BrowserSidebarWidgetRuntime
-
-    var body: some View {
-        let registrations = runtime.userControllableRegistrations()
-        if !registrations.isEmpty {
-            Section("Sidebar widgets", systemImage: "rectangle.leftthird.inset.filled") {
-                ForEach(registrations) { registration in
-                    Toggle(
-                        registration.settingsTitle,
-                        isOn: enabledBinding(for: registration.id)
-                    )
-                    .accessibilityIdentifier(
-                        "sidebar-widget-\(registration.id.rawValue)-toggle"
-                    )
-                }
-
-                CrestFormFootnote(
-                    "Choose which optional cards appear at the bottom of the sidebar."
-                )
-            }
-        }
-    }
-
-    private func enabledBinding(
-        for kindID: BrowserSidebarWidgetKindID
-    ) -> Binding<Bool> {
-        Binding {
-            runtime.isWidgetEnabled(kindID)
-        } set: { isEnabled in
-            runtime.setWidgetEnabled(isEnabled, for: kindID)
-        }
-    }
-}
-
-struct BrowserNewTabSettingsSection: View {
-    static let controlIdentifier =
-        "focus-new-tabs-opened-from-links-toggle"
-
-    let preferences: BrowserLinkPreferenceStore
-
-    var body: some View {
-        Section("Tabs", systemImage: "square.stack") {
-            Toggle(
-                "Focus new tabs opened from links",
-                isOn: preferences.binding(.focusesNewTabs, reading: \.focusesNewTabs)
-            )
-            .accessibilityIdentifier(Self.controlIdentifier)
-
-            CrestFormFootnote(
-                "Selects tabs opened with Command-click or middle-click when the webpage supports it. Add Shift to reverse this choice. Background tabs load immediately."
-            )
-
-            Toggle(
-                "Follow tabs moved to another Space",
-                isOn: preferences.binding(.followsMovedTabs, reading: \.followsMovedTabs)
-            )
-            .accessibilityIdentifier("follow-tabs-moved-to-another-space-toggle")
-
-            CrestFormFootnote(
-                "Switch to the destination Space and open the moved tab. Turn off to keep browsing without following the tab."
-            )
+        switch defaultBrowser.status.tone {
+        case .quiet: AnyShapeStyle(.secondary)
+        case .success: AnyShapeStyle(.green)
+        case .warning: AnyShapeStyle(.orange)
         }
     }
 }
 
 #if os(macOS)
     /// WebKit reads this spelling preference once per process.
-    struct BrowserSpellCheckingSettingsSection: View {
+    struct BrowserSpellCheckingToggle: View {
         static let controlIdentifier = "continuous-spell-checking-toggle"
 
         private let preferences = BrowserAppPreferenceStore.shared
 
-        /// Read while the body evaluates, so the section follows the core's value.
+        /// Read while the body evaluates, so the row follows the core's value.
         private var isEnabled: Binding<Bool> {
             let isEnabled = preferences.checksSpelling
             return Binding {
@@ -272,17 +186,8 @@ struct BrowserNewTabSettingsSection: View {
         }
 
         var body: some View {
-            Section("Typing", systemImage: "keyboard") {
-                Toggle(
-                    "Check spelling on webpages",
-                    isOn: isEnabled
-                )
+            Toggle("Check spelling", isOn: isEnabled)
                 .accessibilityIdentifier(Self.controlIdentifier)
-
-                CrestFormFootnote(
-                    "Highlights misspelled words without changing what you type. Changes take effect the next time Crest opens."
-                )
-            }
         }
     }
 #endif

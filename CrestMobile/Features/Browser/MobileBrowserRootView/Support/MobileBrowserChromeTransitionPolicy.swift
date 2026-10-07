@@ -49,7 +49,7 @@ enum MobileCompactSidebarRevealPolicy {
     static func destination(
         sidebarPresentation: BrowserSidebarPresentation
     ) -> MobileCompactSidebarRevealDestination {
-        switch sidebarPresentation {
+        switch sidebarPresentation.kind {
         case .docked:
             .tabViewer
         case .floating, .collapsed:

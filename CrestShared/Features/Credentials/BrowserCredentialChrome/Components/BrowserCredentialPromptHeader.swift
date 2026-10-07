@@ -22,7 +22,7 @@ struct BrowserCredentialPromptHeader: View {
                 alignment: .leading,
                 spacing: BrowserCredentialPromptMetrics.headerTextSpacing
             ) {
-                Text(kind.title(spaceName: space?.name ?? "this Space"))
+                Text(kind.title(space?.name ?? "this Space"))
                     .font(.callout.weight(.semibold))
                     .lineLimit(1)
                 Text(request.origin.description)

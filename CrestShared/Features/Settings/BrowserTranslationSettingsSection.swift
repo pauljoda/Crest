@@ -21,48 +21,43 @@ struct BrowserTranslationSettingsSection: View {
     }
 
     var body: some View {
-        Section("Page Translation", systemImage: "character.bubble") {
-            Toggle("Offer to Translate", isOn: $preferences.offersTranslation)
-            Toggle("Automatically Translate", isOn: $preferences.automaticallyTranslates)
+        Section("Translation") {
+            Toggle("Offer to translate pages", isOn: $preferences.offersTranslation)
+            Toggle("Translate automatically", isOn: $preferences.automaticallyTranslates)
                 .accessibilityIdentifier("automatic-translation-toggle")
-            CrestFormFootnote(
-                "Translate only the languages you turn on below, using their chosen destination. Other languages stay unchanged. Automatic translation never shows a popup or downloads languages."
-            )
-            VStack(alignment: .leading, spacing: 0) {
-                if !sourceIDs.isEmpty {
-                    ForEach(sourceIDs, id: \.self) { source in
-                        languageRow(source)
-                            .padding(.vertical, 12)
-                        if source != sourceIDs.last { Divider() }
-                    }
-                } else if catalog.hasChecked {
-                    Label("No downloaded language pairs", systemImage: "arrow.down.circle")
-                        .foregroundStyle(.secondary)
-                        .padding(.vertical, 12)
+        }
+        if automaticallyTranslates {
+            languagesSection
+        }
+    }
+
+    private var languagesSection: some View {
+        Section {
+            if !sourceIDs.isEmpty {
+                ForEach(sourceIDs, id: \.self) { source in
+                    languageRow(source)
                 }
-                Divider().padding(.vertical, 12)
-                ViewThatFits(in: .horizontal) {
-                    HStack(spacing: 12) { languageActions }
-                    VStack(alignment: .leading, spacing: 12) { languageActions }
-                }
+            } else if catalog.hasChecked {
+                Text("No downloaded languages")
+                    .foregroundStyle(.secondary)
+            }
+            HStack(spacing: 12) { languageActions }
+        } header: {
+            Text("Translate automatically from")
+        } footer: {
+            VStack(alignment: .leading, spacing: 4) {
                 #if os(macOS)
-                    Text(
-                        "Add languages in System Settings → General → Language & Region → Translation Languages, then refresh this list."
-                    )
-                    .crestFormFootnote().padding(.top, 10)
+                    CrestFormFootnote("Add languages in System Settings › General › Language & Region.")
                 #else
-                    Text("Download both languages in Apple’s Translate app, then refresh this list.")
-                        .crestFormFootnote().padding(.top, 10)
+                    CrestFormFootnote("Download languages in the Translate app.")
                 #endif
                 if couldNotOpenLanguages {
-                    Text(
-                        "Could not open language downloads. Open your device’s language settings to manage downloaded translation languages."
-                    )
-                    .foregroundStyle(.orange).font(.caption).padding(.top, 8)
+                    Text("Couldn’t open language downloads.")
+                        .font(.footnote)
+                        .foregroundStyle(.orange)
                 }
             }
         }
-        .containerValue(\.settingsFullWidth, true)
         .task { await catalog.refresh() }
         .onChange(of: scenePhase) {
             if scenePhase == .active { Task { await catalog.refresh() } }
@@ -74,16 +69,16 @@ struct BrowserTranslationSettingsSection: View {
         Button {
             Task { await catalog.refresh() }
         } label: {
-            Label(catalog.isRefreshing ? "Checking Languages…" : "Refresh Languages", systemImage: "arrow.clockwise")
+            Text(catalog.isRefreshing ? "Checking…" : "Refresh")
         }
         .disabled(catalog.isRefreshing)
         .accessibilityIdentifier("refresh-translation-languages")
         #if os(macOS)
-            Button("Download Languages…", systemImage: "arrow.up.forward") {
+            Button("Download Languages…") {
                 openLanguages(URL(string: "x-apple.systempreferences:com.apple.Localization-Settings.extension")!)
             }
         #else
-            Button("Open Translate…", systemImage: "arrow.up.forward") {
+            Button("Open Translate…") {
                 openLanguages(URL(string: "translate://")!)
             }
         #endif
@@ -102,19 +97,24 @@ struct BrowserTranslationSettingsSection: View {
             ?? zip(targets, BrowserTranslationLanguageCatalog.matches(preferred, in: targets)).first { $0.1 }?.0 ?? ""
         let enabled = saved?.isEnabled ?? false
         let available = targets.contains(target)
-        return ViewThatFits(in: .horizontal) {
-            HStack(spacing: 24) {
-                languageToggle(source, target: target, enabled: enabled, available: available)
+        return LabeledContent {
+            HStack(spacing: 12) {
                 destinationPicker(source, target: target, targets: targets, enabled: enabled)
-                    .frame(width: 300)
+                    .labelsHidden()
+                    .fixedSize()
+                languageToggle(source, target: target, enabled: enabled, available: available)
+                    .labelsHidden()
             }
-            VStack(alignment: .leading, spacing: 10) {
-                languageToggle(source, target: target, enabled: enabled, available: available)
-                destinationPicker(source, target: target, targets: targets, enabled: enabled)
+        } label: {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(BrowserTranslationLanguageCatalog.name(source))
+                if !target.isEmpty && !available && catalog.hasChecked {
+                    Text("Download both languages to translate")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
             }
         }
         .disabled(!automaticallyTranslates)
-        .opacity(automaticallyTranslates ? 1 : 0.45)
     }
 
     private func languageToggle(_ source: String, target: String, enabled: Bool, available: Bool) -> some View {
@@ -124,14 +124,9 @@ struct BrowserTranslationSettingsSection: View {
                 set: { save(source, target: target, enabled: $0) }
             )
         ) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(BrowserTranslationLanguageCatalog.name(source))
-                if !target.isEmpty && !available && catalog.hasChecked {
-                    Text("Download both languages to use this mapping")
-                        .font(.caption).foregroundStyle(.secondary)
-                }
-            }
+            Text(BrowserTranslationLanguageCatalog.name(source))
         }
+        .toggleStyle(.switch)
         .disabled(!enabled && !available)
         .accessibilityIdentifier("automatic-translation-source-\(source)")
     }

@@ -91,9 +91,10 @@ the live status for each issue.
 - [ ] [feature: Reduce empty white space in the sidebar. ](https://github.com/pauljoda/Crest/issues/266)
 - [ ] [feature: Import from Aside and ego lite](https://github.com/pauljoda/Crest/issues/271)
 - [ ] [feature: Translate Crest into Korean, Japanese, and other languages](https://github.com/pauljoda/Crest/issues/273)
-- [ ] [Import every Chrome profile during setup](https://github.com/pauljoda/Crest/issues/275)
 - [ ] [Evaluate a setting for where new tabs open in the sidebar](https://github.com/pauljoda/Crest/issues/276)
 - [ ] [Keep find in page in step with what you type](https://github.com/pauljoda/Crest/issues/278)
+- [ ] [Show a designed window when opening the Mac installer](https://github.com/pauljoda/Crest/issues/280)
+- [ ] [Redesign Settings and Crest Studio](https://github.com/pauljoda/Crest/issues/282)
 
 #### Completed
 
@@ -110,6 +111,7 @@ the live status for each issue.
 - [x] [bug: Unable to import spaces from Zen](https://github.com/pauljoda/Crest/issues/252)
 - [x] [Link the Crest Discord from the website](https://github.com/pauljoda/Crest/issues/256)
 - [x] [bug: extension install waits 180 s for the engine's download unless a page has loaded](https://github.com/pauljoda/Crest/issues/268)
+- [x] [Import every Chrome profile during setup](https://github.com/pauljoda/Crest/issues/275) — [`d1cd39dd`](https://github.com/pauljoda/Crest/commit/d1cd39dd4deecd7f400ed3c639bd1786c4adff8e)
 
 <!-- crest-roadmap-sync:end -->
 

@@ -4,25 +4,19 @@ struct BrowserDurableTabSettingsSection: View {
     @Bindable var preferences: BrowserAppPreferenceStore
 
     var body: some View {
-        Section {
+        Section("Pinned and saved tabs") {
             Picker("After closing", selection: $preferences.savedTabClosePolicy) {
                 ForEach(SavedTabClosePolicy.all, id: \.self) { policy in
                     Text(policy.title).tag(policy)
                 }
             }
             .accessibilityIdentifier("durable-tab-close-policy")
-            CrestFormFootnote(
-                "Choose where pinned and saved tabs open after you close them. Switching Spaces or unloading inactive pages keeps your last location."
-            )
             #if os(macOS)
-                Toggle("Return to saved URL with one favicon click", isOn: $preferences.returnsToSavedURLOnFaviconClick)
-                    .accessibilityIdentifier("saved-tab-favicon-root-return")
-                CrestFormFootnote(
-                    "When a saved tab shows /, click its favicon once to return to its saved URL. Double-clicking the tab still returns it."
+                Toggle(
+                    "Click the favicon to return to the saved URL", isOn: $preferences.returnsToSavedURLOnFaviconClick
                 )
+                .accessibilityIdentifier("saved-tab-favicon-root-return")
             #endif
-        } header: {
-            CrestSettingsSectionHeading(title: "Pinned and saved tabs", systemImage: "pin")
         }
     }
 }

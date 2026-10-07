@@ -23,7 +23,7 @@ struct BrowserSearchEngineManager: View {
     var body: some View {
         NavigationStack {
             List {
-                Section("Built-In", systemImage: "magnifyingglass") {
+                Section("Built-in") {
                     ForEach(SearchProvider.all) { provider in
                         providerRow(provider)
                     }
@@ -31,13 +31,8 @@ struct BrowserSearchEngineManager: View {
 
                 Section {
                     if preferences.customSearchProviders.isEmpty {
-                        ContentUnavailableView(
-                            "No Custom Search Engines",
-                            systemImage: "magnifyingglass",
-                            description: Text(
-                                "Add an HTTPS search URL containing %s or {searchTerms}."
-                            )
-                        )
+                        Text("No custom search engines")
+                            .foregroundStyle(.secondary)
                     } else {
                         ForEach(preferences.customSearchProviders) { custom in
                             customProviderRow(custom)
@@ -45,7 +40,7 @@ struct BrowserSearchEngineManager: View {
                     }
                 } header: {
                     HStack {
-                        CrestSettingsSectionHeading(title: "Custom", systemImage: "slider.horizontal.3")
+                        CrestSettingsSectionHeading(title: "Custom")
                         Spacer()
                         Button {
                             editorRequest = .new()
@@ -60,11 +55,8 @@ struct BrowserSearchEngineManager: View {
                 }
 
                 Section {
-                    Text(
-                        "Custom engines belong to this Space and sync with it. Crest loads their favicon from the engine’s website; the image itself is not synced. Sign in on the engine’s website instead of putting a token in a URL template."
-                    )
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
+                } footer: {
+                    CrestFormFootnote("Don’t put sign-in tokens in a search URL. It syncs with this Space.")
                 }
             }
             .browserSearchEngineEditorPresentation(item: $editorRequest) { request in

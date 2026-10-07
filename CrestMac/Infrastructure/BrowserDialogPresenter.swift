@@ -296,7 +296,7 @@ final class BrowserDialogPresenter {
             let keeps = asked.warning != nil
             alert.messageText = keeps ? "Keep “\(asked.filename)”?" : "Download “\(asked.filename)”?"
             var paragraphs = asked.reasons.map { String(localized: $0.message) }
-            if let warning = asked.warning { paragraphs.append(warning.approvalMessage) }
+            if let warning = asked.warning { paragraphs.append(String(localized: warning.approvalMessage)) }
             switch (asked.sourceHost, spaceName) {
             case (let host?, let space?): paragraphs.append("Source: \(host) · Space: \(space)")
             case (let host?, nil): paragraphs.append("Source: \(host)")
@@ -339,23 +339,15 @@ final class BrowserDialogPresenter {
         }
     }
 
+    /// The page's server as a dialog names it, which the core formats: its
+    /// host, with the port only when it is not the scheme's default.
     static func sourceLabel(for request: URLRequest) -> String {
         guard let url = request.url, let host = url.host(), !host.isEmpty else {
             return ProductIdentity.name
         }
-        guard let port = url.port, !isDefault(port: port, for: url.scheme) else { return host }
-        return "\(host):\(port)"
-    }
-
-    private static func isDefault(port: Int, for scheme: String?) -> Bool {
-        switch scheme?.lowercased() {
-        case "http":
-            return port == 80
-        case "https":
-            return port == 443
-        default:
-            return false
-        }
+        guard let port = url.port else { return host }
+        return BrowserCorePolicy.authenticationSourceLabel(
+            host: host, port: port, scheme: url.scheme, emptyHostLabel: ProductIdentity.name)
     }
 
     private func makeAlert(message: String, request: URLRequest) -> NSAlert {

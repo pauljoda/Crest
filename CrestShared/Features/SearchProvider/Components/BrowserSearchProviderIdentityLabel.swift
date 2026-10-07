@@ -1,36 +1,46 @@
 import SwiftUI
 
-enum BrowserSearchProviderIdentityLabelLayout: Equatable {
-    case compact
-    case touch
+/// How large a search provider's icon and name sit, by input size.
+struct BrowserSearchProviderIdentityLabelLayout: Hashable, Sendable {
+    // MARK: - Static Variables
 
-    static var platformDefault: Self {
-        #if os(macOS)
-            .compact
-        #else
-            .touch
-        #endif
+    static let compact = BrowserSearchProviderIdentityLabelLayout(
+        name: "compact", iconSize: 20, spacing: 4, verticalPadding: 0)
+    static let touch = BrowserSearchProviderIdentityLabelLayout(
+        name: "touch", iconSize: 28, spacing: 8, verticalPadding: 4)
+
+    #if os(macOS)
+        static let platformDefault = compact
+    #else
+        static let platformDefault = touch
+    #endif
+
+    // MARK: - Variables
+
+    let name: String
+    let iconSize: CGFloat
+    let spacing: CGFloat
+    let verticalPadding: CGFloat
+
+    // MARK: - Initializers
+
+    private init(name: String, iconSize: CGFloat, spacing: CGFloat, verticalPadding: CGFloat) {
+        self.name = name
+        self.iconSize = iconSize
+        self.spacing = spacing
+        self.verticalPadding = verticalPadding
     }
 
-    var iconSize: CGFloat {
-        switch self {
-        case .compact: 20
-        case .touch: 28
-        }
+    // MARK: - Actions - Identity
+
+    static func == (
+        lhs: BrowserSearchProviderIdentityLabelLayout, rhs: BrowserSearchProviderIdentityLabelLayout
+    ) -> Bool {
+        lhs.name == rhs.name
     }
 
-    var spacing: CGFloat {
-        switch self {
-        case .compact: 4
-        case .touch: 8
-        }
-    }
-
-    var verticalPadding: CGFloat {
-        switch self {
-        case .compact: 0
-        case .touch: 4
-        }
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(name)
     }
 }
 

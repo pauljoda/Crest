@@ -15,14 +15,14 @@ final class MobileGettingStartedTests: XCTestCase {
         let runtime = try XCTUnwrap(pages.nativeTabs.runtime(matching: assignment, content: .gettingStarted))
         XCTAssertNil(pages.activePage)
         let state = runtime.model(BrowserGettingStartedState.self) { BrowserGettingStartedState() }
-        state.lesson = 2
+        state.lesson = .folders
         browser.openNewTab()
         pages.select()
         XCTAssertNil(pages.prepareResidentPage(for: id))
         XCTAssertTrue(pages.nativeTabs.runtime(matching: assignment, content: .gettingStarted) === runtime)
         browser.selectTab(id)
         pages.select()
-        XCTAssertEqual(state.lesson, 2)
+        XCTAssertEqual(state.lesson, .folders)
         pages.handleMemoryPressure(.critical)
         XCTAssertTrue(pages.nativeTabs.contains(assignment))
         XCTAssertFalse(
@@ -33,7 +33,7 @@ final class MobileGettingStartedTests: XCTestCase {
         pages.select()
         let reopened = try XCTUnwrap(pages.nativeTabs.runtime(matching: assignment, content: .gettingStarted))
         XCTAssertFalse(reopened === runtime)
-        XCTAssertEqual(reopened.model(BrowserGettingStartedState.self) { BrowserGettingStartedState() }.lesson, 0)
+        XCTAssertEqual(reopened.model(BrowserGettingStartedState.self) { BrowserGettingStartedState() }.lesson, .pin)
         await pages.releaseWindowRuntime(for: BrowserSpaceRuntimeAssignment(space: space))
         XCTAssertTrue(pages.nativeTabs.tabIDs.isEmpty)
     }

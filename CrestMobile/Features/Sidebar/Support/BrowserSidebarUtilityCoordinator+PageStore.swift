@@ -23,14 +23,8 @@ extension BrowserSidebarUtilityCoordinator {
                 openHistoryEntry: { url, _ in openURL(url) },
                 selectRestoredTab: selectTab,
                 openFinishedDownload: { item, destination in
-                    switch destination {
-                    case .share:
-                        pages.exportDownload(item.id, to: .share)
-                    case .files:
-                        pages.exportDownload(item.id, to: .files)
-                    case .open, .revealInFinder:
-                        break
-                    }
+                    guard let export = MobileBrowserFileExportDestination.exporting(destination) else { return }
+                    pages.exportDownload(item.id, to: export)
                 },
                 cancelDownload: { itemID in
                     pages.cancelDownload(itemID)

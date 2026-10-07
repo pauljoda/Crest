@@ -13,7 +13,7 @@ public sealed class DownloadPhase {
     public static readonly DownloadPhase AwaitingApproval = new(name: "awaitingApproval", title: "Waiting for approval…",
         symbol: "exclamationmark.shield.fill", primaryAction: DownloadRowAction.Cancel, isLive: true, awaitsDecision: true);
     public static readonly DownloadPhase Downloading = new(name: "downloading", title: "Downloading…", symbol: null,
-        primaryAction: DownloadRowAction.Cancel, isLive: true, isTransferring: true);
+        primaryAction: DownloadRowAction.Cancel, isLive: true, isTransferring: true, allowsResume: true);
     public static readonly DownloadPhase Finished = new(name: "finished", title: "Completed", symbol: null,
         primaryAction: DownloadRowAction.Open, isComplete: true,
         titleComment: "Status of a download whose file is saved.");
@@ -24,7 +24,7 @@ public sealed class DownloadPhase {
     public static readonly DownloadPhase Canceled = new(name: "canceled", title: null, symbol: "xmark.circle.fill",
         primaryAction: DownloadRowAction.Remove);
     public static readonly DownloadPhase Failed = new(name: "failed", title: null, symbol: "exclamationmark.triangle.fill",
-        primaryAction: DownloadRowAction.Remove, needsAttention: true);
+        primaryAction: DownloadRowAction.Remove, needsAttention: true, allowsResume: true);
 
     public static IReadOnlyList<DownloadPhase> All { get; } =
         [Preparing, AwaitingApproval, Downloading, Finished, BlockedAutomaticDownload, Canceled, Failed];
@@ -65,6 +65,10 @@ public sealed class DownloadPhase {
     /// Retrying starts the same record again from nothing.
     public bool CanRetry { get; }
 
+    /// The engine may offer to resume a record in this phase: a transfer it
+    /// paused, or a failed one it can recover.
+    public bool AllowsResume { get; }
+
     /// A live transfer can fail, and so can a record whose retry can no longer
     /// be replayed.
     public bool CanFail => IsLive || CanRetry;
@@ -75,7 +79,7 @@ public sealed class DownloadPhase {
 
     private DownloadPhase(string name, string? title, string? symbol, DownloadRowAction primaryAction, bool isLive = false,
         bool isTransferring = false, bool isComplete = false, bool needsAttention = false, bool awaitsDecision = false,
-        bool canRetry = false, string? titleComment = null) {
+        bool canRetry = false, bool allowsResume = false, string? titleComment = null) {
         Name = name;
         Title = title;
         TitleComment = titleComment;
@@ -87,6 +91,7 @@ public sealed class DownloadPhase {
         NeedsAttention = needsAttention;
         AwaitsDecision = awaitsDecision;
         CanRetry = canRetry;
+        AllowsResume = allowsResume;
     }
 
     #endregion

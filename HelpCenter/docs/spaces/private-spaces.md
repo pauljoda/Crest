@@ -13,7 +13,7 @@ Private Spaces use non-persistent website storage. They do not write normal hist
 
 ## Add device authentication
 
-You can require Touch ID, Face ID, or the device passcode before opening a protected Private Space. Crest can relock protected content when the app leaves the foreground so another person cannot return to it from the app switcher.
+You can require Touch ID, Face ID, or the device passcode before opening a protected Private Space. On Mac, turn on **Require Touch ID or password** on the Space’s Privacy page in Settings. Crest can relock protected content when the app leaves the foreground so another person cannot return to it from the app switcher.
 
 ## What private browsing does not do
 

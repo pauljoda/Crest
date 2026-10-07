@@ -17,18 +17,14 @@ struct BrowserPasswordSettingsPane: View {
     @Binding var searchText: String
     /// Opens the password manager when the platform presents it separately.
     var manage: (() -> Void)?
+    /// The one Space whose passwords the pane shows, or nil to pick one.
+    let fixedSpaceID: UUID?
 
     @State private var credentials: BrowserCredentialSpaceStore
-    @Environment(\.browserSettingsSelections) private var selections
-    @State private var localSelectedSpaceID: UUID?
-    private var selectedSpaceID: UUID? {
-        get { if let selections { selections.passwordSpaceID } else { localSelectedSpaceID } }
-        nonmutating set {
-            if let selections { selections.passwordSpaceID = newValue } else { localSelectedSpaceID = newValue }
-        }
-    }
+    @State private var pickedSpaceID: UUID?
+    private var selectedSpaceID: UUID? { fixedSpaceID ?? pickedSpaceID }
     private var selectedSpaceBinding: Binding<UUID?> {
-        Binding(get: { selectedSpaceID }, set: { selectedSpaceID = $0 })
+        Binding(get: { selectedSpaceID }, set: { if fixedSpaceID == nil { pickedSpaceID = $0 } })
     }
     @State private var credentialPendingDeletion: CredentialDescriptor?
     @State private var credentialDetailRequest: BrowserCredentialDetailRequest?
@@ -44,13 +40,15 @@ struct BrowserPasswordSettingsPane: View {
         spaceAccess: BrowserSpaceAccessController,
         layout: BrowserPasswordSettingsLayout,
         searchText: Binding<String> = .constant(""),
-        manage: (() -> Void)? = nil
+        manage: (() -> Void)? = nil,
+        fixedSpaceID: UUID? = nil
     ) {
         self.browser = browser
         self.spaceAccess = spaceAccess
         self.layout = layout
         _searchText = searchText
         self.manage = manage
+        self.fixedSpaceID = fixedSpaceID
         _credentials = State(
             initialValue: BrowserCredentialSpaceStore(browser: browser)
         )
@@ -165,23 +163,25 @@ struct BrowserPasswordSettingsPane: View {
 
     @ViewBuilder
     private var settingsSections: some View {
-        Section("System passkeys", systemImage: "person.badge.key") {
-            BrowserPasskeyAccessView()
-        }
+        if fixedSpaceID == nil {
+            Section("System passkeys") {
+                BrowserPasskeyAccessView()
+            }
 
-        Section("Space", systemImage: "square.grid.2x2") {
-            CrestSpaceMenuPicker(
-                "Passwords for",
-                selection: selectedSpaceBinding,
-                spaces: CrestSpaceIdentity.list(browser.spaceModels)
-            )
+            Section {
+                CrestSpaceMenuPicker(
+                    "Space",
+                    selection: selectedSpaceBinding,
+                    spaces: CrestSpaceIdentity.list(browser.spaceModels)
+                )
+            }
         }
 
         if let space {
             if canRevealSelectedSpaceData {
-                Section("Crest Passwords", systemImage: "key") {
+                Section {
                     Toggle(
-                        "Use Crest Passwords in this Space",
+                        "Use Crest Passwords",
                         isOn: browser.credentialPreferenceBinding(
                             \.isEnabled,
                             in: space
@@ -197,23 +197,15 @@ struct BrowserPasswordSettingsPane: View {
                         }
 
                         if layout.showsManageAction {
-                            Button(
-                                "Manage Saved Passwords…",
-                                systemImage: "key.fill"
-                            ) {
+                            Button("Manage Saved Passwords…") {
                                 manage?()
                             }
-                            .buttonStyle(.crestTertiary)
                         }
 
                         if layout.showsExportAction {
-                            Button(
-                                "Export Passwords…",
-                                systemImage: "square.and.arrow.up"
-                            ) {
+                            Button("Export Passwords…") {
                                 confirmsPlaintextExport = true
                             }
-                            .buttonStyle(.crestTertiary)
                             .disabled(
                                 credentials.descriptors.isEmpty
                                     || credentials.isPreparingExport
@@ -224,15 +216,16 @@ struct BrowserPasswordSettingsPane: View {
                         }
                     }
                     .disabled(!space.settings.credentialPreferences.isEnabled)
-
+                } header: {
+                    Text("Crest Passwords")
+                } footer: {
                     if !space.settings.credentialPreferences.isEnabled {
-                        Text(BrowserCredentialSettingsPolicy.disabledDescription)
-                            .crestFormFootnote()
+                        Text(BrowserCredentialSettingsPolicy.disabledDescription).crestFormFootnote()
                     }
                 }
 
                 if layout.showsSavedPasswords {
-                    Section("Saved passwords", systemImage: "key.horizontal") {
+                    Section {
                         if !credentials.descriptors.isEmpty || !searchText.isEmpty {
                             BrowserCredentialSearchField(
                                 title: "Search saved passwords",
@@ -242,35 +235,27 @@ struct BrowserPasswordSettingsPane: View {
                         }
                         passwordManagerActions
                         savedPasswords
-                        Text(passwordCountLabel).crestFormFootnote()
+                    } header: {
+                        Text("Saved passwords")
+                    } footer: {
+                        if !credentials.descriptors.isEmpty {
+                            Text(passwordCountLabel).crestFormFootnote()
+                        }
                     }
                 }
 
                 if let errorMessage = credentials.errorMessage {
                     Section {
                         Label(errorMessage, systemImage: "exclamationmark.triangle.fill")
-                            .crestFormFootnote()
+                            .font(.footnote)
                             .foregroundStyle(.red)
-                    }
-                }
-
-                Section {
-                    if layout.showsSavedPasswords {
-                        CrestFormFootnote(
-                            "Crest shows descriptor metadata only. Password values stay in the active Space’s Data Protection Keychain and never enter session or CloudKit data."
-                        )
-                    } else {
-                        CrestFormFootnote(
-                            "Crest Passwords stay in this Space. They never enter another Space’s suggestions or records."
-                        )
                     }
                 }
             } else {
                 BrowserSettingsPrivateSpaceAccessSection(
                     space: space,
                     accessController: spaceAccess,
-                    detail:
-                        "Unlock this Space before viewing account and site metadata or changing its password settings."
+                    detail: "Unlock this Space to see its passwords."
                 )
             }
         }
@@ -311,13 +296,9 @@ struct BrowserPasswordSettingsPane: View {
     }
 
     private func importButton(space: SpaceModel) -> some View {
-        Button(
-            "Import into \(space.settings.name)…",
-            systemImage: "square.and.arrow.down"
-        ) {
+        Button("Import Passwords…") {
             isChoosingImportFile = true
         }
-        .buttonStyle(.crestTertiary)
         .disabled(
             !space.settings.credentialPreferences.isEnabled
                 || credentials.isPreparingImport
@@ -327,14 +308,10 @@ struct BrowserPasswordSettingsPane: View {
     }
 
     private var selectionButton: some View {
-        Button(
-            isSelectingCredentials ? "Done Selecting" : "Select Passwords",
-            systemImage: isSelectingCredentials ? "checkmark" : "checkmark.circle"
-        ) {
+        Button(isSelectingCredentials ? "Done" : "Select") {
             isSelectingCredentials.toggle()
             if !isSelectingCredentials { selectedCredentialIDs.removeAll() }
         }
-        .buttonStyle(.crestTertiary)
         .disabled(credentials.descriptors.isEmpty || credentials.isDeletingSelection)
     }
 
@@ -361,11 +338,6 @@ struct BrowserPasswordSettingsPane: View {
                     in: space
                 )
             )
-
-            Text(
-                "After Crest saves in this Space, the system can ask whether to save or update a copy in your preferred password manager."
-            )
-            .crestFormFootnote()
         }
     }
 
@@ -377,18 +349,8 @@ struct BrowserPasswordSettingsPane: View {
             ProgressView("Reading this Space’s Keychain…")
                 .frame(maxWidth: .infinity)
         } else if descriptors.isEmpty {
-            ContentUnavailableView(
-                searchText.isEmpty ? "No Saved Passwords" : "No Matching Passwords",
-                systemImage: searchText.isEmpty ? "key.slash" : "magnifyingglass",
-                description: Text(
-                    space?.settings.credentialPreferences.isEnabled == false
-                        ? BrowserCredentialSettingsPolicy.disabledDescription
-                        : credentials.emptyDescription(
-                            isSearching: !searchText.isEmpty
-                        )
-                )
-            )
-            .frame(maxWidth: .infinity)
+            Text(searchText.isEmpty ? "No saved passwords" : "No matches")
+                .foregroundStyle(.secondary)
         } else {
             ForEach(descriptors) { descriptor in
                 BrowserPasswordDescriptorRow(

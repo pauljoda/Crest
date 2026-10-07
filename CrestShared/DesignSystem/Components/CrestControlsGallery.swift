@@ -13,7 +13,7 @@
     struct CrestControlsGallery: View {
         var isEnabled = true
 
-        @State private var placement: CrestControlsGalleryPlacement = .saved
+        @State private var placement: TabPlacement = .saved
         @State private var selectedCard = 0
         @State private var chipSelection: UUID? = SessionState.Seed.preview.spaces.first?.id
         @State private var menuSelection: UUID? = SessionState.Seed.preview.spaces.first?.id
@@ -108,7 +108,7 @@
         private var segmented: some View {
             section("Segmented") {
                 Picker("Put new sites in", selection: $placement) {
-                    ForEach(CrestControlsGalleryPlacement.allCases, id: \.self) { placement in
+                    ForEach(TabPlacement.all, id: \.self) { placement in
                         Label(placement.title, systemImage: placement.symbol)
                             .tag(placement)
                     }
@@ -117,15 +117,15 @@
                 .tint(CrestBrandTheme.accent)
 
                 Picker("Appearance", selection: $placement) {
-                    ForEach(CrestControlsGalleryPlacement.allCases, id: \.self) { placement in
+                    ForEach(TabPlacement.all, id: \.self) { placement in
                         Text(placement.title).tag(placement)
                     }
                 }
                 .pickerStyle(.segmented)
                 .tint(CrestBrandTheme.accent)
 
-                Picker("Disabled", selection: .constant(CrestControlsGalleryPlacement.pinned)) {
-                    ForEach(CrestControlsGalleryPlacement.allCases, id: \.self) { placement in
+                Picker("Disabled", selection: .constant(TabPlacement.pinned)) {
+                    ForEach(TabPlacement.all, id: \.self) { placement in
                         Text(placement.title).tag(placement)
                     }
                 }

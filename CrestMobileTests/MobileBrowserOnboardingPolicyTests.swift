@@ -61,7 +61,7 @@ final class MobileBrowserOnboardingPolicyTests: XCTestCase {
         XCTAssertEqual(welcome(flow, .checking, waited: .seconds(4)), .stillChecking)
         XCTAssertTrue(welcome(flow, .checking, waited: .seconds(4)).offersSetupWithoutCloud)
         XCTAssertEqual(welcome(flow, .checking, waited: .seconds(10)), .setupWithoutCloud)
-        XCTAssertEqual(welcome(flow, .failed("iCloud didn’t respond in time."), waited: .zero), .setupWithoutCloud)
+        XCTAssertEqual(welcome(flow, .failed, waited: .zero), .setupWithoutCloud)
         XCTAssertEqual(welcome(flow, .waitingForAccount, waited: .zero), .setupWithoutCloud)
     }
 
@@ -88,7 +88,7 @@ final class MobileBrowserOnboardingPolicyTests: XCTestCase {
     }
 
     private func welcome(
-        _ flow: SetupFlowState, _ cloudPhase: BrowserCloudSyncPhase, waited: Duration
+        _ flow: SetupFlowState, _ cloudPhase: CloudSyncPhase, waited: Duration
     ) -> BrowserOnboardingWelcomeAction {
         BrowserOnboardingWelcomeAction(
             flow: flow, cloudPhase: cloudPhase, wait: BrowserOnboardingCloudWait.Stage(waited: waited))

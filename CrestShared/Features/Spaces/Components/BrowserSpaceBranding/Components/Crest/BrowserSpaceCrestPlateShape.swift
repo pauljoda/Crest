@@ -15,7 +15,7 @@ struct BrowserSpaceCrestPlateShape: Shape {
             CGPoint(x: rect.minX + x * w, y: rect.minY + y * h)
         }
         var path = Path()
-        switch backplate {
+        switch backplate.kind {
         case .none:
             break
         case .circle:

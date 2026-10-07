@@ -13,6 +13,8 @@ Privacy decisions belong to the current Space. A permission granted to a work ac
 
 Crest includes a small built-in ad and tracker ruleset that can be enabled or disabled per Space. It uses WebKit, so it applies on iPhone, iPad, and WebKit pages on Mac. Use the site controls or assign **Toggle Content Blocking** a shortcut when a site needs a quick exception.
 
+To change it for a Space, turn **Block known ads and trackers** on or off in that Space’s privacy settings. On Mac, open Settings, select the Space in the sidebar, then select **Privacy**. On iPhone and iPad, open **Settings → Privacy** and choose the Space.
+
 Chromium pages on Mac have no built-in blocking. Install a content-blocking extension, such as uBlock Origin Lite, in each Space that needs it. Extensions do not run on WebKit pages.
 
 For broader filter-list coverage, install a content-blocking extension in the Space that needs it. Built-in protection and an extension can have different rule coverage, so check which layer is active before assuming the page itself is broken.
@@ -34,13 +36,13 @@ Crest can remember decisions for:
 - Automatic downloads
 - Opening external apps
 
-Open Site Controls on the affected page to inspect or reset the decision. Settings also provides the Space-level view of stored permissions.
+Open Site Controls on the affected page to inspect or reset the decision. The Space’s privacy settings, in the same place as content blocking, list its saved site permissions.
 
 Screen sharing asks through the system picker each time. You can block it for a site, but cannot preapprove a screen or window. Chromium on Mac currently shares a screen or window without browser-tab selection or shared audio.
 
 ## Notifications
 
-Allow the site in Crest and allow Crest in macOS notification settings to receive notifications. Document notifications belong to their open page. Chromium also supports local service-worker and extension notifications while Crest runs, including a service worker's notification after its tab closes. Private profiles do not deliver these background notifications. Locking a Space or revoking its site permission withdraws notifications it can no longer show.
+Allow the site in Crest and allow Crest in macOS notification settings to receive notifications. On Mac, **Settings → Privacy → System permissions** shows whether macOS allows it. Document notifications belong to their open page. Chromium also supports local service-worker and extension notifications while Crest runs, including a service worker's notification after its tab closes. Private profiles do not deliver these background notifications. Locking a Space or revoking its site permission withdraws notifications it can no longer show.
 
 Remote Web Push delivery is not available in this Google-free Chromium build. Local service-worker notifications do not mean that a site can receive server pushes or wake Crest after it quits.
 

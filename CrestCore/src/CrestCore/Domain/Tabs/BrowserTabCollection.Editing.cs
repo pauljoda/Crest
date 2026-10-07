@@ -40,9 +40,9 @@ public sealed partial class BrowserTabCollection {
     }
 
     public bool JoinSplitInPlace(Guid id, Guid targetId, int? memberIndex, Guid newGroup, DateTimeOffset now) {
-        if (id == targetId) throw new BrowserRuleException(BrowserRuleCodes.InvalidSplit);
+        if (id == targetId) throw new BrowserRuleException(BrowserRule.InvalidSplit);
         var tab = Tab(id); var target = Tab(targetId);
-        if (!target.Placement.HoldsSplits) throw new BrowserRuleException(BrowserRuleCodes.InvalidSplit);
+        if (!target.Placement.HoldsSplits) throw new BrowserRuleException(BrowserRule.InvalidSplit);
         var run = SplitMembers(targetId);
         var members = run.Where(t => t.Id != id).ToArray();
         if (members.Length >= MaximumSplitMembers) throw new Rejected(new SplitLimitReached(MaximumSplitMembers));
@@ -96,7 +96,7 @@ public sealed partial class BrowserTabCollection {
         var removing = requested.ToHashSet();
         var removed = tabs.Where(t => removing.Contains(t.Id)).ToArray();
         if (removed.Length != removing.Count || !deleting && removed.Any(t => t.Placement.IsDurable))
-            throw new BrowserRuleException(BrowserRuleCodes.UnknownCurrentTab);
+            throw new BrowserRuleException(BrowserRule.UnknownCurrentTab);
         var orderedFolders = new FolderTree(folders).PreserveOrder(removing, tabs);
         foreach (var tab in removed.Where(t => !t.Content.IsStartPage)) {
             var value = tab.State with { SplitGroupId = null };

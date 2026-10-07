@@ -47,7 +47,7 @@ enum BrowserSidebarReorderItem: Equatable, Sendable {
                 switch $0 {
                 case .folder(let id): return .folder(id)
                 case .tab(let id):
-                    if let member = members[id], let group = member.splitGroupID, member.placement != .pinned {
+                    if let member = members[id], let group = member.splitGroupID, member.placement.holdsSplits {
                         return .splitGroup(group)
                     }
                     return .tab(id)

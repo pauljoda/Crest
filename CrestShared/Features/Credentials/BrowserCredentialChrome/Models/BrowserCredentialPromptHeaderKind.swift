@@ -1,21 +1,39 @@
-import SwiftUI
+import Foundation
 
 /// Which fill prompt a header opens.
-enum BrowserCredentialPromptHeaderKind {
-    case strongPassword
-    case suggestions
+struct BrowserCredentialPromptHeaderKind: Hashable, Sendable {
+    // MARK: - Static Variables
 
-    var symbol: String {
-        switch self {
-        case .strongPassword: "key.horizontal.fill"
-        case .suggestions: "key.fill"
-        }
+    static let strongPassword = BrowserCredentialPromptHeaderKind(
+        name: "strongPassword", symbol: "key.horizontal.fill", title: { "Strong Password for \($0)" })
+    static let suggestions = BrowserCredentialPromptHeaderKind(
+        name: "suggestions", symbol: "key.fill", title: { "Passwords in \($0)" })
+
+    // MARK: - Variables
+
+    let name: String
+    let symbol: String
+
+    /// The header's title for the Space the prompt fills from.
+    let title: @Sendable (_ spaceName: String) -> LocalizedStringResource
+
+    // MARK: - Initializers
+
+    private init(
+        name: String, symbol: String, title: @escaping @Sendable (_ spaceName: String) -> LocalizedStringResource
+    ) {
+        self.name = name
+        self.symbol = symbol
+        self.title = title
     }
 
-    func title(spaceName: String) -> LocalizedStringKey {
-        switch self {
-        case .strongPassword: "Strong Password for \(spaceName)"
-        case .suggestions: "Passwords in \(spaceName)"
-        }
+    // MARK: - Actions - Identity
+
+    static func == (lhs: BrowserCredentialPromptHeaderKind, rhs: BrowserCredentialPromptHeaderKind) -> Bool {
+        lhs.name == rhs.name
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(name)
     }
 }

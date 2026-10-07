@@ -66,10 +66,10 @@ public sealed class DownloadLedger {
     /// terminal record never offers pause, and only a failed one may recover.
     public DownloadState? SetControls(Guid id, bool canPause, bool canResume) =>
         Update(id, item => item.CanPause != (canPause && item.Phase.IsTransferring)
-            || item.CanResume != (canResume && (item.Phase.IsTransferring || item.Phase == DownloadPhase.Failed)),
+            || item.CanResume != (canResume && item.Phase.AllowsResume),
             item => item with {
                 CanPause = canPause && item.Phase.IsTransferring,
-                CanResume = canResume && (item.Phase.IsTransferring || item.Phase == DownloadPhase.Failed)
+                CanResume = canResume && item.Phase.AllowsResume
             });
 
     /// The engine confirmed a requested recovery. Its next reading may start

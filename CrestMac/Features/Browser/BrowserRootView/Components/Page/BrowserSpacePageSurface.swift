@@ -14,6 +14,15 @@ struct BrowserSpacePageSurface: NSViewRepresentable {
         SpaceContentPagerView(frame: .zero)
     }
 
+    func sizeThatFits(
+        _ proposal: ProposedViewSize, nsView: SpaceContentPagerView<BrowserRootPageSurface>, context: Context
+    ) -> CGSize? {
+        // The shell determines the content area; retained pages fill it.
+        // Native fitting would walk every retained page's subtree, every
+        // Settings row among them, whenever a page's scroll geometry changes.
+        proposal.replacingUnspecifiedDimensions(by: .zero)
+    }
+
     func updateNSView(_ view: SpaceContentPagerView<BrowserRootPageSurface>, context: Context) {
         view.update(
             spaces: BrowserSidebarAccessPolicy.availableSpaces(in: model.browser),

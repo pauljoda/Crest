@@ -12,6 +12,7 @@ extension SystemTint {
         case .indigo: .indigo
         case .teal: .teal
         case .pink: .pink
+        case .green: .green
         }
     }
 }

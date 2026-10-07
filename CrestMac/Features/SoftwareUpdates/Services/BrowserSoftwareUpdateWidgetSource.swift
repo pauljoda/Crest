@@ -73,7 +73,7 @@ final class BrowserSoftwareUpdateWidgetSource:
         for snapshot: BrowserSoftwareUpdateWidgetSnapshot
     ) -> BrowserSidebarWidgetInstance {
         var actions: Set<BrowserSidebarWidgetAction> = []
-        switch snapshot.phase {
+        switch snapshot.phase.kind {
         case .permission:
             actions = [
                 .declineAutomaticUpdateChecks,
@@ -102,7 +102,7 @@ final class BrowserSoftwareUpdateWidgetSource:
             }
         case .upToDate, .installed:
             actions = [.acknowledgeUpdateStatus]
-        case .extracting, .unavailable:
+        case .idle, .extracting, .unavailable:
             break
         }
         return BrowserSidebarWidgetInstance(

@@ -50,10 +50,6 @@ struct BrowserRootDetailSurface<Content: View>: View {
         ) {
             content
         }
-        .simultaneousGesture(
-            TapGesture().onEnded {
-                handleWebContentInteraction()
-            }
-        )
+        .modifier(BrowserPlatformObservedTapModifier { handleWebContentInteraction() })
     }
 }

@@ -1,8 +1,11 @@
 import SwiftUI
 
-/// The native macOS form container for a shared settings pane.
+/// The native macOS grouped form for a shared settings pane: one centred
+/// column of rows, scrolled from the page's own edge.
 struct BrowserPlatformSettingsPaneContainer<Content: View>: View {
     @Environment(\.browserSettingsTabState) private var tabState
+    @Environment(\.browserSettingsScrollKey) private var scrollKey
+    @Environment(\.browserSettingsColumnWidth) private var columnWidth
     @State private var standaloneScroll = BrowserNativeScrollState()
     let destination: BrowserSettingsDestination
     @ViewBuilder let content: Content
@@ -16,13 +19,20 @@ struct BrowserPlatformSettingsPaneContainer<Content: View>: View {
     }
 
     var body: some View {
-        ScrollView {
-            BrowserSettingsSectionGrid(allowsColumns: ![.passwords, .about].contains(destination)) {
+        GeometryReader { geometry in
+            Form {
                 content
             }
-            .padding(24)
+            .formStyle(.grouped)
+            .scrollContentBackground(.hidden)
+            .contentMargins(
+                .horizontal,
+                BrowserSettingsVisualPolicy.formInset(
+                    for: geometry.size.width, columnWidth: columnWidth ?? BrowserSettingsVisualPolicy.formColumnWidth),
+                for: .scrollContent
+            )
+            .browserNativeScrollState(tabState?.scroll(forKey: scrollKey ?? destination.name) ?? standaloneScroll)
         }
-        .browserNativeScrollState(tabState?.scroll(for: destination) ?? standaloneScroll)
         .accessibilityIdentifier("settings-form-\(destination.name)")
     }
 }

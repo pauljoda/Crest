@@ -1,14 +1,9 @@
 import SwiftUI
 
-/// The desktop's Spaces pane: the Space list beside the editor for the one
-/// picked, and a route in from elsewhere in the app.
-///
-/// The chrome around a Space is what still differs between the shells — a
-/// toolbar with a section switcher here, a single scrolling pane on touch — so
-/// each keeps its own. The sections inside are
-/// ``BrowserSpaceSettingsSections``, and this shell asks it for the whole
-/// superset.
+/// The Spaces destination on the desktop, where each Space has its own page
+/// in the Settings sidebar: the destination opens the requested Space's page.
 struct BrowserPlatformSpaceSettingsPane: View {
+    @Environment(\.browserSettingsOpenSpace) private var openSpace
     let browser: BrowserStore
     let spaceAccess: BrowserSpaceAccessController
     let dataDeleter: any BrowserSpaceDataDeleting
@@ -16,12 +11,10 @@ struct BrowserPlatformSpaceSettingsPane: View {
     let requestRevision: Int
 
     var body: some View {
-        BrowserSpaceSettingsView(
-            browser: browser,
-            spaceAccess: spaceAccess,
-            dataDeleter: dataDeleter,
-            requestedSpaceID: requestedSpaceID,
-            requestRevision: requestRevision
-        )
+        Color.clear
+            .onAppear {
+                guard let id = requestedSpaceID ?? browser.shownSpace?.id else { return }
+                openSpace?(id)
+            }
     }
 }

@@ -24,10 +24,10 @@ enum BrowserSidebarReorderSection: Hashable, Sendable {
         }
     }
 
-    /// Pinned tabs lay out as a grid, so ordering compares on both axes.
+    /// A section of tabs that lays out as a grid orders on both axes.
     var usesGridOrdering: Bool {
         switch self {
-        case .tabs(let placement, _): placement == .pinned
+        case .tabs(let placement, _): placement.isGrid
         case .folders: false
         }
     }

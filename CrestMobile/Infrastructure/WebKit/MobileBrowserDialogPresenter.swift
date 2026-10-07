@@ -320,7 +320,7 @@ enum MobileBrowserDialogPresenter {
         temporaryDirectoryURL: URL?,
         to destination: MobileBrowserFileExportDestination
     ) {
-        switch destination {
+        switch destination.kind {
         case .share:
             let controller = MobileBrowserExportActivityController(
                 fileURL: fileURL,
@@ -349,17 +349,15 @@ enum MobileBrowserDialogPresenter {
         }
     }
 
+    /// The page's server as a dialog names it, which the core formats: its
+    /// host, with the port only when it is not the scheme's default.
     private static func sourceLabel(for request: URLRequest) -> String {
         guard let url = request.url, let host = url.host(), !host.isEmpty else {
             return ProductIdentity.name
         }
-        guard let port = url.port,
-            !((url.scheme?.lowercased() == "https" && port == 443)
-                || (url.scheme?.lowercased() == "http" && port == 80))
-        else {
-            return host
-        }
-        return "\(host):\(port)"
+        guard let port = url.port else { return host }
+        return BrowserCorePolicy.authenticationSourceLabel(
+            host: host, port: port, scheme: url.scheme, emptyHostLabel: ProductIdentity.name)
     }
 
     private static func topViewController() -> UIViewController? {

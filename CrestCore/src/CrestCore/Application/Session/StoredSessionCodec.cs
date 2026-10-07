@@ -40,8 +40,6 @@ internal static partial class StoredSessionCodec {
         public const string BrowsingPreferences = "browsingPreferences";
         public const string Charge = "charge";
         public const string ChargeLayout = "chargeLayout";
-        public const string ChargeOffset = "chargeOffset";
-        public const string ChargeScale = "chargeScale";
         public const string ChargeWeight = "chargeWeight";
         public const string ChecksSpelling = "checksSpelling";
         public const string CollapseModifiedAt = "collapseModifiedAt";
@@ -59,10 +57,8 @@ internal static partial class StoredSessionCodec {
         public const string DeletionOrigin = "deletionOrigin";
         public const string Depth = "depth";
         public const string DisposableSeedMarker = "disposableSeedMarker";
-        public const string DivisionCount = "divisionCount";
         public const string Downloads = "downloads";
         public const string EdgeColorIndex = "edgeColorIndex";
-        public const string EdgeWidth = "edgeWidth";
         public const string FaviconUrl = "faviconURL";
         public const string FieldDivision = "fieldDivision";
         public const string Finish = "finish";
@@ -97,11 +93,9 @@ internal static partial class StoredSessionCodec {
         public const string OrderAnchorTabId = "orderAnchorTabID";
         public const string Ordinary = "ordinary";
         public const string OrdinaryColorIndex = "ordinaryColorIndex";
-        public const string OrdinaryWidth = "ordinaryWidth";
         public const string Palette = "palette";
         public const string ParentId = "parentID";
         public const string Placement = "placement";
-        public const string PlateScale = "plateScale";
         public const string PositionModifiedAt = "positionModifiedAt";
         public const string Profile = "profile";
         public const string ProfileId = "profileID";
@@ -115,12 +109,10 @@ internal static partial class StoredSessionCodec {
         public const string SavedTabFaviconReturnsToSavedUrl = "savedTabFaviconReturnsToSavedURL";
         public const string SavedTabsExpansionModifiedAt = "savedTabsExpansionModifiedAt";
         public const string SavedUrl = "savedURL";
-        public const string SealTeeth = "sealTeeth";
         public const string SearchSuggestionsEnabled = "searchSuggestionsEnabled";
         public const string SearchUrlTemplate = "searchURLTemplate";
         public const string SecondaryFieldColorIndex = "secondaryFieldColorIndex";
         public const string SelectedSearchProviderId = "selectedSearchProviderID";
-        public const string SheenAngle = "sheenAngle";
         public const string ShowsOutline = "showsOutline";
         public const string ShowsTexture = "showsTexture";
         public const string Sources = "sources";
@@ -151,8 +143,6 @@ internal static partial class StoredSessionCodec {
         public const string TranslationRules = "translationRules";
         public const string Trim = "trim";
         public const string TrimColorIndex = "trimColorIndex";
-        public const string TrimDetail = "trimDetail";
-        public const string TrimWeight = "trimWeight";
         public const string Url = "url";
         public const string Value = "value";
         public const string VisitCount = "visitCount";
@@ -186,7 +176,7 @@ internal static partial class StoredSessionCodec {
     /// session authority refuses a Space, profile or tab that has one.
     internal static Guid Identity(JsonNode? node) {
         if (node is JsonObject wrapped) node = wrapped[Key.RawValue];
-        return Guid.TryParse(Text(node), out var id) ? id : throw new BrowserRuleException(BrowserRuleCodes.InvalidSavedIdentity);
+        return Guid.TryParse(Text(node), out var id) ? id : throw new BrowserRuleException(BrowserRule.InvalidSavedIdentity);
     }
 
     internal static Guid? OptionalIdentity(JsonNode? node) => node is null ? null : Identity(node);
@@ -206,7 +196,7 @@ internal static partial class StoredSessionCodec {
     /// A date outside years 1 through 9999, such as Swift's `distantPast`, reads
     /// as the nearest one a `DateTimeOffset` holds.
     internal static DateTimeOffset Date(double seconds) {
-        if (!double.IsFinite(seconds)) throw new BrowserRuleException(BrowserRuleCodes.InvalidSavedDate);
+        if (!double.IsFinite(seconds)) throw new BrowserRuleException(BrowserRule.InvalidSavedDate);
         if (seconds <= Seconds(DateTimeOffset.MinValue)) return DateTimeOffset.MinValue;
         if (seconds >= Seconds(DateTimeOffset.MaxValue)) return DateTimeOffset.MaxValue;
         double whole = Math.Floor(seconds);
@@ -235,10 +225,10 @@ internal static partial class StoredSessionCodec {
     #region Actions - Values
 
     private static JsonObject Object(JsonNode? node) =>
-        node as JsonObject ?? throw new BrowserRuleException(BrowserRuleCodes.InvalidSavedState);
+        node as JsonObject ?? throw new BrowserRuleException(BrowserRule.InvalidSavedState);
 
     private static JsonArray Items(JsonNode? node) =>
-        node is null ? [] : node as JsonArray ?? throw new BrowserRuleException(BrowserRuleCodes.InvalidSavedState);
+        node is null ? [] : node as JsonArray ?? throw new BrowserRuleException(BrowserRule.InvalidSavedState);
 
     internal static string? Text(JsonNode? node) => node is null ? null : node.GetValue<string>();
 
@@ -260,7 +250,7 @@ internal static partial class StoredSessionCodec {
             if (value.TryGetValue(out int small)) return small;
             if (value.TryGetValue(out decimal exact)) return (double)exact;
         }
-        throw new BrowserRuleException(BrowserRuleCodes.InvalidSavedState);
+        throw new BrowserRuleException(BrowserRule.InvalidSavedState);
     }
 
     private static double? OptionalNumber(JsonNode? node) => node is null ? null : Number(node);
@@ -269,7 +259,7 @@ internal static partial class StoredSessionCodec {
         if (node is null) return null;
         double number = Number(node);
         return number == Math.Floor(number) && number is >= int.MinValue and <= int.MaxValue
-            ? (int)number : throw new BrowserRuleException(BrowserRuleCodes.InvalidSavedState);
+            ? (int)number : throw new BrowserRuleException(BrowserRule.InvalidSavedState);
     }
 
     private static void Put(JsonObject value, string key, string? member) {

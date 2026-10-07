@@ -12,7 +12,7 @@ struct BrowserLinkRoutingSection: View {
     var body: some View {
         Section {
             if routes.isEmpty {
-                Text("No routes yet. Add a URL rule to open matching links in a specific Space.")
+                Text("No routes yet.")
                     .foregroundStyle(.secondary)
             } else {
                 ForEach(Array(routes.enumerated()), id: \.element.id) { index, route in
@@ -34,10 +34,9 @@ struct BrowserLinkRoutingSection: View {
             }
             .buttonStyle(.bordered)
         } header: {
-            CrestSettingsSectionHeading(title: "Routing", systemImage: "arrow.triangle.branch")
+            Text("Routing")
         } footer: {
-            Text("The first matching route wins. Other links use your default destination.")
+            CrestFormFootnote("The first matching route wins.")
         }
-        .containerValue(\.settingsFullWidth, true)
     }
 }

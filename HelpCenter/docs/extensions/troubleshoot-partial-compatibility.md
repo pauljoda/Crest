@@ -14,7 +14,7 @@ Extensions run on Chromium, so most behave as they do in Chrome. When one doesn'
 ## Try these first
 
 1. Check that you are in the Space where you installed it. Each Space has its own installations. See [Spaces and profile isolation](../spaces/spaces-and-isolation.md).
-2. In **Crest Settings → Extensions**, choose the Space, then turn the extension off and back on.
+2. In **Crest Settings**, select the Space in the sidebar, then **Extensions**. Turn the extension off and back on.
 3. Expand its row, select **Manage Permissions in Chromium**, and check whether its site access covers the page you are on.
 4. Open **Extension Settings** if the extension has them, and check its own options.
 5. Remove the extension and install it again from the Chrome Web Store.

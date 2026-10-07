@@ -7,7 +7,7 @@ public static class BorrowedProfilePolicy {
     public static void RequireSource(Guid expectedSpace, Guid expectedProfile,
         Guid sourceSpace, Guid sourceProfile, bool available) {
         if (!available || expectedSpace != sourceSpace || expectedProfile != sourceProfile)
-            throw new BrowserRuleException(BrowserRuleCodes.ProfileLeaseRevoked);
+            throw new BrowserRuleException(BrowserRule.ProfileLeaseRevoked);
     }
 
     #endregion

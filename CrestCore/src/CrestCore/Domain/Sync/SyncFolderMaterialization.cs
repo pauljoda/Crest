@@ -24,7 +24,7 @@ public static class SyncFolderMaterialization {
         IReadOnlyDictionary<Guid, Guid> owners, IReadOnlyDictionary<Guid, FolderState> local,
         HashSet<Guid> deleted) {
         if (ordered.Count > FolderTree.MaximumCount || ordered.Select(f => f.Id).Distinct().Count() != ordered.Count)
-            throw new BrowserRuleException(BrowserRuleCodes.InvalidFolderTree);
+            throw new BrowserRuleException(BrowserRule.InvalidFolderTree);
         var active = ordered.Select(f => f.Id).ToHashSet();
         List<FolderState> roots = [];
         Dictionary<Guid, List<FolderState>> children = [];
@@ -32,9 +32,9 @@ public static class SyncFolderMaterialization {
         foreach (var source in ordered) {
             var folder = source;
             if (folder.ParentId is { } parent) {
-                if (parent == folder.Id) throw new BrowserRuleException(BrowserRuleCodes.InvalidFolderTree);
+                if (parent == folder.Id) throw new BrowserRuleException(BrowserRule.InvalidFolderTree);
                 if (!active.Contains(parent)) {
-                    if (owners.TryGetValue(parent, out var owner) && owner != space) throw new BrowserRuleException(BrowserRuleCodes.InvalidFolderTree);
+                    if (owners.TryGetValue(parent, out var owner) && owner != space) throw new BrowserRuleException(BrowserRule.InvalidFolderTree);
                     if (!TryPromote(parent, active, local, deleted, out var promoted)) { waiting.Add(folder.Id); continue; }
                     folder = folder with { ParentId = promoted };
                 }
@@ -47,7 +47,7 @@ public static class SyncFolderMaterialization {
         HashSet<Guid> visited = [];
         List<FolderState> result = [];
         void Append(FolderState folder, int depth) {
-            if (depth >= FolderTree.MaximumDepth || !visited.Add(folder.Id)) throw new BrowserRuleException(BrowserRuleCodes.InvalidFolderTree);
+            if (depth >= FolderTree.MaximumDepth || !visited.Add(folder.Id)) throw new BrowserRuleException(BrowserRule.InvalidFolderTree);
             result.Add(folder);
             foreach (var child in children.GetValueOrDefault(folder.Id) ?? []) Append(child, depth + 1);
         }
@@ -55,7 +55,7 @@ public static class SyncFolderMaterialization {
         Stack<Guid> pending = new(waiting);
         while (pending.TryPop(out var next))
             foreach (var child in children.GetValueOrDefault(next) ?? []) if (waiting.Add(child.Id)) pending.Push(child.Id);
-        if (visited.Count + waiting.Count != ordered.Count) throw new BrowserRuleException(BrowserRuleCodes.InvalidFolderTree);
+        if (visited.Count + waiting.Count != ordered.Count) throw new BrowserRuleException(BrowserRule.InvalidFolderTree);
         new FolderTree(result).Validate();
         return result;
     }

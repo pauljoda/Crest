@@ -148,7 +148,7 @@ struct BrowserLookAndFeelSidebarCrop: View {
     private var edge: HorizontalEdge { appearance.sidebarEdge(in: layoutDirection) }
 
     private var branding: SpaceBranding {
-        space?.branding ?? BrowserSpaceHousePalette.winter.look
+        space?.branding ?? SpaceHouse.winter.look
     }
 
     private var stateDescription: String {

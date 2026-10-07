@@ -598,7 +598,7 @@ final class MobileBrowserPageStore:
         if loadsInitialURL, let url = tab.url,
             archivedState.map({ !page.restoreInteractionState($0, expecting: url) }) ?? true
         {
-            page.corePage.navigate(to: url.absoluteString)
+            page.corePage.load(url)
         }
         return page
     }

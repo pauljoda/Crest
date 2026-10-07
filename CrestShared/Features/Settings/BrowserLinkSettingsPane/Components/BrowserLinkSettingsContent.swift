@@ -20,7 +20,8 @@ struct BrowserLinkSettingsContent: View {
 
         BrowserPeekSettingsSection(
             automaticallyOpensPeek: automaticPeekBinding,
-            clickModifier: peekClickModifierBinding
+            clickModifier: peekClickModifierBinding,
+            dragsLinksToPeek: dragsLinksToPeekBinding
         )
 
         if lockedRouteDestinationSpaces.isEmpty {
@@ -34,18 +35,18 @@ struct BrowserLinkSettingsContent: View {
                 add: links.addRoute
             )
         } else {
-            Section("Routing", systemImage: "arrow.triangle.branch") {
-                Text("Unlock the private Spaces below before viewing or changing URL route patterns that target them.")
-                    .crestFormFootnote()
-
+            Section {
                 ForEach(lockedRouteDestinationSpaces) { space in
                     BrowserSettingsPrivateSpaceAccessRow(
                         space: space,
                         accessController: spaceAccess
                     )
                 }
+            } header: {
+                Text("Routing")
+            } footer: {
+                CrestFormFootnote("Unlock these Spaces to see the routes that open in them.")
             }
-            .containerValue(\.settingsFullWidth, true)
             .accessibilityIdentifier("settings-private-link-routes")
         }
     }
@@ -104,6 +105,15 @@ struct BrowserLinkSettingsContent: View {
 
     private var automaticPeekBinding: Binding<Bool> {
         links.binding(.opensPeekAutomatically, reading: \.opensPeekAutomatically)
+    }
+
+    /// Link dragging is a pointer gesture, so only the Mac offers it.
+    private var dragsLinksToPeekBinding: Binding<Bool>? {
+        #if os(macOS)
+            links.binding(.dragsLinksToPeek, reading: \.dragsLinksToPeek)
+        #else
+            nil
+        #endif
     }
 
     private var peekClickModifierBinding: Binding<LinkPeekModifier> {

@@ -58,7 +58,7 @@ final class BrowserTransientPageLease {
         self.userActivity = userActivity
         self.onDownloadOnlyNavigation = onDownloadOnlyNavigation
         page.monitorUserActivity(userActivity)
-        if loadsURL { page.corePage.navigate(to: url.absoluteString) }
+        if loadsURL { page.corePage.load(url) }
     }
 
     func setActive(_ isActive: Bool) {
@@ -72,7 +72,7 @@ final class BrowserTransientPageLease {
             balancedRuleLists: balancedContentRuleLists
         )
         page.monitorUserActivity(userActivity)
-        page.corePage.navigate(to: reloadURL.absoluteString)
+        page.corePage.load(reloadURL)
         self.page = page
         pageID = page.corePage.id
         wasReleasedForMemoryPressure = false

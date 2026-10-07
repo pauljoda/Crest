@@ -24,7 +24,7 @@ A one-card placeholder lets you add the next tab without losing the first page.
 
 Click or tap a card. On a keyboard, use **Control-Command-Left** and **Control-Command-Right**. The address, Back and Forward, Reload, Find, Reader, page tools, Peek, and extension popups follow the focused card.
 
-On Mac, **Focus Follows Mouse in Split View** can make pointer movement choose the active card automatically.
+On Mac, turn on **Focus follows pointer** in **Settings → Tabs** to make pointer movement choose the active card automatically.
 
 ## Resize and reorder
 

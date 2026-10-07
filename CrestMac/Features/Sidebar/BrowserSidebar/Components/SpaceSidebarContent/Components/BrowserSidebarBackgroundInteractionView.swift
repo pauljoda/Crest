@@ -14,10 +14,11 @@ struct BrowserSidebarBackgroundInteractionView: View {
             .allowsWindowActivationEvents()
             .contextMenu {
                 ForEach(
-                    BrowserSidebarBackgroundInteractionPolicy.actions.filter { $0 != .newSpace || createSpace != nil },
-                    id: \.self
+                    BrowserSidebarBackgroundInteractionPolicy.actions.filter {
+                        !$0.requiresSpaceCreation || createSpace != nil
+                    }
                 ) { action in
-                    Button(action.title, systemImage: action.systemImage) {
+                    Button(action.title, systemImage: action.symbol) {
                         perform(action)
                     }
                 }
@@ -28,7 +29,7 @@ struct BrowserSidebarBackgroundInteractionView: View {
     }
 
     private func perform(_ action: BrowserSidebarBackgroundAction) {
-        switch action {
+        switch action.kind {
         case .editSpace:
             editSpace()
         case .newSpace:

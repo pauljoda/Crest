@@ -38,8 +38,6 @@ final class BrowserSpaceDownloadSettingsModel {
             directoryName: directoryName,
             usesCustomDirectory: usesCustomDirectory,
             errorMessage: errorMessage,
-            explanation:
-                "This location belongs only to \(space.settings.name) on this Mac. Opening a finished download opens the file directly; its menu also includes Show in Finder.",
             chooseDirectory: { [self] in chooseDirectory(for: space) },
             resetDirectory: { [self] in resetDirectory(for: space.id) }
         )

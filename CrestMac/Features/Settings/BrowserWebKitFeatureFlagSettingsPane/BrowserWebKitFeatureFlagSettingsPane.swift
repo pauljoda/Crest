@@ -44,15 +44,9 @@ struct BrowserWebKitFeatureFlagSettingsPane: View {
         VStack(alignment: .leading, spacing: CrestSpacing.medium) {
             BrowserWebKitPerformanceSettings(store: store)
 
-            Text(
-                "Crest reads this catalog from the WebKit framework installed on this Mac. Feature availability and defaults may change when macOS updates."
-            )
-            .font(.footnote)
-            .foregroundStyle(.secondary)
-
             if store.requiresRestart {
                 Label(
-                    "Restart Crest to apply these changes reliably to every page.",
+                    "Restart Crest to apply these changes.",
                     systemImage: "arrow.clockwise.circle.fill"
                 )
                 .font(.footnote)
@@ -78,8 +72,10 @@ struct BrowserWebKitFeatureFlagSettingsPane: View {
                 .font(.footnote)
                 .foregroundStyle(.secondary)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .padding(24)
+        .frame(maxWidth: BrowserSettingsVisualPolicy.formColumnWidth, maxHeight: .infinity, alignment: .topLeading)
+        .padding(.vertical, 20)
+        .padding(.horizontal, BrowserSettingsVisualPolicy.formMinimumInset)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     }
 
     private var groups: [BrowserWebKitFeatureFlagGroup] {
@@ -102,19 +98,14 @@ private struct BrowserWebKitPerformanceSettings: View {
                 inactiveSchedulingPolicyPicker
 
                 if store.canConfigureAllow120FPS {
-                    performanceToggle(
-                        "Allow 120 FPS",
-                        description:
-                            "Let page animations use higher refresh rates on supported displays. May reduce scrolling smoothness.",
-                        isOn: $store.allows120FPS,
-                        identifier: "webkit-performance-allow-120-fps"
-                    )
+                    Toggle("Allow 120 FPS", isOn: $store.allows120FPS)
+                        .accessibilityIdentifier("webkit-performance-allow-120-fps")
                 }
             }
             .padding(CrestSpacing.extraSmall)
             .frame(maxWidth: .infinity, alignment: .leading)
         } label: {
-            Label("Performance", systemImage: "gauge.with.dots.needle.67percent")
+            Text("Performance")
         }
         .accessibilityIdentifier("webkit-performance-settings")
     }
@@ -136,25 +127,7 @@ private struct BrowserWebKitPerformanceSettings: View {
                 "webkit-performance-background-tab-activity"
             )
 
-            Text(
-                "Suspend pauses inactive tabs. Throttle lets them continue limited work, which may improve responsiveness while using more resources. Changes apply to new tabs; restart Crest to apply to all open tabs."
-            )
-            .font(.caption)
-            .foregroundStyle(.secondary)
-            .fixedSize(horizontal: false, vertical: true)
-        }
-    }
-
-    private func performanceToggle(
-        _ title: LocalizedStringKey,
-        description: LocalizedStringKey,
-        isOn: Binding<Bool>,
-        identifier: String
-    ) -> some View {
-        VStack(alignment: .leading, spacing: CrestSpacing.extraSmall) {
-            Toggle(title, isOn: isOn)
-                .accessibilityIdentifier(identifier)
-            Text(description)
+            Text("Throttle keeps background tabs working and uses more power. Applies to new tabs.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)

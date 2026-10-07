@@ -26,10 +26,10 @@ struct BrowserSpaceBrowsingSection: View {
     }
 
     var body: some View {
-        Section("Browsing", systemImage: "globe") {
+        Section {
             searchProviderPicker
 
-            Button("Manage Search Engines…", systemImage: "magnifyingglass") {
+            Button("Manage Search Engines…") {
                 requestSearchEngineManagement()
             }
             .accessibilityIdentifier("manage-search-providers")
@@ -43,24 +43,17 @@ struct BrowserSpaceBrowsingSection: View {
             )
             .accessibilityIdentifier("space-search-suggestions")
 
-            Text(
-                "When enabled, typed searches are sent to this Space’s search engine after a short delay. Crest never requests suggestions in Private Browsing."
-            )
-            .font(.footnote)
-            .foregroundStyle(.secondary)
-
             cleanupPolicyPicker
 
-            Button("Clean Up Eligible Tabs Now", systemImage: "archivebox") {
+            Button("Archive Now") {
                 browser.cleanupCurrentTabs(in: space.id)
             }
             .disabled(currentPreferences.currentTabCleanup == .never)
 
-            Text(
-                "This policy applies only to \(space.settings.name). Eligible tabs remain recoverable from Archive."
-            )
-            .font(.footnote)
-            .foregroundStyle(.secondary)
+        } header: {
+            Text("Browsing")
+        } footer: {
+            CrestFormFootnote("Search suggestions send what you type to the search engine.")
         }
         .sheet(item: $presentedSearchEngineSheet) { _ in
             BrowserSearchEngineManager(

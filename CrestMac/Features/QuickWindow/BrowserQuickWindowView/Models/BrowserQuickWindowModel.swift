@@ -178,7 +178,7 @@ final class BrowserQuickWindowModel {
             )
         else { return }
         if let page {
-            page.corePage.navigate(to: url.absoluteString)
+            page.corePage.load(url)
             return
         }
         guard let pages, let leaseSpace else { return }

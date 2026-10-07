@@ -11,13 +11,10 @@ public static class PasskeyAccessPolicy {
     /// The managed capability comes first, then device setup, then consent.
     public static PasskeyAccessStatus Status(bool hasManagedCapability, PasskeyDeviceConfiguration deviceConfiguration,
         PasskeyAuthorizationState authorizationState) {
+        ArgumentNullException.ThrowIfNull(authorizationState);
         if (!hasManagedCapability) return PasskeyAccessStatus.ManagedCapabilityRequired;
         if (deviceConfiguration == PasskeyDeviceConfiguration.NotConfigured) return PasskeyAccessStatus.DeviceNotConfigured;
-        return authorizationState switch {
-            PasskeyAuthorizationState.Authorized => PasskeyAccessStatus.Authorized,
-            PasskeyAuthorizationState.Denied => PasskeyAccessStatus.Denied,
-            _ => PasskeyAccessStatus.NotDetermined
-        };
+        return authorizationState.AccessStatus;
     }
 
     #endregion

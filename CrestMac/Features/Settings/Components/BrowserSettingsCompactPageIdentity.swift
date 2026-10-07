@@ -1,35 +1,36 @@
 import SwiftUI
 
-/// A pane's identity as one bar-height row: the brand tile and the display
-/// serif title, the way the Spaces pane names itself above its toolbar.
-///
-/// Used where the page has something better to spend its height on than a
-/// centred header — a live preview pinned beside the form.
+/// A page's name in one bar-height row, the way a settings window names the
+/// pane it shows, with the way back for a sub-page.
 struct BrowserSettingsCompactPageIdentity: View {
     let destination: BrowserSettingsDestination
+    var back: BrowserSettingsPageBack? = nil
 
     var body: some View {
-        HStack(spacing: CrestSpacing.small) {
-            CrestIconTile(
-                systemImage: destination.symbol,
-                color: destination.color,
-                size: 30,
-                symbolSize: 13,
-                cornerRadius: CrestRadius.control
-            )
-            .accessibilityHidden(true)
-
+        HStack(spacing: 6) {
+            if let back {
+                Button(action: back.action) {
+                    Label {
+                        Text(back.title)
+                    } icon: {
+                        Image(systemName: "chevron.left")
+                    }
+                }
+                .buttonStyle(.borderless)
+                .labelStyle(.iconOnly)
+                .help(Text(back.title))
+                .accessibilityLabel(Text("Back to \(String(localized: back.title))"))
+                .accessibilityIdentifier("settings-page-back")
+            }
             Text(destination.title)
-                .font(CrestTypography.displaySection)
-                .foregroundStyle(CrestBrandTheme.textDisplay)
-
-            Spacer(minLength: 0)
+                .font(.title3.weight(.semibold))
+                .accessibilityAddTraits(.isHeader)
         }
-        .padding(.horizontal, CrestSpacing.medium)
-        .frame(minHeight: 54, alignment: .leading)
+        .frame(maxWidth: .infinity, minHeight: 52, alignment: .leading)
+        .padding(.horizontal, CrestSpacing.large)
         .background(BrowserSettingsCanvas.background)
         .overlay(alignment: .bottom) { Divider() }
-        .accessibilityElement(children: .combine)
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("settings-page-header")
     }
 }

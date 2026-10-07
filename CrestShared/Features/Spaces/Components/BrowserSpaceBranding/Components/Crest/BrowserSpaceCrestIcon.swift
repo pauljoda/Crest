@@ -97,7 +97,7 @@ struct BrowserSpaceCrestDepthModifier: ViewModifier {
     let size: CGFloat
 
     func body(content: Content) -> some View {
-        switch depth {
+        switch depth.kind {
         case .none:
             content
         case .soft:

@@ -173,12 +173,6 @@ internal sealed class EngineDownloads(Downloads downloads, Device device, Pages 
         }
     }
 
-    /// Whether the engine's `warning` is a fact the core's `reasons` already
-    /// named: a file whose type runs code.
-    internal static bool Covers(IReadOnlyList<DownloadRiskReason> reasons, EngineDownloadWarning warning) =>
-        warning == EngineDownloadWarning.DangerousFile
-        && reasons.Any(reason => reason == DownloadRiskReason.ExecutableOrInstaller || reason == DownloadRiskReason.DangerousTypeMismatch);
-
     /// The downloads' prompt `promptId` names. Refused with `UnknownPrompt`
     /// when no such prompt waits.
     internal Waiting Prompt(Guid promptId) =>
@@ -231,19 +225,10 @@ internal sealed class EngineDownloads(Downloads downloads, Device device, Pages 
 
     /// Why a download the engine stopped failed: the warning it was blocked
     /// for, else what interrupted it.
-    internal static DownloadFailure FailureOf(EngineDownload reported) => reported.Warning switch {
-        EngineDownloadWarning.InsecureBlocked or EngineDownloadWarning.InsecureConnection => DownloadFailure.BlockedInsecure,
-        EngineDownloadWarning.PolicyBlocked => DownloadFailure.BlockedByPolicy,
-        EngineDownloadWarning.DangerousFile or EngineDownloadWarning.UncommonContent or EngineDownloadWarning.PotentiallyUnwanted =>
-            DownloadFailure.BlockedUnsafe,
-        _ => reported.Interruption switch {
-            EngineDownloadInterruption.Network => DownloadFailure.Network,
-            EngineDownloadInterruption.Server => DownloadFailure.Server,
-            EngineDownloadInterruption.NoSpace => DownloadFailure.NoSpace,
-            EngineDownloadInterruption.FileAccess => DownloadFailure.FileAccess,
-            _ => DownloadFailure.Interrupted
-        }
-    };
+    internal static DownloadFailure FailureOf(EngineDownload reported) =>
+        reported.Warning is { } warning ? DownloadWarning.Of(warning).Failure
+        : reported.Interruption is { } interruption ? EngineDownloadStop.Of(interruption).Failure
+        : DownloadFailure.Interrupted;
 
     #endregion
 }

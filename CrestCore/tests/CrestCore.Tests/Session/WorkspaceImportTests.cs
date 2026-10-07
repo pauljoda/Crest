@@ -211,7 +211,7 @@ public sealed partial class BrowserContractsTests {
         var trips = current.Spaces[1];
         Assert.Equal(("Trips", "airplane"), (trips.Settings.Name, trips.Settings.Symbol));
         var pinnedTrip = Assert.Single(trips.Tabs);
-        Assert.Equal((TabId(moved), TabPlacement.Pinned, WorkspaceImportPolicy.PinnedTabSymbol, "https://moved.example/"),
+        Assert.Equal((TabId(moved), TabPlacement.Pinned, TabPlacement.Pinned.ImportedSymbol, "https://moved.example/"),
             (pinnedTrip.Id, pinnedTrip.Placement, pinnedTrip.Symbol, pinnedTrip.SavedUrl));
         Assert.Contains(new ImportedTab(TabId(moved), 1, TabId(moved)), changes.OfType<TabsImported>().Single().Tabs);
         Assert.Equal(reading.Id, device.Space(window));

@@ -27,7 +27,7 @@ struct CrestSpaceIconPicker<Space: BrowserSpaceIdentifying, SegmentContent: View
                 HStack(spacing: 0) {
                     reorderableButton(space)
 
-                    if style == .compact && space.id != spaces.last?.id {
+                    if style.showsDividers && space.id != spaces.last?.id {
                         Divider()
                             .frame(height: CrestSpaceIconPickerMetrics.dividerHeight)
                     }
@@ -52,12 +52,12 @@ struct CrestSpaceIconPicker<Space: BrowserSpaceIdentifying, SegmentContent: View
         }
         .background {
             CrestSpaceIconPickerShape(style: style)
-                .fill(.primary.opacity(style == .touch ? 0.08 : CrestSpaceIconPickerMetrics.trackFillOpacity))
+                .fill(.primary.opacity(style.trackFillOpacity))
         }
         .overlay {
             CrestSpaceIconPickerShape(style: style)
                 .strokeBorder(
-                    .primary.opacity(style == .touch ? 0 : CrestSpaceIconPickerMetrics.trackBorderOpacity),
+                    .primary.opacity(style.trackBorderOpacity),
                     lineWidth: CrestLayout.hairline / 2
                 )
         }
@@ -155,14 +155,10 @@ struct CrestSpaceIconPicker<Space: BrowserSpaceIdentifying, SegmentContent: View
                 .background {
                     if isSelected && selectionPresentation == nil {
                         CrestSpaceIconPickerShape(style: style)
-                            .fill(
-                                style == .touch
-                                    ? Color.primary.opacity(0.22)
-                                    : tint.opacity(CrestSpaceIconPickerMetrics.selectionFillOpacity)
-                            )
+                            .fill((style.tintsSelection ? tint : Color.primary).opacity(style.selectionFillOpacity))
                             .overlay {
                                 CrestSpaceIconPickerShape(style: style)
-                                    .strokeBorder(style == .touch ? .clear : tint, lineWidth: CrestLayout.hairline)
+                                    .strokeBorder(style.tintsSelection ? tint : .clear, lineWidth: CrestLayout.hairline)
                             }
                     }
                 }

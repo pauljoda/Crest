@@ -36,7 +36,7 @@ Open **Settings → Advanced**. The **Import & Export** section can import a Cre
 
 Choose **Export Browser Data…** in **Settings → Advanced**. A Crest archive includes Spaces, folders, saved and current tabs, Archive, history, and browsing preferences.
 
-For safety, the portable archive does not contain passwords, cookies, website storage, site permissions, downloaded files, favicons, or extensions. Password export is a separate, device-authenticated plaintext operation in **Settings → Passwords**; treat that file as sensitive.
+For safety, the portable archive does not contain passwords, cookies, website storage, site permissions, downloaded files, favicons, or extensions. Password export is a separate, device-authenticated plaintext operation: select a Space in the Settings sidebar, then choose **Passwords → Export Passwords…**. Treat that file as sensitive.
 
 ## After import
 

@@ -64,7 +64,7 @@ public sealed class NativeSyncAuthority {
     internal void Commit(NativeSyncTransaction value) {
         lock (NativeSessionAuthority.Gate) {
             RequirePending(value);
-            if (!value.IsSealed) throw new BrowserRuleException(BrowserRuleCodes.SyncTransactionNotSealed);
+            if (!value.IsSealed) throw new BrowserRuleException(BrowserRule.SyncTransactionNotSealed);
             journal = value.Journal;
             pending = null;
             Monitor.PulseAll(NativeSessionAuthority.Gate);
@@ -81,7 +81,7 @@ public sealed class NativeSyncAuthority {
     }
 
     private void RequirePending(NativeSyncTransaction value) {
-        if (!ReferenceEquals(pending, value)) throw new BrowserRuleException(BrowserRuleCodes.InvalidSyncTransaction);
+        if (!ReferenceEquals(pending, value)) throw new BrowserRuleException(BrowserRule.InvalidSyncTransaction);
     }
 
     #endregion
@@ -172,8 +172,7 @@ public sealed class NativeSyncAuthority {
     /// Why a stage failed, for the transport and the person.
     private static SyncStagingFailure Failure(Exception error) => error switch {
         StorageException => SyncStagingFailure.NotSaved,
-        BrowserRuleException { Code: BrowserRuleCodes.SyncRecordLimit or BrowserRuleCodes.SyncSizeLimit } => SyncStagingFailure.TooLarge,
-        BrowserRuleException { Code: BrowserRuleCodes.SyncClockExhausted } => SyncStagingFailure.ClockExhausted,
+        BrowserRuleException { Rule.StagingFailure: { } failure } => failure,
         _ => SyncStagingFailure.InvalidSession
     };
 

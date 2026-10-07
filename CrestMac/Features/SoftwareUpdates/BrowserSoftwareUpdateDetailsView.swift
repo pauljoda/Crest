@@ -16,9 +16,7 @@ struct BrowserSoftwareUpdateDetailsView: View {
 
             if let progress = model.progress {
                 BrowserSoftwareUpdateProgress(progress: progress)
-            } else if model.phase == .checking || model.phase == .extracting
-                || model.phase == .installing
-            {
+            } else if model.phase.windowShowsActivity {
                 ProgressView()
                     .progressViewStyle(.linear)
                     .accessibilityLabel("Software update progress")

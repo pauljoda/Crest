@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// The window's frame: how much of the Space shows around a page, and which
-/// side the sidebar sits on.
+/// The window's frame: how much of the Space shows around a page, which side
+/// the sidebar sits on, and the accent its tabs and address field wear.
 ///
 /// The desktop hands in the choices only it has — focused-window transparency
 /// and Space page motion — as extra rows and the settings that go with them, so
@@ -16,13 +16,12 @@ struct BrowserWindowAppearanceGroup<Extra: View>: View {
     private var borderWidth = BrowserLookAndFeelDefaults.windowBorderWidth
     @AppStorage(BrowserChromeAppearancePreference.sidebarOnRightKey, store: BrowserChromeAppearancePreference.defaults)
     private var sidebarOnRight = BrowserLookAndFeelDefaults.sidebarOnRight
+    @Bindable private var appearance = BrowserDeviceAppearanceStore.shared
 
     var body: some View {
         CrestSettingsGroup(
             "Window",
-            systemImage: "macwindow",
-            settings: settings,
-            footnote: "Borderless lets pages reach the window's edges."
+            settings: settings
         ) {
             if showsPreview {
                 BrowserLookAndFeelPreview(space: space, focus: .window)
@@ -40,6 +39,11 @@ struct BrowserWindowAppearanceGroup<Extra: View>: View {
                     .labelsHidden()
                     .accessibilityIdentifier("sidebar-on-right")
             }
+            BrowserAppearanceAccentRow(
+                color: accent,
+                fallback: space?.branding.primaryColor ?? .indigo,
+                identifier: "follows-space-accent"
+            )
             extraRows()
         }
     }
@@ -52,7 +56,24 @@ struct BrowserWindowAppearanceGroup<Extra: View>: View {
         CrestSettingValue($sidebarOnRight, default: BrowserLookAndFeelDefaults.sidebarOnRight)
     }
 
+    /// One accent for the selected tabs, pins and the address field, which
+    /// keep their own stored colors.
+    private var accent: CrestSettingValue<BrandColor?> {
+        CrestSettingValue(
+            Binding(
+                get: { appearance.tabs.color ?? appearance.address.color },
+                set: { color in
+                    appearance.tabs.color = color
+                    appearance.address.color = color
+                }
+            )
+        )
+    }
+
     private var settings: [CrestResettableSetting] {
-        [border.resettable("Window border"), sidebar.resettable("Sidebar on right")] + extraSettings
+        [
+            border.resettable("Window border"), sidebar.resettable("Sidebar on right"),
+            accent.resettable("Follow Space accent"),
+        ] + extraSettings
     }
 }

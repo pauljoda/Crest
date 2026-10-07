@@ -1762,7 +1762,7 @@ struct DownloadApprovalAsked: Equatable, Sendable {
     let spaceID: UUID?
     let filename: String
     let reasons: [DownloadRiskReason]
-    let warning: EngineDownloadWarning?
+    let warning: DownloadWarning?
     let sourceHost: String?
 }
 
@@ -3132,6 +3132,11 @@ struct LinkRoutesFull: Equatable, Sendable {
 struct ListDropTarget: Equatable, Sendable {
     let section: TabPlacement
     let folderID: UUID?
+}
+
+struct LoadAddress: Intent, PageIntent, Equatable, Sendable {
+    let pageID: UUID
+    let url: String
 }
 
 struct LoadPage: Equatable, Sendable {
@@ -5127,22 +5132,22 @@ struct SpaceBranding: Equatable, Sendable {
     static let legacyReadabilityFade: Double = 0.25
     static let neutral = SpaceBranding(
         colors: ColorPalette(colors: [BrandColor(red: 0.24, green: 0.25, blue: 0.27, alpha: 1)]),
-        bannerPattern: .solid,
+        bannerPattern: SpaceBannerPattern.solid,
         bannerStrength: 1,
         readabilityFade: 0.34,
         keepsControlsReadable: true,
-        themeMode: .banner,
+        themeMode: SpaceThemeMode.banner,
         gradientAngle: 0,
         showsTexture: false,
-        iconStyle: .simpleSymbol,
+        iconStyle: SpaceIconStyle.simpleSymbol,
         symbolColor: nil,
         crest: SpaceCrest(
-            backplate: .shield,
-            fieldDivision: .plain,
-            ordinary: .none,
-            trim: .none,
-            symbol: .mountain,
-            chargeLayout: .single,
+            backplate: CrestBackplate.shield,
+            fieldDivision: CrestFieldDivision.plain,
+            ordinary: CrestOrdinary.none,
+            trim: CrestTrim.none,
+            symbol: CrestSymbol.mountain,
+            chargeLayout: CrestChargeLayout.single,
             backplateColorIndex: 1,
             secondaryFieldColorIndex: 1,
             ordinaryColorIndex: 2,
@@ -5155,21 +5160,21 @@ struct SpaceBranding: Equatable, Sendable {
             plateScale: 1,
             edgeWidth: 0,
             divisionCount: 4,
-            finish: .flat,
+            finish: CrestFinish.flat,
             ordinaryWidth: 1,
             trimWeight: 1,
             trimDetail: 12,
             chargeScale: 1,
             chargeOffset: 0,
-            chargeWeight: .bold,
+            chargeWeight: CrestChargeWeight.bold,
             sheenAngle: 45,
             sealTeeth: 12,
             showsOutline: false,
-            depth: .none
+            depth: CrestDepth.none
         ),
         renderingVersion: 2,
         folderColorIntensity: 0,
-        textColorMode: .automatic,
+        textColorMode: SpaceTextColorMode.automatic,
         hasCustomAppearance: nil
     )
 
@@ -6163,12 +6168,6 @@ enum AuthenticationHandling: Int, CaseIterable, Sendable {
     case cancel = 2
 }
 
-enum AuthenticationMethod: Int, CaseIterable, Sendable {
-    case httpBasic = 0
-    case httpDigest = 1
-    case other = 2
-}
-
 enum AuthenticationScheme: Int, CaseIterable, Sendable {
     case basic = 0
     case digest = 1
@@ -6193,11 +6192,6 @@ enum CredentialCaptureEvent: Int, CaseIterable, Sendable {
     case filled = 4
 }
 
-enum CredentialFillSource: Int, CaseIterable, Sendable {
-    case saved = 0
-    case generated = 1
-}
-
 enum CredentialPasswordKind: Int, CaseIterable, Sendable {
     case current = 0
     case new = 1
@@ -6219,169 +6213,6 @@ enum CredentialUsernameSource: Int, CaseIterable, Sendable {
     case none = 0
     case explicit = 1
     case hint = 2
-}
-
-enum CrestBackplate: Int, CaseIterable, Sendable {
-    case none = 0
-    case circle = 1
-    case shield = 2
-    case frenchShield = 3
-    case diamond = 4
-    case seal = 5
-    case hexagon = 6
-    case octagon = 7
-    case roundedSquare = 8
-    case oval = 9
-    case banner = 10
-    case badge = 11
-}
-
-enum CrestChargeKind: Int, CaseIterable, Sendable {
-    case heraldic = 0
-    case system = 1
-    case emoji = 2
-    case monogram = 3
-    case none = 4
-}
-
-enum CrestChargeLayout: Int, CaseIterable, Sendable {
-    case single = 0
-    case paired = 1
-    case trio = 2
-    case quad = 3
-    case ring = 4
-}
-
-enum CrestChargeWeight: Int, CaseIterable, Sendable {
-    case light = 0
-    case regular = 1
-    case bold = 2
-}
-
-enum CrestDepth: Int, CaseIterable, Sendable {
-    case none = 0
-    case soft = 1
-    case lifted = 2
-}
-
-enum CrestFieldDivision: Int, CaseIterable, Sendable {
-    case plain = 0
-    case perPale = 1
-    case perFess = 2
-    case perBend = 3
-    case perChevron = 4
-    case quarterly = 5
-    case perSaltire = 6
-    case gyronny = 7
-    case barry = 8
-    case paly = 9
-    case checky = 10
-}
-
-enum CrestFinish: Int, CaseIterable, Sendable {
-    case flat = 0
-    case sheen = 1
-    case embossed = 2
-}
-
-enum CrestMonogramStyle: Int, CaseIterable, Sendable {
-    case serif = 0
-    case sans = 1
-}
-
-enum CrestOrdinary: Int, CaseIterable, Sendable {
-    case none = 0
-    case pale = 1
-    case fess = 2
-    case bend = 3
-    case chevron = 4
-    case cross = 5
-    case saltire = 6
-    case chief = 7
-    case bordure = 8
-    case pall = 9
-    case pile = 10
-    case canton = 11
-    case roundel = 12
-}
-
-enum CrestSymbol: Int, CaseIterable, Sendable {
-    case dragon = 0
-    case direwolf = 1
-    case lion = 2
-    case stag = 3
-    case raven = 4
-    case griffin = 5
-    case eagle = 6
-    case bear = 7
-    case boar = 8
-    case fox = 9
-    case horse = 10
-    case unicorn = 11
-    case wyvern = 12
-    case hydra = 13
-    case serpent = 14
-    case kraken = 15
-    case seahorse = 16
-    case scorpion = 17
-    case bat = 18
-    case falcon = 19
-    case rose = 20
-    case lily = 21
-    case pine = 22
-    case willow = 23
-    case swords = 24
-    case axes = 25
-    case sword = 26
-    case trident = 27
-    case anchor = 28
-    case castle = 29
-    case scales = 30
-    case dragonHead = 31
-    case hound = 32
-    case paw = 33
-    case hare = 34
-    case bird = 35
-    case fish = 36
-    case bee = 37
-    case shell = 38
-    case sun = 39
-    case risingSun = 40
-    case crescent = 41
-    case star = 42
-    case sparkles = 43
-    case lightning = 44
-    case flame = 45
-    case snowflake = 46
-    case drop = 47
-    case mountain = 48
-    case tree = 49
-    case oak = 50
-    case leaf = 51
-    case fern = 52
-    case flower = 53
-    case waves = 54
-    case tower = 55
-    case book = 56
-    case key = 57
-    case hammer = 58
-    case compass = 59
-    case sailboat = 60
-    case crown = 61
-    case horn = 62
-    case crossedBanners = 63
-}
-
-enum CrestTrim: Int, CaseIterable, Sendable {
-    case none = 0
-    case shield = 1
-    case line = 2
-    case doubleLine = 3
-    case laurel = 4
-    case sunburst = 5
-    case doubleRing = 6
-    case seal = 7
-    case beaded = 8
 }
 
 enum EngineDownloadInterruption: Int, CaseIterable, Sendable {
@@ -6493,12 +6324,6 @@ struct PageMediaActivity: OptionSet, Sendable {
     static let pictureInPicture = PageMediaActivity(rawValue: 4)
 }
 
-enum PasskeyAuthorizationState: Int, CaseIterable, Sendable {
-    case authorized = 0
-    case denied = 1
-    case notDetermined = 2
-}
-
 enum PasskeyDeviceConfiguration: Int, CaseIterable, Sendable {
     case configured = 0
     case notConfigured = 1
@@ -6550,34 +6375,6 @@ enum SpaceAccessPolicy: Int, CaseIterable, Sendable {
     case deviceOwnerAuthentication = 1
 }
 
-enum SpaceBannerPattern: Int, CaseIterable, Sendable {
-    case solid = 0
-    case split = 1
-    case bands = 2
-    case diagonal = 3
-    case chevron = 4
-    case quartered = 5
-    case stripes = 6
-    case checkered = 7
-    case lozenges = 8
-}
-
-enum SpaceIconStyle: Int, CaseIterable, Sendable {
-    case simpleSymbol = 0
-    case layeredCrest = 1
-}
-
-enum SpaceTextColorMode: Int, CaseIterable, Sendable {
-    case automatic = 0
-    case light = 1
-    case dark = 2
-}
-
-enum SpaceThemeMode: Int, CaseIterable, Sendable {
-    case banner = 0
-    case gradient = 1
-}
-
 enum StorageFailure: Int, CaseIterable, Sendable {
     case diskFull = 0
     case readOnly = 1
@@ -6602,6 +6399,7 @@ enum SystemTint: Int, CaseIterable, Sendable {
     case indigo = 4
     case teal = 5
     case pink = 6
+    case green = 7
 }
 
 enum TearOffRefusal: Int, CaseIterable, Sendable {
@@ -6829,6 +6627,37 @@ struct ArchiveReason: Hashable, Sendable {
     }
 
     static func == (lhs: ArchiveReason, rhs: ArchiveReason) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+}
+
+/// The members of the core's `AuthenticationMethod`. A member's wire tag is its index in `all`.
+struct AuthenticationMethod: Hashable, Sendable {
+    let tag: Int
+    let name: String
+    let promptsForCredentials: Bool
+
+    private init(tag: Int, name: String, promptsForCredentials: Bool) {
+        self.tag = tag
+        self.name = name
+        self.promptsForCredentials = promptsForCredentials
+    }
+
+    static let httpBasic = AuthenticationMethod(tag: 0, name: "httpBasic", promptsForCredentials: true)
+    static let httpDigest = AuthenticationMethod(tag: 1, name: "httpDigest", promptsForCredentials: true)
+    static let other = AuthenticationMethod(tag: 2, name: "other", promptsForCredentials: false)
+
+    static let all: [AuthenticationMethod] = [httpBasic, httpDigest, other]
+
+    static func named(_ name: String?) -> AuthenticationMethod? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: AuthenticationMethod, rhs: AuthenticationMethod) -> Bool {
         lhs.tag == rhs.tag
     }
 
@@ -7068,18 +6897,28 @@ struct CapabilityStatus: Hashable, Sendable {
 struct CloudAccountState: Hashable, Sendable {
     let tag: Int
     let name: String
+    let title: LocalizedStringResource
 
-    private init(tag: Int, name: String) {
+    private init(tag: Int, name: String, title: LocalizedStringResource) {
         self.tag = tag
         self.name = name
+        self.title = title
     }
 
-    static let checking = CloudAccountState(tag: 0, name: "checking")
-    static let available = CloudAccountState(tag: 1, name: "available")
-    static let noAccount = CloudAccountState(tag: 2, name: "noAccount")
-    static let restricted = CloudAccountState(tag: 3, name: "restricted")
-    static let temporarilyUnavailable = CloudAccountState(tag: 4, name: "temporarilyUnavailable")
-    static let couldNotDetermine = CloudAccountState(tag: 5, name: "couldNotDetermine")
+    static let checking = CloudAccountState(tag: 0, name: "checking", title: LocalizedStringResource("Checking"))
+    static let available = CloudAccountState(tag: 1, name: "available", title: LocalizedStringResource("Available"))
+    static let noAccount = CloudAccountState(tag: 2, name: "noAccount", title: LocalizedStringResource("Not signed in"))
+    static let restricted = CloudAccountState(tag: 3, name: "restricted", title: LocalizedStringResource("Restricted"))
+    static let temporarilyUnavailable = CloudAccountState(
+        tag: 4,
+        name: "temporarilyUnavailable",
+        title: LocalizedStringResource("Temporarily unavailable")
+    )
+    static let couldNotDetermine = CloudAccountState(
+        tag: 5,
+        name: "couldNotDetermine",
+        title: LocalizedStringResource("Could not determine")
+    )
 
     static let all: [CloudAccountState] = [
         checking,
@@ -7140,20 +6979,92 @@ struct CloudSyncPhase: Hashable, Sendable {
     let tag: Int
     let name: String
     let isRetryable: Bool
+    let title: LocalizedStringResource
+    let symbol: String
+    let tint: SystemTint?
+    let keepsCloudOutOfReach: Bool
 
-    private init(tag: Int, name: String, isRetryable: Bool) {
+    private init(
+        tag: Int,
+        name: String,
+        isRetryable: Bool,
+        title: LocalizedStringResource,
+        symbol: String,
+        tint: SystemTint?,
+        keepsCloudOutOfReach: Bool
+    ) {
         self.tag = tag
         self.name = name
         self.isRetryable = isRetryable
+        self.title = title
+        self.symbol = symbol
+        self.tint = tint
+        self.keepsCloudOutOfReach = keepsCloudOutOfReach
     }
 
-    static let disabled = CloudSyncPhase(tag: 0, name: "disabled", isRetryable: false)
-    static let checking = CloudSyncPhase(tag: 1, name: "checking", isRetryable: false)
-    static let ready = CloudSyncPhase(tag: 2, name: "ready", isRetryable: false)
-    static let syncing = CloudSyncPhase(tag: 3, name: "syncing", isRetryable: false)
-    static let needsReconciliation = CloudSyncPhase(tag: 4, name: "needsReconciliation", isRetryable: false)
-    static let waitingForAccount = CloudSyncPhase(tag: 5, name: "waitingForAccount", isRetryable: true)
-    static let failed = CloudSyncPhase(tag: 6, name: "failed", isRetryable: true)
+    static let disabled = CloudSyncPhase(
+        tag: 0,
+        name: "disabled",
+        isRetryable: false,
+        title: LocalizedStringResource("Off"),
+        symbol: "icloud.slash",
+        tint: nil,
+        keepsCloudOutOfReach: false
+    )
+    static let checking = CloudSyncPhase(
+        tag: 1,
+        name: "checking",
+        isRetryable: false,
+        title: LocalizedStringResource("Checking iCloud"),
+        symbol: "arrow.triangle.2.circlepath.icloud",
+        tint: .blue,
+        keepsCloudOutOfReach: true
+    )
+    static let ready = CloudSyncPhase(
+        tag: 2,
+        name: "ready",
+        isRetryable: false,
+        title: LocalizedStringResource("Ready"),
+        symbol: "checkmark.icloud.fill",
+        tint: .green,
+        keepsCloudOutOfReach: false
+    )
+    static let syncing = CloudSyncPhase(
+        tag: 3,
+        name: "syncing",
+        isRetryable: false,
+        title: LocalizedStringResource("Syncing"),
+        symbol: "arrow.triangle.2.circlepath.icloud",
+        tint: .blue,
+        keepsCloudOutOfReach: false
+    )
+    static let needsReconciliation = CloudSyncPhase(
+        tag: 4,
+        name: "needsReconciliation",
+        isRetryable: false,
+        title: LocalizedStringResource("Choose which copy to keep"),
+        symbol: "exclamationmark.icloud.fill",
+        tint: .orange,
+        keepsCloudOutOfReach: false
+    )
+    static let waitingForAccount = CloudSyncPhase(
+        tag: 5,
+        name: "waitingForAccount",
+        isRetryable: true,
+        title: LocalizedStringResource("Waiting for iCloud"),
+        symbol: "person.crop.circle.badge.exclamationmark",
+        tint: .orange,
+        keepsCloudOutOfReach: true
+    )
+    static let failed = CloudSyncPhase(
+        tag: 6,
+        name: "failed",
+        isRetryable: true,
+        title: LocalizedStringResource("Needs attention"),
+        symbol: "xmark.icloud.fill",
+        tint: .red,
+        keepsCloudOutOfReach: true
+    )
 
     static let all: [CloudSyncPhase] = [
         disabled,
@@ -7183,16 +7094,28 @@ struct CloudSyncProblem: Hashable, Sendable {
     let tag: Int
     let name: String
     let reportsError: Bool
+    let message: LocalizedStringResource?
 
-    private init(tag: Int, name: String, reportsError: Bool) {
+    private init(tag: Int, name: String, reportsError: Bool, message: LocalizedStringResource?) {
         self.tag = tag
         self.name = name
         self.reportsError = reportsError
+        self.message = message
     }
 
-    static let notConfigured = CloudSyncProblem(tag: 0, name: "notConfigured", reportsError: false)
-    static let entitlementMissing = CloudSyncProblem(tag: 1, name: "entitlementMissing", reportsError: true)
-    static let localChangesUnsaved = CloudSyncProblem(tag: 2, name: "localChangesUnsaved", reportsError: true)
+    static let notConfigured = CloudSyncProblem(tag: 0, name: "notConfigured", reportsError: false, message: nil)
+    static let entitlementMissing = CloudSyncProblem(
+        tag: 1,
+        name: "entitlementMissing",
+        reportsError: true,
+        message: LocalizedStringResource("The app is missing access to Crest’s CloudKit container.")
+    )
+    static let localChangesUnsaved = CloudSyncProblem(
+        tag: 2,
+        name: "localChangesUnsaved",
+        reportsError: true,
+        message: nil
+    )
 
     static let all: [CloudSyncProblem] = [notConfigured, entitlementMissing, localChangesUnsaved]
 
@@ -7575,6 +7498,36 @@ struct CredentialFileFormat: Hashable, Sendable {
     }
 }
 
+/// The members of the core's `CredentialFillSource`. A member's wire tag is its index in `all`.
+struct CredentialFillSource: Hashable, Sendable {
+    let tag: Int
+    let name: String
+    let fills: CredentialPasswordKind
+
+    private init(tag: Int, name: String, fills: CredentialPasswordKind) {
+        self.tag = tag
+        self.name = name
+        self.fills = fills
+    }
+
+    static let saved = CredentialFillSource(tag: 0, name: "saved", fills: .current)
+    static let generated = CredentialFillSource(tag: 1, name: "generated", fills: .new)
+
+    static let all: [CredentialFillSource] = [saved, generated]
+
+    static func named(_ name: String?) -> CredentialFillSource? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: CredentialFillSource, rhs: CredentialFillSource) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+}
+
 /// The members of the core's `CredentialImportEffect`. A member's wire tag is its index in `all`.
 struct CredentialImportEffect: Hashable, Sendable {
     let tag: Int
@@ -7674,6 +7627,1837 @@ struct CredentialRowFlaw: Hashable, Sendable {
     }
 
     static func == (lhs: CredentialRowFlaw, rhs: CredentialRowFlaw) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+}
+
+/// The members of the core's `CrestBackplate`. A member's wire tag is its index in `all`.
+struct CrestBackplate: Hashable, Sendable {
+    enum Kinds: Sendable {
+        case none
+        case circle
+        case shield
+        case frenchShield
+        case diamond
+        case seal
+        case hexagon
+        case octagon
+        case roundedSquare
+        case oval
+        case banner
+        case badge
+    }
+
+    let tag: Int
+    let kind: Kinds
+    let name: String
+    let title: LocalizedStringResource
+    let drawnSince: CrestVocabulary
+    let hasTeeth: Bool
+
+    private init(
+        tag: Int,
+        kind: Kinds,
+        name: String,
+        title: LocalizedStringResource,
+        drawnSince: CrestVocabulary,
+        hasTeeth: Bool
+    ) {
+        self.tag = tag
+        self.kind = kind
+        self.name = name
+        self.title = title
+        self.drawnSince = drawnSince
+        self.hasTeeth = hasTeeth
+    }
+
+    static let none = CrestBackplate(
+        tag: 0,
+        kind: .none,
+        name: "none",
+        title: LocalizedStringResource("None"),
+        drawnSince: CrestVocabulary.baseline,
+        hasTeeth: false
+    )
+    static let circle = CrestBackplate(
+        tag: 1,
+        kind: .circle,
+        name: "circle",
+        title: LocalizedStringResource("Round"),
+        drawnSince: CrestVocabulary.baseline,
+        hasTeeth: false
+    )
+    static let shield = CrestBackplate(
+        tag: 2,
+        kind: .shield,
+        name: "shield",
+        title: LocalizedStringResource("Shield"),
+        drawnSince: CrestVocabulary.baseline,
+        hasTeeth: false
+    )
+    static let frenchShield = CrestBackplate(
+        tag: 3,
+        kind: .frenchShield,
+        name: "frenchShield",
+        title: LocalizedStringResource("French Shield"),
+        drawnSince: CrestVocabulary.studio,
+        hasTeeth: false
+    )
+    static let diamond = CrestBackplate(
+        tag: 4,
+        kind: .diamond,
+        name: "diamond",
+        title: LocalizedStringResource("Lozenge"),
+        drawnSince: CrestVocabulary.baseline,
+        hasTeeth: false
+    )
+    static let seal = CrestBackplate(
+        tag: 5,
+        kind: .seal,
+        name: "seal",
+        title: LocalizedStringResource("Seal"),
+        drawnSince: CrestVocabulary.baseline,
+        hasTeeth: true
+    )
+    static let hexagon = CrestBackplate(
+        tag: 6,
+        kind: .hexagon,
+        name: "hexagon",
+        title: LocalizedStringResource("Hexagon"),
+        drawnSince: CrestVocabulary.baseline,
+        hasTeeth: false
+    )
+    static let octagon = CrestBackplate(
+        tag: 7,
+        kind: .octagon,
+        name: "octagon",
+        title: LocalizedStringResource("Octagon"),
+        drawnSince: CrestVocabulary.customization,
+        hasTeeth: false
+    )
+    static let roundedSquare = CrestBackplate(
+        tag: 8,
+        kind: .roundedSquare,
+        name: "roundedSquare",
+        title: LocalizedStringResource("Rounded Square"),
+        drawnSince: CrestVocabulary.customization,
+        hasTeeth: false
+    )
+    static let oval = CrestBackplate(
+        tag: 9,
+        kind: .oval,
+        name: "oval",
+        title: LocalizedStringResource("Oval"),
+        drawnSince: CrestVocabulary.studio,
+        hasTeeth: false
+    )
+    static let banner = CrestBackplate(
+        tag: 10,
+        kind: .banner,
+        name: "banner",
+        title: LocalizedStringResource("Banner"),
+        drawnSince: CrestVocabulary.studio,
+        hasTeeth: false
+    )
+    static let badge = CrestBackplate(
+        tag: 11,
+        kind: .badge,
+        name: "badge",
+        title: LocalizedStringResource("Badge"),
+        drawnSince: CrestVocabulary.studio,
+        hasTeeth: false
+    )
+
+    static let all: [CrestBackplate] = [
+        none,
+        circle,
+        shield,
+        frenchShield,
+        diamond,
+        seal,
+        hexagon,
+        octagon,
+        roundedSquare,
+        oval,
+        banner,
+        badge
+    ]
+
+    static func named(_ name: String?) -> CrestBackplate? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: CrestBackplate, rhs: CrestBackplate) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+}
+
+/// The members of the core's `CrestChargeKind`. A member's wire tag is its index in `all`.
+struct CrestChargeKind: Hashable, Sendable {
+    enum Kinds: Sendable {
+        case heraldic
+        case system
+        case emoji
+        case monogram
+        case none
+    }
+
+    let tag: Int
+    let kind: Kinds
+    let name: String
+    let title: LocalizedStringResource
+    let isTinted: Bool
+    let takesWeight: Bool
+
+    private init(tag: Int, kind: Kinds, name: String, title: LocalizedStringResource, isTinted: Bool, takesWeight: Bool) {
+        self.tag = tag
+        self.kind = kind
+        self.name = name
+        self.title = title
+        self.isTinted = isTinted
+        self.takesWeight = takesWeight
+    }
+
+    static let heraldic = CrestChargeKind(
+        tag: 0,
+        kind: .heraldic,
+        name: "heraldic",
+        title: LocalizedStringResource("Heraldry"),
+        isTinted: true,
+        takesWeight: true
+    )
+    static let system = CrestChargeKind(
+        tag: 1,
+        kind: .system,
+        name: "system",
+        title: LocalizedStringResource("SF Symbol"),
+        isTinted: true,
+        takesWeight: true
+    )
+    static let emoji = CrestChargeKind(
+        tag: 2,
+        kind: .emoji,
+        name: "emoji",
+        title: LocalizedStringResource("Emoji"),
+        isTinted: false,
+        takesWeight: false
+    )
+    static let monogram = CrestChargeKind(
+        tag: 3,
+        kind: .monogram,
+        name: "monogram",
+        title: LocalizedStringResource("Monogram"),
+        isTinted: true,
+        takesWeight: true
+    )
+    static let none = CrestChargeKind(
+        tag: 4,
+        kind: .none,
+        name: "none",
+        title: LocalizedStringResource("None"),
+        isTinted: false,
+        takesWeight: false
+    )
+
+    static let all: [CrestChargeKind] = [heraldic, system, emoji, monogram, none]
+
+    static func named(_ name: String?) -> CrestChargeKind? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: CrestChargeKind, rhs: CrestChargeKind) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+}
+
+/// The members of the core's `CrestChargeLayout`. A member's wire tag is its index in `all`.
+struct CrestChargeLayout: Hashable, Sendable {
+    enum Kinds: Sendable {
+        case single
+        case paired
+        case trio
+        case quad
+        case ring
+    }
+
+    let tag: Int
+    let kind: Kinds
+    let name: String
+    let title: LocalizedStringResource
+    let drawnSince: CrestVocabulary
+
+    private init(tag: Int, kind: Kinds, name: String, title: LocalizedStringResource, drawnSince: CrestVocabulary) {
+        self.tag = tag
+        self.kind = kind
+        self.name = name
+        self.title = title
+        self.drawnSince = drawnSince
+    }
+
+    static let single = CrestChargeLayout(
+        tag: 0,
+        kind: .single,
+        name: "single",
+        title: LocalizedStringResource("One"),
+        drawnSince: CrestVocabulary.baseline
+    )
+    static let paired = CrestChargeLayout(
+        tag: 1,
+        kind: .paired,
+        name: "paired",
+        title: LocalizedStringResource("Two"),
+        drawnSince: CrestVocabulary.baseline
+    )
+    static let trio = CrestChargeLayout(
+        tag: 2,
+        kind: .trio,
+        name: "trio",
+        title: LocalizedStringResource("Three"),
+        drawnSince: CrestVocabulary.baseline
+    )
+    static let quad = CrestChargeLayout(
+        tag: 3,
+        kind: .quad,
+        name: "quad",
+        title: LocalizedStringResource("Four"),
+        drawnSince: CrestVocabulary.studio
+    )
+    static let ring = CrestChargeLayout(
+        tag: 4,
+        kind: .ring,
+        name: "ring",
+        title: LocalizedStringResource("Ring"),
+        drawnSince: CrestVocabulary.studio
+    )
+
+    static let all: [CrestChargeLayout] = [single, paired, trio, quad, ring]
+
+    static func named(_ name: String?) -> CrestChargeLayout? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: CrestChargeLayout, rhs: CrestChargeLayout) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+}
+
+/// The members of the core's `CrestChargeWeight`. A member's wire tag is its index in `all`.
+struct CrestChargeWeight: Hashable, Sendable {
+    enum Kinds: Sendable {
+        case light
+        case regular
+        case bold
+    }
+
+    let tag: Int
+    let kind: Kinds
+    let name: String
+    let title: LocalizedStringResource
+    let drawnSince: CrestVocabulary
+
+    private init(tag: Int, kind: Kinds, name: String, title: LocalizedStringResource, drawnSince: CrestVocabulary) {
+        self.tag = tag
+        self.kind = kind
+        self.name = name
+        self.title = title
+        self.drawnSince = drawnSince
+    }
+
+    static let light = CrestChargeWeight(
+        tag: 0,
+        kind: .light,
+        name: "light",
+        title: LocalizedStringResource("Light"),
+        drawnSince: CrestVocabulary.studio
+    )
+    static let regular = CrestChargeWeight(
+        tag: 1,
+        kind: .regular,
+        name: "regular",
+        title: LocalizedStringResource("Regular"),
+        drawnSince: CrestVocabulary.studio
+    )
+    static let bold = CrestChargeWeight(
+        tag: 2,
+        kind: .bold,
+        name: "bold",
+        title: LocalizedStringResource("Bold"),
+        drawnSince: CrestVocabulary.baseline
+    )
+
+    static let all: [CrestChargeWeight] = [light, regular, bold]
+
+    static func named(_ name: String?) -> CrestChargeWeight? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: CrestChargeWeight, rhs: CrestChargeWeight) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+}
+
+/// The members of the core's `CrestDepth`. A member's wire tag is its index in `all`.
+struct CrestDepth: Hashable, Sendable {
+    enum Kinds: Sendable {
+        case none
+        case soft
+        case lifted
+    }
+
+    let tag: Int
+    let kind: Kinds
+    let name: String
+    let title: LocalizedStringResource
+    let drawnSince: CrestVocabulary
+
+    private init(tag: Int, kind: Kinds, name: String, title: LocalizedStringResource, drawnSince: CrestVocabulary) {
+        self.tag = tag
+        self.kind = kind
+        self.name = name
+        self.title = title
+        self.drawnSince = drawnSince
+    }
+
+    static let none = CrestDepth(
+        tag: 0,
+        kind: .none,
+        name: "none",
+        title: LocalizedStringResource("None"),
+        drawnSince: CrestVocabulary.baseline
+    )
+    static let soft = CrestDepth(
+        tag: 1,
+        kind: .soft,
+        name: "soft",
+        title: LocalizedStringResource("Soft"),
+        drawnSince: CrestVocabulary.studio
+    )
+    static let lifted = CrestDepth(
+        tag: 2,
+        kind: .lifted,
+        name: "lifted",
+        title: LocalizedStringResource("Lifted"),
+        drawnSince: CrestVocabulary.studio
+    )
+
+    static let all: [CrestDepth] = [none, soft, lifted]
+
+    static func named(_ name: String?) -> CrestDepth? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: CrestDepth, rhs: CrestDepth) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+}
+
+/// The members of the core's `CrestFieldDivision`. A member's wire tag is its index in `all`.
+struct CrestFieldDivision: Hashable, Sendable {
+    enum Kinds: Sendable {
+        case plain
+        case perPale
+        case perFess
+        case perBend
+        case perChevron
+        case quarterly
+        case perSaltire
+        case gyronny
+        case barry
+        case paly
+        case checky
+    }
+
+    let tag: Int
+    let kind: Kinds
+    let name: String
+    let title: LocalizedStringResource
+    let drawnSince: CrestVocabulary
+    let isCounted: Bool
+
+    private init(
+        tag: Int,
+        kind: Kinds,
+        name: String,
+        title: LocalizedStringResource,
+        drawnSince: CrestVocabulary,
+        isCounted: Bool
+    ) {
+        self.tag = tag
+        self.kind = kind
+        self.name = name
+        self.title = title
+        self.drawnSince = drawnSince
+        self.isCounted = isCounted
+    }
+
+    static let plain = CrestFieldDivision(
+        tag: 0,
+        kind: .plain,
+        name: "plain",
+        title: LocalizedStringResource("Plain"),
+        drawnSince: CrestVocabulary.baseline,
+        isCounted: false
+    )
+    static let perPale = CrestFieldDivision(
+        tag: 1,
+        kind: .perPale,
+        name: "perPale",
+        title: LocalizedStringResource("Vertical"),
+        drawnSince: CrestVocabulary.baseline,
+        isCounted: false
+    )
+    static let perFess = CrestFieldDivision(
+        tag: 2,
+        kind: .perFess,
+        name: "perFess",
+        title: LocalizedStringResource("Horizontal"),
+        drawnSince: CrestVocabulary.baseline,
+        isCounted: false
+    )
+    static let perBend = CrestFieldDivision(
+        tag: 3,
+        kind: .perBend,
+        name: "perBend",
+        title: LocalizedStringResource("Diagonal"),
+        drawnSince: CrestVocabulary.baseline,
+        isCounted: false
+    )
+    static let perChevron = CrestFieldDivision(
+        tag: 4,
+        kind: .perChevron,
+        name: "perChevron",
+        title: LocalizedStringResource("Chevron"),
+        drawnSince: CrestVocabulary.baseline,
+        isCounted: false
+    )
+    static let quarterly = CrestFieldDivision(
+        tag: 5,
+        kind: .quarterly,
+        name: "quarterly",
+        title: LocalizedStringResource("Quartered"),
+        drawnSince: CrestVocabulary.baseline,
+        isCounted: false
+    )
+    static let perSaltire = CrestFieldDivision(
+        tag: 6,
+        kind: .perSaltire,
+        name: "perSaltire",
+        title: LocalizedStringResource("Crossed"),
+        drawnSince: CrestVocabulary.studio,
+        isCounted: false
+    )
+    static let gyronny = CrestFieldDivision(
+        tag: 7,
+        kind: .gyronny,
+        name: "gyronny",
+        title: LocalizedStringResource("Wedges"),
+        drawnSince: CrestVocabulary.studio,
+        isCounted: true
+    )
+    static let barry = CrestFieldDivision(
+        tag: 8,
+        kind: .barry,
+        name: "barry",
+        title: LocalizedStringResource("Bars"),
+        drawnSince: CrestVocabulary.studio,
+        isCounted: true
+    )
+    static let paly = CrestFieldDivision(
+        tag: 9,
+        kind: .paly,
+        name: "paly",
+        title: LocalizedStringResource("Stripes"),
+        drawnSince: CrestVocabulary.studio,
+        isCounted: true
+    )
+    static let checky = CrestFieldDivision(
+        tag: 10,
+        kind: .checky,
+        name: "checky",
+        title: LocalizedStringResource("Checks"),
+        drawnSince: CrestVocabulary.studio,
+        isCounted: true
+    )
+
+    static let all: [CrestFieldDivision] = [
+        plain,
+        perPale,
+        perFess,
+        perBend,
+        perChevron,
+        quarterly,
+        perSaltire,
+        gyronny,
+        barry,
+        paly,
+        checky
+    ]
+
+    static func named(_ name: String?) -> CrestFieldDivision? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: CrestFieldDivision, rhs: CrestFieldDivision) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+}
+
+/// The members of the core's `CrestFinish`. A member's wire tag is its index in `all`.
+struct CrestFinish: Hashable, Sendable {
+    enum Kinds: Sendable {
+        case flat
+        case sheen
+        case embossed
+    }
+
+    let tag: Int
+    let kind: Kinds
+    let name: String
+    let title: LocalizedStringResource
+    let drawnSince: CrestVocabulary
+    let hasAngle: Bool
+
+    private init(
+        tag: Int,
+        kind: Kinds,
+        name: String,
+        title: LocalizedStringResource,
+        drawnSince: CrestVocabulary,
+        hasAngle: Bool
+    ) {
+        self.tag = tag
+        self.kind = kind
+        self.name = name
+        self.title = title
+        self.drawnSince = drawnSince
+        self.hasAngle = hasAngle
+    }
+
+    static let flat = CrestFinish(
+        tag: 0,
+        kind: .flat,
+        name: "flat",
+        title: LocalizedStringResource("Flat"),
+        drawnSince: CrestVocabulary.baseline,
+        hasAngle: false
+    )
+    static let sheen = CrestFinish(
+        tag: 1,
+        kind: .sheen,
+        name: "sheen",
+        title: LocalizedStringResource("Sheen"),
+        drawnSince: CrestVocabulary.studio,
+        hasAngle: true
+    )
+    static let embossed = CrestFinish(
+        tag: 2,
+        kind: .embossed,
+        name: "embossed",
+        title: LocalizedStringResource("Embossed"),
+        drawnSince: CrestVocabulary.studio,
+        hasAngle: false
+    )
+
+    static let all: [CrestFinish] = [flat, sheen, embossed]
+
+    static func named(_ name: String?) -> CrestFinish? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: CrestFinish, rhs: CrestFinish) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+}
+
+/// The members of the core's `CrestMeasure`. A member's wire tag is its index in `all`.
+/// Core-only behavior, not emitted: `value`, `shapes`.
+struct CrestMeasure: Hashable, Sendable {
+    let tag: Int
+    let name: String
+    let minimum: Double
+    let maximum: Double
+    let `default`: Double
+    let isCount: Bool
+
+    private init(tag: Int, name: String, minimum: Double, maximum: Double, `default`: Double, isCount: Bool) {
+        self.tag = tag
+        self.name = name
+        self.minimum = minimum
+        self.maximum = maximum
+        self.`default` = `default`
+        self.isCount = isCount
+    }
+
+    static let plateScale = CrestMeasure(
+        tag: 0,
+        name: "plateScale",
+        minimum: 0.7,
+        maximum: 1.15,
+        `default`: 1,
+        isCount: false
+    )
+    static let edgeWidth = CrestMeasure(tag: 1, name: "edgeWidth", minimum: 0, maximum: 1, `default`: 0, isCount: false)
+    static let divisionCount = CrestMeasure(
+        tag: 2,
+        name: "divisionCount",
+        minimum: 2,
+        maximum: 8,
+        `default`: 4,
+        isCount: true
+    )
+    static let ordinaryWidth = CrestMeasure(
+        tag: 3,
+        name: "ordinaryWidth",
+        minimum: 0.5,
+        maximum: 1.6,
+        `default`: 1,
+        isCount: false
+    )
+    static let trimWeight = CrestMeasure(
+        tag: 4,
+        name: "trimWeight",
+        minimum: 0.5,
+        maximum: 2,
+        `default`: 1,
+        isCount: false
+    )
+    static let trimDetail = CrestMeasure(
+        tag: 5,
+        name: "trimDetail",
+        minimum: 6,
+        maximum: 24,
+        `default`: 12,
+        isCount: true
+    )
+    static let chargeScale = CrestMeasure(
+        tag: 6,
+        name: "chargeScale",
+        minimum: 0.6,
+        maximum: 1.5,
+        `default`: 1,
+        isCount: false
+    )
+    static let chargeOffset = CrestMeasure(
+        tag: 7,
+        name: "chargeOffset",
+        minimum: -0.2,
+        maximum: 0.2,
+        `default`: 0,
+        isCount: false
+    )
+    static let sheenAngle = CrestMeasure(
+        tag: 8,
+        name: "sheenAngle",
+        minimum: 0,
+        maximum: 360,
+        `default`: 45,
+        isCount: false
+    )
+    static let sealTeeth = CrestMeasure(
+        tag: 9,
+        name: "sealTeeth",
+        minimum: 6,
+        maximum: 24,
+        `default`: 12,
+        isCount: true
+    )
+
+    static let all: [CrestMeasure] = [
+        plateScale,
+        edgeWidth,
+        divisionCount,
+        ordinaryWidth,
+        trimWeight,
+        trimDetail,
+        chargeScale,
+        chargeOffset,
+        sheenAngle,
+        sealTeeth
+    ]
+
+    static func named(_ name: String?) -> CrestMeasure? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: CrestMeasure, rhs: CrestMeasure) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+}
+
+/// The members of the core's `CrestMonogramStyle`. A member's wire tag is its index in `all`.
+struct CrestMonogramStyle: Hashable, Sendable {
+    enum Kinds: Sendable {
+        case serif
+        case sans
+    }
+
+    let tag: Int
+    let kind: Kinds
+    let name: String
+    let title: LocalizedStringResource
+    let drawnSince: CrestVocabulary
+
+    private init(tag: Int, kind: Kinds, name: String, title: LocalizedStringResource, drawnSince: CrestVocabulary) {
+        self.tag = tag
+        self.kind = kind
+        self.name = name
+        self.title = title
+        self.drawnSince = drawnSince
+    }
+
+    static let serif = CrestMonogramStyle(
+        tag: 0,
+        kind: .serif,
+        name: "serif",
+        title: LocalizedStringResource("Serif"),
+        drawnSince: CrestVocabulary.studio
+    )
+    static let sans = CrestMonogramStyle(
+        tag: 1,
+        kind: .sans,
+        name: "sans",
+        title: LocalizedStringResource("Sans"),
+        drawnSince: CrestVocabulary.studio
+    )
+
+    static let all: [CrestMonogramStyle] = [serif, sans]
+
+    static func named(_ name: String?) -> CrestMonogramStyle? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: CrestMonogramStyle, rhs: CrestMonogramStyle) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+}
+
+/// The members of the core's `CrestOrdinary`. A member's wire tag is its index in `all`.
+struct CrestOrdinary: Hashable, Sendable {
+    enum Kinds: Sendable {
+        case none
+        case pale
+        case fess
+        case bend
+        case chevron
+        case cross
+        case saltire
+        case chief
+        case bordure
+        case pall
+        case pile
+        case canton
+        case roundel
+    }
+
+    let tag: Int
+    let kind: Kinds
+    let name: String
+    let title: LocalizedStringResource
+    let drawnSince: CrestVocabulary
+
+    private init(tag: Int, kind: Kinds, name: String, title: LocalizedStringResource, drawnSince: CrestVocabulary) {
+        self.tag = tag
+        self.kind = kind
+        self.name = name
+        self.title = title
+        self.drawnSince = drawnSince
+    }
+
+    static let none = CrestOrdinary(
+        tag: 0,
+        kind: .none,
+        name: "none",
+        title: LocalizedStringResource("None"),
+        drawnSince: CrestVocabulary.baseline
+    )
+    static let pale = CrestOrdinary(
+        tag: 1,
+        kind: .pale,
+        name: "pale",
+        title: LocalizedStringResource("Pale"),
+        drawnSince: CrestVocabulary.baseline
+    )
+    static let fess = CrestOrdinary(
+        tag: 2,
+        kind: .fess,
+        name: "fess",
+        title: LocalizedStringResource("Fess"),
+        drawnSince: CrestVocabulary.baseline
+    )
+    static let bend = CrestOrdinary(
+        tag: 3,
+        kind: .bend,
+        name: "bend",
+        title: LocalizedStringResource("Bend"),
+        drawnSince: CrestVocabulary.baseline
+    )
+    static let chevron = CrestOrdinary(
+        tag: 4,
+        kind: .chevron,
+        name: "chevron",
+        title: LocalizedStringResource("Chevron"),
+        drawnSince: CrestVocabulary.baseline
+    )
+    static let cross = CrestOrdinary(
+        tag: 5,
+        kind: .cross,
+        name: "cross",
+        title: LocalizedStringResource("Cross"),
+        drawnSince: CrestVocabulary.baseline
+    )
+    static let saltire = CrestOrdinary(
+        tag: 6,
+        kind: .saltire,
+        name: "saltire",
+        title: LocalizedStringResource("Saltire"),
+        drawnSince: CrestVocabulary.baseline
+    )
+    static let chief = CrestOrdinary(
+        tag: 7,
+        kind: .chief,
+        name: "chief",
+        title: LocalizedStringResource("Chief"),
+        drawnSince: CrestVocabulary.baseline
+    )
+    static let bordure = CrestOrdinary(
+        tag: 8,
+        kind: .bordure,
+        name: "bordure",
+        title: LocalizedStringResource("Bordure"),
+        drawnSince: CrestVocabulary.baseline
+    )
+    static let pall = CrestOrdinary(
+        tag: 9,
+        kind: .pall,
+        name: "pall",
+        title: LocalizedStringResource("Pall"),
+        drawnSince: CrestVocabulary.studio
+    )
+    static let pile = CrestOrdinary(
+        tag: 10,
+        kind: .pile,
+        name: "pile",
+        title: LocalizedStringResource("Pile"),
+        drawnSince: CrestVocabulary.studio
+    )
+    static let canton = CrestOrdinary(
+        tag: 11,
+        kind: .canton,
+        name: "canton",
+        title: LocalizedStringResource("Canton"),
+        drawnSince: CrestVocabulary.studio
+    )
+    static let roundel = CrestOrdinary(
+        tag: 12,
+        kind: .roundel,
+        name: "roundel",
+        title: LocalizedStringResource("Roundel"),
+        drawnSince: CrestVocabulary.studio
+    )
+
+    static let all: [CrestOrdinary] = [
+        none,
+        pale,
+        fess,
+        bend,
+        chevron,
+        cross,
+        saltire,
+        chief,
+        bordure,
+        pall,
+        pile,
+        canton,
+        roundel
+    ]
+
+    static func named(_ name: String?) -> CrestOrdinary? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: CrestOrdinary, rhs: CrestOrdinary) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+}
+
+/// The members of the core's `CrestSymbol`. A member's wire tag is its index in `all`.
+struct CrestSymbol: Hashable, Sendable {
+    let tag: Int
+    let name: String
+    let title: LocalizedStringResource
+    let drawnSince: CrestVocabulary
+    let systemImage: String
+    let assetName: String?
+    let isOffered: Bool
+
+    private init(
+        tag: Int,
+        name: String,
+        title: LocalizedStringResource,
+        drawnSince: CrestVocabulary,
+        systemImage: String,
+        assetName: String?,
+        isOffered: Bool
+    ) {
+        self.tag = tag
+        self.name = name
+        self.title = title
+        self.drawnSince = drawnSince
+        self.systemImage = systemImage
+        self.assetName = assetName
+        self.isOffered = isOffered
+    }
+
+    static let dragon = CrestSymbol(
+        tag: 0,
+        name: "dragon",
+        title: LocalizedStringResource("Dragon"),
+        drawnSince: CrestVocabulary.studio,
+        systemImage: "flame.fill",
+        assetName: "CrestCharge-dragon",
+        isOffered: true
+    )
+    static let direwolf = CrestSymbol(
+        tag: 1,
+        name: "direwolf",
+        title: LocalizedStringResource("Direwolf"),
+        drawnSince: CrestVocabulary.studio,
+        systemImage: "dog.fill",
+        assetName: "CrestCharge-direwolf",
+        isOffered: true
+    )
+    static let lion = CrestSymbol(
+        tag: 2,
+        name: "lion",
+        title: LocalizedStringResource("Lion"),
+        drawnSince: CrestVocabulary.studio,
+        systemImage: "pawprint.fill",
+        assetName: "CrestCharge-lion",
+        isOffered: true
+    )
+    static let stag = CrestSymbol(
+        tag: 3,
+        name: "stag",
+        title: LocalizedStringResource("Stag"),
+        drawnSince: CrestVocabulary.studio,
+        systemImage: "leaf.fill",
+        assetName: "CrestCharge-stag",
+        isOffered: true
+    )
+    static let raven = CrestSymbol(
+        tag: 4,
+        name: "raven",
+        title: LocalizedStringResource("Raven"),
+        drawnSince: CrestVocabulary.studio,
+        systemImage: "bird.fill",
+        assetName: "CrestCharge-raven",
+        isOffered: true
+    )
+    static let griffin = CrestSymbol(
+        tag: 5,
+        name: "griffin",
+        title: LocalizedStringResource("Griffin"),
+        drawnSince: CrestVocabulary.studio,
+        systemImage: "bird.fill",
+        assetName: "CrestCharge-griffin",
+        isOffered: true
+    )
+    static let eagle = CrestSymbol(
+        tag: 6,
+        name: "eagle",
+        title: LocalizedStringResource("Eagle"),
+        drawnSince: CrestVocabulary.studio,
+        systemImage: "shield.fill",
+        assetName: "CrestCharge-eagle",
+        isOffered: true
+    )
+    static let bear = CrestSymbol(
+        tag: 7,
+        name: "bear",
+        title: LocalizedStringResource("Bear"),
+        drawnSince: CrestVocabulary.studio,
+        systemImage: "shield.fill",
+        assetName: "CrestCharge-bear",
+        isOffered: true
+    )
+    static let boar = CrestSymbol(
+        tag: 8,
+        name: "boar",
+        title: LocalizedStringResource("Boar"),
+        drawnSince: CrestVocabulary.studio,
+        systemImage: "shield.fill",
+        assetName: "CrestCharge-boar",
+        isOffered: true
+    )
+    static let fox = CrestSymbol(
+        tag: 9,
+        name: "fox",
+        title: LocalizedStringResource("Fox"),
+        drawnSince: CrestVocabulary.studio,
+        systemImage: "shield.fill",
+        assetName: "CrestCharge-fox",
+        isOffered: true
+    )
+    static let horse = CrestSymbol(
+        tag: 10,
+        name: "horse",
+        title: LocalizedStringResource("Horse"),
+        drawnSince: CrestVocabulary.studio,
+        systemImage: "shield.fill",
+        assetName: "CrestCharge-horse",
+        isOffered: true
+    )
+    static let unicorn = CrestSymbol(
+        tag: 11,
+        name: "unicorn",
+        title: LocalizedStringResource("Unicorn"),
+        drawnSince: CrestVocabulary.studio,
+        systemImage: "shield.fill",
+        assetName: "CrestCharge-unicorn",
+        isOffered: true
+    )
+    static let wyvern = CrestSymbol(
+        tag: 12,
+        name: "wyvern",
+        title: LocalizedStringResource("Wyvern"),
+        drawnSince: CrestVocabulary.studio,
+        systemImage: "shield.fill",
+        assetName: "CrestCharge-wyvern",
+        isOffered: true
+    )
+    static let hydra = CrestSymbol(
+        tag: 13,
+        name: "hydra",
+        title: LocalizedStringResource("Hydra"),
+        drawnSince: CrestVocabulary.studio,
+        systemImage: "shield.fill",
+        assetName: "CrestCharge-hydra",
+        isOffered: true
+    )
+    static let serpent = CrestSymbol(
+        tag: 14,
+        name: "serpent",
+        title: LocalizedStringResource("Serpent"),
+        drawnSince: CrestVocabulary.studio,
+        systemImage: "shield.fill",
+        assetName: "CrestCharge-serpent",
+        isOffered: true
+    )
+    static let kraken = CrestSymbol(
+        tag: 15,
+        name: "kraken",
+        title: LocalizedStringResource("Kraken"),
+        drawnSince: CrestVocabulary.studio,
+        systemImage: "shield.fill",
+        assetName: "CrestCharge-kraken",
+        isOffered: true
+    )
+    static let seahorse = CrestSymbol(
+        tag: 16,
+        name: "seahorse",
+        title: LocalizedStringResource("Seahorse"),
+        drawnSince: CrestVocabulary.studio,
+        systemImage: "shield.fill",
+        assetName: "CrestCharge-seahorse",
+        isOffered: true
+    )
+    static let scorpion = CrestSymbol(
+        tag: 17,
+        name: "scorpion",
+        title: LocalizedStringResource("Scorpion"),
+        drawnSince: CrestVocabulary.studio,
+        systemImage: "shield.fill",
+        assetName: "CrestCharge-scorpion",
+        isOffered: true
+    )
+    static let bat = CrestSymbol(
+        tag: 18,
+        name: "bat",
+        title: LocalizedStringResource("Bat"),
+        drawnSince: CrestVocabulary.studio,
+        systemImage: "shield.fill",
+        assetName: "CrestCharge-bat",
+        isOffered: true
+    )
+    static let falcon = CrestSymbol(
+        tag: 19,
+        name: "falcon",
+        title: LocalizedStringResource("Falcon"),
+        drawnSince: CrestVocabulary.studio,
+        systemImage: "shield.fill",
+        assetName: "CrestCharge-falcon",
+        isOffered: true
+    )
+    static let rose = CrestSymbol(
+        tag: 20,
+        name: "rose",
+        title: LocalizedStringResource("Rose"),
+        drawnSince: CrestVocabulary.studio,
+        systemImage: "shield.fill",
+        assetName: "CrestCharge-rose",
+        isOffered: true
+    )
+    static let lily = CrestSymbol(
+        tag: 21,
+        name: "lily",
+        title: LocalizedStringResource("Fleur-de-lis"),
+        drawnSince: CrestVocabulary.studio,
+        systemImage: "shield.fill",
+        assetName: "CrestCharge-lily",
+        isOffered: true
+    )
+    static let pine = CrestSymbol(
+        tag: 22,
+        name: "pine",
+        title: LocalizedStringResource("Pine"),
+        drawnSince: CrestVocabulary.studio,
+        systemImage: "shield.fill",
+        assetName: "CrestCharge-pine",
+        isOffered: true
+    )
+    static let willow = CrestSymbol(
+        tag: 23,
+        name: "willow",
+        title: LocalizedStringResource("Willow"),
+        drawnSince: CrestVocabulary.studio,
+        systemImage: "shield.fill",
+        assetName: "CrestCharge-willow",
+        isOffered: true
+    )
+    static let swords = CrestSymbol(
+        tag: 24,
+        name: "swords",
+        title: LocalizedStringResource("Crossed Swords"),
+        drawnSince: CrestVocabulary.studio,
+        systemImage: "shield.fill",
+        assetName: "CrestCharge-swords",
+        isOffered: true
+    )
+    static let axes = CrestSymbol(
+        tag: 25,
+        name: "axes",
+        title: LocalizedStringResource("Crossed Axes"),
+        drawnSince: CrestVocabulary.studio,
+        systemImage: "shield.fill",
+        assetName: "CrestCharge-axes",
+        isOffered: true
+    )
+    static let sword = CrestSymbol(
+        tag: 26,
+        name: "sword",
+        title: LocalizedStringResource("Sword"),
+        drawnSince: CrestVocabulary.studio,
+        systemImage: "shield.fill",
+        assetName: "CrestCharge-sword",
+        isOffered: true
+    )
+    static let trident = CrestSymbol(
+        tag: 27,
+        name: "trident",
+        title: LocalizedStringResource("Trident"),
+        drawnSince: CrestVocabulary.studio,
+        systemImage: "shield.fill",
+        assetName: "CrestCharge-trident",
+        isOffered: true
+    )
+    static let anchor = CrestSymbol(
+        tag: 28,
+        name: "anchor",
+        title: LocalizedStringResource("Anchor"),
+        drawnSince: CrestVocabulary.studio,
+        systemImage: "shield.fill",
+        assetName: "CrestCharge-anchor",
+        isOffered: true
+    )
+    static let castle = CrestSymbol(
+        tag: 29,
+        name: "castle",
+        title: LocalizedStringResource("Castle"),
+        drawnSince: CrestVocabulary.studio,
+        systemImage: "shield.fill",
+        assetName: "CrestCharge-castle",
+        isOffered: true
+    )
+    static let scales = CrestSymbol(
+        tag: 30,
+        name: "scales",
+        title: LocalizedStringResource("Scales"),
+        drawnSince: CrestVocabulary.studio,
+        systemImage: "shield.fill",
+        assetName: "CrestCharge-scales",
+        isOffered: true
+    )
+    static let dragonHead = CrestSymbol(
+        tag: 31,
+        name: "dragonHead",
+        title: LocalizedStringResource("Dragon Head"),
+        drawnSince: CrestVocabulary.studio,
+        systemImage: "shield.fill",
+        assetName: "CrestCharge-dragonHead",
+        isOffered: true
+    )
+    static let hound = CrestSymbol(
+        tag: 32,
+        name: "hound",
+        title: LocalizedStringResource("Hound"),
+        drawnSince: CrestVocabulary.expandedCharges,
+        systemImage: "dog.fill",
+        assetName: nil,
+        isOffered: true
+    )
+    static let paw = CrestSymbol(
+        tag: 33,
+        name: "paw",
+        title: LocalizedStringResource("Paw"),
+        drawnSince: CrestVocabulary.expandedCharges,
+        systemImage: "pawprint.fill",
+        assetName: nil,
+        isOffered: true
+    )
+    static let hare = CrestSymbol(
+        tag: 34,
+        name: "hare",
+        title: LocalizedStringResource("Hare"),
+        drawnSince: CrestVocabulary.baseline,
+        systemImage: "hare.fill",
+        assetName: nil,
+        isOffered: true
+    )
+    static let bird = CrestSymbol(
+        tag: 35,
+        name: "bird",
+        title: LocalizedStringResource("Bird"),
+        drawnSince: CrestVocabulary.baseline,
+        systemImage: "bird.fill",
+        assetName: nil,
+        isOffered: true
+    )
+    static let fish = CrestSymbol(
+        tag: 36,
+        name: "fish",
+        title: LocalizedStringResource("Fish"),
+        drawnSince: CrestVocabulary.baseline,
+        systemImage: "fish.fill",
+        assetName: nil,
+        isOffered: true
+    )
+    static let bee = CrestSymbol(
+        tag: 37,
+        name: "bee",
+        title: LocalizedStringResource("Beetle"),
+        drawnSince: CrestVocabulary.baseline,
+        systemImage: "ladybug.fill",
+        assetName: nil,
+        isOffered: true
+    )
+    static let shell = CrestSymbol(
+        tag: 38,
+        name: "shell",
+        title: LocalizedStringResource("Shell"),
+        drawnSince: CrestVocabulary.baseline,
+        systemImage: "fossil.shell.fill",
+        assetName: nil,
+        isOffered: true
+    )
+    static let sun = CrestSymbol(
+        tag: 39,
+        name: "sun",
+        title: LocalizedStringResource("Sun"),
+        drawnSince: CrestVocabulary.baseline,
+        systemImage: "sun.max.fill",
+        assetName: nil,
+        isOffered: true
+    )
+    static let risingSun = CrestSymbol(
+        tag: 40,
+        name: "risingSun",
+        title: LocalizedStringResource("Rising Sun"),
+        drawnSince: CrestVocabulary.expandedCharges,
+        systemImage: "sun.horizon.fill",
+        assetName: nil,
+        isOffered: true
+    )
+    static let crescent = CrestSymbol(
+        tag: 41,
+        name: "crescent",
+        title: LocalizedStringResource("Crescent"),
+        drawnSince: CrestVocabulary.baseline,
+        systemImage: "moon.fill",
+        assetName: nil,
+        isOffered: true
+    )
+    static let star = CrestSymbol(
+        tag: 42,
+        name: "star",
+        title: LocalizedStringResource("Star"),
+        drawnSince: CrestVocabulary.baseline,
+        systemImage: "star.fill",
+        assetName: nil,
+        isOffered: true
+    )
+    static let sparkles = CrestSymbol(
+        tag: 43,
+        name: "sparkles",
+        title: LocalizedStringResource("Sparkles"),
+        drawnSince: CrestVocabulary.baseline,
+        systemImage: "sparkles",
+        assetName: nil,
+        isOffered: true
+    )
+    static let lightning = CrestSymbol(
+        tag: 44,
+        name: "lightning",
+        title: LocalizedStringResource("Lightning"),
+        drawnSince: CrestVocabulary.baseline,
+        systemImage: "bolt.fill",
+        assetName: nil,
+        isOffered: true
+    )
+    static let flame = CrestSymbol(
+        tag: 45,
+        name: "flame",
+        title: LocalizedStringResource("Flame"),
+        drawnSince: CrestVocabulary.baseline,
+        systemImage: "flame.fill",
+        assetName: nil,
+        isOffered: true
+    )
+    static let snowflake = CrestSymbol(
+        tag: 46,
+        name: "snowflake",
+        title: LocalizedStringResource("Snowflake"),
+        drawnSince: CrestVocabulary.expandedCharges,
+        systemImage: "snowflake",
+        assetName: nil,
+        isOffered: true
+    )
+    static let drop = CrestSymbol(
+        tag: 47,
+        name: "drop",
+        title: LocalizedStringResource("Drop"),
+        drawnSince: CrestVocabulary.expandedCharges,
+        systemImage: "drop.fill",
+        assetName: nil,
+        isOffered: true
+    )
+    static let mountain = CrestSymbol(
+        tag: 48,
+        name: "mountain",
+        title: LocalizedStringResource("Mountain"),
+        drawnSince: CrestVocabulary.baseline,
+        systemImage: "mountain.2.fill",
+        assetName: nil,
+        isOffered: true
+    )
+    static let tree = CrestSymbol(
+        tag: 49,
+        name: "tree",
+        title: LocalizedStringResource("Tree"),
+        drawnSince: CrestVocabulary.baseline,
+        systemImage: "tree.fill",
+        assetName: nil,
+        isOffered: true
+    )
+    static let oak = CrestSymbol(
+        tag: 50,
+        name: "oak",
+        title: LocalizedStringResource("Oak"),
+        drawnSince: CrestVocabulary.baseline,
+        systemImage: "leaf.fill",
+        assetName: nil,
+        isOffered: false
+    )
+    static let leaf = CrestSymbol(
+        tag: 51,
+        name: "leaf",
+        title: LocalizedStringResource("Leaf"),
+        drawnSince: CrestVocabulary.baseline,
+        systemImage: "leaf.fill",
+        assetName: nil,
+        isOffered: true
+    )
+    static let fern = CrestSymbol(
+        tag: 52,
+        name: "fern",
+        title: LocalizedStringResource("Frond"),
+        drawnSince: CrestVocabulary.baseline,
+        systemImage: "laurel.leading",
+        assetName: nil,
+        isOffered: true
+    )
+    static let flower = CrestSymbol(
+        tag: 53,
+        name: "flower",
+        title: LocalizedStringResource("Flower"),
+        drawnSince: CrestVocabulary.expandedCharges,
+        systemImage: "camera.macro",
+        assetName: nil,
+        isOffered: true
+    )
+    static let waves = CrestSymbol(
+        tag: 54,
+        name: "waves",
+        title: LocalizedStringResource("Waves"),
+        drawnSince: CrestVocabulary.baseline,
+        systemImage: "water.waves",
+        assetName: nil,
+        isOffered: true
+    )
+    static let tower = CrestSymbol(
+        tag: 55,
+        name: "tower",
+        title: LocalizedStringResource("Tower"),
+        drawnSince: CrestVocabulary.baseline,
+        systemImage: "building.columns.fill",
+        assetName: nil,
+        isOffered: true
+    )
+    static let book = CrestSymbol(
+        tag: 56,
+        name: "book",
+        title: LocalizedStringResource("Book"),
+        drawnSince: CrestVocabulary.baseline,
+        systemImage: "book.closed.fill",
+        assetName: nil,
+        isOffered: true
+    )
+    static let key = CrestSymbol(
+        tag: 57,
+        name: "key",
+        title: LocalizedStringResource("Key"),
+        drawnSince: CrestVocabulary.baseline,
+        systemImage: "key.fill",
+        assetName: nil,
+        isOffered: true
+    )
+    static let hammer = CrestSymbol(
+        tag: 58,
+        name: "hammer",
+        title: LocalizedStringResource("Hammer"),
+        drawnSince: CrestVocabulary.baseline,
+        systemImage: "hammer.fill",
+        assetName: nil,
+        isOffered: true
+    )
+    static let compass = CrestSymbol(
+        tag: 59,
+        name: "compass",
+        title: LocalizedStringResource("Compass"),
+        drawnSince: CrestVocabulary.baseline,
+        systemImage: "location.north.circle.fill",
+        assetName: nil,
+        isOffered: true
+    )
+    static let sailboat = CrestSymbol(
+        tag: 60,
+        name: "sailboat",
+        title: LocalizedStringResource("Sailboat"),
+        drawnSince: CrestVocabulary.baseline,
+        systemImage: "sailboat.fill",
+        assetName: nil,
+        isOffered: true
+    )
+    static let crown = CrestSymbol(
+        tag: 61,
+        name: "crown",
+        title: LocalizedStringResource("Crown"),
+        drawnSince: CrestVocabulary.expandedCharges,
+        systemImage: "crown.fill",
+        assetName: nil,
+        isOffered: true
+    )
+    static let horn = CrestSymbol(
+        tag: 62,
+        name: "horn",
+        title: LocalizedStringResource("Horn"),
+        drawnSince: CrestVocabulary.expandedCharges,
+        systemImage: "horn.fill",
+        assetName: nil,
+        isOffered: true
+    )
+    static let crossedBanners = CrestSymbol(
+        tag: 63,
+        name: "crossedBanners",
+        title: LocalizedStringResource("Banners"),
+        drawnSince: CrestVocabulary.expandedCharges,
+        systemImage: "flag.2.crossed.fill",
+        assetName: nil,
+        isOffered: true
+    )
+
+    static let all: [CrestSymbol] = [
+        dragon,
+        direwolf,
+        lion,
+        stag,
+        raven,
+        griffin,
+        eagle,
+        bear,
+        boar,
+        fox,
+        horse,
+        unicorn,
+        wyvern,
+        hydra,
+        serpent,
+        kraken,
+        seahorse,
+        scorpion,
+        bat,
+        falcon,
+        rose,
+        lily,
+        pine,
+        willow,
+        swords,
+        axes,
+        sword,
+        trident,
+        anchor,
+        castle,
+        scales,
+        dragonHead,
+        hound,
+        paw,
+        hare,
+        bird,
+        fish,
+        bee,
+        shell,
+        sun,
+        risingSun,
+        crescent,
+        star,
+        sparkles,
+        lightning,
+        flame,
+        snowflake,
+        drop,
+        mountain,
+        tree,
+        oak,
+        leaf,
+        fern,
+        flower,
+        waves,
+        tower,
+        book,
+        key,
+        hammer,
+        compass,
+        sailboat,
+        crown,
+        horn,
+        crossedBanners
+    ]
+
+    static func named(_ name: String?) -> CrestSymbol? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: CrestSymbol, rhs: CrestSymbol) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+}
+
+/// The members of the core's `CrestTrim`. A member's wire tag is its index in `all`.
+struct CrestTrim: Hashable, Sendable {
+    enum Kinds: Sendable {
+        case none
+        case shield
+        case line
+        case doubleLine
+        case laurel
+        case sunburst
+        case doubleRing
+        case seal
+        case beaded
+    }
+
+    let tag: Int
+    let kind: Kinds
+    let name: String
+    let title: LocalizedStringResource
+    let drawnSince: CrestVocabulary
+    let isCounted: Bool
+
+    private init(
+        tag: Int,
+        kind: Kinds,
+        name: String,
+        title: LocalizedStringResource,
+        drawnSince: CrestVocabulary,
+        isCounted: Bool
+    ) {
+        self.tag = tag
+        self.kind = kind
+        self.name = name
+        self.title = title
+        self.drawnSince = drawnSince
+        self.isCounted = isCounted
+    }
+
+    static let none = CrestTrim(
+        tag: 0,
+        kind: .none,
+        name: "none",
+        title: LocalizedStringResource("None"),
+        drawnSince: CrestVocabulary.baseline,
+        isCounted: false
+    )
+    static let shield = CrestTrim(
+        tag: 1,
+        kind: .shield,
+        name: "shield",
+        title: LocalizedStringResource("Shield"),
+        drawnSince: CrestVocabulary.baseline,
+        isCounted: false
+    )
+    static let line = CrestTrim(
+        tag: 2,
+        kind: .line,
+        name: "line",
+        title: LocalizedStringResource("Line"),
+        drawnSince: CrestVocabulary.studio,
+        isCounted: false
+    )
+    static let doubleLine = CrestTrim(
+        tag: 3,
+        kind: .doubleLine,
+        name: "doubleLine",
+        title: LocalizedStringResource("Double Line"),
+        drawnSince: CrestVocabulary.studio,
+        isCounted: false
+    )
+    static let laurel = CrestTrim(
+        tag: 4,
+        kind: .laurel,
+        name: "laurel",
+        title: LocalizedStringResource("Laurel"),
+        drawnSince: CrestVocabulary.baseline,
+        isCounted: false
+    )
+    static let sunburst = CrestTrim(
+        tag: 5,
+        kind: .sunburst,
+        name: "sunburst",
+        title: LocalizedStringResource("Sunburst"),
+        drawnSince: CrestVocabulary.baseline,
+        isCounted: true
+    )
+    static let doubleRing = CrestTrim(
+        tag: 6,
+        kind: .doubleRing,
+        name: "doubleRing",
+        title: LocalizedStringResource("Double Ring"),
+        drawnSince: CrestVocabulary.baseline,
+        isCounted: false
+    )
+    static let seal = CrestTrim(
+        tag: 7,
+        kind: .seal,
+        name: "seal",
+        title: LocalizedStringResource("Seal"),
+        drawnSince: CrestVocabulary.baseline,
+        isCounted: false
+    )
+    static let beaded = CrestTrim(
+        tag: 8,
+        kind: .beaded,
+        name: "beaded",
+        title: LocalizedStringResource("Beaded"),
+        drawnSince: CrestVocabulary.studio,
+        isCounted: true
+    )
+
+    static let all: [CrestTrim] = [none, shield, line, doubleLine, laurel, sunburst, doubleRing, seal, beaded]
+
+    static func named(_ name: String?) -> CrestTrim? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: CrestTrim, rhs: CrestTrim) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+}
+
+/// The members of the core's `CrestVocabulary`. A member's wire tag is its index in `all`.
+struct CrestVocabulary: Hashable, Sendable {
+    let tag: Int
+    let name: String
+    let version: Int
+
+    private init(tag: Int, name: String, version: Int) {
+        self.tag = tag
+        self.name = name
+        self.version = version
+    }
+
+    static let baseline = CrestVocabulary(tag: 0, name: "baseline", version: 2)
+    static let expandedCharges = CrestVocabulary(tag: 1, name: "expandedCharges", version: 3)
+    static let customization = CrestVocabulary(tag: 2, name: "customization", version: 4)
+    static let studio = CrestVocabulary(tag: 3, name: "studio", version: 5)
+
+    static let all: [CrestVocabulary] = [baseline, expandedCharges, customization, studio]
+
+    static func named(_ name: String?) -> CrestVocabulary? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: CrestVocabulary, rhs: CrestVocabulary) -> Bool {
         lhs.tag == rhs.tag
     }
 
@@ -7975,6 +9759,7 @@ struct DownloadPhase: Hashable, Sendable {
     let needsAttention: Bool
     let awaitsDecision: Bool
     let canRetry: Bool
+    let allowsResume: Bool
     let canFail: Bool
 
     private init(
@@ -7989,6 +9774,7 @@ struct DownloadPhase: Hashable, Sendable {
         needsAttention: Bool,
         awaitsDecision: Bool,
         canRetry: Bool,
+        allowsResume: Bool,
         canFail: Bool
     ) {
         self.tag = tag
@@ -8002,6 +9788,7 @@ struct DownloadPhase: Hashable, Sendable {
         self.needsAttention = needsAttention
         self.awaitsDecision = awaitsDecision
         self.canRetry = canRetry
+        self.allowsResume = allowsResume
         self.canFail = canFail
     }
 
@@ -8017,6 +9804,7 @@ struct DownloadPhase: Hashable, Sendable {
         needsAttention: false,
         awaitsDecision: false,
         canRetry: false,
+        allowsResume: false,
         canFail: true
     )
     static let awaitingApproval = DownloadPhase(
@@ -8031,6 +9819,7 @@ struct DownloadPhase: Hashable, Sendable {
         needsAttention: false,
         awaitsDecision: true,
         canRetry: false,
+        allowsResume: false,
         canFail: true
     )
     static let downloading = DownloadPhase(
@@ -8045,6 +9834,7 @@ struct DownloadPhase: Hashable, Sendable {
         needsAttention: false,
         awaitsDecision: false,
         canRetry: false,
+        allowsResume: true,
         canFail: true
     )
     static let finished = DownloadPhase(
@@ -8059,6 +9849,7 @@ struct DownloadPhase: Hashable, Sendable {
         needsAttention: false,
         awaitsDecision: false,
         canRetry: false,
+        allowsResume: false,
         canFail: false
     )
     static let blockedAutomaticDownload = DownloadPhase(
@@ -8073,6 +9864,7 @@ struct DownloadPhase: Hashable, Sendable {
         needsAttention: true,
         awaitsDecision: true,
         canRetry: true,
+        allowsResume: false,
         canFail: true
     )
     static let canceled = DownloadPhase(
@@ -8087,6 +9879,7 @@ struct DownloadPhase: Hashable, Sendable {
         needsAttention: false,
         awaitsDecision: false,
         canRetry: false,
+        allowsResume: false,
         canFail: false
     )
     static let failed = DownloadPhase(
@@ -8101,6 +9894,7 @@ struct DownloadPhase: Hashable, Sendable {
         needsAttention: true,
         awaitsDecision: false,
         canRetry: false,
+        allowsResume: true,
         canFail: false
     )
 
@@ -8306,46 +10100,229 @@ struct DownloadTextField: Hashable, Sendable {
     }
 }
 
+/// The members of the core's `DownloadWarning`. A member's wire tag is its index in `all`.
+struct DownloadWarning: Hashable, Sendable {
+    let tag: Int
+    let name: String
+    let engineWarning: EngineDownloadWarning
+    let approvalMessage: LocalizedStringResource
+    let failure: DownloadFailure
+    let coveredBy: [DownloadRiskReason]
+
+    private init(
+        tag: Int,
+        name: String,
+        engineWarning: EngineDownloadWarning,
+        approvalMessage: LocalizedStringResource,
+        failure: DownloadFailure,
+        coveredBy: [DownloadRiskReason]
+    ) {
+        self.tag = tag
+        self.name = name
+        self.engineWarning = engineWarning
+        self.approvalMessage = approvalMessage
+        self.failure = failure
+        self.coveredBy = coveredBy
+    }
+
+    static let insecureConnection = DownloadWarning(
+        tag: 0,
+        name: "insecureConnection",
+        engineWarning: .insecureConnection,
+        approvalMessage: LocalizedStringResource("This file was transferred over an insecure connection and could have been changed by someone else. Keep it only if you trust its source."),
+        failure: DownloadFailure.blockedInsecure,
+        coveredBy: []
+    )
+    static let dangerousFile = DownloadWarning(
+        tag: 1,
+        name: "dangerousFile",
+        engineWarning: .dangerousFile,
+        approvalMessage: LocalizedStringResource("This type of file can change your computer. Keep it only if you trust its source."),
+        failure: DownloadFailure.blockedUnsafe,
+        coveredBy: [DownloadRiskReason.executableOrInstaller, DownloadRiskReason.dangerousTypeMismatch]
+    )
+    static let uncommonContent = DownloadWarning(
+        tag: 2,
+        name: "uncommonContent",
+        engineWarning: .uncommonContent,
+        approvalMessage: LocalizedStringResource("This file is not commonly downloaded. The engine could not confirm that it is safe."),
+        failure: DownloadFailure.blockedUnsafe,
+        coveredBy: []
+    )
+    static let potentiallyUnwanted = DownloadWarning(
+        tag: 3,
+        name: "potentiallyUnwanted",
+        engineWarning: .potentiallyUnwanted,
+        approvalMessage: LocalizedStringResource("This file may change your browser or computer settings without your permission."),
+        failure: DownloadFailure.blockedUnsafe,
+        coveredBy: []
+    )
+    static let insecureBlocked = DownloadWarning(
+        tag: 4,
+        name: "insecureBlocked",
+        engineWarning: .insecureBlocked,
+        approvalMessage: LocalizedStringResource("The engine blocked this insecure download."),
+        failure: DownloadFailure.blockedInsecure,
+        coveredBy: []
+    )
+    static let policyBlocked = DownloadWarning(
+        tag: 5,
+        name: "policyBlocked",
+        engineWarning: .policyBlocked,
+        approvalMessage: LocalizedStringResource("The engine blocked this download because of its safety or organization policy verdict."),
+        failure: DownloadFailure.blockedByPolicy,
+        coveredBy: []
+    )
+
+    static let all: [DownloadWarning] = [
+        insecureConnection,
+        dangerousFile,
+        uncommonContent,
+        potentiallyUnwanted,
+        insecureBlocked,
+        policyBlocked
+    ]
+
+    static func named(_ name: String?) -> DownloadWarning? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: DownloadWarning, rhs: DownloadWarning) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+}
+
 /// The members of the core's `EngineCapability`. A member's wire tag is its index in `all`.
 struct EngineCapability: Hashable, Sendable {
     let tag: Int
     let name: String
     let isRequired: Bool
+    let startsEngineOnDemand: Bool
 
-    private init(tag: Int, name: String, isRequired: Bool) {
+    private init(tag: Int, name: String, isRequired: Bool, startsEngineOnDemand: Bool) {
         self.tag = tag
         self.name = name
         self.isRequired = isRequired
+        self.startsEngineOnDemand = startsEngineOnDemand
     }
 
-    static let pages = EngineCapability(tag: 0, name: "pages", isRequired: true)
-    static let navigation = EngineCapability(tag: 1, name: "navigation", isRequired: true)
-    static let find = EngineCapability(tag: 2, name: "find", isRequired: false)
-    static let zoom = EngineCapability(tag: 3, name: "zoom", isRequired: false)
-    static let interactionState = EngineCapability(tag: 4, name: "interaction-state", isRequired: false)
-    static let pageResidency = EngineCapability(tag: 5, name: "page-residency", isRequired: false)
-    static let popups = EngineCapability(tag: 6, name: "popups", isRequired: false)
-    static let workspaceProfiles = EngineCapability(tag: 7, name: "workspace-profiles", isRequired: true)
-    static let workspaceTransfer = EngineCapability(tag: 8, name: "workspace-transfer", isRequired: false)
-    static let profileDeletion = EngineCapability(tag: 9, name: "profile-deletion", isRequired: true)
-    static let contentBlocking = EngineCapability(tag: 10, name: "content-blocking", isRequired: false)
-    static let downloads = EngineCapability(tag: 11, name: "downloads", isRequired: false)
-    static let permissions = EngineCapability(tag: 12, name: "permissions", isRequired: false)
-    static let reader = EngineCapability(tag: 13, name: "reader", isRequired: false)
-    static let translation = EngineCapability(tag: 14, name: "translation", isRequired: false)
-    static let selectionTranslation = EngineCapability(tag: 15, name: "selection-translation", isRequired: false)
-    static let localFiles = EngineCapability(tag: 16, name: "local-files", isRequired: false)
-    static let extensions = EngineCapability(tag: 17, name: "extensions", isRequired: false)
-    static let viewportCapture = EngineCapability(tag: 18, name: "viewport-capture", isRequired: false)
-    static let fullPageCapture = EngineCapability(tag: 19, name: "full-page-capture", isRequired: false)
-    static let pdf = EngineCapability(tag: 20, name: "pdf", isRequired: false)
-    static let webArchive = EngineCapability(tag: 21, name: "web-archive", isRequired: false)
-    static let print = EngineCapability(tag: 22, name: "print", isRequired: false)
-    static let inspector = EngineCapability(tag: 23, name: "inspector", isRequired: false)
-    static let featureFlags = EngineCapability(tag: 24, name: "feature-flags", isRequired: false)
-    static let beforeUnload = EngineCapability(tag: 25, name: "before-unload", isRequired: false)
-    static let internalPages = EngineCapability(tag: 26, name: "internal-pages", isRequired: false)
-    static let protectedMedia = EngineCapability(tag: 27, name: "protected-media", isRequired: false)
+    static let pages = EngineCapability(tag: 0, name: "pages", isRequired: true, startsEngineOnDemand: false)
+    static let navigation = EngineCapability(tag: 1, name: "navigation", isRequired: true, startsEngineOnDemand: false)
+    static let find = EngineCapability(tag: 2, name: "find", isRequired: false, startsEngineOnDemand: false)
+    static let zoom = EngineCapability(tag: 3, name: "zoom", isRequired: false, startsEngineOnDemand: false)
+    static let interactionState = EngineCapability(
+        tag: 4,
+        name: "interaction-state",
+        isRequired: false,
+        startsEngineOnDemand: false
+    )
+    static let pageResidency = EngineCapability(
+        tag: 5,
+        name: "page-residency",
+        isRequired: false,
+        startsEngineOnDemand: false
+    )
+    static let popups = EngineCapability(tag: 6, name: "popups", isRequired: false, startsEngineOnDemand: false)
+    static let workspaceProfiles = EngineCapability(
+        tag: 7,
+        name: "workspace-profiles",
+        isRequired: true,
+        startsEngineOnDemand: false
+    )
+    static let workspaceTransfer = EngineCapability(
+        tag: 8,
+        name: "workspace-transfer",
+        isRequired: false,
+        startsEngineOnDemand: false
+    )
+    static let profileDeletion = EngineCapability(
+        tag: 9,
+        name: "profile-deletion",
+        isRequired: true,
+        startsEngineOnDemand: false
+    )
+    static let contentBlocking = EngineCapability(
+        tag: 10,
+        name: "content-blocking",
+        isRequired: false,
+        startsEngineOnDemand: false
+    )
+    static let downloads = EngineCapability(tag: 11, name: "downloads", isRequired: false, startsEngineOnDemand: false)
+    static let permissions = EngineCapability(
+        tag: 12,
+        name: "permissions",
+        isRequired: false,
+        startsEngineOnDemand: false
+    )
+    static let reader = EngineCapability(tag: 13, name: "reader", isRequired: false, startsEngineOnDemand: false)
+    static let translation = EngineCapability(
+        tag: 14,
+        name: "translation",
+        isRequired: false,
+        startsEngineOnDemand: false
+    )
+    static let selectionTranslation = EngineCapability(
+        tag: 15,
+        name: "selection-translation",
+        isRequired: false,
+        startsEngineOnDemand: false
+    )
+    static let localFiles = EngineCapability(
+        tag: 16,
+        name: "local-files",
+        isRequired: false,
+        startsEngineOnDemand: false
+    )
+    static let extensions = EngineCapability(tag: 17, name: "extensions", isRequired: false, startsEngineOnDemand: true)
+    static let viewportCapture = EngineCapability(
+        tag: 18,
+        name: "viewport-capture",
+        isRequired: false,
+        startsEngineOnDemand: false
+    )
+    static let fullPageCapture = EngineCapability(
+        tag: 19,
+        name: "full-page-capture",
+        isRequired: false,
+        startsEngineOnDemand: false
+    )
+    static let pdf = EngineCapability(tag: 20, name: "pdf", isRequired: false, startsEngineOnDemand: false)
+    static let webArchive = EngineCapability(
+        tag: 21,
+        name: "web-archive",
+        isRequired: false,
+        startsEngineOnDemand: false
+    )
+    static let print = EngineCapability(tag: 22, name: "print", isRequired: false, startsEngineOnDemand: false)
+    static let inspector = EngineCapability(tag: 23, name: "inspector", isRequired: false, startsEngineOnDemand: false)
+    static let featureFlags = EngineCapability(
+        tag: 24,
+        name: "feature-flags",
+        isRequired: false,
+        startsEngineOnDemand: false
+    )
+    static let beforeUnload = EngineCapability(
+        tag: 25,
+        name: "before-unload",
+        isRequired: false,
+        startsEngineOnDemand: false
+    )
+    static let internalPages = EngineCapability(
+        tag: 26,
+        name: "internal-pages",
+        isRequired: false,
+        startsEngineOnDemand: false
+    )
+    static let protectedMedia = EngineCapability(
+        tag: 27,
+        name: "protected-media",
+        isRequired: false,
+        startsEngineOnDemand: false
+    )
 
     static let all: [EngineCapability] = [
         pages,
@@ -8682,6 +10659,7 @@ struct ImportSource: Hashable, Sendable {
     let spaceName: LocalizedStringResource?
     let numberedSpaceName: LocalizedStringResource?
     let namesItsSpaces: Bool
+    let isListed: Bool
 
     private init(
         tag: Int,
@@ -8700,7 +10678,8 @@ struct ImportSource: Hashable, Sendable {
         listsNewTab: Bool,
         spaceName: LocalizedStringResource?,
         numberedSpaceName: LocalizedStringResource?,
-        namesItsSpaces: Bool
+        namesItsSpaces: Bool,
+        isListed: Bool
     ) {
         self.tag = tag
         self.name = name
@@ -8719,6 +10698,7 @@ struct ImportSource: Hashable, Sendable {
         self.spaceName = spaceName
         self.numberedSpaceName = numberedSpaceName
         self.namesItsSpaces = namesItsSpaces
+        self.isListed = isListed
     }
 
     static let arc = ImportSource(
@@ -8738,7 +10718,8 @@ struct ImportSource: Hashable, Sendable {
         listsNewTab: true,
         spaceName: LocalizedStringResource("Imported Arc Tabs"),
         numberedSpaceName: LocalizedStringResource("Imported Arc Space %lld"),
-        namesItsSpaces: true
+        namesItsSpaces: true,
+        isListed: true
     )
     static let zen = ImportSource(
         tag: 1,
@@ -8757,7 +10738,8 @@ struct ImportSource: Hashable, Sendable {
         listsNewTab: false,
         spaceName: LocalizedStringResource("Imported Zen Tabs"),
         numberedSpaceName: LocalizedStringResource("Imported Zen Space %lld"),
-        namesItsSpaces: true
+        namesItsSpaces: true,
+        isListed: true
     )
     static let chrome = ImportSource(
         tag: 2,
@@ -8776,7 +10758,8 @@ struct ImportSource: Hashable, Sendable {
         listsNewTab: false,
         spaceName: nil,
         numberedSpaceName: nil,
-        namesItsSpaces: false
+        namesItsSpaces: false,
+        isListed: true
     )
     static let safari = ImportSource(
         tag: 3,
@@ -8795,7 +10778,8 @@ struct ImportSource: Hashable, Sendable {
         listsNewTab: false,
         spaceName: nil,
         numberedSpaceName: nil,
-        namesItsSpaces: false
+        namesItsSpaces: false,
+        isListed: true
     )
     static let firefox = ImportSource(
         tag: 4,
@@ -8814,7 +10798,8 @@ struct ImportSource: Hashable, Sendable {
         listsNewTab: false,
         spaceName: nil,
         numberedSpaceName: nil,
-        namesItsSpaces: false
+        namesItsSpaces: false,
+        isListed: true
     )
     static let chromeBeta = ImportSource(
         tag: 5,
@@ -8833,7 +10818,8 @@ struct ImportSource: Hashable, Sendable {
         listsNewTab: false,
         spaceName: nil,
         numberedSpaceName: nil,
-        namesItsSpaces: false
+        namesItsSpaces: false,
+        isListed: true
     )
     static let chromeDev = ImportSource(
         tag: 6,
@@ -8852,7 +10838,8 @@ struct ImportSource: Hashable, Sendable {
         listsNewTab: false,
         spaceName: nil,
         numberedSpaceName: nil,
-        namesItsSpaces: false
+        namesItsSpaces: false,
+        isListed: true
     )
     static let chromeCanary = ImportSource(
         tag: 7,
@@ -8871,7 +10858,8 @@ struct ImportSource: Hashable, Sendable {
         listsNewTab: false,
         spaceName: nil,
         numberedSpaceName: nil,
-        namesItsSpaces: false
+        namesItsSpaces: false,
+        isListed: true
     )
     static let chromium = ImportSource(
         tag: 8,
@@ -8890,7 +10878,8 @@ struct ImportSource: Hashable, Sendable {
         listsNewTab: false,
         spaceName: nil,
         numberedSpaceName: nil,
-        namesItsSpaces: false
+        namesItsSpaces: false,
+        isListed: true
     )
     static let brave = ImportSource(
         tag: 9,
@@ -8909,7 +10898,8 @@ struct ImportSource: Hashable, Sendable {
         listsNewTab: false,
         spaceName: nil,
         numberedSpaceName: nil,
-        namesItsSpaces: false
+        namesItsSpaces: false,
+        isListed: true
     )
     static let edge = ImportSource(
         tag: 10,
@@ -8928,7 +10918,8 @@ struct ImportSource: Hashable, Sendable {
         listsNewTab: false,
         spaceName: nil,
         numberedSpaceName: nil,
-        namesItsSpaces: false
+        namesItsSpaces: false,
+        isListed: true
     )
     static let vivaldi = ImportSource(
         tag: 11,
@@ -8947,7 +10938,8 @@ struct ImportSource: Hashable, Sendable {
         listsNewTab: false,
         spaceName: nil,
         numberedSpaceName: nil,
-        namesItsSpaces: false
+        namesItsSpaces: false,
+        isListed: true
     )
     static let opera = ImportSource(
         tag: 12,
@@ -8966,7 +10958,8 @@ struct ImportSource: Hashable, Sendable {
         listsNewTab: false,
         spaceName: nil,
         numberedSpaceName: nil,
-        namesItsSpaces: false
+        namesItsSpaces: false,
+        isListed: true
     )
     static let dia = ImportSource(
         tag: 13,
@@ -8985,7 +10978,8 @@ struct ImportSource: Hashable, Sendable {
         listsNewTab: false,
         spaceName: nil,
         numberedSpaceName: nil,
-        namesItsSpaces: false
+        namesItsSpaces: false,
+        isListed: true
     )
     static let comet = ImportSource(
         tag: 14,
@@ -9004,7 +10998,8 @@ struct ImportSource: Hashable, Sendable {
         listsNewTab: false,
         spaceName: nil,
         numberedSpaceName: nil,
-        namesItsSpaces: false
+        namesItsSpaces: false,
+        isListed: true
     )
     static let aside = ImportSource(
         tag: 15,
@@ -9023,7 +11018,8 @@ struct ImportSource: Hashable, Sendable {
         listsNewTab: false,
         spaceName: nil,
         numberedSpaceName: nil,
-        namesItsSpaces: false
+        namesItsSpaces: false,
+        isListed: true
     )
     static let egoLite = ImportSource(
         tag: 16,
@@ -9042,7 +11038,8 @@ struct ImportSource: Hashable, Sendable {
         listsNewTab: false,
         spaceName: nil,
         numberedSpaceName: nil,
-        namesItsSpaces: false
+        namesItsSpaces: false,
+        isListed: true
     )
     static let otherChromium = ImportSource(
         tag: 17,
@@ -9061,7 +11058,8 @@ struct ImportSource: Hashable, Sendable {
         listsNewTab: false,
         spaceName: nil,
         numberedSpaceName: nil,
-        namesItsSpaces: false
+        namesItsSpaces: false,
+        isListed: false
     )
 
     static let all: [ImportSource] = [
@@ -9172,14 +11170,24 @@ struct LinkNavigationDecision: Hashable, Sendable {
     let protectsSavedSite: Bool
     let opensTab: Bool
     let selectsTab: Bool
+    let stagesLink: Bool
 
-    private init(tag: Int, name: String, opensPeek: Bool, protectsSavedSite: Bool, opensTab: Bool, selectsTab: Bool) {
+    private init(
+        tag: Int,
+        name: String,
+        opensPeek: Bool,
+        protectsSavedSite: Bool,
+        opensTab: Bool,
+        selectsTab: Bool,
+        stagesLink: Bool
+    ) {
         self.tag = tag
         self.name = name
         self.opensPeek = opensPeek
         self.protectsSavedSite = protectsSavedSite
         self.opensTab = opensTab
         self.selectsTab = selectsTab
+        self.stagesLink = stagesLink
     }
 
     static let navigate = LinkNavigationDecision(
@@ -9188,7 +11196,8 @@ struct LinkNavigationDecision: Hashable, Sendable {
         opensPeek: false,
         protectsSavedSite: false,
         opensTab: false,
-        selectsTab: false
+        selectsTab: false,
+        stagesLink: false
     )
     static let peekModifier = LinkNavigationDecision(
         tag: 1,
@@ -9196,7 +11205,8 @@ struct LinkNavigationDecision: Hashable, Sendable {
         opensPeek: true,
         protectsSavedSite: false,
         opensTab: false,
-        selectsTab: false
+        selectsTab: false,
+        stagesLink: true
     )
     static let peekSavedSite = LinkNavigationDecision(
         tag: 2,
@@ -9204,7 +11214,8 @@ struct LinkNavigationDecision: Hashable, Sendable {
         opensPeek: true,
         protectsSavedSite: true,
         opensTab: false,
-        selectsTab: false
+        selectsTab: false,
+        stagesLink: false
     )
     static let backgroundTab = LinkNavigationDecision(
         tag: 3,
@@ -9212,7 +11223,8 @@ struct LinkNavigationDecision: Hashable, Sendable {
         opensPeek: false,
         protectsSavedSite: false,
         opensTab: true,
-        selectsTab: false
+        selectsTab: false,
+        stagesLink: false
     )
     static let foregroundTab = LinkNavigationDecision(
         tag: 4,
@@ -9220,7 +11232,8 @@ struct LinkNavigationDecision: Hashable, Sendable {
         opensPeek: false,
         protectsSavedSite: false,
         opensTab: true,
-        selectsTab: true
+        selectsTab: true,
+        stagesLink: false
     )
 
     static let all: [LinkNavigationDecision] = [navigate, peekModifier, peekSavedSite, backgroundTab, foregroundTab]
@@ -9405,37 +11418,152 @@ struct NavigationError: Hashable, Sendable {
     let tag: Int
     let name: String
     let code: String
+    let title: LocalizedStringResource
+    let message: LocalizedStringResource
+    let primarySuggestion: LocalizedStringResource
+    let secondarySuggestion: LocalizedStringResource
+    let symbol: String
 
-    private init(tag: Int, name: String, code: String) {
+    private init(
+        tag: Int,
+        name: String,
+        code: String,
+        title: LocalizedStringResource,
+        message: LocalizedStringResource,
+        primarySuggestion: LocalizedStringResource,
+        secondarySuggestion: LocalizedStringResource,
+        symbol: String
+    ) {
         self.tag = tag
         self.name = name
         self.code = code
+        self.title = title
+        self.message = message
+        self.primarySuggestion = primarySuggestion
+        self.secondarySuggestion = secondarySuggestion
+        self.symbol = symbol
     }
 
-    static let offline = NavigationError(tag: 0, name: "offline", code: "CREST_INTERNET_DISCONNECTED")
-    static let timedOut = NavigationError(tag: 1, name: "timedOut", code: "CREST_TIMED_OUT")
-    static let cannotFindServer = NavigationError(tag: 2, name: "cannotFindServer", code: "CREST_NAME_NOT_RESOLVED")
-    static let cannotConnect = NavigationError(tag: 3, name: "cannotConnect", code: "CREST_CONNECTION_REFUSED")
-    static let connectionLost = NavigationError(tag: 4, name: "connectionLost", code: "CREST_CONNECTION_RESET")
+    static let offline = NavigationError(
+        tag: 0,
+        name: "offline",
+        code: "CREST_INTERNET_DISCONNECTED",
+        title: LocalizedStringResource("You’re offline"),
+        message: LocalizedStringResource("Crest can’t reach %@ without a network connection."),
+        primarySuggestion: LocalizedStringResource("Reconnect to Wi-Fi or Ethernet, then try again."),
+        secondarySuggestion: LocalizedStringResource("If you use a VPN or proxy, confirm that it is connected."),
+        symbol: "wifi.slash"
+    )
+    static let timedOut = NavigationError(
+        tag: 1,
+        name: "timedOut",
+        code: "CREST_TIMED_OUT",
+        title: LocalizedStringResource("This site took too long to respond"),
+        message: LocalizedStringResource("%@ didn’t respond in time."),
+        primarySuggestion: LocalizedStringResource("Check your connection and try again in a moment."),
+        secondarySuggestion: LocalizedStringResource("If you use a VPN or proxy, confirm that it is connected."),
+        symbol: "clock.badge.exclamationmark"
+    )
+    static let cannotFindServer = NavigationError(
+        tag: 2,
+        name: "cannotFindServer",
+        code: "CREST_NAME_NOT_RESOLVED",
+        title: LocalizedStringResource("Server not found"),
+        message: LocalizedStringResource("Crest couldn’t find the server for %@."),
+        primarySuggestion: LocalizedStringResource("Check the address for typing mistakes."),
+        secondarySuggestion: LocalizedStringResource("If the address is correct, check your DNS or VPN settings."),
+        symbol: "network.slash"
+    )
+    static let cannotConnect = NavigationError(
+        tag: 3,
+        name: "cannotConnect",
+        code: "CREST_CONNECTION_REFUSED",
+        title: LocalizedStringResource("This site can’t be reached"),
+        message: LocalizedStringResource("%@ refused the connection or isn’t accepting connections."),
+        primarySuggestion: LocalizedStringResource("Check whether the site is available in another browser or device."),
+        secondarySuggestion: LocalizedStringResource("For an intranet site, confirm that you are on the required network."),
+        symbol: "exclamationmark.icloud"
+    )
+    static let connectionLost = NavigationError(
+        tag: 4,
+        name: "connectionLost",
+        code: "CREST_CONNECTION_RESET",
+        title: LocalizedStringResource("The connection was interrupted"),
+        message: LocalizedStringResource("The connection to %@ ended before the page finished loading."),
+        primarySuggestion: LocalizedStringResource("Check your connection and try again in a moment."),
+        secondarySuggestion: LocalizedStringResource("If you use a VPN or proxy, confirm that it is connected."),
+        symbol: "bolt.horizontal.icloud"
+    )
     static let secureConnectionFailed = NavigationError(
         tag: 5,
         name: "secureConnectionFailed",
-        code: "CREST_CERTIFICATE_INVALID"
+        code: "CREST_CERTIFICATE_INVALID",
+        title: LocalizedStringResource("A secure connection couldn’t be made"),
+        message: LocalizedStringResource("Crest couldn’t verify a private, secure connection to %@."),
+        primarySuggestion: LocalizedStringResource("Check that your device’s date and time are correct."),
+        secondarySuggestion: LocalizedStringResource("Avoid entering private information until the site fixes its certificate."),
+        symbol: "lock.trianglebadge.exclamationmark"
     )
-    static let tooManyRedirects = NavigationError(tag: 6, name: "tooManyRedirects", code: "CREST_TOO_MANY_REDIRECTS")
+    static let tooManyRedirects = NavigationError(
+        tag: 6,
+        name: "tooManyRedirects",
+        code: "CREST_TOO_MANY_REDIRECTS",
+        title: LocalizedStringResource("This page is redirecting incorrectly"),
+        message: LocalizedStringResource("%@ sent Crest through too many redirects."),
+        primarySuggestion: LocalizedStringResource("Try again later; the site may be temporarily misconfigured."),
+        secondarySuggestion: LocalizedStringResource("Opening the site’s home page may avoid the redirect loop."),
+        symbol: "arrow.trianglehead.2.clockwise.rotate.90"
+    )
     static let unsupportedAddress = NavigationError(
         tag: 7,
         name: "unsupportedAddress",
-        code: "CREST_UNSUPPORTED_ADDRESS"
+        code: "CREST_UNSUPPORTED_ADDRESS",
+        title: LocalizedStringResource("Crest can’t open this address"),
+        message: LocalizedStringResource("The address uses a format or protocol Crest doesn’t support."),
+        primarySuggestion: LocalizedStringResource("Check the address for typing mistakes."),
+        secondarySuggestion: LocalizedStringResource("Try an address beginning with http:// or https://."),
+        symbol: "link.badge.plus"
     )
-    static let blocked = NavigationError(tag: 8, name: "blocked", code: "CREST_CONTENT_BLOCKED")
-    static let unavailable = NavigationError(tag: 9, name: "unavailable", code: "CREST_RESOURCE_UNAVAILABLE")
+    static let blocked = NavigationError(
+        tag: 8,
+        name: "blocked",
+        code: "CREST_CONTENT_BLOCKED",
+        title: LocalizedStringResource("This page was blocked"),
+        message: LocalizedStringResource("A security or content policy prevented this page from loading."),
+        primarySuggestion: LocalizedStringResource("Review this Space’s content and network settings."),
+        secondarySuggestion: LocalizedStringResource("A firewall, filter, or device policy may also be responsible."),
+        symbol: "hand.raised.slash"
+    )
+    static let unavailable = NavigationError(
+        tag: 9,
+        name: "unavailable",
+        code: "CREST_RESOURCE_UNAVAILABLE",
+        title: LocalizedStringResource("This page isn’t available"),
+        message: LocalizedStringResource("%@ returned a response Crest couldn’t load."),
+        primarySuggestion: LocalizedStringResource("Check whether the site is available in another browser or device."),
+        secondarySuggestion: LocalizedStringResource("For an intranet site, confirm that you are on the required network."),
+        symbol: "exclamationmark.icloud"
+    )
     static let webContentProcessStopped = NavigationError(
         tag: 10,
         name: "webContentProcessStopped",
-        code: "CREST_WEB_PROCESS_STOPPED"
+        code: "CREST_WEB_PROCESS_STOPPED",
+        title: LocalizedStringResource("This page stopped responding"),
+        message: LocalizedStringResource("The web content process stopped repeatedly. Your tab and address are safe."),
+        primarySuggestion: LocalizedStringResource("Try reloading the page in a fresh web content process."),
+        secondarySuggestion: LocalizedStringResource("If it happens again, try closing and reopening the tab."),
+        symbol: "exclamationmark.arrow.trianglehead.2.clockwise.rotate.90"
     )
-    static let unknown = NavigationError(tag: 11, name: "unknown", code: "CREST_NAVIGATION_FAILED")
+    static let unknown = NavigationError(
+        tag: 11,
+        name: "unknown",
+        code: "CREST_NAVIGATION_FAILED",
+        title: LocalizedStringResource("This page couldn’t be opened"),
+        message: LocalizedStringResource("Crest encountered an unexpected problem while opening %@."),
+        primarySuggestion: LocalizedStringResource("Try the address again or open a different page."),
+        secondarySuggestion: LocalizedStringResource("The technical details below can help identify the cause."),
+        symbol: "doc.badge.ellipsis"
+    )
 
     static let all: [NavigationError] = [
         offline,
@@ -10046,6 +12174,45 @@ struct PasskeyAccessStatus: Hashable, Sendable {
     }
 }
 
+/// The members of the core's `PasskeyAuthorizationState`. A member's wire tag is its index in `all`.
+struct PasskeyAuthorizationState: Hashable, Sendable {
+    let tag: Int
+    let name: String
+    let accessStatus: PasskeyAccessStatus
+
+    private init(tag: Int, name: String, accessStatus: PasskeyAccessStatus) {
+        self.tag = tag
+        self.name = name
+        self.accessStatus = accessStatus
+    }
+
+    static let authorized = PasskeyAuthorizationState(
+        tag: 0,
+        name: "authorized",
+        accessStatus: PasskeyAccessStatus.authorized
+    )
+    static let denied = PasskeyAuthorizationState(tag: 1, name: "denied", accessStatus: PasskeyAccessStatus.denied)
+    static let notDetermined = PasskeyAuthorizationState(
+        tag: 2,
+        name: "notDetermined",
+        accessStatus: PasskeyAccessStatus.notDetermined
+    )
+
+    static let all: [PasskeyAuthorizationState] = [authorized, denied, notDetermined]
+
+    static func named(_ name: String?) -> PasskeyAuthorizationState? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: PasskeyAuthorizationState, rhs: PasskeyAuthorizationState) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+}
+
 /// The members of the core's `PracticeTab`. A member's wire tag is its index in `all`.
 struct PracticeTab: Hashable, Sendable {
     let tag: Int
@@ -10053,13 +12220,15 @@ struct PracticeTab: Hashable, Sendable {
     let title: String
     let url: String
     let placement: TabPlacement
+    let artwork: String
 
-    private init(tag: Int, name: String, title: String, url: String, placement: TabPlacement) {
+    private init(tag: Int, name: String, title: String, url: String, placement: TabPlacement, artwork: String) {
         self.tag = tag
         self.name = name
         self.title = title
         self.url = url
         self.placement = placement
+        self.artwork = artwork
     }
 
     static let calendar = PracticeTab(
@@ -10067,35 +12236,40 @@ struct PracticeTab: Hashable, Sendable {
         name: "calendar",
         title: "Calendar",
         url: "https://calendar.google.com",
-        placement: TabPlacement.pinned
+        placement: TabPlacement.pinned,
+        artwork: "GuideCalendar"
     )
     static let reading = PracticeTab(
         tag: 1,
         name: "reading",
         title: "Wikipedia",
         url: "https://wikipedia.org",
-        placement: TabPlacement.saved
+        placement: TabPlacement.saved,
+        artwork: "GuideWikipedia"
     )
     static let mail = PracticeTab(
         tag: 2,
         name: "mail",
         title: "Gmail",
         url: "https://mail.google.com",
-        placement: TabPlacement.current
+        placement: TabPlacement.current,
+        artwork: "GuideGmail"
     )
     static let trail = PracticeTab(
         tag: 3,
         name: "trail",
         title: "A weekend away",
         url: "https://www.alltrails.com",
-        placement: TabPlacement.current
+        placement: TabPlacement.current,
+        artwork: "GuideAllTrails"
     )
     static let packing = PracticeTab(
         tag: 4,
         name: "packing",
         title: "Packing list",
         url: "https://todoist.com",
-        placement: TabPlacement.current
+        placement: TabPlacement.current,
+        artwork: "GuideTodoist"
     )
 
     static let all: [PracticeTab] = [calendar, reading, mail, trail, packing]
@@ -13460,49 +15634,58 @@ struct SpaceAccent: Hashable, Sendable {
                     BrandColor(red: 0.525, green: 0.678, blue: 0.769, alpha: 1)
                 ]
             ),
-            bannerPattern: .diagonal,
+            bannerPattern: SpaceBannerPattern.diagonal,
             bannerStrength: 1,
             readabilityFade: 0.45,
             keepsControlsReadable: true,
-            themeMode: .banner,
+            themeMode: SpaceThemeMode.banner,
             gradientAngle: 0,
             showsTexture: false,
-            iconStyle: .layeredCrest,
+            iconStyle: SpaceIconStyle.layeredCrest,
             symbolColor: nil,
             crest: SpaceCrest(
-                backplate: .frenchShield,
-                fieldDivision: .plain,
-                ordinary: .none,
-                trim: .line,
-                symbol: .direwolf,
-                chargeLayout: .single,
+                backplate: CrestBackplate.frenchShield,
+                fieldDivision: CrestFieldDivision.plain,
+                ordinary: CrestOrdinary.none,
+                trim: CrestTrim.line,
+                symbol: CrestSymbol.direwolf,
+                chargeLayout: CrestChargeLayout.single,
                 backplateColorIndex: 0,
                 secondaryFieldColorIndex: 1,
-                ordinaryColorIndex: 1,
-                trimColorIndex: 2,
-                symbolColorIndex: 2,
+                ordinaryColorIndex: 2,
+                trimColorIndex: 4,
+                symbolColorIndex: 3,
                 startingPresetID: nil,
-                edgeColorIndex: 2,
-                palette: nil,
+                edgeColorIndex: 5,
+                palette: ColorPalette(
+                    colors: [
+                        BrandColor(red: 0.871, green: 0.894, blue: 0.91, alpha: 1),
+                        BrandColor(red: 0.525, green: 0.678, blue: 0.769, alpha: 1),
+                        BrandColor(red: 0.243, green: 0.306, blue: 0.369, alpha: 1),
+                        BrandColor(red: 0.341, green: 0.384, blue: 0.427, alpha: 1),
+                        BrandColor(red: 0.243, green: 0.306, blue: 0.369, alpha: 1),
+                        BrandColor(red: 0.118, green: 0.157, blue: 0.2, alpha: 1)
+                    ]
+                ),
                 charge: nil,
                 plateScale: 1,
-                edgeWidth: 0,
+                edgeWidth: 0.35,
                 divisionCount: 4,
-                finish: .flat,
+                finish: CrestFinish.flat,
                 ordinaryWidth: 1,
                 trimWeight: 0.75,
                 trimDetail: 12,
                 chargeScale: 1.2,
                 chargeOffset: 0,
-                chargeWeight: .bold,
+                chargeWeight: CrestChargeWeight.bold,
                 sheenAngle: 45,
                 sealTeeth: 12,
                 showsOutline: false,
-                depth: .none
+                depth: CrestDepth.soft
             ),
             renderingVersion: 5,
             folderColorIntensity: 0,
-            textColorMode: .automatic,
+            textColorMode: SpaceTextColorMode.automatic,
             hasCustomAppearance: false
         ),
         swatch: BrandColor(red: 0.29, green: 0.25, blue: 0.58, alpha: 1)
@@ -13524,49 +15707,58 @@ struct SpaceAccent: Hashable, Sendable {
                     BrandColor(red: 0.816, green: 0.62, blue: 0.396, alpha: 1)
                 ]
             ),
-            bannerPattern: .diagonal,
+            bannerPattern: SpaceBannerPattern.diagonal,
             bannerStrength: 1,
             readabilityFade: 0.45,
             keepsControlsReadable: true,
-            themeMode: .banner,
-            gradientAngle: 0,
+            themeMode: SpaceThemeMode.gradient,
+            gradientAngle: 160,
             showsTexture: false,
-            iconStyle: .layeredCrest,
+            iconStyle: SpaceIconStyle.layeredCrest,
             symbolColor: nil,
             crest: SpaceCrest(
-                backplate: .circle,
-                fieldDivision: .plain,
-                ordinary: .none,
-                trim: .sunburst,
-                symbol: .sun,
-                chargeLayout: .single,
+                backplate: CrestBackplate.circle,
+                fieldDivision: CrestFieldDivision.plain,
+                ordinary: CrestOrdinary.none,
+                trim: CrestTrim.sunburst,
+                symbol: CrestSymbol.sun,
+                chargeLayout: CrestChargeLayout.single,
                 backplateColorIndex: 0,
                 secondaryFieldColorIndex: 1,
-                ordinaryColorIndex: 1,
-                trimColorIndex: 2,
-                symbolColorIndex: 2,
+                ordinaryColorIndex: 2,
+                trimColorIndex: 4,
+                symbolColorIndex: 3,
                 startingPresetID: nil,
-                edgeColorIndex: 2,
-                palette: nil,
+                edgeColorIndex: 5,
+                palette: ColorPalette(
+                    colors: [
+                        BrandColor(red: 0.851, green: 0.467, blue: 0.176, alpha: 1),
+                        BrandColor(red: 0.545, green: 0.239, blue: 0.106, alpha: 1),
+                        BrandColor(red: 0.894, green: 0.718, blue: 0.333, alpha: 1),
+                        BrandColor(red: 0.722, green: 0.165, blue: 0.118, alpha: 1),
+                        BrandColor(red: 0.894, green: 0.718, blue: 0.333, alpha: 1),
+                        BrandColor(red: 0.208, green: 0.086, blue: 0.043, alpha: 1)
+                    ]
+                ),
                 charge: nil,
                 plateScale: 1,
-                edgeWidth: 0,
+                edgeWidth: 0.25,
                 divisionCount: 4,
-                finish: .flat,
+                finish: CrestFinish.flat,
                 ordinaryWidth: 1,
                 trimWeight: 0.75,
                 trimDetail: 12,
                 chargeScale: 1.2,
                 chargeOffset: 0,
-                chargeWeight: .bold,
+                chargeWeight: CrestChargeWeight.bold,
                 sheenAngle: 45,
                 sealTeeth: 12,
                 showsOutline: false,
-                depth: .none
+                depth: CrestDepth.soft
             ),
             renderingVersion: 5,
             folderColorIntensity: 0,
-            textColorMode: .automatic,
+            textColorMode: SpaceTextColorMode.automatic,
             hasCustomAppearance: false
         ),
         swatch: BrandColor(red: 0.85, green: 0.27, blue: 0.2, alpha: 1)
@@ -13588,49 +15780,58 @@ struct SpaceAccent: Hashable, Sendable {
                     BrandColor(red: 0.737, green: 0.655, blue: 0.4, alpha: 1)
                 ]
             ),
-            bannerPattern: .diagonal,
+            bannerPattern: SpaceBannerPattern.lozenges,
             bannerStrength: 1,
             readabilityFade: 0.45,
             keepsControlsReadable: true,
-            themeMode: .banner,
+            themeMode: SpaceThemeMode.banner,
             gradientAngle: 0,
             showsTexture: false,
-            iconStyle: .layeredCrest,
+            iconStyle: SpaceIconStyle.layeredCrest,
             symbolColor: nil,
             crest: SpaceCrest(
-                backplate: .circle,
-                fieldDivision: .plain,
-                ordinary: .none,
-                trim: .laurel,
-                symbol: .rose,
-                chargeLayout: .single,
+                backplate: CrestBackplate.circle,
+                fieldDivision: CrestFieldDivision.plain,
+                ordinary: CrestOrdinary.none,
+                trim: CrestTrim.laurel,
+                symbol: CrestSymbol.rose,
+                chargeLayout: CrestChargeLayout.single,
                 backplateColorIndex: 0,
                 secondaryFieldColorIndex: 1,
-                ordinaryColorIndex: 1,
-                trimColorIndex: 2,
-                symbolColorIndex: 2,
+                ordinaryColorIndex: 2,
+                trimColorIndex: 4,
+                symbolColorIndex: 3,
                 startingPresetID: nil,
-                edgeColorIndex: 2,
-                palette: nil,
+                edgeColorIndex: 5,
+                palette: ColorPalette(
+                    colors: [
+                        BrandColor(red: 0.188, green: 0.42, blue: 0.231, alpha: 1),
+                        BrandColor(red: 0.204, green: 0.341, blue: 0.22, alpha: 1),
+                        BrandColor(red: 0.871, green: 0.729, blue: 0.318, alpha: 1),
+                        BrandColor(red: 0.871, green: 0.729, blue: 0.318, alpha: 1),
+                        BrandColor(red: 0.737, green: 0.655, blue: 0.4, alpha: 1),
+                        BrandColor(red: 0.082, green: 0.137, blue: 0.094, alpha: 1)
+                    ]
+                ),
                 charge: nil,
                 plateScale: 1,
-                edgeWidth: 0,
+                edgeWidth: 0.25,
                 divisionCount: 4,
-                finish: .flat,
+                finish: CrestFinish.flat,
                 ordinaryWidth: 1,
                 trimWeight: 0.75,
                 trimDetail: 12,
                 chargeScale: 1.2,
                 chargeOffset: 0,
-                chargeWeight: .bold,
+                chargeWeight: CrestChargeWeight.bold,
                 sheenAngle: 45,
                 sealTeeth: 12,
                 showsOutline: false,
-                depth: .none
+                depth: CrestDepth.soft
             ),
             renderingVersion: 5,
             folderColorIntensity: 0,
-            textColorMode: .automatic,
+            textColorMode: SpaceTextColorMode.automatic,
             hasCustomAppearance: false
         ),
         swatch: BrandColor(red: 0.12, green: 0.49, blue: 0.52, alpha: 1)
@@ -13652,49 +15853,58 @@ struct SpaceAccent: Hashable, Sendable {
                     BrandColor(red: 0.788, green: 0.635, blue: 0.329, alpha: 1)
                 ]
             ),
-            bannerPattern: .diagonal,
+            bannerPattern: SpaceBannerPattern.chevron,
             bannerStrength: 1,
             readabilityFade: 0.45,
             keepsControlsReadable: true,
-            themeMode: .banner,
+            themeMode: SpaceThemeMode.banner,
             gradientAngle: 0,
             showsTexture: false,
-            iconStyle: .layeredCrest,
+            iconStyle: SpaceIconStyle.layeredCrest,
             symbolColor: nil,
             crest: SpaceCrest(
-                backplate: .shield,
-                fieldDivision: .plain,
-                ordinary: .none,
-                trim: .line,
-                symbol: .lion,
-                chargeLayout: .single,
+                backplate: CrestBackplate.shield,
+                fieldDivision: CrestFieldDivision.plain,
+                ordinary: CrestOrdinary.none,
+                trim: CrestTrim.doubleLine,
+                symbol: CrestSymbol.lion,
+                chargeLayout: CrestChargeLayout.single,
                 backplateColorIndex: 0,
                 secondaryFieldColorIndex: 1,
-                ordinaryColorIndex: 1,
-                trimColorIndex: 2,
-                symbolColorIndex: 2,
+                ordinaryColorIndex: 2,
+                trimColorIndex: 4,
+                symbolColorIndex: 3,
                 startingPresetID: nil,
-                edgeColorIndex: 2,
-                palette: nil,
+                edgeColorIndex: 5,
+                palette: ColorPalette(
+                    colors: [
+                        BrandColor(red: 0.596, green: 0.114, blue: 0.157, alpha: 1),
+                        BrandColor(red: 0.447, green: 0.125, blue: 0.188, alpha: 1),
+                        BrandColor(red: 0.851, green: 0.682, blue: 0.318, alpha: 1),
+                        BrandColor(red: 0.851, green: 0.682, blue: 0.318, alpha: 1),
+                        BrandColor(red: 0.851, green: 0.682, blue: 0.318, alpha: 1),
+                        BrandColor(red: 0.235, green: 0.055, blue: 0.102, alpha: 1)
+                    ]
+                ),
                 charge: nil,
                 plateScale: 1,
-                edgeWidth: 0,
+                edgeWidth: 0.25,
                 divisionCount: 4,
-                finish: .flat,
+                finish: CrestFinish.sheen,
                 ordinaryWidth: 1,
-                trimWeight: 0.75,
+                trimWeight: 0.85,
                 trimDetail: 12,
-                chargeScale: 1.2,
+                chargeScale: 1.25,
                 chargeOffset: 0,
-                chargeWeight: .bold,
+                chargeWeight: CrestChargeWeight.bold,
                 sheenAngle: 45,
                 sealTeeth: 12,
                 showsOutline: false,
-                depth: .none
+                depth: CrestDepth.lifted
             ),
             renderingVersion: 5,
             folderColorIntensity: 0,
-            textColorMode: .automatic,
+            textColorMode: SpaceTextColorMode.automatic,
             hasCustomAppearance: false
         ),
         swatch: BrandColor(red: 0.72, green: 0.25, blue: 0.42, alpha: 1)
@@ -13707,6 +15917,900 @@ struct SpaceAccent: Hashable, Sendable {
     }
 
     static func == (lhs: SpaceAccent, rhs: SpaceAccent) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+}
+
+/// The members of the core's `SpaceBannerPattern`. A member's wire tag is its index in `all`.
+struct SpaceBannerPattern: Hashable, Sendable {
+    enum Kinds: Sendable {
+        case solid
+        case split
+        case bands
+        case diagonal
+        case chevron
+        case quartered
+        case stripes
+        case checkered
+        case lozenges
+    }
+
+    let tag: Int
+    let kind: Kinds
+    let name: String
+    let title: LocalizedStringResource
+    let drawnSince: CrestVocabulary
+
+    private init(tag: Int, kind: Kinds, name: String, title: LocalizedStringResource, drawnSince: CrestVocabulary) {
+        self.tag = tag
+        self.kind = kind
+        self.name = name
+        self.title = title
+        self.drawnSince = drawnSince
+    }
+
+    static let solid = SpaceBannerPattern(
+        tag: 0,
+        kind: .solid,
+        name: "solid",
+        title: LocalizedStringResource("Solid"),
+        drawnSince: CrestVocabulary.baseline
+    )
+    static let split = SpaceBannerPattern(
+        tag: 1,
+        kind: .split,
+        name: "split",
+        title: LocalizedStringResource("Split"),
+        drawnSince: CrestVocabulary.baseline
+    )
+    static let bands = SpaceBannerPattern(
+        tag: 2,
+        kind: .bands,
+        name: "bands",
+        title: LocalizedStringResource("Bands"),
+        drawnSince: CrestVocabulary.baseline
+    )
+    static let diagonal = SpaceBannerPattern(
+        tag: 3,
+        kind: .diagonal,
+        name: "diagonal",
+        title: LocalizedStringResource("Diagonal"),
+        drawnSince: CrestVocabulary.baseline
+    )
+    static let chevron = SpaceBannerPattern(
+        tag: 4,
+        kind: .chevron,
+        name: "chevron",
+        title: LocalizedStringResource("Chevron"),
+        drawnSince: CrestVocabulary.baseline
+    )
+    static let quartered = SpaceBannerPattern(
+        tag: 5,
+        kind: .quartered,
+        name: "quartered",
+        title: LocalizedStringResource("Quartered"),
+        drawnSince: CrestVocabulary.baseline
+    )
+    static let stripes = SpaceBannerPattern(
+        tag: 6,
+        kind: .stripes,
+        name: "stripes",
+        title: LocalizedStringResource("Stripes"),
+        drawnSince: CrestVocabulary.customization
+    )
+    static let checkered = SpaceBannerPattern(
+        tag: 7,
+        kind: .checkered,
+        name: "checkered",
+        title: LocalizedStringResource("Checkered"),
+        drawnSince: CrestVocabulary.customization
+    )
+    static let lozenges = SpaceBannerPattern(
+        tag: 8,
+        kind: .lozenges,
+        name: "lozenges",
+        title: LocalizedStringResource("Lozenges"),
+        drawnSince: CrestVocabulary.customization
+    )
+
+    static let all: [SpaceBannerPattern] = [
+        solid,
+        split,
+        bands,
+        diagonal,
+        chevron,
+        quartered,
+        stripes,
+        checkered,
+        lozenges
+    ]
+
+    static func named(_ name: String?) -> SpaceBannerPattern? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: SpaceBannerPattern, rhs: SpaceBannerPattern) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+}
+
+/// The members of the core's `SpaceHouse`. A member's wire tag is its index in `all`.
+struct SpaceHouse: Hashable, Sendable {
+    let tag: Int
+    let name: String
+    let title: LocalizedStringResource
+    let look: SpaceBranding
+    let appIconName: String
+
+    private init(tag: Int, name: String, title: LocalizedStringResource, look: SpaceBranding, appIconName: String) {
+        self.tag = tag
+        self.name = name
+        self.title = title
+        self.look = look
+        self.appIconName = appIconName
+    }
+
+    static let winter = SpaceHouse(
+        tag: 0,
+        name: "winter",
+        title: LocalizedStringResource("Winter"),
+        look: SpaceBranding(
+            colors: ColorPalette(
+                colors: [
+                    BrandColor(red: 0.118, green: 0.157, blue: 0.2, alpha: 1),
+                    BrandColor(red: 0.243, green: 0.306, blue: 0.369, alpha: 1),
+                    BrandColor(red: 0.525, green: 0.678, blue: 0.769, alpha: 1)
+                ]
+            ),
+            bannerPattern: SpaceBannerPattern.diagonal,
+            bannerStrength: 1,
+            readabilityFade: 0.45,
+            keepsControlsReadable: true,
+            themeMode: SpaceThemeMode.banner,
+            gradientAngle: 0,
+            showsTexture: false,
+            iconStyle: SpaceIconStyle.layeredCrest,
+            symbolColor: nil,
+            crest: SpaceCrest(
+                backplate: CrestBackplate.frenchShield,
+                fieldDivision: CrestFieldDivision.plain,
+                ordinary: CrestOrdinary.none,
+                trim: CrestTrim.line,
+                symbol: CrestSymbol.direwolf,
+                chargeLayout: CrestChargeLayout.single,
+                backplateColorIndex: 0,
+                secondaryFieldColorIndex: 1,
+                ordinaryColorIndex: 2,
+                trimColorIndex: 4,
+                symbolColorIndex: 3,
+                startingPresetID: nil,
+                edgeColorIndex: 5,
+                palette: ColorPalette(
+                    colors: [
+                        BrandColor(red: 0.871, green: 0.894, blue: 0.91, alpha: 1),
+                        BrandColor(red: 0.525, green: 0.678, blue: 0.769, alpha: 1),
+                        BrandColor(red: 0.243, green: 0.306, blue: 0.369, alpha: 1),
+                        BrandColor(red: 0.341, green: 0.384, blue: 0.427, alpha: 1),
+                        BrandColor(red: 0.243, green: 0.306, blue: 0.369, alpha: 1),
+                        BrandColor(red: 0.118, green: 0.157, blue: 0.2, alpha: 1)
+                    ]
+                ),
+                charge: nil,
+                plateScale: 1,
+                edgeWidth: 0.35,
+                divisionCount: 4,
+                finish: CrestFinish.flat,
+                ordinaryWidth: 1,
+                trimWeight: 0.75,
+                trimDetail: 12,
+                chargeScale: 1.2,
+                chargeOffset: 0,
+                chargeWeight: CrestChargeWeight.bold,
+                sheenAngle: 45,
+                sealTeeth: 12,
+                showsOutline: false,
+                depth: CrestDepth.soft
+            ),
+            renderingVersion: 5,
+            folderColorIntensity: 0,
+            textColorMode: SpaceTextColorMode.automatic,
+            hasCustomAppearance: false
+        ),
+        appIconName: "CrestWinter"
+    )
+    static let lion = SpaceHouse(
+        tag: 1,
+        name: "lion",
+        title: LocalizedStringResource("Lion"),
+        look: SpaceBranding(
+            colors: ColorPalette(
+                colors: [
+                    BrandColor(red: 0.235, green: 0.055, blue: 0.102, alpha: 1),
+                    BrandColor(red: 0.447, green: 0.125, blue: 0.188, alpha: 1),
+                    BrandColor(red: 0.788, green: 0.635, blue: 0.329, alpha: 1)
+                ]
+            ),
+            bannerPattern: SpaceBannerPattern.chevron,
+            bannerStrength: 1,
+            readabilityFade: 0.45,
+            keepsControlsReadable: true,
+            themeMode: SpaceThemeMode.banner,
+            gradientAngle: 0,
+            showsTexture: false,
+            iconStyle: SpaceIconStyle.layeredCrest,
+            symbolColor: nil,
+            crest: SpaceCrest(
+                backplate: CrestBackplate.shield,
+                fieldDivision: CrestFieldDivision.plain,
+                ordinary: CrestOrdinary.none,
+                trim: CrestTrim.doubleLine,
+                symbol: CrestSymbol.lion,
+                chargeLayout: CrestChargeLayout.single,
+                backplateColorIndex: 0,
+                secondaryFieldColorIndex: 1,
+                ordinaryColorIndex: 2,
+                trimColorIndex: 4,
+                symbolColorIndex: 3,
+                startingPresetID: nil,
+                edgeColorIndex: 5,
+                palette: ColorPalette(
+                    colors: [
+                        BrandColor(red: 0.596, green: 0.114, blue: 0.157, alpha: 1),
+                        BrandColor(red: 0.447, green: 0.125, blue: 0.188, alpha: 1),
+                        BrandColor(red: 0.851, green: 0.682, blue: 0.318, alpha: 1),
+                        BrandColor(red: 0.851, green: 0.682, blue: 0.318, alpha: 1),
+                        BrandColor(red: 0.851, green: 0.682, blue: 0.318, alpha: 1),
+                        BrandColor(red: 0.235, green: 0.055, blue: 0.102, alpha: 1)
+                    ]
+                ),
+                charge: nil,
+                plateScale: 1,
+                edgeWidth: 0.25,
+                divisionCount: 4,
+                finish: CrestFinish.sheen,
+                ordinaryWidth: 1,
+                trimWeight: 0.85,
+                trimDetail: 12,
+                chargeScale: 1.25,
+                chargeOffset: 0,
+                chargeWeight: CrestChargeWeight.bold,
+                sheenAngle: 45,
+                sealTeeth: 12,
+                showsOutline: false,
+                depth: CrestDepth.lifted
+            ),
+            renderingVersion: 5,
+            folderColorIntensity: 0,
+            textColorMode: SpaceTextColorMode.automatic,
+            hasCustomAppearance: false
+        ),
+        appIconName: "CrestLion"
+    )
+    static let storm = SpaceHouse(
+        tag: 2,
+        name: "storm",
+        title: LocalizedStringResource("Storm"),
+        look: SpaceBranding(
+            colors: ColorPalette(
+                colors: [
+                    BrandColor(red: 0.082, green: 0.094, blue: 0.141, alpha: 1),
+                    BrandColor(red: 0.192, green: 0.22, blue: 0.282, alpha: 1),
+                    BrandColor(red: 0.69, green: 0.561, blue: 0.29, alpha: 1)
+                ]
+            ),
+            bannerPattern: SpaceBannerPattern.quartered,
+            bannerStrength: 1,
+            readabilityFade: 0.45,
+            keepsControlsReadable: true,
+            themeMode: SpaceThemeMode.banner,
+            gradientAngle: 0,
+            showsTexture: false,
+            iconStyle: SpaceIconStyle.layeredCrest,
+            symbolColor: nil,
+            crest: SpaceCrest(
+                backplate: CrestBackplate.hexagon,
+                fieldDivision: CrestFieldDivision.plain,
+                ordinary: CrestOrdinary.none,
+                trim: CrestTrim.doubleLine,
+                symbol: CrestSymbol.stag,
+                chargeLayout: CrestChargeLayout.single,
+                backplateColorIndex: 0,
+                secondaryFieldColorIndex: 1,
+                ordinaryColorIndex: 2,
+                trimColorIndex: 4,
+                symbolColorIndex: 3,
+                startingPresetID: nil,
+                edgeColorIndex: 5,
+                palette: ColorPalette(
+                    colors: [
+                        BrandColor(red: 0.835, green: 0.655, blue: 0.231, alpha: 1),
+                        BrandColor(red: 0.69, green: 0.561, blue: 0.29, alpha: 1),
+                        BrandColor(red: 0.09, green: 0.094, blue: 0.106, alpha: 1),
+                        BrandColor(red: 0.09, green: 0.094, blue: 0.106, alpha: 1),
+                        BrandColor(red: 0.09, green: 0.094, blue: 0.106, alpha: 1),
+                        BrandColor(red: 0.09, green: 0.094, blue: 0.106, alpha: 1)
+                    ]
+                ),
+                charge: nil,
+                plateScale: 1,
+                edgeWidth: 0.3,
+                divisionCount: 4,
+                finish: CrestFinish.flat,
+                ordinaryWidth: 1,
+                trimWeight: 0.75,
+                trimDetail: 12,
+                chargeScale: 1.2,
+                chargeOffset: 0,
+                chargeWeight: CrestChargeWeight.bold,
+                sheenAngle: 45,
+                sealTeeth: 12,
+                showsOutline: false,
+                depth: CrestDepth.soft
+            ),
+            renderingVersion: 5,
+            folderColorIntensity: 0,
+            textColorMode: SpaceTextColorMode.automatic,
+            hasCustomAppearance: false
+        ),
+        appIconName: "CrestStorm"
+    )
+    static let dragon = SpaceHouse(
+        tag: 3,
+        name: "dragon",
+        title: LocalizedStringResource("Dragon"),
+        look: SpaceBranding(
+            colors: ColorPalette(
+                colors: [
+                    BrandColor(red: 0.102, green: 0.063, blue: 0.051, alpha: 1),
+                    BrandColor(red: 0.478, green: 0.118, blue: 0.071, alpha: 1),
+                    BrandColor(red: 0.745, green: 0.267, blue: 0.22, alpha: 1)
+                ]
+            ),
+            bannerPattern: SpaceBannerPattern.bands,
+            bannerStrength: 1,
+            readabilityFade: 0.45,
+            keepsControlsReadable: true,
+            themeMode: SpaceThemeMode.banner,
+            gradientAngle: 0,
+            showsTexture: false,
+            iconStyle: SpaceIconStyle.layeredCrest,
+            symbolColor: nil,
+            crest: SpaceCrest(
+                backplate: CrestBackplate.shield,
+                fieldDivision: CrestFieldDivision.plain,
+                ordinary: CrestOrdinary.none,
+                trim: CrestTrim.line,
+                symbol: CrestSymbol.dragon,
+                chargeLayout: CrestChargeLayout.single,
+                backplateColorIndex: 0,
+                secondaryFieldColorIndex: 1,
+                ordinaryColorIndex: 2,
+                trimColorIndex: 4,
+                symbolColorIndex: 3,
+                startingPresetID: nil,
+                edgeColorIndex: 5,
+                palette: ColorPalette(
+                    colors: [
+                        BrandColor(red: 0.071, green: 0.059, blue: 0.063, alpha: 1),
+                        BrandColor(red: 0.102, green: 0.063, blue: 0.051, alpha: 1),
+                        BrandColor(red: 0.749, green: 0.18, blue: 0.137, alpha: 1),
+                        BrandColor(red: 0.749, green: 0.18, blue: 0.137, alpha: 1),
+                        BrandColor(red: 0.749, green: 0.18, blue: 0.137, alpha: 1),
+                        BrandColor(red: 0.478, green: 0.118, blue: 0.071, alpha: 1)
+                    ]
+                ),
+                charge: nil,
+                plateScale: 1,
+                edgeWidth: 0.25,
+                divisionCount: 4,
+                finish: CrestFinish.flat,
+                ordinaryWidth: 1,
+                trimWeight: 0.75,
+                trimDetail: 12,
+                chargeScale: 1.25,
+                chargeOffset: 0,
+                chargeWeight: CrestChargeWeight.bold,
+                sheenAngle: 45,
+                sealTeeth: 12,
+                showsOutline: false,
+                depth: CrestDepth.lifted
+            ),
+            renderingVersion: 5,
+            folderColorIntensity: 0,
+            textColorMode: SpaceTextColorMode.automatic,
+            hasCustomAppearance: false
+        ),
+        appIconName: "CrestDragon"
+    )
+    static let meadow = SpaceHouse(
+        tag: 4,
+        name: "meadow",
+        title: LocalizedStringResource("Meadow"),
+        look: SpaceBranding(
+            colors: ColorPalette(
+                colors: [
+                    BrandColor(red: 0.082, green: 0.137, blue: 0.094, alpha: 1),
+                    BrandColor(red: 0.204, green: 0.341, blue: 0.22, alpha: 1),
+                    BrandColor(red: 0.737, green: 0.655, blue: 0.4, alpha: 1)
+                ]
+            ),
+            bannerPattern: SpaceBannerPattern.lozenges,
+            bannerStrength: 1,
+            readabilityFade: 0.45,
+            keepsControlsReadable: true,
+            themeMode: SpaceThemeMode.banner,
+            gradientAngle: 0,
+            showsTexture: false,
+            iconStyle: SpaceIconStyle.layeredCrest,
+            symbolColor: nil,
+            crest: SpaceCrest(
+                backplate: CrestBackplate.circle,
+                fieldDivision: CrestFieldDivision.plain,
+                ordinary: CrestOrdinary.none,
+                trim: CrestTrim.laurel,
+                symbol: CrestSymbol.rose,
+                chargeLayout: CrestChargeLayout.single,
+                backplateColorIndex: 0,
+                secondaryFieldColorIndex: 1,
+                ordinaryColorIndex: 2,
+                trimColorIndex: 4,
+                symbolColorIndex: 3,
+                startingPresetID: nil,
+                edgeColorIndex: 5,
+                palette: ColorPalette(
+                    colors: [
+                        BrandColor(red: 0.188, green: 0.42, blue: 0.231, alpha: 1),
+                        BrandColor(red: 0.204, green: 0.341, blue: 0.22, alpha: 1),
+                        BrandColor(red: 0.871, green: 0.729, blue: 0.318, alpha: 1),
+                        BrandColor(red: 0.871, green: 0.729, blue: 0.318, alpha: 1),
+                        BrandColor(red: 0.737, green: 0.655, blue: 0.4, alpha: 1),
+                        BrandColor(red: 0.082, green: 0.137, blue: 0.094, alpha: 1)
+                    ]
+                ),
+                charge: nil,
+                plateScale: 1,
+                edgeWidth: 0.25,
+                divisionCount: 4,
+                finish: CrestFinish.flat,
+                ordinaryWidth: 1,
+                trimWeight: 0.75,
+                trimDetail: 12,
+                chargeScale: 1.2,
+                chargeOffset: 0,
+                chargeWeight: CrestChargeWeight.bold,
+                sheenAngle: 45,
+                sealTeeth: 12,
+                showsOutline: false,
+                depth: CrestDepth.soft
+            ),
+            renderingVersion: 5,
+            folderColorIntensity: 0,
+            textColorMode: SpaceTextColorMode.automatic,
+            hasCustomAppearance: false
+        ),
+        appIconName: "CrestMeadow"
+    )
+    static let iron = SpaceHouse(
+        tag: 5,
+        name: "iron",
+        title: LocalizedStringResource("Iron"),
+        look: SpaceBranding(
+            colors: ColorPalette(
+                colors: [
+                    BrandColor(red: 0.055, green: 0.102, blue: 0.11, alpha: 1),
+                    BrandColor(red: 0.173, green: 0.227, blue: 0.235, alpha: 1),
+                    BrandColor(red: 0.612, green: 0.592, blue: 0.506, alpha: 1)
+                ]
+            ),
+            bannerPattern: SpaceBannerPattern.stripes,
+            bannerStrength: 1,
+            readabilityFade: 0.45,
+            keepsControlsReadable: true,
+            themeMode: SpaceThemeMode.banner,
+            gradientAngle: 0,
+            showsTexture: false,
+            iconStyle: SpaceIconStyle.layeredCrest,
+            symbolColor: nil,
+            crest: SpaceCrest(
+                backplate: CrestBackplate.octagon,
+                fieldDivision: CrestFieldDivision.plain,
+                ordinary: CrestOrdinary.none,
+                trim: CrestTrim.beaded,
+                symbol: CrestSymbol.kraken,
+                chargeLayout: CrestChargeLayout.single,
+                backplateColorIndex: 0,
+                secondaryFieldColorIndex: 1,
+                ordinaryColorIndex: 2,
+                trimColorIndex: 4,
+                symbolColorIndex: 3,
+                startingPresetID: nil,
+                edgeColorIndex: 5,
+                palette: ColorPalette(
+                    colors: [
+                        BrandColor(red: 0.055, green: 0.102, blue: 0.11, alpha: 1),
+                        BrandColor(red: 0.173, green: 0.227, blue: 0.235, alpha: 1),
+                        BrandColor(red: 0.796, green: 0.651, blue: 0.302, alpha: 1),
+                        BrandColor(red: 0.796, green: 0.651, blue: 0.302, alpha: 1),
+                        BrandColor(red: 0.796, green: 0.651, blue: 0.302, alpha: 1),
+                        BrandColor(red: 0.612, green: 0.592, blue: 0.506, alpha: 1)
+                    ]
+                ),
+                charge: nil,
+                plateScale: 1,
+                edgeWidth: 0.5,
+                divisionCount: 4,
+                finish: CrestFinish.embossed,
+                ordinaryWidth: 1,
+                trimWeight: 0.75,
+                trimDetail: 12,
+                chargeScale: 1.2,
+                chargeOffset: 0,
+                chargeWeight: CrestChargeWeight.bold,
+                sheenAngle: 45,
+                sealTeeth: 12,
+                showsOutline: false,
+                depth: CrestDepth.soft
+            ),
+            renderingVersion: 5,
+            folderColorIntensity: 0,
+            textColorMode: SpaceTextColorMode.automatic,
+            hasCustomAppearance: false
+        ),
+        appIconName: "CrestIron"
+    )
+    static let river = SpaceHouse(
+        tag: 6,
+        name: "river",
+        title: LocalizedStringResource("River"),
+        look: SpaceBranding(
+            colors: ColorPalette(
+                colors: [
+                    BrandColor(red: 0.059, green: 0.118, blue: 0.18, alpha: 1),
+                    BrandColor(red: 0.133, green: 0.282, blue: 0.424, alpha: 1),
+                    BrandColor(red: 0.659, green: 0.361, blue: 0.255, alpha: 1)
+                ]
+            ),
+            bannerPattern: SpaceBannerPattern.split,
+            bannerStrength: 1,
+            readabilityFade: 0.45,
+            keepsControlsReadable: true,
+            themeMode: SpaceThemeMode.banner,
+            gradientAngle: 0,
+            showsTexture: false,
+            iconStyle: SpaceIconStyle.layeredCrest,
+            symbolColor: nil,
+            crest: SpaceCrest(
+                backplate: CrestBackplate.banner,
+                fieldDivision: CrestFieldDivision.barry,
+                ordinary: CrestOrdinary.none,
+                trim: CrestTrim.line,
+                symbol: CrestSymbol.fish,
+                chargeLayout: CrestChargeLayout.single,
+                backplateColorIndex: 0,
+                secondaryFieldColorIndex: 1,
+                ordinaryColorIndex: 2,
+                trimColorIndex: 4,
+                symbolColorIndex: 3,
+                startingPresetID: nil,
+                edgeColorIndex: 5,
+                palette: ColorPalette(
+                    colors: [
+                        BrandColor(red: 0.176, green: 0.369, blue: 0.616, alpha: 1),
+                        BrandColor(red: 0.643, green: 0.157, blue: 0.188, alpha: 1),
+                        BrandColor(red: 0.851, green: 0.871, blue: 0.894, alpha: 1),
+                        BrandColor(red: 0.851, green: 0.871, blue: 0.894, alpha: 1),
+                        BrandColor(red: 0.851, green: 0.871, blue: 0.894, alpha: 1),
+                        BrandColor(red: 0.059, green: 0.118, blue: 0.18, alpha: 1)
+                    ]
+                ),
+                charge: nil,
+                plateScale: 1,
+                edgeWidth: 0.2,
+                divisionCount: 6,
+                finish: CrestFinish.flat,
+                ordinaryWidth: 1,
+                trimWeight: 0.75,
+                trimDetail: 12,
+                chargeScale: 1.2,
+                chargeOffset: 0,
+                chargeWeight: CrestChargeWeight.bold,
+                sheenAngle: 45,
+                sealTeeth: 12,
+                showsOutline: false,
+                depth: CrestDepth.soft
+            ),
+            renderingVersion: 5,
+            folderColorIntensity: 0,
+            textColorMode: SpaceTextColorMode.automatic,
+            hasCustomAppearance: false
+        ),
+        appIconName: "CrestRiver"
+    )
+    static let sun = SpaceHouse(
+        tag: 7,
+        name: "sun",
+        title: LocalizedStringResource("Sun"),
+        look: SpaceBranding(
+            colors: ColorPalette(
+                colors: [
+                    BrandColor(red: 0.208, green: 0.086, blue: 0.043, alpha: 1),
+                    BrandColor(red: 0.545, green: 0.239, blue: 0.106, alpha: 1),
+                    BrandColor(red: 0.816, green: 0.62, blue: 0.396, alpha: 1)
+                ]
+            ),
+            bannerPattern: SpaceBannerPattern.diagonal,
+            bannerStrength: 1,
+            readabilityFade: 0.45,
+            keepsControlsReadable: true,
+            themeMode: SpaceThemeMode.gradient,
+            gradientAngle: 160,
+            showsTexture: false,
+            iconStyle: SpaceIconStyle.layeredCrest,
+            symbolColor: nil,
+            crest: SpaceCrest(
+                backplate: CrestBackplate.circle,
+                fieldDivision: CrestFieldDivision.plain,
+                ordinary: CrestOrdinary.none,
+                trim: CrestTrim.sunburst,
+                symbol: CrestSymbol.sun,
+                chargeLayout: CrestChargeLayout.single,
+                backplateColorIndex: 0,
+                secondaryFieldColorIndex: 1,
+                ordinaryColorIndex: 2,
+                trimColorIndex: 4,
+                symbolColorIndex: 3,
+                startingPresetID: nil,
+                edgeColorIndex: 5,
+                palette: ColorPalette(
+                    colors: [
+                        BrandColor(red: 0.851, green: 0.467, blue: 0.176, alpha: 1),
+                        BrandColor(red: 0.545, green: 0.239, blue: 0.106, alpha: 1),
+                        BrandColor(red: 0.894, green: 0.718, blue: 0.333, alpha: 1),
+                        BrandColor(red: 0.722, green: 0.165, blue: 0.118, alpha: 1),
+                        BrandColor(red: 0.894, green: 0.718, blue: 0.333, alpha: 1),
+                        BrandColor(red: 0.208, green: 0.086, blue: 0.043, alpha: 1)
+                    ]
+                ),
+                charge: nil,
+                plateScale: 1,
+                edgeWidth: 0.25,
+                divisionCount: 4,
+                finish: CrestFinish.flat,
+                ordinaryWidth: 1,
+                trimWeight: 0.75,
+                trimDetail: 12,
+                chargeScale: 1.2,
+                chargeOffset: 0,
+                chargeWeight: CrestChargeWeight.bold,
+                sheenAngle: 45,
+                sealTeeth: 12,
+                showsOutline: false,
+                depth: CrestDepth.soft
+            ),
+            renderingVersion: 5,
+            folderColorIntensity: 0,
+            textColorMode: SpaceTextColorMode.automatic,
+            hasCustomAppearance: false
+        ),
+        appIconName: "CrestSun"
+    )
+    static let vigil = SpaceHouse(
+        tag: 8,
+        name: "vigil",
+        title: LocalizedStringResource("Vigil"),
+        look: SpaceBranding(
+            colors: ColorPalette(
+                colors: [
+                    BrandColor(red: 0.063, green: 0.067, blue: 0.071, alpha: 1),
+                    BrandColor(red: 0.153, green: 0.165, blue: 0.18, alpha: 1),
+                    BrandColor(red: 0.482, green: 0.514, blue: 0.549, alpha: 1)
+                ]
+            ),
+            bannerPattern: SpaceBannerPattern.checkered,
+            bannerStrength: 1,
+            readabilityFade: 0.45,
+            keepsControlsReadable: true,
+            themeMode: SpaceThemeMode.banner,
+            gradientAngle: 0,
+            showsTexture: false,
+            iconStyle: SpaceIconStyle.layeredCrest,
+            symbolColor: nil,
+            crest: SpaceCrest(
+                backplate: CrestBackplate.seal,
+                fieldDivision: CrestFieldDivision.plain,
+                ordinary: CrestOrdinary.none,
+                trim: CrestTrim.doubleRing,
+                symbol: CrestSymbol.raven,
+                chargeLayout: CrestChargeLayout.single,
+                backplateColorIndex: 0,
+                secondaryFieldColorIndex: 1,
+                ordinaryColorIndex: 2,
+                trimColorIndex: 4,
+                symbolColorIndex: 3,
+                startingPresetID: nil,
+                edgeColorIndex: 5,
+                palette: ColorPalette(
+                    colors: [
+                        BrandColor(red: 0.063, green: 0.067, blue: 0.071, alpha: 1),
+                        BrandColor(red: 0.153, green: 0.165, blue: 0.18, alpha: 1),
+                        BrandColor(red: 0.482, green: 0.514, blue: 0.549, alpha: 1),
+                        BrandColor(red: 0.812, green: 0.82, blue: 0.831, alpha: 1),
+                        BrandColor(red: 0.482, green: 0.514, blue: 0.549, alpha: 1),
+                        BrandColor(red: 0.482, green: 0.514, blue: 0.549, alpha: 1)
+                    ]
+                ),
+                charge: nil,
+                plateScale: 1,
+                edgeWidth: 0.45,
+                divisionCount: 4,
+                finish: CrestFinish.flat,
+                ordinaryWidth: 1,
+                trimWeight: 0.9,
+                trimDetail: 12,
+                chargeScale: 1.2,
+                chargeOffset: 0,
+                chargeWeight: CrestChargeWeight.bold,
+                sheenAngle: 45,
+                sealTeeth: 12,
+                showsOutline: false,
+                depth: CrestDepth.none
+            ),
+            renderingVersion: 5,
+            folderColorIntensity: 0,
+            textColorMode: SpaceTextColorMode.automatic,
+            hasCustomAppearance: false
+        ),
+        appIconName: "CrestVigil"
+    )
+
+    static let all: [SpaceHouse] = [winter, lion, storm, dragon, meadow, iron, river, sun, vigil]
+
+    static func named(_ name: String?) -> SpaceHouse? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: SpaceHouse, rhs: SpaceHouse) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+}
+
+/// The members of the core's `SpaceIconStyle`. A member's wire tag is its index in `all`.
+struct SpaceIconStyle: Hashable, Sendable {
+    enum Kinds: Sendable {
+        case simpleSymbol
+        case layeredCrest
+    }
+
+    let tag: Int
+    let kind: Kinds
+    let name: String
+    let title: LocalizedStringResource
+
+    private init(tag: Int, kind: Kinds, name: String, title: LocalizedStringResource) {
+        self.tag = tag
+        self.kind = kind
+        self.name = name
+        self.title = title
+    }
+
+    static let simpleSymbol = SpaceIconStyle(
+        tag: 0,
+        kind: .simpleSymbol,
+        name: "simpleSymbol",
+        title: LocalizedStringResource("Icon")
+    )
+    static let layeredCrest = SpaceIconStyle(
+        tag: 1,
+        kind: .layeredCrest,
+        name: "layeredCrest",
+        title: LocalizedStringResource("Crest")
+    )
+
+    static let all: [SpaceIconStyle] = [simpleSymbol, layeredCrest]
+
+    static func named(_ name: String?) -> SpaceIconStyle? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: SpaceIconStyle, rhs: SpaceIconStyle) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+}
+
+/// The members of the core's `SpaceTextColorMode`. A member's wire tag is its index in `all`.
+struct SpaceTextColorMode: Hashable, Sendable {
+    enum Kinds: Sendable {
+        case automatic
+        case light
+        case dark
+    }
+
+    let tag: Int
+    let kind: Kinds
+    let name: String
+    let title: LocalizedStringResource
+
+    private init(tag: Int, kind: Kinds, name: String, title: LocalizedStringResource) {
+        self.tag = tag
+        self.kind = kind
+        self.name = name
+        self.title = title
+    }
+
+    static let automatic = SpaceTextColorMode(
+        tag: 0,
+        kind: .automatic,
+        name: "automatic",
+        title: LocalizedStringResource("Automatic")
+    )
+    static let light = SpaceTextColorMode(tag: 1, kind: .light, name: "light", title: LocalizedStringResource("Light"))
+    static let dark = SpaceTextColorMode(tag: 2, kind: .dark, name: "dark", title: LocalizedStringResource("Dark"))
+
+    static let all: [SpaceTextColorMode] = [automatic, light, dark]
+
+    static func named(_ name: String?) -> SpaceTextColorMode? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: SpaceTextColorMode, rhs: SpaceTextColorMode) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+}
+
+/// The members of the core's `SpaceThemeMode`. A member's wire tag is its index in `all`.
+struct SpaceThemeMode: Hashable, Sendable {
+    enum Kinds: Sendable {
+        case banner
+        case gradient
+    }
+
+    let tag: Int
+    let kind: Kinds
+    let name: String
+    let title: LocalizedStringResource
+
+    private init(tag: Int, kind: Kinds, name: String, title: LocalizedStringResource) {
+        self.tag = tag
+        self.kind = kind
+        self.name = name
+        self.title = title
+    }
+
+    static let banner = SpaceThemeMode(tag: 0, kind: .banner, name: "banner", title: LocalizedStringResource("Banner"))
+    static let gradient = SpaceThemeMode(
+        tag: 1,
+        kind: .gradient,
+        name: "gradient",
+        title: LocalizedStringResource("Gradient")
+    )
+
+    static let all: [SpaceThemeMode] = [banner, gradient]
+
+    static func named(_ name: String?) -> SpaceThemeMode? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: SpaceThemeMode, rhs: SpaceThemeMode) -> Bool {
         lhs.tag == rhs.tag
     }
 
@@ -14113,6 +17217,9 @@ struct TabPlacement: Hashable, Sendable {
     let holdsSplits: Bool
     let isCollapsible: Bool
     let capacity: Int?
+    let importedSymbol: String?
+    let isGrid: Bool
+    let paletteRow: PaletteRowKind
 
     private init(
         tag: Int,
@@ -14125,7 +17232,10 @@ struct TabPlacement: Hashable, Sendable {
         holdsFolders: Bool,
         holdsSplits: Bool,
         isCollapsible: Bool,
-        capacity: Int?
+        capacity: Int?,
+        importedSymbol: String?,
+        isGrid: Bool,
+        paletteRow: PaletteRowKind
     ) {
         self.tag = tag
         self.name = name
@@ -14138,6 +17248,9 @@ struct TabPlacement: Hashable, Sendable {
         self.holdsSplits = holdsSplits
         self.isCollapsible = isCollapsible
         self.capacity = capacity
+        self.importedSymbol = importedSymbol
+        self.isGrid = isGrid
+        self.paletteRow = paletteRow
     }
 
     static let pinned = TabPlacement(
@@ -14151,7 +17264,10 @@ struct TabPlacement: Hashable, Sendable {
         holdsFolders: false,
         holdsSplits: false,
         isCollapsible: false,
-        capacity: 12
+        capacity: 12,
+        importedSymbol: "pin.fill",
+        isGrid: true,
+        paletteRow: PaletteRowKind.pinnedTab
     )
     static let saved = TabPlacement(
         tag: 1,
@@ -14164,7 +17280,10 @@ struct TabPlacement: Hashable, Sendable {
         holdsFolders: true,
         holdsSplits: true,
         isCollapsible: true,
-        capacity: nil
+        capacity: nil,
+        importedSymbol: nil,
+        isGrid: false,
+        paletteRow: PaletteRowKind.savedTab
     )
     static let current = TabPlacement(
         tag: 2,
@@ -14177,7 +17296,10 @@ struct TabPlacement: Hashable, Sendable {
         holdsFolders: true,
         holdsSplits: true,
         isCollapsible: false,
-        capacity: nil
+        capacity: nil,
+        importedSymbol: nil,
+        isGrid: false,
+        paletteRow: PaletteRowKind.tab
     )
 
     static let all: [TabPlacement] = [pinned, saved, current]
@@ -14226,6 +17348,422 @@ struct TabSurface: Hashable, Sendable {
     }
 }
 
+/// The members of the core's `Tincture`. A member's wire tag is its index in `all`.
+struct Tincture: Hashable, Sendable {
+    let tag: Int
+    let name: String
+    let title: LocalizedStringResource
+    let color: BrandColor
+
+    private init(tag: Int, name: String, title: LocalizedStringResource, color: BrandColor) {
+        self.tag = tag
+        self.name = name
+        self.title = title
+        self.color = color
+    }
+
+    static let ink = Tincture(
+        tag: 0,
+        name: "ink",
+        title: LocalizedStringResource("Ink"),
+        color: BrandColor(red: 0.08, green: 0.15, blue: 0.23, alpha: 1)
+    )
+    static let indigo = Tincture(
+        tag: 1,
+        name: "indigo",
+        title: LocalizedStringResource("Indigo"),
+        color: BrandColor(red: 0.29, green: 0.25, blue: 0.58, alpha: 1)
+    )
+    static let ocean = Tincture(
+        tag: 2,
+        name: "ocean",
+        title: LocalizedStringResource("Ocean"),
+        color: BrandColor(red: 0.22, green: 0.42, blue: 0.64, alpha: 1)
+    )
+    static let sky = Tincture(
+        tag: 3,
+        name: "sky",
+        title: LocalizedStringResource("Sky"),
+        color: BrandColor(red: 0.35, green: 0.66, blue: 0.84, alpha: 1)
+    )
+    static let teal = Tincture(
+        tag: 4,
+        name: "teal",
+        title: LocalizedStringResource("Teal"),
+        color: BrandColor(red: 0.12, green: 0.49, blue: 0.52, alpha: 1)
+    )
+    static let sage = Tincture(
+        tag: 5,
+        name: "sage",
+        title: LocalizedStringResource("Sage"),
+        color: BrandColor(red: 0.39, green: 0.56, blue: 0.42, alpha: 1)
+    )
+    static let gold = Tincture(
+        tag: 6,
+        name: "gold",
+        title: LocalizedStringResource("Gold"),
+        color: BrandColor(red: 0.88, green: 0.67, blue: 0.25, alpha: 1)
+    )
+    static let ember = Tincture(
+        tag: 7,
+        name: "ember",
+        title: LocalizedStringResource("Ember"),
+        color: BrandColor(red: 0.85, green: 0.27, blue: 0.2, alpha: 1)
+    )
+    static let rose = Tincture(
+        tag: 8,
+        name: "rose",
+        title: LocalizedStringResource("Rose"),
+        color: BrandColor(red: 0.72, green: 0.25, blue: 0.42, alpha: 1)
+    )
+    static let sand = Tincture(
+        tag: 9,
+        name: "sand",
+        title: LocalizedStringResource("Sand"),
+        color: BrandColor(red: 0.82, green: 0.72, blue: 0.56, alpha: 1)
+    )
+    static let winterSlate = Tincture(
+        tag: 10,
+        name: "winterSlate",
+        title: LocalizedStringResource("Slate"),
+        color: BrandColor(red: 0.118, green: 0.157, blue: 0.2, alpha: 1)
+    )
+    static let winterSteel = Tincture(
+        tag: 11,
+        name: "winterSteel",
+        title: LocalizedStringResource("Steel"),
+        color: BrandColor(red: 0.243, green: 0.306, blue: 0.369, alpha: 1)
+    )
+    static let winterIce = Tincture(
+        tag: 12,
+        name: "winterIce",
+        title: LocalizedStringResource("Ice"),
+        color: BrandColor(red: 0.525, green: 0.678, blue: 0.769, alpha: 1)
+    )
+    static let lionOxblood = Tincture(
+        tag: 13,
+        name: "lionOxblood",
+        title: LocalizedStringResource("Oxblood"),
+        color: BrandColor(red: 0.235, green: 0.055, blue: 0.102, alpha: 1)
+    )
+    static let lionCrimson = Tincture(
+        tag: 14,
+        name: "lionCrimson",
+        title: LocalizedStringResource("Crimson"),
+        color: BrandColor(red: 0.447, green: 0.125, blue: 0.188, alpha: 1)
+    )
+    static let lionGold = Tincture(
+        tag: 15,
+        name: "lionGold",
+        title: LocalizedStringResource("Antique Gold"),
+        color: BrandColor(red: 0.788, green: 0.635, blue: 0.329, alpha: 1)
+    )
+    static let stormMidnight = Tincture(
+        tag: 16,
+        name: "stormMidnight",
+        title: LocalizedStringResource("Midnight"),
+        color: BrandColor(red: 0.082, green: 0.094, blue: 0.141, alpha: 1)
+    )
+    static let stormGunmetal = Tincture(
+        tag: 17,
+        name: "stormGunmetal",
+        title: LocalizedStringResource("Gunmetal"),
+        color: BrandColor(red: 0.192, green: 0.22, blue: 0.282, alpha: 1)
+    )
+    static let stormBrass = Tincture(
+        tag: 18,
+        name: "stormBrass",
+        title: LocalizedStringResource("Brass"),
+        color: BrandColor(red: 0.69, green: 0.561, blue: 0.29, alpha: 1)
+    )
+    static let dragonChar = Tincture(
+        tag: 19,
+        name: "dragonChar",
+        title: LocalizedStringResource("Char"),
+        color: BrandColor(red: 0.102, green: 0.063, blue: 0.051, alpha: 1)
+    )
+    static let dragonBlood = Tincture(
+        tag: 20,
+        name: "dragonBlood",
+        title: LocalizedStringResource("Blood"),
+        color: BrandColor(red: 0.478, green: 0.118, blue: 0.071, alpha: 1)
+    )
+    static let dragonScarlet = Tincture(
+        tag: 21,
+        name: "dragonScarlet",
+        title: LocalizedStringResource("Scarlet"),
+        color: BrandColor(red: 0.745, green: 0.267, blue: 0.22, alpha: 1)
+    )
+    static let meadowForest = Tincture(
+        tag: 22,
+        name: "meadowForest",
+        title: LocalizedStringResource("Forest"),
+        color: BrandColor(red: 0.082, green: 0.137, blue: 0.094, alpha: 1)
+    )
+    static let meadowMoss = Tincture(
+        tag: 23,
+        name: "meadowMoss",
+        title: LocalizedStringResource("Moss"),
+        color: BrandColor(red: 0.204, green: 0.341, blue: 0.22, alpha: 1)
+    )
+    static let meadowWheat = Tincture(
+        tag: 24,
+        name: "meadowWheat",
+        title: LocalizedStringResource("Wheat"),
+        color: BrandColor(red: 0.737, green: 0.655, blue: 0.4, alpha: 1)
+    )
+    static let ironBlack = Tincture(
+        tag: 25,
+        name: "ironBlack",
+        title: LocalizedStringResource("Iron"),
+        color: BrandColor(red: 0.055, green: 0.102, blue: 0.11, alpha: 1)
+    )
+    static let ironPewter = Tincture(
+        tag: 26,
+        name: "ironPewter",
+        title: LocalizedStringResource("Pewter"),
+        color: BrandColor(red: 0.173, green: 0.227, blue: 0.235, alpha: 1)
+    )
+    static let ironPatina = Tincture(
+        tag: 27,
+        name: "ironPatina",
+        title: LocalizedStringResource("Patina"),
+        color: BrandColor(red: 0.612, green: 0.592, blue: 0.506, alpha: 1)
+    )
+    static let riverNavy = Tincture(
+        tag: 28,
+        name: "riverNavy",
+        title: LocalizedStringResource("Navy"),
+        color: BrandColor(red: 0.059, green: 0.118, blue: 0.18, alpha: 1)
+    )
+    static let riverLapis = Tincture(
+        tag: 29,
+        name: "riverLapis",
+        title: LocalizedStringResource("Lapis"),
+        color: BrandColor(red: 0.133, green: 0.282, blue: 0.424, alpha: 1)
+    )
+    static let riverRust = Tincture(
+        tag: 30,
+        name: "riverRust",
+        title: LocalizedStringResource("Rust"),
+        color: BrandColor(red: 0.659, green: 0.361, blue: 0.255, alpha: 1)
+    )
+    static let sunUmber = Tincture(
+        tag: 31,
+        name: "sunUmber",
+        title: LocalizedStringResource("Umber"),
+        color: BrandColor(red: 0.208, green: 0.086, blue: 0.043, alpha: 1)
+    )
+    static let sunTerracotta = Tincture(
+        tag: 32,
+        name: "sunTerracotta",
+        title: LocalizedStringResource("Terracotta"),
+        color: BrandColor(red: 0.545, green: 0.239, blue: 0.106, alpha: 1)
+    )
+    static let sunDune = Tincture(
+        tag: 33,
+        name: "sunDune",
+        title: LocalizedStringResource("Dune"),
+        color: BrandColor(red: 0.816, green: 0.62, blue: 0.396, alpha: 1)
+    )
+    static let vigilOnyx = Tincture(
+        tag: 34,
+        name: "vigilOnyx",
+        title: LocalizedStringResource("Onyx"),
+        color: BrandColor(red: 0.063, green: 0.067, blue: 0.071, alpha: 1)
+    )
+    static let vigilCharcoal = Tincture(
+        tag: 35,
+        name: "vigilCharcoal",
+        title: LocalizedStringResource("Charcoal"),
+        color: BrandColor(red: 0.153, green: 0.165, blue: 0.18, alpha: 1)
+    )
+    static let vigilAsh = Tincture(
+        tag: 36,
+        name: "vigilAsh",
+        title: LocalizedStringResource("Ash"),
+        color: BrandColor(red: 0.482, green: 0.514, blue: 0.549, alpha: 1)
+    )
+    static let winterArgent = Tincture(
+        tag: 37,
+        name: "winterArgent",
+        title: LocalizedStringResource("Argent"),
+        color: BrandColor(red: 0.871, green: 0.894, blue: 0.91, alpha: 1)
+    )
+    static let winterWolf = Tincture(
+        tag: 38,
+        name: "winterWolf",
+        title: LocalizedStringResource("Wolf Grey"),
+        color: BrandColor(red: 0.341, green: 0.384, blue: 0.427, alpha: 1)
+    )
+    static let lionGules = Tincture(
+        tag: 39,
+        name: "lionGules",
+        title: LocalizedStringResource("Gules"),
+        color: BrandColor(red: 0.596, green: 0.114, blue: 0.157, alpha: 1)
+    )
+    static let lionOr = Tincture(
+        tag: 40,
+        name: "lionOr",
+        title: LocalizedStringResource("Or"),
+        color: BrandColor(red: 0.851, green: 0.682, blue: 0.318, alpha: 1)
+    )
+    static let stormOr = Tincture(
+        tag: 41,
+        name: "stormOr",
+        title: LocalizedStringResource("Storm Gold"),
+        color: BrandColor(red: 0.835, green: 0.655, blue: 0.231, alpha: 1)
+    )
+    static let stormSable = Tincture(
+        tag: 42,
+        name: "stormSable",
+        title: LocalizedStringResource("Sable"),
+        color: BrandColor(red: 0.09, green: 0.094, blue: 0.106, alpha: 1)
+    )
+    static let dragonSable = Tincture(
+        tag: 43,
+        name: "dragonSable",
+        title: LocalizedStringResource("Night"),
+        color: BrandColor(red: 0.071, green: 0.059, blue: 0.063, alpha: 1)
+    )
+    static let dragonFire = Tincture(
+        tag: 44,
+        name: "dragonFire",
+        title: LocalizedStringResource("Fire"),
+        color: BrandColor(red: 0.749, green: 0.18, blue: 0.137, alpha: 1)
+    )
+    static let meadowVert = Tincture(
+        tag: 45,
+        name: "meadowVert",
+        title: LocalizedStringResource("Vert"),
+        color: BrandColor(red: 0.188, green: 0.42, blue: 0.231, alpha: 1)
+    )
+    static let meadowRose = Tincture(
+        tag: 46,
+        name: "meadowRose",
+        title: LocalizedStringResource("Rose Gold"),
+        color: BrandColor(red: 0.871, green: 0.729, blue: 0.318, alpha: 1)
+    )
+    static let ironOr = Tincture(
+        tag: 47,
+        name: "ironOr",
+        title: LocalizedStringResource("Kraken Gold"),
+        color: BrandColor(red: 0.796, green: 0.651, blue: 0.302, alpha: 1)
+    )
+    static let riverAzure = Tincture(
+        tag: 48,
+        name: "riverAzure",
+        title: LocalizedStringResource("Azure"),
+        color: BrandColor(red: 0.176, green: 0.369, blue: 0.616, alpha: 1)
+    )
+    static let riverGules = Tincture(
+        tag: 49,
+        name: "riverGules",
+        title: LocalizedStringResource("River Red"),
+        color: BrandColor(red: 0.643, green: 0.157, blue: 0.188, alpha: 1)
+    )
+    static let riverArgent = Tincture(
+        tag: 50,
+        name: "riverArgent",
+        title: LocalizedStringResource("Silver"),
+        color: BrandColor(red: 0.851, green: 0.871, blue: 0.894, alpha: 1)
+    )
+    static let sunTenne = Tincture(
+        tag: 51,
+        name: "sunTenne",
+        title: LocalizedStringResource("Tenné"),
+        color: BrandColor(red: 0.851, green: 0.467, blue: 0.176, alpha: 1)
+    )
+    static let sunGules = Tincture(
+        tag: 52,
+        name: "sunGules",
+        title: LocalizedStringResource("Sunset Red"),
+        color: BrandColor(red: 0.722, green: 0.165, blue: 0.118, alpha: 1)
+    )
+    static let sunOr = Tincture(
+        tag: 53,
+        name: "sunOr",
+        title: LocalizedStringResource("Saffron"),
+        color: BrandColor(red: 0.894, green: 0.718, blue: 0.333, alpha: 1)
+    )
+    static let vigilBone = Tincture(
+        tag: 54,
+        name: "vigilBone",
+        title: LocalizedStringResource("Bone"),
+        color: BrandColor(red: 0.812, green: 0.82, blue: 0.831, alpha: 1)
+    )
+
+    static let all: [Tincture] = [
+        ink,
+        indigo,
+        ocean,
+        sky,
+        teal,
+        sage,
+        gold,
+        ember,
+        rose,
+        sand,
+        winterSlate,
+        winterSteel,
+        winterIce,
+        lionOxblood,
+        lionCrimson,
+        lionGold,
+        stormMidnight,
+        stormGunmetal,
+        stormBrass,
+        dragonChar,
+        dragonBlood,
+        dragonScarlet,
+        meadowForest,
+        meadowMoss,
+        meadowWheat,
+        ironBlack,
+        ironPewter,
+        ironPatina,
+        riverNavy,
+        riverLapis,
+        riverRust,
+        sunUmber,
+        sunTerracotta,
+        sunDune,
+        vigilOnyx,
+        vigilCharcoal,
+        vigilAsh,
+        winterArgent,
+        winterWolf,
+        lionGules,
+        lionOr,
+        stormOr,
+        stormSable,
+        dragonSable,
+        dragonFire,
+        meadowVert,
+        meadowRose,
+        ironOr,
+        riverAzure,
+        riverGules,
+        riverArgent,
+        sunTenne,
+        sunGules,
+        sunOr,
+        vigilBone
+    ]
+
+    static func named(_ name: String?) -> Tincture? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: Tincture, rhs: Tincture) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+}
+
 /// The members of the core's `TransientPresentation`. A member's wire tag is its index in `all`.
 struct TransientPresentation: Hashable, Sendable {
     let tag: Int
@@ -14262,15 +17800,17 @@ struct WebScheme: Hashable, Sendable {
     let tag: Int
     let name: String
     let defaultPort: Int
+    let isSecure: Bool
 
-    private init(tag: Int, name: String, defaultPort: Int) {
+    private init(tag: Int, name: String, defaultPort: Int, isSecure: Bool) {
         self.tag = tag
         self.name = name
         self.defaultPort = defaultPort
+        self.isSecure = isSecure
     }
 
-    static let http = WebScheme(tag: 0, name: "http", defaultPort: 80)
-    static let https = WebScheme(tag: 1, name: "https", defaultPort: 443)
+    static let http = WebScheme(tag: 0, name: "http", defaultPort: 80, isSecure: false)
+    static let https = WebScheme(tag: 1, name: "https", defaultPort: 443, isSecure: true)
 
     static let all: [WebScheme] = [http, https]
 

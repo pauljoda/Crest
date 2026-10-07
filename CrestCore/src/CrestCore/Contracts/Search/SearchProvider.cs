@@ -143,10 +143,10 @@ public sealed class SearchProvider {
         if (!Uri.TryCreate(probe, UriKind.Absolute, out var uri) || uri.IsFile)
             throw Flawed(probe.Contains("://", StringComparison.Ordinal)
                 ? SearchEngineFlaw.InvalidTemplate : SearchEngineFlaw.RequiresHttps);
-        if (uri.Scheme != Uri.UriSchemeHttps) throw Flawed(SearchEngineFlaw.RequiresHttps);
+        if (WebScheme.Named(uri.Scheme) is not { IsSecure: true } scheme) throw Flawed(SearchEngineFlaw.RequiresHttps);
         if (uri.Host.Length == 0) throw Flawed(SearchEngineFlaw.InvalidTemplate);
         if (uri.UserInfo.Length != 0) throw Flawed(SearchEngineFlaw.CredentialsInTemplate);
-        if (uri.Port != 443) throw Flawed(SearchEngineFlaw.NonstandardPort);
+        if (uri.Port != scheme.DefaultPort) throw Flawed(SearchEngineFlaw.NonstandardPort);
         if (!IsPublicHost(uri.Host)) throw Flawed(SearchEngineFlaw.UnsafeHost);
         if (uri.Fragment.Contains(ProbeMarker, StringComparison.Ordinal))
             throw Flawed(SearchEngineFlaw.PlaceholderInFragment);

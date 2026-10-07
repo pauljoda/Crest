@@ -12,7 +12,7 @@ struct BrowserSettingsPrivateSpaceAccessSection: View {
     init(
         space: some BrowserSpaceIdentifying,
         accessController: BrowserSpaceAccessController,
-        detail: String = "Unlock this Space to view or change its private settings."
+        detail: String = "Unlock this Space to see its settings."
     ) {
         self.space = space.identity
         self.accessController = accessController
@@ -22,14 +22,15 @@ struct BrowserSettingsPrivateSpaceAccessSection: View {
     // MARK: - Body
 
     var body: some View {
-        Section("Private Space", systemImage: "lock.shield") {
-            Text(detail)
-                .crestFormFootnote()
-
+        Section {
             BrowserSettingsPrivateSpaceAccessRow(
                 space: space,
                 accessController: accessController
             )
+        } header: {
+            Text("Locked")
+        } footer: {
+            Text(detail).crestFormFootnote()
         }
         .accessibilityIdentifier("settings-private-space-lock")
     }

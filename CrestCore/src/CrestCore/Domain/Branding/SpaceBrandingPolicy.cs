@@ -12,23 +12,9 @@ public static class SpaceBrandingPolicy {
     #region Variables
 
     public const int MaximumColorCount = 3;
-    public const int MaximumCrestPaletteCount = 4;
+    public const int MaximumCrestPaletteCount = 6;
     /// The most letters a monogram figure shows.
     public const int MaximumMonogramLength = 2;
-
-    /// The rendering vocabulary every shipped build draws.
-    public const int BaselineRenderingVersion = SpaceBranding.BaselineRenderingVersion;
-    /// The vocabulary that adds the expanded heraldic charges.
-    public const int ExpandedChargeRenderingVersion = 3;
-    /// The vocabulary that adds the customization surfaces and backplates.
-    public const int CustomizationRenderingVersion = 4;
-    /// The Crest Studio vocabulary: parametric shapes, own tinctures, custom
-    /// charges, finishes and depth.
-    public const int StudioRenderingVersion = 5;
-    /// How many pieces a counted field division draws unless set.
-    public const int DefaultDivisionCount = SpaceCrest.DefaultDivisionCount;
-    /// How much detail a counted trim draws unless set.
-    public const int DefaultTrimDetail = SpaceCrest.DefaultTrimDetail;
 
     /// The Space color used when a branding record has none.
     public static BrandColor DefaultColor { get; } = new(0.29, 0.25, 0.58);
@@ -70,16 +56,16 @@ public static class SpaceBrandingPolicy {
                 SymbolColorIndex = LayerIndex(crest.SymbolColorIndex, layers),
                 EdgeColorIndex = LayerIndex(crest.EdgeColorIndex, layers),
                 Charge = Charge(crest.Charge, crest.Symbol),
-                PlateScale = Measure(crest.PlateScale, 0.7, 1.15, 1),
-                EdgeWidth = Measure(crest.EdgeWidth, 0, 1, 0),
-                DivisionCount = Math.Clamp(crest.DivisionCount, 2, 8),
-                OrdinaryWidth = Measure(crest.OrdinaryWidth, 0.5, 1.6, 1),
-                TrimWeight = Measure(crest.TrimWeight, 0.5, 2, 1),
-                TrimDetail = Math.Clamp(crest.TrimDetail, 6, 24),
-                ChargeScale = Measure(crest.ChargeScale, 0.6, 1.5, 1),
-                ChargeOffset = Measure(crest.ChargeOffset, -0.2, 0.2, 0),
-                SheenAngle = Measure(crest.SheenAngle, 0, 360, 45),
-                SealTeeth = Math.Clamp(crest.SealTeeth, 6, 24)
+                PlateScale = CrestMeasure.PlateScale.Clamped(crest.PlateScale),
+                EdgeWidth = CrestMeasure.EdgeWidth.Clamped(crest.EdgeWidth),
+                DivisionCount = CrestMeasure.DivisionCount.Clamped(crest.DivisionCount),
+                OrdinaryWidth = CrestMeasure.OrdinaryWidth.Clamped(crest.OrdinaryWidth),
+                TrimWeight = CrestMeasure.TrimWeight.Clamped(crest.TrimWeight),
+                TrimDetail = CrestMeasure.TrimDetail.Clamped(crest.TrimDetail),
+                ChargeScale = CrestMeasure.ChargeScale.Clamped(crest.ChargeScale),
+                ChargeOffset = CrestMeasure.ChargeOffset.Clamped(crest.ChargeOffset),
+                SheenAngle = CrestMeasure.SheenAngle.Clamped(crest.SheenAngle),
+                SealTeeth = CrestMeasure.SealTeeth.Clamped(crest.SealTeeth)
             }
         });
     }
@@ -97,22 +83,17 @@ public static class SpaceBrandingPolicy {
     public static CrestCharge? Charge(CrestCharge? charge, CrestSymbol symbol) {
         if (charge is null) return null;
         string text = charge.Text?.Trim() ?? "";
-        var figure = charge.Kind switch {
-            CrestChargeKind.System => text.Length == 0 ? new(CrestChargeKind.None) : charge with { Text = text },
-            CrestChargeKind.Emoji => string.IsNullOrEmpty(charge.Text) ? new(CrestChargeKind.None)
+        var figure = charge.Kind.Kind switch {
+            CrestChargeKind.Kinds.System => text.Length == 0 ? new(CrestChargeKind.None) : charge with { Text = text },
+            CrestChargeKind.Kinds.Emoji => string.IsNullOrEmpty(charge.Text) ? new(CrestChargeKind.None)
                 : charge with { Text = new System.Globalization.StringInfo(charge.Text).SubstringByTextElements(0, 1) },
-            CrestChargeKind.Monogram => text.Length == 0 ? new(CrestChargeKind.None) : charge with {
+            CrestChargeKind.Kinds.Monogram => text.Length == 0 ? new(CrestChargeKind.None) : charge with {
                 Text = FirstTextElements(text.ToUpperInvariant(), MaximumMonogramLength).ToUpperInvariant()
             },
             _ => charge
         };
         return figure.Kind == CrestChargeKind.Heraldic && figure.Symbol == symbol ? null : figure;
     }
-
-    /// A composition parameter within `minimum` through `maximum`; one that is
-    /// not a number takes `fallback`.
-    private static double Measure(double value, double minimum, double maximum, double fallback) =>
-        double.IsFinite(value) ? Math.Clamp(value, minimum, maximum) : fallback;
 
     private static string FirstTextElements(string text, int count) {
         var elements = new System.Globalization.StringInfo(text);
@@ -146,56 +127,27 @@ public static class SpaceBrandingPolicy {
     #region Actions - Rendering vocabulary
 
     /// The rendering vocabulary `branding` needs, which is the version it
-    /// announces: the shipped baseline unless it wears a term, a symbol color
-    /// or a Studio parameter that a later vocabulary added. Every Apple client
-    /// computes it this way when it writes a branding.
+    /// announces: the newest vocabulary any of its terms is drawn since, and
+    /// the Studio's when it sets a Studio parameter or a color of its own.
+    /// Every Apple client computes it this way when it writes a branding.
     public static int RenderingVersion(SpaceBranding branding) {
         ArgumentNullException.ThrowIfNull(branding);
         var crest = branding.Crest;
-        return new[] {
-            branding.SymbolColor is null ? BaselineRenderingVersion : CustomizationRenderingVersion,
-            branding.BannerPattern is SpaceBannerPattern.Stripes or SpaceBannerPattern.Checkered or SpaceBannerPattern.Lozenges
-                ? CustomizationRenderingVersion : BaselineRenderingVersion,
-            Introduced(crest.Symbol),
-            crest.Backplate switch {
-                CrestBackplate.Octagon or CrestBackplate.RoundedSquare => CustomizationRenderingVersion,
-                CrestBackplate.FrenchShield or CrestBackplate.Oval or CrestBackplate.Banner or CrestBackplate.Badge => StudioRenderingVersion,
-                _ => BaselineRenderingVersion
-            },
-            crest.FieldDivision is CrestFieldDivision.PerSaltire || IsCounted(crest.FieldDivision) ? StudioRenderingVersion : BaselineRenderingVersion,
-            crest.Ordinary is CrestOrdinary.Pall or CrestOrdinary.Pile or CrestOrdinary.Canton or CrestOrdinary.Roundel
-                ? StudioRenderingVersion : BaselineRenderingVersion,
-            crest.Trim is CrestTrim.Line or CrestTrim.DoubleLine or CrestTrim.Beaded ? StudioRenderingVersion : BaselineRenderingVersion,
-            crest.ChargeLayout is CrestChargeLayout.Quad or CrestChargeLayout.Ring ? StudioRenderingVersion : BaselineRenderingVersion,
-            UsesStudioParameters(crest) ? StudioRenderingVersion : BaselineRenderingVersion
-        }.Max();
+        CrestVocabulary[] needed = [
+            branding.BannerPattern.DrawnSince, crest.Symbol.DrawnSince, crest.Backplate.DrawnSince, crest.FieldDivision.DrawnSince,
+            crest.Ordinary.DrawnSince, crest.Trim.DrawnSince, crest.ChargeLayout.DrawnSince, crest.Finish.DrawnSince,
+            crest.Depth.DrawnSince, crest.ChargeWeight.DrawnSince,
+            branding.SymbolColor is null ? CrestVocabulary.Baseline : CrestVocabulary.Customization,
+            UsesStudioParameters(crest) ? CrestVocabulary.Studio : CrestVocabulary.Baseline
+        ];
+        return needed.Max(vocabulary => vocabulary.Version);
     }
 
-    /// The vocabulary that first drew `symbol`.
-    private static int Introduced(CrestSymbol symbol) => symbol switch {
-        CrestSymbol.Dragon or CrestSymbol.Direwolf or CrestSymbol.Lion or CrestSymbol.Stag or CrestSymbol.Raven or CrestSymbol.Griffin
-            or CrestSymbol.Eagle or CrestSymbol.Bear or CrestSymbol.Boar or CrestSymbol.Fox or CrestSymbol.Horse or CrestSymbol.Unicorn
-            or CrestSymbol.Wyvern or CrestSymbol.Hydra or CrestSymbol.Serpent or CrestSymbol.Kraken or CrestSymbol.Seahorse
-            or CrestSymbol.Scorpion or CrestSymbol.Bat or CrestSymbol.Falcon or CrestSymbol.Rose or CrestSymbol.Lily or CrestSymbol.Pine
-            or CrestSymbol.Willow or CrestSymbol.Swords or CrestSymbol.Axes or CrestSymbol.Sword or CrestSymbol.Trident
-            or CrestSymbol.Anchor or CrestSymbol.Castle or CrestSymbol.Scales or CrestSymbol.DragonHead => StudioRenderingVersion,
-        CrestSymbol.Paw or CrestSymbol.Hound or CrestSymbol.Crown or CrestSymbol.RisingSun or CrestSymbol.CrossedBanners
-            or CrestSymbol.Flower or CrestSymbol.Drop or CrestSymbol.Snowflake or CrestSymbol.Horn => ExpandedChargeRenderingVersion,
-        _ => BaselineRenderingVersion
-    };
-
-    /// Whether a field division draws a counted number of pieces.
-    private static bool IsCounted(CrestFieldDivision division) =>
-        division is CrestFieldDivision.Gyronny or CrestFieldDivision.Barry or CrestFieldDivision.Paly or CrestFieldDivision.Checky;
-
-    /// Whether the crest uses a control only the Studio vocabulary draws.
+    /// Whether the crest moves a measure only the Studio vocabulary draws off
+    /// its default, draws an outline, or wears colors or a figure of its own.
     private static bool UsesStudioParameters(SpaceCrest crest) =>
-        crest.Palette is not null || crest.Charge is not null || crest.PlateScale != 1 || crest.EdgeWidth != 0
-        || (IsCounted(crest.FieldDivision) && crest.DivisionCount != DefaultDivisionCount) || crest.Finish != CrestFinish.Flat
-        || crest.SheenAngle != 45 || crest.ShowsOutline || (crest.Backplate == CrestBackplate.Seal && crest.SealTeeth != 12)
-        || crest.OrdinaryWidth != 1 || crest.TrimWeight != 1
-        || (crest.Trim is CrestTrim.Sunburst or CrestTrim.Beaded && crest.TrimDetail != DefaultTrimDetail)
-        || crest.ChargeScale != 1 || crest.ChargeOffset != 0 || crest.ChargeWeight != CrestChargeWeight.Bold || crest.Depth != CrestDepth.None;
+        crest.Palette is not null || crest.Charge is not null || crest.ShowsOutline
+        || CrestMeasure.All.Any(measure => measure.IsMoved(crest));
 
     #endregion
 }

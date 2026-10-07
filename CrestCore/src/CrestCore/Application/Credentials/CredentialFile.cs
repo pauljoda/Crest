@@ -25,14 +25,6 @@ internal sealed record CredentialFile(CredentialFileFormat Format, IReadOnlyList
 
     private static readonly CsvReader Reader = new(new CsvLimits(MaximumRows + 1, MaximumColumns, MaximumFieldCharacters));
 
-    /// The flaw each way a file's text breaks CSV means.
-    private static readonly IReadOnlyDictionary<CsvFault, CredentialFileFlaw> Faults = new Dictionary<CsvFault, CredentialFileFlaw> {
-        [CsvFault.Malformed] = CredentialFileFlaw.Malformed,
-        [CsvFault.TooManyRows] = CredentialFileFlaw.TooManyRows,
-        [CsvFault.TooManyColumns] = CredentialFileFlaw.TooManyColumns,
-        [CsvFault.FieldTooLarge] = CredentialFileFlaw.FieldTooLarge
-    };
-
     #endregion
 
     #region Actions - Reading
@@ -52,7 +44,7 @@ internal sealed record CredentialFile(CredentialFileFormat Format, IReadOnlyList
         try {
             rows = Reader.Read(text);
         } catch (CsvException error) {
-            throw Invalid(Faults[error.Fault]);
+            throw Invalid(CredentialFileFlaw.Answering(error.Fault));
         }
         rows = [.. rows.Where(row => row.Any(field => !string.IsNullOrWhiteSpace(field)))];
         if (rows.Count == 0) throw Invalid(CredentialFileFlaw.Empty);
@@ -95,10 +87,8 @@ internal sealed record CredentialFile(CredentialFileFormat Format, IReadOnlyList
     public static CredentialOrigin? Origin(string site) {
         ArgumentNullException.ThrowIfNull(site);
         string spelled = site.Contains("://", StringComparison.Ordinal) ? site : $"https://{site}";
-        if (ImportAddress.Read(spelled) is not { } address) return null;
-        string scheme = address.Scheme;
-        int port = address.Port ?? (scheme == "https" ? 443 : 80);
-        var origin = new CredentialOrigin(scheme, address.Host.ToLowerInvariant(), port);
+        if (ImportAddress.Read(spelled) is not { } address || WebScheme.Named(address.Scheme) is not { } scheme) return null;
+        var origin = new CredentialOrigin(scheme.Name, address.Host.ToLowerInvariant(), address.Port ?? scheme.DefaultPort);
         return origin.IsValid ? origin : null;
     }
 

@@ -66,27 +66,25 @@ struct BrowserSoftwareUpdateSidebarWidget: View {
 
     @ViewBuilder
     private var progressZone: some View {
-        if let progress = update.progress, isTransferring {
+        if let progress = update.progress, update.phase.isTransferring {
             ProgressView(value: progress)
                 .progressViewStyle(.linear)
                 .tint(CrestBrandTheme.accent)
-                .accessibilityLabel(statusLabel)
-        } else if isTransferring || update.phase == .checking
-            || update.phase == .installing
-        {
+                .accessibilityLabel(Text(statusLabel))
+        } else if update.phase.isWorking {
             HStack(spacing: CrestSpacing.small) {
                 ProgressView()
                     .controlSize(.small)
-                Text(verbatim: statusLabel)
+                Text(statusLabel)
                     .font(CrestTypography.metadata)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
             }
             .accessibilityElement(children: .combine)
-            .accessibilityLabel(statusLabel)
+            .accessibilityLabel(Text(statusLabel))
         }
 
-        if let message = update.message, showsMessage {
+        if let message = update.message, update.phase.showsMessage {
             Text(verbatim: message)
                 .font(CrestTypography.metadata)
                 .foregroundStyle(.secondary)
@@ -205,10 +203,6 @@ struct BrowserSoftwareUpdateSidebarWidget: View {
         .help(accessibilityLabel ?? label)
     }
 
-    private var isTransferring: Bool {
-        update.phase == .downloading || update.phase == .extracting
-    }
-
     private var hasDetails: Bool {
         if let releaseNotes = update.releaseNotes, !releaseNotes.isEmpty {
             return true
@@ -217,28 +211,7 @@ struct BrowserSoftwareUpdateSidebarWidget: View {
     }
 
     private var headerTitle: Text {
-        switch update.phase {
-        case .permission: Text("Keep Crest Up to Date")
-        case .checking: Text("Checking for Updates")
-        case .available: Text(verbatim: update.title)
-        case .downloading: Text("Downloading Update")
-        case .extracting: Text("Preparing Update")
-        case .readyToInstall: Text("Ready to Install")
-        case .installing: Text("Installing Update")
-        case .upToDate: Text("Crest Is Up to Date")
-        case .failed: Text("Update Check Failed")
-        case .installed: Text("Update Installed")
-        case .unavailable: Text("Software Update Unavailable")
-        }
-    }
-
-    private var showsMessage: Bool {
-        switch update.phase {
-        case .checking, .downloading, .extracting:
-            false
-        default:
-            true
-        }
+        update.phase.isTitledByUpdate ? Text(verbatim: update.title) : Text(update.phase.title)
     }
 
     private var versionLine: String? {
@@ -254,20 +227,8 @@ struct BrowserSoftwareUpdateSidebarWidget: View {
         }
     }
 
-    private var statusLabel: String {
-        switch update.phase {
-        case .permission: "Permission required"
-        case .checking: "Checking"
-        case .available: update.isInformationOnly ? "Website release" : "Ready to download"
-        case .downloading: "Downloading"
-        case .extracting: "Preparing"
-        case .readyToInstall: "Ready to install"
-        case .installing: "Installing"
-        case .upToDate: "Up to date"
-        case .failed: "Update error"
-        case .installed: "Installed"
-        case .unavailable: "Unavailable"
-        }
+    private var statusLabel: LocalizedStringResource {
+        (update.isInformationOnly ? update.phase.informationOnlyStatusLabel : nil) ?? update.phase.statusLabel
     }
 }
 

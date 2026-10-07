@@ -168,10 +168,13 @@ html:not(.noanim) .chip-t .tile{animation:bob var(--d,7s) ease-in-out var(--dl,0
 .chip-t .edge{left:-2.5px;right:-2.5px;top:2px;bottom:-4px;background:#fff;opacity:0;transition:opacity .25s}
 .chip-t .flagc{left:0;right:0;top:3px;bottom:0;display:flex;flex-direction:column;align-items:center;padding-top:14px;background:var(--field) 0 0/100% 100% no-repeat}
 .chip-t .flagc img{width:62px;height:62px}
+/* A crest's art leaves room around it for its shadow; draw it at the box's size. */
+img[src*="crests/"]{transform:scale(1.32)}
 .chip-t:hover .tile{filter:drop-shadow(0 24px 20px rgba(0,0,0,.6)) brightness(1.08)}
 .chip-t[aria-pressed=true] .edge{opacity:.9}
 .chip-t:focus-visible{outline:none}
 .chip-t:focus-visible .edge{opacity:1}
+.chip-t.crowded{display:none}
 @media (max-width:1180px){.chip-t{--s:.84 !important}.chip-t[data-t=sun],.chip-t[data-t=vigil]{display:none}}
 @media (max-width:980px){.chip-t[data-t=meadow],.chip-t[data-t=river]{display:none}.chip-t{--s:.72 !important}}
 @media (max-width:760px){
@@ -434,7 +437,7 @@ html:not(.noanim) .tour-in .mac{animation:rise 1s cubic-bezier(.2,.7,.2,1) both 
   .flags::-webkit-scrollbar{display:none}
   .flag{scroll-snap-align:start}
 }
-/* Studio and Look and Feel captures */
+/* Studio and Appearance captures */
 .personalize-row{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(0,1fr);gap:clamp(2rem,5vw,4rem);align-items:center;margin-top:clamp(3rem,6vw,4.5rem)}
 .personalize-row.reverse{grid-template-columns:minmax(0,1fr) minmax(0,1.7fr)}
 .personalize-row.reverse figure{order:2}
@@ -626,7 +629,7 @@ footer p a{text-decoration:underline;text-underline-offset:3px;text-decoration-c
 
     <div class="personalize-row rv">
       <figure class="product-shot">
-        <a href="assets/crest-studio-mac.png" aria-label="View Crest Studio at full size"><img src="assets/crest-studio-mac.png" width="2800" height="1800" alt="Crest Studio on Mac with the Winter template selected and a live preview of the Work Space" loading="lazy" decoding="async"></a>
+        <a href="assets/crest-studio-mac.png" aria-label="View Crest Studio at full size"><img src="assets/crest-studio-mac.png" width="2800" height="1800" alt="Crest Studio on Mac with the Personal Space’s Winter crest on its sidebar background, its colors, and the shape step beside the live sidebar" loading="lazy" decoding="async"></a>
       </figure>
       <div class="personalize-copy">
         <h3>Crest Studio</h3>
@@ -636,12 +639,12 @@ footer p a{text-decoration:underline;text-underline-offset:3px;text-decoration-c
     </div>
     <div class="personalize-row reverse rv">
       <figure class="product-shot">
-        <a href="assets/crest-look-and-feel-mac.png" aria-label="View Look and Feel settings at full size"><img src="assets/crest-look-and-feel-mac.png" width="2800" height="1800" alt="Look and Feel settings on Mac with window, sidebar, tab shape, and pin layout controls" loading="lazy" decoding="async"></a>
+        <a href="assets/crest-look-and-feel-mac.png" aria-label="View Appearance settings at full size"><img src="assets/crest-look-and-feel-mac.png" width="2800" height="1800" alt="Appearance settings on Mac with window, accent, tab shape, and pin layout controls" loading="lazy" decoding="async"></a>
       </figure>
       <div class="personalize-copy">
-        <h3>Look and Feel</h3>
+        <h3>Appearance</h3>
         <p>Sidebar side, tab shape, pins, and address colors.</p>
-        <a class="text-link" href="guides/settings-reference/">Look and Feel settings →</a>
+        <a class="text-link" href="guides/settings-reference/#appearance">Appearance settings →</a>
       </div>
     </div>
   </div>
@@ -693,8 +696,8 @@ footer p a{text-decoration:underline;text-underline-offset:3px;text-decoration-c
     </div>
     <div class="devstack rv" id="devstack" data-dev="mac">
       <div class="ds-scene">
-        <div class="ds-item ds-mac" data-devitem="mac"><img src="assets/crest-work-mac.png" alt="Crest on Mac with the Winter Work Space first, Lion Personal second, and Audience research open in the Launch Atlas folder" width="2800" height="1800" loading="lazy" decoding="async"></div>
-        <div class="ds-item ds-ipad" data-devitem="ipad"><div class="bezel ipad-bz"><img src="assets/crest-work-ipad.png" alt="The same Work Space and Audience research page on iPad" width="2752" height="2064" loading="lazy" decoding="async"></div></div>
+        <div class="ds-item ds-mac" data-devitem="mac"><img src="assets/crest-work-mac.png" alt="Crest on Mac with the Lion Work Space first, Winter Personal second, and Audience research open in the Launch Atlas folder" width="2800" height="1800" loading="lazy" decoding="async"></div>
+        <div class="ds-item ds-ipad" data-devitem="ipad"><div class="bezel ipad-bz"><img src="assets/crest-work-ipad.png" alt="The same Work Space and Audience research page on iPad" width="2420" height="1668" loading="lazy" decoding="async"></div></div>
         <div class="ds-item ds-phone" data-devitem="iphone"><div class="bezel phone-bz"><img src="assets/crest-work-iphone-sidebar.png" alt="The same Work Space and Launch Atlas folder in the iPhone sidebar" width="1206" height="2622" loading="lazy" decoding="async"></div></div>
       </div>
       <div class="segs light" role="tablist" aria-label="Devices">
@@ -930,6 +933,30 @@ footer p a{text-decoration:underline;text-underline-offset:3px;text-decoration-c
   var CHIP_POS={winter:[9,20,1,-7,7],lion:[18,56,.86,6,8],storm:[5,80,.9,-4,6.5],vigil:[25,90,.7,7,9],dragon:[91,18,.96,6,7.5],meadow:[82,48,.8,-5,8.5],iron:[95,76,.86,4,6],river:[76,88,.72,-7,9.5],sun:[72,9,.66,8,7]};
   chips.innerHTML=ORDER.map(function(id,i){var p=CHIP_POS[id];return '<button type="button" class="chip-t" data-t="'+id+'" data-mode="'+CHIP_MODE[id]+'" aria-pressed="false" aria-label="'+T[id].n+', '+MODE_NAME[CHIP_MODE[id]]+' background" style="--x:'+p[0]+'%;--y:'+p[1]+'%;--s:'+p[2]+';--r:'+p[3]+'deg;--d:'+p[4]+'s;--dl:-'+(i*1.3).toFixed(1)+'s"><span class="tile"><span class="edge"></span><span class="flagc" style="--field:'+field(id,CHIP_MODE[id],84,149)+'">'+img(crest(id))+'</span><span class="bar"></span></span></button>'}).join('');
   flags.innerHTML=ORDER.map(function(id){return '<button type="button" class="flag" data-t="'+id+'" aria-label="Use '+T[id].n+'"><span class="cloth" style="--field:'+field(id,'diagonal',SIDEBAR[0],SIDEBAR[1],SIDEBAR[2])+'">'+img(crest(id))+'<span class="pins" aria-hidden="true"><i></i><i></i><i></i><i></i></span><span class="tabs" aria-hidden="true"><i></i><i class="on"></i><i></i><i></i></span></span></button>'}).join('');
+  /* A banner never covers the hero's words or hangs past the hero onto the window
+     below: one that would at this width stays off the page. */
+  var chipEls=[].slice.call(chips.querySelectorAll('.chip-t')), heroHead=document.querySelector('.hero-head');
+  var heroText=[].slice.call(document.querySelectorAll('.hero-copy h1,.hero-copy .lede,.hero-copy .fine')),
+      heroButtons=[].slice.call(document.querySelectorAll('.hero-copy .cta a'));
+  /* the lines the words fill, not the full-width blocks that centre them */
+  function wordBoxes(){
+    var boxes=[];
+    heroText.forEach(function(e){var r=document.createRange();r.selectNodeContents(e);boxes.push.apply(boxes,[].slice.call(r.getClientRects()))});
+    heroButtons.forEach(function(e){boxes.push(e.getBoundingClientRect())});
+    return boxes.filter(function(b){return b.width&&b.height});
+  }
+  function clearWords(){
+    chipEls.forEach(function(c){c.classList.remove('crowded')});
+    if(matchMedia('(max-width:760px)').matches)return;
+    var m=14, floor=heroHead.getBoundingClientRect().bottom;
+    var words=wordBoxes();
+    chipEls.forEach(function(c){
+      var r=c.getBoundingClientRect(); if(!r.width)return;
+      if(r.bottom>floor||words.some(function(w){return r.left<w.right+m&&r.right>w.left-m&&r.top<w.bottom+m&&r.bottom>w.top-m}))c.classList.add('crowded');
+    });
+  }
+  clearWords();addEventListener('resize',clearWords);addEventListener('load',clearWords);
+  if(document.fonts)document.fonts.ready.then(clearWords);
   var heroLayers=[].slice.call(document.querySelectorAll('.hb')), heroOn=0;
   function setTemplate(id,mode){
     state.work=id; state.mode=mode||'diagonal';

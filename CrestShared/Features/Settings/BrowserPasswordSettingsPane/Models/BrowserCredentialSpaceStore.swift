@@ -377,8 +377,4 @@ final class BrowserCredentialSpaceStore {
         guard let space = browser.spaceModel(spaceID), !accessController.isLocked(space) else { return nil }
         return space
     }
-
-    func emptyDescription(isSearching: Bool) -> String {
-        BrowserCredentialSettingsPolicy.emptyDescription(isSearching: isSearching)
-    }
 }

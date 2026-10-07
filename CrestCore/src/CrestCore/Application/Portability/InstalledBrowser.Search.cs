@@ -28,7 +28,7 @@ internal sealed partial class InstalledBrowser {
         ArgumentNullException.ThrowIfNull(home);
         ArgumentNullException.ThrowIfNull(apps);
         var support = new ImportFolder(Path.Combine(home, "Library", "Application Support"));
-        var listed = ImportSource.All.Where(source => source != ImportSource.OtherChromium)
+        var listed = ImportSource.All.Where(source => source.IsListed)
             .Select(source => FullPath(Path.Combine(home, source.DataFolder))).OfType<string>().ToArray();
         var folders = ChromiumDataFolders(support)
             .Where(folder => FullPath(folder.Path) is { } path && !listed.Any(other => IsWithin(path, other) || IsWithin(other, path)))

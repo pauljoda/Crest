@@ -64,8 +64,8 @@ struct MobileSpaceSettingsWorkspaceToolbar: View {
 
     private var sectionPicker: some View {
         Picker("Space settings section", selection: $section) {
-            ForEach(BrowserSpaceEditorSection.allCases) { section in
-                Text(LocalizedStringKey(section.title)).tag(section)
+            ForEach(BrowserSpaceEditorSection.all) { section in
+                Text(section.title).tag(section)
             }
         }
         .pickerStyle(.segmented)

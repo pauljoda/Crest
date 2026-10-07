@@ -1,9 +1,10 @@
 namespace CrestCore.Domain;
 
-public sealed class BrowserRuleException(string code) : Exception(code) {
+/// Something broke `Rule`.
+public sealed class BrowserRuleException(BrowserRule rule) : Exception(rule.Code) {
     #region Variables
 
-    public string Code { get; } = code;
+    public BrowserRule Rule { get; } = rule;
 
     #endregion
 }

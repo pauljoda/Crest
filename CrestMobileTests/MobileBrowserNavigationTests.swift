@@ -10,12 +10,12 @@ final class MobileBrowserNavigationTests: XCTestCase {
 
     func testMobileFileExportsOfferShareAndSaveToFilesDestinations() {
         XCTAssertEqual(
-            MobileBrowserFileExportDestination.allCases,
+            MobileBrowserFileExportDestination.all,
             [.share, .files]
         )
-        XCTAssertEqual(MobileBrowserFileExportDestination.share.title, "Share…")
+        XCTAssertEqual(String(localized: MobileBrowserFileExportDestination.share.title), "Share…")
         XCTAssertEqual(
-            MobileBrowserFileExportDestination.files.title,
+            String(localized: MobileBrowserFileExportDestination.files.title),
             "Save to Files…"
         )
     }

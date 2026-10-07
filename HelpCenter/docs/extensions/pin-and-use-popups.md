@@ -29,7 +29,7 @@ To remove an icon from the strip, choose **Unpin from Toolbar**. Unpinning does 
 
 ## Open an extension's settings
 
-If the extension has a settings page, choose **Extension Settings…** from its menu, or expand it in **Crest Settings → Extensions** and select **Extension Settings**. The page opens in the Space that owns the installation.
+If the extension has a settings page, choose **Extension Settings…** from its menu, or expand it on the Space's Extensions page in **Crest Settings** and select **Extension Settings**. The page opens in the Space that owns the installation.
 
 ## Use side panels
 

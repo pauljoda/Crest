@@ -124,7 +124,8 @@ struct BrowserMacWindowScene: View {
                 browser.spaceModel(matching: assignment) != nil
             else { return }
             model.spaceSettingsPresentation.present(
-                spaceSettingsPresentation.requestedDestination, assignment: assignment)
+                spaceSettingsPresentation.request, assignment: assignment,
+                searchText: spaceSettingsPresentation.searchText)
             browser.selectSpace(assignment.spaceID)
             browser.openSettings()
             pages.select()

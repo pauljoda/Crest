@@ -45,10 +45,10 @@ public sealed class FolderTree(IReadOnlyList<FolderState> folders) {
 
     public void Validate() {
         if (folders.Count > MaximumCount || folders.Select(f => f.Id).Distinct().Count() != folders.Count)
-            throw new BrowserRuleException(BrowserRuleCodes.InvalidFolderTree);
+            throw new BrowserRuleException(BrowserRule.InvalidFolderTree);
         foreach (var folder in folders) {
             if (!folder.Location.HoldsFolders || folder.ParentId is { } parent && Folder(parent).Location != folder.Location)
-                throw new BrowserRuleException(BrowserRuleCodes.InvalidFolderTree);
+                throw new BrowserRuleException(BrowserRule.InvalidFolderTree);
             _ = Depth(folder.Id);
         }
     }
@@ -97,7 +97,7 @@ public sealed class FolderTree(IReadOnlyList<FolderState> folders) {
     #region Mutators
 
     public FolderState Folder(Guid id) => byId.TryGetValue(id, out var folder) ? folder
-        : throw new BrowserRuleException(BrowserRuleCodes.UnknownFolder);
+        : throw new BrowserRuleException(BrowserRule.UnknownFolder);
 
     public IEnumerable<FolderState> Children(Guid? id) => folders.Where(f => f.ParentId == id);
 
@@ -112,7 +112,7 @@ public sealed class FolderTree(IReadOnlyList<FolderState> folders) {
     public int Depth(Guid id) {
         var folder = Folder(id); var depth = 0; HashSet<Guid> seen = [id];
         while (folder.ParentId is { } parent) {
-            if (!seen.Add(parent) || ++depth >= MaximumDepth) throw new BrowserRuleException(BrowserRuleCodes.InvalidFolderTree);
+            if (!seen.Add(parent) || ++depth >= MaximumDepth) throw new BrowserRuleException(BrowserRule.InvalidFolderTree);
             folder = Folder(parent);
         }
         return depth;

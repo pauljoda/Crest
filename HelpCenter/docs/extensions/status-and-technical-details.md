@@ -13,7 +13,7 @@ Crest shows each extension's basic state in its own settings. Chromium's extensi
 
 ## In Crest Settings
 
-Open **Crest Settings → Extensions** and choose the Space. Each installed extension has a row with:
+Open **Crest Settings**, select the Space in the sidebar, then select **Extensions**. Each installed extension has a row with:
 
 - its name, version and description;
 - **From Chrome Web Store** for store installations;
@@ -26,7 +26,7 @@ Expand the row to see the permissions and website access Chromium reports, and t
 For errors and every other detail, open the manager for the extension's Space:
 
 - From the extension's action menu, choose **Manage Extension…** for that extension, or **Manage Extensions…** for the whole list.
-- In **Crest Settings → Extensions**, select **Open Chromium Extension Manager**.
+- On the Space's Extensions page in **Crest Settings**, select **Chromium Extension Manager**.
 
 The manager shows what Chrome's does, including errors the extension reported. Include them, with the extension version, Crest version and the steps that fail, in a bug report.
 

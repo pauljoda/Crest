@@ -32,7 +32,7 @@ struct MobileSavedLocationRestoreAction {
         )
         guard let page = pageActions.activePage
         else { return false }
-        if hadResidentPage && page.live.pendingNavigationURL != url { page.corePage.navigate(to: url.absoluteString) }
+        if hadResidentPage && page.live.pendingNavigationURL != url { page.corePage.load(url) }
         return true
     }
 }

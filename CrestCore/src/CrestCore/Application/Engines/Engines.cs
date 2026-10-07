@@ -24,15 +24,16 @@ internal sealed class Engines {
 
     /// Every registered engine, as the read model shows them, and what the
     /// device offers where `hosting` names the engines a page is open on: what
-    /// the default engine supports, and what each engine that hosts a page
-    /// supports. Extensions remain available to start their engine on demand.
+    /// the default engine supports, what each engine that hosts a page
+    /// supports, and, of the capabilities that start their engine on demand,
+    /// what any registered engine supports.
     public EngineRoster Roster(IReadOnlySet<EngineKind> hosting) {
         if (registered.Count == 0) return EngineRoster.Unregistered;
         var defaultEngine = Default;
         var offering = registered.Values.Where(engine => ReferenceEquals(engine, defaultEngine) || hosting.Contains(engine.Kind)).ToArray();
         return new([.. EngineKind.All.Where(registered.ContainsKey).Select(kind => registered[kind].State(ReferenceEquals(registered[kind], defaultEngine)))],
             [.. EngineCapability.All.Where(capability => offering.Any(engine => engine.Supports(capability))
-                || capability == EngineCapability.Extensions && registered.Values.Any(engine => engine.Supports(capability)))]);
+                || capability.StartsEngineOnDemand && registered.Values.Any(engine => engine.Supports(capability)))]);
     }
 
     /// The commands `roster` offers, in catalog order: those whose whole

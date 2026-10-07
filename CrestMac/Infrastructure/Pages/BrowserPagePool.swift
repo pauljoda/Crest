@@ -585,6 +585,13 @@ final class BrowserPagePool:
         activePage?.corePage.navigate(to: input) ?? false
     }
 
+    /// Asks the core to load `url`, an address Crest already holds, in the
+    /// page the window shows. False when there is none or a rule refused it.
+    @discardableResult
+    func load(_ url: URL) -> Bool {
+        activePage?.corePage.load(url) ?? false
+    }
+
     /// The cards a visited-link restyle applies to.
     ///
     /// Every presented member, not only the focused one: a link followed in one
@@ -998,7 +1005,7 @@ final class BrowserPagePool:
             Self.lifecycleSignposter.endInterval("Start Initial Navigation", interval)
             return
         }
-        page.corePage.navigate(to: url.absoluteString)
+        page.corePage.load(url)
         Self.lifecycleSignposter.endInterval("Start Initial Navigation", interval)
     }
 

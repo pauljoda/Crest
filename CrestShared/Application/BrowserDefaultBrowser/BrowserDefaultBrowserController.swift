@@ -3,11 +3,67 @@ import Observation
 
 // MARK: - Types
 
-enum BrowserDefaultBrowserStatus: Equatable, Sendable {
-    case unknown
-    case isDefault
-    case notDefault
-    case unavailable(String)
+/// What the system says about whether Crest opens links.
+struct BrowserDefaultBrowserStatus: Hashable, Sendable {
+    // MARK: - Types
+
+    /// The color a status's symbol takes, which the view that draws it names.
+    enum Tones: Sendable {
+        case quiet
+        case success
+        case warning
+    }
+
+    // MARK: - Static Variables
+
+    static let unknown = BrowserDefaultBrowserStatus(
+        name: "unknown", title: "Not checked", symbol: "circle.dotted", tone: .quiet)
+    static let isDefault = BrowserDefaultBrowserStatus(
+        name: "isDefault", title: "Crest", symbol: "checkmark.circle.fill", tone: .success)
+    static let notDefault = BrowserDefaultBrowserStatus(
+        name: "notDefault", title: "Another browser", symbol: "circle", tone: .quiet)
+
+    // MARK: - Variables
+
+    let name: String
+    let title: LocalizedStringResource
+    let symbol: String
+    let tone: Tones
+
+    /// Why the system could not say, for a status it could not determine.
+    let message: String?
+
+    // MARK: - Initializers
+
+    private init(
+        name: String, title: LocalizedStringResource, symbol: String, tone: Tones, message: String? = nil
+    ) {
+        self.name = name
+        self.title = title
+        self.symbol = symbol
+        self.tone = tone
+        self.message = message
+    }
+
+    // MARK: - Actions - Building
+
+    /// The system could not say, for the reason `message` gives.
+    static func unavailable(_ message: String) -> BrowserDefaultBrowserStatus {
+        BrowserDefaultBrowserStatus(
+            name: "unavailable", title: "Unavailable", symbol: "exclamationmark.circle", tone: .warning,
+            message: message)
+    }
+
+    // MARK: - Actions - Identity
+
+    static func == (lhs: BrowserDefaultBrowserStatus, rhs: BrowserDefaultBrowserStatus) -> Bool {
+        lhs.name == rhs.name && lhs.message == rhs.message
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(name)
+        hasher.combine(message)
+    }
 }
 
 @Observable

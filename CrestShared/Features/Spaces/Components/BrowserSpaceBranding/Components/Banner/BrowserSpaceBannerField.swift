@@ -10,7 +10,7 @@ struct BrowserSpaceBannerField: View {
         let second = colors[min(1, colors.count - 1)]
         let third = colors[min(2, colors.count - 1)]
 
-        switch pattern {
+        switch pattern.kind {
         case .solid:
             colors[0]
         case .split:
@@ -50,7 +50,7 @@ struct BrowserSpaceBannerField: View {
                     for column in 0..<columns {
                         let x = CGFloat(column) * cell
                         let y = CGFloat(row) * cell
-                        switch pattern {
+                        switch pattern.kind {
                         case .stripes:
                             if column.isMultiple(of: 2) {
                                 context.fill(

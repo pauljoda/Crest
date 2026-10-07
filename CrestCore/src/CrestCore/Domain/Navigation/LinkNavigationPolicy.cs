@@ -29,7 +29,7 @@ public static class LinkNavigationPolicy {
 
     private static bool TryWebUrl(string? value, out Uri? url) =>
         Uri.TryCreate(value, UriKind.Absolute, out url)
-        && (url.Scheme == Uri.UriSchemeHttp || url.Scheme == Uri.UriSchemeHttps) && url.Host.Length > 0;
+        && WebScheme.Named(url.Scheme) is not null && url.Host.Length > 0;
 
     // Match Crest's saved-site contract: ignore www, but keep other subdomains
     // distinct. IdnHost also compares Unicode and punycode URL spellings equally.

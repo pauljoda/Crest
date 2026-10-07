@@ -18,15 +18,15 @@ struct MobileOnboardingWelcomePage: View {
                         Text("Crest").font(.headline)
                     }
                     HStack(spacing: 16) {
-                        ForEach(Array(BrowserSpaceBrandingPreset.curated.prefix(3).enumerated()), id: \.element.id) {
+                        ForEach(Array(SpaceHouse.all.prefix(3).enumerated()), id: \.element.name) {
                             index, preset in
                             BrowserSpaceCrestIcon(
-                                branding: preset.applying(to: SpaceAccent.indigo.house),
+                                branding: preset.look,
                                 size: 72
                             )
                             .padding(.vertical, 24)
                             .frame(maxWidth: .infinity)
-                            .background(preset.colors[0].color, in: .rect(cornerRadius: 22))
+                            .background(preset.look.colors[0].color, in: .rect(cornerRadius: 22))
                             .rotationEffect(.degrees(index == 0 ? -7 : index == 2 ? 7 : 0))
                             .offset(y: hasAppeared || reduceMotion ? (index == 1 ? -10 : 8) : 24)
                         }

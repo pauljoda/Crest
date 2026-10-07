@@ -7,35 +7,38 @@ struct BrowserSyncSettingsView: View {
     @State private var confirmsUsingDevice = false
     @State private var confirmsUsingICloud = false
     @State private var confirmsPullingFromICloud = false
+    @State private var showsDiagnostics = false
 
     var body: some View {
         BrowserSettingsPane(.sync) {
-            Section("iCloud Sync", systemImage: "icloud") {
-                Toggle("Sync Crest with iCloud", isOn: $cloudSync.isEnabled)
+            Section("iCloud") {
+                Toggle("Sync with iCloud", isOn: $cloudSync.isEnabled)
                     .accessibilityIdentifier("icloud-sync-enabled")
 
                 CrestSettingsStatusRow("Status") {
-                    Label(cloudSync.phase.description, systemImage: statusSymbol)
-                        .foregroundStyle(statusColor)
+                    Label(cloudSync.phase.title, systemImage: cloudSync.phase.symbol)
+                        .foregroundStyle(cloudSync.phase.tint?.color ?? .secondary)
                 }
                 CrestSettingsStatusRow("iCloud account") {
-                    Text(cloudSync.accountState.description)
+                    Text(cloudSync.accountState.title)
                         .foregroundStyle(.secondary)
                 }
 
                 if cloudSync.isEnabled {
-                    Button("Sync Now", systemImage: "arrow.triangle.2.circlepath") {
-                        Task { await cloudSync.syncNow() }
-                    }
-                    .disabled(!canSyncNow)
-                    .accessibilityIdentifier("icloud-sync-now")
+                    HStack(spacing: 12) {
+                        Button("Sync Now") {
+                            Task { await cloudSync.syncNow() }
+                        }
+                        .disabled(!canSyncNow)
+                        .accessibilityIdentifier("icloud-sync-now")
 
-                    Button("Pull from iCloud…", systemImage: "icloud.and.arrow.down") {
-                        confirmsPullingFromICloud = true
+                        Button("Pull from iCloud…") {
+                            confirmsPullingFromICloud = true
+                        }
+                        .disabled(!canSyncNow)
+                        .accessibilityIdentifier("icloud-sync-pull")
+                        .accessibilityHint("Downloads a fresh copy and merges it with this device’s content")
                     }
-                    .disabled(!canSyncNow)
-                    .accessibilityIdentifier("icloud-sync-pull")
-                    .accessibilityHint("Downloads a fresh copy and merges it with this device’s content")
                 }
 
                 if let error = cloudSync.errorDescription {
@@ -51,28 +54,15 @@ struct BrowserSyncSettingsView: View {
 
                 if cloudSync.skippedRecordCount > 0 {
                     Label(
-                        "Some iCloud changes could not be read. Update Crest on all devices, then pull from iCloud.",
+                        "Some changes couldn’t be read. Update Crest on every device, then pull from iCloud.",
                         systemImage: "exclamationmark.icloud"
                     )
                     .foregroundStyle(.orange)
                 }
-
-                Text(
-                    "Apple doesn’t expose the iCloud account email to Crest. Confirm both devices use the same Apple Account in System Settings; this page should show iCloud account Available on each device."
-                )
-                .font(.footnote)
-                .foregroundStyle(.secondary)
             }
 
             if let conflict = cloudSync.conflict {
-                Section("Choose Which Copy to Keep", systemImage: "doc.on.doc") {
-                    Label(
-                        "Crest found different content on this device and in iCloud. Sync is paused so neither copy is combined or overwritten without your choice.",
-                        systemImage: "exclamationmark.arrow.triangle.2.circlepath"
-                    )
-                    .foregroundStyle(.orange)
-                    .accessibilityIdentifier("icloud-sync-conflict")
-
+                Section {
                     LabeledContent(
                         "This device",
                         value: "\(conflict.localSpaceCount) Spaces, \(conflict.localRecordCount) records"
@@ -81,67 +71,36 @@ struct BrowserSyncSettingsView: View {
                         "iCloud",
                         value: "\(conflict.cloudSpaceCount) Spaces, \(conflict.cloudRecordCount) records"
                     )
+                    HStack(spacing: 12) {
+                        Button("Use This Device") {
+                            confirmsUsingDevice = true
+                        }
+                        .accessibilityHint("Replaces the Crest content in iCloud with this device’s content")
 
-                    Button("Use This Device", systemImage: "iphone.and.arrow.forward.outward") {
-                        confirmsUsingDevice = true
+                        Button("Use iCloud") {
+                            confirmsUsingICloud = true
+                        }
+                        .accessibilityHint("Replaces this device’s Crest content with the iCloud copy")
                     }
-                    .accessibilityHint("Replaces the Crest content in iCloud with this device’s content")
-
-                    Button("Use iCloud", systemImage: "icloud.and.arrow.down") {
-                        confirmsUsingICloud = true
-                    }
-                    .accessibilityHint("Replaces this device’s Crest content with the iCloud copy")
+                } header: {
+                    Text("Choose which copy to keep")
+                } footer: {
+                    CrestFormFootnote("Sync is paused until you choose.")
+                        .accessibilityIdentifier("icloud-sync-conflict")
                 }
-            }
-
-            Section("Sync Monitor", systemImage: "waveform.path") {
-                LabeledContent(
-                    "Local records",
-                    value: cloudSync.localRecordCount.formatted()
-                )
-                LabeledContent(
-                    "Pending uploads",
-                    value: cloudSync.pendingUploadCount.formatted()
-                )
-                LabeledContent(
-                    "Cloud records observed",
-                    value: cloudSync.observedCloudRecordCount?.formatted() ?? "Not checked"
-                )
-                LabeledContent("Last attempt") {
-                    optionalDate(cloudSync.lastAttemptAt)
-                }
-                LabeledContent("Last successful sync") {
-                    optionalDate(cloudSync.lastSuccessAt)
-                }
-                LabeledContent(
-                    "Last download batch",
-                    value: cloudSync.lastFetchedRecordCount.formatted()
-                )
-                LabeledContent(
-                    "Last upload batch",
-                    value: cloudSync.lastUploadedRecordCount.formatted()
-                )
             }
 
             BrowserSyncContentScopeSection()
 
-            Section("Diagnostics", systemImage: "stethoscope") {
-                LabeledContent(
-                    "CloudKit container",
-                    value: cloudSync.containerIdentifier ?? "Not configured"
-                )
-                ShareLink(
-                    item: cloudSync.diagnosticsReport,
-                    subject: Text("Crest iCloud Sync Diagnostics")
-                ) {
-                    Label("Share Diagnostics", systemImage: "square.and.arrow.up")
+            Section {
+                LabeledContent("Diagnostics") {
+                    Button("Show…") { showsDiagnostics = true }
+                        .accessibilityIdentifier("icloud-sync-diagnostics")
                 }
-                Text(
-                    "The diagnostics report contains sync status and record counts, not URLs, titles, browsing history, passwords, or account identifiers."
-                )
-                .font(.footnote)
-                .foregroundStyle(.secondary)
             }
+        }
+        .sheet(isPresented: $showsDiagnostics) {
+            BrowserSyncDiagnosticsSheet(cloudSync: cloudSync)
         }
         .confirmationDialog(
             "Pull the Latest from iCloud?",
@@ -188,36 +147,5 @@ struct BrowserSyncSettingsView: View {
         cloudSync.accountState == .available
             && cloudSync.conflict == nil
             && cloudSync.phase != .syncing
-    }
-
-    private var statusSymbol: String {
-        switch cloudSync.phase {
-        case .disabled: "icloud.slash"
-        case .checking, .syncing: "arrow.triangle.2.circlepath.icloud"
-        case .ready: "checkmark.icloud.fill"
-        case .needsReconciliation: "exclamationmark.icloud.fill"
-        case .waitingForAccount: "person.crop.circle.badge.exclamationmark"
-        case .failed: "xmark.icloud.fill"
-        }
-    }
-
-    private var statusColor: Color {
-        switch cloudSync.phase {
-        case .ready: .green
-        case .checking, .syncing: .blue
-        case .needsReconciliation, .waitingForAccount: .orange
-        case .failed: .red
-        case .disabled: .secondary
-        }
-    }
-
-    @ViewBuilder
-    private func optionalDate(_ date: Date?) -> some View {
-        if let date {
-            Text(date, style: .relative)
-        } else {
-            Text("Never")
-                .foregroundStyle(.secondary)
-        }
     }
 }

@@ -1,3 +1,5 @@
+using CrestCore.Contracts;
+
 namespace CrestCore.Domain;
 
 /// An http or https address a Space knows, taken apart once so completing
@@ -64,7 +66,7 @@ public sealed class AddressCandidate {
         int separator = url.IndexOf("://", StringComparison.Ordinal);
         if (separator <= 0) return null;
         string scheme = url[..separator].ToLowerInvariant();
-        if (scheme is not ("http" or "https")) return null;
+        if (WebScheme.Named(scheme) is null) return null;
         string rest = url[(separator + 3)..];
         int authorityEnd = rest.IndexOfAny(['/', '?', '#']);
         string authority = authorityEnd < 0 ? rest : rest[..authorityEnd];

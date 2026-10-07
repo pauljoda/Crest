@@ -10,10 +10,9 @@ struct BrowserSpaceDeletionSection: View {
     @State private var errorMessage: String?
 
     var body: some View {
-        Section("Delete Space", systemImage: "trash") {
+        Section {
             Button(
-                isDeleting ? "Deleting Space…" : "Delete \(spaceName)…",
-                systemImage: "trash",
+                isDeleting ? "Deleting Space…" : "Delete “\(spaceName)”…",
                 role: .destructive
             ) {
                 isConfirmingDeletion = true
@@ -33,9 +32,9 @@ struct BrowserSpaceDeletionSection: View {
                     .accessibilityIdentifier("space-deletion-error")
             }
 
+        } footer: {
             Text(disclosure)
-                .font(.footnote)
-                .foregroundStyle(.secondary)
+                .crestFormFootnote()
                 .accessibilityIdentifier("space-deletion-disclosure")
         }
         .alert(
@@ -62,11 +61,9 @@ struct BrowserSpaceDeletionSection: View {
 
     private var disclosure: String {
         if browser.spaceModels.count <= 1 {
-            return "Crest needs at least one Space. Add another Space before deleting this one."
+            return String(localized: "Crest needs at least one Space.")
         }
-        return "Deletes tabs, pins, folders, Archive, history, Crest Passwords, cookies, "
-            + "website storage, permissions, extension packages and storage, and download "
-            + "history. Downloaded files are kept. This can’t be undone."
+        return String(localized: "Deletes everything in this Space except downloaded files.")
     }
 
     private func deleteSpace() {

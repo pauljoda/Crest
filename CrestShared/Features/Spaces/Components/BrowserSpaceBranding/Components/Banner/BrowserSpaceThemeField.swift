@@ -9,7 +9,7 @@ struct BrowserSpaceThemeField: View {
 
     @ViewBuilder
     var body: some View {
-        switch themeMode {
+        switch themeMode.kind {
         case .banner:
             BrowserSpaceBannerField(
                 pattern: bannerPattern,

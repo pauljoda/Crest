@@ -5,14 +5,14 @@ struct BrowserSoftwareUpdateStatusHeader: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: CrestSpacing.medium) {
-            Image(systemName: symbolName)
+            Image(systemName: model.phase.symbol)
                 .font(.system(size: 30, weight: .semibold))
-                .foregroundStyle(symbolStyle)
+                .foregroundStyle(symbolColor)
                 .frame(width: 38, height: 38)
                 .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: CrestSpacing.extraSmall) {
-                Text(title)
+                title
                     .font(.title2.weight(.semibold))
 
                 if let message = model.message {
@@ -24,38 +24,18 @@ struct BrowserSoftwareUpdateStatusHeader: View {
         }
     }
 
-    private var title: String {
-        switch model.phase {
-        case .idle: "Software Update"
-        case .permission: "Keep Crest Up to Date"
-        case .checking: "Checking for Updates"
-        case .updateAvailable: model.updateTitle ?? "Update Available"
-        case .downloading: "Downloading Update"
-        case .extracting: "Preparing Update"
-        case .readyToInstall: "Ready to Install"
-        case .installing: "Installing Update"
-        case .upToDate: "Crest Is Up to Date"
-        case .failed: "Update Check Failed"
-        case .installed: "Update Installed"
+    private var title: Text {
+        if model.phase.isTitledByUpdate, let updateTitle = model.updateTitle {
+            return Text(verbatim: updateTitle)
         }
+        return Text(model.phase.title)
     }
 
-    private var symbolName: String {
-        switch model.phase {
-        case .failed: "exclamationmark.triangle.fill"
-        case .upToDate, .installed: "checkmark.circle.fill"
-        case .downloading: "arrow.down.circle.fill"
-        case .readyToInstall, .installing:
-            "arrow.trianglehead.2.clockwise.rotate.90.circle.fill"
-        default: "arrow.trianglehead.2.clockwise.rotate.90"
-        }
-    }
-
-    private var symbolStyle: AnyShapeStyle {
-        switch model.phase {
-        case .failed: AnyShapeStyle(.orange)
-        case .upToDate, .installed: AnyShapeStyle(.green)
-        default: AnyShapeStyle(CrestBrandTheme.accent)
+    private var symbolColor: Color {
+        switch model.phase.tone {
+        case .accent: CrestBrandTheme.accent
+        case .success: .green
+        case .warning: .orange
         }
     }
 }

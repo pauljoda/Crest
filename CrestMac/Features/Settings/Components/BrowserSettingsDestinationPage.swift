@@ -12,10 +12,11 @@ struct BrowserSettingsDestinationPage: View {
     let dataDeleter: any BrowserSpaceDataDeleting
     let shortcuts: BrowserShortcutStore
     let spaceSettingsPresentation: BrowserSpaceSettingsPresentationState
-    @Binding var searchText: String
+    /// Shows another destination, for a page that leads to one.
+    let select: (BrowserSettingsDestination) -> Void
 
     var body: some View {
-        BrowserSettingsPage(destination: destination) {
+        BrowserSettingsPage(destination: destination, back: back) {
             BrowserSettingsDestinationRouter(
                 destination: destination,
                 browser: browser,
@@ -28,13 +29,26 @@ struct BrowserSettingsDestinationPage: View {
                     pages.contentBlockingErrorDescription,
                 setupActions: setupActions,
                 passwordLayout: .macOSPage,
-                passwordSearchText: $searchText,
                 shortcuts: shortcuts,
                 requestedSpaceID: requestedSpaceID,
                 requestRevision: acceptsExternalRoute ? spaceSettingsPresentation.revision : 0,
-                featureFlagsSpace: featureFlagsSpace
+                featureFlagsSpace: featureFlagsSpace,
+                openFeatureFlags: openFeatureFlags
             )
         }
+    }
+
+    /// The page a sub-page returns to.
+    private var back: BrowserSettingsPageBack? {
+        BrowserPlatformSettingsDestinationCatalog.parent(of: destination).map { parent in
+            BrowserSettingsPageBack(title: parent.title) { select(parent) }
+        }
+    }
+
+    private var openFeatureFlags: (() -> Void)? {
+        guard destination == .advanced, BrowserSettingsDestination.featureFlags.isProvided(in: browser.core.state)
+        else { return nil }
+        return { select(.featureFlags) }
     }
 
     private var acceptsExternalRoute: Bool {

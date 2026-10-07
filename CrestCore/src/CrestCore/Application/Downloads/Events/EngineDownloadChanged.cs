@@ -16,9 +16,7 @@ public sealed record EngineDownloadChanged(EngineDownload Download) : EngineDown
         }
         if (download.ResumeRequested) {
             download.ResumeRequested = false;
-            if (!download.IsLive && Download.State is EngineDownloadState.Preparing or EngineDownloadState.Downloading
-                or EngineDownloadState.Finished or EngineDownloadState.AwaitingApproval)
-                engineDownloads.Resume(download, turn.Changes);
+            if (!download.IsLive && EngineDownloadStage.Of(Download.State).IsUnderway) engineDownloads.Resume(download, turn.Changes);
         }
         if (!download.IsLive) return;
         download.LastReport = Download;
@@ -55,7 +53,7 @@ public sealed record EngineDownloadChanged(EngineDownload Download) : EngineDown
                 turn.Issue(engine, new CancelEngineDownload(download.ProfileId, download.EngineId));
                 break;
             case EngineDownloadState.AwaitingApproval when Download.Warning is { } warning
-                && download.ReasonsApproved && EngineDownloads.Covers(download.Reasons, warning):
+                && download.ReasonsApproved && DownloadWarning.Of(warning).IsCoveredBy(download.Reasons):
                 // A warning about what the person already kept asks nothing new.
                 if (download.ApprovalToken == Download.ApprovalToken) break;
                 download.ApprovalToken = Download.ApprovalToken;
@@ -69,7 +67,7 @@ public sealed record EngineDownloadChanged(EngineDownload Download) : EngineDown
                 var prompt = engineDownloads.Ids.Next();
                 engineDownloads.WaitingPrompts[prompt] = new(download, EngineDownloads.Question.Approval);
                 turn.Changes.Publish(new DownloadApprovalAsked(prompt, download.DownloadId, engineDownloads.SpaceOf(Download),
-                    DownloadFilename.Safe(Download.Filename), download.Reasons, warning, download.SourceHost));
+                    DownloadFilename.Safe(Download.Filename), download.Reasons, DownloadWarning.Of(warning), download.SourceHost));
                 break;
             case EngineDownloadState.Blocked:
                 engineDownloads.Record(new BlockAutomaticDownload(download.DownloadId), turn.Changes);

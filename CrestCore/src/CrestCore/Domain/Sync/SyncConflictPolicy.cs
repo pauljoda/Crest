@@ -8,7 +8,7 @@ public static class SyncConflictPolicy {
 
     public static int Winner(SyncRecordStamp first, SyncRecordStamp second) {
         if (first.Id != second.Id || first.Kind != second.Kind || first.Space != second.Space)
-            throw new BrowserRuleException(BrowserRuleCodes.SyncIdentityMismatch);
+            throw new BrowserRuleException(BrowserRule.SyncIdentityMismatch);
         if (first.DeletionReason?.IsExplicit == true) return 0;
         if (second.DeletionReason?.IsExplicit == true) return 1;
         // A tab shown after the other side deleted it stays open.

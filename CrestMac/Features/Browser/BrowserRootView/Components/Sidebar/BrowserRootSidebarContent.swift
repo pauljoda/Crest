@@ -65,14 +65,17 @@ struct BrowserRootSidebarContent: View {
     private var chromeActions: BrowserSidebarChromeActions {
         let create: (() -> Void)? = model.browser.isTemporaryWorkspace ? nil : { createSpace() }
         return BrowserSidebarChromeActions(
-            presentSpaceSettings: presentSpaceSettings(for:),
+            presentSpaceSettings: { presentSpaceSettings(for: $0) },
             presentHistory: { model.chrome.utilityPresentation.present(.history) },
             createSpace: create
         )
     }
 
-    private func presentSpaceSettings(for assignment: BrowserSpaceRuntimeAssignment) {
-        spaceSettingsPresentation.present(assignment: assignment)
+    private func presentSpaceSettings(
+        for assignment: BrowserSpaceRuntimeAssignment,
+        intent: BrowserSettingsSpaceIntent = .none
+    ) {
+        spaceSettingsPresentation.present(.space(.appearance, intent: intent), assignment: assignment)
         model.browser.openSettings()
         model.pages.select()
     }
@@ -81,6 +84,6 @@ struct BrowserRootSidebarContent: View {
         model.browser.addSpace()
         guard let space = model.browser.shownSpace else { return }
         model.pages.select()
-        presentSpaceSettings(for: BrowserSpaceRuntimeAssignment(space: space))
+        presentSpaceSettings(for: BrowserSpaceRuntimeAssignment(space: space), intent: .newSpace)
     }
 }

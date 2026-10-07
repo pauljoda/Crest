@@ -11,38 +11,16 @@ struct BrowserSystemPermissionRow: View {
     let chooseFolder: () -> Void
 
     var body: some View {
-        HStack(alignment: .center, spacing: 16) {
-            Image(systemName: permission.symbol)
-                .font(.system(size: 17, weight: .medium))
-                .foregroundStyle(permission.tint)
-                .frame(width: 32, height: 32)
-                .background(permission.tint.opacity(0.12), in: .rect(cornerRadius: 8))
-                .accessibilityHidden(true)
-            VStack(alignment: .leading, spacing: 4) {
-                Text(permission.title).font(.headline)
-                Text(description).font(.callout).foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                if let detail = status.detail, !permission.checksSpaceFolder || spaceName != nil {
-                    Text(detail).font(.caption).foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                if let error {
-                    Text(error).font(.caption).foregroundStyle(.orange)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            Label(status.state.title, systemImage: status.state.symbol)
-                .font(.callout.weight(.medium))
-                .foregroundStyle(status.state.tint)
-                .accessibilityLabel("\(String(localized: permission.title)): \(String(localized: status.state.title))")
-                .frame(width: 130, alignment: .leading)
-            HStack {
-                Spacer(minLength: 0)
+        LabeledContent {
+            HStack(spacing: 10) {
+                Label(status.state.title, systemImage: status.state.symbol)
+                    .foregroundStyle(status.state.tint)
+                    .accessibilityLabel(
+                        "\(String(localized: permission.title)): \(String(localized: status.state.title))")
                 if isWorking {
                     ProgressView().controlSize(.small)
                 } else if permission.checksSpaceFolder, spaceName != nil {
-                    Menu("Manage…") {
+                    Menu("Manage") {
                         Button("Check Access", action: request)
                         Button("Choose Folder…", action: chooseFolder)
                         Button("System Settings…", action: openSettings)
@@ -52,17 +30,28 @@ struct BrowserSystemPermissionRow: View {
                     primaryAction
                 }
             }
-            .frame(width: 120)
+        } label: {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(permission.title)
+                if let caption {
+                    Text(caption).font(.caption).foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                if let error {
+                    Text(error).font(.caption).foregroundStyle(.orange)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
         }
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("system-permission-\(permission.name)")
     }
 
-    private var description: String {
-        guard permission.checksSpaceFolder else { return String(localized: permission.explanation) }
-        guard let spaceName else { return String(localized: "Select an unlocked Space to check its download folder.") }
-        return String(
-            localized: "Checks the download folder for \(spaceName). Other files are approved when you choose them.")
+    /// Only the download-folder check needs words: it is about one Space.
+    private var caption: String? {
+        guard permission.checksSpaceFolder else { return nil }
+        guard let spaceName else { return String(localized: "Unlock a Space to check its download folder") }
+        return String(localized: "Download folder for \(spaceName)")
     }
 
     @ViewBuilder private var primaryAction: some View {
@@ -71,7 +60,7 @@ struct BrowserSystemPermissionRow: View {
             if error != nil {
                 Button("Open Settings", action: openSettings)
             } else {
-                Button("Allow…", action: request).buttonStyle(.borderedProminent)
+                Button("Allow…", action: request)
             }
         case .notChecked:
             Button("Check Access", action: request)

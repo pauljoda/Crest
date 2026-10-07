@@ -1,6 +1,8 @@
 using System.Globalization;
 using System.Text;
 
+using CrestCore.Contracts;
+
 namespace CrestCore.Application;
 
 /// A web address an import keeps: an http or https address with a host, as
@@ -102,7 +104,7 @@ internal readonly record struct ImportAddress {
         if (colon <= 0 || !IsScheme(source.AsSpan(0, colon))) return null;
         string scheme = source[..colon];
         string lowered = scheme.ToLowerInvariant();
-        if (lowered is not ("http" or "https")) return null;
+        if (WebScheme.Named(lowered) is null) return null;
         string rest = source[(colon + 1)..];
         if (!rest.StartsWith("//", StringComparison.Ordinal)) return null;
         rest = rest[2..];

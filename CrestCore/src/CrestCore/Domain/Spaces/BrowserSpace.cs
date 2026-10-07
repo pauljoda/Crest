@@ -1,3 +1,5 @@
+using CrestCore.Contracts;
+
 namespace CrestCore.Domain;
 
 /// Rules every Space applies to the names and addresses it holds.
@@ -14,7 +16,7 @@ public static class BrowserSpace {
 
     public static void ValidateUrl(string? url, bool allowsInternalPages = false) {
         if (url is null || url.Length > 16384 || !Uri.TryCreate(url, UriKind.Absolute, out var parsed)
-            || ((parsed.Scheme != Uri.UriSchemeHttp && parsed.Scheme != Uri.UriSchemeHttps)
+            || (WebScheme.Named(parsed.Scheme) is null
                 && url != BrowserUrlConstants.AboutBlank
                 // A local document is a legitimate tab URL on every engine. It stays
                 // out of sync, which the sync projection decides by scheme, not here.
@@ -24,7 +26,7 @@ public static class BrowserSpace {
                 && !(allowsInternalPages && parsed.Scheme == BrowserUrlConstants.ChromeExtensionScheme && parsed.Host.Length == 32
                     && parsed.Host.All(c => c is >= 'a' and <= 'p')))
             || !string.IsNullOrEmpty(parsed.UserInfo))
-            throw new BrowserRuleException(BrowserRuleCodes.UnsupportedUrl);
+            throw new BrowserRuleException(BrowserRule.UnsupportedUrl);
     }
 
     #endregion

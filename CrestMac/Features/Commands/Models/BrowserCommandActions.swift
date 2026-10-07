@@ -319,7 +319,7 @@ struct BrowserCommandActions {
         }
         guard let selected else { return }
         pages.select()
-        pages.navigate(to: selected.absoluteString)
+        pages.load(selected)
         chrome.dismissCommandPalette()
     }
 

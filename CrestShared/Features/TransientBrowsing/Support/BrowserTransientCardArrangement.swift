@@ -23,45 +23,108 @@ enum BrowserTransientEntranceTarget: Equatable, Sendable {
 /// instead of asking which target compiled it. It is an explicit shell input
 /// rather than a capability bit: what varies is how much room there is and how
 /// the card is reached, not whether a shell can do something.
-enum BrowserTransientCardArrangement: Equatable, Sendable {
+struct BrowserTransientCardArrangement: Hashable, Identifiable, Sendable {
+    // MARK: - Static Variables
+
     /// A card beside a window's reserved leading chrome, sized by the shared
     /// window geometry policy and dismissed with the pointer or a key.
-    case pointer
+    static let pointer = BrowserTransientCardArrangement(
+        name: "pointer", entranceTarget: .pageCard, placesControlsAboveCard: true, controlAlignment: .trailing,
+        controlSpacing: 10, constrainsControlBarToMaximumWidth: false, controlBarPadding: 0,
+        ignoredSafeAreaEdges: .all,
+        framesContent: { containerSize, reservedLeadingWidth, layoutDirection in
+            BrowserPeekPresentationPolicy.desktopWebContentFrame(
+                in: containerSize,
+                reservedLeadingWidth: reservedLeadingWidth,
+                layoutDirection: layoutDirection
+            )
+        },
+        sizesCard: { BrowserPeekPresentationPolicy.desktopCardSize(in: $0) },
+        insetsContent: { _ in EdgeInsets(top: 30, leading: 30, bottom: 30, trailing: 30) },
+        cardCornerRadius: 15, cardBorderOpacity: 0.16, cardShadowOpacity: 0.34, cardShadowRadius: 28,
+        cardShadowOffsetY: 14)
 
     /// A card filling a handheld screen's safe area, closed with the control
     /// bar beneath it or by tapping the ground its insets leave showing. The
     /// card itself is all web page, so every gesture over it stays WebKit's.
-    case sheet
+    static let sheet = BrowserTransientCardArrangement(
+        name: "sheet", entranceTarget: .assembly, placesControlsAboveCard: false, controlAlignment: .center,
+        controlSpacing: 8, constrainsControlBarToMaximumWidth: true, controlBarPadding: 10, ignoredSafeAreaEdges: [],
+        framesContent: nil,
+        sizesCard: { _ in nil },
+        insetsContent: { safeAreaInsets in
+            BrowserTransientCardLayout.cardInsets(
+                safeAreaInsets: safeAreaInsets,
+                minimumHorizontal: 14,
+                minimumVertical: 10
+            )
+        },
+        // A thumb-sized card is held closer and rounded more heavily than one
+        // read at pointer distance.
+        cardCornerRadius: 24, cardBorderOpacity: 0.18, cardShadowOpacity: 0.32, cardShadowRadius: 24,
+        cardShadowOffsetY: 12)
 
     /// A card floating at a fraction of a large touch screen, with room left
     /// around it for the scrim to be a deliberate target.
-    case canvas
-}
+    static let canvas = BrowserTransientCardArrangement(
+        name: "canvas", entranceTarget: .assembly, placesControlsAboveCard: false, controlAlignment: .trailing,
+        controlSpacing: 10, constrainsControlBarToMaximumWidth: false, controlBarPadding: 0, ignoredSafeAreaEdges: [],
+        framesContent: nil,
+        sizesCard: { contentSize in
+            CGSize(
+                width: min(max(contentSize.width * 0.76, 600), 1_180),
+                height: min(max(contentSize.height * 0.78, 430), 820)
+            )
+        },
+        insetsContent: { safeAreaInsets in
+            BrowserTransientCardLayout.cardInsets(
+                safeAreaInsets: safeAreaInsets,
+                minimumHorizontal: 28,
+                minimumVertical: 28
+            )
+        },
+        cardCornerRadius: 15, cardBorderOpacity: 0.18, cardShadowOpacity: 0.32, cardShadowRadius: 24,
+        cardShadowOffsetY: 12)
 
-// MARK: - Stacking the card, its controls, and the way out
+    /// Every arrangement.
+    static let all: [BrowserTransientCardArrangement] = [pointer, sheet, canvas]
 
-extension BrowserTransientCardArrangement {
-    var entranceTarget: BrowserTransientEntranceTarget {
-        self == .pointer ? .pageCard : .assembly
-    }
+    // MARK: - Variables
+
+    let name: String
+
+    let entranceTarget: BrowserTransientEntranceTarget
 
     /// Whether the controls sit above the card, as `BrowserPeekChromePolicy`
     /// describes for a pointer. Touch arrangements put them within reach of a
     /// thumb instead.
-    var placesControlsAboveCard: Bool { self == .pointer }
+    let placesControlsAboveCard: Bool
 
-    var controlAlignment: HorizontalAlignment {
-        self == .sheet ? .center : .trailing
-    }
-
-    var controlSpacing: CGFloat { self == .sheet ? 8 : 10 }
+    let controlAlignment: HorizontalAlignment
+    let controlSpacing: CGFloat
 
     /// Whether the control bar may shrink below its natural width. A sheet's
     /// screen can be narrower than the bar, so there the bar is a maximum with
     /// its own padding; elsewhere it is a fixed width.
-    var constrainsControlBarToMaximumWidth: Bool { self == .sheet }
+    let constrainsControlBarToMaximumWidth: Bool
 
-    var controlBarPadding: CGFloat { self == .sheet ? 10 : 0 }
+    let controlBarPadding: CGFloat
+
+    /// Safe-area edges the surface draws through. A pointer overlay is laid
+    /// out against the window it reserves space inside, so it takes the whole
+    /// window; touch arrangements respect the screen's insets.
+    let ignoredSafeAreaEdges: Edge.Set
+
+    /// How the arrangement measures the region, card size and insets below.
+    private let framesContent: (@Sendable (CGSize, CGFloat, LayoutDirection) -> CGRect)?
+    private let sizesCard: @Sendable (CGSize) -> CGSize?
+    private let insetsContent: @Sendable (EdgeInsets) -> EdgeInsets
+
+    let cardCornerRadius: CGFloat
+    let cardBorderOpacity: Double
+    let cardShadowOpacity: Double
+    let cardShadowRadius: CGFloat
+    let cardShadowOffsetY: CGFloat
 
     /// Whether tapping the ground the card stands on closes it.
     ///
@@ -72,15 +135,40 @@ extension BrowserTransientCardArrangement {
     /// card's control bar sits at the bottom edge, where a downward drag is the
     /// system's own Reachability gesture rather than the card's.
     var allowsScrimDismissal: Bool { true }
-}
 
-// MARK: - Geometry
+    var id: String { name }
 
-extension BrowserTransientCardArrangement {
-    /// Safe-area edges the surface draws through. A pointer overlay is laid
-    /// out against the window it reserves space inside, so it takes the whole
-    /// window; touch arrangements respect the screen's insets.
-    var ignoredSafeAreaEdges: Edge.Set { self == .pointer ? .all : [] }
+    // MARK: - Initializers
+
+    private init(
+        name: String, entranceTarget: BrowserTransientEntranceTarget, placesControlsAboveCard: Bool,
+        controlAlignment: HorizontalAlignment, controlSpacing: CGFloat, constrainsControlBarToMaximumWidth: Bool,
+        controlBarPadding: CGFloat, ignoredSafeAreaEdges: Edge.Set,
+        framesContent: (@Sendable (CGSize, CGFloat, LayoutDirection) -> CGRect)?,
+        sizesCard: @escaping @Sendable (CGSize) -> CGSize?,
+        insetsContent: @escaping @Sendable (EdgeInsets) -> EdgeInsets,
+        cardCornerRadius: CGFloat, cardBorderOpacity: Double, cardShadowOpacity: Double, cardShadowRadius: CGFloat,
+        cardShadowOffsetY: CGFloat
+    ) {
+        self.name = name
+        self.entranceTarget = entranceTarget
+        self.placesControlsAboveCard = placesControlsAboveCard
+        self.controlAlignment = controlAlignment
+        self.controlSpacing = controlSpacing
+        self.constrainsControlBarToMaximumWidth = constrainsControlBarToMaximumWidth
+        self.controlBarPadding = controlBarPadding
+        self.ignoredSafeAreaEdges = ignoredSafeAreaEdges
+        self.framesContent = framesContent
+        self.sizesCard = sizesCard
+        self.insetsContent = insetsContent
+        self.cardCornerRadius = cardCornerRadius
+        self.cardBorderOpacity = cardBorderOpacity
+        self.cardShadowOpacity = cardShadowOpacity
+        self.cardShadowRadius = cardShadowRadius
+        self.cardShadowOffsetY = cardShadowOffsetY
+    }
+
+    // MARK: - Actions - Geometry
 
     /// The region of the container the card is laid out inside, or `nil` where
     /// the card simply fills what it is given.
@@ -89,62 +177,26 @@ extension BrowserTransientCardArrangement {
         reservedLeadingWidth: CGFloat,
         layoutDirection: LayoutDirection
     ) -> CGRect? {
-        guard self == .pointer else { return nil }
-        return BrowserPeekPresentationPolicy.desktopWebContentFrame(
-            in: containerSize,
-            reservedLeadingWidth: reservedLeadingWidth,
-            layoutDirection: layoutDirection
-        )
+        framesContent?(containerSize, reservedLeadingWidth, layoutDirection)
     }
 
     /// The card's own size inside that region, or `nil` where the card takes
     /// everything the stack leaves it.
     func cardSize(in contentSize: CGSize) -> CGSize? {
-        switch self {
-        case .pointer:
-            BrowserPeekPresentationPolicy.desktopCardSize(in: contentSize)
-        case .sheet:
-            nil
-        case .canvas:
-            CGSize(
-                width: min(max(contentSize.width * 0.76, 600), 1_180),
-                height: min(max(contentSize.height * 0.78, 430), 820)
-            )
-        }
+        sizesCard(contentSize)
     }
 
     func contentInsets(safeAreaInsets: EdgeInsets) -> EdgeInsets {
-        switch self {
-        case .pointer:
-            EdgeInsets(top: 30, leading: 30, bottom: 30, trailing: 30)
-        case .sheet:
-            BrowserTransientCardLayout.cardInsets(
-                safeAreaInsets: safeAreaInsets,
-                minimumHorizontal: 14,
-                minimumVertical: 10
-            )
-        case .canvas:
-            BrowserTransientCardLayout.cardInsets(
-                safeAreaInsets: safeAreaInsets,
-                minimumHorizontal: 28,
-                minimumVertical: 28
-            )
-        }
+        insetsContent(safeAreaInsets)
     }
-}
 
-// MARK: - Card material
+    // MARK: - Actions - Identity
 
-extension BrowserTransientCardArrangement {
-    /// A thumb-sized card is held closer and rounded more heavily than one
-    /// read at pointer distance.
-    var cardCornerRadius: CGFloat { self == .sheet ? 24 : 15 }
+    static func == (lhs: BrowserTransientCardArrangement, rhs: BrowserTransientCardArrangement) -> Bool {
+        lhs.name == rhs.name
+    }
 
-    var cardBorderOpacity: Double { self == .pointer ? 0.16 : 0.18 }
-
-    var cardShadowOpacity: Double { self == .pointer ? 0.34 : 0.32 }
-
-    var cardShadowRadius: CGFloat { self == .pointer ? 28 : 24 }
-
-    var cardShadowOffsetY: CGFloat { self == .pointer ? 14 : 12 }
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(name)
+    }
 }

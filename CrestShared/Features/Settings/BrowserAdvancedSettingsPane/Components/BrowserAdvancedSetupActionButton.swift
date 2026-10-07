@@ -13,10 +13,9 @@ struct BrowserAdvancedSetupActionButton: View {
     }
 
     private var button: some View {
-        Button(setupAction.title, systemImage: setupAction.symbol) {
+        Button(setupAction.title) {
             setupAction.action()
         }
-        .buttonStyle(.crestTertiary)
         .crestAccessibilityIdentifier(setupAction.identifier)
     }
 }

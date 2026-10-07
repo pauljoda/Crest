@@ -38,7 +38,7 @@ struct BrowserSavedLocationRestoreAction {
         pages.select()
         guard let page = pages.activePage(matching: assignment)
         else { return false }
-        if hadResidentPage && page.live.pendingNavigationURL != url { page.corePage.navigate(to: url.absoluteString) }
+        if hadResidentPage && page.live.pendingNavigationURL != url { page.corePage.load(url) }
         return true
     }
 }

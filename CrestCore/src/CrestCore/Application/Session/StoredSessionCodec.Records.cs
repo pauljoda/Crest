@@ -153,7 +153,7 @@ internal static partial class StoredSessionCodec {
     internal static HistoryEntryState DecodeHistoryEntry(JsonNode? node) {
         var value = Object(node);
         return new(Identity(value[Key.Id]),
-            Text(value[Key.Url]) ?? throw new BrowserRuleException(BrowserRuleCodes.InvalidSavedUrl),
+            Text(value[Key.Url]) ?? throw new BrowserRuleException(BrowserRule.InvalidSavedUrl),
             Text(value[Key.Title]) ?? "", Date(value[Key.FirstVisitedAt]), Date(value[Key.LastVisitedAt]),
             Integer(value[Key.VisitCount]) ?? 1);
     }

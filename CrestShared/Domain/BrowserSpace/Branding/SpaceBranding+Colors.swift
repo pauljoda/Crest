@@ -15,11 +15,11 @@ extension SpaceBranding {
     }
 
     var primaryColor: BrandColor {
-        color(for: .primary) ?? backgroundColor
+        color(for: .accent) ?? backgroundColor
     }
 
     var secondaryColor: BrandColor {
-        color(for: .secondary) ?? primaryColor
+        color(for: .pattern) ?? primaryColor
     }
 
     /// The icon's own color, or the Space's primary color, which it follows
@@ -31,7 +31,7 @@ extension SpaceBranding {
     // MARK: - Actions - Colors
 
     func color(for role: BrowserSpaceBrandColorRole) -> BrandColor? {
-        colors.indices.contains(role.rawValue) ? colors[role.rawValue] : nil
+        colors.indices.contains(role.slot) ? colors[role.slot] : nil
     }
 
     // MARK: - Actions - Normalizing

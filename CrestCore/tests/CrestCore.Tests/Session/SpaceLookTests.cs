@@ -26,33 +26,12 @@ public sealed class SpaceLookTests {
         "textColorMode":"automatic","themeMode":"banner"}
         """;
 
-    /// `BrowserSpaceBranding.initial(accent: .indigo, symbol:)`, the Winter house look, as Swift encoded it.
-    private const string HouseIndigo = """
-        {"bannerPattern":"diagonal","bannerStrength":1,"colors":[{"alpha":1,"blue":0.2,"green":0.157,"red":0.118},
-        {"alpha":1,"blue":0.369,"green":0.306,"red":0.243},{"alpha":1,"blue":0.769,"green":0.678,"red":0.525}],"crest":{
-        "backplate":"frenchShield","backplateColorIndex":0,"chargeLayout":"single","chargeOffset":0,"chargeScale":1.2,"chargeWeight":"bold",
-        "depth":"none","divisionCount":4,"edgeColorIndex":2,"edgeWidth":0,"fieldDivision":"plain","finish":"flat","ordinary":"none",
-        "ordinaryColorIndex":1,"ordinaryWidth":1,"plateScale":1,"sealTeeth":12,"secondaryFieldColorIndex":1,"sheenAngle":45,
-        "showsOutline":false,"symbol":"direwolf","symbolColorIndex":2,"trim":"line","trimColorIndex":2,"trimDetail":12,"trimWeight":0.75},
-        "folderColorIntensity":0,"gradientAngle":0,"hasCustomAppearance":false,"iconStyle":"layeredCrest","keepsControlsReadable":true,
-        "readabilityFade":0.45,"renderingVersion":5,"showsTexture":false,"textColorMode":"automatic","themeMode":"banner"}
-        """;
-
-    /// Each accent's legacy palette and house look, as Swift drew them, where they
-    /// differ from indigo's.
-    public static TheoryData<string, string, string, string, string, string> Accents => new() {
-        { "indigo", """[{"red":0.08,"green":0.15,"blue":0.23},{"red":0.22,"green":0.42,"blue":0.64},{"red":0.88,"green":0.67,"blue":0.25}]""",
-            """[{"red":0.118,"green":0.157,"blue":0.2},{"red":0.243,"green":0.306,"blue":0.369},{"red":0.525,"green":0.678,"blue":0.769}]""",
-            "frenchShield", "direwolf", "line" },
-        { "orange", """[{"red":0.85,"green":0.27,"blue":0.2},{"red":0.88,"green":0.67,"blue":0.25},{"red":0.22,"green":0.42,"blue":0.64}]""",
-            """[{"red":0.208,"green":0.086,"blue":0.043},{"red":0.545,"green":0.239,"blue":0.106},{"red":0.816,"green":0.62,"blue":0.396}]""",
-            "circle", "sun", "sunburst" },
-        { "teal", """[{"red":0.12,"green":0.49,"blue":0.52},{"red":0.22,"green":0.42,"blue":0.64},{"red":0.82,"green":0.72,"blue":0.56}]""",
-            """[{"red":0.082,"green":0.137,"blue":0.094},{"red":0.204,"green":0.341,"blue":0.22},{"red":0.737,"green":0.655,"blue":0.4}]""",
-            "circle", "rose", "laurel" },
-        { "rose", """[{"red":0.72,"green":0.25,"blue":0.42},{"red":0.29,"green":0.25,"blue":0.58},{"red":0.82,"green":0.72,"blue":0.56}]""",
-            """[{"red":0.235,"green":0.055,"blue":0.102},{"red":0.447,"green":0.125,"blue":0.188},{"red":0.788,"green":0.635,"blue":0.329}]""",
-            "shield", "lion", "line" }
+    /// Each accent's legacy palette, as Swift drew it.
+    public static TheoryData<string, string> Accents => new() {
+        { "indigo", """[{"red":0.08,"green":0.15,"blue":0.23},{"red":0.22,"green":0.42,"blue":0.64},{"red":0.88,"green":0.67,"blue":0.25}]""" },
+        { "orange", """[{"red":0.85,"green":0.27,"blue":0.2},{"red":0.88,"green":0.67,"blue":0.25},{"red":0.22,"green":0.42,"blue":0.64}]""" },
+        { "teal", """[{"red":0.12,"green":0.49,"blue":0.52},{"red":0.22,"green":0.42,"blue":0.64},{"red":0.82,"green":0.72,"blue":0.56}]""" },
+        { "rose", """[{"red":0.72,"green":0.25,"blue":0.42},{"red":0.29,"green":0.25,"blue":0.58},{"red":0.82,"green":0.72,"blue":0.56}]""" },
     };
 
     #endregion
@@ -60,23 +39,15 @@ public sealed class SpaceLookTests {
     #region Actions - Legacy looks
 
     /// A Space stored before branding existed wears the look Swift gave it: the
-    /// accent's legacy palette in a full-strength diagonal banner and a plain shield,
-    /// and each accent's house look is the one Swift's `initial` drew.
+    /// accent's legacy palette in a full-strength diagonal banner and a plain shield.
     [Theory]
     [MemberData(nameof(Accents))]
-    public void EachAccentWearsTheLegacyAndHouseLooksSwiftDrew(string name, string legacyColors, string houseColors, string backplate,
-        string figure, string trim) {
+    public void EachAccentWearsTheLegacyLookSwiftDrew(string name, string legacyColors) {
         var accent = Assert.IsType<SpaceAccent>(SpaceAccent.Named(name));
         var legacy = JsonNode.Parse(LegacyIndigoFolder)!;
         legacy["colors"] = JsonNode.Parse(legacyColors);
-        var house = JsonNode.Parse(HouseIndigo)!;
-        house["colors"] = JsonNode.Parse(houseColors);
-        house["crest"]!["backplate"] = backplate;
-        house["crest"]!["symbol"] = figure;
-        house["crest"]!["trim"] = trim;
 
         Assert.Equal(StoredSessionCodec.DecodeBranding(legacy), SpaceBranding.Legacy(accent, "folder"));
-        Assert.Equal(StoredSessionCodec.DecodeBranding(house), accent.House);
     }
 
     /// The legacy crest's figure is the one a keyword of the Space's SF Symbol
@@ -155,7 +126,7 @@ public sealed class SpaceLookTests {
         var kept = SpaceBrandingPolicy.Normalize(edited);
 
         Assert.False(kept.KeepsControlsReadable);
-        Assert.Equal(SpaceBrandingPolicy.StudioRenderingVersion, kept.RenderingVersion);
+        Assert.Equal(CrestVocabulary.Studio.Version, kept.RenderingVersion);
     }
 
     #endregion

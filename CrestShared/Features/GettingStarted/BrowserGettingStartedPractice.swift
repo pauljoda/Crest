@@ -8,14 +8,6 @@ import SwiftUI
 /// for it.
 @Observable @MainActor
 final class BrowserGettingStartedPractice {
-    // MARK: - Static Variables
-
-    /// The bundled icon each practice tab wears.
-    private static let artwork: [PracticeTab: String] = [
-        .calendar: "GuideCalendar", .reading: "GuideWikipedia", .mail: "GuideGmail", .trail: "GuideAllTrails",
-        .packing: "GuideTodoist",
-    ]
-
     // MARK: - Variables
 
     private(set) var sidebarInteraction: BrowserSidebarInteractionState
@@ -95,7 +87,7 @@ final class BrowserGettingStartedPractice {
     }
 
     private static func icon(of tab: PracticeTab) -> Data? {
-        artwork[tab].flatMap(BrowserGettingStartedArtwork.favicon)
+        BrowserGettingStartedArtwork.favicon(tab.artwork)
     }
 
     func reconcileSplitWidths() {

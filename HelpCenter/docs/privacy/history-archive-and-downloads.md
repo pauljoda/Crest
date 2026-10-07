@@ -21,7 +21,7 @@ Use **Command-E** to archive the current tab, **Shift-Command-T** to reopen the 
 
 ## Downloads
 
-Open Downloads with **Shift-Command-J**. Crest tracks status, destination, failures, and blocked automatic downloads. Removing or expiring a download record does not delete the downloaded file from disk.
+Open Downloads with **Shift-Command-J**. Crest tracks status, destination, failures, and blocked automatic downloads. On Mac, each Space chooses its download folder, and whether to ask where to save each download, on its Browsing page in Settings. Removing or expiring a download record does not delete the downloaded file from disk.
 
 Chromium downloads offer **Pause Download** while transferring and **Resume Download** when the engine can continue a paused or interrupted transfer. Depending on the server, resuming may restart the file. The same download record keeps its chosen destination. Cancel ends the transfer; removing a failed record does not retry it. WebKit downloads do not offer these pause and resume controls.
 
@@ -29,8 +29,8 @@ An unsafe-file warning requires its own decision. Resuming a transfer does not a
 
 ## Retention per Space
 
-In **Settings → Privacy**, choose **1 Day, 1 Week, 30 Days, 90 Days, 1 Year, or Forever** independently for History, Archived Tabs, and Download Records.
+On Mac, open Settings, select the Space in the sidebar, then select **Privacy**. On iPhone and iPad, open **Settings → Privacy** and choose the Space. Choose **1 Day, 1 Week, 30 Days, 90 Days, 1 Year, or Forever** independently for History, Archived Tabs, and Download Records.
 
 Crest checks retention when it opens, after sync, and every 15 minutes while active. Shortening a duration can permanently remove older synchronized records, so Crest confirms the destructive change first.
 
-Current-tab automatic cleanup is a different setting. It archives old unpinned tabs after the chosen interval, keeping them recoverable until the Archive retention policy later expires them.
+Current-tab automatic cleanup is a different setting, **Archive current tabs** on the Space’s Browsing page on Mac. It archives old unpinned tabs after the chosen interval, keeping them recoverable until the Archive retention policy later expires them.

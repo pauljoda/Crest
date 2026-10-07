@@ -86,7 +86,7 @@ public sealed partial class NativeSessionAuthority {
     }
 
     private SpaceState RequireBorrowedSource() {
-        var source = borrowedSource ?? throw new BrowserRuleException(BrowserRuleCodes.NotBorrowedWorkspace);
+        var source = borrowedSource ?? throw new BrowserRuleException(BrowserRule.NotBorrowedWorkspace);
         var original = source.session.Spaces.SingleOrDefault(s => s.Id == borrowedSpace);
         BorrowedProfilePolicy.RequireSource(borrowedSpace, borrowedProfile,
             original?.Id ?? Guid.Empty, original?.ProfileId ?? Guid.Empty,
@@ -114,7 +114,7 @@ public sealed partial class NativeSessionAuthority {
         if (borrowedSource is null) return;
         var original = RequireBorrowedSource();
         if (value.Spaces.Count != 1 || BorrowedSpace(original, value.Spaces[0]) != value.Spaces[0])
-            throw new BrowserRuleException(BrowserRuleCodes.BorrowedProfileRequiresOwner);
+            throw new BrowserRuleException(BrowserRule.BorrowedProfileRequiresOwner);
     }
 
     /// Throws unless `value`, a state of a borrowed session, shows its Space
@@ -125,7 +125,7 @@ public sealed partial class NativeSessionAuthority {
         if (borrowedSource is null) return;
         var original = RequireBorrowedSource();
         if (value.Spaces.Count != 1 || BorrowedSpace(original, value.Spaces[0]) != value.Spaces[0])
-            throw new BrowserRuleException(BrowserRuleCodes.StaleBorrowedSource);
+            throw new BrowserRuleException(BrowserRule.StaleBorrowedSource);
     }
 
     /// Takes no more edits. The core then drops the workspace's pages and

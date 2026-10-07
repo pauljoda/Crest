@@ -3673,6 +3673,34 @@
     "import-review-design": {
       "category": "improved",
       "message": "The import review has matching From and Into menus and one card for each Space\u2019s choices, and says when there\u2019s no room for another Space. The list of browsers scrolls when it doesn\u2019t fit the window."
+    },
+    "settings-native-redesign": {
+      "category": "improved",
+      "message": "Settings has a cleaner, native look with less text. Each Space has its own page in the Settings sidebar, where you can add, rename, rearrange, lock and delete Spaces, and tab options have their own Tabs page."
+    },
+    "crest-studio-forge": {
+      "category": "new",
+      "message": "Crest Studio shows your crest on your Space\u2019s own background, names every color by what it paints, and walks you through shape, field, band, emblem, border, finish and sidebar with previews of your crest. Each part of a crest can now have its own color."
+    },
+    "settings-space-switch-speed": {
+      "category": "fixed",
+      "message": "Switching Spaces with Settings open is now as quick as with a webpage, and Settings pages scroll smoothly."
+    },
+    "crest-template-arms": {
+      "category": "improved",
+      "message": "Every Space template has new arms in colors of their own, from a grey wolf on snow to a pale raven on black, and Shuffle now changes every part of a crest and its sidebar."
+    },
+    "declared-fixed-set-facts": {
+      "category": "internal",
+      "message": "Crest's fixed sets declare their own facts, such as a crest term's rendering vocabulary, ranges and titles, instead of working them out in switches across the apps and the core."
+    },
+    "stored-address-loads": {
+      "category": "fixed",
+      "message": "Tabs with very long addresses, or addresses that aren\u2019t ordinary web links, open where they were instead of turning into a search."
+    },
+    "ipad-single-tap-controls": {
+      "category": "fixed",
+      "message": "On iPad, buttons and menus such as Manage Search Engines respond to a single tap or click instead of needing a long press."
     }
   }
 }

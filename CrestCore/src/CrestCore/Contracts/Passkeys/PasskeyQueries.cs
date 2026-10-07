@@ -3,9 +3,6 @@ namespace CrestCore.Contracts;
 /// Where passkey access for websites stands.
 public sealed record PasskeyAccessVerdict(PasskeyAccessStatus Status);
 
-/// The platform's browser-passkey authorization for Crest.
-public enum PasskeyAuthorizationState { Authorized, Denied, NotDetermined }
-
 /// Whether the device has passkeys set up, as far as the platform can tell.
 public enum PasskeyDeviceConfiguration { Configured, NotConfigured, Unknown }
 

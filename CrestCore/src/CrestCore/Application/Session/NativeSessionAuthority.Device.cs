@@ -42,7 +42,7 @@ public sealed partial class NativeSessionAuthority {
     internal void AttachDevice(Device value, Guid workspace) {
         lock (Gate) {
             if (device is not null && !ReferenceEquals(device, value))
-                throw new BrowserRuleException(BrowserRuleCodes.InvalidSessionTransaction);
+                throw new BrowserRuleException(BrowserRule.InvalidSessionTransaction);
             device = value;
             workspaceId = workspace;
         }

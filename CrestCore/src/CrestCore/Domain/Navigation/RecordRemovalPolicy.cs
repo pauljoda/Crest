@@ -8,18 +8,18 @@ public static class RecordRemovalPolicy {
     public static IReadOnlyList<int> Expired(IReadOnlyList<double> timestamps, double now, double lifetime) {
         Validate(timestamps);
         if (!double.IsFinite(now) || !double.IsFinite(lifetime) || lifetime < 0)
-            throw new BrowserRuleException(BrowserRuleCodes.InvalidRetentionInterval);
+            throw new BrowserRuleException(BrowserRule.InvalidRetentionInterval);
         return Enumerable.Range(0, timestamps.Count).Where(i => now - timestamps[i] > lifetime).ToArray();
     }
 
     public static IReadOnlyList<int> WithinRange(IReadOnlyList<double> timestamps, double start, double end) {
         Validate(timestamps);
-        if (!double.IsFinite(start) || !double.IsFinite(end)) throw new BrowserRuleException(BrowserRuleCodes.InvalidHistoryRange);
+        if (!double.IsFinite(start) || !double.IsFinite(end)) throw new BrowserRuleException(BrowserRule.InvalidHistoryRange);
         return Enumerable.Range(0, timestamps.Count).Where(i => timestamps[i] >= start && timestamps[i] < end).ToArray();
     }
 
     private static void Validate(IReadOnlyList<double> timestamps) {
-        if (timestamps.Any(value => !double.IsFinite(value))) throw new BrowserRuleException(BrowserRuleCodes.InvalidRecordDate);
+        if (timestamps.Any(value => !double.IsFinite(value))) throw new BrowserRuleException(BrowserRule.InvalidRecordDate);
     }
 
     #endregion

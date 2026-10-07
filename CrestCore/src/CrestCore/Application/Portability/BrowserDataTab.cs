@@ -41,7 +41,7 @@ internal sealed record BrowserDataTab(Guid Id, string Title, NativeTabContent? N
         Require(ImportAddress.TryReadStored(Url, removesFragment: false, out var url));
         Require(ImportAddress.TryReadStored(SavedUrl, removesFragment: false, out var saved));
         Guid? folder = null;
-        if (Placement != TabPlacement.Pinned && FolderId is { } source) folder = folders.TryGetValue(source, out var mapped) ? mapped
+        if (Placement.HoldsFolders && FolderId is { } source) folder = folders.TryGetValue(source, out var mapped) ? mapped
             : throw BrowserDataValue.Invalid();
         else Require(FolderId is null);
         bool isStartPage = NativeContent is null && url is null;

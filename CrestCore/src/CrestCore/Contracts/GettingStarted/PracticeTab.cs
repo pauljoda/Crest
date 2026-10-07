@@ -1,22 +1,22 @@
 namespace CrestCore.Contracts;
 
 /// A tab the Getting Started practice starts with: the site it stands for,
-/// the title it shows and the section it sits in. Its page never loads, so
-/// the platform gives it the icon it draws for it. `All` is the order the
+/// the title it shows, the section it sits in and the icon it wears, which
+/// the platforms bundle since its page never loads. `All` is the order the
 /// practice Space holds them in.
 public sealed class PracticeTab {
     #region Static Variables
 
     public static readonly PracticeTab Calendar = new(name: "calendar", title: "Calendar", url: "https://calendar.google.com",
-        placement: TabPlacement.Pinned);
+        placement: TabPlacement.Pinned, artwork: "GuideCalendar");
     public static readonly PracticeTab Reading = new(name: "reading", title: "Wikipedia", url: "https://wikipedia.org",
-        placement: TabPlacement.Saved);
+        placement: TabPlacement.Saved, artwork: "GuideWikipedia");
     public static readonly PracticeTab Mail = new(name: "mail", title: "Gmail", url: "https://mail.google.com",
-        placement: TabPlacement.Current);
+        placement: TabPlacement.Current, artwork: "GuideGmail");
     public static readonly PracticeTab Trail = new(name: "trail", title: "A weekend away", url: "https://www.alltrails.com",
-        placement: TabPlacement.Current);
+        placement: TabPlacement.Current, artwork: "GuideAllTrails");
     public static readonly PracticeTab Packing = new(name: "packing", title: "Packing list", url: "https://todoist.com",
-        placement: TabPlacement.Current);
+        placement: TabPlacement.Current, artwork: "GuideTodoist");
 
     public static IReadOnlyList<PracticeTab> All { get; } = [Calendar, Reading, Mail, Trail, Packing];
 
@@ -35,15 +35,20 @@ public sealed class PracticeTab {
     /// The section the tab starts in.
     public TabPlacement Placement { get; }
 
+    /// The name of the icon the platforms bundle for the tab, which it wears
+    /// since its page never loads.
+    public string Artwork { get; }
+
     #endregion
 
     #region Constructors
 
-    private PracticeTab(string name, string title, string url, TabPlacement placement) {
+    private PracticeTab(string name, string title, string url, TabPlacement placement, string artwork) {
         Name = name;
         Title = title;
         Url = url;
         Placement = placement;
+        Artwork = artwork;
     }
 
     #endregion

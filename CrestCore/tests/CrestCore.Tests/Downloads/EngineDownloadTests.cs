@@ -189,7 +189,7 @@ public sealed partial class BrowserContractsTests {
         var record = asked.OfType<DownloadUpdated>().Last().Download;
         Assert.Equal(DownloadPhase.AwaitingApproval, record.Phase);
         var approval = Assert.IsType<DownloadApprovalAsked>(asked[^1]);
-        Assert.Equal((record.Id, "report.pdf", (EngineDownloadWarning?)EngineDownloadWarning.DangerousFile),
+        Assert.Equal((record.Id, "report.pdf", DownloadWarning.DangerousFile),
             (approval.DownloadId, approval.Filename, approval.Warning));
         Assert.Contains(new PromptSettled(approval.PromptId), app.Send(new AnswerDownloadApproval(approval.PromptId, Approved: true)));
         Assert.Equal(new ApproveEngineDownload(profile, "7", "danger:file"), binding.Commands[^1]);
@@ -217,7 +217,7 @@ public sealed partial class BrowserContractsTests {
         var asked = app.Drain();
         var approval = Assert.IsType<DownloadApprovalAsked>(asked[^1]);
         Assert.Equal(DownloadRiskReason.ExecutableOrInstaller, Assert.Single(approval.Reasons));
-        Assert.Equal((space, "installer.dmg", (EngineDownloadWarning?)null, "files.example"),
+        Assert.Equal((space, "installer.dmg", (DownloadWarning?)null, "files.example"),
             (approval.SpaceId, approval.Filename, approval.Warning, approval.SourceHost));
         Assert.DoesNotContain(asked, change => change is DownloadDestinationAsked);
         Assert.Equal(DownloadRiskReason.ExecutableOrInstaller,
@@ -264,7 +264,7 @@ public sealed partial class BrowserContractsTests {
             ApprovalToken = "insecure"
         }));
         var insecure = app.Drain().OfType<DownloadApprovalAsked>().Single();
-        Assert.Equal(((EngineDownloadWarning?)EngineDownloadWarning.InsecureConnection, "files.example"),
+        Assert.Equal((DownloadWarning.InsecureConnection, "files.example"),
             (insecure.Warning, insecure.SourceHost));
         Assert.Equal(DownloadRiskReason.ExecutableOrInstaller, Assert.Single(insecure.Reasons));
     }

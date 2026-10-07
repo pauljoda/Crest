@@ -14,9 +14,7 @@ struct BrowserTabAppearanceGroup: View {
     var body: some View {
         CrestSettingsGroup(
             "Tabs and pins",
-            systemImage: "square.stack",
-            settings: settings,
-            footnote: "Text, icons, and spacing scale together, and pins balance across rows."
+            settings: settings
         ) {
             if showsPreview {
                 BrowserLookAndFeelPreview(space: space, focus: .tabs)
@@ -71,11 +69,6 @@ struct BrowserTabAppearanceGroup: View {
                 Toggle("Dim unloaded tabs", isOn: dimming.binding)
                     .labelsHidden()
             }
-            BrowserAppearanceAccentRow(
-                color: accent,
-                fallback: space?.branding.primaryColor ?? .indigo,
-                identifier: "tabs-follow-space-accent"
-            )
             CrestSettingSlider("Pinned fill", value: pinFill, readout: .percent(zero: "None", full: "Strong"))
             CrestSettingSlider("Selected tab glow", value: pinGlow, readout: .percent(zero: "None", full: "Strong"))
             CrestSettingSlider("Hover tint", value: hoverFill, readout: .percent(zero: "Neutral", full: "Accent"))
@@ -110,10 +103,6 @@ struct BrowserTabAppearanceGroup: View {
             default: BrowserLookAndFeelDefaults.tabs.usesWebsitePinColor)
     }
 
-    private var accent: CrestSettingValue<BrandColor?> {
-        CrestSettingValue($appearance.tabs.color)
-    }
-
     private var dimming: CrestSettingValue<Bool> {
         CrestSettingValue(
             $appearance.tabs.dimsUnloadedTabs,
@@ -141,7 +130,6 @@ struct BrowserTabAppearanceGroup: View {
             outlines.resettable("Accent outline on selected tabs"),
             websiteColors.resettable("Website colors for pins"),
             dimming.resettable("Dim unloaded tabs"),
-            accent.resettable("Follow Space accent"),
             pinFill.resettable("Pinned fill"),
             pinGlow.resettable("Selected tab glow"),
             hoverFill.resettable("Hover tint"),

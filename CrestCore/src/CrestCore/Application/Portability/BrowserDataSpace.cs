@@ -60,10 +60,11 @@ internal sealed record BrowserDataSpace(string Name, string Symbol, SpaceAccent 
         foreach (var split in Tabs.Select(tab => tab.SplitGroupId).OfType<Guid>()) splitIds.TryAdd(split, ids.Next());
         Dictionary<Guid, Guid> tabIds = [];
         List<TabState> tabs = [];
-        int pinned = 0;
+        var counts = new Dictionary<TabPlacement, int>();
         foreach (var tab in Tabs) {
             Require(!tabIds.ContainsKey(tab.Id));
-            if (tab.Placement == TabPlacement.Pinned) Require(++pinned <= TabPlacement.PinnedCapacity);
+            counts[tab.Placement] = counts.GetValueOrDefault(tab.Placement) + 1;
+            Require(tab.Placement.Holds(counts[tab.Placement]));
             var kept = tab.Materialize(ids.Next(), folderIds, splitIds);
             tabIds[tab.Id] = kept.Id;
             tabs.Add(kept);

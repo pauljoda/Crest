@@ -74,7 +74,7 @@ public sealed class ImportSource {
         dataFolder: "Citro Labs/ego lite", safeStorageService: "Chromium Safe Storage", symbol: "e.circle", accent: SpaceAccent.Indigo);
     public static readonly ImportSource OtherChromium = new(name: "otherChromium", title: "Chromium-based browser", bundleIdentifier: "",
         dataFolder: ApplicationSupport, description: "Profiles, bookmarks, and open tabs", symbol: "globe", accent: SpaceAccent.Teal,
-        spaceHeaderStyle: ImportSpaceHeaderStyle.Identity, savedSectionTitle: "BOOKMARKS");
+        spaceHeaderStyle: ImportSpaceHeaderStyle.Identity, savedSectionTitle: "BOOKMARKS", isListed: false);
 
     public static IReadOnlyList<ImportSource> All { get; } = [Arc, Zen, Chrome, Safari, Firefox, ChromeBeta, ChromeDev, ChromeCanary,
         Chromium, Brave, Edge, Vivaldi, Opera, Dia, Comet, Aside, EgoLite, OtherChromium];
@@ -149,6 +149,10 @@ public sealed class ImportSource {
     /// each of its profiles.
     public bool NamesItsSpaces => SpaceName is not null;
 
+    /// Setup lists the browser by name and finds its data in a folder of its
+    /// own; `OtherChromium` stands for any browser setup finds by looking.
+    public bool IsListed { get; }
+
     #endregion
 
     #region Constructors
@@ -156,7 +160,7 @@ public sealed class ImportSource {
     private ImportSource(string name, string title, string bundleIdentifier, string dataFolder, string description, string symbol,
         SpaceAccent accent, ImportSpaceHeaderStyle spaceHeaderStyle, string? safeStorageService = null,
         string pinnedSectionTitle = "PINNED", string savedSectionTitle = "SAVED", bool listsNewTab = false, string? spaceName = null,
-        string? numberedSpaceName = null) {
+        string? numberedSpaceName = null, bool isListed = true) {
         Name = name;
         Title = title;
         BundleIdentifier = bundleIdentifier;
@@ -171,6 +175,7 @@ public sealed class ImportSource {
         ListsNewTab = listsNewTab;
         SpaceName = spaceName;
         NumberedSpaceName = numberedSpaceName;
+        IsListed = isListed;
     }
 
     #endregion

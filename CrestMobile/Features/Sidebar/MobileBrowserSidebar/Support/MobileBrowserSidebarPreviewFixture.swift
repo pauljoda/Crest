@@ -47,7 +47,7 @@ struct MobileBrowserSidebarPreviewFixture {
             name: "Work",
             symbol: "briefcase.fill",
             accent: .indigo,
-            branding: BrowserSpaceHousePalette.lion.look,
+            branding: SpaceHouse.lion.look,
             folders: [folder],
             tabs: [pinnedTab, savedTab, unfiledSavedTab, currentTab],
             history: [
@@ -67,7 +67,7 @@ struct MobileBrowserSidebarPreviewFixture {
             name: "Personal",
             symbol: "lock.fill",
             accent: .orange,
-            branding: BrowserSpaceHousePalette.winter.look,
+            branding: SpaceHouse.winter.look,
             tabs: [],
             accessPolicy: .deviceOwnerAuthentication
         )

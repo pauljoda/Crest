@@ -5,7 +5,7 @@ struct BrowserQuickWindowSettingsSection: View {
     @Binding var remembersSpaceBySite: Bool
 
     var body: some View {
-        Section("Quick Window", systemImage: "macwindow.badge.plus") {
+        Section("Quick Window") {
             Picker("Auto-archive", selection: $archivePolicy) {
                 ForEach(QuickWindowArchivePolicy.all, id: \.self) { policy in
                     Text(policy.title).tag(policy)
@@ -16,8 +16,6 @@ struct BrowserQuickWindowSettingsSection: View {
                 "Remember the chosen Space for each site",
                 isOn: $remembersSpaceBySite
             )
-
-            BrowserPlatformLinkSettingsGuidance(kind: .quickWindow)
         }
     }
 }

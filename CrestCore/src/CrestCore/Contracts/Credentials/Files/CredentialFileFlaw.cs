@@ -1,3 +1,5 @@
+using CrestCore.Domain;
+
 namespace CrestCore.Contracts;
 
 /// Why a password file cannot be imported at all, with what the person is
@@ -12,13 +14,13 @@ public sealed class CredentialFileFlaw {
     public static readonly CredentialFileFlaw NoRows = new(name: "noRows",
         message: "This password file contains supported headers but no credential rows.");
     public static readonly CredentialFileFlaw Malformed = new(name: "malformed",
-        message: "This password file contains malformed CSV quoting or columns.");
+        message: "This password file contains malformed CSV quoting or columns.", answers: CsvFault.Malformed);
     public static readonly CredentialFileFlaw TooManyRows = new(name: "tooManyRows",
-        message: "This password file contains more than 10,000 credential rows.");
+        message: "This password file contains more than 10,000 credential rows.", answers: CsvFault.TooManyRows);
     public static readonly CredentialFileFlaw TooManyColumns = new(name: "tooManyColumns",
-        message: "This password file contains too many columns.");
+        message: "This password file contains too many columns.", answers: CsvFault.TooManyColumns);
     public static readonly CredentialFileFlaw FieldTooLarge = new(name: "fieldTooLarge",
-        message: "A field in this password file is too large to import safely.");
+        message: "A field in this password file is too large to import safely.", answers: CsvFault.FieldTooLarge);
     public static readonly CredentialFileFlaw NoSiteColumn = new(name: "noSiteColumn",
         message: "This password file has no supported site column.");
     public static readonly CredentialFileFlaw NoUsernameColumn = new(name: "noUsernameColumn",
@@ -46,13 +48,19 @@ public sealed class CredentialFileFlaw {
     [Localized]
     public string Message { get; }
 
+    /// The way a file's text breaks CSV that the flaw stands for, or null for
+    /// a flaw of what the CSV holds. The core's own reading, which no
+    /// platform reads.
+    internal CsvFault? Answers { get; }
+
     #endregion
 
     #region Constructors
 
-    private CredentialFileFlaw(string name, string message) {
+    private CredentialFileFlaw(string name, string message, CsvFault? answers = null) {
         Name = name;
         Message = message;
+        Answers = answers;
     }
 
     #endregion
@@ -60,6 +68,9 @@ public sealed class CredentialFileFlaw {
     #region Actions - Lookup
 
     public static CredentialFileFlaw? Named(string? name) => All.FirstOrDefault(flaw => flaw.Name == name);
+
+    /// The flaw a file's text breaking CSV with `fault` means.
+    internal static CredentialFileFlaw Answering(CsvFault fault) => All.First(flaw => flaw.Answers == fault);
 
     #endregion
 }

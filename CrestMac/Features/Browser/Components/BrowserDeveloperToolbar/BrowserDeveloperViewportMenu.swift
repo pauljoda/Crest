@@ -58,7 +58,7 @@ struct BrowserDeveloperViewportMenu: View {
                 Label("Normal — Preview Off", systemImage: "rectangle")
                     .tag(Selection.normal)
                 ForEach(BrowserDeveloperViewport.presets) { viewport in
-                    Label("\(viewport.title) — \(viewport.dimensions)", systemImage: viewport.systemImage)
+                    Label("\(viewport.title) — \(viewport.dimensions)", systemImage: viewport.symbol)
                         .tag(Selection.preset(viewport))
                 }
                 Label("Custom", systemImage: "ruler")
@@ -76,7 +76,9 @@ struct BrowserDeveloperViewportMenu: View {
         .help("Viewport Preview")
         .accessibilityLabel("Viewport Preview")
         .accessibilityValue(
-            showsCustomSize ? String(localized: "Custom") : page.developerViewport?.title ?? String(localized: "Off")
+            showsCustomSize
+                ? String(localized: "Custom")
+                : page.developerViewport.map { String(localized: $0.title) } ?? String(localized: "Off")
         )
         .accessibilityIdentifier("developer-viewport-menu")
     }

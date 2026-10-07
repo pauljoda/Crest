@@ -15,10 +15,7 @@ struct BrowserSpaceBrandingEditor: View {
     @State private var choosesIdentityEmoji = false
 
     private var defaults: SpaceBranding {
-        if let preset = BrowserSpaceBrandingPreset.curated.first(where: { $0.id == branding.crest.startingPresetID }) {
-            return preset.applying(to: BrowserSpaceHousePalette.winter.look)
-        }
-        return initialAppearance ?? branding
+        SpaceHouse.startingPoint(of: branding)?.look ?? initialAppearance ?? branding
     }
 
     private var context: BrowserCrestStudioContext {
@@ -89,15 +86,15 @@ struct BrowserSpaceBrandingEditor: View {
     }
 
     private var presets: some View {
-        BrowserCrestStudioGroup(title: "Start from", systemImage: "sparkles") {
+        BrowserCrestStudioGroup(step: .start) {
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 84), spacing: 10)], spacing: 10) {
-                ForEach(BrowserSpaceBrandingPreset.curated) { preset in
-                    BrowserCrestStudioChoice(title: preset.titleKey, selected: preset.isSelected(in: branding)) {
-                        branding = preset.applying(to: branding)
+                ForEach(SpaceHouse.all, id: \.self) { house in
+                    BrowserCrestStudioChoice(title: house.title, selected: house.isWorn(by: branding)) {
+                        branding = house.applying(to: branding)
                         beforeShuffle = nil
                     } artwork: {
                         BrowserSpaceCrestIcon(
-                            branding: preset.applying(to: gesturePreview ?? branding), size: 52, rasterizesLayers: false
+                            branding: house.applying(to: gesturePreview ?? branding), size: 52, rasterizesLayers: false
                         )
                         .equatable()
                     }

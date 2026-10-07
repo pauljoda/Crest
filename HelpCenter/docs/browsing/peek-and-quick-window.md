@@ -13,7 +13,7 @@ Peek and Quick Window are transient browsing surfaces. Both use a real Crest Spa
 
 Peek opens a link above the source page. Close it to return immediately, or choose the primary action to promote it into a full tab. **Command-W** closes an open Peek and **Command-O** promotes it.
 
-In **Settings → Quick Window and Peek**, you can automatically open cross-site links from pinned and saved tabs in Peek. You can also choose whether **Option-click** or **Command-click** explicitly opens Peek; the other modifier opens the link in a new tab.
+In **Settings → Links**, you can automatically open cross-site links from pinned and saved tabs in Peek. You can also choose whether **Option-click** or **Command-click** explicitly opens Peek; the other modifier opens the link in a new tab.
 
 Peek stays attached to its source tab when you open another tab or switch Spaces. Return to the source tab to continue in its Peek. If the source is one card in Split View, promotion and page commands follow that focused card.
 
@@ -21,7 +21,7 @@ Peek stays attached to its source tab when you open another tab or switch Spaces
 
 Drag a webpage link to pull out a live preview that follows your gesture and fades in as the page loads. Release to keep the preview open, then close it or promote it into a tab using Peek’s controls.
 
-Choose this behavior in **Settings → General → Drag links to Peek**. Hold **Option** to drag the link normally; when the setting is off, Option-drag opens Peek instead.
+Choose this behavior in **Settings → Links → Drag links to Peek**. Hold **Option** to drag the link normally; when the setting is off, Option-drag opens Peek instead.
 
 On iPhone and iPad, touch and hold webpage links for the native link preview and actions, including opening a link in another Space. Touch and hold an image for image actions such as saving it.
 
@@ -29,7 +29,7 @@ On iPhone and iPad, touch and hold webpage links for the native link preview and
 
 Quick Window handles a link from another app without dropping it immediately into the durable sidebar. It uses the configured Space’s cookies and passwords. When the page matters, move it into a normal window and choose the right Space.
 
-Open a blank Quick Window with **Option-Shift-Command-N** on Mac. In **Settings → Quick Window and Peek**, choose whether external links use Quick Window, the most recent Space, or a chosen Space.
+Open a blank Quick Window with **Option-Shift-Command-N** on Mac. In **Settings → Links**, choose whether external links use Quick Window, the most recent Space, or a chosen Space.
 
 ### Sign-in and other popup windows
 

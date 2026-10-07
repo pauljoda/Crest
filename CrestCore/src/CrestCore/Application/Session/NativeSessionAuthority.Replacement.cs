@@ -24,7 +24,7 @@ public sealed partial class NativeSessionAuthority {
             if (!workspaceKind.KeepsFile
                 || sync is not null && !ReferenceEquals(sync, value)
                 || value.Session is not null && !ReferenceEquals(value.Session, this))
-                throw new CrestCore.Domain.BrowserRuleException(CrestCore.Domain.BrowserRuleCodes.InvalidSyncSessionOwner);
+                throw new CrestCore.Domain.BrowserRuleException(CrestCore.Domain.BrowserRule.InvalidSyncSessionOwner);
             if (sync is null) attached = session;
             sync = value; value.Session = this;
         }
@@ -37,7 +37,7 @@ public sealed partial class NativeSessionAuthority {
     internal SessionState? CompleteReplacement(NativeSessionReplacement value, bool commit) {
         lock (Gate) {
             if (!ReferenceEquals(replacement, value))
-                throw new CrestCore.Domain.BrowserRuleException(CrestCore.Domain.BrowserRuleCodes.InvalidSessionTransaction);
+                throw new CrestCore.Domain.BrowserRuleException(CrestCore.Domain.BrowserRule.InvalidSessionTransaction);
             SessionState? previous = null;
             if (commit) {
                 value.SyncTransaction?.Commit();

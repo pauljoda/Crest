@@ -119,11 +119,11 @@ struct BrowserCrestStudioBackground: View {
                 BrowserCrestStudioPreview(branding: context.value, symbol: symbol, compact: true)
             }
             HStack(spacing: 16) {
-                ForEach(BrowserSpaceBrandColorRole.allCases) { role in
+                ForEach(BrowserSpaceBrandColorRole.all) { role in
                     BrowserSpacePaletteSlot(
                         role: role, color: context.branding.editorColor(for: role),
-                        canAdd: role.rawValue == context.value.colors.count,
-                        canRemove: role.rawValue == context.value.colors.count - 1 && context.value.colors.count > 1,
+                        canAdd: role.slot == context.value.colors.count,
+                        canRemove: role.slot == context.value.colors.count - 1 && context.value.colors.count > 1,
                         compact: true, addColor: { context.branding.editorAddColor(for: role) },
                         removeColor: { context.branding.editorRemoveColor(for: role) })
                 }
@@ -160,9 +160,9 @@ struct BrowserCrestStudioBackground: View {
 
     private var backgroundChoices: some View {
         LazyVGrid(columns: [GridItem(.adaptive(minimum: 84), spacing: 10)], spacing: 10) {
-            ForEach(SpaceBannerPattern.allCases, id: \.self) { pattern in
+            ForEach(SpaceBannerPattern.all, id: \.self) { pattern in
                 BrowserCrestStudioChoice(
-                    title: pattern.titleKey,
+                    title: pattern.title,
                     selected: context.value.themeMode == .banner && context.value.bannerPattern == pattern
                 ) {
                     context.branding.editorUpdate {

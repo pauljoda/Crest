@@ -28,19 +28,29 @@ public sealed record AddressResolution(string Url, string? SearchQuery) {
         return resolution.Url;
     }
 
+    /// `url` as it is, when it is an absolute address an engine loads for
+    /// Crest itself: a held address is never a search, so no rule for typed
+    /// input applies. Null when it is not one, or names an internal page an
+    /// engine that shows none can't load.
+    public static string? Held(string url, bool allowsInternalPages) {
+        ArgumentNullException.ThrowIfNull(url);
+        string value = url.Trim();
+        if (IsInternalPage(value)) return allowsInternalPages ? value : null;
+        return Uri.TryCreate(value, UriKind.Absolute, out var parsed)
+            && ExternalSchemePolicy.Disposition(parsed.Scheme, isAppInitiated: true) == ExternalSchemeDisposition.Engine
+            ? value : null;
+    }
+
     public static AddressResolution? Resolve(string input, SearchProvider provider, bool allowsInternalPages = false) {
         string value = input.Trim();
         if (value.Length == 0) return null;
-        if (value.Length > 4096) throw new BrowserRuleException(BrowserRuleCodes.InvalidAddress);
-        if (value == BrowserUrlConstants.AboutBlank || value.StartsWith(BrowserUrlConstants.ChromePrefix, StringComparison.OrdinalIgnoreCase)
-            || value.StartsWith(BrowserUrlConstants.CrestPrefix, StringComparison.OrdinalIgnoreCase)
-            || value.StartsWith(BrowserUrlConstants.ChromeExtensionPrefix, StringComparison.OrdinalIgnoreCase)) {
+        if (value.Length > 4096) throw new BrowserRuleException(BrowserRule.InvalidAddress);
+        if (value == BrowserUrlConstants.AboutBlank || IsInternalPage(value)) {
             if (!allowsInternalPages) return new(provider.Search(value), value);
             BrowserSpace.ValidateUrl(value, allowsInternalPages: true);
             return new(value, null);
         }
-        if (Uri.TryCreate(value, UriKind.Absolute, out var explicitUrl)
-            && (explicitUrl.Scheme == Uri.UriSchemeHttp || explicitUrl.Scheme == Uri.UriSchemeHttps)
+        if (Uri.TryCreate(value, UriKind.Absolute, out var explicitUrl) && WebScheme.Named(explicitUrl.Scheme) is not null
             && explicitUrl.Host.Length > 0) return new(value, null);
         if (LocalFile(value) is { } localFile) return new(localFile, null);
         if (!value.Any(char.IsWhiteSpace)) {
@@ -51,6 +61,12 @@ public sealed record AddressResolution(string Url, string? SearchQuery) {
         }
         return new(provider.Search(value), value);
     }
+
+    /// Whether `value` names one of the browser's own pages.
+    private static bool IsInternalPage(string value) =>
+        value.StartsWith(BrowserUrlConstants.ChromePrefix, StringComparison.OrdinalIgnoreCase)
+        || value.StartsWith(BrowserUrlConstants.CrestPrefix, StringComparison.OrdinalIgnoreCase)
+        || value.StartsWith(BrowserUrlConstants.ChromeExtensionPrefix, StringComparison.OrdinalIgnoreCase);
 
     /// An explicit `file://` URL, or an absolute path the person typed. Only these
     /// three spellings reach a local document; everything else stays a search, and

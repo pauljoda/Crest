@@ -51,8 +51,8 @@ enum BrowserPerformanceSoakFixture {
         tabCount: Int,
         runID: String
     ) -> SessionState.Seed? {
-        let palettes = BrowserSpaceHousePalette.allCases
-        let patterns = SpaceBannerPattern.allCases.shuffled()
+        let palettes = SpaceHouse.all
+        let patterns = SpaceBannerPattern.all.shuffled()
         // Each house look, in a banner pattern of its own and a light fade.
         var appearances = palettes.enumerated().map { index, palette in
             var look = palette.look
@@ -62,7 +62,7 @@ enum BrowserPerformanceSoakFixture {
         }
         // A bright control beside the original palettes exercises both foreground tones.
         var daylight = SpaceBranding.neutral
-        daylight.colors = [.sand, .gold, .winterIce]
+        daylight.colors = [.sand, .gold, Tincture.winterIce.color]
         daylight.bannerPattern = .chevron
         daylight.readabilityFade = 0
         daylight.textColorMode = .dark

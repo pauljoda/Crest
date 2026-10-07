@@ -96,7 +96,7 @@ final class BrowserSoftwareUpdateRefreshTests: XCTestCase {
         coordinator.updateCycleDidFinish()
 
         XCTAssertEqual(updater.userInitiatedCheckCount, 1)
-        XCTAssertEqual(model.phase, .updateAvailable)
+        XCTAssertEqual(model.phase, .available)
         XCTAssertEqual(model.updateBuild, "1052")
 
         model.installUpdate()

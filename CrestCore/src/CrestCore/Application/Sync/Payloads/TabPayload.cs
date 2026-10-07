@@ -105,7 +105,7 @@ internal sealed record TabPayload(
         RequireText(Symbol, MaximumSymbolBytes);
         RequireOrderToken(OrderToken);
         if (Url is { } url && url.Text != BlankPage) RequireWebAddress(url);
-        if (Placement == TabPlacement.Pinned && FolderId is not null) throw new UnreadableSyncPayloadException();
+        if (!Placement.HoldsFolders && FolderId is not null) throw new UnreadableSyncPayloadException();
     }
 
     public override void RequireSendable() {

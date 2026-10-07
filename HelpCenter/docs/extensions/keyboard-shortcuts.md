@@ -13,8 +13,8 @@ Extensions can declare keyboard commands, such as opening their popup. Chromium 
 
 ## Change a shortcut
 
-1. Open **Crest Settings → Extensions** and choose the Space.
-2. Select **Keyboard Shortcuts…**. Chromium's extension shortcuts page opens for that Space.
+1. Open **Crest Settings** and select the Space in the sidebar.
+2. Select **Extensions**, then **Shortcuts…**. Chromium's extension shortcuts page opens for that Space.
 3. Find the extension's command and set, change or clear its shortcut there.
 
 ## When a shortcut does nothing

@@ -70,13 +70,11 @@
     struct BrowserEngineExtensionSettingsPane: View {
         let browser: BrowserStore
         let spaceAccess: BrowserSpaceAccessController
-        var requestedSpaceID: UUID?
-        var requestRevision = 0
+        /// The one Space whose extensions the pane shows, or nil to pick one.
+        var spaceID: UUID?
 
         var body: some View {
-            BrowserExtensionSettingsPane(
-                browser: browser, spaceAccess: spaceAccess,
-                requestedSpaceID: requestedSpaceID, requestRevision: requestRevision)
+            BrowserExtensionSettingsPane(browser: browser, spaceAccess: spaceAccess, fixedSpaceID: spaceID)
         }
     }
 #endif

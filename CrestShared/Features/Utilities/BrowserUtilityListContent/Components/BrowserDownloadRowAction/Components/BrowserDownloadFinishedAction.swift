@@ -9,7 +9,7 @@ struct BrowserDownloadFinishedAction: View {
 
     var body: some View {
         if destinations.count == 1, let destination = destinations.first {
-            Button(destination.title, systemImage: destination.systemImage) {
+            Button(destination.title, systemImage: destination.symbol) {
                 perform(.open(itemID, destination))
             }
             .labelStyle(.iconOnly)
@@ -25,7 +25,7 @@ struct BrowserDownloadFinishedAction: View {
 
                 Menu {
                     ForEach(destinations) { destination in
-                        Button(destination.title, systemImage: destination.systemImage) {
+                        Button(destination.title, systemImage: destination.symbol) {
                             perform(.open(itemID, destination))
                         }
                     }

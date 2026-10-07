@@ -9,7 +9,7 @@ public readonly record struct WebAddress(string Spelling) {
     /// The address history keeps for the page: an http or https address
     /// without its fragment, or null for one history does not keep.
     public string? Normalized => Uri.TryCreate(Spelling, UriKind.Absolute, out var value)
-        && (value.Scheme == Uri.UriSchemeHttp || value.Scheme == Uri.UriSchemeHttps) ? Spelling.Split('#', 2)[0] : null;
+        && WebScheme.Named(value.Scheme) is not null ? Spelling.Split('#', 2)[0] : null;
 
     /// The web origin a page at this address belongs to, with its host in
     /// ASCII, or null for an address that is not http or https.

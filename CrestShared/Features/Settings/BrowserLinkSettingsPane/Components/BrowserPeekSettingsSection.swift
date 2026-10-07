@@ -3,9 +3,11 @@ import SwiftUI
 struct BrowserPeekSettingsSection: View {
     @Binding var automaticallyOpensPeek: Bool
     @Binding var clickModifier: LinkPeekModifier
+    /// Absent where links can't be dragged out of a page.
+    var dragsLinksToPeek: Binding<Bool>? = nil
 
     var body: some View {
-        Section("Peek", systemImage: "rectangle.on.rectangle") {
+        Section {
             Toggle(
                 "Open cross-site links from pinned and saved tabs in Peek",
                 isOn: $automaticallyOpensPeek
@@ -19,12 +21,17 @@ struct BrowserPeekSettingsSection: View {
             }
             .accessibilityIdentifier("peek-click-modifier")
 
-            Text("The other modifier opens the link in a new tab.")
-                .crestFormFootnote()
-
-            BrowserPlatformLinkSettingsGuidance(
-                kind: .peek,
-                peekClickModifier: clickModifier
+            if let dragsLinksToPeek {
+                Toggle("Drag links to Peek", isOn: dragsLinksToPeek)
+                    .accessibilityIdentifier("drag-links-to-peek-toggle")
+            }
+        } header: {
+            Text("Peek")
+        } footer: {
+            CrestFormFootnote(
+                dragsLinksToPeek == nil
+                    ? "The other key opens the link in a new tab."
+                    : "The other key opens a new tab. Hold Option to drag the link itself."
             )
         }
     }

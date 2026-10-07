@@ -8,23 +8,19 @@ struct BrowserDataRetentionSettingsSection: View {
     @State private var pendingChange: BrowserDataRetentionChange?
 
     var body: some View {
-        Section("Data retention", systemImage: "clock.arrow.circlepath") {
-            ForEach(BrowserDataRetentionCategory.allCases) { category in
-                LabeledContent(category.title) {
-                    Picker(category.title, selection: binding(for: category)) {
-                        ForEach(DataRetention.all, id: \.self) { duration in
-                            Text(duration.title).tag(duration)
-                        }
+        Section {
+            ForEach(BrowserDataRetentionCategory.all) { category in
+                Picker(category.title, selection: binding(for: category)) {
+                    ForEach(DataRetention.all, id: \.self) { duration in
+                        Text(duration.title).tag(duration)
                     }
-                    .labelsHidden()
-                    .accessibilityIdentifier(category.accessibilityIdentifier)
                 }
+                .accessibilityIdentifier(category.accessibilityIdentifier)
             }
-
-            Text(
-                "Retention is set separately for this Space. Crest checks when it opens, after sync, and every 15 minutes while active. Download cleanup removes Crest’s record only; downloaded files stay on disk."
-            )
-            .crestFormFootnote()
+        } header: {
+            Text("Keep")
+        } footer: {
+            CrestFormFootnote("Removing download records doesn’t delete the files.")
         }
         .confirmationDialog(
             "Permanently delete older records?",
@@ -86,11 +82,7 @@ struct BrowserDataRetentionSettingsSection: View {
         guard let retention = browser.spaceModel(spaceID)?.settings.browsingPreferences.dataRetention else {
             return .forever
         }
-        return switch category {
-        case .history: retention.history
-        case .archive: retention.archive
-        case .downloads: retention.downloads
-        }
+        return retention[keyPath: category.retention]
     }
 
     private func apply(_ change: BrowserDataRetentionChange) {
@@ -98,11 +90,7 @@ struct BrowserDataRetentionSettingsSection: View {
             pendingChange = nil
             return
         }
-        switch change.category {
-        case .history: retention.history = change.proposed
-        case .archive: retention.archive = change.proposed
-        case .downloads: retention.downloads = change.proposed
-        }
+        retention[keyPath: change.category.retention] = change.proposed
         let now = BrowserDataRetentionClock.now()
         browser.updateDataRetentionPreferences(retention, in: spaceID)
         downloadCenter.sweepExpiredRecords(

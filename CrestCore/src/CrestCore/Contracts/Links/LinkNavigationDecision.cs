@@ -7,7 +7,7 @@ public sealed class LinkNavigationDecision {
     #region Variables
 
     public static readonly LinkNavigationDecision Navigate = new(name: "navigate");
-    public static readonly LinkNavigationDecision PeekModifier = new(name: "peekModifier", opensPeek: true);
+    public static readonly LinkNavigationDecision PeekModifier = new(name: "peekModifier", opensPeek: true, stagesLink: true);
     public static readonly LinkNavigationDecision PeekSavedSite = new(name: "peekSavedSite", opensPeek: true, protectsSavedSite: true);
     public static readonly LinkNavigationDecision BackgroundTab = new(name: "backgroundTab", opensTab: true);
     public static readonly LinkNavigationDecision ForegroundTab = new(name: "foregroundTab", opensTab: true, selectsTab: true);
@@ -30,17 +30,22 @@ public sealed class LinkNavigationDecision {
     /// The new tab is selected when it opens.
     public bool SelectsTab { get; }
 
+    /// The link's request is staged before it leaves the page, so the Peek it
+    /// opens keeps its initiator's referrer. A saved-site Peek starts afresh.
+    public bool StagesLink { get; }
+
     #endregion
 
     #region Constructors
 
     private LinkNavigationDecision(string name, bool opensPeek = false, bool protectsSavedSite = false, bool opensTab = false,
-        bool selectsTab = false) {
+        bool selectsTab = false, bool stagesLink = false) {
         Name = name;
         OpensPeek = opensPeek;
         ProtectsSavedSite = protectsSavedSite;
         OpensTab = opensTab;
         SelectsTab = selectsTab;
+        StagesLink = stagesLink;
     }
 
     #endregion

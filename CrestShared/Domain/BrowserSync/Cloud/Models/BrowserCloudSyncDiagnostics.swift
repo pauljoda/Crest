@@ -4,7 +4,7 @@ struct BrowserCloudSyncDiagnostics: Equatable, Sendable {
     let containerIdentifier: String?
     let isEnabled: Bool
     let accountState: CloudAccountState
-    let phase: BrowserCloudSyncPhase
+    let phase: CloudSyncPhase
     let localRecordCount: Int
     let pendingUploadCount: Int
     let observedCloudRecordCount: Int?
@@ -26,8 +26,8 @@ struct BrowserCloudSyncDiagnostics: Equatable, Sendable {
             Crest iCloud Sync Diagnostics
             Container: \(containerIdentifier ?? "Not configured")
             Enabled: \(isEnabled)
-            Account: \(accountState.description)
-            Status: \(phase.description)
+            Account: \(String(localized: accountState.title))
+            Status: \(String(localized: phase.title))
             Local records: \(localRecordCount)
             Pending uploads: \(pendingUploadCount)
             Cloud records observed: \(observedCloudRecordCount.map(String.init) ?? "Unknown")

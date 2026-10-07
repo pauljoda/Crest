@@ -14,9 +14,6 @@ public static class WorkspaceImportPolicy {
     public const string OverflowFolderTitle = "Imported Pinned Tabs";
     public const string OverflowFolderSymbol = "pin.slash";
 
-    /// The symbol an imported tab wears once pinned.
-    public const string PinnedTabSymbol = "pin.fill";
-
     #endregion
 
     #region Actions - State policy

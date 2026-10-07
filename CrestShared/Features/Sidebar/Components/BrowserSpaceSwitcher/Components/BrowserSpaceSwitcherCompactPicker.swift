@@ -117,7 +117,7 @@ struct BrowserSpaceSwitcherCompactPicker: View {
     }
 
     private var segmentWidth: CGFloat {
-        guard style == .touch, !spaces.isEmpty else { return style.minimumSegmentWidth }
+        guard style.fillsSegments, !spaces.isEmpty else { return style.minimumSegmentWidth }
         return max(
             style.minimumSegmentWidth,
             (allocation.scrollViewportWidth - 2 * CrestSpaceIconPickerMetrics.trackPadding) / CGFloat(spaces.count))

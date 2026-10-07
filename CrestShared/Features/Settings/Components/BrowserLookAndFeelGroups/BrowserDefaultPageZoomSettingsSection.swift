@@ -2,9 +2,10 @@ import SwiftUI
 
 /// The zoom every page starts at, on every Space on this device.
 ///
-/// Both platform settings shells route through the Look and Feel pane, so this
-/// one row and its reset cannot drift into duplicate controls. The slider keeps
-/// the continuous multiplier, while the readout rounds to a whole percentage.
+/// Both platform settings shells route through the Appearance pane, so this
+/// one row and its reset cannot drift into duplicate controls. The menu offers
+/// the zoom levels the page zoom commands step through, plus a level saved
+/// before the menu existed.
 struct BrowserDefaultPageZoomSettingsSection: View {
     static let controlIdentifier = "default-page-zoom-slider"
 
@@ -15,37 +16,48 @@ struct BrowserDefaultPageZoomSettingsSection: View {
     var body: some View {
         CrestSettingsGroup(
             "Page",
-            systemImage: "doc.text",
-            settings: [zoom.resettable("Default page zoom")],
-            footnote:
-                "Pages using the default update immediately. Page Zoom commands override it while you browse, and Actual Size returns here."
+            settings: [zoom.resettable("Default page zoom")]
         ) {
             if showsPreview {
                 BrowserLookAndFeelPreview(space: space, focus: .page)
             }
         } content: {
-            CrestSettingSlider(
-                "Default page zoom",
-                value: zoom,
-                range: zoomRange,
-                readout: .multiplier,
-                identifier: Self.controlIdentifier
-            )
+            CrestSettingRow("Default page zoom", setting: zoom.resettable("Default page zoom")) {
+                Picker("Default page zoom", selection: zoom.binding) {
+                    ForEach(levels, id: \.self) { level in
+                        Text(BrowserPageZoomPolicy.percentageLabel(for: CGFloat(level))).tag(level)
+                    }
+                }
+                .labelsHidden()
+                .fixedSize()
+                .accessibilityIdentifier(Self.controlIdentifier)
+            }
         }
     }
 
-    private var zoomRange: ClosedRange<Double> {
-        let range = BrowserPageZoomPolicy.defaultRange
-        return Double(range.lowerBound)...Double(range.upperBound)
+    /// The zoom levels, with the saved level among them.
+    private var levels: [Double] {
+        let levels = BrowserPageZoomPolicy.levels.map(Double.init)
+        let saved = zoom.wrappedValue
+        guard !levels.contains(where: { BrowserPageZoomPolicy.levelsMatch(CGFloat($0), CGFloat(saved)) }) else {
+            return levels
+        }
+        return (levels + [saved]).sorted()
     }
 
     private var zoom: CrestSettingValue<Double> {
         CrestSettingValue(
             Binding(
-                get: { Double(preferences.defaultZoom) },
+                get: { levelMatching(preferences.defaultZoom) },
                 set: { preferences.defaultZoom = CGFloat($0) }
             ),
             default: Double(BrowserPageZoomPolicy.defaultLevel)
         )
+    }
+
+    /// The menu's level for a stored zoom that differs from it by rounding.
+    private func levelMatching(_ zoom: CGFloat) -> Double {
+        BrowserPageZoomPolicy.levels.first { BrowserPageZoomPolicy.levelsMatch($0, zoom) }.map(Double.init)
+            ?? Double(zoom)
     }
 }

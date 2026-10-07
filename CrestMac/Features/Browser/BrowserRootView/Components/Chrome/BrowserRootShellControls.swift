@@ -10,7 +10,7 @@ struct BrowserRootShellControls: View {
 
     @ViewBuilder
     var body: some View {
-        switch model.sidebarPresentation {
+        switch model.sidebarPresentation.kind {
         case .collapsed:
             BrowserCollapsedSidebarRevealControl(
                 capabilities: interactionCapabilities,

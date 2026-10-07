@@ -147,8 +147,8 @@ public sealed partial class BrowserContractsTests {
         var before = journal.Read().ToArray();
         var changed = record["payload"]!.DeepClone(); changed["value"]!["title"] = "New title";
         var added = changed.DeepClone(); added["value"]!["id"] = SwiftId(Guid.NewGuid());
-        Assert.Equal(BrowserRuleCodes.SyncClockExhausted,
-            Assert.Throws<BrowserRuleException>(() => Staging(journal, SyncDeletionReason.Superseded, 100, changed, added)).Code);
+        Assert.Equal(BrowserRule.SyncClockExhausted,
+            Assert.Throws<BrowserRuleException>(() => Staging(journal, SyncDeletionReason.Superseded, 100, changed, added)).Rule);
         Assert.Equal(before, journal.Read());
     }
 

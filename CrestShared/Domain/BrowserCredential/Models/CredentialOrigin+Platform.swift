@@ -7,14 +7,13 @@ import Foundation
 extension CredentialOrigin {
     // MARK: - Variables
 
-    var isSecure: Bool { scheme == "https" }
+    var isSecure: Bool { WebScheme.named(scheme)?.isSecure == true }
 
     // MARK: - Initializers
 
     init?(url: URL) {
         guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
-            let rawScheme = components.scheme?.lowercased(),
-            rawScheme == "https" || rawScheme == "http",
+            let webScheme = WebScheme.named(components.scheme?.lowercased()),
             let rawHost = components.host,
             !rawHost.isEmpty
         else {
@@ -32,21 +31,20 @@ extension CredentialOrigin {
             return nil
         }
 
-        let resolvedPort = components.port ?? Self.defaultPort(for: rawScheme)
+        let resolvedPort = components.port ?? webScheme.defaultPort
         guard (1...65_535).contains(resolvedPort) else { return nil }
 
-        self.init(scheme: rawScheme, host: canonicalHost, port: resolvedPort)
+        self.init(scheme: webScheme.name, host: canonicalHost, port: resolvedPort)
     }
 
     init?(securityProtocol rawProtocol: String, host rawHost: String, port rawPort: Int) {
-        let scheme = rawProtocol.lowercased()
-        guard scheme == "https" || scheme == "http",
+        guard let webScheme = WebScheme.named(rawProtocol.lowercased()),
             !rawHost.isEmpty
         else {
             return nil
         }
 
-        let resolvedPort = rawPort > 0 ? rawPort : Self.defaultPort(for: scheme)
+        let resolvedPort = rawPort > 0 ? rawPort : webScheme.defaultPort
         guard (1...65_535).contains(resolvedPort) else { return nil }
 
         let renderedHost =
@@ -54,10 +52,10 @@ extension CredentialOrigin {
             ? "[\(rawHost)]"
             : rawHost
         let portSuffix =
-            resolvedPort == Self.defaultPort(for: scheme)
+            resolvedPort == webScheme.defaultPort
             ? ""
             : ":\(resolvedPort)"
-        guard let url = URL(string: "\(scheme)://\(renderedHost)\(portSuffix)") else {
+        guard let url = URL(string: "\(webScheme.name)://\(renderedHost)\(portSuffix)") else {
             return nil
         }
         self.init(url: url)
@@ -67,10 +65,6 @@ extension CredentialOrigin {
 
     func matches(_ url: URL) -> Bool {
         CredentialOrigin(url: url) == self
-    }
-
-    private static func defaultPort(for scheme: String) -> Int {
-        scheme == "https" ? 443 : 80
     }
 }
 
@@ -85,8 +79,7 @@ extension CredentialOrigin: Hashable {
 extension CredentialOrigin: CustomStringConvertible {
     var description: String {
         let renderedHost = host.contains(":") ? "[\(host)]" : host
-        let defaultPort = Self.defaultPort(for: scheme)
-        return port == defaultPort
+        return port == WebScheme.named(scheme)?.defaultPort
             ? "\(scheme)://\(renderedHost)"
             : "\(scheme)://\(renderedHost):\(port)"
     }
@@ -110,7 +103,7 @@ extension CredentialOrigin: Codable {
         components.scheme = decodedScheme
         components.host = decodedHost
         components.port =
-            decodedPort == Self.defaultPort(for: decodedScheme.lowercased())
+            decodedPort == WebScheme.named(decodedScheme.lowercased())?.defaultPort
             ? nil
             : decodedPort
         guard let url = components.url,

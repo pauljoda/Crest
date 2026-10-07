@@ -18,7 +18,7 @@ internal static class SyncJson {
     public static Guid Identity(JsonNode? value) {
         if (value is JsonObject obj) value = obj[StoredSessionCodec.Key.RawValue];
         var id = Guid.Parse(value!.GetValue<string>());
-        if (id == Guid.Empty) throw new BrowserRuleException(BrowserRuleCodes.InvalidIdentity);
+        if (id == Guid.Empty) throw new BrowserRuleException(BrowserRule.InvalidIdentity);
         return id;
     }
 

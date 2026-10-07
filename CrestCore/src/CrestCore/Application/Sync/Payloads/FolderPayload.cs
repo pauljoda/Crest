@@ -70,7 +70,7 @@ internal sealed record FolderPayload(
 
     /// The location a folder record spells: saved or open, and nothing else.
     private static TabPlacement Placement(string location) =>
-        TabPlacement.Named(location) is { } placement && placement != TabPlacement.Pinned ? placement : throw new UnreadableSyncPayloadException();
+        TabPlacement.Named(location) is { HoldsFolders: true } placement ? placement : throw new UnreadableSyncPayloadException();
 
     #endregion
 

@@ -10,13 +10,11 @@ struct BrowserLookAndFeelResetFooter: View {
 
     var body: some View {
         Section {
-            VStack(alignment: .leading, spacing: CrestSpacing.small) {
-                Button("Reset All Look and Feel…") { confirmsReset = true }
-                    .buttonStyle(.crestTertiary)
+            HStack {
+                Spacer()
+                Button("Reset All…") { confirmsReset = true }
                     .accessibilityIdentifier("reset-look-and-feel")
-                CrestFormFootnote("These settings apply to every Space on this device and don't sync.")
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
             .confirmationDialog(
                 "Reset all Look and Feel settings?",
                 isPresented: $confirmsReset,
@@ -27,8 +25,8 @@ struct BrowserLookAndFeelResetFooter: View {
             } message: {
                 Text("Window, tab, address field, folder, and app icon choices return to their defaults.")
             }
-        } header: {
-            CrestSettingsSectionHeading(title: "Defaults", systemImage: "arrow.counterclockwise")
+        } footer: {
+            CrestFormFootnote("Applies to every Space on this device. Doesn’t sync.")
         }
     }
 

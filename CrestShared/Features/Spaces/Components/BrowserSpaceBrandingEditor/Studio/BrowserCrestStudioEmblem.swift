@@ -3,7 +3,10 @@ import SwiftUI
 struct BrowserCrestStudioEmblem: View {
     let context: BrowserCrestStudioContext
     let symbol: String
-    @State private var source: Source
+    /// Shows the controls without their card or color row, for a studio
+    /// that frames them and paints the emblem elsewhere.
+    let isEmbedded: Bool
+    @State private var source: CrestChargeKind
     @State private var search = ""
     @State private var showsAll = false
     @State private var systemName = "sparkles"
@@ -12,51 +15,20 @@ struct BrowserCrestStudioEmblem: View {
     @State private var monogramStyle = CrestMonogramStyle.serif
     @State private var choosesEmoji = false
 
-    private enum Source: String, CaseIterable {
-        case heraldic = "Heraldry"
-        case system = "SF Symbol"
-        case emoji = "Emoji"
-        case monogram = "Monogram"
-        case none = "None"
-        init(_ charge: CrestCharge) {
-            switch charge.kind {
-            case .heraldic: self = .heraldic
-            case .system: self = .system
-            case .emoji: self = .emoji
-            case .monogram: self = .monogram
-            case .none: self = .none
-            }
-        }
-    }
-
-    init(context: BrowserCrestStudioContext, symbol: String) {
+    init(context: BrowserCrestStudioContext, symbol: String, isEmbedded: Bool = false) {
         self.context = context
         self.symbol = symbol
-        _source = State(initialValue: Source(context.value.crest.resolvedCharge))
+        self.isEmbedded = isEmbedded
+        _source = State(initialValue: context.value.crest.resolvedCharge.kind)
     }
 
     var body: some View {
-        BrowserCrestStudioGroup(
-            title: "Emblem", systemImage: "seal", preview: context.compact ? context.value : nil, symbol: symbol
-        ) {
-            let value = context.crest(\.charge)
-            CrestSettingRow("Source", setting: value.resettable("Emblem")) {
-                Picker("Emblem source", selection: $source) {
-                    ForEach(Source.allCases, id: \.self) { Text(LocalizedStringKey($0.rawValue)).tag($0) }
-                }.labelsHidden().fixedSize()
-            }
-            sourceControls
-            if source != .none {
-                if source != .emoji {
-                    BrowserCrestStudioColorRow(context: context, title: "Emblem color", path: \.symbolColorIndex)
-                }
-                context.picker("Arrangement", \.chargeLayout, options: CrestChargeLayout.allCases)
-                context.slider("Size", \.chargeScale, range: SpaceCrest.chargeScaleRange)
-                context.slider("Vertical offset", \.chargeOffset, range: SpaceCrest.chargeOffsetRange)
-                if source == .system || source == .monogram
-                    || (source == .heraldic && context.value.crest.symbol.assetName == nil)
-                {
-                    context.picker("Weight", \.chargeWeight, options: CrestChargeWeight.allCases)
+        Group {
+            if isEmbedded {
+                VStack(alignment: .leading, spacing: 16) { controls }
+            } else {
+                BrowserCrestStudioGroup(step: .emblem, preview: context.compact ? context.value : nil, symbol: symbol) {
+                    controls
                 }
             }
         }
@@ -72,18 +44,39 @@ struct BrowserCrestStudioEmblem: View {
         .onChange(of: monogramStyle) { _, _ in if source == .monogram { commitSource() } }
     }
 
+    @ViewBuilder private var controls: some View {
+        let value = context.crest(\.charge)
+        CrestSettingRow("Source", setting: value.resettable("Emblem")) {
+            Picker("Emblem source", selection: $source) {
+                ForEach(CrestChargeKind.all, id: \.self) { Text($0.title).tag($0) }
+            }.labelsHidden().fixedSize()
+        }
+        sourceControls
+        if source != .none {
+            if source.isTinted, !isEmbedded {
+                BrowserCrestStudioColorRow(context: context, title: "Emblem color", path: \.symbolColorIndex)
+            }
+            context.picker("Arrangement", \.chargeLayout, options: CrestChargeLayout.all)
+            context.slider("Size", \.chargeScale, range: CrestMeasure.chargeScale.range)
+            context.slider("Vertical offset", \.chargeOffset, range: CrestMeasure.chargeOffset.range)
+            if source.takesWeight, source != .heraldic || context.value.crest.symbol.assetName == nil {
+                context.picker("Weight", \.chargeWeight, options: CrestChargeWeight.all)
+            }
+        }
+    }
+
     @ViewBuilder private var sourceControls: some View {
-        switch source {
+        switch source.kind {
         case .heraldic:
             BrowserCrestStudioTextField(title: "Find an emblem", symbol: "magnifyingglass", text: $search)
             let matches = CrestSymbol.selectable.filter {
-                search.isEmpty || $0.title.localizedCaseInsensitiveContains(search)
+                search.isEmpty || String(localized: $0.title).localizedCaseInsensitiveContains(search)
             }
             let visible = search.isEmpty && !showsAll ? Array(matches.prefix(12)) : matches
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 84), spacing: 10)], spacing: 8) {
                 ForEach(visible, id: \.self) { choice in
                     BrowserCrestStudioChoice(
-                        title: choice.titleKey, selected: context.value.crest.resolvedCharge == .heraldic(choice)
+                        title: choice.title, selected: context.value.crest.resolvedCharge == .heraldic(choice)
                     ) {
                         context.branding.editorUpdate {
                             $0.crest.symbol = choice
@@ -133,7 +126,7 @@ struct BrowserCrestStudioEmblem: View {
 
     private func commitSource() {
         let charge: CrestCharge
-        switch source {
+        switch source.kind {
         case .heraldic: charge = .heraldic(context.value.crest.symbol)
         case .system: charge = .system(systemName)
         case .emoji: charge = .emoji(emoji)
@@ -144,9 +137,9 @@ struct BrowserCrestStudioEmblem: View {
     }
 
     private func load(_ charge: CrestCharge) {
-        source = Source(charge)
+        source = charge.kind
         let text = charge.text ?? ""
-        switch charge.kind {
+        switch charge.kind.kind {
         case .system: if systemName != text { systemName = text }
         case .emoji: if emoji != text { emoji = text }
         case .monogram:

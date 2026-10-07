@@ -13,11 +13,18 @@ struct MobileBrowserCompactSettingsLayout: View {
 
     var body: some View {
         NavigationStack(path: $path) {
-            List(filteredDestinations) { destination in
-                NavigationLink(value: destination) {
-                    MobileSettingsDestinationRow(destination: destination)
+            List {
+                Section {
+                    MobileSettingsBuildHeader()
                 }
-                .accessibilityIdentifier("settings-\(destination.name)")
+                Section {
+                    ForEach(filteredDestinations) { destination in
+                        NavigationLink(value: destination) {
+                            MobileSettingsDestinationRow(destination: destination)
+                        }
+                        .accessibilityIdentifier("settings-\(destination.name)")
+                    }
+                }
             }
             .navigationTitle("Settings")
             .toolbar { MobileBrowserSettingsToolbar(dismiss: dismiss) }
@@ -31,7 +38,7 @@ struct MobileBrowserCompactSettingsLayout: View {
                     spaceAccess: spaceAccess,
                     dataDeleter: dataDeleter
                 )
-                .navigationTitle("")
+                .navigationTitle(Text(destination.title))
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar { MobileBrowserSettingsToolbar(dismiss: dismiss) }
             }

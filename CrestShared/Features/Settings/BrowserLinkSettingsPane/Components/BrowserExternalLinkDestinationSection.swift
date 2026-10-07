@@ -6,7 +6,7 @@ struct BrowserExternalLinkDestinationSection: View {
     let spaces: [SpaceModel]
 
     var body: some View {
-        Section("Links from other apps", systemImage: "link") {
+        Section("Links from other apps") {
             Picker("Open in", selection: $destination) {
                 ForEach(ExternalLinkDestination.all, id: \.self) { destination in
                     Text(destination.title).tag(destination)
@@ -21,8 +21,6 @@ struct BrowserExternalLinkDestinationSection: View {
                     spaces: CrestSpaceIdentity.list(spaces)
                 )
             }
-
-            BrowserPlatformLinkSettingsGuidance(kind: .externalDestination)
         }
     }
 }

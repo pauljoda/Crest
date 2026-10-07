@@ -18,7 +18,7 @@ struct BrowserSpaceCrestTrimView: View {
 
     @ViewBuilder
     var body: some View {
-        switch trim {
+        switch trim.kind {
         case .none:
             EmptyView()
         case .shield:

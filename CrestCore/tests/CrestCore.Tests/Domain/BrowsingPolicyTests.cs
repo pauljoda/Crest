@@ -36,6 +36,17 @@ public sealed class BrowsingPolicyTests {
         Assert.Equal(address, enabled.Url);
         Assert.Null(enabled.SearchQuery);
     }
+    [Fact]
+    public void AnAddressCrestHoldsLoadsAsItIsWhereTypedTheSameWordsWouldSearch() {
+        string page = "data:text/html;charset=utf-8," + string.Concat(Enumerable.Repeat("%3Cp%3EShowcase%3C%2Fp%3E", 400));
+        Assert.Equal(page, AddressResolution.Held(page, allowsInternalPages: false));
+        Assert.Throws<BrowserRuleException>(() => AddressResolution.Resolve(page, Kagi()));
+        Assert.Equal("blob:https://example.com/0f1e", AddressResolution.Held("blob:https://example.com/0f1e", false));
+        Assert.Null(AddressResolution.Held("javascript:alert(1)", false));
+        Assert.Null(AddressResolution.Held("mailto:crest@example.com", false));
+        Assert.Null(AddressResolution.Held("chrome://extensions/", allowsInternalPages: false));
+        Assert.Equal("chrome://extensions/", AddressResolution.Held("chrome://extensions/", allowsInternalPages: true));
+    }
     [Theory]
     [InlineData("file:///Users/crest/Saved%20Page.webarchive", "file:///Users/crest/Saved%20Page.webarchive")]
     [InlineData("file://localhost/tmp/archive.mhtml", "file:///tmp/archive.mhtml")]

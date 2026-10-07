@@ -15,7 +15,7 @@ public sealed class DevicePlatform {
         criticalReleaseLimit: eligible => Math.Max(1, (eligible + 1) / 2), keepsSetupDraft: false, importsBrowsers: true,
         sharesPagesAcrossWindows: true,
         forcesSetup: environment => environment.ForcesOnboardingWelcome || environment.ForcesDesktopSetup,
-        setupHoldsFirstWindow: true);
+        setupHoldsFirstWindow: true, showcaseOpensStartPage: false);
 
     /// iPhone and iPad hold on under warning pressure and give back one page
     /// under critical pressure. Beyond that the system reclaims WebKit's page
@@ -27,7 +27,7 @@ public sealed class DevicePlatform {
     public static readonly DevicePlatform Mobile = new(name: "mobile", warningReleaseLimit: _ => 0,
         criticalReleaseLimit: _ => 1, keepsSetupDraft: true, importsBrowsers: false, sharesPagesAcrossWindows: false,
         forcesSetup: environment => environment.ForcesOnboardingWelcome || environment.ForcesMobileSetup,
-        setupHoldsFirstWindow: false);
+        setupHoldsFirstWindow: false, showcaseOpensStartPage: true);
 
     public static IReadOnlyList<DevicePlatform> All { get; } = [Desktop, Mobile];
 
@@ -53,6 +53,11 @@ public sealed class DevicePlatform {
     /// which no platform reads.
     internal bool SetupHoldsFirstWindow { get; }
 
+    /// Whether a launch that presents the showcase always opens on the Start
+    /// Page, as the mobile showcase does, rather than where the launch would.
+    /// The core's own rule, which no platform reads.
+    internal bool ShowcaseOpensStartPage { get; }
+
     /// The most pages pressure at each level may take back, from the number of
     /// eligible pages.
     private readonly IReadOnlyDictionary<MemoryPressureLevel, Func<int, int>> releaseLimits;
@@ -67,12 +72,13 @@ public sealed class DevicePlatform {
 
     private DevicePlatform(string name, Func<int, int> warningReleaseLimit, Func<int, int> criticalReleaseLimit,
         bool keepsSetupDraft, bool importsBrowsers, bool sharesPagesAcrossWindows, Func<LaunchEnvironment, bool> forcesSetup,
-        bool setupHoldsFirstWindow) {
+        bool setupHoldsFirstWindow, bool showcaseOpensStartPage) {
         Name = name;
         KeepsSetupDraft = keepsSetupDraft;
         ImportsBrowsers = importsBrowsers;
         SharesPagesAcrossWindows = sharesPagesAcrossWindows;
         SetupHoldsFirstWindow = setupHoldsFirstWindow;
+        ShowcaseOpensStartPage = showcaseOpensStartPage;
         this.forcesSetup = forcesSetup;
         releaseLimits = new Dictionary<MemoryPressureLevel, Func<int, int>> {
             [MemoryPressureLevel.Warning] = warningReleaseLimit,

@@ -4,9 +4,6 @@ namespace CrestCore.Contracts;
 /// and the platform names Crest itself.
 public sealed record AuthenticationSourceLabel(string? Label);
 
-/// The challenge schemes Crest answers with its own credential prompt.
-public enum AuthenticationMethod { HttpBasic, HttpDigest, Other }
-
 /// How the challenge is answered.
 public sealed record ChallengeHandled(AuthenticationHandling Handling);
 

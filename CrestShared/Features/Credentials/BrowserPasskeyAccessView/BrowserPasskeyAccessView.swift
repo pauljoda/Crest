@@ -38,18 +38,16 @@ struct BrowserPasskeyAccessView: View {
             }
 
             if access.canRequestAccess {
-                Button("Allow Crest to Use Passkeys…", systemImage: "key.fill") {
+                Button("Allow Crest to Use Passkeys…") {
                     Task { await access.requestAccess() }
                 }
                 .accessibilityIdentifier("request-passkey-access")
             }
 
-            Text(
-                "Passkeys belong to the system account and may appear in any Space. The page’s cookies and sign-in session remain in the active Space."
-            )
-            .font(.footnote)
-            .foregroundStyle(.secondary)
-            .fixedSize(horizontal: false, vertical: true)
+            Text("Passkeys can appear in every Space.")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
         }
         .task {
             access.refreshStatus()

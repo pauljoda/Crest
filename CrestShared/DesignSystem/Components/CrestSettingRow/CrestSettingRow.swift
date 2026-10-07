@@ -51,12 +51,12 @@ struct CrestSettingRow<Control: View>: View {
                 Image(systemName: "arrow.counterclockwise")
                     .font(.system(size: 10, weight: .semibold))
                     .frame(width: 18, height: 18)
-                    .background(CrestBrandTheme.accent.opacity(0.1), in: .circle)
+                    .background(.quaternary, in: .circle)
                     .frame(width: 28, height: 28)
                     .contentShape(.rect)
             }
             .buttonStyle(.plain)
-            .foregroundStyle(CrestBrandTheme.accent)
+            .foregroundStyle(.secondary)
             .opacity(showsReset ? 1 : 0)
             // Only the affordance fades. Animating the row would carry the
             // slider's own value changes along with it.

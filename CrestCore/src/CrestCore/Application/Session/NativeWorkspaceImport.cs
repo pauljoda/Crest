@@ -276,16 +276,17 @@ internal sealed class NativeWorkspaceImport {
             });
             mapping[folder.Id] = identity;
         }
-        int pinned = isNew ? 0 : destination.State.Tabs.Count(t => t.Placement == TabPlacement.Pinned);
+        var counts = (isNew ? [] : destination.State.Tabs).CountBy(tab => tab.Placement).ToDictionary();
         var overflowFolder = folders.FirstOrDefault(f =>
             string.Equals(f.Title, WorkspaceImportPolicy.OverflowFolderTitle, StringComparison.OrdinalIgnoreCase));
         var edited = additions.Select(tab => {
             var placement = PlacementFor(tab);
             Guid? folder;
-            if (placement == TabPlacement.Pinned && !placement.Holds(++pinned)) {
-                placement = TabPlacement.Saved;
+            counts[placement] = counts.GetValueOrDefault(placement) + 1;
+            if (placement.Fitting(counts[placement]) is var spill && spill != placement) {
+                placement = spill;
                 if (overflowFolder is null && folders.Count < WorkspaceImportPolicy.MaximumFolders) {
-                    overflowFolder = new FolderState(ids.Next(), TabPlacement.Saved, WorkspaceImportPolicy.OverflowFolderTitle,
+                    overflowFolder = new FolderState(ids.Next(), spill, WorkspaceImportPolicy.OverflowFolderTitle,
                         WorkspaceImportPolicy.OverflowFolderSymbol);
                     folders.Add(overflowFolder);
                 }
@@ -296,7 +297,7 @@ internal sealed class NativeWorkspaceImport {
                 Placement = placement,
                 FolderId = folder,
                 SavedUrl = placement.IsDurable ? tab.SavedUrl ?? tab.Url : null,
-                Symbol = placement == TabPlacement.Pinned ? WorkspaceImportPolicy.PinnedTabSymbol : tab.Symbol
+                Symbol = placement.ImportedSymbol ?? tab.Symbol
             });
         }).ToArray();
         var existing = isNew ? [] : destination.State.Tabs;

@@ -65,7 +65,7 @@ struct BrowserPlatformTabDragSourceModifier: ViewModifier {
                         profileID: profileID,
                         targetShape: shape,
                         progress: shape == .row ? 0 : 1,
-                        rowWidth: tab.placement == .pinned
+                        rowWidth: tab.placement.isGrid
                             ? BrowserTabDragPreviewLayout.defaultRowWidth : sourceWidth,
                         rowMetrics: .touch
                     )

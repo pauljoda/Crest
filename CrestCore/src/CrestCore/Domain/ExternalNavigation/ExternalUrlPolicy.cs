@@ -18,8 +18,7 @@ public static class ExternalUrlPolicy {
     /// A web link: HTTP or HTTPS with a host. Everything else is refused, so a
     /// page or another app cannot steer Crest at local paths or other schemes.
     public static bool AcceptsWebLink(string? scheme, string? host) =>
-        host is { Length: > 0 and <= MaximumHostLength } && (string.Equals(scheme, "http", StringComparison.OrdinalIgnoreCase)
-            || string.Equals(scheme, "https", StringComparison.OrdinalIgnoreCase));
+        host is { Length: > 0 and <= MaximumHostLength } && WebScheme.Spelled(scheme) is not null;
 
     /// A local document opened as a document (Finder, Open With, the Open
     /// panel), never as a web link. Remote authorities are refused;

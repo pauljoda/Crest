@@ -19,7 +19,7 @@ enum BrowserTabDragPreviewShape: Equatable, Sendable {
     /// The shape a tab resting in this placement already has, and therefore the
     /// shape a lift starts from.
     static func resting(for placement: TabPlacement) -> BrowserTabDragPreviewShape {
-        placement == .pinned ? .pinnedTile : .row
+        placement.isGrid ? .pinnedTile : .row
     }
 
     func size(rowWidth: CGFloat, pinnedSize: CGSize = BrowserTabDragPreviewLayout.pinnedSize) -> CGSize {

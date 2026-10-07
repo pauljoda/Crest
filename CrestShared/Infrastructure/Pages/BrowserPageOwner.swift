@@ -307,7 +307,7 @@ extension BrowserPageOwner {
     }
 
     var readerModeActionTitle: LocalizedStringResource {
-        readerModeState.isActive ? "Hide Reader" : "Show Reader"
+        readerModeState.actionTitle
     }
 
     func goBack() { activePage?.goBack() }

@@ -1,4 +1,5 @@
 import AppKit
+import WebKit
 
 /// What Crest's Mac shell asks of WebKit, which needs nothing of it: WebKit's
 /// pages live in Crest's own process and go with their windows, its key
@@ -8,7 +9,10 @@ import AppKit
 final class WebKitShellHost: BrowserMacEngineHost {
     // MARK: - Variables
 
-    var aboutCredits: String? { nil }
+    /// The system WebKit's version, which the build runs pages in.
+    var aboutCredits: String? {
+        (Bundle(for: WKWebView.self).infoDictionary?["CFBundleShortVersionString"] as? String).map { "WebKit \($0)" }
+    }
     var importedExtensionInstaller: (any BrowserImportedExtensionInstalling)? { nil }
 
     // MARK: - Actions - Windows

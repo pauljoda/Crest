@@ -1,22 +1,6 @@
 import Foundation
 import Observation
 
-// MARK: - Types
-
-enum BrowserSoftwareUpdatePhase: Equatable, Sendable {
-    case idle
-    case permission
-    case checking
-    case updateAvailable
-    case downloading
-    case extracting
-    case readyToInstall
-    case installing
-    case upToDate
-    case failed
-    case installed
-}
-
 @MainActor
 @Observable
 final class BrowserSoftwareUpdateModel {
@@ -92,7 +76,7 @@ final class BrowserSoftwareUpdateModel {
         dismiss: @escaping () -> Void = {}
     ) {
         resetCallbacks()
-        phase = .updateAvailable
+        phase = .available
         updateTitle = title
         updateVersion = version
         updateBuild = build
@@ -303,7 +287,7 @@ final class BrowserSoftwareUpdateModel {
     }
 
     func installUpdate() {
-        guard phase == .updateAvailable, !isInformationOnly, install != nil else { return }
+        guard phase == .available, !isInformationOnly, install != nil else { return }
         if allowsOfferRefresh, !isFixture, let refreshBeforeDownload {
             refreshBeforeDownload()
             return
@@ -326,7 +310,7 @@ final class BrowserSoftwareUpdateModel {
     /// installation work has begun.
     @discardableResult
     func beginRefreshingAvailableUpdate(cancellation: (() -> Void)? = nil) -> Bool {
-        guard phase == .updateAvailable, allowsOfferRefresh, let dismiss else { return false }
+        guard phase == .available, allowsOfferRefresh, let dismiss else { return false }
         resetCallbacks()
         self.cancellation = cancellation
         phase = .checking
@@ -430,33 +414,9 @@ final class BrowserSoftwareUpdateModel {
     }
 
     var sidebarWidgetSnapshot: BrowserSoftwareUpdateWidgetSnapshot? {
-        let widgetPhase: BrowserSoftwareUpdateWidgetPhase
-        switch phase {
-        case .permission:
-            widgetPhase = .permission
-        case .checking:
-            widgetPhase = .checking
-        case .updateAvailable:
-            widgetPhase = .available
-        case .downloading:
-            widgetPhase = .downloading
-        case .extracting:
-            widgetPhase = .extracting
-        case .readyToInstall:
-            widgetPhase = .readyToInstall
-        case .installing:
-            widgetPhase = .installing
-        case .upToDate:
-            widgetPhase = .upToDate
-        case .failed:
-            widgetPhase = .failed
-        case .installed:
-            widgetPhase = .installed
-        case .idle:
-            return nil
-        }
+        guard phase != .idle else { return nil }
         return BrowserSoftwareUpdateWidgetSnapshot(
-            phase: widgetPhase,
+            phase: phase,
             title: updateTitle ?? "Crest Update",
             version: updateVersion,
             build: updateBuild,

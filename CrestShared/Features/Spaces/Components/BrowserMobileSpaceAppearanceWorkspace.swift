@@ -1,25 +1,17 @@
 #if os(iOS)
     import SwiftUI
 
-    /// Setup drafts and live Settings use the same touch editor and adaptive preview.
+    /// A setup draft's touch editor and adaptive preview, in the setup flow's
+    /// own paper.
     struct BrowserMobileSpaceAppearanceWorkspace: View {
         @Binding var branding: SpaceBranding
         @Binding var symbol: String
         @Binding var name: String
         var space: BrowserSpaceAppearance? = nil
         var spacePicker: BrowserSpaceCustomizationPicker? = nil
-        @Environment(\.browserSettingsUsesLiveSidebar) private var usesLiveSidebar
         @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
         var body: some View {
-            if usesLiveSidebar {
-                BrowserCrestStudioWorkspace(branding: $branding, symbol: $symbol, name: $name)
-            } else {
-                compactWorkspace
-            }
-        }
-
-        private var compactWorkspace: some View {
             GeometryReader { geometry in
                 let wide = geometry.size.width >= 700 && horizontalSizeClass == .regular
                 HStack(alignment: .top, spacing: wide ? 24 : 0) {

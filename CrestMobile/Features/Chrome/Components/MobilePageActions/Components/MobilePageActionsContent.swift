@@ -83,7 +83,7 @@ struct MobilePageActionsContent: View {
 
         Button(
             pages.readerModeActionTitle,
-            systemImage: pages.readerModeState.isActive ? "doc.plaintext.fill" : "doc.plaintext"
+            systemImage: pages.readerModeState.actionSymbol
         ) {
             pages.toggleReaderMode()
         }
@@ -153,11 +153,11 @@ struct MobilePageActionsContent: View {
                     }
 
                     Menu("Export as PDF…", systemImage: "doc.richtext") {
-                        ForEach(MobileBrowserFileExportDestination.allCases) {
+                        ForEach(MobileBrowserFileExportDestination.all) {
                             destination in
                             Button(
                                 destination.title,
-                                systemImage: destination.systemImage
+                                systemImage: destination.symbol
                             ) {
                                 pages.exportPDF(to: destination)
                             }
@@ -166,11 +166,11 @@ struct MobilePageActionsContent: View {
                     }
 
                     Menu("Export Web Archive…", systemImage: "archivebox") {
-                        ForEach(MobileBrowserFileExportDestination.allCases) {
+                        ForEach(MobileBrowserFileExportDestination.all) {
                             destination in
                             Button(
                                 destination.title,
-                                systemImage: destination.systemImage
+                                systemImage: destination.symbol
                             ) {
                                 pages.exportWebArchive(to: destination)
                             }

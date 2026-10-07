@@ -11,7 +11,7 @@ Link Routing is Crest’s equivalent of Arc’s Air Traffic Control: matching li
 
 ## Create a route
 
-1. Open **Settings → Quick Window and Peek**.
+1. Open **Settings → Links**.
 2. In **Routing**, choose **New Route**.
 3. Enter a URL pattern.
 4. Choose **Contains** or **Exact**.

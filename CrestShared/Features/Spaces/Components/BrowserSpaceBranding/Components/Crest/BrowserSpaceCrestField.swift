@@ -21,7 +21,7 @@ struct BrowserSpaceCrestField: View {
 
     @ViewBuilder
     private var finishOverlay: some View {
-        switch finish {
+        switch finish.kind {
         case .flat:
             EmptyView()
         case .sheen:

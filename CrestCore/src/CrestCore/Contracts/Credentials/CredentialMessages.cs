@@ -48,9 +48,6 @@ public sealed record CredentialUsernameHint(CredentialOrigin Origin, CredentialO
 /// Whether a fill may go ahead.
 public sealed record CredentialFillDecision(bool IsAllowed);
 
-/// What the person asked to fill: a saved credential or a generated password.
-public enum CredentialFillSource { Saved, Generated }
-
 /// Whether a password field asks for the account's current password or for a
 /// new one, as the form classifier reported it.
 public enum CredentialPasswordKind { Current, New }

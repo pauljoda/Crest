@@ -47,7 +47,7 @@ public sealed record ShortcutChord {
     public static ShortcutChord Character(string character, int modifiers) {
         ArgumentNullException.ThrowIfNull(character);
         if (character.Length == 0 || character.Length > MaximumCharacterLength)
-            throw new BrowserRuleException(BrowserRuleCodes.InvalidShortcut);
+            throw new BrowserRuleException(BrowserRule.InvalidShortcut);
         return new(character.Normalize(NormalizationForm.FormC), false, modifiers);
     }
 
@@ -69,7 +69,7 @@ public sealed record ShortcutChord {
 
     public static ShortcutChord Special(string key, int modifiers) {
         ArgumentNullException.ThrowIfNull(key);
-        if (ShortcutSpecialKey.Named(key) is null) throw new BrowserRuleException(BrowserRuleCodes.InvalidShortcut);
+        if (ShortcutSpecialKey.Named(key) is null) throw new BrowserRuleException(BrowserRule.InvalidShortcut);
         return new(key, true, modifiers);
     }
 

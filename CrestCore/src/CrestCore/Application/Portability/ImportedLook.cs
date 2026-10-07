@@ -35,8 +35,9 @@ internal static class ImportedLook {
     /// readable unless `readabilityFade` says otherwise, with a plain mountain
     /// crest unless `figure` names another.
     public static SpaceBranding Painted(IReadOnlyList<BrandColor> colors, SpaceBannerPattern pattern, double strength,
-        double readabilityFade, SpaceThemeMode theme, double gradientAngle, bool showsTexture, CrestSymbol figure = CrestSymbol.Mountain) {
-        var crest = SpaceCrest.PlainField(CrestBackplate.Shield, figure, CrestTrim.None, DefaultLayers, trimWeight: 1, chargeScale: 1);
+        double readabilityFade, SpaceThemeMode theme, double gradientAngle, bool showsTexture, CrestSymbol? figure = null) {
+        var crest = SpaceCrest.PlainField(CrestBackplate.Shield, figure ?? CrestSymbol.Mountain, CrestTrim.None, DefaultLayers,
+            trimWeight: 1, chargeScale: 1);
         return new(new(colors), pattern, strength, readabilityFade, readabilityFade > 0, theme, gradientAngle, showsTexture,
             SpaceIconStyle.SimpleSymbol, SymbolColor: null, crest, SpaceBranding.BaselineRenderingVersion, FolderColorIntensity: 0,
             SpaceTextColorMode.Automatic, HasCustomAppearance: null);

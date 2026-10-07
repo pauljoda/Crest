@@ -37,12 +37,16 @@ struct BrowserSettingsDestinationRouter: View {
     /// The Space whose engine pages the feature flags pane shows, or nil
     /// while it is locked.
     var featureFlagsSpace: SpaceModel? = nil
+    /// Opens Feature Flags from Advanced, for a shell that lists it there.
+    var openFeatureFlags: (() -> Void)? = nil
 
     @ViewBuilder
     var body: some View {
         switch destination.kind {
         case .general:
             BrowserGeneralSettingsPane(browser: browser, spaceAccess: spaceAccess)
+        case .tabs:
+            BrowserTabsSettingsPane(browser: browser)
         case .engines:
             #if os(macOS)
                 BrowserEngineSettingsPane(core: browser.core)
@@ -73,18 +77,21 @@ struct BrowserSettingsDestinationRouter: View {
         case .sync:
             BrowserSyncSettingsView(browser: browser, cloudSync: cloudSync)
         case .privacy:
-            BrowserPrivacySettingsPane(
-                browser: browser,
-                downloadCenter: downloadCenter,
-                spaceAccess: spaceAccess,
-                permissionCenter: permissionCenter,
-                contentBlockingErrorDescription:
-                    contentBlockingErrorDescription
-            )
+            #if os(macOS)
+                // Each Space's own privacy is a page of that Space.
+                BrowserSystemPrivacySettingsPane(browser: browser, spaceAccess: spaceAccess)
+            #else
+                BrowserPrivacySettingsPane(
+                    browser: browser,
+                    downloadCenter: downloadCenter,
+                    spaceAccess: spaceAccess,
+                    permissionCenter: permissionCenter,
+                    contentBlockingErrorDescription:
+                        contentBlockingErrorDescription
+                )
+            #endif
         case .extensions:
-            BrowserEngineExtensionSettingsPane(
-                browser: browser, spaceAccess: spaceAccess,
-                requestedSpaceID: requestedSpaceID, requestRevision: requestRevision)
+            BrowserEngineExtensionSettingsPane(browser: browser, spaceAccess: spaceAccess)
         case .passwords:
             BrowserPasswordSettingsPane(
                 browser: browser,
@@ -100,7 +107,8 @@ struct BrowserSettingsDestinationRouter: View {
                 browser: browser,
                 spaceAccess: spaceAccess,
                 setupActions: setupActions,
-                showsMacOSImportRequirement: showsMacOSImportRequirement
+                showsMacOSImportRequirement: showsMacOSImportRequirement,
+                openFeatureFlags: openFeatureFlags
             )
         case .about:
             BrowserAboutSettingsPane()

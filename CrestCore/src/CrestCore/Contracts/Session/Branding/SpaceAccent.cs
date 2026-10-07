@@ -10,32 +10,18 @@ namespace CrestCore.Contracts;
 public sealed class SpaceAccent {
     #region Static Variables
 
-    // The named palette colors a Space wore before branding existed.
-    private static readonly BrandColor Ink = new(0.08, 0.15, 0.23);
-    private static readonly BrandColor IndigoColor = new(0.29, 0.25, 0.58);
-    private static readonly BrandColor Ocean = new(0.22, 0.42, 0.64);
-    private static readonly BrandColor TealColor = new(0.12, 0.49, 0.52);
-    private static readonly BrandColor Gold = new(0.88, 0.67, 0.25);
-    private static readonly BrandColor Ember = new(0.85, 0.27, 0.20);
-    private static readonly BrandColor RoseColor = new(0.72, 0.25, 0.42);
-    private static readonly BrandColor Sand = new(0.82, 0.72, 0.56);
-
     /// Winter.
-    public static readonly SpaceAccent Indigo = new(name: "indigo", tint: SystemTint.Indigo, legacyColors: [Ink, Ocean, Gold],
-        house: HouseLook([new(0.118, 0.157, 0.200), new(0.243, 0.306, 0.369), new(0.525, 0.678, 0.769)], CrestBackplate.FrenchShield,
-            CrestSymbol.Direwolf, CrestTrim.Line), swatch: IndigoColor);
+    public static readonly SpaceAccent Indigo = new(name: "indigo", tint: SystemTint.Indigo,
+        legacyColors: [Tincture.Ink, Tincture.Ocean, Tincture.Gold], house: SpaceHouse.Winter.Look, swatch: Tincture.Indigo);
     /// Sun.
-    public static readonly SpaceAccent Orange = new(name: "orange", tint: SystemTint.Orange, legacyColors: [Ember, Gold, Ocean],
-        house: HouseLook([new(0.208, 0.086, 0.043), new(0.545, 0.239, 0.106), new(0.816, 0.620, 0.396)], CrestBackplate.Circle,
-            CrestSymbol.Sun, CrestTrim.Sunburst), swatch: Ember);
+    public static readonly SpaceAccent Orange = new(name: "orange", tint: SystemTint.Orange,
+        legacyColors: [Tincture.Ember, Tincture.Gold, Tincture.Ocean], house: SpaceHouse.Sun.Look, swatch: Tincture.Ember);
     /// Meadow.
-    public static readonly SpaceAccent Teal = new(name: "teal", tint: SystemTint.Teal, legacyColors: [TealColor, Ocean, Sand],
-        house: HouseLook([new(0.082, 0.137, 0.094), new(0.204, 0.341, 0.220), new(0.737, 0.655, 0.400)], CrestBackplate.Circle,
-            CrestSymbol.Rose, CrestTrim.Laurel), swatch: TealColor);
+    public static readonly SpaceAccent Teal = new(name: "teal", tint: SystemTint.Teal,
+        legacyColors: [Tincture.Teal, Tincture.Ocean, Tincture.Sand], house: SpaceHouse.Meadow.Look, swatch: Tincture.Teal);
     /// Lion.
-    public static readonly SpaceAccent Rose = new(name: "rose", tint: SystemTint.Pink, legacyColors: [RoseColor, IndigoColor, Sand],
-        house: HouseLook([new(0.235, 0.055, 0.102), new(0.447, 0.125, 0.188), new(0.788, 0.635, 0.329)], CrestBackplate.Shield,
-            CrestSymbol.Lion, CrestTrim.Line), swatch: RoseColor);
+    public static readonly SpaceAccent Rose = new(name: "rose", tint: SystemTint.Pink,
+        legacyColors: [Tincture.Rose, Tincture.Indigo, Tincture.Sand], house: SpaceHouse.Lion.Look, swatch: Tincture.Rose);
 
     public static IReadOnlyList<SpaceAccent> All { get; } = [Indigo, Orange, Teal, Rose];
 
@@ -65,13 +51,12 @@ public sealed class SpaceAccent {
 
     #region Constructors
 
-    private SpaceAccent(string name, SystemTint tint, IReadOnlyList<BrandColor> legacyColors, SpaceBranding house,
-        BrandColor swatch) {
+    private SpaceAccent(string name, SystemTint tint, IReadOnlyList<Tincture> legacyColors, SpaceBranding house, Tincture swatch) {
         Name = name;
         Tint = tint;
-        LegacyColors = legacyColors;
+        LegacyColors = [.. legacyColors.Select(tincture => tincture.Color)];
         House = house;
-        Swatch = swatch;
+        Swatch = swatch.Color;
     }
 
     #endregion
@@ -87,18 +72,6 @@ public sealed class SpaceAccent {
         return All.MinBy(accent => Math.Pow(color.Red - accent.Swatch.Red, 2) + Math.Pow(color.Green - accent.Swatch.Green, 2)
             + Math.Pow(color.Blue - accent.Swatch.Blue, 2))!;
     }
-
-    #endregion
-
-    #region Actions - Looks
-
-    /// A house palette's branding: a diagonal banner that keeps controls
-    /// readable, and the layered crest drawn in the palette's own colors.
-    private static SpaceBranding HouseLook(BrandColor[] colors, CrestBackplate backplate, CrestSymbol figure, CrestTrim trim) =>
-        new(new(colors), SpaceBannerPattern.Diagonal, BannerStrength: 1, ReadabilityFade: 0.45, KeepsControlsReadable: true,
-            SpaceThemeMode.Banner, GradientAngle: 0, ShowsTexture: false, SpaceIconStyle.LayeredCrest, SymbolColor: null,
-            SpaceCrest.PlainField(backplate, figure, trim, layers: [0, 1, 1, 2, 2, 2], trimWeight: 0.75, chargeScale: 1.2),
-            RenderingVersion: 5, FolderColorIntensity: 0, SpaceTextColorMode.Automatic, HasCustomAppearance: false);
 
     #endregion
 }

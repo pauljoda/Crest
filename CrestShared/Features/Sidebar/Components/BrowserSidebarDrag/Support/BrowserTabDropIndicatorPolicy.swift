@@ -4,7 +4,7 @@ enum BrowserTabDropIndicatorPolicy {
         at location: BrowserTabDropLocation,
         dragState: BrowserTabDragState
     ) -> Bool {
-        location.placement != .pinned
+        !location.placement.isGrid
             && dragState.item != nil
             && dragState.dropLocation == location
     }

@@ -13,7 +13,7 @@ struct BrowserNavigationFailureActions: View {
 
     @ViewBuilder
     var body: some View {
-        if layout == .compact {
+        if layout.stacksActions {
             VStack(spacing: CrestSpacing.medium) {
                 BrowserNavigationFailureRetryButton(
                     accent: accent,

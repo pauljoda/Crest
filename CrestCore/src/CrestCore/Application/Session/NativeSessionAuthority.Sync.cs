@@ -231,9 +231,10 @@ public sealed partial class NativeSessionAuthority {
     }
 
     /// The rejection `error`, a failure to take the cloud's records, stands
-    /// for. A save that failed is `SaveFailed`; a journal that cannot record
-    /// the result is `SyncStagingRefused`; a rule a record breaks is
-    /// `InvalidSyncRecords` with its flaw, and a failure no rule names is
+    /// for. A save that failed is `SaveFailed`; a rule that names a flaw of
+    /// the records is `InvalidSyncRecords` with that flaw; a rule that names
+    /// only how a stage fails, such as a journal that cannot record the
+    /// result, is `SyncStagingRefused`; and a failure no rule names is
     /// `InvalidSyncRecords` with `Unexpected`, never a fault the host sees.
     private static Rejected Refusal(Exception error) => error switch {
 #if CREST_CROSS_CHECKS
@@ -246,26 +247,10 @@ public sealed partial class NativeSessionAuthority {
         Rejected rejected => rejected,
         StorageException storage => new(new SaveFailed(storage.Reason)),
         SyncRecordsFlawedException flawed => new(new InvalidSyncRecords(flawed.Flaw, flawed.Subject)),
-        BrowserRuleException { Code: BrowserRuleCodes.SyncClockExhausted } => new(new SyncStagingRefused(SyncStagingFailure.ClockExhausted)),
-        BrowserRuleException { Code: BrowserRuleCodes.SyncSizeLimit } => new(new SyncStagingRefused(SyncStagingFailure.TooLarge)),
-        BrowserRuleException rule => new(new InvalidSyncRecords(RuleFlaw(rule.Code), null)),
+        BrowserRuleException { Rule.RecordFlaw: { } flaw } => new(new InvalidSyncRecords(flaw, null)),
+        BrowserRuleException { Rule.StagingFailure: { } failure } => new(new SyncStagingRefused(failure)),
         JsonException or KeyNotFoundException or FormatException => new(new InvalidSyncRecords(SyncRecordFlaw.MalformedRecord, null)),
         _ => new(new InvalidSyncRecords(SyncRecordFlaw.Unexpected, null))
-    };
-
-    /// The flaw a sync rule's failure stands for. The journal's rules throw
-    /// rule codes because reading a stored journal and staging a session
-    /// share them, and each of those answers them its own way.
-    private static SyncRecordFlaw RuleFlaw(string code) => code switch {
-        BrowserRuleCodes.DuplicateSyncRecord => SyncRecordFlaw.DuplicateRecord,
-        BrowserRuleCodes.SyncRecordLimit => SyncRecordFlaw.TooManyRecords,
-        BrowserRuleCodes.SyncIdentityMismatch => SyncRecordFlaw.IdentityMismatch,
-        BrowserRuleCodes.InvalidFolderTree => SyncRecordFlaw.InvalidFolderHierarchy,
-        BrowserRuleCodes.InvalidSyncRecord or BrowserRuleCodes.InvalidSyncDeletion or BrowserRuleCodes.InvalidSyncDate
-            or BrowserRuleCodes.InvalidSyncKind or BrowserRuleCodes.InvalidSyncPlacement or BrowserRuleCodes.InvalidIdentity
-            or BrowserRuleCodes.InvalidSavedDate or BrowserRuleCodes.InvalidSavedIdentity or BrowserRuleCodes.InvalidSavedState
-            or BrowserRuleCodes.InvalidSavedUrl => SyncRecordFlaw.MalformedRecord,
-        _ => SyncRecordFlaw.Unexpected
     };
 
     #endregion

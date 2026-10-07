@@ -29,7 +29,7 @@ struct MobileBrowserPreviewFixture {
             name: "Work",
             symbol: "briefcase.fill",
             accent: .indigo,
-            branding: BrowserSpaceHousePalette.lion.look,
+            branding: SpaceHouse.lion.look,
             tabs: []
         )
         let alternateSpace = SpaceState.Seed(
@@ -48,7 +48,7 @@ struct MobileBrowserPreviewFixture {
             name: "Personal",
             symbol: "house.fill",
             accent: .orange,
-            branding: BrowserSpaceHousePalette.winter.look,
+            branding: SpaceHouse.winter.look,
             tabs: []
         )
         let browser = BrowserStore(

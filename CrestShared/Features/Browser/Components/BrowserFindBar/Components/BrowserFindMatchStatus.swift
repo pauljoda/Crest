@@ -36,10 +36,10 @@ struct BrowserFindMatchStatus: View {
                 )
                 .accessibilityLabel(Text("Match \(counted.active) of \(counted.total)"))
                 .accessibilityIdentifier("find-result")
-        } else if let label = state.accessibilityLabel {
+        } else if let label = state.label {
             Text(label)
                 .font(.caption)
-                .foregroundStyle(state == .notFound ? .red : .secondary)
+                .foregroundStyle(labelColor)
                 .frame(
                     minWidth: metrics.matchStatusWidth,
                     alignment: .trailing
@@ -64,7 +64,7 @@ struct BrowserFindMatchStatus: View {
                 )
                 .accessibilityLabel(Text("Match \(counted.active) of \(counted.total)"))
                 .accessibilityIdentifier("find-result")
-        } else if let label = state.accessibilityLabel {
+        } else if let label = state.label {
             symbol
                 .frame(
                     width: metrics.matchStatusWidth,
@@ -82,18 +82,28 @@ struct BrowserFindMatchStatus: View {
 
     @ViewBuilder
     private var symbol: some View {
-        switch state {
-        case .idle:
-            EmptyView()
-        case .searching:
+        if state.showsProgress {
             ProgressView()
                 .controlSize(.small)
-        case .found:
-            Image(systemName: "checkmark.circle.fill")
-                .foregroundStyle(.green)
-        case .notFound:
-            Image(systemName: "exclamationmark.circle.fill")
-                .foregroundStyle(.red)
+        } else if let symbol = state.symbol {
+            Image(systemName: symbol)
+                .foregroundStyle(symbolColor)
+        }
+    }
+
+    /// Words stay quiet unless the page has nothing to show.
+    private var labelColor: Color {
+        switch state.tone {
+        case .quiet, .success: .secondary
+        case .failure: .red
+        }
+    }
+
+    private var symbolColor: Color {
+        switch state.tone {
+        case .quiet: .secondary
+        case .success: .green
+        case .failure: .red
         }
     }
 }

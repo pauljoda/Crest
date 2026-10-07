@@ -26,7 +26,7 @@ Browse Mac releases by channel: [Stable](https://github.com/pauljoda/Crest/relea
 [Development](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Development+builds%22).
 
 <p align="center">
-  <a href="Website/assets/crest-work-mac.png"><img src="Website/assets/crest-work-mac.png" width="100%" alt="Crest on Mac with Winter Work first, Lion Personal second, and Audience research open beside the Launch Atlas folder"></a>
+  <a href="Website/assets/crest-work-mac.png"><img src="Website/assets/crest-work-mac.png" width="100%" alt="Crest on Mac with Lion Work first, Winter Personal second, and Audience research open beside the Launch Atlas folder"></a>
 </p>
 
 ## A browser with boundaries
@@ -48,15 +48,15 @@ per-website rules in **Settings → Engines**. iPhone and iPad use WebKit. The
 [engine guide](https://crestbrowser.com/guides/engines/) lists what each engine
 supports.
 
-## Crest Studio and Look and Feel
+## Crest Studio and Appearance
 
-**Crest Studio** starts with templates and opens up into heraldic artwork, shapes, patterns, independent colors, emoji, monograms, and a searchable SF Symbols picker. Design a banner for each Space, or choose a quieter gradient.
+**Crest Studio** puts each Space's crest on that Space's own sidebar background. Start from a template, then step through shape, field, band, emblem, border, finish and sidebar, choosing from previews of your own crest. Every part of the crest and the sidebar has its own color, named by what it paints. Use heraldic artwork, emoji, monograms, or a searchable SF Symbols picker, and Shuffle and Undo freely.
 
-**Look and Feel** lets you dock the sidebar on either edge, go borderless, adjust tab shape and scale, choose a pin layout, and tune tab and address-field colors. Start with a preset, see changes live, and reset individual settings. Choose an app icon palette, folder colors and icons, and a default page zoom from 25% to 500%.
+**Appearance** lets you dock the sidebar on either edge, go borderless, adjust tab shape and scale, choose a pin layout, and tune tab and address-field colors, or let them follow each Space's accent. Start with a preset, see changes live, and reset individual settings. Choose an app icon palette, folder colors and icons, and a default page zoom from 50% to 300%.
 
 <p align="center">
-  <a href="Website/assets/crest-studio-mac.png"><img src="Website/assets/crest-studio-mac.png" width="49%" alt="Crest Studio with the Winter template, crest library, and live sidebar"></a>
-  <a href="Website/assets/crest-look-and-feel-mac.png"><img src="Website/assets/crest-look-and-feel-mac.png" width="49%" alt="Look and Feel settings with sidebar, window, tab, and pin controls"></a>
+  <a href="Website/assets/crest-studio-mac.png"><img src="Website/assets/crest-studio-mac.png" width="49%" alt="Crest Studio with a Winter crest on its Space’s sidebar background, its colors, the shape step, and the live sidebar"></a>
+  <a href="Website/assets/crest-look-and-feel-mac.png"><img src="Website/assets/crest-look-and-feel-mac.png" width="49%" alt="Appearance settings with window, accent, tab, and pin controls"></a>
 </p>
 
 ## Browsing features
@@ -97,7 +97,7 @@ Read the [privacy policy](https://crestbrowser.com/privacy/), [Space isolation g
 The same Spaces, shaped for each screen. iPad keeps the sidebar beside your page; iPhone gives your tabs and folders their own view.
 
 <p align="center">
-  <a href="Website/assets/crest-work-ipad.png"><img src="Website/assets/crest-work-ipad.png" width="72%" alt="Winter Work first and Lion Personal second on iPad, with Audience research open"></a>
+  <a href="Website/assets/crest-work-ipad.png"><img src="Website/assets/crest-work-ipad.png" width="72%" alt="Lion Work first and Winter Personal second on iPad, with Audience research open"></a>
   <a href="Website/assets/crest-work-iphone-sidebar.png"><img src="Website/assets/crest-work-iphone-sidebar.png" width="25%" alt="The same Spaces, Launch Atlas folder, and selected Audience research tab in the iPhone sidebar"></a>
 </p>
 
@@ -160,7 +160,7 @@ macOS releases are distributed directly through GitHub Releases as signed,
 notarized Apple-silicon disk images, one app with both engines. Crest uses
 Sparkle 2 with a native SwiftUI update interface. Stable and nightly builds
 share a signed appcast, and development builds have their own; choosing Nightly
-or Development is an explicit choice in General Settings.
+or Development is an explicit choice in Settings → About.
 
 GitHub Actions builds every public release, verifies its Developer ID signature
 and notarization, publishes provenance and checksums, then updates the signed

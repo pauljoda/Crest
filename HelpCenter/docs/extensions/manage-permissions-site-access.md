@@ -17,8 +17,8 @@ The install review lists the permission warnings Chromium reports for the extens
 
 ## Review access later
 
-1. Open **Crest Settings → Extensions**.
-2. Under **Space**, choose **Manage extensions for** and select the Space.
+1. Open **Crest Settings** and select the Space in the sidebar.
+2. Select **Extensions**.
 3. Expand the extension's row to see its **Permissions and Website Access**.
 
 ## Change website access

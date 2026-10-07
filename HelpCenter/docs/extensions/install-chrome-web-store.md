@@ -13,7 +13,7 @@ Crest for Mac installs Chrome extensions from the Chrome Web Store. Extensions r
 
 ## Before you add it
 
-Choose the Space that should own the extension. Its package, enablement, permissions, storage and pinning stay separate from every other Space and device.
+Switch to the Space that should own the extension. Its package, enablement, permissions, storage and pinning stay separate from every other Space and device.
 
 ## Install the extension
 
@@ -30,7 +30,7 @@ Once installed, the listing's button reads **Added to Crest**, and it offers **R
 ## Use it after installation
 
 - Open **Site Controls** beside the address field to find the extension's action, and pin it if you want it in the Space's extension strip. See [Pin extensions and use popups](./pin-and-use-popups.md).
-- Open **Crest Settings → Extensions**, choose the Space, and expand the extension to turn it on or off, open its settings, manage its permissions, copy it to other Spaces, or remove it.
+- Open **Crest Settings**, select the Space in the sidebar, then select **Extensions**. Expand the extension to turn it on or off, open its settings, manage its permissions, copy it to other Spaces, or remove it.
 - If the extension has keyboard commands, see [Set extension keyboard shortcuts](./keyboard-shortcuts.md).
 
 ## Updates

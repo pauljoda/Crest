@@ -4,6 +4,7 @@ import UIKit
 struct MobileSpaceSettingsView: View {
     @Environment(\.browserSettingsUsesLiveSidebar) private var usesLiveSidebar
     @Environment(\.browserSettingsSelectLiveSpace) private var liveSpaceSelection
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     let browser: BrowserStore
     let spaceAccess: BrowserSpaceAccessController
     let dataDeleter: any BrowserSpaceDataDeleting
@@ -12,6 +13,7 @@ struct MobileSpaceSettingsView: View {
     @State private var editorSection = BrowserSpaceEditorSection.appearance
     @State private var managedSearchEngineSpace: SpaceModel?
     @State private var editingAppearanceSpace: SpaceModel?
+    @State private var forgeStep = BrowserCrestStudioStep.shape
 
     var body: some View {
         Group {
@@ -58,7 +60,7 @@ struct MobileSpaceSettingsView: View {
                 BrowserSettingsPrivateSpaceAccessSection(
                     space: space,
                     accessController: spaceAccess,
-                    detail: "Unlock this Space before viewing its tab preview or changing its settings."
+                    detail: "Unlock this Space to see its settings."
                 )
             }
         }
@@ -74,18 +76,15 @@ struct MobileSpaceSettingsView: View {
             if let space {
                 if canReveal(space) {
                     Group {
-                        switch editorSection {
+                        switch editorSection.kind {
                         case .appearance:
-                            BrowserCrestStudioWorkspace(
+                            BrowserCrestForge(
                                 branding: browser.spaceBrandingBinding(in: space),
-                                symbol: browser.spaceSymbolBinding(in: space),
+                                symbol: browser.spaceSymbolBinding(in: space), step: $forgeStep,
                                 name: browser.spaceNameBinding(in: space))
                         case .settings:
-                            ScrollView {
-                                BrowserSettingsSectionGrid {
-                                    detailSections(for: space)
-                                }
-                                .padding(24)
+                            Form {
+                                detailSections(for: space)
                             }
                         }
                     }
@@ -94,7 +93,7 @@ struct MobileSpaceSettingsView: View {
                     BrowserSettingsPane(.spaces) {
                         BrowserSettingsPrivateSpaceAccessSection(
                             space: space, accessController: spaceAccess,
-                            detail: "Unlock this Space before viewing its tab preview or changing its settings.")
+                            detail: "Unlock this Space to see its settings.")
                     }
                 }
             } else {
@@ -125,10 +124,10 @@ struct MobileSpaceSettingsView: View {
         if let currentSpace = browser.spaceModel(requested.id),
             canReveal(currentSpace)
         {
-            BrowserMobileSpaceAppearanceWorkspace(
+            BrowserCrestForge(
                 branding: browser.spaceBrandingBinding(in: currentSpace),
-                symbol: browser.spaceSymbolBinding(in: currentSpace),
-                name: browser.spaceNameBinding(in: currentSpace), space: BrowserSpaceAppearance(space: currentSpace))
+                symbol: browser.spaceSymbolBinding(in: currentSpace), step: $forgeStep,
+                name: browser.spaceNameBinding(in: currentSpace), listsSteps: horizontalSizeClass == .compact)
         }
     }
 

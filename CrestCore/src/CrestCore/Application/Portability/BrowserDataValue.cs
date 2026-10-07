@@ -62,7 +62,7 @@ internal readonly struct BrowserDataValue(JsonObject value) {
         if (IsAbsent(key)) return null;
         var node = Object[key];
         if (node is JsonValue name && name.GetValueKind() == JsonValueKind.String
-            && SpacePayload.NamedColors.TryGetValue(name.GetValue<string>(), out var named)) return named;
+            && Tincture.Named(name.GetValue<string>()) is { } tincture) return tincture.Color;
         var color = Of(node);
         return new(Unit(color.Number("red")), Unit(color.Number("green")), Unit(color.Number("blue")),
             Unit(color.OptionalNumber("alpha") ?? 1));

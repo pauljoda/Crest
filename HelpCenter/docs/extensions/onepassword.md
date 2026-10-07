@@ -18,7 +18,7 @@ The 1Password Chrome Web Store extension runs on Chromium pages in Crest for Mac
 ## Before you begin
 
 - Install and unlock **1Password for Mac**.
-- Choose the Crest Space that should own the extension. Installations do not copy to another Space or device on their own.
+- Switch to the Crest Space that should own the extension. Installations do not copy to another Space or device on their own.
 
 ## Install the extension
 

@@ -85,7 +85,7 @@ internal static partial class StoredSessionCodec {
     /// A session; unlike its other members, its Spaces are never optional.
     internal static SessionState DecodeSession(JsonNode? node) {
         var value = Object(node);
-        var spaces = value[Key.Spaces] as JsonArray ?? throw new BrowserRuleException(BrowserRuleCodes.InvalidSavedState);
+        var spaces = value[Key.Spaces] as JsonArray ?? throw new BrowserRuleException(BrowserRule.InvalidSavedState);
         return new([.. spaces.Select(DecodeSpace)],
             OptionalIdentity(value[Key.DefaultSpaceId]), OptionalIdentity(value[Key.DisposableSeedMarker]),
             DecodeSpaceDeletions(value[Key.SpaceDeletions]) ?? [],
@@ -106,8 +106,8 @@ internal static partial class StoredSessionCodec {
         null => null,
         JsonArray intents => [.. intents.Select(intent => intent is JsonObject value
             ? new SpaceDeletionState(Identity(value[Key.OperationId]), Identity(value[Key.SpaceId]), Identity(value[Key.ProfileId]))
-            : throw new BrowserRuleException(BrowserRuleCodes.InvalidDeletionIntent))],
-        _ => throw new BrowserRuleException(BrowserRuleCodes.InvalidDeletionIntent)
+            : throw new BrowserRuleException(BrowserRule.InvalidDeletionIntent))],
+        _ => throw new BrowserRuleException(BrowserRule.InvalidDeletionIntent)
     };
 
     internal static JsonObject Encode(SpaceDeletionState deletion) => new() {

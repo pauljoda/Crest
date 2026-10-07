@@ -9,7 +9,7 @@ struct BrowserSpaceCrestChargeGlyph: View {
     let color: Color
 
     var body: some View {
-        switch charge.kind {
+        switch charge.kind.kind {
         case .heraldic:
             let symbol = charge.symbol ?? .fallback
             if let assetName = symbol.assetName {
@@ -48,7 +48,7 @@ struct BrowserSpaceCrestChargeGlyph: View {
     }
 
     private var fontWeight: Font.Weight {
-        switch weight {
+        switch weight.kind {
         case .light: .medium
         case .regular: .semibold
         case .bold: .bold
@@ -74,7 +74,7 @@ struct BrowserSpaceCrestChargeView: View {
 
     @ViewBuilder
     private var arrangement: some View {
-        switch layout {
+        switch layout.kind {
         case .single:
             glyph(0.31)
         case .paired:

@@ -1,3 +1,3 @@
 enum BrowserSidebarBackgroundInteractionPolicy {
-    static let actions = BrowserSidebarBackgroundAction.allCases
+    static let actions = BrowserSidebarBackgroundAction.all
 }

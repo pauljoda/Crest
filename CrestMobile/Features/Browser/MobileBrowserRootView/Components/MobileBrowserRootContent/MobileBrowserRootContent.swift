@@ -155,11 +155,7 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
                     sidebarIsDocked: false,
                     utilityPresentation: navigation.utilityPresentation
                 )
-                .simultaneousGesture(
-                    TapGesture().onEnded {
-                        navigation.handleRegularSidebarInteraction()
-                    }
-                )
+                .modifier(BrowserPlatformObservedTapModifier { navigation.handleRegularSidebarInteraction() })
                 // Never zero: this rides over the rows, and a drag that begins
                 // on touch-down takes the press the reorder lift needs.
                 .simultaneousGesture(
@@ -276,11 +272,7 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
                         \.browserSettingsUsesLiveSidebar,
                         navigation.regularSidebarIsDocked && layout.reservesSidebarWidth
                     )
-                    .simultaneousGesture(
-                        TapGesture().onEnded {
-                            navigation.handleRegularSidebarInteraction()
-                        }
-                    )
+                    .modifier(BrowserPlatformObservedTapModifier { navigation.handleRegularSidebarInteraction() })
                     // Never zero: this rides over the rows, and a drag that
                     // begins on touch-down takes the press the reorder lift
                     // needs.

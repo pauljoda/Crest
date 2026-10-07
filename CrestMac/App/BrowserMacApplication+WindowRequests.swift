@@ -55,7 +55,7 @@ extension BrowserMacApplication {
         guard let host = hostWindow(window), host.browser.openNewTab(url: url, matching: space) != nil
         else { return false }
         host.pages.select()
-        host.pages.navigate(to: url.absoluteString)
+        host.pages.load(url)
         host.chrome.dismissCommandPalette()
         return true
     }

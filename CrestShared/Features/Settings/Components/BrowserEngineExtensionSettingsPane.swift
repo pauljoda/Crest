@@ -9,8 +9,7 @@ import SwiftUI
 struct BrowserEngineExtensionSettingsPane: View {
     let browser: BrowserStore
     let spaceAccess: BrowserSpaceAccessController
-    var requestedSpaceID: UUID?
-    var requestRevision = 0
+    var spaceID: UUID?
 
     var body: some View { EmptyView() }
 }

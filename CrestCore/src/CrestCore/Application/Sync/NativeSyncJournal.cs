@@ -34,14 +34,14 @@ public sealed class NativeSyncJournal {
     /// The journal `source`, a stored journal parsed once, which it takes
     /// over: nothing else may hold it.
     internal NativeSyncJournal(JsonObject source) {
-        if (SyncJson.Int(source["schemaVersion"]!) != 1) throw new BrowserRuleException(BrowserRuleCodes.VersionMismatch);
+        if (SyncJson.Int(source["schemaVersion"]!) != 1) throw new BrowserRuleException(BrowserRule.VersionMismatch);
         // Every member but the records, which the journal keeps by name.
         metadata = new JsonObject(source.Where(member => member.Key is not ("records" or "pendingRecordIDs"))
             .Select(member => KeyValuePair.Create(member.Key, member.Value?.DeepClone())));
         _ = Id(metadata["deviceID"]);
         records = RecordMap(source["records"]!.AsArray());
         pending = source["pendingRecordIDs"]!.AsArray().Select(n => Name(n!)).ToHashSet(StringComparer.Ordinal);
-        if (!pending.IsSubsetOf(records.Keys)) throw new BrowserRuleException(BrowserRuleCodes.InvalidSyncPending);
+        if (!pending.IsSubsetOf(records.Keys)) throw new BrowserRuleException(BrowserRule.InvalidSyncPending);
         ulong clock = SyncJson.ULong(metadata["logicalClock"]!);
         foreach (var record in records.Values) clock = Math.Max(clock, Clock(record));
         metadata["logicalClock"] = clock;
@@ -71,7 +71,7 @@ public sealed class NativeSyncJournal {
     #region Actions - Decoding
 
     private static JsonObject Parse(ReadOnlySpan<byte> bytes) {
-        if (bytes.Length is 0 or > MaximumBytes) throw new BrowserRuleException(BrowserRuleCodes.SyncSizeLimit);
+        if (bytes.Length is 0 or > MaximumBytes) throw new BrowserRuleException(BrowserRule.SyncSizeLimit);
         return JsonNode.Parse(bytes, documentOptions: new() { MaxDepth = 64 })!.AsObject();
     }
 
@@ -87,7 +87,7 @@ public sealed class NativeSyncJournal {
     }
 
     private static SyncRecordReference Reference(JsonNode record) =>
-        new(SyncRecordKind.Named(Kind(record)) ?? throw new BrowserRuleException(BrowserRuleCodes.InvalidSyncKind),
+        new(SyncRecordKind.Named(Kind(record)) ?? throw new BrowserRuleException(BrowserRule.InvalidSyncKind),
             Id(record["id"]!["value"]));
 
     private static ulong Clock(JsonNode record) => SyncJson.ULong(record["version"]!["logicalClock"]!);
@@ -115,7 +115,7 @@ public sealed class NativeSyncJournal {
     /// it never reissues a version it issued after the checkpoint was taken.
     /// Its records, clock and pending uploads are unchanged.
     public NativeSyncJournal Recovered(Guid deviceId) {
-        if (deviceId == Id(metadata["deviceID"])) throw new BrowserRuleException(BrowserRuleCodes.InvalidRecoveryIdentity);
+        if (deviceId == Id(metadata["deviceID"])) throw new BrowserRuleException(BrowserRule.InvalidRecoveryIdentity);
         var fields = metadata.DeepClone().AsObject();
         fields["deviceID"] = deviceId.ToString("D").ToUpperInvariant();
         return new(fields, new(records, StringComparer.Ordinal), new(pending, StringComparer.Ordinal));
@@ -347,7 +347,7 @@ public sealed class NativeSyncJournal {
         value["records"] = new JsonArray(records.OrderBy(p => p.Key, StringComparer.Ordinal).Select(p => p.Value.DeepClone()).ToArray());
         value["pendingRecordIDs"] = new JsonArray(pending.Order(StringComparer.Ordinal).Select(id => records[id]["id"]!.DeepClone()).ToArray());
         var result = Encoding.UTF8.GetBytes(value.ToJsonString());
-        if (result.Length > MaximumBytes) throw new BrowserRuleException(BrowserRuleCodes.SyncSizeLimit);
+        if (result.Length > MaximumBytes) throw new BrowserRuleException(BrowserRule.SyncSizeLimit);
         return result;
     }
 
@@ -356,11 +356,11 @@ public sealed class NativeSyncJournal {
     #region Mutators
 
     private static Dictionary<string, JsonObject> RecordMap(JsonArray values) {
-        if (values.Count > MaximumRecords) throw new BrowserRuleException(BrowserRuleCodes.SyncRecordLimit);
+        if (values.Count > MaximumRecords) throw new BrowserRuleException(BrowserRule.SyncRecordLimit);
         var result = new Dictionary<string, JsonObject>(StringComparer.Ordinal);
         foreach (var value in values) {
             NativeSyncEvaluator.ValidateRecord(value!.AsObject());
-            if (!result.TryAdd(Name(value["id"]!), value.AsObject())) throw new BrowserRuleException(BrowserRuleCodes.DuplicateSyncRecord);
+            if (!result.TryAdd(Name(value["id"]!), value.AsObject())) throw new BrowserRuleException(BrowserRule.DuplicateSyncRecord);
         }
         return result;
     }
@@ -402,7 +402,7 @@ public sealed class NativeSyncJournal {
         public Dictionary<string, JsonObject> Arrive(JsonArray incoming) {
             var arrived = RecordMap(incoming.DeepClone().AsArray());
             foreach (var record in arrived.Values) clock = Math.Max(clock, Clock(record));
-            if (clock == ulong.MaxValue) throw new BrowserRuleException(BrowserRuleCodes.SyncClockExhausted);
+            if (clock == ulong.MaxValue) throw new BrowserRuleException(BrowserRule.SyncClockExhausted);
             return arrived;
         }
 
@@ -428,9 +428,9 @@ public sealed class NativeSyncJournal {
                     };
                 }
                 payload = NativeSyncCompatibility.Preserve(payload, previousPayload);
-                if (!desired.TryAdd(Name(PayloadId(payload)), payload)) throw new BrowserRuleException(BrowserRuleCodes.DuplicateSyncRecord);
+                if (!desired.TryAdd(Name(PayloadId(payload)), payload)) throw new BrowserRuleException(BrowserRule.DuplicateSyncRecord);
             }
-            if (desired.Count > MaximumRecords) throw new BrowserRuleException(BrowserRuleCodes.SyncRecordLimit);
+            if (desired.Count > MaximumRecords) throw new BrowserRuleException(BrowserRule.SyncRecordLimit);
             return desired;
         }
 
@@ -450,7 +450,7 @@ public sealed class NativeSyncJournal {
         /// The tombstone of `previous` at the next version, deleted for
         /// `reason` at `now` in seconds since 2001.
         public JsonObject Delete(JsonObject previous, SyncDeletionReason reason, double now) {
-            if (!double.IsFinite(now)) throw new BrowserRuleException(BrowserRuleCodes.InvalidSyncDate);
+            if (!double.IsFinite(now)) throw new BrowserRuleException(BrowserRule.InvalidSyncDate);
             return new() {
                 ["id"] = previous["id"]!.DeepClone(),
                 ["spaceID"] = previous["spaceID"]!.DeepClone(),
@@ -461,13 +461,13 @@ public sealed class NativeSyncJournal {
 
         /// The journal the update made.
         public NativeSyncJournal Finish() {
-            if (Records.Count > MaximumRecords) throw new BrowserRuleException(BrowserRuleCodes.SyncRecordLimit);
+            if (Records.Count > MaximumRecords) throw new BrowserRuleException(BrowserRule.SyncRecordLimit);
             fields["logicalClock"] = clock;
             return new(fields, Records, Pending);
         }
 
         private JsonObject NextVersion() {
-            if (clock == ulong.MaxValue) throw new BrowserRuleException(BrowserRuleCodes.SyncClockExhausted);
+            if (clock == ulong.MaxValue) throw new BrowserRuleException(BrowserRule.SyncClockExhausted);
             return new() { ["logicalClock"] = ++clock, ["deviceID"] = fields["deviceID"]!.DeepClone() };
         }
 

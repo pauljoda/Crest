@@ -16,7 +16,7 @@ final class BrowserGettingStartedTests: XCTestCase {
         let assignment = BrowserTabRuntimeAssignment(tabID: id, spaceID: space.id, profileID: space.profileID)
         let runtime = try XCTUnwrap(pages.nativeTabs.runtime(matching: assignment, content: .gettingStarted))
         let state = runtime.model(BrowserGettingStartedState.self) { BrowserGettingStartedState() }
-        state.chapter = 1
+        state.chapter = .splitView
         state.practice.makeSplit()
         let members = state.practice.members.map(\.id)
         browser.openNewTab()
@@ -24,7 +24,7 @@ final class BrowserGettingStartedTests: XCTestCase {
         browser.selectTab(id)
         pages.select()
         XCTAssertTrue(pages.nativeTabs.runtime(matching: assignment, content: .gettingStarted) === runtime)
-        XCTAssertEqual(state.chapter, 1)
+        XCTAssertEqual(state.chapter, .splitView)
         XCTAssertEqual(state.practice.members.map(\.id), members)
         XCTAssertFalse(
             pages.host.closeDurablePage(
@@ -39,7 +39,7 @@ final class BrowserGettingStartedTests: XCTestCase {
         pages.select()
         let reopened = try XCTUnwrap(pages.nativeTabs.runtime(matching: assignment, content: .gettingStarted))
         XCTAssertFalse(reopened === runtime)
-        XCTAssertEqual(reopened.model(BrowserGettingStartedState.self) { BrowserGettingStartedState() }.chapter, 0)
+        XCTAssertEqual(reopened.model(BrowserGettingStartedState.self) { BrowserGettingStartedState() }.chapter, .tabs)
     }
 
     func testNativeStateIsScopedToWindowAssignmentAndDescriptor() throws {

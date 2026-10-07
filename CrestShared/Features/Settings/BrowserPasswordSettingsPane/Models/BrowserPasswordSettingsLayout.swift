@@ -19,6 +19,17 @@ struct BrowserPasswordSettingsLayout: Equatable {
         exportDestinationName: "save panel"
     )
 
+    /// One Space's Passwords page in desktop Settings, with its iCloud
+    /// Keychain switch beside the list.
+    static let macOSSpacePage = BrowserPasswordSettingsLayout(
+        showsCredentialPreferences: true,
+        showsSavedPasswords: true,
+        showsExportAction: true,
+        showsManageAction: false,
+        supportsCredentialFileImport: true,
+        exportDestinationName: "save panel"
+    )
+
     static let mobilePage = BrowserPasswordSettingsLayout(
         showsCredentialPreferences: true,
         showsSavedPasswords: false,

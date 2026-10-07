@@ -5,7 +5,7 @@ struct BrowserSoftwareUpdateActions: View {
 
     var body: some View {
         HStack(spacing: CrestSpacing.small) {
-            switch model.phase {
+            switch model.phase.kind {
             case .permission:
                 Button("Not Now") {
                     model.chooseAutomaticChecks(false)
@@ -18,7 +18,7 @@ struct BrowserSoftwareUpdateActions: View {
             case .checking, .downloading:
                 Spacer()
                 Button("Cancel", action: model.cancelCurrentOperation)
-            case .updateAvailable:
+            case .available:
                 Button("Skip This Version", action: model.skipUpdate)
                 Spacer()
                 if model.isInformationOnly, let informationURL = model.informationURL {
@@ -44,7 +44,7 @@ struct BrowserSoftwareUpdateActions: View {
                 Spacer()
                 Button("Dismiss", action: model.acknowledge)
                     .keyboardShortcut(.defaultAction)
-            case .idle, .extracting:
+            case .idle, .extracting, .unavailable:
                 EmptyView()
             }
         }

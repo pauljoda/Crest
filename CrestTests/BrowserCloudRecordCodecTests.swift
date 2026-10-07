@@ -101,7 +101,7 @@ final class BrowserCloudRecordCodecTests: XCTestCase {
             finish: .sheen, ordinaryWidth: 1.2, trimWeight: 1.3, trimDetail: 18, chargeScale: 1.1, chargeOffset: -0.12,
             chargeWeight: .light, sheenAngle: 125, sealTeeth: 16, showsOutline: true, depth: .lifted)
         let charges =
-            CrestSymbol.allCases.map(CrestCharge.heraldic)
+            CrestSymbol.all.map(CrestCharge.heraldic)
             + [.system("hammer.fill"), .emoji("🐉"), .monogram("PD", .serif), .none]
         for charge in charges {
             branding.crest.charge = charge

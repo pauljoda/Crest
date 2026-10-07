@@ -22,11 +22,11 @@ Keeping Crest in Applications gives macOS and the updater one stable installed l
 
 Crest uses Sparkle to check for signed updates from inside the installed app. When an update is available, review the release, install it, and let Crest relaunch. Your Spaces and browsing data remain in their normal app storage rather than inside the application bundle.
 
-You can also open the app menu and choose **Check for Updates**. A manual check uses the same signed update channel as the automatic check.
+Turn automatic checks and installs on or off in **Settings → About**, which also has **Check for Updates…**. You can also open the app menu and choose **Check for Updates**. A manual check uses the same signed update channel as the automatic check.
 
 ## Update channels
 
-Use **Settings → General** to choose the update channel:
+Use **Settings → About** to choose the update channel:
 
 - **Stable** is the normal public release cadence.
 - **Nightly** receives newer builds sooner and can change more frequently.

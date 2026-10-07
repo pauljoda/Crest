@@ -10,28 +10,27 @@ final class BrowserNativeScrollState {
 
 private struct BrowserNativeScrollRestoration: ViewModifier {
     let state: BrowserNativeScrollState
+    private let restoredOffset: CGFloat
     @State private var position: ScrollPosition
-    @State private var currentOffset: CGFloat
 
     init(state: BrowserNativeScrollState) {
         self.state = state
+        restoredOffset = state.offset
         _position = State(initialValue: ScrollPosition(y: state.offset))
-        _currentOffset = State(initialValue: state.offset)
     }
 
     func body(content: Content) -> some View {
         content
             .scrollPosition($position)
             .onAppear {
-                withTransaction(Transaction(animation: nil)) { position.scrollTo(y: state.offset) }
+                withTransaction(Transaction(animation: nil)) { position.scrollTo(y: restoredOffset) }
             }
-            .onDisappear { state.offset = currentOffset }
-            .onScrollGeometryChange(for: CGFloat.self) { geometry in
-                max(0, geometry.contentOffset.y + geometry.contentInsets.top)
-            } action: { _, offset in
-                currentOffset = offset
-                // Capture accessibility and programmatic scrolling too. Commit
-                // on disappearance so initial layout cannot erase a saved offset.
+            .onScrollPhaseChange { _, phase, context in
+                // Recorded when a scroll comes to rest rather than on every
+                // frame: following the offset would update the view graph
+                // each frame the content moves.
+                guard phase == .idle else { return }
+                state.offset = max(0, context.geometry.contentOffset.y + context.geometry.contentInsets.top)
             }
     }
 }

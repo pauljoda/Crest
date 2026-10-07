@@ -160,7 +160,7 @@ public sealed class Palette {
         List<(PaletteRow Row, int Score)> scored = [];
         foreach (var tab in tabs) {
             if (query.Score(tab.DisplayTitle, tab.SavedAddress ?? tab.Url ?? "") is not { } score) continue;
-            var kind = tab.Placement == TabPlacement.Pinned ? PaletteRowKind.PinnedTab : PaletteRowKind.SavedTab;
+            var kind = tab.Placement.PaletteRow;
             scored.Add((new(kind, tab.DisplayTitle, SavedSubtitle(tab, tree), kind.Symbol, SubjectId: null, tab.Id, Address: null,
                 Command: null, Engine: null, CustomEngineId: null), score));
         }

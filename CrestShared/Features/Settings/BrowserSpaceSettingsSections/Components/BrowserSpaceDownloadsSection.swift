@@ -10,7 +10,7 @@ struct BrowserSpaceDownloadsSection: View {
     let settings: BrowserSpaceDownloadSettings
 
     var body: some View {
-        Section("Downloads", systemImage: "arrow.down.circle") {
+        Section("Downloads") {
             Toggle(
                 "Ask where to save each download",
                 isOn: settings.asksWhereToSave
@@ -23,10 +23,10 @@ struct BrowserSpaceDownloadsSection: View {
             }
 
             HStack {
-                Button("Choose Folder…", systemImage: "folder") {
+                Button("Choose Folder…") {
                     settings.chooseDirectory()
                 }
-                Button("Use Downloads", systemImage: "arrow.uturn.backward") {
+                Button("Use Downloads") {
                     settings.resetDirectory()
                 }
                 .disabled(!settings.usesCustomDirectory)
@@ -40,10 +40,6 @@ struct BrowserSpaceDownloadsSection: View {
                 .font(.footnote)
                 .foregroundStyle(.red)
             }
-
-            Text(settings.explanation)
-                .font(.footnote)
-                .foregroundStyle(.secondary)
         }
     }
 }

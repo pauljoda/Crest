@@ -5,9 +5,9 @@ struct BrowserPrivacySpaceSection: View {
     let spaces: [SpaceModel]
 
     var body: some View {
-        Section("Space", systemImage: "square.grid.2x2") {
+        Section {
             CrestSpaceMenuPicker(
-                "Permissions for",
+                "Space",
                 selection: $selectedSpaceID,
                 spaces: CrestSpaceIdentity.list(spaces)
             )

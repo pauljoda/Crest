@@ -6,12 +6,15 @@ struct MobileBrowserSettingsDestinationList: View {
     /// The read model whose engines say which destinations exist.
     let state: CoreState
 
-    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
-    @Environment(\.browserSettingsUsesLiveSidebar) private var usesLiveSidebar
     @Environment(\.locale) private var locale
 
+    // Rows are buttons rather than the list's own selection: a selection
+    // list inside the browser's page surface never receives the tap.
     var body: some View {
         List {
+            Section {
+                MobileSettingsBuildHeader()
+            }
             Section {
                 ForEach(filteredDestinations) { destination in
                     Button {
@@ -25,24 +28,12 @@ struct MobileBrowserSettingsDestinationList: View {
                     .accessibilityIdentifier("settings-\(destination.name)")
                     .listRowBackground(rowBackground(for: destination))
                     .listRowSeparator(.hidden)
-                    .accessibilityAddTraits(
-                        selection == destination ? .isSelected : []
-                    )
-                }
-            } header: {
-                if !usesLiveSidebar {
-                    Text(ProductIdentity.name)
-                        .font(.title2.weight(.bold))
-                        .foregroundStyle(.primary)
-                        .textCase(nil)
-                        .padding(.vertical, 8)
+                    .accessibilityAddTraits(selection == destination ? .isSelected : [])
                 }
             }
         }
         .listStyle(.sidebar)
         .listRowSpacing(4)
-        .scrollContentBackground(.hidden)
-        .background(sidebarBackground)
         .navigationSplitViewColumnWidth(min: 220, ideal: 250, max: 290)
         .searchable(text: $searchText, prompt: "Search settings")
     }
@@ -55,32 +46,10 @@ struct MobileBrowserSettingsDestinationList: View {
         )
     }
 
-    @ViewBuilder
-    private var sidebarBackground: some View {
-        if usesLiveSidebar {
-            BrowserSettingsCanvas.background
-        } else {
-            LinearGradient(
-                colors: [
-                    Color.accentColor.opacity(
-                        BrowserVisualAccessibilityPolicy.atmosphereOpacity(
-                            0.1,
-                            reduceTransparency: reduceTransparency
-                        )
-                    ),
-                    Color(uiColor: .systemGroupedBackground),
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-        }
-    }
-
-    private func rowBackground(
-        for destination: BrowserSettingsDestination
-    ) -> some View {
+    /// The system's own fill behind the row that's showing.
+    private func rowBackground(for destination: BrowserSettingsDestination) -> some View {
         RoundedRectangle(cornerRadius: 12)
-            .fill(selection == destination ? destination.color.opacity(0.16) : .clear)
+            .fill(selection == destination ? Color(uiColor: .systemFill) : .clear)
             .padding(.vertical, 2)
     }
 }

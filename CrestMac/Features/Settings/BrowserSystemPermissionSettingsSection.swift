@@ -32,29 +32,23 @@ private struct BrowserSystemPermissionSettingsContent: View {
     }
 
     var body: some View {
-        Section("System Permissions", systemImage: "hand.raised") {
-            VStack(spacing: 0) {
-                ForEach(BrowserSystemPermission.all) { permission in
-                    BrowserSystemPermissionRow(
-                        permission: permission,
-                        status: controller.status(for: permission),
-                        error: controller.errors[permission],
-                        isWorking: controller.working.contains(permission),
-                        spaceName: spaceID == nil ? nil : browser.shownSpace?.settings.name,
-                        request: { Task { await controller.request(permission, spaceID: spaceID) } },
-                        openSettings: { controller.openSettings(for: permission) },
-                        chooseFolder: {
-                            guard let spaceID else { return }
-                            Task { await controller.chooseFolder(spaceID: spaceID) }
-                        }
-                    )
-                    if permission != BrowserSystemPermission.all.last {
-                        Divider().padding(.vertical, 12)
+        Section("System permissions") {
+            ForEach(BrowserSystemPermission.all) { permission in
+                BrowserSystemPermissionRow(
+                    permission: permission,
+                    status: controller.status(for: permission),
+                    error: controller.errors[permission],
+                    isWorking: controller.working.contains(permission),
+                    spaceName: spaceID == nil ? nil : browser.shownSpace?.settings.name,
+                    request: { Task { await controller.request(permission, spaceID: spaceID) } },
+                    openSettings: { controller.openSettings(for: permission) },
+                    chooseFolder: {
+                        guard let spaceID else { return }
+                        Task { await controller.chooseFolder(spaceID: spaceID) }
                     }
-                }
+                )
             }
         }
-        .containerValue(\.settingsFullWidth, true)
         .task(id: spaceID) { await controller.refresh(spaceID: spaceID) }
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
             Task { await controller.refresh(spaceID: spaceID, recheckFiles: true) }
