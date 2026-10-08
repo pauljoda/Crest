@@ -6,29 +6,29 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.7.21</title>
-            <pubDate>Thu, 08 Oct 2026 17:42:57 +0000</pubDate>
+            <title>0.7.22</title>
+            <pubDate>Thu, 08 Oct 2026 21:11:28 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>development</sparkle:channel>
-            <sparkle:version>1206</sparkle:version>
-            <sparkle:shortVersionString>0.7.21</sparkle:shortVersionString>
+            <sparkle:version>1207</sparkle:version>
+            <sparkle:shortVersionString>0.7.22</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
-### Maintenance
+### Fixed
 
-- Reliability and internal improvements.
+- On Mac, pages no longer show a dark band across their tops after the window enters full screen.
 
 ---
 
 Development builds contain the newest changes and may be less reliable than stable releases.
 
-[View all changes](https://github.com/pauljoda/Crest/compare/ade915396e1ced83d7bb525474ec9515cab7e1a7...89ad515c04ca9b2031914c7fbf101da386be3414) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.7.21-2026-10-08-1206-r206.1/Installer-Crest-0.7.21-development-2026-10-08-89ad515-arm64.dmg)
+[View all changes](https://github.com/pauljoda/Crest/compare/89ad515c04ca9b2031914c7fbf101da386be3414...acfd1d678adad4077ce98917caaeb5b79fe0f5c3) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.7.22-2026-10-08-1207-r207.1/Installer-Crest-0.7.22-development-2026-10-08-acfd1d6-arm64.dmg)
 
 [Browse Development releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Development+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.7.21-2026-10-08-1206-r206.1/Installer-Crest-0.7.21-development-2026-10-08-89ad515-arm64.dmg" length="216022660" type="application/octet-stream" sparkle:edSignature="44aUKauypvocerXIhjIqbgvD7OZz7myZrxBq/0V5i87K7hOy5NwMyy1doInfvqVUz/FinGwNDLiAADyZdAfXCg=="/>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.7.22-2026-10-08-1207-r207.1/Installer-Crest-0.7.22-development-2026-10-08-acfd1d6-arm64.dmg" length="216069765" type="application/octet-stream" sparkle:edSignature="QOgowVEqtYFzXCGcUauleC53uT2IwjbifBU0dKc9DxcUiWM1AHnmD7okyQi0NN40G9oPjc2kyoC8ibRx5vu+AA=="/>
         </item>
         <item>
             <title>0.6.484</title>
@@ -60,6 +60,6 @@ Development builds contain the newest changes and may be less reliable than stab
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: V5VXBHh5xncFuu1vnMDqF8fXnUeukix8vIAvaAz2dol3YzXmQy5BrWSrgZnw1tFfqFgBCIq60avFvkXKXmYDBA==
-length: 3937
+edSignature: E0w7BNyUGkT+SHu4H1xovvgg/wljnGn8MoujztmGynHWt+Tzu/aeGjyfcRk4QZoAAPQVL+VD3uKjyGVdDs0cBw==
+length: 3988
 -->
