@@ -33,5 +33,7 @@ and implementation details.
 ## Project participation
 
 See [SUPPORT.md](../SUPPORT.md) for community and reporting routes,
-[CONTRIBUTING.md](../CONTRIBUTING.md) for local development, and
-[GOVERNANCE.md](../GOVERNANCE.md) for ownership and decision making.
+[CONTRIBUTING.md](../CONTRIBUTING.md) for local development,
+[GOVERNANCE.md](../GOVERNANCE.md) for ownership and decision making, and the
+[`crest-contribution` skill](../.agents/skills/crest-contribution/SKILL.md)
+for the rules every AI-assisted change must follow.

@@ -12,7 +12,11 @@ covered by [`TRADEMARKS.md`](TRADEMARKS.md).
    `Scripts/control-plane/install-dotnet.sh`.
 4. Use Python 3.11 or later for the Chromium and release tools. Check that
    `python3 --version` resolves to that interpreter.
-5. Run `Scripts/bootstrap.sh` from the repository root.
+5. Install [ripgrep](https://github.com/BurntSushi/ripgrep) for the script
+   test suite, and Node.js 20 or later if you build the Help Center in
+   `HelpCenter/`. `swift-format` ships with Xcode; the checks call it through
+   `xcrun`.
+6. Run `Scripts/bootstrap.sh` from the repository root.
 
 Building the `Crest` scheme produces the WebKit composition of the Mac app. The
 published Mac app also packages a prebuilt Chromium engine; see
@@ -70,10 +74,24 @@ See [SUPPORT.md](SUPPORT.md) for reporting routes and
 - Cover important behavioral contracts with focused regression tests. Review visual appearance, layout, and animation in the running app.
 - Keep build products, diagnostic captures, audit reports, submission packets, user state, credentials, signing exports, and local environment files out of Git. Documentation should help public users and contributors; keep private planning and machine-specific instructions local.
 - Do not add task-specific Markdown results or closeout reports, including under Documentation, or upload them as release or issue attachments. Summarize validation in the task or issue discussion. Keep necessary local evidence outside the checkout; maintained docs should describe lasting behavior and instructions, not dated test totals or cleanup narratives.
-- Keep editor and coding-assistant instructions or state local; `Scripts/check-public-source.py` rejects them from the tracked tree.
+- Keep personal editor and coding-assistant state local. The tracked exceptions are the root `AGENTS.md` and the `crest-contribution` skill; `Scripts/check-public-source.py` rejects everything else.
 - Do not enable the managed iOS default-browser entitlement until Apple approves it for the Crest App ID.
 
-## Versions, changelog, and commits
+## AI-assisted contributions
+
+You may use AI tools. Any change an AI tool helped produce must follow the
+[`crest-contribution` skill](.agents/skills/crest-contribution/SKILL.md),
+which carries the code style, architecture, UI, test, verification and
+writing rules a reviewer will hold the change to. Claude Code discovers it
+through `.claude/skills/crest-contribution`, Codex through `.agents/skills`,
+and every other agent is pointed to it by [`AGENTS.md`](AGENTS.md). Load it
+before the agent changes anything and keep it loaded while it works.
+
+The pull request template has an AI usage section with two boxes: that AI
+tools helped, and that the skill was run and its output reviewed. The
+**Contribution checks** workflow fails a pull request that ticks the first
+without the second, or that removed the section. You remain responsible for
+understanding, validating and explaining everything you submit.
 
 `Config/Version.xcconfig` is the only source for Crest's public version. Versions
 use complete `X.Y.Z` semantic versioning. Once a fix is verified and ready to
@@ -114,3 +132,7 @@ trailer, not a transfer of copyright:
 ```text
 Signed-off-by: Your Name <you@example.com>
 ```
+
+The **Contribution checks** workflow fails a pull request when any of its
+commits lacks the trailer. Merge commits, bot commits, and the repository
+owner's commits are exempt.

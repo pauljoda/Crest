@@ -40,8 +40,11 @@ class PublicSourceContractTests(unittest.TestCase):
 
     def test_private_working_files_and_signing_material_are_rejected(self) -> None:
         for path in (
-            "AGENTS.md",
+            "CrestMac/AGENTS.md",
+            "CLAUDE.local.md",
             ".claude/settings.json",
+            ".claude/skills/other-skill/SKILL.md",
+            ".agents/skills/other-skill/SKILL.md",
             ".codex/config.toml",
             ".codex-build/runtime.log",
             "nested/.codex-review/Crest.app/Contents/Info.plist",
@@ -58,6 +61,10 @@ class PublicSourceContractTests(unittest.TestCase):
 
     def test_public_configuration_examples_remain_allowed(self) -> None:
         for path in (
+            "AGENTS.md",
+            ".agents/skills/crest-contribution/SKILL.md",
+            ".agents/skills/crest-contribution/references/library-style.md",
+            ".claude/skills/crest-contribution",
             ".env.example",
             "CrestMac/Infrastructure/WebKit/BrowserPlatformUserAgent.swift",
             "Documentation/Design.md",

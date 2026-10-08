@@ -10,6 +10,14 @@ if ! command -v xcodegen >/dev/null 2>&1; then
 fi
 
 xcodegen generate
+
+skill_link=".claude/skills/crest-contribution"
+if [[ ! -f "$skill_link/SKILL.md" ]]; then
+  mkdir -p "${skill_link:h}"
+  ln -sfn ../../.agents/skills/crest-contribution "$skill_link"
+  print "Linked $skill_link for Claude Code"
+fi
+
 Scripts/check-version.sh
 Scripts/validate-identity.sh
 Scripts/validate-cache-hygiene.sh

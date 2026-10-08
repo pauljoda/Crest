@@ -223,24 +223,45 @@ Contributors are welcome to use AI tools. You must understand, review, and
 validate what you submit, explain your decisions, and address feedback. The
 same quality standards apply regardless of how a contribution was produced.
 
+Any change an AI tool helped produce must follow the
+[`crest-contribution` skill](.agents/skills/crest-contribution/SKILL.md). It
+carries the C# and Swift style, the architecture and UI rules, the test
+policy, and the pull request requirements that are not obvious from the code.
+Claude Code finds it through `.claude/skills` and Codex through
+`.agents/skills`; any other agent should start from [`AGENTS.md`](AGENTS.md),
+which points to it. The pull request template asks you to confirm the skill
+was followed, and a check reads that answer. Every pull request also receives
+an automated CodeRabbit review; treat its comments as a first pass, not a
+verdict.
+
 Submit only work you can stand behind. AI-generated code, test results, and
 claims need verification before they become part of a contribution.
 
 ## Contributing
 
-Want to help? Please do! While I feel confident doing actual dev work, there are some reas 
-that desperately need help. 
-- Designer: If you are a designer, I would love any input or help with the website, promotional material, and feedback on the apps UI itself.
-- Security: I have some background in cyber security, but mainly from a red team/blue team, and some as a dev so I welcome any and all security audits and improvements, please report using the built in security reporting
-- Engine Guru: If you have lots of experience working with chromium and browser engines in general, I would love any input or help.
+Want to help? Please do! While I feel confident doing the actual dev work,
+there are some areas that desperately need help.
 
-While those are the larger needed roles, anyone is free to contribute, please follow the guidelines and ensure your work is well done and aligns with the product, if you have a more drastic change you can always fork it to try it out, and perhaps share to see if it would be a good fit to merge in. 
+- **Designer:** if you are a designer, I would love any input or help with the website, promotional material, and feedback on the app's UI itself.
+- **Security:** I have some background in cyber security, mainly red team/blue team and some as a dev, so I welcome any and all security audits and improvements. Please report findings through the built-in security reporting.
+- **Engine guru:** if you have lots of experience with Chromium and browser engines in general, I would love any input or help.
+
+While those are the larger needed roles, anyone is free to contribute. Please
+follow the guidelines and make sure your work is well done and aligns with the
+product. If you have a more drastic change, you can always fork it to try it
+out, then share it to see whether it would be a good fit to merge in.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for setup and change discipline,
 [GOVERNANCE.md](GOVERNANCE.md) for project ownership, and the
 [documentation index](Documentation/README.md) for engineering references.
 Architecture changes should preserve the Space boundary and the native shape
 of each platform.
+
+## Contributors
+
+<a href="https://github.com/pauljoda/Crest/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=pauljoda/Crest" alt="People who have contributed to Crest">
+</a>
 
 ## License and brand
 

@@ -16,16 +16,26 @@ REPOSITORY_ROOT = Path(
     )
 )
 
+# The public contribution instructions are the only tracked assistant files:
+# the root AGENTS.md, the crest-contribution skill, and its Claude Code link.
+PUBLIC_INSTRUCTION_PATHS = {
+    "AGENTS.md",
+    ".claude/skills/crest-contribution",
+}
+PUBLIC_INSTRUCTION_PREFIXES = (".agents/skills/crest-contribution/",)
+
 FORBIDDEN_NAMES = {
     ".cursorrules",
     "agent.md",
     "agents.md",
     "claude.md",
+    "claude.local.md",
     "copilot-instructions.md",
     "design-qa.md",
     "gemini.md",
 }
 FORBIDDEN_COMPONENTS = {
+    ".agents",
     ".claude",
     ".codex",
     ".crest-review",
@@ -44,6 +54,11 @@ SIGNING_SUFFIXES = {
 
 
 def violation_reason(relative_path: str) -> str | None:
+    if relative_path in PUBLIC_INSTRUCTION_PATHS or relative_path.startswith(
+        PUBLIC_INSTRUCTION_PREFIXES
+    ):
+        return None
+
     path = PurePosixPath(relative_path)
     lowered_parts = tuple(part.lower() for part in path.parts)
     lowered_name = path.name.lower()
