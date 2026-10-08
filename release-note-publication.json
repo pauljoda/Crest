@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "channels": {
     "stable": "window-focus-bridge-release-format",
-    "development": "onboarding-scan-for-more",
+    "development": "concentric-page-corners",
     "nightly": "pinned-tab-unpin-menu"
   }
 }
