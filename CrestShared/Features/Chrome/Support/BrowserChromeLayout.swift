@@ -13,6 +13,8 @@ enum BrowserChromeLayout {
     static let sidebarIdealWidth: CGFloat = 289
     static let sidebarMaximumWidth: CGFloat = 380
     static let pageFrameInset = CrestSpacing.small
+    /// A page's corner where there is no window corner to follow: full screen,
+    /// iPhone and iPad.
     static let pageCornerRadius: CGFloat = 13
     static let pageBrandSeamWidth: CGFloat = 1.5
 

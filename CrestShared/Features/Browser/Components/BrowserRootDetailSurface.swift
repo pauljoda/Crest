@@ -29,7 +29,7 @@ struct BrowserRootDetailSurface<Content: View>: View {
         BrowserRootContentSurface(
             cornerRadius: usesBorderlessFrame
                 ? 0
-                : BrowserChromeLayout.pageCornerRadius,
+                : appearance.framedPageCornerRadius,
             seamWidth: usesBorderlessFrame
                 ? 0
                 : appearance.seamWidth,

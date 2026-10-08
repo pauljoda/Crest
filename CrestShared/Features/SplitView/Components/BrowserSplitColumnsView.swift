@@ -150,7 +150,7 @@ struct BrowserSplitColumnsView<Member: Identifiable, Content: View, Panel: View>
                         BrowserSplitCardFocusIndicator(
                             isFocused: member.id == focusedTabID,
                             accent: accent,
-                            cornerRadius: borderless ? 0 : BrowserChromeLayout.pageCornerRadius
+                            cornerRadius: borderless ? 0 : appearance.framedPageCornerRadius
                         )
                     }
                 }
@@ -176,7 +176,9 @@ struct BrowserSplitColumnsView<Member: Identifiable, Content: View, Panel: View>
     private func slotSurface(_ slot: BrowserSplitColumnSlot<Member>) -> some View {
         let isGap = slot.member.map { $0.id == liftedTabID } ?? false
         return BrowserRootContentSurface(
-            cornerRadius: borderless ? 0 : BrowserChromeLayout.pageCornerRadius,
+            // Every card shares the radius of the cards in the window's
+            // corners, so the row reads as one set of pages.
+            cornerRadius: borderless ? 0 : appearance.framedPageCornerRadius,
             seamWidth: borderless ? 0 : appearance.seamWidth,
             frameInsets: EdgeInsets(),
             usesTransparentInnerSurface: isGap

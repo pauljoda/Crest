@@ -50,6 +50,8 @@ struct BrowserSplitCardLiftPreviewContent: Equatable {
     /// Top-left of the card in the source browser window's global space.
     let origin: CGPoint
     let size: CGSize
+    /// The corner the card had in the row, so it lifts out with the same shape.
+    let cornerRadius: CGFloat
     /// Where inside the card the pointer took hold. The rise is scaled about
     /// this point, so the pixel somebody grabbed stays under the cursor.
     let grabFraction: CGPoint

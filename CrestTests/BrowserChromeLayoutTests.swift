@@ -393,6 +393,37 @@ extension BrowserChromeLayoutTests {
 
     }
 
+    func testPageCornerStaysConcentricWithTheWindowCorner() {
+        for (border, expected) in [(10.0, 16.0), (8.0, 18.0), (2.0, 24.0), (0.0, 0.0)] {
+            let appearance = BrowserChromeAppearance(borderWidth: border, windowCornerRadius: 26)
+            XCTAssertEqual(appearance.pageCornerRadius, CGFloat(expected), "border \(border)")
+        }
+        // A frame wider than the window's corner leaves the page square rather
+        // than inverted.
+        XCTAssertEqual(BrowserChromeAppearance(borderWidth: 10, windowCornerRadius: 6).pageCornerRadius, 0)
+
+        // Full screen has no window corner, and only the Mac measures one.
+        let unmeasured = BrowserChromeAppearance(borderWidth: 8)
+        XCTAssertEqual(unmeasured.pageCornerRadius, BrowserChromeLayout.pageCornerRadius)
+        XCTAssertEqual(
+            BrowserChromeAppearance(borderless: true).framedPageCornerRadius,
+            BrowserChromeLayout.pageCornerRadius
+        )
+    }
+
+    func testWindowCornerRadiusIgnoresTheRoomMadeForWindowControls() {
+        let corner = CGSize(width: 26, height: 26)
+        let windowed = RectangleCornerInsets(
+            topLeading: CGSize(width: 88, height: 66),
+            topTrailing: corner,
+            bottomLeading: corner,
+            bottomTrailing: corner
+        )
+        XCTAssertEqual(BrowserChromeAppearance.windowCornerRadius(from: windowed), 26)
+        // A full-screen window's corners are square.
+        XCTAssertNil(BrowserChromeAppearance.windowCornerRadius(from: RectangleCornerInsets()))
+    }
+
     @MainActor
     func testChromeAppearanceChangesPreserveLivePageHostsAndDocumentState() async throws {
         for split in [false, true] {
