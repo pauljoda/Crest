@@ -3744,7 +3744,7 @@
     },
     "show-history-opens-sidebar": {
       "category": "fixed",
-      "message": "On Mac, Show History now opens a hidden sidebar, as Show Archive and Show Downloads do. With the sidebar on the right, the History, Archive and Downloads button now sits beside the page, so its shortcuts no longer cover the sidebar."
+      "message": "On Mac, Show History now opens a hidden sidebar, as Show Archive and Show Downloads do. The History, Archive and Downloads button now sits on the page side of the sidebar, whichever side the sidebar is on, so its shortcuts open beside the sidebar instead of over it, in right-to-left languages too."
     }
   }
 }
