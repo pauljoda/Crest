@@ -6,33 +6,29 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.7.23</title>
-            <pubDate>Thu, 08 Oct 2026 21:42:21 +0000</pubDate>
+            <title>0.7.24</title>
+            <pubDate>Thu, 08 Oct 2026 23:27:59 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>development</sparkle:channel>
-            <sparkle:version>1208</sparkle:version>
-            <sparkle:shortVersionString>0.7.23</sparkle:shortVersionString>
+            <sparkle:version>1209</sparkle:version>
+            <sparkle:shortVersionString>0.7.24</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
-### Improved
-
-- You can hide the update card in the sidebar until you next check for updates or restart Crest. Settings › About shows where the update stands and offers the same buttons.
-
 ### Fixed
 
-- Restarting to install an update no longer gets stuck. If you choose to stay on a page, the update goes back to Ready to Install so you can restart when you’re ready, and a page asking before you leave now comes to the front.
+- On Mac, Show History now opens a hidden sidebar, as Show Archive and Show Downloads do. The History, Archive and Downloads button now sits on the page side of the sidebar, whichever side the sidebar is on, so its shortcuts open beside the sidebar instead of over it, in right-to-left languages too.
 
 ---
 
 Development builds contain the newest changes and may be less reliable than stable releases.
 
-[View all changes](https://github.com/pauljoda/Crest/compare/acfd1d678adad4077ce98917caaeb5b79fe0f5c3...0b5ebd4c5501fb51c706cee25f879a748746d572) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.7.23-2026-10-08-1208-r208.1/Installer-Crest-0.7.23-development-2026-10-08-0b5ebd4-arm64.dmg)
+[View all changes](https://github.com/pauljoda/Crest/compare/0b5ebd4c5501fb51c706cee25f879a748746d572...6c05ab379fd793d7020e870e01638242d7469433) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.7.24-2026-10-08-1209-r209.1/Installer-Crest-0.7.24-development-2026-10-08-6c05ab3-arm64.dmg)
 
 [Browse Development releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Development+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.7.23-2026-10-08-1208-r208.1/Installer-Crest-0.7.23-development-2026-10-08-0b5ebd4-arm64.dmg" length="216077957" type="application/octet-stream" sparkle:edSignature="CbjvI8KApR6U4vvWa9Q+nUqwloPsyow99yYqx2ynHocSTVe63TrQN7MNIg8c3kyDVF8LwcbBIWWo217UOmLUBw=="/>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.7.24-2026-10-08-1209-r209.1/Installer-Crest-0.7.24-development-2026-10-08-6c05ab3-arm64.dmg" length="216084100" type="application/octet-stream" sparkle:edSignature="MlwKmiBYoQAgDKar5GOGGCYPmbEjzHIHFp4tIrqEgBIo8T29FowmDJRpWcFIEwR8IO9M2pbfBOfVPavGJ5NTBQ=="/>
         </item>
         <item>
             <title>0.6.484</title>
@@ -64,6 +60,6 @@ Development builds contain the newest changes and may be less reliable than stab
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: 2NqSNyGho4OF6p0PGai8fLyZxdt3g0vlhPF6Cj/EhzbIkDZQZhsOe06gGkdj2pVj/++f6Oks7RkwNWOgeAS5Bw==
-length: 4309
+edSignature: CH3tNei9wvxTRYvG+hjjYxw8TadpM4R4aqJj8F0V9NvPH/uDpeyea4L7f/EeGBqGsXHSE2B8F0Em5K3dysRPBA==
+length: 4191
 -->
