@@ -23115,27 +23115,6 @@
 			path = MobileBrowserSettingsView;
 			sourceTree = "<group>";
 		};
-		"TEMP_129CD69A-20D6-4462-8867-2F0ABA9A2E9F" /* Crest */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = Crest;
-			sourceTree = "<group>";
-		};
-		"TEMP_B06F1C94-AB55-4547-959A-C5981D486A4C" /* BrowserExtensionServices */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = BrowserExtensionServices;
-			sourceTree = "<group>";
-		};
-		"TEMP_FC0632A1-FC1E-4E18-9B40-E7EC17372DE3" /* BrowserExtensionServices */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = BrowserExtensionServices;
-			sourceTree = "<group>";
-		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -25142,8 +25121,6 @@
 				F583CF83E12ABBFCF9AD09C8 /* BrowserWebKitFaviconDocument.swift in Sources */,
 				26ABC18C8C13E4407BF375ED /* BrowserWebKitFeatureFlag.swift in Sources */,
 				124C239552B517E84E04EE70 /* BrowserWebKitFeatureFlagControls.swift in Sources */,
-				7AEC18FB576262A2E3F0AB78 /* BrowserWindowFullScreenBridge.swift in Sources */,
-				8F0B214A5A7BCA8FD915B08D /* BrowserWindowFullScreenHostView.swift in Sources */,
 				B5D674C264B7914CFB9EE710 /* BrowserWebKitFeatureFlagFilter.swift in Sources */,
 				55F1ECFD4B9088FE84F0FC84 /* BrowserWebKitFeatureFlagList.swift in Sources */,
 				B960E9A0B4D7165E1889A6ED /* BrowserWebKitFeatureFlagPersistence.swift in Sources */,
@@ -25165,6 +25142,8 @@
 				067B08E0D9CAD325C32EF05C /* BrowserWindowCloseGate.swift in Sources */,
 				9AC9B10D7C1C8DE731B06895 /* BrowserWindowFocusBridge.swift in Sources */,
 				DAD1421E64028CBA169BCA26 /* BrowserWindowFocusHostView.swift in Sources */,
+				7AEC18FB576262A2E3F0AB78 /* BrowserWindowFullScreenBridge.swift in Sources */,
+				8F0B214A5A7BCA8FD915B08D /* BrowserWindowFullScreenHostView.swift in Sources */,
 				ED19C3729E275DB368FC315F /* BrowserWindowLayoutPersistence.swift in Sources */,
 				E34312F6EF62D1378805BA96 /* BrowserWindowLayouts.swift in Sources */,
 				3450ADBC8327B131E53D778C /* BrowserWindowState.swift in Sources */,
@@ -28785,8 +28764,6 @@
 				0A5C1573624BABC6B94F6BA3 /* BrowserWebKitFaviconDocument.swift in Sources */,
 				F3035B940B6BA57D69ED12C7 /* BrowserWebKitFeatureFlag.swift in Sources */,
 				CB89A338790181A9F3398182 /* BrowserWebKitFeatureFlagControls.swift in Sources */,
-				CDD2FA50D6CCB47BF3DC00C1 /* BrowserWindowFullScreenBridge.swift in Sources */,
-				90E8741E0397F60CC2CB06BF /* BrowserWindowFullScreenHostView.swift in Sources */,
 				41702DCE4FC63395F9C0F521 /* BrowserWebKitFeatureFlagFilter.swift in Sources */,
 				A8E9EBFADE6C9592C479B8A5 /* BrowserWebKitFeatureFlagList.swift in Sources */,
 				91B47426D7FE2B19E27BC05E /* BrowserWebKitFeatureFlagPersistence.swift in Sources */,
@@ -28808,6 +28785,8 @@
 				E6DE266719F94EC1C19B8B2B /* BrowserWindowCloseGate.swift in Sources */,
 				D14B200A8ED7309150A23A39 /* BrowserWindowFocusBridge.swift in Sources */,
 				04B7D3C35D6CF06C086EA7ED /* BrowserWindowFocusHostView.swift in Sources */,
+				CDD2FA50D6CCB47BF3DC00C1 /* BrowserWindowFullScreenBridge.swift in Sources */,
+				90E8741E0397F60CC2CB06BF /* BrowserWindowFullScreenHostView.swift in Sources */,
 				28009EE46FB2A780377B3153 /* BrowserWindowLayoutPersistence.swift in Sources */,
 				EFB2DD6ED3D7BF9640EB7540 /* BrowserWindowLayouts.swift in Sources */,
 				AE38B58BE451067891CA3D4A /* BrowserWindowState.swift in Sources */,
@@ -30874,8 +30853,6 @@
 				80162CAFC54D026D2ABF42E7 /* BrowserWebKitFaviconDocument.swift in Sources */,
 				33A49EE05838B4C735097D98 /* BrowserWebKitFeatureFlag.swift in Sources */,
 				CF2FE2171966F19C36444A3C /* BrowserWebKitFeatureFlagControls.swift in Sources */,
-				966FA432441F0C75CC53DB79 /* BrowserWindowFullScreenBridge.swift in Sources */,
-				DD6308891E35EB848F89D856 /* BrowserWindowFullScreenHostView.swift in Sources */,
 				339C316D1D99E4256A359A14 /* BrowserWebKitFeatureFlagFilter.swift in Sources */,
 				3E5AF9DB0D402B6FAA696D77 /* BrowserWebKitFeatureFlagList.swift in Sources */,
 				93D276FA22360F5C275FA17B /* BrowserWebKitFeatureFlagPersistence.swift in Sources */,
@@ -30897,6 +30874,8 @@
 				E8A0A005272725BE4C077251 /* BrowserWindowCloseGate.swift in Sources */,
 				0426E714642ED3E8BFDEB903 /* BrowserWindowFocusBridge.swift in Sources */,
 				5B46CF7321C32650314006F9 /* BrowserWindowFocusHostView.swift in Sources */,
+				966FA432441F0C75CC53DB79 /* BrowserWindowFullScreenBridge.swift in Sources */,
+				DD6308891E35EB848F89D856 /* BrowserWindowFullScreenHostView.swift in Sources */,
 				573F491C2656B6D76A7CC13A /* BrowserWindowLayoutPersistence.swift in Sources */,
 				E237F6B26FC3FB00FB96A15A /* BrowserWindowLayouts.swift in Sources */,
 				D66ACD2CC3C240434467D275 /* BrowserWindowState.swift in Sources */,
@@ -34431,8 +34410,6 @@
 				5E596673A89A2A1498A75BFC /* BrowserWebKitFaviconDocument.swift in Sources */,
 				964055CFB3B02961ABAD7A75 /* BrowserWebKitFeatureFlag.swift in Sources */,
 				C306EFCEE2291061362C9234 /* BrowserWebKitFeatureFlagControls.swift in Sources */,
-				D0E8C0AC2CD6821190835AE2 /* BrowserWindowFullScreenBridge.swift in Sources */,
-				1EB2F589BBF2CD470DB9C90D /* BrowserWindowFullScreenHostView.swift in Sources */,
 				51F260A06305820CD0B1376A /* BrowserWebKitFeatureFlagFilter.swift in Sources */,
 				C46D9BAE4BC8D2D9DDFD7294 /* BrowserWebKitFeatureFlagList.swift in Sources */,
 				BB891D56DA2EB528A42A689B /* BrowserWebKitFeatureFlagPersistence.swift in Sources */,
@@ -34454,6 +34431,8 @@
 				E293213B69CC816D33482704 /* BrowserWindowCloseGate.swift in Sources */,
 				026708842CD08887CC24C2F8 /* BrowserWindowFocusBridge.swift in Sources */,
 				9E6C7A13B7BBAB0106E74A16 /* BrowserWindowFocusHostView.swift in Sources */,
+				D0E8C0AC2CD6821190835AE2 /* BrowserWindowFullScreenBridge.swift in Sources */,
+				1EB2F589BBF2CD470DB9C90D /* BrowserWindowFullScreenHostView.swift in Sources */,
 				140CA33EC18FDB6F81BBEE70 /* BrowserWindowLayoutPersistence.swift in Sources */,
 				40EE6CC2C71D45ECC9B059A5 /* BrowserWindowLayouts.swift in Sources */,
 				A7EFEED5B6D03B9A3B920723 /* BrowserWindowState.swift in Sources */,

@@ -4,11 +4,15 @@ import AppKit
 /// rounded corners for the page frame to follow.
 @MainActor
 final class BrowserWindowFullScreenHostView: NSView {
+    // MARK: - Variables
+
     var fullScreenChanged: ((Bool) -> Void)?
 
     private weak var observedWindow: NSWindow?
     private var observers: [NSObjectProtocol] = []
     private var lastReportedFullScreen: Bool?
+
+    // MARK: - Actions - Window
 
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
@@ -24,6 +28,8 @@ final class BrowserWindowFullScreenHostView: NSView {
     override func hitTest(_ point: NSPoint) -> NSView? {
         nil
     }
+
+    // MARK: - Actions - Observing
 
     func stopObservingWindow() {
         observers.forEach(NotificationCenter.default.removeObserver)
