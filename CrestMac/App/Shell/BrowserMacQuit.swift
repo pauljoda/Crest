@@ -45,6 +45,8 @@ final class BrowserMacQuit {
                 guard let self else { return }
                 guard allowed else {
                     isQuitting = false
+                    // An update relaunch that asked for this quit is offered again.
+                    application.softwareUpdates.model.applicationStayedOpen()
                     finish(false)
                     return
                 }

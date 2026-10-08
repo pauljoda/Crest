@@ -1,6 +1,8 @@
 import AppKit
 import Foundation
 
+// MARK: - Types
+
 struct BrowserFileInputOptions {
     let allowsDirectories: Bool
     let allowsMultipleSelection: Bool
@@ -8,8 +10,13 @@ struct BrowserFileInputOptions {
 
 @MainActor
 final class BrowserDialogPresenter {
-    // A `dismissal` closes the sheet once its question no longer waits; the
-    // sheet then answers as declined.
+    // MARK: - Variables
+
+    private var hostWindow: NSWindow? {
+        NSApp.keyWindow ?? NSApp.mainWindow
+    }
+
+    // MARK: - Actions - Script dialogs
 
     func presentAlert(
         message: String,
@@ -47,7 +54,7 @@ final class BrowserDialogPresenter {
         alert.alertStyle = .warning
         alert.addButton(withTitle: "Leave Page")
         alert.addButton(withTitle: "Stay on Page")
-        present(alert, dismissal: dismissal) { completion($0 == .alertFirstButtonReturn) }
+        present(alert, comesForward: true, dismissal: dismissal) { completion($0 == .alertFirstButtonReturn) }
     }
 
     func presentPrompt(
@@ -67,6 +74,27 @@ final class BrowserDialogPresenter {
             completion(response == .alertFirstButtonReturn ? input.stringValue : nil)
         }
     }
+
+    /// The page's server as a dialog names it, which the core formats: its
+    /// host, with the port only when it is not the scheme's default.
+    static func sourceLabel(for request: URLRequest) -> String {
+        guard let url = request.url, let host = url.host(), !host.isEmpty else {
+            return ProductIdentity.name
+        }
+        guard let port = url.port else { return host }
+        return BrowserCorePolicy.authenticationSourceLabel(
+            host: host, port: port, scheme: url.scheme, emptyHostLabel: ProductIdentity.name)
+    }
+
+    private func makeAlert(message: String, request: URLRequest) -> NSAlert {
+        let alert = NSAlert()
+        alert.messageText = "\(Self.sourceLabel(for: request)) says"
+        alert.informativeText = message
+        alert.alertStyle = .informational
+        return alert
+    }
+
+    // MARK: - Actions - Files
 
     func presentFileInput(
         options: BrowserFileInputOptions,
@@ -111,6 +139,8 @@ final class BrowserDialogPresenter {
             completion()
         }
     }
+
+    // MARK: - Actions - Authentication
 
     func presentHTTPAuthentication(
         prompt: BrowserHTTPAuthenticationPrompt,
@@ -173,6 +203,37 @@ final class BrowserDialogPresenter {
         }
     }
 
+    private func authenticationMessage(
+        prompt: BrowserHTTPAuthenticationPrompt,
+        spaceName: String
+    ) -> String {
+        let descriptor = prompt.descriptor
+        var components: [String] = []
+        if let realm = descriptor.realm, !realm.isEmpty {
+            components.append("Realm: \(realm)")
+        }
+        if prompt.allowsSaving {
+            components.append(
+                "This sign-in belongs only to the \(spaceName) Space. "
+                    + "Crest saves it only after the site accepts it."
+            )
+        } else {
+            components.append(
+                "This sign-in belongs only to the \(spaceName) Space and cannot "
+                    + "be saved because the connection is not protected by HTTPS."
+            )
+        }
+        if descriptor.previousFailureCount > 0 {
+            components.append("The previous credentials were not accepted.")
+        }
+        if !descriptor.isSecureTransport {
+            components.append("Warning: this connection is not protected by HTTPS.")
+        }
+        return components.joined(separator: "\n\n")
+    }
+
+    // MARK: - Actions - System permissions
+
     /// Explains the second, app-level permission boundary before leaving Crest.
     /// The caller keeps the page's original request pending, then rechecks the
     /// system authorization after Crest becomes active again.
@@ -212,6 +273,42 @@ final class BrowserDialogPresenter {
             settingsURL: settingsURL
         )
     }
+
+    private func presentSystemPermissionRecovery(
+        title: String,
+        message: String,
+        openButtonTitle: String,
+        settingsURL: URL
+    ) async {
+        let shouldOpen = await withCheckedContinuation { continuation in
+            let alert = NSAlert()
+            alert.messageText = title
+            alert.informativeText = message
+            alert.alertStyle = .warning
+            alert.addButton(withTitle: openButtonTitle)
+            alert.addButton(withTitle: "Not Now")
+            present(alert) { response in
+                continuation.resume(
+                    returning: response == .alertFirstButtonReturn
+                )
+            }
+        }
+        guard shouldOpen, NSWorkspace.shared.open(settingsURL) else { return }
+        await waitForApplicationReturn()
+    }
+
+    private func waitForApplicationReturn() async {
+        var observedInactiveApplication = !NSApp.isActive
+        while !observedInactiveApplication {
+            try? await Task.sleep(for: .milliseconds(100))
+            observedInactiveApplication = !NSApp.isActive
+        }
+        while !NSApp.isActive {
+            try? await Task.sleep(for: .milliseconds(100))
+        }
+    }
+
+    // MARK: - Actions - External applications
 
     /// Asks before Crest leaves the browser for another application. Cancelling
     /// is not offered as a saved block, so Escape declines this one hand-off
@@ -258,6 +355,8 @@ final class BrowserDialogPresenter {
         let trimmed = path.prefix(while: { $0 != "?" })
         return trimmed.isEmpty ? url.absoluteString : "\(scheme):\(trimmed)"
     }
+
+    // MARK: - Actions - Downloads
 
     func approveRiskyDownload(
         assessment: DownloadRiskAssessment,
@@ -333,99 +432,31 @@ final class BrowserDialogPresenter {
             alert.alertStyle = .warning
             alert.addButton(withTitle: String(localized: "Keep Browsing"))
             alert.addButton(withTitle: String(localized: "Quit"))
-            present(alert, dismissal: dismissal) { response in
+            present(alert, comesForward: true, dismissal: dismissal) { response in
                 continuation.resume(returning: response == .alertSecondButtonReturn)
             }
         }
     }
 
-    /// The page's server as a dialog names it, which the core formats: its
-    /// host, with the port only when it is not the scheme's default.
-    static func sourceLabel(for request: URLRequest) -> String {
-        guard let url = request.url, let host = url.host(), !host.isEmpty else {
-            return ProductIdentity.name
-        }
-        guard let port = url.port else { return host }
-        return BrowserCorePolicy.authenticationSourceLabel(
-            host: host, port: port, scheme: url.scheme, emptyHostLabel: ProductIdentity.name)
-    }
+    // MARK: - Actions - Presentation
 
-    private func makeAlert(message: String, request: URLRequest) -> NSAlert {
-        let alert = NSAlert()
-        alert.messageText = "\(Self.sourceLabel(for: request)) says"
-        alert.informativeText = message
-        alert.alertStyle = .informational
-        return alert
-    }
+    // A `dismissal` closes the sheet once its question no longer waits; the
+    // sheet then answers as declined.
 
-    private func authenticationMessage(
-        prompt: BrowserHTTPAuthenticationPrompt,
-        spaceName: String
-    ) -> String {
-        let descriptor = prompt.descriptor
-        var components: [String] = []
-        if let realm = descriptor.realm, !realm.isEmpty {
-            components.append("Realm: \(realm)")
-        }
-        if prompt.allowsSaving {
-            components.append(
-                "This sign-in belongs only to the \(spaceName) Space. "
-                    + "Crest saves it only after the site accepts it."
-            )
-        } else {
-            components.append(
-                "This sign-in belongs only to the \(spaceName) Space and cannot "
-                    + "be saved because the connection is not protected by HTTPS."
-            )
-        }
-        if descriptor.previousFailureCount > 0 {
-            components.append("The previous credentials were not accepted.")
-        }
-        if !descriptor.isSecureTransport {
-            components.append("Warning: this connection is not protected by HTTPS.")
-        }
-        return components.joined(separator: "\n\n")
-    }
-
-    private func presentSystemPermissionRecovery(
-        title: String,
-        message: String,
-        openButtonTitle: String,
-        settingsURL: URL
-    ) async {
-        let shouldOpen = await withCheckedContinuation { continuation in
-            let alert = NSAlert()
-            alert.messageText = title
-            alert.informativeText = message
-            alert.alertStyle = .warning
-            alert.addButton(withTitle: openButtonTitle)
-            alert.addButton(withTitle: "Not Now")
-            present(alert) { response in
-                continuation.resume(
-                    returning: response == .alertFirstButtonReturn
-                )
-            }
-        }
-        guard shouldOpen, NSWorkspace.shared.open(settingsURL) else { return }
-        await waitForApplicationReturn()
-    }
-
-    private func waitForApplicationReturn() async {
-        var observedInactiveApplication = !NSApp.isActive
-        while !observedInactiveApplication {
-            try? await Task.sleep(for: .milliseconds(100))
-            observedInactiveApplication = !NSApp.isActive
-        }
-        while !NSApp.isActive {
-            try? await Task.sleep(for: .milliseconds(100))
-        }
-    }
-
+    /// Shows `alert` as a sheet on the key window, or on its own while Crest
+    /// has none. A question that holds up leaving a page or quitting
+    /// `comesForward`: Crest activates first, so a quit asked from outside it
+    /// (the updater's relaunch, the Dock, a logout) never waits on a question
+    /// the person cannot see.
     private func present(
         _ alert: NSAlert,
+        comesForward: Bool = false,
         dismissal: BrowserPromptDismissal? = nil,
         completion: @escaping @MainActor @Sendable (NSApplication.ModalResponse) -> Void
     ) {
+        if comesForward, !NSApp.isActive {
+            NSApp.activate(ignoringOtherApps: true)
+        }
         guard let window = hostWindow else {
             dismissal?.attach { [weak alert] in
                 guard let alert, alert.window.isVisible else { return }
@@ -450,9 +481,5 @@ final class BrowserDialogPresenter {
             return
         }
         panel.beginSheetModal(for: window, completionHandler: completion)
-    }
-
-    private var hostWindow: NSWindow? {
-        NSApp.keyWindow ?? NSApp.mainWindow
     }
 }

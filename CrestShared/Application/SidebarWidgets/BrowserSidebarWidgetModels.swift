@@ -324,22 +324,23 @@ struct BrowserSoftwareUpdatePhase: Hashable, Identifiable, Sendable {
         kind: .permission, name: "permission", title: "Keep Crest Up to Date", statusLabel: "Permission required")
     static let checking = BrowserSoftwareUpdatePhase(
         kind: .checking, name: "checking", title: "Checking for Updates", statusLabel: "Checking",
-        showsMessage: false, isWorking: true, windowShowsActivity: true)
+        showsMessage: false, isWorking: true, windowShowsActivity: true, isHideable: true)
     static let available = BrowserSoftwareUpdatePhase(
         kind: .available, name: "available", title: "Update Available", statusLabel: "Ready to download",
-        informationOnlyStatusLabel: "Website release", isTitledByUpdate: true)
+        informationOnlyStatusLabel: "Website release", isTitledByUpdate: true, isHideable: true)
     static let downloading = BrowserSoftwareUpdatePhase(
         kind: .downloading, name: "downloading", title: "Downloading Update", statusLabel: "Downloading",
-        symbol: "arrow.down.circle.fill", showsMessage: false, isTransferring: true, isWorking: true)
+        symbol: "arrow.down.circle.fill", showsMessage: false, isTransferring: true, isWorking: true,
+        isHideable: true)
     static let extracting = BrowserSoftwareUpdatePhase(
         kind: .extracting, name: "extracting", title: "Preparing Update", statusLabel: "Preparing",
-        showsMessage: false, isTransferring: true, isWorking: true, windowShowsActivity: true)
+        showsMessage: false, isTransferring: true, isWorking: true, windowShowsActivity: true, isHideable: true)
     static let readyToInstall = BrowserSoftwareUpdatePhase(
         kind: .readyToInstall, name: "readyToInstall", title: "Ready to Install", statusLabel: "Ready to install",
-        symbol: installSymbol)
+        symbol: installSymbol, isHideable: true)
     static let installing = BrowserSoftwareUpdatePhase(
         kind: .installing, name: "installing", title: "Installing Update", statusLabel: "Installing",
-        symbol: installSymbol, isWorking: true, windowShowsActivity: true)
+        symbol: installSymbol, isWorking: true, windowShowsActivity: true, isHideable: true)
     static let upToDate = BrowserSoftwareUpdatePhase(
         kind: .upToDate, name: "upToDate", title: "Crest Is Up to Date", statusLabel: "Up to date",
         symbol: settledSymbol, tone: .success)
@@ -393,6 +394,11 @@ struct BrowserSoftwareUpdatePhase: Hashable, Identifiable, Sendable {
     /// measured progress.
     let windowShowsActivity: Bool
 
+    /// Whether the person can hide the sidebar card while the update is in
+    /// this phase: one that waits on nothing they must answer and has no
+    /// Dismiss of its own.
+    let isHideable: Bool
+
     var id: String { name }
 
     // MARK: - Initializers
@@ -401,7 +407,8 @@ struct BrowserSoftwareUpdatePhase: Hashable, Identifiable, Sendable {
         kind: Kinds, name: String, title: LocalizedStringResource, statusLabel: LocalizedStringResource,
         informationOnlyStatusLabel: LocalizedStringResource? = nil, isTitledByUpdate: Bool = false,
         symbol: String = BrowserSoftwareUpdatePhase.waitingSymbol, tone: Tones = .accent, showsMessage: Bool = true,
-        isTransferring: Bool = false, isWorking: Bool = false, windowShowsActivity: Bool = false
+        isTransferring: Bool = false, isWorking: Bool = false, windowShowsActivity: Bool = false,
+        isHideable: Bool = false
     ) {
         self.kind = kind
         self.name = name
@@ -415,6 +422,7 @@ struct BrowserSoftwareUpdatePhase: Hashable, Identifiable, Sendable {
         self.isTransferring = isTransferring
         self.isWorking = isWorking
         self.windowShowsActivity = windowShowsActivity
+        self.isHideable = isHideable
     }
 
     // MARK: - Actions - Identity
@@ -471,6 +479,9 @@ enum BrowserSidebarWidgetAction: Hashable, Sendable {
     case declineAutomaticUpdateChecks
     case enableAutomaticUpdateChecks
     case acknowledgeUpdateStatus
+    /// Hides the update card until the person checks for updates or Crest
+    /// restarts. Widget-level only: the update itself carries on.
+    case hideSoftwareUpdate
 }
 
 struct BrowserSidebarWidgetInstance: Equatable, Identifiable, Sendable {

@@ -3733,6 +3733,14 @@
     "full-screen-page-top-band": {
       "category": "fixed",
       "message": "On Mac, pages no longer show a dark band across their tops after the window enters full screen."
+    },
+    "update-restart-recovers": {
+      "category": "fixed",
+      "message": "Restarting to install an update no longer gets stuck. If you choose to stay on a page, the update goes back to Ready to Install so you can restart when you’re ready, and a page asking before you leave now comes to the front."
+    },
+    "update-card-hide": {
+      "category": "improved",
+      "message": "You can hide the update card in the sidebar until you next check for updates or restart Crest. Settings › About shows where the update stands and offers the same buttons."
     }
   }
 }

@@ -156,6 +156,31 @@ final class BrowserSoftwareUpdateTests: XCTestCase {
         XCTAssertEqual(try XCTUnwrap(model.progress), 1, accuracy: 0.001)
     }
 
+    func testARelaunchCrestDidNotQuitForIsOfferedAgain() throws {
+        let model = BrowserSoftwareUpdateModel()
+        var relaunchRequests = 0
+        model.presentAutomaticUpdateReady(
+            title: "Crest 0.5.1",
+            version: "0.5.1",
+            build: "501",
+            releaseNotes: nil,
+            informationURL: nil,
+            installAndRelaunch: { relaunchRequests += 1 }
+        )
+
+        model.installAndRelaunchNow()
+        XCTAssertEqual(relaunchRequests, 1)
+        XCTAssertEqual(model.phase, .installing)
+
+        model.applicationStayedOpen()
+        let snapshot = try XCTUnwrap(model.sidebarWidgetSnapshot)
+        XCTAssertEqual(snapshot.phase, .readyToInstall)
+        XCTAssertTrue(snapshot.allowsInstallAndRelaunch)
+
+        model.installAndRelaunchNow()
+        XCTAssertEqual(relaunchRequests, 2)
+    }
+
     func testSidebarWidgetDismissesTheExactBuildAndAChangedBuildReappears() async throws {
         let source = BrowserSoftwareUpdateWidgetSource()
         let model = BrowserSoftwareUpdateModel(widgetSource: source)
