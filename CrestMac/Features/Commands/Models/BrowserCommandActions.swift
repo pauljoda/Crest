@@ -128,9 +128,10 @@ struct BrowserCommandActions {
         case .saveWebArchive: Route(isAvailable: supportsPageCapability(.webArchive), run: pages.exportWebArchive)
         case .printPage: Route(isAvailable: supportsPageCapability(.print), run: pages.printPage)
         case .toggleSidebar: Route(run: toggleSidebar)
-        case .showHistory: Route(run: chrome.presentHistory)
-        case .showArchive: Route(run: presentArchive)
-        case .showDownloads: Route(isAvailable: supportsEngineCapability(.downloads), run: presentDownloads)
+        case .showHistory: Route { chrome.presentUtility(.history) }
+        case .showArchive: Route { chrome.presentUtility(.archive) }
+        case .showDownloads:
+            Route(isAvailable: supportsEngineCapability(.downloads)) { chrome.presentUtility(.downloads) }
         case .showWebInspector:
             Route(isAvailable: supportsPageCapability(.inspector), run: pages.showWebInspector)
         case .toggleTranslationToolbar:
@@ -256,16 +257,6 @@ struct BrowserCommandActions {
     }
 
     // MARK: - Chrome
-
-    func presentArchive() {
-        chrome.showSidebar()
-        chrome.utilityPresentation.present(.archive)
-    }
-
-    func presentDownloads() {
-        chrome.showSidebar()
-        chrome.utilityPresentation.present(.downloads)
-    }
 
     func toggleSidebar() {
         if chrome.columnVisibility == .detailOnly {

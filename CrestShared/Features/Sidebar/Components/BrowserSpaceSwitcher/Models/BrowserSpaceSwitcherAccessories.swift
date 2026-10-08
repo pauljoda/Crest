@@ -13,17 +13,16 @@ struct BrowserSpaceSwitcherAccessories {
     var commonLists: BrowserSpaceSwitcherCommonLists?
 }
 
-/// The switcher's leading accessory: show or hide the sidebar the switcher is
-/// standing in.
+/// The switcher's accessory at the window's edge: show or hide the sidebar
+/// the switcher is standing in.
 struct BrowserSpaceSwitcherSidebarToggle {
     let action: BrowserSidebarToggleAction
     let toggle: () -> Void
-    var sidebarOnRight = false
 }
 
-/// The switcher's trailing accessory: the archive, history, and downloads
-/// lists, and the badge that says how many finished downloads have not been
-/// looked at yet.
+/// The switcher's accessory on the page side: the archive, history, and
+/// downloads lists, and the badge that says how many finished downloads have
+/// not been looked at yet.
 struct BrowserSpaceSwitcherCommonLists {
     let isExpanded: Bool
     let toggle: () -> Void

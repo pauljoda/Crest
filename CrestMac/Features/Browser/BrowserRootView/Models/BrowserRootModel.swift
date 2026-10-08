@@ -38,11 +38,12 @@ final class BrowserRootModel {
     var isPrepared = false
     @ObservationIgnored private var isPreparingBrowser = false
     var visibleNotice: BrowserNotice?
+    /// The window's chrome keeps it, so a command that presents a sidebar list
+    /// knows whether the sidebar is already on screen.
     var isFloatingSidebarPresented: Bool {
-        get { observed(\.isFloatingSidebarPresentedStorage, as: \.isFloatingSidebarPresented) }
-        set { publish(newValue, into: \.isFloatingSidebarPresentedStorage, as: \.isFloatingSidebarPresented) }
+        get { chrome.isFloatingSidebarPresented }
+        set { chrome.isFloatingSidebarPresented = newValue }
     }
-    @ObservationIgnored private var isFloatingSidebarPresentedStorage = false
     private(set) var isSidebarMorphing: Bool {
         get { observed(\.isSidebarMorphingStorage, as: \.isSidebarMorphing) }
         set { publish(newValue, into: \.isSidebarMorphingStorage, as: \.isSidebarMorphing) }

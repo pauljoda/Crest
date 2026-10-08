@@ -5,7 +5,6 @@ import SwiftUI
 /// presentation with the settings scene.
 struct BrowserRootSidebarContent: View {
     let model: BrowserRootModel
-    var sidebarOnRight = false
     let spaceSettingsPresentation: BrowserSpaceSettingsPresentationState
     let commandSurfaceNamespace: Namespace.ID
     let tabPromotionNamespace: Namespace.ID
@@ -31,7 +30,6 @@ struct BrowserRootSidebarContent: View {
                 activateAddress: { model.chrome.openLocation(model.address) },
                 submitAddress: model.submitAddress,
                 openNewTab: model.openNewTab,
-                sidebarOnRight: sidebarOnRight,
                 sidebarToggleAction:
                     model.sidebarPresentation.sidebarToggleAction,
                 toggleSidebar: {
@@ -66,7 +64,7 @@ struct BrowserRootSidebarContent: View {
         let create: (() -> Void)? = model.browser.isTemporaryWorkspace ? nil : { createSpace() }
         return BrowserSidebarChromeActions(
             presentSpaceSettings: { presentSpaceSettings(for: $0) },
-            presentHistory: { model.chrome.utilityPresentation.present(.history) },
+            presentHistory: { model.chrome.presentUtility(.history) },
             createSpace: create
         )
     }

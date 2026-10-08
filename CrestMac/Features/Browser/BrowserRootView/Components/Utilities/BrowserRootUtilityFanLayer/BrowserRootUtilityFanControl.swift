@@ -47,7 +47,7 @@ struct BrowserRootUtilityFanControl: View {
                 ?? .accentColor,
             downloads: model.selectedUtilityDownloads,
             newDownloadCount: model.newUtilityDownloads.count,
-            select: model.chrome.utilityPresentation.present
+            select: model.chrome.presentUtility
         )
         .zIndex(BrowserRootMetrics.utilityFanZIndex)
     }
