@@ -22,12 +22,10 @@ def load_check_module():
     return module
 
 
-def commit(message: str, login: str = "person", parents: int = 1) -> dict:
+def commit(message: str, parents: int = 1) -> dict:
     return {
         "sha": "0123456789abcdef",
         "parents": [{"sha": "p"}] * parents,
-        "author": {"login": login},
-        "committer": {"login": login},
         "commit": {"message": message},
     }
 
@@ -60,15 +58,19 @@ class ContributionCheckTests(unittest.TestCase):
         self.assertTrue(self.check.opened_before_policy("2026-10-06T14:40:38Z"))
         self.assertFalse(self.check.opened_before_policy("2026-10-09T00:00:00Z"))
 
-    def test_sign_off_is_required_except_for_bots_and_merges(self) -> None:
+    def test_sign_off_is_required_except_for_merges(self) -> None:
         signed = commit("fix: a thing\n\nSigned-off-by: Person <person@example.com>")
         unsigned = commit("fix: a thing")
-        bot = commit("chore(deps): bump", login="dependabot[bot]")
+        empty_trailer = commit("fix: a thing\n\nSigned-off-by:")
         merge = commit("Merge branch 'main'", parents=2)
 
-        self.assertEqual(self.check.sign_off_problems([signed, bot, merge]), [])
-        self.assertEqual(len(self.check.sign_off_problems([signed, unsigned])), 1)
-        self.assertEqual(self.check.sign_off_problems([unsigned], exempt_logins={"person"}), [])
+        self.assertEqual(self.check.sign_off_problems([signed, merge]), [])
+        self.assertEqual(len(self.check.sign_off_problems([signed, unsigned, empty_trailer])), 2)
+
+    def test_only_the_pull_request_author_can_exempt_a_pull_request(self) -> None:
+        self.assertTrue(self.check.exempt_from_sign_off("dependabot[bot]", set()))
+        self.assertTrue(self.check.exempt_from_sign_off("owner", {"owner"}))
+        self.assertFalse(self.check.exempt_from_sign_off("person", {"owner"}))
 
 
 if __name__ == "__main__":

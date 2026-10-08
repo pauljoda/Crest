@@ -14,7 +14,7 @@ import sys
 POLICY_START = datetime(2026, 10, 9, tzinfo=timezone.utc)
 AI_USED_MARKER = "AI tools helped produce this change"
 SKILL_MARKER = "crest-contribution"
-SIGN_OFF_TRAILER = "Signed-off-by:"
+SIGN_OFF_LINE = re.compile(r"^Signed-off-by:\s+\S.*<[^<>\s]+@[^<>\s]+>\s*$")
 CHECKBOX_LINE = re.compile(r"^\s*[-*]\s*\[([ xX])\]\s*(.*)$")
 
 
@@ -53,22 +53,22 @@ def ai_declaration_problems(body: str) -> list[str]:
     return []
 
 
-def sign_off_problems(commits: list[dict], exempt_logins: set[str] = frozenset()) -> list[str]:
-    """Bots, merge commits and the exempt logins (the repository owner) need no trailer."""
+def exempt_from_sign_off(pull_request_author: str, exempt_logins: set[str]) -> bool:
+    """The authenticated account that opened the pull request decides the exemption.
+
+    A commit's recorded author or committer is free text, so it cannot be trusted
+    to identify the repository owner or a bot.
+    """
+    return pull_request_author.endswith("[bot]") or pull_request_author in exempt_logins
+
+
+def sign_off_problems(commits: list[dict]) -> list[str]:
     problems: list[str] = []
     for commit in commits:
         if len(commit.get("parents", [])) > 1:
             continue
-        logins = {
-            (commit.get(role) or {}).get("login") or ""
-            for role in ("author", "committer")
-        }
-        if any(login.endswith("[bot]") or login in exempt_logins for login in logins):
-            continue
         message = commit.get("commit", {}).get("message", "")
-        if not any(
-            line.strip().startswith(SIGN_OFF_TRAILER) for line in message.splitlines()
-        ):
+        if not any(SIGN_OFF_LINE.match(line.strip()) for line in message.splitlines()):
             sha = commit.get("sha", "")[:12]
             subject = message.splitlines()[0] if message else ""
             problems.append(
@@ -98,7 +98,7 @@ def main() -> int:
         "--exempt-login",
         action="append",
         default=[],
-        help="GitHub login whose commits need no sign-off, such as the repository owner",
+        help="GitHub login whose pull requests need no sign-off, such as the repository owner",
     )
     arguments = parser.parse_args()
 
@@ -113,9 +113,11 @@ def main() -> int:
     else:
         if arguments.commits is None:
             parser.error("--commits is required for the sign-off check")
-        problems = sign_off_problems(
-            load_commits(arguments.commits), set(arguments.exempt_login)
-        )
+        author = (pull_request.get("user") or {}).get("login") or ""
+        if exempt_from_sign_off(author, set(arguments.exempt_login)):
+            print(f"Pull request opened by {author}; no sign-off required.")
+            return 0
+        problems = sign_off_problems(load_commits(arguments.commits))
 
     for problem in problems:
         print(f"error: {problem}", file=sys.stderr)

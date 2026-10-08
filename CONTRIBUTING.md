@@ -134,5 +134,5 @@ Signed-off-by: Your Name <you@example.com>
 ```
 
 The **Contribution checks** workflow fails a pull request when any of its
-commits lacks the trailer. Merge commits, bot commits, and the repository
-owner's commits are exempt.
+commits lacks the trailer. Merge commits are skipped, and pull requests
+opened by bots or by the repository owner are exempt.
