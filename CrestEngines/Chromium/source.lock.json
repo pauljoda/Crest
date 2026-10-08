@@ -2,18 +2,18 @@
   "schemaVersion": 1,
   "status": "source-preparation",
   "chromium": {
-    "version": "154.0.8037.57",
-    "sourceArchive": "https://commondatastorage.googleapis.com/chromium-browser-official/chromium-154.0.8037.57-lite.tar.xz",
-    "hashManifest": "md5  4f8583384bdebc17e368caf752d860df  chromium-154.0.8037.57-lite.tar.xz\nsha1  186fc6a1597d04fefc48c64ca0acdb5b3e4ff98b  chromium-154.0.8037.57-lite.tar.xz\nsha224  02038cf82fca325316e139d476eea3fe63ec7d1f9e994445f114c5e1  chromium-154.0.8037.57-lite.tar.xz\nsha256  a7280e6fb90419bb629e1b2cd2df101255e5fe4b9017bb93412001d923872959  chromium-154.0.8037.57-lite.tar.xz\nsha384  2ad1ec909d3344d9138ca8453aba8c9a987e4b157d3631e8b18d8d258bf8bf79438a71713de191c0a4056c12b41dd201  chromium-154.0.8037.57-lite.tar.xz\nsha512  ad9ddd51902e11cde9e63ed206aac31298c7b3ab76cb5101b732f19ef6aecd452aa0c71669e39559d81edf44b235821933e55cf960636e2ad0de1c79b116e09f  chromium-154.0.8037.57-lite.tar.xz\n",
-    "sourceArchiveSha256": "a7280e6fb90419bb629e1b2cd2df101255e5fe4b9017bb93412001d923872959"
+    "version": "154.0.8037.97",
+    "sourceArchive": "https://commondatastorage.googleapis.com/chromium-browser-official/chromium-154.0.8037.97-lite.tar.xz",
+    "hashManifest": "md5  0c949f565c853e8f7fe9cfd0962eb51a  chromium-154.0.8037.97-lite.tar.xz\nsha1  13fa8f3bcbfb2581d1b9f23604f003f39b7ae8b4  chromium-154.0.8037.97-lite.tar.xz\nsha224  4c988819f5e31f1994de5dd73e5fde55df64ba45a5ba70f4cc9de790  chromium-154.0.8037.97-lite.tar.xz\nsha256  d3679fa6ed356c7d701fae03eb39c7b6905c7c4abe46eadd998985825b91dc4b  chromium-154.0.8037.97-lite.tar.xz\nsha384  f125b74ece10fd5dcb2fa994fbcd8fa1f33426dd1bf70087ace13082c81b82404c2ea55cbe6113b3f0fb6f08db2baa52  chromium-154.0.8037.97-lite.tar.xz\nsha512  e3c23d269930bbb01d11e42a70ce5814659d821ae69d525009a18c709d6a7aa5b4ef763ad325813037a5d6a1728a71dc1d55b05da18fc957d7665ae098c6fe80  chromium-154.0.8037.97-lite.tar.xz\n",
+    "sourceArchiveSha256": "d3679fa6ed356c7d701fae03eb39c7b6905c7c4abe46eadd998985825b91dc4b"
   },
   "ungoogledMac": {
     "repository": "https://github.com/ungoogled-software/ungoogled-chromium-macos.git",
-    "tag": "154.0.8037.57-1.1",
-    "commit": "3241dc9cacee393621d277ec936376072f0cb3c5"
+    "tag": "154.0.8037.97-1.1",
+    "commit": "f7ba75f94442abda7ac3ea81790c217f8636d3ba"
   },
   "ungoogled": {
-    "commit": "800d0bb5078472e4442c1fd73373172754a60939"
+    "commit": "3e46b13825f808f0886e484d44532372655e5fe4"
   },
   "inputs": {
     "ungoogled-chromium/flags.gn": "a274a5633b3f909a1d6035192b5ff02c28f81a2f8fe60545d56bde34a0dc6c6b",
@@ -88,7 +88,7 @@
     "ungoogled-chromium/patches/core/ungoogled-chromium/fix-building-with-prunned-binaries.patch": "2fd2dfca1e053883a75645efd68866d6426403222f6eb60000278f3300486d2a",
     "ungoogled-chromium/patches/core/ungoogled-chromium/disable-network-time-tracker.patch": "04278b44bfa8f0a3979e406e7208d6f27f278bfea1e3fd500c176cf7eac52d4e",
     "ungoogled-chromium/patches/core/ungoogled-chromium/disable-mei-preload.patch": "7cb66bc4c87cf0c2bcd654ca5702580638ca54dbdd64c2c15e2668810dde4d90",
-    "ungoogled-chromium/patches/core/ungoogled-chromium/fix-building-without-safebrowsing.patch": "b0be19d0e00a0c1dd9671c3e74cc84b61198cf401e379606bd9ee3c06d017f79",
+    "ungoogled-chromium/patches/core/ungoogled-chromium/fix-building-without-safebrowsing.patch": "4cfab7a1a77d0faf2dbb5c6be42dc9f89e242ae264d88a55d2a37873e2a01ba2",
     "ungoogled-chromium/patches/core/ungoogled-chromium/remove-unused-preferences-fields.patch": "1d9319e420773dda1c6ee33cc200665ace002f099b00e51c6b18633ea00f8b36",
     "ungoogled-chromium/patches/core/ungoogled-chromium/block-requests.patch": "782c0444c67208efa642280154299c14f35f37d7f12d3e5d16a1f0907f7ae77f",
     "ungoogled-chromium/patches/core/ungoogled-chromium/disable-privacy-sandbox.patch": "564d1132649a540a7ea84d7d44404d937cd81f7704b9b7bb867103638d39d8d3",
@@ -204,7 +204,7 @@
   },
   "performanceInputs": {
     "macSDKVersion": "26.5",
-    "pgoProfile": "chrome-mac-arm-8037-1789514271-354a99ee3138b99ca5663d169539bc1a82b1eca7-01b870b743c773a6d66e8b1c5294a95ac51cd3b0.profdata",
-    "pgoSHA256": "695b6c5c63cdeb07f938ee4c3230922310539325d3edb20d0ea1829e74a320c8"
+    "pgoProfile": "chrome-mac-arm-8037-1790791134-7e625cd05d442bc4dc0d292ca8f6a62d10ba87b9-c9f64f1768c4ff9cc30866c2491980e13eb1e068.profdata",
+    "pgoSHA256": "57e63507bee3fd530656fc4201332ec1d69a17d7d0dda3aaca4c3923779e4e9a"
   }
 }

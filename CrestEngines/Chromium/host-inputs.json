@@ -156,8 +156,8 @@
     "after": "bd33b429a87de6f90ac266a87ac8a9b7fca347aed7eed1e8e64112cb0799ec6c"
   },
   "content/browser/renderer_host/render_frame_host_impl.cc": {
-    "before": "21239d549ad602c076a5b99efa9ed266124dc42105daedb9d31fb2a266f82f3b",
-    "after": "94610c580a7027930144482ae34e8786066058f96c5fb0cccd6d965b6eb330c7"
+    "before": "fc4660abf76c237ba64d15a4fd099f504098248305bd09c23aeee525fc90bdd3",
+    "after": "b69b39d71fd69a7085207213a42f3c3eda667756dda91f608d0b59fe9778fb16"
   },
   "content/public/browser/web_contents_delegate.h": {
     "before": "1dfcb8e47f43746e0b7b83f395a47f633bcaf3b34d937ee1fc87ffc8f40bd896",
@@ -268,12 +268,12 @@
     "after": "5f9cf8c7525c4a122723d8cf6ff8a8da635189ae4e8dc1b35b89991e3623468d"
   },
   "content/browser/web_contents/web_contents_impl.h": {
-    "before": "e2a637a5aaf7ada62fab64088f9723137a39c9790594831b1f11767907f2f16c",
-    "after": "52bc13218143edf1ce9393f95b1725534d06753f9858b9add0b607a92d46f5e9"
+    "before": "3be6896cfe7811fc58f59cf7556ec8b942ca066af045f3d527ceb19f6e80fad2",
+    "after": "ab9a24a5ec7d5e2f7170e005bf019b79da84f40c2d9df030bdb58fea0707ca18"
   },
   "content/browser/web_contents/web_contents_impl.cc": {
-    "before": "7c1b9a062b384b753ee4ec54b7b38739fb85b60594711d3239b9cbcc0e7cd661",
-    "after": "ecb87a03f60221b9a2c952bd93341939b64de3e983d4952ae89e29a9bec3ed69"
+    "before": "c345ec17e1310c395f0b25098d6ffddeb3dde425779cd28eb40930c854da7630",
+    "after": "c43b1a4dc1045bbc9f458dcd6d8ec1b0e55c77c3e9bdd089de1edebaf63f7cbb"
   },
   "content/public/browser/web_contents_observer.h": {
     "before": "13fe3a2e17ea5d1518ffd672ca15e015dd28c977002bfbe5cd78677b72aaf33f",
