@@ -15,7 +15,7 @@ An ordinary page appears in the current-tabs area. Close or archive it when fini
 
 ## Pinned sites
 
-Pinned sites appear as a compact icon grid near the top of a Space. Use them for always-close destinations such as mail, calendar, or a dashboard. Choose **Pin or Unpin Current Tab** or press **Command-D**.
+Pinned sites appear as a compact icon grid near the top of a Space. Use them for always-close destinations such as mail, calendar, or a dashboard. Choose **Pin or Unpin Current Tab** or press **Command-D**. You can also right-click a tab and choose **Pin Tab**, or right-click a pinned tab and choose **Unpin Tab**; on iPhone and iPad, touch and hold the tab instead.
 
 ## Saved tabs and saved locations
 

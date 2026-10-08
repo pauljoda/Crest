@@ -66,7 +66,19 @@ struct BrowserTabOrganizationMenuContent: View {
             Divider()
         }
 
-        if tab.placement != .pinned {
+        // Unpin Tab takes Pin Tab's place so the two read as a pair; it moves
+        // the tab to Current Tabs, as ⌘D's Pin or Unpin Tab does.
+        if tab.placement == .pinned {
+            Button("Unpin Tab", systemImage: "pin.slash") {
+                performIfCurrent {
+                    browser.moveTab(
+                        tab.id,
+                        matching: sourceAssignment,
+                        to: .current
+                    )
+                }
+            }
+        } else {
             Button("Pin Tab", systemImage: "pin") {
                 performIfCurrent {
                     browser.moveTab(
@@ -158,7 +170,7 @@ struct BrowserTabOrganizationMenuContent: View {
             .crestMenuActionLabelStyle()
         }
 
-        if tab.placement.isDurable {
+        if tab.placement.isDurable, tab.placement != .pinned {
             Button("Move to Current Tabs", systemImage: "rectangle.stack") {
                 performIfCurrent {
                     browser.moveTab(

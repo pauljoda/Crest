@@ -91,11 +91,17 @@ the live status for each issue.
 - [ ] [feature: Translate Crest into Korean, Japanese, and other languages](https://github.com/pauljoda/Crest/issues/273)
 - [ ] [Evaluate a setting for where new tabs open in the sidebar](https://github.com/pauljoda/Crest/issues/276)
 - [ ] [Keep find in page in step with what you type](https://github.com/pauljoda/Crest/issues/278)
+- [ ] [feature: Github live folders from Arc](https://github.com/pauljoda/Crest/issues/279)
 - [ ] [Show a designed window when opening the Mac installer](https://github.com/pauljoda/Crest/issues/280)
 - [ ] [bug: Extension keyboard shortcuts act on a different tab than the one being viewed](https://github.com/pauljoda/Crest/issues/290)
 - [ ] [Evaluate tab and folder previews when hovering the sidebar](https://github.com/pauljoda/Crest/issues/294)
+- [ ] [feature: Be able to select a single tab instead of whole window while screen sharing](https://github.com/pauljoda/Crest/issues/295)
 - [ ] [Show page loading in the address bar instead of on the page card](https://github.com/pauljoda/Crest/issues/296)
+- [ ] [feature: "New Empty Split View" From Zen](https://github.com/pauljoda/Crest/issues/297)
 - [ ] [Move whole folders between Spaces](https://github.com/pauljoda/Crest/issues/298)
+- [ ] [Pointer reappears during playback and the sidebar opens on its own](https://github.com/pauljoda/Crest/issues/304)
+- [ ] [feature: Make the page frame's corners concentric with the macOS 26 window corners](https://github.com/pauljoda/Crest/issues/305)
+- [ ] [Optional horizontal tab layout](https://github.com/pauljoda/Crest/issues/307)
 
 #### Completed
 

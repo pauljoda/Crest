@@ -3722,6 +3722,10 @@
       "category": "improved",
       "message": "Setup no longer looks through other browsers’ data when Crest first opens. It reads a browser only when you choose it to import, or everything when you press Scan for more."
     },
+    "pinned-tab-unpin-menu": {
+      "category": "improved",
+      "message": "A pinned tab's menu now offers Unpin Tab, and a selection of pinned tabs offers Unpin Tabs."
+    },
     "concentric-page-corners": {
       "category": "improved",
       "message": "On Mac, a page’s corners now follow the rounded corners of its window, so the window border stays the same width all the way around at any border size."

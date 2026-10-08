@@ -24,8 +24,17 @@ struct BrowserTabBatchMenu: View {
         Divider()
         Button("Copy Link URLs", systemImage: "link", action: copyLinks)
         Divider()
-        action("Pin \(count) Tabs", systemImage: "pin", browser.filing(request, .pinned))
-        action("Move to Current Tabs", systemImage: "rectangle.stack", browser.filing(request, .current))
+        // A selection of pinned tabs only is unpinned, the pair of Pin N Tabs;
+        // any other selection may hold tabs to pin.
+        if request.members.allSatisfy({ $0.placement == .pinned }) {
+            action(
+                count == 1 ? "Unpin Tab" : "Unpin \(count) Tabs", systemImage: "pin.slash",
+                browser.filing(request, .current))
+        } else {
+            action(
+                count == 1 ? "Pin Tab" : "Pin \(count) Tabs", systemImage: "pin", browser.filing(request, .pinned))
+            action("Move to Current Tabs", systemImage: "rectangle.stack", browser.filing(request, .current))
+        }
         Menu("Move to Folder", systemImage: "folder") {
             action("New Current Tabs Folder", browser.filingInNewFolder(request, in: .current))
             action("New Saved Folder", browser.filingInNewFolder(request, in: .saved))
