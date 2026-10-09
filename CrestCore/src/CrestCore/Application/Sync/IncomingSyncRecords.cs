@@ -17,7 +17,8 @@ internal sealed class IncomingSyncRecords {
     /// Each readable record as the journal holds it, in the order they arrived.
     private readonly IReadOnlyList<JsonObject> nodes;
 
-    /// Each readable record's Space, by its name in the journal.
+    /// Each readable record's Space, by its name in the journal, for the kinds
+    /// that never move between Spaces.
     private readonly IReadOnlyDictionary<string, Guid> spaces;
 
     /// The first record left out, which a refusal of the whole batch names.
@@ -46,7 +47,8 @@ internal sealed class IncomingSyncRecords {
     public IncomingSyncRecords(IReadOnlyList<SyncRecord> records) {
         if (records.Count > NativeSyncJournal.MaximumRecords) throw Refused(SyncRecordFlaw.TooManyRecords, subject: null);
         var read = new List<JsonObject>(records.Count);
-        var names = new Dictionary<string, Guid>(StringComparer.Ordinal);
+        var names = new HashSet<string>(StringComparer.Ordinal);
+        var placed = new Dictionary<string, Guid>(StringComparer.Ordinal);
         foreach (var record in records) {
             if (record.Schema > SyncRecordBody.NewestSchema) {
                 FromNewerBuild++;
@@ -58,11 +60,13 @@ internal sealed class IncomingSyncRecords {
                 firstSkipped ??= record.Id;
                 continue;
             }
-            if (!names.TryAdd(record.Kind.RecordName(record.Id), record.SpaceId)) throw Refused(SyncRecordFlaw.DuplicateRecord, record.Id);
+            string name = record.Kind.RecordName(record.Id);
+            if (!names.Add(name)) throw Refused(SyncRecordFlaw.DuplicateRecord, record.Id);
+            if (!record.Kind.MovesBetweenSpaces) placed[name] = record.SpaceId;
             read.Add(node);
         }
         nodes = read;
-        spaces = names;
+        spaces = placed;
     }
 
     #endregion
@@ -79,7 +83,9 @@ internal sealed class IncomingSyncRecords {
     }
 
     /// Throws `Rejected` with `InvalidSyncRecords` naming `ChangedSpace` for a
-    /// record `journal` holds in another Space than the one it arrived in.
+    /// record `journal` holds in another Space than the one it arrived in, of
+    /// a kind that never moves between Spaces. A moved tab or archive merges
+    /// as any other version of it does.
     public void RequireSameSpaces(NativeSyncJournal journal) {
         foreach (var (name, space) in spaces)
             if (journal.SpaceOf(name) is { } held && held != space) throw Refused(SyncRecordFlaw.ChangedSpace, spaceOfName: name);

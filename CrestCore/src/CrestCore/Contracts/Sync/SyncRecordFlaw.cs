@@ -19,7 +19,8 @@ public sealed class SyncRecordFlaw {
     /// its deletion reason.
     public static readonly SyncRecordFlaw MalformedRecord = new(name: "malformedRecord",
         title: "A record can’t be read.");
-    /// A record the journal holds in one Space arrived in another.
+    /// A record the journal holds in one Space arrived in another, of a kind
+    /// that never moves between Spaces.
     public static readonly SyncRecordFlaw ChangedSpace = new(name: "changedSpace",
         title: "A record moved to another Space.");
     /// Folders are nested inside each other.

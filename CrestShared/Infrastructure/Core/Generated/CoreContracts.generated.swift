@@ -18497,18 +18497,54 @@ struct SyncRecordKind: Hashable, Sendable {
     var name: String { facts.name }
     var cloudRecordType: String { facts.cloudRecordType }
     var namesItsSpace: Bool { facts.namesItsSpace }
+    var movesBetweenSpaces: Bool { facts.movesBetweenSpaces }
     private let facts: Facts
 
-    private init(tag: Int, name: String, cloudRecordType: String, namesItsSpace: Bool) {
+    private init(tag: Int, name: String, cloudRecordType: String, namesItsSpace: Bool, movesBetweenSpaces: Bool) {
         self.tag = tag
-        facts = Facts(name: name, cloudRecordType: cloudRecordType, namesItsSpace: namesItsSpace)
+        facts = Facts(
+            name: name,
+            cloudRecordType: cloudRecordType,
+            namesItsSpace: namesItsSpace,
+            movesBetweenSpaces: movesBetweenSpaces
+        )
     }
 
-    static let space = SyncRecordKind(tag: 0, name: "space", cloudRecordType: "CrestSpace", namesItsSpace: true)
-    static let folder = SyncRecordKind(tag: 1, name: "folder", cloudRecordType: "CrestFolder", namesItsSpace: false)
-    static let tab = SyncRecordKind(tag: 2, name: "tab", cloudRecordType: "CrestTab", namesItsSpace: false)
-    static let history = SyncRecordKind(tag: 3, name: "history", cloudRecordType: "CrestHistory", namesItsSpace: false)
-    static let archive = SyncRecordKind(tag: 4, name: "archive", cloudRecordType: "CrestArchive", namesItsSpace: false)
+    static let space = SyncRecordKind(
+        tag: 0,
+        name: "space",
+        cloudRecordType: "CrestSpace",
+        namesItsSpace: true,
+        movesBetweenSpaces: false
+    )
+    static let folder = SyncRecordKind(
+        tag: 1,
+        name: "folder",
+        cloudRecordType: "CrestFolder",
+        namesItsSpace: false,
+        movesBetweenSpaces: false
+    )
+    static let tab = SyncRecordKind(
+        tag: 2,
+        name: "tab",
+        cloudRecordType: "CrestTab",
+        namesItsSpace: false,
+        movesBetweenSpaces: true
+    )
+    static let history = SyncRecordKind(
+        tag: 3,
+        name: "history",
+        cloudRecordType: "CrestHistory",
+        namesItsSpace: false,
+        movesBetweenSpaces: false
+    )
+    static let archive = SyncRecordKind(
+        tag: 4,
+        name: "archive",
+        cloudRecordType: "CrestArchive",
+        namesItsSpace: false,
+        movesBetweenSpaces: true
+    )
 
     static let all: [SyncRecordKind] = [space, folder, tab, history, archive]
 
@@ -18528,11 +18564,13 @@ struct SyncRecordKind: Hashable, Sendable {
         let name: String
         let cloudRecordType: String
         let namesItsSpace: Bool
+        let movesBetweenSpaces: Bool
 
-        init(name: String, cloudRecordType: String, namesItsSpace: Bool) {
+        init(name: String, cloudRecordType: String, namesItsSpace: Bool, movesBetweenSpaces: Bool) {
             self.name = name
             self.cloudRecordType = cloudRecordType
             self.namesItsSpace = namesItsSpace
+            self.movesBetweenSpaces = movesBetweenSpaces
         }
     }
 }

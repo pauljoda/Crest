@@ -121,6 +121,29 @@ public sealed partial class BrowserContractsTests {
         Assert.Contains(stored.Session.Current.Spaces.Single().Tabs, tab => tab.Id == last);
     }
 
+    /// A tab moved to another Space keeps its identity, so another device
+    /// receives it in a Space other than the one it holds it in. The newer
+    /// version moves it there, in a batch and in a full pull alike: refusing
+    /// it would fail every later batch and every pull meant to recover them.
+    [Fact]
+    public void ATabMovedToAnotherSpaceMovesThereInABatchAndInAFullPull() {
+        foreach (bool fullPull in new[] { false, true }) {
+            using var directory = new StorageDirectory();
+            var fixture = SavedSession();
+            using var stored = StoredSyncing(directory, fixture.Document);
+            var destination = Guid.NewGuid();
+            stored.App.Send(new MergeSyncRecords([CloudSpace(destination, Guid.NewGuid(), 5)]));
+            SyncRecord[] moved = [CloudTab(fixture.Tab, destination, 1_000_000)];
+
+            stored.App.Send(fullPull ? new MergeCloudSnapshot(moved) : new MergeSyncRecords(moved));
+
+            var spaces = stored.Session.Current.Spaces;
+            Assert.DoesNotContain(spaces.Single(space => space.Id == fixture.Space).Tabs, tab => tab.Id == fixture.Tab);
+            Assert.Contains(spaces.Single(space => space.Id == destination).Tabs, tab => tab.Id == fixture.Tab);
+            Assert.Equal(destination, stored.Sync.Snapshot.SpaceOf(SyncRecordKind.Tab.RecordName(fixture.Tab)));
+        }
+    }
+
     /// Batches the cloud may send that no rule lets the core take, each
     /// refused by the rule it breaks, never by the net for failures no rule
     /// names, and never as a fault.
@@ -129,7 +152,7 @@ public sealed partial class BrowserContractsTests {
         using var directory = new StorageDirectory();
         var fixture = SavedSession();
         using var stored = StoredSyncing(directory, fixture.Document);
-        var held = fixture.Tab;
+        var heldFolder = Guid.Parse(fixture.Document["session"]!["spaces"]![0]!["folders"]![0]!["id"]!["rawValue"]!.GetValue<string>());
         var elsewhere = Guid.NewGuid();
         var profile = Guid.NewGuid();
         var folder = Guid.NewGuid();
@@ -145,7 +168,8 @@ public sealed partial class BrowserContractsTests {
                 Invalid(SyncRecordFlaw.TooManyRecords)),
             ["two records with one identity"] = ([CloudTab(elsewhere, fixture.Space, 5), CloudTab(elsewhere, fixture.Space, 6)],
                 Invalid(SyncRecordFlaw.DuplicateRecord)),
-            ["a record the journal holds in another Space"] = ([CloudTab(held, Guid.NewGuid(), 5)], Invalid(SyncRecordFlaw.ChangedSpace)),
+            ["a folder the journal holds in another Space"] = ([CloudFolder(heldFolder, Guid.NewGuid(), parent: null, 5)],
+                Invalid(SyncRecordFlaw.ChangedSpace)),
             ["two Spaces with one profile"] = ([CloudSpace(Guid.NewGuid(), profile, 5), CloudSpace(Guid.NewGuid(), profile, 5)],
                 Invalid(SyncRecordFlaw.SharedProfile)),
             ["a Space under another profile"] = ([CloudSpace(fixture.Space, Guid.NewGuid(), ulong.MaxValue / 2)],
@@ -248,7 +272,7 @@ public sealed partial class BrowserContractsTests {
         var folder = SpaceId(fixture.Document["session"]!["spaces"]![0]!["folders"]![0]!);
 
         stored.App.Send(new DeleteFolder(stored.Workspace, fixture.Space, folder));
-        Assert.Throws<Rejected>(() => stored.App.Send(new MergeSyncRecords([CloudTab(fixture.Tab, Guid.NewGuid(), clock: 5)])));
+        Assert.Throws<Rejected>(() => stored.App.Send(new MergeSyncRecords([CloudFolder(folder, Guid.NewGuid(), parent: null, clock: 5)])));
         stored.Sync.Flush();
 
         Assert.Equal("explicitDelete", FolderTombstoneReason(stored.Sync, folder));

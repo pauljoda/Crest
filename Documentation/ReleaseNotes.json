@@ -3769,6 +3769,14 @@
     "screen-sharing-tab-picker": {
       "category": "new",
       "message": "Sharing your screen on a page that runs in Chromium now lets you share a single tab, with its sound, as well as a window or your whole screen."
+    },
+    "icloud-sync-tabs-moved-between-spaces": {
+      "category": "fixed",
+      "message": "iCloud sync no longer stops on your other devices after you move a tab to another Space. A device that stopped picks up again once all your devices are on this version."
+    },
+    "sync-buttons-on-their-own-rows": {
+      "category": "fixed",
+      "message": "On iPhone and iPad, Sync Now and Pull from iCloud each have their own row in Sync settings, so each one responds to a tap."
     }
   }
 }

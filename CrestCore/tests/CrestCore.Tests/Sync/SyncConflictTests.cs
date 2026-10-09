@@ -69,8 +69,15 @@ public sealed partial class BrowserContractsTests {
         Assert.True(JsonNode.DeepEquals(deleted, NativeSyncEvaluator.Resolve(live, deleted)));
         deleted["tombstone"]!["reason"] = "retention";
         Assert.True(JsonNode.DeepEquals(live, NativeSyncEvaluator.Resolve(live, deleted)));
+        // A tab keeps its identity when it moves to another Space, and the
+        // same rules decide between its copies; a history entry never moves.
         deleted["spaceID"] = SwiftId(Guid.NewGuid());
-        Assert.Throws<BrowserRuleException>(() => NativeSyncEvaluator.Resolve(live, deleted));
+        Assert.True(JsonNode.DeepEquals(live, NativeSyncEvaluator.Resolve(live, deleted)));
+        var history = deleted.DeepClone().AsObject();
+        history["id"]!["kind"] = "history";
+        var elsewhere = history.DeepClone().AsObject();
+        elsewhere["spaceID"] = SwiftId(Guid.NewGuid());
+        Assert.Throws<BrowserRuleException>(() => NativeSyncEvaluator.Resolve(history, elsewhere));
     }
 
     [Fact]
