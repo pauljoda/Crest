@@ -7,7 +7,7 @@ from pathlib import Path
 import re
 import sys
 
-from chromium_fork import ENGINE, REPO, read_json, run, write_json
+from chromium_fork import ENGINE, REPO, read_json, run
 import chromium_engine
 
 
@@ -16,6 +16,26 @@ def automatic_release_allowed(policy, *, enabled, default_branch, major_update):
             and policy["automaticChannel"] == "development"
             and policy["integrationBranch"] == default_branch
             and (not major_update or policy["automaticMajorUpdates"]))
+
+
+def append_release_note(catalog, identifier, note):
+    """The release-note catalog text with `note` appended as its last entry.
+
+    The catalog keeps literal characters beside older escapes, so its existing
+    text is left exactly as it is instead of being serialized again.
+    """
+    entries = json.loads(catalog)["entries"]
+    if identifier in entries:
+        raise ValueError("This upstream update already has a release note")
+    closing = "\n    }\n  }\n}\n"
+    if not catalog.endswith(closing):
+        raise ValueError("The release-note catalog no longer ends with its entries")
+    fields = ",\n".join(f"      {json.dumps(name)}: {json.dumps(value, ensure_ascii=False)}"
+                        for name, value in note.items())
+    appended = f"{catalog[:-len(closing)]}\n    }},\n    {json.dumps(identifier)}: {{\n{fields}\n    }}\n  }}\n}}\n"
+    if list(json.loads(appended)["entries"].items()) != list((entries | {identifier: note}).items()):
+        raise ValueError("The release-note catalog did not take the update's entry last")
+    return appended
 
 
 def main():
@@ -45,12 +65,12 @@ def main():
     run("git", "config", "user.email", "41898282+github-actions[bot]@users.noreply.github.com")
     run(REPO / "Scripts/set-version.sh", "--patch")
     notes_path = REPO / "Documentation/ReleaseNotes.json"
-    notes = read_json(notes_path)
     entry = f"chromium-upstream-{tag.replace('.', '-')}-{args.base_sha[:12]}"
-    if entry in notes["entries"]:
-        parser.error("This upstream update already has a release note")
-    notes["entries"][entry] = {"category": "fixed", "message": f"Chromium is updated to {tag.split('-')[0]} with upstream security and compatibility fixes."}
-    write_json(notes_path, notes)
+    note = {"category": "fixed", "message": f"Chromium is updated to {tag.split('-')[0]} with upstream security and compatibility fixes."}
+    try:
+        notes_path.write_text(append_release_note(notes_path.read_text(), entry, note))
+    except ValueError as error:
+        parser.error(str(error))
     run("git", "add", *sorted(allowed_paths), "Config/Version.xcconfig", "Documentation/ReleaseNotes.json")
     run(REPO / "Scripts/check-version.sh", "--fix-commit")
     run("git", "commit", "-m", f"Update Chromium to {tag}")

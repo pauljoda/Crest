@@ -163,5 +163,17 @@ class PromotionTests(unittest.TestCase):
                 release_ready(incomplete, key)
 
 
+class ReleaseNoteTests(unittest.TestCase):
+    def test_update_note_is_appended_last_without_rewriting_existing_entries(self):
+        catalog = ('{\n  "schemaVersion": 2,\n  "entries": {\n    "earlier": {\n      "category": "fixed",\n'
+                   '      "message": "Downloads follow the site you\u2019re on. Settings \\u203a About."\n    }\n  }\n}\n')
+        note = {"category": "fixed", "message": "Chromium is updated to 154.0.8037.97 with upstream fixes."}
+        appended = publication.append_release_note(catalog, "chromium-upstream-154", note)
+        self.assertTrue(appended.startswith(catalog[:-len("\n    }\n  }\n}\n")] + "\n    },\n"))
+        self.assertEqual(list(json.loads(appended)["entries"].items())[-1], ("chromium-upstream-154", note))
+        with self.assertRaises(ValueError):
+            publication.append_release_note(appended, "chromium-upstream-154", note)
+
+
 if __name__ == "__main__":
     unittest.main()
