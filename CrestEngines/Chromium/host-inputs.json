@@ -350,5 +350,9 @@
   "chrome/renderer/resources/extensions/identity_custom_bindings.js": {
     "before": "64c0685f826a4ce834cdde56c3944f7eb90aeeb53927529ec613a271fdf04774",
     "after": "82eafcec187a26f9721b22d76a99bdde8008a01a92fc3d89f598c37f36592eb9"
+  },
+  "chrome/browser/mac/code_sign_clone_manager.mm": {
+    "before": "b876a588a115ef8e851085937cfa17b614b42b0d9d3f4db7c93ceccb5b9358f9",
+    "after": "a5510127b8b5f97d69acc5a9a2e503b4f8933cd0b5c332d87a176566a5c6956a"
   }
 }

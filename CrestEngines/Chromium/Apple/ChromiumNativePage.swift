@@ -62,7 +62,7 @@
             guard let engine else { preconditionFailure("A Chromium page came without its engine.") }
             return EnginePage(
                 id: pageID, pages: engine.pages, historyFamily: .chromium,
-                historyVersion: { [weak self] in self?.host?.engineVersion() },
+                historyVersion: { [weak self] in self?.engine?.version },
                 inspectorPanels: [.console, .elements])
         }
 

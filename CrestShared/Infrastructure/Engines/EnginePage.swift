@@ -93,9 +93,9 @@ final class EnginePage: BrowserFindExecuting {
     // MARK: - Actions - History
 
     /// The page's history as the engine keeps it, to restore later on the same
-    /// engine and version; nil when it has none.
+    /// engine and version; nil when it has none, as before its engine starts.
     func savedHistory() -> Data? {
-        guard let version = historyVersion(),
+        guard pages.isReady, let version = historyVersion(),
             let state = pages.request(SaveInteractionState(pageID: id)).state
         else { return nil }
         return BrowserEngineInteractionState(engine: historyFamily, version: version, payload: state).encoded()

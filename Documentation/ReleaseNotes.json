@@ -3536,7 +3536,7 @@
     },
     "downloads-follow-page-site-choice": {
       "category": "fixed",
-      "message": "Downloads follow the Automatic Downloads choice of the site you\u2019re on, including files it serves from another address, such as GitHub release files. A blocked download\u2019s message no longer appears twice."
+      "message": "Downloads follow the Automatic Downloads choice of the site you’re on, including files it serves from another address, such as GitHub release files. A blocked download’s message no longer appears twice."
     },
     "chromium-pages-retain-requested-zoom": {
       "category": "fixed",
@@ -3720,7 +3720,7 @@
     },
     "onboarding-scan-for-more": {
       "category": "improved",
-      "message": "Setup no longer looks through other browsers\u2019 data when Crest first opens. It reads a browser only when you choose it to import, or everything when you press Scan for more."
+      "message": "Setup no longer looks through other browsers’ data when Crest first opens. It reads a browser only when you choose it to import, or everything when you press Scan for more."
     },
     "pinned-tab-unpin-menu": {
       "category": "improved",
@@ -3728,7 +3728,7 @@
     },
     "concentric-page-corners": {
       "category": "improved",
-      "message": "On Mac, a page\u2019s corners now follow the rounded corners of its window, so the window border stays the same width all the way around at any border size."
+      "message": "On Mac, a page’s corners now follow the rounded corners of its window, so the window border stays the same width all the way around at any border size."
     },
     "full-screen-page-top-band": {
       "category": "fixed",
@@ -3736,15 +3736,27 @@
     },
     "update-restart-recovers": {
       "category": "fixed",
-      "message": "Restarting to install an update no longer gets stuck. If you choose to stay on a page, the update goes back to Ready to Install so you can restart when you\u2019re ready, and a page asking before you leave now comes to the front."
+      "message": "Restarting to install an update no longer gets stuck. If you choose to stay on a page, the update goes back to Ready to Install so you can restart when you’re ready, and a page asking before you leave now comes to the front."
     },
     "update-card-hide": {
       "category": "improved",
-      "message": "You can hide the update card in the sidebar until you next check for updates or restart Crest. Settings \u203a About shows where the update stands and offers the same buttons."
+      "message": "You can hide the update card in the sidebar until you next check for updates or restart Crest. Settings › About shows where the update stands and offers the same buttons."
     },
     "show-history-opens-sidebar": {
       "category": "fixed",
       "message": "On Mac, Show History now opens a hidden sidebar, as Show Archive and Show Downloads do. The History, Archive and Downloads button now sits on the page side of the sidebar, whichever side the sidebar is on, so its shortcuts open beside the sidebar instead of over it, in right-to-left languages too."
+    },
+    "chromium-tab-history-after-relaunch": {
+      "category": "fixed",
+      "message": "On Mac, tabs that use Chromium keep their back and forward history when you quit and reopen Crest, as WebKit tabs already did."
+    },
+    "no-chromium-folder-on-quit": {
+      "category": "fixed",
+      "message": "On Mac, quitting Crest no longer creates an empty Chromium folder in Application Support, where another Chromium browser keeps its profile."
+    },
+    "reopened-windows-after-quit": {
+      "category": "fixed",
+      "message": "On Mac, Crest reopens the windows that were open when you quit, instead of sometimes bringing back windows you had already closed."
     },
     "chromium-upstream-154-0-8037-97-1-1-6c05ab379fd7": {
       "category": "fixed",

@@ -3001,3 +3001,33 @@
 +    return 'https://' + id + '.chromiumapp.org' + path;
    });
  });
+--- a/chrome/browser/mac/code_sign_clone_manager.mm
++++ b/chrome/browser/mac/code_sign_clone_manager.mm
+@@ -23,6 +23,7 @@
+ #include <vector>
+ 
+ #include "base/apple/foundation_util.h"
++#include "base/command_line.h"
+ #include "base/containers/fixed_flat_set.h"
+ #include "base/feature_list.h"
+ #include "base/files/file_enumerator.h"
+@@ -358,6 +359,19 @@
+       CodeSignCloneCleanupTypeArg(),
+       UniqueTempDirSuffixArg(unique_suffix),
+   };
++
++  // Like the browser's other child processes, the helper uses the user data
++  // directory the browser was given. Without it, the helper resolves and
++  // creates the default one, which belongs to any other Chromium on this Mac.
++  const base::CommandLine& browser_command_line =
++      *base::CommandLine::ForCurrentProcess();
++  if (browser_command_line.HasSwitch(switches::kUserDataDir)) {
++    code_sign_clone_cleanup_args.push_back(base::StringPrintf(
++        "--%s=%s", switches::kUserDataDir,
++        browser_command_line.GetSwitchValuePath(switches::kUserDataDir)
++            .value()
++            .c_str()));
++  }
+ 
+   // The child helper process should outlive its parent.
+   base::LaunchOptions options;
