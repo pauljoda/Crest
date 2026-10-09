@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "channels": {
     "stable": "window-focus-bridge-release-format",
-    "development": "show-history-opens-sidebar",
+    "development": "reopened-windows-after-quit",
     "nightly": "pinned-tab-unpin-menu"
   }
 }
