@@ -68,10 +68,12 @@ final class NativeEnginePages: EnginePages {
         var writer = WireWriter()
         request.encodePageRequest(into: &writer)
         guard let table else {
-            // Only initial view setup may wait. A refused user action must
-            // never execute later after its caller was told it failed.
+            // Only initial view setup may wait, such as the history a page
+            // restores in place of its first load, which loads the page's
+            // address when the engine cannot restore it. A refused user action
+            // must never execute later after its caller was told it failed.
             precondition(Request.Answer.self == Bool.self, "\(type(of: request)) requires a ready engine.")
-            let deferred = request is WatchPage || request is ZoomPage
+            let deferred = request is WatchPage || request is ZoomPage || request is RestoreInteractionState
             if deferred {
                 startingRequests.append(writer.bytes)
                 start?()

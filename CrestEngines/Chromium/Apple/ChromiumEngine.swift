@@ -9,6 +9,17 @@
     /// the binding for their view work directly.
     @MainActor
     final class ChromiumEngine: NativeEngineBinding {
+        // MARK: - Static Variables
+
+        /// The version the app's Chromium framework names, read without
+        /// loading it.
+        private static let bundledVersion: String? = {
+            guard let frameworks = Bundle.main.privateFrameworksURL,
+                let framework = Bundle(url: frameworks.appendingPathComponent("Chromium Framework.framework"))
+            else { return nil }
+            return framework.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
+        }()
+
         // MARK: - Variables
 
         let integration = BrowserEngineRegistration.chromium
@@ -30,6 +41,10 @@
         /// preparation's identity.
         var preparations: [UUID: CheckedContinuation<Bool, Never>] = [:]
         private(set) var notifications: ChromiumProfileNotifications?
+        /// The Chromium version a page's saved history belongs to: the running
+        /// engine's, or before it starts, the version of the framework it
+        /// loads, so the tabs a launch shows restore their history.
+        var version: String? { host?.engineVersion() ?? Self.bundledVersion }
 
         // MARK: - Initializers
 

@@ -316,8 +316,10 @@ internal sealed class SessionStorage : IDisposable {
         }
     }
 
-    /// Writes the device records before returning. Throws `StorageException`
-    /// and leaves the file as it was when the write fails.
+    /// Writes the device records before returning, in place of every record
+    /// handed to the worker before them: the caller reads and saves them under
+    /// the device lock, so they are the newest. Throws `StorageException` and
+    /// leaves the file as it was when the write fails.
     public void SaveDevice(DeviceRecords records) {
         ArgumentNullException.ThrowIfNull(records);
         Saved? saved;
@@ -326,7 +328,7 @@ internal sealed class SessionStorage : IDisposable {
             connection.InTransaction(() => connection.WriteDevice(records, writtenDevice));
             writtenDevice = records;
             lock (queue) {
-                if (ReferenceEquals(pendingDevice?.Value, records)) pendingDevice = null;
+                pendingDevice = null;
                 saved = Advance();
             }
         }
@@ -346,15 +348,17 @@ internal sealed class SessionStorage : IDisposable {
     }
 
     /// Saves the newest pending device records, answering `Saved` when the
-    /// file now holds a newer file revision. A failure is published, and the
-    /// records stay pending for the next attempt.
+    /// file now holds a newer file revision. What is owed is read under the
+    /// writer lock, so records a durable save superseded are never written over
+    /// it. A failure is published, and the records stay pending for the next
+    /// attempt.
     private Change? WriteDeviceBehind() {
-        Unwritten<DeviceRecords>? owed;
-        lock (queue) owed = pendingDevice;
-        if (owed is null) return null;
-        var records = owed.Value;
         try {
             lock (writing) {
+                Unwritten<DeviceRecords>? owed;
+                lock (queue) owed = pendingDevice;
+                if (owed is null) return null;
+                var records = owed.Value;
                 RequireOpen();
                 if (!records.Equals(writtenDevice)) connection.InTransaction(() => connection.WriteDevice(records, writtenDevice));
                 writtenDevice = records;

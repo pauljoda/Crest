@@ -13,18 +13,22 @@ final class EnginePageAvailabilityTests: XCTestCase {
         XCTAssertEqual(starts, 0, "A refused user action must not start the engine or be replayed later.")
         XCTAssertTrue(pages.request(WatchPage(pageID: pageID)))
         XCTAssertTrue(pages.request(ZoomPage(pageID: pageID, factor: 1.5)))
-        XCTAssertEqual(starts, 2)
+        // A tab a launch shows restores its history before the engine starts.
+        let restore = RestoreInteractionState(pageID: pageID, state: Data([1]), expectedURL: "https://example.com/")
+        XCTAssertTrue(pages.request(restore))
+        XCTAssertEqual(starts, 3)
         XCTAssertFalse(pages.isReady)
     }
 
     func testDeferredAndClosedPagesHaveNoQueryableDocument() {
         let pages = StartingEnginePages()
         let page = EnginePage(
-            id: UUID(), pages: pages, historyFamily: .chromium, historyVersion: { nil }, inspectorPanels: [])
+            id: UUID(), pages: pages, historyFamily: .chromium, historyVersion: { "1" }, inspectorPanels: [])
 
         XCTAssertTrue(page.mediaActivity.isEmpty)
         XCTAssertNil(page.serverTrust(host: "example.com"))
         XCTAssertFalse(page.isInspected)
+        XCTAssertNil(page.savedHistory())
         XCTAssertEqual(pages.queries, 0)
 
         pages.isReady = true

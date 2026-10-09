@@ -3745,6 +3745,18 @@
     "show-history-opens-sidebar": {
       "category": "fixed",
       "message": "On Mac, Show History now opens a hidden sidebar, as Show Archive and Show Downloads do. The History, Archive and Downloads button now sits on the page side of the sidebar, whichever side the sidebar is on, so its shortcuts open beside the sidebar instead of over it, in right-to-left languages too."
+    },
+    "chromium-tab-history-after-relaunch": {
+      "category": "fixed",
+      "message": "On Mac, tabs that use Chromium keep their back and forward history when you quit and reopen Crest, as WebKit tabs already did."
+    },
+    "no-chromium-folder-on-quit": {
+      "category": "fixed",
+      "message": "On Mac, quitting Crest no longer creates an empty Chromium folder in Application Support, where another Chromium browser keeps its profile."
+    },
+    "reopened-windows-after-quit": {
+      "category": "fixed",
+      "message": "On Mac, Crest reopens the windows that were open when you quit, instead of sometimes bringing back windows you had already closed."
     }
   }
 }
