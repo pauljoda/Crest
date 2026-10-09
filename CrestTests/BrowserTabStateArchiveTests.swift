@@ -5,7 +5,7 @@ import XCTest
 
 final class BrowserTabStateArchiveTests: XCTestCase {
 
-    func testEngineStateRejectsOtherEnginesAndVersionsWhileKeepingLegacyWebKitArchives() throws {
+    func testEngineStateKeepsChromiumAcrossVersionsButRejectsOtherEnginesAndWebKitBuilds() throws {
         let payload = Data("opaque engine history".utf8)
         let chromium = try XCTUnwrap(
             BrowserEngineInteractionState(
@@ -17,10 +17,13 @@ final class BrowserTabStateArchiveTests: XCTestCase {
             ).encoded())
 
         XCTAssertEqual(BrowserEngineInteractionState.payload(chromium, engine: .chromium, version: "1"), payload)
+        XCTAssertEqual(
+            BrowserEngineInteractionState.payload(chromium, engine: .chromium, version: "2"), payload,
+            "Chromium reads back history another version of it saved, so an engine update keeps it.")
         XCTAssertEqual(BrowserEngineInteractionState.payload(webkit, engine: .webKit, version: "os-1"), payload)
+        XCTAssertNil(BrowserEngineInteractionState.payload(webkit, engine: .webKit, version: "os-2"))
         XCTAssertNil(BrowserEngineInteractionState.payload(chromium, engine: .webKit, version: "1"))
         XCTAssertNil(BrowserEngineInteractionState.payload(webkit, engine: .chromium, version: "os-1"))
-        XCTAssertNil(BrowserEngineInteractionState.payload(chromium, engine: .chromium, version: "2"))
         XCTAssertNil(BrowserEngineInteractionState.payload(chromium.dropLast(), engine: .chromium, version: "1"))
         XCTAssertNil(BrowserEngineInteractionState.payload(chromium.dropLast(), engine: .webKit, version: "1"))
         XCTAssertEqual(BrowserEngineInteractionState.payload(payload, engine: .webKit, version: "os-1"), payload)
@@ -57,8 +60,18 @@ final class BrowserTabStateArchiveTests: XCTestCase {
                     isSwiftUIPreviewRuntime: true)))
     }
 
-    func testStateFromAnotherOSBuildOrFormatIsNotRestorable() throws {
+    func testUntaggedStateFromAnotherOSBuildOrAnyStateInAnotherFormatIsNotRestorable() throws {
         let payload = Data("session".utf8)
+        let taggedForeignBuild = try XCTUnwrap(
+            BrowserTabStateEnvelope.decode(
+                BrowserTabStateEnvelope(
+                    interactionState: try XCTUnwrap(
+                        BrowserEngineInteractionState(engine: .chromium, version: "1", payload: payload).encoded()),
+                    url: nil,
+                    osBuild: "Version 1.0 (Build 0A0)"
+                ).encoded()
+            )
+        )
         let foreignBuild = try XCTUnwrap(
             BrowserTabStateEnvelope.decode(
                 BrowserTabStateEnvelope(
@@ -80,7 +93,11 @@ final class BrowserTabStateArchiveTests: XCTestCase {
 
         XCTAssertFalse(
             foreignBuild.isRestorable,
-            "interactionState is WebKit's private format, so another OS build must not be trusted."
+            "Untagged state is WebKit's private format, so another OS build must not be trusted."
+        )
+        XCTAssertTrue(
+            taggedForeignBuild.isRestorable,
+            "Tagged state carries its engine's own version check, so a macOS update keeps it."
         )
         XCTAssertFalse(foreignFormat.isRestorable)
     }

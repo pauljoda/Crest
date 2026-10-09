@@ -1,15 +1,15 @@
 import Dispatch
 import Foundation
 
-/// Frames one `WKWebView.interactionState` blob with the little Crest knows
-/// about it.
+/// Frames one page's saved history with the little Crest knows about it.
 ///
-/// `interactionState` is opaque and WebKit only promises to read back a blob its
-/// own build wrote, so the frame records the OS build that produced it. A blob
-/// stamped by anything else is discarded rather than handed to WebKit. The frame
-/// also records the URL the page was showing, which is what lets a restore be
-/// declined — before WebKit is touched at all — when the tab has since been
-/// pointed somewhere else.
+/// The history is opaque. An engine's tagged history carries its own version
+/// check, but untagged history predates tagging and is always WebKit's, which
+/// WebKit only promises to read back on its own build, so the frame records the
+/// OS build that produced it. An untagged blob stamped by anything else is
+/// discarded rather than handed to WebKit. The frame also records the URL the
+/// page was showing, which is what lets a restore be declined — before the
+/// engine is touched at all — when the tab has since been pointed somewhere else.
 struct BrowserTabStateEnvelope: Equatable, Sendable {
     /// Crest's own framing version, bumped when this layout changes. It is not
     /// WebKit's: the OS build covers that.
@@ -40,10 +40,12 @@ struct BrowserTabStateEnvelope: Equatable, Sendable {
         self.osBuild = osBuild
     }
 
-    /// True when this build of Crest, on this OS build, may hand the payload to
-    /// WebKit. Everything else is treated as absent state.
+    /// True when this build of Crest may hand the payload to its engine: its
+    /// engine's tag decides, or an untagged payload is from this OS build.
+    /// Everything else is treated as absent state.
     var isRestorable: Bool {
-        formatVersion == Self.currentFormatVersion && osBuild == Self.currentOSBuild
+        formatVersion == Self.currentFormatVersion
+            && (BrowserEngineInteractionState.isTagged(interactionState) || osBuild == Self.currentOSBuild)
     }
 
     func encoded() -> Data {
