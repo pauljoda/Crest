@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "channels": {
     "stable": "window-focus-bridge-release-format",
-    "development": "sync-buttons-on-their-own-rows",
+    "development": "icloud-sync-status-shows-waiting-uploads",
     "nightly": "pinned-tab-unpin-menu"
   }
 }

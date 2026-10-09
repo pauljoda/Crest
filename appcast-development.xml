@@ -6,30 +6,33 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.7.29</title>
-            <pubDate>Fri, 09 Oct 2026 19:12:36 +0000</pubDate>
+            <title>0.7.30</title>
+            <pubDate>Fri, 09 Oct 2026 19:57:41 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>development</sparkle:channel>
-            <sparkle:version>1216</sparkle:version>
-            <sparkle:shortVersionString>0.7.29</sparkle:shortVersionString>
+            <sparkle:version>1217</sparkle:version>
+            <sparkle:shortVersionString>0.7.30</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
+### Improved
+
+- Sync settings say Up to date only when every change has reached iCloud, and Waiting to upload while some haven’t yet.
+
 ### Fixed
 
-- iCloud sync no longer stops on your other devices after you move a tab to another Space. A device that stopped picks up again once all your devices are on this version.
-- On iPhone and iPad, Sync Now and Pull from iCloud each have their own row in Sync settings, so each one responds to a tap.
+- iCloud sync catches up each time Crest opens. Changes made on your other devices while Crest was closed arrive, and changes waiting on this device upload, without tapping Sync Now.
 
 ---
 
 Development builds contain the newest changes and may be less reliable than stable releases.
 
-[View all changes](https://github.com/pauljoda/Crest/compare/81b7f9d75a9b7e073a05acb973218cfa5167d9f6...2be4b8e93d6a88ced1ef41b752cef4c9cdfac3f7) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.7.29-2026-10-09-1216-r216.1/Installer-Crest-0.7.29-development-2026-10-09-2be4b8e-arm64.dmg)
+[View all changes](https://github.com/pauljoda/Crest/compare/2be4b8e93d6a88ced1ef41b752cef4c9cdfac3f7...bf4f005f58fffb3f363dfc92949bae76db9dcd7e) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.7.30-2026-10-09-1217-r217.1/Installer-Crest-0.7.30-development-2026-10-09-bf4f005-arm64.dmg)
 
 [Browse Development releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Development+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.7.29-2026-10-09-1216-r216.1/Installer-Crest-0.7.29-development-2026-10-09-2be4b8e-arm64.dmg" length="216043141" type="application/octet-stream" sparkle:edSignature="J1sdsGz2xGuQqEky7MHmBjA48m3LDXayvZoW0jHRIMfCtXvdN4MBEAwzpwPt34kEAtkofPOwH7PHUzwg6uDdBQ=="/>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.7.30-2026-10-09-1217-r217.1/Installer-Crest-0.7.30-development-2026-10-09-bf4f005-arm64.dmg" length="216087173" type="application/octet-stream" sparkle:edSignature="XGC0OdJLqxiHHjZCH6oGD/Pf5DWu3EHw7z/f08dE1UForTbZ7df7P/GW2EHB6Betsat+Og98B/xAYybF6cMRAg=="/>
         </item>
         <item>
             <title>0.6.484</title>
@@ -61,6 +64,6 @@ Development builds contain the newest changes and may be less reliable than stab
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: sYXwzIApFJYNTC6bhBQT0/LSd+jA14+FDi0xENmAYtmApT7NZ8NE11eZB/eggUatUYGwdRl3Wry18rxe0zazBA==
-length: 4186
+edSignature: mip/bwqqmcYjfyQMYYqu5Syah2qVKuBvVIcFITeSnNm38K3h8w+P2WPRyTcfYmPwc6bjlB/eUprucOIfT9FWCg==
+length: 4210
 -->
