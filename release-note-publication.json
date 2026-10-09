@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "channels": {
     "stable": "window-focus-bridge-release-format",
-    "development": "chromium-upstream-154-0-8037-97-1-1-6c05ab379fd7",
+    "development": "screen-sharing-tab-picker",
     "nightly": "pinned-tab-unpin-menu"
   }
 }

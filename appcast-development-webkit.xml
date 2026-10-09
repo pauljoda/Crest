@@ -6,29 +6,29 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.7.27</title>
-            <pubDate>Fri, 09 Oct 2026 16:33:17 +0000</pubDate>
+            <title>0.7.28</title>
+            <pubDate>Fri, 09 Oct 2026 18:07:42 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>development</sparkle:channel>
-            <sparkle:version>1214</sparkle:version>
-            <sparkle:shortVersionString>0.7.27</sparkle:shortVersionString>
+            <sparkle:version>1215</sparkle:version>
+            <sparkle:shortVersionString>0.7.28</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
-### Maintenance
+### New
 
-- Reliability and internal improvements.
+- Sharing your screen on a page that runs in Chromium now lets you share a single tab, with its sound, as well as a window or your whole screen.
 
 ---
 
 Development builds contain the newest changes and may be less reliable than stable releases.
 
-[View all changes](https://github.com/pauljoda/Crest/compare/8ceebb1aa1d8a3201d676ed273a0b4322ae29750...ce5b729439da0d45f79cf2903d6bacb146a4fb1d) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.7.27-2026-10-09-1214-r214.1/Installer-Crest-0.7.27-development-2026-10-09-ce5b729-arm64.dmg)
+[View all changes](https://github.com/pauljoda/Crest/compare/ce5b729439da0d45f79cf2903d6bacb146a4fb1d...81b7f9d75a9b7e073a05acb973218cfa5167d9f6) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.7.28-2026-10-09-1215-r215.1/Installer-Crest-0.7.28-development-2026-10-09-81b7f9d-arm64.dmg)
 
 [Browse Development releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Development+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.7.27-2026-10-09-1214-r214.1/Installer-Crest-0.7.27-development-2026-10-09-ce5b729-arm64.dmg" length="215920772" type="application/octet-stream" sparkle:edSignature="1LgjWD+cx4ChSUw3GSAd0cJJV2+Wz0bKZkg9l7KaICIBkNkue9JVTaYRVPwtfzaF+W4qaavE7l8iO8TnSYmOBw=="/>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.7.28-2026-10-09-1215-r215.1/Installer-Crest-0.7.28-development-2026-10-09-81b7f9d-arm64.dmg" length="216097924" type="application/octet-stream" sparkle:edSignature="I7onq8hhBoEkIO2iX91jIga7/XOHwIC8Vsgr5/oisH64xncdjg9DiJXJly+HbP5//i6Bm0PCqTlzn4SYg4cLAA=="/>
         </item>
         <item>
             <title>0.6.484</title>
@@ -60,6 +60,6 @@ Development builds contain the newest changes and may be less reliable than stab
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: eyqm6nS6guN66cYEcMn+K3PDt+TAIPPog9wSaSlpKnT7DO7GuKctg4NOnX6oZwbZNEdlp0MTAfy7aiTRqW0LCg==
-length: 3937
+edSignature: 4u60f7bH0eCbZH3f4OrXZMZZBAbPm2uZVR++O8yRzshO9KfzjsEseZeN1+KzEyrb4c0CPEZzytucFnHqjNdDDg==
+length: 4033
 -->
