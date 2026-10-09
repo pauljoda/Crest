@@ -7233,7 +7233,7 @@ struct CloudSyncPhase: Hashable, Sendable {
         tag: 2,
         name: "ready",
         isRetryable: false,
-        title: LocalizedStringResource("Ready"),
+        title: LocalizedStringResource("Up to date"),
         symbol: "checkmark.icloud.fill",
         tint: .green,
         keepsCloudOutOfReach: false
@@ -7274,6 +7274,15 @@ struct CloudSyncPhase: Hashable, Sendable {
         tint: .red,
         keepsCloudOutOfReach: true
     )
+    static let waitingToUpload = CloudSyncPhase(
+        tag: 7,
+        name: "waitingToUpload",
+        isRetryable: false,
+        title: LocalizedStringResource("Waiting to upload"),
+        symbol: "icloud.and.arrow.up",
+        tint: .blue,
+        keepsCloudOutOfReach: false
+    )
 
     static let all: [CloudSyncPhase] = [
         disabled,
@@ -7282,7 +7291,8 @@ struct CloudSyncPhase: Hashable, Sendable {
         syncing,
         needsReconciliation,
         waitingForAccount,
-        failed
+        failed,
+        waitingToUpload
     ]
 
     static func named(_ name: String?) -> CloudSyncPhase? {

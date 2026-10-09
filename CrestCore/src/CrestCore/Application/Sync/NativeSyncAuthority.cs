@@ -18,6 +18,15 @@ public sealed class NativeSyncAuthority {
     internal NativeSessionAuthority? Session { get; set; }
     /// The journal this authority accepted last.
     internal NativeSyncJournal Snapshot { get { lock (NativeSessionAuthority.Gate) return journal; } }
+    /// How many records the journal holds waiting to upload, which is none
+    /// while its session is a disposable seed, as `AnnounceStaged` tells it.
+    internal int PendingUploads {
+        get {
+            lock (NativeSessionAuthority.Gate) return PendingUploadsHeld;
+        }
+    }
+    /// `PendingUploads` for a caller that holds the lock.
+    private int PendingUploadsHeld => Session?.IsDisposableSeed == true ? 0 : journal.PendingCount;
 
     #endregion
 
@@ -146,10 +155,7 @@ public sealed class NativeSyncAuthority {
     /// intents take.
     internal void AnnounceStaged() {
         int pendingRecords, records;
-        lock (NativeSessionAuthority.Gate) {
-            bool uploadsNothing = Session?.IsDisposableSeed == true;
-            (pendingRecords, records) = (uploadsNothing ? 0 : journal.PendingCount, journal.RecordCount);
-        }
+        lock (NativeSessionAuthority.Gate) (pendingRecords, records) = (PendingUploadsHeld, journal.RecordCount);
         Announce(workspace => new SyncJournalChanged(workspace, pendingRecords, records));
     }
 

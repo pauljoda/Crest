@@ -97,7 +97,7 @@ public sealed partial class CrestApp : IQueryAnswers, IDisposable {
             closePreparations = new(device, pages, downloads, dataDeletions, ids);
             access = new(device, grants);
             cloudTransport = new(storage: null, device);
-            cloudSync = new(cloudTransport, clock, StoredSessionIsDisposableSeed);
+            cloudSync = new(cloudTransport, clock, StoredSessionIsDisposableSeed, StoredJournalPendingUploads);
             return;
         }
         storage = SessionStorage.Open(directory, Announce, out var loaded);
@@ -109,7 +109,7 @@ public sealed partial class CrestApp : IQueryAnswers, IDisposable {
         closePreparations = new(device, pages, downloads, dataDeletions, ids);
         access = new(device, grants);
         cloudTransport = new(storage, device);
-        cloudSync = new(cloudTransport, clock, StoredSessionIsDisposableSeed);
+        cloudSync = new(cloudTransport, clock, StoredSessionIsDisposableSeed, StoredJournalPendingUploads);
         try {
             if (loaded.Session is { } stored) Establish(stored, loaded.Journal, loaded.LegacySelection);
         } catch (Exception error) {

@@ -14,7 +14,8 @@ public sealed record CloudSync : Query<CloudSyncStatus> {
     #region Actions - Answering
 
     internal override CloudSyncStatus Answer(CrestApp app) {
-        lock (app.CloudSync.Gate) return app.CloudSync.Status();
+        int pending = app.CloudSync.PendingUploads();
+        lock (app.CloudSync.Gate) return app.CloudSync.Status(pending);
     }
 
     #endregion
