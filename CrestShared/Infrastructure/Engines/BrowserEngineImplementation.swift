@@ -13,8 +13,11 @@ enum BrowserEngineImplementation: String, Codable, Sendable {
     struct Family: Codable, Hashable, Identifiable, Sendable {
         // MARK: - Static Variables
 
-        static let webKit = Family(name: "webkit", appcastSuffix: "-webkit", mainAppcastName: "appcast-webkit")
-        static let chromium = Family(name: "chromium", appcastSuffix: "", mainAppcastName: nil)
+        static let webKit = Family(
+            name: "webkit", appcastSuffix: "-webkit", mainAppcastName: "appcast-webkit",
+            restoresHistoryFromOtherVersions: false)
+        static let chromium = Family(
+            name: "chromium", appcastSuffix: "", mainAppcastName: nil, restoresHistoryFromOtherVersions: true)
 
         /// Every engine family.
         static let all: [Family] = [webKit, chromium]
@@ -32,14 +35,22 @@ enum BrowserEngineImplementation: String, Codable, Sendable {
         /// the feed bundled in the app serves them.
         let mainAppcastName: String?
 
+        /// True when the engine reads back page history another version of it
+        /// saved, as Chromium's session restore does across updates. WebKit
+        /// promises to read back only what its own build wrote.
+        let restoresHistoryFromOtherVersions: Bool
+
         var id: String { name }
 
         // MARK: - Initializers
 
-        private init(name: String, appcastSuffix: String, mainAppcastName: String?) {
+        private init(
+            name: String, appcastSuffix: String, mainAppcastName: String?, restoresHistoryFromOtherVersions: Bool
+        ) {
             self.name = name
             self.appcastSuffix = appcastSuffix
             self.mainAppcastName = mainAppcastName
+            self.restoresHistoryFromOtherVersions = restoresHistoryFromOtherVersions
         }
 
         init(from decoder: any Decoder) throws {

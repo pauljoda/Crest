@@ -14,8 +14,9 @@ final class EnginePage: BrowserFindExecuting {
     /// The core's page this one is.
     let id: UUID
     private let pages: any EnginePages
-    /// The engine and version the page's saved history belongs to, which a
-    /// restore must match.
+    /// The engine the page's saved history belongs to, which a restore must
+    /// match, and the version it is tagged with, which a restore must also
+    /// match on an engine that reads back only its own version's history.
     private let historyFamily: BrowserEngineImplementation.Family
     private let historyVersion: @MainActor () -> String?
     /// The panels the engine's inspector starts on when asked to.
@@ -93,7 +94,7 @@ final class EnginePage: BrowserFindExecuting {
     // MARK: - Actions - History
 
     /// The page's history as the engine keeps it, to restore later on the same
-    /// engine and version; nil when it has none, as before its engine starts.
+    /// engine; nil when it has none, as before its engine starts.
     func savedHistory() -> Data? {
         guard pages.isReady, let version = historyVersion(),
             let state = pages.request(SaveInteractionState(pageID: id)).state
@@ -102,8 +103,8 @@ final class EnginePage: BrowserFindExecuting {
     }
 
     /// Restores history `savedHistory()` kept, in place of the page's first
-    /// load of `url`; false when it belongs to another engine or version, or
-    /// the engine refused it.
+    /// load of `url`; false when it belongs to another engine, or to another
+    /// version of one that reads back only its own, or the engine refused it.
     func restoreHistory(_ saved: Data, expecting url: URL) -> Bool {
         guard let version = historyVersion(),
             let payload = BrowserEngineInteractionState.payload(saved, engine: historyFamily, version: version)

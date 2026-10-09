@@ -3757,6 +3757,10 @@
     "reopened-windows-after-quit": {
       "category": "fixed",
       "message": "On Mac, Crest reopens the windows that were open when you quit, instead of sometimes bringing back windows you had already closed."
+    },
+    "chromium-tab-history-across-updates": {
+      "category": "improved",
+      "message": "On Mac, tabs that use Chromium keep their back and forward history when Crest or macOS updates."
     }
   }
 }
