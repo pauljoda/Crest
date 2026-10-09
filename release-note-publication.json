@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "channels": {
     "stable": "window-focus-bridge-release-format",
-    "development": "screen-sharing-tab-picker",
+    "development": "sync-buttons-on-their-own-rows",
     "nightly": "pinned-tab-unpin-menu"
   }
 }
