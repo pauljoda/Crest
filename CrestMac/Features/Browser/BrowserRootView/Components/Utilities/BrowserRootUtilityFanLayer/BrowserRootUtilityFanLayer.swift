@@ -5,8 +5,6 @@ struct BrowserRootUtilityFanLayer: View {
     let model: BrowserRootModel
     var sidebarOnRight = false
 
-    @Environment(\.layoutDirection) private var layoutDirection
-
     var body: some View {
         GeometryReader { proxy in
             if let triggerFrame = model.chrome.utilityPresentation
@@ -17,9 +15,8 @@ struct BrowserRootUtilityFanLayer: View {
                     model: model,
                     proxy: proxy,
                     triggerFrame: triggerFrame,
-                    layoutDirection: sidebarOnRight ? .rightToLeft : .leftToRight
+                    sidebarOnRight: sidebarOnRight
                 )
-
             }
         }
     }

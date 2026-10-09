@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct BrowserSoftwareUpdateSidebarWidget: View {
+    // MARK: - Variables
+
     let instance: BrowserSidebarWidgetInstance
     let update: BrowserSoftwareUpdateWidgetSnapshot
     let perform: (BrowserSidebarWidgetAction, BrowserSidebarWidgetID) -> Void
@@ -13,9 +15,23 @@ struct BrowserSoftwareUpdateSidebarWidget: View {
             progressZone
             actions
         }
+        .overlay(alignment: .topTrailing) {
+            hideButton
+        }
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Crest software update")
     }
+
+    private var canHide: Bool {
+        instance.availableActions.contains(.hideSoftwareUpdate)
+    }
+
+    /// The card's own buttons, without the corner control that hides it.
+    private var buttonActions: Set<BrowserSidebarWidgetAction> {
+        instance.availableActions.subtracting([.hideSoftwareUpdate])
+    }
+
+    // MARK: - Actions - Layout
 
     private var headerRow: some View {
         HStack(alignment: .top, spacing: CrestSpacing.small) {
@@ -60,7 +76,25 @@ struct BrowserSoftwareUpdateSidebarWidget: View {
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(
+                .trailing,
+                canHide ? BrowserSidebarWidgetDeckStyle.quietControlDiameter + CrestSpacing.extraSmall : 0
+            )
             .layoutPriority(1)
+        }
+    }
+
+    @ViewBuilder
+    private var hideButton: some View {
+        if canHide {
+            Button {
+                perform(.hideSoftwareUpdate, instance.id)
+            } label: {
+                Image(systemName: "xmark")
+            }
+            .buttonStyle(BrowserSidebarWidgetQuietControlStyle(alignment: .topTrailing))
+            .accessibilityLabel("Hide Update")
+            .help("Hide until you check for updates")
         }
     }
 
@@ -94,7 +128,7 @@ struct BrowserSoftwareUpdateSidebarWidget: View {
 
     @ViewBuilder
     private var actions: some View {
-        if !instance.availableActions.isEmpty {
+        if !buttonActions.isEmpty {
             ViewThatFits(in: .horizontal) {
                 HStack(spacing: CrestSpacing.small) {
                     actionButtons

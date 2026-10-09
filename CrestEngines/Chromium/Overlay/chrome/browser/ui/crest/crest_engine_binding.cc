@@ -23,6 +23,7 @@
 #include "chrome/browser/ui/crest/crest_engine_page.h"
 #include "chrome/browser/ui/crest/crest_engine_profiles.h"
 #include "chrome/browser/ui/crest/crest_engine_prompts.h"
+#include "chrome/browser/ui/crest/crest_engine_screen_sharing.h"
 #include "chrome/browser/ui/crest/crest_engine_tab_groups.h"
 #include "components/password_manager/core/common/password_manager_pref_names.h"
 #include "components/prefs/pref_service.h"
@@ -819,6 +820,19 @@ EnginePage* EngineBinding::PageFor(content::WebContents* contents) {
   return nullptr;
 }
 
+std::vector<EnginePage*> EngineBinding::LivePages() {
+  std::vector<EnginePage*> live;
+  if (disposing_) {
+    return live;
+  }
+  for (auto& [key, page] : pages_) {
+    if (page->web_contents()) {
+      live.push_back(page.get());
+    }
+  }
+  return live;
+}
+
 void EngineBinding::RefreshStoreListings() {
   if (disposing_) {
     return;
@@ -1160,6 +1174,15 @@ bool EngineBinding::Handle(const engine::SetSitePermission& request) {
 // withdraws a grant ends the capture it allowed.
 bool EngineBinding::Handle(const engine::StopMediaCapture&) {
   return false;
+}
+
+bool EngineBinding::Handle(const engine::ChooseShareSource& request) {
+  return AnswerShareChoice(request);
+}
+
+bool EngineBinding::Handle(const engine::StopTabSharing& request) {
+  EnginePage* page = Find(GuidText(request.page_id));
+  return page && StopTabSharing(page->web_contents());
 }
 
 bool EngineBinding::Handle(const engine::AnswerWebNotification& request) {

@@ -1,5 +1,6 @@
 #include "chrome/browser/ui/crest/crest_engine_media.h"
 
+#include <algorithm>
 #include <utility>
 
 #include "base/functional/bind.h"
@@ -55,7 +56,7 @@ engine::PageMediaActivity PageMedia::Activity() const {
     activity = activity | PageMediaActivity::kPlaying;
   }
   auto indicator = MediaCaptureDevicesDispatcher::GetInstance()->GetMediaStreamCaptureIndicator();
-  if (contents_->IsBeingCaptured() || indicator->IsCapturingUserMedia(contents_) ||
+  if (shares_ > 0 || sharing_ > 0 || contents_->IsBeingCaptured() || indicator->IsCapturingUserMedia(contents_) ||
       indicator->IsCapturingTab(contents_) || indicator->IsCapturingWindow(contents_) ||
       indicator->IsCapturingDisplay(contents_)) {
     activity = activity | PageMediaActivity::kCapturing;
@@ -105,6 +106,18 @@ void PageMedia::PictureInPictureChanged(bool active) {
                        }
                      },
                      weak_factory_.GetWeakPtr()));
+}
+
+void PageMedia::SharedChanged(bool shared) {
+  // A page the engine followed anew after the sharing began has no share
+  // of it to end.
+  shares_ = std::max(0, shares_ + (shared ? 1 : -1));
+  changed_.Run();
+}
+
+void PageMedia::SharingChanged(bool sharing) {
+  sharing_ = std::max(0, sharing_ + (sharing ? 1 : -1));
+  changed_.Run();
 }
 
 // A video's return control closes its window and then asks for the page, in

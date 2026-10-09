@@ -1,11 +1,19 @@
 import SwiftUI
 
+/// The archive, history and downloads destinations, fanned out from the lists
+/// button onto the page beside the sidebar.
 struct BrowserRootUtilityFanControl: View {
+    // MARK: - Variables
+
     let model: BrowserRootModel
     let proxy: GeometryProxy
     let triggerFrame: CGRect
-    let layoutDirection: LayoutDirection
+    let sidebarOnRight: Bool
 
+    @Environment(\.layoutDirection) private var layoutDirection
+
+    /// The trigger's frame in this layer, measured from its left edge as the
+    /// window measures it.
     private var localTriggerFrame: CGRect {
         let rootFrame = proxy.frame(in: .global)
         return triggerFrame.offsetBy(
@@ -14,30 +22,27 @@ struct BrowserRootUtilityFanControl: View {
         )
     }
 
+    /// Where the fan settles, from the left edge: beside the trigger, on the
+    /// page's side of the sidebar.
     private var destinationX: CGFloat {
         let edgeOffset =
             BrowserUtilitySwitcherLayout.buttonSize / 2
             + BrowserUtilitySwitcherLayout.destinationGap
             + BrowserRootMetrics.utilityFanAdditionalEdgeOffset
-        switch layoutDirection {
-        case .leftToRight:
-            return localTriggerFrame.maxX + edgeOffset
-        case .rightToLeft:
-            return localTriggerFrame.minX - edgeOffset
-        @unknown default:
-            return localTriggerFrame.maxX + edgeOffset
-        }
+        return sidebarOnRight
+            ? localTriggerFrame.minX - edgeOffset
+            : localTriggerFrame.maxX + edgeOffset
     }
 
     var body: some View {
         BrowserUtilityFanControl(
             isExpanded: model.chrome.utilityPresentation.isSwitcherExpanded,
             origin: CGPoint(
-                x: localTriggerFrame.midX,
+                x: positionX(localTriggerFrame.midX),
                 y: localTriggerFrame.midY
             ),
             destination: CGPoint(
-                x: destinationX,
+                x: positionX(destinationX),
                 y: proxy.size.height / 2
             ),
             selectedSurface: model.chrome.utilityPresentation.surface,
@@ -47,8 +52,16 @@ struct BrowserRootUtilityFanControl: View {
                 ?? .accentColor,
             downloads: model.selectedUtilityDownloads,
             newDownloadCount: model.newUtilityDownloads.count,
-            select: model.chrome.utilityPresentation.present
+            select: model.chrome.presentUtility
         )
         .zIndex(BrowserRootMetrics.utilityFanZIndex)
+    }
+
+    // MARK: - Actions - Placement
+
+    /// `x`, measured from the left edge, as `position` reads it: from the
+    /// leading edge, which a right-to-left layout puts on the right.
+    private func positionX(_ x: CGFloat) -> CGFloat {
+        layoutDirection == .rightToLeft ? proxy.size.width - x : x
     }
 }

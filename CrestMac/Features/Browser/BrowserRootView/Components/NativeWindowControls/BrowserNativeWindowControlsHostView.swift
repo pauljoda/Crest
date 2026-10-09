@@ -18,9 +18,12 @@ struct BrowserNativeWindowChromeSnapshot {
 /// window's own controls sit on the sidebar.
 ///
 /// In fullscreen the title bar slides down over the page with the menu bar,
-/// so there it is the system's standard one, from the moment the window is
-/// fullscreen until it starts to leave. Neither writes the fullscreen bit of
-/// the style mask, which AppKit owns during its transitions.
+/// so there it is the system's standard one while it is revealed, from the
+/// moment the window is fullscreen until it starts to leave. Hidden, it stays
+/// transparent: WebKit pages keep the scroll edge effect they took from the
+/// windowed title bar, which an opaque title bar draws as a band across the
+/// top of every page. Neither writes the fullscreen bit of the style mask,
+/// which AppKit owns during its transitions.
 ///
 /// The window's toolbar only holds the title bar's metrics, so it shows only
 /// outside fullscreen, whoever shows it. AppKit keeps a fullscreen window's
@@ -50,8 +53,13 @@ final class BrowserNativeWindowControlsHostView: NSView {
         }
     }
     /// Whether the window shows the system's standard title bar: while it is
-    /// fullscreen, and not once it starts to leave.
+    /// fullscreen and its title bar is revealed, and not once it starts to
+    /// leave.
     private var showsStandardTitleBar = false
+    /// Follows the window that holds the title bar in fullscreen, which AppKit
+    /// shows from just before the title bar slides down with the menu bar
+    /// until just after it slides away.
+    private var fullScreenTitleBarObservation: NSKeyValueObservation?
 
     // MARK: - Actions - Window
 
@@ -64,9 +72,12 @@ final class BrowserNativeWindowControlsHostView: NSView {
 
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
-        showsStandardTitleBar = window?.styleMask.contains(.fullScreen) ?? false
+        showsStandardTitleBar = false
         captureOriginalChrome()
         observeWindow()
+        if window?.styleMask.contains(.fullScreen) == true {
+            observeFullScreenTitleBar()
+        }
         applyBrowserChrome()
     }
 
@@ -106,7 +117,7 @@ final class BrowserNativeWindowControlsHostView: NSView {
     }
 
     /// Shows the title bar as Crest's chrome, transparent and without a title
-    /// or separator, or while the window is fullscreen as the system's
+    /// or separator, or while it is revealed in fullscreen as the system's
     /// standard one.
     private func applyTitleBar(to window: NSWindow) {
         let standard = showsStandardTitleBar
@@ -270,10 +281,11 @@ final class BrowserNativeWindowControlsHostView: NSView {
             sidebarPosition = position
             return
         case NSWindow.didEnterFullScreenNotification:
-            showsStandardTitleBar = true
+            observeFullScreenTitleBar()
         case NSWindow.willExitFullScreenNotification:
             // The title bar returns to the window as it leaves fullscreen, so
             // it is Crest's again before it does.
+            stopObservingFullScreenTitleBar()
             showsStandardTitleBar = false
             if let window { applyTitleBar(to: window) }
             return
@@ -287,7 +299,39 @@ final class BrowserNativeWindowControlsHostView: NSView {
         }
     }
 
+    /// In fullscreen the title bar moves to a window of its own, which AppKit
+    /// makes visible just before the title bar slides down with the menu bar
+    /// and invisible again just after it slides away. The title bar changes
+    /// with that window in the same update, so the change never shows.
+    private func observeFullScreenTitleBar() {
+        stopObservingFullScreenTitleBar()
+        guard let window,
+            let titleBarWindow = window.standardWindowButton(.closeButton)?.window,
+            titleBarWindow !== window
+        else { return }
+        fullScreenTitleBarObservation = titleBarWindow.observe(
+            \.alphaValue,
+            options: [.initial]
+        ) { [weak self] titleBarWindow, _ in
+            MainActor.assumeIsolated {
+                self?.fullScreenTitleBarChanged(isRevealed: titleBarWindow.alphaValue > 0)
+            }
+        }
+    }
+
+    private func fullScreenTitleBarChanged(isRevealed: Bool) {
+        guard showsStandardTitleBar != isRevealed, let window else { return }
+        showsStandardTitleBar = isRevealed
+        applyTitleBar(to: window)
+    }
+
+    private func stopObservingFullScreenTitleBar() {
+        fullScreenTitleBarObservation?.invalidate()
+        fullScreenTitleBarObservation = nil
+    }
+
     private func stopObservingWindow() {
+        stopObservingFullScreenTitleBar()
         for observer in windowObservers {
             NotificationCenter.default.removeObserver(observer)
         }

@@ -7,6 +7,9 @@ struct PinnedTabInteractionSurface: ViewModifier {
     let isHovering: Bool
     var isMultiSelected = false
     var branding: SpaceBranding? = nil
+    /// Whether another page shares the tab, which the tile outlines in the
+    /// Space's accent while it lasts.
+    var isSharedAsTab = false
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var palette: BrowserFaviconPalette?
@@ -21,6 +24,16 @@ struct PinnedTabInteractionSurface: ViewModifier {
                     isPinned: true, isSelected: isSelected, isHovering: isHovering,
                     selectionEmphasis: isMultiSelected)
             )
+            .overlay {
+                if isSharedAsTab {
+                    RoundedRectangle(
+                        cornerRadius: BrowserDeviceAppearanceStore.shared.sidebarCornerRadius,
+                        style: .continuous
+                    )
+                    .strokeBorder(selectionAccent, lineWidth: CrestLayout.pinnedAccentBorderWidth)
+                    .allowsHitTesting(false)
+                }
+            }
             .animation(
                 BrowserVisualAccessibilityPolicy.animation(
                     CrestMotion.palette,

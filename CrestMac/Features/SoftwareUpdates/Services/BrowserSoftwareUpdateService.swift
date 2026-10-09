@@ -5,10 +5,14 @@ import Sparkle
 @MainActor
 @Observable
 final class BrowserSoftwareUpdateService {
+    // MARK: - Static Variables
+
     static let channelPreferenceKey = "crest.software-update.channel"
     static let bundledChannelPreferenceKey =
         "crest.software-update.bundled-channel"
     static let defaultChannelInfoKey = "CrestDefaultUpdateChannel"
+
+    // MARK: - Variables
 
     let model: BrowserSoftwareUpdateModel
     let widgetSource: BrowserSoftwareUpdateWidgetSource
@@ -27,6 +31,16 @@ final class BrowserSoftwareUpdateService {
     @ObservationIgnored private let userDriver: BrowserSoftwareUpdateUserDriver
     @ObservationIgnored private let updater: SPUUpdater
     @ObservationIgnored private let refreshCoordinator: BrowserSoftwareUpdateRefreshCoordinator
+
+    var automaticallyChecksForUpdates: Bool {
+        updater.automaticallyChecksForUpdates
+    }
+
+    var automaticallyDownloadsUpdates: Bool {
+        updater.automaticallyDownloadsUpdates
+    }
+
+    // MARK: - Initializers
 
     init(
         isEnabled: Bool,
@@ -82,22 +96,9 @@ final class BrowserSoftwareUpdateService {
         startUpdater()
     }
 
-    var automaticallyChecksForUpdates: Bool {
-        updater.automaticallyChecksForUpdates
-    }
+    // MARK: - Actions - Checking
 
-    func setAutomaticallyChecksForUpdates(_ isEnabled: Bool) {
-        updater.automaticallyChecksForUpdates = isEnabled
-    }
-
-    var automaticallyDownloadsUpdates: Bool {
-        updater.automaticallyDownloadsUpdates
-    }
-
-    func setAutomaticallyDownloadsUpdates(_ isEnabled: Bool) {
-        updater.automaticallyDownloadsUpdates = isEnabled
-    }
-
+    /// A check the person asked for, which also brings back a card they hid.
     func checkForUpdates() {
         guard isEnabled else {
             model.presentError(
@@ -106,6 +107,7 @@ final class BrowserSoftwareUpdateService {
             )
             return
         }
+        model.reveal()
         refreshCoordinator.checkForUpdates()
     }
 
@@ -113,6 +115,8 @@ final class BrowserSoftwareUpdateService {
         guard isEnabled else { return }
         refreshCoordinator.applicationDidBecomeActive()
     }
+
+    // MARK: - Actions - Fixtures
 
     /// Presents updater states for an explicitly isolated verification launch.
     /// It never starts Sparkle or reads an appcast, and is deliberately absent
@@ -194,6 +198,8 @@ final class BrowserSoftwareUpdateService {
         }
     }
 
+    // MARK: - Actions - Launch
+
     private func startUpdater() {
         do {
             try updater.start()
@@ -232,5 +238,15 @@ final class BrowserSoftwareUpdateService {
                 forKey: channelPreferenceKey
             ) ?? ""
         ) ?? bundledDefault
+    }
+
+    // MARK: - Mutators
+
+    func setAutomaticallyChecksForUpdates(_ isEnabled: Bool) {
+        updater.automaticallyChecksForUpdates = isEnabled
+    }
+
+    func setAutomaticallyDownloadsUpdates(_ isEnabled: Bool) {
+        updater.automaticallyDownloadsUpdates = isEnabled
     }
 }

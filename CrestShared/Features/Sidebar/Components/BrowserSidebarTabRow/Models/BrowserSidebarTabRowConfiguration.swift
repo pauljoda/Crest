@@ -25,6 +25,9 @@ struct BrowserSidebarTabRowConfiguration {
     let isSplitGroupMember: Bool
     let followingTabID: UUID?
     var spacePresentation: SidebarSpacePresentation? = nil
+    /// Whether another page shares this tab's page, which the row outlines
+    /// and marks for as long as it lasts.
+    var isSharedAsTab = false
 
     var spaceID: UUID { assignment.spaceID }
     var profileID: UUID { assignment.profileID }
@@ -141,7 +144,7 @@ struct BrowserSidebarTabRowConfiguration {
     init(
         tab: TabStateModel, context: BrowserSidebarListContext, isSelected: Bool, isLoaded: Bool,
         isSplitGroupMember: Bool = false, followingTabID: UUID? = nil,
-        spacePresentation: SidebarSpacePresentation? = nil
+        spacePresentation: SidebarSpacePresentation? = nil, isSharedAsTab: Bool = false
     ) {
         self.tab = tab
         self.context = context
@@ -151,5 +154,6 @@ struct BrowserSidebarTabRowConfiguration {
         self.isSplitGroupMember = isSplitGroupMember
         self.followingTabID = followingTabID
         self.spacePresentation = spacePresentation
+        self.isSharedAsTab = isSharedAsTab
     }
 }

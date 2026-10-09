@@ -60,6 +60,16 @@ class PageMedia final : public media_session::mojom::MediaSessionObserver {
   void VisibilityChanged(bool visible);
   // The page's video or document entered or left Picture in Picture.
   void PictureInPictureChanged(bool active);
+  // Another page began or stopped sharing this one as a tab, which counts as
+  // capture for as long as it lasts.
+  void SharedChanged(bool shared);
+  // Whether another page shares this one as a tab now.
+  bool shared() const { return shares_ > 0; }
+  // This page began or stopped sharing another tab, which counts as capture
+  // for as long as it lasts.
+  void SharingChanged(bool sharing);
+  // Whether this page shares another tab now.
+  bool sharing() const { return sharing_ > 0; }
   // Whether an ask for the page comes from its Picture in Picture window's
   // return control: the page left Picture in Picture in the task running
   // now, or its document is still there.
@@ -110,6 +120,10 @@ class PageMedia final : public media_session::mojom::MediaSessionObserver {
   bool played_before_hidden_ = false;
   // The page left Picture in Picture in the task running now.
   bool leaving_picture_in_picture_ = false;
+  // How many captures share the page as a tab now.
+  int shares_ = 0;
+  // How many tabs the page shares now.
+  int sharing_ = 0;
   base::WeakPtrFactory<PageMedia> weak_factory_{this};
 };
 

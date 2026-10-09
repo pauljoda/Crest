@@ -2382,17 +2382,19 @@
  
    // base::Unretained(this) is safe because DisplayMediaAccessHandler is owned
    // by MediaCaptureDevicesDispatcher, which is a lazy singleton which is
-@@ -685,12 +703,20 @@
+@@ -685,12 +703,22 @@
        (media_id.type == DesktopMediaID::TYPE_WEB_CONTENTS) &&
        media_id.web_contents_id.disable_local_echo;
  
 +  bool display_notification = display_notification_;
 +#if BUILDFLAG(IS_MAC)
-+  // The system shows what Crest shares and offers to stop it, and Crest opens
-+  // no window of its own for that.
++  // The system shows the window or display Crest shares and offers to stop
++  // it, and Crest opens no window of its own for that. A tab the engine
++  // captures itself carries Crest's own bars instead.
 +  display_notification =
 +      display_notification &&
-+      !crest::SharesScreenThroughSystem(pending_request.request);
++      (media_id.type == DesktopMediaID::TYPE_WEB_CONTENTS ||
++       !crest::SharesScreenThroughSystem(pending_request.request));
 +#endif  // BUILDFLAG(IS_MAC)
    GetDevicesForDesktopCapture(
        web_contents, media_id, pending_request.request.video_type,
@@ -2404,7 +2406,7 @@
        GetApplicationTitle(web_contents),
        pending_request.request.captured_surface_control_active,
        base::BindOnce(&DisplayMediaAccessHandler::
-@@ -778,11 +804,17 @@
+@@ -778,11 +806,17 @@
    // presence of the window_id indicates the window to be captured is a Chromium
    // window which will be captured internally, the macOS screen capture APIs
    // will not be used.
@@ -2427,6 +2429,33 @@
      RejectRequest(web_contents.get(),
                    MediaStreamRequestResult::PERMISSION_DENIED_BY_SYSTEM);
      return;
+--- a/chrome/browser/media/webrtc/desktop_capture_devices_util.cc
++++ b/chrome/browser/media/webrtc/desktop_capture_devices_util.cc
+@@ -49,6 +49,7 @@
+ #endif  // BUILDFLAG(IS_WIN)
+ 
+ #if BUILDFLAG(IS_MAC)
++#include "chrome/browser/ui/crest/crest_chrome_hooks.h"  // nogncheck
+ #include "third_party/webrtc/modules/desktop_capture/mac/window_list_utils.h"
+ #endif  // BUILDFLAG(IS_MAC)
+ 
+@@ -372,6 +373,16 @@
+         web_contents, media_id, app_preferred_current_tab);
+   }
+ #else
++#if BUILDFLAG(IS_MAC)
++  // Crest shows a shared tab in its own bars, in the shared tab and in the
++  // page that captures it.
++  if (display_notification && crest::IsEnabled() &&
++      media_id.type == content::DesktopMediaID::TYPE_WEB_CONTENTS) {
++    notification_ui = crest::CreateTabSharingIndicator(web_contents, media_id,
++                                                       application_title);
++    display_notification = false;
++  }
++#endif  // BUILDFLAG(IS_MAC)
+   // If required, register to display the notification for stream capture.
+   if (display_notification) {
+     if (media_id.type == content::DesktopMediaID::TYPE_WEB_CONTENTS) {
 --- a/chrome/browser/media/webrtc/desktop_capture_access_handler.cc
 +++ b/chrome/browser/media/webrtc/desktop_capture_access_handler.cc
 @@ -68,6 +68,7 @@
@@ -3001,3 +3030,33 @@
 +    return 'https://' + id + '.chromiumapp.org' + path;
    });
  });
+--- a/chrome/browser/mac/code_sign_clone_manager.mm
++++ b/chrome/browser/mac/code_sign_clone_manager.mm
+@@ -23,6 +23,7 @@
+ #include <vector>
+ 
+ #include "base/apple/foundation_util.h"
++#include "base/command_line.h"
+ #include "base/containers/fixed_flat_set.h"
+ #include "base/feature_list.h"
+ #include "base/files/file_enumerator.h"
+@@ -358,6 +359,19 @@
+       CodeSignCloneCleanupTypeArg(),
+       UniqueTempDirSuffixArg(unique_suffix),
+   };
++
++  // Like the browser's other child processes, the helper uses the user data
++  // directory the browser was given. Without it, the helper resolves and
++  // creates the default one, which belongs to any other Chromium on this Mac.
++  const base::CommandLine& browser_command_line =
++      *base::CommandLine::ForCurrentProcess();
++  if (browser_command_line.HasSwitch(switches::kUserDataDir)) {
++    code_sign_clone_cleanup_args.push_back(base::StringPrintf(
++        "--%s=%s", switches::kUserDataDir,
++        browser_command_line.GetSwitchValuePath(switches::kUserDataDir)
++            .value()
++            .c_str()));
++  }
+ 
+   // The child helper process should outlive its parent.
+   base::LaunchOptions options;

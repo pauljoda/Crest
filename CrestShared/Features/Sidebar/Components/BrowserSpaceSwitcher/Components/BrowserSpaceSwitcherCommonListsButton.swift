@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// The switcher's trailing accessory: one control for the archive, history,
+/// The switcher's page-side accessory: one control for the archive, history,
 /// and downloads lists, badged when downloads have finished unseen.
 struct BrowserSpaceSwitcherCommonListsButton: View {
     let isExpanded: Bool

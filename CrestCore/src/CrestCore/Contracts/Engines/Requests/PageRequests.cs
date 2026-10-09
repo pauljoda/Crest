@@ -220,6 +220,29 @@ public sealed record PerformMediaAction(Guid PageId, string Document, MediaSessi
 /// itself once `SetSitePermission` blocks it.
 public sealed record StopMediaCapture(Guid PageId, SitePermission Permission) : PageRequest<bool>;
 
+/// The person's answer to `ShareSourcesOffered`. With `ShareSourceChoice.Tab`
+/// the page shares the tab whose page is `TabPageId`, with its sound when
+/// `Audio` says so. False when the request already ended, or the tab can no
+/// longer be shared, which refuses the request.
+public sealed record ChooseShareSource(Guid PageId, Guid ShareId, ShareSourceChoice Choice, Guid? TabPageId, bool Audio)
+    : PageRequest<bool>;
+
+/// Stops every tab sharing the page takes part in, as the shared tab or as
+/// the page that shares one. False when it takes part in none.
+public sealed record StopTabSharing(Guid PageId) : PageRequest<bool>;
+
+/// What the person chose to share.
+public enum ShareSourceChoice {
+    /// Nothing: the request is refused.
+    Cancel,
+
+    /// The tab the answer names.
+    Tab,
+
+    /// A window or a display, which the system's picker asks for next.
+    WindowOrScreen
+}
+
 #endregion
 
 #region Notifications

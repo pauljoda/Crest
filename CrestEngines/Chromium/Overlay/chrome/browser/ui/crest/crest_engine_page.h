@@ -162,6 +162,10 @@ class EnginePage final : public content::WebContentsObserver,
   bool Show();
   bool Hide();
   engine::PageMediaActivity MediaActivity() const;
+  // Another page began or stopped sharing this one as a tab.
+  void SharedChanged(bool shared);
+  // This page began or stopped sharing another tab.
+  void SharingChanged(bool sharing);
   bool EnterPictureInPicture();
   // Ends the page's own Picture in Picture, as the core asks once a window
   // shows the page again, returning the video to its place in the page.
@@ -257,6 +261,8 @@ class EnginePage final : public content::WebContentsObserver,
 
   void ApplyZoom();
   void Present(engine::EnginePresentation presentation);
+  // Presents the page's part in tab sharing.
+  void PresentSharing();
   // Presents what the page's view shows that changed since it last did.
   void PresentView();
   std::vector<engine::PageHistoryEntry> History(int direction) const;

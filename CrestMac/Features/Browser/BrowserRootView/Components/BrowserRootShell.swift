@@ -152,7 +152,6 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
                 ) {
                     BrowserRootSidebarContent(
                         model: model,
-                        sidebarOnRight: appearance.sidebarOnRight,
                         spaceSettingsPresentation: spaceSettingsPresentation,
                         commandSurfaceNamespace: commandSurfaceNamespace,
                         tabPromotionNamespace: tabPromotionNamespace

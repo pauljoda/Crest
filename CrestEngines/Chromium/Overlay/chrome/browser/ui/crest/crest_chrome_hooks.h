@@ -13,6 +13,7 @@
 
 class Browser;
 class DesktopMediaPicker;
+class MediaStreamUI;
 class GURL;
 class Profile;
 enum class ToastId;
@@ -124,9 +125,10 @@ bool RouteModifiedLink(content::WebContents* source, content::OpenURLParams& par
 // Crest presents script dialogs for its pages with the same native presenter
 // WebKit uses. Other Chromium pages keep their engine dialog manager.
 content::JavaScriptDialogManager* JavaScriptDialogManagerFor(content::WebContents* contents);
-// Screen sharing. A page's getDisplayMedia() asks the system's own sharing
-// picker once Crest's core lets the page's site ask, so Chromium's picker,
-// which lists and captures every window to show thumbnails, is never made.
+// Screen sharing. Once Crest's core lets the page's site ask, a page's
+// getDisplayMedia() offers the person its profile's tabs, then the system's
+// own sharing picker for a window or a display, so Chromium's picker, which
+// lists and captures every window to show thumbnails, is never made.
 // `SharesScreenThroughSystem` says whether Crest takes `request`, and
 // `CreateScreenSharingPicker` makes its picker.
 bool SharesScreenThroughSystem(const content::MediaStreamRequest& request);
@@ -136,6 +138,13 @@ std::unique_ptr<DesktopMediaPicker> CreateScreenSharingPicker(const content::Med
 // other display or window capture does, and the engine asks the system for it
 // at most once per launch.
 bool AllowsScreenCapture(content::WebContents* contents, const content::DesktopMediaID& source);
+// What shows that `capturer` shares the tab `media_id` names, and stops it:
+// a bar in the shared tab and one in `capturer`, which the platform shows as
+// it shows the engine's other bars. `application_title` names `capturer` as
+// the person reads it.
+std::unique_ptr<MediaStreamUI> CreateTabSharingIndicator(content::WebContents* capturer,
+                                                         const content::DesktopMediaID& media_id,
+                                                         const std::u16string& application_title);
 #ifdef __OBJC__
 // Crest's own UI, which the UI framework attaches when it starts; nil before.
 id<CrestMacUI> MacUI();

@@ -10,6 +10,9 @@ struct PinnedTabSelectionButton: View {
     let select: () -> Void
     var isMultiSelected = false
     var branding: SpaceBranding? = nil
+    /// Whether another page shares this tab's page, which the tile outlines
+    /// for as long as it lasts.
+    var isSharedAsTab = false
     let iconCustomization: BrowserIconCustomizationPresentation
 
     @Environment(\.browserInteractionCapabilities) private var capabilities
@@ -38,7 +41,8 @@ struct PinnedTabSelectionButton: View {
                         isSelected: isSelected,
                         isHovering: isHovering || isMultiSelected,
                         isMultiSelected: isMultiSelected,
-                        branding: branding
+                        branding: branding,
+                        isSharedAsTab: isSharedAsTab
                     )
                 )
         }

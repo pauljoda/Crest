@@ -13,10 +13,17 @@ struct BrowserEngineInteractionState: Codable, Equatable {
         return Self.magic + body
     }
 
+    /// True when `data` names the engine and version that saved it, so that
+    /// engine decides whether a restore may read it.
+    static func isTagged(_ data: Data) -> Bool {
+        data.starts(with: magic)
+    }
+
     static func payload(_ data: Data, engine: BrowserEngineImplementation.Family, version: String) -> Data? {
-        if data.starts(with: magic) {
+        if isTagged(data) {
             guard let state = try? JSONDecoder().decode(Self.self, from: data.dropFirst(magic.count)),
-                state.engine == engine, state.version == version, !state.payload.isEmpty
+                state.engine == engine, engine.restoresHistoryFromOtherVersions || state.version == version,
+                !state.payload.isEmpty
             else { return nil }
             return state.payload
         }

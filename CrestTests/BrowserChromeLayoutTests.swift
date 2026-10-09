@@ -341,6 +341,28 @@ final class BrowserChromeLayoutTests: XCTestCase {
     }
 
     @MainActor
+    func testShowListCommandsBringTheirListOnScreen() {
+        let browser = BrowserStore.hostingPages()
+        let pages = BrowserPagePool(browser: browser)
+        let lists: [(ShortcutCommand, BrowserUtilitySurface)] = [
+            (.showHistory, .history), (.showArchive, .archive), (.showDownloads, .downloads),
+        ]
+
+        for (command, surface) in lists {
+            let hidden = BrowserChromeState(sidebarIsPresented: false)
+            BrowserCommandActions(browser: browser, pages: pages, chrome: hidden, windows: nil).perform(command)
+            XCTAssertEqual(hidden.columnVisibility, .all, "\(command.name) docks a hidden sidebar.")
+            XCTAssertEqual(hidden.utilityPresentation.surface, surface)
+
+            let floating = BrowserChromeState(sidebarIsPresented: false)
+            floating.isFloatingSidebarPresented = true
+            BrowserCommandActions(browser: browser, pages: pages, chrome: floating, windows: nil).perform(command)
+            XCTAssertEqual(floating.columnVisibility, .detailOnly, "\(command.name) keeps a floating sidebar.")
+            XCTAssertEqual(floating.utilityPresentation.surface, surface)
+        }
+    }
+
+    @MainActor
     func testMacChromeRestoresItsOwningWindowsSidebarPresentation() {
         let hiddenChrome = BrowserChromeState(sidebarIsPresented: false)
         let visibleChrome = BrowserChromeState(sidebarIsPresented: true)

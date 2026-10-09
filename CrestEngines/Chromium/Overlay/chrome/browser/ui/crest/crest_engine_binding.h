@@ -163,6 +163,8 @@ class EngineBinding {
   EnginePage* PageFor(content::WebContents* contents);
   // The page the platform names `page`, or nullptr.
   EnginePage* Find(const std::string& page);
+  // Every page the binding follows that has its WebContents.
+  std::vector<EnginePage*> LivePages();
   // Lets `page`'s WebContents go at once, as a closing window does: the shell
   // drops the views beside it and its Browser deletes it, and the page hears
   // it is gone as if the engine had closed it.
@@ -285,6 +287,8 @@ class EngineBinding {
   engine::CertificateChain Handle(const engine::PageCertificates& request);
   bool Handle(const engine::SetSitePermission& request);
   bool Handle(const engine::StopMediaCapture& request);
+  bool Handle(const engine::ChooseShareSource& request);
+  bool Handle(const engine::StopTabSharing& request);
   bool Handle(const engine::AnswerWebNotification& request);
   bool Handle(const engine::AnswerProfileNotification& request);
   bool Handle(const engine::PrepareProfile& request);

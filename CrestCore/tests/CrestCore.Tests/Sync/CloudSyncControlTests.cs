@@ -39,6 +39,28 @@ public sealed partial class BrowserContractsTests {
         return start;
     }
 
+    /// A running sync is not up to date while this device's journal holds
+    /// records iCloud has not saved: it reads as waiting to upload until the
+    /// cloud saves them.
+    [Fact]
+    public void ARunningSyncWaitsToUploadUntilTheCloudSavesTheJournalsRecords() {
+        using var directory = new StorageDirectory();
+        using var stored = StoredSyncing(directory, SavedSession().Document);
+        var app = stored.App;
+        app.Send(new OpenCloudTransport(TransportSchema, Legacy: null));
+        app.Send(new ConfigureCloudSync(IsEnabled: true, CanReachCloud: true));
+        long start = StartTransport(app);
+        var pending = app.Query(new PendingUploads()).Records;
+        Assert.NotEmpty(pending);
+        Assert.Equal(CloudSyncPhase.WaitingToUpload, app.Query(new CloudSync()).Phase);
+
+        var saved = app.Query(new RecordsToUpload(pending)).Records;
+        app.Send(new AcknowledgeUploads([.. saved.Select(record => new UploadedRecord(new(record.Kind, record.Id), record.Version))]));
+        var status = Advance(app, new CloudTransportReported(start, CloudTransportReport.Uploaded, null, saved.Count, false)).Status;
+
+        Assert.Equal(CloudSyncPhase.Ready, status.Phase);
+    }
+
     [Fact]
     public void AStartThatCannotReachCloudKitFailsAndNamesWhy() {
         using var app = SyncingApp(canReachCloud: false);

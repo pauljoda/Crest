@@ -136,7 +136,11 @@ void PageInfoBars::Show(int id, infobars::InfoBar* bar) {
                                     .message = base::UTF16ToUTF8(confirm->GetMessageText()),
                                     .accept_label = label(ConfirmInfoBarDelegate::BUTTON_OK),
                                     .cancel_label = label(ConfirmInfoBarDelegate::BUTTON_CANCEL),
-                                    .closeable = confirm->IsCloseable()});
+                                    .closeable = confirm->IsCloseable(),
+                                    // Only Crest's own tab-sharing bars report
+                                    // something that lasts; the rest ask.
+                                    .minimizable = confirm->GetIdentifier() ==
+                                                   infobars::InfoBarDelegate::TAB_SHARING_INFOBAR_DELEGATE});
 }
 
 }  // namespace crest

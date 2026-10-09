@@ -36,7 +36,20 @@ extension BrowserSidebarPageAccess {
             pullFavicon: { tabID, assignment in
                 await pages.pullFavicon(for: tabID, matching: assignment)
             },
-            downloadCenter: pages.downloadCenter
+            downloadCenter: pages.downloadCenter,
+            isSharedAsTab: { assignment in
+                pages.residentPage(matching: assignment)?.isSharedAsTab ?? false
+            },
+            isSharingTab: { assignment in
+                pages.residentPage(matching: assignment)?.isSharingTab ?? false
+            },
+            stopTabSharing: { assignment in
+                pages.residentPage(matching: assignment)?.stopTabSharing()
+            },
+            sharingTabID: { assignment in
+                guard let shared = pages.residentPage(matching: assignment), shared.isSharedAsTab else { return nil }
+                return pages.tabSharingCounterpart(of: shared)
+            }
         )
     }
 }

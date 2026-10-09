@@ -10,6 +10,7 @@
 #include <string>
 #include <set>
 #include <vector>
+#include "base/auto_reset.h"
 #include "base/check.h"
 #include "base/apple/bridging.h"
 #include "base/apple/foundation_util.h"
@@ -56,6 +57,7 @@
 #include "extensions/common/permissions/permission_message.h"
 
 #include "extensions/browser/install/crx_install_error.h"
+#include "base/memory/raw_ptr.h"
 #include "base/memory/weak_ptr.h"
 #include "base/strings/escape.h"
 #include "base/task/thread_pool.h"
@@ -471,9 +473,9 @@ class NativePermissionPrompt final : public permissions::PermissionPrompt {
       if (!weak || !weak->delegate_) return;
       weak->responded_ = true;
       auto current_delegate = weak->delegate_;
-      if (response == NSAlertFirstButtonReturn) current_delegate->Accept(std::monostate());
-      else if (response == NSAlertSecondButtonReturn) current_delegate->Deny(std::monostate());
-      else current_delegate->Dismiss(std::monostate());
+      if (response == NSAlertFirstButtonReturn) crest::AnswerPermissionRequests(*current_delegate, true, true);
+      else if (response == NSAlertSecondButtonReturn) crest::AnswerPermissionRequests(*current_delegate, false, true);
+      else crest::AnswerPermissionRequests(*current_delegate, false, false);
     }];
   }
   ~NativePermissionPrompt() override {
@@ -512,6 +514,8 @@ struct HostState {
   // Requests that arrive before the native root starts wait in `pending_*`.
   std::map<std::string, ASWebAuthenticationSessionRequest*> authentication_sessions;
   std::vector<ASWebAuthenticationSessionRequest*> pending_authentication_sessions;
+  // The permission requests taking a Crest prompt's answer, while they do.
+  raw_ptr<const permissions::PermissionPrompt::Delegate> answering_permission = nullptr;
 };
 HostState& State() { static base::NoDestructor<HostState> state; return *state; }
 
@@ -1247,6 +1251,9 @@ void ShowExtensionPrompt(
 std::unique_ptr<permissions::PermissionPrompt> CreatePermissionPrompt(
     content::WebContents* contents, permissions::PermissionPrompt::Delegate* delegate) {
   if (delegate->ShouldDropCurrentRequestIfCannotShowQuietly()) return nullptr;
+  // Requests raised again while they take an answer already have it; see
+  // AnswerPermissionRequests.
+  if (State().answering_permission == delegate) return nullptr;
   // A request Crest's permission record covers is asked through the page, so
   // the decision is recorded per Space and listed in Privacy.
   if (auto prompt = crest::EngineBinding::Get().PermissionPrompt(contents, delegate)) return prompt;
@@ -1254,6 +1261,20 @@ std::unique_ptr<permissions::PermissionPrompt> CreatePermissionPrompt(
   NSWindow* window = browser ? WindowForBrowser(static_cast<Browser*>(browser)) : nil;
   if (!window || window.attachedSheet) return nullptr;
   return std::make_unique<NativePermissionPrompt>(window, delegate);
+}
+
+void AnswerPermissionRequests(permissions::PermissionPrompt::Delegate& delegate, bool grants, bool remembers) {
+  base::AutoReset<raw_ptr<const permissions::PermissionPrompt::Delegate>> answering(
+      &State().answering_permission, &delegate);
+  if (grants && remembers) {
+    delegate.Accept(std::monostate());
+  } else if (grants) {
+    delegate.AcceptThisTime(std::monostate());
+  } else if (remembers) {
+    delegate.Deny(std::monostate());
+  } else {
+    delegate.Dismiss(std::monostate());
+  }
 }
 namespace {
 bool HasBundleMarker(NSString* name) {

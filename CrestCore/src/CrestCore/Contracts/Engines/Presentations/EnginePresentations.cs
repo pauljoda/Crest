@@ -110,8 +110,10 @@ public sealed record InfoBarRemoved(Guid PageId, int InfoBarId) : EnginePagePres
 
 /// The engine asks the person something in a bar over the page: a message and
 /// the labels of the buttons it has. The person's answer is `AnswerInfoBar`.
+/// A `Minimizable` bar only reports something that lasts, such as a tab being
+/// shared, so the person may hide it until they come back to the page.
 public sealed record InfoBarShown(Guid PageId, int InfoBarId, string Message, string? AcceptLabel, string? CancelLabel,
-    bool Closeable) : EnginePagePresentation(PageId);
+    bool Closeable, bool Minimizable) : EnginePagePresentation(PageId);
 
 #endregion
 
@@ -194,6 +196,28 @@ public sealed record MediaSessionChanged(Guid PageId, string Document, long Sequ
 /// where the person can allow it. Sharing through the system's own picker
 /// never needs that access.
 public sealed record ScreenCaptureAccessMissing(Guid PageId) : EnginePagePresentation(PageId);
+
+/// A document in the page asked to share the screen, and the core let its
+/// site ask. Before the system's picker, which offers windows and displays,
+/// the platform asks the person whether to share one of `Tabs` instead, and
+/// answers with `ChooseShareSource` and `ShareId`. `Site` names the document
+/// that asks, as the person reads it. `Audio` says whether it asked for
+/// audio too, which a shared tab can carry.
+public sealed record ShareSourcesOffered(Guid PageId, Guid ShareId, string Site, IReadOnlyList<ShareableTab> Tabs, bool Audio)
+    : EnginePagePresentation(PageId);
+
+/// The request `ShareSourcesOffered` asked about ended before the person
+/// chose, so the platform takes its question down.
+public sealed record ShareSourcesWithdrawn(Guid PageId, Guid ShareId) : EnginePagePresentation(PageId);
+
+/// A page the person can share as a tab: its identity, its title, its
+/// address and its icon as a PNG, when it has them.
+public sealed record ShareableTab(Guid PageId, string Title, string? Url, byte[]? Icon);
+
+/// The page's part in tab sharing changed: `Shared` while another page shares
+/// it as a tab, and `Sharing` while it shares another tab, so its tab can show
+/// it and offer to stop.
+public sealed record TabSharingChanged(Guid PageId, bool Shared, bool Sharing) : EnginePagePresentation(PageId);
 
 /// Whether a media session plays.
 public enum MediaPlayback {

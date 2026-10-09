@@ -21,7 +21,9 @@ struct BrowserWebContentView: View {
                     browser: browser,
                     pagePresentation: pagePresentation,
                     isPageActive: pages.activePage === page,
-                    focusRestorationGate: focusRestorationGate
+                    focusRestorationGate: focusRestorationGate,
+                    tabPlacement: tabPlacement(ofPage:),
+                    goToSharingCounterpart: sharingCounterpartActivation
                 )
                 .frame(width: layout.contentSize.width, height: layout.contentSize.height)
                 .scaleEffect(layout.scale)
@@ -55,6 +57,28 @@ struct BrowserWebContentView: View {
         .onChange(of: page.developerCaptureFeedbackRevision) { _, revision in
             dismissDeveloperFeedback(after: revision)
         }
+    }
+
+    /// Shows the tab at the other end of the page's tab sharing, as clicking
+    /// it in the sidebar does, when Crest knows it.
+    private var sharingCounterpartActivation: (() -> Void)? {
+        guard let tabID = pages.tabSharingCounterpart(of: page) else { return nil }
+        let browser = browser
+        let pages = pages
+        return {
+            BrowserTabActivationPolicy.activate(tabID, selectTab: browser.selectTab, presentPage: { pages.select() })
+        }
+    }
+
+    /// Where the tab holding the page `pageID` sits in its Space's tabs, and
+    /// what the sidebar calls it.
+    private func tabPlacement(ofPage pageID: UUID) -> BrowserShareSourceOffer.TabPlacement? {
+        guard let held = pages.livePages.first(where: { $0.corePage.id == pageID }),
+            let tabID = held.navigationContext?.tabID,
+            let space = browser.spaceModel(held.spaceID),
+            let position = space.tabs.models.firstIndex(where: { $0.id == tabID })
+        else { return nil }
+        return BrowserShareSourceOffer.TabPlacement(position: position, name: space.tabs.models[position].shownTitle)
     }
 
     private var focusRestorationGate: BrowserWebFocusRestorationGate {

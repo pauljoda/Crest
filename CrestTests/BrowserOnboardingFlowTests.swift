@@ -71,6 +71,25 @@ final class BrowserOnboardingFlowTests: XCTestCase {
             [[ImportExtensionInstall(extensionID: first, name: "uBlock Origin", iconPath: nil, spaceIDs: [spaceID])]])
     }
 
+    /// Setup reads no browser's data until the person asks: opening it lists
+    /// the browsers by their apps, and going on with one reads that one alone.
+    func testSetupReadsOnlyTheBrowserThePersonGoesOnWith() async {
+        let discovery = RecordingSourceDiscovery(read: [source(.chrome), source(.arc)])
+        let flow = makeFlow(
+            sourceDiscovery: discovery,
+            reader: SequencedImportReader(
+                results: [.success(readOutput(application: .chrome, spaces: [makeSpace(name: "Chrome")]))]))
+        flow.start()
+        flow.discoverInstalledSources()
+        XCTAssertEqual(flow.offeredSources.map(\.application), [.chrome, .arc])
+        XCTAssertTrue(discovery.readApplications.isEmpty)
+
+        flow.toggleImportSelection(.chrome)
+        flow.continueImportQueue()
+        await waitUntil { flow.step == .review }
+        XCTAssertEqual(discovery.readApplications, [.chrome])
+    }
+
     func testCancellationPreventsALateReadFromPublishingAReview() async {
         let reader = SuspendedFlowImportReader()
         let flow = makeFlow(sourceDiscovery: StubSourceDiscovery(sources: [source(.arc)]), reader: reader)
@@ -204,6 +223,28 @@ private struct StubSourceDiscovery: BrowserInstalledImportSourceDiscovering {
 
     func installedSources() -> [BrowserInstalledImportSource] {
         sources
+    }
+}
+
+/// Lists the browsers by their apps alone and records each one setup reads.
+@MainActor
+private final class RecordingSourceDiscovery: BrowserInstalledImportSourceDiscovering {
+    private let read: [BrowserInstalledImportSource]
+    private(set) var readApplications: [ImportSource] = []
+
+    init(read: [BrowserInstalledImportSource]) {
+        self.read = read
+    }
+
+    func installedSources() -> [BrowserInstalledImportSource] {
+        read.map {
+            BrowserInstalledImportSource(application: $0.application, applicationURL: $0.applicationURL, icon: $0.icon)
+        }
+    }
+
+    func scanned(_ source: BrowserInstalledImportSource) -> BrowserInstalledImportSource {
+        readApplications.append(source.application)
+        return read.first { $0.id == source.id } ?? source
     }
 }
 

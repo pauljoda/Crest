@@ -94,7 +94,12 @@ actor BrowserCloudSyncEngine {
             ])
         }
         await enqueueLocalChanges(on: syncEngine)
-        await updateStatus(.idle)
+        // The engine fetches on a push, and one sent while Crest was closed
+        // never arrives; it sends when a save is first queued, and saves
+        // queued while a full pull held them back are not new. A start
+        // fetches and sends once, as Sync Now does, and the status says how
+        // that went.
+        try? await exchange(on: syncEngine)
     }
 
     func stop() async {
@@ -115,7 +120,13 @@ actor BrowserCloudSyncEngine {
             await updateStatus(.pausedForAccountConfirmation)
             return
         }
-        let syncEngine = initializedEngine()
+        try await exchange(on: initializedEngine())
+    }
+
+    /// Fetches what changed in iCloud, then sends what waits to upload,
+    /// recovering with a full pull first when one is required. Reports
+    /// syncing, then idle or the failure it throws.
+    private func exchange(on syncEngine: CKSyncEngine) async throws {
         eventFailureDescription = nil
         await updateStatus(.syncing)
         do {
@@ -151,6 +162,8 @@ actor BrowserCloudSyncEngine {
         }
     }
 
+    /// Downloads every record in Crest's zone and merges it, then sends what
+    /// waits to upload. Answers how many records the zone held.
     func pullFromICloud() async throws -> Int {
         guard !isStopped, !transport.awaitsAccountDecision, !isPullingSnapshot else {
             throw BrowserCloudSyncError.remoteChangeNotApplied("Sync is paused.")
@@ -176,8 +189,15 @@ actor BrowserCloudSyncEngine {
             }
             eventFailureDescription = nil
             isPullingSnapshot = false
-            await enqueueLocalChanges(on: initializedEngine())
+            let syncEngine = initializedEngine()
+            await enqueueLocalChanges(on: syncEngine)
             await activityHandler?(.fetched(recordCount: records.count))
+            // Nothing uploads while a pull runs or is required, and the saves
+            // that waited are not offered again on their own.
+            try await syncEngine.sendChanges(.init(scope: .zoneIDs([codec.recordZoneID])))
+            if let failure = eventFailureDescription {
+                throw BrowserCloudSyncError.remoteChangeNotApplied(failure)
+            }
             await updateStatus(.idle)
             return records.count
         } catch {

@@ -132,6 +132,10 @@ zsh, and ripgrep.
 `Scripts/check-public-source.py` separately inspects the exact Git index and
 rejects coding-assistant instructions or state, machine-local editor files,
 local environment configuration, and Apple signing or provisioning material.
+The only tracked assistant files are the public `AGENTS.md`, the
+`crest-contribution` skill under `.agents/skills/`, and its
+`.claude/skills/crest-contribution` link; any other `.agents/` or `.claude/`
+entry, nested `AGENTS.md`, or `CLAUDE.local.md` is rejected.
 Ignored local worktrees do not enter the public snapshot, while an accidental
 forced add fails the check.
 

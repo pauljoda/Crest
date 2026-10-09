@@ -21,6 +21,7 @@ struct PinnedTabTile: View {
         let runtimeAssignment = self.runtimeAssignment
         let isSelected = grid.window?.shownTabIDs.contains(tab.id) ?? (tab.id == grid.selectedTabID)
         let loaded = context?.isLoaded(tab.id) ?? true
+        let isShared = context?.isSharedAsTab(tab.id) ?? false
         let multiSelection = context?.browser.tabMultiSelection
         PinnedTabSelectionButton(
             tab: tab,
@@ -40,6 +41,7 @@ struct PinnedTabTile: View {
             },
             isMultiSelected: context.map { BrowserSidebarSelection.showsSelected(.tab(tab.id), in: $0) } ?? false,
             branding: context.map(\.space.settings.look),
+            isSharedAsTab: isShared,
             iconCustomization: iconCustomization
         )
         .browserPinnedTabPromotionDestination(
@@ -52,7 +54,13 @@ struct PinnedTabTile: View {
             )
         )
         .accessibilityLabel(tab.shownTitle)
-        .accessibilityValue(BrowserChromeAccessibility.tabValue(isLoaded: loaded))
+        .accessibilityValue(
+            isShared
+                ? Text(
+                    "\(BrowserChromeAccessibility.tabValue(isLoaded: loaded)), Shared",
+                    comment: "Accessibility value of a pinned tab another page shares; the value is its loaded state.")
+                : Text(BrowserChromeAccessibility.tabValue(isLoaded: loaded))
+        )
         .accessibilityAddTraits(isSelected ? .isSelected : [])
         .help(tab.shownTitle)
         .modifier(

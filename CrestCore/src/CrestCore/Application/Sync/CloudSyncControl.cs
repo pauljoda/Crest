@@ -29,6 +29,9 @@ internal sealed class CloudSyncControl {
     /// Whether the session the core keeps in its file is still the disposable
     /// seed a first launch made, which the cloud's content replaces.
     internal Func<bool> SeedIsDisposable { get; }
+    /// How many records the stored session's journal holds waiting to upload,
+    /// read without the control's lock: the journal keeps a lock of its own.
+    private readonly Func<int> pendingUploads;
 
     internal bool IsEnabled { get; set; } = true;
     internal bool CanReachCloud { get; set; }
@@ -60,13 +63,15 @@ internal sealed class CloudSyncControl {
 
     #region Constructors
 
-    public CloudSyncControl(CloudTransportStore transport, IClock clock, Func<bool> seedIsDisposable) {
+    public CloudSyncControl(CloudTransportStore transport, IClock clock, Func<bool> seedIsDisposable, Func<int> pendingUploads) {
         ArgumentNullException.ThrowIfNull(transport);
         ArgumentNullException.ThrowIfNull(clock);
         ArgumentNullException.ThrowIfNull(seedIsDisposable);
+        ArgumentNullException.ThrowIfNull(pendingUploads);
         Transport = transport;
         Clock = clock;
         SeedIsDisposable = seedIsDisposable;
+        this.pendingUploads = pendingUploads;
     }
 
     #endregion
@@ -78,9 +83,10 @@ internal sealed class CloudSyncControl {
     /// cannot be saved.
     public IReadOnlyList<Change> Handle(CloudSyncControlIntent intent) {
         ArgumentNullException.ThrowIfNull(intent);
+        int pending = pendingUploads();
         lock (gate) {
             var steps = intent.Steps(this);
-            return [new CloudSyncAdvanced(Status(), steps)];
+            return [new CloudSyncAdvanced(Status(pending), steps)];
         }
     }
 
@@ -225,8 +231,13 @@ internal sealed class CloudSyncControl {
 
     #region Actions - Queries
 
-    internal CloudSyncStatus Status() => new(IsEnabled, Account, Phase, Problem, FailureMessage, LastAttemptAt, LastSuccessAt, LastFetched,
-        LastUploaded, ObservedCloud, Conflict, Skipped, RequiresAppUpdate, CloudDataRemoved);
+    /// The status, showing the phase as it reads while `pendingUploads`
+    /// records wait to upload.
+    internal CloudSyncStatus Status(int pendingUploads) => new(IsEnabled, Account, Phase.Showing(pendingUploads), Problem, FailureMessage,
+        LastAttemptAt, LastSuccessAt, LastFetched, LastUploaded, ObservedCloud, Conflict, Skipped, RequiresAppUpdate, CloudDataRemoved);
+
+    /// How many records wait to upload, read without the control's lock.
+    internal int PendingUploads() => pendingUploads();
 
     #endregion
 }

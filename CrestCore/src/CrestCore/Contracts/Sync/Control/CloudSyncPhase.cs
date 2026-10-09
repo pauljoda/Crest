@@ -10,8 +10,13 @@ public sealed class CloudSyncPhase {
         tint: null, keepsCloudOutOfReach: false);
     public static readonly CloudSyncPhase Checking = new(name: "checking", isRetryable: false, title: "Checking iCloud",
         symbol: "arrow.triangle.2.circlepath.icloud", tint: SystemTint.Blue, keepsCloudOutOfReach: true);
-    public static readonly CloudSyncPhase Ready = new(name: "ready", isRetryable: false, title: "Ready", symbol: "checkmark.icloud.fill",
-        tint: SystemTint.Green, keepsCloudOutOfReach: false);
+    /// Sync works, and this device's journal holds records that have not
+    /// reached iCloud yet.
+    public static readonly CloudSyncPhase WaitingToUpload = new(name: "waitingToUpload", isRetryable: false, title: "Waiting to upload",
+        symbol: "icloud.and.arrow.up", tint: SystemTint.Blue, keepsCloudOutOfReach: false);
+    /// Sync works, and nothing on this device waits to upload.
+    public static readonly CloudSyncPhase Ready = new(name: "ready", isRetryable: false, title: "Up to date", symbol: "checkmark.icloud.fill",
+        tint: SystemTint.Green, keepsCloudOutOfReach: false, whileUploadsWait: WaitingToUpload);
     public static readonly CloudSyncPhase Syncing = new(name: "syncing", isRetryable: false, title: "Syncing",
         symbol: "arrow.triangle.2.circlepath.icloud", tint: SystemTint.Blue, keepsCloudOutOfReach: false);
     public static readonly CloudSyncPhase NeedsReconciliation = new(name: "needsReconciliation", isRetryable: false,
@@ -22,7 +27,7 @@ public sealed class CloudSyncPhase {
         symbol: "xmark.icloud.fill", tint: SystemTint.Red, keepsCloudOutOfReach: true);
 
     public static IReadOnlyList<CloudSyncPhase> All { get; } =
-        [Disabled, Checking, Ready, Syncing, NeedsReconciliation, WaitingForAccount, Failed];
+        [Disabled, Checking, Ready, Syncing, NeedsReconciliation, WaitingForAccount, Failed, WaitingToUpload];
 
     public string Name { get; }
 
@@ -47,18 +52,33 @@ public sealed class CloudSyncPhase {
     /// it has not answered, no account is signed in, or sync failed.
     public bool KeepsCloudOutOfReach { get; }
 
+    /// The phase this one reads as while records wait to upload, when it
+    /// gives way to them: a sync that has nothing left to do is not up to
+    /// date while this device's changes have not left it.
+    internal CloudSyncPhase? WhileUploadsWait { get; }
+
     #endregion
 
     #region Constructors
 
-    private CloudSyncPhase(string name, bool isRetryable, string title, string symbol, SystemTint? tint, bool keepsCloudOutOfReach) {
+    private CloudSyncPhase(string name, bool isRetryable, string title, string symbol, SystemTint? tint, bool keepsCloudOutOfReach,
+        CloudSyncPhase? whileUploadsWait = null) {
         Name = name;
         IsRetryable = isRetryable;
         Title = title;
         Symbol = symbol;
         Tint = tint;
         KeepsCloudOutOfReach = keepsCloudOutOfReach;
+        WhileUploadsWait = whileUploadsWait;
     }
+
+    #endregion
+
+    #region Actions - Presenting
+
+    /// The phase the settings show while `pendingUploads` records wait to
+    /// upload.
+    internal CloudSyncPhase Showing(int pendingUploads) => pendingUploads > 0 && WhileUploadsWait is { } waiting ? waiting : this;
 
     #endregion
 }

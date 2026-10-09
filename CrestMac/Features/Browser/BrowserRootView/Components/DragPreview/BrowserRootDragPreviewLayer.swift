@@ -6,6 +6,8 @@ struct BrowserRootDragPreviewLayer: View {
     let model: BrowserRootModel
     let reduceMotion: Bool
 
+    @Environment(\.browserChromeAppearance) private var appearance
+
     var body: some View {
         BrowserDragPreviewWindowBridge(
             content: content,
@@ -42,6 +44,11 @@ struct BrowserRootDragPreviewLayer: View {
             snapshot: lift.snapshot,
             origin: lift.previewOrigin,
             size: lift.cardSize,
+            // A borderless card has square corners only because it meets the
+            // window's edges; lifted away from them, it rounds like a page.
+            cornerRadius: appearance.borderless
+                ? BrowserChromeLayout.pageCornerRadius
+                : appearance.pageCornerRadius,
             grabFraction: lift.grabFraction,
             isSettling: lift.isSettling,
             reduceMotion: reduceMotion

@@ -1,7 +1,12 @@
 import SwiftUI
 
 struct BrowserSoftwareUpdateActions: View {
+    // MARK: - Variables
+
     let model: BrowserSoftwareUpdateModel
+    /// Whether Return dismisses a settled update. Only the update window, which
+    /// holds nothing else, takes Return for that.
+    var confirmsWithReturn = true
 
     var body: some View {
         HStack(spacing: CrestSpacing.small) {
@@ -43,7 +48,7 @@ struct BrowserSoftwareUpdateActions: View {
             case .upToDate, .failed, .installed:
                 Spacer()
                 Button("Dismiss", action: model.acknowledge)
-                    .keyboardShortcut(.defaultAction)
+                    .keyboardShortcut(confirmsWithReturn ? .defaultAction : nil)
             case .idle, .extracting, .unavailable:
                 EmptyView()
             }

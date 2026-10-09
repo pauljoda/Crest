@@ -100,6 +100,16 @@ enum BrowserPageEngineEvent {
     case webContentProcessTerminated
     case infoBarAdded(BrowserEngineInfoBar)
     case infoBarRemoved(id: Int?)
+    /// A document in the page asked to share the screen; the person chooses
+    /// one of the offer's tabs, or a window or display.
+    case shareSourcesOffered(BrowserShareSourceOffer)
+    /// The request the offer `shareID` asked about ended first.
+    case shareSourcesWithdrawn(shareID: UUID)
+    /// The page left the screen, as switching to another tab takes it off.
+    case leftScreen
+    /// The page's part in tab sharing changed: shared by another page, or
+    /// sharing another tab.
+    case tabSharingChanged(shared: Bool, sharing: Bool)
     case mediaSession(BrowserMediaSessionPageEvent)
     case contentFullscreenChanged(Bool)
     case userActivity

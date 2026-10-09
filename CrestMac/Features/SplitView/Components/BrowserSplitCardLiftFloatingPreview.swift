@@ -52,7 +52,7 @@ struct BrowserSplitCardLiftFloatingPreview: View {
     /// would advertise the wait it was meant to hide.
     private var art: some View {
         let shape = RoundedRectangle(
-            cornerRadius: BrowserChromeLayout.pageCornerRadius,
+            cornerRadius: content.cornerRadius,
             style: .continuous
         )
         return ZStack {

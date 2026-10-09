@@ -76,13 +76,15 @@ public static class NativeSyncEvaluator {
         => TabPlacement.Named(Text(payload, "placement")) ?? throw new BrowserRuleException(BrowserRule.InvalidSyncPlacement);
 
     /// The record `first` and `second`, two versions of one record, resolve
-    /// to: the winner's, with the fields each side last changed.
+    /// to: the winner's, with the fields each side last changed. Versions in
+    /// different Spaces resolve to the winner's whole, since a field the
+    /// other changed, such as a folder, belongs to the Space it left.
     public static JsonObject Resolve(JsonObject first, JsonObject second) {
         var aStamp = Stamp(first); var bStamp = Stamp(second);
         int winner = SyncConflictPolicy.Winner(aStamp, bStamp);
         var result = (winner == 0 ? first : second).DeepClone().AsObject();
         var a = Payload(first); var b = Payload(second);
-        if (a is null || b is null) return result;
+        if (a is null || b is null || aStamp.Space != bStamp.Space) return result;
         SyncPayloadType.Of(first["payload"]!).MergeFields(Payload(result)!, a, b, winner);
         return result;
     }

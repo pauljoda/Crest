@@ -242,6 +242,12 @@ internal static class SwiftEmitter {
     /// values are equal when they are the same member. An open set's struct has
     /// no tag and a memberwise initializer, and two values are equal when their
     /// names are.
+    ///
+    /// The member's data lives in one shared `Facts` object, so the struct has
+    /// a fixed layout whatever its data holds. A `LocalizedStringResource` has
+    /// none, and stored in the struct it left every record that holds the set
+    /// sized only at runtime: Swift reserves such values at the top of the
+    /// function, so the change decoder's frame outgrew an iPhone's main thread.
     private static void EmitSet(StringBuilder code, ContractSet set) {
         var properties = set.Properties.Select(property => (Name: Local(property.Name), property.Type)).ToList();
         code.Append('\n').Append(set.IsOpen
@@ -259,13 +265,17 @@ internal static class SwiftEmitter {
             code.Append($"    static let {Local(constant.Name)} = {Literal(constant.Type, constant.Value, MemberIndent)}\n");
         if (set.Constants.Count > 0) code.Append('\n');
         if (!set.IsOpen) code.Append("    let tag: Int\n");
-        foreach (var property in properties) code.Append($"    let {property.Name}: {TypeName(property.Type)}\n");
+        foreach (var property in properties)
+            code.Append($"    var {property.Name}: {TypeName(property.Type)} {{ facts.{property.Name} }}\n");
+        if (properties.Count > 0) code.Append("    private let facts: Facts\n");
         string[] tag = set.IsOpen ? [] : ["tag: Int"];
-        code.Append('\n').Append(Wrapped(set.IsOpen ? "    init(" : "    private init(", ")", [
-            .. tag, .. properties.Select(property => $"{property.Name}: {TypeName(property.Type)}")]));
+        var parameters = properties.Select(property => $"{property.Name}: {TypeName(property.Type)}").ToList();
+        code.Append('\n').Append(Wrapped(set.IsOpen ? "    init(" : "    private init(", ")", [.. tag, .. parameters]));
         code.Append(" {\n");
         if (!set.IsOpen) code.Append("        self.tag = tag\n");
-        foreach (var property in properties) code.Append($"        self.{property.Name} = {property.Name}\n");
+        if (properties.Count > 0)
+            code.Append(Wrapped("        facts = Facts(", ")", [.. properties.Select(property => $"{property.Name}: {property.Name}")]))
+                .Append('\n');
         code.Append("    }\n\n");
         foreach (var member in set.Members) {
             string[] memberTag = set.IsOpen ? [] : [$"tag: {member.Tag}"];
@@ -279,7 +289,15 @@ internal static class SwiftEmitter {
         code.Append('\n').Append($"    static func named(_ name: String?) -> {set.Name}? {{\n        all.first {{ $0.name == name }}\n    }}\n");
         string identity = set.IsOpen ? "name" : "tag";
         code.Append('\n').Append($"    static func == (lhs: {set.Name}, rhs: {set.Name}) -> Bool {{\n        lhs.{identity} == rhs.{identity}\n    }}\n");
-        code.Append('\n').Append($"    func hash(into hasher: inout Hasher) {{\n        hasher.combine({identity})\n    }}\n}}\n");
+        code.Append('\n').Append($"    func hash(into hasher: inout Hasher) {{\n        hasher.combine({identity})\n    }}\n");
+        if (properties.Count > 0) {
+            code.Append("\n    private final class Facts: Sendable {\n");
+            foreach (var property in properties) code.Append($"        let {property.Name}: {TypeName(property.Type)}\n");
+            code.Append('\n').Append(Wrapped("        init(", ")", parameters)).Append(" {\n");
+            foreach (var property in properties) code.Append($"            self.{property.Name} = {property.Name}\n");
+            code.Append("        }\n    }\n");
+        }
+        code.Append("}\n");
     }
 
     /// A root the platform sends becomes the protocol its messages conform to,

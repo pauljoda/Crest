@@ -37,6 +37,9 @@
     "%@ — Not Downloaded" : {
 
     },
+    "%@, Shared" : {
+      "comment" : "Accessibility value of a pinned tab another page shares; the value is its loaded state."
+    },
     "%@ · %@" : {
       "localizations" : {
         "ar" : {
@@ -1971,6 +1974,9 @@
     "Already saved" : {
 
     },
+    "Also share tab audio" : {
+      "comment" : "Screen sharing picker option to include the shared tab's sound."
+    },
     "Always show folder highlights" : {
 
     },
@@ -2761,9 +2767,6 @@
     "Browser data found · Review it" : {
 
     },
-    "Browser not listed?" : {
-
-    },
     "browser startup default Space typing spelling spell check text editing Picture in Picture video developer toolbar localhost local pages translation system permissions access camera microphone location notifications passkeys files folders downloads allow blocked repair" : {
 
     },
@@ -3140,6 +3143,9 @@
     },
     "Choose what to bring over" : {
 
+    },
+    "Choose what to share" : {
+      "comment" : "Accessibility label for the screen sharing picker."
     },
     "Choose which accounts to import." : {
 
@@ -4331,6 +4337,9 @@
     "Crest preview" : {
       "extractionState" : "manual"
     },
+    "Crest reads its data when you continue, which may ask for access" : {
+
+    },
     "Crest Recovery" : {
 
     },
@@ -4947,6 +4956,9 @@
     },
     "Dock Sidebar" : {
 
+    },
+    "Don't Share" : {
+      "comment" : "Screen sharing picker control that shares nothing."
     },
     "Don’t put sign-in tokens in a search URL. It syncs with this Space." : {
 
@@ -6154,6 +6166,12 @@
         }
       }
     },
+    "Go to Tab" : {
+      "comment" : "Shared tab popover button that shows the tab it is shared to."
+    },
+    "Go to the other tab" : {
+      "comment" : "Tooltip on a sharing bar's message that shows the tab at the other end."
+    },
     "Gold" : {
 
     },
@@ -6323,6 +6341,15 @@
       }
     },
     "Hide until this tab plays again" : {
+
+    },
+    "Hide until you check for updates" : {
+
+    },
+    "Hide until you come back to this tab" : {
+      "comment" : "Tooltip on a sharing bar's minimize button."
+    },
+    "Hide Update" : {
 
     },
     "Hides recent changes" : {
@@ -7536,7 +7563,7 @@
     "look and feel theme accent color transparency page zoom percentage sidebar left right borderless window fullscreen layout interface animation motion page cards folder highlights counts borders preview density spacing padding scale icons" : {
 
     },
-    "Looks for other browsers built on Chromium" : {
+    "Looks through other browsers’ data on this Mac" : {
 
     },
     "Lozenge" : {
@@ -10917,6 +10944,9 @@
         }
       }
     },
+    "Scan for more" : {
+
+    },
     "Scarlet" : {
 
     },
@@ -11397,8 +11427,17 @@
     "Share Report" : {
 
     },
+    "Share Tab" : {
+      "comment" : "Screen sharing picker button that shares the selected tab."
+    },
     "Share your location with websites you allow." : {
 
+    },
+    "Shared" : {
+      "comment" : "Accessibility label for a sidebar tab another page shares."
+    },
+    "Shared to %@" : {
+      "comment" : "Shared tab popover; the value is the tab it is shared to."
     },
     "Share…" : {
       "localizations" : {
@@ -12261,6 +12300,9 @@
           }
         }
       }
+    },
+    "Stop Sharing" : {
+      "comment" : "Stops the tab sharing a tab takes part in."
     },
     "Stop Speaking" : {
 
@@ -13280,6 +13322,9 @@
     "This Quick Window cannot reconnect to its original browsing profile." : {
 
     },
+    "This Tab" : {
+      "comment" : "Screen sharing picker note on the tab of the page that asks."
+    },
     "This removes %@ from this Space." : {
 
     },
@@ -13337,6 +13382,9 @@
     },
     "This site’s certificate is not trusted. Information you send could be read by others." : {
 
+    },
+    "This tab is being shared" : {
+      "comment" : "Tooltip on a sidebar tab another page shares."
     },
     "This tab needs a newer Crest" : {
 
@@ -13845,10 +13893,16 @@
     "Unmuted" : {
 
     },
+    "Unpin %lld Tabs" : {
+
+    },
     "Unpin Extension" : {
 
     },
     "Unpin from Toolbar" : {
+
+    },
+    "Unpin Tab" : {
 
     },
     "Untitled Space" : {
@@ -14310,6 +14364,9 @@
     "Waiting for iCloud" : {
 
     },
+    "Waiting to upload" : {
+
+    },
     "Wants to download multiple files automatically" : {
 
     },
@@ -14464,6 +14521,9 @@
     },
     "Window border" : {
 
+    },
+    "Window or Screen…" : {
+      "comment" : "Screen sharing picker button that opens the system picker."
     },
     "Window, tab, address field, folder, and app icon choices return to their defaults." : {
 

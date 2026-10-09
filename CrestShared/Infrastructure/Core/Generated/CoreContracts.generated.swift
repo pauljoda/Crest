@@ -439,9 +439,12 @@ enum EnginePresentation: Equatable, Sendable {
     case profilePrepared(ProfilePrepared)
     case profileReleased(ProfileReleased)
     case screenCaptureAccessMissing(ScreenCaptureAccessMissing)
+    case shareSourcesOffered(ShareSourcesOffered)
+    case shareSourcesWithdrawn(ShareSourcesWithdrawn)
     case sidePanelRequested(SidePanelRequested)
     case storeInstallRequested(StoreInstallRequested)
     case storeRemovalRequested(StoreRemovalRequested)
+    case tabSharingChanged(TabSharingChanged)
     case webNotificationClosed(WebNotificationClosed)
     case webNotificationPosted(WebNotificationPosted)
 
@@ -475,9 +478,12 @@ enum EnginePresentation: Equatable, Sendable {
         case .peekRequested(let value): value.pageID
         case .popupBlocked(let value): value.pageID
         case .screenCaptureAccessMissing(let value): value.pageID
+        case .shareSourcesOffered(let value): value.pageID
+        case .shareSourcesWithdrawn(let value): value.pageID
         case .sidePanelRequested(let value): value.pageID
         case .storeInstallRequested(let value): value.pageID
         case .storeRemovalRequested(let value): value.pageID
+        case .tabSharingChanged(let value): value.pageID
         case .webNotificationClosed(let value): value.pageID
         case .webNotificationPosted(let value): value.pageID
         }
@@ -1137,6 +1143,16 @@ struct ChoosePeekModifier: Intent, LinkIntent, Equatable, Sendable {
 
 struct ChooseQuickWindowArchivePolicy: Intent, LinkIntent, Equatable, Sendable {
     let policy: QuickWindowArchivePolicy
+}
+
+struct ChooseShareSource: PageRequest, Equatable, Sendable {
+    typealias Answer = Bool
+
+    let pageID: UUID
+    let shareID: UUID
+    let choice: ShareSourceChoice
+    let tabPageID: UUID?
+    let audio: Bool
 }
 
 struct ChooseSiteEngine: Intent, Equatable, Sendable {
@@ -2725,6 +2741,7 @@ struct InfoBarShown: Equatable, Sendable {
     let acceptLabel: String?
     let cancelLabel: String?
     let closeable: Bool
+    let minimizable: Bool
 }
 
 struct InspectorClosed: Equatable, Sendable {
@@ -4929,6 +4946,26 @@ struct SetupSummary: Equatable, Sendable {
     let spaceCount: Int
 }
 
+struct ShareSourcesOffered: Equatable, Sendable {
+    let pageID: UUID
+    let shareID: UUID
+    let site: String
+    let tabs: [ShareableTab]
+    let audio: Bool
+}
+
+struct ShareSourcesWithdrawn: Equatable, Sendable {
+    let pageID: UUID
+    let shareID: UUID
+}
+
+struct ShareableTab: Equatable, Sendable {
+    let pageID: UUID
+    let title: String
+    let url: String?
+    let icon: Data?
+}
+
 struct ShortcutBinding: Equatable, Sendable {
     let command: ShortcutCommand
     let keys: KeyCombination?
@@ -5541,6 +5578,12 @@ struct StopMediaCapture: PageRequest, Equatable, Sendable {
     let permission: SitePermission
 }
 
+struct StopTabSharing: PageRequest, Equatable, Sendable {
+    typealias Answer = Bool
+
+    let pageID: UUID
+}
+
 struct StorageFailed: Equatable, Sendable {
     let reason: StorageFailure
 }
@@ -5708,6 +5751,12 @@ struct TabSelection: Equatable, Sendable {
     var tabIDs: [UUID]
     var folderIDs: [UUID]
     var memberTabIDs: [UUID]
+}
+
+struct TabSharingChanged: Equatable, Sendable {
+    let pageID: UUID
+    let shared: Bool
+    let sharing: Bool
 }
 
 struct TabState: Equatable, Sendable, Identifiable {
@@ -6344,6 +6393,12 @@ enum SessionFlaw: Int, CaseIterable, Sendable {
     case unknownDeletion = 5
 }
 
+enum ShareSourceChoice: Int, CaseIterable, Sendable {
+    case cancel = 0
+    case tab = 1
+    case windowOrScreen = 2
+}
+
 struct ShortcutModifiers: OptionSet, Sendable {
     let rawValue: Int
     static let command = ShortcutModifiers(rawValue: 1)
@@ -6419,13 +6474,13 @@ enum WebNotificationAnswer: Int, CaseIterable, Sendable {
 /// The members of the core's `AdjacentDirection`. A member's wire tag is its index in `all`.
 struct AdjacentDirection: Hashable, Sendable {
     let tag: Int
-    let name: String
-    let step: Int
+    var name: String { facts.name }
+    var step: Int { facts.step }
+    private let facts: Facts
 
     private init(tag: Int, name: String, step: Int) {
         self.tag = tag
-        self.name = name
-        self.step = step
+        facts = Facts(name: name, step: step)
     }
 
     static let previous = AdjacentDirection(tag: 0, name: "previous", step: -1)
@@ -6444,20 +6499,29 @@ struct AdjacentDirection: Hashable, Sendable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(tag)
     }
+
+    private final class Facts: Sendable {
+        let name: String
+        let step: Int
+
+        init(name: String, step: Int) {
+            self.name = name
+            self.step = step
+        }
+    }
 }
 
 /// The members of the core's `ArchiveFilterGroup`. A member's wire tag is its index in `all`.
 struct ArchiveFilterGroup: Hashable, Sendable {
     let tag: Int
-    let name: String
-    let title: LocalizedStringResource
-    let symbol: String
+    var name: String { facts.name }
+    var title: LocalizedStringResource { facts.title }
+    var symbol: String { facts.symbol }
+    private let facts: Facts
 
     private init(tag: Int, name: String, title: LocalizedStringResource, symbol: String) {
         self.tag = tag
-        self.name = name
-        self.title = title
-        self.symbol = symbol
+        facts = Facts(name: name, title: title, symbol: symbol)
     }
 
     static let closed = ArchiveFilterGroup(
@@ -6498,22 +6562,35 @@ struct ArchiveFilterGroup: Hashable, Sendable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(tag)
     }
+
+    private final class Facts: Sendable {
+        let name: String
+        let title: LocalizedStringResource
+        let symbol: String
+
+        init(name: String, title: LocalizedStringResource, symbol: String) {
+            self.name = name
+            self.title = title
+            self.symbol = symbol
+        }
+    }
 }
 
 /// The members of the core's `ArchiveReason`. A member's wire tag is its index in `all`.
 /// Core-only behavior, not emitted: `syncProjection`.
 struct ArchiveReason: Hashable, Sendable {
     let tag: Int
-    let name: String
-    let storedReason: String
-    let deletionOrigin: String?
-    let filterGroup: ArchiveFilterGroup
-    let title: LocalizedStringResource
-    let symbol: String
-    let tint: SystemTint
-    let isExplicitDeletion: Bool
-    let isCleanup: Bool
-    let isReceived: Bool
+    var name: String { facts.name }
+    var storedReason: String { facts.storedReason }
+    var deletionOrigin: String? { facts.deletionOrigin }
+    var filterGroup: ArchiveFilterGroup { facts.filterGroup }
+    var title: LocalizedStringResource { facts.title }
+    var symbol: String { facts.symbol }
+    var tint: SystemTint { facts.tint }
+    var isExplicitDeletion: Bool { facts.isExplicitDeletion }
+    var isCleanup: Bool { facts.isCleanup }
+    var isReceived: Bool { facts.isReceived }
+    private let facts: Facts
 
     private init(
         tag: Int,
@@ -6529,16 +6606,18 @@ struct ArchiveReason: Hashable, Sendable {
         isReceived: Bool
     ) {
         self.tag = tag
-        self.name = name
-        self.storedReason = storedReason
-        self.deletionOrigin = deletionOrigin
-        self.filterGroup = filterGroup
-        self.title = title
-        self.symbol = symbol
-        self.tint = tint
-        self.isExplicitDeletion = isExplicitDeletion
-        self.isCleanup = isCleanup
-        self.isReceived = isReceived
+        facts = Facts(
+            name: name,
+            storedReason: storedReason,
+            deletionOrigin: deletionOrigin,
+            filterGroup: filterGroup,
+            title: title,
+            symbol: symbol,
+            tint: tint,
+            isExplicitDeletion: isExplicitDeletion,
+            isCleanup: isCleanup,
+            isReceived: isReceived
+        )
     }
 
     static let autoCleanup = ArchiveReason(
@@ -6633,18 +6712,55 @@ struct ArchiveReason: Hashable, Sendable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(tag)
     }
+
+    private final class Facts: Sendable {
+        let name: String
+        let storedReason: String
+        let deletionOrigin: String?
+        let filterGroup: ArchiveFilterGroup
+        let title: LocalizedStringResource
+        let symbol: String
+        let tint: SystemTint
+        let isExplicitDeletion: Bool
+        let isCleanup: Bool
+        let isReceived: Bool
+
+        init(
+            name: String,
+            storedReason: String,
+            deletionOrigin: String?,
+            filterGroup: ArchiveFilterGroup,
+            title: LocalizedStringResource,
+            symbol: String,
+            tint: SystemTint,
+            isExplicitDeletion: Bool,
+            isCleanup: Bool,
+            isReceived: Bool
+        ) {
+            self.name = name
+            self.storedReason = storedReason
+            self.deletionOrigin = deletionOrigin
+            self.filterGroup = filterGroup
+            self.title = title
+            self.symbol = symbol
+            self.tint = tint
+            self.isExplicitDeletion = isExplicitDeletion
+            self.isCleanup = isCleanup
+            self.isReceived = isReceived
+        }
+    }
 }
 
 /// The members of the core's `AuthenticationMethod`. A member's wire tag is its index in `all`.
 struct AuthenticationMethod: Hashable, Sendable {
     let tag: Int
-    let name: String
-    let promptsForCredentials: Bool
+    var name: String { facts.name }
+    var promptsForCredentials: Bool { facts.promptsForCredentials }
+    private let facts: Facts
 
     private init(tag: Int, name: String, promptsForCredentials: Bool) {
         self.tag = tag
-        self.name = name
-        self.promptsForCredentials = promptsForCredentials
+        facts = Facts(name: name, promptsForCredentials: promptsForCredentials)
     }
 
     static let httpBasic = AuthenticationMethod(tag: 0, name: "httpBasic", promptsForCredentials: true)
@@ -6664,6 +6780,16 @@ struct AuthenticationMethod: Hashable, Sendable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(tag)
     }
+
+    private final class Facts: Sendable {
+        let name: String
+        let promptsForCredentials: Bool
+
+        init(name: String, promptsForCredentials: Bool) {
+            self.name = name
+            self.promptsForCredentials = promptsForCredentials
+        }
+    }
 }
 
 /// The members of the core's `AutomaticDownloadAction`. A member's wire tag is its index in `all`.
@@ -6675,13 +6801,13 @@ struct AutomaticDownloadAction: Hashable, Sendable {
     }
 
     let tag: Int
-    let kind: Kinds
-    let name: String
+    var kind: Kinds { facts.kind }
+    var name: String { facts.name }
+    private let facts: Facts
 
     private init(tag: Int, kind: Kinds, name: String) {
         self.tag = tag
-        self.kind = kind
-        self.name = name
+        facts = Facts(kind: kind, name: name)
     }
 
     static let allow = AutomaticDownloadAction(tag: 0, kind: .allow, name: "allow")
@@ -6701,16 +6827,27 @@ struct AutomaticDownloadAction: Hashable, Sendable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(tag)
     }
+
+    private final class Facts: Sendable {
+        let kind: Kinds
+        let name: String
+
+        init(kind: Kinds, name: String) {
+            self.kind = kind
+            self.name = name
+        }
+    }
 }
 
 /// The members of the core's `BlockedPopupEvent`. A member's wire tag is its index in `all`.
 struct BlockedPopupEvent: Hashable, Sendable {
     let tag: Int
-    let name: String
-    let from: BlockedPopupStatus?
-    let fromAnything: Bool
-    let to: BlockedPopupStatus?
-    let startsIndication: Bool
+    var name: String { facts.name }
+    var from: BlockedPopupStatus? { facts.from }
+    var fromAnything: Bool { facts.fromAnything }
+    var to: BlockedPopupStatus? { facts.to }
+    var startsIndication: Bool { facts.startsIndication }
+    private let facts: Facts
 
     private init(
         tag: Int,
@@ -6721,11 +6858,7 @@ struct BlockedPopupEvent: Hashable, Sendable {
         startsIndication: Bool
     ) {
         self.tag = tag
-        self.name = name
-        self.from = from
-        self.fromAnything = fromAnything
-        self.to = to
-        self.startsIndication = startsIndication
+        facts = Facts(name: name, from: from, fromAnything: fromAnything, to: to, startsIndication: startsIndication)
     }
 
     static let blocked = BlockedPopupEvent(
@@ -6782,22 +6915,42 @@ struct BlockedPopupEvent: Hashable, Sendable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(tag)
     }
+
+    private final class Facts: Sendable {
+        let name: String
+        let from: BlockedPopupStatus?
+        let fromAnything: Bool
+        let to: BlockedPopupStatus?
+        let startsIndication: Bool
+
+        init(
+            name: String,
+            from: BlockedPopupStatus?,
+            fromAnything: Bool,
+            to: BlockedPopupStatus?,
+            startsIndication: Bool
+        ) {
+            self.name = name
+            self.from = from
+            self.fromAnything = fromAnything
+            self.to = to
+            self.startsIndication = startsIndication
+        }
+    }
 }
 
 /// The members of the core's `BlockedPopupStatus`. A member's wire tag is its index in `all`.
 struct BlockedPopupStatus: Hashable, Sendable {
     let tag: Int
-    let name: String
-    let symbol: String
-    let guidance: LocalizedStringResource
-    let offersAllow: Bool
+    var name: String { facts.name }
+    var symbol: String { facts.symbol }
+    var guidance: LocalizedStringResource { facts.guidance }
+    var offersAllow: Bool { facts.offersAllow }
+    private let facts: Facts
 
     private init(tag: Int, name: String, symbol: String, guidance: LocalizedStringResource, offersAllow: Bool) {
         self.tag = tag
-        self.name = name
-        self.symbol = symbol
-        self.guidance = guidance
-        self.offersAllow = offersAllow
+        facts = Facts(name: name, symbol: symbol, guidance: guidance, offersAllow: offersAllow)
     }
 
     static let blocked = BlockedPopupStatus(
@@ -6828,16 +6981,31 @@ struct BlockedPopupStatus: Hashable, Sendable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(tag)
     }
+
+    private final class Facts: Sendable {
+        let name: String
+        let symbol: String
+        let guidance: LocalizedStringResource
+        let offersAllow: Bool
+
+        init(name: String, symbol: String, guidance: LocalizedStringResource, offersAllow: Bool) {
+            self.name = name
+            self.symbol = symbol
+            self.guidance = guidance
+            self.offersAllow = offersAllow
+        }
+    }
 }
 
 /// The members of the core's `BuiltInSearchEngine`. A member's wire tag is its index in `all`.
 struct BuiltInSearchEngine: Hashable, Sendable {
     let tag: Int
-    let name: String
+    var name: String { facts.name }
+    private let facts: Facts
 
     private init(tag: Int, name: String) {
         self.tag = tag
-        self.name = name
+        facts = Facts(name: name)
     }
 
     static let google = BuiltInSearchEngine(tag: 0, name: "google")
@@ -6859,18 +7027,26 @@ struct BuiltInSearchEngine: Hashable, Sendable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(tag)
     }
+
+    private final class Facts: Sendable {
+        let name: String
+
+        init(name: String) {
+            self.name = name
+        }
+    }
 }
 
 /// The members of the core's `CapabilityStatus`. A member's wire tag is its index in `all`.
 struct CapabilityStatus: Hashable, Sendable {
     let tag: Int
-    let name: String
-    let isAvailable: Bool
+    var name: String { facts.name }
+    var isAvailable: Bool { facts.isAvailable }
+    private let facts: Facts
 
     private init(tag: Int, name: String, isAvailable: Bool) {
         self.tag = tag
-        self.name = name
-        self.isAvailable = isAvailable
+        facts = Facts(name: name, isAvailable: isAvailable)
     }
 
     static let supported = CapabilityStatus(tag: 0, name: "supported", isAvailable: true)
@@ -6891,18 +7067,28 @@ struct CapabilityStatus: Hashable, Sendable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(tag)
     }
+
+    private final class Facts: Sendable {
+        let name: String
+        let isAvailable: Bool
+
+        init(name: String, isAvailable: Bool) {
+            self.name = name
+            self.isAvailable = isAvailable
+        }
+    }
 }
 
 /// The members of the core's `CloudAccountState`. A member's wire tag is its index in `all`.
 struct CloudAccountState: Hashable, Sendable {
     let tag: Int
-    let name: String
-    let title: LocalizedStringResource
+    var name: String { facts.name }
+    var title: LocalizedStringResource { facts.title }
+    private let facts: Facts
 
     private init(tag: Int, name: String, title: LocalizedStringResource) {
         self.tag = tag
-        self.name = name
-        self.title = title
+        facts = Facts(name: name, title: title)
     }
 
     static let checking = CloudAccountState(tag: 0, name: "checking", title: LocalizedStringResource("Checking"))
@@ -6940,18 +7126,28 @@ struct CloudAccountState: Hashable, Sendable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(tag)
     }
+
+    private final class Facts: Sendable {
+        let name: String
+        let title: LocalizedStringResource
+
+        init(name: String, title: LocalizedStringResource) {
+            self.name = name
+            self.title = title
+        }
+    }
 }
 
 /// The members of the core's `CloudAccountTransition`. A member's wire tag is its index in `all`.
 struct CloudAccountTransition: Hashable, Sendable {
     let tag: Int
-    let name: String
-    let alwaysPauses: Bool
+    var name: String { facts.name }
+    var alwaysPauses: Bool { facts.alwaysPauses }
+    private let facts: Facts
 
     private init(tag: Int, name: String, alwaysPauses: Bool) {
         self.tag = tag
-        self.name = name
-        self.alwaysPauses = alwaysPauses
+        facts = Facts(name: name, alwaysPauses: alwaysPauses)
     }
 
     static let signIn = CloudAccountTransition(tag: 0, name: "signIn", alwaysPauses: false)
@@ -6972,17 +7168,28 @@ struct CloudAccountTransition: Hashable, Sendable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(tag)
     }
+
+    private final class Facts: Sendable {
+        let name: String
+        let alwaysPauses: Bool
+
+        init(name: String, alwaysPauses: Bool) {
+            self.name = name
+            self.alwaysPauses = alwaysPauses
+        }
+    }
 }
 
 /// The members of the core's `CloudSyncPhase`. A member's wire tag is its index in `all`.
 struct CloudSyncPhase: Hashable, Sendable {
     let tag: Int
-    let name: String
-    let isRetryable: Bool
-    let title: LocalizedStringResource
-    let symbol: String
-    let tint: SystemTint?
-    let keepsCloudOutOfReach: Bool
+    var name: String { facts.name }
+    var isRetryable: Bool { facts.isRetryable }
+    var title: LocalizedStringResource { facts.title }
+    var symbol: String { facts.symbol }
+    var tint: SystemTint? { facts.tint }
+    var keepsCloudOutOfReach: Bool { facts.keepsCloudOutOfReach }
+    private let facts: Facts
 
     private init(
         tag: Int,
@@ -6994,12 +7201,14 @@ struct CloudSyncPhase: Hashable, Sendable {
         keepsCloudOutOfReach: Bool
     ) {
         self.tag = tag
-        self.name = name
-        self.isRetryable = isRetryable
-        self.title = title
-        self.symbol = symbol
-        self.tint = tint
-        self.keepsCloudOutOfReach = keepsCloudOutOfReach
+        facts = Facts(
+            name: name,
+            isRetryable: isRetryable,
+            title: title,
+            symbol: symbol,
+            tint: tint,
+            keepsCloudOutOfReach: keepsCloudOutOfReach
+        )
     }
 
     static let disabled = CloudSyncPhase(
@@ -7024,7 +7233,7 @@ struct CloudSyncPhase: Hashable, Sendable {
         tag: 2,
         name: "ready",
         isRetryable: false,
-        title: LocalizedStringResource("Ready"),
+        title: LocalizedStringResource("Up to date"),
         symbol: "checkmark.icloud.fill",
         tint: .green,
         keepsCloudOutOfReach: false
@@ -7065,6 +7274,15 @@ struct CloudSyncPhase: Hashable, Sendable {
         tint: .red,
         keepsCloudOutOfReach: true
     )
+    static let waitingToUpload = CloudSyncPhase(
+        tag: 7,
+        name: "waitingToUpload",
+        isRetryable: false,
+        title: LocalizedStringResource("Waiting to upload"),
+        symbol: "icloud.and.arrow.up",
+        tint: .blue,
+        keepsCloudOutOfReach: false
+    )
 
     static let all: [CloudSyncPhase] = [
         disabled,
@@ -7073,7 +7291,8 @@ struct CloudSyncPhase: Hashable, Sendable {
         syncing,
         needsReconciliation,
         waitingForAccount,
-        failed
+        failed,
+        waitingToUpload
     ]
 
     static func named(_ name: String?) -> CloudSyncPhase? {
@@ -7087,20 +7306,44 @@ struct CloudSyncPhase: Hashable, Sendable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(tag)
     }
+
+    private final class Facts: Sendable {
+        let name: String
+        let isRetryable: Bool
+        let title: LocalizedStringResource
+        let symbol: String
+        let tint: SystemTint?
+        let keepsCloudOutOfReach: Bool
+
+        init(
+            name: String,
+            isRetryable: Bool,
+            title: LocalizedStringResource,
+            symbol: String,
+            tint: SystemTint?,
+            keepsCloudOutOfReach: Bool
+        ) {
+            self.name = name
+            self.isRetryable = isRetryable
+            self.title = title
+            self.symbol = symbol
+            self.tint = tint
+            self.keepsCloudOutOfReach = keepsCloudOutOfReach
+        }
+    }
 }
 
 /// The members of the core's `CloudSyncProblem`. A member's wire tag is its index in `all`.
 struct CloudSyncProblem: Hashable, Sendable {
     let tag: Int
-    let name: String
-    let reportsError: Bool
-    let message: LocalizedStringResource?
+    var name: String { facts.name }
+    var reportsError: Bool { facts.reportsError }
+    var message: LocalizedStringResource? { facts.message }
+    private let facts: Facts
 
     private init(tag: Int, name: String, reportsError: Bool, message: LocalizedStringResource?) {
         self.tag = tag
-        self.name = name
-        self.reportsError = reportsError
-        self.message = message
+        facts = Facts(name: name, reportsError: reportsError, message: message)
     }
 
     static let notConfigured = CloudSyncProblem(tag: 0, name: "notConfigured", reportsError: false, message: nil)
@@ -7130,16 +7373,29 @@ struct CloudSyncProblem: Hashable, Sendable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(tag)
     }
+
+    private final class Facts: Sendable {
+        let name: String
+        let reportsError: Bool
+        let message: LocalizedStringResource?
+
+        init(name: String, reportsError: Bool, message: LocalizedStringResource?) {
+            self.name = name
+            self.reportsError = reportsError
+            self.message = message
+        }
+    }
 }
 
 /// The members of the core's `CloudSyncStepKind`. A member's wire tag is its index in `all`.
 struct CloudSyncStepKind: Hashable, Sendable {
     let tag: Int
-    let name: String
+    var name: String { facts.name }
+    private let facts: Facts
 
     private init(tag: Int, name: String) {
         self.tag = tag
-        self.name = name
+        facts = Facts(name: name)
     }
 
     static let checkEntitlement = CloudSyncStepKind(tag: 0, name: "checkEntitlement")
@@ -7187,16 +7443,25 @@ struct CloudSyncStepKind: Hashable, Sendable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(tag)
     }
+
+    private final class Facts: Sendable {
+        let name: String
+
+        init(name: String) {
+            self.name = name
+        }
+    }
 }
 
 /// The members of the core's `CloudTransportReport`. A member's wire tag is its index in `all`.
 struct CloudTransportReport: Hashable, Sendable {
     let tag: Int
-    let name: String
+    var name: String { facts.name }
+    private let facts: Facts
 
     private init(tag: Int, name: String) {
         self.tag = tag
-        self.name = name
+        facts = Facts(name: name)
     }
 
     static let stopped = CloudTransportReport(tag: 0, name: "stopped")
@@ -7234,18 +7499,26 @@ struct CloudTransportReport: Hashable, Sendable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(tag)
     }
+
+    private final class Facts: Sendable {
+        let name: String
+
+        init(name: String) {
+            self.name = name
+        }
+    }
 }
 
 /// The members of the core's `CloudZoneLoss`. A member's wire tag is its index in `all`.
 struct CloudZoneLoss: Hashable, Sendable {
     let tag: Int
-    let name: String
-    let restoresLocalRecords: Bool
+    var name: String { facts.name }
+    var restoresLocalRecords: Bool { facts.restoresLocalRecords }
+    private let facts: Facts
 
     private init(tag: Int, name: String, restoresLocalRecords: Bool) {
         self.tag = tag
-        self.name = name
-        self.restoresLocalRecords = restoresLocalRecords
+        facts = Facts(name: name, restoresLocalRecords: restoresLocalRecords)
     }
 
     static let deleted = CloudZoneLoss(tag: 0, name: "deleted", restoresLocalRecords: false)
@@ -7265,17 +7538,28 @@ struct CloudZoneLoss: Hashable, Sendable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(tag)
     }
+
+    private final class Facts: Sendable {
+        let name: String
+        let restoresLocalRecords: Bool
+
+        init(name: String, restoresLocalRecords: Bool) {
+            self.name = name
+            self.restoresLocalRecords = restoresLocalRecords
+        }
+    }
 }
 
 /// The members of the core's `ContentBlockingPolicy`. A member's wire tag is its index in `all`.
 struct ContentBlockingPolicy: Hashable, Sendable {
     let tag: Int
-    let name: String
-    let title: LocalizedStringResource
-    let switchTitle: LocalizedStringResource
-    let identifier: String?
-    let blockedHostSuffixes: [String]
-    let blocksContent: Bool
+    var name: String { facts.name }
+    var title: LocalizedStringResource { facts.title }
+    var switchTitle: LocalizedStringResource { facts.switchTitle }
+    var identifier: String? { facts.identifier }
+    var blockedHostSuffixes: [String] { facts.blockedHostSuffixes }
+    var blocksContent: Bool { facts.blocksContent }
+    private let facts: Facts
 
     private init(
         tag: Int,
@@ -7287,12 +7571,14 @@ struct ContentBlockingPolicy: Hashable, Sendable {
         blocksContent: Bool
     ) {
         self.tag = tag
-        self.name = name
-        self.title = title
-        self.switchTitle = switchTitle
-        self.identifier = identifier
-        self.blockedHostSuffixes = blockedHostSuffixes
-        self.blocksContent = blocksContent
+        facts = Facts(
+            name: name,
+            title: title,
+            switchTitle: switchTitle,
+            identifier: identifier,
+            blockedHostSuffixes: blockedHostSuffixes,
+            blocksContent: blocksContent
+        )
     }
 
     static let balanced = ContentBlockingPolicy(
@@ -7347,18 +7633,43 @@ struct ContentBlockingPolicy: Hashable, Sendable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(tag)
     }
+
+    private final class Facts: Sendable {
+        let name: String
+        let title: LocalizedStringResource
+        let switchTitle: LocalizedStringResource
+        let identifier: String?
+        let blockedHostSuffixes: [String]
+        let blocksContent: Bool
+
+        init(
+            name: String,
+            title: LocalizedStringResource,
+            switchTitle: LocalizedStringResource,
+            identifier: String?,
+            blockedHostSuffixes: [String],
+            blocksContent: Bool
+        ) {
+            self.name = name
+            self.title = title
+            self.switchTitle = switchTitle
+            self.identifier = identifier
+            self.blockedHostSuffixes = blockedHostSuffixes
+            self.blocksContent = blocksContent
+        }
+    }
 }
 
 /// The members of the core's `CredentialFileFlaw`. A member's wire tag is its index in `all`.
 struct CredentialFileFlaw: Hashable, Sendable {
     let tag: Int
-    let name: String
-    let message: LocalizedStringResource
+    var name: String { facts.name }
+    var message: LocalizedStringResource { facts.message }
+    private let facts: Facts
 
     private init(tag: Int, name: String, message: LocalizedStringResource) {
         self.tag = tag
-        self.name = name
-        self.message = message
+        facts = Facts(name: name, message: message)
     }
 
     static let tooLarge = CredentialFileFlaw(
@@ -7460,18 +7771,28 @@ struct CredentialFileFlaw: Hashable, Sendable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(tag)
     }
+
+    private final class Facts: Sendable {
+        let name: String
+        let message: LocalizedStringResource
+
+        init(name: String, message: LocalizedStringResource) {
+            self.name = name
+            self.message = message
+        }
+    }
 }
 
 /// The members of the core's `CredentialFileFormat`. A member's wire tag is its index in `all`.
 struct CredentialFileFormat: Hashable, Sendable {
     let tag: Int
-    let name: String
-    let title: LocalizedStringResource
+    var name: String { facts.name }
+    var title: LocalizedStringResource { facts.title }
+    private let facts: Facts
 
     private init(tag: Int, name: String, title: LocalizedStringResource) {
         self.tag = tag
-        self.name = name
-        self.title = title
+        facts = Facts(name: name, title: title)
     }
 
     static let browser = CredentialFileFormat(tag: 0, name: "browser", title: LocalizedStringResource("Browser CSV"))
@@ -7496,18 +7817,28 @@ struct CredentialFileFormat: Hashable, Sendable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(tag)
     }
+
+    private final class Facts: Sendable {
+        let name: String
+        let title: LocalizedStringResource
+
+        init(name: String, title: LocalizedStringResource) {
+            self.name = name
+            self.title = title
+        }
+    }
 }
 
 /// The members of the core's `CredentialFillSource`. A member's wire tag is its index in `all`.
 struct CredentialFillSource: Hashable, Sendable {
     let tag: Int
-    let name: String
-    let fills: CredentialPasswordKind
+    var name: String { facts.name }
+    var fills: CredentialPasswordKind { facts.fills }
+    private let facts: Facts
 
     private init(tag: Int, name: String, fills: CredentialPasswordKind) {
         self.tag = tag
-        self.name = name
-        self.fills = fills
+        facts = Facts(name: name, fills: fills)
     }
 
     static let saved = CredentialFillSource(tag: 0, name: "saved", fills: .current)
@@ -7526,18 +7857,28 @@ struct CredentialFillSource: Hashable, Sendable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(tag)
     }
+
+    private final class Facts: Sendable {
+        let name: String
+        let fills: CredentialPasswordKind
+
+        init(name: String, fills: CredentialPasswordKind) {
+            self.name = name
+            self.fills = fills
+        }
+    }
 }
 
 /// The members of the core's `CredentialImportEffect`. A member's wire tag is its index in `all`.
 struct CredentialImportEffect: Hashable, Sendable {
     let tag: Int
-    let name: String
-    let changesPasswords: Bool
+    var name: String { facts.name }
+    var changesPasswords: Bool { facts.changesPasswords }
+    private let facts: Facts
 
     private init(tag: Int, name: String, changesPasswords: Bool) {
         self.tag = tag
-        self.name = name
-        self.changesPasswords = changesPasswords
+        facts = Facts(name: name, changesPasswords: changesPasswords)
     }
 
     static let adds = CredentialImportEffect(tag: 0, name: "adds", changesPasswords: true)
@@ -7557,18 +7898,28 @@ struct CredentialImportEffect: Hashable, Sendable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(tag)
     }
+
+    private final class Facts: Sendable {
+        let name: String
+        let changesPasswords: Bool
+
+        init(name: String, changesPasswords: Bool) {
+            self.name = name
+            self.changesPasswords = changesPasswords
+        }
+    }
 }
 
 /// The members of the core's `CredentialRowCaution`. A member's wire tag is its index in `all`.
 struct CredentialRowCaution: Hashable, Sendable {
     let tag: Int
-    let name: String
-    let message: LocalizedStringResource
+    var name: String { facts.name }
+    var message: LocalizedStringResource { facts.message }
+    private let facts: Facts
 
     private init(tag: Int, name: String, message: LocalizedStringResource) {
         self.tag = tag
-        self.name = name
-        self.message = message
+        facts = Facts(name: name, message: message)
     }
 
     static let insecureOrigin = CredentialRowCaution(
@@ -7590,18 +7941,28 @@ struct CredentialRowCaution: Hashable, Sendable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(tag)
     }
+
+    private final class Facts: Sendable {
+        let name: String
+        let message: LocalizedStringResource
+
+        init(name: String, message: LocalizedStringResource) {
+            self.name = name
+            self.message = message
+        }
+    }
 }
 
 /// The members of the core's `CredentialRowFlaw`. A member's wire tag is its index in `all`.
 struct CredentialRowFlaw: Hashable, Sendable {
     let tag: Int
-    let name: String
-    let message: LocalizedStringResource
+    var name: String { facts.name }
+    var message: LocalizedStringResource { facts.message }
+    private let facts: Facts
 
     private init(tag: Int, name: String, message: LocalizedStringResource) {
         self.tag = tag
-        self.name = name
-        self.message = message
+        facts = Facts(name: name, message: message)
     }
 
     static let invalidOrigin = CredentialRowFlaw(
@@ -7633,6 +7994,16 @@ struct CredentialRowFlaw: Hashable, Sendable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(tag)
     }
+
+    private final class Facts: Sendable {
+        let name: String
+        let message: LocalizedStringResource
+
+        init(name: String, message: LocalizedStringResource) {
+            self.name = name
+            self.message = message
+        }
+    }
 }
 
 /// The members of the core's `CrestBackplate`. A member's wire tag is its index in `all`.
@@ -7653,11 +8024,12 @@ struct CrestBackplate: Hashable, Sendable {
     }
 
     let tag: Int
-    let kind: Kinds
-    let name: String
-    let title: LocalizedStringResource
-    let drawnSince: CrestVocabulary
-    let hasTeeth: Bool
+    var kind: Kinds { facts.kind }
+    var name: String { facts.name }
+    var title: LocalizedStringResource { facts.title }
+    var drawnSince: CrestVocabulary { facts.drawnSince }
+    var hasTeeth: Bool { facts.hasTeeth }
+    private let facts: Facts
 
     private init(
         tag: Int,
@@ -7668,11 +8040,7 @@ struct CrestBackplate: Hashable, Sendable {
         hasTeeth: Bool
     ) {
         self.tag = tag
-        self.kind = kind
-        self.name = name
-        self.title = title
-        self.drawnSince = drawnSince
-        self.hasTeeth = hasTeeth
+        facts = Facts(kind: kind, name: name, title: title, drawnSince: drawnSince, hasTeeth: hasTeeth)
     }
 
     static let none = CrestBackplate(
@@ -7798,6 +8166,22 @@ struct CrestBackplate: Hashable, Sendable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(tag)
     }
+
+    private final class Facts: Sendable {
+        let kind: Kinds
+        let name: String
+        let title: LocalizedStringResource
+        let drawnSince: CrestVocabulary
+        let hasTeeth: Bool
+
+        init(kind: Kinds, name: String, title: LocalizedStringResource, drawnSince: CrestVocabulary, hasTeeth: Bool) {
+            self.kind = kind
+            self.name = name
+            self.title = title
+            self.drawnSince = drawnSince
+            self.hasTeeth = hasTeeth
+        }
+    }
 }
 
 /// The members of the core's `CrestChargeKind`. A member's wire tag is its index in `all`.
@@ -7811,19 +8195,16 @@ struct CrestChargeKind: Hashable, Sendable {
     }
 
     let tag: Int
-    let kind: Kinds
-    let name: String
-    let title: LocalizedStringResource
-    let isTinted: Bool
-    let takesWeight: Bool
+    var kind: Kinds { facts.kind }
+    var name: String { facts.name }
+    var title: LocalizedStringResource { facts.title }
+    var isTinted: Bool { facts.isTinted }
+    var takesWeight: Bool { facts.takesWeight }
+    private let facts: Facts
 
     private init(tag: Int, kind: Kinds, name: String, title: LocalizedStringResource, isTinted: Bool, takesWeight: Bool) {
         self.tag = tag
-        self.kind = kind
-        self.name = name
-        self.title = title
-        self.isTinted = isTinted
-        self.takesWeight = takesWeight
+        facts = Facts(kind: kind, name: name, title: title, isTinted: isTinted, takesWeight: takesWeight)
     }
 
     static let heraldic = CrestChargeKind(
@@ -7880,6 +8261,22 @@ struct CrestChargeKind: Hashable, Sendable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(tag)
     }
+
+    private final class Facts: Sendable {
+        let kind: Kinds
+        let name: String
+        let title: LocalizedStringResource
+        let isTinted: Bool
+        let takesWeight: Bool
+
+        init(kind: Kinds, name: String, title: LocalizedStringResource, isTinted: Bool, takesWeight: Bool) {
+            self.kind = kind
+            self.name = name
+            self.title = title
+            self.isTinted = isTinted
+            self.takesWeight = takesWeight
+        }
+    }
 }
 
 /// The members of the core's `CrestChargeLayout`. A member's wire tag is its index in `all`.
@@ -7893,17 +8290,15 @@ struct CrestChargeLayout: Hashable, Sendable {
     }
 
     let tag: Int
-    let kind: Kinds
-    let name: String
-    let title: LocalizedStringResource
-    let drawnSince: CrestVocabulary
+    var kind: Kinds { facts.kind }
+    var name: String { facts.name }
+    var title: LocalizedStringResource { facts.title }
+    var drawnSince: CrestVocabulary { facts.drawnSince }
+    private let facts: Facts
 
     private init(tag: Int, kind: Kinds, name: String, title: LocalizedStringResource, drawnSince: CrestVocabulary) {
         self.tag = tag
-        self.kind = kind
-        self.name = name
-        self.title = title
-        self.drawnSince = drawnSince
+        facts = Facts(kind: kind, name: name, title: title, drawnSince: drawnSince)
     }
 
     static let single = CrestChargeLayout(
@@ -7955,6 +8350,20 @@ struct CrestChargeLayout: Hashable, Sendable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(tag)
     }
+
+    private final class Facts: Sendable {
+        let kind: Kinds
+        let name: String
+        let title: LocalizedStringResource
+        let drawnSince: CrestVocabulary
+
+        init(kind: Kinds, name: String, title: LocalizedStringResource, drawnSince: CrestVocabulary) {
+            self.kind = kind
+            self.name = name
+            self.title = title
+            self.drawnSince = drawnSince
+        }
+    }
 }
 
 /// The members of the core's `CrestChargeWeight`. A member's wire tag is its index in `all`.
@@ -7966,17 +8375,15 @@ struct CrestChargeWeight: Hashable, Sendable {
     }
 
     let tag: Int
-    let kind: Kinds
-    let name: String
-    let title: LocalizedStringResource
-    let drawnSince: CrestVocabulary
+    var kind: Kinds { facts.kind }
+    var name: String { facts.name }
+    var title: LocalizedStringResource { facts.title }
+    var drawnSince: CrestVocabulary { facts.drawnSince }
+    private let facts: Facts
 
     private init(tag: Int, kind: Kinds, name: String, title: LocalizedStringResource, drawnSince: CrestVocabulary) {
         self.tag = tag
-        self.kind = kind
-        self.name = name
-        self.title = title
-        self.drawnSince = drawnSince
+        facts = Facts(kind: kind, name: name, title: title, drawnSince: drawnSince)
     }
 
     static let light = CrestChargeWeight(
@@ -8014,6 +8421,20 @@ struct CrestChargeWeight: Hashable, Sendable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(tag)
     }
+
+    private final class Facts: Sendable {
+        let kind: Kinds
+        let name: String
+        let title: LocalizedStringResource
+        let drawnSince: CrestVocabulary
+
+        init(kind: Kinds, name: String, title: LocalizedStringResource, drawnSince: CrestVocabulary) {
+            self.kind = kind
+            self.name = name
+            self.title = title
+            self.drawnSince = drawnSince
+        }
+    }
 }
 
 /// The members of the core's `CrestDepth`. A member's wire tag is its index in `all`.
@@ -8025,17 +8446,15 @@ struct CrestDepth: Hashable, Sendable {
     }
 
     let tag: Int
-    let kind: Kinds
-    let name: String
-    let title: LocalizedStringResource
-    let drawnSince: CrestVocabulary
+    var kind: Kinds { facts.kind }
+    var name: String { facts.name }
+    var title: LocalizedStringResource { facts.title }
+    var drawnSince: CrestVocabulary { facts.drawnSince }
+    private let facts: Facts
 
     private init(tag: Int, kind: Kinds, name: String, title: LocalizedStringResource, drawnSince: CrestVocabulary) {
         self.tag = tag
-        self.kind = kind
-        self.name = name
-        self.title = title
-        self.drawnSince = drawnSince
+        facts = Facts(kind: kind, name: name, title: title, drawnSince: drawnSince)
     }
 
     static let none = CrestDepth(
@@ -8073,6 +8492,20 @@ struct CrestDepth: Hashable, Sendable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(tag)
     }
+
+    private final class Facts: Sendable {
+        let kind: Kinds
+        let name: String
+        let title: LocalizedStringResource
+        let drawnSince: CrestVocabulary
+
+        init(kind: Kinds, name: String, title: LocalizedStringResource, drawnSince: CrestVocabulary) {
+            self.kind = kind
+            self.name = name
+            self.title = title
+            self.drawnSince = drawnSince
+        }
+    }
 }
 
 /// The members of the core's `CrestFieldDivision`. A member's wire tag is its index in `all`.
@@ -8092,11 +8525,12 @@ struct CrestFieldDivision: Hashable, Sendable {
     }
 
     let tag: Int
-    let kind: Kinds
-    let name: String
-    let title: LocalizedStringResource
-    let drawnSince: CrestVocabulary
-    let isCounted: Bool
+    var kind: Kinds { facts.kind }
+    var name: String { facts.name }
+    var title: LocalizedStringResource { facts.title }
+    var drawnSince: CrestVocabulary { facts.drawnSince }
+    var isCounted: Bool { facts.isCounted }
+    private let facts: Facts
 
     private init(
         tag: Int,
@@ -8107,11 +8541,7 @@ struct CrestFieldDivision: Hashable, Sendable {
         isCounted: Bool
     ) {
         self.tag = tag
-        self.kind = kind
-        self.name = name
-        self.title = title
-        self.drawnSince = drawnSince
-        self.isCounted = isCounted
+        facts = Facts(kind: kind, name: name, title: title, drawnSince: drawnSince, isCounted: isCounted)
     }
 
     static let plain = CrestFieldDivision(
@@ -8228,6 +8658,22 @@ struct CrestFieldDivision: Hashable, Sendable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(tag)
     }
+
+    private final class Facts: Sendable {
+        let kind: Kinds
+        let name: String
+        let title: LocalizedStringResource
+        let drawnSince: CrestVocabulary
+        let isCounted: Bool
+
+        init(kind: Kinds, name: String, title: LocalizedStringResource, drawnSince: CrestVocabulary, isCounted: Bool) {
+            self.kind = kind
+            self.name = name
+            self.title = title
+            self.drawnSince = drawnSince
+            self.isCounted = isCounted
+        }
+    }
 }
 
 /// The members of the core's `CrestFinish`. A member's wire tag is its index in `all`.
@@ -8239,11 +8685,12 @@ struct CrestFinish: Hashable, Sendable {
     }
 
     let tag: Int
-    let kind: Kinds
-    let name: String
-    let title: LocalizedStringResource
-    let drawnSince: CrestVocabulary
-    let hasAngle: Bool
+    var kind: Kinds { facts.kind }
+    var name: String { facts.name }
+    var title: LocalizedStringResource { facts.title }
+    var drawnSince: CrestVocabulary { facts.drawnSince }
+    var hasAngle: Bool { facts.hasAngle }
+    private let facts: Facts
 
     private init(
         tag: Int,
@@ -8254,11 +8701,7 @@ struct CrestFinish: Hashable, Sendable {
         hasAngle: Bool
     ) {
         self.tag = tag
-        self.kind = kind
-        self.name = name
-        self.title = title
-        self.drawnSince = drawnSince
-        self.hasAngle = hasAngle
+        facts = Facts(kind: kind, name: name, title: title, drawnSince: drawnSince, hasAngle: hasAngle)
     }
 
     static let flat = CrestFinish(
@@ -8299,25 +8742,38 @@ struct CrestFinish: Hashable, Sendable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(tag)
     }
+
+    private final class Facts: Sendable {
+        let kind: Kinds
+        let name: String
+        let title: LocalizedStringResource
+        let drawnSince: CrestVocabulary
+        let hasAngle: Bool
+
+        init(kind: Kinds, name: String, title: LocalizedStringResource, drawnSince: CrestVocabulary, hasAngle: Bool) {
+            self.kind = kind
+            self.name = name
+            self.title = title
+            self.drawnSince = drawnSince
+            self.hasAngle = hasAngle
+        }
+    }
 }
 
 /// The members of the core's `CrestMeasure`. A member's wire tag is its index in `all`.
 /// Core-only behavior, not emitted: `value`, `shapes`.
 struct CrestMeasure: Hashable, Sendable {
     let tag: Int
-    let name: String
-    let minimum: Double
-    let maximum: Double
-    let `default`: Double
-    let isCount: Bool
+    var name: String { facts.name }
+    var minimum: Double { facts.minimum }
+    var maximum: Double { facts.maximum }
+    var `default`: Double { facts.`default` }
+    var isCount: Bool { facts.isCount }
+    private let facts: Facts
 
     private init(tag: Int, name: String, minimum: Double, maximum: Double, `default`: Double, isCount: Bool) {
         self.tag = tag
-        self.name = name
-        self.minimum = minimum
-        self.maximum = maximum
-        self.`default` = `default`
-        self.isCount = isCount
+        facts = Facts(name: name, minimum: minimum, maximum: maximum, `default`: `default`, isCount: isCount)
     }
 
     static let plateScale = CrestMeasure(
@@ -8418,6 +8874,22 @@ struct CrestMeasure: Hashable, Sendable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(tag)
     }
+
+    private final class Facts: Sendable {
+        let name: String
+        let minimum: Double
+        let maximum: Double
+        let `default`: Double
+        let isCount: Bool
+
+        init(name: String, minimum: Double, maximum: Double, `default`: Double, isCount: Bool) {
+            self.name = name
+            self.minimum = minimum
+            self.maximum = maximum
+            self.`default` = `default`
+            self.isCount = isCount
+        }
+    }
 }
 
 /// The members of the core's `CrestMonogramStyle`. A member's wire tag is its index in `all`.
@@ -8428,17 +8900,15 @@ struct CrestMonogramStyle: Hashable, Sendable {
     }
 
     let tag: Int
-    let kind: Kinds
-    let name: String
-    let title: LocalizedStringResource
-    let drawnSince: CrestVocabulary
+    var kind: Kinds { facts.kind }
+    var name: String { facts.name }
+    var title: LocalizedStringResource { facts.title }
+    var drawnSince: CrestVocabulary { facts.drawnSince }
+    private let facts: Facts
 
     private init(tag: Int, kind: Kinds, name: String, title: LocalizedStringResource, drawnSince: CrestVocabulary) {
         self.tag = tag
-        self.kind = kind
-        self.name = name
-        self.title = title
-        self.drawnSince = drawnSince
+        facts = Facts(kind: kind, name: name, title: title, drawnSince: drawnSince)
     }
 
     static let serif = CrestMonogramStyle(
@@ -8469,6 +8939,20 @@ struct CrestMonogramStyle: Hashable, Sendable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(tag)
     }
+
+    private final class Facts: Sendable {
+        let kind: Kinds
+        let name: String
+        let title: LocalizedStringResource
+        let drawnSince: CrestVocabulary
+
+        init(kind: Kinds, name: String, title: LocalizedStringResource, drawnSince: CrestVocabulary) {
+            self.kind = kind
+            self.name = name
+            self.title = title
+            self.drawnSince = drawnSince
+        }
+    }
 }
 
 /// The members of the core's `CrestOrdinary`. A member's wire tag is its index in `all`.
@@ -8490,17 +8974,15 @@ struct CrestOrdinary: Hashable, Sendable {
     }
 
     let tag: Int
-    let kind: Kinds
-    let name: String
-    let title: LocalizedStringResource
-    let drawnSince: CrestVocabulary
+    var kind: Kinds { facts.kind }
+    var name: String { facts.name }
+    var title: LocalizedStringResource { facts.title }
+    var drawnSince: CrestVocabulary { facts.drawnSince }
+    private let facts: Facts
 
     private init(tag: Int, kind: Kinds, name: String, title: LocalizedStringResource, drawnSince: CrestVocabulary) {
         self.tag = tag
-        self.kind = kind
-        self.name = name
-        self.title = title
-        self.drawnSince = drawnSince
+        facts = Facts(kind: kind, name: name, title: title, drawnSince: drawnSince)
     }
 
     static let none = CrestOrdinary(
@@ -8622,17 +9104,32 @@ struct CrestOrdinary: Hashable, Sendable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(tag)
     }
+
+    private final class Facts: Sendable {
+        let kind: Kinds
+        let name: String
+        let title: LocalizedStringResource
+        let drawnSince: CrestVocabulary
+
+        init(kind: Kinds, name: String, title: LocalizedStringResource, drawnSince: CrestVocabulary) {
+            self.kind = kind
+            self.name = name
+            self.title = title
+            self.drawnSince = drawnSince
+        }
+    }
 }
 
 /// The members of the core's `CrestSymbol`. A member's wire tag is its index in `all`.
 struct CrestSymbol: Hashable, Sendable {
     let tag: Int
-    let name: String
-    let title: LocalizedStringResource
-    let drawnSince: CrestVocabulary
-    let systemImage: String
-    let assetName: String?
-    let isOffered: Bool
+    var name: String { facts.name }
+    var title: LocalizedStringResource { facts.title }
+    var drawnSince: CrestVocabulary { facts.drawnSince }
+    var systemImage: String { facts.systemImage }
+    var assetName: String? { facts.assetName }
+    var isOffered: Bool { facts.isOffered }
+    private let facts: Facts
 
     private init(
         tag: Int,
@@ -8644,12 +9141,14 @@ struct CrestSymbol: Hashable, Sendable {
         isOffered: Bool
     ) {
         self.tag = tag
-        self.name = name
-        self.title = title
-        self.drawnSince = drawnSince
-        self.systemImage = systemImage
-        self.assetName = assetName
-        self.isOffered = isOffered
+        facts = Facts(
+            name: name,
+            title: title,
+            drawnSince: drawnSince,
+            systemImage: systemImage,
+            assetName: assetName,
+            isOffered: isOffered
+        )
     }
 
     static let dragon = CrestSymbol(
@@ -9307,6 +9806,31 @@ struct CrestSymbol: Hashable, Sendable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(tag)
     }
+
+    private final class Facts: Sendable {
+        let name: String
+        let title: LocalizedStringResource
+        let drawnSince: CrestVocabulary
+        let systemImage: String
+        let assetName: String?
+        let isOffered: Bool
+
+        init(
+            name: String,
+            title: LocalizedStringResource,
+            drawnSince: CrestVocabulary,
+            systemImage: String,
+            assetName: String?,
+            isOffered: Bool
+        ) {
+            self.name = name
+            self.title = title
+            self.drawnSince = drawnSince
+            self.systemImage = systemImage
+            self.assetName = assetName
+            self.isOffered = isOffered
+        }
+    }
 }
 
 /// The members of the core's `CrestTrim`. A member's wire tag is its index in `all`.
@@ -9324,11 +9848,12 @@ struct CrestTrim: Hashable, Sendable {
     }
 
     let tag: Int
-    let kind: Kinds
-    let name: String
-    let title: LocalizedStringResource
-    let drawnSince: CrestVocabulary
-    let isCounted: Bool
+    var kind: Kinds { facts.kind }
+    var name: String { facts.name }
+    var title: LocalizedStringResource { facts.title }
+    var drawnSince: CrestVocabulary { facts.drawnSince }
+    var isCounted: Bool { facts.isCounted }
+    private let facts: Facts
 
     private init(
         tag: Int,
@@ -9339,11 +9864,7 @@ struct CrestTrim: Hashable, Sendable {
         isCounted: Bool
     ) {
         self.tag = tag
-        self.kind = kind
-        self.name = name
-        self.title = title
-        self.drawnSince = drawnSince
-        self.isCounted = isCounted
+        facts = Facts(kind: kind, name: name, title: title, drawnSince: drawnSince, isCounted: isCounted)
     }
 
     static let none = CrestTrim(
@@ -9432,18 +9953,34 @@ struct CrestTrim: Hashable, Sendable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(tag)
     }
+
+    private final class Facts: Sendable {
+        let kind: Kinds
+        let name: String
+        let title: LocalizedStringResource
+        let drawnSince: CrestVocabulary
+        let isCounted: Bool
+
+        init(kind: Kinds, name: String, title: LocalizedStringResource, drawnSince: CrestVocabulary, isCounted: Bool) {
+            self.kind = kind
+            self.name = name
+            self.title = title
+            self.drawnSince = drawnSince
+            self.isCounted = isCounted
+        }
+    }
 }
 
 /// The members of the core's `CrestVocabulary`. A member's wire tag is its index in `all`.
 struct CrestVocabulary: Hashable, Sendable {
     let tag: Int
-    let name: String
-    let version: Int
+    var name: String { facts.name }
+    var version: Int { facts.version }
+    private let facts: Facts
 
     private init(tag: Int, name: String, version: Int) {
         self.tag = tag
-        self.name = name
-        self.version = version
+        facts = Facts(name: name, version: version)
     }
 
     static let baseline = CrestVocabulary(tag: 0, name: "baseline", version: 2)
@@ -9464,20 +10001,29 @@ struct CrestVocabulary: Hashable, Sendable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(tag)
     }
+
+    private final class Facts: Sendable {
+        let name: String
+        let version: Int
+
+        init(name: String, version: Int) {
+            self.name = name
+            self.version = version
+        }
+    }
 }
 
 /// The members of the core's `CurrentTabCleanup`. A member's wire tag is its index in `all`.
 struct CurrentTabCleanup: Hashable, Sendable {
     let tag: Int
-    let name: String
-    let title: LocalizedStringResource
-    let lifetime: TimeInterval?
+    var name: String { facts.name }
+    var title: LocalizedStringResource { facts.title }
+    var lifetime: TimeInterval? { facts.lifetime }
+    private let facts: Facts
 
     private init(tag: Int, name: String, title: LocalizedStringResource, lifetime: TimeInterval?) {
         self.tag = tag
-        self.name = name
-        self.title = title
-        self.lifetime = lifetime
+        facts = Facts(name: name, title: title, lifetime: lifetime)
     }
 
     static let after12Hours = CurrentTabCleanup(
@@ -9519,20 +10065,31 @@ struct CurrentTabCleanup: Hashable, Sendable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(tag)
     }
+
+    private final class Facts: Sendable {
+        let name: String
+        let title: LocalizedStringResource
+        let lifetime: TimeInterval?
+
+        init(name: String, title: LocalizedStringResource, lifetime: TimeInterval?) {
+            self.name = name
+            self.title = title
+            self.lifetime = lifetime
+        }
+    }
 }
 
 /// The members of the core's `DataRetention`. A member's wire tag is its index in `all`.
 struct DataRetention: Hashable, Sendable {
     let tag: Int
-    let name: String
-    let title: LocalizedStringResource
-    let lifetime: TimeInterval?
+    var name: String { facts.name }
+    var title: LocalizedStringResource { facts.title }
+    var lifetime: TimeInterval? { facts.lifetime }
+    private let facts: Facts
 
     private init(tag: Int, name: String, title: LocalizedStringResource, lifetime: TimeInterval?) {
         self.tag = tag
-        self.name = name
-        self.title = title
-        self.lifetime = lifetime
+        facts = Facts(name: name, title: title, lifetime: lifetime)
     }
 
     static let oneDay = DataRetention(tag: 0, name: "oneDay", title: LocalizedStringResource("1 Day"), lifetime: 86400)
@@ -9580,21 +10137,32 @@ struct DataRetention: Hashable, Sendable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(tag)
     }
+
+    private final class Facts: Sendable {
+        let name: String
+        let title: LocalizedStringResource
+        let lifetime: TimeInterval?
+
+        init(name: String, title: LocalizedStringResource, lifetime: TimeInterval?) {
+            self.name = name
+            self.title = title
+            self.lifetime = lifetime
+        }
+    }
 }
 
 /// The members of the core's `DevicePlatform`. A member's wire tag is its index in `all`.
 /// Core-only behavior, not emitted: `forcesSetup`.
 struct DevicePlatform: Hashable, Sendable {
     let tag: Int
-    let name: String
-    let keepsSetupDraft: Bool
-    let importsBrowsers: Bool
+    var name: String { facts.name }
+    var keepsSetupDraft: Bool { facts.keepsSetupDraft }
+    var importsBrowsers: Bool { facts.importsBrowsers }
+    private let facts: Facts
 
     private init(tag: Int, name: String, keepsSetupDraft: Bool, importsBrowsers: Bool) {
         self.tag = tag
-        self.name = name
-        self.keepsSetupDraft = keepsSetupDraft
-        self.importsBrowsers = importsBrowsers
+        facts = Facts(name: name, keepsSetupDraft: keepsSetupDraft, importsBrowsers: importsBrowsers)
     }
 
     static let desktop = DevicePlatform(tag: 0, name: "desktop", keepsSetupDraft: false, importsBrowsers: true)
@@ -9613,20 +10181,31 @@ struct DevicePlatform: Hashable, Sendable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(tag)
     }
+
+    private final class Facts: Sendable {
+        let name: String
+        let keepsSetupDraft: Bool
+        let importsBrowsers: Bool
+
+        init(name: String, keepsSetupDraft: Bool, importsBrowsers: Bool) {
+            self.name = name
+            self.keepsSetupDraft = keepsSetupDraft
+            self.importsBrowsers = importsBrowsers
+        }
+    }
 }
 
 /// The members of the core's `DockMenuCommand`. A member's wire tag is its index in `all`.
 struct DockMenuCommand: Hashable, Sendable {
     let tag: Int
-    let name: String
-    let command: ShortcutCommand
-    let title: LocalizedStringResource
+    var name: String { facts.name }
+    var command: ShortcutCommand { facts.command }
+    var title: LocalizedStringResource { facts.title }
+    private let facts: Facts
 
     private init(tag: Int, name: String, command: ShortcutCommand, title: LocalizedStringResource) {
         self.tag = tag
-        self.name = name
-        self.command = command
-        self.title = title
+        facts = Facts(name: name, command: command, title: title)
     }
 
     static let newWindow = DockMenuCommand(
@@ -9661,18 +10240,30 @@ struct DockMenuCommand: Hashable, Sendable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(tag)
     }
+
+    private final class Facts: Sendable {
+        let name: String
+        let command: ShortcutCommand
+        let title: LocalizedStringResource
+
+        init(name: String, command: ShortcutCommand, title: LocalizedStringResource) {
+            self.name = name
+            self.command = command
+            self.title = title
+        }
+    }
 }
 
 /// The members of the core's `DownloadFailure`. A member's wire tag is its index in `all`.
 struct DownloadFailure: Hashable, Sendable {
     let tag: Int
-    let name: String
-    let message: LocalizedStringResource
+    var name: String { facts.name }
+    var message: LocalizedStringResource { facts.message }
+    private let facts: Facts
 
     private init(tag: Int, name: String, message: LocalizedStringResource) {
         self.tag = tag
-        self.name = name
-        self.message = message
+        facts = Facts(name: name, message: message)
     }
 
     static let interrupted = DownloadFailure(
@@ -9744,23 +10335,34 @@ struct DownloadFailure: Hashable, Sendable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(tag)
     }
+
+    private final class Facts: Sendable {
+        let name: String
+        let message: LocalizedStringResource
+
+        init(name: String, message: LocalizedStringResource) {
+            self.name = name
+            self.message = message
+        }
+    }
 }
 
 /// The members of the core's `DownloadPhase`. A member's wire tag is its index in `all`.
 struct DownloadPhase: Hashable, Sendable {
     let tag: Int
-    let name: String
-    let title: LocalizedStringResource?
-    let symbol: String?
-    let primaryAction: DownloadRowAction
-    let isLive: Bool
-    let isTransferring: Bool
-    let isComplete: Bool
-    let needsAttention: Bool
-    let awaitsDecision: Bool
-    let canRetry: Bool
-    let allowsResume: Bool
-    let canFail: Bool
+    var name: String { facts.name }
+    var title: LocalizedStringResource? { facts.title }
+    var symbol: String? { facts.symbol }
+    var primaryAction: DownloadRowAction { facts.primaryAction }
+    var isLive: Bool { facts.isLive }
+    var isTransferring: Bool { facts.isTransferring }
+    var isComplete: Bool { facts.isComplete }
+    var needsAttention: Bool { facts.needsAttention }
+    var awaitsDecision: Bool { facts.awaitsDecision }
+    var canRetry: Bool { facts.canRetry }
+    var allowsResume: Bool { facts.allowsResume }
+    var canFail: Bool { facts.canFail }
+    private let facts: Facts
 
     private init(
         tag: Int,
@@ -9778,18 +10380,20 @@ struct DownloadPhase: Hashable, Sendable {
         canFail: Bool
     ) {
         self.tag = tag
-        self.name = name
-        self.title = title
-        self.symbol = symbol
-        self.primaryAction = primaryAction
-        self.isLive = isLive
-        self.isTransferring = isTransferring
-        self.isComplete = isComplete
-        self.needsAttention = needsAttention
-        self.awaitsDecision = awaitsDecision
-        self.canRetry = canRetry
-        self.allowsResume = allowsResume
-        self.canFail = canFail
+        facts = Facts(
+            name: name,
+            title: title,
+            symbol: symbol,
+            primaryAction: primaryAction,
+            isLive: isLive,
+            isTransferring: isTransferring,
+            isComplete: isComplete,
+            needsAttention: needsAttention,
+            awaitsDecision: awaitsDecision,
+            canRetry: canRetry,
+            allowsResume: allowsResume,
+            canFail: canFail
+        )
     }
 
     static let preparing = DownloadPhase(
@@ -9919,21 +10523,63 @@ struct DownloadPhase: Hashable, Sendable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(tag)
     }
+
+    private final class Facts: Sendable {
+        let name: String
+        let title: LocalizedStringResource?
+        let symbol: String?
+        let primaryAction: DownloadRowAction
+        let isLive: Bool
+        let isTransferring: Bool
+        let isComplete: Bool
+        let needsAttention: Bool
+        let awaitsDecision: Bool
+        let canRetry: Bool
+        let allowsResume: Bool
+        let canFail: Bool
+
+        init(
+            name: String,
+            title: LocalizedStringResource?,
+            symbol: String?,
+            primaryAction: DownloadRowAction,
+            isLive: Bool,
+            isTransferring: Bool,
+            isComplete: Bool,
+            needsAttention: Bool,
+            awaitsDecision: Bool,
+            canRetry: Bool,
+            allowsResume: Bool,
+            canFail: Bool
+        ) {
+            self.name = name
+            self.title = title
+            self.symbol = symbol
+            self.primaryAction = primaryAction
+            self.isLive = isLive
+            self.isTransferring = isTransferring
+            self.isComplete = isComplete
+            self.needsAttention = needsAttention
+            self.awaitsDecision = awaitsDecision
+            self.canRetry = canRetry
+            self.allowsResume = allowsResume
+            self.canFail = canFail
+        }
+    }
 }
 
 /// The members of the core's `DownloadRiskReason`. A member's wire tag is its index in `all`.
 /// Core-only behavior, not emitted: `applies`.
 struct DownloadRiskReason: Hashable, Sendable {
     let tag: Int
-    let name: String
-    let confirmsUserInitiated: Bool
-    let message: LocalizedStringResource
+    var name: String { facts.name }
+    var confirmsUserInitiated: Bool { facts.confirmsUserInitiated }
+    var message: LocalizedStringResource { facts.message }
+    private let facts: Facts
 
     private init(tag: Int, name: String, confirmsUserInitiated: Bool, message: LocalizedStringResource) {
         self.tag = tag
-        self.name = name
-        self.confirmsUserInitiated = confirmsUserInitiated
-        self.message = message
+        facts = Facts(name: name, confirmsUserInitiated: confirmsUserInitiated, message: message)
     }
 
     static let executableOrInstaller = DownloadRiskReason(
@@ -9968,6 +10614,18 @@ struct DownloadRiskReason: Hashable, Sendable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(tag)
     }
+
+    private final class Facts: Sendable {
+        let name: String
+        let confirmsUserInitiated: Bool
+        let message: LocalizedStringResource
+
+        init(name: String, confirmsUserInitiated: Bool, message: LocalizedStringResource) {
+            self.name = name
+            self.confirmsUserInitiated = confirmsUserInitiated
+            self.message = message
+        }
+    }
 }
 
 /// The members of the core's `DownloadRowAction`. A member's wire tag is its index in `all`.
@@ -9982,11 +10640,12 @@ struct DownloadRowAction: Hashable, Sendable {
     }
 
     let tag: Int
-    let kind: Kinds
-    let name: String
-    let title: LocalizedStringResource
-    let symbol: String
-    let isDestructive: Bool
+    var kind: Kinds { facts.kind }
+    var name: String { facts.name }
+    var title: LocalizedStringResource { facts.title }
+    var symbol: String { facts.symbol }
+    var isDestructive: Bool { facts.isDestructive }
+    private let facts: Facts
 
     private init(
         tag: Int,
@@ -9997,11 +10656,7 @@ struct DownloadRowAction: Hashable, Sendable {
         isDestructive: Bool
     ) {
         self.tag = tag
-        self.kind = kind
-        self.name = name
-        self.title = title
-        self.symbol = symbol
-        self.isDestructive = isDestructive
+        facts = Facts(kind: kind, name: name, title: title, symbol: symbol, isDestructive: isDestructive)
     }
 
     static let retry = DownloadRowAction(
@@ -10066,18 +10721,34 @@ struct DownloadRowAction: Hashable, Sendable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(tag)
     }
+
+    private final class Facts: Sendable {
+        let kind: Kinds
+        let name: String
+        let title: LocalizedStringResource
+        let symbol: String
+        let isDestructive: Bool
+
+        init(kind: Kinds, name: String, title: LocalizedStringResource, symbol: String, isDestructive: Bool) {
+            self.kind = kind
+            self.name = name
+            self.title = title
+            self.symbol = symbol
+            self.isDestructive = isDestructive
+        }
+    }
 }
 
 /// The members of the core's `DownloadTextField`. A member's wire tag is its index in `all`.
 struct DownloadTextField: Hashable, Sendable {
     let tag: Int
-    let name: String
-    let maximumLength: Int
+    var name: String { facts.name }
+    var maximumLength: Int { facts.maximumLength }
+    private let facts: Facts
 
     private init(tag: Int, name: String, maximumLength: Int) {
         self.tag = tag
-        self.name = name
-        self.maximumLength = maximumLength
+        facts = Facts(name: name, maximumLength: maximumLength)
     }
 
     static let filename = DownloadTextField(tag: 0, name: "filename", maximumLength: 1024)
@@ -10098,16 +10769,27 @@ struct DownloadTextField: Hashable, Sendable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(tag)
     }
+
+    private final class Facts: Sendable {
+        let name: String
+        let maximumLength: Int
+
+        init(name: String, maximumLength: Int) {
+            self.name = name
+            self.maximumLength = maximumLength
+        }
+    }
 }
 
 /// The members of the core's `DownloadWarning`. A member's wire tag is its index in `all`.
 struct DownloadWarning: Hashable, Sendable {
     let tag: Int
-    let name: String
-    let engineWarning: EngineDownloadWarning
-    let approvalMessage: LocalizedStringResource
-    let failure: DownloadFailure
-    let coveredBy: [DownloadRiskReason]
+    var name: String { facts.name }
+    var engineWarning: EngineDownloadWarning { facts.engineWarning }
+    var approvalMessage: LocalizedStringResource { facts.approvalMessage }
+    var failure: DownloadFailure { facts.failure }
+    var coveredBy: [DownloadRiskReason] { facts.coveredBy }
+    private let facts: Facts
 
     private init(
         tag: Int,
@@ -10118,11 +10800,13 @@ struct DownloadWarning: Hashable, Sendable {
         coveredBy: [DownloadRiskReason]
     ) {
         self.tag = tag
-        self.name = name
-        self.engineWarning = engineWarning
-        self.approvalMessage = approvalMessage
-        self.failure = failure
-        self.coveredBy = coveredBy
+        facts = Facts(
+            name: name,
+            engineWarning: engineWarning,
+            approvalMessage: approvalMessage,
+            failure: failure,
+            coveredBy: coveredBy
+        )
     }
 
     static let insecureConnection = DownloadWarning(
@@ -10194,20 +10878,41 @@ struct DownloadWarning: Hashable, Sendable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(tag)
     }
+
+    private final class Facts: Sendable {
+        let name: String
+        let engineWarning: EngineDownloadWarning
+        let approvalMessage: LocalizedStringResource
+        let failure: DownloadFailure
+        let coveredBy: [DownloadRiskReason]
+
+        init(
+            name: String,
+            engineWarning: EngineDownloadWarning,
+            approvalMessage: LocalizedStringResource,
+            failure: DownloadFailure,
+            coveredBy: [DownloadRiskReason]
+        ) {
+            self.name = name
+            self.engineWarning = engineWarning
+            self.approvalMessage = approvalMessage
+            self.failure = failure
+            self.coveredBy = coveredBy
+        }
+    }
 }
 
 /// The members of the core's `EngineCapability`. A member's wire tag is its index in `all`.
 struct EngineCapability: Hashable, Sendable {
     let tag: Int
-    let name: String
-    let isRequired: Bool
-    let startsEngineOnDemand: Bool
+    var name: String { facts.name }
+    var isRequired: Bool { facts.isRequired }
+    var startsEngineOnDemand: Bool { facts.startsEngineOnDemand }
+    private let facts: Facts
 
     private init(tag: Int, name: String, isRequired: Bool, startsEngineOnDemand: Bool) {
         self.tag = tag
-        self.name = name
-        self.isRequired = isRequired
-        self.startsEngineOnDemand = startsEngineOnDemand
+        facts = Facts(name: name, isRequired: isRequired, startsEngineOnDemand: startsEngineOnDemand)
     }
 
     static let pages = EngineCapability(tag: 0, name: "pages", isRequired: true, startsEngineOnDemand: false)
@@ -10366,15 +11071,28 @@ struct EngineCapability: Hashable, Sendable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(tag)
     }
+
+    private final class Facts: Sendable {
+        let name: String
+        let isRequired: Bool
+        let startsEngineOnDemand: Bool
+
+        init(name: String, isRequired: Bool, startsEngineOnDemand: Bool) {
+            self.name = name
+            self.isRequired = isRequired
+            self.startsEngineOnDemand = startsEngineOnDemand
+        }
+    }
 }
 
 /// The members of the core's `EngineKind`. A member's wire tag is its index in `all`.
 struct EngineKind: Hashable, Sendable {
     let tag: Int
-    let name: String
-    let title: LocalizedStringResource
-    let mark: EngineMark?
-    let pageDescription: LocalizedStringResource
+    var name: String { facts.name }
+    var title: LocalizedStringResource { facts.title }
+    var mark: EngineMark? { facts.mark }
+    var pageDescription: LocalizedStringResource { facts.pageDescription }
+    private let facts: Facts
 
     private init(
         tag: Int,
@@ -10384,10 +11102,7 @@ struct EngineKind: Hashable, Sendable {
         pageDescription: LocalizedStringResource
     ) {
         self.tag = tag
-        self.name = name
-        self.title = title
-        self.mark = mark
-        self.pageDescription = pageDescription
+        facts = Facts(name: name, title: title, mark: mark, pageDescription: pageDescription)
     }
 
     static let chromium = EngineKind(
@@ -10418,16 +11133,31 @@ struct EngineKind: Hashable, Sendable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(tag)
     }
+
+    private final class Facts: Sendable {
+        let name: String
+        let title: LocalizedStringResource
+        let mark: EngineMark?
+        let pageDescription: LocalizedStringResource
+
+        init(name: String, title: LocalizedStringResource, mark: EngineMark?, pageDescription: LocalizedStringResource) {
+            self.name = name
+            self.title = title
+            self.mark = mark
+            self.pageDescription = pageDescription
+        }
+    }
 }
 
 /// The members of the core's `ExportFormat`. A member's wire tag is its index in `all`.
 struct ExportFormat: Hashable, Sendable {
     let tag: Int
-    let name: String
-    let fileName: String
-    let contentType: String
-    let preparingMessage: LocalizedStringResource
-    let savedMessage: LocalizedStringResource
+    var name: String { facts.name }
+    var fileName: String { facts.fileName }
+    var contentType: String { facts.contentType }
+    var preparingMessage: LocalizedStringResource { facts.preparingMessage }
+    var savedMessage: LocalizedStringResource { facts.savedMessage }
+    private let facts: Facts
 
     private init(
         tag: Int,
@@ -10438,11 +11168,13 @@ struct ExportFormat: Hashable, Sendable {
         savedMessage: LocalizedStringResource
     ) {
         self.tag = tag
-        self.name = name
-        self.fileName = fileName
-        self.contentType = contentType
-        self.preparingMessage = preparingMessage
-        self.savedMessage = savedMessage
+        facts = Facts(
+            name: name,
+            fileName: fileName,
+            contentType: contentType,
+            preparingMessage: preparingMessage,
+            savedMessage: savedMessage
+        )
     }
 
     static let browserData = ExportFormat(
@@ -10475,23 +11207,43 @@ struct ExportFormat: Hashable, Sendable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(tag)
     }
+
+    private final class Facts: Sendable {
+        let name: String
+        let fileName: String
+        let contentType: String
+        let preparingMessage: LocalizedStringResource
+        let savedMessage: LocalizedStringResource
+
+        init(
+            name: String,
+            fileName: String,
+            contentType: String,
+            preparingMessage: LocalizedStringResource,
+            savedMessage: LocalizedStringResource
+        ) {
+            self.name = name
+            self.fileName = fileName
+            self.contentType = contentType
+            self.preparingMessage = preparingMessage
+            self.savedMessage = savedMessage
+        }
+    }
 }
 
 /// The members of the core's `ExternalLinkDestination`. A member's wire tag is its index in `all`.
 /// Core-only behavior, not emitted: `space`.
 struct ExternalLinkDestination: Hashable, Sendable {
     let tag: Int
-    let name: String
-    let title: LocalizedStringResource
-    let opensQuickWindow: Bool
-    let asksForSpace: Bool
+    var name: String { facts.name }
+    var title: LocalizedStringResource { facts.title }
+    var opensQuickWindow: Bool { facts.opensQuickWindow }
+    var asksForSpace: Bool { facts.asksForSpace }
+    private let facts: Facts
 
     private init(tag: Int, name: String, title: LocalizedStringResource, opensQuickWindow: Bool, asksForSpace: Bool) {
         self.tag = tag
-        self.name = name
-        self.title = title
-        self.opensQuickWindow = opensQuickWindow
-        self.asksForSpace = asksForSpace
+        facts = Facts(name: name, title: title, opensQuickWindow: opensQuickWindow, asksForSpace: asksForSpace)
     }
 
     static let quickWindow = ExternalLinkDestination(
@@ -10529,6 +11281,20 @@ struct ExternalLinkDestination: Hashable, Sendable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(tag)
     }
+
+    private final class Facts: Sendable {
+        let name: String
+        let title: LocalizedStringResource
+        let opensQuickWindow: Bool
+        let asksForSpace: Bool
+
+        init(name: String, title: LocalizedStringResource, opensQuickWindow: Bool, asksForSpace: Bool) {
+            self.name = name
+            self.title = title
+            self.opensQuickWindow = opensQuickWindow
+            self.asksForSpace = asksForSpace
+        }
+    }
 }
 
 /// The members of the core's `ExternalSchemeDisposition`. A member's wire tag is its index in `all`.
@@ -10540,13 +11306,13 @@ struct ExternalSchemeDisposition: Hashable, Sendable {
     }
 
     let tag: Int
-    let kind: Kinds
-    let name: String
+    var kind: Kinds { facts.kind }
+    var name: String { facts.name }
+    private let facts: Facts
 
     private init(tag: Int, kind: Kinds, name: String) {
         self.tag = tag
-        self.kind = kind
-        self.name = name
+        facts = Facts(kind: kind, name: name)
     }
 
     static let engine = ExternalSchemeDisposition(tag: 0, kind: .engine, name: "engine")
@@ -10566,6 +11332,16 @@ struct ExternalSchemeDisposition: Hashable, Sendable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(tag)
     }
+
+    private final class Facts: Sendable {
+        let kind: Kinds
+        let name: String
+
+        init(kind: Kinds, name: String) {
+            self.kind = kind
+            self.name = name
+        }
+    }
 }
 
 /// The members of the core's `HostedNotificationRequestAction`. A member's wire tag is its index in `all`.
@@ -10578,17 +11354,15 @@ struct HostedNotificationRequestAction: Hashable, Sendable {
     }
 
     let tag: Int
-    let kind: Kinds
-    let name: String
-    let answers: SitePermissionVerdict
-    let answersUserActivation: Bool?
+    var kind: Kinds { facts.kind }
+    var name: String { facts.name }
+    var answers: SitePermissionVerdict { facts.answers }
+    var answersUserActivation: Bool? { facts.answersUserActivation }
+    private let facts: Facts
 
     private init(tag: Int, kind: Kinds, name: String, answers: SitePermissionVerdict, answersUserActivation: Bool?) {
         self.tag = tag
-        self.kind = kind
-        self.name = name
-        self.answers = answers
-        self.answersUserActivation = answersUserActivation
+        facts = Facts(kind: kind, name: name, answers: answers, answersUserActivation: answersUserActivation)
     }
 
     static let respondDefault = HostedNotificationRequestAction(
@@ -10638,28 +11412,43 @@ struct HostedNotificationRequestAction: Hashable, Sendable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(tag)
     }
+
+    private final class Facts: Sendable {
+        let kind: Kinds
+        let name: String
+        let answers: SitePermissionVerdict
+        let answersUserActivation: Bool?
+
+        init(kind: Kinds, name: String, answers: SitePermissionVerdict, answersUserActivation: Bool?) {
+            self.kind = kind
+            self.name = name
+            self.answers = answers
+            self.answersUserActivation = answersUserActivation
+        }
+    }
 }
 
 /// The members of the core's `ImportSource`. A member's wire tag is its index in `all`.
 struct ImportSource: Hashable, Sendable {
     let tag: Int
-    let name: String
-    let title: String
-    let bundleIdentifier: String
-    let dataFolder: String
-    let description: LocalizedStringResource
-    let symbol: String
-    let accent: SpaceAccent
-    let safeStorageService: String?
-    let suppliesPasswords: Bool
-    let spaceHeaderStyle: ImportSpaceHeaderStyle
-    let pinnedSectionTitle: LocalizedStringResource
-    let savedSectionTitle: LocalizedStringResource
-    let listsNewTab: Bool
-    let spaceName: LocalizedStringResource?
-    let numberedSpaceName: LocalizedStringResource?
-    let namesItsSpaces: Bool
-    let isListed: Bool
+    var name: String { facts.name }
+    var title: String { facts.title }
+    var bundleIdentifier: String { facts.bundleIdentifier }
+    var dataFolder: String { facts.dataFolder }
+    var description: LocalizedStringResource { facts.description }
+    var symbol: String { facts.symbol }
+    var accent: SpaceAccent { facts.accent }
+    var safeStorageService: String? { facts.safeStorageService }
+    var suppliesPasswords: Bool { facts.suppliesPasswords }
+    var spaceHeaderStyle: ImportSpaceHeaderStyle { facts.spaceHeaderStyle }
+    var pinnedSectionTitle: LocalizedStringResource { facts.pinnedSectionTitle }
+    var savedSectionTitle: LocalizedStringResource { facts.savedSectionTitle }
+    var listsNewTab: Bool { facts.listsNewTab }
+    var spaceName: LocalizedStringResource? { facts.spaceName }
+    var numberedSpaceName: LocalizedStringResource? { facts.numberedSpaceName }
+    var namesItsSpaces: Bool { facts.namesItsSpaces }
+    var isListed: Bool { facts.isListed }
+    private let facts: Facts
 
     private init(
         tag: Int,
@@ -10682,23 +11471,25 @@ struct ImportSource: Hashable, Sendable {
         isListed: Bool
     ) {
         self.tag = tag
-        self.name = name
-        self.title = title
-        self.bundleIdentifier = bundleIdentifier
-        self.dataFolder = dataFolder
-        self.description = description
-        self.symbol = symbol
-        self.accent = accent
-        self.safeStorageService = safeStorageService
-        self.suppliesPasswords = suppliesPasswords
-        self.spaceHeaderStyle = spaceHeaderStyle
-        self.pinnedSectionTitle = pinnedSectionTitle
-        self.savedSectionTitle = savedSectionTitle
-        self.listsNewTab = listsNewTab
-        self.spaceName = spaceName
-        self.numberedSpaceName = numberedSpaceName
-        self.namesItsSpaces = namesItsSpaces
-        self.isListed = isListed
+        facts = Facts(
+            name: name,
+            title: title,
+            bundleIdentifier: bundleIdentifier,
+            dataFolder: dataFolder,
+            description: description,
+            symbol: symbol,
+            accent: accent,
+            safeStorageService: safeStorageService,
+            suppliesPasswords: suppliesPasswords,
+            spaceHeaderStyle: spaceHeaderStyle,
+            pinnedSectionTitle: pinnedSectionTitle,
+            savedSectionTitle: savedSectionTitle,
+            listsNewTab: listsNewTab,
+            spaceName: spaceName,
+            numberedSpaceName: numberedSpaceName,
+            namesItsSpaces: namesItsSpaces,
+            isListed: isListed
+        )
     }
 
     static let arc = ImportSource(
@@ -11094,16 +11885,75 @@ struct ImportSource: Hashable, Sendable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(tag)
     }
+
+    private final class Facts: Sendable {
+        let name: String
+        let title: String
+        let bundleIdentifier: String
+        let dataFolder: String
+        let description: LocalizedStringResource
+        let symbol: String
+        let accent: SpaceAccent
+        let safeStorageService: String?
+        let suppliesPasswords: Bool
+        let spaceHeaderStyle: ImportSpaceHeaderStyle
+        let pinnedSectionTitle: LocalizedStringResource
+        let savedSectionTitle: LocalizedStringResource
+        let listsNewTab: Bool
+        let spaceName: LocalizedStringResource?
+        let numberedSpaceName: LocalizedStringResource?
+        let namesItsSpaces: Bool
+        let isListed: Bool
+
+        init(
+            name: String,
+            title: String,
+            bundleIdentifier: String,
+            dataFolder: String,
+            description: LocalizedStringResource,
+            symbol: String,
+            accent: SpaceAccent,
+            safeStorageService: String?,
+            suppliesPasswords: Bool,
+            spaceHeaderStyle: ImportSpaceHeaderStyle,
+            pinnedSectionTitle: LocalizedStringResource,
+            savedSectionTitle: LocalizedStringResource,
+            listsNewTab: Bool,
+            spaceName: LocalizedStringResource?,
+            numberedSpaceName: LocalizedStringResource?,
+            namesItsSpaces: Bool,
+            isListed: Bool
+        ) {
+            self.name = name
+            self.title = title
+            self.bundleIdentifier = bundleIdentifier
+            self.dataFolder = dataFolder
+            self.description = description
+            self.symbol = symbol
+            self.accent = accent
+            self.safeStorageService = safeStorageService
+            self.suppliesPasswords = suppliesPasswords
+            self.spaceHeaderStyle = spaceHeaderStyle
+            self.pinnedSectionTitle = pinnedSectionTitle
+            self.savedSectionTitle = savedSectionTitle
+            self.listsNewTab = listsNewTab
+            self.spaceName = spaceName
+            self.numberedSpaceName = numberedSpaceName
+            self.namesItsSpaces = namesItsSpaces
+            self.isListed = isListed
+        }
+    }
 }
 
 /// The members of the core's `KeySystem`. A member's wire tag is its index in `all`.
 struct KeySystem: Hashable, Sendable {
     let tag: Int
-    let name: String
+    var name: String { facts.name }
+    private let facts: Facts
 
     private init(tag: Int, name: String) {
         self.tag = tag
-        self.name = name
+        facts = Facts(name: name)
     }
 
     static let widevine = KeySystem(tag: 0, name: "widevine")
@@ -11122,17 +11972,26 @@ struct KeySystem: Hashable, Sendable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(tag)
     }
+
+    private final class Facts: Sendable {
+        let name: String
+
+        init(name: String) {
+            self.name = name
+        }
+    }
 }
 
 /// The members of the core's `LinkBehavior`. A member's wire tag is its index in `all`.
 /// Core-only behavior, not emitted: `isOn`, `setting`.
 struct LinkBehavior: Hashable, Sendable {
     let tag: Int
-    let name: String
+    var name: String { facts.name }
+    private let facts: Facts
 
     private init(tag: Int, name: String) {
         self.tag = tag
-        self.name = name
+        facts = Facts(name: name)
     }
 
     static let focusesNewTabs = LinkBehavior(tag: 0, name: "focusesNewTabs")
@@ -11160,17 +12019,26 @@ struct LinkBehavior: Hashable, Sendable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(tag)
     }
+
+    private final class Facts: Sendable {
+        let name: String
+
+        init(name: String) {
+            self.name = name
+        }
+    }
 }
 
 /// The members of the core's `LinkNavigationDecision`. A member's wire tag is its index in `all`.
 struct LinkNavigationDecision: Hashable, Sendable {
     let tag: Int
-    let name: String
-    let opensPeek: Bool
-    let protectsSavedSite: Bool
-    let opensTab: Bool
-    let selectsTab: Bool
-    let stagesLink: Bool
+    var name: String { facts.name }
+    var opensPeek: Bool { facts.opensPeek }
+    var protectsSavedSite: Bool { facts.protectsSavedSite }
+    var opensTab: Bool { facts.opensTab }
+    var selectsTab: Bool { facts.selectsTab }
+    var stagesLink: Bool { facts.stagesLink }
+    private let facts: Facts
 
     private init(
         tag: Int,
@@ -11182,12 +12050,14 @@ struct LinkNavigationDecision: Hashable, Sendable {
         stagesLink: Bool
     ) {
         self.tag = tag
-        self.name = name
-        self.opensPeek = opensPeek
-        self.protectsSavedSite = protectsSavedSite
-        self.opensTab = opensTab
-        self.selectsTab = selectsTab
-        self.stagesLink = stagesLink
+        facts = Facts(
+            name: name,
+            opensPeek: opensPeek,
+            protectsSavedSite: protectsSavedSite,
+            opensTab: opensTab,
+            selectsTab: selectsTab,
+            stagesLink: stagesLink
+        )
     }
 
     static let navigate = LinkNavigationDecision(
@@ -11249,16 +12119,35 @@ struct LinkNavigationDecision: Hashable, Sendable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(tag)
     }
+
+    private final class Facts: Sendable {
+        let name: String
+        let opensPeek: Bool
+        let protectsSavedSite: Bool
+        let opensTab: Bool
+        let selectsTab: Bool
+        let stagesLink: Bool
+
+        init(name: String, opensPeek: Bool, protectsSavedSite: Bool, opensTab: Bool, selectsTab: Bool, stagesLink: Bool) {
+            self.name = name
+            self.opensPeek = opensPeek
+            self.protectsSavedSite = protectsSavedSite
+            self.opensTab = opensTab
+            self.selectsTab = selectsTab
+            self.stagesLink = stagesLink
+        }
+    }
 }
 
 /// The members of the core's `LinkPeekModifier`. A member's wire tag is its index in `all`.
 struct LinkPeekModifier: Hashable, Sendable {
     let tag: Int
-    let name: String
-    let title: LocalizedStringResource
-    let clickTitle: LocalizedStringResource
-    let peekKey: ShortcutModifiers
-    let newTabKey: ShortcutModifiers
+    var name: String { facts.name }
+    var title: LocalizedStringResource { facts.title }
+    var clickTitle: LocalizedStringResource { facts.clickTitle }
+    var peekKey: ShortcutModifiers { facts.peekKey }
+    var newTabKey: ShortcutModifiers { facts.newTabKey }
+    private let facts: Facts
 
     private init(
         tag: Int,
@@ -11269,11 +12158,7 @@ struct LinkPeekModifier: Hashable, Sendable {
         newTabKey: ShortcutModifiers
     ) {
         self.tag = tag
-        self.name = name
-        self.title = title
-        self.clickTitle = clickTitle
-        self.peekKey = peekKey
-        self.newTabKey = newTabKey
+        facts = Facts(name: name, title: title, clickTitle: clickTitle, peekKey: peekKey, newTabKey: newTabKey)
     }
 
     static let option = LinkPeekModifier(
@@ -11306,19 +12191,41 @@ struct LinkPeekModifier: Hashable, Sendable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(tag)
     }
+
+    private final class Facts: Sendable {
+        let name: String
+        let title: LocalizedStringResource
+        let clickTitle: LocalizedStringResource
+        let peekKey: ShortcutModifiers
+        let newTabKey: ShortcutModifiers
+
+        init(
+            name: String,
+            title: LocalizedStringResource,
+            clickTitle: LocalizedStringResource,
+            peekKey: ShortcutModifiers,
+            newTabKey: ShortcutModifiers
+        ) {
+            self.name = name
+            self.title = title
+            self.clickTitle = clickTitle
+            self.peekKey = peekKey
+            self.newTabKey = newTabKey
+        }
+    }
 }
 
 /// The members of the core's `LinkRouteMatch`. A member's wire tag is its index in `all`.
 /// Core-only behavior, not emitted: `matches`.
 struct LinkRouteMatch: Hashable, Sendable {
     let tag: Int
-    let name: String
-    let title: LocalizedStringResource
+    var name: String { facts.name }
+    var title: LocalizedStringResource { facts.title }
+    private let facts: Facts
 
     private init(tag: Int, name: String, title: LocalizedStringResource) {
         self.tag = tag
-        self.name = name
-        self.title = title
+        facts = Facts(name: name, title: title)
     }
 
     static let contains = LinkRouteMatch(tag: 0, name: "contains", title: LocalizedStringResource("Contains"))
@@ -11337,20 +12244,29 @@ struct LinkRouteMatch: Hashable, Sendable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(tag)
     }
+
+    private final class Facts: Sendable {
+        let name: String
+        let title: LocalizedStringResource
+
+        init(name: String, title: LocalizedStringResource) {
+            self.name = name
+            self.title = title
+        }
+    }
 }
 
 /// The members of the core's `MemoryPressureLevel`. A member's wire tag is its index in `all`.
 struct MemoryPressureLevel: Hashable, Sendable {
     let tag: Int
-    let name: String
-    let severity: Int
-    let releasesActiveTransientPages: Bool
+    var name: String { facts.name }
+    var severity: Int { facts.severity }
+    var releasesActiveTransientPages: Bool { facts.releasesActiveTransientPages }
+    private let facts: Facts
 
     private init(tag: Int, name: String, severity: Int, releasesActiveTransientPages: Bool) {
         self.tag = tag
-        self.name = name
-        self.severity = severity
-        self.releasesActiveTransientPages = releasesActiveTransientPages
+        facts = Facts(name: name, severity: severity, releasesActiveTransientPages: releasesActiveTransientPages)
     }
 
     static let warning = MemoryPressureLevel(tag: 0, name: "warning", severity: 1, releasesActiveTransientPages: false)
@@ -11369,20 +12285,31 @@ struct MemoryPressureLevel: Hashable, Sendable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(tag)
     }
+
+    private final class Facts: Sendable {
+        let name: String
+        let severity: Int
+        let releasesActiveTransientPages: Bool
+
+        init(name: String, severity: Int, releasesActiveTransientPages: Bool) {
+            self.name = name
+            self.severity = severity
+            self.releasesActiveTransientPages = releasesActiveTransientPages
+        }
+    }
 }
 
 /// The members of the core's `NativeView`. A member's wire tag is its index in `all`.
 struct NativeView: Hashable, Sendable {
     let tag: Int
-    let name: String
-    let title: LocalizedStringResource
-    let symbol: String
+    var name: String { facts.name }
+    var title: LocalizedStringResource { facts.title }
+    var symbol: String { facts.symbol }
+    private let facts: Facts
 
     private init(tag: Int, name: String, title: LocalizedStringResource, symbol: String) {
         self.tag = tag
-        self.name = name
-        self.title = title
-        self.symbol = symbol
+        facts = Facts(name: name, title: title, symbol: symbol)
     }
 
     static let settings = NativeView(
@@ -11411,18 +12338,31 @@ struct NativeView: Hashable, Sendable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(tag)
     }
+
+    private final class Facts: Sendable {
+        let name: String
+        let title: LocalizedStringResource
+        let symbol: String
+
+        init(name: String, title: LocalizedStringResource, symbol: String) {
+            self.name = name
+            self.title = title
+            self.symbol = symbol
+        }
+    }
 }
 
 /// The members of the core's `NavigationError`. A member's wire tag is its index in `all`.
 struct NavigationError: Hashable, Sendable {
     let tag: Int
-    let name: String
-    let code: String
-    let title: LocalizedStringResource
-    let message: LocalizedStringResource
-    let primarySuggestion: LocalizedStringResource
-    let secondarySuggestion: LocalizedStringResource
-    let symbol: String
+    var name: String { facts.name }
+    var code: String { facts.code }
+    var title: LocalizedStringResource { facts.title }
+    var message: LocalizedStringResource { facts.message }
+    var primarySuggestion: LocalizedStringResource { facts.primarySuggestion }
+    var secondarySuggestion: LocalizedStringResource { facts.secondarySuggestion }
+    var symbol: String { facts.symbol }
+    private let facts: Facts
 
     private init(
         tag: Int,
@@ -11435,13 +12375,15 @@ struct NavigationError: Hashable, Sendable {
         symbol: String
     ) {
         self.tag = tag
-        self.name = name
-        self.code = code
-        self.title = title
-        self.message = message
-        self.primarySuggestion = primarySuggestion
-        self.secondarySuggestion = secondarySuggestion
-        self.symbol = symbol
+        facts = Facts(
+            name: name,
+            code: code,
+            title: title,
+            message: message,
+            primarySuggestion: primarySuggestion,
+            secondarySuggestion: secondarySuggestion,
+            symbol: symbol
+        )
     }
 
     static let offline = NavigationError(
@@ -11591,6 +12533,34 @@ struct NavigationError: Hashable, Sendable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(tag)
     }
+
+    private final class Facts: Sendable {
+        let name: String
+        let code: String
+        let title: LocalizedStringResource
+        let message: LocalizedStringResource
+        let primarySuggestion: LocalizedStringResource
+        let secondarySuggestion: LocalizedStringResource
+        let symbol: String
+
+        init(
+            name: String,
+            code: String,
+            title: LocalizedStringResource,
+            message: LocalizedStringResource,
+            primarySuggestion: LocalizedStringResource,
+            secondarySuggestion: LocalizedStringResource,
+            symbol: String
+        ) {
+            self.name = name
+            self.code = code
+            self.title = title
+            self.message = message
+            self.primarySuggestion = primarySuggestion
+            self.secondarySuggestion = secondarySuggestion
+            self.symbol = symbol
+        }
+    }
 }
 
 /// The members of the core's `NumberedSelectionTarget`. A member's wire tag is its index in `all`.
@@ -11602,13 +12572,13 @@ struct NumberedSelectionTarget: Hashable, Sendable {
     }
 
     let tag: Int
-    let kind: Kinds
-    let name: String
+    var kind: Kinds { facts.kind }
+    var name: String { facts.name }
+    private let facts: Facts
 
     private init(tag: Int, kind: Kinds, name: String) {
         self.tag = tag
-        self.kind = kind
-        self.name = name
+        facts = Facts(kind: kind, name: name)
     }
 
     static let tab = NumberedSelectionTarget(tag: 0, kind: .tab, name: "tab")
@@ -11627,18 +12597,28 @@ struct NumberedSelectionTarget: Hashable, Sendable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(tag)
     }
+
+    private final class Facts: Sendable {
+        let kind: Kinds
+        let name: String
+
+        init(kind: Kinds, name: String) {
+            self.kind = kind
+            self.name = name
+        }
+    }
 }
 
 /// The members of the core's `PageExportFailure`. A member's wire tag is its index in `all`.
 struct PageExportFailure: Hashable, Sendable {
     let tag: Int
-    let name: String
-    let message: LocalizedStringResource
+    var name: String { facts.name }
+    var message: LocalizedStringResource { facts.message }
+    private let facts: Facts
 
     private init(tag: Int, name: String, message: LocalizedStringResource) {
         self.tag = tag
-        self.name = name
-        self.message = message
+        facts = Facts(name: name, message: message)
     }
 
     static let busy = PageExportFailure(
@@ -11704,19 +12684,29 @@ struct PageExportFailure: Hashable, Sendable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(tag)
     }
+
+    private final class Facts: Sendable {
+        let name: String
+        let message: LocalizedStringResource
+
+        init(name: String, message: LocalizedStringResource) {
+            self.name = name
+            self.message = message
+        }
+    }
 }
 
 /// The members of the core's `PagePhase`. A member's wire tag is its index in `all`.
 /// Core-only behavior, not emitted: `follows`.
 struct PagePhase: Hashable, Sendable {
     let tag: Int
-    let name: String
-    let holdsEnginePage: Bool
+    var name: String { facts.name }
+    var holdsEnginePage: Bool { facts.holdsEnginePage }
+    private let facts: Facts
 
     private init(tag: Int, name: String, holdsEnginePage: Bool) {
         self.tag = tag
-        self.name = name
-        self.holdsEnginePage = holdsEnginePage
+        facts = Facts(name: name, holdsEnginePage: holdsEnginePage)
     }
 
     static let opening = PagePhase(tag: 0, name: "opening", holdsEnginePage: true)
@@ -11737,16 +12727,27 @@ struct PagePhase: Hashable, Sendable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(tag)
     }
+
+    private final class Facts: Sendable {
+        let name: String
+        let holdsEnginePage: Bool
+
+        init(name: String, holdsEnginePage: Bool) {
+            self.name = name
+            self.holdsEnginePage = holdsEnginePage
+        }
+    }
 }
 
 /// The members of the core's `PagePresentation`. A member's wire tag is its index in `all`.
 struct PagePresentation: Hashable, Sendable {
     let tag: Int
-    let name: String
+    var name: String { facts.name }
+    private let facts: Facts
 
     private init(tag: Int, name: String) {
         self.tag = tag
-        self.name = name
+        facts = Facts(name: name)
     }
 
     static let noSelection = PagePresentation(tag: 0, name: "noSelection")
@@ -11780,17 +12781,26 @@ struct PagePresentation: Hashable, Sendable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(tag)
     }
+
+    private final class Facts: Sendable {
+        let name: String
+
+        init(name: String) {
+            self.name = name
+        }
+    }
 }
 
 /// The members of the core's `PageSecurity`. A member's wire tag is its index in `all`.
 struct PageSecurity: Hashable, Sendable {
     let tag: Int
-    let name: String
-    let title: LocalizedStringResource
-    let symbol: String
-    let detail: LocalizedStringResource?
-    let isSecure: Bool
-    let isHazardous: Bool
+    var name: String { facts.name }
+    var title: LocalizedStringResource { facts.title }
+    var symbol: String { facts.symbol }
+    var detail: LocalizedStringResource? { facts.detail }
+    var isSecure: Bool { facts.isSecure }
+    var isHazardous: Bool { facts.isHazardous }
+    private let facts: Facts
 
     private init(
         tag: Int,
@@ -11802,12 +12812,14 @@ struct PageSecurity: Hashable, Sendable {
         isHazardous: Bool
     ) {
         self.tag = tag
-        self.name = name
-        self.title = title
-        self.symbol = symbol
-        self.detail = detail
-        self.isSecure = isSecure
-        self.isHazardous = isHazardous
+        facts = Facts(
+            name: name,
+            title: title,
+            symbol: symbol,
+            detail: detail,
+            isSecure: isSecure,
+            isHazardous: isHazardous
+        )
     }
 
     static let none = PageSecurity(
@@ -11878,22 +12890,45 @@ struct PageSecurity: Hashable, Sendable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(tag)
     }
+
+    private final class Facts: Sendable {
+        let name: String
+        let title: LocalizedStringResource
+        let symbol: String
+        let detail: LocalizedStringResource?
+        let isSecure: Bool
+        let isHazardous: Bool
+
+        init(
+            name: String,
+            title: LocalizedStringResource,
+            symbol: String,
+            detail: LocalizedStringResource?,
+            isSecure: Bool,
+            isHazardous: Bool
+        ) {
+            self.name = name
+            self.title = title
+            self.symbol = symbol
+            self.detail = detail
+            self.isSecure = isSecure
+            self.isHazardous = isHazardous
+        }
+    }
 }
 
 /// The members of the core's `PaletteRowKind`. A member's wire tag is its index in `all`.
 struct PaletteRowKind: Hashable, Sendable {
     let tag: Int
-    let name: String
-    let symbol: String
-    let action: LocalizedStringResource?
-    let isPrimary: Bool
+    var name: String { facts.name }
+    var symbol: String { facts.symbol }
+    var action: LocalizedStringResource? { facts.action }
+    var isPrimary: Bool { facts.isPrimary }
+    private let facts: Facts
 
     private init(tag: Int, name: String, symbol: String, action: LocalizedStringResource?, isPrimary: Bool) {
         self.tag = tag
-        self.name = name
-        self.symbol = symbol
-        self.action = action
-        self.isPrimary = isPrimary
+        facts = Facts(name: name, symbol: symbol, action: action, isPrimary: isPrimary)
     }
 
     static let openAddress = PaletteRowKind(tag: 0, name: "openAddress", symbol: "globe", action: nil, isPrimary: true)
@@ -11965,22 +13000,34 @@ struct PaletteRowKind: Hashable, Sendable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(tag)
     }
+
+    private final class Facts: Sendable {
+        let name: String
+        let symbol: String
+        let action: LocalizedStringResource?
+        let isPrimary: Bool
+
+        init(name: String, symbol: String, action: LocalizedStringResource?, isPrimary: Bool) {
+            self.name = name
+            self.symbol = symbol
+            self.action = action
+            self.isPrimary = isPrimary
+        }
+    }
 }
 
 /// The members of the core's `PaletteSection`. A member's wire tag is its index in `all`.
 struct PaletteSection: Hashable, Sendable {
     let tag: Int
-    let name: String
-    let title: LocalizedStringResource?
-    let limit: Int
-    let restingLimit: Int
+    var name: String { facts.name }
+    var title: LocalizedStringResource? { facts.title }
+    var limit: Int { facts.limit }
+    var restingLimit: Int { facts.restingLimit }
+    private let facts: Facts
 
     private init(tag: Int, name: String, title: LocalizedStringResource?, limit: Int, restingLimit: Int) {
         self.tag = tag
-        self.name = name
-        self.title = title
-        self.limit = limit
-        self.restingLimit = restingLimit
+        facts = Facts(name: name, title: title, limit: limit, restingLimit: restingLimit)
     }
 
     static let intent = PaletteSection(tag: 0, name: "intent", title: nil, limit: 1, restingLimit: 0)
@@ -12040,20 +13087,35 @@ struct PaletteSection: Hashable, Sendable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(tag)
     }
+
+    private final class Facts: Sendable {
+        let name: String
+        let title: LocalizedStringResource?
+        let limit: Int
+        let restingLimit: Int
+
+        init(name: String, title: LocalizedStringResource?, limit: Int, restingLimit: Int) {
+            self.name = name
+            self.title = title
+            self.limit = limit
+            self.restingLimit = restingLimit
+        }
+    }
 }
 
 /// The members of the core's `PasskeyAccessStatus`. A member's wire tag is its index in `all`.
 struct PasskeyAccessStatus: Hashable, Sendable {
     let tag: Int
-    let name: String
-    let title: LocalizedStringResource
-    let detail: LocalizedStringResource
-    let symbol: String
-    let settingsDetail: LocalizedStringResource?
-    let isReady: Bool
-    let needsAttention: Bool
-    let canRequestAccess: Bool
-    let isChecking: Bool
+    var name: String { facts.name }
+    var title: LocalizedStringResource { facts.title }
+    var detail: LocalizedStringResource { facts.detail }
+    var symbol: String { facts.symbol }
+    var settingsDetail: LocalizedStringResource? { facts.settingsDetail }
+    var isReady: Bool { facts.isReady }
+    var needsAttention: Bool { facts.needsAttention }
+    var canRequestAccess: Bool { facts.canRequestAccess }
+    var isChecking: Bool { facts.isChecking }
+    private let facts: Facts
 
     private init(
         tag: Int,
@@ -12068,15 +13130,17 @@ struct PasskeyAccessStatus: Hashable, Sendable {
         isChecking: Bool
     ) {
         self.tag = tag
-        self.name = name
-        self.title = title
-        self.detail = detail
-        self.symbol = symbol
-        self.settingsDetail = settingsDetail
-        self.isReady = isReady
-        self.needsAttention = needsAttention
-        self.canRequestAccess = canRequestAccess
-        self.isChecking = isChecking
+        facts = Facts(
+            name: name,
+            title: title,
+            detail: detail,
+            symbol: symbol,
+            settingsDetail: settingsDetail,
+            isReady: isReady,
+            needsAttention: needsAttention,
+            canRequestAccess: canRequestAccess,
+            isChecking: isChecking
+        )
     }
 
     static let managedCapabilityRequired = PasskeyAccessStatus(
@@ -12172,18 +13236,52 @@ struct PasskeyAccessStatus: Hashable, Sendable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(tag)
     }
+
+    private final class Facts: Sendable {
+        let name: String
+        let title: LocalizedStringResource
+        let detail: LocalizedStringResource
+        let symbol: String
+        let settingsDetail: LocalizedStringResource?
+        let isReady: Bool
+        let needsAttention: Bool
+        let canRequestAccess: Bool
+        let isChecking: Bool
+
+        init(
+            name: String,
+            title: LocalizedStringResource,
+            detail: LocalizedStringResource,
+            symbol: String,
+            settingsDetail: LocalizedStringResource?,
+            isReady: Bool,
+            needsAttention: Bool,
+            canRequestAccess: Bool,
+            isChecking: Bool
+        ) {
+            self.name = name
+            self.title = title
+            self.detail = detail
+            self.symbol = symbol
+            self.settingsDetail = settingsDetail
+            self.isReady = isReady
+            self.needsAttention = needsAttention
+            self.canRequestAccess = canRequestAccess
+            self.isChecking = isChecking
+        }
+    }
 }
 
 /// The members of the core's `PasskeyAuthorizationState`. A member's wire tag is its index in `all`.
 struct PasskeyAuthorizationState: Hashable, Sendable {
     let tag: Int
-    let name: String
-    let accessStatus: PasskeyAccessStatus
+    var name: String { facts.name }
+    var accessStatus: PasskeyAccessStatus { facts.accessStatus }
+    private let facts: Facts
 
     private init(tag: Int, name: String, accessStatus: PasskeyAccessStatus) {
         self.tag = tag
-        self.name = name
-        self.accessStatus = accessStatus
+        facts = Facts(name: name, accessStatus: accessStatus)
     }
 
     static let authorized = PasskeyAuthorizationState(
@@ -12211,24 +13309,31 @@ struct PasskeyAuthorizationState: Hashable, Sendable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(tag)
     }
+
+    private final class Facts: Sendable {
+        let name: String
+        let accessStatus: PasskeyAccessStatus
+
+        init(name: String, accessStatus: PasskeyAccessStatus) {
+            self.name = name
+            self.accessStatus = accessStatus
+        }
+    }
 }
 
 /// The members of the core's `PracticeTab`. A member's wire tag is its index in `all`.
 struct PracticeTab: Hashable, Sendable {
     let tag: Int
-    let name: String
-    let title: String
-    let url: String
-    let placement: TabPlacement
-    let artwork: String
+    var name: String { facts.name }
+    var title: String { facts.title }
+    var url: String { facts.url }
+    var placement: TabPlacement { facts.placement }
+    var artwork: String { facts.artwork }
+    private let facts: Facts
 
     private init(tag: Int, name: String, title: String, url: String, placement: TabPlacement, artwork: String) {
         self.tag = tag
-        self.name = name
-        self.title = title
-        self.url = url
-        self.placement = placement
-        self.artwork = artwork
+        facts = Facts(name: name, title: title, url: url, placement: placement, artwork: artwork)
     }
 
     static let calendar = PracticeTab(
@@ -12285,20 +13390,35 @@ struct PracticeTab: Hashable, Sendable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(tag)
     }
+
+    private final class Facts: Sendable {
+        let name: String
+        let title: String
+        let url: String
+        let placement: TabPlacement
+        let artwork: String
+
+        init(name: String, title: String, url: String, placement: TabPlacement, artwork: String) {
+            self.name = name
+            self.title = title
+            self.url = url
+            self.placement = placement
+            self.artwork = artwork
+        }
+    }
 }
 
 /// The members of the core's `QuickWindowArchivePolicy`. A member's wire tag is its index in `all`.
 struct QuickWindowArchivePolicy: Hashable, Sendable {
     let tag: Int
-    let name: String
-    let title: LocalizedStringResource
-    let lifetime: TimeInterval?
+    var name: String { facts.name }
+    var title: LocalizedStringResource { facts.title }
+    var lifetime: TimeInterval? { facts.lifetime }
+    private let facts: Facts
 
     private init(tag: Int, name: String, title: LocalizedStringResource, lifetime: TimeInterval?) {
         self.tag = tag
-        self.name = name
-        self.title = title
-        self.lifetime = lifetime
+        facts = Facts(name: name, title: title, lifetime: lifetime)
     }
 
     static let after1Hour = QuickWindowArchivePolicy(
@@ -12345,16 +13465,29 @@ struct QuickWindowArchivePolicy: Hashable, Sendable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(tag)
     }
+
+    private final class Facts: Sendable {
+        let name: String
+        let title: LocalizedStringResource
+        let lifetime: TimeInterval?
+
+        init(name: String, title: LocalizedStringResource, lifetime: TimeInterval?) {
+            self.name = name
+            self.title = title
+            self.lifetime = lifetime
+        }
+    }
 }
 
 /// The members of the core's `RehostReason`. A member's wire tag is its index in `all`.
 struct RehostReason: Hashable, Sendable {
     let tag: Int
-    let name: String
+    var name: String { facts.name }
+    private let facts: Facts
 
     private init(tag: Int, name: String) {
         self.tag = tag
-        self.name = name
+        facts = Facts(name: name)
     }
 
     static let personAsked = RehostReason(tag: 0, name: "personAsked")
@@ -12374,18 +13507,26 @@ struct RehostReason: Hashable, Sendable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(tag)
     }
+
+    private final class Facts: Sendable {
+        let name: String
+
+        init(name: String) {
+            self.name = name
+        }
+    }
 }
 
 /// The members of the core's `SavedTabClosePolicy`. A member's wire tag is its index in `all`.
 struct SavedTabClosePolicy: Hashable, Sendable {
     let tag: Int
-    let name: String
-    let title: LocalizedStringResource
+    var name: String { facts.name }
+    var title: LocalizedStringResource { facts.title }
+    private let facts: Facts
 
     private init(tag: Int, name: String, title: LocalizedStringResource) {
         self.tag = tag
-        self.name = name
-        self.title = title
+        facts = Facts(name: name, title: title)
     }
 
     static let resumeLastLocation = SavedTabClosePolicy(
@@ -12412,18 +13553,28 @@ struct SavedTabClosePolicy: Hashable, Sendable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(tag)
     }
+
+    private final class Facts: Sendable {
+        let name: String
+        let title: LocalizedStringResource
+
+        init(name: String, title: LocalizedStringResource) {
+            self.name = name
+            self.title = title
+        }
+    }
 }
 
 /// The members of the core's `SearchEngineFlaw`. A member's wire tag is its index in `all`.
 struct SearchEngineFlaw: Hashable, Sendable {
     let tag: Int
-    let name: String
-    let message: LocalizedStringResource
+    var name: String { facts.name }
+    var message: LocalizedStringResource { facts.message }
+    private let facts: Facts
 
     private init(tag: Int, name: String, message: LocalizedStringResource) {
         self.tag = tag
-        self.name = name
-        self.message = message
+        facts = Facts(name: name, message: message)
     }
 
     static let invalidIdentity = SearchEngineFlaw(
@@ -12519,6 +13670,16 @@ struct SearchEngineFlaw: Hashable, Sendable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(tag)
     }
+
+    private final class Facts: Sendable {
+        let name: String
+        let message: LocalizedStringResource
+
+        init(name: String, message: LocalizedStringResource) {
+            self.name = name
+            self.message = message
+        }
+    }
 }
 
 /// The members of the core's `SearchProvider`, which also makes members at runtime. Members are equal when their names are.
@@ -12527,18 +13688,21 @@ struct SearchProvider: Hashable, Sendable {
     static let maximumNameLength = 64
     static let maximumTemplateLength = 2048
 
-    let name: String
-    let title: String
-    let logo: String?
-    let searchTemplate: String
-    let suggestionTemplate: String?
+    var name: String { facts.name }
+    var title: String { facts.title }
+    var logo: String? { facts.logo }
+    var searchTemplate: String { facts.searchTemplate }
+    var suggestionTemplate: String? { facts.suggestionTemplate }
+    private let facts: Facts
 
     init(name: String, title: String, logo: String?, searchTemplate: String, suggestionTemplate: String?) {
-        self.name = name
-        self.title = title
-        self.logo = logo
-        self.searchTemplate = searchTemplate
-        self.suggestionTemplate = suggestionTemplate
+        facts = Facts(
+            name: name,
+            title: title,
+            logo: logo,
+            searchTemplate: searchTemplate,
+            suggestionTemplate: suggestionTemplate
+        )
     }
 
     static let google = SearchProvider(
@@ -12590,23 +13754,42 @@ struct SearchProvider: Hashable, Sendable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(name)
     }
+
+    private final class Facts: Sendable {
+        let name: String
+        let title: String
+        let logo: String?
+        let searchTemplate: String
+        let suggestionTemplate: String?
+
+        init(name: String, title: String, logo: String?, searchTemplate: String, suggestionTemplate: String?) {
+            self.name = name
+            self.title = title
+            self.logo = logo
+            self.searchTemplate = searchTemplate
+            self.suggestionTemplate = suggestionTemplate
+        }
+    }
 }
 
 /// The members of the core's `SetupEntry`. A member's wire tag is its index in `all`.
 /// Core-only behavior, not emitted: `opensGuide`.
 struct SetupEntry: Hashable, Sendable {
     let tag: Int
-    let name: String
-    let firstStep: SetupStep
-    let isGuided: Bool
-    let startsManualSetupOver: Bool
+    var name: String { facts.name }
+    var firstStep: SetupStep { facts.firstStep }
+    var isGuided: Bool { facts.isGuided }
+    var startsManualSetupOver: Bool { facts.startsManualSetupOver }
+    private let facts: Facts
 
     private init(tag: Int, name: String, firstStep: SetupStep, isGuided: Bool, startsManualSetupOver: Bool) {
         self.tag = tag
-        self.name = name
-        self.firstStep = firstStep
-        self.isGuided = isGuided
-        self.startsManualSetupOver = startsManualSetupOver
+        facts = Facts(
+            name: name,
+            firstStep: firstStep,
+            isGuided: isGuided,
+            startsManualSetupOver: startsManualSetupOver
+        )
     }
 
     static let firstRun = SetupEntry(
@@ -12651,18 +13834,32 @@ struct SetupEntry: Hashable, Sendable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(tag)
     }
+
+    private final class Facts: Sendable {
+        let name: String
+        let firstStep: SetupStep
+        let isGuided: Bool
+        let startsManualSetupOver: Bool
+
+        init(name: String, firstStep: SetupStep, isGuided: Bool, startsManualSetupOver: Bool) {
+            self.name = name
+            self.firstStep = firstStep
+            self.isGuided = isGuided
+            self.startsManualSetupOver = startsManualSetupOver
+        }
+    }
 }
 
 /// The members of the core's `SetupFailureReason`. A member's wire tag is its index in `all`.
 struct SetupFailureReason: Hashable, Sendable {
     let tag: Int
-    let name: String
-    let returnsToReview: Bool
+    var name: String { facts.name }
+    var returnsToReview: Bool { facts.returnsToReview }
+    private let facts: Facts
 
     private init(tag: Int, name: String, returnsToReview: Bool) {
         self.tag = tag
-        self.name = name
-        self.returnsToReview = returnsToReview
+        facts = Facts(name: name, returnsToReview: returnsToReview)
     }
 
     static let sourceUnavailable = SetupFailureReason(tag: 0, name: "sourceUnavailable", returnsToReview: false)
@@ -12683,18 +13880,28 @@ struct SetupFailureReason: Hashable, Sendable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(tag)
     }
+
+    private final class Facts: Sendable {
+        let name: String
+        let returnsToReview: Bool
+
+        init(name: String, returnsToReview: Bool) {
+            self.name = name
+            self.returnsToReview = returnsToReview
+        }
+    }
 }
 
 /// The members of the core's `SetupPhase`. A member's wire tag is its index in `all`.
 struct SetupPhase: Hashable, Sendable {
     let tag: Int
-    let name: String
-    let isBusy: Bool
+    var name: String { facts.name }
+    var isBusy: Bool { facts.isBusy }
+    private let facts: Facts
 
     private init(tag: Int, name: String, isBusy: Bool) {
         self.tag = tag
-        self.name = name
-        self.isBusy = isBusy
+        facts = Facts(name: name, isBusy: isBusy)
     }
 
     static let idle = SetupPhase(tag: 0, name: "idle", isBusy: false)
@@ -12715,19 +13922,29 @@ struct SetupPhase: Hashable, Sendable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(tag)
     }
+
+    private final class Facts: Sendable {
+        let name: String
+        let isBusy: Bool
+
+        init(name: String, isBusy: Bool) {
+            self.name = name
+            self.isBusy = isBusy
+        }
+    }
 }
 
 /// The members of the core's `SetupStep`. A member's wire tag is its index in `all`.
 /// Core-only behavior, not emitted: `next`, `back`.
 struct SetupStep: Hashable, Sendable {
     let tag: Int
-    let name: String
-    let progressPosition: Int
+    var name: String { facts.name }
+    var progressPosition: Int { facts.progressPosition }
+    private let facts: Facts
 
     private init(tag: Int, name: String, progressPosition: Int) {
         self.tag = tag
-        self.name = name
-        self.progressPosition = progressPosition
+        facts = Facts(name: name, progressPosition: progressPosition)
     }
 
     static let welcome = SetupStep(tag: 0, name: "welcome", progressPosition: 0)
@@ -12760,6 +13977,16 @@ struct SetupStep: Hashable, Sendable {
 
     func hash(into hasher: inout Hasher) {
         hasher.combine(tag)
+    }
+
+    private final class Facts: Sendable {
+        let name: String
+        let progressPosition: Int
+
+        init(name: String, progressPosition: Int) {
+            self.name = name
+            self.progressPosition = progressPosition
+        }
     }
 }
 
@@ -12821,20 +14048,21 @@ struct ShortcutCommand: Hashable, Sendable {
     }
 
     let tag: Int
-    let kind: Kinds
-    let name: String
-    let section: ShortcutSection
-    let title: LocalizedStringResource
-    let searchTerms: LocalizedStringResource?
-    let menuTitle: LocalizedStringResource?
-    let symbol: String
-    let requiredCapability: EngineCapability?
-    let selects: NumberedSelectionTarget?
-    let number: Int?
-    let defaultShortcuts: [ShortcutDefault]
-    let paletteRest: Int?
-    let offersInPalette: Bool
-    let isReservedFromPages: Bool
+    var kind: Kinds { facts.kind }
+    var name: String { facts.name }
+    var section: ShortcutSection { facts.section }
+    var title: LocalizedStringResource { facts.title }
+    var searchTerms: LocalizedStringResource? { facts.searchTerms }
+    var menuTitle: LocalizedStringResource? { facts.menuTitle }
+    var symbol: String { facts.symbol }
+    var requiredCapability: EngineCapability? { facts.requiredCapability }
+    var selects: NumberedSelectionTarget? { facts.selects }
+    var number: Int? { facts.number }
+    var defaultShortcuts: [ShortcutDefault] { facts.defaultShortcuts }
+    var paletteRest: Int? { facts.paletteRest }
+    var offersInPalette: Bool { facts.offersInPalette }
+    var isReservedFromPages: Bool { facts.isReservedFromPages }
+    private let facts: Facts
 
     private init(
         tag: Int,
@@ -12854,20 +14082,22 @@ struct ShortcutCommand: Hashable, Sendable {
         isReservedFromPages: Bool
     ) {
         self.tag = tag
-        self.kind = kind
-        self.name = name
-        self.section = section
-        self.title = title
-        self.searchTerms = searchTerms
-        self.menuTitle = menuTitle
-        self.symbol = symbol
-        self.requiredCapability = requiredCapability
-        self.selects = selects
-        self.number = number
-        self.defaultShortcuts = defaultShortcuts
-        self.paletteRest = paletteRest
-        self.offersInPalette = offersInPalette
-        self.isReservedFromPages = isReservedFromPages
+        facts = Facts(
+            kind: kind,
+            name: name,
+            section: section,
+            title: title,
+            searchTerms: searchTerms,
+            menuTitle: menuTitle,
+            symbol: symbol,
+            requiredCapability: requiredCapability,
+            selects: selects,
+            number: number,
+            defaultShortcuts: defaultShortcuts,
+            paletteRest: paletteRest,
+            offersInPalette: offersInPalette,
+            isReservedFromPages: isReservedFromPages
+        )
     }
 
     static let newWindow = ShortcutCommand(
@@ -14742,20 +15972,68 @@ struct ShortcutCommand: Hashable, Sendable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(tag)
     }
+
+    private final class Facts: Sendable {
+        let kind: Kinds
+        let name: String
+        let section: ShortcutSection
+        let title: LocalizedStringResource
+        let searchTerms: LocalizedStringResource?
+        let menuTitle: LocalizedStringResource?
+        let symbol: String
+        let requiredCapability: EngineCapability?
+        let selects: NumberedSelectionTarget?
+        let number: Int?
+        let defaultShortcuts: [ShortcutDefault]
+        let paletteRest: Int?
+        let offersInPalette: Bool
+        let isReservedFromPages: Bool
+
+        init(
+            kind: Kinds,
+            name: String,
+            section: ShortcutSection,
+            title: LocalizedStringResource,
+            searchTerms: LocalizedStringResource?,
+            menuTitle: LocalizedStringResource?,
+            symbol: String,
+            requiredCapability: EngineCapability?,
+            selects: NumberedSelectionTarget?,
+            number: Int?,
+            defaultShortcuts: [ShortcutDefault],
+            paletteRest: Int?,
+            offersInPalette: Bool,
+            isReservedFromPages: Bool
+        ) {
+            self.kind = kind
+            self.name = name
+            self.section = section
+            self.title = title
+            self.searchTerms = searchTerms
+            self.menuTitle = menuTitle
+            self.symbol = symbol
+            self.requiredCapability = requiredCapability
+            self.selects = selects
+            self.number = number
+            self.defaultShortcuts = defaultShortcuts
+            self.paletteRest = paletteRest
+            self.offersInPalette = offersInPalette
+            self.isReservedFromPages = isReservedFromPages
+        }
+    }
 }
 
 /// The members of the core's `ShortcutMenu`. A member's wire tag is its index in `all`.
 struct ShortcutMenu: Hashable, Sendable {
     let tag: Int
-    let name: String
-    let title: LocalizedStringResource
-    let groups: [[ShortcutCommand]]
+    var name: String { facts.name }
+    var title: LocalizedStringResource { facts.title }
+    var groups: [[ShortcutCommand]] { facts.groups }
+    private let facts: Facts
 
     private init(tag: Int, name: String, title: LocalizedStringResource, groups: [[ShortcutCommand]]) {
         self.tag = tag
-        self.name = name
-        self.title = title
-        self.groups = groups
+        facts = Facts(name: name, title: title, groups: groups)
     }
 
     static let file = ShortcutMenu(
@@ -14890,18 +16168,30 @@ struct ShortcutMenu: Hashable, Sendable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(tag)
     }
+
+    private final class Facts: Sendable {
+        let name: String
+        let title: LocalizedStringResource
+        let groups: [[ShortcutCommand]]
+
+        init(name: String, title: LocalizedStringResource, groups: [[ShortcutCommand]]) {
+            self.name = name
+            self.title = title
+            self.groups = groups
+        }
+    }
 }
 
 /// The members of the core's `ShortcutSection`. A member's wire tag is its index in `all`.
 struct ShortcutSection: Hashable, Sendable {
     let tag: Int
-    let name: String
-    let title: LocalizedStringResource
+    var name: String { facts.name }
+    var title: LocalizedStringResource { facts.title }
+    private let facts: Facts
 
     private init(tag: Int, name: String, title: LocalizedStringResource) {
         self.tag = tag
-        self.name = name
-        self.title = title
+        facts = Facts(name: name, title: title)
     }
 
     static let everyday = ShortcutSection(tag: 0, name: "everyday", title: LocalizedStringResource("Everyday Use"))
@@ -14923,16 +16213,27 @@ struct ShortcutSection: Hashable, Sendable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(tag)
     }
+
+    private final class Facts: Sendable {
+        let name: String
+        let title: LocalizedStringResource
+
+        init(name: String, title: LocalizedStringResource) {
+            self.name = name
+            self.title = title
+        }
+    }
 }
 
 /// The members of the core's `ShortcutSpecialKey`. A member's wire tag is its index in `all`.
 struct ShortcutSpecialKey: Hashable, Sendable {
     let tag: Int
-    let name: String
-    let glyph: String?
-    let title: LocalizedStringResource?
-    let spokenName: LocalizedStringResource?
-    let functionKeyNumber: Int?
+    var name: String { facts.name }
+    var glyph: String? { facts.glyph }
+    var title: LocalizedStringResource? { facts.title }
+    var spokenName: LocalizedStringResource? { facts.spokenName }
+    var functionKeyNumber: Int? { facts.functionKeyNumber }
+    private let facts: Facts
 
     private init(
         tag: Int,
@@ -14943,11 +16244,13 @@ struct ShortcutSpecialKey: Hashable, Sendable {
         functionKeyNumber: Int?
     ) {
         self.tag = tag
-        self.name = name
-        self.glyph = glyph
-        self.title = title
-        self.spokenName = spokenName
-        self.functionKeyNumber = functionKeyNumber
+        facts = Facts(
+            name: name,
+            glyph: glyph,
+            title: title,
+            spokenName: spokenName,
+            functionKeyNumber: functionKeyNumber
+        )
     }
 
     static let tab = ShortcutSpecialKey(
@@ -15271,20 +16574,41 @@ struct ShortcutSpecialKey: Hashable, Sendable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(tag)
     }
+
+    private final class Facts: Sendable {
+        let name: String
+        let glyph: String?
+        let title: LocalizedStringResource?
+        let spokenName: LocalizedStringResource?
+        let functionKeyNumber: Int?
+
+        init(
+            name: String,
+            glyph: String?,
+            title: LocalizedStringResource?,
+            spokenName: LocalizedStringResource?,
+            functionKeyNumber: Int?
+        ) {
+            self.name = name
+            self.glyph = glyph
+            self.title = title
+            self.spokenName = spokenName
+            self.functionKeyNumber = functionKeyNumber
+        }
+    }
 }
 
 /// The members of the core's `SidebarRowKind`. A member's wire tag is its index in `all`.
 struct SidebarRowKind: Hashable, Sendable {
     let tag: Int
-    let name: String
-    let opensList: Bool
-    let groupsTabs: Bool
+    var name: String { facts.name }
+    var opensList: Bool { facts.opensList }
+    var groupsTabs: Bool { facts.groupsTabs }
+    private let facts: Facts
 
     private init(tag: Int, name: String, opensList: Bool, groupsTabs: Bool) {
         self.tag = tag
-        self.name = name
-        self.opensList = opensList
-        self.groupsTabs = groupsTabs
+        facts = Facts(name: name, opensList: opensList, groupsTabs: groupsTabs)
     }
 
     static let tab = SidebarRowKind(tag: 0, name: "tab", opensList: false, groupsTabs: false)
@@ -15304,21 +16628,34 @@ struct SidebarRowKind: Hashable, Sendable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(tag)
     }
+
+    private final class Facts: Sendable {
+        let name: String
+        let opensList: Bool
+        let groupsTabs: Bool
+
+        init(name: String, opensList: Bool, groupsTabs: Bool) {
+            self.name = name
+            self.opensList = opensList
+            self.groupsTabs = groupsTabs
+        }
+    }
 }
 
 /// The members of the core's `SitePermission`. A member's wire tag is its index in `all`.
 struct SitePermission: Hashable, Sendable {
     let tag: Int
-    let name: String
-    let title: LocalizedStringResource
-    let symbol: String
-    let requestTitle: LocalizedStringResource
-    let askTitle: LocalizedStringResource
-    let askChoiceTitle: LocalizedStringResource
-    let isMedia: Bool
-    let isEngineEnforced: Bool
-    let isAskedBySystem: Bool
-    let components: [SitePermission]
+    var name: String { facts.name }
+    var title: LocalizedStringResource { facts.title }
+    var symbol: String { facts.symbol }
+    var requestTitle: LocalizedStringResource { facts.requestTitle }
+    var askTitle: LocalizedStringResource { facts.askTitle }
+    var askChoiceTitle: LocalizedStringResource { facts.askChoiceTitle }
+    var isMedia: Bool { facts.isMedia }
+    var isEngineEnforced: Bool { facts.isEngineEnforced }
+    var isAskedBySystem: Bool { facts.isAskedBySystem }
+    var components: [SitePermission] { facts.components }
+    private let facts: Facts
 
     private init(
         tag: Int,
@@ -15334,16 +16671,18 @@ struct SitePermission: Hashable, Sendable {
         components: [SitePermission]
     ) {
         self.tag = tag
-        self.name = name
-        self.title = title
-        self.symbol = symbol
-        self.requestTitle = requestTitle
-        self.askTitle = askTitle
-        self.askChoiceTitle = askChoiceTitle
-        self.isMedia = isMedia
-        self.isEngineEnforced = isEngineEnforced
-        self.isAskedBySystem = isAskedBySystem
-        self.components = components
+        facts = Facts(
+            name: name,
+            title: title,
+            symbol: symbol,
+            requestTitle: requestTitle,
+            askTitle: askTitle,
+            askChoiceTitle: askChoiceTitle,
+            isMedia: isMedia,
+            isEngineEnforced: isEngineEnforced,
+            isAskedBySystem: isAskedBySystem,
+            components: components
+        )
     }
 
     static let camera = SitePermission(
@@ -15487,18 +16826,56 @@ struct SitePermission: Hashable, Sendable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(tag)
     }
+
+    private final class Facts: Sendable {
+        let name: String
+        let title: LocalizedStringResource
+        let symbol: String
+        let requestTitle: LocalizedStringResource
+        let askTitle: LocalizedStringResource
+        let askChoiceTitle: LocalizedStringResource
+        let isMedia: Bool
+        let isEngineEnforced: Bool
+        let isAskedBySystem: Bool
+        let components: [SitePermission]
+
+        init(
+            name: String,
+            title: LocalizedStringResource,
+            symbol: String,
+            requestTitle: LocalizedStringResource,
+            askTitle: LocalizedStringResource,
+            askChoiceTitle: LocalizedStringResource,
+            isMedia: Bool,
+            isEngineEnforced: Bool,
+            isAskedBySystem: Bool,
+            components: [SitePermission]
+        ) {
+            self.name = name
+            self.title = title
+            self.symbol = symbol
+            self.requestTitle = requestTitle
+            self.askTitle = askTitle
+            self.askChoiceTitle = askChoiceTitle
+            self.isMedia = isMedia
+            self.isEngineEnforced = isEngineEnforced
+            self.isAskedBySystem = isAskedBySystem
+            self.components = components
+        }
+    }
 }
 
 /// The members of the core's `SitePermissionDecision`. A member's wire tag is its index in `all`.
 struct SitePermissionDecision: Hashable, Sendable {
     let tag: Int
-    let name: String
-    let verdict: SitePermissionVerdict
-    let grants: Bool
-    let denies: Bool
-    let isPersistent: Bool
-    let precedence: Int
-    let title: LocalizedStringResource
+    var name: String { facts.name }
+    var verdict: SitePermissionVerdict { facts.verdict }
+    var grants: Bool { facts.grants }
+    var denies: Bool { facts.denies }
+    var isPersistent: Bool { facts.isPersistent }
+    var precedence: Int { facts.precedence }
+    var title: LocalizedStringResource { facts.title }
+    private let facts: Facts
 
     private init(
         tag: Int,
@@ -15511,13 +16888,15 @@ struct SitePermissionDecision: Hashable, Sendable {
         title: LocalizedStringResource
     ) {
         self.tag = tag
-        self.name = name
-        self.verdict = verdict
-        self.grants = grants
-        self.denies = denies
-        self.isPersistent = isPersistent
-        self.precedence = precedence
-        self.title = title
+        facts = Facts(
+            name: name,
+            verdict: verdict,
+            grants: grants,
+            denies: denies,
+            isPersistent: isPersistent,
+            precedence: precedence,
+            title: title
+        )
     }
 
     static let ask = SitePermissionDecision(
@@ -15590,16 +16969,45 @@ struct SitePermissionDecision: Hashable, Sendable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(tag)
     }
+
+    private final class Facts: Sendable {
+        let name: String
+        let verdict: SitePermissionVerdict
+        let grants: Bool
+        let denies: Bool
+        let isPersistent: Bool
+        let precedence: Int
+        let title: LocalizedStringResource
+
+        init(
+            name: String,
+            verdict: SitePermissionVerdict,
+            grants: Bool,
+            denies: Bool,
+            isPersistent: Bool,
+            precedence: Int,
+            title: LocalizedStringResource
+        ) {
+            self.name = name
+            self.verdict = verdict
+            self.grants = grants
+            self.denies = denies
+            self.isPersistent = isPersistent
+            self.precedence = precedence
+            self.title = title
+        }
+    }
 }
 
 /// The members of the core's `SpaceAccent`. A member's wire tag is its index in `all`.
 struct SpaceAccent: Hashable, Sendable {
     let tag: Int
-    let name: String
-    let tint: SystemTint
-    let legacyColors: [BrandColor]
-    let house: SpaceBranding
-    let swatch: BrandColor
+    var name: String { facts.name }
+    var tint: SystemTint { facts.tint }
+    var legacyColors: [BrandColor] { facts.legacyColors }
+    var house: SpaceBranding { facts.house }
+    var swatch: BrandColor { facts.swatch }
+    private let facts: Facts
 
     private init(
         tag: Int,
@@ -15610,11 +17018,7 @@ struct SpaceAccent: Hashable, Sendable {
         swatch: BrandColor
     ) {
         self.tag = tag
-        self.name = name
-        self.tint = tint
-        self.legacyColors = legacyColors
-        self.house = house
-        self.swatch = swatch
+        facts = Facts(name: name, tint: tint, legacyColors: legacyColors, house: house, swatch: swatch)
     }
 
     static let indigo = SpaceAccent(
@@ -15923,6 +17327,22 @@ struct SpaceAccent: Hashable, Sendable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(tag)
     }
+
+    private final class Facts: Sendable {
+        let name: String
+        let tint: SystemTint
+        let legacyColors: [BrandColor]
+        let house: SpaceBranding
+        let swatch: BrandColor
+
+        init(name: String, tint: SystemTint, legacyColors: [BrandColor], house: SpaceBranding, swatch: BrandColor) {
+            self.name = name
+            self.tint = tint
+            self.legacyColors = legacyColors
+            self.house = house
+            self.swatch = swatch
+        }
+    }
 }
 
 /// The members of the core's `SpaceBannerPattern`. A member's wire tag is its index in `all`.
@@ -15940,17 +17360,15 @@ struct SpaceBannerPattern: Hashable, Sendable {
     }
 
     let tag: Int
-    let kind: Kinds
-    let name: String
-    let title: LocalizedStringResource
-    let drawnSince: CrestVocabulary
+    var kind: Kinds { facts.kind }
+    var name: String { facts.name }
+    var title: LocalizedStringResource { facts.title }
+    var drawnSince: CrestVocabulary { facts.drawnSince }
+    private let facts: Facts
 
     private init(tag: Int, kind: Kinds, name: String, title: LocalizedStringResource, drawnSince: CrestVocabulary) {
         self.tag = tag
-        self.kind = kind
-        self.name = name
-        self.title = title
-        self.drawnSince = drawnSince
+        facts = Facts(kind: kind, name: name, title: title, drawnSince: drawnSince)
     }
 
     static let solid = SpaceBannerPattern(
@@ -16040,22 +17458,34 @@ struct SpaceBannerPattern: Hashable, Sendable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(tag)
     }
+
+    private final class Facts: Sendable {
+        let kind: Kinds
+        let name: String
+        let title: LocalizedStringResource
+        let drawnSince: CrestVocabulary
+
+        init(kind: Kinds, name: String, title: LocalizedStringResource, drawnSince: CrestVocabulary) {
+            self.kind = kind
+            self.name = name
+            self.title = title
+            self.drawnSince = drawnSince
+        }
+    }
 }
 
 /// The members of the core's `SpaceHouse`. A member's wire tag is its index in `all`.
 struct SpaceHouse: Hashable, Sendable {
     let tag: Int
-    let name: String
-    let title: LocalizedStringResource
-    let look: SpaceBranding
-    let appIconName: String
+    var name: String { facts.name }
+    var title: LocalizedStringResource { facts.title }
+    var look: SpaceBranding { facts.look }
+    var appIconName: String { facts.appIconName }
+    private let facts: Facts
 
     private init(tag: Int, name: String, title: LocalizedStringResource, look: SpaceBranding, appIconName: String) {
         self.tag = tag
-        self.name = name
-        self.title = title
-        self.look = look
-        self.appIconName = appIconName
+        facts = Facts(name: name, title: title, look: look, appIconName: appIconName)
     }
 
     static let winter = SpaceHouse(
@@ -16684,6 +18114,20 @@ struct SpaceHouse: Hashable, Sendable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(tag)
     }
+
+    private final class Facts: Sendable {
+        let name: String
+        let title: LocalizedStringResource
+        let look: SpaceBranding
+        let appIconName: String
+
+        init(name: String, title: LocalizedStringResource, look: SpaceBranding, appIconName: String) {
+            self.name = name
+            self.title = title
+            self.look = look
+            self.appIconName = appIconName
+        }
+    }
 }
 
 /// The members of the core's `SpaceIconStyle`. A member's wire tag is its index in `all`.
@@ -16694,15 +18138,14 @@ struct SpaceIconStyle: Hashable, Sendable {
     }
 
     let tag: Int
-    let kind: Kinds
-    let name: String
-    let title: LocalizedStringResource
+    var kind: Kinds { facts.kind }
+    var name: String { facts.name }
+    var title: LocalizedStringResource { facts.title }
+    private let facts: Facts
 
     private init(tag: Int, kind: Kinds, name: String, title: LocalizedStringResource) {
         self.tag = tag
-        self.kind = kind
-        self.name = name
-        self.title = title
+        facts = Facts(kind: kind, name: name, title: title)
     }
 
     static let simpleSymbol = SpaceIconStyle(
@@ -16731,6 +18174,18 @@ struct SpaceIconStyle: Hashable, Sendable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(tag)
     }
+
+    private final class Facts: Sendable {
+        let kind: Kinds
+        let name: String
+        let title: LocalizedStringResource
+
+        init(kind: Kinds, name: String, title: LocalizedStringResource) {
+            self.kind = kind
+            self.name = name
+            self.title = title
+        }
+    }
 }
 
 /// The members of the core's `SpaceTextColorMode`. A member's wire tag is its index in `all`.
@@ -16742,15 +18197,14 @@ struct SpaceTextColorMode: Hashable, Sendable {
     }
 
     let tag: Int
-    let kind: Kinds
-    let name: String
-    let title: LocalizedStringResource
+    var kind: Kinds { facts.kind }
+    var name: String { facts.name }
+    var title: LocalizedStringResource { facts.title }
+    private let facts: Facts
 
     private init(tag: Int, kind: Kinds, name: String, title: LocalizedStringResource) {
         self.tag = tag
-        self.kind = kind
-        self.name = name
-        self.title = title
+        facts = Facts(kind: kind, name: name, title: title)
     }
 
     static let automatic = SpaceTextColorMode(
@@ -16775,6 +18229,18 @@ struct SpaceTextColorMode: Hashable, Sendable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(tag)
     }
+
+    private final class Facts: Sendable {
+        let kind: Kinds
+        let name: String
+        let title: LocalizedStringResource
+
+        init(kind: Kinds, name: String, title: LocalizedStringResource) {
+            self.kind = kind
+            self.name = name
+            self.title = title
+        }
+    }
 }
 
 /// The members of the core's `SpaceThemeMode`. A member's wire tag is its index in `all`.
@@ -16785,15 +18251,14 @@ struct SpaceThemeMode: Hashable, Sendable {
     }
 
     let tag: Int
-    let kind: Kinds
-    let name: String
-    let title: LocalizedStringResource
+    var kind: Kinds { facts.kind }
+    var name: String { facts.name }
+    var title: LocalizedStringResource { facts.title }
+    private let facts: Facts
 
     private init(tag: Int, kind: Kinds, name: String, title: LocalizedStringResource) {
         self.tag = tag
-        self.kind = kind
-        self.name = name
-        self.title = title
+        facts = Facts(kind: kind, name: name, title: title)
     }
 
     static let banner = SpaceThemeMode(tag: 0, kind: .banner, name: "banner", title: LocalizedStringResource("Banner"))
@@ -16817,20 +18282,31 @@ struct SpaceThemeMode: Hashable, Sendable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(tag)
     }
+
+    private final class Facts: Sendable {
+        let kind: Kinds
+        let name: String
+        let title: LocalizedStringResource
+
+        init(kind: Kinds, name: String, title: LocalizedStringResource) {
+            self.kind = kind
+            self.name = name
+            self.title = title
+        }
+    }
 }
 
 /// The members of the core's `StartupBehavior`. A member's wire tag is its index in `all`.
 struct StartupBehavior: Hashable, Sendable {
     let tag: Int
-    let name: String
-    let title: LocalizedStringResource
-    let activatesRestoredTab: Bool
+    var name: String { facts.name }
+    var title: LocalizedStringResource { facts.title }
+    var activatesRestoredTab: Bool { facts.activatesRestoredTab }
+    private let facts: Facts
 
     private init(tag: Int, name: String, title: LocalizedStringResource, activatesRestoredTab: Bool) {
         self.tag = tag
-        self.name = name
-        self.title = title
-        self.activatesRestoredTab = activatesRestoredTab
+        facts = Facts(name: name, title: title, activatesRestoredTab: activatesRestoredTab)
     }
 
     static let showStartPage = StartupBehavior(
@@ -16859,18 +18335,30 @@ struct StartupBehavior: Hashable, Sendable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(tag)
     }
+
+    private final class Facts: Sendable {
+        let name: String
+        let title: LocalizedStringResource
+        let activatesRestoredTab: Bool
+
+        init(name: String, title: LocalizedStringResource, activatesRestoredTab: Bool) {
+            self.name = name
+            self.title = title
+            self.activatesRestoredTab = activatesRestoredTab
+        }
+    }
 }
 
 /// The members of the core's `SyncDeletionReason`. A member's wire tag is its index in `all`.
 struct SyncDeletionReason: Hashable, Sendable {
     let tag: Int
-    let name: String
-    let isExplicit: Bool
+    var name: String { facts.name }
+    var isExplicit: Bool { facts.isExplicit }
+    private let facts: Facts
 
     private init(tag: Int, name: String, isExplicit: Bool) {
         self.tag = tag
-        self.name = name
-        self.isExplicit = isExplicit
+        facts = Facts(name: name, isExplicit: isExplicit)
     }
 
     static let explicitDelete = SyncDeletionReason(tag: 0, name: "explicitDelete", isExplicit: true)
@@ -16890,18 +18378,28 @@ struct SyncDeletionReason: Hashable, Sendable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(tag)
     }
+
+    private final class Facts: Sendable {
+        let name: String
+        let isExplicit: Bool
+
+        init(name: String, isExplicit: Bool) {
+            self.name = name
+            self.isExplicit = isExplicit
+        }
+    }
 }
 
 /// The members of the core's `SyncRecordFlaw`. A member's wire tag is its index in `all`.
 struct SyncRecordFlaw: Hashable, Sendable {
     let tag: Int
-    let name: String
-    let title: LocalizedStringResource
+    var name: String { facts.name }
+    var title: LocalizedStringResource { facts.title }
+    private let facts: Facts
 
     private init(tag: Int, name: String, title: LocalizedStringResource) {
         self.tag = tag
-        self.name = name
-        self.title = title
+        facts = Facts(name: name, title: title)
     }
 
     static let duplicateRecord = SyncRecordFlaw(
@@ -16991,27 +18489,72 @@ struct SyncRecordFlaw: Hashable, Sendable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(tag)
     }
+
+    private final class Facts: Sendable {
+        let name: String
+        let title: LocalizedStringResource
+
+        init(name: String, title: LocalizedStringResource) {
+            self.name = name
+            self.title = title
+        }
+    }
 }
 
 /// The members of the core's `SyncRecordKind`. A member's wire tag is its index in `all`.
 struct SyncRecordKind: Hashable, Sendable {
     let tag: Int
-    let name: String
-    let cloudRecordType: String
-    let namesItsSpace: Bool
+    var name: String { facts.name }
+    var cloudRecordType: String { facts.cloudRecordType }
+    var namesItsSpace: Bool { facts.namesItsSpace }
+    var movesBetweenSpaces: Bool { facts.movesBetweenSpaces }
+    private let facts: Facts
 
-    private init(tag: Int, name: String, cloudRecordType: String, namesItsSpace: Bool) {
+    private init(tag: Int, name: String, cloudRecordType: String, namesItsSpace: Bool, movesBetweenSpaces: Bool) {
         self.tag = tag
-        self.name = name
-        self.cloudRecordType = cloudRecordType
-        self.namesItsSpace = namesItsSpace
+        facts = Facts(
+            name: name,
+            cloudRecordType: cloudRecordType,
+            namesItsSpace: namesItsSpace,
+            movesBetweenSpaces: movesBetweenSpaces
+        )
     }
 
-    static let space = SyncRecordKind(tag: 0, name: "space", cloudRecordType: "CrestSpace", namesItsSpace: true)
-    static let folder = SyncRecordKind(tag: 1, name: "folder", cloudRecordType: "CrestFolder", namesItsSpace: false)
-    static let tab = SyncRecordKind(tag: 2, name: "tab", cloudRecordType: "CrestTab", namesItsSpace: false)
-    static let history = SyncRecordKind(tag: 3, name: "history", cloudRecordType: "CrestHistory", namesItsSpace: false)
-    static let archive = SyncRecordKind(tag: 4, name: "archive", cloudRecordType: "CrestArchive", namesItsSpace: false)
+    static let space = SyncRecordKind(
+        tag: 0,
+        name: "space",
+        cloudRecordType: "CrestSpace",
+        namesItsSpace: true,
+        movesBetweenSpaces: false
+    )
+    static let folder = SyncRecordKind(
+        tag: 1,
+        name: "folder",
+        cloudRecordType: "CrestFolder",
+        namesItsSpace: false,
+        movesBetweenSpaces: false
+    )
+    static let tab = SyncRecordKind(
+        tag: 2,
+        name: "tab",
+        cloudRecordType: "CrestTab",
+        namesItsSpace: false,
+        movesBetweenSpaces: true
+    )
+    static let history = SyncRecordKind(
+        tag: 3,
+        name: "history",
+        cloudRecordType: "CrestHistory",
+        namesItsSpace: false,
+        movesBetweenSpaces: false
+    )
+    static let archive = SyncRecordKind(
+        tag: 4,
+        name: "archive",
+        cloudRecordType: "CrestArchive",
+        namesItsSpace: false,
+        movesBetweenSpaces: true
+    )
 
     static let all: [SyncRecordKind] = [space, folder, tab, history, archive]
 
@@ -17026,18 +18569,32 @@ struct SyncRecordKind: Hashable, Sendable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(tag)
     }
+
+    private final class Facts: Sendable {
+        let name: String
+        let cloudRecordType: String
+        let namesItsSpace: Bool
+        let movesBetweenSpaces: Bool
+
+        init(name: String, cloudRecordType: String, namesItsSpace: Bool, movesBetweenSpaces: Bool) {
+            self.name = name
+            self.cloudRecordType = cloudRecordType
+            self.namesItsSpace = namesItsSpace
+            self.movesBetweenSpaces = movesBetweenSpaces
+        }
+    }
 }
 
 /// The members of the core's `SyncStagingFailure`. A member's wire tag is its index in `all`.
 struct SyncStagingFailure: Hashable, Sendable {
     let tag: Int
-    let name: String
-    let title: LocalizedStringResource
+    var name: String { facts.name }
+    var title: LocalizedStringResource { facts.title }
+    private let facts: Facts
 
     private init(tag: Int, name: String, title: LocalizedStringResource) {
         self.tag = tag
-        self.name = name
-        self.title = title
+        facts = Facts(name: name, title: title)
     }
 
     static let tooLarge = SyncStagingFailure(
@@ -17074,18 +18631,28 @@ struct SyncStagingFailure: Hashable, Sendable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(tag)
     }
+
+    private final class Facts: Sendable {
+        let name: String
+        let title: LocalizedStringResource
+
+        init(name: String, title: LocalizedStringResource) {
+            self.name = name
+            self.title = title
+        }
+    }
 }
 
 /// The members of the core's `TabGroupColor`. A member's wire tag is its index in `all`.
 struct TabGroupColor: Hashable, Sendable {
     let tag: Int
-    let name: String
-    let color: BrandColor
+    var name: String { facts.name }
+    var color: BrandColor { facts.color }
+    private let facts: Facts
 
     private init(tag: Int, name: String, color: BrandColor) {
         self.tag = tag
-        self.name = name
-        self.color = color
+        facts = Facts(name: name, color: color)
     }
 
     static let grey = TabGroupColor(
@@ -17131,6 +18698,16 @@ struct TabGroupColor: Hashable, Sendable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(tag)
     }
+
+    private final class Facts: Sendable {
+        let name: String
+        let color: BrandColor
+
+        init(name: String, color: BrandColor) {
+            self.name = name
+            self.color = color
+        }
+    }
 }
 
 /// The members of the core's `TabIconMode`. A member's wire tag is its index in `all`.
@@ -17140,11 +18717,12 @@ struct TabIconMode: Hashable, Sendable {
     static let webSymbol = "globe"
 
     let tag: Int
-    let name: String
-    let inferencePrefix: String?
-    let followsPage: Bool
-    let requiresFavicon: Bool
-    let showsFavicon: Bool
+    var name: String { facts.name }
+    var inferencePrefix: String? { facts.inferencePrefix }
+    var followsPage: Bool { facts.followsPage }
+    var requiresFavicon: Bool { facts.requiresFavicon }
+    var showsFavicon: Bool { facts.showsFavicon }
+    private let facts: Facts
 
     private init(
         tag: Int,
@@ -17155,11 +18733,13 @@ struct TabIconMode: Hashable, Sendable {
         showsFavicon: Bool
     ) {
         self.tag = tag
-        self.name = name
-        self.inferencePrefix = inferencePrefix
-        self.followsPage = followsPage
-        self.requiresFavicon = requiresFavicon
-        self.showsFavicon = showsFavicon
+        facts = Facts(
+            name: name,
+            inferencePrefix: inferencePrefix,
+            followsPage: followsPage,
+            requiresFavicon: requiresFavicon,
+            showsFavicon: showsFavicon
+        )
     }
 
     static let automatic = TabIconMode(
@@ -17200,6 +18780,22 @@ struct TabIconMode: Hashable, Sendable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(tag)
     }
+
+    private final class Facts: Sendable {
+        let name: String
+        let inferencePrefix: String?
+        let followsPage: Bool
+        let requiresFavicon: Bool
+        let showsFavicon: Bool
+
+        init(name: String, inferencePrefix: String?, followsPage: Bool, requiresFavicon: Bool, showsFavicon: Bool) {
+            self.name = name
+            self.inferencePrefix = inferencePrefix
+            self.followsPage = followsPage
+            self.requiresFavicon = requiresFavicon
+            self.showsFavicon = showsFavicon
+        }
+    }
 }
 
 /// The members of the core's `TabPlacement`. A member's wire tag is its index in `all`.
@@ -17207,19 +18803,20 @@ struct TabPlacement: Hashable, Sendable {
     static let pinnedCapacity = 12
 
     let tag: Int
-    let name: String
-    let title: LocalizedStringResource
-    let symbol: String
-    let rank: Int
-    let fallbackRank: Int
-    let isDurable: Bool
-    let holdsFolders: Bool
-    let holdsSplits: Bool
-    let isCollapsible: Bool
-    let capacity: Int?
-    let importedSymbol: String?
-    let isGrid: Bool
-    let paletteRow: PaletteRowKind
+    var name: String { facts.name }
+    var title: LocalizedStringResource { facts.title }
+    var symbol: String { facts.symbol }
+    var rank: Int { facts.rank }
+    var fallbackRank: Int { facts.fallbackRank }
+    var isDurable: Bool { facts.isDurable }
+    var holdsFolders: Bool { facts.holdsFolders }
+    var holdsSplits: Bool { facts.holdsSplits }
+    var isCollapsible: Bool { facts.isCollapsible }
+    var capacity: Int? { facts.capacity }
+    var importedSymbol: String? { facts.importedSymbol }
+    var isGrid: Bool { facts.isGrid }
+    var paletteRow: PaletteRowKind { facts.paletteRow }
+    private let facts: Facts
 
     private init(
         tag: Int,
@@ -17238,19 +18835,21 @@ struct TabPlacement: Hashable, Sendable {
         paletteRow: PaletteRowKind
     ) {
         self.tag = tag
-        self.name = name
-        self.title = title
-        self.symbol = symbol
-        self.rank = rank
-        self.fallbackRank = fallbackRank
-        self.isDurable = isDurable
-        self.holdsFolders = holdsFolders
-        self.holdsSplits = holdsSplits
-        self.isCollapsible = isCollapsible
-        self.capacity = capacity
-        self.importedSymbol = importedSymbol
-        self.isGrid = isGrid
-        self.paletteRow = paletteRow
+        facts = Facts(
+            name: name,
+            title: title,
+            symbol: symbol,
+            rank: rank,
+            fallbackRank: fallbackRank,
+            isDurable: isDurable,
+            holdsFolders: holdsFolders,
+            holdsSplits: holdsSplits,
+            isCollapsible: isCollapsible,
+            capacity: capacity,
+            importedSymbol: importedSymbol,
+            isGrid: isGrid,
+            paletteRow: paletteRow
+        )
     }
 
     static let pinned = TabPlacement(
@@ -17315,18 +18914,64 @@ struct TabPlacement: Hashable, Sendable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(tag)
     }
+
+    private final class Facts: Sendable {
+        let name: String
+        let title: LocalizedStringResource
+        let symbol: String
+        let rank: Int
+        let fallbackRank: Int
+        let isDurable: Bool
+        let holdsFolders: Bool
+        let holdsSplits: Bool
+        let isCollapsible: Bool
+        let capacity: Int?
+        let importedSymbol: String?
+        let isGrid: Bool
+        let paletteRow: PaletteRowKind
+
+        init(
+            name: String,
+            title: LocalizedStringResource,
+            symbol: String,
+            rank: Int,
+            fallbackRank: Int,
+            isDurable: Bool,
+            holdsFolders: Bool,
+            holdsSplits: Bool,
+            isCollapsible: Bool,
+            capacity: Int?,
+            importedSymbol: String?,
+            isGrid: Bool,
+            paletteRow: PaletteRowKind
+        ) {
+            self.name = name
+            self.title = title
+            self.symbol = symbol
+            self.rank = rank
+            self.fallbackRank = fallbackRank
+            self.isDurable = isDurable
+            self.holdsFolders = holdsFolders
+            self.holdsSplits = holdsSplits
+            self.isCollapsible = isCollapsible
+            self.capacity = capacity
+            self.importedSymbol = importedSymbol
+            self.isGrid = isGrid
+            self.paletteRow = paletteRow
+        }
+    }
 }
 
 /// The members of the core's `TabSurface`. A member's wire tag is its index in `all`.
 struct TabSurface: Hashable, Sendable {
     let tag: Int
-    let name: String
-    let showsPage: Bool
+    var name: String { facts.name }
+    var showsPage: Bool { facts.showsPage }
+    private let facts: Facts
 
     private init(tag: Int, name: String, showsPage: Bool) {
         self.tag = tag
-        self.name = name
-        self.showsPage = showsPage
+        facts = Facts(name: name, showsPage: showsPage)
     }
 
     static let startPage = TabSurface(tag: 0, name: "startPage", showsPage: false)
@@ -17346,20 +18991,29 @@ struct TabSurface: Hashable, Sendable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(tag)
     }
+
+    private final class Facts: Sendable {
+        let name: String
+        let showsPage: Bool
+
+        init(name: String, showsPage: Bool) {
+            self.name = name
+            self.showsPage = showsPage
+        }
+    }
 }
 
 /// The members of the core's `Tincture`. A member's wire tag is its index in `all`.
 struct Tincture: Hashable, Sendable {
     let tag: Int
-    let name: String
-    let title: LocalizedStringResource
-    let color: BrandColor
+    var name: String { facts.name }
+    var title: LocalizedStringResource { facts.title }
+    var color: BrandColor { facts.color }
+    private let facts: Facts
 
     private init(tag: Int, name: String, title: LocalizedStringResource, color: BrandColor) {
         self.tag = tag
-        self.name = name
-        self.title = title
-        self.color = color
+        facts = Facts(name: name, title: title, color: color)
     }
 
     static let ink = Tincture(
@@ -17762,18 +19416,30 @@ struct Tincture: Hashable, Sendable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(tag)
     }
+
+    private final class Facts: Sendable {
+        let name: String
+        let title: LocalizedStringResource
+        let color: BrandColor
+
+        init(name: String, title: LocalizedStringResource, color: BrandColor) {
+            self.name = name
+            self.title = title
+            self.color = color
+        }
+    }
 }
 
 /// The members of the core's `TransientPresentation`. A member's wire tag is its index in `all`.
 struct TransientPresentation: Hashable, Sendable {
     let tag: Int
-    let name: String
-    let opensNewTabsInFront: Bool
+    var name: String { facts.name }
+    var opensNewTabsInFront: Bool { facts.opensNewTabsInFront }
+    private let facts: Facts
 
     private init(tag: Int, name: String, opensNewTabsInFront: Bool) {
         self.tag = tag
-        self.name = name
-        self.opensNewTabsInFront = opensNewTabsInFront
+        facts = Facts(name: name, opensNewTabsInFront: opensNewTabsInFront)
     }
 
     static let peek = TransientPresentation(tag: 0, name: "peek", opensNewTabsInFront: true)
@@ -17793,20 +19459,29 @@ struct TransientPresentation: Hashable, Sendable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(tag)
     }
+
+    private final class Facts: Sendable {
+        let name: String
+        let opensNewTabsInFront: Bool
+
+        init(name: String, opensNewTabsInFront: Bool) {
+            self.name = name
+            self.opensNewTabsInFront = opensNewTabsInFront
+        }
+    }
 }
 
 /// The members of the core's `WebScheme`. A member's wire tag is its index in `all`.
 struct WebScheme: Hashable, Sendable {
     let tag: Int
-    let name: String
-    let defaultPort: Int
-    let isSecure: Bool
+    var name: String { facts.name }
+    var defaultPort: Int { facts.defaultPort }
+    var isSecure: Bool { facts.isSecure }
+    private let facts: Facts
 
     private init(tag: Int, name: String, defaultPort: Int, isSecure: Bool) {
         self.tag = tag
-        self.name = name
-        self.defaultPort = defaultPort
-        self.isSecure = isSecure
+        facts = Facts(name: name, defaultPort: defaultPort, isSecure: isSecure)
     }
 
     static let http = WebScheme(tag: 0, name: "http", defaultPort: 80, isSecure: false)
@@ -17825,18 +19500,31 @@ struct WebScheme: Hashable, Sendable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(tag)
     }
+
+    private final class Facts: Sendable {
+        let name: String
+        let defaultPort: Int
+        let isSecure: Bool
+
+        init(name: String, defaultPort: Int, isSecure: Bool) {
+            self.name = name
+            self.defaultPort = defaultPort
+            self.isSecure = isSecure
+        }
+    }
 }
 
 /// The members of the core's `WorkspaceKind`. A member's wire tag is its index in `all`.
 struct WorkspaceKind: Hashable, Sendable {
     let tag: Int
-    let name: String
-    let opensDirectly: Bool
-    let keepsFile: Bool
-    let isPrivate: Bool
-    let ownsSpaces: Bool
-    let keepsAppPreferences: Bool
-    let isPractice: Bool
+    var name: String { facts.name }
+    var opensDirectly: Bool { facts.opensDirectly }
+    var keepsFile: Bool { facts.keepsFile }
+    var isPrivate: Bool { facts.isPrivate }
+    var ownsSpaces: Bool { facts.ownsSpaces }
+    var keepsAppPreferences: Bool { facts.keepsAppPreferences }
+    var isPractice: Bool { facts.isPractice }
+    private let facts: Facts
 
     private init(
         tag: Int,
@@ -17849,13 +19537,15 @@ struct WorkspaceKind: Hashable, Sendable {
         isPractice: Bool
     ) {
         self.tag = tag
-        self.name = name
-        self.opensDirectly = opensDirectly
-        self.keepsFile = keepsFile
-        self.isPrivate = isPrivate
-        self.ownsSpaces = ownsSpaces
-        self.keepsAppPreferences = keepsAppPreferences
-        self.isPractice = isPractice
+        facts = Facts(
+            name: name,
+            opensDirectly: opensDirectly,
+            keepsFile: keepsFile,
+            isPrivate: isPrivate,
+            ownsSpaces: ownsSpaces,
+            keepsAppPreferences: keepsAppPreferences,
+            isPractice: isPractice
+        )
     }
 
     static let persistent = WorkspaceKind(
@@ -17911,6 +19601,34 @@ struct WorkspaceKind: Hashable, Sendable {
 
     func hash(into hasher: inout Hasher) {
         hasher.combine(tag)
+    }
+
+    private final class Facts: Sendable {
+        let name: String
+        let opensDirectly: Bool
+        let keepsFile: Bool
+        let isPrivate: Bool
+        let ownsSpaces: Bool
+        let keepsAppPreferences: Bool
+        let isPractice: Bool
+
+        init(
+            name: String,
+            opensDirectly: Bool,
+            keepsFile: Bool,
+            isPrivate: Bool,
+            ownsSpaces: Bool,
+            keepsAppPreferences: Bool,
+            isPractice: Bool
+        ) {
+            self.name = name
+            self.opensDirectly = opensDirectly
+            self.keepsFile = keepsFile
+            self.isPrivate = isPrivate
+            self.ownsSpaces = ownsSpaces
+            self.keepsAppPreferences = keepsAppPreferences
+            self.isPractice = isPractice
+        }
     }
 }
 

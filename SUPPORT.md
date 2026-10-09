@@ -24,10 +24,10 @@ report has a Crest version, Apple platform, repeatable steps, expected result,
 and actual result. Search existing issues first and add sanitized evidence only
 when it changes what another person can reproduce.
 
-The [Crest 0.5 project](https://github.com/users/pauljoda/projects/3) and
-[0.5 milestone](https://github.com/pauljoda/Crest/milestone/1) are the public
-view of currently planned outcomes. Scope may evolve as WebKit and physical
-device validation clarify the correct behavior.
+The [Crest Roadmap project](https://github.com/users/pauljoda/projects/3) and
+the [release milestones](https://github.com/pauljoda/Crest/milestones) are the
+public view of currently planned outcomes. Scope may evolve as engine and
+physical-device validation clarify the correct behavior.
 
 ## Security vulnerabilities
 

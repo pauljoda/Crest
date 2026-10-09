@@ -6,6 +6,12 @@ struct BrowserWebPageSurface: View {
     let pagePresentation: PagePresentation
     let isPageActive: Bool
     let focusRestorationGate: BrowserWebFocusRestorationGate
+    /// Where the tab holding a page sits in its Space and what it is called,
+    /// for lists that follow the sidebar.
+    var tabPlacement: (UUID) -> BrowserShareSourceOffer.TabPlacement? = { _ in nil }
+    /// Shows the tab at the other end of the page's tab sharing, when Crest
+    /// knows it; the sharing bars lead there.
+    var goToSharingCounterpart: (() -> Void)? = nil
 
     var body: some View {
         ZStack(alignment: .top) {
@@ -44,8 +50,8 @@ struct BrowserWebPageSurface: View {
                 )
             }
 
-            if !page.engineInfoBars.isEmpty {
-                BrowserEngineInfoBarStack(page: page)
+            if !page.visibleEngineInfoBars.isEmpty {
+                BrowserEngineInfoBarStack(page: page, goToSharingCounterpart: goToSharingCounterpart)
             }
 
             BrowserWebPageFailureOverlay(
@@ -70,6 +76,17 @@ struct BrowserWebPageSurface: View {
             if page.isRegionCapturePresented {
                 BrowserRegionCaptureOverlay(page: page)
                     .zIndex(BrowserWebPageSurfaceMetrics.regionCaptureZIndex)
+            }
+
+            if let offer = page.shareSourceOffer {
+                BrowserShareSourcePicker(
+                    offer: offer, requestingPageID: page.corePage.id, tabPlacement: tabPlacement,
+                    requestingTabName: tabPlacement(page.corePage.id)?.name ?? page.live.title
+                ) { choice in
+                    page.answer(offer, with: choice)
+                }
+                .id(offer.id)
+                .zIndex(BrowserWebPageSurfaceMetrics.sharePickerZIndex)
             }
 
             if let feedback = page.developerCaptureFeedback {

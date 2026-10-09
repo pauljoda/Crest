@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct BrowserPlatformSoftwareUpdateSettingsSection: View {
+    // MARK: - Variables
+
     @Environment(BrowserSoftwareUpdateService.self) private var softwareUpdates
 
     var body: some View {
@@ -34,12 +36,17 @@ struct BrowserPlatformSoftwareUpdateSettingsSection: View {
                 }
             }
 
-            HStack {
-                Spacer()
-                Button("Check for Updates…") {
-                    softwareUpdates.checkForUpdates()
+            if softwareUpdates.model.phase == .idle {
+                HStack {
+                    Spacer()
+                    Button("Check for Updates…") {
+                        softwareUpdates.checkForUpdates()
+                    }
+                    .disabled(!softwareUpdates.isEnabled)
                 }
-                .disabled(!softwareUpdates.isEnabled)
+            } else {
+                BrowserSoftwareUpdateStatusRow(model: softwareUpdates.model)
+                BrowserSoftwareUpdateActions(model: softwareUpdates.model, confirmsWithReturn: false)
             }
 
             if let startErrorDescription = softwareUpdates.startErrorDescription {

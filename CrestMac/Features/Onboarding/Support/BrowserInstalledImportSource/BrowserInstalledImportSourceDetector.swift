@@ -2,8 +2,9 @@ import AppKit
 
 @MainActor
 enum BrowserInstalledImportSourceDetector {
-    /// Each browser Crest imports from that is installed, with what the core
-    /// found in its data folder.
+    /// Each browser Crest imports from that is installed, found by its app
+    /// alone. Reading another app's data can make macOS warn that Crest
+    /// looked at it, so setup reads none until the person asks.
     static func installedSources(
         workspace: NSWorkspace = .shared
     ) -> [BrowserInstalledImportSource] {
@@ -15,16 +16,16 @@ enum BrowserInstalledImportSourceDetector {
             else { return nil }
             let icon = workspace.icon(forFile: url.path)
             icon.size = NSSize(width: 64, height: 64)
-            return BrowserInstalledImportSource(
-                application: application,
-                applicationURL: url,
-                detectedPayload: BrowserDetectedImportPayload(
-                    application: application,
-                    data: application.importData(in: application.defaultDataDirectory)
-                ),
-                icon: icon
-            )
+            return BrowserInstalledImportSource(application: application, applicationURL: url, icon: icon)
         }
+    }
+
+    /// `source` with what the core finds in its data folder.
+    static func scanned(_ source: BrowserInstalledImportSource) -> BrowserInstalledImportSource {
+        let application = source.application
+        return source.detecting(
+            BrowserDetectedImportPayload(
+                application: application, data: application.importData(in: application.defaultDataDirectory)))
     }
 
     /// The browsers installed here that Crest does not list, each paired by

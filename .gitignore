@@ -35,16 +35,24 @@ CrestCore/artifacts/
 .env.*
 !.env.example
 
-# Local editor and coding-assistant state
-.claude/
+# Local editor and coding-assistant state. The tracked exceptions are the
+# public AGENTS.md and the crest-contribution skill with its Claude Code link.
+.claude/*
+!.claude/skills/
+.claude/skills/*
+!.claude/skills/crest-contribution
+.agents/*
+!.agents/skills/
+.agents/skills/*
+!.agents/skills/crest-contribution/
 .codex/
 .codex-*/
 .cursor/
 .idea/
 .vscode/
 AGENT.md
-AGENTS.md
 CLAUDE.md
+CLAUDE.local.md
 GEMINI.md
 
 # Language tool caches

@@ -5,12 +5,16 @@
 #include <variant>
 #include <vector>
 
+#include "base/functional/bind.h"
 #include "base/strings/utf_string_conversions.h"
 #include "base/uuid.h"
 #include "chrome/browser/browsing_data/chrome_browsing_data_remover_constants.h"
+#include "chrome/browser/permissions/system/system_permission_settings.h"
 #include "chrome/browser/profiles/profile.h"
 #include "chrome/browser/ui/crest/crest_engine_binding.h"
 #include "chrome/browser/ui/crest/crest_engine_page.h"
+#include "chrome/browser/ui/crest/crest_permission_prompt.h"
+#include "components/content_settings/core/common/content_settings_types.h"
 #include "components/permissions/permission_request.h"
 #include "components/permissions/request_type.h"
 #include "content/public/browser/browsing_data_filter_builder.h"
@@ -62,6 +66,26 @@ std::optional<engine::SitePermission> PermissionFor(permissions::PermissionPromp
                                 : engine::SitePermission::kMicrophone;
   }
   return several ? std::nullopt : single;
+}
+
+// The capture devices a batch of engine requests asks for. Chromium keeps the
+// system's answer for each, and reads it again only when it asks the system
+// itself.
+std::vector<ContentSettingsType> CaptureDevicesFor(permissions::PermissionPrompt::Delegate& delegate) {
+  std::vector<ContentSettingsType> devices;
+  for (const auto& request : delegate.Requests()) {
+    switch (request->request_type()) {
+      case permissions::RequestType::kCameraStream:
+        devices.push_back(ContentSettingsType::MEDIASTREAM_CAMERA);
+        break;
+      case permissions::RequestType::kMicStream:
+        devices.push_back(ContentSettingsType::MEDIASTREAM_MIC);
+        break;
+      default:
+        break;
+    }
+  }
+  return devices;
 }
 
 // Removes a site's data, then answers; it owns itself until the remover
@@ -134,20 +158,29 @@ class EnginePrompts::PermissionPrompt final : public permissions::PermissionProm
   base::WeakPtr<PermissionPrompt> GetWeakPtr() { return weak_factory_.GetWeakPtr(); }
 
   // A grant or block the site's later requests follow, or one for this
-  // request alone.
+  // request alone. A camera or microphone grant waits until Chromium has read
+  // the system's answer for each device, asking the system when it has none.
+  // Crest's own question has usually asked the system already, which Chromium
+  // does not hear; granted before Chromium reads that answer, a page's
+  // embedded camera or microphone control waits for a system answer it never
+  // sees.
   void Answer(bool grants, bool remembers) {
     answered_ = true;
     if (!delegate_) {
       return;
     }
-    if (grants && remembers) {
-      delegate_->Accept(std::monostate());
-    } else if (grants) {
-      delegate_->AcceptThisTime(std::monostate());
-    } else if (remembers) {
-      delegate_->Deny(std::monostate());
-    } else {
-      delegate_->Dismiss(std::monostate());
+    std::vector<ContentSettingsType> devices;
+    if (grants) {
+      devices = CaptureDevicesFor(*delegate_);
+    }
+    if (devices.empty()) {
+      AnswerPermissionRequests(*delegate_, grants, remembers);
+      return;
+    }
+    devices_awaited_ = devices.size();
+    for (ContentSettingsType device : devices) {
+      system_permission_settings::Request(
+          device, base::BindOnce(&PermissionPrompt::DeviceRead, weak_factory_.GetWeakPtr(), remembers));
     }
   }
 
@@ -165,10 +198,20 @@ class EnginePrompts::PermissionPrompt final : public permissions::PermissionProm
   }
 
  private:
+  // Chromium read the system's answer for one device; the grant follows the
+  // last. A prompt Chromium let go of meanwhile answers nothing.
+  void DeviceRead(bool remembers) {
+    if (--devices_awaited_ > 0 || !delegate_) {
+      return;
+    }
+    AnswerPermissionRequests(*delegate_, /*grants=*/true, remembers);
+  }
+
   base::WeakPtr<Delegate> delegate_;
   const engine::Guid id_;
   const base::WeakPtr<EnginePrompts> prompts_;
   bool answered_ = false;
+  size_t devices_awaited_ = 0;
   base::WeakPtrFactory<PermissionPrompt> weak_factory_{this};
 };
 

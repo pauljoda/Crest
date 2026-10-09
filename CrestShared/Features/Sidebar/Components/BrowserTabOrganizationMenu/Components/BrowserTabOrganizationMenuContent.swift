@@ -23,6 +23,20 @@ struct BrowserTabOrganizationMenuContent: View {
     private var spaceAccess: BrowserSpaceAccessController { context.spaceAccess }
 
     var body: some View {
+        if context.takesPartInTabSharing(tab.id) {
+            Button {
+                performIfCurrent { context.stopTabSharing(tab.id) }
+            } label: {
+                Label {
+                    Text("Stop Sharing", comment: "Stops the tab sharing a tab takes part in.")
+                } icon: {
+                    Image(systemName: "rectangle.slash")
+                }
+            }
+
+            Divider()
+        }
+
         if tab.isWebPage {
             Button("Copy Link URL", systemImage: "link") {
                 organizationAction.copyLinkURL(for: assignment)
@@ -66,7 +80,19 @@ struct BrowserTabOrganizationMenuContent: View {
             Divider()
         }
 
-        if tab.placement != .pinned {
+        // Unpin Tab takes Pin Tab's place so the two read as a pair; it moves
+        // the tab to Current Tabs, as ⌘D's Pin or Unpin Tab does.
+        if tab.placement == .pinned {
+            Button("Unpin Tab", systemImage: "pin.slash") {
+                performIfCurrent {
+                    browser.moveTab(
+                        tab.id,
+                        matching: sourceAssignment,
+                        to: .current
+                    )
+                }
+            }
+        } else {
             Button("Pin Tab", systemImage: "pin") {
                 performIfCurrent {
                     browser.moveTab(
@@ -158,7 +184,7 @@ struct BrowserTabOrganizationMenuContent: View {
             .crestMenuActionLabelStyle()
         }
 
-        if tab.placement.isDurable {
+        if tab.placement.isDurable, tab.placement != .pinned {
             Button("Move to Current Tabs", systemImage: "rectangle.stack") {
                 performIfCurrent {
                     browser.moveTab(

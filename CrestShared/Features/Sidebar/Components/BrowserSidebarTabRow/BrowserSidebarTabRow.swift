@@ -70,7 +70,8 @@ struct BrowserSidebarTabRow: View {
             isLoaded: context.isLoaded(tab.id),
             isSplitGroupMember: isSplitGroupMember,
             followingTabID: followingTabID,
-            spacePresentation: spacePresentation
+            spacePresentation: spacePresentation,
+            isSharedAsTab: context.isSharedAsTab(tab.id)
         )
     }
 

@@ -1017,6 +1017,9 @@ void EnginePage::Watch() {
   if (infobars_) {
     infobars_->PresentAll();
   }
+  if (media_ && (media_->shared() || media_->sharing())) {
+    PresentSharing();
+  }
   StateChanged();
 }
 
@@ -1243,6 +1246,33 @@ bool EnginePage::Hide() {
 
 engine::PageMediaActivity EnginePage::MediaActivity() const {
   return media_ ? media_->Activity() : engine::PageMediaActivity::kNone;
+}
+
+// The page's tab shows its part in tab sharing for as long as it lasts.
+void EnginePage::SharedChanged(bool shared) {
+  if (!media_) {
+    return;
+  }
+  const bool was_shared = media_->shared();
+  media_->SharedChanged(shared);
+  if (media_->shared() != was_shared) {
+    PresentSharing();
+  }
+}
+
+void EnginePage::SharingChanged(bool sharing) {
+  if (!media_) {
+    return;
+  }
+  const bool was_sharing = media_->sharing();
+  media_->SharingChanged(sharing);
+  if (media_->sharing() != was_sharing) {
+    PresentSharing();
+  }
+}
+
+void EnginePage::PresentSharing() {
+  Present(engine::TabSharingChanged{.page_id = id_, .shared = media_->shared(), .sharing = media_->sharing()});
 }
 
 bool EnginePage::EnterPictureInPicture() {

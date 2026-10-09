@@ -71,6 +71,21 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     @ObservationIgnored private var hasCommittedNavigationAwaitingCompletion = false
     var blockedPopupState = BrowserBlockedPopupPageState()
     private(set) var engineInfoBars: [BrowserEngineInfoBar] = []
+    /// The engine's offer of tabs to share, while the person chooses.
+    private(set) var shareSourceOffer: BrowserShareSourceOffer?
+    /// Whether another page shares this one as a tab now.
+    private(set) var isSharedAsTab = false
+    /// Whether this page shares another tab now.
+    private(set) var isSharingTab = false
+    /// The pages of the tabs this page chose to share in the picker, while
+    /// it shares any.
+    private(set) var sharedTabPageIDs: Set<UUID> = []
+    /// The bars the person hid until they come back to the page.
+    private(set) var minimizedInfoBarIDs: Set<Int> = []
+    /// The engine's bars the page shows now.
+    var visibleEngineInfoBars: [BrowserEngineInfoBar] {
+        engineInfoBars.filter { !minimizedInfoBarIDs.contains($0.id) }
+    }
     var pendingServerTrustIdentity: BrowserServerTrustIdentity?
     /// Why the page's engine couldn't create it, which the page shows in
     /// place of its content.
@@ -527,6 +542,11 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         sitePermissionSession = BrowserPageSitePermissionSession(
             page: adapter.enginePage, permissionCenter: permissionCenter, spaceID: spaceID)
         engineInfoBars = []
+        shareSourceOffer = nil
+        isSharedAsTab = false
+        isSharingTab = false
+        sharedTabPageIDs = []
+        minimizedInfoBarIDs = []
         developerPanel = nil
         webContentFailureMessage = nil
         installEngine()
@@ -720,6 +740,38 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         if !enginePage.answerInfoBar(bar.id, with: InfoBarAnswer(response)) {
             engineInfoBars.removeAll { $0.id == bar.id }
         }
+    }
+
+    /// Hides a bar that reports something lasting until the person comes back
+    /// to the page.
+    func minimize(_ bar: BrowserEngineInfoBar) {
+        guard bar.isMinimizable else { return }
+        minimizedInfoBarIDs.insert(bar.id)
+    }
+
+    /// The page left the screen: the bars the person hid show again when they
+    /// come back to it.
+    func restoreMinimizedInfoBars() {
+        minimizedInfoBarIDs = []
+    }
+
+    // MARK: - Actions - Screen sharing
+
+    /// The person's answer to the engine's offer of tabs to share. The page
+    /// takes the offer down at once; the engine refuses the request when it
+    /// cannot carry the answer out.
+    func answer(_ offer: BrowserShareSourceOffer, with choice: BrowserShareSourceOffer.Choice) {
+        guard shareSourceOffer?.id == offer.id else { return }
+        shareSourceOffer = nil
+        if let tabPageID = choice.tabPageID { sharedTabPageIDs.insert(tabPageID) }
+        enginePage.chooseShareSource(
+            offer.id, choice: choice.kind, tabPageID: choice.tabPageID, audio: choice.sharesAudio)
+    }
+
+    /// Stops every tab sharing the page takes part in, as the shared tab or
+    /// as the page that shares one.
+    func stopTabSharing() {
+        enginePage.stopTabSharing()
     }
 
     // MARK: - Actions - Credentials
@@ -1121,6 +1173,23 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
             engineInfoBars.append(bar)
         case .infoBarRemoved(let id):
             engineInfoBars.removeAll { $0.id == id }
+            if let id { minimizedInfoBarIDs.remove(id) }
+        case .shareSourcesOffered(let offer):
+            // A new request replaces one the person has not answered, which
+            // is refused.
+            if let previous = shareSourceOffer, previous.id != offer.id {
+                enginePage.chooseShareSource(previous.id, choice: .cancel)
+            }
+            shareSourceOffer = offer
+        case .shareSourcesWithdrawn(let shareID):
+            if shareSourceOffer?.id == shareID { shareSourceOffer = nil }
+        case .leftScreen:
+            // A bar the person hid shows again once they come back.
+            restoreMinimizedInfoBars()
+        case .tabSharingChanged(let shared, let sharing):
+            isSharedAsTab = shared
+            isSharingTab = sharing
+            if !sharing { sharedTabPageIDs = [] }
         case .mediaSession(let event):
             mediaSessionCoordinator?.receive(event, isMainFrame: true)
         case .contentFullscreenChanged(let active):

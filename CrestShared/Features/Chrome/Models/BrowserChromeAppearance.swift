@@ -4,13 +4,19 @@ import SwiftUI
 struct BrowserChromeAppearance: Equatable {
     var sidebarOnRight = false
     var borderWidth: Double = defaultBorderWidth
+    /// The radius of the rounded corners of the window the page sits in. A
+    /// full-screen window has none, and only the Mac measures its window.
+    var windowCornerRadius: CGFloat?
 
     static let defaultBorderWidth: Double = 8
     static let borderWidthRange: ClosedRange<Double> = 0...10
 
-    init(sidebarOnRight: Bool = false, borderWidth: Double = defaultBorderWidth) {
+    init(
+        sidebarOnRight: Bool = false, borderWidth: Double = defaultBorderWidth, windowCornerRadius: CGFloat? = nil
+    ) {
         self.sidebarOnRight = sidebarOnRight
         self.borderWidth = borderWidth
+        self.windowCornerRadius = windowCornerRadius
     }
 
     init(sidebarOnRight: Bool = false, borderless: Bool) {
@@ -23,7 +29,27 @@ struct BrowserChromeAppearance: Equatable {
     }
     var borderless: Bool { frameWidth == 0 }
     var seamWidth: CGFloat { BrowserChromeLayout.pageBrandSeamWidth * frameWidth / Self.defaultBorderWidth }
-    var pageCornerRadius: CGFloat { borderless ? 0 : BrowserChromeLayout.pageCornerRadius }
+    var pageCornerRadius: CGFloat { borderless ? 0 : framedPageCornerRadius }
+
+    /// The corner of a page inside the frame. It is concentric with the
+    /// window's corner, so the frame keeps its width around the corner rather
+    /// than pinching there; without a window corner to follow, the page keeps
+    /// Crest's own radius.
+    var framedPageCornerRadius: CGFloat {
+        guard let windowCornerRadius else { return BrowserChromeLayout.pageCornerRadius }
+        return max(0, windowCornerRadius - frameWidth)
+    }
+
+    /// The window's corner radius, read from the container corner insets of a
+    /// view that reaches the bottom of the window. The bottom corners stand for
+    /// the window: the top leading one also makes room for the window controls.
+    static func windowCornerRadius(from insets: RectangleCornerInsets) -> CGFloat? {
+        let radius = max(
+            min(insets.bottomLeading.width, insets.bottomLeading.height),
+            min(insets.bottomTrailing.width, insets.bottomTrailing.height)
+        )
+        return radius > 0 ? radius : nil
+    }
 
     func sidebarEdge(in direction: LayoutDirection) -> HorizontalEdge {
         sidebarOnRight == (direction == .leftToRight) ? .trailing : .leading

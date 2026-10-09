@@ -24,21 +24,21 @@ struct BrowserSyncSettingsView: View {
                         .foregroundStyle(.secondary)
                 }
 
+                // Each button is its own row: a form row holding two buttons
+                // takes one tap target on iOS, so only one of them answers.
                 if cloudSync.isEnabled {
-                    HStack(spacing: 12) {
-                        Button("Sync Now") {
-                            Task { await cloudSync.syncNow() }
-                        }
-                        .disabled(!canSyncNow)
-                        .accessibilityIdentifier("icloud-sync-now")
-
-                        Button("Pull from iCloud…") {
-                            confirmsPullingFromICloud = true
-                        }
-                        .disabled(!canSyncNow)
-                        .accessibilityIdentifier("icloud-sync-pull")
-                        .accessibilityHint("Downloads a fresh copy and merges it with this device’s content")
+                    Button("Sync Now") {
+                        Task { await cloudSync.syncNow() }
                     }
+                    .disabled(!canSyncNow)
+                    .accessibilityIdentifier("icloud-sync-now")
+
+                    Button("Pull from iCloud…") {
+                        confirmsPullingFromICloud = true
+                    }
+                    .disabled(!canSyncNow)
+                    .accessibilityIdentifier("icloud-sync-pull")
+                    .accessibilityHint("Downloads a fresh copy and merges it with this device’s content")
                 }
 
                 if let error = cloudSync.errorDescription {

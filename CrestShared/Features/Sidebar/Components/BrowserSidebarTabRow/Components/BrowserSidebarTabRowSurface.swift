@@ -184,7 +184,7 @@ private struct BrowserSidebarTabRowAppearance: ViewModifier {
         content.modifier(
             BrowserTabAppearanceSurface(
                 appearance: BrowserDeviceAppearanceStore.shared.tabs,
-                accent: (BrowserDeviceAppearanceStore.shared.tabs.color ?? branding?.primaryColor ?? .indigo).color,
+                accent: accent,
                 isPinned: false,
                 isSelected: configuration.isSelected,
                 isHovering: isHovering
@@ -193,6 +193,22 @@ private struct BrowserSidebarTabRowAppearance: ViewModifier {
                             .tab(configuration.tab.id), in: configuration.context))
             )
         )
+        .overlay {
+            // A tab another page shares is outlined in the Space's accent, at
+            // the weight a pinned tab's accent border has, while it is shared.
+            if configuration.isSharedAsTab {
+                RoundedRectangle(
+                    cornerRadius: BrowserDeviceAppearanceStore.shared.sidebarCornerRadius,
+                    style: .continuous
+                )
+                .strokeBorder(accent, lineWidth: CrestLayout.pinnedAccentBorderWidth)
+                .allowsHitTesting(false)
+            }
+        }
+    }
+
+    private var accent: Color {
+        (BrowserDeviceAppearanceStore.shared.tabs.color ?? branding?.primaryColor ?? .indigo).color
     }
 
     private var branding: SpaceBranding? {

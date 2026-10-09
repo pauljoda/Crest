@@ -38,7 +38,7 @@ Crest can remember decisions for:
 
 Open Site Controls on the affected page to inspect or reset the decision. The Space’s privacy settings, in the same place as content blocking, list its saved site permissions.
 
-Screen sharing asks through the system picker each time. You can block it for a site, but cannot preapprove a screen or window. Chromium on Mac currently shares a screen or window without browser-tab selection or shared audio.
+Screen sharing asks what to share each time. You can block it for a site, but cannot preapprove a tab, screen or window. On pages that run in Chromium on Mac, Crest first lists the tabs in the same Space, and can share a tab's audio. Choose Window or Screen to use the macOS picker instead, which shares no audio. While a tab is shared, it and the sharing page show a bar with Stop sharing, and the shared tab is outlined in the sidebar. Minimize a bar to hide it until you come back to that tab. To stop from the sidebar, right-click either tab and choose Stop Sharing. Clicking the sharing symbol on a shared tab also offers to go to the tab it is shared to.
 
 ## Notifications
 

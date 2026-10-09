@@ -49,4 +49,18 @@ struct BrowserSidebarPageAccess {
     /// Shared across both shells already, so the sidebar holds the real thing
     /// rather than a closure over it.
     let downloadCenter: BrowserDownloadCenter
+
+    /// Whether another page shares the page a tab holds, if the Space and
+    /// profile still own it. A shell whose pages cannot be shared answers no.
+    var isSharedAsTab: @MainActor (BrowserTabRuntimeAssignment) -> Bool = { _ in false }
+
+    /// Whether the page a tab holds shares another tab, if the Space and
+    /// profile still own it.
+    var isSharingTab: @MainActor (BrowserTabRuntimeAssignment) -> Bool = { _ in false }
+
+    /// Stops every tab sharing the page a tab holds takes part in.
+    var stopTabSharing: @MainActor (BrowserTabRuntimeAssignment) -> Void = { _ in }
+
+    /// The tab whose page shares the page a tab holds, when Crest knows it.
+    var sharingTabID: @MainActor (BrowserTabRuntimeAssignment) -> UUID? = { _ in nil }
 }

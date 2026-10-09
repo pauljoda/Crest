@@ -7,7 +7,7 @@
                 let bar = BrowserEngineInfoBar(
                     id: Int(infoBarID), message: message, acceptTitle: acceptLabel ?? "",
                     cancelTitle: cancelLabel ?? "",
-                    isCloseable: closeable)
+                    isCloseable: closeable, isMinimizable: minimizable)
             else { return }
             page.observer(.infoBarAdded(bar))
         }

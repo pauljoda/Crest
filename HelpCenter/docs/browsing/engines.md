@@ -69,7 +69,7 @@ Tabs, Spaces, Split View, Peek, Crest Passwords, site permissions, Picture in Pi
 ## Current Chromium limits
 
 - Crest Passwords handles saved passwords. Built-in address and payment-card autofill are not available.
-- Screen sharing uses the macOS screen or window picker. Browser-tab sharing and shared audio are not available.
+- Screen sharing offers your tabs in the same Space first, with their audio when the site asks for it. A window or your screen goes through the macOS picker, which shares no audio.
 - Local service-worker and extension notifications work while Crest runs. Remote Web Push is not available.
 
 See [Site permissions and notifications](../privacy/content-blocking-and-site-permissions.md) for permission controls and the Google-free engine's site and download protection limits.

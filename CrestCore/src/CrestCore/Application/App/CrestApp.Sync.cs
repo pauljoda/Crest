@@ -28,6 +28,10 @@ public sealed partial class CrestApp {
     /// seed a first launch made.
     private bool StoredSessionIsDisposableSeed() => storedSession is { IsReleased: false, IsDisposableSeed: true };
 
+    /// How many records the stored session's journal holds waiting to upload,
+    /// or none before a session is stored.
+    private int StoredJournalPendingUploads() => storedSync?.PendingUploads ?? 0;
+
     /// Whether the stored session's journal holds records waiting to upload,
     /// once every stage queued before the call settled.
     internal bool JournalHoldsUploads() {

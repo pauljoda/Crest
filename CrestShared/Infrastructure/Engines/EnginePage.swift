@@ -14,8 +14,9 @@ final class EnginePage: BrowserFindExecuting {
     /// The core's page this one is.
     let id: UUID
     private let pages: any EnginePages
-    /// The engine and version the page's saved history belongs to, which a
-    /// restore must match.
+    /// The engine the page's saved history belongs to, which a restore must
+    /// match, and the version it is tagged with, which a restore must also
+    /// match on an engine that reads back only its own version's history.
     private let historyFamily: BrowserEngineImplementation.Family
     private let historyVersion: @MainActor () -> String?
     /// The panels the engine's inspector starts on when asked to.
@@ -93,17 +94,17 @@ final class EnginePage: BrowserFindExecuting {
     // MARK: - Actions - History
 
     /// The page's history as the engine keeps it, to restore later on the same
-    /// engine and version; nil when it has none.
+    /// engine; nil when it has none, as before its engine starts.
     func savedHistory() -> Data? {
-        guard let version = historyVersion(),
+        guard pages.isReady, let version = historyVersion(),
             let state = pages.request(SaveInteractionState(pageID: id)).state
         else { return nil }
         return BrowserEngineInteractionState(engine: historyFamily, version: version, payload: state).encoded()
     }
 
     /// Restores history `savedHistory()` kept, in place of the page's first
-    /// load of `url`; false when it belongs to another engine or version, or
-    /// the engine refused it.
+    /// load of `url`; false when it belongs to another engine, or to another
+    /// version of one that reads back only its own, or the engine refused it.
     func restoreHistory(_ saved: Data, expecting url: URL) -> Bool {
         guard let version = historyVersion(),
             let payload = BrowserEngineInteractionState.payload(saved, engine: historyFamily, version: version)
@@ -243,6 +244,27 @@ final class EnginePage: BrowserFindExecuting {
     /// Asks an engine that fetches the page's icon to fetch it again.
     func refreshIcon() {
         pages.request(RefreshPageIcon(pageID: id))
+    }
+
+    // MARK: - Actions - Screen sharing
+
+    /// The person's answer to the engine's offer of tabs to share, `shareID`:
+    /// the tab whose page is `tabPageID` for `.tab`, with its sound when
+    /// `audio`. False when the request already ended, or the tab can no
+    /// longer be shared.
+    @discardableResult
+    func chooseShareSource(
+        _ shareID: UUID, choice: ShareSourceChoice, tabPageID: UUID? = nil, audio: Bool = false
+    ) -> Bool {
+        pages.request(
+            ChooseShareSource(pageID: id, shareID: shareID, choice: choice, tabPageID: tabPageID, audio: audio))
+    }
+
+    /// Stops every tab sharing the page takes part in. False when it takes
+    /// part in none.
+    @discardableResult
+    func stopTabSharing() -> Bool {
+        pages.request(StopTabSharing(pageID: id))
     }
 
     // MARK: - Actions - Notifications

@@ -4,11 +4,15 @@ import Foundation
 final class BrowserSoftwareUpdateWidgetSource:
     BrowserSidebarWidgetEventSource
 {
+    // MARK: - Variables
+
     let kindID = BrowserSidebarWidgetKindID.softwareUpdate
 
     private weak var model: BrowserSoftwareUpdateModel?
     private var currentInstance: BrowserSidebarWidgetInstance?
     private var subscribers: [UUID: AsyncStream<[BrowserSidebarWidgetInstance]>.Continuation] = [:]
+
+    // MARK: - Actions - Publishing
 
     func bind(_ model: BrowserSoftwareUpdateModel) {
         self.model = model
@@ -37,36 +41,6 @@ final class BrowserSoftwareUpdateWidgetSource:
         }
         continuation.yield(currentInstance.map { [$0] } ?? [])
         return stream
-    }
-
-    func perform(
-        _ action: BrowserSidebarWidgetAction,
-        on instanceID: BrowserSidebarWidgetID
-    ) {
-        guard instanceID == currentInstance?.id, let model else { return }
-        switch action {
-        case .declineAutomaticUpdateChecks:
-            model.chooseAutomaticChecks(false)
-        case .enableAutomaticUpdateChecks:
-            model.chooseAutomaticChecks(true)
-        case .installUpdate:
-            model.installUpdate()
-        case .dismissExactUpdate:
-            // Sparkle persists `.skip` against the exact appcast build. Its own
-            // app-scoped store is authoritative, and a newer build is therefore
-            // offered again without Crest maintaining a competing dismissal key.
-            model.skipUpdate()
-        case .cancelUpdate:
-            model.cancelCurrentOperation()
-        case .installAndRelaunch:
-            model.installAndRelaunchNow()
-        case .retryUpdateInstallation:
-            model.retryApplicationTermination()
-        case .acknowledgeUpdateStatus:
-            model.acknowledge()
-        default:
-            break
-        }
     }
 
     private static func instance(
@@ -105,6 +79,7 @@ final class BrowserSoftwareUpdateWidgetSource:
         case .idle, .extracting, .unavailable:
             break
         }
+        if snapshot.phase.isHideable { actions.insert(.hideSoftwareUpdate) }
         return BrowserSidebarWidgetInstance(
             id: BrowserSidebarWidgetID(
                 kindID: .softwareUpdate,
@@ -115,5 +90,39 @@ final class BrowserSoftwareUpdateWidgetSource:
             presentation: .softwareUpdate(snapshot),
             availableActions: actions
         )
+    }
+
+    // MARK: - Actions - Card actions
+
+    func perform(
+        _ action: BrowserSidebarWidgetAction,
+        on instanceID: BrowserSidebarWidgetID
+    ) {
+        guard instanceID == currentInstance?.id, let model else { return }
+        switch action {
+        case .declineAutomaticUpdateChecks:
+            model.chooseAutomaticChecks(false)
+        case .enableAutomaticUpdateChecks:
+            model.chooseAutomaticChecks(true)
+        case .installUpdate:
+            model.installUpdate()
+        case .dismissExactUpdate:
+            // Sparkle persists `.skip` against the exact appcast build. Its own
+            // app-scoped store is authoritative, and a newer build is therefore
+            // offered again without Crest maintaining a competing dismissal key.
+            model.skipUpdate()
+        case .cancelUpdate:
+            model.cancelCurrentOperation()
+        case .installAndRelaunch:
+            model.installAndRelaunchNow()
+        case .retryUpdateInstallation:
+            model.retryApplicationTermination()
+        case .acknowledgeUpdateStatus:
+            model.acknowledge()
+        case .hideSoftwareUpdate:
+            model.hide()
+        default:
+            break
+        }
     }
 }

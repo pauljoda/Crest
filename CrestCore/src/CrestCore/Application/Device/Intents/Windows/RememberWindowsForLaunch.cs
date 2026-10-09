@@ -12,10 +12,10 @@ public sealed record RememberWindowsForLaunch(IReadOnlyList<Guid> WindowIds) : W
     #region Actions - Device
 
     /// Orders the saved windows open now back to front, as the platform stacks
-    /// them, and saves them for the next launch before returning. Refused with
-    /// `SaveFailed` when the device store cannot be written.
+    /// them, and saves them for the next launch before returning, under the
+    /// device lock so no records handed to the store earlier land after them.
+    /// Refused with `SaveFailed` when the device store cannot be written.
     internal override void Apply(Device device, DeviceTurn turn) {
-        DeviceRecords records;
         lock (device.Gate) {
             var open = device.OpenWindows.Values.Where(window => window.Saved).Select(window => window.Id).ToHashSet();
             var stacked = WindowIds.Distinct().Where(open.Contains).Reverse().ToList();
@@ -23,13 +23,12 @@ public sealed record RememberWindowsForLaunch(IReadOnlyList<Guid> WindowIds) : W
                 .Concat(open.Where(id => !stacked.Contains(id) && !device.Reopening.Contains(id)));
             device.Reopening.Clear();
             device.Reopening.AddRange([.. behind, .. stacked]);
-            records = device.Records();
-        }
-        if (device.Storage is not { } target) return;
-        try {
-            target.SaveDevice(records);
-        } catch (StorageException error) {
-            throw new Rejected(new SaveFailed(error.Reason));
+            if (device.Storage is not { } target) return;
+            try {
+                target.SaveDevice(device.Records());
+            } catch (StorageException error) {
+                throw new Rejected(new SaveFailed(error.Reason));
+            }
         }
     }
 

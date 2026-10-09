@@ -20,6 +20,9 @@ struct BrowserLookAndFeelSidebarCrop: View {
     private var pageZoom = BrowserDefaultPageZoomStore.shared
     @Environment(\.layoutDirection) private var layoutDirection
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// The appearance of the window showing these settings, which says whether
+    /// its pages follow the window's corner.
+    @Environment(\.browserChromeAppearance) private var windowAppearance
 
     /// The sidebar's natural height, measured before any scaling.
     @State private var sidebarContentHeight: CGFloat = 0
@@ -34,7 +37,7 @@ struct BrowserLookAndFeelSidebarCrop: View {
             let scale = Self.scale(fitting: sidebarContentHeight, in: geometry.size.height)
             let designWidth = geometry.size.width / scale
             let designHeight = max(sidebarContentHeight, geometry.size.height / scale)
-            window(width: designWidth, height: designHeight)
+            window(width: designWidth, height: designHeight, scale: scale)
                 .frame(width: designWidth, height: designHeight)
                 .scaleEffect(scale, anchor: .topLeading)
                 .frame(width: geometry.size.width, height: geometry.size.height, alignment: .topLeading)
@@ -71,12 +74,12 @@ struct BrowserLookAndFeelSidebarCrop: View {
         )
     }
 
-    private func window(width: CGFloat, height: CGFloat) -> some View {
+    private func window(width: CGFloat, height: CGFloat, scale: CGFloat) -> some View {
         let sidebarWidth = Self.sidebarWidth(in: width)
         return ZStack(alignment: edge == .leading ? .topLeading : .topTrailing) {
             HStack(spacing: 0) {
                 Color.clear.frame(width: edge == .leading ? sidebarWidth : 0)
-                page
+                page(scale: scale)
                 Color.clear.frame(width: edge == .trailing ? sidebarWidth : 0)
             }
             sidebar
@@ -122,8 +125,9 @@ struct BrowserLookAndFeelSidebarCrop: View {
             .clipped()
     }
 
-    private var page: some View {
-        BrowserRootContentSurface(
+    private func page(scale: CGFloat) -> some View {
+        let appearance = pageAppearance(scale: scale)
+        return BrowserRootContentSurface(
             cornerRadius: appearance.pageCornerRadius,
             seamWidth: appearance.seamWidth,
             frameInsets: appearance.pageInsets(docked: true, direction: layoutDirection),
@@ -143,6 +147,17 @@ struct BrowserLookAndFeelSidebarCrop: View {
 
     private var appearance: BrowserChromeAppearance {
         BrowserChromeAppearance(sidebarOnRight: sidebarOnRight, borderWidth: borderWidth)
+    }
+
+    /// Where a window's page follows the window's corner, the crop's own corner
+    /// stands in for it. The crop is clipped after the window is scaled, so in
+    /// the window's units that corner is rounder by the same factor.
+    private func pageAppearance(scale: CGFloat) -> BrowserChromeAppearance {
+        var appearance = self.appearance
+        if windowAppearance.windowCornerRadius != nil {
+            appearance.windowCornerRadius = BrowserLookAndFeelPreviewMetrics.cardCornerRadius / scale
+        }
+        return appearance
     }
 
     private var edge: HorizontalEdge { appearance.sidebarEdge(in: layoutDirection) }

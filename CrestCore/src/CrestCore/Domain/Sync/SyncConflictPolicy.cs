@@ -6,8 +6,11 @@ namespace CrestCore.Domain;
 public static class SyncConflictPolicy {
     #region Actions - Sync
 
+    /// Which of two copies of one record wins: 0 for `first`, 1 for `second`.
+    /// Copies of a kind that moves between Spaces may name different Spaces
+    /// and are decided as any other two.
     public static int Winner(SyncRecordStamp first, SyncRecordStamp second) {
-        if (first.Id != second.Id || first.Kind != second.Kind || first.Space != second.Space)
+        if (first.Id != second.Id || first.Kind != second.Kind || (first.Space != second.Space && !first.Kind.MovesBetweenSpaces))
             throw new BrowserRuleException(BrowserRule.SyncIdentityMismatch);
         if (first.DeletionReason?.IsExplicit == true) return 0;
         if (second.DeletionReason?.IsExplicit == true) return 1;
