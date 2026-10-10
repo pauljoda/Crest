@@ -63,4 +63,11 @@ struct BrowserSidebarPageAccess {
 
     /// The tab whose page shares the page a tab holds, when Crest knows it.
     var sharingTabID: @MainActor (BrowserTabRuntimeAssignment) -> UUID? = { _ in nil }
+
+    /// What a tab's page is doing with sound, or `nil` while it makes none
+    /// worth marking, as in a shell that reports no media sessions.
+    var tabAudio: @MainActor (BrowserTabRuntimeAssignment) -> BrowserTabAudio? = { _ in nil }
+
+    /// Mutes the tab's playback, or unmutes it when it plays muted.
+    var toggleTabMute: @MainActor (BrowserTabRuntimeAssignment) -> Void = { _ in }
 }

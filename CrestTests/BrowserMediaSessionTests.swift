@@ -430,6 +430,52 @@ final class BrowserMediaSessionTests: XCTestCase {
         )
     }
 
+    func testTabAudioFollowsItsOwnSessionAndSurvivesADismissedCard() {
+        let store = BrowserMediaSessionStore()
+        let endpoint = FakeMediaSessionEndpoint()
+        let owner = assignment()
+        let otherTab = assignment(profileID: owner.profileID)
+
+        store.receive(
+            event(document: "document", sequence: 1, title: "Song", playback: .playing, audible: true),
+            owner: owner,
+            fallbackTitle: nil,
+            endpoint: endpoint
+        )
+        XCTAssertEqual(store.audio(of: owner), .audible)
+        XCTAssertNil(store.audio(of: otherTab), "Another tab's sound never marks this one.")
+
+        store.perform(
+            .dismissMediaSession,
+            on: BrowserSidebarWidgetID(kindID: .nowPlaying, instanceID: store.sessions[0].id.id)
+        )
+        XCTAssertEqual(store.audio(of: owner), .audible, "Hiding the card does not hide the tab's sound.")
+
+        store.toggleMute(of: owner)
+        XCTAssertEqual(endpoint.mutedRequests, [true])
+
+        store.receive(
+            event(document: "document", sequence: 2, title: "Song", playback: .playing, audible: true, muted: true),
+            owner: owner,
+            fallbackTitle: nil,
+            endpoint: endpoint
+        )
+        XCTAssertEqual(store.audio(of: owner), .muted, "Muted playback stays marked, so it can be unmuted.")
+
+        store.toggleMute(of: owner)
+        XCTAssertEqual(endpoint.mutedRequests, [true, false])
+
+        store.receive(
+            event(document: "document", sequence: 3, title: "Song", playback: .paused),
+            owner: owner,
+            fallbackTitle: nil,
+            endpoint: endpoint
+        )
+        XCTAssertNil(store.audio(of: owner))
+        store.toggleMute(of: owner)
+        XCTAssertEqual(endpoint.mutedRequests, [true, false], "A silent tab has nothing to toggle.")
+    }
+
     private func assignment(profileID: UUID = UUID()) -> BrowserTabRuntimeAssignment {
         BrowserTabRuntimeAssignment(
             tabID: UUID(),

@@ -337,6 +337,17 @@ final class MobileBrowserPageStore:
 
     /// Lets go of everything the private workspace kept, in each of the
     /// Spaces `spaces` names, as its scene closes.
+    /// What the tab's page is doing with sound, or `nil` while it makes none
+    /// worth marking. A private window reports no media sessions.
+    func tabAudio(matching assignment: BrowserTabRuntimeAssignment) -> BrowserTabAudio? {
+        mediaSessionStore?.audio(of: assignment)
+    }
+
+    /// Mutes the tab's playback, or unmutes it while it plays muted.
+    func toggleTabMute(matching assignment: BrowserTabRuntimeAssignment) {
+        mediaSessionStore?.toggleMute(of: assignment)
+    }
+
     func closePrivateBrowsingSession(_ spaces: [BrowserSpaceRuntimeAssignment]) {
         guard browsingMode.isPrivate else { return }
         activePage = nil

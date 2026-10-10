@@ -117,6 +117,15 @@ struct PinnedTabTile: View {
                 )
             }
         }
+        // The mark sits above the tile's gestures, menu and accessibility, so
+        // pressing it only mutes: a quick second press never restores the
+        // saved page, and a middle click never unloads the tab.
+        .overlay(alignment: .topTrailing) {
+            if let context {
+                BrowserSidebarTabAudioMark(
+                    tabID: tab.id, context: context, canAct: { isCurrentAndUnlocked })
+            }
+        }
         .animation(
             BrowserVisualAccessibilityPolicy.animation(
                 CrestMotion.contentState,

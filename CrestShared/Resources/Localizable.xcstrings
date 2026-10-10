@@ -8030,8 +8030,11 @@
     "Mute" : {
 
     },
+    "Mute tab" : {
+      "comment" : "Accessibility label for a tab's audio mark that mutes the tab."
+    },
     "Muted" : {
-
+      "comment" : "Tooltip and accessibility value for a tab's mark while its playback is muted."
     },
     "Name" : {
       "localizations" : {
@@ -9585,6 +9588,9 @@
     },
     "Play" : {
 
+    },
+    "Playing audio" : {
+      "comment" : "Tooltip and accessibility value for a tab's mark while it plays sound."
     },
     "Playlists" : {
 
@@ -14269,6 +14275,9 @@
     },
     "Unmute" : {
 
+    },
+    "Unmute tab" : {
+      "comment" : "Accessibility label for a tab's audio mark that unmutes the tab."
     },
     "Unmuted" : {
 

@@ -55,14 +55,13 @@ struct BrowserSidebarListContext {
     /// Whether another page shares the tab's page as a tab. Reading it
     /// observes the page's sharing.
     @MainActor func isSharedAsTab(_ tabID: UUID) -> Bool {
-        pageAccess.isSharedAsTab(
-            BrowserTabRuntimeAssignment(tabID: tabID, spaceID: space.id, profileID: space.profileID))
+        pageAccess.isSharedAsTab(runtimeAssignment(of: tabID))
     }
 
     /// Whether the tab's page takes part in tab sharing: shared by another
     /// page, or sharing another tab with the site it shows.
     @MainActor func takesPartInTabSharing(_ tabID: UUID) -> Bool {
-        let assignment = BrowserTabRuntimeAssignment(tabID: tabID, spaceID: space.id, profileID: space.profileID)
+        let assignment = runtimeAssignment(of: tabID)
         return pageAccess.isSharedAsTab(assignment) || pageAccess.isSharingTab(assignment)
     }
 
@@ -95,14 +94,23 @@ struct BrowserSidebarListContext {
     /// The tab whose page shares the tab's page, when Crest knows it and the
     /// Space holds it.
     @MainActor func sharingTab(of tabID: UUID) -> TabStateModel? {
-        let assignment = BrowserTabRuntimeAssignment(tabID: tabID, spaceID: space.id, profileID: space.profileID)
-        return pageAccess.sharingTabID(assignment).flatMap { space.tabs.model($0) }
+        pageAccess.sharingTabID(runtimeAssignment(of: tabID)).flatMap { space.tabs.model($0) }
     }
 
     /// Stops every tab sharing the tab's page takes part in.
     @MainActor func stopTabSharing(_ tabID: UUID) {
-        pageAccess.stopTabSharing(
-            BrowserTabRuntimeAssignment(tabID: tabID, spaceID: space.id, profileID: space.profileID))
+        pageAccess.stopTabSharing(runtimeAssignment(of: tabID))
+    }
+
+    /// What the tab's page is doing with sound, or `nil` while it makes none
+    /// worth marking. Reading it observes the tab's media session.
+    @MainActor func audio(of tabID: UUID) -> BrowserTabAudio? {
+        pageAccess.tabAudio(runtimeAssignment(of: tabID))
+    }
+
+    /// Mutes the tab's playback, or unmutes it while it plays muted.
+    @MainActor func toggleMute(of tabID: UUID) {
+        pageAccess.toggleTabMute(runtimeAssignment(of: tabID))
     }
 
     @MainActor func unload(_ tabID: UUID) {
@@ -112,6 +120,11 @@ struct BrowserSidebarListContext {
     @MainActor func pullNewIcon(_ tabID: UUID) {
         let actions = tabActions
         Task { await actions.pullNewIcon(for: tabID) }
+    }
+
+    /// The tab as the page layer names it: in this Space, with its profile.
+    @MainActor private func runtimeAssignment(of tabID: UUID) -> BrowserTabRuntimeAssignment {
+        BrowserTabRuntimeAssignment(tabID: tabID, spaceID: space.id, profileID: space.profileID)
     }
 }
 

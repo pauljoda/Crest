@@ -12,6 +12,11 @@ struct BrowserSidebarTabRowContent: View {
             if configuration.isSharedAsTab {
                 sharedMark
             }
+            BrowserSidebarTabAudioMark(
+                tabID: configuration.tab.id,
+                context: configuration.context,
+                canAct: { configuration.isCurrentAndUnlocked }
+            )
             BrowserSidebarTabTrailingControl(
                 configuration: configuration,
                 isHovering: interaction.isHovering

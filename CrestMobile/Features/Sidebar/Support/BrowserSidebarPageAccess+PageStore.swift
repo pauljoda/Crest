@@ -36,7 +36,13 @@ extension BrowserSidebarPageAccess {
             pullFavicon: { tabID, assignment in
                 await pages.pullFavicon(for: tabID, matching: assignment)
             },
-            downloadCenter: pages.downloadCenter
+            downloadCenter: pages.downloadCenter,
+            tabAudio: { assignment in
+                pages.tabAudio(matching: assignment)
+            },
+            toggleTabMute: { assignment in
+                pages.toggleTabMute(matching: assignment)
+            }
         )
     }
 }

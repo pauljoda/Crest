@@ -24,8 +24,8 @@ struct BrowserSidebarTabSharedMark: View {
             .buttonStyle(
                 CrestChromeButtonStyle(
                     controlSize: CGSize(
-                        width: BrowserSidebarTabSharedMarkMetrics.controlSize,
-                        height: BrowserSidebarTabSharedMarkMetrics.controlSize))
+                        width: BrowserSidebarTabMarkMetrics.controlSize,
+                        height: BrowserSidebarTabMarkMetrics.controlSize))
             )
             .help(Text("This tab is being shared", comment: "Tooltip on a sidebar tab another page shares."))
             .accessibilityLabel(Text("Shared", comment: "Accessibility label for a sidebar tab another page shares."))
@@ -81,8 +81,8 @@ struct BrowserSidebarTabSharedMark: View {
             }
             .controlSize(.large)
         }
-        .padding(BrowserSidebarTabSharedMarkMetrics.popoverPadding)
-        .frame(width: BrowserSidebarTabSharedMarkMetrics.popoverWidth, alignment: .leading)
+        .padding(BrowserSidebarTabMarkMetrics.popoverPadding)
+        .frame(width: BrowserSidebarTabMarkMetrics.popoverWidth, alignment: .leading)
     }
 }
 

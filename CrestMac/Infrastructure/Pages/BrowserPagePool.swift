@@ -686,6 +686,19 @@ final class BrowserPagePool:
         host.unloadPage(for: tabID, preservingTabState: false)
     }
 
+    // MARK: - Actions - Media sessions
+
+    /// What the tab's page is doing with sound, or `nil` while it makes none
+    /// worth marking. A private window reports no media sessions.
+    func tabAudio(matching assignment: BrowserTabRuntimeAssignment) -> BrowserTabAudio? {
+        mediaSessionStore?.audio(of: assignment)
+    }
+
+    /// Mutes the tab's playback, or unmutes it while it plays muted.
+    func toggleTabMute(matching assignment: BrowserTabRuntimeAssignment) {
+        mediaSessionStore?.toggleMute(of: assignment)
+    }
+
     // MARK: - Actions - Popup windows
 
     /// Lets go of a popup window's page the core closed before its Quick

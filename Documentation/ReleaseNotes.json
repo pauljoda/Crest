@@ -3789,6 +3789,10 @@
     "command-palette-ranks-and-searches-sites": {
       "category": "new",
       "message": "The command palette puts the best match first, ranks the pages and tabs you use most and most recently, and learns which result you choose for what you type. It fills in sites you visit, including those that start with www, and Return opens what it filled in. Before you type it lists your recent tabs, so Return takes you back to the one you were on. Start typing a provider’s name or shortcut, such as yt for YouTube or claude, to see it under the field, and press Tab to search that site or ask that assistant directly. Hold Command, Shift or Option with Return to open a result in the background, in Split View or in a Quick Window. The new Search section in Settings sets one default search for every Space and one for private windows, turns search engines, AI assistants and websites on or off with options of their own, such as hiding Google’s AI Overviews, adds your own, and chooses what the palette shows, how many of each, and in what order."
+    },
+    "tab-audio-indicator": {
+      "category": "new",
+      "message": "Tabs playing audio now show a speaker that mutes or unmutes them."
     }
   }
 }

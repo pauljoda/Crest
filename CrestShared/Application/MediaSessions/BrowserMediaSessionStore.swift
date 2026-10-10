@@ -303,15 +303,11 @@ final class BrowserMediaSessionStore: BrowserSidebarWidgetEventSource {
             publishIfChanged()
             return
         }
-        guard let endpoint = endpointsByID[snapshot.id]?.value else { return }
         if action == .toggleMute {
-            guard Self.exposesMuteControl(snapshot) else { return }
-            endpoint.setMediaSessionMuted(
-                !snapshot.isMuted,
-                documentIdentifier: snapshot.id.documentIdentifier
-            )
+            toggleMute(snapshot)
             return
         }
+        guard let endpoint = endpointsByID[snapshot.id]?.value else { return }
         let mediaAction: BrowserMediaSessionAction?
         switch action {
         case .play:
@@ -330,6 +326,36 @@ final class BrowserMediaSessionStore: BrowserSidebarWidgetEventSource {
         else { return }
         endpoint.performMediaSessionAction(
             mediaAction,
+            documentIdentifier: snapshot.id.documentIdentifier
+        )
+    }
+
+    /// What the tab's page is doing with sound, or `nil` while it makes none
+    /// worth marking. The core publishes one session per tab. Hiding its card
+    /// does not hide the tab's sound, so a dismissed session counts. Reading it
+    /// observes the published sessions.
+    func audio(of owner: BrowserTabRuntimeAssignment) -> BrowserTabAudio? {
+        session(of: owner).flatMap(BrowserTabAudio.init(session:))
+    }
+
+    /// Mutes the tab's sounding session, or unmutes it while it plays muted.
+    func toggleMute(of owner: BrowserTabRuntimeAssignment) {
+        guard let session = session(of: owner), BrowserTabAudio(session: session) != nil else { return }
+        toggleMute(session)
+    }
+
+    private func session(of owner: BrowserTabRuntimeAssignment) -> BrowserMediaSessionSnapshot? {
+        sessions.first { $0.owner == owner }
+    }
+
+    /// Asks the page for the inverse of the session's mute, where Crest has
+    /// observed its playback.
+    private func toggleMute(_ snapshot: BrowserMediaSessionSnapshot) {
+        guard Self.exposesMuteControl(snapshot),
+            let endpoint = endpointsByID[snapshot.id]?.value
+        else { return }
+        endpoint.setMediaSessionMuted(
+            !snapshot.isMuted,
             documentIdentifier: snapshot.id.documentIdentifier
         )
     }
