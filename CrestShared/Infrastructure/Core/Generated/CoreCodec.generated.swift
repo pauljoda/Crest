@@ -7,11 +7,11 @@ import Foundation
 enum CoreCodec {
     /// SHA-256 of the canonical contract schema. The core refuses any other.
     static let fingerprint: [UInt8] = [
-        0x9e, 0x43, 0xe1, 0x13, 0xf8, 0x10, 0xd9, 0xa6, 0xb8, 0x4d, 0xa1, 0xb5, 0x65, 0xab, 0x93, 0x41, 0xd5, 0x8f, 0x89, 0x64, 0x8c, 0xf6, 0xac, 0x2a, 0x87, 0x19, 0x9d, 0x0a, 0x30, 0x3c, 0x03, 0xa8
+        0xa0, 0xf9, 0x06, 0x52, 0x9e, 0xb1, 0xee, 0x14, 0xec, 0x9a, 0x06, 0xc2, 0x40, 0x5f, 0x0f, 0x7b, 0xf4, 0x6a, 0x49, 0x66, 0xd4, 0xfc, 0x78, 0xc4, 0xf1, 0xa9, 0x54, 0x98, 0x95, 0x40, 0xc3, 0xb2
     ]
     /// SHA-256 of the engine contract alone, which an engine binding registers with.
     static let engineFingerprint: [UInt8] = [
-        0x0b, 0x58, 0xd5, 0x33, 0x6f, 0x64, 0xfe, 0x18, 0x2b, 0xc5, 0x28, 0xe6, 0xa3, 0x58, 0x92, 0xf0, 0xd7, 0x6a, 0x24, 0x48, 0x5e, 0xd5, 0xb5, 0x6e, 0xfd, 0xb3, 0xf6, 0x93, 0x26, 0x55, 0x32, 0xa1
+        0x6b, 0x6f, 0x89, 0xa2, 0xf4, 0x19, 0xaa, 0x12, 0x49, 0x85, 0x5b, 0x5b, 0x08, 0xbb, 0x58, 0xbe, 0x09, 0x3a, 0x89, 0x5e, 0x48, 0x0f, 0xed, 0x64, 0xd0, 0x3b, 0xc7, 0x63, 0x47, 0x70, 0x0b, 0xb1
     ]
 
     static func decodeIntent(from reader: inout WireReader) throws(WireError) -> any Intent {
@@ -410,11 +410,12 @@ enum CoreCodec {
         case 34: return try SetSitePermission(from: &reader)
         case 35: return try ShowBlockedPopups(from: &reader)
         case 36: return try ShowPage(from: &reader)
-        case 37: return try StopLoading(from: &reader)
-        case 38: return try StopMediaCapture(from: &reader)
-        case 39: return try StopTabSharing(from: &reader)
-        case 40: return try WatchPage(from: &reader)
-        case 41: return try ZoomPage(from: &reader)
+        case 37: return try ShowPictureInPictureCaption(from: &reader)
+        case 38: return try StopLoading(from: &reader)
+        case 39: return try StopMediaCapture(from: &reader)
+        case 40: return try StopTabSharing(from: &reader)
+        case 41: return try WatchPage(from: &reader)
+        case 42: return try ZoomPage(from: &reader)
         default: throw WireError.malformed("Unknown PageRequest tag \(tag)")
         }
     }
@@ -19294,6 +19295,29 @@ extension ShowPage {
     }
 }
 
+extension ShowPictureInPictureCaption {
+    init(from reader: inout WireReader) throws(WireError) {
+        let pageID = try reader.readUUID()
+        let caption = try reader.readString()
+        self.init(pageID: pageID, caption: caption)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeUUID(pageID)
+        writer.writeString(caption)
+    }
+
+    func encodePageRequest(into writer: inout WireWriter) {
+        writer.writeTag(37)
+        encode(into: &writer)
+    }
+
+    static func decodeAnswer(from reader: inout WireReader) throws(WireError) -> Bool {
+        let answer = try reader.readBool()
+        return answer
+    }
+}
+
 extension ShowSetupStep {
     init(from reader: inout WireReader) throws(WireError) {
         let step = try SetupStep(from: &reader)
@@ -20959,7 +20983,7 @@ extension StopLoading {
     }
 
     func encodePageRequest(into writer: inout WireWriter) {
-        writer.writeTag(37)
+        writer.writeTag(38)
         encode(into: &writer)
     }
 
@@ -20982,7 +21006,7 @@ extension StopMediaCapture {
     }
 
     func encodePageRequest(into writer: inout WireWriter) {
-        writer.writeTag(38)
+        writer.writeTag(39)
         encode(into: &writer)
     }
 
@@ -21003,7 +21027,7 @@ extension StopTabSharing {
     }
 
     func encodePageRequest(into writer: inout WireWriter) {
-        writer.writeTag(39)
+        writer.writeTag(40)
         encode(into: &writer)
     }
 
@@ -22511,7 +22535,7 @@ extension WatchPage {
     }
 
     func encodePageRequest(into writer: inout WireWriter) {
-        writer.writeTag(40)
+        writer.writeTag(41)
         encode(into: &writer)
     }
 
@@ -22854,7 +22878,7 @@ extension ZoomPage {
     }
 
     func encodePageRequest(into writer: inout WireWriter) {
-        writer.writeTag(41)
+        writer.writeTag(42)
         encode(into: &writer)
     }
 

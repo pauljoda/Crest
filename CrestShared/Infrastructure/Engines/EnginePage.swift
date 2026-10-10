@@ -290,6 +290,14 @@ final class EnginePage: BrowserFindExecuting {
         pages.request(EnterPictureInPicture(pageID: id))
     }
 
+    /// Shows `caption`, the text the page shows over its video, in the page's
+    /// Picture in Picture window; empty shows none. False when that window
+    /// shows no captions.
+    @discardableResult
+    func showPictureInPictureCaption(_ caption: String) -> Bool {
+        pages.request(ShowPictureInPictureCaption(pageID: id, caption: caption))
+    }
+
     /// Moves the page into window `windowID`, keeping its history and
     /// renderer, before the window shows it.
     func move(to windowID: UUID) -> Bool {

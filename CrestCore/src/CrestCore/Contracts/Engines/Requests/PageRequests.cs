@@ -203,6 +203,11 @@ public sealed record ActivateMediaSession(Guid PageId, string Document) : PageRe
 /// already there.
 public sealed record EnterPictureInPicture(Guid PageId) : PageRequest<bool>;
 
+/// Shows `Caption`, the text the page shows over its video, in the page's
+/// Picture in Picture window; empty shows none. False when the page has no
+/// video in Picture in Picture whose window shows captions.
+public sealed record ShowPictureInPictureCaption(Guid PageId, string Caption) : PageRequest<bool>;
+
 /// Mutes or unmutes the page while its media session is still `Document`'s.
 public sealed record MuteMediaSession(Guid PageId, string Document, bool Muted) : PageRequest<bool>;
 

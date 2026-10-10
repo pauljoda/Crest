@@ -1985,9 +1985,77 @@
  
    // A WebContentsModalDialogManager is necessary to show the Dialog. A manager
    // may not be available during the shutdown process of the WebContents, which
+--- a/content/public/browser/overlay_window.h
++++ b/content/public/browser/overlay_window.h
+@@ -70,6 +70,9 @@
+   virtual void SetSurfaceId(const viz::SurfaceId& surface_id) = 0;
+   virtual void SetPlaybackControlsVisibility(bool is_visible) = 0;
+   virtual void SetImmersiveVideoOptions(const ImmersiveOptions& options) = 0;
++  // Crest: shows `caption`, the text the source page shows over its video, at
++  // the foot of the window. Empty shows none.
++  virtual void SetCaption(const std::u16string& caption) {}
+ };
+ 
+ }  // namespace content
+--- a/content/public/browser/video_picture_in_picture_window_controller.h
++++ b/content/public/browser/video_picture_in_picture_window_controller.h
+@@ -5,6 +5,8 @@
+ #ifndef CONTENT_PUBLIC_BROWSER_VIDEO_PICTURE_IN_PICTURE_WINDOW_CONTROLLER_H_
+ #define CONTENT_PUBLIC_BROWSER_VIDEO_PICTURE_IN_PICTURE_WINDOW_CONTROLLER_H_
+ 
++#include <string>
++
+ #include "base/functional/callback_forward.h"
+ #include "base/time/time.h"
+ #include "build/build_config.h"
+@@ -79,6 +81,10 @@
+       int desired_size_px,
+       MediaSession::GetMediaImageBitmapCallback callback) = 0;
+ 
++  // Crest: shows `caption`, the text the source page shows over its video, in
++  // the window. Empty shows none.
++  virtual void SetCaption(const std::u16string& caption) {}
++
+   // Called to set the callback to notify the observers that window has been
+   // created.
+   virtual void SetOnWindowCreatedNotifyObserversCallback(
+--- a/content/browser/picture_in_picture/video_picture_in_picture_window_controller_impl.h
++++ b/content/browser/picture_in_picture/video_picture_in_picture_window_controller_impl.h
+@@ -81,6 +81,7 @@
+   void PreviousSlide() override;
+   void NextSlide() override;
+   void SeekTo(base::TimeDelta time) override;
++  void SetCaption(const std::u16string& caption) override;
+   void SetOnWindowCreatedNotifyObserversCallback(
+       base::OnceClosure on_window_created_notify_observers_callback) override;
+ 
+--- a/content/browser/picture_in_picture/video_picture_in_picture_window_controller_impl.cc
++++ b/content/browser/picture_in_picture/video_picture_in_picture_window_controller_impl.cc
+@@ -484,6 +484,13 @@
+   active_session_->GetMediaPlayerRemote()->RequestSeekTo(time);
+ }
+ 
++void VideoPictureInPictureWindowControllerImpl::SetCaption(
++    const std::u16string& caption) {
++  if (window_) {
++    window_->SetCaption(caption);
++  }
++}
++
+ void VideoPictureInPictureWindowControllerImpl::MediaSessionInfoChanged(
+     const media_session::mojom::MediaSessionInfoPtr& info) {
+   if (!info)
 --- a/chrome/browser/ui/views/overlay/video_overlay_window_views.h
 +++ b/chrome/browser/ui/views/overlay/video_overlay_window_views.h
-@@ -119,6 +119,7 @@
+@@ -111,6 +111,7 @@
+   void SetPlaybackControlsVisibility(bool is_visible) override;
+   void SetImmersiveVideoOptions(
+       const content::ImmersiveOptions& options) override;
++  void SetCaption(const std::u16string& caption) override;
+ 
+   // views::Widget:
+   bool IsActive() const override;
+@@ -119,6 +120,7 @@
    gfx::Size GetMinimumSize() const override;
    gfx::Size GetMaximumSize() const override;
    void OnNativeWidgetMove() override;
@@ -1995,9 +2063,37 @@
    void OnNativeWidgetDestroying() override;
    void OnNativeWidgetDestroyed() override;
    void OnNativeWidgetAddedToCompositor() override;
+@@ -376,6 +378,10 @@
+ 
+   void OnLiveCaptionButtonPressed();
+   void SetLiveCaptionDialogVisibility(bool wanted_visibility);
++
++  // Crest: places the page's caption at the foot of the video, above the
++  // bottom controls while they show.
++  void LayoutCaption(bool above_controls);
+ 
+   void OnFaviconReceived(const SkBitmap& image);
+   void UpdateFavicon(const gfx::ImageSkia& favicon);
+@@ -498,6 +504,8 @@
+   raw_ptr<global_media_controls::MediaProgressView> progress_view_ = nullptr;
+   raw_ptr<views::Label> timestamp_ = nullptr;
+   raw_ptr<views::Label> live_status_ = nullptr;
++  // Crest: the caption the source page shows over its video.
++  raw_ptr<views::Label> caption_ = nullptr;
+   raw_ptr<OverlayWindowLiveCaptionButton> live_caption_button_ = nullptr;
+   raw_ptr<OverlayWindowLiveCaptionDialog> live_caption_dialog_ = nullptr;
+   raw_ptr<AutoPipSettingOverlayView> overlay_view_ = nullptr;
 --- a/chrome/browser/ui/views/overlay/video_overlay_window_views.cc
 +++ b/chrome/browser/ui/views/overlay/video_overlay_window_views.cc
-@@ -24,6 +24,7 @@
+@@ -4,6 +4,7 @@
+ 
+ #include "chrome/browser/ui/views/overlay/video_overlay_window_views.h"
+ 
++#include <algorithm>
+ #include <memory>
+ #include <string>
+ 
+@@ -24,6 +25,7 @@
  #include "chrome/browser/picture_in_picture/video_overlay_window.h"
  #include "chrome/browser/profiles/profile.h"
  #include "chrome/browser/ui/browser_init_state.h"
@@ -2005,7 +2101,7 @@
  #include "chrome/browser/ui/browser_window/public/browser_window_interface.h"
  #include "chrome/browser/ui/browser_window/public/global_browser_collection.h"
  #include "chrome/browser/ui/color/chrome_color_id.h"
-@@ -589,6 +590,13 @@
+@@ -589,6 +591,13 @@
    views::Widget::OnNativeWidgetMove();
  }
  
@@ -2019,6 +2115,107 @@
  void VideoOverlayWindowViews::OnNativeWidgetSizeChanged(
      const gfx::Size& new_size) {
    // Hide the controls when the window is being resized. The controls will
+@@ -865,6 +874,7 @@
+                                                                       : 0.0);
+     GetControlsContainerView()->SetVisible(wanted_visibility);
+   }
++  LayoutCaption(wanted_visibility);
+ }
+ 
+ void VideoOverlayWindowViews::UpdateControlsBounds() {
+@@ -1232,11 +1242,34 @@
+       views::CreateRoundedRectBackground(ui::kColorSysOnTonalContainer, 4));
+   live_status->SetVisible(false);
+ 
++  // Crest: the caption the source page shows over its video. It sits over the
++  // video and under the controls, and stays when the controls fade.
++  auto caption = std::make_unique<views::Label>(std::u16string(),
++                                                views::style::CONTEXT_LABEL,
++                                                views::style::STYLE_BODY_2);
++  caption->SetMultiLine(true);
++  caption->SetMaxLines(3);
++  caption->SetHorizontalAlignment(gfx::ALIGN_CENTER);
++  caption->SetAutoColorReadabilityEnabled(false);
++  caption->SetSubpixelRenderingEnabled(false);
++  caption->SetEnabledColor(SK_ColorWHITE);
++  caption->SetBackgroundColor(SK_ColorTRANSPARENT);
++  caption->SetBorder(views::CreateEmptyBorder(gfx::Insets::VH(2, 8)));
++  caption->SetBackground(
++      views::CreateRoundedRectBackground(SkColorSetA(SK_ColorBLACK, 0xBF), 4));
++  caption->SetPaintToLayer(ui::LAYER_TEXTURED);
++  caption->layer()->SetFillsBoundsOpaquely(false);
++  caption->layer()->SetName("CaptionView");
++  caption->SetVisible(false);
++
+   auto live_caption_button = std::make_unique<OverlayWindowLiveCaptionButton>(
+       base::BindRepeating(&VideoOverlayWindowViews::OnLiveCaptionButtonPressed,
+                           base::Unretained(this)));
+   live_caption_button->SetSize(kActionButtonSize);
+   live_caption_button->SetIsLiveCaptionDialogOpen(false);
++  // Crest: Live Caption needs a speech service this browser does not have.
++  live_caption_button->SetVisible(
++      base::FeatureList::IsEnabled(media::kLiveCaption));
+ 
+   auto live_caption_dialog = std::make_unique<OverlayWindowLiveCaptionDialog>(
+       Profile::FromBrowserContext(
+@@ -1333,6 +1366,7 @@
+       AddChildView(&view_holder_, std::move(controls_top_scrim_view));
+   controls_bottom_scrim_view_ =
+       AddChildView(&view_holder_, std::move(controls_bottom_scrim_view));
++  caption_ = AddChildView(&view_holder_, std::move(caption));
+   title_view_ = AddChildView(&view_holder_, std::move(title_view));
+   controls_container_view_ =
+       AddChildView(&view_holder_, std::move(controls_container_view));
+@@ -1483,6 +1517,7 @@
+   gfx::Rect larger_window_bounds = gfx::Rect(GetBounds().size());
+   larger_window_bounds.Inset(-1);
+   controls_scrim_view_->SetBoundsRect(larger_window_bounds);
++  LayoutCaption(AreControlsVisible());
+ 
+   WindowQuadrant quadrant = GetCurrentWindowQuadrant(GetBounds(), controller_);
+   close_controls_view_->SetPosition(GetBounds().size(), quadrant);
+@@ -1679,7 +1714,9 @@
+ 
+   if (toggle_mute_button_) {
+     toggle_mute_button_->SetPosition(
+-        {live_caption_button_bounds.x() - kActionButtonSize.width() - 4,
++        {live_caption_button_->GetVisible()
++             ? live_caption_button_bounds.x() - kActionButtonSize.width() - 4
++             : live_caption_button_bounds.x(),
+          live_caption_button_bounds.y()});
+   }
+ 
+@@ -2001,6 +2038,30 @@
+   NOTREACHED();
+ }
+ 
++void VideoOverlayWindowViews::SetCaption(const std::u16string& caption) {
++  caption_->SetText(caption);
++  caption_->SetVisible(!caption.empty());
++  LayoutCaption(AreControlsVisible());
++}
++
++void VideoOverlayWindowViews::LayoutCaption(bool above_controls) {
++  // Layout can run before the views are set up.
++  if (!caption_) {
++    return;
++  }
++  constexpr int kCaptionMargin = 8;
++  constexpr int kBottomControlsHeight = 64;
++  const gfx::Size window = GetBounds().size();
++  const int max_width = std::max(0, window.width() - 2 * kCaptionMargin);
++  gfx::Size size = caption_->GetPreferredSize({max_width, {}});
++  size.set_width(std::min(size.width(), max_width));
++  const int bottom = window.height() - kCaptionMargin -
++                     (above_controls ? kBottomControlsHeight : 0);
++  caption_->SetBounds((window.width() - size.width()) / 2,
++                      std::max(0, bottom - size.height()), size.width(),
++                      size.height());
++}
++
+ void VideoOverlayWindowViews::OnNativeWidgetDestroying() {
+   views::Widget::OnNativeWidgetDestroying();
+   MaybeUnregisterFrameSinkHierarchy();
 --- a/third_party/blink/public/platform/media/key_system_config_selector.h
 +++ b/third_party/blink/public/platform/media/key_system_config_selector.h
 @@ -42,6 +42,10 @@

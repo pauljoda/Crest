@@ -266,6 +266,7 @@ class EngineBinding {
   bool Handle(const engine::WatchPage& request);
   engine::PageMediaState Handle(const engine::PageMedia& request);
   bool Handle(const engine::EnterPictureInPicture& request);
+  bool Handle(const engine::ShowPictureInPictureCaption& request);
   bool Handle(const engine::ActivateMediaSession& request);
   bool Handle(const engine::PerformMediaAction& request);
   bool Handle(const engine::MuteMediaSession& request);

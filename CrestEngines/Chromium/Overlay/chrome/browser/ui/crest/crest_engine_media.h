@@ -77,6 +77,9 @@ class PageMedia final : public media_session::mojom::MediaSessionObserver {
 
   // What the platform asks of the session.
   bool EnterPictureInPicture();
+  // Shows `caption` in the page's own video Picture in Picture window; empty
+  // shows none.
+  bool ShowPictureInPictureCaption(const std::string& caption);
   // Ends the page's own Picture in Picture; one of another page stays.
   bool ExitPictureInPicture();
   bool Activate(const std::string& document);

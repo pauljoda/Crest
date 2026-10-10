@@ -167,6 +167,9 @@ class EnginePage final : public content::WebContentsObserver,
   // This page began or stopped sharing another tab.
   void SharingChanged(bool sharing);
   bool EnterPictureInPicture();
+  // Shows `caption`, the text the page shows over its video, in the page's
+  // Picture in Picture window; empty shows none.
+  bool ShowPictureInPictureCaption(const std::string& caption);
   // Ends the page's own Picture in Picture, as the core asks once a window
   // shows the page again, returning the video to its place in the page.
   bool ExitPictureInPicture();

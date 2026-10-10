@@ -1279,6 +1279,10 @@ bool EnginePage::EnterPictureInPicture() {
   return media_ && media_->EnterPictureInPicture();
 }
 
+bool EnginePage::ShowPictureInPictureCaption(const std::string& caption) {
+  return media_ && media_->ShowPictureInPictureCaption(caption);
+}
+
 bool EnginePage::ExitPictureInPicture() {
   return media_ && media_->ExitPictureInPicture();
 }

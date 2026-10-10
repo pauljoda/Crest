@@ -235,13 +235,29 @@
     "before": "fa12f8d6aee2386ad8d3261a521830b22c56b22140a067f291febe46ee308794",
     "after": "0e5b7c1fd995c3a6d630d4514821121cd7707f8ac6ad6c1c367e63ec5aaec975"
   },
+  "content/public/browser/overlay_window.h": {
+    "before": "7eb3436c76c40a6077120eda92f5b049c3f0a88269fa39bb61a7cf88b22adbbf",
+    "after": "5d63f3f93932ec3af75f4af6236fc0ae444c7536b5787c8bde4b4ea27ab22dd1"
+  },
+  "content/public/browser/video_picture_in_picture_window_controller.h": {
+    "before": "413b259a9199e766cadacb3b4eb82ce154ebc9b6c96c3300b8d50c7eb0d5de47",
+    "after": "b9833cc23510f8800933ef351bdeb0e2836ab49e3b864027093ad987cd3d5f08"
+  },
+  "content/browser/picture_in_picture/video_picture_in_picture_window_controller_impl.h": {
+    "before": "d17766d1dcc09d6ef6fc9ce51a83598d41386f334097de8a3b31df83baa1c253",
+    "after": "1ba7e704f70accd8b54d838167d6a90baaebcc7585b27541d0bf334197ff6166"
+  },
+  "content/browser/picture_in_picture/video_picture_in_picture_window_controller_impl.cc": {
+    "before": "1f15060fb8bbf332372331149a99494b139121246b8cf6f4dac6d2e6f613338b",
+    "after": "17bc5136a6c503dbf57b0950a20029e5d118a4e72623a95e1c609c86c28b5487"
+  },
   "chrome/browser/ui/views/overlay/video_overlay_window_views.h": {
     "before": "ba49e1b9b9c063b968b55b6ba6050a519d421e88e5476fd22beb943877c42d6c",
-    "after": "e7d814c1bee3f804040feb248a81cea4b690c622eff9f590d8ffcf1daefac824"
+    "after": "e5b0acc21252479a246b5649381569cb9b953c161bc4983406e4c3cb1385ab09"
   },
   "chrome/browser/ui/views/overlay/video_overlay_window_views.cc": {
     "before": "819eecd0269e5e2c6aed8b25c36d6818b23a545f29b30b78c72c4382e57057a1",
-    "after": "d7cde41fa5a23b6c7a6109b788307d2d47c22bea62cc2ac8c942404292b53fbe"
+    "after": "db3814da2f83b3096dd84a12b9dbe87dee6bb7e7159cd9d9d3d7d6fb0c89643a"
   },
   "third_party/blink/public/platform/media/key_system_config_selector.h": {
     "before": "ac960b2a40c65ff1c9b640e53ed6ed6e3a9ccf53d7a5607033d0cf59201a3d65",

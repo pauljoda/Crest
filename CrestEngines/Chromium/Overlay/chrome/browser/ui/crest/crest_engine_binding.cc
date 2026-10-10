@@ -1062,6 +1062,11 @@ bool EngineBinding::Handle(const engine::EnterPictureInPicture& request) {
   return page && page->EnterPictureInPicture();
 }
 
+bool EngineBinding::Handle(const engine::ShowPictureInPictureCaption& request) {
+  EnginePage* page = Find(GuidText(request.page_id));
+  return page && page->ShowPictureInPictureCaption(request.caption);
+}
+
 bool EngineBinding::Handle(const engine::ActivateMediaSession& request) {
   EnginePage* page = Find(GuidText(request.page_id));
   return page && page->ActivateMediaSession(request.document);

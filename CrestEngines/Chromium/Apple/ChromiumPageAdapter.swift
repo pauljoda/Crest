@@ -62,6 +62,12 @@
             native.menuHost = page
             native.linkDrag = linkDrag
             linkDrag?.observeNativeMouseDown()
+            // Chromium's Picture in Picture window draws the captions the page
+            // shows over its floating video.
+            _ = native.install(BrowserPictureInPictureCaptionBridge.script) { [enginePage] message in
+                guard let caption = BrowserPictureInPictureCaptionBridge.caption(in: message) else { return }
+                enginePage.showPictureInPictureCaption(caption)
+            }
         }
 
         func detach(from page: BrowserPage) {
