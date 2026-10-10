@@ -6,40 +6,48 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.7.20</title>
-            <pubDate>Thu, 08 Oct 2026 16:09:11 +0000</pubDate>
+            <title>0.7.31</title>
+            <pubDate>Sat, 10 Oct 2026 14:58:00 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>nightly</sparkle:channel>
-            <sparkle:version>1204</sparkle:version>
-            <sparkle:shortVersionString>0.7.20</sparkle:shortVersionString>
+            <sparkle:version>1222</sparkle:version>
+            <sparkle:shortVersionString>0.7.31</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
+Showing the 12 most recent highlights from 16 user-facing changes.
+
 ### New
 
-- Choose how wide the edge of the window is that shows a hidden sidebar, in Appearance settings. The edge lights up while you adjust it.
+- Sharing your screen on a page that runs in Chromium now lets you share a single tab, with its sound, as well as a window or your whole screen.
+- The command palette puts the best match first, ranks the pages and tabs you use most and most recently, and learns which result you choose for what you type. It fills in sites you visit, including those that start with www, and Return opens what it filled in. Before you type it lists your recent tabs, so Return takes you back to the one you were on. Start typing a provider’s name or shortcut, such as yt for YouTube or claude, to see it under the field, and press Tab to search that site or ask that assistant directly. Hold Command, Shift or Option with Return to open a result in the background, in Split View or in a Quick Window. The new Search section in Settings sets one default search for every Space and one for private windows, turns search engines, AI assistants and websites on or off with options of their own, such as hiding Google’s AI Overviews, adds your own, and chooses what the palette shows, how many of each, and in what order.
 
 ### Improved
 
-- Setup no longer looks through other browsers’ data when Crest first opens. It reads a browser only when you choose it to import, or everything when you press Scan for more.
-- A pinned tab's menu now offers Unpin Tab, and a selection of pinned tabs offers Unpin Tabs.
+- On Mac, tabs that use Chromium keep their back and forward history when Crest or macOS updates.
+- Sync settings say Up to date only when every change has reached iCloud, and Waiting to upload while some haven’t yet.
 
 ### Fixed
 
-- The strip along the top of a full-screen window no longer flickers when the sidebar opens.
-- Crest on iPhone and iPad opens again instead of closing as soon as it starts.
-- Allowing a site to use your camera or microphone no longer quits Crest.
+- On Mac, Show History now opens a hidden sidebar, as Show Archive and Show Downloads do. The History, Archive and Downloads button now sits on the page side of the sidebar, whichever side the sidebar is on, so its shortcuts open beside the sidebar instead of over it, in right-to-left languages too.
+- On Mac, tabs that use Chromium keep their back and forward history when you quit and reopen Crest, as WebKit tabs already did.
+- On Mac, quitting Crest no longer creates an empty Chromium folder in Application Support, where another Chromium browser keeps its profile.
+- On Mac, Crest reopens the windows that were open when you quit, instead of sometimes bringing back windows you had already closed.
+- Chromium is updated to 154.0.8037.97 with upstream security and compatibility fixes.
+- iCloud sync no longer stops on your other devices after you move a tab to another Space. A device that stopped picks up again once all your devices are on this version.
+- On iPhone and iPad, Sync Now and Pull from iCloud each have their own row in Sync settings, so each one responds to a tap.
+- iCloud sync catches up each time Crest opens. Changes made on your other devices while Crest was closed arrive, and changes waiting on this device upload, without tapping Sync Now.
 
 ---
 
 Nightly builds contain the newest changes and may be less reliable than stable releases.
 
-[View all changes](https://github.com/pauljoda/Crest/compare/32052db7bdb0c86ca33adb788c8ac301de5039f0...17794c4b8261083a62000a4f213614a20435a456) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/nightly-0.7.20-2026-10-08-1204-r204.1/Installer-Crest-0.7.20-nightly-2026-10-08-17794c4-arm64.dmg)
+[View all changes](https://github.com/pauljoda/Crest/compare/17794c4b8261083a62000a4f213614a20435a456...c3e712f200fb1fc90935c09eec48e1f41ae1c330) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/nightly-0.7.31-2026-10-10-1222-r222.1/Installer-Crest-0.7.31-nightly-2026-10-10-c3e712f-arm64.dmg)
 
 [Browse Nightly releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Nightly+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/nightly-0.7.20-2026-10-08-1204-r204.1/Installer-Crest-0.7.20-nightly-2026-10-08-17794c4-arm64.dmg" length="215997052" type="application/octet-stream" sparkle:edSignature="8SYy+SOYNySvTlm2QGjCy5JxmIoVBgfGriTi2W6P/PEP3N5K09sIrogKgnZfpWwg0GiZ40weYIfVOT1doSMyBA=="/>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/nightly-0.7.31-2026-10-10-1222-r222.1/Installer-Crest-0.7.31-nightly-2026-10-10-c3e712f-arm64.dmg" length="216686716" type="application/octet-stream" sparkle:edSignature="WqyM8wOQkQH/P0ywHKOyb0357icwzPZ1zSsKjTf/kAy1CznFNf6YCORFKfsHJRbycbE82dnUzEVp9siyBaS6AA=="/>
         </item>
         <item>
             <title>0.7.2</title>
@@ -106,6 +114,6 @@ Nightly builds contain the newest changes and may be less reliable than stable r
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: GksxvikCwjaUhxacHHbjKQxkQcDmTn77AEnhPAd9JYeZPEX8NZn24rAG3UjwHASEhpR8BTxMptAYOm8h/9yFBw==
-length: 7043
+edSignature: KqOhlyU0Brpw0WrZncpeEgtNwjQMFruVrj8CsZtKWpgH9p3K3YCY+sWEdcGm6YWJAzWesrhEWT4dXWqi0kjxAQ==
+length: 9051
 -->

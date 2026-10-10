@@ -3,6 +3,6 @@
   "channels": {
     "stable": "window-focus-bridge-release-format",
     "development": "command-palette-ranks-and-searches-sites",
-    "nightly": "pinned-tab-unpin-menu"
+    "nightly": "command-palette-ranks-and-searches-sites"
   }
 }
