@@ -41,6 +41,13 @@ final class BrowserMacAutomation {
         }
     }
 
+    /// A question waiting on the person about one tool, and what closes it
+    /// when automation goes off before they answer.
+    private struct Approval {
+        let answer: Task<Bool, Never>
+        let dismissal: BrowserPromptDismissal
+    }
+
     // MARK: - Variables
 
     unowned let application: BrowserMacApplication
@@ -51,7 +58,7 @@ final class BrowserMacAutomation {
     private var sessions: [ObjectIdentifier: Session] = [:]
     /// The questions waiting on the person, by tool, so a tool that connects
     /// again while it is asked about is asked once.
-    private var approvals: [String: Task<Bool, Never>] = [:]
+    private var approvals: [String: Approval] = [:]
     private let dialogs = BrowserDialogPresenter()
     private var stopped = false
 
@@ -121,7 +128,7 @@ final class BrowserMacAutomation {
         listener?.stop()
         listener = nil
         for session in sessions.values { end(session) }
-        for approval in approvals.values { approval.cancel() }
+        for approval in approvals.values { approval.dismissal.dismiss() }
     }
 
     // MARK: - Actions - Connections
@@ -224,14 +231,18 @@ final class BrowserMacAutomation {
     }
 
     /// Whether the person lets `tool` control Crest. A tool asked about
-    /// already waits for the same answer.
+    /// already waits for the same answer, and turning automation off closes
+    /// the question unanswered.
     private func approve(_ tool: AutomationTool) async -> Bool {
         let key = tool.name + "\u{0}" + tool.path
-        if let asking = approvals[key] { return await asking.value }
-        let asking = Task { [dialogs] in await dialogs.approveAutomationTool(name: tool.name, path: tool.path) }
-        approvals[key] = asking
-        let approved = await asking.value
+        if let asking = approvals[key] { return await asking.answer.value && !asking.dismissal.isDismissed }
+        let dismissal = BrowserPromptDismissal()
+        let answer = Task { [dialogs] in
+            await dialogs.approveAutomationTool(name: tool.name, path: tool.path, dismissal: dismissal)
+        }
+        approvals[key] = Approval(answer: answer, dismissal: dismissal)
+        let approved = await answer.value
         approvals[key] = nil
-        return approved && !asking.isCancelled
+        return approved && !dismissal.isDismissed
     }
 }

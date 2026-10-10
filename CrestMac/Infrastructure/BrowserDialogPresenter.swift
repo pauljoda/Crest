@@ -423,8 +423,9 @@ final class BrowserDialogPresenter {
 
     /// Whether the tool `name`, which the program at `path` runs, may control
     /// Crest. Crest comes forward, since the person is likely in the tool's
-    /// terminal when it asks, and declining is the default.
-    func approveAutomationTool(name: String, path: String) async -> Bool {
+    /// terminal when it asks, and declining is the default. A `dismissal`
+    /// closes the question unanswered.
+    func approveAutomationTool(name: String, path: String, dismissal: BrowserPromptDismissal? = nil) async -> Bool {
         await withCheckedContinuation { continuation in
             let alert = NSAlert()
             alert.messageText = String(localized: "Allow “\(name)” to control Crest?")
@@ -435,7 +436,7 @@ final class BrowserDialogPresenter {
             alert.alertStyle = .warning
             alert.addButton(withTitle: String(localized: "Don’t Allow"))
             alert.addButton(withTitle: String(localized: "Allow"))
-            present(alert, comesForward: true) { response in
+            present(alert, comesForward: true, dismissal: dismissal) { response in
                 continuation.resume(returning: response == .alertSecondButtonReturn)
             }
         }

@@ -11,7 +11,7 @@ Open **Crest → Settings** on Mac. On iPhone and iPad, open Settings from the b
 
 On Mac and wider iPad windows, Settings opens as a browser tab and keeps your place when you switch away. In compact layouts, including iPhone, it opens as a dismissible sheet while your current page stays selected.
 
-On Mac, the Settings sidebar lists General, Tabs, Search, Appearance, Links, Engines, Shortcuts, Sync, and Privacy, then each of your Spaces by name and crest, then Advanced and About. iPhone and iPad keep their own layout; see [iPhone and iPad](#iphone-and-ipad).
+On Mac, the Settings sidebar lists General, Tabs, Search, Appearance, Links, Engines, Shortcuts, Sync, and Privacy, then each of your Spaces by name and crest, then Automation, Advanced and About. iPhone and iPad keep their own layout; see [iPhone and iPad](#iphone-and-ipad).
 
 ## General
 

@@ -39,7 +39,7 @@ Crest listens on a Unix domain socket while automation is on:
 ~/Library/Application Support/Crest/Automation.sock
 ```
 
-**Settings > Automation** shows the exact path and copies it. Only your own user can connect. Each message is one JSON-RPC 2.0 object on its own line, in both directions. Crest answers a connection's requests in the order it sends them.
+**Settings > Automation** shows the exact path and copies it. Only your own user can connect. Each message is one JSON-RPC 2.0 object on its own line, in both directions. Give each request an `id`, a whole number or a string, which its answer repeats. Crest answers a connection's requests in the order it sends them.
 
 ### Hello
 
