@@ -6,29 +6,29 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.7.30</title>
-            <pubDate>Fri, 09 Oct 2026 21:40:51 +0000</pubDate>
+            <title>0.7.31</title>
+            <pubDate>Sat, 10 Oct 2026 12:13:07 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>development</sparkle:channel>
-            <sparkle:version>1218</sparkle:version>
-            <sparkle:shortVersionString>0.7.30</sparkle:shortVersionString>
+            <sparkle:version>1220</sparkle:version>
+            <sparkle:shortVersionString>0.7.31</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
-### Maintenance
+### New
 
-- Reliability and internal improvements.
+- The command palette puts the best match first, ranks the pages and tabs you use most and most recently, and learns which result you choose for what you type. It fills in sites you visit, including those that start with www, and Return opens what it filled in. Before you type it lists your recent tabs, so Return takes you back to the one you were on. Start typing a provider’s name or shortcut, such as yt for YouTube or claude, to see it under the field, and press Tab to search that site or ask that assistant directly. Hold Command, Shift or Option with Return to open a result in the background, in Split View or in a Quick Window. The new Search section in Settings sets one default search for every Space and one for private windows, turns search engines, AI assistants and websites on or off with options of their own, such as hiding Google’s AI Overviews, adds your own, and chooses what the palette shows, how many of each, and in what order.
 
 ---
 
 Development builds contain the newest changes and may be less reliable than stable releases.
 
-[View all changes](https://github.com/pauljoda/Crest/compare/bf4f005f58fffb3f363dfc92949bae76db9dcd7e...3eace036f68386fa482bf8a02e218adde4fa21e1) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.7.30-2026-10-09-1218-r218.1/Installer-Crest-0.7.30-development-2026-10-09-3eace03-arm64.dmg)
+[View all changes](https://github.com/pauljoda/Crest/compare/3eace036f68386fa482bf8a02e218adde4fa21e1...c3e712f200fb1fc90935c09eec48e1f41ae1c330) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.7.31-2026-10-10-1220-r220.1/Installer-Crest-0.7.31-development-2026-10-10-c3e712f-arm64.dmg)
 
 [Browse Development releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Development+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.7.30-2026-10-09-1218-r218.1/Installer-Crest-0.7.30-development-2026-10-09-3eace03-arm64.dmg" length="216061060" type="application/octet-stream" sparkle:edSignature="tKw8HUZszXIL4sUXlXdBeZs2pROav6DwhTaH/I7SCqEtB2SOqqLb++g5pgwBuWEBOm8d5wg5YojKTjEJvk4TBg=="/>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.7.31-2026-10-10-1220-r220.1/Installer-Crest-0.7.31-development-2026-10-10-c3e712f-arm64.dmg" length="216624772" type="application/octet-stream" sparkle:edSignature="NQFOAOpDKuzF+7HqfIP1wOWjI5DTw89mDQGYY4lPCnf0nTZ59lAXSdh/s6ZLk7TByxNpPYCuWGY2EqPJfZQvDA=="/>
         </item>
         <item>
             <title>0.6.484</title>
@@ -60,6 +60,6 @@ Development builds contain the newest changes and may be less reliable than stab
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: +4l8X3iLBh5BiDlKZHBRtbUKLxyq1kD3F9gy3Ou3zsUBZ+2WR9cNjAZsSpnru5SzQSZc2Yhm/NzkGgGK1XKxCQ==
-length: 3937
+edSignature: GS09RDCxjp6vKAxCzcRiVXtEsumzpX7QQ5In6h0KER079nCGyIdJyaCQcX+jFLJZeI6D1CnIAPuqvBHwSC42Dg==
+length: 4847
 -->
