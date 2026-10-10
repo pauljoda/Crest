@@ -164,7 +164,8 @@ final class BrowserCloudSyncControllerTests: XCTestCase {
         XCTAssertFalse(transport.awaitsAccountDecision)
         XCTAssertTrue(transport.overwritesCloud)
         XCTAssertNil(controller.conflict)
-        XCTAssertEqual(controller.phase, .ready)
+        // The staged overwrite waits for the transport, which this test never lets upload.
+        XCTAssertEqual(controller.phase, .waitingToUpload)
         XCTAssertEqual(factory.transports.count, 1)
     }
 
