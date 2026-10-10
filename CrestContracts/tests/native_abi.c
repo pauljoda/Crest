@@ -105,6 +105,7 @@ static size_t session_seed(uint8_t* output, size_t capacity, uint8_t deleted) {
         0,             /* the first accent */
         0,             /* no branding, so the accent's legacy look */
         0, 0, 0, 0,    /* no engine chosen, no custom engine, no custom providers, no suggestions */
+        0, 0,          /* its own search and suggestions, not the device's defaults */
         0, 0, 0, 0, 0, /* the first tab cleanup, content blocking, and history, archive and download retention */
         1, 1, 0,       /* offers to save passwords and sync them, not to the system's */
         0, 1, 0        /* open, saved tabs expanded, never collapsed */
