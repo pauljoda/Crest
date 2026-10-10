@@ -158,6 +158,10 @@ internal sealed class SqliteConnection : IDisposable {
         Execute("CREATE TABLE IF NOT EXISTS device_setup (id INTEGER PRIMARY KEY CHECK (id = 0), completed INTEGER NOT NULL)");
         Execute("CREATE TABLE IF NOT EXISTS device_tab_group (id TEXT PRIMARY KEY, space TEXT NOT NULL, engine TEXT NOT NULL, "
             + "title TEXT NOT NULL, color TEXT NOT NULL, position INTEGER NOT NULL)");
+        Execute("CREATE TABLE IF NOT EXISTS device_automation (id INTEGER PRIMARY KEY CHECK (id = 0), is_on INTEGER NOT NULL)");
+        Execute("CREATE TABLE IF NOT EXISTS device_automation_space (space TEXT PRIMARY KEY, position INTEGER NOT NULL)");
+        Execute("CREATE TABLE IF NOT EXISTS device_automation_tool (name TEXT NOT NULL, path TEXT NOT NULL, position INTEGER NOT NULL, "
+            + "PRIMARY KEY (name, path))");
     }
 
     /// Everything the device store holds. A row whose identities or names do
@@ -165,7 +169,8 @@ internal sealed class SqliteConnection : IDisposable {
     public DeviceRecords ReadDevice() => new(ReadWindows(), ReadReopening(), ReadSitePermissions(), ReadSiteEngines(), ReadShortcuts(),
         ReadLinks(), ReadSetupDraft(), ReadSetupCompleted(), ReadAdoptions(), ReadTabGroups(), ReadDefaultEngine()) {
         PaletteMemories = ReadPaletteMemories(),
-        SearchCatalog = ReadSearchCatalog()
+        SearchCatalog = ReadSearchCatalog(),
+        Automation = ReadAutomation()
     };
 
     /// The search catalog the store keeps, or null when it keeps none or it does not read.
@@ -311,6 +316,22 @@ internal sealed class SqliteConnection : IDisposable {
         return links with { Routes = routes, RememberedSites = sites };
     }
 
+    /// The automation preferences: off, reaching nothing and trusting no tool
+    /// for a device that never chose any. A Space or tool that does not read
+    /// is left out.
+    private AutomationPreferences ReadAutomation() {
+        bool isOn = false;
+        Rows("SELECT is_on FROM device_automation", statement => isOn = Sqlite.sqlite3_column_int(statement, 0) != 0);
+        var spaces = new List<Guid>();
+        Rows("SELECT space FROM device_automation_space ORDER BY position", statement => {
+            if (Identity(statement, 0) is { } space) spaces.Add(space);
+        });
+        var tools = new List<AutomationTool>();
+        Rows("SELECT name, path FROM device_automation_tool ORDER BY position",
+            statement => tools.Add(new(Sqlite.ColumnText(statement, 0), Sqlite.ColumnText(statement, 1))));
+        return new(isOn, spaces, tools);
+    }
+
     /// The unfinished manual setup, or null when the store keeps none or it
     /// does not read.
     private KeptSetupDraft? ReadSetupDraft() {
@@ -352,6 +373,7 @@ internal sealed class SqliteConnection : IDisposable {
         if (written is null || !records.TabGroups.SequenceEqual(written.TabGroups)) WriteTabGroups(records.TabGroups);
         WritePaletteMemories(records.PaletteMemories, written?.PaletteMemories);
         if (written is null || !ReferenceEquals(records.SearchCatalog, written.SearchCatalog)) WriteSearchCatalog(records.SearchCatalog);
+        if (written is null || !records.Automation.Equals(written.Automation)) WriteAutomation(records.Automation);
     }
 
     /// The search catalog as its one document, or no row before it was first restored.
@@ -373,6 +395,32 @@ internal sealed class SqliteConnection : IDisposable {
             Insert("INSERT OR REPLACE INTO device_palette(space, document) VALUES(?,?)", statement => {
                 Bind(statement, 1, Spelling(space));
                 Bind(statement, 2, PaletteMemoryDocument.Write(memory));
+            });
+        }
+    }
+
+    /// The automation preferences: whether they are on, and the allowed
+    /// Spaces and approved tools in order.
+    private void WriteAutomation(AutomationPreferences automation) {
+        foreach (var table in new[] { "device_automation", "device_automation_space", "device_automation_tool" })
+            Execute($"DELETE FROM {table}");
+        Insert("INSERT INTO device_automation(id, is_on) VALUES(0,?)",
+            statement => Checked(Sqlite.sqlite3_bind_int64(statement, 1, automation.IsOn ? 1 : 0)));
+        for (int position = 0; position < automation.SpaceIds.Count; position++) {
+            var space = automation.SpaceIds[position];
+            int index = position;
+            Insert("INSERT INTO device_automation_space(space, position) VALUES(?,?)", statement => {
+                Bind(statement, 1, Spelling(space));
+                Checked(Sqlite.sqlite3_bind_int64(statement, 2, index));
+            });
+        }
+        for (int position = 0; position < automation.Tools.Count; position++) {
+            var tool = automation.Tools[position];
+            int index = position;
+            Insert("INSERT INTO device_automation_tool(name, path, position) VALUES(?,?,?)", statement => {
+                Bind(statement, 1, tool.Name);
+                Bind(statement, 2, tool.Path);
+                Checked(Sqlite.sqlite3_bind_int64(statement, 3, index));
             });
         }
     }

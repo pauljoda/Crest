@@ -110,6 +110,7 @@ internal sealed partial class Device {
         defaultEngine = records.DefaultEngine;
         shortcuts = records.Shortcuts;
         links = records.Links;
+        automation = records.Automation;
         keptSetupDraft = platform.KeepsSetupDraft ? records.SetupDraft : null;
         setupCompleted = records.SetupCompleted;
         adopted.UnionWith(records.Adopted);
@@ -338,7 +339,8 @@ internal sealed partial class Device {
         [.. keptPermissions.PersistentRecords], [.. keptEngines.Choices], shortcuts, links, keptSetupDraft, setupCompleted,
         new HashSet<DeviceAdoption>(adopted), [.. keptTabGroups], defaultEngine) {
         PaletteMemories = paletteMemories,
-        SearchCatalog = searchCatalog
+        SearchCatalog = searchCatalog,
+        Automation = automation
     };
 
     #endregion

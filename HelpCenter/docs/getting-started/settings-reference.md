@@ -11,7 +11,7 @@ Open **Crest → Settings** on Mac. On iPhone and iPad, open Settings from the b
 
 On Mac and wider iPad windows, Settings opens as a browser tab and keeps your place when you switch away. In compact layouts, including iPhone, it opens as a dismissible sheet while your current page stays selected.
 
-On Mac, the Settings sidebar lists General, Tabs, Search, Appearance, Links, Engines, Shortcuts, Sync, and Privacy, then each of your Spaces by name and crest, then Advanced and About. iPhone and iPad keep their own layout; see [iPhone and iPad](#iphone-and-ipad).
+On Mac, the Settings sidebar lists General, Tabs, Search, Appearance, Links, Engines, Shortcuts, Sync, and Privacy, then each of your Spaces by name and crest, then Automation, Advanced and About. iPhone and iPad keep their own layout; see [iPhone and iPad](#iphone-and-ipad).
 
 ## General
 
@@ -84,6 +84,10 @@ Each Space's page has these tabs:
 Click **+** next to the Spaces heading to add a Space. Its Appearance page opens with the name ready to type. Click the pencil next to it to rearrange: drag Spaces by their handles, then click the checkmark when done.
 
 Right-click a Space, or use the **…** menu on its page, for **Rename**, **Edit Crest…**, **Move Up**, **Move Down**, **Lock Space**, and **Delete**. Crest needs at least one Space.
+
+## Automation
+
+On Mac, choose whether scripts and coding agents on your Mac may control Crest, which Spaces they may use, and which tools you allowed. See [Control Crest from scripts and coding agents](../browsing/automation.md).
 
 ## Advanced
 

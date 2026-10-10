@@ -18,6 +18,7 @@ final class BrowserMacShell {
         let menuBar: BrowserMacMenuBar
         let dockMenu: BrowserMacDockMenu
         let externalOpening: BrowserMacExternalOpening
+        let automation: BrowserMacAutomation
     }
 
     /// A system sign-in that arrived before the launch finished.
@@ -86,7 +87,8 @@ final class BrowserMacShell {
             application: application, windows: windows,
             quit: BrowserMacQuit(application: application, windows: windows), menuBar: menuBar,
             dockMenu: BrowserMacDockMenu(application: application, windows: windows),
-            externalOpening: BrowserMacExternalOpening(application: application, windows: windows))
+            externalOpening: BrowserMacExternalOpening(application: application, windows: windows),
+            automation: BrowserMacAutomation(application: application, windows: windows))
         recovery?.close()
         recovery = nil
         guard application.presentsInstalledApplicationUI else { return }
@@ -98,6 +100,7 @@ final class BrowserMacShell {
             return self?.handleShortcut(event, pageSeesFirst: pageSeesFirst) == true ? nil : event
         }
         mouseButtons.start()
+        running?.automation.start()
         Task { await application.cloudSync.start() }
         NSApp.activate(ignoringOtherApps: true)
         openPending()
@@ -121,7 +124,12 @@ final class BrowserMacShell {
     /// Answers false when there is nothing to hold, before the launch finished
     /// or once the quit was finished, so the entry point quits at once.
     func requestQuit(finish: @escaping @MainActor (_ allowed: Bool) -> Void) -> Bool {
-        running?.quit.request(finish: finish) ?? false
+        guard let running else { return false }
+        return running.quit.request { allowed in
+            // No tool reaches a Crest that is going.
+            if allowed { running.automation.stop() }
+            finish(allowed)
+        }
     }
 
     /// A Dock click or `Open` with no Crest window. An open window comes

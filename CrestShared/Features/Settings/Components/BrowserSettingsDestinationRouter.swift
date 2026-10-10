@@ -114,6 +114,10 @@ struct BrowserSettingsDestinationRouter: View {
             )
         case .about:
             BrowserAboutSettingsPane()
+        case .automation:
+            #if os(macOS)
+                BrowserAutomationSettingsPane(core: browser.core)
+            #endif
         }
     }
 }

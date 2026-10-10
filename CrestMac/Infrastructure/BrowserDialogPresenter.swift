@@ -421,6 +421,27 @@ final class BrowserDialogPresenter {
         }
     }
 
+    /// Whether the tool `name`, which the program at `path` runs, may control
+    /// Crest. Crest comes forward, since the person is likely in the tool's
+    /// terminal when it asks, and declining is the default. A `dismissal`
+    /// closes the question unanswered.
+    func approveAutomationTool(name: String, path: String, dismissal: BrowserPromptDismissal? = nil) async -> Bool {
+        await withCheckedContinuation { continuation in
+            let alert = NSAlert()
+            alert.messageText = String(localized: "Allow “\(name)” to control Crest?")
+            alert.informativeText = String(
+                localized:
+                    "\(path) wants to open, read and close tabs in the Spaces you allow in Settings > Automation. Crest will trust anything this program runs that uses the same name, so allow only tools you trust."
+            )
+            alert.alertStyle = .warning
+            alert.addButton(withTitle: String(localized: "Don’t Allow"))
+            alert.addButton(withTitle: String(localized: "Allow"))
+            present(alert, comesForward: true, dismissal: dismissal) { response in
+                continuation.resume(returning: response == .alertSecondButtonReturn)
+            }
+        }
+    }
+
     /// Whether to quit and stop the `count` downloads still in progress.
     func approveQuitWithDownloads(count: Int, dismissal: BrowserPromptDismissal? = nil) async -> Bool {
         await withCheckedContinuation { continuation in

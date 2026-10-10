@@ -147,6 +147,7 @@ final class CrestCore {
         let installed = crest_app_set_wake(handle, relayCoreWake, Unmanaged.passUnretained(wake).toOpaque())
         guard installed == CREST_OK else { Self.buildBug(installed, "set its wake callback") }
         state.enginePreferences = try query(GetEnginePreferences())
+        state.automationPreferences = try query(GetAutomationPreferences())
     }
 
     deinit {

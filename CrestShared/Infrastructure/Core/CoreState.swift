@@ -51,6 +51,14 @@ final class CoreState {
         set { publish(newValue, into: \.enginePreferencesStorage, as: \.enginePreferences) }
     }
     @ObservationIgnored private var enginePreferencesStorage = EnginePreferences(defaultEngine: nil, rules: [])
+    /// Whether local tools may control Crest on this device, the Spaces they
+    /// may reach and the tools the person approved.
+    var automationPreferences: AutomationPreferences {
+        get { observed(\.automationPreferencesStorage, as: \.automationPreferences) }
+        set { publish(newValue, into: \.automationPreferencesStorage, as: \.automationPreferences) }
+    }
+    @ObservationIgnored private var automationPreferencesStorage = AutomationPreferences(
+        isOn: false, spaceIDs: [], tools: [])
     /// The newest file revision the core has on disk, counting the stored
     /// session's edits and this device's saved windows; zero before its first
     /// save and for a core that keeps nothing.
