@@ -431,7 +431,7 @@ final class BrowserDialogPresenter {
             alert.messageText = String(localized: "Allow “\(name)” to control Crest?")
             alert.informativeText = String(
                 localized:
-                    "\(path) wants to open, read and close tabs in the Spaces you allow in Settings > Automation. Allow only tools you trust."
+                    "\(path) wants to open, read and close tabs in the Spaces you allow in Settings > Automation. Crest will trust anything this program runs that uses the same name, so allow only tools you trust."
             )
             alert.alertStyle = .warning
             alert.addButton(withTitle: String(localized: "Don’t Allow"))

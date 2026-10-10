@@ -38,9 +38,14 @@ final class BrowserAutomationListener: @unchecked Sendable {
     let path: String
     private let queue = DispatchQueue(label: "com.pauldavis.crest.automation.listener")
     private let connected: @Sendable (BrowserAutomationConnection) -> Void
-    /// What watches the listening socket while the listener runs. Its owner
-    /// starts and stops the listener on one thread.
+    /// What watches the listening socket while the listener runs, and what
+    /// its cancellation signals once the socket is closed and removed. Its
+    /// owner starts and stops the listener on one thread.
     private var source: DispatchSourceRead?
+    private var closed: DispatchSemaphore?
+
+    /// How long `stop` waits for the socket to close.
+    private static let closeTimeout = DispatchTimeInterval.seconds(2)
 
     // MARK: - Initializers
 
@@ -64,21 +69,30 @@ final class BrowserAutomationListener: @unchecked Sendable {
         let source = DispatchSource.makeReadSource(fileDescriptor: descriptor, queue: queue)
         let path = path
         let identity = Self.identity(of: path)
+        let closed = DispatchSemaphore(value: 0)
         source.setEventHandler { [weak self] in self?.acceptWaiting(on: descriptor) }
         source.setCancelHandler {
             Darwin.close(descriptor)
             // Remove the socket only while it is still the one this listener bound.
             if let identity, Self.identity(of: path) == identity { unlink(path) }
+            closed.signal()
         }
         self.source = source
+        self.closed = closed
         source.resume()
     }
 
-    /// Stops accepting connections and removes the socket. Connections
-    /// already made stay open until their owner closes them.
+    /// Stops accepting connections and removes the socket before it returns,
+    /// so the path can be bound again at once. Connections already made stay
+    /// open until their owner closes them.
     func stop() {
-        source?.cancel()
-        source = nil
+        guard let source, let closed else { return }
+        self.source = nil
+        self.closed = nil
+        // The cancellation runs on the listener's own queue, never the
+        // caller's.
+        source.cancel()
+        _ = closed.wait(timeout: .now() + Self.closeTimeout)
     }
 
     // MARK: - Actions - Connections

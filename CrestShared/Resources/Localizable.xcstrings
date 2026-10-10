@@ -354,7 +354,7 @@
         }
       }
     },
-    "%@ wants to open, read and close tabs in the Spaces you allow in Settings > Automation. Allow only tools you trust." : {
+    "%@ wants to open, read and close tabs in the Spaces you allow in Settings > Automation. Crest will trust anything this program runs that uses the same name, so allow only tools you trust." : {
 
     },
     "%@, %@" : {
