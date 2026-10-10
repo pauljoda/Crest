@@ -12,8 +12,8 @@ public sealed record LoadAddress(Guid PageId, string Url) : PageIntent {
     #region Actions - Pages
 
     internal override void Apply(Pages pages, PageTurn turn) =>
-        Navigate.Load(pages, turn, PageId, (preferences, showsInternalPages) =>
-            AddressResolution.Held(Url, showsInternalPages) ?? AddressResolution.Loading(Url, preferences, showsInternalPages));
+        Navigate.Load(pages, turn, PageId, (provider, showsInternalPages) =>
+            AddressResolution.Held(Url, showsInternalPages) ?? AddressResolution.Loading(Url, provider, showsInternalPages));
 
     #endregion
 }

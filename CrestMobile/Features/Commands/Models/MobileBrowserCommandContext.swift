@@ -57,6 +57,7 @@ struct MobileBrowserCommandContext {
     let selectPreviousSpace: () -> Void
     let selectNextSpace: () -> Void
     let selectSpace: (UUID) -> Void
+    let reopenArchivedTab: (UUID) -> Void
     let toggleReaderMode: () -> Void
     let setTranslationToolbarVisible: (Bool) -> Void
     let toggleContentBlocking: () async -> Void

@@ -30,8 +30,11 @@ struct BrowserCommandPalettePresentationView: View {
                         ),
                         queryIsFocused: queryIsFocused
                     )
-                    .padding(BrowserCommandPaletteMetrics.overlayCardPadding)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .padding(.horizontal, BrowserCommandPaletteMetrics.overlayCardPadding)
+                    .padding(.top, BrowserCommandPaletteLayout.overlayTopInset(availableHeight: availableHeight))
+                    .padding(.bottom, BrowserCommandPaletteMetrics.overlayCardPadding)
+                    // The top edge stays put while results change; the card grows down.
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                     .padding(contentInsets)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)

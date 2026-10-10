@@ -136,8 +136,8 @@ public sealed partial class BrowserContractsTests {
 
         // Shortening retention sweeps under it straight away.
         var preferences = core.Current.Spaces[0].Settings.BrowsingPreferences;
-        device.Send(new SetBrowsingPreferences(device.Workspace, f.Space, preferences.SearchSuggestionsEnabled,
-            preferences.CurrentTabCleanup, preferences.ContentBlocking, preferences.DataRetention with { History = DataRetention.OneDay }));
+        device.Send(new SetBrowsingPreferences(device.Workspace, f.Space, preferences.CurrentTabCleanup, preferences.ContentBlocking,
+            preferences.DataRetention with { History = DataRetention.OneDay }));
         Assert.Empty(SavedHistory(core, f.Space));
     }
 

@@ -3,6 +3,10 @@ import SwiftUI
 struct BrowserCommandPaletteResultRow: View {
     let model: BrowserCommandPaletteModel
     let item: BrowserCommandPaletteItem
+    /// The row names its kind at its end, as the blended layout shows it.
+    var namesKind = false
+
+    private var isSelected: Bool { model.selectedResultIndex == item.index }
 
     var body: some View {
         Button {
@@ -18,28 +22,26 @@ struct BrowserCommandPaletteResultRow: View {
                     Text(verbatim: item.row.title)
                         .font(.body.weight(.semibold))
                         .lineLimit(1)
-                    if !item.row.subtitle.isEmpty {
-                        Text(verbatim: item.row.subtitle)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(1)
-                    }
+                    BrowserCommandPaletteRowDetail(model: model, row: item.row)
                 }
 
                 Spacer(minLength: BrowserCommandPaletteMetrics.rowSpacing)
 
-                BrowserCommandPaletteRowTrailing(model: model, row: item.row)
+                BrowserCommandPaletteRowTrailing(
+                    model: model, row: item.row, isSelected: isSelected, namesKind: namesKind)
 
-                Image(systemName: "arrow.right")
+                Image(systemName: isSelected ? model.selectedOpening.symbol : "arrow.right")
                     .foregroundStyle(.secondary)
+                    .contentTransition(.symbolEffect(.replace))
             }
         }
         .buttonStyle(
             BrowserCommandPaletteRowButtonStyle(
-                isSelected: model.selectedResultIndex == item.index
+                isSelected: isSelected
             )
         )
         .accessibilityValue(model.engineBadge(for: item.row).map { Text($0.pageDescription) } ?? Text(verbatim: ""))
+        .accessibilityHint(item.row.reason.map { Text($0.text) } ?? Text(verbatim: ""))
         .accessibilityIdentifier("command-palette-result-\(item.index)")
         .browserCommandPaletteHoverSelection(model: model, index: item.index)
     }

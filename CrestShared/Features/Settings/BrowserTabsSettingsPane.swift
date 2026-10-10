@@ -13,7 +13,6 @@ struct BrowserTabsSettingsPane: View {
             BrowserNewTabSettingsSection(preferences: browser.linkPreferences)
             BrowserDurableTabSettingsSection(preferences: appPreferences)
             #if os(macOS)
-                BrowserSiteSearchSettingsSection(store: .shared, profileID: browser.shownSpace?.profileID)
                 BrowserSplitFocusSettingsSection()
             #endif
             if let sidebarWidgets {

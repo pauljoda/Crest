@@ -1,6 +1,18 @@
 import AppKit
 import SwiftUI
 
+extension EventModifiers {
+    /// The modifier keys AppKit reports, as SwiftUI names them.
+    init(_ flags: NSEvent.ModifierFlags) {
+        var modifiers: EventModifiers = []
+        if flags.contains(.command) { modifiers.insert(.command) }
+        if flags.contains(.shift) { modifiers.insert(.shift) }
+        if flags.contains(.option) { modifiers.insert(.option) }
+        if flags.contains(.control) { modifiers.insert(.control) }
+        self = modifiers
+    }
+}
+
 /// A native single-line editor. The suffix is a noninteractive overlay on
 /// its field editor, never an attributed replacement for the entered text.
 struct BrowserPlatformCommandPaletteField: NSViewRepresentable {
@@ -32,8 +44,8 @@ struct BrowserPlatformCommandPaletteField: NSViewRepresentable {
         model.applyCompletion = { [weak coordinator = coordinator] text, range in
             coordinator?.insert(text, replacementRange: range)
         }
-        model.replaceSiteSearchText = { [weak coordinator = coordinator] text in
-            coordinator?.replaceSiteSearchText(text)
+        model.replaceText = { [weak coordinator = coordinator] text in
+            coordinator?.replaceText(text)
         }
         return field
     }
@@ -75,6 +87,8 @@ struct BrowserPlatformCommandPaletteField: NSViewRepresentable {
         let suffixLabel = CompletionLabel(
             rootView: BrowserURLCompletionSuffix(text: "", font: .title2, isVisible: false))
         var didRequestFocus = false
+        /// Watches the modifier keys and modified Returns while the field edits.
+        private var keyMonitor: Any?
 
         init(model: BrowserCommandPaletteModel) {
             self.model = model
@@ -95,7 +109,36 @@ struct BrowserPlatformCommandPaletteField: NSViewRepresentable {
             NotificationCenter.default.addObserver(
                 self, selector: #selector(selectionChanged), name: NSTextView.didChangeSelectionNotification,
                 object: editor)
+            watchKeys()
             editingChanged()
+        }
+
+        /// While the field edits, a held modifier key shows where Return
+        /// opens the selected row, and Return with Command, Shift or Option
+        /// opens it there; AppKit sends Command-Return to the menus otherwise.
+        private func watchKeys() {
+            guard keyMonitor == nil else { return }
+            keyMonitor = NSEvent.addLocalMonitorForEvents(matching: [.flagsChanged, .keyDown]) { [weak self] event in
+                guard let self, let editor = field?.currentEditor(), event.window === field?.window,
+                    event.window?.firstResponder === editor
+                else { return event }
+                model.updateHeldModifiers(EventModifiers(event.modifierFlags))
+                guard event.type == .keyDown, Self.returnKeys.contains(event.keyCode),
+                    !event.modifierFlags.intersection([.command, .shift, .option]).isEmpty,
+                    (editor as? NSTextView)?.hasMarkedText() != true
+                else { return event }
+                model.pressReturn()
+                return nil
+            }
+        }
+
+        /// Return and the keypad's Enter.
+        private static let returnKeys: Set<UInt16> = [36, 76]
+
+        private func stopWatchingKeys() {
+            if let keyMonitor { NSEvent.removeMonitor(keyMonitor) }
+            keyMonitor = nil
+            model.updateHeldModifiers([])
         }
 
         @objc private func selectionChanged(_ notification: Notification) { editingChanged() }
@@ -104,10 +147,12 @@ struct BrowserPlatformCommandPaletteField: NSViewRepresentable {
 
         func controlTextDidEndEditing(_ notification: Notification) {
             model.rejectURLCompletion()
+            stopWatchingKeys()
             detachSuffix()
         }
 
         func dismantle(_ field: NSTextField) {
+            stopWatchingKeys()
             detachSuffix()
             if field.delegate === self { field.delegate = nil }
             if self.field === field { self.field = nil }
@@ -135,12 +180,13 @@ struct BrowserPlatformCommandPaletteField: NSViewRepresentable {
 
         func refreshSuffix() {
             field?.placeholderString =
-                model.activeSiteSearch.map { String(localized: "Search \($0.name)…") }
+                model.activeProvider.map { "\($0.actionTitle)…" }
+                ?? model.activeScope.map { String(localized: "Search \(String(localized: $0.title))…") }
                 ?? String(localized: "Search or Enter URL…")
-            if let site = model.siteSearchOffer {
+            if model.urlCompletion == nil, let provider = model.providerOffer {
                 suffixLabel.isHidden = true
                 suffixLabel.rootView.isVisible = false
-                field?.setAccessibilityHelp(String(localized: "Search \(site.name). Press Tab to enter a query."))
+                field?.setAccessibilityHelp(String(localized: "\(provider.actionTitle). Press Tab to enter a query."))
                 return
             }
             guard let field, let editor = field.currentEditor() as? NSTextView,
@@ -174,7 +220,7 @@ struct BrowserPlatformCommandPaletteField: NSViewRepresentable {
             editingChanged()
         }
 
-        func replaceSiteSearchText(_ text: String) {
+        func replaceText(_ text: String) {
             guard let field else { return }
             field.stringValue = text
             field.window?.makeFirstResponder(field)
@@ -188,26 +234,46 @@ struct BrowserPlatformCommandPaletteField: NSViewRepresentable {
 
         func control(_ control: NSControl, textView: NSTextView, doCommandBy selector: Selector) -> Bool {
             guard !textView.hasMarkedText() else { return false }
+            let shifted = NSApp.currentEvent?.modifierFlags.contains(.shift) == true
             switch selector {
             case #selector(NSResponder.insertTab(_:)):
-                return model.acceptSiteSearch() || model.acceptURLCompletion()
-            case #selector(NSResponder.moveRight(_:)):
+                model.pressTab()
+                refreshSuffix()
+                return true
+            case #selector(NSResponder.insertBacktab(_:)):
+                model.pressBacktab()
+                refreshSuffix()
+                return true
+            case #selector(NSResponder.moveRight(_:)), #selector(NSResponder.moveToEndOfLine(_:)),
+                #selector(NSResponder.moveToEndOfDocument(_:)):
                 return model.acceptURLCompletion()
-            case #selector(NSResponder.deleteBackward(_:)) where textView.string.isEmpty:
-                return model.leaveSiteSearch()
-            case #selector(NSResponder.insertNewline(_:)):
-                model.activateSelectedResult()
+            case #selector(NSResponder.deleteBackward(_:)), #selector(NSResponder.deleteForward(_:)):
+                if shifted, model.forgetSelectedRow() { return true }
+                guard selector == #selector(NSResponder.deleteBackward(_:)), textView.string.isEmpty else {
+                    return false
+                }
+                return model.leaveScope()
+            case #selector(NSResponder.insertNewline(_:)), #selector(NSResponder.insertNewlineIgnoringFieldEditor(_:)):
+                model.pressReturn()
                 return true
             case #selector(NSResponder.moveDown(_:)):
-                model.moveSelection(by: 1)
+                model.pressDown()
                 refreshSuffix()
                 return true
             case #selector(NSResponder.moveUp(_:)):
                 model.moveSelection(by: -1)
                 refreshSuffix()
                 return true
+            case #selector(NSResponder.moveToEndOfParagraph(_:)):
+                model.moveSection(by: 1)
+                refreshSuffix()
+                return true
+            case #selector(NSResponder.moveToBeginningOfParagraph(_:)):
+                model.moveSection(by: -1)
+                refreshSuffix()
+                return true
             case #selector(NSResponder.cancelOperation(_:)):
-                if model.leaveSiteSearch() {
+                if model.leaveScope() {
                     refreshSuffix()
                     return true
                 }

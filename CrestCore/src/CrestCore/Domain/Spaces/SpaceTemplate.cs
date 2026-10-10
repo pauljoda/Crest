@@ -25,9 +25,11 @@ public sealed class SpaceTemplate {
             chargeScale: 1),
         RenderingVersion: 2, FolderColorIntensity: 0, SpaceTextColorMode.Automatic, HasCustomAppearance: null);
 
-    /// What an ordinary Space searches and keeps.
-    private static readonly BrowsingPreferences OrdinaryBrowsing = new(BuiltInSearchEngine.Google, SelectedCustomEngineId: null, [],
-        SearchSuggestionsEnabled: false, CurrentTabCleanup.After12Hours, ContentBlockingPolicy.Balanced, KeepsEverything);
+    /// What an ordinary Space searches and keeps: the device's default search
+    /// and suggestions, which it follows.
+    private static readonly BrowsingPreferences OrdinaryBrowsing = new(BuiltInSearchProvider.Google, SelectedCustomEngineId: null, [],
+        SearchSuggestionsEnabled: false, FollowsDefaultSearch: true, FollowsDefaultSuggestions: true, CurrentTabCleanup.After12Hours,
+        ContentBlockingPolicy.Balanced, KeepsEverything);
 
     /// A Space that offers to save passwords and sync Crest's with iCloud.
     private static readonly CredentialPreferences SavesPasswords = new(IsEnabled: true, SyncsCrestPasswordsWithICloud: true,
@@ -43,8 +45,9 @@ public sealed class SpaceTemplate {
 
     public static readonly SpaceTemplate Private = new(isPrivate: true, name: number => number == 1 ? "Private" : $"Private {number}",
         symbol: "eyeglasses", accent: _ => SpaceAccent.Indigo, look: _ => PrivateLook,
-        browsing: new(BuiltInSearchEngine.DuckDuckGo, SelectedCustomEngineId: null, [], SearchSuggestionsEnabled: false, CurrentTabCleanup.Never,
-            ContentBlockingPolicy.Balanced, KeepsEverything),
+        browsing: new(BuiltInSearchProvider.DuckDuckGo, SelectedCustomEngineId: null, [], SearchSuggestionsEnabled: false,
+            FollowsDefaultSearch: true, FollowsDefaultSuggestions: false, CurrentTabCleanup.Never, ContentBlockingPolicy.Balanced,
+            KeepsEverything),
         credentials: NoPasswords, tabs: StartPage);
 
     /// The templates a workspace's new Spaces come from, one for each privacy.

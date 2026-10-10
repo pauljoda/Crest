@@ -28,143 +28,77 @@ struct BrowserCommandActions {
     /// in the palette, in the core's order, since this shell performs each.
     static let paletteCommands = ShortcutCommand.all.filter(\.offersInPalette)
 
+    /// The palette's commands and actions in this window. Its settings
+    /// pages open through `openSettings`, which the window's Settings
+    /// presentation owns.
     func paletteRegistry(
-        shortcuts: BrowserShortcutStore?
+        shortcuts: BrowserShortcutStore?,
+        openSettings: @escaping (String) -> Void = { _ in }
     ) -> BrowserCommandPaletteCommandRegistry {
         BrowserCommandPaletteCommandRegistry(
             commands: Self.paletteCommands.filter { $0.isOffered(in: browser.core.state) },
+            settingsPages: BrowserSettingsDestination.palettePages,
             shortcut: { shortcuts?.shortcut(for: $0) },
-            perform: perform
+            perform: perform,
+            openSettings: openSettings,
+            switchSpace: selectSpace,
+            reopenArchivedTab: reopenArchivedTab,
+            copy: copy
         )
     }
 
-    func perform(_ command: ShortcutCommand) {
-        let route = route(command)
-        guard browser.allows(command), route.isAvailable else { return }
-        route.run()
+    /// Reopens the archived tab `id` in the Space it left, and shows it.
+    func reopenArchivedTab(_ id: UUID) {
+        browser.restoreArchivedTab(id)
+        pages.select()
     }
 
-    /// Availability belongs to the same command route used by menus and keys:
-    /// the core says what the window's contents allow, and the route what the
+    /// Copies `text` and says so.
+    func copy(_ text: String) {
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(text, forType: .string)
+        chrome.showNotice(.copied)
+    }
+
+    func perform(_ command: ShortcutCommand) {
+        guard browser.allows(command), let action = BrowserMacCommand.of(command), action.isAvailable(self, command)
+        else { return }
+        action.run(self, command)
+    }
+
+    /// Availability belongs to the same command used by menus and keys: the
+    /// core says what the window's contents allow, and the command what the
     /// page and its engine can do. In particular, a disabled split shortcut
     /// must leave text selection alone.
     func canPerform(_ command: ShortcutCommand) -> Bool {
-        browser.allows(command) && route(command).isAvailable
+        browser.allows(command) && BrowserMacCommand.of(command)?.isAvailable(self, command) == true
     }
 
     /// What the menu bar calls `command` now, when that follows what the
     /// window shows, such as Reader's Show or Hide; nil for its own title.
     func menuTitle(of command: ShortcutCommand) -> LocalizedStringResource? {
-        route(command).title
+        BrowserMacCommand.of(command)?.title(self)
     }
 
     /// Whether what `command` shows or hides is showing, for a command the
     /// menu bar checks; nil for any other.
     func isOn(_ command: ShortcutCommand) -> Bool? {
-        route(command).isOn
+        BrowserMacCommand.of(command)?.isOn(self)
     }
 
-    /// What a command does in the Mac shell, whether it can do it now, and
-    /// how the menu bar presents it when that follows the window.
-    private struct Route {
-        var isAvailable = true
-        var title: LocalizedStringResource?
-        var isOn: Bool?
-        let run: @MainActor () -> Void
-    }
-
-    /// The one place that turns each command into what the Mac shell does.
-    private func route(_ command: ShortcutCommand) -> Route {
-        switch command.kind {
-        case .newWindow: Route(run: openNewWindow)
-        case .newBlankWindow: Route(run: openBlankWindow)
-        case .newTab: Route(run: openNewTab)
-        case .openLocation: Route(run: openLocation)
-        case .openFile: Route(isAvailable: supportsEngineCapability(.localFiles), run: openFile)
-        case .newQuickWindow: Route(run: openQuickWindow)
-        case .newPrivateWindow: Route(run: openPrivateWindow)
-        case .closeTabOrWindow: Route(run: closeTabOrWindow)
-        case .closeWindow: Route(run: closeKeyWindow)
-        case .back: Route(isAvailable: pages.canGoBack, run: pages.goBack)
-        case .forward: Route(isAvailable: pages.canGoForward, run: pages.goForward)
-        case .reloadPage: Route { pages.reloadOrStop() }
-        case .stopLoading: Route(isAvailable: pages.isLoading, run: pages.stopLoading)
-        case .reloadFromOrigin: Route { pages.reloadFromOrigin() }
-        case .toggleSelectedTabPinned: Route(run: toggleSelectedTabPinned)
-        case .duplicateTab: Route(run: duplicateSelectedTab)
-        case .reopenClosedTab: Route(run: reopenClosedTab)
-        case .clearUnpinnedTabs: Route(run: cleanupCurrentTabs)
-        case .archiveTab: Route(run: archiveSelectedTab)
-        case .previousTab: Route(run: selectPreviousTab)
-        case .nextTab: Route(run: selectNextTab)
-        case .mostRecentTab: Route(run: selectMostRecentTab)
-        case .splitWithNextTab: Route(run: splitWithNextTab)
-        case .focusNextSplitCard: Route { focusAdjacentSplitCard(offset: 1) }
-        case .focusPreviousSplitCard: Route { focusAdjacentSplitCard(offset: -1) }
-        case .removeTabFromSplit: Route(run: removeSelectedTabFromSplit)
-        case .separateSplitTabs: Route(run: separateSplitTabs)
-        case .moveSplitCardLeft:
-            Route(isAvailable: canMoveFocusedSplitCard(.left)) { moveFocusedSplitCard(.left) }
-        case .moveSplitCardRight:
-            Route(isAvailable: canMoveFocusedSplitCard(.right)) { moveFocusedSplitCard(.right) }
-        case .previousSpace: Route(run: selectPreviousSpace)
-        case .nextSpace: Route(run: selectNextSpace)
-        case .toggleReaderMode:
-            Route(
-                isAvailable: supportsPageCapability(.reader) && pages.readerModeState.canToggle,
-                title: pages.readerModeActionTitle, run: pages.toggleReaderMode)
-        case .toggleContentBlocking:
-            Route(
-                isAvailable: supportsEngineCapability(.contentBlocking), title: contentBlockingActionTitle,
-                run: toggleContentBlocking)
-        case .findInPage: Route(isAvailable: supportsPageCapability(.find), run: pages.presentFind)
-        case .zoomIn: Route(isAvailable: canZoom, run: zoomIn)
-        case .zoomOut: Route(isAvailable: canZoom, run: zoomOut)
-        case .actualSize: Route(isAvailable: canZoom, run: resetZoom)
-        case .copyPageLink: Route(isAvailable: pages.hasActivePage, run: copyPageLink)
-        case .copyPageLinkAsMarkdown: Route(isAvailable: pages.hasActivePage, run: copyPageLinkAsMarkdown)
-        case .sharePage: Route(isAvailable: pages.hasActivePage, run: pages.sharePage)
-        case .exportPDF: Route(isAvailable: supportsPageCapability(.pdf), run: pages.exportPDF)
-        case .saveWebArchive: Route(isAvailable: supportsPageCapability(.webArchive), run: pages.exportWebArchive)
-        case .printPage: Route(isAvailable: supportsPageCapability(.print), run: pages.printPage)
-        case .toggleSidebar: Route(run: toggleSidebar)
-        case .showHistory: Route { chrome.presentUtility(.history) }
-        case .showArchive: Route { chrome.presentUtility(.archive) }
-        case .showDownloads:
-            Route(isAvailable: supportsEngineCapability(.downloads)) { chrome.presentUtility(.downloads) }
-        case .showWebInspector:
-            Route(isAvailable: supportsPageCapability(.inspector), run: pages.showWebInspector)
-        case .toggleTranslationToolbar:
-            Route(
-                isAvailable: supportsPageCapability(.translation) && !pages.readerModeState.isActive,
-                isOn: pages.activePage?.translation.showsToolbar == true
-            ) {
-                guard let page = pages.activePage, !page.readerModeState.isActive else { return }
-                page.translation.toggleToolbarVisibility()
-            }
-        case .toggleDeveloperToolbar:
-            Route(isAvailable: pages.hasActivePage, isOn: pages.activePage?.isDeveloperModeEnabled == true) {
-                if let page = pages.activePage {
-                    page.setDeveloperToolbarVisible(!page.isDeveloperModeEnabled)
-                }
-            }
-        case .selectNumbered:
-            if let selection = numberedSelections[command] {
-                switch selection.target.kind {
-                case .tab: Route { selectTab(selection.tabID, in: selection.spaceID) }
-                case .space: Route { selectSpace(selection.spaceID) }
-                }
-            } else {
-                Route(isAvailable: false) {}
-            }
+    /// Shows the stop or Space a numbered selection leads to.
+    func select(_ selection: NumberedSelection) {
+        switch selection.target.kind {
+        case .tab: selectTab(selection.tabID, in: selection.spaceID)
+        case .space: selectSpace(selection.spaceID)
         }
     }
 
-    private var canZoom: Bool {
+    var canZoom: Bool {
         supportsPageCapability(.zoom) && pages.activePage?.developerViewport == nil
     }
 
-    private func supportsPageCapability(_ capability: EngineCapability) -> Bool {
+    func supportsPageCapability(_ capability: EngineCapability) -> Bool {
         pages.hasActivePage && pages.activePage?.pageEngine.registration.supports(capability) == true
     }
 
@@ -172,7 +106,7 @@ struct BrowserCommandActions {
     /// the window rather than the document in it, so they stay available in the
     /// moment before a page exists, when the engine new pages open on answers.
     /// The active page's own engine answers whenever there is one.
-    private func supportsEngineCapability(_ capability: EngineCapability) -> Bool {
+    func supportsEngineCapability(_ capability: EngineCapability) -> Bool {
         pages.activePage?.pageEngine.registration.supports(capability)
             ?? browser.core.state.defaultEngineSupports(capability)
     }

@@ -73,7 +73,7 @@ internal static class RecordedIntents {
     /// look the Space started with, which the core now picks itself, so it
     /// becomes the creation and the edits that dress the new Space as the
     /// recording did.
-    public static IReadOnlyList<SessionIntent>? Typed(JsonObject request, Guid workspace, Guid? window, SessionState current) {
+    public static IReadOnlyList<Intent>? Typed(JsonObject request, Guid workspace, Guid? window, SessionState current) {
         var arguments = request["arguments"] as JsonObject ?? [];
         Guid Id(string key) => Guid.Parse(request[key]!.GetValue<string>());
         Guid Argument(string key) => Guid.Parse(arguments[key]!.GetValue<string>());
@@ -116,8 +116,8 @@ internal static class RecordedIntents {
                 arguments["isEnabled"]!.GetValue<bool>())],
             "preferences.import" => [new ImportAppPreferences(workspace, Legacy(arguments["legacy"]!.AsObject()))],
             "space.browsing_preferences" => Browsing(workspace, Id("spaceId"), StoredSessionCodec.DecodeBrowsingPreferences(arguments["value"])),
-            "space.search_provider.upsert" => Upserted(workspace, Id("spaceId"), arguments, current),
-            "space.search_provider.remove" => [new RemoveSearchEngine(workspace, Id("spaceId"), Argument("id"))],
+            "space.search_provider.upsert" => Upserted(workspace, Id("spaceId"), arguments),
+            "space.search_provider.remove" => [new RemoveSearchProvider(Argument("id"))],
             // A recorded import brought a file's Spaces.
             "workspace.import" => [new ImportSpaces(workspace, window ?? Guid.Empty,
                 NativeWorkspaceImport.Decoded(Encoding.UTF8.GetBytes(arguments["sources"]!.ToJsonString())))],
@@ -146,13 +146,14 @@ internal static class RecordedIntents {
     /// `engine` hosts there show what the request observed its tabs' pages
     /// showing, as a split join's copies start from them, and answers the
     /// changes the core published, through the pages' release.
-    public static IReadOnlyList<Change> Send(CrestApp app, Engine engine, JsonObject request, IReadOnlyList<SessionIntent> intents,
+    public static IReadOnlyList<Change> Send(CrestApp app, Engine engine, JsonObject request, IReadOnlyList<Intent> intents,
         Guid? window) {
         var changes = new List<Change>();
         var shown = new List<Guid>();
         foreach (var observed in request["arguments"]?["copyObservations"] as JsonArray ?? []) {
             var page = Guid.NewGuid();
-            changes.AddRange(app.Send(new OpenPage(page, intents[0].WorkspaceId, Guid.Parse(request["spaceId"]!.GetValue<string>()),
+            changes.AddRange(app.Send(new OpenPage(page, intents.OfType<SessionIntent>().First().WorkspaceId,
+                Guid.Parse(request["spaceId"]!.GetValue<string>()),
                 Guid.Parse(observed!["tabId"]!.GetValue<string>()), window!.Value)));
             app.Report(engine, new PageCreated(page));
             var snapshot = PageSnapshot.Blank with { Url = observed["url"]?.GetValue<string>(), Title = observed["title"]!.GetValue<string>() };
@@ -256,26 +257,30 @@ internal static class RecordedIntents {
     ];
 
     /// Recorded browsing preferences, which carried the search choice beside
-    /// the rest: the preferences, then the engine they selected.
+    /// the rest: the preferences, then what the Space searches with and
+    /// whether it suggests.
     private static IReadOnlyList<SessionIntent> Browsing(Guid workspace, Guid space, BrowsingPreferences preferences) => [
-        new SetBrowsingPreferences(workspace, space, preferences.SearchSuggestionsEnabled, preferences.CurrentTabCleanup,
-            preferences.ContentBlocking, preferences.DataRetention),
-        new SelectSearchEngine(workspace, space, preferences.SelectedBuiltInEngine, preferences.SelectedCustomEngineId)
+        new SetBrowsingPreferences(workspace, space, preferences.CurrentTabCleanup, preferences.ContentBlocking, preferences.DataRetention),
+        new SetSpaceSearch(workspace, space, preferences.FollowsDefaultSearch ? null
+                : preferences.SelectedCustomEngineId is { } custom ? Named(SearchProvider.CustomName(custom))
+                : SearchCatalog.Starting(language: null, region: null).Resolving(preferences.SelectedBuiltInEngine ?? BuiltInSearchProvider.Google),
+            preferences.FollowsDefaultSuggestions ? null : preferences.SearchSuggestionsEnabled)
     ];
 
-    /// A recorded upsert, which added an engine the Space did not hold and
-    /// replaced one it did, selecting it when it asked to.
-    private static IReadOnlyList<SessionIntent> Upserted(Guid workspace, Guid space, JsonObject arguments, SessionState current) {
+    /// A recorded upsert of a Space's engine, which the device's catalog now
+    /// keeps, and which the Space then searched with when it asked to.
+    private static IReadOnlyList<Intent> Upserted(Guid workspace, Guid space, JsonObject arguments) {
         var provider = arguments["provider"]!;
-        var engine = new CustomSearchEngine(Guid.Parse(provider["id"]!.GetValue<string>()), provider["name"]!.GetValue<string>(),
+        var engine = CustomSearchProvider.Carried(Guid.Parse(provider["id"]!.GetValue<string>()), provider["name"]!.GetValue<string>(),
             provider["searchURLTemplate"]!.GetValue<string>(), provider["suggestionURLTemplate"]?.GetValue<string>());
-        bool selects = arguments["selects"]?.GetValue<bool>() == true;
-        bool held = current.Spaces.Single(candidate => candidate.Id == space).Settings.BrowsingPreferences.CustomSearchProviders
-            .Any(stored => stored.Id == engine.Id);
-        return held
-            ? [new UpdateSearchEngine(workspace, space, engine), .. selects ? [new SelectSearchEngine(workspace, space, null, engine.Id)] : Array.Empty<SessionIntent>()]
-            : [new AddSearchEngine(workspace, space, engine, selects)];
+        return arguments["selects"]?.GetValue<bool>() == true
+            ? [new SaveSearchProvider(engine), new SetSpaceSearch(workspace, space, Named(SearchProvider.CustomName(engine.Id)), null)]
+            : [new SaveSearchProvider(engine)];
     }
+
+    /// A provider by the name the device's catalog looks it up by.
+    private static SearchProvider Named(string name) =>
+        new(name, name, SearchProviderKind.Engine, [], "https://example.com/?q=%s", null, new BrandColor(0, 0, 0), null, null, null);
 
     /// The identities a recorded request gave the records it made, which the
     /// core now gives them itself: a copy's, or a new Space's profile and tab.

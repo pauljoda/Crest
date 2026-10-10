@@ -31,9 +31,6 @@ struct BrowserCommandPaletteContent: View {
             guard !Task.isCancelled, canFocus else { return }
             queryIsFocused = true
         }
-        .onChange(of: model.siteSearches?.entries) { _, _ in
-            model.refreshSiteSearch()
-        }
         .onKeyPress(.downArrow) {
             guard !model.completionEditing.isComposing else { return .ignored }
             model.moveSelection(by: 1)

@@ -32,6 +32,12 @@ extension BrowserStore {
         return sendRecords(ClearHistory(workspaceID: family.workspaceID, spaceID: assignment.spaceID))
     }
 
+    /// Removes `address` from a Space's history, every visit to it.
+    @discardableResult
+    func removeHistoryAddress(_ address: String, in spaceID: UUID) -> Bool {
+        sendRecords(RemoveHistoryAddress(workspaceID: family.workspaceID, spaceID: spaceID, address: address))
+    }
+
     func cleanupCurrentTabs() {
         sendRecords(CleanUpCurrentTabs(workspaceID: family.workspaceID, spaceID: nil))
     }

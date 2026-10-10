@@ -53,7 +53,10 @@ public sealed class StoredFormatTests {
         Assert.Equal(["after1Hour", "after6Hours", "after12Hours", "after24Hours", "never"],
             QuickWindowArchivePolicy.All.Select(policy => policy.Name));
         Assert.Equal(["balanced", "off"], ContentBlockingPolicy.All.Select(policy => policy.Name));
-        Assert.Equal(["google", "duckDuckGo", "bing", "ecosia", "brave"], BuiltInSearchEngine.All.Select(engine => engine.Name));
+        Assert.Equal(["google", "duckDuckGo", "bing", "ecosia", "brave", "startpage", "kagi", "yahoo", "qwant", "chatGPT", "claude",
+            "perplexity", "googleAIMode", "grok", "leChat", "duckAI", "copilotSearch", "kagiAssistant", "youTube", "wikipedia", "gitHub",
+            "reddit", "x", "stackOverflow", "mdn", "amazon", "imdb", "spotify", "figmaCommunity", "googleMaps", "appleMaps", "googleImages",
+            "googleTranslate", "wolframAlpha", "hackerNews", "npm", "appleDeveloper"], BuiltInSearchProvider.All.Select(provider => provider.Name));
         Assert.Equal("custom:", SearchProvider.CustomPrefix);
     }
 

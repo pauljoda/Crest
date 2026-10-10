@@ -122,6 +122,14 @@ final class CoreState {
         set { publish(newValue, into: \.linkPreferencesStorage, as: \.linkPreferences) }
     }
     @ObservationIgnored private var linkPreferencesStorage: LinkPreferences?
+    /// This device's search catalog, its providers as the device searches with
+    /// them and its default search, as the core last published them. Nil only
+    /// until the launch restores the catalog.
+    var searchCatalog: SearchCatalogChanged? {
+        get { observed(\.searchCatalogStorage, as: \.searchCatalog) }
+        set { publish(newValue, into: \.searchCatalogStorage, as: \.searchCatalog) }
+    }
+    @ObservationIgnored private var searchCatalogStorage: SearchCatalogChanged?
     /// The manual setup this device holds, as the core last published it, or
     /// nil while none is in progress.
     var setupDraft: SetupDraft? {

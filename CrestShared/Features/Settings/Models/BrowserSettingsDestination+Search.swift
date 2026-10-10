@@ -21,3 +21,15 @@ extension BrowserSettingsDestination {
         ) != nil
     }
 }
+
+extension BrowserSettingsDestination {
+    /// Every settings page as the command palette offers it: by its name,
+    /// with its title and the words a person might type to find it.
+    static var palettePages: [PaletteSettingsPage] {
+        all.map {
+            PaletteSettingsPage(
+                name: $0.name, title: String(localized: $0.title),
+                terms: [String(localized: $0.subtitle), String(localized: $0.searchTerms)].joined(separator: " "))
+        }
+    }
+}

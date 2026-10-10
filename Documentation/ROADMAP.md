@@ -108,6 +108,7 @@ the live status for each issue.
 - [ ] [Nest tabs opened from a link under the tab that opened them](https://github.com/pauljoda/Crest/issues/334)
 - [ ] [Show both ends of a shared tab and keep its titles current](https://github.com/pauljoda/Crest/issues/335)
 - [ ] [Allow a narrower sidebar](https://github.com/pauljoda/Crest/issues/336)
+- [ ] [Overhaul the command palette: smarter ordering and a Settings section to customize it](https://github.com/pauljoda/Crest/issues/338)
 
 #### Completed
 

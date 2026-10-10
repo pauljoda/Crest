@@ -1,8 +1,13 @@
 import SwiftUI
 
+/// A row the palette leads with or runs as typed: the best match, the
+/// address or search for the text, a search provider, a calculation or a pasted
+/// address. It shows larger, and its end says where Return opens it.
 struct BrowserCommandPaletteIntentRow: View {
     let model: BrowserCommandPaletteModel
     let item: BrowserCommandPaletteItem
+
+    private var isSelected: Bool { model.selectedResultIndex == item.index }
 
     var body: some View {
         Button {
@@ -10,7 +15,9 @@ struct BrowserCommandPaletteIntentRow: View {
         } label: {
             HStack(spacing: BrowserCommandPaletteMetrics.rowSpacing) {
                 Group {
-                    if let provider = model.searchProvider(for: item.row) {
+                    if model.tab(for: item.row) != nil {
+                        BrowserCommandPaletteRowIcon(model: model, row: item.row)
+                    } else if let provider = model.searchProvider(for: item.row) {
                         BrowserSearchProviderIcon(
                             provider: provider,
                             profileID: model.space?.profileID,
@@ -47,26 +54,27 @@ struct BrowserCommandPaletteIntentRow: View {
                     Text(verbatim: item.row.title)
                         .font(.body.weight(.semibold))
                         .lineLimit(1)
-                    Text(verbatim: item.row.subtitle)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
+                    BrowserCommandPaletteRowDetail(model: model, row: item.row)
                 }
 
                 Spacer(minLength: BrowserCommandPaletteMetrics.rowSpacing)
 
-                Image(systemName: "arrow.turn.down.left")
+                BrowserCommandPaletteRowTrailing(model: model, row: item.row, isSelected: isSelected)
+
+                Image(systemName: isSelected ? model.selectedOpening.symbol : "arrow.turn.down.left")
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(.secondary)
+                    .contentTransition(.symbolEffect(.replace))
             }
         }
         .buttonStyle(
             BrowserCommandPaletteRowButtonStyle(
-                isSelected: model.selectedResultIndex == item.index
+                isSelected: isSelected
             )
         )
         .accessibilityLabel(Text(verbatim: item.row.title))
         .accessibilityValue(Text(verbatim: item.row.subtitle))
+        .accessibilityHint(item.row.reason.map { Text($0.text) } ?? Text(verbatim: ""))
         .accessibilityIdentifier("command-palette-primary-action")
         .browserCommandPaletteHoverSelection(model: model, index: item.index)
     }

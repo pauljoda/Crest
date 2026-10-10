@@ -230,7 +230,7 @@ public sealed unsafe partial class BrowserContractsTests {
             var workspace = Assert.Single(app.Send(new OpenWorkspace(WorkspaceKind.Private, Seed: null)).OfType<WorkspaceOpened>());
             var space = Assert.Single(workspace.Session.Spaces);
             Assert.Equal(WorkspaceKind.Private, workspace.Kind);
-            Assert.Equal(("Private", "eyeglasses", BuiltInSearchEngine.DuckDuckGo, CurrentTabCleanup.Never, false),
+            Assert.Equal(("Private", "eyeglasses", BuiltInSearchProvider.DuckDuckGo, CurrentTabCleanup.Never, false),
                 (space.Settings.Name, space.Settings.Symbol, space.Settings.BrowsingPreferences.SelectedBuiltInEngine,
                     space.Settings.BrowsingPreferences.CurrentTabCleanup, space.Settings.CredentialPreferences.IsEnabled));
             Assert.Single(space.Tabs);

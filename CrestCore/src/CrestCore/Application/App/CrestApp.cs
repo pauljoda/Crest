@@ -89,7 +89,7 @@ public sealed partial class CrestApp : IQueryAnswers, IDisposable {
         // consults it, so a borrowed workspace unlocks with its source.
         var grants = new SpaceAccessAuthority();
         if (configuration.StorageDirectory is not { } directory) {
-            device = new(configuration.Platform, storage: null, DeviceRecords.Empty, grants, Announce, RequestTurn, CloseBorrower);
+            device = new(configuration.Platform, storage: null, DeviceRecords.Empty, grants, Announce, RequestTurn, CloseBorrower, clock);
             engines.Prefer(device.DefaultEngine);
             pages = new(device, engines, clock, ids);
             prompts = new(device, pages);
@@ -101,7 +101,7 @@ public sealed partial class CrestApp : IQueryAnswers, IDisposable {
             return;
         }
         storage = SessionStorage.Open(directory, Announce, out var loaded);
-        device = new(configuration.Platform, storage, storage.Device, grants, Announce, RequestTurn, CloseBorrower);
+        device = new(configuration.Platform, storage, storage.Device, grants, Announce, RequestTurn, CloseBorrower, clock);
         engines.Prefer(device.DefaultEngine);
         pages = new(device, engines, clock, ids);
         prompts = new(device, pages);

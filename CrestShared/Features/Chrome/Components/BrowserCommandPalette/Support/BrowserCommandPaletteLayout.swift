@@ -3,37 +3,25 @@ import CoreGraphics
 enum BrowserCommandPaletteLayout {
     static let maximumResultAreaHeight = BrowserCommandPaletteMetrics.maximumResultAreaHeight
 
+    /// The height the results take: each group's rows, with a header above
+    /// a group that has one, the spacing between groups and the padding
+    /// around them, at most `maximumHeight`.
     static func resultAreaHeight(
-        sectionRowCounts: [Int],
-        includesPrimaryAction: Bool,
+        groups: [(hasHeader: Bool, rows: Int)],
         maximumHeight: CGFloat = maximumResultAreaHeight
     ) -> CGFloat {
-        let sections = sectionRowCounts.filter { $0 > 0 }
-        let blockCount = sections.count + (includesPrimaryAction ? 1 : 0)
-        guard blockCount > 0 else { return 0 }
-
-        let sectionsHeight = sections.reduce(CGFloat.zero) { total, rows in
+        let shown = groups.filter { $0.rows > 0 }
+        guard !shown.isEmpty else { return 0 }
+        let groupsHeight = shown.reduce(CGFloat.zero) { total, group in
             total
-                + BrowserCommandPaletteMetrics.resultHeaderHeight
-                + BrowserCommandPaletteMetrics.resultRowSpacing
-                + (CGFloat(rows) * BrowserCommandPaletteMetrics.resultRowHeight)
-                + (CGFloat(rows - 1) * BrowserCommandPaletteMetrics.resultRowSpacing)
+                + (group.hasHeader
+                    ? BrowserCommandPaletteMetrics.resultHeaderHeight + BrowserCommandPaletteMetrics.resultRowSpacing
+                    : 0)
+                + CGFloat(group.rows) * BrowserCommandPaletteMetrics.resultRowHeight
+                + CGFloat(group.rows - 1) * BrowserCommandPaletteMetrics.resultRowSpacing
         }
-        let actionHeight =
-            includesPrimaryAction
-            ? BrowserCommandPaletteMetrics.resultRowHeight
-            : 0
-        let spacing =
-            CGFloat(blockCount - 1)
-            * BrowserCommandPaletteMetrics.resultSectionSpacing
-
-        return min(
-            BrowserCommandPaletteMetrics.resultOuterPadding
-                + sectionsHeight
-                + spacing
-                + actionHeight,
-            max(0, maximumHeight)
-        )
+        let spacing = CGFloat(shown.count - 1) * BrowserCommandPaletteMetrics.resultSectionSpacing
+        return min(BrowserCommandPaletteMetrics.resultOuterPadding + groupsHeight + spacing, max(0, maximumHeight))
     }
 
     static func resultAreaHeight(
@@ -42,8 +30,7 @@ enum BrowserCommandPaletteLayout {
         maximumHeight: CGFloat = maximumResultAreaHeight
     ) -> CGFloat {
         resultAreaHeight(
-            sectionRowCounts: [max(0, tabCount)],
-            includesPrimaryAction: includesPrimaryAction,
+            groups: [(false, includesPrimaryAction ? 1 : 0), (true, max(0, tabCount))],
             maximumHeight: maximumHeight
         )
     }
@@ -55,6 +42,17 @@ enum BrowserCommandPaletteLayout {
             BrowserCommandPaletteMetrics.maximumCardWidth,
             max(0, availableWidth - BrowserCommandPaletteMetrics.overlayCardPadding * 2)
         )
+    }
+
+    /// How far below the top of the space its layer leaves it the overlay
+    /// card's top edge rests: where a card with its tallest results would sit
+    /// centered, so the top never moves as results come and go and the card
+    /// only grows downward, as on iPhone and iPad.
+    static func overlayTopInset(availableHeight: CGFloat) -> CGFloat {
+        let tallestCard =
+            BrowserCommandPaletteMetrics.searchFieldMinimumHeight
+            + overlayResultAreaHeight(availableHeight: availableHeight)
+        return max(BrowserCommandPaletteMetrics.overlayCardPadding, (availableHeight - tallestCard) / 2)
     }
 
     static func overlayResultAreaHeight(availableHeight: CGFloat) -> CGFloat {

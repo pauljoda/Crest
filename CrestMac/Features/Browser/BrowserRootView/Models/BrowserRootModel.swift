@@ -626,7 +626,8 @@ extension BrowserRootModel {
     func paletteRegistry(
         windows: BrowserMacWindows?,
         layoutDirection: LayoutDirection,
-        shortcuts: BrowserShortcutStore?
+        shortcuts: BrowserShortcutStore?,
+        settings: BrowserSpaceSettingsPresentationState? = nil
     ) -> BrowserCommandPaletteCommandRegistry {
         BrowserCommandActions(
             browser: browser,
@@ -637,7 +638,18 @@ extension BrowserRootModel {
             targetWindowID: windowState?.id,
             layoutDirection: layoutDirection,
         )
-        .paletteRegistry(shortcuts: shortcuts)
+        .paletteRegistry(shortcuts: shortcuts) { [weak self] name in self?.openPaletteSettings(name, in: settings) }
+    }
+
+    /// Opens Settings at the page the settings call `name`, which `settings`
+    /// presents.
+    func openPaletteSettings(_ name: String, in settings: BrowserSpaceSettingsPresentationState?) {
+        guard let destination = BrowserSettingsDestination.all.first(where: { $0.name == name }),
+            let space = browser.shownSpace
+        else { return }
+        settings?.present(destination, assignment: BrowserSpaceRuntimeAssignment(space: space))
+        browser.openSettings()
+        pages.select()
     }
 
     func isPaletteSourceAvailable(
@@ -670,11 +682,15 @@ extension BrowserRootModel {
         return true
     }
 
+    /// Opens `url` from the palette where `opening` says, from `source`, once
+    /// the source's Space may still act.
     @discardableResult
     func openPaletteURL(
         _ url: URL,
         mode: BrowserCommandPaletteMode,
-        from source: BrowserTabRuntimeAssignment
+        from source: BrowserTabRuntimeAssignment,
+        opening: BrowserCommandPaletteOpening = .here,
+        windows: BrowserMacWindows? = nil
     ) -> Bool {
         guard
             BrowserCommandPaletteActionPolicy.isSourceAvailable(
@@ -683,15 +699,53 @@ extension BrowserRootModel {
                 accessController: spaceAccess
             )
         else { return false }
-        switch mode {
-        case .editLocation:
-            browser.navigateSelectedTab(to: url.absoluteString)
-        case .newTab:
-            guard browser.openAddress(url, in: source.spaceID) else { return false }
-        }
+        return opening.open(url, from: source, with: BrowserMacPaletteOpener(model: self, mode: mode, windows: windows))
+    }
+
+    /// Loads `url` in the page the window shows and shows it in the address field.
+    fileprivate func showLoading(_ url: URL) {
         pages.select()
         pages.load(url)
         address = url.absoluteString
+    }
+}
+
+/// How the Mac window opens an address from its palette: in place of the
+/// source tab, or in a new tab when the palette opened for one; in a new tab
+/// behind or in front; beside the source in Split View; or in a Quick Window
+/// that hands its result back to this window.
+@MainActor
+private struct BrowserMacPaletteOpener: BrowserCommandPaletteOpener {
+    let model: BrowserRootModel
+    let mode: BrowserCommandPaletteMode
+    let windows: BrowserMacWindows?
+
+    func openHere(_ url: URL, from source: BrowserTabRuntimeAssignment) -> Bool {
+        if mode == .newTab { return openTab(url, from: source, selecting: true) }
+        model.browser.navigateSelectedTab(to: url.absoluteString)
+        model.showLoading(url)
+        return true
+    }
+
+    func openTab(_ url: URL, from source: BrowserTabRuntimeAssignment, selecting: Bool) -> Bool {
+        guard selecting else { return model.browser.openNewTab(url: url, in: source.spaceID, selecting: false) != nil }
+        guard model.browser.openAddress(url, in: source.spaceID) else { return false }
+        model.showLoading(url)
+        return true
+    }
+
+    func openInSplit(_ url: URL, from source: BrowserTabRuntimeAssignment) -> Bool {
+        let assignment = BrowserSpaceRuntimeAssignment(spaceID: source.spaceID, profileID: source.profileID)
+        return model.browser.openLinkInSplit(url: url, joining: source.tabID, matching: assignment) != nil
+    }
+
+    func openInQuickWindow(_ url: URL, from source: BrowserTabRuntimeAssignment) -> Bool {
+        guard let windows else { return false }
+        windows.openQuickWindow(
+            BrowserQuickWindowRequest(
+                url: url,
+                spaceAssignment: BrowserSpaceRuntimeAssignment(spaceID: source.spaceID, profileID: source.profileID),
+                targetWindowID: model.windowState?.id))
         return true
     }
 }

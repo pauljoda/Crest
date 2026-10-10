@@ -6,20 +6,20 @@ public sealed record AddressResolution(string Url, string? SearchQuery) {
     #region Actions - Navigation
 
     /// The address a page loads for what the person typed or chose in a Space
-    /// with `preferences`, on an engine that shows internal pages or not: an
-    /// address as it is, or a search with the Space's engine. Throws
+    /// that searches with `provider`, on an engine that shows internal pages
+    /// or not: an address as it is, or a search with the provider. Throws
     /// `Rejected` with `UnsupportedAddress` when the input names nothing a
     /// page can load, as blank input does.
-    public static string Loading(string input, BrowsingPreferences preferences, bool allowsInternalPages) {
+    public static string Loading(string input, SearchProvider provider, bool allowsInternalPages) {
         ArgumentNullException.ThrowIfNull(input);
-        ArgumentNullException.ThrowIfNull(preferences);
+        ArgumentNullException.ThrowIfNull(provider);
         // The empty document is an address on every engine, whatever its fragment.
         var value = input.Trim();
         if (value == BrowserUrlConstants.AboutBlank || value.StartsWith(BrowserUrlConstants.AboutBlank + "#", StringComparison.Ordinal))
             return value;
         AddressResolution? resolution;
         try {
-            resolution = Resolve(input, SearchPreferences.Restore(preferences).Selected, allowsInternalPages);
+            resolution = Resolve(input, provider, allowsInternalPages);
         } catch (BrowserRuleException) {
             throw new Rejected(new UnsupportedAddress(input));
         }

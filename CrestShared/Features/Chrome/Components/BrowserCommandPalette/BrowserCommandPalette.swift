@@ -26,13 +26,15 @@ struct BrowserCommandPalette: View {
                 BrowserTabRuntimeAssignment,
                 BrowserTabRuntimeAssignment
             ) -> Bool,
-        openURL: @escaping (BrowserTabRuntimeAssignment, URL) -> Bool,
+        openURL: @escaping (BrowserTabRuntimeAssignment, URL, BrowserCommandPaletteOpening) -> Bool,
         dismiss: @escaping () -> Void,
         presentation: BrowserCommandPalettePresentation = .overlay,
         morphNamespace: Namespace.ID? = nil,
         overlayContentLeadingInset: CGFloat = 0,
         overlayContentInsets: EdgeInsets? = nil,
-        emptySelectionActions: BrowserEmptySelectionPaletteActions? = nil
+        emptySelectionActions: BrowserEmptySelectionPaletteActions? = nil,
+        openings: [BrowserCommandPaletteOpening] = [.here],
+        readPasteboard: () -> String? = { nil }
     ) {
         self.presentation = presentation
         self.morphNamespace = morphNamespace
@@ -50,7 +52,9 @@ struct BrowserCommandPalette: View {
                 selectTab: selectTab,
                 openURL: openURL,
                 dismiss: dismiss,
-                emptySelectionActions: emptySelectionActions
+                emptySelectionActions: emptySelectionActions,
+                openings: openings,
+                readPasteboard: readPasteboard
             ))
     }
 
@@ -80,7 +84,7 @@ struct BrowserCommandPalette: View {
             commands: BrowserCommandPalettePreviewFixture.registry,
             isSourceAvailable: { _ in true },
             selectTab: { _, _ in true },
-            openURL: { _, _ in true },
+            openURL: { _, _, _ in true },
             dismiss: {}
         )
     }
@@ -96,7 +100,7 @@ struct BrowserCommandPalette: View {
         offersRestingCommands: false,
         isSourceAvailable: { _ in true },
         selectTab: { _, _ in true },
-        openURL: { _, _ in true },
+        openURL: { _, _, _ in true },
         dismiss: {},
         presentation: .embedded
     )

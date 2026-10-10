@@ -113,6 +113,9 @@ final class BrowserMacApplication {
         let legacyDevice = BrowserLegacyDeviceDefaults.read(for: launchEnvironment)
         BrowserLinkPreferenceStore.adopt(legacyDevice.linkPreferences, into: core)
         let browser = try BrowserStore.production(core: core, launchEnvironment: launchEnvironment)
+        // The search catalog carries the engines the Spaces chose before the
+        // device kept one, so it restores once the stored session is open.
+        BrowserSearchCatalog.restore(into: core)
         BrowserAppPreferenceStore.shared.bind(
             to: browser, legacy: LegacyAppPreferences.read(for: launchEnvironment))
         BrowserAppPreferenceStore.shared.reconcileWebKitSpellChecking()

@@ -332,8 +332,8 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
                     commands: mobileBrowserCommandContext.paletteRegistry,
                     isSourceAvailable: model.isPaletteSourceAvailable,
                     selectTab: model.selectPaletteTab,
-                    openURL: { source, url, mode in
-                        model.openPaletteURL(url, mode: mode, from: source)
+                    openURL: { source, url, mode, opening in
+                        model.openPaletteURL(url, mode: mode, from: source, opening: opening)
                     },
                     dismiss: dismissCommandPalette,
                     morphNamespace: compactChromeNamespace,

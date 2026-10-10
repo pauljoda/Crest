@@ -33,7 +33,6 @@ struct BrowserCommandPaletteCard: View {
 
     var body: some View {
         surface
-            .modifier(BrowserSiteSearchGlow(color: model.activeSiteSearch?.color))
             .accessibilityElement(children: .contain)
             .accessibilityIdentifier("command-palette")
     }
@@ -62,6 +61,7 @@ struct BrowserCommandPaletteCard: View {
                     )
                 )
                 .clipShape(morphingShape)
+                .modifier(BrowserSearchProviderGlow(color: model.activeProvider?.color, shape: morphingShape))
                 .animation(glassAnimation) {
                     $0.opacity(isSettled ? 1 : 0)
                 }
@@ -85,10 +85,14 @@ struct BrowserCommandPaletteCard: View {
                     )
                 )
                 .clipShape(restingShape)
+                .modifier(BrowserSearchProviderGlow(color: model.activeProvider?.color, shape: restingShape))
                 .opacity(isSettled ? 1 : 0)
         }
     }
 
+    /// The field, the provider chips while what is typed names some, and the
+    /// results. An overlay card keeps one height whatever the results, so it
+    /// never moves as they change; the chips take their room from the results.
     private var contents: some View {
         VStack(spacing: 0) {
             BrowserCommandPaletteSearchField(
@@ -97,14 +101,29 @@ struct BrowserCommandPaletteCard: View {
                 queryIsFocused: queryIsFocused
             )
 
-            if !model.groups.isEmpty {
+            if !model.providerChips.isEmpty {
+                BrowserCommandPaletteProviderChips(model: model)
+            }
+
+            if keepsHeight || !model.groups.isEmpty {
                 Divider()
                 BrowserCommandPaletteResultList(
                     model: model,
-                    maximumResultAreaHeight: maximumResultAreaHeight
+                    maximumResultAreaHeight: resultAreaHeight,
+                    fillsHeight: keepsHeight
                 )
             }
         }
+    }
+
+    /// Whether the card keeps one height while its results change.
+    private var keepsHeight: Bool { presentation == .overlay }
+
+    /// The height the results may take, less what the provider chips take
+    /// from a card that keeps its height.
+    private var resultAreaHeight: CGFloat {
+        guard keepsHeight, !model.providerChips.isEmpty else { return maximumResultAreaHeight }
+        return max(0, maximumResultAreaHeight - BrowserCommandPaletteMetrics.providerChipRowHeight)
     }
 
     /// The card's own outline at rest, and the field's while the card is

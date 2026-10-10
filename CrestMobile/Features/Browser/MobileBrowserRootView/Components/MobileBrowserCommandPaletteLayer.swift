@@ -16,7 +16,8 @@ struct MobileBrowserCommandPaletteLayer: View {
         (
             BrowserTabRuntimeAssignment,
             URL,
-            BrowserCommandPaletteMode
+            BrowserCommandPaletteMode,
+            BrowserCommandPaletteOpening
         ) -> Bool
     let dismiss: () -> Void
     let morphNamespace: Namespace.ID
@@ -34,10 +35,11 @@ struct MobileBrowserCommandPaletteLayer: View {
                 commands: commands,
                 isSourceAvailable: isSourceAvailable,
                 selectTab: selectTab,
-                openURL: { source, url in openURL(source, url, mode) },
+                openURL: { source, url, opening in openURL(source, url, mode, opening) },
                 dismiss: dismiss,
                 morphNamespace: morphNamespace,
-                overlayContentInsets: overlayContentInsets
+                overlayContentInsets: overlayContentInsets,
+                openings: [.here, .backgroundTab, .newTab]
             )
             .id(
                 BrowserCommandPalettePresentationIdentity(

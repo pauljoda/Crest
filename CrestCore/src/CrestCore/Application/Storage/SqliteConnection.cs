@@ -153,6 +153,8 @@ internal sealed class SqliteConnection : IDisposable {
             + "overwrites_cloud INTEGER NOT NULL, engine_state BLOB)");
         Execute("CREATE TABLE IF NOT EXISTS device_cloud_record (name TEXT PRIMARY KEY, fields BLOB NOT NULL, schema_version INTEGER)");
         Execute("CREATE TABLE IF NOT EXISTS device_setup_draft (id INTEGER PRIMARY KEY CHECK (id = 0), document TEXT NOT NULL)");
+        Execute("CREATE TABLE IF NOT EXISTS device_palette (space TEXT PRIMARY KEY, document TEXT NOT NULL)");
+        Execute("CREATE TABLE IF NOT EXISTS device_search_catalog (id INTEGER PRIMARY KEY CHECK (id = 0), document TEXT NOT NULL)");
         Execute("CREATE TABLE IF NOT EXISTS device_setup (id INTEGER PRIMARY KEY CHECK (id = 0), completed INTEGER NOT NULL)");
         Execute("CREATE TABLE IF NOT EXISTS device_tab_group (id TEXT PRIMARY KEY, space TEXT NOT NULL, engine TEXT NOT NULL, "
             + "title TEXT NOT NULL, color TEXT NOT NULL, position INTEGER NOT NULL)");
@@ -161,7 +163,27 @@ internal sealed class SqliteConnection : IDisposable {
     /// Everything the device store holds. A row whose identities or names do
     /// not read is left out.
     public DeviceRecords ReadDevice() => new(ReadWindows(), ReadReopening(), ReadSitePermissions(), ReadSiteEngines(), ReadShortcuts(),
-        ReadLinks(), ReadSetupDraft(), ReadSetupCompleted(), ReadAdoptions(), ReadTabGroups(), ReadDefaultEngine());
+        ReadLinks(), ReadSetupDraft(), ReadSetupCompleted(), ReadAdoptions(), ReadTabGroups(), ReadDefaultEngine()) {
+        PaletteMemories = ReadPaletteMemories(),
+        SearchCatalog = ReadSearchCatalog()
+    };
+
+    /// The search catalog the store keeps, or null when it keeps none or it does not read.
+    private SearchCatalog? ReadSearchCatalog() {
+        string? document = null;
+        Rows("SELECT document FROM device_search_catalog", statement => document = Sqlite.ColumnText(statement, 0));
+        return SearchCatalogDocument.Read(document);
+    }
+
+    /// Each persistent Space's palette memory that reads, by Space.
+    private Dictionary<Guid, PaletteMemory> ReadPaletteMemories() {
+        var memories = new Dictionary<Guid, PaletteMemory>();
+        Rows("SELECT space, document FROM device_palette", statement => {
+            if (Identity(statement, 0) is { } space && PaletteMemoryDocument.Read(Sqlite.ColumnText(statement, 1)) is { } memory)
+                memories[space] = memory;
+        });
+        return memories;
+    }
 
     /// The person's preference remains available even in a single-engine product.
     private EngineKind? ReadDefaultEngine() {
@@ -328,6 +350,31 @@ internal sealed class SqliteConnection : IDisposable {
         if (written is null || records.SetupCompleted != written.SetupCompleted) WriteSetupCompleted(records.SetupCompleted);
         if (written is null || !records.Adopted.SetEquals(written.Adopted)) WriteAdoptions(records.Adopted);
         if (written is null || !records.TabGroups.SequenceEqual(written.TabGroups)) WriteTabGroups(records.TabGroups);
+        WritePaletteMemories(records.PaletteMemories, written?.PaletteMemories);
+        if (written is null || !ReferenceEquals(records.SearchCatalog, written.SearchCatalog)) WriteSearchCatalog(records.SearchCatalog);
+    }
+
+    /// The search catalog as its one document, or no row before it was first restored.
+    private void WriteSearchCatalog(SearchCatalog? catalog) {
+        Execute("DELETE FROM device_search_catalog");
+        if (catalog is null) return;
+        Insert("INSERT INTO device_search_catalog(id, document) VALUES(0,?)",
+            statement => Bind(statement, 1, SearchCatalogDocument.Write(catalog)));
+    }
+
+    /// Each Space's palette memory that differs from what was written, and no
+    /// row for a Space whose memory went.
+    private void WritePaletteMemories(IReadOnlyDictionary<Guid, PaletteMemory> memories, IReadOnlyDictionary<Guid, PaletteMemory>? written) {
+        if (written is null) Execute("DELETE FROM device_palette");
+        foreach (var gone in written?.Keys.Where(space => !memories.ContainsKey(space)) ?? [])
+            Insert("DELETE FROM device_palette WHERE space = ?", statement => Bind(statement, 1, Spelling(gone)));
+        foreach (var (space, memory) in memories) {
+            if (written is not null && written.TryGetValue(space, out var kept) && ReferenceEquals(kept, memory)) continue;
+            Insert("INSERT OR REPLACE INTO device_palette(space, document) VALUES(?,?)", statement => {
+                Bind(statement, 1, Spelling(space));
+                Bind(statement, 2, PaletteMemoryDocument.Write(memory));
+            });
+        }
     }
 
     /// The tab groups in order, each engine and color by its `Name`.

@@ -2,15 +2,15 @@ import SwiftUI
 
 struct BrowserCommandPaletteResultRows: View {
     let model: BrowserCommandPaletteModel
-    let items: [BrowserCommandPaletteItem]
+    let group: BrowserCommandPaletteGroup
 
     var body: some View {
-        ForEach(items) { item in
-            if item.row.kind.isPrimary {
+        ForEach(group.items) { item in
+            if item.row.kind.isPrimary || group.section == .topHit {
                 BrowserCommandPaletteIntentRow(model: model, item: item)
                     .id(item.id)
             } else {
-                BrowserCommandPaletteResultRow(model: model, item: item)
+                BrowserCommandPaletteResultRow(model: model, item: item, namesKind: group.section == .results)
                     .id(item.id)
             }
         }

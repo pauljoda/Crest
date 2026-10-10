@@ -34,10 +34,6 @@ public sealed record WorkspaceBusy(Guid WorkspaceId) : Rejection;
 
 #region Models - Spaces
 
-/// <summary>A search engine a person added to a Space. A template holds exactly one
-/// `%s` or `{searchTerms}` placeholder for the query.</summary>
-public sealed record CustomSearchProvider(Guid Id, string Name, string SearchUrlTemplate, string? SuggestionUrlTemplate);
-
 /// <summary>One address in a Space's history, with its first and latest visit.</summary>
 public sealed record HistoryEntryState(Guid Id, string Url, string Title, DateTimeOffset FirstVisitedAt,
     DateTimeOffset LastVisitedAt, int VisitCount);

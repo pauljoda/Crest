@@ -13,17 +13,19 @@ public sealed record Navigate(Guid PageId, string Input) : PageIntent {
     #region Actions - Pages
 
     internal override void Apply(Pages pages, PageTurn turn) =>
-        Load(pages, turn, PageId, (preferences, showsInternalPages) => AddressResolution.Loading(Input, preferences, showsInternalPages));
+        Load(pages, turn, PageId, (provider, showsInternalPages) => AddressResolution.Loading(Input, provider, showsInternalPages));
 
-    /// Loads into page `pageId` the address `resolve` makes for its Space's
-    /// browsing preferences and whether its engine shows internal pages. A
+    /// Loads into page `pageId` the address `resolve` makes for what its Space
+    /// searches with and whether its engine shows internal pages. A
     /// load to a site chosen for another registered engine moves the page
     /// there, which loads it instead.
-    internal static void Load(Pages pages, PageTurn turn, Guid pageId, Func<BrowsingPreferences, bool, string> resolve) {
+    internal static void Load(Pages pages, PageTurn turn, Guid pageId, Func<SearchProvider, bool, string> resolve) {
         var page = pages.Known(pageId);
         if (!page.Phase.HoldsEnginePage) throw new Rejected(new PageNotLoadable(page.Id));
         var space = pages.Hosting(pages.Device.Workspace(page.WorkspaceId), page.SpaceId);
-        var url = resolve(space.Settings.BrowsingPreferences, page.Engine.Supports(EngineCapability.InternalPages));
+        bool isPrivate = pages.Device.Workspace(page.WorkspaceId).Kind.IsPrivate;
+        var url = resolve(pages.Device.SearchCatalog.For(space.Settings.BrowsingPreferences, isPrivate),
+            page.Engine.Supports(EngineCapability.InternalPages));
         if (pages.Chosen(space, url) is { } chosen && !ReferenceEquals(chosen, page.Engine)) {
             turn.Closing.Move(page, chosen, url, RehostReason.SiteChoice, remembersSite: false, turn);
             return;

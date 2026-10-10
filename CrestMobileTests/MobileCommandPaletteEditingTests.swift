@@ -39,17 +39,17 @@ final class MobileCommandPaletteEditingTests: XCTestCase {
             fixture.coordinator.editingChanged()
             await fixture.model.waitForPendingResults()
             XCTAssertEqual(field.text, "exa")
-            XCTAssertEqual(fixture.model.urlCompletion?.completedQuery, "example.com/path")
+            XCTAssertEqual(fixture.model.urlCompletion?.completedQuery, "example.com")
             XCTAssertEqual(field.accessibilityLabel, "Command Palette")
             XCTAssertEqual(field.accessibilityIdentifier, "command-palette-field")
             XCTAssertTrue(
-                field.keyCommands?.contains { $0.input == "\t" && $0.discoverabilityTitle == "Accept URL completion" }
+                field.keyCommands?.contains { $0.input == "\t" && $0.discoverabilityTitle == "Complete or Search Site" }
                     == true)
             let rightArrow = try XCTUnwrap(field.keyCommands?.first { $0.input == UIKeyCommand.inputRightArrow })
             XCTAssertEqual(rightArrow.modifierFlags, [])
             field.perform(rightArrow.action, with: rightArrow)
-            XCTAssertEqual(field.text, "example.com/path")
-            XCTAssertEqual(fixture.model.query, "example.com/path")
+            XCTAssertEqual(field.text, "example.com")
+            XCTAssertEqual(fixture.model.query, "example.com")
             XCTAssertEqual(field.autocorrectionType, .no)
             XCTAssertTrue(field.adjustsFontForContentSizeCategory)
         }
@@ -99,7 +99,7 @@ final class MobileCommandPaletteEditingTests: XCTestCase {
                 XCTFail("Unexpected navigation")
                 return false
             },
-            openURL: { _, url in openURL(url) }, dismiss: {})
+            openURL: { _, url, _ in openURL(url) }, dismiss: {})
         let view = BrowserPlatformCommandPaletteField(
             model: model, presentation: presentation, identifier: "command-palette-field", focused: false)
         let coordinator = view.makeCoordinator()

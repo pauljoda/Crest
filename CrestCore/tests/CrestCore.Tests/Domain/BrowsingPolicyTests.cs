@@ -10,7 +10,8 @@ namespace CrestCore.Tests;
 /// or records expire.
 public sealed class BrowsingPolicyTests {
     private static SearchProvider Kagi() =>
-        SearchProvider.Admit(Guid.Parse("00000000-0000-0000-0000-000000000264"), "Kagi", "https://kagi.com/search?q=%s", null);
+        CustomSearchProvider.Carried(Guid.Parse("00000000-0000-0000-0000-000000000264"), "Kagi", "https://kagi.com/search?q=%s", null).Admitted()
+            .Provider;
 
     [Theory]
     [InlineData("apple.com", "https://apple.com", null)]

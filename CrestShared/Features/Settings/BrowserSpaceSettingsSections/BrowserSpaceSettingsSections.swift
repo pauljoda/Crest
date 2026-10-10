@@ -10,14 +10,12 @@ struct BrowserSpaceSettingsSections: View {
     let space: SpaceModel
     let spaceAccess: BrowserSpaceAccessController
     let dataDeleter: any BrowserSpaceDataDeleting
-    var manageSearchEngines: (() -> Void)? = nil
     var dismissKeyboard: @MainActor () -> Void = {}
 
     var body: some View {
         BrowserSpaceBrowsingSection(
             browser: browser,
             space: space,
-            manageSearchEngines: manageSearchEngines,
             dismissKeyboard: dismissKeyboard
         )
 

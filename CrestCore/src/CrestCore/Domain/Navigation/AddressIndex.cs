@@ -67,7 +67,8 @@ public sealed class AddressIndex {
     }
 
     private static void Add(ImmutableDictionary<Guid, AddressCandidate>.Builder candidates, HistoryEntryState entry) {
-        if (AddressCandidate.Of(entry.Url, AddressCandidate.HistorySource, entry.LastVisitedAt, entry.VisitCount) is { } candidate)
+        if (AddressCandidate.Of(entry.Url, AddressCandidate.HistorySource, entry.LastVisitedAt, entry.VisitCount, entry.FirstVisitedAt)
+            is { } candidate)
             candidates[entry.Id] = candidate;
     }
 

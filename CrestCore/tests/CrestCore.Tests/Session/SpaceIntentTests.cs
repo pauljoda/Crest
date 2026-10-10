@@ -50,7 +50,7 @@ public sealed partial class BrowserContractsTests {
 
         device.Send(new CreateSpace(device.Workspace, window, Guid.NewGuid()));
         var added = core.Current.Spaces[1];
-        Assert.Equal(("Private 2", "eyeglasses", BuiltInSearchEngine.DuckDuckGo, CurrentTabCleanup.Never),
+        Assert.Equal(("Private 2", "eyeglasses", BuiltInSearchProvider.DuckDuckGo, CurrentTabCleanup.Never),
             (added.Settings.Name, added.Settings.Symbol, added.Settings.BrowsingPreferences.SelectedBuiltInEngine,
                 added.Settings.BrowsingPreferences.CurrentTabCleanup));
         Assert.Equal(new CredentialPreferences(false, false, false), added.Settings.CredentialPreferences);

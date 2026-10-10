@@ -43,6 +43,7 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
                 BrowserRootCommandPaletteLayer(
                     model: model,
                     shortcuts: shortcuts,
+                    spaceSettingsPresentation: spaceSettingsPresentation,
                     commandSurfaceNamespace: commandSurfaceNamespace,
                     contentInsets: BrowserChromeAppearance.contentInsets(
                         for: rect, in: proxy.size, direction: layoutDirection

@@ -10,8 +10,8 @@ internal static partial class StoredSessionCodec {
     #region Variables
 
     /// What a Space that stored no browsing preferences searches and keeps.
-    internal static BrowsingPreferences DefaultBrowsingPreferences { get; } = new(BuiltInSearchEngine.Google, null, [], false,
-        CurrentTabCleanup.After12Hours, ContentBlockingPolicy.Balanced,
+    internal static BrowsingPreferences DefaultBrowsingPreferences { get; } = new(BuiltInSearchProvider.Google, null, [], false,
+        FollowsDefaultSearch: true, FollowsDefaultSuggestions: true, CurrentTabCleanup.After12Hours, ContentBlockingPolicy.Balanced,
         new(DataRetention.Forever, DataRetention.Forever, DataRetention.Forever));
 
     /// What a Space that stored no credential preferences offers.
@@ -23,7 +23,9 @@ internal static partial class StoredSessionCodec {
 
     /// A Space's browsing preferences. The selection falls back to the legacy
     /// provider member, a custom engine without a readable identity is left out,
-    /// a missing cleanup policy is twelve hours and an unknown one never cleans.
+    /// a Space an older release stored searches and suggests as it chose rather
+    /// than following the default, a missing cleanup policy is twelve hours and
+    /// an unknown one never cleans.
     internal static BrowsingPreferences DecodeBrowsingPreferences(JsonNode? node) {
         var value = Object(node);
         var retention = value[Key.DataRetention] as JsonObject;
@@ -34,28 +36,37 @@ internal static partial class StoredSessionCodec {
             ?? TolerantText(value[Key.LegacySearchProvider]));
         return new(builtIn, custom,
             [.. Items(value[Key.CustomSearchProviders]).OfType<JsonObject>().Select(CustomSearchProvider).OfType<CustomSearchProvider>()],
-            TolerantFlag(value[Key.SearchSuggestionsEnabled]) ?? false, cleanup,
+            TolerantFlag(value[Key.SearchSuggestionsEnabled]) ?? false, TolerantFlag(value[Key.SearchFollowsDefault]) ?? false,
+            TolerantFlag(value[Key.SuggestionsFollowDefault]) ?? false, cleanup,
             ContentBlockingPolicy.Named(TolerantText(value[Key.ContentBlockingPolicy])) ?? ContentBlockingPolicy.Balanced,
             new(Kept(Key.History), Kept(Key.Archive), Kept(Key.Downloads)));
     }
 
     /// The engine a stored selection names: a built-in's spelling, or `custom:`
     /// and a custom engine's identity. One this build cannot read selects Google.
-    internal static (BuiltInSearchEngine? BuiltIn, Guid? Custom) SearchSelection(string? spelling) =>
+    internal static (BuiltInSearchProvider? BuiltIn, Guid? Custom) SearchSelection(string? spelling) =>
         spelling is not null && spelling.StartsWith(SearchProvider.CustomPrefix, StringComparison.Ordinal)
             && Guid.TryParseExact(spelling[SearchProvider.CustomPrefix.Length..], "D", out var custom)
-            ? (null, custom) : (BuiltInSearchEngine.Named(spelling) ?? BuiltInSearchEngine.Google, null);
+            ? (null, custom) : (BuiltInSearchProvider.Named(spelling) ?? BuiltInSearchProvider.Google, null);
 
     /// A selection in its stored spelling.
     internal static string SearchSelection(BrowsingPreferences preferences) =>
-        preferences.SelectedCustomEngineId is { } custom ? SearchProvider.CustomId(custom)
-            : (preferences.SelectedBuiltInEngine ?? BuiltInSearchEngine.Google).Name;
+        preferences.SelectedCustomEngineId is { } custom ? SearchProvider.CustomName(custom)
+            : (preferences.SelectedBuiltInEngine ?? BuiltInSearchProvider.Google).Name;
 
     /// Older builds read only the legacy provider member, so a custom selection
-    /// keeps Google there as their safe fallback.
-    internal static JsonObject Encode(BrowsingPreferences preferences) => new() {
+    /// keeps Google there as their safe fallback. Following the default is
+    /// written only where a Space follows it.
+    internal static JsonObject Encode(BrowsingPreferences preferences) {
+        var encoded = EncodeSelection(preferences);
+        if (preferences.FollowsDefaultSearch) encoded[Key.SearchFollowsDefault] = true;
+        if (preferences.FollowsDefaultSuggestions) encoded[Key.SuggestionsFollowDefault] = true;
+        return encoded;
+    }
+
+    private static JsonObject EncodeSelection(BrowsingPreferences preferences) => new() {
         [Key.LegacySearchProvider] = preferences.SelectedCustomEngineId is null
-            ? (preferences.SelectedBuiltInEngine ?? BuiltInSearchEngine.Google).Name : BuiltInSearchEngine.Google.Name,
+            ? (preferences.SelectedBuiltInEngine ?? BuiltInSearchProvider.Google).Name : BuiltInSearchProvider.Google.Name,
         [Key.SelectedSearchProviderId] = SearchSelection(preferences),
         [Key.CustomSearchProviders] = new JsonArray(preferences.CustomSearchProviders.Select(provider => {
             var value = new JsonObject {
@@ -78,7 +89,7 @@ internal static partial class StoredSessionCodec {
 
     private static CustomSearchProvider? CustomSearchProvider(JsonObject value) =>
         Guid.TryParse(TolerantText(value[Key.Id]), out var id)
-            ? new(id, TolerantText(value[Key.Name]) ?? "", TolerantText(value[Key.SearchUrlTemplate]) ?? "",
+            ? Contracts.CustomSearchProvider.Carried(id, TolerantText(value[Key.Name]) ?? "", TolerantText(value[Key.SearchUrlTemplate]) ?? "",
                 TolerantText(value[Key.SuggestionUrlTemplate]))
             : null;
 
@@ -118,20 +129,63 @@ internal static partial class StoredSessionCodec {
             SavedTabClosePolicy.Named(TolerantText(value[Key.SavedTabClosePolicy])) ?? defaults.SavedTabClose,
             TolerantFlag(value[Key.SavedTabFaviconReturnsToSavedUrl]) ?? defaults.SavedTabFaviconReturnsToSavedUrl,
             TolerantFlag(value[Key.SplitFocusFollowsMouse]) ?? defaults.SplitFocusFollowsMouse,
-            TolerantFlag(value[Key.AutomaticallyShowsDeveloperToolbar]) ?? defaults.AutomaticallyShowsDeveloperToolbar);
+            TolerantFlag(value[Key.AutomaticallyShowsDeveloperToolbar]) ?? defaults.AutomaticallyShowsDeveloperToolbar,
+            DecodePalettePreferences(value[Key.Palette]));
     }
 
-    internal static JsonObject Encode(AppPreferences preferences) => new() {
-        [Key.StartupBehavior] = preferences.Startup.Name,
-        [Key.OffersTranslation] = preferences.OffersTranslation,
-        [Key.AutomaticallyTranslates] = preferences.AutomaticallyTranslates,
-        [Key.TranslationRules] = EncodeTranslationRules(preferences.TranslationRules),
-        [Key.ChecksSpelling] = preferences.ChecksSpelling,
-        [Key.AutomaticallyEntersPictureInPicture] = preferences.AutomaticallyEntersPictureInPicture,
-        [Key.SavedTabClosePolicy] = preferences.SavedTabClose.Name,
-        [Key.SavedTabFaviconReturnsToSavedUrl] = preferences.SavedTabFaviconReturnsToSavedUrl,
-        [Key.SplitFocusFollowsMouse] = preferences.SplitFocusFollowsMouse,
-        [Key.AutomaticallyShowsDeveloperToolbar] = preferences.AutomaticallyShowsDeveloperToolbar
+    /// The app-wide preferences. The palette's are written only once they
+    /// differ from the defaults, so a release that never stored them reads
+    /// its own document back unchanged.
+    internal static JsonObject Encode(AppPreferences preferences) {
+        var value = new JsonObject {
+            [Key.StartupBehavior] = preferences.Startup.Name,
+            [Key.OffersTranslation] = preferences.OffersTranslation,
+            [Key.AutomaticallyTranslates] = preferences.AutomaticallyTranslates,
+            [Key.TranslationRules] = EncodeTranslationRules(preferences.TranslationRules),
+            [Key.ChecksSpelling] = preferences.ChecksSpelling,
+            [Key.AutomaticallyEntersPictureInPicture] = preferences.AutomaticallyEntersPictureInPicture,
+            [Key.SavedTabClosePolicy] = preferences.SavedTabClose.Name,
+            [Key.SavedTabFaviconReturnsToSavedUrl] = preferences.SavedTabFaviconReturnsToSavedUrl,
+            [Key.SplitFocusFollowsMouse] = preferences.SplitFocusFollowsMouse,
+            [Key.AutomaticallyShowsDeveloperToolbar] = preferences.AutomaticallyShowsDeveloperToolbar
+        };
+        if (!preferences.Palette.Equals(PalettePreferences.Default)) value[Key.Palette] = Encode(preferences.Palette);
+        return value;
+    }
+
+    /// The palette preferences. A value this build cannot read keeps its
+    /// default, a kind of result it cannot name is left out, and a number of
+    /// rows it cannot read is the kind's own.
+    internal static PalettePreferences DecodePalettePreferences(JsonNode? node) {
+        var value = node as JsonObject ?? [];
+        var defaults = PalettePreferences.Default;
+        List<PaletteSourceChoice> sources = [];
+        foreach (var item in (value[Key.Sources] as JsonArray ?? []).OfType<JsonObject>())
+            if (PaletteSource.Named(TolerantText(item[Key.Source])) is { } source)
+                sources.Add(new(source, TolerantFlag(item[Key.IsEnabled]) ?? source.IsEnabledByDefault,
+                    item[Key.Limit] is JsonValue limit && limit.TryGetValue<int>(out int rows) ? rows : null));
+        return new PalettePreferences(PaletteLayout.Named(TolerantText(value[Key.Layout])) ?? defaults.Layout, sources,
+            TolerantFlag(value[Key.ShowsTopHit]) ?? defaults.ShowsTopHit, TolerantFlag(value[Key.PrefersOpenTabs]) ?? defaults.PrefersOpenTabs,
+            TolerantFlag(value[Key.CompletesInline]) ?? defaults.CompletesInline, TolerantFlag(value[Key.LearnsChoices]) ?? defaults.LearnsChoices,
+            TolerantFlag(value[Key.SearchesSitesWithTab]) ?? defaults.SearchesSitesWithTab,
+            TolerantFlag(value[Key.ShowsReasons]) ?? defaults.ShowsReasons).Restored();
+    }
+
+    private static JsonNode Encode(PaletteSourceChoice choice) {
+        var value = new JsonObject { [Key.Source] = choice.Source.Name, [Key.IsEnabled] = choice.IsEnabled };
+        if (choice.Limit is { } limit) value[Key.Limit] = limit;
+        return value;
+    }
+
+    internal static JsonObject Encode(PalettePreferences preferences) => new() {
+        [Key.Layout] = preferences.Layout.Name,
+        [Key.Sources] = new JsonArray([.. preferences.Sources.Select(Encode)]),
+        [Key.ShowsTopHit] = preferences.ShowsTopHit,
+        [Key.PrefersOpenTabs] = preferences.PrefersOpenTabs,
+        [Key.CompletesInline] = preferences.CompletesInline,
+        [Key.LearnsChoices] = preferences.LearnsChoices,
+        [Key.SearchesSitesWithTab] = preferences.SearchesSitesWithTab,
+        [Key.ShowsReasons] = preferences.ShowsReasons
     };
 
     /// The values the native settings stored before the core owned them, each

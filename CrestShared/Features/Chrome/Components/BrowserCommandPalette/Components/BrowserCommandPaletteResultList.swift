@@ -3,13 +3,13 @@ import SwiftUI
 struct BrowserCommandPaletteResultList: View {
     let model: BrowserCommandPaletteModel
     let maximumResultAreaHeight: CGFloat
+    /// The results take all the height they may, however few there are.
+    var fillsHeight = false
 
     private var resultAreaHeight: CGFloat {
-        BrowserCommandPaletteLayout.resultAreaHeight(
-            sectionRowCounts: model.groups
-                .filter { $0.section.title != nil }
-                .map(\.items.count),
-            includesPrimaryAction: model.groups.contains { $0.section.title == nil },
+        guard !fillsHeight else { return maximumResultAreaHeight }
+        return BrowserCommandPaletteLayout.resultAreaHeight(
+            groups: model.groups.map { ($0.section.title != nil, $0.items.count) },
             maximumHeight: maximumResultAreaHeight
         )
     }
@@ -29,6 +29,7 @@ struct BrowserCommandPaletteResultList: View {
                     }
                 }
                 .padding(BrowserCommandPaletteMetrics.resultContentPadding)
+                .frame(maxWidth: .infinity, alignment: .topLeading)
             }
             .frame(height: resultAreaHeight)
             .clipped()

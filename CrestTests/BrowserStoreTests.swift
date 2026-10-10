@@ -88,7 +88,10 @@ final class BrowserStoreTests: XCTestCase {
             ]
         )
         XCTAssertEqual(branding.bannerPattern, .solid)
-        XCTAssertEqual(browsing.searchProvider, .duckDuckGo)
+        // A private window searches with the device's private default and never suggests.
+        XCTAssertTrue(browsing.followsDefaultSearch)
+        XCTAssertFalse(browsing.followsDefaultSuggestions)
+        XCTAssertFalse(browsing.searchSuggestionsEnabled)
         XCTAssertEqual(browsing.currentTabCleanup, .never)
         XCTAssertFalse(
             try XCTUnwrap(store.shownSpace)
@@ -173,13 +176,17 @@ final class BrowserStoreTests: XCTestCase {
         )
         var preferences = try XCTUnwrap(store.spaceModel(selectedSpaceID)).settings.browsingPreferences
         let untouched = otherSpace.settings.browsingPreferences
-        preferences.searchProvider = .duckDuckGo
         preferences.currentTabCleanup = .never
+        let duckDuckGo = try XCTUnwrap(BrowserSearchCatalog(core: store.core).provider(named: "duckDuckGo"))
 
         store.updateBrowsingPreferences(preferences, in: selectedSpaceID)
+        store.setSearch(duckDuckGo, suggestions: nil, in: selectedSpaceID)
         await store.flushPendingSyncPersistence()
 
-        XCTAssertEqual(store.spaceModel(selectedSpaceID)?.settings.browsingPreferences, preferences)
+        let updated = try XCTUnwrap(store.spaceModel(selectedSpaceID)?.settings.browsingPreferences)
+        XCTAssertEqual(updated.currentTabCleanup, .never)
+        XCTAssertEqual(updated.selectedBuiltInEngine, .duckDuckGo)
+        XCTAssertFalse(updated.followsDefaultSearch)
         XCTAssertEqual(store.spaceModel(otherSpace.id)?.settings.browsingPreferences, untouched)
         XCTAssertTrue(try harness.storedJournal().isPending(.space, selectedSpaceID))
     }

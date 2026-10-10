@@ -1,108 +1,108 @@
 import SwiftUI
 
-/// A Space's search engine, suggestion privacy choice, and current-tab cleanup.
+/// What a Space searches with, whether it suggests searches, and when it
+/// archives current tabs. Search and suggestions follow the device's default
+/// until the Space chooses its own; the providers themselves live in
+/// Settings › Search.
 struct BrowserSpaceBrowsingSection: View {
     let browser: BrowserStore
     let space: SpaceModel
-    let manageSearchEngines: (() -> Void)?
     let dismissKeyboard: @MainActor () -> Void
     let pickerPresentation: BrowserSpaceBrowsingPickerPresentationStyle
 
-    @State private var presentedSearchEngineSheet: BrowserSearchEngineSheet?
+    @State private var catalog: BrowserSearchCatalog
 
     init(
         browser: BrowserStore,
         space: SpaceModel,
-        manageSearchEngines: (() -> Void)? = nil,
         dismissKeyboard: @escaping @MainActor () -> Void = {},
         pickerPresentation: BrowserSpaceBrowsingPickerPresentationStyle = BrowserPlatformSearchEnginePresentation
             .pickerStyle
     ) {
         self.browser = browser
         self.space = space
-        self.manageSearchEngines = manageSearchEngines
         self.dismissKeyboard = dismissKeyboard
         self.pickerPresentation = pickerPresentation
+        _catalog = State(initialValue: BrowserSearchCatalog(core: browser.core))
     }
 
     var body: some View {
         Section {
-            searchProviderPicker
-
-            Button("Manage Search Engines…") {
-                requestSearchEngineManagement()
-            }
-            .accessibilityIdentifier("manage-search-providers")
-
-            Toggle(
-                "Search suggestions",
-                isOn: browser.browsingPreferenceBinding(
-                    \.searchSuggestionsEnabled,
-                    in: space
-                )
-            )
-            .accessibilityIdentifier("space-search-suggestions")
-
+            searchPicker
+            suggestionsPicker
             cleanupPolicyPicker
 
             Button("Archive Now") {
                 browser.cleanupCurrentTabs(in: space.id)
             }
             .disabled(currentPreferences.currentTabCleanup == .never)
-
         } header: {
             Text("Browsing")
         } footer: {
             CrestFormFootnote("Search suggestions send what you type to the search engine.")
         }
-        .sheet(item: $presentedSearchEngineSheet) { _ in
-            BrowserSearchEngineManager(
-                browser: browser,
-                space: space,
-                dismissKeyboard: dismissKeyboard
-            )
-        }
-    }
-
-    func requestSearchEngineManagement() {
-        guard let manageSearchEngines else {
-            presentedSearchEngineSheet = .manager
-            return
-        }
-        manageSearchEngines()
     }
 
     private var currentPreferences: BrowsingPreferences {
         space.settings.browsingPreferences
     }
 
-    private var searchProviderBinding: Binding<SearchProvider> {
-        browser.browsingPreferenceBinding(\.searchProvider, in: space)
-    }
-
     private var cleanupPolicyBinding: Binding<CurrentTabCleanup> {
         browser.browsingPreferenceBinding(\.currentTabCleanup, in: space)
     }
 
-    private var searchProviderPicker: some View {
+    // MARK: - Search
+
+    /// The Space's choice: the default while it follows it, else its own.
+    private var searchChoice: Binding<BrowserSpaceSearchChoice> {
+        Binding {
+            BrowserSpaceSearchChoice(
+                provider: currentPreferences.followsDefaultSearch
+                    ? nil : catalog.provider(for: currentPreferences, isPrivate: browser.isPrivateBrowsing))
+        } set: { choice in
+            browser.setSearch(choice.provider, suggestions: suggestionChoice.wrappedValue.enabled, in: space.id)
+        }
+    }
+
+    /// Default, then every engine and assistant the device offers, and the
+    /// Space's own when the device no longer offers it.
+    private var searchChoices: [BrowserSpaceSearchChoice] {
+        var providers = catalog.defaultChoices
+        if let own = searchChoice.wrappedValue.provider, !providers.contains(own) { providers.append(own) }
+        return [BrowserSpaceSearchChoice(provider: nil)] + providers.map { BrowserSpaceSearchChoice(provider: $0) }
+    }
+
+    private func title(of choice: BrowserSpaceSearchChoice) -> String {
+        if let provider = choice.provider { return provider.title }
+        return String(
+            localized: "Default (\(catalog.defaultProvider(isPrivate: browser.isPrivateBrowsing)?.title ?? "Google"))",
+            comment: "A Space follows the device's default search, named in parentheses.")
+    }
+
+    private var searchPicker: some View {
         BrowserSpaceBrowsingPreferencePicker(
-            title: "Search engine",
+            title: "Search with",
             presentation: pickerPresentation,
-            selection: searchProviderBinding,
-            choices: currentPreferences.availableSearchProviders,
-            choiceTitle: { $0.title },
+            selection: searchChoice,
+            choices: searchChoices,
+            choiceTitle: title(of:),
             accessibilityIdentifier: "space-search-provider",
             dismissKeyboard: dismissKeyboard,
-            choiceLabel: { provider in
-                BrowserSearchProviderIdentityLabel(provider: provider, profileID: space.profileID)
+            choiceLabel: { choice in
+                if let provider = choice.provider {
+                    BrowserSearchProviderIdentityLabel(provider: provider, profileID: space.profileID)
+                } else {
+                    Text(title(of: choice))
+                }
             },
             selectedValue: {
                 HStack(spacing: BrowserSpaceBrowsingPickerValueLayout.touch.providerTextSpacing) {
-                    BrowserSearchProviderIcon(
-                        provider: currentPreferences.searchProvider,
-                        profileID: space.profileID,
-                        size: BrowserSearchProviderIdentityLabelLayout.touch.iconSize)
-                    Text(currentPreferences.searchProvider.title)
+                    if let provider = catalog.provider(for: currentPreferences, isPrivate: browser.isPrivateBrowsing) {
+                        BrowserSearchProviderIcon(
+                            provider: provider, profileID: space.profileID,
+                            size: BrowserSearchProviderIdentityLabelLayout.touch.iconSize)
+                    }
+                    Text(title(of: searchChoice.wrappedValue))
                         .foregroundStyle(.secondary)
                         .lineLimit(BrowserSpaceBrowsingPickerValueLayout.touch.providerTitleLineLimit)
                         .minimumScaleFactor(BrowserSpaceBrowsingPickerValueLayout.touch.minimumProviderTitleScale)
@@ -110,6 +110,37 @@ struct BrowserSpaceBrowsingSection: View {
                 }
             })
     }
+
+    // MARK: - Suggestions
+
+    private var suggestionChoice: Binding<BrowserSpaceSuggestionChoice> {
+        Binding {
+            currentPreferences.followsDefaultSuggestions
+                ? .followsDefault : BrowserSpaceSuggestionChoice(enabled: currentPreferences.searchSuggestionsEnabled)
+        } set: { choice in
+            browser.setSearch(searchChoice.wrappedValue.provider, suggestions: choice.enabled, in: space.id)
+        }
+    }
+
+    private var suggestionsPicker: some View {
+        BrowserSpaceBrowsingPreferencePicker(
+            title: "Search suggestions",
+            presentation: pickerPresentation,
+            selection: suggestionChoice,
+            choices: BrowserSpaceSuggestionChoice.all,
+            choiceTitle: { $0.title(defaultEnabled: catalog.suggestionsEnabled) },
+            accessibilityIdentifier: "space-search-suggestions",
+            dismissKeyboard: dismissKeyboard,
+            choiceLabel: { choice in
+                Text(choice.title(defaultEnabled: catalog.suggestionsEnabled))
+            },
+            selectedValue: {
+                Text(suggestionChoice.wrappedValue.title(defaultEnabled: catalog.suggestionsEnabled))
+                    .foregroundStyle(.secondary)
+            })
+    }
+
+    // MARK: - Cleanup
 
     private var cleanupPolicyPicker: some View {
         BrowserSpaceBrowsingPreferencePicker(
@@ -128,11 +159,6 @@ struct BrowserSpaceBrowsingSection: View {
                     .foregroundStyle(.secondary)
             })
     }
-}
-
-private enum BrowserSearchEngineSheet: String, Identifiable {
-    case manager
-    var id: String { rawValue }
 }
 
 extension CurrentTabCleanup: Identifiable {

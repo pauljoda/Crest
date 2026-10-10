@@ -1,52 +1,7 @@
 import SwiftUI
+import UIKit
 
 extension MobileBrowserCommandContext {
-    /// The commands the launcher offers on iOS and iPadOS.
-    ///
-    /// It is the Mac list minus everything the platform has no answer for:
-    /// extra window kinds, the Web Inspector, and the share and export sheets,
-    /// none of which this shell implements. A command absent here simply never
-    /// appears in the launcher — that is the whole contract.
-    static let paletteCommands: [ShortcutCommand] = [
-        .closeTabOrWindow,
-        .back,
-        .forward,
-        .reloadPage,
-        .stopLoading,
-        .reloadFromOrigin,
-        .toggleSelectedTabPinned,
-        .duplicateTab,
-        .reopenClosedTab,
-        .clearUnpinnedTabs,
-        .archiveTab,
-        .previousTab,
-        .nextTab,
-        .mostRecentTab,
-        .splitWithNextTab,
-        .focusNextSplitCard,
-        .focusPreviousSplitCard,
-        .removeTabFromSplit,
-        .separateSplitTabs,
-        .moveSplitCardLeft,
-        .moveSplitCardRight,
-        .previousSpace,
-        .nextSpace,
-        .toggleReaderMode,
-        .toggleContentBlocking,
-        .findInPage,
-        .zoomIn,
-        .zoomOut,
-        .actualSize,
-        .copyPageLink,
-        .copyPageLinkAsMarkdown,
-        .printPage,
-        .toggleSidebar,
-        .toggleTranslationToolbar,
-        .showHistory,
-        .showArchive,
-        .showDownloads,
-    ]
-
     /// The on-screen direction resolved against this shell's layout, so the
     /// hardware-keyboard menu and the launcher ask the same question.
     func canMoveFocusedSplitCard(
@@ -68,61 +23,26 @@ extension MobileBrowserCommandContext {
     @MainActor
     var paletteRegistry: BrowserCommandPaletteCommandRegistry {
         BrowserCommandPaletteCommandRegistry(
-            commands: Self.paletteCommands.filter {
-                isOffered($0)
-                    && ($0 != .toggleTranslationToolbar || canToggleTranslationToolbar)
-            },
-            perform: performFromPalette
+            commands: MobileBrowserCommand.all.filter { isOffered($0.command) && $0.isAvailable(self) }.map(\.command),
+            perform: performFromPalette,
+            switchSpace: selectSpace,
+            reopenArchivedTab: reopenArchivedTab,
+            copy: { UIPasteboard.general.string = $0 }
         )
     }
 
+    /// Toggles content blocking for the page the window shows, which finishes
+    /// on its own once the engine applies it.
+    @MainActor
+    func beginTogglingContentBlocking() {
+        Task { await toggleContentBlocking() }
+    }
+
+    /// Runs `command` as the platform does, when it has an answer for it and
+    /// can run it now.
     @MainActor
     private func performFromPalette(_ command: ShortcutCommand) {
-        switch command.kind {
-        case .closeTabOrWindow: dismissSelectedTab()
-        case .archiveTab: archiveSelectedTab()
-        case .back: goBack()
-        case .forward: goForward()
-        case .reloadPage: reloadOrStop()
-        case .stopLoading: stopLoading()
-        case .reloadFromOrigin: reloadFromOrigin()
-        case .toggleSelectedTabPinned: toggleSelectedTabPinned()
-        case .duplicateTab: duplicateSelectedTab()
-        case .reopenClosedTab: reopenClosedTab()
-        case .clearUnpinnedTabs: cleanupCurrentTabs()
-        case .previousTab: selectPreviousTab()
-        case .nextTab: selectNextTab()
-        case .mostRecentTab: selectMostRecentTab()
-        case .splitWithNextTab: splitWithNextTab()
-        case .focusNextSplitCard: focusNextSplitCard()
-        case .focusPreviousSplitCard: focusPreviousSplitCard()
-        case .removeTabFromSplit: removeTabFromSplit()
-        case .separateSplitTabs: separateSplitTabs()
-        case .moveSplitCardLeft: moveFocusedSplitCard(.left)
-        case .moveSplitCardRight: moveFocusedSplitCard(.right)
-        case .previousSpace: selectPreviousSpace()
-        case .nextSpace: selectNextSpace()
-        case .toggleReaderMode: toggleReaderMode()
-        case .toggleContentBlocking:
-            Task { await toggleContentBlocking() }
-        case .findInPage: presentFind()
-        case .zoomIn: zoomIn()
-        case .zoomOut: zoomOut()
-        case .actualSize: resetZoom()
-        case .copyPageLink: copyPageLink()
-        case .copyPageLinkAsMarkdown: copyPageLinkAsMarkdown()
-        case .printPage: printPage()
-        case .toggleSidebar: toggleSidebar()
-        case .toggleTranslationToolbar:
-            guard canToggleTranslationToolbar else { return }
-            setTranslationToolbarVisible(!isTranslationToolbarVisible)
-        case .showHistory: presentHistory()
-        case .showArchive: presentArchive()
-        case .showDownloads: presentDownloads()
-        default:
-            // Everything else is deliberately unregistered on this platform, so
-            // the launcher never offers it and this arm never runs.
-            break
-        }
+        guard let action = MobileBrowserCommand.of(command), action.isAvailable(self) else { return }
+        action.run(self)
     }
 }

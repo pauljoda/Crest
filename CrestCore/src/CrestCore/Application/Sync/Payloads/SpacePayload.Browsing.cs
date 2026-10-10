@@ -10,7 +10,7 @@ internal sealed partial record SpacePayload {
 
     /// The most custom engines a client asks the core to restore at once;
     /// past it, a client keeps its engines as they are.
-    private const int MaximumRestoredProviders = SearchPreferences.MaximumCustomProviders * 2;
+    private const int MaximumRestoredProviders = SearchCatalog.MaximumCustomCount * 2;
 
     #endregion
 
@@ -19,13 +19,16 @@ internal sealed partial record SpacePayload {
     /// Browsing preferences as every client reads them. The tab cleanup is
     /// required and every closed choice must be one clients know; the engines
     /// are all or none; the selection falls back to the legacy member, then to
-    /// Google; and engines that no longer validate are left out, with a
-    /// selection that named one falling back to Google.
+    /// Google; engines that no longer validate are left out, with a selection
+    /// that named one falling back to Google; and a Space an older client wrote
+    /// searches and suggests as it chose rather than following the default.
     private static BrowsingPreferences ReadBrowsingPreferences(SyncPayloadReader value) {
-        string legacy = value.OptionalText(StoredSessionCodec.Key.LegacySearchProvider) ?? BuiltInSearchEngine.Google.Name;
+        string legacy = value.OptionalText(StoredSessionCodec.Key.LegacySearchProvider) ?? BuiltInSearchProvider.Google.Name;
         string selected = value.TolerantText(StoredSessionCodec.Key.SelectedSearchProviderId) ?? legacy;
         var providers = CustomProviders(value.Value[StoredSessionCodec.Key.CustomSearchProviders]);
         bool suggestions = value.TolerantFlag(StoredSessionCodec.Key.SearchSuggestionsEnabled) ?? false;
+        bool followsSearch = value.TolerantFlag(StoredSessionCodec.Key.SearchFollowsDefault) ?? false;
+        bool followsSuggestions = value.TolerantFlag(StoredSessionCodec.Key.SuggestionsFollowDefault) ?? false;
         var cleanup = value.Named(StoredSessionCodec.Key.CurrentTabCleanupPolicy, CurrentTabCleanup.Named);
         var blocking = value.OptionalNamed(StoredSessionCodec.Key.ContentBlockingPolicy, ContentBlockingPolicy.Named) ?? ContentBlockingPolicy.Balanced;
         var retention = value.OptionalNested(StoredSessionCodec.Key.DataRetention) is { } kept
@@ -34,7 +37,7 @@ internal sealed partial record SpacePayload {
             : StoredSessionCodec.DefaultBrowsingPreferences.DataRetention;
         (providers, selected) = Restored(providers, selected);
         var (builtIn, custom) = StoredSessionCodec.SearchSelection(selected);
-        return new(builtIn, custom, providers, suggestions, cleanup, blocking, retention);
+        return new(builtIn, custom, providers, suggestions, followsSearch, followsSuggestions, cleanup, blocking, retention);
     }
 
     /// The custom engines a record holds, or none when any of them is not an
@@ -44,7 +47,7 @@ internal sealed partial record SpacePayload {
         try {
             return [.. (node as JsonArray ?? throw new UnreadableSyncPayloadException()).Select(item => {
                 var provider = new SyncPayloadReader(item, SyncPayloadForm.Journal);
-                return new CustomSearchProvider(provider.Identity(StoredSessionCodec.Key.Id), provider.Text(StoredSessionCodec.Key.Name),
+                return CustomSearchProvider.Carried(provider.Identity(StoredSessionCodec.Key.Id), provider.Text(StoredSessionCodec.Key.Name),
                     provider.Text(StoredSessionCodec.Key.SearchUrlTemplate), provider.OptionalText(StoredSessionCodec.Key.SuggestionUrlTemplate));
             })];
         } catch (UnreadableSyncPayloadException) {
@@ -58,20 +61,20 @@ internal sealed partial record SpacePayload {
     private static (IReadOnlyList<CustomSearchProvider> Providers, string Selected) Restored(
         IReadOnlyList<CustomSearchProvider> providers, string selected) {
         if (providers.Count is > 0 and <= MaximumRestoredProviders) {
-            var admitted = new List<(CustomSearchProvider Stored, SearchProvider Admitted)>();
-            foreach (var stored in providers) {
+            List<CustomSearchProvider> admitted = [];
+            foreach (var stored in providers.DistinctBy(provider => provider.Id).Take(SearchCatalog.MaximumCustomCount)) {
                 try {
-                    admitted.Add((stored, SearchProvider.Admit(stored.Id, stored.Name, stored.SearchUrlTemplate, stored.SuggestionUrlTemplate)));
+                    stored.Admitted();
+                    admitted.Add(stored);
                 } catch (Rejected) {
                     // Left out; see the summary.
                 }
             }
-            var restored = SearchPreferences.Restore(selected, admitted.Select(entry => entry.Admitted), false);
-            return ([.. restored.CustomProviders.Select(provider => admitted.First(entry => ReferenceEquals(entry.Admitted, provider)).Stored)],
-                restored.SelectedId);
+            providers = admitted;
         }
-        var available = SearchProvider.All.Select(provider => provider.Name).Concat(providers.Select(provider => SearchProvider.CustomId(provider.Id)));
-        return (providers, available.Contains(selected, StringComparer.Ordinal) ? selected : BuiltInSearchEngine.Google.Name);
+        var available = BuiltInSearchProvider.All.Select(provider => provider.Name)
+            .Concat(providers.Select(provider => SearchProvider.CustomName(provider.Id)));
+        return (providers, available.Contains(selected, StringComparer.Ordinal) ? selected : BuiltInSearchProvider.Google.Name);
     }
 
     #endregion

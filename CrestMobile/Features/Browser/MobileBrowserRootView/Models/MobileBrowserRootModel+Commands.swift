@@ -160,6 +160,9 @@ extension MobileBrowserRootModel {
                     beforeSynchronization: prepareForSelectionSynchronization
                 )
             },
+            reopenArchivedTab: { tabID in
+                self.browser.restoreArchivedTab(tabID)
+            },
             toggleReaderMode: { pageActions?.toggleReaderMode() },
             setTranslationToolbarVisible: { visible in
                 guard usesPageToolbars, pageActions?.readerModeState.isActive != true else { return }

@@ -22,7 +22,8 @@ public sealed record NavigateTab(Guid WorkspaceId, Guid SpaceId, Guid TabId, str
     internal override SessionEdit? Edit(NativeSessionAuthority workspace, SessionTurn turn) {
         var space = workspace.Editable(turn.Basis, SpaceId);
         var stored = space.Tabs.FirstOrDefault(tab => tab.Id == TabId) ?? throw new Rejected(new UnknownTab(TabId));
-        var url = AddressResolution.Loading(Input, space.Settings.BrowsingPreferences, (turn.Pages?.OpensInternalPages ?? false));
+        var url = AddressResolution.Loading(Input, workspace.SearchCatalog.For(space.Settings.BrowsingPreferences, workspace.Kind.IsPrivate),
+            turn.Pages?.OpensInternalPages ?? false);
         var tab = BrowserTab.Restore(stored);
         if (tab.Content.IsWebPage) return new(turn.Basis, SyncStaging.PageReport);
         var address = new Uri(url);

@@ -1,6 +1,30 @@
 import SwiftUI
 import UIKit
 
+extension EventModifiers {
+    /// The modifier keys UIKit reports, as SwiftUI names them.
+    init(_ flags: UIKeyModifierFlags) {
+        var modifiers: EventModifiers = []
+        if flags.contains(.command) { modifiers.insert(.command) }
+        if flags.contains(.shift) { modifiers.insert(.shift) }
+        if flags.contains(.alternate) { modifiers.insert(.option) }
+        if flags.contains(.control) { modifiers.insert(.control) }
+        self = modifiers
+    }
+}
+
+extension UIKeyModifierFlags {
+    /// The modifier keys SwiftUI names, as UIKit reports them.
+    init(_ modifiers: EventModifiers) {
+        var flags: UIKeyModifierFlags = []
+        if modifiers.contains(.command) { flags.insert(.command) }
+        if modifiers.contains(.shift) { flags.insert(.shift) }
+        if modifiers.contains(.option) { flags.insert(.alternate) }
+        if modifiers.contains(.control) { flags.insert(.control) }
+        self = flags
+    }
+}
+
 struct BrowserPlatformCommandPaletteField: UIViewRepresentable {
     let model: BrowserCommandPaletteModel
     let presentation: BrowserCommandPalettePresentation
@@ -34,6 +58,11 @@ struct BrowserPlatformCommandPaletteField: UIViewRepresentable {
         coordinator.field = field
         model.applyCompletion = { [weak coordinator = coordinator] text, range in
             coordinator?.insert(text, replacementRange: range)
+        }
+        model.replaceText = { [weak field] text in
+            guard let field else { return }
+            field.text = text
+            field.sendActions(for: .editingChanged)
         }
         return field
     }
@@ -82,8 +111,18 @@ struct BrowserPlatformCommandPaletteField: UIViewRepresentable {
 
         func textFieldShouldReturn(_ textField: UITextField) -> Bool {
             guard textField.markedTextRange == nil else { return false }
-            model.activateSelectedResult()
+            model.pressReturn()
             return false
+        }
+
+        /// Delete in an empty field leaves the site search or scope.
+        func textField(
+            _ textField: UITextField, shouldChangeCharactersIn range: NSRange, replacementString string: String
+        )
+            -> Bool
+        {
+            guard string.isEmpty, range.length == 0, (textField.text ?? "").isEmpty else { return true }
+            return !model.leaveScope()
         }
 
         func insert(_ text: String, replacementRange: NSRange) {
@@ -120,20 +159,75 @@ struct BrowserPlatformCommandPaletteField: UIViewRepresentable {
 
         required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
+        /// A hardware keyboard's Tab runs the palette's Tab chain, Shift-Tab
+        /// moves back, Right Arrow accepts the completion, and Return with
+        /// Command, Shift or Option opens the row where those keys choose.
         override var keyCommands: [UIKeyCommand]? {
-            guard markedTextRange == nil, model?.urlCompletion != nil else { return super.keyCommands }
-            let commands = ["\t", UIKeyCommand.inputRightArrow].map { input in
-                let accept = UIKeyCommand(input: input, modifierFlags: [], action: #selector(acceptCompletion))
-                accept.discoverabilityTitle = String(localized: "Accept URL completion")
-                accept.wantsPriorityOverSystemBehavior = true
-                return accept
+            guard markedTextRange == nil else { return super.keyCommands }
+            var commands = [
+                command("\t", [], #selector(pressTab), String(localized: "Complete or Search Site")),
+                command("\t", .shift, #selector(pressBacktab), nil),
+                command(UIKeyCommand.inputEscape, [], #selector(pressEscape), nil),
+            ]
+            if model?.urlCompletion != nil {
+                commands.append(command(UIKeyCommand.inputRightArrow, [], #selector(acceptCompletion), nil))
+            }
+            for opening in model?.openings ?? [] where !opening.modifiers.isEmpty {
+                commands.append(command("\r", UIKeyModifierFlags(opening.modifiers), #selector(pressReturn(_:)), nil))
             }
             return (super.keyCommands ?? []) + commands
+        }
+
+        private func command(_ input: String, _ modifiers: UIKeyModifierFlags, _ action: Selector, _ title: String?)
+            -> UIKeyCommand
+        {
+            let command = UIKeyCommand(input: input, modifierFlags: modifiers, action: action)
+            if let title { command.discoverabilityTitle = title }
+            command.wantsPriorityOverSystemBehavior = true
+            return command
         }
 
         @objc private func acceptCompletion() {
             model?.acceptURLCompletion()
             refreshSuffix()
+        }
+
+        @objc private func pressTab() {
+            model?.pressTab()
+            refreshSuffix()
+        }
+
+        @objc private func pressBacktab() {
+            model?.pressBacktab()
+        }
+
+        @objc private func pressEscape() {
+            guard let model else { return }
+            if model.leaveScope() { return }
+            if model.urlCompletion != nil {
+                model.rejectURLCompletion()
+                refreshSuffix()
+            } else {
+                model.dismiss()
+            }
+        }
+
+        @objc private func pressReturn(_ command: UIKeyCommand) {
+            model?.updateHeldModifiers(EventModifiers(command.modifierFlags))
+            model?.pressReturn()
+        }
+
+        /// A held modifier key shows where Return opens the selected row.
+        override func pressesBegan(_ presses: Set<UIPress>, with event: UIPressesEvent?) {
+            model?.updateHeldModifiers(EventModifiers(event?.modifierFlags ?? []))
+            super.pressesBegan(presses, with: event)
+        }
+
+        override func pressesEnded(_ presses: Set<UIPress>, with event: UIPressesEvent?) {
+            model?.updateHeldModifiers(
+                EventModifiers(event?.modifierFlags ?? []).subtracting(
+                    EventModifiers(presses.compactMap(\.key?.modifierFlags).reduce([]) { $0.union($1) })))
+            super.pressesEnded(presses, with: event)
         }
 
         override func layoutSubviews() {

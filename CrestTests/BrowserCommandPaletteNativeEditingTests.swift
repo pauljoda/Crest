@@ -62,7 +62,7 @@ final class BrowserCommandPaletteNativeEditingTests: XCTestCase {
         // The core answers off the main thread; the completion arrives with it.
         await successor.model.waitForPendingResults()
         XCTAssertTrue(successor.model.acceptURLCompletion())
-        XCTAssertEqual(successor.editor.string, "example.com/path")
+        XCTAssertEqual(successor.editor.string, "example.com")
 
         // The same coordinator can detach and rejoin normal editing.
         successor.coordinator.controlTextDidEndEditing(Notification(name: NSControl.textDidEndEditingNotification))
@@ -132,7 +132,7 @@ final class BrowserCommandPaletteNativeEditingTests: XCTestCase {
         XCTAssertTrue(
             fixture.coordinator.control(
                 fixture.field, textView: editor, doCommandBy: #selector(NSResponder.moveRight(_:))))
-        XCTAssertEqual(editor.string, "example.com/path")
+        XCTAssertEqual(editor.string, "example.com")
         XCTAssertFalse(
             fixture.coordinator.control(
                 fixture.field, textView: editor, doCommandBy: #selector(NSResponder.moveRight(_:))))
@@ -151,7 +151,7 @@ final class BrowserCommandPaletteNativeEditingTests: XCTestCase {
         let model = BrowserCommandPaletteModel(
             browser: browser, space: browser.spaceModel(space.id), selectedTabID: tab.id, initialQuery: "",
             commands: nil,
-            isSourceAvailable: { _ in true }, selectTab: { _, _ in false }, openURL: { _, _ in false }, dismiss: {})
+            isSourceAvailable: { _ in true }, selectTab: { _, _ in false }, openURL: { _, _, _ in false }, dismiss: {})
         let view = BrowserPlatformCommandPaletteField(
             model: model, presentation: .overlay, identifier: "command-palette-field", focused: false)
         let coordinator = view.makeCoordinator()

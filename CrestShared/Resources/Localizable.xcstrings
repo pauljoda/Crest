@@ -14,6 +14,9 @@
         }
       }
     },
+    "@ Filters" : {
+
+    },
     "%@" : {
       "localizations" : {
         "ar" : {
@@ -36,9 +39,6 @@
     },
     "%@ — Not Downloaded" : {
 
-    },
-    "%@, Shared" : {
-      "comment" : "Accessibility value of a pinned tab another page shares; the value is its loaded state."
     },
     "%@ · %@" : {
       "localizations" : {
@@ -377,6 +377,9 @@
         }
       }
     },
+    "%@, Shared" : {
+      "comment" : "Accessibility value of a pinned tab another page shares; the value is its loaded state."
+    },
     "%@: %@" : {
       "localizations" : {
         "en" : {
@@ -386,6 +389,9 @@
           }
         }
       }
+    },
+    "%@. Press Tab to enter a query." : {
+
     },
     "%@/s" : {
 
@@ -1529,9 +1535,6 @@
     "90 Days" : {
 
     },
-    "A custom search engine already uses this name." : {
-
-    },
     "A field in this password file is too large to import safely." : {
 
     },
@@ -1657,6 +1660,9 @@
     "Accounts" : {
 
     },
+    "Action" : {
+
+    },
     "Actions" : {
       "localizations" : {
         "ar" : {
@@ -1743,7 +1749,10 @@
     "Add Pattern Color" : {
 
     },
-    "Add Search Engine" : {
+    "Add Provider" : {
+
+    },
+    "Add Provider…" : {
 
     },
     "Add site" : {
@@ -1888,6 +1897,15 @@
         }
       }
     },
+    "AI Assistant" : {
+
+    },
+    "AI Assistants" : {
+
+    },
+    "Albums" : {
+
+    },
     "All" : {
       "localizations" : {
         "ar" : {
@@ -1971,11 +1989,20 @@
     "Allowed for Session" : {
 
     },
+    "Already open" : {
+
+    },
     "Already saved" : {
 
     },
     "Also share tab audio" : {
       "comment" : "Screen sharing picker option to include the shared tab's sound."
+    },
+    "Also show" : {
+
+    },
+    "Always List Results" : {
+
     },
     "Always show folder highlights" : {
 
@@ -2009,7 +2036,16 @@
     "Another browser" : {
 
     },
+    "Another search provider already uses this name." : {
+
+    },
+    "Another search provider already uses this shortcut." : {
+
+    },
     "Another Space already uses this Space’s browsing data." : {
+
+    },
+    "Answers arithmetic such as 24 * 7. Return copies the answer." : {
 
     },
     "Antique Gold" : {
@@ -2105,6 +2141,9 @@
         }
       }
     },
+    "Archived" : {
+
+    },
     "archived tabs" : {
 
     },
@@ -2124,6 +2163,9 @@
         }
       }
     },
+    "Artists" : {
+
+    },
     "Artwork credits" : {
 
     },
@@ -2142,6 +2184,9 @@
           }
         }
       }
+    },
+    "Ask %@" : {
+
     },
     "Ask after First" : {
 
@@ -2581,6 +2626,9 @@
         }
       }
     },
+    "Best Match" : {
+
+    },
     "Bird" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -2593,6 +2641,9 @@
       }
     },
     "Bitwarden CSV" : {
+
+    },
+    "Blended" : {
 
     },
     "Block" : {
@@ -2792,7 +2843,7 @@
     "Built on ungoogled-chromium, with Google integrations removed. Smooth browsing and extensions." : {
 
     },
-    "Built-in" : {
+    "Calculator" : {
 
     },
     "Camera" : {
@@ -2896,6 +2947,9 @@
     "Changes made after this checkpoint may be missing. Crest will keep a separate copy of the current files and fetch current iCloud records before uploading again." : {
 
     },
+    "Channels" : {
+
+    },
     "Char" : {
 
     },
@@ -2966,9 +3020,6 @@
           }
         }
       }
-    },
-    "Check the search engine details and try again." : {
-
     },
     "Check whether the site is available in another browser or device." : {
       "localizations" : {
@@ -3090,6 +3141,9 @@
 
     },
     "Choose a name, crest, and theme. Add more Spaces whenever you need them." : {
+
+    },
+    "Choose a search engine or an AI assistant." : {
 
     },
     "Choose a shape to color its field" : {
@@ -3252,6 +3306,12 @@
         }
       }
     },
+    "Clear Learned Choices" : {
+
+    },
+    "Clear Learned Choices…" : {
+
+    },
     "Clear open tabs" : {
 
     },
@@ -3277,6 +3337,9 @@
         }
       }
     },
+    "Clear what the palette learned?" : {
+
+    },
     "Click a shortcut, then press the new keys." : {
 
     },
@@ -3293,6 +3356,9 @@
 
     },
     "Click, then press the new shortcut" : {
+
+    },
+    "Clipboard" : {
 
     },
     "Close" : {
@@ -3490,6 +3556,9 @@
         }
       }
     },
+    "Code" : {
+
+    },
     "Collapsed" : {
       "localizations" : {
         "ar" : {
@@ -3589,6 +3658,9 @@
     "Command-click" : {
 
     },
+    "Comments" : {
+
+    },
     "Common Lists" : {
 
     },
@@ -3599,6 +3671,9 @@
 
     },
     "Compact Phone" : {
+
+    },
+    "Companies" : {
 
     },
     "Compass" : {
@@ -3612,6 +3687,12 @@
         }
       }
     },
+    "Complete addresses inline" : {
+
+    },
+    "Complete or Search Site" : {
+
+    },
     "Completed" : {
       "comment" : "Status of a download whose file is saved."
     },
@@ -3624,6 +3705,9 @@
           }
         }
       }
+    },
+    "Completes what you typed" : {
+
     },
     "Configure passkeys in system settings, then reopen Crest." : {
       "localizations" : {
@@ -3697,6 +3781,9 @@
 
     },
     "Cookies and website data" : {
+
+    },
+    "Copied" : {
 
     },
     "Copied locally for 60 seconds" : {
@@ -3822,7 +3909,7 @@
     "Couldn’t open language downloads." : {
 
     },
-    "Couldn’t Save Search Engine" : {
+    "Country" : {
 
     },
     "Create folders and nested folders" : {
@@ -4589,6 +4676,9 @@
         }
       }
     },
+    "Default (%@)" : {
+
+    },
     "Default (Ask after First)" : {
 
     },
@@ -4618,6 +4708,9 @@
 
     },
     "Default page zoom" : {
+
+    },
+    "Default search" : {
 
     },
     "Default Space" : {
@@ -4926,6 +5019,9 @@
     "Disabled and selected" : {
 
     },
+    "Discussions" : {
+
+    },
     "Dismiss" : {
 
     },
@@ -4959,9 +5055,6 @@
     },
     "Don't Share" : {
       "comment" : "Screen sharing picker control that shares nothing."
-    },
-    "Don’t put sign-in tokens in a search URL. It syncs with this Space." : {
-
     },
     "Done" : {
       "localizations" : {
@@ -5154,6 +5247,9 @@
     "Drag to capture a portion of this page" : {
 
     },
+    "Drag to change the order." : {
+
+    },
     "Drag to move the window or open Space actions" : {
 
     },
@@ -5281,7 +5377,10 @@
     "Edit Crest…" : {
 
     },
-    "Edit Search Engine" : {
+    "Edit Provider" : {
+
+    },
+    "Edit Shortcuts…" : {
 
     },
     "Edit Space name" : {
@@ -5304,6 +5403,9 @@
       }
     },
     "Edit Website Rule" : {
+
+    },
+    "Edit…" : {
 
     },
     "Embedded password form from %@" : {
@@ -5396,6 +5498,9 @@
     "Enter a name for this search engine." : {
 
     },
+    "Enter a shortcut without spaces, slashes or colons." : {
+
+    },
     "Enter a valid URL template." : {
 
     },
@@ -5463,6 +5568,9 @@
     "Everything in its Space" : {
 
     },
+    "Exact Words" : {
+
+    },
     "Example folder" : {
 
     },
@@ -5523,6 +5631,9 @@
       }
     },
     "Experimental" : {
+
+    },
+    "Explore" : {
 
     },
     "Export as PDF" : {
@@ -5806,6 +5917,9 @@
 
     },
     "Find…" : {
+
+    },
+    "Finds Settings pages by name." : {
 
     },
     "Finish" : {
@@ -6175,9 +6289,6 @@
     "Gold" : {
 
     },
-    "Google will become this Space’s search engine." : {
-
-    },
     "Gradient" : {
       "localizations" : {
         "ar" : {
@@ -6278,6 +6389,15 @@
         }
       }
     },
+    "Hide AI Answers" : {
+
+    },
+    "Hide AI Features" : {
+
+    },
+    "Hide AI Overviews" : {
+
+    },
     "Hide Crest" : {
 
     },
@@ -6350,6 +6470,9 @@
       "comment" : "Tooltip on a sharing bar's minimize button."
     },
     "Hide Update" : {
+
+    },
+    "Hides its options" : {
 
     },
     "Hides recent changes" : {
@@ -6452,6 +6575,9 @@
 
     },
     "https://example.com" : {
+
+    },
+    "Hybrid" : {
 
     },
     "Hydra" : {
@@ -7230,6 +7356,9 @@
     "Is Exactly" : {
 
     },
+    "Issues" : {
+
+    },
     "Its content is still saved. Update Crest to open it." : {
 
     },
@@ -7298,6 +7427,12 @@
         }
       }
     },
+    "Keywords" : {
+
+    },
+    "Kind" : {
+
+    },
     "Kraken" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -7310,6 +7445,9 @@
       }
     },
     "Kraken Gold" : {
+
+    },
+    "Language" : {
 
     },
     "Languages" : {
@@ -7364,6 +7502,9 @@
         }
       }
     },
+    "Latest First" : {
+
+    },
     "Laurel" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -7386,6 +7527,9 @@
         }
       }
     },
+    "Layout" : {
+
+    },
     "Leaf" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -7396,6 +7540,12 @@
           }
         }
       }
+    },
+    "Learn from my choices" : {
+
+    },
+    "Learned choices stay on this device." : {
+
     },
     "Leave all" : {
 
@@ -7640,10 +7790,10 @@
         }
       }
     },
-    "Manage Search Engines…" : {
+    "Manual access only for insecure HTTP site" : {
 
     },
-    "Manual access only for insecure HTTP site" : {
+    "Map" : {
 
     },
     "Mark" : {
@@ -7656,6 +7806,9 @@
           }
         }
       }
+    },
+    "Market" : {
+
     },
     "Match" : {
       "localizations" : {
@@ -7691,6 +7844,12 @@
     "Matched in source browser" : {
 
     },
+    "Matches the address" : {
+
+    },
+    "Matches the title" : {
+
+    },
     "Meadow" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -7712,6 +7871,12 @@
 
     },
     "Minimize" : {
+
+    },
+    "Model" : {
+
+    },
+    "Moderate" : {
 
     },
     "Monogram" : {
@@ -7746,6 +7911,12 @@
           }
         }
       }
+    },
+    "Most Stars" : {
+
+    },
+    "Most Votes" : {
+
     },
     "Mountain" : {
       "extractionState" : "stale",
@@ -7854,9 +8025,6 @@
       }
     },
     "Moves all current tabs to Archive" : {
-
-    },
-    "Must return an OpenSearch JSON array." : {
 
     },
     "Mute" : {
@@ -8060,6 +8228,9 @@
     "New, pinned and saved tabs" : {
 
     },
+    "Newest" : {
+
+    },
     "Next" : {
 
     },
@@ -8158,9 +8329,6 @@
           }
         }
       }
-    },
-    "No custom search engines" : {
-
     },
     "No downloaded languages" : {
 
@@ -8383,6 +8551,9 @@
     "Not signed in" : {
 
     },
+    "Notes why each result is there, such as “Often visited” or “Already open”." : {
+
+    },
     "Nothing to Review" : {
 
     },
@@ -8439,6 +8610,12 @@
 
     },
     "Offer to translate pages" : {
+
+    },
+    "Offers the address you copied when the palette opens." : {
+
+    },
+    "Often visited" : {
 
     },
     "OK" : {
@@ -8614,13 +8791,25 @@
         }
       }
     },
+    "Open in Background" : {
+
+    },
     "Open in Current Space" : {
+
+    },
+    "Open in New Tab" : {
 
     },
     "Open in Other Space" : {
 
     },
+    "Open in Quick Window" : {
+
+    },
     "Open in Space" : {
+
+    },
+    "Open in Split View" : {
 
     },
     "Open Last Active Tab" : {
@@ -8705,6 +8894,9 @@
       }
     },
     "Open System Settings" : {
+
+    },
+    "Open Tab" : {
 
     },
     "Open Tabs" : {
@@ -8833,6 +9025,9 @@
 
     },
     "Option-click" : {
+
+    },
+    "Optional" : {
 
     },
     "Or" : {
@@ -9100,6 +9295,9 @@
     "Paste" : {
 
     },
+    "Paste and Go" : {
+
+    },
     "Paste and Match Style" : {
 
     },
@@ -9183,6 +9381,9 @@
           }
         }
       }
+    },
+    "People" : {
+
     },
     "Performance" : {
 
@@ -9353,6 +9554,9 @@
     "Pinned fill" : {
 
     },
+    "Pinned or saved" : {
+
+    },
     "Pinned tabs cannot join a drag with saved or current tabs. Start the drag again." : {
 
     },
@@ -9382,10 +9586,19 @@
     "Play" : {
 
     },
+    "Playlists" : {
+
+    },
+    "Podcasts & Shows" : {
+
+    },
     "Pop-up blocked for %@" : {
 
     },
     "Pop-ups allowed for %@" : {
+
+    },
+    "Popular" : {
 
     },
     "Practice" : {
@@ -9407,6 +9620,9 @@
 
     },
     "Practice window" : {
+
+    },
+    "Prefer open tabs" : {
 
     },
     "Preparing" : {
@@ -9447,6 +9663,12 @@
           }
         }
       }
+    },
+    "Press Tab to %@" : {
+
+    },
+    "Press Tab, enter your query, then press Return." : {
+
     },
     "Preview open" : {
       "extractionState" : "stale",
@@ -9606,6 +9828,9 @@
         }
       }
     },
+    "Private windows" : {
+
+    },
     "Proceed Anyway" : {
       "localizations" : {
         "ar" : {
@@ -9650,6 +9875,9 @@
           }
         }
       }
+    },
+    "Pull Requests" : {
+
     },
     "Pull the Latest from iCloud?" : {
 
@@ -9866,6 +10094,15 @@
     "Rearrange Spaces" : {
 
     },
+    "Recent Tabs" : {
+
+    },
+    "Recently Updated" : {
+
+    },
+    "Recently used" : {
+
+    },
     "Recipes" : {
 
     },
@@ -9894,6 +10131,9 @@
     "Refresh" : {
 
     },
+    "Region" : {
+
+    },
     "Regular" : {
       "extractionState" : "manual"
     },
@@ -9901,6 +10141,9 @@
 
     },
     "Release Notes" : {
+
+    },
+    "Relevance" : {
 
     },
     "Reload" : {
@@ -10111,10 +10354,10 @@
     "Remove Pattern Color" : {
 
     },
-    "Remove Rule" : {
+    "Remove Provider" : {
 
     },
-    "Remove Search Engine?" : {
+    "Remove Rule" : {
 
     },
     "Remove Space" : {
@@ -10192,6 +10435,9 @@
           }
         }
       }
+    },
+    "Reopen" : {
+
     },
     "Reopen Closed Tab" : {
       "localizations" : {
@@ -10292,6 +10538,9 @@
     "Report an Issue" : {
 
     },
+    "Repositories" : {
+
+    },
     "Request a browser" : {
 
     },
@@ -10383,6 +10632,9 @@
     "Reset Icon" : {
 
     },
+    "Reset Order" : {
+
+    },
     "Reset practice" : {
 
     },
@@ -10458,6 +10710,15 @@
     "Restore Checkpoint" : {
 
     },
+    "Restore Defaults" : {
+
+    },
+    "Restore Defaults…" : {
+
+    },
+    "Restore the built-in providers?" : {
+
+    },
     "Restore the last checkpoint?" : {
 
     },
@@ -10468,6 +10729,12 @@
 
     },
     "Restricted by macOS" : {
+
+    },
+    "Results" : {
+
+    },
+    "Results shown" : {
 
     },
     "Resume Download" : {
@@ -10696,6 +10963,12 @@
     "Safari CSV" : {
 
     },
+    "Safe Search" : {
+
+    },
+    "SafeSearch" : {
+
+    },
     "Saffron" : {
 
     },
@@ -10732,6 +11005,9 @@
     },
     "Sans" : {
       "extractionState" : "manual"
+    },
+    "Satellite" : {
+
     },
     "Save" : {
 
@@ -10950,6 +11226,9 @@
     "Scarlet" : {
 
     },
+    "Scope" : {
+
+    },
     "Scorpion" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -10989,6 +11268,12 @@
     "Search" : {
 
     },
+    "Search %@" : {
+
+    },
+    "Search %@…" : {
+
+    },
     "Search accounts or sites" : {
       "localizations" : {
         "ar" : {
@@ -11019,15 +11304,11 @@
         }
       }
     },
-    "Search engine" : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "محرك البحث"
-          }
-        }
-      }
+    "Search Engine" : {
+
+    },
+    "search engine Google suggestions command palette address bar results order top hit blended sections complete addresses inline autocomplete learn choices clear site searches shortcuts Tab YouTube Wikipedia scopes calculator paste and go reasons" : {
+
     },
     "Search engine names must be 64 characters or fewer." : {
 
@@ -11041,10 +11322,16 @@
     "Search engine templates must use HTTPS." : {
 
     },
+    "Search engine, command palette and site searches" : {
+
+    },
     "Search Engines" : {
 
     },
     "Search feature flags" : {
+
+    },
+    "Search For" : {
 
     },
     "Search History…" : {
@@ -11092,6 +11379,9 @@
     "Search Passwords" : {
 
     },
+    "Search providers" : {
+
+    },
     "Search saved passwords" : {
 
     },
@@ -11120,6 +11410,9 @@
     "Search symbols" : {
 
     },
+    "Search the Web" : {
+
+    },
     "Search this Space" : {
       "localizations" : {
         "ar" : {
@@ -11131,6 +11424,9 @@
       }
     },
     "Search URL" : {
+
+    },
+    "Search with" : {
 
     },
     "Search with %@" : {
@@ -11148,6 +11444,9 @@
       }
     },
     "Second field" : {
+
+    },
+    "Sections" : {
 
     },
     "Secure" : {
@@ -11299,6 +11598,9 @@
     "Separate Selected Splits" : {
 
     },
+    "Separate shortcuts with commas." : {
+
+    },
     "Serif" : {
       "extractionState" : "manual"
     },
@@ -11348,6 +11650,9 @@
           }
         }
       }
+    },
+    "Settings Pages" : {
+
     },
     "Settings unavailable" : {
       "extractionState" : "manual"
@@ -11433,12 +11738,6 @@
     "Share your location with websites you allow." : {
 
     },
-    "Shared" : {
-      "comment" : "Accessibility label for a sidebar tab another page shares."
-    },
-    "Shared to %@" : {
-      "comment" : "Shared tab popover; the value is the tab it is shared to."
-    },
     "Share…" : {
       "localizations" : {
         "ar" : {
@@ -11448,6 +11747,12 @@
           }
         }
       }
+    },
+    "Shared" : {
+      "comment" : "Accessibility label for a sidebar tab another page shares."
+    },
+    "Shared to %@" : {
+      "comment" : "Shared tab popover; the value is the tab it is shared to."
     },
     "Sheen" : {
       "extractionState" : "manual"
@@ -11506,10 +11811,22 @@
         }
       }
     },
+    "Shortcuts and options you changed go back to how they ship. Providers you added stay." : {
+
+    },
+    "Shorts" : {
+
+    },
+    "Show" : {
+
+    },
     "Show a static custom icon or emoji instead of folder artwork." : {
 
     },
     "Show All" : {
+
+    },
+    "Show all results" : {
 
     },
     "Show Archive" : {
@@ -11569,6 +11886,9 @@
           }
         }
       }
+    },
+    "Show match reasons" : {
+
     },
     "Show more tabs" : {
 
@@ -11677,6 +11997,9 @@
     "Show…" : {
 
     },
+    "Shows its options" : {
+
+    },
     "Shows recent changes" : {
 
     },
@@ -11758,6 +12081,9 @@
     "Skip Space" : {
       "extractionState" : "stale"
     },
+    "Skip the AI Answer" : {
+
+    },
     "Skip this account" : {
 
     },
@@ -11838,6 +12164,12 @@
 
     },
     "Some of this browsing session can’t be synced." : {
+
+    },
+    "Songs" : {
+
+    },
+    "Sort By" : {
 
     },
     "Source" : {
@@ -12301,10 +12633,16 @@
         }
       }
     },
+    "Stop searching %@" : {
+
+    },
     "Stop Sharing" : {
       "comment" : "Stops the tab sharing a tab takes part in."
     },
     "Stop Speaking" : {
+
+    },
+    "Store" : {
 
     },
     "Stored only in %@, with Crest iCloud sync" : {
@@ -12358,6 +12696,9 @@
         }
       }
     },
+    "Stories" : {
+
+    },
     "Storm" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -12370,6 +12711,12 @@
       }
     },
     "Storm Gold" : {
+
+    },
+    "Strict" : {
+
+    },
+    "Strict SafeSearch" : {
 
     },
     "Stripes" : {
@@ -12411,10 +12758,10 @@
     "Substitutions" : {
 
     },
-    "Suggestion URL" : {
+    "Suggestion" : {
 
     },
-    "Suggestions (optional)" : {
+    "Suggestions URL" : {
 
     },
     "Sun" : {
@@ -12487,6 +12834,9 @@
           }
         }
       }
+    },
+    "Switch to Space" : {
+
     },
     "Switch to Tab" : {
       "localizations" : {
@@ -12686,6 +13036,9 @@
     "Tab scale" : {
 
     },
+    "Tab to search providers" : {
+
+    },
     "Tab, address bar, and sidebar sizing are in Look and Feel. These choices belong to this Space." : {
 
     },
@@ -12737,6 +13090,9 @@
 
     },
     "Temporarily unavailable" : {
+
+    },
+    "Temporary Chat" : {
 
     },
     "temporary disposable unsynced window" : {
@@ -12933,6 +13289,9 @@
 
     },
     "The page was closed." : {
+
+    },
+    "The palette forgets which results you chose for what you typed." : {
 
     },
     "The password could not be saved. Try again." : {
@@ -13322,9 +13681,6 @@
     "This Quick Window cannot reconnect to its original browsing profile." : {
 
     },
-    "This Tab" : {
-      "comment" : "Screen sharing picker note on the tab of the page that asks."
-    },
     "This removes %@ from this Space." : {
 
     },
@@ -13383,6 +13739,9 @@
     "This site’s certificate is not trusted. Information you send could be read by others." : {
 
     },
+    "This Tab" : {
+      "comment" : "Screen sharing picker note on the tab of the page that asks."
+    },
     "This tab is being shared" : {
       "comment" : "Tooltip on a sidebar tab another page shares."
     },
@@ -13410,6 +13769,9 @@
 
     },
     "Tint Folder Title" : {
+
+    },
+    "Titles" : {
 
     },
     "To" : {
@@ -13464,6 +13826,9 @@
         }
       }
     },
+    "Top Hit" : {
+
+    },
     "Top Level" : {
       "localizations" : {
         "ar" : {
@@ -13494,6 +13859,9 @@
     "Transformations" : {
 
     },
+    "Transit" : {
+
+    },
     "Translate" : {
 
     },
@@ -13507,6 +13875,9 @@
 
     },
     "Translate From" : {
+
+    },
+    "Translate Into" : {
 
     },
     "Translate Now" : {
@@ -13759,7 +14130,16 @@
         }
       }
     },
+    "Type @tabs, @saved, @history, @actions or @spaces, then a space or Tab, to show only that kind." : {
+
+    },
+    "Type a provider’s name or shortcut and press Tab, or type $ and its shortcut, then a space." : {
+
+    },
     "Type Shortcut" : {
+
+    },
+    "Typing" : {
 
     },
     "Ultrawide" : {
@@ -13917,6 +14297,9 @@
           }
         }
       }
+    },
+    "Up to %lld" : {
+
     },
     "Up to %lld per row" : {
 
@@ -14126,6 +14509,9 @@
         }
       }
     },
+    "Use %@ where the search words go." : {
+
+    },
     "Use %s or {searchTerms} where the search goes. HTTPS only." : {
 
     },
@@ -14133,6 +14519,9 @@
 
     },
     "Use a supported key with Command, Option, Control, or Shift." : {
+
+    },
+    "Use Built-In Shortcuts" : {
 
     },
     "Use Clear on the line in the practice sidebar." : {
@@ -14239,6 +14628,9 @@
     "Usernames and passwords cannot be stored in a search template." : {
 
     },
+    "Users" : {
+
+    },
     "Verified Chrome Web Store package" : {
 
     },
@@ -14272,6 +14664,9 @@
       }
     },
     "Vertical offset" : {
+
+    },
+    "Videos" : {
 
     },
     "View" : {
@@ -14402,6 +14797,9 @@
         }
       }
     },
+    "Web Access" : {
+
+    },
     "WebKit" : {
       "comment" : "The name of a browser engine. Keep the product name as it is."
     },
@@ -14441,6 +14839,9 @@
 
     },
     "Website rules" : {
+
+    },
+    "Websites" : {
 
     },
     "Wedges" : {
@@ -14578,6 +14979,9 @@
     "You approve each destination in the Save dialog." : {
 
     },
+    "You can add up to %lld search providers." : {
+
+    },
     "You can also download languages in Apple’s Translate app, or manage them in Settings → Apps → Translate → Downloaded Languages." : {
 
     },
@@ -14601,6 +15005,9 @@
       }
     },
     "You can still set up Spaces manually." : {
+
+    },
+    "You chose this before" : {
 
     },
     "You’re offline" : {
