@@ -3785,6 +3785,10 @@
     "icloud-sync-status-shows-waiting-uploads": {
       "category": "improved",
       "message": "Sync settings say Up to date only when every change has reached iCloud, and Waiting to upload while some haven’t yet."
+    },
+    "automation-for-local-tools": {
+      "category": "new",
+      "message": "On Mac, scripts and coding agents on your computer can list, open, show and close tabs in the Spaces you choose. Turn it on in Settings › Automation; Crest asks before each new tool connects."
     }
   }
 }

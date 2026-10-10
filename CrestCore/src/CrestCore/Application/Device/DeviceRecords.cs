@@ -19,12 +19,20 @@ internal sealed record TabGroupRecord(Guid Id, Guid SpaceId, EngineKind Engine, 
 /// site permission choices in storage order and its site engine choices least
 /// recent first, the person's shortcut choices and link preferences, the
 /// unfinished manual setup it keeps for the next launch, whether this device
-/// has completed setup, what it has adopted from an installed release, and the
-/// tab groups whose folders follow them.
+/// has completed setup, what it has adopted from an installed release, the
+/// tab groups whose folders follow them, and the automation preferences, which
+/// are the default when absent.
 internal sealed record DeviceRecords(IReadOnlyList<SavedWindow> Windows, IReadOnlyList<Guid> Reopening,
     IReadOnlyList<SitePermissionRecord> SitePermissions, IReadOnlyList<SiteEngineChoice> SiteEngines, ShortcutOverrides Shortcuts,
     LinkPreferences Links, KeptSetupDraft? SetupDraft, bool SetupCompleted, IReadOnlySet<DeviceAdoption> Adopted,
-    IReadOnlyList<TabGroupRecord> TabGroups, EngineKind? DefaultEngine = null) {
+    IReadOnlyList<TabGroupRecord> TabGroups, EngineKind? DefaultEngine = null, AutomationPreferences? Automation = null) {
+    #region Variables
+
+    /// The automation preferences, the default when the records hold none.
+    public AutomationPreferences KeptAutomation => Automation ?? AutomationPreferences.Off;
+
+    #endregion
+
     #region Static Variables
 
     public static readonly DeviceRecords Empty = new([], [], [], [], ShortcutOverrides.None, LinkPreferencePolicy.Default,
@@ -52,7 +60,8 @@ internal sealed record DeviceRecords(IReadOnlyList<SavedWindow> Windows, IReadOn
         && KeptSetupDraft.Same(SetupDraft, other.SetupDraft)
         && SetupCompleted == other.SetupCompleted
         && Adopted.SetEquals(other.Adopted)
-        && TabGroups.SequenceEqual(other.TabGroups);
+        && TabGroups.SequenceEqual(other.TabGroups)
+        && KeptAutomation.Equals(other.KeptAutomation);
 
     public override int GetHashCode() => HashCode.Combine(Windows.Count, SitePermissions.Count, Adopted.Count);
 

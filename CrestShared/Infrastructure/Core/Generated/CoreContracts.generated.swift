@@ -39,6 +39,9 @@ protocol EngineQuestion: Sendable {
     static func decodeAnswer(from reader: inout WireReader) throws(WireError) -> Answer
 }
 
+/// The members of `Intent` that derive from the core's `AutomationIntent`.
+protocol AutomationIntent: Intent {}
+
 /// The members of `Intent` that derive from the core's `CloseIntent`.
 protocol CloseIntent: Intent {}
 
@@ -110,6 +113,7 @@ enum Change: Equatable, Sendable {
     case appPreferencesChanged(AppPreferencesChanged)
     case archiveChanged(ArchiveChanged)
     case authenticationAsked(AuthenticationAsked)
+    case automationPreferencesChanged(AutomationPreferencesChanged)
     case closeReady(CloseReady)
     case cloudMergeBegan(CloudMergeBegan)
     case cloudSyncAdvanced(CloudSyncAdvanced)
@@ -178,6 +182,8 @@ enum Rejection: Equatable, Error, Sendable {
     case archiveInvalid(ArchiveInvalid)
     case archiveTooLarge(ArchiveTooLarge)
     case authenticationBusy(AuthenticationBusy)
+    case automationSpaceUnavailable(AutomationSpaceUnavailable)
+    case automationToolsFull(AutomationToolsFull)
     case bookmarksHaveNoLinks(BookmarksHaveNoLinks)
     case bookmarksOverLimits(BookmarksOverLimits)
     case bookmarksTooLarge(BookmarksTooLarge)
@@ -207,6 +213,7 @@ enum Rejection: Equatable, Error, Sendable {
     case folderLimitReached(FolderLimitReached)
     case guideSpaceLocked(GuideSpaceLocked)
     case incompleteSplit(IncompleteSplit)
+    case invalidAutomationTool(InvalidAutomationTool)
     case invalidBlockedPopup(InvalidBlockedPopup)
     case invalidCredentialDate(InvalidCredentialDate)
     case invalidCredentialFile(InvalidCredentialFile)
@@ -497,6 +504,7 @@ extension Change {
         case .appPreferencesChanged(let change): change.apply(to: state)
         case .archiveChanged(let change): change.apply(to: state)
         case .authenticationAsked(let change): change.apply(to: state)
+        case .automationPreferencesChanged(let change): change.apply(to: state)
         case .closeReady(let change): change.apply(to: state)
         case .cloudMergeBegan(let change): change.apply(to: state)
         case .cloudSyncAdvanced(let change): change.apply(to: state)
@@ -649,6 +657,11 @@ struct AdoptWindowRecords: Intent, WindowIntent, Equatable, Sendable {
     let records: Data?
 }
 
+struct AllowAutomationSpace: Intent, AutomationIntent, Equatable, Sendable {
+    let spaceID: UUID
+    let allowed: Bool
+}
+
 struct AlreadyInSpace: Equatable, Sendable {
     let spaceID: UUID
 }
@@ -759,6 +772,10 @@ struct AppPreferencesChanged: Equatable, Sendable {
 struct ApplyManualSetup: Intent, ImportWorkspace, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let windowID: UUID
+}
+
+struct ApproveAutomationTool: Intent, AutomationIntent, Equatable, Sendable {
+    let tool: AutomationTool
 }
 
 struct ApproveEngineDownload: Equatable, Sendable {
@@ -876,6 +893,49 @@ struct AutomaticDownloadCheck: Query, Equatable, Sendable {
 struct AutomaticDownloadVerdict: Equatable, Sendable {
     let action: AutomaticDownloadAction
     let hasAllowedAutomaticDownload: Bool
+}
+
+struct AutomationPreferences: Equatable, Sendable {
+    static let maximumTools: Int = 32
+    static let maximumToolName: Int = 64
+    static let maximumToolPath: Int = 1024
+
+    let isOn: Bool
+    let spaceIDs: [UUID]
+    let tools: [AutomationTool]
+}
+
+struct AutomationPreferencesChanged: Equatable, Sendable {
+    let preferences: AutomationPreferences
+}
+
+struct AutomationReach: Query, Equatable, Sendable {
+    typealias Answer = AutomationReachList
+
+}
+
+struct AutomationReachList: Equatable, Sendable {
+    let workspaceID: UUID?
+    let spaces: [AutomationSpace]
+}
+
+struct AutomationSpace: Equatable, Sendable {
+    let spaceID: UUID
+    let name: String
+    let isLocked: Bool
+}
+
+struct AutomationSpaceUnavailable: Equatable, Sendable {
+    let spaceID: UUID
+}
+
+struct AutomationTool: Equatable, Sendable {
+    var name: String
+    var path: String
+}
+
+struct AutomationToolsFull: Equatable, Sendable {
+    let maximum: Int
 }
 
 struct AwaitDownloadApproval: Intent, DownloadIntent, Equatable, Sendable {
@@ -2495,12 +2555,21 @@ struct FoldersChanged: Equatable, Sendable {
     let order: [UUID]?
 }
 
+struct ForgetAutomationTool: Intent, AutomationIntent, Equatable, Sendable {
+    let tool: AutomationTool
+}
+
 struct ForgetCloudZone: Intent, CloudTransportIntent, Equatable, Sendable {
     let loss: CloudZoneLoss
 }
 
 struct ForgetEngineRule: Intent, Equatable, Sendable {
     let origin: SiteOrigin
+}
+
+struct GetAutomationPreferences: Query, Equatable, Sendable {
+    typealias Answer = AutomationPreferences
+
 }
 
 struct GetEnginePreferences: Query, Equatable, Sendable {
@@ -2781,6 +2850,11 @@ struct InstalledExtensions: PageRequest, Equatable, Sendable {
 
 struct InteractionState: Equatable, Sendable {
     let state: Data?
+}
+
+struct InvalidAutomationTool: Equatable, Sendable {
+    let maximumName: Int
+    let maximumPath: Int
 }
 
 struct InvalidBlockedPopup: Equatable, Sendable {
@@ -4710,6 +4784,10 @@ struct SessionUnrecognized: Equatable, Sendable {
 struct SetAppPreferences: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let preferences: AppPreferences
+}
+
+struct SetAutomation: Intent, AutomationIntent, Equatable, Sendable {
+    let isOn: Bool
 }
 
 struct SetBrowsingPreferences: Intent, SessionIntent, Equatable, Sendable {

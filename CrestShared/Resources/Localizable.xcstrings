@@ -37,6 +37,9 @@
     "%@ — Not Downloaded" : {
 
     },
+    "%@ wants to open, read and close tabs in the Spaces you allow in Settings > Automation. Allow only tools you trust." : {
+
+    },
     "%@, Shared" : {
       "comment" : "Accessibility value of a pinned tab another page shares; the value is its loaded state."
     },
@@ -1917,6 +1920,9 @@
         }
       }
     },
+    "Allow “%@” to control Crest?" : {
+
+    },
     "Allow 120 FPS" : {
 
     },
@@ -1962,6 +1968,9 @@
         }
       }
     },
+    "Allow tools to control Crest" : {
+
+    },
     "Allow…" : {
 
     },
@@ -1969,6 +1978,9 @@
 
     },
     "Allowed for Session" : {
+
+    },
+    "Allowed tools" : {
 
     },
     "Already saved" : {
@@ -2355,6 +2367,12 @@
           }
         }
       }
+    },
+    "Automation" : {
+
+    },
+    "automation scripts coding agents AI Claude Codex command line CLI socket tools control remote JSON-RPC" : {
+
     },
     "Available" : {
 
@@ -3764,6 +3782,9 @@
         }
       }
     },
+    "Copy the socket’s path" : {
+
+    },
     "copy url address clipboard" : {
       "localizations" : {
         "ar" : {
@@ -4957,6 +4978,9 @@
     "Dock Sidebar" : {
 
     },
+    "Don’t Allow" : {
+
+    },
     "Don't Share" : {
       "comment" : "Screen sharing picker control that shares nothing."
     },
@@ -6025,6 +6049,12 @@
 
     },
     "Forever" : {
+
+    },
+    "Forget" : {
+
+    },
+    "Forgetting a tool disconnects it. Crest asks again the next time it connects." : {
 
     },
     "Forward" : {
@@ -8313,6 +8343,9 @@
 
     },
     "No supported page text was found. Editable fields, embedded pages, and images are excluded." : {
+
+    },
+    "No tools yet" : {
 
     },
     "No username" : {
@@ -10964,6 +10997,12 @@
     "Screen Sharing" : {
 
     },
+    "Scripts and coding agents" : {
+
+    },
+    "Scripts and coding agents on this Mac can open, read and close tabs in the Spaces you choose. Crest asks before each new tool connects." : {
+
+    },
     "Seahorse" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -11801,6 +11840,9 @@
           }
         }
       }
+    },
+    "Socket" : {
+
     },
     "Soft" : {
       "extractionState" : "manual"
@@ -13463,6 +13505,9 @@
           }
         }
       }
+    },
+    "Tools never reach a private window, and see only the name of a locked Space." : {
+
     },
     "Top Level" : {
       "localizations" : {

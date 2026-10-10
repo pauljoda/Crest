@@ -65,6 +65,10 @@ Click **+** next to the Spaces heading to add a Space. Its Appearance page opens
 
 Right-click a Space, or use the **…** menu on its page, for **Rename**, **Edit Crest…**, **Move Up**, **Move Down**, **Lock Space**, and **Delete**. Crest needs at least one Space.
 
+## Automation
+
+On Mac, choose whether scripts and coding agents on your Mac may control Crest, which Spaces they may use, and which tools you allowed. See [Control Crest from scripts and coding agents](../browsing/automation.md).
+
 ## Advanced
 
 Import and export browser data, access runtime and diagnostic controls, and manage developer-facing behavior. Change advanced options deliberately; many of them exist to diagnose a specific browser or engine condition rather than improve everyday browsing.

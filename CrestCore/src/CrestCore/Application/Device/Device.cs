@@ -105,6 +105,7 @@ internal sealed partial class Device {
         defaultEngine = records.DefaultEngine;
         shortcuts = records.Shortcuts;
         links = records.Links;
+        automation = records.KeptAutomation;
         keptSetupDraft = platform.KeepsSetupDraft ? records.SetupDraft : null;
         setupCompleted = records.SetupCompleted;
         adopted.UnionWith(records.Adopted);
@@ -328,7 +329,7 @@ internal sealed partial class Device {
     /// Everything the device store keeps, as it stands. The caller holds the device lock.
     internal DeviceRecords Records() => new([.. saved.Values.OrderBy(record => record.Used)], [.. reopening],
         [.. keptPermissions.PersistentRecords], [.. keptEngines.Choices], shortcuts, links, keptSetupDraft, setupCompleted,
-        new HashSet<DeviceAdoption>(adopted), [.. keptTabGroups], defaultEngine);
+        new HashSet<DeviceAdoption>(adopted), [.. keptTabGroups], defaultEngine, automation);
 
     #endregion
 
