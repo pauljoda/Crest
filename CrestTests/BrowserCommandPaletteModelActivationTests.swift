@@ -44,7 +44,7 @@ final class BrowserCommandPaletteModelActivationTests: XCTestCase {
                 capturedTarget = target
                 return true
             },
-            openURL: { _, _ in false },
+            openURL: { _, _, _ in false },
             dismiss: { dismissalCount += 1 }
         )
         let targetResult = try XCTUnwrap(model.items.first { $0.row.tabID == targetTab.id }?.row)
@@ -155,6 +155,7 @@ final class BrowserCommandPaletteModelActivationTests: XCTestCase {
             lastActivatedAt: fixedDate
         )
         var preferences = BrowsingPreferences.seeded
+        preferences.followsDefaultSuggestions = false
         preferences.searchSuggestionsEnabled = searchSuggestionsEnabled
         let space = SpaceState.Seed(
             id: uuid(0x51),
@@ -190,7 +191,7 @@ final class BrowserCommandPaletteModelActivationTests: XCTestCase {
             },
             isSourceAvailable: { _ in true },
             selectTab: { _, _ in false },
-            openURL: { _, _ in false },
+            openURL: { _, _, _ in false },
             dismiss: {}
         )
     }

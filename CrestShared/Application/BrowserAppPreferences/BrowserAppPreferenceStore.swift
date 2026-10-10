@@ -76,6 +76,12 @@ final class BrowserAppPreferenceStore {
         set { set { $0.automaticallyShowsDeveloperToolbar = newValue } }
     }
 
+    /// How the command palette ranks and arranges what it offers.
+    var palette: PalettePreferences {
+        get { preferences.palette }
+        set { set { $0.palette = newValue } }
+    }
+
     // MARK: - Initializers
 
     init(preferences: AppPreferences = .default) {

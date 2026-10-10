@@ -11,7 +11,6 @@ struct MobileSpaceSettingsView: View {
 
     @State private var selectedSpaceID: UUID?
     @State private var editorSection = BrowserSpaceEditorSection.appearance
-    @State private var managedSearchEngineSpace: SpaceModel?
     @State private var editingAppearanceSpace: SpaceModel?
     @State private var forgeStep = BrowserCrestStudioStep.shape
 
@@ -35,10 +34,6 @@ struct MobileSpaceSettingsView: View {
                         }
                     }
             }
-        }
-        .sheet(item: $managedSearchEngineSpace) { space in
-            BrowserSearchEngineManager(
-                browser: browser, space: space, dismissKeyboard: dismissKeyboard)
         }
     }
 
@@ -110,7 +105,6 @@ struct MobileSpaceSettingsView: View {
             space: space,
             spaceAccess: spaceAccess,
             dataDeleter: dataDeleter,
-            manageSearchEngines: { managedSearchEngineSpace = space },
             dismissKeyboard: dismissKeyboard)
     }
 

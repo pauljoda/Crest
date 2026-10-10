@@ -75,11 +75,17 @@ protocol PageEvent: EngineEvent {}
 /// The members of `Intent` that derive from the core's `PageIntent`.
 protocol PageIntent: Intent {}
 
+/// The members of `Intent` that derive from the core's `PaletteIntent`.
+protocol PaletteIntent: Intent {}
+
 /// The members of `EngineEvent` that derive from the core's `PromptEvent`.
 protocol PromptEvent: EngineEvent {}
 
 /// The members of `Intent` that derive from the core's `PromptIntent`.
 protocol PromptIntent: Intent {}
+
+/// The members of `Intent` that derive from the core's `SearchCatalogIntent`.
+protocol SearchCatalogIntent: Intent {}
 
 /// The members of `Intent` that derive from the core's `SessionIntent`.
 protocol SessionIntent: Intent {}
@@ -143,6 +149,7 @@ enum Change: Equatable, Sendable {
     case quitWithDownloadsAsked(QuitWithDownloadsAsked)
     case saved(Saved)
     case scriptDialogAsked(ScriptDialogAsked)
+    case searchCatalogChanged(SearchCatalogChanged)
     case sessionAdopted(SessionAdopted)
     case setupCompletedChanged(SetupCompletedChanged)
     case setupDraftChanged(SetupDraftChanged)
@@ -203,6 +210,7 @@ enum Rejection: Equatable, Error, Sendable {
     case duplicateMediaSession(DuplicateMediaSession)
     case duplicatePage(DuplicatePage)
     case duplicateSearchEngineName(DuplicateSearchEngineName)
+    case duplicateSearchShortcut(DuplicateSearchShortcut)
     case engineAlreadyRegistered(EngineAlreadyRegistered)
     case engineLacksCapability(EngineLacksCapability)
     case engineNotRegistered(EngineNotRegistered)
@@ -234,6 +242,7 @@ enum Rejection: Equatable, Error, Sendable {
     case invalidPasswordLength(InvalidPasswordLength)
     case invalidRetentionLifetime(InvalidRetentionLifetime)
     case invalidSearchEngine(InvalidSearchEngine)
+    case invalidSearchShortcut(InvalidSearchShortcut)
     case invalidSession(InvalidSession)
     case invalidShortcut(InvalidShortcut)
     case invalidSiteHost(InvalidSiteHost)
@@ -316,6 +325,7 @@ enum Rejection: Equatable, Error, Sendable {
     case unknownPage(UnknownPage)
     case unknownPrompt(UnknownPrompt)
     case unknownSearchEngine(UnknownSearchEngine)
+    case unknownSearchOption(UnknownSearchOption)
     case unknownSpace(UnknownSpace)
     case unknownSplitGroup(UnknownSplitGroup)
     case unknownTab(UnknownTab)
@@ -323,6 +333,7 @@ enum Rejection: Equatable, Error, Sendable {
     case unregisteredEngine(UnregisteredEngine)
     case unrelatedWorkspaces(UnrelatedWorkspaces)
     case unsavedWorkspace(UnsavedWorkspace)
+    case unsuitableDefaultSearch(UnsuitableDefaultSearch)
     case unsupportedAddress(UnsupportedAddress)
     case unsupportedArchiveVersion(UnsupportedArchiveVersion)
     case webPagesOnly(WebPagesOnly)
@@ -343,10 +354,12 @@ enum Rejection: Equatable, Error, Sendable {
         case .cannotPinSplit(let value): value.message
         case .currentTabsOnly(let value): value.message
         case .duplicateSearchEngineName(let value): value.message
+        case .duplicateSearchShortcut(let value): value.message
         case .fileUnreadable(let value): value.message
         case .guideSpaceLocked(let value): value.message
         case .incompleteSplit(let value): value.message
         case .invalidImport(let value): value.message
+        case .invalidSearchShortcut(let value): value.message
         case .invalidSyncRecords(let value): value.message
         case .legacyCloudStateUnreadable(let value): value.message
         case .noIncludedSpaces(let value): value.message
@@ -379,6 +392,7 @@ enum Rejection: Equatable, Error, Sendable {
         case .splitLimitReached(let value): value.message
         case .splitNeedsTwoTabs(let value): value.message
         case .unknownCloudMerge(let value): value.message
+        case .unsuitableDefaultSearch(let value): value.message
         case .unsupportedArchiveVersion(let value): value.message
         case .webPagesOnly(let value): value.message
         default: nil
@@ -534,6 +548,7 @@ extension Change {
         case .quitWithDownloadsAsked(let change): change.apply(to: state)
         case .saved(let change): change.apply(to: state)
         case .scriptDialogAsked(let change): change.apply(to: state)
+        case .searchCatalogChanged(let change): change.apply(to: state)
         case .sessionAdopted(let change): change.apply(to: state)
         case .setupCompletedChanged(let change): change.apply(to: state)
         case .setupDraftChanged(let change): change.apply(to: state)
@@ -598,13 +613,6 @@ struct AddLinkRoute: Intent, LinkIntent, Equatable, Sendable {
 
     let routeID: UUID
     let destinationSpaceID: UUID
-}
-
-struct AddSearchEngine: Intent, SessionIntent, Equatable, Sendable {
-    let workspaceID: UUID
-    let spaceID: UUID
-    let engine: CustomSearchEngine
-    let selects: Bool
 }
 
 struct AddSetupSpace: Intent, SetupDraftIntent, Equatable, Sendable {
@@ -749,7 +757,30 @@ struct AppPreferences: Equatable, Sendable {
         savedTabClose: SavedTabClosePolicy.resumeLastLocation,
         savedTabFaviconReturnsToSavedURL: false,
         splitFocusFollowsMouse: false,
-        automaticallyShowsDeveloperToolbar: true
+        automaticallyShowsDeveloperToolbar: true,
+        palette: PalettePreferences(
+            layout: PaletteLayout.sections,
+            sources: [
+                PaletteSourceChoice(source: PaletteSource.recentTabs, isEnabled: true, limit: nil),
+                PaletteSourceChoice(source: PaletteSource.openTabs, isEnabled: true, limit: nil),
+                PaletteSourceChoice(source: PaletteSource.saved, isEnabled: true, limit: nil),
+                PaletteSourceChoice(source: PaletteSource.history, isEnabled: true, limit: nil),
+                PaletteSourceChoice(source: PaletteSource.actions, isEnabled: true, limit: nil),
+                PaletteSourceChoice(source: PaletteSource.spaces, isEnabled: true, limit: nil),
+                PaletteSourceChoice(source: PaletteSource.archivedTabs, isEnabled: false, limit: nil),
+                PaletteSourceChoice(source: PaletteSource.suggestions, isEnabled: true, limit: nil),
+                PaletteSourceChoice(source: PaletteSource.settingsPages, isEnabled: true, limit: nil),
+                PaletteSourceChoice(source: PaletteSource.scopes, isEnabled: true, limit: nil),
+                PaletteSourceChoice(source: PaletteSource.calculator, isEnabled: true, limit: nil),
+                PaletteSourceChoice(source: PaletteSource.pasteAndGo, isEnabled: false, limit: nil)
+            ],
+            showsTopHit: true,
+            prefersOpenTabs: true,
+            completesInline: true,
+            learnsChoices: true,
+            searchesSitesWithTab: true,
+            showsReasons: false
+        )
     )
 
     var startup: StartupBehavior
@@ -762,6 +793,7 @@ struct AppPreferences: Equatable, Sendable {
     var savedTabFaviconReturnsToSavedURL: Bool
     var splitFocusFollowsMouse: Bool
     var automaticallyShowsDeveloperToolbar: Bool
+    var palette: PalettePreferences
 }
 
 struct AppPreferencesChanged: Equatable, Sendable {
@@ -1052,10 +1084,12 @@ struct BrandColor: Equatable, Sendable {
 }
 
 struct BrowsingPreferences: Equatable, Sendable {
-    var selectedBuiltInEngine: BuiltInSearchEngine?
+    var selectedBuiltInEngine: BuiltInSearchProvider?
     var selectedCustomEngineID: UUID?
     var customSearchProviders: [CustomSearchProvider]
     var searchSuggestionsEnabled: Bool
+    var followsDefaultSearch: Bool
+    var followsDefaultSuggestions: Bool
     var currentTabCleanup: CurrentTabCleanup
     var contentBlocking: ContentBlockingPolicy
     var dataRetention: DataRetentionPreferences
@@ -1244,6 +1278,9 @@ struct ClearCurrentTabs: Intent, SessionIntent, Equatable, Sendable {
 struct ClearHistory: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let spaceID: UUID?
+}
+
+struct ClearPaletteChoices: Intent, PaletteIntent, Equatable, Sendable {
 }
 
 struct CloseInspector: PageRequest, Equatable, Sendable {
@@ -1701,18 +1738,17 @@ struct CurrentTabsOnly: Equatable, Sendable {
     }
 }
 
-struct CustomSearchEngine: Equatable, Sendable, Identifiable {
-    var id: UUID
-    var name: String
-    var searchTemplate: String
-    var suggestionTemplate: String?
-}
-
 struct CustomSearchProvider: Equatable, Sendable, Identifiable {
+    static let maximumNameLength: Int = 64
+    static let maximumShortcutLength: Int = 32
+
     var id: UUID
     var name: String
     var searchURLTemplate: String
     var suggestionURLTemplate: String?
+    var kind: SearchProviderKind
+    var shortcuts: [String]
+    var color: BrandColor?
 }
 
 struct CustomizeImportSpace: Intent, SetupFlowIntent, Equatable, Sendable {
@@ -2047,7 +2083,13 @@ struct DuplicatePage: Equatable, Sendable {
 
 struct DuplicateSearchEngineName: Equatable, Sendable {
     var message: LocalizedStringResource {
-        LocalizedStringResource("A custom search engine already uses this name.")
+        LocalizedStringResource("Another search provider already uses this name.")
+    }
+}
+
+struct DuplicateSearchShortcut: Equatable, Sendable {
+    var message: LocalizedStringResource {
+        LocalizedStringResource("Another search provider already uses this shortcut.")
     }
 }
 
@@ -2567,6 +2609,11 @@ struct ForgetEngineRule: Intent, Equatable, Sendable {
     let origin: SiteOrigin
 }
 
+struct ForgetPaletteChoices: Intent, PaletteIntent, Equatable, Sendable {
+    let windowID: UUID
+    let row: PaletteRow.Seed
+}
+
 struct GetAutomationPreferences: Query, Equatable, Sendable {
     typealias Answer = AutomationPreferences
 
@@ -2929,6 +2976,12 @@ struct InvalidRetentionLifetime: Equatable, Sendable {
 
 struct InvalidSearchEngine: Equatable, Sendable {
     let flaw: SearchEngineFlaw
+}
+
+struct InvalidSearchShortcut: Equatable, Sendable {
+    var message: LocalizedStringResource {
+        LocalizedStringResource("Enter a shortcut without spaces, slashes or colons.")
+    }
 }
 
 struct InvalidSession: Equatable, Sendable {
@@ -3993,6 +4046,10 @@ struct PaletteAnswer: Equatable, Sendable {
     let groups: [PaletteGroup]
     let completion: AddressCompletion?
     let suggestionAddress: String?
+    let offeredSearch: SearchOffer?
+    let offeredScope: PaletteScope?
+    let matchingProviders: [SearchProvider]
+    let entry: PaletteEntry?
 }
 
 struct PaletteCommand: Equatable, Sendable {
@@ -4001,9 +4058,51 @@ struct PaletteCommand: Equatable, Sendable {
     var sectionTitle: String
 }
 
+struct PaletteEntry: Equatable, Sendable {
+    let provider: SearchProvider?
+    let scope: PaletteScope?
+    let text: String
+}
+
 struct PaletteGroup: Equatable, Sendable {
     let section: PaletteSection
     let rows: [PaletteRow]
+}
+
+struct PalettePreferences: Equatable, Sendable {
+    static let maximumLimit: Int = 50
+    static let `default` = PalettePreferences(
+        layout: PaletteLayout.sections,
+        sources: [
+            PaletteSourceChoice(source: PaletteSource.recentTabs, isEnabled: true, limit: nil),
+            PaletteSourceChoice(source: PaletteSource.openTabs, isEnabled: true, limit: nil),
+            PaletteSourceChoice(source: PaletteSource.saved, isEnabled: true, limit: nil),
+            PaletteSourceChoice(source: PaletteSource.history, isEnabled: true, limit: nil),
+            PaletteSourceChoice(source: PaletteSource.actions, isEnabled: true, limit: nil),
+            PaletteSourceChoice(source: PaletteSource.spaces, isEnabled: true, limit: nil),
+            PaletteSourceChoice(source: PaletteSource.archivedTabs, isEnabled: false, limit: nil),
+            PaletteSourceChoice(source: PaletteSource.suggestions, isEnabled: true, limit: nil),
+            PaletteSourceChoice(source: PaletteSource.settingsPages, isEnabled: true, limit: nil),
+            PaletteSourceChoice(source: PaletteSource.scopes, isEnabled: true, limit: nil),
+            PaletteSourceChoice(source: PaletteSource.calculator, isEnabled: true, limit: nil),
+            PaletteSourceChoice(source: PaletteSource.pasteAndGo, isEnabled: false, limit: nil)
+        ],
+        showsTopHit: true,
+        prefersOpenTabs: true,
+        completesInline: true,
+        learnsChoices: true,
+        searchesSitesWithTab: true,
+        showsReasons: false
+    )
+
+    var layout: PaletteLayout
+    var sources: [PaletteSourceChoice]
+    var showsTopHit: Bool
+    var prefersOpenTabs: Bool
+    var completesInline: Bool
+    var learnsChoices: Bool
+    var searchesSitesWithTab: Bool
+    var showsReasons: Bool
 }
 
 struct PaletteRow: Equatable, Sendable {
@@ -4015,8 +4114,57 @@ struct PaletteRow: Equatable, Sendable {
     let tabID: UUID?
     let address: String?
     let command: ShortcutCommand?
-    let engine: BuiltInSearchEngine?
-    let customEngineID: UUID?
+    let provider: SearchProvider?
+    let settingsPage: String?
+    let scope: PaletteScope?
+    let reason: PaletteReason?
+
+    /// The fields of a `PaletteRow` alone, as a platform builds one to send. The
+    /// core resolves the rest when it reads it.
+    struct Seed: Equatable, Sendable {
+        var kind: PaletteRowKind
+        var title: String
+        var subtitle: String
+        var symbol: String
+        var subjectID: UUID?
+        var tabID: UUID?
+        var address: String?
+        var command: ShortcutCommand?
+        var provider: SearchProvider.Seed?
+        var settingsPage: String?
+        var scope: PaletteScope?
+        var reason: PaletteReason?
+    }
+
+    /// The record's fields alone, as a platform sends it back.
+    var seed: Seed {
+        Seed(
+            kind: kind,
+            title: title,
+            subtitle: subtitle,
+            symbol: symbol,
+            subjectID: subjectID,
+            tabID: tabID,
+            address: address,
+            command: command,
+            provider: provider?.seed,
+            settingsPage: settingsPage,
+            scope: scope,
+            reason: reason
+        )
+    }
+}
+
+struct PaletteSettingsPage: Equatable, Sendable {
+    var name: String
+    var title: String
+    var terms: String
+}
+
+struct PaletteSourceChoice: Equatable, Sendable {
+    var source: PaletteSource
+    var isEnabled: Bool
+    var limit: Int?
 }
 
 struct PaletteSuggestions: Query, Equatable, Sendable {
@@ -4025,7 +4173,12 @@ struct PaletteSuggestions: Query, Equatable, Sendable {
     let windowID: UUID
     let text: String
     let commands: [PaletteCommand]
+    let settingsPages: [PaletteSettingsPage]
     let remote: [String]
+    let provider: SearchProvider.Seed?
+    let scope: PaletteScope?
+    let allowsCompletion: Bool
+    let pasteboard: String?
 }
 
 struct PasskeyAccess: Query, Equatable, Sendable {
@@ -4297,6 +4450,12 @@ struct RecordDownloadTransfer: Intent, DownloadIntent, Equatable, Sendable {
     let progress: Double
 }
 
+struct RecordPaletteChoice: Intent, PaletteIntent, Equatable, Sendable {
+    let windowID: UUID
+    let text: String
+    let row: PaletteRow.Seed
+}
+
 struct RecordsToUpload: Query, Equatable, Sendable {
     typealias Answer = UploadBatch
 
@@ -4389,10 +4548,8 @@ struct RemoveProfileDownloads: Intent, DownloadIntent, Equatable, Sendable {
     let profileID: UUID
 }
 
-struct RemoveSearchEngine: Intent, SessionIntent, Equatable, Sendable {
-    let workspaceID: UUID
-    let spaceID: UUID
-    let engineID: UUID
+struct RemoveSearchProvider: Intent, SearchCatalogIntent, Equatable, Sendable, Identifiable {
+    let id: UUID
 }
 
 struct RemoveSetupSpace: Intent, SetupDraftIntent, Equatable, Sendable {
@@ -4462,6 +4619,9 @@ struct ResetPrivateBrowsing: Intent, SessionIntent, Equatable, Sendable {
     let windowID: UUID
 }
 
+struct ResetSearchProviders: Intent, SearchCatalogIntent, Equatable, Sendable {
+}
+
 struct ResetShortcut: Intent, ShortcutIntent, Equatable, Sendable {
     let command: ShortcutCommand
 }
@@ -4516,6 +4676,11 @@ struct RestoreInteractionState: PageRequest, Equatable, Sendable {
     let pageID: UUID
     let state: Data
     let expectedURL: String
+}
+
+struct RestoreSearchCatalog: Intent, SearchCatalogIntent, Equatable, Sendable {
+    let language: String?
+    let region: String?
 }
 
 struct ResumeDownload: Intent, DownloadIntent, Equatable, Sendable {
@@ -4583,6 +4748,10 @@ struct SaveInteractionState: PageRequest, Equatable, Sendable {
     let pageID: UUID
 }
 
+struct SaveSearchProvider: Intent, SearchCatalogIntent, Equatable, Sendable {
+    let provider: CustomSearchProvider
+}
+
 struct Saved: Equatable, Sendable {
     let revision: Int64
 }
@@ -4625,12 +4794,103 @@ struct ScriptDialogQuestion: Equatable, Sendable {
     var sourceURL: String
 }
 
+struct SearchCatalog: Equatable, Sendable {
+    static let maximumCustomCount: Int = 32
+
+    let builtIns: [SearchProviderSettings]
+    let custom: [CustomSearchProvider]
+    let defaultBuiltIn: BuiltInSearchProvider?
+    let defaultCustomID: UUID?
+    let privateBuiltIn: BuiltInSearchProvider?
+    let privateCustomID: UUID?
+    let suggestionsEnabled: Bool
+    let language: String?
+    let region: String?
+}
+
+struct SearchCatalogChanged: Equatable, Sendable {
+    let catalog: SearchCatalog
+    let providers: [SearchProvider]
+    let `default`: SearchProvider
+    let privateDefault: SearchProvider
+}
+
 struct SearchEngineLimitReached: Equatable, Sendable {
     let limit: Int
 
     var message: LocalizedStringResource {
-        LocalizedStringResource("A Space can contain up to \(limit) custom search engines.")
+        LocalizedStringResource("You can add up to \(limit) search providers.")
     }
+}
+
+struct SearchLocaleCode: Equatable, Sendable {
+    let code: String
+    let locale: String
+    let alsoServes: [String]
+}
+
+struct SearchOffer: Equatable, Sendable {
+    let provider: SearchProvider
+    let beatsCompletion: Bool
+}
+
+struct SearchOptionSetting: Equatable, Sendable {
+    let option: SearchProviderOption
+    let value: String
+}
+
+struct SearchProvider: Equatable, Sendable {
+    static let customPrefix: String = "custom:"
+
+    let name: String
+    let title: String
+    let kind: SearchProviderKind
+    let shortcuts: [String]
+    let searchTemplate: String
+    let suggestionTemplate: String?
+    let color: BrandColor
+    let logo: String?
+    let builtIn: BuiltInSearchProvider?
+    let customID: UUID?
+    let site: String
+
+    /// The fields of a `SearchProvider` alone, as a platform builds one to send. The
+    /// core resolves the rest when it reads it.
+    struct Seed: Equatable, Sendable {
+        var name: String
+        var title: String
+        var kind: SearchProviderKind
+        var shortcuts: [String]
+        var searchTemplate: String
+        var suggestionTemplate: String?
+        var color: BrandColor
+        var logo: String?
+        var builtIn: BuiltInSearchProvider?
+        var customID: UUID?
+    }
+
+    /// The record's fields alone, as a platform sends it back.
+    var seed: Seed {
+        Seed(
+            name: name,
+            title: title,
+            kind: kind,
+            shortcuts: shortcuts,
+            searchTemplate: searchTemplate,
+            suggestionTemplate: suggestionTemplate,
+            color: color,
+            logo: logo,
+            builtIn: builtIn,
+            customID: customID
+        )
+    }
+}
+
+struct SearchProviderSettings: Equatable, Sendable {
+    let provider: BuiltInSearchProvider
+    let isEnabled: Bool
+    let shortcuts: [String]?
+    let options: [SearchOptionSetting]
 }
 
 struct SecureOriginCheck: Query, Equatable, Sendable {
@@ -4645,13 +4905,6 @@ struct SecureOriginVerdict: Equatable, Sendable {
 
 struct SelectDefaultEngine: Intent, Equatable, Sendable {
     let engine: EngineKind?
-}
-
-struct SelectSearchEngine: Intent, SessionIntent, Equatable, Sendable {
-    let workspaceID: UUID
-    let spaceID: UUID
-    let builtIn: BuiltInSearchEngine?
-    let customEngineID: UUID?
 }
 
 struct SelectedRoot: Equatable, Sendable, Identifiable {
@@ -4793,7 +5046,6 @@ struct SetAutomation: Intent, AutomationIntent, Equatable, Sendable {
 struct SetBrowsingPreferences: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let spaceID: UUID
-    let searchSuggestionsEnabled: Bool
     let currentTabCleanup: CurrentTabCleanup
     let contentBlocking: ContentBlockingPolicy
     let dataRetention: DataRetentionPreferences
@@ -4807,6 +5059,10 @@ struct SetCredentialPreferences: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let spaceID: UUID
     let preferences: CredentialPreferences
+}
+
+struct SetDefaultSearch: Intent, SearchCatalogIntent, Equatable, Sendable {
+    let provider: SearchProvider.Seed
 }
 
 struct SetDefaultSpace: Intent, SessionIntent, Equatable, Sendable {
@@ -4839,6 +5095,30 @@ struct SetLinkBehavior: Intent, LinkIntent, Equatable, Sendable {
     let isOn: Bool
 }
 
+struct SetPrivateSearch: Intent, SearchCatalogIntent, Equatable, Sendable {
+    let provider: SearchProvider.Seed
+}
+
+struct SetSearchOption: Intent, SearchCatalogIntent, Equatable, Sendable {
+    let provider: BuiltInSearchProvider
+    let option: SearchProviderOption
+    let value: String?
+}
+
+struct SetSearchProviderEnabled: Intent, SearchCatalogIntent, Equatable, Sendable {
+    let provider: BuiltInSearchProvider
+    let isEnabled: Bool
+}
+
+struct SetSearchShortcuts: Intent, SearchCatalogIntent, Equatable, Sendable {
+    let provider: BuiltInSearchProvider
+    let shortcuts: [String]?
+}
+
+struct SetSearchSuggestions: Intent, SearchCatalogIntent, Equatable, Sendable {
+    let enabled: Bool
+}
+
 struct SetSitePermission: PageRequest, Equatable, Sendable {
     typealias Answer = Bool
 
@@ -4865,6 +5145,13 @@ struct SetSpaceIdentity: Intent, SessionIntent, Equatable, Sendable {
     let name: String
     let symbol: String
     let accent: SpaceAccent
+}
+
+struct SetSpaceSearch: Intent, SessionIntent, Equatable, Sendable {
+    let workspaceID: UUID
+    let spaceID: UUID
+    let provider: SearchProvider.Seed?
+    let suggestionsEnabled: Bool?
 }
 
 struct SetSplitIcon: Intent, SessionIntent, Equatable, Sendable {
@@ -6017,6 +6304,10 @@ struct UnknownSearchEngine: Equatable, Sendable {
     let engineID: UUID?
 }
 
+struct UnknownSearchOption: Equatable, Sendable {
+    let option: SearchProviderOption
+}
+
 struct UnknownSpace: Equatable, Sendable {
     let spaceID: UUID
 }
@@ -6045,6 +6336,12 @@ struct UnsavedWorkspace: Equatable, Sendable {
     let workspaceID: UUID
 }
 
+struct UnsuitableDefaultSearch: Equatable, Sendable {
+    var message: LocalizedStringResource {
+        LocalizedStringResource("Choose a search engine or an AI assistant.")
+    }
+}
+
 struct UnsupportedAddress: Equatable, Sendable {
     let url: String
 }
@@ -6055,12 +6352,6 @@ struct UnsupportedArchiveVersion: Equatable, Sendable {
     var message: LocalizedStringResource {
         LocalizedStringResource("This Crest browser-data version (\(version)) is not supported.")
     }
-}
-
-struct UpdateSearchEngine: Intent, SessionIntent, Equatable, Sendable {
-    let workspaceID: UUID
-    let spaceID: UUID
-    let engine: CustomSearchEngine
 }
 
 struct UploadBatch: Equatable, Sendable {
@@ -7075,30 +7366,512 @@ struct BlockedPopupStatus: Hashable, Sendable {
     }
 }
 
-/// The members of the core's `BuiltInSearchEngine`. A member's wire tag is its index in `all`.
-struct BuiltInSearchEngine: Hashable, Sendable {
+/// The members of the core's `BuiltInSearchProvider`. A member's wire tag is its index in `all`.
+struct BuiltInSearchProvider: Hashable, Sendable {
     let tag: Int
     var name: String { facts.name }
+    var title: String { facts.title }
+    var kind: SearchProviderKind { facts.kind }
+    var shortcuts: [String] { facts.shortcuts }
+    var color: BrandColor { facts.color }
+    var logo: String? { facts.logo }
+    var isEnabledByDefault: Bool { facts.isEnabledByDefault }
+    var options: [SearchProviderOption] { facts.options }
     private let facts: Facts
 
-    private init(tag: Int, name: String) {
+    private init(
+        tag: Int,
+        name: String,
+        title: String,
+        kind: SearchProviderKind,
+        shortcuts: [String],
+        color: BrandColor,
+        logo: String?,
+        isEnabledByDefault: Bool,
+        options: [SearchProviderOption]
+    ) {
         self.tag = tag
-        facts = Facts(name: name)
+        facts = Facts(
+            name: name,
+            title: title,
+            kind: kind,
+            shortcuts: shortcuts,
+            color: color,
+            logo: logo,
+            isEnabledByDefault: isEnabledByDefault,
+            options: options
+        )
     }
 
-    static let google = BuiltInSearchEngine(tag: 0, name: "google")
-    static let duckDuckGo = BuiltInSearchEngine(tag: 1, name: "duckDuckGo")
-    static let bing = BuiltInSearchEngine(tag: 2, name: "bing")
-    static let ecosia = BuiltInSearchEngine(tag: 3, name: "ecosia")
-    static let brave = BuiltInSearchEngine(tag: 4, name: "brave")
+    static let google = BuiltInSearchProvider(
+        tag: 0,
+        name: "google",
+        title: "Google",
+        kind: SearchProviderKind.engine,
+        shortcuts: ["g", "google"],
+        color: BrandColor(red: 0.25882352941176473, green: 0.5215686274509804, blue: 0.9568627450980393, alpha: 1),
+        logo: "SearchProviderGoogle",
+        isEnabledByDefault: true,
+        options: [
+            SearchProviderOption.googleHidesAIOverviews,
+            SearchProviderOption.googleSafeSearch,
+            SearchProviderOption.googleExactWords
+        ]
+    )
+    static let duckDuckGo = BuiltInSearchProvider(
+        tag: 1,
+        name: "duckDuckGo",
+        title: "DuckDuckGo",
+        kind: SearchProviderKind.engine,
+        shortcuts: ["ddg", "dg", "duck"],
+        color: BrandColor(red: 0.8705882352941177, green: 0.34509803921568627, blue: 0.2, alpha: 1),
+        logo: "SearchProviderDuckDuckGo",
+        isEnabledByDefault: true,
+        options: [
+            SearchProviderOption.duckDuckGoHidesAI,
+            SearchProviderOption.duckDuckGoSafeSearch,
+            SearchProviderOption.duckDuckGoRegion
+        ]
+    )
+    static let bing = BuiltInSearchProvider(
+        tag: 2,
+        name: "bing",
+        title: "Bing",
+        kind: SearchProviderKind.engine,
+        shortcuts: ["b", "bing"],
+        color: BrandColor(red: 0.047058823529411764, green: 0.5176470588235295, blue: 0.5176470588235295, alpha: 1),
+        logo: "SearchProviderBing",
+        isEnabledByDefault: true,
+        options: [SearchProviderOption.bingMarket, SearchProviderOption.bingStrictSafeSearch]
+    )
+    static let ecosia = BuiltInSearchProvider(
+        tag: 3,
+        name: "ecosia",
+        title: "Ecosia",
+        kind: SearchProviderKind.engine,
+        shortcuts: ["ecosia", "eco"],
+        color: BrandColor(red: 0.17254901960784313, green: 0.5490196078431373, blue: 0.2901960784313726, alpha: 1),
+        logo: "SearchProviderEcosia",
+        isEnabledByDefault: true,
+        options: []
+    )
+    static let brave = BuiltInSearchProvider(
+        tag: 4,
+        name: "brave",
+        title: "Brave Search",
+        kind: SearchProviderKind.engine,
+        shortcuts: ["brave"],
+        color: BrandColor(red: 0.984313725490196, green: 0.32941176470588235, blue: 0.16862745098039217, alpha: 1),
+        logo: "SearchProviderBrave",
+        isEnabledByDefault: true,
+        options: [
+            SearchProviderOption.braveHidesAIAnswers,
+            SearchProviderOption.braveSafeSearch,
+            SearchProviderOption.braveCountry
+        ]
+    )
+    static let startpage = BuiltInSearchProvider(
+        tag: 5,
+        name: "startpage",
+        title: "Startpage",
+        kind: SearchProviderKind.engine,
+        shortcuts: ["sp", "startpage"],
+        color: BrandColor(red: 0.396078431372549, green: 0.45098039215686275, blue: 1, alpha: 1),
+        logo: nil,
+        isEnabledByDefault: true,
+        options: [SearchProviderOption.startpageSafeSearch]
+    )
+    static let kagi = BuiltInSearchProvider(
+        tag: 6,
+        name: "kagi",
+        title: "Kagi",
+        kind: SearchProviderKind.engine,
+        shortcuts: ["kagi"],
+        color: BrandColor(red: 1, green: 0.7019607843137254, blue: 0.09803921568627451, alpha: 1),
+        logo: nil,
+        isEnabledByDefault: false,
+        options: [SearchProviderOption.kagiExactWords]
+    )
+    static let yahoo = BuiltInSearchProvider(
+        tag: 7,
+        name: "yahoo",
+        title: "Yahoo",
+        kind: SearchProviderKind.engine,
+        shortcuts: ["y", "yahoo"],
+        color: BrandColor(red: 0.3764705882352941, green: 0.00392156862745098, blue: 0.8235294117647058, alpha: 1),
+        logo: nil,
+        isEnabledByDefault: false,
+        options: [SearchProviderOption.yahooStrictSafeSearch]
+    )
+    static let qwant = BuiltInSearchProvider(
+        tag: 8,
+        name: "qwant",
+        title: "Qwant",
+        kind: SearchProviderKind.engine,
+        shortcuts: ["qw", "qwant"],
+        color: BrandColor(red: 0.3607843137254902, green: 0.592156862745098, blue: 1, alpha: 1),
+        logo: nil,
+        isEnabledByDefault: false,
+        options: [SearchProviderOption.qwantRegion]
+    )
+    static let chatGPT = BuiltInSearchProvider(
+        tag: 9,
+        name: "chatGPT",
+        title: "ChatGPT",
+        kind: SearchProviderKind.assistant,
+        shortcuts: ["chatgpt", "gpt"],
+        color: BrandColor(red: 0.06274509803921569, green: 0.6392156862745098, blue: 0.4980392156862745, alpha: 1),
+        logo: nil,
+        isEnabledByDefault: true,
+        options: [
+            SearchProviderOption.chatGPTSearchesWeb,
+            SearchProviderOption.chatGPTTemporaryChat,
+            SearchProviderOption.chatGPTModel
+        ]
+    )
+    static let claude = BuiltInSearchProvider(
+        tag: 10,
+        name: "claude",
+        title: "Claude",
+        kind: SearchProviderKind.assistant,
+        shortcuts: ["claude"],
+        color: BrandColor(red: 0.8509803921568627, green: 0.4666666666666667, blue: 0.3411764705882353, alpha: 1),
+        logo: nil,
+        isEnabledByDefault: true,
+        options: []
+    )
+    static let perplexity = BuiltInSearchProvider(
+        tag: 11,
+        name: "perplexity",
+        title: "Perplexity",
+        kind: SearchProviderKind.assistant,
+        shortcuts: ["perplexity", "pplx"],
+        color: BrandColor(red: 0.12549019607843137, green: 0.7215686274509804, blue: 0.803921568627451, alpha: 1),
+        logo: nil,
+        isEnabledByDefault: true,
+        options: []
+    )
+    static let googleAIMode = BuiltInSearchProvider(
+        tag: 12,
+        name: "googleAIMode",
+        title: "Google AI Mode",
+        kind: SearchProviderKind.assistant,
+        shortcuts: ["aimode", "gai"],
+        color: BrandColor(red: 0.25882352941176473, green: 0.5215686274509804, blue: 0.9568627450980393, alpha: 1),
+        logo: nil,
+        isEnabledByDefault: true,
+        options: []
+    )
+    static let grok = BuiltInSearchProvider(
+        tag: 13,
+        name: "grok",
+        title: "Grok",
+        kind: SearchProviderKind.assistant,
+        shortcuts: ["grok"],
+        color: BrandColor(red: 0.44313725490196076, green: 0.4627450980392157, blue: 0.4823529411764706, alpha: 1),
+        logo: nil,
+        isEnabledByDefault: false,
+        options: []
+    )
+    static let leChat = BuiltInSearchProvider(
+        tag: 14,
+        name: "leChat",
+        title: "Le Chat",
+        kind: SearchProviderKind.assistant,
+        shortcuts: ["mistral", "lechat"],
+        color: BrandColor(red: 0.9803921568627451, green: 0.3215686274509804, blue: 0.058823529411764705, alpha: 1),
+        logo: nil,
+        isEnabledByDefault: false,
+        options: []
+    )
+    static let duckAI = BuiltInSearchProvider(
+        tag: 15,
+        name: "duckAI",
+        title: "Duck.ai",
+        kind: SearchProviderKind.assistant,
+        shortcuts: ["duckai", "ai"],
+        color: BrandColor(red: 0.8705882352941177, green: 0.34509803921568627, blue: 0.2, alpha: 1),
+        logo: nil,
+        isEnabledByDefault: false,
+        options: []
+    )
+    static let copilotSearch = BuiltInSearchProvider(
+        tag: 16,
+        name: "copilotSearch",
+        title: "Copilot Search",
+        kind: SearchProviderKind.assistant,
+        shortcuts: ["copilot"],
+        color: BrandColor(red: 0.1568627450980392, green: 0.4392156862745098, blue: 0.9176470588235294, alpha: 1),
+        logo: nil,
+        isEnabledByDefault: false,
+        options: []
+    )
+    static let kagiAssistant = BuiltInSearchProvider(
+        tag: 17,
+        name: "kagiAssistant",
+        title: "Kagi Assistant",
+        kind: SearchProviderKind.assistant,
+        shortcuts: ["kagiai"],
+        color: BrandColor(red: 1, green: 0.7019607843137254, blue: 0.09803921568627451, alpha: 1),
+        logo: nil,
+        isEnabledByDefault: false,
+        options: [SearchProviderOption.kagiAssistantModel, SearchProviderOption.kagiAssistantWebAccess]
+    )
+    static let youTube = BuiltInSearchProvider(
+        tag: 18,
+        name: "youTube",
+        title: "YouTube",
+        kind: SearchProviderKind.website,
+        shortcuts: ["yt", "youtube"],
+        color: BrandColor(red: 1, green: 0, blue: 0, alpha: 1),
+        logo: nil,
+        isEnabledByDefault: true,
+        options: [SearchProviderOption.youTubeShows]
+    )
+    static let wikipedia = BuiltInSearchProvider(
+        tag: 19,
+        name: "wikipedia",
+        title: "Wikipedia",
+        kind: SearchProviderKind.website,
+        shortcuts: ["w", "wiki"],
+        color: BrandColor(red: 0.38823529411764707, green: 0.39215686274509803, blue: 0.4, alpha: 1),
+        logo: nil,
+        isEnabledByDefault: true,
+        options: [SearchProviderOption.wikipediaLanguage, SearchProviderOption.wikipediaListsResults]
+    )
+    static let gitHub = BuiltInSearchProvider(
+        tag: 20,
+        name: "gitHub",
+        title: "GitHub",
+        kind: SearchProviderKind.website,
+        shortcuts: ["gh", "github"],
+        color: BrandColor(red: 0.5098039215686274, green: 0.3137254901960784, blue: 0.8745098039215686, alpha: 1),
+        logo: nil,
+        isEnabledByDefault: true,
+        options: [SearchProviderOption.gitHubSearchesFor, SearchProviderOption.gitHubSort]
+    )
+    static let reddit = BuiltInSearchProvider(
+        tag: 21,
+        name: "reddit",
+        title: "Reddit",
+        kind: SearchProviderKind.website,
+        shortcuts: ["r", "reddit"],
+        color: BrandColor(red: 1, green: 0.27058823529411763, blue: 0, alpha: 1),
+        logo: nil,
+        isEnabledByDefault: true,
+        options: []
+    )
+    static let x = BuiltInSearchProvider(
+        tag: 22,
+        name: "x",
+        title: "X",
+        kind: SearchProviderKind.website,
+        shortcuts: ["x", "twitter"],
+        color: BrandColor(red: 0.44313725490196076, green: 0.4627450980392157, blue: 0.4823529411764706, alpha: 1),
+        logo: nil,
+        isEnabledByDefault: true,
+        options: [SearchProviderOption.xLatestFirst]
+    )
+    static let stackOverflow = BuiltInSearchProvider(
+        tag: 23,
+        name: "stackOverflow",
+        title: "Stack Overflow",
+        kind: SearchProviderKind.website,
+        shortcuts: ["so", "stackoverflow"],
+        color: BrandColor(red: 0.9568627450980393, green: 0.5019607843137255, blue: 0.1411764705882353, alpha: 1),
+        logo: nil,
+        isEnabledByDefault: true,
+        options: [SearchProviderOption.stackOverflowSort]
+    )
+    static let mdn = BuiltInSearchProvider(
+        tag: 24,
+        name: "mdn",
+        title: "MDN",
+        kind: SearchProviderKind.website,
+        shortcuts: ["mdn"],
+        color: BrandColor(red: 0.5137254901960784, green: 0.8156862745098039, blue: 0.9490196078431372, alpha: 1),
+        logo: nil,
+        isEnabledByDefault: true,
+        options: [SearchProviderOption.mdnLanguage]
+    )
+    static let amazon = BuiltInSearchProvider(
+        tag: 25,
+        name: "amazon",
+        title: "Amazon",
+        kind: SearchProviderKind.website,
+        shortcuts: ["a", "amazon"],
+        color: BrandColor(red: 1, green: 0.6, blue: 0, alpha: 1),
+        logo: nil,
+        isEnabledByDefault: true,
+        options: [SearchProviderOption.amazonStore]
+    )
+    static let imDb = BuiltInSearchProvider(
+        tag: 26,
+        name: "imdb",
+        title: "IMDb",
+        kind: SearchProviderKind.website,
+        shortcuts: ["imdb"],
+        color: BrandColor(red: 0.9607843137254902, green: 0.7725490196078432, blue: 0.09411764705882353, alpha: 1),
+        logo: nil,
+        isEnabledByDefault: true,
+        options: [SearchProviderOption.imDbFinds]
+    )
+    static let spotify = BuiltInSearchProvider(
+        tag: 27,
+        name: "spotify",
+        title: "Spotify",
+        kind: SearchProviderKind.website,
+        shortcuts: ["spotify"],
+        color: BrandColor(red: 0.11372549019607843, green: 0.7254901960784313, blue: 0.32941176470588235, alpha: 1),
+        logo: nil,
+        isEnabledByDefault: true,
+        options: [SearchProviderOption.spotifyShows]
+    )
+    static let figmaCommunity = BuiltInSearchProvider(
+        tag: 28,
+        name: "figmaCommunity",
+        title: "Figma Community",
+        kind: SearchProviderKind.website,
+        shortcuts: ["figma"],
+        color: BrandColor(red: 0.9490196078431372, green: 0.3058823529411765, blue: 0.11764705882352941, alpha: 1),
+        logo: nil,
+        isEnabledByDefault: true,
+        options: []
+    )
+    static let googleMaps = BuiltInSearchProvider(
+        tag: 29,
+        name: "googleMaps",
+        title: "Google Maps",
+        kind: SearchProviderKind.website,
+        shortcuts: ["gm", "maps"],
+        color: BrandColor(red: 0.20392156862745098, green: 0.6588235294117647, blue: 0.3254901960784314, alpha: 1),
+        logo: nil,
+        isEnabledByDefault: true,
+        options: []
+    )
+    static let appleMaps = BuiltInSearchProvider(
+        tag: 30,
+        name: "appleMaps",
+        title: "Apple Maps",
+        kind: SearchProviderKind.website,
+        shortcuts: ["amaps"],
+        color: BrandColor(red: 0.34901960784313724, green: 0.7254901960784313, blue: 0.2980392156862745, alpha: 1),
+        logo: nil,
+        isEnabledByDefault: true,
+        options: [SearchProviderOption.appleMapsShows]
+    )
+    static let googleImages = BuiltInSearchProvider(
+        tag: 31,
+        name: "googleImages",
+        title: "Google Images",
+        kind: SearchProviderKind.website,
+        shortcuts: ["gi", "images"],
+        color: BrandColor(red: 0.25882352941176473, green: 0.5215686274509804, blue: 0.9568627450980393, alpha: 1),
+        logo: nil,
+        isEnabledByDefault: true,
+        options: [SearchProviderOption.googleImagesSafeSearch]
+    )
+    static let googleTranslate = BuiltInSearchProvider(
+        tag: 32,
+        name: "googleTranslate",
+        title: "Google Translate",
+        kind: SearchProviderKind.website,
+        shortcuts: ["gt", "translate"],
+        color: BrandColor(red: 0.25882352941176473, green: 0.5215686274509804, blue: 0.9568627450980393, alpha: 1),
+        logo: nil,
+        isEnabledByDefault: true,
+        options: [SearchProviderOption.translateInto]
+    )
+    static let wolframAlpha = BuiltInSearchProvider(
+        tag: 33,
+        name: "wolframAlpha",
+        title: "Wolfram|Alpha",
+        kind: SearchProviderKind.website,
+        shortcuts: ["wa", "wolfram"],
+        color: BrandColor(red: 0.8666666666666667, green: 0.06666666666666667, blue: 0, alpha: 1),
+        logo: nil,
+        isEnabledByDefault: true,
+        options: []
+    )
+    static let hackerNews = BuiltInSearchProvider(
+        tag: 34,
+        name: "hackerNews",
+        title: "Hacker News",
+        kind: SearchProviderKind.website,
+        shortcuts: ["hn"],
+        color: BrandColor(red: 1, green: 0.4, blue: 0, alpha: 1),
+        logo: nil,
+        isEnabledByDefault: false,
+        options: [SearchProviderOption.hackerNewsSort, SearchProviderOption.hackerNewsShows]
+    )
+    static let npm = BuiltInSearchProvider(
+        tag: 35,
+        name: "npm",
+        title: "npm",
+        kind: SearchProviderKind.website,
+        shortcuts: ["npm"],
+        color: BrandColor(red: 0.796078431372549, green: 0.2196078431372549, blue: 0.21568627450980393, alpha: 1),
+        logo: nil,
+        isEnabledByDefault: false,
+        options: []
+    )
+    static let appleDeveloper = BuiltInSearchProvider(
+        tag: 36,
+        name: "appleDeveloper",
+        title: "Apple Developer",
+        kind: SearchProviderKind.website,
+        shortcuts: ["adev"],
+        color: BrandColor(red: 0, green: 0.44313725490196076, blue: 0.8901960784313725, alpha: 1),
+        logo: nil,
+        isEnabledByDefault: false,
+        options: [SearchProviderOption.appleDeveloperSkipsAI]
+    )
 
-    static let all: [BuiltInSearchEngine] = [google, duckDuckGo, bing, ecosia, brave]
+    static let all: [BuiltInSearchProvider] = [
+        google,
+        duckDuckGo,
+        bing,
+        ecosia,
+        brave,
+        startpage,
+        kagi,
+        yahoo,
+        qwant,
+        chatGPT,
+        claude,
+        perplexity,
+        googleAIMode,
+        grok,
+        leChat,
+        duckAI,
+        copilotSearch,
+        kagiAssistant,
+        youTube,
+        wikipedia,
+        gitHub,
+        reddit,
+        x,
+        stackOverflow,
+        mdn,
+        amazon,
+        imDb,
+        spotify,
+        figmaCommunity,
+        googleMaps,
+        appleMaps,
+        googleImages,
+        googleTranslate,
+        wolframAlpha,
+        hackerNews,
+        npm,
+        appleDeveloper
+    ]
 
-    static func named(_ name: String?) -> BuiltInSearchEngine? {
+    static func named(_ name: String?) -> BuiltInSearchProvider? {
         all.first { $0.name == name }
     }
 
-    static func == (lhs: BuiltInSearchEngine, rhs: BuiltInSearchEngine) -> Bool {
+    static func == (lhs: BuiltInSearchProvider, rhs: BuiltInSearchProvider) -> Bool {
         lhs.tag == rhs.tag
     }
 
@@ -7108,9 +7881,32 @@ struct BuiltInSearchEngine: Hashable, Sendable {
 
     private final class Facts: Sendable {
         let name: String
+        let title: String
+        let kind: SearchProviderKind
+        let shortcuts: [String]
+        let color: BrandColor
+        let logo: String?
+        let isEnabledByDefault: Bool
+        let options: [SearchProviderOption]
 
-        init(name: String) {
+        init(
+            name: String,
+            title: String,
+            kind: SearchProviderKind,
+            shortcuts: [String],
+            color: BrandColor,
+            logo: String?,
+            isEnabledByDefault: Bool,
+            options: [SearchProviderOption]
+        ) {
             self.name = name
+            self.title = title
+            self.kind = kind
+            self.shortcuts = shortcuts
+            self.color = color
+            self.logo = logo
+            self.isEnabledByDefault = isEnabledByDefault
+            self.options = options
         }
     }
 }
@@ -12995,64 +13791,418 @@ struct PageSecurity: Hashable, Sendable {
     }
 }
 
+/// The members of the core's `PaletteActivation`. A member's wire tag is its index in `all`.
+struct PaletteActivation: Hashable, Sendable {
+    let tag: Int
+    var name: String { facts.name }
+    var closesPalette: Bool { facts.closesPalette }
+    var opensWhereKeysChoose: Bool { facts.opensWhereKeysChoose }
+    private let facts: Facts
+
+    private init(tag: Int, name: String, closesPalette: Bool, opensWhereKeysChoose: Bool) {
+        self.tag = tag
+        facts = Facts(name: name, closesPalette: closesPalette, opensWhereKeysChoose: opensWhereKeysChoose)
+    }
+
+    static let switchesToTab = PaletteActivation(
+        tag: 0,
+        name: "switchesToTab",
+        closesPalette: true,
+        opensWhereKeysChoose: false
+    )
+    static let opensAddress = PaletteActivation(
+        tag: 1,
+        name: "opensAddress",
+        closesPalette: true,
+        opensWhereKeysChoose: true
+    )
+    static let searches = PaletteActivation(tag: 2, name: "searches", closesPalette: true, opensWhereKeysChoose: true)
+    static let runsCommand = PaletteActivation(
+        tag: 3,
+        name: "runsCommand",
+        closesPalette: true,
+        opensWhereKeysChoose: false
+    )
+    static let opensSettingsPage = PaletteActivation(
+        tag: 4,
+        name: "opensSettingsPage",
+        closesPalette: true,
+        opensWhereKeysChoose: false
+    )
+    static let showsSpace = PaletteActivation(
+        tag: 5,
+        name: "showsSpace",
+        closesPalette: true,
+        opensWhereKeysChoose: false
+    )
+    static let reopensArchivedTab = PaletteActivation(
+        tag: 6,
+        name: "reopensArchivedTab",
+        closesPalette: true,
+        opensWhereKeysChoose: false
+    )
+    static let copiesAnswer = PaletteActivation(
+        tag: 7,
+        name: "copiesAnswer",
+        closesPalette: true,
+        opensWhereKeysChoose: false
+    )
+    static let entersScope = PaletteActivation(
+        tag: 8,
+        name: "entersScope",
+        closesPalette: false,
+        opensWhereKeysChoose: false
+    )
+
+    static let all: [PaletteActivation] = [
+        switchesToTab,
+        opensAddress,
+        searches,
+        runsCommand,
+        opensSettingsPage,
+        showsSpace,
+        reopensArchivedTab,
+        copiesAnswer,
+        entersScope
+    ]
+
+    static func named(_ name: String?) -> PaletteActivation? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: PaletteActivation, rhs: PaletteActivation) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+
+    private final class Facts: Sendable {
+        let name: String
+        let closesPalette: Bool
+        let opensWhereKeysChoose: Bool
+
+        init(name: String, closesPalette: Bool, opensWhereKeysChoose: Bool) {
+            self.name = name
+            self.closesPalette = closesPalette
+            self.opensWhereKeysChoose = opensWhereKeysChoose
+        }
+    }
+}
+
+/// The members of the core's `PaletteLayout`. A member's wire tag is its index in `all`.
+struct PaletteLayout: Hashable, Sendable {
+    let tag: Int
+    var name: String { facts.name }
+    var title: LocalizedStringResource { facts.title }
+    var groupsByKind: Bool { facts.groupsByKind }
+    private let facts: Facts
+
+    private init(tag: Int, name: String, title: LocalizedStringResource, groupsByKind: Bool) {
+        self.tag = tag
+        facts = Facts(name: name, title: title, groupsByKind: groupsByKind)
+    }
+
+    static let sections = PaletteLayout(
+        tag: 0,
+        name: "sections",
+        title: LocalizedStringResource("Sections"),
+        groupsByKind: true
+    )
+    static let blended = PaletteLayout(
+        tag: 1,
+        name: "blended",
+        title: LocalizedStringResource("Blended"),
+        groupsByKind: false
+    )
+
+    static let all: [PaletteLayout] = [sections, blended]
+
+    static func named(_ name: String?) -> PaletteLayout? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: PaletteLayout, rhs: PaletteLayout) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+
+    private final class Facts: Sendable {
+        let name: String
+        let title: LocalizedStringResource
+        let groupsByKind: Bool
+
+        init(name: String, title: LocalizedStringResource, groupsByKind: Bool) {
+            self.name = name
+            self.title = title
+            self.groupsByKind = groupsByKind
+        }
+    }
+}
+
+/// The members of the core's `PaletteReason`. A member's wire tag is its index in `all`.
+struct PaletteReason: Hashable, Sendable {
+    let tag: Int
+    var name: String { facts.name }
+    var text: LocalizedStringResource { facts.text }
+    private let facts: Facts
+
+    private init(tag: Int, name: String, text: LocalizedStringResource) {
+        self.tag = tag
+        facts = Facts(name: name, text: text)
+    }
+
+    static let completion = PaletteReason(
+        tag: 0,
+        name: "completion",
+        text: LocalizedStringResource("Completes what you typed")
+    )
+    static let learned = PaletteReason(tag: 1, name: "learned", text: LocalizedStringResource("You chose this before"))
+    static let oftenVisited = PaletteReason(
+        tag: 2,
+        name: "oftenVisited",
+        text: LocalizedStringResource("Often visited")
+    )
+    static let recentlyUsed = PaletteReason(
+        tag: 3,
+        name: "recentlyUsed",
+        text: LocalizedStringResource("Recently used")
+    )
+    static let openTab = PaletteReason(tag: 4, name: "openTab", text: LocalizedStringResource("Already open"))
+    static let kept = PaletteReason(tag: 5, name: "kept", text: LocalizedStringResource("Pinned or saved"))
+    static let titleMatch = PaletteReason(
+        tag: 6,
+        name: "titleMatch",
+        text: LocalizedStringResource("Matches the title")
+    )
+    static let addressMatch = PaletteReason(
+        tag: 7,
+        name: "addressMatch",
+        text: LocalizedStringResource("Matches the address")
+    )
+
+    static let all: [PaletteReason] = [
+        completion,
+        learned,
+        oftenVisited,
+        recentlyUsed,
+        openTab,
+        kept,
+        titleMatch,
+        addressMatch
+    ]
+
+    static func named(_ name: String?) -> PaletteReason? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: PaletteReason, rhs: PaletteReason) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+
+    private final class Facts: Sendable {
+        let name: String
+        let text: LocalizedStringResource
+
+        init(name: String, text: LocalizedStringResource) {
+            self.name = name
+            self.text = text
+        }
+    }
+}
+
 /// The members of the core's `PaletteRowKind`. A member's wire tag is its index in `all`.
+/// Core-only behavior, not emitted: `destination`.
 struct PaletteRowKind: Hashable, Sendable {
     let tag: Int
     var name: String { facts.name }
     var symbol: String { facts.symbol }
     var action: LocalizedStringResource? { facts.action }
+    var label: LocalizedStringResource { facts.label }
     var isPrimary: Bool { facts.isPrimary }
+    var activation: PaletteActivation { facts.activation }
+    var forgetsFromHistory: Bool { facts.forgetsFromHistory }
     private let facts: Facts
 
-    private init(tag: Int, name: String, symbol: String, action: LocalizedStringResource?, isPrimary: Bool) {
+    private init(
+        tag: Int,
+        name: String,
+        symbol: String,
+        action: LocalizedStringResource?,
+        label: LocalizedStringResource,
+        isPrimary: Bool,
+        activation: PaletteActivation,
+        forgetsFromHistory: Bool
+    ) {
         self.tag = tag
-        facts = Facts(name: name, symbol: symbol, action: action, isPrimary: isPrimary)
+        facts = Facts(
+            name: name,
+            symbol: symbol,
+            action: action,
+            label: label,
+            isPrimary: isPrimary,
+            activation: activation,
+            forgetsFromHistory: forgetsFromHistory
+        )
     }
 
-    static let openAddress = PaletteRowKind(tag: 0, name: "openAddress", symbol: "globe", action: nil, isPrimary: true)
-    static let search = PaletteRowKind(tag: 1, name: "search", symbol: "magnifyingglass", action: nil, isPrimary: true)
+    static let openAddress = PaletteRowKind(
+        tag: 0,
+        name: "openAddress",
+        symbol: "globe",
+        action: nil,
+        label: LocalizedStringResource("Website"),
+        isPrimary: true,
+        activation: PaletteActivation.opensAddress,
+        forgetsFromHistory: false
+    )
+    static let search = PaletteRowKind(
+        tag: 1,
+        name: "search",
+        symbol: "magnifyingglass",
+        action: nil,
+        label: LocalizedStringResource("Search"),
+        isPrimary: true,
+        activation: PaletteActivation.searches,
+        forgetsFromHistory: false
+    )
     static let searchSuggestion = PaletteRowKind(
         tag: 2,
         name: "searchSuggestion",
         symbol: "magnifyingglass",
         action: LocalizedStringResource("Search"),
-        isPrimary: false
+        label: LocalizedStringResource("Suggestion"),
+        isPrimary: false,
+        activation: PaletteActivation.searches,
+        forgetsFromHistory: false
     )
     static let tab = PaletteRowKind(
         tag: 3,
         name: "tab",
         symbol: "globe",
         action: LocalizedStringResource("Switch to Tab"),
-        isPrimary: false
+        label: LocalizedStringResource("Open Tab"),
+        isPrimary: false,
+        activation: PaletteActivation.switchesToTab,
+        forgetsFromHistory: false
     )
     static let pinnedTab = PaletteRowKind(
         tag: 4,
         name: "pinnedTab",
         symbol: "pin.fill",
         action: LocalizedStringResource("Switch to Tab"),
-        isPrimary: false
+        label: LocalizedStringResource("Pinned"),
+        isPrimary: false,
+        activation: PaletteActivation.switchesToTab,
+        forgetsFromHistory: false
     )
     static let savedTab = PaletteRowKind(
         tag: 5,
         name: "savedTab",
         symbol: "bookmark",
         action: LocalizedStringResource("Switch to Tab"),
-        isPrimary: false
+        label: LocalizedStringResource("Saved"),
+        isPrimary: false,
+        activation: PaletteActivation.switchesToTab,
+        forgetsFromHistory: false
     )
     static let folder = PaletteRowKind(
         tag: 6,
         name: "folder",
         symbol: "folder",
         action: LocalizedStringResource("Open First Tab"),
-        isPrimary: false
+        label: LocalizedStringResource("Folder"),
+        isPrimary: false,
+        activation: PaletteActivation.switchesToTab,
+        forgetsFromHistory: false
     )
-    static let command = PaletteRowKind(tag: 7, name: "command", symbol: "command", action: nil, isPrimary: false)
+    static let command = PaletteRowKind(
+        tag: 7,
+        name: "command",
+        symbol: "command",
+        action: nil,
+        label: LocalizedStringResource("Action"),
+        isPrimary: false,
+        activation: PaletteActivation.runsCommand,
+        forgetsFromHistory: false
+    )
     static let history = PaletteRowKind(
         tag: 8,
         name: "history",
         symbol: "clock",
         action: LocalizedStringResource("Open"),
-        isPrimary: false
+        label: LocalizedStringResource("History"),
+        isPrimary: false,
+        activation: PaletteActivation.opensAddress,
+        forgetsFromHistory: true
+    )
+    static let space = PaletteRowKind(
+        tag: 9,
+        name: "space",
+        symbol: "square.stack",
+        action: LocalizedStringResource("Switch to Space"),
+        label: LocalizedStringResource("Space"),
+        isPrimary: false,
+        activation: PaletteActivation.showsSpace,
+        forgetsFromHistory: false
+    )
+    static let archivedTab = PaletteRowKind(
+        tag: 10,
+        name: "archivedTab",
+        symbol: "archivebox",
+        action: LocalizedStringResource("Reopen"),
+        label: LocalizedStringResource("Archived"),
+        isPrimary: false,
+        activation: PaletteActivation.reopensArchivedTab,
+        forgetsFromHistory: false
+    )
+    static let settingsPage = PaletteRowKind(
+        tag: 11,
+        name: "settingsPage",
+        symbol: "gearshape",
+        action: LocalizedStringResource("Open Settings"),
+        label: LocalizedStringResource("Settings"),
+        isPrimary: false,
+        activation: PaletteActivation.opensSettingsPage,
+        forgetsFromHistory: false
+    )
+    static let calculation = PaletteRowKind(
+        tag: 12,
+        name: "calculation",
+        symbol: "equal",
+        action: LocalizedStringResource("Copy"),
+        label: LocalizedStringResource("Calculator"),
+        isPrimary: true,
+        activation: PaletteActivation.copiesAnswer,
+        forgetsFromHistory: false
+    )
+    static let pasteAndGo = PaletteRowKind(
+        tag: 13,
+        name: "pasteAndGo",
+        symbol: "doc.on.clipboard",
+        action: nil,
+        label: LocalizedStringResource("Clipboard"),
+        isPrimary: true,
+        activation: PaletteActivation.opensAddress,
+        forgetsFromHistory: false
+    )
+    static let scope = PaletteRowKind(
+        tag: 14,
+        name: "scope",
+        symbol: "line.3.horizontal.decrease",
+        action: LocalizedStringResource("Search"),
+        label: LocalizedStringResource("Scope"),
+        isPrimary: false,
+        activation: PaletteActivation.entersScope,
+        forgetsFromHistory: false
     )
 
     static let all: [PaletteRowKind] = [
@@ -13064,7 +14214,13 @@ struct PaletteRowKind: Hashable, Sendable {
         savedTab,
         folder,
         command,
-        history
+        history,
+        space,
+        archivedTab,
+        settingsPage,
+        calculation,
+        pasteAndGo,
+        scope
     ]
 
     static func named(_ name: String?) -> PaletteRowKind? {
@@ -13083,13 +14239,121 @@ struct PaletteRowKind: Hashable, Sendable {
         let name: String
         let symbol: String
         let action: LocalizedStringResource?
+        let label: LocalizedStringResource
         let isPrimary: Bool
+        let activation: PaletteActivation
+        let forgetsFromHistory: Bool
 
-        init(name: String, symbol: String, action: LocalizedStringResource?, isPrimary: Bool) {
+        init(
+            name: String,
+            symbol: String,
+            action: LocalizedStringResource?,
+            label: LocalizedStringResource,
+            isPrimary: Bool,
+            activation: PaletteActivation,
+            forgetsFromHistory: Bool
+        ) {
             self.name = name
             self.symbol = symbol
             self.action = action
+            self.label = label
             self.isPrimary = isPrimary
+            self.activation = activation
+            self.forgetsFromHistory = forgetsFromHistory
+        }
+    }
+}
+
+/// The members of the core's `PaletteScope`. A member's wire tag is its index in `all`.
+struct PaletteScope: Hashable, Sendable {
+    let tag: Int
+    var name: String { facts.name }
+    var keyword: String { facts.keyword }
+    var title: LocalizedStringResource { facts.title }
+    var symbol: String { facts.symbol }
+    var source: PaletteSource { facts.source }
+    private let facts: Facts
+
+    private init(
+        tag: Int,
+        name: String,
+        keyword: String,
+        title: LocalizedStringResource,
+        symbol: String,
+        source: PaletteSource
+    ) {
+        self.tag = tag
+        facts = Facts(name: name, keyword: keyword, title: title, symbol: symbol, source: source)
+    }
+
+    static let tabs = PaletteScope(
+        tag: 0,
+        name: "tabs",
+        keyword: "@tabs",
+        title: LocalizedStringResource("Tabs"),
+        symbol: "square.on.square",
+        source: PaletteSource.openTabs
+    )
+    static let saved = PaletteScope(
+        tag: 1,
+        name: "saved",
+        keyword: "@saved",
+        title: LocalizedStringResource("Pinned & Saved"),
+        symbol: "pin",
+        source: PaletteSource.saved
+    )
+    static let history = PaletteScope(
+        tag: 2,
+        name: "history",
+        keyword: "@history",
+        title: LocalizedStringResource("History"),
+        symbol: "clock",
+        source: PaletteSource.history
+    )
+    static let actions = PaletteScope(
+        tag: 3,
+        name: "actions",
+        keyword: "@actions",
+        title: LocalizedStringResource("Actions"),
+        symbol: "command",
+        source: PaletteSource.actions
+    )
+    static let spaces = PaletteScope(
+        tag: 4,
+        name: "spaces",
+        keyword: "@spaces",
+        title: LocalizedStringResource("Spaces"),
+        symbol: "square.stack",
+        source: PaletteSource.spaces
+    )
+
+    static let all: [PaletteScope] = [tabs, saved, history, actions, spaces]
+
+    static func named(_ name: String?) -> PaletteScope? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: PaletteScope, rhs: PaletteScope) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+
+    private final class Facts: Sendable {
+        let name: String
+        let keyword: String
+        let title: LocalizedStringResource
+        let symbol: String
+        let source: PaletteSource
+
+        init(name: String, keyword: String, title: LocalizedStringResource, symbol: String, source: PaletteSource) {
+            self.name = name
+            self.keyword = keyword
+            self.title = title
+            self.symbol = symbol
+            self.source = source
         }
     }
 }
@@ -13101,58 +14365,109 @@ struct PaletteSection: Hashable, Sendable {
     var title: LocalizedStringResource? { facts.title }
     var limit: Int { facts.limit }
     var restingLimit: Int { facts.restingLimit }
+    var scopedLimit: Int { facts.scopedLimit }
     private let facts: Facts
 
-    private init(tag: Int, name: String, title: LocalizedStringResource?, limit: Int, restingLimit: Int) {
+    private init(
+        tag: Int,
+        name: String,
+        title: LocalizedStringResource?,
+        limit: Int,
+        restingLimit: Int,
+        scopedLimit: Int
+    ) {
         self.tag = tag
-        facts = Facts(name: name, title: title, limit: limit, restingLimit: restingLimit)
+        facts = Facts(name: name, title: title, limit: limit, restingLimit: restingLimit, scopedLimit: scopedLimit)
     }
 
-    static let intent = PaletteSection(tag: 0, name: "intent", title: nil, limit: 1, restingLimit: 0)
+    static let intent = PaletteSection(tag: 0, name: "intent", title: nil, limit: 2, restingLimit: 1, scopedLimit: 0)
     static let searchSuggestions = PaletteSection(
         tag: 1,
         name: "searchSuggestions",
         title: LocalizedStringResource("Search Suggestions"),
         limit: 3,
-        restingLimit: 0
+        restingLimit: 0,
+        scopedLimit: 0
     )
-    static let openTabs = PaletteSection(
+    static let recentTabs = PaletteSection(
         tag: 2,
-        name: "openTabs",
-        title: LocalizedStringResource("Open Tabs"),
+        name: "recentTabs",
+        title: LocalizedStringResource("Recent Tabs"),
         limit: 0,
-        restingLimit: 5
+        restingLimit: 5,
+        scopedLimit: 0
     )
     static let tabs = PaletteSection(
         tag: 3,
         name: "tabs",
         title: LocalizedStringResource("Tabs"),
         limit: 8,
-        restingLimit: 0
+        restingLimit: 0,
+        scopedLimit: 30
     )
     static let actions = PaletteSection(
         tag: 4,
         name: "actions",
         title: LocalizedStringResource("Actions"),
-        limit: 5,
-        restingLimit: 3
+        limit: 3,
+        restingLimit: 3,
+        scopedLimit: 30
     )
     static let saved = PaletteSection(
         tag: 5,
         name: "saved",
         title: LocalizedStringResource("Pinned & Saved"),
         limit: 5,
-        restingLimit: 0
+        restingLimit: 0,
+        scopedLimit: 30
     )
     static let history = PaletteSection(
         tag: 6,
         name: "history",
         title: LocalizedStringResource("History"),
         limit: 6,
-        restingLimit: 0
+        restingLimit: 0,
+        scopedLimit: 30
+    )
+    static let topHit = PaletteSection(tag: 7, name: "topHit", title: nil, limit: 1, restingLimit: 0, scopedLimit: 0)
+    static let spaces = PaletteSection(
+        tag: 8,
+        name: "spaces",
+        title: LocalizedStringResource("Spaces"),
+        limit: 2,
+        restingLimit: 0,
+        scopedLimit: 30
+    )
+    static let archived = PaletteSection(
+        tag: 9,
+        name: "archived",
+        title: LocalizedStringResource("Archived Tabs"),
+        limit: 3,
+        restingLimit: 0,
+        scopedLimit: 30
+    )
+    static let results = PaletteSection(
+        tag: 10,
+        name: "results",
+        title: nil,
+        limit: 12,
+        restingLimit: 0,
+        scopedLimit: 0
     )
 
-    static let all: [PaletteSection] = [intent, searchSuggestions, openTabs, tabs, actions, saved, history]
+    static let all: [PaletteSection] = [
+        intent,
+        searchSuggestions,
+        recentTabs,
+        tabs,
+        actions,
+        saved,
+        history,
+        topHit,
+        spaces,
+        archived,
+        results
+    ]
 
     static func named(_ name: String?) -> PaletteSection? {
         all.first { $0.name == name }
@@ -13171,12 +14486,243 @@ struct PaletteSection: Hashable, Sendable {
         let title: LocalizedStringResource?
         let limit: Int
         let restingLimit: Int
+        let scopedLimit: Int
 
-        init(name: String, title: LocalizedStringResource?, limit: Int, restingLimit: Int) {
+        init(name: String, title: LocalizedStringResource?, limit: Int, restingLimit: Int, scopedLimit: Int) {
             self.name = name
             self.title = title
             self.limit = limit
             self.restingLimit = restingLimit
+            self.scopedLimit = scopedLimit
+        }
+    }
+}
+
+/// The members of the core's `PaletteSource`. A member's wire tag is its index in `all`.
+struct PaletteSource: Hashable, Sendable {
+    let tag: Int
+    var name: String { facts.name }
+    var title: LocalizedStringResource { facts.title }
+    var detail: LocalizedStringResource? { facts.detail }
+    var section: PaletteSection { facts.section }
+    var isSection: Bool { facts.isSection }
+    var isEnabledByDefault: Bool { facts.isEnabledByDefault }
+    var restingSection: PaletteSection? { facts.restingSection }
+    var defaultLimit: Int { facts.defaultLimit }
+    private let facts: Facts
+
+    private init(
+        tag: Int,
+        name: String,
+        title: LocalizedStringResource,
+        detail: LocalizedStringResource?,
+        section: PaletteSection,
+        isSection: Bool,
+        isEnabledByDefault: Bool,
+        restingSection: PaletteSection?,
+        defaultLimit: Int
+    ) {
+        self.tag = tag
+        facts = Facts(
+            name: name,
+            title: title,
+            detail: detail,
+            section: section,
+            isSection: isSection,
+            isEnabledByDefault: isEnabledByDefault,
+            restingSection: restingSection,
+            defaultLimit: defaultLimit
+        )
+    }
+
+    static let recentTabs = PaletteSource(
+        tag: 0,
+        name: "recentTabs",
+        title: LocalizedStringResource("Recent Tabs"),
+        detail: nil,
+        section: PaletteSection.recentTabs,
+        isSection: true,
+        isEnabledByDefault: true,
+        restingSection: PaletteSection.recentTabs,
+        defaultLimit: 5
+    )
+    static let openTabs = PaletteSource(
+        tag: 1,
+        name: "openTabs",
+        title: LocalizedStringResource("Open Tabs"),
+        detail: nil,
+        section: PaletteSection.tabs,
+        isSection: true,
+        isEnabledByDefault: true,
+        restingSection: nil,
+        defaultLimit: 8
+    )
+    static let saved = PaletteSource(
+        tag: 2,
+        name: "saved",
+        title: LocalizedStringResource("Pinned & Saved"),
+        detail: nil,
+        section: PaletteSection.saved,
+        isSection: true,
+        isEnabledByDefault: true,
+        restingSection: nil,
+        defaultLimit: 5
+    )
+    static let history = PaletteSource(
+        tag: 3,
+        name: "history",
+        title: LocalizedStringResource("History"),
+        detail: nil,
+        section: PaletteSection.history,
+        isSection: true,
+        isEnabledByDefault: true,
+        restingSection: nil,
+        defaultLimit: 6
+    )
+    static let actions = PaletteSource(
+        tag: 4,
+        name: "actions",
+        title: LocalizedStringResource("Actions"),
+        detail: nil,
+        section: PaletteSection.actions,
+        isSection: true,
+        isEnabledByDefault: true,
+        restingSection: PaletteSection.actions,
+        defaultLimit: 3
+    )
+    static let spaces = PaletteSource(
+        tag: 5,
+        name: "spaces",
+        title: LocalizedStringResource("Spaces"),
+        detail: nil,
+        section: PaletteSection.spaces,
+        isSection: true,
+        isEnabledByDefault: true,
+        restingSection: nil,
+        defaultLimit: 2
+    )
+    static let archivedTabs = PaletteSource(
+        tag: 6,
+        name: "archivedTabs",
+        title: LocalizedStringResource("Archived Tabs"),
+        detail: nil,
+        section: PaletteSection.archived,
+        isSection: true,
+        isEnabledByDefault: false,
+        restingSection: nil,
+        defaultLimit: 3
+    )
+    static let suggestions = PaletteSource(
+        tag: 7,
+        name: "suggestions",
+        title: LocalizedStringResource("Search Suggestions"),
+        detail: nil,
+        section: PaletteSection.searchSuggestions,
+        isSection: true,
+        isEnabledByDefault: true,
+        restingSection: nil,
+        defaultLimit: 3
+    )
+    static let settingsPages = PaletteSource(
+        tag: 8,
+        name: "settingsPages",
+        title: LocalizedStringResource("Settings Pages"),
+        detail: LocalizedStringResource("Finds Settings pages by name."),
+        section: PaletteSection.actions,
+        isSection: false,
+        isEnabledByDefault: true,
+        restingSection: nil,
+        defaultLimit: 3
+    )
+    static let scopes = PaletteSource(
+        tag: 9,
+        name: "scopes",
+        title: LocalizedStringResource("@ Filters"),
+        detail: LocalizedStringResource("Type @tabs, @saved, @history, @actions or @spaces, then a space or Tab, to show only that kind."),
+        section: PaletteSection.intent,
+        isSection: false,
+        isEnabledByDefault: true,
+        restingSection: nil,
+        defaultLimit: 2
+    )
+    static let calculator = PaletteSource(
+        tag: 10,
+        name: "calculator",
+        title: LocalizedStringResource("Calculator"),
+        detail: LocalizedStringResource("Answers arithmetic such as 24 * 7. Return copies the answer."),
+        section: PaletteSection.topHit,
+        isSection: false,
+        isEnabledByDefault: true,
+        restingSection: nil,
+        defaultLimit: 1
+    )
+    static let pasteAndGo = PaletteSource(
+        tag: 11,
+        name: "pasteAndGo",
+        title: LocalizedStringResource("Paste and Go"),
+        detail: LocalizedStringResource("Offers the address you copied when the palette opens."),
+        section: PaletteSection.intent,
+        isSection: false,
+        isEnabledByDefault: false,
+        restingSection: nil,
+        defaultLimit: 2
+    )
+
+    static let all: [PaletteSource] = [
+        recentTabs,
+        openTabs,
+        saved,
+        history,
+        actions,
+        spaces,
+        archivedTabs,
+        suggestions,
+        settingsPages,
+        scopes,
+        calculator,
+        pasteAndGo
+    ]
+
+    static func named(_ name: String?) -> PaletteSource? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: PaletteSource, rhs: PaletteSource) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+
+    private final class Facts: Sendable {
+        let name: String
+        let title: LocalizedStringResource
+        let detail: LocalizedStringResource?
+        let section: PaletteSection
+        let isSection: Bool
+        let isEnabledByDefault: Bool
+        let restingSection: PaletteSection?
+        let defaultLimit: Int
+
+        init(
+            name: String,
+            title: LocalizedStringResource,
+            detail: LocalizedStringResource?,
+            section: PaletteSection,
+            isSection: Bool,
+            isEnabledByDefault: Bool,
+            restingSection: PaletteSection?,
+            defaultLimit: Int
+        ) {
+            self.name = name
+            self.title = title
+            self.detail = detail
+            self.section = section
+            self.isSection = isSection
+            self.isEnabledByDefault = isEnabledByDefault
+            self.restingSection = restingSection
+            self.defaultLimit = defaultLimit
         }
     }
 }
@@ -13643,6 +15189,123 @@ struct SavedTabClosePolicy: Hashable, Sendable {
     }
 }
 
+/// The members of the core's `SearchChoice`. A member's wire tag is its index in `all`.
+struct SearchChoice: Hashable, Sendable {
+    let tag: Int
+    var name: String { facts.name }
+    var title: LocalizedStringResource { facts.title }
+    private let facts: Facts
+
+    private init(tag: Int, name: String, title: LocalizedStringResource) {
+        self.tag = tag
+        facts = Facts(name: name, title: title)
+    }
+
+    static let moderate = SearchChoice(tag: 0, name: "moderate", title: LocalizedStringResource("Moderate"))
+    static let strict = SearchChoice(tag: 1, name: "strict", title: LocalizedStringResource("Strict"))
+    static let off = SearchChoice(tag: 2, name: "off", title: LocalizedStringResource("Off"))
+    static let everything = SearchChoice(tag: 3, name: "everything", title: LocalizedStringResource("All"))
+    static let videos = SearchChoice(tag: 4, name: "videos", title: LocalizedStringResource("Videos"))
+    static let shorts = SearchChoice(tag: 5, name: "shorts", title: LocalizedStringResource("Shorts"))
+    static let channels = SearchChoice(tag: 6, name: "channels", title: LocalizedStringResource("Channels"))
+    static let playlists = SearchChoice(tag: 7, name: "playlists", title: LocalizedStringResource("Playlists"))
+    static let repositories = SearchChoice(tag: 8, name: "repositories", title: LocalizedStringResource("Repositories"))
+    static let code = SearchChoice(tag: 9, name: "code", title: LocalizedStringResource("Code"))
+    static let issues = SearchChoice(tag: 10, name: "issues", title: LocalizedStringResource("Issues"))
+    static let pullRequests = SearchChoice(
+        tag: 11,
+        name: "pullRequests",
+        title: LocalizedStringResource("Pull Requests")
+    )
+    static let discussions = SearchChoice(tag: 12, name: "discussions", title: LocalizedStringResource("Discussions"))
+    static let users = SearchChoice(tag: 13, name: "users", title: LocalizedStringResource("Users"))
+    static let bestMatch = SearchChoice(tag: 14, name: "bestMatch", title: LocalizedStringResource("Best Match"))
+    static let mostStars = SearchChoice(tag: 15, name: "mostStars", title: LocalizedStringResource("Most Stars"))
+    static let recentlyUpdated = SearchChoice(
+        tag: 16,
+        name: "recentlyUpdated",
+        title: LocalizedStringResource("Recently Updated")
+    )
+    static let relevance = SearchChoice(tag: 17, name: "relevance", title: LocalizedStringResource("Relevance"))
+    static let newest = SearchChoice(tag: 18, name: "newest", title: LocalizedStringResource("Newest"))
+    static let mostVotes = SearchChoice(tag: 19, name: "mostVotes", title: LocalizedStringResource("Most Votes"))
+    static let titles = SearchChoice(tag: 20, name: "titles", title: LocalizedStringResource("Titles"))
+    static let people = SearchChoice(tag: 21, name: "people", title: LocalizedStringResource("People"))
+    static let companies = SearchChoice(tag: 22, name: "companies", title: LocalizedStringResource("Companies"))
+    static let keywords = SearchChoice(tag: 23, name: "keywords", title: LocalizedStringResource("Keywords"))
+    static let songs = SearchChoice(tag: 24, name: "songs", title: LocalizedStringResource("Songs"))
+    static let artists = SearchChoice(tag: 25, name: "artists", title: LocalizedStringResource("Artists"))
+    static let albums = SearchChoice(tag: 26, name: "albums", title: LocalizedStringResource("Albums"))
+    static let podcasts = SearchChoice(tag: 27, name: "podcasts", title: LocalizedStringResource("Podcasts & Shows"))
+    static let explore = SearchChoice(tag: 28, name: "explore", title: LocalizedStringResource("Explore"))
+    static let satellite = SearchChoice(tag: 29, name: "satellite", title: LocalizedStringResource("Satellite"))
+    static let hybrid = SearchChoice(tag: 30, name: "hybrid", title: LocalizedStringResource("Hybrid"))
+    static let transit = SearchChoice(tag: 31, name: "transit", title: LocalizedStringResource("Transit"))
+    static let popular = SearchChoice(tag: 32, name: "popular", title: LocalizedStringResource("Popular"))
+    static let stories = SearchChoice(tag: 33, name: "stories", title: LocalizedStringResource("Stories"))
+    static let comments = SearchChoice(tag: 34, name: "comments", title: LocalizedStringResource("Comments"))
+
+    static let all: [SearchChoice] = [
+        moderate,
+        strict,
+        off,
+        everything,
+        videos,
+        shorts,
+        channels,
+        playlists,
+        repositories,
+        code,
+        issues,
+        pullRequests,
+        discussions,
+        users,
+        bestMatch,
+        mostStars,
+        recentlyUpdated,
+        relevance,
+        newest,
+        mostVotes,
+        titles,
+        people,
+        companies,
+        keywords,
+        songs,
+        artists,
+        albums,
+        podcasts,
+        explore,
+        satellite,
+        hybrid,
+        transit,
+        popular,
+        stories,
+        comments
+    ]
+
+    static func named(_ name: String?) -> SearchChoice? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: SearchChoice, rhs: SearchChoice) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+
+    private final class Facts: Sendable {
+        let name: String
+        let title: LocalizedStringResource
+
+        init(name: String, title: LocalizedStringResource) {
+            self.name = name
+            self.title = title
+        }
+    }
+}
+
 /// The members of the core's `SearchEngineFlaw`. A member's wire tag is its index in `all`.
 struct SearchEngineFlaw: Hashable, Sendable {
     let tag: Int
@@ -13760,92 +15423,785 @@ struct SearchEngineFlaw: Hashable, Sendable {
     }
 }
 
-/// The members of the core's `SearchProvider`, which also makes members at runtime. Members are equal when their names are.
-struct SearchProvider: Hashable, Sendable {
-    static let customPrefix = "custom:"
-    static let maximumNameLength = 64
-    static let maximumTemplateLength = 2048
-
+/// The members of the core's `SearchProviderKind`. A member's wire tag is its index in `all`.
+struct SearchProviderKind: Hashable, Sendable {
+    let tag: Int
     var name: String { facts.name }
-    var title: String { facts.title }
-    var logo: String? { facts.logo }
-    var searchTemplate: String { facts.searchTemplate }
-    var suggestionTemplate: String? { facts.suggestionTemplate }
+    var title: LocalizedStringResource { facts.title }
+    var itemTitle: LocalizedStringResource { facts.itemTitle }
+    var symbol: String { facts.symbol }
+    var canBeDefault: Bool { facts.canBeDefault }
     private let facts: Facts
 
-    init(name: String, title: String, logo: String?, searchTemplate: String, suggestionTemplate: String?) {
-        facts = Facts(
-            name: name,
-            title: title,
-            logo: logo,
-            searchTemplate: searchTemplate,
-            suggestionTemplate: suggestionTemplate
-        )
+    private init(
+        tag: Int,
+        name: String,
+        title: LocalizedStringResource,
+        itemTitle: LocalizedStringResource,
+        symbol: String,
+        canBeDefault: Bool
+    ) {
+        self.tag = tag
+        facts = Facts(name: name, title: title, itemTitle: itemTitle, symbol: symbol, canBeDefault: canBeDefault)
     }
 
-    static let google = SearchProvider(
-        name: "google",
-        title: "Google",
-        logo: "SearchProviderGoogle",
-        searchTemplate: "https://www.google.com/search?q=%s",
-        suggestionTemplate: "https://www.google.com/complete/search?client=chrome&q=%s"
+    static let engine = SearchProviderKind(
+        tag: 0,
+        name: "engine",
+        title: LocalizedStringResource("Search Engines"),
+        itemTitle: LocalizedStringResource("Search Engine"),
+        symbol: "magnifyingglass",
+        canBeDefault: true
     )
-    static let duckDuckGo = SearchProvider(
-        name: "duckDuckGo",
-        title: "DuckDuckGo",
-        logo: "SearchProviderDuckDuckGo",
-        searchTemplate: "https://duckduckgo.com/?q=%s",
-        suggestionTemplate: "https://duckduckgo.com/ac/?q=%s&type=list"
+    static let assistant = SearchProviderKind(
+        tag: 1,
+        name: "assistant",
+        title: LocalizedStringResource("AI Assistants"),
+        itemTitle: LocalizedStringResource("AI Assistant"),
+        symbol: "sparkles",
+        canBeDefault: true
     )
-    static let bing = SearchProvider(
-        name: "bing",
-        title: "Bing",
-        logo: "SearchProviderBing",
-        searchTemplate: "https://www.bing.com/search?q=%s",
-        suggestionTemplate: "https://www.bing.com/osjson.aspx?query=%s"
-    )
-    static let ecosia = SearchProvider(
-        name: "ecosia",
-        title: "Ecosia",
-        logo: "SearchProviderEcosia",
-        searchTemplate: "https://www.ecosia.org/search?q=%s",
-        suggestionTemplate: "https://ac.ecosia.org/autocomplete?q=%s&type=list"
-    )
-    static let brave = SearchProvider(
-        name: "brave",
-        title: "Brave Search",
-        logo: "SearchProviderBrave",
-        searchTemplate: "https://search.brave.com/search?q=%s",
-        suggestionTemplate: "https://search.brave.com/api/suggest?q=%s"
+    static let website = SearchProviderKind(
+        tag: 2,
+        name: "website",
+        title: LocalizedStringResource("Websites"),
+        itemTitle: LocalizedStringResource("Website"),
+        symbol: "globe",
+        canBeDefault: false
     )
 
-    static let all: [SearchProvider] = [google, duckDuckGo, bing, ecosia, brave]
+    static let all: [SearchProviderKind] = [engine, assistant, website]
 
-    static func named(_ name: String?) -> SearchProvider? {
+    static func named(_ name: String?) -> SearchProviderKind? {
         all.first { $0.name == name }
     }
 
-    static func == (lhs: SearchProvider, rhs: SearchProvider) -> Bool {
-        lhs.name == rhs.name
+    static func == (lhs: SearchProviderKind, rhs: SearchProviderKind) -> Bool {
+        lhs.tag == rhs.tag
     }
 
     func hash(into hasher: inout Hasher) {
-        hasher.combine(name)
+        hasher.combine(tag)
     }
 
     private final class Facts: Sendable {
         let name: String
-        let title: String
-        let logo: String?
-        let searchTemplate: String
-        let suggestionTemplate: String?
+        let title: LocalizedStringResource
+        let itemTitle: LocalizedStringResource
+        let symbol: String
+        let canBeDefault: Bool
 
-        init(name: String, title: String, logo: String?, searchTemplate: String, suggestionTemplate: String?) {
+        init(
+            name: String,
+            title: LocalizedStringResource,
+            itemTitle: LocalizedStringResource,
+            symbol: String,
+            canBeDefault: Bool
+        ) {
             self.name = name
             self.title = title
-            self.logo = logo
-            self.searchTemplate = searchTemplate
-            self.suggestionTemplate = suggestionTemplate
+            self.itemTitle = itemTitle
+            self.symbol = symbol
+            self.canBeDefault = canBeDefault
+        }
+    }
+}
+
+/// The members of the core's `SearchProviderOption`. A member's wire tag is its index in `all`.
+/// Core-only behavior, not emitted: `edits`.
+struct SearchProviderOption: Hashable, Sendable {
+    static let on = "on"
+    static let maximumTextLength = 128
+
+    let tag: Int
+    var name: String { facts.name }
+    var title: LocalizedStringResource { facts.title }
+    var isSwitch: Bool { facts.isSwitch }
+    var acceptsText: Bool { facts.acceptsText }
+    var textExample: String? { facts.textExample }
+    var choices: [SearchChoice] { facts.choices }
+    var locales: [SearchLocaleCode] { facts.locales }
+    var namesRegions: Bool { facts.namesRegions }
+    private let facts: Facts
+
+    private init(
+        tag: Int,
+        name: String,
+        title: LocalizedStringResource,
+        isSwitch: Bool,
+        acceptsText: Bool,
+        textExample: String?,
+        choices: [SearchChoice],
+        locales: [SearchLocaleCode],
+        namesRegions: Bool
+    ) {
+        self.tag = tag
+        facts = Facts(
+            name: name,
+            title: title,
+            isSwitch: isSwitch,
+            acceptsText: acceptsText,
+            textExample: textExample,
+            choices: choices,
+            locales: locales,
+            namesRegions: namesRegions
+        )
+    }
+
+    static let googleHidesAIOverviews = SearchProviderOption(
+        tag: 0,
+        name: "googleHidesAIOverviews",
+        title: LocalizedStringResource("Hide AI Overviews"),
+        isSwitch: true,
+        acceptsText: false,
+        textExample: nil,
+        choices: [],
+        locales: [],
+        namesRegions: false
+    )
+    static let googleSafeSearch = SearchProviderOption(
+        tag: 1,
+        name: "googleSafeSearch",
+        title: LocalizedStringResource("SafeSearch"),
+        isSwitch: true,
+        acceptsText: false,
+        textExample: nil,
+        choices: [],
+        locales: [],
+        namesRegions: false
+    )
+    static let googleExactWords = SearchProviderOption(
+        tag: 2,
+        name: "googleExactWords",
+        title: LocalizedStringResource("Exact Words"),
+        isSwitch: true,
+        acceptsText: false,
+        textExample: nil,
+        choices: [],
+        locales: [],
+        namesRegions: false
+    )
+    static let duckDuckGoHidesAI = SearchProviderOption(
+        tag: 3,
+        name: "duckDuckGoHidesAI",
+        title: LocalizedStringResource("Hide AI Features"),
+        isSwitch: true,
+        acceptsText: false,
+        textExample: nil,
+        choices: [],
+        locales: [],
+        namesRegions: false
+    )
+    static let duckDuckGoSafeSearch = SearchProviderOption(
+        tag: 4,
+        name: "duckDuckGoSafeSearch",
+        title: LocalizedStringResource("Safe Search"),
+        isSwitch: false,
+        acceptsText: false,
+        textExample: nil,
+        choices: [SearchChoice.moderate, SearchChoice.strict, SearchChoice.off],
+        locales: [],
+        namesRegions: false
+    )
+    static let duckDuckGoRegion = SearchProviderOption(
+        tag: 5,
+        name: "duckDuckGoRegion",
+        title: LocalizedStringResource("Region"),
+        isSwitch: false,
+        acceptsText: false,
+        textExample: nil,
+        choices: [],
+        locales: [
+            SearchLocaleCode(code: "us-en", locale: "en-US", alsoServes: []),
+            SearchLocaleCode(code: "uk-en", locale: "en-GB", alsoServes: []),
+            SearchLocaleCode(code: "ca-en", locale: "en-CA", alsoServes: []),
+            SearchLocaleCode(code: "au-en", locale: "en-AU", alsoServes: []),
+            SearchLocaleCode(code: "in-en", locale: "en-IN", alsoServes: []),
+            SearchLocaleCode(code: "de-de", locale: "de-DE", alsoServes: []),
+            SearchLocaleCode(code: "at-de", locale: "de-AT", alsoServes: []),
+            SearchLocaleCode(code: "ch-de", locale: "de-CH", alsoServes: []),
+            SearchLocaleCode(code: "fr-fr", locale: "fr-FR", alsoServes: []),
+            SearchLocaleCode(code: "es-es", locale: "es-ES", alsoServes: []),
+            SearchLocaleCode(code: "mx-es", locale: "es-MX", alsoServes: []),
+            SearchLocaleCode(code: "it-it", locale: "it-IT", alsoServes: []),
+            SearchLocaleCode(code: "nl-nl", locale: "nl-NL", alsoServes: []),
+            SearchLocaleCode(code: "se-sv", locale: "sv-SE", alsoServes: []),
+            SearchLocaleCode(code: "br-pt", locale: "pt-BR", alsoServes: []),
+            SearchLocaleCode(code: "jp-jp", locale: "ja-JP", alsoServes: [])
+        ],
+        namesRegions: true
+    )
+    static let bingMarket = SearchProviderOption(
+        tag: 6,
+        name: "bingMarket",
+        title: LocalizedStringResource("Market"),
+        isSwitch: false,
+        acceptsText: false,
+        textExample: nil,
+        choices: [],
+        locales: [
+            SearchLocaleCode(code: "en-US", locale: "en-US", alsoServes: []),
+            SearchLocaleCode(code: "en-GB", locale: "en-GB", alsoServes: []),
+            SearchLocaleCode(code: "en-CA", locale: "en-CA", alsoServes: []),
+            SearchLocaleCode(code: "en-AU", locale: "en-AU", alsoServes: []),
+            SearchLocaleCode(code: "en-IN", locale: "en-IN", alsoServes: []),
+            SearchLocaleCode(code: "de-DE", locale: "de-DE", alsoServes: []),
+            SearchLocaleCode(code: "de-AT", locale: "de-AT", alsoServes: []),
+            SearchLocaleCode(code: "de-CH", locale: "de-CH", alsoServes: []),
+            SearchLocaleCode(code: "fr-FR", locale: "fr-FR", alsoServes: []),
+            SearchLocaleCode(code: "es-ES", locale: "es-ES", alsoServes: []),
+            SearchLocaleCode(code: "es-MX", locale: "es-MX", alsoServes: []),
+            SearchLocaleCode(code: "it-IT", locale: "it-IT", alsoServes: []),
+            SearchLocaleCode(code: "nl-NL", locale: "nl-NL", alsoServes: []),
+            SearchLocaleCode(code: "sv-SE", locale: "sv-SE", alsoServes: []),
+            SearchLocaleCode(code: "pt-BR", locale: "pt-BR", alsoServes: []),
+            SearchLocaleCode(code: "ja-JP", locale: "ja-JP", alsoServes: [])
+        ],
+        namesRegions: false
+    )
+    static let bingStrictSafeSearch = SearchProviderOption(
+        tag: 7,
+        name: "bingStrictSafeSearch",
+        title: LocalizedStringResource("Strict SafeSearch"),
+        isSwitch: true,
+        acceptsText: false,
+        textExample: nil,
+        choices: [],
+        locales: [],
+        namesRegions: false
+    )
+    static let braveHidesAIAnswers = SearchProviderOption(
+        tag: 8,
+        name: "braveHidesAIAnswers",
+        title: LocalizedStringResource("Hide AI Answers"),
+        isSwitch: true,
+        acceptsText: false,
+        textExample: nil,
+        choices: [],
+        locales: [],
+        namesRegions: false
+    )
+    static let braveSafeSearch = SearchProviderOption(
+        tag: 9,
+        name: "braveSafeSearch",
+        title: LocalizedStringResource("Safe Search"),
+        isSwitch: false,
+        acceptsText: false,
+        textExample: nil,
+        choices: [SearchChoice.moderate, SearchChoice.strict, SearchChoice.off],
+        locales: [],
+        namesRegions: false
+    )
+    static let braveCountry = SearchProviderOption(
+        tag: 10,
+        name: "braveCountry",
+        title: LocalizedStringResource("Country"),
+        isSwitch: false,
+        acceptsText: false,
+        textExample: nil,
+        choices: [],
+        locales: [
+            SearchLocaleCode(code: "us", locale: "en-US", alsoServes: []),
+            SearchLocaleCode(code: "gb", locale: "en-GB", alsoServes: []),
+            SearchLocaleCode(code: "ca", locale: "en-CA", alsoServes: []),
+            SearchLocaleCode(code: "au", locale: "en-AU", alsoServes: []),
+            SearchLocaleCode(code: "in", locale: "en-IN", alsoServes: []),
+            SearchLocaleCode(code: "de", locale: "de-DE", alsoServes: []),
+            SearchLocaleCode(code: "at", locale: "de-AT", alsoServes: []),
+            SearchLocaleCode(code: "ch", locale: "de-CH", alsoServes: []),
+            SearchLocaleCode(code: "fr", locale: "fr-FR", alsoServes: []),
+            SearchLocaleCode(code: "es", locale: "es-ES", alsoServes: []),
+            SearchLocaleCode(code: "mx", locale: "es-MX", alsoServes: []),
+            SearchLocaleCode(code: "it", locale: "it-IT", alsoServes: []),
+            SearchLocaleCode(code: "nl", locale: "nl-NL", alsoServes: []),
+            SearchLocaleCode(code: "se", locale: "sv-SE", alsoServes: []),
+            SearchLocaleCode(code: "br", locale: "pt-BR", alsoServes: []),
+            SearchLocaleCode(code: "jp", locale: "ja-JP", alsoServes: [])
+        ],
+        namesRegions: true
+    )
+    static let startpageSafeSearch = SearchProviderOption(
+        tag: 11,
+        name: "startpageSafeSearch",
+        title: LocalizedStringResource("Safe Search"),
+        isSwitch: false,
+        acceptsText: false,
+        textExample: nil,
+        choices: [SearchChoice.moderate, SearchChoice.strict, SearchChoice.off],
+        locales: [],
+        namesRegions: false
+    )
+    static let kagiExactWords = SearchProviderOption(
+        tag: 12,
+        name: "kagiExactWords",
+        title: LocalizedStringResource("Exact Words"),
+        isSwitch: true,
+        acceptsText: false,
+        textExample: nil,
+        choices: [],
+        locales: [],
+        namesRegions: false
+    )
+    static let yahooStrictSafeSearch = SearchProviderOption(
+        tag: 13,
+        name: "yahooStrictSafeSearch",
+        title: LocalizedStringResource("Strict SafeSearch"),
+        isSwitch: true,
+        acceptsText: false,
+        textExample: nil,
+        choices: [],
+        locales: [],
+        namesRegions: false
+    )
+    static let qwantRegion = SearchProviderOption(
+        tag: 14,
+        name: "qwantRegion",
+        title: LocalizedStringResource("Region"),
+        isSwitch: false,
+        acceptsText: false,
+        textExample: nil,
+        choices: [],
+        locales: [
+            SearchLocaleCode(code: "en_US", locale: "en-US", alsoServes: []),
+            SearchLocaleCode(code: "en_GB", locale: "en-GB", alsoServes: []),
+            SearchLocaleCode(code: "de_DE", locale: "de-DE", alsoServes: []),
+            SearchLocaleCode(code: "de_AT", locale: "de-AT", alsoServes: []),
+            SearchLocaleCode(code: "de_CH", locale: "de-CH", alsoServes: []),
+            SearchLocaleCode(code: "fr_FR", locale: "fr-FR", alsoServes: []),
+            SearchLocaleCode(code: "fr_BE", locale: "fr-BE", alsoServes: []),
+            SearchLocaleCode(code: "fr_CH", locale: "fr-CH", alsoServes: []),
+            SearchLocaleCode(code: "es_ES", locale: "es-ES", alsoServes: []),
+            SearchLocaleCode(code: "it_IT", locale: "it-IT", alsoServes: []),
+            SearchLocaleCode(code: "nl_NL", locale: "nl-NL", alsoServes: []),
+            SearchLocaleCode(code: "pt_PT", locale: "pt-PT", alsoServes: [])
+        ],
+        namesRegions: false
+    )
+    static let chatGPTSearchesWeb = SearchProviderOption(
+        tag: 15,
+        name: "chatGPTSearchesWeb",
+        title: LocalizedStringResource("Search the Web"),
+        isSwitch: true,
+        acceptsText: false,
+        textExample: nil,
+        choices: [],
+        locales: [],
+        namesRegions: false
+    )
+    static let chatGPTTemporaryChat = SearchProviderOption(
+        tag: 16,
+        name: "chatGPTTemporaryChat",
+        title: LocalizedStringResource("Temporary Chat"),
+        isSwitch: true,
+        acceptsText: false,
+        textExample: nil,
+        choices: [],
+        locales: [],
+        namesRegions: false
+    )
+    static let chatGPTModel = SearchProviderOption(
+        tag: 17,
+        name: "chatGPTModel",
+        title: LocalizedStringResource("Model"),
+        isSwitch: false,
+        acceptsText: true,
+        textExample: "gpt-5",
+        choices: [],
+        locales: [],
+        namesRegions: false
+    )
+    static let kagiAssistantModel = SearchProviderOption(
+        tag: 18,
+        name: "kagiAssistantModel",
+        title: LocalizedStringResource("Model"),
+        isSwitch: false,
+        acceptsText: true,
+        textExample: "claude-4-sonnet",
+        choices: [],
+        locales: [],
+        namesRegions: false
+    )
+    static let kagiAssistantWebAccess = SearchProviderOption(
+        tag: 19,
+        name: "kagiAssistantWebAccess",
+        title: LocalizedStringResource("Web Access"),
+        isSwitch: true,
+        acceptsText: false,
+        textExample: nil,
+        choices: [],
+        locales: [],
+        namesRegions: false
+    )
+    static let youTubeShows = SearchProviderOption(
+        tag: 20,
+        name: "youTubeShows",
+        title: LocalizedStringResource("Show"),
+        isSwitch: false,
+        acceptsText: false,
+        textExample: nil,
+        choices: [
+            SearchChoice.everything,
+            SearchChoice.videos,
+            SearchChoice.shorts,
+            SearchChoice.channels,
+            SearchChoice.playlists
+        ],
+        locales: [],
+        namesRegions: false
+    )
+    static let wikipediaLanguage = SearchProviderOption(
+        tag: 21,
+        name: "wikipediaLanguage",
+        title: LocalizedStringResource("Language"),
+        isSwitch: false,
+        acceptsText: false,
+        textExample: nil,
+        choices: [],
+        locales: [
+            SearchLocaleCode(code: "en", locale: "en", alsoServes: []),
+            SearchLocaleCode(code: "de", locale: "de", alsoServes: []),
+            SearchLocaleCode(code: "fr", locale: "fr", alsoServes: []),
+            SearchLocaleCode(code: "es", locale: "es", alsoServes: []),
+            SearchLocaleCode(code: "it", locale: "it", alsoServes: []),
+            SearchLocaleCode(code: "ja", locale: "ja", alsoServes: []),
+            SearchLocaleCode(code: "ru", locale: "ru", alsoServes: []),
+            SearchLocaleCode(code: "pt", locale: "pt", alsoServes: []),
+            SearchLocaleCode(code: "zh", locale: "zh", alsoServes: []),
+            SearchLocaleCode(code: "nl", locale: "nl", alsoServes: []),
+            SearchLocaleCode(code: "pl", locale: "pl", alsoServes: []),
+            SearchLocaleCode(code: "sv", locale: "sv", alsoServes: []),
+            SearchLocaleCode(code: "ar", locale: "ar", alsoServes: []),
+            SearchLocaleCode(code: "uk", locale: "uk", alsoServes: []),
+            SearchLocaleCode(code: "ko", locale: "ko", alsoServes: []),
+            SearchLocaleCode(code: "he", locale: "he", alsoServes: []),
+            SearchLocaleCode(code: "tr", locale: "tr", alsoServes: []),
+            SearchLocaleCode(code: "cs", locale: "cs", alsoServes: []),
+            SearchLocaleCode(code: "fi", locale: "fi", alsoServes: []),
+            SearchLocaleCode(code: "no", locale: "no", alsoServes: []),
+            SearchLocaleCode(code: "da", locale: "da", alsoServes: []),
+            SearchLocaleCode(code: "id", locale: "id", alsoServes: []),
+            SearchLocaleCode(code: "vi", locale: "vi", alsoServes: []),
+            SearchLocaleCode(code: "fa", locale: "fa", alsoServes: []),
+            SearchLocaleCode(code: "hu", locale: "hu", alsoServes: []),
+            SearchLocaleCode(code: "ca", locale: "ca", alsoServes: []),
+            SearchLocaleCode(code: "el", locale: "el", alsoServes: []),
+            SearchLocaleCode(code: "ro", locale: "ro", alsoServes: [])
+        ],
+        namesRegions: false
+    )
+    static let wikipediaListsResults = SearchProviderOption(
+        tag: 22,
+        name: "wikipediaListsResults",
+        title: LocalizedStringResource("Always List Results"),
+        isSwitch: true,
+        acceptsText: false,
+        textExample: nil,
+        choices: [],
+        locales: [],
+        namesRegions: false
+    )
+    static let gitHubSearchesFor = SearchProviderOption(
+        tag: 23,
+        name: "gitHubSearchesFor",
+        title: LocalizedStringResource("Search For"),
+        isSwitch: false,
+        acceptsText: false,
+        textExample: nil,
+        choices: [
+            SearchChoice.repositories,
+            SearchChoice.code,
+            SearchChoice.issues,
+            SearchChoice.pullRequests,
+            SearchChoice.discussions,
+            SearchChoice.users
+        ],
+        locales: [],
+        namesRegions: false
+    )
+    static let gitHubSort = SearchProviderOption(
+        tag: 24,
+        name: "gitHubSort",
+        title: LocalizedStringResource("Sort By"),
+        isSwitch: false,
+        acceptsText: false,
+        textExample: nil,
+        choices: [SearchChoice.bestMatch, SearchChoice.mostStars, SearchChoice.recentlyUpdated],
+        locales: [],
+        namesRegions: false
+    )
+    static let xLatestFirst = SearchProviderOption(
+        tag: 25,
+        name: "xLatestFirst",
+        title: LocalizedStringResource("Latest First"),
+        isSwitch: true,
+        acceptsText: false,
+        textExample: nil,
+        choices: [],
+        locales: [],
+        namesRegions: false
+    )
+    static let stackOverflowSort = SearchProviderOption(
+        tag: 26,
+        name: "stackOverflowSort",
+        title: LocalizedStringResource("Sort By"),
+        isSwitch: false,
+        acceptsText: false,
+        textExample: nil,
+        choices: [SearchChoice.relevance, SearchChoice.newest, SearchChoice.mostVotes],
+        locales: [],
+        namesRegions: false
+    )
+    static let mdnLanguage = SearchProviderOption(
+        tag: 27,
+        name: "mdnLanguage",
+        title: LocalizedStringResource("Language"),
+        isSwitch: false,
+        acceptsText: false,
+        textExample: nil,
+        choices: [],
+        locales: [
+            SearchLocaleCode(code: "en-US", locale: "en-US", alsoServes: []),
+            SearchLocaleCode(code: "de", locale: "de", alsoServes: []),
+            SearchLocaleCode(code: "es", locale: "es", alsoServes: []),
+            SearchLocaleCode(code: "fr", locale: "fr", alsoServes: []),
+            SearchLocaleCode(code: "ja", locale: "ja", alsoServes: []),
+            SearchLocaleCode(code: "ko", locale: "ko", alsoServes: []),
+            SearchLocaleCode(code: "pt-BR", locale: "pt-BR", alsoServes: []),
+            SearchLocaleCode(code: "ru", locale: "ru", alsoServes: []),
+            SearchLocaleCode(code: "zh-CN", locale: "zh-CN", alsoServes: []),
+            SearchLocaleCode(code: "zh-TW", locale: "zh-TW", alsoServes: [])
+        ],
+        namesRegions: false
+    )
+    static let amazonStore = SearchProviderOption(
+        tag: 28,
+        name: "amazonStore",
+        title: LocalizedStringResource("Store"),
+        isSwitch: false,
+        acceptsText: false,
+        textExample: nil,
+        choices: [],
+        locales: [
+            SearchLocaleCode(code: "amazon.com", locale: "en-US", alsoServes: []),
+            SearchLocaleCode(code: "amazon.co.uk", locale: "en-GB", alsoServes: ["IE"]),
+            SearchLocaleCode(code: "amazon.de", locale: "de-DE", alsoServes: ["AT", "CH", "LU"]),
+            SearchLocaleCode(code: "amazon.fr", locale: "fr-FR", alsoServes: []),
+            SearchLocaleCode(code: "amazon.com.be", locale: "nl-BE", alsoServes: []),
+            SearchLocaleCode(code: "amazon.it", locale: "it-IT", alsoServes: []),
+            SearchLocaleCode(code: "amazon.es", locale: "es-ES", alsoServes: []),
+            SearchLocaleCode(code: "amazon.nl", locale: "nl-NL", alsoServes: []),
+            SearchLocaleCode(code: "amazon.se", locale: "sv-SE", alsoServes: []),
+            SearchLocaleCode(code: "amazon.pl", locale: "pl-PL", alsoServes: []),
+            SearchLocaleCode(code: "amazon.co.jp", locale: "ja-JP", alsoServes: []),
+            SearchLocaleCode(code: "amazon.ca", locale: "en-CA", alsoServes: []),
+            SearchLocaleCode(code: "amazon.com.au", locale: "en-AU", alsoServes: []),
+            SearchLocaleCode(code: "amazon.in", locale: "en-IN", alsoServes: []),
+            SearchLocaleCode(code: "amazon.com.br", locale: "pt-BR", alsoServes: []),
+            SearchLocaleCode(code: "amazon.com.mx", locale: "es-MX", alsoServes: [])
+        ],
+        namesRegions: true
+    )
+    static let imDbFinds = SearchProviderOption(
+        tag: 29,
+        name: "imdbFinds",
+        title: LocalizedStringResource("Find"),
+        isSwitch: false,
+        acceptsText: false,
+        textExample: nil,
+        choices: [
+            SearchChoice.everything,
+            SearchChoice.titles,
+            SearchChoice.people,
+            SearchChoice.companies,
+            SearchChoice.keywords
+        ],
+        locales: [],
+        namesRegions: false
+    )
+    static let spotifyShows = SearchProviderOption(
+        tag: 30,
+        name: "spotifyShows",
+        title: LocalizedStringResource("Show"),
+        isSwitch: false,
+        acceptsText: false,
+        textExample: nil,
+        choices: [
+            SearchChoice.everything,
+            SearchChoice.songs,
+            SearchChoice.artists,
+            SearchChoice.albums,
+            SearchChoice.playlists,
+            SearchChoice.podcasts
+        ],
+        locales: [],
+        namesRegions: false
+    )
+    static let appleMapsShows = SearchProviderOption(
+        tag: 31,
+        name: "appleMapsShows",
+        title: LocalizedStringResource("Map"),
+        isSwitch: false,
+        acceptsText: false,
+        textExample: nil,
+        choices: [SearchChoice.explore, SearchChoice.satellite, SearchChoice.hybrid, SearchChoice.transit],
+        locales: [],
+        namesRegions: false
+    )
+    static let googleImagesSafeSearch = SearchProviderOption(
+        tag: 32,
+        name: "googleImagesSafeSearch",
+        title: LocalizedStringResource("SafeSearch"),
+        isSwitch: true,
+        acceptsText: false,
+        textExample: nil,
+        choices: [],
+        locales: [],
+        namesRegions: false
+    )
+    static let translateInto = SearchProviderOption(
+        tag: 33,
+        name: "translateInto",
+        title: LocalizedStringResource("Translate Into"),
+        isSwitch: false,
+        acceptsText: false,
+        textExample: nil,
+        choices: [],
+        locales: [
+            SearchLocaleCode(code: "en", locale: "en", alsoServes: []),
+            SearchLocaleCode(code: "de", locale: "de", alsoServes: []),
+            SearchLocaleCode(code: "fr", locale: "fr", alsoServes: []),
+            SearchLocaleCode(code: "es", locale: "es", alsoServes: []),
+            SearchLocaleCode(code: "it", locale: "it", alsoServes: []),
+            SearchLocaleCode(code: "ja", locale: "ja", alsoServes: []),
+            SearchLocaleCode(code: "ko", locale: "ko", alsoServes: []),
+            SearchLocaleCode(code: "zh-CN", locale: "zh-CN", alsoServes: []),
+            SearchLocaleCode(code: "zh-TW", locale: "zh-TW", alsoServes: []),
+            SearchLocaleCode(code: "pt", locale: "pt", alsoServes: []),
+            SearchLocaleCode(code: "ru", locale: "ru", alsoServes: []),
+            SearchLocaleCode(code: "nl", locale: "nl", alsoServes: []),
+            SearchLocaleCode(code: "pl", locale: "pl", alsoServes: []),
+            SearchLocaleCode(code: "sv", locale: "sv", alsoServes: []),
+            SearchLocaleCode(code: "ar", locale: "ar", alsoServes: []),
+            SearchLocaleCode(code: "hi", locale: "hi", alsoServes: []),
+            SearchLocaleCode(code: "tr", locale: "tr", alsoServes: []),
+            SearchLocaleCode(code: "uk", locale: "uk", alsoServes: [])
+        ],
+        namesRegions: false
+    )
+    static let hackerNewsSort = SearchProviderOption(
+        tag: 34,
+        name: "hackerNewsSort",
+        title: LocalizedStringResource("Sort By"),
+        isSwitch: false,
+        acceptsText: false,
+        textExample: nil,
+        choices: [SearchChoice.popular, SearchChoice.newest],
+        locales: [],
+        namesRegions: false
+    )
+    static let hackerNewsShows = SearchProviderOption(
+        tag: 35,
+        name: "hackerNewsShows",
+        title: LocalizedStringResource("Show"),
+        isSwitch: false,
+        acceptsText: false,
+        textExample: nil,
+        choices: [SearchChoice.everything, SearchChoice.stories, SearchChoice.comments],
+        locales: [],
+        namesRegions: false
+    )
+    static let appleDeveloperSkipsAI = SearchProviderOption(
+        tag: 36,
+        name: "appleDeveloperSkipsAI",
+        title: LocalizedStringResource("Skip the AI Answer"),
+        isSwitch: true,
+        acceptsText: false,
+        textExample: nil,
+        choices: [],
+        locales: [],
+        namesRegions: false
+    )
+
+    static let all: [SearchProviderOption] = [
+        googleHidesAIOverviews,
+        googleSafeSearch,
+        googleExactWords,
+        duckDuckGoHidesAI,
+        duckDuckGoSafeSearch,
+        duckDuckGoRegion,
+        bingMarket,
+        bingStrictSafeSearch,
+        braveHidesAIAnswers,
+        braveSafeSearch,
+        braveCountry,
+        startpageSafeSearch,
+        kagiExactWords,
+        yahooStrictSafeSearch,
+        qwantRegion,
+        chatGPTSearchesWeb,
+        chatGPTTemporaryChat,
+        chatGPTModel,
+        kagiAssistantModel,
+        kagiAssistantWebAccess,
+        youTubeShows,
+        wikipediaLanguage,
+        wikipediaListsResults,
+        gitHubSearchesFor,
+        gitHubSort,
+        xLatestFirst,
+        stackOverflowSort,
+        mdnLanguage,
+        amazonStore,
+        imDbFinds,
+        spotifyShows,
+        appleMapsShows,
+        googleImagesSafeSearch,
+        translateInto,
+        hackerNewsSort,
+        hackerNewsShows,
+        appleDeveloperSkipsAI
+    ]
+
+    static func named(_ name: String?) -> SearchProviderOption? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: SearchProviderOption, rhs: SearchProviderOption) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+
+    private final class Facts: Sendable {
+        let name: String
+        let title: LocalizedStringResource
+        let isSwitch: Bool
+        let acceptsText: Bool
+        let textExample: String?
+        let choices: [SearchChoice]
+        let locales: [SearchLocaleCode]
+        let namesRegions: Bool
+
+        init(
+            name: String,
+            title: LocalizedStringResource,
+            isSwitch: Bool,
+            acceptsText: Bool,
+            textExample: String?,
+            choices: [SearchChoice],
+            locales: [SearchLocaleCode],
+            namesRegions: Bool
+        ) {
+            self.name = name
+            self.title = title
+            self.isSwitch = isSwitch
+            self.acceptsText = acceptsText
+            self.textExample = textExample
+            self.choices = choices
+            self.locales = locales
+            self.namesRegions = namesRegions
         }
     }
 }

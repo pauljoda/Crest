@@ -18,10 +18,10 @@ struct BrowserCommandPaletteResultGroupView: View {
                         .horizontal,
                         BrowserCommandPaletteMetrics.resultHeaderHorizontalPadding
                     )
-                BrowserCommandPaletteResultRows(model: model, items: group.items)
+                BrowserCommandPaletteResultRows(model: model, group: group)
             }
         } else {
-            BrowserCommandPaletteResultRows(model: model, items: group.items)
+            BrowserCommandPaletteResultRows(model: model, group: group)
         }
     }
 }

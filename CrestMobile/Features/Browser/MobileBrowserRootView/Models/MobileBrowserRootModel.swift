@@ -519,11 +519,14 @@ extension MobileBrowserRootModel {
         return true
     }
 
+    /// Opens `url` from the palette where `opening` says, from `source`, once
+    /// the source's Space may still act.
     @discardableResult
     func openPaletteURL(
         _ url: URL,
         mode: BrowserCommandPaletteMode,
-        from source: BrowserTabRuntimeAssignment
+        from source: BrowserTabRuntimeAssignment,
+        opening: BrowserCommandPaletteOpening = .here
     ) -> Bool {
         guard
             BrowserCommandPaletteActionPolicy.isSourceAvailable(
@@ -532,16 +535,42 @@ extension MobileBrowserRootModel {
                 accessController: spaceAccess
             )
         else { return false }
-        switch mode {
-        case .editLocation:
-            browser.navigateSelectedTab(to: url.absoluteString)
-        case .newTab:
-            guard browser.openAddress(url, in: source.spaceID) else { return false }
-        }
+        return opening.open(url, from: source, with: MobilePaletteOpener(model: self, mode: mode))
+    }
+
+    /// Loads `url` in the page the window shows and shows it in the address field.
+    fileprivate func showLoading(_ url: URL) {
         pages.selectAndNavigate(to: url.absoluteString)
         address = url.absoluteString
+    }
+}
+
+/// How an iPhone or iPad window opens an address from its palette: in place
+/// of the source tab, or in a new tab when the palette opened for one, or in
+/// a new tab behind or in front. Neither Split View nor a Quick Window opens
+/// from the palette here.
+@MainActor
+private struct MobilePaletteOpener: BrowserCommandPaletteOpener {
+    let model: MobileBrowserRootModel
+    let mode: BrowserCommandPaletteMode
+
+    func openHere(_ url: URL, from source: BrowserTabRuntimeAssignment) -> Bool {
+        if mode == .newTab { return openTab(url, from: source, selecting: true) }
+        model.browser.navigateSelectedTab(to: url.absoluteString)
+        model.showLoading(url)
         return true
     }
+
+    func openTab(_ url: URL, from source: BrowserTabRuntimeAssignment, selecting: Bool) -> Bool {
+        guard selecting else { return model.browser.openNewTab(url: url, in: source.spaceID, selecting: false) != nil }
+        guard model.browser.openAddress(url, in: source.spaceID) else { return false }
+        model.showLoading(url)
+        return true
+    }
+
+    func openInSplit(_ url: URL, from source: BrowserTabRuntimeAssignment) -> Bool { false }
+
+    func openInQuickWindow(_ url: URL, from source: BrowserTabRuntimeAssignment) -> Bool { false }
 }
 
 // MARK: - Animation

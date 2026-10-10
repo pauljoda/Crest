@@ -68,11 +68,10 @@ extension BrowserMacShell {
     /// opened, such as a Quick Window or setup, can close itself.
     func canPerform(_ command: ShortcutCommand) -> Bool {
         guard !isQuitting, NSApp.modalWindow == nil, NSApp.keyWindow?.attachedSheet == nil else { return false }
-        switch command.kind {
-        case .newWindow, .newPrivateWindow: return true
-        case .closeWindow, .closeTabOrWindow: return activeActions != nil || windows?.isShellWindowKey == true
-        default: return activeActions?.canPerform(command) == true
+        if let windowless = BrowserMacCommand.of(command)?.withoutWindow, let windows {
+            return activeActions != nil || windowless.isAvailable(windows)
         }
+        return activeActions?.canPerform(command) == true
     }
 
     /// Runs `command` in the key browser window, or with none, the commands
@@ -83,12 +82,7 @@ extension BrowserMacShell {
             actions.perform(command)
             return
         }
-        switch command.kind {
-        case .newWindow: windows?.open(.normal(sourceWindowID: nil), activation: .key)
-        case .newPrivateWindow: windows?.openPrivateWindow()
-        case .closeWindow, .closeTabOrWindow: NSApp.keyWindow?.performClose(nil)
-        default: break
-        }
+        if let windows { BrowserMacCommand.of(command)?.withoutWindow?.run(windows) }
     }
 
     // MARK: - Actions - Engine window requests

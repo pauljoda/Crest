@@ -10,7 +10,7 @@ public sealed partial class BrowserContractsTests {
     public void AcceptedAndPublishedSessionsOwnTheirNestedCollectionsIncludingCopies() {
         var source = TestWorkspaces.Seed(SavedSession().Document["session"]!);
         var original = source.Spaces[0];
-        List<CustomSearchProvider> providers = [new(Guid.NewGuid(), "Search", "https://search.example/?q={searchTerms}", null)];
+        List<CustomSearchProvider> providers = [CustomSearchProvider.Carried(Guid.NewGuid(), "Search", "https://search.example/?q={searchTerms}", null)];
         List<BrandColor> colors = [new(0.1, 0.2, 0.3)];
         List<TranslationRule> rules = [new("en", "es", true)];
         var tabs = original.Tabs.ToList();

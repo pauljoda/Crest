@@ -4,20 +4,11 @@ using CrestCore.Domain;
 namespace CrestCore.Application;
 
 public sealed partial class NativeSessionAuthority {
-    #region Actions - Search engines
+    #region Variables
 
-    /// `space` with its search choice edited by `edit`, through the rules a
-    /// Space's engines follow. Stored engines that no longer validate are left
-    /// out, as reading them does.
-    internal SessionEdit Searching(SessionState basis, SpaceState space, Func<SearchPreferences, SearchPreferences> edit) =>
-        SettingSpace(basis, space, settings => settings with {
-            BrowsingPreferences = edit(SearchPreferences.Restore(settings.BrowsingPreferences)).Applied(settings.BrowsingPreferences)
-        }, SyncStaging.Edit);
-
-    /// A custom engine as the person typed it, trimmed and validated. Throws
-    /// `Rejected` with `InvalidSearchEngine` naming its first flaw.
-    internal SearchProvider Admitted(CustomSearchEngine engine) =>
-        SearchProvider.Admit(engine.Id, engine.Name, engine.SearchTemplate, engine.SuggestionTemplate);
+    /// The search providers of the device whose windows show this session,
+    /// or what a device that never chose offers before one is attached.
+    internal SearchCatalog SearchCatalog => device?.SearchCatalog ?? SearchCatalog.Starting(language: null, region: null);
 
     #endregion
 
@@ -36,12 +27,12 @@ public sealed partial class NativeSessionAuthority {
             ? new(resolution.Url, resolution.SearchQuery) : new(Url: null, SearchQuery: null);
     }
 
-    /// The search choice of a Space of the accepted session. Throws `Rejected`
+    /// What a Space of the accepted session searches with. Throws `Rejected`
     /// with `UnknownSpace` for one it does not hold.
-    internal SearchPreferences Searches(Guid spaceId) {
+    internal SearchProvider Searches(Guid spaceId) {
         SpaceState space;
         lock (Gate) space = session.Spaces.FirstOrDefault(candidate => candidate.Id == spaceId) ?? throw new Rejected(new UnknownSpace(spaceId));
-        return SearchPreferences.Restore(space.Settings.BrowsingPreferences);
+        return SearchCatalog.For(space.Settings.BrowsingPreferences, Kind.IsPrivate);
     }
 
     #endregion

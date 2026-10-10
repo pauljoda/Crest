@@ -20,23 +20,29 @@ internal sealed record TabGroupRecord(Guid Id, Guid SpaceId, EngineKind Engine, 
 /// recent first, the person's shortcut choices and link preferences, the
 /// unfinished manual setup it keeps for the next launch, whether this device
 /// has completed setup, what it has adopted from an installed release, the
-/// tab groups whose folders follow them, and the automation preferences, which
-/// are the default when absent.
+/// tab groups whose folders follow them, the site searches, what each
+/// persistent Space's palette remembers, and the automation preferences.
 internal sealed record DeviceRecords(IReadOnlyList<SavedWindow> Windows, IReadOnlyList<Guid> Reopening,
     IReadOnlyList<SitePermissionRecord> SitePermissions, IReadOnlyList<SiteEngineChoice> SiteEngines, ShortcutOverrides Shortcuts,
     LinkPreferences Links, KeptSetupDraft? SetupDraft, bool SetupCompleted, IReadOnlySet<DeviceAdoption> Adopted,
-    IReadOnlyList<TabGroupRecord> TabGroups, EngineKind? DefaultEngine = null, AutomationPreferences? Automation = null) {
-    #region Variables
-
-    /// The automation preferences, the default when the records hold none.
-    public AutomationPreferences KeptAutomation => Automation ?? AutomationPreferences.Off;
-
-    #endregion
-
+    IReadOnlyList<TabGroupRecord> TabGroups, EngineKind? DefaultEngine = null) {
     #region Static Variables
 
     public static readonly DeviceRecords Empty = new([], [], [], [], ShortcutOverrides.None, LinkPreferencePolicy.Default,
         SetupDraft: null, SetupCompleted: false, new HashSet<DeviceAdoption>(), TabGroups: []);
+
+    #endregion
+
+    #region Variables
+
+    /// What each persistent Space's palette remembers, by Space.
+    public IReadOnlyDictionary<Guid, PaletteMemory> PaletteMemories { get; init; } = new Dictionary<Guid, PaletteMemory>();
+
+    /// The device's search catalog, or null before the platform first restored it.
+    public SearchCatalog? SearchCatalog { get; init; }
+
+    /// Whether local tools may control Crest, and what the person allowed them.
+    public AutomationPreferences Automation { get; init; } = AutomationPreferences.Off;
 
     #endregion
 
@@ -61,7 +67,10 @@ internal sealed record DeviceRecords(IReadOnlyList<SavedWindow> Windows, IReadOn
         && SetupCompleted == other.SetupCompleted
         && Adopted.SetEquals(other.Adopted)
         && TabGroups.SequenceEqual(other.TabGroups)
-        && KeptAutomation.Equals(other.KeptAutomation);
+        && Equals(SearchCatalog, other.SearchCatalog)
+        && PaletteMemories.Count == other.PaletteMemories.Count
+        && PaletteMemories.All(entry => other.PaletteMemories.TryGetValue(entry.Key, out var memory) && ReferenceEquals(memory, entry.Value))
+        && Automation.Equals(other.Automation);
 
     public override int GetHashCode() => HashCode.Combine(Windows.Count, SitePermissions.Count, Adopted.Count);
 

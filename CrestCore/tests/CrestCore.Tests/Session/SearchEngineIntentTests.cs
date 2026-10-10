@@ -8,75 +8,110 @@ using Xunit;
 
 namespace CrestCore.Tests;
 
-/// A Space admits custom search engines under one set of rules, searches with
-/// exactly one engine, and stores that choice in the spelling every build
-/// reads; new browsing preferences sweep the Space under their retention.
+/// A Space follows the device's default search or chooses its own, carries a
+/// provider a person added so other devices and older builds still search
+/// with it, and stores its choice in the spelling every build reads; the
+/// first restore of the catalog keeps what Spaces chose before; new browsing
+/// preferences sweep the Space under their retention.
 public sealed partial class BrowserContractsTests {
     [Fact]
-    public void CustomSearchEnginesAreAdmittedSelectedAndStoredInTheNativeSpelling() {
+    public void ASpaceFollowsTheDefaultSearchOrCarriesItsOwnInTheSpellingEveryBuildReads() {
         var session = SavedSession().Document["session"]!;
         using var device = new TestDevice(session);
         var core = device.Authority;
         var space = SpaceId(session["spaces"]![0]!);
-        var (kagi, other) = (Guid.NewGuid(), Guid.NewGuid());
+        var kagi = Guid.NewGuid();
         JsonNode Stored() => JsonNode.Parse(core.Checkpoint().Read("core"))!["spaces"]![0]!["browsingPreferences"]!;
+        SearchProvider Searches() => core.SearchCatalog.For(core.Current.Spaces[0].Settings.BrowsingPreferences, isPrivate: false);
+        device.Send(new RestoreSearchCatalog("en", "US"));
+        device.Send(new SaveSearchProvider(new(kagi, "  Kagi ", " https://kagi.com/search?q=%s ", "", SearchProviderKind.Engine, ["kg"], null)));
+        var catalog = core.SearchCatalog;
 
-        device.Send(new AddSearchEngine(device.Workspace, space, new(kagi, "  Kagi ", " https://kagi.com/search?q=%s ", ""), Selects: true));
+        device.Send(new SetSpaceSearch(device.Workspace, space, catalog.Named(SearchProvider.CustomName(kagi)), SuggestionsEnabled: true));
         var preferences = Stored();
         Assert.Equal("custom:" + kagi.ToString("D"), preferences["selectedSearchProviderID"]!.GetValue<string>());
         // Builds that read only the legacy member fall back to Google.
         Assert.Equal("google", preferences["searchProvider"]!.GetValue<string>());
         Assert.Equal($"[{{\"id\":\"{kagi.ToString("D").ToUpperInvariant()}\",\"name\":\"Kagi\",\"searchURLTemplate\":\"https://kagi.com/search?q=%s\"}}]",
             preferences["customSearchProviders"]!.ToJsonString());
-        var selected = core.Current.Spaces[0].Settings.BrowsingPreferences;
-        Assert.Equal(((BuiltInSearchEngine?)null, (Guid?)kagi), (selected.SelectedBuiltInEngine, selected.SelectedCustomEngineId));
+        Assert.Null(preferences["searchFollowsDefault"]);
+        Assert.Equal("https://kagi.com/search?q=a", Searches().Search("a"));
 
-        device.Send(new AddSearchEngine(device.Workspace, space, new(other, "Example", "https://example.com/?q={searchTerms}", null), Selects: false));
-        device.Send(new UpdateSearchEngine(device.Workspace, space,
-            new(kagi, "Kagi Search", "https://kagi.com/search?q=%s", "https://kagi.com/api/autosuggest?q=%s")));
-        var engines = Stored()["customSearchProviders"]!.AsArray();
-        Assert.Equal(["Kagi Search", "Example"], engines.Select(e => e!["name"]!.GetValue<string>()));
-        Assert.Equal("https://kagi.com/api/autosuggest?q=%s", engines[0]!["suggestionURLTemplate"]!.GetValue<string>());
+        // Removing it from the device leaves the Space searching with the copy it carries.
+        device.Send(new RemoveSearchProvider(kagi));
+        Assert.Equal("https://kagi.com/search?q=a", Searches().Search("a"));
 
-        device.Send(new SelectSearchEngine(device.Workspace, space, BuiltInSearchEngine.Brave, null));
-        Assert.Equal(("brave", "brave"), (Stored()["selectedSearchProviderID"]!.GetValue<string>(), Stored()["searchProvider"]!.GetValue<string>()));
-        device.Send(new SelectSearchEngine(device.Workspace, space, null, kagi));
+        device.Send(new SetDefaultSearch(core.SearchCatalog.Resolving(BuiltInSearchProvider.Brave)));
+        device.Send(new SetSpaceSearch(device.Workspace, space, Provider: null, SuggestionsEnabled: null));
+        Assert.Equal(("brave", "brave", true), (Stored()["selectedSearchProviderID"]!.GetValue<string>(),
+            Stored()["searchProvider"]!.GetValue<string>(), Stored()["searchFollowsDefault"]!.GetValue<bool>()));
+        Assert.Empty(Stored()["customSearchProviders"]!.AsArray());
+        device.Send(new SetDefaultSearch(core.SearchCatalog.Resolving(BuiltInSearchProvider.ChatGPT)));
+        Assert.Equal("chatGPT", Searches().Name);
 
-        // Removing the selected engine searches with Google.
-        device.Send(new RemoveSearchEngine(device.Workspace, space, kagi));
-        Assert.Equal("google", Stored()["selectedSearchProviderID"]!.GetValue<string>());
-        Assert.Single(Stored()["customSearchProviders"]!.AsArray());
-        Assert.Equal(new UnknownSearchEngine(kagi), Assert.Throws<Rejected>(() =>
-            device.Send(new SelectSearchEngine(device.Workspace, space, null, kagi))).Rejection);
-        Assert.Equal(new UnknownSearchEngine(other), Assert.Throws<Rejected>(() =>
-            device.Send(new SelectSearchEngine(device.Workspace, space, BuiltInSearchEngine.Bing, other))).Rejection);
+        Assert.IsType<UnsuitableDefaultSearch>(Assert.Throws<Rejected>(() => device.Send(new SetSpaceSearch(device.Workspace, space,
+            core.SearchCatalog.Resolving(BuiltInSearchProvider.YouTube), null))).Rejection);
+        Assert.IsType<UnknownSearchEngine>(Assert.Throws<Rejected>(() => device.Send(new SetSpaceSearch(device.Workspace, space,
+            CustomSearchProvider.Carried(Guid.NewGuid(), "Stranger", "https://stranger.example/?q=%s", null).Admitted() with { } is var stranger
+                ? core.SearchCatalog.Saving(stranger).Custom[0].Provider : null, null))).Rejection);
     }
 
     [Fact]
-    public void RefusedCustomSearchEnginesLeaveTheSpaceUnchanged() {
-        var session = SavedSession().Document["session"]!;
-        using var device = new TestDevice(session);
+    public void TheFirstRestoreKeepsWhatSpacesChoseAndTheyFollowTheDefaultItMakes() {
+        var (document, _, _) = SavedSession();
+        var spaces = document["session"]!["spaces"]!.AsArray();
+        var first = spaces[0]!;
+        spaces.Add(first.DeepClone());
+        spaces.Add(first.DeepClone());
+        var engine = Guid.NewGuid();
+        for (int index = 0; index < spaces.Count; index++) {
+            var space = spaces[index]!;
+            space["id"] = SwiftId(Guid.NewGuid());
+            space["browsingPreferences"] = StoredSessionCodec.Encode(new BrowsingPreferences(
+                index < 2 ? BuiltInSearchProvider.DuckDuckGo : null, index < 2 ? null : engine,
+                index < 2 ? [] : [CustomSearchProvider.Carried(engine, "Example", "https://example.org/?q=%s", null)],
+                SearchSuggestionsEnabled: index == 0, FollowsDefaultSearch: false, FollowsDefaultSuggestions: false, CurrentTabCleanup.Never,
+                ContentBlockingPolicy.Balanced, new(DataRetention.Forever, DataRetention.Forever, DataRetention.Forever)));
+        }
+        using var device = new TestDevice(document["session"]!);
         var core = device.Authority;
-        var space = SpaceId(session["spaces"]![0]!);
-        device.Send(new AddSearchEngine(device.Workspace, space, new(Guid.NewGuid(), "Café", "https://example.org/?q=%s", null), Selects: false));
-        var admitted = core.Current;
 
-        var duplicate = new AddSearchEngine(device.Workspace, space, new(Guid.NewGuid(), "CAFE", "https://example.com/?q=%s", null), Selects: false);
-        Assert.IsType<DuplicateSearchEngineName>(device.Query(new CanSend(duplicate)).Refusal);
-        Assert.Equal(new DuplicateSearchEngineName(), Assert.Throws<Rejected>(() => device.Send(duplicate)).Rejection);
-        Assert.Equal(new InvalidSearchEngine(SearchEngineFlaw.UnsafeHost), Assert.Throws<Rejected>(() => device.Send(new AddSearchEngine(
-            device.Workspace, space, new(Guid.NewGuid(), "Local", "https://localhost/?q=%s", null), Selects: false))).Rejection);
-        var stranger = Guid.NewGuid();
-        Assert.Equal(new UnknownSearchEngine(stranger), Assert.Throws<Rejected>(() => device.Send(new UpdateSearchEngine(
-            device.Workspace, space, new(stranger, "Nothing", "https://example.net/?q=%s", null)))).Rejection);
-        Assert.Same(admitted, core.Current);
+        device.Send(new RestoreSearchCatalog("en", "GB"));
 
-        for (int index = 1; index < SearchPreferences.MaximumCustomProviders; index++)
-            device.Send(new AddSearchEngine(device.Workspace, space,
-                new(Guid.NewGuid(), $"Engine {index}", $"https://e{index}.example/?q=%s", null), Selects: false));
-        Assert.Equal(new SearchEngineLimitReached(SearchPreferences.MaximumCustomProviders), Assert.Throws<Rejected>(() => device.Send(
-            new AddSearchEngine(device.Workspace, space, new(Guid.NewGuid(), "One more", "https://more.example/?q=%s", null), Selects: false)))
-            .Rejection);
+        var catalog = core.SearchCatalog;
+        Assert.Equal(("duckDuckGo", false), (catalog.Default.Name, catalog.SuggestionsEnabled));
+        Assert.Equal("https://example.org/?q=%s", Assert.Single(catalog.Custom).SearchUrlTemplate);
+        var browsing = core.Current.Spaces.Select(space => space.Settings.BrowsingPreferences).ToList();
+        Assert.Equal([true, true, false], browsing.Select(space => space.FollowsDefaultSearch));
+        Assert.Equal([false, true, true], browsing.Select(space => space.FollowsDefaultSuggestions));
+        Assert.Equal(engine, browsing[2].SelectedCustomEngineId);
+        Assert.True(browsing[0].SearchSuggestionsEnabled);
+
+        // A later restore only follows the device's language and region.
+        device.Send(new RestoreSearchCatalog("de", "DE"));
+        Assert.Equal(("duckDuckGo", "de"), (core.SearchCatalog.Default.Name, core.SearchCatalog.Language));
+        Assert.Equal(browsing, core.Current.Spaces.Select(space => space.Settings.BrowsingPreferences));
+    }
+
+    [Fact]
+    public void ADeviceThatRestoresAfterAnotherTakesItsDefaultAndLeavesEverySpaceAsItIs() {
+        var (document, _, _) = SavedSession();
+        var spaces = document["session"]!["spaces"]!.AsArray();
+        spaces.Add(spaces[0]!.DeepClone());
+        spaces[1]!["id"] = SwiftId(Guid.NewGuid());
+        // Another device made Bing its default, which the first Space follows; the second chose Google.
+        for (int index = 0; index < spaces.Count; index++)
+            spaces[index]!["browsingPreferences"] = StoredSessionCodec.Encode(new BrowsingPreferences(
+                index == 0 ? BuiltInSearchProvider.Bing : BuiltInSearchProvider.Google, null, [], SearchSuggestionsEnabled: index == 0,
+                FollowsDefaultSearch: index == 0, FollowsDefaultSuggestions: index == 0, CurrentTabCleanup.Never, ContentBlockingPolicy.Balanced,
+                new(DataRetention.Forever, DataRetention.Forever, DataRetention.Forever)));
+        using var device = new TestDevice(document["session"]!);
+        var before = device.Authority.Current.Spaces.Select(space => space.Settings.BrowsingPreferences).ToList();
+
+        device.Send(new RestoreSearchCatalog("en", "US"));
+
+        Assert.Equal(("bing", true), (device.Authority.SearchCatalog.Default.Name, device.Authority.SearchCatalog.SuggestionsEnabled));
+        Assert.Equal(before, device.Authority.Current.Spaces.Select(space => space.Settings.BrowsingPreferences));
     }
 
     [Fact]
@@ -96,15 +131,14 @@ public sealed partial class BrowserContractsTests {
         var preferences = space.Settings.BrowsingPreferences;
         Assert.Single(space.History);
 
-        device.Send(new SetBrowsingPreferences(device.Workspace, space.Id, SearchSuggestionsEnabled: true, preferences.CurrentTabCleanup,
-            preferences.ContentBlocking, preferences.DataRetention));
+        device.Send(new SetBrowsingPreferences(device.Workspace, space.Id, CurrentTabCleanup.Never, preferences.ContentBlocking,
+            preferences.DataRetention));
         Assert.Single(core.Current.Spaces[0].History);
 
-        device.Send(new SetBrowsingPreferences(device.Workspace, space.Id, SearchSuggestionsEnabled: true, preferences.CurrentTabCleanup,
-            preferences.ContentBlocking, preferences.DataRetention with { History = DataRetention.OneDay }));
+        device.Send(new SetBrowsingPreferences(device.Workspace, space.Id, preferences.CurrentTabCleanup, preferences.ContentBlocking,
+            preferences.DataRetention with { History = DataRetention.OneDay }));
         var swept = core.Current.Spaces[0];
         Assert.Empty(swept.History);
-        Assert.Equal((true, DataRetention.OneDay),
-            (swept.Settings.BrowsingPreferences.SearchSuggestionsEnabled, swept.Settings.BrowsingPreferences.DataRetention.History));
+        Assert.Equal(DataRetention.OneDay, swept.Settings.BrowsingPreferences.DataRetention.History);
     }
 }

@@ -109,11 +109,13 @@ void Write(engine::WireWriter& writer, SessionSeed) {
   writer.WriteVarint(0);
   Write(writer, false);
   // No engine chosen, no custom engine, no custom providers and no suggestions;
-  // then the first tab cleanup, content blocking, and history, archive and
-  // download retention.
+  // its own search and suggestions, not the device's defaults; then the first
+  // tab cleanup, content blocking, and history, archive and download retention.
   Write(writer, false);
   Write(writer, false);
   writer.WriteVarint(0);
+  Write(writer, false);
+  Write(writer, false);
   Write(writer, false);
   for (int member = 0; member < 5; member++) writer.WriteVarint(0);
   // Offers to save passwords and sync them, not to the system's; open; saved

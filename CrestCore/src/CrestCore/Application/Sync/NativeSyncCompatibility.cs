@@ -34,7 +34,7 @@ internal static class NativeSyncCompatibility {
     private static readonly Shape SearchProvider = new("id name searchURLTemplate suggestionURLTemplate");
 
     private static readonly Shape Browsing = new(
-        "searchProvider selectedSearchProviderID customSearchProviders searchSuggestionsEnabled currentTabCleanupPolicy contentBlockingPolicy dataRetention",
+        "searchProvider selectedSearchProviderID customSearchProviders searchSuggestionsEnabled searchFollowsDefault suggestionsFollowDefault currentTabCleanupPolicy contentBlockingPolicy dataRetention",
         new() { ["customSearchProviders"] = List(SearchProvider, true), ["dataRetention"] = new("history archive downloads") });
 
     private static readonly Shape Group = new("id customTitle titleModifiedAt customIconSymbol iconModifiedAt tint tintModifiedAt",

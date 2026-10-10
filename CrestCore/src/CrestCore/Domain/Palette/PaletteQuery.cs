@@ -11,6 +11,10 @@ public sealed class PaletteQuery {
     /// What a term matched in a row's detail scores less than the same match
     /// in its title.
     private const int DetailPenalty = 150;
+    /// A word typed as the initials of a title's words.
+    private const int InitialsPoints = 250;
+    /// A word whose letters appear in a title in order.
+    private const int SubsequencePoints = 150;
     private static readonly Rune FinalSigma = new('ς');
     private static readonly Rune Sigma = new('σ');
 
@@ -71,6 +75,48 @@ public sealed class PaletteQuery {
             return null;
         }
         return total / terms.Length;
+    }
+
+    /// Whether what was typed, as one text, starts `text`, ignoring case:
+    /// "amazon" starts "amazon.de/" and "crest br" starts "Crest Browser".
+    public bool Prefixes(string text) {
+        ArgumentNullException.ThrowIfNull(text);
+        if (IsEmpty) return false;
+        var folded = new List<Rune>();
+        foreach (var rune in text.EnumerateRunes()) folded.Add(IsWhitespace(rune) ? new Rune(' ') : Folded(rune));
+        int position = 0;
+        for (int index = 0; index < terms.Length; index++) {
+            if (index > 0) {
+                if (position >= folded.Count || folded[position] != new Rune(' ')) return false;
+                while (position < folded.Count && folded[position] == new Rune(' ')) position++;
+            }
+            foreach (var rune in terms[index]) {
+                if (position >= folded.Count || folded[position] != rune) return false;
+                position++;
+            }
+        }
+        return true;
+    }
+
+    /// How well one typed word abbreviates `title`: as the initials of its
+    /// words ("tsv" for Toggle Split View), or as letters it holds in order;
+    /// null for neither, or for more than one word or a single letter.
+    public int? Abbreviates(string title) {
+        ArgumentNullException.ThrowIfNull(title);
+        if (terms.Length != 1 || terms[0].Length < 2) return null;
+        var term = terms[0];
+        List<Rune> initials = [];
+        Rune? previous = null;
+        foreach (var rune in title.EnumerateRunes()) {
+            if (!IsBoundary(rune) && (previous is not { } before || IsBoundary(before))) initials.Add(Folded(rune));
+            previous = rune;
+        }
+        if (initials.Count >= term.Length && term.Select((rune, index) => initials[index] == rune).All(matches => matches))
+            return InitialsPoints;
+        int found = 0;
+        foreach (var rune in title.EnumerateRunes())
+            if (found < term.Length && Folded(rune) == term[found]) found++;
+        return found == term.Length ? SubsequencePoints : null;
     }
 
     /// The best place `term` appears in `text`: where it starts the text, where

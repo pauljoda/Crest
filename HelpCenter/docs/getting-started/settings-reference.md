@@ -2,7 +2,7 @@
 title: Settings reference
 description: Find every major Crest setting and understand whether it applies globally or to one Space.
 slug: /settings-reference
-keywords: [settings, preferences, General, Tabs, Appearance, page zoom, app icon, Links, Quick Window, Peek, Engines, Chromium, WebKit, Shortcuts, Sync, Privacy, system permissions, Spaces, Passwords, Extensions, Advanced, Feature Flags, About, updates]
+keywords: [settings, preferences, General, Tabs, Search, default search, search providers, command palette, Appearance, page zoom, app icon, Links, Quick Window, Peek, Engines, Chromium, WebKit, Shortcuts, Sync, Privacy, system permissions, Spaces, Passwords, Extensions, Advanced, Feature Flags, About, updates]
 ---
 
 # Settings reference
@@ -11,7 +11,7 @@ Open **Crest → Settings** on Mac. On iPhone and iPad, open Settings from the b
 
 On Mac and wider iPad windows, Settings opens as a browser tab and keeps your place when you switch away. In compact layouts, including iPhone, it opens as a dismissible sheet while your current page stays selected.
 
-On Mac, the Settings sidebar lists General, Tabs, Appearance, Links, Engines, Shortcuts, Sync, and Privacy, then each of your Spaces by name and crest, then Advanced and About. iPhone and iPad keep their own layout; see [iPhone and iPad](#iphone-and-ipad).
+On Mac, the Settings sidebar lists General, Tabs, Search, Appearance, Links, Engines, Shortcuts, Sync, and Privacy, then each of your Spaces by name and crest, then Advanced and About. iPhone and iPad keep their own layout; see [iPhone and iPad](#iphone-and-ipad).
 
 ## General
 
@@ -20,6 +20,26 @@ Make Crest your default browser, choose what happens when Crest opens, and pick 
 ## Tabs
 
 Choose whether tabs opened from links get focus with **Switch to tabs opened from links**, and whether to **Follow tabs moved to another Space**. Set what pinned and saved tabs do after you close them, and whether clicking the favicon returns to the saved URL. Tabs also holds sidebar widgets and, on Mac, Split View's **Focus follows pointer**.
+
+## Search
+
+- **Default search**: the search engine or AI assistant every Space uses unless it chose its own, the one **Private windows** use, and whether the default gives **Search suggestions**. **Tab to search providers** turns provider names and shortcuts in the command palette on or off.
+
+The command palette settings come next:
+
+- **Results**: show results under a header for each kind or **Blended** into one list, lead with a **Top Hit**, prefer an open tab over history for the same site, and **Show match reasons**, which notes under each result why it is there, such as "Often visited".
+- **Sections**: turn each kind of result on or off, choose how many results each shows, and drag them into the order you want; **Reset Order** puts them back. Before you type, **Recent Tabs** and **Actions** show in this order.
+- **Also show**: **Settings Pages**, **@ Filters** such as `@tabs`, the **Calculator** and, on Mac, **Paste and Go**, which offers the address you copied when the palette opens.
+- **Typing**: complete addresses inline and learn from the results you choose. **Clear Learned Choices** forgets what the palette learned. Learned choices stay on this device.
+
+The search providers come last:
+
+- **Search Engines**, **AI Assistants** and **Websites**: every provider Crest offers, each with its main shortcut. Turn a provider off to stop its shortcut; the default stays on. Click a provider to open it and see its options, such as Google's **Hide AI Overviews** or ChatGPT's **Model**, and to change its shortcuts.
+- **Add Provider…** adds your own search engine, AI assistant or website with a name, shortcuts, search URL and color. **Restore Defaults…** puts the built-in providers' shortcuts and options back; providers you added stay.
+
+Search providers and their settings stay on this device.
+
+See [Use the command palette](../browsing/command-palette.md).
 
 ## Appearance
 
@@ -54,7 +74,7 @@ On Mac, every Space has its own page. Select the Space in the Settings sidebar; 
 Each Space's page has these tabs:
 
 - **Appearance**: Crest Studio for the Space's crest, colors, and sidebar background.
-- **Browsing**: search engine and search suggestions, archiving old tabs with **Archive current tabs** and **Archive Now**, downloads (whether to ask where to save, and the download folder), and **Delete Space**.
+- **Browsing**: **Search with** and **Search suggestions**, which follow your default search until you choose for the Space, archiving old tabs with **Archive current tabs** and **Archive Now**, downloads (whether to ask where to save, and the download folder), and **Delete Space**.
 - **Privacy**: **Require Touch ID or password**, how long to keep History, Archived Tabs, and Download Records, content blocking, and saved site permissions.
 - **Passwords**: **Use Crest Passwords**, **Sync with iCloud Keychain**, and the Space's saved passwords, with **Import Passwords…** and **Export Passwords…**.
 - **Extensions**: available when Chromium is. **Open Chrome Web Store**, **Chromium Extension Manager**, **Shortcuts…**, and the extensions installed in the Space.

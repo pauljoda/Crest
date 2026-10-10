@@ -15,14 +15,14 @@ public sealed record SelectionSearchAnswer(string? Url, string EngineTitle);
 
 #region Rejections
 
-/// Another custom engine in the Space already uses this name, ignoring case and
-/// diacritics.
+/// Another search provider a person added already uses this name, ignoring
+/// case and diacritics.
 public sealed record DuplicateSearchEngineName() : Rejection {
     #region Variables
 
     /// What the engine editor tells the person.
     [Localized]
-    public string Message => "A custom search engine already uses this name.";
+    public string Message => "Another search provider already uses this name.";
 
     #endregion
 }
@@ -30,24 +30,72 @@ public sealed record DuplicateSearchEngineName() : Rejection {
 /// A custom search engine has `Flaw`, the first rule it breaks.
 public sealed record InvalidSearchEngine(SearchEngineFlaw Flaw) : Rejection;
 
-/// The Space already holds `Limit` custom search engines.
+/// The device already keeps `Limit` search providers a person added.
 public sealed record SearchEngineLimitReached(int Limit) : Rejection {
     #region Variables
 
-    /// What the engine editor tells the person.
+    /// What the provider editor tells the person.
     [Localized(Argument = nameof(Limit))]
-    public string Message => "A Space can contain up to %lld custom search engines.";
+    public string Message => "You can add up to %lld search providers.";
+
+    #endregion
+}
+
+/// A shortcut is empty, has whitespace, a slash, a colon or a leading `@`,
+/// or is longer than the limit.
+public sealed record InvalidSearchShortcut() : Rejection {
+    #region Variables
+
+    /// What the provider editor tells the person.
+    [Localized]
+    public string Message => "Enter a shortcut without spaces, slashes or colons.";
+
+    #endregion
+}
+
+/// Another search provider already answers to one of the shortcuts.
+public sealed record DuplicateSearchShortcut() : Rejection {
+    #region Variables
+
+    /// What the provider editor tells the person.
+    [Localized]
+    public string Message => "Another search provider already uses this shortcut.";
+
+    #endregion
+}
+
+/// `Option` is not one its provider offers, or refuses the value given.
+public sealed record UnknownSearchOption(SearchProviderOption Option) : Rejection;
+
+/// A website was offered as a default search, which only a search engine or
+/// an AI assistant may be.
+public sealed record UnsuitableDefaultSearch() : Rejection {
+    #region Variables
+
+    /// What Settings tells the person.
+    [Localized]
+    public string Message => "Choose a search engine or an AI assistant.";
 
     #endregion
 }
 
 #endregion
 
-#region Models
+#region Changes
 
-/// A Space's custom search engine as the person typed it or as it is stored.
-/// Each template holds exactly one `%s` or `{searchTerms}` query placeholder;
-/// an absent suggestion template means the engine offers no suggestions.
-public sealed record CustomSearchEngine(Guid Id, string Name, string SearchTemplate, string? SuggestionTemplate);
+/// The device's search catalog, published whole whenever it changes, with
+/// every provider it holds as the device searches with it, and the default
+/// search a Space that follows it searches with, in an ordinary window and in
+/// a private one.
+public sealed record SearchCatalogChanged(SearchCatalog Catalog, IReadOnlyList<SearchProvider> Providers, SearchProvider Default,
+    SearchProvider PrivateDefault) : Change {
+    #region Constructors
+
+    /// `catalog` as the platform reads it.
+    internal static SearchCatalogChanged Of(SearchCatalog catalog) =>
+        new(catalog, catalog.Providers, catalog.Default, catalog.PrivateDefault);
+
+    #endregion
+}
 
 #endregion

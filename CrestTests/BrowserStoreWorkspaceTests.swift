@@ -89,18 +89,15 @@ final class BrowserStoreWorkspaceTests: XCTestCase {
         XCTAssertEqual(temporary.spaceModels.map(\.id), [assignment.spaceID])
 
         temporary.updateSpaceIdentity(assignment.spaceID, name: "Canonical rename", symbol: "book", accent: .orange)
-        var preferences = try XCTUnwrap(temporary.shownSpace).settings.browsingPreferences
-        preferences.searchProvider = .duckDuckGo
-        temporary.updateBrowsingPreferences(preferences, in: assignment.spaceID)
+        let duckDuckGo = try XCTUnwrap(BrowserSearchCatalog(core: temporary.core).provider(named: "duckDuckGo"))
+        temporary.setSearch(duckDuckGo, suggestions: nil, in: assignment.spaceID)
         // Asking for authentication locks the Space, which this process has
         // not unlocked, so it comes last.
         temporary.updateSpaceAccessPolicy(.deviceOwnerAuthentication, in: assignment.spaceID)
 
         XCTAssertEqual(source.shownSpace?.settings.name, "Canonical rename")
         XCTAssertEqual(source.shownSpace?.settings.accessPolicy, .deviceOwnerAuthentication)
-        XCTAssertEqual(
-            source.shownSpace?.settings.browsingPreferences.searchProvider,
-            .duckDuckGo)
+        XCTAssertEqual(source.shownSpace?.settings.browsingPreferences.selectedBuiltInEngine, .duckDuckGo)
         XCTAssertEqual(source.openTabIDs, originalTabs)
         XCTAssertTrue(try XCTUnwrap(temporary.shownSpace).tabs.models.isEmpty)
         XCTAssertTrue(source.family.beginDeletingSpace(assignment.spaceID))

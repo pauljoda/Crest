@@ -5,7 +5,6 @@ struct BrowserGeneralSettingsPane: View {
     let browser: BrowserStore
     let spaceAccess: BrowserSpaceAccessController
 
-    @Environment(\.browserSidebarWidgetRuntime) private var sidebarWidgets
     @State private var defaultBrowser = BrowserDefaultBrowserController()
     @State private var isCheckingDefaultBrowser = true
     @Bindable private var appPreferences = BrowserAppPreferenceStore.shared
@@ -14,8 +13,6 @@ struct BrowserGeneralSettingsPane: View {
         self.browser = browser
         self.spaceAccess = spaceAccess
     }
-
-    private var linkPreferences: BrowserLinkPreferenceStore { browser.linkPreferences }
 
     var body: some View {
         BrowserSettingsPane(.general) {

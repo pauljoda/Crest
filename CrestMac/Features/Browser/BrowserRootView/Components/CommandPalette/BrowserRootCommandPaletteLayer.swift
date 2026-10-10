@@ -1,8 +1,10 @@
+import AppKit
 import SwiftUI
 
 struct BrowserRootCommandPaletteLayer: View {
     let model: BrowserRootModel
     let shortcuts: BrowserShortcutStore?
+    var spaceSettingsPresentation: BrowserSpaceSettingsPresentationState? = nil
     let commandSurfaceNamespace: Namespace.ID
     var contentInsets = EdgeInsets()
 
@@ -20,16 +22,19 @@ struct BrowserRootCommandPaletteLayer: View {
                 selectedTabID: model.browser.shownTab?.id,
                 initialQuery: mode.initialQuery,
                 commands: model.paletteRegistry(
-                    windows: windows, layoutDirection: layoutDirection, shortcuts: shortcuts),
+                    windows: windows, layoutDirection: layoutDirection, shortcuts: shortcuts,
+                    settings: spaceSettingsPresentation),
                 isSourceAvailable: model.isPaletteSourceAvailable,
                 selectTab: model.selectPaletteTab,
-                openURL: { source, url in
-                    model.openPaletteURL(url, mode: mode, from: source)
+                openURL: { source, url, opening in
+                    model.openPaletteURL(url, mode: mode, from: source, opening: opening, windows: windows)
                 },
                 dismiss: model.chrome.dismissCommandPalette,
                 morphNamespace: commandSurfaceNamespace,
                 overlayContentInsets: contentInsets,
-                emptySelectionActions: model.emptySelectionPaletteActions
+                emptySelectionActions: model.emptySelectionPaletteActions,
+                openings: BrowserCommandPaletteOpening.all,
+                readPasteboard: { NSPasteboard.general.string(forType: .string) }
             )
             .id(
                 BrowserCommandPalettePresentationIdentity(

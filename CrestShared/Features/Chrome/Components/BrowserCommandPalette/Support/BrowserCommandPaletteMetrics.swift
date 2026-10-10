@@ -26,6 +26,12 @@ enum BrowserCommandPaletteMetrics {
     static let searchFieldMinimumHeight: CGFloat = 68
 
     static let resultContentPadding: CGFloat = 14
+    /// The row of search provider chips under the field.
+    static let providerChipRowHeight: CGFloat = 44
+    /// A provider's logo in a chip, and the neutral plate it sits on so it
+    /// reads on any brand tint.
+    static let chipIconSize: CGFloat = 14
+    static let chipIconPlateSize: CGFloat = 20
     static let resultGroupSpacing: CGFloat = 16
     static let resultHeaderSpacing: CGFloat = 6
     static let resultHeaderHorizontalPadding: CGFloat = 4

@@ -47,6 +47,8 @@ struct BrowserSettingsDestinationRouter: View {
             BrowserGeneralSettingsPane(browser: browser, spaceAccess: spaceAccess)
         case .tabs:
             BrowserTabsSettingsPane(browser: browser)
+        case .search:
+            BrowserSearchSettingsPane(browser: browser)
         case .engines:
             #if os(macOS)
                 BrowserEngineSettingsPane(core: browser.core)

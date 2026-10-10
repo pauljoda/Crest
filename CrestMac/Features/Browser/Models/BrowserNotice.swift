@@ -15,6 +15,11 @@ struct BrowserNotice: Equatable, Hashable {
         systemImage: "checkmark.circle.fill"
     )
 
+    static let copied = BrowserNotice(
+        message: String(localized: "Copied"),
+        systemImage: "checkmark.circle.fill"
+    )
+
     static func pageZoom(_ label: String) -> BrowserNotice {
         BrowserNotice(message: label, systemImage: "textformat.size")
     }

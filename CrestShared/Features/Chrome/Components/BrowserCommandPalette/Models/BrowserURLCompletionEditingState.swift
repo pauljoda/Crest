@@ -18,6 +18,11 @@ struct BrowserURLCompletionEditingState: Equatable {
 
     mutating func reject() { suppressed = true }
 
+    /// The caret rests at the end of the text with nothing being composed.
+    var isAtEnd: Bool {
+        !isComposing && selection == NSRange(location: text.utf16.count, length: 0)
+    }
+
     func canPropose(for query: String) -> Bool {
         !suppressed && !isComposing && text == query
             && selection == NSRange(location: query.utf16.count, length: 0)

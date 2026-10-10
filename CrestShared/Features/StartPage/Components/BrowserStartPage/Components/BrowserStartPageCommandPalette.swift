@@ -43,7 +43,7 @@ struct BrowserStartPageCommandPalette: View {
             offersRestingCommands: false,
             isSourceAvailable: page.isSourceAvailable,
             selectTab: page.selectTab,
-            openURL: page.openURL,
+            openURL: { source, url, _ in page.openURL(source, url) },
             dismiss: {},
             presentation: .embedded,
             emptySelectionActions: page.emptySelectionActions

@@ -1,5 +1,7 @@
 import SwiftUI
 
+/// A search provider's icon: its bundled logo, else its site's own icon,
+/// fetched from the site in the Space's profile, else its kind's symbol.
 struct BrowserSearchProviderIcon: View {
     let provider: SearchProvider
     var profileID: UUID? = nil
@@ -21,7 +23,7 @@ struct BrowserSearchProviderIcon: View {
                     .scaledToFit()
                     .clipShape(.rect(cornerRadius: size * 0.18))
             } else {
-                Image(systemName: "magnifyingglass")
+                Image(systemName: provider.kind.symbol)
                     .font(.system(size: size * 0.65, weight: .semibold))
                     .foregroundStyle(.secondary)
             }
@@ -39,7 +41,6 @@ struct BrowserSearchProviderIcon: View {
 
     private func loadCustomIcon() async {
         guard
-            provider.isCustom,
             let profileID,
             let pageURL = provider.iconPageURL
         else {

@@ -19,6 +19,7 @@ struct BrowserSettingsDestination: Hashable, Identifiable, Sendable {
     enum Kinds: Sendable {
         case general
         case tabs
+        case search
         case engines
         case lookAndFeel
         case links
@@ -48,6 +49,11 @@ struct BrowserSettingsDestination: Hashable, Identifiable, Sendable {
         searchTerms:
             "focus switch new tabs follow move between Spaces Command-click middle-click Shift pinned saved close resume restore root URL favicon Split View focus follows mouse pointer sidebar widgets Now Playing media cards",
         symbol: "square.on.square", color: CrestBrandPalette.sky, tincture: .riverLapis)
+    static let search = BrowserSettingsDestination(
+        kind: .search, name: "search", title: "Search", subtitle: "Search engine, command palette and site searches",
+        searchTerms:
+            "search engine Google suggestions command palette address bar results order top hit blended sections complete addresses inline autocomplete learn choices clear site searches shortcuts Tab YouTube Wikipedia scopes calculator paste and go reasons",
+        symbol: "magnifyingglass", color: CrestBrandPalette.sky, tincture: .riverAzure)
     static let lookAndFeel = BrowserSettingsDestination(
         kind: .lookAndFeel, name: "lookAndFeel", title: "Appearance", subtitle: "Window, tabs, zoom and motion",
         searchTerms:
@@ -112,7 +118,7 @@ struct BrowserSettingsDestination: Hashable, Identifiable, Sendable {
 
     /// Every destination, in catalog order.
     static let all: [BrowserSettingsDestination] = [
-        general, tabs, engines, lookAndFeel, links, shortcuts, spaces, sync, privacy, passwords, extensions,
+        general, tabs, search, engines, lookAndFeel, links, shortcuts, spaces, sync, privacy, passwords, extensions,
         featureFlags, advanced, about, automation,
     ]
 

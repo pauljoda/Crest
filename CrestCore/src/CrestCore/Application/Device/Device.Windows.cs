@@ -17,9 +17,11 @@ internal sealed partial class Device {
 
     #region Actions - Queries
 
-    /// The palette of a window: over the Space it shows, unless that Space is
-    /// locked or being deleted, leaving out the tab it shows there.
-    public Palette Palette(Guid windowId, bool allowsInternalPages) {
+    /// The palette of a window at `now`: over the Space it shows, unless that
+    /// Space is locked or being deleted, leaving out the tab it shows there,
+    /// under the device's app-wide preferences and with what the Space's
+    /// palette remembers, offering the workspace's other Spaces to switch to.
+    public Palette Palette(Guid windowId, bool allowsInternalPages, DateTimeOffset now) {
         var window = Opened(windowId);
         var authority = Workspace(window.WorkspaceId);
         Guid spaceId;
@@ -28,9 +30,12 @@ internal sealed partial class Device {
             spaceId = window.ShownSpaceId;
             shown = window.Tab(spaceId);
         }
-        var space = Available(authority.Current, spaceId);
+        var session = authority.Current;
+        var space = Available(session, spaceId);
         if (space is not null && authority.IsLocked(space)) space = null;
-        return new(space, shown, authority.Kind.IsPrivate, allowsInternalPages);
+        var others = session.Spaces.Where(other => other.Id != spaceId && Available(session, other.Id) is not null).ToList();
+        var preferences = PersistentPreferences() ?? session.AppPreferences ?? AppPreferences.Default;
+        return new(space, shown, authority.Kind.IsPrivate, allowsInternalPages, preferences, SearchCatalog, MemoryOf(spaceId), others, now);
     }
 
     /// The rule that would refuse `intent` in `authority` now, or null when it

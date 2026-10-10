@@ -89,7 +89,8 @@ public sealed partial class BrowserContractsTests {
         app.Drain();
 
         // Words are the Space's search, and the page shows where it is heading at once.
-        var search = SearchProvider.DuckDuckGo.Search("crest browser");
+        var duckDuckGo = SearchCatalog.Starting(language: null, region: null).Resolving(BuiltInSearchProvider.DuckDuckGo);
+        var search = duckDuckGo.Search("crest browser");
         var heading = Live(app.Send(new Navigate(page, "  crest browser ")));
         Assert.Equal((search, null, search), (heading.PendingUrl, heading.Failure, heading.Address));
         Assert.Equal(new LoadPage(page, search), binding.Commands[^1]);
@@ -98,7 +99,7 @@ public sealed partial class BrowserContractsTests {
         app.Send(new Navigate(page, "example.org/path"));
         Assert.Equal(new LoadPage(page, "https://example.org/path"), binding.Commands[^1]);
         app.Send(new Navigate(page, "chrome://flags"));
-        Assert.Equal(new LoadPage(page, SearchProvider.DuckDuckGo.Search("chrome://flags")), binding.Commands[^1]);
+        Assert.Equal(new LoadPage(page, duckDuckGo.Search("chrome://flags")), binding.Commands[^1]);
         app.Send(new Navigate(page, "about:blank#start"));
         Assert.Equal(new LoadPage(page, "about:blank#start"), binding.Commands[^1]);
 

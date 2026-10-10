@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using System.Text.Json.Nodes;
 
 using CrestCore.Contracts;
@@ -57,6 +58,8 @@ internal sealed partial class Device {
     private readonly Action<Guid> closeBorrower;
     /// The device class whose defaults the device's rules apply.
     private readonly DevicePlatform platform;
+    /// The core's time, which palette memories read.
+    private readonly IClock clock;
 
     /// The platform this device runs, whose rules memory pressure follows.
     internal DevicePlatform Platform => platform;
@@ -84,8 +87,9 @@ internal sealed partial class Device {
     /// for a drain on its next turn, and `closeBorrower` closes a borrowed
     /// workspace whose owner no longer lends its Space.
     public Device(DevicePlatform platform, SessionStorage? storage, DeviceRecords records, SpaceAccessAuthority access,
-        Action<Change> announce, Action requestTurn, Action<Guid> closeBorrower) {
+        Action<Change> announce, Action requestTurn, Action<Guid> closeBorrower, IClock clock) {
         ArgumentNullException.ThrowIfNull(platform);
+        ArgumentNullException.ThrowIfNull(clock);
         ArgumentNullException.ThrowIfNull(records);
         ArgumentNullException.ThrowIfNull(access);
         ArgumentNullException.ThrowIfNull(announce);
@@ -97,6 +101,7 @@ internal sealed partial class Device {
         this.announce = announce;
         this.requestTurn = requestTurn;
         this.closeBorrower = closeBorrower;
+        this.clock = clock;
         foreach (var record in records.Windows) saved[record.Id] = record;
         reopening.AddRange(records.Reopening.Distinct());
         lastUse = records.Windows.Count == 0 ? 0 : records.Windows.Max(record => record.Used);
@@ -105,11 +110,13 @@ internal sealed partial class Device {
         defaultEngine = records.DefaultEngine;
         shortcuts = records.Shortcuts;
         links = records.Links;
-        automation = records.KeptAutomation;
+        automation = records.Automation;
         keptSetupDraft = platform.KeepsSetupDraft ? records.SetupDraft : null;
         setupCompleted = records.SetupCompleted;
         adopted.UnionWith(records.Adopted);
         keptTabGroups.AddRange(records.TabGroups);
+        paletteMemories = records.PaletteMemories.ToImmutableDictionary();
+        searchCatalog = records.SearchCatalog;
     }
 
     #endregion
@@ -234,6 +241,7 @@ internal sealed partial class Device {
             owner = workspaces.GetValueOrDefault(workspaceId);
         }
         foreach (var change in changes) announce(change);
+        RememberPublished(workspaceId, previous, next);
         if (owner is not null) FollowOwner(owner);
     }
 
@@ -329,7 +337,11 @@ internal sealed partial class Device {
     /// Everything the device store keeps, as it stands. The caller holds the device lock.
     internal DeviceRecords Records() => new([.. saved.Values.OrderBy(record => record.Used)], [.. reopening],
         [.. keptPermissions.PersistentRecords], [.. keptEngines.Choices], shortcuts, links, keptSetupDraft, setupCompleted,
-        new HashSet<DeviceAdoption>(adopted), [.. keptTabGroups], defaultEngine, automation);
+        new HashSet<DeviceAdoption>(adopted), [.. keptTabGroups], defaultEngine) {
+        PaletteMemories = paletteMemories,
+        SearchCatalog = searchCatalog,
+        Automation = automation
+    };
 
     #endregion
 
