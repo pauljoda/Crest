@@ -46,6 +46,9 @@ final class BrowserAutomationListener: @unchecked Sendable {
 
     /// How long `stop` waits for the socket to close.
     private static let closeTimeout = DispatchTimeInterval.seconds(2)
+    /// The most connections one wake-up accepts. The source wakes again for
+    /// the rest, and a stop waits for one short batch at most.
+    private static let acceptsPerWake = 16
 
     // MARK: - Initializers
 
@@ -70,7 +73,10 @@ final class BrowserAutomationListener: @unchecked Sendable {
         let path = path
         let identity = Self.identity(of: path)
         let closed = DispatchSemaphore(value: 0)
-        source.setEventHandler { [weak self] in self?.acceptWaiting(on: descriptor) }
+        source.setEventHandler { [weak self, weak source] in
+            guard let self, let source else { return }
+            acceptWaiting(on: descriptor) { source.isCancelled }
+        }
         source.setCancelHandler {
             Darwin.close(descriptor)
             // Remove the socket only while it is still the one this listener bound.
@@ -83,22 +89,28 @@ final class BrowserAutomationListener: @unchecked Sendable {
     }
 
     /// Stops accepting connections and removes the socket before it returns,
-    /// so the path can be bound again at once. Connections already made stay
-    /// open until their owner closes them.
-    func stop() {
-        guard let source, let closed else { return }
+    /// so the path can be bound again at once, and answers whether it did.
+    /// It answers false only when the socket was still open after waiting
+    /// `closeTimeout`. Connections already made stay open until their owner
+    /// closes them.
+    @discardableResult
+    func stop() -> Bool {
+        guard let source, let closed else { return true }
         self.source = nil
         self.closed = nil
         // The cancellation runs on the listener's own queue, never the
-        // caller's.
+        // caller's, once a wake-up in progress returns.
         source.cancel()
-        _ = closed.wait(timeout: .now() + Self.closeTimeout)
+        return closed.wait(timeout: .now() + Self.closeTimeout) == .success
     }
 
     // MARK: - Actions - Connections
 
-    private func acceptWaiting(on descriptor: Int32) {
-        while true {
+    /// Accepts up to `acceptsPerWake` waiting connections, stopping early
+    /// once `cancelled` says the listener is stopping.
+    private func acceptWaiting(on descriptor: Int32, cancelled: () -> Bool) {
+        for _ in 0..<Self.acceptsPerWake {
+            guard !cancelled() else { return }
             let client = Darwin.accept(descriptor, nil, nil)
             guard client >= 0 else { return }
             guard let peer = Self.peer(of: client) else {

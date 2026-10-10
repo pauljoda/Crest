@@ -125,7 +125,9 @@ final class BrowserMacAutomation {
     }
 
     private func closeEndpoint() {
-        listener?.stop()
+        if let listener, !listener.stop() {
+            Self.logger.error("The automation socket did not close in time.")
+        }
         listener = nil
         for session in sessions.values { end(session) }
         for approval in approvals.values { approval.dismissal.dismiss() }
