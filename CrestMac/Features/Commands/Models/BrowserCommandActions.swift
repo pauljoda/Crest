@@ -85,11 +85,13 @@ struct BrowserCommandActions {
         case .newPrivateWindow: Route(run: openPrivateWindow)
         case .closeTabOrWindow: Route(run: closeTabOrWindow)
         case .closeWindow: Route(run: closeKeyWindow)
-        case .back: Route(isAvailable: pages.canGoBack, run: pages.goBack)
-        case .forward: Route(isAvailable: pages.canGoForward, run: pages.goForward)
-        case .reloadPage: Route { pages.reloadOrStop() }
-        case .stopLoading: Route(isAvailable: pages.isLoading, run: pages.stopLoading)
-        case .reloadFromOrigin: Route { pages.reloadFromOrigin() }
+        case .back: Route(isAvailable: pages.commandPage?.live.canGoBack == true) { pages.commandPage?.goBack() }
+        case .forward:
+            Route(isAvailable: pages.commandPage?.live.canGoForward == true) { pages.commandPage?.goForward() }
+        case .reloadPage: Route { reload(.standard) }
+        case .stopLoading:
+            Route(isAvailable: pages.commandPage?.live.isLoading == true) { pages.commandPage?.stopLoading() }
+        case .reloadFromOrigin: Route { reload(.fromOrigin) }
         case .toggleSelectedTabPinned: Route(run: toggleSelectedTabPinned)
         case .duplicateTab: Route(run: duplicateSelectedTab)
         case .reopenClosedTab: Route(run: reopenClosedTab)
@@ -117,16 +119,16 @@ struct BrowserCommandActions {
             Route(
                 isAvailable: supportsEngineCapability(.contentBlocking), title: contentBlockingActionTitle,
                 run: toggleContentBlocking)
-        case .findInPage: Route(isAvailable: supportsPageCapability(.find), run: pages.presentFind)
+        case .findInPage: Route(isAvailable: commandPageSupports(.find)) { pages.commandPage?.presentFind() }
         case .zoomIn: Route(isAvailable: canZoom, run: zoomIn)
         case .zoomOut: Route(isAvailable: canZoom, run: zoomOut)
         case .actualSize: Route(isAvailable: canZoom, run: resetZoom)
-        case .copyPageLink: Route(isAvailable: pages.hasActivePage, run: copyPageLink)
-        case .copyPageLinkAsMarkdown: Route(isAvailable: pages.hasActivePage, run: copyPageLinkAsMarkdown)
-        case .sharePage: Route(isAvailable: pages.hasActivePage, run: pages.sharePage)
+        case .copyPageLink: Route(isAvailable: hasCommandPage, run: copyPageLink)
+        case .copyPageLinkAsMarkdown: Route(isAvailable: hasCommandPage, run: copyPageLinkAsMarkdown)
+        case .sharePage: Route(isAvailable: hasCommandPage) { pages.commandPage?.sharePage() }
         case .exportPDF: Route(isAvailable: supportsPageCapability(.pdf), run: pages.exportPDF)
         case .saveWebArchive: Route(isAvailable: supportsPageCapability(.webArchive), run: pages.exportWebArchive)
-        case .printPage: Route(isAvailable: supportsPageCapability(.print), run: pages.printPage)
+        case .printPage: Route(isAvailable: commandPageSupports(.print)) { pages.commandPage?.printPage() }
         case .toggleSidebar: Route(run: toggleSidebar)
         case .showHistory: Route { chrome.presentUtility(.history) }
         case .showArchive: Route { chrome.presentUtility(.archive) }
@@ -160,8 +162,19 @@ struct BrowserCommandActions {
         }
     }
 
+    /// Whether the page the page commands act on has loaded a document.
+    private var hasCommandPage: Bool {
+        pages.commandPage?.live.documentURL != nil
+    }
+
     private var canZoom: Bool {
-        supportsPageCapability(.zoom) && pages.activePage?.developerViewport == nil
+        commandPageSupports(.zoom) && pages.commandPage?.developerViewport == nil
+    }
+
+    /// The same question as `supportsPageCapability` for the page the page
+    /// commands act on, which a Peek open over the active tab stands in for.
+    private func commandPageSupports(_ capability: EngineCapability) -> Bool {
+        hasCommandPage && pages.commandPage?.pageEngine.registration.supports(capability) == true
     }
 
     private func supportsPageCapability(_ capability: EngineCapability) -> Bool {
@@ -328,12 +341,12 @@ struct BrowserCommandActions {
     }
 
     func copyPageLink() {
-        guard pages.copyPageLink() else { return }
+        guard pages.commandPage?.copyPageLink() == true else { return }
         chrome.showURLCopiedFeedback()
     }
 
     func copyPageLinkAsMarkdown() {
-        guard pages.copyPageLinkAsMarkdown() else { return }
+        guard pages.commandPage?.copyPageLinkAsMarkdown() == true else { return }
         chrome.showURLCopiedFeedback()
     }
 
@@ -346,18 +359,28 @@ struct BrowserCommandActions {
     }
 
     func zoomIn() {
-        guard pages.zoomIn() else { return }
-        chrome.showPageZoomFeedback(pages.pageZoomLabel)
+        guard let page = pages.commandPage, page.zoomIn() else { return }
+        chrome.showPageZoomFeedback(BrowserPageZoomPolicy.percentageLabel(for: page.pageZoom))
     }
 
     func zoomOut() {
-        guard pages.zoomOut() else { return }
-        chrome.showPageZoomFeedback(pages.pageZoomLabel)
+        guard let page = pages.commandPage, page.zoomOut() else { return }
+        chrome.showPageZoomFeedback(BrowserPageZoomPolicy.percentageLabel(for: page.pageZoom))
     }
 
     func resetZoom() {
-        guard pages.resetZoom() else { return }
-        chrome.showPageZoomFeedback(pages.pageZoomLabel)
+        guard let page = pages.commandPage, page.resetZoom() else { return }
+        chrome.showPageZoomFeedback(BrowserPageZoomPolicy.percentageLabel(for: page.pageZoom))
+    }
+
+    /// Reloads a Peek open over the active tab, or else the tab, which the
+    /// pool brings back when its page went.
+    func reload(_ mode: BrowserPageReloadMode) {
+        if let peek = pages.peekPage {
+            peek.performReload(mode)
+        } else {
+            pages.reload(mode)
+        }
     }
 
     // MARK: - Tabs

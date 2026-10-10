@@ -445,6 +445,12 @@ final class BrowserPageHost {
         return lease
     }
 
+    /// The page of the Peek open over tab `tabID`, which shows in front of
+    /// the tab's own page; nil when no Peek is open over it.
+    func peekPage(over tabID: UUID) -> BrowserPlatformPage? {
+        peekLeases.values.first { $0.request.sourceTabID == tabID }?.lease.page
+    }
+
     /// Lets go of the Peeks' leases no longer asked for.
     func retainPeekPages(for requests: [BrowserPeekRequest]) {
         for (id, entry) in peekLeases where !requests.contains(entry.request) {
