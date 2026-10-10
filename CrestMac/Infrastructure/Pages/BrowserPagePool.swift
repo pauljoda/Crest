@@ -410,6 +410,17 @@ final class BrowserPagePool:
         activePage?.live.documentURL != nil
     }
 
+    /// The Peek open over the active tab, which shows in front of it.
+    var peekPage: BrowserPage? {
+        activeTabID.flatMap(host.peekPage(over:))
+    }
+
+    /// The page the page commands act on: the Peek open over the active tab,
+    /// or else the tab's own page.
+    var commandPage: BrowserPage? {
+        peekPage ?? activePage
+    }
+
     var isLoading: Bool {
         activePage?.live.isLoading == true
     }
@@ -815,6 +826,12 @@ final class BrowserPagePool:
         host.tabState.removeStates(profileID: space.profileID)
     }
 
+    /// Reloads the shown tab, or brings its page back when it went.
+    func reload(_ mode: BrowserPageReloadMode) {
+        guard canReloadShownPage() else { return }
+        activePage?.performReload(mode)
+    }
+
     func reloadOrStop() {
         reload(.standard)
     }
@@ -830,30 +847,6 @@ final class BrowserPagePool:
 
     func showWebInspector() {
         activePage?.showWebInspector()
-    }
-
-    @discardableResult
-    func zoomIn() -> Bool {
-        activePage?.zoomIn() == true
-    }
-
-    @discardableResult
-    func zoomOut() -> Bool {
-        activePage?.zoomOut() == true
-    }
-
-    @discardableResult
-    func resetZoom() -> Bool {
-        activePage?.resetZoom() == true
-    }
-
-    @discardableResult
-    func copyPageLink() -> Bool {
-        activePage?.copyPageLink() == true
-    }
-
-    func sharePage() {
-        activePage?.sharePage()
     }
 
     func exportPDF() {
@@ -1007,11 +1000,6 @@ final class BrowserPagePool:
         }
         page.corePage.load(url)
         Self.lifecycleSignposter.endInterval("Start Initial Navigation", interval)
-    }
-
-    private func reload(_ mode: BrowserPageReloadMode) {
-        guard canReloadShownPage() else { return }
-        activePage?.performReload(mode)
     }
 
     /// Presents what the window shows, answering whether the tab it shows

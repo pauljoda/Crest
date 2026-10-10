@@ -3785,6 +3785,10 @@
     "icloud-sync-status-shows-waiting-uploads": {
       "category": "improved",
       "message": "Sync settings say Up to date only when every change has reached iCloud, and Waiting to upload while some haven’t yet."
+    },
+    "page-commands-follow-peek": {
+      "category": "fixed",
+      "message": "While a Peek is open, Copy Link, Share, Find, Zoom, Reload, Back, Forward and Print act on the page in the Peek instead of the tab behind it."
     }
   }
 }
