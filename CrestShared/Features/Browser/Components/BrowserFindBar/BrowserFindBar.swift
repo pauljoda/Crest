@@ -77,7 +77,7 @@ struct BrowserFindBar: View {
                 isPageActive: isPageActive
             )
         ) {
-            guard isPageActive else { return }
+            guard isPageActive, port.focusesQueryField() else { return }
             // The returning NSViewRepresentable finishes its AppKit focus
             // replay during layout. Resume afterward so the page-owned chrome,
             // not the reattached WebKit view, remains authoritative.

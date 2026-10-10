@@ -16401,6 +16401,8 @@ struct ShortcutCommand: Hashable, Sendable {
         case toggleDeveloperToolbar
         case toggleTranslationToolbar
         case openFile
+        case findNext
+        case findPrevious
     }
 
     let tag: Int
@@ -18245,6 +18247,52 @@ struct ShortcutCommand: Hashable, Sendable {
         offersInPalette: true,
         isReservedFromPages: false
     )
+    static let findNext = ShortcutCommand(
+        tag: 68,
+        kind: .findNext,
+        name: "findNext",
+        section: ShortcutSection.page,
+        title: LocalizedStringResource("Find Next"),
+        searchTerms: LocalizedStringResource("next match search again"),
+        menuTitle: nil,
+        symbol: "chevron.down",
+        requiredCapability: nil,
+        selects: nil,
+        number: nil,
+        defaultShortcuts: [
+            ShortcutDefault(
+                platform: DevicePlatform.desktop,
+                keys: KeyCombination(key: "g", isSpecialKey: false, modifiers: [.command]),
+                yieldsToOverrides: false
+            )
+        ],
+        paletteRest: nil,
+        offersInPalette: true,
+        isReservedFromPages: false
+    )
+    static let findPrevious = ShortcutCommand(
+        tag: 69,
+        kind: .findPrevious,
+        name: "findPrevious",
+        section: ShortcutSection.page,
+        title: LocalizedStringResource("Find Previous"),
+        searchTerms: LocalizedStringResource("previous match search again back"),
+        menuTitle: nil,
+        symbol: "chevron.up",
+        requiredCapability: nil,
+        selects: nil,
+        number: nil,
+        defaultShortcuts: [
+            ShortcutDefault(
+                platform: DevicePlatform.desktop,
+                keys: KeyCombination(key: "g", isSpecialKey: false, modifiers: [.command, .shift]),
+                yieldsToOverrides: false
+            )
+        ],
+        paletteRest: nil,
+        offersInPalette: true,
+        isReservedFromPages: false
+    )
 
     static let all: [ShortcutCommand] = [
         newWindow,
@@ -18314,7 +18362,9 @@ struct ShortcutCommand: Hashable, Sendable {
         moveSplitCardRight,
         toggleDeveloperToolbar,
         toggleTranslationToolbar,
-        openFile
+        openFile,
+        findNext,
+        findPrevious
     ]
 
     static func named(_ name: String?) -> ShortcutCommand? {
@@ -18493,7 +18543,7 @@ struct ShortcutMenu: Hashable, Sendable {
         title: LocalizedStringResource("Page"),
         groups: [
             [ShortcutCommand.toggleReaderMode, ShortcutCommand.toggleContentBlocking],
-            [ShortcutCommand.findInPage],
+            [ShortcutCommand.findInPage, ShortcutCommand.findNext, ShortcutCommand.findPrevious],
             [ShortcutCommand.zoomIn, ShortcutCommand.zoomOut, ShortcutCommand.actualSize],
             [
                 ShortcutCommand.copyPageLink,

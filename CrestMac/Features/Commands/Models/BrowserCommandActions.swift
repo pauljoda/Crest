@@ -36,7 +36,7 @@ struct BrowserCommandActions {
         openSettings: @escaping (String) -> Void = { _ in }
     ) -> BrowserCommandPaletteCommandRegistry {
         BrowserCommandPaletteCommandRegistry(
-            commands: Self.paletteCommands.filter { $0.isOffered(in: browser.core.state) },
+            commands: Self.paletteCommands.filter(isListedInPalette),
             settingsPages: BrowserSettingsDestination.palettePages,
             shortcut: { shortcuts?.shortcut(for: $0) },
             perform: perform,
@@ -74,6 +74,13 @@ struct BrowserCommandActions {
         browser.allows(command) && BrowserMacCommand.of(command)?.isAvailable(self, command) == true
     }
 
+    /// Whether the palette lists `command` now: the core offers it, and a
+    /// command that waits until it can run is able to.
+    private func isListedInPalette(_ command: ShortcutCommand) -> Bool {
+        guard command.isOffered(in: browser.core.state) else { return false }
+        return BrowserMacCommand.of(command)?.waitsInPaletteUntilAvailable != true || canPerform(command)
+    }
+
     /// What the menu bar calls `command` now, when that follows what the
     /// window shows, such as Reader's Show or Hide; nil for its own title.
     func menuTitle(of command: ShortcutCommand) -> LocalizedStringResource? {
@@ -92,6 +99,10 @@ struct BrowserCommandActions {
         case .tab: selectTab(selection.tabID, in: selection.spaceID)
         case .space: selectSpace(selection.spaceID)
         }
+    }
+
+    var canFindAgain: Bool {
+        supportsPageCapability(.find) && pages.activePage?.canFindAgain == true
     }
 
     var canZoom: Bool {

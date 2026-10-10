@@ -20,7 +20,7 @@ public sealed class ShortcutCatalogTests {
         "sharePage", "exportPDF", "saveWebArchive", "printPage", "toggleSidebar", "showHistory", "showArchive",
         "showDownloads", "webInspectorInstructions", "splitWithNextTab", "focusNextSplitCard", "focusPreviousSplitCard",
         "removeTabFromSplit", "separateSplitTabs", "moveSplitCardLeft", "moveSplitCardRight", "toggleDeveloperToolbar",
-        "toggleTranslationToolbar", "openFile"
+        "toggleTranslationToolbar", "openFile", "findNext", "findPrevious"
     ];
 
     private static readonly IReadOnlyList<ShortcutCommand> Offered = ShortcutCommand.All;
@@ -84,9 +84,18 @@ public sealed class ShortcutCatalogTests {
         Assert.Null(Default("duplicateTab", DevicePlatform.Desktop));
     }
 
+    /// The Mac steps through find matches with the chords every Mac app uses.
+    [Fact]
+    public void FindNextAndPreviousDefaultToCommandGOnlyOnTheMac() {
+        Assert.Equal(Key("g", ShortcutChord.Command), Default("findNext", DevicePlatform.Desktop));
+        Assert.Equal(Key("g", ShortcutChord.Command | ShortcutChord.Shift), Default("findPrevious", DevicePlatform.Desktop));
+        Assert.Null(Default("findNext", DevicePlatform.Mobile));
+        Assert.Null(Default("findPrevious", DevicePlatform.Mobile));
+    }
+
     [Fact]
     public void AConflictNamesOnlyOtherHoldersAndChangesNothingUntilReassigned() {
-        var chord = Key("g", ShortcutChord.Command | ShortcutChord.Shift);
+        var chord = Key("u", ShortcutChord.Command | ShortcutChord.Shift);
         var first = ShortcutOverrides.None.Assigning(ShortcutCommand.NewTab, chord, Offered, DevicePlatform.Desktop);
         Assert.True(first.Assigning(ShortcutCommand.NewTab, chord, Offered, DevicePlatform.Desktop).SameAs(first));
 

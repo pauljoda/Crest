@@ -86,7 +86,7 @@ public sealed partial class BrowserContractsTests {
     public void KeysAnotherCommandHoldsWaitForConfirmationAndEveryChangeSurvivesARelaunch() {
         using var directory = new StorageDirectory();
         var find = Typed("f", ShortcutModifiers.Command);
-        var chord = Typed("g", ShortcutModifiers.Command | ShortcutModifiers.Shift);
+        var chord = Typed("u", ShortcutModifiers.Command | ShortcutModifiers.Shift);
         {
             var (app, _, _) = DeviceApp(directory);
             using var disposal = app;

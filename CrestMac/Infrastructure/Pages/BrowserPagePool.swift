@@ -832,6 +832,10 @@ final class BrowserPagePool:
         activePage?.showWebInspector()
     }
 
+    func findAgain(_ direction: BrowserFindDirection) {
+        activePage?.findAgain(direction)
+    }
+
     @discardableResult
     func zoomIn() -> Bool {
         activePage?.zoomIn() == true

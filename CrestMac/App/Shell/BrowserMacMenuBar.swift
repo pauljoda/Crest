@@ -262,14 +262,13 @@ final class BrowserMacMenuBar: NSObject, NSMenuDelegate, NSMenuItemValidation {
     }
 
     /// The Edit menu's text submenus, which AppKit's responder chain answers
-    /// for the field or page that has focus. Find opens Crest's own find bar;
-    /// the rest act on a text view's own find.
+    /// for the field or page that has focus. Find and finding again use Crest's
+    /// own find bar; the rest act on a text view's own find.
     private func textItems(in edit: NSMenu) {
         let find = submenu(String(localized: "Find"), in: edit)
         command(.findInPage, titled: String(localized: "Find…"), in: find)
-        textFinder(String(localized: "Find Next"), .nextMatch, key: "g", in: find)
-        textFinder(
-            String(localized: "Find Previous"), .previousMatch, key: "g", modifiers: [.command, .shift], in: find)
+        command(.findNext, in: find)
+        command(.findPrevious, in: find)
         // Command-E archives a tab in Crest, so the selection has no chord.
         textFinder(String(localized: "Use Selection for Find"), .setSearchString, in: find)
         standard(
