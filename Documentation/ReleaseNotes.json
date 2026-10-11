@@ -3834,6 +3834,14 @@
       "category": "improved",
       "message": "Each section in Settings has its own color, drawn from the Space templates."
     },
+    "history-opens-over-page": {
+      "category": "fixed",
+      "message": "On iPhone, Show Full History in a page’s Back and Forward menus opens History."
+    },
+    "download-prompt-over-page": {
+      "category": "fixed",
+      "message": "On iPhone, Crest asks before downloading a risky file from the page you’re viewing, instead of leaving the download waiting for approval."
+    },
     "automation-for-local-tools": {
       "category": "new",
       "message": "On Mac, scripts and coding agents on your computer can list, open, show and close tabs in the Spaces you choose. Turn it on in Settings › Automation; Crest asks before each new tool connects."
