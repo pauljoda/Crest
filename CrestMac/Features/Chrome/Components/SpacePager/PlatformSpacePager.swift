@@ -13,6 +13,8 @@ struct PlatformSpacePager<Content: View>: NSViewRepresentable {
     let selectSpace: (UUID) -> UUID
     @ViewBuilder let content: (SpaceModel, Bool) -> Content
 
+    private var pageEnvironment = SpacePageEnvironment()
+
     func makeNSView(context: Context) -> SpacePagerViewport<Content> {
         SpacePagerViewport(frame: .zero)
     }
@@ -28,6 +30,7 @@ struct PlatformSpacePager<Content: View>: NSViewRepresentable {
 
     func updateNSView(_ view: SpacePagerViewport<Content>, context: Context) {
         let environment = context.environment
+        let objects = pageEnvironment.objects
         view.update(
             spaces: spaces, selectedSpaceID: selectedSpaceID,
             isInteractionLocked: isInteractionLocked,
@@ -39,7 +42,7 @@ struct PlatformSpacePager<Content: View>: NSViewRepresentable {
         ) { space, isSelected in
             SpacePageRoot(
                 content: content(space, isSelected),
-                assignment: BrowserSpaceRuntimeAssignment(space: space))
+                assignment: BrowserSpaceRuntimeAssignment(space: space), objects: objects)
         }
     }
 

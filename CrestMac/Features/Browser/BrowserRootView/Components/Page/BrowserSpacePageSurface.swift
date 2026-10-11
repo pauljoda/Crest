@@ -9,6 +9,7 @@ struct BrowserSpacePageSurface: NSViewRepresentable {
 
     @AppStorage(SpacePageMotionPreference.key)
     private var animatesSpacePages = SpacePageMotionPreference.defaultValue
+    private var pageEnvironment = SpacePageEnvironment()
 
     func makeNSView(context: Context) -> SpaceContentPagerView<BrowserRootPageSurface> {
         SpaceContentPagerView(frame: .zero)
@@ -24,6 +25,7 @@ struct BrowserSpacePageSurface: NSViewRepresentable {
     }
 
     func updateNSView(_ view: SpaceContentPagerView<BrowserRootPageSurface>, context: Context) {
+        let objects = pageEnvironment.objects
         view.update(
             spaces: BrowserSidebarAccessPolicy.availableSpaces(in: model.browser),
             selectedSpaceID: model.browser.selectedSpaceID,
@@ -40,7 +42,7 @@ struct BrowserSpacePageSurface: NSViewRepresentable {
                     shortcuts: shortcuts,
                     appearance: appearance,
                     layoutDirection: context.environment.layoutDirection),
-                assignment: BrowserSpaceRuntimeAssignment(space: space))
+                assignment: BrowserSpaceRuntimeAssignment(space: space), objects: objects)
         }
     }
 

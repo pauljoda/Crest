@@ -108,7 +108,6 @@ the live status for each issue.
 - [ ] [Choose Shift-click to open Peek](https://github.com/pauljoda/Crest/issues/344)
 - [ ] [Option to open Crest straight to your tabs instead of the start page](https://github.com/pauljoda/Crest/issues/345)
 - [ ] [feature: Per-site developer mode toggle in the URL bar menu, persistent per origin](https://github.com/pauljoda/Crest/issues/351)
-- [ ] [Search engine logos look stretched in Settings › Search on Mac](https://github.com/pauljoda/Crest/issues/354)
 - [ ] [Sidebar hide and reveal animation is choppy on Mac](https://github.com/pauljoda/Crest/issues/355)
 - [ ] [Treat a Split View as one tab when cycling tabs from the keyboard](https://github.com/pauljoda/Crest/issues/356)
 - [ ] [Move to New Window in the tab menu](https://github.com/pauljoda/Crest/issues/357)
@@ -152,6 +151,7 @@ the live status for each issue.
 - [x] [Keep the address card in place while typing on Mac](https://github.com/pauljoda/Crest/issues/327) — [`c3e712f2`](https://github.com/pauljoda/Crest/commit/c3e712f200fb1fc90935c09eec48e1f41ae1c330)
 - [x] [Fill in a visited site's address while typing](https://github.com/pauljoda/Crest/issues/330) — [`c3e712f2`](https://github.com/pauljoda/Crest/commit/c3e712f200fb1fc90935c09eec48e1f41ae1c330)
 - [x] [Overhaul the command palette: smarter ordering and a Settings section to customize it](https://github.com/pauljoda/Crest/issues/338) — [`c3e712f2`](https://github.com/pauljoda/Crest/commit/c3e712f200fb1fc90935c09eec48e1f41ae1c330)
+- [x] [Search engine logos look stretched in Settings › Search on Mac](https://github.com/pauljoda/Crest/issues/354) — [`d27a88c5`](https://github.com/pauljoda/Crest/commit/d27a88c5bcb7bc48cf160e295d0dc7e8f6006f5e)
 
 <!-- crest-roadmap-sync:end -->
 
