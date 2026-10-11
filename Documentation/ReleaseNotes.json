@@ -3850,6 +3850,10 @@
       "category": "fixed",
       "message": "While a Peek is open, Copy Link, Share, Find, Zoom, Reload, Back, Forward, Print, Export as PDF and Save Web Archive act on the page in the Peek instead of the tab behind it, and Close Tab closes the Peek."
     },
+    "find-next-shortcut": {
+      "category": "fixed",
+      "message": "Command-G and Command-Shift-G move to the next and previous find-in-page match, and reopen the find bar with your last search."
+    },
     "automation-for-local-tools": {
       "category": "new",
       "message": "On Mac, scripts and coding agents on your computer can list, open, show and close tabs in the Spaces you choose. Turn it on in Settings › Automation; Crest asks before each new tool connects."

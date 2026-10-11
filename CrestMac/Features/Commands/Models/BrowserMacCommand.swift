@@ -72,6 +72,12 @@ struct BrowserMacCommand {
     static let findInPage = BrowserMacCommand(
         .findInPage, isAvailable: { $0.commandPageSupports(.find) },
         run: { $0.pages.commandPage?.presentFind() })
+    static let findNext = BrowserMacCommand(
+        .findNext, isAvailable: { $0.canFindAgain }, waitsInPaletteUntilAvailable: true,
+        run: { $0.pages.commandPage?.findAgain(.forward) })
+    static let findPrevious = BrowserMacCommand(
+        .findPrevious, isAvailable: { $0.canFindAgain }, waitsInPaletteUntilAvailable: true,
+        run: { $0.pages.commandPage?.findAgain(.backward) })
     static let zoomIn = BrowserMacCommand(.zoomIn, isAvailable: { $0.canZoom }, run: { $0.zoomIn() })
     static let zoomOut = BrowserMacCommand(.zoomOut, isAvailable: { $0.canZoom }, run: { $0.zoomOut() })
     static let actualSize = BrowserMacCommand(.actualSize, isAvailable: { $0.canZoom }, run: { $0.resetZoom() })
@@ -134,7 +140,8 @@ struct BrowserMacCommand {
         clearUnpinnedTabs, archiveTab, previousTab, nextTab, mostRecentTab, splitWithNextTab, focusNextSplitCard,
         focusPreviousSplitCard, removeTabFromSplit, separateSplitTabs, moveSplitCardLeft, moveSplitCardRight,
         previousSpace, nextSpace,
-        toggleReaderMode, toggleContentBlocking, findInPage, zoomIn, zoomOut, actualSize, copyPageLink,
+        toggleReaderMode, toggleContentBlocking, findInPage, findNext, findPrevious, zoomIn, zoomOut, actualSize,
+        copyPageLink,
         copyPageLinkAsMarkdown,
         sharePage, exportPDF, saveWebArchive, printPage, toggleSidebar, showHistory, showArchive, showDownloads,
         showWebInspector,
@@ -163,6 +170,11 @@ struct BrowserMacCommand {
     /// command that needs one.
     let withoutWindow: BrowserMacWindowlessCommand?
 
+    /// Whether the palette lists the command only while it can run, for a
+    /// command that means nothing until something else happens first, such
+    /// as finding again before any search.
+    let waitsInPaletteUntilAvailable: Bool
+
     // MARK: - Initializers
 
     private init(
@@ -171,11 +183,12 @@ struct BrowserMacCommand {
         title: @escaping @MainActor (BrowserCommandActions) -> LocalizedStringResource? = { _ in nil },
         isOn: @escaping @MainActor (BrowserCommandActions) -> Bool? = { _ in nil },
         withoutWindow: BrowserMacWindowlessCommand? = nil,
+        waitsInPaletteUntilAvailable: Bool = false,
         run: @escaping @MainActor (BrowserCommandActions) -> Void
     ) {
         self.init(
             kind, isAvailable: { actions, _ in isAvailable(actions) }, title: title, isOn: isOn,
-            withoutWindow: withoutWindow,
+            withoutWindow: withoutWindow, waitsInPaletteUntilAvailable: waitsInPaletteUntilAvailable,
             run: { actions, _ in run(actions) })
     }
 
@@ -185,6 +198,7 @@ struct BrowserMacCommand {
         title: @escaping @MainActor (BrowserCommandActions) -> LocalizedStringResource? = { _ in nil },
         isOn: @escaping @MainActor (BrowserCommandActions) -> Bool? = { _ in nil },
         withoutWindow: BrowserMacWindowlessCommand? = nil,
+        waitsInPaletteUntilAvailable: Bool = false,
         run: @escaping @MainActor (BrowserCommandActions, ShortcutCommand) -> Void
     ) {
         self.kind = kind
@@ -192,6 +206,7 @@ struct BrowserMacCommand {
         self.title = title
         self.isOn = isOn
         self.withoutWindow = withoutWindow
+        self.waitsInPaletteUntilAvailable = waitsInPaletteUntilAvailable
         self.run = run
     }
 

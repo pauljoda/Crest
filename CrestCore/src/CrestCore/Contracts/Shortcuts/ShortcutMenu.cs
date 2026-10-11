@@ -41,7 +41,7 @@ public sealed class ShortcutMenu {
     ]);
     public static readonly ShortcutMenu Page = new(name: "page", title: "Page", groups: [
         [ShortcutCommand.ToggleReaderMode, ShortcutCommand.ToggleContentBlocking],
-        [ShortcutCommand.FindInPage],
+        [ShortcutCommand.FindInPage, ShortcutCommand.FindNext, ShortcutCommand.FindPrevious],
         [ShortcutCommand.ZoomIn, ShortcutCommand.ZoomOut, ShortcutCommand.ActualSize],
         [ShortcutCommand.CopyPageLink, ShortcutCommand.CopyPageLinkAsMarkdown, ShortcutCommand.SharePage, ShortcutCommand.ExportPDF,
             ShortcutCommand.SaveWebArchive]

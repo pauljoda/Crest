@@ -61,6 +61,35 @@ final class BrowserFindSessionTests: XCTestCase {
         XCTAssertFalse(session.isPresented)
     }
 
+    func testFindingAgainReusesTheLastQueryAndLeavesFocusWithThePage() throws {
+        let executor = BrowserFindExecutorSpy()
+        let session = BrowserFindSession()
+        XCTAssertFalse(session.canFindAgain)
+
+        session.present(hasLoadedPage: true)
+        session.find("Crest", using: executor)
+        session.dismiss(using: executor)
+        XCTAssertTrue(session.canFindAgain)
+
+        let focusRequest = session.focusRequest
+        session.findAgain(.backward, hasLoadedPage: true, using: executor)
+
+        let request = try XCTUnwrap(executor.requests.last)
+        XCTAssertEqual(request.query, "Crest")
+        XCTAssertTrue(request.configuration.backwards)
+        XCTAssertTrue(session.isPresented)
+        XCTAssertEqual(session.query, "Crest")
+        XCTAssertFalse(session.focusesQueryField)
+        XCTAssertEqual(session.focusRequest, focusRequest)
+
+        // Asking for find again hands the field its focus back.
+        session.present(hasLoadedPage: true)
+        XCTAssertTrue(session.focusesQueryField)
+
+        // An emptied field leaves nothing to find again while the bar is open.
+        session.find("", using: executor)
+        XCTAssertFalse(session.canFindAgain)
+    }
 }
 
 @MainActor

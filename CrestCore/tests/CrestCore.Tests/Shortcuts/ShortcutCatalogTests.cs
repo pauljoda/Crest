@@ -20,7 +20,7 @@ public sealed class ShortcutCatalogTests {
         "sharePage", "exportPDF", "saveWebArchive", "printPage", "toggleSidebar", "showHistory", "showArchive",
         "showDownloads", "webInspectorInstructions", "splitWithNextTab", "focusNextSplitCard", "focusPreviousSplitCard",
         "removeTabFromSplit", "separateSplitTabs", "moveSplitCardLeft", "moveSplitCardRight", "toggleDeveloperToolbar",
-        "toggleTranslationToolbar", "openFile"
+        "toggleTranslationToolbar", "openFile", "findNext", "findPrevious"
     ];
 
     private static readonly IReadOnlyList<ShortcutCommand> Offered = ShortcutCommand.All;
@@ -86,7 +86,7 @@ public sealed class ShortcutCatalogTests {
 
     [Fact]
     public void AConflictNamesOnlyOtherHoldersAndChangesNothingUntilReassigned() {
-        var chord = Key("g", ShortcutChord.Command | ShortcutChord.Shift);
+        var chord = Key("u", ShortcutChord.Command | ShortcutChord.Shift);
         var first = ShortcutOverrides.None.Assigning(ShortcutCommand.NewTab, chord, Offered, DevicePlatform.Desktop);
         Assert.True(first.Assigning(ShortcutCommand.NewTab, chord, Offered, DevicePlatform.Desktop).SameAs(first));
 
@@ -138,17 +138,19 @@ public sealed class ShortcutCatalogTests {
     }
 
     [Theory]
-    [InlineData("newQuickWindow", "newBlankWindow", ShortcutChord.Command | ShortcutChord.Option)]
-    [InlineData("newTab", "newQuickWindow", ShortcutChord.Command | ShortcutChord.Option | ShortcutChord.Shift)]
-    public void TheMacWindowDefaultsYieldToAPersistedCustomChord(string owner, string displaced, int modifiers) {
-        var overrides = ShortcutOverrides.Restore([new(owner, Key("n", modifiers)), new("showHistory", null)]);
+    [InlineData("newQuickWindow", "newBlankWindow", "n", ShortcutChord.Command | ShortcutChord.Option)]
+    [InlineData("newTab", "newQuickWindow", "n", ShortcutChord.Command | ShortcutChord.Option | ShortcutChord.Shift)]
+    [InlineData("newTab", "findNext", "g", ShortcutChord.Command)]
+    [InlineData("newTab", "findPrevious", "g", ShortcutChord.Command | ShortcutChord.Shift)]
+    public void MacDefaultsAddedLaterYieldToAPersistedCustomChord(string owner, string displaced, string key, int modifiers) {
+        var overrides = ShortcutOverrides.Restore([new(owner, Key(key, modifiers)), new("showHistory", null)]);
         var bindings = overrides.Bindings(Offered, DevicePlatform.Desktop).ToDictionary(binding => binding.Command.Name);
-        Assert.Equal(Key("n", modifiers).Keys, bindings[owner].Keys);
+        Assert.Equal(Key(key, modifiers).Keys, bindings[owner].Keys);
         Assert.Null(bindings[displaced].Keys);
         Assert.False(bindings[displaced].IsCustomized);
         Assert.Null(bindings["showHistory"].Keys);
         Assert.True(bindings["showHistory"].IsCustomized);
-        Assert.Equal(Key("n", modifiers), overrides.Resetting(ShortcutCommand.Named(owner)!)
+        Assert.Equal(Key(key, modifiers), overrides.Resetting(ShortcutCommand.Named(owner)!)
             .Effective(ShortcutCommand.Named(displaced)!, Offered, DevicePlatform.Desktop));
     }
 }

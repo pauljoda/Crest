@@ -95,6 +95,8 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     var findMatchState: BrowserFindMatchState { findSession.matchState }
     var findMatches: BrowserFindMatches? { findSession.matches }
     var findFocusRequest: Int { findSession.focusRequest }
+    var findFocusesQueryField: Bool { findSession.focusesQueryField }
+    var canFindAgain: Bool { findSession.canFindAgain }
     private(set) var pageZoom: CGFloat = BrowserPageZoomPolicy.defaultLevel
     let translation = BrowserPageTranslation()
     var readerModeState: BrowserReaderModeState { readerModeSession?.state ?? .unavailable }
@@ -685,6 +687,10 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
 
     func find(_ query: String, direction: BrowserFindDirection = .forward) {
         findSession.find(query, direction: direction, using: findExecutor)
+    }
+
+    func findAgain(_ direction: BrowserFindDirection) {
+        findSession.findAgain(direction, hasLoadedPage: live.url != nil, using: findExecutor)
     }
 
     // MARK: - Actions - Zoom

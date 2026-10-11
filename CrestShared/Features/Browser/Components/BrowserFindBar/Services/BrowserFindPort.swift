@@ -2,7 +2,7 @@
 ///
 /// The two shells reach different pages — one a pooled windowed page, the other
 /// the compact shell's single resident page — but the bar only ever asks the
-/// same four questions, and both pages already answer them with identical
+/// same few questions, and both pages already answer them with identical
 /// signatures. They live here as closures rather than behind a protocol, for
 /// the same reason `BrowserSidebarNavigationPort`'s do: there is no third
 /// implementation to swap in, only two concrete pages, each bound where its
@@ -36,6 +36,10 @@ struct BrowserFindPort {
     /// for the query field, including the ones made while the bar is already
     /// on screen.
     let focusRequest: () -> Int
+
+    /// Whether the bar takes the query field when it appears. A bar brought
+    /// back by finding again leaves the keys with the page.
+    var focusesQueryField: () -> Bool = { true }
 
     /// Closes the bar and clears the page's highlight.
     let dismiss: () -> Void

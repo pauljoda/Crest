@@ -24,12 +24,48 @@ final class BrowserFindSession {
     /// changes on every ask, which is what the bar takes focus from.
     private(set) var focusRequest = 0
 
+    /// Whether the bar should take the query field when it appears. Finding
+    /// again brings a closed bar back to show where the match went, without
+    /// pulling the keys away from the page the reader is stepping through.
+    private(set) var focusesQueryField = true
+
+    /// The last query searched for, which finding again reuses after the bar
+    /// has closed and cleared its own.
+    @ObservationIgnored private var lastQuery = ""
+
     @ObservationIgnored private var generation = 0
+
+    /// Whether there is a query to find again: the bar's own while it is open,
+    /// or the last one searched for once it has closed.
+    var canFindAgain: Bool {
+        !queryToFindAgain.isEmpty
+    }
+
+    private var queryToFindAgain: String {
+        isPresented ? query : lastQuery
+    }
 
     func present(hasLoadedPage: Bool) {
         guard hasLoadedPage else { return }
         isPresented = true
+        focusesQueryField = true
         focusRequest &+= 1
+    }
+
+    /// Moves to the next or previous match for the query there is to find
+    /// again, bringing the bar back without its field's focus when it closed.
+    func findAgain(
+        _ direction: BrowserFindDirection,
+        hasLoadedPage: Bool,
+        using executor: any BrowserFindExecuting
+    ) {
+        let query = queryToFindAgain
+        guard hasLoadedPage, !query.isEmpty else { return }
+        if !isPresented {
+            isPresented = true
+            focusesQueryField = false
+        }
+        find(query, direction: direction, using: executor)
     }
 
     func dismiss(using executor: any BrowserFindExecuting) {
@@ -48,6 +84,7 @@ final class BrowserFindSession {
     ) {
         generation &+= 1
         self.query = query
+        if !query.isEmpty { lastQuery = query }
         let requestGeneration = generation
         guard !query.isEmpty else {
             matchState = .idle
