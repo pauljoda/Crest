@@ -111,6 +111,7 @@ final class BrowserMacAutomation {
 
     private func openEndpoint() {
         guard listener == nil, let path else { return }
+        let status = application.automationEndpoint
         let listener = BrowserAutomationListener(path: path) { [weak self] connection in
             // The main queue keeps connections and their lines in the order
             // they arrived.
@@ -119,8 +120,10 @@ final class BrowserMacAutomation {
         do {
             try listener.start()
             self.listener = listener
+            status.state = .listening(path: path)
         } catch {
             Self.logger.error("The automation socket could not open: \(String(describing: error), privacy: .public)")
+            status.state = .failed(error)
         }
     }
 
@@ -129,6 +132,7 @@ final class BrowserMacAutomation {
             Self.logger.error("The automation socket did not close in time.")
         }
         listener = nil
+        application.automationEndpoint.state = .closed
         for session in sessions.values { end(session) }
         for approval in approvals.values { approval.dismissal.dismiss() }
     }

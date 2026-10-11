@@ -4,12 +4,13 @@ import SwiftUI
 /// Whether local tools, such as scripts and coding agents, may control Crest
 /// on this Mac, which of the person's Spaces they reach, and the tools the
 /// person approved. Tools connect to the socket this pane names, which exists
-/// only while automation is on; a launch that can't offer one can't turn
-/// automation on.
+/// only while automation is on, or says why tools can't reach Crest; a launch
+/// that can't offer a socket can't turn automation on.
 struct BrowserAutomationSettingsPane: View {
     // MARK: - Variables
 
     let core: CrestCore
+    @Environment(BrowserAutomationEndpointStatus.self) private var endpoint: BrowserAutomationEndpointStatus?
     @State private var failure: String?
 
     private var preferences: AutomationPreferences { core.state.automationPreferences }
@@ -35,8 +36,15 @@ struct BrowserAutomationSettingsPane: View {
                     // With no socket, tools have nothing to connect to, but
                     // automation can still be turned off.
                     .disabled(socketPath == nil && !preferences.isOn)
-                if preferences.isOn, let socketPath {
-                    BrowserAutomationSocketRow(path: socketPath)
+                if preferences.isOn {
+                    switch endpoint?.state {
+                    case .listening(let path):
+                        BrowserAutomationSocketRow(path: path)
+                    case .failed(let failure):
+                        Text(Self.unreachable(failure)).foregroundStyle(.red)
+                    case .closed, nil:
+                        EmptyView()
+                    }
                 }
             } footer: {
                 if socketPath == nil {
@@ -74,6 +82,17 @@ struct BrowserAutomationSettingsPane: View {
                 CrestFormFootnote("Forgetting a tool disconnects it. Crest asks again the next time it connects.")
             }
             if let failure { Text(failure).foregroundStyle(.red) }
+        }
+    }
+
+    /// Why tools can't reach Crest while automation is on. Turning it off
+    /// and on again tries the socket again.
+    private static func unreachable(_ failure: BrowserAutomationListener.Failure) -> LocalizedStringKey {
+        switch failure {
+        case .inUse:
+            "Another copy of Crest is using the socket, so tools can’t reach this one. Quit the other copy, then turn automation off and on again."
+        case .occupied, .system:
+            "Crest couldn’t open the socket tools connect to. Turn automation off and on again to try again."
         }
     }
 

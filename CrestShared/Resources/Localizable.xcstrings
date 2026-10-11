@@ -2048,6 +2048,9 @@
     "Another browser" : {
 
     },
+    "Another copy of Crest is using the socket, so tools can’t reach this one. Quit the other copy, then turn automation off and on again." : {
+
+    },
     "Another search provider already uses this name." : {
 
     },
@@ -4301,6 +4304,9 @@
           }
         }
       }
+    },
+    "Crest couldn’t open the socket tools connect to. Turn automation off and on again to try again." : {
+
     },
     "Crest couldn't open your session" : {
 
