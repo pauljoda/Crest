@@ -500,7 +500,10 @@ final class SpaceScrollGestureTests: XCTestCase {
     private func nativeRoot(_ space: SpaceModel, _ isSelected: Bool) -> SpacePageRoot<Text> {
         SpacePageRoot(
             content: Text(space.settings.name),
-            assignment: BrowserSpaceRuntimeAssignment(space: space))
+            assignment: BrowserSpaceRuntimeAssignment(space: space),
+            objects: SpacePageObjects(
+                sidebarInteraction: nil, extensionSidePanel: nil, downloadFeedback: nil, passkeyAccess: nil,
+                softwareUpdates: nil, core: nil))
     }
 
     private func input(

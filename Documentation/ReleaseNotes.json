@@ -3793,6 +3793,14 @@
     "search-logos-keep-proportions": {
       "category": "fixed",
       "message": "Search engine and assistant logos in Settings keep their proportions instead of looking stretched."
+    },
+    "space-switching-keeps-crest-open": {
+      "category": "fixed",
+      "message": "Switching Spaces no longer makes Crest quit unexpectedly on macOS 26."
+    },
+    "settings-opens-in-browser-window": {
+      "category": "fixed",
+      "message": "Settings opens in your browser window instead of a new window while a Quick Window is in front."
     }
   }
 }

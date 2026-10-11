@@ -92,9 +92,7 @@ final class BrowserMacWindows {
                 browser: application.privateBrowser, pages: application.privatePages,
                 chrome: application.privateChrome, windowID: application.privatePages.windowID)
         }
-        guard let model = activeWindowModel else { return nil }
-        return BrowserMacWindowContext(
-            browser: model.browser, pages: model.pages, chrome: model.chrome, windowID: model.id)
+        return activeWindowModel.map(Self.context(of:))
     }
 
     /// The menu bar's commands as they run in the key browser window.
@@ -162,6 +160,29 @@ final class BrowserMacWindows {
     /// Whether `id` is the private window's identity while it is open.
     func isPrivateWindow(_ id: UUID) -> Bool {
         controllers.contains { $0.kind == .private && $0.windowID == id }
+    }
+
+    /// The stores of the window a menu command that needs a browser window
+    /// runs in: the key browser or private window; else the browser window the
+    /// person used, brought forward; else a new browser window. A Quick Window
+    /// or setup being key never opens another window for the command.
+    func contextBringingBrowserWindowForward() -> BrowserMacWindowContext? {
+        if let context = activeContext { return context }
+        let coordinator = application.windowCoordinator
+        if let window = activeBrowserWindow, let controller = controller(showing: window),
+            let model = coordinator.existingModel(for: controller.windowID)
+        {
+            controller.bringForward()
+            return Self.context(of: model)
+        }
+        let request = BrowserMacWindowRequest.normal(sourceWindowID: nil)
+        open(request, activation: .key)
+        return coordinator.existingModel(for: request.id).map(Self.context(of:))
+    }
+
+    private static func context(of model: BrowserMacWindowModel) -> BrowserMacWindowContext {
+        BrowserMacWindowContext(
+            browser: model.browser, pages: model.pages, chrome: model.chrome, windowID: model.id)
     }
 
     private func controller(showing window: NSWindow?) -> BrowserMacWindowController? {

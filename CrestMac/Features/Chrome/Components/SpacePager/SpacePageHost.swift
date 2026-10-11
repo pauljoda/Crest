@@ -16,15 +16,24 @@ extension EnvironmentValues {
 /// The hosting view inherits its environment through the representable's native
 /// hierarchy. Copying the parent's entire EnvironmentValues back into this root
 /// duplicates propagation through every row on native geometry/focus updates.
+/// Only the window's shared objects travel with the root, because views require
+/// them and a page can be built before it has inherited them.
 struct SpacePageRoot<Content: View>: View {
     let content: Content
     let assignment: BrowserSpaceRuntimeAssignment
+    let objects: SpacePageObjects
     var contentPresentation = SpaceContentPresentation.interactive
 
     var body: some View {
         content
             .id(assignment)
             .environment(\.spaceContentPresentation, contentPresentation)
+            .environment(objects.sidebarInteraction)
+            .environment(objects.extensionSidePanel)
+            .environment(objects.downloadFeedback)
+            .environment(objects.passkeyAccess)
+            .environment(objects.softwareUpdates)
+            .environment(objects.core)
     }
 }
 

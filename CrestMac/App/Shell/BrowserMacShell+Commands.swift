@@ -120,23 +120,17 @@ extension BrowserMacShell {
         application?.softwareUpdates.checkForUpdates()
     }
 
-    /// Opens Settings in the key browser window, opening one when none is key.
+    /// Opens Settings in the browser window the person is using, opening one
+    /// only when none is open.
     func openSettings() {
-        guard let context = activeContextOpeningWindow() else { return }
+        guard let context = windows?.contextBringingBrowserWindowForward() else { return }
         application?.openSettings(in: context.windowID)
     }
 
-    /// Opens Getting Started in the key browser window, opening one when none
-    /// is key.
+    /// Opens Getting Started in the browser window the person is using,
+    /// opening one only when none is open.
     func openGettingStarted() {
-        guard let context = activeContextOpeningWindow() else { return }
+        guard let context = windows?.contextBringingBrowserWindowForward() else { return }
         application?.openGettingStarted(in: context.windowID)
-    }
-
-    /// The key browser window's stores, after opening a window when none is key.
-    private func activeContextOpeningWindow() -> BrowserMacWindowContext? {
-        guard let windows else { return nil }
-        if windows.activeContext == nil { windows.open(.normal(sourceWindowID: nil), activation: .key) }
-        return windows.activeContext
     }
 }
