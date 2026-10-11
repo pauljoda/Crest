@@ -2416,6 +2416,9 @@
     "Automation" : {
 
     },
+    "Automation isn’t available here because Crest can’t create the socket tools connect to." : {
+
+    },
     "automation scripts coding agents AI Claude Codex command line CLI socket tools control remote JSON-RPC" : {
 
     },

@@ -4,7 +4,8 @@ import SwiftUI
 /// Whether local tools, such as scripts and coding agents, may control Crest
 /// on this Mac, which of the person's Spaces they reach, and the tools the
 /// person approved. Tools connect to the socket this pane names, which exists
-/// only while automation is on.
+/// only while automation is on; a launch that can't offer one can't turn
+/// automation on.
 struct BrowserAutomationSettingsPane: View {
     // MARK: - Variables
 
@@ -31,13 +32,22 @@ struct BrowserAutomationSettingsPane: View {
             Section {
                 Toggle("Allow tools to control Crest", isOn: isOn)
                     .accessibilityIdentifier("automation-enabled")
+                    // With no socket, tools have nothing to connect to, but
+                    // automation can still be turned off.
+                    .disabled(socketPath == nil && !preferences.isOn)
                 if preferences.isOn, let socketPath {
                     BrowserAutomationSocketRow(path: socketPath)
                 }
             } footer: {
-                CrestFormFootnote(
-                    "Scripts and coding agents on this Mac can open, read and close tabs in the Spaces you choose. Crest asks before each new tool connects."
-                )
+                if socketPath == nil {
+                    CrestFormFootnote(
+                        "Automation isn’t available here because Crest can’t create the socket tools connect to."
+                    )
+                } else {
+                    CrestFormFootnote(
+                        "Scripts and coding agents on this Mac can open, read and close tabs in the Spaces you choose. Crest asks before each new tool connects."
+                    )
+                }
             }
             Section {
                 ForEach(spaces) { space in
