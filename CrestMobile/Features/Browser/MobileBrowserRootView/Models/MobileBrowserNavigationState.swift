@@ -31,6 +31,10 @@ final class MobileBrowserNavigationState {
     /// The window has measured itself, so `presentation` is its own.
     @ObservationIgnored
     private var hasAdaptedPresentation = false
+    /// Whether a narrow window docked a sidebar the person had hidden at
+    /// regular width, which hides again once the window widens.
+    @ObservationIgnored
+    private var dockedHiddenSidebarWhileNarrow = false
 
     init(
         regularSidebarIsPresented: Bool = true,
@@ -256,16 +260,22 @@ final class MobileBrowserNavigationState {
         hasAdaptedPresentation = true
         if presentation == .regular {
             compactToolbarIsHidden = false
+            if dockedHiddenSidebarWhileNarrow, regularSidebarPresentation == .docked {
+                hideRegularSidebar()
+            }
+            dockedHiddenSidebarWhileNarrow = false
         }
         dockIfFloatingIsNotAllowed()
     }
 
     /// A narrow window that may not float its sidebar keeps it docked, which
-    /// keeps the page full screen under the compact toolbar.
+    /// keeps the page full screen under the compact toolbar. A sidebar hidden
+    /// at regular width hides again when the window widens.
     private func dockIfFloatingIsNotAllowed() {
         guard presentation == .compact, !allowsCompactFloatingSidebar, regularSidebarPresentation != .docked else {
             return
         }
+        dockedHiddenSidebarWhileNarrow = true
         dockRegularSidebar()
     }
 
