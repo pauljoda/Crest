@@ -18,6 +18,13 @@ struct BrowserSearchProviderIcon: View {
         let scale: CGFloat
     }
 
+    /// A fetched site icon as drawn for one request. It shows only while that
+    /// request is current, so a drawing for another size or scale never does.
+    private struct SiteIcon {
+        let request: SiteIconRequest
+        let image: CGImage
+    }
+
     // MARK: - Variables
 
     let provider: SearchProvider
@@ -26,7 +33,7 @@ struct BrowserSearchProviderIcon: View {
 
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.displayScale) private var displayScale
-    @State private var siteIcon: CGImage?
+    @State private var siteIcon: SiteIcon?
 
     var body: some View {
         Group {
@@ -50,7 +57,9 @@ struct BrowserSearchProviderIcon: View {
     // MARK: - Actions - Artwork
 
     private var artwork: CGImage? {
-        guard let logo = provider.logo else { return siteIcon }
+        guard let logo = provider.logo else {
+            return siteIcon.flatMap { $0.request == siteIconRequest ? $0.image : nil }
+        }
         return BrowserSearchProviderArtworkRenderer.shared.image(
             logo: logo, size: size, colorScheme: colorScheme, scale: displayScale)
     }
@@ -80,6 +89,8 @@ struct BrowserSearchProviderIcon: View {
             !Task.isCancelled
         else { return }
         siteIcon = BrowserSearchProviderArtworkRenderer.shared.image(
-            siteIcon: image, size: request.size, scale: request.scale)
+            siteIcon: image, size: request.size, scale: request.scale
+        )
+        .map { SiteIcon(request: request, image: $0) }
     }
 }
