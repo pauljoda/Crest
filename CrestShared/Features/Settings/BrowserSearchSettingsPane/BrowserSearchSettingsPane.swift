@@ -9,6 +9,7 @@ struct BrowserSearchSettingsPane: View {
 
     @Bindable private var appPreferences = BrowserAppPreferenceStore.shared
     @State private var catalog: BrowserSearchCatalog
+    @State private var editing: BrowserSearchProviderDraft?
 
     init(browser: BrowserStore) {
         self.browser = browser
@@ -21,7 +22,11 @@ struct BrowserSearchSettingsPane: View {
                 preferences: appPreferences, catalog: catalog, profileID: browser.shownSpace?.profileID)
             BrowserPaletteResultsSettingsSection(preferences: appPreferences)
             BrowserPaletteTypingSettingsSection(preferences: appPreferences, browser: browser)
-            BrowserSearchProvidersSettingsSection(catalog: catalog, profileID: browser.shownSpace?.profileID)
+            BrowserSearchProvidersSettingsSection(
+                catalog: catalog, profileID: browser.shownSpace?.profileID, editing: $editing)
+        }
+        .sheet(item: $editing) { draft in
+            BrowserSearchProviderEditor(draft: draft, catalog: catalog, profileID: browser.shownSpace?.profileID)
         }
     }
 }

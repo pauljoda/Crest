@@ -3,12 +3,14 @@ import SwiftUI
 /// Every search provider the device offers, one section for each kind: each
 /// provider collapsed to its icon, main shortcut and switch until the person
 /// opens it to its options and edits. The person may add their own and
-/// return the built-ins to how they ship.
+/// return the built-ins to how they ship. The pane presents the provider
+/// being edited: a phone's list never builds a section scrolled out of view,
+/// so a sheet on one of these would wait for its section to come into view.
 struct BrowserSearchProvidersSettingsSection: View {
     let catalog: BrowserSearchCatalog
     var profileID: UUID? = nil
+    @Binding var editing: BrowserSearchProviderDraft?
 
-    @State private var editing: BrowserSearchProviderDraft?
     @State private var confirmsResetting = false
     /// The providers the person opened, by name; every one starts closed.
     @State private var expandedNames: Set<String> = []
@@ -37,9 +39,6 @@ struct BrowserSearchProvidersSettingsSection: View {
                 confirmsResetting = true
             }
             .accessibilityIdentifier("restore-search-providers")
-        }
-        .sheet(item: $editing) { draft in
-            BrowserSearchProviderEditor(draft: draft, catalog: catalog, profileID: profileID)
         }
         .confirmationDialog("Restore the built-in providers?", isPresented: $confirmsResetting) {
             Button("Restore Defaults", role: .destructive) { catalog.reset() }

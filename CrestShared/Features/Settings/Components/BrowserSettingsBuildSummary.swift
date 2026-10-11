@@ -2,16 +2,14 @@ import SwiftUI
 
 /// The build at a glance over Settings: Crest's icon, its version and build,
 /// and the engine version it runs pages in.
-struct BrowserSettingsBuildSummary: View {
-    let icon: Image
+struct BrowserSettingsBuildSummary<Icon: View>: View {
     let engine: String?
+    @ViewBuilder let icon: Icon
     private let build = BrowserAboutBuildInformation.current
 
     var body: some View {
         HStack(spacing: 10) {
             icon
-                .resizable()
-                .scaledToFit()
                 .frame(width: 40, height: 40)
                 .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 1) {

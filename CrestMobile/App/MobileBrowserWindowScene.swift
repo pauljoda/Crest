@@ -261,6 +261,7 @@ struct MobileBrowserWindowScene: View {
     }
 
     private func openExternalURL(_ url: URL) {
+        BrowserPlatformDefaultBrowserSystem.noteOpenedLink(url)
         Task {
             guard await model.routeExternalURL(url) else { return }
             withAnimation(modeAnimation) {

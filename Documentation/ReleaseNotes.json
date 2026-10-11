@@ -3801,6 +3801,38 @@
     "settings-opens-in-browser-window": {
       "category": "fixed",
       "message": "Settings opens in your browser window instead of a new window while a Quick Window is in front."
+    },
+    "start-on-new-tab": {
+      "category": "new",
+      "message": "On iPhone and iPad, Start on new tab in General settings opens Crest on a new tab in your default Space, ready to search."
+    },
+    "floating-sidebar-optional": {
+      "category": "improved",
+      "message": "On iPhone the sidebar stays full screen. Turn on Allow floating sidebar in General settings to float it over the page instead."
+    },
+    "floating-sidebar-buttons-respond": {
+      "category": "fixed",
+      "message": "Buttons in the floating sidebar respond to taps, and its Settings button opens Settings."
+    },
+    "settings-shows-real-app-icon": {
+      "category": "fixed",
+      "message": "Settings on iPhone and iPad shows Crest’s real app icon, including the one you chose, in light and dark."
+    },
+    "default-browser-status-remembered": {
+      "category": "fixed",
+      "message": "On iPhone and iPad, General settings shows whether Crest is your default browser instead of Unavailable when iOS limits how often Crest can check."
+    },
+    "search-provider-editor-opens": {
+      "category": "fixed",
+      "message": "Edit Shortcuts and Add Provider in Search settings open right away on iPhone and iPad."
+    },
+    "space-search-picker-icons": {
+      "category": "improved",
+      "message": "A Space’s Search with menu shows each provider’s icon, like the default search menu."
+    },
+    "settings-section-colors": {
+      "category": "improved",
+      "message": "Each section in Settings has its own color, drawn from the Space templates."
     }
   }
 }

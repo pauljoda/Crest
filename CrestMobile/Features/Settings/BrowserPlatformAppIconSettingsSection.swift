@@ -12,9 +12,9 @@ struct BrowserPlatformAppIconSettingsSection: View {
             settings: [resettable]
         ) {
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 78), spacing: 12)], spacing: 16) {
-                iconChoice(name: nil, title: "Crest", preview: nil)
+                iconChoice(name: nil, title: "Crest")
                 ForEach(SpaceHouse.all, id: \.self) { house in
-                    iconChoice(name: house.appIconName, title: house.title, preview: house.appIconName + "Preview")
+                    iconChoice(name: house.appIconName, title: house.title)
                 }
             }
             .padding(.vertical, 8)
@@ -51,16 +51,15 @@ struct BrowserPlatformAppIconSettingsSection: View {
         }
     }
 
-    private func iconChoice(name: String?, title: LocalizedStringResource, preview: String?) -> some View {
+    private func iconChoice(name: String?, title: LocalizedStringResource) -> some View {
         Button {
             select(name)
         } label: {
             VStack(spacing: 6) {
-                Image(preview ?? "CrestPreview").resizable().scaledToFit()
+                BrowserPlatformAppIcon(name: name)
                     .frame(width: 58, height: 58)
-                    .clipShape(.rect(cornerRadius: 13))
                     .overlay {
-                        RoundedRectangle(cornerRadius: 13)
+                        RoundedRectangle(cornerRadius: 13, style: .continuous)
                             .strokeBorder(selectedName == name ? Color.accentColor : .clear, lineWidth: 3)
                     }
                 Text(title).font(.caption).foregroundStyle(.primary)

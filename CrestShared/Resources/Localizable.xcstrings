@@ -1980,6 +1980,9 @@
         }
       }
     },
+    "Allow floating sidebar" : {
+
+    },
     "Allow…" : {
 
     },
@@ -2818,7 +2821,7 @@
     "Browser data found · Review it" : {
 
     },
-    "browser startup default Space typing spelling spell check text editing Picture in Picture video developer toolbar localhost local pages translation system permissions access camera microphone location notifications passkeys files folders downloads allow blocked repair" : {
+    "browser startup default Space typing spelling spell check text editing Picture in Picture video developer toolbar localhost local pages translation system permissions access camera microphone location notifications passkeys files folders downloads allow blocked repair new tab floating sidebar" : {
 
     },
     "Browser window preview" : {
@@ -8687,6 +8690,9 @@
         }
       }
     },
+    "Open a New Tab" : {
+
+    },
     "Open a regular window to do this." : {
 
     },
@@ -12546,6 +12552,9 @@
       }
     },
     "Start from" : {
+
+    },
+    "Start on new tab" : {
 
     },
     "Start Page" : {

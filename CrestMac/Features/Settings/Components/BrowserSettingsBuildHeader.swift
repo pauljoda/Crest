@@ -7,9 +7,11 @@ struct BrowserSettingsBuildHeader: View {
     @Environment(\.browserMacWindows) private var windows
 
     var body: some View {
-        BrowserSettingsBuildSummary(
-            icon: Image(nsImage: NSApplication.shared.applicationIconImage), engine: windows?.engineCredits
-        )
+        BrowserSettingsBuildSummary(engine: windows?.engineCredits) {
+            Image(nsImage: NSApplication.shared.applicationIconImage)
+                .resizable()
+                .scaledToFit()
+        }
         .padding(.horizontal, 14)
         .padding(.top, 14)
     }

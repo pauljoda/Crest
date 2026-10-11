@@ -66,14 +66,33 @@ extension MobileBrowserRootModel {
         )
     }
 
-    func prepareBrowser() async {
-        guard !hasPreparedBrowser else { return }
+    /// Prepares the window's pages once, then applies the launch's startup
+    /// choice. True when the launch starts on a new tab in the default Space,
+    /// which this shows first; the view opens the tab, since it owns the
+    /// address field the tab focuses.
+    @discardableResult
+    func prepareBrowser() async -> Bool {
+        guard !hasPreparedBrowser else { return false }
         await pages.prepareContentBlocking()
         hasPreparedBrowser = true
+        if startupBehavior.opensNewTab {
+            return showDefaultSpaceForNewTab()
+        }
         guard startupBehavior.activatesRestoredTab,
             !navigation.defersPageActivation
-        else { return }
+        else { return false }
         synchronizeSelection()
+        return false
+    }
+
+    /// Shows the default Space for the launch's new tab, unless the window
+    /// already shows a tab, such as one a link opened, or the Space is locked.
+    private func showDefaultSpaceForNewTab() -> Bool {
+        guard browser.shownTab == nil else { return false }
+        if let defaultSpaceID = browser.workspaceModel?.defaultSpaceID {
+            browser.selectSpace(defaultSpaceID)
+        }
+        return browser.shownSpace != nil && !selectedSpaceIsLocked
     }
 
     /// Releases moved pages and discards archived state for removed tabs.

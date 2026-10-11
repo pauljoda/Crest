@@ -20658,27 +20658,37 @@ struct StartupBehavior: Hashable, Sendable {
     var name: String { facts.name }
     var title: LocalizedStringResource { facts.title }
     var activatesRestoredTab: Bool { facts.activatesRestoredTab }
+    var opensNewTab: Bool { facts.opensNewTab }
     private let facts: Facts
 
-    private init(tag: Int, name: String, title: LocalizedStringResource, activatesRestoredTab: Bool) {
+    private init(tag: Int, name: String, title: LocalizedStringResource, activatesRestoredTab: Bool, opensNewTab: Bool) {
         self.tag = tag
-        facts = Facts(name: name, title: title, activatesRestoredTab: activatesRestoredTab)
+        facts = Facts(name: name, title: title, activatesRestoredTab: activatesRestoredTab, opensNewTab: opensNewTab)
     }
 
     static let showStartPage = StartupBehavior(
         tag: 0,
         name: "showStartPage",
         title: LocalizedStringResource("Show Start Page"),
-        activatesRestoredTab: false
+        activatesRestoredTab: false,
+        opensNewTab: false
     )
     static let lastActiveTab = StartupBehavior(
         tag: 1,
         name: "lastActiveTab",
         title: LocalizedStringResource("Open Last Active Tab"),
-        activatesRestoredTab: true
+        activatesRestoredTab: true,
+        opensNewTab: false
+    )
+    static let newTab = StartupBehavior(
+        tag: 2,
+        name: "newTab",
+        title: LocalizedStringResource("Open a New Tab"),
+        activatesRestoredTab: false,
+        opensNewTab: true
     )
 
-    static let all: [StartupBehavior] = [showStartPage, lastActiveTab]
+    static let all: [StartupBehavior] = [showStartPage, lastActiveTab, newTab]
 
     static func named(_ name: String?) -> StartupBehavior? {
         all.first { $0.name == name }
@@ -20696,11 +20706,13 @@ struct StartupBehavior: Hashable, Sendable {
         let name: String
         let title: LocalizedStringResource
         let activatesRestoredTab: Bool
+        let opensNewTab: Bool
 
-        init(name: String, title: LocalizedStringResource, activatesRestoredTab: Bool) {
+        init(name: String, title: LocalizedStringResource, activatesRestoredTab: Bool, opensNewTab: Bool) {
             self.name = name
             self.title = title
             self.activatesRestoredTab = activatesRestoredTab
+            self.opensNewTab = opensNewTab
         }
     }
 }

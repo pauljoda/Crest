@@ -10,6 +10,16 @@ final class MobileBrowserNavigationState {
     private(set) var compactToolbarIsHidden = false
     let utilityPresentation = BrowserUtilityPresentationState()
 
+    /// Whether a narrow window may float its sidebar over the page. When it
+    /// may not, the full-screen tab viewer is its only sidebar, and the
+    /// sidebar stays docked while the window is narrow.
+    var allowsCompactFloatingSidebar: Bool {
+        didSet {
+            guard allowsCompactFloatingSidebar != oldValue, hasAdaptedPresentation else { return }
+            dockIfFloatingIsNotAllowed()
+        }
+    }
+
     @ObservationIgnored
     private let transientSidebarDismissalDelay: Duration
     @ObservationIgnored
@@ -18,16 +28,21 @@ final class MobileBrowserNavigationState {
     private var transientSidebarDismissalIsPaused = false
     @ObservationIgnored
     private var lockedSpaceKeepsSidebarVisible = false
+    /// The window has measured itself, so `presentation` is its own.
+    @ObservationIgnored
+    private var hasAdaptedPresentation = false
 
     init(
         regularSidebarIsPresented: Bool = true,
         initiallyShowsCompactPage: Bool = false,
+        allowsCompactFloatingSidebar: Bool = true,
         transientSidebarDismissalDelay: Duration = .seconds(5)
     ) {
         regularSidebarPresentation =
             regularSidebarIsPresented
             ? .docked
             : .collapsed
+        self.allowsCompactFloatingSidebar = allowsCompactFloatingSidebar
         self.transientSidebarDismissalDelay = transientSidebarDismissalDelay
         compactPagePresentationPhase =
             initiallyShowsCompactPage
@@ -195,17 +210,24 @@ final class MobileBrowserNavigationState {
     }
 
     /// Uses the same three sidebar states as regular-width windows while
-    /// adapting only what "docked" means on a narrow phone.
+    /// adapting only what "docked" means on a narrow phone. Without a
+    /// floating sidebar it moves between the tab viewer and the page.
     func toggleCompactSidebar() {
         switch compactSidebarPresentation.kind {
         case .docked:
-            showRegularSidebar()
+            if allowsCompactFloatingSidebar {
+                showRegularSidebar()
+            }
             compactToolbarIsHidden = false
             compactPagePresentationPhase = .presentingPage
         case .floating:
             showTabViewer()
         case .collapsed:
-            showRegularSidebar()
+            if allowsCompactFloatingSidebar {
+                showRegularSidebar()
+            } else {
+                showTabViewer()
+            }
         }
     }
 
@@ -231,9 +253,20 @@ final class MobileBrowserNavigationState {
 
     func adapt(to presentation: MobileBrowserPresentation) {
         self.presentation = presentation
+        hasAdaptedPresentation = true
         if presentation == .regular {
             compactToolbarIsHidden = false
         }
+        dockIfFloatingIsNotAllowed()
+    }
+
+    /// A narrow window that may not float its sidebar keeps it docked, which
+    /// keeps the page full screen under the compact toolbar.
+    private func dockIfFloatingIsNotAllowed() {
+        guard presentation == .compact, !allowsCompactFloatingSidebar, regularSidebarPresentation != .docked else {
+            return
+        }
+        dockRegularSidebar()
     }
 
     private func scheduleTransientSidebarDismissal() {

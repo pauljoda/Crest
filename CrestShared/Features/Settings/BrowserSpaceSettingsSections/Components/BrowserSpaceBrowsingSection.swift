@@ -60,6 +60,7 @@ struct BrowserSpaceBrowsingSection: View {
                 provider: currentPreferences.followsDefaultSearch
                     ? nil : catalog.provider(for: currentPreferences, isPrivate: browser.isPrivateBrowsing))
         } set: { choice in
+            dismissKeyboard()
             browser.setSearch(choice.provider, suggestions: suggestionChoice.wrappedValue.enabled, in: space.id)
         }
     }
@@ -79,36 +80,22 @@ struct BrowserSpaceBrowsingSection: View {
             comment: "A Space follows the device's default search, named in parentheses.")
     }
 
+    /// The same picker as the default search's, each choice in its
+    /// provider's icon; the default wears the icon of the provider it follows.
     private var searchPicker: some View {
-        BrowserSpaceBrowsingPreferencePicker(
-            title: "Search with",
-            presentation: pickerPresentation,
-            selection: searchChoice,
-            choices: searchChoices,
-            choiceTitle: title(of:),
-            accessibilityIdentifier: "space-search-provider",
-            dismissKeyboard: dismissKeyboard,
-            choiceLabel: { choice in
-                if let provider = choice.provider {
-                    BrowserSearchProviderIdentityLabel(provider: provider, profileID: space.profileID)
+        Picker("Search with", selection: searchChoice) {
+            ForEach(searchChoices) { choice in
+                if let provider = choice.provider ?? catalog.defaultProvider(isPrivate: browser.isPrivateBrowsing) {
+                    BrowserSearchProviderIdentityLabel(
+                        provider: provider, profileID: space.profileID, title: title(of: choice)
+                    )
+                    .tag(choice)
                 } else {
-                    Text(title(of: choice))
+                    Text(title(of: choice)).tag(choice)
                 }
-            },
-            selectedValue: {
-                HStack(spacing: BrowserSpaceBrowsingPickerValueLayout.touch.providerTextSpacing) {
-                    if let provider = catalog.provider(for: currentPreferences, isPrivate: browser.isPrivateBrowsing) {
-                        BrowserSearchProviderIcon(
-                            provider: provider, profileID: space.profileID,
-                            size: BrowserSearchProviderIdentityLabelLayout.touch.iconSize)
-                    }
-                    Text(title(of: searchChoice.wrappedValue))
-                        .foregroundStyle(.secondary)
-                        .lineLimit(BrowserSpaceBrowsingPickerValueLayout.touch.providerTitleLineLimit)
-                        .minimumScaleFactor(BrowserSpaceBrowsingPickerValueLayout.touch.minimumProviderTitleScale)
-                        .allowsTightening(true)
-                }
-            })
+            }
+        }
+        .accessibilityIdentifier("space-search-provider")
     }
 
     // MARK: - Suggestions
