@@ -29,14 +29,17 @@ struct BrowserMacCommand {
         run: { $0.closeTabOrWindow() })
     static let closeWindow = BrowserMacCommand(
         .closeWindow, withoutWindow: .closesShellWindow, run: { $0.closeKeyWindow() })
-    static let back = BrowserMacCommand(.back, isAvailable: { $0.pages.canGoBack }, run: { $0.pages.goBack() })
+    static let back = BrowserMacCommand(
+        .back, isAvailable: { $0.pages.commandPage?.live.canGoBack == true },
+        run: { $0.pages.commandPage?.goBack() })
     static let forward = BrowserMacCommand(
-        .forward, isAvailable: { $0.pages.canGoForward }, run: { $0.pages.goForward() })
-    static let reloadPage = BrowserMacCommand(.reloadPage) { $0.pages.reloadOrStop() }
+        .forward, isAvailable: { $0.pages.commandPage?.live.canGoForward == true },
+        run: { $0.pages.commandPage?.goForward() })
+    static let reloadPage = BrowserMacCommand(.reloadPage) { $0.reload(.standard) }
     static let stopLoading = BrowserMacCommand(
-        .stopLoading, isAvailable: { $0.pages.isLoading },
-        run: { $0.pages.stopLoading() })
-    static let reloadFromOrigin = BrowserMacCommand(.reloadFromOrigin) { $0.pages.reloadFromOrigin() }
+        .stopLoading, isAvailable: { $0.pages.commandPage?.live.isLoading == true },
+        run: { $0.pages.commandPage?.stopLoading() })
+    static let reloadFromOrigin = BrowserMacCommand(.reloadFromOrigin) { $0.reload(.fromOrigin) }
     static let toggleSelectedTabPinned = BrowserMacCommand(.toggleSelectedTabPinned) { $0.toggleSelectedTabPinned() }
     static let duplicateTab = BrowserMacCommand(.duplicateTab) { $0.duplicateSelectedTab() }
     static let reopenClosedTab = BrowserMacCommand(.reopenClosedTab) { $0.reopenClosedTab() }
@@ -67,29 +70,29 @@ struct BrowserMacCommand {
         .toggleContentBlocking, isAvailable: { $0.supportsEngineCapability(.contentBlocking) },
         title: { $0.contentBlockingActionTitle }, run: { $0.toggleContentBlocking() })
     static let findInPage = BrowserMacCommand(
-        .findInPage, isAvailable: { $0.supportsPageCapability(.find) },
-        run: { $0.pages.presentFind() })
+        .findInPage, isAvailable: { $0.commandPageSupports(.find) },
+        run: { $0.pages.commandPage?.presentFind() })
     static let zoomIn = BrowserMacCommand(.zoomIn, isAvailable: { $0.canZoom }, run: { $0.zoomIn() })
     static let zoomOut = BrowserMacCommand(.zoomOut, isAvailable: { $0.canZoom }, run: { $0.zoomOut() })
     static let actualSize = BrowserMacCommand(.actualSize, isAvailable: { $0.canZoom }, run: { $0.resetZoom() })
     static let copyPageLink = BrowserMacCommand(
-        .copyPageLink, isAvailable: { $0.pages.hasActivePage },
+        .copyPageLink, isAvailable: { $0.hasCommandPage },
         run: { $0.copyPageLink() })
     static let copyPageLinkAsMarkdown = BrowserMacCommand(
-        .copyPageLinkAsMarkdown, isAvailable: { $0.pages.hasActivePage },
+        .copyPageLinkAsMarkdown, isAvailable: { $0.hasCommandPage },
         run: { $0.copyPageLinkAsMarkdown() })
     static let sharePage = BrowserMacCommand(
-        .sharePage, isAvailable: { $0.pages.hasActivePage },
-        run: { $0.pages.sharePage() })
+        .sharePage, isAvailable: { $0.hasCommandPage },
+        run: { $0.pages.commandPage?.sharePage() })
     static let exportPDF = BrowserMacCommand(
-        .exportPDF, isAvailable: { $0.supportsPageCapability(.pdf) },
-        run: { $0.pages.exportPDF() })
+        .exportPDF, isAvailable: { $0.commandPageSupports(.pdf) },
+        run: { $0.pages.commandPage?.exportPDF() })
     static let saveWebArchive = BrowserMacCommand(
-        .saveWebArchive, isAvailable: { $0.supportsPageCapability(.webArchive) },
-        run: { $0.pages.exportWebArchive() })
+        .saveWebArchive, isAvailable: { $0.commandPageSupports(.webArchive) },
+        run: { $0.pages.commandPage?.exportWebArchive() })
     static let printPage = BrowserMacCommand(
-        .printPage, isAvailable: { $0.supportsPageCapability(.print) },
-        run: { $0.pages.printPage() })
+        .printPage, isAvailable: { $0.commandPageSupports(.print) },
+        run: { $0.pages.commandPage?.printPage() })
     static let toggleSidebar = BrowserMacCommand(.toggleSidebar) { $0.toggleSidebar() }
     static let showHistory = BrowserMacCommand(.showHistory) { $0.chrome.presentUtility(.history) }
     static let showArchive = BrowserMacCommand(.showArchive) { $0.chrome.presentUtility(.archive) }

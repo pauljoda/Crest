@@ -5,6 +5,9 @@ struct BrowserWebPageSurface: View {
     let browser: BrowserStore
     let pagePresentation: PagePresentation
     let isPageActive: Bool
+    /// Whether the window's page commands act on this page, as they do on a
+    /// Peek open over the active tab; its find bar then takes the keyboard.
+    let isCommandPage: Bool
     let focusRestorationGate: BrowserWebFocusRestorationGate
     /// Where the tab holding a page sits in its Space and what it is called,
     /// for lists that follow the sidebar.
@@ -40,7 +43,7 @@ struct BrowserWebPageSurface: View {
                 BrowserFindBar(
                     port: findPort,
                     capabilities: capabilities,
-                    isPageActive: isPageActive
+                    isPageActive: isCommandPage
                 )
                 .padding(BrowserWebPageSurfaceMetrics.overlayPadding)
                 .frame(

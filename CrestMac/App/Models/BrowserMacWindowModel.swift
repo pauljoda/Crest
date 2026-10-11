@@ -1,5 +1,6 @@
 import AppKit
 import Observation
+import SwiftUI
 
 @Observable
 @MainActor
@@ -30,6 +31,19 @@ final class BrowserMacWindowModel {
         self.pages = pages
         self.transientBrowsing = transientBrowsing
         self.windowState = windowState
+        // Page commands act on a Peek only once it opens, not while its link
+        // is still being dragged.
+        pages.isPeekOpen = { [weak transientBrowsing] request in
+            transientBrowsing?.presentationPhase(for: request) == .committed
+        }
+        // Closes as the Peek's own Close button does.
+        pages.dismissPeek = { [weak transientBrowsing] request in
+            let animation = BrowserVisualAccessibilityPolicy.animation(
+                CrestMotion.peekDismissal,
+                reduceMotion: NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+            )
+            withAnimation(animation) { _ = transientBrowsing?.dismissPeek(request) }
+        }
         closeGate = BrowserWindowCloseGate(core: browser.core) { [windowID = browser.windowID] in
             PrepareToCloseWindows(requestID: UUID(), windowIDs: [windowID])
         }

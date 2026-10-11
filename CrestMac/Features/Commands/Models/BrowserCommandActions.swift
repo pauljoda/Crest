@@ -94,8 +94,19 @@ struct BrowserCommandActions {
         }
     }
 
+    /// Whether the page the page commands act on has loaded a document.
+    var hasCommandPage: Bool {
+        pages.commandPage?.live.documentURL != nil
+    }
+
     var canZoom: Bool {
-        supportsPageCapability(.zoom) && pages.activePage?.developerViewport == nil
+        commandPageSupports(.zoom) && pages.commandPage?.developerViewport == nil
+    }
+
+    /// The same question as `supportsPageCapability` for the page the page
+    /// commands act on, which a Peek open over the active tab stands in for.
+    func commandPageSupports(_ capability: EngineCapability) -> Bool {
+        hasCommandPage && pages.commandPage?.pageEngine.registration.supports(capability) == true
     }
 
     func supportsPageCapability(_ capability: EngineCapability) -> Bool {
@@ -152,6 +163,8 @@ struct BrowserCommandActions {
     /// Closes the selected tab the way the core closes it, or the window when
     /// the core says only the window is left to close.
     func closeTabOrWindow() {
+        // A Peek open over the tab closes first, as it is what shows.
+        if pages.closePeek() { return }
         guard let selectedTab = browser.shownTab, let space = browser.shownSpace,
             !browser.closingLeavesOnlyTheWindow(selectedTab.id, in: space.id)
         else {
@@ -262,12 +275,12 @@ struct BrowserCommandActions {
     }
 
     func copyPageLink() {
-        guard pages.copyPageLink() else { return }
+        guard pages.commandPage?.copyPageLink() == true else { return }
         chrome.showURLCopiedFeedback()
     }
 
     func copyPageLinkAsMarkdown() {
-        guard pages.copyPageLinkAsMarkdown() else { return }
+        guard pages.commandPage?.copyPageLinkAsMarkdown() == true else { return }
         chrome.showURLCopiedFeedback()
     }
 
@@ -280,18 +293,28 @@ struct BrowserCommandActions {
     }
 
     func zoomIn() {
-        guard pages.zoomIn() else { return }
-        chrome.showPageZoomFeedback(pages.pageZoomLabel)
+        guard let page = pages.commandPage, page.zoomIn() else { return }
+        chrome.showPageZoomFeedback(BrowserPageZoomPolicy.percentageLabel(for: page.pageZoom))
     }
 
     func zoomOut() {
-        guard pages.zoomOut() else { return }
-        chrome.showPageZoomFeedback(pages.pageZoomLabel)
+        guard let page = pages.commandPage, page.zoomOut() else { return }
+        chrome.showPageZoomFeedback(BrowserPageZoomPolicy.percentageLabel(for: page.pageZoom))
     }
 
     func resetZoom() {
-        guard pages.resetZoom() else { return }
-        chrome.showPageZoomFeedback(pages.pageZoomLabel)
+        guard let page = pages.commandPage, page.resetZoom() else { return }
+        chrome.showPageZoomFeedback(BrowserPageZoomPolicy.percentageLabel(for: page.pageZoom))
+    }
+
+    /// Reloads a Peek open over the active tab, or else the tab, which the
+    /// pool brings back when its page went.
+    func reload(_ mode: BrowserPageReloadMode) {
+        if let peek = pages.peekPage {
+            peek.performReload(mode)
+        } else {
+            pages.reload(mode)
+        }
     }
 
     // MARK: - Tabs

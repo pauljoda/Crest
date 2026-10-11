@@ -29,15 +29,26 @@ struct BrowserPeekInputLifecycleModifier: ViewModifier {
             }
             .onKeyPress(.escape) {
                 guard model.isSelected && !focusGate.browserChromeOwnsFocus else { return .ignored }
-                dismiss()
+                dismissFindOrPeek()
                 return .handled
             }
             .background {
                 BrowserPeekKeyboardMonitor(
-                    dismiss: dismiss,
+                    dismiss: dismissFindOrPeek,
                     installsMonitor: installsKeyboardMonitor && model.isSelected && !focusGate.browserChromeOwnsFocus
                 )
                 .frame(width: 0, height: 0)
             }
+    }
+
+    // MARK: - Actions - Dismissal
+
+    /// Escape closes the Peek's find bar first, then the Peek.
+    private func dismissFindOrPeek() {
+        if let page = model.page, page.isFindPresented {
+            page.dismissFind()
+        } else {
+            dismiss()
+        }
     }
 }

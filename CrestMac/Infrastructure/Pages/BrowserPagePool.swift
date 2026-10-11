@@ -104,6 +104,11 @@ final class BrowserPagePool:
     /// presentation installs it. Without one, such a page has nowhere to show
     /// and goes.
     @ObservationIgnored var popupWindowPresenter: ((BrowserQuickWindowRequest) -> Void)?
+    /// Whether a Peek is open for the person rather than staged while they
+    /// still drag its link; the window's transient browsing answers.
+    @ObservationIgnored var isPeekOpen: (BrowserPeekRequest) -> Bool = { _ in false }
+    /// Closes a Peek the window shows; the window's transient browsing does.
+    @ObservationIgnored var dismissPeek: (BrowserPeekRequest) -> Void = { _ in }
     @ObservationIgnored private let openNewTab: (URL) -> Void
     @ObservationIgnored private let openModifiedLink: ModifiedLinkOpener
     @ObservationIgnored private let openPeek: (BrowserPeekRequest) -> Void
@@ -410,8 +415,16 @@ final class BrowserPagePool:
         activePage?.live.documentURL != nil
     }
 
-    var isLoading: Bool {
-        activePage?.live.isLoading == true
+    /// The Peek open over the active tab, which shows in front of it. A Peek
+    /// still staged by a link drag is not open yet.
+    var peekPage: BrowserPage? {
+        activeTabID.flatMap { host.peekPage(over: $0, where: isPeekOpen) }
+    }
+
+    /// The page the page commands act on: the Peek open over the active tab,
+    /// or else the tab's own page.
+    var commandPage: BrowserPage? {
+        peekPage ?? activePage
     }
 
     /// Presents what the window shows: the tab it shows and the cards beside
@@ -686,6 +699,17 @@ final class BrowserPagePool:
         host.unloadPage(for: tabID, preservingTabState: false)
     }
 
+    // MARK: - Actions - Peek
+
+    /// Closes the Peek open over the active tab, which Close Tab closes
+    /// before the tab under it; false when no Peek is open.
+    func closePeek() -> Bool {
+        guard let request = activeTabID.flatMap({ host.peekRequest(over: $0, where: isPeekOpen) })
+        else { return false }
+        dismissPeek(request)
+        return true
+    }
+
     // MARK: - Actions - Media sessions
 
     /// The media session the tab's page publishes. A private window reports
@@ -834,6 +858,12 @@ final class BrowserPagePool:
         host.tabState.removeStates(profileID: space.profileID)
     }
 
+    /// Reloads the shown tab, or brings its page back when it went.
+    func reload(_ mode: BrowserPageReloadMode) {
+        guard canReloadShownPage() else { return }
+        activePage?.performReload(mode)
+    }
+
     func reloadOrStop() {
         reload(.standard)
     }
@@ -849,38 +879,6 @@ final class BrowserPagePool:
 
     func showWebInspector() {
         activePage?.showWebInspector()
-    }
-
-    @discardableResult
-    func zoomIn() -> Bool {
-        activePage?.zoomIn() == true
-    }
-
-    @discardableResult
-    func zoomOut() -> Bool {
-        activePage?.zoomOut() == true
-    }
-
-    @discardableResult
-    func resetZoom() -> Bool {
-        activePage?.resetZoom() == true
-    }
-
-    @discardableResult
-    func copyPageLink() -> Bool {
-        activePage?.copyPageLink() == true
-    }
-
-    func sharePage() {
-        activePage?.sharePage()
-    }
-
-    func exportPDF() {
-        activePage?.exportPDF()
-    }
-
-    func exportWebArchive() {
-        activePage?.exportWebArchive()
     }
 
     /// Releases what memory pressure takes back that the core does not
@@ -1026,11 +1024,6 @@ final class BrowserPagePool:
         }
         page.corePage.load(url)
         Self.lifecycleSignposter.endInterval("Start Initial Navigation", interval)
-    }
-
-    private func reload(_ mode: BrowserPageReloadMode) {
-        guard canReloadShownPage() else { return }
-        activePage?.performReload(mode)
     }
 
     /// Presents what the window shows, answering whether the tab it shows

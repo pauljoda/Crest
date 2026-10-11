@@ -186,7 +186,7 @@ final class BrowserPageActionsTests: XCTestCase {
             "Inactive resident pages must adopt the new global baseline."
         )
 
-        pool.zoomIn()
+        pool.commandPage?.zoomIn()
         XCTAssertEqual(firstPage.pageZoom, 1.75)
         firstPage.load(
             try XCTUnwrap(URL(string: "about:blank#navigated"))
@@ -204,13 +204,13 @@ final class BrowserPageActionsTests: XCTestCase {
             "Changing the baseline must not discard a temporary page override."
         )
         XCTAssertEqual(secondPage.pageZoom, 2)
-        pool.resetZoom()
+        pool.commandPage?.resetZoom()
         XCTAssertEqual(firstPage.pageZoom, 2)
 
         pool.present(tab: second.id, in: space.id)
         XCTAssertTrue(pool.activePage === secondPage)
         XCTAssertEqual(secondPage.pageZoom, 2)
-        pool.zoomOut()
+        pool.commandPage?.zoomOut()
         XCTAssertEqual(secondPage.pageZoom, 1.75)
 
         pool.unloadPage(for: second.id)

@@ -445,6 +445,18 @@ final class BrowserPageHost {
         return lease
     }
 
+    /// The Peek over tab `tabID` that `isOpen` accepts, which shows in front
+    /// of the tab's own page; nil when no such Peek is there. A staged Peek
+    /// keeps its lease to draw, but is not open.
+    func peekRequest(over tabID: UUID, where isOpen: (BrowserPeekRequest) -> Bool) -> BrowserPeekRequest? {
+        peekLeases.values.first { $0.request.sourceTabID == tabID && isOpen($0.request) }?.request
+    }
+
+    /// The page of the Peek `peekRequest(over:where:)` finds.
+    func peekPage(over tabID: UUID, where isOpen: (BrowserPeekRequest) -> Bool) -> BrowserPlatformPage? {
+        peekRequest(over: tabID, where: isOpen).flatMap { peekLeases[$0.id]?.lease.page }
+    }
+
     /// Lets go of the Peeks' leases no longer asked for.
     func retainPeekPages(for requests: [BrowserPeekRequest]) {
         for (id, entry) in peekLeases where !requests.contains(entry.request) {
