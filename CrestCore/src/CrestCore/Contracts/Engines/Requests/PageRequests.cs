@@ -206,6 +206,11 @@ public sealed record EnterPictureInPicture(Guid PageId) : PageRequest<bool>;
 /// Mutes or unmutes the page while its media session is still `Document`'s.
 public sealed record MuteMediaSession(Guid PageId, string Document, bool Muted) : PageRequest<bool>;
 
+/// Starts or stops measuring the sound the page plays, band by band, which the
+/// engine presents as `AudioSpectrumChanged` while it is observed. False when
+/// the page is gone.
+public sealed record ObserveAudioSpectrum(Guid PageId, bool Observed) : PageRequest<bool>;
+
 /// What media the page runs at this moment.
 public sealed record PageMedia(Guid PageId) : PageRequest<PageMediaState>;
 

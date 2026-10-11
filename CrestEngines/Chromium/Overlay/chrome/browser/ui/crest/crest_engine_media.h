@@ -2,6 +2,7 @@
 #define CHROME_BROWSER_UI_CREST_CREST_ENGINE_MEDIA_H_
 
 #include <cstdint>
+#include <memory>
 #include <optional>
 #include <set>
 #include <string>
@@ -23,6 +24,8 @@ class WebContents;
 }
 
 namespace crest {
+
+class AudioSpectrumTap;
 
 // A page's media: what it plays and captures, and the engine's own Media
 // Session — metadata, artwork, playback state and the actions the page
@@ -82,6 +85,10 @@ class PageMedia final : public media_session::mojom::MediaSessionObserver {
   bool Activate(const std::string& document);
   bool Perform(const std::string& document, engine::MediaSessionAction action);
   bool Mute(const std::string& document, bool muted);
+  // Starts or stops measuring the sound the page plays, band by band, for its
+  // tab to show. While measured, `present` hears the bands a few times a
+  // second, and a silent page sends nothing new.
+  bool ObserveSpectrum(bool observed);
 
   // media_session::mojom::MediaSessionObserver:
   void MediaSessionInfoChanged(media_session::mojom::MediaSessionInfoPtr info) override;
@@ -98,6 +105,8 @@ class PageMedia final : public media_session::mojom::MediaSessionObserver {
   // Keeps the artwork the engine fetched for `generation`, unless the page
   // named other artwork since.
   void ArtworkLoaded(uint64_t generation, const SkBitmap& bitmap);
+  // Presents the bands the spectrum tap measured last.
+  void SpectrumMeasured(engine::Bytes bands);
 
   const raw_ptr<content::WebContents> contents_;
   const engine::Guid page_;
@@ -124,6 +133,8 @@ class PageMedia final : public media_session::mojom::MediaSessionObserver {
   int shares_ = 0;
   // How many tabs the page shares now.
   int sharing_ = 0;
+  // Listens to the page's own sound while the platform observes it.
+  std::unique_ptr<AudioSpectrumTap> spectrum_;
   base::WeakPtrFactory<PageMedia> weak_factory_{this};
 };
 

@@ -114,7 +114,13 @@ the live status for each issue.
 - [ ] [Switch a Split View between side-by-side and stacked](https://github.com/pauljoda/Crest/issues/358)
 - [ ] [Start a new Space from an existing Space's settings](https://github.com/pauljoda/Crest/issues/359)
 - [ ] [A place to see and open imported bookmarks](https://github.com/pauljoda/Crest/issues/360)
-- [ ] [Edit Shortcuts does nothing in Settings › Search on iPhone and iPad](https://github.com/pauljoda/Crest/issues/361)
+- [ ] [bug: http://192.168.0.1 automatically turns into https://192.168.0.1 and can not be open](https://github.com/pauljoda/Crest/issues/363)
+- [ ] [bug: cannot install third-party extensions](https://github.com/pauljoda/Crest/issues/364)
+- [ ] [Collapsed sidebar buttons can't be tapped on small iPhones](https://github.com/pauljoda/Crest/issues/368)
+- [ ] [Some settings don't sync to iPhone](https://github.com/pauljoda/Crest/issues/369)
+- [ ] [Hold-space cursor control doesn't work in the iPhone address bar](https://github.com/pauljoda/Crest/issues/370)
+- [ ] [Optional new-tab button in the iPhone toolbar](https://github.com/pauljoda/Crest/issues/371)
+- [ ] [Open links in Crest from the iOS share sheet](https://github.com/pauljoda/Crest/issues/372)
 
 #### Completed
 
@@ -152,6 +158,7 @@ the live status for each issue.
 - [x] [Fill in a visited site's address while typing](https://github.com/pauljoda/Crest/issues/330) — [`c3e712f2`](https://github.com/pauljoda/Crest/commit/c3e712f200fb1fc90935c09eec48e1f41ae1c330)
 - [x] [Overhaul the command palette: smarter ordering and a Settings section to customize it](https://github.com/pauljoda/Crest/issues/338) — [`c3e712f2`](https://github.com/pauljoda/Crest/commit/c3e712f200fb1fc90935c09eec48e1f41ae1c330)
 - [x] [Search engine logos look stretched in Settings › Search on Mac](https://github.com/pauljoda/Crest/issues/354) — [`d27a88c5`](https://github.com/pauljoda/Crest/commit/d27a88c5bcb7bc48cf160e295d0dc7e8f6006f5e)
+- [x] [Edit Shortcuts does nothing in Settings › Search on iPhone and iPad](https://github.com/pauljoda/Crest/issues/361) — [`6365c526`](https://github.com/pauljoda/Crest/commit/6365c5264b199a3523dd179eebe1432830cf4d69)
 
 <!-- crest-roadmap-sync:end -->
 

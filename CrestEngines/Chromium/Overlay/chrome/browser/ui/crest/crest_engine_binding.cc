@@ -1077,6 +1077,11 @@ bool EngineBinding::Handle(const engine::MuteMediaSession& request) {
   return page && page->MuteMediaSession(request.document, request.muted);
 }
 
+bool EngineBinding::Handle(const engine::ObserveAudioSpectrum& request) {
+  EnginePage* page = Find(GuidText(request.page_id));
+  return page && page->ObserveAudioSpectrum(request.observed);
+}
+
 bool EngineBinding::Handle(const engine::AnswerInfoBar& request) {
   EnginePage* page = Find(GuidText(request.page_id));
   return page && page->AnswerInfoBar(request.info_bar_id, request.answer);

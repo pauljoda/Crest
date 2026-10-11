@@ -46,13 +46,7 @@ struct TabFaviconBadge: View {
 
     var body: some View {
         mark.artwork
-            .frame(width: Self.markSize * scale, height: Self.markSize * scale)
-            .frame(width: Self.diameter * scale, height: Self.diameter * scale)
-            .background(.background, in: .circle)
-            .overlay {
-                Circle()
-                    .strokeBorder(CrestColor.subtleBorder, lineWidth: CrestLayout.hairline)
-            }
+            .modifier(TabFaviconBadgeDisc(scale: scale))
             .offset(x: Self.overhang * scale, y: Self.overhang * scale)
             .accessibilityHidden(true)
             .help(title)

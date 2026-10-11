@@ -7,11 +7,11 @@ import Foundation
 enum CoreCodec {
     /// SHA-256 of the canonical contract schema. The core refuses any other.
     static let fingerprint: [UInt8] = [
-        0xe6, 0x77, 0x94, 0xa3, 0xee, 0x79, 0x9e, 0x64, 0x0b, 0xe7, 0xdb, 0x93, 0x29, 0xb0, 0xab, 0x08, 0x2b, 0x77, 0x91, 0x6c, 0x5a, 0x04, 0x01, 0x0c, 0x7d, 0x50, 0x14, 0x59, 0x67, 0xc1, 0x06, 0xe3
+        0xd2, 0x3f, 0xcb, 0xf1, 0x9d, 0x18, 0x1f, 0x33, 0xf4, 0x12, 0xc2, 0x28, 0x96, 0x29, 0x28, 0x58, 0x81, 0xd9, 0x15, 0x69, 0x52, 0x1f, 0x85, 0xcf, 0xfd, 0x62, 0x91, 0x36, 0x15, 0xc5, 0xf6, 0xc7
     ]
     /// SHA-256 of the engine contract alone, which an engine binding registers with.
     static let engineFingerprint: [UInt8] = [
-        0x0b, 0x58, 0xd5, 0x33, 0x6f, 0x64, 0xfe, 0x18, 0x2b, 0xc5, 0x28, 0xe6, 0xa3, 0x58, 0x92, 0xf0, 0xd7, 0x6a, 0x24, 0x48, 0x5e, 0xd5, 0xb5, 0x6e, 0xfd, 0xb3, 0xf6, 0x93, 0x26, 0x55, 0x32, 0xa1
+        0x4b, 0x42, 0x37, 0x97, 0xfa, 0x7d, 0x37, 0xc7, 0x2d, 0xc1, 0xd8, 0x62, 0x5b, 0x0e, 0x19, 0xd5, 0xb6, 0xa9, 0x93, 0x34, 0x14, 0x69, 0x5b, 0x71, 0x0f, 0x13, 0x91, 0x10, 0xc1, 0x2a, 0xdc, 0x04
     ]
 
     static func decodeIntent(from reader: inout WireReader) throws(WireError) -> any Intent {
@@ -399,28 +399,29 @@ enum CoreCodec {
         case 17: return try LayoutInspector(from: &reader)
         case 18: return try MovePageToWindow(from: &reader)
         case 19: return try MuteMediaSession(from: &reader)
-        case 20: return try OpenInspector(from: &reader)
-        case 21: return try PageCertificates(from: &reader)
-        case 22: return try PageExtensions(from: &reader)
-        case 23: return try PageIcon(from: &reader)
-        case 24: return try PageInspected(from: &reader)
-        case 25: return try PageMedia(from: &reader)
-        case 26: return try PerformMediaAction(from: &reader)
-        case 27: return try PinnedExtensions(from: &reader)
-        case 28: return try PrepareProfile(from: &reader)
-        case 29: return try RefreshPageIcon(from: &reader)
-        case 30: return try RefreshStoreListing(from: &reader)
-        case 31: return try ReloadPage(from: &reader)
-        case 32: return try RestoreInteractionState(from: &reader)
-        case 33: return try SaveInteractionState(from: &reader)
-        case 34: return try SetSitePermission(from: &reader)
-        case 35: return try ShowBlockedPopups(from: &reader)
-        case 36: return try ShowPage(from: &reader)
-        case 37: return try StopLoading(from: &reader)
-        case 38: return try StopMediaCapture(from: &reader)
-        case 39: return try StopTabSharing(from: &reader)
-        case 40: return try WatchPage(from: &reader)
-        case 41: return try ZoomPage(from: &reader)
+        case 20: return try ObserveAudioSpectrum(from: &reader)
+        case 21: return try OpenInspector(from: &reader)
+        case 22: return try PageCertificates(from: &reader)
+        case 23: return try PageExtensions(from: &reader)
+        case 24: return try PageIcon(from: &reader)
+        case 25: return try PageInspected(from: &reader)
+        case 26: return try PageMedia(from: &reader)
+        case 27: return try PerformMediaAction(from: &reader)
+        case 28: return try PinnedExtensions(from: &reader)
+        case 29: return try PrepareProfile(from: &reader)
+        case 30: return try RefreshPageIcon(from: &reader)
+        case 31: return try RefreshStoreListing(from: &reader)
+        case 32: return try ReloadPage(from: &reader)
+        case 33: return try RestoreInteractionState(from: &reader)
+        case 34: return try SaveInteractionState(from: &reader)
+        case 35: return try SetSitePermission(from: &reader)
+        case 36: return try ShowBlockedPopups(from: &reader)
+        case 37: return try ShowPage(from: &reader)
+        case 38: return try StopLoading(from: &reader)
+        case 39: return try StopMediaCapture(from: &reader)
+        case 40: return try StopTabSharing(from: &reader)
+        case 41: return try WatchPage(from: &reader)
+        case 42: return try ZoomPage(from: &reader)
         default: throw WireError.malformed("Unknown PageRequest tag \(tag)")
         }
     }
@@ -1462,167 +1463,171 @@ extension EnginePresentation {
     init(from reader: inout WireReader) throws(WireError) {
         let tag = try reader.readTag()
         switch tag {
-        case 0: self = .contentFullscreenChanged(try ContentFullscreenChanged(from: &reader))
-        case 1: self = .contentMessagePosted(try ContentMessagePosted(from: &reader))
-        case 2: self = .contentScriptEvaluated(try ContentScriptEvaluated(from: &reader))
-        case 3: self = .extensionsChanged(try ExtensionsChanged(from: &reader))
-        case 4: self = .findFinished(try FindFinished(from: &reader))
-        case 5: self = .infoBarRemoved(try InfoBarRemoved(from: &reader))
-        case 6: self = .infoBarShown(try InfoBarShown(from: &reader))
-        case 7: self = .inspectorClosed(try InspectorClosed(from: &reader))
-        case 8: self = .inspectorLayoutChanged(try InspectorLayoutChanged(from: &reader))
-        case 9: self = .linkHovered(try LinkHovered(from: &reader))
-        case 10: self = .mediaSessionChanged(try MediaSessionChanged(from: &reader))
-        case 11: self = .pageCaptured(try PageCaptured(from: &reader))
-        case 12: self = .pageExported(try PageExported(from: &reader))
-        case 13: self = .pageHistoryChanged(try PageHistoryChanged(from: &reader))
-        case 14: self = .pageInteracted(try PageInteracted(from: &reader))
-        case 15: self = .pageLoadingChanged(try PageLoadingChanged(from: &reader))
-        case 16: self = .pageNavigationCommitted(try PageNavigationCommitted(from: &reader))
-        case 17: self = .pageNavigationFailed(try PageNavigationFailed(from: &reader))
-        case 18: self = .pageNavigationStarted(try PageNavigationStarted(from: &reader))
-        case 19: self = .pageRendererGone(try PageRendererGone(from: &reader))
-        case 20: self = .pageThemeChanged(try PageThemeChanged(from: &reader))
-        case 21: self = .pageViewClosed(try PageViewClosed(from: &reader))
-        case 22: self = .pageViewReady(try PageViewReady(from: &reader))
-        case 23: self = .pageViewUnavailable(try PageViewUnavailable(from: &reader))
-        case 24: self = .peekRequested(try PeekRequested(from: &reader))
-        case 25: self = .popupBlocked(try PopupBlocked(from: &reader))
-        case 26: self = .profileNotificationClosed(try ProfileNotificationClosed(from: &reader))
-        case 27: self = .profileNotificationPosted(try ProfileNotificationPosted(from: &reader))
-        case 28: self = .profilePrepared(try ProfilePrepared(from: &reader))
-        case 29: self = .profileReleased(try ProfileReleased(from: &reader))
-        case 30: self = .screenCaptureAccessMissing(try ScreenCaptureAccessMissing(from: &reader))
-        case 31: self = .shareSourcesOffered(try ShareSourcesOffered(from: &reader))
-        case 32: self = .shareSourcesWithdrawn(try ShareSourcesWithdrawn(from: &reader))
-        case 33: self = .sidePanelRequested(try SidePanelRequested(from: &reader))
-        case 34: self = .storeInstallRequested(try StoreInstallRequested(from: &reader))
-        case 35: self = .storeRemovalRequested(try StoreRemovalRequested(from: &reader))
-        case 36: self = .tabSharingChanged(try TabSharingChanged(from: &reader))
-        case 37: self = .webNotificationClosed(try WebNotificationClosed(from: &reader))
-        case 38: self = .webNotificationPosted(try WebNotificationPosted(from: &reader))
+        case 0: self = .audioSpectrumChanged(try AudioSpectrumChanged(from: &reader))
+        case 1: self = .contentFullscreenChanged(try ContentFullscreenChanged(from: &reader))
+        case 2: self = .contentMessagePosted(try ContentMessagePosted(from: &reader))
+        case 3: self = .contentScriptEvaluated(try ContentScriptEvaluated(from: &reader))
+        case 4: self = .extensionsChanged(try ExtensionsChanged(from: &reader))
+        case 5: self = .findFinished(try FindFinished(from: &reader))
+        case 6: self = .infoBarRemoved(try InfoBarRemoved(from: &reader))
+        case 7: self = .infoBarShown(try InfoBarShown(from: &reader))
+        case 8: self = .inspectorClosed(try InspectorClosed(from: &reader))
+        case 9: self = .inspectorLayoutChanged(try InspectorLayoutChanged(from: &reader))
+        case 10: self = .linkHovered(try LinkHovered(from: &reader))
+        case 11: self = .mediaSessionChanged(try MediaSessionChanged(from: &reader))
+        case 12: self = .pageCaptured(try PageCaptured(from: &reader))
+        case 13: self = .pageExported(try PageExported(from: &reader))
+        case 14: self = .pageHistoryChanged(try PageHistoryChanged(from: &reader))
+        case 15: self = .pageInteracted(try PageInteracted(from: &reader))
+        case 16: self = .pageLoadingChanged(try PageLoadingChanged(from: &reader))
+        case 17: self = .pageNavigationCommitted(try PageNavigationCommitted(from: &reader))
+        case 18: self = .pageNavigationFailed(try PageNavigationFailed(from: &reader))
+        case 19: self = .pageNavigationStarted(try PageNavigationStarted(from: &reader))
+        case 20: self = .pageRendererGone(try PageRendererGone(from: &reader))
+        case 21: self = .pageThemeChanged(try PageThemeChanged(from: &reader))
+        case 22: self = .pageViewClosed(try PageViewClosed(from: &reader))
+        case 23: self = .pageViewReady(try PageViewReady(from: &reader))
+        case 24: self = .pageViewUnavailable(try PageViewUnavailable(from: &reader))
+        case 25: self = .peekRequested(try PeekRequested(from: &reader))
+        case 26: self = .popupBlocked(try PopupBlocked(from: &reader))
+        case 27: self = .profileNotificationClosed(try ProfileNotificationClosed(from: &reader))
+        case 28: self = .profileNotificationPosted(try ProfileNotificationPosted(from: &reader))
+        case 29: self = .profilePrepared(try ProfilePrepared(from: &reader))
+        case 30: self = .profileReleased(try ProfileReleased(from: &reader))
+        case 31: self = .screenCaptureAccessMissing(try ScreenCaptureAccessMissing(from: &reader))
+        case 32: self = .shareSourcesOffered(try ShareSourcesOffered(from: &reader))
+        case 33: self = .shareSourcesWithdrawn(try ShareSourcesWithdrawn(from: &reader))
+        case 34: self = .sidePanelRequested(try SidePanelRequested(from: &reader))
+        case 35: self = .storeInstallRequested(try StoreInstallRequested(from: &reader))
+        case 36: self = .storeRemovalRequested(try StoreRemovalRequested(from: &reader))
+        case 37: self = .tabSharingChanged(try TabSharingChanged(from: &reader))
+        case 38: self = .webNotificationClosed(try WebNotificationClosed(from: &reader))
+        case 39: self = .webNotificationPosted(try WebNotificationPosted(from: &reader))
         default: throw WireError.malformed("Unknown EnginePresentation tag \(tag)")
         }
     }
 
     func encode(into writer: inout WireWriter) {
         switch self {
-        case .contentFullscreenChanged(let value):
+        case .audioSpectrumChanged(let value):
             writer.writeTag(0)
             value.encode(into: &writer)
-        case .contentMessagePosted(let value):
+        case .contentFullscreenChanged(let value):
             writer.writeTag(1)
             value.encode(into: &writer)
-        case .contentScriptEvaluated(let value):
+        case .contentMessagePosted(let value):
             writer.writeTag(2)
             value.encode(into: &writer)
-        case .extensionsChanged(let value):
+        case .contentScriptEvaluated(let value):
             writer.writeTag(3)
             value.encode(into: &writer)
-        case .findFinished(let value):
+        case .extensionsChanged(let value):
             writer.writeTag(4)
             value.encode(into: &writer)
-        case .infoBarRemoved(let value):
+        case .findFinished(let value):
             writer.writeTag(5)
             value.encode(into: &writer)
-        case .infoBarShown(let value):
+        case .infoBarRemoved(let value):
             writer.writeTag(6)
             value.encode(into: &writer)
-        case .inspectorClosed(let value):
+        case .infoBarShown(let value):
             writer.writeTag(7)
             value.encode(into: &writer)
-        case .inspectorLayoutChanged(let value):
+        case .inspectorClosed(let value):
             writer.writeTag(8)
             value.encode(into: &writer)
-        case .linkHovered(let value):
+        case .inspectorLayoutChanged(let value):
             writer.writeTag(9)
             value.encode(into: &writer)
-        case .mediaSessionChanged(let value):
+        case .linkHovered(let value):
             writer.writeTag(10)
             value.encode(into: &writer)
-        case .pageCaptured(let value):
+        case .mediaSessionChanged(let value):
             writer.writeTag(11)
             value.encode(into: &writer)
-        case .pageExported(let value):
+        case .pageCaptured(let value):
             writer.writeTag(12)
             value.encode(into: &writer)
-        case .pageHistoryChanged(let value):
+        case .pageExported(let value):
             writer.writeTag(13)
             value.encode(into: &writer)
-        case .pageInteracted(let value):
+        case .pageHistoryChanged(let value):
             writer.writeTag(14)
             value.encode(into: &writer)
-        case .pageLoadingChanged(let value):
+        case .pageInteracted(let value):
             writer.writeTag(15)
             value.encode(into: &writer)
-        case .pageNavigationCommitted(let value):
+        case .pageLoadingChanged(let value):
             writer.writeTag(16)
             value.encode(into: &writer)
-        case .pageNavigationFailed(let value):
+        case .pageNavigationCommitted(let value):
             writer.writeTag(17)
             value.encode(into: &writer)
-        case .pageNavigationStarted(let value):
+        case .pageNavigationFailed(let value):
             writer.writeTag(18)
             value.encode(into: &writer)
-        case .pageRendererGone(let value):
+        case .pageNavigationStarted(let value):
             writer.writeTag(19)
             value.encode(into: &writer)
-        case .pageThemeChanged(let value):
+        case .pageRendererGone(let value):
             writer.writeTag(20)
             value.encode(into: &writer)
-        case .pageViewClosed(let value):
+        case .pageThemeChanged(let value):
             writer.writeTag(21)
             value.encode(into: &writer)
-        case .pageViewReady(let value):
+        case .pageViewClosed(let value):
             writer.writeTag(22)
             value.encode(into: &writer)
-        case .pageViewUnavailable(let value):
+        case .pageViewReady(let value):
             writer.writeTag(23)
             value.encode(into: &writer)
-        case .peekRequested(let value):
+        case .pageViewUnavailable(let value):
             writer.writeTag(24)
             value.encode(into: &writer)
-        case .popupBlocked(let value):
+        case .peekRequested(let value):
             writer.writeTag(25)
             value.encode(into: &writer)
-        case .profileNotificationClosed(let value):
+        case .popupBlocked(let value):
             writer.writeTag(26)
             value.encode(into: &writer)
-        case .profileNotificationPosted(let value):
+        case .profileNotificationClosed(let value):
             writer.writeTag(27)
             value.encode(into: &writer)
-        case .profilePrepared(let value):
+        case .profileNotificationPosted(let value):
             writer.writeTag(28)
             value.encode(into: &writer)
-        case .profileReleased(let value):
+        case .profilePrepared(let value):
             writer.writeTag(29)
             value.encode(into: &writer)
-        case .screenCaptureAccessMissing(let value):
+        case .profileReleased(let value):
             writer.writeTag(30)
             value.encode(into: &writer)
-        case .shareSourcesOffered(let value):
+        case .screenCaptureAccessMissing(let value):
             writer.writeTag(31)
             value.encode(into: &writer)
-        case .shareSourcesWithdrawn(let value):
+        case .shareSourcesOffered(let value):
             writer.writeTag(32)
             value.encode(into: &writer)
-        case .sidePanelRequested(let value):
+        case .shareSourcesWithdrawn(let value):
             writer.writeTag(33)
             value.encode(into: &writer)
-        case .storeInstallRequested(let value):
+        case .sidePanelRequested(let value):
             writer.writeTag(34)
             value.encode(into: &writer)
-        case .storeRemovalRequested(let value):
+        case .storeInstallRequested(let value):
             writer.writeTag(35)
             value.encode(into: &writer)
-        case .tabSharingChanged(let value):
+        case .storeRemovalRequested(let value):
             writer.writeTag(36)
             value.encode(into: &writer)
-        case .webNotificationClosed(let value):
+        case .tabSharingChanged(let value):
             writer.writeTag(37)
             value.encode(into: &writer)
-        case .webNotificationPosted(let value):
+        case .webNotificationClosed(let value):
             writer.writeTag(38)
+            value.encode(into: &writer)
+        case .webNotificationPosted(let value):
+            writer.writeTag(39)
             value.encode(into: &writer)
         }
     }
@@ -2585,6 +2590,19 @@ extension AssignShortcut {
     func encodeIntent(into writer: inout WireWriter) {
         writer.writeTag(24)
         encode(into: &writer)
+    }
+}
+
+extension AudioSpectrumChanged {
+    init(from reader: inout WireReader) throws(WireError) {
+        let pageID = try reader.readUUID()
+        let bands = try reader.readData()
+        self.init(pageID: pageID, bands: bands)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeUUID(pageID)
+        writer.writeData(bands)
     }
 }
 
@@ -12882,6 +12900,29 @@ extension NumberedSelections {
     }
 }
 
+extension ObserveAudioSpectrum {
+    init(from reader: inout WireReader) throws(WireError) {
+        let pageID = try reader.readUUID()
+        let observed = try reader.readBool()
+        self.init(pageID: pageID, observed: observed)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeUUID(pageID)
+        writer.writeBool(observed)
+    }
+
+    func encodePageRequest(into writer: inout WireWriter) {
+        writer.writeTag(20)
+        encode(into: &writer)
+    }
+
+    static func decodeAnswer(from reader: inout WireReader) throws(WireError) -> Bool {
+        let answer = try reader.readBool()
+        return answer
+    }
+}
+
 extension ObserveCloudAccountAvailability {
     init(from reader: inout WireReader) throws(WireError) {
         self.init()
@@ -13056,7 +13097,7 @@ extension OpenInspector {
     }
 
     func encodePageRequest(into writer: inout WireWriter) {
-        writer.writeTag(20)
+        writer.writeTag(21)
         encode(into: &writer)
     }
 
@@ -13395,7 +13436,7 @@ extension PageCertificates {
     }
 
     func encodePageRequest(into writer: inout WireWriter) {
-        writer.writeTag(21)
+        writer.writeTag(22)
         encode(into: &writer)
     }
 
@@ -13563,7 +13604,7 @@ extension PageExtensions {
     }
 
     func encodePageRequest(into writer: inout WireWriter) {
-        writer.writeTag(22)
+        writer.writeTag(23)
         encode(into: &writer)
     }
 
@@ -13695,7 +13736,7 @@ extension PageIcon {
     }
 
     func encodePageRequest(into writer: inout WireWriter) {
-        writer.writeTag(23)
+        writer.writeTag(24)
         encode(into: &writer)
     }
 
@@ -13769,7 +13810,7 @@ extension PageInspected {
     }
 
     func encodePageRequest(into writer: inout WireWriter) {
-        writer.writeTag(24)
+        writer.writeTag(25)
         encode(into: &writer)
     }
 
@@ -13898,7 +13939,7 @@ extension PageMedia {
     }
 
     func encodePageRequest(into writer: inout WireWriter) {
-        writer.writeTag(25)
+        writer.writeTag(26)
         encode(into: &writer)
     }
 
@@ -15114,7 +15155,7 @@ extension PerformMediaAction {
     }
 
     func encodePageRequest(into writer: inout WireWriter) {
-        writer.writeTag(26)
+        writer.writeTag(27)
         encode(into: &writer)
     }
 
@@ -15212,7 +15253,7 @@ extension PinnedExtensions {
     }
 
     func encodePageRequest(into writer: inout WireWriter) {
-        writer.writeTag(27)
+        writer.writeTag(28)
         encode(into: &writer)
     }
 
@@ -15306,7 +15347,7 @@ extension PrepareProfile {
     }
 
     func encodePageRequest(into writer: inout WireWriter) {
-        writer.writeTag(28)
+        writer.writeTag(29)
         encode(into: &writer)
     }
 
@@ -15838,7 +15879,7 @@ extension RefreshPageIcon {
     }
 
     func encodePageRequest(into writer: inout WireWriter) {
-        writer.writeTag(29)
+        writer.writeTag(30)
         encode(into: &writer)
     }
 
@@ -15859,7 +15900,7 @@ extension RefreshStoreListing {
     }
 
     func encodePageRequest(into writer: inout WireWriter) {
-        writer.writeTag(30)
+        writer.writeTag(31)
         encode(into: &writer)
     }
 
@@ -15931,7 +15972,7 @@ extension ReloadPage {
     }
 
     func encodePageRequest(into writer: inout WireWriter) {
-        writer.writeTag(31)
+        writer.writeTag(32)
         encode(into: &writer)
     }
 
@@ -16649,7 +16690,7 @@ extension RestoreInteractionState {
     }
 
     func encodePageRequest(into writer: inout WireWriter) {
-        writer.writeTag(32)
+        writer.writeTag(33)
         encode(into: &writer)
     }
 
@@ -16980,7 +17021,7 @@ extension SaveInteractionState {
     }
 
     func encodePageRequest(into writer: inout WireWriter) {
-        writer.writeTag(33)
+        writer.writeTag(34)
         encode(into: &writer)
     }
 
@@ -18417,7 +18458,7 @@ extension SetSitePermission {
     }
 
     func encodePageRequest(into writer: inout WireWriter) {
-        writer.writeTag(34)
+        writer.writeTag(35)
         encode(into: &writer)
     }
 
@@ -19497,7 +19538,7 @@ extension ShowBlockedPopups {
     }
 
     func encodePageRequest(into writer: inout WireWriter) {
-        writer.writeTag(35)
+        writer.writeTag(36)
         encode(into: &writer)
     }
 
@@ -19550,7 +19591,7 @@ extension ShowPage {
     }
 
     func encodePageRequest(into writer: inout WireWriter) {
-        writer.writeTag(36)
+        writer.writeTag(37)
         encode(into: &writer)
     }
 
@@ -21225,7 +21266,7 @@ extension StopLoading {
     }
 
     func encodePageRequest(into writer: inout WireWriter) {
-        writer.writeTag(37)
+        writer.writeTag(38)
         encode(into: &writer)
     }
 
@@ -21248,7 +21289,7 @@ extension StopMediaCapture {
     }
 
     func encodePageRequest(into writer: inout WireWriter) {
-        writer.writeTag(38)
+        writer.writeTag(39)
         encode(into: &writer)
     }
 
@@ -21269,7 +21310,7 @@ extension StopTabSharing {
     }
 
     func encodePageRequest(into writer: inout WireWriter) {
-        writer.writeTag(39)
+        writer.writeTag(40)
         encode(into: &writer)
     }
 
@@ -22777,7 +22818,7 @@ extension WatchPage {
     }
 
     func encodePageRequest(into writer: inout WireWriter) {
-        writer.writeTag(40)
+        writer.writeTag(41)
         encode(into: &writer)
     }
 
@@ -23120,7 +23161,7 @@ extension ZoomPage {
     }
 
     func encodePageRequest(into writer: inout WireWriter) {
-        writer.writeTag(41)
+        writer.writeTag(42)
         encode(into: &writer)
     }
 

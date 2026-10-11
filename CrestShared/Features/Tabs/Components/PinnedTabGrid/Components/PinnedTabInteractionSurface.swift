@@ -7,9 +7,8 @@ struct PinnedTabInteractionSurface: ViewModifier {
     let isHovering: Bool
     var isMultiSelected = false
     var branding: SpaceBranding? = nil
-    /// Whether another page shares the tab, which the tile outlines in the
-    /// Space's accent while it lasts.
-    var isSharedAsTab = false
+    /// The tab's page, whose statuses dress the tile while they last.
+    var statusSource: BrowserTabStatusSource? = nil
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var palette: BrowserFaviconPalette?
@@ -17,6 +16,14 @@ struct PinnedTabInteractionSurface: ViewModifier {
 
     func body(content: Content) -> some View {
         content
+            .background {
+                BrowserTabStatusSurfaces(
+                    tab: statusSource,
+                    style: BrowserTabStatusSurfaceStyle(
+                        accent: selectionAccent, cornerRadius: BrowserDeviceAppearanceStore.shared.sidebarCornerRadius,
+                        barOpacity: CrestOpacity.prominentStatusSurface)
+                )
+            }
             .modifier(
                 BrowserTabAppearanceSurface(
                     appearance: appearance,
@@ -24,16 +31,6 @@ struct PinnedTabInteractionSurface: ViewModifier {
                     isPinned: true, isSelected: isSelected, isHovering: isHovering,
                     selectionEmphasis: isMultiSelected)
             )
-            .overlay {
-                if isSharedAsTab {
-                    RoundedRectangle(
-                        cornerRadius: BrowserDeviceAppearanceStore.shared.sidebarCornerRadius,
-                        style: .continuous
-                    )
-                    .strokeBorder(selectionAccent, lineWidth: CrestLayout.pinnedAccentBorderWidth)
-                    .allowsHitTesting(false)
-                }
-            }
             .animation(
                 BrowserVisualAccessibilityPolicy.animation(
                     CrestMotion.palette,

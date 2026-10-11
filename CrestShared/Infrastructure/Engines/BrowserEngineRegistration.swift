@@ -60,7 +60,7 @@ enum BrowserEngineRegistration {
             .workspaceProfiles, .workspaceTransfer, .profileDeletion,
             .beforeUnload, .downloads, .permissions, .viewportCapture, .inspector, .internalPages,
             .fullPageCapture, .pdf, .webArchive, .print, .localFiles,
-            .extensions, .selectionTranslation, .popups, .featureFlags,
+            .extensions, .selectionTranslation, .popups, .featureFlags, .audioSpectrum,
         ],
         unavailable: [.reader, .translation, .contentBlocking, .protectedMedia],
         archiveFormat: .mhtml)

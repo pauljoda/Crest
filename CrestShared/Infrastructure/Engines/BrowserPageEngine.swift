@@ -31,6 +31,9 @@ protocol BrowserPageEngine: AnyObject {
     /// Content bridges run by the engine itself, or nil when the page installs
     /// them through the engine's own API.
     var contentScripting: (any BrowserPageContentScripting)? { get }
+    /// The engine's measure of the sound the page plays, band by band, or nil
+    /// when the engine does not measure it.
+    var audioSpectrum: BrowserAudioSpectrumFeed? { get }
 }
 
 extension BrowserPageEngine {
@@ -38,6 +41,7 @@ extension BrowserPageEngine {
     @discardableResult func synchronizeHistory() -> URL? { nil }
     func stageNavigation(_ navigation: BrowserEngineNavigation, expecting url: URL) -> Bool { false }
     var contentScripting: (any BrowserPageContentScripting)? { nil }
+    var audioSpectrum: BrowserAudioSpectrumFeed? { nil }
 }
 
 /// A link an engine staged for a new page's first load, which keeps the

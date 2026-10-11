@@ -3842,6 +3842,10 @@
       "category": "fixed",
       "message": "On iPhone, Crest asks before downloading a risky file from the page you’re viewing, instead of leaving the download waiting for approval."
     },
+    "tab-audio-indicator": {
+      "category": "new",
+      "message": "A tab playing sound shows a speaker badge on its icon, which mutes or unmutes it, and bars behind its title that follow its sound on Chromium pages. Tabs taking part in tab sharing show a badge that goes to the other tab or stops sharing. Look and Feel can show the status in place of the tab’s icon, or turn the bars off."
+    },
     "automation-for-local-tools": {
       "category": "new",
       "message": "On Mac, scripts and coding agents on your computer can list, open, show and close tabs in the Spaces you choose. Turn it on in Settings › Automation; Crest asks before each new tool connects."

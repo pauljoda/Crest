@@ -3,6 +3,9 @@ import Observation
 
 struct BrowserTabAppearance: Codable, Equatable, Sendable {
     enum Borders: String, Codable, CaseIterable { case selected, pinned, all }
+    /// How a tab shows a status its page is in, such as playing sound: as a
+    /// badge on its icon, or in place of its icon.
+    enum StatusStyle: String, Codable, CaseIterable { case badge, icon }
     var borders: Borders = .selected
     var outlinesSelectedTabs = false
     var usesWebsitePinColor = true
@@ -11,6 +14,9 @@ struct BrowserTabAppearance: Codable, Equatable, Sendable {
     var pinGlow: Double = 0
     var hoverFill: Double = 0
     var color: BrandColor?
+    var statusStyle: StatusStyle = .badge
+    /// Whether a tab playing sound shows bars across it.
+    var showsAudioVisualizer = true
 
     static func intensity(_ value: Double) -> Double {
         value.isFinite ? min(max(value, 0), 1) : 0
@@ -30,7 +36,7 @@ struct BrowserAddressAppearance: Codable, Equatable, Sendable {
 extension BrowserTabAppearance {
     private enum CodingKeys: String, CodingKey {
         case borders, outlinesSelectedTabs, usesWebsitePinColor, dimsUnloadedTabs
-        case pinFill, pinGlow, hoverFill, color
+        case pinFill, pinGlow, hoverFill, color, statusStyle, showsAudioVisualizer
     }
 
     init(from decoder: Decoder) throws {
@@ -44,6 +50,8 @@ extension BrowserTabAppearance {
         pinGlow = Self.intensity((try? values.decode(Double.self, forKey: .pinGlow)) ?? 0)
         hoverFill = Self.intensity((try? values.decode(Double.self, forKey: .hoverFill)) ?? 0)
         color = try? values.decode(BrandColor.self, forKey: .color)
+        statusStyle = (try? values.decode(StatusStyle.self, forKey: .statusStyle)) ?? .badge
+        showsAudioVisualizer = (try? values.decode(Bool.self, forKey: .showsAudioVisualizer)) ?? true
     }
 }
 

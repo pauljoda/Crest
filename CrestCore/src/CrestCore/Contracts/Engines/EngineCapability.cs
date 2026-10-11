@@ -35,12 +35,15 @@ public sealed class EngineCapability {
     /// The engine plays protected media through the platform's own content
     /// decryption, such as FairPlay on Apple platforms.
     public static readonly EngineCapability ProtectedMedia = new(name: "protected-media");
+    /// The engine measures the sound a page plays, band by band, so its tab can
+    /// show it.
+    public static readonly EngineCapability AudioSpectrum = new(name: "audio-spectrum");
 
     public static IReadOnlyList<EngineCapability> All { get; } = [
         Pages, Navigation, Find, Zoom, InteractionState, PageResidency, Popups, WorkspaceProfiles, WorkspaceTransfer,
         ProfileDeletion, ContentBlocking, Downloads, Permissions, Reader, Translation, SelectionTranslation, LocalFiles,
         Extensions, ViewportCapture, FullPageCapture, Pdf, WebArchive, Print, Inspector, FeatureFlags, BeforeUnload,
-        InternalPages, ProtectedMedia
+        InternalPages, ProtectedMedia, AudioSpectrum
     ];
 
     /// The capabilities an engine must support to register.

@@ -37,6 +37,7 @@ struct BrowserLookAndFeelSettingsPane: View {
                     preferences: .shared, space: space, showsPreview: showsInlinePreviews)
             }
             BrowserTabAppearanceGroup(space: space, showsPreview: showsInlinePreviews)
+            BrowserTabStatusAppearanceGroup()
             BrowserAddressAppearanceGroup(space: space, showsPreview: showsInlinePreviews)
             BrowserFolderAppearanceGroup(space: space, showsPreview: showsInlinePreviews)
             if usesLiveSidebar {

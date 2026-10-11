@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// What a sidebar tab row draws inside its surface: the tab, whatever the tab
-/// is currently holding open, and the one control that puts it away.
+/// What a sidebar tab row draws inside its surface: the tab, and the one
+/// control that puts it away.
 struct BrowserSidebarTabRowContent: View {
     let configuration: BrowserSidebarTabRowConfiguration
     let interaction: BrowserSidebarTabRowInteractionContext
@@ -9,30 +9,12 @@ struct BrowserSidebarTabRowContent: View {
     var body: some View {
         HStack(spacing: configuration.metrics.contentSpacing) {
             leadingContent
-            if configuration.isSharedAsTab {
-                sharedMark
-            }
             BrowserSidebarTabTrailingControl(
                 configuration: configuration,
                 isHovering: interaction.isHovering
             )
             .padding(.trailing, configuration.metrics.contentTrailingInset)
         }
-    }
-
-    /// The shared tab's mark, which goes to the tab sharing it or stops the
-    /// sharing.
-    private var sharedMark: some View {
-        let context = configuration.context
-        let tabID = configuration.tab.id
-        let sharingTab = context.sharingTab(of: tabID)
-        return BrowserSidebarTabSharedMark(
-            sharingTab: sharingTab,
-            goToSharingTab: sharingTab.map { sharing in
-                { if configuration.isCurrentAndUnlocked { context.select(sharing.id) } }
-            },
-            stopSharing: { if configuration.isCurrentAndUnlocked { context.stopTabSharing(tabID) } }
-        )
     }
 
     @ViewBuilder

@@ -190,6 +190,11 @@ public sealed record MediaSessionChanged(Guid PageId, string Document, long Sequ
     string? Title, string? Artist, string? Album, byte[]? Artwork, MediaPlayback Playback, bool Audible, bool Muted,
     IReadOnlyList<MediaSessionAction> Actions) : EnginePagePresentation(PageId);
 
+/// How loud the sound the page plays is now in each of `Bands` frequency bands,
+/// lowest first, from 0 for silence to 255 at its loudest, a few times a second
+/// while the platform observes it with `ObserveAudioSpectrum`.
+public sealed record AudioSpectrumChanged(Guid PageId, byte[] Bands) : EnginePagePresentation(PageId);
+
 /// A document in the page asked to capture the screen in a way that needs the
 /// system's Screen Recording access, which Crest does not have. The engine
 /// asked the system for it once and refused the request; the platform says

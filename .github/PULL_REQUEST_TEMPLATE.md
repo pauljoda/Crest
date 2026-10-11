@@ -4,7 +4,7 @@
 
 ## Validation
 
-<!-- List the focused tests, platform suite, and interactive checks you ran. -->
+<!-- List the focused tests, platform suite, and interactive checks you ran. For a visual change, attach screenshots of it. -->
 
 ## AI usage
 

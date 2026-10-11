@@ -7,7 +7,8 @@ import SwiftUI
 /// page, or whose engine has no mark, wears none.
 ///
 /// It reads the core from the environment and draws nothing where no window
-/// supplies one, such as a drag preview.
+/// supplies one, such as a drag preview, or while a status badge has taken
+/// its corner.
 struct TabEngineBadge: View {
     // MARK: - Variables
 
@@ -17,9 +18,10 @@ struct TabEngineBadge: View {
     var scale: CGFloat = 1
 
     @Environment(CrestCore.self) private var core: CrestCore?
+    @Environment(\.tabFaviconBadgeIsTaken) private var isCornerTaken
 
     var body: some View {
-        if let engine = core?.state.engineBadge(forTab: tabID), let mark = engine.mark {
+        if !isCornerTaken, let engine = core?.state.engineBadge(forTab: tabID), let mark = engine.mark {
             TabFaviconBadge(mark: mark, title: Text(engine.pageDescription), scale: scale)
         }
     }

@@ -1303,6 +1303,10 @@ bool EnginePage::MuteMediaSession(const std::string& document, bool muted) {
   return media_ && media_->Mute(document, muted);
 }
 
+bool EnginePage::ObserveAudioSpectrum(bool observed) {
+  return media_ && media_->ObserveSpectrum(observed);
+}
+
 bool EnginePage::AnswerInfoBar(int id, engine::InfoBarAnswer answer) {
   return infobars_ && infobars_->Answer(id, answer);
 }

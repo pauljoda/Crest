@@ -686,6 +686,25 @@ final class BrowserPagePool:
         host.unloadPage(for: tabID, preservingTabState: false)
     }
 
+    // MARK: - Actions - Media sessions
+
+    /// The media session the tab's page publishes. A private window reports
+    /// no media sessions.
+    func mediaSession(matching assignment: BrowserTabRuntimeAssignment) -> BrowserMediaSessionSnapshot? {
+        mediaSessionStore?.session(of: assignment)
+    }
+
+    /// Mutes or unmutes the sound the tab's page plays.
+    func setMuted(_ muted: Bool, matching assignment: BrowserTabRuntimeAssignment) {
+        mediaSessionStore?.setMuted(muted, of: assignment)
+    }
+
+    /// The engine's measure of the sound the tab's page plays, when its engine
+    /// measures it.
+    func audioSpectrum(matching assignment: BrowserTabRuntimeAssignment) -> BrowserAudioSpectrumFeed? {
+        residentPage(matching: assignment)?.pageEngine.audioSpectrum
+    }
+
     // MARK: - Actions - Popup windows
 
     /// Lets go of a popup window's page the core closed before its Quick

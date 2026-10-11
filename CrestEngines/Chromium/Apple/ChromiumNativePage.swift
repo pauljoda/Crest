@@ -39,6 +39,19 @@
         private(set) var disposed = false
         /// What waits for the engine: each script evaluation by its identity.
         var evaluations: [UUID: CheckedContinuation<String?, Never>] = [:]
+        /// Whether the page's tab shows its sound, so a page the engine creates
+        /// after its tab began showing it starts measuring as it is created.
+        @ObservationIgnored private var observesSpectrum = false
+        /// The engine's measure of the sound the page plays, which it takes
+        /// only while the page's tab shows it.
+        @ObservationIgnored
+        private(set) lazy var audioSpectrum: BrowserAudioSpectrumFeed? = BrowserAudioSpectrumFeed(observe: {
+            [weak self] observed in
+            guard let self else { return }
+            observesSpectrum = observed
+            guard created else { return }
+            pages?.request(ObserveAudioSpectrum(pageID: pageID, observed: observed))
+        })
 
         /// A page the core opened, which Chromium's binding creates.
         init(id: UUID, engine: ChromiumEngine) {
@@ -344,14 +357,18 @@
             promptPresenter.ask(asked, dismissal: dismissal)
         }
 
-        /// The engine created the page: the page's scripts go in, and its view
-        /// goes on screen if it has a window to go in.
+        /// The engine created the page: the page's scripts go in, its sound is
+        /// measured if its tab already shows it, and its view goes on screen if
+        /// it has a window to go in.
         func viewReady() {
             guard !created else { return }
             created = true
             for script in contentScripts {
                 pages?.request(
                     AddContentScript(pageID: pageID, source: script.source, mainFrameOnly: script.mainFrameOnly))
+            }
+            if observesSpectrum {
+                pages?.request(ObserveAudioSpectrum(pageID: pageID, observed: true))
             }
             attachIfPossible()
         }

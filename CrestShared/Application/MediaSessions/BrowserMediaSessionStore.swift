@@ -303,15 +303,11 @@ final class BrowserMediaSessionStore: BrowserSidebarWidgetEventSource {
             publishIfChanged()
             return
         }
-        guard let endpoint = endpointsByID[snapshot.id]?.value else { return }
         if action == .toggleMute {
-            guard Self.exposesMuteControl(snapshot) else { return }
-            endpoint.setMediaSessionMuted(
-                !snapshot.isMuted,
-                documentIdentifier: snapshot.id.documentIdentifier
-            )
+            setMuted(!snapshot.isMuted, snapshot)
             return
         }
+        guard let endpoint = endpointsByID[snapshot.id]?.value else { return }
         let mediaAction: BrowserMediaSessionAction?
         switch action {
         case .play:
@@ -332,6 +328,29 @@ final class BrowserMediaSessionStore: BrowserSidebarWidgetEventSource {
             mediaAction,
             documentIdentifier: snapshot.id.documentIdentifier
         )
+    }
+
+    /// The session the tab's page publishes, or nil while it publishes none.
+    /// The core keeps one session per tab, and hiding its card does not hide
+    /// it. Reading it observes the published sessions.
+    func session(of owner: BrowserTabRuntimeAssignment) -> BrowserMediaSessionSnapshot? {
+        sessions.first { $0.owner == owner }
+    }
+
+    /// Mutes or unmutes the tab's session, where Crest has observed its
+    /// playback.
+    func setMuted(_ muted: Bool, of owner: BrowserTabRuntimeAssignment) {
+        guard let session = session(of: owner) else { return }
+        setMuted(muted, session)
+    }
+
+    /// Asks the page to mute or unmute the session, where Crest has observed
+    /// its playback.
+    private func setMuted(_ muted: Bool, _ snapshot: BrowserMediaSessionSnapshot) {
+        guard Self.exposesMuteControl(snapshot),
+            let endpoint = endpointsByID[snapshot.id]?.value
+        else { return }
+        endpoint.setMediaSessionMuted(muted, documentIdentifier: snapshot.id.documentIdentifier)
     }
 
     /// Muting addresses page media elements directly, so the control belongs to

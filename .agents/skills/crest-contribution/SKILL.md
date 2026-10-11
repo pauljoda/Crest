@@ -143,6 +143,12 @@ type you touch. The rules that matter most:
   the real app, Simulator or browser, never only by tests. Launch fixtures and
   validation sessions with `CREST_ISOLATED_SESSION=1` so they never touch
   real browsing data.
+- **Show visual changes in the pull request.** A pull request that changes
+  what people see includes screenshots of each change in its description, so
+  a reviewer can check it without building. Add a short recording where the
+  change moves, before-and-after pairs where the difference is subtle, and
+  both appearances where light and dark differ. Take them in the running app
+  or Simulator, attach them to the pull request, and never commit them.
 - **Regressions: read history, restore once.** When a second regression
   appears in the same area after a refactor, stop guessing. Read the commits
   that built the working behavior, compare the current behavior against the
@@ -160,8 +166,8 @@ type you touch. The rules that matter most:
   platform. No eyebrow labels, subtitles or explanatory text for what the UI
   already shows. Strings go through `String(localized:)` and the catalog.
 - **Plain pull request descriptions.** What changed, why, what was validated,
-  and the AI declaration. No filler, no generated-sounding prose, no emoji
-  headings.
+  screenshots of any visual change, and the AI declaration. No filler, no
+  generated-sounding prose, no emoji headings.
 - **Documentation describes lasting behavior.** Maintained product behavior
   and contributor instructions only; never dated totals, machine paths,
   investigation transcripts or cleanup narratives.
@@ -175,3 +181,4 @@ type you touch. The rules that matter most:
 - [ ] Tests only for silent-breaking contracts; probes removed.
 - [ ] Patch bump, release-note entry and `check-version.sh --fix-commit` pass.
 - [ ] Pull request lists what ran, and both AI usage boxes are ticked.
+- [ ] Visual changes are shown in screenshots attached to the pull request.

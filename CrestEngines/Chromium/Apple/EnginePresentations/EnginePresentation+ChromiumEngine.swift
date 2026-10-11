@@ -7,6 +7,7 @@
         /// gone, or that its owner let go, changes nothing.
         @MainActor func present(on engine: ChromiumEngine) {
             switch self {
+            case .audioSpectrumChanged(let presentation): presentation.present(on: engine)
             case .contentFullscreenChanged(let presentation): presentation.present(on: engine)
             case .contentMessagePosted(let presentation): presentation.present(on: engine)
             case .contentScriptEvaluated(let presentation): presentation.present(on: engine)

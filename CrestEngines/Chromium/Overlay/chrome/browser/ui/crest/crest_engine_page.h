@@ -177,6 +177,8 @@ class EnginePage final : public content::WebContentsObserver,
   bool ActivateMediaSession(const std::string& document);
   bool PerformMediaAction(const std::string& document, engine::MediaSessionAction action);
   bool MuteMediaSession(const std::string& document, bool muted);
+  // Starts or stops measuring the sound the page plays for its tab.
+  bool ObserveAudioSpectrum(bool observed);
   bool AnswerInfoBar(int id, engine::InfoBarAnswer answer);
   bool RefreshIcon();
   bool ShowBlockedPopups();

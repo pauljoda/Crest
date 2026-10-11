@@ -12,15 +12,19 @@ struct BrowserSidebarTabFaviconContent: View {
     var isLoaded = true
     let iconScale: Double
 
+    @Environment(\.tabFaviconIsReplaced) private var isReplaced
+
     var body: some View {
         TabStateFaviconView(
             tab: tab, favicons: favicons, profileID: profileID,
             size: TabFaviconMetrics.defaultSize * BrowserSidebarDensityPolicy.scale(iconScale)
         )
+        .opacity(isReplaced ? 0 : 1)
         .browserTabResidency(isLoaded: isLoaded)
         .overlay(alignment: .bottomTrailing) {
             TabEngineBadge(tabID: tab.id, scale: BrowserSidebarDensityPolicy.scale(iconScale))
         }
+        .anchorPreference(key: TabFaviconBoundsKey.self, value: .bounds) { $0 }
         .modifier(BrowserSidebarTabFaviconColumn(slot: metrics.faviconSlot))
         .foregroundStyle(isProminent ? .primary : .secondary)
     }

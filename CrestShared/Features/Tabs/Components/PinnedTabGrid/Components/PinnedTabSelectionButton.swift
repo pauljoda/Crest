@@ -10,12 +10,12 @@ struct PinnedTabSelectionButton: View {
     let select: () -> Void
     var isMultiSelected = false
     var branding: SpaceBranding? = nil
-    /// Whether another page shares this tab's page, which the tile outlines
-    /// for as long as it lasts.
-    var isSharedAsTab = false
+    /// The tab's page, whose statuses dress the tile while they last.
+    var statusSource: BrowserTabStatusSource? = nil
     let iconCustomization: BrowserIconCustomizationPresentation
 
     @Environment(\.browserInteractionCapabilities) private var capabilities
+    @Environment(\.tabFaviconIsReplaced) private var isIconReplaced
     @State private var isHovering = false
     @AppStorage(BrowserSidebarDensityPreference.scaleKey, store: BrowserSidebarDensityPreference.defaults) private
         var iconScale = 1.0
@@ -23,12 +23,14 @@ struct PinnedTabSelectionButton: View {
     var body: some View {
         Button(action: select) {
             icon
+                .opacity(isIconReplaced ? 0 : 1)
                 .font(.system(size: 17 * BrowserSidebarDensityPolicy.scale(iconScale), weight: .medium))
                 .browserTabResidency(isLoaded: tab.nativeContent != nil || isLoaded)
                 .browserIconCustomizationPopover(iconCustomization, arrowEdge: iconPickerArrowEdge)
                 .overlay(alignment: .bottomTrailing) {
                     TabEngineBadge(tabID: tab.id, scale: BrowserSidebarDensityPolicy.scale(iconScale))
                 }
+                .anchorPreference(key: TabFaviconBoundsKey.self, value: .bounds) { $0 }
                 .frame(maxWidth: .infinity)
                 .frame(
                     height: BrowserSidebarDensityPolicy.pinHeight(scale: iconScale, touch: capabilities.supportsTouch)
@@ -42,7 +44,7 @@ struct PinnedTabSelectionButton: View {
                         isHovering: isHovering || isMultiSelected,
                         isMultiSelected: isMultiSelected,
                         branding: branding,
-                        isSharedAsTab: isSharedAsTab
+                        statusSource: statusSource
                     )
                 )
         }

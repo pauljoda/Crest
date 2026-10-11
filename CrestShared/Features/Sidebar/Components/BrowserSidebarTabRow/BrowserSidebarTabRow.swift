@@ -42,6 +42,11 @@ struct BrowserSidebarTabRow: View {
                 interaction: interaction
             )
         )
+        .modifier(
+            BrowserTabStatusBadgeHost(
+                tab: BrowserTabStatusSource(
+                    tabID: tab.id, context: context, canAct: { configuration.isCurrentAndUnlocked }))
+        )
         .environment(\.browserInteractionCapabilities, context.capabilities)
         .onChange(of: runtimeAssignment) { _, assignment in
             guard renameRequest != assignment else { return }
@@ -70,8 +75,7 @@ struct BrowserSidebarTabRow: View {
             isLoaded: context.isLoaded(tab.id),
             isSplitGroupMember: isSplitGroupMember,
             followingTabID: followingTabID,
-            spacePresentation: spacePresentation,
-            isSharedAsTab: context.isSharedAsTab(tab.id)
+            spacePresentation: spacePresentation
         )
     }
 

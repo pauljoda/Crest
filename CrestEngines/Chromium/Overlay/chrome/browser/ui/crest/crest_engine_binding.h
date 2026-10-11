@@ -269,6 +269,7 @@ class EngineBinding {
   bool Handle(const engine::ActivateMediaSession& request);
   bool Handle(const engine::PerformMediaAction& request);
   bool Handle(const engine::MuteMediaSession& request);
+  bool Handle(const engine::ObserveAudioSpectrum& request);
   bool Handle(const engine::AnswerInfoBar& request);
   bool Handle(const engine::RefreshPageIcon& request);
   bool Handle(const engine::ShowBlockedPopups& request);
