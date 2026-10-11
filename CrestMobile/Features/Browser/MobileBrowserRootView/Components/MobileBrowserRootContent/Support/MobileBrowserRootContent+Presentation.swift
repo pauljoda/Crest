@@ -64,15 +64,17 @@ extension MobileBrowserRootContent {
         )
     }
 
-    /// Whether Settings shows as a sheet from the page, which covers a
-    /// narrow window while it shows, or from the window itself: a sheet asked
-    /// of the window while the page covers it never appears.
+    /// Whether the page covers a narrow window, so a sheet shows from the
+    /// page rather than from the window: a sheet asked of the window while
+    /// the page covers it never appears.
+    var pageCoversWindow: Bool {
+        presentation == .compact && compactPagePresentation.wrappedValue
+    }
+
+    /// Whether Settings shows as a sheet from the page, or from the window.
     func settingsSheet(overPage: Bool) -> Binding<Bool> {
         Binding(
-            get: {
-                model.showsSettings
-                    && (presentation == .compact && compactPagePresentation.wrappedValue) == overPage
-            },
+            get: { model.showsSettings && pageCoversWindow == overPage },
             set: { model.showsSettings = $0 }
         )
     }
@@ -81,6 +83,28 @@ extension MobileBrowserRootContent {
         MobileBrowserSettingsView(
             browser: browser, pages: pages, spaceAccess: spaceAccess, dataDeleter: dataDeleter,
             state: model.settings.state)
+    }
+
+    /// The Space whose History shows as a sheet from the page, or from the
+    /// window.
+    func historySheet(overPage: Bool) -> Binding<BrowserSpaceRuntimeAssignment?> {
+        Binding(
+            get: { pageCoversWindow == overPage ? historyAssignment : nil },
+            set: { historyAssignment = $0 }
+        )
+    }
+
+    func historySheetContent(_ assignment: BrowserSpaceRuntimeAssignment) -> some View {
+        MobileHistoryView(browser: browser, assignment: assignment, spaceAccess: spaceAccess, openURL: openURL)
+    }
+
+    /// Asks about a risky download from the page, or from the window.
+    func downloadRiskConfirmation(overPage: Bool) -> MobileDownloadRiskConfirmationModifier {
+        MobileDownloadRiskConfirmationModifier(
+            confirmation: pages.downloadRiskConfirmation,
+            profileIDs: Set(browser.spaceModels.map(\.profileID)),
+            asks: pageCoversWindow == overPage
+        )
     }
 
     /// The expanded detail area. The container decides whether it adjoins a

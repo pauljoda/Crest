@@ -226,9 +226,12 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
                         showHistory: presentHistoryFromCommand
                     )
                 )
-                // The page covers the window while it shows, so Settings
-                // presents from it; the floating sidebar lives on it too.
+                // The page covers the window while it shows, so Settings,
+                // History and download prompts present from it; the floating
+                // sidebar lives on it too.
                 .sheet(isPresented: settingsSheet(overPage: true)) { settingsSheetContent }
+                .sheet(item: historySheet(overPage: true)) { historySheetContent($0) }
+                .modifier(downloadRiskConfirmation(overPage: true))
             ),
             regular: { layout in
                 MobileRegularBrowserLayout(
@@ -371,20 +374,8 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
         .onChange(of: model.lockedSpaceIDs) {
             model.settings.reconcile()
         }
-        .sheet(item: $historyAssignment) { assignment in
-            MobileHistoryView(
-                browser: browser,
-                assignment: assignment,
-                spaceAccess: spaceAccess,
-                openURL: openURL
-            )
-        }
-        .modifier(
-            MobileDownloadRiskConfirmationModifier(
-                confirmation: pages.downloadRiskConfirmation,
-                profileIDs: Set(browser.spaceModels.map(\.profileID))
-            )
-        )
+        .sheet(item: historySheet(overPage: false)) { historySheetContent($0) }
+        .modifier(downloadRiskConfirmation(overPage: false))
         .onChange(of: pages.urlCopyFeedbackRevision) { _, revision in
             presentURLCopyFeedback(revision: revision)
         }
