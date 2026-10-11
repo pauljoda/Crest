@@ -4,6 +4,9 @@ import SwiftUI
 struct MobileBrowserRootLifecycleModifier: ViewModifier {
     let model: MobileBrowserRootModel
     let presentation: MobileBrowserPresentation
+    /// Opens a new tab with its address field focused, for a launch that
+    /// starts on one.
+    let openNewTab: () -> Void
 
     @Binding var isAddressEditing: Bool
     @Binding var storedSidebarWidth: Double
@@ -16,11 +19,13 @@ struct MobileBrowserRootLifecycleModifier: ViewModifier {
     init(
         model: MobileBrowserRootModel,
         presentation: MobileBrowserPresentation,
+        openNewTab: @escaping () -> Void,
         isAddressEditing: Binding<Bool>,
         storedSidebarWidth: Binding<Double>
     ) {
         self.model = model
         self.presentation = presentation
+        self.openNewTab = openNewTab
         _isAddressEditing = isAddressEditing
         _storedSidebarWidth = storedSidebarWidth
         _runtimeSessionProjection = State(
@@ -35,7 +40,9 @@ struct MobileBrowserRootLifecycleModifier: ViewModifier {
         let preparedContent =
             content
             .task {
-                await model.prepareBrowser()
+                if await model.prepareBrowser() {
+                    openNewTab()
+                }
             }
             .modifier(
                 BrowserRootSelectionObserver(

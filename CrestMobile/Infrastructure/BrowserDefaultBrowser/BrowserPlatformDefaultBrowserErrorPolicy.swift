@@ -3,16 +3,17 @@ import UIKit
 
 @MainActor
 enum BrowserPlatformDefaultBrowserErrorPolicy {
-    static func userFacingDescription(for error: any Error) -> String? {
+    /// Whether the system declined to answer because Crest asked too recently.
+    static func isRateLimited(_ error: any Error) -> Bool {
         let error = error as NSError
-        guard error.domain == UIApplication.CategoryDefaultError.errorDomain,
-            error.code
-                == UIApplication.CategoryDefaultError.rateLimited.rawValue
-        else {
-            return nil
-        }
+        return error.domain == UIApplication.CategoryDefaultError.errorDomain
+            && error.code == UIApplication.CategoryDefaultError.rateLimited.rawValue
+    }
 
-        if let retryDate = error.userInfo[
+    static func userFacingDescription(for error: any Error) -> String? {
+        guard isRateLimited(error) else { return nil }
+
+        if let retryDate = (error as NSError).userInfo[
             UIApplication.CategoryDefaultError.retryAvailableDateErrorKey
         ] as? Date {
             return

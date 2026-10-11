@@ -64,6 +64,25 @@ extension MobileBrowserRootContent {
         )
     }
 
+    /// Whether Settings shows as a sheet from the page, which covers a
+    /// narrow window while it shows, or from the window itself: a sheet asked
+    /// of the window while the page covers it never appears.
+    func settingsSheet(overPage: Bool) -> Binding<Bool> {
+        Binding(
+            get: {
+                model.showsSettings
+                    && (presentation == .compact && compactPagePresentation.wrappedValue) == overPage
+            },
+            set: { model.showsSettings = $0 }
+        )
+    }
+
+    var settingsSheetContent: some View {
+        MobileBrowserSettingsView(
+            browser: browser, pages: pages, spaceAccess: spaceAccess, dataDeleter: dataDeleter,
+            state: model.settings.state)
+    }
+
     /// The expanded detail area. The container decides whether it adjoins a
     /// docked sidebar, while the page and split composition stay identical.
     func regularPageSurface(

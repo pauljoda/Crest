@@ -6,47 +6,98 @@ import UIKit
 /// it, and an iPad pointer's click goes to the container instead of the button
 /// under it; this watches from the window, which sees every touch, and never
 /// claims one.
+///
+/// The window sees a touch wherever it lands, so content drawn over other
+/// observed content, such as a sidebar floating over the page, claims its
+/// taps: an observer beneath it does not hear a tap inside it. Otherwise a tap
+/// on the sidebar's buttons would also read as a tap on the page, which hides
+/// the sidebar before its button can act.
 struct BrowserPlatformObservedTapModifier: ViewModifier {
+    var claimsTaps = false
     let action: @MainActor () -> Void
 
     func body(content: Content) -> some View {
-        content.background(BrowserObservedTapAnchor(action: action))
+        content.background(BrowserObservedTapAnchor(claimsTaps: claimsTaps, action: action))
     }
 }
 
 /// Marks where the content is, and keeps the window's observer while it's on
 /// screen.
 private struct BrowserObservedTapAnchor: UIViewRepresentable {
+    let claimsTaps: Bool
     let action: @MainActor () -> Void
 
     func makeUIView(context: Context) -> AnchorView {
         let view = AnchorView()
         view.isUserInteractionEnabled = false
         view.action = action
+        view.claimsTaps = claimsTaps
         return view
     }
 
     func updateUIView(_ view: AnchorView, context: Context) {
         view.action = action
+        view.claimsTaps = claimsTaps
     }
 
     final class AnchorView: UIView {
+        // MARK: - Static Variables
+
+        /// The anchors on screen whose content keeps its taps from the
+        /// observers beneath it.
+        private static let claiming = NSHashTable<AnchorView>.weakObjects()
+
+        // MARK: - Variables
+
         var action: (@MainActor () -> Void)?
+        var claimsTaps = false {
+            didSet { register() }
+        }
         private var observer: BrowserTapObserverRecognizer?
+
+        // MARK: - Actions - Window
 
         override func didMoveToWindow() {
             super.didMoveToWindow()
+            register()
             if let observer {
                 observer.view?.removeGestureRecognizer(observer)
                 self.observer = nil
             }
             guard let window else { return }
             let observer = BrowserTapObserverRecognizer { [weak self] touch in
-                guard let self, self.window != nil, self.bounds.contains(touch.location(in: self)) else { return }
+                guard let self, self.window != nil, self.contains(touch),
+                    self.claimsTaps || !Self.isClaimed(touch)
+                else { return }
                 self.action?()
             }
             window.addGestureRecognizer(observer)
             self.observer = observer
+        }
+
+        // MARK: - Actions - Claims
+
+        private func register() {
+            if claimsTaps, window != nil {
+                Self.claiming.add(self)
+            } else {
+                Self.claiming.remove(self)
+            }
+        }
+
+        /// Whether content that claims its taps is on screen where `touch`
+        /// landed.
+        private static func isClaimed(_ touch: UITouch) -> Bool {
+            claiming.allObjects.contains { $0.window === touch.window && $0.isShown && $0.contains(touch) }
+        }
+
+        private func contains(_ touch: UITouch) -> Bool {
+            bounds.contains(touch.location(in: self))
+        }
+
+        /// Whether the anchor and everything holding it are drawn.
+        private var isShown: Bool {
+            sequence(first: self as UIView, next: \.superview).allSatisfy { !$0.isHidden && $0.alpha > 0 }
         }
     }
 }
