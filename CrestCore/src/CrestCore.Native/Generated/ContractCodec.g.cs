@@ -14,7 +14,7 @@ namespace CrestCore.Native;
 public static class ContractCodec {
     /// <summary>SHA-256 of the canonical contract schema.</summary>
     public static ReadOnlySpan<byte> Fingerprint => [
-        0x17, 0xc9, 0x4d, 0x67, 0xb2, 0xc6, 0x22, 0xeb, 0xff, 0xe4, 0xd7, 0xba, 0x8f, 0xcf, 0xf6, 0xb5, 0x3e, 0x1a, 0x94, 0x9c, 0x1c, 0x68, 0xcc, 0xa0, 0x5e, 0xa2, 0xbd, 0x49, 0xa0, 0xbc, 0x15, 0xd7
+        0xfb, 0x7f, 0xbf, 0xb8, 0x57, 0x89, 0xd5, 0x00, 0x70, 0x32, 0xca, 0x1f, 0x25, 0x07, 0x92, 0xd8, 0x4f, 0xd5, 0x37, 0x54, 0x97, 0xf9, 0x22, 0x1b, 0x1a, 0xb0, 0xd2, 0x54, 0x97, 0x54, 0x2e, 0xcf
     ];
 
     /// <summary>SHA-256 of the engine contract alone, which an engine binding registers with.</summary>
@@ -18547,16 +18547,6 @@ public static class ContractCodec {
         writer.WriteEnum((int)value);
     }
 
-    public static CredentialCaptureEvent ReadCredentialCaptureEvent(WireReader reader) {
-        ArgumentNullException.ThrowIfNull(reader);
-        return (CredentialCaptureEvent)reader.ReadEnum(5);
-    }
-
-    public static void WriteCredentialCaptureEvent(WireWriter writer, CredentialCaptureEvent value) {
-        ArgumentNullException.ThrowIfNull(writer);
-        writer.WriteEnum((int)value);
-    }
-
     public static CredentialPasswordKind ReadCredentialPasswordKind(WireReader reader) {
         ArgumentNullException.ThrowIfNull(reader);
         return (CredentialPasswordKind)reader.ReadEnum(2);
@@ -18703,16 +18693,6 @@ public static class ContractCodec {
     }
 
     public static void WritePageMediaActivity(WireWriter writer, PageMediaActivity value) {
-        ArgumentNullException.ThrowIfNull(writer);
-        writer.WriteEnum((int)value);
-    }
-
-    public static PasskeyDeviceConfiguration ReadPasskeyDeviceConfiguration(WireReader reader) {
-        ArgumentNullException.ThrowIfNull(reader);
-        return (PasskeyDeviceConfiguration)reader.ReadEnum(3);
-    }
-
-    public static void WritePasskeyDeviceConfiguration(WireWriter writer, PasskeyDeviceConfiguration value) {
         ArgumentNullException.ThrowIfNull(writer);
         writer.WriteEnum((int)value);
     }
@@ -18992,6 +18972,17 @@ public static class ContractCodec {
         ArgumentNullException.ThrowIfNull(writer);
         ArgumentNullException.ThrowIfNull(value);
         writer.WriteEnum(TagOf(ContentBlockingPolicy.All, value));
+    }
+
+    public static CredentialCaptureEvent ReadCredentialCaptureEvent(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return CredentialCaptureEvent.All[reader.ReadEnum(CredentialCaptureEvent.All.Count)];
+    }
+
+    public static void WriteCredentialCaptureEvent(WireWriter writer, CredentialCaptureEvent value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteEnum(TagOf(CredentialCaptureEvent.All, value));
     }
 
     public static CredentialFileFlaw ReadCredentialFileFlaw(WireReader reader) {
@@ -19619,6 +19610,17 @@ public static class ContractCodec {
         ArgumentNullException.ThrowIfNull(writer);
         ArgumentNullException.ThrowIfNull(value);
         writer.WriteEnum(TagOf(PasskeyAuthorizationState.All, value));
+    }
+
+    public static PasskeyDeviceConfiguration ReadPasskeyDeviceConfiguration(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return PasskeyDeviceConfiguration.All[reader.ReadEnum(PasskeyDeviceConfiguration.All.Count)];
+    }
+
+    public static void WritePasskeyDeviceConfiguration(WireWriter writer, PasskeyDeviceConfiguration value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteEnum(TagOf(PasskeyDeviceConfiguration.All, value));
     }
 
     public static PracticeTab ReadPracticeTab(WireReader reader) {

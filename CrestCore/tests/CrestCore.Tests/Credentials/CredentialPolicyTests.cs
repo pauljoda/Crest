@@ -15,6 +15,10 @@ public sealed class CredentialPolicyTests {
         CredentialPasswordKind? passwordKind = CredentialPasswordKind.Current, bool? visible = null, bool target = true) =>
         new(kind, frame ?? Login, top ?? Login, mainFrame, true, username, password, passwordKind, visible, target);
 
+    private static CredentialCaptureDecision Decide(CredentialFormFacts facts, CredentialUsernameHint? hint,
+        CredentialPendingCandidate? pending, double now) =>
+        facts.Event.Decide(facts, hint, pending, now);
+
     private static Rejection Refusal(Func<object?> rule) => Assert.Throws<Rejected>(rule).Rejection;
 
     [Fact]
@@ -23,9 +27,9 @@ public sealed class CredentialPolicyTests {
         Assert.False(CredentialCapturePolicy.Accepts(Plain, Login));
         Assert.False(CredentialCapturePolicy.Accepts(Login, Plain));
         Assert.Equal(CredentialCaptureAction.Ignore,
-            CredentialCapturePolicy.Decide(Facts(CredentialCaptureEvent.Username, top: Plain, username: true), null, null, 0).Action);
+            Decide(Facts(CredentialCaptureEvent.Username, top: Plain, username: true), null, null, 0).Action);
         Assert.Equal(CredentialCaptureAction.Ignore,
-            CredentialCapturePolicy.Decide(Facts(CredentialCaptureEvent.Submit, frame: Plain, username: true, password: true), null, null, 0).Action);
+            Decide(Facts(CredentialCaptureEvent.Submit, frame: Plain, username: true, password: true), null, null, 0).Action);
         Assert.Equal(CredentialSaveValidity.InsecureOrigin, CredentialCapturePolicy.SaveValidity(Plain, Login, 0, 1));
     }
 
@@ -50,32 +54,32 @@ public sealed class CredentialPolicyTests {
     [Fact]
     public void ASubmitTakesAnExplicitUsernameThenAnApplicableHintAndOtherwiseClearsTheHint() {
         var hint = new CredentialUsernameHint(Login, Login, 1_000);
-        var explicitName = CredentialCapturePolicy.Decide(Facts(CredentialCaptureEvent.Submit, username: true, password: true), hint, null, 1_001);
+        var explicitName = Decide(Facts(CredentialCaptureEvent.Submit, username: true, password: true), hint, null, 1_001);
         Assert.Equal(CredentialCapturePolicy.Decision(CredentialCaptureAction.CaptureCandidate, CredentialUsernameSource.Explicit), explicitName);
 
-        var fromHint = CredentialCapturePolicy.Decide(Facts(CredentialCaptureEvent.Submit, password: true), hint, null, 1_001);
+        var fromHint = Decide(Facts(CredentialCaptureEvent.Submit, password: true), hint, null, 1_001);
         Assert.Equal(CredentialUsernameSource.Hint, fromHint.UsernameSource);
 
-        var expired = CredentialCapturePolicy.Decide(Facts(CredentialCaptureEvent.Submit, password: true), hint, null, 2_000);
+        var expired = Decide(Facts(CredentialCaptureEvent.Submit, password: true), hint, null, 2_000);
         Assert.Equal(CredentialCapturePolicy.Decision(CredentialCaptureAction.Ignore, clearsUsernameHint: true), expired);
 
-        var framed = CredentialCapturePolicy.Decide(Facts(CredentialCaptureEvent.Submit, frame: Embedded, username: true, password: true), null, null, 0);
+        var framed = Decide(Facts(CredentialCaptureEvent.Submit, frame: Embedded, username: true, password: true), null, null, 0);
         Assert.True(framed.IsCrossOriginFrame);
         Assert.Equal(CredentialCaptureAction.Ignore,
-            CredentialCapturePolicy.Decide(Facts(CredentialCaptureEvent.Submit, username: true), null, null, 0).Action);
+            Decide(Facts(CredentialCaptureEvent.Submit, username: true), null, null, 0).Action);
     }
 
     [Fact]
     public void AFocusWithoutAPasswordFieldDismissesAndOnlyAMainFrameFieldAnchorsItsPrompt() {
         Assert.Equal(CredentialCaptureAction.DismissFill,
-            CredentialCapturePolicy.Decide(Facts(CredentialCaptureEvent.Focus, passwordKind: null), null, null, 0).Action);
+            Decide(Facts(CredentialCaptureEvent.Focus, passwordKind: null), null, null, 0).Action);
         Assert.Equal(CredentialCaptureAction.Ignore,
-            CredentialCapturePolicy.Decide(Facts(CredentialCaptureEvent.Focus, target: false), null, null, 0).Action);
+            Decide(Facts(CredentialCaptureEvent.Focus, target: false), null, null, 0).Action);
 
-        var main = CredentialCapturePolicy.Decide(Facts(CredentialCaptureEvent.Focus, username: true), null, null, 0);
+        var main = Decide(Facts(CredentialCaptureEvent.Focus, username: true), null, null, 0);
         Assert.Equal(CredentialCapturePolicy.Decision(CredentialCaptureAction.OfferFill, CredentialUsernameSource.Explicit,
             anchorsToField: true), main);
-        var framed = CredentialCapturePolicy.Decide(Facts(CredentialCaptureEvent.Focus, frame: Embedded, mainFrame: false), null, null, 0);
+        var framed = Decide(Facts(CredentialCaptureEvent.Focus, frame: Embedded, mainFrame: false), null, null, 0);
         Assert.Equal(CredentialCapturePolicy.Decision(CredentialCaptureAction.OfferFill, CredentialUsernameSource.None, true, true), framed);
     }
 
@@ -83,17 +87,17 @@ public sealed class CredentialPolicyTests {
     public void ASaveIsOfferedOnlyOnceThePasswordFieldDisappearsBeforeTheCandidateExpires() {
         var pending = new CredentialPendingCandidate(Login, 1_000);
         Assert.Equal(CredentialCaptureAction.KeepPending,
-            CredentialCapturePolicy.Decide(Facts(CredentialCaptureEvent.DocumentState, visible: true), null, pending, 1_001).Action);
+            Decide(Facts(CredentialCaptureEvent.DocumentState, visible: true), null, pending, 1_001).Action);
         Assert.Equal(CredentialCaptureAction.OfferSave,
-            CredentialCapturePolicy.Decide(Facts(CredentialCaptureEvent.DocumentState, visible: false), null, pending, 1_001).Action);
+            Decide(Facts(CredentialCaptureEvent.DocumentState, visible: false), null, pending, 1_001).Action);
         Assert.Equal(CredentialCaptureAction.DiscardPending,
-            CredentialCapturePolicy.Decide(Facts(CredentialCaptureEvent.DocumentState, visible: false), null, pending,
+            Decide(Facts(CredentialCaptureEvent.DocumentState, visible: false), null, pending,
                 1_001 + CredentialCapturePolicy.CandidateLifetime).Action);
         Assert.Equal(CredentialCaptureAction.Ignore,
-            CredentialCapturePolicy.Decide(Facts(CredentialCaptureEvent.DocumentState, frame: Embedded, mainFrame: false, visible: false),
+            Decide(Facts(CredentialCaptureEvent.DocumentState, frame: Embedded, mainFrame: false, visible: false),
                 null, pending, 1_001).Action);
         Assert.Equal(CredentialCaptureAction.Ignore,
-            CredentialCapturePolicy.Decide(Facts(CredentialCaptureEvent.DocumentState, visible: false), null, null, 1_001).Action);
+            Decide(Facts(CredentialCaptureEvent.DocumentState, visible: false), null, null, 1_001).Action);
     }
 
     [Fact]

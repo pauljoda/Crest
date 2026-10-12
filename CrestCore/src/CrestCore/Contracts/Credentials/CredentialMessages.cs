@@ -33,10 +33,6 @@ public sealed record CredentialFormFacts(CredentialCaptureEvent Event, Credentia
     CredentialOrigin TopLevelOrigin, bool IsMainFrame, bool HasFormId, bool HasUsername, bool HasPassword,
     CredentialPasswordKind? PasswordKind, bool? HasVisiblePasswordField, bool HasFillTarget);
 
-/// A credential form observation, or `Filled` when the native layer finished
-/// filling a saved credential into the page.
-public enum CredentialCaptureEvent { Username, Focus, Submit, DocumentState, Filled }
-
 /// A submitted credential still waiting for the page to show it signed in.
 /// `SubmittedAt` is in seconds since 1970.
 public sealed record CredentialPendingCandidate(CredentialOrigin Origin, double SubmittedAt);

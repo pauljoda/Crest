@@ -3869,6 +3869,10 @@
     "2026-10-12-agent-messages-own-behavior": {
       "category": "internal",
       "message": "Let agent messages and tool options say what they do"
+    },
+    "2026-10-12-core-kinds-own-behavior": {
+      "category": "internal",
+      "message": "Let core kinds say what each of them does"
     }
   }
 }

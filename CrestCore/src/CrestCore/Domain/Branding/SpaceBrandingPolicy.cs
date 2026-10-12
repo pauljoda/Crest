@@ -13,8 +13,6 @@ public static class SpaceBrandingPolicy {
 
     public const int MaximumColorCount = 3;
     public const int MaximumCrestPaletteCount = 6;
-    /// The most letters a monogram figure shows.
-    public const int MaximumMonogramLength = 2;
 
     /// The Space color used when a branding record has none.
     public static BrandColor DefaultColor { get; } = new(0.29, 0.25, 0.58);
@@ -82,22 +80,8 @@ public static class SpaceBrandingPolicy {
     /// place of an empty one, and none at all when it is the crest's own symbol.
     public static CrestCharge? Charge(CrestCharge? charge, CrestSymbol symbol) {
         if (charge is null) return null;
-        string text = charge.Text?.Trim() ?? "";
-        var figure = charge.Kind.Kind switch {
-            CrestChargeKind.Kinds.System => text.Length == 0 ? new(CrestChargeKind.None) : charge with { Text = text },
-            CrestChargeKind.Kinds.Emoji => string.IsNullOrEmpty(charge.Text) ? new(CrestChargeKind.None)
-                : charge with { Text = new System.Globalization.StringInfo(charge.Text).SubstringByTextElements(0, 1) },
-            CrestChargeKind.Kinds.Monogram => text.Length == 0 ? new(CrestChargeKind.None) : charge with {
-                Text = FirstTextElements(text.ToUpperInvariant(), MaximumMonogramLength).ToUpperInvariant()
-            },
-            _ => charge
-        };
+        var figure = charge.Kind.Normalized(charge);
         return figure.Kind == CrestChargeKind.Heraldic && figure.Symbol == symbol ? null : figure;
-    }
-
-    private static string FirstTextElements(string text, int count) {
-        var elements = new System.Globalization.StringInfo(text);
-        return elements.LengthInTextElements <= count ? text : elements.SubstringByTextElements(0, count);
     }
 
     /// A strength, fade, intensity or color component, kept within 0 through 1.

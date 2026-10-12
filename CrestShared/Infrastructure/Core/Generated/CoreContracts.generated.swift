@@ -6912,14 +6912,6 @@ enum CredentialCaptureAction: Int, CaseIterable, Sendable {
     case discardPending = 7
 }
 
-enum CredentialCaptureEvent: Int, CaseIterable, Sendable {
-    case username = 0
-    case focus = 1
-    case submit = 2
-    case documentState = 3
-    case filled = 4
-}
-
 enum CredentialPasswordKind: Int, CaseIterable, Sendable {
     case current = 0
     case new = 1
@@ -7071,12 +7063,6 @@ struct PageMediaActivity: OptionSet, Sendable {
 enum PageScriptWorld: Int, CaseIterable, Sendable {
     case agent = 0
     case page = 1
-}
-
-enum PasskeyDeviceConfiguration: Int, CaseIterable, Sendable {
-    case configured = 0
-    case notConfigured = 1
-    case unknown = 2
 }
 
 enum PointerButton: Int, CaseIterable, Sendable {
@@ -8665,6 +8651,7 @@ struct CloudSyncStepKind: Hashable, Sendable {
 }
 
 /// The members of the core's `CloudTransportReport`. A member's wire tag is its index in `all`.
+/// Core-only behavior, not emitted: `settle`.
 struct CloudTransportReport: Hashable, Sendable {
     let tag: Int
     var name: String { facts.name }
@@ -8867,6 +8854,47 @@ struct ContentBlockingPolicy: Hashable, Sendable {
             self.identifier = identifier
             self.blockedHostSuffixes = blockedHostSuffixes
             self.blocksContent = blocksContent
+        }
+    }
+}
+
+/// The members of the core's `CredentialCaptureEvent`. A member's wire tag is its index in `all`.
+/// Core-only behavior, not emitted: `decide`.
+struct CredentialCaptureEvent: Hashable, Sendable {
+    let tag: Int
+    var name: String { facts.name }
+    private let facts: Facts
+
+    private init(tag: Int, name: String) {
+        self.tag = tag
+        facts = Facts(name: name)
+    }
+
+    static let username = CredentialCaptureEvent(tag: 0, name: "username")
+    static let focus = CredentialCaptureEvent(tag: 1, name: "focus")
+    static let submit = CredentialCaptureEvent(tag: 2, name: "submit")
+    static let documentState = CredentialCaptureEvent(tag: 3, name: "documentState")
+    static let filled = CredentialCaptureEvent(tag: 4, name: "filled")
+
+    static let all: [CredentialCaptureEvent] = [username, focus, submit, documentState, filled]
+
+    static func named(_ name: String?) -> CredentialCaptureEvent? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: CredentialCaptureEvent, rhs: CredentialCaptureEvent) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+
+    private final class Facts: Sendable {
+        let name: String
+
+        init(name: String) {
+            self.name = name
         }
     }
 }
@@ -9396,6 +9424,7 @@ struct CrestBackplate: Hashable, Sendable {
 }
 
 /// The members of the core's `CrestChargeKind`. A member's wire tag is its index in `all`.
+/// Core-only behavior, not emitted: `normalize`.
 struct CrestChargeKind: Hashable, Sendable {
     enum Kinds: Sendable {
         case heraldic
@@ -15289,6 +15318,47 @@ struct PasskeyAuthorizationState: Hashable, Sendable {
     }
 }
 
+/// The members of the core's `PasskeyDeviceConfiguration`. A member's wire tag is its index in `all`.
+struct PasskeyDeviceConfiguration: Hashable, Sendable {
+    let tag: Int
+    var name: String { facts.name }
+    var rulesOutPasskeys: Bool { facts.rulesOutPasskeys }
+    private let facts: Facts
+
+    private init(tag: Int, name: String, rulesOutPasskeys: Bool) {
+        self.tag = tag
+        facts = Facts(name: name, rulesOutPasskeys: rulesOutPasskeys)
+    }
+
+    static let configured = PasskeyDeviceConfiguration(tag: 0, name: "configured", rulesOutPasskeys: false)
+    static let notConfigured = PasskeyDeviceConfiguration(tag: 1, name: "notConfigured", rulesOutPasskeys: true)
+    static let unknown = PasskeyDeviceConfiguration(tag: 2, name: "unknown", rulesOutPasskeys: false)
+
+    static let all: [PasskeyDeviceConfiguration] = [configured, notConfigured, unknown]
+
+    static func named(_ name: String?) -> PasskeyDeviceConfiguration? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: PasskeyDeviceConfiguration, rhs: PasskeyDeviceConfiguration) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+
+    private final class Facts: Sendable {
+        let name: String
+        let rulesOutPasskeys: Bool
+
+        init(name: String, rulesOutPasskeys: Bool) {
+            self.name = name
+            self.rulesOutPasskeys = rulesOutPasskeys
+        }
+    }
+}
+
 /// The members of the core's `PracticeTab`. A member's wire tag is its index in `all`.
 struct PracticeTab: Hashable, Sendable {
     let tag: Int
@@ -19694,12 +19764,14 @@ struct SitePermission: Hashable, Sendable {
 }
 
 /// The members of the core's `SitePermissionDecision`. A member's wire tag is its index in `all`.
+/// Core-only behavior, not emitted: `record`.
 struct SitePermissionDecision: Hashable, Sendable {
     let tag: Int
     var name: String { facts.name }
     var verdict: SitePermissionVerdict { facts.verdict }
     var grants: Bool { facts.grants }
     var denies: Bool { facts.denies }
+    var asks: Bool { facts.asks }
     var isPersistent: Bool { facts.isPersistent }
     var precedence: Int { facts.precedence }
     var title: LocalizedStringResource { facts.title }
@@ -19711,6 +19783,7 @@ struct SitePermissionDecision: Hashable, Sendable {
         verdict: SitePermissionVerdict,
         grants: Bool,
         denies: Bool,
+        asks: Bool,
         isPersistent: Bool,
         precedence: Int,
         title: LocalizedStringResource
@@ -19721,6 +19794,7 @@ struct SitePermissionDecision: Hashable, Sendable {
             verdict: verdict,
             grants: grants,
             denies: denies,
+            asks: asks,
             isPersistent: isPersistent,
             precedence: precedence,
             title: title
@@ -19733,6 +19807,7 @@ struct SitePermissionDecision: Hashable, Sendable {
         verdict: .ask,
         grants: false,
         denies: false,
+        asks: true,
         isPersistent: false,
         precedence: 2,
         title: LocalizedStringResource("Ask")
@@ -19743,6 +19818,7 @@ struct SitePermissionDecision: Hashable, Sendable {
         verdict: .grant,
         grants: true,
         denies: false,
+        asks: false,
         isPersistent: false,
         precedence: 1,
         title: LocalizedStringResource("Allowed for Session")
@@ -19753,6 +19829,7 @@ struct SitePermissionDecision: Hashable, Sendable {
         verdict: .deny,
         grants: false,
         denies: true,
+        asks: false,
         isPersistent: false,
         precedence: 3,
         title: LocalizedStringResource("Blocked for Session")
@@ -19763,6 +19840,7 @@ struct SitePermissionDecision: Hashable, Sendable {
         verdict: .grant,
         grants: true,
         denies: false,
+        asks: false,
         isPersistent: true,
         precedence: 0,
         title: LocalizedStringResource("Allow")
@@ -19773,6 +19851,7 @@ struct SitePermissionDecision: Hashable, Sendable {
         verdict: .deny,
         grants: false,
         denies: true,
+        asks: false,
         isPersistent: true,
         precedence: 4,
         title: LocalizedStringResource("Block")
@@ -19803,6 +19882,7 @@ struct SitePermissionDecision: Hashable, Sendable {
         let verdict: SitePermissionVerdict
         let grants: Bool
         let denies: Bool
+        let asks: Bool
         let isPersistent: Bool
         let precedence: Int
         let title: LocalizedStringResource
@@ -19812,6 +19892,7 @@ struct SitePermissionDecision: Hashable, Sendable {
             verdict: SitePermissionVerdict,
             grants: Bool,
             denies: Bool,
+            asks: Bool,
             isPersistent: Bool,
             precedence: Int,
             title: LocalizedStringResource
@@ -19820,6 +19901,7 @@ struct SitePermissionDecision: Hashable, Sendable {
             self.verdict = verdict
             self.grants = grants
             self.denies = denies
+            self.asks = asks
             self.isPersistent = isPersistent
             self.precedence = precedence
             self.title = title

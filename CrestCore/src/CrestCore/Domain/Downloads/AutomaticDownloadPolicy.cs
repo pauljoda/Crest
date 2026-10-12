@@ -16,7 +16,7 @@ public static class AutomaticDownloadPolicy {
         // A fresh user action starts a fresh one-download allowance.
         bool allowance = !isUserInitiated && hasAllowedAutomaticDownload;
         var action = Action(isUserInitiated || isUserApprovedRetry, savedDecision, allowance);
-        if (!isUserInitiated && !isUserApprovedRetry && savedDecision.Verdict == SitePermissionVerdict.Ask
+        if (!isUserInitiated && !isUserApprovedRetry && savedDecision.Asks
             && action == AutomaticDownloadAction.Allow) allowance = true;
         return new(action, allowance);
     }

@@ -3,9 +3,6 @@ namespace CrestCore.Contracts;
 /// Where passkey access for websites stands.
 public sealed record PasskeyAccessVerdict(PasskeyAccessStatus Status);
 
-/// Whether the device has passkeys set up, as far as the platform can tell.
-public enum PasskeyDeviceConfiguration { Configured, NotConfigured, Unknown }
-
 /// Whether the save prompt offers the password to the system's Passwords app.
 public sealed record SystemPasswordOfferDecision(bool Offers);
 

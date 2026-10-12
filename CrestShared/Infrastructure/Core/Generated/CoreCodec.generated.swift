@@ -7,7 +7,7 @@ import Foundation
 enum CoreCodec {
     /// SHA-256 of the canonical contract schema. The core refuses any other.
     static let fingerprint: [UInt8] = [
-        0x17, 0xc9, 0x4d, 0x67, 0xb2, 0xc6, 0x22, 0xeb, 0xff, 0xe4, 0xd7, 0xba, 0x8f, 0xcf, 0xf6, 0xb5, 0x3e, 0x1a, 0x94, 0x9c, 0x1c, 0x68, 0xcc, 0xa0, 0x5e, 0xa2, 0xbd, 0x49, 0xa0, 0xbc, 0x15, 0xd7
+        0xfb, 0x7f, 0xbf, 0xb8, 0x57, 0x89, 0xd5, 0x00, 0x70, 0x32, 0xca, 0x1f, 0x25, 0x07, 0x92, 0xd8, 0x4f, 0xd5, 0x37, 0x54, 0x97, 0xf9, 0x22, 0x1b, 0x1a, 0xb0, 0xd2, 0x54, 0x97, 0x54, 0x2e, 0xcf
     ]
     /// SHA-256 of the engine contract alone, which an engine binding registers with.
     static let engineFingerprint: [UInt8] = [
@@ -24150,20 +24150,6 @@ extension CredentialCaptureAction {
     }
 }
 
-extension CredentialCaptureEvent {
-    init(from reader: inout WireReader) throws(WireError) {
-        let rawValue = try reader.readEnum()
-        guard let value = CredentialCaptureEvent(rawValue: rawValue) else {
-            throw WireError.malformed("Unknown CredentialCaptureEvent \(rawValue)")
-        }
-        self = value
-    }
-
-    func encode(into writer: inout WireWriter) {
-        writer.writeEnum(rawValue)
-    }
-}
-
 extension CredentialPasswordKind {
     init(from reader: inout WireReader) throws(WireError) {
         let rawValue = try reader.readEnum()
@@ -24473,20 +24459,6 @@ extension PageScriptWorld {
         let rawValue = try reader.readEnum()
         guard let value = PageScriptWorld(rawValue: rawValue) else {
             throw WireError.malformed("Unknown PageScriptWorld \(rawValue)")
-        }
-        self = value
-    }
-
-    func encode(into writer: inout WireWriter) {
-        writer.writeEnum(rawValue)
-    }
-}
-
-extension PasskeyDeviceConfiguration {
-    init(from reader: inout WireReader) throws(WireError) {
-        let rawValue = try reader.readEnum()
-        guard let value = PasskeyDeviceConfiguration(rawValue: rawValue) else {
-            throw WireError.malformed("Unknown PasskeyDeviceConfiguration \(rawValue)")
         }
         self = value
     }
@@ -24919,6 +24891,20 @@ extension ContentBlockingPolicy {
         let tag = try reader.readEnum()
         guard Self.all.indices.contains(tag) else {
             throw WireError.malformed("Unknown ContentBlockingPolicy \(tag)")
+        }
+        self = Self.all[tag]
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeEnum(tag)
+    }
+}
+
+extension CredentialCaptureEvent {
+    init(from reader: inout WireReader) throws(WireError) {
+        let tag = try reader.readEnum()
+        guard Self.all.indices.contains(tag) else {
+            throw WireError.malformed("Unknown CredentialCaptureEvent \(tag)")
         }
         self = Self.all[tag]
     }
@@ -25731,6 +25717,20 @@ extension PasskeyAuthorizationState {
         let tag = try reader.readEnum()
         guard Self.all.indices.contains(tag) else {
             throw WireError.malformed("Unknown PasskeyAuthorizationState \(tag)")
+        }
+        self = Self.all[tag]
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeEnum(tag)
+    }
+}
+
+extension PasskeyDeviceConfiguration {
+    init(from reader: inout WireReader) throws(WireError) {
+        let tag = try reader.readEnum()
+        guard Self.all.indices.contains(tag) else {
+            throw WireError.malformed("Unknown PasskeyDeviceConfiguration \(tag)")
         }
         self = Self.all[tag]
     }
