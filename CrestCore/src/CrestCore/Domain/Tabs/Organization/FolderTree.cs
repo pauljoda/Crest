@@ -29,25 +29,38 @@ public sealed class FolderTree(IReadOnlyList<FolderState> folders) {
         return index;
     }
 
+    /// The bounded tree `source` makes, in preorder: a folder whose parent
+    /// comes later, is missing or would sit too deep moves to the top level,
+    /// a child takes its parent's section, and a folder that repeats an
+    /// identity, sits in a section that holds no folders or comes past the
+    /// most a Space keeps is left out. Never throws.
     public static IReadOnlyList<FolderState> RepairPreorder(IReadOnlyList<FolderState> source) {
         List<FolderState> accepted = [];
         Dictionary<Guid, (int Depth, TabPlacement Location)> parents = [];
-        foreach (var folder in source.Take(MaximumCount)) {
+        foreach (var folder in source) {
+            if (accepted.Count == MaximumCount) break;
+            if (parents.ContainsKey(folder.Id)) continue;
             var parent = folder.ParentId;
             if (parent is not { } requested || requested == folder.Id || !parents.TryGetValue(requested, out var found)
                 || found.Depth + 1 >= MaximumDepth) parent = null;
             var repaired = folder with { ParentId = parent, Location = parent is { } p ? parents[p].Location : folder.Location };
+            if (!repaired.Location.HoldsFolders) continue;
             accepted.Add(repaired);
             parents[folder.Id] = (parent is { } id ? parents[id].Depth + 1 : 0, repaired.Location);
         }
         return new FolderTree(accepted).DisplayOrder();
     }
 
+    /// Throws `BrowserRuleException` with `InvalidFolderTree` unless the
+    /// folders are a bounded tree: too many, a repeated identity, a folder in
+    /// a section that holds none, a parent that is missing or in another
+    /// section, a cycle, or a folder too deep.
     public void Validate() {
         if (folders.Count > MaximumCount || folders.Select(f => f.Id).Distinct().Count() != folders.Count)
             throw new BrowserRuleException(BrowserRule.InvalidFolderTree);
         foreach (var folder in folders) {
-            if (!folder.Location.HoldsFolders || folder.ParentId is { } parent && Folder(parent).Location != folder.Location)
+            if (!folder.Location.HoldsFolders
+                || folder.ParentId is { } parent && (!byId.TryGetValue(parent, out var held) || held.Location != folder.Location))
                 throw new BrowserRuleException(BrowserRule.InvalidFolderTree);
             _ = Depth(folder.Id);
         }
@@ -96,8 +109,10 @@ public sealed class FolderTree(IReadOnlyList<FolderState> folders) {
 
     #region Mutators
 
+    /// The folder with this identity. Refused with `UnknownFolder` for one the
+    /// tree does not hold.
     public FolderState Folder(Guid id) => byId.TryGetValue(id, out var folder) ? folder
-        : throw new BrowserRuleException(BrowserRule.UnknownFolder);
+        : throw new Rejected(new UnknownFolder(id));
 
     public IEnumerable<FolderState> Children(Guid? id) => folders.Where(f => f.ParentId == id);
 
@@ -109,11 +124,16 @@ public sealed class FolderTree(IReadOnlyList<FolderState> folders) {
         return result;
     }
 
+    /// How many folders hold the folder. Refused with `UnknownFolder` for one
+    /// the tree does not hold; throws `BrowserRuleException` with
+    /// `InvalidFolderTree` when a folder above it is missing, in a cycle or
+    /// too deep.
     public int Depth(Guid id) {
         var folder = Folder(id); var depth = 0; HashSet<Guid> seen = [id];
         while (folder.ParentId is { } parent) {
-            if (!seen.Add(parent) || ++depth >= MaximumDepth) throw new BrowserRuleException(BrowserRule.InvalidFolderTree);
-            folder = Folder(parent);
+            if (!seen.Add(parent) || ++depth >= MaximumDepth || !byId.TryGetValue(parent, out var held))
+                throw new BrowserRuleException(BrowserRule.InvalidFolderTree);
+            folder = held;
         }
         return depth;
     }

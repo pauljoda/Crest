@@ -17,7 +17,8 @@ public sealed record HistoryEntryState(Guid Id, string Url, string Title, DateTi
     /// A newest-first history after a visit to `url`, capped at
     /// `MaximumEntries`: the page's entry, with one more visit, goes first, and
     /// a new entry takes `newId`. Null for an address history does not keep,
-    /// which leaves it as it was.
+    /// including one whose normal form normalizes to another, which leaves
+    /// it as it was.
     internal static IReadOnlyList<HistoryEntryState>? Visit(IReadOnlyList<HistoryEntryState> history, string url, string? title,
         DateTimeOffset now, Guid newId) => Visit(history, url, title, now, newId, MaximumEntries);
 
@@ -25,7 +26,7 @@ public sealed record HistoryEntryState(Guid Id, string Url, string Title, DateTi
     internal static IReadOnlyList<HistoryEntryState>? Visit(IReadOnlyList<HistoryEntryState> history, string url, string? title,
         DateTimeOffset now, Guid newId, int limit) {
         ArgumentNullException.ThrowIfNull(history);
-        if (new WebAddress(url).Normalized is not { } normalized) return null;
+        if (new WebAddress(url).Normalized is not { } normalized || new WebAddress(normalized).Normalized != normalized) return null;
         var previous = AddressIndex.Of(history).Entry(normalized);
 #if CREST_CROSS_CHECKS
         if (previous != history.FirstOrDefault(entry => entry.Url == normalized))
@@ -59,10 +60,12 @@ public sealed record HistoryEntryState(Guid Id, string Url, string Title, DateTi
     /// The entry a visit to `normalizedUrl` titled `title` leaves: `previous`
     /// with one more visit, or a new entry taking `newId`. A blank title is
     /// the page saying nothing, so the entry keeps its title, and a new one
-    /// takes the address's host.
+    /// takes the address's host. `normalizedUrl` is an address in its normal
+    /// form, and `previous`, when there is one, is its entry.
     internal static HistoryEntryState Record(string normalizedUrl, string? title, DateTimeOffset now, Guid newId, HistoryEntryState? previous) {
         if (new WebAddress(normalizedUrl).Normalized != normalizedUrl || newId == Guid.Empty
-            || previous is not null && previous.Url != normalizedUrl) throw new BrowserRuleException(BrowserRule.InvalidHistoryVisit);
+            || previous is not null && previous.Url != normalizedUrl)
+            throw new ArgumentException("A visit is to an address in its normal form, with a new identity or the address's own entry.");
         string resolvedTitle = !string.IsNullOrEmpty(title) ? title : previous?.Title ?? new Uri(normalizedUrl).Host;
         if (resolvedTitle.Length == 0) resolvedTitle = normalizedUrl;
         return previous is null ? new(newId, normalizedUrl, resolvedTitle, now, now, 1)

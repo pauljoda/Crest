@@ -21,7 +21,7 @@ public static class NativeSessionMaintenance {
 
     /// The repaired session and positional asset references: `{"session", "assets"}`.
     public static JsonObject Repair(JsonObject source, double now, JsonObject? emptySpace = null, IIdSource? ids = null) {
-        if (!double.IsFinite(now)) throw new BrowserRuleException(BrowserRule.InvalidSavedDate);
+        if (!double.IsFinite(now)) throw new ArgumentOutOfRangeException(nameof(now), now, "A time is a finite number of seconds.");
         var repaired = Repair(StoredSessionCodec.DecodeSession(source), StoredSessionCodec.Date(now),
             emptySpace is null ? null : StoredSessionCodec.DecodeSpace(emptySpace), ids ?? new SystemIdSource(), out var origins);
         return Answer(repaired, origins);
@@ -68,7 +68,7 @@ public static class NativeSessionMaintenance {
     /// Removes history and archive records older than each Space keeps them;
     /// a Space that is being deleted keeps everything. `{"session", "changed"}`.
     public static JsonObject Retain(JsonObject source, double now) {
-        if (!double.IsFinite(now)) throw new BrowserRuleException(BrowserRule.InvalidSavedDate);
+        if (!double.IsFinite(now)) throw new ArgumentOutOfRangeException(nameof(now), now, "A time is a finite number of seconds.");
         var retained = Retain(StoredSessionCodec.DecodeSession(source), StoredSessionCodec.Date(now), out var changed);
         return new() { ["session"] = StoredSessionCodec.Encode(retained), ["changed"] = changed };
     }

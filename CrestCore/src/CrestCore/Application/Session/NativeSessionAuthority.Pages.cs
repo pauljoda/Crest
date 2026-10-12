@@ -37,23 +37,25 @@ public sealed partial class NativeSessionAuthority {
     }
 
     /// Accepts `edit` and answers the states it went between, or null when it
-    /// no longer applies. An edit that changes nothing is still taken: the
-    /// state stays as it was. The caller holds the gate.
+    /// no longer applies, including when a rule would refuse what it leaves:
+    /// a report is never refused. An edit that changes nothing is still
+    /// taken: the state stays as it was. The caller holds the gate.
     private (SessionState Previous, SessionState Next, SessionTabEvents Events)? ApplyUnderGate(PageEdit edit) {
-        try {
-            RequireWritable();
-        } catch (BrowserRuleException) {
-            return null;
-        }
-        if (PendingDeletion(session, edit.SpaceId) is not null
+        if (!TakesEdits() || PendingDeletion(session, edit.SpaceId) is not null
             || session.Spaces.FirstOrDefault(space => space.Id == edit.SpaceId) is not { } original
             || IsLockedUnderGate(original)) return null;
-        if (edit.Apply(original, Stamp(edit.At)) is not { } edited) return null;
-        var events = new SessionTabEvents([], edited.Favicon);
-        if (edited.Space == original) return (session, session, events);
-        var next = Replacing(session, edited.Space);
-        Validate(session, next);
-        ValidateBorrowedSession(next);
+        SessionState next;
+        SessionTabEvents events;
+        try {
+            if (edit.Apply(original, Stamp(edit.At)) is not { } edited) return null;
+            events = new SessionTabEvents([], edited.Favicon);
+            if (edited.Space == original) return (session, session, events);
+            next = Replacing(session, edited.Space);
+            Validate(session, next);
+            ValidateBorrowedSession(next);
+        } catch (Rejected) {
+            return null;
+        }
         return (Accept(next), next, events);
     }
 

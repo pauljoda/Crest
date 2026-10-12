@@ -63,7 +63,7 @@ internal sealed class NativeSyncTransaction : IDisposable {
             // A paired session replacement may already have published this
             // journal under the same core lock as the browser revision.
             if (committed) return;
-            if (completed) throw new BrowserRuleException(BrowserRule.InvalidSyncTransaction);
+            if (completed) throw new InvalidOperationException("A sync transaction completes once.");
             Owner.Commit(this); completed = committed = true;
         }
     }
@@ -76,7 +76,7 @@ internal sealed class NativeSyncTransaction : IDisposable {
     internal void CommitDurably() {
         lock (NativeSessionAuthority.Gate) {
             if (committed) return;
-            if (completed || !IsSealed) throw new BrowserRuleException(BrowserRule.InvalidSyncTransaction);
+            if (completed || !IsSealed) throw new InvalidOperationException("A sync transaction is saved once it is sealed, and once.");
         }
         Owner.Session?.Storage?.SaveJournal(Journal);
         Commit();

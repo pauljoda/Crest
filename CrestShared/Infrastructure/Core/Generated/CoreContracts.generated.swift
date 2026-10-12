@@ -260,6 +260,7 @@ enum Rejection: Equatable, Error, Sendable {
     case invalidSplitColumnShares(InvalidSplitColumnShares)
     case invalidSplitIcon(InvalidSplitIcon)
     case invalidSyncRecords(InvalidSyncRecords)
+    case invalidTabContent(InvalidTabContent)
     case invalidTabIcon(InvalidTabIcon)
     case languageTooLong(LanguageTooLong)
     case lastStartPage(LastStartPage)
@@ -3342,6 +3343,10 @@ struct InvalidSyncRecords: Equatable, Sendable {
     var message: LocalizedStringResource {
         LocalizedStringResource("Crest couldn’t apply the latest changes from iCloud.")
     }
+}
+
+struct InvalidTabContent: Equatable, Sendable {
+    let tabID: UUID
 }
 
 struct InvalidTabIcon: Equatable, Sendable {

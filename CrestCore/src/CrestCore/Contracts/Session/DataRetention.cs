@@ -51,10 +51,9 @@ public sealed class DataRetention {
     /// The indices of `timestamps` older than `lifetime` seconds at `now`.
     /// Numeric timestamps keep native Date precision at a retention boundary;
     /// callers apply the returned indices to their existing value snapshots.
+    /// Every time is the stored seconds of a date, so each is finite.
     internal static IReadOnlyList<int> Expired(IReadOnlyList<double> timestamps, double now, double lifetime) {
-        if (timestamps.Any(value => !double.IsFinite(value))) throw new BrowserRuleException(BrowserRule.InvalidRecordDate);
-        if (!double.IsFinite(now) || !double.IsFinite(lifetime) || lifetime < 0)
-            throw new BrowserRuleException(BrowserRule.InvalidRetentionInterval);
+        ArgumentOutOfRangeException.ThrowIfNegative(lifetime);
         return Enumerable.Range(0, timestamps.Count).Where(i => now - timestamps[i] > lifetime).ToArray();
     }
 

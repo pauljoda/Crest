@@ -38,11 +38,12 @@ public sealed class BrowserTab {
     #region Actions - Persistence
 
     /// A stored tab, with a blank rename read as no rename. A web page needs an
-    /// address and nothing else may have one.
+    /// address and nothing else may have one, and a native view names its
+    /// kind. Refused with `InvalidTabContent` otherwise.
     public static BrowserTab Restore(TabState state) {
         var restored = state with { CustomTitle = string.IsNullOrWhiteSpace(state.CustomTitle) ? null : state.CustomTitle.Trim() };
-        var content = TabKind.FromStored(restored.NativeContent?.Kind, restored.Url, restored.Title);
-        if (content.IsWebPage != (restored.Url is not null)) throw new BrowserRuleException(BrowserRule.InvalidTabContent);
+        if (restored.NativeContent is { } native && (string.IsNullOrWhiteSpace(native.Kind) || restored.Url is not null))
+            throw new Rejected(new InvalidTabContent(restored.Id));
         return new(restored);
     }
 

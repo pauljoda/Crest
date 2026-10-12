@@ -21,12 +21,10 @@ public sealed record RemoveHistoryRange(Guid WorkspaceId, Guid SpaceId, DateTime
 
     /// The indices of `timestamps` from `start` up to, but not including,
     /// `end`. Callers apply the returned indices to their existing value
-    /// snapshots.
-    internal static IReadOnlyList<int> WithinRange(IReadOnlyList<double> timestamps, double start, double end) {
-        if (timestamps.Any(value => !double.IsFinite(value))) throw new BrowserRuleException(BrowserRule.InvalidRecordDate);
-        if (!double.IsFinite(start) || !double.IsFinite(end)) throw new BrowserRuleException(BrowserRule.InvalidHistoryRange);
-        return Enumerable.Range(0, timestamps.Count).Where(i => timestamps[i] >= start && timestamps[i] < end).ToArray();
-    }
+    /// snapshots. Every time is the stored seconds of a date, so each is
+    /// finite.
+    internal static IReadOnlyList<int> WithinRange(IReadOnlyList<double> timestamps, double start, double end) =>
+        Enumerable.Range(0, timestamps.Count).Where(i => timestamps[i] >= start && timestamps[i] < end).ToArray();
 
     #endregion
 }

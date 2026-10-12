@@ -115,7 +115,7 @@ public sealed class NativeSyncJournal {
     /// it never reissues a version it issued after the checkpoint was taken.
     /// Its records, clock and pending uploads are unchanged.
     public NativeSyncJournal Recovered(Guid deviceId) {
-        if (deviceId == Id(metadata["deviceID"])) throw new BrowserRuleException(BrowserRule.InvalidRecoveryIdentity);
+        if (deviceId == Id(metadata["deviceID"])) throw new ArgumentException("A recovered journal takes a new device identity.", nameof(deviceId));
         var fields = metadata.DeepClone().AsObject();
         fields["deviceID"] = deviceId.ToString("D").ToUpperInvariant();
         return new(fields, new(records, StringComparer.Ordinal), new(pending, StringComparer.Ordinal));

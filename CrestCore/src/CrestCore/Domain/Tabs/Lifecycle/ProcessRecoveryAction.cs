@@ -33,7 +33,7 @@ public sealed class ProcessRecoveryAction {
     /// What a page does after `consecutiveTerminations` renderer terminations
     /// in a row.
     public static ProcessRecoveryAction For(int consecutiveTerminations) {
-        if (consecutiveTerminations < 1) throw new BrowserRuleException(BrowserRule.InvalidTerminationCount);
+        ArgumentOutOfRangeException.ThrowIfLessThan(consecutiveTerminations, 1);
         return consecutiveTerminations <= MaximumAutomaticReloads ? Reload : ShowFailure;
     }
 

@@ -4013,6 +4013,10 @@
     "2026-10-12-iphone-welcome-card-width": {
       "category": "fixed",
       "message": "Line up the welcome card with the rest of the iPhone welcome page"
+    },
+    "2026-10-12-refuse-unexpected-edits-instead-of-quitting": {
+      "category": "fixed",
+      "message": "Refuse an edit Crest cannot make, such as one on a tab that just closed or a change only a Space's owner may make, instead of quitting."
     }
   }
 }
