@@ -3977,6 +3977,10 @@
     "2026-10-12-queries-answer-without-app": {
       "category": "internal",
       "message": "Let each query say how it answers without an app"
+    },
+    "2026-10-12-unsupported-address-rejection": {
+      "category": "internal",
+      "message": "Refuse an address no Space holds as an unsupported address"
     }
   }
 }

@@ -35,7 +35,7 @@ public sealed record AddressResolution(string Url, string? SearchQuery) {
         AddressResolution? resolution;
         try {
             resolution = Resolve(input, provider, allowsInternalPages);
-        } catch (BrowserRuleException) {
+        } catch (Rejected refused) when (refused.Rejection is UnsupportedAddress) {
             throw new Rejected(new UnsupportedAddress(input));
         }
         if (resolution is null || !Uri.TryCreate(resolution.Url, UriKind.Absolute, out _))
@@ -56,10 +56,13 @@ public sealed record AddressResolution(string Url, string? SearchQuery) {
             ? value : null;
     }
 
+    /// What `input` loads with `provider`, or null for blank input. Throws
+    /// `Rejected` with `UnsupportedAddress` for input too long to be an
+    /// address, or an internal page no Space may hold.
     public static AddressResolution? Resolve(string input, SearchProvider provider, bool allowsInternalPages = false) {
         string value = input.Trim();
         if (value.Length == 0) return null;
-        if (value.Length > 4096) throw new BrowserRuleException(BrowserRule.InvalidAddress);
+        if (value.Length > 4096) throw new Rejected(new UnsupportedAddress(value));
         if (value == AboutBlank || IsInternalPage(value)) {
             if (!allowsInternalPages) return new(provider.Search(value), value);
             ValidateUrl(value, allowsInternalPages: true);
@@ -109,7 +112,8 @@ public sealed record AddressResolution(string Url, string? SearchQuery) {
 
     #region Actions - Validation
 
-    /// Throws `UnsupportedUrl` for an address no Space holds.
+    /// Throws `Rejected` with `UnsupportedAddress` for an address no Space
+    /// holds.
     public static void ValidateUrl(string? url, bool allowsInternalPages = false) {
         if (url is null || url.Length > 16384 || !Uri.TryCreate(url, UriKind.Absolute, out var parsed)
             || (WebScheme.Named(parsed.Scheme) is null
@@ -122,7 +126,7 @@ public sealed record AddressResolution(string Url, string? SearchQuery) {
                 && !(allowsInternalPages && parsed.Scheme == ChromeExtensionScheme && parsed.Host.Length == 32
                     && parsed.Host.All(c => c is >= 'a' and <= 'p')))
             || !string.IsNullOrEmpty(parsed.UserInfo))
-            throw new BrowserRuleException(BrowserRule.UnsupportedUrl);
+            throw new Rejected(new UnsupportedAddress(url ?? ""));
     }
 
     #endregion

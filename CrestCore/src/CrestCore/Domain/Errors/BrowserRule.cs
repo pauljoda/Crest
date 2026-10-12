@@ -12,7 +12,6 @@ public sealed class BrowserRule {
     public static readonly BrowserRule AccessAlreadyAttached = new("access_already_attached");
     public static readonly BrowserRule BorrowedProfileRequiresOwner = new("borrowed_profile_requires_owner");
     public static readonly BrowserRule DuplicateSyncRecord = new("duplicate_sync_record", recordFlaw: SyncRecordFlaw.DuplicateRecord);
-    public static readonly BrowserRule InvalidAddress = new("invalid_address");
     public static readonly BrowserRule InvalidDeletionIntent = new("invalid_deletion_intent");
     public static readonly BrowserRule InvalidFolderTree = new("invalid_folder_tree", recordFlaw: SyncRecordFlaw.InvalidFolderHierarchy);
     public static readonly BrowserRule InvalidHistoryRange = new("invalid_history_range");
@@ -56,18 +55,17 @@ public sealed class BrowserRule {
     public static readonly BrowserRule SyncTransactionNotSealed = new("sync_transaction_not_sealed");
     public static readonly BrowserRule UnknownCurrentTab = new("unknown_current_tab");
     public static readonly BrowserRule UnknownFolder = new("unknown_folder");
-    public static readonly BrowserRule UnsupportedUrl = new("unsupported_url");
     public static readonly BrowserRule VersionMismatch = new("version_mismatch");
 
     public static IReadOnlyList<BrowserRule> All { get; } = [
-        AccessAlreadyAttached, BorrowedProfileRequiresOwner, DuplicateSyncRecord, InvalidAddress, InvalidDeletionIntent, InvalidFolderTree,
+        AccessAlreadyAttached, BorrowedProfileRequiresOwner, DuplicateSyncRecord, InvalidDeletionIntent, InvalidFolderTree,
         InvalidHistoryRange, InvalidHistoryVisit, InvalidIdentity, InvalidNativeKind, InvalidRecordDate, InvalidRecoveryIdentity,
         InvalidRetentionInterval, InvalidSavedDate, InvalidSavedIdentity, InvalidSavedState, InvalidSavedUrl, InvalidSessionTransaction,
         InvalidShortcut, InvalidSplit, InvalidSyncDate, InvalidSyncDeletion, InvalidSyncKind, InvalidSyncPending, InvalidSyncPlacement,
         InvalidSyncRecord, InvalidSyncSessionOwner, InvalidSyncTransaction, InvalidTabContent, InvalidTerminationCount,
         NotBorrowedWorkspace, ProfileLeaseRevoked, SessionReleased, SessionTransactionInProgress, StaleBorrowedSource,
         SyncClockExhausted, SyncIdentityMismatch, SyncRecordLimit, SyncSizeLimit, SyncTransactionNotSealed, UnknownCurrentTab,
-        UnknownFolder, UnsupportedUrl, VersionMismatch
+        UnknownFolder, VersionMismatch
     ];
 
     #endregion

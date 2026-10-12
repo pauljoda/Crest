@@ -41,7 +41,7 @@ public sealed class BrowsingPolicyTests {
     public void AnAddressCrestHoldsLoadsAsItIsWhereTypedTheSameWordsWouldSearch() {
         string page = "data:text/html;charset=utf-8," + string.Concat(Enumerable.Repeat("%3Cp%3EShowcase%3C%2Fp%3E", 400));
         Assert.Equal(page, AddressResolution.Held(page, allowsInternalPages: false));
-        Assert.Throws<BrowserRuleException>(() => AddressResolution.Resolve(page, Kagi()));
+        Assert.IsType<UnsupportedAddress>(Assert.Throws<Rejected>(() => AddressResolution.Resolve(page, Kagi())).Rejection);
         Assert.Equal("blob:https://example.com/0f1e", AddressResolution.Held("blob:https://example.com/0f1e", false));
         Assert.Null(AddressResolution.Held("javascript:alert(1)", false));
         Assert.Null(AddressResolution.Held("mailto:crest@example.com", false));
@@ -58,7 +58,7 @@ public sealed class BrowsingPolicyTests {
         var resolved = AddressResolution.Resolve(input, Kagi())!;
         if (url is null) {
             Assert.False(resolved.Url.StartsWith("file:", StringComparison.OrdinalIgnoreCase));
-            Assert.Throws<BrowserRuleException>(() => AddressResolution.ValidateUrl(input));
+            Assert.IsType<UnsupportedAddress>(Assert.Throws<Rejected>(() => AddressResolution.ValidateUrl(input)).Rejection);
             return;
         }
         Assert.Equal(url, resolved.Url);
