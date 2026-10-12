@@ -148,8 +148,18 @@
 
         }
 
-        private var lessonActions: some View {
-            lesson.actions(practice)
+        @ViewBuilder private var lessonActions: some View {
+            switch lesson.kind {
+            case .pin:
+                BrowserGettingStartedPinAction(practice: practice)
+            case .save:
+                BrowserGettingStartedSaveAction(
+                    practice: practice, title: "Save this tab", systemImage: "bookmark.fill")
+            case .folders:
+                HStack { BrowserGettingStartedFolderActions(practice: practice) }
+            case .clear:
+                BrowserGettingStartedClearHint()
+            }
         }
 
         private var nextLesson: some View {

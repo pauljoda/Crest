@@ -4025,6 +4025,10 @@
     "2026-10-12-refused-engine-report-safe": {
       "category": "fixed",
       "message": "Keep a page's report that Crest can't use from closing the app"
+    },
+    "2026-10-12-concrete-pane-views": {
+      "category": "internal",
+      "message": "Keep settings, studio and lesson panes as concrete views"
     }
   }
 }

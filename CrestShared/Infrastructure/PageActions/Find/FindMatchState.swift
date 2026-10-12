@@ -1,4 +1,4 @@
-import SwiftUI
+import Foundation
 
 /// What a find-in-page search has turned up so far.
 struct BrowserFindMatchState: Hashable, Sendable {
@@ -9,10 +9,9 @@ struct BrowserFindMatchState: Hashable, Sendable {
     static let searching = BrowserFindMatchState(
         name: "searching", label: "Searching", symbol: nil, showsProgress: true)
     static let found = BrowserFindMatchState(
-        name: "found", label: "Match found", symbol: "checkmark.circle.fill", symbolColor: .green)
+        name: "found", label: "Match found", symbol: "checkmark.circle.fill", readsAsSuccess: true)
     static let notFound = BrowserFindMatchState(
-        name: "notFound", label: "No match", symbol: "exclamationmark.circle.fill", labelColor: .red,
-        symbolColor: .red)
+        name: "notFound", label: "No match", symbol: "exclamationmark.circle.fill", readsAsFailure: true)
 
     /// Every state.
     static let all: [BrowserFindMatchState] = [idle, searching, found, notFound]
@@ -31,25 +30,26 @@ struct BrowserFindMatchState: Hashable, Sendable {
     /// Whether a spinner stands for the state where there is no room for words.
     let showsProgress: Bool
 
-    /// The color the state's words take: quiet unless the page has nothing
-    /// to show.
-    let labelColor: Color
+    /// Whether the search plainly found something, which the state's symbol
+    /// shows.
+    let readsAsSuccess: Bool
 
-    /// The color the state's symbol takes.
-    let symbolColor: Color
+    /// Whether the page has nothing to show, which both the state's words and
+    /// its symbol show.
+    let readsAsFailure: Bool
 
     // MARK: - Initializers
 
     private init(
         name: String, label: LocalizedStringResource?, symbol: String?, showsProgress: Bool = false,
-        labelColor: Color = .secondary, symbolColor: Color = .secondary
+        readsAsSuccess: Bool = false, readsAsFailure: Bool = false
     ) {
         self.name = name
         self.label = label
         self.symbol = symbol
         self.showsProgress = showsProgress
-        self.labelColor = labelColor
-        self.symbolColor = symbolColor
+        self.readsAsSuccess = readsAsSuccess
+        self.readsAsFailure = readsAsFailure
     }
 
     // MARK: - Actions - Identity

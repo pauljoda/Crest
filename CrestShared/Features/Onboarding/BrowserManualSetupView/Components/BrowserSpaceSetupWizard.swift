@@ -16,33 +16,32 @@ struct BrowserSpaceSetupWizard: View {
     /// A page of the wizard: what it shows, and what Back and Continue do
     /// from it.
     private struct Step: Hashable, Sendable {
+        // MARK: - Types
+
+        /// The wizard switches on the kind to choose the page's concrete view.
+        enum Kinds: Sendable {
+            case appearance
+            case ready
+        }
+
         // MARK: - Static Variables
 
         static let appearance: Step = Step(
-            position: 0, title: "01 — Appearance", continueTitle: "Continue",
-            page: { _, draft, branding, symbol, compact in
-                let editor = BrowserSpaceBrandingEditor(
-                    branding: branding, symbol: symbol, compact: compact, showsPreview: false)
-                return AnyView(editor.id(draft.spaceID))
-            },
+            kind: .appearance, position: 0, title: "01 — Appearance", continueTitle: "Continue",
             back: { wizard in wizard.back() },
             next: { wizard in wizard.step = .ready })
         static let ready: Step = Step(
-            position: 1, title: "02 — Your Spaces", continueTitle: "Open Crest",
-            page: { wizard, _, _, _, _ in AnyView(wizard.spacesReview) },
+            kind: .ready, position: 1, title: "02 — Your Spaces", continueTitle: "Open Crest",
             back: { wizard in wizard.step = .appearance },
             next: { wizard in wizard.finish() })
 
         // MARK: - Variables
 
+        let kind: Kinds
         /// The page's place in setup, counted from zero.
         let position: Int
         let title: LocalizedStringResource
         let continueTitle: LocalizedStringResource
-        let page:
-            @MainActor @Sendable (
-                BrowserSpaceSetupWizard, SetupDraftSpace, Binding<SpaceBranding>, Binding<String>, Bool
-            ) -> AnyView
         let back: @MainActor @Sendable (BrowserSpaceSetupWizard) -> Void
         let next: @MainActor @Sendable (BrowserSpaceSetupWizard) -> Void
 
@@ -185,11 +184,17 @@ struct BrowserSpaceSetupWizard: View {
         .overlay(alignment: .bottom) { Rectangle().fill(BrowserOnboardingPalette.line).frame(height: 1) }
     }
 
-    private func page(
+    @ViewBuilder private func page(
         draft: SetupDraftSpace, branding: Binding<SpaceBranding>,
         symbol: Binding<String>, compact: Bool
     ) -> some View {
-        step.page(self, draft, branding, symbol, compact)
+        switch step.kind {
+        case .appearance:
+            BrowserSpaceBrandingEditor(branding: branding, symbol: symbol, compact: compact, showsPreview: false)
+                .id(draft.spaceID)
+        case .ready:
+            spacesReview
+        }
     }
 
     /// The Spaces setup made, to review or add to before opening Crest.

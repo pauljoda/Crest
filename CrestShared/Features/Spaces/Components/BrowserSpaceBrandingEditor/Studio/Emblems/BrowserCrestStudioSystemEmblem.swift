@@ -1,13 +1,7 @@
-import SwiftUI
+import Foundation
 
 /// An emblem drawn from an SF Symbol.
 struct BrowserCrestStudioSystemEmblem: BrowserCrestStudioEmblemSource {
-    // MARK: - Actions - Controls
-
-    func controls(in emblem: BrowserCrestStudioEmblem) -> AnyView {
-        AnyView(BrowserSystemSymbolPicker(selection: emblem.$systemName))
-    }
-
     // MARK: - Actions - Charge
 
     func charge(in emblem: BrowserCrestStudioEmblem) -> CrestCharge {

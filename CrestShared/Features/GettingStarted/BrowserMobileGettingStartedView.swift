@@ -125,8 +125,18 @@
             }
         }
 
-        private var lessonActions: some View {
-            lesson.touchActions(practice)
+        @ViewBuilder private var lessonActions: some View {
+            switch lesson.kind {
+            case .pin:
+                BrowserGettingStartedPinAction(practice: practice)
+            case .save:
+                BrowserGettingStartedSaveAction(
+                    practice: practice, title: "Save A weekend away", systemImage: "bookmark")
+            case .folders:
+                BrowserGettingStartedFolderActions(practice: practice)
+            case .clear:
+                BrowserGettingStartedCleanUpAction(practice: practice)
+            }
         }
 
     }

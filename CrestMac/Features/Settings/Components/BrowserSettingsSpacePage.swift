@@ -10,8 +10,8 @@ struct BrowserSettingsSpacePage: View {
     @Bindable var tabState: BrowserSettingsTabState
     let openSpace: BrowserSettingsOpenSpaceAction
 
-    @State var downloads = BrowserSpaceDownloadSettingsModel()
-    @State var passwordSearchText = ""
+    @State private var downloads = BrowserSpaceDownloadSettingsModel()
+    @State private var passwordSearchText = ""
     @State private var pendingDeletionID: UUID?
     @State private var showsArtworkCredits = false
 
@@ -122,8 +122,44 @@ struct BrowserSettingsSpacePage: View {
         .accessibilityIdentifier("space-settings-tabs")
     }
 
+    @ViewBuilder
     private var tabContent: some View {
-        tab.pane(self)
+        switch tab.kind {
+        case .appearance:
+            BrowserSpaceEditorView(browser: browser, space: space)
+        case .browsing:
+            browsingPane
+        case .privacy:
+            BrowserPrivacySettingsPane(
+                browser: browser,
+                downloadCenter: pages.downloadCenter,
+                spaceAccess: spaceAccess,
+                permissionCenter: pages.permissionCenter,
+                contentBlockingErrorDescription: pages.contentBlockingErrorDescription,
+                fixedSpaceID: space.id
+            )
+        case .passwords:
+            BrowserPasswordSettingsPane(
+                browser: browser,
+                spaceAccess: spaceAccess,
+                layout: .macOSSpacePage,
+                searchText: $passwordSearchText,
+                fixedSpaceID: space.id
+            )
+        case .extensions:
+            BrowserEngineExtensionSettingsPane(browser: browser, spaceAccess: spaceAccess, spaceID: space.id)
+        }
+    }
+
+    /// The Space's browsing, downloads and deletion, with its download
+    /// settings read fresh whenever the Space changes.
+    private var browsingPane: some View {
+        BrowserSettingsPane(.spaces) {
+            BrowserSpaceBrowsingSection(browser: browser, space: space)
+            BrowserSpaceDownloadsSection(settings: downloads.settings(for: space))
+            BrowserSpaceDeletionSection(browser: browser, spaceID: space.id, dataDeleter: dataDeleter)
+        }
+        .task(id: space.id) { downloads.refresh(for: space.id) }
     }
 }
 

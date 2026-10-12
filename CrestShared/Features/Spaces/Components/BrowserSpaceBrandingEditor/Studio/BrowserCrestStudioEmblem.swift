@@ -66,8 +66,19 @@ struct BrowserCrestStudioEmblem: View {
         }
     }
 
-    private var sourceControls: some View {
-        source.studioSource.controls(in: self)
+    @ViewBuilder private var sourceControls: some View {
+        switch source.kind {
+        case .heraldic:
+            BrowserCrestStudioHeraldicEmblemControls(context: context, search: $search, showsAll: $showsAll)
+        case .system:
+            BrowserSystemSymbolPicker(selection: $systemName)
+        case .emoji:
+            BrowserCrestStudioEmojiEmblemControls(emoji: $emoji, choosesEmoji: $choosesEmoji)
+        case .monogram:
+            BrowserCrestStudioMonogramEmblemControls(monogram: $monogram, monogramStyle: $monogramStyle)
+        case .none:
+            EmptyView()
+        }
     }
 
     private func commitSource() {
