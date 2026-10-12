@@ -182,14 +182,9 @@ struct BrowserSidebarTabRow: View {
     }
 
     private func dismissFromAuxiliaryClick() {
+        let configuration = self.configuration
         guard configuration.isCurrentAndUnlocked else { return }
-        switch BrowserTabMiddleClickPolicy.action(for: tab.placement) {
-        case .close:
-            context.browser.closeTab(tab.id, matching: configuration.assignment)
-        case .unload:
-            guard configuration.isLoaded else { return }
-            context.unload(tab.id)
-        }
+        BrowserTabMiddleClickAction(for: tab.placement).perform(on: configuration)
     }
 
     private var isRenaming: Bool {

@@ -146,11 +146,7 @@ struct BrowserFolderGroupConfiguration {
     func keptItem(for state: BrowserCollapsedFolderTabVisibilityState) -> BrowserSidebarListItem? {
         guard let keptTabID = keptTabID(for: state) else { return nil }
         return BrowserSidebarListItem.items(of: inside, in: context.space).first { item in
-            switch item.content {
-            case .tab(let tab): tab.id == keptTabID
-            case .split(_, let members): members.contains { $0.id == keptTabID }
-            case .folder(let folder): context.space.tabIDs(inFolder: folder.id).contains(keptTabID)
-            }
+            item.content.contains(tabID: keptTabID, in: context.space)
         }
     }
 }

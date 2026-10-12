@@ -199,17 +199,17 @@ final class BrowserChromeLayoutTests: XCTestCase {
 
     func testSidebarAuxiliaryMouseButtonsSwitchSpacesWithoutClaimingOtherButtons() {
         XCTAssertEqual(
-            BrowserSidebarMouseButtonPolicy.action(for: 3),
+            BrowserSidebarMouseButtonAction(buttonNumber: 3),
             .previousSpace
         )
         XCTAssertEqual(
-            BrowserSidebarMouseButtonPolicy.action(for: 4),
+            BrowserSidebarMouseButtonAction(buttonNumber: 4),
             .nextSpace
         )
-        XCTAssertNil(BrowserSidebarMouseButtonPolicy.action(for: 0))
-        XCTAssertNil(BrowserSidebarMouseButtonPolicy.action(for: 1))
-        XCTAssertNil(BrowserSidebarMouseButtonPolicy.action(for: 2))
-        XCTAssertNil(BrowserSidebarMouseButtonPolicy.action(for: 5))
+        XCTAssertNil(BrowserSidebarMouseButtonAction(buttonNumber: 0))
+        XCTAssertNil(BrowserSidebarMouseButtonAction(buttonNumber: 1))
+        XCTAssertNil(BrowserSidebarMouseButtonAction(buttonNumber: 2))
+        XCTAssertNil(BrowserSidebarMouseButtonAction(buttonNumber: 5))
     }
 
     func testAuxiliaryMouseButtonsStayWithinWebpageScope() {
@@ -218,17 +218,15 @@ final class BrowserChromeLayoutTests: XCTestCase {
             .nextSpace,
         ] {
             XCTAssertEqual(
-                BrowserSidebarMouseButtonPolicy.disposition(
+                BrowserSidebarMousePointerScope.webpage.disposition(
                     for: action,
-                    pointerScope: .webpage,
                     canNavigatePage: true
                 ),
                 .navigatePage(action)
             )
             XCTAssertEqual(
-                BrowserSidebarMouseButtonPolicy.disposition(
+                BrowserSidebarMousePointerScope.webpage.disposition(
                     for: action,
-                    pointerScope: .webpage,
                     canNavigatePage: false
                 ),
                 .consume
@@ -242,17 +240,15 @@ final class BrowserChromeLayoutTests: XCTestCase {
             .nextSpace,
         ] {
             XCTAssertEqual(
-                BrowserSidebarMouseButtonPolicy.disposition(
+                BrowserSidebarMousePointerScope.sidebar.disposition(
                     for: action,
-                    pointerScope: .sidebar,
                     canNavigatePage: true
                 ),
                 .switchSpace(action)
             )
             XCTAssertEqual(
-                BrowserSidebarMouseButtonPolicy.disposition(
+                BrowserSidebarMousePointerScope.sidebar.disposition(
                     for: action,
-                    pointerScope: .sidebar,
                     canNavigatePage: false
                 ),
                 .switchSpace(action)
@@ -263,9 +259,9 @@ final class BrowserChromeLayoutTests: XCTestCase {
     /// A swipe no page took, such as a mouse's Back action over a Chromium
     /// page, moves the way WebKit's views and Chrome's windows move it.
     func testUnhandledSwipeGoesBackOnAPositiveDeltaAsTheEnginesDo() {
-        XCTAssertEqual(BrowserSidebarMouseButtonPolicy.action(forSwipeDeltaX: 1), .previousSpace)
-        XCTAssertEqual(BrowserSidebarMouseButtonPolicy.action(forSwipeDeltaX: -1), .nextSpace)
-        XCTAssertNil(BrowserSidebarMouseButtonPolicy.action(forSwipeDeltaX: 0))
+        XCTAssertEqual(BrowserSidebarMouseButtonAction(swipeDeltaX: 1), .previousSpace)
+        XCTAssertEqual(BrowserSidebarMouseButtonAction(swipeDeltaX: -1), .nextSpace)
+        XCTAssertNil(BrowserSidebarMouseButtonAction(swipeDeltaX: 0))
     }
 
     func testAuxiliaryMouseButtonsRemainUnclaimedOutsidePageAndSidebar() {
@@ -274,9 +270,8 @@ final class BrowserChromeLayoutTests: XCTestCase {
             .nextSpace,
         ] {
             XCTAssertNil(
-                BrowserSidebarMouseButtonPolicy.disposition(
+                BrowserSidebarMousePointerScope.unowned.disposition(
                     for: action,
-                    pointerScope: .unowned,
                     canNavigatePage: true
                 )
             )

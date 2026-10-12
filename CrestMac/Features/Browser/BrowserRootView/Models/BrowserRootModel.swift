@@ -315,14 +315,7 @@ extension BrowserRootModel {
     func handleAuxiliaryMouseAction(
         _ action: BrowserSidebarMouseButtonAction
     ) {
-        let direction: BrowserSpaceSwipeDirection
-        switch action {
-        case .previousSpace:
-            direction = .previous
-        case .nextSpace:
-            direction = .next
-        }
-        guard browser.selectAdjacentSpace(direction) != nil else { return }
+        guard browser.selectAdjacentSpace(action.spaceDirection) != nil else { return }
         pages.selectSpace(in: browser)
     }
 }

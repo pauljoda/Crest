@@ -985,8 +985,8 @@ final class BrowserInteractionModelTests: XCTestCase {
     }
 
     func testMiddleClickClosesOnlyCurrentTabsAndUnloadsSavedTabs() {
-        XCTAssertEqual(BrowserTabMiddleClickPolicy.action(for: .current), .close)
-        XCTAssertEqual(BrowserTabMiddleClickPolicy.action(for: .pinned), .unload)
-        XCTAssertEqual(BrowserTabMiddleClickPolicy.action(for: .saved), .unload)
+        XCTAssertEqual(BrowserTabMiddleClickAction(for: .current), .close)
+        XCTAssertEqual(BrowserTabMiddleClickAction(for: .pinned), .unload)
+        XCTAssertEqual(BrowserTabMiddleClickAction(for: .saved), .unload)
     }
 }

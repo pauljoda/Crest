@@ -3905,6 +3905,10 @@
     "2026-10-12-sidebar-lift-previews-own-behavior": {
       "category": "internal",
       "message": "Let sidebar lift previews size and place themselves"
+    },
+    "2026-10-12-sidebar-pointer-actions-own-behavior": {
+      "category": "internal",
+      "message": "Let sidebar pointer and row actions say what they do"
     }
   }
 }
