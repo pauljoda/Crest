@@ -4,7 +4,7 @@ import WebKit
 
 /// Connects an engine's claimed link drag to AppKit pointer and window events.
 @MainActor
-final class BrowserLinkDragController {
+final class BrowserLinkDragController: BrowserLinkPullReceiver {
     private static let pendingReleaseLifetime: TimeInterval = 0.3
     private static let escapeKeyCode: UInt16 = 53
     private weak var nativeView: NSView?
@@ -124,20 +124,20 @@ final class BrowserLinkDragController {
         guard message.webView === webView, message.name == BrowserLinkDragContentBridge.name,
             let body = BrowserLinkPullMessage(message.body, requiresVersion: true)
         else { return }
-        switch body.phase {
-        case .ready:
-            frames[body.document] = message.frameInfo
-            configure(message.frameInfo)
-        case .retire:
-            frames[body.document] = nil
-            if gesture?.document == body.document { cancel() }
-        case .begin:
-            begin(body)
-        default: break
-        }
+        body.phase.apply(body, from: message.frameInfo, to: self)
     }
 
-    private func begin(_ message: BrowserLinkPullMessage) {
+    func ready(_ message: BrowserLinkPullMessage, from frame: WKFrameInfo) {
+        frames[message.document] = frame
+        configure(frame)
+    }
+
+    func retire(_ message: BrowserLinkPullMessage) {
+        frames[message.document] = nil
+        if gesture?.document == message.document { cancel() }
+    }
+
+    func begin(_ message: BrowserLinkPullMessage) {
         guard frames[message.document] != nil, let url = message.url else { return }
         _ = begin(url: url, label: message.label, document: message.document, dragOffset: message.dragOffset)
     }

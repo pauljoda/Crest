@@ -258,7 +258,7 @@ final class BrowserGeolocationBridgeTests: XCTestCase {
     )
 
     private func makeFixture(
-        systemAuthorization: BrowserGeolocationSystemAuthorization = .authorized,
+        systemAuthorization: BrowserSystemAuthorization = .authorized,
         recoversSystemAuthorization: Bool = false,
         url: URL? = nil,
         space: SpaceState.Seed? = nil
@@ -345,20 +345,20 @@ private final class TestBrowserGeolocationService: BrowserGeolocationServicing {
     var currentRequests: [String: Request] = [:]
     var watchRequests: [String: Request] = [:]
     var cancelledIdentifiers: Set<String> = []
-    var authorization: BrowserGeolocationSystemAuthorization
+    var authorization: BrowserSystemAuthorization
     var recoveryCount = 0
     var delaysAuthorization = false
-    var authorizationContinuation: CheckedContinuation<BrowserGeolocationSystemAuthorization, Never>?
+    var authorizationContinuation: CheckedContinuation<BrowserSystemAuthorization, Never>?
 
-    init(authorization: BrowserGeolocationSystemAuthorization) {
+    init(authorization: BrowserSystemAuthorization) {
         self.authorization = authorization
     }
 
-    func currentAuthorization() -> BrowserGeolocationSystemAuthorization {
+    func currentAuthorization() -> BrowserSystemAuthorization {
         authorization
     }
 
-    func requestAuthorization() async -> BrowserGeolocationSystemAuthorization {
+    func requestAuthorization() async -> BrowserSystemAuthorization {
         if delaysAuthorization {
             return await withCheckedContinuation { authorizationContinuation = $0 }
         }

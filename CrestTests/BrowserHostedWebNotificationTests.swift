@@ -166,7 +166,7 @@ private final class TestHostedWebNotificationCenter:
         let eventHandler: @MainActor (BrowserHostedWebNotificationEvent) -> Void
     }
 
-    var authorization: BrowserHostedWebNotificationAuthorization
+    var authorization: BrowserSystemAuthorization
     private var registrations: [String: Registration] = [:]
     private var addContinuations: [CheckedContinuation<Void, Never>] = []
     var pausesAdds = false
@@ -177,15 +177,15 @@ private final class TestHostedWebNotificationCenter:
         registrations.values.map(\.delivery)
     }
 
-    init(authorization: BrowserHostedWebNotificationAuthorization) {
+    init(authorization: BrowserSystemAuthorization) {
         self.authorization = authorization
     }
 
-    func currentAuthorization() async -> BrowserHostedWebNotificationAuthorization {
+    func currentAuthorization() async -> BrowserSystemAuthorization {
         authorization
     }
 
-    func requestAuthorization() async -> BrowserHostedWebNotificationAuthorization {
+    func requestAuthorization() async -> BrowserSystemAuthorization {
         return authorization
     }
 

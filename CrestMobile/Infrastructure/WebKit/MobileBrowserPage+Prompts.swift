@@ -13,25 +13,7 @@ extension MobileBrowserPage: BrowserPromptPresenting {
         let reply: @MainActor @Sendable (Bool, String?) -> Void = { accepted, text in
             corePage.answer(AnswerScriptDialog(promptID: promptID, accepted: accepted, text: text))
         }
-        switch question.kind {
-        case .alert:
-            MobileBrowserDialogPresenter.presentAlert(message: question.message, request: request, dismissal: dismissal)
-            {
-                reply(true, nil)
-            }
-        case .confirm, .beforeUnload:
-            MobileBrowserDialogPresenter.presentConfirmation(
-                message: question.message, request: request, dismissal: dismissal
-            ) {
-                reply($0, nil)
-            }
-        case .prompt:
-            MobileBrowserDialogPresenter.presentPrompt(
-                message: question.message, defaultText: question.defaultText, request: request, dismissal: dismissal
-            ) { answer in
-                reply(answer != nil, answer)
-            }
-        }
+        question.kind.present(question, request: request, dismissal: dismissal, on: self, reply: reply)
     }
 
     func ask(_ asked: AuthenticationAsked, dismissal: BrowserPromptDismissal) {
@@ -70,5 +52,43 @@ extension MobileBrowserPage: BrowserPromptPresenting {
             corePage.answer(
                 AnswerPermission(promptID: promptID, grants: response.grants, remembers: response.savedDecision != nil))
         }
+    }
+}
+
+/// Each kind of script dialog, shown as an alert over the window. A page
+/// asking before it unloads is a confirmation like any other.
+extension MobileBrowserPage: BrowserScriptDialogPresenting {
+    func presentAlert(
+        _ question: ScriptDialogQuestion, request: URLRequest, dismissal: BrowserPromptDismissal, reply: @escaping Reply
+    ) {
+        MobileBrowserDialogPresenter.presentAlert(message: question.message, request: request, dismissal: dismissal) {
+            reply(true, nil)
+        }
+    }
+
+    func presentConfirm(
+        _ question: ScriptDialogQuestion, request: URLRequest, dismissal: BrowserPromptDismissal, reply: @escaping Reply
+    ) {
+        MobileBrowserDialogPresenter.presentConfirmation(
+            message: question.message, request: request, dismissal: dismissal
+        ) {
+            reply($0, nil)
+        }
+    }
+
+    func presentPrompt(
+        _ question: ScriptDialogQuestion, request: URLRequest, dismissal: BrowserPromptDismissal, reply: @escaping Reply
+    ) {
+        MobileBrowserDialogPresenter.presentPrompt(
+            message: question.message, defaultText: question.defaultText, request: request, dismissal: dismissal
+        ) { answer in
+            reply(answer != nil, answer)
+        }
+    }
+
+    func presentBeforeUnload(
+        _ question: ScriptDialogQuestion, request: URLRequest, dismissal: BrowserPromptDismissal, reply: @escaping Reply
+    ) {
+        presentConfirm(question, request: request, dismissal: dismissal, reply: reply)
     }
 }

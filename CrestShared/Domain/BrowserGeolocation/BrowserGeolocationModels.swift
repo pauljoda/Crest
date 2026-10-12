@@ -1,11 +1,5 @@
 import Foundation
 
-enum BrowserGeolocationSystemAuthorization: Equatable, Sendable {
-    case notDetermined
-    case denied
-    case authorized
-}
-
 struct BrowserGeolocationRequestOptions: Equatable, Sendable {
     let enablesHighAccuracy: Bool
     let maximumAge: TimeInterval

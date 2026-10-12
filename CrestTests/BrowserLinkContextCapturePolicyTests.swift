@@ -250,10 +250,12 @@ final class BrowserLinkContextCapturePolicyTests: XCTestCase {
         let host = RecordingContextMenuHost()
         let link = URL(string: "https://example.com/next")
         let space = BrowserPageContextMenuAction(
-            kind: .space(UUID()), title: "Work", symbolName: "briefcase", linkURL: link, selectionText: nil)
+            kind: .space(UUID()), title: "Work", symbolName: "briefcase", linkURL: link, selectionText: nil
+        ) { _, _, _ in true }
         let peek = BrowserPageContextMenuAction(
             kind: .peek, title: "Open Link in Peek", symbolName: "rectangle.on.rectangle", linkURL: link,
-            selectionText: nil)
+            selectionText: nil
+        ) { _, _, _ in true }
         // The page's view outlives the menu, as the window keeps it; the rows
         // hold it weakly.
         let pageView = NSView()

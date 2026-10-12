@@ -3881,6 +3881,10 @@
     "2026-10-12-core-changes-follow-themselves": {
       "category": "internal",
       "message": "Let each core change say who follows it"
+    },
+    "2026-10-12-page-edge-objects-own-behavior": {
+      "category": "internal",
+      "message": "Let page and engine-edge objects carry what they do"
     }
   }
 }
