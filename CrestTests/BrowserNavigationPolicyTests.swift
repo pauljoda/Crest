@@ -184,7 +184,7 @@ final class BrowserNavigationPolicyTests: XCTestCase {
     func testDownloadTakesPrecedenceOverTargetlessNavigation() throws {
         let url = try XCTUnwrap(URL(string: "https://example.com/archive.zip"))
 
-        let intent = BrowserNavigationIntent.classify(
+        let intent = BrowserNavigationDecision.classify(
             url: url,
             hasTargetFrame: false,
             shouldPerformDownload: true
@@ -213,7 +213,7 @@ final class BrowserNavigationPolicyTests: XCTestCase {
         let mailURL = try XCTUnwrap(URL(string: "mailto:person@example.com"))
 
         XCTAssertEqual(
-            BrowserNavigationIntent.classify(
+            BrowserNavigationDecision.classify(
                 url: mailURL,
                 hasTargetFrame: false,
                 shouldPerformDownload: true
@@ -221,7 +221,7 @@ final class BrowserNavigationPolicyTests: XCTestCase {
             .handOffToSystem(mailURL)
         )
         XCTAssertEqual(
-            BrowserNavigationIntent.classify(
+            BrowserNavigationDecision.classify(
                 url: try XCTUnwrap(URL(string: "javascript:alert(1)")),
                 hasTargetFrame: true,
                 shouldPerformDownload: false
@@ -229,7 +229,7 @@ final class BrowserNavigationPolicyTests: XCTestCase {
             .blockScheme
         )
         XCTAssertEqual(
-            BrowserNavigationIntent.classify(
+            BrowserNavigationDecision.classify(
                 url: try XCTUnwrap(URL(string: "https://example.com/next")),
                 hasTargetFrame: true,
                 shouldPerformDownload: false

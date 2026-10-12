@@ -70,31 +70,19 @@ extension BrowserPage: WKNavigationDelegate {
         decidePolicyFor navigationAction: WKNavigationAction,
         decisionHandler: @escaping @MainActor @Sendable (WKNavigationActionPolicy) -> Void
     ) {
-        let appInitiated = isAppInitiated(navigationAction)
-        switch navigationDecider.decision(
+        navigationDecider.decision(
             for: navigationAction,
-            isAppInitiated: appInitiated
-        ) {
-        case .policy(.allow):
-            break
-        case .policy(let policy):
-            decisionHandler(policy)
-            return
-        case .handOffToSystem(let url):
-            // Cancelling before `prepareForNavigation` is what keeps the
-            // hand-off out of the error page: nothing is pending to fail, and
-            // WebKit's own cancellation error is an expected interruption.
-            externalSchemeCoordinator.handOff(
-                destinationURL: url,
-                trigger: BrowserPopupTrigger.classify(navigationAction.navigationType),
-                origin: externalSchemeCoordinator.sourceOrigin(
-                    for: navigationAction,
-                    currentURL: live.displayURL
-                )
-            )
-            decisionHandler(.cancel)
-            return
-        }
+            isAppInitiated: isAppInitiated(navigationAction)
+        ).apply(to: self, for: navigationAction, in: webView, decisionHandler: decisionHandler)
+    }
+
+    /// Lets the core judge the link `navigationAction` follows, once WebKit may
+    /// load it, and answers WebKit.
+    func decideLinkPolicy(
+        for navigationAction: WKNavigationAction,
+        in webView: WKWebView,
+        decisionHandler: @escaping @MainActor @Sendable (WKNavigationActionPolicy) -> Void
+    ) {
         let sourcePresentation =
             navigationAction.navigationType == .linkActivated
             ? peekSourcePresentation(
