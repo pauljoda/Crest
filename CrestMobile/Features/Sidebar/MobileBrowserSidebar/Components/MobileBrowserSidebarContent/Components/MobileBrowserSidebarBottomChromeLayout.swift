@@ -26,7 +26,7 @@ struct MobileBrowserSidebarBottomChromeLayout<Content: View>: View {
                         // A top layer over every Space of every profile: mounted
                         // beside the pager and never keyed to the selected Space,
                         // so a Space switch cannot unmount or recreate the deck.
-                        if BrowserSidebarWidgetHostPolicy.shouldRender(
+                        if BrowserSidebarWidgetHost.isShown(
                             sidebarIsPresented:
                                 configuration.sidebarIsPresented,
                             isPrivateBrowsing: configuration.context.browser

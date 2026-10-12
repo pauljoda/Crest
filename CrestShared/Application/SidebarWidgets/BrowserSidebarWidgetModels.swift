@@ -39,19 +39,14 @@ struct BrowserSidebarWidgetCapabilities: OptionSet, Hashable, Sendable {
     static let directSoftwareUpdates = Self(rawValue: 1 << 2)
 }
 
-enum BrowserSidebarWidgetVisibilityPolicy: Equatable, Sendable {
-    case mandatory
-    case userControllable
-}
-
 struct BrowserSidebarWidgetRegistration: Equatable, Identifiable, Sendable {
     let id: BrowserSidebarWidgetKindID
     let settingsTitle: String
     let order: Int
     let platforms: BrowserSidebarWidgetPlatform
     let requiredCapabilities: BrowserSidebarWidgetCapabilities
-    let instancePolicy: BrowserSidebarWidgetInstancePolicy
-    let visibilityPolicy: BrowserSidebarWidgetVisibilityPolicy
+    let instanceLimit: BrowserSidebarWidgetInstanceLimit
+    let visibility: BrowserSidebarWidgetVisibility
     let backgroundActivityID: String?
 }
 
@@ -62,8 +57,8 @@ extension BrowserSidebarWidgetRegistration {
         order: 200,
         platforms: .all,
         requiredCapabilities: [.mediaSessions],
-        instancePolicy: .multiple,
-        visibilityPolicy: .userControllable,
+        instanceLimit: .multiple,
+        visibility: .userControllable,
         backgroundActivityID: "crest.media-session-observation"
     )
 
@@ -73,8 +68,8 @@ extension BrowserSidebarWidgetRegistration {
         order: 100,
         platforms: .macOS,
         requiredCapabilities: [.directSoftwareUpdates],
-        instancePolicy: .single,
-        visibilityPolicy: .mandatory,
+        instanceLimit: .single,
+        visibility: .mandatory,
         backgroundActivityID: "crest.software-update-observation"
     )
 }
@@ -85,137 +80,6 @@ extension BrowserSidebarWidgetRegistration {
 enum BrowserSidebarWidgetScope: Equatable, Sendable {
     case application
     case profile(UUID)
-}
-
-enum BrowserSidebarWidgetHostPolicy {
-    static func shouldRender(
-        sidebarIsPresented: Bool,
-        isPrivateBrowsing: Bool
-    ) -> Bool {
-        sidebarIsPresented && !isPrivateBrowsing
-    }
-}
-
-enum BrowserSidebarWidgetCarouselPolicy {
-    static func mostRecentlyInsertedID(
-        in instances: [BrowserSidebarWidgetInstance],
-        insertionOrdinals: [BrowserSidebarWidgetID: UInt64]
-    ) -> BrowserSidebarWidgetID? {
-        instances.max { lhs, rhs in
-            let lhsOrdinal = insertionOrdinals[lhs.id] ?? 0
-            let rhsOrdinal = insertionOrdinals[rhs.id] ?? 0
-            if lhsOrdinal != rhsOrdinal {
-                return lhsOrdinal < rhsOrdinal
-            }
-            return lhs.id.id < rhs.id.id
-        }?.id
-    }
-
-    /// Wrapping adjacency: the deck is a loop the reader flips through, so the
-    /// last card hands back to the first rather than dead-ending.
-    static func cyclicAdjacentID(
-        to selectedID: BrowserSidebarWidgetID?,
-        in instances: [BrowserSidebarWidgetInstance],
-        direction: BrowserSidebarWidgetCarouselDirection
-    ) -> BrowserSidebarWidgetID? {
-        guard !instances.isEmpty else { return nil }
-        guard
-            let selectedID,
-            let selectedIndex = instances.firstIndex(where: { $0.id == selectedID })
-        else {
-            return instances.first?.id
-        }
-        let count = instances.count
-        let step = direction == .next ? 1 : count - 1
-        return instances[(selectedIndex + step) % count].id
-    }
-
-    /// The cards a vertical deck shows: the selected card first, then the cards
-    /// it will flip to, wrapping until the visible depth is filled.
-    static func deckOrder(
-        from selectedID: BrowserSidebarWidgetID?,
-        in instances: [BrowserSidebarWidgetInstance],
-        visibleDepth: Int
-    ) -> [BrowserSidebarWidgetInstance] {
-        guard !instances.isEmpty, visibleDepth > 0 else { return [] }
-        let start =
-            selectedID
-            .flatMap { id in instances.firstIndex(where: { $0.id == id }) }
-            ?? instances.startIndex
-        let count = min(visibleDepth, instances.count)
-        return (0..<count).map { offset in
-            instances[(start + offset) % instances.count]
-        }
-    }
-}
-
-enum BrowserSidebarWidgetCarouselDirection: Equatable, Sendable {
-    case previous
-    case next
-}
-
-enum BrowserSidebarWidgetCarouselLayoutPolicy {
-    static func cardInsets(
-        instanceCount _: Int
-    ) -> BrowserSidebarWidgetCarouselCardInsets {
-        .zero
-    }
-
-    static func shouldUpdateActiveCardHeight(
-        currentHeight: CGFloat?,
-        measuredHeight: CGFloat,
-        isSelected: Bool
-    ) -> Bool {
-        guard isSelected, measuredHeight > 0 else { return false }
-        guard let currentHeight else { return true }
-        return abs(currentHeight - measuredHeight) > 0.5
-    }
-}
-
-enum BrowserSidebarWidgetDeckGestureAxis: Equatable, Sendable {
-    case horizontal
-    case vertical
-}
-
-enum BrowserSidebarWidgetDeckGesturePolicy {
-    static var currentPlatformAxis: BrowserSidebarWidgetDeckGestureAxis {
-        #if os(iOS)
-            .vertical
-        #else
-            .horizontal
-        #endif
-    }
-
-    static func primaryTranslation(
-        horizontal: CGFloat,
-        vertical: CGFloat,
-        axis: BrowserSidebarWidgetDeckGestureAxis
-    ) -> CGFloat {
-        switch axis {
-        case .horizontal: horizontal
-        case .vertical: vertical
-        }
-    }
-
-    static func cardOffset(
-        trackedTranslation: CGFloat,
-        slotOffset: CGFloat,
-        axis: BrowserSidebarWidgetDeckGestureAxis
-    ) -> CGSize {
-        switch axis {
-        case .horizontal:
-            CGSize(width: trackedTranslation, height: slotOffset)
-        case .vertical:
-            CGSize(width: 0, height: slotOffset + trackedTranslation)
-        }
-    }
-}
-
-struct BrowserSidebarWidgetCarouselCardInsets: Equatable, Sendable {
-    let leading: CGFloat
-    let trailing: CGFloat
-
-    static let zero = Self(leading: 0, trailing: 0)
 }
 
 enum BrowserMediaSessionPlaybackState: String, Encodable, Equatable, Sendable {

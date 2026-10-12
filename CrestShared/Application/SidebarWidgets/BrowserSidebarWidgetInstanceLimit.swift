@@ -2,7 +2,7 @@ import Foundation
 
 /// How many cards one widget kind shows at once, and which of the instances
 /// its source publishes they are.
-struct BrowserSidebarWidgetInstancePolicy: Equatable, Sendable {
+struct BrowserSidebarWidgetInstanceLimit: Equatable, Sendable {
     // MARK: - Static Variables
 
     /// The kind shows one card: the instance with the lowest identifier.

@@ -67,7 +67,7 @@ struct BrowserSidebarLoadedContent: View {
             // The widget deck is a top layer over every Space of every profile.
             // It mounts unconditionally beside the pager — never keyed to the
             // selected Space — so switching Spaces cannot unmount or recreate it.
-            if BrowserSidebarWidgetHostPolicy.shouldRender(
+            if BrowserSidebarWidgetHost.isShown(
                 sidebarIsPresented: true,
                 isPrivateBrowsing: context.browser.isPrivateBrowsing
             ) {
@@ -142,10 +142,9 @@ struct BrowserSidebarLoadedContent: View {
         guard let widgetRuntime else { return }
         let instances = widgetRuntime.instances(capabilities: widgetCapabilities)
         guard instances.count > 1,
-            let nextID = BrowserSidebarWidgetCarouselPolicy.cyclicAdjacentID(
+            let nextID = direction.adjacentID(
                 to: widgetRuntime.carouselSelection,
-                in: instances,
-                direction: direction
+                in: instances
             )
         else { return }
         withAnimation(

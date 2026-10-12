@@ -113,11 +113,18 @@ struct BrowserSidebarWidgetDeck: View {
     }
 
     private var deckOrder: [BrowserSidebarWidgetInstance] {
-        BrowserSidebarWidgetCarouselPolicy.deckOrder(
-            from: selectedInstanceID,
-            in: instances,
-            visibleDepth: BrowserSidebarWidgetDeckStyle.visibleDepth
-        )
+        // The selected card first, then the cards it will flip to, wrapping
+        // until the visible depth is filled.
+        let visibleDepth = BrowserSidebarWidgetDeckStyle.visibleDepth
+        guard !instances.isEmpty, visibleDepth > 0 else { return [] }
+        let start =
+            selectedInstanceID
+            .flatMap { id in instances.firstIndex(where: { $0.id == id }) }
+            ?? instances.startIndex
+        let count = min(visibleDepth, instances.count)
+        return (0..<count).map { offset in
+            instances[(start + offset) % instances.count]
+        }
     }
 
     private var reservedPeek: CGFloat {
@@ -158,21 +165,16 @@ struct BrowserSidebarWidgetDeck: View {
     }
 
     private func primaryTranslation(_ translation: CGSize) -> CGFloat {
-        BrowserSidebarWidgetDeckGesturePolicy.primaryTranslation(
-            horizontal: translation.width,
-            vertical: translation.height,
-            axis: BrowserSidebarWidgetDeckGesturePolicy.currentPlatformAxis
-        )
+        BrowserSidebarWidgetDeckGestureAxis.current.primaryTranslation(of: translation)
     }
 
     private func cardOffset(
         forDepth depth: Int,
         trackedTranslation: CGFloat
     ) -> CGSize {
-        BrowserSidebarWidgetDeckGesturePolicy.cardOffset(
+        BrowserSidebarWidgetDeckGestureAxis.current.cardOffset(
             trackedTranslation: trackedTranslation,
-            slotOffset: slotOffset(forDepth: depth),
-            axis: BrowserSidebarWidgetDeckGesturePolicy.currentPlatformAxis
+            slotOffset: slotOffset(forDepth: depth)
         )
     }
 
@@ -197,13 +199,8 @@ struct BrowserSidebarWidgetDeck: View {
         _ measuredHeight: CGFloat,
         isFront: Bool
     ) {
-        guard
-            BrowserSidebarWidgetCarouselLayoutPolicy.shouldUpdateActiveCardHeight(
-                currentHeight: activeCardHeight,
-                measuredHeight: measuredHeight,
-                isSelected: isFront
-            )
-        else { return }
+        guard isFront, measuredHeight > 0 else { return }
+        if let activeCardHeight, abs(activeCardHeight - measuredHeight) <= 0.5 { return }
         activeCardHeight = measuredHeight
     }
 }

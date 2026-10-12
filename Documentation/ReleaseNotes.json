@@ -3925,6 +3925,10 @@
     "2026-10-12-mobile-layout-own-behavior": {
       "category": "internal",
       "message": "Let window sizes, sidebar toggles and Settings styles carry what they do"
+    },
+    "2026-10-12-widget-kinds-own-rules": {
+      "category": "internal",
+      "message": "Let widget kinds, deck directions and gesture axes carry what they do"
     }
   }
 }

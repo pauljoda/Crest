@@ -169,7 +169,7 @@ struct BrowserSidebarWidgetDeckStepper: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel(
-            direction == .previous ? "Previous Widget" : "Next Widget"
+            Text(direction.accessibilityLabel)
         )
     }
 
