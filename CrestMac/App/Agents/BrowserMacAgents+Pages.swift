@@ -281,11 +281,8 @@ extension BrowserMacAgents {
         return try await serially(on: fill.tab) { () async throws(BrowserAgentFailure) -> AgentToolResult in
             let page = try await self.settledPage(for: fill.tab, call)
             let prepared = try await self.run(BrowserAgentPageScript.prepareFill(fill.uid, value: fill.value), on: page)
-            switch prepared["error"]?.string {
-            case "unknown": throw .unknownElement(fill.uid)
-            case "option": throw .refused("The menu has no option labelled or valued \(fill.value).")
-            case "editable": throw .notEditable
-            default: break
+            if let refusal = BrowserAgentFillRefusal.named(prepared["error"]?.string) {
+                throw refusal.failure(uid: fill.uid, value: fill.value)
             }
             if let chosen = prepared["chosen"]?.string { return .message("Chose \(chosen).") }
             guard !fill.value.isEmpty else { return .message("Cleared \(fill.uid).") }

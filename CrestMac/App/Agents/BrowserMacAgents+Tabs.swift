@@ -26,15 +26,9 @@ extension BrowserMacAgents {
     }
 
     private struct Navigation: Decodable {
-        enum Action: String, Decodable {
-            case back
-            case forward
-            case reload
-        }
-
         let tab: UUID
         let url: String?
-        let action: Action?
+        let action: BrowserAgentNavigationAction?
     }
 
     struct TabReference: Decodable {
@@ -149,12 +143,7 @@ extension BrowserMacAgents {
             if let url {
                 page.corePage.load(url)
             } else {
-                switch navigation.action {
-                case .back: page.enginePage.goToHistory(offset: -1)
-                case .forward: page.enginePage.goToHistory(offset: 1)
-                case .reload: page.enginePage.reload()
-                case nil: break
-                }
+                navigation.action?.perform(on: page.enginePage)
             }
             return .data(["tab": try self.listing(navigation.tab, call)])
         }

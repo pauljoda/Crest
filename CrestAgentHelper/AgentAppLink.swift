@@ -17,6 +17,20 @@ actor AgentAppLink {
         case closed
         /// The call is longer than Crest reads.
         case tooLarge
+
+        /// What the agent's model reads instead of the tool's answer.
+        var message: String {
+            switch self {
+            case .unreachable, .refused(.agentsOff):
+                "Crest isn't running, or agents are turned off in Crest's Settings › Agents. Ask the person to open Crest and turn on agents."
+            case .refused(.staleHelper):
+                "Crest was updated since this connection started. Ask the person to restart Crest's MCP server in your agent."
+            case .closed:
+                "Crest closed the connection before the tool finished."
+            case .tooLarge:
+                "The call was too large to send to Crest. Send less at once, such as shorter text or a shorter script."
+            }
+        }
     }
 
     // MARK: - Variables
@@ -57,6 +71,28 @@ actor AgentAppLink {
         }
     }
 
+    // MARK: - Actions - Responses
+
+    /// Crest heard the agent and listed its tools as `tools`.
+    func receiveAttached(_ tools: AgentJSON) {
+        attaching?.resume(returning: tools)
+        attaching = nil
+    }
+
+    /// Crest refused the helper for `reason`, so attaching and every call
+    /// waiting fail.
+    func receiveRefusal(_ reason: AgentLinkRefusal) {
+        attaching?.resume(throwing: Failure.refused(reason))
+        attaching = nil
+        for continuation in waiting.values { continuation.resume(throwing: Failure.refused(reason)) }
+        waiting = [:]
+    }
+
+    /// Crest answered call `id` with `result`.
+    func receiveResult(_ result: AgentToolResult, for id: Int) {
+        waiting.removeValue(forKey: id)?.resume(returning: result)
+    }
+
     // MARK: - Mutators
 
     private func connected(client: AgentClientInfo?) async throws -> AgentLineChannel {
@@ -81,18 +117,7 @@ actor AgentAppLink {
     private func listen(to channel: AgentLineChannel) async {
         for await line in channel.lines() {
             guard let response = try? JSONDecoder().decode(AgentLinkResponse.self, from: line) else { continue }
-            switch response {
-            case .attached(let tools):
-                attaching?.resume(returning: tools)
-                attaching = nil
-            case .refused(let reason):
-                attaching?.resume(throwing: Failure.refused(reason))
-                attaching = nil
-                for continuation in waiting.values { continuation.resume(throwing: Failure.refused(reason)) }
-                waiting = [:]
-            case .result(let id, let result):
-                waiting.removeValue(forKey: id)?.resume(returning: result)
-            }
+            response.deliver(to: self)
         }
         disconnect(channel)
     }

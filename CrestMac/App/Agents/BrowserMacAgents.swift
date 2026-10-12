@@ -228,27 +228,35 @@ final class BrowserMacAgents {
             end(link)
             return
         }
-        switch request {
-        case .attach(let version, let client):
-            guard version == AgentLinkRequest.version else {
-                reply(.refused(reason: .staleHelper), on: link)
-                link.connection.close()
-                return
-            }
-            guard core.state.agentPreferences.isOn else {
-                reply(.refused(reason: .agentsOff), on: link)
-                return
-            }
-            link.client = client
-            link.isAttached = true
-            reply(.attached(tools: AgentToolDefinition.catalog), on: link)
-        case .call(let id, let name, let arguments):
-            Task { [weak self] in
-                guard let self else { return }
-                let result = await perform(name, arguments: arguments, on: link)
-                guard links[key] != nil else { return }
-                reply(.result(id: id, result: result), on: link)
-            }
+        request.handle(on: self, from: link)
+    }
+
+    /// The helper behind `link` introduced the agent `client`, speaking link
+    /// `version`.
+    func attach(_ link: Link, version: Int, client: AgentClientInfo?) {
+        guard version == AgentLinkRequest.version else {
+            reply(.refused(reason: .staleHelper), on: link)
+            link.connection.close()
+            return
+        }
+        guard core.state.agentPreferences.isOn else {
+            reply(.refused(reason: .agentsOff), on: link)
+            return
+        }
+        link.client = client
+        link.isAttached = true
+        reply(.attached(tools: AgentToolDefinition.catalog), on: link)
+    }
+
+    /// The agent behind `link` called tool `name` with `arguments`, as call
+    /// `id`, which is answered once the tool finishes.
+    func call(_ id: Int, name: String, arguments: AgentJSON, from link: Link) {
+        let key = ObjectIdentifier(link)
+        Task { [weak self] in
+            guard let self else { return }
+            let result = await perform(name, arguments: arguments, on: link)
+            guard links[key] != nil else { return }
+            reply(.result(id: id, result: result), on: link)
         }
     }
 

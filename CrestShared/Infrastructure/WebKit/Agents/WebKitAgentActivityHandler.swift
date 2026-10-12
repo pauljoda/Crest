@@ -9,11 +9,6 @@ import WebKit
     /// scripts can post too, so nothing here is trusted beyond being kept for
     /// the agent watching that page.
     struct WebKitAgentActivityMessage: Decodable {
-        enum Kind: String, Decodable {
-            case console
-            case network
-        }
-
         /// A console message's level, as the observer spells it.
         enum Level: String, Decodable {
             case debug
@@ -33,7 +28,7 @@ import WebKit
             }
         }
 
-        let kind: Kind
+        let kind: WebKitAgentActivityKind
         let level: Level?
         let text: String?
         let source: String?

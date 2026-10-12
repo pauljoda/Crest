@@ -3865,6 +3865,10 @@
     "2026-10-12-widget-actions-own-behavior": {
       "category": "internal",
       "message": "Let sidebar widget actions and update phases say what they do"
+    },
+    "2026-10-12-agent-messages-own-behavior": {
+      "category": "internal",
+      "message": "Let agent messages and tool options say what they do"
     }
   }
 }
