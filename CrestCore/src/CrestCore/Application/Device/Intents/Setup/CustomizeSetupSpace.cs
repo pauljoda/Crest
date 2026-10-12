@@ -10,7 +10,7 @@ public sealed record CustomizeSetupSpace(Guid SpaceId, SpaceCustomization Custom
     #region Actions - Device
 
     internal override void Apply(Device device, DeviceTurn turn) =>
-        device.ReviseSetup(turn.Changes, draft => ManualSetupPolicy.Customizing(draft, SpaceId, Customization));
+        device.ReviseSetup(turn.Changes, draft => draft.Customizing(SpaceId, Customization));
 
     #endregion
 }

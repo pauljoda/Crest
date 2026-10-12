@@ -9,7 +9,7 @@ public sealed record RemoveSetupSpace(Guid SpaceId) : SetupDraftIntent {
     #region Actions - Device
 
     internal override void Apply(Device device, DeviceTurn turn) =>
-        device.ReviseSetup(turn.Changes, draft => ManualSetupPolicy.Removing(draft, SpaceId));
+        device.ReviseSetup(turn.Changes, draft => draft.Removing(SpaceId));
 
     #endregion
 }

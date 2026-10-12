@@ -9,7 +9,7 @@ public sealed record IncludeImportSpace(Guid SourceSpaceId, bool Included) : Set
     #region Actions - Device
 
     internal override void Apply(Device device, DeviceTurn turn) => device.ReviseFlow(turn.Changes, (flow, session) =>
-        Device.Editing(flow, review => ImportReviewPolicy.IncludingSpace(review, SourceSpaceId, Included, session)));
+        Device.Editing(flow, review => review.IncludingSpace(SourceSpaceId, Included, session)));
 
     #endregion
 }

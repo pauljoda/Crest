@@ -1,3 +1,5 @@
+using CrestCore.Domain;
+
 namespace CrestCore.Contracts;
 
 /// <summary>
@@ -70,6 +72,26 @@ public sealed record TabState(
     /// <summary>The tab is a Start Page: it shows neither a web page nor a native view,
     /// and no sidebar lists it.</summary>
     public bool IsStartPage => Surface == TabSurface.StartPage;
+
+    #endregion
+
+    #region Actions - Repair
+
+    /// A new Start Page tab, last shown `now`.
+    internal static TabState NewStartPage(Guid id, DateTimeOffset now) => new(id, TabKind.StartPage.Name, null, null, null,
+        TabKind.StartPage.Symbol, null, null, null, TabPlacement.Current, null, null, now, null, null, null, false);
+
+    /// The tab as repair keeps it: a blank rename is no rename, edit clocks
+    /// are whole milliseconds, and a Start Page wears its own title and symbol.
+    internal TabState Normalized() {
+        var normalized = this with {
+            CustomTitle = string.IsNullOrWhiteSpace(CustomTitle) ? null : CustomTitle.Trim(),
+            PositionModifiedAt = PositionModifiedAt is { } position ? BrowserEditTimestamp.Normalize(position) : null,
+            TitleModifiedAt = TitleModifiedAt is { } title ? BrowserEditTimestamp.Normalize(title) : null
+        };
+        return normalized.IsStartPage
+            ? normalized with { Title = TabKind.StartPage.Name, Symbol = TabKind.StartPage.Symbol } : normalized;
+    }
 
     #endregion
 }

@@ -1,3 +1,5 @@
+using CrestCore.Domain;
+
 namespace CrestCore.Contracts;
 
 /// <summary>
@@ -102,6 +104,35 @@ public sealed record SpaceState(
         }
         return null;
     }
+
+    #endregion
+
+    #region Actions - Imports
+
+    /// The name and look the Space has, as a review or a setup offers them.
+    internal SpaceCustomization Customization => new(Settings.Name, Settings.Symbol, Settings.Accent, Settings.Look);
+
+    /// The first of `destinations` not in `joined` whose name matches this
+    /// Space's. Two Space names match on letters and digits only, ignoring
+    /// case, accents and width; a name with neither never matches.
+    internal SpaceState? Joining(IReadOnlyList<SpaceState> destinations, IReadOnlySet<Guid> joined) {
+        string key = FolderState.MatchKey(Settings.Name);
+        return key.Length == 0 ? null
+            : destinations.FirstOrDefault(existing => !joined.Contains(existing.Id) && FolderState.MatchKey(existing.Settings.Name) == key);
+    }
+
+    /// This Space's tabs at an address `other` holds a tab at.
+    internal Guid[] TabsAlsoIn(SpaceState other) {
+        var keys = other.TabKeys();
+        return [.. Tabs.Where(tab => tab.Url is not null && keys.Contains(UrlKey(tab.Url))).Select(tab => tab.Id)];
+    }
+
+    private HashSet<string> TabKeys() =>
+        Tabs.Where(tab => tab.Url is not null).Select(tab => UrlKey(tab.Url!)).ToHashSet(StringComparer.Ordinal);
+
+    /// The key two tab addresses match on: the address a history visit would
+    /// record, or the address itself when history would not record it.
+    private static string UrlKey(string url) => new WebAddress(url).Normalized ?? url;
 
     #endregion
 

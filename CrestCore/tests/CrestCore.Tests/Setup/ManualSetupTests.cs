@@ -29,7 +29,7 @@ public sealed partial class BrowserContractsTests {
             started.Spaces.Select(space => (space.SpaceId, space.ProfileId, space.IsNew, space.ShownName)));
         // A new Space is named for its place and wears the next accent.
         var added = Drafted(device.Send(new AddSetupSpace())).Spaces[1];
-        Assert.Equal((true, "Space 2", ManualSetupPolicy.NewSpaceSymbol, SpaceAccent.Orange),
+        Assert.Equal((true, "Space 2", SetupDraft.NewSpaceSymbol, SpaceAccent.Orange),
             (added.IsNew, added.ShownName, added.Customization.Symbol, added.Customization.Accent));
         // A blank name stays blank while it is typed and shows as untitled.
         var blank = Drafted(device.Send(new CustomizeSetupSpace(added.SpaceId, added.Customization with { Name = "  " }))).Spaces[1];

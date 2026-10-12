@@ -19,7 +19,7 @@ public sealed record ImportPasswordDestinations(Guid WorkspaceId, IReadOnlyList<
     internal override ImportPasswordRoutes Answer(CrestApp app) {
         var review = app.Device.ImportReview(WorkspaceId) ?? throw new Rejected(new NoSetup());
         var authority = app.Device.Workspace(WorkspaceId);
-        return ImportPasswordRouting.Destinations(review, Passwords, authority.Current, authority.IsLocked);
+        return review.PasswordRoutes(Passwords, authority.Current, authority.IsLocked);
     }
 
     #endregion

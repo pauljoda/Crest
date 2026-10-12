@@ -3969,6 +3969,10 @@
     "2026-10-12-pages-history-spaces-own-rules": {
       "category": "internal",
       "message": "Let pages, history, Spaces and brandings keep their own rules"
+    },
+    "2026-10-12-import-setup-repair-own-steps": {
+      "category": "internal",
+      "message": "Let import reviews, setups and session repair carry their own steps"
     }
   }
 }

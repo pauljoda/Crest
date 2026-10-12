@@ -9,7 +9,7 @@ public sealed record CustomizeImportSpace(Guid SourceSpaceId, SpaceCustomization
     #region Actions - Device
 
     internal override void Apply(Device device, DeviceTurn turn) => device.ReviseFlow(turn.Changes, (flow, session) =>
-        Device.Editing(flow, review => ImportReviewPolicy.Customizing(review, SourceSpaceId, Customization, session)));
+        Device.Editing(flow, review => review.Customizing(SourceSpaceId, Customization, session)));
 
     #endregion
 }

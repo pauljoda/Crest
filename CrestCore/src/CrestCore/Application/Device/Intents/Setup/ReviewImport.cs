@@ -34,7 +34,7 @@ public sealed record ReviewImport(ImportSource Source, IReadOnlyList<SpaceState>
         return flow with {
             Step = SetupStep.Review,
             Phase = SetupPhase.Reviewing,
-            Review = ImportReviewPolicy.Started(Source, Spaces, ImportPasswordRouting.Counts(Source, Passwords, Spaces),
+            Review = SetupImportReview.Started(Source, Spaces, Source.PasswordCounts(Passwords, Spaces),
                 Extensions ?? [], LeftOut ?? [], session) with { BrowserTitle = Title },
             Failure = null
         };

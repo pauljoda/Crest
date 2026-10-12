@@ -34,4 +34,35 @@ public sealed record SetupReviewSpace(SpaceState Source, bool Included, Guid? De
     internal bool MakesNewSpace => Included && DestinationId is null;
 
     #endregion
+
+    #region Actions - Review
+
+    /// The review of `space` as a review starts it: joining `match`, taking
+    /// its name and look and leaving out the tabs it holds, or coming in new
+    /// with its own. It comes in when `included`, with the `passwordCount`
+    /// saved passwords that belong with it, offering `offered`, all of them
+    /// left on.
+    internal static SetupReviewSpace Started(SpaceState space, SpaceState? match, bool included, int passwordCount,
+        IReadOnlyList<ImportExtension> offered) {
+        var duplicates = match is null ? [] : space.TabsAlsoIn(match).ToHashSet();
+        return new(space, included, match?.Id, (match ?? space).Customization,
+            included ? [.. space.Tabs.Where(tab => !duplicates.Contains(tab.Id)).Select(tab => tab.Id)] : [], [], [], [],
+            IncludesPasswords: true, passwordCount, offered, [.. offered.Select(extension => extension.ExtensionId)]);
+    }
+
+    /// The Space with what joining `destination` means: its tabs the
+    /// destination already holds, and, when it comes in, the destination's
+    /// tabs it matches.
+    internal SetupReviewSpace Analyzed(SpaceState? destination) => this with {
+        DuplicateTabIds = destination is null ? [] : Source.TabsAlsoIn(destination),
+        MatchedTabIds = destination is null || !Included ? [] : destination.TabsAlsoIn(Source)
+    };
+
+    /// `ids` in the order the Space holds its tabs.
+    internal Guid[] Ordered(IEnumerable<Guid> ids) {
+        var chosen = ids.ToHashSet();
+        return [.. Source.Tabs.Select(tab => tab.Id).Where(chosen.Contains)];
+    }
+
+    #endregion
 }

@@ -140,9 +140,23 @@ internal sealed class NativeWorkspaceImport {
     /// Throws `Rejected` with `InvalidImport` unless they name each imported
     /// Space exactly once.
     private IReadOnlyList<(Draft Input, TChoice Choice)> Pair<TChoice>(IReadOnlyList<TChoice> choices, Func<TChoice, Guid> named) {
-        var paired = ImportReviewPolicy.Paired(inputs, choices, input => input.Id, named);
+        var paired = Paired(inputs, choices, input => input.Id, named);
         var byChoice = paired.ToDictionary(pair => named(pair.Choice), pair => pair.Source);
         return [.. choices.Select(choice => (byChoice[named(choice)], choice))];
+    }
+
+    /// Each source with the one choice that names it, in the sources' order.
+    /// Throws `Rejected` with `InvalidImport` unless the choices name each
+    /// source exactly once and the sources' identities are distinct.
+    private static IReadOnlyList<(TSource Source, TChoice Choice)> Paired<TSource, TChoice>(IReadOnlyList<TSource> sources,
+        IReadOnlyList<TChoice> choices, Func<TSource, Guid> sourceId, Func<TChoice, Guid> choiceId) {
+        var byId = new Dictionary<Guid, TChoice>();
+        foreach (var choice in choices)
+            if (!byId.TryAdd(choiceId(choice), choice)) throw new Rejected(new InvalidImport(ImportFlaw.UnpairedChoices));
+        if (sources.Select(sourceId).Distinct().Count() != sources.Count || byId.Count != sources.Count)
+            throw new Rejected(new InvalidImport(ImportFlaw.UnpairedChoices));
+        return [.. sources.Select(source => byId.TryGetValue(sourceId(source), out var choice)
+            ? (source, choice) : throw new Rejected(new InvalidImport(ImportFlaw.UnpairedChoices)))];
     }
 
     #endregion
