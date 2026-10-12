@@ -13,7 +13,7 @@ final class EnginePage: BrowserFindExecuting {
 
     /// The core's page this one is.
     let id: UUID
-    private let pages: any EnginePages
+    let pages: any EnginePages
     /// The engine the page's saved history belongs to, which a restore must
     /// match, and the version it is tagged with, which a restore must also
     /// match on an engine that reads back only its own version's history.
@@ -26,11 +26,13 @@ final class EnginePage: BrowserFindExecuting {
     private var findCompletion: (@MainActor (BrowserFindResult) -> Void)?
     private var captures: [UUID: @MainActor (Data?) -> Void] = [:]
     private var exports: [UUID: CheckedContinuation<Data, any Error>] = [:]
+    /// What an agent's scripts and input wait for, by their identities.
+    var agentWaits = EnginePageAgentWaits()
     /// The page's requested multiplier, retained across document and view
     /// replacement because an engine can reset its renderer's zoom then.
     private var requestedZoom: CGFloat?
     /// True once the page's owner let it go.
-    private var closed = false
+    private(set) var closed = false
 
     // MARK: - Initializers
 
@@ -61,6 +63,7 @@ final class EnginePage: BrowserFindExecuting {
         let exporting = exports
         exports = [:]
         for export in exporting.values { export.resume(throwing: BrowserPageExportError.pageUnavailable) }
+        agentWaits.end()
     }
 
     // MARK: - Actions - Navigation
@@ -317,6 +320,7 @@ final class EnginePage: BrowserFindExecuting {
                 finished.matches.map { BrowserFindResult(matchCount: $0, activeMatch: finished.activeMatch) }
                     ?? BrowserFindResult(matchFound: true))
         }
+        agentWaits.receive(presentation)
         if case .pageCaptured(let captured) = presentation {
             captures.removeValue(forKey: captured.captureID)?(captured.png)
         }

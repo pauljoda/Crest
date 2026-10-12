@@ -50,7 +50,9 @@ SHARED_METADATA = Area(
     folders=("Crest.xcodeproj/",),
     files=("Config/Version.xcconfig", "Documentation/ReleaseNotes.json"),
 )
-MAC_ONLY = Area(name="macOS only", folders=("CrestMac/", "CrestEngines/", "CrestDockTilePlugin/", "CrestTests/"))
+MAC_ONLY = Area(
+    name="macOS only",
+    folders=("CrestMac/", "CrestEngines/", "CrestDockTilePlugin/", "CrestTests/", "CrestAgents/", "CrestAgentHelper/"))
 IOS_ONLY = Area(name="iOS only", folders=("CrestMobile/", "CrestMobileTests/"))
 
 

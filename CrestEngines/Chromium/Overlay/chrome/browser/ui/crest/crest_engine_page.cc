@@ -10,6 +10,7 @@
 #include "base/pickle.h"
 #include "base/strings/string_util.h"
 #include "base/strings/utf_string_conversions.h"
+#include "chrome/browser/ui/crest/crest_engine_agent.h"
 #include "chrome/browser/ui/crest/crest_engine_binding.h"
 #include "chrome/browser/ui/crest/crest_engine_content.h"
 #include "chrome/browser/ui/crest/crest_engine_documents.h"
@@ -197,11 +198,16 @@ void EnginePage::Start(content::WebContents* contents) {
   store_ = std::make_unique<PageStore>(contents, id_, present);
   ApplyZoom();
   UpdateTheme();
+  // An agent that asked while the page was being made sees its first load.
+  if (observes_activity_) {
+    Agent()->ObserveActivity(true);
+  }
   StateChanged();
 }
 
 void EnginePage::Stop() {
   settle_timer_.Stop();
+  agent_.reset();
   documents_.reset();
   store_.reset();
   content_.reset();
@@ -1344,6 +1350,26 @@ bool EnginePage::EvaluateContentScript(const engine::Guid& evaluation,
                                        const std::string& source,
                                        const std::string& frame) {
   return content_ && content_->Evaluate(evaluation, source, frame);
+}
+
+PageAgent* EnginePage::Agent() {
+  if (!agent_ && web_contents()) {
+    agent_ = std::make_unique<PageAgent>(web_contents(), id_,
+                                         base::BindRepeating(&EnginePage::Present, weak_factory_.GetWeakPtr()));
+  }
+  return agent_.get();
+}
+
+bool EnginePage::ObserveActivity(bool observing) {
+  if (PageAgent* agent = Agent()) {
+    observes_activity_ = observing;
+    return agent->ObserveActivity(observing);
+  }
+  if (phase_ != Phase::kCreating) {
+    return false;
+  }
+  observes_activity_ = observing;
+  return true;
 }
 
 bool EnginePage::OpenInspector(std::optional<engine::InspectorPanel> panel) {

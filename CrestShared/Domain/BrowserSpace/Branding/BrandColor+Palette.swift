@@ -17,6 +17,10 @@ extension BrandColor {
     static let rose = Tincture.rose.color
     static let sand = Tincture.sand.color
     static let folderDefault = BrandColor(red: 0.43, green: 0.48, blue: 0.54, alpha: 1)
+    #if os(macOS)
+        /// What an agent that gives no brand colour of its own wears.
+        static let agentDefault = BrandColor(red: 0.53, green: 0.54, blue: 0.56, alpha: 1)
+    #endif
 
     static let presets: [BrandColor] = [
         .ink, .indigo, .ocean, .sky, .teal, .sage, .gold, .ember, .rose, .sand,

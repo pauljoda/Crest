@@ -35,7 +35,7 @@ struct BrowserTabStatusSurfaces: View {
                     .clipShape(shape)
                 }
                 if let outline, let width = outline.surface?.outlineWidth {
-                    shape.strokeBorder(outline.tint.color, lineWidth: width)
+                    shape.strokeBorder(outline.tint, lineWidth: width)
                 }
             }
             .allowsHitTesting(false)

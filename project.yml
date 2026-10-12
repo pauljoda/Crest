@@ -125,8 +125,13 @@ targetTemplates:
       - path: CrestEngines/Chromium/Apple
         excludes:
           - CrestChromiumHost.h
+      - path: CrestAgents
     dependencies:
       - target: CrestDockTilePlugin
+        link: false
+        embed: false
+      # The packager copies the agent helper into Contents/Helpers.
+      - target: CrestBrowserHelper
         link: false
         embed: false
       - package: Sparkle
@@ -193,6 +198,7 @@ targets:
           - Resources/CrestIcon/Sources
           - Resources/CrestIcon/Validation
       - path: CrestMac
+      - path: CrestAgents
     dependencies:
       - target: CrestDockTilePlugin
         embed: true
@@ -200,6 +206,13 @@ targets:
         codeSign: true
         copy:
           destination: plugins
+      - target: CrestBrowserHelper
+        embed: true
+        link: false
+        codeSign: true
+        copy:
+          destination: wrapper
+          subpath: Contents/Helpers
       - package: Sparkle
         product: Sparkle
       - sdk: AuthenticationServices.framework
@@ -302,6 +315,7 @@ targets:
           - Resources/CrestIcon/Sources
           - Resources/CrestIcon/Validation
       - path: CrestMac
+      - path: CrestAgents
     dependencies:
       - target: CrestDockTilePlugin
         embed: true
@@ -309,6 +323,13 @@ targets:
         codeSign: true
         copy:
           destination: plugins
+      - target: CrestBrowserHelper
+        embed: true
+        link: false
+        codeSign: true
+        copy:
+          destination: wrapper
+          subpath: Contents/Helpers
       - package: Sparkle
         product: Sparkle
       - sdk: AuthenticationServices.framework
@@ -334,6 +355,23 @@ targets:
         PRODUCT_MODULE_NAME: Crest
         PRODUCT_NAME: Crest
         CREST_DEFAULT_UPDATE_CHANNEL: development
+  # crest-browser, the helper agents run over stdio to reach the Crest app it
+  # ships inside (Contents/Helpers). Mac only.
+  CrestBrowserHelper:
+    type: tool
+    platform: macOS
+    sources:
+      - path: CrestAgentHelper
+      - path: CrestAgents
+    settings:
+      base:
+        PRODUCT_NAME: crest-browser
+        PRODUCT_MODULE_NAME: CrestBrowserHelper
+        PRODUCT_BUNDLE_IDENTIFIER: com.pauldavis.crest.browser-helper
+        GENERATE_INFOPLIST_FILE: YES
+        CREATE_INFOPLIST_SECTION_IN_BINARY: YES
+        SKIP_INSTALL: YES
+        SWIFT_EMIT_LOC_STRINGS: NO
   CrestDockTilePlugin:
     type: bundle
     platform: macOS

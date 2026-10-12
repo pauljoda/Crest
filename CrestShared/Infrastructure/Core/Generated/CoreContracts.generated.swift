@@ -39,8 +39,8 @@ protocol EngineQuestion: Sendable {
     static func decodeAnswer(from reader: inout WireReader) throws(WireError) -> Answer
 }
 
-/// The members of `Intent` that derive from the core's `AutomationIntent`.
-protocol AutomationIntent: Intent {}
+/// The members of `Intent` that derive from the core's `AgentIntent`.
+protocol AgentIntent: Intent {}
 
 /// The members of `Intent` that derive from the core's `CloseIntent`.
 protocol CloseIntent: Intent {}
@@ -116,10 +116,11 @@ protocol WorkspaceIntent: Intent {}
 
 /// Everything an intent can change. `CoreState.apply` keeps the read model current.
 enum Change: Equatable, Sendable {
+    case agentPreferencesChanged(AgentPreferencesChanged)
+    case agentSessionsChanged(AgentSessionsChanged)
     case appPreferencesChanged(AppPreferencesChanged)
     case archiveChanged(ArchiveChanged)
     case authenticationAsked(AuthenticationAsked)
-    case automationPreferencesChanged(AutomationPreferencesChanged)
     case closeReady(CloseReady)
     case cloudMergeBegan(CloudMergeBegan)
     case cloudSyncAdvanced(CloudSyncAdvanced)
@@ -184,13 +185,19 @@ enum Change: Equatable, Sendable {
 
 /// The rule that refused an intent or a query.
 enum Rejection: Equatable, Error, Sendable {
+    case agentNotApproved(AgentNotApproved)
+    case agentSessionsFull(AgentSessionsFull)
+    case agentSpaceUnavailable(AgentSpaceUnavailable)
+    case agentTabStopped(AgentTabStopped)
+    case agentTabUnavailable(AgentTabUnavailable)
+    case agentsFull(AgentsFull)
+    case agentsOff(AgentsOff)
+    case agentsUnavailable(AgentsUnavailable)
     case alreadyInSpace(AlreadyInSpace)
     case alreadyInSplit(AlreadyInSplit)
     case archiveInvalid(ArchiveInvalid)
     case archiveTooLarge(ArchiveTooLarge)
     case authenticationBusy(AuthenticationBusy)
-    case automationSpaceUnavailable(AutomationSpaceUnavailable)
-    case automationToolsFull(AutomationToolsFull)
     case bookmarksHaveNoLinks(BookmarksHaveNoLinks)
     case bookmarksOverLimits(BookmarksOverLimits)
     case bookmarksTooLarge(BookmarksTooLarge)
@@ -221,7 +228,7 @@ enum Rejection: Equatable, Error, Sendable {
     case folderLimitReached(FolderLimitReached)
     case guideSpaceLocked(GuideSpaceLocked)
     case incompleteSplit(IncompleteSplit)
-    case invalidAutomationTool(InvalidAutomationTool)
+    case invalidAgent(InvalidAgent)
     case invalidBlockedPopup(InvalidBlockedPopup)
     case invalidCredentialDate(InvalidCredentialDate)
     case invalidCredentialFile(InvalidCredentialFile)
@@ -318,6 +325,7 @@ enum Rejection: Equatable, Error, Sendable {
     case tabLimitReached(TabLimitReached)
     case transientAlreadyCompleted(TransientAlreadyCompleted)
     case translationRuleLimitReached(TranslationRuleLimitReached)
+    case unknownAgentSession(UnknownAgentSession)
     case unknownArchivedTab(UnknownArchivedTab)
     case unknownCloudMerge(UnknownCloudMerge)
     case unknownFolder(UnknownFolder)
@@ -343,6 +351,14 @@ enum Rejection: Equatable, Error, Sendable {
 
     var message: LocalizedStringResource? {
         switch self {
+        case .agentNotApproved(let value): value.message
+        case .agentSessionsFull(let value): value.message
+        case .agentSpaceUnavailable(let value): value.message
+        case .agentTabStopped(let value): value.message
+        case .agentTabUnavailable(let value): value.message
+        case .agentsFull(let value): value.message
+        case .agentsOff(let value): value.message
+        case .agentsUnavailable(let value): value.message
         case .archiveInvalid(let value): value.message
         case .archiveTooLarge(let value): value.message
         case .bookmarksHaveNoLinks(let value): value.message
@@ -358,6 +374,7 @@ enum Rejection: Equatable, Error, Sendable {
         case .fileUnreadable(let value): value.message
         case .guideSpaceLocked(let value): value.message
         case .incompleteSplit(let value): value.message
+        case .invalidAgent(let value): value.message
         case .invalidImport(let value): value.message
         case .invalidSearchShortcut(let value): value.message
         case .invalidSyncRecords(let value): value.message
@@ -391,6 +408,7 @@ enum Rejection: Equatable, Error, Sendable {
         case .spaceProfileChanged(let value): value.message
         case .splitLimitReached(let value): value.message
         case .splitNeedsTwoTabs(let value): value.message
+        case .unknownAgentSession(let value): value.message
         case .unknownCloudMerge(let value): value.message
         case .unsuitableDefaultSearch(let value): value.message
         case .unsupportedArchiveVersion(let value): value.message
@@ -444,12 +462,14 @@ enum EnginePresentation: Equatable, Sendable {
     case pageCaptured(PageCaptured)
     case pageExported(PageExported)
     case pageHistoryChanged(PageHistoryChanged)
+    case pageInputDelivered(PageInputDelivered)
     case pageInteracted(PageInteracted)
     case pageLoadingChanged(PageLoadingChanged)
     case pageNavigationCommitted(PageNavigationCommitted)
     case pageNavigationFailed(PageNavigationFailed)
     case pageNavigationStarted(PageNavigationStarted)
     case pageRendererGone(PageRendererGone)
+    case pageScriptEvaluated(PageScriptEvaluated)
     case pageThemeChanged(PageThemeChanged)
     case pageViewClosed(PageViewClosed)
     case pageViewReady(PageViewReady)
@@ -488,12 +508,14 @@ enum EnginePresentation: Equatable, Sendable {
         case .pageCaptured(let value): value.pageID
         case .pageExported(let value): value.pageID
         case .pageHistoryChanged(let value): value.pageID
+        case .pageInputDelivered(let value): value.pageID
         case .pageInteracted(let value): value.pageID
         case .pageLoadingChanged(let value): value.pageID
         case .pageNavigationCommitted(let value): value.pageID
         case .pageNavigationFailed(let value): value.pageID
         case .pageNavigationStarted(let value): value.pageID
         case .pageRendererGone(let value): value.pageID
+        case .pageScriptEvaluated(let value): value.pageID
         case .pageThemeChanged(let value): value.pageID
         case .pageViewClosed(let value): value.pageID
         case .pageViewReady(let value): value.pageID
@@ -517,10 +539,11 @@ extension Change {
     /// Applies the change to the read model, as its own `apply(to:)` does.
     @MainActor func apply(to state: CoreState) {
         switch self {
+        case .agentPreferencesChanged(let change): change.apply(to: state)
+        case .agentSessionsChanged(let change): change.apply(to: state)
         case .appPreferencesChanged(let change): change.apply(to: state)
         case .archiveChanged(let change): change.apply(to: state)
         case .authenticationAsked(let change): change.apply(to: state)
-        case .automationPreferencesChanged(let change): change.apply(to: state)
         case .closeReady(let change): change.apply(to: state)
         case .cloudMergeBegan(let change): change.apply(to: state)
         case .cloudSyncAdvanced(let change): change.apply(to: state)
@@ -667,7 +690,128 @@ struct AdoptWindowRecords: Intent, WindowIntent, Equatable, Sendable {
     let records: Data?
 }
 
-struct AllowAutomationSpace: Intent, AutomationIntent, Equatable, Sendable {
+struct AgentIdentity: Equatable, Sendable {
+    static let maximumField: Int = 255
+    static let maximumPath: Int = 1024
+
+    var teamID: String?
+    var signingID: String?
+    var path: String?
+    var client: String?
+}
+
+struct AgentNotApproved: Equatable, Sendable {
+    var message: LocalizedStringResource {
+        LocalizedStringResource("The person hasn’t allowed this agent to use Crest.")
+    }
+}
+
+struct AgentPreferences: Equatable, Sendable {
+    static let maximumAgents: Int = 32
+    static let maximumName: Int = 64
+
+    let isOn: Bool
+    let runsScripts: Bool
+    let spaceIDs: [UUID]
+    let agents: [ApprovedAgent]
+}
+
+struct AgentPreferencesChanged: Equatable, Sendable {
+    let preferences: AgentPreferences
+}
+
+struct AgentReach: Query, Equatable, Sendable {
+    typealias Answer = AgentReachList
+
+    let sessionID: UUID
+}
+
+struct AgentReachList: Equatable, Sendable {
+    let workspaceID: UUID?
+    let spaces: [AgentSpace]
+}
+
+struct AgentSessionState: Equatable, Sendable {
+    let sessionID: UUID
+    let identity: AgentIdentity
+    let name: String
+    let color: BrandColor?
+    let tabIDs: [UUID]
+    let stoppedTabIDs: [UUID]
+}
+
+struct AgentSessionsChanged: Equatable, Sendable {
+    let sessions: [AgentSessionState]
+}
+
+struct AgentSessionsFull: Equatable, Sendable {
+    let maximum: Int
+
+    var message: LocalizedStringResource {
+        LocalizedStringResource("Too many agents are using Crest right now.")
+    }
+}
+
+struct AgentSpace: Equatable, Sendable {
+    let spaceID: UUID
+    let name: String
+    let isLocked: Bool
+    let tabs: [AgentTab]
+}
+
+struct AgentSpaceUnavailable: Equatable, Sendable {
+    let spaceID: UUID
+
+    var message: LocalizedStringResource {
+        LocalizedStringResource("That Space isn’t one agents may use.")
+    }
+}
+
+struct AgentTab: Equatable, Sendable {
+    let tabID: UUID
+    let title: String
+    let url: String?
+    let placement: TabPlacement
+    let claimed: Bool
+}
+
+struct AgentTabStopped: Equatable, Sendable {
+    let tabID: UUID
+
+    var message: LocalizedStringResource {
+        LocalizedStringResource("The person stopped agents from using this tab.")
+    }
+}
+
+struct AgentTabUnavailable: Equatable, Sendable {
+    let tabID: UUID
+
+    var message: LocalizedStringResource {
+        LocalizedStringResource("That tab isn’t one agents may use.")
+    }
+}
+
+struct AgentsFull: Equatable, Sendable {
+    let maximum: Int
+
+    var message: LocalizedStringResource {
+        LocalizedStringResource("Too many agents are allowed. Forget one in Settings first.")
+    }
+}
+
+struct AgentsOff: Equatable, Sendable {
+    var message: LocalizedStringResource {
+        LocalizedStringResource("Agents are turned off in Crest’s settings.")
+    }
+}
+
+struct AgentsUnavailable: Equatable, Sendable {
+    var message: LocalizedStringResource {
+        LocalizedStringResource("Agents can’t use Crest on this device.")
+    }
+}
+
+struct AllowAgentSpace: Intent, AgentIntent, Equatable, Sendable {
     let spaceID: UUID
     let allowed: Bool
 }
@@ -808,14 +952,19 @@ struct ApplyManualSetup: Intent, ImportWorkspace, SessionIntent, Equatable, Send
     let windowID: UUID
 }
 
-struct ApproveAutomationTool: Intent, AutomationIntent, Equatable, Sendable {
-    let tool: AutomationTool
+struct ApproveAgent: Intent, AgentIntent, Equatable, Sendable {
+    let agent: ApprovedAgent
 }
 
 struct ApproveEngineDownload: Equatable, Sendable {
     let profileID: UUID
     let downloadID: String
     let approvalToken: String
+}
+
+struct ApprovedAgent: Equatable, Sendable {
+    var identity: AgentIdentity
+    var name: String
 }
 
 struct ArchiveChanged: Equatable, Sendable {
@@ -934,49 +1083,6 @@ struct AutomaticDownloadVerdict: Equatable, Sendable {
     let hasAllowedAutomaticDownload: Bool
 }
 
-struct AutomationPreferences: Equatable, Sendable {
-    static let maximumTools: Int = 32
-    static let maximumToolName: Int = 64
-    static let maximumToolPath: Int = 1024
-
-    let isOn: Bool
-    let spaceIDs: [UUID]
-    let tools: [AutomationTool]
-}
-
-struct AutomationPreferencesChanged: Equatable, Sendable {
-    let preferences: AutomationPreferences
-}
-
-struct AutomationReach: Query, Equatable, Sendable {
-    typealias Answer = AutomationReachList
-
-}
-
-struct AutomationReachList: Equatable, Sendable {
-    let workspaceID: UUID?
-    let spaces: [AutomationSpace]
-}
-
-struct AutomationSpace: Equatable, Sendable {
-    let spaceID: UUID
-    let name: String
-    let isLocked: Bool
-}
-
-struct AutomationSpaceUnavailable: Equatable, Sendable {
-    let spaceID: UUID
-}
-
-struct AutomationTool: Equatable, Sendable {
-    var name: String
-    var path: String
-}
-
-struct AutomationToolsFull: Equatable, Sendable {
-    let maximum: Int
-}
-
 struct AwaitDownloadApproval: Intent, DownloadIntent, Equatable, Sendable {
     let downloadID: UUID
 }
@@ -989,6 +1095,12 @@ struct BalancedProtectionRules: Query, Equatable, Sendable {
 struct BeforeUnloadAnswered: EngineEvent, Equatable, Sendable {
     let pageID: UUID
     let proceeds: Bool
+}
+
+struct BeginAgentSession: Intent, AgentIntent, Equatable, Sendable {
+    let sessionID: UUID
+    let identity: AgentIdentity
+    let name: String
 }
 
 struct BeginCloudMerge: Intent, CloudTransportIntent, Equatable, Sendable {
@@ -1271,6 +1383,11 @@ struct ChooseTabIcon: Intent, SessionIntent, Equatable, Sendable {
     let accent: TabIconAccent?
 }
 
+struct ClaimAgentTab: Intent, AgentIntent, Equatable, Sendable {
+    let sessionID: UUID
+    let tabID: UUID
+}
+
 struct CleanUpCurrentTabs: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let spaceID: UUID?
@@ -1288,6 +1405,17 @@ struct ClearHistory: Intent, SessionIntent, Equatable, Sendable {
 }
 
 struct ClearPaletteChoices: Intent, PaletteIntent, Equatable, Sendable {
+}
+
+struct ClickPage: PageRequest, Equatable, Sendable {
+    typealias Answer = Bool
+
+    let pageID: UUID
+    let inputID: UUID
+    let point: PagePoint
+    let button: PointerButton
+    let count: Int
+    let modifiers: KeyModifiers
 }
 
 struct CloseInspector: PageRequest, Equatable, Sendable {
@@ -2132,6 +2260,10 @@ struct EditLinkRoute: Intent, LinkIntent, Equatable, Sendable {
     let destinationSpaceID: UUID?
 }
 
+struct EndAgentSession: Intent, AgentIntent, Equatable, Sendable {
+    let sessionID: UUID
+}
+
 struct EnforcedLimits: Query, Equatable, Sendable {
     typealias Answer = CapacityLimits
 
@@ -2290,6 +2422,15 @@ struct EvaluateContentScript: PageRequest, Equatable, Sendable {
     let evaluationID: UUID
     let source: String
     let frameID: String
+}
+
+struct EvaluatePageScript: PageRequest, Equatable, Sendable {
+    typealias Answer = Bool
+
+    let pageID: UUID
+    let evaluationID: UUID
+    let source: String
+    let world: PageScriptWorld
 }
 
 struct ExistingCredential: Equatable, Sendable, Identifiable {
@@ -2605,8 +2746,8 @@ struct FoldersChanged: Equatable, Sendable {
     let order: [UUID]?
 }
 
-struct ForgetAutomationTool: Intent, AutomationIntent, Equatable, Sendable {
-    let tool: AutomationTool
+struct ForgetAgent: Intent, AgentIntent, Equatable, Sendable {
+    let identity: AgentIdentity
 }
 
 struct ForgetCloudZone: Intent, CloudTransportIntent, Equatable, Sendable {
@@ -2622,8 +2763,8 @@ struct ForgetPaletteChoices: Intent, PaletteIntent, Equatable, Sendable {
     let row: PaletteRow.Seed
 }
 
-struct GetAutomationPreferences: Query, Equatable, Sendable {
-    typealias Answer = AutomationPreferences
+struct GetAgentPreferences: Query, Equatable, Sendable {
+    typealias Answer = AgentPreferences
 
 }
 
@@ -2693,6 +2834,29 @@ struct HistoryEntryState: Equatable, Sendable, Identifiable {
     var firstVisitedAt: Date
     var lastVisitedAt: Date
     var visitCount: Int
+}
+
+struct HoldPageRendering: PageRequest, Equatable, Sendable {
+    typealias Answer = Bool
+
+    let pageID: UUID
+    let held: Bool
+    let width: Double
+    let height: Double
+}
+
+struct HoverPage: PageRequest, Equatable, Sendable {
+    typealias Answer = Bool
+
+    let pageID: UUID
+    let inputID: UUID
+    let point: PagePoint
+}
+
+struct IdentifyAgent: Intent, AgentIntent, Equatable, Sendable {
+    let sessionID: UUID
+    let name: String?
+    let color: BrandColor?
 }
 
 struct ImportAppPreferences: Intent, SessionIntent, Equatable, Sendable {
@@ -2907,9 +3071,12 @@ struct InteractionState: Equatable, Sendable {
     let state: Data?
 }
 
-struct InvalidAutomationTool: Equatable, Sendable {
+struct InvalidAgent: Equatable, Sendable {
     let maximumName: Int
-    let maximumPath: Int
+
+    var message: LocalizedStringResource {
+        LocalizedStringResource("Crest couldn’t tell which program this agent is.")
+    }
 }
 
 struct InvalidBlockedPopup: Equatable, Sendable {
@@ -3674,6 +3841,13 @@ struct ObserveCloudAccountChange: Intent, CloudTransportIntent, Equatable, Senda
     let transition: CloudAccountTransition
 }
 
+struct ObservePageActivity: PageRequest, Equatable, Sendable {
+    typealias Answer = Bool
+
+    let pageID: UUID
+    let observing: Bool
+}
+
 struct OfferImportSources: Intent, SetupFlowIntent, Equatable, Sendable {
     let installed: [ImportSource]
 }
@@ -3808,6 +3982,20 @@ struct PageClosed: EngineEvent, PageEvent, Equatable, Sendable {
     let restoreState: PageRestoreState?
 }
 
+struct PageConsoleLog: Equatable, Sendable {
+    let messages: [PageConsoleMessage]
+    let dropped: Int64
+}
+
+struct PageConsoleMessage: Equatable, Sendable {
+    let sequence: Int64
+    let level: PageConsoleLevel
+    let text: String
+    let source: String?
+    let line: Int
+    let at: Date
+}
+
 struct PageCrashed: EngineEvent, PageEvent, Equatable, Sendable {
     let pageID: UUID
     let domain: String
@@ -3852,6 +4040,11 @@ struct PageGroupChanged: EngineEvent, Equatable, Sendable {
     let pageIDs: [UUID]
 }
 
+struct PageHeader: Equatable, Sendable {
+    let name: String
+    let value: String
+}
+
 struct PageHistoryChanged: Equatable, Sendable {
     let pageID: UUID
     let back: [PageHistoryEntry]
@@ -3879,6 +4072,13 @@ struct PageIconImage: Equatable, Sendable {
     let image: Data?
 }
 
+struct PageInputDelivered: Equatable, Sendable {
+    let pageID: UUID
+    let inputID: UUID
+    let delivered: Bool
+    let trusted: Bool
+}
+
 struct PageInspected: PageRequest, Equatable, Sendable {
     typealias Answer = Bool
 
@@ -3887,6 +4087,13 @@ struct PageInspected: PageRequest, Equatable, Sendable {
 
 struct PageInteracted: Equatable, Sendable {
     let pageID: UUID
+}
+
+struct PageKey: Equatable, Sendable {
+    var key: String
+    var code: String
+    var keyCode: Int
+    var text: String?
 }
 
 struct PageLiveState: Equatable, Sendable {
@@ -3948,6 +4155,26 @@ struct PageNavigationStarted: Equatable, Sendable {
     let pageID: UUID
 }
 
+struct PageNetworkLog: Equatable, Sendable {
+    let requests: [PageNetworkRequest]
+    let dropped: Int64
+}
+
+struct PageNetworkRequest: Equatable, Sendable {
+    let sequence: Int64
+    let url: String
+    let method: String
+    let resourceType: String
+    let status: Int
+    let mimeType: String?
+    let requestHeaders: [PageHeader]
+    let responseHeaders: [PageHeader]
+    let started: Date
+    let duration: Double
+    let bytes: Int64
+    let failure: String?
+}
+
 struct PageNotLoadable: Equatable, Sendable {
     let pageID: UUID
 }
@@ -3964,6 +4191,11 @@ struct PageOffered: EngineEvent, Equatable, Sendable {
 
 struct PageOpened: Equatable, Sendable {
     let page: PageState
+}
+
+struct PagePoint: Equatable, Sendable {
+    var x: Double
+    var y: Double
 }
 
 struct PagePresented: Equatable, Sendable {
@@ -3995,6 +4227,13 @@ struct PageRendererGone: Equatable, Sendable {
 struct PageRestoreState: Equatable, Sendable {
     var url: String
     var state: Data
+}
+
+struct PageScriptEvaluated: Equatable, Sendable {
+    let pageID: UUID
+    let evaluationID: UUID
+    let json: String?
+    let error: String?
 }
 
 struct PageSnapshot: Equatable, Sendable {
@@ -4361,6 +4600,15 @@ struct PresentPage: Query, Equatable, Sendable {
     let restoresUnloaded: Bool
 }
 
+struct PressKeyInPage: PageRequest, Equatable, Sendable {
+    typealias Answer = Bool
+
+    let pageID: UUID
+    let inputID: UUID
+    let key: PageKey
+    let modifiers: KeyModifiers
+}
+
 struct PrivateWorkspaceBoundary: Equatable, Sendable {
     let destinationWorkspaceID: UUID
 }
@@ -4447,6 +4695,20 @@ struct ReadImport: Query, Equatable, Sendable {
 
     let source: ImportSource
     let profiles: [ImportProfile]
+}
+
+struct ReadPageConsole: PageRequest, Equatable, Sendable {
+    typealias Answer = PageConsoleLog
+
+    let pageID: UUID
+    let after: Int64
+}
+
+struct ReadPageNetwork: PageRequest, Equatable, Sendable {
+    typealias Answer = PageNetworkLog
+
+    let pageID: UUID
+    let after: Int64
 }
 
 struct ReassignShortcut: Intent, ShortcutIntent, Equatable, Sendable {
@@ -4809,6 +5071,16 @@ struct ScriptDialogQuestion: Equatable, Sendable {
     var sourceURL: String
 }
 
+struct ScrollPage: PageRequest, Equatable, Sendable {
+    typealias Answer = Bool
+
+    let pageID: UUID
+    let inputID: UUID
+    let point: PagePoint
+    let deltaX: Double
+    let deltaY: Double
+}
+
 struct SearchCatalog: Equatable, Sendable {
     static let maximumCustomCount: Int = 32
 
@@ -5049,13 +5321,17 @@ struct SessionUnrecognized: Equatable, Sendable {
     }
 }
 
+struct SetAgentScripts: Intent, AgentIntent, Equatable, Sendable {
+    let runsScripts: Bool
+}
+
+struct SetAgents: Intent, AgentIntent, Equatable, Sendable {
+    let isOn: Bool
+}
+
 struct SetAppPreferences: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let preferences: AppPreferences
-}
-
-struct SetAutomation: Intent, AutomationIntent, Equatable, Sendable {
-    let isOn: Bool
 }
 
 struct SetBrowsingPreferences: Intent, SessionIntent, Equatable, Sendable {
@@ -5945,6 +6221,10 @@ struct StepSplitMember: Intent, SessionIntent, Equatable, Sendable {
     let offset: Int
 }
 
+struct StopAgentTab: Intent, AgentIntent, Equatable, Sendable {
+    let tabID: UUID
+}
+
 struct StopLoading: PageRequest, Equatable, Sendable {
     typealias Answer = Bool
 
@@ -6283,8 +6563,24 @@ struct TranslationRuleLimitReached: Equatable, Sendable {
     let limit: Int
 }
 
+struct TypeInPage: PageRequest, Equatable, Sendable {
+    typealias Answer = Bool
+
+    let pageID: UUID
+    let inputID: UUID
+    let text: String
+}
+
 struct UnassignShortcut: Intent, ShortcutIntent, Equatable, Sendable {
     let command: ShortcutCommand
+}
+
+struct UnknownAgentSession: Equatable, Sendable {
+    let sessionID: UUID
+
+    var message: LocalizedStringResource {
+        LocalizedStringResource("This agent is no longer connected to Crest.")
+    }
 }
 
 struct UnknownArchivedTab: Equatable, Sendable {
@@ -6718,6 +7014,14 @@ enum JavaScriptDialogKind: Int, CaseIterable, Sendable {
     case beforeUnload = 3
 }
 
+struct KeyModifiers: OptionSet, Sendable {
+    let rawValue: Int
+    static let shift = KeyModifiers(rawValue: 1)
+    static let control = KeyModifiers(rawValue: 2)
+    static let option = KeyModifiers(rawValue: 4)
+    static let command = KeyModifiers(rawValue: 8)
+}
+
 enum MediaPlayback: Int, CaseIterable, Sendable {
     case none = 0
     case playing = 1
@@ -6743,6 +7047,14 @@ enum MediaSessionDisposition: Int, CaseIterable, Sendable {
     case publish = 2
 }
 
+enum PageConsoleLevel: Int, CaseIterable, Sendable {
+    case debug = 0
+    case log = 1
+    case info = 2
+    case warning = 3
+    case error = 4
+}
+
 enum PageExportFormat: Int, CaseIterable, Sendable {
     case pdf = 0
     case png = 1
@@ -6757,10 +7069,21 @@ struct PageMediaActivity: OptionSet, Sendable {
     static let pictureInPicture = PageMediaActivity(rawValue: 4)
 }
 
+enum PageScriptWorld: Int, CaseIterable, Sendable {
+    case agent = 0
+    case page = 1
+}
+
 enum PasskeyDeviceConfiguration: Int, CaseIterable, Sendable {
     case configured = 0
     case notConfigured = 1
     case unknown = 2
+}
+
+enum PointerButton: Int, CaseIterable, Sendable {
+    case primary = 0
+    case secondary = 1
+    case middle = 2
 }
 
 enum ProfileNotificationSource: Int, CaseIterable, Sendable {

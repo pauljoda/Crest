@@ -44,7 +44,7 @@
             case .storeRemovalRequested(let presentation): presentation.present(on: engine)
             case .webNotificationClosed(let presentation): presentation.present(on: engine)
             case .webNotificationPosted(let presentation): presentation.present(on: engine)
-            case .findFinished, .pageCaptured, .pageExported:
+            case .findFinished, .pageCaptured, .pageExported, .pageScriptEvaluated, .pageInputDelivered:
                 // The page's shared direct path hears what it asked for.
                 break
             }

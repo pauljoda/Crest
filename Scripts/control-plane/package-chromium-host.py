@@ -286,6 +286,16 @@ def main():
         plugins = output / "Contents/PlugIns"
         plugins.mkdir(exist_ok=True)
         subprocess.run(["ditto", str(dock_plugin), str(plugins / dock_plugin.name)], check=True)
+        # The helper agents run, crest-browser, which reaches Crest over its
+        # agent socket. It lives in Contents/Helpers, where signing treats it
+        # as loose code with the hardened runtime; its embedded Info.plist
+        # names its signing identifier.
+        agent_helper = ui.parent / "crest-browser"
+        if not agent_helper.is_file():
+            parser.error("The native UI build must supply crest-browser beside the host framework")
+        helpers = output / "Contents/Helpers"
+        helpers.mkdir(exist_ok=True)
+        shutil.copy2(agent_helper, helpers / agent_helper.name)
         # Chromium's native menus also resolve its legacy app.icns resource.
         shutil.copy2(icon, resources / "app.icns")
     if args.product:
@@ -350,7 +360,8 @@ def main():
         name_engine_helpers(frameworks, info["CFBundleDisplayName"])
         name_product_in_localized_info(resources, info["CFBundleDisplayName"])
     targets = [] if args.baseline else [frameworks / "CrestCore.Native.dylib", frameworks / ui.name,
-                                      output / "Contents/PlugIns/CrestDockTilePlugin.docktileplugin"]
+                                      output / "Contents/PlugIns/CrestDockTilePlugin.docktileplugin",
+                                      output / "Contents/Helpers/crest-browser"]
     targets += sorted((p for p in frameworks.rglob("*.app") if not p.is_symlink()), key=lambda p: len(p.parts), reverse=True)
     targets += sorted((p for p in frameworks.glob("*.framework") if p.name != ui.name), key=lambda p: len(p.parts), reverse=True)
     if cloud_entitlements:

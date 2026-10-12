@@ -504,6 +504,23 @@ final class BrowserPagePool:
         return openedID
     }
 
+    /// The live page of tab `tabID`, if it has one.
+    func residentPage(ofTab tabID: UUID) -> BrowserPage? {
+        tabRuntimes[tabID]?.page
+    }
+
+    /// The live page of `tab` in `space` for an agent the person allowed: the
+    /// tab's resident page, or one made and loaded at the tab's address
+    /// without this window showing it. Nil when the core refuses the tab a
+    /// page.
+    func agentPage(for tab: TabStateModel, in space: SpaceModel) -> BrowserPage? {
+        let pageTab = BrowserPageTab(tab, images: browser.core.state.favicons)
+        guard let page = page(for: pageTab, space: space) else { return nil }
+        loadInitialURL(for: pageTab, into: page)
+        reconcileCredentialAccess()
+        return page
+    }
+
     /// Opens the link a person followed with a modifier in page `opener` as a
     /// new tab of Space `spaceID`, whose page runs on its opener's engine.
     private func openModifiedLink(

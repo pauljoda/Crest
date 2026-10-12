@@ -10,12 +10,13 @@ public sealed class DevicePlatform {
     /// eligible pages, at least one, under critical pressure. A page on screen
     /// is never taken. A manual setup left unfinished starts over at the next
     /// launch, and setup imports from the browsers installed on it. First-run
-    /// setup opens in a window of its own before any browser window.
+    /// setup opens in a window of its own before any browser window. Agents
+    /// the person runs on the Mac may use it.
     public static readonly DevicePlatform Desktop = new(name: "desktop", warningReleaseLimit: _ => 1,
         criticalReleaseLimit: eligible => Math.Max(1, (eligible + 1) / 2), keepsSetupDraft: false, importsBrowsers: true,
         sharesPagesAcrossWindows: true,
         forcesSetup: environment => environment.ForcesOnboardingWelcome || environment.ForcesDesktopSetup,
-        setupHoldsFirstWindow: true, showcaseOpensStartPage: false);
+        setupHoldsFirstWindow: true, showcaseOpensStartPage: false, offersAgents: true);
 
     /// iPhone and iPad hold on under warning pressure and give back one page
     /// under critical pressure. Beyond that the system reclaims WebKit's page
@@ -23,11 +24,11 @@ public sealed class DevicePlatform {
     /// back through crash recovery when it is shown. An unfinished manual setup
     /// waits for the next launch, since the system may end the app while it is
     /// in the background. First-run setup covers the browser, which opens
-    /// beneath it as the person chose.
+    /// beneath it as the person chose. No agent uses it.
     public static readonly DevicePlatform Mobile = new(name: "mobile", warningReleaseLimit: _ => 0,
         criticalReleaseLimit: _ => 1, keepsSetupDraft: true, importsBrowsers: false, sharesPagesAcrossWindows: false,
         forcesSetup: environment => environment.ForcesOnboardingWelcome || environment.ForcesMobileSetup,
-        setupHoldsFirstWindow: false, showcaseOpensStartPage: true);
+        setupHoldsFirstWindow: false, showcaseOpensStartPage: true, offersAgents: false);
 
     public static IReadOnlyList<DevicePlatform> All { get; } = [Desktop, Mobile];
 
@@ -58,6 +59,10 @@ public sealed class DevicePlatform {
     /// The core's own rule, which no platform reads.
     internal bool ShowcaseOpensStartPage { get; }
 
+    /// Whether agents the person runs on the device, such as coding agents,
+    /// may use Crest. The core's own rule, which no platform reads.
+    internal bool OffersAgents { get; }
+
     /// The most pages pressure at each level may take back, from the number of
     /// eligible pages.
     private readonly IReadOnlyDictionary<MemoryPressureLevel, Func<int, int>> releaseLimits;
@@ -72,13 +77,14 @@ public sealed class DevicePlatform {
 
     private DevicePlatform(string name, Func<int, int> warningReleaseLimit, Func<int, int> criticalReleaseLimit,
         bool keepsSetupDraft, bool importsBrowsers, bool sharesPagesAcrossWindows, Func<LaunchEnvironment, bool> forcesSetup,
-        bool setupHoldsFirstWindow, bool showcaseOpensStartPage) {
+        bool setupHoldsFirstWindow, bool showcaseOpensStartPage, bool offersAgents) {
         Name = name;
         KeepsSetupDraft = keepsSetupDraft;
         ImportsBrowsers = importsBrowsers;
         SharesPagesAcrossWindows = sharesPagesAcrossWindows;
         SetupHoldsFirstWindow = setupHoldsFirstWindow;
         ShowcaseOpensStartPage = showcaseOpensStartPage;
+        OffersAgents = offersAgents;
         this.forcesSetup = forcesSetup;
         releaseLimits = new Dictionary<MemoryPressureLevel, Func<int, int>> {
             [MemoryPressureLevel.Warning] = warningReleaseLimit,

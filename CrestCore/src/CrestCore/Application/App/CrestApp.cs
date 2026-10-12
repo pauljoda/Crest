@@ -157,6 +157,8 @@ public sealed partial class CrestApp : IQueryAnswers, IDisposable {
             // What a page that went had asked no longer waits.
             prompts.Prune(changes);
             closePreparations.Prune(changes, Issue);
+            // Agents let go of the tabs they may no longer use.
+            device.PruneAgents(changes);
             published = [.. TakePending(), .. changes.Published];
         }
         Deliver();
