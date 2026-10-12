@@ -70,7 +70,7 @@ final class BrowserWebKitPageAdapter: BrowserPageEngineAdapter {
             document: BrowserWebKitFaviconDocument(webView: webView, profileID: $0.profileID),
             policy: .delayedDocumentIcons,
             receive: { [weak self] data in
-                self?.page?.receive(.favicon(data, source: nil))
+                self?.page?.receive(BrowserPageFaviconFetched(data: data, source: nil))
                 self?.reporter?.foundIcon(data, at: self?.webView.url)
             }
         )
@@ -264,7 +264,7 @@ final class BrowserWebKitPageAdapter: BrowserPageEngineAdapter {
         userActivityMessageProxy = BrowserUserActivityBridge.install(
             in: webView.configuration.userContentController
         ) { [weak page] in
-            page?.receive(.userActivity)
+            page?.receive(BrowserPageInteracted())
         }
     }
 
@@ -307,7 +307,7 @@ final class BrowserWebKitPageAdapter: BrowserPageEngineAdapter {
                 guard let self else { return }
                 let previous = self.documentURL
                 self.documentURL = self.webView.url
-                self.page?.receive(.urlChanged(from: previous, to: self.webView.url))
+                self.page?.receive(BrowserPageURLChanged(previous: previous, current: self.webView.url))
                 self.reporter?.stateChanged()
                 self.reportMoveWithinDocument()
             }
@@ -315,18 +315,18 @@ final class BrowserWebKitPageAdapter: BrowserPageEngineAdapter {
         .store(in: &observations)
         webView.publisher(for: \.title, options: [.initial, .new]).sink { [weak self] _ in
             MainActor.assumeIsolated {
-                self?.page?.receive(.titleChanged)
+                self?.page?.receive(BrowserPageTitleChanged())
                 self?.reporter?.titleChanged()
             }
         }
         .store(in: &observations)
         webView.publisher(for: \.estimatedProgress, options: [.initial, .new]).sink { [weak self] value in
-            MainActor.assumeIsolated { self?.page?.receive(.progressChanged(value)) }
+            MainActor.assumeIsolated { self?.page?.receive(BrowserPageProgressChanged(progress: value)) }
         }
         .store(in: &observations)
         webView.publisher(for: \.isLoading, options: [.initial, .new]).sink { [weak self] _ in
             MainActor.assumeIsolated {
-                self?.page?.receive(.historyChanged)
+                self?.page?.receive(BrowserPageHistoryChanged())
                 self?.page?.refreshMediaActivity()
             }
         }
@@ -349,17 +349,17 @@ final class BrowserWebKitPageAdapter: BrowserPageEngineAdapter {
         .store(in: &observations)
         webView.publisher(for: \.themeColor, options: [.initial, .new]).sink { [weak self] value in
             MainActor.assumeIsolated {
-                self?.page?.receive(.themeColorChanged(value))
+                self?.page?.receive(BrowserPageThemeColorChanged(color: value))
                 self?.reporter?.themeChanged(self?.page?.siteThemeIconAccent)
             }
         }
         .store(in: &observations)
         webView.publisher(for: \.canGoBack, options: [.initial, .new]).sink { [weak self] _ in
-            MainActor.assumeIsolated { self?.page?.receive(.historyChanged) }
+            MainActor.assumeIsolated { self?.page?.receive(BrowserPageHistoryChanged()) }
         }
         .store(in: &observations)
         webView.publisher(for: \.canGoForward, options: [.initial, .new]).sink { [weak self] _ in
-            MainActor.assumeIsolated { self?.page?.receive(.historyChanged) }
+            MainActor.assumeIsolated { self?.page?.receive(BrowserPageHistoryChanged()) }
         }
         .store(in: &observations)
     }

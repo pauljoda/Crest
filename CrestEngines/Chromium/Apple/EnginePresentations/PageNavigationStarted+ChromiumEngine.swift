@@ -3,7 +3,7 @@
 
     extension PageNavigationStarted {
         @MainActor func present(on engine: ChromiumEngine) {
-            engine.presentedPage(pageID)?.observer(.navigationStarted)
+            engine.presentedPage(pageID)?.observer(BrowserPageNavigationStarted())
         }
     }
 #endif

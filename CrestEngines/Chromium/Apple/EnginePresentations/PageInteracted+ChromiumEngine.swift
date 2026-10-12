@@ -3,7 +3,7 @@
 
     extension PageInteracted {
         @MainActor func present(on engine: ChromiumEngine) {
-            engine.presentedPage(pageID)?.observer(.userActivity)
+            engine.presentedPage(pageID)?.observer(BrowserPageInteracted())
         }
     }
 #endif

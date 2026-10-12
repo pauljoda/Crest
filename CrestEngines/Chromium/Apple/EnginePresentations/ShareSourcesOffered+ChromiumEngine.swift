@@ -11,7 +11,7 @@
                     ChooseShareSource(pageID: pageID, shareID: shareID, choice: .cancel, tabPageID: nil, audio: false))
                 return
             }
-            page.observer(.shareSourcesOffered(BrowserShareSourceOffer(self)))
+            page.observer(BrowserPageShareSourcesOffered(offer: BrowserShareSourceOffer(self)))
         }
     }
 #endif

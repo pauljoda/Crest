@@ -21,7 +21,7 @@
         var profileID: UUID?
         /// The engine that hosts the page, which its direct requests go to.
         private weak var engine: ChromiumEngine?
-        var observer: (BrowserPageEngineEvent) -> Void
+        var observer: (any BrowserPageEngineEvent) -> Void
         /// The platform's page hosting this one, which shows the person the
         /// core's questions about it.
         weak var promptPresenter: (any BrowserPromptPresenting)?
@@ -261,7 +261,7 @@
         /// command opens an inspector instead of trying to close a closed one.
         func developerPanelDidClose() {
             guard !disposed else { return }
-            observer(.developerPanelClosed)
+            observer(BrowserPageDeveloperPanelClosed())
         }
 
         /// The Chrome Web Store listing this page is showing asked Crest to install
@@ -313,7 +313,7 @@
             isShown = false
             DiagnosticLog.pages.notice("Chromium page \(pageID) hides")
             pages?.request(HidePage(pageID: pageID))
-            observer(.leftScreen)
+            observer(BrowserPageLeftScreen())
         }
 
         /// The page's owner let it go. The core's ClosePage has the binding

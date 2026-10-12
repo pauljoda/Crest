@@ -3,7 +3,7 @@
 
     extension PageRendererGone {
         @MainActor func present(on engine: ChromiumEngine) {
-            engine.presentedPage(pageID)?.observer(.webContentProcessTerminated)
+            engine.presentedPage(pageID)?.observer(BrowserPageContentProcessTerminated())
         }
     }
 #endif

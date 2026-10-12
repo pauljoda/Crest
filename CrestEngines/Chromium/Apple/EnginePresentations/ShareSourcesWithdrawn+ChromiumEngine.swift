@@ -3,7 +3,7 @@
 
     extension ShareSourcesWithdrawn {
         @MainActor func present(on engine: ChromiumEngine) {
-            engine.presentedPage(pageID)?.observer(.shareSourcesWithdrawn(shareID: shareID))
+            engine.presentedPage(pageID)?.observer(BrowserPageShareSourcesWithdrawn(shareID: shareID))
         }
     }
 #endif

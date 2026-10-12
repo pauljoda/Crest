@@ -3,7 +3,7 @@
 
     extension WebNotificationPosted {
         @MainActor func present(on engine: ChromiumEngine) {
-            engine.presentedPage(pageID)?.observer(.webNotificationPosted(self))
+            engine.presentedPage(pageID)?.observer(BrowserPageWebNotificationPosted(posted: self))
         }
     }
 #endif
