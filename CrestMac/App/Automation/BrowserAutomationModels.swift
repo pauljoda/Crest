@@ -39,6 +39,28 @@ struct BrowserAutomationTabReference: Decodable {
     let tab: UUID
 }
 
+/// What `windows.new` reads.
+struct BrowserAutomationWindowOpening: Decodable {
+    let space: UUID?
+    let url: String?
+}
+
+/// What `windows.blank` reads.
+struct BrowserAutomationBlankWindowOpening: Decodable {
+    let space: UUID?
+}
+
+/// What `windows.private` reads.
+struct BrowserAutomationPrivateWindowOpening: Decodable {
+    let url: String?
+}
+
+/// What `windows.quick` reads.
+struct BrowserAutomationQuickWindowOpening: Decodable {
+    let space: UUID?
+    let url: String
+}
+
 // MARK: - Results
 
 /// What `hello` answers: the protocol version, Crest's version, and the
@@ -71,6 +93,9 @@ struct BrowserAutomationTab: Encodable {
     let title: String
     let url: String?
     let placement: String
+    let isPinned: Bool
+    let isSaved: Bool
+    let folders: [String]
     let shown: Bool
 }
 
@@ -84,4 +109,16 @@ struct BrowserAutomationTabAnswer: Encodable {
 
 struct BrowserAutomationClosed: Encodable {
     let closed: Bool
+}
+
+struct BrowserAutomationWindowAnswer: Encodable {
+    let windowID: UUID
+    let spaceID: UUID?
+    let tabID: UUID?
+}
+
+struct BrowserAutomationQuickWindowAnswer: Encodable {
+    let windowID: UUID
+    let spaceID: UUID
+    let url: String
 }

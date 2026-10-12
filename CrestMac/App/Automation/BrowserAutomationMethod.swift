@@ -31,8 +31,31 @@ struct BrowserAutomationMethod {
         (automation, parameters: BrowserAutomationTabReference, _) throws(BrowserAutomationError) in
         try automation.showTab(parameters)
     }
+    static let reloadTab = Self(name: "tabs.reload") {
+        (automation, parameters: BrowserAutomationTabReference, _) throws(BrowserAutomationError) in
+        try automation.reloadTab(parameters)
+    }
+    static let openWindow = Self(name: "windows.new") {
+        (automation, parameters: BrowserAutomationWindowOpening, _) throws(BrowserAutomationError) in
+        try automation.openWindow(parameters)
+    }
+    static let openBlankWindow = Self(name: "windows.blank") {
+        (automation, parameters: BrowserAutomationBlankWindowOpening, _) throws(BrowserAutomationError) in
+        try automation.openBlankWindow(parameters)
+    }
+    static let openPrivateWindow = Self(name: "windows.private") {
+        (automation, parameters: BrowserAutomationPrivateWindowOpening, _) throws(BrowserAutomationError) in
+        try automation.openPrivateWindow(parameters)
+    }
+    static let openQuickWindow = Self(name: "windows.quick") {
+        (automation, parameters: BrowserAutomationQuickWindowOpening, _) throws(BrowserAutomationError) in
+        try automation.openQuickWindow(parameters)
+    }
 
-    static let all: [Self] = [hello, listSpaces, listTabs, openTab, closeTab, showTab]
+    static let all: [Self] = [
+        hello, listSpaces, listTabs, openTab, closeTab, showTab, reloadTab,
+        openWindow, openBlankWindow, openPrivateWindow, openQuickWindow,
+    ]
 
     /// The methods a tool may call once the person approved it, as `hello`
     /// lists them.

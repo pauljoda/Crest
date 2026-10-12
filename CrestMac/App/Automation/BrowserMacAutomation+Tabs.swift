@@ -70,12 +70,22 @@ extension BrowserMacAutomation {
     }
 
     /// Brings a tab forward in the front window over its Space, and Crest
-    /// with it.
+    /// with it. If no window is currently open over the Space, opens a normal window.
     func showTab(_ reference: BrowserAutomationTabReference) throws(BrowserAutomationError)
         -> BrowserAutomationTabAnswer
     {
         let (space, tab) = try tab(reference.tab)
-        guard let window = frontWindow(over: space) else { throw .noWindow }
+        let window: BrowserMacWindowModel
+        if let existing = frontWindow(over: space) {
+            window = existing
+        } else {
+            let request = BrowserMacWindowRequest.normal(sourceWindowID: nil)
+            windows.open(request, activation: .key)
+            guard let opened = application.windowCoordinator.existingModel(for: request.id) else {
+                throw .noWindow
+            }
+            window = opened
+        }
         window.browser.selectSpace(space.id)
         guard window.browser.activateSessionTab(tab.id, in: space.id) else {
             throw .refused("Crest could not show the tab.")
@@ -84,11 +94,21 @@ extension BrowserMacAutomation {
         return BrowserAutomationTabAnswer(tab: self.tab(tab: tab, in: space))
     }
 
+    /// Reloads the page of an active tab.
+    func reloadTab(_ reference: BrowserAutomationTabReference) throws(BrowserAutomationError)
+        -> BrowserAutomationTabAnswer
+    {
+        let (space, tab) = try tab(reference.tab)
+        guard let window = frontWindow(over: space) else { throw .noWindow }
+        window.pages.reload(.standard)
+        return BrowserAutomationTabAnswer(tab: self.tab(tab: tab, in: space))
+    }
+
     // MARK: - Actions - Reach
 
     /// The person's own workspace and the Spaces a tool reaches in it, as the
     /// core answers.
-    private func reach() throws(BrowserAutomationError) -> (workspace: WorkspaceModel, spaces: [AutomationSpace]) {
+    func reach() throws(BrowserAutomationError) -> (workspace: WorkspaceModel, spaces: [AutomationSpace]) {
         guard let reach = try? core.query(AutomationReach()), let id = reach.workspaceID,
             let workspace = core.state.workspaces[id]
         else { throw .automationOff }
@@ -96,7 +116,7 @@ extension BrowserMacAutomation {
     }
 
     /// The Space `id` names, while a tool reaches it and it is unlocked.
-    private func space(_ id: UUID) throws(BrowserAutomationError) -> SpaceModel {
+    func space(_ id: UUID) throws(BrowserAutomationError) -> SpaceModel {
         let reach = try reach()
         guard let reached = reach.spaces.first(where: { $0.spaceID == id }),
             let space = reach.workspace.spaces.model(id)
@@ -107,7 +127,7 @@ extension BrowserMacAutomation {
 
     /// The tab `id` names and its Space, while a tool reaches the Space and
     /// it is unlocked.
-    private func tab(_ id: UUID) throws(BrowserAutomationError) -> (SpaceModel, TabStateModel) {
+    func tab(_ id: UUID) throws(BrowserAutomationError) -> (SpaceModel, TabStateModel) {
         let reach = try reach()
         for reached in reach.spaces {
             guard let space = reach.workspace.spaces.model(reached.spaceID), let tab = space.tabs.model(id) else {
@@ -121,7 +141,7 @@ extension BrowserMacAutomation {
 
     /// `text` as an address a tool may open: http or https, with a host.
     /// Crest's own pages and other schemes stay out of a tool's reach.
-    private func address(_ text: String) throws(BrowserAutomationError) -> URL {
+    func address(_ text: String) throws(BrowserAutomationError) -> URL {
         guard let url = URL(string: text), let scheme = url.scheme?.lowercased(), ["http", "https"].contains(scheme),
             url.host() != nil
         else { throw .unsupportedAddress }
@@ -131,13 +151,13 @@ extension BrowserMacAutomation {
     // MARK: - Actions - Windows
 
     /// The front window over `space`'s workspace, or nil with none open.
-    private func frontWindow(over space: SpaceModel) -> BrowserMacWindowModel? {
+    func frontWindow(over space: SpaceModel) -> BrowserMacWindowModel? {
         application.stackedWindowIDs.lazy.compactMap { self.application.windowCoordinator.existingModel(for: $0) }
             .first { !$0.isTemporary && $0.browser.spaceModel(space.id) != nil }
     }
 
     /// Shows what `window` selected and brings it forward, and Crest with it.
-    private func bringForward(_ window: BrowserMacWindowModel) {
+    func bringForward(_ window: BrowserMacWindowModel) {
         window.pages.select()
         windows.open(window.request, activation: .key)
         NSApp.activate(ignoringOtherApps: true)
@@ -145,11 +165,26 @@ extension BrowserMacAutomation {
 
     // MARK: - Actions - Descriptions
 
+    /// Computes the hierarchical folder path for a saved tab.
+    private func folderPath(for tab: TabStateModel, in space: SpaceModel) -> [String] {
+        var path: [String] = []
+        var visited = Set<UUID>()
+        var current = tab.folderID
+        while let id = current, visited.insert(id).inserted, let folder = space.folders.model(id) {
+            path.insert(folder.title, at: 0)
+            current = folder.parentID
+        }
+        return path
+    }
+
     /// A tab as a tool reads it. It is shown when a window on screen shows
     /// it, which the core's record of a window alone does not say.
     private func tab(tab: TabStateModel, in space: SpaceModel) -> BrowserAutomationTab {
         BrowserAutomationTab(
             id: tab.id, space: space.id, title: tab.displayTitle, url: tab.url, placement: tab.placement.name,
+            isPinned: tab.placement == .pinned,
+            isSaved: tab.placement == .saved,
+            folders: folderPath(for: tab, in: space),
             shown: application.stackedWindowIDs.contains {
                 core.state.windows[$0]?.shownTabIDs.contains(tab.id) == true
             })

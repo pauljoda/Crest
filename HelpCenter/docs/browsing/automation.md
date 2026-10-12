@@ -62,10 +62,15 @@ Crest identifies a tool by `client.name` and the program that connected. Ship yo
 | `spaces.list` | none | `spaces`: each with `id`, `name` and `locked` |
 | `tabs.list` | `space` (optional) | `tabs`: every tab of the reachable, unlocked Spaces, or of `space`, in sidebar order |
 | `tabs.open` | `space`, `url`, `show` (optional, false) | `tab`: the new tab, after the tab the Space shows. With `show`, it comes forward in the front window over the Space, when one is open |
-| `tabs.show` | `tab` | `tab`: brought forward in the front window over its Space |
+| `tabs.show` | `tab` | `tab`: brought forward in the front window over its Space (opens a window if none is open) |
+| `tabs.reload` | `tab` | `tab`: reloads the page in the tab |
 | `tabs.close` | `tab` | `closed`: true when the tab closed, false when its page asked you before leaving and is still open. It closes if you agree |
+| `windows.new` | `space` (optional), `url` (optional) | `windowID`, `spaceID`, `tabID`: opens a new standard browser window |
+| `windows.blank` | `space` (optional) | `windowID`, `spaceID`: opens a temporary Blank Window borrowing Space session |
+| `windows.private` | `url` (optional) | `windowID`: opens a private browsing window |
+| `windows.quick` | `url`, `space` (optional) | `windowID`, `spaceID`, `url`: opens a Quick Window for the address |
 
-A tab has `id`, `space`, `title`, `url` (absent for a tab that shows no website), `placement` (`pinned`, `saved` or `current`) and `shown`, which says whether a window shows it now. Identities are the ones Crest gives.
+A tab has `id`, `space`, `title`, `url` (absent for a tab that shows no website), `placement` (`pinned`, `saved` or `current`), `isPinned`, `isSaved`, `folders` (hierarchical folder path titles), and `shown`, which says whether a window shows it now. Identities are the ones Crest gives.
 
 ### Errors
 

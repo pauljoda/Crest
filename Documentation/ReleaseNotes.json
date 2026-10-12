@@ -3857,6 +3857,10 @@
     "automation-for-local-tools": {
       "category": "new",
       "message": "On Mac, scripts and coding agents on your computer can list, open, show and close tabs in the Spaces you choose. Turn it on in Settings › Automation; Crest asks before each new tool connects."
+    },
+    "automation-windows-and-controls": {
+      "category": "improved",
+      "message": "Local automation tools can open normal, blank, private and Quick Windows, reload tabs, and bring tabs forward by opening a window when none is open."
     }
   }
 }
