@@ -16,6 +16,10 @@ Crest 0.7 for Mac requires Apple silicon and macOS 26.1 or later. It is distribu
 3. Open the disk image, then drag Crest into **Applications**.
 4. Eject the disk image and open Crest from Applications.
 
+Alternatively, Crest can be installed via Homebrew:
+1. Open Terminal.
+2. Run `brew install --cask crest-browser`
+
 Keeping Crest in Applications gives macOS and the updater one stable installed location. If Gatekeeper reports that the app cannot be verified, do not bypass the warning; download the current release again from the official Releases page.
 
 ## Automatic updates

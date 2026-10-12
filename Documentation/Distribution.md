@@ -3,13 +3,16 @@
 Crest has one official distribution path per platform:
 
 - **macOS:** one app, Crest, with the Chromium and WebKit engines. It is
-  distributed directly from GitHub Releases, signed with Developer ID, notarized
-  by Apple, and updated through Sparkle 2;
+  distributed directly via GitHub Releases and official Homebrew cask (`crest-browser`),
+  signed with Developer ID, notarized by Apple, and updated through Sparkle 2;
 - **iPhone and iPad:** TestFlight and the App Store.
 
 There is no Mac App Store build, and no separate WebKit-only download. Keeping
 one macOS product avoids incompatible sandbox capabilities, duplicate update
 behavior, and user confusion over which build supports extensions.
+
+The Homebrew cask fetches un-modified binaries from GitHub Releases, 
+thus it is still updated through Sparkle 2. 
 
 Crest 0.7 opens the release line with `MARKETING_VERSION = 0.7.0` and stable
 tag `v0.7.0`. User-facing release copy calls it Crest 0.7. Mac requires Apple

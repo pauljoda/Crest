@@ -103,7 +103,7 @@ The same Spaces, shaped for each screen. iPad keeps the sidebar beside your page
 
 | Platform | Install |
 | --- | --- |
-| Mac · Apple silicon · macOS 26.1+ | [Signed, notarized download](https://github.com/pauljoda/Crest/releases/latest) with built-in Sparkle updates. |
+| Mac · Apple silicon · macOS 26.1+ | [Signed, notarized download](https://github.com/pauljoda/Crest/releases/latest) with built-in Sparkle updates.<br><br>Or install via Homebrew:<br>`brew install --cask crest-browser` |
 | iPhone · iOS 26.1+ | [App Store](https://apps.apple.com/us/app/crest-browser/id6797335023) |
 | iPad · iPadOS 26.1+ | [App Store](https://apps.apple.com/us/app/crest-browser/id6797335023) |
 | iPhone & iPad beta | [TestFlight](https://testflight.apple.com/join/vV1CM49Q) |
