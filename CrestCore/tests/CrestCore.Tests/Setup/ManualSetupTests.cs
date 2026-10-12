@@ -44,8 +44,8 @@ public sealed partial class BrowserContractsTests {
         Assert.Equal([existing.Id, created],
             Drafted(device.Send(new StartSetup(device.Workspace, SetupEntry.ManualSetup))).Spaces.Select(space => space.SpaceId));
 
-        for (int count = 2; count < WorkspaceImportPolicy.MaximumSpaces; count++) device.Send(new AddSetupSpace());
-        Assert.Equal(new SpaceLimitReached(WorkspaceImportPolicy.MaximumSpaces),
+        for (int count = 2; count < SessionState.MaximumSpaces; count++) device.Send(new AddSetupSpace());
+        Assert.Equal(new SpaceLimitReached(SessionState.MaximumSpaces),
             Assert.Throws<Rejected>(() => device.Send(new AddSetupSpace())).Rejection);
 
         // Setup opened again from the start ends the manual setup.

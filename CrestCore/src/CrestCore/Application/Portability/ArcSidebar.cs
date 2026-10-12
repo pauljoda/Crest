@@ -226,7 +226,7 @@ internal static class ArcSidebar {
         }
         if (colors.Count == 0 && Color(ImportJson.Member(ImportJson.Member(theme, "primaryColorPalette"), "midTone")) is { } midTone)
             colors.Add(midTone);
-        return [.. colors.Take(SpaceBrandingPolicy.MaximumColorCount)];
+        return [.. colors.Take(SpaceBranding.MaximumColorCount)];
     }
 
     private static JsonElement? Path(JsonElement? value, params string[] keys) {

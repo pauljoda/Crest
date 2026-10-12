@@ -24,7 +24,7 @@ internal static class ImportedLook {
     /// `branding` as a Space keeps it, or the legacy look of `accent` and
     /// `symbol` when there is none.
     public static SpaceBranding Kept(SpaceBranding? branding, SpaceAccent accent, string symbol) =>
-        SpaceBrandingPolicy.Normalize(branding ?? SpaceBranding.Legacy(accent, symbol));
+        SpaceBranding.Normalized(branding ?? SpaceBranding.Legacy(accent, symbol));
 
     /// The neutral look a Space from another browser wears when it brought no
     /// colors, with the crest figure `symbol` suggests.

@@ -172,7 +172,7 @@ public sealed partial class BrowserTabCollection {
     /// A folder's name: its trimmed title, or "Untitled Folder" for a blank one.
     private static string FolderName(string name) {
         var trimmed = name.Trim();
-        if (trimmed.Length > BrowserSpace.MaximumNameLength) throw new Rejected(new InvalidName(BrowserSpace.MaximumNameLength));
+        if (trimmed.Length > BrowserTabCollection.MaximumNameLength) throw new Rejected(new InvalidName(BrowserTabCollection.MaximumNameLength));
         return trimmed.Length == 0 ? UntitledFolderName : trimmed;
     }
 

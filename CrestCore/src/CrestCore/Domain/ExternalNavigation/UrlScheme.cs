@@ -15,7 +15,7 @@ public sealed class UrlScheme {
     public static readonly UrlScheme Https = new(WebScheme.Https.Name, ExternalSchemeDisposition.Engine);
     public static readonly UrlScheme About = new("about", ExternalSchemeDisposition.Engine);
     public static readonly UrlScheme Blob = new("blob", ExternalSchemeDisposition.Engine);
-    public static readonly UrlScheme ChromeExtension = new(BrowserUrlConstants.ChromeExtensionScheme, ExternalSchemeDisposition.Engine);
+    public static readonly UrlScheme ChromeExtension = new(AddressResolution.ChromeExtensionScheme, ExternalSchemeDisposition.Engine);
     public static readonly UrlScheme CrestExtension = new("crest-extension", ExternalSchemeDisposition.Engine);
     /// The engine, not Crest, refuses a top-level `data:` navigation from web
     /// content; handing one to another app would walk around that.

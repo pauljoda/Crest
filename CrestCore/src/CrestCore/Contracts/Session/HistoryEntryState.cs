@@ -1,21 +1,24 @@
-using CrestCore.Contracts;
+using CrestCore.Domain;
 
-namespace CrestCore.Domain;
+namespace CrestCore.Contracts;
 
-public static class HistoryPolicy {
-    #region Variables
+/// <summary>One address in a Space's history, with its first and latest visit.</summary>
+public sealed record HistoryEntryState(Guid Id, string Url, string Title, DateTimeOffset FirstVisitedAt,
+    DateTimeOffset LastVisitedAt, int VisitCount) {
+    #region Static Variables
 
-    public const int MaximumEntries = 5000;
+    /// The most entries a Space's history keeps.
+    internal const int MaximumEntries = 5000;
 
     #endregion
 
-    #region Actions - Navigation
+    #region Actions - Visits
 
     /// A newest-first history after a visit to `url`, capped at
     /// `MaximumEntries`: the page's entry, with one more visit, goes first, and
     /// a new entry takes `newId`. Null for an address history does not keep,
     /// which leaves it as it was.
-    public static IReadOnlyList<HistoryEntryState>? Visit(IReadOnlyList<HistoryEntryState> history, string url, string? title,
+    internal static IReadOnlyList<HistoryEntryState>? Visit(IReadOnlyList<HistoryEntryState> history, string url, string? title,
         DateTimeOffset now, Guid newId) => Visit(history, url, title, now, newId, MaximumEntries);
 
     /// A visit to a history that keeps at most `limit` entries.
@@ -43,7 +46,7 @@ public static class HistoryPolicy {
     /// The history with the newest entry for `url` titled `title`, in its
     /// place and with its visits as they were. Null for a blank title, an
     /// address history keeps no entry for, or an entry already titled so.
-    public static IReadOnlyList<HistoryEntryState>? Retitle(IReadOnlyList<HistoryEntryState> history, string url, string title) {
+    internal static IReadOnlyList<HistoryEntryState>? Retitle(IReadOnlyList<HistoryEntryState> history, string url, string title) {
         ArgumentNullException.ThrowIfNull(history);
         if (string.IsNullOrEmpty(title) || new WebAddress(url).Normalized is not { } normalized
             || AddressIndex.Of(history).Entry(normalized) is not { } entry || entry.Title == title) return null;
@@ -57,7 +60,7 @@ public static class HistoryPolicy {
     /// with one more visit, or a new entry taking `newId`. A blank title is
     /// the page saying nothing, so the entry keeps its title, and a new one
     /// takes the address's host.
-    public static HistoryEntryState Record(string normalizedUrl, string? title, DateTimeOffset now, Guid newId, HistoryEntryState? previous) {
+    internal static HistoryEntryState Record(string normalizedUrl, string? title, DateTimeOffset now, Guid newId, HistoryEntryState? previous) {
         if (new WebAddress(normalizedUrl).Normalized != normalizedUrl || newId == Guid.Empty
             || previous is not null && previous.Url != normalizedUrl) throw new BrowserRuleException(BrowserRule.InvalidHistoryVisit);
         string resolvedTitle = !string.IsNullOrEmpty(title) ? title : previous?.Title ?? new Uri(normalizedUrl).Host;

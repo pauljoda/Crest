@@ -170,7 +170,7 @@ public static class NativeSyncMaterializer {
         var localIds = localOnly.Select(entry => entry.Id).ToHashSet();
         var synced = Payloads<HistoryPayload>(records, space).Where(entry => SyncedAddress.Includes(entry.Url.Text) && !localIds.Contains(entry.Id))
             .OrderByDescending(entry => entry.LastVisitedAt.ReferenceSeconds).ThenBy(entry => entry.Id.ToString("D"), StringComparer.Ordinal)
-            .Take(HistoryPolicy.MaximumEntries).Select(entry => new HistoryEntryState(entry.Id, entry.Url.Spelled ?? entry.Url.Text, entry.Title,
+            .Take(HistoryEntryState.MaximumEntries).Select(entry => new HistoryEntryState(entry.Id, entry.Url.Spelled ?? entry.Url.Text, entry.Title,
                 entry.FirstVisitedAt.Moment, entry.LastVisitedAt.Moment, checked((int)entry.VisitCount)));
         return [.. synced.Concat(localOnly).OrderByDescending(entry => entry.LastVisitedAt)];
     }

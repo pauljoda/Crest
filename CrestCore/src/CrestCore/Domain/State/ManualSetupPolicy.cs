@@ -58,7 +58,7 @@ public static class ManualSetupPolicy {
         ArgumentNullException.ThrowIfNull(draft);
         ArgumentNullException.ThrowIfNull(nextId);
         int count = draft.Spaces.Count;
-        if (count >= WorkspaceImportPolicy.MaximumSpaces) throw new Rejected(new SpaceLimitReached(WorkspaceImportPolicy.MaximumSpaces));
+        if (count >= SessionState.MaximumSpaces) throw new Rejected(new SpaceLimitReached(SessionState.MaximumSpaces));
         var accent = SpaceAccent.All[count % SpaceAccent.All.Count];
         var space = new SetupDraftSpace(nextId(), nextId(), IsNew: true,
             new($"Space {count + 1}", NewSpaceSymbol, accent, accent.House));
@@ -90,7 +90,7 @@ public static class ManualSetupPolicy {
     public static SetupDraft Customizing(SetupDraft draft, Guid spaceId, SpaceCustomization customization) {
         ArgumentNullException.ThrowIfNull(draft);
         ArgumentNullException.ThrowIfNull(customization);
-        var kept = customization with { Branding = SpaceBrandingPolicy.Normalize(customization.Branding) };
+        var kept = customization with { Branding = SpaceBranding.Normalized(customization.Branding) };
         return draft with {
             Spaces = [.. draft.Spaces.Select(space => space.SpaceId == spaceId ? space with { Customization = kept } : space)]
         };

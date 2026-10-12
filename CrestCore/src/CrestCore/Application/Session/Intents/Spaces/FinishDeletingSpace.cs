@@ -17,7 +17,7 @@ public sealed record FinishDeletingSpace(Guid WorkspaceId, Guid WindowId, Guid S
         workspace.RequireOwnedSpaces();
         var (space, pending) = workspace.Deleting(turn.Basis, SpaceId);
         if (pending is null || pending.Id != OperationId) throw new Rejected(new WrongDeletionOperation(space.Id));
-        SpaceOrganizationPolicy.RequireRemovable(turn.Basis.Spaces.Count);
+        SessionState.RequireRemovable(turn.Basis.Spaces.Count);
         var index = turn.Basis.Spaces.ToList().IndexOf(space);
         IReadOnlyList<SpaceState> spaces = [.. turn.Basis.Spaces.Where(candidate => candidate.Id != space.Id)];
         var neighbor = spaces[Math.Min(index, spaces.Count - 1)].Id;

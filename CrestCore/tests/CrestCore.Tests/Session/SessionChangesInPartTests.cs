@@ -63,11 +63,11 @@ public sealed class SessionChangesInPartTests {
 
         // A new visit goes first; a visit to an older address moves its entry
         // first. Neither needs an order.
-        var visited = HistoryPolicy.Visit(history, "https://new.example/", "New", Now, Guid.NewGuid())!;
+        var visited = HistoryEntryState.Visit(history, "https://new.example/", "New", Now, Guid.NewGuid())!;
         var visit = Assert.IsType<HistoryChanged>(Assert.Single(Editing(ref session, workspace, space.Id, Current(session).Tabs, visited)));
         Assert.Equal([visited[0]], visit.Recorded);
         Assert.Null(visit.Order);
-        var revisited = HistoryPolicy.Visit(visited, history[3].Url, "Again", Now, Guid.NewGuid())!;
+        var revisited = HistoryEntryState.Visit(visited, history[3].Url, "Again", Now, Guid.NewGuid())!;
         var revisit = Assert.IsType<HistoryChanged>(Assert.Single(Editing(ref session, workspace, space.Id, Current(session).Tabs,
             revisited)));
         Assert.Equal([revisited[0]], revisit.Recorded);

@@ -15,6 +15,13 @@ namespace CrestCore.Application;
 internal sealed class NativeWorkspaceImport {
     #region Static Variables
 
+    /// The most folders an import leaves a Space holding.
+    internal const int MaximumFolders = 500;
+
+    /// The saved folder that receives imported pinned tabs past the limit.
+    internal const string OverflowFolderTitle = "Imported Pinned Tabs";
+    internal const string OverflowFolderSymbol = "pin.slash";
+
     /// The fewest tabs a split brings.
     private const int MinimumSplitMembers = 2;
 
@@ -100,7 +107,7 @@ internal sealed class NativeWorkspaceImport {
         inputs = [.. spaces.Select(space => new Draft(space, isOriginal: false))];
         for (int index = 0; index < inputs.Count; index++) Track(inputs[index].State, index);
         foreach (var input in inputs)
-            WorkspaceImportPolicy.RequireSplitMembership(
+            SplitMember.RequireWellFormed(
                 [.. input.State.Tabs.Select(t => new SplitMember(t.SplitGroupId, t.Placement, t.FolderId))]);
     }
 
@@ -150,8 +157,8 @@ internal sealed class NativeWorkspaceImport {
     /// `SpaceBeingDeleted` when disposable Spaces must make way while one is
     /// going away.
     internal void AddSpaces() {
-        bool replaceSeed = seedMarker is not null && (long)spaces.Count + inputs.Count > WorkspaceImportPolicy.MaximumSpaces;
-        WorkspaceImportPolicy.RequireSpaceCapacity(replaceSeed ? 0 : spaces.Count, inputs.Count);
+        bool replaceSeed = seedMarker is not null && (long)spaces.Count + inputs.Count > SessionState.MaximumSpaces;
+        SessionState.RequireSpaceCapacity(replaceSeed ? 0 : spaces.Count, inputs.Count);
         if (replaceSeed) {
             ReplaceSeed();
             seedMarker = null;
@@ -178,7 +185,7 @@ internal sealed class NativeWorkspaceImport {
     /// Applies a manual setup's Spaces in their order; see `ApplyManualSetup`.
     internal void ApplySetup(SetupDraft setup) {
         var paired = Pair(setup.Spaces, draft => draft.SpaceId);
-        WorkspaceImportPolicy.RequireSpaceCapacity(spaces.Count, setup.Spaces.Count(draft => draft.IsNew));
+        SessionState.RequireSpaceCapacity(spaces.Count, setup.Spaces.Count(draft => draft.IsNew));
         foreach (var (input, draft) in paired) {
             var id = input.Id;
             bool created = draft.IsNew;
@@ -208,7 +215,7 @@ internal sealed class NativeWorkspaceImport {
         var included = Pair(reviews, review => review.Source.Id).Where(pair => pair.Choice.Included).ToArray();
         if (included.Length == 0) throw new Rejected(new NoIncludedSpaces());
         bool replaceSeed = seedMarker is not null;
-        WorkspaceImportPolicy.RequireSpaceCapacity(replaceSeed ? 0 : spaces.Count,
+        SessionState.RequireSpaceCapacity(replaceSeed ? 0 : spaces.Count,
             included.Count(pair => pair.Choice.DestinationId is null));
         if (replaceSeed) ReplaceSeed();
         foreach (var (input, review) in included) {
@@ -246,7 +253,7 @@ internal sealed class NativeWorkspaceImport {
         var overrides = review.Placements.GroupBy(choice => choice.TabId).ToDictionary(group => group.Key, group => group.Last().Placement);
         TabPlacement PlacementFor(TabState tab) => overrides.GetValueOrDefault(tab.Id, tab.Placement);
         var additions = Fitting([.. input.State.Tabs.Where(t => included.Contains(t.Id))], PlacementFor,
-            BrowserSpace.MaximumTabs - (isNew ? 0 : destination.State.Tabs.Count));
+            BrowserTabCollection.MaximumTabs - (isNew ? 0 : destination.State.Tabs.Count));
         var sourceFolders = input.State.Folders;
         var folders = isNew ? [] : destination.State.Folders.ToList();
         var byId = sourceFolders.GroupBy(f => f.Id).ToDictionary(g => g.Key, g => g.First());
@@ -262,9 +269,9 @@ internal sealed class NativeWorkspaceImport {
             var original = byId[folder.Id];
             Guid? parent = folder.ParentId is { } p && mapping.TryGetValue(p, out var mapped) ? mapped : null;
             var match = folders.FirstOrDefault(f => f.ParentId == parent && f.Location == original.Location
-                && WorkspaceImportPolicy.FolderMatchKey(f.Title) == WorkspaceImportPolicy.FolderMatchKey(original.Title));
+                && FolderState.MatchKey(f.Title) == FolderState.MatchKey(original.Title));
             if (match is not null) { mapping[folder.Id] = match.Id; continue; }
-            if (folders.Count >= WorkspaceImportPolicy.MaximumFolders) continue;
+            if (folders.Count >= MaximumFolders) continue;
             var identity = folder.Id;
             while (folders.Any(f => f.Id == identity)) identity = ids.Next();
             folders.Add(original with {
@@ -278,16 +285,16 @@ internal sealed class NativeWorkspaceImport {
         }
         var counts = (isNew ? [] : destination.State.Tabs).CountBy(tab => tab.Placement).ToDictionary();
         var overflowFolder = folders.FirstOrDefault(f =>
-            string.Equals(f.Title, WorkspaceImportPolicy.OverflowFolderTitle, StringComparison.OrdinalIgnoreCase));
+            string.Equals(f.Title, OverflowFolderTitle, StringComparison.OrdinalIgnoreCase));
         var edited = additions.Select(tab => {
             var placement = PlacementFor(tab);
             Guid? folder;
             counts[placement] = counts.GetValueOrDefault(placement) + 1;
             if (placement.Fitting(counts[placement]) is var spill && spill != placement) {
                 placement = spill;
-                if (overflowFolder is null && folders.Count < WorkspaceImportPolicy.MaximumFolders) {
-                    overflowFolder = new FolderState(ids.Next(), spill, WorkspaceImportPolicy.OverflowFolderTitle,
-                        WorkspaceImportPolicy.OverflowFolderSymbol);
+                if (overflowFolder is null && folders.Count < MaximumFolders) {
+                    overflowFolder = new FolderState(ids.Next(), spill, OverflowFolderTitle,
+                        OverflowFolderSymbol);
                     folders.Add(overflowFolder);
                 }
                 folder = overflowFolder?.Id;
@@ -339,7 +346,7 @@ internal sealed class NativeWorkspaceImport {
         var asked = edited.Select(tab => Mapped(tab.SplitGroupId)).ToArray();
         var all = existing.Select(tab => new SplitMember(tab.SplitGroupId, tab.Placement, tab.FolderId))
             .Concat(edited.Select((tab, index) => new SplitMember(asked[index], tab.Placement, tab.FolderId))).ToArray();
-        var repaired = SplitMembershipPolicy.Repair(all).Skip(existing.Count).ToArray();
+        var repaired = SplitMember.Repair(all).Skip(existing.Count).ToArray();
         var counts = repaired.OfType<Guid>().GroupBy(id => id).ToDictionary(group => group.Key, group => group.Count());
         var tabs = edited.Select((tab, index) => {
             Guid? kept = repaired[index] is { } joined && joined == asked[index] && counts[joined] >= MinimumSplitMembers ? joined : null;
@@ -465,10 +472,10 @@ internal sealed class NativeWorkspaceImport {
     /// `settings` with the name and look `customization` chooses, as the core
     /// keeps them.
     private static SpaceSettings Customized(SpaceSettings settings, SpaceCustomization customization) => settings with {
-        Name = SpaceOrganizationPolicy.Name(customization.Name),
-        Symbol = SpaceOrganizationPolicy.Symbol(customization.Symbol),
+        Name = SpaceCustomization.Resolved(customization.Name),
+        Symbol = SpaceCustomization.ResolvedSymbol(customization.Symbol),
         Accent = customization.Accent,
-        Branding = SpaceBrandingPolicy.Normalize(customization.Branding)
+        Branding = SpaceBranding.Normalized(customization.Branding)
     };
 
     /// Throws `Rejected` with `SpaceBeingDeleted` when `id` is going away.

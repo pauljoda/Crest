@@ -13,6 +13,13 @@ public sealed record SessionState(
     Guid? DisposableSeedMarker,
     IReadOnlyList<SpaceDeletionState> SpaceDeletions,
     AppPreferences? AppPreferences) {
+    #region Static Variables
+
+    /// The most Spaces a session holds.
+    internal const int MaximumSpaces = 64;
+
+    #endregion
+
     #region Variables
 
     /// Collections are owned when constructed or replaced on a copy.
@@ -25,6 +32,22 @@ public sealed record SessionState(
         get;
         init => field = [.. value];
     } = [.. SpaceDeletions];
+
+    #endregion
+
+    #region Actions - Spaces
+
+    /// Throws `Rejected` with `SpaceLimitReached` when `additions` more Spaces
+    /// would take a workspace holding `existing` past the limit.
+    internal static void RequireSpaceCapacity(int existing, int additions) {
+        if ((long)existing + additions > MaximumSpaces) throw new Rejected(new SpaceLimitReached(MaximumSpaces));
+    }
+
+    /// Throws `Rejected` with `CannotDeleteLastSpace` unless `spaceCount`
+    /// Spaces leave one behind when one goes.
+    internal static void RequireRemovable(int spaceCount) {
+        if (spaceCount <= 1) throw new Rejected(new CannotDeleteLastSpace());
+    }
 
     #endregion
 

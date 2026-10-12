@@ -30,5 +30,11 @@ public sealed record SiteOrigin(string Scheme, string Host, int Port) {
     /// The origin as a person reads it: the port only when it is not the default.
     public string DisplayName => WebScheme.Named(Scheme)?.DefaultPort == Port ? $"{Scheme}://{Host}" : $"{Scheme}://{Host}:{Port}";
 
+    /// Powerful features (location, hosted web notifications) need a secure
+    /// context: HTTPS, or plain HTTP only on this device's loopback names. An
+    /// origin the rules cannot read is never secure.
+    internal bool IsSecureContext => IsValid && WebScheme.Named(Scheme) is { } scheme
+        && (scheme.IsSecure || Host is "localhost" or "127.0.0.1" or "::1");
+
     #endregion
 }

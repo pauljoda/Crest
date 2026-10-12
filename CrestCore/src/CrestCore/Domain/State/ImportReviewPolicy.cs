@@ -14,7 +14,7 @@ public static class ImportReviewPolicy {
 
     /// The key two Space names match on: letters and digits only, ignoring
     /// case, accents and width. A name with neither never matches.
-    public static string SpaceMatchKey(string name) => WorkspaceImportPolicy.FolderMatchKey(name);
+    public static string SpaceMatchKey(string name) => FolderState.MatchKey(name);
 
     /// The key two tab addresses match on: the address a history visit would
     /// record, or the address itself when history would not record it.
@@ -158,7 +158,7 @@ public static class ImportReviewPolicy {
     public static SetupImportReview Customizing(SetupImportReview review, Guid sourceId, SpaceCustomization customization,
         SessionState session) {
         ArgumentNullException.ThrowIfNull(customization);
-        var kept = customization with { Branding = SpaceBrandingPolicy.Normalize(customization.Branding) };
+        var kept = customization with { Branding = SpaceBranding.Normalized(customization.Branding) };
         return Editing(review, sourceId, session, space => space with { Customization = kept });
     }
 
@@ -230,7 +230,7 @@ public static class ImportReviewPolicy {
     /// `ImportReviewedSpaces` counts them: a first launch's disposable Spaces
     /// make way for the import, and every other Space counts.
     private static int Room(SessionState session) =>
-        Math.Max(0, WorkspaceImportPolicy.MaximumSpaces - (session.DisposableSeedMarker is null ? session.Spaces.Count : 0));
+        Math.Max(0, SessionState.MaximumSpaces - (session.DisposableSeedMarker is null ? session.Spaces.Count : 0));
 
     /// The Spaces an import may join: none over a first launch's disposable
     /// Spaces, and never one going away.

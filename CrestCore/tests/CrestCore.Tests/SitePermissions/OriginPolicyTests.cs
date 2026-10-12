@@ -17,7 +17,7 @@ public sealed class OriginPolicyTests {
     [InlineData("file", "localhost", false)]
     [InlineData("https", "", false)]
     public void PowerfulFeaturesNeedASecureContext(string scheme, string host, bool allowed) =>
-        Assert.Equal(allowed, SecureOriginPolicy.Allows(new(scheme, host, 0)));
+        Assert.Equal(allowed, new SiteOrigin(scheme, host, 0).IsSecureContext);
 
     [Theory]
     [InlineData("https", false, "engine")]
@@ -70,7 +70,7 @@ public sealed class OriginPolicyTests {
     [Fact]
     public void ADocumentShowsOneBlockedPopupIndicationUntilItNavigates() {
         static BlockedPopupPageState? After(BlockedPopupPageState state, BlockedPopupEvent popupEvent, string? document = null,
-            SiteOrigin? origin = null) => BlockedPopupPolicy.Apply(state, popupEvent, document, origin);
+            SiteOrigin? origin = null) => state.Applying(popupEvent, document, origin);
         var blocked = After(BlockedPopupPageState.Empty, BlockedPopupEvent.Blocked, "doc-1", Site)!;
         Assert.Equal(BlockedPopupStatus.Blocked, blocked.Status);
         Assert.Equal(1, blocked.IndicationRevision);

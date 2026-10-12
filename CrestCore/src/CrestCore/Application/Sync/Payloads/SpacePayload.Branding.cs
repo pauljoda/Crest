@@ -36,7 +36,7 @@ internal sealed partial record SpacePayload {
             ReadCrest(value.Nested("crest")), version, value.TolerantNumber("folderColorIntensity") ?? 0,
             SpaceTextColorMode.Named(value.TolerantText("textColorMode")) ?? SpaceTextColorMode.Automatic,
             value.OptionalFlag("hasCustomAppearance"));
-        return SpaceBrandingPolicy.Normalize(branding);
+        return SpaceBranding.Normalized(branding);
     }
 
     /// A crest as every client reads it: each member it cannot read takes its

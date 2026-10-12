@@ -8,7 +8,7 @@ namespace CrestCore.Contracts;
 public sealed record NormalizeBranding(SpaceBranding Branding) : StandaloneQuery<NormalizedBranding> {
     #region Actions - Answering
 
-    internal override NormalizedBranding Answer(StandaloneContext context) => new(SpaceBrandingPolicy.Normalize(Branding));
+    internal override NormalizedBranding Answer(StandaloneContext context) => new(SpaceBranding.Normalized(Branding));
 
     #endregion
 }

@@ -75,7 +75,7 @@ public sealed class WorkspaceReviewTests {
 
     [Fact]
     public void AReviewBringsNoMoreNewSpacesThanTheWorkspaceHoldsAndJoinsEachSpaceOnce() {
-        var existing = Enumerable.Range(0, WorkspaceImportPolicy.MaximumSpaces - 1)
+        var existing = Enumerable.Range(0, SessionState.MaximumSpaces - 1)
             .Select(index => Space($"Existing {index}", Tab($"https://existing{index}.example/"))).ToArray();
         var session = Session(null, existing);
         var joining = Space("Existing 0", Tab("https://joining.example/"));
@@ -101,7 +101,7 @@ public sealed class WorkspaceReviewTests {
         Assert.Equal((true, 0), (full.Spaces[2].Included, full.NewSpaceCapacity));
         Assert.Same(full, ImportReviewPolicy.ChoosingDestination(full, again.Id, null, session));
         // A first launch's disposable Spaces make way for every Space.
-        Assert.Equal(WorkspaceImportPolicy.MaximumSpaces - 4, ImportReviewPolicy.Started(ImportSource.Chrome, [joining, again, first, second],
+        Assert.Equal(SessionState.MaximumSpaces - 4, ImportReviewPolicy.Started(ImportSource.Chrome, [joining, again, first, second],
             new Dictionary<Guid, int>(), [], [], Session(Guid.NewGuid(), existing)).NewSpaceCapacity);
     }
 
@@ -109,14 +109,14 @@ public sealed class WorkspaceReviewTests {
     public void ImportsRejectSplitRunsThatRepairWouldRewrite() {
         Guid group = Guid.NewGuid(), folder = Guid.NewGuid();
         SplitMember Member(TabPlacement? placement = null, Guid? inFolder = null) => new(group, placement ?? TabPlacement.Current, inFolder);
-        WorkspaceImportPolicy.RequireSplitMembership([Member(), Member(), new(null, TabPlacement.Current, null)]);
-        WorkspaceImportPolicy.RequireSplitMembership([Member()]);
-        Assert.Throws<Rejected>(() => WorkspaceImportPolicy.RequireSplitMembership([Member(), Member(TabPlacement.Saved)]));
-        Assert.Throws<Rejected>(() => WorkspaceImportPolicy.RequireSplitMembership([Member(), Member(inFolder: folder)]));
-        Assert.Throws<Rejected>(() => WorkspaceImportPolicy.RequireSplitMembership([Member(TabPlacement.Pinned)]));
-        Assert.Throws<Rejected>(() => WorkspaceImportPolicy.RequireSplitMembership(
+        SplitMember.RequireWellFormed([Member(), Member(), new(null, TabPlacement.Current, null)]);
+        SplitMember.RequireWellFormed([Member()]);
+        Assert.Throws<Rejected>(() => SplitMember.RequireWellFormed([Member(), Member(TabPlacement.Saved)]));
+        Assert.Throws<Rejected>(() => SplitMember.RequireWellFormed([Member(), Member(inFolder: folder)]));
+        Assert.Throws<Rejected>(() => SplitMember.RequireWellFormed([Member(TabPlacement.Pinned)]));
+        Assert.Throws<Rejected>(() => SplitMember.RequireWellFormed(
             Enumerable.Repeat(Member(), BrowserTabCollection.MaximumSplitMembers + 1).ToArray()));
-        Assert.Throws<Rejected>(() => WorkspaceImportPolicy.RequireSplitMembership(
+        Assert.Throws<Rejected>(() => SplitMember.RequireWellFormed(
             [Member(), new(null, TabPlacement.Current, null), Member()]));
     }
 }

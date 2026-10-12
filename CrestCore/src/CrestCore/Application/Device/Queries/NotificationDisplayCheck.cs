@@ -12,7 +12,7 @@ public sealed record NotificationDisplayCheck(Guid SpaceId, SiteOrigin Origin) :
     #region Actions - Answering
 
     internal override NotificationDisplayVerdict Answer(CrestApp app) =>
-        new(SecureOriginPolicy.Allows(Origin) && !app.Device.IsPrivate(SpaceId)
+        new(Origin.IsSecureContext && !app.Device.IsPrivate(SpaceId)
             && app.Device.Answer(new SiteDecision(SpaceId, Origin, SitePermission.Notifications, Detail: null)).Decision.Grants);
 
     #endregion

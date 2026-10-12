@@ -243,7 +243,7 @@ internal static class ZenSessions {
     /// many as a look keeps.
     private static List<BrandColor> Colors(JsonElement? theme) {
         var values = ImportJson.Object(theme) is null ? null : ImportJson.Array(ImportJson.Member(theme, "gradientColors"));
-        return [.. (values ?? []).Select(Color).OfType<BrandColor>().Take(SpaceBrandingPolicy.MaximumColorCount)];
+        return [.. (values ?? []).Select(Color).OfType<BrandColor>().Take(SpaceBranding.MaximumColorCount)];
     }
 
     private static BrandColor? Color(JsonElement value) {

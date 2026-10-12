@@ -88,9 +88,10 @@ public sealed partial class NativeSessionAuthority {
     private SpaceState RequireBorrowedSource() {
         var source = borrowedSource ?? throw new BrowserRuleException(BrowserRule.NotBorrowedWorkspace);
         var original = source.session.Spaces.SingleOrDefault(s => s.Id == borrowedSpace);
-        BorrowedProfilePolicy.RequireSource(borrowedSpace, borrowedProfile,
-            original?.Id ?? Guid.Empty, original?.ProfileId ?? Guid.Empty,
-            !source.released && PendingDeletion(source.session, borrowedSpace) is null);
+        // A temporary workspace borrows one existing profile; it never replaces it.
+        bool available = !source.released && PendingDeletion(source.session, borrowedSpace) is null;
+        if (!available || borrowedSpace != (original?.Id ?? Guid.Empty) || borrowedProfile != (original?.ProfileId ?? Guid.Empty))
+            throw new BrowserRuleException(BrowserRule.ProfileLeaseRevoked);
         return original!;
     }
 

@@ -12,10 +12,10 @@ public sealed record SetSpaceIdentity(Guid WorkspaceId, Guid SpaceId, string Nam
     internal override SessionEdit? Edit(NativeSessionAuthority workspace, SessionTurn turn) {
         workspace.RequireOwnedSpaces();
         var space = workspace.Editable(turn.Basis, SpaceId);
-        var name = SpaceOrganizationPolicy.ChosenName(Name);
+        var name = SpaceCustomization.Chosen(Name);
         return workspace.SettingSpace(turn.Basis, space, settings => settings with {
             Name = name,
-            Symbol = SpaceOrganizationPolicy.Symbol(Symbol),
+            Symbol = SpaceCustomization.ResolvedSymbol(Symbol),
             Accent = Accent
         }, SyncStaging.Edit);
     }

@@ -88,12 +88,12 @@ public sealed partial class NativeSessionAuthority {
         var retention = space.Settings.BrowsingPreferences.DataRetention;
         var seconds = StoredSessionCodec.Seconds(now);
         if (retention.History.Lifetime is { } history) {
-            var expired = RecordRemovalPolicy.Expired(Seconds(space.History.Select(entry => entry.LastVisitedAt)), seconds,
+            var expired = DataRetention.Expired(Seconds(space.History.Select(entry => entry.LastVisitedAt)), seconds,
                 history.TotalSeconds).ToHashSet();
             space = WithoutHistory(space, (_, index) => expired.Contains(index));
         }
         if (retention.Archive.Lifetime is { } archive) {
-            var expired = RecordRemovalPolicy.Expired(Seconds(space.ArchivedTabs.Select(archived => archived.ArchivedAt)), seconds,
+            var expired = DataRetention.Expired(Seconds(space.ArchivedTabs.Select(archived => archived.ArchivedAt)), seconds,
                 archive.TotalSeconds).ToHashSet();
             if (expired.Count > 0) space = space with { ArchivedTabs = [.. space.ArchivedTabs.Where((_, index) => !expired.Contains(index))] };
         }

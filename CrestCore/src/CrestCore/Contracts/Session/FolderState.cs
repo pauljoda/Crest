@@ -1,3 +1,5 @@
+using System.Text;
+
 namespace CrestCore.Contracts;
 
 /// <summary>
@@ -40,6 +42,15 @@ public sealed record FolderState(
     /// The color the folder is drawn in: the one chosen, or <see cref="DefaultColor"/>.
     [Resolved]
     public BrandColor DisplayColor => Color ?? DefaultColor;
+
+    #endregion
+
+    #region Actions - Imports
+
+    /// The key an imported folder matches an existing one by: its letters and
+    /// digits in compatibility form, lowercased.
+    internal static string MatchKey(string title) => string.Concat(title.Normalize(NormalizationForm.FormKD)
+        .Where(char.IsLetterOrDigit)).ToLowerInvariant();
 
     #endregion
 }

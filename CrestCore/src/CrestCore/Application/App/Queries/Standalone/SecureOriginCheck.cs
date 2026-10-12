@@ -8,7 +8,7 @@ namespace CrestCore.Contracts;
 public sealed record SecureOriginCheck(SiteOrigin Origin) : StandaloneQuery<SecureOriginVerdict> {
     #region Actions - Answering
 
-    internal override SecureOriginVerdict Answer(StandaloneContext context) => new(SecureOriginPolicy.Allows(Origin));
+    internal override SecureOriginVerdict Answer(StandaloneContext context) => new(Origin.IsSecureContext);
 
     #endregion
 }

@@ -105,7 +105,7 @@ public static class NativeSessionMaintenance {
                 });
             }).ToList();
             if (tabs.Count == 0) tabs.Add(StartTab(tabIds.Claim(ids.Next()), now));
-            var groups = SplitMembershipPolicy.Repair(tabs.Select(tab => new SplitMember(tab.SplitGroupId, tab.Placement, tab.FolderId)).ToArray());
+            var groups = SplitMember.Repair(tabs.Select(tab => new SplitMember(tab.SplitGroupId, tab.Placement, tab.FolderId)).ToArray());
             var archive = space.ArchivedTabs.Where(archived => !IsStartPage(archived.Tab)).Select(archived => archived with {
                 Tab = Normalized(archived.Tab with {
                     Id = tabIds.Claim(archived.Tab.Id),
@@ -119,7 +119,7 @@ public static class NativeSessionMaintenance {
                 Folders = folders,
                 Tabs = [.. tabs.Select((tab, index) => tab with { SplitGroupId = groups[index] })],
                 ArchivedTabs = [.. archive],
-                History = [.. space.History.Take(HistoryPolicy.MaximumEntries)],
+                History = [.. space.History.Take(HistoryEntryState.MaximumEntries)],
                 SplitGroups = MergedSplitGroups(space.SplitGroups)
             };
         })];
@@ -157,7 +157,7 @@ public static class NativeSessionMaintenance {
 
     private static IReadOnlyList<T> Retained<T>(IReadOnlyList<T> records, Func<T, DateTimeOffset> date, double? lifetime, double now) {
         if (lifetime is not { } seconds) return records;
-        var expired = RecordRemovalPolicy.Expired(records.Select(record => StoredSessionCodec.Seconds(date(record))).ToArray(), now, seconds)
+        var expired = DataRetention.Expired(records.Select(record => StoredSessionCodec.Seconds(date(record))).ToArray(), now, seconds)
             .ToHashSet();
         return [.. records.Where((_, index) => !expired.Contains(index))];
     }

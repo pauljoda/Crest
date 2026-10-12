@@ -50,7 +50,7 @@ public sealed partial class BrowserContractsTests {
     }
 
     private static SpaceCustomization Customization(string name, string symbol = "star") =>
-        new(name, symbol, SpaceAccent.Teal, SpaceBrandingPolicy.Normalize(StoredSessionCodec.DecodeBranding(new JsonObject())));
+        new(name, symbol, SpaceAccent.Teal, SpaceBranding.Normalized(StoredSessionCodec.DecodeBranding(new JsonObject())));
 
     private static Guid TabId(JsonNode tab) => Guid.Parse(tab["id"]!["rawValue"]!.GetValue<string>());
 
@@ -113,7 +113,7 @@ public sealed partial class BrowserContractsTests {
         using var device = new TestDevice(session);
         var window = device.Showing(session);
         int held = device.Authority.Current.Spaces.Single(space => space.Id == fixture.Space).Tabs.Count;
-        int room = BrowserSpace.MaximumTabs - held;
+        int room = BrowserTabCollection.MaximumTabs - held;
         // A saved tab is the first to stay behind; an open one comes along.
         var joining = ImportedSpace("reading", [.. Enumerable.Range(0, room).Select(index => ImportedTab($"https://saved.example/{index}", "saved")),
             ImportedTab("https://open.example/")]);
@@ -123,7 +123,7 @@ public sealed partial class BrowserContractsTests {
         device.Send(new ImportReviewedSpaces(device.Workspace, window));
 
         var reading = device.Authority.Current.Spaces.Single(space => space.Id == fixture.Space);
-        Assert.Equal(BrowserSpace.MaximumTabs, reading.Tabs.Count);
+        Assert.Equal(BrowserTabCollection.MaximumTabs, reading.Tabs.Count);
         Assert.Contains(reading.Tabs, tab => tab.Url == "https://open.example/");
         Assert.DoesNotContain(reading.Tabs, tab => tab.SavedUrl == $"https://saved.example/{room - 1}");
     }
@@ -159,10 +159,10 @@ public sealed partial class BrowserContractsTests {
         Assert.Equal((imported.Id, (Guid?)tab.Id), (device.Space(window), device.Tab(window, imported.Id)));
 
         // One that does not fit beside them takes their place, as a reviewed import does.
-        var full = ReadSpaces([.. Enumerable.Range(0, WorkspaceImportPolicy.MaximumSpaces)
+        var full = ReadSpaces([.. Enumerable.Range(0, SessionState.MaximumSpaces)
             .Select(index => ImportedSpace($"Many {index}", ImportedTab($"https://many.example/{index}")))]);
         device.Send(new ImportSpaces(device.Workspace, window, full));
-        Assert.Equal((WorkspaceImportPolicy.MaximumSpaces, (Guid?)null), (device.Authority.Current.Spaces.Count,
+        Assert.Equal((SessionState.MaximumSpaces, (Guid?)null), (device.Authority.Current.Spaces.Count,
             device.Authority.Current.DisposableSeedMarker));
     }
 
@@ -203,7 +203,7 @@ public sealed partial class BrowserContractsTests {
         var reading = current.Spaces[0];
         Assert.Equal(fixture.Space, reading.Id);
         Assert.Equal(TabId(saved), reading.Tabs[0].Id);
-        var overflow = reading.Folders.Single(candidate => candidate.Title == WorkspaceImportPolicy.OverflowFolderTitle);
+        var overflow = reading.Folders.Single(candidate => candidate.Title == NativeWorkspaceImport.OverflowFolderTitle);
         Assert.Equal(2, reading.Folders.Count);
         Assert.Equal(reading.Folders[0].Id, reading.Tabs.Single(tab => tab.Url == "https://new.example/").FolderId);
         Assert.Equal(TabPlacement.PinnedCapacity, reading.Tabs.Count(tab => tab.Placement == TabPlacement.Pinned));
@@ -293,8 +293,8 @@ public sealed partial class BrowserContractsTests {
         var split = ImportedSpace("Split", ImportedTab("https://one.example/"), ImportedTab("https://two.example/", "saved"));
         foreach (var tab in split["tabs"]!.AsArray()) tab!["splitGroupID"] = group.DeepClone();
         Assert.Equal(new InvalidImport(ImportFlaw.MalformedSplit), Refusal(new ImportSpaces(device.Workspace, window, ReadSpaces(split))));
-        Assert.Equal(new SpaceLimitReached(WorkspaceImportPolicy.MaximumSpaces), Refusal(new ImportSpaces(device.Workspace, window,
-            ReadSpaces([.. Enumerable.Range(0, WorkspaceImportPolicy.MaximumSpaces + 1).Select(_ => ImportedSpace("Many"))]))));
+        Assert.Equal(new SpaceLimitReached(SessionState.MaximumSpaces), Refusal(new ImportSpaces(device.Workspace, window,
+            ReadSpaces([.. Enumerable.Range(0, SessionState.MaximumSpaces + 1).Select(_ => ImportedSpace("Many"))]))));
         Reviewing(device, space);
         device.Send(new IncludeImportSpace(SpaceId(space), Included: false));
         Assert.Equal(new NoIncludedSpaces(), Refusal(new BeginImportCommit()));

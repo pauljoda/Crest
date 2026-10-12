@@ -76,7 +76,7 @@ internal sealed record KeptSetupDraft(IReadOnlyList<SetupDraftSpace> Spaces, boo
                 if (node is not JsonObject space || Flag(space[IsNewKey]) is not { } isNew || Text(space[NameKey]) is not { } name
                     || Text(space[SymbolKey]) is not { } symbol || SpaceAccent.Named(Text(space[AccentKey])) is not { } accent) return null;
                 read.Add(new(StoredSessionCodec.Identity(space[IdKey]), StoredSessionCodec.Identity(space[ProfileKey]), isNew,
-                    new(name, symbol, accent, SpaceBrandingPolicy.Normalize(StoredSessionCodec.DecodeBranding(space[BrandingKey])))));
+                    new(name, symbol, accent, SpaceBranding.Normalized(StoredSessionCodec.DecodeBranding(space[BrandingKey])))));
             }
             return new(read, Flag(root[OrderWasEditedKey]) ?? false);
         } catch (Exception error) when (error is JsonException or InvalidOperationException or BrowserRuleException) {

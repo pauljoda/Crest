@@ -3965,6 +3965,10 @@
     "2026-10-12-download-media-launch-answers": {
       "category": "internal",
       "message": "Let download, media and launch questions answer from their facts"
+    },
+    "2026-10-12-pages-history-spaces-own-rules": {
+      "category": "internal",
+      "message": "Let pages, history, Spaces and brandings keep their own rules"
     }
   }
 }
