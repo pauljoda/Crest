@@ -29,12 +29,8 @@ final class BrowserTransientBrowsingCoordinator {
         peeks.first { $0.request == request }?.motion
     }
 
-    func handleLinkDrag(_ event: BrowserPeekInteractionEvent) {
-        switch event {
-        case .began(let request, let state): beginPeekDrag(request, state: state)
-        case .moved(let id, let state): updatePeekDrag(id: id, state: state)
-        case .cancelled(let id): cancelStagedPeek(id: id)
-        }
+    func handleLinkDrag(_ event: any BrowserPeekInteractionEvent) {
+        event.apply(to: self)
     }
 
     func presentPeek(_ request: BrowserPeekRequest) {

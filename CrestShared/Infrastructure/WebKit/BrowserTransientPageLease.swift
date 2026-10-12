@@ -65,6 +65,12 @@ final class BrowserTransientPageLease {
         self.isActive = isActive
     }
 
+    /// Whether the lease may serve a request in `requestAssignment`: it must
+    /// still match the request's runtime assignment.
+    func isReusable(for requestAssignment: BrowserSpaceRuntimeAssignment) -> Bool {
+        assignment == requestAssignment && canBeReused
+    }
+
     func restore() {
         guard !isInvalidated, page == nil, let page = rebuild() else { return }
         page.applyContentBlocking(

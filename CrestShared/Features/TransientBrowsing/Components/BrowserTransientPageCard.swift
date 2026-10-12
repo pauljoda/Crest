@@ -75,7 +75,7 @@ struct BrowserTransientPageCard<WebContent: View>: View {
 
     private var revealAnimation: Animation? {
         BrowserVisualAccessibilityPolicy.animation(
-            BrowserPeekPresentationPolicy.initialContentRevealAnimation,
+            CrestMotion.contentReveal,
             reduceMotion: reduceMotion
         )
     }

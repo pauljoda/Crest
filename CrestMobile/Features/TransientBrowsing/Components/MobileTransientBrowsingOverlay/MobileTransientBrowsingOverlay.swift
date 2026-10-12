@@ -15,12 +15,12 @@ struct MobileTransientBrowsingOverlay: View {
                 ForEach(coordinator.peekRequests.filter { $0.isSelected(in: browser) }) { request in
                     overlay(
                         MobileTransientBrowsingPresentation(
-                            request: .peek(request), phase: coordinator.presentationPhase(for: request) ?? .committed)
+                            request: request, phase: coordinator.presentationPhase(for: request) ?? .committed)
                     )
                 }
             }
             if let request = coordinator.quickWindowRequest {
-                overlay(MobileTransientBrowsingPresentation(request: .quickWindow(request), phase: .committed))
+                overlay(MobileTransientBrowsingPresentation(request: request, phase: .committed))
             }
         }
     }

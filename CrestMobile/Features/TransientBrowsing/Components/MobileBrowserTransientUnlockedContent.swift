@@ -74,7 +74,7 @@ struct MobileBrowserTransientUnlockedContent: View {
             reduceMotion: reduceMotion,
             reduceTransparency: reduceTransparency,
             presentationPhase: presentationPhase,
-            sourcePresentation: model.request.sourcePresentation,
+            sourcePresentation: model.request.resolvedSourcePresentation,
             motionState: model.motionState ?? retainedMotionState
         )
     }

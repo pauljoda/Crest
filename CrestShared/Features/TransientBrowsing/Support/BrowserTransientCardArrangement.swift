@@ -33,13 +33,18 @@ struct BrowserTransientCardArrangement: Hashable, Identifiable, Sendable {
         controlSpacing: 10, constrainsControlBarToMaximumWidth: false, controlBarPadding: 0,
         ignoredSafeAreaEdges: .all,
         framesContent: { containerSize, reservedLeadingWidth, layoutDirection in
-            BrowserPeekPresentationPolicy.desktopWebContentFrame(
-                in: containerSize,
-                reservedLeadingWidth: reservedLeadingWidth,
-                layoutDirection: layoutDirection
+            let leadingWidth = min(
+                max(reservedLeadingWidth, 0),
+                containerSize.width
+            )
+            return CGRect(
+                x: layoutDirection == .leftToRight ? leadingWidth : 0,
+                y: 0,
+                width: containerSize.width - leadingWidth,
+                height: containerSize.height
             )
         },
-        sizesCard: { BrowserPeekPresentationPolicy.desktopCardSize(in: $0) },
+        sizesCard: { BrowserTransientWindowGeometryPolicy.contentSize(in: $0) },
         insetsContent: { _ in EdgeInsets(top: 30, leading: 30, bottom: 30, trailing: 30) },
         cardCornerRadius: 15, cardBorderOpacity: 0.16, cardShadowOpacity: 0.34, cardShadowRadius: 28,
         cardShadowOffsetY: 14)

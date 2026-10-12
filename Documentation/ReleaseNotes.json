@@ -3917,6 +3917,10 @@
     "2026-10-12-credential-objects-own-behavior": {
       "category": "internal",
       "message": "Let credential events, plans and sign-in answers say what they do"
+    },
+    "2026-10-12-transient-requests-own-behavior": {
+      "category": "internal",
+      "message": "Let transient requests, lease dispositions and pulls say what they do"
     }
   }
 }

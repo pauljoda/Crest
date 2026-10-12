@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct MobileTransientBrowsingPreviewSurface: View {
-    let request: MobileBrowserTransientRequest
+    let request: any MobileBrowserTransientRequest
 
     var body: some View {
         ZStack {
@@ -9,7 +9,7 @@ struct MobileTransientBrowsingPreviewSurface: View {
                 .ignoresSafeArea()
 
             VStack(spacing: CrestSpacing.medium) {
-                Image(systemName: systemImage)
+                Image(systemName: request.previewSystemImage)
                     .font(.largeTitle)
                 Text(request.accessibilityLabel)
                     .font(.headline)
@@ -20,9 +20,5 @@ struct MobileTransientBrowsingPreviewSurface: View {
                     .fill(.regularMaterial)
             }
         }
-    }
-
-    private var systemImage: String {
-        request.isQuickWindow ? "sparkle.magnifyingglass" : "eye"
     }
 }

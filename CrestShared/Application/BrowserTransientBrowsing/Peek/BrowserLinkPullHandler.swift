@@ -4,7 +4,7 @@ import Foundation
 @MainActor
 final class BrowserLinkPullHandler {
     private let context: () -> BrowserPageNavigationContext?
-    private let handle: (BrowserPeekInteractionEvent) -> Void
+    private let handle: (any BrowserPeekInteractionEvent) -> Void
     private var interaction: Interaction?
 
     private struct Interaction {
@@ -14,7 +14,7 @@ final class BrowserLinkPullHandler {
 
     init(
         context: @escaping () -> BrowserPageNavigationContext?,
-        handle: @escaping (BrowserPeekInteractionEvent) -> Void
+        handle: @escaping (any BrowserPeekInteractionEvent) -> Void
     ) {
         self.context = context
         self.handle = handle
@@ -36,7 +36,7 @@ final class BrowserLinkPullHandler {
         let pull = BrowserPeekPullSession(
             origin: origin, location: sample.location, size: sample.size, time: sample.time)
         interaction = Interaction(request: request, pull: pull)
-        handle(.began(request, pull.state))
+        handle(BrowserPeekDragBegan(request: request, state: pull.state))
         return true
     }
 
@@ -64,7 +64,7 @@ final class BrowserLinkPullHandler {
     func cancel() {
         let requestID = interaction?.request.id
         interaction = nil
-        if let requestID { handle(.cancelled(requestID)) }
+        if let requestID { handle(BrowserPeekDragCancelled(requestID: requestID)) }
     }
 
     private func update(_ sample: BrowserLinkPullSample, isEnding: Bool) {
@@ -80,6 +80,6 @@ final class BrowserLinkPullHandler {
         } else {
             interaction = current
         }
-        handle(.moved(current.request.id, current.pull.state))
+        handle(BrowserPeekDragMoved(requestID: current.request.id, state: current.pull.state))
     }
 }

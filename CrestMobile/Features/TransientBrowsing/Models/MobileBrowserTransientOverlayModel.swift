@@ -4,7 +4,7 @@ import Observation
 @Observable
 @MainActor
 final class MobileBrowserTransientOverlayModel {
-    let request: MobileBrowserTransientRequest
+    let request: any MobileBrowserTransientRequest
     private(set) var pageLease: MobileBrowserTransientPageLease?
     private(set) var releasedPageSnapshot: BrowserTransientPageSnapshot?
     private(set) var wasPromoted = false
@@ -14,14 +14,14 @@ final class MobileBrowserTransientOverlayModel {
     @ObservationIgnored private var unloadedPage: CorePage?
     @ObservationIgnored let browser: BrowserStore
     @ObservationIgnored private let pages: MobileBrowserPageStore?
-    @ObservationIgnored private let coordinator: BrowserTransientBrowsingCoordinator
-    @ObservationIgnored private let spaceAccess: BrowserSpaceAccessController
+    @ObservationIgnored let coordinator: BrowserTransientBrowsingCoordinator
+    @ObservationIgnored let spaceAccess: BrowserSpaceAccessController
     @ObservationIgnored private let preferences: BrowserTransientBrowsingPreferences
     @ObservationIgnored private let activityClock: BrowserTransientActivityClock
     @ObservationIgnored private let didPromote: () -> Void
 
     init(
-        request: MobileBrowserTransientRequest,
+        request: any MobileBrowserTransientRequest,
         browser: BrowserStore,
         pages: MobileBrowserPageStore,
         coordinator: BrowserTransientBrowsingCoordinator,
@@ -42,7 +42,7 @@ final class MobileBrowserTransientOverlayModel {
     }
 
     init(
-        previewing request: MobileBrowserTransientRequest,
+        previewing request: any MobileBrowserTransientRequest,
         browser: BrowserStore,
         coordinator: BrowserTransientBrowsingCoordinator,
         spaceAccess: BrowserSpaceAccessController
@@ -67,8 +67,7 @@ final class MobileBrowserTransientOverlayModel {
     /// The Spaces the overlay may move to or unlock: none being deleted, and
     /// none locked but its own.
     var availableSpaceModels: [SpaceModel] {
-        BrowserTransientSessionPolicy.availableSpaces(
-            in: browser, requestSpaceID: request.spaceID, isLocked: spaceAccess.isLocked)
+        browser.transientSpaces(forRequestIn: request.spaceID, isLocked: spaceAccess.isLocked)
     }
 
     var page: MobileBrowserPage? {
@@ -76,18 +75,15 @@ final class MobileBrowserTransientOverlayModel {
     }
 
     var motionState: BrowserPeekMotionState? {
-        guard case .peek(let peek) = request else { return nil }
-        return coordinator.motionState(for: peek)
+        request.motionState(in: coordinator)
     }
 
     var isSelected: Bool {
-        guard case .peek(let peek) = request else { return true }
-        return peek.isSelected(in: browser)
+        request.isSelected(in: browser)
     }
 
     var hasSource: Bool {
-        guard case .peek(let peek) = request else { return spaceModel != nil }
-        return peek.hasSource(in: browser)
+        request.hasSource(in: browser)
     }
 
     /// The inactivity wait a Quick Window restarts when its activity or its
@@ -98,49 +94,14 @@ final class MobileBrowserTransientOverlayModel {
 
     @discardableResult
     func preparePage(isActive: Bool) -> Bool {
-        let space: SpaceModel
-        switch sourceDisposition {
-        case .notPresented:
-            releasePageRetainingQuickWindowSnapshot()
-            return false
-        case .sourceMissing:
-            dismissUnavailableRequest()
-            return false
-        case .sourceLocked:
-            setSourceLocked(true)
-            return false
-        case .usable(let usableSpace):
-            space = usableSpace
-        }
-        if let pageLease,
-            BrowserTransientSessionPolicy.reusesLease(
-                leaseAssignment: pageLease.assignment,
-                requestAssignment: request.spaceAssignment,
-                leaseCanBeReused: pageLease.page != nil
-                    || pageLease.wasReleasedForMemoryPressure
-            )
-        {
+        guard let space = sourceDisposition.settle(on: self) else { return false }
+        if let pageLease, pageLease.isReusable(for: request.spaceAssignment) {
             pageLease.setActive(isActive && isSelected)
             return true
         }
         pageLease?.release()
         guard let pages else { return true }
-        if case .peek(let peek) = request {
-            pageLease = pages.makePeekPageLease(
-                request: peek, in: space,
-                onDownloadOnlyNavigation: { [weak coordinator] in
-                    coordinator?.dismissPeek(peek)
-                })
-        } else {
-            pageLease = pages.makeTransientPageLease(
-                url: releasedPageSnapshot?.url ?? request.url,
-                in: space,
-                onUserActivity: recordUserActivity,
-                onDownloadOnlyNavigation: { [weak self] in
-                    self?.dismissDownloadOnlyNavigation()
-                }
-            )
-        }
+        pageLease = request.makePageLease(for: self, from: pages, in: space)
         guard let pageLease else {
             dismissUnavailableRequest()
             return false
@@ -151,19 +112,7 @@ final class MobileBrowserTransientOverlayModel {
     }
 
     func setActive(_ isActive: Bool) {
-        switch sourceDisposition {
-        case .notPresented:
-            releasePageRetainingQuickWindowSnapshot()
-            return
-        case .sourceMissing:
-            dismissUnavailableRequest()
-            return
-        case .sourceLocked:
-            setSourceLocked(true)
-            return
-        case .usable:
-            break
-        }
+        guard sourceDisposition.settle(on: self) != nil else { return }
         pageLease?.setActive(isActive && isSelected)
         guard isActive else { return }
         activityClock.recordActivity(restartsTimerImmediately: true)
@@ -171,7 +120,7 @@ final class MobileBrowserTransientOverlayModel {
 
     func setSourceLocked(_ isLocked: Bool) {
         guard isLocked else { return }
-        releasePageRetainingQuickWindowSnapshot()
+        releaseLease()
     }
 
     func setSourceAvailable(_ isAvailable: Bool) {
@@ -203,20 +152,13 @@ final class MobileBrowserTransientOverlayModel {
     func restorePage() {
         activityClock.recordActivity(restartsTimerImmediately: true)
         guard isCurrentRequest else {
-            releasePageRetainingQuickWindowSnapshot()
+            releaseLease()
             return
         }
-        guard let pageLease else { return }
-        switch disposition(ofSpaceMatching: pageLease.assignment) {
-        case .notPresented:
-            releasePageRetainingQuickWindowSnapshot()
-        case .sourceMissing:
-            dismissUnavailableRequest()
-        case .sourceLocked:
-            setSourceLocked(true)
-        case .usable:
-            pageLease.restore()
+        guard let pageLease, disposition(ofSpaceMatching: pageLease.assignment).settle(on: self) != nil else {
+            return
         }
+        pageLease.restore()
     }
 
     @discardableResult
@@ -240,12 +182,7 @@ final class MobileBrowserTransientOverlayModel {
             )
         else { return false }
 
-        // Keeping a Quick Window's page in another Space remembers that Space for its site.
-        if case .quickWindow(let quickWindowRequest) = request, destinationAssignment != quickWindowRequest.assignment,
-            let pageURL = page.live.documentURL ?? quickWindowRequest.initialURL
-        {
-            preferences.rememberSpace(destinationAssignment.spaceID, for: pageURL)
-        }
+        request.rememberKeeping(page, in: destinationAssignment, preferences: preferences)
         wasPromoted = true
         if outcome == .openedNewPage {
             pageLease.release()
@@ -258,16 +195,7 @@ final class MobileBrowserTransientOverlayModel {
 
     func selectLockedSpace(_ assignment: BrowserSpaceRuntimeAssignment) {
         guard isCurrentRequest else { return }
-        switch request {
-        case .quickWindow:
-            changeQuickWindowSpace(to: assignment)
-        case .peek(let peekRequest):
-            guard let candidate = browser.spaceModel(matching: assignment),
-                !spaceAccess.isLocked(candidate),
-                coordinator.dismissPeek(peekRequest)
-            else { return }
-            browser.selectSpace(assignment.spaceID)
-        }
+        request.selectLockedSpace(assignment, on: self)
     }
 
     func dismiss() {
@@ -279,22 +207,12 @@ final class MobileBrowserTransientOverlayModel {
         pageLease?.release()
         pageLease = nil
         forgetReleasedSnapshot()
-        switch request {
-        case .peek(let peekRequest):
-            coordinator.dismissPeek(peekRequest)
-        case .quickWindow(let quickWindowRequest):
-            coordinator.dismissQuickWindow(quickWindowRequest)
-        }
+        request.dismiss(from: coordinator)
     }
 
     func handleDisappearance() {
         guard !wasPromoted else { return }
-        archiveQuickWindowIfNeeded()
-        if !request.isQuickWindow && isCurrentRequest {
-            pageLease?.setActive(false)
-        } else {
-            pageLease?.release()
-        }
+        request.disappear(from: self)
         pageLease = nil
         forgetReleasedSnapshot()
     }
@@ -310,38 +228,27 @@ final class MobileBrowserTransientOverlayModel {
 
     private func dismissCoordinatorRequest() {
         guard isCurrentRequest else { return }
-        switch request {
-        case .peek(let peekRequest):
-            coordinator.dismissPeek(peekRequest)
-        case .quickWindow(let quickWindowRequest):
-            archiveQuickWindowIfNeeded()
-            coordinator.dismissQuickWindow(quickWindowRequest)
-        }
+        request.close(on: self)
     }
 
-    private func dismissDownloadOnlyNavigation() {
+    func dismissDownloadOnlyNavigation() {
         guard isCurrentRequest else { return }
         forgetReleasedSnapshot()
-        switch request {
-        case .peek(let peekRequest):
-            coordinator.dismissPeek(peekRequest)
-        case .quickWindow(let quickWindowRequest):
-            coordinator.dismissQuickWindow(quickWindowRequest)
-        }
+        request.dismiss(from: coordinator)
     }
 
     /// Files a Quick Window's page in the archive. The core archives a page
     /// once, and never one kept as a tab.
-    private func archiveQuickWindowIfNeeded() {
-        guard request.isQuickWindow, let snapshot = currentSnapshot else { return }
+    func archiveCurrentSnapshot() {
+        guard let snapshot = currentSnapshot else { return }
         browser.archiveTransientPage(snapshot.pageID, matching: snapshot.assignment)
     }
 
-    private func changeQuickWindowSpace(
+    func changeSpace(
+        of quickWindowRequest: BrowserQuickWindowRequest,
         to destinationAssignment: BrowserSpaceRuntimeAssignment
     ) {
         guard isCurrentRequest,
-            case .quickWindow(let quickWindowRequest) = request,
             destinationAssignment.spaceID != quickWindowRequest.spaceID,
             let destination = browser.spaceModel(matching: destinationAssignment),
             !spaceAccess.isLocked(destination)
@@ -363,13 +270,8 @@ final class MobileBrowserTransientOverlayModel {
         )
     }
 
-    private var isCurrentRequest: Bool {
-        switch request {
-        case .peek(let peekRequest):
-            coordinator.isPresentingPeek(peekRequest)
-        case .quickWindow(let quickWindowRequest):
-            coordinator.isPresentingQuickWindow(quickWindowRequest)
-        }
+    var isCurrentRequest: Bool {
+        request.isPresented(by: coordinator)
     }
 
     private var sourceDisposition: BrowserTransientLeaseDisposition {
@@ -381,7 +283,7 @@ final class MobileBrowserTransientOverlayModel {
     private func disposition(
         ofSpaceMatching assignment: BrowserSpaceRuntimeAssignment
     ) -> BrowserTransientLeaseDisposition {
-        BrowserTransientSessionPolicy.disposition(
+        BrowserTransientLeaseDisposition(
             isPresentingRequest: isCurrentRequest,
             space: hasSource ? browser.spaceModel(matching: assignment) : nil,
             isLocked: spaceAccess.isLocked
@@ -391,17 +293,18 @@ final class MobileBrowserTransientOverlayModel {
     /// Lets the page go; a Quick Window keeps what it shows: the snapshot it
     /// archives on dismissal, and the core's memory of the page, both until
     /// the snapshot goes.
-    private func releasePageRetainingQuickWindowSnapshot() {
+    func releaseLease() {
         guard let pageLease else { return }
-        if request.isQuickWindow {
-            let retained = snapshot(pageLease)
-            forgetReleasedSnapshot()
-            releasedPageSnapshot = retained
-            unloadedPage = pageLease.unload()
-        } else {
-            pageLease.release()
-        }
+        request.release(pageLease, on: self)
         self.pageLease = nil
+    }
+
+    /// Unloads `lease`'s page, keeping its snapshot and the core's memory of it.
+    func unload(_ lease: MobileBrowserTransientPageLease) {
+        let retained = snapshot(lease)
+        forgetReleasedSnapshot()
+        releasedPageSnapshot = retained
+        unloadedPage = lease.unload()
     }
 
     /// Drops the released page's snapshot, and releases its page for good so
@@ -427,3 +330,5 @@ final class MobileBrowserTransientOverlayModel {
         )
     }
 }
+
+extension MobileBrowserTransientOverlayModel: BrowserTransientLeaseHolder {}

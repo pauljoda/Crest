@@ -143,7 +143,7 @@ extension BrowserPage: WKNavigationDelegate {
         let pointInWebView = webView.convert(pointInWindow, from: nil)
         guard webView.bounds.contains(pointInWebView) else { return nil }
 
-        return BrowserPeekPresentationPolicy.sourcePresentation(
+        return BrowserPeekSourcePresentation(
             touchPoint: content.convert(pointInWindow, from: nil),
             in: content.bounds.size,
             hasTopLeadingOrigin: content.isFlipped,
