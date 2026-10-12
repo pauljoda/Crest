@@ -50,12 +50,6 @@ extension BrowserShortcut {
     }
 }
 
-enum BrowserShortcutAssignmentResult: Equatable, Sendable {
-    case assigned
-    case conflict(commands: [ShortcutCommand])
-    case invalid
-}
-
 enum BrowserShortcutKey: Codable, Hashable, Sendable {
     case character(Character)
     case special(ShortcutSpecialKey)

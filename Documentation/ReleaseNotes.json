@@ -3885,6 +3885,10 @@
     "2026-10-12-page-edge-objects-own-behavior": {
       "category": "internal",
       "message": "Let page and engine-edge objects carry what they do"
+    },
+    "2026-10-12-settings-own-behavior": {
+      "category": "internal",
+      "message": "Let settings pages, permissions and requests say what they do"
     }
   }
 }

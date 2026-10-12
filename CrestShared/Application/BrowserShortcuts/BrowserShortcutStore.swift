@@ -66,12 +66,12 @@ final class BrowserShortcutStore {
     // MARK: - Actions - Changes
 
     /// Binds `shortcut` to `command` unless another command holds it.
-    func assign(_ shortcut: BrowserShortcut, to command: ShortcutCommand) -> BrowserShortcutAssignmentResult {
+    func assign(_ shortcut: BrowserShortcut, to command: ShortcutCommand) -> any BrowserShortcutAssignmentResult {
         answer(AssignShortcut(command: command, keys: shortcut.keys))
     }
 
     /// Binds `shortcut` to `command`, taking it from every command that holds it.
-    func reassign(_ shortcut: BrowserShortcut, to command: ShortcutCommand) -> BrowserShortcutAssignmentResult {
+    func reassign(_ shortcut: BrowserShortcut, to command: ShortcutCommand) -> any BrowserShortcutAssignmentResult {
         answer(ReassignShortcut(command: command, keys: shortcut.keys))
     }
 
@@ -87,19 +87,19 @@ final class BrowserShortcutStore {
         _ = answer(ResetShortcuts())
     }
 
-    private func answer(_ intent: some ShortcutIntent) -> BrowserShortcutAssignmentResult {
+    private func answer(_ intent: some ShortcutIntent) -> any BrowserShortcutAssignmentResult {
         do {
             try core.send(intent)
-            return .assigned
+            return BrowserShortcutAssigned()
         } catch .shortcutInUse(let refusal) {
-            return .conflict(commands: refusal.commands)
+            return BrowserShortcutInUse(commands: refusal.commands)
         } catch .invalidShortcut {
-            return .invalid
+            return BrowserShortcutInvalid()
         } catch {
             Self.log.error(
                 "The core refused \(String(describing: type(of: intent))): \(DiagnosticLog.describe(error))"
             )
-            return .invalid
+            return BrowserShortcutInvalid()
         }
     }
 }

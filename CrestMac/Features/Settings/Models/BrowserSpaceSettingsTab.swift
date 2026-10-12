@@ -1,47 +1,71 @@
 import SwiftUI
 
 /// The pages of one Space in Settings, in the order its tab bar shows them.
+/// Each page carries the pane it shows, built from the Space's settings page.
 struct BrowserSpaceSettingsTab: Hashable, Identifiable, Sendable {
-    // MARK: - Types
-
-    /// Each page shows its own pane, so the one place that builds a page
-    /// switches over the kind.
-    enum Kinds: Sendable {
-        case appearance
-        case browsing
-        case privacy
-        case passwords
-        case extensions
-    }
-
     // MARK: - Static Variables
 
     static let appearance = BrowserSpaceSettingsTab(
-        kind: .appearance, name: "appearance", title: "Appearance",
+        name: "appearance", title: "Appearance",
         searchTerms: "crest studio name icon emblem colors theme banner background sidebar pattern gradient accent",
-        destination: .spaces)
+        destination: .spaces,
+        pane: { page in AnyView(BrowserSpaceEditorView(browser: page.browser, space: page.space)) })
     static let browsing = BrowserSpaceSettingsTab(
-        kind: .browsing, name: "browsing", title: "Browsing",
-        searchTerms: "search engine suggestions archive tabs cleanup downloads folder save location delete Space")
+        name: "browsing", title: "Browsing",
+        searchTerms: "search engine suggestions archive tabs cleanup downloads folder save location delete Space",
+        pane: { page in
+            AnyView(
+                BrowserSettingsPane(.spaces) {
+                    BrowserSpaceBrowsingSection(browser: page.browser, space: page.space)
+                    BrowserSpaceDownloadsSection(settings: page.downloads.settings(for: page.space))
+                    BrowserSpaceDeletionSection(
+                        browser: page.browser, spaceID: page.space.id, dataDeleter: page.dataDeleter)
+                }
+                .task(id: page.space.id) { page.downloads.refresh(for: page.space.id) })
+        })
     static let privacy = BrowserSpaceSettingsTab(
-        kind: .privacy, name: "privacy", title: "Privacy",
+        name: "privacy", title: "Privacy",
         searchTerms:
-            "privacy lock Touch ID password private history retention archive downloads records content blocking ads trackers site permissions camera microphone location notifications"
-    )
+            "privacy lock Touch ID password private history retention archive downloads records content blocking ads trackers site permissions camera microphone location notifications",
+        pane: { page in
+            AnyView(
+                BrowserPrivacySettingsPane(
+                    browser: page.browser,
+                    downloadCenter: page.pages.downloadCenter,
+                    spaceAccess: page.spaceAccess,
+                    permissionCenter: page.pages.permissionCenter,
+                    contentBlockingErrorDescription: page.pages.contentBlockingErrorDescription,
+                    fixedSpaceID: page.space.id
+                ))
+        })
     static let passwords = BrowserSpaceSettingsTab(
-        kind: .passwords, name: "passwords", title: "Passwords",
-        searchTerms: "passwords credentials autofill iCloud Keychain import export", destination: .passwords)
+        name: "passwords", title: "Passwords",
+        searchTerms: "passwords credentials autofill iCloud Keychain import export", destination: .passwords,
+        pane: { page in
+            AnyView(
+                BrowserPasswordSettingsPane(
+                    browser: page.browser,
+                    spaceAccess: page.spaceAccess,
+                    layout: .macOSSpacePage,
+                    searchText: page.$passwordSearchText,
+                    fixedSpaceID: page.space.id
+                ))
+        })
     static let extensions = BrowserSpaceSettingsTab(
-        kind: .extensions, name: "extensions", title: "Extensions",
+        name: "extensions", title: "Extensions",
         searchTerms: "extensions add-ons Chrome Web Store install remove", destination: .extensions,
-        requiredCapability: .extensions)
+        requiredCapability: .extensions,
+        pane: { page in
+            AnyView(
+                BrowserEngineExtensionSettingsPane(
+                    browser: page.browser, spaceAccess: page.spaceAccess, spaceID: page.space.id))
+        })
 
     /// Every page, in tab-bar order.
     static let all: [BrowserSpaceSettingsTab] = [appearance, browsing, privacy, passwords, extensions]
 
     // MARK: - Variables
 
-    let kind: Kinds
     let name: String
     let title: LocalizedStringResource
 
@@ -55,20 +79,24 @@ struct BrowserSpaceSettingsTab: Hashable, Identifiable, Sendable {
     /// The engine capability the page's subject depends on.
     let requiredCapability: EngineCapability?
 
+    /// The pane the page shows for one Space.
+    let pane: @MainActor @Sendable (BrowserSettingsSpacePage) -> AnyView
+
     var id: String { name }
 
     // MARK: - Initializers
 
     private init(
-        kind: Kinds, name: String, title: LocalizedStringResource, searchTerms: LocalizedStringResource,
-        destination: BrowserSettingsDestination? = nil, requiredCapability: EngineCapability? = nil
+        name: String, title: LocalizedStringResource, searchTerms: LocalizedStringResource,
+        destination: BrowserSettingsDestination? = nil, requiredCapability: EngineCapability? = nil,
+        pane: @escaping @MainActor @Sendable (BrowserSettingsSpacePage) -> AnyView
     ) {
-        self.kind = kind
         self.name = name
         self.title = title
         self.searchTerms = searchTerms
         self.destination = destination
         self.requiredCapability = requiredCapability
+        self.pane = pane
     }
 
     // MARK: - Actions - Lookup
@@ -124,10 +152,4 @@ enum BrowserSettingsSpaceIntent: Equatable, Sendable {
     case rename
     /// A Space just made: name it, then pick where its crest starts.
     case newSpace
-}
-
-/// One row of the Settings sidebar: a settings page, or a Space's page.
-enum BrowserSettingsSidebarItem: Hashable {
-    case destination(BrowserSettingsDestination)
-    case space(UUID)
 }

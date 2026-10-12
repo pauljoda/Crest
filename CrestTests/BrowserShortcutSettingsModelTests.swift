@@ -10,9 +10,8 @@ final class BrowserShortcutSettingsModelTests: XCTestCase {
             key: .character("g"),
             modifiers: [.command, .shift]
         )
-        XCTAssertEqual(
-            fixture.shortcuts.assign(shortcut, to: .newTab),
-            .assigned
+        XCTAssertTrue(
+            fixture.shortcuts.assign(shortcut, to: .newTab) is BrowserShortcutAssigned
         )
 
         fixture.model.record(shortcut, for: .newWindow)
@@ -46,9 +45,8 @@ final class BrowserShortcutSettingsModelTests: XCTestCase {
             key: .character("g"),
             modifiers: [.command, .shift]
         )
-        XCTAssertEqual(
-            fixture.shortcuts.assign(shortcut, to: .newTab),
-            .assigned
+        XCTAssertTrue(
+            fixture.shortcuts.assign(shortcut, to: .newTab) is BrowserShortcutAssigned
         )
 
         fixture.model.record(shortcut, for: .newWindow)

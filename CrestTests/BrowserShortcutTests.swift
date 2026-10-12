@@ -16,8 +16,9 @@ final class BrowserShortcutTests: XCTestCase {
         XCTAssertNil(store.command(for: event, isEnabled: { _ in false }))
         store.clearShortcut(for: .toggleDeveloperToolbar)
         XCTAssertNil(store.command(for: event, isEnabled: { _ in true }))
-        XCTAssertEqual(
-            store.assign(BrowserShortcut(key: .character("i"), modifiers: [.command, .shift]), to: .newTab), .assigned)
+        XCTAssertTrue(
+            store.assign(BrowserShortcut(key: .character("i"), modifiers: [.command, .shift]), to: .newTab)
+                is BrowserShortcutAssigned)
         XCTAssertEqual(store.command(for: event, isEnabled: { _ in true }), .newTab)
     }
 
@@ -30,7 +31,9 @@ final class BrowserShortcutTests: XCTestCase {
                 modifierFlags: [.command], timestamp: 0, windowNumber: 0, context: nil,
                 characters: "=", charactersIgnoringModifiers: "=", isARepeat: false, keyCode: 24))
         XCTAssertEqual(store.command(for: event, isEnabled: { _ in true }), .zoomIn)
-        XCTAssertEqual(store.assign(BrowserShortcut(key: .character("="), modifiers: .command), to: .newTab), .assigned)
+        XCTAssertTrue(
+            store.assign(BrowserShortcut(key: .character("="), modifiers: .command), to: .newTab)
+                is BrowserShortcutAssigned)
         XCTAssertEqual(store.command(for: event, isEnabled: { _ in true }), .newTab)
         XCTAssertNil(store.command(for: event, isEnabled: { $0 != .newTab }))
         store.clearShortcut(for: .newTab)
@@ -48,7 +51,7 @@ final class BrowserShortcutTests: XCTestCase {
     func testShortcutSearchUsesCurrentBindingsAndFindsUnassignedCommands() {
         let store = BrowserShortcutStore()
         let custom = shortcut("g", [.command, .option])
-        XCTAssertEqual(store.assign(custom, to: .newTab), .assigned)
+        XCTAssertTrue(store.assign(custom, to: .newTab) is BrowserShortcutAssigned)
 
         XCTAssertEqual(store.commands(matching: "option g"), [.newTab])
         XCTAssertTrue(store.commands(matching: "unassigned").contains(.duplicateTab))

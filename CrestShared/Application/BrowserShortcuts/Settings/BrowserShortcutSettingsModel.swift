@@ -7,8 +7,8 @@ final class BrowserShortcutSettingsModel {
     private let shortcuts: BrowserShortcutStore
 
     var searchText = ""
-    private(set) var validationIssue: BrowserShortcutValidationIssue?
-    private(set) var pendingConflict: BrowserShortcutPendingConflict?
+    var validationIssue: BrowserShortcutValidationIssue?
+    var pendingConflict: BrowserShortcutPendingConflict?
 
     @ObservationIgnored private var searchProvider: any BrowserShortcutSearchProviding
 
@@ -77,18 +77,7 @@ final class BrowserShortcutSettingsModel {
             return
         }
 
-        switch shortcuts.assign(shortcut, to: command) {
-        case .assigned:
-            validationIssue = nil
-        case .conflict(let commands):
-            pendingConflict = BrowserShortcutPendingConflict(
-                command: command,
-                shortcut: shortcut,
-                conflictingCommands: commands
-            )
-        case .invalid:
-            validationIssue = .invalidShortcut
-        }
+        shortcuts.assign(shortcut, to: command).apply(to: self, recording: shortcut, for: command)
     }
 
     func replacePendingConflict() {

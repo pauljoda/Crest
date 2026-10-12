@@ -4,118 +4,197 @@ import SwiftUI
 ///
 /// macOS presents these in a `NavigationSplitView` sidebar; iOS presents them in a
 /// `NavigationSplitView` or `NavigationStack` sheet. Each shell keeps its own
-/// navigation and pane content — this type owns only the *identity* of a
-/// destination: what it is called, how it is described, which glyph and brand
-/// hue stand for it, and which words find it in search.
+/// navigation and the chrome around a pane. A destination owns its identity —
+/// what it is called, how it is described, which glyph and brand hue stand for
+/// it, and which words find it in search — and the pane it opens.
+///
+/// Each destination carries its pane as a closure over the shell's inputs, which
+/// ``BrowserSettingsDestinationRouter`` holds. A pane that only one platform
+/// hosts, or that differs by platform, says so with `#if os(...)` inside its own
+/// closure, so a new destination is one instance and nothing else.
 ///
 /// `name` is a shipped contract: accessibility identifiers derive from it
 /// (`settings-<name>` rows and `settings-form-<name>` forms), so the names
 /// below cannot change without breaking the automation suites.
 struct BrowserSettingsDestination: Hashable, Identifiable, Sendable {
-    // MARK: - Types
-
-    /// Each destination opens its own pane, so the one place that builds a
-    /// pane switches over the kind.
-    enum Kinds: Sendable {
-        case general
-        case tabs
-        case search
-        case engines
-        case lookAndFeel
-        case links
-        case shortcuts
-        case spaces
-        case sync
-        case privacy
-        case passwords
-        case extensions
-        case featureFlags
-        case advanced
-        case about
-        case agents
-    }
-
     // MARK: - Static Variables
 
     // Each destination wears a template tincture: the templates' main colors
     // first, in list order, then their other colors, so neighbouring rows never
     // share a hue on either platform and read the same in both appearances.
     static let general = BrowserSettingsDestination(
-        kind: .general, name: "general", title: "General", subtitle: "Browsing and startup",
+        name: "general", title: "General", subtitle: "Browsing and startup",
         searchTerms:
             "browser startup default Space typing spelling spell check text editing Picture in Picture video developer toolbar localhost local pages translation system permissions access camera microphone location notifications passkeys files folders downloads allow blocked repair new tab floating sidebar",
-        symbol: "gearshape", tincture: .vigilAsh)
+        symbol: "gearshape", tincture: .vigilAsh,
+        pane: { router in
+            AnyView(BrowserGeneralSettingsPane(browser: router.browser, spaceAccess: router.spaceAccess))
+        })
     static let tabs = BrowserSettingsDestination(
-        kind: .tabs, name: "tabs", title: "Tabs", subtitle: "New, pinned and saved tabs",
+        name: "tabs", title: "Tabs", subtitle: "New, pinned and saved tabs",
         searchTerms:
             "focus switch new tabs follow move between Spaces Command-click middle-click Shift pinned saved close resume restore root URL favicon Split View focus follows mouse pointer sidebar widgets Now Playing media cards",
-        symbol: "square.on.square", tincture: .riverAzure)
+        symbol: "square.on.square", tincture: .riverAzure,
+        pane: { router in AnyView(BrowserTabsSettingsPane(browser: router.browser)) })
     static let search = BrowserSettingsDestination(
-        kind: .search, name: "search", title: "Search", subtitle: "Search engine, command palette and site searches",
+        name: "search", title: "Search", subtitle: "Search engine, command palette and site searches",
         searchTerms:
             "search engine Google suggestions command palette address bar results order top hit blended sections complete addresses inline autocomplete learn choices clear site searches shortcuts Tab YouTube Wikipedia scopes calculator paste and go reasons",
-        symbol: "magnifyingglass", tincture: .sunTenne)
+        symbol: "magnifyingglass", tincture: .sunTenne,
+        pane: { router in AnyView(BrowserSearchSettingsPane(browser: router.browser)) })
     static let lookAndFeel = BrowserSettingsDestination(
-        kind: .lookAndFeel, name: "lookAndFeel", title: "Appearance", subtitle: "Window, tabs, zoom and motion",
+        name: "lookAndFeel", title: "Appearance", subtitle: "Window, tabs, zoom and motion",
         searchTerms:
             "look and feel theme accent color transparency page zoom percentage sidebar left right borderless window fullscreen layout interface animation motion page cards folder highlights counts borders preview density spacing padding scale icons",
-        symbol: "paintpalette", tincture: .lionGules)
+        symbol: "paintpalette", tincture: .lionGules,
+        pane: { router in
+            AnyView(
+                BrowserLookAndFeelSettingsPane(
+                    space: router.browser.shownSpace.map(BrowserSpaceAppearance.init(space:))))
+        })
     static let engines = BrowserSettingsDestination(
-        kind: .engines, name: "engines", title: "Engines", subtitle: "Default engine and website rules",
+        name: "engines", title: "Engines", subtitle: "Default engine and website rules",
         searchTerms: "Chromium WebKit hybrid default browser engine websites rules protected video DRM compatibility",
-        symbol: "cpu", tincture: .riverLapis, isMacOnly: true)
+        symbol: "cpu", tincture: .riverLapis, isMacOnly: true,
+        pane: { router in
+            #if os(macOS)
+                return AnyView(BrowserEngineSettingsPane(core: router.browser.core))
+            #else
+                return AnyView(EmptyView())
+            #endif
+        })
     static let links = BrowserSettingsDestination(
-        kind: .links, name: "links", title: "Links", subtitle: "Quick Window and Peek",
+        name: "links", title: "Links", subtitle: "Quick Window and Peek",
         searchTerms: "external apps Quick Window Peek pinned saved routing open", symbol: "link",
-        tincture: .meadowVert)
+        tincture: .meadowVert,
+        pane: { router in
+            AnyView(
+                BrowserLinkSettingsPane(
+                    browser: router.browser,
+                    spaceAccess: router.spaceAccess
+                ))
+        })
     static let shortcuts = BrowserSettingsDestination(
-        kind: .shortcuts, name: "shortcuts", title: "Shortcuts", subtitle: "Keyboard commands",
+        name: "shortcuts", title: "Shortcuts", subtitle: "Keyboard commands",
         searchTerms: "keyboard keys commands rebind remap Arc hotkeys navigation tabs Spaces page", symbol: "keyboard",
-        tincture: .lionOr, isMacOnly: true)
+        tincture: .lionOr, isMacOnly: true,
+        pane: { router in
+            AnyView(
+                router.shortcuts.map { shortcuts in
+                    BrowserPlatformShortcutSettingsPane(
+                        shortcuts: shortcuts,
+                        requestedSpaceID: router.requestedSpaceID,
+                        requestRevision: router.requestRevision
+                    )
+                })
+        })
     static let spaces = BrowserSettingsDestination(
-        kind: .spaces, name: "spaces", title: "Spaces", subtitle: "Profiles and appearance",
+        name: "spaces", title: "Spaces", subtitle: "Profiles and appearance",
         searchTerms:
             "profile name identity icon color appearance theme search cleanup isolation reorder browsing archive independence folder intensity text color light dark automatic preview",
-        symbol: "square.grid.2x2", tincture: .stormOr)
+        symbol: "square.grid.2x2", tincture: .stormOr,
+        pane: { router in
+            AnyView(
+                BrowserPlatformSpaceSettingsPane(
+                    browser: router.browser,
+                    spaceAccess: router.spaceAccess,
+                    dataDeleter: router.dataDeleter,
+                    requestedSpaceID: router.requestedSpaceID,
+                    requestRevision: router.requestRevision
+                ))
+        })
     static let sync = BrowserSettingsDestination(
-        kind: .sync, name: "sync", title: "Sync", subtitle: "iCloud setup and status",
+        name: "sync", title: "Sync", subtitle: "iCloud setup and status",
         searchTerms: "iCloud CloudKit account upload download conflict status monitor diagnostics pending records",
-        symbol: "arrow.triangle.2.circlepath.icloud", tincture: .winterIce)
+        symbol: "arrow.triangle.2.circlepath.icloud", tincture: .winterIce,
+        pane: { router in AnyView(BrowserSyncSettingsView(browser: router.browser, cloudSync: router.cloudSync)) })
     // The macOS sidebar row cannot fit "Privacy & Permissions" on one line at
     // its compact row height.
     static let privacy = BrowserSettingsDestination(
-        kind: .privacy, name: "privacy", title: "Privacy & Permissions", navigationTitle: "Privacy",
+        name: "privacy", title: "Privacy & Permissions", navigationTitle: "Privacy",
         subtitle: "Site access and data",
         searchTerms: "content blocking ads trackers camera microphone site access history cookies data",
-        symbol: "hand.raised", tincture: .dragonFire)
+        symbol: "hand.raised", tincture: .dragonFire,
+        pane: { router in
+            #if os(macOS)
+                // Each Space's own privacy is a page of that Space.
+                return AnyView(
+                    BrowserSystemPrivacySettingsPane(browser: router.browser, spaceAccess: router.spaceAccess))
+            #else
+                return AnyView(
+                    BrowserPrivacySettingsPane(
+                        browser: router.browser,
+                        downloadCenter: router.downloadCenter,
+                        spaceAccess: router.spaceAccess,
+                        permissionCenter: router.permissionCenter,
+                        contentBlockingErrorDescription:
+                            router.contentBlockingErrorDescription
+                    ))
+            #endif
+        })
     static let passwords = BrowserSettingsDestination(
-        kind: .passwords, name: "passwords", title: "Passwords", subtitle: "Credentials and autofill",
+        name: "passwords", title: "Passwords", subtitle: "Credentials and autofill",
         searchTerms: "credentials autofill iCloud Keychain passkeys synchronization", symbol: "key",
-        tincture: .ironPatina)
+        tincture: .ironPatina,
+        pane: { router in
+            AnyView(
+                BrowserPasswordSettingsPane(
+                    browser: router.browser,
+                    spaceAccess: router.spaceAccess,
+                    layout: router.passwordLayout,
+                    searchText: router.passwordSearchText,
+                    manage: router.managePasswords
+                ))
+        })
     static let extensions = BrowserSettingsDestination(
-        kind: .extensions, name: "extensions", title: "Extensions", subtitle: "Space extensions and permissions",
+        name: "extensions", title: "Extensions", subtitle: "Space extensions and permissions",
         searchTerms: "extensions permissions Chromium Chrome Web Store install copies Spaces",
         symbol: "puzzlepiece.extension", tincture: .meadowMoss,
-        requiredCapability: .extensions)
+        requiredCapability: .extensions,
+        pane: { router in
+            AnyView(BrowserEngineExtensionSettingsPane(browser: router.browser, spaceAccess: router.spaceAccess))
+        })
     static let featureFlags = BrowserSettingsDestination(
-        kind: .featureFlags, name: "featureFlags", title: "Feature Flags", subtitle: "Engine experiments",
+        name: "featureFlags", title: "Feature Flags", subtitle: "Engine experiments",
         searchTerms: "WebKit Chromium experimental preview testable developer stable runtime flags features",
         symbol: "flag.2.crossed", tincture: .sunTerracotta, isMacOnly: true,
-        requiredCapability: .featureFlags)
+        requiredCapability: .featureFlags,
+        pane: { router in
+            AnyView(
+                BrowserEngineRegistration.featureFlagsPane(space: router.featureFlagsSpace, browser: router.browser))
+        })
     static let advanced = BrowserSettingsDestination(
-        kind: .advanced, name: "advanced", title: "Advanced", subtitle: "Import, export, and runtime",
+        name: "advanced", title: "Advanced", subtitle: "Import, export, and runtime",
         searchTerms: "import export backup portability data records", symbol: "switch.2",
-        tincture: .stormGunmetal)
+        tincture: .stormGunmetal,
+        pane: { router in
+            AnyView(
+                BrowserAdvancedSettingsPane(
+                    browser: router.browser,
+                    spaceAccess: router.spaceAccess,
+                    setupActions: router.setupActions,
+                    showsMacOSImportRequirement: router.showsMacOSImportRequirement,
+                    openFeatureFlags: router.openFeatureFlags
+                ))
+        })
     static let agents = BrowserSettingsDestination(
-        kind: .agents, name: "agents", title: "Agents", subtitle: "Coding agents and scripts",
+        name: "agents", title: "Agents", subtitle: "Coding agents and scripts",
         searchTerms:
             "agents AI MCP model context protocol coding agents scripts automation Claude Codex Cursor command line terminal",
-        symbol: "sparkles", tincture: .meadowForest, isMacOnly: true)
+        symbol: "sparkles", tincture: .meadowForest, isMacOnly: true,
+        pane: { router in
+            #if os(macOS)
+                return AnyView(BrowserAgentsSettingsPane(core: router.browser.core))
+            #else
+                return AnyView(EmptyView())
+            #endif
+        })
     static let about = BrowserSettingsDestination(
-        kind: .about, name: "about", title: "About", subtitle: "Version, updates, and support",
+        name: "about", title: "About", subtitle: "Version, updates, and support",
         searchTerms:
             "version build updates changelog what's new feedback Reddit GitHub issues roadmap support community",
-        symbol: "info.circle", tincture: .sunDune)
+        symbol: "info.circle", tincture: .sunDune,
+        pane: { _ in AnyView(BrowserAboutSettingsPane()) })
 
     /// Every destination, in catalog order.
     static let all: [BrowserSettingsDestination] = [
@@ -125,7 +204,6 @@ struct BrowserSettingsDestination: Hashable, Identifiable, Sendable {
 
     // MARK: - Variables
 
-    let kind: Kinds
     let name: String
     let title: LocalizedStringResource
 
@@ -157,16 +235,19 @@ struct BrowserSettingsDestination: Hashable, Identifiable, Sendable {
     /// rebindable keyboard commands and WebKit's private feature registry.
     let isMacOnly: Bool
 
+    /// The pane the destination opens, built from the shell's inputs.
+    let pane: @MainActor @Sendable (BrowserSettingsDestinationRouter) -> AnyView
+
     var id: String { name }
 
     // MARK: - Initializers
 
     private init(
-        kind: Kinds, name: String, title: LocalizedStringResource, navigationTitle: LocalizedStringResource? = nil,
+        name: String, title: LocalizedStringResource, navigationTitle: LocalizedStringResource? = nil,
         subtitle: LocalizedStringResource, searchTerms: LocalizedStringResource, symbol: String,
-        tincture: Tincture, isMacOnly: Bool = false, requiredCapability: EngineCapability? = nil
+        tincture: Tincture, isMacOnly: Bool = false, requiredCapability: EngineCapability? = nil,
+        pane: @escaping @MainActor @Sendable (BrowserSettingsDestinationRouter) -> AnyView
     ) {
-        self.kind = kind
         self.name = name
         self.title = title
         self.navigationTitle = navigationTitle ?? title
@@ -176,6 +257,7 @@ struct BrowserSettingsDestination: Hashable, Identifiable, Sendable {
         self.tincture = tincture
         self.isMacOnly = isMacOnly
         self.requiredCapability = requiredCapability
+        self.pane = pane
     }
 
     // MARK: - Actions - Platform capability
