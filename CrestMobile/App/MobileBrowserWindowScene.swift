@@ -231,10 +231,28 @@ struct MobileBrowserWindowScene: View {
         let gateIsActive =
             onboardingProgress.isLaunchGateActive
             && onboardingCoordinator.request.entryPoint == .firstRun
-        return MobileBrowserAutomaticOnboardingPolicy.showsLaunchGate(
+        return Self.showsLaunchGate(
             automaticallyPresentsOnboarding: automaticallyPresentsOnboarding,
             isLaunchGateActive: gateIsActive
         )
+    }
+
+    /// Whether a launch puts up the welcome by itself: always outside an
+    /// isolated test launch, and inside one only when a fixture asks for it.
+    nonisolated static func presentsOnboardingAutomatically(
+        forceOnboarding: Bool,
+        usesIsolatedLaunch: Bool
+    ) -> Bool {
+        forceOnboarding || !usesIsolatedLaunch
+    }
+
+    /// Whether the launch gate replaces the browser: only on an incomplete
+    /// install whose welcome comes up by itself.
+    nonisolated static func showsLaunchGate(
+        automaticallyPresentsOnboarding: Bool,
+        isLaunchGateActive: Bool
+    ) -> Bool {
+        automaticallyPresentsOnboarding && isLaunchGateActive
     }
 
     private func presentAutomaticOnboardingIfNeeded() {

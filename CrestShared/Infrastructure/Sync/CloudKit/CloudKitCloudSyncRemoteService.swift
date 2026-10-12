@@ -10,7 +10,7 @@ actor CloudKitBrowserCloudSyncRemoteService: BrowserCloudSyncRemoteService {
     }
 
     func hasRequiredEntitlement() -> Bool {
-        BrowserPlatformCloudContainerEntitlementPolicy.currentProcessContainsContainer(
+        Self.currentProcessContainsContainer(
             configuration.containerIdentifier
         )
     }

@@ -5,7 +5,7 @@ import XCTest
 final class MobileBrowserOnboardingPolicyTests: XCTestCase {
     func testAutomaticWelcomeIsSuppressedForAnIsolatedTestLaunch() {
         XCTAssertFalse(
-            MobileBrowserAutomaticOnboardingPolicy.shouldPresent(
+            MobileBrowserWindowScene.presentsOnboardingAutomatically(
                 forceOnboarding: false,
                 usesIsolatedLaunch: true
             )
@@ -14,7 +14,7 @@ final class MobileBrowserOnboardingPolicyTests: XCTestCase {
 
     func testExplicitOnboardingFixtureOverridesLaunchIsolation() {
         XCTAssertTrue(
-            MobileBrowserAutomaticOnboardingPolicy.shouldPresent(
+            MobileBrowserWindowScene.presentsOnboardingAutomatically(
                 forceOnboarding: true,
                 usesIsolatedLaunch: true
             )
@@ -23,7 +23,7 @@ final class MobileBrowserOnboardingPolicyTests: XCTestCase {
 
     func testProductionLaunchCanPresentTheAutomaticWelcome() {
         XCTAssertTrue(
-            MobileBrowserAutomaticOnboardingPolicy.shouldPresent(
+            MobileBrowserWindowScene.presentsOnboardingAutomatically(
                 forceOnboarding: false,
                 usesIsolatedLaunch: false
             )
@@ -32,19 +32,19 @@ final class MobileBrowserOnboardingPolicyTests: XCTestCase {
 
     func testLaunchGateOnlyReplacesTheBrowserOnAnIncompleteInstall() {
         XCTAssertTrue(
-            MobileBrowserAutomaticOnboardingPolicy.showsLaunchGate(
+            MobileBrowserWindowScene.showsLaunchGate(
                 automaticallyPresentsOnboarding: true,
                 isLaunchGateActive: true
             )
         )
         XCTAssertFalse(
-            MobileBrowserAutomaticOnboardingPolicy.showsLaunchGate(
+            MobileBrowserWindowScene.showsLaunchGate(
                 automaticallyPresentsOnboarding: true,
                 isLaunchGateActive: false
             )
         )
         XCTAssertFalse(
-            MobileBrowserAutomaticOnboardingPolicy.showsLaunchGate(
+            MobileBrowserWindowScene.showsLaunchGate(
                 automaticallyPresentsOnboarding: false,
                 isLaunchGateActive: true
             )

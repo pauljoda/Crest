@@ -1,7 +1,9 @@
 import Foundation
 import Security
 
-enum BrowserPlatformCloudContainerEntitlementPolicy {
+extension CloudKitBrowserCloudSyncRemoteService {
+    /// Whether this process is entitled to `containerIdentifier`, read the way
+    /// the platform signs it.
     static func currentProcessContainsContainer(
         _ containerIdentifier: String
     ) -> Bool {

@@ -187,8 +187,8 @@ private final class BrowserMobileApplication {
         windowLayouts.adoptLegacyRecords(into: core)
         browser.sweepAtLaunch()
         automaticallyPresentsOnboarding =
-            MobileBrowserAutomaticOnboardingPolicy
-            .shouldPresent(
+            MobileBrowserWindowScene
+            .presentsOnboardingAutomatically(
                 forceOnboarding: forceOnboarding,
                 usesIsolatedLaunch: usesIsolatedLaunch
             )

@@ -3937,6 +3937,10 @@
     "2026-10-12-mobile-layout-own-rules": {
       "category": "internal",
       "message": "Let window sizes, viewports and pagers carry the iPhone and iPad layout"
+    },
+    "2026-10-12-mobile-platform-own-rules": {
+      "category": "internal",
+      "message": "Let the iPhone app's platform pieces hold their own rules"
     }
   }
 }
