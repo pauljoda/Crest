@@ -3985,6 +3985,10 @@
     "2026-10-12-branding-makes-imported-looks": {
       "category": "internal",
       "message": "Let a branding make the looks imported Spaces wear"
+    },
+    "2026-10-12-sidebar-chrome-tabs-own-rules": {
+      "category": "internal",
+      "message": "Let sidebar rows, chrome, tabs, splits and Spaces carry their own rules"
     }
   }
 }

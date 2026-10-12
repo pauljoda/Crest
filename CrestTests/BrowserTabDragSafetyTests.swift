@@ -726,9 +726,7 @@ final class BrowserTabDragSafetyTests: XCTestCase {
         // row highlight and the nesting outline.
         XCTAssertEqual(state.lift?.item, .tab(item))
         XCTAssertTrue(
-            BrowserFolderRowPresentationPolicy.showsDropHighlight(
-                for: state.lift?.item
-            )
+            state.lift?.item.showsFolderDropHighlight ?? false
         )
 
         _ = state.end()

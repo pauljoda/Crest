@@ -1,5 +1,13 @@
 import Foundation
 
+// MARK: - Types
+
+/// Where activating a tab leads: its page, or Settings.
+enum BrowserTabActivationDestination {
+    case page
+    case settings
+}
+
 /// How a window shows Settings: as a tab embedded beside a regular window's
 /// sidebar, or as a sheet over a compact one. Each style opens, presents and
 /// adapts Settings its own way.
@@ -23,8 +31,8 @@ struct MobileBrowserSettingsStyle: Equatable {
                 let source = settings.sheetAssignment
                 settings.dismissSheet()
                 guard let sheetAssignment = source,
-                    BrowserSidebarAccessPolicy.selectedUnlockedSpace(
-                        matching: sheetAssignment, in: settings.browser, accessController: settings.spaceAccess)
+                    settings.browser.selectedUnlockedSpace(
+                        matching: sheetAssignment, accessController: settings.spaceAccess)
                         != nil
                 else { return }
                 settings.openEmbeddedSettings(adopting: sheetState)
@@ -90,7 +98,7 @@ struct MobileBrowserSettingsStyle: Equatable {
     // MARK: - Actions - Settings
 
     /// Where activating a tab showing `content` leads.
-    func destination(for content: BrowserNativeTabContent?) -> BrowserTabActivationPolicy.Destination {
+    func destination(for content: BrowserNativeTabContent?) -> BrowserTabActivationDestination {
         showsSettingsAsSheet && content == .settings ? .settings : .page
     }
 

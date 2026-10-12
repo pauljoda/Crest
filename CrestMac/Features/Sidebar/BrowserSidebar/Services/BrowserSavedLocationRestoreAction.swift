@@ -18,14 +18,11 @@ struct BrowserSavedLocationRestoreAction {
     @discardableResult
     func perform(_ assignment: BrowserTabRuntimeAssignment) -> Bool {
         guard
-            let space = BrowserSidebarAccessPolicy.selectedUnlockedSpace(
+            let space = browser.selectedUnlockedSpace(
                 matching: BrowserSpaceRuntimeAssignment(
                     spaceID: assignment.spaceID,
                     profileID: assignment.profileID
-                ),
-                in: browser,
-                accessController: spaceAccess
-            ),
+                ), accessController: spaceAccess),
             let tab = space.tabs.model(assignment.tabID),
             browser.returnsToSavedAddress(tab.id, in: space.id),
             !pages.containsResidentPage(for: tab.id) || pages.containsResidentPage(matching: assignment)

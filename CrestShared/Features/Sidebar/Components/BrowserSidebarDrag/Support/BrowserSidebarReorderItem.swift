@@ -11,21 +11,18 @@ enum BrowserSidebarReorderItem: Equatable, Sendable {
 
     // MARK: - Variables
 
-    var id: BrowserSidebarReorderItemID {
+    /// The item's payload, which carries every rule that differs by kind.
+    var dragged: any BrowserSidebarDraggedItem {
         switch self {
-        case .tab(let item): .tab(item.tabID)
-        case .folder(let item): .folder(item.folderID)
-        case .splitGroup(let item): .splitGroup(item.groupID)
+        case .tab(let item): item
+        case .folder(let item): item
+        case .splitGroup(let item): item
         }
     }
 
-    var selection: BrowserCapturedSelection? {
-        switch self {
-        case .tab(let item): item.selection
-        case .splitGroup(let item): item.selection
-        case .folder(let item): item.selection
-        }
-    }
+    var id: BrowserSidebarReorderItemID { dragged.rowID }
+
+    var selection: BrowserCapturedSelection? { dragged.selection }
 
     var selectionRowIDs: Set<BrowserSidebarReorderItemID> {
         guard let selection else { return [id] }
@@ -54,59 +51,34 @@ enum BrowserSidebarReorderItem: Equatable, Sendable {
 
     private static func folderRowID(_ id: UUID) -> BrowserSidebarReorderItemID { .folder(id) }
 
-    var spaceAssignment: BrowserSpaceRuntimeAssignment {
-        switch self {
-        case .tab(let item): item.spaceAssignment
-        case .folder(let item): item.spaceAssignment
-        case .splitGroup(let item): item.spaceAssignment
-        }
-    }
+    var spaceAssignment: BrowserSpaceRuntimeAssignment { dragged.spaceAssignment }
 
     /// The tabs and folders lifting the row alone picks: a tab, every member
     /// of a split, or a folder with all it holds.
-    var rowPicks: (tabIDs: [UUID], folderIDs: [UUID]) {
-        switch self {
-        case .tab(let tab): ([tab.tabID], [])
-        case .splitGroup(let group): (group.memberTabIDs, [])
-        case .folder(let folder): ([], [folder.folderID])
-        }
-    }
+    var rowPicks: (tabIDs: [UUID], folderIDs: [UUID]) { dragged.rowPicks }
 
     /// The pick that stands for the row in the window's selection: the tab,
     /// the first member of a split, or the folder.
-    var firstSelectionID: BrowserSelectionItemID? {
-        switch self {
-        case .tab(let tab): .tab(tab.tabID)
-        case .splitGroup(let group): group.memberTabIDs.first.map(BrowserSelectionItemID.tab)
-        case .folder(let folder): .folder(folder.folderID)
-        }
-    }
+    var firstSelectionID: BrowserSelectionItemID? { dragged.firstSelectionID }
 
     /// Whether the lift's art takes the shape of where it would land. A tab
     /// morphs between its row, the pinned tile and the page card; a folder or
     /// a split keeps its own art.
-    var morphsIntoTarget: Bool {
-        switch self {
-        case .tab: true
-        case .folder, .splitGroup: false
-        }
-    }
+    var morphsIntoTarget: Bool { dragged.morphsIntoTarget }
+
+    /// Whether a collapsed folder's header lights up the way a row does when
+    /// this lift would land inside it.
+    var showsFolderDropHighlight: Bool { dragged.showsFolderDropHighlight }
+
+    /// Whether a folder's header wears an outline around the whole row when
+    /// this lift would land inside it.
+    var showsFolderNestOutline: Bool { dragged.showsFolderNestOutline }
 
     // MARK: - Actions - Lifting
 
     /// The item lifted with the window's selection `request`.
     func selecting(_ request: BrowserCapturedSelection?) -> Self {
-        switch self {
-        case .tab(var item):
-            item.selection = request
-            return .tab(item)
-        case .splitGroup(var item):
-            item.selection = request
-            return .splitGroup(item)
-        case .folder(var item):
-            item.selection = request
-            return .folder(item)
-        }
+        dragged.selecting(request)
     }
 
     /// The selection lifting the row alone carries, from what the core says
@@ -116,19 +88,7 @@ enum BrowserSidebarReorderItem: Equatable, Sendable {
     /// held then drops only while it holds them still; the core refuses a
     /// selection whose tabs changed.
     func rowSelection(from selected: SelectedTabs) -> TabSelection? {
-        switch self {
-        case .tab:
-            return selected.selection
-        case .splitGroup(let group):
-            guard selected.members.map(\.id) == group.memberTabIDs,
-                selected.members.allSatisfy({ $0.splitGroupID == group.groupID })
-            else { return nil }
-            return selected.selection
-        case .folder(let folder):
-            guard let snapshot = folder.memberTabIDs else { return selected.selection }
-            return TabSelection(
-                tabIDs: selected.selection.tabIDs, folderIDs: selected.selection.folderIDs, memberTabIDs: snapshot)
-        }
+        dragged.rowSelection(from: selected)
     }
 
     /// Whether the row still stands in `space` where it was lifted from, in
@@ -138,19 +98,7 @@ enum BrowserSidebarReorderItem: Equatable, Sendable {
     func stands(
         in space: SpaceModel, section: BrowserSidebarReorderSection, parentItemID: BrowserSidebarReorderItemID?
     ) -> Bool {
-        switch self {
-        case .tab(let tabItem):
-            guard let tab = space.tabs.model(tabItem.tabID),
-                space.shownSplit(containing: tab.id).map(BrowserSidebarReorderItemID.splitGroup) == parentItemID
-            else { return false }
-            return section == .tabs(placement: tab.placement, folderID: tab.folderID)
-        case .folder(let folderItem):
-            return space.folders.model(folderItem.folderID)?.reorderSection == section
-        case .splitGroup(let groupItem):
-            let members = space.splitMembers(of: groupItem.groupID)
-            guard let first = members.first, members.map(\.id) == groupItem.memberTabIDs else { return false }
-            return section == .tabs(placement: first.placement, folderID: first.folderID)
-        }
+        dragged.stands(in: space, section: section, parentItemID: parentItemID)
     }
 
     // MARK: - Actions - Targets
@@ -167,28 +115,14 @@ enum BrowserSidebarReorderItem: Equatable, Sendable {
             if case .tabs = section { return true }
             return selection.hasFolders
         }
-        switch self {
-        case .tab:
-            if case .tabs = section { return true }
-            return false
-        case .splitGroup:
-            guard case .tabs(let placement, _) = section else { return false }
-            return placement.holdsSplits
-        case .folder:
-            guard case .tabs(let placement, _) = section else { return true }
-            return placement.holdsFolders
-        }
+        return dragged.isAcceptedAlone(by: section)
     }
 
     /// Whether dropping the item on the open tab `tabID` may make a folder
     /// around it: the tab is not one the item carries.
     func foldsAround(_ tabID: UUID) -> Bool {
         if let selection { return !selection.ids.contains(tabID) }
-        switch self {
-        case .tab(let tab): return tab.tabID != tabID
-        case .splitGroup(let group): return !group.memberTabIDs.contains(tabID)
-        case .folder: return false
-        }
+        return dragged.foldsAroundAlone(tabID)
     }
 
     /// Whether the item may join the cards the content area for `assignment`
@@ -200,10 +134,7 @@ enum BrowserSidebarReorderItem: Equatable, Sendable {
     /// elsewhere is refused here rather than relocated first.
     func joinsCards(shownIn assignment: BrowserSpaceRuntimeAssignment) -> Bool {
         if selection != nil { return true }
-        switch self {
-        case .tab, .splitGroup: return spaceAssignment == assignment
-        case .folder: return false
-        }
+        return dragged.joinsCardsAlone(shownIn: assignment)
     }
 }
 

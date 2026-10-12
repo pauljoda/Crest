@@ -17,13 +17,13 @@ struct BrowserSpaceSwipeModifier: ViewModifier {
 
     private var dragGesture: some Gesture {
         DragGesture(
-            minimumDistance: BrowserSpaceSwipePolicy.minimumDragRecognitionDistance,
+            minimumDistance: BrowserSpaceSwipeDirection.minimumDragRecognitionDistance,
             coordinateSpace: .local
         )
         .onEnded { value in
             guard
-                let direction = BrowserSpaceSwipePolicy.direction(
-                    for: value.predictedEndTranslation,
+                let direction = BrowserSpaceSwipeDirection(
+                    translation: value.predictedEndTranslation,
                     layoutDirection: layoutDirection
                 )
             else { return }

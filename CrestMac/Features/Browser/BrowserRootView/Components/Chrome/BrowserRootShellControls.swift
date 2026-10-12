@@ -56,11 +56,9 @@ struct BrowserRootShellControls: View {
     /// Where the docked sidebar's resize handle sits: at the sidebar's edge,
     /// on whichever side the sidebar is.
     private var resizeHandleOffset: CGFloat {
-        BrowserChromeDirectionPolicy.leadingOffset(
+        layoutDirection.leadingOffset(
             (model.sidebarWidth - BrowserRootMetrics.sidebarResizeHandleOffset)
-                * (sidebarEdge == .leading ? 1 : -1),
-            layoutDirection: layoutDirection
-        )
+                * (sidebarEdge == .leading ? 1 : -1))
     }
 
     private var interactionCapabilities: BrowserInteractionCapabilities {

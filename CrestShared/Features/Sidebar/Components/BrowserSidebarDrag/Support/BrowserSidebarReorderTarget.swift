@@ -1,6 +1,18 @@
 import CoreGraphics
 import Foundation
 
+// MARK: - Types
+
+/// A drop a target makes of a lift: the core's intent, the Space the window
+/// follows the lift to, if any, and whether the lift leaves its Space.
+struct BrowserSidebarDrop {
+    let intent: any SidebarDrop
+    var following: SpaceModel? = nil
+    /// Whether the lift leaves the Space it was lifted in, so a selection it
+    /// carried is let go rather than kept selected where it landed.
+    var leavesSpace = false
+}
+
 /// Where a lifted sidebar item will land when released.
 struct BrowserSidebarReorderTarget: Equatable, Sendable {
     // MARK: - Types
@@ -48,60 +60,58 @@ struct BrowserSidebarReorderTarget: Equatable, Sendable {
 
         // MARK: - Actions - Dropping
 
-        /// The core's drop intent for landing `selection`, lifted in `space`
-        /// of `browser`'s window, here, and the Space the window follows the
-        /// lift to, if any; nil where the target no longer stands.
+        /// The drop that lands `selection`, lifted in `space` of `browser`'s
+        /// window, here: the core's intent, the Space the window follows the
+        /// lift to, if any, and whether it leaves its Space; nil where the
+        /// target no longer stands.
         @MainActor
         func drop(
             lifting selection: TabSelection, in space: SpaceModel, from browser: BrowserStore
-        ) -> (intent: any SidebarDrop, following: SpaceModel?)? {
+        ) -> BrowserSidebarDrop? {
             let (workspaceID, windowID, spaceID) = (browser.family.workspaceID, browser.windowID, space.id)
             switch self {
             case .insert(let section, let beforeID, _):
                 let (placement, folderID) = section.list(in: space)
-                return (
-                    DropIntoList(
+                return BrowserSidebarDrop(
+                    intent: DropIntoList(
                         workspaceID: workspaceID, windowID: windowID, spaceID: spaceID, selection: selection,
                         section: placement, folderID: folderID,
                         beforeTabID: beforeID?.anchorTabID(in: space, lifted: Set(selection.memberTabIDs)),
-                        beforeFolderID: beforeID?.folderID),
-                    nil
+                        beforeFolderID: beforeID?.folderID)
                 )
             case .intoFolder(let folderID):
                 guard let folder = space.folders.model(folderID) else { return nil }
-                return (
-                    DropIntoList(
+                return BrowserSidebarDrop(
+                    intent: DropIntoList(
                         workspaceID: workspaceID, windowID: windowID, spaceID: spaceID, selection: selection,
-                        section: folder.location, folderID: folderID, beforeTabID: nil, beforeFolderID: nil),
-                    nil
+                        section: folder.location, folderID: folderID, beforeTabID: nil, beforeFolderID: nil)
                 )
             case .space(let destination):
                 guard let destinationSpace = browser.spaceModel(destination.spaceID),
                     destinationSpace.profileID == destination.profileID
                 else { return nil }
                 let follows = browser.linkPreferences.preferences.followsMovedTabs
-                return (
-                    DropOnSpace(
+                return BrowserSidebarDrop(
+                    intent: DropOnSpace(
                         workspaceID: workspaceID, windowID: windowID, spaceID: spaceID, selection: selection,
                         destinationSpaceID: destination.spaceID, follows: follows),
-                    follows ? destinationSpace : nil
+                    following: follows ? destinationSpace : nil,
+                    leavesSpace: true
                 )
             case .splitInsert(let assignment, let index):
                 // The cards on show are the shown tab's split, so the shown tab is
                 // the one the lift joins, and a window showing one tab makes a split.
                 guard assignment.spaceID == spaceID, let shown = browser.selectedTabID(in: spaceID) else { return nil }
-                return (
-                    DropIntoSplit(
+                return BrowserSidebarDrop(
+                    intent: DropIntoSplit(
                         workspaceID: workspaceID, windowID: windowID, spaceID: spaceID, selection: selection,
-                        targetTabID: shown, index: index),
-                    nil
+                        targetTabID: shown, index: index)
                 )
             case .createCurrentFolder(let tabID):
-                return (
-                    DropAroundTab(
+                return BrowserSidebarDrop(
+                    intent: DropAroundTab(
                         workspaceID: workspaceID, windowID: windowID, spaceID: spaceID, selection: selection,
-                        tabID: tabID),
-                    nil
+                        tabID: tabID)
                 )
             }
         }

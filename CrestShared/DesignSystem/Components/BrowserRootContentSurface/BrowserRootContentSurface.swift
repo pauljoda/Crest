@@ -4,6 +4,9 @@ import SwiftUI
 /// whether their interior is opaque; clipping, the theme seam, and elevation
 /// remain owned here.
 struct BrowserRootContentSurface<Content: View>: View {
+    private static var boundaryStrokeWidth: CGFloat { 0.5 }
+    private static var boundaryStrokeOpacity: Double { CrestOpacity.border }
+
     let cornerRadius: CGFloat
     let seamWidth: CGFloat
     let frameInsets: EdgeInsets
@@ -59,10 +62,10 @@ struct BrowserRootContentSurface<Content: View>: View {
                 CrestLiftedSurfaceShadow(
                     cornerRadius: cornerRadius,
                     opacity: showsBoundary
-                        ? BrowserPageSurfacePolicy.shadowOpacity
+                        ? CrestLiftedSurfaceShadow.pageShadowOpacity
                         : 0,
-                    radius: BrowserPageSurfacePolicy.shadowRadius,
-                    yOffset: BrowserPageSurfacePolicy.shadowYOffset
+                    radius: CrestLiftedSurfaceShadow.pageShadowRadius,
+                    yOffset: CrestLiftedSurfaceShadow.pageShadowYOffset
                 )
             }
             .overlay {
@@ -72,11 +75,10 @@ struct BrowserRootContentSurface<Content: View>: View {
                             showsBoundary
                                 ? showsFallbackBorder
                                     ? CrestOpacity.border
-                                    : BrowserPageSurfacePolicy
-                                        .boundaryStrokeOpacity
+                                    : Self.boundaryStrokeOpacity
                                 : 0
                         ),
-                        lineWidth: BrowserPageSurfacePolicy.boundaryStrokeWidth,
+                        lineWidth: Self.boundaryStrokeWidth,
                         antialiased: true
                     )
                     .allowsHitTesting(false)

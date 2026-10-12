@@ -1,15 +1,5 @@
 import SwiftUI
 
-enum BrowserIconPopoverPlacementPolicy {
-    /// Compact windows let the system choose an edge that fits the picker.
-    static func preferredArrowEdge(
-        horizontalSizeClass: UserInterfaceSizeClass?,
-        regularArrowEdge: Edge?
-    ) -> Edge? {
-        horizontalSizeClass == .compact ? nil : regularArrowEdge
-    }
-}
-
 extension View {
     func browserIconCustomizationPopover(
         _ presentation: BrowserIconCustomizationPresentation,
@@ -32,12 +22,7 @@ private struct BrowserIconCustomizationPopoverModifier: ViewModifier {
 
     @ViewBuilder
     func body(content: Content) -> some View {
-        if let preferredArrowEdge =
-            BrowserIconPopoverPlacementPolicy.preferredArrowEdge(
-                horizontalSizeClass: horizontalSizeClass,
-                regularArrowEdge: arrowEdge
-            )
-        {
+        if let preferredArrowEdge {
             content.popover(
                 isPresented: presentation.isPresented,
                 attachmentAnchor: .rect(.bounds),
@@ -53,6 +38,11 @@ private struct BrowserIconCustomizationPopoverModifier: ViewModifier {
                 popoverContent
             }
         }
+    }
+
+    /// Compact windows let the system choose an edge that fits the picker.
+    private var preferredArrowEdge: Edge? {
+        horizontalSizeClass == .compact ? nil : arrowEdge
     }
 
     private var popoverContent: some View {

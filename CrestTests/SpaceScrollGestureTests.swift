@@ -8,13 +8,13 @@ import XCTest
 final class SpaceScrollGestureTests: XCTestCase {
     func testOneHorizontalIntentPerGesturePreservesVerticalAndOutsideScrolling() {
         struct Event {
-            let input: SpaceScrollGesturePolicy.Input
+            let input: SpaceScrollGestureRecognizer.Input
             var isInside = true
         }
         struct Scenario {
             let name: String
             let events: [Event]
-            let decisions: [SpaceScrollGesturePolicy.Decision]
+            let decisions: [SpaceScrollGestureRecognizer.Decision]
         }
 
         let scenarios: [Scenario] = [
@@ -100,8 +100,8 @@ final class SpaceScrollGestureTests: XCTestCase {
 
         for scenario in scenarios {
             XCTContext.runActivity(named: scenario.name) { _ in
-                var policy = SpaceScrollGesturePolicy()
-                let actual = scenario.events.map { policy.consume($0.input, isInside: $0.isInside) }
+                var recognizer = SpaceScrollGestureRecognizer()
+                let actual = scenario.events.map { recognizer.consume($0.input, isInside: $0.isInside) }
                 XCTAssertEqual(actual, scenario.decisions)
             }
         }
@@ -508,8 +508,8 @@ final class SpaceScrollGestureTests: XCTestCase {
 
     private func input(
         _ x: CGFloat, y: CGFloat = 0, at timestamp: TimeInterval,
-        phase: SpaceScrollGesturePolicy.Phase = .none, precise: Bool = true, momentum: Bool = false
-    ) -> SpaceScrollGesturePolicy.Input {
+        phase: SpaceScrollGestureRecognizer.Phase = .none, precise: Bool = true, momentum: Bool = false
+    ) -> SpaceScrollGestureRecognizer.Input {
         .init(deltaX: x, deltaY: y, timestamp: timestamp, isPrecise: precise, phase: phase, isMomentum: momentum)
     }
 }

@@ -59,7 +59,7 @@ struct BrowserSplitPageSurface: View {
         return .constant(
             BrowserSplitWidthTransaction(
                 persistedFractions:
-                    BrowserSplitLayoutSeedPolicy.fractions(persisted: persisted, memberCount: members.count)))
+                    BrowserSplitColumnLayout.seedFractions(persisted: persisted, memberCount: members.count)))
     }
 
     var body: some View {
@@ -355,7 +355,7 @@ struct BrowserSplitPageSurface: View {
     /// atmosphere through it while loaded neighbours keep their page background.
     private func usesTransparentInnerSurface(_ member: TabStateModel) -> Bool {
         let page = model.pages.surfacePage(for: member.id, in: space, accessController: model.spaceAccess)
-        return BrowserPageSurfacePolicy.usesTransparentInnerSurface(
+        return BrowserPageSurfacePresentation.usesTransparentInnerSurface(
             isStartPage: member.surface == .startPage,
             hasActivePage: page != nil,
             completedNavigationCount: page?.completedNavigationCount ?? 0

@@ -42,21 +42,13 @@ struct MobileDownloadsView: View {
     private func downloadItem(
         for action: BrowserUtilityDownloadAction
     ) -> DownloadState? {
-        BrowserSidebarUtilityActionPolicy.downloadItem(
-            for: action,
-            matching: assignment,
-            in: browser,
-            accessController: spaceAccess,
-            itemsForProfile: pages.downloadCenter.items(for:)
-        )
+        action.downloadItem(
+            matching: assignment, in: browser, accessController: spaceAccess,
+            itemsForProfile: pages.downloadCenter.items(for:))
     }
 
     private var space: SpaceModel? {
-        BrowserSidebarAccessPolicy.selectedUnlockedSpace(
-            matching: assignment,
-            in: browser,
-            accessController: spaceAccess
-        )
+        browser.selectedUnlockedSpace(matching: assignment, accessController: spaceAccess)
     }
 }
 
@@ -71,11 +63,7 @@ extension MobileDownloadsView: BrowserDownloadActionPerformer {
 
     func retryDownload(_ item: DownloadState, matching assignment: BrowserSpaceRuntimeAssignment) {
         pages.downloadCenter.retryAutomaticDownload(item.id, matching: assignment) { expectedAssignment in
-            BrowserSidebarAccessPolicy.unlockedSpace(
-                matching: expectedAssignment,
-                in: browser,
-                accessController: spaceAccess
-            ) != nil
+            browser.unlockedSpace(matching: expectedAssignment, accessController: spaceAccess) != nil
         }
     }
 

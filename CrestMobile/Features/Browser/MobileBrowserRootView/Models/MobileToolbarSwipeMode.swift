@@ -1,6 +1,6 @@
 /// What the horizontal toolbar swipe is for on this build.
 ///
-/// One gesture, one owner. `BrowserSpaceSwipePolicy` still decides whether a
+/// One gesture, one owner. `BrowserSpaceSwipeDirection` still decides whether a
 /// drag counts as a deliberate horizontal swipe and which way it points; the
 /// mode decides what that swipe is *for*, which as of 0.4 is Split View.
 ///

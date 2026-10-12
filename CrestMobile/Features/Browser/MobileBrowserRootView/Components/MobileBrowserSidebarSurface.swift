@@ -214,11 +214,7 @@ struct MobileBrowserSidebarSurface: View {
     func presentSpaceSheet(_ surface: BrowserUtilitySurface) {
         guard utilityPresentationStyle == .sheet,
             let assignment = selectedSpaceAssignment,
-            BrowserSidebarAccessPolicy.selectedUnlockedSpace(
-                matching: assignment,
-                in: browser,
-                accessController: spaceAccess
-            ) != nil
+            browser.selectedUnlockedSpace(matching: assignment, accessController: spaceAccess) != nil
         else { return }
         presentedSpaceSheet = MobileBrowserSidebarSpaceSheet(
             surface: surface,

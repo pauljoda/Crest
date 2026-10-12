@@ -70,7 +70,9 @@ struct BrowserWebContentView: View {
         let browser = browser
         let pages = pages
         return {
-            BrowserTabActivationPolicy.activate(tabID, selectTab: browser.selectTab, presentPage: { pages.select() })
+            // Select the tab before presenting its page.
+            browser.selectTab(tabID)
+            pages.select()
         }
     }
 

@@ -27,7 +27,7 @@ struct BrowserPinnedTabsDropSection: View {
     }
 
     private var metrics: BrowserSidebarTabListMetrics {
-        BrowserSidebarInteractionPolicy.tabListMetrics(context.capabilities)
+        context.capabilities.tabListMetrics
     }
 }
 

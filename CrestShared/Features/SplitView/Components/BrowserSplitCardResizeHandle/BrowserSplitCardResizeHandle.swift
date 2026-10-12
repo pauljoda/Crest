@@ -101,9 +101,6 @@ struct BrowserSplitCardResizeHandle: View {
     }
 
     private func semanticTranslation(_ translation: CGFloat) -> CGFloat {
-        BrowserChromeDirectionPolicy.semanticHorizontalTranslation(
-            translation,
-            layoutDirection: layoutDirection
-        )
+        layoutDirection.semanticHorizontalTranslation(translation)
     }
 }

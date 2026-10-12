@@ -324,7 +324,7 @@ extension BrowserRootModel {
 
 extension BrowserRootModel {
     var sidebarPresentation: BrowserSidebarPresentation {
-        BrowserSidebarPresentationPolicy.presentation(
+        BrowserSidebarPresentation(
             columnVisibility: chrome.columnVisibility,
             isFloatingSidebarPresented: isFloatingSidebarPresented
         )
@@ -647,11 +647,7 @@ extension BrowserRootModel {
     func isPaletteSourceAvailable(
         _ source: BrowserTabRuntimeAssignment
     ) -> Bool {
-        BrowserCommandPaletteActionPolicy.isSourceAvailable(
-            source,
-            in: browser,
-            accessController: spaceAccess
-        )
+        browser.isPaletteSourceAvailable(source, accessController: spaceAccess)
     }
 
     @discardableResult
@@ -660,12 +656,7 @@ extension BrowserRootModel {
         to target: BrowserTabRuntimeAssignment
     ) -> Bool {
         guard
-            let destination = BrowserCommandPaletteActionPolicy.target(
-                target,
-                from: source,
-                in: browser,
-                accessController: spaceAccess
-            )
+            let destination = browser.paletteTarget(target, from: source, accessController: spaceAccess)
         else { return false }
         browser.selectSpace(destination.space.id)
         browser.selectTab(destination.tab.id)
@@ -685,11 +676,7 @@ extension BrowserRootModel {
         windows: BrowserMacWindows? = nil
     ) -> Bool {
         guard
-            BrowserCommandPaletteActionPolicy.isSourceAvailable(
-                source,
-                in: browser,
-                accessController: spaceAccess
-            )
+            browser.isPaletteSourceAvailable(source, accessController: spaceAccess)
         else { return false }
         return opening.open(url, from: source, with: BrowserMacPaletteOpener(model: self, mode: mode, windows: windows))
     }

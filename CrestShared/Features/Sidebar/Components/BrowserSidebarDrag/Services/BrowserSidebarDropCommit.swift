@@ -56,12 +56,12 @@ struct BrowserSidebarDropCommit {
     /// A lifted selection stays selected where it landed, its copies in place
     /// of the tabs that stayed behind; one that left the Space is let go.
     private func reselect(
-        after drop: (intent: any SidebarDrop, following: SpaceModel?), lifted item: BrowserSidebarReorderItem,
+        after drop: BrowserSidebarDrop, lifted item: BrowserSidebarReorderItem,
         copies: [TabCopied]
     ) {
         guard let captured = item.selection else { return }
         let selection = browser.tabMultiSelection
-        if drop.intent is DropOnSpace {
+        if drop.leavesSpace {
             selection.clear()
             return
         }

@@ -47,7 +47,7 @@ struct SpaceSidebarTabListScroll<Background: View, Content: View>: View {
             .environment(\.browserSidebarScrollRegionID, scrollRegionID)
             .modifier(SidebarScrollAffordance(isDragging: sidebarInteraction.sidebarReorderState.isDragging))
             .scrollClipDisabled(
-                !BrowserSidebarScrollLayoutPolicy.clipsScrollableRegion
+                !BrowserSidebarReorderVisuals.clipsScrollableRegionWhenIdle
             )
             .background {
                 BrowserSidebarScrollViewportObserver(

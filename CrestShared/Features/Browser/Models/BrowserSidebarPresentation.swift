@@ -1,4 +1,4 @@
-import CoreGraphics
+import SwiftUI
 
 /// Where a window's sidebar is: beside the page, floating over it, or put away.
 struct BrowserSidebarPresentation: Hashable, Sendable {
@@ -13,6 +13,9 @@ struct BrowserSidebarPresentation: Hashable, Sendable {
     }
 
     // MARK: - Static Variables
+
+    static let floatingCardInset: CGFloat = 7
+    static let floatingCardCornerRadius: CGFloat = 18
 
     static let docked = BrowserSidebarPresentation(
         kind: .docked, name: "docked", showsSidebar: true, showsWindowControls: true, reservesSidebarWidth: true,
@@ -54,7 +57,21 @@ struct BrowserSidebarPresentation: Hashable, Sendable {
         self.toggles = toggles
     }
 
+    /// The place a window's split-view column visibility and floating state
+    /// put its sidebar.
+    init(columnVisibility: NavigationSplitViewVisibility, isFloatingSidebarPresented: Bool) {
+        guard columnVisibility == .detailOnly else {
+            self = .docked
+            return
+        }
+        self = isFloatingSidebarPresented ? .floating : .collapsed
+    }
+
     // MARK: - Actions - Layout
+
+    static func floatingHoverRegionWidth(sidebarWidth: CGFloat) -> CGFloat {
+        sidebarWidth + (floatingCardInset * 2)
+    }
 
     func reservedWidth(
         for sidebarWidth: CGFloat,

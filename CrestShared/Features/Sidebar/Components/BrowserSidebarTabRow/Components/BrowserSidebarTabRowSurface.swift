@@ -20,7 +20,7 @@ import UniformTypeIdentifiers
 /// same identity, and both are presentation transforms over the exact view the
 /// drag interaction lifts. Two of them, or one with no partner to pair with, and
 /// the lift stops starting — which is what
-/// `BrowserSidebarInteractionPolicy.usesMatchedGeometryPromotionDestination` and
+/// `BrowserInteractionCapabilities.usesMatchedGeometryPromotionDestination` and
 /// `BrowserInteractionCapabilities.pairsRowWithPromotedSurface` exist to keep
 /// from happening.
 struct BrowserSidebarTabRowSurface: ViewModifier {
@@ -46,8 +46,8 @@ struct BrowserSidebarTabRowSurface: ViewModifier {
             )
             .padding(
                 .vertical,
-                BrowserSidebarDensityPolicy.rowSeparation(
-                    scale: tabScale, hasBorders: BrowserDeviceAppearanceStore.shared.tabs.borders == .all) / 2
+                BrowserSidebarDensity(tabScale).rowSeparation(
+                    hasBorders: BrowserDeviceAppearanceStore.shared.tabs.borders == .all) / 2
             )
             .browserTabPromotionDestination(
                 id: configuration.promotionID,
@@ -159,19 +159,13 @@ struct BrowserSidebarTabRowSurface: ViewModifier {
     }
 
     private var minHeight: CGFloat {
-        let base = BrowserSidebarInteractionPolicy.rowMinHeight(
-            configuration.capabilities,
-            dynamicTypeSize: dynamicTypeSize
-        )
-        return BrowserSidebarDensityPolicy.rowHeight(
-            base: base, scale: dynamicTypeSize.isAccessibilitySize ? max(1, tabScale) : tabScale,
-            touch: configuration.capabilities.supportsTouch)
+        let base = configuration.capabilities.rowMinHeight(dynamicTypeSize: dynamicTypeSize)
+        return BrowserSidebarDensity(dynamicTypeSize.isAccessibilitySize ? max(1, tabScale) : tabScale).rowHeight(
+            base: base, touch: configuration.capabilities.supportsTouch)
     }
 
     private var usesMatchedGeometryPromotion: Bool {
-        BrowserSidebarInteractionPolicy.usesMatchedGeometryPromotionDestination(
-            configuration.capabilities
-        )
+        configuration.capabilities.usesMatchedGeometryPromotionDestination
     }
 }
 

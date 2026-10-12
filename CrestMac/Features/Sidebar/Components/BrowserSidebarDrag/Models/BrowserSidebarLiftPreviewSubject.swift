@@ -16,65 +16,45 @@ enum BrowserSidebarLiftPreviewSubject: Equatable {
     case splitGroup([TabStateModel])
     case selection([BrowserSidebarSelectionPreviewRow])
 
+    // MARK: - Variables
+
+    /// How this kind of subject's art is laid out.
+    private var layout: any BrowserSidebarLiftPreviewLayout {
+        switch self {
+        case .tab: BrowserSidebarTabLiftPreviewLayout()
+        case .folder: BrowserSidebarFolderLiftPreviewLayout()
+        case .splitGroup(let members): BrowserSidebarSplitLiftPreviewLayout(memberCount: members.count)
+        case .selection(let rows): BrowserSidebarSelectionLiftPreviewLayout(rows: rows)
+        }
+    }
+
     // MARK: - Actions - Layout
 
     /// The size the subject's art is laid out at for `lift`, before any
     /// scaling: a tab takes the shape it is morphing into, and every other
     /// subject the width of a folder row and the height of its source.
     func artSize(of lift: BrowserSidebarFloatingLift, rowWidth: CGFloat, pinnedSize: CGSize) -> CGSize {
-        switch self {
-        case .tab:
-            lift.shape.size(rowWidth: rowWidth, pinnedSize: pinnedSize)
-        case .folder, .splitGroup, .selection:
-            CGSize(width: BrowserFolderDragPreviewLayout.width(for: rowWidth), height: max(lift.sourceSize.height, 1))
-        }
+        layout.artSize(of: lift, rowWidth: rowWidth, pinnedSize: pinnedSize)
     }
 
     /// The point of the art that stays under the pointer: where a selection
     /// was grabbed, or the lift's anchor in any other art of `artSize`.
     func displayAnchor(of lift: BrowserSidebarFloatingLift, artSize: CGSize) -> CGSize {
-        switch self {
-        case .selection:
-            lift.grabOffset
-        case .tab, .folder, .splitGroup:
-            CGSize(width: lift.anchorFraction.x * artSize.width, height: lift.anchorFraction.y * artSize.height)
-        }
+        layout.displayAnchor(of: lift, artSize: artSize)
     }
 
     /// How much the art of `artSize` is scaled: a selection never, any other
     /// art to fill `landedFrame` once it lands, and by the lift's rise while
     /// it is held.
     func scale(artSize: CGSize, landedFrame: CGRect?, reduceMotion: Bool) -> CGSize {
-        switch self {
-        case .selection:
-            return CGSize(width: 1, height: 1)
-        case .tab, .folder, .splitGroup:
-            if let landedFrame {
-                return CGSize(
-                    width: landedFrame.width / max(artSize.width, 1),
-                    height: landedFrame.height / max(artSize.height, 1))
-            }
-            let value = BrowserSidebarReorderVisuals.liftScale.unlessReducingMotion(reduceMotion)
-            return CGSize(width: value, height: value)
-        }
+        layout.scale(artSize: artSize, landedFrame: landedFrame, reduceMotion: reduceMotion)
     }
 
     /// Where the art of `lift` is drawn once it lands in `landedFrame`: a
     /// selection keeps its grab on the lead row of its gathered stack, and
     /// any other art its anchor.
     func landedPointer(of lift: BrowserSidebarFloatingLift, in landedFrame: CGRect, pinnedSize: CGSize) -> CGPoint {
-        switch self {
-        case .selection(let rows):
-            let leadOffset = BrowserSidebarSelectionPreviewRow.stackOffset(
-                of: lift.item.id, in: rows, shape: lift.shape, pinnedSize: pinnedSize)
-            return CGPoint(
-                x: landedFrame.minX + lift.grabOffset.width,
-                y: landedFrame.minY + leadOffset + lift.grabOffset.height)
-        case .tab, .folder, .splitGroup:
-            return CGPoint(
-                x: landedFrame.minX + lift.anchorFraction.x * landedFrame.width,
-                y: landedFrame.minY + lift.anchorFraction.y * landedFrame.height)
-        }
+        layout.landedPointer(of: lift, in: landedFrame, pinnedSize: pinnedSize)
     }
 
     /// The extent the preview window covers for the subject of `lift`, grown
@@ -82,31 +62,7 @@ enum BrowserSidebarLiftPreviewSubject: Equatable {
     /// selection by its rows both where they were and gathered under the
     /// grab, and a split by its member lines.
     func drawingExtent(from base: CGSize, of lift: BrowserSidebarFloatingLift) -> CGSize {
-        let rowSize = BrowserTabDragPreviewLayout.rowSize
-        switch self {
-        case .selection(let rows):
-            guard let lead = rows.first(where: { $0.id == lift.item.id }) ?? rows.first else { return base }
-            var (width, height) = (base.width, base.height)
-            var gatheredHeight: CGFloat = 0
-            for row in rows {
-                let rowWidth = max(
-                    BrowserTabDragPreviewLayout.resolvedRowWidth(lift.rowWidth), row.frame.width,
-                    lift.pinnedTileSize.width)
-                let rowHeight = max(
-                    row.frame.height, rowSize.height, lift.pinnedTileSize.height,
-                    row.isSplit ? CGFloat(row.tabs.count + 1) * rowSize.height : 0)
-                gatheredHeight += rowHeight
-                width = max(width, abs(row.frame.minX - lead.frame.minX) + rowWidth)
-                height = max(height, abs(row.frame.minY - lead.frame.minY) + rowHeight)
-            }
-            width += abs(lift.grabOffset.width)
-            height = max(height, gatheredHeight) + abs(lift.grabOffset.height)
-            return CGSize(width: width, height: height)
-        case .splitGroup(let tabs):
-            return CGSize(width: base.width, height: max(base.height, CGFloat(tabs.count + 1) * rowSize.height))
-        case .tab, .folder:
-            return base
-        }
+        layout.drawingExtent(from: base, of: lift)
     }
 
     // MARK: - Actions - Equality
@@ -204,15 +160,6 @@ extension BrowserSidebarReorderItem {
     func liftPreviewSubject(
         in space: SpaceModel, previewRows: [BrowserSidebarReorderRow]
     ) -> BrowserSidebarLiftPreviewSubject? {
-        switch self {
-        case .tab(let tab):
-            return space.tabs.model(tab.tabID).map(BrowserSidebarLiftPreviewSubject.tab)
-        case .folder(let folder):
-            let rows = BrowserFolderDragPreviewRow.resolve(previewRows, in: space, rootFolderID: folder.folderID)
-            return space.folders.model(folder.folderID).map { .folder($0, rows: rows) }
-        case .splitGroup(let group):
-            let members = space.splitMembers(of: group.groupID)
-            return members.isEmpty ? nil : .splitGroup(members)
-        }
+        dragged.liftPreviewSubject(in: space, previewRows: previewRows)
     }
 }

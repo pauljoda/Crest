@@ -87,9 +87,7 @@ struct BrowserSpaceHeader: View {
     /// the section opens.
     private var identity: some View {
         Group {
-            if BrowserSpaceHeaderIconPolicy.showsDisclosure(
-                isSavedTabsExpanded: isSavedTabsExpanded
-            ) {
+            if !isSavedTabsExpanded {
                 Image(systemName: "chevron.right")
                     .font(
                         .system(
@@ -119,7 +117,7 @@ struct BrowserSpaceHeader: View {
     }
 
     private var metrics: BrowserSpaceHeaderMetrics {
-        BrowserSidebarInteractionPolicy.spaceHeaderMetrics(capabilities)
+        capabilities.spaceHeaderMetrics
     }
 
     private func toggleSavedTabs() {

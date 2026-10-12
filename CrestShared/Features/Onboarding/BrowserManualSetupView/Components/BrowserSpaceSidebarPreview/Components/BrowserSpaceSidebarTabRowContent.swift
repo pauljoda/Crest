@@ -17,7 +17,7 @@ struct BrowserSpaceSidebarTabRowContent: View {
                 tab: tab,
                 favicons: favicons,
                 profileID: profileID,
-                size: BrowserManualSetupSidebarPreviewMetrics.tabIconSize * BrowserSidebarDensityPolicy.scale(tabScale)
+                size: BrowserManualSetupSidebarPreviewMetrics.tabIconSize * BrowserSidebarDensity(tabScale).scale
             )
             Text(tab.shownTitle)
                 .lineLimit(1)
@@ -29,13 +29,12 @@ struct BrowserSpaceSidebarTabRowContent: View {
         )
         .font(
             .system(
-                size: BrowserSidebarDensityPolicy.bodySize(touch: capabilities.supportsTouch)
-                    * BrowserSidebarDensityPolicy.scale(tabScale))
+                size: BrowserSidebarDensity.bodySize(touch: capabilities.supportsTouch)
+                    * BrowserSidebarDensity(tabScale).scale)
         )
         .frame(
-            minHeight: BrowserSidebarDensityPolicy.rowHeight(
-                base: BrowserManualSetupSidebarPreviewMetrics.tabHeight, scale: tabScale,
-                touch: capabilities.supportsTouch)
+            minHeight: BrowserSidebarDensity(tabScale).rowHeight(
+                base: BrowserManualSetupSidebarPreviewMetrics.tabHeight, touch: capabilities.supportsTouch)
         )
         .modifier(
             BrowserTabAppearanceSurface(

@@ -16,7 +16,7 @@ struct BrowserCurrentTabsDivider: View {
     @Environment(\.displayScale) private var displayScale
 
     private var metrics: BrowserSidebarTabListMetrics {
-        BrowserSidebarInteractionPolicy.tabListMetrics(capabilities)
+        capabilities.tabListMetrics
     }
 
     var body: some View {
@@ -76,7 +76,7 @@ struct BrowserCurrentTabsDivider: View {
     }
 
     private var revealsOnHoverOnly: Bool {
-        BrowserSidebarInteractionPolicy.revealsRowControlsOnHoverOnly(capabilities)
+        capabilities.revealsRowControlsOnHoverOnly
     }
 }
 

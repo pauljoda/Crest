@@ -1,6 +1,9 @@
 import SwiftUI
 
 struct PinnedTabGridContent: View {
+    /// The width of the drop target that trails the last pinned tile.
+    private static let trailingTargetWidth = CrestSpacing.extraLarge
+
     @Environment(BrowserSidebarInteractionState.self) private var sidebarInteraction: BrowserSidebarInteractionState?
     let grid: PinnedTabGrid
 
@@ -61,7 +64,7 @@ struct PinnedTabGridContent: View {
         .overlay(alignment: .trailing) {
             if reorderContext != nil, let dragState = grid.dragState, dragState.item != nil {
                 Color.clear
-                    .frame(width: BrowserPinnedDropTargetPolicy.trailingTargetWidth)
+                    .frame(width: Self.trailingTargetWidth)
                     .frame(maxHeight: .infinity)
                     .contentShape(.rect)
                     .accessibilityHidden(true)
@@ -140,8 +143,8 @@ struct PinnedTabGridContent: View {
             .applyingPreferences(width: BrowserChromeLayout.sidebarIdealWidth, touch: capabilities.supportsTouch)
         value.preferredColumns = min(max(pinColumns, 0), 6)
         value.tabScale = tabScale
-        value.tileHeight = BrowserSidebarDensityPolicy.pinHeight(scale: tabScale, touch: capabilities.supportsTouch)
-        value.tileSpacing = BrowserSidebarDensityPolicy.pinSpacing(scale: tabScale)
+        value.tileHeight = BrowserSidebarDensity(tabScale).pinHeight(touch: capabilities.supportsTouch)
+        value.tileSpacing = BrowserSidebarDensity(tabScale).pinSpacing
         return value
     }
 

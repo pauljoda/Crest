@@ -143,7 +143,7 @@ struct BrowserFolderGroup: View {
                 cancel: clearUnavailableDeferredActions
             )
         )
-        .padding(.vertical, BrowserFolderAppearancePolicy.regionInset)
+        .padding(.vertical, BrowserFolderLayout.regionInset)
     }
 
     /// Nested folders are children of the section they move with, so a parent's

@@ -45,8 +45,7 @@ struct BrowserTabBatchMenu: View {
         }
         Menu("Move to Space", systemImage: "square.grid.2x2") {
             ForEach(
-                BrowserSidebarAccessPolicy.availableTabMoveDestinationSpaces(
-                    from: request.assignment, in: browser, accessController: spaceAccess)
+                browser.availableTabMoveDestinationSpaces(from: request.assignment, accessController: spaceAccess)
             ) { space in
                 let moving = browser.moving(request, to: BrowserSpaceRuntimeAssignment(space: space))
                 Button {

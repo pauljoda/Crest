@@ -53,10 +53,9 @@ struct MobileBrowserSidebarBottomChrome: View {
         if holdsReservedSpace {
             reservedSpace
         } else {
-            if BrowserSidebarAccessPolicy.showsSelectedSpaceActions(
-                in: configuration.context.browser,
-                accessController: configuration.context.spaceAccess
-            ) {
+            if configuration.context.browser.showsSelectedSpaceActions(
+                accessController: configuration.context.spaceAccess)
+            {
                 MobileSpaceActions(
                     browser: configuration.context.browser,
                     pages: configuration.pages,

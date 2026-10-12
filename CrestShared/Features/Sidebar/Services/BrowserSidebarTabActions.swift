@@ -73,11 +73,7 @@ struct BrowserSidebarTabActions {
     @discardableResult
     func clearCurrentTabs() -> Bool {
         guard
-            BrowserSidebarAccessPolicy.selectedUnlockedSpace(
-                matching: assignment,
-                in: browser,
-                accessController: spaceAccess
-            ) != nil,
+            browser.selectedUnlockedSpace(matching: assignment, accessController: spaceAccess) != nil,
             browser.clearCurrentTabs(matching: assignment)
         else { return false }
         syncPagesAfterMutation()
@@ -89,11 +85,7 @@ struct BrowserSidebarTabActions {
     @discardableResult
     func openNewTab(_ command: () -> Void) -> Bool {
         guard !reorderState.isDragging,
-            BrowserSidebarAccessPolicy.selectedUnlockedSpace(
-                matching: assignment,
-                in: browser,
-                accessController: spaceAccess
-            ) != nil
+            browser.selectedUnlockedSpace(matching: assignment, accessController: spaceAccess) != nil
         else { return false }
         command()
         return true
@@ -101,11 +93,7 @@ struct BrowserSidebarTabActions {
 
     private func ownsUnlockedTab(_ tabID: UUID) -> Bool {
         guard
-            let space = BrowserSidebarAccessPolicy.selectedUnlockedSpace(
-                matching: assignment,
-                in: browser,
-                accessController: spaceAccess
-            )
+            let space = browser.selectedUnlockedSpace(matching: assignment, accessController: spaceAccess)
         else { return false }
         return space.tabs.model(tabID) != nil
     }

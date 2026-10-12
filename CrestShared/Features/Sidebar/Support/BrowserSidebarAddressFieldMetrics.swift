@@ -57,6 +57,10 @@ struct BrowserSidebarAddressFieldMetrics: Equatable, Sendable {
     /// has to enlarge it, because only there is it aimed at with a finger.
     let clearControlFont: Font?
 
+    /// The square a pointer shell's site security control claims: the same
+    /// hit target as a row's trailing control.
+    static let securityControlSize = BrowserTabTrailingControlMetrics.pointer.controlSize.height
+
     /// A pointer shell: one exact 36pt band with the glyph column reserved.
     static let pointer = BrowserSidebarAddressFieldMetrics(
         contentSpacing: 7,
@@ -67,7 +71,7 @@ struct BrowserSidebarAddressFieldMetrics: Equatable, Sendable {
         editingRingColor: CrestColor.selectedBorder,
         editingRingWidth: BrowserChromeLayout.addressEditingRingWidth,
         leadingGlyphFont: .caption.weight(.medium),
-        leadingGlyphSlot: BrowserAddressSecurityControlPolicy.controlSize,
+        leadingGlyphSlot: securityControlSize,
         clearControlFont: nil
     )
 

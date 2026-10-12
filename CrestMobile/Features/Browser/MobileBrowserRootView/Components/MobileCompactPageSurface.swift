@@ -43,7 +43,7 @@ struct MobileCompactPageSurface<Backdrop: View, Detail: View>: View {
         if reduceMotion {
             page
         } else if let selectedTab,
-            BrowserTabPromotionSourcePolicy.isPromotionSource(selectedTab, isSelected: true)
+            selectedTab.isPromotionSource(isSelected: true)
         {
             page.navigationTransition(
                 .zoom(

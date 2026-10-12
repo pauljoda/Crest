@@ -58,10 +58,10 @@ final class BrowserSidebarReorderLayoutTests: XCTestCase {
             _ lift: BrowserSidebarReorderState.Lift, layout: BrowserSidebarReorderLayout,
             pointer: CGPoint, insertionPoint: CGPoint
         ) -> BrowserSidebarReorderTarget? {
-            BrowserSidebarReorderTargetResolver(
+            BrowserSidebarReorderAim(
                 lift: lift, pointer: pointer, insertionPoint: insertionPoint, layout: layout, pinned: nil,
                 zones: [sectionZone, spaceZone], rows: [:], splitCards: [:]
-            ).resolve(previousTarget: previous)
+            ).target(previousTarget: previous)
         }
         XCTAssertEqual(
             resolve(lift, layout: tallGap, pointer: pointer, insertionPoint: pointer)?.kind,

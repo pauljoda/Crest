@@ -154,10 +154,6 @@ struct MobileBrowserSpacePage: View {
     }
 
     private var isCurrentAndUnlocked: Bool {
-        BrowserSidebarAccessPolicy.selectedUnlockedSpace(
-            matching: assignment,
-            in: browser,
-            accessController: spaceAccess
-        ) != nil
+        browser.selectedUnlockedSpace(matching: assignment, accessController: spaceAccess) != nil
     }
 }

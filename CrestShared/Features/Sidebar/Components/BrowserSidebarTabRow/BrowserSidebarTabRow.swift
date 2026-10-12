@@ -6,7 +6,7 @@ import SwiftUI
 /// rename in flight, the height a drop indicator sizes itself against — and
 /// hands everything else to `BrowserSidebarTabRowConfiguration`. What differs
 /// between a pointer shell and a touch one is read from
-/// `BrowserSidebarInteractionPolicy` rather than from which target compiled
+/// `BrowserInteractionCapabilities` rather than from which target compiled
 /// the file, so the two shells share this row instead of a resemblance.
 struct BrowserSidebarTabRow: View {
     @Environment(BrowserSidebarInteractionState.self) private var sidebarInteraction

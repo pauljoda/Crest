@@ -25,8 +25,7 @@ struct BrowserTabOrganizationAction {
         let spaceAssignment = BrowserSpaceRuntimeAssignment(
             spaceID: assignment.spaceID, profileID: assignment.profileID)
         guard
-            let space = BrowserSidebarAccessPolicy.selectedUnlockedSpace(
-                matching: spaceAssignment, in: browser, accessController: spaceAccess),
+            let space = browser.selectedUnlockedSpace(matching: spaceAssignment, accessController: spaceAccess),
             let tab = space.tabs.model(assignment.tabID), tab.surface == .webPage
         else { return nil }
         return browser.tabLinkProvider?.liveLinkURL(for: assignment) ?? tab.address
@@ -74,11 +73,7 @@ struct BrowserTabOrganizationAction {
             profileID: assignment.profileID
         )
         guard
-            let space = BrowserSidebarAccessPolicy.selectedUnlockedSpace(
-                matching: spaceAssignment,
-                in: browser,
-                accessController: spaceAccess
-            ),
+            let space = browser.selectedUnlockedSpace(matching: spaceAssignment, accessController: spaceAccess),
             let tab = space.tabs.model(assignment.tabID),
             tab.placement == expectedPlacement
         else { return nil }

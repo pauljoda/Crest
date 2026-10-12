@@ -36,13 +36,13 @@ struct BrowserSidebarSplitGroupRowConfiguration {
     var hasVisibleFollowingRow: Bool { followingTabID != nil }
 
     var metrics: BrowserSidebarSplitGroupRowMetrics {
-        BrowserSidebarInteractionPolicy.splitGroupRowMetrics(capabilities)
+        capabilities.splitGroupRowMetrics
     }
 
     /// The member rows' own profile, which the container reads for the two
     /// insets it borrows rather than chooses.
     var tabRowMetrics: BrowserSidebarTabRowMetrics {
-        BrowserSidebarInteractionPolicy.tabRowMetrics(capabilities)
+        capabilities.tabRowMetrics
     }
 
     /// The container's inset from the sidebar edge, matching the inset a

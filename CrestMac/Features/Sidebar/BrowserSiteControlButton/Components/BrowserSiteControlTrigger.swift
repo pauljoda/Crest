@@ -12,7 +12,7 @@ struct BrowserSiteControlTrigger: View {
                 Image(systemName: "slider.horizontal.3")
                     .font(
                         .system(
-                            size: BrowserTabTrailingControlPolicy.glyphSize,
+                            size: BrowserTabTrailingControlMetrics.pointer.glyphSize,
                             weight: .medium
                         )
                     )

@@ -42,8 +42,7 @@ struct MobileBrowserSpaceTabListScroll<Content: View>: View {
                 .modifier(SidebarScrollAffordance(isDragging: sidebarInteraction.sidebarReorderState.isDragging))
                 .scrollClipDisabled(
                     !BrowserSidebarReorderVisuals.clipsScrollableRegion(
-                        clipsWhenIdle: BrowserSidebarScrollLayoutPolicy
-                            .clipsScrollableRegion,
+                        clipsWhenIdle: BrowserSidebarReorderVisuals.clipsScrollableRegionWhenIdle,
                         isDragging: sidebarInteraction.sidebarReorderState.isDragging
                     )
                 )

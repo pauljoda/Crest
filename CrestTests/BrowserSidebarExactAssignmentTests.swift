@@ -321,27 +321,17 @@ final class BrowserSidebarExactAssignmentTests: XCTestCase {
         )
         context.store.seedVisit(to: historyURL, titled: "Selection", in: assignment.spaceID)
         let confirmation = try XCTUnwrap(
-            BrowserSidebarSpacePresentationPolicy.clearHistoryConfirmation(
-                for: try XCTUnwrap(context.store.spaceModel(context.source.id)),
-                in: context.store,
-                accessController: access
-            )
+            BrowserSidebarClearHistoryConfirmation(
+                for: try XCTUnwrap(context.store.spaceModel(context.source.id)), in: context.store,
+                accessController: access)
         )
         context.store.selectSpace(context.destination.id)
 
         XCTAssertFalse(
-            BrowserSidebarSpacePresentationPolicy.isLive(
-                confirmation,
-                in: context.store,
-                accessController: access
-            )
+            confirmation.isLive(in: context.store, accessController: access)
         )
         XCTAssertFalse(
-            BrowserSidebarSpacePresentationPolicy.clearHistory(
-                confirmation,
-                in: context.store,
-                accessController: access
-            )
+            confirmation.clearHistory(in: context.store, accessController: access)
         )
         XCTAssertEqual(
             context.store.spaceModel(context.source.id)?.history.entries.count,
@@ -364,20 +354,14 @@ final class BrowserSidebarExactAssignmentTests: XCTestCase {
         // The core records nothing into a Space this process holds locked.
         context.store.seedVisit(to: historyURL, titled: "Relock", in: assignment.spaceID)
         let confirmation = try XCTUnwrap(
-            BrowserSidebarSpacePresentationPolicy.clearHistoryConfirmation(
-                for: try XCTUnwrap(context.store.spaceModel(context.source.id)),
-                in: context.store,
-                accessController: access
-            )
+            BrowserSidebarClearHistoryConfirmation(
+                for: try XCTUnwrap(context.store.spaceModel(context.source.id)), in: context.store,
+                accessController: access)
         )
         access.lock(context.source.id)
 
         XCTAssertFalse(
-            BrowserSidebarSpacePresentationPolicy.clearHistory(
-                confirmation,
-                in: context.store,
-                accessController: access
-            )
+            confirmation.clearHistory(in: context.store, accessController: access)
         )
         XCTAssertEqual(
             context.store.spaceModel(context.source.id)?.history.entries.count,

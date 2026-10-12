@@ -223,13 +223,11 @@ struct BrowserSplitColumnsView<Member: Identifiable, Content: View, Panel: View>
                 }
             )
             .offset(
-                x: BrowserChromeDirectionPolicy.leadingOffset(
+                x: layoutDirection.leadingOffset(
                     BrowserSplitColumnLayout.dividerLeadingDistance(
                         after: index,
                         cardWidths: cardWidths
-                    ),
-                    layoutDirection: layoutDirection
-                )
+                    ))
             )
         }
     }
@@ -263,12 +261,10 @@ struct BrowserSplitColumnsView<Member: Identifiable, Content: View, Panel: View>
             accessibilityDirection: -1
         )
         .offset(
-            x: BrowserChromeDirectionPolicy.leadingOffset(
+            x: layoutDirection.leadingOffset(
                 BrowserSplitColumnLayout.dividerLeadingDistance(
                     after: members.count - 1, cardWidths: cardWidths
-                ),
-                layoutDirection: layoutDirection
-            ))
+                )))
     }
 
     private func resizePanel(delta: CGFloat) {
@@ -351,7 +347,7 @@ struct BrowserSplitColumnsView<Member: Identifiable, Content: View, Panel: View>
     /// The live fractions, or equal columns while the transaction is still a
     /// membership behind. Seeding runs on a change the row has already drawn.
     private var resolvedFractions: [Double] {
-        BrowserSplitLayoutSeedPolicy.fractions(
+        BrowserSplitColumnLayout.seedFractions(
             persisted: widthTransaction.fractions,
             memberCount: members.count
         )

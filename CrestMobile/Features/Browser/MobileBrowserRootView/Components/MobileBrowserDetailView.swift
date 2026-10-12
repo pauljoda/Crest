@@ -473,12 +473,7 @@ struct MobileBrowserDetailView: View {
         _ target: BrowserTabRuntimeAssignment
     ) -> Bool {
         guard
-            let destination = BrowserCommandPaletteActionPolicy.target(
-                target,
-                from: source,
-                in: browser,
-                accessController: spaceAccess
-            )
+            let destination = browser.paletteTarget(target, from: source, accessController: spaceAccess)
         else { return false }
         browser.selectSpace(destination.space.id)
         browser.selectTab(destination.tab.id)
@@ -489,10 +484,6 @@ struct MobileBrowserDetailView: View {
     private func isPaletteSourceAvailable(
         _ source: BrowserTabRuntimeAssignment
     ) -> Bool {
-        BrowserCommandPaletteActionPolicy.isSourceAvailable(
-            source,
-            in: browser,
-            accessController: spaceAccess
-        )
+        browser.isPaletteSourceAvailable(source, accessController: spaceAccess)
     }
 }

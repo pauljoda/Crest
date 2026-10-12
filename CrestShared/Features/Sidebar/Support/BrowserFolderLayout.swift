@@ -8,6 +8,8 @@ import CoreGraphics
 enum BrowserFolderLayout {
     static let contentsInset: CGFloat = 6
     static let nestingIndent = contentsInset
+    /// The band a folder's region keeps above and below what it holds.
+    static let regionInset = contentsInset / 2
 
     /// How far a row *inside* a folder sits from the sidebar's leading edge:
     /// one step for the folder itself, plus one per level above it. Tab rows

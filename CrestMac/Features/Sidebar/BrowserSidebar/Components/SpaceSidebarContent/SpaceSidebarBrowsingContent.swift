@@ -128,11 +128,9 @@ struct SpaceSidebarBrowsingContent: View {
         browser.tabMultiSelection.click(
             tabID,
             units: BrowserSidebarSelection.itemUnits(in: browser))
-        BrowserTabActivationPolicy.activate(
-            tabID,
-            selectTab: browser.selectTab,
-            presentPage: { pages.select() }
-        )
+        // Select the tab before presenting its page.
+        browser.selectTab(tabID)
+        pages.select()
     }
 
     private func restoreSavedLocation(_ tabID: UUID) {

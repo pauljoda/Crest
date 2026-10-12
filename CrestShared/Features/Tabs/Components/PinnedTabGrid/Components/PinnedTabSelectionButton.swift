@@ -24,16 +24,16 @@ struct PinnedTabSelectionButton: View {
         Button(action: select) {
             icon
                 .opacity(isIconReplaced ? 0 : 1)
-                .font(.system(size: 17 * BrowserSidebarDensityPolicy.scale(iconScale), weight: .medium))
+                .font(.system(size: 17 * BrowserSidebarDensity(iconScale).scale, weight: .medium))
                 .browserTabResidency(isLoaded: tab.nativeContent != nil || isLoaded)
                 .browserIconCustomizationPopover(iconCustomization, arrowEdge: iconPickerArrowEdge)
                 .overlay(alignment: .bottomTrailing) {
-                    TabEngineBadge(tabID: tab.id, scale: BrowserSidebarDensityPolicy.scale(iconScale))
+                    TabEngineBadge(tabID: tab.id, scale: BrowserSidebarDensity(iconScale).scale)
                 }
                 .anchorPreference(key: TabFaviconBoundsKey.self, value: .bounds) { $0 }
                 .frame(maxWidth: .infinity)
                 .frame(
-                    height: BrowserSidebarDensityPolicy.pinHeight(scale: iconScale, touch: capabilities.supportsTouch)
+                    height: BrowserSidebarDensity(iconScale).pinHeight(touch: capabilities.supportsTouch)
                 )
                 .contentShape(.rect)
                 .modifier(
@@ -54,7 +54,7 @@ struct PinnedTabSelectionButton: View {
 
     private var icon: some View {
         TabStateFaviconView(
-            tab: tab, favicons: favicons, profileID: profileID, size: 19 * BrowserSidebarDensityPolicy.scale(iconScale))
+            tab: tab, favicons: favicons, profileID: profileID, size: 19 * BrowserSidebarDensity(iconScale).scale)
     }
 
     private var iconPickerArrowEdge: Edge? {

@@ -28,7 +28,7 @@ final class BrowserSidebarReorderState {
     static let activationSuppression: Duration = .milliseconds(250)
 
     /// Backstop for a provider query that never starts or completes a native drag.
-    static let stagedLiftExpiration = BrowserDragReleaseFallbackPolicy.sessionExpiration
+    static let stagedLiftExpiration = BrowserTabDragState.sessionExpiration
 
     /// Taller blocks use their moving edge when crossing another row.
     static let movingEdgeProbeMinimumHeight = CrestLayout.sidebarRowHeight * 1.5
@@ -306,7 +306,7 @@ final class BrowserSidebarReorderState {
     }
 
     var orderedSplitCardFrames: [CGRect] {
-        BrowserSplitDropPolicy.ordered(geometry.splitCards.values.map(\.frame))
+        BrowserSplitColumnLayout.orderedCardFrames(geometry.splitCards.values.map(\.frame))
     }
 
     // MARK: - Drag lifecycle
@@ -700,11 +700,11 @@ final class BrowserSidebarReorderState {
             resolvedTarget = nil
             return
         }
-        resolvedTarget = BrowserSidebarReorderTargetResolver(
+        resolvedTarget = BrowserSidebarReorderAim(
             lift: lift, pointer: pointer, insertionPoint: insertionProbe(for: lift), layout: layout,
             pinned: pinnedGeometry, zones: visibleZones, rows: geometry.rows,
             splitCards: geometry.splitCards
-        ).resolve(previousTarget: previousTarget)
+        ).target(previousTarget: previousTarget)
         if case .splitInsert = resolvedTarget?.kind { hasEnteredSplitContent = true }
     }
 

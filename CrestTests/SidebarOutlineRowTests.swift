@@ -110,11 +110,6 @@ final class SidebarOutlineRowTests: XCTestCase {
         let followingTabID = try items(of: [head, tail])[0].followingTabID
 
         XCTAssertNil(followingTabID)
-        XCTAssertTrue(
-            BrowserTabRowIndicatorOwnershipPolicy.showsAfterRowIndicator(
-                hasVisibleFollowingRow: followingTabID != nil
-            )
-        )
     }
 
     /// A collapsed folder's list still holds its rows, so the row it keeps on

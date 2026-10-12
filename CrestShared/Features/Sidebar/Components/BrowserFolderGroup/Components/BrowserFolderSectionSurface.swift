@@ -22,15 +22,13 @@ struct BrowserFolderSectionSurface: ViewModifier {
 
     func body(content: Content) -> some View {
         content
-            .padding(.bottom, hasVisibleContents ? BrowserFolderAppearancePolicy.regionInset : 0)
+            .padding(.bottom, hasVisibleContents ? BrowserFolderLayout.regionInset : 0)
             .contentShape(.rect)
             .modifier(
                 BrowserFolderHighlightSurface(
                     color: color, intensity: intensity,
                     textColorMode: textColorMode,
-                    showsFill: BrowserFolderAppearancePolicy.showsFill(
-                        alwaysVisible: alwaysVisible || previewShowsHighlight, isHovered: isHovered || isSelected,
-                        isTargeted: isTargeted),
+                    showsFill: alwaysVisible || previewShowsHighlight || isHovered || isSelected || isTargeted,
                     showsBorders: showsBorders, leadingInset: leadingInset,
                     isSelected: isSelected,
                     emphasisOpacity: alwaysVisible && (isHovered || isTargeted) ? (isTargeted ? 0.16 : 0.08) : 0)

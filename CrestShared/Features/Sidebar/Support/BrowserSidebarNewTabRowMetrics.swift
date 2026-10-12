@@ -26,7 +26,7 @@ struct BrowserSidebarNewTabRowMetrics: Equatable, Sendable {
     /// A pointer shell keeps every row on one rhythm so the list reads as a
     /// scannable column. A touch row is already a hit target sized for a finger,
     /// so it takes a floor instead and grows with the label rather than
-    /// clipping it — see `BrowserSidebarInteractionPolicy.rowMinHeight`.
+    /// clipping it — see `BrowserInteractionCapabilities.rowMinHeight`.
     let usesFixedHeight: Bool
 
     /// Whether the row wears the chrome's hover treatment.

@@ -119,9 +119,7 @@ struct BrowserPlatformTabDragSourceModifier: ViewModifier {
                                 .active
                             }
                         guard
-                            BrowserTabDragSessionLifecyclePolicy.shouldEnd(
-                                for: lifecyclePhase
-                            )
+                            lifecyclePhase.endsSession
                         else { return }
                         Task { @MainActor in
                             guard let sessionToken else { return }

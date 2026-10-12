@@ -24,7 +24,7 @@ final class MobileBrowserSettingsPresentation {
         self.spaceAccess = spaceAccess
     }
 
-    func destination(for tab: TabStateModel) -> BrowserTabActivationPolicy.Destination {
+    func destination(for tab: TabStateModel) -> BrowserTabActivationDestination {
         (style ?? .embedded).destination(for: tab.nativeTabContent)
     }
 
@@ -42,9 +42,9 @@ final class MobileBrowserSettingsPresentation {
     @discardableResult
     func present(matching assignment: BrowserTabRuntimeAssignment) -> Bool {
         guard let style,
-            let space = BrowserSidebarAccessPolicy.selectedUnlockedSpace(
+            let space = browser.selectedUnlockedSpace(
                 matching: BrowserSpaceRuntimeAssignment(spaceID: assignment.spaceID, profileID: assignment.profileID),
-                in: browser, accessController: spaceAccess),
+                accessController: spaceAccess),
             let tab = space.tabs.model(assignment.tabID), tab.nativeTabContent == .settings
         else { return false }
         return style.present(tab, in: space, on: self)
@@ -78,8 +78,7 @@ final class MobileBrowserSettingsPresentation {
     func reconcile() {
         guard showsSheet else { return }
         guard let sheetAssignment,
-            let space = BrowserSidebarAccessPolicy.selectedUnlockedSpace(
-                matching: sheetAssignment, in: browser, accessController: spaceAccess),
+            let space = browser.selectedUnlockedSpace(matching: sheetAssignment, accessController: spaceAccess),
             sheetTabID == nil || sheetTabID.flatMap({ space.tabs.model($0) })?.nativeTabContent == .settings
         else {
             dismissSheet()

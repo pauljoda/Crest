@@ -93,7 +93,7 @@ struct MobileSplitColumnsPageSurface: View {
                 profileID: space.profileID
             )
         )
-        return BrowserPageSurfacePolicy.usesTransparentInnerSurface(
+        return BrowserPageSurfacePresentation.usesTransparentInnerSurface(
             isStartPage: member.surface == .startPage,
             hasActivePage: page != nil,
             completedNavigationCount: page?.completedNavigationCount ?? 0

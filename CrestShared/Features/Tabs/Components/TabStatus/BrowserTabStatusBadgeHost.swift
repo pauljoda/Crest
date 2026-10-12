@@ -47,7 +47,7 @@ struct BrowserTabStatusBadgeHost: ViewModifier {
                 if let iconBounds, let mark, let tab {
                     GeometryReader { proxy in
                         let icon = proxy[iconBounds]
-                        let scale = BrowserSidebarDensityPolicy.scale(iconScale)
+                        let scale = BrowserSidebarDensity(iconScale).scale
                         if replacesIcon {
                             BrowserTabStatusBadge(mark: mark, tab: tab, diameter: min(icon.width, icon.height))
                                 .position(x: icon.midX, y: icon.midY)

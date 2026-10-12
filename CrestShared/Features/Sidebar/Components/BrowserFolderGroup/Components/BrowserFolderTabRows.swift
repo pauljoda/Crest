@@ -48,6 +48,6 @@ struct BrowserFolderEmptyRunBand: View {
         let section = BrowserSidebarReorderSection.tabs(
             placement: configuration.folder.location, folderID: configuration.folder.id)
         guard !state.layout.isActive, state.emptySectionIndicator(for: section) != nil else { return 0 }
-        return BrowserSidebarInteractionPolicy.tabListMetrics(configuration.capabilities).sectionEndBandHeight
+        return configuration.capabilities.tabListMetrics.sectionEndBandHeight
     }
 }

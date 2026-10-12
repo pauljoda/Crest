@@ -22,7 +22,7 @@ final class BrowserFolderDragState {
         sessionToken = token
         dropLocation = nil
         expirationTask = Task { @MainActor [weak self] in
-            try? await Task.sleep(for: BrowserDragReleaseFallbackPolicy.sessionExpiration)
+            try? await Task.sleep(for: BrowserTabDragState.sessionExpiration)
             guard !Task.isCancelled else { return }
             self?.end(session: token)
         }
@@ -82,7 +82,7 @@ final class BrowserFolderDragState {
         guard sessionToken == token else { return }
         releaseCleanupTask?.cancel()
         releaseCleanupTask = Task { @MainActor [weak self] in
-            try? await Task.sleep(for: BrowserDragReleaseFallbackPolicy.cleanupDelay)
+            try? await Task.sleep(for: BrowserTabDragState.releaseCleanupDelay)
             guard !Task.isCancelled, let self else { return }
             releaseCleanupTask = nil
             end(session: token)

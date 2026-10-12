@@ -31,7 +31,7 @@ struct BrowserFolderHeader: View {
         )
         .modifier(BrowserFolderSelectionAccessibility(folderID: folder.id, browser: configuration.browser))
         .padding(.horizontal, CrestSpacing.small)
-        .padding(.vertical, BrowserSidebarDensityPolicy.rowSeparation(scale: tabScale) / 2)
+        .padding(.vertical, BrowserSidebarDensity(tabScale).rowSeparation() / 2)
         .modifier(
             BrowserTabSelectionTarget(
                 tabID: nil, browser: configuration.browser,

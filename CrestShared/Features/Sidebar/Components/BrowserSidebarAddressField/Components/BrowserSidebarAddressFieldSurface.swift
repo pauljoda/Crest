@@ -69,7 +69,7 @@ struct BrowserSidebarAddressFieldSurface: ViewModifier {
     }
 
     private var loadingProgress: CGFloat {
-        BrowserPageSurfacePolicy.loadingProgress(
+        BrowserPageSurfacePresentation.loadingProgress(
             estimatedProgress: progress,
             isNavigating: isLoading
         )

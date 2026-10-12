@@ -28,10 +28,3 @@ struct BrowserTabIconActions: View {
         }
     }
 }
-
-enum BrowserTabIconCustomizationPolicy {
-    /// Reset applies to explicit icon overrides.
-    static func showsReset(iconMode: TabIconMode) -> Bool {
-        !iconMode.followsPage
-    }
-}

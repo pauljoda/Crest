@@ -9,6 +9,9 @@ import SwiftUI
 /// claims. None of that is a platform fact — it follows from the least precise
 /// input the shell accepts, the same way the tab row's geometry does.
 struct BrowserSpaceHeaderMetrics: Equatable, Sendable {
+    /// The most a fixed-height header's content may grow to, or nil for no cap.
+    private static let fixedContentMaxHeight: CGFloat? = nil
+
     /// The point size of the chevron that replaces the identity icon while the
     /// saved tabs are collapsed.
     let disclosureGlyphSize: CGFloat
@@ -67,7 +70,7 @@ struct BrowserSpaceHeaderMetrics: Equatable, Sendable {
     var contentMaxHeight: CGFloat? {
         fillsRowHeight
             ? .infinity
-            : BrowserSidebarScrollLayoutPolicy.fixedSpaceHeaderMaxHeight
+            : Self.fixedContentMaxHeight
     }
 }
 

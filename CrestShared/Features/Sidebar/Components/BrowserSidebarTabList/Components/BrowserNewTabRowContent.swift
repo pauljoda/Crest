@@ -10,21 +10,17 @@ struct BrowserNewTabRowContent: View {
     let hasBorders: Bool
 
     private var tabMetrics: BrowserSidebarTabRowMetrics {
-        BrowserSidebarInteractionPolicy.tabRowMetrics(capabilities)
+        capabilities.tabRowMetrics
     }
 
     private var metrics: BrowserSidebarNewTabRowMetrics {
-        BrowserSidebarInteractionPolicy.newTabRowMetrics(capabilities)
+        capabilities.newTabRowMetrics
     }
 
     private var rowHeight: CGFloat {
-        let base = BrowserSidebarInteractionPolicy.rowMinHeight(
-            capabilities,
-            dynamicTypeSize: dynamicTypeSize
-        )
-        return BrowserSidebarDensityPolicy.rowHeight(
-            base: base, scale: dynamicTypeSize.isAccessibilitySize ? max(1, tabScale) : tabScale,
-            touch: capabilities.supportsTouch)
+        let base = capabilities.rowMinHeight(dynamicTypeSize: dynamicTypeSize)
+        return BrowserSidebarDensity(dynamicTypeSize.isAccessibilitySize ? max(1, tabScale) : tabScale).rowHeight(
+            base: base, touch: capabilities.supportsTouch)
     }
 
     var body: some View {
@@ -58,8 +54,7 @@ struct BrowserNewTabRowContent: View {
         .modifier(BrowserNewTabRowSurface(metrics: metrics))
         .padding(
             .vertical,
-            BrowserSidebarDensityPolicy.rowSeparation(
-                scale: tabScale, hasBorders: hasBorders) / 2
+            BrowserSidebarDensity(tabScale).rowSeparation(hasBorders: hasBorders) / 2
         )
         .padding(.horizontal, metrics.rowHorizontalInset)
         .modifier(BrowserNewTabRowTooltip(metrics: metrics))

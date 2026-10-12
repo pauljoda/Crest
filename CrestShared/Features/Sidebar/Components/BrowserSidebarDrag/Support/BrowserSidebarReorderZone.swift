@@ -80,22 +80,22 @@ struct BrowserSidebarReorderZone: Equatable, Sendable {
 
         // MARK: - Actions - Landing
 
-        /// Where a lift aimed at this target lands, as `resolver` reads the
+        /// Where a lift aimed at this target lands, as `aim` reads the
         /// rows and cards around it, or nil where it lands nowhere.
         @MainActor
-        func reorderTarget(for resolver: BrowserSidebarReorderTargetResolver) -> BrowserSidebarReorderTarget? {
+        func reorderTarget(for aim: BrowserSidebarReorderAim) -> BrowserSidebarReorderTarget? {
             switch self {
             case .currentTab(let tabID):
                 BrowserSidebarReorderTarget(kind: .createCurrentFolder(tabID))
             case .space(let assignment):
                 BrowserSidebarReorderTarget(kind: .space(assignment))
             case .folder(let folderID):
-                resolver.lift.item.id == .folder(folderID)
+                aim.lift.item.id == .folder(folderID)
                     ? nil : BrowserSidebarReorderTarget(kind: .intoFolder(folderID))
             case .section(let section):
-                resolver.insertionTarget(in: section)
+                aim.insertionTarget(in: section)
             case .splitContent(let assignment):
-                resolver.splitInsertTarget(in: assignment)
+                aim.splitInsertTarget(in: assignment)
             }
         }
 

@@ -498,11 +498,7 @@ extension MobileBrowserRootModel {
     func isPaletteSourceAvailable(
         _ source: BrowserTabRuntimeAssignment
     ) -> Bool {
-        BrowserCommandPaletteActionPolicy.isSourceAvailable(
-            source,
-            in: browser,
-            accessController: spaceAccess
-        )
+        browser.isPaletteSourceAvailable(source, accessController: spaceAccess)
     }
 
     @discardableResult
@@ -511,12 +507,7 @@ extension MobileBrowserRootModel {
         to target: BrowserTabRuntimeAssignment
     ) -> Bool {
         guard
-            let destination = BrowserCommandPaletteActionPolicy.target(
-                target,
-                from: source,
-                in: browser,
-                accessController: spaceAccess
-            )
+            let destination = browser.paletteTarget(target, from: source, accessController: spaceAccess)
         else { return false }
         if settings.destination(for: destination.tab) == .settings {
             browser.selectSpace(destination.space.id)
@@ -539,11 +530,7 @@ extension MobileBrowserRootModel {
         opening: BrowserCommandPaletteOpening = .here
     ) -> Bool {
         guard
-            BrowserCommandPaletteActionPolicy.isSourceAvailable(
-                source,
-                in: browser,
-                accessController: spaceAccess
-            )
+            browser.isPaletteSourceAvailable(source, accessController: spaceAccess)
         else { return false }
         return opening.open(url, from: source, with: MobilePaletteOpener(model: self, mode: mode))
     }

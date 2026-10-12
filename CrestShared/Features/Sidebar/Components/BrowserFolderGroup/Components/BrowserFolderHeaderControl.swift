@@ -99,9 +99,7 @@ private struct BrowserFolderHeaderTitle: View, @MainActor Equatable {
         Text(folder.shownTitle)
             .foregroundStyle(
                 tintsTitle
-                    ? BrowserFolderAppearancePolicy.titleColor(
-                        folder.displayColor, onDarkBackground: colorScheme == .dark
-                    ).color
+                    ? folder.displayColor.folderTitleColor(onDarkBackground: colorScheme == .dark).color
                     : .primary
             )
             .fontWeight(tintsTitle || holdsShownTab ? .semibold : .regular)

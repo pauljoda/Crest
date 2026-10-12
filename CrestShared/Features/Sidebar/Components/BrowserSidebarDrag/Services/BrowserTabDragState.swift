@@ -3,6 +3,13 @@ import Observation
 @Observable
 @MainActor
 final class BrowserTabDragState {
+    /// Clears a provider or drag session that never receives native completion.
+    nonisolated static let sessionExpiration: Duration = .seconds(30)
+
+    /// Give a destination's synchronous `performDrop` callback time to finish
+    /// before treating the touch release as a cancelled/outside drop.
+    nonisolated static let releaseCleanupDelay: Duration = .milliseconds(180)
+
     private(set) var item: BrowserTabDragItem?
     private(set) var sessionToken: BrowserDragSessionToken?
     private(set) var sourcePlacement: TabPlacement?
@@ -33,11 +40,19 @@ final class BrowserTabDragState {
         dropLocation = nil
         liveMoveCount = 0
         expirationTask = Task { @MainActor [weak self] in
-            try? await Task.sleep(for: BrowserDragReleaseFallbackPolicy.sessionExpiration)
+            try? await Task.sleep(for: BrowserTabDragState.sessionExpiration)
             guard !Task.isCancelled else { return }
             self?.end(session: token)
         }
         return token
+    }
+
+    /// Whether the drop indicator at `location` shows: a row drop, not a grid
+    /// one, aimed there by a drag in flight.
+    func showsDropIndicator(at location: BrowserTabDropLocation) -> Bool {
+        !location.placement.isGrid
+            && item != nil
+            && dropLocation == location
     }
 
     func isDragging(_ item: BrowserTabDragItem) -> Bool {
@@ -126,7 +141,7 @@ final class BrowserTabDragState {
         guard sessionToken == token else { return }
         releaseCleanupTask?.cancel()
         releaseCleanupTask = Task { @MainActor [weak self] in
-            try? await Task.sleep(for: BrowserDragReleaseFallbackPolicy.cleanupDelay)
+            try? await Task.sleep(for: BrowserTabDragState.releaseCleanupDelay)
             guard !Task.isCancelled, let self else { return }
             releaseCleanupTask = nil
             end(session: token)

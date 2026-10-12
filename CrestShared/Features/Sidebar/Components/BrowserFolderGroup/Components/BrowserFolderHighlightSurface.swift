@@ -29,11 +29,15 @@ struct BrowserFolderHighlightSurface: ViewModifier {
 
     private var compositedColor: BrandColor {
         let channel = colorScheme == .dark ? 0.0 : 1.0
-        return BrowserFolderAppearancePolicy.compositedColor(
-            color,
-            opacity: BrowserFolderAppearancePolicy.fillOpacity(
-                intensity: intensity, reduceTransparency: reduceTransparency),
-            background: parentBackgroundColor ?? BrandColor(red: channel, green: channel, blue: channel))
+        return color.composited(
+            opacity: fillOpacity,
+            over: parentBackgroundColor ?? BrandColor(red: channel, green: channel, blue: channel))
+    }
+
+    private var fillOpacity: Double {
+        let strength = intensity.isFinite ? min(max(intensity, 0), 1) : 0
+        let baseline = reduceTransparency ? 0.28 : 0.12
+        return baseline + (1 - baseline) * strength
     }
 
     func body(content: Content) -> some View {
@@ -44,9 +48,7 @@ struct BrowserFolderHighlightSurface: ViewModifier {
                         cornerRadius: BrowserDeviceAppearanceStore.shared.containerCornerRadius(), style: .continuous
                     )
                     .fill(
-                        color.color.opacity(
-                            BrowserFolderAppearancePolicy.fillOpacity(
-                                intensity: intensity, reduceTransparency: reduceTransparency))
+                        color.color.opacity(fillOpacity)
                     )
                     .overlay {
                         if emphasisOpacity > 0 {

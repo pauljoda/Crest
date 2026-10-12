@@ -75,7 +75,7 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
                 sidebarPresentation: navigation.regularSidebarPresentation,
                 preferredSidebarWidth: model.sidebarWidthBinding,
                 space: browser.shownSpace,
-                spaces: BrowserSidebarAccessPolicy.availableSpaces(in: browser),
+                spaces: browser.availableSpaces,
                 reduceTransparency: reduceTransparency,
                 layoutDirection: layoutDirection,
                 usesBorderlessFloatingPageFrame:
@@ -241,7 +241,7 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
                     reduceTransparency: reduceTransparency,
                     layoutDirection: layoutDirection,
                     space: browser.shownSpace,
-                    spaces: BrowserSidebarAccessPolicy.availableSpaces(in: browser),
+                    spaces: browser.availableSpaces,
                     showSidebar: showRegularSidebar,
                     commitSidebarWidth: commitRegularSidebarWidth,
                     sidebar: MobileBrowserSidebarSurface(

@@ -39,9 +39,8 @@ struct BrowserSidebarTabRowDropIndicators: ViewModifier {
     /// the same seam from its own top edge.
     @ViewBuilder
     private var trailingIndicator: some View {
-        if BrowserTabRowIndicatorOwnershipPolicy.showsAfterRowIndicator(
-            hasVisibleFollowingRow: configuration.hasVisibleFollowingRow
-        ) {
+        // A row owns the indicator after it only while no visible row follows it.
+        if !configuration.hasVisibleFollowingRow {
             BrowserTabDropIndicator(
                 location: configuration.afterDropLocation,
                 dragState: sidebarInteraction.tabDragState,

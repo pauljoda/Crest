@@ -24,7 +24,7 @@ struct BrowserFolderNestDropHighlight: View {
                 state.resolvedTarget?.kind == .createCurrentFolder(tabID)
             case .folder(let folderID):
                 state.isTargetedFolder(folderID)
-                    && BrowserFolderRowPresentationPolicy.showsNestOutline(for: state.lift?.item)
+                    && (state.lift?.item.showsFolderNestOutline ?? false)
             }
         }
     }

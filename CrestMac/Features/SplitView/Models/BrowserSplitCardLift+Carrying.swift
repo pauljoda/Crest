@@ -101,7 +101,7 @@ extension BrowserSplitCardLift {
         members: [Member],
         cardFrames: [UUID: CGRect]
     ) -> [CGRect] where Member.ID == UUID {
-        BrowserSplitDropPolicy.ordered(members.compactMap { cardFrames[$0.id] })
+        BrowserSplitColumnLayout.orderedCardFrames(members.compactMap { cardFrames[$0.id] })
     }
 
     /// Whether `point` belongs to the divider between two cards rather than to
@@ -118,7 +118,7 @@ extension BrowserSplitCardLift {
         hitWidth: CGFloat = BrowserSplitLayoutMetrics.resizeHandleHitWidth
     ) -> Bool {
         let reach = max(0, hitWidth) / 2
-        let frames = BrowserSplitDropPolicy.ordered(
+        let frames = BrowserSplitColumnLayout.orderedCardFrames(
             orderedCardFrames + (panelFrame.map { [$0] } ?? [])
         )
         return zip(frames, frames.dropFirst()).contains {
@@ -153,10 +153,10 @@ extension BrowserSplitCardLift {
         lifted liftedTabID: UUID,
         layoutDirection: LayoutDirection
     ) -> Int {
-        let neighbours = BrowserSplitDropPolicy.ordered(
+        let neighbours = BrowserSplitColumnLayout.orderedCardFrames(
             cardFrames.lazy.filter { $0.key != liftedTabID }.map(\.value)
         )
-        let passed = BrowserSplitDropPolicy.insertionIndex(
+        let passed = BrowserSplitColumnLayout.insertionIndex(
             at: point,
             orderedCardFrames: neighbours
         )

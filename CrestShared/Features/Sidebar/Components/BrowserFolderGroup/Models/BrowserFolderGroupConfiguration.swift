@@ -3,7 +3,7 @@ import SwiftUI
 /// Everything a folder group draws itself from, on every shell.
 ///
 /// What differs between a pointer shell and a touch one is read from
-/// `BrowserSidebarInteractionPolicy` rather than from which target compiled the
+/// `BrowserInteractionCapabilities` rather than from which target compiled the
 /// file. What the two shells genuinely cannot share — where a page lives, what
 /// opening a tab means to the host, how a tab gets home — arrives through the
 /// list context the host binds.
@@ -45,7 +45,7 @@ struct BrowserFolderGroupConfiguration {
     }
 
     var headerMetrics: BrowserFolderHeaderMetrics {
-        BrowserSidebarInteractionPolicy.savedFolderHeaderMetrics(capabilities)
+        capabilities.savedFolderHeaderMetrics
     }
 
     /// How far the header's own content sits from the leading edge, in the
@@ -53,9 +53,7 @@ struct BrowserFolderGroupConfiguration {
     var headerLeadingInset: CGFloat {
         BrowserFolderLayout.headerLeadingInset(
             depth: depth,
-            tabRowMetrics: BrowserSidebarInteractionPolicy.tabRowMetrics(
-                capabilities
-            )
+            tabRowMetrics: capabilities.tabRowMetrics
         )
     }
 

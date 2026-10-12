@@ -22,9 +22,8 @@ struct BrowserSavedTabsEndDropTarget: View {
             .frame(height: bandHeight)
             .contentShape(.rect)
             .overlay(alignment: .top) {
-                if BrowserTabRowIndicatorOwnershipPolicy.showsSectionEndIndicator(
-                    hasVisibleRows: list.holdsTabRows
-                ) {
+                // The section's end draws the indicator only when no row is there to.
+                if !list.holdsTabRows {
                     BrowserTabDropIndicator(
                         location: tabLocation,
                         dragState: sidebarInteraction.tabDragState,
@@ -43,7 +42,7 @@ struct BrowserSavedTabsEndDropTarget: View {
     }
 
     private var bandHeight: CGFloat {
-        BrowserSidebarInteractionPolicy.tabListMetrics(capabilities)
+        capabilities.tabListMetrics
             .savedSectionEndBandHeight
     }
 

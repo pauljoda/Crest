@@ -63,11 +63,11 @@ struct BrowserSidebarTabRowConfiguration {
     var select: (UUID) -> Void { context.select }
 
     var metrics: BrowserSidebarTabRowMetrics {
-        BrowserSidebarInteractionPolicy.tabRowMetrics(capabilities)
+        capabilities.tabRowMetrics
     }
 
     var trailingControlMetrics: BrowserTabTrailingControlMetrics {
-        BrowserSidebarInteractionPolicy.trailingControlMetrics(capabilities)
+        capabilities.trailingControlMetrics
     }
 
     /// The inset between the row's own bounds and its surface. Zero inside a

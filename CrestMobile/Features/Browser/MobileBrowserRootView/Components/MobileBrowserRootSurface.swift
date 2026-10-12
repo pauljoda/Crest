@@ -24,7 +24,7 @@ struct MobileBrowserRootSurface<Compact: View, Regular: View, Palette: View>:
         ZStack {
             if !presentation.presentsPageOverTabViewer {
                 SpaceBackdropBlend(
-                    spaces: BrowserSidebarAccessPolicy.availableSpaces(in: browser),
+                    spaces: browser.availableSpaces,
                     selectedSpace: browser.shownSpace
                 ) {
                     BrowserWindowAtmosphere(space: $0)

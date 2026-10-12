@@ -88,8 +88,7 @@ struct SpaceSidebarContent: View {
 
     private func toggleSavedTabs() {
         guard
-            let liveSpace = BrowserSidebarAccessPolicy.selectedUnlockedSpace(
-                matching: assignment, in: browser, accessController: spaceAccess)
+            let liveSpace = browser.selectedUnlockedSpace(matching: assignment, accessController: spaceAccess)
         else { return }
         browser.setSavedTabsExpanded(!liveSpace.settings.isSavedTabsExpanded, matching: assignment)
     }
@@ -99,10 +98,6 @@ struct SpaceSidebarContent: View {
     }
 
     private var isCurrentAndUnlocked: Bool {
-        BrowserSidebarAccessPolicy.selectedUnlockedSpace(
-            matching: assignment,
-            in: browser,
-            accessController: spaceAccess
-        ) != nil
+        browser.selectedUnlockedSpace(matching: assignment, accessController: spaceAccess) != nil
     }
 }

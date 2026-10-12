@@ -5,7 +5,7 @@ import SwiftUI
 /// The two shells reached the switcher differently enough that they kept two
 /// of them, but the difference was never styling — it was arrangement, and
 /// arrangement follows from what the shell's reader can aim at. So there is
-/// one switcher whose layout `BrowserSidebarInteractionPolicy` picks from
+/// one switcher whose layout `BrowserInteractionCapabilities` picks from
 /// `BrowserInteractionCapabilities`, and two shared arrangements underneath
 /// it. Accessories are inputs the scrolling arrangement simply ignores.
 struct BrowserSpaceSwitcher: View {
@@ -22,9 +22,7 @@ struct BrowserSpaceSwitcher: View {
     var accessories = BrowserSpaceSwitcherAccessories()
 
     var body: some View {
-        switch BrowserSidebarInteractionPolicy.spaceSwitcherArrangement(
-            capabilities
-        ) {
+        switch capabilities.spaceSwitcherArrangement {
         case .compactStrip:
             BrowserSpaceSwitcherCompactStrip(
                 spaces: spaces,
@@ -60,7 +58,7 @@ struct BrowserSpaceSwitcher: View {
     }
 
     private var spaces: [BrowserSpaceIdentity] {
-        BrowserSidebarAccessPolicy.availableSpaces(in: browser).map(BrowserSpaceIdentity.init(space:))
+        browser.availableSpaces.map(BrowserSpaceIdentity.init(space:))
     }
 
     private var selectedSpaceID: UUID {
@@ -68,6 +66,6 @@ struct BrowserSpaceSwitcher: View {
     }
 
     private var metrics: BrowserSpacePickerMetrics {
-        BrowserSidebarInteractionPolicy.spacePickerMetrics(capabilities)
+        capabilities.spacePickerMetrics
     }
 }

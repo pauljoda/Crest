@@ -40,11 +40,7 @@ struct BrowserSidebarUtilityCoordinator {
         matching assignment: BrowserSpaceRuntimeAssignment
     ) {
         guard
-            BrowserSidebarAccessPolicy.selectedUnlockedSpace(
-                matching: assignment,
-                in: browser,
-                accessController: spaceAccess
-            ) != nil,
+            browser.selectedUnlockedSpace(matching: assignment, accessController: spaceAccess) != nil,
             browser.restoreArchivedTab(tabID, matching: assignment)
         else { return }
         platformActions.selectRestoredTab(tabID)
@@ -55,11 +51,7 @@ struct BrowserSidebarUtilityCoordinator {
         matching assignment: BrowserSpaceRuntimeAssignment
     ) {
         guard
-            BrowserSidebarAccessPolicy.selectedUnlockedSpace(
-                matching: assignment,
-                in: browser,
-                accessController: spaceAccess
-            ) != nil,
+            browser.selectedUnlockedSpace(matching: assignment, accessController: spaceAccess) != nil,
             let url = URL(string: entry.url)
         else { return }
         platformActions.openHistoryEntry(url, assignment)
@@ -79,13 +71,9 @@ struct BrowserSidebarUtilityCoordinator {
         for action: BrowserUtilityDownloadAction,
         matching assignment: BrowserSpaceRuntimeAssignment
     ) -> DownloadState? {
-        BrowserSidebarUtilityActionPolicy.downloadItem(
-            for: action,
-            matching: assignment,
-            in: browser,
-            accessController: spaceAccess,
-            itemsForProfile: downloadCenter.items(for:)
-        )
+        action.downloadItem(
+            matching: assignment, in: browser, accessController: spaceAccess,
+            itemsForProfile: downloadCenter.items(for:))
     }
 }
 
@@ -98,11 +86,7 @@ extension BrowserSidebarUtilityCoordinator: BrowserDownloadActionPerformer {
 
     func retryDownload(_ item: DownloadState, matching assignment: BrowserSpaceRuntimeAssignment) {
         downloadCenter.retryAutomaticDownload(item.id, matching: assignment) { expectedAssignment in
-            BrowserSidebarAccessPolicy.unlockedSpace(
-                matching: expectedAssignment,
-                in: browser,
-                accessController: spaceAccess
-            ) != nil
+            browser.unlockedSpace(matching: expectedAssignment, accessController: spaceAccess) != nil
         }
     }
 

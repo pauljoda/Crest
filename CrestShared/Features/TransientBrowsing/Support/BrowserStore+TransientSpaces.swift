@@ -9,7 +9,7 @@ extension BrowserStore {
         forRequestIn requestSpaceID: UUID,
         isLocked: @MainActor (SpaceModel) -> Bool
     ) -> [SpaceModel] {
-        BrowserSidebarAccessPolicy.availableSpaces(in: self).filter {
+        self.availableSpaces.filter {
             $0.id == requestSpaceID || !isLocked($0)
         }
     }

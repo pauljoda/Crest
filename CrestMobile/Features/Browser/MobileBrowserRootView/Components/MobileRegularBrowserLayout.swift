@@ -58,11 +58,9 @@ struct MobileRegularBrowserLayout<Sidebar: View, Detail: View>: View,
                     onResizeEnded: commitSidebarWidth, edge: sidebarEdge
                 )
                 .offset(
-                    x: BrowserChromeDirectionPolicy.leadingOffset(
+                    x: layoutDirection.leadingOffset(
                         (layout.sidebarWidth - MobileBrowserRootLayout.resizeHandleOverlap)
-                            * (sidebarEdge == .leading ? 1 : -1),
-                        layoutDirection: layoutDirection
-                    )
+                            * (sidebarEdge == .leading ? 1 : -1))
                 )
                 .zIndex(BrowserRootMetrics.sidebarResizeControlZIndex)
             }

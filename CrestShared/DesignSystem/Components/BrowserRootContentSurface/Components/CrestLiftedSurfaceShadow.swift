@@ -3,6 +3,11 @@ import SwiftUI
 /// A transparent SwiftUI canvas that casts only the exterior part of a rounded
 /// surface's shadow.
 struct CrestLiftedSurfaceShadow: View {
+    static let pageShadowOpacity = 0.11
+    static let pageShadowRadius: CGFloat = 7
+    static let pageShadowYOffset: CGFloat = 2
+    static let drawingOutset = pageShadowRadius * 2 + abs(pageShadowYOffset)
+
     let cornerRadius: CGFloat
     let opacity: Double
     let radius: CGFloat
@@ -11,7 +16,7 @@ struct CrestLiftedSurfaceShadow: View {
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
 
     var body: some View {
-        let drawingOutset = BrowserPageSurfacePolicy.shadowDrawingOutset
+        let drawingOutset = Self.drawingOutset
 
         Canvas { context, size in
             guard !reduceTransparency, opacity > 0 else { return }

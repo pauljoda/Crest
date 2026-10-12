@@ -18,7 +18,7 @@ struct BrowserLookAndFeelColumns: Equatable {
     static let formMinimumWidth: CGFloat = 356
     static let previewLeadingPadding: CGFloat = CrestSpacing.extraExtraLarge
     static let pinnedPreviewMinimumWidth: CGFloat = previewMinimumWidth + formMinimumWidth + previewLeadingPadding
-    static let formMaximumWidth: CGFloat = BrowserSettingsVisualPolicy.maximumReadableContentWidth
+    static let formMaximumWidth: CGFloat = BrowserSettingsLayout.maximumReadableContentWidth
 
     // MARK: - Variables
 

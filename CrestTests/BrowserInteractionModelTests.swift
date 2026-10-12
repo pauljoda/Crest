@@ -64,25 +64,23 @@ final class BrowserInteractionModelTests: XCTestCase {
 
     func testMobileDragLifecycleUsesTheNativeCompletionOnlyWhereItExists() {
         XCTAssertFalse(
-            BrowserTabDragSessionLifecyclePolicy.usesNativeCompletion(
+            BrowserTabDragSessionLifecyclePhase.usesNativeCompletion(
                 runtimeMajorVersion: 26
             )
         )
         XCTAssertTrue(
-            BrowserTabDragSessionLifecyclePolicy.usesNativeCompletion(
+            BrowserTabDragSessionLifecyclePhase.usesNativeCompletion(
                 runtimeMajorVersion: 27
             )
         )
         XCTAssertFalse(
-            BrowserTabDragSessionLifecyclePolicy.shouldEnd(for: .active)
+            BrowserTabDragSessionLifecyclePhase.active.endsSession
         )
         XCTAssertTrue(
-            BrowserTabDragSessionLifecyclePolicy.shouldEnd(for: .ended)
+            BrowserTabDragSessionLifecyclePhase.ended.endsSession
         )
         XCTAssertTrue(
-            BrowserTabDragSessionLifecyclePolicy.shouldEnd(
-                for: .dataTransferCompleted
-            )
+            BrowserTabDragSessionLifecyclePhase.dataTransferCompleted.endsSession
         )
     }
 
@@ -100,7 +98,7 @@ final class BrowserInteractionModelTests: XCTestCase {
 
         XCTAssertTrue(dragState.isDragging(item))
         try? await Task.sleep(
-            for: BrowserDragReleaseFallbackPolicy.cleanupDelay * 2
+            for: BrowserTabDragState.releaseCleanupDelay * 2
         )
         XCTAssertFalse(dragState.isDragging(item))
         XCTAssertNil(dragState.dropLocation)
@@ -120,7 +118,7 @@ final class BrowserInteractionModelTests: XCTestCase {
 
         XCTAssertTrue(dragState.isDragging(item))
         try? await Task.sleep(
-            for: BrowserDragReleaseFallbackPolicy.cleanupDelay * 2
+            for: BrowserTabDragState.releaseCleanupDelay * 2
         )
         XCTAssertFalse(dragState.isDragging(item))
         XCTAssertNil(dragState.dropLocation)
