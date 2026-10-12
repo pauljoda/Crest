@@ -272,6 +272,8 @@ final class BrowserDownloadCenter: NSObject {
         resolution.save(data, as: itemID, from: originatingURL, in: self)
     }
 
+    /// Writes `data` to `destination` through Crest's staging folder, with
+    /// the quarantine of the page it came from.
     func saveDataToDestination(
         _ data: Data, itemID: UUID, destination: URL, originatingURL: URL
     ) throws {

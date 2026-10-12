@@ -8,13 +8,9 @@ struct BrowserDownloadStatusIcon: View {
             Image(systemName: symbol).foregroundStyle(symbolStyle)
         } else if item.phase.isTransferring {
             ZStack {
-                Image(
-                    systemName: BrowserDownloadFileIconPolicy.systemImage(
-                        for: item.filename
-                    )
-                )
-                .font(.caption2)
-                .foregroundStyle(.secondary)
+                Image(systemName: BrowserDownloadFileKind(filename: item.filename).symbol)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
                 Circle().stroke(.secondary.opacity(0.25), lineWidth: 2)
                 Circle()
                     .trim(from: 0, to: max(item.progress, 0.02))
@@ -33,11 +29,7 @@ struct BrowserDownloadStatusIcon: View {
         } else if item.phase.isLive {
             ProgressView().controlSize(.small)
         } else {
-            Image(
-                systemName: BrowserDownloadFileIconPolicy.systemImage(
-                    for: item.filename
-                )
-            )
+            Image(systemName: BrowserDownloadFileKind(filename: item.filename).symbol)
         }
     }
 
@@ -50,29 +42,6 @@ struct BrowserDownloadStatusIcon: View {
             AnyShapeStyle(Color.red)
         } else {
             AnyShapeStyle(HierarchicalShapeStyle.secondary)
-        }
-    }
-}
-
-enum BrowserDownloadFileIconPolicy {
-    static func systemImage(for filename: String) -> String {
-        switch (filename as NSString).pathExtension.lowercased() {
-        case "png", "jpg", "jpeg", "gif", "heic", "heif", "webp", "tiff", "svg":
-            "photo.fill"
-        case "pdf":
-            "doc.richtext.fill"
-        case "zip", "tar", "gz", "tgz", "bz2", "xz", "7z", "rar":
-            "archivebox.fill"
-        case "mp3", "m4a", "aac", "wav", "aiff", "flac", "ogg":
-            "waveform"
-        case "mov", "mp4", "m4v", "avi", "mkv", "webm":
-            "film.fill"
-        case "txt", "md", "rtf", "doc", "docx", "pages", "csv":
-            "doc.text.fill"
-        case "dmg", "iso", "pkg":
-            "externaldrive.fill"
-        default:
-            "doc.fill"
         }
     }
 }
@@ -113,7 +82,7 @@ struct BrowserDownloadFeedbackLayer: View {
                                 x: destination.x - CGFloat(index) * 4,
                                 y: destination.y - CGFloat(index) * 4
                             ),
-                            presentation: BrowserDownloadFeedbackPolicy.presentation(
+                            presentation: BrowserDownloadFeedbackPresentation.resolve(
                                 hasSource: true,
                                 hasSidebarDestination: true,
                                 reduceMotion: reduceMotion
@@ -157,30 +126,18 @@ private struct BrowserDownloadFeedbackIcon: View {
             .scaleEffect(scale)
             .task {
                 await Task.yield()
-                switch presentation {
-                case .flight:
-                    withAnimation(.spring(duration: 0.68, bounce: 0.16)) {
-                        hasArrived = true
-                    }
-                case .destinationFade:
-                    withAnimation(.easeOut(duration: 0.24)) {
-                        hasArrived = true
-                    }
-                case .none:
-                    break
+                guard let arrival = presentation.arrival else { return }
+                withAnimation(arrival) {
+                    hasArrived = true
                 }
             }
     }
 
     private var icon: some View {
         ZStack(alignment: .bottomTrailing) {
-            Image(
-                systemName: BrowserDownloadFileIconPolicy.systemImage(
-                    for: filename
-                )
-            )
-            .font(.system(size: 21, weight: .medium))
-            .symbolRenderingMode(.hierarchical)
+            Image(systemName: BrowserDownloadFileKind(filename: filename).symbol)
+                .font(.system(size: 21, weight: .medium))
+                .symbolRenderingMode(.hierarchical)
 
             Image(systemName: "arrow.down.circle.fill")
                 .font(.system(size: 11, weight: .bold))
@@ -195,22 +152,15 @@ private struct BrowserDownloadFeedbackIcon: View {
     }
 
     private var position: CGPoint {
-        presentation == .flight && !hasArrived ? source : destination
+        presentation.departsFromSource && !hasArrived ? source : destination
     }
 
     private var opacity: Double {
-        switch presentation {
-        case .flight:
-            hasArrived ? 0.84 : 1
-        case .destinationFade:
-            hasArrived ? 0.9 : 0
-        case .none:
-            0
-        }
+        presentation.opacity(hasArrived: hasArrived)
     }
 
     private var scale: CGFloat {
-        presentation == .destinationFade && !hasArrived ? 0.92 : 1
+        presentation.scale(hasArrived: hasArrived)
     }
 }
 

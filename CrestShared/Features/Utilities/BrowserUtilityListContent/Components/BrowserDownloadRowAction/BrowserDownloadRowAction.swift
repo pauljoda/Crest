@@ -14,24 +14,15 @@ struct BrowserDownloadRowAction: View {
             actionButton(.resume) { perform(.resume(item.id)) }
         }
         let action = item.phase.primaryAction
-        switch action.kind {
-        case .retry:
-            actionButton(action) { perform(.retry(item.id)) }
-        case .cancel:
-            actionButton(action) { perform(.cancel(item.id)) }
-        case .open:
+        if let request = action.request(for: item.id) {
+            actionButton(action) { perform(request) }
+        } else {
             BrowserDownloadFinishedAction(
                 itemID: item.id,
                 action: action,
                 destinations: destinations,
                 perform: perform
             )
-        case .remove:
-            actionButton(action) { perform(.clear(item.id)) }
-        case .pause:
-            actionButton(action) { perform(.pause(item.id)) }
-        case .resume:
-            actionButton(action) { perform(.resume(item.id)) }
         }
     }
 

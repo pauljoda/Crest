@@ -3909,6 +3909,10 @@
     "2026-10-12-sidebar-pointer-actions-own-behavior": {
       "category": "internal",
       "message": "Let sidebar pointer and row actions say what they do"
+    },
+    "2026-10-12-download-actions-own-behavior": {
+      "category": "internal",
+      "message": "Let download actions, destinations and feedback say what they do"
     }
   }
 }

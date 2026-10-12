@@ -72,26 +72,7 @@ struct BrowserSidebarUtilityCoordinator {
         guard let item = downloadItem(for: action, matching: assignment) else {
             return
         }
-        switch action {
-        case .open(_, let destination):
-            platformActions.openFinishedDownload(item, destination)
-        case .retry(let itemID):
-            downloadCenter.retryAutomaticDownload(itemID, matching: assignment) { expectedAssignment in
-                BrowserSidebarAccessPolicy.unlockedSpace(
-                    matching: expectedAssignment,
-                    in: browser,
-                    accessController: spaceAccess
-                ) != nil
-            }
-        case .cancel(let itemID):
-            platformActions.cancelDownload(itemID)
-        case .pause(let itemID):
-            downloadCenter.pause(itemID)
-        case .resume(let itemID):
-            downloadCenter.resume(itemID)
-        case .clear(let itemID):
-            platformActions.clearDownload(itemID)
-        }
+        action.perform(on: self, for: item, matching: assignment)
     }
 
     private func downloadItem(
@@ -105,5 +86,39 @@ struct BrowserSidebarUtilityCoordinator {
             accessController: spaceAccess,
             itemsForProfile: downloadCenter.items(for:)
         )
+    }
+}
+
+// MARK: - Actions - Downloads
+
+extension BrowserSidebarUtilityCoordinator: BrowserDownloadActionPerformer {
+    func openDownload(_ item: DownloadState, in destination: BrowserUtilityDownloadDestination) {
+        platformActions.openFinishedDownload(item, destination)
+    }
+
+    func retryDownload(_ item: DownloadState, matching assignment: BrowserSpaceRuntimeAssignment) {
+        downloadCenter.retryAutomaticDownload(item.id, matching: assignment) { expectedAssignment in
+            BrowserSidebarAccessPolicy.unlockedSpace(
+                matching: expectedAssignment,
+                in: browser,
+                accessController: spaceAccess
+            ) != nil
+        }
+    }
+
+    func pauseDownload(_ item: DownloadState) {
+        downloadCenter.pause(item.id)
+    }
+
+    func resumeDownload(_ item: DownloadState) {
+        downloadCenter.resume(item.id)
+    }
+
+    func cancelDownload(_ item: DownloadState) {
+        platformActions.cancelDownload(item.id)
+    }
+
+    func clearDownload(_ item: DownloadState) {
+        platformActions.clearDownload(item.id)
     }
 }

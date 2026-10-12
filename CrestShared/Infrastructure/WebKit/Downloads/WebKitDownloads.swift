@@ -250,14 +250,7 @@ final class WebKitDownloads: NSObject {
             isUserInitiated: transfer.isUserInitiated, isUserApprovedRetry: transfer.isApprovedRetry,
             savedDecision: saved, hasAllowedAutomaticDownload: automaticAllowances[scope] ?? false)
         automaticAllowances[scope] = verdict.hasAllowedAutomaticDownload
-        switch verdict.action.kind {
-        case .allow: return true
-        case .deny: return false
-        case .requestPermission:
-            guard let page = transfer.page else { return false }
-            return await page.ask(
-                PermissionQuestion(permission: .automaticDownloads, origin: origin, topLevelOrigin: origin))
-        }
+        return await verdict.action.settle(on: WebKitAutomaticDownloadRequest(page: transfer.page, origin: origin))
     }
 
     /// The site's choice refused `download`: it waits for the person's retry.

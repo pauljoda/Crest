@@ -1,4 +1,4 @@
-import AppKit
+import Foundation
 
 extension BrowserSidebarUtilityCoordinator {
     /// Binds the sidebar's utility surfaces to the window's card pool.
@@ -33,16 +33,7 @@ extension BrowserSidebarUtilityCoordinator {
                     guard item.phase.isComplete,
                         let destinationURL = item.destinationURL
                     else { return }
-                    switch destination.kind {
-                    case .open:
-                        NSWorkspace.shared.open(destinationURL)
-                    case .revealInFinder:
-                        NSWorkspace.shared.activateFileViewerSelecting([
-                            destinationURL
-                        ])
-                    case .share, .files:
-                        break
-                    }
+                    destination.send(destinationURL, to: BrowserWorkspaceFileOpener())
                 },
                 cancelDownload: { itemID in
                     pages.downloadCenter.cancel(itemID)

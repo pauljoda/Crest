@@ -136,9 +136,9 @@ private struct BrowserUtilityDownloadRow: View {
     }
 
     private var primaryDestination: BrowserUtilityDownloadDestination? {
-        BrowserUtilityDownloadPrimaryActionPolicy.destination(
+        BrowserUtilityDownloadDestination.primary(
             for: download.phase,
-            availableDestinations: actions.downloadDestinations
+            among: actions.downloadDestinations
         )
     }
 

@@ -446,16 +446,16 @@ final class BrowserUtilityListTests: XCTestCase {
 
     func testFinishedDownloadRowRevealsTheFileInFinder() {
         XCTAssertEqual(
-            BrowserUtilityDownloadPrimaryActionPolicy.destination(
+            BrowserUtilityDownloadDestination.primary(
                 for: .finished,
-                availableDestinations: [.open, .revealInFinder]
+                among: [.open, .revealInFinder]
             ),
             .revealInFinder
         )
         XCTAssertNil(
-            BrowserUtilityDownloadPrimaryActionPolicy.destination(
+            BrowserUtilityDownloadDestination.primary(
                 for: .downloading,
-                availableDestinations: [.open, .revealInFinder]
+                among: [.open, .revealInFinder]
             )
         )
     }

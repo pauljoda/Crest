@@ -1,5 +1,26 @@
 import Foundation
 
+// MARK: - Types
+
+/// A trusted primary-pointer activation as Crest's link bridge posts it: the
+/// link and where it sits, as fractions of the viewport.
+private struct BrowserDownloadActivationMessage: Decodable {
+    /// The only kind of message the bridge posts that is an activation.
+    enum Kind: String, Decodable {
+        case activation
+    }
+
+    let version: Int
+    let kind: Kind
+    let href: String
+    let minX: Double
+    let minY: Double
+    let width: Double
+    let height: Double
+    let touchX: Double
+    let touchY: Double
+}
+
 /// A trusted primary-pointer activation reported from Crest's private WebKit
 /// content world. Only geometry and the already-owned download destination are
 /// retained, and only long enough to match the ensuing download callback.
@@ -30,47 +51,34 @@ struct BrowserDownloadSourceCapture: Equatable, Sendable {
         )
     }
 
+    /// The capture an activation message from the link bridge reports, decoded
+    /// once from the script message's body. Anything else the bridge posts,
+    /// and any activation that breaks the contract, is not one.
     init?(messageBody: Any) {
-        guard let values = messageBody as? [String: Any],
-            Self.integer(values["version"]) == 1,
-            values["kind"] as? String == "activation",
-            let href = values["href"] as? String,
-            href.count <= 4_096,
-            let destinationURL = URL(string: href),
-            BrowserCorePolicy.acceptsExternalURL(destinationURL),
-            let minX = Self.number(values["minX"]),
-            let minY = Self.number(values["minY"]),
-            let width = Self.number(values["width"]),
-            let height = Self.number(values["height"]),
-            let touchX = Self.number(values["touchX"]),
-            let touchY = Self.number(values["touchY"])
+        guard JSONSerialization.isValidJSONObject(messageBody),
+            let data = try? JSONSerialization.data(withJSONObject: messageBody),
+            let message = try? JSONDecoder().decode(BrowserDownloadActivationMessage.self, from: data),
+            message.version == 1,
+            message.href.count <= 4_096,
+            let destinationURL = URL(string: message.href),
+            BrowserCorePolicy.acceptsExternalURL(destinationURL)
         else { return nil }
 
         self.init(
             destinationURL: destinationURL,
             normalizedSourceRect: CGRect(
-                x: minX,
-                y: minY,
-                width: width,
-                height: height
+                x: message.minX,
+                y: message.minY,
+                width: message.width,
+                height: message.height
             ),
-            normalizedTouchPoint: CGPoint(x: touchX, y: touchY)
+            normalizedTouchPoint: CGPoint(x: message.touchX, y: message.touchY)
         )
     }
 
     private static func normalized(_ value: Double) -> Double {
         guard value.isFinite else { return 0 }
         return min(max(value, 0), 1)
-    }
-
-    private static func number(_ value: Any?) -> Double? {
-        if let value = value as? NSNumber { return value.doubleValue }
-        return value as? Double
-    }
-
-    private static func integer(_ value: Any?) -> Int? {
-        if let value = value as? NSNumber { return value.intValue }
-        return value as? Int
     }
 }
 
@@ -137,24 +145,9 @@ struct BrowserDownloadFeedbackEvent: Identifiable, Equatable, @unchecked Sendabl
     let source: BrowserDownloadFeedbackSource
 }
 
-enum BrowserDownloadFeedbackPresentation: Equatable, Sendable {
-    case flight
-    case destinationFade
-    case none
-}
-
 enum BrowserDownloadFeedbackPolicy {
     static let maximumVisibleEvents = 3
     static let lifetime: Duration = .milliseconds(1_400)
-
-    static func presentation(
-        hasSource: Bool,
-        hasSidebarDestination: Bool,
-        reduceMotion: Bool
-    ) -> BrowserDownloadFeedbackPresentation {
-        guard hasSource, hasSidebarDestination else { return .none }
-        return reduceMotion ? .destinationFade : .flight
-    }
 
     static func bounded(
         _ events: [BrowserDownloadFeedbackEvent],

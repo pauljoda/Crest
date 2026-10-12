@@ -16,18 +16,8 @@ enum BrowserSidebarUtilityActionPolicy {
                 accessController: accessController
             )
         else { return nil }
-        let itemID = itemID(for: action)
         return itemsForProfile(space.profileID).first {
-            $0.id == itemID && $0.profileID == assignment.profileID
-        }
-    }
-
-    private static func itemID(
-        for action: BrowserUtilityDownloadAction
-    ) -> UUID {
-        switch action {
-        case .open(let id, _), .retry(let id), .pause(let id), .resume(let id), .cancel(let id), .clear(let id):
-            id
+            $0.id == action.itemID && $0.profileID == assignment.profileID
         }
     }
 }
