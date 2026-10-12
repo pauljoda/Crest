@@ -8,4 +8,9 @@ extension WorkspaceClosed {
         }
         state.touch(workspaceID)
     }
+
+    @MainActor func apply(to core: CrestCore, in batch: inout CoreChangeBatch) {
+        batch.notificationAccessChanged = true
+        apply(to: core.state)
+    }
 }

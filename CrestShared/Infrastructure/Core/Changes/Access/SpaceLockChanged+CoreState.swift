@@ -9,4 +9,9 @@ extension SpaceLockChanged {
         access[assignment] = isUnlocked || isAuthenticating ? self : nil
         state.publish(access, into: \.spaceAccessStorage, as: \.spaceAccess)
     }
+
+    @MainActor func apply(to core: CrestCore, in batch: inout CoreChangeBatch) {
+        batch.notificationAccessChanged = true
+        apply(to: core.state)
+    }
 }

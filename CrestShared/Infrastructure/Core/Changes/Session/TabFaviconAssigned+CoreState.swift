@@ -7,4 +7,9 @@ extension TabFaviconAssigned {
         }
         state.touch(workspaceID)
     }
+
+    @MainActor func apply(to core: CrestCore, in batch: inout CoreChangeBatch) {
+        apply(to: core.state)
+        if pageID != nil { batch.pageRecords.icons.append(self) }
+    }
 }

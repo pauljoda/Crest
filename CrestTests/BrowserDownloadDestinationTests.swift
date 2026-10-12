@@ -12,7 +12,7 @@ final class BrowserDownloadDestinationTests: XCTestCase {
         preferences.setDirectoryMetadata(bookmark: Data([1, 2, 3]), displayName: "Work Files", for: spaceID)
         let resolution = await BrowserPlatformDownloadDirectory.resolve(
             suggestedFilename: "report.txt", spaceID: spaceID)
-        guard case .unavailable = resolution else {
+        guard resolution is BrowserDownloadFolderUnavailable else {
             XCTFail("A broken saved folder must not silently redirect a download.")
             return
         }

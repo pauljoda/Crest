@@ -159,7 +159,7 @@ final class WebKitEngineBinding: EngineBinding {
         if contentRules.provider == nil {
             contentRules.provider = BrowserContentRuleListProvider.forLaunch(core: engines.core)
         }
-        engines.core.followPrompts(self) { [weak self] change in self?.ask(change) }
+        engines.core.followPrompts(self)
     }
 
     func run(_ command: EngineCommand) {
@@ -419,24 +419,6 @@ final class WebKitEngineBinding: EngineBinding {
         engines?.report(PromptWithdrawn(promptID: promptID), from: self)
     }
 
-    /// Shows a question the core asks about one of this binding's pages on
-    /// the page's host, and closes it once the core settles it. One no host
-    /// can show is declined.
-    private func ask(_ change: Change) {
-        if case .scriptDialogAsked(let asked) = change {
-            present(asked.promptID, on: asked.pageID) { $0.ask(asked, dismissal: $1) }
-        }
-        if case .authenticationAsked(let asked) = change {
-            present(asked.promptID, on: asked.pageID) { $0.ask(asked, dismissal: $1) }
-        }
-        if case .permissionAsked(let asked) = change {
-            present(asked.promptID, on: asked.pageID) { $0.ask(asked, dismissal: $1) }
-        }
-        if case .promptSettled(let settled) = change {
-            dismissals.removeValue(forKey: settled.promptID)?.dismiss()
-        }
-    }
-
     /// Shows one of this binding's prompts with `show` on the host of page
     /// `pageID`, or declines it when no host can show it.
     private func present(
@@ -463,6 +445,27 @@ final class WebKitEngineBinding: EngineBinding {
             prompts[promptID] = nil
             prompt.decline()
         }
+    }
+}
+
+/// Shows a question the core asks about one of this binding's pages on the
+/// page's host, and closes it once the core settles it. One no host can show
+/// is declined.
+extension WebKitEngineBinding: CorePromptHost {
+    func ask(_ asked: ScriptDialogAsked) {
+        present(asked.promptID, on: asked.pageID) { $0.ask(asked, dismissal: $1) }
+    }
+
+    func ask(_ asked: AuthenticationAsked) {
+        present(asked.promptID, on: asked.pageID) { $0.ask(asked, dismissal: $1) }
+    }
+
+    func ask(_ asked: PermissionAsked) {
+        present(asked.promptID, on: asked.pageID) { $0.ask(asked, dismissal: $1) }
+    }
+
+    func dismiss(_ settled: PromptSettled) {
+        dismissals.removeValue(forKey: settled.promptID)?.dismiss()
     }
 }
 

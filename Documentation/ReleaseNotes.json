@@ -3877,6 +3877,10 @@
     "2026-10-12-cloud-sync-steps-own-behavior": {
       "category": "internal",
       "message": "Let each iCloud sync step take itself"
+    },
+    "2026-10-12-core-changes-follow-themselves": {
+      "category": "internal",
+      "message": "Let each core change say who follows it"
     }
   }
 }

@@ -26,7 +26,7 @@ final class BrowserDownloadCenter: NSObject {
             String,
             UUID,
             Bool
-        ) async -> BrowserPlatformDownloadResolution
+        ) async -> any BrowserPlatformDownloadResolution
 
     // MARK: - Variables
 
@@ -269,34 +269,10 @@ final class BrowserDownloadCenter: NSObject {
         // Cancellation or removal of the owning Space can happen while a
         // native panel is open. A late response must never resurrect the save.
         guard dataSaveAssignments[itemID] == assignment else { return }
-        switch resolution {
-        case .cancelled:
-            send(CancelDownload(downloadID: itemID, message: "Canceled."))
-        case .unavailable:
-            #if os(macOS)
-                send(
-                    FailDownload(
-                        downloadID: itemID, reason: .folderUnavailable,
-                        message:
-                            "The download folder is unavailable. Open Crest Settings > General > System Permissions to check folder access or choose another folder."
-                    ))
-            #else
-                send(FailDownload(downloadID: itemID, reason: .folderUnavailable, message: nil))
-            #endif
-        case .destination(let destination, let resourceURL):
-            let scoped = resourceURL?.startAccessingSecurityScopedResource() ?? false
-            defer { if scoped { resourceURL?.stopAccessingSecurityScopedResource() } }
-            do {
-                try saveDataToDestination(
-                    data, itemID: itemID, destination: destination, originatingURL: originatingURL)
-                send(FinishDownload(downloadID: itemID, finalByteCount: Int64(data.count)))
-            } catch {
-                send(FailDownload(downloadID: itemID, reason: .fileAccess, message: error.localizedDescription))
-            }
-        }
+        resolution.save(data, as: itemID, from: originatingURL, in: self)
     }
 
-    private func saveDataToDestination(
+    func saveDataToDestination(
         _ data: Data, itemID: UUID, destination: URL, originatingURL: URL
     ) throws {
         let fileManager = FileManager.default

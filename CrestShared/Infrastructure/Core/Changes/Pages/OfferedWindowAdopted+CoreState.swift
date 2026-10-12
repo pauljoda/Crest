@@ -5,4 +5,9 @@ extension OfferedWindowAdopted {
     /// the window that hosts it hears of it through
     /// `CrestCore.followAdoptedWindows`.
     @MainActor func apply(to state: CoreState) {}
+
+    @MainActor func apply(to core: CrestCore, in batch: inout CoreChangeBatch) {
+        apply(to: core.state)
+        batch.adoptedWindows.append(self)
+    }
 }

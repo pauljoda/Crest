@@ -8,4 +8,9 @@ extension DownloadUpdated {
             state.downloads.insert(download, at: min(max(position, 0), state.downloads.count))
         }
     }
+
+    @MainActor func apply(to core: CrestCore, in batch: inout CoreChangeBatch) {
+        apply(to: core.state)
+        batch.downloads.append(download)
+    }
 }

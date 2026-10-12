@@ -606,6 +606,78 @@ extension Change {
         case .workspaceOpened(let change): change.apply(to: state)
         }
     }
+
+    /// Applies the change to the core's read model and notes in `batch` what it
+    /// tells those who follow the batch, as its own `apply(to:in:)` does.
+    @MainActor func apply(to core: CrestCore, in batch: inout CoreChangeBatch) {
+        switch self {
+        case .agentPreferencesChanged(let change): change.apply(to: core, in: &batch)
+        case .agentSessionsChanged(let change): change.apply(to: core, in: &batch)
+        case .appPreferencesChanged(let change): change.apply(to: core, in: &batch)
+        case .archiveChanged(let change): change.apply(to: core, in: &batch)
+        case .authenticationAsked(let change): change.apply(to: core, in: &batch)
+        case .closeReady(let change): change.apply(to: core, in: &batch)
+        case .cloudMergeBegan(let change): change.apply(to: core, in: &batch)
+        case .cloudSyncAdvanced(let change): change.apply(to: core, in: &batch)
+        case .cloudTransportChanged(let change): change.apply(to: core, in: &batch)
+        case .dataDeleted(let change): change.apply(to: core, in: &batch)
+        case .downloadApprovalAsked(let change): change.apply(to: core, in: &batch)
+        case .downloadDestinationAsked(let change): change.apply(to: core, in: &batch)
+        case .downloadStarted(let change): change.apply(to: core, in: &batch)
+        case .downloadUpdated(let change): change.apply(to: core, in: &batch)
+        case .downloadsRemoved(let change): change.apply(to: core, in: &batch)
+        case .enginePreferencesChanged(let change): change.apply(to: core, in: &batch)
+        case .enginesChanged(let change): change.apply(to: core, in: &batch)
+        case .extensionInstallAsked(let change): change.apply(to: core, in: &batch)
+        case .foldersChanged(let change): change.apply(to: core, in: &batch)
+        case .historyChanged(let change): change.apply(to: core, in: &batch)
+        case .linkPreferencesChanged(let change): change.apply(to: core, in: &batch)
+        case .navigationRecorded(let change): change.apply(to: core, in: &batch)
+        case .offeredPageAdopted(let change): change.apply(to: core, in: &batch)
+        case .offeredWindowAdopted(let change): change.apply(to: core, in: &batch)
+        case .pageChanged(let change): change.apply(to: core, in: &batch)
+        case .pageOpened(let change): change.apply(to: core, in: &batch)
+        case .pageRehosted(let change): change.apply(to: core, in: &batch)
+        case .pageRemoved(let change): change.apply(to: core, in: &batch)
+        case .pageUnloaded(let change): change.apply(to: core, in: &batch)
+        case .permissionAsked(let change): change.apply(to: core, in: &batch)
+        case .promptSettled(let change): change.apply(to: core, in: &batch)
+        case .quitWithDownloadsAsked(let change): change.apply(to: core, in: &batch)
+        case .saved(let change): change.apply(to: core, in: &batch)
+        case .scriptDialogAsked(let change): change.apply(to: core, in: &batch)
+        case .searchCatalogChanged(let change): change.apply(to: core, in: &batch)
+        case .sessionAdopted(let change): change.apply(to: core, in: &batch)
+        case .setupCompletedChanged(let change): change.apply(to: core, in: &batch)
+        case .setupDraftChanged(let change): change.apply(to: core, in: &batch)
+        case .setupFinished(let change): change.apply(to: core, in: &batch)
+        case .setupFlowChanged(let change): change.apply(to: core, in: &batch)
+        case .shortcutsChanged(let change): change.apply(to: core, in: &batch)
+        case .sidebarChanged(let change): change.apply(to: core, in: &batch)
+        case .sitePermissionsChanged(let change): change.apply(to: core, in: &batch)
+        case .spaceLockChanged(let change): change.apply(to: core, in: &batch)
+        case .spaceSettingsChanged(let change): change.apply(to: core, in: &batch)
+        case .spacesChanged(let change): change.apply(to: core, in: &batch)
+        case .splitGroupsChanged(let change): change.apply(to: core, in: &batch)
+        case .storageFailed(let change): change.apply(to: core, in: &batch)
+        case .syncJournalChanged(let change): change.apply(to: core, in: &batch)
+        case .syncRecordsSkipped(let change): change.apply(to: core, in: &batch)
+        case .syncStagingFailed(let change): change.apply(to: core, in: &batch)
+        case .tabCopied(let change): change.apply(to: core, in: &batch)
+        case .tabFaviconAssigned(let change): change.apply(to: core, in: &batch)
+        case .tabPagePutAway(let change): change.apply(to: core, in: &batch)
+        case .tabsChanged(let change): change.apply(to: core, in: &batch)
+        case .tabsImported(let change): change.apply(to: core, in: &batch)
+        case .transientPageClosed(let change): change.apply(to: core, in: &batch)
+        case .transientPagePromoted(let change): change.apply(to: core, in: &batch)
+        case .windowBroughtForward(let change): change.apply(to: core, in: &batch)
+        case .windowChanged(let change): change.apply(to: core, in: &batch)
+        case .windowClosed(let change): change.apply(to: core, in: &batch)
+        case .windowRecordsAdopted(let change): change.apply(to: core, in: &batch)
+        case .workspaceChanged(let change): change.apply(to: core, in: &batch)
+        case .workspaceClosed(let change): change.apply(to: core, in: &batch)
+        case .workspaceOpened(let change): change.apply(to: core, in: &batch)
+        }
+    }
 }
 
 // MARK: - Records
@@ -716,7 +788,7 @@ struct AgentPreferences: Equatable, Sendable {
     let agents: [ApprovedAgent]
 }
 
-struct AgentPreferencesChanged: Equatable, Sendable {
+struct AgentPreferencesChanged: CoreChange, Equatable, Sendable {
     let preferences: AgentPreferences
 }
 
@@ -739,7 +811,7 @@ struct AgentSessionState: Equatable, Sendable {
     let tabIDs: [UUID]
 }
 
-struct AgentSessionsChanged: Equatable, Sendable {
+struct AgentSessionsChanged: CoreChange, Equatable, Sendable {
     let sessions: [AgentSessionState]
 }
 
@@ -941,7 +1013,7 @@ struct AppPreferences: Equatable, Sendable {
     var palette: PalettePreferences
 }
 
-struct AppPreferencesChanged: Equatable, Sendable {
+struct AppPreferencesChanged: CoreChange, Equatable, Sendable {
     let workspaceID: UUID
     let preferences: AppPreferences?
 }
@@ -966,7 +1038,7 @@ struct ApprovedAgent: Equatable, Sendable {
     var name: String
 }
 
-struct ArchiveChanged: Equatable, Sendable {
+struct ArchiveChanged: CoreChange, Equatable, Sendable {
     let workspaceID: UUID
     let spaceID: UUID
     let archived: [ArchivedTabState]
@@ -1026,7 +1098,7 @@ struct AudioSpectrumChanged: Equatable, Sendable {
     let bands: Data
 }
 
-struct AuthenticationAsked: Equatable, Sendable {
+struct AuthenticationAsked: CoreChange, Equatable, Sendable {
     let promptID: UUID
     let pageID: UUID
     let question: AuthenticationQuestion
@@ -1432,7 +1504,7 @@ struct ClosePreparationUnderway: Equatable, Sendable {
     let requestID: UUID
 }
 
-struct CloseReady: Equatable, Sendable {
+struct CloseReady: CoreChange, Equatable, Sendable {
     let requestID: UUID
     let allowed: Bool
 }
@@ -1505,7 +1577,7 @@ struct CloudFieldsOf: Query, Equatable, Sendable {
     let recordNames: [String]
 }
 
-struct CloudMergeBegan: Equatable, Sendable {
+struct CloudMergeBegan: CoreChange, Equatable, Sendable {
     let mergeID: Int64
 }
 
@@ -1536,7 +1608,7 @@ struct CloudSync: Query, Equatable, Sendable {
 
 }
 
-struct CloudSyncAdvanced: Equatable, Sendable {
+struct CloudSyncAdvanced: CoreChange, Equatable, Sendable {
     let status: CloudSyncStatus
     let steps: [CloudSyncStep]
 }
@@ -1569,7 +1641,7 @@ struct CloudTransport: Query, Equatable, Sendable {
 
 }
 
-struct CloudTransportChanged: Equatable, Sendable {
+struct CloudTransportChanged: CoreChange, Equatable, Sendable {
     let state: CloudTransportState
 }
 
@@ -1895,7 +1967,7 @@ struct CustomizeSetupSpace: Intent, SetupDraftIntent, Equatable, Sendable {
     let customization: SpaceCustomization
 }
 
-struct DataDeleted: Equatable, Sendable {
+struct DataDeleted: CoreChange, Equatable, Sendable {
     let requestID: UUID
     let deleted: Bool
 }
@@ -2002,7 +2074,7 @@ struct DockMenuSpace: Equatable, Sendable {
     let isLocked: Bool
 }
 
-struct DownloadApprovalAsked: Equatable, Sendable {
+struct DownloadApprovalAsked: CoreChange, Equatable, Sendable {
     let promptID: UUID
     let downloadID: UUID
     let spaceID: UUID?
@@ -2012,7 +2084,7 @@ struct DownloadApprovalAsked: Equatable, Sendable {
     let sourceHost: String?
 }
 
-struct DownloadDestinationAsked: Equatable, Sendable {
+struct DownloadDestinationAsked: CoreChange, Equatable, Sendable {
     let promptID: UUID
     let downloadID: UUID
     let spaceID: UUID
@@ -2074,7 +2146,7 @@ struct DownloadRiskVerdict: Equatable, Sendable {
     let requiresConfirmation: Bool
 }
 
-struct DownloadStarted: Equatable, Sendable {
+struct DownloadStarted: CoreChange, Equatable, Sendable {
     let downloadID: UUID
     let pageID: UUID
 }
@@ -2134,12 +2206,12 @@ struct DownloadTransferEstimator: Equatable, Sendable {
     var smoothedBytesPerSecond: Double?
 }
 
-struct DownloadUpdated: Equatable, Sendable {
+struct DownloadUpdated: CoreChange, Equatable, Sendable {
     let download: DownloadState
     let position: Int
 }
 
-struct DownloadsRemoved: Equatable, Sendable {
+struct DownloadsRemoved: CoreChange, Equatable, Sendable {
     let downloadIDs: [UUID]
 }
 
@@ -2319,7 +2391,7 @@ struct EnginePreferences: Equatable, Sendable {
     let rules: [SiteEngineRule]
 }
 
-struct EnginePreferencesChanged: Equatable, Sendable {
+struct EnginePreferencesChanged: CoreChange, Equatable, Sendable {
     let preferences: EnginePreferences
 }
 
@@ -2391,7 +2463,7 @@ struct EngineWindowPlacement: Query, Equatable, Sendable {
     let windowIDs: [UUID]
 }
 
-struct EnginesChanged: Equatable, Sendable {
+struct EnginesChanged: CoreChange, Equatable, Sendable {
     let roster: EngineRoster
 }
 
@@ -2500,7 +2572,7 @@ struct ExtensionActionList: Equatable, Sendable {
     let actions: [ExtensionAction]
 }
 
-struct ExtensionInstallAsked: Equatable, Sendable {
+struct ExtensionInstallAsked: CoreChange, Equatable, Sendable {
     let promptID: UUID
     let windowID: UUID
     let question: ExtensionInstallQuestion
@@ -2737,7 +2809,7 @@ struct FolderTabsAround: Intent, SessionIntent, Equatable, Sendable {
     let tabID: UUID
 }
 
-struct FoldersChanged: Equatable, Sendable {
+struct FoldersChanged: CoreChange, Equatable, Sendable {
     let workspaceID: UUID
     let spaceID: UUID
     let updated: [FolderState]
@@ -2818,7 +2890,7 @@ struct HistoryAddresses: Query, Equatable, Sendable {
     let addresses: [String]
 }
 
-struct HistoryChanged: Equatable, Sendable {
+struct HistoryChanged: CoreChange, Equatable, Sendable {
     let workspaceID: UUID
     let spaceID: UUID
     let recorded: [HistoryEntryState]
@@ -3427,7 +3499,7 @@ struct LinkPreferences: Equatable, Sendable {
     let rememberedSites: [RememberedSite]
 }
 
-struct LinkPreferencesChanged: Equatable, Sendable {
+struct LinkPreferencesChanged: CoreChange, Equatable, Sendable {
     let preferences: LinkPreferences
 }
 
@@ -3712,7 +3784,7 @@ struct NavigationFinished: EngineEvent, PageEvent, Equatable, Sendable {
     let title: String
 }
 
-struct NavigationRecorded: Equatable, Sendable {
+struct NavigationRecorded: CoreChange, Equatable, Sendable {
     let pageID: UUID
     let workspaceID: UUID
     let spaceID: UUID
@@ -3851,7 +3923,7 @@ struct OfferImportSources: Intent, SetupFlowIntent, Equatable, Sendable {
     let installed: [ImportSource]
 }
 
-struct OfferedPageAdopted: Equatable, Sendable {
+struct OfferedPageAdopted: CoreChange, Equatable, Sendable {
     let pageID: UUID
     let workspaceID: UUID
     let windowID: UUID
@@ -3860,7 +3932,7 @@ struct OfferedPageAdopted: Equatable, Sendable {
     let shows: Bool
 }
 
-struct OfferedWindowAdopted: Equatable, Sendable {
+struct OfferedWindowAdopted: CoreChange, Equatable, Sendable {
     let pageID: UUID
     let sourcePageID: UUID
     let workspaceID: UUID
@@ -3968,7 +4040,7 @@ struct PageCertificates: PageRequest, Equatable, Sendable {
     let pageID: UUID
 }
 
-struct PageChanged: Equatable, Sendable {
+struct PageChanged: CoreChange, Equatable, Sendable {
     let page: PageState
 }
 
@@ -4188,7 +4260,7 @@ struct PageOffered: EngineEvent, Equatable, Sendable {
     let foreground: Bool
 }
 
-struct PageOpened: Equatable, Sendable {
+struct PageOpened: CoreChange, Equatable, Sendable {
     let page: PageState
 }
 
@@ -4206,7 +4278,7 @@ struct PageProfileMismatch: Equatable, Sendable {
     let spaceID: UUID
 }
 
-struct PageRehosted: Equatable, Sendable {
+struct PageRehosted: CoreChange, Equatable, Sendable {
     let pageID: UUID
     let spaceID: UUID
     let origin: SiteOrigin?
@@ -4215,7 +4287,7 @@ struct PageRehosted: Equatable, Sendable {
     let reason: RehostReason
 }
 
-struct PageRemoved: Equatable, Sendable {
+struct PageRemoved: CoreChange, Equatable, Sendable {
     let pageID: UUID
 }
 
@@ -4277,7 +4349,7 @@ struct PageThemeChanged: Equatable, Sendable {
     let color: BrandColor?
 }
 
-struct PageUnloaded: Equatable, Sendable {
+struct PageUnloaded: CoreChange, Equatable, Sendable {
     let pageID: UUID
     let workspaceID: UUID
     let tabID: UUID
@@ -4495,7 +4567,7 @@ struct PerformMediaAction: PageRequest, Equatable, Sendable {
     let action: MediaSessionAction
 }
 
-struct PermissionAsked: Equatable, Sendable {
+struct PermissionAsked: CoreChange, Equatable, Sendable {
     let promptID: UUID
     let pageID: UUID
     let question: PermissionQuestion
@@ -4664,7 +4736,7 @@ struct PromptAnswerMismatch: Equatable, Sendable {
     let promptID: UUID
 }
 
-struct PromptSettled: Equatable, Sendable {
+struct PromptSettled: CoreChange, Equatable, Sendable {
     let promptID: UUID
 }
 
@@ -4677,7 +4749,7 @@ struct ProtectedMediaUnavailable: EngineEvent, PageEvent, Equatable, Sendable {
     let keySystem: KeySystem
 }
 
-struct QuitWithDownloadsAsked: Equatable, Sendable {
+struct QuitWithDownloadsAsked: CoreChange, Equatable, Sendable {
     let promptID: UUID
     let requestID: UUID
     let liveDownloads: Int
@@ -5028,7 +5100,7 @@ struct SaveSearchProvider: Intent, SearchCatalogIntent, Equatable, Sendable {
     let provider: CustomSearchProvider
 }
 
-struct Saved: Equatable, Sendable {
+struct Saved: CoreChange, Equatable, Sendable {
     let revision: Int64
 }
 
@@ -5051,7 +5123,7 @@ struct ScreenCaptureAccessMissing: Equatable, Sendable {
     let pageID: UUID
 }
 
-struct ScriptDialogAsked: Equatable, Sendable {
+struct ScriptDialogAsked: CoreChange, Equatable, Sendable {
     let promptID: UUID
     let pageID: UUID
     let question: ScriptDialogQuestion
@@ -5094,7 +5166,7 @@ struct SearchCatalog: Equatable, Sendable {
     let region: String?
 }
 
-struct SearchCatalogChanged: Equatable, Sendable {
+struct SearchCatalogChanged: CoreChange, Equatable, Sendable {
     let catalog: SearchCatalog
     let providers: [SearchProvider]
     let `default`: SearchProvider
@@ -5257,7 +5329,7 @@ struct SeparateSplits: Intent, SessionIntent, Equatable, Sendable {
     let selection: TabSelection
 }
 
-struct SessionAdopted: Equatable, Sendable {
+struct SessionAdopted: CoreChange, Equatable, Sendable {
     let favicons: [TabFavicon]
 }
 
@@ -5495,7 +5567,7 @@ struct SetupBusy: Equatable, Sendable {
     }
 }
 
-struct SetupCompletedChanged: Equatable, Sendable {
+struct SetupCompletedChanged: CoreChange, Equatable, Sendable {
     let completed: Bool
 }
 
@@ -5505,7 +5577,7 @@ struct SetupDraft: Equatable, Sendable {
     let orderWasEdited: Bool
 }
 
-struct SetupDraftChanged: Equatable, Sendable {
+struct SetupDraftChanged: CoreChange, Equatable, Sendable {
     let draft: SetupDraft?
 }
 
@@ -5523,12 +5595,12 @@ struct SetupFailure: Equatable, Sendable {
     let detail: String?
 }
 
-struct SetupFinished: Equatable, Sendable {
+struct SetupFinished: CoreChange, Equatable, Sendable {
     let workspaceID: UUID
     let guideSpaceID: UUID?
 }
 
-struct SetupFlowChanged: Equatable, Sendable {
+struct SetupFlowChanged: CoreChange, Equatable, Sendable {
     let flow: SetupFlowState?
 }
 
@@ -5637,7 +5709,7 @@ struct ShortcutInUse: Equatable, Sendable {
     let commands: [ShortcutCommand]
 }
 
-struct ShortcutsChanged: Equatable, Sendable {
+struct ShortcutsChanged: CoreChange, Equatable, Sendable {
     let bindings: [ShortcutBinding]
     let isCustomized: Bool
 }
@@ -5712,7 +5784,7 @@ struct SidePanelRequested: Equatable, Sendable {
     let request: SidePanelRequest
 }
 
-struct SidebarChanged: Equatable, Sendable {
+struct SidebarChanged: CoreChange, Equatable, Sendable {
     let workspaceID: UUID
     let spaceID: UUID
     let lists: [SidebarList]
@@ -5797,7 +5869,7 @@ struct SitePermissionScope: Equatable, Sendable {
     let revokesAuthorization: Bool
 }
 
-struct SitePermissionsChanged: Equatable, Sendable {
+struct SitePermissionsChanged: CoreChange, Equatable, Sendable {
     let spaceID: UUID
     let records: [SitePermissionRecordState]
     let touched: [SitePermissionScope]
@@ -5957,7 +6029,7 @@ struct SpaceLimitReached: Equatable, Sendable {
     }
 }
 
-struct SpaceLockChanged: Equatable, Sendable {
+struct SpaceLockChanged: CoreChange, Equatable, Sendable {
     let spaceID: UUID
     let profileID: UUID
     let isUnlocked: Bool
@@ -6023,7 +6095,7 @@ struct SpaceSettings: Equatable, Sendable {
     }
 }
 
-struct SpaceSettingsChanged: Equatable, Sendable {
+struct SpaceSettingsChanged: CoreChange, Equatable, Sendable {
     let workspaceID: UUID
     let spaceID: UUID
     let settings: SpaceSettings
@@ -6068,7 +6140,7 @@ struct SpaceState: Equatable, Sendable, Identifiable {
     }
 }
 
-struct SpacesChanged: Equatable, Sendable {
+struct SpacesChanged: CoreChange, Equatable, Sendable {
     let workspaceID: UUID
     let added: [SpaceState]
     let removed: [UUID]
@@ -6131,7 +6203,7 @@ struct SplitGroupState: Equatable, Sendable, Identifiable {
     }
 }
 
-struct SplitGroupsChanged: Equatable, Sendable {
+struct SplitGroupsChanged: CoreChange, Equatable, Sendable {
     let workspaceID: UUID
     let spaceID: UUID
     let groups: [SplitGroupState]
@@ -6243,7 +6315,7 @@ struct StopTabSharing: PageRequest, Equatable, Sendable {
     let pageID: UUID
 }
 
-struct StorageFailed: Equatable, Sendable {
+struct StorageFailed: CoreChange, Equatable, Sendable {
     let reason: StorageFailure
 }
 
@@ -6285,7 +6357,7 @@ struct SweepExpiredRecords: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
 }
 
-struct SyncJournalChanged: Equatable, Sendable {
+struct SyncJournalChanged: CoreChange, Equatable, Sendable {
     let workspaceID: UUID
     let pendingRecords: Int
     let records: Int
@@ -6306,12 +6378,12 @@ struct SyncRecordReference: Equatable, Sendable, Identifiable {
     var id: UUID
 }
 
-struct SyncRecordsSkipped: Equatable, Sendable {
+struct SyncRecordsSkipped: CoreChange, Equatable, Sendable {
     let unreadable: Int
     let fromNewerBuild: Int
 }
 
-struct SyncStagingFailed: Equatable, Sendable {
+struct SyncStagingFailed: CoreChange, Equatable, Sendable {
     let workspaceID: UUID
     let reason: SyncStagingFailure
 }
@@ -6365,7 +6437,7 @@ struct TabContent: Equatable, Sendable {
     var title: String?
 }
 
-struct TabCopied: Equatable, Sendable {
+struct TabCopied: CoreChange, Equatable, Sendable {
     let workspaceID: UUID
     let sourceTabID: UUID
     let copyTabID: UUID
@@ -6376,7 +6448,7 @@ struct TabFavicon: Equatable, Sendable {
     let image: Data
 }
 
-struct TabFaviconAssigned: Equatable, Sendable {
+struct TabFaviconAssigned: CoreChange, Equatable, Sendable {
     let workspaceID: UUID
     let tabID: UUID
     let adopts: Bool
@@ -6393,7 +6465,7 @@ struct TabLimitReached: Equatable, Sendable {
     let limit: Int
 }
 
-struct TabPagePutAway: Equatable, Sendable {
+struct TabPagePutAway: CoreChange, Equatable, Sendable {
     let workspaceID: UUID
     let windowID: UUID
     let spaceID: UUID
@@ -6489,7 +6561,7 @@ struct TabState: Equatable, Sendable, Identifiable {
     }
 }
 
-struct TabsChanged: Equatable, Sendable {
+struct TabsChanged: CoreChange, Equatable, Sendable {
     let workspaceID: UUID
     let spaceID: UUID
     let updated: [TabState]
@@ -6497,7 +6569,7 @@ struct TabsChanged: Equatable, Sendable {
     let order: [UUID]?
 }
 
-struct TabsImported: Equatable, Sendable {
+struct TabsImported: CoreChange, Equatable, Sendable {
     let workspaceID: UUID
     let tabs: [ImportedTab]
 }
@@ -6528,12 +6600,12 @@ struct TransientAlreadyCompleted: Equatable, Sendable {
     let pageID: UUID
 }
 
-struct TransientPageClosed: Equatable, Sendable {
+struct TransientPageClosed: CoreChange, Equatable, Sendable {
     let pageID: UUID
     let workspaceID: UUID
 }
 
-struct TransientPagePromoted: Equatable, Sendable {
+struct TransientPagePromoted: CoreChange, Equatable, Sendable {
     let workspaceID: UUID
     let pageID: UUID
     let tabID: UUID
@@ -6702,15 +6774,15 @@ struct WebPagesOnly: Equatable, Sendable {
     }
 }
 
-struct WindowBroughtForward: Equatable, Sendable {
+struct WindowBroughtForward: CoreChange, Equatable, Sendable {
     let windowID: UUID
 }
 
-struct WindowChanged: Equatable, Sendable {
+struct WindowChanged: CoreChange, Equatable, Sendable {
     let window: WindowState
 }
 
-struct WindowClosed: Equatable, Sendable {
+struct WindowClosed: CoreChange, Equatable, Sendable {
     let windowID: UUID
 }
 
@@ -6724,7 +6796,7 @@ struct WindowNotOpen: Equatable, Sendable {
     let windowID: UUID
 }
 
-struct WindowRecordsAdopted: Equatable, Sendable {
+struct WindowRecordsAdopted: CoreChange, Equatable, Sendable {
     let layouts: [WindowLayout]
 }
 
@@ -6748,18 +6820,18 @@ struct WorkspaceBusy: Equatable, Sendable {
     let workspaceID: UUID
 }
 
-struct WorkspaceChanged: Equatable, Sendable {
+struct WorkspaceChanged: CoreChange, Equatable, Sendable {
     let workspaceID: UUID
     let defaultSpaceID: UUID?
     let isDisposableSeed: Bool
     let spaceDeletions: [SpaceDeletionState]
 }
 
-struct WorkspaceClosed: Equatable, Sendable {
+struct WorkspaceClosed: CoreChange, Equatable, Sendable {
     let workspaceID: UUID
 }
 
-struct WorkspaceOpened: Equatable, Sendable {
+struct WorkspaceOpened: CoreChange, Equatable, Sendable {
     let workspaceID: UUID
     let kind: WorkspaceKind
     let session: SessionState

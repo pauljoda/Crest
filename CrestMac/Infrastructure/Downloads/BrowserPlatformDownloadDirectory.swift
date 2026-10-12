@@ -8,7 +8,7 @@ enum BrowserPlatformDownloadDirectory {
         spaceID: UUID,
         forcesPrompt: Bool = false,
         fileManager: FileManager = .default
-    ) async -> BrowserPlatformDownloadResolution {
+    ) async -> any BrowserPlatformDownloadResolution {
         let safeFilename = BrowserDownloadDestination.safeFilename(
             from: suggestedFilename
         )

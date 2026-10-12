@@ -51,7 +51,7 @@ final class BrowserDownloadTransferTests: XCTestCase {
         let occupied = root.appending(path: "occupied.pdf")
         let original = Data("Existing user file".utf8)
         try original.write(to: occupied)
-        let resolutions: [BrowserPlatformDownloadResolution] = [
+        let resolutions: [any BrowserPlatformDownloadResolution] = [
             .cancelled, .unavailable, .destination(occupied, securityScopedURL: nil),
         ]
         for (index, resolution) in resolutions.enumerated() {
@@ -101,7 +101,7 @@ final class BrowserDownloadTransferTests: XCTestCase {
         let root = FileManager.default.temporaryDirectory.appending(path: "crest-native-save-\(UUID())")
         defer { try? FileManager.default.removeItem(at: root) }
         for removesSpace in [false, true] {
-            var reply: CheckedContinuation<BrowserPlatformDownloadResolution, Never>?
+            var reply: CheckedContinuation<any BrowserPlatformDownloadResolution, Never>?
             let center = BrowserDownloadCenter(resolveDownloadDestination: { _, _, _ in
                 await withCheckedContinuation { reply = $0 }
             })
