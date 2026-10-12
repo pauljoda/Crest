@@ -3873,6 +3873,10 @@
     "quick-window-extension-password-prompts": {
       "category": "fixed",
       "message": "Keep extension password prompts working in Quick Windows."
+    },
+    "background-launch-for-local-tools": {
+      "category": "fixed",
+      "message": "Opening a connected tool can start Crest in the background without taking focus from the tool."
     }
   }
 }

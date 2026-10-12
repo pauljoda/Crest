@@ -3,6 +3,17 @@ import XCTest
 @testable import Crest
 
 final class BrowserLaunchEnvironmentTests: XCTestCase {
+    func testBackgroundLaunchKeepsTheInstalledProfileUnlessIsolationIsRequested() {
+        let background = BrowserLaunchEnvironment(values: ["CREST_BACKGROUND_LAUNCH": "1"], isXCTestRuntime: false)
+        XCTAssertTrue(background.launchesInBackground)
+        XCTAssertFalse(background.requiresIsolation)
+        let isolated = BrowserLaunchEnvironment(
+            values: ["CREST_BACKGROUND_LAUNCH": "1", "CREST_ISOLATED_SESSION": "1"], isXCTestRuntime: false)
+        XCTAssertTrue(isolated.launchesInBackground)
+        XCTAssertTrue(isolated.requiresIsolation)
+        XCTAssertFalse(BrowserLaunchEnvironment(values: [:], isXCTestRuntime: false).launchesInBackground)
+    }
+
     func testCloudReviewRequiresExplicitNamedIsolationAndNeverUsesTheProductionZone() throws {
         let configuration = BrowserCloudSyncConfiguration(containerIdentifier: "iCloud.com.pauldavis.crest")
         let values = [
