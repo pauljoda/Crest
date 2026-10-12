@@ -17,12 +17,6 @@ struct SpaceScrollGestureRecognizer {
         let isMomentum: Bool
     }
 
-    enum Decision: Equatable {
-        case passThrough
-        case consumed
-        case step(BrowserSpaceSwipeDirection)
-    }
-
     private enum Axis {
         case undecided, horizontal, vertical, outside
     }

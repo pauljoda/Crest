@@ -4001,6 +4001,10 @@
     "2026-10-12-navigation-decisions-answer-webkit": {
       "category": "internal",
       "message": "Let each navigation decision answer WebKit itself"
+    },
+    "2026-10-12-commands-prompts-swipes-say-what-they-do": {
+      "category": "internal",
+      "message": "Let engine commands, pending prompts and swipe decisions say what they do"
     }
   }
 }

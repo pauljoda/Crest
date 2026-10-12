@@ -23,15 +23,8 @@ final class SpaceScrollGestureEventAdapter {
         let decision = recognizer.consume(
             Self.input(for: event, layoutDirection: layoutDirection), isInside: isInside && isEnabled)
         guard isEnabled else { return event }
-        switch decision {
-        case .passThrough:
-            return event
-        case .consumed:
-            return nil
-        case .step(let direction):
-            onStep(direction)
-            return nil
-        }
+        if let direction = decision.direction { onStep(direction) }
+        return decision.consumesEvent ? nil : event
     }
 
     static func input(for event: NSEvent, layoutDirection: LayoutDirection) -> SpaceScrollGestureRecognizer.Input {

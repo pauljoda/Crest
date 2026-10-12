@@ -97,19 +97,9 @@ final class BrowserUtilityPresentationState {
     }
 
     func handleInteraction(_ interactionSurface: BrowserUtilityInteractionSurface) {
-        switch interactionSurface {
-        case .webContent, .sidebarBlankSpace:
-            dismiss()
-        case .control:
-            break
-        }
+        guard interactionSurface.dismissesUtilities else { return }
+        dismiss()
     }
-}
-
-enum BrowserUtilityInteractionSurface: Equatable, Sendable {
-    case webContent
-    case sidebarBlankSpace
-    case control
 }
 
 extension BrowserUtilityPresentationState: BrowserStoreFirstObservable {}

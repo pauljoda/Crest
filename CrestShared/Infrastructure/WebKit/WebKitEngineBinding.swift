@@ -64,38 +64,6 @@ final class WebKitEngineBinding: EngineBinding {
     private static let stagedLinkLifetime: TimeInterval = 300
     private static let stagedLinkLimit = 16
 
-    /// A question one of this binding's pages raised with the core, until the
-    /// core settles it.
-    enum PendingPrompt {
-        case scriptDialog(pageID: UUID, answer: @MainActor (Bool, String?) -> Void)
-        case authentication(pageID: UUID, answer: @MainActor (AuthenticationCredential?) -> Void)
-        case permission(pageID: UUID, answer: @MainActor (Bool) -> Void)
-
-        var pageID: UUID {
-            switch self {
-            case .scriptDialog(let pageID, _), .authentication(let pageID, _), .permission(let pageID, _): pageID
-            }
-        }
-
-        /// Answers WebKit as nobody accepting or giving anything.
-        @MainActor func decline() {
-            switch self {
-            case .scriptDialog(_, let answer): answer(false, nil)
-            case .authentication(_, let answer): answer(nil)
-            case .permission(_, let answer): answer(false)
-            }
-        }
-
-        /// The answer that declines the prompt `promptID` through the core.
-        func declining(_ promptID: UUID) -> any PromptIntent {
-            switch self {
-            case .scriptDialog: AnswerScriptDialog(promptID: promptID, accepted: false, text: nil)
-            case .authentication: AnswerAuthentication(promptID: promptID, credential: nil)
-            case .permission: AnswerPermission(promptID: promptID, grants: false, remembers: false)
-            }
-        }
-    }
-
     // MARK: - Variables
 
     let integration = BrowserEngineRegistration.webKit
@@ -122,7 +90,7 @@ final class WebKitEngineBinding: EngineBinding {
     var pages: [UUID: WeakPage] = [:]
     /// The questions this binding's pages raised, by prompt, until the core
     /// settles them.
-    var prompts: [UUID: PendingPrompt] = [:]
+    var prompts: [UUID: any WebKitPendingPrompt] = [:]
     /// How to close what each page's host shows for a question, until the
     /// question no longer waits.
     private var dismissals: [UUID: BrowserPromptDismissal] = [:]
@@ -382,7 +350,7 @@ final class WebKitEngineBinding: EngineBinding {
     {
         guard let engines else { return answer(false, nil) }
         let promptID = UUID()
-        prompts[promptID] = .scriptDialog(pageID: pageID, answer: answer)
+        prompts[promptID] = WebKitPendingScriptDialog(pageID: pageID, answer: answer)
         engines.report(ScriptDialogOpened(promptID: promptID, pageID: pageID, question: question), from: self)
     }
 
@@ -395,7 +363,7 @@ final class WebKitEngineBinding: EngineBinding {
     ) {
         guard let engines else { return answer(nil) }
         let promptID = UUID()
-        prompts[promptID] = .authentication(pageID: pageID, answer: answer)
+        prompts[promptID] = WebKitPendingAuthentication(pageID: pageID, answer: answer)
         engines.report(AuthenticationChallenged(promptID: promptID, pageID: pageID, question: question), from: self)
     }
 
@@ -407,7 +375,7 @@ final class WebKitEngineBinding: EngineBinding {
         answer: @escaping @MainActor (Bool) -> Void
     ) {
         guard let engines else { return answer(false) }
-        prompts[promptID] = .permission(pageID: pageID, answer: answer)
+        prompts[promptID] = WebKitPendingPermission(pageID: pageID, answer: answer)
         engines.report(PermissionRequested(promptID: promptID, pageID: pageID, question: question), from: self)
     }
 
