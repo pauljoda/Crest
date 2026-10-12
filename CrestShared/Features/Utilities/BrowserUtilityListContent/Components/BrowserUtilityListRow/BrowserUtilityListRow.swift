@@ -235,11 +235,9 @@ private struct BrowserDownloadRowLabel: View {
     @ViewBuilder
     private var details: some View {
         let presentation = BrowserDownloadRowPresentation.resolve(item: download)
-        switch BrowserDownloadRowLayoutPolicy.resolve(
+        switch presentation.layout(
             availableWidth: availableWidth,
-            usesAccessibilityTextSize: dynamicTypeSize.isAccessibilitySize,
-            hasSecondaryMetrics: presentation.hasSecondaryTransferMetrics,
-            statusNeedsAttention: presentation.statusNeedsAttention
+            usesAccessibilityTextSize: dynamicTypeSize.isAccessibilitySize
         ) {
         case .singleLine:
             primaryLine(presentation)

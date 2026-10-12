@@ -6,12 +6,6 @@ enum BrowserImportPreviewControls {
     static let usesAnchoredImportFooter = true
 }
 
-enum BrowserOnboardingAppearancePolicy {
-    static func colorSchemeOverride(isManualSetup _: Bool) -> ColorScheme? {
-        nil
-    }
-}
-
 enum BrowserOnboardingLegacyDraftCleanup {
     static let importDraftKey = "crest.onboarding.import-draft"
     static let manualSetupDraftKey = "crest.onboarding.manual-setup-draft"

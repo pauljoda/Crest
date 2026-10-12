@@ -1,6 +1,9 @@
 import SwiftUI
 
 struct BrowserSitePermissionDisclosure: View {
+    /// Whether the permissions list starts open where it first appears.
+    nonisolated static let defaultIsExpanded = true
+
     let origin: SiteOrigin
     let spaceID: UUID
     let permissionCenter: BrowserSitePermissionCenter
@@ -30,12 +33,7 @@ struct BrowserSitePermissionDisclosure: View {
             .accessibilityLabel("Permissions")
             .accessibilityValue(isExpanded ? "Expanded" : "Collapsed")
 
-            ForEach(
-                BrowserSitePermissionDisclosurePolicy.visiblePermissions(
-                    isExpanded: isExpanded
-                ),
-                id: \.self
-            ) { permission in
+            ForEach(isExpanded ? SitePermission.all : [], id: \.self) { permission in
                 BrowserSitePermissionRow(
                     permission: permission,
                     origin: origin,

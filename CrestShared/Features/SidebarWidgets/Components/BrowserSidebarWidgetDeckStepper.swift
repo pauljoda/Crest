@@ -146,10 +146,7 @@ struct BrowserSidebarWidgetDeckStepper: View {
     }
 
     private var selectionAnimation: Animation? {
-        BrowserVisualAccessibilityPolicy.animation(
-            CrestMotion.selection,
-            reduceMotion: reduceMotion
-        )
+        CrestMotion.selection.unlessReducingMotion(reduceMotion)
     }
 
     /// The deck wraps, so a step control is never a dead end.

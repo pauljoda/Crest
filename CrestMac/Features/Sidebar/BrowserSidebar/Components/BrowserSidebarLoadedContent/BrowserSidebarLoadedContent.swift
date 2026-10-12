@@ -91,7 +91,7 @@ struct BrowserSidebarLoadedContent: View {
             .environment(
                 \.colorScheme,
                 context.browser.shownSpace.map {
-                    BrowserSpaceForegroundPolicy.colorScheme(for: $0.settings.look)
+                    $0.settings.look.foregroundTone.colorScheme
                 } ?? .dark
             )
             .modifier(
@@ -148,10 +148,7 @@ struct BrowserSidebarLoadedContent: View {
             )
         else { return }
         withAnimation(
-            BrowserVisualAccessibilityPolicy.animation(
-                CrestMotion.spaceSwipe,
-                reduceMotion: reduceMotion
-            )
+            CrestMotion.spaceSwipe.unlessReducingMotion(reduceMotion)
         ) {
             widgetRuntime.selectCarouselInstance(
                 nextID,

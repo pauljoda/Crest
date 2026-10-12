@@ -62,20 +62,20 @@ final class BrowserChromeLayoutTests: XCTestCase {
 
     func testCertificateReviewRequiresHTTPSAndServerTrust() {
         XCTAssertTrue(
-            BrowserSiteCertificatePresentationPolicy.isAvailable(
-                url: URL(string: "https://example.com"),
+            BrowserPage.canReviewCertificate(
+                of: URL(string: "https://example.com"),
                 hasServerTrust: true
             )
         )
         XCTAssertFalse(
-            BrowserSiteCertificatePresentationPolicy.isAvailable(
-                url: URL(string: "http://example.com"),
+            BrowserPage.canReviewCertificate(
+                of: URL(string: "http://example.com"),
                 hasServerTrust: true
             )
         )
         XCTAssertFalse(
-            BrowserSiteCertificatePresentationPolicy.isAvailable(
-                url: URL(string: "https://example.com"),
+            BrowserPage.canReviewCertificate(
+                of: URL(string: "https://example.com"),
                 hasServerTrust: false
             )
         )

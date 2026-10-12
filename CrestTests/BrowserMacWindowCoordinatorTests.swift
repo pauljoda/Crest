@@ -85,9 +85,9 @@ final class BrowserMacWindowCoordinatorTests: XCTestCase {
         let registry = BrowserPagePoolRegistry(primary: primaryPages)
         registry.register(temporary.pages, browser: temporary.browser, for: temporary.id)
         let context = try XCTUnwrap(
-            BrowserQuickWindowContextResolver(
-                browser: fixture.browser, pages: primaryPages, pagePoolRegistry: registry
-            ).context(targetWindowID: temporary.id))
+            BrowserQuickWindowBrowsingContext(
+                targetWindowID: temporary.id, browser: fixture.browser, pages: primaryPages,
+                pagePoolRegistry: registry))
         XCTAssertTrue(context.browser === fixture.browser)
         XCTAssertTrue(context.pages === primaryPages)
         XCTAssertFalse(context.supportsLivePagePromotion)

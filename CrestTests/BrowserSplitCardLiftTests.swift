@@ -11,7 +11,7 @@ import XCTest
 /// The gesture itself is a local `NSEvent` monitor no test can drive, which is
 /// exactly why every decision it makes is a pure function. These are the
 /// contract for those decisions.
-final class BrowserSplitCardLiftPolicyTests: XCTestCase {
+final class BrowserSplitCardLiftTests: XCTestCase {
 
     // MARK: - Pickup
 
@@ -84,7 +84,7 @@ final class BrowserSplitCardLiftPolicyTests: XCTestCase {
                 lifted: Self.middle
             )
             let shifted = Self.registeredFrames(
-                members: BrowserSplitCardLiftPolicy.displayMembers(
+                members: BrowserSplitCardLift.displayMembers(
                     members,
                     lifted: Self.middle,
                     gapIndex: index
@@ -109,7 +109,7 @@ final class BrowserSplitCardLiftPolicyTests: XCTestCase {
         let members = BrowserSplitCardTestFixture.members
 
         XCTAssertEqual(
-            BrowserSplitCardLiftPolicy.displayMembers(
+            BrowserSplitCardLift.displayMembers(
                 members,
                 lifted: Self.middle,
                 gapIndex: 0
@@ -118,7 +118,7 @@ final class BrowserSplitCardLiftPolicyTests: XCTestCase {
             [Self.middle, Self.leading, Self.trailing]
         )
         XCTAssertEqual(
-            BrowserSplitCardLiftPolicy.displayMembers(
+            BrowserSplitCardLift.displayMembers(
                 members,
                 lifted: Self.middle,
                 gapIndex: 2
@@ -133,7 +133,7 @@ final class BrowserSplitCardLiftPolicyTests: XCTestCase {
         let members = BrowserSplitCardTestFixture.members
 
         XCTAssertEqual(
-            BrowserSplitCardLiftPolicy.displayMembers(
+            BrowserSplitCardLift.displayMembers(
                 members,
                 lifted: UUID(),
                 gapIndex: 0
@@ -156,7 +156,7 @@ final class BrowserSplitCardLiftPolicyTests: XCTestCase {
         // The whole row, as the leaving card measured it before it shrank.
         frames[departed] = CGRect(x: 0, y: 0, width: 1_000, height: 600)
 
-        let card = BrowserSplitCardLiftPolicy.card(
+        let card = BrowserSplitCardLift.card(
             at: CGPoint(x: 150, y: 300),
             members: members,
             cardFrames: frames
@@ -174,14 +174,14 @@ final class BrowserSplitCardLiftPolicyTests: XCTestCase {
         var frames = Self.registeredFrames(count: 2)
         frames[UUID()] = CGRect(x: 120, y: 0, width: 60, height: 600)
 
-        let ordered = BrowserSplitCardLiftPolicy.orderedMemberFrames(
+        let ordered = BrowserSplitCardLift.orderedMemberFrames(
             members: members,
             cardFrames: frames
         )
 
         XCTAssertEqual(ordered.count, 2)
         XCTAssertFalse(
-            BrowserSplitCardLiftPolicy.isOverDivider(
+            BrowserSplitCardLift.isOverDivider(
                 CGPoint(x: 150, y: 300),
                 orderedCardFrames: ordered
             ),
@@ -203,7 +203,7 @@ final class BrowserSplitCardLiftPolicyTests: XCTestCase {
         isDraggingSidebarItem: Bool = false,
         isCommandPalettePresented: Bool = false
     ) -> Bool {
-        BrowserSplitCardLiftPolicy.picksUp(
+        BrowserSplitCardLift.picksUp(
             modifiers: modifiers,
             isInsideCard: isInsideCard,
             isOverDivider: isOverDivider,
@@ -214,7 +214,7 @@ final class BrowserSplitCardLiftPolicyTests: XCTestCase {
     }
 
     private static func isOverDivider(atX x: CGFloat, in cards: [CGRect]) -> Bool {
-        BrowserSplitCardLiftPolicy.isOverDivider(
+        BrowserSplitCardLift.isOverDivider(
             CGPoint(x: x, y: 300),
             orderedCardFrames: cards
         )
@@ -226,7 +226,7 @@ final class BrowserSplitCardLiftPolicyTests: XCTestCase {
         lifted: UUID,
         layoutDirection: LayoutDirection = .leftToRight
     ) -> Int {
-        BrowserSplitCardLiftPolicy.gapIndex(
+        BrowserSplitCardLift.gapIndex(
             at: CGPoint(x: x, y: 300),
             cardFrames: frames,
             lifted: lifted,

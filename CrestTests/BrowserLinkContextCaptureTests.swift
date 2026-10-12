@@ -4,9 +4,9 @@ import XCTest
 
 @testable import Crest
 
-final class BrowserLinkContextCapturePolicyTests: XCTestCase {
+final class BrowserLinkContextCaptureTests: XCTestCase {
     func testARecordedLinkIsHandedToExactlyOneMenu() throws {
-        var policy = BrowserLinkContextCapturePolicy()
+        var policy = BrowserLinkContextCapture()
         policy.record(body: makeBody(href: "https://example.com/article"))
 
         XCTAssertEqual(
@@ -26,7 +26,7 @@ final class BrowserLinkContextCapturePolicyTests: XCTestCase {
     }
 
     func testARightClickWithoutALinkEmptiesTheSlot() {
-        var policy = BrowserLinkContextCapturePolicy()
+        var policy = BrowserLinkContextCapture()
         policy.record(body: makeBody(href: "https://example.com/article"))
         policy.record(body: makeBody(href: nil))
 
@@ -37,7 +37,7 @@ final class BrowserLinkContextCapturePolicyTests: XCTestCase {
     }
 
     func testAClosingMenuDropsAnUnusedCapture() {
-        var policy = BrowserLinkContextCapturePolicy()
+        var policy = BrowserLinkContextCapture()
         policy.record(body: makeBody(href: "https://example.com/article"))
         policy.clear()
 
@@ -46,7 +46,7 @@ final class BrowserLinkContextCapturePolicyTests: XCTestCase {
     }
 
     func testALaterRightClickReplacesAnEarlierCapture() throws {
-        var policy = BrowserLinkContextCapturePolicy()
+        var policy = BrowserLinkContextCapture()
         policy.record(body: makeBody(href: "https://example.com/first"))
         policy.record(body: makeBody(href: "https://example.com/second"))
 
@@ -57,7 +57,7 @@ final class BrowserLinkContextCapturePolicyTests: XCTestCase {
     }
 
     func testACapturedLinkSurvivesAClearedPredecessor() throws {
-        var policy = BrowserLinkContextCapturePolicy()
+        var policy = BrowserLinkContextCapture()
         policy.record(body: makeBody(href: "https://example.com/first"))
         policy.clear()
         policy.record(body: makeBody(href: "https://example.com/second"))
@@ -80,7 +80,7 @@ final class BrowserLinkContextCapturePolicyTests: XCTestCase {
             "https:///no-host",
         ]
         for href in refused {
-            var policy = BrowserLinkContextCapturePolicy()
+            var policy = BrowserLinkContextCapture()
             policy.record(body: makeBody(href: href))
             XCTAssertNil(
                 policy.take()?.linkURL,
@@ -103,7 +103,7 @@ final class BrowserLinkContextCapturePolicyTests: XCTestCase {
             ] as [String: Any],
         ]
         for body in refused {
-            var policy = BrowserLinkContextCapturePolicy()
+            var policy = BrowserLinkContextCapture()
             policy.record(body: body)
             XCTAssertNil(
                 policy.take()?.linkURL,
@@ -113,7 +113,7 @@ final class BrowserLinkContextCapturePolicyTests: XCTestCase {
     }
 
     func testAMalformedPayloadStillRetiresTheCaptureBeforeIt() {
-        var policy = BrowserLinkContextCapturePolicy()
+        var policy = BrowserLinkContextCapture()
         policy.record(body: makeBody(href: "https://example.com/article"))
         policy.record(body: "not a dictionary")
 
@@ -124,7 +124,7 @@ final class BrowserLinkContextCapturePolicyTests: XCTestCase {
     }
 
     func testImageAndLinkFromTheSameRightClickAreConsumedTogether() throws {
-        var policy = BrowserLinkContextCapturePolicy()
+        var policy = BrowserLinkContextCapture()
         policy.record(
             body: makeBody(
                 href: "https://example.com/article",
@@ -153,7 +153,7 @@ final class BrowserLinkContextCapturePolicyTests: XCTestCase {
             "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==",
         ]
         for imageURL in accepted {
-            var policy = BrowserLinkContextCapturePolicy()
+            var policy = BrowserLinkContextCapture()
             policy.record(body: makeBody(imageURL: imageURL))
             XCTAssertEqual(policy.take()?.imageURL?.absoluteString, imageURL)
         }
@@ -167,7 +167,7 @@ final class BrowserLinkContextCapturePolicyTests: XCTestCase {
             "data:image/png;base64,\(String(repeating: "a", count: 4_096))",
         ]
         for imageURL in refused {
-            var policy = BrowserLinkContextCapturePolicy()
+            var policy = BrowserLinkContextCapture()
             policy.record(body: makeBody(imageURL: imageURL))
             XCTAssertNil(policy.take()?.imageURL)
         }
@@ -176,7 +176,7 @@ final class BrowserLinkContextCapturePolicyTests: XCTestCase {
     func testSelectionEditableAndFrameMetadataTravelWithTheFreshCapture()
         throws
     {
-        var policy = BrowserLinkContextCapturePolicy()
+        var policy = BrowserLinkContextCapture()
         let documentURL = try XCTUnwrap(
             URL(string: "https://frame.example/editor")
         )
@@ -208,7 +208,7 @@ final class BrowserLinkContextCapturePolicyTests: XCTestCase {
         let download = NSMenuItem(title: "Download Linked File", action: nil, keyEquivalent: "")
         menu.items = [item, download]
 
-        BrowserDesktopWebViewMenuPolicy.relabelLinkDestination(in: menu)
+        menu.relabelWebKitLinkDestination()
 
         XCTAssertEqual(item.title, String(localized: "Open Link in This Space"))
         XCTAssertEqual(item.action, action)
@@ -231,13 +231,11 @@ final class BrowserLinkContextCapturePolicyTests: XCTestCase {
             action: nil,
             keyEquivalent: ""
         )
-        imageDownload.identifier =
-            BrowserDesktopWebViewMenuPolicy.downloadImageIdentifier
+        imageDownload.identifier = .webKitDownloadImage
         menu.items = [unrelated, imageDownload]
 
         XCTAssertTrue(
-            BrowserDesktopWebViewMenuPolicy.downloadImageItem(in: menu)
-                === imageDownload
+            menu.webKitDownloadImageItem === imageDownload
         )
     }
 
@@ -283,7 +281,7 @@ final class BrowserLinkContextCapturePolicyTests: XCTestCase {
         isEditable: Bool = false
     ) -> [String: Any] {
         var body: [String: Any] = [
-            "version": BrowserLinkContextCapturePolicy.contractVersion,
+            "version": BrowserLinkContextCapture.contractVersion,
             "token": 1,
             "editable": isEditable,
         ]

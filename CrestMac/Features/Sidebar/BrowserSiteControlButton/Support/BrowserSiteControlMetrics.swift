@@ -1,6 +1,7 @@
 import CoreGraphics
 
-enum BrowserSiteControlLayoutPolicy {
+/// The geometry of the Site Controls popover, its trigger and its rows.
+enum BrowserSiteControlMetrics {
     static let width: CGFloat = 292
     static let expandedHeight: CGFloat = 520
     static let maximumHeight: CGFloat = 560
@@ -15,8 +16,4 @@ enum BrowserSiteControlLayoutPolicy {
         width: BrowserTabTrailingControlPolicy.minimumHitTarget,
         height: BrowserTabTrailingControlPolicy.minimumHitTarget
     )
-
-    static func height(permissionsExpanded: Bool) -> CGFloat? {
-        permissionsExpanded ? expandedHeight : nil
-    }
 }

@@ -1,6 +1,7 @@
 import CoreGraphics
 
-enum BrowserSettingsControlPolicy {
+/// The shared geometry and fills of the settings icon and labeled action buttons.
+enum BrowserSettingsControlMetrics {
     static let minimumTouchTarget: CGFloat = 44
     static let labeledActionHeight: CGFloat = 46
     static let horizontalPadding = CrestSpacing.medium

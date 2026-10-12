@@ -10,6 +10,8 @@ struct BrowserSettingsSpaceDataRequest: Equatable {
 
 /// Shared Space password preferences and manager, configured by each platform's layout.
 struct BrowserPasswordSettingsPane: View {
+    private static let disabledDescription = "Saved passwords stay here until you delete them."
+
     let browser: BrowserStore
     let spaceAccess: BrowserSpaceAccessController
     let layout: BrowserPasswordSettingsLayout
@@ -220,7 +222,7 @@ struct BrowserPasswordSettingsPane: View {
                     Text("Crest Passwords")
                 } footer: {
                     if !space.settings.credentialPreferences.isEnabled {
-                        Text(BrowserCredentialSettingsPolicy.disabledDescription).crestFormFootnote()
+                        Text(Self.disabledDescription).crestFormFootnote()
                     }
                 }
 

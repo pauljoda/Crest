@@ -20,7 +20,7 @@ struct BrowserLookAndFeelAddressPreview: View {
                 .frame(maxWidth: .infinity)
                 .background { BrowserSpaceBannerBackground(branding: branding) }
                 .clipShape(.rect(cornerRadius: BrowserLookAndFeelPreviewMetrics.cardCornerRadius))
-                .environment(\.colorScheme, BrowserSpaceForegroundPolicy.colorScheme(for: branding))
+                .environment(\.colorScheme, branding.foregroundTone.colorScheme)
         } else {
             field
         }

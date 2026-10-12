@@ -81,10 +81,7 @@ private struct BrowserDeveloperToolbarButtonStyle: ButtonStyle {
             )
             .scaleEffect(configuration.isPressed ? 0.94 : 1)
             .animation(
-                BrowserVisualAccessibilityPolicy.animation(
-                    CrestMotion.developerPress,
-                    reduceMotion: reduceMotion
-                ),
+                CrestMotion.developerPress.unlessReducingMotion(reduceMotion),
                 value: configuration.isPressed
             )
     }

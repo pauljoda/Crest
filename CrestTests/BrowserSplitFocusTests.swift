@@ -8,14 +8,14 @@ import XCTest
 /// The tracking area and the event monitor that feed it are AppKit machinery no
 /// test can drive, which is exactly why the decision they consult is a pure
 /// function. These tests are the contract for when focus is allowed to move.
-final class BrowserSplitFocusPolicyTests: XCTestCase {
+final class BrowserSplitFocusTests: XCTestCase {
 
     /// Focus is selection, and the selection observer resigns address focus, so
     /// a pointer drifting across a card while someone types a URL would discard
     /// what they had typed.
     func testHoverNeverInterruptsAddressBarTyping() {
         XCTAssertFalse(
-            BrowserSplitFocusPolicy.focusesOnHover(
+            BrowserSplitPageSurface.focusesOnHover(
                 followsMouse: true,
                 isCardFocused: false,
                 isAddressEditing: true,
@@ -28,7 +28,7 @@ final class BrowserSplitFocusPolicyTests: XCTestCase {
 
     func testHoverStandsAsideForADragInFlightAndForTheCommandPalette() {
         XCTAssertFalse(
-            BrowserSplitFocusPolicy.focusesOnHover(
+            BrowserSplitPageSurface.focusesOnHover(
                 followsMouse: true,
                 isCardFocused: false,
                 isAddressEditing: false,
@@ -38,7 +38,7 @@ final class BrowserSplitFocusPolicyTests: XCTestCase {
             )
         )
         XCTAssertFalse(
-            BrowserSplitFocusPolicy.focusesOnHover(
+            BrowserSplitPageSurface.focusesOnHover(
                 followsMouse: true,
                 isCardFocused: false,
                 isAddressEditing: false,
@@ -55,7 +55,7 @@ final class BrowserSplitFocusPolicyTests: XCTestCase {
     /// gesture.
     func testHoverStandsAsideForACardBeingCarried() {
         XCTAssertFalse(
-            BrowserSplitFocusPolicy.focusesOnHover(
+            BrowserSplitPageSurface.focusesOnHover(
                 followsMouse: true,
                 isCardFocused: false,
                 isAddressEditing: false,
@@ -65,7 +65,7 @@ final class BrowserSplitFocusPolicyTests: XCTestCase {
             )
         )
         XCTAssertFalse(
-            BrowserSplitFocusPolicy.focusesOnClick(
+            BrowserSplitPageSurface.focusesOnClick(
                 isCardFocused: false,
                 isDraggingSidebarItem: false,
                 isCarryingCard: true,
@@ -78,7 +78,7 @@ final class BrowserSplitFocusPolicyTests: XCTestCase {
     /// into, so the preference has no say in it — it is not even an input.
     func testClickFocusesAnUnfocusedCardRegardlessOfTheHoverSetting() {
         XCTAssertTrue(
-            BrowserSplitFocusPolicy.focusesOnClick(
+            BrowserSplitPageSurface.focusesOnClick(
                 isCardFocused: false,
                 isDraggingSidebarItem: false,
                 isCarryingCard: false,
@@ -92,7 +92,7 @@ final class BrowserSplitFocusPolicyTests: XCTestCase {
     /// guard.
     func testClickIsRefusedOnlyByFocusADragOrThePalette() {
         XCTAssertFalse(
-            BrowserSplitFocusPolicy.focusesOnClick(
+            BrowserSplitPageSurface.focusesOnClick(
                 isCardFocused: true,
                 isDraggingSidebarItem: false,
                 isCarryingCard: false,
@@ -100,7 +100,7 @@ final class BrowserSplitFocusPolicyTests: XCTestCase {
             )
         )
         XCTAssertFalse(
-            BrowserSplitFocusPolicy.focusesOnClick(
+            BrowserSplitPageSurface.focusesOnClick(
                 isCardFocused: false,
                 isDraggingSidebarItem: true,
                 isCarryingCard: false,
@@ -108,7 +108,7 @@ final class BrowserSplitFocusPolicyTests: XCTestCase {
             )
         )
         XCTAssertFalse(
-            BrowserSplitFocusPolicy.focusesOnClick(
+            BrowserSplitPageSurface.focusesOnClick(
                 isCardFocused: false,
                 isDraggingSidebarItem: false,
                 isCarryingCard: false,

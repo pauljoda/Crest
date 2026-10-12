@@ -54,8 +54,7 @@ enum BrowserSidebarLiftPreviewSubject: Equatable {
                     width: landedFrame.width / max(artSize.width, 1),
                     height: landedFrame.height / max(artSize.height, 1))
             }
-            let value = BrowserVisualAccessibilityPolicy.spatialScale(
-                BrowserSidebarReorderVisuals.liftScale, reduceMotion: reduceMotion)
+            let value = BrowserSidebarReorderVisuals.liftScale.unlessReducingMotion(reduceMotion)
             return CGSize(width: value, height: value)
         }
     }

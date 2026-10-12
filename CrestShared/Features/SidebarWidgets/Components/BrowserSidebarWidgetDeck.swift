@@ -89,10 +89,7 @@ struct BrowserSidebarWidgetDeck: View {
                 updateActiveCardHeight(measuredHeight, isFront: isFront)
             }
             .scaleEffect(
-                BrowserVisualAccessibilityPolicy.spatialScale(
-                    BrowserSidebarWidgetDeckStyle.scale(forDepth: depth),
-                    reduceMotion: reduceMotion
-                ),
+                BrowserSidebarWidgetDeckStyle.scale(forDepth: depth).unlessReducingMotion(reduceMotion),
                 anchor: .top
             )
             .offset(
@@ -133,10 +130,7 @@ struct BrowserSidebarWidgetDeck: View {
     }
 
     private var deckAnimation: Animation? {
-        BrowserVisualAccessibilityPolicy.animation(
-            CrestMotion.spaceSwipe,
-            reduceMotion: reduceMotion
-        )
+        CrestMotion.spaceSwipe.unlessReducingMotion(reduceMotion)
     }
 
     private var deckDragGesture: some Gesture {

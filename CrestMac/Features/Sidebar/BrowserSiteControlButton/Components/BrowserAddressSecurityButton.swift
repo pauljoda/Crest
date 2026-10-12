@@ -25,10 +25,7 @@ struct BrowserAddressSecurityButton: View {
         .accessibilityIdentifier("browser-address-security")
         .help(stateDescription)
         .animation(
-            BrowserVisualAccessibilityPolicy.animation(
-                CrestMotion.contentState,
-                reduceMotion: reduceMotion
-            ),
+            CrestMotion.contentState.unlessReducingMotion(reduceMotion),
             value: isSecure
         )
     }

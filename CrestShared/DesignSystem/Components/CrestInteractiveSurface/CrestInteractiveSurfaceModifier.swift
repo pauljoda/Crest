@@ -91,10 +91,7 @@ struct CrestInteractiveSurfaceModifier: ViewModifier {
     }
 
     private var accessibleSurfaceAnimation: Animation? {
-        BrowserVisualAccessibilityPolicy.animation(
-            CrestMotion.surface,
-            reduceMotion: reduceMotion
-        )
+        CrestMotion.surface.unlessReducingMotion(reduceMotion)
     }
 }
 

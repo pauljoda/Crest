@@ -759,10 +759,9 @@ final class BrowserWebHostViewTests: XCTestCase {
         windowIsKey: Bool = true,
         applicationIsActive: Bool = true
     ) -> Bool {
-        BrowserWebFocusRestorationPolicy.allowsRestoration(
+        gate.allowsRestoration(
             hasPendingCandidate: true,
             candidateBelongsToWebView: true,
-            gate: gate,
             windowIsKey: windowIsKey,
             applicationIsActive: applicationIsActive,
             windowHasAttachedSheet: windowHasAttachedSheet,

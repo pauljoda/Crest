@@ -298,9 +298,6 @@ struct BrowserNowPlayingSidebarWidget: View {
     }
 
     private var pressAnimation: Animation? {
-        BrowserVisualAccessibilityPolicy.animation(
-            CrestMotion.press,
-            reduceMotion: reduceMotion
-        )
+        CrestMotion.press.unlessReducingMotion(reduceMotion)
     }
 }

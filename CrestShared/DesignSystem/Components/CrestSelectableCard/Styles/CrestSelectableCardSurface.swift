@@ -39,10 +39,7 @@ struct CrestSelectableCardSurface: View {
                 isEnabled: isEnabled
             )
             .animation(
-                BrowserVisualAccessibilityPolicy.animation(
-                    CrestMotion.press,
-                    reduceMotion: reduceMotion
-                ),
+                CrestMotion.press.unlessReducingMotion(reduceMotion),
                 value: isSelected
             )
             .onHover { isHovering = $0 && isEnabled }

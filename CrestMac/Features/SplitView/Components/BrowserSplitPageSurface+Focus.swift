@@ -24,9 +24,11 @@
 /// - **The command palette.** The palette is modal over the content area. A click
 ///   that lands on it, or a pointer crossing beneath it, is not addressed to a
 ///   card.
-enum BrowserSplitFocusPolicy {
+extension BrowserSplitPageSurface {
+    // MARK: - Actions - Focus
+
     /// Whether a pointer entering an unfocused card should focus it.
-    static func focusesOnHover(
+    nonisolated static func focusesOnHover(
         followsMouse: Bool,
         isCardFocused: Bool,
         isAddressEditing: Bool,
@@ -50,7 +52,7 @@ enum BrowserSplitFocusPolicy {
     /// A carry keeps its own mouse events, so in practice no click arrives while
     /// one is in flight — but the guard is stated rather than assumed, because
     /// "no click can reach here" is a property of a different file.
-    static func focusesOnClick(
+    nonisolated static func focusesOnClick(
         isCardFocused: Bool,
         isDraggingSidebarItem: Bool,
         isCarryingCard: Bool,

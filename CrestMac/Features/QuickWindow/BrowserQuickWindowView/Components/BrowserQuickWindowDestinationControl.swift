@@ -9,16 +9,12 @@ struct BrowserQuickWindowDestinationControl: View {
     var body: some View {
         HStack(spacing: 0) {
             Button(action: promoteCurrentSpace) {
-                Text(
-                    BrowserQuickWindowChromePolicy.destinationTitle(
-                        spaceName: model.spaceModel?.settings.name ?? "Space"
-                    )
-                )
-                .lineLimit(1)
-                .padding(.leading, 10)
-                .padding(.trailing, 8)
-                .frame(height: BrowserQuickWindowLayout.controlHeight)
-                .contentShape(.rect)
+                Text(destinationTitle)
+                    .lineLimit(1)
+                    .padding(.leading, 10)
+                    .padding(.trailing, 8)
+                    .frame(height: BrowserQuickWindowLayout.controlHeight)
+                    .contentShape(.rect)
             }
             .buttonStyle(.plain)
             .keyboardShortcut("o", modifiers: .command)
@@ -47,6 +43,12 @@ struct BrowserQuickWindowDestinationControl: View {
         }
         .fixedSize()
         .help("Open in \(model.spaceModel?.settings.name ?? "Space") (⌘O)")
+    }
+
+    /// "Open in" the Space the page would land in.
+    private var destinationTitle: String {
+        let spaceName = model.spaceModel?.settings.name ?? "Space"
+        return String(localized: "Open in \(spaceName)")
     }
 
     private func promoteCurrentSpace() {

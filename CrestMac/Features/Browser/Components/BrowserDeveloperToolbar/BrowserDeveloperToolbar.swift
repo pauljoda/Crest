@@ -11,7 +11,7 @@ struct BrowserDeveloperToolbar: View {
     @State private var showsSiteSettings = false
     @State private var showsCaptureOptions = false
     @State private var isSiteSettingsPermissionsExpanded =
-        BrowserSitePermissionDisclosurePolicy.defaultIsExpanded
+        BrowserSitePermissionDisclosure.defaultIsExpanded
 
     var body: some View {
         BrowserPageToolbarSurface(label: "Developer Toolbar", identifier: "developer-toolbar") {

@@ -3945,6 +3945,10 @@
     "2026-10-12-core-query-answers-own-rules": {
       "category": "internal",
       "message": "Let core queries and page values carry the rules that judge them"
+    },
+    "2026-10-12-tokens-and-shell-own-rules": {
+      "category": "internal",
+      "message": "Let design tokens, Space colors, settings values and the Mac shell keep their own rules"
     }
   }
 }

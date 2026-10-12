@@ -41,7 +41,7 @@ struct BrowserSidebarLiftFloatingPreview: View {
                 )
                 .offset(x: -displayAnchor.width, y: -displayAnchor.height)
                 .animation(
-                    BrowserVisualAccessibilityPolicy.animation(CrestMotion.dragPreview, reduceMotion: reduceMotion),
+                    CrestMotion.dragPreview.unlessReducingMotion(reduceMotion),
                     value: lift.shape
                 )
                 .offset(x: displayPointer.x, y: displayPointer.y)
@@ -64,7 +64,7 @@ struct BrowserSidebarLiftFloatingPreview: View {
         .accessibilityHidden(true)
         .onAppear {
             withAnimation(
-                BrowserVisualAccessibilityPolicy.animation(CrestMotion.dragSource, reduceMotion: reduceMotion)
+                CrestMotion.dragSource.unlessReducingMotion(reduceMotion)
             ) {
                 stackHasGathered = true
             }
@@ -77,7 +77,7 @@ struct BrowserSidebarLiftFloatingPreview: View {
             }
             if landing.isRevealing {
                 withAnimation(
-                    BrowserVisualAccessibilityPolicy.animation(.easeOut(duration: 0.10), reduceMotion: reduceMotion),
+                    Animation.easeOut(duration: 0.10).unlessReducingMotion(reduceMotion),
                     completionCriteria: .removed
                 ) {
                     previewOpacity = 0
@@ -87,7 +87,7 @@ struct BrowserSidebarLiftFloatingPreview: View {
                 return
             }
             withAnimation(
-                BrowserVisualAccessibilityPolicy.animation(CrestMotion.dragSource, reduceMotion: reduceMotion),
+                CrestMotion.dragSource.unlessReducingMotion(reduceMotion),
                 completionCriteria: .removed
             ) {
                 landedFrame = landing.frame

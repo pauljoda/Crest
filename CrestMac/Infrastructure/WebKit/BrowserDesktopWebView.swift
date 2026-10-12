@@ -50,16 +50,16 @@ final class BrowserDesktopWebView: WKWebView {
     override func willOpenMenu(_ menu: NSMenu, with event: NSEvent) {
         super.willOpenMenu(menu, with: event)
         if menuHost?.opensLinksInCurrentSpace == true {
-            BrowserDesktopWebViewMenuPolicy.relabelLinkDestination(in: menu)
+            menu.relabelWebKitLinkDestination()
         }
-        BrowserDesktopWebViewMenuPolicy.removeDefaultSelectionSearch(in: menu)
+        menu.removeWebKitSelectionSearch()
         guard let menuHost, let context = menuHost.takeMenuContext() else { return }
         BrowserPageContextMenu(
             actions: menuHost.contextMenuActions(linkURL: context.linkURL, selectionText: context.selectionText),
             host: menuHost, view: self
         ).insert(into: menu)
         if let imageDownloadURL = context.imageDownloadURL,
-            let item = BrowserDesktopWebViewMenuPolicy.downloadImageItem(in: menu)
+            let item = menu.webKitDownloadImageItem
         {
             item.target = self
             item.action = #selector(downloadImage(_:))
@@ -79,31 +79,6 @@ final class BrowserDesktopWebView: WKWebView {
         guard let url = sender.representedObject as? URL else { return }
         menuHost?.downloadImage(from: url)
     }
-}
-
-enum BrowserDesktopWebViewMenuPolicy {
-    static let searchWebIdentifier = NSUserInterfaceItemIdentifier("WKMenuItemIdentifierSearchWeb")
-    static let openLinkIdentifier = NSUserInterfaceItemIdentifier("WKMenuItemIdentifierOpenLinkInNewWindow")
-
-    static func removeDefaultSelectionSearch(in menu: NSMenu) {
-        if let item = menu.items.first(where: { $0.identifier == searchWebIdentifier }) {
-            menu.removeItem(item)
-        }
-    }
-
-    static func relabelLinkDestination(in menu: NSMenu) {
-        menu.items.first { $0.identifier == openLinkIdentifier }?.title =
-            String(localized: "Open Link in This Space")
-    }
-
-    static let downloadImageIdentifier = NSUserInterfaceItemIdentifier(
-        "WKMenuItemIdentifierDownloadImage"
-    )
-
-    static func downloadImageItem(in menu: NSMenu) -> NSMenuItem? {
-        menu.items.first { $0.identifier == downloadImageIdentifier }
-    }
-
 }
 
 // WebKit's hover observer remains with its adapter. Other native engine views

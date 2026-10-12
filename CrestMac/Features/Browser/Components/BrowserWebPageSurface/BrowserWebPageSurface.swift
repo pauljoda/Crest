@@ -218,10 +218,7 @@ private struct BrowserPageLoadingPresentation: View {
             .scaleEffect(x: progress, anchor: .leading)
             .opacity(isNavigating ? 1 : 0)
             .animation(
-                BrowserVisualAccessibilityPolicy.animation(
-                    CrestMotion.loadingProgress,
-                    reduceMotion: reduceMotion
-                ),
+                CrestMotion.loadingProgress.unlessReducingMotion(reduceMotion),
                 value: progress
             )
             .accessibilityHidden(true)

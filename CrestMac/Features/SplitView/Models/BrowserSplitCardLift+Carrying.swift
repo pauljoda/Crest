@@ -5,10 +5,12 @@ import SwiftUI
 /// somebody is carrying one.
 ///
 /// Every decision is arithmetic over frames and booleans, for the same reason
-/// `BrowserSplitFocusPolicy` is: the gesture itself is a local `NSEvent` monitor
-/// no unit test can drive, so what *is* testable has to be the answers it asks
-/// for rather than the asking.
-enum BrowserSplitCardLiftPolicy {
+/// the surface's focus guards are: the gesture itself is a local `NSEvent`
+/// monitor no unit test can drive, so what *is* testable has to be the answers
+/// it asks for rather than the asking.
+extension BrowserSplitCardLift {
+    // MARK: - Static Variables
+
     /// The modifiers that turn a press into a carry: the same pair that moves a
     /// card by keyboard.
     ///
@@ -16,6 +18,8 @@ enum BrowserSplitCardLiftPolicy {
     /// means "move this card to wherever I put it". One idea, one binding,
     /// reached two ways.
     static let carryModifiers: BrowserKeyboardModifierFlags = [.command, .shift]
+
+    // MARK: - Actions - Carrying
 
     /// Whether a modified mouse-down lifts the card it landed in.
     ///
@@ -54,23 +58,6 @@ enum BrowserSplitCardLiftPolicy {
             && memberCount > 1
             && !isDraggingSidebarItem
             && !isCommandPalettePresented
-    }
-
-    /// Whether a card in this presentation has a WebKit rendering worth
-    /// carrying.
-    ///
-    /// Only a live page does. Every other presentation is drawn by SwiftUI over
-    /// a web view that is showing nothing — a start-page card never loads or
-    /// mounts the page it was given, an unloaded card has not started one, and a
-    /// failure card is covering whatever the page last had — so the picture
-    /// WebKit would hand back is not the card anybody is looking at.
-    ///
-    /// The distinction matters because an empty picture is worse than none: the
-    /// preview stands its title-and-favicon placeholder down the moment a
-    /// snapshot arrives, so a blank one leaves the carry showing neither the page
-    /// nor the tab. A card with nothing to picture must not ask.
-    static func picturesPage(_ presentation: PagePresentation) -> Bool {
-        presentation == .livePage
     }
 
     /// The card `point` landed in, resolved against the row's own membership.

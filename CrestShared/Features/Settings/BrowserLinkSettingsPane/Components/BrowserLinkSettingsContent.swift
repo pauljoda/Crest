@@ -56,11 +56,21 @@ struct BrowserLinkSettingsContent: View {
     }
 
     private var resolvedSelectedSpaceID: UUID {
-        BrowserLinkSettingsSpacePolicy.resolvedExternalSpaceID(
-            preferredSpaceID: browser.selectedSpaceID,
-            spaces: availableSpaces,
-            selectedSpaceID: browser.selectedSpaceID
-        )
+        resolvedSpaceID(preferring: browser.selectedSpaceID)
+    }
+
+    /// The Space links open in: the preferred one while it is available, then
+    /// the selected one, then the first available Space.
+    private func resolvedSpaceID(preferring preferredSpaceID: UUID?) -> UUID {
+        let spaces = availableSpaces
+        let selectedSpaceID = browser.selectedSpaceID
+        if let preferredSpaceID, spaces.contains(where: { $0.id == preferredSpaceID }) {
+            return preferredSpaceID
+        }
+        if spaces.contains(where: { $0.id == selectedSpaceID }) {
+            return selectedSpaceID
+        }
+        return spaces.first?.id ?? selectedSpaceID
     }
 
     /// The locked Spaces some route opens links in: while one is locked, the
@@ -88,11 +98,7 @@ struct BrowserLinkSettingsContent: View {
 
     private var externalSpaceBinding: Binding<UUID?> {
         Binding {
-            BrowserLinkSettingsSpacePolicy.resolvedExternalSpaceID(
-                preferredSpaceID: links.preferences.destinationSpaceID,
-                spaces: availableSpaces,
-                selectedSpaceID: browser.selectedSpaceID
-            )
+            resolvedSpaceID(preferring: links.preferences.destinationSpaceID)
         } set: { value in
             guard let value else { return }
             links.chooseExternalDestination(links.preferences.destination, spaceID: value)

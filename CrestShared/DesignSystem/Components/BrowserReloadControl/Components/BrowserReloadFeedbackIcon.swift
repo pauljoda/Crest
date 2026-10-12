@@ -1,13 +1,17 @@
 import SwiftUI
 
 struct BrowserReloadFeedbackIcon: View {
+    private static let restingRotation = 0.0
+    private static let pressedRotation = Double(CrestLayout.reloadQuarterTurn)
+    private static let phaseDuration = CrestMotion.reloadFeedbackPhaseDuration
+
     let systemName: String
     let pulse: Int
     let animates: Bool
     let pointSize: CGFloat
     let feedbackDidComplete: (Int) -> Void
 
-    @State private var rotation = BrowserReloadFeedbackPolicy.restingRotation
+    @State private var rotation = Self.restingRotation
     @State private var feedbackTask: Task<Void, Never>?
 
     var body: some View {
@@ -36,15 +40,15 @@ struct BrowserReloadFeedbackIcon: View {
         let playingPulse = pulse
         feedbackTask = Task { @MainActor in
             withAnimation(CrestMotion.reloadTurnOut) {
-                rotation = BrowserReloadFeedbackPolicy.pressedRotation
+                rotation = Self.pressedRotation
             }
-            try? await Task.sleep(for: BrowserReloadFeedbackPolicy.phaseDuration)
+            try? await Task.sleep(for: Self.phaseDuration)
             guard !Task.isCancelled else { return }
             withAnimation(
                 CrestMotion.reloadTurnIn,
                 completionCriteria: .logicallyComplete
             ) {
-                rotation = BrowserReloadFeedbackPolicy.restingRotation
+                rotation = Self.restingRotation
             } completion: {
                 feedbackDidComplete(playingPulse)
             }
@@ -65,7 +69,7 @@ struct BrowserReloadFeedbackIcon: View {
 
     private func resetRotation() {
         withTransaction(Transaction(animation: nil)) {
-            rotation = BrowserReloadFeedbackPolicy.restingRotation
+            rotation = Self.restingRotation
         }
     }
 }

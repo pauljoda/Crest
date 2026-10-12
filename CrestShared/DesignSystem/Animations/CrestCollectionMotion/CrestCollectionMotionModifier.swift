@@ -8,10 +8,7 @@ struct CrestCollectionMotionModifier<ID: Hashable>: ViewModifier {
 
     func body(content: Content) -> some View {
         content.animation(
-            BrowserVisualAccessibilityPolicy.animation(
-                CrestMotion.collection,
-                reduceMotion: reduceMotion
-            ),
+            CrestMotion.collection.unlessReducingMotion(reduceMotion),
             value: ids
         )
     }

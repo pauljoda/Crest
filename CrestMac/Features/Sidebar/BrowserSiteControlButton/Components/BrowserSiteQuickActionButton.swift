@@ -10,12 +10,12 @@ struct BrowserSiteQuickActionButton: View {
             Image(systemName: systemImage)
                 .font(
                     .system(
-                        size: BrowserSiteControlLayoutPolicy.quickActionGlyphSize,
+                        size: BrowserSiteControlMetrics.quickActionGlyphSize,
                         weight: .medium
                     )
                 )
                 .frame(maxWidth: .infinity)
-                .frame(height: BrowserSiteControlLayoutPolicy.quickActionHeight)
+                .frame(height: BrowserSiteControlMetrics.quickActionHeight)
                 .contentShape(.rect)
         }
         .buttonStyle(.plain)

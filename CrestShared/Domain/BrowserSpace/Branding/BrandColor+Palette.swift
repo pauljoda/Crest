@@ -26,6 +26,13 @@ extension BrandColor {
         .ink, .indigo, .ocean, .sky, .teal, .sage, .gold, .ember, .rose, .sand,
     ]
 
+    // MARK: - Variables
+
+    /// The tone that reads best over this one solid color.
+    var foregroundTone: BrowserSpaceForegroundTone {
+        ColorPalette(colors: [self]).foregroundTone(strength: 1, readabilityFade: 0)
+    }
+
     // MARK: - Initializers
 
     /// An opaque color, each component kept within 0 through 1.

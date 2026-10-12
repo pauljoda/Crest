@@ -437,7 +437,7 @@ final class BrowserUtilityListTests: XCTestCase {
 
         XCTAssertEqual(
             try XCTUnwrap(
-                BrowserDownloadNotificationPolicy.progress(in: [older, newest])
+                [older, newest].notificationProgress
             ),
             0.35,
             accuracy: 0.001

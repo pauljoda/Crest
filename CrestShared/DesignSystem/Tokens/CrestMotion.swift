@@ -7,12 +7,12 @@ import SwiftUI
 /// system-owned motion.
 ///
 /// Never apply these animations directly. Route every Crest-authored animation
-/// through `BrowserVisualAccessibilityPolicy.animation(_:reduceMotion:)` so the
+/// through `Animation.unlessReducingMotion(_:)` so the
 /// system's Reduce Motion setting can drop the animation entirely:
 ///
 /// ```swift
 /// .animation(
-///     BrowserVisualAccessibilityPolicy.animation(CrestMotion.pane, reduceMotion: reduceMotion),
+///     CrestMotion.pane.unlessReducingMotion(reduceMotion),
 ///     value: selection
 /// )
 /// ```

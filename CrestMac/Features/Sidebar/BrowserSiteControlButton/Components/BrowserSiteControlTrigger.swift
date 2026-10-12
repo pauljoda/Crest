@@ -28,14 +28,14 @@ struct BrowserSiteControlTrigger: View {
                 }
             }
             .frame(
-                width: BrowserSiteControlLayoutPolicy.triggerSize.width,
-                height: BrowserSiteControlLayoutPolicy.triggerSize.height
+                width: BrowserSiteControlMetrics.triggerSize.width,
+                height: BrowserSiteControlMetrics.triggerSize.height
             )
             .contentShape(.rect)
         }
         .buttonStyle(
             CrestChromeButtonStyle(
-                controlSize: BrowserSiteControlLayoutPolicy.triggerSize
+                controlSize: BrowserSiteControlMetrics.triggerSize
             )
         )
         .foregroundStyle(

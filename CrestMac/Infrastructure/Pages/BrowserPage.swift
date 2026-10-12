@@ -173,7 +173,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     @ObservationIgnored private var preparingPrint = false
     /// The link the pending web-content context menu is over. Read and cleared
     /// by this page's `BrowserDesktopWebViewMenuHost` conformance.
-    @ObservationIgnored var linkContextCapture = BrowserLinkContextCapturePolicy()
+    @ObservationIgnored var linkContextCapture = BrowserLinkContextCapture()
     @ObservationIgnored var downloadSourceStore = BrowserDownloadSourceStore()
     @ObservationIgnored var splitLinkHost: BrowserSplitLinkHost
     @ObservationIgnored var linkDestinationHost: BrowserLinkDestinationHost

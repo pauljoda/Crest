@@ -292,9 +292,10 @@ final class BrowserMacWindows {
             controller.present(.key)
             return
         }
-        let resolver = BrowserQuickWindowContextResolver(
-            browser: application.browser, pages: application.pages, pagePoolRegistry: application.pagePoolRegistry)
-        guard let context = resolver.context(for: request),
+        guard
+            let context = BrowserQuickWindowBrowsingContext(
+                for: request, browser: application.browser, pages: application.pages,
+                pagePoolRegistry: application.pagePoolRegistry),
             let space = context.browser.spaceModel(matching: request.assignment),
             !application.spaceAccess.isLocked(space)
         else {

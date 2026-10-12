@@ -97,23 +97,14 @@ struct BrowserSplitCardLiftFloatingPreview: View {
 
     private var scale: CGFloat {
         guard !content.isSettling else { return 1 }
-        return BrowserVisualAccessibilityPolicy.spatialScale(
-            BrowserSidebarReorderVisuals.liftScale,
-            reduceMotion: content.reduceMotion
-        )
+        return BrowserSidebarReorderVisuals.liftScale.unlessReducingMotion(content.reduceMotion)
     }
 
     private var settleMotion: Animation? {
-        BrowserVisualAccessibilityPolicy.animation(
-            CrestMotion.collection,
-            reduceMotion: content.reduceMotion
-        )
+        CrestMotion.collection.unlessReducingMotion(content.reduceMotion)
     }
 
     private var crossfadeMotion: Animation? {
-        BrowserVisualAccessibilityPolicy.animation(
-            CrestMotion.dragPreview,
-            reduceMotion: content.reduceMotion
-        )
+        CrestMotion.dragPreview.unlessReducingMotion(content.reduceMotion)
     }
 }

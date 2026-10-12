@@ -55,10 +55,7 @@ struct BrowserStartPageContent: View {
         _ url: URL
     ) -> Bool {
         return withAnimation(
-            BrowserVisualAccessibilityPolicy.animation(
-                CrestMotion.contentNavigation,
-                reduceMotion: reduceMotion
-            )
+            CrestMotion.contentNavigation.unlessReducingMotion(reduceMotion)
         ) {
             BrowserStartPageNavigationAction(
                 browser: browser,

@@ -12,9 +12,9 @@ struct BrowserSiteExtensionsHeader: View {
                 Image(systemName: "plus")
                     .font(.system(size: 11, weight: .semibold))
                     .frame(
-                        width: BrowserSiteControlLayoutPolicy
+                        width: BrowserSiteControlMetrics
                             .manageExtensionControlSize,
-                        height: BrowserSiteControlLayoutPolicy
+                        height: BrowserSiteControlMetrics
                             .manageExtensionControlSize
                     )
             }

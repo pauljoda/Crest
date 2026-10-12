@@ -84,24 +84,24 @@ final class BrowserSettingsPaneTests: XCTestCase {
         let all = [webForm, httpBasic]
 
         XCTAssertEqual(
-            BrowserCredentialSettingsPolicy.filter(all, matching: "  "),
+            all.matching("  "),
             [httpBasic, webForm],
             "A blank query keeps every password and orders the manager by site."
         )
         XCTAssertEqual(
-            BrowserCredentialSettingsPolicy.filter(all, matching: "PERSON"),
+            all.matching("PERSON"),
             [webForm]
         )
         XCTAssertEqual(
-            BrowserCredentialSettingsPolicy.filter(all, matching: "work mail"),
+            all.matching("work mail"),
             [webForm]
         )
         XCTAssertEqual(
-            BrowserCredentialSettingsPolicy.filter(all, matching: "intranet"),
+            all.matching("intranet"),
             [httpBasic]
         )
         XCTAssertEqual(
-            BrowserCredentialSettingsPolicy.filter(all, matching: "Realm"),
+            all.matching("Realm"),
             [httpBasic],
             "The authentication scope is part of how a reader finds a credential."
         )

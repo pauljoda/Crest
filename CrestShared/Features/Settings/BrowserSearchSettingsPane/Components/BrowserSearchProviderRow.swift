@@ -78,8 +78,7 @@ struct BrowserSearchProviderRow: View {
 
     private func toggleExpanded() {
         withAnimation(
-            BrowserVisualAccessibilityPolicy.animation(
-                .snappy(duration: CrestMotion.disclosureTransition), reduceMotion: reduceMotion)
+            Animation.snappy(duration: CrestMotion.disclosureTransition).unlessReducingMotion(reduceMotion)
         ) {
             isExpanded.toggle()
         }

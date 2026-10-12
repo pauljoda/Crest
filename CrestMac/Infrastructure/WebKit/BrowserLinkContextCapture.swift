@@ -18,7 +18,7 @@ import Foundation
 /// right-click that found no link reports exactly that — a menu *takes* the
 /// capture instead of reading it, and a token that only ever increases refuses
 /// a second take of the same report even if a caller forgets to clear.
-struct BrowserLinkContextCapturePolicy: Equatable, Sendable {
+struct BrowserLinkContextCapture: Equatable, Sendable {
     /// The message contract the injected script posts against. A payload from
     /// an older or newer script is discarded rather than guessed at.
     static let contractVersion = 3

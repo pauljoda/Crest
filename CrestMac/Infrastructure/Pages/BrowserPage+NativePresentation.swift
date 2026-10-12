@@ -8,10 +8,13 @@ extension BrowserPage {
     var viewportSize: CGSize { nativeView.bounds.size }
 
     var canReviewCertificate: Bool {
-        BrowserSiteCertificatePresentationPolicy.isAvailable(
-            url: live.displayURL,
-            hasServerTrust: serverTrust != nil
-        )
+        Self.canReviewCertificate(of: live.displayURL, hasServerTrust: serverTrust != nil)
+    }
+
+    /// A certificate is offered for review only for an HTTPS document whose
+    /// server trust the engine reports.
+    nonisolated static func canReviewCertificate(of url: URL?, hasServerTrust: Bool) -> Bool {
+        url?.scheme?.lowercased() == "https" && hasServerTrust
     }
 
     /// The trust the page's current document was verified with.

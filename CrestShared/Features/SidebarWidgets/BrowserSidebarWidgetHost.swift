@@ -92,10 +92,7 @@ struct BrowserSidebarWidgetHost: View {
     }
 
     private var deckAnimation: Animation? {
-        BrowserVisualAccessibilityPolicy.animation(
-            CrestMotion.spaceSwipe,
-            reduceMotion: reduceMotion
-        )
+        CrestMotion.spaceSwipe.unlessReducingMotion(reduceMotion)
     }
 
     private func reconcileSelection() {

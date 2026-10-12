@@ -6,10 +6,10 @@ struct BrowserSiteExtensionActionLabel: View {
     var body: some View {
         BrowserExtensionActionArtwork(
             action: action,
-            glyphSize: BrowserSiteControlLayoutPolicy.extensionGlyphSize
+            glyphSize: BrowserSiteControlMetrics.extensionGlyphSize
         )
         .frame(maxWidth: .infinity)
-        .frame(height: BrowserSiteControlLayoutPolicy.extensionActionHeight)
+        .frame(height: BrowserSiteControlMetrics.extensionActionHeight)
         .contentShape(.rect)
     }
 }

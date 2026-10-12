@@ -12,10 +12,7 @@ struct BrowserUtilityFanReveal: BrowserUtilityFanExpansionStep {
     func run(on fan: BrowserUtilityFanControl, reduceMotion: Bool) async -> Bool {
         guard !Task.isCancelled else { return false }
         withAnimation(
-            BrowserVisualAccessibilityPolicy.animation(
-                CrestMotion.utilityFanReveal,
-                reduceMotion: reduceMotion
-            )
+            CrestMotion.utilityFanReveal.unlessReducingMotion(reduceMotion)
         ) {
             _ = fan.revealedSurfaces.insert(surface)
         }

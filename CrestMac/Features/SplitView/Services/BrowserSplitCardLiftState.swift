@@ -10,7 +10,7 @@ import Observation
 /// neither can see the other's gap.
 ///
 /// The state answers *what* is being carried and never *where it may go*: the
-/// slot arrives already resolved, from `BrowserSplitCardLiftPolicy` measuring
+/// slot arrives already resolved, from `BrowserSplitCardLift` measuring
 /// the pointer against the frames the row registered. Keeping resolution out
 /// here is what lets the whole geometry be exercised without a carry, and the
 /// whole carry be exercised without a window.
@@ -110,7 +110,7 @@ final class BrowserSplitCardLiftState {
             tabID: tabID,
             originIndex: originIndex,
             cardSize: cardFrame.size,
-            grabFraction: BrowserSplitCardLiftPolicy.grabFraction(
+            grabFraction: BrowserSplitCardLift.grabFraction(
                 pointer: pointer,
                 in: cardFrame
             ),

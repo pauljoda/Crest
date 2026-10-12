@@ -61,7 +61,7 @@ struct BrowserSiteControlPopoverStyle: ViewModifier {
                 }
             }
             .padding(CrestSpacing.medium)
-            .frame(width: BrowserSiteControlLayoutPolicy.width)
+            .frame(width: BrowserSiteControlMetrics.width)
             .modifier(BrowserSiteControlPopoverStyle())
         }
     }

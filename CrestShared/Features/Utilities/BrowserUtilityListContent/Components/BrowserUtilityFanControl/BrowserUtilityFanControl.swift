@@ -87,10 +87,7 @@ struct BrowserUtilityFanControl: View {
             }
         } else {
             withAnimation(
-                BrowserVisualAccessibilityPolicy.animation(
-                    CrestMotion.dismissal,
-                    reduceMotion: shouldReduceMotion
-                )
+                CrestMotion.dismissal.unlessReducingMotion(shouldReduceMotion)
             ) {
                 revealedSurfaces.removeAll()
                 isContainerVisible = false
