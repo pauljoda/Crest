@@ -3961,6 +3961,10 @@
     "2026-10-12-sync-records-decide-conflicts": {
       "category": "internal",
       "message": "Let sync records, addresses and reasons decide their conflicts"
+    },
+    "2026-10-12-download-media-launch-answers": {
+      "category": "internal",
+      "message": "Let download, media and launch questions answer from their facts"
     }
   }
 }

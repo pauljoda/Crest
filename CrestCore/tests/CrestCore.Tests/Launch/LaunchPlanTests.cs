@@ -6,7 +6,7 @@ using Xunit;
 
 namespace CrestCore.Tests;
 
-public sealed class LaunchPolicyTests {
+public sealed class LaunchPlanTests {
     private static readonly string[] FixtureFlags = [
         "testRuntime", "previewRuntime", "isolatedSession", "isolatedCloudSync", "resetSession", "showcase",
         "inMemoryCredentials", "onboardingWelcome", "desktopSetup", "mobileSetup", "performanceHarness", "updateTestFeed"
@@ -53,13 +53,13 @@ public sealed class LaunchPolicyTests {
     [InlineData("desktop", true, "lastActiveTab")]
     [InlineData("mobile", false, "showStartPage")]
     public void WithoutASessionALaunchOpensTheDefaultUnlessSetupOwnsTheFirstWindow(string platform, bool gate, string expected) =>
-        Assert.Equal(expected, LaunchPolicy.Plan(Environment(), DevicePlatform.Named(platform)!, storedStartup: null, gate).Startup.Name);
+        Assert.Equal(expected, Environment().Plan(DevicePlatform.Named(platform)!, storedStartup: null, gate).Startup.Name);
 
     [Fact]
     public void IsolatedLaunchesRestoreTheirStagedTabExceptTheMobileShowcase() {
         Assert.Equal(StartupBehavior.LastActiveTab, Plan(Environment("resetSession"), DevicePlatform.Mobile).Startup);
         Assert.Equal(StartupBehavior.LastActiveTab, Plan(Environment("showcase"), DevicePlatform.Desktop).Startup);
         Assert.Equal(StartupBehavior.ShowStartPage, Plan(Environment("showcase"), DevicePlatform.Mobile).Startup);
-        Assert.Equal(StartupBehavior.ShowStartPage, LaunchPolicy.DefaultStartup);
+        Assert.Equal(StartupBehavior.ShowStartPage, AppPreferences.Default.Startup);
     }
 }
