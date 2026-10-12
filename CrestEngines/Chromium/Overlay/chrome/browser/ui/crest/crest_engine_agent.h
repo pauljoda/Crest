@@ -66,6 +66,7 @@ class PageAgent final : public content::WebContentsObserver, public content::Dev
   // content::DevToolsAgentHostClient:
   void DispatchProtocolMessage(content::DevToolsAgentHost* host, base::span<const uint8_t> message) override;
   void AgentHostClosed(content::DevToolsAgentHost* host) override;
+  bool MayAttachToURL(const GURL& url, bool is_webui) override;
 
   // content::WebContentsObserver:
   void OnDidAddMessageToConsole(content::RenderFrameHost* source_frame,

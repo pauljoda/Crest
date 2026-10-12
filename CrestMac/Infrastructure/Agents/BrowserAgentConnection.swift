@@ -11,7 +11,7 @@ import Foundation
 final class BrowserAgentConnection: @unchecked Sendable {
     // MARK: - Static Variables
 
-    static let maximumLineLength = 1 << 20
+    static let maximumLineLength = AgentLinkRequest.maximumBytes
     static let maximumOutstanding = 32
 
     // MARK: - Variables

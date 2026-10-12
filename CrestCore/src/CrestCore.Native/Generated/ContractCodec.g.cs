@@ -14,7 +14,7 @@ namespace CrestCore.Native;
 public static class ContractCodec {
     /// <summary>SHA-256 of the canonical contract schema.</summary>
     public static ReadOnlySpan<byte> Fingerprint => [
-        0xa1, 0x30, 0xae, 0xbe, 0x82, 0x0a, 0x6a, 0x64, 0x6f, 0xe6, 0xcd, 0x2e, 0xcc, 0x5c, 0x10, 0x0a, 0x64, 0xaf, 0x7e, 0xd7, 0xdf, 0xde, 0xa5, 0x1a, 0x66, 0x1e, 0x0a, 0x11, 0x6d, 0x03, 0x37, 0x9d
+        0x17, 0xc9, 0x4d, 0x67, 0xb2, 0xc6, 0x22, 0xeb, 0xff, 0xe4, 0xd7, 0xba, 0x8f, 0xcf, 0xf6, 0xb5, 0x3e, 0x1a, 0x94, 0x9c, 0x1c, 0x68, 0xcc, 0xa0, 0x5e, 0xa2, 0xbd, 0x49, 0xa0, 0xbc, 0x15, 0xd7
     ];
 
     /// <summary>SHA-256 of the engine contract alone, which an engine binding registers with.</summary>
@@ -3853,7 +3853,6 @@ public static class ContractCodec {
             ReadAgentIdentity(reader),
             reader.ReadString(),
             reader.ReadPresence() ? (BrandColor?)ReadBrandColor(reader) : null,
-            reader.ReadList(() => reader.ReadGuid()),
             reader.ReadList(() => reader.ReadGuid()));
     }
 
@@ -3872,10 +3871,6 @@ public static class ContractCodec {
         writer.WriteCount(value.TabIds.Count);
         foreach (var itemTabIds in value.TabIds) {
             writer.WriteGuid(itemTabIds);
-        }
-        writer.WriteCount(value.StoppedTabIds.Count);
-        foreach (var itemStoppedTabIds in value.StoppedTabIds) {
-            writer.WriteGuid(itemStoppedTabIds);
         }
     }
 

@@ -193,6 +193,8 @@ actor AgentHelperEndpoint {
             "Crest was updated since this connection started. Ask the person to restart Crest's MCP server in your agent."
         case .closed:
             "Crest closed the connection before the tool finished."
+        case .tooLarge:
+            "The call was too large to send to Crest. Send less at once, such as shorter text or a shorter script."
         }
     }
 

@@ -115,7 +115,9 @@ public sealed record AgentPreferences(bool IsOn, bool RunsScripts, IReadOnlyList
 
     /// `name` as Crest shows it: without control or formatting characters,
     /// such as the ones that reverse text, with runs of space as one, and at
-    /// most `MaximumName` characters; null when nothing is left to show.
+    /// most `MaximumName` characters, never cut inside a character or left
+    /// ending in a space; null when nothing is left to show. Cleaning a
+    /// cleaned name leaves it as it is, so a stored name finds itself again.
     public static string? CleanName(string? name) {
         if (name is null) return null;
         var cleaned = new StringBuilder();
@@ -124,22 +126,19 @@ public sealed record AgentPreferences(bool IsOn, bool RunsScripts, IReadOnlyList
             var category = Rune.GetUnicodeCategory(rune);
             if (category is UnicodeCategory.Control or UnicodeCategory.Format or UnicodeCategory.LineSeparator
                 or UnicodeCategory.ParagraphSeparator or UnicodeCategory.Surrogate or UnicodeCategory.PrivateUse
-                or UnicodeCategory.OtherNotAssigned) {
+                or UnicodeCategory.OtherNotAssigned || Rune.IsWhiteSpace(rune)) {
                 spaced = cleaned.Length > 0;
                 continue;
             }
-            if (Rune.IsWhiteSpace(rune)) {
-                spaced = cleaned.Length > 0;
-                continue;
-            }
+            // A space is kept only with the character after it, and neither
+            // is kept past the limit.
+            int length = (spaced ? 1 : 0) + rune.Utf16SequenceLength;
+            if (cleaned.Length + length > MaximumName) break;
             if (spaced) cleaned.Append(' ');
             spaced = false;
             cleaned.Append(rune.ToString());
-            if (cleaned.Length >= MaximumName) break;
         }
-        var text = cleaned.ToString();
-        if (text.Length > MaximumName) text = text[..MaximumName];
-        return text.Length == 0 ? null : text;
+        return cleaned.Length == 0 ? null : cleaned.ToString();
     }
 
     #endregion

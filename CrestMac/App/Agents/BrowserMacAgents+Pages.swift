@@ -210,6 +210,9 @@ extension BrowserMacAgents {
     private static let scriptTimeout = Duration.seconds(15)
     private static let settleTimeout = Duration.seconds(15)
     private static let inputTimeout = Duration.seconds(10)
+    /// How long after input a page is given for a load the input started to
+    /// begin, as a click on a link or a submit button does.
+    private static let loadGrace = Duration.seconds(1)
     private static let untrustedNote =
         "This page’s engine took the input as script events, which some pages ignore. If nothing changed, try another way."
 
@@ -241,6 +244,8 @@ extension BrowserMacAgents {
                 png = await page.enginePage.capture()
             }
             guard let png, !png.isEmpty else { throw .refused("The page showed nothing to capture.") }
+            // Base64 makes the image a third larger on its way to the agent.
+            guard png.count / 3 * 4 < AgentLinkResponse.maximumBytes - (64 << 10) else { throw .tooLarge }
             return AgentToolResult(content: [.png(png)], isError: false)
         }
     }
@@ -255,7 +260,7 @@ extension BrowserMacAgents {
             let delivered = try await self.deliver(
                 .click(
                     at: PagePoint(x: located.x, y: located.y), button: click.button?.pointer ?? .primary,
-                    count: click.double == true ? 2 : 1), to: page)
+                    count: click.double == true ? 2 : 1), to: page, tab: click.tab, call)
             return .message(Self.done("Clicked the \(located.tag) \(click.uid).", delivered))
         }
     }
@@ -265,7 +270,8 @@ extension BrowserMacAgents {
         return try await serially(on: reference.tab) { () async throws(BrowserAgentFailure) -> AgentToolResult in
             let page = try await self.settledPage(for: reference.tab, call)
             let located = try await self.locate(reference.uid, on: page)
-            let delivered = try await self.deliver(.hover(at: PagePoint(x: located.x, y: located.y)), to: page)
+            let delivered = try await self.deliver(
+                .hover(at: PagePoint(x: located.x, y: located.y)), to: page, tab: reference.tab, call)
             return .message(Self.done("The pointer is over the \(located.tag) \(reference.uid).", delivered))
         }
     }
@@ -283,7 +289,7 @@ extension BrowserMacAgents {
             }
             if let chosen = prepared["chosen"]?.string { return .message("Chose \(chosen).") }
             guard !fill.value.isEmpty else { return .message("Cleared \(fill.uid).") }
-            let delivered = try await self.deliver(.type(fill.value), to: page)
+            let delivered = try await self.deliver(.type(fill.value), to: page, tab: fill.tab, call)
             return .message(Self.done("Filled \(fill.uid).", delivered))
         }
     }
@@ -292,7 +298,7 @@ extension BrowserMacAgents {
         let typing = try call.arguments(Typing.self)
         return try await serially(on: typing.tab) { () async throws(BrowserAgentFailure) -> AgentToolResult in
             let page = try await self.settledPage(for: typing.tab, call)
-            let delivered = try await self.deliver(.type(typing.text), to: page)
+            let delivered = try await self.deliver(.type(typing.text), to: page, tab: typing.tab, call)
             return .message(Self.done("Typed the text.", delivered))
         }
     }
@@ -306,7 +312,8 @@ extension BrowserMacAgents {
         let modifiers = (press.modifiers ?? []).reduce(into: KeyModifiers()) { $0.formUnion($1.keys) }
         return try await serially(on: press.tab) { () async throws(BrowserAgentFailure) -> AgentToolResult in
             let page = try await self.settledPage(for: press.tab, call)
-            let delivered = try await self.deliver(.press(key.pageKey, modifiers: modifiers), to: page)
+            let delivered = try await self.deliver(
+                .press(key.pageKey, modifiers: modifiers), to: page, tab: press.tab, call)
             return .message(Self.done("Pressed \(press.key).", delivered))
         }
     }
@@ -322,7 +329,8 @@ extension BrowserMacAgents {
             }
             let (dx, dy) = (scrolling.dx ?? 0, scrolling.dy ?? 0)
             guard dx != 0 || dy != 0 else { return .message("Scrolled \(scrolling.uid ?? "the page") into view.") }
-            let delivered = try await self.deliver(.scroll(at: point, deltaX: dx, deltaY: dy), to: page)
+            let delivered = try await self.deliver(
+                .scroll(at: point, deltaX: dx, deltaY: dy), to: page, tab: scrolling.tab, call)
             return .message(Self.done("Scrolled.", delivered))
         }
     }
@@ -406,18 +414,25 @@ extension BrowserMacAgents {
     func page(for tabID: UUID, _ call: BrowserAgentCall) throws(BrowserAgentFailure) -> BrowserPage {
         let (space, tab) = try claim(tabID, call)
         guard let page = application.pages.agentPage(for: tab, in: space) else { throw .noPage }
-        if !call.link.observedPages.contains(tabID), page.enginePage.observeActivity(true) {
-            call.link.observedPages.insert(tabID)
+        guard Self.showsWebPage(page.live.url) else { throw .notWebPage }
+        if call.link.observedPages[tabID] != page.enginePage.id, page.enginePage.observeActivity(true) {
+            call.link.observedPages[tabID] = page.enginePage.id
         }
         return page
     }
 
     /// The live page of tab `tabID`, as `page(for:)` gives it, once it shows a
     /// document: one that was just loaded for the agent, or is still on its
-    /// way, settles first, for up to `settleTimeout`.
+    /// way, settles first, for up to `settleTimeout`. Just after the agent's
+    /// input, a load the input starts is waited for too.
     private func settledPage(for tabID: UUID, _ call: BrowserAgentCall) async throws(BrowserAgentFailure) -> BrowserPage
     {
         let page = try page(for: tabID, call)
+        if let input = call.link.lastInput.removeValue(forKey: tabID) {
+            while !page.live.isLoading, page.live.pendingURL == nil, ContinuousClock.now < input + Self.loadGrace {
+                try? await Task.sleep(for: .milliseconds(50))
+            }
+        }
         let deadline = ContinuousClock.now + Self.settleTimeout
         while page.committedNavigationCount == 0 || page.live.isLoading || page.live.pendingURL != nil,
             ContinuousClock.now < deadline
@@ -427,17 +442,29 @@ extension BrowserMacAgents {
         // The page renders for the agent from now on, at the size of the window
         // over its Space, once its engine made it; a page still being made is
         // asked again on the agent's next call.
-        if !call.link.heldPages.contains(tabID) {
+        // A load may have left the web for a page agents can't use.
+        guard Self.showsWebPage(page.live.url) else { throw .notWebPage }
+        if call.link.heldPages[tabID] != page.enginePage.id {
             let size =
                 frontWindow(over: try claim(tabID, call).0)?.pages.presentationWindow?.contentLayoutRect.size
                 ?? CGSize(width: 1280, height: 800)
             if page.enginePage.holdRendering(true, size: size) {
-                call.link.heldPages.insert(tabID)
+                call.link.heldPages[tabID] = page.enginePage.id
                 // A page that took a size lays out again before it is read.
                 try? await Task.sleep(for: .milliseconds(150))
             }
         }
         return page
+    }
+
+    /// Whether `address` shows a web page, or a blank one or none yet, which
+    /// an agent may use, rather than one of the browser's own, an extension's
+    /// or a file.
+    private static func showsWebPage(_ address: String?) -> Bool {
+        guard let address else { return true }
+        guard address != "about:blank" else { return true }
+        let scheme = URL(string: address)?.scheme?.lowercased()
+        return scheme == "http" || scheme == "https"
     }
 
     /// What `script` answered in the agent's world of `page`.
@@ -464,13 +491,16 @@ extension BrowserMacAgents {
         return located
     }
 
-    private func deliver(_ input: EnginePageInput, to page: BrowserPage) async throws(BrowserAgentFailure)
-        -> PageInputDelivered
+    /// Delivers `input` to `page` of tab `tabID`, which the agent's next call
+    /// on the tab gives a moment to start a load.
+    private func deliver(_ input: EnginePageInput, to page: BrowserPage, tab tabID: UUID, _ call: BrowserAgentCall)
+        async throws(BrowserAgentFailure) -> PageInputDelivered
     {
         guard let delivered = await page.enginePage.deliver(input, timeout: Self.inputTimeout), delivered.delivered
         else {
             throw .refused("The page did not take the input.")
         }
+        call.link.lastInput[tabID] = .now
         return delivered
     }
 

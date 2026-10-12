@@ -45,10 +45,10 @@ struct BrowserAgentPeer: Sendable {
     // MARK: - Static Variables
 
     /// Executables that run code they are handed rather than code of their
-    /// own.
+    /// own, by their names in lowercase without a version.
     private static let interpreters: Set<String> = [
-        "node", "nodejs", "bun", "deno", "python", "python3", "ruby", "perl", "php", "java", "uv", "uvx", "npx", "pnpm",
-        "yarn", "osascript", "Python",
+        "node", "nodejs", "bun", "deno", "python", "pypy", "ruby", "perl", "php", "java", "lua", "tclsh", "uv", "uvx",
+        "npx", "pnpm", "yarn", "osascript",
     ]
     /// How far above the helper Crest looks for the agent, past shells and
     /// the system's own programs.
@@ -107,43 +107,53 @@ struct BrowserAgentPeer: Sendable {
         return (pid_t(info.pbi_ppid), info.pbi_start_tvsec &* 1_000_000 &+ info.pbi_start_tvusec)
     }
 
-    private static func code(of processID: pid_t) -> SecStaticCode? {
+    /// The running code of process `processID`.
+    private static func code(of processID: pid_t) -> SecCode? {
         var code: SecCode?
         let attributes = [kSecGuestAttributePid: processID] as CFDictionary
-        guard SecCodeCopyGuestWithAttributes(nil, attributes, [], &code) == errSecSuccess, let code
-        else { return nil }
-        var staticCode: SecStaticCode?
-        guard SecCodeCopyStaticCode(code, [], &staticCode) == errSecSuccess else { return nil }
-        return staticCode
+        guard SecCodeCopyGuestWithAttributes(nil, attributes, [], &code) == errSecSuccess else { return nil }
+        return code
     }
 
-    /// The program `code` is, or nil for one of the system's own, such as a
+    /// The program `code` runs, or nil for one of the system's own, such as a
     /// shell, which Crest looks past.
-    private static func program(_ code: SecStaticCode) -> Program? {
+    private static func program(_ code: SecCode) -> Program? {
+        var staticCode: SecStaticCode?
         var location: CFURL?
         var info: CFDictionary?
-        guard SecCodeCopyPath(code, [], &location) == errSecSuccess, let url = location as URL?,
-            SecCodeCopySigningInformation(code, SecCSFlags(rawValue: kSecCSSigningInformation), &info) == errSecSuccess,
+        guard SecCodeCopyStaticCode(code, [], &staticCode) == errSecSuccess, let staticCode,
+            SecCodeCopyPath(staticCode, [], &location) == errSecSuccess, let url = location as URL?,
+            SecCodeCopySigningInformation(staticCode, SecCSFlags(rawValue: kSecCSSigningInformation), &info)
+                == errSecSuccess,
             let signing = info as? [String: Any]
         else { return nil }
-        if (signing[kSecCodeInfoPlatformIdentifier as String] as? Int ?? 0) != 0 { return nil }
         let executable = url.hasDirectoryPath ? (Bundle(url: url)?.executableURL ?? url) : url
-        let bundleName = Bundle(url: url)?.object(forInfoDictionaryKey: "CFBundleName") as? String
-        let team = signing[kSecCodeInfoTeamIdentifier as String] as? String
+        let isInterpreter = isInterpreter(executable.lastPathComponent)
+        // A program of the system's own is looked past, unless it runs code it
+        // is handed, as osascript and the system's Ruby do.
+        let isPlatform = (signing[kSecCodeInfoPlatformIdentifier as String] as? Int ?? 0) != 0
+        if isPlatform && !isInterpreter { return nil }
+        let team = (signing[kSecCodeInfoTeamIdentifier as String] as? String).flatMap(teamID)
         let signingID = signing[kSecCodeInfoIdentifier as String] as? String
+        // What the signature says counts only when macOS finds it valid and
+        // issued by Apple, to the team it names or to Apple for its own
+        // programs. Any other program, such as one signed with a certificate
+        // its maker made, is known only by where it is.
+        let vouched = isValid(code, team: team)
+        let bundleName = Bundle(url: url)?.object(forInfoDictionaryKey: "CFBundleName") as? String
         // An app goes by its own name. A lone program a developer signed goes
         // by the identifier they gave it, which outlives its file: Claude Code
         // keeps each version in a file named for the version.
         let name =
             if url.pathExtension == "app" {
                 bundleName ?? url.deletingPathExtension().lastPathComponent
-            } else if team != nil, let named = signingID?.split(separator: ".").last {
+            } else if vouched, team != nil, let named = signingID?.split(separator: ".").last {
                 String(named)
             } else {
                 url.lastPathComponent
             }
         var signer: String?
-        if let certificates = signing[kSecCodeInfoCertificates as String] as? [SecCertificate],
+        if vouched, let certificates = signing[kSecCodeInfoCertificates as String] as? [SecCertificate],
             let leaf = certificates.first, let summary = SecCertificateCopySubjectSummary(leaf) as String?
         {
             // "Developer ID Application: Anthropic PBC (Q6L2SF6YDW)" names
@@ -153,14 +163,38 @@ struct BrowserAgentPeer: Sendable {
                 ? "Apple" : summary.components(separatedBy: ": ").last?.components(separatedBy: " (").first ?? summary
         }
         let identity =
-            if let team, let signingID {
+            if vouched, let team, let signingID {
                 AgentIdentity(teamID: team, signingID: signingID, path: nil, client: nil)
             } else {
                 AgentIdentity(teamID: nil, signingID: nil, path: executable.path, client: nil)
             }
         return Program(
-            identity: identity, name: name, signer: signer, path: executable.path,
-            isInterpreter: interpreters.contains(executable.lastPathComponent))
+            identity: identity, name: name, signer: signer, path: executable.path, isInterpreter: isInterpreter)
+    }
+
+    /// Whether the running `code` is valid and signed through Apple: by Apple
+    /// itself, or with a Developer ID or App Store certificate of `team`.
+    private static func isValid(_ code: SecCode, team: String?) -> Bool {
+        var text = "anchor apple"
+        if let team { text += " or (anchor apple generic and certificate leaf[subject.OU] = \"\(team)\")" }
+        var requirement: SecRequirement?
+        guard SecRequirementCreateWithString(text as CFString, [], &requirement) == errSecSuccess, let requirement
+        else { return false }
+        return SecCodeCheckValidity(code, [], requirement) == errSecSuccess
+    }
+
+    /// `text` when it is a team identifier, ten capital letters and digits as
+    /// Apple issues them, and nil otherwise; a signature's maker chooses what
+    /// it says, so nothing else reaches a requirement.
+    private static func teamID(_ text: String) -> String? {
+        text.count == 10 && text.allSatisfy { $0.isASCII && ($0.isUppercase || $0.isNumber) } ? text : nil
+    }
+
+    /// Whether `executable` names an interpreter, with or without a version,
+    /// as python3.14 and node22 do.
+    private static func isInterpreter(_ executable: String) -> Bool {
+        let unversioned = executable.lowercased().trimmingCharacters(in: CharacterSet(charactersIn: "0123456789.-"))
+        return interpreters.contains(unversioned)
     }
 }
 

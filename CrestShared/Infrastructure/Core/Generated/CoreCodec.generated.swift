@@ -7,7 +7,7 @@ import Foundation
 enum CoreCodec {
     /// SHA-256 of the canonical contract schema. The core refuses any other.
     static let fingerprint: [UInt8] = [
-        0xa1, 0x30, 0xae, 0xbe, 0x82, 0x0a, 0x6a, 0x64, 0x6f, 0xe6, 0xcd, 0x2e, 0xcc, 0x5c, 0x10, 0x0a, 0x64, 0xaf, 0x7e, 0xd7, 0xdf, 0xde, 0xa5, 0x1a, 0x66, 0x1e, 0x0a, 0x11, 0x6d, 0x03, 0x37, 0x9d
+        0x17, 0xc9, 0x4d, 0x67, 0xb2, 0xc6, 0x22, 0xeb, 0xff, 0xe4, 0xd7, 0xba, 0x8f, 0xcf, 0xf6, 0xb5, 0x3e, 0x1a, 0x94, 0x9c, 0x1c, 0x68, 0xcc, 0xa0, 0x5e, 0xa2, 0xbd, 0x49, 0xa0, 0xbc, 0x15, 0xd7
     ]
     /// SHA-256 of the engine contract alone, which an engine binding registers with.
     static let engineFingerprint: [UInt8] = [
@@ -2238,14 +2238,7 @@ extension AgentSessionState {
             let tabIDsElement = try reader.readUUID()
             tabIDs.append(tabIDsElement)
         }
-        let stoppedTabIDsCount = try reader.readCount()
-        var stoppedTabIDs: [UUID] = []
-        stoppedTabIDs.reserveCapacity(stoppedTabIDsCount)
-        for _ in 0..<stoppedTabIDsCount {
-            let stoppedTabIDsElement = try reader.readUUID()
-            stoppedTabIDs.append(stoppedTabIDsElement)
-        }
-        self.init(sessionID: sessionID, identity: identity, name: name, color: color, tabIDs: tabIDs, stoppedTabIDs: stoppedTabIDs)
+        self.init(sessionID: sessionID, identity: identity, name: name, color: color, tabIDs: tabIDs)
     }
 
     func encode(into writer: inout WireWriter) {
@@ -2260,10 +2253,6 @@ extension AgentSessionState {
         }
         writer.writeCount(tabIDs.count)
         for element0 in tabIDs {
-            writer.writeUUID(element0)
-        }
-        writer.writeCount(stoppedTabIDs.count)
-        for element0 in stoppedTabIDs {
             writer.writeUUID(element0)
         }
     }

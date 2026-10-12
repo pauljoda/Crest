@@ -47,17 +47,23 @@ import WebKit
     }
 
     /// Hears the activity observer of one watched page, and stops hearing it
-    /// once the agent stops watching.
+    /// once the agent stops watching. A popup shares its opener's controller,
+    /// so its observer reaches this handler too; only the watched page's own
+    /// view is heard.
     final class WebKitAgentActivityHandler: NSObject, WKScriptMessageHandler {
         // MARK: - Variables
 
         private let pageID: UUID
+        private weak var webView: WKWebView?
         private var keep: (@MainActor (UUID, WebKitAgentActivityMessage) -> Void)?
 
         // MARK: - Initializers
 
-        init(pageID: UUID, keep: @escaping @MainActor (UUID, WebKitAgentActivityMessage) -> Void) {
+        init(
+            pageID: UUID, webView: WKWebView, keep: @escaping @MainActor (UUID, WebKitAgentActivityMessage) -> Void
+        ) {
             self.pageID = pageID
+            self.webView = webView
             self.keep = keep
         }
 
@@ -67,7 +73,8 @@ import WebKit
             _ userContentController: WKUserContentController, didReceive message: WKScriptMessage
         ) {
             MainActor.assumeIsolated {
-                guard let keep, message.frameInfo.isMainFrame, JSONSerialization.isValidJSONObject(message.body),
+                guard let keep, let webView, message.webView === webView, message.frameInfo.isMainFrame,
+                    JSONSerialization.isValidJSONObject(message.body),
                     let data = try? JSONSerialization.data(withJSONObject: message.body),
                     let activity = try? JSONDecoder().decode(WebKitAgentActivityMessage.self, from: data)
                 else { return }

@@ -81,4 +81,13 @@ extension AgentLinkRequest {
     /// The link's revision; a helper and a Crest of different revisions never
     /// talk.
     static let version = 1
+    /// The longest line a helper sends Crest. A call past it fails in the
+    /// helper, so it never ends the agent's connection.
+    static let maximumBytes = 4 << 20
+}
+
+extension AgentLinkResponse {
+    /// The longest line Crest sends a helper, well within what the helper
+    /// reads. An answer past it fails that call.
+    static let maximumBytes = 6 << 20
 }

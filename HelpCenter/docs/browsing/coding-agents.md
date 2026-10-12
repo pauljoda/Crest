@@ -29,17 +29,17 @@ When the program is a general interpreter, such as node or python, allowing it c
 ## See what agents do
 
 - Each tab an agent uses shows the agent's badge and an outline in its colour, and the page shows a bar naming the agent.
-- Choose **Stop** in that bar, or **Stop Agent in This Tab** from the badge, to keep the agent out of that tab while it stays connected.
+- Choose **Stop** in that bar, or **Stop Agent in This Tab** from the badge, to keep the agent out of that tab, through any of its connections, until Crest quits or you forget the agent.
 - **Settings > Agents** lists the agents connected now. Choose **Disconnect** to end one's connection.
 - Turning agents off disconnects every agent.
 
 ## What agents can reach
 
 - Only the Spaces you turned on. A locked Space shows agents its name and nothing in it.
-- Never a private window, and never Crest's own pages, such as Settings.
-- Only `http` and `https` addresses.
-- Never your saved passwords. A password field's value is left out of what agents read, cookies and sign-in headers are hidden in the requests they read, and request and response bodies are never shown.
-- Scripts in a page's own world only when you turn on **Let agents run scripts in pages**.
+- Never a private window, and never Crest's own pages, such as Settings, a browser or extension page, or a file.
+- Only `http` and `https` pages, and blank ones.
+- Not your saved passwords. A password field's value is left out of what agents read, cookies and sign-in headers are hidden in the requests they read, and request and response bodies are never shown.
+- Scripts in a page's own world only when you turn on **Let agents run scripts in pages**. A script runs with the page's own access, so it can read anything the page holds, including a password filled in on it.
 
 Any program that runs as you on your Mac can run an agent you allowed. Crest's question tells agents apart so you can see and control them; it is not a defense against harmful software already on your Mac. Allow only agents you trust, and turn agents off when you don't need them.
 

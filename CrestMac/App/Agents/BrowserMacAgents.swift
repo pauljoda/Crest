@@ -30,10 +30,17 @@ final class BrowserMacAgents {
         var isAttached = false
         /// The agent's connection in the core, once the person allowed it.
         var sessionID: UUID?
-        /// The tabs whose pages already render for the agent and keep their
-        /// activity, which a later call need not ask for again.
-        var heldPages: Set<UUID> = []
-        var observedPages: Set<UUID> = []
+        /// The session being begun while the person is asked, which calls
+        /// that arrive meanwhile share.
+        var beginning: Task<Result<UUID, BrowserAgentFailure>, Never>?
+        /// The engine page of each tab that renders for the agent, and of each
+        /// that keeps its activity, by tab. A later call asks again only when
+        /// the tab's page changed, as when it moved to another engine.
+        var heldPages: [UUID: UUID] = [:]
+        var observedPages: [UUID: UUID] = [:]
+        /// When the agent last gave each tab input, which may start a load a
+        /// moment later.
+        var lastInput: [UUID: ContinuousClock.Instant] = [:]
 
         init(connection: BrowserAgentConnection) {
             self.connection = connection
@@ -94,18 +101,27 @@ final class BrowserMacAgents {
         }
     }
 
-    /// Opens or removes the socket as agents are turned on or off, and ends
-    /// the connections of an agent the core no longer keeps connected, as
-    /// when the person forgot it.
+    /// Opens or removes the socket as agents are turned on or off, ends the
+    /// connections of an agent the core no longer keeps connected, as when
+    /// the person forgot it, and lets go of the pages of tabs an agent may no
+    /// longer use, as one the person stopped it in.
     private func apply(_ preferences: AgentPreferences, connected: [AgentSessionState]) {
         guard preferences.isOn else {
             closeEndpoint()
             return
         }
         openEndpoint()
-        let live = Set(connected.map(\.sessionID))
+        let sessions = Dictionary(connected.map { ($0.sessionID, $0) }, uniquingKeysWith: { first, _ in first })
         for link in links.values {
-            if let sessionID = link.sessionID, !live.contains(sessionID) { end(link) }
+            guard let sessionID = link.sessionID else { continue }
+            guard let session = sessions[sessionID] else {
+                end(link)
+                continue
+            }
+            let used = Set(session.tabIDs)
+            for tabID in Set(link.heldPages.keys).union(link.observedPages.keys) where !used.contains(tabID) {
+                letGo(tabID, of: link)
+            }
         }
     }
 
@@ -171,13 +187,10 @@ final class BrowserMacAgents {
     }
 
     /// Lets go of what `link`'s agent held: its pages render and keep
-    /// activity no more, and the core disconnects it.
+    /// activity for it no more, and the core disconnects it.
     private func release(_ link: Link) {
         approvals.withdraw(ObjectIdentifier(link))
-        for tabID in link.heldPages { agentPage(tabID)?.enginePage.holdRendering(false, size: .zero) }
-        for tabID in link.observedPages { agentPage(tabID)?.enginePage.observeActivity(false) }
-        link.heldPages = []
-        link.observedPages = []
+        for tabID in Set(link.heldPages.keys).union(link.observedPages.keys) { letGo(tabID, of: link) }
         guard let sessionID = link.sessionID else { return }
         link.sessionID = nil
         let name = core.state.agentSessions.first { $0.sessionID == sessionID }?.name ?? link.agent?.agentName
@@ -186,6 +199,25 @@ final class BrowserMacAgents {
             BrowserNoticeCenter.shared.post(
                 BrowserNotice(message: String(localized: "\(name) stopped using Crest"), systemImage: "sparkles"))
         }
+    }
+
+    /// Lets `link` go of tab `tabID`'s page: it renders and keeps activity
+    /// for agents no more once no other connection uses it, since the engine
+    /// keeps one of each per page.
+    private func letGo(_ tabID: UUID, of link: Link) {
+        let page = agentPage(tabID)?.enginePage
+        let others = links.values.filter { $0 !== link }
+        if let held = link.heldPages.removeValue(forKey: tabID), page?.id == held,
+            !others.contains(where: { $0.heldPages[tabID] == held })
+        {
+            page?.holdRendering(false, size: .zero)
+        }
+        if let observed = link.observedPages.removeValue(forKey: tabID), page?.id == observed,
+            !others.contains(where: { $0.observedPages[tabID] == observed })
+        {
+            page?.observeActivity(false)
+        }
+        link.lastInput[tabID] = nil
     }
 
     // MARK: - Actions - Requests
@@ -221,7 +253,15 @@ final class BrowserMacAgents {
     }
 
     private func reply(_ response: AgentLinkResponse, on link: Link) {
-        guard let line = try? JSONEncoder().encode(response) else { return }
+        guard var line = try? JSONEncoder().encode(response) else { return }
+        // An answer longer than the helper reads would end the agent's whole
+        // connection, so that one call fails instead.
+        if line.count > AgentLinkResponse.maximumBytes, case .result(let id, _) = response,
+            let refusal = try? JSONEncoder().encode(
+                AgentLinkResponse.result(id: id, result: .error(BrowserAgentFailure.tooLarge.message)))
+        {
+            line = refusal
+        }
         link.connection.send(line)
     }
 
@@ -240,9 +280,28 @@ final class BrowserMacAgents {
     }
 
     /// The agent's connection in the core: begun now when the person already
-    /// allowed it, or after they allow it when it is new.
+    /// allowed it, or after they allow it when it is new. Calls that arrive
+    /// while it begins share it, as an agent's first calls often come
+    /// together.
     private func session(for link: Link) async throws(BrowserAgentFailure) -> UUID {
         if let sessionID = link.sessionID { return sessionID }
+        if let beginning = link.beginning { return try await beginning.value.get() }
+        let beginning = Task { await self.begin(link) }
+        link.beginning = beginning
+        let begun = await beginning.value
+        link.beginning = nil
+        return try begun.get()
+    }
+
+    private func begin(_ link: Link) async -> Result<UUID, BrowserAgentFailure> {
+        do throws(BrowserAgentFailure) {
+            return .success(try await beginSession(for: link))
+        } catch {
+            return .failure(error)
+        }
+    }
+
+    private func beginSession(for link: Link) async throws(BrowserAgentFailure) -> UUID {
         guard core.state.agentPreferences.isOn else { throw .rejected(.agentsOff(AgentsOff())) }
         guard let agent = link.agent else { throw .unidentified }
         let sessionID = UUID()

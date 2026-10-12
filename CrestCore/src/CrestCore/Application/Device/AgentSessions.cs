@@ -3,9 +3,10 @@ using CrestCore.Contracts;
 namespace CrestCore.Application;
 
 /// The agents connected now, in the order they connected, with the tabs each
-/// uses and the tabs the person stopped each using. The core keeps them in
-/// memory only: an agent that connects after a relaunch starts with none.
-/// The device's lock guards every call.
+/// uses, and the tabs the person stopped each agent using, which hold for
+/// every connection of that agent. The core keeps them in memory only: after
+/// a relaunch no agent is connected and none is stopped anywhere. The
+/// device's lock guards every call.
 internal sealed class AgentSessions {
     #region Static Variables
 
@@ -18,6 +19,7 @@ internal sealed class AgentSessions {
     #region Variables
 
     private readonly List<AgentSessionState> sessions = [];
+    private readonly Dictionary<AgentIdentity, HashSet<Guid>> stopped = [];
 
     /// Every agent connected now.
     public IReadOnlyList<AgentSessionState> All => sessions;
@@ -25,6 +27,10 @@ internal sealed class AgentSessions {
     /// The tabs some agent uses, which keep their pages loaded and their place
     /// while it does.
     public IReadOnlySet<Guid> HeldTabs => sessions.SelectMany(session => session.TabIds).ToHashSet();
+
+    /// The tabs the person stopped agent `identity` using.
+    public IReadOnlySet<Guid> Stopped(AgentIdentity identity) =>
+        stopped.TryGetValue(identity, out var tabs) ? tabs : new HashSet<Guid>();
 
     #endregion
 
@@ -38,7 +44,7 @@ internal sealed class AgentSessions {
     public bool Begin(Guid sessionId, AgentIdentity identity, string name) {
         if (Find(sessionId) is not null) return false;
         if (sessions.Count >= MaximumSessions) throw new Rejected(new AgentSessionsFull(MaximumSessions));
-        sessions.Add(new AgentSessionState(sessionId, identity, name, null, [], []));
+        sessions.Add(new AgentSessionState(sessionId, identity, name, null, []));
         return true;
     }
 
@@ -48,26 +54,26 @@ internal sealed class AgentSessions {
         Revise(sessionId, session => session with { Name = name ?? session.Name, Color = color ?? session.Color });
 
     /// The agent connected as `sessionId` uses `tabId` from now on. Refused
-    /// with `AgentTabStopped` for a tab the person stopped it using.
+    /// with `AgentTabStopped` for a tab the person stopped that agent using,
+    /// through any of its connections.
     public bool Claim(Guid sessionId, Guid tabId) {
         var session = Find(sessionId) ?? throw new Rejected(new UnknownAgentSession(sessionId));
-        if (session.StoppedTabIds.Contains(tabId)) throw new Rejected(new AgentTabStopped(tabId));
+        if (Stopped(session.Identity).Contains(tabId)) throw new Rejected(new AgentTabStopped(tabId));
         if (session.TabIds.Contains(tabId)) return false;
         if (session.TabIds.Count >= MaximumTabs) throw new Rejected(new AgentTabUnavailable(tabId));
         return Revise(sessionId, current => current with { TabIds = [.. current.TabIds, tabId] });
     }
 
     /// The person stopped every agent using `tabId`: none uses it any more,
-    /// and none may again while it stays connected.
+    /// and no connection of those agents may take it again while Crest runs.
     public bool Stop(Guid tabId) {
         bool changed = false;
         for (int index = 0; index < sessions.Count; index++) {
             var session = sessions[index];
             if (!session.TabIds.Contains(tabId)) continue;
-            sessions[index] = session with {
-                TabIds = [.. session.TabIds.Where(candidate => candidate != tabId)],
-                StoppedTabIds = [.. session.StoppedTabIds, tabId]
-            };
+            if (!stopped.TryGetValue(session.Identity, out var tabs)) stopped[session.Identity] = tabs = [];
+            tabs.Add(tabId);
+            sessions[index] = session with { TabIds = [.. session.TabIds.Where(candidate => candidate != tabId)] };
             changed = true;
         }
         return changed;
@@ -75,6 +81,12 @@ internal sealed class AgentSessions {
 
     /// Disconnects the agents `ends` names.
     public bool End(Func<AgentSessionState, bool> ends) => sessions.RemoveAll(session => ends(session)) > 0;
+
+    /// Forgets where the person stopped the agents `forgets` names, as when
+    /// they forget an agent or turn agents off.
+    public void Unstop(Func<AgentIdentity, bool> forgets) {
+        foreach (var identity in stopped.Keys.Where(forgets).ToList()) stopped.Remove(identity);
+    }
 
     /// Lets each agent go of the tabs `reachable` says it may no longer use.
     public bool Prune(Func<Guid, bool> reachable) {

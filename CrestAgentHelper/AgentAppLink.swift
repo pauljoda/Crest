@@ -15,6 +15,8 @@ actor AgentAppLink {
         case refused(AgentLinkRefusal)
         /// Crest went while the call waited.
         case closed
+        /// The call is longer than Crest reads.
+        case tooLarge
     }
 
     // MARK: - Variables
@@ -40,13 +42,15 @@ actor AgentAppLink {
     /// answers what the tool answered. Throws a `Failure` when it reached no
     /// tool.
     func call(_ name: String, arguments: AgentJSON, client: AgentClientInfo?) async throws -> AgentToolResult {
-        let channel = try await connected(client: client)
         let id = nextID
         nextID += 1
-        let request = AgentLinkRequest.call(id: id, name: name, arguments: arguments)
+        guard let line = try? JSONEncoder().encode(AgentLinkRequest.call(id: id, name: name, arguments: arguments))
+        else { throw Failure.closed }
+        guard line.count <= AgentLinkRequest.maximumBytes else { throw Failure.tooLarge }
+        let channel = try await connected(client: client)
         return try await withCheckedThrowingContinuation { continuation in
             waiting[id] = continuation
-            guard let line = try? JSONEncoder().encode(request), channel.send(line) else {
+            guard channel.send(line) else {
                 waiting.removeValue(forKey: id)?.resume(throwing: Failure.closed)
                 return
             }

@@ -40,17 +40,15 @@ public sealed record AgentTab(Guid TabId, string Title, string? Url, TabPlacemen
 #region Sessions
 
 /// An agent connected now: who macOS says it is, the name and colour it goes
-/// by, the tabs it uses, and the tabs the person stopped it using, which it
-/// reaches no more while it stays connected.
+/// by, and the tabs it uses.
 public sealed record AgentSessionState(Guid SessionId, AgentIdentity Identity, string Name, BrandColor? Color,
-    IReadOnlyList<Guid> TabIds, IReadOnlyList<Guid> StoppedTabIds) {
+    IReadOnlyList<Guid> TabIds) {
     #region Actions - Equality
 
     public bool Equals(AgentSessionState? other) => other is not null && SessionId == other.SessionId
-        && Identity == other.Identity && Name == other.Name && Color == other.Color && TabIds.SequenceEqual(other.TabIds)
-        && StoppedTabIds.SequenceEqual(other.StoppedTabIds);
+        && Identity == other.Identity && Name == other.Name && Color == other.Color && TabIds.SequenceEqual(other.TabIds);
 
-    public override int GetHashCode() => HashCode.Combine(SessionId, Name, TabIds.Count, StoppedTabIds.Count);
+    public override int GetHashCode() => HashCode.Combine(SessionId, Name, TabIds.Count);
 
     #endregion
 }

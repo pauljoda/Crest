@@ -14,6 +14,7 @@
 #include "content/public/browser/global_request_id.h"
 #include "net/base/net_errors.h"
 #include "third_party/blink/public/mojom/loader/resource_load_info.mojom.h"
+#include "url/gurl.h"
 #include "content/public/browser/render_frame_host.h"
 #include "content/public/browser/render_widget_host_view.h"
 #include "content/public/browser/web_contents.h"
@@ -35,6 +36,12 @@ constexpr double kMaximumHeldSide = 8192;
 
 engine::Date DateOf(base::Time time) {
   return engine::Date{.seconds_since_2001 = time.InSecondsFSinceUnixEpoch() - kReferenceDateOffset};
+}
+
+// Whether `url` shows a web page, a blank one or none yet, which an agent may
+// use, rather than one of the browser's own, an extension's or a file.
+bool IsWebPage(const GURL& url) {
+  return url.is_empty() || url.IsAboutBlank() || url.SchemeIsHTTPOrHTTPS();
 }
 
 // The kind of a finished load as DevTools names it.
@@ -160,7 +167,7 @@ PageAgent::~PageAgent() {
 }
 
 bool PageAgent::Evaluate(const engine::Guid& evaluation, const std::string& source, engine::PageScriptWorld world) {
-  if (!web_contents()) {
+  if (!web_contents() || !IsWebPage(web_contents()->GetPrimaryMainFrame()->GetLastCommittedURL())) {
     return false;
   }
   if (world == engine::PageScriptWorld::kPage) {
@@ -308,6 +315,9 @@ bool PageAgent::ObserveActivity(bool observing) {
       network_enabled_ = false;
       Send("Network.disable", base::DictValue(), base::DoNothing());
     }
+    if (!rendering_) {
+      Detach();
+    }
     return true;
   }
   if (!Attach()) {
@@ -348,6 +358,13 @@ bool PageAgent::HoldRendering(bool held, double width, double height) {
   }
   if (!held) {
     rendering_.RunAndReset();
+    // The page counts as unfocused and hidden again; once the agent no
+    // longer watches it either, it keeps nothing of the agent's.
+    if (!observing_) {
+      Detach();
+    } else if (attached_) {
+      Send("Emulation.setFocusEmulationEnabled", base::DictValue().Set("enabled", false), base::DoNothing());
+    }
     return true;
   }
   if (!std::isfinite(width) || !std::isfinite(height) || width < 1 || height < 1 || width > kMaximumHeldSide ||
@@ -365,10 +382,17 @@ bool PageAgent::HoldRendering(bool held, double width, double height) {
     view->SetSize(size);
   }
   if (!rendering_) {
-    // Renders as captured content does, without showing the page or keeping
-    // it from counting as hidden.
-    rendering_ = web_contents()->IncrementCapturerCount(size, /*stay_hidden=*/true, /*stay_awake=*/true,
+    // Renders as captured content does, without showing the page, keeping it
+    // from counting as hidden or keeping the display awake. The size above
+    // already holds, and a hidden capture takes none.
+    rendering_ = web_contents()->IncrementCapturerCount(gfx::Size(), /*stay_hidden=*/true, /*stay_awake=*/false,
                                                         /*is_activity=*/false);
+    // While the agent holds the page it takes the agent's keys as though it
+    // had focus, as a page in a background tab would not otherwise, without
+    // taking focus from the page the person uses.
+    if (Attach()) {
+      Send("Emulation.setFocusEmulationEnabled", base::DictValue().Set("enabled", true), base::DoNothing());
+    }
   }
   return true;
 }
@@ -396,6 +420,12 @@ void PageAgent::DispatchProtocolMessage(content::DevToolsAgentHost*, base::span<
   if (method && params && observing_) {
     NetworkEvent(*method, *params);
   }
+}
+
+bool PageAgent::MayAttachToURL(const GURL& url, bool is_webui) {
+  // DevTools asks again as the page navigates, and lets the agent go of a
+  // page that left the web.
+  return !is_webui && IsWebPage(url);
 }
 
 void PageAgent::AgentHostClosed(content::DevToolsAgentHost*) {
@@ -495,7 +525,7 @@ bool PageAgent::Attach() {
   if (attached_) {
     return true;
   }
-  if (!web_contents()) {
+  if (!web_contents() || !IsWebPage(web_contents()->GetPrimaryMainFrame()->GetLastCommittedURL())) {
     return false;
   }
   host_ = content::DevToolsAgentHost::GetOrCreateFor(web_contents());
@@ -504,10 +534,6 @@ bool PageAgent::Attach() {
     host_.reset();
     return false;
   }
-  // The page takes the agent's keys as though it had focus, as a page in the
-  // background tab it works in would not otherwise, without taking focus from
-  // the page the person uses. It lasts while the agent's session does.
-  Send("Emulation.setFocusEmulationEnabled", base::DictValue().Set("enabled", true), base::DoNothing());
   return true;
 }
 

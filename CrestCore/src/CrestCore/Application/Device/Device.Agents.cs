@@ -47,6 +47,9 @@ internal sealed partial class Device {
             changes.Publish(new AgentPreferencesChanged(agents));
             if (agentSessions.End(session => !revised.IsOn || !revised.Approves(session.Identity)))
                 changes.Publish(new AgentSessionsChanged([.. agentSessions.All]));
+            // An agent forgotten, or every agent once agents are off, starts
+            // over where the person stopped it.
+            agentSessions.Unstop(identity => !revised.IsOn || !revised.Approves(identity));
         }
         PruneAgents(changes);
     }
@@ -85,15 +88,15 @@ internal sealed partial class Device {
         // The session's own locks are taken before the device's.
         if (ReachedSpaces() is not { } reached) throw new Rejected(new AgentsOff());
         var holding = reached.FirstOrDefault(entry => entry.Space.Tabs.Any(tab => tab.Id == tabId));
-        if (holding.Space is null || holding.IsLocked
-            || holding.Space.Tabs.First(tab => tab.Id == tabId).NativeContent is not null)
+        if (holding.Space is null || holding.IsLocked || !OffersToAgents(holding.Space.Tabs.First(tab => tab.Id == tabId)))
             throw new Rejected(new AgentTabUnavailable(tabId));
         ReviseAgentSessions(changes, sessions => sessions.Claim(sessionId, tabId));
     }
 
     /// Lets each agent go of the tabs it may no longer use: tabs that closed,
-    /// moved out of the Spaces it reaches, or sit in a Space that locked, and
-    /// every tab once agents are off. Runs after every turn, and costs nothing
+    /// moved out of the Spaces it reaches, sit in a Space that locked or left
+    /// the web for a browser or extension page, and every tab once agents are
+    /// off. Runs after every turn, and costs nothing
     /// while no agent is connected.
     internal void PruneAgents(ChangeFeed changes) {
         lock (gate) {
@@ -101,7 +104,7 @@ internal sealed partial class Device {
         }
         var usable = (ReachedSpaces() ?? [])
             .Where(entry => !entry.IsLocked)
-            .SelectMany(entry => entry.Space.Tabs.Where(tab => tab.NativeContent is null).Select(tab => tab.Id))
+            .SelectMany(entry => entry.Space.Tabs.Where(OffersToAgents).Select(tab => tab.Id))
             .ToHashSet();
         ReviseAgentSessions(changes, sessions => sessions.Prune(usable.Contains));
     }
@@ -116,6 +119,11 @@ internal sealed partial class Device {
     internal bool OffersToAgents(Guid spaceId) =>
         Persistent() is (_, var authority) && authority.Current.Spaces.Any(space => space.Id == spaceId) && !authority.IsDeleting(spaceId);
 
+    /// Whether an agent may use `tab`: one that shows a web page or none yet,
+    /// never Crest's own view, a browser or extension page, or a file.
+    private static bool OffersToAgents(TabState tab) =>
+        tab.NativeContent is null && (tab.Url is null || new WebAddress(tab.Url).IsWebPage);
+
     /// What the agent connected as `sessionId` may reach now: nothing while
     /// agents are off or for a session the core does not know, and otherwise
     /// each allowed Space of the person's own session that is not being
@@ -123,11 +131,15 @@ internal sealed partial class Device {
     /// without the device lock, since it reads the session.
     internal AgentReachList AgentReach(Guid sessionId) {
         AgentSessionState? session;
-        lock (gate) session = agentSessions.Find(sessionId);
+        IReadOnlySet<Guid> stopped;
+        lock (gate) {
+            session = agentSessions.Find(sessionId);
+            stopped = session is null ? new HashSet<Guid>() : agentSessions.Stopped(session.Identity);
+        }
         if (session is null || ReachedSpaces() is not { } reached || Persistent() is not (var workspaceId, _)) return new(null, []);
         var spaces = reached.Select(entry => new AgentSpace(entry.Space.Id, entry.Space.Settings.Name, entry.IsLocked,
             entry.IsLocked ? [] : [.. entry.Space.Tabs
-                .Where(tab => tab.NativeContent is null && !session.StoppedTabIds.Contains(tab.Id))
+                .Where(tab => OffersToAgents(tab) && !stopped.Contains(tab.Id))
                 .Select(tab => new AgentTab(tab.Id, tab.DisplayTitle, tab.Url, tab.Placement, session.TabIds.Contains(tab.Id)))]));
         return new(workspaceId, [.. spaces]);
     }

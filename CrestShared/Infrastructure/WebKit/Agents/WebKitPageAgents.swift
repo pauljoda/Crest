@@ -128,7 +128,8 @@ import WebKit
             guard page.ownsUserContentController else { return false }
             if activities[request.pageID] == nil { activities[request.pageID] = Activity() }
             if handlers[request.pageID] == nil {
-                let handler = WebKitAgentActivityHandler(pageID: request.pageID) { [weak self] pageID, message in
+                let handler = WebKitAgentActivityHandler(pageID: request.pageID, webView: page.webView) {
+                    [weak self] pageID, message in
                     self?.keep(message, for: pageID)
                 }
                 handlers[request.pageID] = handler

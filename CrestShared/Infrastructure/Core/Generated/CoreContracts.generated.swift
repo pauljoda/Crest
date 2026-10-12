@@ -737,7 +737,6 @@ struct AgentSessionState: Equatable, Sendable {
     let name: String
     let color: BrandColor?
     let tabIDs: [UUID]
-    let stoppedTabIDs: [UUID]
 }
 
 struct AgentSessionsChanged: Equatable, Sendable {

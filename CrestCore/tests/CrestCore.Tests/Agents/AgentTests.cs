@@ -93,20 +93,33 @@ public sealed partial class BrowserContractsTests {
             Assert.Equal(new AgentSpaceUnavailable(unavailable), Assert.Throws<Rejected>(() =>
                 app.Send(new AllowAgentSpace(unavailable, true))).Rejection);
 
-        // Crest's own views are never an agent's, even in an allowed Space.
+        // Crest's own views, browser and extension pages and files are never an
+        // agent's, even in an allowed Space; a web page or a blank one is.
         var window = Guid.NewGuid();
         app.Send(new OpenWindow(window, workspace, Saved: false, null, null, [], RestoresTabs: true));
-        var (page, settings) = (Guid.NewGuid(), Guid.NewGuid());
+        var (page, blank, settings) = (Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid());
         app.Send(new OpenTab(workspace, window, first, page, new TabContent("https://example.com/", null, "Example"),
+            TabPlacement.Current, null, Shows: false));
+        app.Send(new OpenTab(workspace, window, first, blank, new TabContent("about:blank", null, null),
             TabPlacement.Current, null, Shows: false));
         app.Send(new OpenTab(workspace, window, first, settings, new TabContent(null, NativeView.Settings, null),
             TabPlacement.Current, null, Shows: false));
+        var internals = new[] { "chrome://settings/", "chrome-extension://abcdefghijklmnop/options.html", "file:///etc/hosts" }
+            .Select(address => {
+                var tab = Guid.NewGuid();
+                app.Send(new OpenTab(workspace, window, first, tab, new TabContent(address, null, null), TabPlacement.Current,
+                    null, Shows: false));
+                return tab;
+            }).ToArray();
         var reached = Assert.Single(app.Query(new AgentReach(agent)).Spaces);
         Assert.Equal(first, reached.SpaceId);
         Assert.Contains(reached.Tabs, tab => tab.TabId == page && !tab.Claimed);
-        Assert.DoesNotContain(reached.Tabs, tab => tab.TabId == settings);
-        Assert.Equal(new AgentTabUnavailable(settings), Assert.Throws<Rejected>(() =>
-            app.Send(new ClaimAgentTab(agent, settings))).Rejection);
+        Assert.Contains(reached.Tabs, tab => tab.TabId == blank);
+        foreach (var unreachable in internals.Append(settings)) {
+            Assert.DoesNotContain(reached.Tabs, tab => tab.TabId == unreachable);
+            Assert.Equal(new AgentTabUnavailable(unreachable), Assert.Throws<Rejected>(() =>
+                app.Send(new ClaimAgentTab(agent, unreachable))).Rejection);
+        }
 
         // A tab of a Space the person did not allow, or no tab at all, is
         // never claimed, however its identity was learned.
@@ -147,12 +160,18 @@ public sealed partial class BrowserContractsTests {
         app.Send(new ClaimAgentTab(agent, other));
 
         // The person stops the agent in a tab: it lets go, sees it no more and
-        // may not take it again while it stays connected.
+        // may not take it again, through this connection or another of its.
         var stopped = Assert.Single(AgentSessionsIn(app.Send(new StopAgentTab(tabs[0]))));
         Assert.Equal([other], stopped.TabIds);
-        Assert.Equal([tabs[0]], stopped.StoppedTabIds);
-        Assert.Equal(new AgentTabStopped(tabs[0]), Assert.Throws<Rejected>(() => app.Send(new ClaimAgentTab(agent, tabs[0]))).Rejection);
-        Assert.DoesNotContain(app.Query(new AgentReach(agent)).Spaces.SelectMany(space => space.Tabs), tab => tab.TabId == tabs[0]);
+        var window2 = Guid.NewGuid();
+        app.Send(new BeginAgentSession(window2, Claude, "claude"));
+        foreach (var connection in new[] { agent, window2 }) {
+            Assert.Equal(new AgentTabStopped(tabs[0]), Assert.Throws<Rejected>(() =>
+                app.Send(new ClaimAgentTab(connection, tabs[0]))).Rejection);
+            Assert.DoesNotContain(app.Query(new AgentReach(connection)).Spaces.SelectMany(space => space.Tabs),
+                tab => tab.TabId == tabs[0]);
+        }
+        app.Send(new EndAgentSession(window2));
 
         // A Space no longer allowed takes its tabs from the agent at once.
         Assert.Empty(Assert.Single(AgentSessionsIn(app.Send(new AllowAgentSpace(second, false)))).TabIds);
@@ -165,10 +184,12 @@ public sealed partial class BrowserContractsTests {
         app.Send(new DeleteProfileData(Guid.NewGuid(), ProfileId(session["spaces"]![1]!), Ephemeral: false));
         Assert.Equal([first], AgentPreferencesIn(app.Send(new FinishDeletingSpace(workspace, Guid.NewGuid(), second, operation))).SpaceIds);
 
-        // Forgetting the agent disconnects it; turning agents off disconnects
-        // every agent and lets no new one connect.
+        // Forgetting the agent disconnects it and forgets where it was
+        // stopped; turning agents off disconnects every agent and lets no new
+        // one connect.
         Assert.Empty(AgentSessionsIn(app.Send(new ForgetAgent(Claude))));
         var again = ConnectClaude(app, first);
+        Assert.Contains(tabs[0], Assert.Single(AgentSessionsIn(app.Send(new ClaimAgentTab(again, tabs[0])))).TabIds);
         Assert.Empty(AgentSessionsIn(app.Send(new SetAgents(false))));
         Assert.Equal(new AgentReachList(null, []), app.Query(new AgentReach(again)));
         Assert.IsType<AgentsOff>(Assert.Throws<Rejected>(() => app.Send(new BeginAgentSession(Guid.NewGuid(), Claude, "claude"))).Rejection);
@@ -195,6 +216,15 @@ public sealed partial class BrowserContractsTests {
         Assert.Equal("Claude Code", AgentPreferences.CleanName("  Claude‮\u0000 \n Code "));
         Assert.Null(AgentPreferences.CleanName("​⁦\r\n"));
         Assert.Equal(AgentPreferences.MaximumName, AgentPreferences.CleanName(new string('a', 500))!.Length);
+        // A name cut at the limit is never cut inside a character or after a
+        // space, so cleaning it again finds the same name, as Forget does.
+        var edge = new string('a', AgentPreferences.MaximumName - 1);
+        foreach (var name in new[] { edge + " b", edge + "\U0001F600", edge + "\u0000\u202Eb", edge.Insert(10, " \uD800 ") }) {
+            var cleaned = AgentPreferences.CleanName(name)!;
+            Assert.True(cleaned.Length <= AgentPreferences.MaximumName);
+            Assert.False(cleaned.EndsWith(' '));
+            Assert.Equal(cleaned, AgentPreferences.CleanName(cleaned));
+        }
 
         using var app = new CrestApp();
         var session = TwoSpaceSession();
