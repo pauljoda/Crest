@@ -61,27 +61,22 @@ struct BrowserSidebarReorderLayout: Equatable {
 
     func frame(for zone: BrowserSidebarReorderZone) -> CGRect? {
         guard isActive else { return zone.frame }
-        switch zone.target {
-        case .space, .splitContent: return zone.frame
-        case .folder(let id):
-            guard !hiddenIDs.contains(.folder(id)) else { return nil }
-        case .currentTab(let id):
-            guard !hiddenIDs.contains(.tab(id)) else { return nil }
-        case .section(let section):
-            guard !section.usesGridOrdering else { return zone.frame }
-            if let parent = section.parentFolderID, hiddenIDs.contains(.folder(parent)) { return nil }
-        }
-        guard sharesColumn(zone.frame) else { return zone.frame }
-        let containsGap: Bool
-        if case .section(let section) = zone.target {
-            containsGap =
-                section == gap?.section
-                || section.parentFolderID.map { gap?.containingFolders.contains($0) == true } == true
-                || (gap.map { zone.frame.minY < $0.frame.minY && zone.frame.maxY >= $0.frame.minY } ?? false)
-        } else {
-            containsGap = false
-        }
-        return project(zone.frame, containsGap: containsGap)
+        return zone.target.frame(zone.frame, in: self)
+    }
+
+    /// `frame` as the lift moves what shares its column: the source removed
+    /// and the gap opened, with the gap inside it when it `containsGap`.
+    func projected(_ frame: CGRect, containsGap: Bool) -> CGRect {
+        guard sharesColumn(frame) else { return frame }
+        return project(frame, containsGap: containsGap)
+    }
+
+    /// Whether the run `section`, measured at `frame`, holds the open gap:
+    /// the gap is in it, in a folder inside it, or opens within its frame.
+    func holdsGap(_ section: BrowserSidebarReorderSection, at frame: CGRect) -> Bool {
+        section == gap?.section
+            || section.parentFolderID.map { gap?.containingFolders.contains($0) == true } == true
+            || (gap.map { frame.minY < $0.frame.minY && frame.maxY >= $0.frame.minY } ?? false)
     }
 
     private func sharesColumn(_ frame: CGRect) -> Bool {
@@ -106,14 +101,5 @@ struct BrowserSidebarReorderLayout: Equatable {
             result.origin.y += gapHeight
         }
         return result
-    }
-}
-
-extension BrowserSidebarReorderSection {
-    var parentFolderID: UUID? {
-        switch self {
-        case .tabs(_, let folderID): folderID
-        case .folders(let parentID): parentID
-        }
     }
 }

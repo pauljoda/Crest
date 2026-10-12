@@ -346,8 +346,7 @@ final class MobileBrowserSidebarReorderPolicyTests: XCTestCase {
         }
 
         init(
-            stagedLiftExpiration: Duration = BrowserSidebarReorderPolicy
-                .stagedLiftExpiration
+            stagedLiftExpiration: Duration = BrowserSidebarReorderState.stagedLiftExpiration
         ) {
             state = BrowserSidebarReorderState(
                 stagedLiftExpiration: stagedLiftExpiration, clock: clock

@@ -14,13 +14,26 @@ struct BrowserFolderNestDropHighlight: View {
     enum Target: Equatable {
         case currentTab(UUID)
         case folder(UUID)
+
+        /// Whether releasing the lift `state` holds would file it inside the
+        /// row this marks.
+        @MainActor
+        func isTargeted(in state: BrowserSidebarReorderState) -> Bool {
+            switch self {
+            case .currentTab(let tabID):
+                state.resolvedTarget?.kind == .createCurrentFolder(tabID)
+            case .folder(let folderID):
+                state.isTargetedFolder(folderID)
+                    && BrowserFolderRowPresentationPolicy.showsNestOutline(for: state.lift?.item)
+            }
+        }
     }
 
     let state: BrowserSidebarReorderState
     let target: Target
 
     var body: some View {
-        if isTargeted {
+        if target.isTargeted(in: state) {
             RoundedRectangle(
                 cornerRadius: BrowserDeviceAppearanceStore.shared.containerCornerRadius(),
                 style: .continuous
@@ -36,16 +49,6 @@ struct BrowserFolderNestDropHighlight: View {
             .padding(.horizontal, CrestSpacing.small)
             .allowsHitTesting(false)
             .accessibilityHidden(true)
-        }
-    }
-
-    private var isTargeted: Bool {
-        switch target {
-        case .currentTab(let tabID):
-            state.resolvedTarget?.kind == .createCurrentFolder(tabID)
-        case .folder(let folderID):
-            state.isTargetedFolder(folderID)
-                && BrowserFolderRowPresentationPolicy.showsNestOutline(for: state.lift?.item)
         }
     }
 }

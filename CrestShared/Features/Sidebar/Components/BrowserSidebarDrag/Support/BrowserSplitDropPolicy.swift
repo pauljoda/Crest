@@ -4,7 +4,7 @@ import CoreGraphics
 /// on show. Pure geometry, so a drop can be exercised without a live drag.
 ///
 /// The columns view lays cards out in reading order along one axis, so the rule
-/// is the horizontal twin of `BrowserSidebarReorderPolicy.insertionIndex`: the
+/// is the horizontal twin of `BrowserSidebarReorderRow.insertionIndex`: the
 /// pointer has passed a card once it is beyond that card's midpoint, and the
 /// index is how many cards it has passed.
 ///
@@ -37,7 +37,7 @@ enum BrowserSplitDropPolicy {
     ///
     /// Sorting by leading edge rather than trusting a dictionary's iteration is
     /// what keeps the index tied to what is on screen. It matches the ordering
-    /// `BrowserSidebarReorderPolicy` already uses for the pinned grid, including
+    /// `BrowserSidebarReorderRow` already uses for the pinned grid, including
     /// its indifference to layout direction.
     static func ordered(_ frames: [CGRect]) -> [CGRect] {
         frames.filter { !$0.isEmpty }.sorted { $0.minX < $1.minX }

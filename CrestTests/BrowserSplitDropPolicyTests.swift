@@ -24,7 +24,7 @@ final class BrowserSplitDropPolicyTests: XCTestCase {
         let point = CGPoint(x: 400, y: 300)
 
         XCTAssertEqual(
-            BrowserSidebarReorderPolicy.zone(
+            BrowserSidebarReorderZone.aimed(
                 at: point,
                 in: zones,
                 accepting: Self.tabItem(in: assignment)
@@ -33,7 +33,7 @@ final class BrowserSplitDropPolicyTests: XCTestCase {
             .splitContent(assignment)
         )
         XCTAssertNil(
-            BrowserSidebarReorderPolicy.zone(
+            BrowserSidebarReorderZone.aimed(
                 at: point,
                 in: zones,
                 accepting: Self.folderItem(in: assignment)
@@ -41,7 +41,7 @@ final class BrowserSplitDropPolicyTests: XCTestCase {
         )
         // A split joins the cards on show only when the core offers it.
         XCTAssertNil(
-            BrowserSidebarReorderPolicy.zone(
+            BrowserSidebarReorderZone.aimed(
                 at: point,
                 in: zones,
                 accepting: Self.groupItem(in: assignment),
@@ -61,7 +61,7 @@ final class BrowserSplitDropPolicyTests: XCTestCase {
         ]
 
         XCTAssertNil(
-            BrowserSidebarReorderPolicy.zone(
+            BrowserSidebarReorderZone.aimed(
                 at: CGPoint(x: 400, y: 300),
                 in: zones,
                 accepting: Self.tabItem(
@@ -93,7 +93,7 @@ final class BrowserSplitDropPolicyTests: XCTestCase {
         ]
 
         XCTAssertEqual(
-            BrowserSidebarReorderPolicy.zone(
+            BrowserSidebarReorderZone.aimed(
                 at: CGPoint(x: 120, y: 300),
                 in: zones,
                 accepting: Self.tabItem(in: Self.assignment)
@@ -102,7 +102,7 @@ final class BrowserSplitDropPolicyTests: XCTestCase {
             .section(section)
         )
         XCTAssertEqual(
-            BrowserSidebarReorderPolicy.zone(
+            BrowserSidebarReorderZone.aimed(
                 at: CGPoint(x: 600, y: 300),
                 in: zones,
                 accepting: Self.tabItem(in: Self.assignment)
@@ -152,7 +152,7 @@ final class BrowserSplitDropPolicyTests: XCTestCase {
         ]
 
         XCTAssertEqual(
-            BrowserSidebarReorderPolicy.zone(
+            BrowserSidebarReorderZone.aimed(
                 at: CGPoint(x: 140, y: 60),
                 in: zones,
                 accepting: Self.tabItem(in: Self.assignment)
@@ -162,7 +162,7 @@ final class BrowserSplitDropPolicyTests: XCTestCase {
             "Above the grid, the grid is what the pointer is aiming at."
         )
         XCTAssertEqual(
-            BrowserSidebarReorderPolicy.zone(
+            BrowserSidebarReorderZone.aimed(
                 at: CGPoint(x: 140, y: 200),
                 in: zones,
                 accepting: Self.tabItem(in: Self.assignment)
@@ -172,7 +172,7 @@ final class BrowserSplitDropPolicyTests: XCTestCase {
             "Below the grid, the nearer run wins on the same terms."
         )
         XCTAssertEqual(
-            BrowserSidebarReorderPolicy.zone(
+            BrowserSidebarReorderZone.aimed(
                 at: CGPoint(x: 600, y: 60),
                 in: zones,
                 accepting: Self.tabItem(in: Self.assignment)
@@ -182,7 +182,7 @@ final class BrowserSplitDropPolicyTests: XCTestCase {
             "Past the sidebar's own column no run answers, and the page does."
         )
         XCTAssertEqual(
-            BrowserSidebarReorderPolicy.zone(
+            BrowserSidebarReorderZone.aimed(
                 at: CGPoint(x: 140, y: 800),
                 in: zones,
                 accepting: Self.tabItem(in: Self.assignment)

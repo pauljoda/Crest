@@ -75,7 +75,7 @@ struct BrowserSidebarFloatingLift: Equatable, Sendable {
     var presentationPointer: CGPoint {
         guard shape == .pinnedTile, let sidebarBounds,
             pointer.x <= sidebarBounds.maxX,
-            pointer.x >= sidebarBounds.minX - BrowserSidebarReorderPolicy.zoneSlop
+            pointer.x >= sidebarBounds.minX - BrowserSidebarReorderZone.slop
         else { return pointer }
         let leading = sidebarBounds.minX + 2
         let trailing = max(leading, sidebarBounds.maxX - pinnedTileSize.width - 2)

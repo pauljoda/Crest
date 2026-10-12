@@ -15,45 +15,26 @@ struct BrowserSidebarReorderTargetResolver {
 
     func resolve(previousTarget: BrowserSidebarReorderTarget?) -> BrowserSidebarReorderTarget? {
         let available = zones.filter { !$0.frame.isEmpty && allowsNesting(in: $0) }
-        let direct = BrowserSidebarReorderPolicy.zone(
+        let direct = BrowserSidebarReorderZone.aimed(
             at: pointer, in: available, accepting: lift.item, plan: lift.plan)
-        // A Space picker remains reachable when a tall batch's temporary gap
-        // overlaps it or the lifted folder's moving edge extends beyond it.
-        if case .space(let assignment) = direct?.target {
-            return BrowserSidebarReorderTarget(kind: .space(assignment))
-        }
+        if let direct, direct.target.outranksGap { return direct.target.reorderTarget(for: self) }
         // Keep the open gap stable while neighbouring rows animate around it.
         if let gap = layout.gapFrame, gap.contains(insertionPoint) { return previousTarget }
         if let pinned, let gap = pinned.layout.frame(for: .gap, in: pinned.frame), gap.contains(pointer) {
             return previousTarget
         }
-        let nesting: BrowserSidebarReorderZone? =
-            switch direct?.target {
-            case .folder, .currentTab: direct
-            default: nil
-            }
+        let nesting = direct.flatMap { $0.target.nests ? $0 : nil }
         guard
             let zone = nesting
-                ?? BrowserSidebarReorderPolicy.zone(
+                ?? BrowserSidebarReorderZone.aimed(
                     at: insertionPoint, in: available, accepting: lift.item, plan: lift.plan)
         else { return nil }
-
-        switch zone.target {
-        case .currentTab(let tabID):
-            return BrowserSidebarReorderTarget(kind: .createCurrentFolder(tabID))
-        case .space(let assignment):
-            return BrowserSidebarReorderTarget(kind: .space(assignment))
-        case .folder(let folderID):
-            return lift.item.id == .folder(folderID)
-                ? nil : BrowserSidebarReorderTarget(kind: .intoFolder(folderID))
-        case .section(let section):
-            return insertionTarget(in: section)
-        case .splitContent(let assignment):
-            return splitInsertTarget(in: assignment)
-        }
+        return zone.target.reorderTarget(for: self)
     }
 
-    private func insertionTarget(in section: BrowserSidebarReorderSection)
+    /// Where a lift aimed at the run `section` inserts, among its rows the
+    /// lift does not carry.
+    func insertionTarget(in section: BrowserSidebarReorderSection)
         -> BrowserSidebarReorderTarget?
     {
         if section == lift.section, let parentID = rows[lift.item.id]?.row.parentItemID,
@@ -61,8 +42,7 @@ struct BrowserSidebarReorderTargetResolver {
         {
             return nil
         }
-        let ordered = BrowserSidebarReorderPolicy.rows(
-            in: section,
+        let ordered = section.rows(
             from: rows.values.map(\.row).filter { $0.space == lift.item.spaceAssignment && $0.parentItemID == nil }
                 .compactMap {
                     row in
@@ -77,9 +57,9 @@ struct BrowserSidebarReorderTargetResolver {
                         id: row.id, space: row.space, section: row.section, frame: frame)
                 })
         let candidates = ordered.filter { !lift.item.selectionRowIDs.contains($0.id) }
-        let index = BrowserSidebarReorderPolicy.insertionIndex(
+        let index = BrowserSidebarReorderRow.insertionIndex(
             at: insertionPoint, orderedRows: candidates, excluding: lift.item.id)
-        let anchor = BrowserSidebarReorderPolicy.insertionAnchor(
+        let anchor = BrowserSidebarReorderRow.insertionAnchor(
             index: index, orderedRows: candidates, excluding: lift.item.id)
         return BrowserSidebarReorderTarget(
             kind: .insert(section: section, beforeID: anchor, index: index))
@@ -102,7 +82,9 @@ struct BrowserSidebarReorderTargetResolver {
         return ancestors.count
     }
 
-    private func splitInsertTarget(in assignment: BrowserSpaceRuntimeAssignment)
+    /// Where a lift aimed at the content area for `assignment` joins the
+    /// cards on show, or nil when none are measured.
+    func splitInsertTarget(in assignment: BrowserSpaceRuntimeAssignment)
         -> BrowserSidebarReorderTarget?
     {
         // Departing Space cards may remain registered until their transition finishes.

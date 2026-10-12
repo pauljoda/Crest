@@ -2,6 +2,10 @@ import SwiftUI
 
 /// Pointer drags coexist with row buttons; the browser window draws their previews.
 struct BrowserPlatformSidebarReorderLiftGesture: ViewModifier {
+    /// A drag must travel this far before it lifts, so a sloppy click still
+    /// selects a tab instead of starting a reorder.
+    private static let liftDistance: CGFloat = 4
+
     var isEnabled = true
     let apply: (BrowserSidebarReorderLiftPhase) -> Void
 
@@ -11,7 +15,7 @@ struct BrowserPlatformSidebarReorderLiftGesture: ViewModifier {
 
     private var pointerDrag: some Gesture {
         DragGesture(
-            minimumDistance: BrowserSidebarReorderPolicy.liftDistance,
+            minimumDistance: Self.liftDistance,
             coordinateSpace: BrowserSidebarReorderSpace.coordinateSpace
         )
         .onChanged { value in

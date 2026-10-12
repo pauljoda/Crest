@@ -3897,6 +3897,10 @@
     "2026-10-12-studio-and-choices-own-behavior": {
       "category": "internal",
       "message": "Let studio steps, emblems and small choices carry their own behavior"
+    },
+    "2026-10-12-sidebar-drop-targets-own-behavior": {
+      "category": "internal",
+      "message": "Let sidebar drop targets and zones say what they take"
     }
   }
 }

@@ -94,13 +94,9 @@ struct BrowserSidebarReorderSourceModifier: ViewModifier {
         in reorder: BrowserSidebarReorderContext
     ) -> (BrowserSidebarReorderItem, BrowserSidebarReorderSection)? {
         let browser = reorder.browser
-        let firstID: BrowserSelectionItemID? =
-            switch item {
-            case .tab(let tab): .tab(tab.tabID)
-            case .splitGroup(let group): group.memberTabIDs.first.map(BrowserSelectionItemID.tab)
-            case .folder(let folder): .folder(folder.folderID)
-            }
-        guard let firstID, var captured = BrowserSidebarSelection.capture(for: firstID, in: browser) else {
+        guard let firstID = item.firstSelectionID,
+            var captured = BrowserSidebarSelection.capture(for: firstID, in: browser)
+        else {
             return (item, section)
         }
         if let remaining = browser.tabMultiSelection.releasePinnedTabs(from: captured) {
@@ -157,19 +153,7 @@ final class BrowserSidebarReorderInputSession {
             let assignment = item.spaceAssignment
             guard let space = reorder.browser.spaceModel(assignment.spaceID), space.profileID == assignment.profileID
             else { return false }
-            switch item {
-            case .tab(let tabItem):
-                guard let tab = space.tabs.model(tabItem.tabID),
-                    space.shownSplit(containing: tab.id).map(BrowserSidebarReorderItemID.splitGroup) == parentItemID
-                else { return false }
-                return section == .tabs(placement: tab.placement, folderID: tab.folderID)
-            case .folder(let folderItem):
-                return space.folders.model(folderItem.folderID)?.reorderSection == section
-            case .splitGroup(let groupItem):
-                let members = space.splitMembers(of: groupItem.groupID)
-                guard let first = members.first, members.map(\.id) == groupItem.memberTabIDs else { return false }
-                return section == .tabs(placement: first.placement, folderID: first.folderID)
-            }
+            return item.stands(in: space, section: section, parentItemID: parentItemID)
         }
     }
 

@@ -99,11 +99,11 @@ final class BrowserSidebarReorderLayoutTests: XCTestCase {
                 .init(tabID: UUID(), spaceID: space.spaceID, profileID: space.profileID))
             for y in [CGFloat(176), 180, 184] {
                 XCTAssertEqual(
-                    BrowserSidebarReorderPolicy.zone(at: CGPoint(x: 100, y: y), in: zones, accepting: item)?.target,
+                    BrowserSidebarReorderZone.aimed(at: CGPoint(x: 100, y: y), in: zones, accepting: item)?.target,
                     .section(parent))
             }
             XCTAssertEqual(
-                BrowserSidebarReorderPolicy.zone(at: CGPoint(x: 100, y: 210), in: zones, accepting: item)?.target,
+                BrowserSidebarReorderZone.aimed(at: CGPoint(x: 100, y: 210), in: zones, accepting: item)?.target,
                 .section(.tabs(placement: placement, folderID: second)))
         }
     }

@@ -701,28 +701,16 @@ final class BrowserInteractionModelTests: XCTestCase {
         )
 
         XCTAssertTrue(
-            BrowserSidebarReorderPolicy.accepts(
-                item: tab,
-                in: .tabs(placement: .saved, folderID: nil)
-            )
+            tab.isAccepted(by: .tabs(placement: .saved, folderID: nil))
         )
         XCTAssertFalse(
-            BrowserSidebarReorderPolicy.accepts(
-                item: tab,
-                in: .folders(parentID: nil)
-            )
+            tab.isAccepted(by: .folders(parentID: nil))
         )
         XCTAssertTrue(
-            BrowserSidebarReorderPolicy.accepts(
-                item: folder,
-                in: .folders(parentID: nil)
-            )
+            folder.isAccepted(by: .folders(parentID: nil))
         )
         XCTAssertFalse(
-            BrowserSidebarReorderPolicy.accepts(
-                item: folder,
-                in: .tabs(placement: .pinned, folderID: nil)
-            )
+            folder.isAccepted(by: .tabs(placement: .pinned, folderID: nil))
         )
     }
 
@@ -739,28 +727,16 @@ final class BrowserInteractionModelTests: XCTestCase {
         )
 
         XCTAssertTrue(
-            BrowserSidebarReorderPolicy.accepts(
-                item: group,
-                in: .tabs(placement: .current, folderID: nil)
-            )
+            group.isAccepted(by: .tabs(placement: .current, folderID: nil))
         )
         XCTAssertTrue(
-            BrowserSidebarReorderPolicy.accepts(
-                item: group,
-                in: .tabs(placement: .saved, folderID: UUID())
-            )
+            group.isAccepted(by: .tabs(placement: .saved, folderID: UUID()))
         )
         XCTAssertFalse(
-            BrowserSidebarReorderPolicy.accepts(
-                item: group,
-                in: .tabs(placement: .pinned, folderID: nil)
-            )
+            group.isAccepted(by: .tabs(placement: .pinned, folderID: nil))
         )
         XCTAssertFalse(
-            BrowserSidebarReorderPolicy.accepts(
-                item: group,
-                in: .folders(parentID: nil)
-            )
+            group.isAccepted(by: .folders(parentID: nil))
         )
     }
 
@@ -806,7 +782,7 @@ final class BrowserInteractionModelTests: XCTestCase {
                 split: nil, folderAroundTabIDs: []))
 
         XCTAssertEqual(
-            BrowserSidebarReorderPolicy.zone(
+            BrowserSidebarReorderZone.aimed(
                 at: point,
                 in: zones,
                 accepting: group,
@@ -816,7 +792,7 @@ final class BrowserInteractionModelTests: XCTestCase {
             .section(section)
         )
         XCTAssertEqual(
-            BrowserSidebarReorderPolicy.zone(
+            BrowserSidebarReorderZone.aimed(
                 at: point,
                 in: zones,
                 accepting: tab

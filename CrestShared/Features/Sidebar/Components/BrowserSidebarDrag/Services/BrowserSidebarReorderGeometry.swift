@@ -6,6 +6,8 @@ import Observation
 @Observable
 @MainActor
 final class BrowserSidebarReorderGeometry {
+    // MARK: - Types
+
     struct RegisteredRow {
         let owner: UUID
         var row: BrowserSidebarReorderRow
@@ -23,6 +25,13 @@ final class BrowserSidebarReorderGeometry {
         let space: BrowserSpaceRuntimeAssignment
         let frame: CGRect
     }
+
+    // MARK: - Static Variables
+
+    /// Rows within this vertical distance share a selection line.
+    static let selectionLineTolerance: CGFloat = 2
+
+    // MARK: - Variables
 
     private(set) var selectionRowsRevision = 0
     /// Advances with every change to the rows, so what is worked out from
@@ -78,7 +87,7 @@ final class BrowserSidebarReorderGeometry {
     func selectionRows(in space: BrowserSpaceRuntimeAssignment) -> [BrowserSidebarReorderRow] {
         registeredRows(in: space).sorted {
             if $0.usesGridOrdering != $1.usesGridOrdering { return $0.usesGridOrdering }
-            if abs($0.frame.minY - $1.frame.minY) > BrowserSidebarReorderPolicy.selectionLineTolerance {
+            if abs($0.frame.minY - $1.frame.minY) > Self.selectionLineTolerance {
                 return $0.frame.minY < $1.frame.minY
             }
             return $0.frame.minX < $1.frame.minX
