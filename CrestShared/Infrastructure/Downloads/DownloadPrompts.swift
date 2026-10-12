@@ -19,7 +19,7 @@ final class BrowserDownloadPrompts {
     /// question that names none.
     private let claims: @MainActor (UUID?) -> Bool
     private let approve: Approve
-    private let resolveDestination: BrowserDownloadCenter.DownloadDestinationResolver
+    private let resolveDestination: BrowserDownloadCenter.DownloadDestinationChooser
     /// What closes each approval the person is shown, until the core settles it.
     private var dismissals: [UUID: BrowserPromptDismissal] = [:]
     /// The folder access each download writing into a chosen folder holds
@@ -35,7 +35,7 @@ final class BrowserDownloadPrompts {
         core: CrestCore,
         claims: @escaping @MainActor (UUID?) -> Bool = { _ in true },
         approve: @escaping Approve,
-        resolveDestination: @escaping BrowserDownloadCenter.DownloadDestinationResolver = {
+        resolveDestination: @escaping BrowserDownloadCenter.DownloadDestinationChooser = {
             await BrowserPlatformDownloadDirectory.resolve(suggestedFilename: $0, spaceID: $1, forcesPrompt: $2)
         }
     ) {

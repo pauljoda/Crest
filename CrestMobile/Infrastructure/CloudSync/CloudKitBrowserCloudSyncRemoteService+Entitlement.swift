@@ -19,9 +19,7 @@ extension CloudKitBrowserCloudSyncRemoteService {
                 let values = try? PropertyListSerialization.propertyList(
                     from: Data(bytes: bytes, count: Int(size)), options: [], format: nil) as? [String: Any]
             else { return false }
-            return BrowserCloudContainerEntitlementPolicy.containsContainer(
-                containerIdentifier,
-                entitlementValue: values[BrowserCloudContainerEntitlementPolicy.entitlementName])
+            return containerEntitlement(values[containerEntitlementName], contains: containerIdentifier)
         #else
             // Device installation validates the signed application configuration.
             return true

@@ -1,6 +1,13 @@
 import SwiftUI
 
 struct BrowserPinnedExtensionActionButton: View {
+    // MARK: - Static Variables
+
+    private static let tileSize: CGFloat = 24
+    private static let glyphSize: CGFloat = 16
+
+    // MARK: - Variables
+
     let action: BrowserExtensionActionPresentation
     let perform: (BrowserExtensionPopupAnchor?) -> Void
     var prepare: () -> Void = {}
@@ -22,8 +29,8 @@ struct BrowserPinnedExtensionActionButton: View {
     private var anchoredButton: some View {
         actionButton
             .frame(
-                width: BrowserPinnedExtensionStripLayoutPolicy.tileSize,
-                height: BrowserPinnedExtensionStripLayoutPolicy.tileSize
+                width: Self.tileSize,
+                height: Self.tileSize
             )
             .background {
                 BrowserExtensionPopupAnchorReader(
@@ -46,8 +53,7 @@ struct BrowserPinnedExtensionActionButton: View {
                 } else {
                     BrowserExtensionActionArtwork(
                         action: action,
-                        glyphSize:
-                            BrowserPinnedExtensionStripLayoutPolicy.glyphSize
+                        glyphSize: Self.glyphSize
                     )
                 }
             }

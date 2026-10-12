@@ -1,6 +1,12 @@
 import SwiftUI
 
 struct BrowserPinnedExtensionActionList: View {
+    // MARK: - Static Variables
+
+    private static let spacing: CGFloat = 6
+
+    // MARK: - Variables
+
     let actions: [BrowserExtensionActionPresentation]
     let perform: (BrowserExtensionActionPresentation, BrowserExtensionPopupAnchor?) -> Void
     var prepare: (BrowserExtensionActionPresentation) -> Void = { _ in }
@@ -11,9 +17,7 @@ struct BrowserPinnedExtensionActionList: View {
     var body: some View {
         GeometryReader { proxy in
             ScrollView(.horizontal) {
-                HStack(
-                    spacing: BrowserPinnedExtensionStripLayoutPolicy.spacing
-                ) {
+                HStack(spacing: Self.spacing) {
                     ForEach(actions) { action in
                         BrowserPinnedExtensionActionButton(
                             action: action,

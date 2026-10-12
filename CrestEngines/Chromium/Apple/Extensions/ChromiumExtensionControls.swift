@@ -34,7 +34,7 @@ struct BrowserPinnedExtensionStrip: View {
                 )
                 .padding(
                     .top,
-                    BrowserPinnedExtensionStripLayoutPolicy.adjacentSpacing
+                    BrowserPinnedExtensionStripContent.adjacentSpacing
                         + (space.sidebar.section(.pinned).isEmpty
                             ? 0 : BrowserTabSelectionGlow.outset)
                 )

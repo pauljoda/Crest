@@ -21,7 +21,7 @@ final class BrowserDownloadCenter: NSObject {
             UUID
         ) async -> Bool
 
-    typealias DownloadDestinationResolver =
+    typealias DownloadDestinationChooser =
         @MainActor (
             String,
             UUID,
@@ -43,7 +43,7 @@ final class BrowserDownloadCenter: NSObject {
 
     @ObservationIgnored let permissionCenter: BrowserSitePermissionCenter
     @ObservationIgnored let approveRiskyDownload: RiskApprovalHandler
-    @ObservationIgnored let resolveDownloadDestination: DownloadDestinationResolver
+    @ObservationIgnored let resolveDownloadDestination: DownloadDestinationChooser
     @ObservationIgnored private var feedbackExpirationTasks: [UUID: Task<Void, Never>] = [:]
     @ObservationIgnored private var dataSaveAssignments: [UUID: BrowserSpaceRuntimeAssignment] = [:]
     @ObservationIgnored private var lastRetentionSweepAt: Date?
@@ -55,7 +55,7 @@ final class BrowserDownloadCenter: NSObject {
         approveRiskyDownload: @escaping RiskApprovalHandler = { _, _, _, _ in false },
         permissionCenter: BrowserSitePermissionCenter = BrowserSitePermissionCenter(),
         resolveDownloadDestination:
-            @escaping DownloadDestinationResolver = {
+            @escaping DownloadDestinationChooser = {
                 suggestedFilename,
                 spaceID,
                 forcesPrompt in

@@ -3993,6 +3993,10 @@
     "2026-10-12-forwarders-retired": {
       "category": "internal",
       "message": "Ask each rule's owner directly instead of through old forwarders"
+    },
+    "2026-10-12-entitlement-extension-strip-own-rules": {
+      "category": "internal",
+      "message": "Let the iCloud service and extension strip views keep their own measures"
     }
   }
 }

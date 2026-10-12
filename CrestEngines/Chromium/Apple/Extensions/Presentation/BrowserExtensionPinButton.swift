@@ -1,6 +1,12 @@
 import SwiftUI
 
 struct BrowserExtensionPinButton: View {
+    // MARK: - Static Variables
+
+    private static let size: CGFloat = 14
+
+    // MARK: - Variables
+
     let isPinned: Bool
     let action: () -> Void
 
@@ -9,8 +15,8 @@ struct BrowserExtensionPinButton: View {
             Image(systemName: isPinned ? "pin.slash.fill" : "pin.fill")
                 .font(.system(size: 8, weight: .semibold))
                 .frame(
-                    width: BrowserPinnedExtensionStripLayoutPolicy.pinControlSize,
-                    height: BrowserPinnedExtensionStripLayoutPolicy.pinControlSize
+                    width: Self.size,
+                    height: Self.size
                 )
                 .contentShape(.circle)
         }

@@ -10,12 +10,9 @@ extension CloudKitBrowserCloudSyncRemoteService {
         guard let task = SecTaskCreateFromSelf(nil) else { return false }
         let value = SecTaskCopyValueForEntitlement(
             task,
-            BrowserCloudContainerEntitlementPolicy.entitlementName as CFString,
+            containerEntitlementName as CFString,
             nil
         )
-        return BrowserCloudContainerEntitlementPolicy.containsContainer(
-            containerIdentifier,
-            entitlementValue: value
-        )
+        return containerEntitlement(value, contains: containerIdentifier)
     }
 }
