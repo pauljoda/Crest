@@ -4029,6 +4029,10 @@
     "2026-10-12-concrete-pane-views": {
       "category": "internal",
       "message": "Keep settings, studio and lesson panes as concrete views"
+    },
+    "2026-10-12-extension-files-own-one-type": {
+      "category": "internal",
+      "message": "Give each extension file one owner type"
     }
   }
 }
