@@ -43,10 +43,17 @@ protocol CoreChange {
     /// `core` itself what it must hear at once. Most changes tell no one, so
     /// by default this only applies the change.
     @MainActor func apply(to core: CrestCore, in batch: inout CoreChangeBatch)
+
+    /// Notes in `receipts` what the change tells the cloud transport whose
+    /// intent it answers. Most changes tell it nothing, so by default this
+    /// notes nothing.
+    func note(in receipts: inout CloudTransportReceipts)
 }
 
 extension CoreChange {
     @MainActor func apply(to core: CrestCore, in batch: inout CoreChangeBatch) {
         apply(to: core.state)
     }
+
+    func note(in receipts: inout CloudTransportReceipts) {}
 }

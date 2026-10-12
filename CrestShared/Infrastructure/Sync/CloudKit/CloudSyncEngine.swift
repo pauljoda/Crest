@@ -231,10 +231,7 @@ actor BrowserCloudSyncEngine {
             throw error
         }
         try await send(FinishCloudMerge(mergeID: merge, succeeded: true, fullSnapshot: isFullSnapshot))
-        return receipts.lazy.compactMap { receipt -> SyncRecordsSkipped? in
-            if case .syncRecordsSkipped(let skipped) = receipt { return skipped }
-            return nil
-        }.first
+        return CloudTransportReceipts(receipts).skipped
     }
 
     func process(
@@ -374,7 +371,7 @@ actor BrowserCloudSyncEngine {
     private func send(_ intent: some CloudTransportIntent) async throws -> CloudTransportState {
         let core = core
         let receipts = try await Task.detached(priority: .utility) { try core.transport(intent) }.value
-        for case .cloudTransportChanged(let changed) in receipts { transport = changed.state }
+        if let state = CloudTransportReceipts(receipts).transport { transport = state }
         return transport
     }
 
@@ -383,15 +380,9 @@ actor BrowserCloudSyncEngine {
     private func beginMerge() async throws -> Int64 {
         let core = core
         let receipts = try await Task.detached(priority: .utility) { try core.transport(BeginCloudMerge()) }.value
-        var merge: Int64?
-        for receipt in receipts {
-            switch receipt {
-            case .cloudTransportChanged(let changed): transport = changed.state
-            case .cloudMergeBegan(let began): merge = began.mergeID
-            default: break
-            }
-        }
-        guard let merge else { preconditionFailure("The core began a merge without naming it.") }
+        let noted = CloudTransportReceipts(receipts)
+        if let state = noted.transport { transport = state }
+        guard let merge = noted.mergeID else { preconditionFailure("The core began a merge without naming it.") }
         return merge
     }
 

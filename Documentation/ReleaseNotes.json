@@ -4005,6 +4005,10 @@
     "2026-10-12-commands-prompts-swipes-say-what-they-do": {
       "category": "internal",
       "message": "Let engine commands, pending prompts and swipe decisions say what they do"
+    },
+    "2026-10-12-cloud-receipts-note-themselves": {
+      "category": "internal",
+      "message": "Let the core's answers to the cloud transport note what they tell it"
     }
   }
 }

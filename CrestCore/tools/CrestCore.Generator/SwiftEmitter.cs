@@ -80,6 +80,18 @@ internal static class SwiftEmitter {
             """);
         foreach (var member in schema.Members(ContractRoot.Change))
             code.Append($"        case .{Naming.SwiftMember(member.Name)}(let change): change.apply(to: core, in: &batch)\n");
+        code.Append("""
+                    }
+                }
+
+                /// Notes in `receipts` what the change tells the cloud transport whose intent
+                /// it answers, as its own `note(in:)` does.
+                func note(in receipts: inout CloudTransportReceipts) {
+                    switch self {
+
+            """);
+        foreach (var member in schema.Members(ContractRoot.Change))
+            code.Append($"        case .{Naming.SwiftMember(member.Name)}(let change): change.note(in: &receipts)\n");
         code.Append("        }\n    }\n}\n");
 
         var roots = new Dictionary<Type, (ContractRoot Root, ContractMember Member)>();

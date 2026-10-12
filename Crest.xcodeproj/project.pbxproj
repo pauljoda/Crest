@@ -3541,6 +3541,7 @@
 		471746BCCCC3633BA7CFFACB /* BrowserPlatformAppIcon.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0D48F463C8DFDCA9C2255BB /* BrowserPlatformAppIcon.swift */; };
 		471B007E90229C296B0FA5AB /* BrowserCredentialChromePresentation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82DF3937805CF7D6EC49A852 /* BrowserCredentialChromePresentation.swift */; };
 		47216C3E4B510DC71E564F0C /* BrowserOnboardingProgressHeader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 325997A2926BB86646DE6105 /* BrowserOnboardingProgressHeader.swift */; };
+		47237C84FD471AC1D5BE485E /* CloudTransportReceipts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2D655D13C942AA92C2B4F58C /* CloudTransportReceipts.swift */; };
 		472406E7CFA72EA6031C0939 /* ReloadPage+WebKitEnginePages.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3614A3D6F410798D4DAECA3 /* ReloadPage+WebKitEnginePages.swift */; };
 		4727F65A8F099DB3180B3CF0 /* SecurityBrowserSafeStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25C3AE2A0502837CFC3A07A8 /* SecurityBrowserSafeStorage.swift */; };
 		472840D6F6BB27FA451E2C74 /* BrowserNavigationFailureDetailsButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 903A7CFFDCD9EC23D0EC7A1E /* BrowserNavigationFailureDetailsButton.swift */; };
@@ -4603,6 +4604,7 @@
 		5CCC45664C80AB668DF7C10D /* BrowserAgentCall.swift in Sources */ = {isa = PBXBuildFile; fileRef = BAC7BB14983E071C7D9E2A5B /* BrowserAgentCall.swift */; };
 		5CCCDA3F34FD182C121E3573 /* CloudSyncAdvanced+CoreState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3408B104EA97A8561FB5D69E /* CloudSyncAdvanced+CoreState.swift */; };
 		5CD362BFD6AD6E97D8CCC03F /* ContentRuleListProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5DE796E8C334A33AC053A602 /* ContentRuleListProvider.swift */; };
+		5CD6D83FBC22318F71E4F238 /* CloudTransportReceipts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2D655D13C942AA92C2B4F58C /* CloudTransportReceipts.swift */; };
 		5CDD194151B877E1ADC1C3E8 /* BrowserPlatformDownloadDirectory.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF0CB46C5EE497D63E99883F /* BrowserPlatformDownloadDirectory.swift */; };
 		5CDE0612A14216ADA6CA0EF8 /* BrowserSpaceTextureGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B8D8F5D77D9067D8258987E /* BrowserSpaceTextureGenerator.swift */; };
 		5CDF8288BBDF74C18A33315C /* ChromiumEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C7E565B2EC6C9ADEFCCE833 /* ChromiumEngine.swift */; };
@@ -4800,6 +4802,7 @@
 		60668E7DB14C99DBBC97945F /* CrestFieldMetrics.swift in Sources */ = {isa = PBXBuildFile; fileRef = A83B7620627B0A7CCD342647 /* CrestFieldMetrics.swift */; };
 		6067A1BB3B1D8CB930278056 /* BrowserPageClosedByEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 637DFB6385864B3F7B4D6915 /* BrowserPageClosedByEngine.swift */; };
 		606A7158CECC468375BE7074 /* KeychainCredentialVault.swift in Sources */ = {isa = PBXBuildFile; fileRef = A93EF9F8F07282C1A376D5FC /* KeychainCredentialVault.swift */; };
+		606CADFCE65CBA18BD361CEA /* CloudTransportReceipts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2D655D13C942AA92C2B4F58C /* CloudTransportReceipts.swift */; };
 		606D2376E9F2FED6476D0929 /* AnswerInfoBar+WebKitEnginePages.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81251D36454DE5E70B8F6518 /* AnswerInfoBar+WebKitEnginePages.swift */; };
 		6074981D7B03EBA1A7367409 /* BrowserTabBatchActions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 69540FC478ED792587CF51D6 /* BrowserTabBatchActions.swift */; };
 		607D2F3CB7FE1AFE27327F1B /* CrestPlatformSettingsFormModifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E540AF14B8D5520DD9D9727 /* CrestPlatformSettingsFormModifier.swift */; };
@@ -7030,6 +7033,7 @@
 		8F6532016B2AE24C2E564B3F /* BrowserSidebarCustomizationPreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2BA99521C470EB3DE84B2B4 /* BrowserSidebarCustomizationPreview.swift */; };
 		8F66ABF72FDC29FD460A6F93 /* BrowserSiteEngineMenuIcon.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5AFEFB018E794147DF6DC60C /* BrowserSiteEngineMenuIcon.swift */; };
 		8F748D2450D46296D0370654 /* BrowserDataPortabilityMacRequirement.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60E06B4E9E0970C8D0DD18EE /* BrowserDataPortabilityMacRequirement.swift */; };
+		8F757CB05F883D30CACF15F0 /* CloudTransportReceipts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2D655D13C942AA92C2B4F58C /* CloudTransportReceipts.swift */; };
 		8F7BA7AD04FA35949255C281 /* BrowserMediaSessionPageCoordinator+WebKit.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26700D2E8ABFD8A12F2027E9 /* BrowserMediaSessionPageCoordinator+WebKit.swift */; };
 		8F7D03CABA9CE43BC6CE3535 /* BrowserSpaceChevronMiddleBannerShape.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3590F02483655ED1CCD104B3 /* BrowserSpaceChevronMiddleBannerShape.swift */; };
 		8F7DA08756EDC8703602AAD7 /* ReaderModeController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CBB59BA812288CC156EB81B /* ReaderModeController.swift */; };
@@ -12276,6 +12280,7 @@
 		FAAF32D95C7553FBE4464EE5 /* BrowserSettingsPane.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3A78BA6034D2AE72A25912A /* BrowserSettingsPane.swift */; };
 		FAB466D3978769D8CB0D1DC1 /* SettleAuthentication+WebKitEngineBinding.swift in Sources */ = {isa = PBXBuildFile; fileRef = 43470C79F2E1117C0AE0B290 /* SettleAuthentication+WebKitEngineBinding.swift */; };
 		FAB76D715D9BC18ADBBC7300 /* BrowserSplitLayoutMetrics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2302D12F84F4041C7BAF7F85 /* BrowserSplitLayoutMetrics.swift */; };
+		FAC903A1856BFFCC012C4965 /* CloudTransportReceipts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2D655D13C942AA92C2B4F58C /* CloudTransportReceipts.swift */; };
 		FADE42C6D5DF28F1EDDDB3B4 /* BrowserSettingsDestination.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36DF400C7F7319FA732C31FA /* BrowserSettingsDestination.swift */; };
 		FADFE80937CCEE844EA91B8A /* BrowserCredentialImportPasswordValue.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDBA5B24D3FEF126F6C0EC56 /* BrowserCredentialImportPasswordValue.swift */; };
 		FAE1781C8FBB03FCEB4869BE /* BrowserExtensionSettingsPane.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88B25A8D2B926FD173375FA2 /* BrowserExtensionSettingsPane.swift */; };
@@ -12377,6 +12382,7 @@
 		FC9F8F3E185635DBA27300F8 /* SpacePagerGesture.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F12953920FA1155B8DFC3F7 /* SpacePagerGesture.swift */; };
 		FC9FC2A6AAB9BCBFE3AD3D0A /* BrowserSpaceIdentityLabel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3192E14C76E200E112D0C8E8 /* BrowserSpaceIdentityLabel.swift */; };
 		FCAE7D81DFAAE0B5938C38D2 /* BrowserCommandPaletteScrim.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FC0B701E38AAB40854A6CEB /* BrowserCommandPaletteScrim.swift */; };
+		FCB1EC8713630BB35A0E7957 /* CloudTransportReceipts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2D655D13C942AA92C2B4F58C /* CloudTransportReceipts.swift */; };
 		FCB216135AA1EEE73384AEC4 /* BrowserSidebarReorderRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 69A1C00B92A5F7BA1075D056 /* BrowserSidebarReorderRow.swift */; };
 		FCB4B84E57739FF3CB5DB8DF /* CapacityLimits+Current.swift in Sources */ = {isa = PBXBuildFile; fileRef = A33F9B3D8D990E2B18B4E343 /* CapacityLimits+Current.swift */; };
 		FCB647C388564B011861620C /* BrowserOnboardingPalette.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10F90F017B894F0D83753170 /* BrowserOnboardingPalette.swift */; };
@@ -12626,10 +12632,10 @@
 		77246D3C18A4BE22588899AF /* Embed Dependencies */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
-			dstPath = "";
-			dstSubfolderSpec = 13;
+			dstPath = Contents/Helpers;
+			dstSubfolderSpec = 1;
 			files = (
-				E920722BC4FE573FCD86AC2F /* CrestDockTilePlugin.bundle in Embed Dependencies */,
+				602EA1C48DA886AF37165D05 /* CrestBrowserHelper in Embed Dependencies */,
 			);
 			name = "Embed Dependencies";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -12659,10 +12665,10 @@
 		F67E0DC06840146EFBBD7607 /* Embed Dependencies */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
-			dstPath = Contents/Helpers;
-			dstSubfolderSpec = 1;
+			dstPath = "";
+			dstSubfolderSpec = 13;
 			files = (
-				602EA1C48DA886AF37165D05 /* CrestBrowserHelper in Embed Dependencies */,
+				E920722BC4FE573FCD86AC2F /* CrestDockTilePlugin.bundle in Embed Dependencies */,
 			);
 			name = "Embed Dependencies";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -13124,6 +13130,7 @@
 		2D317B5E52F4221BD3528DDD /* BrowserSpaceAccessFailure+Presentation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "BrowserSpaceAccessFailure+Presentation.swift"; sourceTree = "<group>"; };
 		2D4244EEFC6E674E7C7B68F4 /* ReaderModeSnapshotDecoder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderModeSnapshotDecoder.swift; sourceTree = "<group>"; };
 		2D582617AE165C7FCFE44CEB /* BrowserDataPortabilitySection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserDataPortabilitySection.swift; sourceTree = "<group>"; };
+		2D655D13C942AA92C2B4F58C /* CloudTransportReceipts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudTransportReceipts.swift; sourceTree = "<group>"; };
 		2D8550A466882445013EDE3F /* BrowserLegacyCloudSyncState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserLegacyCloudSyncState.swift; sourceTree = "<group>"; };
 		2DC0182F43FD83CBB365164D /* BrowserTransientScrim.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserTransientScrim.swift; sourceTree = "<group>"; };
 		2DE1F48A759206EC3CA9C065 /* BrowserUtilityPresentation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserUtilityPresentation.swift; sourceTree = "<group>"; };
@@ -23833,6 +23840,7 @@
 				6A9A203F23160C114C24F535 /* CloudMergeBegan+CoreState.swift */,
 				3408B104EA97A8561FB5D69E /* CloudSyncAdvanced+CoreState.swift */,
 				92589857F0D568A9C762366D /* CloudTransportChanged+CoreState.swift */,
+				2D655D13C942AA92C2B4F58C /* CloudTransportReceipts.swift */,
 				498F7851AAB11A1C47063C5C /* SyncJournalChanged+CoreState.swift */,
 				8EBAE70C2C46239E3D960305 /* SyncRecordsSkipped+CoreState.swift */,
 				1CA32D35F728382000C11B25 /* SyncStagingFailed+CoreState.swift */,
@@ -27195,6 +27203,7 @@
 				53C3E4DD12F5EA8B7BFC2136 /* CloudSyncStepKind+Performer.swift in Sources */,
 				A87B7CCFDFCF68F96A2FA47B /* CloudSyncStepPerformer.swift in Sources */,
 				94D379355F64AB81D125870E /* CloudTransportChanged+CoreState.swift in Sources */,
+				FAC903A1856BFFCC012C4965 /* CloudTransportReceipts.swift in Sources */,
 				573A18A0ADD3643BC0A2A992 /* CloudUploadSource.swift in Sources */,
 				A5B3BF38DC0732AD3EB11550 /* Color+ReadableForeground.swift in Sources */,
 				C6B4CD523443DF3453A7CA5F /* ColorPalette+Collection.swift in Sources */,
@@ -28886,6 +28895,7 @@
 				F62845657A81291CA1161B92 /* CloudSyncStepKind+Performer.swift in Sources */,
 				B05310E8C9BE551E43DD3423 /* CloudSyncStepPerformer.swift in Sources */,
 				41BC081B0948C8E8B7092E58 /* CloudTransportChanged+CoreState.swift in Sources */,
+				47237C84FD471AC1D5BE485E /* CloudTransportReceipts.swift in Sources */,
 				1E79B74812D99D99C2FC2645 /* CloudUploadSource.swift in Sources */,
 				272BC45CC20E1EF74D1D76A2 /* Color+ReadableForeground.swift in Sources */,
 				9AD2C891B03A58D235F0FFED /* ColorPalette+Collection.swift in Sources */,
@@ -31217,6 +31227,7 @@
 				884B44C7F0891B5834594B49 /* CloudSyncStepKind+Performer.swift in Sources */,
 				7333DB4CD1ABDFE34118BD71 /* CloudSyncStepPerformer.swift in Sources */,
 				70B2D9E0258FDF7BACC57C81 /* CloudTransportChanged+CoreState.swift in Sources */,
+				606CADFCE65CBA18BD361CEA /* CloudTransportReceipts.swift in Sources */,
 				CF866A0EE0E9C52FD76B48CD /* CloudUploadSource.swift in Sources */,
 				FF9E130BCC5887BC3CDA7386 /* Color+ReadableForeground.swift in Sources */,
 				38CAAA9ACF12C9A1BA90225C /* ColorPalette+Collection.swift in Sources */,
@@ -33535,6 +33546,7 @@
 				3A3A800E60FB53CCA2DED190 /* CloudSyncStepKind+Performer.swift in Sources */,
 				59D41DB1417FF89A570FB21C /* CloudSyncStepPerformer.swift in Sources */,
 				69466639FF5F84916FD3D049 /* CloudTransportChanged+CoreState.swift in Sources */,
+				5CD6D83FBC22318F71E4F238 /* CloudTransportReceipts.swift in Sources */,
 				36FA63BB64309425DE3B6CD7 /* CloudUploadSource.swift in Sources */,
 				33143A8DA318776F2488A6A6 /* Color+ReadableForeground.swift in Sources */,
 				E0AA8A834C36A17983038187 /* ColorPalette+Collection.swift in Sources */,
@@ -35217,6 +35229,7 @@
 				C962CFA34F86EFBC4E30A4DF /* CloudSyncStepKind+Performer.swift in Sources */,
 				B28C1E6611AD3EF6582737C4 /* CloudSyncStepPerformer.swift in Sources */,
 				F9F09D13E55A73962A15C798 /* CloudTransportChanged+CoreState.swift in Sources */,
+				8F757CB05F883D30CACF15F0 /* CloudTransportReceipts.swift in Sources */,
 				9FBB68BEF70CC1896221CCCB /* CloudUploadSource.swift in Sources */,
 				3C79ECF8CA5276BE2F5D7ACE /* Color+ReadableForeground.swift in Sources */,
 				7FBAFC9CEDA867BA26C55284 /* ColorPalette+Collection.swift in Sources */,
@@ -37467,6 +37480,7 @@
 				C7D5F62CA8D9387E121C430E /* CloudSyncStepKind+Performer.swift in Sources */,
 				E3B00BB1D6E71681F63793B5 /* CloudSyncStepPerformer.swift in Sources */,
 				7AF0E41CF9A065BC32685DC7 /* CloudTransportChanged+CoreState.swift in Sources */,
+				FCB1EC8713630BB35A0E7957 /* CloudTransportReceipts.swift in Sources */,
 				3E4D53775CF07ABA10075F9D /* CloudUploadSource.swift in Sources */,
 				1BC90480B389E0A2C55CE0B0 /* Color+ReadableForeground.swift in Sources */,
 				0EEE43B59373EE4CD2CD5CE6 /* ColorPalette+Collection.swift in Sources */,
