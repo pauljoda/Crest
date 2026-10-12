@@ -95,50 +95,12 @@
             self.core = core
             notifications = ChromiumProfileNotifications(
                 core: core, center: application.hostedNotificationCenter, pages: pages)
-            core.followPrompts(self) { [weak self] change in self?.ask(change) }
+            core.followPrompts(self)
         }
 
         /// Sends the person's answer to a question the core asked.
         func answer(_ intent: some PromptIntent) {
             _ = try? core?.send(intent)
-        }
-
-        /// Shows a question the core asks on the page that asked it, and closes
-        /// it once the core settles it. One no page of this engine can show any
-        /// more is declined; one about a page another engine hosts is that
-        /// engine's to show.
-        private func ask(_ change: Change) {
-            if case .scriptDialogAsked(let asked) = change {
-                guard let page = hosted[asked.pageID]?.page else {
-                    guard !isAnotherEnginesPage(asked.pageID) else { return }
-                    return answer(AnswerScriptDialog(promptID: asked.promptID, accepted: false, text: nil))
-                }
-                page.ask(asked, dismissal: dismissal(for: asked.promptID))
-            }
-            if case .authenticationAsked(let asked) = change {
-                guard let page = hosted[asked.pageID]?.page else {
-                    guard !isAnotherEnginesPage(asked.pageID) else { return }
-                    return answer(AnswerAuthentication(promptID: asked.promptID, credential: nil))
-                }
-                page.ask(asked, dismissal: dismissal(for: asked.promptID))
-            }
-            if case .permissionAsked(let asked) = change {
-                guard let page = hosted[asked.pageID]?.page else {
-                    guard !isAnotherEnginesPage(asked.pageID) else { return }
-                    return answer(AnswerPermission(promptID: asked.promptID, grants: false, remembers: false))
-                }
-                page.ask(asked, dismissal: dismissal(for: asked.promptID))
-            }
-            if case .extensionInstallAsked(let asked) = change {
-                ChromiumComposition.extensions.review(asked) { [weak self] accepted, withholds in
-                    self?.answer(
-                        AnswerExtensionInstall(
-                            promptID: asked.promptID, accepted: accepted, withholdsSiteAccess: withholds))
-                }
-            }
-            if case .promptSettled(let settled) = change {
-                dismissals.removeValue(forKey: settled.promptID)?.dismiss()
-            }
         }
 
         /// Whether the core hosts `pageID` on another engine.
@@ -230,6 +192,57 @@
         func presentedPage(_ pageID: UUID) -> ChromiumNativePage? {
             guard let page = hosted[pageID]?.page, !page.disposed else { return nil }
             return page
+        }
+    }
+
+    /// Shows a question the core asks on the page that asked it, and closes
+    /// it once the core settles it. One no page of this engine can show any
+    /// more is declined; one about a page another engine hosts is that
+    /// engine's to show.
+    extension ChromiumEngine: CorePromptHost {
+        func ask(_ asked: ScriptDialogAsked) {
+            guard let page = hosted[asked.pageID]?.page else {
+                guard !isAnotherEnginesPage(asked.pageID) else { return }
+                return answer(AnswerScriptDialog(promptID: asked.promptID, accepted: false, text: nil))
+            }
+            page.ask(asked, dismissal: dismissal(for: asked.promptID))
+        }
+
+        func ask(_ asked: AuthenticationAsked) {
+            guard let page = hosted[asked.pageID]?.page else {
+                guard !isAnotherEnginesPage(asked.pageID) else { return }
+                return answer(AnswerAuthentication(promptID: asked.promptID, credential: nil))
+            }
+            page.ask(asked, dismissal: dismissal(for: asked.promptID))
+        }
+
+        func ask(_ asked: PermissionAsked) {
+            guard let page = hosted[asked.pageID]?.page else {
+                guard !isAnotherEnginesPage(asked.pageID) else { return }
+                return answer(AnswerPermission(promptID: asked.promptID, grants: false, remembers: false))
+            }
+            page.ask(asked, dismissal: dismissal(for: asked.promptID))
+        }
+
+        func ask(_ asked: ExtensionInstallAsked) {
+            ChromiumComposition.extensions.review(asked) { [weak self] accepted, withholds in
+                self?.answer(
+                    AnswerExtensionInstall(
+                        promptID: asked.promptID, accepted: accepted, withholdsSiteAccess: withholds))
+            }
+        }
+
+        /// The download prompts choose where a download goes.
+        func ask(_ asked: DownloadDestinationAsked) {}
+
+        /// The download prompts ask whether a download may go ahead.
+        func ask(_ asked: DownloadApprovalAsked) {}
+
+        /// The quit preparation asks about downloads in progress.
+        func ask(_ asked: QuitWithDownloadsAsked) {}
+
+        func dismiss(_ settled: PromptSettled) {
+            dismissals.removeValue(forKey: settled.promptID)?.dismiss()
         }
     }
 

@@ -16,6 +16,12 @@ final class BrowserGeolocationCoordinator: BrowserSitePermissionObserver {
         ) async -> Bool
     typealias RecoverSystemAuthorization = @MainActor () async -> Void
 
+    /// The messages the geolocation bridge sends.
+    private static let messages: [any BrowserGeolocationMessage.Type] = [
+        BrowserGeolocationPermissionQuery.self, BrowserGeolocationPositionRequest.self,
+        BrowserGeolocationCancellation.self, BrowserGeolocationCancelAll.self,
+    ]
+
     private let webView: WKWebView
     private let permissionCenter: BrowserSitePermissionCenter
     private let service: any BrowserGeolocationServicing
@@ -75,7 +81,7 @@ final class BrowserGeolocationCoordinator: BrowserSitePermissionObserver {
         guard message.webView === webView,
             let requestURL = message.frameInfo.request.url,
             let origin = SiteOrigin(url: requestURL),
-            BrowserCorePolicy.allowsGeolocation(for: origin),
+            SecureOriginCheck(origin: origin).isAllowed,
             let body = message.body as? [String: Any],
             (body["version"] as? Int) == 1,
             let action = body["action"] as? String,
@@ -83,45 +89,13 @@ final class BrowserGeolocationCoordinator: BrowserSitePermissionObserver {
             UUID(uuidString: frameDocumentIdentifier) != nil
         else { return }
 
-        let messageDocumentIdentifier = documentIdentifier
-        switch action {
-        case "queryPermission":
-            sendPermission(
-                origin: origin,
-                documentIdentifier: messageDocumentIdentifier,
-                frame: message.frameInfo,
-                frameDocumentIdentifier: frameDocumentIdentifier
-            )
-        case "getCurrentPosition", "watchPosition":
-            guard let identifier = body["identifier"] as? String,
-                Self.isValidIdentifier(identifier)
-            else { return }
-            beginRequest(
-                identifier: identifier,
-                watchesPosition: action == "watchPosition",
-                options: Self.options(from: body["options"]),
-                origin: origin,
-                documentIdentifier: messageDocumentIdentifier,
-                frame: message.frameInfo,
-                frameDocumentIdentifier: frameDocumentIdentifier
-            )
-        case "cancel":
-            guard let identifier = body["identifier"] as? String,
-                Self.isValidIdentifier(identifier)
-            else { return }
-            cancel(
-                nativeIdentifier:
-                    "\(messageDocumentIdentifier).\(origin.displayName).\(frameDocumentIdentifier).\(identifier)")
-        case "cancelAll":
-            for request in Array(requests.values)
-            where request.origin == origin
-                && request.frameDocumentIdentifier == frameDocumentIdentifier
-            {
-                cancel(nativeIdentifier: request.nativeIdentifier)
-            }
-        default:
-            return
-        }
+        guard let request = Self.messages.lazy.compactMap({ $0.init(action: action, body: body) }).first
+        else { return }
+        request.handle(
+            on: self,
+            in: BrowserGeolocationFrame(
+                origin: origin, documentIdentifier: documentIdentifier, frame: message.frameInfo,
+                frameDocumentIdentifier: frameDocumentIdentifier))
     }
 
     func synchronizeMainFramePermission() {
@@ -138,6 +112,17 @@ final class BrowserGeolocationCoordinator: BrowserSitePermissionObserver {
     func beginNavigation() {
         cancelAll()
         documentIdentifier = UUID().uuidString
+    }
+
+    /// Cancels every request `origin` made from the frame document
+    /// `frameDocumentIdentifier`.
+    func cancelRequests(of origin: SiteOrigin, inFrameDocument frameDocumentIdentifier: String) {
+        for request in Array(requests.values)
+        where request.origin == origin
+            && request.frameDocumentIdentifier == frameDocumentIdentifier
+        {
+            cancel(nativeIdentifier: request.nativeIdentifier)
+        }
     }
 
     func cancelAll() {
@@ -162,7 +147,7 @@ final class BrowserGeolocationCoordinator: BrowserSitePermissionObserver {
         }
     }
 
-    private func beginRequest(
+    func beginRequest(
         identifier: String,
         watchesPosition: Bool,
         options: BrowserGeolocationRequestOptions,
@@ -268,31 +253,20 @@ final class BrowserGeolocationCoordinator: BrowserSitePermissionObserver {
         await service.systemAuthorizes(recovering: recoverSystemAuthorization)
     }
 
-    private func sendPermission(
+    func sendPermission(
         origin: SiteOrigin,
         documentIdentifier: String,
         frame: WKFrameInfo?,
         frameDocumentIdentifier: String? = nil
     ) {
-        // The states are the Permissions API's.
-        let state: String
-        switch permissionCenter.decision(for: .location, origin: origin, in: spaceID).verdict {
-        case .ask:
-            state = "prompt"
-        case .deny:
-            state = "denied"
-        case .grant:
-            switch service.currentAuthorization() {
-            case .authorized:
-                state = "granted"
-            case .denied:
-                state = "denied"
-            case .notDetermined:
-                state = "prompt"
-            }
-        }
+        // The states are the Permissions API's. A site's saved verdict gives
+        // them on its own, except a grant, which the system decides.
+        let state =
+            BrowserWebPermissionState.answering(
+                permissionCenter.decision(for: .location, origin: origin, in: spaceID).verdict)
+            ?? .answering(service.currentAuthorization())
         send(
-            ["type": "permission", "state": state],
+            ["type": "permission", "state": state.spelling],
             documentIdentifier: documentIdentifier,
             frame: frame,
             frameDocumentIdentifier: frameDocumentIdentifier
@@ -374,25 +348,12 @@ final class BrowserGeolocationCoordinator: BrowserSitePermissionObserver {
         }
     }
 
-    private func cancel(nativeIdentifier: String) {
+    func cancel(nativeIdentifier: String) {
         requests.removeValue(forKey: nativeIdentifier)?.task?.cancel()
         service.cancel(identifier: nativeIdentifier)
     }
 
     private func isCurrentDocument(_ identifier: String) -> Bool {
         identifier == documentIdentifier
-    }
-
-    private static func options(from value: Any?) -> BrowserGeolocationRequestOptions {
-        let options = value as? [String: Any]
-        let maximumAgeMilliseconds = options?["maximumAge"] as? Double ?? 0
-        return BrowserGeolocationRequestOptions(
-            enablesHighAccuracy: options?["enableHighAccuracy"] as? Bool ?? false,
-            maximumAge: maximumAgeMilliseconds / 1_000
-        )
-    }
-
-    private static func isValidIdentifier(_ identifier: String) -> Bool {
-        !identifier.isEmpty && identifier.utf8.count <= 128
     }
 }

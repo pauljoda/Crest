@@ -10,6 +10,20 @@
 #include <time.h>
 #include <unistd.h>
 
+/* The union tag a buffer starts with: its LEB128 varint, which takes a second
+ * byte from 128 on. `used` receives how many bytes it took. */
+static uint32_t read_tag(const uint8_t* bytes, size_t length, size_t* used) {
+    uint32_t tag = 0;
+    size_t at = 0;
+    for (unsigned shift = 0; at < length && shift < 32; shift += 7) {
+        uint8_t next = bytes[at++];
+        tag |= (uint32_t)(next & 0x7f) << shift;
+        if ((next & 0x80) == 0) break;
+    }
+    *used = at;
+    return tag;
+}
+
 static void app_boundary(void) {
     const uint8_t fingerprint[CREST_CONTRACTS_FINGERPRINT_LENGTH] = CREST_CONTRACTS_FINGERPRINT;
     uint8_t stale[CREST_CONTRACTS_FINGERPRINT_LENGTH];
@@ -51,7 +65,9 @@ static void app_boundary(void) {
     /* A comparison with another record is stale: one rejection, no fields. */
     memset(save + 19, 0x66, 16);
     assert(crest_app_query(app, save, sizeof(save), &buffer) == CREST_REJECTED);
-    assert(buffer.length == 1 && buffer.bytes[0] == CREST_REJECTION_STALE_CREDENTIAL_COMPARISON);
+    size_t used = 0;
+    assert(read_tag(buffer.bytes, buffer.length, &used) == CREST_REJECTION_STALE_CREDENTIAL_COMPARISON
+        && used == buffer.length);
     crest_buffer_free(&buffer);
     assert(crest_app_destroy(app) == CREST_OK);
     assert(crest_app_dispatch(app, acknowledge, sizeof(acknowledge), &buffer) == CREST_INVALID_HANDLE);
@@ -490,7 +506,9 @@ static void storage_boundary(void) {
     FILE* file = fopen(path, "wb");
     assert(file != NULL && fputs("not a session", file) >= 0 && fclose(file) == 0);
     assert(crest_app_create(fingerprint, sizeof(fingerprint), configuration, configured, &app, &buffer) == CREST_REJECTED
-        && app == 0 && buffer.bytes != NULL && buffer.bytes[0] == CREST_REJECTION_STORAGE_UNREADABLE);
+        && app == 0 && buffer.bytes != NULL);
+    size_t used = 0;
+    assert(read_tag(buffer.bytes, buffer.length, &used) == CREST_REJECTION_STORAGE_UNREADABLE);
     crest_buffer_free(&buffer);
     /* The second launch kept a recovery checkpoint, since the file held a
      * session and its staged journal; without one a restore is refused. */
@@ -498,7 +516,8 @@ static void storage_boundary(void) {
     snprintf(checkpoint, sizeof(checkpoint), "%s/session.recovery.sqlite", directory);
     assert(remove(checkpoint) == 0);
     assert(crest_app_restore(fingerprint, sizeof(fingerprint), configuration, configured, &buffer) == CREST_REJECTED
-        && buffer.bytes != NULL && buffer.bytes[0] == CREST_REJECTION_RECOVERY_CHECKPOINT_UNUSABLE);
+        && buffer.bytes != NULL);
+    assert(read_tag(buffer.bytes, buffer.length, &used) == CREST_REJECTION_RECOVERY_CHECKPOINT_UNUSABLE);
     crest_buffer_free(&buffer);
     char command[320];
     snprintf(command, sizeof(command), "rm -rf '%s'", directory);

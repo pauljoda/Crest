@@ -46,7 +46,7 @@ internal static class LegacySetupDraftDocument {
                     || Flag(space[IsNew]) is not { } isNew || Text(chosen[Name]) is not { } name || Text(chosen[Symbol]) is not { } symbol
                     || SpaceAccent.Named(Text(chosen[Accent])) is not { } accent) return null;
                 read.Add(new(StoredSessionCodec.Identity(space[Id]), StoredSessionCodec.Identity(profile[Id]), isNew,
-                    new(name, symbol, accent, SpaceBrandingPolicy.Normalize(chosen[Branding] is JsonObject branding
+                    new(name, symbol, accent, SpaceBranding.Normalized(chosen[Branding] is JsonObject branding
                         ? StoredSessionCodec.DecodeBranding(branding) : accent.House))));
             }
             return read.Count == 0 ? null : new(read, Flag(root[OrderWasEdited]) ?? false);

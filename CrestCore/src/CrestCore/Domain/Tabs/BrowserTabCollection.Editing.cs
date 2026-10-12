@@ -39,10 +39,14 @@ public sealed partial class BrowserTabCollection {
         return true;
     }
 
+    /// Joins the tab to the split of `targetId`, or to a new split `newGroup`
+    /// with it, at member `memberIndex`. Refused with `AlreadyInSplit` for a
+    /// tab named to join itself, `CannotPinSplit` for a target whose section
+    /// holds no splits, and `SplitLimitReached` for a full split.
     public bool JoinSplitInPlace(Guid id, Guid targetId, int? memberIndex, Guid newGroup, DateTimeOffset now) {
-        if (id == targetId) throw new BrowserRuleException(BrowserRule.InvalidSplit);
+        if (id == targetId) throw new Rejected(new AlreadyInSplit(id));
         var tab = Tab(id); var target = Tab(targetId);
-        if (!target.Placement.HoldsSplits) throw new BrowserRuleException(BrowserRule.InvalidSplit);
+        if (!target.Placement.HoldsSplits) throw new Rejected(new CannotPinSplit(targetId));
         var run = SplitMembers(targetId);
         var members = run.Where(t => t.Id != id).ToArray();
         if (members.Length >= MaximumSplitMembers) throw new Rejected(new SplitLimitReached(MaximumSplitMembers));
@@ -91,12 +95,16 @@ public sealed partial class BrowserTabCollection {
         tabs.Insert(insertion, tab);
     }
 
+    /// Archives the `requested` tabs and answers the tab the Space shows next.
+    /// Refused with `UnknownTab` for a tab the Space does not hold, and with
+    /// `CurrentTabsOnly` for a saved or pinned tab unless `deleting`.
     public Guid? DismissTabs(IReadOnlyCollection<Guid> requested, Guid? selected, Guid? fallback,
         DateTimeOffset now, bool deleting, bool ensureSelection, bool resetArchivePlacement) {
         var removing = requested.ToHashSet();
+        foreach (var id in removing) _ = Tab(id);
         var removed = tabs.Where(t => removing.Contains(t.Id)).ToArray();
-        if (removed.Length != removing.Count || !deleting && removed.Any(t => t.Placement.IsDurable))
-            throw new BrowserRuleException(BrowserRule.UnknownCurrentTab);
+        if (!deleting && removed.FirstOrDefault(t => t.Placement.IsDurable) is { } durable)
+            throw new Rejected(new CurrentTabsOnly(durable.Id));
         var orderedFolders = new FolderTree(folders).PreserveOrder(removing, tabs);
         foreach (var tab in removed.Where(t => !t.Content.IsStartPage)) {
             var value = tab.State with { SplitGroupId = null };

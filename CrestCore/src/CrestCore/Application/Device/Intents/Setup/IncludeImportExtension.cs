@@ -9,7 +9,7 @@ public sealed record IncludeImportExtension(Guid SourceSpaceId, string Extension
     #region Actions - Device
 
     internal override void Apply(Device device, DeviceTurn turn) => device.ReviseFlow(turn.Changes, (flow, session) =>
-        Device.Editing(flow, review => ImportReviewPolicy.IncludingExtension(review, SourceSpaceId, ExtensionId, Included, session)));
+        Device.Editing(flow, review => review.IncludingExtension(SourceSpaceId, ExtensionId, Included, session)));
 
     #endregion
 }

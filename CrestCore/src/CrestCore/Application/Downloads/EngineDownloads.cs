@@ -51,12 +51,7 @@ internal sealed class EngineDownloads(Downloads downloads, Device device, Pages 
         public string? SourceHost { get; set; }
     }
 
-    /// What a download's prompt asks: where its file goes, whether to keep a
-    /// file its engine warned about, or whether to go on with one the core
-    /// judged dangerous, which holds back the engine's destination request.
-    internal enum Question { Destination, Approval, Risk }
-
-    internal sealed record Waiting(Tracked Download, Question Question, EngineDownloadDestinationRequested? Held = null);
+    internal sealed record Waiting(Tracked Download, EngineDownloadQuestion Question, EngineDownloadDestinationRequested? Held = null);
 
     #endregion
 
@@ -88,7 +83,7 @@ internal sealed class EngineDownloads(Downloads downloads, Device device, Pages 
     public void Report(EngineDownloadEvent report, Engine engine, EngineDownloadTurn turn) => report.Apply(this, engine, turn);
 
     internal void AskDestination(Tracked download, EngineDownloadDestinationRequested requested, Guid space, ChangeFeed changes) {
-        waiting[requested.PromptId] = new(download, Question.Destination);
+        waiting[requested.PromptId] = new(download, EngineDownloadQuestion.Destination);
         changes.Publish(new DownloadDestinationAsked(requested.PromptId, download.DownloadId, space,
             DownloadFilename.Safe(requested.SuggestedFilename), requested.ForcesPrompt));
     }
@@ -158,7 +153,7 @@ internal sealed class EngineDownloads(Downloads downloads, Device device, Pages 
 
     internal void SettleApproval(Tracked download, ChangeFeed changes) {
         download.ApprovalToken = null;
-        foreach (var (id, _) in waiting.Where(entry => entry.Value.Download == download && entry.Value.Question == Question.Approval)
+        foreach (var (id, _) in waiting.Where(entry => entry.Value.Download == download && entry.Value.Question.AsksAboutEngineWarning)
                      .ToArray())
             Settle(id, changes);
     }

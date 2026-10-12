@@ -151,23 +151,14 @@
         @ViewBuilder private var lessonActions: some View {
             switch lesson.kind {
             case .pin:
-                Button("Pin Gmail", systemImage: "pin.fill") {
-                    if let mail = practice.tabID(.mail) { practice.browser.pinTab(mail) }
-                }
-                .buttonStyle(.crestPrimary(tint: CrestBrandPalette.butter))
+                BrowserGettingStartedPinAction(practice: practice)
             case .save:
-                Button("Save this tab", systemImage: "bookmark.fill") {
-                    if let trail = practice.tabID(.trail) { practice.browser.saveTab(trail) }
-                }
-                .buttonStyle(.crestPrimary(tint: CrestBrandPalette.butter))
+                BrowserGettingStartedSaveAction(
+                    practice: practice, title: "Save this tab", systemImage: "bookmark.fill")
             case .folders:
-                HStack {
-                    Button("Add folder", systemImage: "folder.badge.plus") { practice.addFolder(nested: false) }
-                    Button("Nest a folder", systemImage: "folder") { practice.addFolder(nested: true) }
-                }.buttonStyle(.crestSecondary)
+                HStack { BrowserGettingStartedFolderActions(practice: practice) }
             case .clear:
-                Text("Use Clear on the line in the practice sidebar.")
-                    .font(CrestTypography.sans(12)).foregroundStyle(.secondary)
+                BrowserGettingStartedClearHint()
             }
         }
 

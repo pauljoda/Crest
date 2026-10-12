@@ -5,8 +5,8 @@
         @MainActor func present(on engine: ChromiumEngine) {
             guard let page = engine.presentedPage(pageID), let address = URL(string: url) else { return }
             page.observer(
-                .peekRequested(
-                    address, decision: decision,
+                BrowserPagePeekRequested(
+                    destination: address, decision: decision,
                     stagedLink: stagedLinkID.map {
                         BrowserEngineNavigation(
                             implementation: page.registration.implementationId, token: $0.uuidString,

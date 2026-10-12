@@ -132,4 +132,16 @@ public sealed class TabPlacement {
     }
 
     #endregion
+
+    #region Actions - Sync
+
+    /// Whether an open tab in this section, shown at `activated` and edited at
+    /// `tabVersion`, wins over its archived copy, archived for
+    /// `archiveReason` at `archived` and edited at `archiveVersion`.
+    internal bool KeepsTabOverArchive(double activated, SyncVersion tabVersion, ArchiveReason archiveReason, double archived,
+        SyncVersion archiveVersion)
+        => IsDurable || archiveReason.IsExplicitDeletion
+            || (archiveReason.IsCleanup ? activated > archived : tabVersion.CompareTo(archiveVersion) > 0);
+
+    #endregion
 }

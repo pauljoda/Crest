@@ -27,8 +27,8 @@ struct BrowserPlatformSettingsPaneContainer<Content: View>: View {
             .scrollContentBackground(.hidden)
             .contentMargins(
                 .horizontal,
-                BrowserSettingsVisualPolicy.formInset(
-                    for: geometry.size.width, columnWidth: columnWidth ?? BrowserSettingsVisualPolicy.formColumnWidth),
+                BrowserSettingsLayout.formInset(
+                    for: geometry.size.width, columnWidth: columnWidth ?? BrowserSettingsLayout.formColumnWidth),
                 for: .scrollContent
             )
             .browserNativeScrollState(tabState?.scroll(forKey: scrollKey ?? destination.name) ?? standaloneScroll)

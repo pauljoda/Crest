@@ -147,18 +147,14 @@ struct BrowserCommandPaletteCard: View {
     /// The contents appear once the frame has nearly settled, and clear
     /// before it starts to shrink.
     private var contentsAnimation: Animation? {
-        BrowserVisualAccessibilityPolicy.animation(
-            isSettled ? BrowserCommandSurfaceMorph.trailingFade : BrowserCommandSurfaceMorph.leadingFade,
-            reduceMotion: reduceMotion
-        )
+        let fade = isSettled ? BrowserCommandSurfaceMorph.trailingFade : BrowserCommandSurfaceMorph.leadingFade
+        return fade.unlessReducingMotion(reduceMotion)
     }
 
     /// The glass takes over from the field as the frame leaves it, and hands
     /// back to the field as the frame lands on it.
     private var glassAnimation: Animation? {
-        BrowserVisualAccessibilityPolicy.animation(
-            isSettled ? BrowserCommandSurfaceMorph.leadingFade : BrowserCommandSurfaceMorph.trailingFade,
-            reduceMotion: reduceMotion
-        )
+        let fade = isSettled ? BrowserCommandSurfaceMorph.leadingFade : BrowserCommandSurfaceMorph.trailingFade
+        return fade.unlessReducingMotion(reduceMotion)
     }
 }

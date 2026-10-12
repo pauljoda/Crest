@@ -1,5 +1,4 @@
 using CrestCore.Application;
-using CrestCore.Domain;
 
 namespace CrestCore.Contracts;
 
@@ -13,7 +12,7 @@ public sealed record LaunchIsolation(DevicePlatform Platform, LaunchEnvironment 
     #region Actions - Answering
 
     internal override LaunchDecision Answer(StandaloneContext context) =>
-        LaunchPolicy.Plan(Environment, Platform, storedStartup: null, hasActiveLaunchGate: false);
+        Environment.Plan(Platform, storedStartup: null, hasActiveLaunchGate: false);
 
     #endregion
 }

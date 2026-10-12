@@ -58,7 +58,7 @@ final class EnginePageAvailabilityTests: XCTestCase {
         pages.commit(page)
         XCTAssertEqual(pages.renderedZoom, 1.5, "The first document must render at the configured default.")
 
-        page.zoom(to: BrowserPageZoomPolicy.increased(from: 1.5))
+        page.zoom(to: CGFloat(1.5).pageZoomIncreased)
         XCTAssertEqual(pages.renderedZoom, 1.75)
         pages.commit(page)
         XCTAssertEqual(pages.renderedZoom, 1.75, "Navigation must retain a manual page override.")

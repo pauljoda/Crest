@@ -11,18 +11,6 @@ actor BrowserCloudUploadSource {
     /// How many records one question to the core names.
     static let chunkSize = 200
 
-    // MARK: - Types
-
-    /// What a batch uploads for one pending save.
-    enum Upload: Sendable {
-        /// The record as the core's journal holds it.
-        case record(SyncRecord)
-        /// The journal no longer holds the record, so its pending save goes.
-        case gone
-        /// The core would not answer for the record. Its save stays pending.
-        case skipped
-    }
-
     // MARK: - Variables
 
     private let core: CrestCore
@@ -56,14 +44,14 @@ actor BrowserCloudUploadSource {
 
     /// What the batch uploads for `recordID`. A save whose name no record of
     /// Crest's has is gone.
-    func upload(for recordID: CKRecord.ID) -> Upload {
-        guard codec.reference(for: recordID) != nil else { return .gone }
+    func upload(for recordID: CKRecord.ID) -> any BrowserCloudUpload {
+        guard codec.reference(for: recordID) != nil else { return BrowserCloudUploadGone() }
         let name = recordID.recordName
         if answered[name] == nil, !gone.contains(name), let position = positions[name], position >= asked {
-            do { try ask(from: position) } catch { return .skipped }
+            do { try ask(from: position) } catch { return BrowserCloudUploadSkipped() }
         }
-        if gone.contains(name) { return .gone }
-        return answered[name].map(Upload.record) ?? .skipped
+        if gone.contains(name) { return BrowserCloudUploadGone() }
+        return answered[name].map { BrowserCloudUploadRecord(syncRecord: $0) } ?? BrowserCloudUploadSkipped()
     }
 
     /// Asks the core for the chunk of saves that starts at `position`.

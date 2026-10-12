@@ -69,8 +69,8 @@ public sealed class DownloadPolicyTests {
     [Fact]
     public void UserInitiatedDownloadsAndApprovedRetriesBypassSavedDenials() {
         Assert.Equal(AutomaticDownloadAction.Allow,
-            AutomaticDownloadPolicy.Decide(true, false, SitePermissionDecision.DenyPersistently, true).Action);
-        var retry = AutomaticDownloadPolicy.Decide(false, true, SitePermissionDecision.DenyPersistently, true);
+            new AutomaticDownloadCheck(true, false, SitePermissionDecision.DenyPersistently, true).Verdict.Action);
+        var retry = new AutomaticDownloadCheck(false, true, SitePermissionDecision.DenyPersistently, true).Verdict;
         Assert.Equal(new AutomaticDownloadVerdict(AutomaticDownloadAction.Allow, true), retry);
     }
 
@@ -81,22 +81,22 @@ public sealed class DownloadPolicyTests {
     [InlineData("denyPersistently", "deny")]
     public void SavedDecisionsAnswerAutomaticDownloadsWithoutThrottling(string name, string expected) {
         var decision = SitePermissionDecision.Named(name)!;
-        var verdict = AutomaticDownloadPolicy.Decide(false, false, decision, true);
+        var verdict = new AutomaticDownloadCheck(false, false, decision, true).Verdict;
         Assert.Equal(expected, verdict.Action.Name);
         Assert.Equal(new AutomaticDownloadVerdict(AutomaticDownloadAction.Named(expected)!, false),
-            AutomaticDownloadPolicy.Decide(false, false, decision, false));
+            new AutomaticDownloadCheck(false, false, decision, false).Verdict);
     }
 
     [Fact]
     public void TheFirstAutomaticDownloadIsAllowedAndAUserActionResetsTheAllowance() {
-        var first = AutomaticDownloadPolicy.Decide(false, false, SitePermissionDecision.Ask, false);
+        var first = new AutomaticDownloadCheck(false, false, SitePermissionDecision.Ask, false).Verdict;
         Assert.Equal(new AutomaticDownloadVerdict(AutomaticDownloadAction.Allow, true), first);
-        var second = AutomaticDownloadPolicy.Decide(false, false, SitePermissionDecision.Ask, first.HasAllowedAutomaticDownload);
+        var second = new AutomaticDownloadCheck(false, false, SitePermissionDecision.Ask, first.HasAllowedAutomaticDownload).Verdict;
         Assert.Equal(new AutomaticDownloadVerdict(AutomaticDownloadAction.RequestPermission, true), second);
-        var gesture = AutomaticDownloadPolicy.Decide(true, false, SitePermissionDecision.Ask, second.HasAllowedAutomaticDownload);
+        var gesture = new AutomaticDownloadCheck(true, false, SitePermissionDecision.Ask, second.HasAllowedAutomaticDownload).Verdict;
         Assert.Equal(new AutomaticDownloadVerdict(AutomaticDownloadAction.Allow, false), gesture);
         Assert.Equal(AutomaticDownloadAction.Allow,
-            AutomaticDownloadPolicy.Decide(false, false, SitePermissionDecision.Ask, gesture.HasAllowedAutomaticDownload).Action);
+            new AutomaticDownloadCheck(false, false, SitePermissionDecision.Ask, gesture.HasAllowedAutomaticDownload).Verdict.Action);
     }
 
     [Fact]

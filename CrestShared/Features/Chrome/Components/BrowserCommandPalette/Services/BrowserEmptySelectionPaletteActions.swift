@@ -11,11 +11,7 @@ struct BrowserEmptySelectionPaletteActions {
 
     var isAvailable: Bool {
         guard
-            let space = BrowserSidebarAccessPolicy.selectedUnlockedSpace(
-                matching: source,
-                in: browser,
-                accessController: accessController
-            )
+            let space = browser.selectedUnlockedSpace(matching: source, accessController: accessController)
         else { return false }
         return browser.selectedTabID(in: space.id) == nil
     }

@@ -6,7 +6,7 @@
             guard let page = engine.presentedPage(pageID), let event = BrowserMediaSessionPageEvent(self) else {
                 return
             }
-            page.observer(.mediaSession(event))
+            page.observer(BrowserPageMediaSessionChanged(event: event))
         }
     }
 #endif

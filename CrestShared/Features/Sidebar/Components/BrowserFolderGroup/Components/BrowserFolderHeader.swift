@@ -30,8 +30,9 @@ struct BrowserFolderHeader: View {
                 : "Expands this folder"
         )
         .modifier(BrowserFolderSelectionAccessibility(folderID: folder.id, browser: configuration.browser))
-        .padding(.horizontal, CrestSpacing.small)
-        .padding(.vertical, BrowserSidebarDensityPolicy.rowSeparation(scale: tabScale) / 2)
+        // Inside the folder's padding, as a Split View's header is inside its own.
+        .padding(.horizontal, BrowserSidebarMetrics.layerInset + BrowserSidebarMetrics.containerPadding)
+        .padding(.vertical, BrowserSidebarDensity(tabScale).rowSeparation() / 2)
         .modifier(
             BrowserTabSelectionTarget(
                 tabID: nil, browser: configuration.browser,
@@ -60,7 +61,8 @@ struct BrowserFolderHeader: View {
         // above the header is already drawn by the row's own reorder indicator,
         // on every shell, so the header carries only the nesting answer.
         .overlay {
-            BrowserFolderNestDropHighlight(state: sidebarInteraction.sidebarReorderState, target: .folder(folder.id))
+            BrowserFolderNestDropHighlight(
+                state: sidebarInteraction.sidebarReorderState, target: .folder(folder.id), depth: configuration.depth)
         }
     }
 }

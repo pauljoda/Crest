@@ -39,10 +39,10 @@ struct SpaceSidebarBrowsingContent: View {
         let hasPinnedTabs = !listContext.space.sidebar.section(.pinned).isEmpty
         BrowserPinnedTabsDropSection(context: listContext)
             .equatable()
-            .padding(.horizontal, CrestSpacing.small)
-            // The native Space host clips at this section's top edge. Keep the
-            // glow's drawing margin inside it, including below extension toolbars.
-            .padding(.top, hasPinnedTabs ? BrowserTabSelectionGlow.outset : 0)
+            .padding(.horizontal, BrowserSidebarMetrics.layerInset)
+            // The selected pin's glow slides under the address field or the
+            // extension strip above rather than holding space of its own.
+            .padding(.top, hasPinnedTabs ? BrowserSidebarMetrics.topSectionSpacing : 0)
             .padding(.bottom, hasPinnedTabs ? BrowserSidebarMetrics.pinnedTabsBottomInset : 0)
 
         BrowserSpaceHeader(
@@ -128,11 +128,9 @@ struct SpaceSidebarBrowsingContent: View {
         browser.tabMultiSelection.click(
             tabID,
             units: BrowserSidebarSelection.itemUnits(in: browser))
-        BrowserTabActivationPolicy.activate(
-            tabID,
-            selectTab: browser.selectTab,
-            presentPage: { pages.select() }
-        )
+        // Select the tab before presenting its page.
+        browser.selectTab(tabID)
+        pages.select()
     }
 
     private func restoreSavedLocation(_ tabID: UUID) {

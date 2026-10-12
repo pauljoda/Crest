@@ -12,4 +12,12 @@ public sealed record SetupDraftSpace(Guid SpaceId, Guid ProfileId, bool IsNew, S
     public string ShownName => SpaceCustomization.Resolved(Customization.Name);
 
     #endregion
+
+    #region Actions - Setup
+
+    /// The existing Space `space` as a setup starts from it, with its name and
+    /// look.
+    internal static SetupDraftSpace Existing(SpaceState space) => new(space.Id, space.ProfileId, IsNew: false, space.Customization);
+
+    #endregion
 }

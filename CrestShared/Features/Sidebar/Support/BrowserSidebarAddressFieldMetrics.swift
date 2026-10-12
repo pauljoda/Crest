@@ -29,8 +29,6 @@ struct BrowserSidebarAddressFieldMetrics: Equatable, Sendable {
     /// be allowed to push the band taller rather than clip.
     let growsWithContent: Bool
 
-    let cornerRadius: CGFloat
-
     /// The ring drawn around the field while it is being edited, at full
     /// strength. The field fades the whole color to nothing when editing ends,
     /// so a shell that wants a softer ring bakes that into the color here.
@@ -57,17 +55,20 @@ struct BrowserSidebarAddressFieldMetrics: Equatable, Sendable {
     /// has to enlarge it, because only there is it aimed at with a finger.
     let clearControlFont: Font?
 
+    /// The square a pointer shell's site security control claims: the same
+    /// hit target as a row's trailing control.
+    static let securityControlSize = BrowserTabTrailingControlMetrics.pointer.controlSize.height
+
     /// A pointer shell: one exact 36pt band with the glyph column reserved.
     static let pointer = BrowserSidebarAddressFieldMetrics(
         contentSpacing: 7,
         horizontalPadding: 9,
         height: BrowserChromeLayout.addressHeight,
         growsWithContent: false,
-        cornerRadius: BrowserChromeLayout.addressCornerRadius,
         editingRingColor: CrestColor.selectedBorder,
         editingRingWidth: BrowserChromeLayout.addressEditingRingWidth,
         leadingGlyphFont: .caption.weight(.medium),
-        leadingGlyphSlot: BrowserAddressSecurityControlPolicy.controlSize,
+        leadingGlyphSlot: securityControlSize,
         clearControlFont: nil
     )
 
@@ -83,7 +84,6 @@ struct BrowserSidebarAddressFieldMetrics: Equatable, Sendable {
         horizontalPadding: 12,
         height: 44,
         growsWithContent: true,
-        cornerRadius: CrestLayout.sidebarControlCornerRadius,
         editingRingColor: Color.accentColor.opacity(0.7),
         editingRingWidth: 1,
         leadingGlyphFont: .system(size: 13, weight: .medium),

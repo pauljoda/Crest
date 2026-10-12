@@ -22,9 +22,9 @@ struct MobileBrowserRootSurface<Compact: View, Regular: View, Palette: View>:
 
     var body: some View {
         ZStack {
-            if presentation == .regular {
+            if !presentation.presentsPageOverTabViewer {
                 SpaceBackdropBlend(
-                    spaces: BrowserSidebarAccessPolicy.availableSpaces(in: browser),
+                    spaces: browser.availableSpaces,
                     selectedSpace: browser.shownSpace
                 ) {
                     BrowserWindowAtmosphere(space: $0)
@@ -32,11 +32,11 @@ struct MobileBrowserRootSurface<Compact: View, Regular: View, Palette: View>:
                 .ignoresSafeArea()
             }
 
-            if presentation == .compact {
+            if presentation.presentsPageOverTabViewer {
                 compact
             } else {
                 GeometryReader { proxy in
-                    let layout = MobileRegularWindowLayoutPolicy.resolve(
+                    let layout = MobileRegularWindowLayout(
                         availableWidth: proxy.size.width,
                         preferredSidebarWidth: preferredSidebarWidth
                     )
@@ -55,7 +55,7 @@ struct MobileBrowserRootSurface<Compact: View, Regular: View, Palette: View>:
             }
         }
         .overlay {
-            if presentation == .compact && !navigation.compactShowsPage {
+            if presentation.presentsPageOverTabViewer && !navigation.compactShowsPage {
                 MobileTransientBrowsingOverlay(
                     browser: browser,
                     pages: pages,
@@ -67,19 +67,15 @@ struct MobileBrowserRootSurface<Compact: View, Regular: View, Palette: View>:
             }
         }
         .overlay(alignment: .top) {
-            if presentation == .regular || !navigation.compactShowsPage {
+            if !presentation.presentsPageOverTabViewer || !navigation.compactShowsPage {
                 MobileURLCopyFeedback(
                     isVisible: isURLCopiedFeedbackVisible,
-                    topPadding: presentation == .compact
-                        ? MobileBrowserRootLayout.compactOverlayTopPadding
-                        : MobileBrowserRootLayout.regularOverlayTopPadding
+                    topPadding: presentation.overlayTopPadding
                 )
                 if let pageZoomFeedbackLabel {
                     MobilePageZoomFeedback(
                         label: pageZoomFeedbackLabel,
-                        topPadding: presentation == .compact
-                            ? MobileBrowserRootLayout.compactOverlayTopPadding
-                            : MobileBrowserRootLayout.regularOverlayTopPadding
+                        topPadding: presentation.overlayTopPadding
                     )
                 }
             }

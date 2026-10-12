@@ -16,7 +16,7 @@ public sealed record ImportExtensionInstall(string ExtensionId, string Name, str
 /// read left out, and `SpaceRoom`, how many new Spaces the workspace has room
 /// for before the review brings any. `BrowserTitle` names a browser setup
 /// found by looking, which `Source` only stands for.
-public sealed record SetupImportReview(ImportSource Source, IReadOnlyList<SetupReviewSpace> Spaces, IReadOnlyList<Guid> OverflowTabIds,
+public sealed partial record SetupImportReview(ImportSource Source, IReadOnlyList<SetupReviewSpace> Spaces, IReadOnlyList<Guid> OverflowTabIds,
     Guid? ShownSpaceId, IReadOnlyList<ImportLeftOut> LeftOut, int SpaceRoom, string? BrowserTitle = null) {
     #region Variables
 

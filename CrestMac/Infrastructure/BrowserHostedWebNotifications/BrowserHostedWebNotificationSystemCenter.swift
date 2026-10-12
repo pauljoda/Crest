@@ -32,7 +32,7 @@ final class BrowserHostedWebNotificationSystemCenter:
         }
     }
 
-    func currentAuthorization() async -> BrowserHostedWebNotificationAuthorization {
+    func currentAuthorization() async -> BrowserSystemAuthorization {
         await withCheckedContinuation { continuation in
             center.getNotificationSettings { settings in
                 continuation.resume(
@@ -42,7 +42,7 @@ final class BrowserHostedWebNotificationSystemCenter:
         }
     }
 
-    func requestAuthorization() async -> BrowserHostedWebNotificationAuthorization {
+    func requestAuthorization() async -> BrowserSystemAuthorization {
         do {
             let granted = try await center.requestAuthorization(options: [.alert, .sound])
             return granted ? .authorized : .denied
@@ -126,7 +126,7 @@ final class BrowserHostedWebNotificationSystemCenter:
 
     nonisolated private static func authorization(
         from settings: UNNotificationSettings
-    ) -> BrowserHostedWebNotificationAuthorization {
+    ) -> BrowserSystemAuthorization {
         switch settings.authorizationStatus {
         case .notDetermined:
             .notDetermined

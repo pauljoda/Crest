@@ -46,12 +46,31 @@ struct BrowserBlockedPopupPageState: Equatable, Sendable {
         _ event: BlockedPopupEvent, documentIdentifier: String? = nil,
         origin: SiteOrigin? = nil
     ) -> Bool {
-        guard
-            let next = BrowserCorePolicy.blockedPopupState(
-                after: event, from: self,
-                documentIdentifier: documentIdentifier, origin: origin)
-        else { return false }
+        guard let next = state(after: event, documentIdentifier: documentIdentifier, origin: origin) else {
+            return false
+        }
         self = next
         return true
+    }
+
+    /// The page's popup state after one event, as the core's notice rules
+    /// answer it, or nil when nothing changes or the core cannot answer; the
+    /// caller then keeps its state and shows no new indication.
+    private func state(
+        after event: BlockedPopupEvent, documentIdentifier: String?, origin: SiteOrigin?
+    ) -> BrowserBlockedPopupPageState? {
+        let current = BlockedPopupPageState(
+            status: notice?.status, origin: notice?.origin,
+            documentIdentifier: self.documentIdentifier.nonEmpty, indicationRevision: indicationRevision)
+        let question = BlockedPopupTransition(
+            state: current, event: event, documentIdentifier: documentIdentifier.nonEmpty, origin: origin)
+        guard let next = (try? CrestCore.answer(question))?.state else { return nil }
+        var notice: BrowserBlockedPopupNotice?
+        if let status = next.status, let origin = next.origin {
+            notice = BrowserBlockedPopupNotice(origin: origin, status: status)
+        }
+        return BrowserBlockedPopupPageState(
+            notice: notice, documentIdentifier: next.documentIdentifier,
+            indicationRevision: next.indicationRevision)
     }
 }

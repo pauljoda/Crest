@@ -13,11 +13,10 @@ struct BrowserLookAndFeelSettingsPane: View {
                 if usesLiveSidebar {
                     form(showsInlinePreviews: false)
                         .frame(maxWidth: .infinity)
-                } else if BrowserLookAndFeelLayoutPolicy.mode(forWidth: width) == .pinnedPreview {
-                    let columns = BrowserLookAndFeelLayoutPolicy.columns(forWidth: width)
+                } else if let columns = BrowserLookAndFeelColumns(width: width) {
                     BrowserLookAndFeelPreview(space: space, focus: .window, fillsHeight: true)
                         .frame(width: columns.preview)
-                        .padding(.leading, BrowserLookAndFeelLayoutPolicy.previewLeadingPadding)
+                        .padding(.leading, BrowserLookAndFeelColumns.previewLeadingPadding)
                         .padding(.vertical, CrestSpacing.extraLarge)
                     form(showsInlinePreviews: false)
                         .frame(width: columns.form)

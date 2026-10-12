@@ -6,12 +6,7 @@ private struct BrowserReadableForegroundModifier: ViewModifier {
     @Environment(\.self) private var environment
 
     func body(content: Content) -> some View {
-        content.foregroundStyle(
-            BrowserVisualAccessibilityPolicy.readableForeground(
-                over: background,
-                environment: environment
-            )
-        )
+        content.foregroundStyle(background.readableForeground(environment: environment))
     }
 }
 
@@ -19,18 +14,10 @@ private struct BrowserTabResidencyModifier: ViewModifier {
     let isLoaded: Bool
 
     func body(content: Content) -> some View {
-        let dimsUnloadedTabs = BrowserDeviceAppearanceStore.shared.tabs.dimsUnloadedTabs
+        let isDimmed = !isLoaded && BrowserDeviceAppearanceStore.shared.tabs.dimsUnloadedTabs
         content
-            .saturation(
-                BrowserVisualAccessibilityPolicy.tabResidencySaturation(
-                    isLoaded: isLoaded, dimsUnloadedTabs: dimsUnloadedTabs
-                )
-            )
-            .opacity(
-                BrowserVisualAccessibilityPolicy.tabResidencyOpacity(
-                    isLoaded: isLoaded, dimsUnloadedTabs: dimsUnloadedTabs
-                )
-            )
+            .saturation(isDimmed ? 0.3 : 1)
+            .opacity(isDimmed ? 0.5 : 1)
     }
 }
 

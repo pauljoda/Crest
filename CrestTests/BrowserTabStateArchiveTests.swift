@@ -127,32 +127,32 @@ final class BrowserTabStateArchiveTests: XCTestCase {
         let otherHost = try XCTUnwrap(URL(string: "https://elsewhere.example/doc"))
 
         XCTAssertTrue(
-            BrowserTabStateRestorePolicy.restoresArchivedState(
+            SamePage.restoresArchivedState(
                 archivedURL: archived,
                 tabURL: sameDocument
             )
         )
         XCTAssertTrue(
-            BrowserTabStateRestorePolicy.restoresArchivedState(
+            SamePage.restoresArchivedState(
                 archivedURL: archived,
                 tabURL: archived
             )
         )
         XCTAssertFalse(
-            BrowserTabStateRestorePolicy.restoresArchivedState(
+            SamePage.restoresArchivedState(
                 archivedURL: archived,
                 tabURL: otherQuery
             ),
             "A tab pointed somewhere else while unloaded must win over its old state."
         )
         XCTAssertFalse(
-            BrowserTabStateRestorePolicy.restoresArchivedState(
+            SamePage.restoresArchivedState(
                 archivedURL: archived,
                 tabURL: otherHost
             )
         )
         XCTAssertFalse(
-            BrowserTabStateRestorePolicy.restoresArchivedState(
+            SamePage.restoresArchivedState(
                 archivedURL: nil,
                 tabURL: sameDocument
             )

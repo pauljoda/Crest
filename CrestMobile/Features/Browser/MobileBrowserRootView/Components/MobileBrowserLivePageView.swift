@@ -35,7 +35,7 @@ struct MobileBrowserLivePageView: View {
         // background independently of the page's theme.
         .background(
             Color(
-                uiColor: BrowserPageSurfacePolicy.revealsWebContent(
+                uiColor: BrowserPageSurfacePresentation.revealsWebContent(
                     committedNavigationCount: page.committedNavigationCount
                 )
                     ? page.themeColor
@@ -62,7 +62,7 @@ struct MobileBrowserLivePageView: View {
         )
         .id(page.tabID)
         .opacity(
-            BrowserPageSurfacePolicy.revealsWebContent(
+            BrowserPageSurfacePresentation.revealsWebContent(
                 committedNavigationCount: page.committedNavigationCount
             ) ? 1 : 0
         )

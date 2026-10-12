@@ -68,7 +68,7 @@ extension BrowserDialogPresenter {
             return ProductIdentity.name
         }
         guard let port = url.port else { return host }
-        return BrowserCorePolicy.authenticationSourceLabel(
+        return AuthenticationSource.label(
             host: host, port: port, scheme: url.scheme, emptyHostLabel: ProductIdentity.name)
     }
 

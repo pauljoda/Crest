@@ -1,5 +1,4 @@
 using CrestCore.Application;
-using CrestCore.Domain;
 
 namespace CrestCore.Contracts;
 
@@ -10,7 +9,7 @@ public sealed record CredentialFill(CredentialFillSource Source, CredentialPassw
     #region Actions - Answering
 
     internal override CredentialFillDecision Answer(CrestApp app) {
-        return new(CredentialCapturePolicy.Offers(Source, PasswordKind));
+        return new(Source.Offers(PasswordKind));
     }
 
     #endregion

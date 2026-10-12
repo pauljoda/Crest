@@ -3,7 +3,7 @@
 
     extension InfoBarRemoved {
         @MainActor func present(on engine: ChromiumEngine) {
-            engine.presentedPage(pageID)?.observer(.infoBarRemoved(id: Int(infoBarID)))
+            engine.presentedPage(pageID)?.observer(BrowserPageInfoBarRemoved(id: Int(infoBarID)))
         }
     }
 #endif

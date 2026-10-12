@@ -7,7 +7,9 @@ import SwiftUI
 /// surface's edges, how much room the favicon column claims, and whether the
 /// activation area stretches to the row's full height. The trailing control's
 /// own geometry stays in `BrowserTabTrailingControlMetrics`, which the same
-/// policy resolves from the same capabilities.
+/// policy resolves from the same capabilities. Where the surface itself sits,
+/// and how round it is, is the sidebar's to say for every layer alike: see
+/// `BrowserSidebarMetrics`.
 struct BrowserSidebarTabRowMetrics: Equatable, Sendable {
     /// The gap between the activation area and the trailing control.
     let contentSpacing: CGFloat
@@ -21,13 +23,6 @@ struct BrowserSidebarTabRowMetrics: Equatable, Sendable {
 
     /// The inset between the trailing control and the surface's trailing edge.
     let contentTrailingInset: CGFloat
-
-    /// The inset between a free-standing row's bounds and its interactive
-    /// surface, which is what holds the surface off the sidebar's edge. A row
-    /// nested in a split group drops it: the group's container padding has
-    /// already placed the row, and applying both would leave the member
-    /// noticeably narrower than the tabs above and below the group.
-    let surfaceHorizontalInset: CGFloat
 
     /// The fixed column the favicon is drawn into, where the shell reserves
     /// one. A touch row sizes its glyph for the distance it is read from and
@@ -49,7 +44,6 @@ struct BrowserSidebarTabRowMetrics: Equatable, Sendable {
         contentLeadingInset: 9,
         contentTrailingInset: (CrestLayout.sidebarRowHeight
             - BrowserTabTrailingControlMetrics.pointer.controlSize.height) / 2,
-        surfaceHorizontalInset: 8,
         faviconSlot: nil,
         fillsRowHeight: true
     )
@@ -60,7 +54,6 @@ struct BrowserSidebarTabRowMetrics: Equatable, Sendable {
         contentSpacing: 4,
         contentLeadingInset: 12,
         contentTrailingInset: 4,
-        surfaceHorizontalInset: 8,
         faviconSlot: BrowserSidebarTabFaviconSlot(
             width: 20,
             glyphSize: 17,

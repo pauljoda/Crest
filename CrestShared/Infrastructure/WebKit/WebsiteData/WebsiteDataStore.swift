@@ -43,7 +43,7 @@ enum BrowserWebsiteDataStore {
         let cookieStore = dataStore.httpCookieStore
         let cookies = await allCookies(in: cookieStore)
         for cookie in cookies
-        where BrowserSiteDataPolicy.includesCookieDomainForRemoval(
+        where includesCookieDomainForRemoval(
             cookie.domain,
             host: host
         ) {
@@ -53,7 +53,7 @@ enum BrowserWebsiteDataStore {
         let dataTypes = WKWebsiteDataStore.allWebsiteDataTypes()
         let records = await dataRecords(ofTypes: dataTypes, in: dataStore)
         let matchingRecords = records.filter {
-            BrowserSiteDataPolicy.matchesDataRecord(
+            matchesDataRecord(
                 displayName: $0.displayName,
                 host: host
             )
@@ -63,6 +63,32 @@ enum BrowserWebsiteDataStore {
             ofTypes: dataTypes,
             for: matchingRecords,
             in: dataStore
+        )
+    }
+
+    /// Whether a website data record named `displayName` belongs to `host`:
+    /// the host itself, a parent of it, or a subdomain of it.
+    nonisolated static func matchesDataRecord(displayName: String, host: String) -> Bool {
+        let record = normalizedHost(displayName)
+        let host = normalizedHost(host)
+        guard !record.isEmpty, !host.isEmpty else { return false }
+        return record == host
+            || host.hasSuffix(".\(record)")
+            || record.hasSuffix(".\(host)")
+    }
+
+    /// Site-data deletion intentionally includes parent domains. This is not
+    /// request eligibility: it does not model host-only, Secure, path or SameSite.
+    nonisolated static func includesCookieDomainForRemoval(_ domain: String, host: String) -> Bool {
+        let domain = normalizedHost(domain)
+        let host = normalizedHost(host)
+        guard !domain.isEmpty, !host.isEmpty else { return false }
+        return domain == host || host.hasSuffix(".\(domain)")
+    }
+
+    private nonisolated static func normalizedHost(_ value: String) -> String {
+        value.lowercased().trimmingCharacters(
+            in: CharacterSet(charactersIn: ".")
         )
     }
 

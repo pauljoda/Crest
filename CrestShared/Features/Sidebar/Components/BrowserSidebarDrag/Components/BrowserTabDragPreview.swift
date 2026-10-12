@@ -24,7 +24,9 @@ struct BrowserTabDragPreview: View {
             pinnedSize: pinnedSize
         )
         let shape = RoundedRectangle(
-            cornerRadius: metrics.cornerRadius,
+            cornerRadius: BrowserTabDragPreviewLayout.cornerRadius(
+                from: .row, to: targetShape, progress: progress,
+                layerCornerRadius: BrowserSidebarMetrics.layerCornerRadius()),
             style: .continuous
         )
         // The row layout and the card's own centred layout cross-fade rather
@@ -33,8 +35,7 @@ struct BrowserTabDragPreview: View {
         let rowOpacity = 1 - Double(metrics.cardContentWeight)
 
         ZStack(alignment: .leading) {
-            shape
-                .fill(CrestColor.selectedSurface)
+            CrestSurfaceLayer(shape: shape)
                 .overlay {
                     shape.strokeBorder(CrestColor.subtleBorder, lineWidth: 0.5)
                 }
@@ -44,7 +45,7 @@ struct BrowserTabDragPreview: View {
                 BrowserSidebarTabLabel(
                     tab: tab, favicons: favicons, profileID: profileID, isSelected: isSelected,
                     isLoaded: isLoaded, metrics: rowMetrics,
-                    leadingInset: rowMetrics.surfaceHorizontalInset + rowMetrics.contentLeadingInset,
+                    leadingInset: BrowserSidebarMetrics.layerInset + rowMetrics.contentLeadingInset,
                     titleOpacity: metrics.titleOpacity,
                     iconOffset: ((metrics.width / 2) - rowIconCenter) * metrics.contentCentering)
             }
@@ -69,7 +70,7 @@ struct BrowserTabDragPreview: View {
     }
 
     private var rowIconCenter: CGFloat {
-        rowMetrics.surfaceHorizontalInset + rowMetrics.contentLeadingInset + (rowMetrics.faviconSlot?.width ?? 18) / 2
+        BrowserSidebarMetrics.layerInset + rowMetrics.contentLeadingInset + (rowMetrics.faviconSlot?.width ?? 18) / 2
     }
 
     /// The page-shaped drop preview: what the tab looks like once it is a card.

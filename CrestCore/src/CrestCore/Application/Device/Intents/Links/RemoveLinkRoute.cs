@@ -8,7 +8,7 @@ public sealed record RemoveLinkRoute(Guid RouteId) : LinkIntent {
     #region Actions - Device
 
     internal override void Apply(Device device, DeviceTurn turn) =>
-        device.ReviseLinks(turn.Changes, links => LinkPreferencePolicy.Removing(links, this));
+        device.ReviseLinks(turn.Changes, links => links.Removing(this));
 
     #endregion
 }

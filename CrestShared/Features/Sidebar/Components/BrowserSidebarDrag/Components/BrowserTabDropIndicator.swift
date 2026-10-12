@@ -18,9 +18,6 @@ struct BrowserTabDropIndicator: View {
 
     private var isVisible: Bool {
         _ = isTargeted
-        return BrowserTabDropIndicatorPolicy.isVisible(
-            at: location,
-            dragState: dragState
-        )
+        return dragState.showsDropIndicator(at: location)
     }
 }

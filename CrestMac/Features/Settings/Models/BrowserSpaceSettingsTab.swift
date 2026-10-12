@@ -4,8 +4,8 @@ import SwiftUI
 struct BrowserSpaceSettingsTab: Hashable, Identifiable, Sendable {
     // MARK: - Types
 
-    /// Each page shows its own pane, so the one place that builds a page
-    /// switches over the kind.
+    /// Each page shows its own pane. ``BrowserSettingsSpacePage`` switches on
+    /// the kind to choose that pane's concrete view.
     enum Kinds: Sendable {
         case appearance
         case browsing
@@ -124,10 +124,4 @@ enum BrowserSettingsSpaceIntent: Equatable, Sendable {
     case rename
     /// A Space just made: name it, then pick where its crest starts.
     case newSpace
-}
-
-/// One row of the Settings sidebar: a settings page, or a Space's page.
-enum BrowserSettingsSidebarItem: Hashable {
-    case destination(BrowserSettingsDestination)
-    case space(UUID)
 }

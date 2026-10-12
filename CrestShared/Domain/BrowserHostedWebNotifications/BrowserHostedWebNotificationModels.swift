@@ -1,11 +1,5 @@
 import Foundation
 
-enum BrowserHostedWebNotificationAuthorization: Equatable, Sendable {
-    case notDetermined
-    case denied
-    case authorized
-}
-
 struct BrowserHostedWebNotificationDelivery: Equatable, Sendable {
     let identifier: String
     let title: String

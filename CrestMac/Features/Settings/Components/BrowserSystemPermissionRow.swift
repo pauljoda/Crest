@@ -54,24 +54,7 @@ struct BrowserSystemPermissionRow: View {
         return String(localized: "Download folder for \(spaceName)")
     }
 
-    @ViewBuilder private var primaryAction: some View {
-        switch status.state.kind {
-        case .notRequested:
-            if error != nil {
-                Button("Open Settings", action: openSettings)
-            } else {
-                Button("Allow…", action: request)
-            }
-        case .notChecked:
-            Button("Check Access", action: request)
-        case .blocked, .restricted:
-            Button("Open Settings", action: openSettings)
-        case .allowed:
-            Button(
-                permission.checksSpaceFolder ? "Check Again" : "Settings…",
-                action: permission.checksSpaceFolder ? request : openSettings)
-        case .checking, .unavailable, .chooseEachTime:
-            EmptyView()
-        }
+    private var primaryAction: some View {
+        status.state.primaryAction(self)
     }
 }

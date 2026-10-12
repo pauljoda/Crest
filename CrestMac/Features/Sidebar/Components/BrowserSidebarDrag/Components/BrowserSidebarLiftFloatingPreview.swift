@@ -41,7 +41,7 @@ struct BrowserSidebarLiftFloatingPreview: View {
                 )
                 .offset(x: -displayAnchor.width, y: -displayAnchor.height)
                 .animation(
-                    BrowserVisualAccessibilityPolicy.animation(CrestMotion.dragPreview, reduceMotion: reduceMotion),
+                    CrestMotion.dragPreview.unlessReducingMotion(reduceMotion),
                     value: lift.shape
                 )
                 .offset(x: displayPointer.x, y: displayPointer.y)
@@ -51,7 +51,9 @@ struct BrowserSidebarLiftFloatingPreview: View {
                     .font(.caption)
                     .padding(8)
                     .frame(maxWidth: 280, alignment: .leading)
-                    .background(.regularMaterial, in: .rect(cornerRadius: 8))
+                    .background {
+                        CrestSurfaceLayer(shape: .rect(cornerRadius: BrowserSidebarMetrics.layerCornerRadius(depth: 0)))
+                    }
                     .offset(x: displayPointer.x + 12, y: displayPointer.y + lift.sourceSize.height + 12)
             }
         }
@@ -64,7 +66,7 @@ struct BrowserSidebarLiftFloatingPreview: View {
         .accessibilityHidden(true)
         .onAppear {
             withAnimation(
-                BrowserVisualAccessibilityPolicy.animation(CrestMotion.dragSource, reduceMotion: reduceMotion)
+                CrestMotion.dragSource.unlessReducingMotion(reduceMotion)
             ) {
                 stackHasGathered = true
             }
@@ -77,7 +79,7 @@ struct BrowserSidebarLiftFloatingPreview: View {
             }
             if landing.isRevealing {
                 withAnimation(
-                    BrowserVisualAccessibilityPolicy.animation(.easeOut(duration: 0.10), reduceMotion: reduceMotion),
+                    Animation.easeOut(duration: 0.10).unlessReducingMotion(reduceMotion),
                     completionCriteria: .removed
                 ) {
                     previewOpacity = 0
@@ -87,7 +89,7 @@ struct BrowserSidebarLiftFloatingPreview: View {
                 return
             }
             withAnimation(
-                BrowserVisualAccessibilityPolicy.animation(CrestMotion.dragSource, reduceMotion: reduceMotion),
+                CrestMotion.dragSource.unlessReducingMotion(reduceMotion),
                 completionCriteria: .removed
             ) {
                 landedFrame = landing.frame
@@ -98,11 +100,7 @@ struct BrowserSidebarLiftFloatingPreview: View {
     }
 
     private var artSize: CGSize {
-        if case .tab = subject {
-            return lift.shape.size(rowWidth: rowWidth, pinnedSize: pinnedSize)
-        }
-        return CGSize(
-            width: BrowserFolderDragPreviewLayout.width(for: rowWidth), height: max(lift.sourceSize.height, 1))
+        subject.artSize(of: lift, rowWidth: rowWidth, pinnedSize: pinnedSize)
     }
 
     /// Resize layout rather than scaling glyphs to meet the destination. A
@@ -110,32 +108,16 @@ struct BrowserSidebarLiftFloatingPreview: View {
     private var rowWidth: CGFloat { landedFrame?.width ?? lift.rowWidth }
     private var pinnedSize: CGSize { landedFrame?.size ?? lift.pinnedTileSize }
     private var displayAnchor: CGSize {
-        if case .selection = subject { return lift.grabOffset }
-        return CGSize(width: lift.anchorFraction.x * artSize.width, height: lift.anchorFraction.y * artSize.height)
+        subject.displayAnchor(of: lift, artSize: artSize)
     }
 
     private var scale: CGSize {
-        if case .selection = subject { return CGSize(width: 1, height: 1) }
-        if let landedFrame {
-            return CGSize(
-                width: landedFrame.width / max(artSize.width, 1), height: landedFrame.height / max(artSize.height, 1))
-        }
-        let value = BrowserVisualAccessibilityPolicy.spatialScale(
-            BrowserSidebarReorderVisuals.liftScale, reduceMotion: reduceMotion)
-        return CGSize(width: value, height: value)
+        subject.scale(artSize: artSize, landedFrame: landedFrame, reduceMotion: reduceMotion)
     }
 
     private var displayPointer: CGPoint {
         guard let landedFrame else { return lift.presentationPointer }
-        if case .selection(let rows) = subject {
-            let leadOffset = compactOffset(for: lift.item.id, in: rows)
-            return CGPoint(
-                x: landedFrame.minX + lift.grabOffset.width,
-                y: landedFrame.minY + leadOffset + lift.grabOffset.height)
-        }
-        return CGPoint(
-            x: landedFrame.minX + lift.anchorFraction.x * landedFrame.width,
-            y: landedFrame.minY + lift.anchorFraction.y * landedFrame.height)
+        return subject.landedPointer(of: lift, in: landedFrame, pinnedSize: pinnedSize)
     }
 
     @ViewBuilder
@@ -170,15 +152,10 @@ struct BrowserSidebarLiftFloatingPreview: View {
         }
     }
 
-    private func stackHeight(_ row: BrowserSidebarSelectionPreviewRow) -> CGFloat {
-        if row.isSplit || row.folder != nil { return row.frame.height }
-        return lift.shape == .pinnedTile ? pinnedSize.height : BrowserTabDragPreviewLayout.rowSize.height
-    }
-
     private func compactOffset(for id: BrowserSidebarReorderItemID, in rows: [BrowserSidebarSelectionPreviewRow])
         -> CGFloat
     {
-        rows.prefix { $0.id != id }.reduce(0) { $0 + stackHeight($1) }
+        BrowserSidebarSelectionPreviewRow.stackOffset(of: id, in: rows, shape: lift.shape, pinnedSize: pinnedSize)
     }
 
     private func selectionStack(_ rows: [BrowserSidebarSelectionPreviewRow]) -> some View {
@@ -216,5 +193,4 @@ struct BrowserSidebarLiftFloatingPreview: View {
                 isSelected: tab.id == selectedTabID, isLoaded: loadedTabIDs.contains(tab.id))
         }
     }
-
 }

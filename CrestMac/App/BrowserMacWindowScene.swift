@@ -58,11 +58,11 @@ struct BrowserMacWindowScene: View {
         )
         .modifier(BrowserChromeAppearancePersistence())
         .frame(
-            minWidth: BrowserMainWindowSizingPolicy.minimumContentSize.width,
-            idealWidth: BrowserMainWindowSizingPolicy.idealContentSize.width,
+            minWidth: BrowserMacWindowKind.browserMinimumContentSize.width,
+            idealWidth: BrowserMacWindowKind.browserContentSize.width,
             maxWidth: .infinity,
-            minHeight: BrowserMainWindowSizingPolicy.minimumContentSize.height,
-            idealHeight: BrowserMainWindowSizingPolicy.idealContentSize.height,
+            minHeight: BrowserMacWindowKind.browserMinimumContentSize.height,
+            idealHeight: BrowserMacWindowKind.browserContentSize.height,
             maxHeight: .infinity
         )
         .accessibilityElement(children: .contain)

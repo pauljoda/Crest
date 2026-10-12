@@ -2,7 +2,7 @@ import SwiftUI
 
 /// The page for the step setup is on. Back leads where the core says, or
 /// closes setup where it leads nowhere.
-struct BrowserOnboardingStepContent: View {
+struct BrowserOnboardingStepContent: View, BrowserOnboardingPages {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     let cloudSync: BrowserCloudSyncController
@@ -15,60 +15,78 @@ struct BrowserOnboardingStepContent: View {
     let openCrest: () -> Void
 
     var body: some View {
-        switch flow.step {
-        case .welcome:
-            BrowserOnboardingWelcomePage(
-                action: BrowserOnboardingWelcomeAction(
-                    flow: flow.state, cloudPhase: cloudSync.phase, wait: cloudWait.stage,
-                    forcesSetup: progress.forcesSetup),
-                hasCompletedSetup: progress.hasCompletedSetup,
-                hasDisposableSeedState: flow.hasDisposableSeedState,
-                continueSetup: continueSetup,
-                setUpWithoutCloud: {
-                    cloudWait.setUpWithoutCloud()
-                    continueSetup()
-                },
-                openCrest: openCrest
-            )
-        case .importBrowser:
-            BrowserOnboardingImportPage(
-                sources: flow.offeredSources,
-                isSelected: flow.isSelected,
-                hasScanned: flow.hasScanned,
-                unlistedCount: flow.unlistedSources.count,
-                isReading: flow.isReading,
-                isLocked: flow.isImportSelectionLocked,
-                failure: flow.failure?.message,
-                accessLabel: flow.importAccessLabel,
-                toggleSelection: flow.toggleSelection,
-                scanForMore: flow.scanForMore,
-                beginManualSetup: beginManualSetup,
-                continueImport: flow.continueImportQueue,
-                back: back
-            )
-        case .review:
-            BrowserOnboardingReviewPage(
-                flow: flow,
-                customizationSpaceID: $customizationSpaceID,
-                back: back
-            )
-        case .manualSetup:
-            BrowserOnboardingManualSetupPage(
-                flow: flow,
-                opensGettingStarted: flow.state?.opensGuide == true,
-                selectedSpaceID: $selectedManualSpaceID,
-                back: back.action,
-                openCrest: openCrest
-            )
-        case .complete:
-            BrowserOnboardingCompletionPage(
-                summary: flow.completionSummary,
-                openCrest: openCrest
-            )
-        default:
-            EmptyView()
-        }
+        flow.step.page(in: self)
     }
+
+    // MARK: - Pages
+
+    func welcomePage() -> some View {
+        BrowserOnboardingWelcomePage(
+            action: BrowserOnboardingWelcomeAction(
+                flow: flow.state, cloudPhase: cloudSync.phase, wait: cloudWait.stage,
+                forcesSetup: progress.forcesSetup),
+            hasCompletedSetup: progress.hasCompletedSetup,
+            hasDisposableSeedState: flow.hasDisposableSeedState,
+            continueSetup: continueSetup,
+            setUpWithoutCloud: {
+                cloudWait.setUpWithoutCloud()
+                continueSetup()
+            },
+            openCrest: openCrest
+        )
+    }
+
+    /// Setup on the Mac has no pages for the feature tour.
+    func featureSpacesPage() -> some View { EmptyView() }
+
+    func featureTabsPage() -> some View { EmptyView() }
+
+    func featureSyncPage() -> some View { EmptyView() }
+
+    func importBrowserPage() -> some View {
+        BrowserOnboardingImportPage(
+            sources: flow.offeredSources,
+            isSelected: flow.isSelected,
+            hasScanned: flow.hasScanned,
+            unlistedCount: flow.unlistedSources.count,
+            isReading: flow.isReading,
+            isLocked: flow.isImportSelectionLocked,
+            failure: flow.failure?.message,
+            accessLabel: flow.importAccessLabel,
+            toggleSelection: flow.toggleSelection,
+            scanForMore: flow.scanForMore,
+            beginManualSetup: beginManualSetup,
+            continueImport: flow.continueImportQueue,
+            back: back
+        )
+    }
+
+    func reviewPage() -> some View {
+        BrowserOnboardingReviewPage(
+            flow: flow,
+            customizationSpaceID: $customizationSpaceID,
+            back: back
+        )
+    }
+
+    func manualSetupPage() -> some View {
+        BrowserOnboardingManualSetupPage(
+            flow: flow,
+            opensGettingStarted: flow.state?.opensGuide == true,
+            selectedSpaceID: $selectedManualSpaceID,
+            back: back.action,
+            openCrest: openCrest
+        )
+    }
+
+    func completePage() -> some View {
+        BrowserOnboardingCompletionPage(
+            summary: flow.completionSummary,
+            openCrest: openCrest
+        )
+    }
+
+    // MARK: - Navigation
 
     /// What Back does from the step: the step the core names, or closing.
     private var back: BrowserOnboardingBackAction {
@@ -93,10 +111,7 @@ struct BrowserOnboardingStepContent: View {
     }
 
     private func motion(_ animation: Animation) -> Animation? {
-        BrowserVisualAccessibilityPolicy.animation(
-            animation,
-            reduceMotion: reduceMotion
-        )
+        animation.unlessReducingMotion(reduceMotion)
     }
 }
 

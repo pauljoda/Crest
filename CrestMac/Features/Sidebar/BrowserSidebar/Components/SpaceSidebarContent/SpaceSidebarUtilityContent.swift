@@ -24,7 +24,7 @@ struct SpaceSidebarUtilityContent: View {
                 morph: .utilitySearch(spaceID: space.id),
                 clearHistory: clearHistory
             )
-            .padding(.horizontal, BrowserChromeLayout.sidebarHorizontalInset)
+            .padding(.horizontal, BrowserSidebarMetrics.layerInset)
             .padding(.bottom, CrestSpacing.extraSmall)
             .transition(.opacity.combined(with: .move(edge: .trailing)))
 

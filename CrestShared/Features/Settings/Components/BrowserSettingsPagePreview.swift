@@ -29,6 +29,6 @@ struct BrowserSettingsPagePreview: View {
         .allowsHitTesting(false)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("Page preview")
-        .accessibilityValue(BrowserPageZoomPolicy.percentageLabel(for: zoom))
+        .accessibilityValue(CGFloat(zoom).pageZoomPercentage)
     }
 }

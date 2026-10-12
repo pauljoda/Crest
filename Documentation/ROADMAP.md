@@ -59,7 +59,6 @@ the live status for each issue.
 - [ ] [Add privacy-preserving analytics and opt-in diagnostics](https://github.com/pauljoda/Crest/issues/179)
 - [ ] [bug: bad colors on new tab](https://github.com/pauljoda/Crest/issues/185)
 - [ ] [feature: Add Edit Pinned URL menu option and dialogue](https://github.com/pauljoda/Crest/issues/218)
-- [ ] [feature: Install Crest with Homebrew (tap first, then homebrew-cask)](https://github.com/pauljoda/Crest/issues/222)
 - [ ] [Investigate reported passkey failures in both engines](https://github.com/pauljoda/Crest/issues/226)
 - [ ] [Investigate mouse side buttons ignoring the sidebar's Space switching](https://github.com/pauljoda/Crest/issues/227)
 - [ ] [Make Quick Windows practical for short browsing sessions](https://github.com/pauljoda/Crest/issues/228)
@@ -70,7 +69,6 @@ the live status for each issue.
 - [ ] [Make borderless windows easier to move](https://github.com/pauljoda/Crest/issues/234)
 - [ ] [Evaluate a swipe gesture for History and Downloads on Mac](https://github.com/pauljoda/Crest/issues/235)
 - [ ] [Return a pinned tab to its saved address from the mobile menu](https://github.com/pauljoda/Crest/issues/236)
-- [ ] [feature: Control Crest from the command line for scripts and AI agents](https://github.com/pauljoda/Crest/issues/240)
 - [ ] [feature: Delete a Space from the sidebar instead of the bottom of Settings](https://github.com/pauljoda/Crest/issues/241)
 - [ ] [bug: white flash between loading screen in dark mode](https://github.com/pauljoda/Crest/issues/246)
 - [ ] [bug: Crest crash eah time using 1password autofill extension](https://github.com/pauljoda/Crest/issues/248)
@@ -118,11 +116,14 @@ the live status for each issue.
 - [ ] [Optional new-tab button in the iPhone toolbar](https://github.com/pauljoda/Crest/issues/371)
 - [ ] [Open links in Crest from the iOS share sheet](https://github.com/pauljoda/Crest/issues/372)
 - [ ] [Crest's iOS icon doesn't tint with tinted Home Screen icons](https://github.com/pauljoda/Crest/issues/373)
-- [ ] [Site Controls may still not open in full screen on Mac](https://github.com/pauljoda/Crest/issues/374)
 - [ ] [Switch what a tab is sharing from its sharing menu](https://github.com/pauljoda/Crest/issues/375)
 - [ ] [Muting from a pinned tab's sound badge may pause the video](https://github.com/pauljoda/Crest/issues/376)
 - [ ] [Page menu commands are disabled in Quick Windows on Mac](https://github.com/pauljoda/Crest/issues/377)
 - [ ] [Closing find with Escape doesn't return focus to the page on Mac](https://github.com/pauljoda/Crest/issues/378)
+- [ ] [feature: Expose native scripting & automation interface for Spaces, Tabs, and Window management](https://github.com/pauljoda/Crest/issues/380)
+- [ ] [bug: On fullscreen the Site Controls -menu doesn't open](https://github.com/pauljoda/Crest/issues/385)
+- [ ] [feature: Choose search engine on new tab prompt (based on shortcut)](https://github.com/pauljoda/Crest/issues/386)
+- [ ] [feature: Show a peek indicator on the originating tab when a Peek is open](https://github.com/pauljoda/Crest/issues/389)
 
 #### Completed
 
@@ -132,12 +133,14 @@ the live status for each issue.
 - [x] [bug: Pin icon looks blurry or poor quality](https://github.com/pauljoda/Crest/issues/217)
 - [x] [bug: Cant install Keeper as Extension in Chromium](https://github.com/pauljoda/Crest/issues/219)
 - [x] [feature: Make Tab Groups visible](https://github.com/pauljoda/Crest/issues/220)
+- [x] [feature: Install Crest with Homebrew (tap first, then homebrew-cask)](https://github.com/pauljoda/Crest/issues/222)
 - [x] [bug: Quitting Crest creates an empty ~/Library/Application Support/Chromium](https://github.com/pauljoda/Crest/issues/223)
 - [x] [bug: Crest 0.7.2 crashes when clicking a website's Login button on macOS](https://github.com/pauljoda/Crest/issues/224)
 - [x] [Investigate a reported crash when signing in to Pinterest on Mac](https://github.com/pauljoda/Crest/issues/225) — [`606000ce`](https://github.com/pauljoda/Crest/commit/606000ce4b006e04dee412926366ebb355bcc186)
 - [x] [Choose one search engine for every Space](https://github.com/pauljoda/Crest/issues/232) — [`c3e712f2`](https://github.com/pauljoda/Crest/commit/c3e712f200fb1fc90935c09eec48e1f41ae1c330)
 - [x] [Keep the Claude extension signed in after relaunching Crest](https://github.com/pauljoda/Crest/issues/238) — [`1222cfab`](https://github.com/pauljoda/Crest/commit/1222cfab91e205f9325b814fb7224a35f2d9872c)
 - [x] [bug: Site Settings/Extension Menu unreliable in opening](https://github.com/pauljoda/Crest/issues/239)
+- [x] [feature: Control Crest from the command line for scripts and AI agents](https://github.com/pauljoda/Crest/issues/240)
 - [x] [Keep the back and forward history menu fast on long-lived tabs](https://github.com/pauljoda/Crest/issues/244) — [`86f5d23c`](https://github.com/pauljoda/Crest/commit/86f5d23cd6995e2d8790311bff1d09dbafa00bc5)
 - [x] [bug: Unable to import spaces from Zen](https://github.com/pauljoda/Crest/issues/252)
 - [x] [Keep a tab's back and forward history after relaunching](https://github.com/pauljoda/Crest/issues/253) — [`28e2c71b`](https://github.com/pauljoda/Crest/commit/28e2c71bf1e02e993bb0a0cc05285f554e14d02c)
@@ -165,6 +168,11 @@ the live status for each issue.
 - [x] [Overhaul the command palette: smarter ordering and a Settings section to customize it](https://github.com/pauljoda/Crest/issues/338) — [`c3e712f2`](https://github.com/pauljoda/Crest/commit/c3e712f200fb1fc90935c09eec48e1f41ae1c330)
 - [x] [Search engine logos look stretched in Settings › Search on Mac](https://github.com/pauljoda/Crest/issues/354) — [`d27a88c5`](https://github.com/pauljoda/Crest/commit/d27a88c5bcb7bc48cf160e295d0dc7e8f6006f5e)
 - [x] [Edit Shortcuts does nothing in Settings › Search on iPhone and iPad](https://github.com/pauljoda/Crest/issues/361) — [`6365c526`](https://github.com/pauljoda/Crest/commit/6365c5264b199a3523dd179eebe1432830cf4d69)
+- [x] [feature:  Allow multiple Spaces to share a browser profile Allow multiple Spaces to share a browser profile](https://github.com/pauljoda/Crest/issues/379)
+
+#### Not planned
+
+- [x] [Site Controls may still not open in full screen on Mac](https://github.com/pauljoda/Crest/issues/374)
 
 <!-- crest-roadmap-sync:end -->
 

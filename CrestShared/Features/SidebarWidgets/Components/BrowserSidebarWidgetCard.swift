@@ -75,8 +75,7 @@ private struct BrowserSidebarWidgetCardChrome: ViewModifier {
 
     private func crestChrome(_ content: Content) -> some View {
         content
-            .background(CrestColor.chromeSurface, in: BrowserSidebarWidgetDeckStyle.cardShape)
-            .background(.regularMaterial, in: BrowserSidebarWidgetDeckStyle.cardShape)
+            .background { CrestSurfaceLayer(shape: BrowserSidebarWidgetDeckStyle.cardShape) }
             .overlay {
                 BrowserSidebarWidgetDeckStyle.cardShape
                     .stroke(

@@ -42,7 +42,7 @@ public sealed partial class NativeSessionAuthority {
     internal void AttachDevice(Device value, Guid workspace) {
         lock (Gate) {
             if (device is not null && !ReferenceEquals(device, value))
-                throw new BrowserRuleException(BrowserRule.InvalidSessionTransaction);
+                throw new InvalidOperationException("A session is shown by one device.");
             device = value;
             workspaceId = workspace;
         }
@@ -97,12 +97,8 @@ public sealed partial class NativeSessionAuthority {
     internal (SessionState Previous, SessionState Next)? Touch(Guid spaceId, Guid tabId, DateTimeOffset now) {
         SessionState previous, next;
         lock (Gate) {
-            try {
-                RequireWritable();
-            } catch (BrowserRuleException) {
-                return null;
-            }
-            if (PendingDeletion(session, spaceId) is not null || session.Spaces.FirstOrDefault(s => s.Id == spaceId) is not { } space
+            if (!TakesEdits() || PendingDeletion(session, spaceId) is not null
+                || session.Spaces.FirstOrDefault(s => s.Id == spaceId) is not { } space
                 || space.Tabs.All(tab => tab.Id != tabId)) return null;
             if (IsLockedUnderGate(space)) throw new Rejected(new SpaceLocked(spaceId));
             // The stored spelling of the time, so the next load reads the same value.

@@ -13,7 +13,7 @@ extension BrowserHTTPAuthenticationDescriptor {
     }
 
     static func sourceLabel(for protectionSpace: URLProtectionSpace) -> String {
-        BrowserCorePolicy.authenticationSourceLabel(
+        AuthenticationSource.label(
             host: protectionSpace.host,
             port: protectionSpace.port,
             scheme: protectionSpace.protocol,

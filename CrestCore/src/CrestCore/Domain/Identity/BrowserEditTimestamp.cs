@@ -5,7 +5,8 @@ public static class BrowserEditTimestamp {
     #region Actions - Identity
 
     public static double NormalizeUnixSeconds(double seconds) {
-        if (!double.IsFinite(seconds)) throw new BrowserRuleException(BrowserRule.InvalidSavedDate);
+        if (!double.IsFinite(seconds))
+            throw new ArgumentOutOfRangeException(nameof(seconds), seconds, "A time is a finite number of seconds.");
         return Math.Round(seconds * 1000, MidpointRounding.AwayFromZero) / 1000;
     }
 

@@ -3,6 +3,12 @@ import Foundation
 import WebKit
 
 extension BrowserPage {
+    /// The messages the notification bridge sends, by their actions.
+    private static let hostedNotificationMessages: [any BrowserHostedNotificationMessage.Type] = [
+        BrowserHostedNotificationPermissionQuery.self, BrowserHostedNotificationPermissionRequest.self,
+        BrowserHostedNotificationCreation.self, BrowserHostedNotificationClosing.self,
+    ]
+
     /// The bridge's per-document state lives with the WebKit adapter; another
     /// engine never posts through this bridge.
     var hostedNotificationDocumentIdentifier: String {
@@ -42,67 +48,18 @@ extension BrowserPage {
             let requestURL = message.frameInfo.request.url,
             let origin = SiteOrigin(url: requestURL),
             SiteOrigin(message.frameInfo.securityOrigin) == origin,
-            BrowserCorePolicy.allowsHostedNotifications(for: origin),
+            SecureOriginCheck(origin: origin).isAllowed,
             let body = message.body as? [String: Any],
             (body["version"] as? Int) == 1,
             let action = body["action"] as? String
         else { return }
-        let documentIdentifier = hostedNotificationDocumentIdentifier
-
-        switch action {
-        case "queryPermission":
-            guard let requestID = body["requestID"] as? String,
-                isValidHostedWebNotificationIdentifier(requestID)
-            else { return }
-            Task { @MainActor [weak self] in
-                await self?.sendHostedNotificationPermission(
-                    requestID: requestID,
-                    origin: origin,
-                    requestsSystemAuthorization: false,
-                    documentIdentifier: documentIdentifier,
-                    frame: message.frameInfo
-                )
-            }
-        case "requestPermission":
-            guard let requestID = body["requestID"] as? String,
-                isValidHostedWebNotificationIdentifier(requestID)
-            else { return }
-            Task { @MainActor [weak self] in
-                guard let self else { return }
-                let userActivation = await hasActiveUserGesture(in: message.frameInfo)
-                await resolveHostedNotificationPermission(
-                    requestID: requestID,
-                    origin: origin,
-                    hasUserActivation: userActivation,
-                    documentIdentifier: documentIdentifier,
-                    frame: message.frameInfo
-                )
-            }
-        case "create":
-            guard let identifier = body["identifier"] as? String,
-                isValidHostedWebNotificationIdentifier(identifier),
-                let title = body["title"] as? String,
-                let notificationBody = body["body"] as? String
-            else { return }
-            let isSilent = body["silent"] as? Bool ?? false
-            Task { @MainActor [weak self] in
-                await self?.createHostedWebNotification(
-                    identifier: identifier,
-                    title: title,
-                    body: notificationBody,
-                    isSilent: isSilent,
-                    origin: origin,
-                    documentIdentifier: documentIdentifier
-                )
-            }
-        case "close":
-            guard let identifier = body["identifier"] as? String,
-                isValidHostedWebNotificationIdentifier(identifier)
-            else { return }
-            withdrawWebNotification(hostedSystemIdentifier(for: identifier))
-        default:
-            return
-        }
+        guard let kind = Self.hostedNotificationMessages.first(where: { $0.action == action }),
+            let request = kind.init(body: body)
+        else { return }
+        request.handle(
+            on: self,
+            in: BrowserHostedNotificationDocument(
+                identifier: hostedNotificationDocumentIdentifier, origin: origin, frame: message.frameInfo))
     }
 
     func beginHostedWebNotificationNavigation() {
@@ -111,7 +68,7 @@ extension BrowserPage {
         hostedNotificationDocumentIdentifier = UUID().uuidString
     }
 
-    private func resolveHostedNotificationPermission(
+    func resolveHostedNotificationPermission(
         requestID: String,
         origin: SiteOrigin,
         hasUserActivation: Bool,
@@ -129,105 +86,13 @@ extension BrowserPage {
             origin: origin,
             in: spaceID
         )
-        switch BrowserCorePolicy.hostedNotificationPermissionRequestAction(
-            for: decision,
-            hasUserActivation: hasUserActivation
-        ).kind {
-        case .respondDenied:
-            sendHostedNotificationPermissionResponse(
-                requestID: requestID,
-                permission: "denied",
-                documentIdentifier: documentIdentifier,
-                origin: origin,
-                frame: frame
-            )
-        case .resolveSystemAuthorization:
-            await sendHostedNotificationPermission(
-                requestID: requestID,
-                origin: origin,
-                requestsSystemAuthorization: hasUserActivation,
-                documentIdentifier: documentIdentifier,
-                frame: frame
-            )
-        case .respondDefault:
-            sendHostedNotificationPermissionResponse(
-                requestID: requestID,
-                permission: "default",
-                documentIdentifier: documentIdentifier,
-                origin: origin,
-                frame: frame
-            )
-        case .promptForSitePermission:
-            let generation = sitePermissionRequests.generation
-            // The core asks the person and records what they ask it to
-            // remember; the system's consent still decides what the page hears.
-            let grants =
-                await webKitAdapter?.webKitPage.ask(
-                    PermissionQuestion(permission: .notifications, origin: origin, topLevelOrigin: origin)) ?? false
-            guard
-                isCurrentHostedNotificationDocument(
-                    documentIdentifier,
-                    origin: origin
-                )
-            else { return }
-            guard generation == sitePermissionRequests.generation else { return }
-            guard grants else {
-                // A block the person asked the core to remember denies the
-                // site; a decline that saves nothing leaves it free to ask.
-                let denies = permissionCenter.decision(for: .notifications, origin: origin, in: spaceID).denies
-                sendHostedNotificationPermissionResponse(
-                    requestID: requestID, permission: denies ? "denied" : "default",
-                    documentIdentifier: documentIdentifier, origin: origin, frame: frame
-                )
-                return
-            }
-            guard await authorizedForSystemNotifications(requestIfNeeded: true) else {
-                sendHostedNotificationPermissionResponse(
-                    requestID: requestID,
-                    permission: "denied",
-                    documentIdentifier: documentIdentifier,
-                    origin: origin,
-                    frame: frame
-                )
-                return
-            }
-            guard
-                isCurrentHostedNotificationDocument(
-                    documentIdentifier,
-                    origin: origin
-                )
-            else { return }
-            guard generation == sitePermissionRequests.generation else {
-                await sendHostedNotificationPermission(
-                    requestID: requestID, origin: origin,
-                    requestsSystemAuthorization: false,
-                    documentIdentifier: documentIdentifier, frame: frame
-                )
-                return
-            }
-            guard !permissionCenter.decision(for: .notifications, origin: origin, in: spaceID).denies else {
-                sendHostedNotificationPermissionResponse(
-                    requestID: requestID, permission: "denied",
-                    documentIdentifier: documentIdentifier, origin: origin, frame: frame
-                )
-                return
-            }
-            // A granted request is remembered for the session at least; a
-            // grant the person asked the core to remember is already kept.
-            if !permissionCenter.decision(for: .notifications, origin: origin, in: spaceID).grants {
-                permissionCenter.setDecision(.grantForSession, for: .notifications, origin: origin, in: spaceID)
-            }
-            sendHostedNotificationPermissionResponse(
-                requestID: requestID,
-                permission: "granted",
-                documentIdentifier: documentIdentifier,
-                origin: origin,
-                frame: frame
-            )
-        }
+        await NotificationPermissionRequest(decision: decision, hasUserActivation: hasUserActivation).action.respond(
+            through: BrowserHostedNotificationPermissionResolution(
+                page: self, requestID: requestID, origin: origin, hasUserActivation: hasUserActivation,
+                documentIdentifier: documentIdentifier, frame: frame))
     }
 
-    private func sendHostedNotificationPermission(
+    func sendHostedNotificationPermission(
         requestID: String,
         origin: SiteOrigin,
         requestsSystemAuthorization: Bool,
@@ -245,34 +110,18 @@ extension BrowserPage {
             origin: origin,
             in: spaceID
         )
-        // The states are the Notifications API's.
-        let permission: String
-        switch siteDecision.verdict {
-        case .deny:
-            permission = "denied"
-        case .ask:
-            permission = "default"
-        case .grant:
-            guard let hostedNotificationCenter else {
-                permission = "denied"
-                break
-            }
-            if requestsSystemAuthorization {
-                permission =
-                    await authorizedForSystemNotifications(
-                        requestIfNeeded: true
-                    )
-                    ? "granted" : "denied"
-            } else {
-                switch await hostedNotificationCenter.currentAuthorization() {
-                case .authorized:
-                    permission = "granted"
-                case .denied:
-                    permission = "denied"
-                case .notDetermined:
-                    permission = "default"
-                }
-            }
+        // The states are the Notifications API's. A site's saved verdict
+        // gives them on its own, except a grant, which the system decides.
+        let permission: BrowserWebPermissionState
+        if let answered = BrowserWebPermissionState.answering(siteDecision.verdict) {
+            permission = answered
+        } else if let hostedNotificationCenter {
+            permission =
+                requestsSystemAuthorization
+                ? .granting(await authorizedForSystemNotifications(requestIfNeeded: true))
+                : .answering(await hostedNotificationCenter.currentAuthorization())
+        } else {
+            permission = .denied
         }
         guard
             isCurrentHostedNotificationDocument(
@@ -291,7 +140,7 @@ extension BrowserPage {
 
     /// Shows what the document posted through Crest's shared path, and tells
     /// the document whether it shows and when the person clicks it.
-    private func createHostedWebNotification(
+    func createHostedWebNotification(
         identifier: String,
         title: String,
         body: String,
@@ -333,21 +182,17 @@ extension BrowserPage {
     func authorizedForSystemNotifications(
         requestIfNeeded: Bool
     ) async -> Bool {
-        guard let hostedNotificationCenter else { return false }
-        switch await hostedNotificationCenter.currentAuthorization() {
-        case .authorized:
-            return true
-        case .denied:
-            await recoverNotificationSystemAuthorization()
-            return await hostedNotificationCenter.currentAuthorization()
-                == .authorized
-        case .notDetermined:
-            guard requestIfNeeded else { return false }
-            return await hostedNotificationCenter.requestAuthorization() == .authorized
-        }
+        guard let center = hostedNotificationCenter else { return false }
+        var request: (@MainActor () async -> BrowserSystemAuthorization)?
+        if requestIfNeeded { request = { await center.requestAuthorization() } }
+        let access = BrowserSystemAuthorizationAccess(
+            current: { await center.currentAuthorization() }, request: request,
+            recover: recoverNotificationSystemAuthorization)
+        let authorization = await center.currentAuthorization()
+        return await authorization.authorizes(through: access)
     }
 
-    private func hasActiveUserGesture(in frame: WKFrameInfo) async -> Bool {
+    func hasActiveUserGesture(in frame: WKFrameInfo) async -> Bool {
         guard let webView = webKitView else { return false }
         let result = try? await webView.callAsyncJavaScript(
             "return navigator.userActivation?.isActive === true;",
@@ -358,19 +203,13 @@ extension BrowserPage {
         return result as? Bool ?? false
     }
 
-    private func hostedSystemIdentifier(for identifier: String) -> String {
+    func hostedSystemIdentifier(for identifier: String) -> String {
         "\(hostedNotificationDocumentIdentifier).\(identifier)"
     }
 
-    private func isValidHostedWebNotificationIdentifier(
-        _ identifier: String
-    ) -> Bool {
-        !identifier.isEmpty && identifier.utf8.count <= 128
-    }
-
-    private func sendHostedNotificationPermissionResponse(
+    func sendHostedNotificationPermissionResponse(
         requestID: String,
-        permission: String,
+        permission: BrowserWebPermissionState,
         documentIdentifier: String,
         origin: SiteOrigin,
         frame: WKFrameInfo?
@@ -379,7 +218,7 @@ extension BrowserPage {
             [
                 "type": "permission",
                 "requestID": requestID,
-                "permission": permission,
+                "permission": permission.notificationSpelling,
             ],
             documentIdentifier: documentIdentifier,
             origin: origin,
@@ -434,7 +273,7 @@ extension BrowserPage {
         }
     }
 
-    private func isCurrentHostedNotificationDocument(
+    func isCurrentHostedNotificationDocument(
         _ documentIdentifier: String,
         origin: SiteOrigin
     ) -> Bool {

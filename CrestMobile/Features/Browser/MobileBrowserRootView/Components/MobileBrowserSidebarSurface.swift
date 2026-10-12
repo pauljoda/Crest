@@ -193,11 +193,12 @@ struct MobileBrowserSidebarSurface: View {
         )
     }
 
+    /// The sidebar reads its foreground from the shown Space's own branding
+    /// rather than from the system appearance, as every compact placement
+    /// does, so they keep agreeing.
     private var selectedSidebarColorScheme: ColorScheme {
-        guard MobileBrowserSidebarAppearancePolicy.usesSpaceForeground(),
-            let space = browser.shownSpace
-        else { return colorScheme }
-        return BrowserSpaceForegroundPolicy.colorScheme(for: space.settings.look)
+        guard let space = browser.shownSpace else { return colorScheme }
+        return space.settings.look.foregroundTone.colorScheme
     }
 
     private var selectedSpaceAssignment: BrowserSpaceRuntimeAssignment? {
@@ -205,24 +206,15 @@ struct MobileBrowserSidebarSurface: View {
     }
 
     private func presentHistory() {
-        switch utilityPresentationStyle {
-        case .inline:
-            utilityPresentation.present(.history)
-        case .sheet:
-            presentSpaceSheet(.history)
-        }
+        utilityPresentationStyle.presentHistory(from: self)
     }
 
     /// Puts one of the Space's lists up as a sheet, and refuses unless the Space
     /// is still the selected, unlocked one the sheet would be about.
-    private func presentSpaceSheet(_ surface: BrowserUtilitySurface) {
+    func presentSpaceSheet(_ surface: BrowserUtilitySurface) {
         guard utilityPresentationStyle == .sheet,
             let assignment = selectedSpaceAssignment,
-            BrowserSidebarAccessPolicy.selectedUnlockedSpace(
-                matching: assignment,
-                in: browser,
-                accessController: spaceAccess
-            ) != nil
+            browser.selectedUnlockedSpace(matching: assignment, accessController: spaceAccess) != nil
         else { return }
         presentedSpaceSheet = MobileBrowserSidebarSpaceSheet(
             surface: surface,

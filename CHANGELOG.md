@@ -7,6 +7,66 @@ and Crest uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.8.1] - 2026-10-12
+
+### Fixed
+
+- On pinned tabs, the sound and sharing badge sits in the tile’s bottom corner instead of over the site icon, so the icon is easy to click.
+
+## [0.8.0] - 2026-10-12
+
+Crest 0.8 brings coding agents to Crest on Mac, a rebuilt command palette
+and Settings, many more browsers to import from, and a quicker, more
+consistent sidebar.
+
+### Added
+
+- Let coding agents such as Claude Code and Codex use Crest as their browser on Mac, in the Spaces you choose, from Settings › Agents. Crest asks before each new agent connects, and every tab an agent uses shows its badge.
+- Search with a rebuilt command palette that ranks the pages and tabs you use most, completes sites you visit, lists recent tabs before you type, and searches a site or asks an assistant directly with Tab.
+- Set one default search for every Space and one for private windows in the new Search section of Settings, and turn search engines, AI assistants and websites on or off.
+- Import from Brave, Microsoft Edge, Vivaldi, Opera, Dia, Comet, Aside, ego lite, Chromium, and Chrome Beta, Dev, and Canary, and bring the Chrome Web Store extensions each profile used.
+- See extension tab groups, such as the tabs Claude works in, as folders in the Space’s open tabs on Mac.
+- Share a single Chromium tab with its sound when sharing your screen.
+- See which tabs are playing sound, mute them from their icon, and see which tabs are sharing.
+- Design a Space’s crest in Crest Studio, with previews on the Space’s own background and a color for each part.
+- Choose how much the sidebar’s layers show the background through, from Ultra Thin to Ultra Thick, in Look and Feel settings.
+- Choose how wide the window edge is that reveals a hidden sidebar.
+- Start on a new tab in your default Space on iPhone and iPad.
+
+### Changed
+
+- Settings has a cleaner native look, with a page for each Space in its sidebar and a separate Tabs page.
+- Switching tabs on Mac uses a fraction of the CPU and energy it did, without blank frames in between.
+- Tabs, folders, Split Views, pinned tabs and the address bar share one shape and spacing that follows your corner setting, including Capsule.
+- Site Controls, Peek, notices and other floating panels use the sidebar’s material.
+- Imports keep split views and tab groups, bring every Zen and Firefox profile with open tabs, and keep as much as fits instead of stopping.
+- Setup reads another browser’s data only when you choose to import from it.
+- Page corners on Mac follow the window’s rounded corners.
+- Sync settings say Up to date only when every change has reached iCloud, and iCloud sync catches up each time Crest opens.
+- Chromium tabs keep their back and forward history across relaunches and updates.
+- Chromium is updated to 154.0.8037.97.
+
+### Fixed
+
+- Crest no longer quits when you press a site’s Login button, allow the camera or microphone, or switch Spaces on macOS 26.
+- iPhone and iPad open again instead of closing at launch.
+- Large Chrome Web Store extensions such as Keeper install, and an extension installed right after launch no longer waits up to three minutes.
+- Extensions that sign in at startup, such as Claude, stay signed in after Crest restarts.
+- iCloud sync no longer stops on other devices after a tab moves to another Space.
+- Restarting to install an update no longer gets stuck.
+- Site Controls opens in full screen, and full-screen windows no longer show a dark band or flicker along the top.
+- The back and forward history menus open at once instead of freezing Crest.
+- Site icons are sharp on Retina displays.
+- While a Peek is open, page commands act on the Peek, and Close Tab closes it.
+- Command-G and Command-Shift-G move between find-in-page matches.
+- Tabs with very long or unusual addresses reopen where they were instead of turning into a search.
+- Imports from Chrome, Safari and Zen bring the right profiles, pinned tabs, bookmarks and passwords.
+- Buttons in iPad and iPhone Settings respond to a single tap.
+
+### Upgrading
+
+- iCloud sync that stopped after moving a tab between Spaces resumes once all your devices are on this version.
+
 ## [0.7.0] - 2026-10-02
 
 Crest 0.7 brings Chromium and WebKit together in one Mac app, with Chromium as
@@ -412,7 +472,10 @@ Mac, iPhone, and iPad.
 
 Crest releases before 0.3.0 predate this changelog. Their development history remains available in Git.
 
-[Unreleased]: https://github.com/pauljoda/Crest/compare/v0.6.33...HEAD
+[Unreleased]: https://github.com/pauljoda/Crest/compare/v0.8.1...HEAD
+[0.8.1]: https://github.com/pauljoda/Crest/compare/v0.8.0...v0.8.1
+[0.8.0]: https://github.com/pauljoda/Crest/compare/v0.7.2...v0.8.0
+[0.7.0]: https://github.com/pauljoda/Crest/compare/v0.6.33...v0.7.0
 [0.6.33]: https://github.com/pauljoda/Crest/compare/v0.6.8...v0.6.33
 [0.6.3]: https://github.com/pauljoda/Crest/compare/v0.5.7...v0.6.3
 [0.5.7]: https://github.com/pauljoda/Crest/releases/tag/v0.5.7

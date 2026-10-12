@@ -26,20 +26,29 @@ enum BrowserTransientEntranceTarget: Equatable, Sendable {
 struct BrowserTransientCardArrangement: Hashable, Identifiable, Sendable {
     // MARK: - Static Variables
 
-    /// A card beside a window's reserved leading chrome, sized by the shared
-    /// window geometry policy and dismissed with the pointer or a key.
+    /// The share of its container a pointer card fills, and that a Quick Window
+    /// takes of the page or screen it opens over.
+    static let windowContentFraction: CGFloat = 0.8
+
+    /// A card beside a window's reserved leading chrome, sized at the shared
+    /// window fraction and dismissed with the pointer or a key.
     static let pointer = BrowserTransientCardArrangement(
         name: "pointer", entranceTarget: .pageCard, placesControlsAboveCard: true, controlAlignment: .trailing,
         controlSpacing: 10, constrainsControlBarToMaximumWidth: false, controlBarPadding: 0,
         ignoredSafeAreaEdges: .all,
         framesContent: { containerSize, reservedLeadingWidth, layoutDirection in
-            BrowserPeekPresentationPolicy.desktopWebContentFrame(
-                in: containerSize,
-                reservedLeadingWidth: reservedLeadingWidth,
-                layoutDirection: layoutDirection
+            let leadingWidth = min(
+                max(reservedLeadingWidth, 0),
+                containerSize.width
+            )
+            return CGRect(
+                x: layoutDirection == .leftToRight ? leadingWidth : 0,
+                y: 0,
+                width: containerSize.width - leadingWidth,
+                height: containerSize.height
             )
         },
-        sizesCard: { BrowserPeekPresentationPolicy.desktopCardSize(in: $0) },
+        sizesCard: { windowContentSize(in: $0) },
         insetsContent: { _ in EdgeInsets(top: 30, leading: 30, bottom: 30, trailing: 30) },
         cardCornerRadius: 15, cardBorderOpacity: 0.16, cardShadowOpacity: 0.34, cardShadowRadius: 28,
         cardShadowOffsetY: 14)
@@ -95,9 +104,8 @@ struct BrowserTransientCardArrangement: Hashable, Identifiable, Sendable {
 
     let entranceTarget: BrowserTransientEntranceTarget
 
-    /// Whether the controls sit above the card, as `BrowserPeekChromePolicy`
-    /// describes for a pointer. Touch arrangements put them within reach of a
-    /// thumb instead.
+    /// Whether the controls sit above the card, as they do for a pointer.
+    /// Touch arrangements put them within reach of a thumb instead.
     let placesControlsAboveCard: Bool
 
     let controlAlignment: HorizontalAlignment
@@ -188,6 +196,25 @@ struct BrowserTransientCardArrangement: Hashable, Identifiable, Sendable {
 
     func contentInsets(safeAreaInsets: EdgeInsets) -> EdgeInsets {
         insetsContent(safeAreaInsets)
+    }
+
+    /// The size a pointer card or Quick Window takes of `containerSize`.
+    static func windowContentSize(in containerSize: CGSize) -> CGSize {
+        CGSize(
+            width: containerSize.width * windowContentFraction,
+            height: containerSize.height * windowContentFraction
+        )
+    }
+
+    /// A frame of the window content size, centred in `containerFrame`.
+    static func centeredWindowContentFrame(in containerFrame: CGRect) -> CGRect {
+        let size = windowContentSize(in: containerFrame.size)
+        return CGRect(
+            x: containerFrame.midX - (size.width / 2),
+            y: containerFrame.midY - (size.height / 2),
+            width: size.width,
+            height: size.height
+        )
     }
 
     // MARK: - Actions - Identity

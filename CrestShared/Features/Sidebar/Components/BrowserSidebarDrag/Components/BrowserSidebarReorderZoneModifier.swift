@@ -65,11 +65,7 @@ struct BrowserSidebarReorderZoneModifier: ViewModifier {
     nonisolated private static func resolvedFrame(
         _ frame: CGRect, target: BrowserSidebarReorderZone.Target, topInset: CGFloat
     ) -> CGRect {
-        switch target {
-        case .folder, .currentTab:
-            return BrowserSidebarReorderPolicy.nestingFrame(for: frame)
-        default: break
-        }
+        if target.nests { return BrowserSidebarReorderZone.nestingFrame(for: frame) }
         guard topInset > 0, frame.height > topInset else { return frame }
         return CGRect(
             x: frame.minX,

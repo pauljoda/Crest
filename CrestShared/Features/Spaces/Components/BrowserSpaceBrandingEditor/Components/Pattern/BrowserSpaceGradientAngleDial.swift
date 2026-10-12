@@ -106,10 +106,7 @@ struct BrowserSpaceGradientAngleDial: View {
     private func adjust(
         _ direction: BrowserSpaceGradientAngleAdjustmentDirection
     ) {
-        angle = BrowserSpaceBrandingControlPolicy.adjustedAngle(
-            angle,
-            direction: direction
-        )
+        angle = direction.adjusted(angle)
     }
 }
 

@@ -296,9 +296,7 @@ final class Engines {
     /// closes on this one and lives on, and its owner forgets it only when it
     /// lets it go.
     func run(_ command: EngineCommand, on kind: EngineKind) {
-        if case .createPage(let creation) = command { hosts[creation.pageID] = kind }
-        if case .adoptOfferedPage(let adoption) = command { hosts[adoption.pageID] = kind }
-        if case .closePage(let closing) = command, hosts[closing.pageID] == kind { hosts[closing.pageID] = nil }
+        command.note(runningOn: kind, in: &hosts)
         bindings[kind]?.run(command)
     }
 }

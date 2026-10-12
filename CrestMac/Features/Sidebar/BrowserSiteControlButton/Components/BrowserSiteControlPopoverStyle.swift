@@ -1,17 +1,18 @@
 import SwiftUI
 
-/// Site controls own a dark surface even when their Space uses dark ink.
-/// A color-scheme override alone does not replace an inherited foreground style.
+/// Site controls own a dark surface even when their Space uses dark ink: the
+/// device's surface material, drawn in its dark appearance so bright page
+/// content behind it never washes out the light labels. A color-scheme override
+/// alone does not replace an inherited foreground style.
 struct BrowserSiteControlPopoverStyle: ViewModifier {
-    static let background = Color(white: 0.12)
+    @Environment(\.crestSurfaceMaterial) private var surfaceMaterial
 
     func body(content: Content) -> some View {
         content
             .font(.body)
             .foregroundStyle(Color.white)
             .tint(CrestBrandTheme.accent(.dark))
-            .background(Self.background)
-            .presentationBackground(Self.background)
+            .presentationBackground(surfaceMaterial.material)
             .preferredColorScheme(.dark)
             .environment(\.colorScheme, .dark)
     }
@@ -61,8 +62,11 @@ struct BrowserSiteControlPopoverStyle: ViewModifier {
                 }
             }
             .padding(CrestSpacing.medium)
-            .frame(width: BrowserSiteControlLayoutPolicy.width)
+            .frame(width: BrowserSiteControlMetrics.width)
             .modifier(BrowserSiteControlPopoverStyle())
+            .background { CrestSurfaceLayer(shape: Rectangle()).environment(\.colorScheme, .dark) }
+            .padding()
+            .background(.indigo.gradient)
         }
     }
 #endif

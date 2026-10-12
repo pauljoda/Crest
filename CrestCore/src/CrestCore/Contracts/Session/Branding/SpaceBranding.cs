@@ -5,7 +5,7 @@ namespace CrestCore.Contracts;
 /// vocabulary the branding uses, which older readers need to read it faithfully.
 /// <see cref="HasCustomAppearance"/> is null for branding stored before it was recorded.
 /// </summary>
-public sealed record SpaceBranding(
+public sealed partial record SpaceBranding(
     ColorPalette Colors,
     SpaceBannerPattern BannerPattern,
     double BannerStrength,

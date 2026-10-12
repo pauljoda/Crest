@@ -7,7 +7,7 @@ extension BrowserPage {
     /// Opens `url` as a new card beside the tab this page presents.
     func openLinkInSplitView(_ url: URL) {
         guard let context = navigationContext,
-            BrowserCorePolicy.acceptsExternalURL(url)
+            ExternalWebLink.accepts(url)
         else { return }
         _ = splitLinkHost.openLink(url, context.tabID, context.assignment)
     }

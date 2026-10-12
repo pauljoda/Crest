@@ -200,117 +200,8 @@ final class BrowserCloudSyncController {
         var pending = steps
         while !pending.isEmpty {
             let step = pending.removeFirst()
-            pending.insert(contentsOf: await take(step), at: 0)
+            pending.insert(contentsOf: await step.kind.take(step, on: self), at: 0)
         }
-    }
-
-    /// Takes one step and answers the steps its report leads to.
-    private func take(_ step: CloudSyncStep) async -> [CloudSyncStep] {
-        let attempt = step.attempt
-        switch step.kind {
-        case .checkEntitlement:
-            let granted = await remoteService?.hasRequiredEntitlement() ?? false
-            return advance(CloudEntitlementChecked(attempt: attempt, granted: granted))
-        case .checkAccount:
-            return await reporting(step) { _ in
-                try await self.openTransportState()
-                let check = BrowserCloudAccountCheck(remote: try self.remote(), deadline: self.accountCheckDeadline)
-                let state = try await check.state()
-                return CloudAccountChecked(attempt: attempt, state: state)
-            }
-        case .replaceSeed:
-            return await reporting(step) { observed in
-                let records = try await self.remote().loadSnapshot()
-                observed = records.count
-                try await self.deliver(ReplaceSeedWithCloudRecords(records: records))
-                return CloudSeedReplaced(attempt: attempt, cloudRecords: records.count)
-            }
-        case .compareContent:
-            return await reporting(step) { observed in
-                let records = try await self.remote().loadSnapshot()
-                observed = records.count
-                self.comparedRecords = records
-                let comparison = try await self.compare(with: records)
-                return CloudContentCompared(attempt: attempt, cloudRecords: records.count, comparison: comparison)
-            }
-        case .takeCloudContent:
-            return await reporting(step) { _ in
-                let records = self.comparedRecords
-                self.comparedRecords = []
-                try await self.deliver(ReplaceWithCloudRecords(records: records))
-                return CloudContentTaken(attempt: attempt)
-            }
-        case .applyChosenCopy:
-            return await reporting(step) { observed in
-                let records = try await self.remote().loadSnapshot()
-                observed = records.count
-                if step.usesCloud {
-                    try await self.deliver(ReplaceWithCloudRecords(records: records))
-                } else {
-                    try await self.deliver(OverwriteCloud(records: records))
-                }
-                return CloudCopyApplied(attempt: attempt, usesCloud: step.usesCloud, cloudRecords: records.count)
-            }
-        case .startTransport:
-            return await startTransport(for: step)
-        case .stopTransport:
-            let previous = transport
-            transport = nil
-            await previous?.stop()
-            return []
-        case .syncTransport:
-            return await reporting(step) { _ in
-                try await self.transport?.syncNow()
-                return CloudTransportSynced(attempt: attempt, localChangesUnsaved: self.localErrorDescription != nil)
-            }
-        case .pullTransport:
-            return await reporting(step) { _ in
-                let count = try await self.transport?.pullFromICloud() ?? 0
-                return CloudTransportPulled(
-                    attempt: attempt, cloudRecords: count, localChangesUnsaved: self.localErrorDescription != nil)
-            }
-        case .notifyTransport:
-            await transport?.notifyLocalChanges()
-            return []
-        case .scheduleRetry:
-            let delay = retryDelay
-            retryTask = Task { [weak self] in
-                try? await Task.sleep(for: delay)
-                guard !Task.isCancelled else { return }
-                await self?.run(RetryCloudSync())
-            }
-            return []
-        case .cancelRetry:
-            retryTask?.cancel()
-            retryTask = nil
-            return []
-        case .restartAfterAccountChange:
-            Task { [weak self] in await self?.run(RestartCloudSyncAfterAccountChange()) }
-            return []
-        default:
-            return []
-        }
-    }
-
-    /// Creates and starts the transport, whose reports name the attempt it
-    /// started for. A transport started for a start that is no longer
-    /// current is stopped again.
-    private func startTransport(for step: CloudSyncStep) async -> [CloudSyncStep] {
-        let attempt = step.attempt
-        let created: any BrowserCloudSyncTransport
-        do {
-            guard let transportFactory else { throw BrowserCloudSyncError.remoteChangeNotApplied("No transport.") }
-            created = try transportFactory.makeTransport(
-                statusHandler: { [weak self] status in await self?.report(status, attempt: attempt) },
-                activityHandler: { [weak self] activity in await self?.report(activity, attempt: attempt) })
-        } catch {
-            return failed(step, error, observed: nil)
-        }
-        transport = created
-        await created.start()
-        let next = advance(CloudTransportStarted(attempt: attempt))
-        if next.contains(where: { $0.kind == .discardStartedTransport }) { await created.stop() }
-        return next.filter { $0.kind != .discardStartedTransport }
     }
 
     /// Runs a step's work and reports what it came to, or the failure with
@@ -408,5 +299,139 @@ final class BrowserCloudSyncController {
     private func deliver(_ intent: some CloudSyncIntent) async throws {
         let core = core
         try await Task.detached(priority: .utility) { _ = try core.deliver(intent) }.value
+    }
+}
+
+// MARK: - CloudSyncStepPerformer
+
+extension BrowserCloudSyncController: CloudSyncStepPerformer {
+    func checkEntitlement(_ step: CloudSyncStep) async -> [CloudSyncStep] {
+        let granted = await remoteService?.hasRequiredEntitlement() ?? false
+        return advance(CloudEntitlementChecked(attempt: step.attempt, granted: granted))
+    }
+
+    func checkAccount(_ step: CloudSyncStep) async -> [CloudSyncStep] {
+        await reporting(step) { _ in
+            try await self.openTransportState()
+            let check = BrowserCloudAccountCheck(remote: try self.remote(), deadline: self.accountCheckDeadline)
+            let state = try await check.state()
+            return CloudAccountChecked(attempt: step.attempt, state: state)
+        }
+    }
+
+    func replaceSeed(_ step: CloudSyncStep) async -> [CloudSyncStep] {
+        await reporting(step) { observed in
+            let records = try await self.remote().loadSnapshot()
+            observed = records.count
+            try await self.deliver(ReplaceSeedWithCloudRecords(records: records))
+            return CloudSeedReplaced(attempt: step.attempt, cloudRecords: records.count)
+        }
+    }
+
+    func compareContent(_ step: CloudSyncStep) async -> [CloudSyncStep] {
+        await reporting(step) { observed in
+            let records = try await self.remote().loadSnapshot()
+            observed = records.count
+            self.comparedRecords = records
+            let comparison = try await self.compare(with: records)
+            return CloudContentCompared(attempt: step.attempt, cloudRecords: records.count, comparison: comparison)
+        }
+    }
+
+    func takeCloudContent(_ step: CloudSyncStep) async -> [CloudSyncStep] {
+        await reporting(step) { _ in
+            let records = self.comparedRecords
+            self.comparedRecords = []
+            try await self.deliver(ReplaceWithCloudRecords(records: records))
+            return CloudContentTaken(attempt: step.attempt)
+        }
+    }
+
+    func applyChosenCopy(_ step: CloudSyncStep) async -> [CloudSyncStep] {
+        await reporting(step) { observed in
+            let records = try await self.remote().loadSnapshot()
+            observed = records.count
+            if step.usesCloud {
+                try await self.deliver(ReplaceWithCloudRecords(records: records))
+            } else {
+                try await self.deliver(OverwriteCloud(records: records))
+            }
+            return CloudCopyApplied(attempt: step.attempt, usesCloud: step.usesCloud, cloudRecords: records.count)
+        }
+    }
+
+    /// Creates and starts the transport, whose reports name the attempt it
+    /// started for. A transport started for a start that is no longer
+    /// current is stopped again.
+    func startTransport(_ step: CloudSyncStep) async -> [CloudSyncStep] {
+        let attempt = step.attempt
+        let created: any BrowserCloudSyncTransport
+        do {
+            guard let transportFactory else { throw BrowserCloudSyncError.remoteChangeNotApplied("No transport.") }
+            created = try transportFactory.makeTransport(
+                statusHandler: { [weak self] status in await self?.report(status, attempt: attempt) },
+                activityHandler: { [weak self] activity in await self?.report(activity, attempt: attempt) })
+        } catch {
+            return failed(step, error, observed: nil)
+        }
+        transport = created
+        await created.start()
+        let next = advance(CloudTransportStarted(attempt: attempt))
+        if next.contains(where: { $0.kind == .discardStartedTransport }) { await created.stop() }
+        return next.filter { $0.kind != .discardStartedTransport }
+    }
+
+    /// The start step that answers it consumes this step, stopping the
+    /// transport it just started, so it never reaches the performer alone.
+    func discardStartedTransport(_ step: CloudSyncStep) async -> [CloudSyncStep] {
+        []
+    }
+
+    func stopTransport(_ step: CloudSyncStep) async -> [CloudSyncStep] {
+        let previous = transport
+        transport = nil
+        await previous?.stop()
+        return []
+    }
+
+    func syncTransport(_ step: CloudSyncStep) async -> [CloudSyncStep] {
+        await reporting(step) { _ in
+            try await self.transport?.syncNow()
+            return CloudTransportSynced(attempt: step.attempt, localChangesUnsaved: self.localErrorDescription != nil)
+        }
+    }
+
+    func pullTransport(_ step: CloudSyncStep) async -> [CloudSyncStep] {
+        await reporting(step) { _ in
+            let count = try await self.transport?.pullFromICloud() ?? 0
+            return CloudTransportPulled(
+                attempt: step.attempt, cloudRecords: count, localChangesUnsaved: self.localErrorDescription != nil)
+        }
+    }
+
+    func notifyTransport(_ step: CloudSyncStep) async -> [CloudSyncStep] {
+        await transport?.notifyLocalChanges()
+        return []
+    }
+
+    func scheduleRetry(_ step: CloudSyncStep) async -> [CloudSyncStep] {
+        let delay = retryDelay
+        retryTask = Task { [weak self] in
+            try? await Task.sleep(for: delay)
+            guard !Task.isCancelled else { return }
+            await self?.run(RetryCloudSync())
+        }
+        return []
+    }
+
+    func cancelRetry(_ step: CloudSyncStep) async -> [CloudSyncStep] {
+        retryTask?.cancel()
+        retryTask = nil
+        return []
+    }
+
+    func restartAfterAccountChange(_ step: CloudSyncStep) async -> [CloudSyncStep] {
+        Task { [weak self] in await self?.run(RestartCloudSyncAfterAccountChange()) }
+        return []
     }
 }

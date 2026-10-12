@@ -10,8 +10,7 @@ struct BrowserFolderDragPreview: View {
     var loadedTabIDs: Set<UUID>?
 
     var body: some View {
-        let shape = RoundedRectangle(
-            cornerRadius: BrowserDeviceAppearanceStore.shared.containerCornerRadius(), style: .continuous)
+        let shape = RoundedRectangle(cornerRadius: BrowserSidebarMetrics.layerCornerRadius(), style: .continuous)
         let width = BrowserFolderDragPreviewLayout.width(for: rowWidth)
 
         ZStack(alignment: .topLeading) {
@@ -19,13 +18,12 @@ struct BrowserFolderDragPreview: View {
                 .frame(height: BrowserFolderDragPreviewLayout.height)
             ForEach(rows) { row in
                 rowContent(row)
-                    .frame(width: width, height: rowHeight(row), alignment: .topLeading)
+                    .frame(width: width, height: row.previewHeight, alignment: .topLeading)
                     .offset(y: row.frame.minY)
             }
         }
         .frame(width: width, height: max(BrowserFolderDragPreviewLayout.height, sourceHeight), alignment: .topLeading)
-        .background(CrestColor.selectedSurface, in: shape)
-        .background(.regularMaterial, in: shape)
+        .background { CrestSurfaceLayer(shape: shape) }
         .overlay {
             shape.fill(folder.displayColor.color.opacity(0.12))
             shape.strokeBorder(folder.displayColor.color.opacity(0.35), lineWidth: 0.5)
@@ -62,8 +60,11 @@ struct BrowserFolderDragPreview: View {
                     .font(.caption).frame(maxWidth: .infinity, alignment: .leading)
                 ForEach(members, id: \.id) { tab in tabLine(tab, leadingInset: 0).frame(maxHeight: .infinity) }
             }
-            .padding(CrestSpacing.extraSmall)
-            .background(CrestColor.chromeSurface, in: .rect(cornerRadius: CrestRadius.control))
+            .padding(BrowserSidebarMetrics.containerPadding)
+            .background {
+                CrestSurfaceLayer(
+                    shape: .rect(cornerRadius: BrowserSidebarMetrics.layerCornerRadius(depth: 1), style: .continuous))
+            }
             .padding(.leading, max(BrowserFolderLayout.nestingIndent, row.frame.minX))
         }
     }
@@ -80,10 +81,5 @@ struct BrowserFolderDragPreview: View {
         .padding(.trailing, CrestSpacing.medium)
         .frame(maxHeight: .infinity)
         .browserTabResidency(isLoaded: loadedTabIDs?.contains(tab.id) ?? true)
-    }
-
-    private func rowHeight(_ row: BrowserFolderDragPreviewRow) -> CGFloat {
-        if case .folder = row.content { return BrowserFolderDragPreviewLayout.height }
-        return row.frame.height
     }
 }

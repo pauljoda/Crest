@@ -24,11 +24,7 @@ final class BrowserFaviconRenderSafetyTests: XCTestCase {
         ]
 
         for subject in subjects {
-            let request = BrowserFaviconTaskIdentityPolicy.renderRequest(
-                for: subject,
-                profileID: profileID,
-                maximumPixelSize: 64
-            )
+            let request = subject.renderRequest(profileID: profileID, maximumPixelSize: 64)
             let result = await BrowserFaviconRenderLoader.decode(
                 request,
                 fallbackData: fallback.data
@@ -48,12 +44,7 @@ final class BrowserFaviconRenderSafetyTests: XCTestCase {
             data: nil,
             iconMode: .automatic
         )
-        let request = BrowserFaviconTaskIdentityPolicy.renderRequest(
-            for: tab,
-            profileID: fixedUUID(tail: 0x91),
-            maximumPixelSize: 64,
-            isUnlocked: false
-        )
+        let request = tab.renderRequest(profileID: fixedUUID(tail: 0x91), maximumPixelSize: 64, isUnlocked: false)
         XCTAssertNil(request.fallbackPageURL)
         XCTAssertNil(request.fallbackProfileID)
 
@@ -73,16 +64,8 @@ final class BrowserFaviconRenderSafetyTests: XCTestCase {
             data: Data([0x01, 0x02, 0x03]),
             iconMode: .automatic
         )
-        let older = BrowserFaviconTaskIdentityPolicy.identity(
-            for: tab,
-            profileID: fixedUUID(tail: 0xA2),
-            maximumPixelSize: 64
-        )
-        let newer = BrowserFaviconTaskIdentityPolicy.identity(
-            for: tab,
-            profileID: fixedUUID(tail: 0xA3),
-            maximumPixelSize: 64
-        )
+        let older = tab.taskIdentity(profileID: fixedUUID(tail: 0xA2), maximumPixelSize: 64)
+        let newer = tab.taskIdentity(profileID: fixedUUID(tail: 0xA3), maximumPixelSize: 64)
         var state = BrowserFaviconRenderState()
 
         state.begin(older, isCancelled: false)

@@ -32,12 +32,9 @@ struct BrowserPinnedExtensionStrip: View {
                             })
                     }
                 )
-                .padding(
-                    .top,
-                    BrowserPinnedExtensionStripLayoutPolicy.adjacentSpacing
-                        + (space.sidebar.section(.pinned).isEmpty
-                            ? 0 : BrowserTabSelectionGlow.outset)
-                )
+                .padding(.top, BrowserSidebarMetrics.topSectionSpacing)
+                // Pinned tabs below hold the same gap above themselves.
+                .padding(.bottom, space.sidebar.section(.pinned).isEmpty ? BrowserSidebarMetrics.topSectionSpacing : 0)
                 .transition(.opacity)
             }
         }

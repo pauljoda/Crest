@@ -3,7 +3,7 @@
 
     extension ContentFullscreenChanged {
         @MainActor func present(on engine: ChromiumEngine) {
-            engine.presentedPage(pageID)?.observer(.contentFullscreenChanged(active))
+            engine.presentedPage(pageID)?.observer(BrowserPageContentFullscreenChanged(isActive: active))
         }
     }
 #endif

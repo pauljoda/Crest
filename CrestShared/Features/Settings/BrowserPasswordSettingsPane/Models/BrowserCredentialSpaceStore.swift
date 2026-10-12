@@ -36,7 +36,7 @@ final class BrowserCredentialSpaceStore {
 
     /// The descriptors that match a query, over the four fields both shells searched.
     func descriptors(matching query: String) -> [CredentialDescriptor] {
-        BrowserCredentialSettingsPolicy.filter(descriptors, matching: query)
+        descriptors.matching(query)
     }
 
     func isDeleting(_ descriptor: CredentialDescriptor) -> Bool {
@@ -360,8 +360,7 @@ final class BrowserCredentialSpaceStore {
         for descriptor: CredentialDescriptor,
         in space: SpaceModel?
     ) -> String {
-        BrowserCredentialSettingsPolicy.deletionMessage(
-            for: descriptor,
+        descriptor.deletionMessage(
             spaceName: space?.settings.name
                 ?? browser.spaceModel(descriptor.spaceID)?.settings.name
                 ?? "this Space"

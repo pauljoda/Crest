@@ -35,8 +35,7 @@ struct SidebarChrome: View {
                 // tabs; a fade on each switch redraws the strip every frame.
                 .animation(nil, value: pages.activeTabID)
                 .animation(
-                    BrowserVisualAccessibilityPolicy.animation(
-                        SpacePagerSettlement.standardAnimation, reduceMotion: reduceMotion),
+                    SpacePagerSettlement.standardAnimation.unlessReducingMotion(reduceMotion),
                     value: [pages.canGoBack, pages.canGoForward, pages.activePage?.live.isLoading == true]
                 )
 
@@ -65,7 +64,7 @@ struct SidebarChrome: View {
             }
             .environment(
                 \.colorScheme,
-                BrowserSpaceForegroundPolicy.colorScheme(for: space.settings.look)
+                space.settings.look.foregroundTone.colorScheme
             )
             .modifier(SpaceForegroundBlend(spaces: context.availableSpaces, selectedSpaceID: space.id))
             .blur(radius: isLocked ? BrowserSidebarMetrics.lockedSpaceBlurRadius : 0)

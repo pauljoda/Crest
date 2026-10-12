@@ -5,7 +5,7 @@ import ImageIO
 @MainActor
 protocol BrowserSystemNowPlayingDriving: AnyObject {
     func setCommandHandler(
-        _ handler: ((BrowserMediaSessionAction) -> Bool)?
+        _ handler: ((MediaSessionAction) -> Bool)?
     )
     func publish(_ session: BrowserMediaSessionSnapshot?)
 }
@@ -59,7 +59,7 @@ final class BrowserSystemNowPlayingCoordinator {
         from sessions: [BrowserMediaSessionSnapshot]
     ) {
         let next: BrowserMediaSessionSnapshot?
-        if let arbitration = BrowserCorePolicy.mediaSessionArbitration(sessions) {
+        if let arbitration = MediaSessionOrder.arbitration(of: sessions) {
             next = arbitration.nowPlaying
         } else {
             next = selectedSession.flatMap { selected in
@@ -71,7 +71,7 @@ final class BrowserSystemNowPlayingCoordinator {
         driver.publish(next)
     }
 
-    private func perform(_ action: BrowserMediaSessionAction) -> Bool {
+    private func perform(_ action: MediaSessionAction) -> Bool {
         guard let selectedSession,
             selectedSession.availableActions.contains(action)
         else { return false }
@@ -79,16 +79,7 @@ final class BrowserSystemNowPlayingCoordinator {
             kindID: .nowPlaying,
             instanceID: selectedSession.id.id
         )
-        switch action {
-        case .play:
-            store.perform(.play, on: widgetID)
-        case .pause:
-            store.perform(.pause, on: widgetID)
-        case .previousTrack:
-            store.perform(.previousTrack, on: widgetID)
-        case .nextTrack:
-            store.perform(.nextTrack, on: widgetID)
-        }
+        store.perform(.mediaSession(action), on: widgetID)
         return true
     }
 }
@@ -100,9 +91,12 @@ final class BrowserSystemNowPlayingCoordinator {
 final class BrowserMediaPlayerNowPlayingDriver: NSObject,
     BrowserSystemNowPlayingDriving
 {
+    /// The largest artwork the system's Now Playing surface is handed.
+    private nonisolated static let maximumArtworkPixelSize = 1_024
+
     private let infoCenter: MPNowPlayingInfoCenter
     private let commandCenter: MPRemoteCommandCenter
-    private var commandHandler: ((BrowserMediaSessionAction) -> Bool)?
+    private var commandHandler: ((MediaSessionAction) -> Bool)?
     private var commandTargets: [(command: MPRemoteCommand, target: Any)] = []
 
     init(
@@ -126,7 +120,7 @@ final class BrowserMediaPlayerNowPlayingDriver: NSObject,
     }
 
     func setCommandHandler(
-        _ handler: ((BrowserMediaSessionAction) -> Bool)?
+        _ handler: ((MediaSessionAction) -> Bool)?
     ) {
         commandHandler = handler
     }
@@ -161,7 +155,7 @@ final class BrowserMediaPlayerNowPlayingDriver: NSObject,
 
     private func install(
         _ command: MPRemoteCommand,
-        action: BrowserMediaSessionAction
+        action: MediaSessionAction
     ) {
         let target = command.addTarget { [weak self] _ in
             guard self?.commandHandler?(action) == true else {
@@ -173,7 +167,7 @@ final class BrowserMediaPlayerNowPlayingDriver: NSObject,
     }
 
     private func setEnabledActions(
-        _ actions: Set<BrowserMediaSessionAction>
+        _ actions: Set<MediaSessionAction>
     ) {
         commandCenter.playCommand.isEnabled = actions.contains(.play)
         commandCenter.pauseCommand.isEnabled = actions.contains(.pause)
@@ -194,7 +188,7 @@ final class BrowserMediaPlayerNowPlayingDriver: NSObject,
                     kCGImageSourceCreateThumbnailFromImageAlways: true,
                     kCGImageSourceCreateThumbnailWithTransform: true,
                     kCGImageSourceThumbnailMaxPixelSize:
-                        BrowserMediaSessionArtworkPolicy.maximumSystemPixelSize,
+                        maximumArtworkPixelSize,
                     kCGImageSourceShouldCacheImmediately: true,
                 ] as CFDictionary
             )

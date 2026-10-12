@@ -42,7 +42,7 @@ struct CrestSettingsGroup<Preview: View, Content: View>: View {
                     .controlSize(.small)
                     .opacity(isModified ? 1 : 0)
                     .animation(
-                        BrowserVisualAccessibilityPolicy.animation(CrestMotion.surface, reduceMotion: reduceMotion),
+                        CrestMotion.surface.unlessReducingMotion(reduceMotion),
                         value: isModified
                     )
                     .disabled(!isModified)

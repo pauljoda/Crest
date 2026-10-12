@@ -59,7 +59,7 @@ struct BrowserSplitPageSurface: View {
         return .constant(
             BrowserSplitWidthTransaction(
                 persistedFractions:
-                    BrowserSplitLayoutSeedPolicy.fractions(persisted: persisted, memberCount: members.count)))
+                    BrowserSplitColumnLayout.seedFractions(persisted: persisted, memberCount: members.count)))
     }
 
     var body: some View {
@@ -162,7 +162,7 @@ struct BrowserSplitPageSurface: View {
         guard isSelectedSpace, let lift = model.splitCardLift.lift, !lift.isSettling else {
             return members
         }
-        return BrowserSplitCardLiftPolicy.displayMembers(
+        return BrowserSplitCardLift.displayMembers(
             members,
             lifted: lift.tabID,
             gapIndex: lift.gapIndex
@@ -214,19 +214,19 @@ struct BrowserSplitPageSurface: View {
     ) -> Bool {
         guard isSelectedSpace else { return false }
         let frames = memberCardFrames
-        let card = BrowserSplitCardLiftPolicy.card(
+        let card = BrowserSplitCardLift.card(
             at: point,
             members: members,
             cardFrames: frames
         )
         guard
-            BrowserSplitCardLiftPolicy.picksUp(
+            BrowserSplitCardLift.picksUp(
                 modifiers: modifiers,
                 isInsideCard: card != nil,
-                isOverDivider: BrowserSplitCardLiftPolicy.isOverDivider(
+                isOverDivider: BrowserSplitCardLift.isOverDivider(
                     point,
                     orderedCardFrames:
-                        BrowserSplitCardLiftPolicy
+                        BrowserSplitCardLift
                         .orderedMemberFrames(
                             members: members,
                             cardFrames: frames
@@ -268,7 +268,7 @@ struct BrowserSplitPageSurface: View {
         guard let carried = model.splitCardLift.carriedTabID else { return }
         model.splitCardLift.update(
             pointer: point,
-            gapIndex: BrowserSplitCardLiftPolicy.gapIndex(
+            gapIndex: BrowserSplitCardLift.gapIndex(
                 at: point,
                 cardFrames: memberCardFrames,
                 lifted: carried,
@@ -316,7 +316,7 @@ struct BrowserSplitPageSurface: View {
     private func loadSnapshot(for member: TabStateModel, token: BrowserSplitCardLiftToken) {
         let page = model.pages.presentedPage(
             matching: BrowserTabRuntimeAssignment(tabID: member.id, spaceID: space.id, profileID: space.profileID))
-        guard BrowserSplitCardLiftPolicy.picturesPage(.of(member.surface, page: page)), let page else { return }
+        guard PagePresentation.of(member.surface, page: page).picturesLivePage, let page else { return }
         let lift = model.splitCardLift
         BrowserSplitCardSnapshotLoader.snapshot(of: page) { snapshot in
             guard let snapshot else { return }
@@ -326,7 +326,7 @@ struct BrowserSplitPageSurface: View {
 
     private func focusesOnHover(_ tabID: UUID) -> Bool {
         isSelectedSpace
-            && BrowserSplitFocusPolicy.focusesOnHover(
+            && Self.focusesOnHover(
                 followsMouse: appPreferences.splitFocusFollowsMouse,
                 isCardFocused: model.pages.activeTabID == tabID,
                 isAddressEditing: model.isAddressEditing,
@@ -339,7 +339,7 @@ struct BrowserSplitPageSurface: View {
     private func handleMouseDown(_ tabID: UUID) {
         guard
             isSelectedSpace,
-            BrowserSplitFocusPolicy.focusesOnClick(
+            Self.focusesOnClick(
                 isCardFocused: model.pages.activeTabID == tabID,
                 isDraggingSidebarItem:
                     model.sidebarInteraction.sidebarReorderState.isDragging,
@@ -355,7 +355,7 @@ struct BrowserSplitPageSurface: View {
     /// atmosphere through it while loaded neighbours keep their page background.
     private func usesTransparentInnerSurface(_ member: TabStateModel) -> Bool {
         let page = model.pages.surfacePage(for: member.id, in: space, accessController: model.spaceAccess)
-        return BrowserPageSurfacePolicy.usesTransparentInnerSurface(
+        return BrowserPageSurfacePresentation.usesTransparentInnerSurface(
             isStartPage: member.surface == .startPage,
             hasActivePage: page != nil,
             completedNavigationCount: page?.completedNavigationCount ?? 0

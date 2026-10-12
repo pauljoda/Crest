@@ -12,6 +12,21 @@ struct BrowserSidebarListItem: Identifiable, Equatable {
         case folder(FolderStateModel)
         case split(UUID, members: [TabStateModel])
 
+        // MARK: - Actions - Tabs
+
+        /// Whether the row stands for the tab `tabID` of `space`: is it, is
+        /// the split around it, or is a folder that holds it, however deep.
+        @MainActor
+        func contains(tabID: UUID, in space: SpaceModel) -> Bool {
+            switch self {
+            case .tab(let tab): tab.id == tabID
+            case .split(_, let members): members.contains { $0.id == tabID }
+            case .folder(let folder): space.tabIDs(inFolder: folder.id).contains(tabID)
+            }
+        }
+
+        // MARK: - Actions - Equality
+
         static func == (lhs: Content, rhs: Content) -> Bool {
             switch (lhs, rhs) {
             case (.tab(let tab), .tab(let other)): tab === other

@@ -137,16 +137,6 @@ extension BrowserStore {
                 BrowserTabRuntimeAssignment(tabID: $0, spaceID: destination.spaceID, profileID: destination.profileID)
             }
         }
-        switch batch.reselection {
-        case .cleared: tabMultiSelection.clear()
-        case .copies: tabMultiSelection.selectAll(units: copies.map { [.tab($0.copyTabID)] })
-        case .items:
-            let copied = Dictionary(uniqueKeysWithValues: copies.map { ($0.sourceTabID, $0.copyTabID) })
-            tabMultiSelection.selectAll(
-                units: request.rootItems.map { item in
-                    guard case .tab(let id) = item, let copy = copied[id] else { return [item] }
-                    return [.tab(copy)]
-                })
-        }
+        batch.reselection.apply(tabMultiSelection, copies, request)
     }
 }

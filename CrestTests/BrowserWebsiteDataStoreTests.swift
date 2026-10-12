@@ -45,19 +45,19 @@ final class BrowserWebsiteDataStoreTests: XCTestCase {
 
     func testSiteDataMatchingIncludesTheHostAndItsParentRecords() {
         XCTAssertTrue(
-            BrowserSiteDataPolicy.matchesDataRecord(
+            BrowserWebsiteDataStore.matchesDataRecord(
                 displayName: "localhost",
                 host: "api.localhost"
             )
         )
         XCTAssertTrue(
-            BrowserSiteDataPolicy.matchesDataRecord(
+            BrowserWebsiteDataStore.matchesDataRecord(
                 displayName: "api.localhost",
                 host: "api.localhost"
             )
         )
         XCTAssertFalse(
-            BrowserSiteDataPolicy.matchesDataRecord(
+            BrowserWebsiteDataStore.matchesDataRecord(
                 displayName: "notlocalhost.example",
                 host: "localhost"
             )
@@ -65,21 +65,21 @@ final class BrowserWebsiteDataStoreTests: XCTestCase {
     }
 
     func testSiteCookieRemovalIncludesParentDomainsButNotUnrelatedSites() {
-        XCTAssertTrue(BrowserSiteDataPolicy.includesCookieDomainForRemoval("localhost", host: "api.localhost"))
+        XCTAssertTrue(BrowserWebsiteDataStore.includesCookieDomainForRemoval("localhost", host: "api.localhost"))
         XCTAssertTrue(
-            BrowserSiteDataPolicy.includesCookieDomainForRemoval(
+            BrowserWebsiteDataStore.includesCookieDomainForRemoval(
                 ".localhost",
                 host: "api.localhost"
             )
         )
         XCTAssertTrue(
-            BrowserSiteDataPolicy.includesCookieDomainForRemoval(
+            BrowserWebsiteDataStore.includesCookieDomainForRemoval(
                 "api.localhost",
                 host: "api.localhost"
             )
         )
         XCTAssertFalse(
-            BrowserSiteDataPolicy.includesCookieDomainForRemoval(
+            BrowserWebsiteDataStore.includesCookieDomainForRemoval(
                 ".example.com",
                 host: "api.localhost"
             )

@@ -9,9 +9,10 @@ namespace CrestCore.Contracts;
 public sealed record EnforcedLimits() : StandaloneQuery<CapacityLimits> {
     #region Actions - Answering
 
-    internal override CapacityLimits Answer(StandaloneContext context) => new(BrowserLimits.Folders, BrowserLimits.FolderDepth,
-        BrowserLimits.HistoryEntries, BrowserLimits.SplitMembers, BrowserLimits.BrandColors, BrowserLimits.CrestPalette,
-        BrowserLimits.Spaces, BrowserLimits.TabsPerSpace, NativeSyncJournal.MaximumRecords, CredentialFile.MaximumBytes);
+    internal override CapacityLimits Answer(StandaloneContext context) => new(FolderTree.MaximumCount, FolderTree.MaximumDepth,
+        HistoryEntryState.MaximumEntries, BrowserTabCollection.MaximumSplitMembers, SpaceBranding.MaximumColorCount,
+        SpaceBranding.MaximumCrestPaletteCount, SessionState.MaximumSpaces, BrowserTabCollection.MaximumTabs, NativeSyncJournal.MaximumRecords,
+        CredentialFile.MaximumBytes);
 
     #endregion
 }

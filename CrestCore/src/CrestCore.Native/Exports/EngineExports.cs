@@ -87,6 +87,10 @@ public static unsafe partial class Exports {
             var reader = new WireReader(new ReadOnlySpan<byte>(report, (int)length).ToArray());
             entry.App.Report(entry.Engine, Finished(ContractCodec.ReadEngineEvent(reader), reader));
             return CoreStatus.Ok;
+        } catch (Rejected) {
+            // A report is never refused: one the core's rules turn away
+            // changes nothing, like a report about a page the core forgot.
+            return CoreStatus.Ok;
         } catch (WireFormatException) {
             return CoreStatus.InvalidMessage;
         } catch {

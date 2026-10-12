@@ -2,7 +2,22 @@ using CrestCore.Contracts;
 
 namespace CrestCore.Domain;
 
+/// What a typed or chosen address loads, and the rules every Space applies to
+/// the addresses it holds.
 public sealed record AddressResolution(string Url, string? SearchQuery) {
+    #region Static Variables
+
+    // Browser-owned URL spellings that are shared by address and tab rules.
+    public const string AboutBlank = "about:blank";
+    public const string ChromeScheme = "chrome";
+    public const string CrestScheme = "crest";
+    public const string ChromeExtensionScheme = "chrome-extension";
+    public const string ChromePrefix = ChromeScheme + "://";
+    public const string CrestPrefix = CrestScheme + "://";
+    public const string ChromeExtensionPrefix = ChromeExtensionScheme + "://";
+
+    #endregion
+
     #region Actions - Navigation
 
     /// The address a page loads for what the person typed or chose in a Space
@@ -15,12 +30,12 @@ public sealed record AddressResolution(string Url, string? SearchQuery) {
         ArgumentNullException.ThrowIfNull(provider);
         // The empty document is an address on every engine, whatever its fragment.
         var value = input.Trim();
-        if (value == BrowserUrlConstants.AboutBlank || value.StartsWith(BrowserUrlConstants.AboutBlank + "#", StringComparison.Ordinal))
+        if (value == AboutBlank || value.StartsWith(AboutBlank + "#", StringComparison.Ordinal))
             return value;
         AddressResolution? resolution;
         try {
             resolution = Resolve(input, provider, allowsInternalPages);
-        } catch (BrowserRuleException) {
+        } catch (Rejected refused) when (refused.Rejection is UnsupportedAddress) {
             throw new Rejected(new UnsupportedAddress(input));
         }
         if (resolution is null || !Uri.TryCreate(resolution.Url, UriKind.Absolute, out _))
@@ -37,17 +52,20 @@ public sealed record AddressResolution(string Url, string? SearchQuery) {
         string value = url.Trim();
         if (IsInternalPage(value)) return allowsInternalPages ? value : null;
         return Uri.TryCreate(value, UriKind.Absolute, out var parsed)
-            && ExternalSchemePolicy.Disposition(parsed.Scheme, isAppInitiated: true) == ExternalSchemeDisposition.Engine
+            && UrlScheme.DispositionOf(parsed.Scheme, isAppInitiated: true) == ExternalSchemeDisposition.Engine
             ? value : null;
     }
 
+    /// What `input` loads with `provider`, or null for blank input. Throws
+    /// `Rejected` with `UnsupportedAddress` for input too long to be an
+    /// address, or an internal page no Space may hold.
     public static AddressResolution? Resolve(string input, SearchProvider provider, bool allowsInternalPages = false) {
         string value = input.Trim();
         if (value.Length == 0) return null;
-        if (value.Length > 4096) throw new BrowserRuleException(BrowserRule.InvalidAddress);
-        if (value == BrowserUrlConstants.AboutBlank || IsInternalPage(value)) {
+        if (value.Length > 4096) throw new Rejected(new UnsupportedAddress(value));
+        if (value == AboutBlank || IsInternalPage(value)) {
             if (!allowsInternalPages) return new(provider.Search(value), value);
-            BrowserSpace.ValidateUrl(value, allowsInternalPages: true);
+            ValidateUrl(value, allowsInternalPages: true);
             return new(value, null);
         }
         if (Uri.TryCreate(value, UriKind.Absolute, out var explicitUrl) && WebScheme.Named(explicitUrl.Scheme) is not null
@@ -64,9 +82,9 @@ public sealed record AddressResolution(string Url, string? SearchQuery) {
 
     /// Whether `value` names one of the browser's own pages.
     private static bool IsInternalPage(string value) =>
-        value.StartsWith(BrowserUrlConstants.ChromePrefix, StringComparison.OrdinalIgnoreCase)
-        || value.StartsWith(BrowserUrlConstants.CrestPrefix, StringComparison.OrdinalIgnoreCase)
-        || value.StartsWith(BrowserUrlConstants.ChromeExtensionPrefix, StringComparison.OrdinalIgnoreCase);
+        value.StartsWith(ChromePrefix, StringComparison.OrdinalIgnoreCase)
+        || value.StartsWith(CrestPrefix, StringComparison.OrdinalIgnoreCase)
+        || value.StartsWith(ChromeExtensionPrefix, StringComparison.OrdinalIgnoreCase);
 
     /// An explicit `file://` URL, or an absolute path the person typed. Only these
     /// three spellings reach a local document; everything else stays a search, and
@@ -88,6 +106,27 @@ public sealed record AddressResolution(string Url, string? SearchQuery) {
         // is a remote authority Crest does not read as a local document.
         if (!parsed.Host.Equals("localhost", StringComparison.OrdinalIgnoreCase)) return null;
         return new UriBuilder(parsed) { Host = string.Empty }.Uri.AbsoluteUri;
+    }
+
+    #endregion
+
+    #region Actions - Validation
+
+    /// Throws `Rejected` with `UnsupportedAddress` for an address no Space
+    /// holds.
+    public static void ValidateUrl(string? url, bool allowsInternalPages = false) {
+        if (url is null || url.Length > 16384 || !Uri.TryCreate(url, UriKind.Absolute, out var parsed)
+            || (WebScheme.Named(parsed.Scheme) is null
+                && url != AboutBlank
+                // A local document is a legitimate tab URL on every engine. It stays
+                // out of sync, which the sync projection decides by scheme, not here.
+                && !(parsed.Scheme == Uri.UriSchemeFile && parsed.Host.Length == 0 && parsed.AbsolutePath.Length > 0)
+                && !(allowsInternalPages && (parsed.Scheme == ChromeScheme
+                    || parsed.Scheme == CrestScheme) && parsed.Host.Length > 0)
+                && !(allowsInternalPages && parsed.Scheme == ChromeExtensionScheme && parsed.Host.Length == 32
+                    && parsed.Host.All(c => c is >= 'a' and <= 'p')))
+            || !string.IsNullOrEmpty(parsed.UserInfo))
+            throw new Rejected(new UnsupportedAddress(url ?? ""));
     }
 
     #endregion

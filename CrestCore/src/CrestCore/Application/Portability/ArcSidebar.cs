@@ -226,7 +226,7 @@ internal static class ArcSidebar {
         }
         if (colors.Count == 0 && Color(ImportJson.Member(ImportJson.Member(theme, "primaryColorPalette"), "midTone")) is { } midTone)
             colors.Add(midTone);
-        return [.. colors.Take(SpaceBrandingPolicy.MaximumColorCount)];
+        return [.. colors.Take(SpaceBranding.MaximumColorCount)];
     }
 
     private static JsonElement? Path(JsonElement? value, params string[] keys) {
@@ -243,8 +243,8 @@ internal static class ArcSidebar {
     private static double Unit(double value) => Math.Clamp(value, 0, 1);
 
     /// A diagonal gradient banner of several colors, or a solid banner of one.
-    private static SpaceBranding? Look(IReadOnlyList<BrandColor> colors) => colors.Count == 0 ? null : ImportedLook.Painted(colors,
-        colors.Count > 1 ? SpaceBannerPattern.Diagonal : SpaceBannerPattern.Solid, strength: 1, ImportedLook.ReadableFade,
+    private static SpaceBranding? Look(IReadOnlyList<BrandColor> colors) => colors.Count == 0 ? null : SpaceBranding.Painted(colors,
+        colors.Count > 1 ? SpaceBannerPattern.Diagonal : SpaceBannerPattern.Solid, strength: 1, SpaceBranding.LegacyReadabilityFade,
         colors.Count > 1 ? SpaceThemeMode.Gradient : SpaceThemeMode.Banner, gradientAngle: 45, showsTexture: false);
 
     #endregion

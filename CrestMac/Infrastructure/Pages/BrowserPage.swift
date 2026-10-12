@@ -57,31 +57,31 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     /// loading, history, security, failure and media. Presentation that
     /// changes constantly, such as progress, find and zoom, stays here.
     var live: PageLiveState { corePage.live }
-    private(set) var estimatedProgress = 0.0
-    private(set) var isContentFullscreen: Bool {
+    var estimatedProgress = 0.0
+    var isContentFullscreen: Bool {
         get { observed(\.isContentFullscreenStorage, as: \.isContentFullscreen) }
         set { publish(newValue, into: \.isContentFullscreenStorage, as: \.isContentFullscreen) }
     }
     @ObservationIgnored private var isContentFullscreenStorage = false
-    private(set) var faviconData: Data?
-    private(set) var themeColor: NSColor?
+    var faviconData: Data?
+    var themeColor: NSColor?
     /// Documents the page committed and finished, which reveal its surface.
     var committedNavigationCount = 0
     var completedNavigationCount = 0
-    @ObservationIgnored private var hasCommittedNavigationAwaitingCompletion = false
+    @ObservationIgnored var hasCommittedNavigationAwaitingCompletion = false
     var blockedPopupState = BrowserBlockedPopupPageState()
-    private(set) var engineInfoBars: [BrowserEngineInfoBar] = []
+    var engineInfoBars: [BrowserEngineInfoBar] = []
     /// The engine's offer of tabs to share, while the person chooses.
-    private(set) var shareSourceOffer: BrowserShareSourceOffer?
+    var shareSourceOffer: BrowserShareSourceOffer?
     /// Whether another page shares this one as a tab now.
-    private(set) var isSharedAsTab = false
+    var isSharedAsTab = false
     /// Whether this page shares another tab now.
-    private(set) var isSharingTab = false
+    var isSharingTab = false
     /// The pages of the tabs this page chose to share in the picker, while
     /// it shares any.
-    private(set) var sharedTabPageIDs: Set<UUID> = []
+    var sharedTabPageIDs: Set<UUID> = []
     /// The bars the person hid until they come back to the page.
-    private(set) var minimizedInfoBarIDs: Set<Int> = []
+    var minimizedInfoBarIDs: Set<Int> = []
     /// The engine's bars the page shows now.
     var visibleEngineInfoBars: [BrowserEngineInfoBar] {
         engineInfoBars.filter { !minimizedInfoBarIDs.contains($0.id) }
@@ -97,11 +97,11 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     var findFocusRequest: Int { findSession.focusRequest }
     var findFocusesQueryField: Bool { findSession.focusesQueryField }
     var canFindAgain: Bool { findSession.canFindAgain }
-    private(set) var pageZoom: CGFloat = BrowserPageZoomPolicy.defaultLevel
+    private(set) var pageZoom: CGFloat = BrowserDefaultPageZoomStore.defaultLevel
     let translation = BrowserPageTranslation()
     var readerModeState: BrowserReaderModeState { readerModeSession?.state ?? .unavailable }
     var isContentBlockingActive: Bool { engineAdapter.isContentBlockingActive }
-    private(set) var developerPanel: BrowserDeveloperPanel?
+    var developerPanel: BrowserDeveloperPanel?
     private(set) var isRegionCapturePresented = false
     private(set) var developerCaptureFeedback: String?
     private(set) var developerCaptureFeedbackRevision = 0
@@ -173,15 +173,15 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     @ObservationIgnored private var preparingPrint = false
     /// The link the pending web-content context menu is over. Read and cleared
     /// by this page's `BrowserDesktopWebViewMenuHost` conformance.
-    @ObservationIgnored var linkContextCapture = BrowserLinkContextCapturePolicy()
+    @ObservationIgnored var linkContextCapture = BrowserLinkContextCapture()
     @ObservationIgnored var downloadSourceStore = BrowserDownloadSourceStore()
     @ObservationIgnored var splitLinkHost: BrowserSplitLinkHost
     @ObservationIgnored var linkDestinationHost: BrowserLinkDestinationHost
     @ObservationIgnored var mediaSessionCoordinator: BrowserMediaSessionPageCoordinator?
-    @ObservationIgnored private var userActivityHandler: (() -> Void)?
+    @ObservationIgnored private(set) var userActivityHandler: (() -> Void)?
     /// Whether a window brought the page on screen and the person has not
     /// used it since, which the diagnostic log notes once they do.
-    @ObservationIgnored private var awaitsInputSincePresented = false
+    @ObservationIgnored var awaitsInputSincePresented = false
     @ObservationIgnored let credentialSession: BrowserCredentialSession
     var credentialState: BrowserCredentialPageState<BrowserCredentialSession.FillTarget> {
         credentialSession.state
@@ -204,7 +204,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     /// a local development address, while the person keeps that preference on.
     var isDeveloperModeAutomatic: Bool {
         BrowserAppPreferenceStore.shared.automaticallyShowsDeveloperToolbar
-            && BrowserDeveloperModePolicy.isAutomatic(for: live.displayURL)
+            && live.displayURL?.isLocalDevelopmentAddress == true
     }
 
     /// The tab that owns this page's Media Session, read when the session
@@ -258,7 +258,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         spaceName: String,
         allowsCredentialAccess: Bool = true,
         isCredentialAccessEnabled: Bool = true,
-        defaultPageZoom: CGFloat = BrowserPageZoomPolicy.defaultLevel,
+        defaultPageZoom: CGFloat = BrowserDefaultPageZoomStore.defaultLevel,
         loadHTTPAuthenticationCredential:
             @escaping BrowserHTTPAuthenticationSession.LoadCredential = { _ in nil },
         saveHTTPAuthenticationCredential:
@@ -297,7 +297,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         self.allowsCredentialAccess = allowsCredentialAccess
         sitePermissionSession = BrowserPageSitePermissionSession(
             page: engineAdapter.enginePage, permissionCenter: permissionCenter, spaceID: spaceID)
-        let normalizedDefaultPageZoom = BrowserPageZoomPolicy.normalizedDefault(
+        let normalizedDefaultPageZoom = BrowserDefaultPageZoomStore.normalized(
             defaultPageZoom
         )
         self.defaultPageZoom = normalizedDefaultPageZoom
@@ -655,9 +655,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
                 let panel = NSSavePanel()
                 panel.allowedContentTypes = [.png]
                 panel.canCreateDirectories = true
-                panel.nameFieldStringValue =
-                    BrowserDeveloperCapturePolicy
-                    .pngFilename(title: live.title, url: live.documentURL)
+                panel.nameFieldStringValue = live.suggestedFilename(pathExtension: "png")
                 panel.title = "Save Portrait Capture"
                 panel.prompt = "Save"
                 guard await panel.beginSheetModal(for: window) == .OK,
@@ -698,13 +696,13 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     @discardableResult
     func zoomIn() -> Bool {
         guard developerViewport == nil else { return false }
-        return setTemporaryPageZoom(BrowserPageZoomPolicy.increased(from: pageZoom))
+        return setTemporaryPageZoom(pageZoom.pageZoomIncreased)
     }
 
     @discardableResult
     func zoomOut() -> Bool {
         guard developerViewport == nil else { return false }
-        return setTemporaryPageZoom(BrowserPageZoomPolicy.decreased(from: pageZoom))
+        return setTemporaryPageZoom(pageZoom.pageZoomDecreased)
     }
 
     @discardableResult
@@ -720,10 +718,10 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     /// the newly selected default already equals its temporary value.
     @discardableResult
     func applyDefaultPageZoom(_ zoom: CGFloat) -> Bool {
-        let normalized = BrowserPageZoomPolicy.normalizedDefault(zoom)
+        let normalized = BrowserDefaultPageZoomStore.normalized(zoom)
         defaultPageZoom = normalized
         if hasTemporaryPageZoomOverride {
-            if BrowserPageZoomPolicy.levelsMatch(pageZoom, normalized) {
+            if pageZoom.matchesPageZoom(normalized) {
                 hasTemporaryPageZoomOverride = false
             }
             return false
@@ -993,7 +991,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
 
     func exportPDF() {
         guard let window = nativeView.window, live.url != nil else { return }
-        let suggestedFilename = BrowserPageExportPolicy.pdfFilename(title: live.title, url: live.documentURL)
+        let suggestedFilename = live.suggestedFilename(pathExtension: "pdf")
         Task { [weak self, weak window] in
             guard let self, let window else { return }
             do {
@@ -1025,17 +1023,13 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     func exportWebArchive() {
         guard let window = nativeView.window, live.url != nil else { return }
         let format = pageEngine.registration.archiveFormat
-        let suggestedFilename = BrowserPageExportPolicy.webArchiveFilename(
-            title: live.title,
-            url: live.documentURL,
-            format: format
-        )
+        let suggestedFilename = live.suggestedFilename(pathExtension: format.pathExtension)
         Task { [weak self, weak window] in
             guard let self, let window else { return }
             do {
                 let data = try await webArchiveData()
                 let panel = NSSavePanel()
-                panel.allowedContentTypes = [UTType(filenameExtension: format.rawValue) ?? .data]
+                panel.allowedContentTypes = [format.contentType]
                 panel.canCreateDirectories = true
                 panel.nameFieldStringValue = suggestedFilename
                 panel.title = "Save Page as Web Archive"
@@ -1066,10 +1060,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
 
     private func setTemporaryPageZoom(_ zoom: CGFloat) -> Bool {
         let changed = setPageZoom(zoom)
-        hasTemporaryPageZoomOverride = !BrowserPageZoomPolicy.levelsMatch(
-            pageZoom,
-            defaultPageZoom
-        )
+        hasTemporaryPageZoomOverride = !pageZoom.matchesPageZoom(defaultPageZoom)
         return changed
     }
 
@@ -1113,131 +1104,9 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
 
     // MARK: - Actions - Engine observations
 
-    func receive(_ event: BrowserPageEngineEvent) {
-        switch event {
-        case .navigationStarted:
-            hasCommittedNavigationAwaitingCompletion = false
-            linkDrag?.beginNavigation()
-            linkHover?.beginNavigation()
-            credentialState.didStartNavigation()
-            beginBlockedPopupNavigation()
-            // A prompt the engine withdrew with its document has no one to answer.
-            sitePermissionRequests.cancelAll()
-            mediaSessionCoordinator?.prepareForNavigation()
-            removeWebNotifications()
-        case .urlChanged(let previous, let current):
-            translation.documentURLDidChange(from: previous, to: current)
-            refreshNavigationState()
-            credentialState.didChangeTopLevelURL(to: current)
-        case .titleChanged:
-            mediaSessionCoordinator?.ownerTitleDidChange()
-            refreshNavigationState()
-        case .progressChanged(let value):
-            estimatedProgress = value
-        case .historyChanged:
-            refreshNavigationState()
-        case .loadingChanged(let isLoading):
-            guard !isLoading else { return }
-            linkDrag?.didFinishNavigation()
-            // A navigation that failed or turned into a download ends
-            // here without committing.
-            linkHover?.didFailNavigation()
-            mediaSessionCoordinator?.didFinishNavigation()
-            if hasCommittedNavigationAwaitingCompletion {
-                hasCommittedNavigationAwaitingCompletion = false
-                completedNavigationCount += 1
-            }
-        case .navigationCommitted(let url, let isLoading):
-            hasCommittedNavigationAwaitingCompletion = isLoading
-            isContentFullscreen = false
-            webContentFailureMessage = nil
-            linkHover?.didCommitNavigation()
-            mediaSessionCoordinator?.didCommitNavigation()
-            committedNavigationCount += 1
-            if !isLoading { completedNavigationCount += 1 }
-            Task { await httpAuthenticationSession.authenticationSucceeded() }
-            synchronizePopupPermission(for: url)
-            sitePermissionSession.synchronize(for: url)
-        case .navigationFailed:
-            // The engine reported the failure to the core, which shows it
-            // until a navigation commits: the engine retries a network error
-            // on its own, and a retry that fails again commits no new error
-            // page.
-            hasCommittedNavigationAwaitingCompletion = false
-            httpAuthenticationSession.authenticationFailed()
-        case .webContentProcessTerminated:
-            // The core decides whether the page comes back and shows the
-            // failure when it does not; the page drops what belonged to the
-            // document that is gone.
-            hasCommittedNavigationAwaitingCompletion = false
-            credentialState.webContentProcessDidTerminate()
-            mediaSessionCoordinator?.webContentProcessDidTerminate()
-        case .themeColorChanged(let value):
-            themeColor = value
-        case .infoBarAdded(let bar):
-            guard !engineInfoBars.contains(where: { $0.id == bar.id }) else { return }
-            engineInfoBars.append(bar)
-        case .infoBarRemoved(let id):
-            engineInfoBars.removeAll { $0.id == id }
-            if let id { minimizedInfoBarIDs.remove(id) }
-        case .shareSourcesOffered(let offer):
-            // A new request replaces one the person has not answered, which
-            // is refused.
-            if let previous = shareSourceOffer, previous.id != offer.id {
-                enginePage.chooseShareSource(previous.id, choice: .cancel)
-            }
-            shareSourceOffer = offer
-        case .shareSourcesWithdrawn(let shareID):
-            if shareSourceOffer?.id == shareID { shareSourceOffer = nil }
-        case .leftScreen:
-            // A bar the person hid shows again once they come back.
-            restoreMinimizedInfoBars()
-        case .tabSharingChanged(let shared, let sharing):
-            isSharedAsTab = shared
-            isSharingTab = sharing
-            if !sharing { sharedTabPageIDs = [] }
-        case .mediaSession(let event):
-            mediaSessionCoordinator?.receive(event, isMainFrame: true)
-        case .contentFullscreenChanged(let active):
-            isContentFullscreen = active
-        case .userActivity:
-            if awaitsInputSincePresented {
-                awaitsInputSincePresented = false
-                DiagnosticLog.pages.notice("Page \(corePage.id) takes the person's input")
-            }
-            userActivityHandler?()
-        case .linkHovered(let destination):
-            linkHover?.receiveEngineHover(destination)
-        case .popupBlocked(let pageURL):
-            recordEngineBlockedPopup(pageURL: pageURL, documentIdentifier: String(committedNavigationCount))
-        case .webNotificationPosted(let posted):
-            showEngineWebNotification(posted)
-        case .webNotificationClosed(let notificationID):
-            withdrawWebNotification(engineWebNotificationIdentifier(notificationID))
-        case .peekRequested(let destination, let decision, let stagedLink):
-            openRequestedPeek(to: destination, decision: decision, stagedLink: stagedLink)
-        case .favicon(let data, let source):
-            if let source {
-                guard let url = pageEngine.currentURL,
-                    BrowserTabStateRestorePolicy.restoresArchivedState(archivedURL: source, tabURL: url)
-                else { return }
-            }
-            faviconData = data
-        case .developerPanelClosed:
-            // The inspector went away on its own — its close button, an
-            // undocked window close, or the engine tearing it down. Without
-            // this the next Console command would try to close a panel that is
-            // already gone instead of opening one.
-            developerPanel = nil
-        case .closedByEngine:
-            Task { @MainActor [weak self] in
-                guard let self else { return }
-                host?.releaseEngineClosedPage(self)
-            }
-        case .creationFailed(let message):
-            hasCommittedNavigationAwaitingCompletion = false
-            webContentFailureMessage = message
-        }
+    /// Takes what the engine observed. Each event says what follows from it.
+    func receive(_ event: any BrowserPageEngineEvent) {
+        event.apply(to: self)
     }
 
     // MARK: - Actions - Site permissions

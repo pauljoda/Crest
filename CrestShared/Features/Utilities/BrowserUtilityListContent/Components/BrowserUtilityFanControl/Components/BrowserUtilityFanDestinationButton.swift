@@ -17,9 +17,7 @@ struct BrowserUtilityFanDestinationButton: View {
                     BrowserUtilityNotificationBadge(
                         count: newDownloadCount,
                         tint: downloadBadgeColor,
-                        progress: BrowserDownloadNotificationPolicy.progress(
-                            in: downloads
-                        )
+                        progress: downloads.notificationProgress
                     )
                     .offset(
                         x: BrowserUtilitySwitcherLayout.notificationBadgeOffset,

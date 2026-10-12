@@ -123,7 +123,7 @@ public sealed class SpaceLookTests {
             Crest = house.Crest with { Backplate = CrestBackplate.Badge }
         };
 
-        var kept = SpaceBrandingPolicy.Normalize(edited);
+        var kept = SpaceBranding.Normalized(edited);
 
         Assert.False(kept.KeepsControlsReadable);
         Assert.Equal(CrestVocabulary.Studio.Version, kept.RenderingVersion);

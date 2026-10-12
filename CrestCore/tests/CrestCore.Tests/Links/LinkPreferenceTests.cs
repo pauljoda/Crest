@@ -34,7 +34,7 @@ public sealed partial class BrowserContractsTests {
                 {"id":"not-an-identity","isEnabled":true,"match":"contains","pattern":"x","destinationSpaceID":"{{{work}}}"}],
             "rememberedQuickWindowSpacesBySite":{"example.org":"{{{personal}}}"}}
             """;
-        var expected = LinkPreferencePolicy.Default with {
+        var expected = LinkPreferences.Default with {
             Destination = ExternalLinkDestination.ChosenSpace,
             DestinationSpaceId = work,
             FocusesNewTabs = true,

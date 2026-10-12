@@ -6,7 +6,7 @@ enum BrowserPlatformDownloadDirectory {
         spaceID _: UUID,
         forcesPrompt _: Bool = false,
         fileManager: FileManager = .default
-    ) async -> BrowserPlatformDownloadResolution {
+    ) async -> any BrowserPlatformDownloadResolution {
         let directory = URL.documentsDirectory
             .appendingPathComponent("Downloads", isDirectory: true)
         return .destination(

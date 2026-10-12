@@ -16,6 +16,8 @@ struct BrowserDragPreviewWindowFloatingContent: View {
             .frame(width: presentation.canvasFrame.width, height: presentation.canvasFrame.height)
             .offset(x: presentation.canvasFrame.minX, y: presentation.canvasFrame.minY)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            // A window of its own inherits nothing from the browser's.
+            .modifier(BrowserDeviceAppearanceEnvironment())
     }
 
     @ViewBuilder

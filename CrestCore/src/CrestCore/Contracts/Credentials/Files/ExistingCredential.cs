@@ -6,6 +6,29 @@ namespace CrestCore.Contracts;
 [HoldsSecrets]
 public sealed record ExistingCredential(Guid Id, CredentialOrigin Origin, string Username, bool IsWebForm, double UpdatedAt,
     double? LastUsedAt, string Password) {
+    #region Variables
+
+    /// The password's recency, without its account or secret.
+    internal CredentialRecord Record => new(Id, Username: null, UpdatedAt, LastUsedAt);
+
+    #endregion
+
+    #region Actions - Recency
+
+    /// The most recent of the passwords the Space keeps for one account, or
+    /// null when it keeps none.
+    internal static ExistingCredential? MostRecent(IEnumerable<ExistingCredential> saved) {
+        ExistingCredential? best = null;
+        foreach (var credential in saved) {
+            if (!double.IsFinite(credential.UpdatedAt) || credential.LastUsedAt is { } used && !double.IsFinite(used))
+                throw new Rejected(new InvalidCredentialDate());
+            if (best is null || best.Record.IsLessRecentThan(credential.Record)) best = credential;
+        }
+        return best;
+    }
+
+    #endregion
+
     #region Actions - Text
 
     public override string ToString() {

@@ -12,7 +12,7 @@ import SwiftUI
 /// list while still letting a person focus, rename, unload, or close one pane.
 ///
 /// What differs between a pointer shell and a touch one is read from
-/// `BrowserSidebarInteractionPolicy` rather than from which target compiled the
+/// `BrowserInteractionCapabilities` rather than from which target compiled the
 /// file, so the two shells share this row instead of a resemblance.
 struct BrowserSidebarSplitGroupRow: View {
     @Environment(BrowserSidebarInteractionState.self) private var sidebarInteraction

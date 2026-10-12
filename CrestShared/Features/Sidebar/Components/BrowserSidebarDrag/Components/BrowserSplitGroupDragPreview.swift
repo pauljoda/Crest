@@ -16,7 +16,7 @@ struct BrowserSplitGroupDragPreview: View {
     var sourceHeight: CGFloat?
     var loadedTabIDs: Set<UUID>?
 
-    private static let containerPadding: CGFloat = CrestSpacing.extraSmall
+    private static let containerPadding = BrowserSidebarMetrics.containerPadding
     private static let lineSpacing: CGFloat = CrestSpacing.extraExtraSmall
     private static let headerHeight: CGFloat = 20
     private static let headerGlyphSize: CGFloat = 11
@@ -25,10 +25,7 @@ struct BrowserSplitGroupDragPreview: View {
     private static let memberLineHeight: CGFloat = 28
 
     var body: some View {
-        let shape = RoundedRectangle(
-            cornerRadius: CrestRadius.control,
-            style: .continuous
-        )
+        let shape = RoundedRectangle(cornerRadius: BrowserSidebarMetrics.layerCornerRadius(), style: .continuous)
 
         VStack(spacing: Self.lineSpacing) {
             header
@@ -38,7 +35,7 @@ struct BrowserSplitGroupDragPreview: View {
         }
         .padding(Self.containerPadding)
         .frame(width: BrowserTabDragPreviewLayout.resolvedRowWidth(rowWidth))
-        .background(CrestColor.selectedSurface, in: shape)
+        .background { CrestSurfaceLayer(shape: shape) }
         .overlay {
             shape.strokeBorder(CrestColor.subtleBorder, lineWidth: 0.5)
         }

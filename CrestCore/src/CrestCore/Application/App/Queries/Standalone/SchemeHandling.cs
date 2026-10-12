@@ -8,7 +8,7 @@ namespace CrestCore.Contracts;
 public sealed record SchemeHandling(string? Scheme, bool AppInitiated) : StandaloneQuery<SchemeHandled> {
     #region Actions - Answering
 
-    internal override SchemeHandled Answer(StandaloneContext context) => new(ExternalSchemePolicy.Disposition(Scheme, AppInitiated));
+    internal override SchemeHandled Answer(StandaloneContext context) => new(UrlScheme.DispositionOf(Scheme, AppInitiated));
 
     #endregion
 }

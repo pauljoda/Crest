@@ -25,10 +25,7 @@ struct BrowserAddressSecurityButton: View {
         .accessibilityIdentifier("browser-address-security")
         .help(stateDescription)
         .animation(
-            BrowserVisualAccessibilityPolicy.animation(
-                CrestMotion.contentState,
-                reduceMotion: reduceMotion
-            ),
+            CrestMotion.contentState.unlessReducingMotion(reduceMotion),
             value: isSecure
         )
     }
@@ -36,8 +33,8 @@ struct BrowserAddressSecurityButton: View {
     private var buttonStyle: CrestChromeButtonStyle {
         CrestChromeButtonStyle(
             controlSize: CGSize(
-                width: BrowserAddressSecurityControlPolicy.controlSize,
-                height: BrowserAddressSecurityControlPolicy.controlSize
+                width: BrowserSidebarAddressFieldMetrics.securityControlSize,
+                height: BrowserSidebarAddressFieldMetrics.securityControlSize
             )
         )
     }
@@ -66,14 +63,14 @@ private struct BrowserAddressSecurityIcon: View {
         Image(systemName: isSecure ? "lock.fill" : "lock.open.fill")
             .font(
                 .system(
-                    size: BrowserTabTrailingControlPolicy.glyphSize,
+                    size: BrowserTabTrailingControlMetrics.pointer.glyphSize,
                     weight: .medium
                 )
             )
             .contentTransition(.symbolEffect(.replace))
             .frame(
-                width: BrowserAddressSecurityControlPolicy.controlSize,
-                height: BrowserAddressSecurityControlPolicy.controlSize
+                width: BrowserSidebarAddressFieldMetrics.securityControlSize,
+                height: BrowserSidebarAddressFieldMetrics.securityControlSize
             )
             .contentShape(.rect)
     }

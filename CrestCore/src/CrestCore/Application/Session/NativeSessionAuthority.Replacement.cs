@@ -24,7 +24,7 @@ public sealed partial class NativeSessionAuthority {
             if (!workspaceKind.KeepsFile
                 || sync is not null && !ReferenceEquals(sync, value)
                 || value.Session is not null && !ReferenceEquals(value.Session, this))
-                throw new CrestCore.Domain.BrowserRuleException(CrestCore.Domain.BrowserRule.InvalidSyncSessionOwner);
+                throw new InvalidOperationException("Only a session that keeps a file syncs, through one sync component of its own.");
             if (sync is null) attached = session;
             sync = value; value.Session = this;
         }
@@ -37,7 +37,7 @@ public sealed partial class NativeSessionAuthority {
     internal SessionState? CompleteReplacement(NativeSessionReplacement value, bool commit) {
         lock (Gate) {
             if (!ReferenceEquals(replacement, value))
-                throw new CrestCore.Domain.BrowserRuleException(CrestCore.Domain.BrowserRule.InvalidSessionTransaction);
+                throw new InvalidOperationException("Only the reservation that holds the session completes it.");
             SessionState? previous = null;
             if (commit) {
                 value.SyncTransaction?.Commit();

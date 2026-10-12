@@ -1,11 +1,5 @@
 import Foundation
 
-enum BrowserPeekInteractionEvent: Sendable {
-    case began(BrowserPeekRequest, BrowserPeekMotionState)
-    case moved(UUID, BrowserPeekMotionState)
-    case cancelled(UUID)
-}
-
 /// Position and velocity use the source window's normalized content coordinates.
 struct BrowserPeekMotionState: Equatable, Sendable {
     static let initialScale = 0.08
@@ -34,6 +28,8 @@ struct BrowserPeekPullSession {
         static let velocitySmoothingInterval: TimeInterval = 0.035
         static let maximumScaleGrowth = 0.72
         static let scaleResponseDistance = 180.0
+        static let activationRadius: CGFloat = 28
+        static let cancellationRadialVelocity: CGFloat = -12
     }
 
     private(set) var state: BrowserPeekMotionState
@@ -67,29 +63,26 @@ struct BrowserPeekPullSession {
 
     mutating func release(size: CGSize, at date: Date = .now) {
         state.releasedAt = date
-        state.returnsToSource = !BrowserLinkDragReleasePolicy.opensPeek(
+        state.returnsToSource = !Self.opensPeek(
             translation: CGSize(
                 width: (state.location.x - state.origin.x) * size.width,
                 height: (state.location.y - state.origin.y) * size.height),
             velocity: CGSize(width: state.velocity.width * size.width, height: state.velocity.height * size.height))
     }
 
+    /// Whether a pull released with `translation` and `velocity`, in
+    /// points, opens its Peek rather than returning to the link.
+    static func opensPeek(translation: CGSize, velocity: CGSize) -> Bool {
+        let distance = hypot(translation.width, translation.height)
+        guard distance >= Motion.activationRadius else { return false }
+        let radialVelocity = (translation.width * velocity.width + translation.height * velocity.height) / distance
+        // A resting hand commits outside the radius; a pull back cancels.
+        return radialVelocity >= Motion.cancellationRadialVelocity
+    }
+
     private static func scale(at point: CGPoint, origin: CGPoint, size: CGSize) -> Double {
         let distance = hypot((point.x - origin.x) * size.width, (point.y - origin.y) * size.height)
         return BrowserPeekMotionState.initialScale
             + Motion.maximumScaleGrowth * (1 - exp(-distance / Motion.scaleResponseDistance))
-    }
-}
-
-enum BrowserLinkDragReleasePolicy {
-    static let activationRadius: CGFloat = 28
-    private static let cancellationRadialVelocity: CGFloat = -12
-
-    static func opensPeek(translation: CGSize, velocity: CGSize) -> Bool {
-        let distance = hypot(translation.width, translation.height)
-        guard distance >= activationRadius else { return false }
-        let radialVelocity = (translation.width * velocity.width + translation.height * velocity.height) / distance
-        // A resting hand commits outside the radius; a pull back cancels.
-        return radialVelocity >= cancellationRadialVelocity
     }
 }

@@ -12,7 +12,7 @@ struct BrowserUtilityFanControl: View {
     var reduceMotionOverride: Bool? = nil
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var revealedSurfaces: Set<BrowserUtilitySurface> = []
+    @State var revealedSurfaces: Set<BrowserUtilitySurface> = []
     @State private var isContainerVisible = false
 
     var body: some View {
@@ -83,29 +83,11 @@ struct BrowserUtilityFanControl: View {
                 isContainerVisible = true
             }
             for step in BrowserUtilitySwitcherLayout.expansionSteps {
-                switch step {
-                case .wait(let delay):
-                    try? await Task.sleep(
-                        for: .seconds(delay)
-                    )
-                case .reveal(let surface):
-                    guard !Task.isCancelled else { return }
-                    withAnimation(
-                        BrowserVisualAccessibilityPolicy.animation(
-                            CrestMotion.utilityFanReveal,
-                            reduceMotion: shouldReduceMotion
-                        )
-                    ) {
-                        _ = revealedSurfaces.insert(surface)
-                    }
-                }
+                guard await step.run(on: self, reduceMotion: shouldReduceMotion) else { return }
             }
         } else {
             withAnimation(
-                BrowserVisualAccessibilityPolicy.animation(
-                    CrestMotion.dismissal,
-                    reduceMotion: shouldReduceMotion
-                )
+                CrestMotion.dismissal.unlessReducingMotion(shouldReduceMotion)
             ) {
                 revealedSurfaces.removeAll()
                 isContainerVisible = false

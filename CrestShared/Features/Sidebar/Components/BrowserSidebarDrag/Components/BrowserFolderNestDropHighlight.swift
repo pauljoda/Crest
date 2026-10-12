@@ -14,38 +14,39 @@ struct BrowserFolderNestDropHighlight: View {
     enum Target: Equatable {
         case currentTab(UUID)
         case folder(UUID)
+
+        /// Whether releasing the lift `state` holds would file it inside the
+        /// row this marks.
+        @MainActor
+        func isTargeted(in state: BrowserSidebarReorderState) -> Bool {
+            switch self {
+            case .currentTab(let tabID):
+                state.resolvedTarget?.kind == .createCurrentFolder(tabID)
+            case .folder(let folderID):
+                state.isTargetedFolder(folderID)
+                    && (state.lift?.item.showsFolderNestOutline ?? false)
+            }
+        }
     }
 
     let state: BrowserSidebarReorderState
     let target: Target
+    /// How many folders hold the row this marks, whose bounds start at the
+    /// sidebar's leading edge however deep the row is; the outline steps in
+    /// and tightens to match the surface drawn there.
+    var depth = 0
 
     var body: some View {
-        if isTargeted {
-            RoundedRectangle(
-                cornerRadius: BrowserDeviceAppearanceStore.shared.containerCornerRadius(),
-                style: .continuous
-            )
-            .fill(CrestColor.dropIndicator.opacity(0.14))
-            .overlay {
-                RoundedRectangle(
-                    cornerRadius: BrowserDeviceAppearanceStore.shared.containerCornerRadius(),
-                    style: .continuous
-                )
-                .strokeBorder(CrestColor.dropIndicator, lineWidth: 1.5)
-            }
-            .padding(.horizontal, CrestSpacing.small)
-            .allowsHitTesting(false)
-            .accessibilityHidden(true)
-        }
-    }
-
-    private var isTargeted: Bool {
-        switch target {
-        case .currentTab(let tabID):
-            state.resolvedTarget?.kind == .createCurrentFolder(tabID)
-        case .folder(let folderID):
-            state.isTargetedFolder(folderID)
-                && BrowserFolderRowPresentationPolicy.showsNestOutline(for: state.lift?.item)
+        if target.isTargeted(in: state) {
+            let shape = RoundedRectangle(
+                cornerRadius: BrowserSidebarMetrics.layerCornerRadius(depth: depth), style: .continuous)
+            shape
+                .fill(CrestColor.dropIndicator.opacity(0.14))
+                .overlay { shape.strokeBorder(CrestColor.dropIndicator, lineWidth: 1.5) }
+                .padding(.leading, BrowserFolderLayout.surfaceLeadingInset(depth: depth))
+                .padding(.trailing, BrowserSidebarMetrics.layerInset)
+                .allowsHitTesting(false)
+                .accessibilityHidden(true)
         }
     }
 }

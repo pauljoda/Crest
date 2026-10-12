@@ -40,7 +40,7 @@ struct BrowserRootDetailSurface<Content: View>: View {
                         docked: adjoinsLeadingSidebar, direction: layoutDirection
                     ),
             usesTransparentInnerSurface:
-                BrowserPageSurfacePolicy.usesTransparentInnerSurface(
+                BrowserPageSurfacePresentation.usesTransparentInnerSurface(
                     isStartPage: isStartPage,
                     hasActivePage: hasActivePage,
                     completedNavigationCount: completedNavigationCount

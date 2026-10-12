@@ -55,18 +55,14 @@ struct BrowserCredentialPromptSurface<Content: View>: View {
     private var surfaceBackground: some View {
         switch metrics.surfaceStyle {
         case .panel:
-            BrowserAccessibleMaterialBackground(
-                material: .regular,
+            CrestSurfaceLayer(
                 shape: RoundedRectangle(
                     cornerRadius: BrowserCredentialPromptMetrics.cornerRadius,
                     style: .continuous
                 )
             )
         case .band:
-            BrowserAccessibleMaterialBackground(
-                material: .regular,
-                shape: Rectangle()
-            )
+            CrestSurfaceLayer(shape: Rectangle())
         }
     }
 

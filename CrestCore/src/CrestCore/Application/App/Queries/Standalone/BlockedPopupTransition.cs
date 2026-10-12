@@ -1,5 +1,4 @@
 using CrestCore.Application;
-using CrestCore.Domain;
 
 namespace CrestCore.Contracts;
 
@@ -10,7 +9,7 @@ public sealed record BlockedPopupTransition(BlockedPopupPageState State, Blocked
     #region Actions - Answering
 
     internal override BlockedPopupTransitioned Answer(StandaloneContext context) =>
-        new(BlockedPopupPolicy.Apply(State, Event, DocumentIdentifier, Origin));
+        new(State.Applying(Event, DocumentIdentifier, Origin));
 
     #endregion
 }

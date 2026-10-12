@@ -5,6 +5,10 @@ struct BrowserSidebarSplitGroupRowContent: View {
     let configuration: BrowserSidebarSplitGroupRowConfiguration
     let interaction: BrowserSidebarSplitGroupRowInteractionContext
 
+    @Environment(\.sidebarLayerDepth) private var depth
+    @AppStorage(BrowserSidebarDensityPreference.scaleKey, store: BrowserSidebarDensityPreference.defaults)
+    private var tabScale = 1.0
+
     var body: some View {
         VStack(spacing: configuration.metrics.memberSpacing) {
             BrowserSidebarSplitGroupHeader(
@@ -22,6 +26,8 @@ struct BrowserSidebarSplitGroupRowContent: View {
                     .id(member.id)
             }
         }
-        .padding(configuration.metrics.containerPadding)
+        .environment(\.sidebarLayerDepth, depth + 1)
+        .padding([.horizontal, .top], BrowserSidebarMetrics.containerPadding)
+        .padding(.bottom, BrowserSidebarMetrics.containerBottomPadding(tabScale: tabScale))
     }
 }

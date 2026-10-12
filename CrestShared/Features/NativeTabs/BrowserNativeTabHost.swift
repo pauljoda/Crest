@@ -55,9 +55,9 @@ struct BrowserNativeTabActions {
     {
         openURL = { source, content, url in
             guard
-                let space = BrowserSidebarAccessPolicy.selectedUnlockedSpace(
+                let space = browser.selectedUnlockedSpace(
                     matching: BrowserSpaceRuntimeAssignment(spaceID: source.spaceID, profileID: source.profileID),
-                    in: browser, accessController: spaceAccess),
+                    accessController: spaceAccess),
                 space.tabs.model(source.tabID)?.nativeTabContent == content,
                 ["https", "http"].contains(url.scheme?.lowercased() ?? "")
             else { return }

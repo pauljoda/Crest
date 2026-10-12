@@ -102,34 +102,22 @@ final class BrowserSidebarUtilityCoordinatorTests: XCTestCase {
         let action = BrowserUtilityDownloadAction.clear(exactItem.id)
 
         XCTAssertEqual(
-            BrowserSidebarUtilityActionPolicy.downloadItem(
-                for: action,
-                matching: assignment,
-                in: context.browser,
-                accessController: context.access,
-                itemsForProfile: { _ in [exactItem] }
-            ),
+            action.downloadItem(
+                matching: assignment, in: context.browser, accessController: context.access,
+                itemsForProfile: { _ in [exactItem] }),
             exactItem
         )
         XCTAssertNil(
-            BrowserSidebarUtilityActionPolicy.downloadItem(
-                for: action,
-                matching: assignment,
-                in: context.browser,
-                accessController: context.access,
-                itemsForProfile: { _ in [wrongProfileItem] }
-            )
+            action.downloadItem(
+                matching: assignment, in: context.browser, accessController: context.access,
+                itemsForProfile: { _ in [wrongProfileItem] })
         )
 
         context.browser.selectSpace(context.destination.id)
         XCTAssertNil(
-            BrowserSidebarUtilityActionPolicy.downloadItem(
-                for: action,
-                matching: assignment,
-                in: context.browser,
-                accessController: context.access,
-                itemsForProfile: { _ in [exactItem] }
-            )
+            action.downloadItem(
+                matching: assignment, in: context.browser, accessController: context.access,
+                itemsForProfile: { _ in [exactItem] })
         )
 
         let lockedContext = makeContext(isProtected: true)
@@ -141,13 +129,9 @@ final class BrowserSidebarUtilityCoordinatorTests: XCTestCase {
             id: Self.uuid(22)
         )
         XCTAssertNil(
-            BrowserSidebarUtilityActionPolicy.downloadItem(
-                for: .clear(lockedItem.id),
-                matching: lockedAssignment,
-                in: lockedContext.browser,
-                accessController: lockedContext.access,
-                itemsForProfile: { _ in [lockedItem] }
-            )
+            BrowserUtilityDownloadAction.clear(lockedItem.id).downloadItem(
+                matching: lockedAssignment, in: lockedContext.browser, accessController: lockedContext.access,
+                itemsForProfile: { _ in [lockedItem] })
         )
 
         let deletingContext = makeContext()
@@ -169,13 +153,9 @@ final class BrowserSidebarUtilityCoordinatorTests: XCTestCase {
             )
         }
         XCTAssertNil(
-            BrowserSidebarUtilityActionPolicy.downloadItem(
-                for: .clear(deletingItem.id),
-                matching: deletingAssignment,
-                in: deletingContext.browser,
-                accessController: deletingContext.access,
-                itemsForProfile: { _ in [deletingItem] }
-            )
+            BrowserUtilityDownloadAction.clear(deletingItem.id).downloadItem(
+                matching: deletingAssignment, in: deletingContext.browser, accessController: deletingContext.access,
+                itemsForProfile: { _ in [deletingItem] })
         )
 
         let replacementContext = makeContext()
@@ -191,13 +171,9 @@ final class BrowserSidebarUtilityCoordinatorTests: XCTestCase {
             in: replacementContext.browser
         )
         XCTAssertNil(
-            BrowserSidebarUtilityActionPolicy.downloadItem(
-                for: .clear(replacementItem.id),
-                matching: replacementAssignment,
-                in: replacementContext.browser,
-                accessController: replacementContext.access,
-                itemsForProfile: { _ in [replacementItem] }
-            )
+            BrowserUtilityDownloadAction.clear(replacementItem.id).downloadItem(
+                matching: replacementAssignment, in: replacementContext.browser,
+                accessController: replacementContext.access, itemsForProfile: { _ in [replacementItem] })
         )
     }
 

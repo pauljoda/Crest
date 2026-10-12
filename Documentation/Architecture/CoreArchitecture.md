@@ -111,8 +111,13 @@ for `EnginePage` lists every direct engine call.
    (`Intent.Route`), engine events likewise, and queries and engine questions
    answer themselves (`Answer`). Swift receives each union as an enum whose
    one method forwards, with an exhaustive switch, to its payload's own
-   method (`change.apply(to: state)`, `command.perform(on: binding)`); a
-   listener for a few cases uses `if case`. Engine capabilities are a fixed
+   method (`change.apply(to: state)`, `command.perform(on: binding)`). A
+   listener for some cases never picks them with `if case`: those cases
+   conform to a protocol that calls the listener's contract
+   (`prompt.present(on: host)`). A fixed set or union the platform performs
+   forwards each member to a performer protocol with one method per member
+   (`step.kind.take(step, on: performer)`), so a new member fails to compile
+   until every platform handles it. Engine capabilities are a fixed
    set (`EngineCapability`). No capability is a string.
 4. Identifiers are plain `Guid` in C# and `UUID` in Swift, and they appear only
    at boundaries. Inside the core, methods take the objects themselves

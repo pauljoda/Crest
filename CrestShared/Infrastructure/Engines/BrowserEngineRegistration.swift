@@ -31,7 +31,7 @@ enum BrowserEngineRegistration {
             .selectionTranslation, .localFiles, .protectedMedia,
         ] + desktopWebKit,
         unavailable: [.extensions],
-        archiveFormat: .webKit)
+        archiveFormat: .webArchive)
 
     /// The native macOS Chromium host with Crest's page and profile ports.
     ///

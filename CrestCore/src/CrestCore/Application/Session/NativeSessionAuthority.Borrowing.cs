@@ -85,14 +85,6 @@ public sealed partial class NativeSessionAuthority {
             || PendingDeletion(source.session, borrowedSpace) is not null ? null : original;
     }
 
-    private SpaceState RequireBorrowedSource() {
-        var source = borrowedSource ?? throw new BrowserRuleException(BrowserRule.NotBorrowedWorkspace);
-        var original = source.session.Spaces.SingleOrDefault(s => s.Id == borrowedSpace);
-        BorrowedProfilePolicy.RequireSource(borrowedSpace, borrowedProfile,
-            original?.Id ?? Guid.Empty, original?.ProfileId ?? Guid.Empty,
-            !source.released && PendingDeletion(source.session, borrowedSpace) is null);
-        return original!;
-    }
 
     /// The borrowed Space with its owner's current settings and its own
     /// organization. Organization belongs to the temporary workspace: its
@@ -110,23 +102,32 @@ public sealed partial class NativeSessionAuthority {
         }
     };
 
+    /// Refuses `value`, a state of a borrowed session, unless it shows only
+    /// its Space with the settings its owner holds now: `UnknownSpace` once
+    /// the owner no longer lends the Space, `SpaceBeingDeleted` while the
+    /// owner deletes it, and `BorrowedProfileRequiresOwner` for a change only
+    /// the owner may make. A temporary workspace borrows one existing profile;
+    /// it never replaces it. Any other session always passes.
     private void ValidateBorrowedSession(SessionState value) {
-        if (borrowedSource is null) return;
-        var original = RequireBorrowedSource();
-        if (value.Spaces.Count != 1 || BorrowedSpace(original, value.Spaces[0]) != value.Spaces[0])
-            throw new BrowserRuleException(BrowserRule.BorrowedProfileRequiresOwner);
+        if (borrowedSource is not { } source) return;
+        if (source.released || source.session.Spaces.SingleOrDefault(space => space.Id == borrowedSpace) is not { } original
+            || original.ProfileId != borrowedProfile) throw new Rejected(new UnknownSpace(borrowedSpace));
+        if (PendingDeletion(source.session, borrowedSpace) is not null) throw new Rejected(new SpaceBeingDeleted(borrowedSpace));
+        if (!ShowsCurrent(original, value)) throw new Rejected(new BorrowedProfileRequiresOwner(workspaceId));
     }
 
-    /// Throws unless `value`, a state of a borrowed session, shows its Space
-    /// with the settings its owner holds now; the core brings a borrowed
-    /// session up to date as soon as its owner changes. Any other session
-    /// always passes.
-    internal void RequireCurrentBorrowedPolicy(SessionState value) {
-        if (borrowedSource is null) return;
-        var original = RequireBorrowedSource();
-        if (value.Spaces.Count != 1 || BorrowedSpace(original, value.Spaces[0]) != value.Spaces[0])
-            throw new BrowserRuleException(BrowserRule.StaleBorrowedSource);
-    }
+    /// Whether `value`, a state of a borrowed session, shows only its Space
+    /// with the settings `original`, the Space its owner lends, holds now.
+    private static bool ShowsCurrent(SpaceState original, SessionState value) =>
+        value.Spaces.Count == 1 && BorrowedSpace(original, value.Spaces[0]) == value.Spaces[0];
+
+    /// Whether the session takes an edit it did not ask for, such as a page's
+    /// report or a window showing a tab: its workspace is open, no
+    /// reservation holds it, and a borrowed session's owner still lends its
+    /// Space with the settings it shows; the core brings a borrowed session
+    /// up to date as soon as its owner changes. The caller holds the gate.
+    private bool TakesEdits() => !released && replacement is null
+        && (borrowedSource is not { } source || Lent(source) is { } original && ShowsCurrent(original, session));
 
     /// Takes no more edits. The core then drops the workspace's pages and
     /// windows and publishes that it closed.

@@ -825,9 +825,10 @@ final class BrowserWebCompatibilityTests: XCTestCase {
 
         func open(_ request: BrowserQuickWindowRequest) {
             requests.append(request)
-            let resolver = BrowserQuickWindowContextResolver(
-                browser: browser, pages: primary, pagePoolRegistry: registry)
-            guard let context = resolver.context(for: request) else { return }
+            guard
+                let context = BrowserQuickWindowBrowsingContext(
+                    for: request, browser: browser, pages: primary, pagePoolRegistry: registry)
+            else { return }
             let model = BrowserQuickWindowModel(
                 request: request, browser: context.browser, pages: context.pages, spaceAccess: spaceAccess,
                 supportsLivePagePromotion: context.supportsLivePagePromotion, preferences: .isolated,

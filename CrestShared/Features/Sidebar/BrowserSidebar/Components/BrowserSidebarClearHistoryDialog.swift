@@ -21,11 +21,7 @@ struct BrowserSidebarClearHistoryDialog: ViewModifier {
             ) { request in
                 Button("Clear History", role: .destructive) {
                     confirmation = nil
-                    BrowserSidebarSpacePresentationPolicy.clearHistory(
-                        request,
-                        in: browser,
-                        accessController: spaceAccess
-                    )
+                    request.clearHistory(in: browser, accessController: spaceAccess)
                 }
             } message: { _ in
                 Text("History in other Spaces is not affected.")
@@ -53,10 +49,6 @@ struct BrowserSidebarClearHistoryDialog: ViewModifier {
 
     private var isLive: Bool {
         guard let confirmation else { return false }
-        return BrowserSidebarSpacePresentationPolicy.isLive(
-            confirmation,
-            in: browser,
-            accessController: spaceAccess
-        )
+        return confirmation.isLive(in: browser, accessController: spaceAccess)
     }
 }

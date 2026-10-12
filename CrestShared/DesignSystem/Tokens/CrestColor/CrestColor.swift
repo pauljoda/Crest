@@ -3,7 +3,6 @@ import SwiftUI
 /// Semantic colors for Crest-authored chrome. Space identity colors remain data-driven.
 enum CrestColor {
     static let selection = Color.primary.opacity(CrestOpacity.selection)
-    static let selectedSurface = selection
     static let chromeSurface = Color.primary.opacity(CrestOpacity.chromeSurface)
     static let hover = Color.primary.opacity(CrestOpacity.hover)
     static let subtleBorder = Color.primary.opacity(CrestOpacity.border)

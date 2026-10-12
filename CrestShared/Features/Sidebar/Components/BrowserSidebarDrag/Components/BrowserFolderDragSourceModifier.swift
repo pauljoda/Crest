@@ -10,8 +10,6 @@ struct BrowserFolderDragSourceModifier: ViewModifier {
     let isEnabled: Bool
     var requiresSelectedSpace = false
 
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
     @Environment(\.sidebarSpaceIsSelected) private var isSelected
 
     @ViewBuilder
@@ -24,38 +22,9 @@ struct BrowserFolderDragSourceModifier: ViewModifier {
             profileID: profileID,
             memberTabIDs: memberTabIDs
         )
-        let isDragging =
-            isEnabled && reorder == nil
-            && BrowserTabDragVisualPolicy.usesPersistentSourceStyle(
-                isDragging: dragState.isDragging(item),
-                hasReliableTerminalLifecycle:
-                    BrowserPlatformTabDragVisualPolicy.hasReliableTerminalLifecycle
-            )
-
+        let isDragging = isEnabled && reorder == nil && dragState.isDragging(item)
         content
-            .scaleEffect(
-                BrowserTabDragVisualPolicy.sourceScale(isDragging: isDragging)
-            )
-            .opacity(
-                BrowserTabDragVisualPolicy.sourceOpacity(isDragging: isDragging)
-            )
-            .shadow(
-                color: .black.opacity(isDragging ? 0.24 : 0),
-                radius: BrowserTabDragVisualPolicy.sourceShadowRadius(
-                    isDragging: isDragging
-                ),
-                y: BrowserTabDragVisualPolicy.sourceShadowYOffset(
-                    isDragging: isDragging
-                )
-            )
-            .zIndex(isDragging ? 2 : 0)
-            .animation(
-                BrowserVisualAccessibilityPolicy.animation(
-                    CrestMotion.dragSource,
-                    reduceMotion: reduceMotion
-                ),
-                value: isDragging
-            )
+            .modifier(BrowserDragSourceLiftStyle(isDragging: isDragging))
             .modifier(
                 BrowserPlatformFolderDragSourceModifier(
                     folder: folder,

@@ -23,7 +23,7 @@ extension BrowserPlatformPage {
     }
 
     func performMediaSessionAction(
-        _ action: BrowserMediaSessionAction,
+        _ action: MediaSessionAction,
         documentIdentifier: String
     ) {
         mediaSessionCoordinator?.perform(

@@ -9,9 +9,9 @@ public sealed partial class NativeSessionAuthority {
     /// A new tab in `placement`'s section showing `content`: a page titled by
     /// its title or host, a native view with the title and symbol it was
     /// given, or the Start Page. A saved or pinned page belongs to its address.
+    /// Refused with `InvalidTabContent` for content that names both.
     internal TabState NewTab(Guid id, TabContent content, TabPlacement placement, DateTimeOffset now) {
-        if (content.Address is not null && content.View is not null)
-            throw new ArgumentException("A tab shows a page or a native view, not both.", nameof(content));
+        if (content.Address is not null && content.View is not null) throw new Rejected(new InvalidTabContent(id));
         var kind = content.View is { } view ? TabKind.Of(view) : content.Address is null ? TabKind.StartPage : TabKind.Web;
         var address = content.Address is { } requested ? PageAddress(requested) : null;
         var title = address is not null ? PageTitle(address, content.Title) : kind.Name;

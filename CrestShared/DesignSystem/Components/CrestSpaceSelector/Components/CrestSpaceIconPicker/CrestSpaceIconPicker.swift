@@ -100,16 +100,13 @@ struct CrestSpaceIconPicker<Space: BrowserSpaceIdentifying, SegmentContent: View
                     value: reorder.targetID
                 )
                 .modifier(
-                    BrowserPlatformSidebarReorderLiftGesture { phase in
-                        switch phase {
-                        case .moved(let start, let pointer):
-                            reorder.update(
-                                source: space.id, ids: spaces.map(\.id), frames: frames, start: start, pointer: pointer,
-                                viewport: reorderViewport)
-                        case .released:
-                            guard reorder.sourceID == space.id else { return }
-                            if let move = reorder.end() { moveSpace(move.source, move.target) }
-                        }
+                    BrowserPlatformSidebarReorderLiftGesture { start, pointer in
+                        reorder.update(
+                            source: space.id, ids: spaces.map(\.id), frames: frames, start: start, pointer: pointer,
+                            viewport: reorderViewport)
+                    } released: {
+                        guard reorder.sourceID == space.id else { return }
+                        if let move = reorder.end() { moveSpace(move.source, move.target) }
                     }
                 )
                 #if os(macOS)

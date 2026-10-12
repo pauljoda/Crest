@@ -13,7 +13,10 @@ struct BrowserFolderHighlightSurface: ViewModifier {
     var textColorMode: SpaceTextColorMode = .automatic
     var showsFill = true
     var showsBorders = true
-    var leadingInset: CGFloat = CrestSpacing.small
+    /// How many folders hold this one. Each steps the surface in by the
+    /// container padding and rounds it one padding tighter, concentric with
+    /// the folder around it.
+    var depth = 0
     var isSelected = false
     var emphasisOpacity: Double = 0
 
@@ -24,60 +27,45 @@ struct BrowserFolderHighlightSurface: ViewModifier {
     private var foregroundScheme: ColorScheme {
         if let override = textColorMode.foregroundTone { return override == .light ? .dark : .light }
         guard showsFill, intensity > 0 else { return colorScheme }
-        return BrowserSpaceForegroundPolicy.colorScheme(over: compositedColor)
+        return compositedColor.foregroundTone.colorScheme
     }
 
     private var compositedColor: BrandColor {
         let channel = colorScheme == .dark ? 0.0 : 1.0
-        return BrowserFolderAppearancePolicy.compositedColor(
-            color,
-            opacity: BrowserFolderAppearancePolicy.fillOpacity(
-                intensity: intensity, reduceTransparency: reduceTransparency),
-            background: parentBackgroundColor ?? BrandColor(red: channel, green: channel, blue: channel))
+        return color.composited(
+            opacity: fillOpacity,
+            over: parentBackgroundColor ?? BrandColor(red: channel, green: channel, blue: channel))
+    }
+
+    private var fillOpacity: Double {
+        let strength = intensity.isFinite ? min(max(intensity, 0), 1) : 0
+        let baseline = reduceTransparency ? 0.28 : 0.12
+        return baseline + (1 - baseline) * strength
+    }
+
+    private var shape: RoundedRectangle {
+        RoundedRectangle(cornerRadius: BrowserSidebarMetrics.layerCornerRadius(depth: depth), style: .continuous)
     }
 
     func body(content: Content) -> some View {
         content
             .background {
                 if showsFill {
-                    RoundedRectangle(
-                        cornerRadius: BrowserDeviceAppearanceStore.shared.containerCornerRadius(), style: .continuous
-                    )
-                    .fill(
-                        color.color.opacity(
-                            BrowserFolderAppearancePolicy.fillOpacity(
-                                intensity: intensity, reduceTransparency: reduceTransparency))
-                    )
-                    .overlay {
-                        if emphasisOpacity > 0 {
-                            RoundedRectangle(
-                                cornerRadius: BrowserDeviceAppearanceStore.shared.containerCornerRadius(),
-                                style: .continuous
-                            )
-                            .fill(.primary.opacity(emphasisOpacity))
+                    CrestSurfaceLayer(shape: shape, tint: color.color.opacity(fillOpacity))
+                        .overlay {
+                            if emphasisOpacity > 0 { shape.fill(.primary.opacity(emphasisOpacity)) }
                         }
-                    }
-                    .overlay {
-                        if isSelected {
-                            RoundedRectangle(
-                                cornerRadius: BrowserDeviceAppearanceStore.shared.containerCornerRadius(),
-                                style: .continuous
-                            )
-                            .fill(CrestColor.hover)
+                        .overlay {
+                            if isSelected { shape.fill(CrestColor.hover) }
                         }
-                    }
-                    .overlay {
-                        if showsBorders {
-                            RoundedRectangle(
-                                cornerRadius: BrowserDeviceAppearanceStore.shared.containerCornerRadius(),
-                                style: .continuous
-                            )
-                            .strokeBorder(color.color.opacity(0.5), lineWidth: 1)
+                        .overlay {
+                            if showsBorders {
+                                shape.strokeBorder(color.color.opacity(0.5), lineWidth: 1)
+                            }
                         }
-                    }
-                    .padding(.leading, leadingInset)
-                    .padding(.trailing, CrestSpacing.small)
-                    .allowsHitTesting(false)
+                        .padding(.leading, BrowserFolderLayout.surfaceLeadingInset(depth: depth))
+                        .padding(.trailing, BrowserSidebarMetrics.layerInset)
+                        .allowsHitTesting(false)
                 }
             }
             .environment(\.colorScheme, foregroundScheme)

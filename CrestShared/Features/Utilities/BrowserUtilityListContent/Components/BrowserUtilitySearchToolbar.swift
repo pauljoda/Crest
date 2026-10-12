@@ -32,10 +32,11 @@ struct BrowserUtilitySearchToolbar: View {
             }
             .padding(.horizontal, 9)
             .frame(height: BrowserChromeLayout.addressHeight)
-            .background(
-                CrestColor.chromeSurface,
-                in: .rect(cornerRadius: BrowserChromeLayout.addressCornerRadius)
-            )
+            .background {
+                // The address field's own shape, which this stands in for.
+                CrestSurfaceLayer(
+                    shape: .rect(cornerRadius: BrowserSidebarMetrics.layerCornerRadius(), style: .continuous))
+            }
             .matchedGeometryEffect(
                 id: morph,
                 in: morphNamespace,

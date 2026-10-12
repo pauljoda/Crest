@@ -76,9 +76,3 @@ enum BrowserDownloadDestination {
         return (trimmedStem.isEmpty ? "download" : trimmedStem) + safeExtension
     }
 }
-
-enum BrowserPlatformDownloadResolution {
-    case destination(URL, securityScopedURL: URL?)
-    case cancelled
-    case unavailable
-}

@@ -66,27 +66,18 @@ final class BrowserExternalSchemeCoordinator {
         // always pauses at Crest's prompt, whether or not a click started it.
         let decision = permissionCenter.decision(
             for: .externalApplications, origin: origin, detail: scheme, in: spaceID)
-        switch decision.verdict {
-        case .grant:
-            opensExternalURL(destinationURL)
-        case .deny:
-            return
-        case .ask:
-            switch await prompt(origin, destinationURL, spaceName) {
-            case .open:
-                opensExternalURL(destinationURL)
-            case .openAndRemember:
-                permissionCenter.setDecision(
-                    .grantPersistently,
-                    for: .externalApplications,
-                    origin: origin,
-                    detail: scheme,
-                    in: spaceID
-                )
-                opensExternalURL(destinationURL)
-            case .cancel:
-                return
-            }
+        var response = BrowserExternalSchemePromptResponse.answering(decision.verdict)
+        if response == nil { response = await prompt(origin, destinationURL, spaceName) }
+        guard let response else { return }
+        if response.remembers {
+            permissionCenter.setDecision(
+                .grantPersistently,
+                for: .externalApplications,
+                origin: origin,
+                detail: scheme,
+                in: spaceID
+            )
         }
+        if response.opens { opensExternalURL(destinationURL) }
     }
 }

@@ -1004,6 +1004,9 @@ final class BrowserPagePoolTests: XCTestCase {
 
         XCTAssertTrue(mount.window.makeFirstResponder(firstPage.webView))
         present(pool, tab: second.id, in: space.id)
+        // The tab shown in its place takes focus, as a real switch does, so
+        // the first page has a responder to restore when it comes back.
+        mount.window.makeFirstResponder(nil)
         present(pool, tab: first.id, in: space.id)
         XCTAssertTrue(firstPage.focusRestoration.hasPendingRestoration)
 
@@ -1015,6 +1018,9 @@ final class BrowserPagePoolTests: XCTestCase {
 
         XCTAssertTrue(mount.window.makeFirstResponder(firstPage.webView))
         present(pool, tab: second.id, in: space.id)
+        // The tab shown in its place takes focus, as a real switch does, so
+        // the first page has a responder to restore when it comes back.
+        mount.window.makeFirstResponder(nil)
         present(pool, tab: first.id, in: space.id)
         XCTAssertTrue(firstPage.focusRestoration.hasPendingRestoration)
         firstPage.webViewWebContentProcessDidTerminate(firstPage.webView)

@@ -689,7 +689,7 @@ final class BrowserTabDragSafetyTests: XCTestCase {
         state.register(
             zone: BrowserSidebarReorderZone(
                 target: .folder(folderID),
-                frame: BrowserSidebarReorderPolicy.nestingFrame(
+                frame: BrowserSidebarReorderZone.nestingFrame(
                     for: folderFrame
                 )
             ),
@@ -726,9 +726,7 @@ final class BrowserTabDragSafetyTests: XCTestCase {
         // row highlight and the nesting outline.
         XCTAssertEqual(state.lift?.item, .tab(item))
         XCTAssertTrue(
-            BrowserFolderRowPresentationPolicy.showsDropHighlight(
-                for: state.lift?.item
-            )
+            state.lift?.item.showsFolderDropHighlight ?? false
         )
 
         _ = state.end()
@@ -860,10 +858,7 @@ final class BrowserTabDragSafetyTests: XCTestCase {
         )
         // A split row never competes for a folder list's slots.
         XCTAssertFalse(
-            BrowserSidebarReorderPolicy.accepts(
-                item: .splitGroup(context.item),
-                in: .folders(parentID: nil)
-            )
+            BrowserSidebarReorderItem.splitGroup(context.item).isAccepted(by: .folders(parentID: nil))
         )
         XCTAssertFalse(
             commit.apply(

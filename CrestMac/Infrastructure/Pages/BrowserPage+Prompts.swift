@@ -14,26 +14,7 @@ extension BrowserPage: BrowserPromptPresenting {
         let reply: @MainActor @Sendable (Bool, String?) -> Void = { accepted, text in
             corePage.answer(AnswerScriptDialog(promptID: promptID, accepted: accepted, text: text))
         }
-        switch question.kind {
-        case .alert:
-            dialogPresenter.presentAlert(message: question.message, request: request, dismissal: dismissal) {
-                reply(true, nil)
-            }
-        case .confirm:
-            dialogPresenter.presentConfirm(message: question.message, request: request, dismissal: dismissal) {
-                reply($0, nil)
-            }
-        case .prompt:
-            dialogPresenter.presentPrompt(
-                message: question.message, defaultText: question.defaultText, request: request, dismissal: dismissal
-            ) { answer in
-                reply(answer != nil, answer)
-            }
-        case .beforeUnload:
-            dialogPresenter.presentBeforeUnload(request: request, dismissal: dismissal) {
-                reply($0, nil)
-            }
-        }
+        question.kind.present(question, request: request, dismissal: dismissal, on: self, reply: reply)
     }
 
     func ask(_ asked: AuthenticationAsked, dismissal: BrowserPromptDismissal) {
@@ -82,6 +63,43 @@ extension BrowserPage: BrowserPromptPresenting {
         let dialogs = dialogPresenter
         return await BrowserGeolocationSystemService().systemAuthorizes {
             await dialogs.recoverGeolocationSystemAuthorization()
+        }
+    }
+}
+
+/// Each kind of script dialog, shown as a sheet on the page's window.
+extension BrowserPage: BrowserScriptDialogPresenting {
+    func presentAlert(
+        _ question: ScriptDialogQuestion, request: URLRequest, dismissal: BrowserPromptDismissal, reply: @escaping Reply
+    ) {
+        dialogPresenter.presentAlert(message: question.message, request: request, dismissal: dismissal) {
+            reply(true, nil)
+        }
+    }
+
+    func presentConfirm(
+        _ question: ScriptDialogQuestion, request: URLRequest, dismissal: BrowserPromptDismissal, reply: @escaping Reply
+    ) {
+        dialogPresenter.presentConfirm(message: question.message, request: request, dismissal: dismissal) {
+            reply($0, nil)
+        }
+    }
+
+    func presentPrompt(
+        _ question: ScriptDialogQuestion, request: URLRequest, dismissal: BrowserPromptDismissal, reply: @escaping Reply
+    ) {
+        dialogPresenter.presentPrompt(
+            message: question.message, defaultText: question.defaultText, request: request, dismissal: dismissal
+        ) { answer in
+            reply(answer != nil, answer)
+        }
+    }
+
+    func presentBeforeUnload(
+        _ question: ScriptDialogQuestion, request: URLRequest, dismissal: BrowserPromptDismissal, reply: @escaping Reply
+    ) {
+        dialogPresenter.presentBeforeUnload(request: request, dismissal: dismissal) {
+            reply($0, nil)
         }
     }
 }

@@ -5,7 +5,7 @@ import SwiftUI
 /// Placed as an overlay so the tracked region is the card's full bounds — web
 /// content, find bar, failure overlay and all — and reports nothing but "the
 /// pointer is inside this card". What that is worth is decided by
-/// `BrowserSplitFocusPolicy`, not here.
+/// `BrowserSplitPageSurface.focusesOnHover`, not here.
 struct BrowserSplitCardHoverTracker: NSViewRepresentable {
     let onHoverChange: @MainActor @Sendable (Bool) -> Void
 

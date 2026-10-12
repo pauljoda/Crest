@@ -7,7 +7,7 @@
             page.currentURL = URL(string: url)
             page.mediaSessionLocation = url
             page.surface.layoutEngineView()
-            page.observer(.navigationCommitted(page.currentURL, isLoading: isLoading))
+            page.observer(BrowserPageNavigationCommitted(url: page.currentURL, isLoading: isLoading))
         }
     }
 #endif

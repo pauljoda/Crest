@@ -113,7 +113,7 @@ public sealed record PageOffered(Guid OfferId, Guid ProfileId, Guid? SourcePageI
     /// window that has no address yet does.
     private void LoadInSource(Pages pages, Page source, PageTurn turn) {
         if (!source.Phase.HoldsEnginePage
-            || new WebAddress(Url).Origin is null && !Url.StartsWith(BrowserUrlConstants.AboutBlank + "#", StringComparison.Ordinal)
+            || new WebAddress(Url).Origin is null && !Url.StartsWith(AddressResolution.AboutBlank + "#", StringComparison.Ordinal)
             || pages.Device.Attached(source.WorkspaceId) is not { } workspace || Hostable(workspace, source.SpaceId) is null)
             return;
         pages.Update(source, turn.Changes, () => source.Load(Url));

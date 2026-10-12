@@ -108,7 +108,7 @@ struct BrowserSpaceSidebarPreview: View {
         }
         .environment(
             \.colorScheme,
-            BrowserSpaceForegroundPolicy.colorScheme(for: branding)
+            branding.foregroundTone.colorScheme
         )
         .allowsHitTesting(false)
         .environment(\.sidebarSpacePresentation, SidebarSpacePresentation(space: space, isUnlocked: true))

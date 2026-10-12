@@ -4,8 +4,11 @@ import SwiftUI
 /// button style owns the hit frame, keeping every symbol centered without
 /// platform-view offsets or custom baselines.
 struct BrowserChromeSymbolLabel: View {
+    /// The point size adjacent chrome symbols share.
+    nonisolated static let defaultPointSize: CGFloat = 14
+
     let systemName: String
-    var pointSize = BrowserReloadFeedbackPolicy.symbolPointSize
+    var pointSize = Self.defaultPointSize
 
     var body: some View {
         Image(systemName: systemName)

@@ -31,34 +31,16 @@
         }
 
         /// Applies a request the engine made for `page`'s own tab.
-        ///
-        /// The engine has already checked that the extension has an entry for the
-        /// tab, so the only remaining decision is what the tab is showing: a second
-        /// request for the panel already there toggles or is ignored rather than
-        /// rebuilding the same document.
         static func route(
             _ request: SidePanelRequest,
             extensionID: String,
             page: ChromiumNativePage,
             host: BrowserExtensionSidePanelHost
         ) {
-            let isShowing = host.panel(on: page.pageID)?.id == extensionID
-            switch request {
-            case .close:
-                if isShowing { host.close(on: page.pageID) }
-            case .toggle where isShowing:
-                host.close(on: page.pageID)
-            case .open where isShowing:
-                break
-            default:
-                let action = ChromiumComposition.extensions.actions(for: page).first { $0.id == extensionID }
-                present(
-                    extensionID, title: action?.displayName ?? extensionID,
-                    icon: action?.icon, page: page, host: host)
-            }
+            request.take(through: ChromiumSidePanelRoute(extensionID: extensionID, page: page, host: host))
         }
 
-        private static func present(
+        static func present(
             _ extensionID: String,
             title: String,
             icon: NSImage?,

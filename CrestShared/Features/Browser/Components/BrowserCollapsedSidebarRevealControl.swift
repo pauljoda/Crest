@@ -71,10 +71,8 @@ struct BrowserCollapsedSidebarRevealControl: View {
 
     private func revealIfSwipedInward(_ value: DragGesture.Value) {
         guard
-            BrowserChromeDirectionPolicy.isLeadingEdgeReveal(
-                CGSize(width: value.translation.width * (edge == .leading ? 1 : -1), height: value.translation.height),
-                layoutDirection: layoutDirection
-            )
+            layoutDirection.isLeadingEdgeReveal(
+                CGSize(width: value.translation.width * (edge == .leading ? 1 : -1), height: value.translation.height))
         else { return }
         showSidebar()
     }

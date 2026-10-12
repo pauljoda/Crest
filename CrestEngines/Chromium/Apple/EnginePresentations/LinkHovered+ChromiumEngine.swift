@@ -3,7 +3,7 @@
 
     extension LinkHovered {
         @MainActor func present(on engine: ChromiumEngine) {
-            engine.presentedPage(pageID)?.observer(.linkHovered(url.flatMap(URL.init(string:))))
+            engine.presentedPage(pageID)?.observer(BrowserPageLinkHovered(destination: url.flatMap(URL.init(string:))))
         }
     }
 #endif

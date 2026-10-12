@@ -103,6 +103,12 @@ final class BrowserAutomaticSoftwareUpdatePresenter {
 final class BrowserSoftwareUpdateUserDriver: NSObject, SPUUserDriver,
     SPUUpdaterDelegate
 {
+    /// The marketing version of the bundle this process started from.
+    nonisolated static var bundleVersion: String? {
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString")
+            as? String
+    }
+
     let model: BrowserSoftwareUpdateModel
     var channel: BrowserSoftwareUpdateChannel
     var updateCycleDidFinish: (() -> Void)?
@@ -117,7 +123,7 @@ final class BrowserSoftwareUpdateUserDriver: NSObject, SPUUserDriver,
         model: BrowserSoftwareUpdateModel,
         channel: BrowserSoftwareUpdateChannel,
         feedURLOverride: URL? = nil,
-        runningVersion: String? = BrowserSoftwareUpdateVersionPolicy.runningVersion
+        runningVersion: String? = BrowserSoftwareUpdateUserDriver.bundleVersion
     ) {
         self.model = model
         self.channel = channel
@@ -347,11 +353,26 @@ final class BrowserSoftwareUpdateUserDriver: NSObject, SPUUserDriver,
         }
     }
 
+    /// Whether an offered — or already downloaded and waiting — update is
+    /// actually newer than the Crest that is running.
+    ///
+    /// Sparkle keeps a prepared update in the host bundle's cache, and the next
+    /// process to start from that bundle resumes it. A build whose
+    /// `MARKETING_VERSION` has since moved ahead of the cached one is then told
+    /// it is "Ready to Install" a Crest older than itself, and accepting that
+    /// would silently downgrade. Sparkle's own comparison is against the
+    /// bundle's recorded version, so the running version has to be checked here.
+    ///
+    /// Absent or unparseable versions are treated as newer: the guard exists to
+    /// catch a stale cache, never to block a legitimate update it cannot read.
     private func isNewerThanRunning(_ item: SUAppcastItem) -> Bool {
-        BrowserSoftwareUpdateVersionPolicy.isNewer(
-            item.displayVersionString,
-            thanRunning: runningVersion
-        )
+        let offered = item.displayVersionString.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard
+            !offered.isEmpty,
+            let running = runningVersion?.trimmingCharacters(in: .whitespacesAndNewlines),
+            !running.isEmpty
+        else { return true }
+        return offered.compare(running, options: .numeric) == .orderedDescending
     }
 
     func allowedChannels(for updater: SPUUpdater) -> Set<String> {

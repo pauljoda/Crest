@@ -146,10 +146,7 @@ struct BrowserSidebarWidgetDeckStepper: View {
     }
 
     private var selectionAnimation: Animation? {
-        BrowserVisualAccessibilityPolicy.animation(
-            CrestMotion.selection,
-            reduceMotion: reduceMotion
-        )
+        CrestMotion.selection.unlessReducingMotion(reduceMotion)
     }
 
     /// The deck wraps, so a step control is never a dead end.
@@ -169,7 +166,7 @@ struct BrowserSidebarWidgetDeckStepper: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel(
-            direction == .previous ? "Previous Widget" : "Next Widget"
+            Text(direction.accessibilityLabel)
         )
     }
 
@@ -179,11 +176,6 @@ struct BrowserSidebarWidgetDeckStepper: View {
         let position =
             instances.firstIndex(where: { $0.id == instance.id })
             .map { $0 + 1 } ?? 1
-        switch instance.presentation {
-        case .nowPlaying(let session):
-            return "Widget \(position), Now Playing, \(session.ownerDisplayTitle)"
-        case .softwareUpdate:
-            return "Widget \(position), Update Available"
-        }
+        return "Widget \(position), \(instance.presentation.deckDescription)"
     }
 }

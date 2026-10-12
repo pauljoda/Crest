@@ -41,9 +41,6 @@ struct BrowserOnboardingProgressHeader: View {
     }
 
     private func motion(_ animation: Animation) -> Animation? {
-        BrowserVisualAccessibilityPolicy.animation(
-            animation,
-            reduceMotion: reduceMotion
-        )
+        animation.unlessReducingMotion(reduceMotion)
     }
 }

@@ -59,7 +59,7 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     var findQuery: String { findSession.query }
     var findMatchState: BrowserFindMatchState { findSession.matchState }
     var findFocusRequest: Int { findSession.focusRequest }
-    private(set) var pageZoom: CGFloat = BrowserPageZoomPolicy.defaultLevel
+    private(set) var pageZoom: CGFloat = BrowserDefaultPageZoomStore.defaultLevel
     let translation = BrowserPageTranslation()
     var readerModeState: BrowserReaderModeState { readerModeSession.state }
     var isContentBlockingActive: Bool { contentRuleSession.isActive }
@@ -172,7 +172,7 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         contentRuleList: WKContentRuleList? = nil,
         allowsCredentialAccess: Bool = true,
         isCredentialAccessEnabled: Bool = true,
-        defaultPageZoom: CGFloat = BrowserPageZoomPolicy.defaultLevel,
+        defaultPageZoom: CGFloat = BrowserDefaultPageZoomStore.defaultLevel,
         loadsInitialURL: Bool = true,
         loadHTTPAuthenticationCredential:
             @escaping BrowserHTTPAuthenticationSession.LoadCredential = { _ in nil },
@@ -235,9 +235,7 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
                 )
             }
         )
-        let normalizedDefaultPageZoom = BrowserPageZoomPolicy.normalizedDefault(
-            defaultPageZoom
-        )
+        let normalizedDefaultPageZoom = BrowserDefaultPageZoomStore.normalized(defaultPageZoom)
         self.defaultPageZoom = normalizedDefaultPageZoom
         pageZoom = normalizedDefaultPageZoom
         let httpAuthenticationSession = BrowserHTTPAuthenticationSession(
@@ -272,7 +270,7 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         }
 
         super.init()
-        if normalizedDefaultPageZoom != BrowserPageZoomPolicy.defaultLevel {
+        if normalizedDefaultPageZoom != BrowserDefaultPageZoomStore.defaultLevel {
             webView.pageZoom = normalizedDefaultPageZoom
         }
         #if DEBUG
@@ -645,12 +643,12 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
 
     @discardableResult
     func zoomIn() -> Bool {
-        setTemporaryPageZoom(BrowserPageZoomPolicy.increased(from: pageZoom))
+        setTemporaryPageZoom(pageZoom.pageZoomIncreased)
     }
 
     @discardableResult
     func zoomOut() -> Bool {
-        setTemporaryPageZoom(BrowserPageZoomPolicy.decreased(from: pageZoom))
+        setTemporaryPageZoom(pageZoom.pageZoomDecreased)
     }
 
     @discardableResult
@@ -661,10 +659,10 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
 
     @discardableResult
     func applyDefaultPageZoom(_ zoom: CGFloat) -> Bool {
-        let normalized = BrowserPageZoomPolicy.normalizedDefault(zoom)
+        let normalized = BrowserDefaultPageZoomStore.normalized(zoom)
         defaultPageZoom = normalized
         if hasTemporaryPageZoomOverride {
-            if BrowserPageZoomPolicy.levelsMatch(pageZoom, normalized) {
+            if pageZoom.matchesPageZoom(normalized) {
                 hasTemporaryPageZoomOverride = false
             }
             return false
@@ -730,7 +728,7 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
 
     func exportPDF(to destination: MobileBrowserFileExportDestination) {
         guard webView.url != nil else { return }
-        let suggestedFilename = BrowserPageExportPolicy.pdfFilename(title: live.title, url: live.documentURL)
+        let suggestedFilename = live.suggestedFilename(pathExtension: "pdf")
         Task { [weak self] in
             guard let self else { return }
             do {
@@ -760,10 +758,8 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
 
     func exportWebArchive(to destination: MobileBrowserFileExportDestination) {
         guard webView.url != nil else { return }
-        let suggestedFilename = BrowserPageExportPolicy.webArchiveFilename(
-            title: live.title,
-            url: live.documentURL
-        )
+        let suggestedFilename = live.suggestedFilename(
+            pathExtension: BrowserPageArchiveFormat.webArchive.pathExtension)
         Task { [weak self] in
             guard let self else { return }
             do {
@@ -951,10 +947,7 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
 
     private func setTemporaryPageZoom(_ zoom: CGFloat) -> Bool {
         let changed = setPageZoom(zoom)
-        hasTemporaryPageZoomOverride = !BrowserPageZoomPolicy.levelsMatch(
-            pageZoom,
-            defaultPageZoom
-        )
+        hasTemporaryPageZoomOverride = !pageZoom.matchesPageZoom(defaultPageZoom)
         return changed
     }
 

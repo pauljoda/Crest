@@ -67,14 +67,13 @@ final class BrowserSidebarPointerNavigationView: NSView, BrowserMacWindowPointer
         guard event.window === window else { return false }
         let page = pageUnderPointer(for: event)
         guard
-            let disposition = BrowserSidebarMouseButtonPolicy.disposition(
+            let disposition = pointerScope(for: event, page: page).disposition(
                 for: action,
-                pointerScope: pointerScope(for: event, page: page),
                 canNavigatePage: canNavigate(action, in: page)
             )
         else { return false }
 
-        execute(disposition, in: page)
+        disposition.take(on: self, page: page)
         return true
     }
 
@@ -101,39 +100,16 @@ final class BrowserSidebarPointerNavigationView: NSView, BrowserMacWindowPointer
         in page: (any BrowserSidebarMouseNavigationTarget)?
     ) -> Bool {
         guard let page else { return false }
-        return switch action {
-        case .previousSpace:
-            page.live.canGoBack
-        case .nextSpace:
-            page.live.canGoForward
-        }
+        return action.canNavigate(page)
     }
 
-    private func execute(
-        _ disposition: BrowserSidebarMouseButtonDisposition,
-        in page: (any BrowserSidebarMouseNavigationTarget)?
-    ) {
-        switch disposition {
-        case .navigatePage(let action):
-            navigate(action, in: page)
-        case .switchSpace(let action):
-            perform(action)
-        case .consume:
-            break
-        }
-    }
-
-    private func navigate(
+    /// Moves `page`, if there is one, the way `action` asks.
+    func navigate(
         _ action: BrowserSidebarMouseButtonAction,
         in page: (any BrowserSidebarMouseNavigationTarget)?
     ) {
         guard let page else { return }
-        switch action {
-        case .previousSpace:
-            page.goBack()
-        case .nextSpace:
-            page.goForward()
-        }
+        action.navigate(page)
     }
 
     /// Matches the hit view against the pages this window owns rather than a

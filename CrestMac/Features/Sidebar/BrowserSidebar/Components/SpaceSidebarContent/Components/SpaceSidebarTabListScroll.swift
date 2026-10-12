@@ -47,7 +47,7 @@ struct SpaceSidebarTabListScroll<Background: View, Content: View>: View {
             .environment(\.browserSidebarScrollRegionID, scrollRegionID)
             .modifier(SidebarScrollAffordance(isDragging: sidebarInteraction.sidebarReorderState.isDragging))
             .scrollClipDisabled(
-                !BrowserSidebarScrollLayoutPolicy.clipsScrollableRegion
+                !BrowserSidebarReorderVisuals.clipsScrollableRegionWhenIdle
             )
             .background {
                 BrowserSidebarScrollViewportObserver(
@@ -151,6 +151,13 @@ private struct BrowserSidebarDragAutoscrollBridge: NSViewRepresentable {
 
 @MainActor
 private final class BrowserSidebarDragAutoscrollObserverView: NSView {
+    /// Thickness of the bands inside the scroll viewport that advance a long
+    /// list while a lift is held at either vertical edge.
+    private static let autoscrollEdgeBand: CGFloat = 56
+
+    /// Maximum document movement per display tick at the outer edge of a band.
+    private static let autoscrollMaximumStep: CGFloat = 14
+
     private weak var reorderState: BrowserSidebarReorderState?
     private weak var observedClipView: NSClipView?
     private var boundsObserver: NSObjectProtocol?
@@ -164,6 +171,35 @@ private final class BrowserSidebarDragAutoscrollObserverView: NSView {
     private var isDragging = false
     private var lastScrollOriginY: CGFloat?
     private var connectionIsScheduled = false
+
+    /// Signed document movement for the pointer in the scroll viewport.
+    /// Negative travels toward the beginning; positive travels toward the end.
+    ///
+    /// The horizontal containment check is intentional. Once the pointer leaves
+    /// the list for pinned tabs or other fixed chrome, that chrome owns the drop
+    /// and the list behind it must stop moving.
+    private var autoscrollStep: CGFloat {
+        guard !viewport.isEmpty,
+            pointer.x >= viewport.minX,
+            pointer.x <= viewport.maxX,
+            pointer.y >= viewport.minY,
+            pointer.y <= viewport.maxY
+        else { return 0 }
+
+        let topDistance = pointer.y - viewport.minY
+        if topDistance < Self.autoscrollEdgeBand {
+            return -Self.autoscrollMaximumStep
+                * (1 - topDistance / Self.autoscrollEdgeBand)
+        }
+
+        let bottomDistance = viewport.maxY - pointer.y
+        if bottomDistance < Self.autoscrollEdgeBand {
+            return Self.autoscrollMaximumStep
+                * (1 - bottomDistance / Self.autoscrollEdgeBand)
+        }
+
+        return 0
+    }
 
     override func viewDidMoveToSuperview() {
         super.viewDidMoveToSuperview()
@@ -251,10 +287,7 @@ private final class BrowserSidebarDragAutoscrollObserverView: NSView {
     }
 
     private func updateAutoscroll() {
-        let step = BrowserSidebarReorderPolicy.autoscrollStep(
-            at: pointer,
-            in: viewport
-        )
+        let step = autoscrollStep
         guard window != nil, isDragging, step != 0, observedClipView != nil else {
             autoscrollClock.stop()
             return
@@ -272,10 +305,7 @@ private final class BrowserSidebarDragAutoscrollObserverView: NSView {
             return
         }
 
-        let requestedStep = BrowserSidebarReorderPolicy.autoscrollStep(
-            at: pointer,
-            in: viewport
-        )
+        let requestedStep = autoscrollStep
         guard requestedStep != 0 else {
             autoscrollClock.stop()
             return

@@ -5,10 +5,13 @@ import SwiftUI
 struct BrowserSidebarReorderGap: View {
     let height: CGFloat
 
+    /// The slot takes the shape of a layer where it stands.
+    @Environment(\.sidebarLayerDepth) private var depth
+
     var body: some View {
-        RoundedRectangle(cornerRadius: CrestRadius.control)
+        RoundedRectangle(cornerRadius: BrowserSidebarMetrics.layerCornerRadius(depth: depth), style: .continuous)
             .fill(.primary.opacity(0.035))
-            .padding(.horizontal, CrestSpacing.small)
+            .padding(.horizontal, BrowserSidebarMetrics.layerInset)
             .padding(.vertical, CrestSpacing.extraSmall)
             .frame(height: height)
             .clipped()

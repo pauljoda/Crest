@@ -50,12 +50,6 @@ extension BrowserShortcut {
     }
 }
 
-enum BrowserShortcutAssignmentResult: Equatable, Sendable {
-    case assigned
-    case conflict(commands: [ShortcutCommand])
-    case invalid
-}
-
 enum BrowserShortcutKey: Codable, Hashable, Sendable {
     case character(Character)
     case special(ShortcutSpecialKey)
@@ -104,10 +98,6 @@ extension ShortcutModifiers: Codable, Hashable {
         .control,
         .shift,
     ]
-}
-
-struct BrowserShortcutSearchDocument: Equatable, Sendable {
-    let fields: [String]
 }
 
 extension ShortcutSection: Identifiable {

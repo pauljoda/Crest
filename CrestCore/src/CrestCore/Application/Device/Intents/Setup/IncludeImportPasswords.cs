@@ -9,7 +9,7 @@ public sealed record IncludeImportPasswords(Guid SourceSpaceId, bool Included) :
     #region Actions - Device
 
     internal override void Apply(Device device, DeviceTurn turn) => device.ReviseFlow(turn.Changes, (flow, session) =>
-        Device.Editing(flow, review => ImportReviewPolicy.IncludingPasswords(review, SourceSpaceId, Included, session)));
+        Device.Editing(flow, review => review.IncludingPasswords(SourceSpaceId, Included, session)));
 
     #endregion
 }

@@ -21,7 +21,7 @@ public sealed record LaunchPlan(Guid WorkspaceId, DevicePlatform Platform, Launc
     private LaunchDecision Answer(NativeSessionAuthority workspace, bool gated) {
         lock (NativeSessionAuthority.Gate) {
             workspace.RequirePreferenceOwner();
-            return LaunchPolicy.Plan(Environment, Platform, workspace.AcceptedSession.AppPreferences?.Startup, gated);
+            return Environment.Plan(Platform, workspace.AcceptedSession.AppPreferences?.Startup, gated);
         }
     }
 

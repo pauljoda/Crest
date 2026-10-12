@@ -1,6 +1,12 @@
 import SwiftUI
 
 struct BrowserExtensionPinButton: View {
+    // MARK: - Static Variables
+
+    private static let size: CGFloat = 14
+
+    // MARK: - Variables
+
     let isPinned: Bool
     let action: () -> Void
 
@@ -8,14 +14,14 @@ struct BrowserExtensionPinButton: View {
         Button(action: action) {
             Image(systemName: isPinned ? "pin.slash.fill" : "pin.fill")
                 .font(.system(size: 8, weight: .semibold))
-                .frame(
-                    width: BrowserPinnedExtensionStripLayoutPolicy.pinControlSize,
-                    height: BrowserPinnedExtensionStripLayoutPolicy.pinControlSize
-                )
-                .contentShape(.circle)
         }
-        .buttonStyle(.plain)
-        .background(.regularMaterial, in: .circle)
+        .buttonStyle(
+            CrestChromeButtonStyle(
+                controlSize: CGSize(width: Self.size, height: Self.size),
+                cornerRadius: Self.size / 2,
+                showsRestingFill: true
+            )
+        )
         .accessibilityLabel(isPinned ? "Unpin Extension" : "Pin Extension")
         .help(isPinned ? "Unpin Extension" : "Pin Extension")
     }

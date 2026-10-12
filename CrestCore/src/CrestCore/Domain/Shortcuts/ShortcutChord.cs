@@ -43,11 +43,12 @@ public sealed record ShortcutChord {
     #region Actions - Construction
 
     /// A typed character, compared in canonical composition so the two
-    /// spellings of an accented key are one chord.
+    /// spellings of an accented key are one chord. Refused with
+    /// `InvalidShortcut` for an empty or overlong character.
     public static ShortcutChord Character(string character, int modifiers) {
         ArgumentNullException.ThrowIfNull(character);
         if (character.Length == 0 || character.Length > MaximumCharacterLength)
-            throw new BrowserRuleException(BrowserRule.InvalidShortcut);
+            throw new Rejected(new InvalidShortcut(new(character, false, (ShortcutModifiers)modifiers)));
         return new(character.Normalize(NormalizationForm.FormC), false, modifiers);
     }
 
@@ -67,9 +68,11 @@ public sealed record ShortcutChord {
         return keys.IsSpecialKey ? Special(keys.Key, (int)keys.Modifiers) : Character(keys.Key, (int)keys.Modifiers);
     }
 
+    /// A named special key. Refused with `InvalidShortcut` for a key this
+    /// build does not know.
     public static ShortcutChord Special(string key, int modifiers) {
         ArgumentNullException.ThrowIfNull(key);
-        if (ShortcutSpecialKey.Named(key) is null) throw new BrowserRuleException(BrowserRule.InvalidShortcut);
+        if (ShortcutSpecialKey.Named(key) is null) throw new Rejected(new InvalidShortcut(new(key, true, (ShortcutModifiers)modifiers)));
         return new(key, true, modifiers);
     }
 

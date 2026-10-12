@@ -294,7 +294,9 @@ enum MobileBrowserDialogPresenter {
         presenter.present(alert, animated: true)
     }
 
-    private static func present(
+    /// Presents `viewController` over the top view controller, or calls
+    /// `fallback` when there is none to present it over.
+    static func present(
         _ viewController: UIViewController,
         fallback: @escaping @MainActor @Sendable () -> Void
     ) {
@@ -320,33 +322,8 @@ enum MobileBrowserDialogPresenter {
         temporaryDirectoryURL: URL?,
         to destination: MobileBrowserFileExportDestination
     ) {
-        switch destination.kind {
-        case .share:
-            let controller = MobileBrowserExportActivityController(
-                fileURL: fileURL,
-                temporaryDirectoryURL: temporaryDirectoryURL
-            )
-            present(controller) {
-                controller.cleanupTemporaryFiles()
-            }
-        case .files:
-            if let temporaryDirectoryURL {
-                let controller = MobileBrowserExportPickerController(
-                    fileURL: fileURL,
-                    temporaryDirectoryURL: temporaryDirectoryURL
-                )
-                present(controller) {
-                    controller.cleanupTemporaryFiles()
-                }
-                return
-            }
-            let controller = UIDocumentPickerViewController(
-                forExporting: [fileURL],
-                asCopy: true
-            )
-            controller.shouldShowFileExtensions = true
-            present(controller, fallback: {})
-        }
+        destination.download.send(
+            fileURL, to: MobileBrowserFilePresenter(temporaryDirectoryURL: temporaryDirectoryURL))
     }
 
     /// The page's server as a dialog names it, which the core formats: its
@@ -356,7 +333,7 @@ enum MobileBrowserDialogPresenter {
             return ProductIdentity.name
         }
         guard let port = url.port else { return host }
-        return BrowserCorePolicy.authenticationSourceLabel(
+        return AuthenticationSource.label(
             host: host, port: port, scheme: url.scheme, emptyHostLabel: ProductIdentity.name)
     }
 

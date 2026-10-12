@@ -20,7 +20,7 @@ final class BrowserWebKitMediaSessionTransport: BrowserMediaSessionTransport {
         )
     }
 
-    func performMediaSessionAction(_ action: BrowserMediaSessionAction, documentIdentifier: String) {
+    func performMediaSessionAction(_ action: MediaSessionAction, documentIdentifier: String) {
         call(
             """
             return globalThis.__crestMediaSessionBridge?.perform(
@@ -28,7 +28,7 @@ final class BrowserWebKitMediaSessionTransport: BrowserMediaSessionTransport {
               documentIdentifier
             ) === true;
             """,
-            ["action": action.rawValue, "documentIdentifier": documentIdentifier]
+            ["action": action.pageName, "documentIdentifier": documentIdentifier]
         )
     }
 

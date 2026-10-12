@@ -20,7 +20,7 @@ public sealed record PermissionRequested(Guid PromptId, Guid PageId, PermissionQ
     /// What the Space's `decision` answers without asking the person, or
     /// null when the person must be asked.
     private SettlePermission? Answer(SitePermissionDecision decision) =>
-        decision.Verdict != SitePermissionVerdict.Ask ? new(PromptId, decision.Grants, decision.IsPersistent)
+        !decision.Asks ? new(PromptId, decision.Grants, decision.IsPersistent)
         : Question.Permission.IsAskedBySystem ? new(PromptId, Grants: true, Remembers: false)
         : null;
 

@@ -63,17 +63,18 @@ struct BrowserSidebarTabRowConfiguration {
     var select: (UUID) -> Void { context.select }
 
     var metrics: BrowserSidebarTabRowMetrics {
-        BrowserSidebarInteractionPolicy.tabRowMetrics(capabilities)
+        capabilities.tabRowMetrics
     }
 
     var trailingControlMetrics: BrowserTabTrailingControlMetrics {
-        BrowserSidebarInteractionPolicy.trailingControlMetrics(capabilities)
+        capabilities.trailingControlMetrics
     }
 
-    /// The inset between the row's own bounds and its surface. Zero inside a
+    /// The inset between the row's own bounds and its surface: the sidebar's
+    /// layer inset, so the row lines up with every other layer. Zero inside a
     /// group, where the container's padding has already placed the row.
     var surfaceHorizontalInset: CGFloat {
-        isSplitGroupMember ? 0 : metrics.surfaceHorizontalInset
+        isSplitGroupMember ? 0 : BrowserSidebarMetrics.layerInset
     }
 
     /// Whether this row draws its own insertion lines.

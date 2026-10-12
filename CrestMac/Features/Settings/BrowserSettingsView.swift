@@ -139,7 +139,7 @@ struct BrowserSettingsView: View {
             return
         }
         spaceSettingsPresentation.present(
-            .space(tab, intent: intent),
+            BrowserSettingsSpaceRequest(tab: tab, intent: intent),
             assignment: BrowserSpaceRuntimeAssignment(spaceID: selected.spaceID, profileID: selected.profileID),
             searchText: tabState.navigation.searchText
         )
@@ -156,7 +156,8 @@ struct BrowserSettingsView: View {
             return
         }
         spaceSettingsPresentation.present(
-            .space(.appearance, intent: .newSpace), assignment: BrowserSpaceRuntimeAssignment(space: space))
+            BrowserSettingsSpaceRequest(tab: .appearance, intent: .newSpace),
+            assignment: BrowserSpaceRuntimeAssignment(space: space))
         browser.openSettings()
         pages.select()
     }

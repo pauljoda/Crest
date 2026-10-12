@@ -11,15 +11,3 @@ struct BrowserKeyboardModifierFlags: OptionSet, Equatable, Sendable {
     static let option = BrowserKeyboardModifierFlags(rawValue: 1 << 2)
     static let shift = BrowserKeyboardModifierFlags(rawValue: 1 << 3)
 }
-
-enum BrowserSidebarScrollRegion: Equatable, Sendable {
-    case fixed
-    case scrollable
-}
-
-enum BrowserSidebarSection: Equatable, Sendable {
-    case essentials
-    case spaceIdentity
-    case savedTabs
-    case currentTabs
-}

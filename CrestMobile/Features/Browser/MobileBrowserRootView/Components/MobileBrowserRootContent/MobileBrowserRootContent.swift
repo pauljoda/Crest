@@ -75,7 +75,7 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
                 sidebarPresentation: navigation.regularSidebarPresentation,
                 preferredSidebarWidth: model.sidebarWidthBinding,
                 space: browser.shownSpace,
-                spaces: BrowserSidebarAccessPolicy.availableSpaces(in: browser),
+                spaces: browser.availableSpaces,
                 reduceTransparency: reduceTransparency,
                 layoutDirection: layoutDirection,
                 usesBorderlessFloatingPageFrame:
@@ -202,9 +202,8 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
                         commands: commandContext.paletteRegistry,
                         isCompact: true,
                         obscuresSystemSafeAreas:
-                            MobileBrowserViewportPolicy.usesEdgeToEdgeWebViewport(
+                            presentation.usesEdgeToEdgeWebViewport(
                                 isPhone: UIDevice.current.userInterfaceIdiom == .phone,
-                                presentation: presentation,
                                 sidebarPresentation: navigation.regularSidebarPresentation),
                         showsCompactToolbar: showsCompactPageToolbar,
                         compactToolbarIsHidden:
@@ -242,7 +241,7 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
                     reduceTransparency: reduceTransparency,
                     layoutDirection: layoutDirection,
                     space: browser.shownSpace,
-                    spaces: BrowserSidebarAccessPolicy.availableSpaces(in: browser),
+                    spaces: browser.availableSpaces,
                     showSidebar: showRegularSidebar,
                     commitSidebarWidth: commitRegularSidebarWidth,
                     sidebar: MobileBrowserSidebarSurface(
@@ -405,7 +404,7 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
         } action: { size in
             availableRootSize = size
             guard size.width > 0 else { return }
-            model.presentationChanged(to: MobileBrowserPresentationPolicy.resolve(availableWidth: size.width))
+            model.presentationChanged(to: MobileBrowserPresentation.fitting(availableWidth: size.width))
         }
         .ignoresSafeArea(
             .keyboard,

@@ -3,7 +3,7 @@
 
     extension PageNavigationFailed {
         @MainActor func present(on engine: ChromiumEngine) {
-            engine.presentedPage(pageID)?.observer(.navigationFailed)
+            engine.presentedPage(pageID)?.observer(BrowserPageNavigationFailed())
         }
     }
 #endif

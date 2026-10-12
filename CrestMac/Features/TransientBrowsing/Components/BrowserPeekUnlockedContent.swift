@@ -135,9 +135,6 @@ struct BrowserPeekUnlockedContent: View {
     }
 
     private var dismissAnimation: Animation? {
-        BrowserVisualAccessibilityPolicy.animation(
-            CrestMotion.peekDismissal,
-            reduceMotion: reduceMotion
-        )
+        CrestMotion.peekDismissal.unlessReducingMotion(reduceMotion)
     }
 }

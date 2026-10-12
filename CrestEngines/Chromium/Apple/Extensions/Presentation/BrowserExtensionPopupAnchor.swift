@@ -2,10 +2,20 @@ import AppKit
 
 @MainActor
 final class BrowserExtensionPopupAnchor {
+    // MARK: - Static Variables
+
+    private static let anchorWidth: CGFloat = 28
+    private static let anchorHeight: CGFloat = 1
+    private static let topLeadingFallbackOffset = CGPoint(x: 292, y: 36)
+
+    // MARK: - Variables
+
     let screenPoint: CGPoint
     private weak var sourceWindow: NSWindow?
     private weak var sourceView: NSView?
     private let fallbackOffset: CGPoint
+
+    // MARK: - Initializers
 
     init(screenPoint: CGPoint, sourceWindow: NSWindow?) {
         self.screenPoint = screenPoint
@@ -41,6 +51,8 @@ final class BrowserExtensionPopupAnchor {
         self.sourceView = sourceView
         self.fallbackOffset = fallbackOffset
     }
+
+    // MARK: - Actions - Presentation
 
     func offsetBy(
         dx: CGFloat = 0,
@@ -109,10 +121,38 @@ final class BrowserExtensionPopupAnchor {
         let interactionPoint = hostView.convert(windowPoint, from: nil)
         return (
             hostView,
-            BrowserExtensionPopupAnchorPolicy.anchorRect(
+            Self.anchorRect(
                 in: hostView.bounds,
                 interactionPoint: interactionPoint
             )
+        )
+    }
+
+    /// A thin rect centred on `interactionPoint` when it falls inside
+    /// `bounds`, else near the top leading corner, kept inside `bounds`.
+    private static func anchorRect(
+        in bounds: CGRect,
+        interactionPoint: CGPoint?
+    ) -> CGRect {
+        let point =
+            interactionPoint.flatMap { bounds.contains($0) ? $0 : nil }
+            ?? CGPoint(
+                x: min(
+                    bounds.maxX - anchorWidth / 2,
+                    bounds.minX + topLeadingFallbackOffset.x
+                ),
+                y: bounds.maxY - topLeadingFallbackOffset.y
+            )
+        let centerX = min(
+            max(point.x, bounds.minX + anchorWidth / 2),
+            bounds.maxX - anchorWidth / 2
+        )
+        let centerY = min(max(point.y, bounds.minY), bounds.maxY)
+        return CGRect(
+            x: centerX - anchorWidth / 2,
+            y: centerY - anchorHeight / 2,
+            width: anchorWidth,
+            height: anchorHeight
         )
     }
 }

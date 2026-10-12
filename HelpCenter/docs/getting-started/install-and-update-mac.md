@@ -7,7 +7,7 @@ keywords: [download, install, update, macOS, GitHub Releases, Sparkle]
 
 # Install and update Crest for Mac
 
-Crest 0.7 for Mac requires Apple silicon and macOS 26.1 or later. It is distributed directly as a signed and notarized app with Chromium and WebKit; see [Chromium and WebKit on Mac](../browsing/engines.md). Crest for iPhone and iPad is on the App Store and continues to use WebKit.
+Crest for Mac requires Apple silicon and macOS 26.1 or later. It is distributed directly as a signed and notarized app with Chromium and WebKit; see [Chromium and WebKit on Mac](../browsing/engines.md). Crest for iPhone and iPad is on the App Store and continues to use WebKit.
 
 ## Install the latest Mac release
 
@@ -38,7 +38,7 @@ Use **Settings → About** to choose the update channel:
 
 Changing channels changes which future update is offered; it does not move or duplicate your profile.
 
-## Updating to Crest 0.7
+## Updating from an older Crest
 
 The same installer updates older WebKit-only versions and versions that already include Chromium. Your Spaces and browser records stay in place. Chromium and WebKit keep separate website sign-ins, and older WebKit extension installations do not carry over. See [Upgrading from a WebKit-only Crest](../browsing/engines.md#after-updating-from-a-webkit-only-crest) before switching engines.
 

@@ -20,7 +20,7 @@ struct BrowserMirroredPageContent: View {
                 Label("Active in another window", systemImage: "macwindow.on.rectangle")
                     .font(.headline)
                     .padding(20)
-                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
+                    .background { CrestSurfaceLayer(shape: .rect(cornerRadius: 12)) }
             }
             .buttonStyle(.plain)
             .accessibilityHint("Move this page here without reloading it.")

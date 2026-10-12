@@ -293,7 +293,7 @@ internal sealed class SqliteConnection : IDisposable {
     /// The link preferences, each value that does not read keeping its
     /// default: a device that never chose any holds no rows.
     private LinkPreferences ReadLinks() {
-        var links = LinkPreferencePolicy.Default;
+        var links = LinkPreferences.Default;
         Rows("SELECT destination, destination_space, peek_modifier, archive_policy FROM device_link", statement => links = links with {
             Destination = ExternalLinkDestination.Named(Sqlite.ColumnText(statement, 0)) ?? links.Destination,
             DestinationSpaceId = Identity(statement, 1),

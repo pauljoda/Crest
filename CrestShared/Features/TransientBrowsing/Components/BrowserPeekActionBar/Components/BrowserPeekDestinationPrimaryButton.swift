@@ -1,30 +1,39 @@
 import SwiftUI
 
 struct BrowserPeekDestinationPrimaryButton: View {
+    // MARK: - Static Variables
+
+    private static let leadingInset: CGFloat = 16
+    private static let contentSpacing = CrestSpacing.small
+    private static let iconSize: CGFloat = 22
+    private static let title = "Open In…"
+
+    // MARK: - Variables
+
     let selectedSpace: BrowserSpaceIdentity?
     let openInSelectedSpace: () -> Void
 
     var body: some View {
         Button(action: openInSelectedSpace) {
-            HStack(spacing: BrowserPeekChromePolicy.destinationContentSpacing) {
+            HStack(spacing: Self.contentSpacing) {
                 if let selectedSpace {
                     BrowserSpaceIdentityIcon(
                         identity: selectedSpace,
-                        size: BrowserPeekChromePolicy.destinationIconSize
+                        size: Self.iconSize
                     )
                 } else {
                     Image(systemName: "square.grid.2x2")
                 }
-                Text(BrowserPeekChromePolicy.openInTitle)
+                Text(Self.title)
                     .lineLimit(1)
             }
             .frame(maxWidth: .infinity)
-            .padding(.leading, BrowserPeekChromePolicy.destinationLeadingInset)
-            .frame(height: BrowserPeekChromePolicy.controlHeight)
+            .padding(.leading, Self.leadingInset)
+            .frame(height: BrowserPeekActionBar.controlHeight)
             .contentShape(.rect)
         }
         .keyboardShortcut("o", modifiers: .command)
-        .accessibilityLabel(Text(BrowserPeekChromePolicy.openInTitle))
+        .accessibilityLabel(Text(Self.title))
         .accessibilityValue(Text(selectedSpace?.name ?? "Space"))
         .accessibilityIdentifier("peek-open-selected-space")
         .help("Open in \(selectedSpace?.name ?? "Space") (⌘O)")

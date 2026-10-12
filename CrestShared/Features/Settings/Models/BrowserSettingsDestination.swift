@@ -14,8 +14,8 @@ import SwiftUI
 struct BrowserSettingsDestination: Hashable, Identifiable, Sendable {
     // MARK: - Types
 
-    /// Each destination opens its own pane, so the one place that builds a
-    /// pane switches over the kind.
+    /// Each destination opens its own pane. ``BrowserSettingsDestinationRouter``
+    /// switches on the kind to choose that pane's concrete view.
     enum Kinds: Sendable {
         case general
         case tabs

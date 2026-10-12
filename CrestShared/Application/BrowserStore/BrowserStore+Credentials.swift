@@ -194,7 +194,7 @@ extension BrowserStore {
         for candidate: BrowserCredentialSaveCandidate,
         in spaceID: UUID,
         now: Date = .now
-    ) async throws -> BrowserCredentialSavePlan {
+    ) async throws -> any BrowserCredentialSavePlan {
         try validateCredentialSaveCandidate(candidate, in: spaceID, now: now)
         let descriptors = try await credentialVault.descriptors(
             matching: candidate.origin,
@@ -225,9 +225,9 @@ extension BrowserStore {
             plan.kind == .create || plan.id == descriptor?.id
         else { throw CredentialVaultError.saveDecisionUnavailable }
         switch (plan.kind, descriptor) {
-        case (.create, _): return .create
-        case (.update, let descriptor?): return .update(descriptor)
-        case (.alreadyStored, let descriptor?): return .alreadyStored(descriptor)
+        case (.create, _): return BrowserCredentialCreatePlan()
+        case (.update, let descriptor?): return BrowserCredentialUpdatePlan(existing: descriptor)
+        case (.alreadyStored, let descriptor?): return BrowserCredentialAlreadyStoredPlan(existing: descriptor)
         default: throw CredentialVaultError.saveDecisionUnavailable
         }
     }
@@ -458,38 +458,12 @@ extension BrowserStore {
             in: spaceID,
             now: now
         )
-        switch plan {
-        case .create:
-            let descriptor = try await saveCredential(
-                candidate,
-                in: spaceID,
-                replacing: nil,
-                now: now
-            )
-            return BrowserCredentialSaveResult(
-                descriptor: descriptor,
-                disposition: .created
-            )
-        case .update(let existing):
-            let descriptor = try await saveCredential(
-                candidate,
-                in: spaceID,
-                replacing: existing,
-                now: now
-            )
-            return BrowserCredentialSaveResult(
-                descriptor: descriptor,
-                disposition: .updated
-            )
-        case .alreadyStored(let existing):
-            return BrowserCredentialSaveResult(
-                descriptor: existing,
-                disposition: .unchanged
-            )
-        }
+        return try await plan.commit(candidate, in: spaceID, now: now, on: self)
     }
 
-    private func saveCredential(
+    /// Saves `candidate` in the Space `spaceID`, in place of `existing` when
+    /// it names the account the candidate changes.
+    func saveCredential(
         _ candidate: BrowserCredentialSaveCandidate,
         in spaceID: UUID,
         replacing existing: CredentialDescriptor?,

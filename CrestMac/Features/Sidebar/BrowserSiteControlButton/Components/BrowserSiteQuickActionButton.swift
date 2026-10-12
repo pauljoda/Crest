@@ -10,16 +10,16 @@ struct BrowserSiteQuickActionButton: View {
             Image(systemName: systemImage)
                 .font(
                     .system(
-                        size: BrowserSiteControlLayoutPolicy.quickActionGlyphSize,
+                        size: BrowserSiteControlMetrics.quickActionGlyphSize,
                         weight: .medium
                     )
                 )
                 .frame(maxWidth: .infinity)
-                .frame(height: BrowserSiteControlLayoutPolicy.quickActionHeight)
-                .contentShape(.rect)
+                .frame(height: BrowserSiteControlMetrics.quickActionHeight)
         }
-        .buttonStyle(.plain)
-        .background(.quaternary, in: .rect(cornerRadius: 8))
+        .buttonStyle(
+            CrestChromeButtonStyle(controlSize: nil, cornerRadius: CrestRadius.compact, showsRestingFill: true)
+        )
         .accessibilityLabel(Text(title))
         .help(Text(title))
     }

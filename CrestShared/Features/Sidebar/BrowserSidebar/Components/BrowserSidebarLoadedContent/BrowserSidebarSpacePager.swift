@@ -52,10 +52,6 @@ struct BrowserSidebarSpacePager<Page: View>: View {
     /// Space mid-lift — a move no lifted tab can make, and one that swaps the
     /// rows its drop was aimed at for another Space's.
     private var isInteractionLocked: Bool {
-        BrowserSpacePagerPolicy.isInteractionLocked(
-            hasSidebarLift: context.sidebarInteraction.sidebarReorderState.hasLiftInFlight,
-            hasTabDrag: context.sidebarInteraction.tabDragState.item != nil,
-            hasFolderDrag: context.sidebarInteraction.folderDragState.item != nil
-        )
+        context.sidebarInteraction.ownsHorizontalAxis
     }
 }

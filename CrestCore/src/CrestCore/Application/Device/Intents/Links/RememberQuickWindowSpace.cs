@@ -10,7 +10,7 @@ public sealed record RememberQuickWindowSpace(string Url, Guid SpaceId) : LinkIn
     #region Actions - Device
 
     internal override void Apply(Device device, DeviceTurn turn) =>
-        device.ReviseLinks(turn.Changes, links => LinkPreferencePolicy.Remembering(links, Url, SpaceId));
+        device.ReviseLinks(turn.Changes, links => links.Remembering(Url, SpaceId));
 
     #endregion
 }

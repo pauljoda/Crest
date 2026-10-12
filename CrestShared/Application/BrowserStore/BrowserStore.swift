@@ -3,13 +3,6 @@ import Observation
 
 // MARK: - Types
 
-/// The core's save plan for one candidate, carrying the descriptor it names.
-enum BrowserCredentialSavePlan: Equatable, Sendable {
-    case create
-    case update(CredentialDescriptor)
-    case alreadyStored(CredentialDescriptor)
-}
-
 struct BrowserCredentialSaveResult: Equatable, Sendable {
     let descriptor: CredentialDescriptor
     let disposition: BrowserCredentialSaveDisposition

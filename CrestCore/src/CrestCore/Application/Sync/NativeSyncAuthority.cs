@@ -73,7 +73,7 @@ public sealed class NativeSyncAuthority {
     internal void Commit(NativeSyncTransaction value) {
         lock (NativeSessionAuthority.Gate) {
             RequirePending(value);
-            if (!value.IsSealed) throw new BrowserRuleException(BrowserRule.SyncTransactionNotSealed);
+            if (!value.IsSealed) throw new InvalidOperationException("A sync transaction commits only once it is sealed.");
             journal = value.Journal;
             pending = null;
             Monitor.PulseAll(NativeSessionAuthority.Gate);
@@ -90,7 +90,7 @@ public sealed class NativeSyncAuthority {
     }
 
     private void RequirePending(NativeSyncTransaction value) {
-        if (!ReferenceEquals(pending, value)) throw new BrowserRuleException(BrowserRule.InvalidSyncTransaction);
+        if (!ReferenceEquals(pending, value)) throw new InvalidOperationException("Only the pending sync transaction completes.");
     }
 
     #endregion

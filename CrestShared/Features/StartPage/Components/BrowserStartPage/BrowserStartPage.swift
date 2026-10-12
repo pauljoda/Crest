@@ -13,7 +13,7 @@ import SwiftUI
 /// The tab is named explicitly rather than read off the Space because Split
 /// View renders one of these per card, so the surface cannot assume it is
 /// speaking for the selected tab. Every action still routes through
-/// `BrowserCommandPaletteActionPolicy`, which answers "unavailable" for a card
+/// `BrowserStore.isPaletteSourceAvailable`, which answers "unavailable" for a card
 /// that is not the focused one.
 struct BrowserStartPage: View {
     /// The window the page's palette answers for.

@@ -17,7 +17,7 @@ final class MobileBrowserTransientOverlayModelTests: XCTestCase {
         context.browser.selectSpace(context.source.id)
         context.browser.selectTab(context.request.sourceTabID)
         let restored = MobileBrowserTransientOverlayModel(
-            request: .peek(context.request), browser: context.browser, pages: context.pages,
+            request: context.request, browser: context.browser, pages: context.pages,
             coordinator: context.coordinator, spaceAccess: context.spaceAccess, preferences: .isolated)
         XCTAssertTrue(restored.preparePage(isActive: true))
         XCTAssertTrue(restored.page === page)
@@ -308,7 +308,7 @@ final class MobileBrowserTransientOverlayModelTests: XCTestCase {
         let coordinator = BrowserTransientBrowsingCoordinator()
         coordinator.presentQuickWindow(request)
         let model = MobileBrowserTransientOverlayModel(
-            request: .quickWindow(request),
+            request: request,
             browser: browser,
             pages: pages,
             coordinator: coordinator,
@@ -324,8 +324,7 @@ final class MobileBrowserTransientOverlayModelTests: XCTestCase {
             )
         )
         model.preparePage(isActive: true)
-        let originalIdentity = MobileBrowserTransientRequest.quickWindow(request)
-            .renderIdentity
+        let originalIdentity = request.renderIdentity
 
         model.selectLockedSpace(
             BrowserSpaceRuntimeAssignment(space: destination)
@@ -338,7 +337,7 @@ final class MobileBrowserTransientOverlayModelTests: XCTestCase {
             BrowserSpaceRuntimeAssignment(space: destination)
         )
         XCTAssertNotEqual(
-            MobileBrowserTransientRequest.quickWindow(retargeted).renderIdentity,
+            retargeted.renderIdentity,
             originalIdentity
         )
         XCTAssertNil(model.pageLease)
@@ -634,7 +633,7 @@ final class MobileBrowserTransientOverlayModelTests: XCTestCase {
             request,
             spaceAccess,
             MobileBrowserTransientOverlayModel(
-                request: .peek(request),
+                request: request,
                 browser: browser,
                 pages: pages,
                 coordinator: coordinator,
@@ -706,7 +705,7 @@ final class MobileBrowserTransientOverlayModelTests: XCTestCase {
             request,
             spaceAccess,
             MobileBrowserTransientOverlayModel(
-                request: .quickWindow(request),
+                request: request,
                 browser: browser,
                 pages: pages,
                 coordinator: coordinator,

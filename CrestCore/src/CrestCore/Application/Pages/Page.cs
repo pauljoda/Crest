@@ -343,7 +343,7 @@ internal sealed class Page {
     /// budget lasts, and past it the page shows the failure.
     private bool Stopped(string domain, long code) {
         crashes++;
-        if (PageProcessRecoveryPolicy.Decide(crashes) == ProcessRecoveryAction.Reload) return true;
+        if (ProcessRecoveryAction.For(crashes).Reloads) return true;
         failure = new PageFailure(NavigationError.WebContentProcessStopped, shown.Url, ReplacedDocument: true, domain, code);
         shown = shown with { PendingUrl = null, IsLoading = false };
         return false;

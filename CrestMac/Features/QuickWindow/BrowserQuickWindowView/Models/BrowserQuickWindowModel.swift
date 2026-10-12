@@ -81,8 +81,7 @@ final class BrowserQuickWindowModel {
     /// The Spaces the Quick Window may move to or unlock: none being deleted, and
     /// none locked but its own.
     var availableSpaceModels: [SpaceModel] {
-        BrowserTransientSessionPolicy.availableSpaces(
-            in: browser, requestSpaceID: selectedAssignment.spaceID, isLocked: spaceAccess.isLocked)
+        browser.transientSpaces(forRequestIn: selectedAssignment.spaceID, isLocked: spaceAccess.isLocked)
     }
 
     /// The Space the page pool opens the Quick Window's page in.

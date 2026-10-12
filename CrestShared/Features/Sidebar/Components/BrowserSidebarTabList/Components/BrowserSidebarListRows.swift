@@ -57,6 +57,11 @@ struct BrowserSidebarListRow: View {
     var keptTabID: UUID? = nil
 
     var body: some View {
+        content.environment(\.sidebarLayerDepth, item.depth)
+    }
+
+    @ViewBuilder
+    private var content: some View {
         switch item.content {
         case .tab(let tab):
             BrowserSidebarTabRow(tab: tab, context: context, followingTabID: item.followingTabID)
@@ -81,7 +86,7 @@ struct BrowserSidebarListRow: View {
         case .folder(let folder):
             BrowserFolderGroup(folder: folder, depth: item.depth, context: context, inheritedKeptTabID: keptTabID)
                 .equatable()
-                .padding(.trailing, item.depth > 0 ? BrowserFolderLayout.contentsInset : 0)
+                .padding(.trailing, item.depth > 0 ? BrowserFolderLayout.nestingIndent : 0)
                 .crestCollectionItemTransition()
         }
     }
@@ -97,7 +102,9 @@ extension BrowserSidebarListRow: @MainActor Equatable {
 }
 
 /// Steps a row inside a folder in by the folders around it, the rhythm the
-/// folder's own header keeps. A row at a section's top level stays put.
+/// folder's own header keeps. A row at a section's top level stays put. Rows
+/// inside a folder stack as they do at the top level; the folder's padding is
+/// what holds them off its edges.
 private struct BrowserSidebarFolderRowIndent: ViewModifier {
     let depth: Int
 
@@ -106,8 +113,7 @@ private struct BrowserSidebarFolderRowIndent: ViewModifier {
         if depth > 0 {
             content
                 .padding(.leading, BrowserFolderLayout.rowLeadingInset(depth: depth - 1))
-                .padding(.trailing, BrowserFolderLayout.contentsInset)
-                .padding(.vertical, BrowserFolderAppearancePolicy.regionInset)
+                .padding(.trailing, BrowserFolderLayout.nestingIndent)
                 .frame(maxWidth: .infinity)
                 .transition(.opacity.combined(with: .move(edge: .top)))
         } else {

@@ -2,16 +2,6 @@ import Foundation
 
 /// What a find-in-page search has turned up so far.
 struct BrowserFindMatchState: Hashable, Sendable {
-    // MARK: - Types
-
-    /// The color a state's words and symbol take, which the view that draws
-    /// them names.
-    enum Tones: Sendable {
-        case quiet
-        case success
-        case failure
-    }
-
     // MARK: - Static Variables
 
     /// No search has been asked for, so there is nothing to say.
@@ -19,9 +9,9 @@ struct BrowserFindMatchState: Hashable, Sendable {
     static let searching = BrowserFindMatchState(
         name: "searching", label: "Searching", symbol: nil, showsProgress: true)
     static let found = BrowserFindMatchState(
-        name: "found", label: "Match found", symbol: "checkmark.circle.fill", tone: .success)
+        name: "found", label: "Match found", symbol: "checkmark.circle.fill", readsAsSuccess: true)
     static let notFound = BrowserFindMatchState(
-        name: "notFound", label: "No match", symbol: "exclamationmark.circle.fill", tone: .failure)
+        name: "notFound", label: "No match", symbol: "exclamationmark.circle.fill", readsAsFailure: true)
 
     /// Every state.
     static let all: [BrowserFindMatchState] = [idle, searching, found, notFound]
@@ -40,19 +30,26 @@ struct BrowserFindMatchState: Hashable, Sendable {
     /// Whether a spinner stands for the state where there is no room for words.
     let showsProgress: Bool
 
-    let tone: Tones
+    /// Whether the search plainly found something, which the state's symbol
+    /// shows.
+    let readsAsSuccess: Bool
+
+    /// Whether the page has nothing to show, which both the state's words and
+    /// its symbol show.
+    let readsAsFailure: Bool
 
     // MARK: - Initializers
 
     private init(
         name: String, label: LocalizedStringResource?, symbol: String?, showsProgress: Bool = false,
-        tone: Tones = .quiet
+        readsAsSuccess: Bool = false, readsAsFailure: Bool = false
     ) {
         self.name = name
         self.label = label
         self.symbol = symbol
         self.showsProgress = showsProgress
-        self.tone = tone
+        self.readsAsSuccess = readsAsSuccess
+        self.readsAsFailure = readsAsFailure
     }
 
     // MARK: - Actions - Identity

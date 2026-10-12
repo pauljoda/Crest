@@ -61,7 +61,7 @@ struct BrowserSettingsDestinationRouter: View {
                 spaceAccess: spaceAccess
             )
         case .shortcuts:
-            if let shortcuts {
+            shortcuts.map { shortcuts in
                 BrowserPlatformShortcutSettingsPane(
                     shortcuts: shortcuts,
                     requestedSpaceID: requestedSpaceID,

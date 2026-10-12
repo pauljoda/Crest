@@ -315,14 +315,7 @@ extension BrowserRootModel {
     func handleAuxiliaryMouseAction(
         _ action: BrowserSidebarMouseButtonAction
     ) {
-        let direction: BrowserSpaceSwipeDirection
-        switch action {
-        case .previousSpace:
-            direction = .previous
-        case .nextSpace:
-            direction = .next
-        }
-        guard browser.selectAdjacentSpace(direction) != nil else { return }
+        guard browser.selectAdjacentSpace(action.spaceDirection) != nil else { return }
         pages.selectSpace(in: browser)
     }
 }
@@ -331,7 +324,7 @@ extension BrowserRootModel {
 
 extension BrowserRootModel {
     var sidebarPresentation: BrowserSidebarPresentation {
-        BrowserSidebarPresentationPolicy.presentation(
+        BrowserSidebarPresentation(
             columnVisibility: chrome.columnVisibility,
             isFloatingSidebarPresented: isFloatingSidebarPresented
         )
@@ -392,57 +385,56 @@ extension BrowserRootModel {
     }
 
     func toggleSidebar(reduceMotion: Bool) {
-        switch sidebarPresentation.sidebarToggleAction.kind {
-        case .hide:
-            hideSidebar(reduceMotion: reduceMotion)
-        case .dock:
-            guard !reduceMotion else {
-                cancelSidebarMorph()
-                isFloatingSidebarPresented = false
-                chrome.showSidebar()
-                return
-            }
-            let revision = beginSidebarMorph()
-            sidebarMorphTask = Task { @MainActor [weak self] in
-                await Task.yield()
-                guard let self,
-                    !Task.isCancelled,
-                    self.sidebarMorphRevision == revision
-                else { return }
-                withAnimation(
-                    self.accessibleAnimation(
-                        CrestMotion.sidebarDockApproach,
-                        reduceMotion
-                    )
-                ) {
-                    self.isSidebarApproachingDock = true
-                }
-                try? await self.sidebarMorphWait(
-                    CrestMotion.sidebarDockApproachCompletionDelay
+        sidebarPresentation.sidebarToggleAction.perform(on: self, reduceMotion: reduceMotion)
+    }
+
+    func dockSidebar(reduceMotion: Bool) {
+        guard !reduceMotion else {
+            cancelSidebarMorph()
+            isFloatingSidebarPresented = false
+            chrome.showSidebar()
+            return
+        }
+        let revision = beginSidebarMorph()
+        sidebarMorphTask = Task { @MainActor [weak self] in
+            await Task.yield()
+            guard let self,
+                !Task.isCancelled,
+                self.sidebarMorphRevision == revision
+            else { return }
+            withAnimation(
+                self.accessibleAnimation(
+                    CrestMotion.sidebarDockApproach,
+                    reduceMotion
                 )
-                guard !Task.isCancelled,
-                    self.sidebarMorphRevision == revision
-                else { return }
-                withAnimation(
-                    self.accessibleAnimation(
-                        CrestMotion.sidebarDockAttachment,
-                        reduceMotion
-                    )
-                ) {
-                    self.isFloatingSidebarPresented = false
-                    self.chrome.showSidebar()
-                }
-                try? await self.sidebarMorphWait(
-                    CrestMotion.sidebarDockAttachmentCompletionDelay
-                )
-                guard !Task.isCancelled,
-                    self.sidebarMorphRevision == revision
-                else { return }
-                withTransaction(Transaction(animation: nil)) {
-                    self.isSidebarApproachingDock = false
-                }
-                _ = self.finishSidebarMorph(revision)
+            ) {
+                self.isSidebarApproachingDock = true
             }
+            try? await self.sidebarMorphWait(
+                CrestMotion.sidebarDockApproachCompletionDelay
+            )
+            guard !Task.isCancelled,
+                self.sidebarMorphRevision == revision
+            else { return }
+            withAnimation(
+                self.accessibleAnimation(
+                    CrestMotion.sidebarDockAttachment,
+                    reduceMotion
+                )
+            ) {
+                self.isFloatingSidebarPresented = false
+                self.chrome.showSidebar()
+            }
+            try? await self.sidebarMorphWait(
+                CrestMotion.sidebarDockAttachmentCompletionDelay
+            )
+            guard !Task.isCancelled,
+                self.sidebarMorphRevision == revision
+            else { return }
+            withTransaction(Transaction(animation: nil)) {
+                self.isSidebarApproachingDock = false
+            }
+            _ = self.finishSidebarMorph(revision)
         }
     }
 
@@ -655,11 +647,7 @@ extension BrowserRootModel {
     func isPaletteSourceAvailable(
         _ source: BrowserTabRuntimeAssignment
     ) -> Bool {
-        BrowserCommandPaletteActionPolicy.isSourceAvailable(
-            source,
-            in: browser,
-            accessController: spaceAccess
-        )
+        browser.isPaletteSourceAvailable(source, accessController: spaceAccess)
     }
 
     @discardableResult
@@ -668,12 +656,7 @@ extension BrowserRootModel {
         to target: BrowserTabRuntimeAssignment
     ) -> Bool {
         guard
-            let destination = BrowserCommandPaletteActionPolicy.target(
-                target,
-                from: source,
-                in: browser,
-                accessController: spaceAccess
-            )
+            let destination = browser.paletteTarget(target, from: source, accessController: spaceAccess)
         else { return false }
         browser.selectSpace(destination.space.id)
         browser.selectTab(destination.tab.id)
@@ -693,11 +676,7 @@ extension BrowserRootModel {
         windows: BrowserMacWindows? = nil
     ) -> Bool {
         guard
-            BrowserCommandPaletteActionPolicy.isSourceAvailable(
-                source,
-                in: browser,
-                accessController: spaceAccess
-            )
+            browser.isPaletteSourceAvailable(source, accessController: spaceAccess)
         else { return false }
         return opening.open(url, from: source, with: BrowserMacPaletteOpener(model: self, mode: mode, windows: windows))
     }
@@ -781,10 +760,7 @@ extension BrowserRootModel {
         _ animation: Animation,
         _ reduceMotion: Bool
     ) -> Animation? {
-        BrowserVisualAccessibilityPolicy.animation(
-            animation,
-            reduceMotion: reduceMotion
-        )
+        animation.unlessReducingMotion(reduceMotion)
     }
 }
 
@@ -803,3 +779,5 @@ extension BrowserRootModel {
 }
 
 extension BrowserRootModel: BrowserStoreFirstObservable {}
+
+extension BrowserRootModel: BrowserSidebarToggleTarget {}

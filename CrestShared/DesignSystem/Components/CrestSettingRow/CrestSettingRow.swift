@@ -61,7 +61,7 @@ struct CrestSettingRow<Control: View>: View {
             // Only the affordance fades. Animating the row would carry the
             // slider's own value changes along with it.
             .animation(
-                BrowserVisualAccessibilityPolicy.animation(CrestMotion.surface, reduceMotion: reduceMotion),
+                CrestMotion.surface.unlessReducingMotion(reduceMotion),
                 value: showsReset
             )
             .allowsHitTesting(showsReset)

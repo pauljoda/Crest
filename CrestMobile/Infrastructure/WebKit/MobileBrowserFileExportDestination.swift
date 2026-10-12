@@ -7,29 +7,19 @@ import WebKit
 /// Where an exported page or a finished download goes on a device without a
 /// Finder: the share sheet or the Files picker.
 struct MobileBrowserFileExportDestination: Hashable, Identifiable, Sendable {
-    // MARK: - Types
-
-    /// Each destination presents its own system controller, so the presenter
-    /// switches over the kind.
-    enum Kinds: Sendable {
-        case share
-        case files
-    }
-
     // MARK: - Static Variables
 
-    static let share = MobileBrowserFileExportDestination(kind: .share, download: .share)
-    static let files = MobileBrowserFileExportDestination(kind: .files, download: .files)
+    static let share = MobileBrowserFileExportDestination(download: .share)
+    static let files = MobileBrowserFileExportDestination(download: .files)
 
     /// Every destination, in menu order.
     static let all: [MobileBrowserFileExportDestination] = [share, files]
 
     // MARK: - Variables
 
-    let kind: Kinds
-
     /// The download row destination that exports this way, whose title and
-    /// symbol this destination shares.
+    /// symbol this destination shares, and which presents its own system
+    /// controller.
     let download: BrowserUtilityDownloadDestination
 
     var name: String { download.name }
@@ -39,8 +29,7 @@ struct MobileBrowserFileExportDestination: Hashable, Identifiable, Sendable {
 
     // MARK: - Initializers
 
-    private init(kind: Kinds, download: BrowserUtilityDownloadDestination) {
-        self.kind = kind
+    private init(download: BrowserUtilityDownloadDestination) {
         self.download = download
     }
 

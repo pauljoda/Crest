@@ -3,7 +3,7 @@ import SwiftUI
 /// The macOS content area, and the one place that decides between real columns
 /// and the single rounded page surface.
 ///
-/// The branch is `BrowserPageSurfaceBranchPolicy`'s rather than this view's, so
+/// The branch is `BrowserPageSurfacePresentation`'s rather than this view's, so
 /// iPadOS opens and closes its columns on exactly the same conditions. What is
 /// left here is macOS's half: which surface draws the answer, and what the
 /// pointer may do to it.
@@ -60,7 +60,7 @@ struct BrowserRootPageSurface: View, @MainActor Equatable {
         if previewsStartPage, !model.spaceAccess.isLocked(space) {
             return .single(space: space, cardTabID: nil)
         }
-        return BrowserPageSurfaceBranchPolicy.resolve(
+        return BrowserPageSurfacePresentation(
             space: space,
             isLocked: model.spaceAccess.isLocked(space),
             cards: model.browser.cards(in: space),
@@ -135,12 +135,12 @@ struct BrowserRootPageSurface: View, @MainActor Equatable {
                     if model.spaceAccess.isLocked(space) {
                         BrowserSpaceAccessView(
                             space: space,
-                            spaces: BrowserSidebarAccessPolicy.availableSpaces(in: model.browser),
+                            spaces: model.browser.availableSpaces,
                             accessController: model.spaceAccess,
                             selectSpace: { assignment in
                                 guard
-                                    let candidate = BrowserSidebarAccessPolicy.unlockedSpace(
-                                        matching: assignment, in: model.browser, accessController: model.spaceAccess)
+                                    let candidate = model.browser.unlockedSpace(
+                                        matching: assignment, accessController: model.spaceAccess)
                                 else { return }
                                 model.browser.selectSpace(candidate.id)
                             },

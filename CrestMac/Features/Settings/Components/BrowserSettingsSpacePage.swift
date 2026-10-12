@@ -128,12 +128,7 @@ struct BrowserSettingsSpacePage: View {
         case .appearance:
             BrowserSpaceEditorView(browser: browser, space: space)
         case .browsing:
-            BrowserSettingsPane(.spaces) {
-                BrowserSpaceBrowsingSection(browser: browser, space: space)
-                BrowserSpaceDownloadsSection(settings: downloads.settings(for: space))
-                BrowserSpaceDeletionSection(browser: browser, spaceID: space.id, dataDeleter: dataDeleter)
-            }
-            .task(id: space.id) { downloads.refresh(for: space.id) }
+            browsingPane
         case .privacy:
             BrowserPrivacySettingsPane(
                 browser: browser,
@@ -154,6 +149,17 @@ struct BrowserSettingsSpacePage: View {
         case .extensions:
             BrowserEngineExtensionSettingsPane(browser: browser, spaceAccess: spaceAccess, spaceID: space.id)
         }
+    }
+
+    /// The Space's browsing, downloads and deletion, with its download
+    /// settings read fresh whenever the Space changes.
+    private var browsingPane: some View {
+        BrowserSettingsPane(.spaces) {
+            BrowserSpaceBrowsingSection(browser: browser, space: space)
+            BrowserSpaceDownloadsSection(settings: downloads.settings(for: space))
+            BrowserSpaceDeletionSection(browser: browser, spaceID: space.id, dataDeleter: dataDeleter)
+        }
+        .task(id: space.id) { downloads.refresh(for: space.id) }
     }
 }
 

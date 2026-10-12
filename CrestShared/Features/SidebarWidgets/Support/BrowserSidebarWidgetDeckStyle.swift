@@ -55,15 +55,17 @@ enum BrowserSidebarWidgetDeckStyle {
     static let sideStepperRailWidth: CGFloat = 24
     /// Places the stepper in the trailing margin without widening the card.
     static let sideStepperExternalOffset = sideStepperOffset(
-        cardTrailingInset: CrestSpacing.small,
+        cardTrailingInset: BrowserSidebarMetrics.layerInset,
         railWidth: sideStepperRailWidth,
         paneBoundaryWidth: CrestLayout.hairline
     )
     static let indicatorActiveOpacity = 0.72
     static let indicatorInactiveOpacity = 0.3
 
+    /// A card is a top-level sidebar layer, cornered like every other one.
+    @MainActor
     static var cardShape: RoundedRectangle {
-        RoundedRectangle(cornerRadius: CrestRadius.card, style: .continuous)
+        RoundedRectangle(cornerRadius: BrowserSidebarMetrics.layerCornerRadius(), style: .continuous)
     }
 
     /// A glass top-edge highlight that fades into the card's lower border.

@@ -13,20 +13,23 @@ struct BrowserMacWindowKind: Hashable {
     private static let browsingStyle: NSWindow.StyleMask = [
         .titled, .closable, .miniaturizable, .resizable, .fullSizeContentView,
     ]
+    /// The size a browser window opens at, and the smallest its content may be.
+    static let browserContentSize = CGSize(width: 1440, height: 900)
+    static let browserMinimumContentSize = CGSize(width: 900, height: 600)
 
     /// A browser window over the person's own Spaces, which keeps its frame
     /// under its identity and cascades from the window the person is using.
     static let browser = BrowserMacWindowKind(
         name: "browser", title: ProductIdentity.name, styleMask: browsingStyle, hidesTitle: true,
-        contentSize: BrowserMainWindowSizingPolicy.idealContentSize,
-        minimumContentSize: BrowserMainWindowSizingPolicy.minimumContentSize,
+        contentSize: browserContentSize,
+        minimumContentSize: browserMinimumContentSize,
         savesFrame: true, hasWindowModel: true, hasPageRow: true)
     /// A browser window over a torn-off tab's own workspace, placed where the
     /// tab was dropped and never kept.
     static let temporary = BrowserMacWindowKind(
         name: "temporary", title: ProductIdentity.name, styleMask: browsingStyle, hidesTitle: true,
-        contentSize: BrowserMainWindowSizingPolicy.idealContentSize,
-        minimumContentSize: BrowserMainWindowSizingPolicy.minimumContentSize,
+        contentSize: browserContentSize,
+        minimumContentSize: browserMinimumContentSize,
         hasWindowModel: true, hasPageRow: true)
     /// The one private browsing window.
     static let `private` = BrowserMacWindowKind(

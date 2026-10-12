@@ -29,7 +29,7 @@ struct BrowserSidebarReorderSectionIndicatorModifier: ViewModifier {
             BrowserSidebarReorderGap(height: state.layout.emptySpace(for: section))
         }
         .animation(
-            BrowserVisualAccessibilityPolicy.animation(CrestMotion.dragSource, reduceMotion: reduceMotion),
+            CrestMotion.dragSource.unlessReducingMotion(reduceMotion),
             value: state.layout.emptySpace(for: section)
         )
         .overlay(alignment: alignment) {
@@ -38,10 +38,7 @@ struct BrowserSidebarReorderSectionIndicatorModifier: ViewModifier {
             }
         }
         .animation(
-            BrowserVisualAccessibilityPolicy.animation(
-                CrestMotion.dragSource,
-                reduceMotion: reduceMotion
-            ),
+            CrestMotion.dragSource.unlessReducingMotion(reduceMotion),
             value: indicator
         )
     }
@@ -71,10 +68,7 @@ struct BrowserSidebarReorderSectionReservationModifier: ViewModifier {
         content
             .padding(.bottom, height)
             .animation(
-                BrowserVisualAccessibilityPolicy.animation(
-                    CrestMotion.dragSource,
-                    reduceMotion: reduceMotion
-                ),
+                CrestMotion.dragSource.unlessReducingMotion(reduceMotion),
                 value: height
             )
     }

@@ -9,7 +9,7 @@ struct BrowserPeekCloseButton: View {
         Button(action: dismiss) {
             Label("Close", systemImage: "xmark")
                 .frame(maxWidth: .infinity)
-                .frame(height: BrowserPeekChromePolicy.controlHeight)
+                .frame(height: BrowserPeekActionBar.controlHeight)
                 .contentShape(.capsule)
         }
         .buttonStyle(.plain)

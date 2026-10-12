@@ -205,11 +205,8 @@ struct BrowserTabOrganizationMenuContent: View {
                             let destinationAssignment =
                                 BrowserSpaceRuntimeAssignment(space: space)
                             guard
-                                BrowserSidebarAccessPolicy.unlockedSpace(
-                                    matching: destinationAssignment,
-                                    in: browser,
-                                    accessController: spaceAccess
-                                ) != nil
+                                browser.unlockedSpace(matching: destinationAssignment, accessController: spaceAccess)
+                                    != nil
                             else { return }
                             browser.moveTab(
                                 tab.id,
@@ -373,11 +370,7 @@ struct BrowserTabOrganizationMenuContent: View {
     }
 
     private var availableDestinationSpaces: [SpaceModel] {
-        BrowserSidebarAccessPolicy.availableTabMoveDestinationSpaces(
-            from: sourceAssignment,
-            in: browser,
-            accessController: spaceAccess
-        )
+        browser.availableTabMoveDestinationSpaces(from: sourceAssignment, accessController: spaceAccess)
     }
 
     /// Runs a menu action only while the window shows the tab's Space,

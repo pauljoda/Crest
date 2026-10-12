@@ -1,6 +1,12 @@
 import SwiftUI
 
 struct BrowserPinnedExtensionStripContent: View {
+    // MARK: - Static Variables
+
+    private static let sectionHeight: CGFloat = 32
+
+    // MARK: - Variables
+
     let actions: [BrowserExtensionActionPresentation]
     let perform: (BrowserExtensionActionPresentation, BrowserExtensionPopupAnchor?) -> Void
     var prepare: (BrowserExtensionActionPresentation) -> Void = { _ in }
@@ -16,22 +22,13 @@ struct BrowserPinnedExtensionStripContent: View {
             presentMenu: presentMenu
         )
         .frame(
-            height: BrowserPinnedExtensionStripLayoutPolicy.height(
-                for: actions.count
-            )
+            height: actions.count > 0 ? Self.sectionHeight : 0
         )
-        .background(
-            CrestColor.chromeSurface,
-            in: .rect(
-                cornerRadius:
-                    BrowserPinnedExtensionStripLayoutPolicy.sectionCornerRadius
-            )
-        )
-        .padding(.horizontal, BrowserChromeLayout.sidebarHorizontalInset)
-        .padding(
-            .bottom,
-            BrowserPinnedExtensionStripLayoutPolicy.adjacentSpacing
-        )
+        .background {
+            CrestSurfaceLayer(
+                shape: .rect(cornerRadius: BrowserSidebarMetrics.layerCornerRadius(), style: .continuous))
+        }
+        .padding(.horizontal, BrowserSidebarMetrics.layerInset)
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Pinned Extensions")
         .accessibilityIdentifier("browser-pinned-extensions")

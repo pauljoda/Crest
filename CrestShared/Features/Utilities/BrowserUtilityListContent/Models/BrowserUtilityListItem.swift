@@ -20,6 +20,25 @@ enum BrowserUtilityListItem: Identifiable, Sendable {
         case .download(let item): item.createdAt
         }
     }
+
+    /// Whether a search for `query` finds the item by its words: an empty
+    /// search finds every item.
+    func matches(_ query: String) -> Bool {
+        guard !query.isEmpty else { return true }
+        switch self {
+        case .archive(let archived):
+            return archived.tab.shownTitle.localizedStandardContains(query)
+                || archived.tab.url?.localizedStandardContains(query) == true
+        case .history(let entry):
+            return entry.title.localizedStandardContains(query)
+                || entry.url.localizedStandardContains(query)
+        case .download(let download):
+            return download.filename.localizedStandardContains(query)
+                || BrowserDownloadRowPresentation.status(of: download)
+                    .resolvedForSearch()
+                    .localizedStandardContains(query)
+        }
+    }
 }
 
 enum BrowserUtilityListItemID: Hashable, Sendable {

@@ -15,7 +15,7 @@ import WebKit
         // MARK: - Types
 
         /// What an agent watching one page kept of its activity.
-        private struct Activity {
+        struct Activity {
             var console: [PageConsoleMessage] = []
             var network: [PageNetworkRequest] = []
             var consoleSequence: Int64 = 0
@@ -192,33 +192,7 @@ import WebKit
 
         private func keep(_ message: WebKitAgentActivityMessage, for pageID: UUID) {
             guard var activity = activities[pageID] else { return }
-            switch message.kind {
-            case .console:
-                activity.consoleSequence += 1
-                activity.console.append(
-                    PageConsoleMessage(
-                        sequence: activity.consoleSequence, level: message.level?.engineLevel ?? .log,
-                        text: String((message.text ?? "").prefix(Self.maximumText)),
-                        source: message.source.map { String($0.prefix(Self.maximumText)) }, line: message.line ?? 0,
-                        at: Date()))
-                if activity.console.count > Self.maximumKept {
-                    activity.console.removeFirst()
-                    activity.consoleDropped += 1
-                }
-            case .network:
-                activity.networkSequence += 1
-                activity.network.append(
-                    PageNetworkRequest(
-                        sequence: activity.networkSequence, url: String((message.url ?? "").prefix(Self.maximumText)),
-                        method: "", resourceType: message.type ?? "", status: message.status ?? 0, mimeType: nil,
-                        requestHeaders: [], responseHeaders: [],
-                        started: message.start.map { Date(timeIntervalSince1970: $0 / 1000) } ?? Date(),
-                        duration: message.duration ?? 0, bytes: Int64(message.bytes ?? 0), failure: nil))
-                if activity.network.count > Self.maximumKept {
-                    activity.network.removeFirst()
-                    activity.networkDropped += 1
-                }
-            }
+            message.kind.keep(message, in: &activity)
             activities[pageID] = activity
         }
 

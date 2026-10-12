@@ -7,12 +7,11 @@ final class BrowserShortcutSettingsModelTests: XCTestCase {
     func testCrestConflictWaitsForConfirmationBeforeReplacingAssignments() {
         let fixture = makeFixture()
         let shortcut = BrowserShortcut(
-            key: .character("g"),
+            key: .character("y"),
             modifiers: [.command, .shift]
         )
-        XCTAssertEqual(
-            fixture.shortcuts.assign(shortcut, to: .newTab),
-            .assigned
+        XCTAssertTrue(
+            fixture.shortcuts.assign(shortcut, to: .newTab) is BrowserShortcutAssigned
         )
 
         fixture.model.record(shortcut, for: .newWindow)
@@ -43,12 +42,11 @@ final class BrowserShortcutSettingsModelTests: XCTestCase {
     func testCancelingCrestConflictPreservesBothExistingAssignments() {
         let fixture = makeFixture()
         let shortcut = BrowserShortcut(
-            key: .character("g"),
+            key: .character("y"),
             modifiers: [.command, .shift]
         )
-        XCTAssertEqual(
-            fixture.shortcuts.assign(shortcut, to: .newTab),
-            .assigned
+        XCTAssertTrue(
+            fixture.shortcuts.assign(shortcut, to: .newTab) is BrowserShortcutAssigned
         )
 
         fixture.model.record(shortcut, for: .newWindow)

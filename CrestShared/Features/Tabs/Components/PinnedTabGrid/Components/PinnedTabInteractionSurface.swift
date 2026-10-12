@@ -20,7 +20,7 @@ struct PinnedTabInteractionSurface: ViewModifier {
                 BrowserTabStatusSurfaces(
                     tab: statusSource,
                     style: BrowserTabStatusSurfaceStyle(
-                        accent: selectionAccent, cornerRadius: BrowserDeviceAppearanceStore.shared.sidebarCornerRadius,
+                        accent: selectionAccent, cornerRadius: BrowserSidebarMetrics.layerCornerRadius(),
                         barOpacity: CrestOpacity.prominentStatusSurface)
                 )
             }
@@ -32,10 +32,7 @@ struct PinnedTabInteractionSurface: ViewModifier {
                     selectionEmphasis: isMultiSelected)
             )
             .animation(
-                BrowserVisualAccessibilityPolicy.animation(
-                    CrestMotion.palette,
-                    reduceMotion: reduceMotion
-                ),
+                CrestMotion.palette.unlessReducingMotion(reduceMotion),
                 value: resolvedAccent
             )
             .task(id: favicon?.identity) {
@@ -50,10 +47,7 @@ struct PinnedTabInteractionSurface: ViewModifier {
     }
 
     private var accent: BrowserTabIconAccent? {
-        BrowserTabIconAccentResolver.resolve(
-            siteTheme: siteTheme,
-            extracted: palette?.primary.iconAccent
-        )
+        siteTheme?.preferring(extracted: palette?.primary.iconAccent) ?? palette?.primary.iconAccent
     }
 
     private var resolvedAccent: Color {

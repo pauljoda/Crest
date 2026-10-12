@@ -20,7 +20,7 @@ struct BrowserRootShellControls: View {
                 showSidebar: presentFloatingSidebar,
                 edge: sidebarEdge,
                 isWindowFocused: model.isWindowFocused,
-                pointerWidth: SidebarRevealWidthPreference.width(storedRevealWidth)
+                pointerWidth: revealPointerWidth
             )
             // Shows the strip while its width changes in Settings.
             .background { BrowserSidebarRevealZonePreview() }
@@ -41,17 +41,24 @@ struct BrowserRootShellControls: View {
                 onResizeEnded: commitSidebarWidth,
                 edge: sidebarEdge
             )
-            .offset(
-                x: BrowserChromeDirectionPolicy.leadingOffset(
-                    (model.sidebarWidth - BrowserRootMetrics.sidebarResizeHandleOffset)
-                        * (sidebarEdge == .leading ? 1 : -1),
-                    layoutDirection: layoutDirection
-                )
-            )
+            .offset(x: resizeHandleOffset)
             .zIndex(BrowserRootMetrics.sidebarResizeControlZIndex)
         case .floating:
             EmptyView()
         }
+    }
+
+    /// How wide the collapsed sidebar's reveal strip is, as Settings sets it.
+    private var revealPointerWidth: CGFloat {
+        SidebarRevealWidthPreference.width(storedRevealWidth)
+    }
+
+    /// Where the docked sidebar's resize handle sits: at the sidebar's edge,
+    /// on whichever side the sidebar is.
+    private var resizeHandleOffset: CGFloat {
+        layoutDirection.leadingOffset(
+            (model.sidebarWidth - BrowserRootMetrics.sidebarResizeHandleOffset)
+                * (sidebarEdge == .leading ? 1 : -1))
     }
 
     private var interactionCapabilities: BrowserInteractionCapabilities {

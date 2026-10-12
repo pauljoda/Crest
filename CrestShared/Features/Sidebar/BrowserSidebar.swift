@@ -89,9 +89,7 @@ struct BrowserSidebar<Content: View>: View {
             pageAccess: pageAccess,
             spaceAccess: spaceAccess,
             capabilities: capabilities,
-            availableSpaces: BrowserSidebarAccessPolicy.availableSpaces(
-                in: browser
-            ),
+            availableSpaces: browser.availableSpaces,
             utilityPresentation: utilityPresentation,
             utilityActions: utilityCoordinator.actions,
             utilitySearchText: $utilitySearchText,
@@ -125,11 +123,7 @@ struct BrowserSidebar<Content: View>: View {
 
     private func confirmClearHistory(for space: SpaceModel) {
         clearHistoryConfirmation =
-            BrowserSidebarSpacePresentationPolicy.clearHistoryConfirmation(
-                for: space,
-                in: browser,
-                accessController: spaceAccess
-            )
+            BrowserSidebarClearHistoryConfirmation(for: space, in: browser, accessController: spaceAccess)
     }
 
     /// Moves the session to a Space, then decides what the page layer does

@@ -21,7 +21,7 @@
         var profileID: UUID?
         /// The engine that hosts the page, which its direct requests go to.
         private weak var engine: ChromiumEngine?
-        var observer: (BrowserPageEngineEvent) -> Void
+        var observer: (any BrowserPageEngineEvent) -> Void
         /// The platform's page hosting this one, which shows the person the
         /// core's questions about it.
         weak var promptPresenter: (any BrowserPromptPresenting)?
@@ -261,7 +261,7 @@
         /// command opens an inspector instead of trying to close a closed one.
         func developerPanelDidClose() {
             guard !disposed else { return }
-            observer(.developerPanelClosed)
+            observer(BrowserPageDeveloperPanelClosed())
         }
 
         /// The Chrome Web Store listing this page is showing asked Crest to install
@@ -313,7 +313,7 @@
             isShown = false
             DiagnosticLog.pages.notice("Chromium page \(pageID) hides")
             pages?.request(HidePage(pageID: pageID))
-            observer(.leftScreen)
+            observer(BrowserPageLeftScreen())
         }
 
         /// The page's owner let it go. The core's ClosePage has the binding
@@ -388,7 +388,7 @@
         /// Starts Crest's own drag of the link to `url` out of the page; false
         /// leaves the drag to the engine.
         func beginLinkDrag(_ url: URL, title: String) -> Bool {
-            guard !disposed, BrowserCorePolicy.acceptsExternalURL(url) else { return false }
+            guard !disposed, ExternalWebLink.accepts(url) else { return false }
             return linkDrag?.beginNativeLink(url: url, label: title) == true
         }
     }
@@ -554,26 +554,15 @@
             pages?.request(ActivateMediaSession(pageID: pageID, document: documentIdentifier))
         }
 
-        func performMediaSessionAction(_ action: BrowserMediaSessionAction, documentIdentifier: String) {
+        func performMediaSessionAction(_ action: MediaSessionAction, documentIdentifier: String) {
             guard created else { return }
             pages?.request(
-                PerformMediaAction(pageID: pageID, document: documentIdentifier, action: action.core))
+                PerformMediaAction(pageID: pageID, document: documentIdentifier, action: action))
         }
 
         func setMediaSessionMuted(_ muted: Bool, documentIdentifier: String) {
             guard created else { return }
             pages?.request(MuteMediaSession(pageID: pageID, document: documentIdentifier, muted: muted))
-        }
-    }
-
-    extension BrowserMediaSessionAction {
-        fileprivate init(_ action: MediaSessionAction) {
-            switch action {
-            case .play: self = .play
-            case .pause: self = .pause
-            case .previousTrack: self = .previousTrack
-            case .nextTrack: self = .nextTrack
-            }
         }
     }
 
@@ -602,10 +591,10 @@
                 location: session.location, isInvalidated: false, hasActiveSession: session.active,
                 title: bounded(session.title), artist: bounded(session.artist), album: bounded(session.album),
                 artworkData: session.artwork.flatMap {
-                    $0.count <= BrowserMediaSessionArtworkPolicy.maximumBytes ? $0 : nil
+                    $0.count <= BrowserMediaSessionPageEventDecoder.maximumArtworkBytes ? $0 : nil
                 },
                 playbackState: playback, isAudible: session.audible, isMuted: session.muted,
-                availableActions: Set(session.actions.map(BrowserMediaSessionAction.init)))
+                availableActions: Set(session.actions))
         }
     }
 

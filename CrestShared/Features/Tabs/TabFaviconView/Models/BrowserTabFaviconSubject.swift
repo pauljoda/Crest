@@ -46,4 +46,60 @@ struct BrowserTabFaviconSubject: Equatable {
         isStartPage = tab.surface == .startPage
         self.image = tab.iconMode.showsFavicon ? image : nil
     }
+
+    // MARK: - Actions - Rendering
+
+    /// The identity of the task that renders this icon at up to
+    /// `maximumPixelSize` for `profileID`.
+    func taskIdentity(
+        profileID: UUID?,
+        maximumPixelSize: Int,
+        isUnlocked: Bool = true
+    ) -> BrowserFaviconTaskIdentity {
+        BrowserFaviconTaskIdentity(
+            tabID: tabID,
+            profileID: profileID,
+            pageURL: pageURL,
+            iconMode: iconMode.name,
+            // The image carries the fingerprint taken when it was set. SwiftUI
+            // evaluates this identity during every view update, so nothing
+            // here may read the image bytes.
+            payload: image?.identity,
+            maximumPixelSize: maximumPixelSize,
+            isUnlocked: isUnlocked
+        )
+    }
+
+    /// A locked Space must never reach the network for an icon: the request that
+    /// fetches `https://<host>/favicon.ico` would disclose the hostnames the lock
+    /// exists to hide, and would cache them under the locked Space's profile.
+    /// Redaction is a drawing effect and cannot stop that, so the fallback is
+    /// dropped at the request itself.
+    func renderRequest(
+        profileID: UUID?,
+        maximumPixelSize: Int,
+        isUnlocked: Bool = true
+    ) -> BrowserFaviconRenderRequest {
+        let identity = taskIdentity(
+            profileID: profileID,
+            maximumPixelSize: maximumPixelSize,
+            isUnlocked: isUnlocked
+        )
+        guard !isStartPage, emoji == nil, isUnlocked else {
+            return BrowserFaviconRenderRequest(
+                identity: identity,
+                payload: nil,
+                fallbackPageURL: nil,
+                fallbackProfileID: nil
+            )
+        }
+
+        let payload = image?.data
+        return BrowserFaviconRenderRequest(
+            identity: identity,
+            payload: payload,
+            fallbackPageURL: payload == nil ? pageURL : nil,
+            fallbackProfileID: payload == nil ? profileID : nil
+        )
+    }
 }

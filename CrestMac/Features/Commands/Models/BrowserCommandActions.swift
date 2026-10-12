@@ -8,7 +8,7 @@ import SwiftUI
 /// same shape `MobileBrowserCommandController` already has on iOS — lets the
 /// menu bar and the launcher run one implementation.
 @MainActor
-struct BrowserCommandActions {
+struct BrowserCommandActions: BrowserNumberedSelectionPerformer {
     let browser: BrowserStore
     let pages: BrowserPagePool
     let chrome: BrowserChromeState
@@ -95,10 +95,7 @@ struct BrowserCommandActions {
 
     /// Shows the stop or Space a numbered selection leads to.
     func select(_ selection: NumberedSelection) {
-        switch selection.target.kind {
-        case .tab: selectTab(selection.tabID, in: selection.spaceID)
-        case .space: selectSpace(selection.spaceID)
-        }
+        selection.select(on: self)
     }
 
     /// Whether the page the page commands act on has a search to find again.
@@ -241,7 +238,7 @@ struct BrowserCommandActions {
         let actions = self
         Task { @MainActor in
             let panel = NSOpenPanel()
-            panel.allowedContentTypes = BrowserLocalFileOpenPolicy.contentTypes(archive: format)
+            panel.allowedContentTypes = format.openableContentTypes
             panel.allowsMultipleSelection = true
             panel.canChooseDirectories = false
             panel.canChooseFiles = true
@@ -263,7 +260,7 @@ struct BrowserCommandActions {
         in assignment: BrowserSpaceRuntimeAssignment
     ) {
         var selected: URL?
-        for url in urls where BrowserCorePolicy.acceptsLocalDocument(url) {
+        for url in urls where ExternalLocalDocument.accepts(url) {
             guard browser.openNewTab(url: url, matching: assignment) != nil else { continue }
             selected = url
         }
@@ -306,17 +303,17 @@ struct BrowserCommandActions {
 
     func zoomIn() {
         guard let page = pages.commandPage, page.zoomIn() else { return }
-        chrome.showPageZoomFeedback(BrowserPageZoomPolicy.percentageLabel(for: page.pageZoom))
+        chrome.showPageZoomFeedback(page.pageZoom.pageZoomPercentage)
     }
 
     func zoomOut() {
         guard let page = pages.commandPage, page.zoomOut() else { return }
-        chrome.showPageZoomFeedback(BrowserPageZoomPolicy.percentageLabel(for: page.pageZoom))
+        chrome.showPageZoomFeedback(page.pageZoom.pageZoomPercentage)
     }
 
     func resetZoom() {
         guard let page = pages.commandPage, page.resetZoom() else { return }
-        chrome.showPageZoomFeedback(BrowserPageZoomPolicy.percentageLabel(for: page.pageZoom))
+        chrome.showPageZoomFeedback(page.pageZoom.pageZoomPercentage)
     }
 
     /// Reloads a Peek open over the active tab, or else the tab, which the

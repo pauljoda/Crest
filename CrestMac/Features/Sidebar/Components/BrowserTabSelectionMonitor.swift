@@ -108,8 +108,7 @@ struct BrowserTabSelectionMonitor: View {
                 browser.selectedSpaceID == assignment.spaceID
             else { return event }
             guard
-                BrowserSidebarAccessPolicy.selectedUnlockedSpace(
-                    matching: assignment, in: browser, accessController: spaceAccess) != nil
+                browser.selectedUnlockedSpace(matching: assignment, accessController: spaceAccess) != nil
             else {
                 browser.tabMultiSelection.clear()
                 return event

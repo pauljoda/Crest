@@ -66,7 +66,7 @@ final class MobileBrowserWindowSceneModelTests: XCTestCase {
         let privateSession = model.privateBrowser.sessionSeed
         try model.browser.core.send(StartSetup(workspaceID: model.browser.family.workspaceID, entry: .firstRun))
         let result = await BrowserSetupFinish.finish(browser: model.browser, spaceAccess: model.spaceAccess)
-        guard case .completed(let opened) = result, let guide = opened else {
+        guard let guide = (result as? BrowserSetupCompleted)?.guide else {
             return XCTFail("Setup did not create a guide")
         }
         XCTAssertTrue(model.presentGettingStartedAfterSetup(matching: guide))

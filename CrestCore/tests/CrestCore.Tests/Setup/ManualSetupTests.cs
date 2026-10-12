@@ -29,7 +29,7 @@ public sealed partial class BrowserContractsTests {
             started.Spaces.Select(space => (space.SpaceId, space.ProfileId, space.IsNew, space.ShownName)));
         // A new Space is named for its place and wears the next accent.
         var added = Drafted(device.Send(new AddSetupSpace())).Spaces[1];
-        Assert.Equal((true, "Space 2", ManualSetupPolicy.NewSpaceSymbol, SpaceAccent.Orange),
+        Assert.Equal((true, "Space 2", SetupDraft.NewSpaceSymbol, SpaceAccent.Orange),
             (added.IsNew, added.ShownName, added.Customization.Symbol, added.Customization.Accent));
         // A blank name stays blank while it is typed and shows as untitled.
         var blank = Drafted(device.Send(new CustomizeSetupSpace(added.SpaceId, added.Customization with { Name = "  " }))).Spaces[1];
@@ -44,8 +44,8 @@ public sealed partial class BrowserContractsTests {
         Assert.Equal([existing.Id, created],
             Drafted(device.Send(new StartSetup(device.Workspace, SetupEntry.ManualSetup))).Spaces.Select(space => space.SpaceId));
 
-        for (int count = 2; count < WorkspaceImportPolicy.MaximumSpaces; count++) device.Send(new AddSetupSpace());
-        Assert.Equal(new SpaceLimitReached(WorkspaceImportPolicy.MaximumSpaces),
+        for (int count = 2; count < SessionState.MaximumSpaces; count++) device.Send(new AddSetupSpace());
+        Assert.Equal(new SpaceLimitReached(SessionState.MaximumSpaces),
             Assert.Throws<Rejected>(() => device.Send(new AddSetupSpace())).Rejection);
 
         // Setup opened again from the start ends the manual setup.

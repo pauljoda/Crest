@@ -125,11 +125,11 @@ public sealed partial class BrowserContractsTests {
         }
         var written = SpaceAccent.Indigo.House with { RenderingVersion = version, BannerStrength = stored };
 
-        var kept = SpaceBrandingPolicy.Normalize(written);
+        var kept = SpaceBranding.Normalized(written);
 
         Assert.Equal(worn, kept.BannerStrength, precision: 10);
         Assert.Equal(kept, Synced(written));
-        Assert.Equal(kept, SpaceBrandingPolicy.Normalize(kept));
+        Assert.Equal(kept, SpaceBranding.Normalized(kept));
         Assert.Equal(kept, Synced(Synced(kept)));
         Assert.Equal(kept, StoredSessionCodec.DecodeBranding(StoredSessionCodec.Encode(kept)).InTodaysUnits());
     }
@@ -154,7 +154,7 @@ public sealed partial class BrowserContractsTests {
             }
         };
 
-        var kept = SpaceBrandingPolicy.Normalize(look);
+        var kept = SpaceBranding.Normalized(look);
         value["branding"] = StoredSessionCodec.Encode(kept);
         var cloud = SyncRecordBody.Read(CodecBody("space", value), isTombstone: false, SyncPayloadForm.Journal)
             .Write(SyncPayloadForm.Cloud);
@@ -306,7 +306,7 @@ public sealed partial class BrowserContractsTests {
 
         Assert.True(Encoding.UTF8.GetByteCount(raw) <= SyncedAddress.MaximumBytes);
         Assert.False(new SyncedAddress(raw).IsPortable);
-        Assert.False(SyncContentPolicy.Includes(raw));
+        Assert.False(SyncedAddress.Includes(raw));
     }
 
     #endregion

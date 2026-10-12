@@ -10,47 +10,44 @@ struct BrowserSettingsLabeledActionButtonStyle: ButtonStyle {
         configuration.label
             .font(.body.weight(.medium))
             .foregroundStyle(tint)
-            .padding(.horizontal, BrowserSettingsControlPolicy.horizontalPadding)
+            .padding(.horizontal, BrowserSettingsControlMetrics.horizontalPadding)
             .frame(
                 maxWidth: .infinity,
-                minHeight: BrowserSettingsControlPolicy.labeledActionHeight
+                minHeight: BrowserSettingsControlMetrics.labeledActionHeight
             )
             .fixedSize(horizontal: false, vertical: true)
             .background(
                 tint.opacity(
                     configuration.isPressed
-                        ? BrowserSettingsControlPolicy.labeledPressedFillOpacity
-                        : BrowserSettingsControlPolicy.restingFillOpacity
+                        ? BrowserSettingsControlMetrics.labeledPressedFillOpacity
+                        : BrowserSettingsControlMetrics.restingFillOpacity
                 ),
                 in: RoundedRectangle(
-                    cornerRadius: BrowserSettingsControlPolicy.cornerRadius,
+                    cornerRadius: BrowserSettingsControlMetrics.cornerRadius,
                     style: .continuous
                 )
             )
             .overlay {
                 RoundedRectangle(
-                    cornerRadius: BrowserSettingsControlPolicy.cornerRadius,
+                    cornerRadius: BrowserSettingsControlMetrics.cornerRadius,
                     style: .continuous
                 )
                 .strokeBorder(
-                    tint.opacity(BrowserSettingsControlPolicy.labeledBorderOpacity),
-                    lineWidth: BrowserSettingsControlPolicy.borderWidth
+                    tint.opacity(BrowserSettingsControlMetrics.labeledBorderOpacity),
+                    lineWidth: BrowserSettingsControlMetrics.borderWidth
                 )
             }
             .contentShape(.rect)
             .scaleEffect(
                 configuration.isPressed
-                    ? BrowserSettingsControlPolicy.labeledPressedScale
+                    ? BrowserSettingsControlMetrics.labeledPressedScale
                     : 1
             )
             .opacity(
-                isEnabled ? 1 : BrowserSettingsControlPolicy.labeledDisabledOpacity
+                isEnabled ? 1 : BrowserSettingsControlMetrics.labeledDisabledOpacity
             )
             .animation(
-                BrowserVisualAccessibilityPolicy.animation(
-                    CrestMotion.compactPress,
-                    reduceMotion: reduceMotion
-                ),
+                CrestMotion.compactPress.unlessReducingMotion(reduceMotion),
                 value: configuration.isPressed
             )
     }

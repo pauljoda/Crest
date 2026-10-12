@@ -189,7 +189,7 @@ struct BrowserSpaceBrandingEditor: View {
 
 #Preview("Crest Studio") {
     @Previewable @State var branding = BrowserSpaceBrandingPreviewFixture.crestBranding
-    @Previewable @State var symbol = BrowserSpaceSimpleSymbol.work.rawValue
+    @Previewable @State var symbol = BrowserSpaceSimpleSymbol.work.symbol
     ScrollView { BrowserSpaceBrandingEditor(branding: $branding, symbol: $symbol).padding(20) }
         .frame(width: 560, height: 720)
 }

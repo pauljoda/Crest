@@ -9,7 +9,7 @@ public sealed record MoveSetupSpace(Guid SpaceId, Guid TargetSpaceId) : SetupDra
     #region Actions - Device
 
     internal override void Apply(Device device, DeviceTurn turn) =>
-        device.ReviseSetup(turn.Changes, draft => ManualSetupPolicy.Moving(draft, SpaceId, TargetSpaceId));
+        device.ReviseSetup(turn.Changes, draft => draft.Moving(SpaceId, TargetSpaceId));
 
     #endregion
 }

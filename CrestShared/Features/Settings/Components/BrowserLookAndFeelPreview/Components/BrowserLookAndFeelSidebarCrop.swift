@@ -47,9 +47,9 @@ struct BrowserLookAndFeelSidebarCrop: View {
             RoundedRectangle(cornerRadius: BrowserLookAndFeelPreviewMetrics.cardCornerRadius, style: .continuous)
                 .strokeBorder(.primary.opacity(CrestOpacity.border))
         }
-        .environment(\.colorScheme, BrowserSpaceForegroundPolicy.colorScheme(for: branding))
+        .environment(\.colorScheme, branding.foregroundTone.colorScheme)
         .animation(
-            BrowserVisualAccessibilityPolicy.animation(CrestMotion.collection, reduceMotion: reduceMotion),
+            CrestMotion.collection.unlessReducingMotion(reduceMotion),
             value: sidebarOnRight
         )
         .accessibilityElement(children: .contain)

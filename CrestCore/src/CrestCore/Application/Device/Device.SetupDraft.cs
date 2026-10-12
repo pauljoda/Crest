@@ -37,7 +37,7 @@ internal sealed partial class Device {
         var resumed = startsOver ? null
             : setupDraft is { } held && held.WorkspaceId == workspaceId ? held
             : keptSetupDraft?.For(workspaceId);
-        var draft = resumed is null ? ManualSetupPolicy.Started(workspaceId, session, ids.Next) : ManualSetupPolicy.Reconciled(resumed, session);
+        var draft = resumed is null ? SetupDraft.Started(workspaceId, session, ids.Next) : resumed.Reconciled(session);
         KeepSetup(draft, changes: null);
         changes.Publish(new SetupDraftChanged(draft));
     }
@@ -65,7 +65,7 @@ internal sealed partial class Device {
     /// The caller holds the device lock.
     private SetupDraftChanged? FollowingSpaces(Guid workspaceId, SessionState next) {
         if (setupDraft is not { } draft || draft.WorkspaceId != workspaceId) return null;
-        var followed = ManualSetupPolicy.Reconciled(draft, next);
+        var followed = draft.Reconciled(next);
         if (ReferenceEquals(followed, draft)) return null;
         KeepSetup(followed, changes: null);
         return new(followed);

@@ -71,68 +71,6 @@ enum MobileBrowserRootPreferences {
     }
 }
 
-enum MobileBrowserPresentationPolicy {
-    static let expandedLayoutMinimumWidth: CGFloat = 600
-
-    static func resolve(
-        availableWidth: CGFloat
-    ) -> MobileBrowserPresentation {
-        if availableWidth >= expandedLayoutMinimumWidth {
-            return .regular
-        }
-        return .compact
-    }
-}
-
-enum MobileSidebarPageFramePolicy {
-    static func usesBorderlessFrame(
-        preferenceIsEnabled: Bool,
-        sidebarPresentation: BrowserSidebarPresentation,
-        presentsSplitView: Bool,
-        browserPresentation: MobileBrowserPresentation
-    ) -> Bool {
-        if browserPresentation == .compact,
-            sidebarPresentation == .docked
-        {
-            return true
-        }
-        return preferenceIsEnabled
-    }
-
-    static func showsCompactToolbar(
-        sidebarPresentation: BrowserSidebarPresentation,
-        presentsSplitView: Bool
-    ) -> Bool {
-        presentsSplitView || sidebarPresentation == .docked
-    }
-}
-
-enum MobileSidebarTabSelectionPolicy {
-    static func dismissesSidebar(
-        browserPresentation: MobileBrowserPresentation,
-        sidebarPresentation: BrowserSidebarPresentation
-    ) -> Bool {
-        browserPresentation == .compact
-            && sidebarPresentation == .floating
-    }
-}
-
-enum MobileKeyboardLayoutPolicy {
-    static let floatingKeyboardMaximumWidthRatio: CGFloat = 0.85
-
-    static func isFloating(
-        keyboardFrame: CGRect,
-        availableSize: CGSize
-    ) -> Bool {
-        guard !keyboardFrame.isNull,
-            !keyboardFrame.isEmpty,
-            availableSize.width > 0
-        else { return false }
-        return keyboardFrame.width
-            < availableSize.width * floatingKeyboardMaximumWidthRatio
-    }
-}
-
 enum MobileCompactDomainChipLayout {
     static let visibleHeight: CGFloat = 36
     static let minimumHitTarget = CrestLayout.minimumHitTarget
@@ -140,14 +78,6 @@ enum MobileCompactDomainChipLayout {
     static let outerHorizontalPadding: CGFloat = 12
 }
 
-enum MobileCompactPageChromePolicy {
-    static let usesPageThemeBackdrop = true
-}
-
 enum MobileCompactTabViewerLayout {
     static let showsTopAddressBar = false
-}
-
-enum MobileFullTabPresentationPolicy {
-    static let allowsInteractiveDismissal = false
 }

@@ -17,7 +17,7 @@ public sealed record SelectionSearch(Guid WorkspaceId, Guid SpaceId, string Text
         string text = Text.Trim();
         if (text.Length == 0) return new(Url: null, engine.Title);
         string url = engine.Search(text);
-        bool opens = Uri.TryCreate(url, UriKind.Absolute, out var parsed) && ExternalUrlPolicy.AcceptsWebLink(parsed.Scheme, parsed.Host);
+        bool opens = Uri.TryCreate(url, UriKind.Absolute, out var parsed) && new ExternalWebLink(parsed.Scheme, parsed.Host).IsAccepted;
         return new(opens ? url : null, engine.Title);
     }
 

@@ -11,7 +11,7 @@ struct BrowserDeveloperToolbar: View {
     @State private var showsSiteSettings = false
     @State private var showsCaptureOptions = false
     @State private var isSiteSettingsPermissionsExpanded =
-        BrowserSitePermissionDisclosurePolicy.defaultIsExpanded
+        BrowserSitePermissionDisclosure.defaultIsExpanded
 
     var body: some View {
         BrowserPageToolbarSurface(label: "Developer Toolbar", identifier: "developer-toolbar") {
@@ -100,9 +100,7 @@ struct BrowserDeveloperToolbar: View {
     /// address rules.
     private func navigate() {
         let input = address
-        if BrowserDeveloperNavigationPolicy.updatesSelectedTab(
-            isActivePage: pages.activePage === page
-        ) {
+        if pages.activePage === page {
             browser.navigateSelectedTab(to: input)
             guard pages.navigate(to: input) else { return }
         } else {

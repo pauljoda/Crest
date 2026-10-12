@@ -13,6 +13,29 @@ struct BrowserWebFocusRestorationGate: Equatable {
     var allowsWebPageFocus: Bool {
         !browserChromeOwnsFocus && !pageChromeOwnsFocus
     }
+
+    /// Whether a remembered responder may take focus back through this gate,
+    /// with everything else that could own focus at that moment.
+    func allowsRestoration(
+        hasPendingCandidate: Bool,
+        candidateBelongsToWebView: Bool,
+        windowIsKey: Bool,
+        applicationIsActive: Bool,
+        windowHasAttachedSheet: Bool,
+        menuIsTracking: Bool,
+        accessibilityOwnsFocus: Bool,
+        currentOwner: BrowserWebFocusRestorationCurrentOwner
+    ) -> Bool {
+        hasPendingCandidate
+            && candidateBelongsToWebView
+            && allowsWebPageFocus
+            && windowIsKey
+            && applicationIsActive
+            && !windowHasAttachedSheet
+            && !menuIsTracking
+            && !accessibilityOwnsFocus
+            && currentOwner != .other
+    }
 }
 
 enum BrowserWebFocusRestorationCurrentOwner: Equatable {
@@ -53,30 +76,6 @@ final class BrowserMenuTrackingMonitor {
                 }
             },
         ]
-    }
-}
-
-struct BrowserWebFocusRestorationPolicy {
-    static func allowsRestoration(
-        hasPendingCandidate: Bool,
-        candidateBelongsToWebView: Bool,
-        gate: BrowserWebFocusRestorationGate,
-        windowIsKey: Bool,
-        applicationIsActive: Bool,
-        windowHasAttachedSheet: Bool,
-        menuIsTracking: Bool,
-        accessibilityOwnsFocus: Bool,
-        currentOwner: BrowserWebFocusRestorationCurrentOwner
-    ) -> Bool {
-        hasPendingCandidate
-            && candidateBelongsToWebView
-            && gate.allowsWebPageFocus
-            && windowIsKey
-            && applicationIsActive
-            && !windowHasAttachedSheet
-            && !menuIsTracking
-            && !accessibilityOwnsFocus
-            && currentOwner != .other
     }
 }
 
@@ -205,11 +204,9 @@ final class BrowserWebFocusRestorationController {
             host: host
         )
         let allowsRestoration =
-            BrowserWebFocusRestorationPolicy
-            .allowsRestoration(
+            gate.allowsRestoration(
                 hasPendingCandidate: true,
                 candidateBelongsToWebView: true,
-                gate: gate,
                 windowIsKey: windowIsKey ?? window.isKeyWindow,
                 applicationIsActive: applicationIsActive,
                 windowHasAttachedSheet: window.attachedSheet != nil,

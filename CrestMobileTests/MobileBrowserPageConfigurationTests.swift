@@ -44,7 +44,7 @@ final class MobileBrowserPageConfigurationTests: XCTestCase {
         XCTAssertEqual(configuration.mediaTypesRequiringUserActionForPlayback, .all)
         XCTAssertTrue(
             configuration.userContentController.userScripts.contains {
-                $0.source == MobileMediaPlaybackPolicy.inlineVideoScript.source
+                $0.source == MobileWebKit.inlineVideoScript.source
             }
         )
         XCTAssertTrue(

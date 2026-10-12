@@ -23,9 +23,9 @@ final class EnginePage: BrowserFindExecuting {
     private let inspectorPanels: Set<InspectorPanel>
     /// What waits for the engine: the latest find's count, and each capture
     /// and export by its identity.
-    private var findCompletion: (@MainActor (BrowserFindResult) -> Void)?
-    private var captures: [UUID: @MainActor (Data?) -> Void] = [:]
-    private var exports: [UUID: CheckedContinuation<Data, any Error>] = [:]
+    var findCompletion: (@MainActor (BrowserFindResult) -> Void)?
+    var captures: [UUID: @MainActor (Data?) -> Void] = [:]
+    var exports: [UUID: CheckedContinuation<Data, any Error>] = [:]
     /// What an agent's scripts and input wait for, by their identities.
     var agentWaits = EnginePageAgentWaits()
     /// The page's requested multiplier, retained across document and view
@@ -89,7 +89,7 @@ final class EnginePage: BrowserFindExecuting {
         pages.request(ZoomPage(pageID: id, factor: Double(factor)))
     }
 
-    private func restoreRequestedZoom() {
+    func restoreRequestedZoom() {
         guard !closed, let requestedZoom else { return }
         pages.request(ZoomPage(pageID: id, factor: Double(requestedZoom)))
     }
@@ -303,38 +303,7 @@ final class EnginePage: BrowserFindExecuting {
 
     /// Hears what the engine finished for the page.
     func receive(_ presentation: EnginePresentation) {
-        // Chromium clears isolated zoom when a document commits. These
-        // presentations arrive after its navigation observers have finished,
-        // so restore the page's own default or manual override at that point.
-        // A recovered view and an engine-rendered error page need it too.
-        switch presentation {
-        case .pageViewReady, .pageNavigationCommitted, .pageNavigationFailed:
-            restoreRequestedZoom()
-        default:
-            break
-        }
-        if case .findFinished(let finished) = presentation {
-            let completion = findCompletion
-            findCompletion = nil
-            completion?(
-                finished.matches.map { BrowserFindResult(matchCount: $0, activeMatch: finished.activeMatch) }
-                    ?? BrowserFindResult(matchFound: true))
-        }
-        agentWaits.receive(presentation)
-        if case .pageCaptured(let captured) = presentation {
-            captures.removeValue(forKey: captured.captureID)?(captured.png)
-        }
-        if case .pageExported(let exported) = presentation,
-            let continuation = exports.removeValue(forKey: exported.exportID)
-        {
-            if let document = exported.document {
-                continuation.resume(returning: document)
-            } else {
-                let failure = exported.failure ?? PageExportFailure.failed
-                continuation.resume(
-                    throwing: BrowserPageExportError.renderingFailed(String(localized: failure.message)))
-            }
-        }
+        presentation.deliver(to: self)
     }
 }
 

@@ -51,7 +51,7 @@ final class BrowserCommandPaletteCompletionTests: XCTestCase {
             browser: browser, space: browser.spaceModel(original.id), selectedTabID: tab.id, initialQuery: "",
             commands: nil,
             isSourceAvailable: {
-                BrowserCommandPaletteActionPolicy.isSourceAvailable($0, in: browser, accessController: access)
+                browser.isPaletteSourceAvailable($0, accessController: access)
             },
             selectTab: { _, _ in false }, openURL: { _, _, _ in false }, dismiss: {})
         model.applyCompletion = { _, _ in XCTFail("Stale proposal was accepted") }

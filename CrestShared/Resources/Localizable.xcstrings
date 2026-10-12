@@ -7949,6 +7949,9 @@
     "Matches the title" : {
 
     },
+    "Material" : {
+
+    },
     "Meadow" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -13531,6 +13534,12 @@
     "These rows are excluded from the import. Correct the source file to import them later." : {
 
     },
+    "Thick" : {
+
+    },
+    "Thin" : {
+
+    },
     "This action requires webpage tabs. Deselect built-in pages first." : {
 
     },
@@ -14299,6 +14308,12 @@
 
     },
     "Typing" : {
+
+    },
+    "Ultra Thick" : {
+
+    },
+    "Ultra Thin" : {
 
     },
     "Ultrawide" : {

@@ -11,26 +11,9 @@ extension BrowserPlatformPage {
         _ challenge: URLAuthenticationChallenge, from webKitPage: WebKitEnginePage?,
         completionHandler: @escaping @MainActor @Sendable (URLSession.AuthChallengeDisposition, URLCredential?) -> Void
     ) {
-        switch BrowserCorePolicy.authenticationHandling(for: BrowserAuthenticationChallenge(challenge)) {
-        case .performDefaultHandling:
-            completionHandler(.performDefaultHandling, nil)
-        case .cancel:
-            httpAuthenticationSession.authenticationFailed()
-            completionHandler(.cancelAuthenticationChallenge, nil)
-        case .promptForCredentials:
-            guard let webKitPage, let question = AuthenticationQuestion(challenge) else {
-                completionHandler(.performDefaultHandling, nil)
-                return
-            }
-            webKitPage.ask(question) { credential in
-                guard let credential else {
-                    completionHandler(.cancelAuthenticationChallenge, nil)
-                    return
-                }
-                completionHandler(
-                    .useCredential,
-                    URLCredential(user: credential.username, password: credential.password, persistence: .none))
-            }
-        }
+        BrowserAuthenticationChallenge(challenge).handling.respond(
+            on: WebKitSignInResponder(
+                challenge: challenge, page: webKitPage, session: httpAuthenticationSession,
+                completionHandler: completionHandler))
     }
 }

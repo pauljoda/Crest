@@ -2,6 +2,14 @@ import SwiftUI
 import UIKit
 
 struct MobileCompactPageBackdrop: View {
+    // MARK: - Static Variables
+
+    /// Whether a page stands on its own theme colour rather than the Space's
+    /// atmosphere.
+    private static let usesPageThemeBackdrop = true
+
+    // MARK: - Variables
+
     let isStartPage: Bool
     let hasSelectedPage: Bool
     let pageThemeColor: UIColor?
@@ -9,7 +17,7 @@ struct MobileCompactPageBackdrop: View {
     let space: SpaceModel?
 
     var body: some View {
-        if MobileCompactPageChromePolicy.usesPageThemeBackdrop,
+        if Self.usesPageThemeBackdrop,
             !isStartPage,
             hasSelectedPage
         {

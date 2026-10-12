@@ -1,3 +1,5 @@
+using CrestCore.Domain;
+
 namespace CrestCore.Contracts;
 
 /// <summary>
@@ -31,6 +33,15 @@ public sealed record AppPreferences(StartupBehavior Startup, bool OffersTranslat
         get;
         init => field = [.. value];
     } = [.. TranslationRules];
+
+    #endregion
+
+    #region Actions - Translation
+
+    /// Records a source language's translation choice through the rule set's
+    /// alias rules.
+    internal AppPreferences WithTranslationRule(string source, string target, bool isEnabled) =>
+        this with { TranslationRules = AutomaticTranslationRules.Restore(TranslationRules).Set(source, target, isEnabled).Rules };
 
     #endregion
 

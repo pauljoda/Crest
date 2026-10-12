@@ -1,6 +1,9 @@
 import CloudKit
 
 actor CloudKitBrowserCloudSyncRemoteService: BrowserCloudSyncRemoteService {
+    /// The entitlement that lists the iCloud containers a process may open.
+    static let containerEntitlementName = "com.apple.developer.icloud-container-identifiers"
+
     private let configuration: BrowserCloudSyncConfiguration
     private var container: CKContainer?
     private var database: CKDatabase?
@@ -10,9 +13,15 @@ actor CloudKitBrowserCloudSyncRemoteService: BrowserCloudSyncRemoteService {
     }
 
     func hasRequiredEntitlement() -> Bool {
-        BrowserPlatformCloudContainerEntitlementPolicy.currentProcessContainsContainer(
+        Self.currentProcessContainsContainer(
             configuration.containerIdentifier
         )
+    }
+
+    /// Whether a signed container entitlement value lists `containerIdentifier`.
+    static func containerEntitlement(_ entitlementValue: Any?, contains containerIdentifier: String) -> Bool {
+        guard let identifiers = entitlementValue as? [String] else { return false }
+        return identifiers.contains(containerIdentifier)
     }
 
     func accountState() async throws -> CloudAccountState {

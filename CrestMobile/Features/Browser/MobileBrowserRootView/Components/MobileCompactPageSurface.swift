@@ -1,6 +1,13 @@
 import SwiftUI
 
 struct MobileCompactPageSurface<Backdrop: View, Detail: View>: View {
+    // MARK: - Static Variables
+
+    /// Whether a downward swipe may dismiss the full-screen page.
+    private static var allowsInteractiveDismissal: Bool { false }
+
+    // MARK: - Variables
+
     let selectedTab: TabStateModel?
     let isURLCopiedFeedbackVisible: Bool
     let pageZoomFeedbackLabel: String?
@@ -17,7 +24,7 @@ struct MobileCompactPageSurface<Backdrop: View, Detail: View>: View {
             detail
         }
         .interactiveDismissDisabled(
-            !MobileFullTabPresentationPolicy.allowsInteractiveDismissal
+            !Self.allowsInteractiveDismissal
         )
         .onAppear(perform: completePagePresentation)
         .overlay(alignment: .top) {
@@ -36,16 +43,11 @@ struct MobileCompactPageSurface<Backdrop: View, Detail: View>: View {
         if reduceMotion {
             page
         } else if let selectedTab,
-            MobileTabPromotionPolicy.isTransitionSource(
-                selectedTab,
-                selectedTabID: selectedTab.id
-            )
+            selectedTab.isPromotionSource(isSelected: true)
         {
             page.navigationTransition(
                 .zoom(
-                    sourceID: MobileTabPromotionPolicy.destinationID(
-                        for: selectedTab.id
-                    ),
+                    sourceID: BrowserTabPromotionID.value(for: selectedTab.id),
                     in: tabPromotionNamespace
                 )
             )

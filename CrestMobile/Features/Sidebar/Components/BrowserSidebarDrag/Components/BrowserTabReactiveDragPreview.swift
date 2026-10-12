@@ -20,10 +20,7 @@ struct BrowserTabReactiveDragPreview: View {
             rowMetrics: .touch
         )
         .animation(
-            BrowserVisualAccessibilityPolicy.animation(
-                CrestMotion.dragPreview,
-                reduceMotion: reduceMotionOverride ?? reduceMotion
-            ),
+            CrestMotion.dragPreview.unlessReducingMotion(reduceMotionOverride ?? reduceMotion),
             value: dragState.currentPlacement
         )
     }

@@ -98,10 +98,7 @@ struct BrowserFolderGroupSurface: View {
             Text("Its tabs stay in this section, and any nested folders move up one level.")
         }
         .animation(
-            BrowserVisualAccessibilityPolicy.animation(
-                CrestMotion.collection,
-                reduceMotion: reduceMotion
-            ),
+            CrestMotion.collection.unlessReducingMotion(reduceMotion),
             value: folder.isCollapsed
         )
         .onAppear(perform: interaction.beginTitleEditingIfNeeded)

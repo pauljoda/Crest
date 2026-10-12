@@ -26,7 +26,7 @@ final class BrowserChromeLayoutTests: XCTestCase {
 
         XCTAssertEqual(presentation.requestedSpaceID, second)
         XCTAssertEqual(presentation.requestedAssignment, secondAssignment)
-        XCTAssertEqual(presentation.request, .destination(.shortcuts))
+        XCTAssertEqual((presentation.request as? BrowserSettingsDestinationRequest)?.destination, .shortcuts)
         XCTAssertEqual(presentation.revision, 2)
     }
 
@@ -42,7 +42,7 @@ final class BrowserChromeLayoutTests: XCTestCase {
         presentation.present(.shortcuts, assignment: assignment)
         presentation.present(.shortcuts, assignment: assignment)
 
-        XCTAssertEqual(presentation.request, .destination(.shortcuts))
+        XCTAssertEqual((presentation.request as? BrowserSettingsDestinationRequest)?.destination, .shortcuts)
         XCTAssertEqual(presentation.requestedSpaceID, spaceID)
         XCTAssertEqual(presentation.revision, 2)
     }
@@ -62,20 +62,20 @@ final class BrowserChromeLayoutTests: XCTestCase {
 
     func testCertificateReviewRequiresHTTPSAndServerTrust() {
         XCTAssertTrue(
-            BrowserSiteCertificatePresentationPolicy.isAvailable(
-                url: URL(string: "https://example.com"),
+            BrowserPage.canReviewCertificate(
+                of: URL(string: "https://example.com"),
                 hasServerTrust: true
             )
         )
         XCTAssertFalse(
-            BrowserSiteCertificatePresentationPolicy.isAvailable(
-                url: URL(string: "http://example.com"),
+            BrowserPage.canReviewCertificate(
+                of: URL(string: "http://example.com"),
                 hasServerTrust: true
             )
         )
         XCTAssertFalse(
-            BrowserSiteCertificatePresentationPolicy.isAvailable(
-                url: URL(string: "https://example.com"),
+            BrowserPage.canReviewCertificate(
+                of: URL(string: "https://example.com"),
                 hasServerTrust: false
             )
         )
@@ -123,19 +123,18 @@ final class BrowserChromeLayoutTests: XCTestCase {
     }
 
     func testPeekKeyboardDismissalLeavesReturnToThePage() {
-        XCTAssertEqual(
-            BrowserPeekKeyboardPolicy.action(forKeyCode: 53, modifierFlags: []),
-            .dismiss
+        XCTAssertTrue(
+            BrowserPeekKeyboardMonitorCoordinator.dismisses(keyCode: 53, modifierFlags: [])
         )
-        XCTAssertNil(
-            BrowserPeekKeyboardPolicy.action(forKeyCode: 36, modifierFlags: [])
+        XCTAssertFalse(
+            BrowserPeekKeyboardMonitorCoordinator.dismisses(keyCode: 36, modifierFlags: [])
         )
-        XCTAssertNil(
-            BrowserPeekKeyboardPolicy.action(forKeyCode: 76, modifierFlags: [])
+        XCTAssertFalse(
+            BrowserPeekKeyboardMonitorCoordinator.dismisses(keyCode: 76, modifierFlags: [])
         )
-        XCTAssertNil(
-            BrowserPeekKeyboardPolicy.action(
-                forKeyCode: 36,
+        XCTAssertFalse(
+            BrowserPeekKeyboardMonitorCoordinator.dismisses(
+                keyCode: 36,
                 modifierFlags: [.command]
             )
         )
@@ -193,23 +192,23 @@ final class BrowserChromeLayoutTests: XCTestCase {
     /// The shared direction source for the compact toolbar's horizontal swipe.
     ///
     /// What that swipe *does* is no longer this policy's business — on iOS it
-    /// pages Split View cards, routed by `MobileToolbarSwipePolicy` — but "next"
+    /// pages Split View cards, routed by `MobileToolbarSwipeMode` — but "next"
     /// still has to mean the trailing neighbour in both writing directions, and
     /// this is the only place that decides it.
 
     func testSidebarAuxiliaryMouseButtonsSwitchSpacesWithoutClaimingOtherButtons() {
         XCTAssertEqual(
-            BrowserSidebarMouseButtonPolicy.action(for: 3),
+            BrowserSidebarMouseButtonAction(buttonNumber: 3),
             .previousSpace
         )
         XCTAssertEqual(
-            BrowserSidebarMouseButtonPolicy.action(for: 4),
+            BrowserSidebarMouseButtonAction(buttonNumber: 4),
             .nextSpace
         )
-        XCTAssertNil(BrowserSidebarMouseButtonPolicy.action(for: 0))
-        XCTAssertNil(BrowserSidebarMouseButtonPolicy.action(for: 1))
-        XCTAssertNil(BrowserSidebarMouseButtonPolicy.action(for: 2))
-        XCTAssertNil(BrowserSidebarMouseButtonPolicy.action(for: 5))
+        XCTAssertNil(BrowserSidebarMouseButtonAction(buttonNumber: 0))
+        XCTAssertNil(BrowserSidebarMouseButtonAction(buttonNumber: 1))
+        XCTAssertNil(BrowserSidebarMouseButtonAction(buttonNumber: 2))
+        XCTAssertNil(BrowserSidebarMouseButtonAction(buttonNumber: 5))
     }
 
     func testAuxiliaryMouseButtonsStayWithinWebpageScope() {
@@ -218,17 +217,15 @@ final class BrowserChromeLayoutTests: XCTestCase {
             .nextSpace,
         ] {
             XCTAssertEqual(
-                BrowserSidebarMouseButtonPolicy.disposition(
+                BrowserSidebarMousePointerScope.webpage.disposition(
                     for: action,
-                    pointerScope: .webpage,
                     canNavigatePage: true
                 ),
                 .navigatePage(action)
             )
             XCTAssertEqual(
-                BrowserSidebarMouseButtonPolicy.disposition(
+                BrowserSidebarMousePointerScope.webpage.disposition(
                     for: action,
-                    pointerScope: .webpage,
                     canNavigatePage: false
                 ),
                 .consume
@@ -242,17 +239,15 @@ final class BrowserChromeLayoutTests: XCTestCase {
             .nextSpace,
         ] {
             XCTAssertEqual(
-                BrowserSidebarMouseButtonPolicy.disposition(
+                BrowserSidebarMousePointerScope.sidebar.disposition(
                     for: action,
-                    pointerScope: .sidebar,
                     canNavigatePage: true
                 ),
                 .switchSpace(action)
             )
             XCTAssertEqual(
-                BrowserSidebarMouseButtonPolicy.disposition(
+                BrowserSidebarMousePointerScope.sidebar.disposition(
                     for: action,
-                    pointerScope: .sidebar,
                     canNavigatePage: false
                 ),
                 .switchSpace(action)
@@ -263,9 +258,9 @@ final class BrowserChromeLayoutTests: XCTestCase {
     /// A swipe no page took, such as a mouse's Back action over a Chromium
     /// page, moves the way WebKit's views and Chrome's windows move it.
     func testUnhandledSwipeGoesBackOnAPositiveDeltaAsTheEnginesDo() {
-        XCTAssertEqual(BrowserSidebarMouseButtonPolicy.action(forSwipeDeltaX: 1), .previousSpace)
-        XCTAssertEqual(BrowserSidebarMouseButtonPolicy.action(forSwipeDeltaX: -1), .nextSpace)
-        XCTAssertNil(BrowserSidebarMouseButtonPolicy.action(forSwipeDeltaX: 0))
+        XCTAssertEqual(BrowserSidebarMouseButtonAction(swipeDeltaX: 1), .previousSpace)
+        XCTAssertEqual(BrowserSidebarMouseButtonAction(swipeDeltaX: -1), .nextSpace)
+        XCTAssertNil(BrowserSidebarMouseButtonAction(swipeDeltaX: 0))
     }
 
     func testAuxiliaryMouseButtonsRemainUnclaimedOutsidePageAndSidebar() {
@@ -274,9 +269,8 @@ final class BrowserChromeLayoutTests: XCTestCase {
             .nextSpace,
         ] {
             XCTAssertNil(
-                BrowserSidebarMouseButtonPolicy.disposition(
+                BrowserSidebarMousePointerScope.unowned.disposition(
                     for: action,
-                    pointerScope: .unowned,
                     canNavigatePage: true
                 )
             )

@@ -22,6 +22,14 @@ extension SpaceBranding {
         color(for: .pattern) ?? primaryColor
     }
 
+    /// The tone that reads best over the banner, unless the text color mode
+    /// names one.
+    var foregroundTone: BrowserSpaceForegroundTone {
+        if let override = textColorMode.foregroundTone { return override }
+        return (colors.isEmpty ? [.indigo] : colors).foregroundTone(
+            strength: bannerStrength, readabilityFade: readabilityFade)
+    }
+
     /// The icon's own color, or the Space's primary color, which it follows
     /// as the palette changes, when it has none.
     var resolvedSymbolColor: BrandColor {

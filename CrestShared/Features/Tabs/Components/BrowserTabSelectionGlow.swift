@@ -1,7 +1,9 @@
 import SwiftUI
 
-/// The selected tab's outer glow. Clipped containers must reserve its outset
-/// inside their bounds so the blur can fade before reaching the clipping edge.
+/// The selected tab's outer glow. It slides under the layer above it — the
+/// address field, the extension strip — rather than containers reserving its
+/// outset as empty space; only a clipping edge with nothing over it needs the
+/// outset inside its bounds, so the blur can fade before reaching it.
 struct BrowserTabSelectionGlow: View {
     static let outset: CGFloat = 12
 

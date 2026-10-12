@@ -53,11 +53,6 @@ struct BrowserOnboardingWindowContent: View {
         }
         .ignoresSafeArea()
         .frame(minWidth: 980, minHeight: 660)
-        .preferredColorScheme(
-            BrowserOnboardingAppearancePolicy.colorSchemeOverride(
-                isManualSetup: flow.step == .manualSetup
-            )
-        )
         .tint(CrestBrandTheme.accent)
         .background(BrowserOnboardingWindowConfigurator())
         .task {
@@ -91,9 +86,6 @@ struct BrowserOnboardingWindowContent: View {
     }
 
     private func motion(_ animation: Animation) -> Animation? {
-        BrowserVisualAccessibilityPolicy.animation(
-            animation,
-            reduceMotion: reduceMotion
-        )
+        animation.unlessReducingMotion(reduceMotion)
     }
 }

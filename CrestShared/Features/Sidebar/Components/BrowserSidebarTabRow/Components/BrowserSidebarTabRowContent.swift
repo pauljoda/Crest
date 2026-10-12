@@ -45,9 +45,8 @@ struct BrowserSidebarTabRowContent: View {
                     isPresented: interaction.isChoosingIcon,
                     title: "Tab Icon",
                     currentEmoji: configuration.tab.emojiIcon,
-                    showsReset: BrowserTabIconCustomizationPolicy.showsReset(
-                        iconMode: configuration.tab.iconMode
-                    ),
+                    // Reset applies to explicit icon overrides.
+                    showsReset: !configuration.tab.iconMode.followsPage,
                     resetTitle: "Use Website Icon",
                     setEmoji: interaction.setEmojiIcon,
                     reset: interaction.resetIcon

@@ -41,7 +41,7 @@ struct BrowserMacDownloadFeedbackLayer: View {
                         .font(.body.weight(.medium))
                         .padding(.horizontal, 16)
                         .padding(.vertical, 14)
-                        .background(.regularMaterial, in: .rect(cornerRadius: 12))
+                        .background { CrestSurfaceLayer(shape: .rect(cornerRadius: 12)) }
                         .padding(.leading, 16)
                         .padding(.bottom, context.destination == nil ? 16 : 56)
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
@@ -116,7 +116,7 @@ private struct BrowserMacDownloadFlightDrawing: AnimatableModifier {
                 .symbolRenderingMode(.hierarchical)
                 .foregroundStyle(.primary)
                 .frame(width: 42, height: 46)
-                .background(.regularMaterial, in: .rect(cornerRadius: 8))
+                .background { CrestSurfaceLayer(shape: .rect(cornerRadius: 8)) }
                 .shadow(color: .black.opacity(0.18), radius: 4, y: 2)
                 .scaleEffect(path.scale(at: progress) * (0.55 + 0.45 * appearance))
                 .opacity(appearance * (1 - min(max((progress - 0.9) / 0.1, 0), 1)))

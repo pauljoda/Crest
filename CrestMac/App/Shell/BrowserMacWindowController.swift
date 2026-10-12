@@ -42,7 +42,11 @@ final class BrowserMacWindowController: NSObject {
         window.closeGate = closeGate
         activity = BrowserMacWindowActivity(following: window)
         super.init()
-        kind.host(content(window).modifier(BrowserMacWindowActivity.Phase(activity: activity)), in: window)
+        kind.host(
+            content(window)
+                .modifier(BrowserMacWindowActivity.Phase(activity: activity))
+                .modifier(BrowserDeviceAppearanceEnvironment()),
+            in: window)
         NotificationCenter.default.addObserver(
             self, selector: #selector(windowWillClose), name: NSWindow.willCloseNotification, object: window)
     }

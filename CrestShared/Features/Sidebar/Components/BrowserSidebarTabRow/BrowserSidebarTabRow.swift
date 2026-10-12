@@ -6,7 +6,7 @@ import SwiftUI
 /// rename in flight, the height a drop indicator sizes itself against — and
 /// hands everything else to `BrowserSidebarTabRowConfiguration`. What differs
 /// between a pointer shell and a touch one is read from
-/// `BrowserSidebarInteractionPolicy` rather than from which target compiled
+/// `BrowserInteractionCapabilities` rather than from which target compiled
 /// the file, so the two shells share this row instead of a resemblance.
 struct BrowserSidebarTabRow: View {
     @Environment(BrowserSidebarInteractionState.self) private var sidebarInteraction
@@ -182,14 +182,9 @@ struct BrowserSidebarTabRow: View {
     }
 
     private func dismissFromAuxiliaryClick() {
+        let configuration = self.configuration
         guard configuration.isCurrentAndUnlocked else { return }
-        switch BrowserTabMiddleClickPolicy.action(for: tab.placement) {
-        case .close:
-            context.browser.closeTab(tab.id, matching: configuration.assignment)
-        case .unload:
-            guard configuration.isLoaded else { return }
-            context.unload(tab.id)
-        }
+        BrowserTabMiddleClickAction(for: tab.placement).perform(on: configuration)
     }
 
     private var isRenaming: Bool {

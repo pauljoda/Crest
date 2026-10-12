@@ -9,17 +9,11 @@ struct CrestPressFeedbackModifier: ViewModifier {
     func body(content: Content) -> some View {
         content
             .scaleEffect(
-                BrowserVisualAccessibilityPolicy.spatialScale(
-                    isPressed ? CrestButtonMetrics.pressedScale : 1,
-                    reduceMotion: reduceMotion
-                )
+                (isPressed ? CrestButtonMetrics.pressedScale : 1).unlessReducingMotion(reduceMotion)
             )
             .opacity(isEnabled ? 1 : CrestButtonMetrics.disabledOpacity)
             .animation(
-                BrowserVisualAccessibilityPolicy.animation(
-                    CrestMotion.press,
-                    reduceMotion: reduceMotion
-                ),
+                CrestMotion.press.unlessReducingMotion(reduceMotion),
                 value: isPressed
             )
     }

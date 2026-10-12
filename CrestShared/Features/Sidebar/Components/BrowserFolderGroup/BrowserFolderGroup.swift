@@ -114,8 +114,7 @@ struct BrowserFolderGroup: View {
                 color: folder.displayColor,
                 intensity: configuration.displayBranding?.folderColorIntensity ?? 0,
                 textColorMode: configuration.displayBranding?.textColorMode ?? .automatic,
-                leadingInset: CrestSpacing.small + CGFloat(depth) * BrowserFolderLayout.nestingIndent,
-                hasVisibleContents: showsContents || configuration.keptItem(for: collapsedTabVisibility) != nil,
+                depth: depth,
                 isSelected: BrowserSidebarSelection.showsSelected(.folder(folder.id), in: context),
                 folderID: folder.id, reorder: sidebarInteraction.sidebarReorderState)
         )
@@ -143,7 +142,7 @@ struct BrowserFolderGroup: View {
                 cancel: clearUnavailableDeferredActions
             )
         )
-        .padding(.vertical, BrowserFolderAppearancePolicy.regionInset)
+        .padding(.vertical, BrowserSidebarMetrics.containerSpacing)
     }
 
     /// Nested folders are children of the section they move with, so a parent's
@@ -155,7 +154,11 @@ struct BrowserFolderGroup: View {
         .equatable()
         .browserSidebarReorderSectionIndicator(
             .tabs(placement: folder.location, folderID: folder.id),
-            state: sidebarInteraction.sidebarReorderState)
+            state: sidebarInteraction.sidebarReorderState
+        )
+        // Each row says its own depth; this is for what the run draws between
+        // them, such as the slot a lift leaves.
+        .environment(\.sidebarLayerDepth, depth + 1)
     }
 
     private func beginCreatingChild() {
@@ -211,10 +214,7 @@ struct BrowserFolderGroup: View {
             return
         }
         withAnimation(
-            BrowserVisualAccessibilityPolicy.animation(
-                CrestMotion.disclosure,
-                reduceMotion: reduceMotion
-            )
+            CrestMotion.disclosure.unlessReducingMotion(reduceMotion)
         ) {
             let nextExpansion = folder.isCollapsed
             collapsedTabVisibility.expansionDidChange(

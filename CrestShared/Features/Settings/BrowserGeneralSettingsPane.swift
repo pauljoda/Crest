@@ -157,22 +157,13 @@ struct BrowserGeneralSettingsPane: View {
 
     @ViewBuilder
     private var defaultBrowserActions: some View {
-        switch defaultBrowser.requestStyle {
-        case .direct:
-            if defaultBrowser.status != .isDefault {
-                Button("Make Default") {
-                    Task { await defaultBrowser.requestDefault() }
-                }
-                .disabled(defaultBrowser.isWorking)
-                .accessibilityIdentifier("make-default-browser")
+        if defaultBrowser.status != .isDefault {
+            let style = defaultBrowser.requestStyle
+            Button(style.buttonTitle) {
+                style.request(defaultBrowser)
             }
-        case .systemSettings:
-            if defaultBrowser.status != .isDefault {
-                Button("Open Settings…") {
-                    defaultBrowser.openSystemSettings()
-                }
-                .accessibilityIdentifier("open-default-apps-settings")
-            }
+            .disabled(style.waitsForRequest && defaultBrowser.isWorking)
+            .accessibilityIdentifier(style.buttonIdentifier)
         }
     }
 

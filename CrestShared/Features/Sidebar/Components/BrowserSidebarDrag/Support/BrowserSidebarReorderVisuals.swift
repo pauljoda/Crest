@@ -9,6 +9,9 @@ enum BrowserSidebarReorderVisuals {
     /// is all that is left to say here.
     static let liftScale: CGFloat = 1.04
 
+    /// Whether the scrolling run of tabs clips its rows while nothing is lifted.
+    static let clipsScrollableRegionWhenIdle = true
+
     /// Whether the list keeps its normal scroll clip while a row is lifted.
     ///
     /// macOS draws the travelling copy in a window-level host, outside this

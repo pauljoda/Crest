@@ -178,11 +178,7 @@ struct BrowserTranslationToolbar: View {
             }
             .font(.callout.weight(.medium))
         } background: {
-            #if os(macOS)
-                Color(nsColor: .windowBackgroundColor)
-            #else
-                Color(uiColor: .secondarySystemBackground)
-            #endif
+            CrestSurfaceLayer(shape: Rectangle())
         }
         // Read only the externally proposed width. Nested ViewThatFits probes
         // repeatedly measured menus during floating-sidebar transitions and

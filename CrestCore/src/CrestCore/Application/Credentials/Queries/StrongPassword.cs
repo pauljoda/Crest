@@ -1,5 +1,4 @@
 using CrestCore.Application;
-using CrestCore.Domain;
 
 namespace CrestCore.Contracts;
 
@@ -9,7 +8,7 @@ public sealed record StrongPassword(int? Length) : Query<StrongPasswordRecipe> {
     #region Actions - Answering
 
     internal override StrongPasswordRecipe Answer(CrestApp app) {
-        return StrongPasswordPolicy.Recipe(Length);
+        return StrongPasswordRecipe.For(Length);
     }
 
     #endregion

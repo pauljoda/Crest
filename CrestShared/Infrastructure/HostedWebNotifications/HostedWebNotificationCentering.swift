@@ -1,7 +1,7 @@
 @MainActor
 protocol BrowserHostedWebNotificationCentering: AnyObject {
-    func currentAuthorization() async -> BrowserHostedWebNotificationAuthorization
-    func requestAuthorization() async -> BrowserHostedWebNotificationAuthorization
+    func currentAuthorization() async -> BrowserSystemAuthorization
+    func requestAuthorization() async -> BrowserSystemAuthorization
     func add(
         _ delivery: BrowserHostedWebNotificationDelivery,
         eventHandler: @escaping @MainActor (BrowserHostedWebNotificationEvent) -> Void

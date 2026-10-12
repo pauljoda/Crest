@@ -1,3 +1,5 @@
+using CrestCore.Application;
+
 namespace CrestCore.Contracts;
 
 /// A browser whose data Crest imports: what the person sees about it, where
@@ -183,6 +185,34 @@ public sealed class ImportSource {
     #region Actions - Lookup
 
     public static ImportSource? Named(string? name) => All.FirstOrDefault(source => source.Name == name);
+
+    #endregion
+
+    #region Actions - Passwords
+
+    /// How many of `passwords` belong with each of `spaces`, by Space. A
+    /// browser whose Spaces are its profiles gives a password to its own
+    /// profile's Space and to no other; one that names its own Spaces gives it
+    /// to every Space holding its site, or a site one of them is a subdomain
+    /// of. A browser that keeps no passwords routes none.
+    internal IReadOnlyDictionary<Guid, int> PasswordCounts(IReadOnlyList<ImportPasswordSource> passwords, IReadOnlyList<SpaceState> spaces) {
+        ArgumentNullException.ThrowIfNull(passwords);
+        var sites = SpaceSites.Of(spaces);
+        var counts = new Dictionary<Guid, int>();
+        foreach (var password in passwords)
+            foreach (var spaceId in SpacesFor(password, spaces, sites))
+                counts[spaceId] = counts.GetValueOrDefault(spaceId) + 1;
+        return counts;
+    }
+
+    /// The Spaces among `spaces` that `password` belongs with.
+    internal IEnumerable<Guid> SpacesFor(ImportPasswordSource password, IReadOnlyList<SpaceState> spaces,
+        IReadOnlyDictionary<Guid, SpaceSites> sites) {
+        if (!SuppliesPasswords) return [];
+        if (NamesItsSpaces) return spaces.Where(space => sites[space.Id].Holds(password.Host)).Select(space => space.Id);
+        var profile = spaces.FirstOrDefault(space => string.Equals(space.Settings.Name, password.ProfileName, StringComparison.Ordinal));
+        return profile is null ? [] : [profile.Id];
+    }
 
     #endregion
 

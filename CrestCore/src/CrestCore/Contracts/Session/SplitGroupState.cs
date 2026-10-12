@@ -1,3 +1,6 @@
+using CrestCore.Application;
+using CrestCore.Domain;
+
 namespace CrestCore.Contracts;
 
 /// <summary>
@@ -38,6 +41,42 @@ public sealed record SplitGroupState(
     /// <summary>The emoji the split shows as its icon, or null when it shows none.</summary>
     [Resolved]
     public string? DisplayEmojiIcon => EmojiIcon.Parse(CustomIconSymbol)?.Emoji;
+
+    #endregion
+
+    #region Actions - Repair
+
+    /// One metadata record per split. Repeated records merge field by field, the
+    /// later clock winning; the chosen icon stays opaque to the core.
+    internal static IReadOnlyList<SplitGroupState> Merged(IReadOnlyList<SplitGroupState> source) {
+        var groups = new List<SplitGroupState>();
+        foreach (var group in source) {
+            var normalized = group with {
+                CustomTitle = string.IsNullOrWhiteSpace(group.CustomTitle) ? null : group.CustomTitle.Trim(),
+                TitleModifiedAt = Normalized(group.TitleModifiedAt),
+                IconModifiedAt = Normalized(group.IconModifiedAt),
+                TintModifiedAt = Normalized(group.TintModifiedAt)
+            };
+            int index = groups.FindIndex(candidate => candidate.Id == group.Id);
+            if (index < 0) { groups.Add(normalized); continue; }
+            var previous = groups[index];
+            if (PreviousWins(previous.TitleModifiedAt, normalized.TitleModifiedAt))
+                normalized = normalized with { CustomTitle = previous.CustomTitle, TitleModifiedAt = previous.TitleModifiedAt };
+            if (PreviousWins(previous.IconModifiedAt, normalized.IconModifiedAt))
+                normalized = normalized with { CustomIconSymbol = previous.CustomIconSymbol, IconModifiedAt = previous.IconModifiedAt };
+            if (PreviousWins(previous.TintModifiedAt, normalized.TintModifiedAt))
+                normalized = normalized with { Tint = previous.Tint, TintModifiedAt = previous.TintModifiedAt };
+            groups[index] = normalized;
+        }
+        return [.. groups];
+    }
+
+    private static DateTimeOffset? Normalized(DateTimeOffset? clock) => clock is { } value ? BrowserEditTimestamp.Normalize(value) : null;
+
+    /// Whether an earlier record's field wins over a repeated record's.
+    private static bool PreviousWins(DateTimeOffset? previous, DateTimeOffset? current) =>
+        SyncRecordStamp.Later(current is { } value ? StoredSessionCodec.Seconds(value) : null,
+            previous is { } earlier ? StoredSessionCodec.Seconds(earlier) : null) == 1;
 
     #endregion
 }

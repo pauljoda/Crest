@@ -55,10 +55,7 @@ struct BrowserTransientPresentationState {
         // Pulling the card provides the emphasis without dimming the source.
         guard motionState == nil else { return 0 }
         let restingOpacity = presentationPhase == .staged ? 0.08 : 0.34
-        return BrowserVisualAccessibilityPolicy.scrimOpacity(
-            restingOpacity * (isCardVisible ? 1 : 0),
-            reduceTransparency: reduceTransparency
-        )
+        return (restingOpacity * (isCardVisible ? 1 : 0)).scrimOpacity(reduceTransparency: reduceTransparency)
     }
 
     // MARK: - Derivations behind the entrance
@@ -86,9 +83,6 @@ struct BrowserTransientPresentationState {
     /// behind a press that has not committed.
     private func cardScale(visible: CGFloat, staged: CGFloat) -> CGFloat {
         guard !isCardExpanded else { return 1 }
-        return BrowserVisualAccessibilityPolicy.spatialScale(
-            isCardVisible ? visible : staged,
-            reduceMotion: reduceMotion
-        )
+        return (isCardVisible ? visible : staged).unlessReducingMotion(reduceMotion)
     }
 }
