@@ -306,7 +306,7 @@ public sealed partial class BrowserContractsTests {
 
         Assert.True(Encoding.UTF8.GetByteCount(raw) <= SyncedAddress.MaximumBytes);
         Assert.False(new SyncedAddress(raw).IsPortable);
-        Assert.False(SyncContentPolicy.Includes(raw));
+        Assert.False(SyncedAddress.Includes(raw));
     }
 
     #endregion

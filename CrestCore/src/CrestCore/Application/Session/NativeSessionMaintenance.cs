@@ -219,7 +219,7 @@ public static class NativeSessionMaintenance {
 
     /// Whether an earlier record's field wins over a repeated record's.
     private static bool PreviousWins(DateTimeOffset? previous, DateTimeOffset? current) =>
-        SyncConflictPolicy.Latest(current is { } value ? StoredSessionCodec.Seconds(value) : null,
+        SyncRecordStamp.Later(current is { } value ? StoredSessionCodec.Seconds(value) : null,
             previous is { } earlier ? StoredSessionCodec.Seconds(earlier) : null) == 1;
 
     #endregion

@@ -3957,6 +3957,10 @@
     "2026-10-12-link-preferences-judge-themselves": {
       "category": "internal",
       "message": "Let link preferences, routes and schemes judge themselves"
+    },
+    "2026-10-12-sync-records-decide-conflicts": {
+      "category": "internal",
+      "message": "Let sync records, addresses and reasons decide their conflicts"
     }
   }
 }

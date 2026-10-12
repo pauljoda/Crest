@@ -25,7 +25,7 @@ public static class NativeSyncProjection {
     internal static string? SavedUrl(JsonNode tab) => Text(tab["savedURL"])
         ?? (Placement(tab).IsDurable ? Text(tab["url"]) : null);
 
-    internal static bool PortableTab(JsonNode tab) => SyncContentPolicy.IncludesTab(Text(tab["url"]), tab["nativeContent"] is not null, SavedUrl(tab));
+    internal static bool PortableTab(JsonNode tab) => SyncedAddress.IncludesTab(Text(tab["url"]), tab["nativeContent"] is not null, SavedUrl(tab));
 
     /// A stored archive record's reason as sync spells it. A reason this build
     /// does not know keeps its stored spelling.
@@ -111,7 +111,7 @@ public static class NativeSyncProjection {
             var tabTokens = Tokens(SyncPayloadType.Tab, tabs);
             for (int j = 0; j < tabs.Length; j++) Add(SyncPayloadType.Tab, Tab(tabs[j], space["id"]!, tabTokens[j], archived: false));
             if (!policy.HistoryAndArchive) continue;
-            foreach (var history in Items(space, StoredSessionCodec.Key.History).Where(h => SyncContentPolicy.Includes(Text(h!["url"])))) {
+            foreach (var history in Items(space, StoredSessionCodec.Key.History).Where(h => SyncedAddress.Includes(Text(h!["url"])))) {
                 var value = Fields(history!, "id", "url", "title", "firstVisitedAt", "lastVisitedAt", "visitCount");
                 value["spaceID"] = space["id"]!.DeepClone();
                 Spell(value, "url");

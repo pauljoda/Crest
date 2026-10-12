@@ -81,7 +81,7 @@ public static class NativeSyncEvaluator {
     /// other changed, such as a folder, belongs to the Space it left.
     public static JsonObject Resolve(JsonObject first, JsonObject second) {
         var aStamp = Stamp(first); var bStamp = Stamp(second);
-        int winner = SyncConflictPolicy.Winner(aStamp, bStamp);
+        int winner = SyncRecordStamp.Winner(aStamp, bStamp);
         var result = (winner == 0 ? first : second).DeepClone().AsObject();
         var a = Payload(first); var b = Payload(second);
         if (a is null || b is null || aStamp.Space != bStamp.Space) return result;
@@ -99,7 +99,7 @@ public static class NativeSyncEvaluator {
             string archiveName = tabs.Counterpart!.Kind.RecordName(Id(tab["id"]!["value"]));
             if (!byId.TryGetValue(archiveName, out var archiveRecord) || Payload(archiveRecord) is not { } archive) continue;
             var payload = Payload(tab)!;
-            bool active = SyncConflictPolicy.ActiveTabWins(Placement(payload), Date(payload, "lastActivatedAt")!.Value,
+            bool active = Placement(payload).KeepsTabOverArchive(Date(payload, "lastActivatedAt")!.Value,
                 Version(tab), ArchiveReason.Named(Text(archive, "reason")) ?? ArchiveReason.Closed, Date(archive, "archivedAt")!.Value,
                 Version(archiveRecord));
             byId.Remove(active ? archiveName : Name(tab));

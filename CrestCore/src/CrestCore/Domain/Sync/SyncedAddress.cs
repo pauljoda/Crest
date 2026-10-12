@@ -58,6 +58,24 @@ public readonly record struct SyncedAddress(string Text) {
 
     #endregion
 
+    #region Actions - Content
+
+    // Shared browser records describe portable web content, never an engine's
+    // internal pages, native documents, files, or extension execution state.
+
+    /// Whether a record whose address is `url` is shared: an address every
+    /// client reads is http or https, names a host and, spelled as every
+    /// client parses it, fits in `MaximumBytes` of UTF-8; a record whose
+    /// address does not stays on this device.
+    public static bool Includes(string? url) => url is not null && new SyncedAddress(url).IsPortable;
+
+    /// Whether a tab at `url`, saved at `savedUrl`, is shared: never a native
+    /// document, and only when both its addresses are.
+    public static bool IncludesTab(string? url, bool native, string? savedUrl)
+        => !native && Includes(url) && (savedUrl is null || Includes(savedUrl));
+
+    #endregion
+
     #region Actions - Parsing
 
     /// The address's parts, or null when it has no scheme or holds a host or
