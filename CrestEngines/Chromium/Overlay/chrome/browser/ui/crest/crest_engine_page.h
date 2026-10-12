@@ -24,6 +24,7 @@
 namespace crest {
 
 class EngineBinding;
+class PageAgent;
 class PageContent;
 class PageDocuments;
 class PageInfoBars;
@@ -184,6 +185,13 @@ class EnginePage final : public content::WebContentsObserver,
   bool ShowBlockedPopups();
   bool AddContentScript(std::string source, bool main_frame_only);
   bool EvaluateContentScript(const engine::Guid& evaluation, const std::string& source, const std::string& frame);
+  // The page's agent session, made the first time an agent uses the page; null
+  // while the page has no WebContents.
+  PageAgent* Agent();
+  // Keeps the page's console and network for an agent: at once on a live page,
+  // and on one still being made from the moment it goes live, before its first
+  // load.
+  bool ObserveActivity(bool observing);
   bool OpenInspector(std::optional<engine::InspectorPanel> panel);
   bool CloseInspector();
   bool Inspected() const;
@@ -352,6 +360,8 @@ class EnginePage final : public content::WebContentsObserver,
   std::unique_ptr<PageInfoBars> infobars_;
   std::unique_ptr<PageInspector> inspector_;
   std::unique_ptr<PageContent> content_;
+  std::unique_ptr<PageAgent> agent_;
+  bool observes_activity_ = false;
   std::unique_ptr<PageStore> store_;
 
   // What the page's view showed when it was last presented.

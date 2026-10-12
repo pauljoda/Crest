@@ -26,6 +26,9 @@ namespace crest {
 // the embedder range, far from the worlds extensions allocate upward, and the
 // patched evaluator awaits promises in this world only.
 inline constexpr int kContentWorldID = (1 << 29) - 1;
+// The isolated world an agent's scripts run in, just below Crest's own: the
+// page and Crest's content bridges never see it.
+inline constexpr int kAgentWorldID = (1 << 29) - 2;
 // Enabled only by the explicitly selected Crest host command-line switch.
 bool IsEnabled();
 // The platform's BrowserWindow for `browser` was created or destroyed. The

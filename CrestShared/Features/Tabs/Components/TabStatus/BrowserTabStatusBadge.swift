@@ -35,11 +35,11 @@ struct BrowserTabStatusBadge: View {
                 .resizable()
                 .scaledToFit()
                 .fontWeight(.semibold)
-                .foregroundStyle(.white)
+                .foregroundStyle(mark.glyph)
                 .contentTransition(.symbolEffect(.replace))
                 .frame(width: symbol, height: symbol)
                 .frame(width: diameter, height: diameter)
-                .glassEffect(.regular.tint(mark.tint.color).interactive(), in: .circle)
+                .glassEffect(.regular.tint(mark.tint).interactive(), in: .circle)
                 .frame(width: hitTarget, height: hitTarget)
                 .contentShape(.circle)
         }

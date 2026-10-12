@@ -14,6 +14,12 @@ final class WebKitEnginePages: EnginePages {
     private unowned let binding: WebKitEngineBinding
     /// The pages that hear the presentations about them.
     private var attached = AttachedEnginePages()
+    #if os(macOS)
+        /// What agents the person allowed do in the binding's pages.
+        private(set) lazy var agents = WebKitPageAgents(pages: self) { [weak self] presentation in
+            self?.attached.present(presentation)
+        }
+    #endif
 
     // MARK: - Initializers
 

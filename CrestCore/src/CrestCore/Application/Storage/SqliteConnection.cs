@@ -158,10 +158,11 @@ internal sealed class SqliteConnection : IDisposable {
         Execute("CREATE TABLE IF NOT EXISTS device_setup (id INTEGER PRIMARY KEY CHECK (id = 0), completed INTEGER NOT NULL)");
         Execute("CREATE TABLE IF NOT EXISTS device_tab_group (id TEXT PRIMARY KEY, space TEXT NOT NULL, engine TEXT NOT NULL, "
             + "title TEXT NOT NULL, color TEXT NOT NULL, position INTEGER NOT NULL)");
-        Execute("CREATE TABLE IF NOT EXISTS device_automation (id INTEGER PRIMARY KEY CHECK (id = 0), is_on INTEGER NOT NULL)");
-        Execute("CREATE TABLE IF NOT EXISTS device_automation_space (space TEXT PRIMARY KEY, position INTEGER NOT NULL)");
-        Execute("CREATE TABLE IF NOT EXISTS device_automation_tool (name TEXT NOT NULL, path TEXT NOT NULL, position INTEGER NOT NULL, "
-            + "PRIMARY KEY (name, path))");
+        Execute("CREATE TABLE IF NOT EXISTS device_agents (id INTEGER PRIMARY KEY CHECK (id = 0), is_on INTEGER NOT NULL, "
+            + "runs_scripts INTEGER NOT NULL)");
+        Execute("CREATE TABLE IF NOT EXISTS device_agent_space (space TEXT PRIMARY KEY, position INTEGER NOT NULL)");
+        Execute("CREATE TABLE IF NOT EXISTS device_agent (position INTEGER PRIMARY KEY, team TEXT, signing TEXT, path TEXT, "
+            + "client TEXT, name TEXT NOT NULL)");
     }
 
     /// Everything the device store holds. A row whose identities or names do
@@ -170,7 +171,7 @@ internal sealed class SqliteConnection : IDisposable {
         ReadLinks(), ReadSetupDraft(), ReadSetupCompleted(), ReadAdoptions(), ReadTabGroups(), ReadDefaultEngine()) {
         PaletteMemories = ReadPaletteMemories(),
         SearchCatalog = ReadSearchCatalog(),
-        Automation = ReadAutomation()
+        Agents = ReadAgents()
     };
 
     /// The search catalog the store keeps, or null when it keeps none or it does not read.
@@ -316,20 +317,30 @@ internal sealed class SqliteConnection : IDisposable {
         return links with { Routes = routes, RememberedSites = sites };
     }
 
-    /// The automation preferences: off, reaching nothing and trusting no tool
-    /// for a device that never chose any. A Space or tool that does not read
-    /// is left out.
-    private AutomationPreferences ReadAutomation() {
+    /// The agent preferences: off, reaching nothing and trusting no agent for a
+    /// device that never chose any. A Space or agent that does not read is
+    /// left out.
+    private AgentPreferences ReadAgents() {
         bool isOn = false;
-        Rows("SELECT is_on FROM device_automation", statement => isOn = Sqlite.sqlite3_column_int(statement, 0) != 0);
+        bool runsScripts = false;
+        Rows("SELECT is_on, runs_scripts FROM device_agents", statement => {
+            isOn = Sqlite.sqlite3_column_int(statement, 0) != 0;
+            runsScripts = Sqlite.sqlite3_column_int(statement, 1) != 0;
+        });
         var spaces = new List<Guid>();
-        Rows("SELECT space FROM device_automation_space ORDER BY position", statement => {
+        Rows("SELECT space FROM device_agent_space ORDER BY position", statement => {
             if (Identity(statement, 0) is { } space) spaces.Add(space);
         });
-        var tools = new List<AutomationTool>();
-        Rows("SELECT name, path FROM device_automation_tool ORDER BY position",
-            statement => tools.Add(new(Sqlite.ColumnText(statement, 0), Sqlite.ColumnText(statement, 1))));
-        return new(isOn, spaces, tools);
+        var approved = new List<ApprovedAgent>();
+        static string? Optional(nint statement, int column) =>
+            Sqlite.ColumnIsNull(statement, column) ? null : Sqlite.ColumnText(statement, column);
+        Rows("SELECT team, signing, path, client, name FROM device_agent ORDER BY position", statement => {
+            var identity = new AgentIdentity(Optional(statement, 0), Optional(statement, 1), Optional(statement, 2),
+                Optional(statement, 3));
+            if (identity.IsValid && AgentPreferences.CleanName(Sqlite.ColumnText(statement, 4)) is { } name)
+                approved.Add(new ApprovedAgent(identity, name));
+        });
+        return new(isOn, runsScripts, spaces, approved);
     }
 
     /// The unfinished manual setup, or null when the store keeps none or it
@@ -373,7 +384,7 @@ internal sealed class SqliteConnection : IDisposable {
         if (written is null || !records.TabGroups.SequenceEqual(written.TabGroups)) WriteTabGroups(records.TabGroups);
         WritePaletteMemories(records.PaletteMemories, written?.PaletteMemories);
         if (written is null || !ReferenceEquals(records.SearchCatalog, written.SearchCatalog)) WriteSearchCatalog(records.SearchCatalog);
-        if (written is null || !records.Automation.Equals(written.Automation)) WriteAutomation(records.Automation);
+        if (written is null || !records.Agents.Equals(written.Agents)) WriteAgents(records.Agents);
     }
 
     /// The search catalog as its one document, or no row before it was first restored.
@@ -399,28 +410,33 @@ internal sealed class SqliteConnection : IDisposable {
         }
     }
 
-    /// The automation preferences: whether they are on, and the allowed
-    /// Spaces and approved tools in order.
-    private void WriteAutomation(AutomationPreferences automation) {
-        foreach (var table in new[] { "device_automation", "device_automation_space", "device_automation_tool" })
+    /// The agent preferences: whether they are on and run scripts in pages,
+    /// and the allowed Spaces and approved agents in order.
+    private void WriteAgents(AgentPreferences preferences) {
+        foreach (var table in new[] { "device_agents", "device_agent_space", "device_agent" })
             Execute($"DELETE FROM {table}");
-        Insert("INSERT INTO device_automation(id, is_on) VALUES(0,?)",
-            statement => Checked(Sqlite.sqlite3_bind_int64(statement, 1, automation.IsOn ? 1 : 0)));
-        for (int position = 0; position < automation.SpaceIds.Count; position++) {
-            var space = automation.SpaceIds[position];
+        Insert("INSERT INTO device_agents(id, is_on, runs_scripts) VALUES(0,?,?)", statement => {
+            Checked(Sqlite.sqlite3_bind_int64(statement, 1, preferences.IsOn ? 1 : 0));
+            Checked(Sqlite.sqlite3_bind_int64(statement, 2, preferences.RunsScripts ? 1 : 0));
+        });
+        for (int position = 0; position < preferences.SpaceIds.Count; position++) {
+            var space = preferences.SpaceIds[position];
             int index = position;
-            Insert("INSERT INTO device_automation_space(space, position) VALUES(?,?)", statement => {
+            Insert("INSERT INTO device_agent_space(space, position) VALUES(?,?)", statement => {
                 Bind(statement, 1, Spelling(space));
                 Checked(Sqlite.sqlite3_bind_int64(statement, 2, index));
             });
         }
-        for (int position = 0; position < automation.Tools.Count; position++) {
-            var tool = automation.Tools[position];
+        for (int position = 0; position < preferences.Agents.Count; position++) {
+            var agent = preferences.Agents[position];
             int index = position;
-            Insert("INSERT INTO device_automation_tool(name, path, position) VALUES(?,?,?)", statement => {
-                Bind(statement, 1, tool.Name);
-                Bind(statement, 2, tool.Path);
-                Checked(Sqlite.sqlite3_bind_int64(statement, 3, index));
+            Insert("INSERT INTO device_agent(position, team, signing, path, client, name) VALUES(?,?,?,?,?,?)", statement => {
+                Checked(Sqlite.sqlite3_bind_int64(statement, 1, index));
+                Bind(statement, 2, agent.Identity.TeamId);
+                Bind(statement, 3, agent.Identity.SigningId);
+                Bind(statement, 4, agent.Identity.Path);
+                Bind(statement, 5, agent.Identity.Client);
+                Bind(statement, 6, agent.Name);
             });
         }
     }

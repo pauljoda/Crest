@@ -275,6 +275,16 @@ class EngineBinding {
   bool Handle(const engine::ShowBlockedPopups& request);
   bool Handle(const engine::AddContentScript& request);
   bool Handle(const engine::EvaluateContentScript& request);
+  bool Handle(const engine::EvaluatePageScript& request);
+  bool Handle(const engine::ClickPage& request);
+  bool Handle(const engine::HoverPage& request);
+  bool Handle(const engine::ScrollPage& request);
+  bool Handle(const engine::TypeInPage& request);
+  bool Handle(const engine::PressKeyInPage& request);
+  bool Handle(const engine::ObservePageActivity& request);
+  engine::PageConsoleLog Handle(const engine::ReadPageConsole& request);
+  engine::PageNetworkLog Handle(const engine::ReadPageNetwork& request);
+  bool Handle(const engine::HoldPageRendering& request);
   bool Handle(const engine::RefreshStoreListing& request);
   bool Handle(const engine::OpenInspector& request);
   bool Handle(const engine::CloseInspector& request);

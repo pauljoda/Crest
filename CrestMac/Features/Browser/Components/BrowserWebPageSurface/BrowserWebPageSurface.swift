@@ -16,6 +16,12 @@ struct BrowserWebPageSurface: View {
     /// knows it; the sharing bars lead there.
     var goToSharingCounterpart: (() -> Void)? = nil
 
+    /// The agent using the page's tab now, when one does.
+    private var agent: AgentSessionState? {
+        guard let tabID = browser.core.state.pages[page.corePage.id]?.tabID else { return nil }
+        return browser.core.state.agentSessions.first { $0.tabIDs.contains(tabID) }
+    }
+
     var body: some View {
         ZStack(alignment: .top) {
             BrowserPlatformWebView(
@@ -55,6 +61,17 @@ struct BrowserWebPageSurface: View {
 
             if !page.visibleEngineInfoBars.isEmpty {
                 BrowserEngineInfoBarStack(page: page, goToSharingCounterpart: goToSharingCounterpart)
+            }
+
+            if let agent {
+                BrowserAgentPageBar(session: agent) {
+                    if let tabID = browser.core.state.pages[page.corePage.id]?.tabID {
+                        _ = try? browser.core.send(StopAgentTab(tabID: tabID))
+                    }
+                }
+                .padding(BrowserWebPageSurfaceMetrics.overlayPadding)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+                .transition(.opacity)
             }
 
             BrowserWebPageFailureOverlay(

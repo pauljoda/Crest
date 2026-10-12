@@ -21,9 +21,9 @@ final class BrowserMacApplication {
     let spaceAccess: BrowserSpaceAccessController
     /// The app's one passkey controller: pages refresh it and settings show it.
     let passkeyAccess: BrowserPasskeyAccessController
-    /// Whether tools can reach Crest now: automation keeps it and settings
-    /// show it.
-    let automationEndpoint = BrowserAutomationEndpointStatus()
+    /// Whether agents can reach Crest now: the agent service keeps it and
+    /// settings show it.
+    let agentEndpoint = BrowserAgentEndpointStatus()
     let shortcuts: BrowserShortcutStore
     let spaceSettingsPresentation: BrowserSpaceSettingsPresentationState
     let softwareUpdates: BrowserSoftwareUpdateService
@@ -335,7 +335,7 @@ final class BrowserMacApplication {
         )
         .environment(softwareUpdates)
         .environment(passkeyAccess)
-        .environment(automationEndpoint)
+        .environment(agentEndpoint)
         .environment(browser.core)
         .environment(browser.core.engines)
         .environment(\.browserSidebarWidgetRuntime, sidebarWidgets)
@@ -355,7 +355,7 @@ final class BrowserMacApplication {
         .modifier(BrowserChromeAppearancePersistence())
         .environment(softwareUpdates)
         .environment(passkeyAccess)
-        .environment(automationEndpoint)
+        .environment(agentEndpoint)
         .environment(privateBrowser.core)
         .environment(privateBrowser.core.engines)
         .environment(

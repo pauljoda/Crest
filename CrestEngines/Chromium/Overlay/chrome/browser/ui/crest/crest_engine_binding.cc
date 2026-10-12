@@ -14,6 +14,7 @@
 #include "chrome/browser/profiles/profile.h"
 #include "chrome/browser/ui/crest/crest_chrome_hooks.h"
 #include "chrome/browser/ui/crest/crest_download_hooks.h"
+#include "chrome/browser/ui/crest/crest_engine_agent.h"
 #include "chrome/browser/download/download_confirmation_result.h"
 #include "ui/shell_dialogs/selected_file_info.h"
 #include "chrome/browser/ui/crest/crest_engine_browsers.h"
@@ -1105,6 +1106,67 @@ bool EngineBinding::Handle(const engine::AddContentScript& request) {
 bool EngineBinding::Handle(const engine::EvaluateContentScript& request) {
   EnginePage* page = Find(GuidText(request.page_id));
   return page && page->EvaluateContentScript(request.evaluation_id, request.source, request.frame_id);
+}
+
+// An agent's requests reach only pages of the persistent profiles the core
+// let it use; the core and the platform decide which, never the page.
+bool EngineBinding::Handle(const engine::EvaluatePageScript& request) {
+  EnginePage* page = Find(GuidText(request.page_id));
+  PageAgent* agent = page ? page->Agent() : nullptr;
+  return agent && agent->Evaluate(request.evaluation_id, request.source, request.world);
+}
+
+bool EngineBinding::Handle(const engine::ClickPage& request) {
+  EnginePage* page = Find(GuidText(request.page_id));
+  PageAgent* agent = page ? page->Agent() : nullptr;
+  return agent && agent->Click(request.input_id, request.point, request.button, request.count, request.modifiers);
+}
+
+bool EngineBinding::Handle(const engine::HoverPage& request) {
+  EnginePage* page = Find(GuidText(request.page_id));
+  PageAgent* agent = page ? page->Agent() : nullptr;
+  return agent && agent->Hover(request.input_id, request.point);
+}
+
+bool EngineBinding::Handle(const engine::ScrollPage& request) {
+  EnginePage* page = Find(GuidText(request.page_id));
+  PageAgent* agent = page ? page->Agent() : nullptr;
+  return agent && agent->Scroll(request.input_id, request.point, request.delta_x, request.delta_y);
+}
+
+bool EngineBinding::Handle(const engine::TypeInPage& request) {
+  EnginePage* page = Find(GuidText(request.page_id));
+  PageAgent* agent = page ? page->Agent() : nullptr;
+  return agent && agent->Type(request.input_id, request.text);
+}
+
+bool EngineBinding::Handle(const engine::PressKeyInPage& request) {
+  EnginePage* page = Find(GuidText(request.page_id));
+  PageAgent* agent = page ? page->Agent() : nullptr;
+  return agent && agent->PressKey(request.input_id, request.key, request.modifiers);
+}
+
+bool EngineBinding::Handle(const engine::ObservePageActivity& request) {
+  EnginePage* page = Find(GuidText(request.page_id));
+  return page && page->ObserveActivity(request.observing);
+}
+
+engine::PageConsoleLog EngineBinding::Handle(const engine::ReadPageConsole& request) {
+  EnginePage* page = Find(GuidText(request.page_id));
+  PageAgent* agent = page ? page->Agent() : nullptr;
+  return agent ? agent->Console(request.after) : engine::PageConsoleLog{};
+}
+
+engine::PageNetworkLog EngineBinding::Handle(const engine::ReadPageNetwork& request) {
+  EnginePage* page = Find(GuidText(request.page_id));
+  PageAgent* agent = page ? page->Agent() : nullptr;
+  return agent ? agent->Network(request.after) : engine::PageNetworkLog{};
+}
+
+bool EngineBinding::Handle(const engine::HoldPageRendering& request) {
+  EnginePage* page = Find(GuidText(request.page_id));
+  PageAgent* agent = page ? page->Agent() : nullptr;
+  return agent && agent->HoldRendering(request.held, request.width, request.height);
 }
 
 bool EngineBinding::Handle(const engine::RefreshStoreListing& request) {

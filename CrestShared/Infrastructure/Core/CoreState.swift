@@ -51,14 +51,21 @@ final class CoreState {
         set { publish(newValue, into: \.enginePreferencesStorage, as: \.enginePreferences) }
     }
     @ObservationIgnored private var enginePreferencesStorage = EnginePreferences(defaultEngine: nil, rules: [])
-    /// Whether local tools may control Crest on this device, the Spaces they
-    /// may reach and the tools the person approved.
-    var automationPreferences: AutomationPreferences {
-        get { observed(\.automationPreferencesStorage, as: \.automationPreferences) }
-        set { publish(newValue, into: \.automationPreferencesStorage, as: \.automationPreferences) }
+    /// Whether agents may use Crest on this device, whether they may run
+    /// scripts in pages, the Spaces they may reach and the agents the person
+    /// allowed.
+    var agentPreferences: AgentPreferences {
+        get { observed(\.agentPreferencesStorage, as: \.agentPreferences) }
+        set { publish(newValue, into: \.agentPreferencesStorage, as: \.agentPreferences) }
     }
-    @ObservationIgnored private var automationPreferencesStorage = AutomationPreferences(
-        isOn: false, spaceIDs: [], tools: [])
+    @ObservationIgnored private var agentPreferencesStorage = AgentPreferences(
+        isOn: false, runsScripts: false, spaceIDs: [], agents: [])
+    /// The agents connected now, with the tabs each uses.
+    var agentSessions: [AgentSessionState] {
+        get { observed(\.agentSessionsStorage, as: \.agentSessions) }
+        set { publish(newValue, into: \.agentSessionsStorage, as: \.agentSessions) }
+    }
+    @ObservationIgnored private var agentSessionsStorage: [AgentSessionState] = []
     /// The newest file revision the core has on disk, counting the stored
     /// session's edits and this device's saved windows; zero before its first
     /// save and for a core that keeps nothing.

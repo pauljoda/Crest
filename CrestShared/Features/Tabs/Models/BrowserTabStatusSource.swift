@@ -20,6 +20,13 @@ struct BrowserTabStatusSource {
     /// Playing card is hidden.
     var mediaSession: BrowserMediaSessionSnapshot? { context.mediaSession(of: tabID) }
 
+    #if os(macOS)
+        /// The agent using the tab now, when one does.
+        var agentSession: AgentSessionState? {
+            context.browser.core.state.agentSessions.first { $0.tabIDs.contains(tabID) }
+        }
+    #endif
+
     /// Whether another page shares the tab's page.
     var isShared: Bool { context.isSharedAsTab(tabID) }
 
@@ -47,6 +54,19 @@ struct BrowserTabStatusSource {
     func setMuted(_ muted: Bool) {
         context.setMuted(muted, of: tabID)
     }
+
+    #if os(macOS)
+        /// Stops every agent using the tab from using it.
+        func stopAgent() {
+            _ = try? context.browser.core.send(StopAgentTab(tabID: tabID))
+        }
+
+        /// Disconnects the agent using the tab.
+        func disconnectAgent() {
+            guard let session = agentSession else { return }
+            _ = try? context.browser.core.send(EndAgentSession(sessionID: session.sessionID))
+        }
+    #endif
 
     /// Stops every tab sharing the tab's page takes part in.
     func stopSharing() {

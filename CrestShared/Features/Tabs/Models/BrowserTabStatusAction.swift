@@ -37,6 +37,22 @@ struct BrowserTabStatusAction {
         role: .destructive
     ) { $0.stopSharing() }
 
+    #if os(macOS)
+        static let stopAgent = Self(
+            title: LocalizedStringResource(
+                "Stop Agent in This Tab", comment: "Stops the agent using a tab from using it."),
+            symbol: "hand.raised",
+            role: .destructive
+        ) { $0.stopAgent() }
+
+        static let disconnectAgent = Self(
+            title: LocalizedStringResource(
+                "Disconnect Agent", comment: "Disconnects the agent using a tab from Crest."),
+            symbol: "xmark.circle",
+            role: .destructive
+        ) { $0.disconnectAgent() }
+    #endif
+
     // MARK: - Variables
 
     let title: LocalizedStringResource

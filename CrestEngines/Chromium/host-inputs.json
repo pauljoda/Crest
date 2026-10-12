@@ -13,7 +13,7 @@
   },
   "chrome/browser/ui/BUILD.gn": {
     "before": "ba3df68bc08591e6b7598d5c146a6353c8d2a026f2aa538936519e61dfdf5b59",
-    "after": "7e542a6a6a83176ae4cfc50373448dc4eb73c5e5183f7de3713d162b3851fa0f"
+    "after": "21ab67b6ce2a1c057d90bc5ff9ba93e24ede90b048d4c9280c6208f9ead511dc"
   },
   "chrome/browser/ui/tabs/tab_features.cc": {
     "before": "b40bccb7a821ed1ca4d7ecaf32fe11fcd771b2691fc473a15bfbd8cf3302a08e",
@@ -157,7 +157,7 @@
   },
   "content/browser/renderer_host/render_frame_host_impl.cc": {
     "before": "fc4660abf76c237ba64d15a4fd099f504098248305bd09c23aeee525fc90bdd3",
-    "after": "b69b39d71fd69a7085207213a42f3c3eda667756dda91f608d0b59fe9778fb16"
+    "after": "3441564f134d589bd186c4705102d8a99d889ad64f64d2a4e107718c2ef15d54"
   },
   "content/public/browser/web_contents_delegate.h": {
     "before": "1dfcb8e47f43746e0b7b83f395a47f633bcaf3b34d937ee1fc87ffc8f40bd896",
@@ -213,7 +213,7 @@
   },
   "third_party/blink/renderer/core/frame/local_frame_mojo_handler.cc": {
     "before": "9311613afbf96a6d5a10e87d8f78c633f3ac29948550144d2b2870f899263862",
-    "after": "cd9d2d3d2826637f7ca9c91ac4d12558b22acde9d625b1546391ebd91057daf9"
+    "after": "ccacdca07a972db9d73715808114a93e071062e2be80cbbe34354a03d4508e5b"
   },
   "chrome/browser/ui/views/bubble_anchor_util_views.cc": {
     "before": "83e95e1bc4b0f8468d3fb3b515a889e0078c7e22c5085d71e808bd897b92161c",

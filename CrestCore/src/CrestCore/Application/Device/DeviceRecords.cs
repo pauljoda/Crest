@@ -21,7 +21,7 @@ internal sealed record TabGroupRecord(Guid Id, Guid SpaceId, EngineKind Engine, 
 /// unfinished manual setup it keeps for the next launch, whether this device
 /// has completed setup, what it has adopted from an installed release, the
 /// tab groups whose folders follow them, the site searches, what each
-/// persistent Space's palette remembers, and the automation preferences.
+/// persistent Space's palette remembers, and the agent preferences.
 internal sealed record DeviceRecords(IReadOnlyList<SavedWindow> Windows, IReadOnlyList<Guid> Reopening,
     IReadOnlyList<SitePermissionRecord> SitePermissions, IReadOnlyList<SiteEngineChoice> SiteEngines, ShortcutOverrides Shortcuts,
     LinkPreferences Links, KeptSetupDraft? SetupDraft, bool SetupCompleted, IReadOnlySet<DeviceAdoption> Adopted,
@@ -41,8 +41,8 @@ internal sealed record DeviceRecords(IReadOnlyList<SavedWindow> Windows, IReadOn
     /// The device's search catalog, or null before the platform first restored it.
     public SearchCatalog? SearchCatalog { get; init; }
 
-    /// Whether local tools may control Crest, and what the person allowed them.
-    public AutomationPreferences Automation { get; init; } = AutomationPreferences.Off;
+    /// Whether agents may use Crest, and what the person allowed them.
+    public AgentPreferences Agents { get; init; } = AgentPreferences.Off;
 
     #endregion
 
@@ -70,7 +70,7 @@ internal sealed record DeviceRecords(IReadOnlyList<SavedWindow> Windows, IReadOn
         && Equals(SearchCatalog, other.SearchCatalog)
         && PaletteMemories.Count == other.PaletteMemories.Count
         && PaletteMemories.All(entry => other.PaletteMemories.TryGetValue(entry.Key, out var memory) && ReferenceEquals(memory, entry.Value))
-        && Automation.Equals(other.Automation);
+        && Agents.Equals(other.Agents);
 
     public override int GetHashCode() => HashCode.Combine(Windows.Count, SitePermissions.Count, Adopted.Count);
 

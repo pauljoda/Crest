@@ -230,7 +230,7 @@
        // If the web authentication request is still pending, remove it from the
 --- a/chrome/browser/ui/BUILD.gn
 +++ b/chrome/browser/ui/BUILD.gn
-@@ -2318,6 +2318,47 @@
+@@ -2318,6 +2318,49 @@
      sources += [
        "browser_commands_mac.h",
        "browser_commands_mac.mm",
@@ -241,6 +241,8 @@
 +      "crest/crest_app.h",
 +      "crest/crest_core.h",
 +      "crest/crest_engine.h",
++      "crest/crest_engine_agent.cc",
++      "crest/crest_engine_agent.h",
 +      "crest/crest_engine_binding.cc",
 +      "crest/crest_engine_binding.h",
 +      "crest/crest_engine_browsers.cc",
@@ -1279,14 +1281,15 @@
  #include "content/public/browser/web_ui_url_loader_factory.h"
  #include "content/public/common/alternative_error_page_override_info.mojom.h"
  #include "content/public/common/bindings_policy.h"
-@@ -3937,7 +3938,9 @@
+@@ -3937,7 +3938,10 @@
      int32_t world_id) {
    CHECK_CURRENTLY_ON(BrowserThread::UI);
    CHECK_GT(world_id, ISOLATED_WORLD_ID_GLOBAL);
 -  CHECK_LE(world_id, ISOLATED_WORLD_ID_MAX);
-+  // Crest's content-bridge world sits at the top of the embedder range, above
-+  // every world Chromium or its extensions allocate.
-+  CHECK(world_id <= ISOLATED_WORLD_ID_MAX || world_id == (1 << 29) - 1);
++  // Crest's content-bridge world and its agent world sit at the top of the
++  // embedder range, above every world Chromium or its extensions allocate.
++  CHECK(world_id <= ISOLATED_WORLD_ID_MAX || world_id == (1 << 29) - 1 ||
++        world_id == (1 << 29) - 2);
    AssertFrameWasCommitted();
  
    const bool wants_result = !callback.is_null();
@@ -1853,15 +1856,17 @@
      if (contents_view->web_contents() == web_contents) {
 --- a/third_party/blink/renderer/core/frame/local_frame_mojo_handler.cc
 +++ b/third_party/blink/renderer/core/frame/local_frame_mojo_handler.cc
-@@ -980,7 +980,10 @@
+@@ -980,7 +980,12 @@
        wants_result
            ? mojom::blink::WantResultOption::kWantResultDateAndRegExpAllowed
            : mojom::blink::WantResultOption::kNoResult,
 -      mojom::blink::PromiseResultOption::kDoNotWait,
 +      // Crest's content-bridge world, crest::kContentWorldID, delivers its
-+      // messages by resolving a promise the browser is waiting on.
-+      world_id == (1 << 29) - 1 ? mojom::blink::PromiseResultOption::kAwait
-+                                : mojom::blink::PromiseResultOption::kDoNotWait,
++      // messages by resolving a promise the browser is waiting on, and an
++      // agent's scripts, in crest::kAgentWorldID, answer when they settle.
++      world_id == (1 << 29) - 1 || world_id == (1 << 29) - 2
++          ? mojom::blink::PromiseResultOption::kAwait
++          : mojom::blink::PromiseResultOption::kDoNotWait,
        /*is_injected_extension_script=*/false);
  }
  

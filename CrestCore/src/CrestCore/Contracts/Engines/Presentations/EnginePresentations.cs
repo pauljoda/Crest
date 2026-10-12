@@ -103,6 +103,21 @@ public sealed record ContentScriptEvaluated(Guid PageId, Guid EvaluationId, stri
 
 #endregion
 
+#region Agents
+
+/// What `EvaluatePageScript` `EvaluationId` settled with: its value as JSON,
+/// or the message of the error it threw, or neither when its document went
+/// away first.
+public sealed record PageScriptEvaluated(Guid PageId, Guid EvaluationId, string? Json, string? Error)
+    : EnginePagePresentation(PageId);
+
+/// Whether the engine delivered input `InputId` to the page, and whether the
+/// page sees it as the person's own input rather than script events.
+public sealed record PageInputDelivered(Guid PageId, Guid InputId, bool Delivered, bool Trusted)
+    : EnginePagePresentation(PageId);
+
+#endregion
+
 #region Info Bars
 
 /// The bar `InfoBarShown` presented is gone.

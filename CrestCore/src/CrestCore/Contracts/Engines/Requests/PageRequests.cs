@@ -333,3 +333,119 @@ public sealed record RestoreInteractionState(Guid PageId, byte[] State, string E
 public sealed record SaveInteractionState(Guid PageId) : PageRequest<InteractionState>;
 
 #endregion
+
+#region Agents
+
+/// Runs `Source`, the body of an async JavaScript function, in the main frame
+/// of the page's document in `World`, and presents `PageScriptEvaluated` with
+/// `EvaluationId` once it settles. False when the page has no document to run
+/// it in.
+public sealed record EvaluatePageScript(Guid PageId, Guid EvaluationId, string Source, PageScriptWorld World)
+    : PageRequest<bool>;
+
+/// Where a script an agent asked for runs: the agent world, which the page
+/// and Crest's own content scripts never see, or the page's own world.
+public enum PageScriptWorld {
+    Agent,
+    Page
+}
+
+/// Presses and releases `Button` `Count` times at `Point` in the page's view,
+/// and presents `PageInputDelivered` with `InputId`.
+public sealed record ClickPage(Guid PageId, Guid InputId, PagePoint Point, PointerButton Button, int Count,
+    KeyModifiers Modifiers) : PageRequest<bool>;
+
+/// Moves the pointer to `Point` in the page's view, and presents
+/// `PageInputDelivered` with `InputId`.
+public sealed record HoverPage(Guid PageId, Guid InputId, PagePoint Point) : PageRequest<bool>;
+
+/// Scrolls `DeltaX` and `DeltaY` CSS pixels at `Point` in the page's view,
+/// and presents `PageInputDelivered` with `InputId`.
+public sealed record ScrollPage(Guid PageId, Guid InputId, PagePoint Point, double DeltaX, double DeltaY)
+    : PageRequest<bool>;
+
+/// Types `Text` into whatever the page has focused, and presents
+/// `PageInputDelivered` with `InputId`.
+public sealed record TypeInPage(Guid PageId, Guid InputId, string Text) : PageRequest<bool>;
+
+/// Presses and releases `Key` with `Modifiers` held, and presents
+/// `PageInputDelivered` with `InputId`.
+public sealed record PressKeyInPage(Guid PageId, Guid InputId, PageKey Key, KeyModifiers Modifiers)
+    : PageRequest<bool>;
+
+/// A point in a page's viewport, in CSS pixels from its top left, as the
+/// page's own scripts measure it.
+public sealed record PagePoint(double X, double Y);
+
+/// The pointer button input presses.
+public enum PointerButton {
+    Primary,
+    Secondary,
+    Middle
+}
+
+/// The modifier keys input holds down.
+[Flags]
+public enum KeyModifiers {
+    None = 0,
+    Shift = 1,
+    Control = 2,
+    Option = 4,
+    Command = 8
+}
+
+/// A key as the DOM names it: `Key` is a KeyboardEvent key such as "Enter" or
+/// "a", `Code` the physical key such as "KeyA", `KeyCode` the virtual key code
+/// pages still read, and `Text` what the key types, if anything.
+public sealed record PageKey(string Key, string Code, int KeyCode, string? Text);
+
+/// Starts or stops keeping the page's console messages and network requests,
+/// a bounded number of each, newest last. A page its engine is still making
+/// starts when it is ready, before its first load. Stopping forgets what was
+/// kept.
+public sealed record ObservePageActivity(Guid PageId, bool Observing) : PageRequest<bool>;
+
+/// The console messages the page kept after sequence `After`, oldest first.
+public sealed record ReadPageConsole(Guid PageId, long After) : PageRequest<PageConsoleLog>;
+
+/// The network requests the page kept after sequence `After`, oldest first.
+public sealed record ReadPageNetwork(Guid PageId, long After) : PageRequest<PageNetworkLog>;
+
+/// Console messages a page kept, and how many older ones it let go since it
+/// started keeping them.
+public sealed record PageConsoleLog(IReadOnlyList<PageConsoleMessage> Messages, long Dropped);
+
+/// A message a page's scripts wrote to the console, or an error they threw.
+public sealed record PageConsoleMessage(long Sequence, PageConsoleLevel Level, string Text, string? Source, int Line,
+    DateTimeOffset At);
+
+/// How severe a console message is.
+public enum PageConsoleLevel {
+    Debug,
+    Log,
+    Info,
+    Warning,
+    Error
+}
+
+/// Network requests a page kept, and how many older ones it let go since it
+/// started keeping them.
+public sealed record PageNetworkLog(IReadOnlyList<PageNetworkRequest> Requests, long Dropped);
+
+/// A request a page made: what it asked for and, once answered, its status,
+/// type, headers, size and how long it took, or why it failed. `Status` is 0
+/// and `Duration` 0 while it runs. An engine that cannot see a field leaves it
+/// empty.
+public sealed record PageNetworkRequest(long Sequence, string Url, string Method, string ResourceType, int Status,
+    string? MimeType, IReadOnlyList<PageHeader> RequestHeaders, IReadOnlyList<PageHeader> ResponseHeaders,
+    DateTimeOffset Started, double Duration, long Bytes, string? Failure);
+
+/// A header of a request or response.
+public sealed record PageHeader(string Name, string Value);
+
+/// Keeps the page rendering at `Width` by `Height` points while no window
+/// shows it, so an agent's captures, scripts and input reach it, or lets it
+/// rest again.
+public sealed record HoldPageRendering(Guid PageId, bool Held, double Width, double Height) : PageRequest<bool>;
+
+#endregion

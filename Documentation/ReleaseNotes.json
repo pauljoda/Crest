@@ -3861,6 +3861,18 @@
     "automation-windows-and-controls": {
       "category": "improved",
       "message": "Local automation tools can open normal, blank, private and Quick Windows, reload tabs, and bring tabs forward by opening a window when none is open."
+    },
+    "agents-use-crest": {
+      "category": "new",
+      "message": "On Mac, coding agents such as Claude Code and Codex can use Crest as their browser in the Spaces you choose: open and read tabs, click and type, take screenshots, and read a page’s console and network requests. Turn it on in Settings › Agents. Crest asks before each new agent connects, and every tab an agent uses shows its badge."
+    },
+    "mcp-browser-history-providers-and-windows": {
+      "category": "improved",
+      "message": "Connected tools can search browsing history, use your search providers, and open pages in Quick, Private, or chosen Space windows."
+    },
+    "quick-window-extension-password-prompts": {
+      "category": "fixed",
+      "message": "Keep extension password prompts working in Quick Windows."
     }
   }
 }
