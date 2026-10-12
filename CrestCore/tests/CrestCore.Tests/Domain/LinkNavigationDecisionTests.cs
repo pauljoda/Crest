@@ -5,7 +5,7 @@ using Xunit;
 
 namespace CrestCore.Tests;
 
-public sealed class LinkNavigationPolicyTests {
+public sealed class LinkNavigationDecisionTests {
     [Theory]
     [InlineData(true, false, false, "option", "backgroundTab")]
     [InlineData(false, true, false, "option", "peekModifier")]
@@ -83,6 +83,6 @@ public sealed class LinkNavigationPolicyTests {
     private static LinkNavigationDecision Decide(string? url = "https://example.com/", bool userLink = true,
         bool topLevel = true, bool peek = false, bool newTab = false, bool shift = false, bool focus = false,
         bool owned = true, string? placement = "saved", string? savedUrl = "https://apple.com/", bool automatic = true) =>
-        LinkNavigationPolicy.Decide(url, userLink, topLevel, peek, newTab, shift, focus, owned, TabPlacement.Named(placement), savedUrl,
+        LinkNavigationDecision.For(url, userLink, topLevel, peek, newTab, shift, focus, owned, TabPlacement.Named(placement), savedUrl,
             automatic);
 }

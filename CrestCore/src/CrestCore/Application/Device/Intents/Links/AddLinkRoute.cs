@@ -17,7 +17,7 @@ public sealed record AddLinkRoute(Guid RouteId, Guid DestinationSpaceId) : LinkI
     #region Actions - Device
 
     internal override void Apply(Device device, DeviceTurn turn) =>
-        device.ReviseLinks(turn.Changes, links => LinkPreferencePolicy.Adding(links, this));
+        device.ReviseLinks(turn.Changes, links => links.Adding(this));
 
     #endregion
 }

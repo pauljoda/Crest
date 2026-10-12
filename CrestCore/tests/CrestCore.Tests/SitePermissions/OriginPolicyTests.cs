@@ -30,32 +30,32 @@ public sealed class OriginPolicyTests {
     [InlineData("zoommtg", false, "handOff")]
     [InlineData(null, false, "engine")]
     public void SchemesAreKeptBlockedOrHandedOff(string? scheme, bool appInitiated, string expected) =>
-        Assert.Equal(expected, ExternalSchemePolicy.Disposition(scheme, appInitiated).Name);
+        Assert.Equal(expected, UrlScheme.DispositionOf(scheme, appInitiated).Name);
 
     [Fact]
     public void AnOverlongSchemeIsRefused() =>
-        Assert.Equal(ExternalSchemeDisposition.Blocked, ExternalSchemePolicy.Disposition(new string('a', 300), false));
+        Assert.Equal(ExternalSchemeDisposition.Blocked, UrlScheme.DispositionOf(new string('a', 300), false));
 
     [Fact]
     public void WebLinksNeedHttpOrHttpsAndAHost() {
-        Assert.True(ExternalUrlPolicy.AcceptsWebLink("HTTPS", "example.com"));
-        Assert.True(ExternalUrlPolicy.AcceptsWebLink("http", "example.com"));
-        Assert.False(ExternalUrlPolicy.AcceptsWebLink("https", ""));
-        Assert.False(ExternalUrlPolicy.AcceptsWebLink("file", null));
-        Assert.False(ExternalUrlPolicy.AcceptsWebLink("javascript", "example.com"));
-        Assert.False(ExternalUrlPolicy.AcceptsWebLink(null, "example.com"));
-        Assert.False(ExternalUrlPolicy.AcceptsWebLink("https", new string('a', ExternalUrlPolicy.MaximumHostLength + 1)));
+        Assert.True(new ExternalWebLink("HTTPS", "example.com").IsAccepted);
+        Assert.True(new ExternalWebLink("http", "example.com").IsAccepted);
+        Assert.False(new ExternalWebLink("https", "").IsAccepted);
+        Assert.False(new ExternalWebLink("file", null).IsAccepted);
+        Assert.False(new ExternalWebLink("javascript", "example.com").IsAccepted);
+        Assert.False(new ExternalWebLink(null, "example.com").IsAccepted);
+        Assert.False(new ExternalWebLink("https", new string('a', ExternalWebLink.MaximumHostLength + 1)).IsAccepted);
     }
 
     [Fact]
     public void LocalDocumentsRefuseRemoteAuthoritiesAndUsers() {
-        Assert.True(ExternalUrlPolicy.AcceptsLocalDocument(new(true, false, true, null)));
-        Assert.True(ExternalUrlPolicy.AcceptsLocalDocument(new(true, false, true, "LocalHost")));
-        Assert.False(ExternalUrlPolicy.AcceptsLocalDocument(new(true, false, true, "server")));
-        Assert.False(ExternalUrlPolicy.AcceptsLocalDocument(new(true, true, true, null)));
-        Assert.False(ExternalUrlPolicy.AcceptsLocalDocument(new(true, false, false, null)));
-        Assert.False(ExternalUrlPolicy.AcceptsLocalDocument(new(false, false, true, null)));
-        Assert.False(ExternalUrlPolicy.AcceptsLocalDocument(new(true, false, true, new string('a', ExternalUrlPolicy.MaximumHostLength + 1))));
+        Assert.True(new LocalDocumentFacts(true, false, true, null).IsAcceptedDocument);
+        Assert.True(new LocalDocumentFacts(true, false, true, "LocalHost").IsAcceptedDocument);
+        Assert.False(new LocalDocumentFacts(true, false, true, "server").IsAcceptedDocument);
+        Assert.False(new LocalDocumentFacts(true, true, true, null).IsAcceptedDocument);
+        Assert.False(new LocalDocumentFacts(true, false, false, null).IsAcceptedDocument);
+        Assert.False(new LocalDocumentFacts(false, false, true, null).IsAcceptedDocument);
+        Assert.False(new LocalDocumentFacts(true, false, true, new string('a', ExternalWebLink.MaximumHostLength + 1)).IsAcceptedDocument);
     }
 
     [Fact]

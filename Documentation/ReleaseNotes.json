@@ -3953,6 +3953,10 @@
     "2026-10-12-credential-records-judge-themselves": {
       "category": "internal",
       "message": "Let credential records judge themselves"
+    },
+    "2026-10-12-link-preferences-judge-themselves": {
+      "category": "internal",
+      "message": "Let link preferences, routes and schemes judge themselves"
     }
   }
 }

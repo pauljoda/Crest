@@ -56,12 +56,4 @@ public sealed record LinkGesture(bool UserActivated, bool TopLevel, ShortcutModi
 /// What following a link does.
 public sealed record LinkNavigationAnswer(LinkNavigationDecision Decision);
 
-/// One ordered rule that sends matching external links to a Space.
-public sealed record LinkRoute(Guid Id, bool IsEnabled, LinkRouteMatch Match, string Pattern, Guid DestinationSpaceId);
-
-/// The Space a Quick Window last opened a site in, which the next external
-/// link to that site opens in when the preferences remember Spaces by site.
-/// `Site` is the lowercased host without a leading `www.`.
-public sealed record RememberedSite(string Site, Guid SpaceId);
-
 #endregion

@@ -37,7 +37,7 @@ public sealed record AddressResolution(string Url, string? SearchQuery) {
         string value = url.Trim();
         if (IsInternalPage(value)) return allowsInternalPages ? value : null;
         return Uri.TryCreate(value, UriKind.Absolute, out var parsed)
-            && ExternalSchemePolicy.Disposition(parsed.Scheme, isAppInitiated: true) == ExternalSchemeDisposition.Engine
+            && UrlScheme.DispositionOf(parsed.Scheme, isAppInitiated: true) == ExternalSchemeDisposition.Engine
             ? value : null;
     }
 

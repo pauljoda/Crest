@@ -8,7 +8,7 @@ namespace CrestCore.Application;
 internal sealed partial class Device {
     #region Variables
 
-    private LinkPreferences links = LinkPreferencePolicy.Default;
+    private LinkPreferences links = LinkPreferences.Default;
     internal LinkPreferences Links { get => links; set => links = value; }
 
     #endregion
@@ -28,7 +28,7 @@ internal sealed partial class Device {
     /// choice as the external-link Space and the sites that remembered it.
     public void ForgetLinks(Guid spaceId, ChangeFeed changes) {
         ArgumentNullException.ThrowIfNull(changes);
-        lock (gate) Revise(LinkPreferencePolicy.Forgetting(links, spaceId), changes);
+        lock (gate) Revise(links.Forgetting(spaceId), changes);
     }
 
     /// Keeps `revised` and publishes it when it differs from the preferences
@@ -60,7 +60,7 @@ internal sealed partial class Device {
                 .FirstOrDefault(candidate => candidate.Id == tabId)
             : null;
         bool focuses = preferences.FocusesNewTabs || page is { TabId: null, Transient.OpensNewTabsInFront: true };
-        return new(LinkNavigationPolicy.Decide(question.Url, gesture.UserActivated, gesture.TopLevel, peek, newTab,
+        return new(LinkNavigationDecision.For(question.Url, gesture.UserActivated, gesture.TopLevel, peek, newTab,
             gesture.Modifiers.HasFlag(ShortcutModifiers.Shift), focuses, hasContext: tab is not null, tab?.Placement,
             tab?.SavedAddress, preferences.OpensPeekAutomatically));
     }
