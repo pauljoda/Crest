@@ -55,7 +55,11 @@ struct BrowserDownloadSourceCapture: Equatable, Sendable {
     /// once from the script message's body. Anything else the bridge posts,
     /// and any activation that breaks the contract, is not one.
     init?(messageBody: Any) {
-        guard JSONSerialization.isValidJSONObject(messageBody),
+        // The bridge posts other messages on this channel too, some of them
+        // long; only an activation is worth decoding.
+        let activation = BrowserDownloadActivationMessage.Kind.activation.rawValue
+        guard (messageBody as? [String: Any])?["kind"] as? String == activation,
+            JSONSerialization.isValidJSONObject(messageBody),
             let data = try? JSONSerialization.data(withJSONObject: messageBody),
             let message = try? JSONDecoder().decode(BrowserDownloadActivationMessage.self, from: data),
             message.version == 1,

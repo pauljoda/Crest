@@ -4021,6 +4021,10 @@
     "2026-10-12-prompt-hosts-answer-every-question": {
       "category": "internal",
       "message": "Every place that shows Crest's questions now handles each kind of question explicitly."
+    },
+    "2026-10-12-refused-engine-report-safe": {
+      "category": "fixed",
+      "message": "Keep a page's report that Crest can't use from closing the app"
     }
   }
 }
