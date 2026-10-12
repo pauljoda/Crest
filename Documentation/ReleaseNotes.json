@@ -3901,6 +3901,10 @@
     "2026-10-12-sidebar-drop-targets-own-behavior": {
       "category": "internal",
       "message": "Let sidebar drop targets and zones say what they take"
+    },
+    "2026-10-12-sidebar-lift-previews-own-behavior": {
+      "category": "internal",
+      "message": "Let sidebar lift previews size and place themselves"
     }
   }
 }

@@ -186,16 +186,7 @@
                 guard let lift = practice.sidebarInteraction.sidebarReorderState.liftPreview,
                     let space = practice.browser.workspaceModel?.spaces.models.first
                 else { return nil }
-                let subject: BrowserSidebarLiftPreviewSubject?
-                switch lift.item {
-                case .tab(let item):
-                    subject = space.tabs.model(item.tabID).map(BrowserSidebarLiftPreviewSubject.tab)
-                case .folder(let item):
-                    subject = space.folders.model(item.folderID).map { .folder($0, rows: []) }
-                case .splitGroup(let item):
-                    subject = .splitGroup(space.splitMembers(of: item.groupID))
-                }
-                guard let subject else { return nil }
+                guard let subject = lift.item.liftPreviewSubject(in: space, previewRows: []) else { return nil }
                 return .sidebarLift(
                     BrowserSidebarLiftPreviewContent(
                         subject: subject, favicons: practice.browser.core.state.favicons, lift: lift,

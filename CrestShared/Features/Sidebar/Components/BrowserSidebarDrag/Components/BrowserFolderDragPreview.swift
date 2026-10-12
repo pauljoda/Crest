@@ -19,7 +19,7 @@ struct BrowserFolderDragPreview: View {
                 .frame(height: BrowserFolderDragPreviewLayout.height)
             ForEach(rows) { row in
                 rowContent(row)
-                    .frame(width: width, height: rowHeight(row), alignment: .topLeading)
+                    .frame(width: width, height: row.previewHeight, alignment: .topLeading)
                     .offset(y: row.frame.minY)
             }
         }
@@ -80,10 +80,5 @@ struct BrowserFolderDragPreview: View {
         .padding(.trailing, CrestSpacing.medium)
         .frame(maxHeight: .infinity)
         .browserTabResidency(isLoaded: loadedTabIDs?.contains(tab.id) ?? true)
-    }
-
-    private func rowHeight(_ row: BrowserFolderDragPreviewRow) -> CGFloat {
-        if case .folder = row.content { return BrowserFolderDragPreviewLayout.height }
-        return row.frame.height
     }
 }
