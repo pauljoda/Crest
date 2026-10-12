@@ -4009,6 +4009,10 @@
     "2026-10-12-cloud-receipts-note-themselves": {
       "category": "internal",
       "message": "Let the core's answers to the cloud transport note what they tell it"
+    },
+    "2026-10-12-iphone-welcome-card-width": {
+      "category": "fixed",
+      "message": "Line up the welcome card with the rest of the iPhone welcome page"
     }
   }
 }
