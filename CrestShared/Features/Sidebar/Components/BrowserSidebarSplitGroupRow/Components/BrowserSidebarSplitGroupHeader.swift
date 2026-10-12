@@ -222,10 +222,7 @@ private struct BrowserSidebarSplitGroupIcon: View {
     }
 
     private var deckAnimation: Animation? {
-        BrowserVisualAccessibilityPolicy.animation(
-            CrestMotion.collection,
-            reduceMotion: reduceMotion
-        )
+        CrestMotion.collection.unlessReducingMotion(reduceMotion)
     }
 }
 

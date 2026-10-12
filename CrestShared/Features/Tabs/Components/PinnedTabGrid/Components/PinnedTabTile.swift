@@ -119,10 +119,7 @@ struct PinnedTabTile: View {
         }
         .modifier(BrowserTabStatusBadgeHost(tab: statusSource))
         .animation(
-            BrowserVisualAccessibilityPolicy.animation(
-                CrestMotion.contentState,
-                reduceMotion: reduceMotion
-            ),
+            CrestMotion.contentState.unlessReducingMotion(reduceMotion),
             value: loaded
         )
         .crestCollectionItemTransition()

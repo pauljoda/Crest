@@ -36,9 +36,7 @@ struct BrowserSpaceSwitcherCommonListsButton: View {
                         tint: downloads.contains(where: { $0.phase.needsAttention })
                             ? .red
                             : badgeColor,
-                        progress: BrowserDownloadNotificationPolicy.progress(
-                            in: downloads
-                        )
+                        progress: downloads.notificationProgress
                     )
                     .offset(
                         x: BrowserUtilitySwitcherLayout.notificationBadgeOffset,

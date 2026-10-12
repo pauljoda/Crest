@@ -91,7 +91,7 @@ struct BrowserTabStatusMark: Equatable {
             return Self(
                 symbol: "sparkles",
                 tint: tint,
-                glyph: BrowserVisualAccessibilityPolicy.readableForeground(over: tint, colorScheme: .light),
+                glyph: tint.readableForeground(colorScheme: .light),
                 title: LocalizedStringResource(
                     "Used by \(session.name)", comment: "A tab's mark while an agent uses it."),
                 actions: [.stopAgent, .disconnectAgent],

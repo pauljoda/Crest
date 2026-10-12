@@ -760,10 +760,7 @@ extension BrowserRootModel {
         _ animation: Animation,
         _ reduceMotion: Bool
     ) -> Animation? {
-        BrowserVisualAccessibilityPolicy.animation(
-            animation,
-            reduceMotion: reduceMotion
-        )
+        animation.unlessReducingMotion(reduceMotion)
     }
 }
 

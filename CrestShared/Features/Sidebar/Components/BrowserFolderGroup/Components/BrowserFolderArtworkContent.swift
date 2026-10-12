@@ -41,7 +41,7 @@ struct BrowserFolderArtworkContent: View {
     }
 
     private var faceForeground: Color {
-        let scheme = BrowserSpaceForegroundPolicy.colorScheme(over: color)
+        let scheme = color.foregroundTone.colorScheme
         return scheme == .dark ? .white : .black
     }
 

@@ -27,7 +27,7 @@ struct BrowserPlatformLinkRouteEditorContent: View {
                 )
             )
             .frame(
-                minHeight: BrowserSettingsControlPolicy.minimumTouchTarget
+                minHeight: BrowserSettingsControlMetrics.minimumTouchTarget
             )
             .accessibilityIdentifier("route-enabled-\(identifierSuffix)")
 
@@ -66,7 +66,7 @@ struct BrowserPlatformLinkRouteEditorContent: View {
             .focused($isPatternFocused)
             .onSubmit { isPatternFocused = false }
             .frame(
-                minHeight: BrowserSettingsControlPolicy.minimumTouchTarget
+                minHeight: BrowserSettingsControlMetrics.minimumTouchTarget
             )
             .accessibilityIdentifier("route-pattern-\(identifierSuffix)")
 
@@ -146,7 +146,7 @@ struct BrowserPlatformLinkRouteEditorContent: View {
         }
         .frame(
             maxWidth: .infinity,
-            minHeight: BrowserSettingsControlPolicy.minimumTouchTarget
+            minHeight: BrowserSettingsControlMetrics.minimumTouchTarget
         )
         .contentShape(.rect)
     }

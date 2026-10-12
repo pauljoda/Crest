@@ -229,17 +229,11 @@ struct MobileBrowserDetailView: View {
             }
         }
         .animation(
-            BrowserVisualAccessibilityPolicy.animation(
-                CrestMotion.toolbar,
-                reduceMotion: reduceMotion
-            ),
+            CrestMotion.toolbar.unlessReducingMotion(reduceMotion),
             value: page?.isFindPresented
         )
         .animation(
-            BrowserVisualAccessibilityPolicy.animation(
-                CrestMotion.toolbar,
-                reduceMotion: reduceMotion
-            ),
+            CrestMotion.toolbar.unlessReducingMotion(reduceMotion),
             value: compactToolbarIsHidden
         )
         .sheet(item: $downloadsAssignment) { assignment in
@@ -279,9 +273,7 @@ struct MobileBrowserDetailView: View {
         return MobileDownloadsMenuAccess(
             newItemCount: pages.downloadCenter
                 .unacknowledgedItems(for: space.profileID).count,
-            activeProgress: BrowserDownloadNotificationPolicy.progress(
-                in: items
-            ),
+            activeProgress: items.notificationProgress,
             open: presentCompactDownloads
         )
     }
@@ -412,7 +404,7 @@ struct MobileBrowserDetailView: View {
     /// no brand to follow and the header inherits the environment's appearance.
     private var startPageHeaderColorScheme: ColorScheme? {
         guard let branding = shownBranding else { return nil }
-        return BrowserSpaceForegroundPolicy.colorScheme(for: branding)
+        return branding.foregroundTone.colorScheme
     }
 
     private var unloadedPageSurface: some View {
@@ -457,10 +449,7 @@ struct MobileBrowserDetailView: View {
     ) -> Bool {
         guard isPaletteSourceAvailable(source) else { return false }
         withAnimation(
-            BrowserVisualAccessibilityPolicy.animation(
-                CrestMotion.contentNavigation,
-                reduceMotion: reduceMotion
-            )
+            CrestMotion.contentNavigation.unlessReducingMotion(reduceMotion)
         ) {
             browser.navigateSelectedTab(to: url.absoluteString)
             pages.selectAndNavigate(to: url.absoluteString)

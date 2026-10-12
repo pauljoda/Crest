@@ -136,13 +136,3 @@ struct BrowserDownloadFeedbackSource: Equatable, @unchecked Sendable {
     let pointInGlobal: CGPoint
     let windowIdentifier: ObjectIdentifier?
 }
-
-/// A forwarder kept only for CrestMobile, which another batch owns. Delete it
-/// once `MobileBrowserPage` passes `isUserInitiated: feedbackSource != nil`.
-enum BrowserDownloadInitiationPolicy {
-    static func userInitiatedOverride(
-        hasTrustedSource: Bool
-    ) -> Bool? {
-        hasTrustedSource ? true : nil
-    }
-}

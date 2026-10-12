@@ -131,10 +131,7 @@ struct MobileBrowserWindowScene: View {
                 }
             }
             .animation(
-                BrowserVisualAccessibilityPolicy.animation(
-                    CrestMotion.onboardingPresentation,
-                    reduceMotion: reduceMotion
-                ),
+                CrestMotion.onboardingPresentation.unlessReducingMotion(reduceMotion),
                 value: onboardingCoordinator.isMobilePresented
             )
             .onAppear(perform: presentAutomaticOnboardingIfNeeded)
@@ -289,9 +286,6 @@ struct MobileBrowserWindowScene: View {
     }
 
     private var modeAnimation: Animation? {
-        BrowserVisualAccessibilityPolicy.animation(
-            CrestMotion.navigation,
-            reduceMotion: reduceMotion
-        )
+        CrestMotion.navigation.unlessReducingMotion(reduceMotion)
     }
 }

@@ -17,7 +17,7 @@ struct BrowserTabStatusControl<Label: View>: View {
         control
             .help(Text(mark.title))
             .animation(
-                BrowserVisualAccessibilityPolicy.animation(CrestMotion.contentState, reduceMotion: reduceMotion),
+                CrestMotion.contentState.unlessReducingMotion(reduceMotion),
                 value: mark
             )
     }

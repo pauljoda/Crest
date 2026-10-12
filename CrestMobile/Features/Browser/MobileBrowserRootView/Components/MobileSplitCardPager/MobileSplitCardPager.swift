@@ -138,10 +138,7 @@ struct MobileSplitCardPager: View {
                     visibleTabID != tabID
                 else { return }
                 withAnimation(
-                    BrowserVisualAccessibilityPolicy.animation(
-                        CrestMotion.spaceSwipe,
-                        reduceMotion: reduceMotion
-                    )
+                    CrestMotion.spaceSwipe.unlessReducingMotion(reduceMotion)
                 ) {
                     visibleTabID = tabID
                 }

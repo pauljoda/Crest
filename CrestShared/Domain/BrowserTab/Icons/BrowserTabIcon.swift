@@ -37,14 +37,3 @@ struct BrowserTabIconAccent: Codable, Equatable, Hashable, Sendable {
         isDistinctive ? self : extracted
     }
 }
-
-/// A forwarder kept only for the tab views another batch owns. Delete it once
-/// they ask `siteTheme?.preferring(extracted:) ?? extracted` directly.
-enum BrowserTabIconAccentResolver {
-    static func resolve(
-        siteTheme: BrowserTabIconAccent?,
-        extracted: BrowserTabIconAccent?
-    ) -> BrowserTabIconAccent? {
-        siteTheme?.preferring(extracted: extracted) ?? extracted
-    }
-}

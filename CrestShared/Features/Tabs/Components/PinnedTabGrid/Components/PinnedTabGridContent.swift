@@ -56,7 +56,7 @@ struct PinnedTabGridContent: View {
                 .accessibilityHidden(true)
         }
         .animation(
-            BrowserVisualAccessibilityPolicy.animation(CrestMotion.dragSource, reduceMotion: reduceMotion),
+            CrestMotion.dragSource.unlessReducingMotion(reduceMotion),
             value: projection.slots
         )
         .environment(\.browserInteractionCapabilities, capabilities)

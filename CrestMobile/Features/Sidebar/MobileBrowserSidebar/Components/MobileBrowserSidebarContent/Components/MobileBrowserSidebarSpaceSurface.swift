@@ -42,7 +42,7 @@ struct MobileBrowserSidebarSpaceSurface: View {
     /// than from the system appearance, as every compact placement does, so
     /// they keep agreeing.
     private var spaceColorScheme: ColorScheme {
-        BrowserSpaceForegroundPolicy.colorScheme(for: space.settings.look)
+        space.settings.look.foregroundTone.colorScheme
     }
 
     private func selectUnlockedSpace(_ assignment: BrowserSpaceRuntimeAssignment) {

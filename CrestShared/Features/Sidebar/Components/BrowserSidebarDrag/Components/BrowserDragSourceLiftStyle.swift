@@ -20,10 +20,7 @@ struct BrowserDragSourceLiftStyle: ViewModifier {
             )
             .zIndex(isDragging ? 2 : 0)
             .animation(
-                BrowserVisualAccessibilityPolicy.animation(
-                    CrestMotion.dragSource,
-                    reduceMotion: reduceMotion
-                ),
+                CrestMotion.dragSource.unlessReducingMotion(reduceMotion),
                 value: isDragging
             )
     }

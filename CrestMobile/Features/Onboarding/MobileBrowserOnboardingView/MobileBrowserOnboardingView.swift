@@ -164,10 +164,7 @@ struct MobileBrowserOnboardingView: View {
 
     private func move(to newStep: SetupStep) {
         withAnimation(
-            BrowserVisualAccessibilityPolicy.animation(
-                CrestMotion.selection,
-                reduceMotion: reduceMotion
-            )
+            CrestMotion.selection.unlessReducingMotion(reduceMotion)
         ) {
             _ = try? browser.core.send(ShowSetupStep(step: newStep))
         }

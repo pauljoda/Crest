@@ -77,7 +77,7 @@ struct BrowserSpaceAppearanceHero: View {
             }
         }
         .background { BrowserSpaceBannerBackground(branding: branding) }
-        .environment(\.colorScheme, BrowserSpaceForegroundPolicy.colorScheme(for: branding))
+        .environment(\.colorScheme, branding.foregroundTone.colorScheme)
         .environment(\.sidebarSpacePresentation, SidebarSpacePresentation(space: preview, isUnlocked: true))
         .clipShape(.rect(cornerRadius: 18))
         .overlay {

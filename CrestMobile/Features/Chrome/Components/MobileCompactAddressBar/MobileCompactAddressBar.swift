@@ -70,9 +70,7 @@ struct MobileCompactAddressBar: View {
             } else if reloadOrStop != nil {
                 BrowserReloadControl(
                     isLoading: isLoading,
-                    isDeveloperMode: BrowserDeveloperModePolicy.isAutomatic(
-                        for: pageActions?.activeURL
-                    ),
+                    isDeveloperMode: pageActions?.activeURL?.isLocalDevelopmentAddress == true,
                     reloadOrStop: performReloadOrStop,
                     reload: performReload,
                     reloadFromOrigin: performReloadFromOrigin,
@@ -99,10 +97,7 @@ struct MobileCompactAddressBar: View {
                 .scaleEffect(x: loadingProgress, anchor: .leading)
                 .mask(fieldShape)
                 .animation(
-                    BrowserVisualAccessibilityPolicy.animation(
-                        CrestMotion.loadingProgress,
-                        reduceMotion: reduceMotion
-                    ),
+                    CrestMotion.loadingProgress.unlessReducingMotion(reduceMotion),
                     value: loadingProgress
                 )
         }

@@ -68,7 +68,7 @@ final class SpacePickerPresentationView: UIView {
         tones = spaces.map {
             .init(
                 id: $0.id,
-                white: BrowserSpaceForegroundPolicy.tone(for: $0.branding) == .light ? 1 : 0)
+                white: $0.branding.foregroundTone == .light ? 1 : 0)
         }
         self.frames = frames
         self.tint = tint.map(UIColor.init)

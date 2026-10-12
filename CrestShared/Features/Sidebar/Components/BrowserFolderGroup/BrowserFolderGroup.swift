@@ -211,10 +211,7 @@ struct BrowserFolderGroup: View {
             return
         }
         withAnimation(
-            BrowserVisualAccessibilityPolicy.animation(
-                CrestMotion.disclosure,
-                reduceMotion: reduceMotion
-            )
+            CrestMotion.disclosure.unlessReducingMotion(reduceMotion)
         ) {
             let nextExpansion = folder.isCollapsed
             collapsedTabVisibility.expansionDidChange(

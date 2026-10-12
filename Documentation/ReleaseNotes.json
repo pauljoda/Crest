@@ -3989,6 +3989,10 @@
     "2026-10-12-sidebar-chrome-tabs-own-rules": {
       "category": "internal",
       "message": "Let sidebar rows, chrome, tabs, splits and Spaces carry their own rules"
+    },
+    "2026-10-12-forwarders-retired": {
+      "category": "internal",
+      "message": "Ask each rule's owner directly instead of through old forwarders"
     }
   }
 }

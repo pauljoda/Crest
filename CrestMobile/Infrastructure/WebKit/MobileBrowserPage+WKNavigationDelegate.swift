@@ -221,8 +221,7 @@ extension MobileBrowserPage: WKNavigationDelegate {
         }
         webKitPage.startDownload(
             download,
-            isUserInitiated: BrowserDownloadInitiationPolicy.userInitiatedOverride(
-                hasTrustedSource: feedbackSource != nil) ?? false)
+            isUserInitiated: feedbackSource != nil)
     }
 
     func discardDownloadOnlySurfaceIfNeeded() {

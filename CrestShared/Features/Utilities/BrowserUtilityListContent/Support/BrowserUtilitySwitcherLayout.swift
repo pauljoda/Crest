@@ -27,12 +27,3 @@ enum BrowserUtilitySwitcherLayout {
         Double(max(index, 0)) * staggerInterval
     }
 }
-
-/// A forwarder kept only for call sites other batches own (CrestMobile and the
-/// sidebar's Space switcher). Delete it once they read
-/// `downloads.notificationProgress` directly.
-enum BrowserDownloadNotificationPolicy {
-    static func progress(in downloads: [DownloadState]) -> Double? {
-        downloads.notificationProgress
-    }
-}

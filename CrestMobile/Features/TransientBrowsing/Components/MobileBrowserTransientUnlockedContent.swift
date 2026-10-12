@@ -120,10 +120,7 @@ struct MobileBrowserTransientUnlockedContent: View {
             return
         }
         withAnimation(
-            BrowserVisualAccessibilityPolicy.animation(
-                CrestMotion.quickPeekEntrance,
-                reduceMotion: reduceMotion
-            )
+            CrestMotion.quickPeekEntrance.unlessReducingMotion(reduceMotion)
         ) {
             isCardVisible = true
             isCardExpanded = true
@@ -132,10 +129,7 @@ struct MobileBrowserTransientUnlockedContent: View {
 
     private func dismiss() {
         withAnimation(
-            BrowserVisualAccessibilityPolicy.animation(
-                CrestMotion.peekDismissal,
-                reduceMotion: reduceMotion
-            )
+            CrestMotion.peekDismissal.unlessReducingMotion(reduceMotion)
         ) {
             model.dismiss()
         }

@@ -35,7 +35,7 @@ struct BrowserFolderSectionSurface: ViewModifier {
             )
             .onHover { isHovered = $0 }
             .animation(
-                BrowserVisualAccessibilityPolicy.animation(CrestMotion.surface, reduceMotion: reduceMotion),
+                CrestMotion.surface.unlessReducingMotion(reduceMotion),
                 value: isHovered || isTargeted || isSelected
             )
     }

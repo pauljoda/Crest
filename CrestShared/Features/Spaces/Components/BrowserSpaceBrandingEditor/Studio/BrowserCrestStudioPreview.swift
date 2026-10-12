@@ -27,7 +27,7 @@ struct BrowserCrestStudioPreview: View {
             .padding(20)
             .frame(maxWidth: .infinity)
             .background { BrowserSpaceBannerBackground(branding: branding) }
-            .environment(\.colorScheme, BrowserSpaceForegroundPolicy.colorScheme(for: branding))
+            .environment(\.colorScheme, branding.foregroundTone.colorScheme)
             .clipShape(.rect(cornerRadius: 18))
 
             if !compact && showsSidebar {
@@ -47,7 +47,7 @@ struct BrowserCrestStudioPreview: View {
                 .frame(height: sidebarHeight, alignment: .top)
                 .clipped()
                 .background { BrowserSpaceBannerBackground(branding: branding) }
-                .environment(\.colorScheme, BrowserSpaceForegroundPolicy.colorScheme(for: branding))
+                .environment(\.colorScheme, branding.foregroundTone.colorScheme)
                 .clipShape(.rect(cornerRadius: 16))
                 .allowsHitTesting(false)
                 .accessibilityLabel("Actual sidebar preview")

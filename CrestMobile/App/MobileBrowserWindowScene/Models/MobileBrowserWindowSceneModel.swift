@@ -199,7 +199,7 @@ final class MobileBrowserWindowSceneModel {
     /// which is never a locked Space.
     @discardableResult
     func routeExternalURL(_ url: URL) async -> Bool {
-        guard BrowserCorePolicy.acceptsExternalURL(url),
+        guard ExternalWebLink.accepts(url),
             let placement = try? browser.core.query(
                 RouteExternalLink(windowIDs: [browser.windowID], url: url.absoluteString)),
             let spaceID = placement.spaceID,

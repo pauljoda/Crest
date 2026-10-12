@@ -84,10 +84,7 @@ struct BrowserSplitColumnsView<Member: Identifiable, Content: View, Panel: View>
         // column opening, moving between gaps, and closing again all settle
         // with the same motion a member joining or leaving does.
         .animation(
-            BrowserVisualAccessibilityPolicy.animation(
-                CrestMotion.collection,
-                reduceMotion: reduceMotion
-            ),
+            CrestMotion.collection.unlessReducingMotion(reduceMotion),
             value: slots.map(\.id)
         )
         .accessibilityElement(children: .contain)

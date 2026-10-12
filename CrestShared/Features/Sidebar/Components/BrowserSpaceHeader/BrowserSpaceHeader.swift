@@ -122,10 +122,7 @@ struct BrowserSpaceHeader: View {
 
     private func toggleSavedTabs() {
         withAnimation(
-            BrowserVisualAccessibilityPolicy.animation(
-                CrestMotion.disclosure,
-                reduceMotion: reduceMotion
-            )
+            CrestMotion.disclosure.unlessReducingMotion(reduceMotion)
         ) {
             if let toggle = actions.toggleSavedTabs {
                 toggle()
