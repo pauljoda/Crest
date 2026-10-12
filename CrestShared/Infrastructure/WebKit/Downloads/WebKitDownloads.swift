@@ -318,28 +318,10 @@ final class WebKitDownloads: NSObject {
         _ challenge: URLAuthenticationChallenge, for download: WKDownload,
         completionHandler: @escaping @MainActor @Sendable (URLSession.AuthChallengeDisposition, URLCredential?) -> Void
     ) {
-        switch BrowserCorePolicy.authenticationHandling(for: BrowserAuthenticationChallenge(challenge)) {
-        case .performDefaultHandling:
-            completionHandler(.performDefaultHandling, nil)
-        case .cancel:
-            completionHandler(.cancelAuthenticationChallenge, nil)
-        case .promptForCredentials:
-            guard let page = byDownload[ObjectIdentifier(download)]?.page,
-                let question = AuthenticationQuestion(challenge)
-            else {
-                completionHandler(.performDefaultHandling, nil)
-                return
-            }
-            page.ask(question) { credential in
-                guard let credential else {
-                    completionHandler(.cancelAuthenticationChallenge, nil)
-                    return
-                }
-                completionHandler(
-                    .useCredential,
-                    URLCredential(user: credential.username, password: credential.password, persistence: .none))
-            }
-        }
+        BrowserCorePolicy.authenticationHandling(for: BrowserAuthenticationChallenge(challenge)).respond(
+            on: WebKitSignInResponder(
+                challenge: challenge, page: byDownload[ObjectIdentifier(download)]?.page, session: nil,
+                completionHandler: completionHandler))
     }
 
     // MARK: - Actions - Reports

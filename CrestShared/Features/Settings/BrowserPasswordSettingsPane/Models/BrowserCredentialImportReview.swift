@@ -38,6 +38,18 @@ enum BrowserCredentialImportSelection: Equatable, Hashable, Sendable {
     case existing
     case imported(rowNumber: Int)
     case skip
+
+    // MARK: - Actions - Choosing
+
+    /// Whether `group` offers this choice: keeping the saved password needs
+    /// one, and importing a row needs the account to bring that row.
+    func isValid(for group: CredentialImportGroup) -> Bool {
+        switch self {
+        case .existing: group.existingID != nil
+        case .imported(let rowNumber): group.candidates.contains(where: { $0.rowNumber == rowNumber })
+        case .skip: true
+        }
+    }
 }
 
 struct BrowserCredentialImportSummary: Equatable, Sendable, Identifiable {
@@ -131,15 +143,10 @@ struct BrowserCredentialImportReview:
 
     /// Keeps `selection` for the account `id` names, when the account offers it.
     mutating func select(_ selection: BrowserCredentialImportSelection, for id: BrowserCredentialImportGroupID) {
-        guard let group = plan.groups.first(where: { BrowserCredentialImportGroupID($0) == id }) else { return }
-        switch selection {
-        case .existing where group.existingID == nil:
-            return
-        case .imported(let rowNumber) where !group.candidates.contains(where: { $0.rowNumber == rowNumber }):
-            return
-        default:
-            selections[id] = selection
-        }
+        guard let group = plan.groups.first(where: { BrowserCredentialImportGroupID($0) == id }),
+            selection.isValid(for: group)
+        else { return }
+        selections[id] = selection
     }
 
     /// The saved password the account would change, for the person to compare.

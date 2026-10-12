@@ -79,14 +79,7 @@ struct BrowserCredentialSavePrompt: View {
     }
 
     private func perform(_ action: BrowserCredentialPromptPrimaryAction) {
-        switch action.kind {
-        case .commit:
-            save()
-        case .retryCredentialPreparation:
-            retry()
-        case .retrySystemPasswords:
-            retrySystemPasswords()
-        }
+        action.perform(self)
     }
 
     private func prepare() async {
@@ -102,13 +95,21 @@ struct BrowserCredentialSavePrompt: View {
         port.dismiss()
     }
 
-    private func retry() {
-        Task { @MainActor in
-            await prepare()
+    private func offerToSystemPasswords() async {
+        guard let offer = port.offerToSystemPasswords else { return }
+        await model.offerToSystemPasswords {
+            try await offer(
+                candidate,
+                "\(candidate.username) · \(space?.name ?? "this Space")"
+            )
         }
     }
+}
 
-    private func save() {
+// MARK: - Actions - Primary action
+
+extension BrowserCredentialSavePrompt: BrowserCredentialPromptPerformer {
+    func save() {
         Task { @MainActor in
             await model.commit(
                 candidate: candidate,
@@ -128,23 +129,19 @@ struct BrowserCredentialSavePrompt: View {
         }
     }
 
-    private func retrySystemPasswords() {
+    func retryPreparation() {
+        Task { @MainActor in
+            await prepare()
+        }
+    }
+
+    func retrySystemPasswords() {
         Task { @MainActor in
             await offerToSystemPasswords()
             guard port.presentedCandidateID() == candidate.id,
                 model.systemPasswordOfferPhase == .completed
             else { return }
             port.dismiss()
-        }
-    }
-
-    private func offerToSystemPasswords() async {
-        guard let offer = port.offerToSystemPasswords else { return }
-        await model.offerToSystemPasswords {
-            try await offer(
-                candidate,
-                "\(candidate.username) · \(space?.name ?? "this Space")"
-            )
         }
     }
 }

@@ -10,6 +10,17 @@ struct BrowserCredentialUsernameHint: Equatable, Sendable {
     let capturedAt: Date
 }
 
+/// One form message the core decided on, with where it came from, what a
+/// fill would write into, and when the page saw it.
+struct BrowserCredentialObservation<FillTarget> {
+    let message: BrowserCredentialFormMessage
+    let frameOrigin: CredentialOrigin
+    let topLevelOrigin: CredentialOrigin
+    let fillTarget: FillTarget?
+    let decision: CredentialCaptureDecision
+    let now: Date
+}
+
 /// Owns the short-lived credential state for one retained browser page.
 ///
 /// The generic fill target is intentionally opaque here. WebKit pages use a
@@ -51,15 +62,9 @@ final class BrowserCredentialPageState<FillTarget> {
         isMainFrame: Bool,
         fillTarget: FillTarget?
     ) {
-        let event: CredentialCaptureEvent
-        switch message.event {
-        case .fieldGeometry:
+        guard let event = message.event.captureEvent else {
             followField(message, frameOrigin: frameOrigin, isMainFrame: isMainFrame)
             return
-        case .username: event = .username
-        case .focus: event = .focus
-        case .submit: event = .submit
-        case .documentState: event = .documentState
         }
         let now = Date.now
         let facts = CredentialFormFacts(
@@ -70,89 +75,18 @@ final class BrowserCredentialPageState<FillTarget> {
         guard
             let decision = captureDecision(
                 facts, usernameHint: pendingUsernameHint,
-                pendingCandidate: event == .documentState ? pendingSaveCandidate : nil, now: now)
+                pendingCandidate: message.event.weighsPendingCandidate ? pendingSaveCandidate : nil, now: now)
         else {
             // Fail safe: close any fill prompt this page shows and capture nothing.
-            if event == .focus { dismissFillRequest() }
+            if message.event.closesFillWhenRefused { dismissFillRequest() }
             return
         }
         if decision.clearsUsernameHint { clearUsernameHint() }
-
-        switch decision.action {
-        case .rememberUsername:
-            guard let username = message.username else { return }
-            rememberUsername(
-                username, origin: frameOrigin, topLevelOrigin: topLevelOrigin,
-                lifetime: decision.usernameHintLifetime)
-
-        case .dismissFill:
-            dismissFillRequest()
-
-        case .offerFill:
-            guard let passwordKind = message.passwordKind, let formID = message.formID,
-                let fillTarget
-            else { return }
-            let request = BrowserCredentialFillRequest(
-                id: UUID(),
-                origin: frameOrigin,
-                topLevelOrigin: topLevelOrigin,
-                usernameHint: username(from: decision.usernameSource, explicitUsername: message.username),
-                passwordKind: passwordKind,
-                isCrossOriginFrame: decision.isCrossOriginFrame,
-                requestedAt: now,
-                fieldRect: decision.anchorsToField ? message.fieldRect : nil
-            )
-            if let previousRequest = fillRequest {
-                fillTargets[previousRequest.id] = nil
-            }
-            fillTargets[request.id] = fillTarget
-            fillFormID = formID
-            fillRequest = request
-
-        case .captureCandidate:
-            guard
-                let username = username(from: decision.usernameSource, explicitUsername: message.username),
-                let password = message.password,
-                let passwordKind = message.passwordKind
-            else { return }
-            dismissSaveCandidate()
-            let candidate = BrowserCredentialSaveCandidate(
-                id: UUID(),
-                origin: frameOrigin,
-                topLevelOrigin: topLevelOrigin,
-                username: username,
-                password: password,
-                passwordKind: passwordKind,
-                isCrossOriginFrame: decision.isCrossOriginFrame,
-                submittedAt: now
-            )
-            dismissFillRequest()
-            clearUsernameHint()
-            pendingSaveCandidate = candidate
-            let lifetime = decision.candidateLifetime
-            candidateExpirationTask = Task { @MainActor [weak self] in
-                try? await Task.sleep(for: .seconds(lifetime))
-                guard !Task.isCancelled, let self else { return }
-                if self.pendingSaveCandidate?.id == candidate.id {
-                    self.pendingSaveCandidate = nil
-                }
-                if self.saveCandidate?.id == candidate.id {
-                    self.saveCandidate = nil
-                }
-                self.candidateExpirationTask = nil
-            }
-
-        case .offerSave:
-            guard let candidate = pendingSaveCandidate else { return }
-            pendingSaveCandidate = nil
-            saveCandidate = candidate
-
-        case .discardPending:
-            pendingSaveCandidate = nil
-
-        case .ignore, .keepPending:
-            return
-        }
+        decision.action.take(
+            BrowserCredentialObservation(
+                message: message, frameOrigin: frameOrigin, topLevelOrigin: topLevelOrigin, fillTarget: fillTarget,
+                decision: decision, now: now),
+            on: self)
     }
 
     /// A geometry report only moves the prompt already on show, and only for
@@ -334,6 +268,95 @@ final class BrowserCredentialPageState<FillTarget> {
         usernameExpirationTask?.cancel()
         usernameExpirationTask = nil
         pendingUsernameHint = nil
+    }
+}
+
+// MARK: - Actions - Capture
+
+extension BrowserCredentialPageState: CredentialCapturePerformer {
+    func ignore(_ observation: BrowserCredentialObservation<FillTarget>) {}
+
+    func rememberUsername(_ observation: BrowserCredentialObservation<FillTarget>) {
+        guard let username = observation.message.username else { return }
+        rememberUsername(
+            username, origin: observation.frameOrigin, topLevelOrigin: observation.topLevelOrigin,
+            lifetime: observation.decision.usernameHintLifetime)
+    }
+
+    func dismissFill(_ observation: BrowserCredentialObservation<FillTarget>) {
+        dismissFillRequest()
+    }
+
+    func offerFill(_ observation: BrowserCredentialObservation<FillTarget>) {
+        let message = observation.message
+        let decision = observation.decision
+        guard let passwordKind = message.passwordKind, let formID = message.formID,
+            let fillTarget = observation.fillTarget
+        else { return }
+        let request = BrowserCredentialFillRequest(
+            id: UUID(),
+            origin: observation.frameOrigin,
+            topLevelOrigin: observation.topLevelOrigin,
+            usernameHint: username(from: decision.usernameSource, explicitUsername: message.username),
+            passwordKind: passwordKind,
+            isCrossOriginFrame: decision.isCrossOriginFrame,
+            requestedAt: observation.now,
+            fieldRect: decision.anchorsToField ? message.fieldRect : nil
+        )
+        if let previousRequest = fillRequest {
+            fillTargets[previousRequest.id] = nil
+        }
+        fillTargets[request.id] = fillTarget
+        fillFormID = formID
+        fillRequest = request
+    }
+
+    func captureCandidate(_ observation: BrowserCredentialObservation<FillTarget>) {
+        let message = observation.message
+        let decision = observation.decision
+        guard
+            let username = username(from: decision.usernameSource, explicitUsername: message.username),
+            let password = message.password,
+            let passwordKind = message.passwordKind
+        else { return }
+        dismissSaveCandidate()
+        let candidate = BrowserCredentialSaveCandidate(
+            id: UUID(),
+            origin: observation.frameOrigin,
+            topLevelOrigin: observation.topLevelOrigin,
+            username: username,
+            password: password,
+            passwordKind: passwordKind,
+            isCrossOriginFrame: decision.isCrossOriginFrame,
+            submittedAt: observation.now
+        )
+        dismissFillRequest()
+        clearUsernameHint()
+        pendingSaveCandidate = candidate
+        let lifetime = decision.candidateLifetime
+        candidateExpirationTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .seconds(lifetime))
+            guard !Task.isCancelled, let self else { return }
+            if self.pendingSaveCandidate?.id == candidate.id {
+                self.pendingSaveCandidate = nil
+            }
+            if self.saveCandidate?.id == candidate.id {
+                self.saveCandidate = nil
+            }
+            self.candidateExpirationTask = nil
+        }
+    }
+
+    func offerSave(_ observation: BrowserCredentialObservation<FillTarget>) {
+        guard let candidate = pendingSaveCandidate else { return }
+        pendingSaveCandidate = nil
+        saveCandidate = candidate
+    }
+
+    func keepPending(_ observation: BrowserCredentialObservation<FillTarget>) {}
+
+    func discardPending(_ observation: BrowserCredentialObservation<FillTarget>) {
+        pendingSaveCandidate = nil
     }
 }
 

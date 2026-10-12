@@ -95,24 +95,16 @@ struct BrowserCredentialPromptDismissAction: Hashable, Sendable {
 
 /// What the prompt's prominent button does, and what it is called.
 struct BrowserCredentialPromptPrimaryAction: Hashable, Sendable {
-    // MARK: - Types
-
-    /// Each shell performs an action with its own code, so the one place that
-    /// performs it switches over the kind.
-    enum Kind: Sendable {
-        case commit
-        case retryCredentialPreparation
-        case retrySystemPasswords
-    }
-
     // MARK: - Variables
 
     static let retryCredentialPreparation = BrowserCredentialPromptPrimaryAction(
-        kind: .retryCredentialPreparation, action: nil, title: { _, _ in "Try Again" })
+        name: "retryCredentialPreparation", action: nil, title: { _, _ in "Try Again" },
+        perform: { performer in performer.retryPreparation() })
     static let retrySystemPasswords = BrowserCredentialPromptPrimaryAction(
-        kind: .retrySystemPasswords, action: nil, title: { _, _ in "Try Passwords Again" })
+        name: "retrySystemPasswords", action: nil, title: { _, _ in "Try Passwords Again" },
+        perform: { performer in performer.retrySystemPasswords() })
 
-    let kind: Kind
+    let name: String
 
     /// The save a commit performs.
     let action: BrowserCredentialSavePromptAction?
@@ -121,25 +113,29 @@ struct BrowserCredentialPromptPrimaryAction: Hashable, Sendable {
     /// the save also offers the password to the system's Passwords app.
     let title: @Sendable (_ spaceName: String?, _ offersSystemPasswords: Bool) -> LocalizedStringResource
 
+    /// Runs the button on the prompt that shows it.
+    let perform: @MainActor @Sendable (_ performer: any BrowserCredentialPromptPerformer) -> Void
+
     // MARK: - Initializers
 
     /// Saves or updates the password.
     static func commit(_ action: BrowserCredentialSavePromptAction) -> BrowserCredentialPromptPrimaryAction {
         BrowserCredentialPromptPrimaryAction(
-            kind: .commit, action: action,
+            name: "commit", action: action,
             title: { spaceName, offersSystemPasswords in
                 offersSystemPasswords ? action.offerTitle : action.commitTitle(spaceName)
-            })
+            },
+            perform: { performer in performer.save() })
     }
 
     // MARK: - Actions - Identity
 
     static func == (lhs: BrowserCredentialPromptPrimaryAction, rhs: BrowserCredentialPromptPrimaryAction) -> Bool {
-        lhs.kind == rhs.kind && lhs.action == rhs.action
+        lhs.name == rhs.name && lhs.action == rhs.action
     }
 
     func hash(into hasher: inout Hasher) {
-        hasher.combine(kind)
+        hasher.combine(name)
         hasher.combine(action)
     }
 }

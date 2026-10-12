@@ -3913,6 +3913,10 @@
     "2026-10-12-download-actions-own-behavior": {
       "category": "internal",
       "message": "Let download actions, destinations and feedback say what they do"
+    },
+    "2026-10-12-credential-objects-own-behavior": {
+      "category": "internal",
+      "message": "Let credential events, plans and sign-in answers say what they do"
     }
   }
 }
