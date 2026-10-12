@@ -13,21 +13,18 @@ struct BrowserShortcutPresentationCatalog: BrowserShortcutSearchProviding {
         query: String
     ) -> Bool {
         let searchTerms = command.searchTerms.map { BrowserShortcutLocalization.string($0, locale: locale) }
-        return BrowserShortcutSearchPolicy.matches(
-            query: query,
-            document: BrowserShortcutSearchDocument(
-                fields: [
-                    command.title(locale: locale),
-                    command.section.title(locale: locale),
-                    searchTerms,
-                    currentShortcut?.spokenDescription(locale: locale)
-                        ?? BrowserShortcutLocalization.string(
-                            "unassigned none no shortcut",
-                            locale: locale
-                        ),
-                ].compactMap { $0 }
-            )
-        )
+        return BrowserShortcutSearchDocument(
+            fields: [
+                command.title(locale: locale),
+                command.section.title(locale: locale),
+                searchTerms,
+                currentShortcut?.spokenDescription(locale: locale)
+                    ?? BrowserShortcutLocalization.string(
+                        "unassigned none no shortcut",
+                        locale: locale
+                    ),
+            ].compactMap { $0 }
+        ).matches(query)
     }
 }
 

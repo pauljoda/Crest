@@ -18,7 +18,7 @@ enum BrowserNavigationIntent: Equatable {
         // The scheme is settled first: a `mailto:` link with `target="_blank"`
         // belongs to the mail client, not to a new Crest tab, and a scheme Crest
         // refuses must not become a download either.
-        switch BrowserCorePolicy.externalSchemeDisposition(
+        switch SchemeHandling.disposition(
             for: url,
             isAppInitiated: isAppInitiated
         ).kind {

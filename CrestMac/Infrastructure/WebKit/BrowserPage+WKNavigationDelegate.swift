@@ -227,8 +227,10 @@ extension BrowserPage: WKNavigationDelegate {
         )
         startDownload(
             download, in: webView,
-            isUserInitiated: BrowserDownloadInitiationPolicy.userInitiatedOverride(
-                hasTrustedSource: feedbackSource != nil) ?? false,
+            // Only Crest's trusted activation bridge may strengthen WebKit's own
+            // initiation signal. A synthetic `.linkActivated` navigation is not proof
+            // of a user gesture and must remain subject to automatic-download policy.
+            isUserInitiated: feedbackSource != nil,
             feedbackSource: feedbackSource)
         discardDownloadOnlySurfaceIfNeeded()
     }
@@ -245,8 +247,7 @@ extension BrowserPage: WKNavigationDelegate {
         )
         startDownload(
             download, in: webView,
-            isUserInitiated: BrowserDownloadInitiationPolicy.userInitiatedOverride(
-                hasTrustedSource: feedbackSource != nil) ?? false,
+            isUserInitiated: feedbackSource != nil,
             feedbackSource: feedbackSource)
         discardDownloadOnlySurfaceIfNeeded()
     }

@@ -91,7 +91,7 @@ final class BrowserWebKitPageEngine: BrowserPageEngine {
         // give the document its own file origin; an ordinary request would load
         // the page without its stylesheets, scripts or images. The folder holding
         // the file is that root, which is what a saved page's resources sit in.
-        if let url = request.url, BrowserCorePolicy.acceptsLocalDocument(url) {
+        if let url = request.url, ExternalLocalDocument.accepts(url) {
             webView.loadFileURL(url, allowingReadAccessTo: url.deletingLastPathComponent())
             return
         }

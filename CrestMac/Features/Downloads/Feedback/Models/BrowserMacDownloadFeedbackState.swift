@@ -45,7 +45,7 @@ final class BrowserMacDownloadFeedbackState {
         for event in newEvents {
             next.append(Flight(id: event.id, path: path(for: event, context: context)))
         }
-        next = Array(next.suffix(BrowserDownloadFeedbackPolicy.maximumVisibleEvents))
+        next = Array(next.suffix(BrowserDownloadFeedbackEvent.maximumVisible))
         return !newEvents.isEmpty
     }
 

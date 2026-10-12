@@ -9,9 +9,9 @@ import Foundation
         /// whenever the choice changes, so a difference here is a choice WebKit's
         /// Spelling menu saved since the last launch, and the core records it.
         func reconcileWebKitSpellChecking(defaults: UserDefaults = .standard) {
-            guard let engine = defaults.object(forKey: BrowserMacWebTextAssistancePolicy.spellCheckingKey) as? Bool
+            guard let engine = defaults.object(forKey: BrowserMacWebTextAssistancePreference.spellCheckingKey) as? Bool
             else {
-                if checksSpelling { defaults.set(true, forKey: BrowserMacWebTextAssistancePolicy.spellCheckingKey) }
+                if checksSpelling { defaults.set(true, forKey: BrowserMacWebTextAssistancePreference.spellCheckingKey) }
                 return
             }
             if engine != checksSpelling { checksSpelling = engine }
@@ -21,7 +21,7 @@ import Foundation
         /// the next time Crest opens.
         func setChecksSpellingForWebKit(_ isEnabled: Bool, defaults: UserDefaults = .standard) {
             checksSpelling = isEnabled
-            defaults.set(checksSpelling, forKey: BrowserMacWebTextAssistancePolicy.spellCheckingKey)
+            defaults.set(checksSpelling, forKey: BrowserMacWebTextAssistancePreference.spellCheckingKey)
         }
     }
 #endif

@@ -98,7 +98,7 @@ final class WebKitDownloads: NSObject {
         let request = download.originalRequest
         let transfer = Transfer(
             profileID: page.profileID, page: page,
-            replay: request.flatMap(BrowserDownloadRetryRequestPolicy.replayableRequest(from:)),
+            replay: request?.replayableDownloadRequest,
             sourceURL: request?.url, origin: Self.origin(of: download, in: page.webView),
             spaceID: binding.core?.state.pages[page.id]?.spaceID,
             isUserInitiated: download.isUserInitiated || isUserInitiated,
@@ -246,9 +246,10 @@ final class WebKitDownloads: NSObject {
                 SiteDecision(spaceID: spaceID, origin: origin, permission: .automaticDownloads, detail: nil)))?
             .decision ?? .denyPersistently
         let scope = AutomaticScope(pageID: transfer.pageID, origin: origin)
-        let verdict = BrowserCorePolicy.automaticDownload(
-            isUserInitiated: transfer.isUserInitiated, isUserApprovedRetry: transfer.isApprovedRetry,
-            savedDecision: saved, hasAllowedAutomaticDownload: automaticAllowances[scope] ?? false)
+        let verdict = AutomaticDownloadCheck(
+            userInitiated: transfer.isUserInitiated, userApprovedRetry: transfer.isApprovedRetry,
+            savedDecision: saved, hasAllowedAutomaticDownload: automaticAllowances[scope] ?? false
+        ).verdict
         automaticAllowances[scope] = verdict.hasAllowedAutomaticDownload
         return await verdict.action.settle(on: WebKitAutomaticDownloadRequest(page: transfer.page, origin: origin))
     }
@@ -318,7 +319,7 @@ final class WebKitDownloads: NSObject {
         _ challenge: URLAuthenticationChallenge, for download: WKDownload,
         completionHandler: @escaping @MainActor @Sendable (URLSession.AuthChallengeDisposition, URLCredential?) -> Void
     ) {
-        BrowserCorePolicy.authenticationHandling(for: BrowserAuthenticationChallenge(challenge)).respond(
+        BrowserAuthenticationChallenge(challenge).handling.respond(
             on: WebKitSignInResponder(
                 challenge: challenge, page: byDownload[ObjectIdentifier(download)]?.page, session: nil,
                 completionHandler: completionHandler))

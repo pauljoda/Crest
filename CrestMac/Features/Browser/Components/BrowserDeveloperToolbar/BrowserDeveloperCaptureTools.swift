@@ -29,6 +29,9 @@ struct BrowserDeveloperCaptureControls: View {
 }
 
 struct BrowserRegionCaptureOverlay: View {
+    /// The shortest side a region capture may have.
+    private static let minimumSelectionLength: CGFloat = 12
+
     let page: BrowserPage
 
     @State private var dragStart: CGPoint?
@@ -82,7 +85,7 @@ struct BrowserRegionCaptureOverlay: View {
             }
             .onEnded { value in
                 let start = dragStart ?? value.startLocation
-                let rect = BrowserDeveloperCapturePolicy.captureRect(
+                let rect = Self.captureRect(
                     from: start,
                     to: value.location,
                     in: bounds
@@ -97,11 +100,34 @@ struct BrowserRegionCaptureOverlay: View {
 
     private func selectionRect(in bounds: CGRect) -> CGRect? {
         guard let dragStart, let dragEnd else { return nil }
-        return BrowserDeveloperCapturePolicy.captureRect(
+        return Self.captureRect(
             from: dragStart,
             to: dragEnd,
             in: bounds
         )
+    }
+
+    /// The region a drag from `start` to `end` selects, clipped to `bounds`,
+    /// or nil when it is too small to be a deliberate selection.
+    private static func captureRect(
+        from start: CGPoint,
+        to end: CGPoint,
+        in bounds: CGRect
+    ) -> CGRect? {
+        let proposed = CGRect(
+            x: min(start.x, end.x),
+            y: min(start.y, end.y),
+            width: abs(end.x - start.x),
+            height: abs(end.y - start.y)
+        )
+        let clipped = proposed.intersection(bounds)
+        guard !clipped.isNull,
+            clipped.width >= minimumSelectionLength,
+            clipped.height >= minimumSelectionLength
+        else {
+            return nil
+        }
+        return clipped
     }
 }
 

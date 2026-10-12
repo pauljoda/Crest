@@ -50,7 +50,7 @@ struct BrowserLinkDestinationHost {
         from source: BrowserTabRuntimeAssignment,
         in destination: BrowserSpaceRuntimeAssignment
     ) -> Bool {
-        guard BrowserCorePolicy.acceptsExternalURL(url),
+        guard ExternalWebLink.accepts(url),
             canOpenLink(from: source), let browser, let spaceAccess,
             BrowserSidebarAccessPolicy.unlockedSpace(
                 matching: destination,

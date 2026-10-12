@@ -11,7 +11,7 @@ extension BrowserPlatformPage {
         _ challenge: URLAuthenticationChallenge, from webKitPage: WebKitEnginePage?,
         completionHandler: @escaping @MainActor @Sendable (URLSession.AuthChallengeDisposition, URLCredential?) -> Void
     ) {
-        BrowserCorePolicy.authenticationHandling(for: BrowserAuthenticationChallenge(challenge)).respond(
+        BrowserAuthenticationChallenge(challenge).handling.respond(
             on: WebKitSignInResponder(
                 challenge: challenge, page: webKitPage, session: httpAuthenticationSession,
                 completionHandler: completionHandler))

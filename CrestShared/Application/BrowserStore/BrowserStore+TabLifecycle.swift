@@ -101,7 +101,7 @@ extension BrowserStore {
     /// shows, as `openAddress` does.
     @discardableResult
     func openExternalURL(_ url: URL) -> Bool {
-        guard BrowserCorePolicy.acceptsExternalURL(url), let space = shownSpace else { return false }
+        guard ExternalWebLink.accepts(url), let space = shownSpace else { return false }
         return openAddress(url, in: space.id)
     }
 

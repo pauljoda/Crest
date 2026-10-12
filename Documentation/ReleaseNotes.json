@@ -3941,6 +3941,10 @@
     "2026-10-12-mobile-platform-own-rules": {
       "category": "internal",
       "message": "Let the iPhone app's platform pieces hold their own rules"
+    },
+    "2026-10-12-core-query-answers-own-rules": {
+      "category": "internal",
+      "message": "Let core queries and page values carry the rules that judge them"
     }
   }
 }

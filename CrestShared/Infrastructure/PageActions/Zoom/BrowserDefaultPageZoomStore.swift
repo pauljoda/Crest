@@ -2,39 +2,6 @@ import CoreGraphics
 import Foundation
 import Observation
 
-enum BrowserPageZoomPolicy {
-    static let levels: [CGFloat] = [
-        0.5, 0.67, 0.8, 0.9, 1, 1.1, 1.25, 1.5, 1.75, 2, 2.5, 3,
-    ]
-    static let defaultLevel: CGFloat = 1
-    static let defaultRange: ClosedRange<CGFloat> = 0.25...5
-
-    static func increased(from current: CGFloat) -> CGFloat {
-        levels.first(where: { $0 > current + tolerance }) ?? max(current, levels[levels.count - 1])
-    }
-
-    static func decreased(from current: CGFloat) -> CGFloat {
-        levels.last(where: { $0 < current - tolerance }) ?? min(current, levels[0])
-    }
-
-    static func percentageLabel(for zoom: CGFloat) -> String {
-        "\(Int((zoom * 100).rounded()))%"
-    }
-
-    /// Preserve the continuous multiplier, bounding only out-of-range values.
-    /// Non-finite values fall back to the familiar 100% default.
-    static func normalizedDefault(_ proposed: CGFloat) -> CGFloat {
-        guard proposed.isFinite else { return defaultLevel }
-        return min(max(proposed, defaultRange.lowerBound), defaultRange.upperBound)
-    }
-
-    static func levelsMatch(_ lhs: CGFloat, _ rhs: CGFloat) -> Bool {
-        abs(lhs - rhs) <= tolerance
-    }
-
-    private static let tolerance: CGFloat = 0.001
-}
-
 @MainActor
 protocol BrowserDefaultPageZoomObserving: AnyObject {
     func defaultPageZoomDidChange(to zoom: CGFloat)
@@ -92,6 +59,11 @@ final class InMemoryBrowserDefaultPageZoomPersistence:
 @Observable
 @MainActor
 final class BrowserDefaultPageZoomStore {
+    /// The baseline a page starts at when nothing else is saved.
+    nonisolated static let defaultLevel: CGFloat = 1
+    /// The baselines a saved preference may hold.
+    nonisolated static let defaultRange: ClosedRange<CGFloat> = 0.25...5
+
     static let shared: BrowserDefaultPageZoomStore = {
         let environment = BrowserLaunchEnvironment.current
         guard environment.requiresIsolation else {
@@ -122,8 +94,8 @@ final class BrowserDefaultPageZoomStore {
     init(persistence: any BrowserDefaultPageZoomPersisting) {
         self.persistence = persistence
         let persisted = persistence.load()
-        let normalized = BrowserPageZoomPolicy.normalizedDefault(
-            persisted ?? BrowserPageZoomPolicy.defaultLevel
+        let normalized = Self.normalized(
+            persisted ?? Self.defaultLevel
         )
         storedDefaultZoom = normalized
         if let persisted,
@@ -133,13 +105,20 @@ final class BrowserDefaultPageZoomStore {
         }
     }
 
+    /// Preserve the continuous multiplier, bounding only out-of-range values.
+    /// Non-finite values fall back to the familiar 100% default.
+    nonisolated static func normalized(_ proposed: CGFloat) -> CGFloat {
+        guard proposed.isFinite else { return defaultLevel }
+        return min(max(proposed, defaultRange.lowerBound), defaultRange.upperBound)
+    }
+
     func register(_ observer: any BrowserDefaultPageZoomObserving) {
         observers.add(observer)
         observer.defaultPageZoomDidChange(to: storedDefaultZoom)
     }
 
     private func setDefaultZoom(_ proposed: CGFloat) {
-        let normalized = BrowserPageZoomPolicy.normalizedDefault(proposed)
+        let normalized = Self.normalized(proposed)
         guard normalized != storedDefaultZoom else {
             return
         }

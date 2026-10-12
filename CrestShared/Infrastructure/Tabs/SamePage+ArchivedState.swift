@@ -8,7 +8,9 @@ import Foundation
 /// by the address bar, by an extension, or by a synchronized change from another
 /// device. The tab's own URL wins in that case: restoring would quietly navigate
 /// the user back to where they used to be.
-enum BrowserTabStateRestorePolicy {
+extension SamePage {
+    // MARK: - Actions - Answer
+
     static func restoresArchivedState(archivedURL: URL?, tabURL: URL) -> Bool {
         guard let archivedURL else { return false }
         if archivedURL == tabURL { return true }

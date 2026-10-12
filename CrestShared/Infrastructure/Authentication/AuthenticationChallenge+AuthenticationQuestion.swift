@@ -29,7 +29,7 @@ extension BrowserAuthenticationChallenge {
             previousFailureCount: previousFailures,
             protectionSpace: BrowserHTTPAuthenticationProtectionSpace(origin: origin, credentialScope: scope),
             descriptor: BrowserHTTPAuthenticationDescriptor(
-                source: BrowserCorePolicy.authenticationSourceLabel(
+                source: AuthenticationSource.label(
                     host: question.host, port: question.port, scheme: url.scheme, emptyHostLabel: ProductIdentity.name),
                 realm: realm,
                 authenticationMethod: schemeName,

@@ -18,23 +18,23 @@ final class BrowserSettingsPaneTests: XCTestCase {
             "WebAutomaticDashSubstitutionEnabled",
             "WebAutomaticLinkDetectionEnabled",
         ])
-        for key in BrowserMacWebTextAssistancePolicy.disabledSmartTextKeys {
+        for key in BrowserMacWebTextAssistancePreference.disabledSmartTextKeys {
             defaults.set(true, forKey: key)
         }
 
-        BrowserMacWebTextAssistancePolicy.configure(
+        BrowserMacWebTextAssistancePreference.configure(
             defaults: defaults
         )
 
         XCTAssertEqual(
-            Set(BrowserMacWebTextAssistancePolicy.disabledSmartTextKeys),
+            Set(BrowserMacWebTextAssistancePreference.disabledSmartTextKeys),
             expectedKeys
         )
         XCTAssertEqual(
-            BrowserMacWebTextAssistancePolicy.disabledSmartTextKeys.count,
+            BrowserMacWebTextAssistancePreference.disabledSmartTextKeys.count,
             expectedKeys.count
         )
-        for key in BrowserMacWebTextAssistancePolicy.disabledSmartTextKeys {
+        for key in BrowserMacWebTextAssistancePreference.disabledSmartTextKeys {
             XCTAssertFalse(defaults.bool(forKey: key), key)
         }
     }
@@ -45,12 +45,12 @@ final class BrowserSettingsPaneTests: XCTestCase {
         defer { defaults.removePersistentDomain(forName: suiteName) }
         let key = "WebAutomaticTextReplacementEnabled"
         defaults.set(false, forKey: key)
-        BrowserMacWebTextAssistancePolicy.configure(defaults: defaults)
+        BrowserMacWebTextAssistancePreference.configure(defaults: defaults)
         XCTAssertNil(defaults.object(forKey: key), "WebKit should inherit the macOS text replacement preference")
 
         for choice in [true, false, true] {
             defaults.set(choice, forKey: key)
-            BrowserMacWebTextAssistancePolicy.configure(defaults: defaults)
+            BrowserMacWebTextAssistancePreference.configure(defaults: defaults)
             XCTAssertEqual(defaults.bool(forKey: key), choice)
         }
     }

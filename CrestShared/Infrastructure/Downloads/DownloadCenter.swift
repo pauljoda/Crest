@@ -307,17 +307,14 @@ final class BrowserDownloadCenter: NSObject {
     func presentFeedback(_ event: BrowserDownloadFeedbackEvent) {
         guard !feedbackEvents.contains(where: { $0.id == event.id }) else { return }
         let previousIDs = Set(feedbackEvents.map(\.id))
-        feedbackEvents = BrowserDownloadFeedbackPolicy.bounded(
-            feedbackEvents,
-            appending: event
-        )
+        feedbackEvents = event.appended(to: feedbackEvents)
         let retainedIDs = Set(feedbackEvents.map(\.id))
         for removedID in previousIDs.subtracting(retainedIDs) {
             feedbackExpirationTasks.removeValue(forKey: removedID)?.cancel()
         }
         feedbackExpirationTasks[event.id]?.cancel()
         feedbackExpirationTasks[event.id] = Task { @MainActor [weak self] in
-            try? await Task.sleep(for: BrowserDownloadFeedbackPolicy.lifetime)
+            try? await Task.sleep(for: BrowserDownloadFeedbackEvent.lifetime)
             guard !Task.isCancelled else { return }
             self?.dismissFeedback(event.id)
         }

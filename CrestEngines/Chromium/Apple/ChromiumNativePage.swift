@@ -388,7 +388,7 @@
         /// Starts Crest's own drag of the link to `url` out of the page; false
         /// leaves the drag to the engine.
         func beginLinkDrag(_ url: URL, title: String) -> Bool {
-            guard !disposed, BrowserCorePolicy.acceptsExternalURL(url) else { return false }
+            guard !disposed, ExternalWebLink.accepts(url) else { return false }
             return linkDrag?.beginNativeLink(url: url, label: title) == true
         }
     }
@@ -591,7 +591,7 @@
                 location: session.location, isInvalidated: false, hasActiveSession: session.active,
                 title: bounded(session.title), artist: bounded(session.artist), album: bounded(session.album),
                 artworkData: session.artwork.flatMap {
-                    $0.count <= BrowserMediaSessionArtworkPolicy.maximumBytes ? $0 : nil
+                    $0.count <= BrowserMediaSessionPageEventDecoder.maximumArtworkBytes ? $0 : nil
                 },
                 playbackState: playback, isAudible: session.audible, isMuted: session.muted,
                 availableActions: Set(session.actions))

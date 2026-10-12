@@ -59,7 +59,7 @@ final class BrowserSystemNowPlayingCoordinator {
         from sessions: [BrowserMediaSessionSnapshot]
     ) {
         let next: BrowserMediaSessionSnapshot?
-        if let arbitration = BrowserCorePolicy.mediaSessionArbitration(sessions) {
+        if let arbitration = MediaSessionOrder.arbitration(of: sessions) {
             next = arbitration.nowPlaying
         } else {
             next = selectedSession.flatMap { selected in
@@ -91,6 +91,9 @@ final class BrowserSystemNowPlayingCoordinator {
 final class BrowserMediaPlayerNowPlayingDriver: NSObject,
     BrowserSystemNowPlayingDriving
 {
+    /// The largest artwork the system's Now Playing surface is handed.
+    private nonisolated static let maximumArtworkPixelSize = 1_024
+
     private let infoCenter: MPNowPlayingInfoCenter
     private let commandCenter: MPRemoteCommandCenter
     private var commandHandler: ((MediaSessionAction) -> Bool)?
@@ -185,7 +188,7 @@ final class BrowserMediaPlayerNowPlayingDriver: NSObject,
                     kCGImageSourceCreateThumbnailFromImageAlways: true,
                     kCGImageSourceCreateThumbnailWithTransform: true,
                     kCGImageSourceThumbnailMaxPixelSize:
-                        BrowserMediaSessionArtworkPolicy.maximumSystemPixelSize,
+                        maximumArtworkPixelSize,
                     kCGImageSourceShouldCacheImmediately: true,
                 ] as CFDictionary
             )

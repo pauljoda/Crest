@@ -29,7 +29,7 @@ extension BrowserPage {
         contentRuleList: WKContentRuleList? = nil,
         allowsCredentialAccess: Bool = true,
         isCredentialAccessEnabled: Bool = true,
-        defaultPageZoom: CGFloat = BrowserPageZoomPolicy.defaultLevel,
+        defaultPageZoom: CGFloat = BrowserDefaultPageZoomStore.defaultLevel,
         loadHTTPAuthenticationCredential:
             @escaping BrowserHTTPAuthenticationSession.LoadCredential = { _ in nil },
         saveHTTPAuthenticationCredential:

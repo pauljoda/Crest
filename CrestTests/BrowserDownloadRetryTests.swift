@@ -21,7 +21,7 @@ final class BrowserDownloadRetryTests: XCTestCase {
         original.allowsCellularAccess = false
 
         let replay = try XCTUnwrap(
-            BrowserDownloadRetryRequestPolicy.replayableRequest(from: original)
+            original.replayableDownloadRequest
         )
 
         XCTAssertEqual(replay.url, url)
@@ -45,10 +45,10 @@ final class BrowserDownloadRetryTests: XCTestCase {
         )
 
         XCTAssertNil(
-            BrowserDownloadRetryRequestPolicy.replayableRequest(from: streamRequest)
+            streamRequest.replayableDownloadRequest
         )
         XCTAssertNil(
-            BrowserDownloadRetryRequestPolicy.replayableRequest(from: fileRequest)
+            fileRequest.replayableDownloadRequest
         )
     }
 

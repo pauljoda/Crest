@@ -1,7 +1,17 @@
 import Foundation
 
-enum BrowserShortcutSearchPolicy {
-    static func matches(query: String, fields: [String]) -> Bool {
+/// The words one shortcut row is found by: its title, section, search terms
+/// and spoken shortcut.
+struct BrowserShortcutSearchDocument: Equatable, Sendable {
+    // MARK: - Variables
+
+    let fields: [String]
+
+    // MARK: - Actions - Searching
+
+    /// Whether every term of `query` appears in the fields. A one-character
+    /// term must match a whole word; an empty query matches everything.
+    func matches(_ query: String) -> Bool {
         let terms =
             query
             .lowercased()
@@ -18,17 +28,8 @@ enum BrowserShortcutSearchPolicy {
         }
     }
 
-    static func matches(
-        query: String,
-        document: BrowserShortcutSearchDocument
-    ) -> Bool {
-        matches(query: query, fields: document.fields)
-    }
-
-    static func containsTrimmedPhrase(
-        query: String,
-        fields: [String]
-    ) -> Bool {
+    /// Whether the fields contain `query`, trimmed, as one phrase.
+    func containsTrimmedPhrase(_ query: String) -> Bool {
         let phrase = query.trimmingCharacters(
             in: .whitespacesAndNewlines
         ).lowercased()

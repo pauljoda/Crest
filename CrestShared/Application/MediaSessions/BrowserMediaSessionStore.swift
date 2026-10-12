@@ -30,41 +30,17 @@ struct BrowserMediaSessionPageEvent: Equatable, Sendable {
     let availableActions: Set<MediaSessionAction>
 }
 
-enum BrowserMediaSessionArtworkPolicy {
-    /// Preserve standards-provided artwork bytes whenever they fit the bounded
-    /// native payload. Only a larger page resource is rasterized by the bridge.
-    static let maximumInputBytes = 8 * 1_024 * 1_024
-    static let maximumBytes = 4 * 1_024 * 1_024
-    static let maximumDataURLCharacters = 5_600_128
-    static let maximumSourceCharacters = 11_200_256
-    static let maximumOversizePixelSize = 2_048
-
-    /// Native rendering keeps ordinary source pixels intact. These limits are
-    /// only a decode-safety boundary for unusually large compressed images.
-    static let maximumWidgetPixelDimension = 4_096
-    static let maximumWidgetPixelCount = 16 * 1_024 * 1_024
-    static let maximumSystemPixelSize = 1_024
-
-    static func decode(_ dataURL: String?) -> Data? {
-        guard let dataURL,
-            dataURL.count <= maximumDataURLCharacters,
-            dataURL.hasPrefix("data:image/png;base64,")
-                || dataURL.hasPrefix("data:image/jpeg;base64,")
-                || dataURL.hasPrefix("data:image/webp;base64,")
-        else { return nil }
-        guard let comma = dataURL.firstIndex(of: ",") else { return nil }
-        let encoded = String(dataURL[dataURL.index(after: comma)...])
-        guard let data = Data(base64Encoded: encoded),
-            data.count <= maximumBytes
-        else { return nil }
-        return data
-    }
-}
-
 enum BrowserMediaSessionPageEventDecoder {
     static let maximumTextLength = 512
     static let maximumDocumentIdentifierLength = 128
     static let maximumLocationLength = 4_096
+    /// Preserve standards-provided artwork bytes whenever they fit the bounded
+    /// native payload. Only a larger page resource is rasterized by the bridge.
+    static let maximumArtworkInputBytes = 8 * 1_024 * 1_024
+    static let maximumArtworkBytes = 4 * 1_024 * 1_024
+    static let maximumArtworkDataURLCharacters = 5_600_128
+    static let maximumArtworkSourceCharacters = 11_200_256
+    static let maximumOversizeArtworkPixelSize = 2_048
 
     static func decode(_ body: Any) -> BrowserMediaSessionPageEvent? {
         guard let body = body as? [String: Any],
@@ -98,14 +74,29 @@ enum BrowserMediaSessionPageEventDecoder {
             title: boundedString(body["title"], maximum: maximumTextLength),
             artist: boundedString(body["artist"], maximum: maximumTextLength),
             album: boundedString(body["album"], maximum: maximumTextLength),
-            artworkData: BrowserMediaSessionArtworkPolicy.decode(
-                body["artworkDataURL"] as? String
+            artworkData: artworkData(
+                fromDataURL: body["artworkDataURL"] as? String
             ),
             playbackState: playbackState,
             isAudible: body["audible"] as? Bool == true,
             isMuted: body["muted"] as? Bool == true,
             availableActions: actions
         )
+    }
+
+    static func artworkData(fromDataURL dataURL: String?) -> Data? {
+        guard let dataURL,
+            dataURL.count <= maximumArtworkDataURLCharacters,
+            dataURL.hasPrefix("data:image/png;base64,")
+                || dataURL.hasPrefix("data:image/jpeg;base64,")
+                || dataURL.hasPrefix("data:image/webp;base64,")
+        else { return nil }
+        guard let comma = dataURL.firstIndex(of: ",") else { return nil }
+        let encoded = String(dataURL[dataURL.index(after: comma)...])
+        guard let data = Data(base64Encoded: encoded),
+            data.count <= maximumArtworkBytes
+        else { return nil }
+        return data
     }
 
     private static func boundedString(
@@ -166,18 +157,7 @@ final class BrowserMediaSessionStore: BrowserSidebarWidgetEventSource {
             tabID: owner.tabID,
             documentIdentifier: event.documentIdentifier
         )
-        guard
-            let decision = BrowserCorePolicy.mediaSessionEvent(
-                event,
-                isRetired: retiredIDs.contains(id),
-                lastSequence: lastSequenceByID[id],
-                ordinal: ordinalByID[id],
-                isDismissed: dismissedIDs.contains(id),
-                previousPlayback: snapshotsByID[id]?.playbackState,
-                retainedIdentities: lastSequenceByID.count,
-                nextOrdinal: nextOrdinal
-            )
-        else { return }
+        guard let decision = decision(for: event, id: id) else { return }
         recordSequence(event.sequence, for: id, evictingOldest: decision.evictOldest)
         endpointsByID[id] = WeakEndpoint(endpoint)
         ownersByID[id] = owner
@@ -186,6 +166,28 @@ final class BrowserMediaSessionStore: BrowserSidebarWidgetEventSource {
                 id: id, event: event, owner: owner, fallbackTitle: fallbackTitle, decision: decision),
             on: self
         )
+    }
+
+    /// The core's decision for one report against what the store remembers
+    /// of its session. Nil when the report is stale, from a retired document,
+    /// or the core cannot answer; the store then keeps its state exactly as it
+    /// is. Only ordering, lifecycle and control facts cross.
+    private func decision(
+        for event: BrowserMediaSessionPageEvent, id: BrowserMediaSessionID
+    ) -> MediaSessionEventDecision? {
+        let question = MediaSessionReport(
+            event: MediaSessionEvent(
+                sequence: event.sequence, isInvalidated: event.isInvalidated, hasActiveSession: event.hasActiveSession,
+                playback: event.playbackState.core, isMuted: event.isMuted,
+                actions: Array(event.availableActions)),
+            identity: MediaSessionIdentity(
+                isRetired: retiredIDs.contains(id), lastSequence: lastSequenceByID[id], ordinal: ordinalByID[id],
+                isDismissed: dismissedIDs.contains(id), previousPlayback: snapshotsByID[id]?.playbackState.core),
+            retainedIdentities: lastSequenceByID.count, nextOrdinal: nextOrdinal)
+        guard let decision = try? CrestCore.answer(question), decision.accepted, decision.evictOldest >= 0 else {
+            return nil
+        }
+        return decision
     }
 
     func invalidate(
@@ -362,7 +364,7 @@ final class BrowserMediaSessionStore: BrowserSidebarWidgetEventSource {
     private func publishIfChanged() {
         let current = Array(snapshotsByID.values)
         let next =
-            BrowserCorePolicy.mediaSessionArbitration(current)?.order
+            MediaSessionOrder.arbitration(of: current)?.order
             ?? {
                 let placed = sessions.compactMap { snapshotsByID[$0.id] }
                 let placedIDs = Set(placed.map(\.id))

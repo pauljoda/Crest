@@ -61,7 +61,7 @@ struct BrowserDownloadSourceCapture: Equatable, Sendable {
             message.version == 1,
             message.href.count <= 4_096,
             let destinationURL = URL(string: message.href),
-            BrowserCorePolicy.acceptsExternalURL(destinationURL)
+            ExternalWebLink.accepts(destinationURL)
         else { return nil }
 
         self.init(
@@ -137,30 +137,9 @@ struct BrowserDownloadFeedbackSource: Equatable, @unchecked Sendable {
     let windowIdentifier: ObjectIdentifier?
 }
 
-struct BrowserDownloadFeedbackEvent: Identifiable, Equatable, @unchecked Sendable {
-    let id: UUID
-    let profileID: UUID
-    let spaceID: UUID
-    let filename: String
-    let source: BrowserDownloadFeedbackSource
-}
-
-enum BrowserDownloadFeedbackPolicy {
-    static let maximumVisibleEvents = 3
-    static let lifetime: Duration = .milliseconds(1_400)
-
-    static func bounded(
-        _ events: [BrowserDownloadFeedbackEvent],
-        appending event: BrowserDownloadFeedbackEvent
-    ) -> [BrowserDownloadFeedbackEvent] {
-        Array((events + [event]).suffix(maximumVisibleEvents))
-    }
-}
-
+/// A forwarder kept only for CrestMobile, which another batch owns. Delete it
+/// once `MobileBrowserPage` passes `isUserInitiated: feedbackSource != nil`.
 enum BrowserDownloadInitiationPolicy {
-    /// Only Crest's trusted activation bridge may strengthen WebKit's own
-    /// initiation signal. A synthetic `.linkActivated` navigation is not proof
-    /// of a user gesture and must remain subject to automatic-download policy.
     static func userInitiatedOverride(
         hasTrustedSource: Bool
     ) -> Bool? {

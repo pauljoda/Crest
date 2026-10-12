@@ -47,7 +47,7 @@ final class BrowserHTTPAuthenticationSession {
         to challenge: BrowserAuthenticationChallenge,
         prompt: Prompt
     ) async -> BrowserHTTPAuthenticationDecision {
-        await BrowserCorePolicy.authenticationHandling(for: challenge).respond(on: self)(challenge, prompt)
+        await challenge.handling.respond(on: self)(challenge, prompt)
     }
 
     func authenticationSucceeded() async {

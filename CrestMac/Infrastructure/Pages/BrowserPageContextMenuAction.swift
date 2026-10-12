@@ -201,7 +201,7 @@ extension BrowserPage: BrowserPageContextMenuHost {
             profileID: context.assignment.profileID)
         var actions: [BrowserPageContextMenuAction] = []
 
-        if let linkURL, BrowserCorePolicy.acceptsExternalURL(linkURL),
+        if let linkURL, ExternalWebLink.accepts(linkURL),
             linkDestinationHost.canOpenLink(from: source)
         {
             for space in linkDestinationHost.otherSpaces(from: source) {

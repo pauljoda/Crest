@@ -238,7 +238,7 @@ struct BrowserCommandActions: BrowserNumberedSelectionPerformer {
         let actions = self
         Task { @MainActor in
             let panel = NSOpenPanel()
-            panel.allowedContentTypes = BrowserLocalFileOpenPolicy.contentTypes(archive: format)
+            panel.allowedContentTypes = format.openableContentTypes
             panel.allowsMultipleSelection = true
             panel.canChooseDirectories = false
             panel.canChooseFiles = true
@@ -260,7 +260,7 @@ struct BrowserCommandActions: BrowserNumberedSelectionPerformer {
         in assignment: BrowserSpaceRuntimeAssignment
     ) {
         var selected: URL?
-        for url in urls where BrowserCorePolicy.acceptsLocalDocument(url) {
+        for url in urls where ExternalLocalDocument.accepts(url) {
             guard browser.openNewTab(url: url, matching: assignment) != nil else { continue }
             selected = url
         }
@@ -303,17 +303,17 @@ struct BrowserCommandActions: BrowserNumberedSelectionPerformer {
 
     func zoomIn() {
         guard let page = pages.commandPage, page.zoomIn() else { return }
-        chrome.showPageZoomFeedback(BrowserPageZoomPolicy.percentageLabel(for: page.pageZoom))
+        chrome.showPageZoomFeedback(page.pageZoom.pageZoomPercentage)
     }
 
     func zoomOut() {
         guard let page = pages.commandPage, page.zoomOut() else { return }
-        chrome.showPageZoomFeedback(BrowserPageZoomPolicy.percentageLabel(for: page.pageZoom))
+        chrome.showPageZoomFeedback(page.pageZoom.pageZoomPercentage)
     }
 
     func resetZoom() {
         guard let page = pages.commandPage, page.resetZoom() else { return }
-        chrome.showPageZoomFeedback(BrowserPageZoomPolicy.percentageLabel(for: page.pageZoom))
+        chrome.showPageZoomFeedback(page.pageZoom.pageZoomPercentage)
     }
 
     /// Reloads a Peek open over the active tab, or else the tab, which the

@@ -100,10 +100,6 @@ extension ShortcutModifiers: Codable, Hashable {
     ]
 }
 
-struct BrowserShortcutSearchDocument: Equatable, Sendable {
-    let fields: [String]
-}
-
 extension ShortcutSection: Identifiable {
     var id: String { name }
 }

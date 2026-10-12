@@ -1,39 +1,15 @@
 import Foundation
 
-enum BrowserPageArchiveFormat: String {
-    case webKit = "webarchive"
-    case mhtml
+extension PageLiveState {
+    // MARK: - Actions - Export
 
-    /// What the page's engine exports an archive as.
-    var exportFormat: PageExportFormat {
-        switch self {
-        case .webKit: .webArchive
-        case .mhtml: .mhtml
-        }
-    }
-}
-
-enum BrowserPageExportPolicy {
-    static func pdfFilename(title: String?, url: URL?) -> String {
-        filename(title: title, url: url, pathExtension: "pdf")
-    }
-
-    static func webArchiveFilename(title: String?, url: URL?, format: BrowserPageArchiveFormat = .webKit) -> String {
-        filename(title: title, url: url, pathExtension: format.rawValue)
-    }
-
-    static func imageFilename(title: String?, url: URL?) -> String {
-        filename(title: title, url: url, pathExtension: "png")
-    }
-
-    private static func filename(
-        title: String?,
-        url: URL?,
-        pathExtension: String
-    ) -> String {
+    /// The name a save panel proposes for this document exported with
+    /// `pathExtension`: its title, else its host, else "Web Page", made safe
+    /// for a file name.
+    func suggestedFilename(pathExtension: String) -> String {
         let source =
-            normalized(title)
-            ?? normalized(url?.host())
+            Self.normalized(title)
+            ?? Self.normalized(documentURL?.host())
             ?? "Web Page"
         var candidate = source.replacingOccurrences(
             of: #"[\x00-\x1F\x7F/\\:*?"<>|]+"#,

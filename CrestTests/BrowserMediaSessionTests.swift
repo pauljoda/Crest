@@ -415,16 +415,16 @@ final class BrowserMediaSessionTests: XCTestCase {
 
         let oversized = Data(
             repeating: 1,
-            count: BrowserMediaSessionArtworkPolicy.maximumBytes + 1
+            count: BrowserMediaSessionPageEventDecoder.maximumArtworkBytes + 1
         )
         XCTAssertNil(
-            BrowserMediaSessionArtworkPolicy.decode(
-                "data:image/png;base64,\(oversized.base64EncodedString())"
+            BrowserMediaSessionPageEventDecoder.artworkData(
+                fromDataURL: "data:image/png;base64,\(oversized.base64EncodedString())"
             )
         )
         XCTAssertNil(
-            BrowserMediaSessionArtworkPolicy.decode(
-                "https://private.example/artwork.png"
+            BrowserMediaSessionPageEventDecoder.artworkData(
+                fromDataURL: "https://private.example/artwork.png"
             ),
             "Crest must not refetch page artwork across WebKit security boundaries."
         )

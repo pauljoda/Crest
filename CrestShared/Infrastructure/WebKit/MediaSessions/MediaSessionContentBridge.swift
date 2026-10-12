@@ -86,7 +86,7 @@ enum BrowserMediaSessionContentBridge {
             for (const item of artwork) {
               const source = item?.src;
               if (typeof source === "string" && source.length <=
-                  \#(BrowserMediaSessionArtworkPolicy.maximumSourceCharacters)) {
+                  \#(BrowserMediaSessionPageEventDecoder.maximumArtworkSourceCharacters)) {
                 const match = /^(\d+)x(\d+)$/i.exec(item?.sizes || "");
                 const area = match ? Number(match[1]) * Number(match[2]) : 0;
                 if (!selected || area > selectedArea) {
@@ -121,7 +121,7 @@ enum BrowserMediaSessionContentBridge {
             }
             const scale = Math.min(
               1,
-              \#(BrowserMediaSessionArtworkPolicy.maximumOversizePixelSize)
+              \#(BrowserMediaSessionPageEventDecoder.maximumOversizeArtworkPixelSize)
                 / Math.max(bitmap.width, bitmap.height)
             );
             const canvas = document.createElement("canvas");
@@ -139,10 +139,10 @@ enum BrowserMediaSessionContentBridge {
               sourceBlob.type === "image/jpeg" ? "image/jpeg" : "image/png",
               0.92
             );
-            if (encoded?.size > \#(BrowserMediaSessionArtworkPolicy.maximumBytes)) {
+            if (encoded?.size > \#(BrowserMediaSessionPageEventDecoder.maximumArtworkBytes)) {
               encoded = await encodedArtworkBlob(canvas, "image/jpeg", 0.86);
             }
-            return encoded?.size <= \#(BrowserMediaSessionArtworkPolicy.maximumBytes)
+            return encoded?.size <= \#(BrowserMediaSessionPageEventDecoder.maximumArtworkBytes)
               ? encoded : null;
           };
 
@@ -151,7 +151,7 @@ enum BrowserMediaSessionContentBridge {
             if (!["image/png", "image/jpeg", "image/webp"].includes(type)) return;
             const declaredLength = Number(response.headers.get("content-length"));
             if (Number.isFinite(declaredLength)
-                && declaredLength > \#(BrowserMediaSessionArtworkPolicy.maximumInputBytes)) return;
+                && declaredLength > \#(BrowserMediaSessionPageEventDecoder.maximumArtworkInputBytes)) return;
             const reader = response.body?.getReader();
             if (!reader) return;
             const chunks = [];
@@ -160,7 +160,7 @@ enum BrowserMediaSessionContentBridge {
               const part = await reader.read();
               if (part.done) break;
               total += part.value.byteLength;
-              if (total > \#(BrowserMediaSessionArtworkPolicy.maximumInputBytes)) {
+              if (total > \#(BrowserMediaSessionPageEventDecoder.maximumArtworkInputBytes)) {
                 await reader.cancel();
                 return;
               }
@@ -171,7 +171,7 @@ enum BrowserMediaSessionContentBridge {
             // Ordinary artwork crosses the bridge byte-for-byte. Rasterize only
             // when the original cannot fit the bounded native payload.
             const retainedBlob = sourceBlob.size
-              <= \#(BrowserMediaSessionArtworkPolicy.maximumBytes)
+              <= \#(BrowserMediaSessionPageEventDecoder.maximumArtworkBytes)
               ? sourceBlob
               : await boundedOversizeArtwork(sourceBlob, generation);
             if (!retainedBlob || generation !== artworkGeneration) return;
@@ -179,7 +179,7 @@ enum BrowserMediaSessionContentBridge {
             if (generation !== artworkGeneration
                 || typeof dataURL !== "string"
                 || dataURL.length >
-                    \#(BrowserMediaSessionArtworkPolicy.maximumDataURLCharacters)
+                    \#(BrowserMediaSessionPageEventDecoder.maximumArtworkDataURLCharacters)
                 || !/^data:image\/(?:png|jpeg|webp);base64,/i.test(dataURL)) return;
             artworkDataURL = dataURL;
             post({});
@@ -196,7 +196,7 @@ enum BrowserMediaSessionContentBridge {
             if (!source) return;
             if (/^data:image\/(?:png|jpeg|webp);base64,/i.test(source)
                 && source.length <=
-                    \#(BrowserMediaSessionArtworkPolicy.maximumDataURLCharacters)) {
+                    \#(BrowserMediaSessionPageEventDecoder.maximumArtworkDataURLCharacters)) {
               artworkDataURL = source;
               return;
             }

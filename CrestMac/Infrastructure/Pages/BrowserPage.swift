@@ -97,7 +97,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     var findFocusRequest: Int { findSession.focusRequest }
     var findFocusesQueryField: Bool { findSession.focusesQueryField }
     var canFindAgain: Bool { findSession.canFindAgain }
-    private(set) var pageZoom: CGFloat = BrowserPageZoomPolicy.defaultLevel
+    private(set) var pageZoom: CGFloat = BrowserDefaultPageZoomStore.defaultLevel
     let translation = BrowserPageTranslation()
     var readerModeState: BrowserReaderModeState { readerModeSession?.state ?? .unavailable }
     var isContentBlockingActive: Bool { engineAdapter.isContentBlockingActive }
@@ -204,7 +204,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     /// a local development address, while the person keeps that preference on.
     var isDeveloperModeAutomatic: Bool {
         BrowserAppPreferenceStore.shared.automaticallyShowsDeveloperToolbar
-            && BrowserDeveloperModePolicy.isAutomatic(for: live.displayURL)
+            && live.displayURL?.isLocalDevelopmentAddress == true
     }
 
     /// The tab that owns this page's Media Session, read when the session
@@ -258,7 +258,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         spaceName: String,
         allowsCredentialAccess: Bool = true,
         isCredentialAccessEnabled: Bool = true,
-        defaultPageZoom: CGFloat = BrowserPageZoomPolicy.defaultLevel,
+        defaultPageZoom: CGFloat = BrowserDefaultPageZoomStore.defaultLevel,
         loadHTTPAuthenticationCredential:
             @escaping BrowserHTTPAuthenticationSession.LoadCredential = { _ in nil },
         saveHTTPAuthenticationCredential:
@@ -297,7 +297,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         self.allowsCredentialAccess = allowsCredentialAccess
         sitePermissionSession = BrowserPageSitePermissionSession(
             page: engineAdapter.enginePage, permissionCenter: permissionCenter, spaceID: spaceID)
-        let normalizedDefaultPageZoom = BrowserPageZoomPolicy.normalizedDefault(
+        let normalizedDefaultPageZoom = BrowserDefaultPageZoomStore.normalized(
             defaultPageZoom
         )
         self.defaultPageZoom = normalizedDefaultPageZoom
@@ -655,9 +655,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
                 let panel = NSSavePanel()
                 panel.allowedContentTypes = [.png]
                 panel.canCreateDirectories = true
-                panel.nameFieldStringValue =
-                    BrowserDeveloperCapturePolicy
-                    .pngFilename(title: live.title, url: live.documentURL)
+                panel.nameFieldStringValue = live.suggestedFilename(pathExtension: "png")
                 panel.title = "Save Portrait Capture"
                 panel.prompt = "Save"
                 guard await panel.beginSheetModal(for: window) == .OK,
@@ -698,13 +696,13 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     @discardableResult
     func zoomIn() -> Bool {
         guard developerViewport == nil else { return false }
-        return setTemporaryPageZoom(BrowserPageZoomPolicy.increased(from: pageZoom))
+        return setTemporaryPageZoom(pageZoom.pageZoomIncreased)
     }
 
     @discardableResult
     func zoomOut() -> Bool {
         guard developerViewport == nil else { return false }
-        return setTemporaryPageZoom(BrowserPageZoomPolicy.decreased(from: pageZoom))
+        return setTemporaryPageZoom(pageZoom.pageZoomDecreased)
     }
 
     @discardableResult
@@ -720,10 +718,10 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     /// the newly selected default already equals its temporary value.
     @discardableResult
     func applyDefaultPageZoom(_ zoom: CGFloat) -> Bool {
-        let normalized = BrowserPageZoomPolicy.normalizedDefault(zoom)
+        let normalized = BrowserDefaultPageZoomStore.normalized(zoom)
         defaultPageZoom = normalized
         if hasTemporaryPageZoomOverride {
-            if BrowserPageZoomPolicy.levelsMatch(pageZoom, normalized) {
+            if pageZoom.matchesPageZoom(normalized) {
                 hasTemporaryPageZoomOverride = false
             }
             return false
@@ -993,7 +991,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
 
     func exportPDF() {
         guard let window = nativeView.window, live.url != nil else { return }
-        let suggestedFilename = BrowserPageExportPolicy.pdfFilename(title: live.title, url: live.documentURL)
+        let suggestedFilename = live.suggestedFilename(pathExtension: "pdf")
         Task { [weak self, weak window] in
             guard let self, let window else { return }
             do {
@@ -1025,17 +1023,13 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     func exportWebArchive() {
         guard let window = nativeView.window, live.url != nil else { return }
         let format = pageEngine.registration.archiveFormat
-        let suggestedFilename = BrowserPageExportPolicy.webArchiveFilename(
-            title: live.title,
-            url: live.documentURL,
-            format: format
-        )
+        let suggestedFilename = live.suggestedFilename(pathExtension: format.pathExtension)
         Task { [weak self, weak window] in
             guard let self, let window else { return }
             do {
                 let data = try await webArchiveData()
                 let panel = NSSavePanel()
-                panel.allowedContentTypes = [UTType(filenameExtension: format.rawValue) ?? .data]
+                panel.allowedContentTypes = [format.contentType]
                 panel.canCreateDirectories = true
                 panel.nameFieldStringValue = suggestedFilename
                 panel.title = "Save Page as Web Archive"
@@ -1066,10 +1060,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
 
     private func setTemporaryPageZoom(_ zoom: CGFloat) -> Bool {
         let changed = setPageZoom(zoom)
-        hasTemporaryPageZoomOverride = !BrowserPageZoomPolicy.levelsMatch(
-            pageZoom,
-            defaultPageZoom
-        )
+        hasTemporaryPageZoomOverride = !pageZoom.matchesPageZoom(defaultPageZoom)
         return changed
     }
 
