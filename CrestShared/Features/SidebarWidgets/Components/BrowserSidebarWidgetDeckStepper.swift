@@ -179,11 +179,6 @@ struct BrowserSidebarWidgetDeckStepper: View {
         let position =
             instances.firstIndex(where: { $0.id == instance.id })
             .map { $0 + 1 } ?? 1
-        switch instance.presentation {
-        case .nowPlaying(let session):
-            return "Widget \(position), Now Playing, \(session.ownerDisplayTitle)"
-        case .softwareUpdate:
-            return "Widget \(position), Update Available"
-        }
+        return "Widget \(position), \(instance.presentation.deckDescription)"
     }
 }

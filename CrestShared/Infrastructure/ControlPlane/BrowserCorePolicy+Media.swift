@@ -18,7 +18,7 @@ extension BrowserCorePolicy {
             event: MediaSessionEvent(
                 sequence: event.sequence, isInvalidated: event.isInvalidated, hasActiveSession: event.hasActiveSession,
                 playback: event.playbackState.core, isMuted: event.isMuted,
-                actions: event.availableActions.map(\.core)),
+                actions: Array(event.availableActions)),
             identity: MediaSessionIdentity(
                 isRetired: isRetired, lastSequence: lastSequence, ordinal: ordinal, isDismissed: isDismissed,
                 previousPlayback: previousPlayback?.core),

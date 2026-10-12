@@ -446,7 +446,7 @@ final class BrowserMediaSessionTests: XCTestCase {
         playback: BrowserMediaSessionPlaybackState = .paused,
         audible: Bool = false,
         muted: Bool = false,
-        actions: Set<BrowserMediaSessionAction> = [.play, .pause]
+        actions: Set<MediaSessionAction> = [.play, .pause]
     ) -> BrowserMediaSessionPageEvent {
         BrowserMediaSessionPageEvent(
             documentIdentifier: document,
@@ -468,12 +468,12 @@ final class BrowserMediaSessionTests: XCTestCase {
 
 @MainActor
 private final class FakeMediaSessionEndpoint: BrowserMediaSessionCommandEndpoint {
-    private(set) var actions: [BrowserMediaSessionAction] = []
+    private(set) var actions: [MediaSessionAction] = []
     private(set) var documentIdentifiers: [String] = []
     private(set) var mutedRequests: [Bool] = []
 
     func performMediaSessionAction(
-        _ action: BrowserMediaSessionAction,
+        _ action: MediaSessionAction,
         documentIdentifier: String
     ) {
         actions.append(action)

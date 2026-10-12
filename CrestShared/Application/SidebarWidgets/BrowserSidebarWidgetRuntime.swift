@@ -258,16 +258,7 @@ final class BrowserSidebarWidgetRuntime: BrowserSidebarWidgetPreferenceObserving
             return
         }
         let matching = candidates.filter { $0.id.kindID == kindID }
-        let normalized: [BrowserSidebarWidgetInstance]
-        switch registration.instancePolicy {
-        case .single:
-            normalized = matching.sorted { $0.id.id < $1.id.id }.prefix(1).map { $0 }
-        case .multiple:
-            var unique: [BrowserSidebarWidgetID: BrowserSidebarWidgetInstance] = [:]
-            for instance in matching { unique[instance.id] = instance }
-            normalized = unique.values.sorted { $0.id.id < $1.id.id }
-        }
-        storeInstances(normalized, for: kindID)
+        storeInstances(registration.instancePolicy.normalize(matching), for: kindID)
     }
 
     private func storeInstances(

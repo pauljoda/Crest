@@ -78,9 +78,7 @@ struct BrowserSidebarWidgetRegistry: Sendable {
 
         var seenSingleKinds: Set<BrowserSidebarWidgetKindID> = []
         return eligible.sorted(by: instancePrecedes).filter { instance in
-            guard
-                registrationsByID[instance.id.kindID]?.instancePolicy
-                    == .single
+            guard registrationsByID[instance.id.kindID]?.instancePolicy.isSingle == true
             else { return true }
             return seenSingleKinds.insert(instance.id.kindID).inserted
         }

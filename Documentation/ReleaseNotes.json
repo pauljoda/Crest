@@ -3861,6 +3861,10 @@
     "2026-10-12-page-engine-events-own-behavior": {
       "category": "internal",
       "message": "Let each engine event say what it does to its page"
+    },
+    "2026-10-12-widget-actions-own-behavior": {
+      "category": "internal",
+      "message": "Let sidebar widget actions and update phases say what they do"
     }
   }
 }

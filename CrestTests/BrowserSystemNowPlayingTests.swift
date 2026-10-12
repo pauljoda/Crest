@@ -78,11 +78,11 @@ final class BrowserSystemNowPlayingTests: XCTestCase {
 
 @MainActor
 private final class SystemNowPlayingFakeDriver: BrowserSystemNowPlayingDriving {
-    private(set) var commandHandler: ((BrowserMediaSessionAction) -> Bool)?
+    private(set) var commandHandler: ((MediaSessionAction) -> Bool)?
     private(set) var published: [BrowserMediaSessionSnapshot?] = []
 
     func setCommandHandler(
-        _ handler: ((BrowserMediaSessionAction) -> Bool)?
+        _ handler: ((MediaSessionAction) -> Bool)?
     ) {
         commandHandler = handler
     }
@@ -91,17 +91,17 @@ private final class SystemNowPlayingFakeDriver: BrowserSystemNowPlayingDriving {
         published.append(session)
     }
 
-    func send(_ action: BrowserMediaSessionAction) -> Bool {
+    func send(_ action: MediaSessionAction) -> Bool {
         commandHandler?(action) == true
     }
 }
 
 @MainActor
 private final class SystemNowPlayingFakeEndpoint: BrowserMediaSessionCommandEndpoint {
-    private(set) var actions: [BrowserMediaSessionAction] = []
+    private(set) var actions: [MediaSessionAction] = []
 
     func performMediaSessionAction(
-        _ action: BrowserMediaSessionAction,
+        _ action: MediaSessionAction,
         documentIdentifier: String
     ) {
         actions.append(action)

@@ -554,26 +554,15 @@
             pages?.request(ActivateMediaSession(pageID: pageID, document: documentIdentifier))
         }
 
-        func performMediaSessionAction(_ action: BrowserMediaSessionAction, documentIdentifier: String) {
+        func performMediaSessionAction(_ action: MediaSessionAction, documentIdentifier: String) {
             guard created else { return }
             pages?.request(
-                PerformMediaAction(pageID: pageID, document: documentIdentifier, action: action.core))
+                PerformMediaAction(pageID: pageID, document: documentIdentifier, action: action))
         }
 
         func setMediaSessionMuted(_ muted: Bool, documentIdentifier: String) {
             guard created else { return }
             pages?.request(MuteMediaSession(pageID: pageID, document: documentIdentifier, muted: muted))
-        }
-    }
-
-    extension BrowserMediaSessionAction {
-        fileprivate init(_ action: MediaSessionAction) {
-            switch action {
-            case .play: self = .play
-            case .pause: self = .pause
-            case .previousTrack: self = .previousTrack
-            case .nextTrack: self = .nextTrack
-            }
         }
     }
 
@@ -605,7 +594,7 @@
                     $0.count <= BrowserMediaSessionArtworkPolicy.maximumBytes ? $0 : nil
                 },
                 playbackState: playback, isAudible: session.audible, isMuted: session.muted,
-                availableActions: Set(session.actions.map(BrowserMediaSessionAction.init)))
+                availableActions: Set(session.actions))
         }
     }
 

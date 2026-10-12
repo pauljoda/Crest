@@ -54,7 +54,12 @@ final class BrowserSoftwareUpdateModel {
 
     var sidebarWidgetSnapshot: BrowserSoftwareUpdateWidgetSnapshot? {
         guard phase != .idle, !isHidden else { return nil }
-        return BrowserSoftwareUpdateWidgetSnapshot(
+        return snapshot
+    }
+
+    /// Where the update stands now, whether or not the sidebar shows it.
+    var snapshot: BrowserSoftwareUpdateWidgetSnapshot {
+        BrowserSoftwareUpdateWidgetSnapshot(
             phase: phase,
             title: updateTitle ?? "Crest Update",
             version: updateVersion,
@@ -513,3 +518,5 @@ final class BrowserSoftwareUpdateModel {
         widgetSource?.publish(sidebarWidgetSnapshot)
     }
 }
+
+extension BrowserSoftwareUpdateModel: BrowserSoftwareUpdateActionPerformer {}

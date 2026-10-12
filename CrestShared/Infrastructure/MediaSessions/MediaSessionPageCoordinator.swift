@@ -10,7 +10,7 @@ protocol BrowserMediaSessionTransport: AnyObject {
     var mediaSessionLocation: String? { get }
     /// Starts reporting the current document under `documentIdentifier`.
     func activateMediaSession(documentIdentifier: String)
-    func performMediaSessionAction(_ action: BrowserMediaSessionAction, documentIdentifier: String)
+    func performMediaSessionAction(_ action: MediaSessionAction, documentIdentifier: String)
     func setMediaSessionMuted(_ muted: Bool, documentIdentifier: String)
 }
 
@@ -122,7 +122,7 @@ final class BrowserMediaSessionPageCoordinator {
     }
 
     func perform(
-        _ action: BrowserMediaSessionAction,
+        _ action: MediaSessionAction,
         documentIdentifier: String
     ) {
         guard self.documentIdentifier == documentIdentifier,

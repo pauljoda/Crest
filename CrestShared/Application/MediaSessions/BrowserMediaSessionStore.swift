@@ -4,7 +4,7 @@ import Observation
 @MainActor
 protocol BrowserMediaSessionCommandEndpoint: AnyObject {
     func performMediaSessionAction(
-        _ action: BrowserMediaSessionAction,
+        _ action: MediaSessionAction,
         documentIdentifier: String
     )
 
@@ -27,7 +27,7 @@ struct BrowserMediaSessionPageEvent: Equatable, Sendable {
     let playbackState: BrowserMediaSessionPlaybackState
     let isAudible: Bool
     let isMuted: Bool
-    let availableActions: Set<BrowserMediaSessionAction>
+    let availableActions: Set<MediaSessionAction>
 }
 
 enum BrowserMediaSessionArtworkPolicy {
@@ -82,7 +82,7 @@ enum BrowserMediaSessionPageEventDecoder {
 
         let actions = Set(
             (body["actions"] as? [String] ?? []).compactMap(
-                BrowserMediaSessionAction.init(rawValue:)
+                MediaSessionAction.init(pageName:)
             )
         )
         let playbackState =
@@ -181,47 +181,11 @@ final class BrowserMediaSessionStore: BrowserSidebarWidgetEventSource {
         recordSequence(event.sequence, for: id, evictingOldest: decision.evictOldest)
         endpointsByID[id] = WeakEndpoint(endpoint)
         ownersByID[id] = owner
-        switch decision.disposition {
-        case .retire:
-            retire(id)
-            publishIfChanged()
-            return
-        case .clear:
-            snapshotsByID[id] = nil
-            publishIfChanged()
-            return
-        case .publish:
-            break
-        }
-
-        if decision.supersedesTabSiblings {
-            let superseded = ownersByID.keys.filter {
-                $0.tabID == owner.tabID && $0 != id
-            }
-            for supersededID in superseded { retire(supersededID) }
-        }
-
-        guard let ordinal = decision.ordinal else { return }
-        ordinalByID[id] = ordinal
-        nextOrdinal = decision.nextOrdinal
-        if decision.clearsDismissal {
-            dismissedIDs.remove(id)
-        }
-        snapshotsByID[id] = BrowserMediaSessionSnapshot(
-            id: id,
-            owner: owner,
-            ownerTitle: Self.boundedFallbackTitle(fallbackTitle),
-            title: event.title,
-            artist: event.artist,
-            album: event.album,
-            artworkData: event.artworkData,
-            playbackState: event.playbackState,
-            isAudible: event.isAudible,
-            isMuted: event.isMuted,
-            availableActions: event.availableActions,
-            orderingOrdinal: ordinal
+        decision.disposition.settle(
+            BrowserMediaSessionReport(
+                id: id, event: event, owner: owner, fallbackTitle: fallbackTitle, decision: decision),
+            on: self
         )
-        publishIfChanged()
     }
 
     func invalidate(
@@ -296,38 +260,7 @@ final class BrowserMediaSessionStore: BrowserSidebarWidgetEventSource {
                 $0.id.id == instanceID.instanceID
             })
         else { return }
-        if action == .dismissMediaSession {
-            // Hiding a card is Crest's own state, so it does not need the page to
-            // still be reachable.
-            guard dismissedIDs.insert(snapshot.id).inserted else { return }
-            publishIfChanged()
-            return
-        }
-        if action == .toggleMute {
-            setMuted(!snapshot.isMuted, snapshot)
-            return
-        }
-        guard let endpoint = endpointsByID[snapshot.id]?.value else { return }
-        let mediaAction: BrowserMediaSessionAction?
-        switch action {
-        case .play:
-            mediaAction = .play
-        case .pause:
-            mediaAction = .pause
-        case .previousTrack:
-            mediaAction = .previousTrack
-        case .nextTrack:
-            mediaAction = .nextTrack
-        default:
-            mediaAction = nil
-        }
-        guard let mediaAction,
-            snapshot.availableActions.contains(mediaAction)
-        else { return }
-        endpoint.performMediaSessionAction(
-            mediaAction,
-            documentIdentifier: snapshot.id.documentIdentifier
-        )
+        action.perform(on: self, session: snapshot)
     }
 
     /// The session the tab's page publishes, or nil while it publishes none.
@@ -374,18 +307,7 @@ final class BrowserMediaSessionStore: BrowserSidebarWidgetEventSource {
             if Self.exposesMuteControl(snapshot) {
                 actions.insert(.toggleMute)
             }
-            for action in snapshot.availableActions {
-                switch action {
-                case .play:
-                    actions.insert(.play)
-                case .pause:
-                    actions.insert(.pause)
-                case .previousTrack:
-                    actions.insert(.previousTrack)
-                case .nextTrack:
-                    actions.insert(.nextTrack)
-                }
-            }
+            actions.formUnion(snapshot.availableActions.map(BrowserSidebarWidgetAction.mediaSession))
             return BrowserSidebarWidgetInstance(
                 id: BrowserSidebarWidgetID(
                     kindID: kindID,
@@ -469,5 +391,74 @@ final class BrowserMediaSessionStore: BrowserSidebarWidgetEventSource {
             trimmed.count <= BrowserMediaSessionPageEventDecoder.maximumTextLength
         else { return nil }
         return trimmed
+    }
+}
+
+extension BrowserMediaSessionStore: BrowserNowPlayingActionPerformer {
+    func dismissCard(of session: BrowserMediaSessionSnapshot) {
+        // Hiding a card is Crest's own state, so it does not need the page to
+        // still be reachable.
+        guard dismissedIDs.insert(session.id).inserted else { return }
+        publishIfChanged()
+    }
+
+    func toggleMute(of session: BrowserMediaSessionSnapshot) {
+        setMuted(!session.isMuted, session)
+    }
+
+    func perform(_ action: MediaSessionAction, on session: BrowserMediaSessionSnapshot) {
+        guard let endpoint = endpointsByID[session.id]?.value,
+            session.availableActions.contains(action)
+        else { return }
+        endpoint.performMediaSessionAction(
+            action,
+            documentIdentifier: session.id.documentIdentifier
+        )
+    }
+}
+
+extension BrowserMediaSessionStore: BrowserMediaSessionDispositionPerformer {
+    func retireSession(_ report: BrowserMediaSessionReport) {
+        retire(report.id)
+        publishIfChanged()
+    }
+
+    func clearSession(_ report: BrowserMediaSessionReport) {
+        snapshotsByID[report.id] = nil
+        publishIfChanged()
+    }
+
+    func publishSession(_ report: BrowserMediaSessionReport) {
+        let id = report.id
+        let event = report.event
+        let decision = report.decision
+        if decision.supersedesTabSiblings {
+            let superseded = ownersByID.keys.filter {
+                $0.tabID == report.owner.tabID && $0 != id
+            }
+            for supersededID in superseded { retire(supersededID) }
+        }
+
+        guard let ordinal = decision.ordinal else { return }
+        ordinalByID[id] = ordinal
+        nextOrdinal = decision.nextOrdinal
+        if decision.clearsDismissal {
+            dismissedIDs.remove(id)
+        }
+        snapshotsByID[id] = BrowserMediaSessionSnapshot(
+            id: id,
+            owner: report.owner,
+            ownerTitle: Self.boundedFallbackTitle(report.fallbackTitle),
+            title: event.title,
+            artist: event.artist,
+            album: event.album,
+            artworkData: event.artworkData,
+            playbackState: event.playbackState,
+            isAudible: event.isAudible,
+            isMuted: event.isMuted,
+            availableActions: event.availableActions,
+            orderingOrdinal: ordinal
+        )
+        publishIfChanged()
     }
 }

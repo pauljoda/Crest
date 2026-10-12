@@ -128,7 +128,7 @@ final class BrowserSoftwareUpdateService {
             maxSplits: 2,
             omittingEmptySubsequences: true
         ).map(String.init)
-        let state = components.first ?? "available"
+        let fixture = BrowserSoftwareUpdateFixture.named(components.first ?? "available")
         let version = components.count > 1 ? components[1] : "0.5.99"
         let build = components.count > 2 ? components[2] : "599"
         let releaseNotes = """
@@ -147,55 +147,7 @@ final class BrowserSoftwareUpdateService {
             install: {},
             skip: {}
         )
-        switch state {
-        case "checking":
-            model.presentChecking(cancellation: {})
-        case "automatic-downloading":
-            model.presentAutomaticDownload(
-                title: "Crest \(version)",
-                version: version,
-                build: build,
-                releaseNotes: releaseNotes,
-                informationURL: nil,
-                isFixture: true
-            )
-        case "downloading":
-            model.presentDownload(cancellation: {})
-            model.setExpectedDownloadLength(100)
-            model.receiveDownloadedBytes(42)
-        case "automatic-ready":
-            model.presentAutomaticUpdateReady(
-                title: "Crest \(version)",
-                version: version,
-                build: build,
-                releaseNotes: releaseNotes,
-                informationURL: nil,
-                isFixture: true,
-                installAndRelaunch: { [weak model] in
-                    model?.presentInstalling(
-                        applicationTerminated: true,
-                        retryTermination: {}
-                    )
-                }
-            )
-        case "ready":
-            model.presentReadyToInstall(
-                install: { [weak model] in
-                    model?.presentInstalling(
-                        applicationTerminated: true,
-                        retryTermination: {}
-                    )
-                },
-                cancel: {}
-            )
-        case "failed":
-            model.presentError(
-                message: "This isolated fixture simulates an update error.",
-                acknowledgement: {}
-            )
-        default:
-            break
-        }
+        fixture.present(on: model, version: version, build: build, releaseNotes: releaseNotes)
     }
 
     // MARK: - Actions - Launch
