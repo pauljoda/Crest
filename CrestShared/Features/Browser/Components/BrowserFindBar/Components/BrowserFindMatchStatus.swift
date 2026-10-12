@@ -39,7 +39,7 @@ struct BrowserFindMatchStatus: View {
         } else if let label = state.label {
             Text(label)
                 .font(.caption)
-                .foregroundStyle(labelColor)
+                .foregroundStyle(state.labelColor)
                 .frame(
                     minWidth: metrics.matchStatusWidth,
                     alignment: .trailing
@@ -87,23 +87,7 @@ struct BrowserFindMatchStatus: View {
                 .controlSize(.small)
         } else if let symbol = state.symbol {
             Image(systemName: symbol)
-                .foregroundStyle(symbolColor)
-        }
-    }
-
-    /// Words stay quiet unless the page has nothing to show.
-    private var labelColor: Color {
-        switch state.tone {
-        case .quiet, .success: .secondary
-        case .failure: .red
-        }
-    }
-
-    private var symbolColor: Color {
-        switch state.tone {
-        case .quiet: .secondary
-        case .success: .green
-        case .failure: .red
+                .foregroundStyle(state.symbolColor)
         }
     }
 }

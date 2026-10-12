@@ -3893,6 +3893,10 @@
     "2026-10-12-setup-steps-own-behavior": {
       "category": "internal",
       "message": "Let setup steps, outcomes and lessons say what they show and do"
+    },
+    "2026-10-12-studio-and-choices-own-behavior": {
+      "category": "internal",
+      "message": "Let studio steps, emblems and small choices carry their own behavior"
     }
   }
 }

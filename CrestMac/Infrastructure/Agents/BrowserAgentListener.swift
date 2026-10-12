@@ -20,6 +20,19 @@ final class BrowserAgentListener: @unchecked Sendable {
         /// This copy of Crest has no socket path, as when the account's home
         /// folder path is too long for one, or no helper to admit.
         case unavailable
+
+        /// Why agents can't reach Crest while agents are on. Turning agents
+        /// off and on again tries again.
+        var message: LocalizedStringResource {
+            switch self {
+            case .inUse:
+                "Another copy of Crest is already open to agents. Quit it, then turn agents off and on again."
+            case .occupied, .system:
+                "Crest couldn’t open itself to agents. Turn agents off and on again to try again."
+            case .unavailable:
+                "Agents can’t reach this copy of Crest."
+            }
+        }
     }
 
     /// What the listener asked the system for.

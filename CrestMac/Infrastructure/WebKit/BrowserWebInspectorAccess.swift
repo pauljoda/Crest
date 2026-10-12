@@ -146,15 +146,7 @@ enum BrowserWebInspectorAccess {
                 .takeUnretainedValue() as? WKWebView
         else { return }
 
-        let functionName =
-            switch panel {
-            case .network:
-                "showNetworkTab"
-            case .elements:
-                "showElementsTab"
-            case .console:
-                "showConsoleTab"
-            }
+        let functionName = panel.webInspectorFunctionName
 
         Task { @MainActor in
             for _ in 0..<20 {

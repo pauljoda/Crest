@@ -8,7 +8,7 @@ import SwiftUI
 /// same shape `MobileBrowserCommandController` already has on iOS — lets the
 /// menu bar and the launcher run one implementation.
 @MainActor
-struct BrowserCommandActions {
+struct BrowserCommandActions: BrowserNumberedSelectionPerformer {
     let browser: BrowserStore
     let pages: BrowserPagePool
     let chrome: BrowserChromeState
@@ -95,10 +95,7 @@ struct BrowserCommandActions {
 
     /// Shows the stop or Space a numbered selection leads to.
     func select(_ selection: NumberedSelection) {
-        switch selection.target.kind {
-        case .tab: selectTab(selection.tabID, in: selection.spaceID)
-        case .space: selectSpace(selection.spaceID)
-        }
+        selection.select(on: self)
     }
 
     /// Whether the page the page commands act on has a search to find again.

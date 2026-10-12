@@ -115,7 +115,7 @@ struct BrowserAgentsSettingsPane: View {
             if isTranslocated {
                 Text("Move Crest to your Applications folder to connect agents.").foregroundStyle(.secondary)
             } else if case .failed(let failure) = endpoint?.state {
-                Text(Self.unreachable(failure)).foregroundStyle(.red)
+                Text(failure.message).foregroundStyle(.red)
             } else {
                 ForEach(Setup.all) { setup in
                     LabeledContent(setup.name) {
@@ -131,19 +131,6 @@ struct BrowserAgentsSettingsPane: View {
         } footer: {
             CrestFormFootnote(
                 "Paste the setup in your agent’s terminal or settings. Crest must be open while the agent works.")
-        }
-    }
-
-    /// Why agents can't reach Crest while agents are on. Turning agents off
-    /// and on again tries again.
-    private static func unreachable(_ failure: BrowserAgentListener.Failure) -> LocalizedStringKey {
-        switch failure {
-        case .inUse:
-            "Another copy of Crest is already open to agents. Quit it, then turn agents off and on again."
-        case .occupied, .system:
-            "Crest couldn’t open itself to agents. Turn agents off and on again to try again."
-        case .unavailable:
-            "Agents can’t reach this copy of Crest."
         }
     }
 

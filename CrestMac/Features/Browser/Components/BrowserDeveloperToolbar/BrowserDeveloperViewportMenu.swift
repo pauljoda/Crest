@@ -7,10 +7,28 @@ struct BrowserDeveloperViewportMenu: View {
     @State private var width = ""
     @State private var height = ""
 
+    /// A choice in the viewport picker, which is also the picker's tag.
     private enum Selection: Hashable {
         case normal
         case preset(BrowserDeveloperViewport)
         case custom
+
+        /// Shows the choice on the menu's page.
+        @MainActor
+        func apply(to menu: BrowserDeveloperViewportMenu) {
+            switch self {
+            case .normal:
+                menu.showsCustomSize = false
+                menu.page.developerViewport = nil
+            case .preset(let viewport):
+                menu.showsCustomSize = false
+                menu.page.developerViewport = viewport
+            case .custom:
+                if !menu.showsCustomSize { menu.populateCustomSize() }
+                menu.showsCustomSize = true
+                menu.showsCustomSizeEditor = true
+            }
+        }
     }
 
     var body: some View {
@@ -40,18 +58,7 @@ struct BrowserDeveloperViewportMenu: View {
                         return page.developerViewport.map(Selection.preset) ?? .normal
                     },
                     set: { selection in
-                        switch selection {
-                        case .normal:
-                            showsCustomSize = false
-                            page.developerViewport = nil
-                        case .preset(let viewport):
-                            showsCustomSize = false
-                            page.developerViewport = viewport
-                        case .custom:
-                            if !showsCustomSize { populateCustomSize() }
-                            showsCustomSize = true
-                            showsCustomSizeEditor = true
-                        }
+                        selection.apply(to: self)
                     }
                 )
             ) {

@@ -36,7 +36,7 @@ enum BrowserUtilityListPreparation {
         var items: [BrowserUtilityListItem] = []
         for item in baseItems(for: request) {
             guard !Task.isCancelled else { return [] }
-            guard matchesSearch(item, query: query),
+            guard item.matches(query),
                 matchesFilter(
                     item,
                     request: request,
@@ -76,26 +76,6 @@ enum BrowserUtilityListPreparation {
         for request: BrowserUtilityListRequest
     ) -> [BrowserUtilityListItem] {
         request.surface.items(in: request)
-    }
-
-    nonisolated private static func matchesSearch(
-        _ item: BrowserUtilityListItem,
-        query: String
-    ) -> Bool {
-        guard !query.isEmpty else { return true }
-        switch item {
-        case .archive(let archived):
-            return archived.tab.shownTitle.localizedStandardContains(query)
-                || archived.tab.url?.localizedStandardContains(query) == true
-        case .history(let entry):
-            return entry.title.localizedStandardContains(query)
-                || entry.url.localizedStandardContains(query)
-        case .download(let download):
-            return download.filename.localizedStandardContains(query)
-                || BrowserDownloadRowPresentation.status(of: download)
-                    .resolvedForSearch()
-                    .localizedStandardContains(query)
-        }
     }
 
     nonisolated private static func matchesFilter(
