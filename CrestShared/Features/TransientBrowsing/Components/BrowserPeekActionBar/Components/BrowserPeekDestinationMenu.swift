@@ -1,6 +1,12 @@
 import SwiftUI
 
 struct BrowserPeekDestinationMenu: View {
+    // MARK: - Static Variables
+
+    private static let width: CGFloat = 48
+
+    // MARK: - Variables
+
     let spaces: [BrowserSpaceIdentity]
     let selectedSpace: BrowserSpaceIdentity?
     let openInSpace: (BrowserSpaceRuntimeAssignment) -> Void
@@ -13,9 +19,7 @@ struct BrowserPeekDestinationMenu: View {
                 } label: {
                     BrowserSpaceIdentityLabel(
                         identity: candidate,
-                        title: BrowserPeekChromePolicy.menuTitle(
-                            spaceName: candidate.name
-                        )
+                        title: candidate.name
                     )
                 }
             }
@@ -24,8 +28,8 @@ struct BrowserPeekDestinationMenu: View {
             Image(systemName: "chevron.down")
                 .font(.caption2.weight(.semibold))
                 .frame(
-                    width: BrowserPeekChromePolicy.destinationControlWidth,
-                    height: BrowserPeekChromePolicy.controlHeight
+                    width: Self.width,
+                    height: BrowserPeekActionBar.controlHeight
                 )
                 .contentShape(.rect)
         }

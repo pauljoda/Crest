@@ -3929,6 +3929,10 @@
     "2026-10-12-widget-kinds-own-rules": {
       "category": "internal",
       "message": "Let widget kinds, deck directions and gesture axes carry what they do"
+    },
+    "2026-10-12-peek-measures-own-rules": {
+      "category": "internal",
+      "message": "Let Peek's views and the card arrangement carry their own measures"
     }
   }
 }

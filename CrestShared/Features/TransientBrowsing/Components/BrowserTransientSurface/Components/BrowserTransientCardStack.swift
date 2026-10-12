@@ -128,10 +128,10 @@ private struct BrowserTransientControlBarWidth: ViewModifier {
     func body(content: Content) -> some View {
         if arrangement.constrainsControlBarToMaximumWidth {
             content
-                .frame(maxWidth: BrowserPeekChromePolicy.controlBarWidth)
+                .frame(maxWidth: BrowserPeekActionBar.width)
                 .padding(arrangement.controlBarPadding)
         } else {
-            content.frame(width: BrowserPeekChromePolicy.controlBarWidth)
+            content.frame(width: BrowserPeekActionBar.width)
         }
     }
 }

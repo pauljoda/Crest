@@ -123,19 +123,18 @@ final class BrowserChromeLayoutTests: XCTestCase {
     }
 
     func testPeekKeyboardDismissalLeavesReturnToThePage() {
-        XCTAssertEqual(
-            BrowserPeekKeyboardPolicy.action(forKeyCode: 53, modifierFlags: []),
-            .dismiss
+        XCTAssertTrue(
+            BrowserPeekKeyboardMonitorCoordinator.dismisses(keyCode: 53, modifierFlags: [])
         )
-        XCTAssertNil(
-            BrowserPeekKeyboardPolicy.action(forKeyCode: 36, modifierFlags: [])
+        XCTAssertFalse(
+            BrowserPeekKeyboardMonitorCoordinator.dismisses(keyCode: 36, modifierFlags: [])
         )
-        XCTAssertNil(
-            BrowserPeekKeyboardPolicy.action(forKeyCode: 76, modifierFlags: [])
+        XCTAssertFalse(
+            BrowserPeekKeyboardMonitorCoordinator.dismisses(keyCode: 76, modifierFlags: [])
         )
-        XCTAssertNil(
-            BrowserPeekKeyboardPolicy.action(
-                forKeyCode: 36,
+        XCTAssertFalse(
+            BrowserPeekKeyboardMonitorCoordinator.dismisses(
+                keyCode: 36,
                 modifierFlags: [.command]
             )
         )
