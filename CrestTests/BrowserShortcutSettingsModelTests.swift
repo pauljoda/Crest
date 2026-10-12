@@ -7,7 +7,7 @@ final class BrowserShortcutSettingsModelTests: XCTestCase {
     func testCrestConflictWaitsForConfirmationBeforeReplacingAssignments() {
         let fixture = makeFixture()
         let shortcut = BrowserShortcut(
-            key: .character("g"),
+            key: .character("y"),
             modifiers: [.command, .shift]
         )
         XCTAssertTrue(
@@ -42,7 +42,7 @@ final class BrowserShortcutSettingsModelTests: XCTestCase {
     func testCancelingCrestConflictPreservesBothExistingAssignments() {
         let fixture = makeFixture()
         let shortcut = BrowserShortcut(
-            key: .character("g"),
+            key: .character("y"),
             modifiers: [.command, .shift]
         )
         XCTAssertTrue(
