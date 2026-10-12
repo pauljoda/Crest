@@ -72,6 +72,21 @@ final class BrowserDownloadPrompts {
 /// Answers a question the core asks about a download, and closes an approval
 /// once the core settles it.
 extension BrowserDownloadPrompts: CorePromptHost {
+    /// The engine hosting the page shows its dialogs.
+    func ask(_ asked: ScriptDialogAsked) {}
+
+    /// The engine hosting the page shows its sign-in.
+    func ask(_ asked: AuthenticationAsked) {}
+
+    /// The engine hosting the page shows its permission request.
+    func ask(_ asked: PermissionAsked) {}
+
+    /// The Chromium engine reviews extension installs.
+    func ask(_ asked: ExtensionInstallAsked) {}
+
+    /// The quit preparation asks about downloads in progress.
+    func ask(_ asked: QuitWithDownloadsAsked) {}
+
     func ask(_ asked: DownloadDestinationAsked) {
         guard claims(asked.spaceID) else { return }
         choose(asked)

@@ -4017,6 +4017,10 @@
     "2026-10-12-refuse-unexpected-edits-instead-of-quitting": {
       "category": "fixed",
       "message": "Refuse an edit Crest cannot make, such as one on a tab that just closed or a change only a Space's owner may make, instead of quitting."
+    },
+    "2026-10-12-prompt-hosts-answer-every-question": {
+      "category": "internal",
+      "message": "Every place that shows Crest's questions now handles each kind of question explicitly."
     }
   }
 }

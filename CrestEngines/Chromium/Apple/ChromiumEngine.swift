@@ -232,6 +232,15 @@
             }
         }
 
+        /// The download prompts choose where a download goes.
+        func ask(_ asked: DownloadDestinationAsked) {}
+
+        /// The download prompts ask whether a download may go ahead.
+        func ask(_ asked: DownloadApprovalAsked) {}
+
+        /// The quit preparation asks about downloads in progress.
+        func ask(_ asked: QuitWithDownloadsAsked) {}
+
         func dismiss(_ settled: PromptSettled) {
             dismissals.removeValue(forKey: settled.promptID)?.dismiss()
         }
