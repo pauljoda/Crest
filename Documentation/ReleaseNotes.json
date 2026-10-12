@@ -4081,6 +4081,10 @@
     "background-launch-for-local-tools": {
       "category": "fixed",
       "message": "Opening a connected tool can start Crest in the background without taking focus from the tool."
+    },
+    "native-automation-upstream-08-compatibility": {
+      "category": "internal",
+      "message": "Keep the additional browser controls compatible with the Crest 0.8 agent and window changes."
     }
   }
 }
