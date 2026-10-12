@@ -3921,6 +3921,10 @@
     "2026-10-12-transient-requests-own-behavior": {
       "category": "internal",
       "message": "Let transient requests, lease dispositions and pulls say what they do"
+    },
+    "2026-10-12-mobile-layout-own-behavior": {
+      "category": "internal",
+      "message": "Let window sizes, sidebar toggles and Settings styles carry what they do"
     }
   }
 }

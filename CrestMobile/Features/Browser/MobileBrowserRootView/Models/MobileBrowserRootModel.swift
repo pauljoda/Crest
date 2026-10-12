@@ -59,7 +59,7 @@ extension MobileBrowserRootModel {
     func presentationChanged(to presentation: MobileBrowserPresentation) {
         navigation.adapt(to: presentation)
         settings.adapt(to: presentation)
-        guard presentation == .regular else { return }
+        guard !presentation.presentsPageOverTabViewer else { return }
         windowState?.captureSidebar(
             width: Double(sidebarWidth),
             isPresented: navigation.regularSidebarIsDocked
@@ -321,14 +321,7 @@ extension MobileBrowserRootModel {
             return
         }
         guard previous.isLocked, hasPreparedBrowser else { return }
-        switch navigation.finishLockedSpaceTransition() {
-        case .tabViewer:
-            navigation.prepareForSpaceSwitch()
-            pages.deactivatePagePresentation()
-            address = browser.shownTab?.url ?? ""
-        case .selectedPage:
-            activateSelectedTab()
-        }
+        navigation.finishLockedSpaceTransition().settle(on: self)
     }
 
     func synchronizeSelection() {
@@ -368,12 +361,7 @@ extension MobileBrowserRootModel {
     func revealSidebarForUtilityCommand(
         presentation: MobileBrowserPresentation
     ) {
-        switch presentation {
-        case .compact:
-            navigation.showTabViewer()
-        case .regular:
-            navigation.showRegularSidebar()
-        }
+        presentation.revealSidebar(on: navigation)
     }
 
     func hideRegularSidebar(reduceMotion: Bool) {
@@ -393,19 +381,22 @@ extension MobileBrowserRootModel {
         presentation: MobileBrowserPresentation,
         reduceMotion: Bool
     ) {
-        if presentation == .compact {
-            let revealsPage =
-                navigation.compactSidebarPresentation == .docked
-            if revealsPage {
-                pages.select()
-                address = browser.shownTab?.url ?? ""
-            }
-            withAnimation(accessibleAnimation(CrestMotion.chrome, reduceMotion)) {
-                navigation.toggleCompactSidebar()
-            }
-            return
-        }
+        presentation.toggleSidebar(on: self, reduceMotion: reduceMotion)
+    }
 
+    func toggleCompactSidebar(reduceMotion: Bool) {
+        let revealsPage =
+            navigation.compactSidebarPresentation == .docked
+        if revealsPage {
+            pages.select()
+            address = browser.shownTab?.url ?? ""
+        }
+        withAnimation(accessibleAnimation(CrestMotion.chrome, reduceMotion)) {
+            navigation.toggleCompactSidebar()
+        }
+    }
+
+    func toggleRegularSidebar(reduceMotion: Bool) {
         if navigation.regularSidebarIsPresented {
             navigation.utilityPresentation.dismiss()
         }

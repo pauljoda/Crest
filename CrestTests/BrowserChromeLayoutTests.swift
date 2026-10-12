@@ -193,7 +193,7 @@ final class BrowserChromeLayoutTests: XCTestCase {
     /// The shared direction source for the compact toolbar's horizontal swipe.
     ///
     /// What that swipe *does* is no longer this policy's business — on iOS it
-    /// pages Split View cards, routed by `MobileToolbarSwipePolicy` — but "next"
+    /// pages Split View cards, routed by `MobileToolbarSwipeMode` — but "next"
     /// still has to mean the trailing neighbour in both writing directions, and
     /// this is the only place that decides it.
 

@@ -68,7 +68,7 @@ extension MobileBrowserRootContent {
     /// page rather than from the window: a sheet asked of the window while
     /// the page covers it never appears.
     var pageCoversWindow: Bool {
-        presentation == .compact && compactPagePresentation.wrappedValue
+        presentation.presentsPageOverTabViewer && compactPagePresentation.wrappedValue
     }
 
     /// Whether Settings shows as a sheet from the page, or from the window.

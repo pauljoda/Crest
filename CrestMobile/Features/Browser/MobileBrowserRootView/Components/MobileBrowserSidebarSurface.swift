@@ -205,17 +205,12 @@ struct MobileBrowserSidebarSurface: View {
     }
 
     private func presentHistory() {
-        switch utilityPresentationStyle {
-        case .inline:
-            utilityPresentation.present(.history)
-        case .sheet:
-            presentSpaceSheet(.history)
-        }
+        utilityPresentationStyle.presentHistory(from: self)
     }
 
     /// Puts one of the Space's lists up as a sheet, and refuses unless the Space
     /// is still the selected, unlocked one the sheet would be about.
-    private func presentSpaceSheet(_ surface: BrowserUtilitySurface) {
+    func presentSpaceSheet(_ surface: BrowserUtilitySurface) {
         guard utilityPresentationStyle == .sheet,
             let assignment = selectedSpaceAssignment,
             BrowserSidebarAccessPolicy.selectedUnlockedSpace(

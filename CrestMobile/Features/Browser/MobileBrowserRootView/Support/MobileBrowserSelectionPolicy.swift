@@ -23,17 +23,6 @@ enum MobileBrowserRootSelectionChange: Equatable, Sendable {
     }
 }
 
-enum MobileBrowserSpaceSwitchPolicy {
-    static func destinationAfterLeavingLockedSpace(
-        in presentation: MobileBrowserPresentation,
-        sidebarPresentation: BrowserSidebarPresentation
-    ) -> MobileBrowserSpaceSwitchDestination {
-        presentation == .compact && sidebarPresentation == .docked
-            ? .tabViewer
-            : .selectedPage
-    }
-}
-
 enum MobileTabPromotionPolicy {
     static let usesNativeNavigationTransition = true
 

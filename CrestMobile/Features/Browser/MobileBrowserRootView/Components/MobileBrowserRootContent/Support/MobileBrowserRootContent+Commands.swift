@@ -4,7 +4,9 @@ extension MobileBrowserRootContent {
     /// Whether the regular shell shows its overlay palette: one was asked for,
     /// over a selected tab the palette can act on.
     var isCommandPaletteShown: Bool {
-        guard commandPaletteMode != nil, presentation == .regular, let source = browser.shownTabAssignment else {
+        guard commandPaletteMode != nil, !presentation.presentsPageOverTabViewer,
+            let source = browser.shownTabAssignment
+        else {
             return false
         }
         return model.isPaletteSourceAvailable(source)
@@ -26,14 +28,7 @@ extension MobileBrowserRootContent {
     }
 
     func presentHistoryFromCommand() {
-        switch presentation {
-        case .compact:
-            guard let space = browser.shownSpace, !spaceAccess.isLocked(space) else { return }
-            historyAssignment = BrowserSpaceRuntimeAssignment(space: space)
-        case .regular:
-            model.revealSidebarForUtilityCommand(presentation: presentation)
-            navigation.utilityPresentation.present(.history)
-        }
+        presentation.presentHistory(in: self)
     }
 
     func presentDownloadsFromCommand() {

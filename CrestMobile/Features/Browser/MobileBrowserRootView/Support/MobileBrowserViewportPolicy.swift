@@ -13,7 +13,7 @@ enum MobileBrowserViewportPolicy {
         presentation: MobileBrowserPresentation,
         sidebarPresentation: BrowserSidebarPresentation
     ) -> Bool {
-        isPhone && presentation == .compact && sidebarPresentation == .docked
+        isPhone && presentation.presentsPageOverTabViewer && sidebarPresentation == .docked
     }
 
     /// SwiftUI's directional safe area as the physical one UIKit lays out with.

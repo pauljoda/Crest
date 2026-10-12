@@ -385,57 +385,56 @@ extension BrowserRootModel {
     }
 
     func toggleSidebar(reduceMotion: Bool) {
-        switch sidebarPresentation.sidebarToggleAction.kind {
-        case .hide:
-            hideSidebar(reduceMotion: reduceMotion)
-        case .dock:
-            guard !reduceMotion else {
-                cancelSidebarMorph()
-                isFloatingSidebarPresented = false
-                chrome.showSidebar()
-                return
-            }
-            let revision = beginSidebarMorph()
-            sidebarMorphTask = Task { @MainActor [weak self] in
-                await Task.yield()
-                guard let self,
-                    !Task.isCancelled,
-                    self.sidebarMorphRevision == revision
-                else { return }
-                withAnimation(
-                    self.accessibleAnimation(
-                        CrestMotion.sidebarDockApproach,
-                        reduceMotion
-                    )
-                ) {
-                    self.isSidebarApproachingDock = true
-                }
-                try? await self.sidebarMorphWait(
-                    CrestMotion.sidebarDockApproachCompletionDelay
+        sidebarPresentation.sidebarToggleAction.perform(on: self, reduceMotion: reduceMotion)
+    }
+
+    func dockSidebar(reduceMotion: Bool) {
+        guard !reduceMotion else {
+            cancelSidebarMorph()
+            isFloatingSidebarPresented = false
+            chrome.showSidebar()
+            return
+        }
+        let revision = beginSidebarMorph()
+        sidebarMorphTask = Task { @MainActor [weak self] in
+            await Task.yield()
+            guard let self,
+                !Task.isCancelled,
+                self.sidebarMorphRevision == revision
+            else { return }
+            withAnimation(
+                self.accessibleAnimation(
+                    CrestMotion.sidebarDockApproach,
+                    reduceMotion
                 )
-                guard !Task.isCancelled,
-                    self.sidebarMorphRevision == revision
-                else { return }
-                withAnimation(
-                    self.accessibleAnimation(
-                        CrestMotion.sidebarDockAttachment,
-                        reduceMotion
-                    )
-                ) {
-                    self.isFloatingSidebarPresented = false
-                    self.chrome.showSidebar()
-                }
-                try? await self.sidebarMorphWait(
-                    CrestMotion.sidebarDockAttachmentCompletionDelay
-                )
-                guard !Task.isCancelled,
-                    self.sidebarMorphRevision == revision
-                else { return }
-                withTransaction(Transaction(animation: nil)) {
-                    self.isSidebarApproachingDock = false
-                }
-                _ = self.finishSidebarMorph(revision)
+            ) {
+                self.isSidebarApproachingDock = true
             }
+            try? await self.sidebarMorphWait(
+                CrestMotion.sidebarDockApproachCompletionDelay
+            )
+            guard !Task.isCancelled,
+                self.sidebarMorphRevision == revision
+            else { return }
+            withAnimation(
+                self.accessibleAnimation(
+                    CrestMotion.sidebarDockAttachment,
+                    reduceMotion
+                )
+            ) {
+                self.isFloatingSidebarPresented = false
+                self.chrome.showSidebar()
+            }
+            try? await self.sidebarMorphWait(
+                CrestMotion.sidebarDockAttachmentCompletionDelay
+            )
+            guard !Task.isCancelled,
+                self.sidebarMorphRevision == revision
+            else { return }
+            withTransaction(Transaction(animation: nil)) {
+                self.isSidebarApproachingDock = false
+            }
+            _ = self.finishSidebarMorph(revision)
         }
     }
 
@@ -796,3 +795,5 @@ extension BrowserRootModel {
 }
 
 extension BrowserRootModel: BrowserStoreFirstObservable {}
+
+extension BrowserRootModel: BrowserSidebarToggleTarget {}

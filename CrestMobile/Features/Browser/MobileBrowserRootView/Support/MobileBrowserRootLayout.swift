@@ -91,7 +91,7 @@ enum MobileSidebarPageFramePolicy {
         presentsSplitView: Bool,
         browserPresentation: MobileBrowserPresentation
     ) -> Bool {
-        if browserPresentation == .compact,
+        if browserPresentation.presentsPageOverTabViewer,
             sidebarPresentation == .docked
         {
             return true
@@ -112,7 +112,7 @@ enum MobileSidebarTabSelectionPolicy {
         browserPresentation: MobileBrowserPresentation,
         sidebarPresentation: BrowserSidebarPresentation
     ) -> Bool {
-        browserPresentation == .compact
+        browserPresentation.presentsPageOverTabViewer
             && sidebarPresentation == .floating
     }
 }

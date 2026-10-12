@@ -5,7 +5,7 @@ struct BrowserSpaceSwipeModifier: ViewModifier {
     ///
     /// The recognizer decides only that a deliberate horizontal gesture happened
     /// and which way it points. Where it goes is the consumer's call — on iOS
-    /// that is `MobileToolbarSwipePolicy`, which as of 0.4 pages Split View cards
+    /// that is `MobileToolbarSwipeMode`, which as of 0.4 pages Split View cards
     /// rather than switching Spaces.
     let handleSwipe: (BrowserSpaceSwipeDirection) -> Void
 

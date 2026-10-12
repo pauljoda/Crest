@@ -55,16 +55,11 @@ final class MobileBrowserNavigationState {
     }
 
     var defersPageActivation: Bool {
-        presentation == .compact && !compactShowsPage
+        presentation.presentsPageOverTabViewer && !compactShowsPage
     }
 
     var compactShowsPage: Bool {
-        switch compactPagePresentationPhase {
-        case .presentingPage, .page:
-            true
-        case .tabViewer:
-            false
-        }
+        compactPagePresentationPhase.showsPage
     }
 
     var compactPageIsFullyPresented: Bool {
@@ -95,7 +90,7 @@ final class MobileBrowserNavigationState {
     }
 
     func selectTab() {
-        if presentation == .compact {
+        if presentation.presentsPageOverTabViewer {
             if compactPagePresentationPhase == .tabViewer {
                 // The full-screen phone tab viewer is the docked sidebar. A
                 // normal row selection must therefore enter the original
@@ -120,7 +115,7 @@ final class MobileBrowserNavigationState {
     func showTabViewer() {
         compactToolbarIsHidden = false
         compactPagePresentationPhase = .tabViewer
-        if presentation == .compact {
+        if presentation.presentsPageOverTabViewer {
             dockRegularSidebar()
         }
     }
@@ -138,7 +133,7 @@ final class MobileBrowserNavigationState {
         lockedSpaceKeepsSidebarVisible = true
         compactToolbarIsHidden = false
 
-        if presentation == .compact {
+        if presentation.presentsPageOverTabViewer {
             if compactShowsPage, regularSidebarPresentation != .docked {
                 cancelTransientSidebarDismissal()
                 regularSidebarPresentation = .floating
@@ -156,14 +151,14 @@ final class MobileBrowserNavigationState {
 
     func finishLockedSpaceTransition() -> MobileBrowserSpaceSwitchDestination {
         lockedSpaceKeepsSidebarVisible = false
-        return MobileBrowserSpaceSwitchPolicy.destinationAfterLeavingLockedSpace(
+        return MobileBrowserSpaceSwitchDestination.afterLeavingLockedSpace(
             in: presentation,
             sidebarPresentation: regularSidebarPresentation
         )
     }
 
     func hideCompactToolbar() {
-        guard presentation == .compact, compactShowsPage else { return }
+        guard presentation.presentsPageOverTabViewer, compactShowsPage else { return }
         compactToolbarIsHidden = true
     }
 
@@ -203,36 +198,20 @@ final class MobileBrowserNavigationState {
     }
 
     func toggleRegularSidebar() {
-        switch regularSidebarPresentation.kind {
-        case .collapsed:
-            showRegularSidebar()
-        case .floating:
-            dockRegularSidebar()
-        case .docked:
-            hideRegularSidebar()
-        }
+        regularSidebarPresentation.toggle(on: MobileRegularSidebarToggle(navigation: self))
     }
 
     /// Uses the same three sidebar states as regular-width windows while
     /// adapting only what "docked" means on a narrow phone. Without a
     /// floating sidebar it moves between the tab viewer and the page.
     func toggleCompactSidebar() {
-        switch compactSidebarPresentation.kind {
-        case .docked:
-            if allowsCompactFloatingSidebar {
-                showRegularSidebar()
-            }
-            compactToolbarIsHidden = false
-            compactPagePresentationPhase = .presentingPage
-        case .floating:
-            showTabViewer()
-        case .collapsed:
-            if allowsCompactFloatingSidebar {
-                showRegularSidebar()
-            } else {
-                showTabViewer()
-            }
-        }
+        compactSidebarPresentation.toggle(on: MobileCompactSidebarToggle(navigation: self))
+    }
+
+    /// Brings the page up over a narrow window's tab viewer, with its toolbar.
+    func presentCompactPage() {
+        compactToolbarIsHidden = false
+        compactPagePresentationPhase = .presentingPage
     }
 
     func handleRegularSidebarInteraction() {
@@ -258,7 +237,7 @@ final class MobileBrowserNavigationState {
     func adapt(to presentation: MobileBrowserPresentation) {
         self.presentation = presentation
         hasAdaptedPresentation = true
-        if presentation == .regular {
+        if !presentation.presentsPageOverTabViewer {
             compactToolbarIsHidden = false
             if dockedHiddenSidebarWhileNarrow, regularSidebarPresentation == .docked {
                 hideRegularSidebar()
@@ -272,7 +251,9 @@ final class MobileBrowserNavigationState {
     /// keeps the page full screen under the compact toolbar. A sidebar hidden
     /// at regular width hides again when the window widens.
     private func dockIfFloatingIsNotAllowed() {
-        guard presentation == .compact, !allowsCompactFloatingSidebar, regularSidebarPresentation != .docked else {
+        guard presentation.presentsPageOverTabViewer, !allowsCompactFloatingSidebar,
+            regularSidebarPresentation != .docked
+        else {
             return
         }
         dockedHiddenSidebarWhileNarrow = true

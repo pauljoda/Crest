@@ -562,7 +562,7 @@ final class MobileBrowserNavigationTests: XCTestCase {
                 "Without a split there is no undocked toolbar to swipe."
             )
             XCTAssertEqual(
-                MobileCompactSidebarRevealPolicy.destination(
+                MobileCompactSidebarRevealDestination.destination(
                     sidebarPresentation: presentation
                 ),
                 .floatingSidebar,
@@ -583,7 +583,7 @@ final class MobileBrowserNavigationTests: XCTestCase {
         navigation.hideRegularSidebar()
 
         XCTAssertEqual(
-            MobileCompactSidebarRevealPolicy.destination(
+            MobileCompactSidebarRevealDestination.destination(
                 sidebarPresentation: navigation.regularSidebarPresentation
             ),
             .floatingSidebar
@@ -605,7 +605,7 @@ final class MobileBrowserNavigationTests: XCTestCase {
 
         XCTAssertEqual(navigation.regularSidebarPresentation, .docked)
         XCTAssertEqual(
-            MobileCompactSidebarRevealPolicy.destination(
+            MobileCompactSidebarRevealDestination.destination(
                 sidebarPresentation: navigation.regularSidebarPresentation
             ),
             .tabViewer
