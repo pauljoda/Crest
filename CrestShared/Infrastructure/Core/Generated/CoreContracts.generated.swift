@@ -16886,24 +16886,36 @@ struct SetupPhase: Hashable, Sendable {
 /// The members of the core's `SetupStep`. A member's wire tag is its index in `all`.
 /// Core-only behavior, not emitted: `next`, `back`.
 struct SetupStep: Hashable, Sendable {
+    enum Kinds: Sendable {
+        case welcome
+        case featureSpaces
+        case featureTabs
+        case featureSync
+        case importBrowser
+        case review
+        case manualSetup
+        case complete
+    }
+
     let tag: Int
+    var kind: Kinds { facts.kind }
     var name: String { facts.name }
     var progressPosition: Int { facts.progressPosition }
     private let facts: Facts
 
-    private init(tag: Int, name: String, progressPosition: Int) {
+    private init(tag: Int, kind: Kinds, name: String, progressPosition: Int) {
         self.tag = tag
-        facts = Facts(name: name, progressPosition: progressPosition)
+        facts = Facts(kind: kind, name: name, progressPosition: progressPosition)
     }
 
-    static let welcome = SetupStep(tag: 0, name: "welcome", progressPosition: 0)
-    static let featureSpaces = SetupStep(tag: 1, name: "featureSpaces", progressPosition: 0)
-    static let featureTabs = SetupStep(tag: 2, name: "featureTabs", progressPosition: 0)
-    static let featureSync = SetupStep(tag: 3, name: "featureSync", progressPosition: 0)
-    static let importBrowser = SetupStep(tag: 4, name: "importBrowser", progressPosition: 1)
-    static let review = SetupStep(tag: 5, name: "review", progressPosition: 2)
-    static let manualSetup = SetupStep(tag: 6, name: "manualSetup", progressPosition: 2)
-    static let complete = SetupStep(tag: 7, name: "complete", progressPosition: 2)
+    static let welcome = SetupStep(tag: 0, kind: .welcome, name: "welcome", progressPosition: 0)
+    static let featureSpaces = SetupStep(tag: 1, kind: .featureSpaces, name: "featureSpaces", progressPosition: 0)
+    static let featureTabs = SetupStep(tag: 2, kind: .featureTabs, name: "featureTabs", progressPosition: 0)
+    static let featureSync = SetupStep(tag: 3, kind: .featureSync, name: "featureSync", progressPosition: 0)
+    static let importBrowser = SetupStep(tag: 4, kind: .importBrowser, name: "importBrowser", progressPosition: 1)
+    static let review = SetupStep(tag: 5, kind: .review, name: "review", progressPosition: 2)
+    static let manualSetup = SetupStep(tag: 6, kind: .manualSetup, name: "manualSetup", progressPosition: 2)
+    static let complete = SetupStep(tag: 7, kind: .complete, name: "complete", progressPosition: 2)
 
     static let all: [SetupStep] = [
         welcome,
@@ -16929,10 +16941,12 @@ struct SetupStep: Hashable, Sendable {
     }
 
     private final class Facts: Sendable {
+        let kind: Kinds
         let name: String
         let progressPosition: Int
 
-        init(name: String, progressPosition: Int) {
+        init(kind: Kinds, name: String, progressPosition: Int) {
+            self.kind = kind
             self.name = name
             self.progressPosition = progressPosition
         }

@@ -11,9 +11,51 @@ struct BrowserSpaceSetupWizard: View {
     let finish: () -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var step = Step.appearance
+    @State private var step: Step = .appearance
 
-    private enum Step: Int { case appearance, ready }
+    /// A page of the wizard: what it shows, and what Back and Continue do
+    /// from it.
+    private struct Step: Hashable, Sendable {
+        // MARK: - Static Variables
+
+        static let appearance: Step = Step(
+            position: 0, title: "01 — Appearance", continueTitle: "Continue",
+            page: { _, draft, branding, symbol, compact in
+                let editor = BrowserSpaceBrandingEditor(
+                    branding: branding, symbol: symbol, compact: compact, showsPreview: false)
+                return AnyView(editor.id(draft.spaceID))
+            },
+            back: { wizard in wizard.back() },
+            next: { wizard in wizard.step = .ready })
+        static let ready: Step = Step(
+            position: 1, title: "02 — Your Spaces", continueTitle: "Open Crest",
+            page: { wizard, _, _, _, _ in AnyView(wizard.spacesReview) },
+            back: { wizard in wizard.step = .appearance },
+            next: { wizard in wizard.finish() })
+
+        // MARK: - Variables
+
+        /// The page's place in setup, counted from zero.
+        let position: Int
+        let title: LocalizedStringResource
+        let continueTitle: LocalizedStringResource
+        let page:
+            @MainActor @Sendable (
+                BrowserSpaceSetupWizard, SetupDraftSpace, Binding<SpaceBranding>, Binding<String>, Bool
+            ) -> AnyView
+        let back: @MainActor @Sendable (BrowserSpaceSetupWizard) -> Void
+        let next: @MainActor @Sendable (BrowserSpaceSetupWizard) -> Void
+
+        // MARK: - Actions - Identity
+
+        static func == (lhs: Step, rhs: Step) -> Bool {
+            lhs.position == rhs.position
+        }
+
+        func hash(into hasher: inout Hasher) {
+            hasher.combine(position)
+        }
+    }
 
     private var draft: SetupDraftSpace? {
         setup.space(selectedSpaceID)
@@ -122,15 +164,15 @@ struct BrowserSpaceSetupWizard: View {
             CrestStartPageMark().frame(width: 24, height: 24)
             Text("Crest Setup").font(CrestTypography.sans(13, weight: .bold))
             Spacer()
-            Text(step == .appearance ? "01 — Appearance" : "02 — Your Spaces")
+            Text(step.title)
                 .font(.system(size: 12, weight: .medium))
                 .foregroundStyle(.secondary)
             HStack(spacing: 5) {
                 ForEach(0..<2) { index in
                     Capsule().fill(
-                        index <= step.rawValue ? CrestBrandPalette.butter : Color.secondary.opacity(0.15)
+                        index <= step.position ? CrestBrandPalette.butter : Color.secondary.opacity(0.15)
                     )
-                    .frame(width: index == step.rawValue ? 22 : 6, height: 6)
+                    .frame(width: index == step.position ? 22 : 6, height: 6)
                 }
             }
             .padding(.leading, 10)
@@ -143,52 +185,50 @@ struct BrowserSpaceSetupWizard: View {
         .overlay(alignment: .bottom) { Rectangle().fill(BrowserOnboardingPalette.line).frame(height: 1) }
     }
 
-    @ViewBuilder private func page(
+    private func page(
         draft: SetupDraftSpace, branding: Binding<SpaceBranding>,
         symbol: Binding<String>, compact: Bool
     ) -> some View {
-        switch step {
-        case .appearance:
-            BrowserSpaceBrandingEditor(branding: branding, symbol: symbol, compact: compact, showsPreview: false)
-                .id(draft.spaceID)
-        case .ready:
-            VStack(alignment: .leading, spacing: 20) {
-                Text("Your Spaces are ready").font(CrestTypography.display(36))
-                Text("Review your Spaces or add another before opening Crest.")
-                    .foregroundStyle(.secondary)
-                ForEach(setup.spaces, id: \.spaceID) { space in
-                    Button {
-                        selectedSpaceID = space.spaceID
-                        step = .appearance
-                    } label: {
-                        HStack(spacing: 16) {
-                            BrowserSpaceEditorIdentityPreview(
-                                branding: space.customization.branding,
-                                symbol: space.customization.symbol, size: 44)
-                            Text(space.shownName).font(.headline)
-                            Spacer()
-                            Text("Edit").foregroundStyle(.secondary)
-                            Image(systemName: "chevron.forward").foregroundStyle(.secondary)
-                        }
-                        .padding(16)
-                        .browserOnboardingPanel()
+        step.page(self, draft, branding, symbol, compact)
+    }
+
+    /// The Spaces setup made, to review or add to before opening Crest.
+    private var spacesReview: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            Text("Your Spaces are ready").font(CrestTypography.display(36))
+            Text("Review your Spaces or add another before opening Crest.")
+                .foregroundStyle(.secondary)
+            ForEach(setup.spaces, id: \.spaceID) { space in
+                Button {
+                    selectedSpaceID = space.spaceID
+                    step = .appearance
+                } label: {
+                    HStack(spacing: 16) {
+                        BrowserSpaceEditorIdentityPreview(
+                            branding: space.customization.branding,
+                            symbol: space.customization.symbol, size: 44)
+                        Text(space.shownName).font(.headline)
+                        Spacer()
+                        Text("Edit").foregroundStyle(.secondary)
+                        Image(systemName: "chevron.forward").foregroundStyle(.secondary)
                     }
-                    .buttonStyle(.plain)
-                    .contextMenu {
-                        if space.isNew {
-                            Button("Remove Space", role: .destructive) { setup.removeSpace(space.spaceID) }
-                        }
-                    }
+                    .padding(16)
+                    .browserOnboardingPanel()
                 }
-                Button("Add another Space", systemImage: "plus", action: addSpace)
-                    .buttonStyle(.crestSecondary)
-                    .controlSize(.large)
-                if opensGettingStarted {
-                    Text(gettingStartedDescription)
-                        .font(.callout).foregroundStyle(.secondary)
+                .buttonStyle(.plain)
+                .contextMenu {
+                    if space.isNew {
+                        Button("Remove Space", role: .destructive) { setup.removeSpace(space.spaceID) }
+                    }
                 }
             }
-
+            Button("Add another Space", systemImage: "plus", action: addSpace)
+                .buttonStyle(.crestSecondary)
+                .controlSize(.large)
+            if opensGettingStarted {
+                Text(gettingStartedDescription)
+                    .font(.callout).foregroundStyle(.secondary)
+            }
         }
     }
 
@@ -207,23 +247,17 @@ struct BrowserSpaceSetupWizard: View {
             }
             HStack {
                 Button {
-                    switch step {
-                    case .appearance: back()
-                    case .ready: step = .appearance
-                    }
+                    step.back(self)
                 } label: {
                     Label("Back", systemImage: "arrow.left")
                 }
                 .buttonStyle(.crestSecondary)
                 Spacer()
                 Button {
-                    switch step {
-                    case .appearance: step = .ready
-                    case .ready: finish()
-                    }
+                    step.next(self)
                 } label: {
                     HStack(spacing: 20) {
-                        Text(step == .ready ? "Open Crest" : "Continue")
+                        Text(step.continueTitle)
                         Image(systemName: "arrow.right")
                     }
                 }

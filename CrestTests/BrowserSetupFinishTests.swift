@@ -24,7 +24,7 @@ final class BrowserSetupFinishTests: XCTestCase {
         await authenticator.waitForRequest()
         authenticator.resolve(false)
         let refusal = await refused.value
-        XCTAssertEqual(refusal, .cancelled)
+        XCTAssertTrue(refusal is BrowserSetupCancelled)
         XCTAssertEqual(browser.sessionSeed, before)
         XCTAssertNotNil(setup.draft)
         XCTAssertNotEqual(browser.core.state.setupCompleted, true)
@@ -34,8 +34,10 @@ final class BrowserSetupFinishTests: XCTestCase {
         let updated = browser.spaceModels[1]
         XCTAssertTrue(browser.setTabCustomTitle("Updated during setup", for: updated.tabs.models[0].id, in: updated.id))
         authenticator.resolve(true)
-        guard case .completed(let guide) = await retry.value else { return XCTFail("Setup did not complete") }
-        XCTAssertEqual(guide?.spaceID, before.spaces.first?.id)
+        guard let completed = await retry.value as? BrowserSetupCompleted else {
+            return XCTFail("Setup did not complete")
+        }
+        XCTAssertEqual(completed.guide?.spaceID, before.spaces.first?.id)
         XCTAssertEqual(browser.spaceModels.filter { $0.id == addedID }.count, 1)
         XCTAssertEqual(browser.spaceModel(updated.id)?.tabs.models[0].customTitle, "Updated during setup")
         XCTAssertNil(setup.draft)

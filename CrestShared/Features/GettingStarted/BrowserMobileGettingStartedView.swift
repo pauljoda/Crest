@@ -125,29 +125,8 @@
             }
         }
 
-        @ViewBuilder private var lessonActions: some View {
-            switch lesson.kind {
-            case .pin:
-                Button("Pin Gmail", systemImage: "pin.fill") {
-                    if let mail = practice.tabID(.mail) { practice.browser.pinTab(mail) }
-                }
-                .buttonStyle(.crestPrimary(tint: CrestBrandPalette.butter))
-            case .save:
-                Button("Save A weekend away", systemImage: "bookmark") {
-                    if let trail = practice.tabID(.trail) { practice.browser.saveTab(trail) }
-                }
-                .buttonStyle(.crestPrimary(tint: CrestBrandPalette.butter))
-            case .folders:
-                Button("Add folder", systemImage: "folder.badge.plus") { practice.addFolder(nested: false) }
-                    .buttonStyle(.crestSecondary)
-                Button("Nest a folder", systemImage: "folder") { practice.addFolder(nested: true) }
-                    .buttonStyle(.crestSecondary)
-            case .clear:
-                Button("Clean Up Current Tabs", systemImage: "sparkles") {
-                    _ = practice.tabActions.clearCurrentTabs()
-                }
-                .buttonStyle(.crestPrimary(tint: CrestBrandPalette.butter))
-            }
+        private var lessonActions: some View {
+            lesson.touchActions(practice)
         }
 
     }

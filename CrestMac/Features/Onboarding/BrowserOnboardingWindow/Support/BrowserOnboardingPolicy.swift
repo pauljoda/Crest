@@ -47,42 +47,6 @@ enum BrowserOnboardingSummary {
         )
     }
 
-    static func review(
-        tabCount: Int,
-        passwordCount: Int,
-        overflowTabCount: Int
-    ) -> LocalizedStringResource {
-        let tabs = max(tabCount, 0)
-        let passwords = max(passwordCount, 0)
-        let overflowTabs = max(overflowTabCount, 0)
-
-        switch (passwords == 0, overflowTabs == 0) {
-        case (true, true):
-            return LocalizedStringResource(
-                "\(tabs) tabs selected",
-                comment: "Selected tab count in the browser-import review."
-            )
-        case (false, true):
-            return LocalizedStringResource(
-                "\(tabs) tabs selected · \(passwords) passwords",
-                comment:
-                    "Browser-import review summary. The first count is tabs; the second is passwords."
-            )
-        case (true, false):
-            return LocalizedStringResource(
-                "\(tabs) tabs selected · \(overflowTabs) pinned tabs move to a saved folder",
-                comment:
-                    "Browser-import review summary. The first count is selected tabs; the second is pinned tabs that must become saved tabs."
-            )
-        case (false, false):
-            return LocalizedStringResource(
-                "\(tabs) tabs selected · \(passwords) passwords · \(overflowTabs) pinned tabs move to a saved folder",
-                comment:
-                    "Browser-import review summary. Counts are selected tabs, passwords, then pinned tabs that must become saved tabs."
-            )
-        }
-    }
-
     /// What setup did, as the core summed it up.
     static func completed(_ summary: SetupSummary) -> LocalizedStringResource {
         summary.isImport
