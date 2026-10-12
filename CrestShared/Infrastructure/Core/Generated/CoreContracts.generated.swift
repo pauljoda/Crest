@@ -8586,30 +8586,57 @@ struct CloudSyncProblem: Hashable, Sendable {
 
 /// The members of the core's `CloudSyncStepKind`. A member's wire tag is its index in `all`.
 struct CloudSyncStepKind: Hashable, Sendable {
+    enum Kinds: Sendable {
+        case checkEntitlement
+        case checkAccount
+        case replaceSeed
+        case compareContent
+        case takeCloudContent
+        case applyChosenCopy
+        case startTransport
+        case discardStartedTransport
+        case stopTransport
+        case syncTransport
+        case pullTransport
+        case notifyTransport
+        case scheduleRetry
+        case cancelRetry
+        case restartAfterAccountChange
+    }
+
     let tag: Int
+    var kind: Kinds { facts.kind }
     var name: String { facts.name }
     private let facts: Facts
 
-    private init(tag: Int, name: String) {
+    private init(tag: Int, kind: Kinds, name: String) {
         self.tag = tag
-        facts = Facts(name: name)
+        facts = Facts(kind: kind, name: name)
     }
 
-    static let checkEntitlement = CloudSyncStepKind(tag: 0, name: "checkEntitlement")
-    static let checkAccount = CloudSyncStepKind(tag: 1, name: "checkAccount")
-    static let replaceSeed = CloudSyncStepKind(tag: 2, name: "replaceSeed")
-    static let compareContent = CloudSyncStepKind(tag: 3, name: "compareContent")
-    static let takeCloudContent = CloudSyncStepKind(tag: 4, name: "takeCloudContent")
-    static let applyChosenCopy = CloudSyncStepKind(tag: 5, name: "applyChosenCopy")
-    static let startTransport = CloudSyncStepKind(tag: 6, name: "startTransport")
-    static let discardStartedTransport = CloudSyncStepKind(tag: 7, name: "discardStartedTransport")
-    static let stopTransport = CloudSyncStepKind(tag: 8, name: "stopTransport")
-    static let syncTransport = CloudSyncStepKind(tag: 9, name: "syncTransport")
-    static let pullTransport = CloudSyncStepKind(tag: 10, name: "pullTransport")
-    static let notifyTransport = CloudSyncStepKind(tag: 11, name: "notifyTransport")
-    static let scheduleRetry = CloudSyncStepKind(tag: 12, name: "scheduleRetry")
-    static let cancelRetry = CloudSyncStepKind(tag: 13, name: "cancelRetry")
-    static let restartAfterAccountChange = CloudSyncStepKind(tag: 14, name: "restartAfterAccountChange")
+    static let checkEntitlement = CloudSyncStepKind(tag: 0, kind: .checkEntitlement, name: "checkEntitlement")
+    static let checkAccount = CloudSyncStepKind(tag: 1, kind: .checkAccount, name: "checkAccount")
+    static let replaceSeed = CloudSyncStepKind(tag: 2, kind: .replaceSeed, name: "replaceSeed")
+    static let compareContent = CloudSyncStepKind(tag: 3, kind: .compareContent, name: "compareContent")
+    static let takeCloudContent = CloudSyncStepKind(tag: 4, kind: .takeCloudContent, name: "takeCloudContent")
+    static let applyChosenCopy = CloudSyncStepKind(tag: 5, kind: .applyChosenCopy, name: "applyChosenCopy")
+    static let startTransport = CloudSyncStepKind(tag: 6, kind: .startTransport, name: "startTransport")
+    static let discardStartedTransport = CloudSyncStepKind(
+        tag: 7,
+        kind: .discardStartedTransport,
+        name: "discardStartedTransport"
+    )
+    static let stopTransport = CloudSyncStepKind(tag: 8, kind: .stopTransport, name: "stopTransport")
+    static let syncTransport = CloudSyncStepKind(tag: 9, kind: .syncTransport, name: "syncTransport")
+    static let pullTransport = CloudSyncStepKind(tag: 10, kind: .pullTransport, name: "pullTransport")
+    static let notifyTransport = CloudSyncStepKind(tag: 11, kind: .notifyTransport, name: "notifyTransport")
+    static let scheduleRetry = CloudSyncStepKind(tag: 12, kind: .scheduleRetry, name: "scheduleRetry")
+    static let cancelRetry = CloudSyncStepKind(tag: 13, kind: .cancelRetry, name: "cancelRetry")
+    static let restartAfterAccountChange = CloudSyncStepKind(
+        tag: 14,
+        kind: .restartAfterAccountChange,
+        name: "restartAfterAccountChange"
+    )
 
     static let all: [CloudSyncStepKind] = [
         checkEntitlement,
@@ -8642,9 +8669,11 @@ struct CloudSyncStepKind: Hashable, Sendable {
     }
 
     private final class Facts: Sendable {
+        let kind: Kinds
         let name: String
 
-        init(name: String) {
+        init(kind: Kinds, name: String) {
+            self.kind = kind
             self.name = name
         }
     }

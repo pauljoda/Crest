@@ -318,23 +318,13 @@ actor BrowserCloudSyncEngine {
         }
         guard let kept = try? core.query(CloudFieldsOf(recordNames: saves.map(\.recordName))) else { return nil }
         let systemFields = Dictionary(kept.records.map { ($0.recordName, $0) }, uniquingKeysWith: { _, last in last })
-        // A local copy for the sendable closure, named apart from the
-        // property: Swift 6.2 reads a same-named local declared later in the
-        // scope as the one the filter above captures, and refuses it.
-        let recordCodec = codec
+        // The sendable closure takes a copy of the codec in the batch, never a
+        // local named like the property: Swift 6.2 reads a same-named local
+        // declared later in the scope as the one the filter above captures,
+        // and refuses it.
+        let batch = BrowserCloudUploadBatch(codec: codec, systemFields: systemFields, syncEngine: syncEngine)
         return await CKSyncEngine.RecordZoneChangeBatch(pendingChanges: changes) { recordID in
-            switch await source.upload(for: recordID) {
-            case .record(let record):
-                // A record whose server copy a newer build wrote stays
-                // pending, skipped.
-                let base = systemFields[recordID.recordName]?.record(for: recordID)
-                return try? recordCodec.record(for: record, reusing: base)
-            case .gone:
-                syncEngine.state.remove(pendingRecordZoneChanges: [.saveRecord(recordID)])
-                return nil
-            case .skipped:
-                return nil
-            }
+            await source.upload(for: recordID).record(for: recordID, in: batch)
         }
     }
 
