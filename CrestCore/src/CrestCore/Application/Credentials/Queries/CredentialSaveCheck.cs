@@ -1,5 +1,4 @@
 using CrestCore.Application;
-using CrestCore.Domain;
 
 namespace CrestCore.Contracts;
 
@@ -10,7 +9,7 @@ public sealed record CredentialSaveCheck(CredentialOrigin Origin, CredentialOrig
     #region Actions - Answering
 
     internal override CredentialSaveVerdict Answer(CrestApp app) {
-        return new(CredentialCapturePolicy.SaveValidity(Origin, TopLevelOrigin, SubmittedAt, Now));
+        return new(new CredentialPendingCandidate(Origin, SubmittedAt).SaveValidity(TopLevelOrigin, Now));
     }
 
     #endregion

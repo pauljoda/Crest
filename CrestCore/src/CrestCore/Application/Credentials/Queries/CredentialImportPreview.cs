@@ -39,7 +39,7 @@ public sealed record CredentialImportPreview(byte[] Document, IReadOnlyList<Exis
     /// `Rejected` with `InvalidCredentialFile` for a file that cannot import.
     internal override CredentialImportPlan Answer(CrestApp app) {
         var file = CredentialFile.Read(Document);
-        return CredentialImportPlanning.Plan(file.Format, file.Credentials, file.Rejections, Existing);
+        return CredentialImportPlan.For(file.Format, file.Credentials, file.Rejections, Existing);
     }
 
     #endregion

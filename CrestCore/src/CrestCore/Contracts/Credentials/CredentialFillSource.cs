@@ -37,4 +37,12 @@ public sealed class CredentialFillSource {
     public static CredentialFillSource? Named(string? name) => All.FirstOrDefault(source => source.Name == name);
 
     #endregion
+
+    #region Actions - Filling
+
+    /// Saved credentials are offered to current-password fields; generated
+    /// passwords only to new-password fields.
+    internal bool Offers(CredentialPasswordKind passwordKind) => Fills == passwordKind;
+
+    #endregion
 }

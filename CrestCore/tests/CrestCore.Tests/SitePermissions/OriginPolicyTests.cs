@@ -97,17 +97,17 @@ public sealed class OriginPolicyTests {
 
     [Fact]
     public void BasicAndDigestPromptThreeTimesAndProxiesKeepSystemHandling() {
-        Assert.Equal(AuthenticationHandling.PromptForCredentials, AuthenticationPolicy.Handling(AuthenticationMethod.HttpBasic, false, 2));
-        Assert.Equal(AuthenticationHandling.Cancel, AuthenticationPolicy.Handling(AuthenticationMethod.HttpDigest, false, 3));
-        Assert.Equal(AuthenticationHandling.PerformDefaultHandling, AuthenticationPolicy.Handling(AuthenticationMethod.HttpBasic, true, 0));
-        Assert.Equal(AuthenticationHandling.PerformDefaultHandling, AuthenticationPolicy.Handling(AuthenticationMethod.Other, false, 0));
+        Assert.Equal(AuthenticationHandling.PromptForCredentials, new ChallengeHandling(AuthenticationMethod.HttpBasic, false, 2).Handling);
+        Assert.Equal(AuthenticationHandling.Cancel, new ChallengeHandling(AuthenticationMethod.HttpDigest, false, 3).Handling);
+        Assert.Equal(AuthenticationHandling.PerformDefaultHandling, new ChallengeHandling(AuthenticationMethod.HttpBasic, true, 0).Handling);
+        Assert.Equal(AuthenticationHandling.PerformDefaultHandling, new ChallengeHandling(AuthenticationMethod.Other, false, 0).Handling);
     }
 
     [Fact]
     public void TheAuthenticationPromptNamesTheServerWithANonDefaultPort() {
-        Assert.Equal("intranet.example", AuthenticationPolicy.SourceLabel("intranet.example", 443, "HTTPS"));
-        Assert.Equal("intranet.example:8443", AuthenticationPolicy.SourceLabel("intranet.example", 8443, "https"));
-        Assert.Equal("proxy.example:80", AuthenticationPolicy.SourceLabel("proxy.example", 80, null));
-        Assert.Null(AuthenticationPolicy.SourceLabel("", 443, "https"));
+        Assert.Equal("intranet.example", new AuthenticationSource("intranet.example", 443, "HTTPS").Label);
+        Assert.Equal("intranet.example:8443", new AuthenticationSource("intranet.example", 8443, "https").Label);
+        Assert.Equal("proxy.example:80", new AuthenticationSource("proxy.example", 80, null).Label);
+        Assert.Null(new AuthenticationSource("", 443, "https").Label);
     }
 }

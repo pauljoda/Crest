@@ -3949,6 +3949,10 @@
     "2026-10-12-tokens-and-shell-own-rules": {
       "category": "internal",
       "message": "Let design tokens, Space colors, settings values and the Mac shell keep their own rules"
+    },
+    "2026-10-12-credential-records-judge-themselves": {
+      "category": "internal",
+      "message": "Let credential records judge themselves"
     }
   }
 }

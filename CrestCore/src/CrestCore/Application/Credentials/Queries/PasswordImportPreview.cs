@@ -39,7 +39,7 @@ public sealed record PasswordImportPreview(IReadOnlyList<ImportedCredential> Cre
     /// What importing another browser's passwords means, as its own password
     /// file would.
     internal override CredentialImportPlan Answer(CrestApp app) {
-        return CredentialImportPlanning.Plan(CredentialFileFormat.Browser, Credentials, [], Existing);
+        return CredentialImportPlan.For(CredentialFileFormat.Browser, Credentials, [], Existing);
     }
 
     #endregion

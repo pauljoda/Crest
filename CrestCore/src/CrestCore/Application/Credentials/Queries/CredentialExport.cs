@@ -37,7 +37,7 @@ public sealed record CredentialExport(IReadOnlyList<ExportedCredential> Credenti
     #region Actions - Answering
 
     /// The Space's password file.
-    internal override CredentialExportFile Answer(CrestApp app) => CredentialExporting.File(this);
+    internal override CredentialExportFile Answer(CrestApp app) => CredentialExportFile.Of(this);
 
     #endregion
 }

@@ -1,5 +1,3 @@
-using CrestCore.Domain;
-
 namespace CrestCore.Contracts;
 
 /// A credential form observation, or `Filled` when the native layer finished
@@ -12,29 +10,29 @@ public sealed class CredentialCaptureEvent {
 
     public static readonly CredentialCaptureEvent Username = new(name: "username", decide: RememberUsername);
     public static readonly CredentialCaptureEvent Focus = new(name: "focus", decide: (facts, accepted, hint, _, now) => {
-        if (facts.PasswordKind is null) return CredentialCapturePolicy.Decision(CredentialCaptureAction.DismissFill);
-        if (!accepted || !facts.HasFormId || !facts.HasFillTarget) return CredentialCapturePolicy.Decision(CredentialCaptureAction.Ignore);
+        if (facts.PasswordKind is null) return CredentialCaptureDecision.For(CredentialCaptureAction.DismissFill);
+        if (!accepted || !facts.HasFormId || !facts.HasFillTarget) return CredentialCaptureDecision.For(CredentialCaptureAction.Ignore);
         var source = UsernameSource(facts, hint, now);
-        return CredentialCapturePolicy.Decision(CredentialCaptureAction.OfferFill, source, source == CredentialUsernameSource.None,
+        return CredentialCaptureDecision.For(CredentialCaptureAction.OfferFill, source, source == CredentialUsernameSource.None,
             facts.FrameOrigin != facts.TopLevelOrigin, facts.IsMainFrame);
     });
     public static readonly CredentialCaptureEvent Submit = new(name: "submit", decide: (facts, accepted, hint, _, now) => {
-        if (!accepted) return CredentialCapturePolicy.Decision(CredentialCaptureAction.Ignore);
+        if (!accepted) return CredentialCaptureDecision.For(CredentialCaptureAction.Ignore);
         var source = UsernameSource(facts, hint, now);
         if (source == CredentialUsernameSource.None)
-            return CredentialCapturePolicy.Decision(CredentialCaptureAction.Ignore, clearsUsernameHint: true);
-        if (!facts.HasPassword || facts.PasswordKind is null) return CredentialCapturePolicy.Decision(CredentialCaptureAction.Ignore);
-        return CredentialCapturePolicy.Decision(CredentialCaptureAction.CaptureCandidate, source,
+            return CredentialCaptureDecision.For(CredentialCaptureAction.Ignore, clearsUsernameHint: true);
+        if (!facts.HasPassword || facts.PasswordKind is null) return CredentialCaptureDecision.For(CredentialCaptureAction.Ignore);
+        return CredentialCaptureDecision.For(CredentialCaptureAction.CaptureCandidate, source,
             isCrossOriginFrame: facts.FrameOrigin != facts.TopLevelOrigin);
     });
     public static readonly CredentialCaptureEvent DocumentState = new(name: "documentState", decide: (facts, _, _, pending, now) => {
         if (pending is null || facts.HasVisiblePasswordField is not { } visible
-            || !facts.IsMainFrame && facts.FrameOrigin != CredentialCapturePolicy.Valid(pending.Origin))
-            return CredentialCapturePolicy.Decision(CredentialCaptureAction.Ignore);
-        if (CredentialCapturePolicy.ShouldOfferSave(pending.SubmittedAt, visible, now))
-            return CredentialCapturePolicy.Decision(CredentialCaptureAction.OfferSave);
-        return CredentialCapturePolicy.Decision(
-            CredentialCapturePolicy.Seconds(now) - CredentialCapturePolicy.Seconds(pending.SubmittedAt) > CredentialCapturePolicy.CandidateLifetime
+            || !facts.IsMainFrame && facts.FrameOrigin != pending.Origin.Validated())
+            return CredentialCaptureDecision.For(CredentialCaptureAction.Ignore);
+        if (pending.OffersSave(visible, now))
+            return CredentialCaptureDecision.For(CredentialCaptureAction.OfferSave);
+        return CredentialCaptureDecision.For(
+            pending.Age(now) > CredentialPendingCandidate.Lifetime
                 ? CredentialCaptureAction.DiscardPending : CredentialCaptureAction.KeepPending);
     });
     public static readonly CredentialCaptureEvent Filled = new(name: "filled", decide: RememberUsername);
@@ -78,18 +76,18 @@ public sealed class CredentialCaptureEvent {
     public CredentialCaptureDecision Decide(CredentialFormFacts facts, CredentialUsernameHint? hint, CredentialPendingCandidate? pending,
         double now) {
         ArgumentNullException.ThrowIfNull(facts);
-        bool accepted = CredentialCapturePolicy.Accepts(facts.FrameOrigin, facts.TopLevelOrigin);
+        bool accepted = facts.FrameOrigin.IsSecureUnder(facts.TopLevelOrigin);
         return decide(facts, accepted, hint, pending, now);
     }
 
     private static CredentialCaptureDecision RememberUsername(CredentialFormFacts facts, bool accepted, CredentialUsernameHint? hint,
         CredentialPendingCandidate? pending, double now) =>
-        CredentialCapturePolicy.Decision(accepted && facts.HasUsername ? CredentialCaptureAction.RememberUsername : CredentialCaptureAction.Ignore);
+        CredentialCaptureDecision.For(accepted && facts.HasUsername ? CredentialCaptureAction.RememberUsername : CredentialCaptureAction.Ignore);
 
     /// An explicit username wins; otherwise a remembered one that still applies.
     private static CredentialUsernameSource UsernameSource(CredentialFormFacts facts, CredentialUsernameHint? hint, double now) {
         if (facts.HasUsername) return CredentialUsernameSource.Explicit;
-        return hint is not null && CredentialCapturePolicy.HintApplies(hint, facts.FrameOrigin, facts.TopLevelOrigin, now)
+        return hint is not null && hint.Applies(facts.FrameOrigin, facts.TopLevelOrigin, now)
             ? CredentialUsernameSource.Hint : CredentialUsernameSource.None;
     }
 

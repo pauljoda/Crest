@@ -49,9 +49,9 @@ public sealed class CredentialExportTests {
 
     [Fact]
     public void TheFileNameKeepsTheSpacesLettersAndDigits() {
-        Assert.Equal("Crest Passwords - Work Client.csv", CredentialExporting.FileName("Work / Client", "Space"));
-        Assert.Equal("Crest Passwords - Café 東京 2.csv", CredentialExporting.FileName("  Café—東京 (2)! ", "Space"));
-        Assert.Equal("Crest Passwords - Espace.csv", CredentialExporting.FileName("\U0001F512 !! ", "Espace"));
-        Assert.Equal($"Crest Passwords - {new string('a', 80)}.csv", CredentialExporting.FileName(new string('a', 120), "Space"));
+        Assert.Equal("Crest Passwords - Work Client.csv", CredentialExportFile.Named("Work / Client", "Space"));
+        Assert.Equal("Crest Passwords - Café 東京 2.csv", CredentialExportFile.Named("  Café—東京 (2)! ", "Space"));
+        Assert.Equal("Crest Passwords - Espace.csv", CredentialExportFile.Named("\U0001F512 !! ", "Espace"));
+        Assert.Equal($"Crest Passwords - {new string('a', 80)}.csv", CredentialExportFile.Named(new string('a', 120), "Space"));
     }
 }
