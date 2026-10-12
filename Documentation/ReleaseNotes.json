@@ -3973,6 +3973,10 @@
     "2026-10-12-import-setup-repair-own-steps": {
       "category": "internal",
       "message": "Let import reviews, setups and session repair carry their own steps"
+    },
+    "2026-10-12-queries-answer-without-app": {
+      "category": "internal",
+      "message": "Let each query say how it answers without an app"
     }
   }
 }

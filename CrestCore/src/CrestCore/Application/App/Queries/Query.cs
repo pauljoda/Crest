@@ -21,4 +21,14 @@ public abstract record Query<TAnswer> {
     internal abstract TAnswer Answer(CrestApp app);
 
     #endregion
+
+    #region Actions - Answering
+
+    /// The answer a host without an app gives at the time `context` gives.
+    /// Only a question that reads no state, or that names no state to read,
+    /// has one; any other only an app answers.
+    internal virtual TAnswer AnswerWithoutApp(StandaloneContext context) =>
+        throw new ArgumentOutOfRangeException("query", GetType().Name, "Only an app answers this query.");
+
+    #endregion
 }

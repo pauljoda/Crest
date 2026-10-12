@@ -1,5 +1,4 @@
 using CrestCore.Contracts;
-using CrestCore.Domain;
 
 namespace CrestCore.Application;
 
@@ -29,9 +28,7 @@ public sealed class StandaloneAnswers : IQueryAnswers {
     /// other question, which only an app answers.
     public TAnswer Query<TAnswer>(Query<TAnswer> query) {
         ArgumentNullException.ThrowIfNull(query);
-        if (query is StandaloneQuery<TAnswer> alone) return alone.Answer(new StandaloneContext(DateTimeOffset.UtcNow));
-        if (query is ResolveAddress { WorkspaceId: null } address) return (TAnswer)(object)address.Unplaced();
-        throw new ArgumentOutOfRangeException(nameof(query), query.GetType().Name, "Only an app answers this query.");
+        return query.AnswerWithoutApp(new StandaloneContext(DateTimeOffset.UtcNow));
     }
 
     #endregion

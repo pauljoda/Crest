@@ -25,5 +25,10 @@ public sealed record ResolveAddress(Guid? WorkspaceId, Guid? SpaceId, string Inp
     internal ResolvedAddress Unplaced() => NativeSessionAuthority.Resolved(Input,
         SearchCatalog.Starting(language: null, region: null).Default, allowsInternalPages: false);
 
+    /// An address that names no workspace resolves by the default rules
+    /// without an app; one that names a workspace only an app answers.
+    internal override ResolvedAddress AnswerWithoutApp(StandaloneContext context) =>
+        WorkspaceId is null ? Unplaced() : base.AnswerWithoutApp(context);
+
     #endregion
 }
