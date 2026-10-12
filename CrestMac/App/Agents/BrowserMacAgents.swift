@@ -110,8 +110,12 @@ final class BrowserMacAgents {
     }
 
     private func openEndpoint() {
-        guard listener == nil, let path, let helper else { return }
+        guard listener == nil else { return }
         let status = application.agentEndpoint
+        guard let path, let helper else {
+            status.state = .failed(.unavailable)
+            return
+        }
         let listener = BrowserAgentListener(path: path, helper: helper) { [weak self] connection in
             // The main queue keeps connections and their lines in the order
             // they arrived.
@@ -169,6 +173,7 @@ final class BrowserMacAgents {
     /// Lets go of what `link`'s agent held: its pages render and keep
     /// activity no more, and the core disconnects it.
     private func release(_ link: Link) {
+        approvals.withdraw(ObjectIdentifier(link))
         for tabID in link.heldPages { agentPage(tabID)?.enginePage.holdRendering(false, size: .zero) }
         for tabID in link.observedPages { agentPage(tabID)?.enginePage.observeActivity(false) }
         link.heldPages = []
@@ -244,7 +249,7 @@ final class BrowserMacAgents {
         do {
             _ = try core.send(BeginAgentSession(sessionID: sessionID, identity: agent.identity, name: agent.agentName))
         } catch .agentNotApproved {
-            try await approvals.approve(agent, client: link.client)
+            try await approvals.approve(agent, client: link.client, for: ObjectIdentifier(link))
             guard links[ObjectIdentifier(link)] != nil, core.state.agentPreferences.isOn else { throw .declined }
             do {
                 _ = try core.send(ApproveAgent(agent: ApprovedAgent(identity: agent.identity, name: agent.agentName)))

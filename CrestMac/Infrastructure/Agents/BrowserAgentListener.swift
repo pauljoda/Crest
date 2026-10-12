@@ -17,6 +17,9 @@ final class BrowserAgentListener: @unchecked Sendable {
         case occupied
         /// The system refused `operation` with `code`.
         case system(operation: Operation, code: Int32)
+        /// This copy of Crest has no socket path, as when the account's home
+        /// folder path is too long for one, or no helper to admit.
+        case unavailable
     }
 
     /// What the listener asked the system for.

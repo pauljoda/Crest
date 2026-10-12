@@ -142,6 +142,8 @@ struct BrowserAgentsSettingsPane: View {
             "Another copy of Crest is already open to agents. Quit it, then turn agents off and on again."
         case .occupied, .system:
             "Crest couldn’t open itself to agents. Turn agents off and on again to try again."
+        case .unavailable:
+            "Agents can’t reach this copy of Crest."
         }
     }
 
