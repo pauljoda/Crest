@@ -84,7 +84,7 @@ internal sealed record BrowserDataSpace(string Name, string Symbol, SpaceAccent 
         var history = BrowserDataHistoryEntry.Materialize(History, HistoryEntryState.MaximumEntries, ids.Next);
         if (SelectedTabId is { } selected) Require(tabIds.ContainsKey(selected));
 
-        var settings = new SpaceSettings(Name, Symbol, Accent, ImportedLook.Kept(Branding, Accent, Symbol), BrowsingPreferences,
+        var settings = new SpaceSettings(Name, Symbol, Accent, SpaceBranding.Kept(Branding, Accent, Symbol), BrowsingPreferences,
             StoredSessionCodec.DefaultCredentialPreferences, SpaceAccessPolicy.Open, IsSavedTabsExpanded: true,
             SavedTabsExpansionModifiedAt: null);
         return new(ids.Next(), ids.Next(), settings,

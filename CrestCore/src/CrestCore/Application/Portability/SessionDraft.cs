@@ -159,7 +159,7 @@ internal sealed record SessionDraft(int Ordinal, string? Name, IReadOnlyList<Ses
         string name = ImportText.Bounded(Name, Fallback(names, numbered), ImportText.MaximumSpaceName)
             ?? throw new Rejected(new SessionOverLimits());
         string symbol = Symbol ?? source.Symbol;
-        return new(name, symbol, Accent ?? source.Accent, Branding ?? ImportedLook.Neutral(symbol), Ordered(folders), tabs,
+        return new(name, symbol, Accent ?? source.Accent, Branding ?? SpaceBranding.NeutralImport(symbol), Ordered(folders), tabs,
             splits, ArchivedTabs: [], History: [], StoredSessionCodec.DefaultBrowsingPreferences, SelectedTabId: null);
     }
 

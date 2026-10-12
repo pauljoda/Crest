@@ -3981,6 +3981,10 @@
     "2026-10-12-unsupported-address-rejection": {
       "category": "internal",
       "message": "Refuse an address no Space holds as an unsupported address"
+    },
+    "2026-10-12-branding-makes-imported-looks": {
+      "category": "internal",
+      "message": "Let a branding make the looks imported Spaces wear"
     }
   }
 }
