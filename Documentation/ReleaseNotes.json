@@ -4737,6 +4737,10 @@
     "chromium-restore-history-crash": {
       "category": "fixed",
       "message": "Going back to a restored tab on Mac no longer quits Crest when that tab's page never finished opening, such as one that turned into a download or that you stopped."
+    },
+    "fullscreen-video-without-black-frames": {
+      "category": "fixed",
+      "message": "Videos and other pages go into and out of full screen without a few black frames on Chromium pages."
     }
   }
 }
