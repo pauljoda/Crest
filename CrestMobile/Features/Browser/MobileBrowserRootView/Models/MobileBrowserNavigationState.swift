@@ -90,18 +90,22 @@ final class MobileBrowserNavigationState {
     }
 
     func selectTab() {
-        if presentation.presentsPageOverTabViewer {
-            if compactPagePresentationPhase == .tabViewer {
-                // The full-screen phone tab viewer is the docked sidebar. A
-                // normal row selection must therefore enter the original
-                // docked detail flow even if a prior window session last used
-                // the floating sidebar. The Undock button takes the separate
-                // toggleCompactSidebar path and keeps the floating mode.
-                dockRegularSidebar()
-            }
-            compactToolbarIsHidden = false
-            compactPagePresentationPhase = .presentingPage
+        presentation.selectTab(on: self)
+    }
+
+    /// Brings the page a row selection chose up over a narrow window's tab
+    /// viewer.
+    func presentPageFromTabViewer() {
+        if compactPagePresentationPhase == .tabViewer {
+            // The full-screen phone tab viewer is the docked sidebar. A
+            // normal row selection must therefore enter the original
+            // docked detail flow even if a prior window session last used
+            // the floating sidebar. The Undock button takes the separate
+            // toggleCompactSidebar path and keeps the floating mode.
+            dockRegularSidebar()
         }
+        compactToolbarIsHidden = false
+        compactPagePresentationPhase = .presentingPage
     }
 
     /// Setup can finish before the new browser root has resolved its width.
@@ -115,9 +119,7 @@ final class MobileBrowserNavigationState {
     func showTabViewer() {
         compactToolbarIsHidden = false
         compactPagePresentationPhase = .tabViewer
-        if presentation.presentsPageOverTabViewer {
-            dockRegularSidebar()
-        }
+        presentation.placeSidebarForTabViewer(on: self)
     }
 
     func prepareForSpaceSwitch() {
@@ -132,17 +134,23 @@ final class MobileBrowserNavigationState {
     func prepareForLockedSpace() {
         lockedSpaceKeepsSidebarVisible = true
         compactToolbarIsHidden = false
+        presentation.prepareForLockedSpace(on: self)
+    }
 
-        if presentation.presentsPageOverTabViewer {
-            if compactShowsPage, regularSidebarPresentation != .docked {
-                cancelTransientSidebarDismissal()
-                regularSidebarPresentation = .floating
-            } else {
-                showTabViewer()
-            }
-            return
+    /// A narrow window keeps an undocked sidebar floating over the page it
+    /// shows, and otherwise returns to its full-screen tab viewer.
+    func keepLockedSpaceOverCompactPage() {
+        if compactShowsPage, regularSidebarPresentation != .docked {
+            cancelTransientSidebarDismissal()
+            regularSidebarPresentation = .floating
+        } else {
+            showTabViewer()
         }
+    }
 
+    /// A regular window floats a hidden sidebar over the page, so the lock
+    /// stays on screen.
+    func keepLockedSpaceBesidePage() {
         cancelTransientSidebarDismissal()
         if regularSidebarPresentation == .collapsed {
             regularSidebarPresentation = .floating
@@ -237,14 +245,18 @@ final class MobileBrowserNavigationState {
     func adapt(to presentation: MobileBrowserPresentation) {
         self.presentation = presentation
         hasAdaptedPresentation = true
-        if !presentation.presentsPageOverTabViewer {
-            compactToolbarIsHidden = false
-            if dockedHiddenSidebarWhileNarrow, regularSidebarPresentation == .docked {
-                hideRegularSidebar()
-            }
-            dockedHiddenSidebarWhileNarrow = false
-        }
+        presentation.adapt(self)
         dockIfFloatingIsNotAllowed()
+    }
+
+    /// A window that widens shows its toolbar, and hides again a sidebar it
+    /// docked only because it was narrow.
+    func leaveNarrowWidth() {
+        compactToolbarIsHidden = false
+        if dockedHiddenSidebarWhileNarrow, regularSidebarPresentation == .docked {
+            hideRegularSidebar()
+        }
+        dockedHiddenSidebarWhileNarrow = false
     }
 
     /// A narrow window that may not float its sidebar keeps it docked, which

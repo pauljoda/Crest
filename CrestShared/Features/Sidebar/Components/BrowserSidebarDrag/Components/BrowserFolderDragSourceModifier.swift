@@ -29,7 +29,7 @@ struct BrowserFolderDragSourceModifier: ViewModifier {
             && BrowserTabDragVisualPolicy.usesPersistentSourceStyle(
                 isDragging: dragState.isDragging(item),
                 hasReliableTerminalLifecycle:
-                    BrowserPlatformTabDragVisualPolicy.hasReliableTerminalLifecycle
+                    BrowserTabDragState.hasReliableTerminalLifecycle
             )
 
         content

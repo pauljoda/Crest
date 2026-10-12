@@ -47,7 +47,7 @@ struct MobileCompactBrowserSurface<
 
                         GeometryReader { proxy in
                             MobileRegularBrowserLayout(
-                                layout: MobileRegularWindowLayoutPolicy.resolve(
+                                layout: MobileRegularWindowLayout(
                                     availableWidth: proxy.size.width,
                                     preferredSidebarWidth: preferredSidebarWidth
                                 ),

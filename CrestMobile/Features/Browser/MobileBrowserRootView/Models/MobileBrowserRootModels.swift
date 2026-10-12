@@ -1,16 +1,5 @@
 import Foundation
 
-// MARK: - Presentation
-
-enum MobileStartPageForegroundTone: Equatable, Sendable {
-    case onBrand
-}
-
-struct MobileTabPromotionTarget: Equatable {
-    let tabID: UUID
-    let placement: TabPlacement
-}
-
 // MARK: - Snapshots
 
 struct MobileBrowserRootLockSnapshot: Equatable, Sendable {

@@ -193,10 +193,11 @@ struct MobileBrowserSidebarSurface: View {
         )
     }
 
+    /// The sidebar reads its foreground from the shown Space's own branding
+    /// rather than from the system appearance, as every compact placement
+    /// does, so they keep agreeing.
     private var selectedSidebarColorScheme: ColorScheme {
-        guard MobileBrowserSidebarAppearancePolicy.usesSpaceForeground(),
-            let space = browser.shownSpace
-        else { return colorScheme }
+        guard let space = browser.shownSpace else { return colorScheme }
         return BrowserSpaceForegroundPolicy.colorScheme(for: space.settings.look)
     }
 

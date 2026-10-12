@@ -3933,6 +3933,10 @@
     "2026-10-12-peek-measures-own-rules": {
       "category": "internal",
       "message": "Let Peek's views and the card arrangement carry their own measures"
+    },
+    "2026-10-12-mobile-layout-own-rules": {
+      "category": "internal",
+      "message": "Let window sizes, viewports and pagers carry the iPhone and iPad layout"
     }
   }
 }

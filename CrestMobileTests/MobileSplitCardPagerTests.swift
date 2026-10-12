@@ -4,12 +4,12 @@ import XCTest
 @testable import CrestMobile
 
 @MainActor
-final class MobileSplitCardPagerPolicyTests: XCTestCase {
+final class MobileSplitCardPagerTests: XCTestCase {
     func testAdjacentMemberStepsOneCardInEachDirection() {
         let members = memberIDs(count: 3)
 
         XCTAssertEqual(
-            MobileSplitCardPagerPolicy.adjacentMember(
+            MobileSplitCardPager.adjacentMember(
                 of: members[0],
                 in: members,
                 direction: .next
@@ -17,7 +17,7 @@ final class MobileSplitCardPagerPolicyTests: XCTestCase {
             members[1]
         )
         XCTAssertEqual(
-            MobileSplitCardPagerPolicy.adjacentMember(
+            MobileSplitCardPager.adjacentMember(
                 of: members[2],
                 in: members,
                 direction: .previous
@@ -30,7 +30,7 @@ final class MobileSplitCardPagerPolicyTests: XCTestCase {
         let members = memberIDs(count: 3)
 
         XCTAssertNil(
-            MobileSplitCardPagerPolicy.adjacentMember(
+            MobileSplitCardPager.adjacentMember(
                 of: members[0],
                 in: members,
                 direction: .previous
@@ -41,7 +41,7 @@ final class MobileSplitCardPagerPolicyTests: XCTestCase {
             """
         )
         XCTAssertNil(
-            MobileSplitCardPagerPolicy.adjacentMember(
+            MobileSplitCardPager.adjacentMember(
                 of: members[2],
                 in: members,
                 direction: .next
@@ -54,7 +54,7 @@ final class MobileSplitCardPagerPolicyTests: XCTestCase {
         let closedMember = fixedUUID(0xDE)
 
         XCTAssertNil(
-            MobileSplitCardPagerPolicy.adjacentMember(
+            MobileSplitCardPager.adjacentMember(
                 of: closedMember,
                 in: members,
                 direction: .next

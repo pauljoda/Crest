@@ -57,12 +57,7 @@ struct MobileBrowserSpaceTabListScroll<Content: View>: View {
                     BrowserSpaceAccessibilityID.tabs(context.space.id)
                 )
                 .onChange(of: selectedPromotionTarget) { previous, current in
-                    guard
-                        MobileTabPromotionPolicy.shouldPreposition(
-                            previous: previous,
-                            current: current,
-                            compactPageIsFullyPresented: compactPageIsFullyPresented
-                        ), let current
+                    guard compactPageIsFullyPresented, let current, previous != current
                     else { return }
 
                     var transaction = Transaction(animation: nil)
@@ -82,6 +77,6 @@ struct MobileBrowserSpaceTabListScroll<Content: View>: View {
         guard let tabID = context.window.shownTabs.first(where: { $0.spaceID == spaceID })?.tabID,
             let tab = context.space.tabs.model(tabID)
         else { return nil }
-        return MobileTabPromotionPolicy.target(for: tab)
+        return MobileTabPromotionTarget(shownTab: tab)
     }
 }

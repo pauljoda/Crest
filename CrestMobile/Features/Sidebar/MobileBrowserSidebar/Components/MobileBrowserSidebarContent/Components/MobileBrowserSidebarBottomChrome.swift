@@ -50,11 +50,9 @@ struct MobileBrowserSidebarBottomChrome: View {
 
     @ViewBuilder
     private var actions: some View {
-        switch MobileBrowserSidebarBottomChromePolicy.content(
-            reservesInset: configuration.reservesBottomChromeInset,
-            isVisible: configuration.showsBottomSpaceSwitcher
-        ) {
-        case .actions:
+        if holdsReservedSpace {
+            reservedSpace
+        } else {
             if BrowserSidebarAccessPolicy.showsSelectedSpaceActions(
                 in: configuration.context.browser,
                 accessController: configuration.context.spaceAccess
@@ -70,9 +68,13 @@ struct MobileBrowserSidebarBottomChrome: View {
             } else {
                 reservedSpace
             }
-        case .reservedSpace:
-            reservedSpace
         }
+    }
+
+    /// Whether the chrome only holds its reserved inset open, its controls
+    /// being off screen.
+    private var holdsReservedSpace: Bool {
+        configuration.reservesBottomChromeInset && !configuration.showsBottomSpaceSwitcher
     }
 
     private var reservedSpace: some View {

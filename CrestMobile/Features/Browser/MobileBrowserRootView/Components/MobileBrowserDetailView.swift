@@ -359,7 +359,7 @@ struct MobileBrowserDetailView: View {
     /// same value, which is what makes a grouped tab render exactly like the
     /// plain tab it is.
     private var pageViewport: MobileBrowserPageViewport {
-        let safeAreaInsets = MobileBrowserViewportPolicy.systemSafeAreaInsets(
+        let safeAreaInsets = MobileBrowserPageViewport.systemSafeAreaInsets(
             resolvedSafeAreaInsets,
             layoutDirection: layoutDirection
         )
@@ -388,7 +388,7 @@ struct MobileBrowserDetailView: View {
     private var splitCardMembers: [TabStateModel]? {
         guard let space = splitCardSpace else { return nil }
         let members = browser.cards(in: space)
-        let isRenderableRun = MobileSplitCardPagerPolicy.isPagerPresented(
+        let isRenderableRun = MobileSplitCardPager.presents(
             memberCount: members.count
         )
         return isRenderableRun ? members : nil
@@ -411,12 +411,7 @@ struct MobileBrowserDetailView: View {
     /// the branding rather than the system appearance. Without a Space there is
     /// no brand to follow and the header inherits the environment's appearance.
     private var startPageHeaderColorScheme: ColorScheme? {
-        guard
-            MobileStartPageAppearancePolicy.foregroundTone(
-                usesCommandPalette: !isCompact
-            ) == .onBrand,
-            let branding = shownBranding
-        else { return nil }
+        guard let branding = shownBranding else { return nil }
         return BrowserSpaceForegroundPolicy.colorScheme(for: branding)
     }
 
@@ -428,8 +423,8 @@ struct MobileBrowserDetailView: View {
 
     private var compactBottomChromeHeight: CGFloat {
         compactToolbarIsHidden
-            ? MobileBrowserViewportPolicy.compactDomainChipHeight
-            : MobileBrowserViewportPolicy.compactToolbarHeight
+            ? MobileBrowserPageViewport.compactDomainChipHeight
+            : MobileBrowserPageViewport.compactToolbarHeight
     }
 
     private var selectedSpaceIsLocked: Bool {

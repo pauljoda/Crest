@@ -36,7 +36,7 @@ struct MobileBrowserRootSurface<Compact: View, Regular: View, Palette: View>:
                 compact
             } else {
                 GeometryReader { proxy in
-                    let layout = MobileRegularWindowLayoutPolicy.resolve(
+                    let layout = MobileRegularWindowLayout(
                         availableWidth: proxy.size.width,
                         preferredSidebarWidth: preferredSidebarWidth
                     )

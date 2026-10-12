@@ -478,7 +478,7 @@ extension MobileBrowserRootModel {
         _ direction: BrowserSpaceSwipeDirection
     ) -> UUID? {
         guard let selectedTabID = browser.shownTab?.id, presentedSplitGroupID != nil,
-            let target = MobileSplitCardPagerPolicy.adjacentMember(
+            let target = MobileSplitCardPager.adjacentMember(
                 of: selectedTabID, in: presentedSplitMembers.map(\.id), direction: direction)
         else { return nil }
         browser.selectTab(target)

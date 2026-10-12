@@ -4,8 +4,7 @@ extension MobileBrowserRootContent {
     func selectTab(_ id: UUID) {
         dismissAddressFocus()
         let dismissesFloatingPhoneSidebar =
-            MobileSidebarTabSelectionPolicy.dismissesSidebar(
-                browserPresentation: presentation,
+            presentation.dismissesSidebarOnTabSelection(
                 sidebarPresentation: navigation.regularSidebarPresentation
             )
         model.selectTab(id)

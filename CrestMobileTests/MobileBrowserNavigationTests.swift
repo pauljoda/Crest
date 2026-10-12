@@ -423,20 +423,17 @@ final class MobileBrowserNavigationTests: XCTestCase {
 
     func testSelectingATabDismissesOnlyTheFloatingPhoneSidebar() {
         XCTAssertTrue(
-            MobileSidebarTabSelectionPolicy.dismissesSidebar(
-                browserPresentation: .compact,
+            MobileBrowserPresentation.compact.dismissesSidebarOnTabSelection(
                 sidebarPresentation: .floating
             )
         )
         XCTAssertFalse(
-            MobileSidebarTabSelectionPolicy.dismissesSidebar(
-                browserPresentation: .compact,
+            MobileBrowserPresentation.compact.dismissesSidebarOnTabSelection(
                 sidebarPresentation: .docked
             )
         )
         XCTAssertFalse(
-            MobileSidebarTabSelectionPolicy.dismissesSidebar(
-                browserPresentation: .regular,
+            MobileBrowserPresentation.regular.dismissesSidebarOnTabSelection(
                 sidebarPresentation: .floating
             ),
             "iPad keeps the normal shared floating-sidebar selection behavior."
@@ -473,7 +470,7 @@ final class MobileBrowserNavigationTests: XCTestCase {
             MobileBrowserPageViewport(
                 obscuresSystemSafeAreas: true,
                 systemSafeAreaInsets: .zero,
-                bottomChromeHeight: MobileBrowserViewportPolicy.compactToolbarHeight
+                bottomChromeHeight: MobileBrowserPageViewport.compactToolbarHeight
             )
         )
         newHost.attach(webView)
@@ -498,7 +495,7 @@ final class MobileBrowserNavigationTests: XCTestCase {
         )
         XCTAssertEqual(
             webView.scrollView.verticalScrollIndicatorInsets.bottom,
-            MobileBrowserViewportPolicy.compactToolbarHeight,
+            MobileBrowserPageViewport.compactToolbarHeight,
             "A stale host must not clear viewport state applied by the replacement host."
         )
     }
@@ -548,14 +545,14 @@ final class MobileBrowserNavigationTests: XCTestCase {
     func testUpwardRevealNeverDropsTheSplitThatPutTheToolbarOnScreen() {
         for presentation in [BrowserSidebarPresentation.floating, .collapsed] {
             XCTAssertTrue(
-                MobileSidebarPageFramePolicy.showsCompactToolbar(
+                MobileBrowserRootContent.showsCompactPageToolbar(
                     sidebarPresentation: presentation,
                     presentsSplitView: true
                 ),
                 "A split is what puts the compact toolbar up when undocked."
             )
             XCTAssertFalse(
-                MobileSidebarPageFramePolicy.showsCompactToolbar(
+                MobileBrowserRootContent.showsCompactPageToolbar(
                     sidebarPresentation: presentation,
                     presentsSplitView: false
                 ),

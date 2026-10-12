@@ -7,7 +7,7 @@
 /// swipe belongs to them the same way.
 ///
 /// Reaching this toolbar undocked takes a Split View.
-/// `MobileSidebarPageFramePolicy.showsCompactToolbar` puts the compact toolbar
+/// `MobileBrowserRootContent.showsCompactPageToolbar` puts the compact toolbar
 /// up for a docked sidebar *or* a presented split, so a floating or collapsed
 /// sidebar only has a toolbar to swipe while a group is on show. Sending the
 /// swipe to the full-screen viewer from there took the window out of its split
