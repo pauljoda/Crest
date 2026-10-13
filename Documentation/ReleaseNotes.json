@@ -4069,6 +4069,10 @@
     "sidebar-cache-layout-documentation": {
       "category": "internal",
       "message": "Documented cached page sizing and visibility contracts."
+    },
+    "sidebar-pager-lifecycle-documentation": {
+      "category": "internal",
+      "message": "Documented pager lifecycle, input routing, and accessibility contracts."
     }
   }
 }
