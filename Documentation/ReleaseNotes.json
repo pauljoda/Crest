@@ -4065,6 +4065,10 @@
     "sidebar-offscreen-page-resizing": {
       "category": "improved",
       "message": "Sidebar transitions avoid resizing pages in offscreen Spaces."
+    },
+    "sidebar-cache-layout-documentation": {
+      "category": "internal",
+      "message": "Documented cached page sizing and visibility contracts."
     }
   }
 }

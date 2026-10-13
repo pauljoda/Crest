@@ -69,6 +69,7 @@ final class SpaceContentPagerView<Content: View & Equatable>: NSView {
         for host in hosts.values { host.layer?.removeAllAnimations() }
     }
 
+    /// Reflows visible pages during viewport changes while preserving inactive pages' cached sizes.
     override func layout() {
         super.layout()
         guard lastSize != bounds.size else { return }
@@ -164,6 +165,7 @@ final class SpaceContentPagerView<Content: View & Equatable>: NSView {
         preparedDestination = nil
     }
 
+    /// Keeps a bounded cache and restores each page's geometry before admitting it to a visible slide.
     private func prepareHosts(
         at position: CGFloat, destination: UUID?, refresh: Bool, preparesNeighbors: Bool = true
     ) {
@@ -247,6 +249,7 @@ final class SpaceContentPagerView<Content: View & Equatable>: NSView {
         host.frame.intersects(bounds) || CGRect(origin: origin, size: bounds.size).intersects(bounds)
     }
 
+    /// Positions visible slides and parks inactive cached frames beyond a widened viewport's clip.
     private func positionHosts(at position: CGFloat) {
         for (key, host) in hosts {
             var origin = origin(for: key, at: position)
