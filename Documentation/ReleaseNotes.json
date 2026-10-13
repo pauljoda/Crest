@@ -4062,17 +4062,6 @@
       "category": "fixed",
       "message": "On pinned tabs, the sound and sharing badge sits in the tile\u2019s bottom corner instead of over the site icon, so the icon is easy to click."
     },
-    "sidebar-offscreen-page-resizing": {
-      "category": "improved",
-      "message": "Sidebar transitions avoid resizing pages in offscreen Spaces."
-    },
-    "sidebar-cache-layout-documentation": {
-      "category": "internal",
-      "message": "Documented cached page sizing and visibility contracts."
-    },
-    "sidebar-pager-lifecycle-documentation": {
-      "category": "internal",
-      "message": "Documented pager lifecycle, input routing, and accessibility contracts."
     "site-controls-extension-menu-stays-open": {
       "category": "fixed",
       "message": "Right-clicking an extension in Site Controls shows its menu without closing Site Controls."
@@ -4088,6 +4077,10 @@
     "find-close-returns-page-focus": {
       "category": "fixed",
       "message": "Closing find in page returns the keyboard to the page, including a page in Peek, so arrow keys and Space scroll right away."
+    },
+    "sidebar-offscreen-page-resizing": {
+      "category": "fixed",
+      "message": "Showing and hiding the sidebar is smoother when several Spaces are open."
     }
   }
 }

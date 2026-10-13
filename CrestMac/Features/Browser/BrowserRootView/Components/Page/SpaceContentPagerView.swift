@@ -18,7 +18,6 @@ final class SpaceContentPagerView<Content: View & Equatable>: NSView {
     private var lastSize = CGSize.zero
     private var preparedDestination: UUID?
 
-    /// Creates a clipped, layer-backed viewport for cached native page hosts.
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
         wantsLayer = true
@@ -26,14 +25,12 @@ final class SpaceContentPagerView<Content: View & Equatable>: NSView {
         setAccessibilityElement(false)
     }
 
-    /// Page hosts are assembled with their live browsing owners rather than loaded from an archive.
     required init?(coder: NSCoder) { nil }
     override var isFlipped: Bool { true }
     override var intrinsicContentSize: NSSize {
         NSSize(width: NSView.noIntrinsicMetric, height: NSView.noIntrinsicMetric)
     }
 
-    /// Withdraws stale or newly locked hosts before reconciling the current Space graph and presentation.
     func update(
         spaces: [SpaceModel], selectedSpaceID: UUID, lockedSpaceIDs: Set<UUID>,
         layoutDirection: LayoutDirection, presentation: SpacePagerPresentation?,
@@ -65,7 +62,6 @@ final class SpaceContentPagerView<Content: View & Equatable>: NSView {
         updateAccessibility()
     }
 
-    /// Detaches presentation callbacks and stops motion while retaining reusable page hosts.
     func disconnect() {
         presentation?.removeObserver(owner: self)
         presentation = nil
@@ -73,7 +69,6 @@ final class SpaceContentPagerView<Content: View & Equatable>: NSView {
         for host in hosts.values { host.layer?.removeAllAnimations() }
     }
 
-    /// Reflows visible pages during viewport changes while preserving inactive pages' cached sizes.
     override func layout() {
         super.layout()
         guard lastSize != bounds.size else { return }
@@ -95,7 +90,6 @@ final class SpaceContentPagerView<Content: View & Equatable>: NSView {
         }
     }
 
-    /// Only settled, selected content receives input; cached pages and sliding previews remain passive.
     override func hitTest(_ point: NSPoint) -> NSView? {
         guard bounds.contains(convert(point, from: superview)),
             snapshot?.phase == .idle, snapshot?.destinationID == selectedSpaceID
@@ -103,20 +97,17 @@ final class SpaceContentPagerView<Content: View & Equatable>: NSView {
         return super.hitTest(point)
     }
 
-    /// Rejects presenter snapshots whose Space order no longer matches the live graph.
     private var matchingSnapshot: SpacePagerPresentation.Snapshot? {
         guard let value = presentation?.snapshot, value.spaceIDs == spaces.map(\.id) else { return nil }
         return value
     }
 
-    /// Provides a selected-Space idle snapshot until the presenter matches the current Space graph.
     private func restingSnapshot(_ id: UUID) -> SpacePagerPresentation.Snapshot {
         .init(
             generation: 0, spaceIDs: spaces.map(\.id),
             position: CGFloat(spaces.firstIndex { $0.id == id } ?? 0), phase: .idle, destinationID: id)
     }
 
-    /// Applies matching slide snapshots and refreshes settled roots before they receive input.
     private func receive(_ value: SpacePagerPresentation.Snapshot) {
         guard value.spaceIDs == spaces.map(\.id) else { return }
         // A selection that arrives mid-slide leaves the roots built for the
@@ -165,7 +156,6 @@ final class SpaceContentPagerView<Content: View & Equatable>: NSView {
         updateAccessibility()
     }
 
-    /// Cancels an in-flight slide and invalidates its prepared destination before new motion is reconciled.
     private func stopAnimations() {
         if transition != nil {
             for host in hosts.values { host.layer?.removeAllAnimations() }
@@ -174,7 +164,6 @@ final class SpaceContentPagerView<Content: View & Equatable>: NSView {
         preparedDestination = nil
     }
 
-    /// Keeps a bounded cache and restores each page's geometry before admitting it to a visible slide.
     private func prepareHosts(
         at position: CGFloat, destination: UUID?, refresh: Bool, preparesNeighbors: Bool = true
     ) {
@@ -233,7 +222,6 @@ final class SpaceContentPagerView<Content: View & Equatable>: NSView {
         }
     }
 
-    /// Assigns page roles across the full release path so reversals retain passive preview surfaces.
     private func contentPresentation(at index: Int) -> SpaceContentPresentation {
         guard let snapshot else { return .inactive }
         let id = spaces[index].id
@@ -249,23 +237,20 @@ final class SpaceContentPagerView<Content: View & Equatable>: NSView {
         return visible.contains(index) || id == snapshot.destinationID ? .preview : .inactive
     }
 
-    /// Uses current viewport width and reading direction to locate cached hosts along fractional slides.
     private func origin(for key: BrowserSpaceRuntimeAssignment, at position: CGFloat) -> CGPoint {
         let index = spaces.firstIndex { $0.id == key.spaceID } ?? 0
         let direction: CGFloat = layoutDirection == .leftToRight ? 1 : -1
         return CGPoint(x: (CGFloat(index) - position) * bounds.width * direction, y: 0)
     }
 
-    /// Restricts native motion to frames intersecting the viewport at either end rather than the whole cache.
     private func needsMotion(_ host: NSView, to origin: CGPoint) -> Bool {
         host.frame.intersects(bounds) || CGRect(origin: origin, size: bounds.size).intersects(bounds)
     }
 
-    /// Positions visible slides and parks inactive cached frames beyond a widened viewport's clip.
     private func positionHosts(at position: CGFloat) {
         for (key, host) in hosts {
             var origin = origin(for: key, at: position)
-            if snapshot?.phase == .idle, host.hostingView.rootView.contentPresentation == .inactive {
+            if host.hostingView.rootView.contentPresentation == .inactive {
                 guard host.frame.intersects(bounds) else { continue }
                 // A wider viewport can expose a cached frame. Park it beyond
                 // the clip until prepareHosts admits it to a visible slide.
@@ -278,7 +263,6 @@ final class SpaceContentPagerView<Content: View & Equatable>: NSView {
         }
     }
 
-    /// Exposes only the selected destination at rest; cached and sliding pages stay hidden from accessibility.
     private func updateAccessibility() {
         for (key, host) in hosts {
             host.setAccessibilityHidden(
