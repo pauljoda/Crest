@@ -345,7 +345,9 @@ final class BrowserChromeLayoutTests: XCTestCase {
         for (command, surface) in lists {
             let hidden = BrowserChromeState(sidebarIsPresented: false)
             BrowserCommandActions(browser: browser, pages: pages, chrome: hidden, windows: nil).perform(command)
-            XCTAssertEqual(hidden.columnVisibility, .all, "\(command.name) docks a hidden sidebar.")
+            XCTAssertEqual(
+                hidden.columnVisibility, .detailOnly, "\(command.name) preserves the hidden sidebar preference.")
+            XCTAssertTrue(hidden.isFloatingSidebarPresented)
             XCTAssertEqual(hidden.utilityPresentation.surface, surface)
 
             let floating = BrowserChromeState(sidebarIsPresented: false)

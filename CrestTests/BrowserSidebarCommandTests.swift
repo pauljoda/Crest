@@ -8,10 +8,17 @@ import XCTest
 @MainActor
 final class BrowserSidebarCommandTests: XCTestCase {
     func testFindMovesNativeFocusIntoHistorySearch() async throws {
+        for sidebarIsPresented in [false, true] {
+            try await verifyHistorySearchFocus(sidebarIsPresented: sidebarIsPresented)
+        }
+    }
+
+    private func verifyHistorySearchFocus(sidebarIsPresented: Bool) async throws {
         let browser = BrowserStore.hostingPages()
         let pages = BrowserPagePool(browser: browser)
-        let chrome = BrowserChromeState()
-        chrome.presentUtility(.history)
+        let chrome = BrowserChromeState(sidebarIsPresented: sidebarIsPresented)
+        let actions = BrowserCommandActions(browser: browser, pages: pages, chrome: chrome, windows: nil)
+        actions.perform(.showHistory)
         let host = NSHostingView(
             rootView: BrowserRootView(
                 browser: browser, pages: pages, chrome: chrome,
@@ -36,7 +43,6 @@ final class BrowserSidebarCommandTests: XCTestCase {
         host.layoutSubtreeIfNeeded()
         try await Task.sleep(for: .milliseconds(150))
         XCTAssertTrue(window.makeFirstResponder(sentinel))
-        let actions = BrowserCommandActions(browser: browser, pages: pages, chrome: chrome, windows: nil)
         XCTAssertTrue(actions.canPerform(.findInPage))
         actions.perform(.findInPage)
         for _ in 0..<20 {
@@ -97,17 +103,23 @@ final class BrowserSidebarCommandTests: XCTestCase {
         let commands: [(ShortcutCommand, BrowserUtilitySurface)] = [
             (.showHistory, .history), (.showArchive, .archive), (.showDownloads, .downloads),
         ]
-        for (command, surface) in commands {
-            let chrome = BrowserChromeState(sidebarIsPresented: false)
-            let actions = BrowserCommandActions(browser: browser, pages: pages, chrome: chrome, windows: nil)
-            actions.perform(command)
-            XCTAssertEqual(chrome.utilityPresentation.surface, surface)
-            XCTAssertEqual(chrome.columnVisibility, .all)
-            actions.perform(command)
-            XCTAssertNil(chrome.utilityPresentation.surface)
-            XCTAssertEqual(otherWindow.utilityPresentation.surface, .history)
-            actions.perform(command)
-            XCTAssertEqual(chrome.utilityPresentation.surface, surface)
+        for sidebarIsPresented in [false, true] {
+            for (command, surface) in commands {
+                let chrome = BrowserChromeState(sidebarIsPresented: sidebarIsPresented)
+                let actions = BrowserCommandActions(browser: browser, pages: pages, chrome: chrome, windows: nil)
+                actions.perform(command)
+                XCTAssertEqual(chrome.utilityPresentation.surface, surface)
+                XCTAssertEqual(chrome.columnVisibility, sidebarIsPresented ? .all : .detailOnly)
+                XCTAssertEqual(chrome.isFloatingSidebarPresented, !sidebarIsPresented)
+                actions.perform(command)
+                XCTAssertNil(chrome.utilityPresentation.surface)
+                XCTAssertFalse(chrome.isFloatingSidebarPresented)
+                XCTAssertEqual(chrome.columnVisibility, sidebarIsPresented ? .all : .detailOnly)
+                XCTAssertEqual(otherWindow.utilityPresentation.surface, .history)
+                actions.perform(command)
+                XCTAssertEqual(chrome.utilityPresentation.surface, surface)
+                XCTAssertEqual(chrome.isFloatingSidebarPresented, !sidebarIsPresented)
+            }
         }
     }
 
@@ -119,12 +131,18 @@ final class BrowserSidebarCommandTests: XCTestCase {
         actions.perform(.showHistory)
         chrome.hideSidebar()
         actions.perform(.showHistory)
-        XCTAssertEqual(chrome.columnVisibility, .all)
+        XCTAssertEqual(chrome.columnVisibility, .detailOnly)
+        XCTAssertTrue(chrome.isFloatingSidebarPresented)
         XCTAssertEqual(chrome.utilityPresentation.surface, .history)
         actions.perform(.showArchive)
         XCTAssertEqual(chrome.utilityPresentation.surface, .archive)
         actions.perform(.showDownloads)
         XCTAssertEqual(chrome.utilityPresentation.surface, .downloads)
+        XCTAssertEqual(chrome.columnVisibility, .detailOnly)
+        XCTAssertTrue(chrome.isFloatingSidebarPresented)
+        actions.perform(.showDownloads)
+        XCTAssertNil(chrome.utilityPresentation.surface)
+        XCTAssertFalse(chrome.isFloatingSidebarPresented)
     }
 
     func testFindDoesNotSearchAHiddenOrLockedHistoryList() {

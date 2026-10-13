@@ -69,13 +69,19 @@ final class BrowserChromeState {
         utilityPresentation.present(surface)
     }
 
-    /// Repeating a utility shortcut returns to tabs; a hidden list is brought into view first.
+    /// Utility shortcuts preserve the docked preference and toggle a floating sidebar when hidden.
     func toggleUtility(_ surface: BrowserUtilitySurface) {
         if utilityPresentation.surface == surface,
             columnVisibility != .detailOnly || isFloatingSidebarPresented
         {
             utilityPresentation.dismiss(surface)
+            if columnVisibility == .detailOnly {
+                isFloatingSidebarPresented = false
+            }
         } else {
+            if columnVisibility == .detailOnly {
+                isFloatingSidebarPresented = true
+            }
             presentUtility(surface)
         }
     }

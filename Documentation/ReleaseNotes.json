@@ -4065,6 +4065,10 @@
     "sidebar-utility-shortcuts": {
       "category": "fixed",
       "message": "History, Archive, and Downloads shortcuts toggle their sidebar lists, and Find focuses History search while it is open."
+    },
+    "temporary-sidebar-utility-shortcuts": {
+      "category": "fixed",
+      "message": "Utility shortcuts open a temporary sidebar when the sidebar is hidden."
     }
   }
 }
