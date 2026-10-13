@@ -86,6 +86,10 @@ final class BrowserAgentConnection: @unchecked Sendable {
         while let newline = pending.firstIndex(of: 0x0A) {
             let line = pending[pending.startIndex..<newline]
             pending.removeSubrange(pending.startIndex...newline)
+            guard line.count <= Self.maximumLineLength else {
+                finish()
+                return
+            }
             guard !line.isEmpty else { continue }
             outstanding += 1
             guard outstanding <= Self.maximumOutstanding else {

@@ -15253,6 +15253,15 @@
           }
         }
       }
+    },
+    "It can read history and search providers, manage tabs in the Spaces you choose in Settings › Agents, and open windows, including Private Windows. Private tabs remain inaccessible. Every tab it uses shows its badge." : {
+
+    },
+    "Local tools can manage tabs and windows and read history and search providers in the Spaces you choose. Crest asks before each new tool connects." : {
+
+    },
+    "Tools can open Private Windows but cannot access private tabs. A locked Space exposes only its name." : {
+
     }
   },
   "version" : "1.3"

@@ -10,7 +10,7 @@ struct BrowserAgentFailure: Error, Sendable {
     static let declined = Self("The person didn’t allow this agent to use Crest.")
     static let busy = Self("Crest is asking the person about other agents. Try again shortly.")
     static let noWindow = Self(
-        "No Crest window is open. Ask the person to open one; Crest never opens one for an agent.")
+        "Crest could not open a browser window.")
     static let unsupportedAddress = Self("Agents may open only http and https addresses.")
     static let noPage = Self("The tab’s page could not be loaded.")
     static let timedOut = Self("The page took too long to answer.")

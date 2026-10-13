@@ -12,224 +12,8 @@ struct BrowserFileInputOptions {
 final class BrowserDialogPresenter {
     // MARK: - Variables
 
-    private var hostWindow: NSWindow? {
+    var hostWindow: NSWindow? {
         NSApp.keyWindow ?? NSApp.mainWindow
-    }
-
-    // MARK: - Actions - Script dialogs
-
-    func presentAlert(
-        message: String,
-        request: URLRequest,
-        dismissal: BrowserPromptDismissal? = nil,
-        completion: @escaping @MainActor @Sendable () -> Void
-    ) {
-        let alert = makeAlert(message: message, request: request)
-        alert.addButton(withTitle: "OK")
-        present(alert, dismissal: dismissal) { _ in completion() }
-    }
-
-    func presentConfirm(
-        message: String,
-        request: URLRequest,
-        dismissal: BrowserPromptDismissal? = nil,
-        completion: @escaping @MainActor @Sendable (Bool) -> Void
-    ) {
-        let alert = makeAlert(message: message, request: request)
-        alert.addButton(withTitle: "OK")
-        alert.addButton(withTitle: "Cancel")
-        present(alert, dismissal: dismissal) { completion($0 == .alertFirstButtonReturn) }
-    }
-
-    /// Pages no longer choose the wording of a beforeunload prompt, so the
-    /// message names the site rather than repeating page-supplied text.
-    func presentBeforeUnload(
-        request: URLRequest,
-        dismissal: BrowserPromptDismissal? = nil,
-        completion: @escaping @MainActor @Sendable (Bool) -> Void
-    ) {
-        let alert = NSAlert()
-        alert.messageText = "Leave this page?"
-        alert.informativeText = "Changes you made on \(Self.sourceLabel(for: request)) may not be saved."
-        alert.alertStyle = .warning
-        alert.addButton(withTitle: "Leave Page")
-        alert.addButton(withTitle: "Stay on Page")
-        present(alert, comesForward: true, dismissal: dismissal) { completion($0 == .alertFirstButtonReturn) }
-    }
-
-    func presentPrompt(
-        message: String,
-        defaultText: String?,
-        request: URLRequest,
-        dismissal: BrowserPromptDismissal? = nil,
-        completion: @escaping @MainActor @Sendable (String?) -> Void
-    ) {
-        let alert = makeAlert(message: message, request: request)
-        let input = NSTextField(string: defaultText ?? "")
-        input.frame = NSRect(x: 0, y: 0, width: 300, height: 24)
-        alert.accessoryView = input
-        alert.addButton(withTitle: "OK")
-        alert.addButton(withTitle: "Cancel")
-        present(alert, dismissal: dismissal) { response in
-            completion(response == .alertFirstButtonReturn ? input.stringValue : nil)
-        }
-    }
-
-    /// The page's server as a dialog names it, which the core formats: its
-    /// host, with the port only when it is not the scheme's default.
-    static func sourceLabel(for request: URLRequest) -> String {
-        guard let url = request.url, let host = url.host(), !host.isEmpty else {
-            return ProductIdentity.name
-        }
-        guard let port = url.port else { return host }
-        return AuthenticationSource.label(
-            host: host, port: port, scheme: url.scheme, emptyHostLabel: ProductIdentity.name)
-    }
-
-    private func makeAlert(message: String, request: URLRequest) -> NSAlert {
-        let alert = NSAlert()
-        alert.messageText = "\(Self.sourceLabel(for: request)) says"
-        alert.informativeText = message
-        alert.alertStyle = .informational
-        return alert
-    }
-
-    // MARK: - Actions - Files
-
-    func presentFileInput(
-        options: BrowserFileInputOptions,
-        request: URLRequest,
-        completion: @escaping @MainActor @Sendable ([URL]?) -> Void
-    ) {
-        let panel = NSOpenPanel()
-        panel.title = "Choose Files for \(Self.sourceLabel(for: request))"
-        panel.canChooseFiles = true
-        panel.canChooseDirectories = options.allowsDirectories
-        panel.allowsMultipleSelection = options.allowsMultipleSelection
-        panel.canCreateDirectories = false
-        panel.resolvesAliases = true
-
-        present(panel) { response in
-            completion(response == .OK ? panel.urls : nil)
-        }
-    }
-
-    func presentFileAccessFailure(
-        _ error: Error,
-        request: URLRequest,
-        completion: @escaping @MainActor @Sendable () -> Void
-    ) {
-        let alert = makeAlert(message: "Crest couldn’t open the selected files.", request: request)
-        alert.informativeText = error.localizedDescription
-        let denied =
-            (error as NSError).domain == NSCocoaErrorDomain
-            && (error as NSError).code == CocoaError.fileReadNoPermission.rawValue
-        if denied {
-            alert.informativeText +=
-                " Allow Crest in Privacy & Security > Files and Folders, then choose the files again."
-            alert.addButton(withTitle: "Open Files and Folders Settings")
-        }
-        alert.addButton(withTitle: "OK")
-        present(alert) { response in
-            if denied, response == .alertFirstButtonReturn,
-                let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_FilesAndFolders")
-            {
-                NSWorkspace.shared.open(url)
-            }
-            completion()
-        }
-    }
-
-    // MARK: - Actions - Authentication
-
-    func presentHTTPAuthentication(
-        prompt: BrowserHTTPAuthenticationPrompt,
-        spaceName: String,
-        dismissal: BrowserPromptDismissal? = nil
-    ) async -> BrowserHTTPAuthenticationPromptResponse? {
-        let descriptor = prompt.descriptor
-        let alert = NSAlert()
-        alert.messageText = "Sign in to \(descriptor.source)"
-        alert.informativeText = authenticationMessage(
-            prompt: prompt,
-            spaceName: spaceName
-        )
-        alert.alertStyle = descriptor.isSecureTransport ? .informational : .warning
-
-        let username = NSTextField(string: prompt.suggestedUsername ?? "")
-        username.placeholderString = "Username"
-        username.setAccessibilityLabel("Username")
-        let password = NSSecureTextField(string: "")
-        password.placeholderString = "Password"
-        password.setAccessibilityLabel("Password")
-
-        let savePassword = NSButton(
-            checkboxWithTitle: "Save in \(spaceName)",
-            target: nil,
-            action: nil
-        )
-        savePassword.state = .on
-        savePassword.setAccessibilityLabel("Save this sign-in in the \(spaceName) Space")
-
-        let accessoryHeight: CGFloat = prompt.allowsSaving ? 84 : 56
-        let fields = NSView(frame: NSRect(x: 0, y: 0, width: 280, height: accessoryHeight))
-        username.frame = NSRect(x: 0, y: accessoryHeight - 24, width: 280, height: 24)
-        password.frame = NSRect(x: 0, y: accessoryHeight - 56, width: 280, height: 24)
-        fields.addSubview(username)
-        fields.addSubview(password)
-        if prompt.allowsSaving {
-            savePassword.frame = NSRect(x: 0, y: 0, width: 280, height: 20)
-            fields.addSubview(savePassword)
-        }
-        alert.accessoryView = fields
-        alert.addButton(withTitle: "Sign In")
-        alert.addButton(withTitle: "Cancel")
-        alert.window.initialFirstResponder = username
-
-        return await withCheckedContinuation { continuation in
-            present(alert, dismissal: dismissal) { response in
-                guard response == .alertFirstButtonReturn else {
-                    continuation.resume(returning: nil)
-                    return
-                }
-                continuation.resume(
-                    returning: BrowserHTTPAuthenticationPromptResponse(
-                        username: username.stringValue,
-                        password: password.stringValue,
-                        shouldSave: prompt.allowsSaving && savePassword.state == .on
-                    )
-                )
-            }
-        }
-    }
-
-    private func authenticationMessage(
-        prompt: BrowserHTTPAuthenticationPrompt,
-        spaceName: String
-    ) -> String {
-        let descriptor = prompt.descriptor
-        var components: [String] = []
-        if let realm = descriptor.realm, !realm.isEmpty {
-            components.append("Realm: \(realm)")
-        }
-        if prompt.allowsSaving {
-            components.append(
-                "This sign-in belongs only to the \(spaceName) Space. "
-                    + "Crest saves it only after the site accepts it."
-            )
-        } else {
-            components.append(
-                "This sign-in belongs only to the \(spaceName) Space and cannot "
-                    + "be saved because the connection is not protected by HTTPS."
-            )
-        }
-        if descriptor.previousFailureCount > 0 {
-            components.append("The previous credentials were not accepted.")
-        }
-        if !descriptor.isSecureTransport {
-            components.append("Warning: this connection is not protected by HTTPS.")
-        }
-        return components.joined(separator: "\n\n")
     }
 
     // MARK: - Actions - System permissions
@@ -421,60 +205,6 @@ final class BrowserDialogPresenter {
         }
     }
 
-    /// Whether `agent`, which macOS vouches for by its code signature, may use
-    /// Crest. The question names the program macOS verified, never what the
-    /// agent says of itself, except for a general interpreter, whose approval
-    /// covers the agent by the name it gives. Crest comes forward, since the
-    /// person is likely in the agent's terminal when it asks, and declining is
-    /// the default. A `dismissal` closes the question unanswered.
-    func approveAgent(
-        _ agent: BrowserAgentPeer.Program, client: AgentClientInfo?, dismissal: BrowserPromptDismissal? = nil
-    ) async -> Bool {
-        await withCheckedContinuation { continuation in
-            let alert = NSAlert()
-            alert.messageText = String(localized: "Allow “\(agent.name)” to use Crest?")
-            // A signed program is known by its signer; an unsigned one only by
-            // where it is.
-            var lines =
-                agent.signer.map { [String(localized: "Signed by \($0).")] }
-                ?? [String(localized: "This program isn’t signed by a developer."), agent.path]
-            if agent.isInterpreter, let named = client.map({ Self.shown($0.name) }), !named.isEmpty {
-                lines.append(
-                    String(
-                        localized:
-                            "\(agent.name) runs other programs. Allowing it lets any program it runs that calls itself “\(named)” use Crest."
-                    ))
-            }
-            lines.append(
-                String(
-                    localized:
-                        "It can read and act on tabs in the Spaces you choose in Settings › Agents, and every tab it uses shows its badge."
-                ))
-            alert.informativeText = lines.joined(separator: "\n\n")
-            alert.alertStyle = .warning
-            alert.addButton(withTitle: String(localized: "Don’t Allow"))
-            alert.addButton(withTitle: String(localized: "Allow"))
-            if !NSApp.isActive { NSApp.requestUserAttention(.criticalRequest) }
-            present(alert, comesForward: true, dismissal: dismissal) { response in
-                continuation.resume(returning: response == .alertSecondButtonReturn)
-            }
-        }
-    }
-
-    /// `name` as a question may show it: without control or formatting
-    /// characters, such as the ones that reverse text, and at most 64
-    /// characters.
-    private static func shown(_ name: String) -> String {
-        let kept = name.unicodeScalars.filter { scalar in
-            switch scalar.properties.generalCategory {
-            case .control, .format, .lineSeparator, .paragraphSeparator, .surrogate, .privateUse, .unassigned: false
-            default: true
-            }
-        }
-        return String(String.UnicodeScalarView(kept)).split(whereSeparator: \.isWhitespace).joined(separator: " ")
-            .prefix(64).description
-    }
-
     /// Whether to quit and stop the `count` downloads still in progress.
     func approveQuitWithDownloads(count: Int, dismissal: BrowserPromptDismissal? = nil) async -> Bool {
         await withCheckedContinuation { continuation in
@@ -502,7 +232,7 @@ final class BrowserDialogPresenter {
     /// `comesForward`: Crest activates first, so a quit asked from outside it
     /// (the updater's relaunch, the Dock, a logout) never waits on a question
     /// the person cannot see.
-    private func present(
+    func present(
         _ alert: NSAlert,
         comesForward: Bool = false,
         dismissal: BrowserPromptDismissal? = nil,
@@ -526,7 +256,7 @@ final class BrowserDialogPresenter {
         alert.beginSheetModal(for: window, completionHandler: completion)
     }
 
-    private func present(
+    func present(
         _ panel: NSOpenPanel,
         completion: @escaping @MainActor @Sendable (NSApplication.ModalResponse) -> Void
     ) {

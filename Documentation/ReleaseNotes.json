@@ -4061,6 +4061,10 @@
     "pinned-tab-status-badge-corner": {
       "category": "fixed",
       "message": "On pinned tabs, the sound and sharing badge sits in the tile\u2019s bottom corner instead of over the site icon, so the icon is easy to click."
+    },
+    "mcp-native-browser-tools": {
+      "category": "improved",
+      "message": "Connected tools can search history, use search providers, and open windows in allowed Spaces while private tabs remain inaccessible."
     }
   }
 }

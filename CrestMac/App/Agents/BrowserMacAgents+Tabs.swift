@@ -5,18 +5,14 @@ import AppKit
 /// the person stopped allowing or locked, or a tab they stopped the agent
 /// using, is out of reach at once. Tabs open, close and come forward through
 /// the window stores Crest's own commands use, so the core's rules and a
-/// page's leave-page check apply as they do for the person. An agent never
-/// opens a window: it works in the windows the person has open.
+/// page's leave-page check apply as they do for the person. An agent
+/// creates a window only for an explicit command from the person.
 extension BrowserMacAgents {
     // MARK: - Types
 
     private struct Introduction: Decodable {
         let name: String?
         let color: String?
-    }
-
-    private struct SpaceQuery: Decodable {
-        let space: UUID?
     }
 
     private struct Opening: Decodable {
@@ -33,22 +29,6 @@ extension BrowserMacAgents {
 
     struct TabReference: Decodable {
         let tab: UUID
-    }
-
-    private struct SpaceListing: Encodable {
-        let id: UUID
-        let name: String
-        let locked: Bool
-    }
-
-    private struct TabListing: Encodable {
-        let id: UUID
-        let space: UUID
-        let title: String
-        let url: String?
-        let placement: String
-        let inUse: Bool
-        let shown: Bool
     }
 
     // MARK: - Actions - Identity
@@ -77,38 +57,7 @@ extension BrowserMacAgents {
             blue: Double(value & 0xFF) / 255, alpha: 1)
     }
 
-    // MARK: - Actions - Spaces
-
-    func listSpaces(_ call: BrowserAgentCall) async throws(BrowserAgentFailure) -> AgentToolResult {
-        let reach = try reach(call)
-        return .data(["spaces": reach.spaces.map { SpaceListing(id: $0.spaceID, name: $0.name, locked: $0.isLocked) }])
-    }
-
     // MARK: - Actions - Tabs
-
-    func listTabs(_ call: BrowserAgentCall) async throws(BrowserAgentFailure) -> AgentToolResult {
-        let query = try call.arguments(SpaceQuery.self)
-        let reach = try reach(call)
-        var spaces = reach.spaces
-        if let id = query.space {
-            guard let space = spaces.first(where: { $0.spaceID == id }) else {
-                throw .rejected(.agentSpaceUnavailable(AgentSpaceUnavailable(spaceID: id)))
-            }
-            spaces = [space]
-        }
-        let tabs = spaces.flatMap { space in
-            space.tabs.map { tab in
-                TabListing(
-                    id: tab.tabID, space: space.spaceID, title: tab.title, url: tab.url, placement: tab.placement.name,
-                    inUse: tab.claimed, shown: isShown(tab.tabID))
-            }
-        }
-        let locked = spaces.filter(\.isLocked).map(\.name)
-        let note =
-            locked.isEmpty
-            ? nil : "Locked Spaces show no tabs until the person unlocks them: \(locked.joined(separator: ", "))."
-        return .data(["tabs": tabs], note: note)
-    }
 
     func openTab(_ call: BrowserAgentCall) async throws(BrowserAgentFailure) -> AgentToolResult {
         let opening = try call.arguments(Opening.self)
@@ -152,7 +101,12 @@ extension BrowserMacAgents {
     func showTab(_ call: BrowserAgentCall) async throws(BrowserAgentFailure) -> AgentToolResult {
         let reference = try call.arguments(TabReference.self)
         let (space, tab) = try claim(reference.tab, call)
-        guard let window = frontWindow(over: space) else { throw .noWindow }
+        let window: BrowserMacWindowModel
+        if let existing = frontWindow(over: space) {
+            window = existing
+        } else {
+            window = try openWindow(over: space)
+        }
         window.browser.selectSpace(space.id)
         guard window.browser.activateSessionTab(tab.id, in: space.id) else {
             throw .refused("Crest could not show the tab.")
@@ -216,24 +170,7 @@ extension BrowserMacAgents {
         return url
     }
 
-    private func listing(_ tabID: UUID, _ call: BrowserAgentCall) throws(BrowserAgentFailure) -> TabListing {
-        let reach = try reach(call)
-        for space in reach.spaces {
-            if let tab = space.tabs.first(where: { $0.tabID == tabID }) {
-                return TabListing(
-                    id: tab.tabID, space: space.spaceID, title: tab.title, url: tab.url, placement: tab.placement.name,
-                    inUse: tab.claimed, shown: isShown(tab.tabID))
-            }
-        }
-        throw .rejected(.agentTabUnavailable(AgentTabUnavailable(tabID: tabID)))
-    }
-
     // MARK: - Actions - Windows
-
-    /// Whether a window on screen shows the tab now.
-    private func isShown(_ tabID: UUID) -> Bool {
-        application.stackedWindowIDs.contains { core.state.windows[$0]?.shownTabIDs.contains(tabID) == true }
-    }
 
     /// The front window over `space`'s workspace, or nil with none open.
     func frontWindow(over space: SpaceModel) -> BrowserMacWindowModel? {
@@ -242,7 +179,7 @@ extension BrowserMacAgents {
     }
 
     /// Shows what `window` selected and brings it forward, and Crest with it.
-    private func bringForward(_ window: BrowserMacWindowModel) {
+    func bringForward(_ window: BrowserMacWindowModel) {
         window.pages.select()
         windows.open(window.request, activation: .key)
         NSApp.activate(ignoringOtherApps: true)
