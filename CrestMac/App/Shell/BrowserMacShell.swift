@@ -93,7 +93,8 @@ final class BrowserMacShell {
         recovery = nil
         guard application.presentsInstalledApplicationUI else { return }
         BrowserMacDockTile.shared.start(following: application.browser.core)
-        windows.openLaunchWindows()
+        let background = BrowserLaunchEnvironment.current.launchesInBackground
+        windows.openLaunchWindows(activation: background ? .background : .key)
         menuBar.install()
         keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
             let pageSeesFirst = BrowserWebHostView.isPageContent(NSApp.keyWindow?.firstResponder)
@@ -102,7 +103,7 @@ final class BrowserMacShell {
         mouseButtons.start()
         running?.agents.start()
         Task { await application.cloudSync.start() }
-        NSApp.activate(ignoringOtherApps: true)
+        if !background { NSApp.activate(ignoringOtherApps: true) }
         openPending()
     }
 

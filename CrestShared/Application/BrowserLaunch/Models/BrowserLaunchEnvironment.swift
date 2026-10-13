@@ -1,6 +1,8 @@
 import Foundation
 
 struct BrowserLaunchEnvironment: Equatable, Sendable {
+    /// Starts local services without taking focus.
+    let launchesInBackground: Bool
     let explicitlyRequiresIsolation: Bool
     let persistentIsolationID: String?
     let isolatedCloudSyncID: String?
@@ -33,6 +35,7 @@ struct BrowserLaunchEnvironment: Equatable, Sendable {
         isXCTestRuntime: Bool,
         isSwiftUIPreviewRuntime: Bool = false
     ) {
+        launchesInBackground = values["CREST_BACKGROUND_LAUNCH"] == "1"
         explicitlyRequiresIsolation = Self.isEnabled(.isolatedSession, in: values)
         persistentIsolationID = values[Key.persistentIsolationID.rawValue]
             .flatMap(Self.normalizedIsolationID)
