@@ -12,6 +12,7 @@ struct SpaceSidebarUtilityContent: View {
     let dismissOnBlankSpace: () -> Void
     let clearHistory: () -> Void
     var searchFocusRequest = 0
+    var consumeSearchFocusRequest: @MainActor (Int, BrowserUtilitySurface) -> Bool = { _, _ in false }
 
     @Environment(\.sidebarSpaceIsSelected) private var isSelected
 
@@ -24,7 +25,8 @@ struct SpaceSidebarUtilityContent: View {
                 morphNamespace: commandSurfaceNamespace,
                 morph: .utilitySearch(spaceID: space.id),
                 clearHistory: clearHistory,
-                focusRequest: searchFocusRequest
+                focusRequest: searchFocusRequest,
+                consumeFocusRequest: consumeSearchFocusRequest
             )
             .padding(.horizontal, BrowserSidebarMetrics.layerInset)
             .padding(.bottom, CrestSpacing.extraSmall)

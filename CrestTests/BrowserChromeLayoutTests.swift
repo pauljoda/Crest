@@ -335,6 +335,7 @@ final class BrowserChromeLayoutTests: XCTestCase {
     }
 
     @MainActor
+    /// Commands reveal their list without overriding the owning window's docked-sidebar preference.
     func testShowListCommandsBringTheirListOnScreen() {
         let browser = BrowserStore.hostingPages()
         let pages = BrowserPagePool(browser: browser)

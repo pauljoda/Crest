@@ -4069,6 +4069,10 @@
     "temporary-sidebar-utility-shortcuts": {
       "category": "fixed",
       "message": "Utility shortcuts open a temporary sidebar when the sidebar is hidden."
+    },
+    "history-search-pending-focus": {
+      "category": "fixed",
+      "message": "History search receives Find commands issued while opening without stealing focus when reopened."
     }
   }
 }
