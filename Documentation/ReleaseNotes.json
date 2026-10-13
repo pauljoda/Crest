@@ -4064,7 +4064,7 @@
     },
     "web-inspector-shortcut-toggles": {
       "category": "fixed",
-      "message": "Pressing Command-Option-I again closes the Web Inspector instead of leaving it open."
+      "message": "Pressing Option-Command-I again closes the Web Inspector or Chromium DevTools instead of leaving it open."
     }
   }
 }
