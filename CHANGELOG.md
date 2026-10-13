@@ -7,12 +7,6 @@ and Crest uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-## [0.8.2] - 2026-10-13
-
-### Fixed
-
-- Choosing 5 or 6 pins per row in Settings fills each row to that count, as far as the sidebar width allows, instead of falling back to 4.
-
 ## [0.8.1] - 2026-10-12
 
 ### Fixed
@@ -478,8 +472,7 @@ Mac, iPhone, and iPad.
 
 Crest releases before 0.3.0 predate this changelog. Their development history remains available in Git.
 
-[Unreleased]: https://github.com/pauljoda/Crest/compare/v0.8.2...HEAD
-[0.8.2]: https://github.com/pauljoda/Crest/compare/v0.8.1...v0.8.2
+[Unreleased]: https://github.com/pauljoda/Crest/compare/v0.8.1...HEAD
 [0.8.1]: https://github.com/pauljoda/Crest/compare/v0.8.0...v0.8.1
 [0.8.0]: https://github.com/pauljoda/Crest/compare/v0.7.2...v0.8.0
 [0.7.0]: https://github.com/pauljoda/Crest/compare/v0.6.33...v0.7.0

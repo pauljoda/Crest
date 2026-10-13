@@ -3,13 +3,19 @@ import CoreGraphics
 /// The temporary pinned slots, shared by rendering and drop hit testing.
 /// A lifted tile stays alive in the view tree but occupies no slot of its own.
 struct BrowserPinnedTabReorderLayout: Equatable {
+    // MARK: - Static Variables
+
+    static let cellHeight: CGFloat = 47
+    static let spacing = CrestSpacing.small
+
+    // MARK: - Types
+
     enum Slot: Equatable {
         case tab(BrowserSidebarReorderItemID)
         case gap
     }
 
-    static let cellHeight: CGFloat = 47
-    static let spacing = CrestSpacing.small
+    // MARK: - Variables
 
     let ids: [BrowserSidebarReorderItemID]
     var liftedID: BrowserSidebarReorderItemID?
@@ -50,6 +56,8 @@ struct BrowserPinnedTabReorderLayout: Equatable {
         return CGFloat(rows) * tileHeight + CGFloat(rows - 1) * tileSpacing
     }
 
+    // MARK: - Actions - Layout
+
     func frame(for slot: Slot, in bounds: CGRect) -> CGRect? {
         guard let index = slots.firstIndex(of: slot) else { return nil }
         let width = max(0, (bounds.width - CGFloat(columns - 1) * tileSpacing) / CGFloat(columns))
@@ -58,6 +66,8 @@ struct BrowserPinnedTabReorderLayout: Equatable {
             y: bounds.minY + CGFloat(index / columns) * (tileHeight + tileSpacing),
             width: width, height: tileHeight)
     }
+
+    // MARK: - Actions - Preferences
 
     @MainActor
     func applyingPreferences(width: CGFloat, touch: Bool) -> Self {

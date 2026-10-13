@@ -4064,7 +4064,7 @@
     },
     "pin-layout-honors-chosen-columns": {
       "category": "fixed",
-      "message": "Choosing 5 or 6 pins per row in Settings now fills rows to that count, as far as the sidebar width allows, instead of falling back to 4."
+      "message": "Pins fill each row to the number chosen in Settings, as far as the sidebar width allows, instead of evening out the rows."
     }
   }
 }
