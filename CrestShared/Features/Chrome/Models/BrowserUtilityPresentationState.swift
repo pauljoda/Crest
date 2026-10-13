@@ -30,6 +30,7 @@ final class BrowserUtilityPresentationState {
     }
     @ObservationIgnored private var isSiteControlContextMenuPresentedStorage = false
     private(set) var triggerFrameInGlobal: CGRect?
+    private(set) var searchFocusRequest = 0
     @ObservationIgnored private let defaults: UserDefaults?
     @ObservationIgnored private let persistenceKey: String
     @ObservationIgnored private var lastSelectedSurface = BrowserUtilitySurface.archive
@@ -75,6 +76,11 @@ final class BrowserUtilityPresentationState {
         lastSelectedSurface = surface
         defaults?.set(surface.name, forKey: persistenceKey)
         isSwitcherExpanded = true
+    }
+
+    func focusSearch() {
+        guard surface != nil else { return }
+        searchFocusRequest &+= 1
     }
 
     func dismiss(_ surface: BrowserUtilitySurface) {

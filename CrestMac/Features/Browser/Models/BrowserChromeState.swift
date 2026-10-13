@@ -69,6 +69,17 @@ final class BrowserChromeState {
         utilityPresentation.present(surface)
     }
 
+    /// Repeating a utility shortcut returns to tabs; a hidden list is brought into view first.
+    func toggleUtility(_ surface: BrowserUtilitySurface) {
+        if utilityPresentation.surface == surface,
+            columnVisibility != .detailOnly || isFloatingSidebarPresented
+        {
+            utilityPresentation.dismiss(surface)
+        } else {
+            presentUtility(surface)
+        }
+    }
+
     // MARK: - Actions - Command Palette
 
     func openLocation(_ address: String = "") {

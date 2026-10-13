@@ -87,7 +87,8 @@ struct BrowserSidebarSpacePage: View {
             ),
             utilityActions: utilityActions,
             dismissUtilityOnBlankSpace: dismissUtilityOnBlankSpace,
-            clearHistory: { confirmClear(pageSpace) }
+            clearHistory: { confirmClear(pageSpace) },
+            utilitySearchFocusRequest: utilityPresentation.searchFocusRequest
         )
         .environment(\.sidebarSpacePresentation, SidebarSpacePresentation(space: space, isUnlocked: !isLocked))
         .environment(\.sidebarSpaceIsSelected, isSelected)

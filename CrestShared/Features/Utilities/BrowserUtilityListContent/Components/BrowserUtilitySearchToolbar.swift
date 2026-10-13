@@ -9,6 +9,9 @@ struct BrowserUtilitySearchToolbar: View {
     /// for.
     let morph: BrowserCommandSurfaceMorph
     var clearHistory: (() -> Void)?
+    var focusRequest = 0
+
+    @FocusState private var isSearchFocused: Bool
 
     var body: some View {
         HStack(spacing: 6) {
@@ -20,6 +23,8 @@ struct BrowserUtilitySearchToolbar: View {
 
                 TextField(surface.searchPrompt, text: $searchText)
                     .textFieldStyle(.plain)
+                    .focused($isSearchFocused)
+                    .onChange(of: focusRequest) { isSearchFocused = true }
 
                 if !searchText.isEmpty {
                     Button("Clear", systemImage: "xmark.circle.fill") {
