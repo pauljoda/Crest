@@ -4,10 +4,11 @@ struct BrowserWebPageSurface: View {
     let page: BrowserPage
     let browser: BrowserStore
     let pagePresentation: PagePresentation
+    /// Whether the window's page commands act on this page: a Peek open over
+    /// the active tab, or else the tab's own page. That page alone takes the
+    /// keyboard, for its find bar and as focus returns to it, so the tab
+    /// under an open Peek never takes it from the Peek.
     let isPageActive: Bool
-    /// Whether the window's page commands act on this page, as they do on a
-    /// Peek open over the active tab; its find bar then takes the keyboard.
-    let isCommandPage: Bool
     let focusRestorationGate: BrowserWebFocusRestorationGate
     /// Where the tab holding a page sits in its Space and what it is called,
     /// for lists that follow the sidebar.
@@ -49,7 +50,7 @@ struct BrowserWebPageSurface: View {
                 BrowserFindBar(
                     port: findPort,
                     capabilities: capabilities,
-                    isPageActive: isCommandPage
+                    isPageActive: isPageActive
                 )
                 .padding(BrowserWebPageSurfaceMetrics.overlayPadding)
                 .frame(
