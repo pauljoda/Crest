@@ -580,7 +580,11 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
 
     @discardableResult
     func showWebInspector() -> Bool {
-        enginePage.openInspector()
+        guard enginePage.isInspected else { return enginePage.openInspector() }
+        // An inspector the engine refuses to close keeps its panel selected.
+        guard enginePage.closeInspector() else { return false }
+        developerPanel = nil
+        return true
     }
 
     /// Closes the inspector showing `panel`, or opens one on it. An engine
@@ -679,8 +683,12 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         enginePage
     }
 
+    /// Closes find as the reader does, handing the keyboard back to the page
+    /// they searched. The page's host takes focus as the bar leaves, unless
+    /// something of Crest's, such as the address field, holds it by then.
     func dismissFind() {
         findSession.dismiss(using: findExecutor)
+        focusRestoration.requestPageFocus()
     }
 
     func find(_ query: String, direction: BrowserFindDirection = .forward) {

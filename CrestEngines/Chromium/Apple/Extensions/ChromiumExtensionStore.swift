@@ -193,14 +193,18 @@ final class ChromiumExtensionStore {
     /// - Parameter openSidePanel: Supplied only when the extension has a side
     ///   panel entry for the page the action was presented on. The caller owns
     ///   the window the panel would mount into, so it also owns the check.
+    /// - Parameter closeSource: Closes the surface the menu opened over, such
+    ///   as Site Controls, before an item that leads somewhere else runs. The
+    ///   surface stays open while the menu shows and when it is dismissed.
     func presentMenu(
         _ action: BrowserExtensionActionPresentation, space: BrowserSpaceIdentity,
         anchor: BrowserExtensionPopupAnchor?, isPrivate: Bool = false,
-        openSidePanel: (@MainActor () -> Void)? = nil
+        openSidePanel: (@MainActor () -> Void)? = nil,
+        closeSource: (() -> Void)? = nil
     ) {
         let menu = NSMenu(title: action.displayName)
         menu.autoenablesItems = false
-        let handler = ExtensionMenuHandler()
+        let handler = ExtensionMenuHandler(closeSource: closeSource)
         let record = installedRecord(action.id, in: space)
         if let openSidePanel {
             menu.addItem(handler.item(String(localized: "Open Side Panel")) { openSidePanel() })
@@ -218,7 +222,8 @@ final class ChromiumExtensionStore {
             menu.addItem(
                 handler.item(
                     action.isPinned
-                        ? String(localized: "Unpin from Toolbar") : String(localized: "Pin to Toolbar")
+                        ? String(localized: "Unpin from Toolbar") : String(localized: "Pin to Toolbar"),
+                    keepsSource: true
                 ) { [weak self] in
                     self?.togglePin(action, space: space)
                 })
@@ -487,13 +492,31 @@ extension ChromiumExtensionStore: BrowserImportedExtensionInstalling {}
 /// Owns the menu item closures; `NSMenuItem.target` is weak, so this has to
 /// outlive the menu's tracking loop.
 @MainActor private final class ExtensionMenuHandler: NSObject {
+    private let closeSource: (() -> Void)?
     private var handlers: [() -> Void] = []
-    func item(_ title: String, perform: @escaping () -> Void) -> NSMenuItem {
+
+    init(closeSource: (() -> Void)?) {
+        self.closeSource = closeSource
+    }
+
+    /// - Parameter keepsSource: The item changes something the source surface
+    ///   shows, so the surface stays open after it runs.
+    func item(_ title: String, keepsSource: Bool = false, perform: @escaping () -> Void) -> NSMenuItem {
         let item = NSMenuItem(title: title, action: #selector(invoke(_:)), keyEquivalent: "")
         item.target = self
         item.isEnabled = true
         item.tag = handlers.count
-        handlers.append(perform)
+        if keepsSource || closeSource == nil {
+            handlers.append(perform)
+        } else {
+            handlers.append { [closeSource] in
+                closeSource?()
+                Task { @MainActor in
+                    await Task.yield()
+                    perform()
+                }
+            }
+        }
         return item
     }
     @objc private func invoke(_ sender: NSMenuItem) {

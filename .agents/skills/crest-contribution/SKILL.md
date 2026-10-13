@@ -143,6 +143,15 @@ type you touch. The rules that matter most:
   the real app, Simulator or browser, never only by tests. Launch fixtures and
   validation sessions with `CREST_ISOLATED_SESSION=1` so they never touch
   real browsing data.
+- **Remove test copies when you finish.** Every copy of Crest you build,
+  install or launch for testing registers with macOS under the same bundle
+  identifier as the person's own Crest, so macOS can hand links, passkey
+  requests and later test launches to the wrong copy. Before handing off,
+  quit those copies, unregister each with
+  `/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -u <path>`,
+  then delete it. Unregister first, because an app moved to the Trash
+  registers again at its Trash path. Never remove or replace the person's
+  installed Crest.
 - **Show visual changes in the pull request.** A pull request that changes
   what people see includes screenshots of each change in its description, so
   a reviewer can check it without building. Add a short recording where the
@@ -182,3 +191,4 @@ type you touch. The rules that matter most:
 - [ ] Patch bump, release-note entry and `check-version.sh --fix-commit` pass.
 - [ ] Pull request lists what ran, and both AI usage boxes are ticked.
 - [ ] Visual changes are shown in screenshots attached to the pull request.
+- [ ] Test copies of Crest are quit, unregistered and deleted.

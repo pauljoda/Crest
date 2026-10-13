@@ -611,6 +611,62 @@ final class BrowserWebHostViewTests: XCTestCase {
         XCTAssertTrue(setup.window.firstResponder === setup.webView)
     }
 
+    /// Closing find hands the keyboard to the page that was searched, even one
+    /// that never held focus, once the find field has left the window. It
+    /// never takes focus from Crest's own fields.
+    func testClosingFindReturnsFocusToThePageButNotFromBrowserChrome() {
+        let setup = focusHostSetup()
+        let allowed = BrowserWebFocusRestorationGate(browserChromeOwnsFocus: false, pageChromeOwnsFocus: false)
+        let findField = NSTextField(string: "crest")
+        setup.host.addSubview(findField)
+        XCTAssertTrue(setup.window.makeFirstResponder(findField))
+
+        setup.controller.requestPageFocus()
+        findField.removeFromSuperview()
+        XCTAssertTrue(
+            setup.controller.restoreIfNeeded(
+                in: setup.host,
+                gate: allowed,
+                applicationIsActive: true,
+                accessibilityOwnsFocus: false,
+                menuIsTracking: false,
+                windowIsKey: true
+            )
+        )
+        XCTAssertTrue(setup.window.firstResponder === setup.webView)
+
+        let addressField = NSTextField(string: "https://example.com")
+        setup.host.addSubview(addressField)
+        XCTAssertTrue(setup.window.makeFirstResponder(addressField))
+        setup.controller.requestPageFocus()
+        XCTAssertFalse(
+            setup.controller.restoreIfNeeded(
+                in: setup.host,
+                gate: allowed,
+                applicationIsActive: true,
+                accessibilityOwnsFocus: false,
+                menuIsTracking: false,
+                windowIsKey: true
+            )
+        )
+        XCTAssertFalse(setup.window.firstResponder === setup.webView)
+
+        // The refused request is gone, so the page does not take focus once
+        // the address field lets go.
+        addressField.removeFromSuperview()
+        XCTAssertFalse(
+            setup.controller.restoreIfNeeded(
+                in: setup.host,
+                gate: allowed,
+                applicationIsActive: true,
+                accessibilityOwnsFocus: false,
+                menuIsTracking: false,
+                windowIsKey: true
+            )
+        )
+        XCTAssertFalse(setup.window.firstResponder === setup.webView)
+    }
+
     func testNativeRefusalInvalidatesInsteadOfStealingFocusLater() {
         let refusingWindow = BrowserFocusRefusingWindow(
             contentRect: NSRect(x: 0, y: 0, width: 640, height: 480),
