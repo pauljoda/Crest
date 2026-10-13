@@ -4073,6 +4073,10 @@
     "history-search-pending-focus": {
       "category": "fixed",
       "message": "History search receives Find commands issued while opening without stealing focus when reopened."
+    },
+    "history-find-cancel-on-hide": {
+      "category": "fixed",
+      "message": "Hiding the sidebar cancels pending History search focus."
     }
   }
 }

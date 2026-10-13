@@ -29,9 +29,16 @@ final class BrowserSidebarCommandTests: XCTestCase {
         }
     }
 
+    /// Hiding the sidebar between command dispatch and mounting cancels input intended for History.
+    func testPendingHistoryFindDoesNotFocusAHiddenSidebar() async throws {
+        try await verifyHistorySearchFocus(
+            sidebarIsPresented: true, requestsBeforeMount: true, hidesBeforeMount: true)
+    }
+
     /// A native responder outside the browser distinguishes requested focus from automatic window focus.
     private func verifyHistorySearchFocus(
-        sidebarIsPresented: Bool, requestsBeforeMount: Bool = false, locksBeforeMount: Bool = false
+        sidebarIsPresented: Bool, requestsBeforeMount: Bool = false,
+        locksBeforeMount: Bool = false, hidesBeforeMount: Bool = false
     ) async throws {
         let browser = BrowserStore.hostingPages()
         let pages = BrowserPagePool(browser: browser)
@@ -60,6 +67,10 @@ final class BrowserSidebarCommandTests: XCTestCase {
             let space = try XCTUnwrap(browser.shownSpace)
             browser.updateSpaceAccessPolicy(.deviceOwnerAuthentication, in: space.id)
         }
+        if hidesBeforeMount {
+            actions.perform(.toggleSidebar)
+            XCTAssertNil(chrome.utilityPresentation.surface)
+        }
         func makeHost() -> NSHostingView<BrowserRootView> {
             let host = NSHostingView(
                 rootView: BrowserRootView(
@@ -71,11 +82,19 @@ final class BrowserSidebarCommandTests: XCTestCase {
             return host
         }
         let host = makeHost()
-        if locksBeforeMount {
+        if locksBeforeMount || hidesBeforeMount {
             try await Task.sleep(for: .milliseconds(250))
-            let editor = try XCTUnwrap(window.firstResponder as? NSTextView)
-            XCTAssertTrue(editor.delegate as? NSTextField === sentinel)
-            XCTAssertFalse(actions.canPerform(.findInPage))
+            let field = (window.firstResponder as? NSTextView)?.delegate as? NSTextField
+            XCTAssertNotEqual(field?.placeholderString, String(localized: BrowserUtilitySurface.history.searchPrompt))
+            if locksBeforeMount {
+                XCTAssertTrue(field === sentinel)
+                XCTAssertFalse(actions.canPerform(.findInPage))
+            }
+            if hidesBeforeMount {
+                actions.perform(.showHistory)
+                actions.perform(.findInPage)
+                _ = try await historySearchEditor(in: host, window: window)
+            }
             return
         }
         if !requestsBeforeMount {
@@ -87,13 +106,18 @@ final class BrowserSidebarCommandTests: XCTestCase {
         editor.insertText("history-route-397", replacementRange: NSRange(location: NSNotFound, length: 0))
         XCTAssertEqual(editor.string, "history-route-397")
         guard requestsBeforeMount else { return }
-        XCTAssertTrue(window.makeFirstResponder(sentinel))
         host.removeFromSuperview()
+        try await Task.sleep(for: .milliseconds(100))
+        XCTAssertTrue(window.makeFirstResponder(sentinel))
+        let beforeRemount = try XCTUnwrap(window.firstResponder as? NSTextView)
+        XCTAssertTrue(beforeRemount.delegate as? NSTextField === sentinel, "The remount starts with external input focused.")
         let replacement = makeHost()
         try await Task.sleep(for: .milliseconds(250))
-        let sentinelEditor = try XCTUnwrap(window.firstResponder as? NSTextView)
-        XCTAssertTrue(
-            sentinelEditor.delegate as? NSTextField === sentinel, "Remounting must not replay a consumed Find.")
+        let remountedField = (window.firstResponder as? NSTextView)?.delegate as? NSTextField
+        // A new browser root may focus its start-page input; it must not replay focus into History.
+        XCTAssertNotEqual(
+            remountedField?.placeholderString, String(localized: BrowserUtilitySurface.history.searchPrompt),
+            "Remounting must not replay a consumed Find.")
         actions.perform(.findInPage)
         _ = try await historySearchEditor(in: replacement, window: window)
     }

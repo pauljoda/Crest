@@ -50,7 +50,9 @@ final class BrowserChromeState {
 
     // MARK: - Actions - Sidebar
 
+    /// Hiding cancels utility presentation and pending input before an asynchronous view update can mount it.
     func hideSidebar() {
+        utilityPresentation.dismiss()
         columnVisibility = .detailOnly
     }
 
