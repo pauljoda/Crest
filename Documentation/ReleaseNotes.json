@@ -4065,6 +4065,10 @@
     "site-controls-extension-menu-stays-open": {
       "category": "fixed",
       "message": "Right-clicking an extension in Site Controls shows its menu without closing Site Controls."
+    },
+    "pin-layout-honors-chosen-columns": {
+      "category": "fixed",
+      "message": "Pins fill each row to the number chosen in Settings, as far as the sidebar width allows, instead of evening out the rows."
     }
   }
 }

@@ -124,7 +124,6 @@ the live status for each issue.
 - [ ] [bug: white flash between loading screen in dark mode](https://github.com/pauljoda/Crest/issues/246)
 - [ ] [feature: have a top url bar when in fullscreen mode](https://github.com/pauljoda/Crest/issues/249)
 - [ ] [bug: CPU usage very high compared to Arc](https://github.com/pauljoda/Crest/issues/259)
-- [ ] [bug: Right-clicking an extension in Site Controls closes Site Controls](https://github.com/pauljoda/Crest/issues/262)
 - [ ] [bug: Can't install a private Chrome Web Store extension](https://github.com/pauljoda/Crest/issues/263)
 - [ ] [feature: Double-click a tab to rename](https://github.com/pauljoda/Crest/issues/264)
 - [ ] [feature: Redesign bottom space picker in the sidebar. ](https://github.com/pauljoda/Crest/issues/265)
@@ -175,6 +174,10 @@ the live status for each issue.
 - [ ] [Swipe from the edge to go back on iPhone and iPad](https://github.com/pauljoda/Crest/issues/426)
 - [ ] [Air Traffic Control rules for links opened inside Crest](https://github.com/pauljoda/Crest/issues/427)
 - [ ] [Return to the previous app when a Quick Window from another app closes](https://github.com/pauljoda/Crest/issues/428)
+
+#### Completed
+
+- [x] [bug: Right-clicking an extension in Site Controls closes Site Controls](https://github.com/pauljoda/Crest/issues/262)
 
 <!-- crest-roadmap-sync:end -->
 
