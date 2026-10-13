@@ -23,8 +23,7 @@ struct BrowserWebContentView: View {
                     page: page,
                     browser: browser,
                     pagePresentation: pagePresentation,
-                    isPageActive: pages.activePage === page,
-                    isCommandPage: pages.commandPage === page,
+                    isPageActive: pages.commandPage === page,
                     focusRestorationGate: focusRestorationGate,
                     tabPlacement: tabPlacement(ofPage:),
                     goToSharingCounterpart: sharingCounterpartActivation

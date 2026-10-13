@@ -3,13 +3,19 @@ import CoreGraphics
 /// The temporary pinned slots, shared by rendering and drop hit testing.
 /// A lifted tile stays alive in the view tree but occupies no slot of its own.
 struct BrowserPinnedTabReorderLayout: Equatable {
+    // MARK: - Static Variables
+
+    static let cellHeight: CGFloat = 47
+    static let spacing = CrestSpacing.small
+
+    // MARK: - Types
+
     enum Slot: Equatable {
         case tab(BrowserSidebarReorderItemID)
         case gap
     }
 
-    static let cellHeight: CGFloat = 47
-    static let spacing = CrestSpacing.small
+    // MARK: - Variables
 
     let ids: [BrowserSidebarReorderItemID]
     var liftedID: BrowserSidebarReorderItemID?
@@ -37,7 +43,11 @@ struct BrowserPinnedTabReorderLayout: Equatable {
         let width =
             availableWidth.isFinite ? min(max(0, availableWidth), 10_000) : BrowserChromeLayout.sidebarIdealWidth
         let fitting = max(1, Int((width + tileSpacing) / (minimumTileWidth + tileSpacing)))
-        return PinnedTabGridLayout.columnCount(for: slots.count, maximumColumns: min(requested, fitting))
+        let capacity = min(requested, fitting)
+        // A chosen count is what the person asked for, so rows fill to it.
+        // Only the automatic layout balances rows, which can land below it.
+        guard preferredColumns == 0 else { return min(max(slots.count, 1), capacity) }
+        return PinnedTabGridLayout.columnCount(for: slots.count, maximumColumns: capacity)
     }
 
     var height: CGFloat {
@@ -45,6 +55,8 @@ struct BrowserPinnedTabReorderLayout: Equatable {
         let rows = (slots.count + columns - 1) / columns
         return CGFloat(rows) * tileHeight + CGFloat(rows - 1) * tileSpacing
     }
+
+    // MARK: - Actions - Layout
 
     func frame(for slot: Slot, in bounds: CGRect) -> CGRect? {
         guard let index = slots.firstIndex(of: slot) else { return nil }
@@ -54,6 +66,8 @@ struct BrowserPinnedTabReorderLayout: Equatable {
             y: bounds.minY + CGFloat(index / columns) * (tileHeight + tileSpacing),
             width: width, height: tileHeight)
     }
+
+    // MARK: - Actions - Preferences
 
     @MainActor
     func applyingPreferences(width: CGFloat, touch: Bool) -> Self {
