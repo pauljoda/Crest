@@ -110,7 +110,8 @@ final class BrowserSidebarCommandTests: XCTestCase {
         try await Task.sleep(for: .milliseconds(100))
         XCTAssertTrue(window.makeFirstResponder(sentinel))
         let beforeRemount = try XCTUnwrap(window.firstResponder as? NSTextView)
-        XCTAssertTrue(beforeRemount.delegate as? NSTextField === sentinel, "The remount starts with external input focused.")
+        XCTAssertTrue(
+            beforeRemount.delegate as? NSTextField === sentinel, "The remount starts with external input focused.")
         let replacement = makeHost()
         try await Task.sleep(for: .milliseconds(250))
         let remountedField = (window.firstResponder as? NSTextView)?.delegate as? NSTextField

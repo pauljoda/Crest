@@ -4077,6 +4077,10 @@
     "history-find-cancel-on-hide": {
       "category": "fixed",
       "message": "Hiding the sidebar cancels pending History search focus."
+    },
+    "history-search-focus-formatting": {
+      "category": "internal",
+      "message": "Aligned sidebar search focus code with repository formatting."
     }
   }
 }
