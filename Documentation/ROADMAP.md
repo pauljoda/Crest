@@ -164,7 +164,6 @@ the live status for each issue.
 - [ ] [bug: Command palette treats custom URL schemes as web search queries instead of opening them](https://github.com/pauljoda/Crest/issues/408)
 - [ ] [Back and Forward stop working after a page falls back from Chromium to WebKit](https://github.com/pauljoda/Crest/issues/412)
 - [ ] [Translation language download never progresses on Mac WebKit pages](https://github.com/pauljoda/Crest/issues/413)
-- [ ] [bug: Pin layout capped at 4 pins per row since 0.8 — selecting 5 or 6 has no effect](https://github.com/pauljoda/Crest/issues/415)
 - [ ] [Crest can quit while playing Reddit videos on iPhone](https://github.com/pauljoda/Crest/issues/420)
 - [ ] [Select the address when tapping the iPhone address bar](https://github.com/pauljoda/Crest/issues/421)
 - [ ] [Show that a link opened in a background tab](https://github.com/pauljoda/Crest/issues/422)
@@ -178,6 +177,7 @@ the live status for each issue.
 #### Completed
 
 - [x] [bug: Right-clicking an extension in Site Controls closes Site Controls](https://github.com/pauljoda/Crest/issues/262)
+- [x] [bug: Pin layout capped at 4 pins per row since 0.8 — selecting 5 or 6 has no effect](https://github.com/pauljoda/Crest/issues/415)
 
 <!-- crest-roadmap-sync:end -->
 
