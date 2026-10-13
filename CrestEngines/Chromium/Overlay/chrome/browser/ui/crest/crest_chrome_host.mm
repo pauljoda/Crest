@@ -848,7 +848,12 @@ using CrestChromiumUIStart = void (*)(id<CrestMacShell> shell, const crest_engin
   crest::EnginePage* page = binding.Find(key);
   content::WebContents* contents = page ? page->web_contents() : nullptr;
   Browser* browser = binding.Browsers().Holding(contents);
-  if (!browser || !anchorView.window || anchorView.window != crest::WindowForBrowser(browser)) return NO;
+  // The anchor view must be in some window — ExtensionPopup attaches its
+  // child popup to anchor_view_.window — but that window does not have to be
+  // the same as WindowForBrowser(browser). For Quick Windows the anchor lives
+  // in a transient NSWindow distinct from the main browser window, and
+  // requiring equality would always reject extension actions there.
+  if (!browser || !anchorView.window) return NO;
   Profile* profile = browser->GetProfile();
   const auto id = base::SysNSStringToUTF8(extensionID);
   const auto* extension = extensions::ExtensionRegistry::Get(profile)->enabled_extensions().GetByID(id);
@@ -902,7 +907,9 @@ using CrestChromiumUIStart = void (*)(id<CrestMacShell> shell, const crest_engin
   const GURL popup_url = action->GetPopupUrl(extensions::ExtensionAction::kDefaultTabId);
   if (!popup_url.is_valid()) return NO;
   Browser* browser = crest::EngineBinding::Get().Browsers().ForWindow(profile_id, KeyFor(windowID));
-  if (!browser || anchorView.window != crest::WindowForBrowser(browser)) return NO;
+  // Require only that the browser and anchor window both exist; ExtensionPopup
+  // needs anchor_view_.window to attach its child, not a specific window.
+  if (!browser || !anchorView.window) return NO;
   auto popup = extensions::ExtensionViewHostFactory::CreatePopupHost(*extension, popup_url, browser);
   if (!popup) return NO;
   State().space_extension_popup = std::make_unique<ExtensionPopup>(std::move(popup), anchorView, anchorRect);

@@ -1231,6 +1231,12 @@ bool EnginePage::Show() {
   }
   web_contents()->WasShown();
   web_contents()->Focus();
+  // Activate this page as its Browser's active tab so that extension APIs
+  // (e.g. HasPopupOnActiveTab) never see a null GetActiveTab(). Transient
+  // pages are added with ADD_NONE and are never otherwise activated; without
+  // this call any extension action triggered while a Quick Window is key
+  // dereferences a null pointer at tab-strip offset 0x40 and crashes.
+  binding_->Browsers().Activate(web_contents());
   if (media_) {
     media_->VisibilityChanged(true);
   }
