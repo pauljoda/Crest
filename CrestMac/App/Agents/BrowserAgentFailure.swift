@@ -16,7 +16,6 @@ struct BrowserAgentFailure: Error, Sendable {
     static let timedOut = Self("The page took too long to answer.")
     static let scriptsOff = Self(
         "The person hasn’t allowed agents to run scripts in pages. They can allow it in Crest’s Settings › Agents.")
-    static let pinnedOrSaved = Self("Agents may close only open tabs, never pinned or saved ones.")
     static let notEditable = Self("That element isn’t a text field, text area, editable element or menu.")
     static let notWebPage = Self(
         "The tab shows a browser or extension page, or a file, which agents can’t use. Open a web page instead.")

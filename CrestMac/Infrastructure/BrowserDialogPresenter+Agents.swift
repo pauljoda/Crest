@@ -31,7 +31,7 @@ extension BrowserDialogPresenter {
             lines.append(
                 String(
                     localized:
-                        "It can read history and search providers, manage tabs in the Spaces you choose in Settings › Agents, and open windows, including Private Windows. Private tabs remain inaccessible. Every tab it uses shows its badge."
+                        "It can read history and search providers, delete requested history addresses, manage tabs in the Spaces you choose in Settings › Agents, and open windows, including Private Windows. Private tabs remain inaccessible. Every tab it uses shows its badge."
                 ))
             alert.informativeText = lines.joined(separator: "\n\n")
             alert.alertStyle = .warning

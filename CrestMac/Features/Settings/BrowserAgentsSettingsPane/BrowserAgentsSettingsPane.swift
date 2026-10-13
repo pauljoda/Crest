@@ -59,7 +59,7 @@ struct BrowserAgentsSettingsPane: View {
                     .accessibilityIdentifier("agents-enabled")
             } footer: {
                 CrestFormFootnote(
-                    "Local tools can manage tabs and windows and read history and search providers in the Spaces you choose. Crest asks before each new tool connects."
+                    "Local tools can manage tabs and windows, read history and search providers, and delete requested history addresses in the Spaces you choose. Crest asks before each new tool connects."
                 )
             }
             if preferences.isOn { connection }

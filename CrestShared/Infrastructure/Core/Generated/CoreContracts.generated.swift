@@ -4917,6 +4917,11 @@ struct RejectOfferedPage: Equatable, Sendable {
     let offerID: UUID
 }
 
+struct ReleaseAgentTab: Intent, AgentIntent, Equatable, Sendable {
+    let sessionID: UUID
+    let tabID: UUID
+}
+
 struct ReleasePage: Intent, PageIntent, Equatable, Sendable {
     let pageID: UUID
     let keepsState: Bool

@@ -24,6 +24,16 @@ extension BrowserMacAgents {
         let domain: String?
     }
 
+    private struct HistoryDeletion: Decodable {
+        let space: UUID
+        let url: String
+    }
+
+    private struct HistoryDeletionReceipt: Encodable {
+        let space: UUID
+        let removed: Int
+    }
+
     private struct HistoryList: Encodable {
         struct Entry: Encodable {
             let id: UUID
@@ -95,6 +105,23 @@ extension BrowserMacAgents {
                         if $0.lastVisitTime != $1.lastVisitTime { return $0.lastVisitTime > $1.lastVisitTime }
                         return $0.id.uuidString < $1.id.uuidString
                     }.prefix(limit))))
+    }
+
+    /// Removes one requested address from an explicitly allowed, unlocked Space through the core.
+    func deleteHistory(_ call: BrowserAgentCall) throws(BrowserAgentFailure) -> AgentToolResult {
+        let deletion = try call.arguments(HistoryDeletion.self)
+        let url = try Self.address(deletion.url)
+        let space = try resolveSpace(deletion.space, call)
+        let reach = try reach(call)
+        guard let workspaceID = reach.workspaceID else { throw .rejected(.agentsOff(AgentsOff())) }
+        let before = space.history.entries.count
+        do {
+            try core.send(
+                RemoveHistoryAddress(workspaceID: workspaceID, spaceID: space.id, address: url.absoluteString))
+        } catch {
+            throw .rejected(error)
+        }
+        return .data(HistoryDeletionReceipt(space: space.id, removed: before - space.history.entries.count))
     }
 
     // MARK: - Actions - Spaces

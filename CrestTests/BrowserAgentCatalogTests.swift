@@ -1,5 +1,4 @@
 import AppKit
-import Darwin
 import XCTest
 
 @testable import Crest
@@ -7,6 +6,8 @@ import XCTest
 /// Tools share the core's live permission boundary and never expose private tabs.
 @MainActor
 final class BrowserAgentCatalogTests: XCTestCase {
+    // MARK: - Types
+
     private struct Visit: Decodable {
         let title: String
         let url: String
@@ -18,8 +19,10 @@ final class BrowserAgentCatalogTests: XCTestCase {
         let inUse: Bool
     }
 
+    // MARK: - Actions - Catalogs
+
     func testWindowToolsPreserveTheRequestedSpaceAndSavedTabIdentity() async throws {
-        let fixture = try AgentFixture()
+        let fixture = try BrowserAgentFixture()
         let before = fixture.application.stackedWindowIDs
         await assertToolFailure(fixture, "open_window", ["url": .string("file:///private/tmp/test")])
         XCTAssertEqual(fixture.application.stackedWindowIDs, before)
@@ -61,7 +64,7 @@ final class BrowserAgentCatalogTests: XCTestCase {
     }
 
     func testLiveHistoryAndProvidersRespectRevocationAndSearchBeforeLimiting() async throws {
-        let fixture = try AgentFixture()
+        let fixture = try BrowserAgentFixture()
         let catalog = try await fixture.invoke("list_search_providers")
         XCTAssertNotNil(catalog["defaultProvider"])
         let url = try XCTUnwrap(URL(string: "https://docs.example.com/older"))
@@ -89,7 +92,7 @@ final class BrowserAgentCatalogTests: XCTestCase {
     }
 
     func testPrivateCreationValidatesBeforeMutationAndNeverExposesPrivateTabs() async throws {
-        let fixture = try AgentFixture()
+        let fixture = try BrowserAgentFixture()
         let before = fixture.application.stackedWindowIDs
         await assertToolFailure(fixture, "open_private_window", ["url": .string("javascript:alert(1)")])
         XCTAssertEqual(fixture.application.stackedWindowIDs, before)
@@ -116,7 +119,7 @@ final class BrowserAgentCatalogTests: XCTestCase {
     }
 
     func testShowingSavedTabWithoutAnOpenWindowKeepsItsIdentity() async throws {
-        let fixture = try AgentFixture()
+        let fixture = try BrowserAgentFixture()
         XCTAssertNil(fixture.windows.activeBrowserWindow)
         let saved = try XCTUnwrap(fixture.space.tabs.models.first { $0.placement == .saved })
         let count = fixture.space.tabs.models.count
@@ -128,7 +131,7 @@ final class BrowserAgentCatalogTests: XCTestCase {
     }
 
     func testDeniedSpacesCannotOpenPublicWindows() async throws {
-        let fixture = try AgentFixture()
+        let fixture = try BrowserAgentFixture()
         try fixture.core.send(AllowAgentSpace(spaceID: fixture.space.id, allowed: false))
         let before = fixture.application.stackedWindowIDs
         for name in ["open_window", "open_blank_window", "open_quick_window"] {
@@ -141,7 +144,7 @@ final class BrowserAgentCatalogTests: XCTestCase {
     }
 
     func testLockedSpacesRedactListingsAndDenyPublicWindowCreation() async throws {
-        let fixture = try AgentFixture()
+        let fixture = try BrowserAgentFixture()
         fixture.application.browser.seedVisit(
             to: try XCTUnwrap(URL(string: "https://example.com/locked-history")), titled: "Locked history coverage")
         let visible = try await fixture.invoke("search_history", ["query": .string("Locked history coverage")])
@@ -166,7 +169,7 @@ final class BrowserAgentCatalogTests: XCTestCase {
     }
 
     func testHistoryDomainMatchesSubdomainsButNotSiblingNamesAndIncludesMaps() async throws {
-        let fixture = try AgentFixture()
+        let fixture = try BrowserAgentFixture()
         for address in [
             "https://example.com/root", "https://docs.example.com/sub", "https://notexample.com/no",
             "https://www.google.com/maps/place/test", "https://www.google.com/search?q=test",
@@ -184,50 +187,14 @@ final class BrowserAgentCatalogTests: XCTestCase {
         await assertToolFailure(fixture, "search_history", ["limit": .number(0)])
     }
 
-    private func assertToolFailure(_ fixture: AgentFixture, _ name: String, _ arguments: [String: AgentJSON] = [:])
+    private func assertToolFailure(
+        _ fixture: BrowserAgentFixture, _ name: String, _ arguments: [String: AgentJSON] = [:]
+    )
         async
     {
         do {
             _ = try await fixture.invoke(name, arguments)
             XCTFail("The tool should refuse this operation.")
         } catch {}
-    }
-}
-
-@MainActor
-private final class AgentFixture {
-    let host = WebKitShellHost()
-    let application: BrowserMacApplication
-    let windows: BrowserMacWindows
-    let agents: BrowserMacAgents
-    let link: BrowserMacAgents.Link
-    let sessionID = UUID()
-    let space: SpaceModel
-    var core: CrestCore { application.browser.core }
-
-    init() throws {
-        application = try BrowserMacApplication()
-        windows = BrowserMacWindows(application: application, engineHost: host)
-        agents = BrowserMacAgents(application: application, windows: windows)
-        space = try XCTUnwrap(application.browser.shownSpace)
-        let identity = AgentIdentity(teamID: nil, signingID: nil, path: "/private/tmp/crest-test-agent", client: nil)
-        var descriptors: [Int32] = [0, 0]
-        guard socketpair(AF_UNIX, SOCK_STREAM, 0, &descriptors) == 0 else { throw POSIXError(.EIO) }
-        Darwin.close(descriptors[1])
-        let peer = BrowserAgentPeer(helperProcessID: getpid(), agent: nil)
-        link = BrowserMacAgents.Link(connection: BrowserAgentConnection(descriptor: descriptors[0], peer: peer))
-        try core.send(SetAgents(isOn: true))
-        try core.send(AllowAgentSpace(spaceID: space.id, allowed: true))
-        try core.send(ApproveAgent(agent: ApprovedAgent(identity: identity, name: "Test")))
-        try core.send(BeginAgentSession(sessionID: sessionID, identity: identity, name: "Test"))
-    }
-
-    func invoke(_ name: String, _ arguments: [String: AgentJSON] = [:]) async throws -> AgentJSON {
-        let tool = try XCTUnwrap(BrowserAgentTool.named(name))
-        let answer = try await tool.perform(
-            BrowserAgentCall(agents: agents, link: link, sessionID: sessionID, arguments: .object(arguments)))
-        if answer.isError { throw BrowserAgentFailure(answer.content.first?.text ?? "The tool failed.") }
-        let text = try XCTUnwrap(answer.content.first?.text)
-        return try JSONDecoder().decode(AgentJSON.self, from: Data(text.utf8))
     }
 }
