@@ -30,7 +30,8 @@ final class BrowserSidebarCommandTests: XCTestCase {
         for sidebarIsPresented in [false, true] {
             for (command, surface) in Self.utilityCommands {
                 try await verifyUtilitySearchFocus(
-                    command: command, surface: surface, sidebarIsPresented: sidebarIsPresented, requestsBeforeMount: true)
+                    command: command, surface: surface, sidebarIsPresented: sidebarIsPresented,
+                    requestsBeforeMount: true)
             }
         }
     }
@@ -139,7 +140,9 @@ final class BrowserSidebarCommandTests: XCTestCase {
     }
 
     /// Waits for the actual utility input control rather than inspecting a focus-request counter.
-    private func utilitySearchEditor(for surface: BrowserUtilitySurface, in host: NSView, window: NSWindow) async throws -> NSTextView {
+    private func utilitySearchEditor(for surface: BrowserUtilitySurface, in host: NSView, window: NSWindow) async throws
+        -> NSTextView
+    {
         for _ in 0..<20 {
             if let editor = window.firstResponder as? NSTextView,
                 let field = editor.delegate as? NSTextField, field.isDescendant(of: host),
