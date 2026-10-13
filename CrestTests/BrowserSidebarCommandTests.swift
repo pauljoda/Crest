@@ -7,36 +7,51 @@ import XCTest
 /// Sidebar shortcuts act on their owning window, even after a utility is already open.
 @MainActor
 final class BrowserSidebarCommandTests: XCTestCase {
-    /// Mounted History takes keyboard input from an unrelated native responder in either sidebar mode.
-    func testFindMovesNativeFocusIntoHistorySearch() async throws {
+    // MARK: - Static Variables
+
+    private static let utilityCommands: [(ShortcutCommand, BrowserUtilitySurface)] = [
+        (.showHistory, .history), (.showArchive, .archive), (.showDownloads, .downloads),
+    ]
+
+    // MARK: - Actions - Search routing
+
+    /// Mounted utility search takes keyboard input from an unrelated native responder in either sidebar mode.
+    func testFindMovesNativeFocusIntoEachUtilitySearch() async throws {
         for sidebarIsPresented in [false, true] {
-            try await verifyHistorySearchFocus(sidebarIsPresented: sidebarIsPresented)
+            for (command, surface) in Self.utilityCommands {
+                try await verifyUtilitySearchFocus(
+                    command: command, surface: surface, sidebarIsPresented: sidebarIsPresented)
+            }
         }
     }
 
     /// Find issued before the field exists is delivered once, without stealing focus on a remount.
-    func testFindBeforeHistoryMountIsConsumedWithoutReplayingOnRemount() async throws {
+    func testFindBeforeUtilityMountIsConsumedWithoutReplayingOnRemount() async throws {
         for sidebarIsPresented in [false, true] {
-            try await verifyHistorySearchFocus(sidebarIsPresented: sidebarIsPresented, requestsBeforeMount: true)
+            for (command, surface) in Self.utilityCommands {
+                try await verifyUtilitySearchFocus(
+                    command: command, surface: surface, sidebarIsPresented: sidebarIsPresented, requestsBeforeMount: true)
+            }
         }
     }
 
     /// Authorization must still hold when a requested field becomes available, not only at command dispatch.
     func testPendingHistoryFindDoesNotFocusALockedSpace() async throws {
         for sidebarIsPresented in [false, true] {
-            try await verifyHistorySearchFocus(
+            try await verifyUtilitySearchFocus(
                 sidebarIsPresented: sidebarIsPresented, requestsBeforeMount: true, locksBeforeMount: true)
         }
     }
 
     /// Hiding the sidebar between command dispatch and mounting cancels input intended for History.
     func testPendingHistoryFindDoesNotFocusAHiddenSidebar() async throws {
-        try await verifyHistorySearchFocus(
+        try await verifyUtilitySearchFocus(
             sidebarIsPresented: true, requestsBeforeMount: true, hidesBeforeMount: true)
     }
 
     /// A native responder outside the browser distinguishes requested focus from automatic window focus.
-    private func verifyHistorySearchFocus(
+    private func verifyUtilitySearchFocus(
+        command: ShortcutCommand = .showHistory, surface: BrowserUtilitySurface = .history,
         sidebarIsPresented: Bool, requestsBeforeMount: Bool = false,
         locksBeforeMount: Bool = false, hidesBeforeMount: Bool = false
     ) async throws {
@@ -44,7 +59,7 @@ final class BrowserSidebarCommandTests: XCTestCase {
         let pages = BrowserPagePool(browser: browser)
         let chrome = BrowserChromeState(sidebarIsPresented: sidebarIsPresented)
         let actions = BrowserCommandActions(browser: browser, pages: pages, chrome: chrome, windows: nil)
-        actions.perform(.showHistory)
+        actions.perform(command)
         let frame = CGRect(x: 0, y: 0, width: 1120, height: 720)
         let container = NSView(frame: frame)
         let sentinel = NSTextField(string: "Outside browser")
@@ -85,15 +100,15 @@ final class BrowserSidebarCommandTests: XCTestCase {
         if locksBeforeMount || hidesBeforeMount {
             try await Task.sleep(for: .milliseconds(250))
             let field = (window.firstResponder as? NSTextView)?.delegate as? NSTextField
-            XCTAssertNotEqual(field?.placeholderString, String(localized: BrowserUtilitySurface.history.searchPrompt))
+            XCTAssertNotEqual(field?.placeholderString, String(localized: surface.searchPrompt))
             if locksBeforeMount {
                 XCTAssertTrue(field === sentinel)
                 XCTAssertFalse(actions.canPerform(.findInPage))
             }
             if hidesBeforeMount {
-                actions.perform(.showHistory)
+                actions.perform(command)
                 actions.perform(.findInPage)
-                _ = try await historySearchEditor(in: host, window: window)
+                _ = try await utilitySearchEditor(for: surface, in: host, window: window)
             }
             return
         }
@@ -102,9 +117,9 @@ final class BrowserSidebarCommandTests: XCTestCase {
             XCTAssertTrue(window.makeFirstResponder(sentinel))
             actions.perform(.findInPage)
         }
-        let editor = try await historySearchEditor(in: host, window: window)
-        editor.insertText("history-route-397", replacementRange: NSRange(location: NSNotFound, length: 0))
-        XCTAssertEqual(editor.string, "history-route-397")
+        let editor = try await utilitySearchEditor(for: surface, in: host, window: window)
+        editor.insertText("utility-route", replacementRange: NSRange(location: NSNotFound, length: 0))
+        XCTAssertEqual(editor.string, "utility-route")
         guard requestsBeforeMount else { return }
         host.removeFromSuperview()
         try await Task.sleep(for: .milliseconds(100))
@@ -115,30 +130,30 @@ final class BrowserSidebarCommandTests: XCTestCase {
         let replacement = makeHost()
         try await Task.sleep(for: .milliseconds(250))
         let remountedField = (window.firstResponder as? NSTextView)?.delegate as? NSTextField
-        // A new browser root may focus its start-page input; it must not replay focus into History.
+        // A new browser root may focus its start-page input; it must not replay focus into utility search.
         XCTAssertNotEqual(
-            remountedField?.placeholderString, String(localized: BrowserUtilitySurface.history.searchPrompt),
+            remountedField?.placeholderString, String(localized: surface.searchPrompt),
             "Remounting must not replay a consumed Find.")
         actions.perform(.findInPage)
-        _ = try await historySearchEditor(in: replacement, window: window)
+        _ = try await utilitySearchEditor(for: surface, in: replacement, window: window)
     }
 
-    /// Waits for the actual History input control rather than inspecting a focus-request counter.
-    private func historySearchEditor(in host: NSView, window: NSWindow) async throws -> NSTextView {
+    /// Waits for the actual utility input control rather than inspecting a focus-request counter.
+    private func utilitySearchEditor(for surface: BrowserUtilitySurface, in host: NSView, window: NSWindow) async throws -> NSTextView {
         for _ in 0..<20 {
             if let editor = window.firstResponder as? NSTextView,
                 let field = editor.delegate as? NSTextField, field.isDescendant(of: host),
-                field.placeholderString == String(localized: BrowserUtilitySurface.history.searchPrompt)
+                field.placeholderString == String(localized: surface.searchPrompt)
             {
                 return editor
             }
             try await Task.sleep(for: .milliseconds(50))
         }
-        return try XCTUnwrap(nil as NSTextView?, "Find must focus the History search field.")
+        return try XCTUnwrap(nil as NSTextView?, "Find must focus the selected utility search field.")
     }
 
-    /// Archive and ordinary browsing retain page Find rather than routing into utility search.
-    func testFindUsesTheLoadedPageOutsideHistory() async throws {
+    /// Ordinary browsing and a dismissed utility retain page Find.
+    func testFindUsesTheLoadedPageWhenNoUtilityIsVisible() async throws {
         let url = try XCTUnwrap(URL(string: "about:blank"))
         let tab = TabState.Seed(title: "Find page", url: url, placement: .current)
         let space = SpaceState.Seed(name: "Page find", symbol: "globe", accent: .indigo, folders: [], tabs: [tab])
@@ -158,21 +173,25 @@ final class BrowserSidebarCommandTests: XCTestCase {
         XCTAssertTrue(actions.canPerform(.findInPage))
         actions.perform(.findInPage)
         XCTAssertTrue(page.isFindPresented)
-        chrome.presentUtility(.archive)
+        actions.perform(.showArchive)
+        actions.perform(.showArchive)
+        XCTAssertNil(chrome.utilityPresentation.surface)
         let previousRequest = page.findFocusRequest
         actions.perform(.findInPage)
         XCTAssertGreaterThan(page.findFocusRequest, previousRequest)
     }
 
-    /// History search is a native command even when no webpage can accept Find.
-    func testFindIsAvailableForVisibleHistoryWithoutALoadedWebpage() {
+    /// Every utility accepts Find even when no webpage can accept it.
+    func testFindIsAvailableForEachUtilityWithoutALoadedWebpage() {
         let browser = BrowserStore.hostingPages()
         let chrome = BrowserChromeState()
         let actions = BrowserCommandActions(
             browser: browser, pages: BrowserPagePool(browser: browser), chrome: chrome, windows: nil)
         XCTAssertFalse(actions.canPerform(.findInPage))
-        actions.perform(.showHistory)
-        XCTAssertTrue(actions.canPerform(.findInPage))
+        for (command, _) in Self.utilityCommands {
+            actions.perform(command)
+            XCTAssertTrue(actions.canPerform(.findInPage))
+        }
     }
 
     /// Utility toggles preserve the docked preference and cannot close another window's History.
@@ -227,21 +246,21 @@ final class BrowserSidebarCommandTests: XCTestCase {
         XCTAssertFalse(chrome.isFloatingSidebarPresented)
     }
 
-    /// Hidden and protected History must not expose its search command.
-    func testFindDoesNotSearchAHiddenOrLockedHistoryList() {
-        let browser = BrowserStore.hostingPages()
-        let chrome = BrowserChromeState()
-        let actions = BrowserCommandActions(
-            browser: browser, pages: BrowserPagePool(browser: browser), chrome: chrome, windows: nil)
-        actions.perform(.showHistory)
-        chrome.hideSidebar()
-        XCTAssertFalse(actions.canPerform(.findInPage))
-        chrome.showSidebar()
-        if let space = browser.shownSpace {
+    /// Hidden and protected utility panels must not expose their search commands.
+    func testFindDoesNotSearchAHiddenOrLockedUtilityList() throws {
+        for (command, _) in Self.utilityCommands {
+            let browser = BrowserStore.hostingPages()
+            let chrome = BrowserChromeState()
+            let actions = BrowserCommandActions(
+                browser: browser, pages: BrowserPagePool(browser: browser), chrome: chrome, windows: nil)
+            actions.perform(command)
+            chrome.hideSidebar()
+            XCTAssertFalse(actions.canPerform(.findInPage))
+            actions.perform(command)
+            XCTAssertTrue(actions.canPerform(.findInPage))
+            let space = try XCTUnwrap(browser.shownSpace)
             browser.updateSpaceAccessPolicy(.deviceOwnerAuthentication, in: space.id)
-        } else {
-            XCTFail("The history command fixture requires a Space.")
+            XCTAssertFalse(actions.canPerform(.findInPage))
         }
-        XCTAssertFalse(actions.canPerform(.findInPage))
     }
 }

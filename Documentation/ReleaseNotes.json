@@ -4081,6 +4081,10 @@
     "history-search-focus-formatting": {
       "category": "internal",
       "message": "Aligned sidebar search focus code with repository formatting."
+    },
+    "utility-search-find-routing": {
+      "category": "fixed",
+      "message": "Find focuses search in History, Archive, and Downloads, including the temporary sidebar."
     }
   }
 }
