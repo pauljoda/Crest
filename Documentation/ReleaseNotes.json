@@ -4062,9 +4062,9 @@
       "category": "fixed",
       "message": "On pinned tabs, the sound and sharing badge sits in the tile\u2019s bottom corner instead of over the site icon, so the icon is easy to click."
     },
-    "pin-layout-honors-chosen-columns": {
+    "site-controls-extension-menu-stays-open": {
       "category": "fixed",
-      "message": "Pins fill each row to the number chosen in Settings, as far as the sidebar width allows, instead of evening out the rows."
+      "message": "Right-clicking an extension in Site Controls shows its menu without closing Site Controls."
     }
   }
 }
