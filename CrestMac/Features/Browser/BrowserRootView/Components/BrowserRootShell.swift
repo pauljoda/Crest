@@ -29,7 +29,7 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
             // style while AppKit is carrying it into fullscreen.
             BrowserNativeWindowControlsBridge(
                 isVisible: model.sidebarPresentation.showsWindowControls,
-                sidebarPosition: appearance.sidebarOnRight ? 1 : 0,
+                sidebarOnRight: appearance.sidebarOnRight,
                 sidebarWidth: model.sidebarWidth
             )
             .frame(maxWidth: .infinity)
