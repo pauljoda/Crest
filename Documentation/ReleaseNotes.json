@@ -4062,33 +4062,6 @@
       "category": "fixed",
       "message": "On pinned tabs, the sound and sharing badge sits in the tile\u2019s bottom corner instead of over the site icon, so the icon is easy to click."
     },
-    "sidebar-utility-shortcuts": {
-      "category": "fixed",
-      "message": "History, Archive, and Downloads shortcuts toggle their sidebar lists, and Find focuses History search while it is open."
-    },
-    "temporary-sidebar-utility-shortcuts": {
-      "category": "fixed",
-      "message": "Utility shortcuts open a temporary sidebar when the sidebar is hidden."
-    },
-    "history-search-pending-focus": {
-      "category": "fixed",
-      "message": "History search receives Find commands issued while opening without stealing focus when reopened."
-    },
-    "history-find-cancel-on-hide": {
-      "category": "fixed",
-      "message": "Hiding the sidebar cancels pending History search focus."
-    },
-    "history-search-focus-formatting": {
-      "category": "internal",
-      "message": "Aligned sidebar search focus code with repository formatting."
-    },
-    "utility-search-find-routing": {
-      "category": "fixed",
-      "message": "Find focuses search in History, Archive, and Downloads, including the temporary sidebar."
-    },
-    "utility-find-formatting": {
-      "category": "internal",
-      "message": "Aligned sidebar search focus code with repository formatting."
     "site-controls-extension-menu-stays-open": {
       "category": "fixed",
       "message": "Right-clicking an extension in Site Controls shows its menu without closing Site Controls."
@@ -4104,6 +4077,14 @@
     "find-close-returns-page-focus": {
       "category": "fixed",
       "message": "Closing find in page returns the keyboard to the page, including a page in Peek, so arrow keys and Space scroll right away."
+    },
+    "sidebar-hides-when-pointer-leaves-window": {
+      "category": "fixed",
+      "message": "A hidden sidebar that slides out at the window edge now hides again when the pointer moves on to another app."
+    },
+    "sidebar-utility-shortcuts": {
+      "category": "improved",
+      "message": "The History, Archive and Downloads shortcuts open and close their list, showing the sidebar for the moment when it is hidden, and Command-F searches the list that is open."
     }
   }
 }

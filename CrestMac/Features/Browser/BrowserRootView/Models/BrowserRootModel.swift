@@ -57,6 +57,9 @@ final class BrowserRootModel {
     }
     @ObservationIgnored private var isSidebarApproachingDockStorage = false
     private(set) var isSidebarSurfaceHovered = false
+    /// Whether the floating sidebar came out because the pointer reached the
+    /// window edge, rather than from a click, command or page request.
+    private(set) var isFloatingSidebarRevealedByPointer = false
     private var sidebarMorphRevision = 0
     /// Cancels or awaits the current sidebar transition.
     @ObservationIgnored private(set) var sidebarMorphTask: Task<Void, Never>?
@@ -351,6 +354,7 @@ extension BrowserRootModel {
 
     func hideSidebar(reduceMotion: Bool) {
         chrome.utilityPresentation.dismiss()
+        isFloatingSidebarRevealedByPointer = false
         guard !reduceMotion else {
             cancelSidebarMorph()
             isFloatingSidebarPresented = isSidebarSurfaceHovered
@@ -389,6 +393,7 @@ extension BrowserRootModel {
     }
 
     func dockSidebar(reduceMotion: Bool) {
+        isFloatingSidebarRevealedByPointer = false
         guard !reduceMotion else {
             cancelSidebarMorph()
             isFloatingSidebarPresented = false
@@ -448,8 +453,18 @@ extension BrowserRootModel {
         }
     }
 
+    /// Presents the floating sidebar for a pointer that reached the window
+    /// edge. Leaving the window counts as leaving the sidebar from then on,
+    /// even before the pointer first reaches the card sliding in under it.
+    func revealFloatingSidebarFromPointer(reduceMotion: Bool) {
+        presentFloatingSidebar(reduceMotion: reduceMotion)
+        guard sidebarPresentation == .floating else { return }
+        isFloatingSidebarRevealedByPointer = true
+    }
+
     func dismissFloatingSidebar(reduceMotion: Bool) {
         cancelSidebarMorph()
+        isFloatingSidebarRevealedByPointer = false
         if sidebarPresentation == .floating {
             chrome.utilityPresentation.dismiss()
         }
