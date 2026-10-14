@@ -4081,6 +4081,18 @@
     "sidebar-hides-when-pointer-leaves-window": {
       "category": "fixed",
       "message": "A hidden sidebar that slides out at the window edge now hides again when the pointer moves on to another app."
+    },
+    "space-switch-keeps-sliding": {
+      "category": "fixed",
+      "message": "Switching Spaces again before the slide finishes keeps sliding toward the next Space instead of jumping to it."
+    },
+    "window-controls-follow-sidebar-side": {
+      "category": "fixed",
+      "message": "When the sidebar moves to the other side of the window, the window buttons travel with it instead of arriving first."
+    },
+    "smoother-live-resize": {
+      "category": "improved",
+      "message": "Resizing the window, a split or the sidebar is smoother."
     }
   }
 }
