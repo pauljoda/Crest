@@ -4069,6 +4069,21 @@
     "agent-history-deletion-and-durable-page-close": {
       "category": "improved",
       "message": "Approved tools can delete an address from a chosen Space’s history and close saved or pinned pages while keeping their sidebar entries."
+    "site-controls-extension-menu-stays-open": {
+      "category": "fixed",
+      "message": "Right-clicking an extension in Site Controls shows its menu without closing Site Controls."
+    },
+    "pin-layout-honors-chosen-columns": {
+      "category": "fixed",
+      "message": "Pins fill each row to the number chosen in Settings, as far as the sidebar width allows, instead of evening out the rows."
+    },
+    "web-inspector-shortcut-toggles": {
+      "category": "fixed",
+      "message": "Pressing Option-Command-I again closes the Web Inspector or Chromium DevTools instead of leaving it open."
+    },
+    "find-close-returns-page-focus": {
+      "category": "fixed",
+      "message": "Closing find in page returns the keyboard to the page, including a page in Peek, so arrow keys and Space scroll right away."
     }
   }
 }

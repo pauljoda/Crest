@@ -83,15 +83,15 @@ struct ChromiumExtensionControls: View {
                     afterDismiss { page.runExtension(action.id, anchor: retained) }
                 },
                 togglePinned: { store.togglePin($0, space: space.identity) },
+                // Site Controls stays open under the menu, as it does for the
+                // pin button, and closes only for an item that leads elsewhere.
                 presentMenu: { action, anchor in
-                    let retained = anchor?.replacingSourceWindow(page.surface.window)
-                    let openSidePanel = BrowserExtensionSidePanelHost.opener(
-                        action, page: page, host: sidePanel)
-                    afterDismiss {
-                        store.presentMenu(
-                            action, space: space.identity, anchor: retained,
-                            isPrivate: page.isPrivateBrowsing, openSidePanel: openSidePanel)
-                    }
+                    store.presentMenu(
+                        action, space: space.identity, anchor: anchor,
+                        isPrivate: page.isPrivateBrowsing,
+                        openSidePanel: BrowserExtensionSidePanelHost.opener(
+                            action, page: page, host: sidePanel),
+                        closeSource: dismiss)
                 })
             if !page.isPrivateBrowsing, let id = ChromiumNativePage.webStoreExtensionID(url) {
                 Button("Install Extension…", systemImage: "plus.app") {

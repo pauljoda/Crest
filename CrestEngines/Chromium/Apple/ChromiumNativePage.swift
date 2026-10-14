@@ -151,6 +151,16 @@
             show(in: window, takingFocus: true)
         }
 
+        /// Focuses the page while it is on screen, as the engine does a page it
+        /// shows: its render view takes the keys. AppKit alone would stop at
+        /// the engine's outer view, which holds focus without passing keys on.
+        func focusShownPage() -> Bool {
+            guard isShown, surface.presentation == .presented, let window = surface.window else { return false }
+            show(in: window, takingFocus: true)
+            guard let responder = window.firstResponder as? NSView else { return false }
+            return responder.isDescendant(of: surface)
+        }
+
         /// Asks the engine to show the page. The engine focuses a page it
         /// shows; one that may not take focus hands it back to what held it.
         private func show(in window: NSWindow, takingFocus takesFocus: Bool) {
@@ -460,6 +470,7 @@
             // The page, never the docked inspector beside it: focus arriving at the
             // card belongs to the page the card is showing.
             guard let view = engineView else { return super.becomeFirstResponder() }
+            if page?.focusShownPage() == true { return true }
             return window?.makeFirstResponder(view) ?? false
         }
         override func viewWillMove(toWindow newWindow: NSWindow?) {

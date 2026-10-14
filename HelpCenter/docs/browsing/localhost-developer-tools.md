@@ -29,7 +29,7 @@ Automatic localhost tools follow the focused address. The manual toolbar toggle 
 
 ## Open the inspector directly
 
-Use **Option-Command-I**, the menu, or the command palette. A Chromium page opens Chromium DevTools in the window, and a WebKit page opens Web Inspector. The inspector follows the focused page, including the focused card inside Split View.
+Use **Option-Command-I**, the menu, or the command palette; the same shortcut closes it again. A Chromium page opens Chromium DevTools in the window, and a WebKit page opens Web Inspector. The inspector follows the focused page, including the focused card inside Split View.
 
 ## Security boundary
 
