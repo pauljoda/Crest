@@ -14,7 +14,7 @@ namespace CrestCore.Native;
 public static class ContractCodec {
     /// <summary>SHA-256 of the canonical contract schema.</summary>
     public static ReadOnlySpan<byte> Fingerprint => [
-        0x7b, 0x8c, 0x3e, 0xd8, 0x10, 0xc6, 0xff, 0xa3, 0xe9, 0x86, 0x31, 0xce, 0x79, 0x4d, 0x7f, 0x39, 0xb4, 0x21, 0x8f, 0x86, 0x75, 0xa7, 0x31, 0xe4, 0x35, 0x5d, 0xd1, 0xf5, 0x02, 0x52, 0x55, 0xc1
+        0x43, 0x50, 0x8e, 0x5f, 0x3a, 0x14, 0x75, 0x92, 0x3d, 0x88, 0x8e, 0x7b, 0xd3, 0xa6, 0x7d, 0x71, 0x4d, 0xb8, 0x53, 0x31, 0x16, 0x04, 0xa2, 0xef, 0x8f, 0x68, 0x1e, 0x8a, 0x82, 0xcb, 0xbb, 0x3f
     ];
 
     /// <summary>SHA-256 of the engine contract alone, which an engine binding registers with.</summary>
@@ -12480,7 +12480,8 @@ public static class ContractCodec {
             reader.ReadBool(),
             reader.ReadBool(),
             reader.ReadBool(),
-            reader.ReadBool());
+            reader.ReadBool(),
+            ReadSearchProviderSpaceTrigger(reader));
     }
 
     public static void WritePalettePreferences(WireWriter writer, PalettePreferences value) {
@@ -12497,6 +12498,7 @@ public static class ContractCodec {
         writer.WriteBool(value.LearnsChoices);
         writer.WriteBool(value.SearchesSitesWithTab);
         writer.WriteBool(value.ShowsReasons);
+        WriteSearchProviderSpaceTrigger(writer, value.ProviderSpaceTrigger);
     }
 
     public static PaletteRow ReadPaletteRow(WireReader reader) {
@@ -19726,6 +19728,17 @@ public static class ContractCodec {
         ArgumentNullException.ThrowIfNull(writer);
         ArgumentNullException.ThrowIfNull(value);
         writer.WriteEnum(TagOf(SearchProviderOption.All, value));
+    }
+
+    public static SearchProviderSpaceTrigger ReadSearchProviderSpaceTrigger(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return SearchProviderSpaceTrigger.All[reader.ReadEnum(SearchProviderSpaceTrigger.All.Count)];
+    }
+
+    public static void WriteSearchProviderSpaceTrigger(WireWriter writer, SearchProviderSpaceTrigger value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteEnum(TagOf(SearchProviderSpaceTrigger.All, value));
     }
 
     public static SetupEntry ReadSetupEntry(WireReader reader) {

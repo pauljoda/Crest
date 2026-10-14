@@ -1,45 +1,13 @@
 import SwiftUI
 
 /// The search every Space follows unless it chose its own, the one private
-/// windows follow, whether the default suggests searches, and whether Tab
-/// after a shortcut searches its provider.
+/// windows follow, suggestions, and the independent Tab and Space provider triggers.
 struct BrowserDefaultSearchSettingsSection: View {
+    // MARK: - Variables
+
     @Bindable var preferences: BrowserAppPreferenceStore
     let catalog: BrowserSearchCatalog
     var profileID: UUID? = nil
-
-    var body: some View {
-        Section {
-            Picker("Default search", selection: defaultProvider) {
-                ForEach(catalog.defaultChoices) { provider in
-                    BrowserSearchProviderIdentityLabel(provider: provider, profileID: profileID)
-                        .tag(Optional(provider))
-                }
-            }
-            .accessibilityIdentifier("default-search")
-
-            Picker("Private windows", selection: privateProvider) {
-                ForEach(catalog.defaultChoices) { provider in
-                    BrowserSearchProviderIdentityLabel(provider: provider, profileID: profileID)
-                        .tag(Optional(provider))
-                }
-            }
-            .accessibilityIdentifier("private-search")
-
-            Toggle("Search suggestions", isOn: suggestions)
-                .accessibilityIdentifier("default-search-suggestions")
-
-            Toggle(isOn: $preferences.palette.searchesSitesWithTab) {
-                Text("Tab to search providers")
-                Text("Type a provider’s name or shortcut and press Tab, or type $ and its shortcut, then a space.")
-            }
-            .accessibilityIdentifier("palette-tab-to-search")
-        } header: {
-            Text("Search")
-        } footer: {
-            CrestFormFootnote("Search suggestions send what you type to the search engine.")
-        }
-    }
 
     private var defaultProvider: Binding<SearchProvider?> {
         Binding {
@@ -64,6 +32,47 @@ struct BrowserDefaultSearchSettingsSection: View {
             catalog.suggestionsEnabled
         } set: {
             catalog.setSuggestionsEnabled($0)
+        }
+    }
+
+    var body: some View {
+        Section {
+            Picker("Default search", selection: defaultProvider) {
+                ForEach(catalog.defaultChoices) { provider in
+                    BrowserSearchProviderIdentityLabel(provider: provider, profileID: profileID)
+                        .tag(Optional(provider))
+                }
+            }
+            .accessibilityIdentifier("default-search")
+
+            Picker("Private windows", selection: privateProvider) {
+                ForEach(catalog.defaultChoices) { provider in
+                    BrowserSearchProviderIdentityLabel(provider: provider, profileID: profileID)
+                        .tag(Optional(provider))
+                }
+            }
+            .accessibilityIdentifier("private-search")
+
+            Toggle("Search suggestions", isOn: suggestions)
+                .accessibilityIdentifier("default-search-suggestions")
+
+            Toggle(isOn: $preferences.palette.searchesSitesWithTab) {
+                Text("Tab selects a search provider")
+                Text("When off, Tab cycles suggestions.")
+            }
+            .accessibilityIdentifier("palette-tab-to-search")
+
+            Picker("Space selects a provider", selection: $preferences.palette.providerSpaceTrigger) {
+                ForEach(SearchProviderSpaceTrigger.all, id: \.self) { trigger in
+                    Text(trigger.title).tag(trigger)
+                }
+            }
+            .accessibilityIdentifier("palette-space-to-search")
+            Text(preferences.palette.providerSpaceTrigger.example).crestFormFootnote()
+        } header: {
+            Text("Search")
+        } footer: {
+            CrestFormFootnote("Search suggestions send what you type to the search engine.")
         }
     }
 }

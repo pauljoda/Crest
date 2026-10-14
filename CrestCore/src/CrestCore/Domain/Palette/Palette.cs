@@ -176,7 +176,7 @@ public sealed partial class Palette {
     /// at most `MaximumMatchingProviders`; none once a space shows the text
     /// is not a provider's name.
     private IReadOnlyList<SearchProvider> MatchingProviders(PaletteQuery query) =>
-        Preferences.SearchesSitesWithTab && !query.Text.Any(char.IsWhiteSpace)
+        (Preferences.SearchesSitesWithTab || Preferences.ProviderSpaceTrigger.IsEnabled) && !query.Text.Any(char.IsWhiteSpace)
             ? [.. context.Catalog.Matching(PaletteNotation.Provider.Word(query.Text)).Take(MaximumMatchingProviders)] : [];
 
     #endregion

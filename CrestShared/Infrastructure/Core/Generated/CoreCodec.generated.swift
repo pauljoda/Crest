@@ -7,7 +7,7 @@ import Foundation
 enum CoreCodec {
     /// SHA-256 of the canonical contract schema. The core refuses any other.
     static let fingerprint: [UInt8] = [
-        0x7b, 0x8c, 0x3e, 0xd8, 0x10, 0xc6, 0xff, 0xa3, 0xe9, 0x86, 0x31, 0xce, 0x79, 0x4d, 0x7f, 0x39, 0xb4, 0x21, 0x8f, 0x86, 0x75, 0xa7, 0x31, 0xe4, 0x35, 0x5d, 0xd1, 0xf5, 0x02, 0x52, 0x55, 0xc1
+        0x43, 0x50, 0x8e, 0x5f, 0x3a, 0x14, 0x75, 0x92, 0x3d, 0x88, 0x8e, 0x7b, 0xd3, 0xa6, 0x7d, 0x71, 0x4d, 0xb8, 0x53, 0x31, 0x16, 0x04, 0xa2, 0xef, 0x8f, 0x68, 0x1e, 0x8a, 0x82, 0xcb, 0xbb, 0x3f
     ]
     /// SHA-256 of the engine contract alone, which an engine binding registers with.
     static let engineFingerprint: [UInt8] = [
@@ -15310,7 +15310,8 @@ extension PalettePreferences {
         let learnsChoices = try reader.readBool()
         let searchesSitesWithTab = try reader.readBool()
         let showsReasons = try reader.readBool()
-        self.init(layout: layout, sources: sources, showsTopHit: showsTopHit, prefersOpenTabs: prefersOpenTabs, completesInline: completesInline, learnsChoices: learnsChoices, searchesSitesWithTab: searchesSitesWithTab, showsReasons: showsReasons)
+        let providerSpaceTrigger = try SearchProviderSpaceTrigger(from: &reader)
+        self.init(layout: layout, sources: sources, showsTopHit: showsTopHit, prefersOpenTabs: prefersOpenTabs, completesInline: completesInline, learnsChoices: learnsChoices, searchesSitesWithTab: searchesSitesWithTab, showsReasons: showsReasons, providerSpaceTrigger: providerSpaceTrigger)
     }
 
     func encode(into writer: inout WireWriter) {
@@ -15325,6 +15326,7 @@ extension PalettePreferences {
         writer.writeBool(learnsChoices)
         writer.writeBool(searchesSitesWithTab)
         writer.writeBool(showsReasons)
+        providerSpaceTrigger.encode(into: &writer)
     }
 }
 
@@ -25858,6 +25860,20 @@ extension SearchProviderOption {
         let tag = try reader.readEnum()
         guard Self.all.indices.contains(tag) else {
             throw WireError.malformed("Unknown SearchProviderOption \(tag)")
+        }
+        self = Self.all[tag]
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeEnum(tag)
+    }
+}
+
+extension SearchProviderSpaceTrigger {
+    init(from reader: inout WireReader) throws(WireError) {
+        let tag = try reader.readEnum()
+        guard Self.all.indices.contains(tag) else {
+            throw WireError.malformed("Unknown SearchProviderSpaceTrigger \(tag)")
         }
         self = Self.all[tag]
     }

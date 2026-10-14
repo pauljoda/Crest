@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct BrowserCommandPaletteSearchField: View {
+    // MARK: - Variables
+
     let model: BrowserCommandPaletteModel
     let presentation: BrowserCommandPalettePresentation
     let queryIsFocused: FocusState<Bool>.Binding
@@ -91,14 +93,25 @@ struct BrowserCommandPaletteSearchField: View {
             Button {
                 model.acceptURLCompletion()
             } label: {
-                tabHint
+                if model.preferences.searchesSitesWithTab {
+                    tabHint
+                } else {
+                    Label("Right Arrow", systemImage: "arrow.right").font(.caption)
+                }
             }
             .buttonStyle(.plain)
             .foregroundStyle(.secondary)
-            .help("Accept URL completion (Tab or Right Arrow)")
+            .help(
+                model.preferences.searchesSitesWithTab
+                    ? Text("Accept URL completion (Tab or Right Arrow)") : Text("Accept URL completion (Right Arrow)")
+            )
             .accessibilityLabel("Accept URL completion")
             .accessibilityValue(completion.accepted)
-            .accessibilityHint("Fills the address without opening it. Press Tab or Right Arrow to accept.")
+            .accessibilityHint(
+                model.preferences.searchesSitesWithTab
+                    ? Text("Fills the address without opening it. Press Tab or Right Arrow to accept.")
+                    : Text("Fills the address without opening it. Press Right Arrow to accept.")
+            )
             .accessibilityIdentifier("command-palette-accept-completion")
         } else if let scope = model.scopeOffer {
             Button {
