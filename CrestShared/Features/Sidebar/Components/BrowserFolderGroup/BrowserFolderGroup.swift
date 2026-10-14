@@ -18,7 +18,9 @@ import SwiftUI
 /// open colour popover, and a request that can no longer be honoured is
 /// dropped instead of landing on whatever took its place.
 struct BrowserFolderGroup: View {
-    @Environment(BrowserSidebarInteractionState.self) private var sidebarInteraction
+    // MARK: - Variables
+
+    @Environment(BrowserSidebarInteractionState.self) var sidebarInteraction
 
     let folder: FolderStateModel
     /// How many folders hold this one.
@@ -28,35 +30,35 @@ struct BrowserFolderGroup: View {
     /// folder shows in place of its contents.
     var inheritedKeptTabID: UUID? = nil
 
-    @Environment(\.sidebarSpacePresentation) private var spacePresentation
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var draftTitle = ""
-    @State private var iconRequest: BrowserFolderRuntimeAssignment?
-    @State private var colorRequest: BrowserFolderRuntimeAssignment?
-    @State private var deletionRequest: BrowserFolderRuntimeAssignment?
+    @Environment(\.sidebarSpacePresentation) var spacePresentation
+    @Environment(\.accessibilityReduceMotion) var reduceMotion
+    @State var draftTitle = ""
+    @State var iconRequest: BrowserFolderRuntimeAssignment?
+    @State var colorRequest: BrowserFolderRuntimeAssignment?
+    @State var deletionRequest: BrowserFolderRuntimeAssignment?
     #if os(macOS)
-        private var collapsedTabVisibility: BrowserCollapsedFolderTabVisibilityState {
+        var collapsedTabVisibility: BrowserCollapsedFolderTabVisibilityState {
             get { collapsedVisibilityOwner.state }
             nonmutating set { collapsedVisibilityOwner.state = newValue }
         }
 
-        private var collapsedVisibilityOwner: BrowserSidebarFolderVisibility {
+        var collapsedVisibilityOwner: BrowserSidebarFolderVisibility {
             sidebarInteraction.collapsedFolderVisibility(
                 for: BrowserFolderRuntimeAssignment(
                     folderID: folder.id, spaceID: context.space.id, profileID: context.space.profileID))
         }
     #else
-        @State private var collapsedTabVisibility = BrowserCollapsedFolderTabVisibilityState()
+        @State var collapsedTabVisibility = BrowserCollapsedFolderTabVisibilityState()
     #endif
-    @FocusState private var isTitleFocused: Bool
+    @FocusState var isTitleFocused: Bool
 
-    private var configuration: BrowserFolderGroupConfiguration {
+    var configuration: BrowserFolderGroupConfiguration {
         BrowserFolderGroupConfiguration(
             sidebarInteraction: sidebarInteraction, folder: folder, depth: depth, context: context,
             spacePresentation: spacePresentation, inheritedKeptTabID: inheritedKeptTabID)
     }
 
-    private var isExpanded: Binding<Bool> {
+    var isExpanded: Binding<Bool> {
         Binding {
             !folder.isCollapsed
         } set: { isExpanded in
@@ -66,7 +68,7 @@ struct BrowserFolderGroup: View {
         }
     }
 
-    private var editingFolderRequest: Binding<BrowserFolderRuntimeAssignment?> {
+    var editingFolderRequest: Binding<BrowserFolderRuntimeAssignment?> {
         Binding {
             sidebarInteraction.editingFolderRequest
         } set: {
@@ -74,7 +76,7 @@ struct BrowserFolderGroup: View {
         }
     }
 
-    private var interaction: BrowserFolderGroupInteractionContext {
+    var interaction: BrowserFolderGroupInteractionContext {
         BrowserFolderGroupInteractionContext(
             isExpanded: isExpanded,
             editingFolderRequest: editingFolderRequest,
@@ -114,7 +116,7 @@ struct BrowserFolderGroup: View {
                 color: folder.displayColor,
                 intensity: configuration.displayBranding?.folderColorIntensity ?? 0,
                 textColorMode: configuration.displayBranding?.textColorMode ?? .automatic,
-                depth: depth,
+                depth: depth, isExpanded: showsContents,
                 isSelected: BrowserSidebarSelection.showsSelected(.folder(folder.id), in: context),
                 folderID: folder.id, reorder: sidebarInteraction.sidebarReorderState)
         )
@@ -145,231 +147,6 @@ struct BrowserFolderGroup: View {
         .padding(.vertical, BrowserSidebarMetrics.containerSpacing)
     }
 
-    /// Nested folders are children of the section they move with, so a parent's
-    /// measurement, hover surface and lift include the entire expanded subtree.
-    private func folderContents(configuration: BrowserFolderGroupConfiguration) -> some View {
-        BrowserSidebarListRows(list: configuration.inside, context: context) { items in
-            if items.isEmpty { BrowserFolderEmptyRunBand(configuration: configuration) }
-        }
-        .equatable()
-        .browserSidebarReorderSectionIndicator(
-            .tabs(placement: folder.location, folderID: folder.id),
-            state: sidebarInteraction.sidebarReorderState
-        )
-        // Each row says its own depth; this is for what the run draws between
-        // them, such as the slot a lift leaves.
-        .environment(\.sidebarLayerDepth, depth + 1)
-    }
-
-    private func beginCreatingChild() {
-        guard configuration.isCurrentAndUnlocked else { return }
-        guard
-            let childID = context.browser.addFolder(
-                parentID: folder.id,
-                matching: configuration.assignment
-            )
-        else {
-            return
-        }
-        if inheritedKeptTabID != nil { expandFoldersAround() }
-        isExpanded.wrappedValue = true
-        sidebarInteraction.editingFolderRequest = BrowserFolderRuntimeAssignment(
-            folderID: childID,
-            spaceID: configuration.spaceID,
-            profileID: configuration.profileID
-        )
-    }
-
-    /// Opens every collapsed folder that holds this one. A folder drawn on a
-    /// collapsed folder's way to its kept tab shows only that way, so a child
-    /// made here would stay hidden, and its title could never start editing,
-    /// until the folders around it open.
-    private func expandFoldersAround() {
-        var parentID = folder.parentID
-        var visited: Set<UUID> = []
-        while let id = parentID, visited.insert(id).inserted, let parent = context.space.folders.model(id) {
-            if parent.isCollapsed {
-                context.browser.setFolderCollapsed(id, matching: configuration.assignment, isCollapsed: false)
-            }
-            parentID = parent.parentID
-        }
-    }
-
-    private func unloadKeptCollapsedTab(_ tabID: UUID) {
-        guard configuration.isCurrentAndUnlocked else { return }
-        collapsedTabVisibility.tabDidUnload(tabID)
-        context.unload(tabID)
-    }
-
-    private func beginRenaming() {
-        guard configuration.isCurrentAndUnlocked else { return }
-        sidebarInteraction.editingFolderRequest = configuration.folderRuntimeAssignment
-    }
-
-    private func toggleExpansion() {
-        guard !sidebarInteraction.sidebarReorderState.suppressesActivation,
-            sidebarInteraction.editingFolderRequest != configuration.folderRuntimeAssignment,
-            configuration.isCurrentAndUnlocked
-        else {
-            return
-        }
-        withAnimation(
-            CrestMotion.disclosure.unlessReducingMotion(reduceMotion)
-        ) {
-            let nextExpansion = folder.isCollapsed
-            collapsedTabVisibility.expansionDidChange(
-                isExpanded: nextExpansion,
-                selectedTabID: configuration.shownFolderTabID,
-                folderTabIDs: configuration.folderTabIDs
-            )
-            isExpanded.wrappedValue = nextExpansion
-        }
-    }
-
-    private func beginTitleEditingIfNeeded() {
-        guard sidebarInteraction.editingFolderRequest == configuration.folderRuntimeAssignment,
-            isDeferredAssignmentAvailable(
-                configuration.folderRuntimeAssignment
-            )
-        else {
-            isTitleFocused = false
-            return
-        }
-        draftTitle = folder.title
-        Task { @MainActor in
-            isTitleFocused = true
-        }
-    }
-
-    private func commitTitle() {
-        guard let request = sidebarInteraction.editingFolderRequest,
-            request == configuration.folderRuntimeAssignment
-        else { return }
-        sidebarInteraction.editingFolderRequest = nil
-        guard isDeferredAssignmentAvailable(request) else { return }
-        context.browser.renameFolder(
-            request.folderID,
-            matching: request.spaceAssignment,
-            title: draftTitle
-        )
-    }
-
-    private func cancelTitleEditing() {
-        guard sidebarInteraction.editingFolderRequest == configuration.folderRuntimeAssignment else {
-            return
-        }
-        draftTitle = folder.title
-        sidebarInteraction.editingFolderRequest = nil
-    }
-
-    private func deleteFolder() {
-        guard let request = deletionRequest else { return }
-        deletionRequest = nil
-        guard isDeferredAssignmentAvailable(request) else { return }
-        context.browser.deleteFolder(request.folderID, matching: request.spaceAssignment)
-    }
-
-    private var folderColorBinding: Binding<BrandColor> {
-        Binding(
-            get: { folder.displayColor },
-            set: { color in
-                guard let request = colorRequest,
-                    isDeferredAssignmentAvailable(request)
-                else { return }
-                context.browser.setFolderColor(
-                    request.folderID,
-                    matching: request.spaceAssignment,
-                    color: color
-                )
-            }
-        )
-    }
-
-    private var colorPresentation: Binding<Bool> {
-        Binding {
-            guard let request = colorRequest else { return false }
-            return isDeferredAssignmentAvailable(request)
-        } set: { isPresented in
-            if isPresented, configuration.isCurrentAndUnlocked {
-                colorRequest = configuration.folderRuntimeAssignment
-            } else if !isPresented {
-                colorRequest = nil
-            }
-        }
-    }
-
-    private var folderSymbolBinding: Binding<String> {
-        Binding(
-            get: { folder.displaySymbol },
-            set: { symbol in
-                guard let request = iconRequest,
-                    isDeferredAssignmentAvailable(request)
-                else { return }
-                context.browser.setFolderSymbol(
-                    request.folderID,
-                    matching: request.spaceAssignment,
-                    symbol: symbol
-                )
-            }
-        )
-    }
-
-    private var iconPresentation: Binding<Bool> {
-        Binding {
-            guard let request = iconRequest else { return false }
-            return isDeferredAssignmentAvailable(request)
-        } set: { isPresented in
-            if isPresented, configuration.isCurrentAndUnlocked {
-                iconRequest = configuration.folderRuntimeAssignment
-            } else if !isPresented {
-                iconRequest = nil
-            }
-        }
-    }
-
-    private var deletionPresentation: Binding<Bool> {
-        Binding {
-            guard let request = deletionRequest else { return false }
-            return isDeferredAssignmentAvailable(request)
-        } set: { isPresented in
-            if isPresented, configuration.isCurrentAndUnlocked {
-                deletionRequest = configuration.folderRuntimeAssignment
-            } else if !isPresented {
-                deletionRequest = nil
-            }
-        }
-    }
-
-    private func isDeferredAssignmentAvailable(
-        _ request: BrowserFolderRuntimeAssignment
-    ) -> Bool {
-        request == configuration.folderRuntimeAssignment && configuration.isCurrentAndUnlocked
-    }
-
-    private func clearUnavailableDeferredActions() {
-        if let request = sidebarInteraction.editingFolderRequest,
-            request == configuration.folderRuntimeAssignment,
-            !isDeferredAssignmentAvailable(request)
-        {
-            sidebarInteraction.editingFolderRequest = nil
-            isTitleFocused = false
-        }
-        if let request = iconRequest,
-            !isDeferredAssignmentAvailable(request)
-        {
-            iconRequest = nil
-        }
-        if let request = colorRequest,
-            !isDeferredAssignmentAvailable(request)
-        {
-            colorRequest = nil
-        }
-        if let request = deletionRequest,
-            !isDeferredAssignmentAvailable(request)
-        {
-            deletionRequest = nil
-        }
-    }
 }
 
 extension BrowserFolderGroup: @MainActor Equatable {
@@ -384,11 +161,11 @@ extension BrowserFolderGroup: @MainActor Equatable {
 /// The full folder keeps its registration for an owned lift, while ordinary
 /// input follows the page role entirely within this interaction leaf.
 private struct BrowserFolderReorderContainer: ViewModifier {
-    @Environment(BrowserSidebarInteractionState.self) private var sidebarInteraction
+    @Environment(BrowserSidebarInteractionState.self) var sidebarInteraction
 
     let configuration: BrowserFolderGroupConfiguration
 
-    @Environment(\.sidebarSpaceIsSelected) private var isSelected
+    @Environment(\.sidebarSpaceIsSelected) var isSelected
 
     func body(content: Content) -> some View {
         content.browserSidebarReorderContainer(
@@ -418,7 +195,7 @@ private struct BrowserFolderReorderContainer: ViewModifier {
 /// that reserves those places gets a zone of its own here. Where the seam is
 /// aimable the reservation would only add an empty band nothing lands in.
 private struct BrowserFolderReorderReservation: ViewModifier {
-    @Environment(BrowserSidebarInteractionState.self) private var sidebarInteraction
+    @Environment(BrowserSidebarInteractionState.self) var sidebarInteraction
 
     let configuration: BrowserFolderGroupConfiguration
 

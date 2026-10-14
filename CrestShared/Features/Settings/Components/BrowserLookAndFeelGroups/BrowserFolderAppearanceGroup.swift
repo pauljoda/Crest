@@ -3,11 +3,13 @@ import SwiftUI
 /// How folders read in every Space on this device. A Space's own folder color
 /// travels with its branding and stays in the Space editor.
 struct BrowserFolderAppearanceGroup: View {
+    // MARK: - Variables
+
     var space: BrowserSpaceAppearance?
     var showsPreview = false
 
-    @AppStorage(BrowserFolderAppearancePreference.alwaysVisibleKey, store: BrowserFolderAppearancePreference.defaults)
-    private var alwaysVisible = BrowserLookAndFeelDefaults.foldersAlwaysVisible
+    @AppStorage(BrowserFolderAppearancePreference.highlightModeKey, store: BrowserFolderAppearancePreference.defaults)
+    private var highlightMode = BrowserFolderAppearancePreference.defaultHighlightMode
     @AppStorage(BrowserFolderAppearancePreference.showsTabCountsKey, store: BrowserFolderAppearancePreference.defaults)
     private var showsTabCounts = BrowserLookAndFeelDefaults.foldersShowTabCounts
     @AppStorage(BrowserFolderAppearancePreference.showsBordersKey, store: BrowserFolderAppearancePreference.defaults)
@@ -16,6 +18,37 @@ struct BrowserFolderAppearanceGroup: View {
     private var iconOnly = BrowserLookAndFeelDefaults.foldersIconOnly
     @AppStorage(BrowserFolderAppearancePreference.tintsTitleKey, store: BrowserFolderAppearancePreference.defaults)
     private var tintsTitle = BrowserLookAndFeelDefaults.foldersTintTitle
+
+    private var highlights: CrestSettingValue<BrowserFolderHighlightMode> {
+        CrestSettingValue($highlightMode, default: BrowserLookAndFeelDefaults.folderHighlights)
+    }
+
+    private var counts: CrestSettingValue<Bool> {
+        CrestSettingValue($showsTabCounts, default: BrowserLookAndFeelDefaults.foldersShowTabCounts)
+    }
+
+    private var borders: CrestSettingValue<Bool> {
+        CrestSettingValue($showsBorders, default: BrowserLookAndFeelDefaults.foldersShowBorders)
+    }
+
+    private var settings: [CrestResettableSetting] {
+        [
+            icons.resettable("Icon Only Folders"),
+            titles.resettable("Tint Folder Title"),
+            highlights.resettable("Folder highlights"),
+            counts.resettable("Show folder tab counts"),
+            borders.resettable("Show folder color borders"),
+        ]
+    }
+
+    private var icons: CrestSettingValue<Bool> {
+        CrestSettingValue($iconOnly, default: BrowserLookAndFeelDefaults.foldersIconOnly)
+    }
+
+    private var titles: CrestSettingValue<Bool> {
+        CrestSettingValue($tintsTitle, default: BrowserLookAndFeelDefaults.foldersTintTitle)
+    }
+    // MARK: - Actions - Settings
 
     var body: some View {
         CrestSettingsGroup(
@@ -38,11 +71,17 @@ struct BrowserFolderAppearanceGroup: View {
                     .accessibilityIdentifier("folder-tint-title")
             }
             CrestSettingRow(
-                "Always show folder highlights", setting: highlights.resettable("Always show folder highlights")
+                "Folder highlights", setting: highlights.resettable("Folder highlights")
             ) {
-                Toggle("Always show folder highlights", isOn: highlights.binding)
-                    .labelsHidden()
-                    .accessibilityIdentifier("folder-always-show-highlights")
+                Picker("Folder highlights", selection: highlights.binding) {
+                    ForEach(BrowserFolderHighlightMode.options) { mode in
+                        Text(mode.title).tag(mode)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                .fixedSize()
+                .accessibilityIdentifier("folder-highlights")
             }
             CrestSettingRow("Show folder tab counts", setting: counts.resettable("Show folder tab counts")) {
                 Toggle("Show folder tab counts", isOn: counts.binding)
@@ -54,36 +93,7 @@ struct BrowserFolderAppearanceGroup: View {
                     .labelsHidden()
                     .accessibilityIdentifier("folder-show-color-borders")
             }
+
         }
-    }
-
-    private var highlights: CrestSettingValue<Bool> {
-        CrestSettingValue($alwaysVisible, default: BrowserLookAndFeelDefaults.foldersAlwaysVisible)
-    }
-
-    private var counts: CrestSettingValue<Bool> {
-        CrestSettingValue($showsTabCounts, default: BrowserLookAndFeelDefaults.foldersShowTabCounts)
-    }
-
-    private var borders: CrestSettingValue<Bool> {
-        CrestSettingValue($showsBorders, default: BrowserLookAndFeelDefaults.foldersShowBorders)
-    }
-
-    private var settings: [CrestResettableSetting] {
-        [
-            icons.resettable("Icon Only Folders"),
-            titles.resettable("Tint Folder Title"),
-            highlights.resettable("Always show folder highlights"),
-            counts.resettable("Show folder tab counts"),
-            borders.resettable("Show folder color borders"),
-        ]
-    }
-
-    private var icons: CrestSettingValue<Bool> {
-        CrestSettingValue($iconOnly, default: BrowserLookAndFeelDefaults.foldersIconOnly)
-    }
-
-    private var titles: CrestSettingValue<Bool> {
-        CrestSettingValue($tintsTitle, default: BrowserLookAndFeelDefaults.foldersTintTitle)
     }
 }

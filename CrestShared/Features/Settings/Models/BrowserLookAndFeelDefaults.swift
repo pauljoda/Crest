@@ -6,6 +6,8 @@ import Foundation
 /// so a default can no longer drift between the `@AppStorage` declaration that
 /// seeds a control and the migration code that seeds the store.
 enum BrowserLookAndFeelDefaults {
+    // MARK: - Static Variables
+
     static let windowBorderWidth = BrowserChromeAppearance.defaultBorderWidth
     static let sidebarOnRight = false
     static let surfaceMaterial = CrestSurfaceMaterial.standard
@@ -14,11 +16,13 @@ enum BrowserLookAndFeelDefaults {
     static let pinColumns = 0
     static let tabs = BrowserTabAppearance()
     static let address = BrowserAddressAppearance()
-    static let foldersAlwaysVisible = false
+    static let folderHighlights = BrowserFolderHighlightMode.expanded
     static let foldersShowTabCounts = true
     static let foldersShowBorders = true
     static let foldersIconOnly = false
     static let foldersTintTitle = false
+
+    // MARK: - Actions - Reset
 
     /// Puts every device-wide appearance choice this pane owns back.
     ///
@@ -43,7 +47,7 @@ enum BrowserLookAndFeelDefaults {
         density.set(tabScale, forKey: BrowserSidebarDensityPreference.scaleKey)
         density.set(pinColumns, forKey: BrowserSidebarDensityPreference.pinColumnsKey)
 
-        folders.set(foldersAlwaysVisible, forKey: BrowserFolderAppearancePreference.alwaysVisibleKey)
+        folders.set(folderHighlights.rawValue, forKey: BrowserFolderAppearancePreference.highlightModeKey)
         folders.set(foldersShowTabCounts, forKey: BrowserFolderAppearancePreference.showsTabCountsKey)
         folders.set(foldersShowBorders, forKey: BrowserFolderAppearancePreference.showsBordersKey)
         folders.set(foldersIconOnly, forKey: BrowserFolderAppearancePreference.iconOnlyKey)

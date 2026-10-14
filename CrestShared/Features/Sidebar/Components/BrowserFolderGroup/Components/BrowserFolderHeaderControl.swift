@@ -11,8 +11,8 @@ struct BrowserFolderHeaderControl: View {
     @Environment(\.browserInteractionCapabilities) private var capabilities
     @AppStorage(BrowserFolderAppearancePreference.showsTabCountsKey, store: BrowserFolderAppearancePreference.defaults)
     private var showsTabCounts = true
-    @AppStorage(BrowserFolderAppearancePreference.alwaysVisibleKey, store: BrowserFolderAppearancePreference.defaults)
-    private var alwaysVisible = false
+    @AppStorage(BrowserFolderAppearancePreference.highlightModeKey, store: BrowserFolderAppearancePreference.defaults)
+    private var highlightMode = BrowserFolderAppearancePreference.defaultHighlightMode
     @AppStorage(BrowserFolderAppearancePreference.tintsTitleKey, store: BrowserFolderAppearancePreference.defaults)
     private var tintsTitle = BrowserLookAndFeelDefaults.foldersTintTitle
     @AppStorage(BrowserSidebarDensityPreference.scaleKey, store: BrowserSidebarDensityPreference.defaults) private
@@ -63,7 +63,7 @@ struct BrowserFolderHeaderControl: View {
 
                         BrowserFolderHeaderTitle(
                             folder: folder, context: configuration.context, tintsTitle: tintsTitle,
-                            emphasizesShownTab: alwaysVisible
+                            emphasizesShownTab: highlightMode.showsHighlight(isExpanded: configuration.showsContents)
                         )
                         .equatable()
 
@@ -84,7 +84,7 @@ struct BrowserFolderHeaderControl: View {
 }
 
 /// The folder's title, in its color where the person asked for it, and bold
-/// while the folder holds the shown tab where every folder stays visible. It
+/// while the folder holds the shown tab and keeps its highlight visible. It
 /// reads the folder's tabs only for that emphasis, so the rest of the header
 /// redraws for neither.
 private struct BrowserFolderHeaderTitle: View, @MainActor Equatable {

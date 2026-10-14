@@ -4,11 +4,21 @@ import Foundation
 /// Space color strength travels separately with the existing branding payload.
 @MainActor
 enum BrowserFolderAppearancePreference {
+    // MARK: - Static Variables
+
     static let alwaysVisibleKey = "crest.folders.alwaysShowHighlights"
     static let showsTabCountsKey = "crest.folders.showsTabCounts"
     static let showsBordersKey = "crest.folders.showsBorders"
+    static let highlightModeKey = "crest.folders.highlightMode"
     static let iconOnlyKey = "crest.folders.iconOnly"
     static let tintsTitleKey = "crest.folders.tintsTitle"
+
+    static var defaultHighlightMode: BrowserFolderHighlightMode {
+        guard let legacy = defaults.object(forKey: alwaysVisibleKey) as? Bool else {
+            return BrowserLookAndFeelDefaults.folderHighlights
+        }
+        return legacy ? .all : .off
+    }
 
     static let defaults: UserDefaults = {
         let environment = BrowserLaunchEnvironment.current
