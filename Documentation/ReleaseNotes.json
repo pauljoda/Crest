@@ -4077,6 +4077,7 @@
     "find-close-returns-page-focus": {
       "category": "fixed",
       "message": "Closing find in page returns the keyboard to the page, including a page in Peek, so arrow keys and Space scroll right away."
-    }
+    },
+    "cross-space-link-tab-activation": {"category": "fixed", "message": "Opening a link in another Space keeps the new tab selected."}
   }
 }
