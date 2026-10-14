@@ -8,6 +8,7 @@ struct BrowserFolderSectionSurface: ViewModifier {
     var textColorMode: SpaceTextColorMode = .automatic
     /// How many folders hold this one.
     var depth = 0
+    var isExpanded = false
     var isSelected = false
     let folderID: UUID
     let reorder: BrowserSidebarReorderState
@@ -18,10 +19,12 @@ struct BrowserFolderSectionSurface: ViewModifier {
     private var tabScale = 1.0
     @State private var isHovered = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @AppStorage(BrowserFolderAppearancePreference.alwaysVisibleKey, store: BrowserFolderAppearancePreference.defaults)
-    private var alwaysVisible = false
+    @AppStorage(BrowserFolderAppearancePreference.highlightModeKey, store: BrowserFolderAppearancePreference.defaults)
+    private var highlightMode = BrowserFolderAppearancePreference.defaultHighlightMode
     @AppStorage(BrowserFolderAppearancePreference.showsBordersKey, store: BrowserFolderAppearancePreference.defaults)
     private var showsBorders = true
+
+    private var keepsHighlight: Bool { highlightMode.showsHighlight(isExpanded: isExpanded) }
 
     func body(content: Content) -> some View {
         content
@@ -32,10 +35,10 @@ struct BrowserFolderSectionSurface: ViewModifier {
                 BrowserFolderHighlightSurface(
                     color: color, intensity: intensity,
                     textColorMode: textColorMode,
-                    showsFill: alwaysVisible || previewShowsHighlight || isHovered || isSelected || isTargeted,
+                    showsFill: keepsHighlight || previewShowsHighlight || isHovered || isSelected || isTargeted,
                     showsBorders: showsBorders, depth: depth,
                     isSelected: isSelected,
-                    emphasisOpacity: alwaysVisible && (isHovered || isTargeted) ? (isTargeted ? 0.16 : 0.08) : 0)
+                    emphasisOpacity: keepsHighlight && (isHovered || isTargeted) ? (isTargeted ? 0.16 : 0.08) : 0)
             )
             .onHover { isHovered = $0 }
             .animation(
