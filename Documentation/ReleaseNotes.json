@@ -4082,6 +4082,10 @@
       "category": "fixed",
       "message": "A hidden sidebar that slides out at the window edge now hides again when the pointer moves on to another app."
     },
+    "sidebar-offscreen-page-resizing": {
+      "category": "fixed",
+      "message": "Showing and hiding the sidebar is smoother when several Spaces are open."
+    },
     "space-switch-keeps-sliding": {
       "category": "fixed",
       "message": "Switching Spaces again before the slide finishes keeps sliding toward the next Space instead of jumping to it."
