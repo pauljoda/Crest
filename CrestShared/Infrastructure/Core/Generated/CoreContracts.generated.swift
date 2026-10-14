@@ -1069,7 +1069,8 @@ struct AppPreferences: Equatable, Sendable {
             completesInline: true,
             learnsChoices: true,
             searchesSitesWithTab: true,
-            showsReasons: false
+            showsReasons: false,
+            providerSpaceTrigger: SearchProviderSpaceTrigger.prefixedShortcut
         )
     )
 
@@ -4494,7 +4495,8 @@ struct PalettePreferences: Equatable, Sendable {
         completesInline: true,
         learnsChoices: true,
         searchesSitesWithTab: true,
-        showsReasons: false
+        showsReasons: false,
+        providerSpaceTrigger: SearchProviderSpaceTrigger.prefixedShortcut
     )
 
     var layout: PaletteLayout
@@ -4505,6 +4507,7 @@ struct PalettePreferences: Equatable, Sendable {
     var learnsChoices: Bool
     var searchesSitesWithTab: Bool
     var showsReasons: Bool
+    var providerSpaceTrigger: SearchProviderSpaceTrigger
 }
 
 struct PaletteRow: Equatable, Sendable {
@@ -16794,6 +16797,90 @@ struct SearchProviderOption: Hashable, Sendable {
             self.choices = choices
             self.locales = locales
             self.namesRegions = namesRegions
+        }
+    }
+}
+
+/// The members of the core's `SearchProviderSpaceTrigger`. A member's wire tag is its index in `all`.
+struct SearchProviderSpaceTrigger: Hashable, Sendable {
+    let tag: Int
+    var name: String { facts.name }
+    var title: LocalizedStringResource { facts.title }
+    var example: LocalizedStringResource { facts.example }
+    var isEnabled: Bool { facts.isEnabled }
+    var requiresPrefix: Bool { facts.requiresPrefix }
+    private let facts: Facts
+
+    private init(
+        tag: Int,
+        name: String,
+        title: LocalizedStringResource,
+        example: LocalizedStringResource,
+        isEnabled: Bool,
+        requiresPrefix: Bool
+    ) {
+        self.tag = tag
+        facts = Facts(name: name, title: title, example: example, isEnabled: isEnabled, requiresPrefix: requiresPrefix)
+    }
+
+    static let off = SearchProviderSpaceTrigger(
+        tag: 0,
+        name: "off",
+        title: LocalizedStringResource("Off"),
+        example: LocalizedStringResource("Space keeps typing normally."),
+        isEnabled: false,
+        requiresPrefix: false
+    )
+    static let prefixedShortcut = SearchProviderSpaceTrigger(
+        tag: 1,
+        name: "prefixedShortcut",
+        title: LocalizedStringResource("Require $ before shortcut"),
+        example: LocalizedStringResource("Example: $yt, then Space"),
+        isEnabled: true,
+        requiresPrefix: true
+    )
+    static let shortcut = SearchProviderSpaceTrigger(
+        tag: 2,
+        name: "shortcut",
+        title: LocalizedStringResource("Shortcut without $"),
+        example: LocalizedStringResource("Example: yt, then Space"),
+        isEnabled: true,
+        requiresPrefix: false
+    )
+
+    static let all: [SearchProviderSpaceTrigger] = [off, prefixedShortcut, shortcut]
+
+    static func named(_ name: String?) -> SearchProviderSpaceTrigger? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: SearchProviderSpaceTrigger, rhs: SearchProviderSpaceTrigger) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+
+    private final class Facts: Sendable {
+        let name: String
+        let title: LocalizedStringResource
+        let example: LocalizedStringResource
+        let isEnabled: Bool
+        let requiresPrefix: Bool
+
+        init(
+            name: String,
+            title: LocalizedStringResource,
+            example: LocalizedStringResource,
+            isEnabled: Bool,
+            requiresPrefix: Bool
+        ) {
+            self.name = name
+            self.title = title
+            self.example = example
+            self.isEnabled = isEnabled
+            self.requiresPrefix = requiresPrefix
         }
     }
 }
