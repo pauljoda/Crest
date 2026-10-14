@@ -54,8 +54,12 @@ extension BrowserStore {
         selecting: Bool
     ) -> UUID? {
         guard !isDeleting(spaceID), spaceModel(spaceID) != nil else { return nil }
-        return openSessionTab(
-            .page(url), in: spaceID, insertingAfter: selectedTabID(in: spaceID), shouldSelect: selecting)
+        guard
+            let tabID = openSessionTab(
+                .page(url), in: spaceID, insertingAfter: selectedTabID(in: spaceID), shouldSelect: selecting)
+        else { return nil }
+        if !selecting { interactionObserver?.browserDidOpenBackgroundTab() }
+        return tabID
     }
 
     @discardableResult
@@ -291,38 +295,4 @@ extension BrowserStore {
             from: self, failure: "Core navigation failed")
     }
 
-}
-
-// MARK: - Residency
-
-extension BrowserStore {
-    @discardableResult
-    func setTabKeepsPageLoaded(
-        _ keepsPageLoaded: Bool,
-        for id: UUID,
-        in spaceID: UUID
-    ) -> Bool {
-        guard
-            setSessionTabResidency(
-                keepsPageLoaded,
-                tabID: id,
-                in: spaceID
-            )
-        else { return false }
-        return true
-    }
-
-    @discardableResult
-    func setTabKeepsPageLoaded(
-        _ keepsPageLoaded: Bool,
-        for id: UUID,
-        matching assignment: BrowserSpaceRuntimeAssignment
-    ) -> Bool {
-        guard spaceModel(matching: assignment)?.tabs.model(id) != nil else { return false }
-        return setTabKeepsPageLoaded(
-            keepsPageLoaded,
-            for: id,
-            in: assignment.spaceID
-        )
-    }
 }
