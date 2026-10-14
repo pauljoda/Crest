@@ -15253,6 +15253,39 @@
           }
         }
       }
+    },
+    "Tab selects a search provider" : {
+
+    },
+    "When off, Tab cycles suggestions." : {
+
+    },
+    "Space selects a provider" : {
+
+    },
+    "Space keeps typing normally." : {
+
+    },
+    "Require $ before shortcut" : {
+
+    },
+    "Example: $yt, then Space" : {
+
+    },
+    "Shortcut without $" : {
+
+    },
+    "Example: yt, then Space" : {
+
+    },
+    "Right Arrow" : {
+
+    },
+    "Accept URL completion (Right Arrow)" : {
+
+    },
+    "Fills the address without opening it. Press Right Arrow to accept." : {
+
     }
   },
   "version" : "1.3"

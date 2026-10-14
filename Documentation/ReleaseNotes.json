@@ -4078,6 +4078,7 @@
       "category": "fixed",
       "message": "Closing find in page returns the keyboard to the page, including a page in Peek, so arrow keys and Space scroll right away."
     },
-    "independent-search-provider-triggers": {"category": "improved", "message": "Choose separately whether Tab selects search providers and whether Space requires a $ before their shortcut."}
+    "independent-search-provider-triggers": {"category": "improved", "message": "Choose separately whether Tab selects search providers and whether Space requires a $ before their shortcut."},
+    "search-provider-trigger-localization": {"category": "internal", "message": "Search trigger controls and keyboard hints are included in the localization catalog."}
   }
 }
