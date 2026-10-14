@@ -4065,6 +4065,7 @@
     "background-launch-for-connected-tools": {
       "category": "fixed",
       "message": "Connected tools can start Crest in the background without taking focus."
+    },
     "site-controls-extension-menu-stays-open": {
       "category": "fixed",
       "message": "Right-clicking an extension in Site Controls shows its menu without closing Site Controls."
