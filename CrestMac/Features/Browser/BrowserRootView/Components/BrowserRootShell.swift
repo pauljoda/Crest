@@ -144,6 +144,7 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
                     space: model.browser.shownSpace,
                     reduceTransparency: reduceTransparency,
                     spaces: model.browser.availableSpaces,
+                    isRevealedByPointer: model.isFloatingSidebarRevealedByPointer,
                     hoverChanged: {
                         model.sidebarSurfaceHoverChanged(
                             $0,

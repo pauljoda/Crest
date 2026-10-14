@@ -23,6 +23,19 @@ final class BrowserSidebarHoverTrackingView: NSView {
     // MARK: - Variables
 
     var onHoverChange: @MainActor @Sendable (Bool) -> Void
+    /// Whether the pointer brought the sidebar out by reaching the window
+    /// edge, so it was already on its way in before the region slid under it.
+    ///
+    /// Each such reveal starts a new hover. The pointer can touch the edge
+    /// again while the sidebar it just left is still sliding away, and the
+    /// same region comes back with the exit it already reported; leaving
+    /// again would repeat that report and never reach the sidebar.
+    var isRevealedByPointer = false {
+        didSet {
+            guard isRevealedByPointer, !oldValue else { return }
+            lastReportedHover = nil
+        }
+    }
 
     private let notificationCenter: NotificationCenter
     private let pointerLocation: @MainActor () -> NSPoint
@@ -39,6 +52,15 @@ final class BrowserSidebarHoverTrackingView: NSView {
         guard let window, window.isKeyWindow, !isHiddenOrHasHiddenAncestor else { return false }
         let location = convert(window.convertPoint(fromScreen: pointerLocation()), from: nil)
         return trackedRect.contains(location)
+    }
+
+    /// Whether the pointer that revealed the sidebar has gone somewhere a
+    /// slide-in cannot explain: out of the window, or into another app. It
+    /// can get there before the region first reports it inside, and nothing
+    /// in the region reports an exit it never saw an entry for.
+    private var hasRevealingPointerLeft: Bool {
+        guard isRevealedByPointer, let window else { return false }
+        return !window.isKeyWindow || !window.frame.contains(pointerLocation())
     }
 
     private var isHeldOpen: Bool {
@@ -153,8 +175,9 @@ final class BrowserSidebarHoverTrackingView: NSView {
         releaseWindowsNoLongerShown()
         let isHovering = isPointerInside || (lastReportedHover == true && isHeldOpen)
         // A newly revealed sidebar starts offscreen while it slides in.
-        // Absence before its first entry is not a pointer exit.
-        guard isHovering || lastReportedHover != nil else { return }
+        // Absence before its first entry is not a pointer exit, unless the
+        // pointer that revealed it has already left the window.
+        guard isHovering || lastReportedHover != nil || hasRevealingPointerLeft else { return }
         guard isHovering != lastReportedHover else { return }
         lastReportedHover = isHovering
         onHoverChange(isHovering)

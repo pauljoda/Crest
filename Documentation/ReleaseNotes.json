@@ -4077,6 +4077,10 @@
     "find-close-returns-page-focus": {
       "category": "fixed",
       "message": "Closing find in page returns the keyboard to the page, including a page in Peek, so arrow keys and Space scroll right away."
+    },
+    "sidebar-hides-when-pointer-leaves-window": {
+      "category": "fixed",
+      "message": "A hidden sidebar that slides out at the window edge now hides again when the pointer moves on to another app."
     }
   }
 }
