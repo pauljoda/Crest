@@ -4069,6 +4069,7 @@
     "agent-history-deletion-and-durable-page-close": {
       "category": "improved",
       "message": "Approved tools can delete an address from a chosen Space’s history and close saved or pinned pages while keeping their sidebar entries."
+    },
     "site-controls-extension-menu-stays-open": {
       "category": "fixed",
       "message": "Right-clicking an extension in Site Controls shows its menu without closing Site Controls."
