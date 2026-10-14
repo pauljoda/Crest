@@ -4078,6 +4078,7 @@
       "category": "fixed",
       "message": "Closing find in page returns the keyboard to the page, including a page in Peek, so arrow keys and Space scroll right away."
     },
-    "background-link-opening-notice": {"category": "improved", "message": "Opening a link in a background tab now confirms it in the window’s notice capsule."}
+    "background-link-opening-notice": {"category": "improved", "message": "Opening a link in a background tab now confirms it in the window’s notice capsule."},
+    "background-link-notice-localization": {"category": "internal", "message": "The background tab confirmation is included in the localization catalog."}
   }
 }
