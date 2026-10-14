@@ -493,6 +493,13 @@ extension BrowserRootModel {
         dismissFloatingSidebarIfInteractionAllows(reduceMotion: reduceMotion)
     }
 
+    /// A command can put the floating sidebar away without going through
+    /// `dismissFloatingSidebar`, and whatever revealed it last no longer applies.
+    func floatingSidebarPresentationChanged() {
+        guard !isFloatingSidebarPresented else { return }
+        isFloatingSidebarRevealedByPointer = false
+    }
+
     func columnVisibilityChanged(reduceMotion: Bool) {
         guard chrome.columnVisibility != .detailOnly else {
             chrome.utilityPresentation.dismiss()

@@ -68,7 +68,6 @@ struct BrowserSidebarSpacePage: View {
         return utilityPresentation.consumeSearchFocusRequest(request, for: surface)
     }
 
-    /// Resolves cached page ownership into live presentation and callbacks for its Space.
     private func content(for space: SpaceModel) -> some View {
         let isLocked = spaceAccess.isLocked(space)
         // These callbacks use the page and their action owners, independently

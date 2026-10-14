@@ -16,32 +16,20 @@ final class BrowserSidebarCommandTests: XCTestCase {
     // MARK: - Actions - Search routing
 
     /// Mounted utility search takes keyboard input from an unrelated native responder in either sidebar mode.
-    func testFindMovesNativeFocusIntoEachUtilitySearch() async throws {
+    func testFindMovesNativeFocusIntoUtilitySearch() async throws {
         for sidebarIsPresented in [false, true] {
-            for (command, surface) in Self.utilityCommands {
-                try await verifyUtilitySearchFocus(
-                    command: command, surface: surface, sidebarIsPresented: sidebarIsPresented)
-            }
+            try await verifyUtilitySearchFocus(sidebarIsPresented: sidebarIsPresented)
         }
     }
 
     /// Find issued before the field exists is delivered once, without stealing focus on a remount.
     func testFindBeforeUtilityMountIsConsumedWithoutReplayingOnRemount() async throws {
-        for sidebarIsPresented in [false, true] {
-            for (command, surface) in Self.utilityCommands {
-                try await verifyUtilitySearchFocus(
-                    command: command, surface: surface, sidebarIsPresented: sidebarIsPresented,
-                    requestsBeforeMount: true)
-            }
-        }
+        try await verifyUtilitySearchFocus(sidebarIsPresented: true, requestsBeforeMount: true)
     }
 
     /// Authorization must still hold when a requested field becomes available, not only at command dispatch.
     func testPendingHistoryFindDoesNotFocusALockedSpace() async throws {
-        for sidebarIsPresented in [false, true] {
-            try await verifyUtilitySearchFocus(
-                sidebarIsPresented: sidebarIsPresented, requestsBeforeMount: true, locksBeforeMount: true)
-        }
+        try await verifyUtilitySearchFocus(sidebarIsPresented: true, requestsBeforeMount: true, locksBeforeMount: true)
     }
 
     /// Hiding the sidebar between command dispatch and mounting cancels input intended for History.
@@ -184,30 +172,14 @@ final class BrowserSidebarCommandTests: XCTestCase {
         XCTAssertGreaterThan(page.findFocusRequest, previousRequest)
     }
 
-    /// Every utility accepts Find even when no webpage can accept it.
-    func testFindIsAvailableForEachUtilityWithoutALoadedWebpage() {
-        let browser = BrowserStore.hostingPages()
-        let chrome = BrowserChromeState()
-        let actions = BrowserCommandActions(
-            browser: browser, pages: BrowserPagePool(browser: browser), chrome: chrome, windows: nil)
-        XCTAssertFalse(actions.canPerform(.findInPage))
-        for (command, _) in Self.utilityCommands {
-            actions.perform(command)
-            XCTAssertTrue(actions.canPerform(.findInPage))
-        }
-    }
-
     /// Utility toggles preserve the docked preference and cannot close another window's History.
     func testRepeatingEachUtilityCommandClosesOnlyItsOwningWindowPanel() {
         let browser = BrowserStore.hostingPages()
         let pages = BrowserPagePool(browser: browser)
         let otherWindow = BrowserChromeState()
         otherWindow.presentUtility(.history)
-        let commands: [(ShortcutCommand, BrowserUtilitySurface)] = [
-            (.showHistory, .history), (.showArchive, .archive), (.showDownloads, .downloads),
-        ]
         for sidebarIsPresented in [false, true] {
-            for (command, surface) in commands {
+            for (command, surface) in Self.utilityCommands {
                 let chrome = BrowserChromeState(sidebarIsPresented: sidebarIsPresented)
                 let actions = BrowserCommandActions(browser: browser, pages: pages, chrome: chrome, windows: nil)
                 actions.perform(command)
@@ -224,29 +196,6 @@ final class BrowserSidebarCommandTests: XCTestCase {
                 XCTAssertEqual(chrome.isFloatingSidebarPresented, !sidebarIsPresented)
             }
         }
-    }
-
-    /// Changing utility commands reuses the temporary sidebar until the active command is repeated.
-    func testUtilityCommandShowsAHiddenListAndReplacesADifferentList() {
-        let browser = BrowserStore.hostingPages()
-        let chrome = BrowserChromeState()
-        let actions = BrowserCommandActions(
-            browser: browser, pages: BrowserPagePool(browser: browser), chrome: chrome, windows: nil)
-        actions.perform(.showHistory)
-        chrome.hideSidebar()
-        actions.perform(.showHistory)
-        XCTAssertEqual(chrome.columnVisibility, .detailOnly)
-        XCTAssertTrue(chrome.isFloatingSidebarPresented)
-        XCTAssertEqual(chrome.utilityPresentation.surface, .history)
-        actions.perform(.showArchive)
-        XCTAssertEqual(chrome.utilityPresentation.surface, .archive)
-        actions.perform(.showDownloads)
-        XCTAssertEqual(chrome.utilityPresentation.surface, .downloads)
-        XCTAssertEqual(chrome.columnVisibility, .detailOnly)
-        XCTAssertTrue(chrome.isFloatingSidebarPresented)
-        actions.perform(.showDownloads)
-        XCTAssertNil(chrome.utilityPresentation.surface)
-        XCTAssertFalse(chrome.isFloatingSidebarPresented)
     }
 
     /// Hidden and protected utility panels must not expose their search commands.

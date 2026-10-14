@@ -36,7 +36,6 @@ final class BrowserUtilityPresentationState {
     @ObservationIgnored private let persistenceKey: String
     @ObservationIgnored private var lastSelectedSurface = BrowserUtilitySurface.archive
 
-    /// Restores the last utility selection without reopening a surface or restoring keyboard focus.
     init(
         defaults: UserDefaults? = nil,
         persistenceKey: String = selectedSurfaceDefaultsKey

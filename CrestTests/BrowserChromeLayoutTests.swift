@@ -368,8 +368,8 @@ final class BrowserChromeLayoutTests: XCTestCase {
         XCTAssertNil(firstWindow.utilityPresentation.surface)
     }
 
-    @MainActor
     /// Commands reveal their list without overriding the owning window's docked-sidebar preference.
+    @MainActor
     func testShowListCommandsBringTheirListOnScreen() {
         let browser = BrowserStore.hostingPages()
         let pages = BrowserPagePool(browser: browser)

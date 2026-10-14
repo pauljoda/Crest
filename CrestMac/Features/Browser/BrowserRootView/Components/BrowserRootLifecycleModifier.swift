@@ -156,6 +156,9 @@ private struct BrowserRootChromeObserver: ViewModifier {
             .onChange(of: model.chrome.columnVisibility) {
                 model.columnVisibilityChanged(reduceMotion: reduceMotion)
             }
+            .onChange(of: model.chrome.isFloatingSidebarPresented) {
+                model.floatingSidebarPresentationChanged()
+            }
             .onChange(of: model.lockedSpaceIDs, initial: true) { _, spaceIDs in
                 model.relockProtectedSpaces(spaceIDs)
             }
