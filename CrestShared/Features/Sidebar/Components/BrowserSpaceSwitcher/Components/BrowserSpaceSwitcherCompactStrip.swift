@@ -16,6 +16,7 @@ struct BrowserSpaceSwitcherCompactStrip: View {
     let selectedSpaceID: UUID
     let reorderState: BrowserSidebarReorderState
     let metrics: BrowserSpacePickerMetrics
+    let style: CrestSpaceIconPickerStyle
     let selectSpace: (UUID) -> Void
     let accessories: BrowserSpaceSwitcherAccessories
     let downloads: BrowserSpaceSwitcherDownloads
@@ -34,7 +35,8 @@ struct BrowserSpaceSwitcherCompactStrip: View {
                 availableWidth: geometry.size.width,
                 spaceCount: spaces.count,
                 leadingUtilityWidth: utilityWidth(at: .leading),
-                trailingUtilityWidth: utilityWidth(at: .trailing)
+                trailingUtilityWidth: utilityWidth(at: .trailing),
+                segmentWidth: style.minimumSegmentWidth
             )
 
             ZStack {
@@ -62,7 +64,8 @@ struct BrowserSpaceSwitcherCompactStrip: View {
                     reorderState: reorderState,
                     metrics: metrics,
                     selectSpace: selectSpace,
-                    allocation: allocation
+                    allocation: allocation,
+                    style: style
                 )
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)

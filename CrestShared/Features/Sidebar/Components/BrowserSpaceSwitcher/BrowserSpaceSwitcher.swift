@@ -9,7 +9,11 @@ import SwiftUI
 /// choose, and two shared arrangements underneath
 /// it. Accessories are inputs the scrolling arrangement simply ignores.
 struct BrowserSpaceSwitcher: View {
+    // MARK: - Variables
+
     @Environment(BrowserSidebarInteractionState.self) private var sidebarInteraction
+    @AppStorage(BrowserSidebarDensityPreference.spaceIconScaleKey, store: BrowserSidebarDensityPreference.defaults)
+    private var spaceIconScale = BrowserLookAndFeelDefaults.spaceIconScale
 
     let browser: BrowserStore
 
@@ -21,6 +25,8 @@ struct BrowserSpaceSwitcher: View {
     let selectSpace: (UUID) -> Void
     var accessories = BrowserSpaceSwitcherAccessories()
 
+    // MARK: - Actions - Drawing
+
     var body: some View {
         switch capabilities.spaceSwitcherArrangement {
         case .compactStrip:
@@ -29,6 +35,7 @@ struct BrowserSpaceSwitcher: View {
                 selectedSpaceID: selectedSpaceID,
                 reorderState: sidebarInteraction.sidebarReorderState,
                 metrics: metrics,
+                style: CrestSpaceIconPickerStyle.compact.scaled(by: iconScale),
                 selectSpace: selectSpace,
                 accessories: accessories,
                 downloads: downloads
@@ -39,6 +46,7 @@ struct BrowserSpaceSwitcher: View {
                 selectedSpaceID: selectedSpaceID,
                 reorderState: sidebarInteraction.sidebarReorderState,
                 metrics: metrics,
+                style: CrestSpaceIconPickerStyle.touch.scaled(by: iconScale),
                 selectSpace: selectSpace
             )
         }
@@ -66,6 +74,12 @@ struct BrowserSpaceSwitcher: View {
     }
 
     private var metrics: BrowserSpacePickerMetrics {
-        capabilities.spacePickerMetrics
+        capabilities.spacePickerMetrics.scaled(by: iconScale)
+    }
+
+    /// The person's Space icon size. Segments follow the crest, so a smaller
+    /// size fits more Spaces before the strip has to scroll.
+    private var iconScale: CGFloat {
+        BrowserSpacePickerMetrics.scale(spaceIconScale)
     }
 }

@@ -4129,6 +4129,10 @@
     "page-commands-follow-quick-window": {
       "category": "fixed",
       "message": "Back, Reload, Find, Zoom, Copy Page Link, Print and the other page commands work in a Quick Window."
+    },
+    "space-icon-size-setting": {
+      "category": "new",
+      "message": "Resize the sidebar’s Space icons with a slider in Appearance settings, so more Spaces fit without scrolling."
     }
   }
 }

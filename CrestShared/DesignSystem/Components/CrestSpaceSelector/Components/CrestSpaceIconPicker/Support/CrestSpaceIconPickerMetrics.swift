@@ -25,11 +25,11 @@ struct CrestSpaceIconPickerStyle: Hashable, Sendable {
         overflowButtonWidth: CrestSpaceIconPickerMetrics.overflowButtonWidth, showsDividers: true,
         fillsSegments: false, trackFillOpacity: CrestSpaceIconPickerMetrics.trackFillOpacity,
         trackBorderOpacity: CrestSpaceIconPickerMetrics.trackBorderOpacity, tintsSelection: true,
-        selectionFillOpacity: CrestSpaceIconPickerMetrics.selectionFillOpacity)
+        selectionFillOpacity: CrestSpaceIconPickerMetrics.selectionFillOpacity, shrinksWithCrest: true)
     static let touch = CrestSpaceIconPickerStyle(
         name: "touch", height: 48, fixedCornerRadius: nil, minimumSegmentWidth: 52, dividerWidth: 0,
         overflowButtonWidth: 44, showsDividers: false, fillsSegments: true, trackFillOpacity: 0.08,
-        trackBorderOpacity: 0, tintsSelection: false, selectionFillOpacity: 0.22)
+        trackBorderOpacity: 0, tintsSelection: false, selectionFillOpacity: 0.22, shrinksWithCrest: false)
 
     // MARK: - Variables
 
@@ -59,12 +59,17 @@ struct CrestSpaceIconPickerStyle: Hashable, Sendable {
 
     let selectionFillOpacity: Double
 
+    /// Whether segments shrink with a smaller crest. Touch keeps its segments
+    /// at full size so each Space stays a target a finger can hit.
+    let shrinksWithCrest: Bool
+
     // MARK: - Initializers
 
     private init(
         name: String, height: CGFloat, fixedCornerRadius: CGFloat?, minimumSegmentWidth: CGFloat,
         dividerWidth: CGFloat, overflowButtonWidth: CGFloat, showsDividers: Bool, fillsSegments: Bool,
-        trackFillOpacity: Double, trackBorderOpacity: Double, tintsSelection: Bool, selectionFillOpacity: Double
+        trackFillOpacity: Double, trackBorderOpacity: Double, tintsSelection: Bool, selectionFillOpacity: Double,
+        shrinksWithCrest: Bool
     ) {
         self.name = name
         self.height = height
@@ -78,6 +83,7 @@ struct CrestSpaceIconPickerStyle: Hashable, Sendable {
         self.trackBorderOpacity = trackBorderOpacity
         self.tintsSelection = tintsSelection
         self.selectionFillOpacity = selectionFillOpacity
+        self.shrinksWithCrest = shrinksWithCrest
     }
 
     // MARK: - Actions - Drawing
@@ -89,13 +95,33 @@ struct CrestSpaceIconPickerStyle: Hashable, Sendable {
         fixedCornerRadius ?? height / 2
     }
 
+    // MARK: - Actions - Sizing
+
+    /// This style with segments sized for a crest drawn `scale` times its usual
+    /// size. Segments always grow to hold a larger crest; they shrink with a
+    /// smaller one only where `shrinksWithCrest`, so more Spaces fit across a
+    /// pointer track while touch segments never fall below their own size.
+    func scaled(by scale: CGFloat) -> CrestSpaceIconPickerStyle {
+        let padding = CrestSpaceIconPickerMetrics.trackPadding
+        let factor = shrinksWithCrest ? scale : max(1, scale)
+        return CrestSpaceIconPickerStyle(
+            name: name, height: (height - 2 * padding) * factor + 2 * padding,
+            fixedCornerRadius: fixedCornerRadius, minimumSegmentWidth: minimumSegmentWidth * factor,
+            dividerWidth: dividerWidth, overflowButtonWidth: overflowButtonWidth, showsDividers: showsDividers,
+            fillsSegments: fillsSegments, trackFillOpacity: trackFillOpacity, trackBorderOpacity: trackBorderOpacity,
+            tintsSelection: tintsSelection, selectionFillOpacity: selectionFillOpacity,
+            shrinksWithCrest: shrinksWithCrest)
+    }
+
     // MARK: - Actions - Identity
 
     static func == (lhs: CrestSpaceIconPickerStyle, rhs: CrestSpaceIconPickerStyle) -> Bool {
-        lhs.name == rhs.name
+        lhs.name == rhs.name && lhs.height == rhs.height && lhs.minimumSegmentWidth == rhs.minimumSegmentWidth
     }
 
     func hash(into hasher: inout Hasher) {
         hasher.combine(name)
+        hasher.combine(height)
+        hasher.combine(minimumSegmentWidth)
     }
 }

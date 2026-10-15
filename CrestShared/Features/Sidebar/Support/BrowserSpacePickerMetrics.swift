@@ -8,15 +8,10 @@ import CoreGraphics
 /// a finger needs a larger one with clearance around it before the
 /// neighbouring Space becomes a misfire.
 struct BrowserSpacePickerMetrics: Equatable, Sendable {
-    /// The square the Space's crest is drawn into.
-    let iconSize: CGFloat
+    // MARK: - Static Variables
 
-    /// The badge drawn on a private Space's crest. It travels with the crest
-    /// rather than being fixed, so the two scale together.
-    let lockSize: CGFloat
-
-    /// The clearance around the crest inside its segment.
-    let iconPadding: CGFloat
+    /// How far the person's Space icon size can shrink or grow the crest.
+    static let scaleRange: ClosedRange<Double> = 0.5...1.5
 
     /// A pointer shell: a small crest that fills the compact picker's segment
     /// on its own.
@@ -33,4 +28,34 @@ struct BrowserSpacePickerMetrics: Equatable, Sendable {
         lockSize: 7,
         iconPadding: 4
     )
+
+    // MARK: - Variables
+
+    /// The square the Space's crest is drawn into.
+    let iconSize: CGFloat
+
+    /// The badge drawn on a private Space's crest. It travels with the crest
+    /// rather than being fixed, so the two scale together.
+    let lockSize: CGFloat
+
+    /// The clearance around the crest inside its segment.
+    let iconPadding: CGFloat
+
+    // MARK: - Actions - Sizing
+
+    /// A stored Space icon size held to `scaleRange`, or 1 when it is not a
+    /// number.
+    static func scale(_ value: Double) -> CGFloat {
+        value.isFinite ? CGFloat(min(max(value, scaleRange.lowerBound), scaleRange.upperBound)) : 1
+    }
+
+    /// These metrics with the crest, its badge and its clearance drawn `scale`
+    /// times their usual size.
+    func scaled(by scale: CGFloat) -> BrowserSpacePickerMetrics {
+        BrowserSpacePickerMetrics(
+            iconSize: iconSize * scale,
+            lockSize: lockSize * scale,
+            iconPadding: iconPadding * scale
+        )
+    }
 }

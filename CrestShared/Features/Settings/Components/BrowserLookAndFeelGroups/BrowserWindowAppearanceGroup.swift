@@ -1,12 +1,15 @@
 import SwiftUI
 
 /// The window's frame: how much of the Space shows around a page, which side
-/// the sidebar sits on, and the accent its tabs and address field wear.
+/// the sidebar sits on, how large its Space icons are, and the accent its tabs
+/// and address field wear.
 ///
 /// The desktop hands in the choices only it has — focused-window transparency
 /// and Space page motion — as extra rows and the settings that go with them, so
 /// the group's own Reset covers them too.
 struct BrowserWindowAppearanceGroup<Extra: View>: View {
+    // MARK: - Variables
+
     var space: BrowserSpaceAppearance?
     var showsPreview = false
     var extraSettings: [CrestResettableSetting] = []
@@ -16,7 +19,11 @@ struct BrowserWindowAppearanceGroup<Extra: View>: View {
     private var borderWidth = BrowserLookAndFeelDefaults.windowBorderWidth
     @AppStorage(BrowserChromeAppearancePreference.sidebarOnRightKey, store: BrowserChromeAppearancePreference.defaults)
     private var sidebarOnRight = BrowserLookAndFeelDefaults.sidebarOnRight
+    @AppStorage(BrowserSidebarDensityPreference.spaceIconScaleKey, store: BrowserSidebarDensityPreference.defaults)
+    private var spaceIconScale = BrowserLookAndFeelDefaults.spaceIconScale
     @Bindable private var appearance = BrowserDeviceAppearanceStore.shared
+
+    // MARK: - Actions - Drawing
 
     var body: some View {
         CrestSettingsGroup(
@@ -49,6 +56,13 @@ struct BrowserWindowAppearanceGroup<Extra: View>: View {
                     .labelsHidden()
                     .accessibilityIdentifier("sidebar-on-right")
             }
+            CrestSettingSlider(
+                "Space icon size",
+                value: spaceIcons,
+                range: BrowserSpacePickerMetrics.scaleRange,
+                step: 0.05,
+                identifier: "space-icon-size"
+            )
             BrowserAppearanceAccentRow(
                 color: accent,
                 fallback: space?.branding.primaryColor ?? .indigo,
@@ -57,6 +71,8 @@ struct BrowserWindowAppearanceGroup<Extra: View>: View {
             extraRows()
         }
     }
+
+    // MARK: - Actions - Settings
 
     private var border: CrestSettingValue<Double> {
         CrestSettingValue($borderWidth, default: BrowserLookAndFeelDefaults.windowBorderWidth)
@@ -77,6 +93,10 @@ struct BrowserWindowAppearanceGroup<Extra: View>: View {
         CrestSettingValue($sidebarOnRight, default: BrowserLookAndFeelDefaults.sidebarOnRight)
     }
 
+    private var spaceIcons: CrestSettingValue<Double> {
+        CrestSettingValue($spaceIconScale, default: BrowserLookAndFeelDefaults.spaceIconScale)
+    }
+
     /// One accent for the selected tabs, pins and the address field, which
     /// keep their own stored colors.
     private var accent: CrestSettingValue<BrandColor?> {
@@ -94,7 +114,7 @@ struct BrowserWindowAppearanceGroup<Extra: View>: View {
     private var settings: [CrestResettableSetting] {
         [
             border.resettable("Window border"), material.resettable("Material"),
-            sidebar.resettable("Sidebar on right"),
+            sidebar.resettable("Sidebar on right"), spaceIcons.resettable("Space icon size"),
             accent.resettable("Follow Space accent"),
         ] + extraSettings
     }

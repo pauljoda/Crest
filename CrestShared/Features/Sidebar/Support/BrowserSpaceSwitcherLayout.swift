@@ -39,7 +39,8 @@ enum BrowserSpaceSwitcherLayout {
         availableWidth: CGFloat,
         spaceCount: Int,
         leadingUtilityWidth: CGFloat,
-        trailingUtilityWidth: CGFloat
+        trailingUtilityWidth: CGFloat,
+        segmentWidth: CGFloat = BrowserSpaceSwitcherLayout.segmentWidth
     ) -> BrowserSpaceSwitcherCompactAllocation {
         let width = max(0, availableWidth)
         let leadingWidth = max(0, leadingUtilityWidth)
@@ -59,7 +60,8 @@ enum BrowserSpaceSwitcherLayout {
         return BrowserSpaceSwitcherCompactAllocation(
             pickerViewportWidth: pickerViewportWidth,
             pickerContentWidth: compactPickerContentWidth(
-                spaceCount: spaceCount
+                spaceCount: spaceCount,
+                segmentWidth: segmentWidth
             )
         )
     }
@@ -81,7 +83,7 @@ enum BrowserSpaceSwitcherLayout {
         width > 0 ? width + compactStripSpacing : 0
     }
 
-    private static func compactPickerContentWidth(spaceCount: Int) -> CGFloat {
+    private static func compactPickerContentWidth(spaceCount: Int, segmentWidth: CGFloat) -> CGFloat {
         let count = max(0, spaceCount)
         guard count > 0 else { return 0 }
         return 2 * CrestSpaceIconPickerMetrics.trackPadding
