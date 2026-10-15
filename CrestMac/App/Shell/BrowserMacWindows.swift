@@ -29,6 +29,7 @@ final class BrowserMacWindows {
     private struct QuickWindow {
         let model: BrowserQuickWindowModel
         let request: QuickRequest
+        /// The window's own notices, such as a copied link's.
         let chrome: BrowserChromeState
     }
 
@@ -86,16 +87,8 @@ final class BrowserMacWindows {
         return application.windowCoordinator.existingModel(for: key.windowID)
     }
 
-    /// The stores of the key window, when it is a browser, a Quick Window or the private window.
+    /// The stores of the key window, when it is a browser or the private window.
     var activeContext: BrowserMacWindowContext? {
-        if let key = controller(showing: NSApp.keyWindow), key.kind == .quick,
-            let quick = quickWindows[key.windowID],
-            let pages = quick.model.pages
-        {
-            return BrowserMacWindowContext(
-                browser: quick.model.browser, pages: pages, chrome: quick.chrome,
-                windowID: quick.request.value.targetWindowID ?? key.windowID)
-        }
         if controller(showing: NSApp.keyWindow)?.kind == .private {
             return BrowserMacWindowContext(
                 browser: application.privateBrowser, pages: application.privatePages,
@@ -112,15 +105,22 @@ final class BrowserMacWindows {
             spaceAccess: application.spaceAccess, targetWindowID: context.windowID)
     }
 
+    /// The page commands as they run in the key Quick Window, on the page it
+    /// shows; nil while no Quick Window with a page is key.
+    var activeQuickWindowActions: BrowserCommandActions? {
+        guard let key = controller(showing: NSApp.keyWindow), key.kind == .quick,
+            let quickWindow = quickWindows[key.windowID], let pages = quickWindow.model.pages,
+            let page = quickWindow.model.page
+        else { return nil }
+        return BrowserCommandActions(
+            browser: quickWindow.model.browser, pages: pages, chrome: quickWindow.chrome, windows: self,
+            spaceAccess: application.spaceAccess, targetWindowID: quickWindow.request.value.targetWindowID,
+            quickWindowPage: page)
+    }
+
     /// Whether the key window is a Quick Window.
     var isQuickWindowKey: Bool {
         controller(showing: NSApp.keyWindow)?.kind == .quick
-    }
-
-    /// The active Quick Window's page, if a Quick Window is key.
-    var activeQuickWindowPage: BrowserPage? {
-        guard let key = controller(showing: NSApp.keyWindow), key.kind == .quick else { return nil }
-        return quickWindows[key.windowID]?.model.page
     }
 
     /// Whether the key window is one the shell opened, which the menu bar's
@@ -182,14 +182,7 @@ final class BrowserMacWindows {
     /// person used, brought forward; else a new browser window. A Quick Window
     /// or setup being key never opens another window for the command.
     func contextBringingBrowserWindowForward() -> BrowserMacWindowContext? {
-        if controller(showing: NSApp.keyWindow)?.kind == .private {
-            return BrowserMacWindowContext(
-                browser: application.privateBrowser, pages: application.privatePages,
-                chrome: application.privateChrome, windowID: application.privatePages.windowID)
-        }
-        if let model = activeWindowModel {
-            return Self.context(of: model)
-        }
+        if let context = activeContext { return context }
         let coordinator = application.windowCoordinator
         if let window = activeBrowserWindow, let controller = controller(showing: window),
             let model = coordinator.existingModel(for: controller.windowID)
@@ -326,12 +319,6 @@ final class BrowserMacWindows {
             }
             return
         }
-        context.pages.isQuickWindowInFront = { [weak self] in
-            self?.isQuickWindowKey == true
-        }
-        context.pages.activeQuickWindowPage = { [weak self] in
-            self?.activeQuickWindowPage
-        }
         let current = QuickRequest(request)
         let model = BrowserQuickWindowModel(
             request: request, browser: context.browser, pages: context.pages, spaceAccess: application.spaceAccess,
@@ -344,8 +331,9 @@ final class BrowserMacWindows {
                     current.value = revised
                     return true
                 }))
-        quickWindows[request.id] = QuickWindow(
+        let quickWindow = QuickWindow(
             model: model, request: current, chrome: BrowserChromeState(sidebarIsPresented: false))
+        quickWindows[request.id] = quickWindow
         show(
             .quick, id: request.id, closeGate: model.closeGate,
             content: { window in
@@ -361,6 +349,7 @@ final class BrowserMacWindows {
                         open(.normal(sourceWindowID: request.targetWindowID), activation: .key)
                     }
                 )
+                .overlay { BrowserNoticeLayer(chrome: quickWindow.chrome) }
                 .modifier(BrowserChromeAppearancePersistence())
                 .environment(application.softwareUpdates)
                 .modifier(QuickWindowTitle(model: model, request: current, window: window))
@@ -387,13 +376,7 @@ final class BrowserMacWindows {
 
     private func quickWindowClosed(_ controller: BrowserMacWindowController) {
         forget(controller)
-        if let quick = quickWindows.removeValue(forKey: controller.windowID) {
-            quick.model.releaseForDismissal()
-            if !quickWindows.values.contains(where: { $0.model.pages === quick.model.pages }) {
-                quick.model.pages?.isQuickWindowInFront = nil
-                quick.model.pages?.activeQuickWindowPage = nil
-            }
-        }
+        quickWindows.removeValue(forKey: controller.windowID)?.model.releaseForDismissal()
         engineHost.windowClosed(controller.windowID, releasingProfiles: [])
     }
 

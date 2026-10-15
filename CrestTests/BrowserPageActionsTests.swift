@@ -218,91 +218,32 @@ final class BrowserPageActionsTests: XCTestCase {
         XCTAssertFalse(pool.activePage === secondPage)
     }
 
-    func testCommandPageActsOnActiveQuickWindowWhenInFront() throws {
-        let first = TabState.Seed(
-            title: "First",
-            url: URL(string: "about:blank"),
-            placement: .current
-        )
-        let space = makeSpace(tabs: [first])
-        let pool = BrowserPagePool(
-            browser: .hostingPages(SessionState.Seed(spaces: [space]))
-        )
-        pool.present(tab: first.id, in: space.id)
-        let tabPage = try XCTUnwrap(pool.activePage)
-        XCTAssertTrue(pool.commandPage === tabPage)
-
-        let lease = try XCTUnwrap(
-            pool.makeTransientPageLease(
-                url: try XCTUnwrap(URL(string: "about:blank#quick")),
-                in: try XCTUnwrap(pool.browser.spaceModel(space.id))
-            )
-        )
-        defer { lease.release() }
-        let quickPage = try XCTUnwrap(lease.page)
-
-        var quickInFront = false
-        pool.isQuickWindowInFront = { quickInFront }
-        pool.activeQuickWindowPage = { quickPage }
-
-        XCTAssertTrue(pool.commandPage === tabPage)
-
-        quickInFront = true
-        XCTAssertTrue(pool.commandPage === quickPage)
-        XCTAssertFalse(pool.commandPage === tabPage)
-
-        pool.commandPage?.zoomIn()
-        XCTAssertEqual(quickPage.pageZoom, 1.1)
-        XCTAssertEqual(tabPage.pageZoom, 1.0)
-
-        quickInFront = false
-        XCTAssertTrue(pool.commandPage === tabPage)
-    }
-
-    func testCommandActionsActOnQuickWindowPageWhenInFront() throws {
-        let first = TabState.Seed(
-            title: "Start Page",
-            url: nil,
-            placement: .current
-        )
-        let space = makeSpace(tabs: [first])
+    /// A Quick Window in front shows only its page: the page commands act on
+    /// it even while the browser window behind shows the Start Page, and the
+    /// window's other commands stay with the browser window.
+    func testQuickWindowActionsRunOnlyPageCommandsOnItsPage() throws {
+        let startPage = TabState.Seed(title: "Start Page", url: nil, placement: .current)
+        let space = makeSpace(tabs: [startPage])
         let browser = BrowserStore.hostingPages(SessionState.Seed(spaces: [space]))
         let pool = BrowserPagePool(browser: browser)
-        pool.present(tab: first.id, in: space.id)
-
+        pool.present(tab: startPage.id, in: space.id)
         let lease = try XCTUnwrap(
             pool.makeTransientPageLease(
                 url: try XCTUnwrap(URL(string: "about:blank#quick")),
-                in: try XCTUnwrap(pool.browser.spaceModel(space.id))
-            )
-        )
+                in: try XCTUnwrap(browser.spaceModel(space.id))))
         defer { lease.release() }
-        let quickPage = try XCTUnwrap(lease.page)
-
-        var quickInFront = true
-        pool.isQuickWindowInFront = { quickInFront }
-        pool.activeQuickWindowPage = { quickPage }
-
+        let quickWindowPage = try XCTUnwrap(lease.page)
         let chrome = BrowserChromeState(sidebarIsPresented: false)
-        let actions = BrowserCommandActions(
-            browser: browser,
-            pages: pool,
-            chrome: chrome,
-            windows: nil
-        )
+        let window = BrowserCommandActions(browser: browser, pages: pool, chrome: chrome, windows: nil)
+        let quickWindow = BrowserCommandActions(
+            browser: browser, pages: pool, chrome: chrome, windows: nil, quickWindowPage: quickWindowPage)
 
-        XCTAssertTrue(actions.canPerform(.reloadPage))
-        XCTAssertTrue(actions.canPerform(.reloadFromOrigin))
-        XCTAssertTrue(actions.canPerform(.zoomIn))
+        XCTAssertFalse(window.canPerform(.reloadPage))
+        XCTAssertTrue(quickWindow.canPerform(.reloadPage))
+        XCTAssertFalse(quickWindow.canPerform(.newTab))
 
-        actions.zoomIn()
-        XCTAssertEqual(quickPage.pageZoom, 1.1)
-        actions.resetZoom()
-        XCTAssertEqual(quickPage.pageZoom, 1.0)
-
-        quickInFront = false
-        XCTAssertFalse(actions.canPerform(.reloadPage))
-        XCTAssertFalse(actions.canPerform(.reloadFromOrigin))
+        quickWindow.zoomIn()
+        XCTAssertEqual(quickWindowPage.pageZoom, 1.1)
     }
 
     private func makeSpace(tabs: [TabState.Seed]) -> SpaceState.Seed {

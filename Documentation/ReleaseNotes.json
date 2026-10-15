@@ -4116,7 +4116,7 @@
     },
     "page-commands-follow-quick-window": {
       "category": "fixed",
-      "message": "Page commands and shortcuts such as Copy Link, Find, Zoom, Reload, Print, and Close act on an open Quick Window when it is in front."
+      "message": "Back, Reload, Find, Zoom, Copy Page Link, Print and the other page commands work in a Quick Window."
     }
   }
 }

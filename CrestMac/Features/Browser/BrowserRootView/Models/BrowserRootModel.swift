@@ -37,7 +37,6 @@ final class BrowserRootModel {
     )
     var isPrepared = false
     @ObservationIgnored private var isPreparingBrowser = false
-    var visibleNotice: BrowserNotice?
     /// The window's chrome keeps it, so a command that presents a sidebar list
     /// knows whether the sidebar is already on screen.
     var isFloatingSidebarPresented: Bool {
@@ -748,30 +747,6 @@ private struct BrowserMacPaletteOpener: BrowserCommandPaletteOpener {
                 spaceAssignment: BrowserSpaceRuntimeAssignment(spaceID: source.spaceID, profileID: source.profileID),
                 targetWindowID: model.windowState?.id))
         return true
-    }
-}
-
-// MARK: - Feedback
-
-extension BrowserRootModel {
-    func presentNotice(revision: Int, reduceMotion: Bool) {
-        guard revision > 0, let notice = chrome.notice else { return }
-        withAnimation(
-            accessibleAnimation(CrestMotion.feedbackPresentation, reduceMotion)
-        ) {
-            visibleNotice = notice
-        }
-        Task { @MainActor [weak self] in
-            try? await Task.sleep(for: notice.duration)
-            guard let self,
-                self.chrome.noticeRevision == revision
-            else { return }
-            withAnimation(
-                self.accessibleAnimation(CrestMotion.dismissal, reduceMotion)
-            ) {
-                self.visibleNotice = nil
-            }
-        }
     }
 }
 

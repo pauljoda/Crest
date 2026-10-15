@@ -19,6 +19,9 @@ struct BrowserCommandActions: BrowserNumberedSelectionPerformer {
     /// The window a Quick Window should hand its result back to, when the
     /// command was issued from a focused browser window.
     var targetWindowID: UUID?
+    /// The page a Quick Window in front shows, which the page commands act on
+    /// in place of the browser window's; nil in a browser window.
+    var quickWindowPage: BrowserPage?
     /// Which way the cards are laid out, for the commands that name a side of
     /// the screen. Only the split-card moves read it; see
     /// `BrowserSplitCardMoveDirection`.
@@ -60,40 +63,8 @@ struct BrowserCommandActions: BrowserNumberedSelectionPerformer {
         chrome.showNotice(.copied)
     }
 
-    private var isQuickWindowInFront: Bool {
-        pages.isQuickWindowInFront?() == true || windows?.isQuickWindowKey == true
-    }
-
-    /// Whether this window's state allows `command`.
-    ///
-    /// The core says what a browser window's contents allow. When a Quick Window
-    /// is in front, commands that act on a page or on the window itself are
-    /// allowed even if the underlying browser window is on a start page or has
-    /// no window model.
-    func allows(_ command: ShortcutCommand) -> Bool {
-        if isQuickWindowInFront {
-            switch command.kind {
-            case .reloadPage, .reloadFromOrigin:
-                return hasCommandPage
-            case .findNext, .findPrevious:
-                return canFindAgain
-            case .closeTabOrWindow, .closeWindow:
-                return true
-            case .newWindow, .newBlankWindow, .newQuickWindow, .newPrivateWindow:
-                return true
-            case .back, .forward, .stopLoading, .findInPage, .zoomIn, .zoomOut, .actualSize,
-                .copyPageLink, .copyPageLinkAsMarkdown, .sharePage, .exportPDF, .saveWebArchive,
-                .printPage, .toggleReaderMode, .toggleContentBlocking:
-                return true
-            default:
-                break
-            }
-        }
-        return browser.allows(command)
-    }
-
     func perform(_ command: ShortcutCommand) {
-        guard allows(command), let action = BrowserMacCommand.of(command), action.isAvailable(self, command)
+        guard windowAllows(command), let action = BrowserMacCommand.of(command), action.isAvailable(self, command)
         else { return }
         action.run(self, command)
     }
@@ -103,7 +74,15 @@ struct BrowserCommandActions: BrowserNumberedSelectionPerformer {
     /// page and its engine can do. In particular, a disabled split shortcut
     /// must leave text selection alone.
     func canPerform(_ command: ShortcutCommand) -> Bool {
-        allows(command) && BrowserMacCommand.of(command)?.isAvailable(self, command) == true
+        windowAllows(command) && BrowserMacCommand.of(command)?.isAvailable(self, command) == true
+    }
+
+    /// Whether what the window shows allows `command`. The core judges a
+    /// browser window's contents; a Quick Window shows only its page, so only
+    /// the commands on the page run there.
+    private func windowAllows(_ command: ShortcutCommand) -> Bool {
+        guard quickWindowPage != nil else { return browser.allows(command) }
+        return BrowserMacCommand.of(command)?.actsOnPage == true
     }
 
     /// Whether the palette lists `command` now: the core offers it, and a
@@ -130,28 +109,31 @@ struct BrowserCommandActions: BrowserNumberedSelectionPerformer {
         selection.select(on: self)
     }
 
+    /// The page the page commands act on: a Quick Window's in front, or else
+    /// the one the window's pool names, a Peek open over the active tab or
+    /// the tab's own page.
+    var commandPage: BrowserPage? {
+        quickWindowPage ?? pages.commandPage
+    }
+
     /// Whether the page the page commands act on has a search to find again.
     var canFindAgain: Bool {
-        commandPageSupports(.find) && pages.commandPage?.canFindAgain == true
+        commandPageSupports(.find) && commandPage?.canFindAgain == true
     }
 
     /// Whether the page the page commands act on has loaded a document.
     var hasCommandPage: Bool {
-        if pages.commandPage?.live.documentURL != nil { return true }
-        if isQuickWindowInFront {
-            return pages.commandPage != nil
-        }
-        return false
+        commandPage?.live.documentURL != nil
     }
 
     var canZoom: Bool {
-        commandPageSupports(.zoom) && pages.commandPage?.developerViewport == nil
+        commandPageSupports(.zoom) && commandPage?.developerViewport == nil
     }
 
     /// The same question as `supportsPageCapability` for the page the page
-    /// commands act on, which a Peek open over the active tab stands in for.
+    /// commands act on.
     func commandPageSupports(_ capability: EngineCapability) -> Bool {
-        hasCommandPage && pages.commandPage?.pageEngine.registration.supports(capability) == true
+        hasCommandPage && commandPage?.pageEngine.registration.supports(capability) == true
     }
 
     func supportsPageCapability(_ capability: EngineCapability) -> Bool {
@@ -208,10 +190,6 @@ struct BrowserCommandActions: BrowserNumberedSelectionPerformer {
     /// Closes the selected tab the way the core closes it, or the window when
     /// the core says only the window is left to close.
     func closeTabOrWindow() {
-        if windows?.isQuickWindowKey == true {
-            closeKeyWindow()
-            return
-        }
         // A Peek open over the tab closes first, as it is what shows.
         if pages.closePeek() { return }
         guard let selectedTab = browser.shownTab, let space = browser.shownSpace,
@@ -249,7 +227,7 @@ struct BrowserCommandActions: BrowserNumberedSelectionPerformer {
     /// The engines the shown page can move to: every registered engine but
     /// its own, so the choice is there before any page opens on the others.
     var pageEngineMoves: [EngineKind] {
-        pages.commandPage?.corePage.otherEngines ?? []
+        pages.activePage?.corePage.otherEngines ?? []
     }
 
     // MARK: - Chrome
@@ -314,7 +292,7 @@ struct BrowserCommandActions: BrowserNumberedSelectionPerformer {
 
     /// Moves the shown page to `engine`, which loads what it showed there.
     func movePage(to engine: EngineKind) {
-        pages.commandPage?.corePage.move(to: engine)
+        pages.activePage?.corePage.move(to: engine)
     }
 
     /// Translates the whole shown page, which its translation toolbar then
@@ -324,12 +302,12 @@ struct BrowserCommandActions: BrowserNumberedSelectionPerformer {
     }
 
     func copyPageLink() {
-        guard pages.commandPage?.copyPageLink() == true else { return }
+        guard commandPage?.copyPageLink() == true else { return }
         chrome.showURLCopiedFeedback()
     }
 
     func copyPageLinkAsMarkdown() {
-        guard pages.commandPage?.copyPageLinkAsMarkdown() == true else { return }
+        guard commandPage?.copyPageLinkAsMarkdown() == true else { return }
         chrome.showURLCopiedFeedback()
     }
 
@@ -342,27 +320,25 @@ struct BrowserCommandActions: BrowserNumberedSelectionPerformer {
     }
 
     func zoomIn() {
-        guard let page = pages.commandPage, page.zoomIn() else { return }
+        guard let page = commandPage, page.zoomIn() else { return }
         chrome.showPageZoomFeedback(page.pageZoom.pageZoomPercentage)
     }
 
     func zoomOut() {
-        guard let page = pages.commandPage, page.zoomOut() else { return }
+        guard let page = commandPage, page.zoomOut() else { return }
         chrome.showPageZoomFeedback(page.pageZoom.pageZoomPercentage)
     }
 
     func resetZoom() {
-        guard let page = pages.commandPage, page.resetZoom() else { return }
+        guard let page = commandPage, page.resetZoom() else { return }
         chrome.showPageZoomFeedback(page.pageZoom.pageZoomPercentage)
     }
 
-    /// Reloads an open Quick Window in front, a Peek open over the active tab,
-    /// or else the tab, which the pool brings back when its page went.
+    /// Reloads a Quick Window's page in front or a Peek open over the active
+    /// tab, or else the tab, which the pool brings back when its page went.
     func reload(_ mode: BrowserPageReloadMode) {
-        if isQuickWindowInFront {
-            (windows?.activeQuickWindowPage ?? pages.commandPage ?? pages.activeQuickWindowPage?())?.performReload(mode)
-        } else if let peek = pages.peekPage {
-            peek.performReload(mode)
+        if let page = quickWindowPage ?? pages.peekPage {
+            page.performReload(mode)
         } else {
             pages.reload(mode)
         }

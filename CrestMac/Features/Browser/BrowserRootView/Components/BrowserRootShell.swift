@@ -192,10 +192,7 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
                 .allowsHitTesting(false)
                 .accessibilityHidden(true)
 
-            if let notice = model.visibleNotice {
-                BrowserNoticeView(notice: notice)
-                    .id(notice)
-            }
+            BrowserNoticeLayer(chrome: model.chrome)
         }
     }
 

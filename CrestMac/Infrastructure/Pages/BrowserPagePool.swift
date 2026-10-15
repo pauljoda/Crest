@@ -104,11 +104,6 @@ final class BrowserPagePool:
     /// presentation installs it. Without one, such a page has nowhere to show
     /// and goes.
     @ObservationIgnored var popupWindowPresenter: ((BrowserQuickWindowRequest) -> Void)?
-    /// Whether an open Quick Window is in front.
-    @ObservationIgnored var isQuickWindowInFront: (() -> Bool)?
-    /// The page shown by an open Quick Window when it is in front, so page
-    /// commands act on it instead of the background window's tab.
-    @ObservationIgnored var activeQuickWindowPage: (() -> BrowserPage?)?
     /// Whether a Peek is open for the person rather than staged while they
     /// still drag its link; the window's transient browsing answers.
     @ObservationIgnored var isPeekOpen: (BrowserPeekRequest) -> Bool = { _ in false }
@@ -426,13 +421,10 @@ final class BrowserPagePool:
         activeTabID.flatMap { host.peekPage(over: $0, where: isPeekOpen) }
     }
 
-    /// The page the page commands act on: an open Quick Window in front, the
-    /// Peek open over the active tab, or else the tab's own page.
+    /// The page the page commands act on: the Peek open over the active tab,
+    /// or else the tab's own page.
     var commandPage: BrowserPage? {
-        if isQuickWindowInFront?() == true {
-            return activeQuickWindowPage?()
-        }
-        return peekPage ?? activePage
+        peekPage ?? activePage
     }
 
     /// Presents what the window shows: the tab it shows and the cards beside
