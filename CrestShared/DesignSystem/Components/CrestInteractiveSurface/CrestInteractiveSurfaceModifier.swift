@@ -35,7 +35,7 @@ struct CrestInteractiveSurfaceModifier: ViewModifier {
 
         content
             .background {
-                shape.fill(fill)
+                surface(in: shape)
                     .overlay { if selectionEmphasis { shape.fill(CrestColor.hover) } }
             }
             .overlay {
@@ -64,18 +64,23 @@ struct CrestInteractiveSurfaceModifier: ViewModifier {
             .animation(accessibleSurfaceAnimation, value: isPressed)
     }
 
-    private var fill: Color {
-        switch (isSelected || isPressed, isHovering, showsRestingSurface) {
-        case (true, _, _):
-            customSelectedFill ?? CrestColor.selectedSurface
-        case (false, true, _):
-            customHoverFill ?? CrestColor.hover
-        case (false, false, true):
-            customRestingFill ?? CrestColor.chromeSurface
-        case (false, false, false):
-            .clear
+    /// Selected, pressed and resting surfaces are layers of the device's
+    /// material, wearing their accent tint; hover is only ever a tint, laid
+    /// over that material or, on a plain row, alone.
+    @ViewBuilder
+    private func surface(in shape: RoundedRectangle) -> some View {
+        if isSelected || isPressed || showsRestingSurface {
+            CrestSurfaceLayer(
+                shape: shape,
+                tint: isSelected || isPressed ? customSelectedFill : customRestingFill,
+                hoverTint: isHovering ? hoverFill : nil
+            )
+        } else if isHovering {
+            shape.fill(hoverFill)
         }
     }
+
+    private var hoverFill: Color { customHoverFill ?? CrestColor.hover }
 
     private var borderWidth: CGFloat {
         guard contrast == .increased else { return selectedBorderWidth }
@@ -91,10 +96,7 @@ struct CrestInteractiveSurfaceModifier: ViewModifier {
     }
 
     private var accessibleSurfaceAnimation: Animation? {
-        BrowserVisualAccessibilityPolicy.animation(
-            CrestMotion.surface,
-            reduceMotion: reduceMotion
-        )
+        CrestMotion.surface.unlessReducingMotion(reduceMotion)
     }
 }
 

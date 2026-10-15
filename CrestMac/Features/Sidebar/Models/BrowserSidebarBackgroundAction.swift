@@ -2,28 +2,20 @@ import Foundation
 
 /// What the empty sidebar's context menu offers.
 struct BrowserSidebarBackgroundAction: Hashable, Identifiable, Sendable {
-    // MARK: - Types
-
-    /// Each action does something different, so the one place that performs
-    /// an action switches over the kind.
-    enum Kinds: Sendable {
-        case editSpace
-        case newSpace
-    }
-
     // MARK: - Static Variables
 
     static let editSpace = BrowserSidebarBackgroundAction(
-        kind: .editSpace, name: "editSpace", title: "Edit Space…", symbol: "pencil", requiresSpaceCreation: false)
+        name: "editSpace", title: "Edit Space…", symbol: "pencil", requiresSpaceCreation: false
+    ) { $0.editSpace() }
     static let newSpace = BrowserSidebarBackgroundAction(
-        kind: .newSpace, name: "newSpace", title: "New Space…", symbol: "plus", requiresSpaceCreation: true)
+        name: "newSpace", title: "New Space…", symbol: "plus", requiresSpaceCreation: true
+    ) { $0.createSpace?() }
 
     /// Every action, in menu order.
     static let all: [BrowserSidebarBackgroundAction] = [editSpace, newSpace]
 
     // MARK: - Variables
 
-    let kind: Kinds
     let name: String
     let title: LocalizedStringResource
     let symbol: String
@@ -31,19 +23,30 @@ struct BrowserSidebarBackgroundAction: Hashable, Identifiable, Sendable {
     /// Whether the menu offers the action only where the sidebar can create
     /// Spaces.
     let requiresSpaceCreation: Bool
+    private let performance: @MainActor @Sendable (BrowserSidebarBackgroundInteractionView) -> Void
 
     var id: String { name }
 
     // MARK: - Initializers
 
     private init(
-        kind: Kinds, name: String, title: LocalizedStringResource, symbol: String, requiresSpaceCreation: Bool
+        name: String, title: LocalizedStringResource, symbol: String, requiresSpaceCreation: Bool,
+        perform: @escaping @MainActor @Sendable (BrowserSidebarBackgroundInteractionView) -> Void
     ) {
-        self.kind = kind
         self.name = name
         self.title = title
         self.symbol = symbol
         self.requiresSpaceCreation = requiresSpaceCreation
+        performance = perform
+    }
+
+    // MARK: - Actions - Performing
+
+    /// Performs the action through the sidebar background `view` it was
+    /// chosen on.
+    @MainActor
+    func perform(on view: BrowserSidebarBackgroundInteractionView) {
+        performance(view)
     }
 
     // MARK: - Actions - Identity

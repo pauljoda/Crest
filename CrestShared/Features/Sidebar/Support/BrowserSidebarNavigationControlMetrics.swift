@@ -87,7 +87,7 @@ struct BrowserSidebarNavigationControlMetrics: Equatable, Sendable {
         controlSize: CGSize(width: 44, height: 44),
         reloadMenuControlSize: CGSize(width: 28, height: 44),
         historySymbolFont: .system(size: 17, weight: .medium),
-        reloadSymbolPointSize: BrowserReloadFeedbackPolicy.symbolPointSize,
+        reloadSymbolPointSize: BrowserChromeSymbolLabel.defaultPointSize,
         leadingInset: 14,
         trailingInset: 14,
         barHeight: 48,

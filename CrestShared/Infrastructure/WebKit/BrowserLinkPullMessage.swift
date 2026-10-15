@@ -2,23 +2,19 @@ import Foundation
 
 /// Decodes the shared fields of the desktop drag and mobile touch bridges.
 struct BrowserLinkPullMessage {
-    enum Phase: String {
-        case ready, retire, begin, move, end, cancel
-    }
-
     private static let protocolVersion = 1
     private static let maximumIdentifierLength = 100
     private static let maximumURLLength = 8192
 
     let document: String
-    let phase: Phase
+    let phase: BrowserLinkPullPhase
     private let body: [String: Any]
 
     init?(_ body: Any, requiresVersion: Bool = false) {
         guard let body = body as? [String: Any],
             !requiresVersion || (body["version"] as? NSNumber)?.intValue == Self.protocolVersion,
             let document = Self.identifier(body["document"]),
-            let rawPhase = body["phase"] as? String, let phase = Phase(rawValue: rawPhase)
+            let rawPhase = body["phase"] as? String, let phase = BrowserLinkPullPhase.named(rawPhase)
         else { return nil }
         self.body = body
         self.document = document

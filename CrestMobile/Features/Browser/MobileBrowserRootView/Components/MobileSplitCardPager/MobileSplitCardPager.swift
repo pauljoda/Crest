@@ -6,13 +6,31 @@ import SwiftUI
 /// Built on the same skeleton as `BrowserSpacePager` — a lazy horizontal stack
 /// of container-width cells, view-aligned one at a time, with a two-way
 /// `scrollPosition` binding — and disabled for direct dragging, which is the one
-/// place the two part company. `MobileSplitCardPagerPolicy.allowsDirectDrag`
-/// carries the reasoning.
+/// place the two part company. `allowsDirectDrag` carries the reasoning.
 ///
 /// The two-way sync still earns its keep with paging programmatic: focus moves
 /// from the sidebar, a hardware keyboard, and sync as well as from the swipe,
 /// and every one of those routes has to bring the carousel with it.
 struct MobileSplitCardPager: View {
+    // MARK: - Static Variables
+
+    /// Whether a finger on the page may page the carousel.
+    ///
+    /// `false` for 0.4, and the pager is `scrollDisabled` because of it. A
+    /// horizontal `ScrollView` wrapped around live `WKWebView`s competes with
+    /// every page's own horizontal pan — carousels, maps, code blocks, and
+    /// WebKit's own back/forward edge swipe — and the loser of that arbitration
+    /// is whichever one the person actually meant. Paging is therefore
+    /// programmatic: the toolbar swipe commits a selection and the pager
+    /// animates to it. Direct content-drag paging is a post-0.4 gesture spike.
+    static let allowsDirectDrag = false
+
+    static let showsScrollIndicators = false
+
+    static var scrollIndicatorVisibility: ScrollIndicatorVisibility { .never }
+
+    // MARK: - Variables
+
     let members: [TabStateModel]
     let space: SpaceModel
     let focusedTabID: UUID
@@ -59,7 +77,7 @@ struct MobileSplitCardPager: View {
         ScrollViewReader { scrollProxy in
             ScrollView(
                 .horizontal,
-                showsIndicators: MobileSplitCardPagerPolicy.showsScrollIndicators
+                showsIndicators: Self.showsScrollIndicators
             ) {
                 LazyHStack(spacing: 0) {
                     ForEach(members) { member in
@@ -78,12 +96,12 @@ struct MobileSplitCardPager: View {
                 .scrollTargetLayout()
             }
             .scrollIndicators(
-                MobileSplitCardPagerPolicy.scrollIndicatorVisibility,
+                Self.scrollIndicatorVisibility,
                 axes: .horizontal
             )
             .scrollTargetBehavior(.viewAligned(limitBehavior: .alwaysByOne))
             .scrollPosition(id: $visibleTabID, anchor: .center)
-            .scrollDisabled(!MobileSplitCardPagerPolicy.allowsDirectDrag)
+            .scrollDisabled(!Self.allowsDirectDrag)
             .accessibilityElement(children: .contain)
             .accessibilityLabel("Split View Cards")
             .accessibilityIdentifier("split-card-pager")
@@ -120,10 +138,7 @@ struct MobileSplitCardPager: View {
                     visibleTabID != tabID
                 else { return }
                 withAnimation(
-                    BrowserVisualAccessibilityPolicy.animation(
-                        CrestMotion.spaceSwipe,
-                        reduceMotion: reduceMotion
-                    )
+                    CrestMotion.spaceSwipe.unlessReducingMotion(reduceMotion)
                 ) {
                     visibleTabID = tabID
                 }
@@ -180,9 +195,32 @@ struct MobileSplitCardPager: View {
         }
     }
 
+    /// Whether a presented run is long enough to page at all. A run of one is a
+    /// plain tab and renders through the ordinary single-page path.
+    nonisolated static func presents(memberCount: Int) -> Bool {
+        memberCount >= SplitGroupState.minimumShownMembers
+    }
+
+    /// The card one step from `tabID`, clamped at both ends.
+    ///
+    /// Deliberately not wrapping. A swipe is a spatial gesture — the cards sit in
+    /// a row — so running off the end and reappearing at the other would read as
+    /// the carousel losing its place. The keyboard's focus-cycling commands do
+    /// wrap, because a repeated chord is a cycle rather than a direction.
+    nonisolated static func adjacentMember(
+        of tabID: UUID,
+        in members: [UUID],
+        direction: BrowserSpaceSwipeDirection
+    ) -> UUID? {
+        guard let index = members.firstIndex(of: tabID) else { return nil }
+        let target = direction == .next ? index + 1 : index - 1
+        guard members.indices.contains(target) else { return nil }
+        return members[target]
+    }
+
     private func focusAdjacentCard(_ direction: BrowserSpaceSwipeDirection) {
         guard
-            let tabID = MobileSplitCardPagerPolicy.adjacentMember(
+            let tabID = Self.adjacentMember(
                 of: focusedTabID,
                 in: members.map(\.id),
                 direction: direction

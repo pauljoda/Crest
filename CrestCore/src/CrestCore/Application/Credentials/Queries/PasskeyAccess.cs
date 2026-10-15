@@ -1,5 +1,4 @@
 using CrestCore.Application;
-using CrestCore.Domain;
 
 namespace CrestCore.Contracts;
 
@@ -7,10 +6,25 @@ namespace CrestCore.Contracts;
 /// platform's build, device and authorization facts.
 public sealed record PasskeyAccess(bool HasManagedCapability, PasskeyDeviceConfiguration DeviceConfiguration,
     PasskeyAuthorizationState AuthorizationState) : Query<PasskeyAccessVerdict> {
+    #region Variables
+
+    /// The managed capability comes first, then device setup, then consent.
+    internal PasskeyAccessStatus Status {
+        get {
+            ArgumentNullException.ThrowIfNull(DeviceConfiguration);
+            ArgumentNullException.ThrowIfNull(AuthorizationState);
+            if (!HasManagedCapability) return PasskeyAccessStatus.ManagedCapabilityRequired;
+            if (DeviceConfiguration.RulesOutPasskeys) return PasskeyAccessStatus.DeviceNotConfigured;
+            return AuthorizationState.AccessStatus;
+        }
+    }
+
+    #endregion
+
     #region Actions - Answering
 
     internal override PasskeyAccessVerdict Answer(CrestApp app) {
-        return new(PasskeyAccessPolicy.Status(HasManagedCapability, DeviceConfiguration, AuthorizationState));
+        return new(Status);
     }
 
     #endregion

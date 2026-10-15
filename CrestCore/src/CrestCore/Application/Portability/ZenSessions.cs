@@ -243,7 +243,7 @@ internal static class ZenSessions {
     /// many as a look keeps.
     private static List<BrandColor> Colors(JsonElement? theme) {
         var values = ImportJson.Object(theme) is null ? null : ImportJson.Array(ImportJson.Member(theme, "gradientColors"));
-        return [.. (values ?? []).Select(Color).OfType<BrandColor>().Take(SpaceBrandingPolicy.MaximumColorCount)];
+        return [.. (values ?? []).Select(Color).OfType<BrandColor>().Take(SpaceBranding.MaximumColorCount)];
     }
 
     private static BrandColor? Color(JsonElement value) {
@@ -264,8 +264,8 @@ internal static class ZenSessions {
     /// A gradient banner in bands of several colors, or a solid banner of
     /// one, as strong as the theme's opacity and textured as it is.
     private static SpaceBranding? Look(IReadOnlyList<BrandColor> colors, JsonElement? theme) => colors.Count == 0 ? null
-        : ImportedLook.Painted(colors, colors.Count > 1 ? SpaceBannerPattern.Bands : SpaceBannerPattern.Solid,
-            Math.Clamp(ImportJson.Number(ImportJson.Member(theme, "opacity")) ?? DefaultOpacity, 0, 1), ImportedLook.ReadableFade,
+        : SpaceBranding.Painted(colors, colors.Count > 1 ? SpaceBannerPattern.Bands : SpaceBannerPattern.Solid,
+            Math.Clamp(ImportJson.Number(ImportJson.Member(theme, "opacity")) ?? DefaultOpacity, 0, 1), SpaceBranding.LegacyReadabilityFade,
             SpaceThemeMode.Gradient, gradientAngle: 45, showsTexture: (ImportJson.Integer(ImportJson.Member(theme, "texture")) ?? 0) != 0);
 
     #endregion

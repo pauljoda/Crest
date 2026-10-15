@@ -114,22 +114,34 @@ public sealed class SitePermissionLedger {
         if (!IsValidDetail(detail)) throw new Rejected(new InvalidSitePermissionDetail(MaximumDetailLength));
         if (!IsAvailable(permission, decision)) throw new Rejected(new InvalidSitePermissionGrant(permission));
         var key = new SitePermissionKey(origin, permission, detail);
-        bool persistenceChanged = false;
-        if (decision.IsPersistent) {
-            int index = persistent.FindIndex(record => record.Space == space && Key(record) == key);
-            if (index < 0 && persistent.Count >= MaximumRecords) throw new Rejected(new SitePermissionLimitReached(MaximumRecords));
-            if (session.TryGetValue(space, out var overridden)) overridden.Remove(key);
-            if (index >= 0) persistent[index] = persistent[index] with { Decision = decision, ModifiedAt = now };
-            else persistent.Add(new(recordId, space, origin, permission, detail, decision, now));
-            persistenceChanged = true;
-        } else if (decision.Verdict == SitePermissionVerdict.Ask) {
-            if (session.TryGetValue(space, out var cleared)) cleared.Remove(key);
-            persistenceChanged = persistent.RemoveAll(record => record.Space == space && Key(record) == key) > 0;
-        } else {
-            if (!session.TryGetValue(space, out var decisions)) session[space] = decisions = [];
-            decisions[key] = decision;
-        }
+        bool persistenceChanged = decision.Record(this, space, key, recordId, now);
         return new(persistenceChanged, [new(space, new(origin, permission, detail, !decision.Grants))]);
+    }
+
+    /// Saves `decision` for `key` in `space`, replacing the session answer and
+    /// keeping an existing record's identity; a new record is `recordId`.
+    internal bool Persist(Guid space, SitePermissionKey key, SitePermissionDecision decision, Guid recordId, double now) {
+        int index = persistent.FindIndex(record => record.Space == space && Key(record) == key);
+        if (index < 0 && persistent.Count >= MaximumRecords) throw new Rejected(new SitePermissionLimitReached(MaximumRecords));
+        if (session.TryGetValue(space, out var overridden)) overridden.Remove(key);
+        if (index >= 0) persistent[index] = persistent[index] with { Decision = decision, ModifiedAt = now };
+        else persistent.Add(new(recordId, space, key.Origin, key.Permission, key.Detail, decision, now));
+        return true;
+    }
+
+    /// Clears both the session answer and the saved choice for `key` in
+    /// `space`, and says whether a saved one went.
+    internal bool Forget(Guid space, SitePermissionKey key) {
+        if (session.TryGetValue(space, out var cleared)) cleared.Remove(key);
+        return persistent.RemoveAll(record => record.Space == space && Key(record) == key) > 0;
+    }
+
+    /// Answers `key` in `space` with `decision` until the process ends,
+    /// over the saved choice, which stays.
+    internal bool KeepForSession(Guid space, SitePermissionKey key, SitePermissionDecision decision) {
+        if (!session.TryGetValue(space, out var decisions)) session[space] = decisions = [];
+        decisions[key] = decision;
+        return false;
     }
 
     /// Forgets the persistent record `id`; one that is gone changes nothing.
@@ -164,7 +176,7 @@ public sealed class SitePermissionLedger {
         !(decision.Grants && permission.IsAskedBySystem);
 
     /// One choice's identity within a Space.
-    private readonly record struct SitePermissionKey(SiteOrigin Origin, SitePermission Permission, string? Detail);
+    internal readonly record struct SitePermissionKey(SiteOrigin Origin, SitePermission Permission, string? Detail);
 
     #endregion
 }

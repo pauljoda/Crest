@@ -21,12 +21,12 @@ final class BrowserDownloadCenter: NSObject {
             UUID
         ) async -> Bool
 
-    typealias DownloadDestinationResolver =
+    typealias DownloadDestinationChooser =
         @MainActor (
             String,
             UUID,
             Bool
-        ) async -> BrowserPlatformDownloadResolution
+        ) async -> any BrowserPlatformDownloadResolution
 
     // MARK: - Variables
 
@@ -43,7 +43,7 @@ final class BrowserDownloadCenter: NSObject {
 
     @ObservationIgnored let permissionCenter: BrowserSitePermissionCenter
     @ObservationIgnored let approveRiskyDownload: RiskApprovalHandler
-    @ObservationIgnored let resolveDownloadDestination: DownloadDestinationResolver
+    @ObservationIgnored let resolveDownloadDestination: DownloadDestinationChooser
     @ObservationIgnored private var feedbackExpirationTasks: [UUID: Task<Void, Never>] = [:]
     @ObservationIgnored private var dataSaveAssignments: [UUID: BrowserSpaceRuntimeAssignment] = [:]
     @ObservationIgnored private var lastRetentionSweepAt: Date?
@@ -55,7 +55,7 @@ final class BrowserDownloadCenter: NSObject {
         approveRiskyDownload: @escaping RiskApprovalHandler = { _, _, _, _ in false },
         permissionCenter: BrowserSitePermissionCenter = BrowserSitePermissionCenter(),
         resolveDownloadDestination:
-            @escaping DownloadDestinationResolver = {
+            @escaping DownloadDestinationChooser = {
                 suggestedFilename,
                 spaceID,
                 forcesPrompt in
@@ -269,34 +269,12 @@ final class BrowserDownloadCenter: NSObject {
         // Cancellation or removal of the owning Space can happen while a
         // native panel is open. A late response must never resurrect the save.
         guard dataSaveAssignments[itemID] == assignment else { return }
-        switch resolution {
-        case .cancelled:
-            send(CancelDownload(downloadID: itemID, message: "Canceled."))
-        case .unavailable:
-            #if os(macOS)
-                send(
-                    FailDownload(
-                        downloadID: itemID, reason: .folderUnavailable,
-                        message:
-                            "The download folder is unavailable. Open Crest Settings > General > System Permissions to check folder access or choose another folder."
-                    ))
-            #else
-                send(FailDownload(downloadID: itemID, reason: .folderUnavailable, message: nil))
-            #endif
-        case .destination(let destination, let resourceURL):
-            let scoped = resourceURL?.startAccessingSecurityScopedResource() ?? false
-            defer { if scoped { resourceURL?.stopAccessingSecurityScopedResource() } }
-            do {
-                try saveDataToDestination(
-                    data, itemID: itemID, destination: destination, originatingURL: originatingURL)
-                send(FinishDownload(downloadID: itemID, finalByteCount: Int64(data.count)))
-            } catch {
-                send(FailDownload(downloadID: itemID, reason: .fileAccess, message: error.localizedDescription))
-            }
-        }
+        resolution.save(data, as: itemID, from: originatingURL, in: self)
     }
 
-    private func saveDataToDestination(
+    /// Writes `data` to `destination` through Crest's staging folder, with
+    /// the quarantine of the page it came from.
+    func saveDataToDestination(
         _ data: Data, itemID: UUID, destination: URL, originatingURL: URL
     ) throws {
         let fileManager = FileManager.default
@@ -329,17 +307,14 @@ final class BrowserDownloadCenter: NSObject {
     func presentFeedback(_ event: BrowserDownloadFeedbackEvent) {
         guard !feedbackEvents.contains(where: { $0.id == event.id }) else { return }
         let previousIDs = Set(feedbackEvents.map(\.id))
-        feedbackEvents = BrowserDownloadFeedbackPolicy.bounded(
-            feedbackEvents,
-            appending: event
-        )
+        feedbackEvents = event.appended(to: feedbackEvents)
         let retainedIDs = Set(feedbackEvents.map(\.id))
         for removedID in previousIDs.subtracting(retainedIDs) {
             feedbackExpirationTasks.removeValue(forKey: removedID)?.cancel()
         }
         feedbackExpirationTasks[event.id]?.cancel()
         feedbackExpirationTasks[event.id] = Task { @MainActor [weak self] in
-            try? await Task.sleep(for: BrowserDownloadFeedbackPolicy.lifetime)
+            try? await Task.sleep(for: BrowserDownloadFeedbackEvent.lifetime)
             guard !Task.isCancelled else { return }
             self?.dismissFeedback(event.id)
         }

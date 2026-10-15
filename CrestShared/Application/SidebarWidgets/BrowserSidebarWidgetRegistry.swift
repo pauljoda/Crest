@@ -40,7 +40,7 @@ struct BrowserSidebarWidgetRegistry: Sendable {
         platform: BrowserSidebarWidgetPlatform
     ) -> [BrowserSidebarWidgetRegistration] {
         registrations.filter { registration in
-            registration.visibilityPolicy == .userControllable
+            registration.visibility.isUserControllable
                 && !registration.platforms.intersection(platform).isEmpty
         }
     }
@@ -49,8 +49,10 @@ struct BrowserSidebarWidgetRegistry: Sendable {
         _ registration: BrowserSidebarWidgetRegistration,
         disabledKindIdentifiers: Set<String>
     ) -> Bool {
-        registration.visibilityPolicy == .mandatory
-            || !disabledKindIdentifiers.contains(registration.id.rawValue)
+        registration.visibility.isEnabled(
+            registration.id,
+            disabledKindIdentifiers: disabledKindIdentifiers
+        )
     }
 
     /// The deck is one global layer, so visibility answers only what this build
@@ -78,9 +80,7 @@ struct BrowserSidebarWidgetRegistry: Sendable {
 
         var seenSingleKinds: Set<BrowserSidebarWidgetKindID> = []
         return eligible.sorted(by: instancePrecedes).filter { instance in
-            guard
-                registrationsByID[instance.id.kindID]?.instancePolicy
-                    == .single
+            guard registrationsByID[instance.id.kindID]?.instanceLimit.isSingle == true
             else { return true }
             return seenSingleKinds.insert(instance.id.kindID).inserted
         }

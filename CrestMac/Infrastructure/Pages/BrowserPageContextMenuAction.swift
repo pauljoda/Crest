@@ -3,17 +3,22 @@ import Foundation
 
 /// Crest-owned actions placed ahead of an engine's page menu. Engines keep
 /// their own editing and extension rows; these actions use Crest's Space and
-/// tab routing after the menu closes.
+/// tab routing after the menu closes. Each row carries what it does to the
+/// page, given the page's navigation context and the tab it comes from.
 struct BrowserPageContextMenuAction {
     // MARK: - Types
 
-    /// What the row does, with what it does it to.
+    /// Which row this is, with what it does it to.
     enum Kind: Equatable {
         case search
         case peek
         case split
         case space(UUID)
     }
+
+    /// Runs the row on the page, answering whether it did.
+    typealias Perform =
+        @MainActor (BrowserPage, BrowserPageNavigationContext, BrowserTabRuntimeAssignment) -> Bool
 
     // MARK: - Variables
 
@@ -25,10 +30,79 @@ struct BrowserPageContextMenuAction {
     /// The Space a Space destination opens the link in, whose icon its row
     /// shows; nil for every other row.
     var space: BrowserSpaceIdentity?
+    let perform: Perform
 
     var isSpaceDestination: Bool {
         if case .space = kind { return true }
         return false
+    }
+
+    // MARK: - Initializers
+
+    init(
+        kind: Kind, title: String, symbolName: String, linkURL: URL?, selectionText: String?,
+        space: BrowserSpaceIdentity? = nil, perform: @escaping Perform
+    ) {
+        self.kind = kind
+        self.title = title
+        self.symbolName = symbolName
+        self.linkURL = linkURL
+        self.selectionText = selectionText
+        self.space = space
+        self.perform = perform
+    }
+
+    // MARK: - Actions - Rows
+
+    /// Opens `linkURL` in `space`, another Space of the window.
+    @MainActor static func space(_ space: SpaceModel, opening linkURL: URL) -> BrowserPageContextMenuAction {
+        let id = space.id
+        return BrowserPageContextMenuAction(
+            kind: .space(id), title: space.settings.name, symbolName: "square.stack.3d.up", linkURL: linkURL,
+            selectionText: nil, space: space.identity
+        ) { page, _, source in
+            guard let space = page.linkDestinationHost.otherSpaces(from: source).first(where: { $0.id == id })
+            else { return false }
+            return page.linkDestinationHost.openLink(
+                linkURL, from: source, in: BrowserSpaceRuntimeAssignment(space: space))
+        }
+    }
+
+    /// Opens `linkURL` in Peek over the page.
+    static func peek(_ linkURL: URL) -> BrowserPageContextMenuAction {
+        BrowserPageContextMenuAction(
+            kind: .peek, title: String(localized: "Open Link in Peek"), symbolName: "rectangle.on.rectangle",
+            linkURL: linkURL, selectionText: nil
+        ) { page, context, _ in
+            page.openPeek(
+                BrowserPeekRequest(
+                    url: linkURL, sourceTabID: context.tabID, sourceTitle: context.title,
+                    spaceAssignment: context.assignment, trigger: .contextMenu))
+            return true
+        }
+    }
+
+    /// Opens `linkURL` in a split view beside the page's tab.
+    static func split(_ linkURL: URL) -> BrowserPageContextMenuAction {
+        BrowserPageContextMenuAction(
+            kind: .split, title: String(localized: "Open Link in Split View"), symbolName: "rectangle.split.2x1",
+            linkURL: linkURL, selectionText: nil
+        ) { page, _, _ in
+            page.openLinkInSplitView(linkURL)
+            return true
+        }
+    }
+
+    /// Searches for `selectionText` with the engine titled `engineTitle`.
+    static func search(_ selectionText: String, with engineTitle: String) -> BrowserPageContextMenuAction {
+        BrowserPageContextMenuAction(
+            kind: .search, title: String(localized: "Search with \(engineTitle)"), symbolName: "magnifyingglass",
+            linkURL: nil, selectionText: selectionText
+        ) { page, context, source in
+            guard let search = page.linkDestinationHost.selectionSearch(for: selectionText, from: source)
+            else { return false }
+            return page.linkDestinationHost.openLink(search.url, from: source, in: context.assignment)
+        }
     }
 }
 
@@ -127,34 +201,21 @@ extension BrowserPage: BrowserPageContextMenuHost {
             profileID: context.assignment.profileID)
         var actions: [BrowserPageContextMenuAction] = []
 
-        if let linkURL, BrowserCorePolicy.acceptsExternalURL(linkURL),
+        if let linkURL, ExternalWebLink.accepts(linkURL),
             linkDestinationHost.canOpenLink(from: source)
         {
             for space in linkDestinationHost.otherSpaces(from: source) {
-                actions.append(
-                    BrowserPageContextMenuAction(
-                        kind: .space(space.id), title: space.settings.name,
-                        symbolName: "square.stack.3d.up", linkURL: linkURL, selectionText: nil,
-                        space: space.identity))
+                actions.append(.space(space, opening: linkURL))
             }
-            actions.append(
-                BrowserPageContextMenuAction(
-                    kind: .peek, title: String(localized: "Open Link in Peek"),
-                    symbolName: "rectangle.on.rectangle", linkURL: linkURL, selectionText: nil))
+            actions.append(.peek(linkURL))
             if splitLinkHost.canOpenLink(context.tabID, context.assignment) {
-                actions.append(
-                    BrowserPageContextMenuAction(
-                        kind: .split, title: String(localized: "Open Link in Split View"),
-                        symbolName: "rectangle.split.2x1", linkURL: linkURL, selectionText: nil))
+                actions.append(.split(linkURL))
             }
         }
         if let selectionText,
             let search = linkDestinationHost.selectionSearch(for: selectionText, from: source)
         {
-            actions.append(
-                BrowserPageContextMenuAction(
-                    kind: .search, title: String(localized: "Search with \(search.engineTitle)"),
-                    symbolName: "magnifyingglass", linkURL: nil, selectionText: selectionText))
+            actions.append(.search(selectionText, with: search.engineTitle))
         }
         return actions
     }
@@ -171,30 +232,6 @@ extension BrowserPage: BrowserPageContextMenuHost {
         let source = BrowserTabRuntimeAssignment(
             tabID: context.tabID, spaceID: context.spaceID,
             profileID: context.assignment.profileID)
-        switch action.kind {
-        case .search:
-            guard let selectionText = action.selectionText,
-                let search = linkDestinationHost.selectionSearch(for: selectionText, from: source)
-            else { return false }
-            return linkDestinationHost.openLink(
-                search.url, from: source, in: context.assignment)
-        case .peek:
-            guard let linkURL = action.linkURL else { return false }
-            openPeek(
-                BrowserPeekRequest(
-                    url: linkURL, sourceTabID: context.tabID, sourceTitle: context.title,
-                    spaceAssignment: context.assignment, trigger: .contextMenu))
-            return true
-        case .split:
-            guard let linkURL = action.linkURL else { return false }
-            openLinkInSplitView(linkURL)
-            return true
-        case .space(let id):
-            guard let linkURL = action.linkURL,
-                let space = linkDestinationHost.otherSpaces(from: source).first(where: { $0.id == id })
-            else { return false }
-            return linkDestinationHost.openLink(
-                linkURL, from: source, in: BrowserSpaceRuntimeAssignment(space: space))
-        }
+        return action.perform(self, context, source)
     }
 }

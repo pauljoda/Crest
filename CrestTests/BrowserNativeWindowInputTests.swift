@@ -9,7 +9,7 @@ final class BrowserNativeWindowInputTests: XCTestCase {
         let window = makeWindow()
         defer { window.close() }
         let content = try XCTUnwrap(window.contentView)
-        let buttons = BrowserNativeWindowControlsPolicy.buttonTypes.compactMap(window.standardWindowButton)
+        let buttons = BrowserNativeWindowControlsHostView.buttonTypes.compactMap(window.standardWindowButton)
         let input = NSTextField(frame: NSRect(x: 350, y: 560, width: 200, height: 28))
         content.addSubview(input)
         let chrome = BrowserNativeWindowControlsHostView()
@@ -22,7 +22,7 @@ final class BrowserNativeWindowInputTests: XCTestCase {
         XCTAssertTrue(window.styleMask.contains(.resizable))
         XCTAssertTrue(window.styleMask.contains(.titled))
         XCTAssertTrue(content.hitTest(NSPoint(x: 400, y: 574)) === input)
-        for (type, button) in zip(BrowserNativeWindowControlsPolicy.buttonTypes, buttons) {
+        for (type, button) in zip(BrowserNativeWindowControlsHostView.buttonTypes, buttons) {
             XCTAssertTrue(window.standardWindowButton(type) === button)
             XCTAssertTrue(button.isEnabled)
         }
@@ -67,12 +67,10 @@ final class BrowserNativeWindowInputTests: XCTestCase {
         let chrome = windowed.union(.fullSizeContentView)
 
         XCTAssertEqual(
-            BrowserNativeWindowControlsPolicy.restoredStyleMask(
-                original: windowed, current: chrome.union(.fullScreen)),
+            chrome.union(.fullScreen).restoringBrowserChrome(to: windowed),
             windowed.union(.fullScreen))
         XCTAssertEqual(
-            BrowserNativeWindowControlsPolicy.restoredStyleMask(
-                original: windowed.union(.fullScreen), current: chrome),
+            chrome.restoringBrowserChrome(to: windowed.union(.fullScreen)),
             windowed)
     }
 

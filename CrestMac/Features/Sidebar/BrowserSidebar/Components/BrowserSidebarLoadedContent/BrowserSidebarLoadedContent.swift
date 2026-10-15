@@ -1,8 +1,8 @@
 import AppKit
 import SwiftUI
 
-/// The windowed shell's sidebar layout: a clipped Space pager with the Space
-/// switcher resting under it.
+/// The windowed shell's sidebar layout: a clipped Space pager tucked under the
+/// address chrome, with the Space switcher resting under it.
 ///
 /// Everything about *what* the sidebar does comes down from `BrowserSidebar`
 /// through the context. What this view owns is the arrangement, the switcher's
@@ -47,8 +47,12 @@ struct BrowserSidebarLoadedContent: View {
             .onGeometryChange(for: CGFloat.self) {
                 $0.size.height
             } action: {
-                spacePagerPresentation.gestureTopInset = $0
+                // The pager already reaches the glow's outset up under the chrome.
+                spacePagerPresentation.gestureTopInset = max(0, $0 - BrowserTabSelectionGlow.outset)
             }
+            // Above the pager, so a selected pin's glow slides under the
+            // address field.
+            .zIndex(1)
 
             BrowserSidebarSpacePager(context: context) { space, isSelected in
                 BrowserSidebarSpacePage(
@@ -60,14 +64,20 @@ struct BrowserSidebarLoadedContent: View {
                     commandSurfaceNamespace: commandSurfaceNamespace,
                     tabPromotionNamespace: tabPromotionNamespace
                 )
+                .padding(.top, BrowserTabSelectionGlow.outset)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .clipped()
+            // The native Space pages clip at their own bounds, so the pager
+            // reaches the glow's outset up under the chrome and each page
+            // starts that far down: the glow draws into the band behind the
+            // address field while paging still clips at the sides and bottom.
+            .padding(.top, -BrowserTabSelectionGlow.outset)
 
             // The widget deck is a top layer over every Space of every profile.
             // It mounts unconditionally beside the pager — never keyed to the
             // selected Space — so switching Spaces cannot unmount or recreate it.
-            if BrowserSidebarWidgetHostPolicy.shouldRender(
+            if BrowserSidebarWidgetHost.isShown(
                 sidebarIsPresented: true,
                 isPrivateBrowsing: context.browser.isPrivateBrowsing
             ) {
@@ -91,7 +101,7 @@ struct BrowserSidebarLoadedContent: View {
             .environment(
                 \.colorScheme,
                 context.browser.shownSpace.map {
-                    BrowserSpaceForegroundPolicy.colorScheme(for: $0.settings.look)
+                    $0.settings.look.foregroundTone.colorScheme
                 } ?? .dark
             )
             .modifier(
@@ -142,17 +152,13 @@ struct BrowserSidebarLoadedContent: View {
         guard let widgetRuntime else { return }
         let instances = widgetRuntime.instances(capabilities: widgetCapabilities)
         guard instances.count > 1,
-            let nextID = BrowserSidebarWidgetCarouselPolicy.cyclicAdjacentID(
+            let nextID = direction.adjacentID(
                 to: widgetRuntime.carouselSelection,
-                in: instances,
-                direction: direction
+                in: instances
             )
         else { return }
         withAnimation(
-            BrowserVisualAccessibilityPolicy.animation(
-                CrestMotion.spaceSwipe,
-                reduceMotion: reduceMotion
-            )
+            CrestMotion.spaceSwipe.unlessReducingMotion(reduceMotion)
         ) {
             widgetRuntime.selectCarouselInstance(
                 nextID,

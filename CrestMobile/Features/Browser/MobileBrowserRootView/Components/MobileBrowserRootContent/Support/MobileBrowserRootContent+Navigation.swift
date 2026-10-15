@@ -4,8 +4,7 @@ extension MobileBrowserRootContent {
     func selectTab(_ id: UUID) {
         dismissAddressFocus()
         let dismissesFloatingPhoneSidebar =
-            MobileSidebarTabSelectionPolicy.dismissesSidebar(
-                browserPresentation: presentation,
+            presentation.dismissesSidebarOnTabSelection(
                 sidebarPresentation: navigation.regularSidebarPresentation
             )
         model.selectTab(id)
@@ -24,46 +23,11 @@ extension MobileBrowserRootContent {
     }
 
     func beginNewTab() {
-        if presentation == .compact {
-            model.beginCompactNewTab()
-            isAddressEditing = false
-            addressFocusRequest &+= 1
-        } else {
-            switch MobileStartPageSearchPolicy.destination(
-                isStartPage: showsStartPage,
-                presentation: presentation
-            ) {
-            case .embeddedStartPage:
-                focusStartPageCommandPalette()
-            case .overlay:
-                commandPaletteMode = .newTab
-            }
-        }
+        presentation.beginNewTab(in: self)
     }
 
     func openLocation() {
-        if presentation == .compact {
-            if navigation.defersPageActivation {
-                model.activateSelectedTab()
-            }
-            Task { @MainActor in
-                await Task.yield()
-                isAddressEditing = true
-                addressFocusRequest &+= 1
-            }
-            return
-        }
-
-        showRegularSidebar()
-        switch MobileStartPageSearchPolicy.destination(
-            isStartPage: showsStartPage,
-            presentation: presentation
-        ) {
-        case .embeddedStartPage:
-            focusStartPageCommandPalette()
-        case .overlay:
-            commandPaletteMode = .editLocation(address)
-        }
+        presentation.openLocation(in: self)
     }
 
     func focusStartPageCommandPalette() {
@@ -78,59 +42,36 @@ extension MobileBrowserRootContent {
     }
 
     func finishCompactTransition(_ predictedEndTranslation: CGSize) {
-        guard presentation == .compact else { return }
-        guard
-            MobileCompactChromeTransitionPolicy.commits(
-                predictedEndTranslation: predictedEndTranslation,
-                for: compactTransition
-            )
-        else { return }
+        guard presentation.presentsPageOverTabViewer else { return }
+        guard compactTransition.commits(predictedEndTranslation: predictedEndTranslation) else { return }
         isAddressEditing = false
-        switch compactTransition {
-        case .revealTabViewer:
-            revealSidebarFromCompactChrome()
-        case .revealPage:
-            model.activateSelectedTab()
-        }
+        compactTransition.finish(in: self)
     }
 
     /// Brings the sidebar up from the compact chrome's upward swipe, in the
     /// placement this window already keeps it in.
     ///
-    /// `MobileCompactSidebarRevealPolicy` carries the reasoning. The short of it
+    /// `MobileCompactSidebarRevealDestination` carries the reasoning. The short of it
     /// is that the full-screen viewer is the docked sidebar, so a docked window
     /// goes on landing there, while an undocked one — which only has this
     /// toolbar to swipe because a split is on show — floats the sidebar over the
     /// split instead of dropping the split to reach it.
     func revealSidebarFromCompactChrome() {
-        switch MobileCompactSidebarRevealPolicy.destination(
+        MobileCompactSidebarRevealDestination.destination(
             sidebarPresentation: navigation.regularSidebarPresentation
-        ) {
-        case .tabViewer:
-            showTabViewer()
-        case .floatingSidebar:
-            dismissAddressFocus()
-            showRegularSidebar()
-        }
+        )
+        .reveal(in: self)
     }
 
     /// The compact toolbar's horizontal swipe.
     ///
     /// It used to switch Spaces unconditionally. As of 0.4 it belongs to Split
-    /// View: `MobileToolbarSwipePolicy` decides, and outside a group the answer
+    /// View: `MobileToolbarSwipeMode` decides, and outside a group the answer
     /// is deliberately nothing. Keyboard Space switching (⌥⌘←/→) is untouched —
     /// it goes through `MobileBrowserCommandController`, not through here.
     func handleToolbarSwipe(_ direction: BrowserSpaceSwipeDirection) {
-        switch MobileToolbarSwipePolicy.destination(
-            isInSplitGroup: isSelectedTabInSplitGroup
-        ) {
-        case .adjacentCard:
-            model.selectAdjacentSplitCard(direction)
-        case .adjacentSpace:
-            model.switchSpace(direction, reduceMotion: reduceMotion)
-        case .none:
-            break
-        }
+        MobileToolbarSwipeMode.shipping.destination(isInSplitGroup: isSelectedTabInSplitGroup)
+            .swipe(direction, in: self)
     }
 
     /// The carousel's own selection commits: an accessibility adjustment, or a
@@ -144,7 +85,7 @@ extension MobileBrowserRootContent {
     }
 
     func toggleSidebarFromCommand() {
-        if presentation == .compact, navigation.compactShowsPage {
+        if presentation.presentsPageOverTabViewer, navigation.compactShowsPage {
             dismissAddressFocus()
         }
         model.toggleSidebar(

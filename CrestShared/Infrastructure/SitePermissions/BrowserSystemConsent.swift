@@ -12,8 +12,9 @@ final class BrowserSystemConsent: BrowserSystemConsenting {
 
     // MARK: - Variables
 
-    private let location: Consent
-    private let notifications: Consent
+    /// The service that answers for each capability the system gates
+    /// besides capture. A capability without one is not gated.
+    private let services: [SitePermission: Consent]
 
     // MARK: - Initializers
 
@@ -21,19 +22,14 @@ final class BrowserSystemConsent: BrowserSystemConsenting {
     /// about notifications, each asking the person when the system has not
     /// decided.
     init(location: @escaping Consent, notifications: @escaping Consent) {
-        self.location = location
-        self.notifications = notifications
+        services = [.location: location, .notifications: notifications]
     }
 
     // MARK: - Actions - Consent
 
     func consents(to permission: SitePermission) async -> Bool {
         if permission.isMedia { return await Self.captureConsents(to: permission) }
-        switch permission {
-        case .location: return await location()
-        case .notifications: return await notifications()
-        default: return true
-        }
+        return await services[permission]?() ?? true
     }
 
     /// Whether the system lets Crest use every device `permission` captures

@@ -9,7 +9,7 @@ public sealed record MoveLinkRoute(Guid RouteId, int Offset) : LinkIntent {
     #region Actions - Device
 
     internal override void Apply(Device device, DeviceTurn turn) =>
-        device.ReviseLinks(turn.Changes, links => LinkPreferencePolicy.Moving(links, this));
+        device.ReviseLinks(turn.Changes, links => links.Moving(this));
 
     #endregion
 }

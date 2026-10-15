@@ -91,7 +91,7 @@ final class BrowserMacApplication {
         let usesIsolatedLaunch = launchEnvironment.requiresIsolation
         let usesEphemeralProfileStorage =
             launchEnvironment.usesEphemeralProfileStorage
-        BrowserMacWebTextAssistancePolicy.configure()
+        BrowserMacWebTextAssistancePreference.configure()
         BrowserWebKitFeatureFlagStore.configureForLaunch(
             usesIsolatedLaunch: usesIsolatedLaunch
         )

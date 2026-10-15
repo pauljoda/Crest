@@ -8,6 +8,7 @@ import Foundation
 enum BrowserLookAndFeelDefaults {
     static let windowBorderWidth = BrowserChromeAppearance.defaultBorderWidth
     static let sidebarOnRight = false
+    static let surfaceMaterial = CrestSurfaceMaterial.standard
     static let cornerRadius: Double = 10
     static let tabScale: Double = 1
     static let pinColumns = 0
@@ -34,6 +35,7 @@ enum BrowserLookAndFeelDefaults {
         appearance.cornerRadius = cornerRadius
         appearance.tabs = tabs
         appearance.address = address
+        appearance.surfaceMaterial = surfaceMaterial
 
         chrome.set(windowBorderWidth, forKey: BrowserChromeAppearancePreference.borderWidthKey)
         chrome.set(sidebarOnRight, forKey: BrowserChromeAppearancePreference.sidebarOnRightKey)

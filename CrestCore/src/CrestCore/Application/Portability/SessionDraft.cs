@@ -140,7 +140,7 @@ internal sealed record SessionDraft(int Ordinal, string? Name, IReadOnlyList<Ses
                 placement = spill;
                 if (overflow is null && folders.Count < FolderTree.MaximumCount) {
                     overflow = ids.Next();
-                    folders.Add(Folder(overflow.Value, WorkspaceImportPolicy.OverflowFolderTitle, WorkspaceImportPolicy.OverflowFolderSymbol,
+                    folders.Add(Folder(overflow.Value, NativeWorkspaceImport.OverflowFolderTitle, NativeWorkspaceImport.OverflowFolderSymbol,
                         parent: null, spill));
                     folderPlaces[overflow.Value] = spill;
                 }
@@ -159,7 +159,7 @@ internal sealed record SessionDraft(int Ordinal, string? Name, IReadOnlyList<Ses
         string name = ImportText.Bounded(Name, Fallback(names, numbered), ImportText.MaximumSpaceName)
             ?? throw new Rejected(new SessionOverLimits());
         string symbol = Symbol ?? source.Symbol;
-        return new(name, symbol, Accent ?? source.Accent, Branding ?? ImportedLook.Neutral(symbol), Ordered(folders), tabs,
+        return new(name, symbol, Accent ?? source.Accent, Branding ?? SpaceBranding.NeutralImport(symbol), Ordered(folders), tabs,
             splits, ArchivedTabs: [], History: [], StoredSessionCodec.DefaultBrowsingPreferences, SelectedTabId: null);
     }
 
@@ -172,7 +172,7 @@ internal sealed record SessionDraft(int Ordinal, string? Name, IReadOnlyList<Ses
         Guid? Group(SessionTab tab) => tab.SplitSourceId is not { } source ? null
             : splitIds.TryGetValue(source, out var id) ? id : splitIds[source] = ids.Next();
         var asked = sources.Select(Group).ToArray();
-        var kept = SplitMembershipPolicy.Repair([.. tabs.Select((tab, index) => new SplitMember(asked[index], tab.Placement, tab.FolderId))]);
+        var kept = SplitMember.Repair([.. tabs.Select((tab, index) => new SplitMember(asked[index], tab.Placement, tab.FolderId))]);
         var counts = kept.OfType<Guid>().GroupBy(group => group).ToDictionary(group => group.Key, group => group.Count());
         List<BrowserDataSplit> splits = [];
         for (int index = 0; index < tabs.Count; index++) {

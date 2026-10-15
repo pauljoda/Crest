@@ -2112,6 +2112,9 @@
     "Apple translates page text on this device. Languages may need to download first; Apple asks before downloading. Downloaded languages are shared with other apps and remain available after Private Browsing ends." : {
 
     },
+    "Apple Translation doesn’t support %@." : {
+
+    },
     "Apple Translation requires a physical device. It is not available in Simulator." : {
 
     },
@@ -7949,6 +7952,9 @@
     "Matches the title" : {
 
     },
+    "Material" : {
+
+    },
     "Meadow" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -10123,9 +10129,6 @@
           }
         }
       }
-    },
-    "Reader and page translation" : {
-
     },
     "Reader Mode" : {
       "localizations" : {
@@ -13531,6 +13534,12 @@
     "These rows are excluded from the import. Correct the source file to import them later." : {
 
     },
+    "Thick" : {
+
+    },
+    "Thin" : {
+
+    },
     "This action requires webpage tabs. Deselect built-in pages first." : {
 
     },
@@ -14299,6 +14308,12 @@
 
     },
     "Typing" : {
+
+    },
+    "Ultra Thick" : {
+
+    },
+    "Ultra Thin" : {
 
     },
     "Ultrawide" : {

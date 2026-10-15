@@ -70,9 +70,9 @@ private struct BrowserShortcutSettingsContent: View {
                 .font(.footnote)
                 .foregroundStyle(.secondary)
         }
-        .frame(maxWidth: BrowserSettingsVisualPolicy.formColumnWidth, maxHeight: .infinity, alignment: .topLeading)
+        .frame(maxWidth: BrowserSettingsLayout.formColumnWidth, maxHeight: .infinity, alignment: .topLeading)
         .padding(.vertical, 20)
-        .padding(.horizontal, BrowserSettingsVisualPolicy.formMinimumInset)
+        .padding(.horizontal, BrowserSettingsLayout.formMinimumInset)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .alert(
             BrowserShortcutSettingsPresentation.shortcutAlreadyInUse,

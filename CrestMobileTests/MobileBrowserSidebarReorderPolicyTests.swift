@@ -241,7 +241,7 @@ final class MobileBrowserSidebarReorderPolicyTests: XCTestCase {
 
         for entry in matrix {
             XCTAssertEqual(
-                BrowserSpacePagerPolicy.isInteractionLocked(
+                BrowserSidebarInteractionState.ownsHorizontalAxis(
                     hasSidebarLift: entry.sidebar,
                     hasTabDrag: entry.tab,
                     hasFolderDrag: entry.folder
@@ -255,7 +255,7 @@ final class MobileBrowserSidebarReorderPolicyTests: XCTestCase {
 
     /// What the pager itself computes, from the one state a touch lift touches.
     private func lockedPager(_ state: BrowserSidebarReorderState) -> Bool {
-        BrowserSpacePagerPolicy.isInteractionLocked(
+        BrowserSidebarInteractionState.ownsHorizontalAxis(
             hasSidebarLift: state.hasLiftInFlight,
             hasTabDrag: false,
             hasFolderDrag: false
@@ -346,8 +346,7 @@ final class MobileBrowserSidebarReorderPolicyTests: XCTestCase {
         }
 
         init(
-            stagedLiftExpiration: Duration = BrowserSidebarReorderPolicy
-                .stagedLiftExpiration
+            stagedLiftExpiration: Duration = BrowserSidebarReorderState.stagedLiftExpiration
         ) {
             state = BrowserSidebarReorderState(
                 stagedLiftExpiration: stagedLiftExpiration, clock: clock
@@ -816,7 +815,7 @@ final class MobileBrowserSidebarReorderPolicyTests: XCTestCase {
             )
             let widths = BrowserSplitColumnLayout.widths(
                 containerWidth: row.width,
-                fractions: BrowserSplitLayoutSeedPolicy.fractions(
+                fractions: BrowserSplitColumnLayout.seedFractions(
                     persisted: nil,
                     memberCount: cards.count
                 )

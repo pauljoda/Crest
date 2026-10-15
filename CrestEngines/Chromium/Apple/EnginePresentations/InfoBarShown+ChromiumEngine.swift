@@ -9,7 +9,7 @@
                     cancelTitle: cancelLabel ?? "",
                     isCloseable: closeable, isMinimizable: minimizable)
             else { return }
-            page.observer(.infoBarAdded(bar))
+            page.observer(BrowserPageInfoBarAdded(bar: bar))
         }
     }
 #endif

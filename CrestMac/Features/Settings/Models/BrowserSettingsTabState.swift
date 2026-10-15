@@ -46,7 +46,7 @@ final class BrowserSettingsTabState {
     }
 
     func applyExternalRoute(
-        _ request: BrowserSettingsRequest,
+        _ request: any BrowserSettingsRequest,
         spaceID: UUID?,
         searchText: String?,
         revision: Int
@@ -54,13 +54,7 @@ final class BrowserSettingsTabState {
         guard revision > consumedRouteRevision else { return }
         consumedRouteRevision = revision
         if let searchText { navigation.searchText = searchText }
-        switch request {
-        case .destination(let destination):
-            navigation.selection = .destination(destination)
-        case .space(let tab, let intent):
-            guard let spaceID else { return }
-            showSpace(spaceID, tab: tab, intent: intent)
-        }
+        request.apply(to: self, spaceID: spaceID)
     }
 }
 

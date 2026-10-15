@@ -15,10 +15,7 @@ struct MobileCompactChromeTransitionModifier: ViewModifier {
         DragGesture(minimumDistance: 8, coordinateSpace: .local)
             .onChanged { value in
                 guard !committedDuringDrag,
-                    MobileCompactChromeTransitionPolicy.commits(
-                        predictedEndTranslation: value.translation,
-                        for: transition
-                    )
+                    transition.commits(predictedEndTranslation: value.translation)
                 else { return }
                 committedDuringDrag = true
                 transitionEnded(value.translation)

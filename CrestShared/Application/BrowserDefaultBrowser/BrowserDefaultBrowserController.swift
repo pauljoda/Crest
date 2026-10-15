@@ -124,7 +124,7 @@ final class BrowserDefaultBrowserController {
 
     private static func userFacingDescription(for error: any Error) -> String {
         if let platformDescription =
-            BrowserPlatformDefaultBrowserErrorPolicy.userFacingDescription(
+            BrowserPlatformDefaultBrowserSystem.userFacingDescription(
                 for: error
             )
         {

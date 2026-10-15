@@ -17,7 +17,7 @@ public sealed class OriginPolicyTests {
     [InlineData("file", "localhost", false)]
     [InlineData("https", "", false)]
     public void PowerfulFeaturesNeedASecureContext(string scheme, string host, bool allowed) =>
-        Assert.Equal(allowed, SecureOriginPolicy.Allows(new(scheme, host, 0)));
+        Assert.Equal(allowed, new SiteOrigin(scheme, host, 0).IsSecureContext);
 
     [Theory]
     [InlineData("https", false, "engine")]
@@ -30,32 +30,32 @@ public sealed class OriginPolicyTests {
     [InlineData("zoommtg", false, "handOff")]
     [InlineData(null, false, "engine")]
     public void SchemesAreKeptBlockedOrHandedOff(string? scheme, bool appInitiated, string expected) =>
-        Assert.Equal(expected, ExternalSchemePolicy.Disposition(scheme, appInitiated).Name);
+        Assert.Equal(expected, UrlScheme.DispositionOf(scheme, appInitiated).Name);
 
     [Fact]
     public void AnOverlongSchemeIsRefused() =>
-        Assert.Equal(ExternalSchemeDisposition.Blocked, ExternalSchemePolicy.Disposition(new string('a', 300), false));
+        Assert.Equal(ExternalSchemeDisposition.Blocked, UrlScheme.DispositionOf(new string('a', 300), false));
 
     [Fact]
     public void WebLinksNeedHttpOrHttpsAndAHost() {
-        Assert.True(ExternalUrlPolicy.AcceptsWebLink("HTTPS", "example.com"));
-        Assert.True(ExternalUrlPolicy.AcceptsWebLink("http", "example.com"));
-        Assert.False(ExternalUrlPolicy.AcceptsWebLink("https", ""));
-        Assert.False(ExternalUrlPolicy.AcceptsWebLink("file", null));
-        Assert.False(ExternalUrlPolicy.AcceptsWebLink("javascript", "example.com"));
-        Assert.False(ExternalUrlPolicy.AcceptsWebLink(null, "example.com"));
-        Assert.False(ExternalUrlPolicy.AcceptsWebLink("https", new string('a', ExternalUrlPolicy.MaximumHostLength + 1)));
+        Assert.True(new ExternalWebLink("HTTPS", "example.com").IsAccepted);
+        Assert.True(new ExternalWebLink("http", "example.com").IsAccepted);
+        Assert.False(new ExternalWebLink("https", "").IsAccepted);
+        Assert.False(new ExternalWebLink("file", null).IsAccepted);
+        Assert.False(new ExternalWebLink("javascript", "example.com").IsAccepted);
+        Assert.False(new ExternalWebLink(null, "example.com").IsAccepted);
+        Assert.False(new ExternalWebLink("https", new string('a', ExternalWebLink.MaximumHostLength + 1)).IsAccepted);
     }
 
     [Fact]
     public void LocalDocumentsRefuseRemoteAuthoritiesAndUsers() {
-        Assert.True(ExternalUrlPolicy.AcceptsLocalDocument(new(true, false, true, null)));
-        Assert.True(ExternalUrlPolicy.AcceptsLocalDocument(new(true, false, true, "LocalHost")));
-        Assert.False(ExternalUrlPolicy.AcceptsLocalDocument(new(true, false, true, "server")));
-        Assert.False(ExternalUrlPolicy.AcceptsLocalDocument(new(true, true, true, null)));
-        Assert.False(ExternalUrlPolicy.AcceptsLocalDocument(new(true, false, false, null)));
-        Assert.False(ExternalUrlPolicy.AcceptsLocalDocument(new(false, false, true, null)));
-        Assert.False(ExternalUrlPolicy.AcceptsLocalDocument(new(true, false, true, new string('a', ExternalUrlPolicy.MaximumHostLength + 1))));
+        Assert.True(new LocalDocumentFacts(true, false, true, null).IsAcceptedDocument);
+        Assert.True(new LocalDocumentFacts(true, false, true, "LocalHost").IsAcceptedDocument);
+        Assert.False(new LocalDocumentFacts(true, false, true, "server").IsAcceptedDocument);
+        Assert.False(new LocalDocumentFacts(true, true, true, null).IsAcceptedDocument);
+        Assert.False(new LocalDocumentFacts(true, false, false, null).IsAcceptedDocument);
+        Assert.False(new LocalDocumentFacts(false, false, true, null).IsAcceptedDocument);
+        Assert.False(new LocalDocumentFacts(true, false, true, new string('a', ExternalWebLink.MaximumHostLength + 1)).IsAcceptedDocument);
     }
 
     [Fact]
@@ -70,7 +70,7 @@ public sealed class OriginPolicyTests {
     [Fact]
     public void ADocumentShowsOneBlockedPopupIndicationUntilItNavigates() {
         static BlockedPopupPageState? After(BlockedPopupPageState state, BlockedPopupEvent popupEvent, string? document = null,
-            SiteOrigin? origin = null) => BlockedPopupPolicy.Apply(state, popupEvent, document, origin);
+            SiteOrigin? origin = null) => state.Applying(popupEvent, document, origin);
         var blocked = After(BlockedPopupPageState.Empty, BlockedPopupEvent.Blocked, "doc-1", Site)!;
         Assert.Equal(BlockedPopupStatus.Blocked, blocked.Status);
         Assert.Equal(1, blocked.IndicationRevision);
@@ -97,17 +97,17 @@ public sealed class OriginPolicyTests {
 
     [Fact]
     public void BasicAndDigestPromptThreeTimesAndProxiesKeepSystemHandling() {
-        Assert.Equal(AuthenticationHandling.PromptForCredentials, AuthenticationPolicy.Handling(AuthenticationMethod.HttpBasic, false, 2));
-        Assert.Equal(AuthenticationHandling.Cancel, AuthenticationPolicy.Handling(AuthenticationMethod.HttpDigest, false, 3));
-        Assert.Equal(AuthenticationHandling.PerformDefaultHandling, AuthenticationPolicy.Handling(AuthenticationMethod.HttpBasic, true, 0));
-        Assert.Equal(AuthenticationHandling.PerformDefaultHandling, AuthenticationPolicy.Handling(AuthenticationMethod.Other, false, 0));
+        Assert.Equal(AuthenticationHandling.PromptForCredentials, new ChallengeHandling(AuthenticationMethod.HttpBasic, false, 2).Handling);
+        Assert.Equal(AuthenticationHandling.Cancel, new ChallengeHandling(AuthenticationMethod.HttpDigest, false, 3).Handling);
+        Assert.Equal(AuthenticationHandling.PerformDefaultHandling, new ChallengeHandling(AuthenticationMethod.HttpBasic, true, 0).Handling);
+        Assert.Equal(AuthenticationHandling.PerformDefaultHandling, new ChallengeHandling(AuthenticationMethod.Other, false, 0).Handling);
     }
 
     [Fact]
     public void TheAuthenticationPromptNamesTheServerWithANonDefaultPort() {
-        Assert.Equal("intranet.example", AuthenticationPolicy.SourceLabel("intranet.example", 443, "HTTPS"));
-        Assert.Equal("intranet.example:8443", AuthenticationPolicy.SourceLabel("intranet.example", 8443, "https"));
-        Assert.Equal("proxy.example:80", AuthenticationPolicy.SourceLabel("proxy.example", 80, null));
-        Assert.Null(AuthenticationPolicy.SourceLabel("", 443, "https"));
+        Assert.Equal("intranet.example", new AuthenticationSource("intranet.example", 443, "HTTPS").Label);
+        Assert.Equal("intranet.example:8443", new AuthenticationSource("intranet.example", 8443, "https").Label);
+        Assert.Equal("proxy.example:80", new AuthenticationSource("proxy.example", 80, null).Label);
+        Assert.Null(new AuthenticationSource("", 443, "https").Label);
     }
 }

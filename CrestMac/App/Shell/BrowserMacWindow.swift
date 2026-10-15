@@ -61,7 +61,7 @@ final class BrowserMacWindow: NSWindow {
     /// page under the pointer, or the window's active page, as the Back and
     /// Forward commands do; a WebKit page moves through its own swipes.
     override func swipe(with event: NSEvent) {
-        if let action = BrowserSidebarMouseButtonPolicy.action(forSwipeDeltaX: event.deltaX),
+        if let action = BrowserSidebarMouseButtonAction(swipeDeltaX: event.deltaX),
             pointerNavigation?.navigate(action, swipedAt: event) == true
         {
             return

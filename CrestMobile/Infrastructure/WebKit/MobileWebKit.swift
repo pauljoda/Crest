@@ -10,6 +10,36 @@ enum MobileWebKit {
 
     static let preferredContentMode = WKWebpagePreferences.ContentMode.recommended
 
+    /// Keeps every video, including ones a page adds later, playing inline
+    /// rather than taking over the screen.
+    static let inlineVideoScript = WKUserScript(
+        source: """
+            (() => {
+              const keepInline = (root) => {
+                if (root instanceof HTMLVideoElement) {
+                  root.setAttribute('playsinline', '');
+                  root.setAttribute('webkit-playsinline', '');
+                }
+                root.querySelectorAll?.('video').forEach((video) => {
+                  video.setAttribute('playsinline', '');
+                  video.setAttribute('webkit-playsinline', '');
+                });
+              };
+
+              keepInline(document);
+              new MutationObserver((records) => {
+                records.forEach((record) => {
+                  record.addedNodes.forEach((node) => {
+                    if (node instanceof Element) keepInline(node);
+                  });
+                });
+              }).observe(document.documentElement, { childList: true, subtree: true });
+            })();
+            """,
+        injectionTime: .atDocumentStart,
+        forMainFrameOnly: false
+    )
+
     // MARK: - Actions - Pages
 
     /// Adds the mobile media policy to a new page's configuration, on top of
@@ -20,7 +50,7 @@ enum MobileWebKit {
         configuration.allowsInlineMediaPlayback = true
         configuration.allowsPictureInPictureMediaPlayback = true
         configuration.mediaTypesRequiringUserActionForPlayback = .all
-        configuration.userContentController.addUserScript(MobileMediaPlaybackPolicy.inlineVideoScript)
+        configuration.userContentController.addUserScript(inlineVideoScript)
     }
 
     /// The web view over `configuration`, one the binding assembled or one

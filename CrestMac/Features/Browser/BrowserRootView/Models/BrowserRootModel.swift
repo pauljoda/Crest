@@ -57,6 +57,9 @@ final class BrowserRootModel {
     }
     @ObservationIgnored private var isSidebarApproachingDockStorage = false
     private(set) var isSidebarSurfaceHovered = false
+    /// Whether the floating sidebar came out because the pointer reached the
+    /// window edge, rather than from a click, command or page request.
+    private(set) var isFloatingSidebarRevealedByPointer = false
     private var sidebarMorphRevision = 0
     /// Cancels or awaits the current sidebar transition.
     @ObservationIgnored private(set) var sidebarMorphTask: Task<Void, Never>?
@@ -315,14 +318,7 @@ extension BrowserRootModel {
     func handleAuxiliaryMouseAction(
         _ action: BrowserSidebarMouseButtonAction
     ) {
-        let direction: BrowserSpaceSwipeDirection
-        switch action {
-        case .previousSpace:
-            direction = .previous
-        case .nextSpace:
-            direction = .next
-        }
-        guard browser.selectAdjacentSpace(direction) != nil else { return }
+        guard browser.selectAdjacentSpace(action.spaceDirection) != nil else { return }
         pages.selectSpace(in: browser)
     }
 }
@@ -331,7 +327,7 @@ extension BrowserRootModel {
 
 extension BrowserRootModel {
     var sidebarPresentation: BrowserSidebarPresentation {
-        BrowserSidebarPresentationPolicy.presentation(
+        BrowserSidebarPresentation(
             columnVisibility: chrome.columnVisibility,
             isFloatingSidebarPresented: isFloatingSidebarPresented
         )
@@ -358,6 +354,7 @@ extension BrowserRootModel {
 
     func hideSidebar(reduceMotion: Bool) {
         chrome.utilityPresentation.dismiss()
+        isFloatingSidebarRevealedByPointer = false
         guard !reduceMotion else {
             cancelSidebarMorph()
             isFloatingSidebarPresented = isSidebarSurfaceHovered
@@ -392,57 +389,57 @@ extension BrowserRootModel {
     }
 
     func toggleSidebar(reduceMotion: Bool) {
-        switch sidebarPresentation.sidebarToggleAction.kind {
-        case .hide:
-            hideSidebar(reduceMotion: reduceMotion)
-        case .dock:
-            guard !reduceMotion else {
-                cancelSidebarMorph()
-                isFloatingSidebarPresented = false
-                chrome.showSidebar()
-                return
-            }
-            let revision = beginSidebarMorph()
-            sidebarMorphTask = Task { @MainActor [weak self] in
-                await Task.yield()
-                guard let self,
-                    !Task.isCancelled,
-                    self.sidebarMorphRevision == revision
-                else { return }
-                withAnimation(
-                    self.accessibleAnimation(
-                        CrestMotion.sidebarDockApproach,
-                        reduceMotion
-                    )
-                ) {
-                    self.isSidebarApproachingDock = true
-                }
-                try? await self.sidebarMorphWait(
-                    CrestMotion.sidebarDockApproachCompletionDelay
+        sidebarPresentation.sidebarToggleAction.perform(on: self, reduceMotion: reduceMotion)
+    }
+
+    func dockSidebar(reduceMotion: Bool) {
+        isFloatingSidebarRevealedByPointer = false
+        guard !reduceMotion else {
+            cancelSidebarMorph()
+            isFloatingSidebarPresented = false
+            chrome.showSidebar()
+            return
+        }
+        let revision = beginSidebarMorph()
+        sidebarMorphTask = Task { @MainActor [weak self] in
+            await Task.yield()
+            guard let self,
+                !Task.isCancelled,
+                self.sidebarMorphRevision == revision
+            else { return }
+            withAnimation(
+                self.accessibleAnimation(
+                    CrestMotion.sidebarDockApproach,
+                    reduceMotion
                 )
-                guard !Task.isCancelled,
-                    self.sidebarMorphRevision == revision
-                else { return }
-                withAnimation(
-                    self.accessibleAnimation(
-                        CrestMotion.sidebarDockAttachment,
-                        reduceMotion
-                    )
-                ) {
-                    self.isFloatingSidebarPresented = false
-                    self.chrome.showSidebar()
-                }
-                try? await self.sidebarMorphWait(
-                    CrestMotion.sidebarDockAttachmentCompletionDelay
-                )
-                guard !Task.isCancelled,
-                    self.sidebarMorphRevision == revision
-                else { return }
-                withTransaction(Transaction(animation: nil)) {
-                    self.isSidebarApproachingDock = false
-                }
-                _ = self.finishSidebarMorph(revision)
+            ) {
+                self.isSidebarApproachingDock = true
             }
+            try? await self.sidebarMorphWait(
+                CrestMotion.sidebarDockApproachCompletionDelay
+            )
+            guard !Task.isCancelled,
+                self.sidebarMorphRevision == revision
+            else { return }
+            withAnimation(
+                self.accessibleAnimation(
+                    CrestMotion.sidebarDockAttachment,
+                    reduceMotion
+                )
+            ) {
+                self.isFloatingSidebarPresented = false
+                self.chrome.showSidebar()
+            }
+            try? await self.sidebarMorphWait(
+                CrestMotion.sidebarDockAttachmentCompletionDelay
+            )
+            guard !Task.isCancelled,
+                self.sidebarMorphRevision == revision
+            else { return }
+            withTransaction(Transaction(animation: nil)) {
+                self.isSidebarApproachingDock = false
+            }
+            _ = self.finishSidebarMorph(revision)
         }
     }
 
@@ -456,8 +453,18 @@ extension BrowserRootModel {
         }
     }
 
+    /// Presents the floating sidebar for a pointer that reached the window
+    /// edge. Leaving the window counts as leaving the sidebar from then on,
+    /// even before the pointer first reaches the card sliding in under it.
+    func revealFloatingSidebarFromPointer(reduceMotion: Bool) {
+        presentFloatingSidebar(reduceMotion: reduceMotion)
+        guard sidebarPresentation == .floating else { return }
+        isFloatingSidebarRevealedByPointer = true
+    }
+
     func dismissFloatingSidebar(reduceMotion: Bool) {
         cancelSidebarMorph()
+        isFloatingSidebarRevealedByPointer = false
         if sidebarPresentation == .floating {
             chrome.utilityPresentation.dismiss()
         }
@@ -484,6 +491,13 @@ extension BrowserRootModel {
     ) {
         guard !isActive else { return }
         dismissFloatingSidebarIfInteractionAllows(reduceMotion: reduceMotion)
+    }
+
+    /// A command can put the floating sidebar away without going through
+    /// `dismissFloatingSidebar`, and whatever revealed it last no longer applies.
+    func floatingSidebarPresentationChanged() {
+        guard !isFloatingSidebarPresented else { return }
+        isFloatingSidebarRevealedByPointer = false
     }
 
     func columnVisibilityChanged(reduceMotion: Bool) {
@@ -655,11 +669,7 @@ extension BrowserRootModel {
     func isPaletteSourceAvailable(
         _ source: BrowserTabRuntimeAssignment
     ) -> Bool {
-        BrowserCommandPaletteActionPolicy.isSourceAvailable(
-            source,
-            in: browser,
-            accessController: spaceAccess
-        )
+        browser.isPaletteSourceAvailable(source, accessController: spaceAccess)
     }
 
     @discardableResult
@@ -668,12 +678,7 @@ extension BrowserRootModel {
         to target: BrowserTabRuntimeAssignment
     ) -> Bool {
         guard
-            let destination = BrowserCommandPaletteActionPolicy.target(
-                target,
-                from: source,
-                in: browser,
-                accessController: spaceAccess
-            )
+            let destination = browser.paletteTarget(target, from: source, accessController: spaceAccess)
         else { return false }
         browser.selectSpace(destination.space.id)
         browser.selectTab(destination.tab.id)
@@ -693,11 +698,7 @@ extension BrowserRootModel {
         windows: BrowserMacWindows? = nil
     ) -> Bool {
         guard
-            BrowserCommandPaletteActionPolicy.isSourceAvailable(
-                source,
-                in: browser,
-                accessController: spaceAccess
-            )
+            browser.isPaletteSourceAvailable(source, accessController: spaceAccess)
         else { return false }
         return opening.open(url, from: source, with: BrowserMacPaletteOpener(model: self, mode: mode, windows: windows))
     }
@@ -781,10 +782,7 @@ extension BrowserRootModel {
         _ animation: Animation,
         _ reduceMotion: Bool
     ) -> Animation? {
-        BrowserVisualAccessibilityPolicy.animation(
-            animation,
-            reduceMotion: reduceMotion
-        )
+        animation.unlessReducingMotion(reduceMotion)
     }
 }
 
@@ -803,3 +801,5 @@ extension BrowserRootModel {
 }
 
 extension BrowserRootModel: BrowserStoreFirstObservable {}
+
+extension BrowserRootModel: BrowserSidebarToggleTarget {}

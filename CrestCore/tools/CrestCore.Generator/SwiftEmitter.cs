@@ -28,6 +28,10 @@ internal static class SwiftEmitter {
     private const string ObservedModelProtocol = "ObservedModel";
     private const string ObservedListClass = "ObservedList";
 
+    /// The hand-written protocol each change adopts, which applies it to the
+    /// read model and notes what it tells those who follow its batch.
+    private const string ChangeProtocol = "CoreChange";
+
     /// The path segment under which Swift sources are view code.
     private const string ViewDirectory = "/Features/";
 
@@ -64,6 +68,30 @@ internal static class SwiftEmitter {
             """);
         foreach (var member in schema.Members(ContractRoot.Change))
             code.Append($"        case .{Naming.SwiftMember(member.Name)}(let change): change.apply(to: state)\n");
+        code.Append("""
+                    }
+                }
+
+                /// Applies the change to the core's read model and notes in `batch` what it
+                /// tells those who follow the batch, as its own `apply(to:in:)` does.
+                @MainActor func apply(to core: CrestCore, in batch: inout CoreChangeBatch) {
+                    switch self {
+
+            """);
+        foreach (var member in schema.Members(ContractRoot.Change))
+            code.Append($"        case .{Naming.SwiftMember(member.Name)}(let change): change.apply(to: core, in: &batch)\n");
+        code.Append("""
+                    }
+                }
+
+                /// Notes in `receipts` what the change tells the cloud transport whose intent
+                /// it answers, as its own `note(in:)` does.
+                func note(in receipts: inout CloudTransportReceipts) {
+                    switch self {
+
+            """);
+        foreach (var member in schema.Members(ContractRoot.Change))
+            code.Append($"        case .{Naming.SwiftMember(member.Name)}(let change): change.note(in: &receipts)\n");
         code.Append("        }\n    }\n}\n");
 
         var roots = new Dictionary<Type, (ContractRoot Root, ContractMember Member)>();
@@ -74,6 +102,9 @@ internal static class SwiftEmitter {
             var conformances = new List<string>();
             bool isSent = roots.TryGetValue(record.Type, out var owner) && owner.Root.PlatformSends;
             if (isSent) conformances.Add(owner.Root.Name);
+            // A change applies itself to the read model, through the hand-written protocol.
+            if (roots.TryGetValue(record.Type, out var received) && received.Root == ContractRoot.Change)
+                conformances.Add(ChangeProtocol);
             conformances.AddRange(schema.Families.Where(family => family.Base!.IsAssignableFrom(record.Type)).Select(family => family.Base!.Name));
             if (record.IsNormalizedOnConstruction) conformances.Add("Hashable");
             else if (equatable.Contains(record.Type)) conformances.Add("Equatable");

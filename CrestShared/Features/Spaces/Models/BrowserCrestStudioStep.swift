@@ -5,8 +5,8 @@ import Foundation
 struct BrowserCrestStudioStep: Hashable, Identifiable, Sendable {
     // MARK: - Types
 
-    /// Each step shows its own choices, so the one place that builds a step
-    /// switches over the kind.
+    /// Each step shows its own choices. ``BrowserCrestForge`` switches on the
+    /// kind to choose that step's concrete sections.
     enum Kinds: Sendable {
         case start
         case shape

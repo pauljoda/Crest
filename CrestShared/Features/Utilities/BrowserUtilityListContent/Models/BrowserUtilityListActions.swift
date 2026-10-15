@@ -1,14 +1,5 @@
 import Foundation
 
-enum BrowserUtilityDownloadAction {
-    case open(UUID, BrowserUtilityDownloadDestination)
-    case retry(UUID)
-    case pause(UUID)
-    case resume(UUID)
-    case cancel(UUID)
-    case clear(UUID)
-}
-
 struct BrowserUtilityListActions {
     var restoreArchivedTab: (UUID, BrowserSpaceRuntimeAssignment) -> Void = { _, _ in }
     var openHistoryEntry: (HistoryEntryState, BrowserSpaceRuntimeAssignment) -> Void = { _, _ in }

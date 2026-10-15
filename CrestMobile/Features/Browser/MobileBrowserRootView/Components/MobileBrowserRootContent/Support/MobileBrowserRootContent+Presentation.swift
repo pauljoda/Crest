@@ -9,7 +9,7 @@ extension MobileBrowserRootContent {
     var address: String { model.address }
 
     var presentation: MobileBrowserPresentation {
-        MobileBrowserPresentationPolicy.resolve(
+        MobileBrowserPresentation.fitting(
             availableWidth: availableRootSize.width
         )
     }
@@ -25,26 +25,38 @@ extension MobileBrowserRootContent {
     }
 
     var usesBorderlessPageFrame: Bool {
-        MobileSidebarPageFramePolicy.usesBorderlessFrame(
+        presentation.usesBorderlessPageFrame(
             preferenceIsEnabled: chromeAppearance.borderless,
-            sidebarPresentation: navigation.regularSidebarPresentation,
-            presentsSplitView: presentsSplitView,
-            browserPresentation: presentation
+            sidebarPresentation: navigation.regularSidebarPresentation
         )
     }
 
     var showsCompactPageToolbar: Bool {
-        MobileSidebarPageFramePolicy.showsCompactToolbar(
+        Self.showsCompactPageToolbar(
             sidebarPresentation: navigation.regularSidebarPresentation,
             presentsSplitView: presentsSplitView
         )
     }
 
+    /// The compact toolbar shows under a docked sidebar's page, and under a
+    /// presented split whatever the sidebar's placement.
+    nonisolated static func showsCompactPageToolbar(
+        sidebarPresentation: BrowserSidebarPresentation,
+        presentsSplitView: Bool
+    ) -> Bool {
+        presentsSplitView || sidebarPresentation == .docked
+    }
+
+    /// Whether the keyboard floats over the window rather than docking to its
+    /// bottom edge: one narrower than most of the window floats.
     var ignoresFloatingKeyboardSafeArea: Bool {
-        MobileKeyboardLayoutPolicy.isFloating(
-            keyboardFrame: keyboardEndFrame,
-            availableSize: availableRootSize
-        )
+        let floatingKeyboardMaximumWidthRatio: CGFloat = 0.85
+        guard !keyboardEndFrame.isNull,
+            !keyboardEndFrame.isEmpty,
+            availableRootSize.width > 0
+        else { return false }
+        return keyboardEndFrame.width
+            < availableRootSize.width * floatingKeyboardMaximumWidthRatio
     }
 
     var compactPagePresentation: Binding<Bool> {
@@ -68,7 +80,7 @@ extension MobileBrowserRootContent {
     /// page rather than from the window: a sheet asked of the window while
     /// the page covers it never appears.
     var pageCoversWindow: Bool {
-        presentation == .compact && compactPagePresentation.wrappedValue
+        presentation.presentsPageOverTabViewer && compactPagePresentation.wrappedValue
     }
 
     /// Whether Settings shows as a sheet from the page, or from the window.
@@ -143,9 +155,8 @@ extension MobileBrowserRootContent {
         model.commandContext(
             transientBrowsing: transientBrowsing,
             layoutDirection: layoutDirection,
-            usesPageToolbars: !MobileBrowserViewportPolicy.usesEdgeToEdgeWebViewport(
+            usesPageToolbars: !presentation.usesEdgeToEdgeWebViewport(
                 isPhone: UIDevice.current.userInterfaceIdiom == .phone,
-                presentation: presentation,
                 sidebarPresentation: navigation.regularSidebarPresentation
             ),
             togglePrivateBrowsing: togglePrivateBrowsing,

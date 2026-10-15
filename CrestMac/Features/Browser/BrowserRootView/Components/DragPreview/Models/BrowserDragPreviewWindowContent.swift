@@ -21,7 +21,7 @@ enum BrowserDragPreviewWindowContent: Equatable {
     var drawingBounds: CGRect {
         switch self {
         case .sidebarLift(let sidebar):
-            return sidebarDrawingBounds(sidebar)
+            return sidebar.drawingBounds
         case .splitCardLift(let card):
             let scale = BrowserSidebarReorderVisuals.liftScale
             return CGRect(origin: card.origin, size: card.size)
@@ -29,59 +29,5 @@ enum BrowserDragPreviewWindowContent: Equatable {
                     dx: -card.size.width * (scale - 1) - 48,
                     dy: -card.size.height * (scale - 1) - 48)
         }
-    }
-
-    private func sidebarDrawingBounds(_ sidebar: BrowserSidebarLiftPreviewContent) -> CGRect {
-        let lift = sidebar.lift
-        let rowSize = BrowserTabDragPreviewLayout.rowSize
-        var width = max(
-            BrowserTabDragPreviewLayout.resolvedRowWidth(lift.rowWidth), lift.sourceSize.width,
-            lift.pinnedTileSize.width, BrowserTabDragPreviewLayout.cardSize.width)
-        var height = max(
-            rowSize.height, lift.sourceSize.height, lift.pinnedTileSize.height,
-            BrowserTabDragPreviewLayout.cardSize.height)
-
-        switch sidebar.subject {
-        case .selection(let rows):
-            if let lead = rows.first(where: { $0.id == lift.item.id }) ?? rows.first {
-                var gatheredHeight: CGFloat = 0
-                for row in rows {
-                    let rowWidth = max(
-                        BrowserTabDragPreviewLayout.resolvedRowWidth(lift.rowWidth), row.frame.width,
-                        lift.pinnedTileSize.width)
-                    let rowHeight = max(
-                        row.frame.height, rowSize.height, lift.pinnedTileSize.height,
-                        row.isSplit ? CGFloat(row.tabs.count + 1) * rowSize.height : 0)
-                    gatheredHeight += rowHeight
-                    width = max(width, abs(row.frame.minX - lead.frame.minX) + rowWidth)
-                    height = max(height, abs(row.frame.minY - lead.frame.minY) + rowHeight)
-                }
-                width += abs(lift.grabOffset.width)
-                height = max(height, gatheredHeight) + abs(lift.grabOffset.height)
-            }
-        case .splitGroup(let tabs):
-            height = max(height, CGFloat(tabs.count + 1) * rowSize.height)
-        case .tab, .folder:
-            break
-        }
-
-        let scale = BrowserSidebarReorderVisuals.liftScale
-        let pointer = lift.presentationPointer
-        let extent = CGSize(width: width * scale + 48, height: height * scale + 48)
-        var bounds = CGRect(
-            x: pointer.x - extent.width, y: pointer.y - extent.height,
-            width: extent.width * 2, height: extent.height * 2)
-        if let landing = lift.landing {
-            bounds = bounds.union(landing.frame.insetBy(dx: -extent.width, dy: -extent.height))
-        }
-        if lift.constraintMessage != nil {
-            // The short constraint label is at most 280 points wide. The
-            // existing preview envelope leaves room for its wrapped caption.
-            bounds = bounds.union(
-                CGRect(
-                    x: pointer.x + 12, y: pointer.y + lift.sourceSize.height + 12,
-                    width: 280, height: extent.height))
-        }
-        return bounds
     }
 }

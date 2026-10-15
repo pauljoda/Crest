@@ -42,6 +42,12 @@ enum BrowserPlatformDefaultBrowserSystem {
         )
     }
 
+    /// macOS has no answer of its own to add, so an error shows its own
+    /// description.
+    static func userFacingDescription(for error: any Error) -> String? {
+        nil
+    }
+
     static func openSettings() {
         NSWorkspace.shared.open(
             URL(

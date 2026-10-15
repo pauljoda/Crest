@@ -25,13 +25,13 @@ final class BrowserSpaceBrandingTests: XCTestCase {
         XCTAssertEqual(local.tabs.pinFill, 0.7)
         XCTAssertEqual(local.tabs.hoverFill, 1)
         XCTAssertEqual(local.cornerRadius, 0)
-        XCTAssertEqual(local.containerCornerRadius(padding: 4), 0)
+        XCTAssertEqual(BrowserSidebarMetrics.layerCornerRadius(depth: 0, userRadius: local.sidebarCornerRadius), 0)
         local.cornerRadius = 4
-        XCTAssertEqual(local.containerCornerRadius(padding: 4), 8)
+        XCTAssertEqual(BrowserSidebarMetrics.layerCornerRadius(depth: 0, userRadius: local.sidebarCornerRadius), 8)
         local.cornerRadius = 40
         XCTAssertEqual(local.sidebarCornerRadius, 40)
-        XCTAssertEqual(local.containerCornerRadius(), 10)
-        XCTAssertEqual(local.containerCornerRadius(padding: 4), 14)
+        XCTAssertEqual(BrowserSidebarMetrics.layerCornerRadius(depth: 1, userRadius: local.sidebarCornerRadius), 10)
+        XCTAssertEqual(BrowserSidebarMetrics.layerCornerRadius(depth: 0, userRadius: local.sidebarCornerRadius), 14)
         local.cornerRadius = 24
         local.tabs.dimsUnloadedTabs = false
         local.address.border = 0.6

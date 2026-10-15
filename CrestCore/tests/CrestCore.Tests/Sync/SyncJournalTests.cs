@@ -135,8 +135,8 @@ public sealed partial class BrowserContractsTests {
         var owner = TestWorkspaces.Session(session);
         owner.AttachSync(sync);
         owner.AttachSync(sync); // A second window shares this family.
-        Assert.Throws<BrowserRuleException>(() => TestWorkspaces.Session(session).AttachSync(sync));
-        Assert.Throws<BrowserRuleException>(() => TestWorkspaces.Session(session, WorkspaceKind.Private).AttachSync(new(initial)));
+        Assert.Throws<InvalidOperationException>(() => TestWorkspaces.Session(session).AttachSync(sync));
+        Assert.Throws<InvalidOperationException>(() => TestWorkspaces.Session(session, WorkspaceKind.Private).AttachSync(new(initial)));
     }
 
     [Fact]

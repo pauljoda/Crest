@@ -18,7 +18,7 @@ public sealed record EditLinkRoute(Guid RouteId, bool? IsEnabled, LinkRouteMatch
     #region Actions - Device
 
     internal override void Apply(Device device, DeviceTurn turn) =>
-        device.ReviseLinks(turn.Changes, links => LinkPreferencePolicy.Editing(links, this));
+        device.ReviseLinks(turn.Changes, links => links.Editing(this));
 
     #endregion
 }

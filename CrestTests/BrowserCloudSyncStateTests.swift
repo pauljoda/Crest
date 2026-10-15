@@ -9,21 +9,21 @@ final class BrowserCloudSyncStateTests: XCTestCase {
         let identifier = "iCloud.com.pauldavis.crest"
 
         XCTAssertTrue(
-            BrowserCloudContainerEntitlementPolicy.containsContainer(
-                identifier,
-                entitlementValue: [identifier, "iCloud.com.pauldavis.other"]
+            CloudKitBrowserCloudSyncRemoteService.containerEntitlement(
+                [identifier, "iCloud.com.pauldavis.other"],
+                contains: identifier
             )
         )
         XCTAssertFalse(
-            BrowserCloudContainerEntitlementPolicy.containsContainer(
-                identifier,
-                entitlementValue: ["iCloud.com.pauldavis.other"]
+            CloudKitBrowserCloudSyncRemoteService.containerEntitlement(
+                ["iCloud.com.pauldavis.other"],
+                contains: identifier
             )
         )
         XCTAssertFalse(
-            BrowserCloudContainerEntitlementPolicy.containsContainer(
-                identifier,
-                entitlementValue: nil
+            CloudKitBrowserCloudSyncRemoteService.containerEntitlement(
+                nil,
+                contains: identifier
             )
         )
     }

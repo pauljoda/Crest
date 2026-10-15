@@ -108,73 +108,114 @@ struct BrowserCrestForge: View {
     private var stepSections: some View {
         switch shownStep.kind {
         case .start:
-            gallery(SpaceHouse.all, id: \.self) { house in
-                BrowserCrestStudioChoice(title: house.title, selected: house.isWorn(by: branding), tint: .accentColor) {
-                    branding = house.applying(to: branding)
-                } artwork: {
-                    crest(house.applying(to: editingStart ?? branding))
-                }
-            }
+            startSections
         case .shape:
-            crestGallery(\.backplate, CrestBackplate.all)
-            Section {
-                context.slider("Edge", \.edgeWidth, range: CrestMeasure.edgeWidth.range)
-                context.slider("Size", \.plateScale, range: CrestMeasure.plateScale.range)
-                if branding.crest.backplate.hasTeeth {
-                    context.count("Teeth", \.sealTeeth, range: CrestMeasure.sealTeeth.countRange)
-                }
-            }
+            shapeSections
         case .field:
-            crestGallery(\.fieldDivision, CrestFieldDivision.all)
-            Section {
-                context.count("Repeats", \.divisionCount, range: CrestMeasure.divisionCount.countRange)
-                    .disabled(!branding.crest.fieldDivision.isCounted)
-            }
+            fieldSections
         case .band:
-            crestGallery(\.ordinary, CrestOrdinary.all)
-            Section {
-                context.slider("Width", \.ordinaryWidth, range: CrestMeasure.ordinaryWidth.range)
-                    .disabled(branding.crest.ordinary == .none)
-            }
+            bandSections
         case .emblem:
-            Section {
-                identityRow
-            } header: {
-                stageHeader
-            }
-            if isIcon {
-                iconSections
-            } else {
-                Section {
-                    BrowserCrestStudioEmblem(context: context, symbol: symbol, isEmbedded: true)
-                }
-            }
+            emblemSections
         case .border:
-            crestGallery(\.trim, CrestTrim.all)
-            Section {
-                context.slider("Weight", \.trimWeight, range: CrestMeasure.trimWeight.range)
-                    .disabled(branding.crest.trim == .none)
-                context.count("Details", \.trimDetail, range: CrestMeasure.trimDetail.countRange)
-                    .disabled(!branding.crest.trim.isCounted)
-            }
+            borderSections
         case .finish:
-            crestGallery(\.finish, CrestFinish.all)
-            Section {
-                segmented("Shadow", context.crest(\.depth), options: CrestDepth.all)
-                let outline = context.crest(\.showsOutline)
-                CrestSettingRow("Outline", setting: outline.resettable("Outline")) {
-                    Toggle("Outline", isOn: outline.binding).labelsHidden()
-                }
-                if branding.crest.finish.hasAngle {
-                    context.slider(
-                        "Sheen angle", \.sheenAngle, range: CrestMeasure.sheenAngle.range,
-                        readout: .init { "\(Int($0))°" })
-                }
-            }
+            finishSections
         case .sidebar:
-            sidebarGallery
-            sidebarSection
+            sidebarSections
         }
+    }
+
+    // MARK: - Step sections
+
+    private var startSections: some View {
+        gallery(SpaceHouse.all, id: \.self) { house in
+            BrowserCrestStudioChoice(title: house.title, selected: house.isWorn(by: branding), tint: .accentColor) {
+                branding = house.applying(to: branding)
+            } artwork: {
+                crest(house.applying(to: editingStart ?? branding))
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var shapeSections: some View {
+        crestGallery(\.backplate, CrestBackplate.all)
+        Section {
+            context.slider("Edge", \.edgeWidth, range: CrestMeasure.edgeWidth.range)
+            context.slider("Size", \.plateScale, range: CrestMeasure.plateScale.range)
+            if branding.crest.backplate.hasTeeth {
+                context.count("Teeth", \.sealTeeth, range: CrestMeasure.sealTeeth.countRange)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var fieldSections: some View {
+        crestGallery(\.fieldDivision, CrestFieldDivision.all)
+        Section {
+            context.count("Repeats", \.divisionCount, range: CrestMeasure.divisionCount.countRange)
+                .disabled(!branding.crest.fieldDivision.isCounted)
+        }
+    }
+
+    @ViewBuilder
+    private var bandSections: some View {
+        crestGallery(\.ordinary, CrestOrdinary.all)
+        Section {
+            context.slider("Width", \.ordinaryWidth, range: CrestMeasure.ordinaryWidth.range)
+                .disabled(branding.crest.ordinary == .none)
+        }
+    }
+
+    @ViewBuilder
+    private var emblemSections: some View {
+        Section {
+            identityRow
+        } header: {
+            stageHeader
+        }
+        if isIcon {
+            iconSections
+        } else {
+            Section {
+                BrowserCrestStudioEmblem(context: context, symbol: symbol, isEmbedded: true)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var borderSections: some View {
+        crestGallery(\.trim, CrestTrim.all)
+        Section {
+            context.slider("Weight", \.trimWeight, range: CrestMeasure.trimWeight.range)
+                .disabled(branding.crest.trim == .none)
+            context.count("Details", \.trimDetail, range: CrestMeasure.trimDetail.countRange)
+                .disabled(!branding.crest.trim.isCounted)
+        }
+    }
+
+    @ViewBuilder
+    private var finishSections: some View {
+        crestGallery(\.finish, CrestFinish.all)
+        Section {
+            segmented("Shadow", context.crest(\.depth), options: CrestDepth.all)
+            let outline = context.crest(\.showsOutline)
+            CrestSettingRow("Outline", setting: outline.resettable("Outline")) {
+                Toggle("Outline", isOn: outline.binding).labelsHidden()
+            }
+            if branding.crest.finish.hasAngle {
+                context.slider(
+                    "Sheen angle", \.sheenAngle, range: CrestMeasure.sheenAngle.range,
+                    readout: .init { "\(Int($0))°" })
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var sidebarSections: some View {
+        sidebarGallery
+        sidebarSection
     }
 
     private var identityRow: some View {

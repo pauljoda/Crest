@@ -27,7 +27,7 @@ struct CrestSettingsDestinationLabel: View {
                 Text(title)
                     .font(CrestTypography.controlTitle)
                     .foregroundStyle(CrestColor.textPrimary)
-                if !compact || BrowserSettingsVisualPolicy.showsSidebarSubtitles {
+                if !compact || BrowserSettingsLayout.showsSidebarSubtitles {
                     Text(subtitle)
                         .font(
                             compact
@@ -56,7 +56,7 @@ struct CrestSettingsDestinationLabel: View {
 
     private var iconSize: CGFloat {
         compact
-            ? BrowserSettingsVisualPolicy.sidebarIconSize
+            ? BrowserSettingsLayout.sidebarIconSize
             : CrestSettingsPresentationMetrics.regularIconSize
     }
 

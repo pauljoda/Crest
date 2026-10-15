@@ -10,50 +10,41 @@ struct BrowserSoftwareUpdateActions: View {
 
     var body: some View {
         HStack(spacing: CrestSpacing.small) {
-            switch model.phase.kind {
-            case .permission:
-                Button("Not Now") {
-                    model.chooseAutomaticChecks(false)
-                }
+            if let buttons = model.phase.windowButtons(for: model.snapshot) {
+                ForEach(buttons.leading, id: \.action, content: button)
                 Spacer()
-                Button("Check Automatically") {
-                    model.chooseAutomaticChecks(true)
-                }
-                .buttonStyle(.borderedProminent)
-            case .checking, .downloading:
-                Spacer()
-                Button("Cancel", action: model.cancelCurrentOperation)
-            case .available:
-                Button("Skip This Version", action: model.skipUpdate)
-                Spacer()
-                if model.isInformationOnly, let informationURL = model.informationURL {
-                    Link("View Release", destination: informationURL)
-                        .buttonStyle(.borderedProminent)
-                } else {
-                    Button("Download and Install", action: model.installUpdate)
-                        .buttonStyle(.borderedProminent)
-                }
-            case .readyToInstall:
-                Spacer()
-                Button("Install and Relaunch", action: model.installAndRelaunchNow)
-                    .buttonStyle(.borderedProminent)
-            case .installing:
-                Spacer()
-                if model.canRetryTermination {
-                    Button(
-                        "Try Quitting Again",
-                        action: model.retryApplicationTermination
-                    )
-                }
-            case .upToDate, .failed, .installed:
-                Spacer()
-                Button("Dismiss", action: model.acknowledge)
-                    .keyboardShortcut(confirmsWithReturn ? .defaultAction : nil)
-            case .idle, .extracting, .unavailable:
-                EmptyView()
+                ForEach(buttons.trailing, id: \.action, content: button)
             }
         }
         .tint(CrestBrandTheme.accent)
+    }
+
+    // MARK: - Actions - Buttons
+
+    @ViewBuilder
+    private func button(_ button: BrowserSoftwareUpdatePhase.WindowButton) -> some View {
+        if let destination = button.destination {
+            prominence(Link(destination: destination) { Text(button.title) }, button)
+        } else {
+            prominence(
+                Button {
+                    button.action.perform(on: model)
+                } label: {
+                    Text(button.title)
+                }
+                .keyboardShortcut(button.confirms && confirmsWithReturn ? .defaultAction : nil),
+                button
+            )
+        }
+    }
+
+    @ViewBuilder
+    private func prominence(_ content: some View, _ button: BrowserSoftwareUpdatePhase.WindowButton) -> some View {
+        if button.isProminent {
+            content.buttonStyle(.borderedProminent)
+        } else {
+            content
+        }
     }
 }
 

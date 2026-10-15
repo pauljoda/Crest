@@ -4,7 +4,7 @@ The product site and [Crest Help](https://crestbrowser.com/guides/) explain how
 to use the browser. This directory describes the source, product behavior, and
 build and release requirements for contributors.
 
-Crest 0.7 ships Chromium and WebKit together on Mac, backed by the shared native
+Crest ships Chromium and WebKit together on Mac, backed by the shared native
 core. iPhone and iPad keep WebKit. Start with the [engine and migration guide](../HelpCenter/docs/browsing/engines.md)
 for user-visible behavior, or the architecture references below for ownership
 and implementation details.

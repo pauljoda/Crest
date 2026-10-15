@@ -23,16 +23,19 @@ extension EnvironmentValues {
 }
 
 /// Shows the first status a tab's page is in, in the order the statuses list
-/// them, as the person chose: hung off the corner of the tab's favicon in
-/// place of its engine badge, or in place of the favicon itself. Either way it
-/// sits above the row's or tile's gestures, menu and accessibility, so
-/// pressing it only does what it says: a quick second press never restores a
-/// saved page, and a middle click never unloads the tab.
+/// them, as the person chose: beside the tab's favicon where its `anchor`
+/// puts it, or in place of the favicon itself. Either way it sits above the
+/// row's or tile's gestures, menu and accessibility, so pressing it only does
+/// what it says: a quick second press never restores a saved page, and a
+/// middle click never unloads the tab.
 struct BrowserTabStatusBadgeHost: ViewModifier {
     // MARK: - Variables
 
     /// The tab's page, where the host can read it.
     let tab: BrowserTabStatusSource?
+
+    /// Where the badge hangs when it sits beside the favicon.
+    var anchor = BrowserTabStatusBadgeAnchor.favicon
 
     @AppStorage(BrowserSidebarDensityPreference.scaleKey, store: BrowserSidebarDensityPreference.defaults) private
         var iconScale = 1.0
@@ -41,21 +44,22 @@ struct BrowserTabStatusBadgeHost: ViewModifier {
         let mark = tab.flatMap { BrowserTabStatus.marks(of: $0).first }
         let replacesIcon = BrowserDeviceAppearanceStore.shared.tabs.statusStyle == .icon
         content
-            .environment(\.tabFaviconBadgeIsTaken, mark != nil && !replacesIcon)
+            .environment(\.tabFaviconBadgeIsTaken, mark != nil && !replacesIcon && anchor.takesFaviconCorner)
             .environment(\.tabFaviconIsReplaced, mark != nil && replacesIcon)
             .overlayPreferenceValue(TabFaviconBoundsKey.self) { iconBounds in
                 if let iconBounds, let mark, let tab {
                     GeometryReader { proxy in
                         let icon = proxy[iconBounds]
-                        let scale = BrowserSidebarDensityPolicy.scale(iconScale)
+                        let scale = BrowserSidebarDensity(iconScale).scale
                         if replacesIcon {
                             BrowserTabStatusBadge(mark: mark, tab: tab, diameter: min(icon.width, icon.height))
                                 .position(x: icon.midX, y: icon.midY)
                         } else {
                             let diameter = BrowserTabStatusBadge.diameter * scale
-                            let inset = diameter / 2 - TabFaviconBadge.overhang * scale
                             BrowserTabStatusBadge(mark: mark, tab: tab, diameter: diameter)
-                                .position(x: icon.maxX - inset, y: icon.maxY - inset)
+                                .position(
+                                    anchor.center(
+                                        icon, proxy.size, diameter, scale, BrowserSidebarMetrics.layerCornerRadius()))
                         }
                     }
                 }

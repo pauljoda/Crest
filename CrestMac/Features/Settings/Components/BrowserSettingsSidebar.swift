@@ -195,22 +195,10 @@ struct BrowserSettingsSidebar: View {
     /// under; clearing the selection is ignored, so a pane is always shown.
     private var selection: Binding<BrowserSettingsSidebarItem?> {
         Binding {
-            switch navigation.selection {
-            case .destination(let destination):
-                .destination(BrowserPlatformSettingsDestinationCatalog.parent(of: destination) ?? destination)
-            case .space:
-                navigation.selection
-            }
+            navigation.selection.row
         } set: { item in
-            switch item {
-            case .destination:
-                tabState.navigation.selection = item!
-            case .space(let id):
-                // Arranging drags rows; a press that starts a drag isn't a choice.
-                guard !tabState.isArrangingSpaces else { return }
+            item?.select(on: tabState) { id in
                 openSpace(id, tab: navigation.matchingSpaceTab(locale: locale, in: state))
-            case nil:
-                break
             }
         }
     }

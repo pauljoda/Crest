@@ -1,26 +1,18 @@
-import AppKit
 import SwiftUI
 
+/// The device's surface material, striped so the bar reads as a developer tool.
 struct BrowserDeveloperToolbarBackground: View {
     let isOpaque: Bool
 
     var body: some View {
         Canvas { context, size in
-            draw(in: &context, size: size)
+            drawStripes(in: &context, size: size)
         }
+        .background { CrestSurfaceLayer(shape: Rectangle()) }
         .accessibilityHidden(true)
     }
 
-    private func draw(in context: inout GraphicsContext, size: CGSize) {
-        let bounds = CGRect(origin: .zero, size: size)
-        context.fill(
-            Path(bounds),
-            with: .color(
-                isOpaque
-                    ? Color(nsColor: .windowBackgroundColor)
-                    : Color(nsColor: .underPageBackgroundColor).opacity(0.92)
-            )
-        )
+    private func drawStripes(in context: inout GraphicsContext, size: CGSize) {
         for x in stride(from: -size.height, through: size.width, by: 22) {
             var stripe = Path()
             stripe.move(to: CGPoint(x: x, y: 0))
@@ -81,10 +73,7 @@ private struct BrowserDeveloperToolbarButtonStyle: ButtonStyle {
             )
             .scaleEffect(configuration.isPressed ? 0.94 : 1)
             .animation(
-                BrowserVisualAccessibilityPolicy.animation(
-                    CrestMotion.developerPress,
-                    reduceMotion: reduceMotion
-                ),
+                CrestMotion.developerPress.unlessReducingMotion(reduceMotion),
                 value: configuration.isPressed
             )
     }

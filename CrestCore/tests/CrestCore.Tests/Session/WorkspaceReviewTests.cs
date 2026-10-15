@@ -29,7 +29,7 @@ public sealed class WorkspaceReviewTests {
         var duplicate = Tab("https://example.com/a"); var fresh = Tab("https://example.com/b"); var native = Tab(null);
         var source = Space(" work! ", duplicate, fresh, native);
         var unmatched = Space("!!!", Tab("https://example.com/a"));
-        var review = ImportReviewPolicy.Started(ImportSource.Arc, [source, unmatched], new Dictionary<Guid, int> { [source.Id] = 3 }, [], [], Session(null, existing));
+        var review = SetupImportReview.Started(ImportSource.Arc, [source, unmatched], new Dictionary<Guid, int> { [source.Id] = 3 }, [], [], Session(null, existing));
 
         Assert.Equal(source.Id, review.ShownSpaceId);
         var joined = review.Spaces[0];
@@ -39,7 +39,7 @@ public sealed class WorkspaceReviewTests {
         Assert.Equal([existingTab.Id], joined.MatchedTabIds);
         Assert.Equal((null, "!!!"), (review.Spaces[1].DestinationId, review.Spaces[1].Customization.Name));
         // Over a first launch's disposable Spaces, everything comes in new.
-        Assert.Null(ImportReviewPolicy.Started(ImportSource.Arc, [source], new Dictionary<Guid, int>(), [], [], Session(Guid.NewGuid(), existing)).Spaces[0].DestinationId);
+        Assert.Null(SetupImportReview.Started(ImportSource.Arc, [source], new Dictionary<Guid, int>(), [], [], Session(Guid.NewGuid(), existing)).Spaces[0].DestinationId);
     }
 
     [Fact]
@@ -51,31 +51,31 @@ public sealed class WorkspaceReviewTests {
         var source = Space("Work", first, second, promoted);
         var fresh = Space("New", Tab("https://three.example", TabPlacement.Pinned));
         var session = Session(null, existing);
-        var review = ImportReviewPolicy.Started(ImportSource.Chrome, [source, fresh], new Dictionary<Guid, int>(), [], [], session);
+        var review = SetupImportReview.Started(ImportSource.Chrome, [source, fresh], new Dictionary<Guid, int>(), [], [], session);
 
-        review = ImportReviewPolicy.Placing(review, source.Id, promoted.Id, TabPlacement.Pinned, session);
+        review = review.Placing(source.Id, promoted.Id, TabPlacement.Pinned, session);
         Assert.Equal([second.Id, promoted.Id], review.OverflowTabIds);
         Assert.Equal([promoted.Id], review.Spaces[0].DuplicateTabIds);
         Assert.Equal([existing.Tabs[^1].Id], review.Spaces[0].MatchedTabIds);
         Assert.Empty(review.Spaces[1].DuplicateTabIds);
         // Joining another Space takes its name and look, and coming in new the Space's own.
-        var joined = ImportReviewPolicy.ChoosingDestination(review, fresh.Id, existing.Id, session);
+        var joined = review.ChoosingDestination(fresh.Id, existing.Id, session);
         Assert.Equal((existing.Id, "Work"), (joined.Spaces[1].DestinationId, joined.Spaces[1].Customization.Name));
-        Assert.Equal("New", ImportReviewPolicy.ChoosingDestination(joined, fresh.Id, null, session).Spaces[1].Customization.Name);
-        var dropped = ImportReviewPolicy.IncludingSpace(review, source.Id, included: false, session);
+        Assert.Equal("New", joined.ChoosingDestination(fresh.Id, null, session).Spaces[1].Customization.Name);
+        var dropped = review.IncludingSpace(source.Id, included: false, session);
         Assert.Empty(dropped.OverflowTabIds);
         Assert.Empty(dropped.Spaces[0].MatchedTabIds);
         Assert.Empty(dropped.Spaces[0].IncludedTabIds);
         Assert.Equal([promoted.Id], dropped.Spaces[0].DuplicateTabIds);
         // Bringing a tab back brings its Space, and bringing the Space leaves out what the destination holds.
-        Assert.True(ImportReviewPolicy.IncludingTabs(dropped, source.Id, [first.Id], included: true, session).Spaces[0].Included);
+        Assert.True(dropped.IncludingTabs(source.Id, [first.Id], included: true, session).Spaces[0].Included);
         Assert.Equal([first.Id, second.Id],
-            ImportReviewPolicy.IncludingSpace(dropped, source.Id, included: true, session).Spaces[0].IncludedTabIds);
+            dropped.IncludingSpace(source.Id, included: true, session).Spaces[0].IncludedTabIds);
     }
 
     [Fact]
     public void AReviewBringsNoMoreNewSpacesThanTheWorkspaceHoldsAndJoinsEachSpaceOnce() {
-        var existing = Enumerable.Range(0, WorkspaceImportPolicy.MaximumSpaces - 1)
+        var existing = Enumerable.Range(0, SessionState.MaximumSpaces - 1)
             .Select(index => Space($"Existing {index}", Tab($"https://existing{index}.example/"))).ToArray();
         var session = Session(null, existing);
         var joining = Space("Existing 0", Tab("https://joining.example/"));
@@ -86,22 +86,22 @@ public sealed class WorkspaceReviewTests {
 
         // The first Space matching an existing one joins it, and the next
         // comes in new; the workspace has room for one new Space only.
-        var review = ImportReviewPolicy.Started(ImportSource.Chrome, [joining, again, first, second], new Dictionary<Guid, int>(), [], leftOut,
+        var review = SetupImportReview.Started(ImportSource.Chrome, [joining, again, first, second], new Dictionary<Guid, int>(), [], leftOut,
             session);
         Assert.Equal([existing[0].Id, null, null, null], review.Spaces.Select(space => space.DestinationId));
         Assert.Equal([true, true, false, false], review.Spaces.Select(space => space.Included));
         Assert.Equal((0, leftOut), (review.NewSpaceCapacity, review.LeftOut));
         // Bringing another new Space past the room changes nothing, until one
         // joins an existing Space instead.
-        Assert.Same(review, ImportReviewPolicy.IncludingSpace(review, first.Id, included: true, session));
-        Assert.Same(review, ImportReviewPolicy.IncludingTabs(review, second.Id, [second.Tabs[0].Id], included: true, session));
-        var joined = ImportReviewPolicy.ChoosingDestination(review, again.Id, existing[1].Id, session);
+        Assert.Same(review, review.IncludingSpace(first.Id, included: true, session));
+        Assert.Same(review, review.IncludingTabs(second.Id, [second.Tabs[0].Id], included: true, session));
+        var joined = review.ChoosingDestination(again.Id, existing[1].Id, session);
         Assert.Equal(1, joined.NewSpaceCapacity);
-        var full = ImportReviewPolicy.IncludingSpace(joined, first.Id, included: true, session);
+        var full = joined.IncludingSpace(first.Id, included: true, session);
         Assert.Equal((true, 0), (full.Spaces[2].Included, full.NewSpaceCapacity));
-        Assert.Same(full, ImportReviewPolicy.ChoosingDestination(full, again.Id, null, session));
+        Assert.Same(full, full.ChoosingDestination(again.Id, null, session));
         // A first launch's disposable Spaces make way for every Space.
-        Assert.Equal(WorkspaceImportPolicy.MaximumSpaces - 4, ImportReviewPolicy.Started(ImportSource.Chrome, [joining, again, first, second],
+        Assert.Equal(SessionState.MaximumSpaces - 4, SetupImportReview.Started(ImportSource.Chrome, [joining, again, first, second],
             new Dictionary<Guid, int>(), [], [], Session(Guid.NewGuid(), existing)).NewSpaceCapacity);
     }
 
@@ -109,14 +109,14 @@ public sealed class WorkspaceReviewTests {
     public void ImportsRejectSplitRunsThatRepairWouldRewrite() {
         Guid group = Guid.NewGuid(), folder = Guid.NewGuid();
         SplitMember Member(TabPlacement? placement = null, Guid? inFolder = null) => new(group, placement ?? TabPlacement.Current, inFolder);
-        WorkspaceImportPolicy.RequireSplitMembership([Member(), Member(), new(null, TabPlacement.Current, null)]);
-        WorkspaceImportPolicy.RequireSplitMembership([Member()]);
-        Assert.Throws<Rejected>(() => WorkspaceImportPolicy.RequireSplitMembership([Member(), Member(TabPlacement.Saved)]));
-        Assert.Throws<Rejected>(() => WorkspaceImportPolicy.RequireSplitMembership([Member(), Member(inFolder: folder)]));
-        Assert.Throws<Rejected>(() => WorkspaceImportPolicy.RequireSplitMembership([Member(TabPlacement.Pinned)]));
-        Assert.Throws<Rejected>(() => WorkspaceImportPolicy.RequireSplitMembership(
+        SplitMember.RequireWellFormed([Member(), Member(), new(null, TabPlacement.Current, null)]);
+        SplitMember.RequireWellFormed([Member()]);
+        Assert.Throws<Rejected>(() => SplitMember.RequireWellFormed([Member(), Member(TabPlacement.Saved)]));
+        Assert.Throws<Rejected>(() => SplitMember.RequireWellFormed([Member(), Member(inFolder: folder)]));
+        Assert.Throws<Rejected>(() => SplitMember.RequireWellFormed([Member(TabPlacement.Pinned)]));
+        Assert.Throws<Rejected>(() => SplitMember.RequireWellFormed(
             Enumerable.Repeat(Member(), BrowserTabCollection.MaximumSplitMembers + 1).ToArray()));
-        Assert.Throws<Rejected>(() => WorkspaceImportPolicy.RequireSplitMembership(
+        Assert.Throws<Rejected>(() => SplitMember.RequireWellFormed(
             [Member(), new(null, TabPlacement.Current, null), Member()]));
     }
 }

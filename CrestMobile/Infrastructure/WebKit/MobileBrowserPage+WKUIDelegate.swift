@@ -15,7 +15,7 @@ extension MobileBrowserPage: WKUIDelegate {
         guard webView === self.webView,
             let context = navigationContext,
             let url = elementInfo.linkURL,
-            BrowserCorePolicy.acceptsExternalURL(url),
+            ExternalWebLink.accepts(url),
             let window = webView.window
         else {
             // WebKit supplies image and detected-data previews and their actions.

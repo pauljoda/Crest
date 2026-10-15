@@ -38,10 +38,8 @@ final class BrowserMacWindowModel {
         }
         // Closes as the Peek's own Close button does.
         pages.dismissPeek = { [weak transientBrowsing] request in
-            let animation = BrowserVisualAccessibilityPolicy.animation(
-                CrestMotion.peekDismissal,
-                reduceMotion: NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
-            )
+            let animation = CrestMotion.peekDismissal.unlessReducingMotion(
+                NSWorkspace.shared.accessibilityDisplayShouldReduceMotion)
             withAnimation(animation) { _ = transientBrowsing?.dismissPeek(request) }
         }
         closeGate = BrowserWindowCloseGate(core: browser.core) { [windowID = browser.windowID] in

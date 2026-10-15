@@ -45,7 +45,7 @@ struct MobileBrowserSidebarTopChrome: View {
                     morph: .utilitySearch(spaceID: selectedSpaceID),
                     clearHistory: confirmClearHistory
                 )
-                .padding(.horizontal, 12)
+                .padding(.horizontal, BrowserSidebarMetrics.layerInset)
                 .padding(.bottom, 4)
                 .transition(.opacity.combined(with: .move(edge: .trailing)))
             } else {
@@ -64,7 +64,7 @@ struct MobileBrowserSidebarTopChrome: View {
                         }
                     }
                 )
-                .padding(.horizontal, 12)
+                .padding(.horizontal, BrowserSidebarMetrics.layerInset)
                 .padding(.bottom, 4)
             }
         }

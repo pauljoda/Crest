@@ -50,10 +50,7 @@ struct BrowserNavigationFailureView: View {
 
     private func toggleDetails() {
         withAnimation(
-            BrowserVisualAccessibilityPolicy.animation(
-                CrestMotion.recovery,
-                reduceMotion: reduceMotion
-            )
+            CrestMotion.recovery.unlessReducingMotion(reduceMotion)
         ) {
             showsDetails.toggle()
         }

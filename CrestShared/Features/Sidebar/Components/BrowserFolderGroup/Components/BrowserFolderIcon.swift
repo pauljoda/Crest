@@ -53,12 +53,12 @@ private struct BrowserFolderIconColumn: ViewModifier {
         content
             .font(
                 .system(
-                    size: ((metrics.iconGlyphSize ?? 16) + 2) * BrowserSidebarDensityPolicy.scale(iconScale),
+                    size: ((metrics.iconGlyphSize ?? 16) + 2) * BrowserSidebarDensity(iconScale).scale,
                     weight: metrics.iconGlyphWeight)
             )
             // Reserve the open front's projected edge without moving the title
             // when the folder toggles. The bottom hinge lowers its optical center.
-            .offset(y: (isExpanded ? -1.5 : -0.5) * BrowserSidebarDensityPolicy.scale(iconScale))
-            .frame(width: (metrics.iconWidth + 6) * BrowserSidebarDensityPolicy.scale(iconScale))
+            .offset(y: (isExpanded ? -1.5 : -0.5) * BrowserSidebarDensity(iconScale).scale)
+            .frame(width: (metrics.iconWidth + 6) * BrowserSidebarDensity(iconScale).scale)
     }
 }

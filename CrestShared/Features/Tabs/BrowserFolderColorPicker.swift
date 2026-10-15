@@ -85,9 +85,6 @@ struct BrowserFolderColorPicker: View {
     }
 
     private var resetAnimation: Animation? {
-        BrowserVisualAccessibilityPolicy.animation(
-            CrestMotion.collection,
-            reduceMotion: reduceMotion
-        )
+        CrestMotion.collection.unlessReducingMotion(reduceMotion)
     }
 }

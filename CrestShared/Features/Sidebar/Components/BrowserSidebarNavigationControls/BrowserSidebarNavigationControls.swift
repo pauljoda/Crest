@@ -4,7 +4,7 @@ import SwiftUI
 ///
 /// Everything the strip needs from the page layer arrives through
 /// `BrowserSidebarNavigationPort`, and everything about how it is drawn comes
-/// from `BrowserSidebarInteractionPolicy` — so the two shells share this strip
+/// from `BrowserInteractionCapabilities` — so the two shells share this strip
 /// rather than a resemblance. What is left is one slot at the trailing end for
 /// a shell that keeps its page menu there.
 struct BrowserSidebarNavigationControls<TrailingAccessory: View>: View {
@@ -71,9 +71,7 @@ struct BrowserSidebarNavigationControls<TrailingAccessory: View>: View {
 
             BrowserReloadControl(
                 isLoading: port.isLoading(),
-                isDeveloperMode: BrowserDeveloperModePolicy.isAutomatic(
-                    for: port.activeURL()
-                ),
+                isDeveloperMode: port.activeURL()?.isLocalDevelopmentAddress == true,
                 reloadOrStop: port.reloadOrStop,
                 reload: port.reload,
                 reloadFromOrigin: port.reloadFromOrigin,
@@ -99,6 +97,6 @@ struct BrowserSidebarNavigationControls<TrailingAccessory: View>: View {
     }
 
     private var metrics: BrowserSidebarNavigationControlMetrics {
-        BrowserSidebarInteractionPolicy.navigationControlMetrics(capabilities)
+        capabilities.navigationControlMetrics
     }
 }

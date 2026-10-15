@@ -42,7 +42,7 @@ internal sealed record BrowserDataSpace(string Name, string Symbol, SpaceAccent 
         ArgumentNullException.ThrowIfNull(ids);
         Require(ImportText.IsKept(Name, ImportText.MaximumSpaceName) && ImportText.IsKept(Symbol, ImportText.MaximumSymbol));
         Require(Folders.Count <= FolderTree.MaximumCount && Tabs.Count <= MaximumTabs && ArchivedTabs.Count <= MaximumTabs
-            && History.Count <= HistoryPolicy.MaximumEntries);
+            && History.Count <= HistoryEntryState.MaximumEntries);
 
         Dictionary<Guid, Guid> folderIds = [];
         foreach (var folder in Folders) Require(folderIds.TryAdd(folder.Id, ids.Next()));
@@ -81,10 +81,10 @@ internal sealed record BrowserDataSpace(string Name, string Symbol, SpaceAccent 
             Require(seenArchived.Add(entry.Tab.Id) && !tabIds.ContainsKey(entry.Tab.Id));
             return entry.Materialize(ids.Next());
         }).ToArray();
-        var history = BrowserDataHistoryEntry.Materialize(History, HistoryPolicy.MaximumEntries, ids.Next);
+        var history = BrowserDataHistoryEntry.Materialize(History, HistoryEntryState.MaximumEntries, ids.Next);
         if (SelectedTabId is { } selected) Require(tabIds.ContainsKey(selected));
 
-        var settings = new SpaceSettings(Name, Symbol, Accent, ImportedLook.Kept(Branding, Accent, Symbol), BrowsingPreferences,
+        var settings = new SpaceSettings(Name, Symbol, Accent, SpaceBranding.Kept(Branding, Accent, Symbol), BrowsingPreferences,
             StoredSessionCodec.DefaultCredentialPreferences, SpaceAccessPolicy.Open, IsSavedTabsExpanded: true,
             SavedTabsExpansionModifiedAt: null);
         return new(ids.Next(), ids.Next(), settings,
@@ -107,7 +107,7 @@ internal sealed record BrowserDataSpace(string Name, string Symbol, SpaceAccent 
     public static BrowserDataSpace From(SpaceState space) {
         ArgumentNullException.ThrowIfNull(space);
         var settings = space.Settings;
-        return new(settings.Name, settings.Symbol, settings.Accent, SpaceBrandingPolicy.Announced(settings.Look),
+        return new(settings.Name, settings.Symbol, settings.Accent, SpaceBranding.Announced(settings.Look),
             [.. space.Folders.Select(BrowserDataFolder.From)], [.. space.Tabs.Select(BrowserDataTab.From)],
             [.. space.SplitGroups.Select(BrowserDataSplit.From)], [.. space.ArchivedTabs.Select(BrowserDataArchivedTab.From)],
             [.. space.History.Select(BrowserDataHistoryEntry.From)], settings.BrowsingPreferences, SelectedTabId: null);

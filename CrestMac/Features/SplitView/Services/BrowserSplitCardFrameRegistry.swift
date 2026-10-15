@@ -57,7 +57,7 @@ final class BrowserSplitCardFrameRegistry {
     /// disappearance, and until then this holds a rectangle that overlaps the
     /// cards which closed up around it. Only the row knows which tabs are still
     /// members, so every geometric question the carry asks is asked of the
-    /// members — see `BrowserSplitCardLiftPolicy.card(at:members:cardFrames:)`
+    /// members — see `BrowserSplitCardLift.card(at:members:cardFrames:)`
     /// and `orderedMemberFrames(members:cardFrames:)`.
     var frames: [UUID: CGRect] {
         framesByTabID

@@ -1,6 +1,9 @@
 import SwiftUI
 
 struct BrowserWebContentView: View {
+    /// How long a developer capture's confirmation stays on screen.
+    private static let developerFeedbackDuration: Duration = .seconds(1.6)
+
     let page: BrowserPage
     let browser: BrowserStore
     let pages: BrowserPagePool
@@ -20,8 +23,7 @@ struct BrowserWebContentView: View {
                     page: page,
                     browser: browser,
                     pagePresentation: pagePresentation,
-                    isPageActive: pages.activePage === page,
-                    isCommandPage: pages.commandPage === page,
+                    isPageActive: pages.commandPage === page,
                     focusRestorationGate: focusRestorationGate,
                     tabPlacement: tabPlacement(ofPage:),
                     goToSharingCounterpart: sharingCounterpartActivation
@@ -67,7 +69,9 @@ struct BrowserWebContentView: View {
         let browser = browser
         let pages = pages
         return {
-            BrowserTabActivationPolicy.activate(tabID, selectTab: browser.selectTab, presentPage: { pages.select() })
+            // Select the tab before presenting its page.
+            browser.selectTab(tabID)
+            pages.select()
         }
     }
 
@@ -108,9 +112,7 @@ struct BrowserWebContentView: View {
     private func dismissDeveloperFeedback(after revision: Int) {
         guard revision > 0 else { return }
         Task { @MainActor in
-            try? await Task.sleep(
-                for: BrowserDeveloperCaptureFeedbackPolicy.displayDuration
-            )
+            try? await Task.sleep(for: Self.developerFeedbackDuration)
             guard page.developerCaptureFeedbackRevision == revision else { return }
             page.dismissDeveloperCaptureFeedback()
         }

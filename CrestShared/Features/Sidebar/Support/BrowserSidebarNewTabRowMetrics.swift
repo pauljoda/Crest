@@ -15,18 +15,12 @@ struct BrowserSidebarNewTabRowMetrics: Equatable, Sendable {
     /// of stopping short of it.
     let labelHorizontalInset: CGFloat
 
-    /// The inset between the list's edges and the row.
-    ///
-    /// Outside the button on purpose: it is the margin the hover surface is
-    /// drawn within, and it is not part of what a reader can press.
-    let rowHorizontalInset: CGFloat
-
     /// Whether the row holds one exact height.
     ///
     /// A pointer shell keeps every row on one rhythm so the list reads as a
     /// scannable column. A touch row is already a hit target sized for a finger,
     /// so it takes a floor instead and grows with the label rather than
-    /// clipping it — see `BrowserSidebarInteractionPolicy.rowMinHeight`.
+    /// clipping it — see `BrowserInteractionCapabilities.rowMinHeight`.
     let usesFixedHeight: Bool
 
     /// Whether the row wears the chrome's hover treatment.
@@ -45,16 +39,14 @@ struct BrowserSidebarNewTabRowMetrics: Equatable, Sendable {
     /// on hover.
     static let pointer = BrowserSidebarNewTabRowMetrics(
         labelHorizontalInset: 9,
-        rowHorizontalInset: CrestSpacing.small,
         usesFixedHeight: true,
         showsHoverSurface: true,
         showsShortcutTooltip: true
     )
 
-    /// A touch shell uses the same content and surface margins as a tab row.
+    /// A touch shell uses the same content margin as a tab row.
     static let touch = BrowserSidebarNewTabRowMetrics(
         labelHorizontalInset: BrowserSidebarTabRowMetrics.touch.contentLeadingInset,
-        rowHorizontalInset: BrowserSidebarTabRowMetrics.touch.surfaceHorizontalInset,
         usesFixedHeight: false,
         showsHoverSurface: false,
         showsShortcutTooltip: false

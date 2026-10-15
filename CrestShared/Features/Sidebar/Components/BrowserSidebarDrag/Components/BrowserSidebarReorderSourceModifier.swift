@@ -33,52 +33,58 @@ struct BrowserSidebarReorderSourceModifier: ViewModifier {
                 content
             }
         }
-        .modifier(BrowserPlatformSidebarReorderLiftGesture(isEnabled: acceptsInput, apply: applyLift))
+        .modifier(
+            BrowserPlatformSidebarReorderLiftGesture(isEnabled: acceptsInput, moved: moveLift, released: releaseLift))
     }
 
-    /// Keeps captured selection and live source authorization with the shared session.
-    private var applyLift: (BrowserSidebarReorderLiftPhase) -> Void {
-        { phase in
-            if input.liftSessionToken != nil, !ownsLift {
-                input.liftSessionToken = nil
-                if case .moved = phase { input.rejectedGesture = true }
-                return
-            }
-            if input.rejectedGesture {
-                if case .released = phase {
-                    input.rejectedGesture = false
-                    state.suppressActivation()
-                }
-                return
-            }
-            // A retained source can receive a callback before SwiftUI has
-            // rendered a Space/profile/lock change. Recheck live authorization.
-            if ownsLift {
-                input.resume(phase, source: source, reorder: reorder, windowDrop: windowDrop)
-                return
-            }
-            guard source.isAvailable(in: reorder), isEnabled,
-                reorder.browser.selectedSpaceID == item.spaceAssignment.spaceID
-            else { return }
-            switch phase {
-            case .moved(let startLocation, let location):
-                if !state.hasLiftInFlight {
-                    guard let (lifted, liftedSection) = liftedItem(in: reorder) else {
-                        input.rejectedGesture = true
-                        return
-                    }
-                    state.begin(
-                        item: lifted, section: liftedSection, at: startLocation, plan: reorder.plan(for: lifted))
-                    input.liftSessionToken = state.sessionToken
-                    #if os(macOS)
-                        input.retainPointerContinuation(source: source, reorder: reorder, windowDrop: windowDrop)
-                    #endif
-                    state.update(pointer: location)
-                }
-            case .released:
-                break
-            }
+    // MARK: - Actions - Lifting
+
+    /// Keeps captured selection and live source authorization with the shared
+    /// session as the pointer moves: a lift another source took rejects the
+    /// rest of this gesture, and an unclaimed one begins here.
+    private func moveLift(from startLocation: CGPoint, to location: CGPoint) {
+        if input.liftSessionToken != nil, !ownsLift {
+            input.liftSessionToken = nil
+            input.rejectedGesture = true
+            return
         }
+        if input.rejectedGesture { return }
+        // A retained source can receive a callback before SwiftUI has
+        // rendered a Space/profile/lock change. Recheck live authorization.
+        if ownsLift {
+            input.move(to: location, source: source, reorder: reorder)
+            return
+        }
+        guard source.isAvailable(in: reorder), isEnabled,
+            reorder.browser.selectedSpaceID == item.spaceAssignment.spaceID,
+            !state.hasLiftInFlight
+        else { return }
+        guard let (lifted, liftedSection) = liftedItem(in: reorder) else {
+            input.rejectedGesture = true
+            return
+        }
+        state.begin(item: lifted, section: liftedSection, at: startLocation, plan: reorder.plan(for: lifted))
+        input.liftSessionToken = state.sessionToken
+        #if os(macOS)
+            input.retainPointerContinuation(source: source, reorder: reorder, windowDrop: windowDrop)
+        #endif
+        state.update(pointer: location)
+    }
+
+    /// Commits the lift this source holds as the pointer lets go, and lets a
+    /// rejected gesture go without activating the row.
+    private func releaseLift() {
+        if input.liftSessionToken != nil, !ownsLift {
+            input.liftSessionToken = nil
+            return
+        }
+        if input.rejectedGesture {
+            input.rejectedGesture = false
+            state.suppressActivation()
+            return
+        }
+        guard ownsLift else { return }
+        input.release(source: source, reorder: reorder, windowDrop: windowDrop)
     }
 
     private var source: BrowserSidebarReorderInputSession.Source {
@@ -94,13 +100,9 @@ struct BrowserSidebarReorderSourceModifier: ViewModifier {
         in reorder: BrowserSidebarReorderContext
     ) -> (BrowserSidebarReorderItem, BrowserSidebarReorderSection)? {
         let browser = reorder.browser
-        let firstID: BrowserSelectionItemID? =
-            switch item {
-            case .tab(let tab): .tab(tab.tabID)
-            case .splitGroup(let group): group.memberTabIDs.first.map(BrowserSelectionItemID.tab)
-            case .folder(let folder): .folder(folder.folderID)
-            }
-        guard let firstID, var captured = BrowserSidebarSelection.capture(for: firstID, in: browser) else {
+        guard let firstID = item.firstSelectionID,
+            var captured = BrowserSidebarSelection.capture(for: firstID, in: browser)
+        else {
             return (item, section)
         }
         if let remaining = browser.tabMultiSelection.releasePinnedTabs(from: captured) {
@@ -157,19 +159,7 @@ final class BrowserSidebarReorderInputSession {
             let assignment = item.spaceAssignment
             guard let space = reorder.browser.spaceModel(assignment.spaceID), space.profileID == assignment.profileID
             else { return false }
-            switch item {
-            case .tab(let tabItem):
-                guard let tab = space.tabs.model(tabItem.tabID),
-                    space.shownSplit(containing: tab.id).map(BrowserSidebarReorderItemID.splitGroup) == parentItemID
-                else { return false }
-                return section == .tabs(placement: tab.placement, folderID: tab.folderID)
-            case .folder(let folderItem):
-                return space.folders.model(folderItem.folderID)?.reorderSection == section
-            case .splitGroup(let groupItem):
-                let members = space.splitMembers(of: groupItem.groupID)
-                guard let first = members.first, members.map(\.id) == groupItem.memberTabIDs else { return false }
-                return section == .tabs(placement: first.placement, folderID: first.folderID)
-            }
+            return item.stands(in: space, section: section, parentItemID: parentItemID)
         }
     }
 
@@ -194,42 +184,51 @@ final class BrowserSidebarReorderInputSession {
                 return
             }
             let context = BrowserSidebarReorderContext(browser: browser, spaceAccess: access, state: state)
-            resume(
-                .moved(startLocation: point, location: point), source: source, reorder: context, windowDrop: windowDrop)
+            move(to: point, source: source, reorder: context)
             if released {
-                resume(.released(previewOwner: .application), source: source, reorder: context, windowDrop: windowDrop)
+                release(source: source, reorder: context, windowDrop: windowDrop)
             }
         }
     }
 
-    func resume(
-        _ phase: BrowserSidebarReorderLiftPhase, source: Source,
-        reorder: BrowserSidebarReorderContext, windowDrop: BrowserSidebarWindowDrop?
-    ) {
+    /// Moves the lift this session holds to `location`.
+    func move(to location: CGPoint, source: Source, reorder: BrowserSidebarReorderContext) {
+        guard holdsLift(from: source, in: reorder) else { return }
         let state = reorder.state
-        guard ownsLift(in: state) else { return }
-        guard source.isAvailable(in: reorder) else {
+        if state.pointer != location { state.update(pointer: location) }
+    }
+
+    /// Drops the lift this session holds: out of the window when the window
+    /// takes it, and otherwise where it landed in the sidebar.
+    func release(source: Source, reorder: BrowserSidebarReorderContext, windowDrop: BrowserSidebarWindowDrop?) {
+        guard holdsLift(from: source, in: reorder) else { return }
+        let state = reorder.state
+        if let lift = state.liftPreview, windowDrop?.perform(lift) == true {
             cancel(in: state)
+            state.suppressActivation()
             return
         }
-        switch phase {
-        case .moved(_, let location):
-            if state.pointer != location { state.update(pointer: location) }
-        case .released(let previewOwner):
-            if let lift = state.liftPreview, windowDrop?.perform(lift) == true {
-                cancel(in: state)
-                state.suppressActivation()
-                return
-            }
-            liftSessionToken = nil
-            // Commit once while the native release event still supplies tear-off coordinates.
-            var transaction = Transaction(animation: nil)
-            transaction.disablesAnimations = true
-            withTransaction(transaction) {
-                guard let drop = state.end(retainingPreview: previewOwner == .application) else { return }
-                reorder.commit(drop)
-            }
+        liftSessionToken = nil
+        // Commit once while the native release event still supplies tear-off coordinates.
+        var transaction = Transaction(animation: nil)
+        transaction.disablesAnimations = true
+        withTransaction(transaction) {
+            // The application draws the lift's preview, so it keeps it to land.
+            guard let drop = state.end(retainingPreview: true) else { return }
+            reorder.commit(drop)
         }
+    }
+
+    /// Whether this session still holds the lift `source` began; one whose
+    /// row no longer stands where it was lifted from is cancelled.
+    private func holdsLift(from source: Source, in reorder: BrowserSidebarReorderContext) -> Bool {
+        let state = reorder.state
+        guard ownsLift(in: state) else { return false }
+        guard source.isAvailable(in: reorder) else {
+            cancel(in: state)
+            return false
+        }
+        return true
     }
 
     func cancel(in state: BrowserSidebarReorderState) {

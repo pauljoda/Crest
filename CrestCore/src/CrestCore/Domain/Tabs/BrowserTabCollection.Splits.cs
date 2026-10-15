@@ -120,7 +120,7 @@ public sealed partial class BrowserTabCollection {
     }
 
     internal void RepairSplitMembership() {
-        var groups = SplitMembershipPolicy.Repair(tabs.Select(t => new SplitMember(t.SplitGroupId, t.Placement, t.FolderId)).ToArray());
+        var groups = SplitMember.Repair(tabs.Select(t => new SplitMember(t.SplitGroupId, t.Placement, t.FolderId)).ToArray());
         for (int index = 0; index < tabs.Count; index++) tabs[index].SetSplit(groups[index]);
     }
 

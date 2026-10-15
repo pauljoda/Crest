@@ -112,7 +112,7 @@ public sealed partial class BrowserContractsTests {
         });
         // More history than a Space keeps: the newest entries stay, as recording a visit keeps them.
         var history = space["history"]!.AsArray();
-        for (int entry = 0; entry < HistoryPolicy.MaximumEntries + 10; entry++)
+        for (int entry = 0; entry < HistoryEntryState.MaximumEntries + 10; entry++)
             history.Add(new JsonObject {
                 ["id"] = Guid.NewGuid().ToString().ToUpperInvariant(),
                 ["url"] = $"https://example.com/older/{entry}",
@@ -158,7 +158,7 @@ public sealed partial class BrowserContractsTests {
         Assert.Equal(group, Guid.Parse(tabs.Single(tab => SpaceId(tab!) == open)!["folderID"]!["rawValue"]!.GetValue<string>()));
         // Only an open tab outside every folder joins; the saved tab keeps its folder.
         Assert.NotEqual(group, Guid.Parse(tabs.Single(tab => SpaceId(tab!) == fixture.Tab)!["folderID"]!["rawValue"]!.GetValue<string>()));
-        Assert.Equal(HistoryPolicy.MaximumEntries, carried["history"]!.AsArray().Count);
+        Assert.Equal(HistoryEntryState.MaximumEntries, carried["history"]!.AsArray().Count);
         Assert.Equal("Earlier visit", carried["history"]![0]!["title"]!.GetValue<string>());
         Assert.Null(StoredDocument(app)["currentTabFolders"]);
     }

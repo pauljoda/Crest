@@ -9,7 +9,7 @@ public sealed record IncludeImportTabs(Guid SourceSpaceId, IReadOnlyList<Guid> T
     #region Actions - Device
 
     internal override void Apply(Device device, DeviceTurn turn) => device.ReviseFlow(turn.Changes, (flow, session) =>
-        Device.Editing(flow, review => ImportReviewPolicy.IncludingTabs(review, SourceSpaceId, TabIds, Included, session)));
+        Device.Editing(flow, review => review.IncludingTabs(SourceSpaceId, TabIds, Included, session)));
 
     #endregion
 }

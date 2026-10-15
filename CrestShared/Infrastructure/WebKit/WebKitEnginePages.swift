@@ -73,27 +73,11 @@ final class WebKitEnginePages: EnginePages {
     }
 
     /// Makes the page's document as the export asks, and presents it once
-    /// WebKit made it. WebKit keeps its archives as web archives, never as
-    /// MHTML.
+    /// WebKit made it.
     func export(_ exporting: ExportPage) -> Bool {
         #if os(macOS)
-            guard let page = page(exporting.pageID), exporting.format != .mhtml else { return false }
-            let webView = page.webView
-            Task { @MainActor [weak self] in
-                let document: Data?
-                switch exporting.format {
-                case .pdf: document = try? await webView.pdf(configuration: WKPDFConfiguration())
-                case .webArchive: document = try? await Self.webArchive(of: webView)
-                case .png: document = await Self.fullPage(of: webView, width: exporting.width)
-                case .mhtml: document = nil
-                }
-                self?.attached.present(
-                    .pageExported(
-                        PageExported(
-                            pageID: exporting.pageID, exportID: exporting.exportID, document: document,
-                            failure: document == nil ? .failed : nil)))
-            }
-            return true
+            guard let page = page(exporting.pageID) else { return false }
+            return exporting.format.export(exporting, from: page, using: self)
         #else
             return false
         #endif
@@ -156,6 +140,19 @@ final class WebKitEnginePages: EnginePages {
                 let png = await Task.detached(priority: .userInitiated) { Self.png(bitmap, scale: scale) }.value
                 self?.attached.present(presentation(png))
             }
+        }
+
+        /// Presents the document `make` makes for the export once it is made.
+        private func export(_ exporting: ExportPage, making make: @escaping @MainActor () async -> Data?) -> Bool {
+            Task { @MainActor [weak self] in
+                let document = await make()
+                self?.attached.present(
+                    .pageExported(
+                        PageExported(
+                            pageID: exporting.pageID, exportID: exporting.exportID, document: document,
+                            failure: document == nil ? .failed : nil)))
+            }
+            return true
         }
     #endif
 
@@ -246,3 +243,27 @@ final class WebKitEnginePages: EnginePages {
         return true
     }
 }
+
+#if os(macOS)
+    extension WebKitEnginePages: WebKitPageExporting {
+        func exportPDF(_ exporting: ExportPage, from page: WebKitEnginePage) -> Bool {
+            let webView = page.webView
+            return export(exporting) { try? await webView.pdf(configuration: WKPDFConfiguration()) }
+        }
+
+        func exportPNG(_ exporting: ExportPage, from page: WebKitEnginePage) -> Bool {
+            let webView = page.webView
+            return export(exporting) { await Self.fullPage(of: webView, width: exporting.width) }
+        }
+
+        /// WebKit keeps its archives as web archives, never as MHTML.
+        func exportMHTML(_ exporting: ExportPage, from page: WebKitEnginePage) -> Bool {
+            false
+        }
+
+        func exportWebArchive(_ exporting: ExportPage, from page: WebKitEnginePage) -> Bool {
+            let webView = page.webView
+            return export(exporting) { try? await Self.webArchive(of: webView) }
+        }
+    }
+#endif

@@ -6,6 +6,8 @@ import Observation
 @Observable
 @MainActor
 final class BrowserSidebarReorderState {
+    // MARK: - Types
+
     struct Lift: Equatable, Sendable {
         let item: BrowserSidebarReorderItem
         let section: BrowserSidebarReorderSection
@@ -19,6 +21,22 @@ final class BrowserSidebarReorderState {
         /// every row asks whether it is one of them each time it renders.
         var rowIDs: Set<BrowserSidebarReorderItemID> = []
     }
+
+    // MARK: - Static Variables
+
+    /// How long a row ignores its own activation after being dropped.
+    static let activationSuppression: Duration = .milliseconds(250)
+
+    /// Backstop for a provider query that never starts or completes a native drag.
+    static let stagedLiftExpiration = BrowserTabDragState.sessionExpiration
+
+    /// Taller blocks use their moving edge when crossing another row.
+    static let movingEdgeProbeMinimumHeight = CrestLayout.sidebarRowHeight * 1.5
+
+    /// A small buffer beyond the visible sidebar before a tab offers a split.
+    static let sidebarExitBuffer: CGFloat = 24
+
+    // MARK: - Variables
 
     private(set) var lift: Lift?
     private(set) var pointer: CGPoint = .zero
@@ -91,8 +109,7 @@ final class BrowserSidebarReorderState {
     @ObservationIgnored private let clock: any Clock<Duration>
 
     init(
-        stagedLiftExpiration: Duration = BrowserSidebarReorderPolicy
-            .stagedLiftExpiration,
+        stagedLiftExpiration: Duration = BrowserSidebarReorderState.stagedLiftExpiration,
         clock: any Clock<Duration> = ContinuousClock()
     ) {
         self.stagedLiftExpiration = stagedLiftExpiration
@@ -233,7 +250,7 @@ final class BrowserSidebarReorderState {
                 guard !frame.isNull, !frame.isEmpty else { return nil }
                 if case .section = registration.zone.target {
                     frame.size.width =
-                        viewport.maxX + BrowserSidebarReorderPolicy.sidebarExitBuffer - frame.minX
+                        viewport.maxX + Self.sidebarExitBuffer - frame.minX
                 }
             }
             guard !frame.isNull, !frame.isEmpty else { return nil }
@@ -263,8 +280,7 @@ final class BrowserSidebarReorderState {
         guard let lift, let source = geometry.rows[lift.item.id]?.row.frame else { return nil }
         let section = BrowserSidebarReorderSection.tabs(placement: .pinned, folderID: nil)
         guard let zone = restingZone(for: section, inColumn: source) else { return nil }
-        let ordered = BrowserSidebarReorderPolicy.rows(
-            in: section, from: registeredRows(in: lift.item.spaceAssignment))
+        let ordered = section.rows(from: registeredRows(in: lift.item.spaceAssignment))
         let emptyHeight = max(zone.minimumHeight, ordered.isEmpty ? zone.frame.height : 0)
         return (
             pinnedLayout(ids: ordered.map(\.id), in: lift.item.spaceAssignment).applyingPreferences(
@@ -290,7 +306,7 @@ final class BrowserSidebarReorderState {
     }
 
     var orderedSplitCardFrames: [CGRect] {
-        BrowserSplitDropPolicy.ordered(geometry.splitCards.values.map(\.frame))
+        BrowserSplitColumnLayout.orderedCardFrames(geometry.splitCards.values.map(\.frame))
     }
 
     // MARK: - Drag lifecycle
@@ -369,8 +385,7 @@ final class BrowserSidebarReorderState {
                     $0 + ($1.usesGridOrdering ? BrowserTabDragPreviewLayout.rowSize.height : $1.frame.height)
                 }
             }
-            let ordered = BrowserSidebarReorderPolicy.rows(
-                in: section, from: registeredRows(in: item.spaceAssignment))
+            let ordered = section.rows(from: registeredRows(in: item.spaceAssignment))
             let candidates = ordered.filter { !layout.hiddenIDs.contains($0.id) }
             let index = ordered.prefix { $0.id != item.id }.filter { !layout.hiddenIDs.contains($0.id) }
                 .count
@@ -481,7 +496,7 @@ final class BrowserSidebarReorderState {
         activationSuppressionTask?.cancel()
         activationSuppressionTask = Task { @MainActor [weak self] in
             try? await Task.sleep(
-                for: BrowserSidebarReorderPolicy.activationSuppression
+                for: Self.activationSuppression
             )
             guard !Task.isCancelled else { return }
             self?.isSuppressingActivation = false
@@ -502,11 +517,10 @@ final class BrowserSidebarReorderState {
             return CGSize(width: frame.minX - row.frame.minX, height: frame.minY - row.frame.minY)
         }
         guard let context = insertionContext(for: id) else { return .zero }
-        return BrowserSidebarReorderPolicy.displacement(
+        return context.order.slotLayout.displacement(
             candidateIndex: context.candidateIndex,
             draggedSlot: context.order.draggedSlot,
-            insertionIndex: context.order.index,
-            layout: context.order.slotLayout
+            insertionIndex: context.order.index
         )
     }
 
@@ -550,11 +564,7 @@ final class BrowserSidebarReorderState {
     ) -> BrowserSidebarReorderIndicator? {
         guard let lift,
             resolvedTarget?.section == section,
-            BrowserSidebarReorderPolicy.rows(
-                in: section,
-                from: registeredRows(in: lift.item.spaceAssignment)
-            )
-            .allSatisfy({ $0.id == lift.item.id })
+            section.rows(from: registeredRows(in: lift.item.spaceAssignment)).allSatisfy({ $0.id == lift.item.id })
         else { return nil }
         return BrowserSidebarReorderIndicator(
             side: .before,
@@ -572,25 +582,13 @@ final class BrowserSidebarReorderState {
         if constraintMessage != nil {
             return lift.section.usesGridOrdering ? .pinnedTile : .row
         }
-        switch lift.item {
-        case .tab:
-            break
-        case .folder, .splitGroup:
-            return nil
-        }
-        switch resolvedTarget?.kind {
-        case .insert(let section, _, _):
-            guard case .tabs(let placement, _) = section else { return nil }
-            return .resting(for: placement)
-        case .intoFolder, .createCurrentFolder:
-            return .row
-        case .splitInsert:
-            return .webpageCard
-        case .space, .none:
-            if lastPreviewShape == .pinnedTile { return .pinnedTile }
-            guard case .tabs(let placement, _) = lift.section else { return nil }
-            return .resting(for: placement)
-        }
+        guard lift.item.morphsIntoTarget else { return nil }
+        // Over no target of its own, a tile stays a tile, and anything else
+        // takes the shape it rests in.
+        let resting: BrowserTabDragPreviewShape? =
+            lastPreviewShape == .pinnedTile ? .pinnedTile : lift.section.restingPreviewShape
+        guard let kind = resolvedTarget?.kind else { return resting }
+        return kind.previewShape(resting: resting)
     }
 
     var liftPreview: BrowserSidebarFloatingLift? {
@@ -622,21 +620,8 @@ final class BrowserSidebarReorderState {
 
     private var landingFrame: CGRect? {
         guard let lift else { return nil }
-        switch resolvedTarget?.kind {
-        case .insert(let section, _, _):
-            if section.usesGridOrdering, let pinned = pinnedGeometry {
-                return pinned.layout.frame(for: .gap, in: pinned.frame)
-            }
-            return layout.gapFrame
-        case .intoFolder(let id):
-            return geometry.rows[.folder(id)].flatMap { layout.frame(for: $0.row) }
-        case .createCurrentFolder(let id):
-            return geometry.rows[.tab(id)].flatMap { layout.frame(for: $0.row) }
-        case .none:
-            return geometry.rows[lift.item.id]?.row.frame
-        case .space, .splitInsert:
-            return nil
-        }
+        guard let kind = resolvedTarget?.kind else { return geometry.rows[lift.item.id]?.row.frame }
+        return kind.landingFrame(layout: layout, pinned: pinnedGeometry, rows: geometry.rows)
     }
 
     // MARK: - Resolution
@@ -656,7 +641,7 @@ final class BrowserSidebarReorderState {
         let candidateCount: Int
         let draggedSlot: Int
         let index: Int
-        let slotLayout: BrowserSidebarReorderPolicy.SlotLayout
+        let slotLayout: BrowserSidebarReorderSlotLayout
     }
 
     private struct InsertionContext {
@@ -687,10 +672,7 @@ final class BrowserSidebarReorderState {
             return order
         }
         guard case .insert(let section, _, let index) = target.kind else { return nil }
-        let ordered = BrowserSidebarReorderPolicy.rows(
-            in: section,
-            from: registeredRows(in: lift.item.spaceAssignment)
-        )
+        let ordered = section.rows(from: registeredRows(in: lift.item.spaceAssignment))
         let candidates = ordered.filter { $0.id != lift.item.id }
         let order = InsertionOrder(
             item: lift.item.id, target: target, rowSize: lift.rowSize, rowsRevision: geometry.rowsRevision,
@@ -700,8 +682,8 @@ final class BrowserSidebarReorderState {
             candidateCount: candidates.count,
             draggedSlot: ordered.firstIndex { $0.id == lift.item.id } ?? candidates.count,
             index: index,
-            slotLayout: BrowserSidebarReorderPolicy.slotLayout(
-                for: ordered,
+            slotLayout: BrowserSidebarReorderSlotLayout(
+                rows: ordered,
                 fallbackStride: section.usesGridOrdering ? lift.rowSize.width : lift.rowSize.height))
         insertionOrder = order
         return order
@@ -718,11 +700,11 @@ final class BrowserSidebarReorderState {
             resolvedTarget = nil
             return
         }
-        resolvedTarget = BrowserSidebarReorderTargetResolver(
+        resolvedTarget = BrowserSidebarReorderAim(
             lift: lift, pointer: pointer, insertionPoint: insertionProbe(for: lift), layout: layout,
             pinned: pinnedGeometry, zones: visibleZones, rows: geometry.rows,
             splitCards: geometry.splitCards
-        ).resolve(previousTarget: previousTarget)
+        ).target(previousTarget: previousTarget)
         if case .splitInsert = resolvedTarget?.kind { hasEnteredSplitContent = true }
     }
 
@@ -734,21 +716,15 @@ final class BrowserSidebarReorderState {
             constraintMessage = nil
             return
         }
-        switch plan.verdict(on: target) {
-        case .allowed:
-            constraintMessage = nil
-        case .refused(let refusal):
-            constraintMessage = refusal.placementExplanation
-        case .unavailable:
-            resolvedTarget = nil
-            constraintMessage = nil
-        }
+        let verdict = plan.verdict(on: target)
+        if !verdict.isOffered { resolvedTarget = nil }
+        constraintMessage = verdict.constraintMessage
     }
 
     // Tall blocks cross neighbours with their moving edge rather than the grabbed header.
     private func insertionProbe(for lift: Lift) -> CGPoint {
         guard layout.isActive,
-            lift.rowSize.height > BrowserSidebarReorderPolicy.movingEdgeProbeMinimumHeight,
+            lift.rowSize.height > Self.movingEdgeProbeMinimumHeight,
             verticalDirection != 0
         else { return pointer }
         let top = pointer.y - lift.grabOffset.height
@@ -773,9 +749,8 @@ final class BrowserSidebarReorderState {
         if case .insert(let section, let beforeID, _) = resolvedTarget?.kind,
             !section.usesGridOrdering
         {
-            let candidates = BrowserSidebarReorderPolicy.rows(
-                in: section, from: registeredRows(in: lift.item.spaceAssignment)
-            ).filter { !next.hiddenIDs.contains($0.id) }
+            let candidates = section.rows(from: registeredRows(in: lift.item.spaceAssignment))
+                .filter { !next.hiddenIDs.contains($0.id) }
             let anchor: BrowserSidebarReorderLayout.Gap.Anchor
             let frame: CGRect
             if let beforeID, let row = candidates.first(where: { $0.id == beforeID }) {

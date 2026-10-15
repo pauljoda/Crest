@@ -54,9 +54,9 @@ final class BrowserQuickWindowGeometryHostView: NSView {
             return frame
         }
         if let referenceFrame = usable(sourceWebContentFrame) ?? usable(sourceWindowFrame) {
-            return BrowserTransientWindowGeometryPolicy.centeredContentFrame(in: referenceFrame)
+            return BrowserTransientCardArrangement.centeredWindowContentFrame(in: referenceFrame)
         }
-        let proposed = BrowserTransientWindowGeometryPolicy.centeredContentFrame(in: fallbackVisibleFrame)
+        let proposed = BrowserTransientCardArrangement.centeredWindowContentFrame(in: fallbackVisibleFrame)
         let size = CGSize(
             width: min(proposed.width, BrowserQuickWindowLayout.maximumScreenFallbackWidth),
             height: min(proposed.height, BrowserQuickWindowLayout.maximumScreenFallbackHeight))

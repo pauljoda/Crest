@@ -15,20 +15,20 @@ final class BrowserSharedPageRuntimeTests: XCTestCase {
         let page = try XCTUnwrap(pool.activePage)
         let url = try XCTUnwrap(URL(string: "https://example.com/first"))
 
-        page.receive(.navigationStarted)
-        page.receive(.loadingChanged(true))
-        page.receive(.navigationCommitted(url, isLoading: true))
+        page.receive(BrowserPageNavigationStarted())
+        page.receive(BrowserPageLoadingChanged(isLoading: true))
+        page.receive(BrowserPageNavigationCommitted(url: url, isLoading: true))
         XCTAssertEqual(page.completedNavigationCount, 0)
-        page.receive(.loadingChanged(false))
+        page.receive(BrowserPageLoadingChanged(isLoading: false))
         XCTAssertEqual(page.completedNavigationCount, 1)
 
-        page.receive(.navigationStarted)
-        page.receive(.loadingChanged(true))
-        page.receive(.loadingChanged(false))
+        page.receive(BrowserPageNavigationStarted())
+        page.receive(BrowserPageLoadingChanged(isLoading: true))
+        page.receive(BrowserPageLoadingChanged(isLoading: false))
         XCTAssertEqual(page.completedNavigationCount, 1)
 
         let section = try XCTUnwrap(URL(string: "https://example.com/first#section"))
-        page.receive(.navigationCommitted(section, isLoading: false))
+        page.receive(BrowserPageNavigationCommitted(url: section, isLoading: false))
         XCTAssertEqual(page.completedNavigationCount, 2)
     }
 
@@ -68,7 +68,7 @@ final class BrowserSharedPageRuntimeTests: XCTestCase {
         second.present(tab: tab.id, in: space.id)
         second.setWindowFocused(true)
         let page = try XCTUnwrap(second.activePage)
-        page.translation.setActive(true, in: page.webView)
+        page.translation.setActive(true, in: try XCTUnwrap(page.translationDocument))
         page.translation.sourceID = "es"
         page.translation.targetID = "en"
         page.translation.start()

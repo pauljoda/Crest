@@ -164,10 +164,7 @@ struct MobileBrowserOnboardingView: View {
 
     private func move(to newStep: SetupStep) {
         withAnimation(
-            BrowserVisualAccessibilityPolicy.animation(
-                CrestMotion.selection,
-                reduceMotion: reduceMotion
-            )
+            CrestMotion.selection.unlessReducingMotion(reduceMotion)
         ) {
             _ = try? browser.core.send(ShowSetupStep(step: newStep))
         }
@@ -215,24 +212,33 @@ struct MobileBrowserOnboardingView: View {
             let result = await BrowserSetupFinish.finish(browser: browser, spaceAccess: spaceAccess)
             guard !Task.isCancelled else { return }
             completionTask = nil
-            switch result {
-            case .completed(let guide):
-                errorMessage = nil
-                progress.setupFinished()
-                if let guide { didOpenGettingStarted(guide) }
-                coordinator.isMobilePresented = false
-            case .cancelled:
-                finishingStep = nil
-                errorMessage = String(localized: "Unlock your first Space to open Getting Started.")
-            case .refused(let message):
-                finishingStep = nil
-                errorMessage = message
-            }
+            result.apply(to: self)
         }
     }
 
     private func close() {
         coordinator.isMobilePresented = false
+    }
+}
+
+extension MobileBrowserOnboardingView: BrowserSetupFinishReceiver {
+    // MARK: - Actions - Finishing
+
+    func setupCompleted(guide: BrowserTabRuntimeAssignment?) {
+        errorMessage = nil
+        progress.setupFinished()
+        if let guide { didOpenGettingStarted(guide) }
+        coordinator.isMobilePresented = false
+    }
+
+    func setupCancelled() {
+        finishingStep = nil
+        errorMessage = String(localized: "Unlock your first Space to open Getting Started.")
+    }
+
+    func setupRefused(_ message: String) {
+        finishingStep = nil
+        errorMessage = message
     }
 }
 

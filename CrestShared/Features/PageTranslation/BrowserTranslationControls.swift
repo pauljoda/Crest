@@ -61,7 +61,7 @@ struct BrowserTranslationActions: View {
                     ? String(localized: "Translate Page Again") : String(localized: "Translate Page"),
                 systemImage: "translate", action: translation.start
             )
-            .disabled(translation.targetID.isEmpty)
+            .disabled(!translation.canTranslate)
         }
         if translation.isTranslated {
             Button("Show Original", systemImage: "arrow.uturn.backward", action: translation.showOriginal)
@@ -178,11 +178,7 @@ struct BrowserTranslationToolbar: View {
             }
             .font(.callout.weight(.medium))
         } background: {
-            #if os(macOS)
-                Color(nsColor: .windowBackgroundColor)
-            #else
-                Color(uiColor: .secondarySystemBackground)
-            #endif
+            CrestSurfaceLayer(shape: Rectangle())
         }
         // Read only the externally proposed width. Nested ViewThatFits probes
         // repeatedly measured menus during floating-sidebar transitions and
@@ -316,7 +312,7 @@ struct BrowserTranslationToolbar: View {
                 isProminent: !translation.isWorking && !translation.hasSelectedTranslation
             )
         )
-        .disabled(!translation.isWorking && !translation.hasSelectedTranslation && translation.targetID.isEmpty)
+        .disabled(!translation.isWorking && !translation.hasSelectedTranslation && !translation.canTranslate)
         .accessibilityLabel(actionTitle)
         .help(actionTitle)
     }

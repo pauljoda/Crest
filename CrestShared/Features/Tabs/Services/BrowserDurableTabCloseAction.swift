@@ -14,14 +14,12 @@ struct BrowserDurableTabCloseAction {
     func perform(_ assignment: BrowserTabRuntimeAssignment) -> Bool {
         let space = BrowserSpaceRuntimeAssignment(spaceID: assignment.spaceID, profileID: assignment.profileID)
         guard
-            let unlocked = BrowserSidebarAccessPolicy.selectedUnlockedSpace(
-                matching: space, in: browser, accessController: spaceAccess),
+            let unlocked = browser.selectedUnlockedSpace(matching: space, accessController: spaceAccess),
             unlocked.tabs.model(assignment.tabID)?.placement.isDurable == true
         else { return false }
         return browser.performPageDismissal(of: [assignment]) {
             guard
-                BrowserSidebarAccessPolicy.selectedUnlockedSpace(
-                    matching: space, in: browser, accessController: spaceAccess) != nil
+                browser.selectedUnlockedSpace(matching: space, accessController: spaceAccess) != nil
             else { return false }
             return browser.closeDurableTab(assignment)
         }

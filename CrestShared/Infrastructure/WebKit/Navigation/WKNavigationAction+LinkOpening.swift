@@ -10,7 +10,7 @@ extension WKNavigationAction {
         if modifierFlags.contains(.shift) { held.insert(.shift) }
         #if os(macOS)
             if modifierFlags.contains(.option) { held.insert(.option) }
-            let middle = BrowserMouseButtonPolicy.isMiddleButton(number: buttonNumber)
+            let middle = buttonNumber == 1 << 2
         #else
             if modifierFlags.contains(.alternate) { held.insert(.option) }
             let middle = buttonNumber.rawValue == 1 << 2

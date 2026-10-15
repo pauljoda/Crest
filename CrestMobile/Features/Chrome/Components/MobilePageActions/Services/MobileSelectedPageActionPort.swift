@@ -82,7 +82,7 @@ struct MobileSelectedPageActionPort: MobilePageActions {
     }
 
     var pageZoomLabel: String {
-        BrowserPageZoomPolicy.percentageLabel(for: activePage?.pageZoom ?? 1)
+        (activePage?.pageZoom ?? 1).pageZoomPercentage
     }
 
     var blockedPopupNotice: BrowserBlockedPopupNotice? {

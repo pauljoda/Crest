@@ -124,7 +124,7 @@ struct BrowserSpaceSwitcherCompactPicker: View {
     }
 
     private var scrollAnimation: Animation? {
-        BrowserVisualAccessibilityPolicy.animation(CrestMotion.scrollAlignment, reduceMotion: reduceMotion)
+        CrestMotion.scrollAlignment.unlessReducingMotion(reduceMotion)
     }
 
     private func revealSelection(_ reader: ScrollViewProxy, animated: Bool) {

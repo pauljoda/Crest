@@ -1,6 +1,9 @@
 import Foundation
 
 struct BrowserDownloadRowPresentation: Sendable {
+    /// The narrowest row that keeps the status and transfer metrics on one line.
+    static let inlineMinimumWidth: CGFloat = 360
+
     let bytesReceived: Int64
     let totalBytes: Int64?
     let progress: Double
@@ -58,33 +61,28 @@ struct BrowserDownloadRowPresentation: Sendable {
             || estimatedTimeRemaining != nil
             || showsStatusAlongsideMetrics
     }
+
+    /// How a row this wide lays the presentation out.
+    func layout(
+        availableWidth: CGFloat,
+        usesAccessibilityTextSize: Bool
+    ) -> BrowserDownloadRowLayout {
+        // Without metrics the status is the only line; a second would repeat it.
+        guard hasSecondaryTransferMetrics else {
+            return .singleLine
+        }
+        guard !usesAccessibilityTextSize,
+            !statusNeedsAttention,
+            availableWidth >= Self.inlineMinimumWidth
+        else {
+            return .stacked
+        }
+        return .inline
+    }
 }
 
 enum BrowserDownloadRowLayout: Equatable, Sendable {
     case singleLine
     case inline
     case stacked
-}
-
-enum BrowserDownloadRowLayoutPolicy {
-    static let inlineMinimumWidth: CGFloat = 360
-
-    static func resolve(
-        availableWidth: CGFloat,
-        usesAccessibilityTextSize: Bool,
-        hasSecondaryMetrics: Bool,
-        statusNeedsAttention: Bool
-    ) -> BrowserDownloadRowLayout {
-        // Without metrics the status is the only line; a second would repeat it.
-        guard hasSecondaryMetrics else {
-            return .singleLine
-        }
-        guard !usesAccessibilityTextSize,
-            !statusNeedsAttention,
-            availableWidth >= inlineMinimumWidth
-        else {
-            return .stacked
-        }
-        return .inline
-    }
 }

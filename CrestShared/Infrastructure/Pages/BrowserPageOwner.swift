@@ -299,7 +299,7 @@ extension BrowserPageOwner {
     var forwardHistory: [BrowserNavigationHistoryItem] { activePage?.forwardHistory ?? [] }
 
     var pageZoomLabel: String {
-        BrowserPageZoomPolicy.percentageLabel(for: activePage?.pageZoom ?? 1)
+        (activePage?.pageZoom ?? 1).pageZoomPercentage
     }
 
     var readerModeState: BrowserReaderModeState {

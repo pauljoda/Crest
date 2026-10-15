@@ -64,7 +64,7 @@ final class BrowserMacMouseButtons {
     private func takePress(_ event: NSEvent) -> Bool {
         // A release the application never saw leaves no claim on the next press.
         takenButtons.remove(event.buttonNumber)
-        guard let action = BrowserSidebarMouseButtonPolicy.action(for: event.buttonNumber),
+        guard let action = BrowserSidebarMouseButtonAction(buttonNumber: event.buttonNumber),
             navigation(event)?.takePress(action, at: event) == true
         else { return false }
         takenButtons.insert(event.buttonNumber)

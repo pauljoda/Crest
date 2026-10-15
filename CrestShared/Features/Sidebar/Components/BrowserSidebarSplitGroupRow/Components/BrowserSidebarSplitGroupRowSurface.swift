@@ -6,29 +6,35 @@ struct BrowserSidebarSplitGroupRowSurface: ViewModifier {
     let interaction: BrowserSidebarSplitGroupRowInteractionContext
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.sidebarLayerDepth) private var depth
 
     func body(content: Content) -> some View {
         content
             .frame(maxWidth: .infinity)
             .contentShape(.rect)
             .background {
-                containerShape
-                    .fill(groupTint)
-                    .overlay { if isMultiSelected { containerShape.fill(CrestColor.hover) } }
-                    .overlay {
-                        if let tint = configuration.tint {
-                            containerShape.fill(
-                                tint.color.opacity(
-                                    configuration.isPresented ? 0.16 : 0.10
-                                )
+                CrestSurfaceLayer(
+                    shape: containerShape,
+                    hoverTint: configuration.isPresented ? CrestColor.hover : nil
+                )
+                .overlay { if isMultiSelected { containerShape.fill(CrestColor.hover) } }
+                .overlay {
+                    if let tint = configuration.tint {
+                        containerShape.fill(
+                            tint.color.opacity(
+                                configuration.isPresented ? 0.16 : 0.10
                             )
-                        }
+                        )
                     }
+                }
             }
             .animation(surfaceAnimation, value: configuration.isPresented)
             .animation(surfaceAnimation, value: isMultiSelected)
-            .padding(.horizontal, configuration.rowHorizontalInset)
-            .padding(.vertical, configuration.metrics.rowVerticalInset)
+            // In the same column as every other layer, with the space it keeps
+            // from its neighbours inside the row, so drag geometry includes the
+            // resting separation.
+            .padding(.horizontal, BrowserSidebarMetrics.layerInset)
+            .padding(.vertical, BrowserSidebarMetrics.containerSpacing)
             .contentShape(.rect)
             .modifier(
                 BrowserTabSelectionTarget(
@@ -60,22 +66,11 @@ struct BrowserSidebarSplitGroupRowSurface: ViewModifier {
         }
     }
 
-    private var groupTint: Color {
-        configuration.isPresented ? CrestColor.hover : CrestColor.chromeSurface
-    }
-
     private var containerShape: RoundedRectangle {
-        RoundedRectangle(
-            cornerRadius: BrowserDeviceAppearanceStore.shared.containerCornerRadius(
-                padding: configuration.metrics.containerPadding),
-            style: .continuous
-        )
+        RoundedRectangle(cornerRadius: BrowserSidebarMetrics.layerCornerRadius(depth: depth), style: .continuous)
     }
 
     private var surfaceAnimation: Animation? {
-        BrowserVisualAccessibilityPolicy.animation(
-            CrestMotion.surface,
-            reduceMotion: reduceMotion
-        )
+        CrestMotion.surface.unlessReducingMotion(reduceMotion)
     }
 }

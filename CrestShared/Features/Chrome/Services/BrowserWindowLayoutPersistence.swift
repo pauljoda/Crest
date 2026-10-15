@@ -25,7 +25,7 @@ struct BrowserWindowLayoutPersistence {
         guard memberCount > 0 else { return }
         let persisted = groupID.flatMap { windowState?.splitColumnFractions(for: $0) }
         transaction.begin(
-            fractions: BrowserSplitLayoutSeedPolicy.fractions(persisted: persisted, memberCount: memberCount)
+            fractions: BrowserSplitColumnLayout.seedFractions(persisted: persisted, memberCount: memberCount)
         )
     }
 

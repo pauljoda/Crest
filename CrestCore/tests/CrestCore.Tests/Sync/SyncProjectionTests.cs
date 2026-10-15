@@ -22,9 +22,9 @@ public sealed partial class BrowserContractsTests {
     [InlineData("about:blank", false)]
     [InlineData(null, false)]
     public void OnlyPortableWebContentEntersSharedRecords(string? url, bool expected) {
-        Assert.Equal(expected, SyncContentPolicy.IncludesTab(url, false, null));
-        Assert.False(SyncContentPolicy.IncludesTab(url, true, null));
-        Assert.False(SyncContentPolicy.IncludesTab(url, false, "crest://settings"));
+        Assert.Equal(expected, SyncedAddress.IncludesTab(url, false, null));
+        Assert.False(SyncedAddress.IncludesTab(url, true, null));
+        Assert.False(SyncedAddress.IncludesTab(url, false, "crest://settings"));
     }
 
     [Fact]

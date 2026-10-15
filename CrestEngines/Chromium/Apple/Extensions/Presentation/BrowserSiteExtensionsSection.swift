@@ -32,11 +32,11 @@ struct BrowserSiteExtensionsSection: View {
             columns: Array(
                 repeating: GridItem(
                     .flexible(),
-                    spacing: BrowserSiteControlLayoutPolicy.extensionGridSpacing
+                    spacing: BrowserSiteControlMetrics.extensionGridSpacing
                 ),
-                count: BrowserSiteControlLayoutPolicy.extensionColumnCount
+                count: BrowserSiteControlMetrics.extensionColumnCount
             ),
-            spacing: BrowserSiteControlLayoutPolicy.extensionGridSpacing
+            spacing: BrowserSiteControlMetrics.extensionGridSpacing
         ) {
             ForEach(actions) { action in
                 BrowserSiteExtensionActionButton(

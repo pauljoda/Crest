@@ -27,7 +27,7 @@ struct BrowserSpacePageSurface: NSViewRepresentable {
     func updateNSView(_ view: SpaceContentPagerView<BrowserRootPageSurface>, context: Context) {
         let objects = pageEnvironment.objects
         view.update(
-            spaces: BrowserSidebarAccessPolicy.availableSpaces(in: model.browser),
+            spaces: model.browser.availableSpaces,
             selectedSpaceID: model.browser.selectedSpaceID,
             lockedSpaceIDs: model.lockedSpaceIDs,
             layoutDirection: context.environment.layoutDirection,

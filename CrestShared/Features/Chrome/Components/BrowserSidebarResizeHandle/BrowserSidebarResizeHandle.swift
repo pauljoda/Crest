@@ -49,10 +49,7 @@ struct BrowserSidebarResizeHandle: View {
             isActive = true
             width = BrowserChromeLayout.clampedSidebarWidth(
                 start
-                    + BrowserChromeDirectionPolicy.sidebarResizeDelta(
-                        value.translation.width,
-                        layoutDirection: layoutDirection
-                    ) * (edge == .leading ? 1 : -1)
+                    + layoutDirection.sidebarResizeDelta(value.translation.width) * (edge == .leading ? 1 : -1)
             )
         }
     }

@@ -94,15 +94,6 @@ public sealed partial class NativeSessionAuthority {
 
     #region Actions - Session revisions
 
-    private void RequireWritable(bool requireCurrentBorrowedPolicy = true) {
-        if (released) throw new BrowserRuleException(BrowserRule.SessionReleased);
-        if (replacement is not null) throw new BrowserRuleException(BrowserRule.SessionTransactionInProgress);
-        if (borrowedSource is not null) {
-            _ = RequireBorrowedSource();
-            if (requireCurrentBorrowedPolicy) RequireCurrentBorrowedPolicy(session);
-        }
-    }
-
     /// Makes `next` the accepted state, saved behind as a new revision, and
     /// answers the state it replaced. The caller holds the gate.
     private SessionState Accept(SessionState next) {

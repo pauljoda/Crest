@@ -14,8 +14,7 @@ struct BrowserPaletteSectionDragPreview: View {
         .padding(.horizontal, CrestSpacing.medium)
         .padding(.vertical, CrestSpacing.small)
         .background {
-            BrowserAccessibleMaterialBackground(
-                material: .regular, shape: RoundedRectangle(cornerRadius: CrestRadius.compact, style: .continuous))
+            CrestSurfaceLayer(shape: .rect(cornerRadius: CrestRadius.compact, style: .continuous))
         }
     }
 }

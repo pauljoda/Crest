@@ -20,6 +20,66 @@ enum BrowserSplitColumnLayout {
         return Array(repeating: 1 / Double(count), count: count)
     }
 
+    /// The slot a tab dragged over the content area would take among
+    /// `orderedCardFrames`, in `0...orderedCardFrames.count`. Pure geometry,
+    /// so a drop can be exercised without a live drag.
+    ///
+    /// The columns view lays cards out in reading order along one axis, so the
+    /// rule is the horizontal twin of `BrowserSidebarReorderRow.insertionIndex`:
+    /// the pointer has passed a card once it is beyond that card's midpoint,
+    /// and the index is how many cards it has passed.
+    ///
+    /// Only presented cards are measured. The drop placeholder registers no
+    /// frame of its own, and the cards it displaces provably keep the same
+    /// answer: inserting a placeholder at `index` moves every earlier card's
+    /// midpoint left and every later card's midpoint right, which is the
+    /// direction that reinforces the index the pointer already resolved. That
+    /// is what lets the placeholder appear without the layout it causes
+    /// changing the slot it appears in.
+    ///
+    /// A lone card is not a special case: the pointer resolves to `0` on its
+    /// leading half and `1` on its trailing half, which is exactly how a split
+    /// gets created out of a window presenting one tab.
+    static func insertionIndex(
+        at point: CGPoint,
+        orderedCardFrames: [CGRect]
+    ) -> Int {
+        var index = 0
+        for frame in orderedCardFrames {
+            guard point.x > frame.midX else { break }
+            index += 1
+        }
+        return index
+    }
+
+    /// Reading order for measured cards.
+    ///
+    /// Sorting by leading edge rather than trusting a dictionary's iteration is
+    /// what keeps the index tied to what is on screen. It matches the ordering
+    /// `BrowserSidebarReorderRow` already uses for the pinned grid, including
+    /// its indifference to layout direction.
+    static func orderedCardFrames(_ frames: [CGRect]) -> [CGRect] {
+        frames.filter { !$0.isEmpty }.sorted { $0.minX < $1.minX }
+    }
+
+    /// Which fractions a split starts a layout pass with.
+    ///
+    /// Two callers need the same answer and must not disagree: the window
+    /// model, seeding its width transaction when the presented group changes,
+    /// and the columns view, which lays out every frame and cannot index a
+    /// fraction list that is one member behind the group it is drawing. A
+    /// stored list whose length no longer matches the group is not repaired
+    /// here — a split of three has no honest reading of two fractions — so it
+    /// is discarded for equal columns, the same starting point a brand-new
+    /// group gets.
+    static func seedFractions(persisted: [Double]?, memberCount: Int) -> [Double] {
+        guard memberCount > 0 else { return [] }
+        guard let persisted, persisted.count == memberCount else {
+            return equalFractions(count: memberCount)
+        }
+        return normalizedFractions(persisted)
+    }
+
     /// The caller's fractions as shares summing to one.
     ///
     /// A list containing anything that cannot be a share — a non-finite value,

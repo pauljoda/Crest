@@ -11,6 +11,10 @@ import AppKit
 /// instead, and nothing reaches the popovers.
 @MainActor
 final class BrowserChromeToolbar: NSToolbar {
+    // MARK: - Static Variables
+
+    static let chromeIdentifier = NSToolbar.Identifier("crest.browser.window-chrome")
+
     // MARK: - Variables
 
     /// The window whose title bar the toolbar measures.
@@ -27,6 +31,6 @@ final class BrowserChromeToolbar: NSToolbar {
     /// Whether the toolbar may show in its window as the window is now.
     private var showsInChromeWindow: Bool {
         guard let chromeWindow else { return true }
-        return BrowserNativeWindowControlsPolicy.showsToolbar(in: chromeWindow.styleMask)
+        return chromeWindow.styleMask.showsBrowserToolbar
     }
 }

@@ -26,7 +26,7 @@ internal sealed class PasteFinder : PaletteFinder {
         AddressResolution? resolution;
         try {
             resolution = AddressResolution.Resolve(pasteboard.Trim(), context.Search, context.AllowsInternalPages);
-        } catch (BrowserRuleException) {
+        } catch (Rejected refused) when (refused.Rejection is UnsupportedAddress) {
             yield break;
         }
         if (resolution is not { SearchQuery: null } || !Uri.TryCreate(resolution.Url, UriKind.Absolute, out _)) yield break;

@@ -73,7 +73,8 @@ struct BrowserRootSidebarContent: View {
         for assignment: BrowserSpaceRuntimeAssignment,
         intent: BrowserSettingsSpaceIntent = .none
     ) {
-        spaceSettingsPresentation.present(.space(.appearance, intent: intent), assignment: assignment)
+        spaceSettingsPresentation.present(
+            BrowserSettingsSpaceRequest(tab: .appearance, intent: intent), assignment: assignment)
         model.browser.openSettings()
         model.pages.select()
     }

@@ -12,25 +12,16 @@ final class BrowserShortcutPolicyTests: XCTestCase {
         ]
 
         XCTAssertTrue(
-            BrowserShortcutSearchPolicy.matches(
-                query: "copy url",
-                fields: fields
-            )
+            BrowserShortcutSearchDocument(fields: fields).matches("copy url")
         )
         XCTAssertTrue(
-            BrowserShortcutSearchPolicy.matches(
-                query: "command shift c",
-                fields: fields
-            )
+            BrowserShortcutSearchDocument(fields: fields).matches("command shift c")
         )
         XCTAssertFalse(
-            BrowserShortcutSearchPolicy.matches(
-                query: "command shift p",
-                fields: fields
-            )
+            BrowserShortcutSearchDocument(fields: fields).matches("command shift p")
         )
         XCTAssertTrue(
-            BrowserShortcutSearchPolicy.matches(query: "", fields: fields)
+            BrowserShortcutSearchDocument(fields: fields).matches("")
         )
     }
 
@@ -42,28 +33,16 @@ final class BrowserShortcutPolicyTests: XCTestCase {
         ]
 
         XCTAssertTrue(
-            BrowserShortcutSearchPolicy.containsTrimmedPhrase(
-                query: "  reader tools  ",
-                fields: fields
-            )
+            BrowserShortcutSearchDocument(fields: fields).containsTrimmedPhrase("  reader tools  ")
         )
         XCTAssertTrue(
-            BrowserShortcutSearchPolicy.containsTrimmedPhrase(
-                query: "CAPTURE ARTICLE",
-                fields: fields
-            )
+            BrowserShortcutSearchDocument(fields: fields).containsTrimmedPhrase("CAPTURE ARTICLE")
         )
         XCTAssertFalse(
-            BrowserShortcutSearchPolicy.containsTrimmedPhrase(
-                query: "reader capture",
-                fields: fields
-            )
+            BrowserShortcutSearchDocument(fields: fields).containsTrimmedPhrase("reader capture")
         )
         XCTAssertTrue(
-            BrowserShortcutSearchPolicy.containsTrimmedPhrase(
-                query: "   ",
-                fields: fields
-            )
+            BrowserShortcutSearchDocument(fields: fields).containsTrimmedPhrase("   ")
         )
     }
 }

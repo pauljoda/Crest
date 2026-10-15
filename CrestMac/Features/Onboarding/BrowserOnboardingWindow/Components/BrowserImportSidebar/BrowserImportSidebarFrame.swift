@@ -23,7 +23,7 @@ struct BrowserImportSidebarFrame<Content: View>: View {
             }
             .environment(
                 \.colorScheme,
-                BrowserSpaceForegroundPolicy.colorScheme(for: branding)
+                branding.foregroundTone.colorScheme
             )
     }
 }

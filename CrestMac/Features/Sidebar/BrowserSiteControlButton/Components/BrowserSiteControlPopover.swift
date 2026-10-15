@@ -6,7 +6,7 @@ struct BrowserSiteControlPopover: View {
     let dismiss: () -> Void
 
     @State private var isPermissionsExpanded =
-        BrowserSitePermissionDisclosurePolicy.defaultIsExpanded
+        BrowserSitePermissionDisclosure.defaultIsExpanded
 
     var body: some View {
         ScrollView {
@@ -19,12 +19,10 @@ struct BrowserSiteControlPopover: View {
         }
         .id(isPermissionsExpanded)
         .frame(
-            width: BrowserSiteControlLayoutPolicy.width,
-            height: BrowserSiteControlLayoutPolicy.height(
-                permissionsExpanded: isPermissionsExpanded
-            )
+            width: BrowserSiteControlMetrics.width,
+            height: isPermissionsExpanded ? BrowserSiteControlMetrics.expandedHeight : nil
         )
-        .frame(maxHeight: BrowserSiteControlLayoutPolicy.maximumHeight)
+        .frame(maxHeight: BrowserSiteControlMetrics.maximumHeight)
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Site Controls")
         .accessibilityIdentifier("browser-site-controls-popover")

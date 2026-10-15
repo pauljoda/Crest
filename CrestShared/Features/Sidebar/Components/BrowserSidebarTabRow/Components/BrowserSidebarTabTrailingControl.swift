@@ -48,7 +48,7 @@ private struct BrowserSidebarTabCloseButton: View {
         }
         .modifier(BrowserSidebarTabTrailingControlStyle(metrics: metrics))
         .contentShape(.rect)
-        .foregroundStyle(BrowserVisualAccessibilityPolicy.tabCloseForeground)
+        .foregroundStyle(Color.primary)
         .opacity(
             isVisible
                 ? metrics.closeOpacity(isSelected: configuration.isSelected)

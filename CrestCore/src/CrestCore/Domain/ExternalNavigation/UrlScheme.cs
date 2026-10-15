@@ -9,11 +9,13 @@ namespace CrestCore.Domain;
 public sealed class UrlScheme {
     #region Static Variables
 
+    public const int MaximumSchemeLength = 256;
+
     public static readonly UrlScheme Http = new(WebScheme.Http.Name, ExternalSchemeDisposition.Engine);
     public static readonly UrlScheme Https = new(WebScheme.Https.Name, ExternalSchemeDisposition.Engine);
     public static readonly UrlScheme About = new("about", ExternalSchemeDisposition.Engine);
     public static readonly UrlScheme Blob = new("blob", ExternalSchemeDisposition.Engine);
-    public static readonly UrlScheme ChromeExtension = new(BrowserUrlConstants.ChromeExtensionScheme, ExternalSchemeDisposition.Engine);
+    public static readonly UrlScheme ChromeExtension = new(AddressResolution.ChromeExtensionScheme, ExternalSchemeDisposition.Engine);
     public static readonly UrlScheme CrestExtension = new("crest-extension", ExternalSchemeDisposition.Engine);
     /// The engine, not Crest, refuses a top-level `data:` navigation from web
     /// content; handing one to another app would walk around that.
@@ -57,6 +59,20 @@ public sealed class UrlScheme {
     #region Actions - Lookup
 
     public static UrlScheme? Named(string? name) => All.FirstOrDefault(scheme => scheme.Name == name);
+
+    #endregion
+
+    #region Actions - Schemes
+
+    /// A request the engine built without a scheme stays the engine's to
+    /// resolve; one in a scheme Crest decides about goes as the scheme says,
+    /// and any other belongs to another application.
+    public static ExternalSchemeDisposition DispositionOf(string? scheme, bool isAppInitiated) {
+        if (string.IsNullOrEmpty(scheme)) return ExternalSchemeDisposition.Engine;
+        if (scheme.Length > MaximumSchemeLength) return ExternalSchemeDisposition.Blocked;
+        if (Named(scheme.ToLowerInvariant()) is not { } known) return ExternalSchemeDisposition.HandOff;
+        return isAppInitiated ? known.AppInitiatedDisposition : known.Disposition;
+    }
 
     #endregion
 }

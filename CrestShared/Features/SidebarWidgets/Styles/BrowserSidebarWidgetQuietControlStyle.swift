@@ -62,9 +62,6 @@ private struct BrowserSidebarWidgetQuietControlSurface: View {
     }
 
     private var surfaceAnimation: Animation? {
-        BrowserVisualAccessibilityPolicy.animation(
-            CrestMotion.surface,
-            reduceMotion: reduceMotion
-        )
+        CrestMotion.surface.unlessReducingMotion(reduceMotion)
     }
 }

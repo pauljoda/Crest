@@ -34,14 +34,14 @@ struct BrowserFolderArtworkContent: View {
     /// inherited hierarchical style, which a highlighted menu row inverts.
     private var symbolStyle: AnyShapeStyle {
         guard
-            let tint = BrowserFolderAppearancePolicy.symbolColor(
-                for: symbol, color: color, tintsTitle: tintsTitle, onDarkBackground: colorScheme == .dark)
+            let tint = color.folderSymbolColor(
+                for: symbol, tintsTitle: tintsTitle, onDarkBackground: colorScheme == .dark)
         else { return AnyShapeStyle(.primary) }
         return AnyShapeStyle(tint.color)
     }
 
     private var faceForeground: Color {
-        let scheme = BrowserSpaceForegroundPolicy.colorScheme(over: color)
+        let scheme = color.foregroundTone.colorScheme
         return scheme == .dark ? .white : .black
     }
 
@@ -118,7 +118,7 @@ private struct BrowserFolderFaces: View {
                             cornerRadius: max(0, radius - edgeInset))
                         context.fill(path, with: .color(faceColor))
                         var tint = context
-                        tint.opacity = BrowserFolderAppearancePolicy.frontHighlightOpacity
+                        tint.opacity = BrandColor.folderFrontHighlightOpacity
                         tint.fill(path, with: .color(.white))
                         if let glyph {
                             context.draw(

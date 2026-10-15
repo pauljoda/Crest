@@ -21,7 +21,7 @@
         var profileID: UUID?
         /// The engine that hosts the page, which its direct requests go to.
         private weak var engine: ChromiumEngine?
-        var observer: (BrowserPageEngineEvent) -> Void
+        var observer: (any BrowserPageEngineEvent) -> Void
         /// The platform's page hosting this one, which shows the person the
         /// core's questions about it.
         weak var promptPresenter: (any BrowserPromptPresenting)?
@@ -151,6 +151,16 @@
             show(in: window, takingFocus: true)
         }
 
+        /// Focuses the page while it is on screen, as the engine does a page it
+        /// shows: its render view takes the keys. AppKit alone would stop at
+        /// the engine's outer view, which holds focus without passing keys on.
+        func focusShownPage() -> Bool {
+            guard isShown, surface.presentation == .presented, let window = surface.window else { return false }
+            show(in: window, takingFocus: true)
+            guard let responder = window.firstResponder as? NSView else { return false }
+            return responder.isDescendant(of: surface)
+        }
+
         /// Asks the engine to show the page. The engine focuses a page it
         /// shows; one that may not take focus hands it back to what held it.
         private func show(in window: NSWindow, takingFocus takesFocus: Bool) {
@@ -261,7 +271,7 @@
         /// command opens an inspector instead of trying to close a closed one.
         func developerPanelDidClose() {
             guard !disposed else { return }
-            observer(.developerPanelClosed)
+            observer(BrowserPageDeveloperPanelClosed())
         }
 
         /// The Chrome Web Store listing this page is showing asked Crest to install
@@ -313,7 +323,7 @@
             isShown = false
             DiagnosticLog.pages.notice("Chromium page \(pageID) hides")
             pages?.request(HidePage(pageID: pageID))
-            observer(.leftScreen)
+            observer(BrowserPageLeftScreen())
         }
 
         /// The page's owner let it go. The core's ClosePage has the binding
@@ -388,7 +398,7 @@
         /// Starts Crest's own drag of the link to `url` out of the page; false
         /// leaves the drag to the engine.
         func beginLinkDrag(_ url: URL, title: String) -> Bool {
-            guard !disposed, BrowserCorePolicy.acceptsExternalURL(url) else { return false }
+            guard !disposed, ExternalWebLink.accepts(url) else { return false }
             return linkDrag?.beginNativeLink(url: url, label: title) == true
         }
     }
@@ -460,6 +470,7 @@
             // The page, never the docked inspector beside it: focus arriving at the
             // card belongs to the page the card is showing.
             guard let view = engineView else { return super.becomeFirstResponder() }
+            if page?.focusShownPage() == true { return true }
             return window?.makeFirstResponder(view) ?? false
         }
         override func viewWillMove(toWindow newWindow: NSWindow?) {
@@ -513,16 +524,24 @@
             -> Any?
         {
             guard created, !disposed, let frameID = frame.handle as? String else { return nil }
-            // The arguments arrive as constants named for their keys, as WebKit's
-            // callAsyncJavaScript binds them.
-            var source = ""
-            if !arguments.isEmpty {
-                let json = String(decoding: try JSONSerialization.data(withJSONObject: arguments), as: UTF8.self)
-                source = "const __crestArguments = \(json);\n"
-                for key in arguments.keys.sorted() { source += "const \(key) = __crestArguments[\"\(key)\"];\n" }
-            }
-            source += body
-            return await evaluate(source, in: frameID)
+            return await evaluate(try Self.binding(arguments, to: body), in: frameID)
+        }
+
+        func callAsyncJavaScriptInMainFrame(_ body: String, arguments: [String: Any]) async throws -> Any? {
+            guard created, !disposed else { return nil }
+            // The engine addresses the primary main frame's current document by
+            // this name.
+            return await evaluate(try Self.binding(arguments, to: body), in: "main")
+        }
+
+        /// `body` with `arguments` bound as constants named for their keys, as
+        /// WebKit's callAsyncJavaScript binds them.
+        private static func binding(_ arguments: [String: Any], to body: String) throws -> String {
+            guard !arguments.isEmpty else { return body }
+            let json = String(decoding: try JSONSerialization.data(withJSONObject: arguments), as: UTF8.self)
+            var source = "const __crestArguments = \(json);\n"
+            for key in arguments.keys.sorted() { source += "const \(key) = __crestArguments[\"\(key)\"];\n" }
+            return source + body
         }
 
         /// Runs `source` in the document `frameID` names and answers the value of
@@ -554,26 +573,15 @@
             pages?.request(ActivateMediaSession(pageID: pageID, document: documentIdentifier))
         }
 
-        func performMediaSessionAction(_ action: BrowserMediaSessionAction, documentIdentifier: String) {
+        func performMediaSessionAction(_ action: MediaSessionAction, documentIdentifier: String) {
             guard created else { return }
             pages?.request(
-                PerformMediaAction(pageID: pageID, document: documentIdentifier, action: action.core))
+                PerformMediaAction(pageID: pageID, document: documentIdentifier, action: action))
         }
 
         func setMediaSessionMuted(_ muted: Bool, documentIdentifier: String) {
             guard created else { return }
             pages?.request(MuteMediaSession(pageID: pageID, document: documentIdentifier, muted: muted))
-        }
-    }
-
-    extension BrowserMediaSessionAction {
-        fileprivate init(_ action: MediaSessionAction) {
-            switch action {
-            case .play: self = .play
-            case .pause: self = .pause
-            case .previousTrack: self = .previousTrack
-            case .nextTrack: self = .nextTrack
-            }
         }
     }
 
@@ -602,10 +610,10 @@
                 location: session.location, isInvalidated: false, hasActiveSession: session.active,
                 title: bounded(session.title), artist: bounded(session.artist), album: bounded(session.album),
                 artworkData: session.artwork.flatMap {
-                    $0.count <= BrowserMediaSessionArtworkPolicy.maximumBytes ? $0 : nil
+                    $0.count <= BrowserMediaSessionPageEventDecoder.maximumArtworkBytes ? $0 : nil
                 },
                 playbackState: playback, isAudible: session.audible, isMuted: session.muted,
-                availableActions: Set(session.actions.map(BrowserMediaSessionAction.init)))
+                availableActions: Set(session.actions))
         }
     }
 

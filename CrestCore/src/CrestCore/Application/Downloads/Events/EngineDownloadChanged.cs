@@ -1,5 +1,4 @@
 using CrestCore.Application;
-using CrestCore.Domain;
 
 namespace CrestCore.Contracts;
 
@@ -30,51 +29,7 @@ public sealed record EngineDownloadChanged(EngineDownload Download) : EngineDown
             download.Estimator = reading.Estimator;
             engineDownloads.Record(new RecordDownloadTransfer(download.DownloadId, reading.Telemetry, reading.Progress), turn.Changes);
         }
-        switch (Download.State) {
-            case EngineDownloadState.Preparing or EngineDownloadState.Downloading:
-                // A warning the person or the engine resolved asks nothing more.
-                engineDownloads.SettleApproval(download, turn.Changes);
-                break;
-            case EngineDownloadState.Finished:
-                engineDownloads.Record(new FinishDownload(download.DownloadId, Download.Received), turn.Changes);
-                engineDownloads.End(download, turn.Changes);
-                break;
-            case EngineDownloadState.Canceled:
-                engineDownloads.Record(new CancelDownload(download.DownloadId, EngineDownloads.CanceledMessage), turn.Changes);
-                engineDownloads.End(download, turn.Changes);
-                break;
-            case EngineDownloadState.Failed:
-                engineDownloads.Record(new FailDownload(download.DownloadId, EngineDownloads.FailureOf(Download), Download.FailureDetail),
-                    turn.Changes);
-                engineDownloads.End(download, turn.Changes);
-                break;
-            case EngineDownloadState.AwaitingApproval when Download.Warning is null:
-                // An approval with nothing to approve is never kept.
-                turn.Issue(engine, new CancelEngineDownload(download.ProfileId, download.EngineId));
-                break;
-            case EngineDownloadState.AwaitingApproval when Download.Warning is { } warning
-                && download.ReasonsApproved && DownloadWarning.Of(warning).IsCoveredBy(download.Reasons):
-                // A warning about what the person already kept asks nothing new.
-                if (download.ApprovalToken == Download.ApprovalToken) break;
-                download.ApprovalToken = Download.ApprovalToken;
-                turn.Issue(engine, new ApproveEngineDownload(download.ProfileId, download.EngineId, Download.ApprovalToken));
-                break;
-            case EngineDownloadState.AwaitingApproval when Download.Warning is { } warning:
-                engineDownloads.Record(new AwaitDownloadApproval(download.DownloadId), turn.Changes);
-                if (download.ApprovalToken == Download.ApprovalToken) break;
-                engineDownloads.SettleApproval(download, turn.Changes);
-                download.ApprovalToken = Download.ApprovalToken;
-                var prompt = engineDownloads.Ids.Next();
-                engineDownloads.WaitingPrompts[prompt] = new(download, EngineDownloads.Question.Approval);
-                turn.Changes.Publish(new DownloadApprovalAsked(prompt, download.DownloadId, engineDownloads.SpaceOf(Download),
-                    DownloadFilename.Safe(Download.Filename), download.Reasons, DownloadWarning.Of(warning), download.SourceHost));
-                break;
-            case EngineDownloadState.Blocked:
-                engineDownloads.Record(new BlockAutomaticDownload(download.DownloadId), turn.Changes);
-                download.IsBlocked = true;
-                download.ApprovalToken = Download.ApprovalToken;
-                break;
-        }
+        EngineDownloadStage.Of(Download.State).Settle(engineDownloads, engine, turn, download, Download);
         engineDownloads.SetControls(download, Download, turn.Changes);
     }
 

@@ -6,13 +6,16 @@ struct CrestMobileApp: App {
 
     var body: some Scene {
         WindowGroup(for: MobileWindowRequest.self) { $request in
-            if let application = launch.value, application.presentsInstalledApplicationUI {
-                application.windowContent(id: request.id)
-            } else if launch.failure != nil {
-                BrowserSessionRecoveryView(launch: launch)
-            } else {
-                EmptyView()
+            Group {
+                if let application = launch.value, application.presentsInstalledApplicationUI {
+                    application.windowContent(id: request.id)
+                } else if launch.failure != nil {
+                    BrowserSessionRecoveryView(launch: launch)
+                } else {
+                    EmptyView()
+                }
             }
+            .modifier(BrowserDeviceAppearanceEnvironment())
         } defaultValue: {
             MobileWindowRequest()
         }
@@ -187,8 +190,8 @@ private final class BrowserMobileApplication {
         windowLayouts.adoptLegacyRecords(into: core)
         browser.sweepAtLaunch()
         automaticallyPresentsOnboarding =
-            MobileBrowserAutomaticOnboardingPolicy
-            .shouldPresent(
+            MobileBrowserWindowScene
+            .presentsOnboardingAutomatically(
                 forceOnboarding: forceOnboarding,
                 usesIsolatedLaunch: usesIsolatedLaunch
             )

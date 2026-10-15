@@ -8,7 +8,7 @@ final class MobileBrowserColdStartTests: XCTestCase {
     func testSimulatorRejectsAContainerAbsentFromItsEntitlements() {
         #if targetEnvironment(simulator)
             XCTAssertFalse(
-                BrowserPlatformCloudContainerEntitlementPolicy.currentProcessContainsContainer(
+                CloudKitBrowserCloudSyncRemoteService.currentProcessContainsContainer(
                     "iCloud.invalid.crest-startup-test"))
         #endif
     }

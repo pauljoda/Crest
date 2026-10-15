@@ -369,7 +369,7 @@ public sealed unsafe class ContractCodecTests {
         var schema = ContractSchema.Load([typeof(Normalized.Badge)]);
         string swift = SwiftEmitter.EmitContracts(schema);
 
-        Assert.Contains("struct Badge: Hashable, Sendable {\n    let name: String\n    let rank: Int\n", swift, StringComparison.Ordinal);
+        Assert.Contains("struct Badge: CoreChange, Hashable, Sendable {\n    let name: String\n    let rank: Int\n", swift, StringComparison.Ordinal);
         Assert.Contains("    init(normalized name: String, rank: Int) {\n        self.name = name\n        self.rank = rank\n    }\n",
             swift, StringComparison.Ordinal);
         Assert.Contains("        self.init(normalized: name, rank: rank)\n", SwiftEmitter.EmitCodec(schema), StringComparison.Ordinal);
@@ -384,7 +384,7 @@ public sealed unsafe class ContractCodecTests {
         var schema = ContractSchema.Load([typeof(Statics.Gauge)]);
         string swift = SwiftEmitter.EmitContracts(schema);
 
-        Assert.Contains("struct Gauge: Equatable, Sendable {\n    static let limit: Int = 3\n    static let full: Double = 100\n"
+        Assert.Contains("struct Gauge: CoreChange, Equatable, Sendable {\n    static let limit: Int = 3\n    static let full: Double = 100\n"
             + "    static let empty = Gauge(label: \"\", level: 0, tint: nil, share: 0)\n"
             + "    static let tinted = Gauge(label: \"tinted\", level: 25, tint: BrandColor(red: 0.5, green: 0.25, blue: 0.125, alpha: 1), share: 0.25)\n\n"
             + "    let label: String\n", swift, StringComparison.Ordinal);

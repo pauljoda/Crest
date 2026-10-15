@@ -41,7 +41,7 @@ internal sealed class NativeSessionReplacement : IDisposable {
     internal void BindSync(NativeSyncTransaction value) {
         lock (NativeSessionAuthority.Gate) {
             if (completed || SyncTransaction is not null || !value.IsReadyToCommit || !ReferenceEquals(value.Owner.Session, owner))
-                throw new CrestCore.Domain.BrowserRuleException(CrestCore.Domain.BrowserRule.InvalidSyncSessionOwner);
+                throw new InvalidOperationException("A reservation binds one sealed journal of its own session.");
             SyncTransaction = value;
         }
     }
@@ -53,7 +53,7 @@ internal sealed class NativeSessionReplacement : IDisposable {
     /// tells the device once it holds no lock.
     internal SessionState Complete() {
         lock (NativeSessionAuthority.Gate) {
-            if (completed) throw new CrestCore.Domain.BrowserRuleException(CrestCore.Domain.BrowserRule.InvalidSessionTransaction);
+            if (completed) throw new InvalidOperationException("A reservation completes once.");
             var previous = owner.CompleteReplacement(this, true)!;
             completed = true;
             owner.Committed(previous);

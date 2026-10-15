@@ -19,7 +19,6 @@ struct BrowserSidebarAddressFieldSurface: ViewModifier {
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
 
     @Environment(\.spaceChromeAccent) private var spaceAccent
-    @Environment(\.spaceChromeForeground) private var spaceForeground
 
     func body(content: Content) -> some View {
         band(
@@ -29,7 +28,7 @@ struct BrowserSidebarAddressFieldSurface: ViewModifier {
         )
         .background {
             ZStack(alignment: .leading) {
-                fieldShape.fill((spaceForeground ?? .primary).opacity(CrestOpacity.chromeSurface))
+                CrestSurfaceLayer(shape: fieldShape)
                 if !reduceTransparency {
                     fieldShape.fill(accent.opacity(BrowserTabAppearance.intensity(appearance.fill) * 0.4))
                 }
@@ -38,10 +37,7 @@ struct BrowserSidebarAddressFieldSurface: ViewModifier {
                     .scaleEffect(x: loadingProgress, anchor: .leading)
                     .mask(fieldShape)
                     .animation(
-                        BrowserVisualAccessibilityPolicy.animation(
-                            CrestMotion.loadingProgress,
-                            reduceMotion: reduceMotion
-                        ),
+                        CrestMotion.loadingProgress.unlessReducingMotion(reduceMotion),
                         value: loadingProgress
                     )
             }
@@ -69,7 +65,7 @@ struct BrowserSidebarAddressFieldSurface: ViewModifier {
     }
 
     private var loadingProgress: CGFloat {
-        BrowserPageSurfacePolicy.loadingProgress(
+        BrowserPageSurfacePresentation.loadingProgress(
             estimatedProgress: progress,
             isNavigating: isLoading
         )
@@ -81,10 +77,7 @@ struct BrowserSidebarAddressFieldSurface: ViewModifier {
     }
 
     private var fieldShape: RoundedRectangle {
-        RoundedRectangle(
-            cornerRadius: BrowserDeviceAppearanceStore.shared.sidebarCornerRadius,
-            style: .continuous
-        )
+        RoundedRectangle(cornerRadius: BrowserSidebarMetrics.layerCornerRadius(), style: .continuous)
     }
 }
 

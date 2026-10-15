@@ -29,33 +29,15 @@ struct BrowserSidebarReorderContext {
         if let captured = item.selection {
             selection = captured.selection
         } else {
-            let (tabIDs, folderIDs): ([UUID], [UUID]) =
-                switch item {
-                case .tab(let tab): ([tab.tabID], [])
-                case .splitGroup(let group): (group.memberTabIDs, [])
-                case .folder(let folder): ([], [folder.folderID])
-                }
+            let picks = item.rowPicks
             guard
                 let selected = try? browser.core.query(
                     SelectionPreview(
-                        workspaceID: browser.family.workspaceID, spaceID: assignment.spaceID, tabIDs: tabIDs,
-                        folderIDs: folderIDs))
+                        workspaceID: browser.family.workspaceID, spaceID: assignment.spaceID, tabIDs: picks.tabIDs,
+                        folderIDs: picks.folderIDs)),
+                let rowSelection = item.rowSelection(from: selected)
             else { return nil }
-            // A split row lifts the run it stood for; one the Space no longer
-            // holds as that split plans nothing.
-            if case .splitGroup(let group) = item {
-                guard selected.members.map(\.id) == group.memberTabIDs,
-                    selected.members.allSatisfy({ $0.splitGroupID == group.groupID })
-                else { return nil }
-            }
-            // A folder lifted with the tabs it held then drops only while it
-            // holds them still; the core refuses a selection whose tabs changed.
-            if case .folder(let folder) = item, let snapshot = folder.memberTabIDs {
-                selection = TabSelection(
-                    tabIDs: selected.selection.tabIDs, folderIDs: selected.selection.folderIDs, memberTabIDs: snapshot)
-            } else {
-                selection = selected.selection
-            }
+            selection = rowSelection
         }
         let targets = try? browser.core.query(
             DropTargets(

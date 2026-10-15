@@ -7,7 +7,7 @@ keywords: [engine, Chromium, WebKit, ungoogled-chromium, default engine, website
 
 # Chromium and WebKit on Mac
 
-Crest 0.7 for Mac includes two web engines. New pages open in Chromium unless you choose otherwise, and any website or page can use WebKit, the engine behind Safari. Crest on iPhone and iPad uses WebKit.
+Crest for Mac includes two web engines. New pages open in Chromium unless you choose otherwise, and any website or page can use WebKit, the engine behind Safari. Crest on iPhone and iPad uses WebKit.
 
 Your Spaces, tabs, history, passwords and settings are the same whichever engine shows a page. Website data is not: each engine keeps its own cookies and storage for a Space, so signing in to a site in Chromium does not sign you in to it in WebKit.
 
@@ -57,7 +57,6 @@ Extensions installed in earlier versions do not carry over. Install them again f
 | --- | --- | --- |
 | Chrome Web Store extensions | Yes | No |
 | Reader | No | Yes |
-| Translate the whole page | No. Translate selected text instead. | Yes |
 | Built-in ad and tracker blocking | No. Use a blocking extension. | Yes |
 | Protected video | Automatically switches to WebKit after unsaved-changes checks | FairPlay, when the website supports it |
 | Find in Page | Shows the number of matches | Shows whether there is a match |

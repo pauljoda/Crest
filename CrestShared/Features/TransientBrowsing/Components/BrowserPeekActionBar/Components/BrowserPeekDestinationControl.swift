@@ -1,6 +1,14 @@
 import SwiftUI
 
 struct BrowserPeekDestinationControl: View {
+    // MARK: - Static Variables
+
+    private static let separatorOpacity = 0.16
+    private static let separatorWidth: CGFloat = 0.5
+    private static let separatorHeight: CGFloat = 22
+
+    // MARK: - Variables
+
     let spaces: [BrowserSpaceIdentity]
     let selectedSpaceID: UUID
     let openInSpace: (BrowserSpaceRuntimeAssignment) -> Void
@@ -21,10 +29,10 @@ struct BrowserPeekDestinationControl: View {
             )
 
             Rectangle()
-                .fill(.primary.opacity(BrowserPeekChromePolicy.separatorOpacity))
+                .fill(.primary.opacity(Self.separatorOpacity))
                 .frame(
-                    width: BrowserPeekChromePolicy.separatorWidth,
-                    height: BrowserPeekChromePolicy.separatorHeight
+                    width: Self.separatorWidth,
+                    height: Self.separatorHeight
                 )
                 .accessibilityHidden(true)
 
@@ -36,7 +44,7 @@ struct BrowserPeekDestinationControl: View {
         }
         .buttonStyle(.plain)
         .frame(maxWidth: .infinity)
-        .frame(height: BrowserPeekChromePolicy.controlHeight)
+        .frame(height: BrowserPeekActionBar.controlHeight)
         .browserReadableForeground(over: spaceTint)
         .contentShape(.capsule)
         .glassEffect(

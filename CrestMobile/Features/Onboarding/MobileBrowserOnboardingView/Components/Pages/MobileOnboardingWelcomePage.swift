@@ -57,6 +57,7 @@ struct MobileOnboardingWelcomePage: View {
                             Image(systemName: "hand.tap").frame(width: 28).foregroundStyle(CrestBrandPalette.sky)
                         }
                     }
+                    .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(20)
                     .browserOnboardingPanel()
                     Text(status).font(.footnote).foregroundStyle(.secondary)

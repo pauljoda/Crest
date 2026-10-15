@@ -54,11 +54,7 @@ extension BrowserPlatformPage {
     }
 
     func performReload(_ mode: BrowserPageReloadMode) {
-        switch BrowserPageReloadPolicy.action(isLoading: live.isLoading, mode: mode) {
-        case .stop: enginePage.stop()
-        case .reload: enginePage.reload(bypassingCache: false)
-        case .reloadFromOrigin: enginePage.reload(bypassingCache: true)
-        }
+        mode.perform(on: enginePage, isLoading: live.isLoading)
     }
 
     func stopLoading() { enginePage.stop() }

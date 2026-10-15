@@ -39,7 +39,7 @@ struct MobileBrowserSpacePage: View {
             BrowserPinnedTabsDropSection(context: listContext)
                 .equatable()
                 .fixedSize(horizontal: false, vertical: true)
-                .padding(.horizontal, 12)
+                .padding(.horizontal, BrowserSidebarMetrics.layerInset)
                 .padding(.vertical, 10)
 
             BrowserSpaceHeader(
@@ -154,10 +154,6 @@ struct MobileBrowserSpacePage: View {
     }
 
     private var isCurrentAndUnlocked: Bool {
-        BrowserSidebarAccessPolicy.selectedUnlockedSpace(
-            matching: assignment,
-            in: browser,
-            accessController: spaceAccess
-        ) != nil
+        browser.selectedUnlockedSpace(matching: assignment, accessController: spaceAccess) != nil
     }
 }

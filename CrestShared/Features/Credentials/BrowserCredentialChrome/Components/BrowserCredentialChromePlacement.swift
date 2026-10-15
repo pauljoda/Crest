@@ -34,7 +34,7 @@ struct BrowserCredentialChromePlacement<Content: View>: View {
     }
 
     private func anchored(to field: CGRect) -> some View {
-        let placement = BrowserCredentialPromptAnchorPolicy.resolve(
+        let placement = BrowserCredentialPromptPlacement(
             field: field,
             size: promptSize,
             container: pageSize,
@@ -73,7 +73,7 @@ struct BrowserCredentialChromePlacement<Content: View>: View {
     }
 
     private func anchoredWidth(_ field: CGRect) -> CGFloat {
-        BrowserCredentialPromptAnchorPolicy.width(
+        BrowserCredentialPromptPlacement.width(
             field: field,
             container: pageSize,
             minimumWidth: metrics.anchoredFillPromptMinimumWidth ?? field.width,

@@ -1,7 +1,8 @@
 namespace CrestCore.Contracts;
 
-/// Where a link activation goes: in place, into Peek, or into a new tab. The
-/// link-navigation policies spell a decision as its `Name`. A decision travels
+/// Where a link activation goes: in place, into Peek, or into a new tab. A
+/// decision is spelled as its `Name`. Engines keep ownership of request
+/// security, downloads, form submissions and rendering. A decision travels
 /// as its index in `All`, so `All` is append-only.
 public sealed class LinkNavigationDecision {
     #region Variables
@@ -53,6 +54,34 @@ public sealed class LinkNavigationDecision {
     #region Actions - Lookup
 
     public static LinkNavigationDecision? Named(string? name) => All.FirstOrDefault(decision => decision.Name == name);
+
+    #endregion
+
+    #region Actions - Navigation
+
+    /// Where following a link to `destination` goes, from the gesture, the
+    /// person's link preferences and the tab's place and saved address.
+    internal static LinkNavigationDecision For(string? destination, bool userActivatedLink,
+        bool topLevel, bool peekModified, bool newTabModified, bool shiftModified,
+        bool focusesNewTabs, bool hasContext, TabPlacement? placement, string? savedUrl,
+        bool automaticallyOpensPeek) {
+        if (!userActivatedLink || !TryWebUrl(destination, out var target)) return Navigate;
+        if (topLevel && hasContext && peekModified) return PeekModifier;
+        if (newTabModified)
+            return focusesNewTabs != shiftModified ? ForegroundTab : BackgroundTab;
+        if (topLevel && hasContext && automaticallyOpensPeek && placement?.IsDurable == true
+            && TryWebUrl(savedUrl, out var saved) && NormalizeHost(saved!) != NormalizeHost(target!))
+            return PeekSavedSite;
+        return Navigate;
+    }
+
+    private static bool TryWebUrl(string? value, out Uri? url) =>
+        Uri.TryCreate(value, UriKind.Absolute, out url)
+        && WebScheme.Named(url.Scheme) is not null && url.Host.Length > 0;
+
+    // Match Crest's saved-site contract: ignore www, but keep other subdomains
+    // distinct. IdnHost also compares Unicode and punycode URL spellings equally.
+    private static string NormalizeHost(Uri url) => RememberedSite.WithoutWww(url.IdnHost.ToLowerInvariant());
 
     #endregion
 }

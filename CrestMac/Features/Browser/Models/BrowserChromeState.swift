@@ -50,7 +50,9 @@ final class BrowserChromeState {
 
     // MARK: - Actions - Sidebar
 
+    /// Hiding cancels utility presentation and pending input before an asynchronous view update can mount it.
     func hideSidebar() {
+        utilityPresentation.dismiss()
         columnVisibility = .detailOnly
     }
 
@@ -67,6 +69,23 @@ final class BrowserChromeState {
             showSidebar()
         }
         utilityPresentation.present(surface)
+    }
+
+    /// Utility shortcuts preserve the docked preference and toggle a floating sidebar when hidden.
+    func toggleUtility(_ surface: BrowserUtilitySurface) {
+        if utilityPresentation.surface == surface,
+            columnVisibility != .detailOnly || isFloatingSidebarPresented
+        {
+            utilityPresentation.dismiss(surface)
+            if columnVisibility == .detailOnly {
+                isFloatingSidebarPresented = false
+            }
+        } else {
+            if columnVisibility == .detailOnly {
+                isFloatingSidebarPresented = true
+            }
+            presentUtility(surface)
+        }
     }
 
     // MARK: - Actions - Command Palette

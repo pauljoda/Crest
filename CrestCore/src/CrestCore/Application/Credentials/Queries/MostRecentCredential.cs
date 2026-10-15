@@ -1,5 +1,4 @@
 using CrestCore.Application;
-using CrestCore.Domain;
 
 namespace CrestCore.Contracts;
 
@@ -10,7 +9,7 @@ public sealed record MostRecentCredential(IReadOnlyList<CredentialRecord> Record
     #region Actions - Answering
 
     internal override CredentialChoice Answer(CrestApp app) {
-        return new(CredentialRecencyPolicy.MostRecent(Records)?.Id);
+        return new(CredentialRecord.MostRecent(Records)?.Id);
     }
 
     #endregion

@@ -5,8 +5,6 @@ struct MobileBrowserSidebarSpaceSurface: View {
     let space: SpaceModel
     let isSelected: Bool
 
-    @Environment(\.colorScheme) private var colorScheme
-
     var body: some View {
         let isLocked = configuration.context.spaceAccess.isLocked(space)
 
@@ -40,11 +38,11 @@ struct MobileBrowserSidebarSpaceSurface: View {
         .accessibilityHidden(!isSelected)
     }
 
+    /// The sidebar reads its foreground from the Space's own branding rather
+    /// than from the system appearance, as every compact placement does, so
+    /// they keep agreeing.
     private var spaceColorScheme: ColorScheme {
-        guard MobileBrowserSidebarAppearancePolicy.usesSpaceForeground() else {
-            return colorScheme
-        }
-        return BrowserSpaceForegroundPolicy.colorScheme(for: space.settings.look)
+        space.settings.look.foregroundTone.colorScheme
     }
 
     private func selectUnlockedSpace(_ assignment: BrowserSpaceRuntimeAssignment) {

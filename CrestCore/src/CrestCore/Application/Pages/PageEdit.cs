@@ -64,7 +64,7 @@ internal sealed record NavigationRecord(Guid PageId, Guid SpaceId, DateTimeOffse
             if (Icon is { } icon && tab.WearPageIcon(Url, icon.Accent)) favicon = new(tabId, Adopts: true, PageId);
             space = Replacing(space, index, tab);
         }
-        return (space with { History = HistoryPolicy.Visit(space.History, Url, Title, now, VisitId) ?? space.History }, favicon);
+        return (space with { History = HistoryEntryState.Visit(space.History, Url, Title, now, VisitId) ?? space.History }, favicon);
     }
 
     public override IEnumerable<Change> Announced(Guid workspaceId) => [new NavigationRecorded(PageId, workspaceId, SpaceId, TabId, Url)];
@@ -90,7 +90,7 @@ internal sealed record TitleRecord(Guid PageId, Guid SpaceId, DateTimeOffset At,
                 space = Replacing(space, index, tab);
             }
         }
-        if (Visit && HistoryPolicy.Retitle(space.History, Url, Title) is { } history) space = space with { History = history };
+        if (Visit && HistoryEntryState.Retitle(space.History, Url, Title) is { } history) space = space with { History = history };
         return (space, null);
     }
 

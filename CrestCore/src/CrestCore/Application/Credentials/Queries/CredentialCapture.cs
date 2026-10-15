@@ -1,5 +1,4 @@
 using CrestCore.Application;
-using CrestCore.Domain;
 
 namespace CrestCore.Contracts;
 
@@ -12,7 +11,7 @@ public sealed record CredentialCapture(CredentialFormFacts Facts, CredentialUser
     #region Actions - Answering
 
     internal override CredentialCaptureDecision Answer(CrestApp app) {
-        return CredentialCapturePolicy.Decide(Facts, Hint, Pending, Now);
+        return Facts.Event.Decide(Facts, Hint, Pending, Now);
     }
 
     #endregion

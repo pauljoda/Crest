@@ -4,7 +4,7 @@
     extension PageViewUnavailable {
         @MainActor func present(on engine: ChromiumEngine) {
             engine.presentedPage(pageID)?.observer(
-                .creationFailed(message: String(localized: "Chromium couldn’t create this page.")))
+                BrowserPageCreationFailed(message: String(localized: "Chromium couldn’t create this page.")))
         }
     }
 #endif

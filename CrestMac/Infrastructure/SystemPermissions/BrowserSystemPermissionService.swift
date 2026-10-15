@@ -6,8 +6,8 @@ import UserNotifications
 @MainActor
 final class BrowserSystemPermissionService: BrowserSystemPermissionServicing {
     private let location = BrowserGeolocationSystemService()
-    private let folderAccess = BrowserSystemFolderAccess()
-    private let passkeyAccess: BrowserPasskeyAccessController
+    let folderAccess = BrowserSystemFolderAccess()
+    let passkeyAccess: BrowserPasskeyAccessController
     private let readPasskeyStatus: @Sendable () -> PasskeyAccessStatus
 
     /// `passkeyAccess` is the app's one passkey controller, which a request
@@ -22,11 +22,11 @@ final class BrowserSystemPermissionService: BrowserSystemPermissionServicing {
     }
 
     func status(for permission: BrowserSystemPermission, spaceID: UUID?) async -> BrowserSystemPermissionStatus {
-        await access(permission, spaceID: spaceID).status()
+        await permission.status(self, spaceID)
     }
 
     func request(_ permission: BrowserSystemPermission, spaceID: UUID?) async throws {
-        try await access(permission, spaceID: spaceID).request()
+        try await permission.request(self, spaceID)
     }
 
     func chooseFolder(spaceID: UUID) async throws {
@@ -38,50 +38,7 @@ final class BrowserSystemPermissionService: BrowserSystemPermissionServicing {
         return NSWorkspace.shared.open(url)
     }
 
-    /// How one permission's state is read and requested from the system.
-    private struct SystemAccess {
-        let status: @MainActor () async -> BrowserSystemPermissionStatus
-        let request: @MainActor () async throws -> Void
-    }
-
-    /// The one place each permission meets the system API that reads and
-    /// requests it.
-    private func access(_ permission: BrowserSystemPermission, spaceID: UUID?) -> SystemAccess {
-        switch permission.kind {
-        case .camera:
-            SystemAccess(
-                status: { await self.captureStatus(.video) },
-                request: { _ = await AVCaptureDevice.requestAccess(for: .video) })
-        case .microphone:
-            SystemAccess(
-                status: { await self.captureStatus(.audio) },
-                request: { _ = await AVCaptureDevice.requestAccess(for: .audio) })
-        case .location:
-            SystemAccess(status: { await self.locationStatus() }, request: { try await self.requestLocation() })
-        case .notifications:
-            SystemAccess(
-                status: { await self.notificationStatus() },
-                request: {
-                    _ = try await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound])
-                })
-        case .passkeys:
-            SystemAccess(
-                status: { await self.passkeyStatus() },
-                request: {
-                    self.passkeyAccess.refreshStatus()
-                    await self.passkeyAccess.requestAccess()
-                })
-        case .files:
-            SystemAccess(
-                status: { self.folderAccess.status(spaceID: spaceID) },
-                request: {
-                    guard let spaceID else { return }
-                    try await self.folderAccess.check(spaceID: spaceID)
-                })
-        }
-    }
-
-    private func locationStatus() async -> BrowserSystemPermissionStatus {
+    func locationStatus() async -> BrowserSystemPermissionStatus {
         let enabled = await Task.detached { CLLocationManager.locationServicesEnabled() }.value
         guard enabled else {
             return .init(
@@ -97,7 +54,7 @@ final class BrowserSystemPermissionService: BrowserSystemPermissionServicing {
         }
     }
 
-    private func requestLocation() async throws {
+    func requestLocation() async throws {
         guard await location.requestAuthorization() == .notDetermined else { return }
         throw NSError(
             domain: "BrowserSystemPermission", code: 1,
@@ -109,7 +66,7 @@ final class BrowserSystemPermissionService: BrowserSystemPermissionServicing {
             ])
     }
 
-    private func notificationStatus() async -> BrowserSystemPermissionStatus {
+    func notificationStatus() async -> BrowserSystemPermissionStatus {
         let settings = await UNUserNotificationCenter.current().notificationSettings()
         switch settings.authorizationStatus {
         case .notDetermined: return .init(state: .notRequested)
@@ -123,7 +80,7 @@ final class BrowserSystemPermissionService: BrowserSystemPermissionServicing {
         }
     }
 
-    private func passkeyStatus() async -> BrowserSystemPermissionStatus {
+    func passkeyStatus() async -> BrowserSystemPermissionStatus {
         let readPasskeyStatus = readPasskeyStatus
         // These read-only APIs can wait for synchronous system IPC.
         // Keep that wait away from the UI while General settings opens.
@@ -150,7 +107,7 @@ final class BrowserSystemPermissionService: BrowserSystemPermissionServicing {
         return (try? core.query(access))?.status ?? .checking
     }
 
-    private func captureStatus(_ type: AVMediaType) async -> BrowserSystemPermissionStatus {
+    func captureStatus(_ type: AVMediaType) async -> BrowserSystemPermissionStatus {
         let status = await Task.detached(priority: .userInitiated) {
             AVCaptureDevice.authorizationStatus(for: type)
         }.value

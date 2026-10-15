@@ -107,10 +107,7 @@ struct BrowserOnboardingReviewPage: View {
     }
 
     private func motion(_ animation: Animation) -> Animation? {
-        BrowserVisualAccessibilityPolicy.animation(
-            animation,
-            reduceMotion: reduceMotion
-        )
+        animation.unlessReducingMotion(reduceMotion)
     }
 }
 
@@ -211,10 +208,7 @@ private struct BrowserOnboardingReviewSpaceStepper: View {
     }
 
     private func motion(_ animation: Animation) -> Animation? {
-        BrowserVisualAccessibilityPolicy.animation(
-            animation,
-            reduceMotion: reduceMotion
-        )
+        animation.unlessReducingMotion(reduceMotion)
     }
 }
 

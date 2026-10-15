@@ -1,5 +1,4 @@
 using CrestCore.Application;
-using CrestCore.Domain;
 
 namespace CrestCore.Contracts;
 
@@ -10,7 +9,7 @@ public sealed record CredentialSaveMatch(string Username, IReadOnlyList<Credenti
     #region Actions - Answering
 
     internal override CredentialChoice Answer(CrestApp app) {
-        return new(CredentialSavePolicy.Match(Username, Records)?.Id);
+        return new(CredentialRecord.Matching(Username, Records)?.Id);
     }
 
     #endregion

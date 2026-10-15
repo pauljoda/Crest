@@ -33,11 +33,11 @@ public sealed partial class BrowserContractsTests {
         Assert.Equal(created, Assert.IsType<SpaceAlreadyExists>(Assert.Throws<Rejected>(() =>
             device.Send(new CreateSpace(device.Workspace, window, created))).Rejection).SpaceId);
 
-        while (core.Current.Spaces.Count < BrowserLimits.Spaces) device.Send(new CreateSpace(device.Workspace, window, Guid.NewGuid()));
+        while (core.Current.Spaces.Count < SessionState.MaximumSpaces) device.Send(new CreateSpace(device.Workspace, window, Guid.NewGuid()));
         var full = core.Current;
         var another = new CreateSpace(device.Workspace, window, Guid.NewGuid());
-        Assert.Equal(BrowserLimits.Spaces, Assert.IsType<SpaceLimitReached>(device.Query(new CanSend(another)).Refusal).Limit);
-        Assert.Equal(new SpaceLimitReached(BrowserLimits.Spaces), Assert.Throws<Rejected>(() => device.Send(another)).Rejection);
+        Assert.Equal(SessionState.MaximumSpaces, Assert.IsType<SpaceLimitReached>(device.Query(new CanSend(another)).Refusal).Limit);
+        Assert.Equal(new SpaceLimitReached(SessionState.MaximumSpaces), Assert.Throws<Rejected>(() => device.Send(another)).Rejection);
         Assert.Same(full, core.Current);
     }
 

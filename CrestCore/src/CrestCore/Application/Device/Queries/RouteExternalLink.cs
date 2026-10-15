@@ -38,7 +38,7 @@ public sealed record RouteExternalLink(IReadOnlyList<Guid> WindowIds, string Url
         var context = new LinkRoutingContext([.. spaces.Select(space => space.Id)], shown,
             [.. spaces.Where(space => authority.IsDeleting(space.Id)).Select(space => space.Id)]);
         var locked = spaces.Where(authority.IsLocked).Select(space => space.Id).ToHashSet();
-        if (LinkRoutingPolicy.DecideExternal(Url, preferences, context, locked) is not { } placed) return nowhere;
+        if (preferences.RouteExternal(Url, context, locked) is not { } placed) return nowhere;
         return front is { } window
             ? new(placed.SpaceId, placed.OpensQuickWindow, placed.SubstitutesForLockedSpace, window.Id, OpensWindow: false)
             : placed.OpensQuickWindow

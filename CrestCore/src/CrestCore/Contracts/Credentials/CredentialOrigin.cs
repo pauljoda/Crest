@@ -24,4 +24,19 @@ public sealed record CredentialOrigin(string Scheme, string Host, int Port) {
     }
 
     #endregion
+
+    #region Actions - Capture
+
+    /// Whether a frame at this origin under a top-level page at
+    /// `topLevelOrigin` may capture and be offered credentials: both must be
+    /// secure.
+    internal bool IsSecureUnder(CredentialOrigin topLevelOrigin) {
+        ArgumentNullException.ThrowIfNull(topLevelOrigin);
+        return Validated().IsSecure && topLevelOrigin.Validated().IsSecure;
+    }
+
+    /// This origin, or the refusal of one that is not `IsValid`.
+    internal CredentialOrigin Validated() => IsValid ? this : throw new Rejected(new InvalidCredentialOrigin());
+
+    #endregion
 }

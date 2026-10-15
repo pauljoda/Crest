@@ -26,10 +26,7 @@ struct BrowserSidebarAddressPlaceholderGlyph: View {
             .foregroundStyle(.secondary)
             .contentTransition(.symbolEffect(.replace))
             .animation(
-                BrowserVisualAccessibilityPolicy.animation(
-                    CrestMotion.contentState,
-                    reduceMotion: reduceMotion
-                ),
+                CrestMotion.contentState.unlessReducingMotion(reduceMotion),
                 value: isSecure
             )
     }

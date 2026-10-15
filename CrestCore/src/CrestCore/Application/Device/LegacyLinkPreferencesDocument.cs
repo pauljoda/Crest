@@ -50,7 +50,7 @@ internal static class LegacyLinkPreferencesDocument {
         using (parsed) {
             var root = parsed.RootElement;
             if (root.ValueKind != JsonValueKind.Object) return null;
-            var read = LinkPreferencePolicy.Default;
+            var read = LinkPreferences.Default;
             read = read with {
                 Destination = ExternalLinkDestination.Named(Text(root, Destination)) ?? read.Destination,
                 DestinationSpaceId = Member(root, DestinationSpace) is { } space ? Identity(space) : null,

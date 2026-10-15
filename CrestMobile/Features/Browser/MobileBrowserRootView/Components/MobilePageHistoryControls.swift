@@ -23,10 +23,7 @@ struct MobilePageHistoryControls: View {
             }
         }
         .animation(
-            BrowserVisualAccessibilityPolicy.animation(
-                CrestMotion.navigation,
-                reduceMotion: reduceMotion
-            ),
+            CrestMotion.navigation.unlessReducingMotion(reduceMotion),
             value: pageActions?.canGoForward == true
         )
     }

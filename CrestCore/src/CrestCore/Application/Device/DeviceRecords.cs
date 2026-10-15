@@ -28,7 +28,7 @@ internal sealed record DeviceRecords(IReadOnlyList<SavedWindow> Windows, IReadOn
     IReadOnlyList<TabGroupRecord> TabGroups, EngineKind? DefaultEngine = null) {
     #region Static Variables
 
-    public static readonly DeviceRecords Empty = new([], [], [], [], ShortcutOverrides.None, LinkPreferencePolicy.Default,
+    public static readonly DeviceRecords Empty = new([], [], [], [], ShortcutOverrides.None, LinkPreferences.Default,
         SetupDraft: null, SetupCompleted: false, new HashSet<DeviceAdoption>(), TabGroups: []);
 
     #endregion

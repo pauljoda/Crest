@@ -1,5 +1,4 @@
 using CrestCore.Application;
-using CrestCore.Domain;
 
 namespace CrestCore.Contracts;
 
@@ -11,7 +10,7 @@ public sealed record CredentialSave(Guid? MatchId, CredentialStoredComparison? S
     #region Actions - Answering
 
     internal override CredentialSavePlan Answer(CrestApp app) {
-        return CredentialSavePolicy.Plan(MatchId, Stored);
+        return CredentialSavePlan.For(MatchId, Stored);
     }
 
     #endregion

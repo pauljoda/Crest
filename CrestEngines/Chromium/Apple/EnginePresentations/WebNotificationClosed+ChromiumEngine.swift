@@ -3,7 +3,7 @@
 
     extension WebNotificationClosed {
         @MainActor func present(on engine: ChromiumEngine) {
-            engine.presentedPage(pageID)?.observer(.webNotificationClosed(notificationID: notificationID))
+            engine.presentedPage(pageID)?.observer(BrowserPageWebNotificationClosed(notificationID: notificationID))
         }
     }
 #endif

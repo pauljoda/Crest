@@ -32,7 +32,7 @@ public sealed record EngineDownloadDestinationRequested(Guid PromptId, EngineDow
             return;
         }
         var prompt = engineDownloads.Ids.Next();
-        engineDownloads.WaitingPrompts[prompt] = new(download, EngineDownloads.Question.Risk, this);
+        engineDownloads.WaitingPrompts[prompt] = new(download, EngineDownloadQuestion.Risk, this);
         turn.Changes.Publish(new DownloadApprovalAsked(prompt, download.DownloadId, space, DownloadFilename.Safe(SuggestedFilename),
             download.Reasons, Warning: null, download.SourceHost));
     }

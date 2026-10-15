@@ -23,15 +23,9 @@ extension SPUUpdater: BrowserSoftwareUpdateChecking {}
 final class BrowserSoftwareUpdateRefreshCoordinator {
     static let minimumAutomaticCheckInterval: TimeInterval = 60 * 60
 
-    private enum PendingCheck {
-        case userInitiated
-        case background
-        case downloadLatest
-    }
-
     private let updater: any BrowserSoftwareUpdateChecking
     private let model: BrowserSoftwareUpdateModel
-    private var pendingCheck: PendingCheck?
+    private var pendingCheck: BrowserSoftwareUpdateCheck?
     private var downloadsNextOffer = false
     private var lastAutomaticRefreshRequestDate: Date?
 
@@ -112,11 +106,9 @@ final class BrowserSoftwareUpdateRefreshCoordinator {
     }
 
     @discardableResult
-    private func request(_ check: PendingCheck) -> Bool {
+    private func request(_ check: BrowserSoftwareUpdateCheck) -> Bool {
         if let pendingCheck {
-            if check == .downloadLatest
-                || (check == .userInitiated && pendingCheck == .background)
-            {
+            if check.replaces(pendingCheck) {
                 self.pendingCheck = check
             }
             return true
@@ -131,7 +123,7 @@ final class BrowserSoftwareUpdateRefreshCoordinator {
             }
 
             pendingCheck = nil
-            if check == .userInitiated {
+            if check.isUserInitiated {
                 if updater.canCheckForUpdates {
                     updater.checkForUpdates()
                 }
@@ -142,19 +134,14 @@ final class BrowserSoftwareUpdateRefreshCoordinator {
         return start(check)
     }
 
-    private func start(_ check: PendingCheck) -> Bool {
+    private func start(_ check: BrowserSoftwareUpdateCheck) -> Bool {
         guard !updater.sessionInProgress, updater.canCheckForUpdates else {
             return false
         }
-        switch check {
-        case .userInitiated:
-            updater.checkForUpdates()
-        case .background:
-            updater.checkForUpdatesInBackground()
-        case .downloadLatest:
+        if check.downloadsOffer {
             downloadsNextOffer = true
-            updater.checkForUpdates()
         }
+        check.start(on: updater)
         return true
     }
 }

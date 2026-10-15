@@ -667,7 +667,7 @@ final class BrowserCredentialTests: XCTestCase {
             in: work.id,
             now: submittedAt
         )
-        XCTAssertEqual(initialPlan, .create)
+        XCTAssertTrue(initialPlan is BrowserCredentialCreatePlan)
 
         let result = try await store.commitCredentialSave(
             candidate,
@@ -681,7 +681,7 @@ final class BrowserCredentialTests: XCTestCase {
         )
 
         XCTAssertEqual(result.disposition, .created)
-        guard case .alreadyStored(let existing) = unchangedPlan else {
+        guard let existing = (unchangedPlan as? BrowserCredentialAlreadyStoredPlan)?.existing else {
             return XCTFail("An identical submitted password should not prompt again")
         }
         XCTAssertEqual(existing.id, result.descriptor.id)
@@ -724,7 +724,7 @@ final class BrowserCredentialTests: XCTestCase {
             in: work.id,
             now: updatedAt
         )
-        guard case .update(let existing) = plan else {
+        guard let existing = (plan as? BrowserCredentialUpdatePlan)?.existing else {
             return XCTFail("A changed password for the same username should update")
         }
         XCTAssertEqual(existing.id, created.descriptor.id)

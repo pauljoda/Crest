@@ -51,7 +51,7 @@ final class BrowserTabStateCoordinator {
         let pending = pendingCopies[assignment]
         if consumePendingCopy { pendingCopies.removeValue(forKey: assignment) }
         if let pending,
-            BrowserTabStateRestorePolicy.restoresArchivedState(archivedURL: pending.url, tabURL: url)
+            SamePage.restoresArchivedState(archivedURL: pending.url, tabURL: url)
         {
             return pending.interactionState
         }
@@ -59,7 +59,7 @@ final class BrowserTabStateCoordinator {
             let archived = archive.archivedState(profileID: assignment.profileID, tabID: assignment.tabID),
             let envelope = BrowserTabStateEnvelope.decode(archived),
             envelope.isRestorable,
-            BrowserTabStateRestorePolicy.restoresArchivedState(archivedURL: envelope.url, tabURL: url)
+            SamePage.restoresArchivedState(archivedURL: envelope.url, tabURL: url)
         else { return nil }
         return envelope.interactionState
     }

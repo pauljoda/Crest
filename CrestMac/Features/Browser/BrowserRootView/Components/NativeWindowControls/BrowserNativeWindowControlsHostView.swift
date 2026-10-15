@@ -31,6 +31,15 @@ struct BrowserNativeWindowChromeSnapshot {
 /// would stay behind as a bar across the top of the window.
 @MainActor
 final class BrowserNativeWindowControlsHostView: NSView {
+    // MARK: - Static Variables
+
+    /// The standard window buttons the chrome hides, shows and moves.
+    static let buttonTypes: [NSWindow.ButtonType] = [
+        .closeButton,
+        .miniaturizeButton,
+        .zoomButton,
+    ]
+
     // MARK: - Variables
 
     private var originalChrome: BrowserNativeWindowChromeSnapshot?
@@ -40,11 +49,11 @@ final class BrowserNativeWindowControlsHostView: NSView {
     private var toolbarVisibilityObservation: NSKeyValueObservation?
     private var windowObservers: [NSObjectProtocol] = []
     private var nativeButtonOrigins: [NSWindow.ButtonType: CGFloat] = [:]
-    var sidebarPosition: CGFloat = 0
-    var sidebarOnRight: Bool {
-        get { sidebarPosition == 1 }
-        set { sidebarPosition = newValue ? 1 : 0 }
-    }
+    var sidebarOnRight = false
+    /// Whether the controls are crossing the window with the sidebar. AppKit
+    /// lays its title bar out again on every window update, and putting them
+    /// straight at their destination then would cut the move short.
+    private var isMovingControls = false
     var sidebarWidth: CGFloat = BrowserChromeLayout.sidebarIdealWidth
     var isVisible = true {
         didSet {
@@ -102,12 +111,9 @@ final class BrowserNativeWindowControlsHostView: NSView {
         }
         applyTitleBar(to: window)
         applySystemToolbarMetrics(to: window)
-        let shouldShowWindowControls =
-            BrowserNativeWindowControlsPolicy.showsWindowControls(
-                sidebarPresentationShowsControls: isVisible,
-                in: window.styleMask
-            )
-        for type in BrowserNativeWindowControlsPolicy.buttonTypes {
+        let shouldShowWindowControls = window.styleMask.showsWindowControls(
+            sidebarPresentationShowsControls: isVisible)
+        for type in Self.buttonTypes {
             guard let button = window.standardWindowButton(type) else { continue }
             let shouldHide = !shouldShowWindowControls
             guard button.isHidden != shouldHide else { continue }
@@ -136,16 +142,15 @@ final class BrowserNativeWindowControlsHostView: NSView {
 
     /// Move the existing AppKit controls inside their titlebar, retaining their
     /// native actions, accessibility, sizes and order. Fullscreen owns placement.
-    private func positionWindowControls() {
-        guard let window, !window.styleMask.contains(.fullScreen) else { return }
+    private func positionWindowControls(onRight: Bool? = nil, animated: Bool = false) {
+        guard let window, animated || !isMovingControls, !window.styleMask.contains(.fullScreen) else { return }
         let offset =
-            BrowserNativeWindowControlsPolicy.sidebarOffset(
-                onRight: true,
+            (onRight ?? sidebarOnRight)
+            ? window.styleMask.windowControlsSidebarOffset(
                 windowWidth: window.contentView?.bounds.width ?? bounds.width,
-                sidebarWidth: sidebarWidth,
-                in: window.styleMask
-            ) * sidebarPosition
-        for type in BrowserNativeWindowControlsPolicy.buttonTypes {
+                sidebarWidth: sidebarWidth
+            ) : 0
+        for type in Self.buttonTypes {
             guard let button = window.standardWindowButton(type), let parent = button.superview else { continue }
             if nativeButtonOrigins[type] == nil {
                 nativeButtonOrigins[type] = parent.convert(button.frame.origin, to: nil).x
@@ -153,19 +158,31 @@ final class BrowserNativeWindowControlsHostView: NSView {
             guard let nativeX = nativeButtonOrigins[type] else { continue }
             let target = parent.convert(NSPoint(x: nativeX + offset, y: 0), from: nil).x
             if abs(button.frame.minX - target) > 0.5 {
-                button.setFrameOrigin(NSPoint(x: target, y: button.frame.minY))
+                (animated ? button.animator() : button).setFrameOrigin(NSPoint(x: target, y: button.frame.minY))
             }
         }
+    }
+
+    /// Takes the controls to the sidebar's new side inside the animation the
+    /// sidebar crosses the window with.
+    func moveWindowControls(sidebarOnRight: Bool) {
+        self.sidebarOnRight = sidebarOnRight
+        isMovingControls = true
+        positionWindowControls(animated: true)
+    }
+
+    func finishMovingWindowControls() {
+        isMovingControls = false
+        applyBrowserChrome()
     }
 
     func restoreWindowChrome() {
         stopObservingWindow()
         guard let window, let originalChrome else { return }
-        sidebarOnRight = false
-        positionWindowControls()
+        isMovingControls = false
+        positionWindowControls(onRight: false)
         nativeButtonOrigins.removeAll()
-        window.styleMask = BrowserNativeWindowControlsPolicy.restoredStyleMask(
-            original: originalChrome.styleMask, current: window.styleMask)
+        window.styleMask = window.styleMask.restoringBrowserChrome(to: originalChrome.styleMask)
         window.titleVisibility = originalChrome.titleVisibility
         window.titlebarAppearsTransparent = originalChrome.titlebarAppearsTransparent
         window.titlebarSeparatorStyle = originalChrome.titlebarSeparatorStyle
@@ -192,7 +209,7 @@ final class BrowserNativeWindowControlsHostView: NSView {
             toolbarStyle: window.toolbarStyle,
             contentFrameClipsToBounds:
                 window.contentView?.superview?.clipsToBounds ?? false,
-            buttonVisibility: BrowserNativeWindowControlsPolicy.buttonTypes.map { type in
+            buttonVisibility: Self.buttonTypes.map { type in
                 (type, window.standardWindowButton(type)?.isHidden ?? false)
             }
         )
@@ -211,7 +228,7 @@ final class BrowserNativeWindowControlsHostView: NSView {
             toolbar = chromeToolbar
         } else {
             toolbar = BrowserChromeToolbar(
-                identifier: BrowserNativeWindowControlsPolicy.toolbarIdentifier
+                identifier: BrowserChromeToolbar.chromeIdentifier
             )
             toolbar.allowsUserCustomization = false
             toolbar.autosavesConfiguration = false
@@ -233,9 +250,7 @@ final class BrowserNativeWindowControlsHostView: NSView {
         if window.toolbarStyle != .unified {
             window.toolbarStyle = .unified
         }
-        let shouldShowToolbar = BrowserNativeWindowControlsPolicy.showsToolbar(
-            in: window.styleMask
-        )
+        let shouldShowToolbar = window.styleMask.showsBrowserToolbar
         if toolbar.isVisible != shouldShowToolbar {
             toolbar.isVisible = shouldShowToolbar
         }
@@ -275,10 +290,7 @@ final class BrowserNativeWindowControlsHostView: NSView {
             positionWindowControls()
             return
         case NSWindow.willEnterFullScreenNotification:
-            let position = sidebarPosition
-            sidebarPosition = 0
-            positionWindowControls()
-            sidebarPosition = position
+            positionWindowControls(onRight: false)
             return
         case NSWindow.didEnterFullScreenNotification:
             observeFullScreenTitleBar()

@@ -86,20 +86,7 @@ struct BrowserRootDragPreviewLayer: View {
             }
             return rows.isEmpty ? nil : .selection(rows)
         }
-        switch item {
-        case .tab(let tab):
-            return space.tabs.model(tab.tabID).map(BrowserSidebarLiftPreviewSubject.tab)
-        case .folder(let folder):
-            let rows = BrowserFolderDragPreviewRow.resolve(
-                model.sidebarInteraction.sidebarReorderState.liftPreview?.previewRows ?? [],
-                in: space, rootFolderID: folder.folderID)
-
-            return space.folders.model(folder.folderID).map { .folder($0, rows: rows) }
-        case .splitGroup(let group):
-            // A run that has already lost its members has nothing to draw; the
-            // drag itself is ended by the same change.
-            let members = space.splitMembers(of: group.groupID)
-            return members.isEmpty ? nil : .splitGroup(members)
-        }
+        return item.liftPreviewSubject(
+            in: space, previewRows: model.sidebarInteraction.sidebarReorderState.liftPreview?.previewRows ?? [])
     }
 }

@@ -5,7 +5,7 @@ struct BrowserStartPageContent: View {
     ///
     /// Split View renders one of these per card, so the surface can no longer
     /// assume it is speaking for the selected tab. Every action still routes
-    /// through `BrowserCommandPaletteActionPolicy`, which answers "unavailable"
+    /// through `BrowserStore.isPaletteSourceAvailable`, which answers "unavailable"
     /// for a card that is not the focused one — an unfocused start page reads
     /// but does not act until a click makes it the focused card.
     let tab: TabStateModel?
@@ -55,10 +55,7 @@ struct BrowserStartPageContent: View {
         _ url: URL
     ) -> Bool {
         return withAnimation(
-            BrowserVisualAccessibilityPolicy.animation(
-                CrestMotion.contentNavigation,
-                reduceMotion: reduceMotion
-            )
+            CrestMotion.contentNavigation.unlessReducingMotion(reduceMotion)
         ) {
             BrowserStartPageNavigationAction(
                 browser: browser,
@@ -73,12 +70,7 @@ struct BrowserStartPageContent: View {
         _ target: BrowserTabRuntimeAssignment
     ) -> Bool {
         guard
-            let destination = BrowserCommandPaletteActionPolicy.target(
-                target,
-                from: source,
-                in: browser,
-                accessController: spaceAccess
-            )
+            let destination = browser.paletteTarget(target, from: source, accessController: spaceAccess)
         else { return false }
         browser.selectSpace(destination.space.id)
         browser.selectTab(destination.tab.id)
@@ -89,10 +81,6 @@ struct BrowserStartPageContent: View {
     private func isSourceAvailable(
         _ source: BrowserTabRuntimeAssignment
     ) -> Bool {
-        BrowserCommandPaletteActionPolicy.isSourceAvailable(
-            source,
-            in: browser,
-            accessController: spaceAccess
-        )
+        browser.isPaletteSourceAvailable(source, accessController: spaceAccess)
     }
 }

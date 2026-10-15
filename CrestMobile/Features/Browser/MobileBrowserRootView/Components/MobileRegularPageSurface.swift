@@ -3,7 +3,7 @@ import SwiftUI
 /// The iPad content area, and the one place that decides between real columns and
 /// the single rounded page surface.
 ///
-/// The branch itself is `BrowserPageSurfaceBranchPolicy`'s, shared with macOS. It
+/// The branch itself is `BrowserPageSurfacePresentation`'s, shared with macOS. It
 /// is *applied* here rather than inside `BrowserRootDetailSurface` because the
 /// columns view *replaces* that surface instead of living inside it: it applies
 /// the outer page insets itself and wraps each card in its own
@@ -39,7 +39,7 @@ struct MobileRegularPageSurface: View {
 
     private var pageSurfacePresentation: BrowserPageSurfacePresentation {
         let space = model.browser.shownSpace
-        return BrowserPageSurfaceBranchPolicy.resolve(
+        return BrowserPageSurfacePresentation(
             space: space,
             isLocked: space.map(model.spaceAccess.isLocked) ?? false,
             cards: model.browser.shownCards,

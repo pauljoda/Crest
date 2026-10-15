@@ -48,8 +48,7 @@ final class BrowserPeekModel {
     /// The Spaces the Peek may move to or unlock: none being deleted, and
     /// none locked but its own.
     var availableSpaceModels: [SpaceModel] {
-        BrowserTransientSessionPolicy.availableSpaces(
-            in: browser, requestSpaceID: request.spaceID, isLocked: spaceAccess.isLocked)
+        browser.transientSpaces(forRequestIn: request.spaceID, isLocked: spaceAccess.isLocked)
     }
 
     var page: BrowserPage? {
@@ -72,27 +71,8 @@ final class BrowserPeekModel {
 
     @discardableResult
     func preparePage(isActive: Bool) -> Bool {
-        let space: SpaceModel
-        switch sourceDisposition {
-        case .notPresented:
-            releaseLease()
-            return false
-        case .sourceMissing:
-            dismissUnavailableRequest()
-            return false
-        case .sourceLocked:
-            setSourceLocked(true)
-            return false
-        case .usable(let usableSpace):
-            space = usableSpace
-        }
-        if let pageLease,
-            BrowserTransientSessionPolicy.reusesLease(
-                leaseAssignment: pageLease.assignment,
-                requestAssignment: request.assignment,
-                leaseCanBeReused: pageLease.canBeReused
-            )
-        {
+        guard let space = sourceDisposition.settle(on: self) else { return false }
+        if let pageLease, pageLease.isReusable(for: request.assignment) {
             pageLease.setActive(isActive && isSelected)
             return true
         }
@@ -118,17 +98,10 @@ final class BrowserPeekModel {
             releaseLease()
             return
         }
-        guard let pageLease else { return }
-        switch disposition(ofSpaceMatching: pageLease.assignment) {
-        case .notPresented:
-            releaseLease()
-        case .sourceMissing:
-            dismissUnavailableRequest()
-        case .sourceLocked:
-            setSourceLocked(true)
-        case .usable:
-            pageLease.restore()
+        guard let pageLease, disposition(ofSpaceMatching: pageLease.assignment).settle(on: self) != nil else {
+            return
         }
+        pageLease.restore()
     }
 
     @discardableResult
@@ -178,13 +151,12 @@ final class BrowserPeekModel {
     }
 
     func setActive(_ isActive: Bool) {
-        switch sourceDisposition {
-        case .notPresented, .sourceMissing, .sourceLocked:
+        guard sourceDisposition.space != nil else {
             // Release inaccessible content without changing the window's presentation.
             releaseLease()
-        case .usable:
-            pageLease?.setActive(isActive && isSelected)
+            return
         }
+        pageLease?.setActive(isActive && isSelected)
     }
 
     func setSourceLocked(_ isLocked: Bool) {
@@ -221,7 +193,7 @@ final class BrowserPeekModel {
     private func disposition(
         ofSpaceMatching assignment: BrowserSpaceRuntimeAssignment
     ) -> BrowserTransientLeaseDisposition {
-        BrowserTransientSessionPolicy.disposition(
+        BrowserTransientLeaseDisposition(
             isPresentingRequest: isCurrentRequest,
             space: request.hasSource(in: browser) ? browser.spaceModel(matching: assignment) : nil,
             isLocked: spaceAccess.isLocked
@@ -235,8 +207,10 @@ final class BrowserPeekModel {
         dismissUnavailableRequest()
     }
 
-    private func releaseLease() {
+    func releaseLease() {
         pageLease?.release()
         pageLease = nil
     }
 }
+
+extension BrowserPeekModel: BrowserTransientLeaseHolder {}

@@ -10,7 +10,7 @@ public sealed record SetSpaceBranding(Guid WorkspaceId, Guid SpaceId, SpaceBrand
 
     internal override SessionEdit? Edit(NativeSessionAuthority workspace, SessionTurn turn) {
         workspace.RequireOwnedSpaces();
-        var branding = SpaceBrandingPolicy.Normalize(Branding);
+        var branding = SpaceBranding.Normalized(Branding);
         return workspace.SettingSpace(turn.Basis, workspace.Editable(turn.Basis, SpaceId),
             settings => settings with { Branding = branding }, SyncStaging.Edit);
     }

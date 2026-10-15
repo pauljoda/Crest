@@ -46,6 +46,9 @@ final class SpaceBackdropBlendView<Background: View>: NSView {
     private var hosts: [BrowserSpaceRuntimeAssignment: NSHostingView<SpaceBackdropRoot<Background>>] = [:]
     private var fallback: NSHostingView<SpaceBackdropRoot<Background>>?
     private var activeTransition: SpacePagerSettlement?
+    /// The background on top while nothing moves, or nil while a slide or a
+    /// swipe shows more than one.
+    private var restingKey: BrowserSpaceRuntimeAssignment?
 
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
@@ -63,7 +66,11 @@ final class SpaceBackdropBlendView<Background: View>: NSView {
 
     override func layout() {
         super.layout()
-        for view in subviews where view.frame != bounds { view.frame = bounds }
+        sizeShownHosts()
+    }
+
+    override func resizeSubviews(withOldSize oldSize: NSSize) {
+        sizeShownHosts()
     }
 
     func update(
@@ -127,6 +134,8 @@ final class SpaceBackdropBlendView<Background: View>: NSView {
         let last = min(spaces.count - 1, max(center + 1, Int(destination.rounded(.up))))
         let range = first...last
         let required = Set(range.map { BrowserSpaceRuntimeAssignment(space: spaces[$0]) })
+        let isResting = transition == nil && position == position.rounded()
+        restingKey = isResting ? BrowserSpaceRuntimeAssignment(space: spaces[center]) : nil
         // Keep the two visible backgrounds and their neighbors ready. No tab
         // trees, page snapshots, or WebKit instances belong to these hosts.
         for index in range {
@@ -138,6 +147,9 @@ final class SpaceBackdropBlendView<Background: View>: NSView {
             for key in hosts.keys where !required.contains(key) {
                 hosts.removeValue(forKey: key)?.removeFromSuperview()
             }
+        }
+        if !isResting {
+            for host in hosts.values where host.frame != bounds { host.frame = bounds }
         }
         CATransaction.begin()
         CATransaction.setDisableActions(true)
@@ -160,6 +172,15 @@ final class SpaceBackdropBlendView<Background: View>: NSView {
         CATransaction.commit()
     }
 
+    /// Only the background on screen follows a live resize. The ones under it
+    /// and beyond it are sized when a slide is about to show them.
+    private func sizeShownHosts() {
+        for (key, host) in hosts where host.frame != bounds && (restingKey == nil || key == restingKey) {
+            host.frame = bounds
+        }
+        if let fallback, fallback.frame != bounds { fallback.frame = bounds }
+    }
+
     private func addHost(root: SpaceBackdropRoot<Background>) -> NSHostingView<SpaceBackdropRoot<Background>> {
         let host = NSHostingView(rootView: root)
         host.sizingOptions = []
@@ -167,7 +188,6 @@ final class SpaceBackdropBlendView<Background: View>: NSView {
         host.wantsLayer = true
         host.layer?.opacity = 0
         host.frame = bounds
-        host.autoresizingMask = [.width, .height]
         addSubview(host)
         host.layer?.opacity = 1
         return host

@@ -9,9 +9,10 @@ struct BrowserTabAppearanceSurface: ViewModifier {
     let isHovering: Bool
     var selectionEmphasis = false
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @Environment(\.sidebarLayerDepth) private var depth
 
     func body(content: Content) -> some View {
-        let radius = BrowserDeviceAppearanceStore.shared.sidebarCornerRadius
+        let radius = BrowserSidebarMetrics.layerCornerRadius(depth: depth)
         let selectedAccent = isPinned || appearance.outlinesSelectedTabs
         let showsBorder = appearance.borders == .all || (isPinned && appearance.borders == .pinned)
         let fill = BrowserTabAppearance.intensity(appearance.pinFill)

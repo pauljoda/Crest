@@ -50,7 +50,7 @@ final class MobileBrowserPageRecoveryTests: XCTestCase {
             "Web content must not be able to replay a file URL Crest once loaded."
         )
         XCTAssertEqual(
-            BrowserCorePolicy.externalSchemeDisposition(
+            SchemeHandling.disposition(
                 for: fileURL,
                 isAppInitiated: page.isAppInitiated(replay)
             ),

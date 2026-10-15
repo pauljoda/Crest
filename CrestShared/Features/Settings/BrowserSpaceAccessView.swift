@@ -131,7 +131,7 @@ struct BrowserSpaceAccessView: View {
     private var accessBackground: some View {
         ZStack {
             if presentation == .contentOverlay, !reduceTransparency {
-                Rectangle().fill(.regularMaterial)
+                CrestSurfaceLayer(shape: Rectangle())
             } else {
                 Rectangle().fill(.background)
             }

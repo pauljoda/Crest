@@ -6,7 +6,7 @@ struct MobileBrowserTransientOverlay: View {
     @State private var model: MobileBrowserTransientOverlayModel
 
     init(
-        request: MobileBrowserTransientRequest,
+        request: any MobileBrowserTransientRequest,
         presentationPhase: BrowserPeekPresentationPhase,
         browser: BrowserStore,
         pages: MobileBrowserPageStore,

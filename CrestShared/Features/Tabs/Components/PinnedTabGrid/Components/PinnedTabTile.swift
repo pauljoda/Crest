@@ -47,7 +47,7 @@ struct PinnedTabTile: View {
         .browserPinnedTabPromotionDestination(
             id: BrowserTabPromotionID.value(for: tab.id),
             in: grid.promotionNamespace,
-            anchor: BrowserPinnedTabPromotionPolicy.anchor(
+            anchor: BrowserPinnedTabPromotionAnchor(
                 hasNamespace: grid.promotionNamespace != nil,
                 isTransitionSource: isSelected,
                 capabilities: grid.capabilities
@@ -117,12 +117,9 @@ struct PinnedTabTile: View {
                 )
             }
         }
-        .modifier(BrowserTabStatusBadgeHost(tab: statusSource))
+        .modifier(BrowserTabStatusBadgeHost(tab: statusSource, anchor: .tile))
         .animation(
-            BrowserVisualAccessibilityPolicy.animation(
-                CrestMotion.contentState,
-                reduceMotion: reduceMotion
-            ),
+            CrestMotion.contentState.unlessReducingMotion(reduceMotion),
             value: loaded
         )
         .crestCollectionItemTransition()
@@ -174,7 +171,8 @@ struct PinnedTabTile: View {
             ),
             title: "Tab Icon",
             currentEmoji: tab.emojiIcon,
-            showsReset: BrowserTabIconCustomizationPolicy.showsReset(iconMode: tab.iconMode),
+            // Reset applies to explicit icon overrides.
+            showsReset: !tab.iconMode.followsPage,
             resetTitle: "Use Website Icon",
             setEmoji: { emoji in
                 guard isIconRequestLive else { return }

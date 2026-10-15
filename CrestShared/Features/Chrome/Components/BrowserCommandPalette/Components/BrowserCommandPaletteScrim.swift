@@ -9,10 +9,7 @@ struct BrowserCommandPaletteScrim: View {
     var body: some View {
         Button(action: dismiss) {
             Color.black.opacity(
-                BrowserVisualAccessibilityPolicy.scrimOpacity(
-                    BrowserCommandPaletteMetrics.scrimOpacity,
-                    reduceTransparency: reduceTransparency
-                )
+                BrowserCommandPaletteMetrics.scrimOpacity.scrimOpacity(reduceTransparency: reduceTransparency)
             )
             .contentShape(.rect)
         }

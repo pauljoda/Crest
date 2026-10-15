@@ -54,11 +54,6 @@ enum BrowserTabDragPreviewLayout {
                     progress
                 )
             ),
-            cornerRadius: lerp(
-                source.cornerRadius,
-                destination.cornerRadius,
-                progress
-            ),
             contentCentering: lerp(
                 source.contentCentering,
                 destination.contentCentering,
@@ -69,6 +64,21 @@ enum BrowserTabDragPreviewLayout {
                 destination.cardContentWeight,
                 progress
             )
+        )
+    }
+
+    /// The preview's corner part-way between two shapes, where a row and a
+    /// pinned tile wear `layerCornerRadius`.
+    static func cornerRadius(
+        from source: BrowserTabDragPreviewShape,
+        to destination: BrowserTabDragPreviewShape,
+        progress proposedProgress: CGFloat,
+        layerCornerRadius: CGFloat
+    ) -> CGFloat {
+        lerp(
+            source.cornerRadius(layerCornerRadius: layerCornerRadius),
+            destination.cornerRadius(layerCornerRadius: layerCornerRadius),
+            min(max(proposedProgress, 0), 1)
         )
     }
 

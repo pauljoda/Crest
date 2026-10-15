@@ -1,5 +1,4 @@
 using CrestCore.Application;
-using CrestCore.Domain;
 
 namespace CrestCore.Contracts;
 
@@ -17,8 +16,7 @@ public sealed record OpenedWindowSelection(LinkGesture Gesture) : Query<OpenedWi
         lock (app.Device.Gate) preferences = app.Device.Links;
         var gesture = Gesture;
         var (_, newTab) = preferences.PeekModifier.Intent(gesture.Modifiers, gesture.MiddleClick);
-        return new(LinkNavigationPolicy.SelectsOpenedWindow(newTab, gesture.Modifiers.HasFlag(ShortcutModifiers.Shift),
-            preferences.FocusesNewTabs));
+        return new(!newTab || preferences.FocusesNewTabs != gesture.Modifiers.HasFlag(ShortcutModifiers.Shift));
     }
 
     #endregion

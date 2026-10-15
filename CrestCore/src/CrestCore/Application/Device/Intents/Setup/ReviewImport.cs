@@ -27,14 +27,14 @@ public sealed record ReviewImport(ImportSource Source, IReadOnlyList<SpaceState>
         if (flow.Phase != SetupPhase.Reading || flow.Source != Source) return flow;
         if (Spaces.Select(space => space.Id).Distinct().Count() != Spaces.Count)
             throw new Rejected(new InvalidImport(ImportFlaw.UnpairedChoices));
-        WorkspaceImportPolicy.RequireSpaceCapacity(0, Spaces.Count);
+        SessionState.RequireSpaceCapacity(0, Spaces.Count);
         foreach (var space in Spaces)
-            WorkspaceImportPolicy.RequireSplitMembership([.. space.Tabs.Select(tab =>
+            SplitMember.RequireWellFormed([.. space.Tabs.Select(tab =>
                 new SplitMember(tab.SplitGroupId, tab.Placement, tab.FolderId))]);
         return flow with {
             Step = SetupStep.Review,
             Phase = SetupPhase.Reviewing,
-            Review = ImportReviewPolicy.Started(Source, Spaces, ImportPasswordRouting.Counts(Source, Passwords, Spaces),
+            Review = SetupImportReview.Started(Source, Spaces, Source.PasswordCounts(Passwords, Spaces),
                 Extensions ?? [], LeftOut ?? [], session) with { BrowserTitle = Title },
             Failure = null
         };

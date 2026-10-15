@@ -10,21 +10,17 @@ struct BrowserNewTabRowContent: View {
     let hasBorders: Bool
 
     private var tabMetrics: BrowserSidebarTabRowMetrics {
-        BrowserSidebarInteractionPolicy.tabRowMetrics(capabilities)
+        capabilities.tabRowMetrics
     }
 
     private var metrics: BrowserSidebarNewTabRowMetrics {
-        BrowserSidebarInteractionPolicy.newTabRowMetrics(capabilities)
+        capabilities.newTabRowMetrics
     }
 
     private var rowHeight: CGFloat {
-        let base = BrowserSidebarInteractionPolicy.rowMinHeight(
-            capabilities,
-            dynamicTypeSize: dynamicTypeSize
-        )
-        return BrowserSidebarDensityPolicy.rowHeight(
-            base: base, scale: dynamicTypeSize.isAccessibilitySize ? max(1, tabScale) : tabScale,
-            touch: capabilities.supportsTouch)
+        let base = capabilities.rowMinHeight(dynamicTypeSize: dynamicTypeSize)
+        return BrowserSidebarDensity(dynamicTypeSize.isAccessibilitySize ? max(1, tabScale) : tabScale).rowHeight(
+            base: base, touch: capabilities.supportsTouch)
     }
 
     var body: some View {
@@ -58,10 +54,12 @@ struct BrowserNewTabRowContent: View {
         .modifier(BrowserNewTabRowSurface(metrics: metrics))
         .padding(
             .vertical,
-            BrowserSidebarDensityPolicy.rowSeparation(
-                scale: tabScale, hasBorders: hasBorders) / 2
+            BrowserSidebarDensity(tabScale).rowSeparation(hasBorders: hasBorders) / 2
         )
-        .padding(.horizontal, metrics.rowHorizontalInset)
+        // Outside the button on purpose: the margin the hover surface is drawn
+        // within, which lines it up with every other layer, is not part of
+        // what a reader can press.
+        .padding(.horizontal, BrowserSidebarMetrics.layerInset)
         .modifier(BrowserNewTabRowTooltip(metrics: metrics))
     }
 }
@@ -72,9 +70,7 @@ private struct BrowserNewTabRowSurface: ViewModifier {
     @ViewBuilder
     func body(content: Content) -> some View {
         if metrics.showsHoverSurface {
-            content.crestHoverSurface(
-                cornerRadius: CrestLayout.sidebarControlCornerRadius
-            )
+            content.crestHoverSurface(cornerRadius: BrowserSidebarMetrics.layerCornerRadius())
         } else {
             content
         }

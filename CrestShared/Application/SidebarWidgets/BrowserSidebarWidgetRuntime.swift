@@ -134,8 +134,8 @@ final class BrowserSidebarWidgetRuntime: BrowserSidebarWidgetPreferenceObserving
         for kindID: BrowserSidebarWidgetKindID
     ) {
         guard
-            registry.registration(for: kindID)?.visibilityPolicy
-                == .userControllable
+            registry.registration(for: kindID)?.visibility.isUserControllable
+                == true
         else { return }
         preferences.setEnabled(isEnabled, for: kindID)
     }
@@ -171,10 +171,7 @@ final class BrowserSidebarWidgetRuntime: BrowserSidebarWidgetPreferenceObserving
             return
         }
 
-        let latestID = BrowserSidebarWidgetCarouselPolicy.mostRecentlyInsertedID(
-            in: visibleInstances,
-            insertionOrdinals: insertionOrdinalByInstanceID
-        )
+        let latestID = mostRecentlyInsertedID(in: visibleInstances)
         let latestOrdinal = latestID.flatMap { insertionOrdinalByInstanceID[$0] } ?? 0
         let currentIsVisible = visibleInstances.contains {
             $0.id == carouselSelection
@@ -186,6 +183,19 @@ final class BrowserSidebarWidgetRuntime: BrowserSidebarWidgetPreferenceObserving
         } else if !currentIsVisible {
             setCarouselSelection(latestID ?? visibleInstances.first?.id)
         }
+    }
+
+    private func mostRecentlyInsertedID(
+        in instances: [BrowserSidebarWidgetInstance]
+    ) -> BrowserSidebarWidgetID? {
+        instances.max { lhs, rhs in
+            let lhsOrdinal = insertionOrdinalByInstanceID[lhs.id] ?? 0
+            let rhsOrdinal = insertionOrdinalByInstanceID[rhs.id] ?? 0
+            if lhsOrdinal != rhsOrdinal {
+                return lhsOrdinal < rhsOrdinal
+            }
+            return lhs.id.id < rhs.id.id
+        }?.id
     }
 
     func selectCarouselInstance(
@@ -258,16 +268,7 @@ final class BrowserSidebarWidgetRuntime: BrowserSidebarWidgetPreferenceObserving
             return
         }
         let matching = candidates.filter { $0.id.kindID == kindID }
-        let normalized: [BrowserSidebarWidgetInstance]
-        switch registration.instancePolicy {
-        case .single:
-            normalized = matching.sorted { $0.id.id < $1.id.id }.prefix(1).map { $0 }
-        case .multiple:
-            var unique: [BrowserSidebarWidgetID: BrowserSidebarWidgetInstance] = [:]
-            for instance in matching { unique[instance.id] = instance }
-            normalized = unique.values.sorted { $0.id.id < $1.id.id }
-        }
-        storeInstances(normalized, for: kindID)
+        storeInstances(registration.instanceLimit.normalize(matching), for: kindID)
     }
 
     private func storeInstances(

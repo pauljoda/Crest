@@ -97,10 +97,7 @@ struct BrowserSidebarAddressField<
     }
 
     private var handoffAnimation: Animation? {
-        BrowserVisualAccessibilityPolicy.animation(
-            configuration.commandPaletteHandoff.fieldAnimation,
-            reduceMotion: reduceMotion
-        )
+        configuration.commandPaletteHandoff.fieldAnimation.unlessReducingMotion(reduceMotion)
     }
 
     /// Whether this field was given a menu at all.

@@ -25,7 +25,7 @@ public sealed partial class BrowserContractsTests {
         app.Drain();
 
         // Each crash within the budget reloads the page at once, and shows no failure.
-        for (var crash = 1; crash <= PageProcessRecoveryPolicy.MaximumAutomaticReloads; crash++) {
+        for (var crash = 1; crash <= ProcessRecoveryAction.MaximumAutomaticReloads; crash++) {
             app.Report(engine, Crashed(page));
             Assert.Equal(crash, Recoveries(binding, page));
             Assert.Empty(app.Drain());
@@ -34,7 +34,7 @@ public sealed partial class BrowserContractsTests {
         // The next one shows the failure over the document it replaced, and reloads nothing.
         app.Report(engine, Crashed(page));
         var stopped = Live(app.Drain());
-        Assert.Equal(PageProcessRecoveryPolicy.MaximumAutomaticReloads, Recoveries(binding, page));
+        Assert.Equal(ProcessRecoveryAction.MaximumAutomaticReloads, Recoveries(binding, page));
         Assert.Equal(new PageFailure(NavigationError.WebContentProcessStopped, "https://example.com/", ReplacedDocument: true,
             "ChromiumTerminationStatus", 3), stopped.Failure);
 
@@ -43,7 +43,7 @@ public sealed partial class BrowserContractsTests {
         app.Report(engine, new NavigationFinished(page, "https://example.com/", "Example"));
         app.Drain();
         app.Report(engine, Crashed(page));
-        Assert.Equal(PageProcessRecoveryPolicy.MaximumAutomaticReloads + 1, Recoveries(binding, page));
+        Assert.Equal(ProcessRecoveryAction.MaximumAutomaticReloads + 1, Recoveries(binding, page));
     }
 
     [Fact]
@@ -56,7 +56,7 @@ public sealed partial class BrowserContractsTests {
 
         // However often the system ends it out of sight, the page shows no
         // failure and nothing reloads it.
-        for (var crash = 0; crash <= PageProcessRecoveryPolicy.MaximumAutomaticReloads; crash++) app.Report(engine, Crashed(page));
+        for (var crash = 0; crash <= ProcessRecoveryAction.MaximumAutomaticReloads; crash++) app.Report(engine, Crashed(page));
         Assert.DoesNotContain(app.Drain(), change => change is PageChanged { Page.Live.Failure: not null });
         Assert.Equal(0, Recoveries(binding, page));
 
@@ -69,9 +69,9 @@ public sealed partial class BrowserContractsTests {
 
         // That recovery spent the budget as a crash in view does: a page that
         // keeps stopping once shown ends at the failure, not in a reload loop.
-        for (var crash = 2; crash <= PageProcessRecoveryPolicy.MaximumAutomaticReloads; crash++) app.Report(engine, Crashed(page));
+        for (var crash = 2; crash <= ProcessRecoveryAction.MaximumAutomaticReloads; crash++) app.Report(engine, Crashed(page));
         app.Report(engine, Crashed(page));
-        Assert.Equal(PageProcessRecoveryPolicy.MaximumAutomaticReloads, Recoveries(binding, page));
+        Assert.Equal(ProcessRecoveryAction.MaximumAutomaticReloads, Recoveries(binding, page));
         Assert.Equal(NavigationError.WebContentProcessStopped, Live(app.Drain()).Failure?.Error);
     }
 

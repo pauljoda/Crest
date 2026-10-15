@@ -113,29 +113,9 @@ final class MobileBrowserWebHostView: UIView {
     /// reasoning.
     private func applyViewportInsets() {
         guard let hostedWebView, hostedWebView.superview === self else { return }
-        let obscuresSystemSafeAreas = viewport.obscuresSystemSafeAreas
-        let safeAreaInsets = viewport.systemSafeAreaInsets
-        let bottomChromeHeight = viewport.bottomChromeHeight
-        let frameInsets =
-            obscuresSystemSafeAreas
-            ? MobileBrowserViewportPolicy.webViewFrameInsets(
-                safeAreaInsets: safeAreaInsets,
-                bottomChromeHeight: bottomChromeHeight
-            )
-            : .zero
-        let overlayInsets =
-            obscuresSystemSafeAreas
-            ? MobileBrowserViewportPolicy.chromeOverlayInsets(
-                safeAreaInsets: safeAreaInsets,
-                bottomChromeHeight: bottomChromeHeight
-            )
-            : .zero
-        let viewportRange =
-            obscuresSystemSafeAreas
-            ? MobileBrowserViewportPolicy.viewportRangeInsets(
-                safeAreaInsets: safeAreaInsets
-            )
-            : (minimum: UIEdgeInsets.zero, maximum: UIEdgeInsets.zero)
+        let frameInsets = viewport.webViewFrameInsets
+        let overlayInsets = viewport.chromeOverlayInsets
+        let viewportRange = viewport.viewportRangeInsets
         let scrollView = hostedWebView.scrollView
 
         // Keep the WebKit surface full-height so ordinary scrolling content

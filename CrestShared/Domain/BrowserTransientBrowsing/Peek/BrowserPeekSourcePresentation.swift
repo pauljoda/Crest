@@ -39,6 +39,41 @@ struct BrowserPeekSourcePresentation: Codable, Equatable, Hashable, Sendable {
         )
     }
 
+    /// The source a touch at `touchPoint` in a web view of `webViewSize`
+    /// names, or nil for a point outside it. `hasTopLeadingOrigin` says
+    /// whether the view's y axis runs down from its top.
+    init?(
+        touchPoint: CGPoint,
+        in webViewSize: CGSize,
+        hasTopLeadingOrigin: Bool,
+        label: String
+    ) {
+        guard webViewSize.width > 0,
+            webViewSize.height > 0,
+            touchPoint.x.isFinite,
+            touchPoint.y.isFinite
+        else { return nil }
+
+        let normalizedX = touchPoint.x / webViewSize.width
+        let normalizedY =
+            hasTopLeadingOrigin
+            ? touchPoint.y / webViewSize.height
+            : 1 - touchPoint.y / webViewSize.height
+        guard (0...1).contains(normalizedX),
+            (0...1).contains(normalizedY)
+        else { return nil }
+
+        self.init(
+            normalizedMinX: normalizedX,
+            normalizedMinY: normalizedY,
+            normalizedWidth: 0,
+            normalizedHeight: 0,
+            normalizedTouchX: normalizedX,
+            normalizedTouchY: normalizedY,
+            label: label
+        )
+    }
+
     static func resolved(
         _ sourcePresentation: BrowserPeekSourcePresentation?
     ) -> BrowserPeekSourcePresentation {

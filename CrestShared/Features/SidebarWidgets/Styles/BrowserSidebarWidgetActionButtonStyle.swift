@@ -59,12 +59,12 @@ private struct BrowserSidebarWidgetActionSurface: View {
         case .quiet:
             labeled
                 .foregroundStyle(.primary)
-                .background(
-                    configuration.isPressed || isHovering
-                        ? CrestColor.selection
-                        : CrestColor.chromeSurface,
-                    in: shape
-                )
+                .background {
+                    CrestSurfaceLayer(
+                        shape: shape,
+                        hoverTint: configuration.isPressed || isHovering ? CrestColor.selection : nil
+                    )
+                }
                 .overlay {
                     shape.strokeBorder(
                         CrestColor.subtleBorder,

@@ -7,6 +7,15 @@ extension EnvironmentValues {
 
 /// Presents the application widget deck independently of the selected Space.
 struct BrowserSidebarWidgetHost: View {
+    /// Whether a sidebar shows the deck: only while it is presented, and never
+    /// in a private window.
+    static func isShown(
+        sidebarIsPresented: Bool,
+        isPrivateBrowsing: Bool
+    ) -> Bool {
+        sidebarIsPresented && !isPrivateBrowsing
+    }
+
     let capabilities: BrowserSidebarWidgetCapabilities
     let activateMediaSession: (BrowserTabRuntimeAssignment) -> Void
     let ownerFaviconData: (BrowserTabRuntimeAssignment) -> Data?
@@ -17,9 +26,6 @@ struct BrowserSidebarWidgetHost: View {
 
     var body: some View {
         if !instances.isEmpty {
-            let cardInsets = BrowserSidebarWidgetCarouselLayoutPolicy.cardInsets(
-                instanceCount: instances.count
-            )
             BrowserSidebarWidgetDeck(
                 instances: instances,
                 selectedInstanceID: visibleInstanceID,
@@ -28,9 +34,7 @@ struct BrowserSidebarWidgetHost: View {
                 ownerFaviconData: ownerFaviconData,
                 cycle: cycle
             )
-            .padding(.leading, cardInsets.leading)
-            .padding(.trailing, cardInsets.trailing)
-            .padding(.horizontal, CrestSpacing.small)
+            .padding(.horizontal, BrowserSidebarMetrics.layerInset)
             .overlay(alignment: .trailing) {
                 if instances.count > 1 {
                     BrowserSidebarWidgetDeckStepper(
@@ -88,10 +92,7 @@ struct BrowserSidebarWidgetHost: View {
     }
 
     private var deckAnimation: Animation? {
-        BrowserVisualAccessibilityPolicy.animation(
-            CrestMotion.spaceSwipe,
-            reduceMotion: reduceMotion
-        )
+        CrestMotion.spaceSwipe.unlessReducingMotion(reduceMotion)
     }
 
     private func reconcileSelection() {
@@ -114,11 +115,7 @@ struct BrowserSidebarWidgetHost: View {
 
     private func cycle(_ direction: BrowserSidebarWidgetCarouselDirection) {
         guard
-            let nextID = BrowserSidebarWidgetCarouselPolicy.cyclicAdjacentID(
-                to: visibleInstanceID,
-                in: instances,
-                direction: direction
-            )
+            let nextID = direction.adjacentID(to: visibleInstanceID, in: instances)
         else { return }
         select(nextID)
     }

@@ -110,6 +110,7 @@ final class SpacePagerViewport<Content: View>: NSView {
             // Actual authoritative selection changes supersede native motion;
             // unrelated updates carrying the old ID do not.
             expectedSelection = nil
+            if continueSettling(to: selectedSpaceID) { return }
             cancelMotion()
             gesture.cancelCurrentGesture()
             if let origin = presentationSpaceID, !reduceMotion,
@@ -365,6 +366,37 @@ final class SpacePagerViewport<Content: View>: NSView {
         positionHosts()
         updateAccessibility()
         settleMotion(to: destination)
+    }
+
+    /// A selection that arrives while a slide is still settling continues from
+    /// what is on screen, starting at the Space that slide was heading to.
+    /// Measured from the Space shown before the slide, the next one along
+    /// would look two pages away and appear without motion.
+    private func continueSettling(to destination: UUID) -> Bool {
+        guard !reduceMotion, let current = motion, let heading = current.settledDestination,
+            let headingIndex = spaces.firstIndex(where: { $0.id == heading }),
+            let targetIndex = spaces.firstIndex(where: { $0.id == destination }),
+            abs(targetIndex - headingIndex) == 1,
+            let origin = assignment(for: heading), hosts[origin] != nil,
+            let target = assignment(for: destination)
+        else { return false }
+        let offset = visibleOffset(for: origin, during: current)
+        gesture.cancelCurrentGesture()
+        stopPresentationSampling()
+        stopHostAnimations()
+        generation &+= 1
+        presentationSpaceID = heading
+        motion = Motion(
+            generation: generation, origin: origin, target: target, offset: offset, initialOffset: offset,
+            direction: (targetIndex > headingIndex ? -1 : 1) * (layoutDirection == .leftToRight ? 1 : -1),
+            commitsSelection: false)
+        // The page the slide left is still partly on screen, so the cache
+        // keeps the strip around the heading Space rather than the new one.
+        prepareHosts(around: heading, retaining: destination, refreshContent: false)
+        positionHosts()
+        updateAccessibility()
+        settleMotion(to: destination)
+        return true
     }
 
     private func visibleOffset(for key: BrowserSpaceRuntimeAssignment, during current: Motion) -> CGFloat {

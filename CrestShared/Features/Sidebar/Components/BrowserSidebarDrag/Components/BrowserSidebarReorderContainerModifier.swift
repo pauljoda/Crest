@@ -80,7 +80,7 @@ struct BrowserSidebarReorderContainerModifier: ViewModifier {
                 .opacity(hidesSource && !isRevealing ? 0 : 1)
                 .animation(nil, value: hidesSource)
                 .animation(
-                    BrowserVisualAccessibilityPolicy.animation(.easeOut(duration: 0.10), reduceMotion: reduceMotion),
+                    Animation.easeOut(duration: 0.10).unlessReducingMotion(reduceMotion),
                     value: isRevealing
                 )
                 .frame(
@@ -95,17 +95,14 @@ struct BrowserSidebarReorderContainerModifier: ViewModifier {
         }
         // Layout capacity moves with the gap, across section boundaries.
         .animation(
-            BrowserVisualAccessibilityPolicy.animation(CrestMotion.dragSource, reduceMotion: reduceMotion),
+            CrestMotion.dragSource.unlessReducingMotion(reduceMotion),
             value: [
                 topSpace, bottomSpace,
                 isLifted ? state.layout.height : 0,
             ]
         )
         .animation(
-            BrowserVisualAccessibilityPolicy.animation(
-                CrestMotion.dragSource,
-                reduceMotion: reduceMotion
-            ),
+            CrestMotion.dragSource.unlessReducingMotion(reduceMotion),
             value: displacement
         )
     }

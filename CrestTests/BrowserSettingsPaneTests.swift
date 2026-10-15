@@ -18,23 +18,23 @@ final class BrowserSettingsPaneTests: XCTestCase {
             "WebAutomaticDashSubstitutionEnabled",
             "WebAutomaticLinkDetectionEnabled",
         ])
-        for key in BrowserMacWebTextAssistancePolicy.disabledSmartTextKeys {
+        for key in BrowserMacWebTextAssistancePreference.disabledSmartTextKeys {
             defaults.set(true, forKey: key)
         }
 
-        BrowserMacWebTextAssistancePolicy.configure(
+        BrowserMacWebTextAssistancePreference.configure(
             defaults: defaults
         )
 
         XCTAssertEqual(
-            Set(BrowserMacWebTextAssistancePolicy.disabledSmartTextKeys),
+            Set(BrowserMacWebTextAssistancePreference.disabledSmartTextKeys),
             expectedKeys
         )
         XCTAssertEqual(
-            BrowserMacWebTextAssistancePolicy.disabledSmartTextKeys.count,
+            BrowserMacWebTextAssistancePreference.disabledSmartTextKeys.count,
             expectedKeys.count
         )
-        for key in BrowserMacWebTextAssistancePolicy.disabledSmartTextKeys {
+        for key in BrowserMacWebTextAssistancePreference.disabledSmartTextKeys {
             XCTAssertFalse(defaults.bool(forKey: key), key)
         }
     }
@@ -45,12 +45,12 @@ final class BrowserSettingsPaneTests: XCTestCase {
         defer { defaults.removePersistentDomain(forName: suiteName) }
         let key = "WebAutomaticTextReplacementEnabled"
         defaults.set(false, forKey: key)
-        BrowserMacWebTextAssistancePolicy.configure(defaults: defaults)
+        BrowserMacWebTextAssistancePreference.configure(defaults: defaults)
         XCTAssertNil(defaults.object(forKey: key), "WebKit should inherit the macOS text replacement preference")
 
         for choice in [true, false, true] {
             defaults.set(choice, forKey: key)
-            BrowserMacWebTextAssistancePolicy.configure(defaults: defaults)
+            BrowserMacWebTextAssistancePreference.configure(defaults: defaults)
             XCTAssertEqual(defaults.bool(forKey: key), choice)
         }
     }
@@ -84,24 +84,24 @@ final class BrowserSettingsPaneTests: XCTestCase {
         let all = [webForm, httpBasic]
 
         XCTAssertEqual(
-            BrowserCredentialSettingsPolicy.filter(all, matching: "  "),
+            all.matching("  "),
             [httpBasic, webForm],
             "A blank query keeps every password and orders the manager by site."
         )
         XCTAssertEqual(
-            BrowserCredentialSettingsPolicy.filter(all, matching: "PERSON"),
+            all.matching("PERSON"),
             [webForm]
         )
         XCTAssertEqual(
-            BrowserCredentialSettingsPolicy.filter(all, matching: "work mail"),
+            all.matching("work mail"),
             [webForm]
         )
         XCTAssertEqual(
-            BrowserCredentialSettingsPolicy.filter(all, matching: "intranet"),
+            all.matching("intranet"),
             [httpBasic]
         )
         XCTAssertEqual(
-            BrowserCredentialSettingsPolicy.filter(all, matching: "Realm"),
+            all.matching("Realm"),
             [httpBasic],
             "The authentication scope is part of how a reader finds a credential."
         )

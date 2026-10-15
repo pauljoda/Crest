@@ -20,7 +20,7 @@ public sealed class AddressIndexTests {
         DateTimeOffset now, Guid id) {
         string normalized = new WebAddress(url).Normalized!;
         var previous = history.FirstOrDefault(entry => entry.Url == normalized);
-        var visit = HistoryPolicy.Record(normalized, title, now, id, previous);
+        var visit = HistoryEntryState.Record(normalized, title, now, id, previous);
         var visited = new List<HistoryEntryState> { visit };
         foreach (var entry in history) {
             if (visited.Count == Limit) break;
@@ -53,7 +53,7 @@ public sealed class AddressIndexTests {
             string url = $"https://site{page % 97}.example/page/{page}" + (random.Next(5) == 0 ? "#part" : "");
             var now = start.AddSeconds(visit);
             var id = Guid.NewGuid();
-            var next = HistoryPolicy.Visit(history, url, $"Page {page}", now, id, Limit)!;
+            var next = HistoryEntryState.Visit(history, url, $"Page {page}", now, id, Limit)!;
             scanned = Scanned(scanned, url, $"Page {page}", now, id);
             Assert.True(scanned.SequenceEqual(next), $"Visit {visit} differs from a scan.");
             // Completion candidates join the index just before the limit is

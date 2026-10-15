@@ -15,12 +15,9 @@ struct TabFaviconView: View {
     }
 
     var body: some View {
-        let request = BrowserFaviconTaskIdentityPolicy.renderRequest(
-            for: subject,
-            profileID: profileID,
-            maximumPixelSize: TabFaviconMetrics.maximumDecodedPixelSize(for: size),
-            isUnlocked: !isLocked
-        )
+        let request = subject.renderRequest(
+            profileID: profileID, maximumPixelSize: TabFaviconMetrics.maximumDecodedPixelSize(for: size),
+            isUnlocked: !isLocked)
         TabFaviconContent(
             subject: subject,
             size: size,

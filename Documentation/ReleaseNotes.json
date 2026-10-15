@@ -3858,6 +3858,262 @@
       "category": "new",
       "message": "On Mac, coding agents such as Claude Code and Codex can use Crest as their browser in the Spaces you choose: open and read tabs, click and type, take screenshots, and read a page’s console and network requests. Turn it on in Settings › Agents. Crest asks before each new agent connects, and every tab an agent uses shows its badge."
     },
+    "2026-10-12-page-engine-events-own-behavior": {
+      "category": "internal",
+      "message": "Let each engine event say what it does to its page"
+    },
+    "2026-10-12-widget-actions-own-behavior": {
+      "category": "internal",
+      "message": "Let sidebar widget actions and update phases say what they do"
+    },
+    "2026-10-12-agent-messages-own-behavior": {
+      "category": "internal",
+      "message": "Let agent messages and tool options say what they do"
+    },
+    "2026-10-12-core-kinds-own-behavior": {
+      "category": "internal",
+      "message": "Let core kinds say what each of them does"
+    },
+    "2026-10-12-cloud-sync-steps-own-behavior": {
+      "category": "internal",
+      "message": "Let each iCloud sync step take itself"
+    },
+    "2026-10-12-core-changes-follow-themselves": {
+      "category": "internal",
+      "message": "Let each core change say who follows it"
+    },
+    "2026-10-12-page-edge-objects-own-behavior": {
+      "category": "internal",
+      "message": "Let page and engine-edge objects carry what they do"
+    },
+    "2026-10-12-settings-own-behavior": {
+      "category": "internal",
+      "message": "Let settings pages, permissions and requests say what they do"
+    },
+    "2026-10-12-setup-steps-own-behavior": {
+      "category": "internal",
+      "message": "Let setup steps, outcomes and lessons say what they show and do"
+    },
+    "2026-10-12-studio-and-choices-own-behavior": {
+      "category": "internal",
+      "message": "Let studio steps, emblems and small choices carry their own behavior"
+    },
+    "2026-10-12-sidebar-drop-targets-own-behavior": {
+      "category": "internal",
+      "message": "Let sidebar drop targets and zones say what they take"
+    },
+    "2026-10-12-sidebar-lift-previews-own-behavior": {
+      "category": "internal",
+      "message": "Let sidebar lift previews size and place themselves"
+    },
+    "2026-10-12-sidebar-pointer-actions-own-behavior": {
+      "category": "internal",
+      "message": "Let sidebar pointer and row actions say what they do"
+    },
+    "2026-10-12-download-actions-own-behavior": {
+      "category": "internal",
+      "message": "Let download actions, destinations and feedback say what they do"
+    },
+    "2026-10-12-credential-objects-own-behavior": {
+      "category": "internal",
+      "message": "Let credential events, plans and sign-in answers say what they do"
+    },
+    "2026-10-12-transient-requests-own-behavior": {
+      "category": "internal",
+      "message": "Let transient requests, lease dispositions and pulls say what they do"
+    },
+    "2026-10-12-mobile-layout-own-behavior": {
+      "category": "internal",
+      "message": "Let window sizes, sidebar toggles and Settings styles carry what they do"
+    },
+    "2026-10-12-widget-kinds-own-rules": {
+      "category": "internal",
+      "message": "Let widget kinds, deck directions and gesture axes carry what they do"
+    },
+    "2026-10-12-peek-measures-own-rules": {
+      "category": "internal",
+      "message": "Let Peek's views and the card arrangement carry their own measures"
+    },
+    "2026-10-12-mobile-layout-own-rules": {
+      "category": "internal",
+      "message": "Let window sizes, viewports and pagers carry the iPhone and iPad layout"
+    },
+    "2026-10-12-mobile-platform-own-rules": {
+      "category": "internal",
+      "message": "Let the iPhone app's platform pieces hold their own rules"
+    },
+    "2026-10-12-core-query-answers-own-rules": {
+      "category": "internal",
+      "message": "Let core queries and page values carry the rules that judge them"
+    },
+    "2026-10-12-tokens-and-shell-own-rules": {
+      "category": "internal",
+      "message": "Let design tokens, Space colors, settings values and the Mac shell keep their own rules"
+    },
+    "2026-10-12-credential-records-judge-themselves": {
+      "category": "internal",
+      "message": "Let credential records judge themselves"
+    },
+    "2026-10-12-link-preferences-judge-themselves": {
+      "category": "internal",
+      "message": "Let link preferences, routes and schemes judge themselves"
+    },
+    "2026-10-12-sync-records-decide-conflicts": {
+      "category": "internal",
+      "message": "Let sync records, addresses and reasons decide their conflicts"
+    },
+    "2026-10-12-download-media-launch-answers": {
+      "category": "internal",
+      "message": "Let download, media and launch questions answer from their facts"
+    },
+    "2026-10-12-pages-history-spaces-own-rules": {
+      "category": "internal",
+      "message": "Let pages, history, Spaces and brandings keep their own rules"
+    },
+    "2026-10-12-import-setup-repair-own-steps": {
+      "category": "internal",
+      "message": "Let import reviews, setups and session repair carry their own steps"
+    },
+    "2026-10-12-queries-answer-without-app": {
+      "category": "internal",
+      "message": "Let each query say how it answers without an app"
+    },
+    "2026-10-12-unsupported-address-rejection": {
+      "category": "internal",
+      "message": "Refuse an address no Space holds as an unsupported address"
+    },
+    "2026-10-12-branding-makes-imported-looks": {
+      "category": "internal",
+      "message": "Let a branding make the looks imported Spaces wear"
+    },
+    "2026-10-12-sidebar-chrome-tabs-own-rules": {
+      "category": "internal",
+      "message": "Let sidebar rows, chrome, tabs, splits and Spaces carry their own rules"
+    },
+    "2026-10-12-forwarders-retired": {
+      "category": "internal",
+      "message": "Ask each rule's owner directly instead of through old forwarders"
+    },
+    "2026-10-12-entitlement-extension-strip-own-rules": {
+      "category": "internal",
+      "message": "Let the iCloud service and extension strip views keep their own measures"
+    },
+    "2026-10-12-navigation-decisions-answer-webkit": {
+      "category": "internal",
+      "message": "Let each navigation decision answer WebKit itself"
+    },
+    "2026-10-12-commands-prompts-swipes-say-what-they-do": {
+      "category": "internal",
+      "message": "Let engine commands, pending prompts and swipe decisions say what they do"
+    },
+    "2026-10-12-cloud-receipts-note-themselves": {
+      "category": "internal",
+      "message": "Let the core's answers to the cloud transport note what they tell it"
+    },
+    "2026-10-12-iphone-welcome-card-width": {
+      "category": "fixed",
+      "message": "The welcome card on iPhone lines up with the rest of the welcome page."
+    },
+    "2026-10-12-refuse-unexpected-edits-instead-of-quitting": {
+      "category": "fixed",
+      "message": "Crest no longer quits when it can’t make an edit, such as one on a tab that just closed or a change only a Space’s owner may make."
+    },
+    "2026-10-12-prompt-hosts-answer-every-question": {
+      "category": "internal",
+      "message": "Every place that shows Crest's questions now handles each kind of question explicitly."
+    },
+    "2026-10-12-refused-engine-report-safe": {
+      "category": "fixed",
+      "message": "A page reporting something Crest can’t use no longer closes the app."
+    },
+    "2026-10-12-concrete-pane-views": {
+      "category": "internal",
+      "message": "Keep settings, studio and lesson panes as concrete views"
+    },
+    "2026-10-12-extension-files-own-one-type": {
+      "category": "internal",
+      "message": "Give each extension file one owner type"
+    },
+    "2026-10-12-sidebar-surface-material": {
+      "category": "improved",
+      "message": "Choose how much the sidebar’s tabs, folders and bars let the background show through, from Ultra Thin to Ultra Thick, in Look and Feel settings. Pinned tabs now sit closer under the address bar."
+    },
+    "2026-10-12-sidebar-layer-shapes": {
+      "category": "improved",
+      "message": "Tabs, folders, Split Views, pinned tabs and the address bar now share one shape and spacing that follows your corner setting."
+    },
+    "2026-10-12-floating-surface-material": {
+      "category": "improved",
+      "message": "Site Controls, Peek, notices and other floating panels use the same material as the sidebar."
+    },
+    "2026-10-12-capsule-corners": {
+      "category": "improved",
+      "message": "With Capsule corners, single tabs are capsules, and Split Views and open folders round their corners to match."
+    },
+    "2026-10-12-site-controls-tile-fill": {
+      "category": "internal",
+      "message": "Give tiles inside material panels a fixed fill"
+    },
+    "crest-08-agents-palette-settings": {
+      "category": "new",
+      "message": "Crest 0.8 lets coding agents use Crest as their browser on Mac, brings a rebuilt command palette and Settings, imports from many more browsers, and makes the sidebar quicker and more consistent."
+    },
+    "pinned-tab-status-badge-corner": {
+      "category": "fixed",
+      "message": "On pinned tabs, the sound and sharing badge sits in the tile\u2019s bottom corner instead of over the site icon, so the icon is easy to click."
+    },
+    "site-controls-extension-menu-stays-open": {
+      "category": "fixed",
+      "message": "Right-clicking an extension in Site Controls shows its menu without closing Site Controls."
+    },
+    "pin-layout-honors-chosen-columns": {
+      "category": "fixed",
+      "message": "Pins fill each row to the number chosen in Settings, as far as the sidebar width allows, instead of evening out the rows."
+    },
+    "web-inspector-shortcut-toggles": {
+      "category": "fixed",
+      "message": "Pressing Option-Command-I again closes the Web Inspector or Chromium DevTools instead of leaving it open."
+    },
+    "find-close-returns-page-focus": {
+      "category": "fixed",
+      "message": "Closing find in page returns the keyboard to the page, including a page in Peek, so arrow keys and Space scroll right away."
+    },
+    "sidebar-hides-when-pointer-leaves-window": {
+      "category": "fixed",
+      "message": "A hidden sidebar that slides out at the window edge now hides again when the pointer moves on to another app."
+    },
+    "sidebar-offscreen-page-resizing": {
+      "category": "fixed",
+      "message": "Showing and hiding the sidebar is smoother when several Spaces are open."
+    },
+    "space-switch-keeps-sliding": {
+      "category": "fixed",
+      "message": "Switching Spaces again before the slide finishes keeps sliding toward the next Space instead of jumping to it."
+    },
+    "window-controls-follow-sidebar-side": {
+      "category": "fixed",
+      "message": "When the sidebar moves to the other side of the window, the window buttons travel with it instead of arriving first."
+    },
+    "smoother-live-resize": {
+      "category": "improved",
+      "message": "Resizing the window, a split or the sidebar is smoother."
+    },
+    "sidebar-utility-shortcuts": {
+      "category": "improved",
+      "message": "The History, Archive and Downloads shortcuts open and close their list, showing the sidebar for the moment when it is hidden, and Command-F searches the list that is open."
+    },
+    "translation-download-languages-no-crash": {
+      "category": "fixed",
+      "message": "Download Languages in Page Translation settings opens language downloads without Crest quitting."
+    },
+    "chromium-whole-page-translation": {
+      "category": "new",
+      "message": "Translate whole pages on device in Chromium too, with the same translation toolbar, automatic translation and Show Original as WebKit pages."
+    },
+    "translation-unsupported-page-language": {
+      "category": "fixed",
+      "message": "Pages in more languages, such as Swedish, now translate, and a page in a language Apple Translation doesn’t support says so instead of offering a translation that fails."
+    },
     "page-commands-follow-quick-window": {
       "category": "fixed",
       "message": "Page commands and shortcuts such as Copy Link, Find, Zoom, Reload, Print, and Close act on an open Quick Window when it is in front."

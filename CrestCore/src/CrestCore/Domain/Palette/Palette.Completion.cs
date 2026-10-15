@@ -19,7 +19,7 @@ public sealed partial class Palette {
         AddressResolution? resolution;
         try {
             resolution = AddressResolution.Resolve(query.Text, context.Search, context.AllowsInternalPages);
-        } catch (BrowserRuleException) {
+        } catch (Rejected refused) when (refused.Rejection is UnsupportedAddress) {
             return null;
         }
         if (resolution is null || !Uri.TryCreate(resolution.Url, UriKind.Absolute, out var url)) return null;

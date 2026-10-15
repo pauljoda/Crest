@@ -14,20 +14,20 @@ final class BrowserAuthenticationPolicyTests: XCTestCase {
             NSURLAuthenticationMethodNTLM,
         ] {
             XCTAssertEqual(
-                BrowserCorePolicy.authenticationHandling(
+                ChallengeHandling(
                     method: AuthenticationMethod(authenticationMethod: method),
                     isProxy: false,
                     previousFailureCount: 0
-                ),
+                ).handling,
                 .performDefaultHandling
             )
         }
         XCTAssertEqual(
-            BrowserCorePolicy.authenticationHandling(
+            ChallengeHandling(
                 method: AuthenticationMethod(authenticationMethod: NSURLAuthenticationMethodHTTPDigest),
                 isProxy: false,
                 previousFailureCount: 0
-            ),
+            ).handling,
             .promptForCredentials
         )
     }

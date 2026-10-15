@@ -25,7 +25,7 @@ struct BrowserDefaultPageZoomSettingsSection: View {
             CrestSettingRow("Default page zoom", setting: zoom.resettable("Default page zoom")) {
                 Picker("Default page zoom", selection: zoom.binding) {
                     ForEach(levels, id: \.self) { level in
-                        Text(BrowserPageZoomPolicy.percentageLabel(for: CGFloat(level))).tag(level)
+                        Text(CGFloat(level).pageZoomPercentage).tag(level)
                     }
                 }
                 .labelsHidden()
@@ -37,9 +37,9 @@ struct BrowserDefaultPageZoomSettingsSection: View {
 
     /// The zoom levels, with the saved level among them.
     private var levels: [Double] {
-        let levels = BrowserPageZoomPolicy.levels.map(Double.init)
+        let levels = CGFloat.pageZoomLevels.map(Double.init)
         let saved = zoom.wrappedValue
-        guard !levels.contains(where: { BrowserPageZoomPolicy.levelsMatch(CGFloat($0), CGFloat(saved)) }) else {
+        guard !levels.contains(where: { CGFloat($0).matchesPageZoom(CGFloat(saved)) }) else {
             return levels
         }
         return (levels + [saved]).sorted()
@@ -51,13 +51,13 @@ struct BrowserDefaultPageZoomSettingsSection: View {
                 get: { levelMatching(preferences.defaultZoom) },
                 set: { preferences.defaultZoom = CGFloat($0) }
             ),
-            default: Double(BrowserPageZoomPolicy.defaultLevel)
+            default: Double(BrowserDefaultPageZoomStore.defaultLevel)
         )
     }
 
     /// The menu's level for a stored zoom that differs from it by rounding.
     private func levelMatching(_ zoom: CGFloat) -> Double {
-        BrowserPageZoomPolicy.levels.first { BrowserPageZoomPolicy.levelsMatch($0, zoom) }.map(Double.init)
+        CGFloat.pageZoomLevels.first { $0.matchesPageZoom(zoom) }.map(Double.init)
             ?? Double(zoom)
     }
 }

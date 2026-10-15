@@ -1,3 +1,5 @@
+using CrestCore.Domain;
+
 namespace CrestCore.Contracts;
 
 /// How long a Space keeps history, archived tabs or downloads.
@@ -41,6 +43,19 @@ public sealed class DataRetention {
     #region Actions - Lookup
 
     public static DataRetention? Named(string? name) => All.FirstOrDefault(retention => retention.Name == name);
+
+    #endregion
+
+    #region Actions - Expiry
+
+    /// The indices of `timestamps` older than `lifetime` seconds at `now`.
+    /// Numeric timestamps keep native Date precision at a retention boundary;
+    /// callers apply the returned indices to their existing value snapshots.
+    /// Every time is the stored seconds of a date, so each is finite.
+    internal static IReadOnlyList<int> Expired(IReadOnlyList<double> timestamps, double now, double lifetime) {
+        ArgumentOutOfRangeException.ThrowIfNegative(lifetime);
+        return Enumerable.Range(0, timestamps.Count).Where(i => now - timestamps[i] > lifetime).ToArray();
+    }
 
     #endregion
 }

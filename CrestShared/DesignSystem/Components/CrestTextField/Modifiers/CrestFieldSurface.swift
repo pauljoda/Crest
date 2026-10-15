@@ -41,10 +41,7 @@ struct CrestFieldSurface: ViewModifier {
                 .allowsHitTesting(false)
             }
             .animation(
-                BrowserVisualAccessibilityPolicy.animation(
-                    CrestMotion.press,
-                    reduceMotion: reduceMotion
-                ),
+                CrestMotion.press.unlessReducingMotion(reduceMotion),
                 value: isFocused
             )
     }

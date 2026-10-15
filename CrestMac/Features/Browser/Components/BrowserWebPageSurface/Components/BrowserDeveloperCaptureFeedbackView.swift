@@ -11,7 +11,7 @@ struct BrowserDeveloperCaptureFeedbackView: View {
                 BrowserWebPageSurfaceMetrics.feedbackHorizontalPadding
             )
             .frame(height: BrowserWebPageSurfaceMetrics.feedbackHeight)
-            .background(.regularMaterial, in: .capsule)
+            .background { CrestSurfaceLayer(shape: Capsule()) }
             .shadow(
                 color: .black.opacity(
                     BrowserWebPageSurfaceMetrics.feedbackShadowOpacity

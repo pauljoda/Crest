@@ -11,15 +11,17 @@ struct BrowserSiteExtensionsHeader: View {
             Button(action: manageExtensions) {
                 Image(systemName: "plus")
                     .font(.system(size: 11, weight: .semibold))
-                    .frame(
-                        width: BrowserSiteControlLayoutPolicy
-                            .manageExtensionControlSize,
-                        height: BrowserSiteControlLayoutPolicy
-                            .manageExtensionControlSize
-                    )
             }
-            .buttonStyle(.plain)
-            .background(.quaternary, in: .rect(cornerRadius: 6))
+            .buttonStyle(
+                CrestChromeButtonStyle(
+                    controlSize: CGSize(
+                        width: BrowserSiteControlMetrics.manageExtensionControlSize,
+                        height: BrowserSiteControlMetrics.manageExtensionControlSize
+                    ),
+                    cornerRadius: 6,
+                    showsRestingFill: true
+                )
+            )
             .accessibilityLabel("Manage Extensions")
             .help("Manage Extensions")
         }

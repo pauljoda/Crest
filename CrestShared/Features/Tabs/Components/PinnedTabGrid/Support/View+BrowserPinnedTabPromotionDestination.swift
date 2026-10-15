@@ -3,7 +3,7 @@ import SwiftUI
 extension View {
     /// Applies the promotion anchor a pinned tile claims, and only that one.
     ///
-    /// Which anchor — or none — is `BrowserPinnedTabPromotionPolicy`'s to decide;
+    /// Which anchor — or none — is `BrowserPinnedTabPromotionAnchor`'s to decide;
     /// this is the seam that puts the answer on the view. Keeping the decision
     /// out of here is what stops the rule being re-derived as "anything but the
     /// native zoom", which is how a partnerless matched-geometry anchor came to

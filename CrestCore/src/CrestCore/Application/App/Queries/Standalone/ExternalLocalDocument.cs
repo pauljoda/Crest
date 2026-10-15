@@ -1,5 +1,4 @@
 using CrestCore.Application;
-using CrestCore.Domain;
 
 namespace CrestCore.Contracts;
 
@@ -8,7 +7,7 @@ namespace CrestCore.Contracts;
 public sealed record ExternalLocalDocument(LocalDocumentFacts Facts) : StandaloneQuery<ExternalAddressVerdict> {
     #region Actions - Answering
 
-    internal override ExternalAddressVerdict Answer(StandaloneContext context) => new(ExternalUrlPolicy.AcceptsLocalDocument(Facts));
+    internal override ExternalAddressVerdict Answer(StandaloneContext context) => new(Facts.IsAcceptedDocument);
 
     #endregion
 }

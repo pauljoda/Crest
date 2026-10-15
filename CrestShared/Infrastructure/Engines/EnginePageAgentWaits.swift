@@ -12,16 +12,14 @@ struct EnginePageAgentWaits {
 
     // MARK: - Actions - Presentations
 
-    /// Ends the wait the presentation answers, if any waits for it.
-    mutating func receive(_ presentation: EnginePresentation) {
-        switch presentation {
-        case .pageScriptEvaluated(let evaluated):
-            evaluations.removeValue(forKey: evaluated.evaluationID)?.resume(returning: evaluated)
-        case .pageInputDelivered(let delivered):
-            inputs.removeValue(forKey: delivered.inputID)?.resume(returning: delivered)
-        default:
-            break
-        }
+    /// Ends the wait for the evaluation the engine settled, if any waits for it.
+    mutating func settle(_ evaluated: PageScriptEvaluated) {
+        evaluations.removeValue(forKey: evaluated.evaluationID)?.resume(returning: evaluated)
+    }
+
+    /// Ends the wait for the input the engine delivered, if any waits for it.
+    mutating func settle(_ delivered: PageInputDelivered) {
+        inputs.removeValue(forKey: delivered.inputID)?.resume(returning: delivered)
     }
 
     // MARK: - Mutators

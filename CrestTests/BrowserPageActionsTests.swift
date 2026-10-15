@@ -2,7 +2,7 @@ import XCTest
 
 @testable import Crest
 
-final class BrowserPageZoomPolicyTests: XCTestCase {
+final class BrowserPageZoomAndDeveloperModeTests: XCTestCase {
     func testDeveloperModeAutomaticallyRecognizesLocalPagesAndHostnames() {
         let localURLs = [
             "http://localhost:3000/dashboard",
@@ -18,7 +18,7 @@ final class BrowserPageZoomPolicyTests: XCTestCase {
 
         for value in localURLs {
             XCTAssertTrue(
-                BrowserDeveloperModePolicy.isAutomatic(for: URL(string: value)),
+                URL(string: value)?.isLocalDevelopmentAddress == true,
                 value
             )
         }
@@ -41,24 +41,23 @@ final class BrowserPageZoomPolicyTests: XCTestCase {
 
         for value in publicURLs {
             XCTAssertFalse(
-                BrowserDeveloperModePolicy.isAutomatic(for: URL(string: value)),
+                URL(string: value)?.isLocalDevelopmentAddress == true,
                 value
             )
         }
-        XCTAssertFalse(BrowserDeveloperModePolicy.isAutomatic(for: nil))
     }
 
     func testDefaultZoomPreservesIntermediateValuesAndClampsToItsOwnBounds() {
-        XCTAssertEqual(BrowserPageZoomPolicy.defaultLevel, 1)
-        XCTAssertEqual(BrowserPageZoomPolicy.normalizedDefault(0.1), 0.25)
-        XCTAssertEqual(BrowserPageZoomPolicy.normalizedDefault(0.7), 0.7)
-        XCTAssertEqual(BrowserPageZoomPolicy.normalizedDefault(1.23456), 1.23456)
-        XCTAssertEqual(BrowserPageZoomPolicy.normalizedDefault(9), 5)
-        XCTAssertEqual(BrowserPageZoomPolicy.normalizedDefault(.nan), 1)
-        XCTAssertEqual(BrowserPageZoomPolicy.normalizedDefault(.infinity), 1)
-        XCTAssertEqual(BrowserPageZoomPolicy.normalizedDefault(-.infinity), 1)
-        for level in BrowserPageZoomPolicy.levels {
-            XCTAssertEqual(BrowserPageZoomPolicy.normalizedDefault(level), level)
+        XCTAssertEqual(BrowserDefaultPageZoomStore.defaultLevel, 1)
+        XCTAssertEqual(BrowserDefaultPageZoomStore.normalized(0.1), 0.25)
+        XCTAssertEqual(BrowserDefaultPageZoomStore.normalized(0.7), 0.7)
+        XCTAssertEqual(BrowserDefaultPageZoomStore.normalized(1.23456), 1.23456)
+        XCTAssertEqual(BrowserDefaultPageZoomStore.normalized(9), 5)
+        XCTAssertEqual(BrowserDefaultPageZoomStore.normalized(.nan), 1)
+        XCTAssertEqual(BrowserDefaultPageZoomStore.normalized(.infinity), 1)
+        XCTAssertEqual(BrowserDefaultPageZoomStore.normalized(-.infinity), 1)
+        for level in CGFloat.pageZoomLevels {
+            XCTAssertEqual(BrowserDefaultPageZoomStore.normalized(level), level)
         }
     }
 }

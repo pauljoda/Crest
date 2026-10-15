@@ -24,16 +24,16 @@ final class BrowserGeolocationSystemService: NSObject, BrowserGeolocationServici
         super.init()
     }
 
-    private var authorizationContinuations: [CheckedContinuation<BrowserGeolocationSystemAuthorization, Never>] = []
+    private var authorizationContinuations: [CheckedContinuation<BrowserSystemAuthorization, Never>] = []
     private var oneShotRegistrations: [String: Registration] = [:]
     private var watchRegistrations: [String: Registration] = [:]
     private var cachedLocation: CLLocation?
 
-    func currentAuthorization() -> BrowserGeolocationSystemAuthorization {
+    func currentAuthorization() -> BrowserSystemAuthorization {
         return Self.authorization(from: manager.authorizationStatus)
     }
 
-    func requestAuthorization() async -> BrowserGeolocationSystemAuthorization {
+    func requestAuthorization() async -> BrowserSystemAuthorization {
         let authorization = currentAuthorization()
         guard authorization == .notDetermined else { return authorization }
         return await withCheckedContinuation { continuation in
@@ -141,7 +141,7 @@ final class BrowserGeolocationSystemService: NSObject, BrowserGeolocationServici
         }
     }
 
-    private func finishAuthorization(with authorization: BrowserGeolocationSystemAuthorization) {
+    private func finishAuthorization(with authorization: BrowserSystemAuthorization) {
         authorizationTimeoutTask?.cancel()
         authorizationTimeoutTask = nil
         let continuations = authorizationContinuations
@@ -165,7 +165,7 @@ final class BrowserGeolocationSystemService: NSObject, BrowserGeolocationServici
 
     private static func authorization(
         from status: CLAuthorizationStatus
-    ) -> BrowserGeolocationSystemAuthorization {
+    ) -> BrowserSystemAuthorization {
         switch status {
         case .notDetermined:
             .notDetermined

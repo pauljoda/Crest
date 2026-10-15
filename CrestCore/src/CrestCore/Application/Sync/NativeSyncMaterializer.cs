@@ -56,10 +56,10 @@ public static class NativeSyncMaterializer {
     private static IEnumerable<T> Payloads<T>(IReadOnlyList<SyncSessionRecord> records, Guid? space = null) where T : SyncPayload =>
         records.Where(record => space is null || record.SpaceId == space).Select(record => record.Payload).OfType<T>();
 
-    private static bool Portable(TabState tab) => SyncContentPolicy.IncludesTab(tab.Url, tab.NativeContent is not null,
+    private static bool Portable(TabState tab) => SyncedAddress.IncludesTab(tab.Url, tab.NativeContent is not null,
         tab.SavedUrl ?? (tab.Placement.IsDurable ? tab.Url : null));
 
-    private static bool Portable(TabPayload tab) => SyncContentPolicy.IncludesTab(tab.Url?.Text, tab.NativeContent is not null,
+    private static bool Portable(TabPayload tab) => SyncedAddress.IncludesTab(tab.Url?.Text, tab.NativeContent is not null,
         tab.SavedUrl?.Text ?? (tab.Placement.IsDurable ? tab.Url?.Text : null));
 
     private static Dictionary<Guid, FolderState> LocalFolders(SpaceState? local) => (local?.Folders ?? []).ToDictionary(folder => folder.Id);
@@ -94,7 +94,7 @@ public static class NativeSyncMaterializer {
             .Select(folder => new FolderState(folder.Id, folder.Location, folder.Title, folder.Symbol, colorIds.Contains(folder.Id) ? folder.Color : null, folder.ParentId,
                 folder.IsCollapsed, folder.CollapseModifiedAt?.Moment, folder.OrderAnchorTabId)).ToArray();
         IReadOnlyList<FolderState> resolved;
-        try { resolved = SyncFolderMaterialization.Resolve(space, synced, owners, LocalFolders(local), deleted); } catch (BrowserRuleException) { throw Error(SyncRecordFlaw.InvalidFolderHierarchy, space); }
+        try { resolved = FolderTree.Materialized(space, synced, owners, LocalFolders(local), deleted); } catch (BrowserRuleException) { throw Error(SyncRecordFlaw.InvalidFolderHierarchy, space); }
         var included = resolved.Select(folder => folder.Id).ToHashSet();
         return [.. resolved, .. (local?.Folders ?? []).Where(folder => !included.Contains(folder.Id) && !policy.Includes(folder.Location))];
     }
@@ -124,7 +124,7 @@ public static class NativeSyncMaterializer {
             var folder = remote.FolderId;
             if (remote.Placement.HoldsFolders && folder is { } missing && !folderIds.Contains(missing)) {
                 if (owners.TryGetValue(missing, out var owner) && owner != space) throw Error(SyncRecordFlaw.DanglingFolder, remote.Id);
-                if (!SyncFolderMaterialization.TryPromote(missing, folderIds, localFolders, deleted, out folder)) continue;
+                if (!FolderTree.TryPromote(missing, folderIds, localFolders, deleted, out folder)) continue;
             }
             result.Add(Tab(remote, byId.GetValueOrDefault(remote.Id)) with { FolderId = remote.Placement.HoldsFolders ? folder : null });
         }
@@ -166,11 +166,11 @@ public static class NativeSyncMaterializer {
 
     private static List<HistoryEntryState> History(Guid space, IReadOnlyList<SyncSessionRecord> records, SyncPreferences policy, SpaceState? local) {
         if (!policy.HistoryAndArchive) return [.. local?.History ?? []];
-        var localOnly = (local?.History ?? []).Where(entry => !SyncContentPolicy.Includes(entry.Url)).ToArray();
+        var localOnly = (local?.History ?? []).Where(entry => !SyncedAddress.Includes(entry.Url)).ToArray();
         var localIds = localOnly.Select(entry => entry.Id).ToHashSet();
-        var synced = Payloads<HistoryPayload>(records, space).Where(entry => SyncContentPolicy.Includes(entry.Url.Text) && !localIds.Contains(entry.Id))
+        var synced = Payloads<HistoryPayload>(records, space).Where(entry => SyncedAddress.Includes(entry.Url.Text) && !localIds.Contains(entry.Id))
             .OrderByDescending(entry => entry.LastVisitedAt.ReferenceSeconds).ThenBy(entry => entry.Id.ToString("D"), StringComparer.Ordinal)
-            .Take(HistoryPolicy.MaximumEntries).Select(entry => new HistoryEntryState(entry.Id, entry.Url.Spelled ?? entry.Url.Text, entry.Title,
+            .Take(HistoryEntryState.MaximumEntries).Select(entry => new HistoryEntryState(entry.Id, entry.Url.Spelled ?? entry.Url.Text, entry.Title,
                 entry.FirstVisitedAt.Moment, entry.LastVisitedAt.Moment, checked((int)entry.VisitCount)));
         return [.. synced.Concat(localOnly).OrderByDescending(entry => entry.LastVisitedAt)];
     }

@@ -23,10 +23,6 @@ struct MobileArchiveView: View {
     }
 
     private var space: SpaceModel? {
-        BrowserSidebarAccessPolicy.selectedUnlockedSpace(
-            matching: assignment,
-            in: browser,
-            accessController: spaceAccess
-        )
+        browser.selectedUnlockedSpace(matching: assignment, accessController: spaceAccess)
     }
 }

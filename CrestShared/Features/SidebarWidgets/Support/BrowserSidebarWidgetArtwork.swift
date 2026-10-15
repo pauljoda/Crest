@@ -3,6 +3,15 @@ import SwiftUI
 
 /// Reduces oversized artwork before decoding it for SwiftUI.
 enum BrowserSidebarWidgetArtwork {
+    // MARK: - Static Variables
+
+    /// Native rendering keeps ordinary source pixels intact. These limits are
+    /// only a decode-safety boundary for unusually large compressed images.
+    static let maximumPixelDimension = 4_096
+    static let maximumPixelCount = 16 * 1_024 * 1_024
+
+    // MARK: - Actions - Decoding
+
     static func image(from data: Data) -> Image? {
         guard
             let source = CGImageSourceCreateWithData(
@@ -16,9 +25,9 @@ enum BrowserSidebarWidgetArtwork {
         let needsSafetyReduction =
             pixelCount.overflow
             || pixelCount.partialValue
-                > BrowserMediaSessionArtworkPolicy.maximumWidgetPixelCount
+                > maximumPixelCount
             || max(properties.width, properties.height)
-                > BrowserMediaSessionArtworkPolicy.maximumWidgetPixelDimension
+                > maximumPixelDimension
         if needsSafetyReduction {
             guard
                 let image = CGImageSourceCreateThumbnailAtIndex(
@@ -28,7 +37,7 @@ enum BrowserSidebarWidgetArtwork {
                         kCGImageSourceCreateThumbnailFromImageAlways: true,
                         kCGImageSourceCreateThumbnailWithTransform: true,
                         kCGImageSourceThumbnailMaxPixelSize:
-                            BrowserMediaSessionArtworkPolicy.maximumWidgetPixelDimension,
+                            maximumPixelDimension,
                         kCGImageSourceShouldCacheImmediately: true,
                     ] as CFDictionary
                 )

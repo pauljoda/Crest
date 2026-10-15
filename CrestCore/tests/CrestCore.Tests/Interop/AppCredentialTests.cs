@@ -19,7 +19,7 @@ public sealed class AppCredentialTests {
         using var app = new AppClient();
         var capture = app.Ask(new CredentialCapture(Submit(Login), new(Login, Login, 1_000), null, 1_001),
             ContractCodec.ReadCredentialCaptureDecision);
-        Assert.Equal(CredentialCapturePolicy.Decision(CredentialCaptureAction.CaptureCandidate, CredentialUsernameSource.Hint), capture);
+        Assert.Equal(CredentialCaptureDecision.For(CredentialCaptureAction.CaptureCandidate, CredentialUsernameSource.Hint), capture);
         Assert.Equal(new InvalidCredentialOrigin(), app.Refuse(new CredentialCapture(Submit(new("ftp", "example.com", 21)), null, null, 1)));
 
         Guid older = Guid.NewGuid(), newer = Guid.NewGuid();
@@ -34,7 +34,7 @@ public sealed class AppCredentialTests {
             app.Ask(new CredentialSaveCheck(Login, Login, 1_000, 2_000), ContractCodec.ReadCredentialSaveVerdict));
 
         var recipe = app.Ask(new StrongPassword(null), ContractCodec.ReadStrongPasswordRecipe);
-        Assert.Equal((StrongPasswordPolicy.DefaultLength, 4), (recipe.Length, recipe.Groups.Count));
+        Assert.Equal((StrongPasswordRecipe.DefaultLength, 4), (recipe.Length, recipe.Groups.Count));
         Assert.Equal(new InvalidPasswordLength(16, 64), app.Refuse(new StrongPassword(8)));
         Assert.True(app.Ask(new CredentialFill(CredentialFillSource.Generated, CredentialPasswordKind.New),
             ContractCodec.ReadCredentialFillDecision).IsAllowed);

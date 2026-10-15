@@ -1,5 +1,4 @@
 using CrestCore.Application;
-using CrestCore.Domain;
 
 namespace CrestCore.Contracts;
 
@@ -8,11 +7,19 @@ namespace CrestCore.Contracts;
 /// is not private.
 public sealed record SystemPasswordOffer(bool SpaceOffersSystemPasswords, SystemPasswordWriteThroughAvailability Availability,
     bool IsPrivateBrowsing) : Query<SystemPasswordOfferDecision> {
+    #region Variables
+
+    /// Offered only after the Space opts in, when available, and never from a
+    /// private window.
+    internal bool Offers =>
+        SpaceOffersSystemPasswords && Availability == SystemPasswordWriteThroughAvailability.Available && !IsPrivateBrowsing;
+
+    #endregion
+
     #region Actions - Answering
 
     internal override SystemPasswordOfferDecision Answer(CrestApp app) {
-        return new(PasskeyAccessPolicy.OffersWriteThrough(SpaceOffersSystemPasswords, Availability,
-            IsPrivateBrowsing));
+        return new(Offers);
     }
 
     #endregion

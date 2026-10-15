@@ -30,7 +30,7 @@ final class BrowserQuitPreparation {
     init(core: CrestCore, deletingSpaces: @escaping @MainActor () -> Set<UUID>) {
         self.core = core
         self.deletingSpaces = deletingSpaces
-        core.followPrompts(self) { [weak self] change in self?.ask(change) }
+        core.followPrompts(self)
     }
 
     // MARK: - Actions - Quitting
@@ -95,23 +95,40 @@ final class BrowserQuitPreparation {
         waiting = nil
         retry()
     }
+}
 
-    // MARK: - Actions - Prompts
+/// Shows the question about downloads in progress, and closes it once the
+/// core settles it.
+extension BrowserQuitPreparation: CorePromptHost {
+    /// The engine hosting the page shows its dialogs.
+    func ask(_ asked: ScriptDialogAsked) {}
 
-    /// Shows the question about downloads in progress, and closes it once the
-    /// core settles it.
-    private func ask(_ change: Change) {
-        if case .quitWithDownloadsAsked(let asked) = change {
-            let dismissal = BrowserPromptDismissal()
-            dismissals[asked.promptID] = dismissal
-            Task { @MainActor [weak self] in
-                guard let self else { return }
-                let quits = await dialogs.approveQuitWithDownloads(count: asked.liveDownloads, dismissal: dismissal)
-                _ = try? core?.send(AnswerQuitWithDownloads(promptID: asked.promptID, quits: quits))
-            }
+    /// The engine hosting the page shows its sign-in.
+    func ask(_ asked: AuthenticationAsked) {}
+
+    /// The engine hosting the page shows its permission request.
+    func ask(_ asked: PermissionAsked) {}
+
+    /// The Chromium engine reviews extension installs.
+    func ask(_ asked: ExtensionInstallAsked) {}
+
+    /// The download prompts choose where a download goes.
+    func ask(_ asked: DownloadDestinationAsked) {}
+
+    /// The download prompts ask whether a download may go ahead.
+    func ask(_ asked: DownloadApprovalAsked) {}
+
+    func ask(_ asked: QuitWithDownloadsAsked) {
+        let dismissal = BrowserPromptDismissal()
+        dismissals[asked.promptID] = dismissal
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            let quits = await dialogs.approveQuitWithDownloads(count: asked.liveDownloads, dismissal: dismissal)
+            _ = try? core?.send(AnswerQuitWithDownloads(promptID: asked.promptID, quits: quits))
         }
-        if case .promptSettled(let settled) = change {
-            dismissals.removeValue(forKey: settled.promptID)?.dismiss()
-        }
+    }
+
+    func dismiss(_ settled: PromptSettled) {
+        dismissals.removeValue(forKey: settled.promptID)?.dismiss()
     }
 }

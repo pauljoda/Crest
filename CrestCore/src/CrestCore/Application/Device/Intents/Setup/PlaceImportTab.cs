@@ -9,7 +9,7 @@ public sealed record PlaceImportTab(Guid SourceSpaceId, Guid TabId, TabPlacement
     #region Actions - Device
 
     internal override void Apply(Device device, DeviceTurn turn) => device.ReviseFlow(turn.Changes, (flow, session) =>
-        Device.Editing(flow, review => ImportReviewPolicy.Placing(review, SourceSpaceId, TabId, Placement, session)));
+        Device.Editing(flow, review => review.Placing(SourceSpaceId, TabId, Placement, session)));
 
     #endregion
 }

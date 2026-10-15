@@ -113,7 +113,7 @@ internal abstract class SyncPayloadType {
     /// Copies `fields` and `timestamp` into `result` from whichever of `first`
     /// and `second` changed them last.
     private static void LatestFields(JsonObject result, JsonObject first, JsonObject second, string timestamp, params string[] fields) {
-        if (SyncConflictPolicy.Latest(NativeSyncEvaluator.Date(first, timestamp), NativeSyncEvaluator.Date(second, timestamp)) is not { } winner)
+        if (SyncRecordStamp.Later(NativeSyncEvaluator.Date(first, timestamp), NativeSyncEvaluator.Date(second, timestamp)) is not { } winner)
             return;
         var source = winner == 0 ? first : second;
         Copy(result, source, fields);
@@ -136,7 +136,7 @@ internal abstract class SyncPayloadType {
     }
 
     /// Whether every device can take a tab that `tab`, a tab's value, holds.
-    private static bool PortableTab(JsonNode tab) => SyncContentPolicy.IncludesTab(tab["url"]?.GetValue<string>(),
+    private static bool PortableTab(JsonNode tab) => SyncedAddress.IncludesTab(tab["url"]?.GetValue<string>(),
         tab["nativeContent"] is not null, tab["savedURL"]?.GetValue<string>());
 
     /// Whether `preferences` syncs a value placed where `value[member]` says:
@@ -158,7 +158,7 @@ internal abstract class SyncPayloadType {
         }
 
         public override SyncDeletionReason? DeletionReason(JsonObject value, ArchiveReason? archiveReason, bool owningSpaceRemains,
-            SyncDeletionReason removal) => SyncDeletionPolicy.Structure(removal);
+            SyncDeletionReason removal) => removal.ForStructure;
     }
 
     private sealed class FolderType() : SyncPayloadType(SyncRecordKind.Folder, FolderPayload.Read) {
@@ -170,7 +170,7 @@ internal abstract class SyncPayloadType {
             LatestFields(result, first, second, "collapseModifiedAt", "isCollapsed");
 
         public override SyncDeletionReason? DeletionReason(JsonObject value, ArchiveReason? archiveReason, bool owningSpaceRemains,
-            SyncDeletionReason removal) => SyncDeletionPolicy.Structure(removal);
+            SyncDeletionReason removal) => removal.ForStructure;
     }
 
     private sealed class TabType() : SyncPayloadType(SyncRecordKind.Tab, TabPayload.Read) {
@@ -188,7 +188,7 @@ internal abstract class SyncPayloadType {
         public override void MergeFields(JsonObject result, JsonObject first, JsonObject second, int winner) {
             result["lastActivatedAt"] = Math.Max(NativeSyncEvaluator.Date(first, "lastActivatedAt")!.Value,
                 NativeSyncEvaluator.Date(second, "lastActivatedAt")!.Value);
-            if (SyncConflictPolicy.Latest(NativeSyncEvaluator.Date(first, "positionModifiedAt"),
+            if (SyncRecordStamp.Later(NativeSyncEvaluator.Date(first, "positionModifiedAt"),
                     NativeSyncEvaluator.Date(second, "positionModifiedAt")) is { } position) {
                 var source = position == 0 ? first : second;
                 Copy(result, source, "placement", "folderID", "orderToken", "positionModifiedAt", "splitGroupID");
@@ -205,14 +205,14 @@ internal abstract class SyncPayloadType {
         }
 
         public override SyncDeletionReason? DeletionReason(JsonObject value, ArchiveReason? archiveReason, bool owningSpaceRemains,
-            SyncDeletionReason removal) => SyncDeletionPolicy.Tab(NativeSyncEvaluator.Placement(value), archiveReason,
-            owningSpaceRemains, removal);
+            SyncDeletionReason removal) => removal.ForTab(NativeSyncEvaluator.Placement(value), archiveReason,
+            owningSpaceRemains);
 
         public override JsonObject Holding(JsonNode tab) => tab.DeepClone().AsObject();
     }
 
     private sealed class HistoryType() : SyncPayloadType(SyncRecordKind.History, HistoryPayload.Read) {
-        public override bool IsPortable(JsonObject value) => SyncContentPolicy.Includes(value["url"]?.GetValue<string>());
+        public override bool IsPortable(JsonObject value) => SyncedAddress.Includes(value["url"]?.GetValue<string>());
 
         public override void MergeFields(JsonObject result, JsonObject first, JsonObject second, int winner) {
             result["firstVisitedAt"] = Math.Min(NativeSyncEvaluator.Date(first, "firstVisitedAt")!.Value,

@@ -62,14 +62,7 @@ final class BrowserCredentialSavePromptModel {
                 now: now
             )
             guard !Task.isCancelled, candidateID == candidate.id else { return }
-            switch plan {
-            case .create:
-                phase = .create
-            case .update:
-                phase = .update
-            case .alreadyStored:
-                phase = .alreadyStored
-            }
+            phase = plan.promptPhase
         } catch {
             guard !Task.isCancelled, candidateID == candidate.id else { return }
             phase = .failed(.preparation)

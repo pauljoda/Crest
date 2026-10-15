@@ -40,7 +40,7 @@ struct BrowserShareSourcePicker: View {
         .padding(BrowserWebPageSurfaceMetrics.sharePickerPadding)
         .frame(width: BrowserWebPageSurfaceMetrics.sharePickerWidth, alignment: .leading)
         .background {
-            BrowserAccessibleMaterialBackground(material: .regular, shape: panelShape)
+            CrestSurfaceLayer(shape: panelShape)
         }
         .overlay {
             panelShape.strokeBorder(.separator, lineWidth: BrowserWebPageSurfaceMetrics.sharePickerStrokeWidth)

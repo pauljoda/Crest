@@ -2,32 +2,37 @@ import Foundation
 
 /// What the sidebar's toggle does from where the sidebar is.
 struct BrowserSidebarToggleAction: Hashable, Sendable {
-    // MARK: - Types
-
-    /// Each action moves the sidebar somewhere else, so the one place that
-    /// performs it switches over the kind.
-    enum Kinds: Sendable {
-        case hide
-        case dock
-    }
-
     // MARK: - Static Variables
 
-    static let hide = BrowserSidebarToggleAction(kind: .hide, name: "hide", title: "Hide Sidebar")
-    static let dock = BrowserSidebarToggleAction(kind: .dock, name: "dock", title: "Dock Sidebar")
+    static let hide = BrowserSidebarToggleAction(
+        name: "hide", title: "Hide Sidebar", performs: { $0.hideSidebar(reduceMotion: $1) })
+    static let dock = BrowserSidebarToggleAction(
+        name: "dock", title: "Dock Sidebar", performs: { $0.dockSidebar(reduceMotion: $1) })
 
     // MARK: - Variables
 
-    let kind: Kinds
     let name: String
     let title: LocalizedStringResource
+    private let performs: @MainActor @Sendable (any BrowserSidebarToggleTarget, Bool) -> Void
 
     // MARK: - Initializers
 
-    private init(kind: Kinds, name: String, title: LocalizedStringResource) {
-        self.kind = kind
+    private init(
+        name: String,
+        title: LocalizedStringResource,
+        performs: @escaping @MainActor @Sendable (any BrowserSidebarToggleTarget, Bool) -> Void
+    ) {
         self.name = name
         self.title = title
+        self.performs = performs
+    }
+
+    // MARK: - Actions - Toggle
+
+    /// Moves `target`'s sidebar where this action sends it.
+    @MainActor
+    func perform(on target: some BrowserSidebarToggleTarget, reduceMotion: Bool) {
+        performs(target, reduceMotion)
     }
 
     // MARK: - Actions - Identity

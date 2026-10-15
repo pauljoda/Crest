@@ -28,7 +28,7 @@ final class BrowserOnboardingFlow {
     private(set) var chosenUnlistedSourceURL: URL?
     private(set) var isChoosingDataAccess = false
     private(set) var isCompletingSetup = false
-    private(set) var completionFailure: String?
+    var completionFailure: String?
     /// The icons the extensions the browsers read offer wear, by identifier.
     private(set) var extensionIcons: [String: NSImage] = [:]
 
@@ -243,15 +243,8 @@ final class BrowserOnboardingFlow {
             guard let self, !Task.isCancelled, operationGeneration == generation else { return }
             completionTask = nil
             isCompletingSetup = false
-            switch result {
-            case .completed:
-                progress.setupFinished()
-                onCompleted()
-            case .cancelled:
-                break
-            case .refused(let message):
-                completionFailure = message
-            }
+            result.apply(
+                to: BrowserOnboardingSetupFinishing(flow: self, progress: progress, onCompleted: onCompleted))
         }
     }
 
@@ -436,10 +429,7 @@ final class BrowserOnboardingFlow {
     }
 
     func reviewSummary() -> LocalizedStringResource? {
-        guard let review else { return nil }
-        return BrowserOnboardingSummary.review(
-            tabCount: review.includedTabCount, passwordCount: review.includedPasswordCount,
-            overflowTabCount: review.overflowTabIDs.count)
+        review?.summary
     }
 
     /// What the core says the review's choices mean.

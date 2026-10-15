@@ -11,34 +11,31 @@ struct BrowserSettingsIconButtonStyle: ButtonStyle {
             .symbolRenderingMode(.hierarchical)
             .foregroundStyle(tint)
             .frame(
-                width: BrowserSettingsControlPolicy.minimumTouchTarget,
-                height: BrowserSettingsControlPolicy.minimumTouchTarget
+                width: BrowserSettingsControlMetrics.minimumTouchTarget,
+                height: BrowserSettingsControlMetrics.minimumTouchTarget
             )
             .background(
                 tint.opacity(
                     configuration.isPressed
-                        ? BrowserSettingsControlPolicy.iconPressedFillOpacity
-                        : BrowserSettingsControlPolicy.restingFillOpacity
+                        ? BrowserSettingsControlMetrics.iconPressedFillOpacity
+                        : BrowserSettingsControlMetrics.restingFillOpacity
                 ),
                 in: RoundedRectangle(
-                    cornerRadius: BrowserSettingsControlPolicy.cornerRadius,
+                    cornerRadius: BrowserSettingsControlMetrics.cornerRadius,
                     style: .continuous
                 )
             )
             .contentShape(.rect)
             .scaleEffect(
                 configuration.isPressed
-                    ? BrowserSettingsControlPolicy.iconPressedScale
+                    ? BrowserSettingsControlMetrics.iconPressedScale
                     : 1
             )
             .opacity(
-                isEnabled ? 1 : BrowserSettingsControlPolicy.iconDisabledOpacity
+                isEnabled ? 1 : BrowserSettingsControlMetrics.iconDisabledOpacity
             )
             .animation(
-                BrowserVisualAccessibilityPolicy.animation(
-                    CrestMotion.compactPress,
-                    reduceMotion: reduceMotion
-                ),
+                CrestMotion.compactPress.unlessReducingMotion(reduceMotion),
                 value: configuration.isPressed
             )
     }

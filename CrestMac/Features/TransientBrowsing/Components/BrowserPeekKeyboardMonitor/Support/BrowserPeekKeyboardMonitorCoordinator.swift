@@ -21,20 +21,34 @@ final class BrowserPeekKeyboardMonitorCoordinator: NSObject {
             [weak self] event in
             guard let self, self.installsMonitor,
                 event.windowNumber == self.windowNumber,
-                let action = BrowserPeekKeyboardPolicy.action(
-                    forKeyCode: event.keyCode,
+                Self.dismisses(
+                    keyCode: event.keyCode,
                     modifierFlags: BrowserKeyboardModifierFlags(
                         event.modifierFlags
                     )
                 )
             else { return event }
 
-            switch action {
-            case .dismiss:
-                self.dismiss()
-            }
+            self.dismiss()
             return nil
         }
+    }
+
+    /// Whether a key press closes Peek: Escape, without Command, Control or
+    /// Option. Return and Enter stay with the page.
+    nonisolated static func dismisses(
+        keyCode: UInt16,
+        modifierFlags: BrowserKeyboardModifierFlags
+    ) -> Bool {
+        let disallowedModifiers: BrowserKeyboardModifierFlags = [
+            .command,
+            .control,
+            .option,
+        ]
+        guard modifierFlags.intersection(disallowedModifiers).isEmpty else {
+            return false
+        }
+        return keyCode == 53
     }
 
     func stop() {

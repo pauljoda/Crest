@@ -13,20 +13,14 @@ struct MobileBrowserSidebarBottomChromeLayout<Content: View>: View {
     }
 
     var body: some View {
-        switch MobileBrowserSidebarBottomChromePolicy.placement(
-            reservesInset: configuration.reservesBottomChromeInset,
-            isVisible: configuration.showsBottomSpaceSwitcher
-        ) {
-        case .hidden:
-            content
-        case .inlineSafeAreaInset:
+        if showsBottomChrome {
             content
                 .safeAreaInset(edge: .bottom, spacing: 0) {
                     VStack(spacing: 0) {
                         // A top layer over every Space of every profile: mounted
                         // beside the pager and never keyed to the selected Space,
                         // so a Space switch cannot unmount or recreate the deck.
-                        if BrowserSidebarWidgetHostPolicy.shouldRender(
+                        if BrowserSidebarWidgetHost.isShown(
                             sidebarIsPresented:
                                 configuration.sidebarIsPresented,
                             isPrivateBrowsing: configuration.context.browser
@@ -47,7 +41,18 @@ struct MobileBrowserSidebarBottomChromeLayout<Content: View>: View {
                         )
                     }
                 }
+        } else {
+            content
         }
+    }
+
+    /// Whether the bottom chrome sits under the content.
+    ///
+    /// A shell that reserves the inset keeps it whether or not its controls are
+    /// on screen. That leaves the selected matched tab destination at the same
+    /// resting position throughout page presentation and return.
+    private var showsBottomChrome: Bool {
+        configuration.reservesBottomChromeInset || configuration.showsBottomSpaceSwitcher
     }
 
     private func ownerFaviconData(

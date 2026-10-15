@@ -14,26 +14,17 @@ struct BrowserSidebarBackgroundInteractionView: View {
             .allowsWindowActivationEvents()
             .contextMenu {
                 ForEach(
-                    BrowserSidebarBackgroundInteractionPolicy.actions.filter {
+                    BrowserSidebarBackgroundAction.all.filter {
                         !$0.requiresSpaceCreation || createSpace != nil
                     }
                 ) { action in
                     Button(action.title, systemImage: action.symbol) {
-                        perform(action)
+                        action.perform(on: self)
                     }
                 }
                 .crestMenuActionLabelStyle()
             }
             .accessibilityLabel("Sidebar background")
             .accessibilityHint("Drag to move the window or open Space actions")
-    }
-
-    private func perform(_ action: BrowserSidebarBackgroundAction) {
-        switch action.kind {
-        case .editSpace:
-            editSpace()
-        case .newSpace:
-            createSpace?()
-        }
     }
 }

@@ -20,7 +20,7 @@ public sealed partial class NativeSessionAuthority {
         AddressResolution? resolution;
         try {
             resolution = AddressResolution.Resolve(input, provider, allowsInternalPages);
-        } catch (BrowserRuleException) {
+        } catch (Rejected refused) when (refused.Rejection is UnsupportedAddress) {
             return new(Url: null, SearchQuery: null);
         }
         return resolution is not null && Uri.TryCreate(resolution.Url, UriKind.Absolute, out _)

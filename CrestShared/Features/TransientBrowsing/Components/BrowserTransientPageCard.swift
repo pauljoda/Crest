@@ -43,7 +43,7 @@ struct BrowserTransientPageCard<WebContent: View>: View {
             if reduceTransparency {
                 Rectangle().fill(.background)
             } else {
-                Rectangle().fill(.regularMaterial)
+                CrestSurfaceLayer(shape: Rectangle())
             }
         }
         .modifier(
@@ -74,10 +74,7 @@ struct BrowserTransientPageCard<WebContent: View>: View {
     }
 
     private var revealAnimation: Animation? {
-        BrowserVisualAccessibilityPolicy.animation(
-            BrowserPeekPresentationPolicy.initialContentRevealAnimation,
-            reduceMotion: reduceMotion
-        )
+        CrestMotion.contentReveal.unlessReducingMotion(reduceMotion)
     }
 }
 

@@ -10,7 +10,9 @@ struct BrowserSiteExtensionActionControl: View {
         Button(action: perform) {
             BrowserSiteExtensionActionLabel(action: action)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(
+            CrestChromeButtonStyle(controlSize: nil, cornerRadius: CrestRadius.compact, showsRestingFill: true)
+        )
         .frame(maxWidth: .infinity)
         .overlay {
             BrowserExtensionContextMenuTrigger(presentMenu: presentMenu)

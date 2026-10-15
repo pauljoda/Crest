@@ -39,4 +39,7 @@ protocol BrowserPageContentScripting: AnyObject {
         arguments: [String: Any],
         in frame: BrowserContentFrame
     ) async throws -> Any?
+    /// Runs `body` as `callAsyncJavaScript` does, in the page's current main
+    /// document. Answers nil when the page has none.
+    func callAsyncJavaScriptInMainFrame(_ body: String, arguments: [String: Any]) async throws -> Any?
 }

@@ -47,15 +47,7 @@ final class BrowserHTTPAuthenticationSession {
         to challenge: BrowserAuthenticationChallenge,
         prompt: Prompt
     ) async -> BrowserHTTPAuthenticationDecision {
-        switch BrowserCorePolicy.authenticationHandling(for: challenge) {
-        case .performDefaultHandling:
-            return .performDefaultHandling
-        case .cancel:
-            authenticationFailed()
-            return .cancel
-        case .promptForCredentials:
-            return await passwordResponse(to: challenge, prompt: prompt)
-        }
+        await challenge.handling.respond(on: self)(challenge, prompt)
     }
 
     func authenticationSucceeded() async {
@@ -170,5 +162,31 @@ final class BrowserHTTPAuthenticationSession {
         attemptedStoredCredential = nil
         attemptedProtectionSpace = nil
         pendingSaveRequest = nil
+    }
+}
+
+// MARK: - Actions - Responding
+
+extension BrowserHTTPAuthenticationSession: AuthenticationResponder {
+    /// The session's answer to a challenge, which it finishes with the
+    /// challenge and the prompt that may ask the person.
+    typealias Response =
+        @MainActor (BrowserAuthenticationChallenge, Prompt) async -> BrowserHTTPAuthenticationDecision
+
+    func performDefaultHandling() -> Response {
+        { _, _ in .performDefaultHandling }
+    }
+
+    func cancelChallenge() -> Response {
+        { [self] _, _ in
+            authenticationFailed()
+            return .cancel
+        }
+    }
+
+    func promptForCredentials() -> Response {
+        { [self] challenge, prompt in
+            await passwordResponse(to: challenge, prompt: prompt)
+        }
     }
 }

@@ -153,7 +153,7 @@ private struct BrowserSidebarSplitGroupIcon: View {
                     size: configuration.metrics.headerGlyphSize * 0.78
                 )
                 .padding(1)
-                .background(.regularMaterial, in: .circle)
+                .background { CrestSurfaceLayer(shape: Circle()) }
                 .overlay {
                     Circle()
                         .strokeBorder(
@@ -222,10 +222,7 @@ private struct BrowserSidebarSplitGroupIcon: View {
     }
 
     private var deckAnimation: Animation? {
-        BrowserVisualAccessibilityPolicy.animation(
-            CrestMotion.collection,
-            reduceMotion: reduceMotion
-        )
+        CrestMotion.collection.unlessReducingMotion(reduceMotion)
     }
 }
 

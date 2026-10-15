@@ -44,33 +44,23 @@ struct BrowserSidebarAddressFieldConfiguration {
     var branding: SpaceBranding? = nil
 
     var metrics: BrowserSidebarAddressFieldMetrics {
-        BrowserSidebarInteractionPolicy.addressFieldMetrics(capabilities)
+        capabilities.addressFieldMetrics
     }
 
     /// Whether the live site's own control takes the leading slot.
     var showsLeadingAccessory: Bool {
-        BrowserAddressSecurityControlPolicy.isVisible(
-            isAddressEditing: isEditing.wrappedValue,
-            hasActiveSite: hasActiveSite
-        )
+        !isEditing.wrappedValue && hasActiveSite
     }
 
     /// Whether the lock-or-search glyph stands in the leading slot instead.
     var showsPlaceholderGlyph: Bool {
-        BrowserAddressLeadingControlPolicy.showsPlaceholderGlyph(
-            isAddressEditing: isEditing.wrappedValue,
-            hasActiveSite: hasActiveSite,
-            hasAddress: !text.wrappedValue.isEmpty,
-            hasResidentPage: hasResidentPage
-        )
+        guard !showsLeadingAccessory else { return false }
+        return isEditing.wrappedValue || (hasResidentPage && !text.wrappedValue.isEmpty)
     }
 
     /// Whether the live site's settings control takes the trailing slot.
     var showsTrailingAccessory: Bool {
-        BrowserSiteControlPresentationPolicy.isVisible(
-            isAddressEditing: isEditing.wrappedValue,
-            hasActiveSite: hasActiveSite
-        )
+        !isEditing.wrappedValue && hasActiveSite
     }
 
     /// The clear control appears while there is an edit in progress and

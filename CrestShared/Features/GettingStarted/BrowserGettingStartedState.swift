@@ -83,8 +83,8 @@ struct BrowserGettingStartedChapter: Hashable, Identifiable, Sendable {
 struct BrowserGettingStartedLesson: Hashable, Identifiable, Sendable {
     // MARK: - Types
 
-    /// Each lesson offers its own practice action, so the place that builds a
-    /// lesson's actions switches over the kind.
+    /// Each lesson offers its own practice actions. Each guide switches on the
+    /// kind to choose that lesson's concrete actions view.
     enum Kinds: Sendable {
         case pin
         case save

@@ -75,7 +75,7 @@ public sealed partial class BrowserContractsTests {
         // site, a subdomain of it or a domain it is a subdomain of.
         var arc = ReadSpaces(ImportedSpace("Mail", ImportedTab("https://mail.example.com/")),
             ImportedSpace("Root", ImportedTab("https://example.com/")));
-        var counts = ImportPasswordRouting.Counts(ImportSource.Arc,
+        var counts = ImportSource.Arc.PasswordCounts(
             [new("Arc", "example.com"), new("Arc", "accounts.example.com"), new("Arc", "notexample.com")], arc);
         Assert.Equal((1, 2), (counts.GetValueOrDefault(arc[0].Id), counts.GetValueOrDefault(arc[1].Id)));
     }

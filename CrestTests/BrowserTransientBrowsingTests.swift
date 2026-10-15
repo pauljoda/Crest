@@ -61,15 +61,15 @@ final class BrowserTransientBrowsingTests: XCTestCase {
 
     func testPullReleaseRequiresDistanceAndRejectsVelocityBackTowardTheLink() {
         for translation in [CGSize(width: 80, height: 0), CGSize(width: -60, height: 80)] {
-            XCTAssertTrue(BrowserLinkDragReleasePolicy.opensPeek(translation: translation, velocity: translation))
+            XCTAssertTrue(BrowserPeekPullSession.opensPeek(translation: translation, velocity: translation))
             XCTAssertFalse(
-                BrowserLinkDragReleasePolicy.opensPeek(
+                BrowserPeekPullSession.opensPeek(
                     translation: translation,
                     velocity: CGSize(width: -translation.width, height: -translation.height)))
-            XCTAssertTrue(BrowserLinkDragReleasePolicy.opensPeek(translation: translation, velocity: .zero))
+            XCTAssertTrue(BrowserPeekPullSession.opensPeek(translation: translation, velocity: .zero))
         }
         XCTAssertFalse(
-            BrowserLinkDragReleasePolicy.opensPeek(
+            BrowserPeekPullSession.opensPeek(
                 translation: CGSize(width: 4, height: 3), velocity: CGSize(width: 900, height: 900)))
     }
 
@@ -410,21 +410,21 @@ final class BrowserTransientBrowsingTests: XCTestCase {
         let access = makeAccessController()
 
         XCTAssertEqual(
-            BrowserTransientSessionPolicy.disposition(
+            BrowserTransientLeaseDisposition(
                 isPresentingRequest: false, space: locked, isLocked: access.isLocked),
             .notPresented
         )
         XCTAssertEqual(
-            BrowserTransientSessionPolicy.disposition(isPresentingRequest: true, space: nil, isLocked: access.isLocked),
+            BrowserTransientLeaseDisposition(isPresentingRequest: true, space: nil, isLocked: access.isLocked),
             .sourceMissing
         )
         XCTAssertEqual(
-            BrowserTransientSessionPolicy.disposition(
+            BrowserTransientLeaseDisposition(
                 isPresentingRequest: true, space: locked, isLocked: access.isLocked),
             .sourceLocked
         )
         XCTAssertEqual(
-            BrowserTransientSessionPolicy.disposition(
+            BrowserTransientLeaseDisposition(
                 isPresentingRequest: true, space: open, isLocked: access.isLocked),
             .usable(open)
         )
@@ -442,38 +442,26 @@ final class BrowserTransientBrowsingTests: XCTestCase {
         XCTAssertTrue(browser.family.beginDeletingSpace(deleting.id))
         defer { browser.family.finishDeletingSpace(deleting.id) }
 
-        let offered = BrowserTransientSessionPolicy.availableSpaces(
-            in: browser, requestSpaceID: lockedSource.id, isLocked: access.isLocked)
+        let offered = browser.transientSpaces(forRequestIn: lockedSource.id, isLocked: access.isLocked)
 
         XCTAssertEqual(offered.map(\.id), [lockedSource.id, open.id])
     }
 
-    func testTransientLeaseIsReusedOnlyByItsRequestAssignment() {
+    func testTransientLeaseIsReusedOnlyByItsRequestAssignment() throws {
         let space = makePolicySpace(name: "Source")
         let other = makePolicySpace(name: "Destination")
         let assignment = BrowserSpaceRuntimeAssignment(space: space)
+        let browser = BrowserStore.hostingPages(SessionState.Seed(spaces: [space, other]), showing: space.id)
+        let pool = BrowserPagePool(browser: browser)
+        let lease = try XCTUnwrap(
+            pool.makeTransientPageLease(
+                url: try XCTUnwrap(URL(string: "about:blank")), in: try XCTUnwrap(browser.spaceModel(space.id)))
+        )
 
-        XCTAssertTrue(
-            BrowserTransientSessionPolicy.reusesLease(
-                leaseAssignment: assignment,
-                requestAssignment: assignment,
-                leaseCanBeReused: true
-            )
-        )
-        XCTAssertFalse(
-            BrowserTransientSessionPolicy.reusesLease(
-                leaseAssignment: assignment,
-                requestAssignment: assignment,
-                leaseCanBeReused: false
-            )
-        )
-        XCTAssertFalse(
-            BrowserTransientSessionPolicy.reusesLease(
-                leaseAssignment: assignment,
-                requestAssignment: BrowserSpaceRuntimeAssignment(space: other),
-                leaseCanBeReused: true
-            )
-        )
+        XCTAssertTrue(lease.isReusable(for: assignment))
+        XCTAssertFalse(lease.isReusable(for: BrowserSpaceRuntimeAssignment(space: other)))
+        lease.release()
+        XCTAssertFalse(lease.isReusable(for: assignment))
     }
 
     private func makePolicySpace(name: String) -> SpaceState.Seed {

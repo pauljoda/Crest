@@ -19,7 +19,7 @@ struct BrowserReloadControl: View {
         width: CrestLayout.minimumHitTarget,
         height: CrestLayout.minimumHitTarget
     )
-    var symbolPointSize = BrowserReloadFeedbackPolicy.symbolPointSize
+    var symbolPointSize = BrowserChromeSymbolLabel.defaultPointSize
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var reloadPulse = 0
@@ -30,10 +30,7 @@ struct BrowserReloadControl: View {
         HStack(spacing: 0) {
             Button(action: performPrimaryAction) {
                 BrowserReloadFeedbackIcon(
-                    systemName: BrowserReloadFeedbackPolicy.symbolName(
-                        isLoading: isLoading,
-                        isPlayingFeedback: isPlayingReloadFeedback
-                    ),
+                    systemName: symbolName,
                     pulse: reloadPulse,
                     animates: !reduceMotion,
                     pointSize: symbolPointSize,
@@ -92,6 +89,11 @@ struct BrowserReloadControl: View {
                 : Color.secondary.opacity(CrestOpacity.controlDisabledForeground)
         )
         .disabled(!isEnabled)
+    }
+
+    /// Stop while a load runs, unless the reload feedback is still turning.
+    private var symbolName: String {
+        isLoading && !isPlayingReloadFeedback ? "xmark" : "arrow.clockwise"
     }
 
     private func performPrimaryAction() {

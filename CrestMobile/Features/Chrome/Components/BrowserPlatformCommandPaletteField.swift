@@ -41,7 +41,7 @@ struct BrowserPlatformCommandPaletteField: UIViewRepresentable {
         field.font = .preferredFont(forTextStyle: .title2)
         field.adjustsFontForContentSizeCategory = true
         field.placeholder = String(localized: "Search or Enter URL…")
-        field.keyboardType = BrowserAddressKeyboardPolicy.keyboardType
+        field.keyboardType = BrowserPlatformAddressInputModifier.keyboardType
         field.textContentType = nil
         field.autocapitalizationType = .none
         field.autocorrectionType = .no

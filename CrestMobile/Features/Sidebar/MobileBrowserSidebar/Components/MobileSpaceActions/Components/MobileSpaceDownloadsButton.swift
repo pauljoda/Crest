@@ -19,9 +19,7 @@ struct MobileSpaceDownloadsButton: View {
                 BrowserUtilityNotificationBadge(
                     count: newDownloads.count,
                     tint: badgeColor,
-                    progress: BrowserDownloadNotificationPolicy.progress(
-                        in: downloads
-                    )
+                    progress: downloads.notificationProgress
                 )
                 .offset(
                     x: BrowserUtilitySwitcherLayout.notificationBadgeOffset,

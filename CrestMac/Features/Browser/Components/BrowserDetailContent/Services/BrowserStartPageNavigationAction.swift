@@ -8,11 +8,8 @@ struct BrowserStartPageNavigationAction {
 
     func perform(_ source: BrowserTabRuntimeAssignment, url: URL) -> Bool {
         guard
-            BrowserCommandPaletteActionPolicy.isSourceAvailable(
-                source,
-                in: browser,
-                accessController: spaceAccess
-            ), browser.shownTab?.surface == .startPage
+            browser.isPaletteSourceAvailable(source, accessController: spaceAccess),
+            browser.shownTab?.surface == .startPage
         else { return false }
         browser.navigateSelectedTab(to: url.absoluteString)
         // A cold launch or unloaded Space has no active page to receive load().

@@ -26,7 +26,7 @@ final class BrowserChromeLayoutTests: XCTestCase {
 
         XCTAssertEqual(presentation.requestedSpaceID, second)
         XCTAssertEqual(presentation.requestedAssignment, secondAssignment)
-        XCTAssertEqual(presentation.request, .destination(.shortcuts))
+        XCTAssertEqual((presentation.request as? BrowserSettingsDestinationRequest)?.destination, .shortcuts)
         XCTAssertEqual(presentation.revision, 2)
     }
 
@@ -42,7 +42,7 @@ final class BrowserChromeLayoutTests: XCTestCase {
         presentation.present(.shortcuts, assignment: assignment)
         presentation.present(.shortcuts, assignment: assignment)
 
-        XCTAssertEqual(presentation.request, .destination(.shortcuts))
+        XCTAssertEqual((presentation.request as? BrowserSettingsDestinationRequest)?.destination, .shortcuts)
         XCTAssertEqual(presentation.requestedSpaceID, spaceID)
         XCTAssertEqual(presentation.revision, 2)
     }
@@ -62,20 +62,20 @@ final class BrowserChromeLayoutTests: XCTestCase {
 
     func testCertificateReviewRequiresHTTPSAndServerTrust() {
         XCTAssertTrue(
-            BrowserSiteCertificatePresentationPolicy.isAvailable(
-                url: URL(string: "https://example.com"),
+            BrowserPage.canReviewCertificate(
+                of: URL(string: "https://example.com"),
                 hasServerTrust: true
             )
         )
         XCTAssertFalse(
-            BrowserSiteCertificatePresentationPolicy.isAvailable(
-                url: URL(string: "http://example.com"),
+            BrowserPage.canReviewCertificate(
+                of: URL(string: "http://example.com"),
                 hasServerTrust: true
             )
         )
         XCTAssertFalse(
-            BrowserSiteCertificatePresentationPolicy.isAvailable(
-                url: URL(string: "https://example.com"),
+            BrowserPage.canReviewCertificate(
+                of: URL(string: "https://example.com"),
                 hasServerTrust: false
             )
         )
@@ -123,19 +123,18 @@ final class BrowserChromeLayoutTests: XCTestCase {
     }
 
     func testPeekKeyboardDismissalLeavesReturnToThePage() {
-        XCTAssertEqual(
-            BrowserPeekKeyboardPolicy.action(forKeyCode: 53, modifierFlags: []),
-            .dismiss
+        XCTAssertTrue(
+            BrowserPeekKeyboardMonitorCoordinator.dismisses(keyCode: 53, modifierFlags: [])
         )
-        XCTAssertNil(
-            BrowserPeekKeyboardPolicy.action(forKeyCode: 36, modifierFlags: [])
+        XCTAssertFalse(
+            BrowserPeekKeyboardMonitorCoordinator.dismisses(keyCode: 36, modifierFlags: [])
         )
-        XCTAssertNil(
-            BrowserPeekKeyboardPolicy.action(forKeyCode: 76, modifierFlags: [])
+        XCTAssertFalse(
+            BrowserPeekKeyboardMonitorCoordinator.dismisses(keyCode: 76, modifierFlags: [])
         )
-        XCTAssertNil(
-            BrowserPeekKeyboardPolicy.action(
-                forKeyCode: 36,
+        XCTAssertFalse(
+            BrowserPeekKeyboardMonitorCoordinator.dismisses(
+                keyCode: 36,
                 modifierFlags: [.command]
             )
         )
@@ -190,26 +189,60 @@ final class BrowserChromeLayoutTests: XCTestCase {
         XCTAssertNil(transaction.commit())
     }
 
+    /// A pointer that reveals the floating sidebar from the window edge can
+    /// leave the window before the card slides under it. That still counts as
+    /// leaving, or the sidebar stays out until the pointer returns to it, and
+    /// each new reveal reports it again. A sidebar opened any other way waits
+    /// for the pointer to arrive first.
+    @MainActor
+    func testSidebarRevealedByThePointerHidesWhenThePointerLeavesBeforeArriving() {
+        let window = NSWindow(
+            contentRect: NSRect(x: 100, y: 100, width: 800, height: 600),
+            styleMask: [.titled], backing: .buffered, defer: true
+        )
+        var reports: [Bool] = []
+        let tracker = BrowserSidebarHoverTrackingView(
+            notificationCenter: NotificationCenter(),
+            pointerLocation: { NSPoint(x: 40, y: 300) },
+            onHoverChange: { reports.append($0) }
+        )
+        tracker.frame = NSRect(x: 0, y: 0, width: 300, height: 600)
+        window.contentView?.addSubview(tracker)
+
+        tracker.refreshPointerHover()
+        XCTAssertEqual(reports, [])
+
+        tracker.isRevealedByPointer = true
+        tracker.refreshPointerHover()
+        XCTAssertEqual(reports, [false])
+
+        // The pointer touches the edge again before the region is taken down.
+        tracker.isRevealedByPointer = false
+        tracker.isRevealedByPointer = true
+        tracker.refreshPointerHover()
+        XCTAssertEqual(reports, [false, false])
+    }
+
     /// The shared direction source for the compact toolbar's horizontal swipe.
     ///
     /// What that swipe *does* is no longer this policy's business — on iOS it
-    /// pages Split View cards, routed by `MobileToolbarSwipePolicy` — but "next"
+    /// pages Split View cards, routed by `MobileToolbarSwipeMode` — but "next"
     /// still has to mean the trailing neighbour in both writing directions, and
     /// this is the only place that decides it.
 
     func testSidebarAuxiliaryMouseButtonsSwitchSpacesWithoutClaimingOtherButtons() {
         XCTAssertEqual(
-            BrowserSidebarMouseButtonPolicy.action(for: 3),
+            BrowserSidebarMouseButtonAction(buttonNumber: 3),
             .previousSpace
         )
         XCTAssertEqual(
-            BrowserSidebarMouseButtonPolicy.action(for: 4),
+            BrowserSidebarMouseButtonAction(buttonNumber: 4),
             .nextSpace
         )
-        XCTAssertNil(BrowserSidebarMouseButtonPolicy.action(for: 0))
-        XCTAssertNil(BrowserSidebarMouseButtonPolicy.action(for: 1))
-        XCTAssertNil(BrowserSidebarMouseButtonPolicy.action(for: 2))
-        XCTAssertNil(BrowserSidebarMouseButtonPolicy.action(for: 5))
+        XCTAssertNil(BrowserSidebarMouseButtonAction(buttonNumber: 0))
+        XCTAssertNil(BrowserSidebarMouseButtonAction(buttonNumber: 1))
+        XCTAssertNil(BrowserSidebarMouseButtonAction(buttonNumber: 2))
+        XCTAssertNil(BrowserSidebarMouseButtonAction(buttonNumber: 5))
     }
 
     func testAuxiliaryMouseButtonsStayWithinWebpageScope() {
@@ -218,17 +251,15 @@ final class BrowserChromeLayoutTests: XCTestCase {
             .nextSpace,
         ] {
             XCTAssertEqual(
-                BrowserSidebarMouseButtonPolicy.disposition(
+                BrowserSidebarMousePointerScope.webpage.disposition(
                     for: action,
-                    pointerScope: .webpage,
                     canNavigatePage: true
                 ),
                 .navigatePage(action)
             )
             XCTAssertEqual(
-                BrowserSidebarMouseButtonPolicy.disposition(
+                BrowserSidebarMousePointerScope.webpage.disposition(
                     for: action,
-                    pointerScope: .webpage,
                     canNavigatePage: false
                 ),
                 .consume
@@ -242,17 +273,15 @@ final class BrowserChromeLayoutTests: XCTestCase {
             .nextSpace,
         ] {
             XCTAssertEqual(
-                BrowserSidebarMouseButtonPolicy.disposition(
+                BrowserSidebarMousePointerScope.sidebar.disposition(
                     for: action,
-                    pointerScope: .sidebar,
                     canNavigatePage: true
                 ),
                 .switchSpace(action)
             )
             XCTAssertEqual(
-                BrowserSidebarMouseButtonPolicy.disposition(
+                BrowserSidebarMousePointerScope.sidebar.disposition(
                     for: action,
-                    pointerScope: .sidebar,
                     canNavigatePage: false
                 ),
                 .switchSpace(action)
@@ -263,9 +292,9 @@ final class BrowserChromeLayoutTests: XCTestCase {
     /// A swipe no page took, such as a mouse's Back action over a Chromium
     /// page, moves the way WebKit's views and Chrome's windows move it.
     func testUnhandledSwipeGoesBackOnAPositiveDeltaAsTheEnginesDo() {
-        XCTAssertEqual(BrowserSidebarMouseButtonPolicy.action(forSwipeDeltaX: 1), .previousSpace)
-        XCTAssertEqual(BrowserSidebarMouseButtonPolicy.action(forSwipeDeltaX: -1), .nextSpace)
-        XCTAssertNil(BrowserSidebarMouseButtonPolicy.action(forSwipeDeltaX: 0))
+        XCTAssertEqual(BrowserSidebarMouseButtonAction(swipeDeltaX: 1), .previousSpace)
+        XCTAssertEqual(BrowserSidebarMouseButtonAction(swipeDeltaX: -1), .nextSpace)
+        XCTAssertNil(BrowserSidebarMouseButtonAction(swipeDeltaX: 0))
     }
 
     func testAuxiliaryMouseButtonsRemainUnclaimedOutsidePageAndSidebar() {
@@ -274,9 +303,8 @@ final class BrowserChromeLayoutTests: XCTestCase {
             .nextSpace,
         ] {
             XCTAssertNil(
-                BrowserSidebarMouseButtonPolicy.disposition(
+                BrowserSidebarMousePointerScope.unowned.disposition(
                     for: action,
-                    pointerScope: .unowned,
                     canNavigatePage: true
                 )
             )
@@ -340,6 +368,7 @@ final class BrowserChromeLayoutTests: XCTestCase {
         XCTAssertNil(firstWindow.utilityPresentation.surface)
     }
 
+    /// Commands reveal their list without overriding the owning window's docked-sidebar preference.
     @MainActor
     func testShowListCommandsBringTheirListOnScreen() {
         let browser = BrowserStore.hostingPages()
@@ -351,7 +380,9 @@ final class BrowserChromeLayoutTests: XCTestCase {
         for (command, surface) in lists {
             let hidden = BrowserChromeState(sidebarIsPresented: false)
             BrowserCommandActions(browser: browser, pages: pages, chrome: hidden, windows: nil).perform(command)
-            XCTAssertEqual(hidden.columnVisibility, .all, "\(command.name) docks a hidden sidebar.")
+            XCTAssertEqual(
+                hidden.columnVisibility, .detailOnly, "\(command.name) preserves the hidden sidebar preference.")
+            XCTAssertTrue(hidden.isFloatingSidebarPresented)
             XCTAssertEqual(hidden.utilityPresentation.surface, surface)
 
             let floating = BrowserChromeState(sidebarIsPresented: false)

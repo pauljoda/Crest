@@ -7,13 +7,14 @@ struct BrowserCrestStudioEmblem: View {
     /// that frames them and paints the emblem elsewhere.
     let isEmbedded: Bool
     @State private var source: CrestChargeKind
-    @State private var search = ""
-    @State private var showsAll = false
-    @State private var systemName = "sparkles"
-    @State private var emoji = "🦁"
-    @State private var monogram = "C"
-    @State private var monogramStyle = CrestMonogramStyle.serif
-    @State private var choosesEmoji = false
+    // The fields each emblem source edits, kept while another source is shown.
+    @State var search = ""
+    @State var showsAll = false
+    @State var systemName = "sparkles"
+    @State var emoji = "🦁"
+    @State var monogram = "C"
+    @State var monogramStyle = CrestMonogramStyle.serif
+    @State var choosesEmoji = false
 
     init(context: BrowserCrestStudioContext, symbol: String, isEmbedded: Bool = false) {
         self.context = context
@@ -68,85 +69,25 @@ struct BrowserCrestStudioEmblem: View {
     @ViewBuilder private var sourceControls: some View {
         switch source.kind {
         case .heraldic:
-            BrowserCrestStudioTextField(title: "Find an emblem", symbol: "magnifyingglass", text: $search)
-            let matches = CrestSymbol.selectable.filter {
-                search.isEmpty || String(localized: $0.title).localizedCaseInsensitiveContains(search)
-            }
-            let visible = search.isEmpty && !showsAll ? Array(matches.prefix(12)) : matches
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 84), spacing: 10)], spacing: 8) {
-                ForEach(visible, id: \.self) { choice in
-                    BrowserCrestStudioChoice(
-                        title: choice.title, selected: context.value.crest.resolvedCharge == .heraldic(choice)
-                    ) {
-                        context.branding.editorUpdate {
-                            $0.crest.symbol = choice
-                            $0.crest.charge = nil
-                            $0.hasCustomAppearance = true
-                        }
-                    } artwork: {
-                        BrowserSpaceCrestIcon(
-                            branding: context.preview {
-                                $0.crest.symbol = choice
-                                $0.crest.charge = nil
-                            }, size: 52, rasterizesLayers: false
-                        )
-                        .equatable()
-                    }
-                }
-            }
-            if search.isEmpty && matches.count > 12 {
-                Button(showsAll ? "Show fewer emblems" : "Browse all emblems (\(matches.count))") { showsAll.toggle() }
-                    .buttonStyle(.borderless)
-            } else if matches.isEmpty {
-                Text("No matching emblems. Try an SF Symbol or a monogram.").font(.caption).foregroundStyle(.secondary)
-            }
+            BrowserCrestStudioHeraldicEmblemControls(context: context, search: $search, showsAll: $showsAll)
         case .system:
             BrowserSystemSymbolPicker(selection: $systemName)
         case .emoji:
-            BrowserArtworkPickerButton(title: "Emoji", detail: Text("Change emoji")) {
-                choosesEmoji = true
-            } artwork: {
-                Text(emoji)
-            }
-            .accessibilityLabel("Choose Emoji")
-            .accessibilityValue(emoji)
-            .browserIconCustomizationPopover(
-                .init(
-                    isPresented: $choosesEmoji, title: "Emblem", currentEmoji: emoji,
-                    setEmoji: { emoji = $0 }))
+            BrowserCrestStudioEmojiEmblemControls(emoji: $emoji, choosesEmoji: $choosesEmoji)
         case .monogram:
-            BrowserCrestStudioTextField(title: "One or two letters", text: $monogram)
-            Picker("Letter style", selection: $monogramStyle) {
-                Text("Serif").tag(CrestMonogramStyle.serif)
-                Text("Sans").tag(CrestMonogramStyle.sans)
-            }.pickerStyle(.segmented)
-        case .none: EmptyView()
+            BrowserCrestStudioMonogramEmblemControls(monogram: $monogram, monogramStyle: $monogramStyle)
+        case .none:
+            EmptyView()
         }
     }
 
     private func commitSource() {
-        let charge: CrestCharge
-        switch source.kind {
-        case .heraldic: charge = .heraldic(context.value.crest.symbol)
-        case .system: charge = .system(systemName)
-        case .emoji: charge = .emoji(emoji)
-        case .monogram: charge = .monogram(monogram, monogramStyle)
-        case .none: charge = CrestCharge.none
-        }
-        context.crest(\.charge).binding.wrappedValue = charge
+        context.crest(\.charge).binding.wrappedValue = source.studioSource.charge(in: self)
     }
 
     private func load(_ charge: CrestCharge) {
         source = charge.kind
-        let text = charge.text ?? ""
-        switch charge.kind.kind {
-        case .system: if systemName != text { systemName = text }
-        case .emoji: if emoji != text { emoji = text }
-        case .monogram:
-            if monogram != text { monogram = text }
-            monogramStyle = charge.style ?? .serif
-        default: break
-        }
+        charge.kind.studioSource.load(charge, into: self)
     }
 }
 

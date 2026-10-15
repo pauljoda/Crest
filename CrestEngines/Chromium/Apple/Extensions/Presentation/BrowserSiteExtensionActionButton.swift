@@ -12,7 +12,6 @@ struct BrowserSiteExtensionActionButton: View {
     var body: some View {
         anchoredButton
             .contentShape(.rect)
-            .background(.quaternary, in: .rect(cornerRadius: 8))
             .onHover { isHovering = $0 }
     }
 

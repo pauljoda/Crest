@@ -7,7 +7,8 @@ import CoreGraphics
 /// pinned grid and a page-shaped card over the content area. Every number a
 /// morph interpolates lives here, which is what lets
 /// `BrowserTabDragPreviewLayout` interpolate any pair without knowing what
-/// either end means.
+/// either end means. The one number a shape does not own is a sidebar layer's
+/// corner, which follows the person's corner setting and is handed in.
 enum BrowserTabDragPreviewShape: Equatable, Sendable {
     /// A sidebar list row — the resting shape of every unpinned tab.
     case row
@@ -36,9 +37,11 @@ enum BrowserTabDragPreviewShape: Equatable, Sendable {
         }
     }
 
-    var cornerRadius: CGFloat {
+    /// The shape's corner, where `layerCornerRadius` is the corner of the
+    /// sidebar layer a row and a pinned tile are drawn as.
+    func cornerRadius(layerCornerRadius: CGFloat) -> CGFloat {
         switch self {
-        case .row, .pinnedTile: CrestRadius.control
+        case .row, .pinnedTile: layerCornerRadius
         // A drop preview that reads as a page has to be cornered like one.
         case .webpageCard: BrowserChromeLayout.pageCornerRadius
         }

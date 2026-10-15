@@ -24,7 +24,7 @@ public sealed partial class NativeSessionAuthority {
         ArgumentNullException.ThrowIfNull(authority);
         lock (Gate) {
             if (access is not null && !ReferenceEquals(access, authority))
-                throw new BrowserRuleException(BrowserRule.AccessAlreadyAttached);
+                throw new InvalidOperationException("A session consults one set of grants.");
             access = authority;
         }
     }

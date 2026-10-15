@@ -34,49 +34,52 @@ struct MobileDownloadsView: View {
         matching rowAssignment: BrowserSpaceRuntimeAssignment
     ) {
         guard rowAssignment == assignment,
-            downloadItem(for: action) != nil
+            let item = downloadItem(for: action)
         else { return }
-        switch action {
-        case .open(let itemID, let destination):
-            if let export = MobileBrowserFileExportDestination.exporting(destination) {
-                pages.exportDownload(itemID, to: export)
-            }
-        case .retry(let itemID):
-            pages.downloadCenter.retryAutomaticDownload(itemID, matching: assignment) { expectedAssignment in
-                BrowserSidebarAccessPolicy.unlockedSpace(
-                    matching: expectedAssignment,
-                    in: browser,
-                    accessController: spaceAccess
-                ) != nil
-            }
-        case .cancel(let itemID):
-            pages.cancelDownload(itemID)
-        case .pause(let itemID):
-            pages.downloadCenter.pause(itemID)
-        case .resume(let itemID):
-            pages.downloadCenter.resume(itemID)
-        case .clear(let itemID):
-            pages.clearDownload(itemID)
-        }
+        action.perform(on: self, for: item, matching: assignment)
     }
 
     private func downloadItem(
         for action: BrowserUtilityDownloadAction
     ) -> DownloadState? {
-        BrowserSidebarUtilityActionPolicy.downloadItem(
-            for: action,
-            matching: assignment,
-            in: browser,
-            accessController: spaceAccess,
-            itemsForProfile: pages.downloadCenter.items(for:)
-        )
+        action.downloadItem(
+            matching: assignment, in: browser, accessController: spaceAccess,
+            itemsForProfile: pages.downloadCenter.items(for:))
     }
 
     private var space: SpaceModel? {
-        BrowserSidebarAccessPolicy.selectedUnlockedSpace(
-            matching: assignment,
-            in: browser,
-            accessController: spaceAccess
-        )
+        browser.selectedUnlockedSpace(matching: assignment, accessController: spaceAccess)
+    }
+}
+
+// MARK: - Actions - Downloads
+
+extension MobileDownloadsView: BrowserDownloadActionPerformer {
+    func openDownload(_ item: DownloadState, in destination: BrowserUtilityDownloadDestination) {
+        if let export = MobileBrowserFileExportDestination.exporting(destination) {
+            pages.exportDownload(item.id, to: export)
+        }
+    }
+
+    func retryDownload(_ item: DownloadState, matching assignment: BrowserSpaceRuntimeAssignment) {
+        pages.downloadCenter.retryAutomaticDownload(item.id, matching: assignment) { expectedAssignment in
+            browser.unlockedSpace(matching: expectedAssignment, accessController: spaceAccess) != nil
+        }
+    }
+
+    func pauseDownload(_ item: DownloadState) {
+        pages.downloadCenter.pause(item.id)
+    }
+
+    func resumeDownload(_ item: DownloadState) {
+        pages.downloadCenter.resume(item.id)
+    }
+
+    func cancelDownload(_ item: DownloadState) {
+        pages.cancelDownload(item.id)
+    }
+
+    func clearDownload(_ item: DownloadState) {
+        pages.clearDownload(item.id)
     }
 }

@@ -168,7 +168,7 @@ final class BrowserMacShell {
     /// does for every one it accepts.
     func openExternal(_ urls: [URL]) -> Bool {
         let accepted = urls.filter {
-            $0.isFileURL ? BrowserCorePolicy.acceptsLocalDocument($0) : BrowserCorePolicy.acceptsExternalURL($0)
+            $0.isFileURL ? ExternalLocalDocument.accepts($0) : ExternalWebLink.accepts($0)
         }
         guard !accepted.isEmpty else { return true }
         guard let running else {
@@ -190,7 +190,7 @@ final class BrowserMacShell {
     func openAuthenticationSession(
         _ url: URL, window windowID: UUID, declined: @escaping @MainActor () -> Void
     ) -> Bool {
-        guard BrowserCorePolicy.acceptsExternalURL(url) else { return false }
+        guard ExternalWebLink.accepts(url) else { return false }
         guard let running else {
             pendingSignIns.append(PendingSignIn(url: url, windowID: windowID, declined: declined))
             return true

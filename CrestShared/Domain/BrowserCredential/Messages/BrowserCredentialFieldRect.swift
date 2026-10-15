@@ -14,7 +14,7 @@ import Foundation
 /// layer only imports Foundation. Turning CSS pixels into a shell's points is
 /// the drawing layer's job anyway: it is the only layer that knows the page's
 /// zoom.
-struct BrowserCredentialFieldRect: Equatable, Sendable {
+struct BrowserCredentialFieldRect: Equatable, Sendable, Decodable {
     /// The largest coordinate or size a page may claim. A document can be very
     /// tall, but nothing honest is a million CSS pixels across.
     static let coordinateLimit: Double = 1_000_000
@@ -24,16 +24,22 @@ struct BrowserCredentialFieldRect: Equatable, Sendable {
     let width: Double
     let height: Double
 
-    init?(body: Any?) {
-        guard let dictionary = body as? [String: Any],
-            let x = Self.coordinate(dictionary["x"]),
-            let y = Self.coordinate(dictionary["y"]),
-            let width = Self.coordinate(dictionary["width"]),
-            let height = Self.coordinate(dictionary["height"]),
-            width > 0,
-            height > 0
-        else {
-            return nil
+    private enum CodingKeys: String, CodingKey {
+        case x
+        case y
+        case width
+        case height
+    }
+
+    init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let x = try Self.coordinate(.x, in: container)
+        let y = try Self.coordinate(.y, in: container)
+        let width = try Self.coordinate(.width, in: container)
+        let height = try Self.coordinate(.height, in: container)
+        guard width > 0, height > 0 else {
+            throw DecodingError.dataCorruptedError(
+                forKey: .width, in: container, debugDescription: "A field rect has a positive size.")
         }
         self.x = x
         self.y = y
@@ -48,11 +54,13 @@ struct BrowserCredentialFieldRect: Equatable, Sendable {
         self.height = height
     }
 
-    private static func coordinate(_ value: Any?) -> Double? {
-        guard let number = value as? NSNumber else { return nil }
-        let candidate = number.doubleValue
+    private static func coordinate(
+        _ key: CodingKeys, in container: KeyedDecodingContainer<CodingKeys>
+    ) throws -> Double {
+        let candidate = try container.decode(Double.self, forKey: key)
         guard candidate.isFinite, abs(candidate) <= coordinateLimit else {
-            return nil
+            throw DecodingError.dataCorruptedError(
+                forKey: key, in: container, debugDescription: "A coordinate is finite and bounded.")
         }
         return candidate
     }

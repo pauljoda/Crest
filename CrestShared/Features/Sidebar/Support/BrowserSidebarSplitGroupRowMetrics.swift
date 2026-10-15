@@ -6,25 +6,17 @@ import CoreGraphics
 /// None of this describes a member. A group holds the *same* rows the tab list
 /// draws everywhere else — full height, full favicon, full trailing control —
 /// so a member's own geometry comes from `BrowserSidebarTabRowMetrics`. What
-/// is left is the container those rows sit in: how far it is held off the
-/// sidebar's edge, how far the rows are held off its own, how far apart they
-/// stack, and the slim strip above them that names the group.
+/// is left is how far apart the rows stack, and the slim strip above them that
+/// names the group.
 ///
-/// Two of the container's insets are deliberately absent here because they are
-/// not the container's to choose. Its inset from the sidebar edge is the tab
-/// row's `surfaceHorizontalInset`, so a group lines up in the same column as
-/// the tabs above and below it, and the header's leading inset is the tab
-/// row's `contentLeadingInset`, so the count glyph sits in the same column as
-/// the member favicons. Both are read from the tab row profile the same
-/// capabilities resolve.
+/// The container's insets are deliberately absent here because they are not
+/// the container's to choose. Its inset from the sidebar edge, the padding it
+/// holds its rows in by, the space it keeps from its neighbours and its corners
+/// are the ones a folder uses too, from `BrowserSidebarMetrics`, so a group
+/// lines up in the same column as the tabs above and below it. The header's
+/// leading inset is the tab row's `contentLeadingInset`, so the count glyph
+/// sits in the same column as the member favicons.
 struct BrowserSidebarSplitGroupRowMetrics: Equatable, Sendable {
-    /// Half the visible gutter between neighboring grouped surfaces, kept on
-    /// the row so drag geometry includes the resting separation.
-    let rowVerticalInset: CGFloat
-
-    /// The inset between the container's edge and the rows inside it.
-    let containerPadding: CGFloat
-
     /// The gap between the header and the first member, and between members.
     ///
     /// A pointer shell stacks them flush: the rows are a fixed band each, and
@@ -45,8 +37,6 @@ struct BrowserSidebarSplitGroupRowMetrics: Equatable, Sendable {
     /// A pointer shell: members flush against one another under a compact
     /// header strip.
     static let pointer = BrowserSidebarSplitGroupRowMetrics(
-        rowVerticalInset: CrestSpacing.extraExtraSmall,
-        containerPadding: CrestSpacing.extraSmall,
         memberSpacing: 0,
         headerHeight: 30,
         headerGlyphSize: 16,
@@ -57,8 +47,6 @@ struct BrowserSidebarSplitGroupRowMetrics: Equatable, Sendable {
     /// slightly taller header carrying a slightly larger glyph, both read at
     /// arm's length rather than at a desk.
     static let touch = BrowserSidebarSplitGroupRowMetrics(
-        rowVerticalInset: CrestSpacing.extraExtraSmall,
-        containerPadding: CrestSpacing.extraSmall,
         memberSpacing: CrestSpacing.extraExtraSmall,
         headerHeight: 44,
         headerGlyphSize: 20,

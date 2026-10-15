@@ -3,7 +3,7 @@ import Foundation
 @MainActor
 final class BrowserFaviconSession {
     private let document: any BrowserFaviconDocument
-    private let policy: BrowserFaviconCapturePolicy
+    private let schedule: BrowserFaviconCaptureSchedule
     private let wait: @MainActor (Duration) async throws -> Void
     private let receive: (Data) -> Void
     private var generation: UInt64 = 0
@@ -13,12 +13,12 @@ final class BrowserFaviconSession {
 
     init(
         document: any BrowserFaviconDocument,
-        policy: BrowserFaviconCapturePolicy = .immediate,
+        policy schedule: BrowserFaviconCaptureSchedule = .immediate,
         wait: @escaping @MainActor (Duration) async throws -> Void = { try await Task.sleep(for: $0) },
         receive: @escaping (Data) -> Void
     ) {
         self.document = document
-        self.policy = policy
+        self.schedule = schedule
         self.wait = wait
         self.receive = receive
     }
@@ -60,13 +60,13 @@ final class BrowserFaviconSession {
         requestedDocumentURL = url
         let requestGeneration = generation
         let document = document
-        let policy = policy
+        let schedule = schedule
         let wait = wait
         let task = Task { [weak self] in
             let isCurrent = { [weak self] in
                 !Task.isCancelled && self?.generation == requestGeneration && document.url == url
             }
-            let data = await Self.load(document, url: url, policy: policy, wait: wait, isCurrent: isCurrent)
+            let data = await Self.load(document, url: url, schedule: schedule, wait: wait, isCurrent: isCurrent)
             guard isCurrent() else {
                 if Task.isCancelled, self?.generation == requestGeneration {
                     self?.task = nil
@@ -85,7 +85,7 @@ final class BrowserFaviconSession {
     private static func load(
         _ document: any BrowserFaviconDocument,
         url: URL,
-        policy: BrowserFaviconCapturePolicy,
+        schedule: BrowserFaviconCaptureSchedule,
         wait: @MainActor (Duration) async throws -> Void,
         isCurrent: () -> Bool
     ) async -> Data? {
@@ -98,7 +98,7 @@ final class BrowserFaviconSession {
         guard isCurrent() else { return nil }
         if let fallback { return fallback }
 
-        for delay in policy.retryDelays {
+        for delay in schedule.retryDelays {
             do { try await wait(delay) } catch { return nil }
             guard isCurrent() else { return nil }
             let captured = await document.capture()
