@@ -334,6 +334,11 @@ final class BrowserMacWindows {
         let quickWindow = QuickWindow(
             model: model, request: current, chrome: BrowserChromeState(sidebarIsPresented: false))
         quickWindows[request.id] = quickWindow
+        // Notices from the page's services reach the Quick Window while it is
+        // key, as they reach a browser window.
+        BrowserNoticeCenter.shared.register(quickWindow.chrome) { [weak self] in
+            self?.quickWindow(request.id)?.isKeyWindow == true
+        }
         show(
             .quick, id: request.id, closeGate: model.closeGate,
             content: { window in
