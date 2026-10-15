@@ -94,6 +94,34 @@ final class BrowserSidebarTabActionsTests: XCTestCase {
         XCTAssertEqual(context.browser.spaceModel(destination.spaceID)?.tabs.values, destinationTabs)
     }
 
+    /// Entering the destination Space shows the tab the link opened, though
+    /// its page is not resident yet, instead of the Start Page.
+    func testLinkDestinationKeepsTheNewTabShownThroughSpaceEntry() throws {
+        let sourceTab = TabState.Seed(
+            title: "Source", url: URL(string: "https://source.crest.test"), placement: .current)
+        let source = SpaceState.Seed(name: "Source", symbol: "circle", accent: .indigo, folders: [], tabs: [sourceTab])
+        let destination = SpaceState.Seed(name: "Destination", symbol: "circle", accent: .rose, folders: [], tabs: [])
+        let browser = BrowserStore.hostingPages(
+            SessionState.Seed(spaces: [source, destination]), showing: source.id, tabs: [source.id: sourceTab.id])
+        let pages = BrowserPagePool(browser: browser, usesEphemeralWebsiteDataStores: true)
+        defer { pages.reconcile(validTabIDs: []) }
+        let access = BrowserSpaceAccessController()
+        browser.attachSpaceAccess(access)
+        let host = BrowserLinkDestinationHost(browser: browser, spaceAccess: access)
+        let from = BrowserTabRuntimeAssignment(tabID: sourceTab.id, spaceID: source.id, profileID: source.profileID)
+        let address = try XCTUnwrap(URL(string: "https://destination.crest.test/article"))
+
+        XCTAssertTrue(host.openLink(address, from: from, in: BrowserSpaceRuntimeAssignment(space: destination)))
+        let opened = try XCTUnwrap(browser.shownTab?.id)
+        pages.selectSpace(in: browser)
+
+        XCTAssertEqual(browser.selectedSpaceID, destination.id)
+        XCTAssertEqual(browser.shownTab?.id, opened)
+        XCTAssertEqual(browser.shownTab?.address, address)
+        XCTAssertEqual(pages.activePage?.spaceID, destination.id)
+        XCTAssertEqual(pages.activePage?.profileID, destination.profileID)
+    }
+
     func testSelectionSearchRejectsEmptyOrInvalidatedSources() throws {
         let invalidations: [(Context) -> Void] = [
             { $0.browser.selectSpace($0.otherSpace.id) },

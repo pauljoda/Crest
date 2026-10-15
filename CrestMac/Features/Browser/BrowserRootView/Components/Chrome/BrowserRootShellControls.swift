@@ -18,16 +18,19 @@ struct BrowserRootShellControls: View {
             BrowserCollapsedSidebarRevealControl(
                 capabilities: interactionCapabilities,
                 showSidebar: presentFloatingSidebar,
+                revealsOnHover: false,
                 edge: sidebarEdge,
                 isWindowFocused: model.isWindowFocused,
                 pointerWidth: revealPointerWidth
             )
             // Shows the strip while its width changes in Settings.
             .background { BrowserSidebarRevealZonePreview() }
-            // The shared control keeps its capability-driven hover behavior for
-            // every pointer shell. The Mac shell also listens through AppKit so
-            // live WKWebView content cannot swallow the edge transition before
-            // SwiftUI sees it.
+            // The Mac shell reveals for a resting pointer through AppKit alone.
+            // Live WKWebView content cannot swallow the edge transition before
+            // AppKit sees it, and AppKit reports only in the key window. The
+            // strip's own hover reads focus a moment late, and reopened the
+            // sidebar under a pointer parked at the screen edge just after the
+            // window lost focus, where nothing would close it again.
             .overlay {
                 if revealMetrics.revealsOnHover {
                     BrowserCollapsedSidebarHoverTracker(
