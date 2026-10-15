@@ -17,7 +17,7 @@ struct BrowserNoticeLayer: View {
             }
         }
         .zIndex(BrowserRootMetrics.feedbackZIndex)
-        .onChange(of: chrome.noticeRevision) { _, revision in
+        .onChange(of: chrome.noticeRevision, initial: true) { _, revision in
             present(revision: revision)
         }
     }
