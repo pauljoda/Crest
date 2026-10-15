@@ -76,7 +76,11 @@ final class SpaceContentPagerView<Content: View & Equatable>: NSView {
         transition = nil
         for host in hosts.values {
             host.layer?.removeAllAnimations()
-            host.setFrameSize(bounds.size)
+            // A sidebar animation resizes this viewport on every frame. Keep
+            // offscreen pages cached without reflowing their native content.
+            if host.hostingView.rootView.contentPresentation != .inactive, host.frame.size != bounds.size {
+                host.setFrameSize(bounds.size)
+            }
         }
         if let snapshot {
             prepareHosts(
@@ -183,6 +187,14 @@ final class SpaceContentPagerView<Content: View & Equatable>: NSView {
             let contentPresentation = contentPresentation(at: index)
             if let host = hosts[key] {
                 let previous = host.hostingView.rootView.contentPresentation
+                if contentPresentation != .inactive, host.frame.size != bounds.size {
+                    host.setFrameSize(bounds.size)
+                }
+                if previous == .inactive, contentPresentation != .inactive {
+                    // Cached geometry may predate a sidebar resize. Restore
+                    // the release origin before its native animation starts.
+                    host.setFrameOrigin(origin(for: key, at: position))
+                }
                 var root = refresh ? makeRoot(space, space.id == selectedSpaceID) : host.hostingView.rootView
                 root.contentPresentation = contentPresentation
                 if host.hostingView.rootView.content != root.content || previous != contentPresentation {
@@ -237,7 +249,14 @@ final class SpaceContentPagerView<Content: View & Equatable>: NSView {
 
     private func positionHosts(at position: CGFloat) {
         for (key, host) in hosts {
-            let origin = origin(for: key, at: position)
+            var origin = origin(for: key, at: position)
+            if host.hostingView.rootView.contentPresentation == .inactive {
+                guard host.frame.intersects(bounds) else { continue }
+                // A wider viewport can expose a cached frame. Park it beyond
+                // the clip until prepareHosts admits it to a visible slide.
+                origin.x =
+                    origin.x < 0 ? min(origin.x, -host.frame.width) : max(origin.x, bounds.maxX + host.frame.width)
+            }
             if snapshot?.phase == .idle || needsMotion(host, to: origin) {
                 if host.frame.origin != origin { host.setFrameOrigin(origin) }
             }

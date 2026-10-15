@@ -189,6 +189,40 @@ final class BrowserChromeLayoutTests: XCTestCase {
         XCTAssertNil(transaction.commit())
     }
 
+    /// A pointer that reveals the floating sidebar from the window edge can
+    /// leave the window before the card slides under it. That still counts as
+    /// leaving, or the sidebar stays out until the pointer returns to it, and
+    /// each new reveal reports it again. A sidebar opened any other way waits
+    /// for the pointer to arrive first.
+    @MainActor
+    func testSidebarRevealedByThePointerHidesWhenThePointerLeavesBeforeArriving() {
+        let window = NSWindow(
+            contentRect: NSRect(x: 100, y: 100, width: 800, height: 600),
+            styleMask: [.titled], backing: .buffered, defer: true
+        )
+        var reports: [Bool] = []
+        let tracker = BrowserSidebarHoverTrackingView(
+            notificationCenter: NotificationCenter(),
+            pointerLocation: { NSPoint(x: 40, y: 300) },
+            onHoverChange: { reports.append($0) }
+        )
+        tracker.frame = NSRect(x: 0, y: 0, width: 300, height: 600)
+        window.contentView?.addSubview(tracker)
+
+        tracker.refreshPointerHover()
+        XCTAssertEqual(reports, [])
+
+        tracker.isRevealedByPointer = true
+        tracker.refreshPointerHover()
+        XCTAssertEqual(reports, [false])
+
+        // The pointer touches the edge again before the region is taken down.
+        tracker.isRevealedByPointer = false
+        tracker.isRevealedByPointer = true
+        tracker.refreshPointerHover()
+        XCTAssertEqual(reports, [false, false])
+    }
+
     /// The shared direction source for the compact toolbar's horizontal swipe.
     ///
     /// What that swipe *does* is no longer this policy's business — on iOS it
@@ -334,6 +368,7 @@ final class BrowserChromeLayoutTests: XCTestCase {
         XCTAssertNil(firstWindow.utilityPresentation.surface)
     }
 
+    /// Commands reveal their list without overriding the owning window's docked-sidebar preference.
     @MainActor
     func testShowListCommandsBringTheirListOnScreen() {
         let browser = BrowserStore.hostingPages()
@@ -345,7 +380,9 @@ final class BrowserChromeLayoutTests: XCTestCase {
         for (command, surface) in lists {
             let hidden = BrowserChromeState(sidebarIsPresented: false)
             BrowserCommandActions(browser: browser, pages: pages, chrome: hidden, windows: nil).perform(command)
-            XCTAssertEqual(hidden.columnVisibility, .all, "\(command.name) docks a hidden sidebar.")
+            XCTAssertEqual(
+                hidden.columnVisibility, .detailOnly, "\(command.name) preserves the hidden sidebar preference.")
+            XCTAssertTrue(hidden.isFloatingSidebarPresented)
             XCTAssertEqual(hidden.utilityPresentation.surface, surface)
 
             let floating = BrowserChromeState(sidebarIsPresented: false)

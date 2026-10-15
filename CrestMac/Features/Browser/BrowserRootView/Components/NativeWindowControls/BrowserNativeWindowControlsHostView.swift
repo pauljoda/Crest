@@ -49,11 +49,11 @@ final class BrowserNativeWindowControlsHostView: NSView {
     private var toolbarVisibilityObservation: NSKeyValueObservation?
     private var windowObservers: [NSObjectProtocol] = []
     private var nativeButtonOrigins: [NSWindow.ButtonType: CGFloat] = [:]
-    var sidebarPosition: CGFloat = 0
-    var sidebarOnRight: Bool {
-        get { sidebarPosition == 1 }
-        set { sidebarPosition = newValue ? 1 : 0 }
-    }
+    var sidebarOnRight = false
+    /// Whether the controls are crossing the window with the sidebar. AppKit
+    /// lays its title bar out again on every window update, and putting them
+    /// straight at their destination then would cut the move short.
+    private var isMovingControls = false
     var sidebarWidth: CGFloat = BrowserChromeLayout.sidebarIdealWidth
     var isVisible = true {
         didSet {
@@ -142,13 +142,14 @@ final class BrowserNativeWindowControlsHostView: NSView {
 
     /// Move the existing AppKit controls inside their titlebar, retaining their
     /// native actions, accessibility, sizes and order. Fullscreen owns placement.
-    private func positionWindowControls() {
-        guard let window, !window.styleMask.contains(.fullScreen) else { return }
+    private func positionWindowControls(onRight: Bool? = nil, animated: Bool = false) {
+        guard let window, animated || !isMovingControls, !window.styleMask.contains(.fullScreen) else { return }
         let offset =
-            window.styleMask.windowControlsSidebarOffset(
+            (onRight ?? sidebarOnRight)
+            ? window.styleMask.windowControlsSidebarOffset(
                 windowWidth: window.contentView?.bounds.width ?? bounds.width,
                 sidebarWidth: sidebarWidth
-            ) * sidebarPosition
+            ) : 0
         for type in Self.buttonTypes {
             guard let button = window.standardWindowButton(type), let parent = button.superview else { continue }
             if nativeButtonOrigins[type] == nil {
@@ -157,16 +158,29 @@ final class BrowserNativeWindowControlsHostView: NSView {
             guard let nativeX = nativeButtonOrigins[type] else { continue }
             let target = parent.convert(NSPoint(x: nativeX + offset, y: 0), from: nil).x
             if abs(button.frame.minX - target) > 0.5 {
-                button.setFrameOrigin(NSPoint(x: target, y: button.frame.minY))
+                (animated ? button.animator() : button).setFrameOrigin(NSPoint(x: target, y: button.frame.minY))
             }
         }
+    }
+
+    /// Takes the controls to the sidebar's new side inside the animation the
+    /// sidebar crosses the window with.
+    func moveWindowControls(sidebarOnRight: Bool) {
+        self.sidebarOnRight = sidebarOnRight
+        isMovingControls = true
+        positionWindowControls(animated: true)
+    }
+
+    func finishMovingWindowControls() {
+        isMovingControls = false
+        applyBrowserChrome()
     }
 
     func restoreWindowChrome() {
         stopObservingWindow()
         guard let window, let originalChrome else { return }
-        sidebarOnRight = false
-        positionWindowControls()
+        isMovingControls = false
+        positionWindowControls(onRight: false)
         nativeButtonOrigins.removeAll()
         window.styleMask = window.styleMask.restoringBrowserChrome(to: originalChrome.styleMask)
         window.titleVisibility = originalChrome.titleVisibility
@@ -276,10 +290,7 @@ final class BrowserNativeWindowControlsHostView: NSView {
             positionWindowControls()
             return
         case NSWindow.willEnterFullScreenNotification:
-            let position = sidebarPosition
-            sidebarPosition = 0
-            positionWindowControls()
-            sidebarPosition = position
+            positionWindowControls(onRight: false)
             return
         case NSWindow.didEnterFullScreenNotification:
             observeFullScreenTitleBar()

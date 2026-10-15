@@ -2112,6 +2112,9 @@
     "Apple translates page text on this device. Languages may need to download first; Apple asks before downloading. Downloaded languages are shared with other apps and remain available after Private Browsing ends." : {
 
     },
+    "Apple Translation doesn’t support %@." : {
+
+    },
     "Apple Translation requires a physical device. It is not available in Simulator." : {
 
     },
@@ -10126,9 +10129,6 @@
           }
         }
       }
-    },
-    "Reader and page translation" : {
-
     },
     "Reader Mode" : {
       "localizations" : {

@@ -71,7 +71,7 @@ struct BrowserRootShellControls: View {
 
     private func collapsedSidebarHoverChanged(_ isHovering: Bool) {
         guard isHovering, model.isWindowFocused else { return }
-        presentFloatingSidebar()
+        model.revealFloatingSidebarFromPointer(reduceMotion: reduceMotion)
     }
 
     private func presentFloatingSidebar() {

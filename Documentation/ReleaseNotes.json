@@ -4078,6 +4078,45 @@
       "category": "fixed",
       "message": "Closing find in page returns the keyboard to the page, including a page in Peek, so arrow keys and Space scroll right away."
     },
-    "cross-space-link-tab-activation": {"category": "fixed", "message": "Opening a link in another Space keeps the new tab selected."}
+    "sidebar-hides-when-pointer-leaves-window": {
+      "category": "fixed",
+      "message": "A hidden sidebar that slides out at the window edge now hides again when the pointer moves on to another app."
+    },
+    "sidebar-offscreen-page-resizing": {
+      "category": "fixed",
+      "message": "Showing and hiding the sidebar is smoother when several Spaces are open."
+    },
+    "space-switch-keeps-sliding": {
+      "category": "fixed",
+      "message": "Switching Spaces again before the slide finishes keeps sliding toward the next Space instead of jumping to it."
+    },
+    "window-controls-follow-sidebar-side": {
+      "category": "fixed",
+      "message": "When the sidebar moves to the other side of the window, the window buttons travel with it instead of arriving first."
+    },
+    "smoother-live-resize": {
+      "category": "improved",
+      "message": "Resizing the window, a split or the sidebar is smoother."
+    },
+    "sidebar-utility-shortcuts": {
+      "category": "improved",
+      "message": "The History, Archive and Downloads shortcuts open and close their list, showing the sidebar for the moment when it is hidden, and Command-F searches the list that is open."
+    },
+    "translation-download-languages-no-crash": {
+      "category": "fixed",
+      "message": "Download Languages in Page Translation settings opens language downloads without Crest quitting."
+    },
+    "chromium-whole-page-translation": {
+      "category": "new",
+      "message": "Translate whole pages on device in Chromium too, with the same translation toolbar, automatic translation and Show Original as WebKit pages."
+    },
+    "translation-unsupported-page-language": {
+      "category": "fixed",
+      "message": "Pages in more languages, such as Swedish, now translate, and a page in a language Apple Translation doesn’t support says so instead of offering a translation that fails."
+    },
+    "cross-space-link-tab-activation": {
+      "category": "fixed",
+      "message": "Opening a link in another Space shows the link there instead of the Start Page."
+    }
   }
 }

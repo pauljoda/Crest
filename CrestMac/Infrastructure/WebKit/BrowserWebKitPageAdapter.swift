@@ -80,6 +80,7 @@ final class BrowserWebKitPageAdapter: BrowserPageEngineAdapter {
     var credentialEvaluator: BrowserCredentialSession.Evaluate? {
         BrowserCredentialSession.evaluator(in: webView)
     }
+    var translationDocument: BrowserTranslationDocument? { BrowserTranslationDocument(webView: webView) }
 
     // MARK: - Initializers
 

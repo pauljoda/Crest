@@ -41,8 +41,8 @@ enum BrowserEngineRegistration {
     /// - Extensions cover actions, installation, side panels and per-Space
     ///   permissions; full API parity and Apple password-helper pairing remain
     ///   incomplete.
-    /// - Translation is limited to the selection service; whole-page translation
-    ///   is unavailable.
+    /// - Whole-page translation rewrites the main document through the
+    ///   engine's content scripting, as WebKit's does through its own.
     /// - Protected media is unavailable: the engine carries no Widevine, and a
     ///   page that asks for it moves to WebKit.
     /// - Site permission decisions reach the engine as content settings for the
@@ -60,9 +60,9 @@ enum BrowserEngineRegistration {
             .workspaceProfiles, .workspaceTransfer, .profileDeletion,
             .beforeUnload, .downloads, .permissions, .viewportCapture, .inspector, .internalPages,
             .fullPageCapture, .pdf, .webArchive, .print, .localFiles,
-            .extensions, .selectionTranslation, .popups, .featureFlags, .audioSpectrum,
+            .extensions, .translation, .selectionTranslation, .popups, .featureFlags, .audioSpectrum,
         ],
-        unavailable: [.reader, .translation, .contentBlocking, .protectedMedia],
+        unavailable: [.reader, .contentBlocking, .protectedMedia],
         archiveFormat: .mhtml)
 
     private static var desktopWebKit: [EngineCapability] {

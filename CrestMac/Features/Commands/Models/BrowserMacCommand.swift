@@ -70,8 +70,8 @@ struct BrowserMacCommand {
         .toggleContentBlocking, isAvailable: { $0.supportsEngineCapability(.contentBlocking) },
         title: { $0.contentBlockingActionTitle }, run: { $0.toggleContentBlocking() })
     static let findInPage = BrowserMacCommand(
-        .findInPage, isAvailable: { $0.commandPageSupports(.find) },
-        run: { $0.pages.commandPage?.presentFind() })
+        .findInPage, isAvailable: { $0.canFind },
+        run: { $0.presentFind() })
     static let findNext = BrowserMacCommand(
         .findNext, isAvailable: { $0.canFindAgain }, waitsInPaletteUntilAvailable: true,
         run: { $0.pages.commandPage?.findAgain(.forward) })
@@ -100,11 +100,11 @@ struct BrowserMacCommand {
         .printPage, isAvailable: { $0.commandPageSupports(.print) },
         run: { $0.pages.commandPage?.printPage() })
     static let toggleSidebar = BrowserMacCommand(.toggleSidebar) { $0.toggleSidebar() }
-    static let showHistory = BrowserMacCommand(.showHistory) { $0.chrome.presentUtility(.history) }
-    static let showArchive = BrowserMacCommand(.showArchive) { $0.chrome.presentUtility(.archive) }
+    static let showHistory = BrowserMacCommand(.showHistory) { $0.chrome.toggleUtility(.history) }
+    static let showArchive = BrowserMacCommand(.showArchive) { $0.chrome.toggleUtility(.archive) }
     static let showDownloads = BrowserMacCommand(
         .showDownloads, isAvailable: { $0.supportsEngineCapability(.downloads) },
-        run: { $0.chrome.presentUtility(.downloads) })
+        run: { $0.chrome.toggleUtility(.downloads) })
     static let showWebInspector = BrowserMacCommand(
         .showWebInspector, isAvailable: { $0.supportsPageCapability(.inspector) },
         run: { $0.pages.showWebInspector() })
