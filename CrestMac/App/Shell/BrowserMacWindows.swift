@@ -87,12 +87,13 @@ final class BrowserMacWindows {
         return application.windowCoordinator.existingModel(for: key.windowID)
     }
 
-    /// The stores of the key window, when it is a browser or the private window.
+    /// The stores of the key window, when it is a browser or a private window.
     var activeContext: BrowserMacWindowContext? {
-        if controller(showing: NSApp.keyWindow)?.kind == .private {
+        if let key = controller(showing: NSApp.keyWindow), key.kind == .private,
+            let window = application.privateWindows.window(key.windowID)
+        {
             return BrowserMacWindowContext(
-                browser: application.privateBrowser, pages: application.privatePages,
-                chrome: application.privateChrome, windowID: application.privatePages.windowID)
+                browser: window.browser, pages: window.pages, chrome: window.chrome, windowID: window.id)
         }
         return activeWindowModel.map(Self.context(of:))
     }
@@ -130,7 +131,7 @@ final class BrowserMacWindows {
     }
 
     /// The window a Dock click brings forward: the browser window the person
-    /// used, or else the private window, a Quick Window or setup.
+    /// used, or else a private window, a Quick Window or setup.
     var windowToBringForward: BrowserMacWindowController? {
         if let window = activeBrowserWindow, let controller = controller(showing: window) { return controller }
         return [BrowserMacWindowKind.private, .quick, .setup].lazy.compactMap { kind in
@@ -172,7 +173,7 @@ final class BrowserMacWindows {
         controllers.contains { $0.kind.hasWindowModel && $0.windowID == id }
     }
 
-    /// Whether `id` is the private window's identity while it is open.
+    /// Whether `id` is a private window's identity while it is open.
     func isPrivateWindow(_ id: UUID) -> Bool {
         controllers.contains { $0.kind == .private && $0.windowID == id }
     }
@@ -270,32 +271,39 @@ final class BrowserMacWindows {
             })
     }
 
-    // MARK: - Actions - Private window
+    // MARK: - Actions - Private windows
 
+    /// Opens another private window over the private Spaces and tabs every
+    /// private window shows, starting as the key private window shows,
+    /// cascaded from it.
     func openPrivateWindow() {
-        guard !bringForwardOpenWindow(of: .private) else { return }
-        let privatePages = application.privatePages
+        let key = controller(showing: NSApp.keyWindow).flatMap { $0.kind == .private ? $0 : nil }
+        let window = application.privateWindows.open(copying: key?.windowID)
         // A Quick Window the private window's pages open, such as a sign-in
         // popup, finds its page and workspace through the registry.
-        application.pagePoolRegistry.register(
-            privatePages, browser: application.privateBrowser, for: privatePages.windowID)
+        application.pagePoolRegistry.register(window.pages, browser: window.browser, for: window.id)
         show(
-            .private, id: privatePages.windowID, closeGate: application.privateWindowCloseGate,
-            content: { _ in application.privateWindowContent },
+            .private, id: window.id, closeGate: window.closeGate, cascadingFrom: key?.window,
+            content: { _ in application.privateWindowContent(window) },
             closed: { [weak self] controller in self?.privateWindowClosed(controller) })
     }
 
-    /// Closing the private window ends private browsing: its Quick Windows
-    /// go with it, and the engine lets go of its profiles.
+    /// Closing the last private window ends private browsing: the private
+    /// Quick Windows go with it, and the engine lets go of its profiles.
     private func privateWindowClosed(_ controller: BrowserMacWindowController) {
         forget(controller)
+        let privateWindows = application.privateWindows
+        guard let window = privateWindows.window(controller.windowID) else { return }
+        application.pagePoolRegistry.unregister(window.pages, for: window.id)
+        guard privateWindows.isLast(window.id) else {
+            privateWindows.close(window.id)
+            return
+        }
         for (id, quick) in quickWindows where quick.model.browser.isPrivateBrowsing {
             closeQuickWindowWithoutAsking(id)
         }
-        let profiles = application.privateBrowser.spaceModels.map(\.profileID)
-        application.pagePoolRegistry.unregister(application.privatePages, for: controller.windowID)
-        application.closePrivateBrowsingWindow()
-        engineHost.windowClosed(controller.windowID, releasingProfiles: profiles)
+        let profiles = privateWindows.close(window.id)
+        engineHost.windowClosed(window.id, releasingProfiles: profiles)
     }
 
     // MARK: - Actions - Quick Windows

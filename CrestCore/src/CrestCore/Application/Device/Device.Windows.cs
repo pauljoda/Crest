@@ -133,13 +133,13 @@ internal sealed partial class Device {
     }
 
     /// The workspaces closing the windows `windowIds` leaves without an open
-    /// window, of a kind whose pages go with their windows, so each goes with
-    /// its last window, and every page of it with that window.
+    /// window, of a kind that ends with its last window, so each goes with
+    /// that window, and every page of it.
     internal IReadOnlySet<Guid> EndingWorkspaces(IReadOnlySet<Guid> windowIds) {
         ArgumentNullException.ThrowIfNull(windowIds);
         lock (gate) {
             var ending = open.Values.Where(window => windowIds.Contains(window.Id)).Select(window => window.WorkspaceId).ToHashSet();
-            ending.RemoveWhere(workspaceId => workspaces.GetValueOrDefault(workspaceId)?.Kind.SharesPagesAcrossWindows != false
+            ending.RemoveWhere(workspaceId => workspaces.GetValueOrDefault(workspaceId)?.Kind.EndsWithItsLastWindow != true
                 || open.Values.Any(window => window.WorkspaceId == workspaceId && !windowIds.Contains(window.Id)));
             return ending;
         }

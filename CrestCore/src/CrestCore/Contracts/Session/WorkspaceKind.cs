@@ -13,7 +13,7 @@ public sealed class WorkspaceKind {
     public static readonly WorkspaceKind Persistent = new(name: "persistent", opensDirectly: true, keepsFile: true,
         isPrivate: false, ownsSpaces: true, keepsAppPreferences: true, isPractice: false, sharesPagesAcrossWindows: true);
     public static readonly WorkspaceKind Private = new(name: "private", opensDirectly: true, keepsFile: false,
-        isPrivate: true, ownsSpaces: true, keepsAppPreferences: false, isPractice: false, sharesPagesAcrossWindows: false);
+        isPrivate: true, ownsSpaces: true, keepsAppPreferences: false, isPractice: false, sharesPagesAcrossWindows: true);
     public static readonly WorkspaceKind Borrowed = new(name: "borrowed", opensDirectly: false, keepsFile: false,
         isPrivate: false, ownsSpaces: false, keepsAppPreferences: false, isPractice: false, sharesPagesAcrossWindows: false);
     public static readonly WorkspaceKind Practice = new(name: "practice", opensDirectly: true, keepsFile: false,
@@ -59,9 +59,14 @@ public sealed class WorkspaceKind {
     /// The workspace's windows share its pages where the device lets them, so
     /// a page outlives the window that hosts it: the workspace's other windows
     /// show it, or its next window does. A page of a kind that does not, such
-    /// as the private window's or a torn-off tab's, goes with its window. The
-    /// core's own rule, which no platform reads.
+    /// as a torn-off tab's, goes with its window. The core's own rule, which no
+    /// platform reads.
     internal bool SharesPagesAcrossWindows { get; }
+
+    /// The workspace goes once its last window closes, and every page of it
+    /// with that window: one that keeps no file keeps nothing beyond its
+    /// windows, as private browsing ends with its last private window.
+    internal bool EndsWithItsLastWindow => !KeepsFile;
 
     #endregion
 

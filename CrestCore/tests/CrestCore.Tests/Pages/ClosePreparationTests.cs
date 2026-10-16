@@ -91,12 +91,22 @@ public sealed partial class BrowserContractsTests {
         app.Report(engine, new BeforeUnloadAnswered(borrowedPage, Proceeds: true));
         Assert.Equal([new CloseReady(torn, Allowed: true)], app.Drain());
 
-        // The private window's pages go with it, as does every other page of
-        // its workspace, whichever window hosts it, and one may keep it open.
+        // Another private window keeps a private window's pages, so closing
+        // one while the other stays asks none.
+        var otherPrivateWindow = Guid.NewGuid();
+        app.Send(new OpenWindow(otherPrivateWindow, privateWorkspace, Saved: false, null, null, [], RestoresTabs: true));
+        app.Drain();
+        asked = binding.Commands.Count;
+        var onePrivate = Guid.NewGuid();
+        Assert.Equal([new CloseReady(onePrivate, Allowed: true)], app.Send(new PrepareToCloseWindows(onePrivate, [privateWindow])));
+        Assert.Equal(asked, binding.Commands.Count);
+
+        // Closing the last private windows ends private browsing: every page of
+        // its workspace goes, whichever window hosts it, and one may keep it open.
         var privateQuick = Live(privateWorkspace, app.Workspace(privateWorkspace).Current.Spaces.Single().Id, null, window);
         app.Drain();
         var closingPrivate = Guid.NewGuid();
-        app.Send(new PrepareToCloseWindows(closingPrivate, [privateWindow]));
+        app.Send(new PrepareToCloseWindows(closingPrivate, [privateWindow, otherPrivateWindow]));
         Assert.Equal(new CheckBeforeUnload(privatePage), binding.Commands[^1]);
         app.Report(engine, new BeforeUnloadAnswered(privatePage, Proceeds: true));
         Assert.Equal(new CheckBeforeUnload(privateQuick), binding.Commands[^1]);

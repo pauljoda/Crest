@@ -55,15 +55,11 @@ final class BrowserMacWindowController: NSObject {
 
     /// Places the window: at the frame it kept, or cascaded from `source`, the
     /// window the person is using, at that window's size, as new windows open
-    /// on the Mac. A window of a kind that keeps no frame, or with no source,
-    /// opens centered.
+    /// on the Mac. A window of a kind that neither keeps a frame nor cascades,
+    /// or with no source, opens centered.
     func place(cascadingFrom source: NSWindow?) {
-        guard kind.savesFrame else {
-            window.center()
-            return
-        }
-        if restoreFrame() { return }
-        guard let source, source !== window, !source.styleMask.contains(.fullScreen) else {
+        if kind.savesFrame, restoreFrame() { return }
+        guard kind.cascades, let source, source !== window, !source.styleMask.contains(.fullScreen) else {
             window.center()
             return
         }

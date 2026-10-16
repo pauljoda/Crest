@@ -455,8 +455,8 @@ profile whose pages a Crest window shows, and those the engine creates for
 itself for `chrome.windows.create`, a renderer's popup or an extension's app
 window. It creates, finds and closes them, moves a page's tab between them
 when its view attaches in another window, offers the tabs the engine opens
-by itself, and closes a profile's `Browser`s when its Space is deleted or its
-private window closes. An extension's popup is the exception to moving: its
+by itself, and closes a profile's `Browser`s when its Space is deleted or the
+last private window closes. An extension's popup is the exception to moving: its
 tab shows in the person's window but stays in the popup's `Browser`, which
 remains the extension's window.
 
@@ -470,12 +470,16 @@ and quit preflight. Each `Browser` is built on the shell's
 Chromium gives a `Browser` its window from its creator only in tests. Objects
 and blocks never enter .NET.
 
-A private window works like incognito and shares nothing with any Space. Its
+A private window works like incognito and shares nothing with any Space. The
+Mac's private windows share one private workspace and its pages, as the
+windows over the person's own Spaces share theirs, so each shows the same
+private tabs, and private browsing ends when the last of them closes. Its
 Space gets a new profile each time private browsing opens
 (`ResetPrivateBrowsing` on close), and `CreatePage` marks its pages private.
 Chromium gives each private profile its own in-memory profile, always derived
 from the engine's own startup profile, which no Space owns and no page browses
-in, and destroys it when the window closes and the profile is released. No
+in, and destroys it when the last private window closes and the profile is
+released. No
 extension a person installed runs in a private profile, whatever its own
 setting.
 

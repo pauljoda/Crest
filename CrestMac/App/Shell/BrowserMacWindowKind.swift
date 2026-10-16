@@ -23,7 +23,7 @@ struct BrowserMacWindowKind: Hashable {
         name: "browser", title: ProductIdentity.name, styleMask: browsingStyle, hidesTitle: true,
         contentSize: browserContentSize,
         minimumContentSize: browserMinimumContentSize,
-        savesFrame: true, hasWindowModel: true, hasPageRow: true)
+        savesFrame: true, cascades: true, hasWindowModel: true, hasPageRow: true)
     /// A browser window over a torn-off tab's own workspace, placed where the
     /// tab was dropped and never kept.
     static let temporary = BrowserMacWindowKind(
@@ -31,10 +31,11 @@ struct BrowserMacWindowKind: Hashable {
         contentSize: browserContentSize,
         minimumContentSize: browserMinimumContentSize,
         hasWindowModel: true, hasPageRow: true)
-    /// The one private browsing window.
+    /// A private browsing window, which cascades from the private window the
+    /// person is using and keeps no frame.
     static let `private` = BrowserMacWindowKind(
         name: "private", title: String(localized: "Private Browsing"), styleMask: browsingStyle, hidesTitle: true,
-        contentSize: CGSize(width: 1200, height: 820), hasPageRow: true, isSingleton: true)
+        contentSize: CGSize(width: 1200, height: 820), cascades: true, hasPageRow: true)
     /// A Quick Window, which shows one page of a Space.
     static let quick = BrowserMacWindowKind(
         name: "quick", title: String(localized: "Quick Window"), styleMask: browsingStyle, hidesTitle: true,
@@ -80,8 +81,11 @@ struct BrowserMacWindowKind: Hashable {
     /// controller's own default.
     let sizingOptions: NSHostingSizingOptions?
     /// Whether the window keeps its frame under its identity for the next time
-    /// it opens; any other window opens centered.
+    /// it opens.
     let savesFrame: Bool
+    /// Whether a window without a frame of its own opens cascaded from the
+    /// window the person is using; any other window opens centered.
+    let cascades: Bool
     /// Whether the window coordinator models the window: a browser window over
     /// a workspace of the person's own Spaces.
     let hasWindowModel: Bool
@@ -101,8 +105,8 @@ struct BrowserMacWindowKind: Hashable {
         name: String, title: String, styleMask: NSWindow.StyleMask, hidesTitle: Bool = false,
         hidesTitleBarSeparator: Bool = false, contentSize: CGSize, minimumContentSize: CGSize? = nil,
         sizingOptions: NSHostingSizingOptions? = nil,
-        savesFrame: Bool = false, hasWindowModel: Bool = false, hasPageRow: Bool = false, isSingleton: Bool = false,
-        identifier: String? = nil
+        savesFrame: Bool = false, cascades: Bool = false, hasWindowModel: Bool = false, hasPageRow: Bool = false,
+        isSingleton: Bool = false, identifier: String? = nil
     ) {
         self.name = name
         self.title = title
@@ -113,6 +117,7 @@ struct BrowserMacWindowKind: Hashable {
         self.minimumContentSize = minimumContentSize
         self.sizingOptions = sizingOptions
         self.savesFrame = savesFrame
+        self.cascades = cascades
         self.hasWindowModel = hasWindowModel
         self.hasPageRow = hasPageRow
         self.isSingleton = isSingleton

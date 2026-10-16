@@ -14,10 +14,8 @@ final class BrowserMacApplication {
     let chrome: BrowserChromeState
     let transientBrowsing: BrowserTransientBrowsingCoordinator
     let windowCoordinator: BrowserMacWindowCoordinator
-    let privateBrowser: BrowserStore
-    let privatePages: BrowserPagePool
-    let privateChrome: BrowserChromeState
-    let privateTransientBrowsing: BrowserTransientBrowsingCoordinator
+    /// The private windows, which share one private workspace.
+    let privateWindows: BrowserMacPrivateWindows
     let spaceAccess: BrowserSpaceAccessController
     /// The app's one passkey controller: pages refresh it and settings show it.
     let passkeyAccess: BrowserPasskeyAccessController
@@ -32,10 +30,6 @@ final class BrowserMacApplication {
     /// Asks the core whether the app may quit, and the person about downloads
     /// in progress.
     let quitPreparation: BrowserQuitPreparation
-    /// Whether the private window may close when the person asks: closing it
-    /// ends private browsing, so the core asks every page it hosts, its Quick
-    /// Windows' too.
-    let privateWindowCloseGate: BrowserWindowCloseGate
     /// Answers the core's questions about every engine's downloads: where each
     /// file goes, and whether to keep one its engine warned about.
     let downloadPrompts: BrowserDownloadPrompts
@@ -59,7 +53,7 @@ final class BrowserMacApplication {
     /// core: the order AppKit stacks them in, then any it leaves out, such as
     /// a minimized one. The core's window decisions read them in this order.
     var stackedWindowIDs: [UUID] {
-        let pools = [privatePages] + windowCoordinator.openWindowPages
+        let pools = privateWindows.openWindowPages + windowCoordinator.openWindowPages
         let windows = pools.compactMap { pool in pool.presentationWindow.map { (window: $0, id: pool.windowID) } }
         let stacked = NSApp.orderedWindows.compactMap { window in windows.first { $0.window === window }?.id }
         return stacked + windows.map(\.id).filter { !stacked.contains($0) }
@@ -132,7 +126,6 @@ final class BrowserMacApplication {
             Task { await cloudSync?.localChangesDidStage() }
         }
         let transientBrowsing = BrowserTransientBrowsingCoordinator()
-        let privateTransientBrowsing = BrowserTransientBrowsingCoordinator()
         let spaceAccess = BrowserSpaceAccessController()
         browser.attachSpaceAccess(spaceAccess)
         privateBrowser.attachSpaceAccess(spaceAccess)
@@ -230,8 +223,6 @@ final class BrowserMacApplication {
             openModifiedLink: { url, spaceID, selecting in
                 privateBrowser.openModifiedLink(url, in: spaceID, selecting: selecting)
             },
-            openPeek: { request in privateTransientBrowsing.presentPeek(request) },
-            handleLinkDrag: { privateTransientBrowsing.handleLinkDrag($0) },
             splitLinkHost: privateBrowser.splitLinkHost,
             linkDestinationHost: BrowserLinkDestinationHost(browser: privateBrowser, spaceAccess: spaceAccess)
         )
@@ -264,13 +255,8 @@ final class BrowserMacApplication {
         self.transientBrowsing = transientBrowsing
         self.windowCoordinator = BrowserMacWindowCoordinator(
             browser: browser, pages: pages, spaceAccess: spaceAccess, windowLayouts: windowLayouts)
-        self.privateBrowser = privateBrowser
-        self.privateChrome = BrowserChromeState(
-            utilityPresentation: BrowserUtilityPresentationState(
-                defaults: utilityDefaults
-            )
-        )
-        self.privateTransientBrowsing = privateTransientBrowsing
+        privateWindows = BrowserMacPrivateWindows(
+            browser: privateBrowser, pages: privatePages, spaceAccess: spaceAccess, utilityDefaults: utilityDefaults)
         self.spaceAccess = spaceAccess
         self.spaceSettingsPresentation = spaceSettingsPresentation
         let shortcuts = BrowserShortcutStore(core: core, legacyOverrides: legacyDevice.shortcuts)
@@ -279,13 +265,9 @@ final class BrowserMacApplication {
         self.softwareUpdates = softwareUpdates
         self.sidebarWidgets = sidebarWidgets
         self.pages = pages
-        self.privatePages = privatePages
         pagePoolRegistry = BrowserPagePoolRegistry(primary: pages, spaceAccess: spaceAccess)
         quitPreparation = BrowserQuitPreparation(core: core) {
             browser.deletingSpaceIDs.union(privateBrowser.deletingSpaceIDs)
-        }
-        privateWindowCloseGate = BrowserWindowCloseGate(core: core) { [windowID = privateBrowser.windowID] in
-            PrepareToCloseWindows(requestID: UUID(), windowIDs: [windowID])
         }
         engineMoveNotices = BrowserEngineMoveNotices(core: core)
         let downloadDialogs = BrowserDialogPresenter()
@@ -343,12 +325,13 @@ final class BrowserMacApplication {
         .modifier(BrowserSoftwareUpdateDetailsPresentation())
     }
 
-    var privateWindowContent: some View {
+    /// What the private window `window` shows.
+    func privateWindowContent(_ window: BrowserMacPrivateWindows.Window) -> some View {
         BrowserRootView(
-            browser: privateBrowser,
-            pages: privatePages,
-            chrome: privateChrome,
-            transientBrowsing: privateTransientBrowsing,
+            browser: window.browser,
+            pages: window.pages,
+            chrome: window.chrome,
+            transientBrowsing: window.transientBrowsing,
             startupBehavior: .lastActiveTab,
             shortcuts: shortcuts
         )
@@ -356,8 +339,8 @@ final class BrowserMacApplication {
         .environment(softwareUpdates)
         .environment(passkeyAccess)
         .environment(agentEndpoint)
-        .environment(privateBrowser.core)
-        .environment(privateBrowser.core.engines)
+        .environment(window.browser.core)
+        .environment(window.browser.core.engines)
         .environment(
             \.browserSidebarWidgetRuntime,
             sidebarWidgets
@@ -365,20 +348,20 @@ final class BrowserMacApplication {
         .frame(minWidth: 900, minHeight: 600)
         .preferredColorScheme(.dark)
         .environment(
-            \.browserSettingsTabContent, settingsTabContent(browser: privateBrowser, pages: privatePages)
+            \.browserSettingsTabContent, settingsTabContent(browser: window.browser, pages: window.pages)
         )
         .environment(\.browserSiteControlAnchor, siteControlAnchor)
         .modifier(BrowserSoftwareUpdateDetailsPresentation())
         .background(
             BrowserMacWindowAttachment(
-                attach: { window in
-                    self.privatePages.bindNativeWindow(window)
-                    self.privatePages.setWindowFocused(window.isKeyWindow)
+                attach: { nativeWindow in
+                    window.pages.bindNativeWindow(nativeWindow)
+                    window.pages.setWindowFocused(nativeWindow.isKeyWindow)
                 },
-                focusChanged: { self.privatePages.setWindowFocused($0) },
+                focusChanged: { window.pages.setWindowFocused($0) },
                 close: {
-                    self.privatePages.setWindowFocused(false)
-                    self.privatePages.bindNativeWindow(nil)
+                    window.pages.setWindowFocused(false)
+                    window.pages.bindNativeWindow(nil)
                 }
             )
         )
@@ -389,14 +372,6 @@ final class BrowserMacApplication {
     /// closes as the app goes; the core saves them before it returns.
     func rememberWindowsForLaunch() {
         _ = try? browser.core.send(RememberWindowsForLaunch(windowIDs: stackedWindowIDs))
-    }
-
-    func closePrivateBrowsingWindow() {
-        privatePages.closePrivateBrowsingSession(
-            privateBrowser.spaceModels.map(BrowserSpaceRuntimeAssignment.init(space:)))
-        privateBrowser.resetPrivateBrowsingSession()
-        privateChrome.dismissCommandPalette()
-        privateTransientBrowsing.dismissPeek()
     }
 
 }

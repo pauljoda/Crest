@@ -101,9 +101,9 @@ extension BrowserMacApplication {
     // MARK: - Mutators
 
     private func hostWindow(_ id: UUID) -> HostWindow? {
-        if id == privatePages.windowID {
+        if let window = privateWindows.window(id) {
             return HostWindow(
-                browser: privateBrowser, pages: privatePages, chrome: privateChrome,
+                browser: window.browser, pages: window.pages, chrome: window.chrome,
                 settings: spaceSettingsPresentation, windowState: nil)
         }
         guard let model = windowCoordinator.existingModel(for: id) else { return nil }

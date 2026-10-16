@@ -238,7 +238,7 @@ final class BrowserMacShell {
     /// first and offers its tabs afterwards. The core declines a profile with
     /// no Space to host it, so the engine drops those tabs rather than routing
     /// them into an unrelated Space, an off-the-record profile once the
-    /// private window is closed, and a Space that is locked or being deleted.
+    /// last private window is closed, and a Space that is locked or being deleted.
     func reserveEngineWindow(forProfile profileID: UUID, ownWindow: Bool) -> (window: UUID, space: UUID)? {
         guard let running, !running.quit.isQuitting else { return nil }
         let application = running.application
