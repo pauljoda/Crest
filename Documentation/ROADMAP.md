@@ -174,7 +174,6 @@ the live status for each issue.
 - [ ] [bug: cannot input url for new route under links](https://github.com/pauljoda/Crest/issues/437)
 - [ ] [Let agents attach local files to a page's file input over MCP](https://github.com/pauljoda/Crest/issues/442)
 - [ ] [Web Inspector shortcut follow-ups](https://github.com/pauljoda/Crest/issues/443)
-- [ ] [After a Peek closes on Chromium, the tab doesn't get the keyboard back](https://github.com/pauljoda/Crest/issues/444)
 - [ ] [feature: Configure Tab and Space search-provider triggers independently](https://github.com/pauljoda/Crest/issues/450)
 - [ ] [bug: Quick Window password support](https://github.com/pauljoda/Crest/issues/462)
 - [ ] [Space switch animation: wrap-around jumps, and a sidebar animation restarts a running slide](https://github.com/pauljoda/Crest/issues/469)
@@ -192,6 +191,7 @@ the live status for each issue.
 - [x] [feature: Toggle History, Archive, and Downloads sidebars and focus search](https://github.com/pauljoda/Crest/issues/397)
 - [x] [bug: Pin layout capped at 4 pins per row since 0.8 — selecting 5 or 6 has no effect](https://github.com/pauljoda/Crest/issues/415)
 - [x] [bug: Revealed sidebar stays open after the pointer leaves the window for another app](https://github.com/pauljoda/Crest/issues/440)
+- [x] [After a Peek closes on Chromium, the tab doesn't get the keyboard back](https://github.com/pauljoda/Crest/issues/444)
 - [x] [bug: Open link in another Space can leave the new tab unselected](https://github.com/pauljoda/Crest/issues/451)
 
 <!-- crest-roadmap-sync:end -->

@@ -723,8 +723,21 @@ final class BrowserPagePool:
     func closePeek() -> Bool {
         guard let request = activeTabID.flatMap({ host.peekRequest(over: $0, where: isPeekOpen) })
         else { return false }
+        if let peekPage { returnFocus(fromPeek: peekPage) }
         dismissPeek(request)
         return true
+    }
+
+    /// Hands the keyboard back to the active tab's page as the Peek page
+    /// holding it closes, as closing find hands it back to the page searched.
+    /// An engine that focuses a page it shows, as Chromium does, gives the
+    /// Peek the keyboard when it opens.
+    func returnFocus(fromPeek peek: BrowserPage) {
+        guard let page = activePage, page !== peek,
+            let responder = peek.nativeView.window?.firstResponder as? NSView,
+            responder.isDescendant(of: peek.nativeView)
+        else { return }
+        page.focusRestoration.requestPageFocus(displacing: peek.nativeView)
     }
 
     // MARK: - Actions - Media sessions
