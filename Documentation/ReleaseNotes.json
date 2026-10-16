@@ -4145,6 +4145,14 @@
     "space-slide-survives-sidebar-toggle": {
       "category": "fixed",
       "message": "A Space switch keeps sliding when you show or hide the sidebar during it, instead of jumping to the end."
+    },
+    "chromium-upstream-155-0-8059-39-1-1-6271503014ef": {
+      "category": "fixed",
+      "message": "Chromium is updated to 155.0.8059.39 with upstream security and compatibility fixes."
+    },
+    "http-dead-link-crash": {
+      "category": "fixed",
+      "message": "Opening an http:// address that can’t be reached shows Crest’s error page instead of closing Crest."
     }
   }
 }
