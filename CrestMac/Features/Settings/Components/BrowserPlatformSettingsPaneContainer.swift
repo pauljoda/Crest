@@ -1,7 +1,11 @@
 import SwiftUI
 
 /// The native macOS grouped form for a shared settings pane: one centred
-/// column of rows, scrolled from the page's own edge.
+/// column of rows.
+///
+/// The column is centred by its frame. With horizontal scroll margins instead,
+/// macOS 26 placed the rows' clicks and accessibility frames a margin away
+/// from where it drew them.
 struct BrowserPlatformSettingsPaneContainer<Content: View>: View {
     @Environment(\.browserSettingsTabState) private var tabState
     @Environment(\.browserSettingsScrollKey) private var scrollKey
@@ -19,20 +23,15 @@ struct BrowserPlatformSettingsPaneContainer<Content: View>: View {
     }
 
     var body: some View {
-        GeometryReader { geometry in
-            Form {
-                content
-            }
-            .formStyle(.grouped)
-            .scrollContentBackground(.hidden)
-            .contentMargins(
-                .horizontal,
-                BrowserSettingsLayout.formInset(
-                    for: geometry.size.width, columnWidth: columnWidth ?? BrowserSettingsLayout.formColumnWidth),
-                for: .scrollContent
-            )
-            .browserNativeScrollState(tabState?.scroll(forKey: scrollKey ?? destination.name) ?? standaloneScroll)
+        Form {
+            content
         }
+        .formStyle(.grouped)
+        .scrollContentBackground(.hidden)
+        .browserNativeScrollState(tabState?.scroll(forKey: scrollKey ?? destination.name) ?? standaloneScroll)
+        .frame(maxWidth: columnWidth ?? BrowserSettingsLayout.formColumnWidth)
+        .padding(.horizontal, BrowserSettingsLayout.formMinimumInset)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .accessibilityIdentifier("settings-form-\(destination.name)")
     }
 }

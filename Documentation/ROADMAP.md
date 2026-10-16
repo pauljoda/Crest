@@ -183,7 +183,6 @@ the live status for each issue.
 - [ ] [bug: Cannot visit Kagi homepage (CREST_NAVIGATION_FAILED)](https://github.com/pauljoda/Crest/issues/487)
 - [ ] [bug: Space settings stop responding to clicks after the first one](https://github.com/pauljoda/Crest/issues/491)
 - [ ] [Keep a Space slide moving forward when Next is pressed again mid-slide](https://github.com/pauljoda/Crest/issues/495)
-- [ ] [Restart to Update waits for Command-Q instead of quitting on its own](https://github.com/pauljoda/Crest/issues/496)
 
 #### Completed
 
@@ -198,6 +197,7 @@ the live status for each issue.
 - [x] [bug: Open link in another Space can leave the new tab unselected](https://github.com/pauljoda/Crest/issues/451)
 - [x] [Space switch animation: wrap-around jumps, and a sidebar animation restarts a running slide](https://github.com/pauljoda/Crest/issues/469) — [`62715030`](https://github.com/pauljoda/Crest/commit/6271503014ef6902c75c32193d9bf6ec0c2bfd60)
 - [x] [Make Translate, Reader, content blocking, the inspector and engine moves act on a Quick Window](https://github.com/pauljoda/Crest/issues/484) — [`a0edbcc9`](https://github.com/pauljoda/Crest/commit/a0edbcc96c055f448c8b64de99dbb906ad8f632e)
+- [x] [Restart to Update waits for Command-Q instead of quitting on its own](https://github.com/pauljoda/Crest/issues/496)
 
 <!-- crest-roadmap-sync:end -->
 
