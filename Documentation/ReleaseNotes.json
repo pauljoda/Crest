@@ -4141,6 +4141,10 @@
     "temporary-utilities-stay-open-during-page-interaction": {
       "category": "fixed",
       "message": "Temporary History, Archive, and Downloads sidebars stay open while you use the webpage."
+    },
+    "docked-utility-selector-direct-placement": {
+      "category": "fixed",
+      "message": "The History, Archive, and Downloads selector opens smoothly with the sidebar pinned open."
     }
   }
 }

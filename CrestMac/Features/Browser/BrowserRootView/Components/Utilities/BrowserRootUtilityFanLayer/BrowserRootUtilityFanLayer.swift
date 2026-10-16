@@ -20,11 +20,15 @@ struct BrowserRootUtilityFanLayer: View {
                 BrowserRootUtilityFanControl(
                     model: model,
                     proxy: proxy,
-                    localTriggerFrame: visibleTriggerFrame ?? localTriggerFrame,
+                    localTriggerFrame:
+                        model.sidebarPresentation.reservesSidebarWidth
+                        ? localTriggerFrame : visibleTriggerFrame ?? localTriggerFrame,
                     sidebarOnRight: sidebarOnRight
                 )
                 .onChange(of: localTriggerFrame, initial: true) { _, frame in
-                    guard model.sidebarPresentation.showsSidebar else { return }
+                    guard !model.sidebarPresentation.reservesSidebarWidth,
+                        model.sidebarPresentation.showsSidebar
+                    else { return }
                     visibleTriggerFrame = frame
                 }
             }
