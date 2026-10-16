@@ -12,7 +12,6 @@ public sealed record DeleteProfileData(Guid RequestId, Guid ProfileId, bool Ephe
     /// Until every engine erases it again, the profile's data is not known gone.
     internal override void Apply(DataDeletions deletions, ChangeFeed changes, Action<Engine, EngineCommand> issue) {
         deletions.ErasedProfiles.Remove(ProfileId);
-        deletions.FailedProfiles.Remove(ProfileId);
         deletions.Start(new(RequestId, ProfileId), erasure => new EraseProfileData(ProfileId, Ephemeral, erasure), changes, issue);
     }
 

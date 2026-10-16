@@ -168,7 +168,6 @@ the live status for each issue.
 - [ ] [Size Peek to the main window's height](https://github.com/pauljoda/Crest/issues/424)
 - [ ] [Tab switches Spaces instead of moving between form fields on iPad](https://github.com/pauljoda/Crest/issues/425)
 - [ ] [Swipe from the edge to go back on iPhone and iPad](https://github.com/pauljoda/Crest/issues/426)
-- [ ] [Air Traffic Control rules for links opened inside Crest](https://github.com/pauljoda/Crest/issues/427)
 - [ ] [Return to the previous app when a Quick Window from another app closes](https://github.com/pauljoda/Crest/issues/428)
 - [ ] [Raise folder contrast in the sidebar](https://github.com/pauljoda/Crest/issues/430)
 - [ ] [bug: cannot input url for new route under links](https://github.com/pauljoda/Crest/issues/437)
@@ -179,11 +178,9 @@ the live status for each issue.
 - [ ] [Menu titles for History, Archive and Downloads now that they toggle](https://github.com/pauljoda/Crest/issues/470)
 - [ ] [bug: dropdown menus in the settings do not open](https://github.com/pauljoda/Crest/issues/476)
 - [ ] [bug: Preserve sidebar state and page state when moving a tab to another window/display](https://github.com/pauljoda/Crest/issues/477)
-- [ ] [bug: Crash when DNS returns NXDOMAIN](https://github.com/pauljoda/Crest/issues/485)
 - [ ] [bug: Cannot visit Kagi homepage (CREST_NAVIGATION_FAILED)](https://github.com/pauljoda/Crest/issues/487)
 - [ ] [bug: Space settings stop responding to clicks after the first one](https://github.com/pauljoda/Crest/issues/491)
 - [ ] [Keep a Space slide moving forward when Next is pressed again mid-slide](https://github.com/pauljoda/Crest/issues/495)
-- [ ] [Restart to Update waits for Command-Q instead of quitting on its own](https://github.com/pauljoda/Crest/issues/496)
 
 #### Completed
 
@@ -193,11 +190,14 @@ the live status for each issue.
 - [x] [feature: Choose search engine on new tab prompt (based on shortcut)](https://github.com/pauljoda/Crest/issues/386)
 - [x] [feature: Toggle History, Archive, and Downloads sidebars and focus search](https://github.com/pauljoda/Crest/issues/397)
 - [x] [bug: Pin layout capped at 4 pins per row since 0.8 — selecting 5 or 6 has no effect](https://github.com/pauljoda/Crest/issues/415)
+- [x] [Air Traffic Control rules for links opened inside Crest](https://github.com/pauljoda/Crest/issues/427)
 - [x] [bug: Revealed sidebar stays open after the pointer leaves the window for another app](https://github.com/pauljoda/Crest/issues/440)
 - [x] [After a Peek closes on Chromium, the tab doesn't get the keyboard back](https://github.com/pauljoda/Crest/issues/444) — [`a04f5215`](https://github.com/pauljoda/Crest/commit/a04f52157f2358fe648ef1eee41894db617602d9)
 - [x] [bug: Open link in another Space can leave the new tab unselected](https://github.com/pauljoda/Crest/issues/451)
 - [x] [Space switch animation: wrap-around jumps, and a sidebar animation restarts a running slide](https://github.com/pauljoda/Crest/issues/469) — [`62715030`](https://github.com/pauljoda/Crest/commit/6271503014ef6902c75c32193d9bf6ec0c2bfd60)
 - [x] [Make Translate, Reader, content blocking, the inspector and engine moves act on a Quick Window](https://github.com/pauljoda/Crest/issues/484) — [`a0edbcc9`](https://github.com/pauljoda/Crest/commit/a0edbcc96c055f448c8b64de99dbb906ad8f632e)
+- [x] [bug: Crash when DNS returns NXDOMAIN](https://github.com/pauljoda/Crest/issues/485)
+- [x] [Restart to Update waits for Command-Q instead of quitting on its own](https://github.com/pauljoda/Crest/issues/496)
 
 <!-- crest-roadmap-sync:end -->
 

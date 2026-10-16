@@ -11051,6 +11051,9 @@
     "Route actions" : {
 
     },
+    "Routes apply to links from other apps. The first matching route wins." : {
+
+    },
     "Routing" : {
       "localizations" : {
         "ar" : {
@@ -13396,9 +13399,6 @@
 
     },
     "The file couldn’t be saved in its folder." : {
-
-    },
-    "The first matching route wins." : {
 
     },
     "The original filename used invisible or direction-changing characters that can disguise its real extension." : {
