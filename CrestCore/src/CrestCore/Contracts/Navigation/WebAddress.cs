@@ -16,9 +16,9 @@ public readonly record struct WebAddress(string Spelling) {
     public SiteOrigin? Origin => Uri.TryCreate(Spelling, UriKind.Absolute, out var value) && WebScheme.Named(value.Scheme) is not null
         && value.IdnHost.Length > 0 ? new SiteOrigin(value.Scheme, value.IdnHost, value.Port) : null;
 
-    /// Where an http or https address points, whichever of the two it uses:
-    /// its host, a port other than the scheme's own, its path, "/" when it
-    /// has none, and its query. Null for any other address.
+    /// Where an http or https address points: its host, a port other than the
+    /// scheme's own, its path, "/" when it has none, and its query. Null for
+    /// any other address.
     public string? Location => Uri.TryCreate(Spelling, UriKind.Absolute, out var value) && WebScheme.Named(value.Scheme) is not null
         ? value.GetComponents(UriComponents.Host | UriComponents.Port | UriComponents.PathAndQuery, UriFormat.UriEscaped) : null;
 
@@ -35,6 +35,14 @@ public readonly record struct WebAddress(string Spelling) {
     /// asks it here, so a fragment or a scheme history does not keep cannot
     /// make one page look like two.
     public bool IsSamePage(WebAddress other) => (Normalized ?? Spelling) == (other.Normalized ?? other.Spelling);
+
+    /// Whether this http or https address is the one `schemeless`, an
+    /// address spelled without its scheme, names when read with this
+    /// address's own scheme, ignoring case. A port it spells must be this
+    /// address's port; with none, the scheme's own is.
+    public bool IsAt(string schemeless) => Uri.TryCreate(Spelling, UriKind.Absolute, out var value)
+        && WebScheme.Named(value.Scheme) is not null
+        && string.Equals(Location, new WebAddress($"{value.Scheme}://{schemeless}").Location, StringComparison.OrdinalIgnoreCase);
 
     #endregion
 }

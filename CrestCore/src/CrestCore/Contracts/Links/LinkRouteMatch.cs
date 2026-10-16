@@ -13,14 +13,12 @@ public sealed class LinkRouteMatch {
         matches: (address, pattern, _) => address.Contains(pattern, StringComparison.OrdinalIgnoreCase));
 
     /// The address is the pattern once both are normalized, ignoring case. A
-    /// pattern without a scheme, such as a bare host, names the address at
-    /// that location on http or https, so `docs.google.com` is that site's
-    /// root address.
+    /// pattern without a scheme, such as a bare host, is read with the
+    /// address's own scheme, so `docs.google.com` is that site's root address
+    /// on http or https, and a port it spells must match.
     public static readonly LinkRouteMatch Exact = new(name: "exact", title: "Is Exactly",
         matches: (address, pattern, normalize) => string.Equals(address, normalize(pattern), StringComparison.OrdinalIgnoreCase)
-            || (!pattern.Contains("://", StringComparison.Ordinal)
-                && new WebAddress($"https://{pattern}").Location is { } location
-                && string.Equals(new WebAddress(address).Location, location, StringComparison.OrdinalIgnoreCase)));
+            || (!pattern.Contains("://", StringComparison.Ordinal) && new WebAddress(address).IsAt(pattern)));
 
     public static IReadOnlyList<LinkRouteMatch> All { get; } = [Contains, Exact];
 

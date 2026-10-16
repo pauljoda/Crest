@@ -160,6 +160,12 @@ public sealed partial class BrowserContractsTests {
         Assert.Equal(shown, Opens("https://docs.google.com/?usp=sharing"));
         Assert.Equal(shown, Opens("https://docs.google.com:8443/"));
 
+        // A port the pattern spells is read with the link's own scheme, so
+        // 443 is https's root address and not http's.
+        app.Send(new EditLinkRoute(route, IsEnabled: null, Match: null, Pattern: "docs.google.com:443", DestinationSpaceId: null));
+        Assert.Equal(routed, Opens("https://docs.google.com/"));
+        Assert.Equal(shown, Opens("http://docs.google.com/"));
+
         // A pattern spelled with its scheme still takes only that spelling.
         app.Send(new EditLinkRoute(route, IsEnabled: null, Match: null, Pattern: "https://docs.google.com/document", DestinationSpaceId: null));
         Assert.Equal(routed, Opens("https://docs.google.com/document"));
