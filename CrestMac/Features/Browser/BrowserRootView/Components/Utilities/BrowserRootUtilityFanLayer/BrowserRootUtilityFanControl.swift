@@ -36,7 +36,9 @@ struct BrowserRootUtilityFanControl: View {
 
     var body: some View {
         BrowserUtilityFanControl(
-            isExpanded: model.chrome.utilityPresentation.isSwitcherExpanded,
+            isExpanded:
+                model.sidebarPresentation.showsSidebar
+                && model.chrome.utilityPresentation.isSwitcherExpanded,
             origin: CGPoint(
                 x: positionX(localTriggerFrame.midX),
                 y: localTriggerFrame.midY

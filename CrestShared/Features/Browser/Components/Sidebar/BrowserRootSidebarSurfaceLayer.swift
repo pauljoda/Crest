@@ -69,7 +69,6 @@ struct BrowserRootSidebarSurfaceLayer<Content: View>: View {
                 .onHover(perform: hoverChanged)
             #endif
             .offset(x: hiddenOffset)
-            .opacity(presentation.showsSidebar ? 1 : 0)
             .allowsHitTesting(presentation.showsSidebar)
             .accessibilityHidden(!presentation.showsSidebar)
             .zIndex(
@@ -85,6 +84,7 @@ struct BrowserRootSidebarSurfaceLayer<Content: View>: View {
 
     private var cardSurface: some View {
         content
+            .animation(nil, value: presentation)
             .frame(width: width)
             .frame(maxHeight: .infinity)
             .background {
@@ -110,7 +110,7 @@ struct BrowserRootSidebarSurfaceLayer<Content: View>: View {
             }
             .shadow(
                 color: .black.opacity(
-                    reduceTransparency || !usesFloatingCardAppearance
+                    reduceTransparency || !usesFloatingCardAppearance || !presentation.showsSidebar
                         ? 0
                         : BrowserRootMetrics.floatingSidebarShadowOpacity
                 ),

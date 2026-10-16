@@ -3536,7 +3536,7 @@
     },
     "downloads-follow-page-site-choice": {
       "category": "fixed",
-      "message": "Downloads follow the Automatic Downloads choice of the site you’re on, including files it serves from another address, such as GitHub release files. A blocked download’s message no longer appears twice."
+      "message": "Downloads follow the Automatic Downloads choice of the site you\u2019re on, including files it serves from another address, such as GitHub release files. A blocked download\u2019s message no longer appears twice."
     },
     "chromium-pages-retain-requested-zoom": {
       "category": "fixed",
@@ -3720,7 +3720,7 @@
     },
     "onboarding-scan-for-more": {
       "category": "improved",
-      "message": "Setup no longer looks through other browsers’ data when Crest first opens. It reads a browser only when you choose it to import, or everything when you press Scan for more."
+      "message": "Setup no longer looks through other browsers\u2019 data when Crest first opens. It reads a browser only when you choose it to import, or everything when you press Scan for more."
     },
     "pinned-tab-unpin-menu": {
       "category": "improved",
@@ -3728,7 +3728,7 @@
     },
     "concentric-page-corners": {
       "category": "improved",
-      "message": "On Mac, a page’s corners now follow the rounded corners of its window, so the window border stays the same width all the way around at any border size."
+      "message": "On Mac, a page\u2019s corners now follow the rounded corners of its window, so the window border stays the same width all the way around at any border size."
     },
     "full-screen-page-top-band": {
       "category": "fixed",
@@ -3736,11 +3736,11 @@
     },
     "update-restart-recovers": {
       "category": "fixed",
-      "message": "Restarting to install an update no longer gets stuck. If you choose to stay on a page, the update goes back to Ready to Install so you can restart when you’re ready, and a page asking before you leave now comes to the front."
+      "message": "Restarting to install an update no longer gets stuck. If you choose to stay on a page, the update goes back to Ready to Install so you can restart when you\u2019re ready, and a page asking before you leave now comes to the front."
     },
     "update-card-hide": {
       "category": "improved",
-      "message": "You can hide the update card in the sidebar until you next check for updates or restart Crest. Settings › About shows where the update stands and offers the same buttons."
+      "message": "You can hide the update card in the sidebar until you next check for updates or restart Crest. Settings \u203a About shows where the update stands and offers the same buttons."
     },
     "show-history-opens-sidebar": {
       "category": "fixed",
@@ -3784,11 +3784,11 @@
     },
     "icloud-sync-status-shows-waiting-uploads": {
       "category": "improved",
-      "message": "Sync settings say Up to date only when every change has reached iCloud, and Waiting to upload while some haven’t yet."
+      "message": "Sync settings say Up to date only when every change has reached iCloud, and Waiting to upload while some haven\u2019t yet."
     },
     "command-palette-ranks-and-searches-sites": {
       "category": "new",
-      "message": "The command palette puts the best match first, ranks the pages and tabs you use most and most recently, and learns which result you choose for what you type. It fills in sites you visit, including those that start with www, and Return opens what it filled in. Before you type it lists your recent tabs, so Return takes you back to the one you were on. Start typing a provider’s name or shortcut, such as yt for YouTube or claude, to see it under the field, and press Tab to search that site or ask that assistant directly. Hold Command, Shift or Option with Return to open a result in the background, in Split View or in a Quick Window. The new Search section in Settings sets one default search for every Space and one for private windows, turns search engines, AI assistants and websites on or off with options of their own, such as hiding Google’s AI Overviews, adds your own, and chooses what the palette shows, how many of each, and in what order."
+      "message": "The command palette puts the best match first, ranks the pages and tabs you use most and most recently, and learns which result you choose for what you type. It fills in sites you visit, including those that start with www, and Return opens what it filled in. Before you type it lists your recent tabs, so Return takes you back to the one you were on. Start typing a provider\u2019s name or shortcut, such as yt for YouTube or claude, to see it under the field, and press Tab to search that site or ask that assistant directly. Hold Command, Shift or Option with Return to open a result in the background, in Split View or in a Quick Window. The new Search section in Settings sets one default search for every Space and one for private windows, turns search engines, AI assistants and websites on or off with options of their own, such as hiding Google\u2019s AI Overviews, adds your own, and chooses what the palette shows, how many of each, and in what order."
     },
     "search-logos-keep-proportions": {
       "category": "fixed",
@@ -3816,7 +3816,7 @@
     },
     "settings-shows-real-app-icon": {
       "category": "fixed",
-      "message": "Settings on iPhone and iPad shows Crest’s real app icon, including the one you chose, in light and dark."
+      "message": "Settings on iPhone and iPad shows Crest\u2019s real app icon, including the one you chose, in light and dark."
     },
     "default-browser-status-remembered": {
       "category": "fixed",
@@ -3828,7 +3828,7 @@
     },
     "space-search-picker-icons": {
       "category": "improved",
-      "message": "A Space’s Search with menu shows each provider’s icon, like the default search menu."
+      "message": "A Space\u2019s Search with menu shows each provider\u2019s icon, like the default search menu."
     },
     "settings-section-colors": {
       "category": "improved",
@@ -3836,15 +3836,15 @@
     },
     "history-opens-over-page": {
       "category": "fixed",
-      "message": "On iPhone, Show Full History in a page’s Back and Forward menus opens History."
+      "message": "On iPhone, Show Full History in a page\u2019s Back and Forward menus opens History."
     },
     "download-prompt-over-page": {
       "category": "fixed",
-      "message": "On iPhone, Crest asks before downloading a risky file from the page you’re viewing, instead of leaving the download waiting for approval."
+      "message": "On iPhone, Crest asks before downloading a risky file from the page you\u2019re viewing, instead of leaving the download waiting for approval."
     },
     "tab-audio-indicator": {
       "category": "new",
-      "message": "A tab playing sound shows a speaker badge on its icon, which mutes or unmutes it, and bars behind its title that follow its sound on Chromium pages. Tabs taking part in tab sharing show a badge that goes to the other tab or stops sharing. Look and Feel can show the status in place of the tab’s icon, or turn the bars off."
+      "message": "A tab playing sound shows a speaker badge on its icon, which mutes or unmutes it, and bars behind its title that follow its sound on Chromium pages. Tabs taking part in tab sharing show a badge that goes to the other tab or stops sharing. Look and Feel can show the status in place of the tab\u2019s icon, or turn the bars off."
     },
     "page-commands-follow-peek": {
       "category": "fixed",
@@ -3856,7 +3856,7 @@
     },
     "agents-use-crest": {
       "category": "new",
-      "message": "On Mac, coding agents such as Claude Code and Codex can use Crest as their browser in the Spaces you choose: open and read tabs, click and type, take screenshots, and read a page’s console and network requests. Turn it on in Settings › Agents. Crest asks before each new agent connects, and every tab an agent uses shows its badge."
+      "message": "On Mac, coding agents such as Claude Code and Codex can use Crest as their browser in the Spaces you choose: open and read tabs, click and type, take screenshots, and read a page\u2019s console and network requests. Turn it on in Settings \u203a Agents. Crest asks before each new agent connects, and every tab an agent uses shows its badge."
     },
     "2026-10-12-page-engine-events-own-behavior": {
       "category": "internal",
@@ -4016,7 +4016,7 @@
     },
     "2026-10-12-refuse-unexpected-edits-instead-of-quitting": {
       "category": "fixed",
-      "message": "Crest no longer quits when it can’t make an edit, such as one on a tab that just closed or a change only a Space’s owner may make."
+      "message": "Crest no longer quits when it can\u2019t make an edit, such as one on a tab that just closed or a change only a Space\u2019s owner may make."
     },
     "2026-10-12-prompt-hosts-answer-every-question": {
       "category": "internal",
@@ -4024,7 +4024,7 @@
     },
     "2026-10-12-refused-engine-report-safe": {
       "category": "fixed",
-      "message": "A page reporting something Crest can’t use no longer closes the app."
+      "message": "A page reporting something Crest can\u2019t use no longer closes the app."
     },
     "2026-10-12-concrete-pane-views": {
       "category": "internal",
@@ -4036,7 +4036,7 @@
     },
     "2026-10-12-sidebar-surface-material": {
       "category": "improved",
-      "message": "Choose how much the sidebar’s tabs, folders and bars let the background show through, from Ultra Thin to Ultra Thick, in Look and Feel settings. Pinned tabs now sit closer under the address bar."
+      "message": "Choose how much the sidebar\u2019s tabs, folders and bars let the background show through, from Ultra Thin to Ultra Thick, in Look and Feel settings. Pinned tabs now sit closer under the address bar."
     },
     "2026-10-12-sidebar-layer-shapes": {
       "category": "improved",
@@ -4105,6 +4105,10 @@
     "translation-download-languages-no-crash": {
       "category": "fixed",
       "message": "Download Languages in Page Translation settings opens language downloads without Crest quitting."
+    },
+    "temporary-sidebar-interruptible-animation": {
+      "category": "fixed",
+      "message": "Temporary sidebars and their utility selector animate smoothly when shortcuts interrupt opening or closing."
     }
   }
 }

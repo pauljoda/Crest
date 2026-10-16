@@ -8,8 +8,7 @@ struct BrowserRootUtilityFanLayer: View {
     var body: some View {
         GeometryReader { proxy in
             if let triggerFrame = model.chrome.utilityPresentation
-                .triggerFrameInGlobal,
-                model.sidebarPresentation.showsSidebar
+                .triggerFrameInGlobal
             {
                 BrowserRootUtilityFanControl(
                     model: model,
@@ -19,6 +18,7 @@ struct BrowserRootUtilityFanLayer: View {
                 )
             }
         }
+        .animation(nil, value: model.sidebarPresentation)
     }
 }
 
