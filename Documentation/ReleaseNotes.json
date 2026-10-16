@@ -4150,6 +4150,10 @@
       "category": "fixed",
       "message": "On macOS 26, switches, pickers and the house choices in Settings take every click instead of ignoring clicks after the first."
     },
+    "update-restart-quits-crest": {
+      "category": "fixed",
+      "message": "Restart and Update quits Crest and installs the update instead of waiting until you quit, and Quit in the Dock works again, even after another app has used AppleScript with Crest."
+    },
     "chromium-upstream-155-0-8059-39-1-1-6271503014ef": {
       "category": "fixed",
       "message": "Chromium is updated to 155.0.8059.39 with upstream security and compatibility fixes."
