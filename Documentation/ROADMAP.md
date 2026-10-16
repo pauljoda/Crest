@@ -151,7 +151,6 @@ the live status for each issue.
 - [ ] [Open links in Crest from the iOS share sheet](https://github.com/pauljoda/Crest/issues/372)
 - [ ] [Crest's iOS icon doesn't tint with tinted Home Screen icons](https://github.com/pauljoda/Crest/issues/373)
 - [ ] [Switch what a tab is sharing from its sharing menu](https://github.com/pauljoda/Crest/issues/375)
-- [ ] [Page menu commands are disabled in Quick Windows on Mac](https://github.com/pauljoda/Crest/issues/377)
 - [ ] [feature: Expose native scripting & automation interface for Spaces, Tabs, and Window management](https://github.com/pauljoda/Crest/issues/380)
 - [ ] [bug: On fullscreen the Site Controls -menu doesn't open](https://github.com/pauljoda/Crest/issues/385)
 - [ ] [feature: Show a peek indicator on the originating tab when a Peek is open](https://github.com/pauljoda/Crest/issues/389)
@@ -177,19 +176,23 @@ the live status for each issue.
 - [ ] [Web Inspector shortcut follow-ups](https://github.com/pauljoda/Crest/issues/443)
 - [ ] [After a Peek closes on Chromium, the tab doesn't get the keyboard back](https://github.com/pauljoda/Crest/issues/444)
 - [ ] [feature: Configure Tab and Space search-provider triggers independently](https://github.com/pauljoda/Crest/issues/450)
-- [ ] [bug: Open link in another Space can leave the new tab unselected](https://github.com/pauljoda/Crest/issues/451)
 - [ ] [bug: Quick Window password support](https://github.com/pauljoda/Crest/issues/462)
 - [ ] [Space switch animation: wrap-around jumps, and a sidebar animation restarts a running slide](https://github.com/pauljoda/Crest/issues/469)
 - [ ] [Menu titles for History, Archive and Downloads now that they toggle](https://github.com/pauljoda/Crest/issues/470)
+- [ ] [bug: dropdown menus in the settings do not open](https://github.com/pauljoda/Crest/issues/476)
+- [ ] [bug: Preserve sidebar state and page state when moving a tab to another window/display](https://github.com/pauljoda/Crest/issues/477)
+- [ ] [Make Translate, Reader, content blocking, the inspector and engine moves act on a Quick Window](https://github.com/pauljoda/Crest/issues/484)
 
 #### Completed
 
 - [x] [bug: Right-clicking an extension in Site Controls closes Site Controls](https://github.com/pauljoda/Crest/issues/262)
+- [x] [Page menu commands are disabled in Quick Windows on Mac](https://github.com/pauljoda/Crest/issues/377) — [`2b661960`](https://github.com/pauljoda/Crest/commit/2b661960d1013f9101417871ebdfeb8796dab253)
 - [x] [Closing find with Escape doesn't return focus to the page on Mac](https://github.com/pauljoda/Crest/issues/378) — [`fdee1e3d`](https://github.com/pauljoda/Crest/commit/fdee1e3d41566ba4cf245d528d325b438b8be48b)
 - [x] [feature: Choose search engine on new tab prompt (based on shortcut)](https://github.com/pauljoda/Crest/issues/386)
 - [x] [feature: Toggle History, Archive, and Downloads sidebars and focus search](https://github.com/pauljoda/Crest/issues/397)
 - [x] [bug: Pin layout capped at 4 pins per row since 0.8 — selecting 5 or 6 has no effect](https://github.com/pauljoda/Crest/issues/415)
 - [x] [bug: Revealed sidebar stays open after the pointer leaves the window for another app](https://github.com/pauljoda/Crest/issues/440)
+- [x] [bug: Open link in another Space can leave the new tab unselected](https://github.com/pauljoda/Crest/issues/451)
 
 <!-- crest-roadmap-sync:end -->
 

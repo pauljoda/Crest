@@ -667,6 +667,43 @@ final class BrowserWebHostViewTests: XCTestCase {
         XCTAssertFalse(setup.window.firstResponder === setup.webView)
     }
 
+    /// Closing a Peek hands the keyboard back to the page under it while the
+    /// Peek's own page, still leaving the window, holds it. Only a request
+    /// that names the Peek's page as the one giving way takes focus from it.
+    func testClosingPeekTakesFocusFromThePeekPage() {
+        let setup = focusHostSetup()
+        let allowed = BrowserWebFocusRestorationGate(browserChromeOwnsFocus: false, pageChromeOwnsFocus: false)
+        let peekPage = NSTextView(frame: NSRect(x: 0, y: 0, width: 200, height: 100))
+        setup.host.addSubview(peekPage)
+        XCTAssertTrue(setup.window.makeFirstResponder(peekPage))
+
+        setup.controller.requestPageFocus()
+        XCTAssertFalse(
+            setup.controller.restoreIfNeeded(
+                in: setup.host,
+                gate: allowed,
+                applicationIsActive: true,
+                accessibilityOwnsFocus: false,
+                menuIsTracking: false,
+                windowIsKey: true
+            )
+        )
+        XCTAssertTrue(setup.window.firstResponder === peekPage)
+
+        setup.controller.requestPageFocus(displacing: peekPage)
+        XCTAssertTrue(
+            setup.controller.restoreIfNeeded(
+                in: setup.host,
+                gate: allowed,
+                applicationIsActive: true,
+                accessibilityOwnsFocus: false,
+                menuIsTracking: false,
+                windowIsKey: true
+            )
+        )
+        XCTAssertTrue(setup.window.firstResponder === setup.webView)
+    }
+
     func testNativeRefusalInvalidatesInsteadOfStealingFocusLater() {
         let refusingWindow = BrowserFocusRefusingWindow(
             contentRect: NSRect(x: 0, y: 0, width: 640, height: 480),

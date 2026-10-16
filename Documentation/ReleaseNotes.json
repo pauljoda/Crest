@@ -4129,6 +4129,10 @@
     "page-commands-follow-quick-window": {
       "category": "fixed",
       "message": "Back, Reload, Find, Zoom, Copy Page Link, Print and the other page commands work in a Quick Window."
+    },
+    "peek-close-returns-keyboard": {
+      "category": "fixed",
+      "message": "Closing a Peek gives the keyboard back to the page underneath, so the arrow keys and Space scroll it again without a click."
     }
   }
 }
