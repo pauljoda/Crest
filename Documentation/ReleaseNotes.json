@@ -4062,6 +4062,10 @@
       "category": "fixed",
       "message": "On pinned tabs, the sound and sharing badge sits in the tile\u2019s bottom corner instead of over the site icon, so the icon is easy to click."
     },
+    "background-launch-for-connected-tools": {
+      "category": "fixed",
+      "message": "Connected tools can start Crest in the background without taking focus."
+    },
     "site-controls-extension-menu-stays-open": {
       "category": "fixed",
       "message": "Right-clicking an extension in Site Controls shows its menu without closing Site Controls."
@@ -4153,6 +4157,10 @@
     "update-restart-quits-crest": {
       "category": "fixed",
       "message": "Restart and Update quits Crest and installs the update instead of waiting until you quit, and Quit in the Dock works again, even after another app has used AppleScript with Crest."
+    },
+    "background-launch-review-scope": {
+      "category": "internal",
+      "message": "Keep background launch focused on window activation while retaining the existing window implementation."
     }
   }
 }
