@@ -4106,6 +4106,30 @@
       "category": "fixed",
       "message": "Download Languages in Page Translation settings opens language downloads without Crest quitting."
     },
+    "chromium-whole-page-translation": {
+      "category": "new",
+      "message": "Translate whole pages on device in Chromium too, with the same translation toolbar, automatic translation and Show Original as WebKit pages."
+    },
+    "translation-unsupported-page-language": {
+      "category": "fixed",
+      "message": "Pages in more languages, such as Swedish, now translate, and a page in a language Apple Translation doesn’t support says so instead of offering a translation that fails."
+    },
+    "cross-space-link-tab-activation": {
+      "category": "fixed",
+      "message": "Opening a link in another Space shows the link there instead of the Start Page."
+    },
+    "palette-control-a-e-line-edges": {
+      "category": "fixed",
+      "message": "Control-A and Control-E move to the start and end of the line in the address bar instead of jumping between result sections."
+    },
+    "sidebar-stays-hidden-after-focus-moves-away": {
+      "category": "fixed",
+      "message": "A hidden sidebar no longer slides back out on its own when you click into another app or another Mac with the pointer at the window edge."
+    },
+    "page-commands-follow-quick-window": {
+      "category": "fixed",
+      "message": "Back, Reload, Find, Zoom, Copy Page Link, Print and the other page commands work in a Quick Window."
+    },
     "temporary-sidebar-interruptible-animation": {
       "category": "fixed",
       "message": "Temporary sidebars and their utility selector animate smoothly when shortcuts interrupt opening or closing."

@@ -13,9 +13,9 @@ On Mac, each page runs in Chromium or WebKit. Crest on iPhone and iPad uses WebK
 
 ## Translate a page
 
-Translate webpages on device using Apple’s Translation framework. Whole-page translation works on iPhone, iPad, and WebKit pages on Mac. On a Chromium page, select text and translate the selection from the page's context menu; it uses the same on-device translation. To translate a whole Chromium page, open it in WebKit.
+Translate webpages on device using Apple’s Translation framework. Whole-page translation works on iPhone, iPad, and Mac, where it works on both Chromium and WebKit pages. On a Chromium page you can also select text and translate the selection from the page's context menu; it uses the same on-device translation.
 
-On a WebKit page on Mac, open the translation toolbar with **Shift-Command-L**. On iPhone and iPad, tap the address bar’s translation button for options, or touch and hold it to translate immediately.
+On Mac, open the translation toolbar with **Shift-Command-L**. On iPhone and iPad, tap the address bar’s translation button for options, or touch and hold it to translate immediately.
 
 Choose **Detect Language** or a source language, pick a target language, then translate. **Show Original** restores the page’s original text. Language availability depends on Apple’s support; Apple asks before downloading a language that is needed.
 

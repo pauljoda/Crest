@@ -2,19 +2,31 @@ import Foundation
 import NaturalLanguage
 import Observation
 @preconcurrency import Translation
-import WebKit
 
 /// One live document owns its offer, model work, and restoration token. Nothing
 /// here is persisted or shared between pages, Spaces, profiles, or private sessions.
 @Observable @MainActor
 final class BrowserPageTranslation {
-    var sourceID = ""
+    /// The unsupported-language notice speaks for Detect Language only; a
+    /// source the person picks from the menu is one Apple translates.
+    var sourceID = "" {
+        didSet {
+            guard let unsupportedSourceID, sourceID != oldValue else { return }
+            let notice = unsupportedNotice(for: unsupportedSourceID)
+            if sourceID.isEmpty {
+                status = notice
+            } else if status == notice {
+                status = ""
+            }
+        }
+    }
     var targetID = ""
     private(set) var languages: [Locale.Language] = []
+    @ObservationIgnored private var supportedLanguages = BrowserTranslationPreference.Languages.unloaded
     private(set) var installedLanguageIDs: Set<String> = []
     private(set) var downloadRevision = 0
     @ObservationIgnored private var languageCheckID: String?
-    @ObservationIgnored private var languageLoadTask: Task<[Locale.Language], Never>?
+    @ObservationIgnored private var languageLoadTask: Task<BrowserTranslationPreference.Languages, Never>?
 
     var downloadedLanguages: [Locale.Language] {
         languages.filter { installedLanguageIDs.contains($0.minimalIdentifier) }
@@ -28,9 +40,12 @@ final class BrowserPageTranslation {
     private(set) var isWorking = false
     private(set) var isTranslated = false
     private(set) var status = ""
+    /// The page's language when Apple cannot translate it, which no menu
+    /// offers as a source.
+    private(set) var unsupportedSourceID: String?
     var showsInformation = false
 
-    @ObservationIgnored private weak var webView: WKWebView?
+    @ObservationIgnored private var document: BrowserTranslationDocument?
     @ObservationIgnored private var isActive = false
     @ObservationIgnored private var activeHostID: UUID?
     @ObservationIgnored private var token: String?
@@ -50,6 +65,13 @@ final class BrowserPageTranslation {
 
     var hasSelectedTranslation: Bool {
         isTranslated && sourceID == translatedSourceID && targetID == translatedTargetID
+    }
+
+    /// Whether Translate can run: a target is chosen, and the source is one
+    /// Apple translates. A page in a language Apple does not translate waits
+    /// for the person to choose a source language themselves.
+    var canTranslate: Bool {
+        !targetID.isEmpty && (unsupportedSourceID == nil || !sourceID.isEmpty)
     }
 
     var showsToolbar: Bool {
@@ -81,62 +103,76 @@ final class BrowserPageTranslation {
         return Locale.current.localizedString(forIdentifier: identifier) ?? identifier
     }
 
-    /// Whole-page translation rewrites a live DOM through Apple's Translation
-    /// session, which only the WebKit port exposes; another engine's page
-    /// leaves the translation inert.
-    func setActive(_ active: Bool, in engine: any BrowserPageEngine, hostID: UUID? = nil) {
-        guard let webView = (engine as? BrowserWebKitPageEngine)?.webView else { return }
-        setActive(active, in: webView, hostID: hostID)
+    /// Apple's low-latency models where they cover the pair, and Apple's
+    /// default model for a language they leave out, such as Swedish.
+    private func usesLowLatency(from source: String, to target: String) -> Bool {
+        supportedLanguages.usesLowLatency(from: source, to: target)
     }
 
-    func detect(in engine: any BrowserPageEngine) async {
-        guard let webView = (engine as? BrowserWebKitPageEngine)?.webView else { return }
-        await detect(in: webView)
+    private func availability(from source: String, to target: String) -> LanguageAvailability {
+        BrowserTranslationPreference.languageAvailability(lowLatency: usesLowLatency(from: source, to: target))
     }
 
-    func setActive(_ active: Bool, in webView: WKWebView, hostID: UUID? = nil) {
+    private func unsupportedNotice(for identifier: String) -> String {
+        String(localized: "Apple Translation doesn’t support \(languageName(identifier)).")
+    }
+
+    /// Whole-page translation rewrites the live DOM of `document`, the page's
+    /// main document on whichever engine shows it.
+    func setActive(_ active: Bool, in document: BrowserTranslationDocument, hostID: UUID? = nil) {
         // Reparenting a live page can mount its next host before the previous
         // host disappears. Only the current host may end that presentation.
         if !active, let hostID, activeHostID != hostID { return }
         activeHostID = active ? hostID : nil
-        self.webView = webView
+        self.document = document
         isActive = active
         if !active { cancel() }
     }
 
-    func detect(in webView: WKWebView) async {
-        guard isActive, !hasDetected, !isWorking else { return }
+    /// Detects the page's language once it settles. The page's host cancels
+    /// detection when the page starts loading again and runs it anew.
+    func detect() async {
+        guard isActive, !hasDetected, !isWorking, let document else { return }
         let revision = documentRevision
         do {
             for attempt in 0..<3 {
                 try await Task.sleep(for: .milliseconds(attempt == 0 ? 1500 : 1000))
-                guard isActive, revision == documentRevision, !isWorking, !webView.isLoading else { return }
-                let sample = try await BrowserTranslationDocument.sample(in: webView)
+                guard isActive, revision == documentRevision, !isWorking else { return }
+                let sample = try await document.sample()
                 let detected = await Task.detached(priority: .utility) { Self.detectedLanguage(in: sample) }.value
                 try Task.checkCancellation()
                 guard isActive, revision == documentRevision, !isWorking else { return }
                 guard let detected else { continue }
                 hasDetected = true
                 sourceID = detected
-                let preferred = Locale.Language(identifier: Locale.preferredLanguages.first ?? "en")
-                guard
-                    languageRules.decision(for: detected)?.target != nil
-                        || preferred.languageCode != Locale.Language(identifier: detected).languageCode
-                else { return }
                 await loadLanguages()
                 guard isActive, revision == documentRevision, !isWorking, !Task.isCancelled else { return }
                 let detectedLanguage = Locale.Language(identifier: detected)
-                sourceID =
-                    languages.first { $0.minimalIdentifier == detectedLanguage.minimalIdentifier }?.minimalIdentifier
+                let supported =
+                    languages.first { $0.minimalIdentifier == detectedLanguage.minimalIdentifier }
                     ?? languages.first {
                         $0.languageCode == detectedLanguage.languageCode && $0.script == detectedLanguage.script
-                    }?.minimalIdentifier
-                    ?? detected
-                guard isActive, revision == documentRevision, !isWorking, !Task.isCancelled else { return }
+                    }
+                // Apple lists every language it translates, so one missing from
+                // a loaded list is not offered and cannot be chosen. A page in
+                // the person's own language says so too, for when they open
+                // translation themselves.
+                if supported == nil, !languages.isEmpty {
+                    sourceID = ""
+                    unsupportedSourceID = detected
+                    status = unsupportedNotice(for: detected)
+                    return
+                }
+                sourceID = supported?.minimalIdentifier ?? detected
+                let preferred = Locale.Language(identifier: Locale.preferredLanguages.first ?? "en")
+                guard
+                    languageRules.decision(for: detected)?.target != nil
+                        || preferred.languageCode != detectedLanguage.languageCode
+                else { return }
                 if let target = languageRules.decision(for: sourceID)?.target, automaticallyTranslates {
                     targetID = target
                 }
-                let availability = await BrowserTranslationPreference.languageAvailability().status(
+                let availability = await availability(from: sourceID, to: targetID).status(
                     from: .init(identifier: sourceID), to: .init(identifier: targetID))
                 guard isActive, revision == documentRevision, !isWorking, !Task.isCancelled else { return }
                 isOffered = availability != .unsupported
@@ -169,14 +205,11 @@ final class BrowserPageTranslation {
         guard languages.isEmpty else { return }
         let load =
             languageLoadTask
-            ?? Task {
-                let supported = await BrowserTranslationPreference.languageAvailability().supportedLanguages
-                // The strategy-specific catalog can be empty even when status(from:to:)
-                // confirms installed pairs. Keep the general catalog available for menus.
-                return supported.isEmpty ? await LanguageAvailability().supportedLanguages : supported
-            }
+            ?? Task { await BrowserTranslationPreference.languages() }
         languageLoadTask = load
-        languages = await load.value.sorted {
+        let loaded = await load.value
+        supportedLanguages = loaded
+        languages = loaded.all.sorted {
             languageName($0.minimalIdentifier).localizedStandardCompare(languageName($1.minimalIdentifier))
                 == .orderedAscending
         }
@@ -196,7 +229,7 @@ final class BrowserPageTranslation {
         // languages; unsupported/supported pairs do not prove either is absent.
         var pairs = identifiers.map { [$0, targetID] }
         if !sourceID.isEmpty { pairs += identifiers.map { [sourceID, $0] } }
-        let installed = await Self.installedLanguages(in: pairs)
+        let installed = await Self.installedLanguages(in: pairs, supported: supportedLanguages)
         guard !Task.isCancelled, check == languageStatusID else {
             if languageCheckID == check { languageCheckID = nil }
             return
@@ -204,13 +237,16 @@ final class BrowserPageTranslation {
         installedLanguageIDs = installed
     }
 
-    private nonisolated static func installedLanguages(in pairs: [[String]]) async -> Set<String> {
+    private nonisolated static func installedLanguages(
+        in pairs: [[String]], supported: BrowserTranslationPreference.Languages
+    ) async -> Set<String> {
         await withTaskGroup(of: [String].self, returning: Set<String>.self) { group in
             var iterator = pairs.makeIterator()
             func enqueue(_ pair: [String]) {
                 group.addTask {
                     guard !Task.isCancelled, !pair[0].isEmpty, !pair[1].isEmpty else { return [] }
-                    let status = await BrowserTranslationPreference.languageAvailability().status(
+                    let lowLatency = supported.usesLowLatency(from: pair[0], to: pair[1])
+                    let status = await BrowserTranslationPreference.languageAvailability(lowLatency: lowLatency).status(
                         from: .init(identifier: pair[0]), to: .init(identifier: pair[1]))
                     return status == .installed ? pair : []
                 }
@@ -246,7 +282,8 @@ final class BrowserPageTranslation {
         if confirmedPair {
             availability = .installed
         } else {
-            availability = await BrowserTranslationPreference.languageAvailability().status(from: source, to: target)
+            availability = await self.availability(from: sourceID, to: target.minimalIdentifier).status(
+                from: source, to: target)
         }
         guard !Task.isCancelled, isActive, revision == documentRevision,
             source == Locale.Language(identifier: sourceID),
@@ -267,7 +304,7 @@ final class BrowserPageTranslation {
             status = String(localized: "Automatically translating to \(targetName)…")
             // This session cannot request downloads or present consent UI.
             let installedSession: TranslationSession
-            if #available(iOS 26.4, macOS 26.4, *) {
+            if #available(iOS 26.4, macOS 26.4, *), usesLowLatency(from: sourceID, to: target.minimalIdentifier) {
                 installedSession = TranslationSession(
                     installedSource: source, target: target, preferredStrategy: .lowLatency)
             } else {
@@ -293,7 +330,7 @@ final class BrowserPageTranslation {
     }
 
     func start() {
-        guard isActive, !isWorking, !targetID.isEmpty else { return }
+        guard isActive, !isWorking, canTranslate else { return }
         isManuallyPresented = true
         automaticAttempted = true
         isAutomaticOperation = false
@@ -309,7 +346,9 @@ final class BrowserPageTranslation {
             var next = lastConfiguration ?? .init()
             next.source = sourceID.isEmpty ? nil : .init(identifier: sourceID)
             next.target = .init(identifier: targetID)
-            if #available(iOS 26.4, macOS 26.4, *) { next.preferredStrategy = .lowLatency }
+            if #available(iOS 26.4, macOS 26.4, *) {
+                next.preferredStrategy = usesLowLatency(from: sourceID, to: targetID) ? .lowLatency : .highFidelity
+            }
             next.invalidate()
             lastConfiguration = next
             configuration = next
@@ -318,7 +357,7 @@ final class BrowserPageTranslation {
 
     func run(using session: TranslationSession, configuration expected: TranslationSession.Configuration?) async {
         guard expected != nil || isAutomaticOperation,
-            expected == configuration, isActive, isWorking, let webView
+            expected == configuration, isActive, isWorking, let document
         else { return }
         let automatic = isAutomaticOperation
         self.session = session
@@ -343,7 +382,7 @@ final class BrowserPageTranslation {
                     return
                 }
             }
-            let capture = try await BrowserTranslationDocument.capture(in: webView, token: operation)
+            let capture = try await document.capture(token: operation)
             try validate(operation, revision: revision)
             isTranslated = false
             guard !capture.texts.isEmpty else {
@@ -360,7 +399,7 @@ final class BrowserPageTranslation {
             var completed = 0
             try await Self.translate(capture.texts, using: session) { updates in
                 try self.validate(operation, revision: revision)
-                applied += try await BrowserTranslationDocument.apply(updates, token: operation, in: webView)
+                applied += try await document.apply(updates, token: operation)
                 try self.validate(operation, revision: revision)
                 completed += updates.count
                 self.isTranslated = applied > 0
@@ -389,7 +428,7 @@ final class BrowserPageTranslation {
             }
         } catch {
             guard token == operation, revision == documentRevision else { return }
-            try? await BrowserTranslationDocument.restore(token: operation, in: webView)
+            try? await document.restore(token: operation)
             guard token == operation, revision == documentRevision else { return }
             isTranslated = false
             status =
@@ -455,9 +494,9 @@ final class BrowserPageTranslation {
         token = nil
         isTranslated = false
         status = String(localized: "Original page")
-        if let previous, let webView {
+        if let previous, let document {
             let revision = documentRevision
-            let restoration = Task { try await BrowserTranslationDocument.restore(token: previous, in: webView) }
+            let restoration = Task { try await document.restore(token: previous) }
             restorationTask = restoration
             Task {
                 do { try await restoration.value } catch {
@@ -489,6 +528,7 @@ final class BrowserPageTranslation {
         automaticAttempted = false
         detectedInstalledPair = nil
         sourceID = ""
+        unsupportedSourceID = nil
         isOffered = false
         isManuallyPresented = false
         isDismissed = false

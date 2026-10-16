@@ -248,15 +248,13 @@
         // MARK: - Actions - Translation
 
         /// Chromium's own translate bubble asks for whole-page translation,
-        /// which this adapter declares unavailable; the notice points at what
-        /// is offered.
+        /// which Crest's translation toolbar answers, as Translate Page does.
         static func translatePage() {
-            showNativeNotice(
-                BrowserEngineRegistration.chromium.supports(.selectionTranslation)
-                    ? "Whole-page translation is not available in this engine. Select text on the page, then translate the selection."
-                    : "Translation is not available in this engine.",
-                icon: "globe"
-            )
+            guard let shell, BrowserMacApplicationAction.translatePage.isEnabled(in: shell) else {
+                showNativeNotice(String(localized: "This page can’t be translated."), icon: "globe")
+                return
+            }
+            BrowserMacApplicationAction.translatePage.perform(in: shell)
         }
 
         static func translateText(_ text: String) {

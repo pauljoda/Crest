@@ -24,7 +24,7 @@ extension BrowserCommandActions {
         if canSearchUtility {
             chrome.utilityPresentation.focusSearch()
         } else {
-            pages.commandPage?.presentFind()
+            commandPage?.presentFind()
         }
     }
 }

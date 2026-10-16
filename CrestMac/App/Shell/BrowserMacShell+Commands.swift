@@ -69,20 +69,29 @@ extension BrowserMacShell {
     func canPerform(_ command: ShortcutCommand) -> Bool {
         guard !isQuitting, NSApp.modalWindow == nil, NSApp.keyWindow?.attachedSheet == nil else { return false }
         if let windowless = BrowserMacCommand.of(command)?.withoutWindow, let windows {
-            return activeActions != nil || windowless.isAvailable(windows)
+            return actions(for: command) != nil || windowless.isAvailable(windows)
         }
-        return activeActions?.canPerform(command) == true
+        return actions(for: command)?.canPerform(command) == true
     }
 
-    /// Runs `command` in the key browser window, or with none, the commands
-    /// that need no window.
+    /// Runs `command` in the key browser window, or on the page of a key
+    /// Quick Window, or with neither, the commands that need no window.
     func perform(_ command: ShortcutCommand) {
         guard canPerform(command) else { return }
-        if let actions = activeActions {
+        if let actions = actions(for: command) {
             actions.perform(command)
             return
         }
         if let windows { BrowserMacCommand.of(command)?.withoutWindow?.run(windows) }
+    }
+
+    /// The actions `command` runs with now: a key Quick Window's for a command
+    /// on the page it shows, or else the key browser window's.
+    private func actions(for command: ShortcutCommand) -> BrowserCommandActions? {
+        if BrowserMacCommand.of(command)?.actsOnPage == true, let quickWindow = windows?.activeQuickWindowActions {
+            return quickWindow
+        }
+        return activeActions
     }
 
     // MARK: - Actions - Engine window requests

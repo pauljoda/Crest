@@ -39,10 +39,13 @@ Rules every engine keeps:
   binding really does. The core offers what the default engine supports and
   what each engine a page is open on supports, and the page's own engine
   enables it. UI never gates on build flags.
-- Unsupported features have explicit product behavior. Reader, whole-page
-  translation, built-in content blocking and protected media are unavailable
-  on Chromium by decision; a page that needs protected media switches to WebKit after before-unload checks, unless a website rule already chooses its engine.
-  Selection translation works on both engines.
+- Unsupported features have explicit product behavior. Reader, built-in
+  content blocking and protected media are unavailable on Chromium by
+  decision; a page that needs protected media switches to WebKit after before-unload checks, unless a website rule already chooses its engine.
+  Whole-page translation works on both engines: each engine adapter supplies
+  the page's main document as a `BrowserTranslationDocument`, which runs the
+  same translation bridge through WebKit's content world or Chromium's content
+  scripting. Selection translation works on both engines.
 
 ## Current state
 

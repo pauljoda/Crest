@@ -16,6 +16,9 @@ import SwiftUI
 struct BrowserCollapsedSidebarRevealControl: View {
     let capabilities: BrowserInteractionCapabilities
     let showSidebar: () -> Void
+    /// Whether the strip reveals the sidebar for a resting pointer itself. A
+    /// shell that tracks the pointer at the edge on its own turns this off.
+    var revealsOnHover = true
     var edge: HorizontalEdge = .leading
     var isWindowFocused = true
     /// Replaces the strip's width where a pointer shell lets people choose it.
@@ -38,7 +41,7 @@ struct BrowserCollapsedSidebarRevealControl: View {
         .accessibilityIdentifier("show-sidebar")
         .help(hint)
         .onHover { isHovering in
-            guard metrics.revealsOnHover, isWindowFocused, isHovering else { return }
+            guard revealsOnHover, metrics.revealsOnHover, isWindowFocused, isHovering else { return }
             showSidebar()
         }
         .frame(width: width)

@@ -61,6 +61,8 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     var findFocusRequest: Int { findSession.focusRequest }
     private(set) var pageZoom: CGFloat = BrowserDefaultPageZoomStore.defaultLevel
     let translation = BrowserPageTranslation()
+    /// The document whole-page translation rewrites.
+    var translationDocument: BrowserTranslationDocument? { BrowserTranslationDocument(webView: webView) }
     var readerModeState: BrowserReaderModeState { readerModeSession.state }
     var isContentBlockingActive: Bool { contentRuleSession.isActive }
     private(set) var isRequestingDesktopSite = false

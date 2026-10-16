@@ -218,6 +218,34 @@ final class BrowserPageActionsTests: XCTestCase {
         XCTAssertFalse(pool.activePage === secondPage)
     }
 
+    /// A Quick Window in front shows only its page: the page commands act on
+    /// it even while the browser window behind shows the Start Page, and the
+    /// window's other commands stay with the browser window.
+    func testQuickWindowActionsRunOnlyPageCommandsOnItsPage() throws {
+        let startPage = TabState.Seed(title: "Start Page", url: nil, placement: .current)
+        let space = makeSpace(tabs: [startPage])
+        let browser = BrowserStore.hostingPages(SessionState.Seed(spaces: [space]))
+        let pool = BrowserPagePool(browser: browser)
+        pool.present(tab: startPage.id, in: space.id)
+        let lease = try XCTUnwrap(
+            pool.makeTransientPageLease(
+                url: try XCTUnwrap(URL(string: "about:blank#quick")),
+                in: try XCTUnwrap(browser.spaceModel(space.id))))
+        defer { lease.release() }
+        let quickWindowPage = try XCTUnwrap(lease.page)
+        let chrome = BrowserChromeState(sidebarIsPresented: false)
+        let window = BrowserCommandActions(browser: browser, pages: pool, chrome: chrome, windows: nil)
+        let quickWindow = BrowserCommandActions(
+            browser: browser, pages: pool, chrome: chrome, windows: nil, quickWindowPage: quickWindowPage)
+
+        XCTAssertFalse(window.canPerform(.reloadPage))
+        XCTAssertTrue(quickWindow.canPerform(.reloadPage))
+        XCTAssertFalse(quickWindow.canPerform(.newTab))
+
+        quickWindow.zoomIn()
+        XCTAssertEqual(quickWindowPage.pageZoom, 1.1)
+    }
+
     private func makeSpace(tabs: [TabState.Seed]) -> SpaceState.Seed {
         SpaceState.Seed(name: "Test", symbol: "circle", accent: .indigo, tabs: tabs)
     }

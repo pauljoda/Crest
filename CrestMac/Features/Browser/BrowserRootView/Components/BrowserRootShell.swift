@@ -36,6 +36,10 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
             .frame(height: 0)
             .allowsHitTesting(false)
             .accessibilityHidden(true)
+
+            // Notices show over a fullscreen page too, so one posted there
+            // is never lost.
+            BrowserNoticeLayer(chrome: model.chrome)
         }
         .overlayPreferenceValue(BrowserRootPageBoundsKey.self) { anchor in
             GeometryReader { proxy in
@@ -191,11 +195,6 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
                 .frame(width: 0, height: 0)
                 .allowsHitTesting(false)
                 .accessibilityHidden(true)
-
-            if let notice = model.visibleNotice {
-                BrowserNoticeView(notice: notice)
-                    .id(notice)
-            }
         }
     }
 

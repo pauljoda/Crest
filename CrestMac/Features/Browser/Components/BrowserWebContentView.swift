@@ -7,6 +7,9 @@ struct BrowserWebContentView: View {
     let page: BrowserPage
     let browser: BrowserStore
     let pages: BrowserPagePool
+    /// Whether a Quick Window shows the page, whose page commands always act
+    /// on it; a browser window's pool names the page they act on.
+    var isQuickWindowPage = false
 
     @Environment(\.browserWebFocusRestorationGate)
     private var browserFocusRestorationGate
@@ -23,7 +26,7 @@ struct BrowserWebContentView: View {
                     page: page,
                     browser: browser,
                     pagePresentation: pagePresentation,
-                    isPageActive: pages.commandPage === page,
+                    isPageActive: isQuickWindowPage || pages.commandPage === page,
                     focusRestorationGate: focusRestorationGate,
                     tabPlacement: tabPlacement(ofPage:),
                     goToSharingCounterpart: sharingCounterpartActivation
