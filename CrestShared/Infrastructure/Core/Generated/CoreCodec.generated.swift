@@ -7,7 +7,7 @@ import Foundation
 enum CoreCodec {
     /// SHA-256 of the canonical contract schema. The core refuses any other.
     static let fingerprint: [UInt8] = [
-        0x7b, 0x8c, 0x3e, 0xd8, 0x10, 0xc6, 0xff, 0xa3, 0xe9, 0x86, 0x31, 0xce, 0x79, 0x4d, 0x7f, 0x39, 0xb4, 0x21, 0x8f, 0x86, 0x75, 0xa7, 0x31, 0xe4, 0x35, 0x5d, 0xd1, 0xf5, 0x02, 0x52, 0x55, 0xc1
+        0x8b, 0x47, 0x97, 0x0b, 0xcd, 0xf5, 0xb1, 0x43, 0x81, 0x6c, 0xd8, 0xf2, 0xfc, 0x20, 0x15, 0x38, 0x04, 0x83, 0xa0, 0xaa, 0x33, 0x97, 0xe0, 0xf9, 0xcb, 0xf7, 0xe1, 0xfc, 0xb6, 0x40, 0x40, 0xed
     ]
     /// SHA-256 of the engine contract alone, which an engine binding registers with.
     static let engineFingerprint: [UInt8] = [
@@ -260,6 +260,7 @@ enum CoreCodec {
         case 240: return try ToggleImportSource(from: &reader)
         case 241: return try TogglePin(from: &reader)
         case 242: return try UnassignShortcut(from: &reader)
+        case 243: return try UnclaimAgentTab(from: &reader)
         default: throw WireError.malformed("Unknown Intent tag \(tag)")
         }
     }
@@ -23493,6 +23494,24 @@ extension UnassignShortcut {
 
     func encodeIntent(into writer: inout WireWriter) {
         writer.writeTag(242)
+        encode(into: &writer)
+    }
+}
+
+extension UnclaimAgentTab {
+    init(from reader: inout WireReader) throws(WireError) {
+        let sessionID = try reader.readUUID()
+        let tabID = try reader.readUUID()
+        self.init(sessionID: sessionID, tabID: tabID)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeUUID(sessionID)
+        writer.writeUUID(tabID)
+    }
+
+    func encodeIntent(into writer: inout WireWriter) {
+        writer.writeTag(243)
         encode(into: &writer)
     }
 }

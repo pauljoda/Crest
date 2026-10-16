@@ -59,7 +59,7 @@ struct BrowserAgentsSettingsPane: View {
                     .accessibilityIdentifier("agents-enabled")
             } footer: {
                 CrestFormFootnote(
-                    "Coding agents on this Mac can read and act on tabs in the Spaces you choose. Crest asks before each new agent connects."
+                    "Local tools can manage tabs and windows, read history and search providers, and delete requested history addresses in the Spaces you choose. Crest asks before each new tool connects."
                 )
             }
             if preferences.isOn { connection }
@@ -72,7 +72,9 @@ struct BrowserAgentsSettingsPane: View {
             } header: {
                 Text("Spaces")
             } footer: {
-                CrestFormFootnote("Agents never reach a private window, and see only the name of a locked Space.")
+                CrestFormFootnote(
+                    "Tools can open Private Windows but cannot access private tabs. A locked Space exposes only its name."
+                )
             }
             .disabled(!preferences.isOn)
             Section {

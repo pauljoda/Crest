@@ -64,6 +64,12 @@ internal sealed class AgentSessions {
         return Revise(sessionId, current => current with { TabIds = [.. current.TabIds, tabId] });
     }
 
+    /// Releases only this connection's hold without stopping future use or changing another connection's claims.
+    public bool Release(Guid sessionId, Guid tabId) {
+        if (Find(sessionId) is not { } session || !session.TabIds.Contains(tabId)) return false;
+        return Revise(sessionId, current => current with { TabIds = [.. current.TabIds.Where(id => id != tabId)] });
+    }
+
     /// The person stopped every agent using `tabId`: none uses it any more,
     /// and no connection of those agents may take it again while Crest runs.
     public bool Stop(Guid tabId) {

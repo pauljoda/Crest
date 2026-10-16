@@ -6723,6 +6723,11 @@ struct UnassignShortcut: Intent, ShortcutIntent, Equatable, Sendable {
     let command: ShortcutCommand
 }
 
+struct UnclaimAgentTab: Intent, AgentIntent, Equatable, Sendable {
+    let sessionID: UUID
+    let tabID: UUID
+}
+
 struct UnknownAgentSession: Equatable, Sendable {
     let sessionID: UUID
 

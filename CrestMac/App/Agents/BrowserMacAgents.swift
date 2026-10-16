@@ -17,6 +17,8 @@ import os
 final class BrowserMacAgents {
     // MARK: - Static Variables
 
+    static let maximumConnections = 32
+
     private static let logger = Logger(subsystem: "com.pauldavis.crest", category: "Agents")
 
     // MARK: - Types
@@ -160,7 +162,7 @@ final class BrowserMacAgents {
     // MARK: - Actions - Connections
 
     private func admit(_ connection: BrowserAgentConnection) {
-        guard listener != nil else {
+        guard listener != nil, links.count < Self.maximumConnections else {
             connection.close()
             return
         }
@@ -204,7 +206,7 @@ final class BrowserMacAgents {
     /// Lets `link` go of tab `tabID`'s page: it renders and keeps activity
     /// for agents no more once no other connection uses it, since the engine
     /// keeps one of each per page.
-    private func letGo(_ tabID: UUID, of link: Link) {
+    func letGo(_ tabID: UUID, of link: Link) {
         let page = agentPage(tabID)?.enginePage
         let others = links.values.filter { $0 !== link }
         if let held = link.heldPages.removeValue(forKey: tabID), page?.id == held,

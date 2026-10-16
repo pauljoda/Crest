@@ -18,7 +18,7 @@ Agents are off until you turn them on.
 3. Under **Spaces**, turn on each Space agents may use.
 4. Under **Connect an Agent**, choose **Copy Setup** for your agent, and paste it in your agent's terminal or settings.
 
-Crest must be open while an agent works. Crest never opens a window for an agent.
+Crest must be open while a tool works. Only explicit window or show-tab commands may open a window at your request.
 
 ## Allow an agent
 
@@ -36,7 +36,7 @@ When the program is a general interpreter, such as node or python, allowing it c
 ## What agents can reach
 
 - Only the Spaces you turned on. A locked Space shows agents its name and nothing in it.
-- Never a private window, and never Crest's own pages, such as Settings, a browser or extension page, or a file.
+- Private tabs remain inaccessible, including when a tool opens a Private Window for you. Never Crest's own pages, such as Settings, a browser or extension page, or a file.
 - Only `http` and `https` pages, and blank ones.
 - Not your saved passwords. A password field's value is left out of what agents read, cookies and sign-in headers are hidden in the requests they read, and request and response bodies are never shown.
 - Scripts in a page's own world only when you turn on **Let agents run scripts in pages**. A script runs with the page's own access, so it can read anything the page holds, including a password filled in on it.
@@ -54,3 +54,17 @@ Crest includes a Model Context Protocol server as a helper inside the app, which
 It speaks protocol version 2026-07-28 and the earlier versions that open with `initialize`. Call `identify` first with your name and brand colour as `#RRGGBB`, so the person sees which tabs you use. Then use `list_spaces` and `list_tabs`, and read pages with `take_snapshot`, whose element `uid`s `click`, `hover`, `fill` and `scroll` take. The other tools are `open_tab`, `navigate`, `show_tab`, `close_tab`, `screenshot`, `type_text`, `press_key`, `wait_for`, `list_console_messages`, `list_network_requests`, `get_network_request` and `evaluate_script`.
 
 When a page runs on WebKit, input reaches it as script events, which some pages ignore, and its network requests show their address, type and timing without their method, status or headers.
+
+## Browser launchers and search tools
+
+Local tools such as Raycast use the same bundled MCP helper, approval and Space permissions. No extension bridge or direct socket access is needed.
+
+- `list_spaces` includes the active state and native artwork of unlocked Spaces. Locked Spaces expose only their identity, name and locked status.
+- `list_tabs` includes pinned/saved placement and folder breadcrumbs. `show_tab` activates the original tab and opens a normal window over its Space only if needed. `close_tab` archives an ordinary open tab or puts a saved/pinned page away while preserving its sidebar entry and close-policy behavior. It respects native page confirmation; `closed` reports completion, `tabPreserved` reports whether the entry remains, and `note` explains an incomplete close. `navigate` can reload a tab by identity.
+- `search_history` reads live core history across allowed, unlocked Spaces. Optional `query` words must all match the title or address. Optional `domain` matches a hostname and its subdomains; Google Maps also matches Google's `/maps` pages. Filtering happens before the globally newest results are limited. `limit` defaults to 25 and accepts 1 through 1000. Visits include an ISO timestamp and `lastVisitTime` in Unix milliseconds.
+- `list_search_providers` returns enabled Crest providers, shortcuts and resolved URL templates, including provider options, and the selected Space's default. Optional `space` must name an allowed, unlocked Space; otherwise the active allowed Space or first unlocked Space is used.
+- `delete_history` takes required `space` and `url`. At your explicit request it removes every visit to that HTTP(S) address from the specified allowed, unlocked Space, ignoring URL fragments. The receipt identifies the Space and reports `removed`; repeating the request reports zero. It cannot clear all history, reach another unapproved Space, or delete private history.
+- `open_window` takes optional `space` and `url`; `open_blank_window` takes optional `space`; `open_quick_window` takes required `url` and optional `space`. URLs must be HTTP or HTTPS and are validated before any window opens.
+- `open_private_window` takes optional `url` and returns only a `windowID` creation receipt. No tool can list or act on that window or its tabs afterward. Private visits never appear in history results.
+
+Opening a window requires the person's request. A refused operation remains an error; launchers should never replace saved-tab activation with a duplicate URL or replace Quick or Private Windows with normal windows.
