@@ -164,15 +164,15 @@ public sealed partial class BrowserContractsTests {
         app.Send(new BeginAgentSession(other, Claude, "other connection"));
         app.Send(new ClaimAgentTab(agent, tab));
         app.Send(new ClaimAgentTab(other, tab));
-        var released = AgentSessionsIn(app.Send(new ReleaseAgentTab(agent, tab)));
+        var released = AgentSessionsIn(app.Send(new UnclaimAgentTab(agent, tab)));
         Assert.Empty(released.Single(current => current.SessionId == agent).TabIds);
         Assert.Equal([tab], released.Single(current => current.SessionId == other).TabIds);
-        app.Send(new ReleaseAgentTab(agent, tab));
-        app.Send(new ReleaseAgentTab(Guid.NewGuid(), tab));
+        app.Send(new UnclaimAgentTab(agent, tab));
+        app.Send(new UnclaimAgentTab(Guid.NewGuid(), tab));
         Assert.True(app.Query(new AgentReach(other)).Spaces.SelectMany(current => current.Tabs).Single(current => current.TabId == tab).Claimed);
         app.Send(new ClaimAgentTab(agent, tab));
         app.Send(new StopAgentTab(tab));
-        app.Send(new ReleaseAgentTab(agent, tab));
+        app.Send(new UnclaimAgentTab(agent, tab));
         Assert.Equal(new AgentTabStopped(tab), Assert.Throws<Rejected>(() => app.Send(new ClaimAgentTab(agent, tab))).Rejection);
     }
 

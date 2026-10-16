@@ -209,7 +209,7 @@ extension BrowserMacAgents {
             else { return false }
             // Put-away notifications run during close, so the caller must release its hold before those observers run.
             do {
-                try self.core.send(ReleaseAgentTab(sessionID: call.sessionID, tabID: tab.id))
+                try self.core.send(UnclaimAgentTab(sessionID: call.sessionID, tabID: tab.id))
             } catch { return false }
             closed = browser.closeSessionTab(tab.id, in: space.id)
             if closed {
