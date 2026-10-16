@@ -73,11 +73,14 @@ final class SpaceContentPagerView<Content: View & Equatable>: NSView {
         super.layout()
         guard lastSize != bounds.size else { return }
         lastSize = bounds.size
-        transition = nil
+        // A sidebar animation resizes this viewport on every frame. A slide
+        // already running keeps going: its pages are re-aimed at the new size
+        // from the moment it began, rather than restarting it every frame.
+        let moving = transition == nil ? [] : slidingHosts
+        let began = transition == nil ? nil : slideBeginTime
         for host in hosts.values {
             host.layer?.removeAllAnimations()
-            // A sidebar animation resizes this viewport on every frame. Keep
-            // offscreen pages cached without reflowing their native content.
+            // Keep offscreen pages cached without reflowing their native content.
             if host.hostingView.rootView.contentPresentation != .inactive, host.frame.size != bounds.size {
                 host.setFrameSize(bounds.size)
             }
@@ -88,6 +91,7 @@ final class SpaceContentPagerView<Content: View & Equatable>: NSView {
                 preparesNeighbors: snapshot.phase == .idle)
             positionHosts(at: snapshot.position)
         }
+        if let transition { resumeSlide(moving, along: transition, beganAt: began) }
     }
 
     override func hitTest(_ point: NSPoint) -> NSView? {
@@ -133,19 +137,10 @@ final class SpaceContentPagerView<Content: View & Equatable>: NSView {
             stopAnimations()
             positionHosts(at: release.startPosition)
             transition = release
-            NSAnimationContext.runAnimationGroup { context in
-                context.duration = release.duration
-                context.timingFunction = release.timingFunction
-                for (key, host) in hosts {
-                    let end = origin(for: key, at: release.endPosition)
-                    guard needsMotion(host, to: end) else { continue }
-                    let animation = CABasicAnimation()
-                    release.configure(animation)
-                    animation.fromValue = NSValue(point: host.frame.origin)
-                    host.animations = ["frameOrigin": animation]
-                    host.animator().setFrameOrigin(end)
-                }
+            let moving = hosts.filter { key, host in
+                needsMotion(host, to: origin(for: key, at: release.endPosition, placedNear: release.startPosition))
             }
+            slide(Array(moving.keys), along: release)
         } else {
             stopAnimations()
             prepareHosts(
@@ -154,6 +149,58 @@ final class SpaceContentPagerView<Content: View & Equatable>: NSView {
             positionHosts(at: value.position)
         }
         updateAccessibility()
+    }
+
+    /// Moves the pages `keys` name along `release`, with the pager's native
+    /// curve.
+    private func slide(_ keys: [BrowserSpaceRuntimeAssignment], along release: SpacePagerSettlement) {
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = release.duration
+            context.timingFunction = release.timingFunction
+            for key in keys {
+                guard let host = hosts[key] else { continue }
+                let animation = CABasicAnimation()
+                release.configure(animation)
+                animation.fromValue = NSValue(point: origin(for: key, at: release.startPosition))
+                host.animations = ["frameOrigin": animation]
+                host.animator().setFrameOrigin(
+                    origin(for: key, at: release.endPosition, placedNear: release.startPosition))
+            }
+        }
+    }
+
+    /// Continues the slide along `release` for the pages `keys` name after a
+    /// resize, from the moment it began, so it goes on from where it is
+    /// instead of starting over. AppKit installs no animator animation while
+    /// it lays a view out, so the pages' layers take the slide directly.
+    private func resumeSlide(
+        _ keys: [BrowserSpaceRuntimeAssignment], along release: SpacePagerSettlement, beganAt beginTime: CFTimeInterval?
+    ) {
+        for key in keys {
+            guard let host = hosts[key] else { continue }
+            let animation = CABasicAnimation(keyPath: "position")
+            release.configure(animation)
+            // Zero, for a slide Core Animation has not committed yet, starts now.
+            animation.beginTime = beginTime ?? 0
+            let end = origin(for: key, at: release.endPosition, placedNear: release.startPosition)
+            animation.fromValue = NSValue(point: origin(for: key, at: release.startPosition))
+            animation.toValue = NSValue(point: end)
+            host.setFrameOrigin(end)
+            host.layer?.add(animation, forKey: "position")
+        }
+    }
+
+    /// The pages the running slide moves.
+    private var slidingHosts: [BrowserSpaceRuntimeAssignment] {
+        hosts.filter { $0.value.layer?.animationKeys()?.isEmpty == false }.map(\.key)
+    }
+
+    /// When Core Animation began the running slide, once it has committed it.
+    private var slideBeginTime: CFTimeInterval? {
+        hosts.values.lazy.compactMap { host -> CFTimeInterval? in
+            guard let layer = host.layer, let key = layer.animationKeys()?.first else { return nil }
+            return layer.animation(forKey: key)?.beginTime
+        }.first { $0 > 0 }
     }
 
     private func stopAnimations() {
@@ -237,10 +284,16 @@ final class SpaceContentPagerView<Content: View & Equatable>: NSView {
         return visible.contains(index) || id == snapshot.destinationID ? .preview : .inactive
     }
 
-    private func origin(for key: BrowserSpaceRuntimeAssignment, at position: CGFloat) -> CGPoint {
+    /// Where `key`'s page sits while the strip shows `position`, placed
+    /// around the ends as near `reference`: a slide keeps each page where it
+    /// began, so none switches ends partway.
+    private func origin(
+        for key: BrowserSpaceRuntimeAssignment, at position: CGFloat, placedNear reference: CGFloat? = nil
+    ) -> CGPoint {
         let index = spaces.firstIndex { $0.id == key.spaceID } ?? 0
+        let placed = SpacePagerInterpolation.index(index, near: reference ?? position, count: spaces.count)
         let direction: CGFloat = layoutDirection == .leftToRight ? 1 : -1
-        return CGPoint(x: (CGFloat(index) - position) * bounds.width * direction, y: 0)
+        return CGPoint(x: (CGFloat(placed) - position) * bounds.width * direction, y: 0)
     }
 
     private func needsMotion(_ host: NSView, to origin: CGPoint) -> Bool {

@@ -134,10 +134,12 @@ final class BrowserPeekModel {
     }
 
     func dismiss() {
+        returnFocus()
         coordinator.dismissPeek(request)
     }
 
     func dismissUnavailableRequest() {
+        returnFocus()
         releaseLease()
         coordinator.dismissPeek(request)
     }
@@ -198,6 +200,13 @@ final class BrowserPeekModel {
             space: request.hasSource(in: browser) ? browser.spaceModel(matching: assignment) : nil,
             isLocked: spaceAccess.isLocked
         )
+    }
+
+    /// Gives the keyboard back to the tab under the Peek when the Peek's page
+    /// holds it as the Peek closes.
+    private func returnFocus() {
+        guard let page else { return }
+        pages?.returnFocus(fromPeek: page)
     }
 
     /// The core closed the Peek's page: it closed itself, as a page another

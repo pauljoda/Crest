@@ -4129,6 +4129,22 @@
     "page-commands-follow-quick-window": {
       "category": "fixed",
       "message": "Back, Reload, Find, Zoom, Copy Page Link, Print and the other page commands work in a Quick Window."
+    },
+    "peek-close-returns-keyboard": {
+      "category": "fixed",
+      "message": "Closing a Peek gives the keyboard back to the page underneath, so the arrow keys and Space scroll it again without a click."
+    },
+    "quick-window-page-tools": {
+      "category": "fixed",
+      "message": "Translate, Reader, content blocking, the Web Inspector and moving a page to the other engine now work on a Quick Window’s page."
+    },
+    "space-switch-wraps-around": {
+      "category": "fixed",
+      "message": "Next Space and Previous Space slide around from the last Space to the first, and back, instead of jumping."
+    },
+    "space-slide-survives-sidebar-toggle": {
+      "category": "fixed",
+      "message": "A Space switch keeps sliding when you show or hide the sidebar during it, instead of jumping to the end."
     }
   }
 }

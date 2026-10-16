@@ -39,9 +39,7 @@ struct BrowserWebContentView: View {
         }
         .modifier(
             BrowserPageToolbarHost {
-                if pages.activePage === page, isSelectedSpace,
-                    !page.readerModeState.isActive, page.translation.showsToolbar
-                {
+                if isShownPage, !page.readerModeState.isActive, page.translation.showsToolbar {
                     BrowserTranslationToolbar(translation: page.translation)
                 }
                 if page.isDeveloperModeEnabled {
@@ -55,7 +53,7 @@ struct BrowserWebContentView: View {
         .modifier(
             BrowserTranslationHost(
                 translation: page.translation, page: page,
-                isActive: pages.activePage === page && isSelectedSpace,
+                isActive: isShownPage,
                 isLoading: page.live.isLoading,
                 isReaderActive: page.readerModeState.isActive
             )
@@ -107,8 +105,11 @@ struct BrowserWebContentView: View {
         .of(.webPage, page: page)
     }
 
-    private var isSelectedSpace: Bool {
-        guard let space = browser.shownSpace else { return false }
+    /// Whether the page is the one its window shows: a Quick Window's, or the
+    /// active tab's in the Space on screen. Its translation follows only then.
+    private var isShownPage: Bool {
+        if isQuickWindowPage { return true }
+        guard pages.activePage === page, let space = browser.shownSpace else { return false }
         return space.id == page.spaceID && space.profileID == page.profileID
     }
 
