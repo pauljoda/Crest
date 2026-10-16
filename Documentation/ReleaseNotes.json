@@ -4158,6 +4158,14 @@
       "category": "fixed",
       "message": "Crest quits instead of waiting indefinitely when a Space couldn’t be fully deleted, and tries deleting that Space again the next time it opens."
     },
+    "chromium-upstream-155-0-8059-39-1-1-6271503014ef": {
+      "category": "fixed",
+      "message": "Chromium is updated to 155.0.8059.39 with upstream security and compatibility fixes."
+    },
+    "http-dead-link-crash": {
+      "category": "fixed",
+      "message": "Opening an http:// address that can’t be reached shows Crest’s error page instead of closing Crest."
+    },
     "link-route-exact-site-name": {
       "category": "fixed",
       "message": "A link route set to “Is Exactly” with just a site’s name, such as docs.google.com, now matches that site’s home page, and Links settings say that routes apply to links from other apps."
