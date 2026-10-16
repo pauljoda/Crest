@@ -244,6 +244,9 @@ final class SpaceContentPagerView<Content: View & Equatable>: NSView {
                 }
                 var root = refresh ? makeRoot(space, space.id == selectedSpaceID) : host.hostingView.rootView
                 root.contentPresentation = contentPresentation
+                // A page off screen is hidden as well: on macOS 26, another
+                // hosting view beside the selected page can take its clicks.
+                host.isHidden = contentPresentation == .inactive
                 if host.hostingView.rootView.content != root.content || previous != contentPresentation {
                     if contentPresentation != .interactive,
                         let responder = window?.firstResponder as? NSView, responder.isDescendant(of: host)
@@ -263,6 +266,7 @@ final class SpaceContentPagerView<Content: View & Equatable>: NSView {
                 let host = SpacePageHost(root: root)
                 host.frame = CGRect(origin: origin(for: key, at: position), size: bounds.size)
                 host.hostingView.frame = host.bounds
+                host.isHidden = contentPresentation == .inactive
                 hosts[key] = host
                 addSubview(host)
             }
