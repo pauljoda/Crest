@@ -12,7 +12,9 @@ final class BrowserStoreFamily {
     private let core: BrowserCoreSessionAuthority
     let temporarySourceAssignment: BrowserSpaceRuntimeAssignment?
     let temporarySettingsBrowser: BrowserStore?
-    private var activeSpaceDeletions: Set<UUID> = []
+    /// The Space deletions this family is running now, until each attempt
+    /// ends, whether it finished the deletion or failed.
+    private(set) var activeSpaceDeletions: Set<UUID> = []
     /// The Spaces this device began deleting before the core records it. A
     /// borrowed workspace's windows read its source's deletions too: a Space's
     /// profile and privacy always read through to the workspace that lends it,

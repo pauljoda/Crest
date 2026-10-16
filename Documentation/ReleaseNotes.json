@@ -4145,6 +4145,10 @@
     "space-slide-survives-sidebar-toggle": {
       "category": "fixed",
       "message": "A Space switch keeps sliding when you show or hide the sidebar during it, instead of jumping to the end."
+    },
+    "quit-after-space-deletion-fails": {
+      "category": "fixed",
+      "message": "Crest quits instead of waiting indefinitely when a Space couldn’t be fully deleted, and tries deleting that Space again the next time it opens."
     }
   }
 }
