@@ -173,8 +173,8 @@
     "ungoogled-chromium/patches/extra/ungoogled-chromium/add-flag-for-disabling-jit.patch": "95c9075c224736a2be979a8a1b4d15d48290d172fcb7259a09155c4566b666df"
   },
   "esbuild": {
-    "url": "https://chrome-infra-packages.appspot.com/dl/infra/3pp/tools/esbuild/mac-arm64/+/version:3@0.25.1.chromium.2",
-    "sha256": "f9801c81788b15756909420d7d03d97e55c15c56eb0829f2ecc938a5e8eb4233"
+    "url": "https://chrome-infra-packages.appspot.com/dl/infra/3pp/tools/esbuild/mac-arm64/+/version:3@0.28.2.chromium.2",
+    "sha256": "7da1785ffba3c4e1171e82d866aa5946837ca027dce90621b8ad4439b6e03419"
   },
   "typescript": {
     "url": "https://chrome-infra-packages.appspot.com/dl/chromium/third_party/typescript/mac-arm64/+/version:2@7.0.2",
@@ -184,7 +184,7 @@
     "Patches/bindgen-apple-linker.patch": "a926989b1c69701a16c43734bfb314ff04ed50f7d9a4a08e206f1ade1c09425a",
     "Patches/v8-generator-apple-unwind.patch": "b26d34cbdc8db33dd1e12fbc891fefbffde0f4de5eceb6a45690d2e16cd0d186",
     "Patches/framework-apple-unwind.patch": "1d9b2812747ffac8389e354c9e978abb0becdaa5957890c8895126a577234ce2",
-    "Patches/pinned-host-tools.patch": "96813935862f374283c6d82670ceeaeb57140775dd34da04d5985ccff4ec2d3c"
+    "Patches/pinned-host-tools.patch": "13729bc2f9c60e0c59d17d60de2b6e3410a6eecd6a4af6bf13d3725e0d61eaf2"
   },
   "performanceBuildArguments": {
     "target_cpu": "arm64",
