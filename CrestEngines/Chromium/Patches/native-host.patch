@@ -2304,11 +2304,13 @@
  
 --- a/chrome/browser/chrome_browser_field_trials.cc
 +++ b/chrome/browser/chrome_browser_field_trials.cc
-@@ -56,6 +56,11 @@
+@@ -56,6 +56,13 @@
  #include "ui/gl/gl_switches.h"
  #endif
  
 +#if BUILDFLAG(IS_MAC)
++#include "chrome/common/chrome_features.h"
++#include "components/security_interstitials/core/features.h"
 +#include "content/public/common/content_features.h"
 +#include "media/base/media_switches.h"
 +#endif
@@ -2316,7 +2318,7 @@
  #if BUILDFLAG(IS_CHROMEOS)
  #include "chromeos/ash/services/multidevice_setup/public/cpp/first_run_field_trial.h"
  #endif
-@@ -127,6 +132,22 @@
+@@ -127,6 +134,29 @@
      base::FeatureList* feature_list) {
    variations::FeatureOverrides feature_overrides(*feature_list);
  
@@ -2333,6 +2335,13 @@
 +    // keep it, so sites sign in through their own pop-up or redirect, as in
 +    // Safari. Crest has no account chooser to show for such a request.
 +    feature_overrides.DisableFeature(features::kFedCm);
++    // An http:// address that can't be upgraded to HTTPS loads over HTTP
++    // without a warning, as in Safari. HTTPS-First's warning is a tab-scoped
++    // dialog, which needs a Views host that Crest's pages don't have.
++    feature_overrides.DisableFeature(features::kHttpsFirstBalancedMode);
++    feature_overrides.DisableFeature(features::kHttpsFirstModeIncognito);
++    feature_overrides.DisableFeature(
++        security_interstitials::features::kHttpsFirstDialogUi);
 +  }
 +#endif  // BUILDFLAG(IS_MAC)
 +
