@@ -126,10 +126,7 @@ struct BrowserRootPageSurface: View, @MainActor Equatable {
                 hasActivePage: surfacePage != nil,
                 completedNavigationCount: surfacePage?.completedNavigationCount ?? 0,
                 hasSelectedSpace: true,
-                handleWebContentInteraction: {
-                    model.chrome.utilityPresentation
-                        .handleInteraction(.webContent)
-                },
+                handleWebContentInteraction: model.chrome.handleWebContentInteraction,
                 frameInsets: frameInsets,
                 content: Group {
                     if model.spaceAccess.isLocked(space) {

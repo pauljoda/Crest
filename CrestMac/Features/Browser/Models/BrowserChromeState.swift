@@ -88,6 +88,11 @@ final class BrowserChromeState {
         }
     }
 
+    func handleWebContentInteraction() {
+        guard columnVisibility != .detailOnly || !isFloatingSidebarPresented else { return }
+        utilityPresentation.handleInteraction(.webContent)
+    }
+
     // MARK: - Actions - Command Palette
 
     func openLocation(_ address: String = "") {
