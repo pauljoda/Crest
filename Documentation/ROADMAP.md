@@ -180,7 +180,6 @@ the live status for each issue.
 - [ ] [Menu titles for History, Archive and Downloads now that they toggle](https://github.com/pauljoda/Crest/issues/470)
 - [ ] [bug: dropdown menus in the settings do not open](https://github.com/pauljoda/Crest/issues/476)
 - [ ] [bug: Preserve sidebar state and page state when moving a tab to another window/display](https://github.com/pauljoda/Crest/issues/477)
-- [ ] [Make Translate, Reader, content blocking, the inspector and engine moves act on a Quick Window](https://github.com/pauljoda/Crest/issues/484)
 
 #### Completed
 
@@ -193,6 +192,7 @@ the live status for each issue.
 - [x] [bug: Revealed sidebar stays open after the pointer leaves the window for another app](https://github.com/pauljoda/Crest/issues/440)
 - [x] [After a Peek closes on Chromium, the tab doesn't get the keyboard back](https://github.com/pauljoda/Crest/issues/444) — [`a04f5215`](https://github.com/pauljoda/Crest/commit/a04f52157f2358fe648ef1eee41894db617602d9)
 - [x] [bug: Open link in another Space can leave the new tab unselected](https://github.com/pauljoda/Crest/issues/451)
+- [x] [Make Translate, Reader, content blocking, the inspector and engine moves act on a Quick Window](https://github.com/pauljoda/Crest/issues/484)
 
 <!-- crest-roadmap-sync:end -->
 
