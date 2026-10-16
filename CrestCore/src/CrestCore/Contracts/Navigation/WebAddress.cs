@@ -16,6 +16,12 @@ public readonly record struct WebAddress(string Spelling) {
     public SiteOrigin? Origin => Uri.TryCreate(Spelling, UriKind.Absolute, out var value) && WebScheme.Named(value.Scheme) is not null
         && value.IdnHost.Length > 0 ? new SiteOrigin(value.Scheme, value.IdnHost, value.Port) : null;
 
+    /// Where an http or https address points, whichever of the two it uses:
+    /// its host, a port other than the scheme's own, its path, "/" when it
+    /// has none, and its query. Null for any other address.
+    public string? Location => Uri.TryCreate(Spelling, UriKind.Absolute, out var value) && WebScheme.Named(value.Scheme) is not null
+        ? value.GetComponents(UriComponents.Host | UriComponents.Port | UriComponents.PathAndQuery, UriFormat.UriEscaped) : null;
+
     /// Whether the address shows a web page, or a blank one, rather than one
     /// of the browser's own, an extension's or a file.
     public bool IsWebPage => Normalized is not null || Spelling == "about:blank";
