@@ -122,23 +122,30 @@ final class SpaceBackdropBlendView<Background: View>: NSView {
         if let transition = snapshot?.transition, activeTransition == transition { return }
         let transition = snapshot?.spaceIDs == spaces.map(\.id) ? snapshot?.transition : nil
         activeTransition = transition
+        let count = spaces.count
+        // A step around the ends of the Spaces runs up to one Space past either end.
+        let reach: CGFloat = count > 2 ? 1 : 0
         let position: CGFloat
         if let snapshot, snapshot.spaceIDs == spaces.map(\.id), snapshot.position.isFinite {
-            position = min(CGFloat(spaces.count - 1), max(0, snapshot.position))
+            position = min(CGFloat(count - 1) + reach, max(-reach, snapshot.position))
         } else {
             position = CGFloat(spaces.firstIndex { $0.id == selectedSpace?.id } ?? 0)
         }
         let center = Int(position.rounded())
         let destination = transition?.endPosition ?? position
-        let first = max(0, min(center - 1, Int(destination.rounded(.down))))
-        let last = min(spaces.count - 1, max(center + 1, Int(destination.rounded(.up))))
-        let range = first...last
+        let lowest = min(center - 1, Int(destination.rounded(.down)))
+        let highest = max(center + 1, Int(destination.rounded(.up)))
+        let wraps = count > 2 && [position, destination].contains { $0 < 0 || $0 > CGFloat(count - 1) }
+        let range =
+            wraps
+            ? Set((max(-1, lowest)...min(count, highest)).map { ($0 + count) % count })
+            : Set(max(0, lowest)...min(count - 1, highest))
         let required = Set(range.map { BrowserSpaceRuntimeAssignment(space: spaces[$0]) })
         let isResting = transition == nil && position == position.rounded()
-        restingKey = isResting ? BrowserSpaceRuntimeAssignment(space: spaces[center]) : nil
+        restingKey = isResting ? BrowserSpaceRuntimeAssignment(space: spaces[(center % count + count) % count]) : nil
         // Keep the two visible backgrounds and their neighbors ready. No tab
         // trees, page snapshots, or WebKit instances belong to these hosts.
-        for index in range {
+        for index in range.sorted() {
             let space = spaces[index]
             let key = BrowserSpaceRuntimeAssignment(space: space)
             if hosts[key] == nil { hosts[key] = addHost(root: makeRoot(space)) }
@@ -157,16 +164,19 @@ final class SpaceBackdropBlendView<Background: View>: NSView {
             guard let layer = hosts[BrowserSpaceRuntimeAssignment(space: space)]?.layer else { continue }
             // Stable stacking also works when an interrupted slide crosses a
             // third Space. The lower background remains opaque at all times.
-            layer.zPosition = CGFloat(index)
+            // Around the ends, the Space a step reaches stacks past the other.
+            let placed = SpacePagerInterpolation.index(
+                index, near: transition?.startPosition ?? position, count: count)
+            layer.zPosition = CGFloat(placed)
             if let transition {
                 transition.animate(
                     layer, keyPath: "opacity",
                     values: transition.positions.map {
-                        SpacePagerInterpolation.backdropOpacity(at: $0, index: index)
+                        SpacePagerInterpolation.backdropOpacity(at: $0, index: placed)
                     })
             } else {
                 layer.removeAnimation(forKey: "spaceTransition.opacity")
-                layer.opacity = SpacePagerInterpolation.backdropOpacity(at: position, index: index)
+                layer.opacity = SpacePagerInterpolation.backdropOpacity(at: position, index: placed)
             }
         }
         CATransaction.commit()

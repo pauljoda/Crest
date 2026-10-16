@@ -10,6 +10,7 @@ struct PlatformSpacePager<Content: View>: NSViewRepresentable {
     let spaces: [SpaceModel]
     let selectedSpaceID: UUID
     let isInteractionLocked: Bool
+    let spaceStep: BrowserSpaceStep?
     let selectSpace: (UUID) -> UUID
     @ViewBuilder let content: (SpaceModel, Bool) -> Content
 
@@ -34,6 +35,7 @@ struct PlatformSpacePager<Content: View>: NSViewRepresentable {
         view.update(
             spaces: spaces, selectedSpaceID: selectedSpaceID,
             isInteractionLocked: isInteractionLocked,
+            spaceStep: spaceStep,
             reduceMotion: environment.accessibilityReduceMotion,
             layoutDirection: environment.layoutDirection,
             presentation: environment.spacePagerPresentation,
