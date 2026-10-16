@@ -282,7 +282,7 @@ final class BrowserMacApplication {
         self.privatePages = privatePages
         pagePoolRegistry = BrowserPagePoolRegistry(primary: pages, spaceAccess: spaceAccess)
         quitPreparation = BrowserQuitPreparation(core: core) {
-            browser.deletingSpaceIDs.union(privateBrowser.deletingSpaceIDs)
+            browser.family.activeSpaceDeletions.union(privateBrowser.family.activeSpaceDeletions)
         }
         privateWindowCloseGate = BrowserWindowCloseGate(core: core) { [windowID = privateBrowser.windowID] in
             PrepareToCloseWindows(requestID: UUID(), windowIDs: [windowID])
