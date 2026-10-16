@@ -894,10 +894,6 @@ final class BrowserPagePool:
         reload(.fromOrigin)
     }
 
-    func showWebInspector() {
-        activePage?.showWebInspector()
-    }
-
     /// Releases what memory pressure takes back that the core does not
     /// decide; see `BrowserPageHost.relieveMemoryPressure`.
     func relieveMemoryPressure(_ level: MemoryPressureLevel) {

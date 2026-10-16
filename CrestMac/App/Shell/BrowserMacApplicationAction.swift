@@ -21,8 +21,8 @@ struct BrowserMacApplicationAction: Hashable {
     /// is.
     static let translatePage = BrowserMacApplicationAction(
         name: "translate-page", title: "Translate Page", symbol: "translate", offeredWith: .toggleTranslationToolbar,
-        isEnabled: { $0.activeActions?.canPerform(.toggleTranslationToolbar) == true },
-        perform: { $0.activeActions?.translatePage() })
+        isEnabled: { $0.pageActions?.canPerform(.toggleTranslationToolbar) == true },
+        perform: { $0.pageActions?.translatePage() })
     static let all: [BrowserMacApplicationAction] = [about, updates, settings, gettingStarted, translatePage]
 
     // MARK: - Variables

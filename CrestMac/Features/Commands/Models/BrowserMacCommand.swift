@@ -64,10 +64,12 @@ struct BrowserMacCommand {
     static let previousSpace = BrowserMacCommand(.previousSpace) { $0.selectPreviousSpace() }
     static let nextSpace = BrowserMacCommand(.nextSpace) { $0.selectNextSpace() }
     static let toggleReaderMode = BrowserMacCommand(
-        .toggleReaderMode, isAvailable: { $0.supportsPageCapability(.reader) && $0.pages.readerModeState.canToggle },
-        title: { $0.pages.readerModeActionTitle }, run: { $0.pages.toggleReaderMode() })
+        .toggleReaderMode, actsOnPage: true,
+        isAvailable: { $0.supportsPageCapability(.reader) && $0.shownPage?.readerModeState.canToggle == true },
+        title: { ($0.shownPage?.readerModeState ?? .unavailable).actionTitle },
+        run: { $0.shownPage?.toggleReaderMode() })
     static let toggleContentBlocking = BrowserMacCommand(
-        .toggleContentBlocking, isAvailable: { $0.supportsEngineCapability(.contentBlocking) },
+        .toggleContentBlocking, actsOnPage: true, isAvailable: { $0.supportsEngineCapability(.contentBlocking) },
         title: { $0.contentBlockingActionTitle }, run: { $0.toggleContentBlocking() })
     static let findInPage = BrowserMacCommand(
         .findInPage, actsOnPage: true, isAvailable: { $0.canFind },
@@ -108,14 +110,14 @@ struct BrowserMacCommand {
         .showDownloads, isAvailable: { $0.supportsEngineCapability(.downloads) },
         run: { $0.chrome.toggleUtility(.downloads) })
     static let showWebInspector = BrowserMacCommand(
-        .showWebInspector, isAvailable: { $0.supportsPageCapability(.inspector) },
-        run: { $0.pages.showWebInspector() })
+        .showWebInspector, actsOnPage: true, isAvailable: { $0.supportsPageCapability(.inspector) },
+        run: { _ = $0.shownPage?.showWebInspector() })
     static let toggleTranslationToolbar = BrowserMacCommand(
-        .toggleTranslationToolbar,
-        isAvailable: { $0.supportsPageCapability(.translation) && !$0.pages.readerModeState.isActive },
-        isOn: { $0.pages.activePage?.translation.showsToolbar == true },
+        .toggleTranslationToolbar, actsOnPage: true,
+        isAvailable: { $0.supportsPageCapability(.translation) && $0.shownPage?.readerModeState.isActive != true },
+        isOn: { $0.shownPage?.translation.showsToolbar == true },
         run: { actions in
-            guard let page = actions.pages.activePage, !page.readerModeState.isActive else { return }
+            guard let page = actions.shownPage, !page.readerModeState.isActive else { return }
             page.translation.toggleToolbarVisibility()
         })
     static let toggleDeveloperToolbar = BrowserMacCommand(
@@ -172,8 +174,8 @@ struct BrowserMacCommand {
     /// command that needs one.
     let withoutWindow: BrowserMacWindowlessCommand?
 
-    /// Whether the command acts on the page the page commands act on, which
-    /// a Quick Window in front shows too.
+    /// Whether the command acts on a page, which a Quick Window in front
+    /// shows too, so a key Quick Window runs it on its own page.
     let actsOnPage: Bool
 
     /// Whether the palette lists the command only while it can run, for a

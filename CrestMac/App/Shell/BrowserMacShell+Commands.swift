@@ -8,6 +8,12 @@ extension BrowserMacShell {
         windows?.activeActions
     }
 
+    /// The commands as they run on the page in front: a key Quick Window's
+    /// own page, or else the key browser window's.
+    var pageActions: BrowserCommandActions? {
+        windows?.activeQuickWindowActions ?? activeActions
+    }
+
     /// Whether the application can check for updates, which an isolated
     /// launch without an update feed cannot.
     var canCheckForUpdates: Bool {
@@ -85,13 +91,10 @@ extension BrowserMacShell {
         if let windows { BrowserMacCommand.of(command)?.withoutWindow?.run(windows) }
     }
 
-    /// The actions `command` runs with now: a key Quick Window's for a command
-    /// on the page it shows, or else the key browser window's.
-    private func actions(for command: ShortcutCommand) -> BrowserCommandActions? {
-        if BrowserMacCommand.of(command)?.actsOnPage == true, let quickWindow = windows?.activeQuickWindowActions {
-            return quickWindow
-        }
-        return activeActions
+    /// The actions `command` runs with now: the page in front's for a command
+    /// on a page, or else the key browser window's.
+    func actions(for command: ShortcutCommand) -> BrowserCommandActions? {
+        BrowserMacCommand.of(command)?.actsOnPage == true ? pageActions : activeActions
     }
 
     // MARK: - Actions - Engine window requests

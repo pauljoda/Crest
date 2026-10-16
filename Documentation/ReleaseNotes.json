@@ -4129,6 +4129,10 @@
     "page-commands-follow-quick-window": {
       "category": "fixed",
       "message": "Back, Reload, Find, Zoom, Copy Page Link, Print and the other page commands work in a Quick Window."
+    },
+    "quick-window-page-tools": {
+      "category": "fixed",
+      "message": "Translate, Reader, content blocking, the Web Inspector and moving a page to the other engine now work on a Quick Window’s page."
     }
   }
 }
