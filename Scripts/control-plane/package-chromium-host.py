@@ -328,6 +328,12 @@ def main():
         info["CFBundleIconName"] = "Crest"
         info["NSDockTilePlugIn"] = "CrestDockTilePlugin.docktileplugin"
         info["CrestAppIconPreferenceDomain"] = info["CFBundleIdentifier"]
+        # Chromium's scripting dictionary names Chromium's application class,
+        # which Crest's application is not. Once any script loaded it, a quit
+        # Apple Event (the updater's relaunch, the Dock's Quit, a logout) found
+        # no application to quit; without it, AppKit handles the quit itself.
+        info.pop("NSAppleScriptEnabled", None)
+        info.pop("OSAScriptingDefinition", None)
         with (repo / "CrestMac/Configuration/Crest-Info.plist").open("rb") as stream:
             crest_info = plistlib.load(stream)
         info["CrestCloudKitContainerIdentifier"] = crest_info["CrestCloudKitContainerIdentifier"]
