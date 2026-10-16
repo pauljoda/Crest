@@ -4145,6 +4145,10 @@
     "space-slide-survives-sidebar-toggle": {
       "category": "fixed",
       "message": "A Space switch keeps sliding when you show or hide the sidebar during it, instead of jumping to the end."
+    },
+    "settings-controls-take-clicks-on-macos-26": {
+      "category": "fixed",
+      "message": "On macOS 26, switches, pickers and the house choices in Settings take every click instead of ignoring clicks after the first."
     }
   }
 }
