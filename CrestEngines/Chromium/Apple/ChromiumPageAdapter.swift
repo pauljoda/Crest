@@ -33,6 +33,9 @@
         var reporter: EnginePageReporter? { nil }
         /// Fills go through the engine's content scripting.
         var credentialEvaluator: BrowserCredentialSession.Evaluate? { nil }
+        /// Translation runs through the engine's content scripting, in the
+        /// page's main document.
+        var translationDocument: BrowserTranslationDocument? { BrowserTranslationDocument(mainFrameOf: native) }
 
         // MARK: - Initializers
 

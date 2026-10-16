@@ -29,13 +29,17 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
             // style while AppKit is carrying it into fullscreen.
             BrowserNativeWindowControlsBridge(
                 isVisible: model.sidebarPresentation.showsWindowControls,
-                sidebarPosition: appearance.sidebarOnRight ? 1 : 0,
+                sidebarOnRight: appearance.sidebarOnRight,
                 sidebarWidth: model.sidebarWidth
             )
             .frame(maxWidth: .infinity)
             .frame(height: 0)
             .allowsHitTesting(false)
             .accessibilityHidden(true)
+
+            // Notices show over a fullscreen page too, so one posted there
+            // is never lost.
+            BrowserNoticeLayer(chrome: model.chrome)
         }
         .overlayPreferenceValue(BrowserRootPageBoundsKey.self) { anchor in
             GeometryReader { proxy in
@@ -144,6 +148,7 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
                     space: model.browser.shownSpace,
                     reduceTransparency: reduceTransparency,
                     spaces: model.browser.availableSpaces,
+                    isRevealedByPointer: model.isFloatingSidebarRevealedByPointer,
                     hoverChanged: {
                         model.sidebarSurfaceHoverChanged(
                             $0,
@@ -190,11 +195,6 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
                 .frame(width: 0, height: 0)
                 .allowsHitTesting(false)
                 .accessibilityHidden(true)
-
-            if let notice = model.visibleNotice {
-                BrowserNoticeView(notice: notice)
-                    .id(notice)
-            }
         }
     }
 

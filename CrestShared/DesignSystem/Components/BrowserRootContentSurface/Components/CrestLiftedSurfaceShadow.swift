@@ -1,7 +1,10 @@
 import SwiftUI
 
-/// A transparent SwiftUI canvas that casts only the exterior part of a rounded
-/// surface's shadow.
+/// Casts only the exterior part of a rounded surface's shadow.
+///
+/// The shadow is the shape's own, which Core Animation composites on the GPU.
+/// Drawing it into a canvas instead blurred the whole page on the CPU at every
+/// step of a window, split or sidebar resize.
 struct CrestLiftedSurfaceShadow: View {
     static let pageShadowOpacity = 0.11
     static let pageShadowRadius: CGFloat = 7
@@ -16,40 +19,21 @@ struct CrestLiftedSurfaceShadow: View {
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
 
     var body: some View {
-        let drawingOutset = Self.drawingOutset
-
-        Canvas { context, size in
-            guard !reduceTransparency, opacity > 0 else { return }
-
-            let bounds = CGRect(
-                x: drawingOutset,
-                y: drawingOutset,
-                width: max(0, size.width - drawingOutset * 2),
-                height: max(0, size.height - drawingOutset * 2)
-            )
-            let path = RoundedRectangle(
-                cornerRadius: cornerRadius,
-                style: .continuous
-            ).path(in: bounds)
-
-            context.drawLayer { shadowContext in
-                shadowContext.addFilter(
-                    .shadow(
-                        color: .black.opacity(opacity),
-                        radius: radius,
-                        x: 0,
-                        y: yOffset,
-                        options: .shadowOnly
-                    )
-                )
-                shadowContext.fill(path, with: .color(.black))
-            }
-
-            context.blendMode = .destinationOut
-            context.fill(path, with: .color(.white))
+        if !reduceTransparency, opacity > 0 {
+            let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+            // Inset, so the cut below covers the casting shape's soft edge.
+            shape.inset(by: 1)
+                .fill(.black)
+                .shadow(color: .black.opacity(opacity), radius: radius, x: 0, y: yOffset)
+                // A translucent surface must not show its own shadow through it.
+                .mask {
+                    Rectangle()
+                        .padding(-Self.drawingOutset)
+                        .overlay { shape.blendMode(.destinationOut) }
+                        .compositingGroup()
+                }
+                .allowsHitTesting(false)
+                .accessibilityHidden(true)
         }
-        .padding(-drawingOutset)
-        .allowsHitTesting(false)
-        .accessibilityHidden(true)
     }
 }

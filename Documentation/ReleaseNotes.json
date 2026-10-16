@@ -4081,6 +4081,86 @@
     "find-close-returns-page-focus": {
       "category": "fixed",
       "message": "Closing find in page returns the keyboard to the page, including a page in Peek, so arrow keys and Space scroll right away."
+    },
+    "sidebar-hides-when-pointer-leaves-window": {
+      "category": "fixed",
+      "message": "A hidden sidebar that slides out at the window edge now hides again when the pointer moves on to another app."
+    },
+    "sidebar-offscreen-page-resizing": {
+      "category": "fixed",
+      "message": "Showing and hiding the sidebar is smoother when several Spaces are open."
+    },
+    "space-switch-keeps-sliding": {
+      "category": "fixed",
+      "message": "Switching Spaces again before the slide finishes keeps sliding toward the next Space instead of jumping to it."
+    },
+    "window-controls-follow-sidebar-side": {
+      "category": "fixed",
+      "message": "When the sidebar moves to the other side of the window, the window buttons travel with it instead of arriving first."
+    },
+    "smoother-live-resize": {
+      "category": "improved",
+      "message": "Resizing the window, a split or the sidebar is smoother."
+    },
+    "sidebar-utility-shortcuts": {
+      "category": "improved",
+      "message": "The History, Archive and Downloads shortcuts open and close their list, showing the sidebar for the moment when it is hidden, and Command-F searches the list that is open."
+    },
+    "translation-download-languages-no-crash": {
+      "category": "fixed",
+      "message": "Download Languages in Page Translation settings opens language downloads without Crest quitting."
+    },
+    "chromium-whole-page-translation": {
+      "category": "new",
+      "message": "Translate whole pages on device in Chromium too, with the same translation toolbar, automatic translation and Show Original as WebKit pages."
+    },
+    "translation-unsupported-page-language": {
+      "category": "fixed",
+      "message": "Pages in more languages, such as Swedish, now translate, and a page in a language Apple Translation doesn’t support says so instead of offering a translation that fails."
+    },
+    "cross-space-link-tab-activation": {
+      "category": "fixed",
+      "message": "Opening a link in another Space shows the link there instead of the Start Page."
+    },
+    "palette-control-a-e-line-edges": {
+      "category": "fixed",
+      "message": "Control-A and Control-E move to the start and end of the line in the address bar instead of jumping between result sections."
+    },
+    "sidebar-stays-hidden-after-focus-moves-away": {
+      "category": "fixed",
+      "message": "A hidden sidebar no longer slides back out on its own when you click into another app or another Mac with the pointer at the window edge."
+    },
+    "page-commands-follow-quick-window": {
+      "category": "fixed",
+      "message": "Back, Reload, Find, Zoom, Copy Page Link, Print and the other page commands work in a Quick Window."
+    },
+    "peek-close-returns-keyboard": {
+      "category": "fixed",
+      "message": "Closing a Peek gives the keyboard back to the page underneath, so the arrow keys and Space scroll it again without a click."
+    },
+    "quick-window-page-tools": {
+      "category": "fixed",
+      "message": "Translate, Reader, content blocking, the Web Inspector and moving a page to the other engine now work on a Quick Window’s page."
+    },
+    "space-switch-wraps-around": {
+      "category": "fixed",
+      "message": "Next Space and Previous Space slide around from the last Space to the first, and back, instead of jumping."
+    },
+    "space-slide-survives-sidebar-toggle": {
+      "category": "fixed",
+      "message": "A Space switch keeps sliding when you show or hide the sidebar during it, instead of jumping to the end."
+    },
+    "settings-controls-take-clicks-on-macos-26": {
+      "category": "fixed",
+      "message": "On macOS 26, switches, pickers and the house choices in Settings take every click instead of ignoring clicks after the first."
+    },
+    "update-restart-quits-crest": {
+      "category": "fixed",
+      "message": "Restart and Update quits Crest and installs the update instead of waiting until you quit, and Quit in the Dock works again, even after another app has used AppleScript with Crest."
+    },
+    "background-launch-review-scope": {
+      "category": "internal",
+      "message": "Keep background launch focused on window activation while retaining the existing window implementation."
     }
   }
 }

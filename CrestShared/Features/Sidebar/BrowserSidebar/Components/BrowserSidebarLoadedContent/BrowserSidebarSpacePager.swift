@@ -21,6 +21,7 @@ struct BrowserSidebarSpacePager<Page: View>: View {
                 spaces: context.availableSpaces,
                 selectedSpaceID: context.browser.selectedSpaceID,
                 isInteractionLocked: isInteractionLocked,
+                spaceStep: context.browser.spaceStep,
                 selectSpace: { spaceID in
                     context.selectSpace(spaceID)
                     return context.browser.selectedSpaceID

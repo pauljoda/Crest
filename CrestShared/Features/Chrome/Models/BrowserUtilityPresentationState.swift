@@ -30,6 +30,8 @@ final class BrowserUtilityPresentationState {
     }
     @ObservationIgnored private var isSiteControlContextMenuPresentedStorage = false
     private(set) var triggerFrameInGlobal: CGRect?
+    private(set) var searchFocusRequest = 0
+    @ObservationIgnored private var consumedSearchFocusRequest = 0
     @ObservationIgnored private let defaults: UserDefaults?
     @ObservationIgnored private let persistenceKey: String
     @ObservationIgnored private var lastSelectedSurface = BrowserUtilitySurface.archive
@@ -70,21 +72,42 @@ final class BrowserUtilityPresentationState {
         isSiteControlContextMenuPresented = isPresented
     }
 
+    /// Replaces the utility and cancels focus requests belonging to the previous surface.
     func present(_ surface: BrowserUtilitySurface) {
+        if self.surface != surface { consumedSearchFocusRequest = searchFocusRequest }
         self.surface = surface
         lastSelectedSurface = surface
         defaults?.set(surface.name, forKey: persistenceKey)
         isSwitcherExpanded = true
     }
 
+    /// Records a request that stays pending until the owning search field can receive it.
+    func focusSearch() {
+        guard surface != nil else { return }
+        searchFocusRequest &+= 1
+    }
+
+    /// A matching mounted toolbar may acknowledge the latest request once; stale fields cannot replay it.
+    func consumeSearchFocusRequest(_ request: Int, for surface: BrowserUtilitySurface) -> Bool {
+        guard self.surface == surface, request == searchFocusRequest, request != consumedSearchFocusRequest else {
+            return false
+        }
+        consumedSearchFocusRequest = request
+        return true
+    }
+
+    /// Stale utility dismissals cannot close a replacement or cancel its pending focus request.
     func dismiss(_ surface: BrowserUtilitySurface) {
         guard self.surface == surface else { return }
         self.surface = nil
+        consumedSearchFocusRequest = searchFocusRequest
         isSwitcherExpanded = false
     }
 
+    /// Closing a utility also discards focus that was requested before its field became available.
     func dismiss() {
         surface = nil
+        consumedSearchFocusRequest = searchFocusRequest
         isSwitcherExpanded = false
     }
 

@@ -5,12 +5,10 @@
 
     /// Selection translation for the Chromium host.
     ///
-    /// Crest's own page translation rewrites the DOM through `WKWebView` JavaScript,
-    /// which the Chromium host has no equivalent for, so whole-page translation stays
-    /// unavailable there and its menu item is absent. What a person actually reaches
-    /// for from a page context menu — "translate this passage" — is available, and it
-    /// is Apple's on-device translation either way: the same system service, the same
-    /// language downloads, and nothing sent to a translation server.
+    /// Beside whole-page translation, a page's context menu translates the passage
+    /// a person selected. It is Apple's on-device translation either way: the same
+    /// system service, the same language downloads, and nothing sent to a
+    /// translation server.
     ///
     /// The presentation is anchored to a one-point view added to the key window, which
     /// is what Apple's translation presentation wants and what lets the popover follow

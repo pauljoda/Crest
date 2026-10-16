@@ -5,6 +5,8 @@ import XCTest
 
 @MainActor
 final class BrowserBackgroundLaunchTests: XCTestCase {
+    // MARK: - Actions - Background launch
+
     func testBackgroundLaunchLeavesTheExistingKeyWindowAndActivationUnchanged() throws {
         let application = try BrowserMacApplication()
         let host = WebKitShellHost()

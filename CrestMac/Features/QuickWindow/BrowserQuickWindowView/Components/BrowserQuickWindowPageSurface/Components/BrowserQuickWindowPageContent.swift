@@ -12,7 +12,8 @@ struct BrowserQuickWindowPageContent: View {
                 BrowserWebContentView(
                     page: page,
                     browser: model.browser,
-                    pages: pages
+                    pages: pages,
+                    isQuickWindowPage: true
                 )
             } else if model.pageLease?.wasReleasedForMemoryPressure == true {
                 BrowserQuickWindowReleasedPageView(

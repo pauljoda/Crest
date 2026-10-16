@@ -14,6 +14,7 @@ struct BrowserMacWindowContext {
 
 extension EnvironmentValues {
     /// The shell's windows, which every window's content can open others
+    /// through; nil outside a shell window.
     @Entry var browserMacWindows: BrowserMacWindows? = nil
 }
 
@@ -22,19 +23,51 @@ extension EnvironmentValues {
 /// the person is using, and lets go of what goes with each as it closes.
 @MainActor
 final class BrowserMacWindows {
+    // MARK: - Types
+
+    /// A Quick Window's content, which answers for the window it shows in.
+    private struct QuickWindow {
+        let model: BrowserQuickWindowModel
+        let request: QuickRequest
+        /// The window's own notices, such as a copied link's.
+        let chrome: BrowserChromeState
+    }
+
+    /// The request a Quick Window shows now, which its content can revise.
+    private final class QuickRequest {
+        var value: BrowserQuickWindowRequest
+
+        init(_ value: BrowserQuickWindowRequest) {
+            self.value = value
+        }
+    }
+
+    /// Keeps a Quick Window's title on what its page shows.
+    private struct QuickWindowTitle: ViewModifier {
+        let model: BrowserQuickWindowModel
+        let request: QuickRequest
+        weak var window: NSWindow?
+
+        func body(content: Content) -> some View {
+            content.onChange(of: model.windowTitle(for: request.value), initial: true) { _, title in
+                window?.title = title
+            }
+        }
+    }
+
     // MARK: - Variables
 
-    unowned let application: BrowserMacApplication
-    unowned let engineHost: any BrowserMacEngineHost
+    private unowned let application: BrowserMacApplication
+    private unowned let engineHost: any BrowserMacEngineHost
 
     /// The engine and version the build runs pages in, where it names one,
     /// as About Crest credits it.
     var engineCredits: String? { engineHost.aboutCredits }
 
     /// The windows open now, in the order they opened.
-    var controllers: [BrowserMacWindowController] = []
+    private var controllers: [BrowserMacWindowController] = []
     /// The content of each Quick Window open now, by its identity.
-    var quickWindows: [UUID: QuickWindow] = [:]
+    private var quickWindows: [UUID: QuickWindow] = [:]
     /// The windows this launch opens, held back while first-run setup stands
     /// in front of them.
     private var heldLaunch: LaunchWindowPlan?
@@ -70,6 +103,19 @@ final class BrowserMacWindows {
         return BrowserCommandActions(
             browser: context.browser, pages: context.pages, chrome: context.chrome, windows: self,
             spaceAccess: application.spaceAccess, targetWindowID: context.windowID)
+    }
+
+    /// The page commands as they run in the key Quick Window, on the page it
+    /// shows; nil while no Quick Window with a page is key.
+    var activeQuickWindowActions: BrowserCommandActions? {
+        guard let key = controller(showing: NSApp.keyWindow), key.kind == .quick,
+            let quickWindow = quickWindows[key.windowID], let pages = quickWindow.model.pages,
+            let page = quickWindow.model.page
+        else { return nil }
+        return BrowserCommandActions(
+            browser: quickWindow.model.browser, pages: pages, chrome: quickWindow.chrome, windows: self,
+            spaceAccess: application.spaceAccess, targetWindowID: quickWindow.request.value.targetWindowID,
+            quickWindowPage: page)
     }
 
     /// Whether the key window is a Quick Window.
@@ -159,13 +205,13 @@ final class BrowserMacWindows {
         return controllers.first { $0.window === window }
     }
 
-    func controller(_ kind: BrowserMacWindowKind, id: UUID? = nil) -> BrowserMacWindowController? {
+    private func controller(_ kind: BrowserMacWindowKind, id: UUID? = nil) -> BrowserMacWindowController? {
         controllers.first { $0.kind == kind && (id == nil || $0.windowID == id) }
     }
 
     /// Brings forward the window of `kind` already open, when one window of
     /// the kind is open at a time. Answers whether there was one.
-    func bringForwardOpenWindow(of kind: BrowserMacWindowKind) -> Bool {
+    private func bringForwardOpenWindow(of kind: BrowserMacWindowKind) -> Bool {
         guard kind.isSingleton, let existing = controller(kind) else { return false }
         existing.present(.key)
         return true
@@ -224,6 +270,121 @@ final class BrowserMacWindows {
             })
     }
 
+    // MARK: - Actions - Private window
+
+    func openPrivateWindow() {
+        guard !bringForwardOpenWindow(of: .private) else { return }
+        let privatePages = application.privatePages
+        // A Quick Window the private window's pages open, such as a sign-in
+        // popup, finds its page and workspace through the registry.
+        application.pagePoolRegistry.register(
+            privatePages, browser: application.privateBrowser, for: privatePages.windowID)
+        show(
+            .private, id: privatePages.windowID, closeGate: application.privateWindowCloseGate,
+            content: { _ in application.privateWindowContent },
+            closed: { [weak self] controller in self?.privateWindowClosed(controller) })
+    }
+
+    /// Closing the private window ends private browsing: its Quick Windows
+    /// go with it, and the engine lets go of its profiles.
+    private func privateWindowClosed(_ controller: BrowserMacWindowController) {
+        forget(controller)
+        for (id, quick) in quickWindows where quick.model.browser.isPrivateBrowsing {
+            closeQuickWindowWithoutAsking(id)
+        }
+        let profiles = application.privateBrowser.spaceModels.map(\.profileID)
+        application.pagePoolRegistry.unregister(application.privatePages, for: controller.windowID)
+        application.closePrivateBrowsingWindow()
+        engineHost.windowClosed(controller.windowID, releasingProfiles: profiles)
+    }
+
+    // MARK: - Actions - Quick Windows
+
+    func openQuickWindow(_ request: BrowserQuickWindowRequest) {
+        if let existing = quickWindows.first(where: { $0.value.request.value == request }),
+            let controller = controller(.quick, id: existing.key)
+        {
+            controller.present(.key)
+            return
+        }
+        guard
+            let context = BrowserQuickWindowBrowsingContext(
+                for: request, browser: application.browser, pages: application.pages,
+                pagePoolRegistry: application.pagePoolRegistry),
+            let space = context.browser.spaceModel(matching: request.assignment),
+            !application.spaceAccess.isLocked(space)
+        else {
+            if let pageID = request.openedPageID {
+                DiagnosticLog.popups.notice("No window hosts the Quick Window for popup page \(pageID.uuidString)")
+            }
+            return
+        }
+        let current = QuickRequest(request)
+        let model = BrowserQuickWindowModel(
+            request: request, browser: context.browser, pages: context.pages, spaceAccess: application.spaceAccess,
+            supportsLivePagePromotion: context.supportsLivePagePromotion,
+            preferences: .production(core: context.browser.core),
+            requestLifecycle: BrowserQuickWindowRequestLifecycle(
+                isCurrent: { [weak current] in current?.value.hasSamePresentationIdentity(as: $0) == true },
+                replace: { [weak current] expected, revised in
+                    guard let current, current.value.hasSamePresentationIdentity(as: expected) else { return false }
+                    current.value = revised
+                    return true
+                }))
+        let quickWindow = QuickWindow(
+            model: model, request: current, chrome: BrowserChromeState(sidebarIsPresented: false))
+        quickWindows[request.id] = quickWindow
+        // Notices from the page's services reach the Quick Window while it is
+        // key, as they reach a browser window.
+        BrowserNoticeCenter.shared.register(quickWindow.chrome) { [weak self] in
+            self?.quickWindow(request.id)?.isKeyWindow == true
+        }
+        show(
+            .quick, id: request.id, closeGate: model.closeGate,
+            content: { window in
+                BrowserQuickWindowWindowSurface(
+                    model: model, spaceAccess: application.spaceAccess, pagePoolRegistry: application.pagePoolRegistry,
+                    // The content closes the window only when the window is
+                    // done, which a person's close waiting on the page, or a
+                    // refused one, never holds back.
+                    dismiss: { [weak self] in self?.closeQuickWindowWithoutAsking(request.id) },
+                    openBrowserWindow: { [weak self] in
+                        guard let self, !application.windowCoordinator.activateExistingWindow(for: context.browser)
+                        else { return }
+                        open(.normal(sourceWindowID: request.targetWindowID), activation: .key)
+                    }
+                )
+                .overlay { BrowserNoticeLayer(chrome: quickWindow.chrome) }
+                .modifier(BrowserChromeAppearancePersistence())
+                .environment(application.softwareUpdates)
+                .modifier(QuickWindowTitle(model: model, request: current, window: window))
+            },
+            closed: { [weak self] controller in self?.quickWindowClosed(controller) })
+    }
+
+    /// The Quick Window named `id`, while it is open.
+    func quickWindow(_ id: UUID) -> NSWindow? {
+        controller(.quick, id: id)?.window
+    }
+
+    /// Closes the Quick Window named `id` without asking its page: what it
+    /// was open for is over.
+    func closeQuickWindowWithoutAsking(_ id: UUID) {
+        controller(.quick, id: id)?.window.closeAfterApproval()
+    }
+
+    /// Closes every Quick Window without asking, as a quit the core allowed
+    /// archives them.
+    func closeQuickWindowsWithoutAsking() {
+        for id in Array(quickWindows.keys) { closeQuickWindowWithoutAsking(id) }
+    }
+
+    private func quickWindowClosed(_ controller: BrowserMacWindowController) {
+        forget(controller)
+        quickWindows.removeValue(forKey: controller.windowID)?.model.releaseForDismissal()
+        engineHost.windowClosed(controller.windowID, releasingProfiles: [])
+    }
+
     // MARK: - Actions - Setup
 
     /// Opens setup for `request`. Asking again brings its current draft
@@ -279,7 +440,7 @@ final class BrowserMacWindows {
     /// Opens a window of `kind` under `id` showing `content`, which opens
     /// other windows through these, places it cascading from `source` and
     /// brings it forward as `activation` says. `closed` says what goes with it.
-    func show<Content: View>(
+    private func show<Content: View>(
         _ kind: BrowserMacWindowKind, id: UUID = UUID(), closeGate: BrowserWindowCloseGate? = nil,
         cascadingFrom source: NSWindow? = nil, activation: BrowserMacWindowActivation = .key,
         content: (BrowserMacWindow) -> Content, closed: @escaping @MainActor (BrowserMacWindowController) -> Void
@@ -294,7 +455,7 @@ final class BrowserMacWindows {
 
     // MARK: - Mutators
 
-    func forget(_ controller: BrowserMacWindowController) {
+    private func forget(_ controller: BrowserMacWindowController) {
         controllers.removeAll { $0 === controller }
     }
 }

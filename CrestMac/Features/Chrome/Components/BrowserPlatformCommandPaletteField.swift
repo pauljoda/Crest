@@ -233,8 +233,17 @@ struct BrowserPlatformCommandPaletteField: NSViewRepresentable {
         }
 
         func control(_ control: NSControl, textView: NSTextView, doCommandBy selector: Selector) -> Bool {
+            perform(selector, in: textView, modifiers: NSApp.currentEvent?.modifierFlags ?? [])
+        }
+
+        /// Runs the palette's part of an editing command the field received
+        /// with `modifiers` held, or answers false to leave it to AppKit.
+        /// Control-A and Control-E send the same commands as Option-Up and
+        /// Option-Down, so only the modifiers tell them apart.
+        func perform(_ selector: Selector, in textView: NSTextView, modifiers: NSEvent.ModifierFlags) -> Bool {
             guard !textView.hasMarkedText() else { return false }
-            let shifted = NSApp.currentEvent?.modifierFlags.contains(.shift) == true
+            let shifted = modifiers.contains(.shift)
+            let controlHeld = modifiers.contains(.control)
             switch selector {
             case #selector(NSResponder.insertTab(_:)):
                 model.pressTab()
@@ -265,10 +274,15 @@ struct BrowserPlatformCommandPaletteField: NSViewRepresentable {
                 refreshSuffix()
                 return true
             case #selector(NSResponder.moveToEndOfParagraph(_:)):
+                // Control-E is the line end: it accepts a completion as Right
+                // Arrow does, or AppKit moves there.
+                if controlHeld { return model.acceptURLCompletion() }
                 model.moveSection(by: 1)
                 refreshSuffix()
                 return true
             case #selector(NSResponder.moveToBeginningOfParagraph(_:)):
+                // Control-A is the line start, which AppKit moves to.
+                if controlHeld { return false }
                 model.moveSection(by: -1)
                 refreshSuffix()
                 return true
