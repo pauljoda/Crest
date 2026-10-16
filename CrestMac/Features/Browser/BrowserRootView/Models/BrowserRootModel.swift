@@ -37,7 +37,6 @@ final class BrowserRootModel {
     )
     var isPrepared = false
     @ObservationIgnored private var isPreparingBrowser = false
-    var visibleNotice: BrowserNotice?
     /// The window's chrome keeps it, so a command that presents a sidebar list
     /// knows whether the sidebar is already on screen.
     var isFloatingSidebarPresented: Bool {
@@ -57,6 +56,9 @@ final class BrowserRootModel {
     }
     @ObservationIgnored private var isSidebarApproachingDockStorage = false
     private(set) var isSidebarSurfaceHovered = false
+    /// Whether the floating sidebar came out because the pointer reached the
+    /// window edge, rather than from a click, command or page request.
+    private(set) var isFloatingSidebarRevealedByPointer = false
     private var sidebarMorphRevision = 0
     /// Cancels or awaits the current sidebar transition.
     @ObservationIgnored private(set) var sidebarMorphTask: Task<Void, Never>?
@@ -351,6 +353,7 @@ extension BrowserRootModel {
 
     func hideSidebar(reduceMotion: Bool) {
         chrome.utilityPresentation.dismiss()
+        isFloatingSidebarRevealedByPointer = false
         guard !reduceMotion else {
             cancelSidebarMorph()
             isFloatingSidebarPresented = isSidebarSurfaceHovered
@@ -389,6 +392,7 @@ extension BrowserRootModel {
     }
 
     func dockSidebar(reduceMotion: Bool) {
+        isFloatingSidebarRevealedByPointer = false
         guard !reduceMotion else {
             cancelSidebarMorph()
             isFloatingSidebarPresented = false
@@ -448,8 +452,18 @@ extension BrowserRootModel {
         }
     }
 
+    /// Presents the floating sidebar for a pointer that reached the window
+    /// edge. Leaving the window counts as leaving the sidebar from then on,
+    /// even before the pointer first reaches the card sliding in under it.
+    func revealFloatingSidebarFromPointer(reduceMotion: Bool) {
+        presentFloatingSidebar(reduceMotion: reduceMotion)
+        guard sidebarPresentation == .floating else { return }
+        isFloatingSidebarRevealedByPointer = true
+    }
+
     func dismissFloatingSidebar(reduceMotion: Bool) {
         cancelSidebarMorph()
+        isFloatingSidebarRevealedByPointer = false
         if sidebarPresentation == .floating {
             chrome.utilityPresentation.dismiss()
         }
@@ -476,6 +490,13 @@ extension BrowserRootModel {
     ) {
         guard !isActive else { return }
         dismissFloatingSidebarIfInteractionAllows(reduceMotion: reduceMotion)
+    }
+
+    /// A command can put the floating sidebar away without going through
+    /// `dismissFloatingSidebar`, and whatever revealed it last no longer applies.
+    func floatingSidebarPresentationChanged() {
+        guard !isFloatingSidebarPresented else { return }
+        isFloatingSidebarRevealedByPointer = false
     }
 
     func columnVisibilityChanged(reduceMotion: Bool) {
@@ -726,30 +747,6 @@ private struct BrowserMacPaletteOpener: BrowserCommandPaletteOpener {
                 spaceAssignment: BrowserSpaceRuntimeAssignment(spaceID: source.spaceID, profileID: source.profileID),
                 targetWindowID: model.windowState?.id))
         return true
-    }
-}
-
-// MARK: - Feedback
-
-extension BrowserRootModel {
-    func presentNotice(revision: Int, reduceMotion: Bool) {
-        guard revision > 0, let notice = chrome.notice else { return }
-        withAnimation(
-            accessibleAnimation(CrestMotion.feedbackPresentation, reduceMotion)
-        ) {
-            visibleNotice = notice
-        }
-        Task { @MainActor [weak self] in
-            try? await Task.sleep(for: notice.duration)
-            guard let self,
-                self.chrome.noticeRevision == revision
-            else { return }
-            withAnimation(
-                self.accessibleAnimation(CrestMotion.dismissal, reduceMotion)
-            ) {
-                self.visibleNotice = nil
-            }
-        }
     }
 }
 

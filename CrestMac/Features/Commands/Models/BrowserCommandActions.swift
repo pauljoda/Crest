@@ -19,6 +19,9 @@ struct BrowserCommandActions: BrowserNumberedSelectionPerformer {
     /// The window a Quick Window should hand its result back to, when the
     /// command was issued from a focused browser window.
     var targetWindowID: UUID?
+    /// The page a Quick Window in front shows, which the page commands act on
+    /// in place of the browser window's; nil in a browser window.
+    var quickWindowPage: BrowserPage?
     /// Which way the cards are laid out, for the commands that name a side of
     /// the screen. Only the split-card moves read it; see
     /// `BrowserSplitCardMoveDirection`.
@@ -61,7 +64,7 @@ struct BrowserCommandActions: BrowserNumberedSelectionPerformer {
     }
 
     func perform(_ command: ShortcutCommand) {
-        guard browser.allows(command), let action = BrowserMacCommand.of(command), action.isAvailable(self, command)
+        guard windowAllows(command), let action = BrowserMacCommand.of(command), action.isAvailable(self, command)
         else { return }
         action.run(self, command)
     }
@@ -71,7 +74,15 @@ struct BrowserCommandActions: BrowserNumberedSelectionPerformer {
     /// page and its engine can do. In particular, a disabled split shortcut
     /// must leave text selection alone.
     func canPerform(_ command: ShortcutCommand) -> Bool {
-        browser.allows(command) && BrowserMacCommand.of(command)?.isAvailable(self, command) == true
+        windowAllows(command) && BrowserMacCommand.of(command)?.isAvailable(self, command) == true
+    }
+
+    /// Whether what the window shows allows `command`. The core judges a
+    /// browser window's contents; a Quick Window shows only its page, so only
+    /// the commands on the page run there.
+    private func windowAllows(_ command: ShortcutCommand) -> Bool {
+        guard quickWindowPage != nil else { return browser.allows(command) }
+        return BrowserMacCommand.of(command)?.actsOnPage == true
     }
 
     /// Whether the palette lists `command` now: the core offers it, and a
@@ -98,36 +109,60 @@ struct BrowserCommandActions: BrowserNumberedSelectionPerformer {
         selection.select(on: self)
     }
 
+    /// The page the page commands act on: a Quick Window's in front, or else
+    /// the one the window's pool names, a Peek open over the active tab or
+    /// the tab's own page.
+    var commandPage: BrowserPage? {
+        quickWindowPage ?? pages.commandPage
+    }
+
+    /// The page the window shows: a Quick Window's in front, or else the
+    /// active tab's, even under a Peek. Reader, translation, the inspector,
+    /// content blocking and engine moves act on it.
+    var shownPage: BrowserPage? {
+        quickWindowPage ?? pages.activePage
+    }
+
+    /// The Space of the page the window shows: a Quick Window's own, or else
+    /// the one the browser window shows.
+    var shownPageSpace: SpaceModel? {
+        guard let page = quickWindowPage else { return browser.shownSpace }
+        let assignment = BrowserSpaceRuntimeAssignment(spaceID: page.spaceID, profileID: page.profileID)
+        return browser.spaceModel(matching: assignment)
+    }
+
     /// Whether the page the page commands act on has a search to find again.
     var canFindAgain: Bool {
-        commandPageSupports(.find) && pages.commandPage?.canFindAgain == true
+        commandPageSupports(.find) && commandPage?.canFindAgain == true
     }
 
     /// Whether the page the page commands act on has loaded a document.
     var hasCommandPage: Bool {
-        pages.commandPage?.live.documentURL != nil
+        commandPage?.live.documentURL != nil
     }
 
     var canZoom: Bool {
-        commandPageSupports(.zoom) && pages.commandPage?.developerViewport == nil
+        commandPageSupports(.zoom) && commandPage?.developerViewport == nil
     }
 
     /// The same question as `supportsPageCapability` for the page the page
-    /// commands act on, which a Peek open over the active tab stands in for.
+    /// commands act on.
     func commandPageSupports(_ capability: EngineCapability) -> Bool {
-        hasCommandPage && pages.commandPage?.pageEngine.registration.supports(capability) == true
+        hasCommandPage && commandPage?.pageEngine.registration.supports(capability) == true
     }
 
+    /// Whether the page the window shows has loaded a document its engine can
+    /// do `capability` for.
     func supportsPageCapability(_ capability: EngineCapability) -> Bool {
-        pages.hasActivePage && pages.activePage?.pageEngine.registration.supports(capability) == true
+        shownPage?.live.documentURL != nil && shownPage?.pageEngine.registration.supports(capability) == true
     }
 
     /// The same question as `supportsPageCapability` for commands that are about
     /// the window rather than the document in it, so they stay available in the
     /// moment before a page exists, when the engine new pages open on answers.
-    /// The active page's own engine answers whenever there is one.
+    /// The shown page's own engine answers whenever there is one.
     func supportsEngineCapability(_ capability: EngineCapability) -> Bool {
-        pages.activePage?.pageEngine.registration.supports(capability)
+        shownPage?.pageEngine.registration.supports(capability)
             ?? browser.core.state.defaultEngineSupports(capability)
     }
 
@@ -203,13 +238,13 @@ struct BrowserCommandActions: BrowserNumberedSelectionPerformer {
 
     var contentBlockingActionTitle: LocalizedStringResource {
         ContentBlockingPolicy.switchTitle(
-            for: browser.shownSpace?.settings.browsingPreferences.contentBlocking)
+            for: shownPageSpace?.settings.browsingPreferences.contentBlocking)
     }
 
     /// The engines the shown page can move to: every registered engine but
     /// its own, so the choice is there before any page opens on the others.
     var pageEngineMoves: [EngineKind] {
-        pages.activePage?.corePage.otherEngines ?? []
+        shownPage?.corePage.otherEngines ?? []
     }
 
     // MARK: - Chrome
@@ -274,27 +309,28 @@ struct BrowserCommandActions: BrowserNumberedSelectionPerformer {
 
     /// Moves the shown page to `engine`, which loads what it showed there.
     func movePage(to engine: EngineKind) {
-        pages.activePage?.corePage.move(to: engine)
+        shownPage?.corePage.move(to: engine)
     }
 
     /// Translates the whole shown page, which its translation toolbar then
     /// follows.
     func translatePage() {
-        pages.activePage?.translation.present()
+        shownPage?.translation.present()
     }
 
     func copyPageLink() {
-        guard pages.commandPage?.copyPageLink() == true else { return }
+        guard commandPage?.copyPageLink() == true else { return }
         chrome.showURLCopiedFeedback()
     }
 
     func copyPageLinkAsMarkdown() {
-        guard pages.commandPage?.copyPageLinkAsMarkdown() == true else { return }
+        guard commandPage?.copyPageLinkAsMarkdown() == true else { return }
         chrome.showURLCopiedFeedback()
     }
 
+    /// Switches content blocking for the Space of the page the window shows.
     func toggleContentBlocking() {
-        guard let space = browser.shownSpace else { return }
+        guard let space = shownPageSpace else { return }
         var preferences = space.settings.browsingPreferences
         preferences.contentBlocking = preferences.contentBlocking.switched
         browser.updateBrowsingPreferences(preferences, in: space.id)
@@ -302,25 +338,25 @@ struct BrowserCommandActions: BrowserNumberedSelectionPerformer {
     }
 
     func zoomIn() {
-        guard let page = pages.commandPage, page.zoomIn() else { return }
+        guard let page = commandPage, page.zoomIn() else { return }
         chrome.showPageZoomFeedback(page.pageZoom.pageZoomPercentage)
     }
 
     func zoomOut() {
-        guard let page = pages.commandPage, page.zoomOut() else { return }
+        guard let page = commandPage, page.zoomOut() else { return }
         chrome.showPageZoomFeedback(page.pageZoom.pageZoomPercentage)
     }
 
     func resetZoom() {
-        guard let page = pages.commandPage, page.resetZoom() else { return }
+        guard let page = commandPage, page.resetZoom() else { return }
         chrome.showPageZoomFeedback(page.pageZoom.pageZoomPercentage)
     }
 
-    /// Reloads a Peek open over the active tab, or else the tab, which the
-    /// pool brings back when its page went.
+    /// Reloads a Quick Window's page in front or a Peek open over the active
+    /// tab, or else the tab, which the pool brings back when its page went.
     func reload(_ mode: BrowserPageReloadMode) {
-        if let peek = pages.peekPage {
-            peek.performReload(mode)
+        if let page = quickWindowPage ?? pages.peekPage {
+            page.performReload(mode)
         } else {
             pages.reload(mode)
         }

@@ -29,6 +29,8 @@ final class BrowserMacWindows {
     private struct QuickWindow {
         let model: BrowserQuickWindowModel
         let request: QuickRequest
+        /// The window's own notices, such as a copied link's.
+        let chrome: BrowserChromeState
     }
 
     /// The request a Quick Window shows now, which its content can revise.
@@ -101,6 +103,19 @@ final class BrowserMacWindows {
         return BrowserCommandActions(
             browser: context.browser, pages: context.pages, chrome: context.chrome, windows: self,
             spaceAccess: application.spaceAccess, targetWindowID: context.windowID)
+    }
+
+    /// The page commands as they run in the key Quick Window, on the page it
+    /// shows; nil while no Quick Window with a page is key.
+    var activeQuickWindowActions: BrowserCommandActions? {
+        guard let key = controller(showing: NSApp.keyWindow), key.kind == .quick,
+            let quickWindow = quickWindows[key.windowID], let pages = quickWindow.model.pages,
+            let page = quickWindow.model.page
+        else { return nil }
+        return BrowserCommandActions(
+            browser: quickWindow.model.browser, pages: pages, chrome: quickWindow.chrome, windows: self,
+            spaceAccess: application.spaceAccess, targetWindowID: quickWindow.request.value.targetWindowID,
+            quickWindowPage: page)
     }
 
     /// Whether the key window is a Quick Window.
@@ -316,7 +331,14 @@ final class BrowserMacWindows {
                     current.value = revised
                     return true
                 }))
-        quickWindows[request.id] = QuickWindow(model: model, request: current)
+        let quickWindow = QuickWindow(
+            model: model, request: current, chrome: BrowserChromeState(sidebarIsPresented: false))
+        quickWindows[request.id] = quickWindow
+        // Notices from the page's services reach the Quick Window while it is
+        // key, as they reach a browser window.
+        BrowserNoticeCenter.shared.register(quickWindow.chrome) { [weak self] in
+            self?.quickWindow(request.id)?.isKeyWindow == true
+        }
         show(
             .quick, id: request.id, closeGate: model.closeGate,
             content: { window in
@@ -332,6 +354,7 @@ final class BrowserMacWindows {
                         open(.normal(sourceWindowID: request.targetWindowID), activation: .key)
                     }
                 )
+                .overlay { BrowserNoticeLayer(chrome: quickWindow.chrome) }
                 .modifier(BrowserChromeAppearancePersistence())
                 .environment(application.softwareUpdates)
                 .modifier(QuickWindowTitle(model: model, request: current, window: window))

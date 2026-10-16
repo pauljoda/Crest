@@ -20,6 +20,8 @@ struct SpaceSidebarContent: View {
     let utilityActions: BrowserUtilityListActions
     let dismissUtilityOnBlankSpace: () -> Void
     let clearHistory: () -> Void
+    var utilitySearchFocusRequest = 0
+    var consumeUtilitySearchFocusRequest: @MainActor (Int, BrowserUtilitySurface) -> Bool = { _, _ in false }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -40,7 +42,9 @@ struct SpaceSidebarContent: View {
                         downloads: utilityDownloads,
                         actions: utilityActions,
                         dismissOnBlankSpace: dismissUtilityOnBlankSpace,
-                        clearHistory: clearHistory
+                        clearHistory: clearHistory,
+                        searchFocusRequest: utilitySearchFocusRequest,
+                        consumeSearchFocusRequest: consumeUtilitySearchFocusRequest
                     )
                 } else {
                     SpaceSidebarBrowsingContent(

@@ -3,11 +3,10 @@ import Translation
 
 struct BrowserTranslationHost: ViewModifier {
     @Bindable var translation: BrowserPageTranslation
-    /// The page, not one engine's view. Whole-page translation rewrites a live
-    /// DOM through Apple's Translation session, which only the WebKit port
-    /// exposes; an engine that does not declare `translation` supplies no
-    /// target and the modifier stays inert rather than the shells having to
-    /// know which engine they composed.
+    /// The page, not one engine's view. Its engine supplies the document
+    /// whole-page translation rewrites; an engine that does not declare
+    /// `translation` supplies none and the modifier stays inert rather than
+    /// the shells having to know which engine they composed.
     let page: BrowserPlatformPage
     let isActive: Bool
     let isLoading: Bool
@@ -20,8 +19,10 @@ struct BrowserTranslationHost: ViewModifier {
     private var offersTranslation: Bool { preferences.offersTranslation }
     private var languageRules: [TranslationRule] { preferences.translationRules }
 
-    private var translationTarget: (any BrowserPageEngine)? {
-        page.pageEngine.registration.supports(.translation) ? page.pageEngine : nil
+    /// Asked for each time, so a page that moved to another engine hands over
+    /// that engine's document.
+    private var translationDocument: BrowserTranslationDocument? {
+        page.pageEngine.registration.supports(.translation) ? page.translationDocument : nil
     }
 
     /// What detecting the page's language depends on; detection runs again
@@ -48,14 +49,14 @@ struct BrowserTranslationHost: ViewModifier {
         return
             content
             .task(id: detection) {
-                guard !Task.isCancelled, let engine = translationTarget else { return }
+                guard !Task.isCancelled, let document = translationDocument else { return }
                 translation.updatePreferences(
                     automaticallyTranslates: automaticallyTranslates, offersTranslation: offersTranslation,
                     languageRules: languageRules)
                 translation.setActive(
-                    isActive && !isReaderActive && scenePhase != .background, in: engine, hostID: hostID)
+                    isActive && !isReaderActive && scenePhase != .background, in: document, hostID: hostID)
                 guard !isLoading, !isReaderActive, isActive else { return }
-                await translation.detect(in: engine)
+                await translation.detect()
                 await translation.automaticallyTranslateIfAvailable(enabled: automaticallyTranslates)
             }
             .task(id: "\(translation.languageStatusID)-\(translation.isOffered)-\(isActive)-\(scenePhase)") {
@@ -71,8 +72,8 @@ struct BrowserTranslationHost: ViewModifier {
                     languageRules: languageRules)
             }
             .onDisappear {
-                if let engine = translationTarget {
-                    translation.setActive(false, in: engine, hostID: hostID)
+                if let document = translationDocument {
+                    translation.setActive(false, in: document, hostID: hostID)
                 }
             }
             .sheet(isPresented: $translation.showsInformation) {

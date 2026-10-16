@@ -818,6 +818,10 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         }
     }
 
+    /// The document whole-page translation rewrites, on the engine the page
+    /// is on now.
+    var translationDocument: BrowserTranslationDocument? { engineAdapter.translationDocument }
+
     // MARK: - Actions - Sharing and export
 
     @discardableResult
