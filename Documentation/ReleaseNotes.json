@@ -4146,6 +4146,14 @@
       "category": "fixed",
       "message": "A Space switch keeps sliding when you show or hide the sidebar during it, instead of jumping to the end."
     },
+    "settings-controls-take-clicks-on-macos-26": {
+      "category": "fixed",
+      "message": "On macOS 26, switches, pickers and the house choices in Settings take every click instead of ignoring clicks after the first."
+    },
+    "update-restart-quits-crest": {
+      "category": "fixed",
+      "message": "Restart and Update quits Crest and installs the update instead of waiting until you quit, and Quit in the Dock works again, even after another app has used AppleScript with Crest."
+    },
     "link-route-exact-site-name": {
       "category": "fixed",
       "message": "A link route set to “Is Exactly” with just a site’s name, such as docs.google.com, now matches that site’s home page, and Links settings say that routes apply to links from other apps."
