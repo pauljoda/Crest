@@ -4154,6 +4154,10 @@
       "category": "fixed",
       "message": "Restart and Update quits Crest and installs the update instead of waiting until you quit, and Quit in the Dock works again, even after another app has used AppleScript with Crest."
     },
+    "quit-after-space-deletion-fails": {
+      "category": "fixed",
+      "message": "Crest quits instead of waiting indefinitely when a Space couldn’t be fully deleted, and tries deleting that Space again the next time it opens."
+    },
     "link-route-exact-site-name": {
       "category": "fixed",
       "message": "A link route set to “Is Exactly” with just a site’s name, such as docs.google.com, now matches that site’s home page, and Links settings say that routes apply to links from other apps."

@@ -77,11 +77,10 @@ public sealed partial class BrowserContractsTests {
             app.Send(new BeginDeletingSpace(workspace, Guid.NewGuid(), deleting, operation));
             Assert.Equal(new SpaceDataNotErased(deleting), Assert.Throws<Rejected>(() =>
                 app.Send(new FinishDeletingSpace(workspace, Guid.NewGuid(), deleting, operation))).Rejection);
-            // A quit waits while the engines are still to erase the profile.
-            Assert.Equal([deleting], Assert.IsType<SpaceDeletionUnderway>(Refusal(app, new PrepareToQuit(Guid.NewGuid()))).SpaceIds);
 
-            // One engine could not erase the profile: the Space stays being
-            // deleted, and waits to be tried again, which a quit no longer waits for.
+            // A quit waits while the engines erase the profile. One engine
+            // could not: the Space stays being deleted, and waits to be tried
+            // again, which a quit no longer waits for.
             app.Send(new DeleteProfileData(Guid.NewGuid(), profile, Ephemeral: false));
             Assert.Equal([deleting], Assert.IsType<SpaceDeletionUnderway>(Refusal(app, new PrepareToQuit(Guid.NewGuid()))).SpaceIds);
             app.Report(webKit, new DataErased(Assert.IsType<EraseProfileData>(webKitBinding.Commands[^1]).ErasureId, Erased: true));
@@ -98,6 +97,9 @@ public sealed partial class BrowserContractsTests {
         var engines = IdleEngines(relaunched);
         Assert.Equal(new SpaceDataNotErased(deleting), Assert.Throws<Rejected>(() =>
             relaunched.Send(new FinishDeletingSpace(again, Guid.NewGuid(), deleting, operation))).Rejection);
+        // Until it erases again, the deletion holds no quit: quitting
+        // interrupts nothing, and the next launch resumes it.
+        Assert.Contains(relaunched.Send(new PrepareToQuit(Guid.NewGuid())), change => change is CloseReady { Allowed: true });
         relaunched.Send(new DeleteProfileData(Guid.NewGuid(), profile, Ephemeral: false));
         relaunched.Report(engines.WebKit,
             new DataErased(Assert.IsType<EraseProfileData>(Assert.Single(engines.WebKitBinding.Commands)).ErasureId, Erased: true));
