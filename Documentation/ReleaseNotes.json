@@ -4133,6 +4133,14 @@
     "temporary-sidebar-interruptible-animation": {
       "category": "fixed",
       "message": "Temporary sidebars and their utility selector animate smoothly when shortcuts interrupt opening or closing."
+    },
+    "temporary-sidebar-selector-return-anchor": {
+      "category": "fixed",
+      "message": "The temporary sidebar selector returns to its button when the sidebar closes."
+    },
+    "temporary-utilities-stay-open-during-page-interaction": {
+      "category": "fixed",
+      "message": "Temporary History, Archive, and Downloads sidebars stay open while you use the webpage."
     }
   }
 }

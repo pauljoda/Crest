@@ -198,6 +198,26 @@ final class BrowserSidebarCommandTests: XCTestCase {
         }
     }
 
+    func testPageInteractionPreservesTemporaryUtilitiesUntilTheirShortcutClosesThem() {
+        let browser = BrowserStore.hostingPages()
+        let pages = BrowserPagePool(browser: browser)
+        for sidebarIsPresented in [false, true] {
+            for (command, surface) in Self.utilityCommands {
+                let chrome = BrowserChromeState(sidebarIsPresented: sidebarIsPresented)
+                let actions = BrowserCommandActions(browser: browser, pages: pages, chrome: chrome, windows: nil)
+                actions.perform(command)
+                chrome.handleWebContentInteraction()
+                XCTAssertEqual(chrome.utilityPresentation.surface, sidebarIsPresented ? nil : surface)
+                XCTAssertEqual(chrome.isFloatingSidebarPresented, !sidebarIsPresented)
+                if !sidebarIsPresented {
+                    actions.perform(command)
+                    XCTAssertNil(chrome.utilityPresentation.surface)
+                    XCTAssertFalse(chrome.isFloatingSidebarPresented)
+                }
+            }
+        }
+    }
+
     /// Hidden and protected utility panels must not expose their search commands.
     func testFindDoesNotSearchAHiddenOrLockedUtilityList() throws {
         for (command, _) in Self.utilityCommands {
