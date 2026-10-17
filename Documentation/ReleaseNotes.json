@@ -4177,6 +4177,10 @@
     "settings-narrow-window-sidebar-clicks": {
       "category": "fixed",
       "message": "In a narrow window, a Space’s Crest Studio no longer covers the Settings sidebar, so its search field and Space buttons take clicks again."
+    },
+    "local-addresses-open-over-http": {
+      "category": "fixed",
+      "message": "Typing a local address such as 192.168.0.1 or printer.local opens it over http, as other browsers do, and an address typed with http:// always opens over http."
     }
   }
 }
