@@ -4193,6 +4193,14 @@
     "core-history-load-identity-on-failure": {
       "category": "internal",
       "message": "A page the core asks to load in place of a history entry gives up that entry's identity when the load fails or is cancelled, so a later page never takes it."
+    },
+    "sidebar-hover-in-full-screen": {
+      "category": "new",
+      "message": "Settings > Window can keep the sidebar hover area working while a video plays full screen, so the sidebar floats over the video when the pointer reaches the window’s edge."
+    },
+    "window-chrome-restore-not-reapplied": {
+      "category": "internal",
+      "message": "A window taking back its own chrome no longer has Crest's chrome applied again from the layout that restore causes, which could abort the app as a window closed."
     }
   }
 }
