@@ -17,7 +17,8 @@ internal sealed record TabGroupRecord(Guid Id, Guid SpaceId, EngineKind Engine, 
 /// What the device store holds: every saved window's record, the saved
 /// windows the next launch reopens, back to front, the persistent session's
 /// site permission choices in storage order and its site engine choices least
-/// recent first, the person's shortcut choices and link preferences, the
+/// recent first, its site Developer Mode choices least recent first, the
+/// person's shortcut choices and link preferences, the
 /// unfinished manual setup it keeps for the next launch, whether this device
 /// has completed setup, what it has adopted from an installed release, the
 /// tab groups whose folders follow them, the site searches, what each
@@ -44,6 +45,9 @@ internal sealed record DeviceRecords(IReadOnlyList<SavedWindow> Windows, IReadOn
     /// Whether agents may use Crest, and what the person allowed them.
     public AgentPreferences Agents { get; init; } = AgentPreferences.Off;
 
+    /// The persistent session's site Developer Mode choices, least recent first.
+    public IReadOnlyList<SiteDeveloperModeChoice> SiteDeveloperModes { get; init; } = [];
+
     #endregion
 
     #region Actions - Adoption
@@ -60,6 +64,7 @@ internal sealed record DeviceRecords(IReadOnlyList<SavedWindow> Windows, IReadOn
         && Reopening.SequenceEqual(other.Reopening)
         && SitePermissions.SequenceEqual(other.SitePermissions)
         && SiteEngines.SequenceEqual(other.SiteEngines)
+        && SiteDeveloperModes.SequenceEqual(other.SiteDeveloperModes)
         && DefaultEngine == other.DefaultEngine
         && Shortcuts.SameAs(other.Shortcuts)
         && Links.Equals(other.Links)

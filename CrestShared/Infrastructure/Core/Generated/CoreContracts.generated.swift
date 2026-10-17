@@ -281,6 +281,7 @@ enum Rejection: Equatable, Error, Sendable {
     case notPrivateWorkspace(NotPrivateWorkspace)
     case pageNotLoadable(PageNotLoadable)
     case pageProfileMismatch(PageProfileMismatch)
+    case pageShowsNoSite(PageShowsNoSite)
     case persistentWorkspaceRequired(PersistentWorkspaceRequired)
     case pinnedTabsDragAlone(PinnedTabsDragAlone)
     case pinnedTabsFull(PinnedTabsFull)
@@ -1509,6 +1510,11 @@ struct ChooseShareSource: PageRequest, Equatable, Sendable {
     let choice: ShareSourceChoice
     let tabPageID: UUID?
     let audio: Bool
+}
+
+struct ChooseSiteDeveloperMode: Intent, PageIntent, Equatable, Sendable {
+    let pageID: UUID
+    let isOn: Bool?
 }
 
 struct ChooseSiteEngine: Intent, Equatable, Sendable {
@@ -4394,6 +4400,10 @@ struct PageScriptEvaluated: Equatable, Sendable {
     let error: String?
 }
 
+struct PageShowsNoSite: Equatable, Sendable {
+    let pageID: UUID
+}
+
 struct PageSnapshot: Equatable, Sendable {
     static let blank = PageSnapshot(url: nil, pendingURL: nil, title: "", isLoading: false, security: PageSecurity.none, media: [])
 
@@ -4413,6 +4423,7 @@ struct PageState: Equatable, Sendable, Identifiable {
     let engine: EngineKind
     let phase: PagePhase
     let live: PageLiveState
+    let developerMode: Bool?
 }
 
 struct PageStateChanged: EngineEvent, PageEvent, Equatable, Sendable {
@@ -22922,6 +22933,10 @@ final class PageStateModel: ObservedModel, Identifiable {
         access(keyPath: \.live)
         return liveStorage
     }
+    var developerMode: Bool? {
+        access(keyPath: \.developerMode)
+        return developerModeStorage
+    }
 
     @ObservationIgnored private var workspaceIDStorage: UUID
     @ObservationIgnored private var spaceIDStorage: UUID
@@ -22929,6 +22944,7 @@ final class PageStateModel: ObservedModel, Identifiable {
     @ObservationIgnored private var engineStorage: EngineKind
     @ObservationIgnored private var phaseStorage: PagePhase
     @ObservationIgnored private var liveStorage: PageLiveState
+    @ObservationIgnored private var developerModeStorage: Bool?
 
     var value: PageState {
         PageState(
@@ -22938,7 +22954,8 @@ final class PageStateModel: ObservedModel, Identifiable {
             tabID: tabID,
             engine: engine,
             phase: phase,
-            live: live
+            live: live,
+            developerMode: developerMode
         )
     }
 
@@ -22950,6 +22967,7 @@ final class PageStateModel: ObservedModel, Identifiable {
         engineStorage = value.engine
         phaseStorage = value.phase
         liveStorage = value.live
+        developerModeStorage = value.developerMode
     }
 
     func update(_ value: PageState) {
@@ -22977,6 +22995,10 @@ final class PageStateModel: ObservedModel, Identifiable {
         if liveStorage != value.live {
             liveStorage = value.live
             withMutation(keyPath: \.live) {}
+        }
+        if developerModeStorage != value.developerMode {
+            developerModeStorage = value.developerMode
+            withMutation(keyPath: \.developerMode) {}
         }
     }
 }

@@ -20,7 +20,7 @@ struct BrowserSiteSettingsContent: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: CrestSpacing.medium) {
-            BrowserSiteDeveloperModeStatus(page: page)
+            BrowserSiteDeveloperModeRow(page: page, origin: origin)
 
             if let origin {
                 BrowserSiteEngineRow(page: page, origin: origin)

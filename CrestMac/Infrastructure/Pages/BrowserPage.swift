@@ -13,6 +13,15 @@ enum BrowserDeveloperCaptureError: Error {
     case encodingFailed
 }
 
+/// The developer toolbar shown or hidden for one page by the shortcut, with
+/// the site it was shown on and the site's Developer Mode choice then. It
+/// holds while the page stays on that site and the choice is unchanged.
+private struct BrowserDeveloperToolbarOverride: Equatable {
+    let isVisible: Bool
+    let origin: SiteOrigin?
+    let siteChoice: Bool?
+}
+
 @Observable
 @MainActor
 final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
@@ -189,7 +198,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     @ObservationIgnored let httpAuthenticationSession: BrowserHTTPAuthenticationSession
 
     // Session-only presentation state belongs to the live page, including in splits.
-    private var developerToolbarVisibilityOverride: Bool?
+    private var developerToolbarOverride: BrowserDeveloperToolbarOverride?
     var developerViewport: BrowserDeveloperViewport? {
         didSet { enginePage.zoom(to: renderedPageZoom) }
     }
@@ -197,8 +206,25 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     var renderedPageZoom: CGFloat { developerViewport == nil ? pageZoom : 1 }
 
     var isDeveloperModeEnabled: Bool {
-        developerToolbarVisibilityOverride ?? (developerViewport != nil || isDeveloperModeAutomatic)
+        if let override = developerToolbarOverride, override.origin == siteOrigin,
+            override.siteChoice == siteDeveloperModeChoice
+        {
+            return override.isVisible
+        }
+        return developerViewport != nil || isDeveloperModeOnForSite
     }
+
+    /// Whether the site this page shows turns the developer toolbar on: its
+    /// Developer Mode choice, or the default when it has none.
+    var isDeveloperModeOnForSite: Bool {
+        siteDeveloperModeChoice ?? isDeveloperModeAutomatic
+    }
+
+    /// The Developer Mode choice for the site this page shows, or nil when it
+    /// follows the default.
+    var siteDeveloperModeChoice: Bool? { corePage.developerMode }
+
+    private var siteOrigin: SiteOrigin? { live.displayURL.flatMap(SiteOrigin.init(url:)) }
 
     /// Whether this page's address turns the developer toolbar on by itself:
     /// a local development address, while the person keeps that preference on.
@@ -569,9 +595,20 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
 
     // MARK: - Actions - Find and developer tools
 
+    /// Shows or hides the developer toolbar for this page alone, while it
+    /// stays on the site it shows, leaving the site's choice as it is.
     func setDeveloperToolbarVisible(_ visible: Bool) {
-        developerToolbarVisibilityOverride = visible
+        developerToolbarOverride = BrowserDeveloperToolbarOverride(
+            isVisible: visible, origin: siteOrigin, siteChoice: siteDeveloperModeChoice)
         if !visible { developerViewport = nil }
+    }
+
+    /// Chooses Developer Mode on or off for the site this page shows, or
+    /// returns it to the default with nil. The site's open pages follow it.
+    func chooseSiteDeveloperMode(_ isOn: Bool?) {
+        guard corePage.chooseDeveloperMode(isOn) else { return }
+        developerToolbarOverride = nil
+        if !isDeveloperModeOnForSite { developerViewport = nil }
     }
 
     func presentFind() {

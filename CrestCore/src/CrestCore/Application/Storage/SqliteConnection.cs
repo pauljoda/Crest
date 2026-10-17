@@ -139,6 +139,8 @@ internal sealed class SqliteConnection : IDisposable {
             + "modified_at REAL NOT NULL, position INTEGER NOT NULL)");
         Execute("CREATE TABLE IF NOT EXISTS device_site_engine (scheme TEXT NOT NULL, host TEXT NOT NULL, port INTEGER NOT NULL, "
             + "engine TEXT NOT NULL, position INTEGER NOT NULL, PRIMARY KEY (scheme, host, port))");
+        Execute("CREATE TABLE IF NOT EXISTS device_site_developer_mode (scheme TEXT NOT NULL, host TEXT NOT NULL, "
+            + "port INTEGER NOT NULL, is_on INTEGER NOT NULL, position INTEGER NOT NULL, PRIMARY KEY (scheme, host, port))");
         Execute("CREATE TABLE IF NOT EXISTS device_engine (id INTEGER PRIMARY KEY CHECK (id = 0), engine TEXT NOT NULL)");
         Execute("CREATE TABLE IF NOT EXISTS device_shortcut (command TEXT PRIMARY KEY, key TEXT, special INTEGER NOT NULL, "
             + "modifiers INTEGER NOT NULL)");
@@ -171,7 +173,8 @@ internal sealed class SqliteConnection : IDisposable {
         ReadLinks(), ReadSetupDraft(), ReadSetupCompleted(), ReadAdoptions(), ReadTabGroups(), ReadDefaultEngine()) {
         PaletteMemories = ReadPaletteMemories(),
         SearchCatalog = ReadSearchCatalog(),
-        Agents = ReadAgents()
+        Agents = ReadAgents(),
+        SiteDeveloperModes = ReadSiteDeveloperModes()
     };
 
     /// The search catalog the store keeps, or null when it keeps none or it does not read.
@@ -268,6 +271,17 @@ internal sealed class SqliteConnection : IDisposable {
             var origin = new SiteOrigin(Sqlite.ColumnText(statement, 0), Sqlite.ColumnText(statement, 1),
                 Sqlite.sqlite3_column_int(statement, 2));
             if (origin.IsValid) choices.Add(new(null, origin, engine));
+        });
+        return choices;
+    }
+
+    /// The site Developer Mode choices, least recent first.
+    private List<SiteDeveloperModeChoice> ReadSiteDeveloperModes() {
+        var choices = new List<SiteDeveloperModeChoice>();
+        Rows("SELECT scheme, host, port, is_on FROM device_site_developer_mode ORDER BY position", statement => {
+            var origin = new SiteOrigin(Sqlite.ColumnText(statement, 0), Sqlite.ColumnText(statement, 1),
+                Sqlite.sqlite3_column_int(statement, 2));
+            if (origin.IsValid) choices.Add(new(null, origin, Sqlite.sqlite3_column_int(statement, 3) != 0));
         });
         return choices;
     }
@@ -375,6 +389,8 @@ internal sealed class SqliteConnection : IDisposable {
         if (written is null || !records.Reopening.SequenceEqual(written.Reopening)) WriteReopening(records.Reopening);
         if (written is null || !records.SitePermissions.SequenceEqual(written.SitePermissions)) WriteSitePermissions(records.SitePermissions);
         if (written is null || !records.SiteEngines.SequenceEqual(written.SiteEngines)) WriteSiteEngines(records.SiteEngines);
+        if (written is null || !records.SiteDeveloperModes.SequenceEqual(written.SiteDeveloperModes))
+            WriteSiteDeveloperModes(records.SiteDeveloperModes);
         if (written is null || records.DefaultEngine != written.DefaultEngine) WriteDefaultEngine(records.DefaultEngine);
         if (written is null || !records.Shortcuts.SameAs(written.Shortcuts)) WriteShortcuts(records.Shortcuts);
         if (written is null || !records.Links.Equals(written.Links)) WriteLinks(records.Links);
@@ -540,6 +556,22 @@ internal sealed class SqliteConnection : IDisposable {
                 Bind(statement, 2, choice.Origin.Host);
                 Checked(Sqlite.sqlite3_bind_int64(statement, 3, choice.Origin.Port));
                 Bind(statement, 4, choice.Engine.Name);
+                Checked(Sqlite.sqlite3_bind_int64(statement, 5, index));
+            });
+        }
+    }
+
+    /// The site Developer Mode choices, least recent first.
+    private void WriteSiteDeveloperModes(IReadOnlyList<SiteDeveloperModeChoice> choices) {
+        Execute("DELETE FROM device_site_developer_mode");
+        for (int position = 0; position < choices.Count; position++) {
+            var choice = choices[position];
+            int index = position;
+            Insert("INSERT INTO device_site_developer_mode(scheme, host, port, is_on, position) VALUES(?,?,?,?,?)", statement => {
+                Bind(statement, 1, choice.Origin.Scheme);
+                Bind(statement, 2, choice.Origin.Host);
+                Checked(Sqlite.sqlite3_bind_int64(statement, 3, choice.Origin.Port));
+                Checked(Sqlite.sqlite3_bind_int64(statement, 4, choice.IsOn ? 1 : 0));
                 Checked(Sqlite.sqlite3_bind_int64(statement, 5, index));
             });
         }
