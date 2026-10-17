@@ -4193,6 +4193,10 @@
     "core-history-load-identity-on-failure": {
       "category": "internal",
       "message": "A page the core asks to load in place of a history entry gives up that entry's identity when the load fails or is cancelled, so a later page never takes it."
+    },
+    "fullscreen-video-without-black-frames": {
+      "category": "fixed",
+      "message": "Videos and other pages go into and out of full screen without a few black frames on Chromium pages."
     }
   }
 }
