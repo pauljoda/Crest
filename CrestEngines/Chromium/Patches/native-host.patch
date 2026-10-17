@@ -3077,3 +3077,45 @@
    // The child helper process should outlive its parent.
    base::LaunchOptions options;
    options.new_process_group = true;
+--- a/chrome/browser/ui/autofill/chrome_autofill_client.cc
++++ b/chrome/browser/ui/autofill/chrome_autofill_client.cc
+@@ -1066,6 +1066,14 @@
+ }
+ 
+ bool ChromeAutofillClient::IsAutofillProfileEnabled() const {
++#if BUILDFLAG(IS_MAC)
++  // Crest fills, imports and offers to save no addresses, whatever the
++  // setting: the save and update prompts need a Views browser window, which
++  // Crest's pages don't have.
++  if (base::CommandLine::ForCurrentProcess()->HasSwitch("crest-control-plane")) {
++    return false;
++  }
++#endif
+   if (!prefs::IsAutofillProfileEnabled(GetPrefs())) {
+     return false;
+   }
+--- a/chrome/browser/ui/autofill/payments/chrome_payments_autofill_client.cc
++++ b/chrome/browser/ui/autofill/payments/chrome_payments_autofill_client.cc
+@@ -9,6 +9,7 @@
+ #include <vector>
+ 
+ #include "base/check_deref.h"
++#include "base/command_line.h"
+ #include "base/containers/span.h"
+ #include "base/functional/callback.h"
+ #include "base/notimplemented.h"
+@@ -872,6 +873,14 @@
+ }
+ 
+ bool ChromePaymentsAutofillClient::IsAutofillPaymentMethodsEnabled() const {
++#if BUILDFLAG(IS_MAC)
++  // Crest fills, imports and offers to save no cards or IBANs, whatever the
++  // setting: the save prompts need a Views browser window, which Crest's
++  // pages don't have.
++  if (base::CommandLine::ForCurrentProcess()->HasSwitch("crest-control-plane")) {
++    return false;
++  }
++#endif
+   if (!autofill_payment_methods_supported_ ||
+       !prefs::IsAutofillPaymentMethodsEnabled(
+           Profile::FromBrowserContext(web_contents()->GetBrowserContext())

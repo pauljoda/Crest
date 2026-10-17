@@ -358,5 +358,13 @@
   "chrome/browser/mac/code_sign_clone_manager.mm": {
     "before": "b876a588a115ef8e851085937cfa17b614b42b0d9d3f4db7c93ceccb5b9358f9",
     "after": "a5510127b8b5f97d69acc5a9a2e503b4f8933cd0b5c332d87a176566a5c6956a"
+  },
+  "chrome/browser/ui/autofill/chrome_autofill_client.cc": {
+    "before": "011f51c1438b2b18895eda6f7525d18e6e0e8b6e4f20a6569def4f0be6e68cdf",
+    "after": "b6cc69eb2d4209c633681a39083c5bb2d567318e4ccd7c8b0cd09f4a6229b710"
+  },
+  "chrome/browser/ui/autofill/payments/chrome_payments_autofill_client.cc": {
+    "before": "15451f305fdb617014a2bc3131dc98987efb53ee523de3753dac2f0e89598258",
+    "after": "be1f0298933b0c588b32cc9f7c2ab0cc4be0a1bb95c2cadab6b1463b19dd3de0"
   }
 }
