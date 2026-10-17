@@ -9,19 +9,32 @@ struct BrowserOnboardingLookPage: View {
     let back: BrowserOnboardingBackAction
     let continueSetup: () -> Void
 
+    /// The size each window takes: half the stage less the gap, no taller
+    /// than the stage leaves under the name.
+    private func cardSize(in stage: CGSize) -> CGSize {
+        let width = min(
+            (stage.width - BrowserOnboardingLookMetrics.spacing) / 2, BrowserOnboardingLookMetrics.maximumWidth)
+        let height = min(width * 0.82, stage.height - 70)
+        return CGSize(width: min(width, height / 0.82), height: height)
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             BrowserOnboardingHeadline("Pick your look")
                 .padding(.top, 22)
-            Spacer(minLength: 24)
-            HStack(alignment: .top, spacing: 80) {
-                ForEach(SetupLook.all, id: \.self) { offered in
-                    BrowserOnboardingLookCard(look: offered, isSelected: offered == look) {
-                        choose(offered)
+            GeometryReader { geometry in
+                let size = cardSize(in: geometry.size)
+                HStack(alignment: .top, spacing: BrowserOnboardingLookMetrics.spacing) {
+                    ForEach(SetupLook.all, id: \.self) { offered in
+                        BrowserOnboardingLookCard(look: offered, isSelected: offered == look, size: size) {
+                            choose(offered)
+                        }
                     }
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
-            Spacer(minLength: 24)
+            .padding(.horizontal, BrowserOnboardingStageMetrics.pageInset)
+            .padding(.vertical, 16)
             BrowserOnboardingFooter(back: back) {
                 BrowserOnboardingContinueButton(action: continueSetup)
                     .accessibilityIdentifier("onboarding-look-continue")
@@ -34,33 +47,26 @@ struct BrowserOnboardingLookPage: View {
 private struct BrowserOnboardingLookCard: View {
     let look: SetupLook
     let isSelected: Bool
+    let size: CGSize
     let select: () -> Void
 
     var body: some View {
         VStack(spacing: 18) {
             Button(action: select) {
-                HStack(spacing: 0) {
-                    BrowserSpaceAppearanceHero(
-                        branding: look.previewBranding, symbol: look.previewSymbol,
-                        name: String(localized: "Personal")
-                    )
-                    .frame(width: 250)
-                    RoundedRectangle(cornerRadius: 13, style: .continuous)
-                        .fill(CrestBrandPalette.paper)
-                        .padding(.vertical, 8)
-                        .padding(.leading, 8)
+                BrowserOnboardingWindowPreview(
+                    branding: look.previewBranding, symbol: look.previewSymbol, name: String(localized: "Personal")
+                ) {
+                    EmptyView()
                 }
-                .padding(.trailing, 8)
-                .frame(width: 520, height: 540)
-                .background(CrestBrandPalette.ink, in: .rect(cornerRadius: 18, style: .continuous))
+                .frame(width: size.width, height: size.height)
                 .overlay {
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .strokeBorder(
-                            isSelected ? CrestBrandPalette.butter : CrestBrandTheme.line,
-                            lineWidth: isSelected ? 4 : CrestLayout.hairline)
+                    RoundedRectangle(
+                        cornerRadius: BrowserOnboardingWindowPreviewMetrics.cornerRadius, style: .continuous
+                    )
+                    .strokeBorder(isSelected ? CrestBrandPalette.butter : .clear, lineWidth: 4)
                 }
-                .shadow(color: .black.opacity(0.45), radius: 30, y: 24)
-                .contentShape(.rect(cornerRadius: 18, style: .continuous))
+                .contentShape(
+                    .rect(cornerRadius: BrowserOnboardingWindowPreviewMetrics.cornerRadius, style: .continuous))
             }
             .buttonStyle(.plain)
             .accessibilityLabel(Text(look.title))
@@ -84,3 +90,8 @@ private struct BrowserOnboardingLookCard: View {
         .frame(width: 1440, height: 900)
     }
 #endif
+
+enum BrowserOnboardingLookMetrics {
+    static let spacing: CGFloat = 60
+    static let maximumWidth: CGFloat = 720
+}

@@ -39,9 +39,11 @@ public sealed class SetupStep {
             : platform.ImportsBrowsers ? ImportBrowser
             : platform.ChoosesLook ? Look
             : Welcome);
-    /// What setup did, before Crest opens.
+    /// What setup is about to do, or did, before Crest opens. Setup that
+    /// walks the person through Crest reaches it from the manual setup, which
+    /// finishing then applies, and Back returns there.
     public static readonly SetupStep Complete = new(Kinds.Complete, name: "complete", progressPosition: 5, next: _ => null,
-        back: (_, _) => null);
+        back: (entry, _) => entry.IsGuided ? ManualSetup : null);
     /// Choosing the look the Spaces setup makes wear, on a platform that offers it.
     public static readonly SetupStep Look = new(Kinds.Look, name: "look", progressPosition: 1,
         next: platform => platform.ImportsBrowsers ? ImportBrowser : ManualSetup, back: (_, _) => Welcome);
@@ -62,6 +64,10 @@ public sealed class SetupStep {
 
     /// How many positions setup walks through on a platform that offers every step.
     public const int ProgressCount = 6;
+
+    /// Whether finishing setup from this step applies the manual setup the
+    /// device holds: from the manual setup itself, or the page after it.
+    internal bool AppliesManualSetup => Kind is Kinds.ManualSetup or Kinds.Complete;
 
     private readonly Func<DevicePlatform, SetupStep?> next;
     private readonly Func<SetupEntry, DevicePlatform, SetupStep?> back;

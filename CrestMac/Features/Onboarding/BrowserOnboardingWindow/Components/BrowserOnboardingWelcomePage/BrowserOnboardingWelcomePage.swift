@@ -10,11 +10,6 @@ struct BrowserOnboardingWelcomePage: View {
     let setUpWithoutCloud: () -> Void
     let openCrest: () -> Void
 
-    /// The Space the banner shows: the showcase's first, wearing Winter.
-    @MainActor private static let banner = SpaceModel.detached(
-        SessionState.Seed.showcase.spaces[0].wearing(
-            SpaceHouse.winter.look, symbol: "house.fill", name: String(localized: "Personal")))
-
     private var cloudStatusDetail: String {
         if hasCompletedSetup {
             return String(localized: "Your existing Crest setup is ready.")
@@ -35,9 +30,14 @@ struct BrowserOnboardingWelcomePage: View {
                     .frame(maxWidth: 560, alignment: .leading)
                     .padding(.leading, 80)
                 Spacer(minLength: 60)
-                BrowserOnboardingBanner(space: Self.banner)
-                    .padding(.trailing, 120)
-                    .padding(.bottom, 40)
+                BrowserOnboardingWindowPreview(
+                    branding: SpaceHouse.winter.look, symbol: "house.fill", name: String(localized: "Personal")
+                ) {
+                    BrowserSpaceCrestIcon(branding: SpaceHouse.winter.look, size: 160)
+                        .frame(width: 160, height: 160)
+                }
+                .frame(width: 680, height: 460)
+                .padding(.trailing, 100)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             column

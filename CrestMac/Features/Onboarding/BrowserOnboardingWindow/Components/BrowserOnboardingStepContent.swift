@@ -84,16 +84,20 @@ struct BrowserOnboardingStepContent: View, BrowserOnboardingPages {
     func manualSetupPage() -> some View {
         BrowserOnboardingManualSetupPage(
             flow: flow,
-            opensGettingStarted: flow.state?.opensGuide == true,
             selectedSpaceID: $selectedManualSpaceID,
-            back: back.action,
-            openCrest: openCrest
+            back: back,
+            advance: { transition(to: .complete) }
         )
     }
 
+    /// The Spaces setup is about to make, or the workspace's once it has.
     func completePage() -> some View {
         BrowserOnboardingCompletionPage(
+            spaces: flow.manualSetup.spaces.isEmpty
+                ? flow.destinationSpaces.map(\.identity) : flow.manualSetup.previewSpaces,
             summary: flow.completionSummary,
+            opensGuide: flow.state?.opensGuide == true,
+            back: flow.state?.backStep == nil ? nil : back,
             openCrest: openCrest
         )
     }

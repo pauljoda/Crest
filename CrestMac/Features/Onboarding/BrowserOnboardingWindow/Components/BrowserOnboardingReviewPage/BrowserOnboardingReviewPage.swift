@@ -20,24 +20,36 @@ struct BrowserOnboardingReviewPage: View {
                 BrowserOnboardingReviewHeader(
                     icon: sourceIcon,
                     title: setupReview.title,
-                    progressLabel: flow.reviewProgressLabel(for: review),
-                    spaces: spaces,
-                    shownSpaceID: review.id,
-                    show: { show($0) }
+                    progressLabel: flow.reviewProgressLabel(for: review)
                 )
                 .disabled(flow.isCommittingImport)
 
-                BrowserOnboardingReviewSpacePage(
-                    flow: flow,
-                    application: setupReview.source,
-                    spaces: spaces,
-                    review: review,
-                    leftOut: setupReview.leftOut,
-                    customize: { customizationSpaceID = review.id }
-                )
-                .id(review.id)
-                .transition(reduceMotion ? .opacity : .opacity.combined(with: .offset(y: 12)))
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                // The browser's Spaces stack under one another, one page each,
+                // so moving between them reads as moving through that browser.
+                ZStack(alignment: .trailing) {
+                    ScrollView(.vertical) {
+                        LazyVStack(spacing: 0) {
+                            ForEach(spaces) { item in
+                                BrowserOnboardingReviewSpacePage(
+                                    flow: flow,
+                                    application: setupReview.source,
+                                    spaces: spaces,
+                                    review: item,
+                                    leftOut: setupReview.leftOut,
+                                    customize: { customizationSpaceID = item.id }
+                                )
+                                .containerRelativeFrame(.vertical)
+                                .id(item.id)
+                            }
+                        }
+                        .scrollTargetLayout()
+                    }
+                    .scrollPosition(id: shownSpaceID, anchor: .top)
+                    .scrollTargetBehavior(.viewAligned)
+                    .scrollIndicators(.hidden)
+
+                    BrowserOnboardingReviewSpaceStepper(spaces: spaces, selectedSpaceID: setupReview.shownSpaceID)
+                }
                 .disabled(flow.isCommittingImport)
 
                 BrowserOnboardingFooter(back: back, isBackDisabled: flow.isCommittingImport) {
@@ -81,6 +93,11 @@ struct BrowserOnboardingReviewPage: View {
         flow.review.flatMap { flow.offeredSource($0.source) }?.icon
     }
 
+    /// The Space the person is looking at, which setup holds.
+    private var shownSpaceID: Binding<UUID?> {
+        Binding(get: { flow.shownReviewSpaceID }, set: { flow.shownReviewSpaceID = $0 })
+    }
+
     private func show(_ spaceID: UUID) {
         withAnimation(motion(CrestMotion.onboardingProgress)) {
             flow.shownReviewSpaceID = spaceID
@@ -105,14 +122,11 @@ struct BrowserOnboardingReviewPage: View {
     }
 }
 
-/// The browser under review and its Spaces as chips, the shown one lit.
+/// The browser under review, and which of its Spaces this is.
 private struct BrowserOnboardingReviewHeader: View {
     let icon: NSImage?
     let title: String
     let progressLabel: String
-    let spaces: [BrowserImportSpaceReview]
-    let shownSpaceID: UUID
-    let show: (UUID) -> Void
 
     var body: some View {
         HStack(alignment: .center, spacing: 14) {
@@ -134,16 +148,6 @@ private struct BrowserOnboardingReviewHeader: View {
                     .foregroundStyle(CrestBrandTheme.textDisplay.opacity(0.6))
             }
             Spacer(minLength: 20)
-            if spaces.count > 1 {
-                HStack(spacing: 8) {
-                    ForEach(spaces) { item in
-                        BrowserOnboardingSpaceChip(
-                            space: item.sourceSpace, isSelected: item.id == shownSpaceID, select: { show(item.id) })
-                    }
-                }
-                .accessibilityElement(children: .contain)
-                .accessibilityLabel("Spaces in this review")
-            }
         }
         .padding(.horizontal, BrowserOnboardingStageMetrics.pageInset)
         .padding(.top, 8)
@@ -151,35 +155,30 @@ private struct BrowserOnboardingReviewHeader: View {
     }
 }
 
-/// One Space as a chip: its icon and name, lit when it is the one shown.
-struct BrowserOnboardingSpaceChip: View {
-    let space: BrowserSpaceIdentity
-    let isSelected: Bool
-    let select: () -> Void
+/// Where the shown Space stands among the browser's, down the right edge.
+private struct BrowserOnboardingReviewSpaceStepper: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    init(space: some BrowserSpaceIdentifying, isSelected: Bool, select: @escaping () -> Void) {
-        self.space = space.identity
-        self.isSelected = isSelected
-        self.select = select
-    }
+    let spaces: [BrowserImportSpaceReview]
+    let selectedSpaceID: UUID?
 
     var body: some View {
-        Button(action: select) {
-            BrowserSpaceIdentityLabel(identity: space, iconSize: 18)
-                .font(CrestTypography.sans(13, weight: .semibold))
-                .lineLimit(1)
-                .foregroundStyle(isSelected ? CrestBrandPalette.ink : CrestBrandTheme.textDisplay)
-                .padding(.leading, 8)
-                .padding(.trailing, 12)
-                .frame(height: 34)
-                .background(isSelected ? CrestBrandPalette.paper : CrestBrandPalette.paper.opacity(0.1), in: .capsule)
-                .overlay {
-                    Capsule().strokeBorder(CrestBrandTheme.line, lineWidth: isSelected ? 0 : CrestLayout.hairline)
-                }
-                .contentShape(.capsule)
+        VStack(spacing: 12) {
+            ForEach(spaces) { item in
+                let isCurrent = item.id == selectedSpaceID
+                Capsule(style: .continuous)
+                    .fill(isCurrent ? CrestBrandPalette.butter : CrestBrandPalette.paper.opacity(0.3))
+                    .frame(width: isCurrent ? 8 : 6, height: isCurrent ? 32 : 6)
+                    .animation(
+                        CrestMotion.onboardingProgress.unlessReducingMotion(reduceMotion), value: selectedSpaceID
+                    )
+                    .accessibilityLabel(item.sourceSpace.settings.name)
+                    .accessibilityValue(isCurrent ? "Current Space" : "Space in review")
+            }
         }
-        .buttonStyle(.plain)
-        .accessibilityAddTraits(isSelected ? .isSelected : [])
+        .padding(.trailing, BrowserOnboardingStageMetrics.inset)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Space review progress")
     }
 }
 

@@ -86,7 +86,9 @@ struct BrowserOnboardingWindowContent: View {
                 return flow.look.previewBranding
             }
             return flow.previewDestinationSpace(for: review)?.settings.look ?? flow.look.previewBranding
-        case .look, .featureSpaces, .featureTabs, .featureSync, .importBrowser, .complete:
+        case .complete:
+            return flow.manualSetup.spaces.first?.customization.branding ?? flow.look.previewBranding
+        case .look, .featureSpaces, .featureTabs, .featureSync, .importBrowser:
             return flow.look.previewBranding
         }
     }

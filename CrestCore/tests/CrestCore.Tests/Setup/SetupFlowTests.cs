@@ -123,6 +123,8 @@ public sealed partial class BrowserContractsTests {
         device.Send(new StartSetup(device.Workspace, SetupEntry.Rerun));
         device.Send(new ShowSetupStep(SetupStep.ManualSetup));
         device.Send(new AddSetupSpace());
+        // The ready page after the manual setup leads back to it, and finishing from it applies the setup.
+        Assert.Equal(SetupStep.ManualSetup, Flowing(device.Send(new ShowSetupStep(SetupStep.Complete))).BackStep);
         var before = device.Authority.Current;
 
         Assert.Equal(new GuideSpaceLocked(locked.Id), Assert.Throws<Rejected>(() => device.Send(new FinishSetup(window))).Rejection);
