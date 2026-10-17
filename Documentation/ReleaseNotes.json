@@ -4177,6 +4177,10 @@
     "settings-narrow-window-sidebar-clicks": {
       "category": "fixed",
       "message": "In a narrow window, a Space’s Crest Studio no longer covers the Settings sidebar, so its search field and Space buttons take clicks again."
+    },
+    "tab-title-after-failed-load": {
+      "category": "fixed",
+      "message": "When a page can’t be opened, its tab in the sidebar shows the site it tried to open instead of the previous page’s title."
     }
   }
 }

@@ -30,6 +30,7 @@ struct BrowserSidebarTabTrailingControl: View {
 }
 
 private struct BrowserSidebarTabCloseButton: View {
+    @Environment(CrestCore.self) private var core: CrestCore?
     let configuration: BrowserSidebarTabRowConfiguration
     let isVisible: Bool
 
@@ -56,7 +57,7 @@ private struct BrowserSidebarTabCloseButton: View {
         )
         .disabled(!configuration.canClose || !configuration.isAvailableForDisplay)
         .allowsHitTesting(isVisible)
-        .accessibilityLabel("Close \(configuration.tab.shownTitle)")
+        .accessibilityLabel("Close \(configuration.tab.shownTitle(in: configuration.isLoaded ? core?.state : nil))")
     }
 
     private var metrics: BrowserTabTrailingControlMetrics {
@@ -65,6 +66,7 @@ private struct BrowserSidebarTabCloseButton: View {
 }
 
 private struct BrowserSidebarTabUnloadButton: View {
+    @Environment(CrestCore.self) private var core: CrestCore?
     let configuration: BrowserSidebarTabRowConfiguration
     let isVisible: Bool
 
@@ -83,7 +85,7 @@ private struct BrowserSidebarTabUnloadButton: View {
         .opacity(isVisible ? 1 : 0)
         .disabled(!configuration.isLoaded || !configuration.isAvailableForDisplay)
         .allowsHitTesting(isVisible)
-        .accessibilityLabel("Unload \(configuration.tab.shownTitle)")
+        .accessibilityLabel("Unload \(configuration.tab.shownTitle(in: configuration.isLoaded ? core?.state : nil))")
         .help("Unload Tab")
     }
 
