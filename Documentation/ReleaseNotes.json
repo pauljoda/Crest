@@ -4193,6 +4193,10 @@
     "core-history-load-identity-on-failure": {
       "category": "internal",
       "message": "A page the core asks to load in place of a history entry gives up that entry's identity when the load fails or is cancelled, so a later page never takes it."
+    },
+    "palette-search-typed-address": {
+      "category": "improved",
+      "message": "The command palette offers to search for a typed or pasted address as well as open it."
     }
   }
 }

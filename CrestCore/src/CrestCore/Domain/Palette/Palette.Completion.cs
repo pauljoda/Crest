@@ -10,28 +10,31 @@ namespace CrestCore.Domain;
 public sealed partial class Palette {
     #region Actions - Intent
 
-    /// The address the text opens, or the search it runs with the Space's
-    /// engine; null when nothing was typed or the text names nothing loadable.
-    /// An address the Space knows under another spelling, such as with
-    /// `www.`, opens the way the Space knows it, in the scheme the person
+    /// The rows the text runs: the address it opens, when it names one, then
+    /// the search it runs with the Space's engine, or only that search when it
+    /// names no address; none when nothing was typed or the text names nothing
+    /// loadable. An address the Space knows under another spelling, such as
+    /// with `www.`, opens the way the Space knows it, in the scheme the person
     /// typed when they typed one.
-    private PaletteRow? Intent(PaletteQuery query) {
-        if (query.IsEmpty) return null;
+    private IReadOnlyList<PaletteRow> Intents(PaletteQuery query) {
+        if (query.IsEmpty) return [];
         AddressResolution? resolution;
         try {
             resolution = AddressResolution.Resolve(query.Text, context.Search, context.AllowsInternalPages);
         } catch (Rejected refused) when (refused.Rejection is UnsupportedAddress) {
-            return null;
+            return [];
         }
-        if (resolution is null || !Uri.TryCreate(resolution.Url, UriKind.Absolute, out var url)) return null;
-        if (resolution.SearchQuery is { } searched)
-            return Searching(PaletteRowKind.Search, context.Search.Kind.RowTitle(context.Search.Title), searched, resolution.Url,
-                context.Search);
+        if (resolution is null || !Uri.TryCreate(resolution.Url, UriKind.Absolute, out var url)) return [];
+        if (resolution.SearchQuery is { } searched) return [Searching(searched, resolution.Url)];
         bool typedScheme = Uri.TryCreate(query.Text, UriKind.Absolute, out var typed) && WebScheme.Named(typed.Scheme) is not null;
         string address = Known(resolution.Url, typedScheme ? url.Scheme : null) ?? resolution.Url;
         string host = url.Host.Length > 0 ? PaletteMemory.WithoutWww(url.Host) : resolution.Url;
-        return PaletteRow.Of(PaletteRowKind.OpenAddress, $"Open {host}", address, address: address);
+        return [PaletteRow.Of(PaletteRowKind.OpenAddress, $"Open {host}", address, address: address),
+            Searching(query.Text, context.Search.Search(query.Text))];
     }
+
+    private PaletteRow Searching(string text, string address) =>
+        Searching(PaletteRowKind.Search, context.Search.Kind.RowTitle(context.Search.Title), text, address, context.Search);
 
     /// The address the Space knows for the same place as `url`: an open or
     /// kept tab's, else history's; null when it knows none. Only an address

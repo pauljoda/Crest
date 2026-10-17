@@ -122,8 +122,8 @@ public sealed partial class Palette {
         var habit = Preferences.LearnsChoices ? context.Memory.Habit(query.Text, context.Now) : null;
         var completion = Completion(question);
         if (completion is not null && habit is not null && habit != PaletteDestination.Address(completion.Opens)) completion = null;
-        var intent = Intent(query);
-        var ranked = Rank(query, question, intent);
+        var found = Intents(query);
+        var ranked = Rank(query, question, found.FirstOrDefault());
         var lead = PaletteLeadRule.First(context,
             new(query, completion, question.AllowsCompletion ? habit : null, ranked, question.AllowsCompletion));
         if (lead is not null) ranked.RemoveAll(entry => entry.Row with { Reason = lead.Row.Reason } == lead.Row);
@@ -131,7 +131,7 @@ public sealed partial class Palette {
         List<PaletteRow> intents = [];
         if (lead is not null && Preferences.ShowsTopHit) groups.Add(new(PaletteSection.TopHit, [lead.Row]));
         else if (lead is not null) intents.Add(lead.Row);
-        if (intent is not null && intent.Address != lead?.Row.Address) intents.Add(intent);
+        intents.AddRange(found.Where(intent => intent.Address != lead?.Row.Address));
         var matching = MatchingProviders(query);
         var offered = matching.Count == 0
             ? null : new SearchOffer(matching[0], matching[0].HasShortcut(PaletteNotation.Provider.Word(query.Text)));
@@ -158,7 +158,8 @@ public sealed partial class Palette {
 
     /// Every row the offered kinds find for `query`, one per place: a page
     /// open in a tab is that tab, kept wins over history, and the address the
-    /// text opens is never repeated as history.
+    /// text opens is never repeated as history. `intent` is the first row the
+    /// text runs, whose address the text opens or searches.
     private List<PaletteCandidate> Rank(PaletteQuery query, PaletteSuggestions question, PaletteRow? intent) {
         List<PaletteCandidate> ranked = [.. PaletteSource.All.Where(Preferences.Offers)
             .SelectMany(source => source.Candidates(context, query, question, narrowed: false))];
