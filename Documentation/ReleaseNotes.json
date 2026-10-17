@@ -4173,6 +4173,10 @@
     "link-route-address-field-editable": {
       "category": "fixed",
       "message": "A link route’s address field takes clicks and typing, with “example.com” shown as a hint inside it instead of a fixed label beside it."
+    },
+    "settings-narrow-window-sidebar-clicks": {
+      "category": "fixed",
+      "message": "In a narrow window, a Space’s Crest Studio no longer covers the Settings sidebar, so its search field and Space buttons take clicks again."
     }
   }
 }
