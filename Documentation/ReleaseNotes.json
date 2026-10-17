@@ -4193,6 +4193,14 @@
     "core-history-load-identity-on-failure": {
       "category": "internal",
       "message": "A page the core asks to load in place of a history entry gives up that entry's identity when the load fails or is cancelled, so a later page never takes it."
+    },
+    "share-sheet-open-links": {
+      "category": "new",
+      "message": "On iPhone and iPad, Crest appears in the share sheet, so a link shared from another app opens in Crest. Settings can have the share sheet ask which Space the link opens in."
+    },
+    "share-sheet-keep-unopened-links": {
+      "category": "internal",
+      "message": "A link saved from the share sheet stays saved when it cannot open yet, such as when its Space stays locked."
     }
   }
 }

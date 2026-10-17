@@ -12,6 +12,8 @@ struct BrowserGeneralSettingsPane: View {
         @AppStorage(
             MobileBrowserRootPreferences.allowsFloatingSidebarKey, store: BrowserChromeAppearancePreference.defaults)
         private var allowsFloatingSidebar = false
+        @State private var linkSharing = BrowserLinkSharingContainer.app
+        @State private var sharedLinkOpening = BrowserSharedLinkOpening.immediately
     #endif
 
     init(browser: BrowserStore, spaceAccess: BrowserSpaceAccessController) {
@@ -73,6 +75,21 @@ struct BrowserGeneralSettingsPane: View {
                 Section("Sidebar") {
                     Toggle("Allow floating sidebar", isOn: $allowsFloatingSidebar)
                         .accessibilityIdentifier("allow-floating-sidebar")
+                }
+
+                if let linkSharing {
+                    Section("Sharing") {
+                        Picker("Links shared to Crest", selection: $sharedLinkOpening) {
+                            ForEach(BrowserSharedLinkOpening.all) { opening in
+                                Text(opening.title).tag(opening)
+                            }
+                        }
+                        .accessibilityIdentifier("shared-link-opening")
+                        .onAppear { sharedLinkOpening = linkSharing.linkOpening }
+                        .onChange(of: sharedLinkOpening) { _, opening in
+                            opening.store(in: linkSharing.defaults)
+                        }
+                    }
                 }
             #endif
 

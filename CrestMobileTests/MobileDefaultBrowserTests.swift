@@ -41,7 +41,7 @@ final class MobileDefaultBrowserTests: XCTestCase {
         XCTAssertEqual(
             reasons,
             [
-                "NSPrivacyAccessedAPICategoryUserDefaults": ["CA92.1"]
+                "NSPrivacyAccessedAPICategoryUserDefaults": ["CA92.1", "1C8F.1"]
             ])
     }
 

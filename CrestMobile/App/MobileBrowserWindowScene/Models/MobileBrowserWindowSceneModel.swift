@@ -196,19 +196,60 @@ final class MobileBrowserWindowSceneModel {
     }
 
     /// Opens a link another app handed this window where the core routes it,
-    /// which is never a locked Space.
+    /// once the Space it lands in is unlocked.
     @discardableResult
     func routeExternalURL(_ url: URL) async -> Bool {
         guard ExternalWebLink.accepts(url),
             let placement = try? browser.core.query(
                 RouteExternalLink(windowIDs: [browser.windowID], url: url.absoluteString)),
-            let spaceID = placement.spaceID,
-            let space = browser.spaceModel(spaceID),
-            await spaceAccess.unlock(space)
+            let spaceID = placement.spaceID
         else { return false }
+        return await open(url, in: spaceID, asQuickWindow: placement.opensQuickWindow)
+    }
+
+    // MARK: - Actions - Shared links
+
+    /// Opens a link shared to Crest as a new tab in the Space the person
+    /// chose for it, or where the core routes links when they chose none or
+    /// that Space is gone.
+    @discardableResult
+    func openSharedLink(_ link: BrowserSharedLink) async -> Bool {
+        guard let spaceID = link.spaceID, !browser.isDeleting(spaceID), browser.spaceModel(spaceID) != nil,
+            ExternalWebLink.accepts(link.url)
+        else { return await routeExternalURL(link.url) }
+        return await open(link.url, in: spaceID, asQuickWindow: false)
+    }
+
+    /// Opens the links the share extension saved because it could not open
+    /// Crest, oldest first, and answers whether any opened. A link that does
+    /// not open, such as one whose Space stays locked, goes back to the inbox
+    /// for the next time, as the share sheet promised.
+    func openSavedSharedLinks() async -> Bool {
+        guard let container = BrowserLinkSharingContainer.app else { return false }
+        var openedAny = false
+        for link in container.inbox.takeAll() {
+            if await openSharedLink(link) {
+                openedAny = true
+            } else {
+                container.inbox.save(link)
+            }
+        }
+        return openedAny
+    }
+
+    /// Writes this window's Spaces for the share extension to offer.
+    func publishSharedSpaces() {
+        guard let container = BrowserLinkSharingContainer.app else { return }
+        BrowserSharedSpaceDirectory.publish(from: browser, to: container)
+    }
+
+    /// Opens `url` in Space `spaceID` once it is unlocked, as a Quick Window
+    /// when `asQuickWindow`, otherwise as a new tab the window shows.
+    private func open(_ url: URL, in spaceID: UUID, asQuickWindow: Bool) async -> Bool {
+        guard let space = browser.spaceModel(spaceID), await spaceAccess.unlock(space) else { return false }
         let assignment = BrowserSpaceRuntimeAssignment(space: space)
         guard browser.spaceModel(matching: assignment) != nil else { return false }
-        if placement.opensQuickWindow {
+        if asQuickWindow {
             transientBrowsing.presentQuickWindow(BrowserQuickWindowRequest(url: url, spaceAssignment: assignment))
             return true
         }
