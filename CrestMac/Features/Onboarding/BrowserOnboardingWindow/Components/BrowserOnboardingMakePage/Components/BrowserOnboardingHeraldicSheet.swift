@@ -149,13 +149,6 @@ struct BrowserOnboardingHeraldicSheet: View {
 
     private var colors: some View {
         BrowserOnboardingMakeSection("Colors") {
-            Button("Shuffle", systemImage: "shuffle") {
-                branding = BrowserCrestForge.shuffled(branding)
-            }
-            .buttonStyle(.crestTertiary)
-            .controlSize(.small)
-            .accessibilityIdentifier("space-forge-shuffle")
-        } content: {
             HStack(spacing: 0) {
                 ForEach(BrowserCrestForgeLayer.all) { layer in
                     BrowserOnboardingMakeSwatch(

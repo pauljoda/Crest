@@ -21,9 +21,17 @@ struct BrowserOnboardingMakePage: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            HStack(alignment: .center) {
+            HStack(alignment: .center, spacing: 20) {
                 BrowserOnboardingHeadline("Make it yours")
                 Spacer()
+                if look.kind == .heraldic {
+                    Button("Shuffle", systemImage: "shuffle") {
+                        branding = BrowserCrestForge.shuffled(branding)
+                    }
+                    .buttonStyle(.crestSecondary)
+                    .help("A new crest and sidebar for this Space")
+                    .accessibilityIdentifier("space-forge-shuffle")
+                }
                 if let picker {
                     BrowserOnboardingMakeChips(picker: picker)
                 }
