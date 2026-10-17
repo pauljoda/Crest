@@ -20,53 +20,60 @@ struct BrowserOnboardingMakePage: View {
     let advance: () -> Void
 
     var body: some View {
-        VStack(spacing: 0) {
-            HStack(alignment: .center, spacing: 20) {
-                BrowserOnboardingHeadline("Make it yours")
-                Spacer()
-                if look.kind == .heraldic {
-                    Button("Shuffle", systemImage: "shuffle") {
-                        branding = BrowserCrestForge.shuffled(branding)
+        GeometryReader { geometry in
+            let inset = BrowserOnboardingStageMetrics.pageInset(for: geometry.size.width)
+            VStack(spacing: 0) {
+                HStack(alignment: .center, spacing: 20) {
+                    BrowserOnboardingHeadline("Make it yours")
+                    Spacer()
+                    if look.kind == .heraldic {
+                        Button("Shuffle", systemImage: "shuffle") {
+                            branding = BrowserCrestForge.shuffled(branding)
+                        }
+                        .buttonStyle(.crestSecondary)
+                        .help("A new crest and sidebar for this Space")
+                        .accessibilityIdentifier("space-forge-shuffle")
                     }
-                    .buttonStyle(.crestSecondary)
-                    .help("A new crest and sidebar for this Space")
-                    .accessibilityIdentifier("space-forge-shuffle")
-                }
-                if let picker {
-                    BrowserOnboardingMakeChips(picker: picker)
-                }
-            }
-            .padding(.horizontal, BrowserOnboardingStageMetrics.pageInset)
-            .padding(.top, 8)
-            .padding(.bottom, 20)
-
-            GeometryReader { geometry in
-                HStack(alignment: .top, spacing: 48) {
-                    preview
-                        .frame(
-                            width: max(BrowserOnboardingMakeMetrics.minimumPreviewWidth, geometry.size.width * 0.44),
-                            height: geometry.size.height)
-                    sheet
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-            }
-            .padding(.horizontal, BrowserOnboardingStageMetrics.pageInset)
-            .padding(.bottom, 8)
-
-            BrowserOnboardingFooter(back: back) {
-                HStack(spacing: 22) {
-                    if let failure {
-                        BrowserOnboardingFailureMessage(message: failure)
-                            .font(CrestTypography.sans(12, weight: .medium))
-                            .foregroundStyle(.red)
-                            .lineLimit(2)
-                            .accessibilityIdentifier("onboarding-workflow-error")
+                    if let picker {
+                        BrowserOnboardingMakeChips(picker: picker)
                     }
-                    BrowserOnboardingContinueButton(advanceTitle, action: advance)
-                        .accessibilityIdentifier("space-setup-continue")
+                }
+                .padding(.horizontal, inset)
+                .padding(.top, 8)
+                .padding(.bottom, 20)
+
+                GeometryReader { body in
+                    HStack(alignment: .top, spacing: BrowserOnboardingMakeMetrics.spacing) {
+                        preview
+                            .frame(width: previewWidth(in: body.size.width), height: body.size.height)
+                        sheet
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                }
+                .padding(.horizontal, inset)
+                .padding(.bottom, 8)
+
+                BrowserOnboardingFooter(back: back) {
+                    HStack(spacing: 22) {
+                        if let failure {
+                            BrowserOnboardingFailureMessage(message: failure)
+                                .font(CrestTypography.sans(12, weight: .medium))
+                                .foregroundStyle(.red)
+                                .lineLimit(2)
+                                .accessibilityIdentifier("onboarding-workflow-error")
+                        }
+                        BrowserOnboardingContinueButton(advanceTitle, action: advance)
+                            .accessibilityIdentifier("space-setup-continue")
+                    }
                 }
             }
         }
+    }
+
+    /// The width the window takes of `available`: under half, and never
+    /// narrower than its sidebar and a page beside it.
+    private func previewWidth(in available: CGFloat) -> CGFloat {
+        max(BrowserOnboardingMakeMetrics.minimumPreviewWidth, available * 0.44)
     }
 
     /// The Space as its window, its icon large on the page.
@@ -168,7 +175,9 @@ struct BrowserOnboardingSpaceChip: View {
 
 enum BrowserOnboardingMakeMetrics {
     /// The window never narrows past its sidebar and a page beside it.
-    static let minimumPreviewWidth: CGFloat = 560
+    static let minimumPreviewWidth: CGFloat = 520
+    /// Between the window and the sheet.
+    static let spacing: CGFloat = 48
     static let pageIconSize: CGFloat = 180
     /// A choice tile on the sheet.
     static let tileSize: CGFloat = 52

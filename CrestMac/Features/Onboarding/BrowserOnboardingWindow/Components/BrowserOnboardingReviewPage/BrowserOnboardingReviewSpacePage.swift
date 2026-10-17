@@ -12,8 +12,17 @@ struct BrowserOnboardingReviewSpacePage: View {
     let customize: () -> Void
 
     var body: some View {
+        GeometryReader { geometry in
+            let layout = BrowserOnboardingReviewLayout(width: geometry.size.width)
+            columns(layout)
+                .padding(.horizontal, layout.inset)
+                .padding(.bottom, 16)
+        }
+    }
+
+    private func columns(_ layout: BrowserOnboardingReviewLayout) -> some View {
         let analysis = flow.reviewAnalysis()
-        HStack(alignment: .top, spacing: 40) {
+        return HStack(alignment: .top, spacing: layout.spacing) {
             VStack(alignment: .leading, spacing: 10) {
                 BrowserOnboardingReviewColumnLabel(title: "From \(flow.review?.title ?? application?.title ?? "")")
                 BrowserSourceImportPreview(
@@ -36,7 +45,7 @@ struct BrowserOnboardingReviewSpacePage: View {
                     .font(CrestTypography.sans(12, weight: .medium))
                     .foregroundStyle(CrestBrandTheme.textDisplay.opacity(0.55))
             }
-            .frame(width: BrowserOnboardingReviewMetrics.sidebarWidth)
+            .frame(width: layout.sidebarWidth)
 
             VStack(spacing: 20) {
                 Spacer(minLength: 0)
@@ -47,7 +56,7 @@ struct BrowserOnboardingReviewSpacePage: View {
                 }
                 Spacer(minLength: 0)
             }
-            .frame(width: BrowserOnboardingReviewMetrics.checklistWidth)
+            .frame(width: BrowserOnboardingReviewLayout.checklistWidth)
 
             VStack(alignment: .leading, spacing: 10) {
                 HStack {
@@ -69,11 +78,9 @@ struct BrowserOnboardingReviewSpacePage: View {
                 )
                 .frame(maxHeight: .infinity)
             }
-            .frame(width: BrowserOnboardingReviewMetrics.sidebarWidth)
+            .frame(width: layout.sidebarWidth)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .padding(.horizontal, BrowserOnboardingStageMetrics.pageInset)
-        .padding(.bottom, 16)
     }
 }
 
@@ -91,7 +98,23 @@ private struct BrowserOnboardingReviewColumnLabel: View {
     }
 }
 
-enum BrowserOnboardingReviewMetrics {
-    static let sidebarWidth: CGFloat = 380
+/// How the review's columns share a stage `width` wide: the checklist keeps
+/// its width, the two sidebars share the rest within what a sidebar draws
+/// well, and the insets and gaps close up on a narrow stage.
+struct BrowserOnboardingReviewLayout {
     static let checklistWidth: CGFloat = 300
+    private static let widestSidebar: CGFloat = 380
+    private static let narrowestSidebar: CGFloat = 250
+
+    let inset: CGFloat
+    let spacing: CGFloat
+    let sidebarWidth: CGFloat
+
+    init(width: CGFloat) {
+        let wide = width >= BrowserOnboardingStageMetrics.wideStageWidth
+        inset = BrowserOnboardingStageMetrics.pageInset(for: width)
+        spacing = wide ? 40 : 24
+        let shared = (width - inset * 2 - Self.checklistWidth - spacing * 2) / 2
+        sidebarWidth = min(Self.widestSidebar, max(Self.narrowestSidebar, shared))
+    }
 }

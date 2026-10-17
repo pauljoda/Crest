@@ -24,7 +24,7 @@ struct BrowserOnboardingManualSetupPage: View {
                     select: { selectedSpaceID = $0 },
                     add: addSpace,
                     remove: { spaceID in
-                        setup.space(spaceID)?.isNew == true ? { setup.removeSpace(spaceID) } : nil
+                        setup.space(spaceID)?.isNew == true ? { removeSpace(spaceID) } : nil
                     }),
                 failure: flow.failure?.message ?? setup.errorMessage.map(BrowserOnboardingFailureText.verbatim),
                 back: back,
@@ -43,5 +43,11 @@ struct BrowserOnboardingManualSetupPage: View {
 
     private func addSpace() {
         if let added = setup.addSpace() { selectedSpaceID = added }
+    }
+
+    /// Removes a Space the setup made, and shows another when it was the one shown.
+    private func removeSpace(_ spaceID: UUID) {
+        setup.removeSpace(spaceID)
+        setup.repairSelection($selectedSpaceID)
     }
 }

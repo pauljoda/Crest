@@ -62,9 +62,12 @@ public sealed partial class BrowserContractsTests {
         Assert.Equal([(seeded.Id, modern)], started.Spaces.Select(space => (space.SpaceId, Worn(space.Customization))));
         var added = Drafted(device.Send(new AddSetupSpace())).Spaces[1];
         Assert.Equal((modern, seeded.Settings.Name), (Worn(added.Customization), started.Spaces[0].ShownName));
-        // Choosing another look restyles the setup the device holds.
+        // Choosing another look restyles the setup the device holds: a new
+        // Space not yet edited takes the look a new Space gets, the disposable
+        // one keeps its colors in the new mode.
         var restyled = Drafted(device.Send(new ChooseSetupLook(SetupLook.Heraldic)));
-        Assert.Equal([heraldic, heraldic], restyled.Spaces.Select(space => Worn(space.Customization)));
+        Assert.Equal(heraldic, Worn(restyled.Spaces[0].Customization));
+        Assert.Equal(SpaceAccent.Orange.House, restyled.Spaces[1].Customization.Branding);
 
         // A Space an import brings in new wears it; one joining an existing
         // Space takes that Space's look.

@@ -11,7 +11,7 @@ public sealed record ChooseSetupLook(SetupLook Look) : SetupFlowIntent {
     internal override void Apply(Device device, DeviceTurn turn) => device.ReviseFlow(turn.Changes, (flow, session) => {
         var idle = Device.Idle(flow);
         if (idle.Look == Look) return flow;
-        device.RestyleSetup(flow.WorkspaceId, session, Look, turn.Changes);
+        device.RestyleSetup(flow.WorkspaceId, session, idle.Look, Look, turn.Changes);
         return idle with { Look = Look };
     });
 

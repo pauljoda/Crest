@@ -36,7 +36,7 @@ struct BrowserOnboardingHeraldicSheet: View {
 
     private var startFrom: some View {
         BrowserOnboardingMakeSection("Start from") {
-            HStack(spacing: 10) {
+            BrowserOnboardingMakeStrip {
                 ForEach(SpaceHouse.all, id: \.self) { house in
                     BrowserOnboardingMakeTile(title: house.title, isSelected: house.isWorn(by: branding)) {
                         branding = house.applying(to: branding)
@@ -71,7 +71,7 @@ struct BrowserOnboardingHeraldicSheet: View {
     /// The first few heraldic figures, the crest's own among them, and a way
     /// to every other.
     private var figureStrip: some View {
-        HStack(spacing: 10) {
+        BrowserOnboardingMakeStrip {
             ForEach(offeredFigures, id: \.self) { figure in
                 BrowserOnboardingMakeTile(
                     title: figure.title, isSelected: branding.crest.resolvedCharge == .heraldic(figure)
@@ -168,7 +168,7 @@ struct BrowserOnboardingHeraldicSheet: View {
 
     private var sidebar: some View {
         BrowserOnboardingMakeSection("Sidebar") {
-            HStack(spacing: 10) {
+            BrowserOnboardingMakeStrip {
                 ForEach(SpaceBannerPattern.all, id: \.self) { pattern in
                     BrowserOnboardingMakeTile(
                         title: pattern.title,

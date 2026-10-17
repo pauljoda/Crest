@@ -45,7 +45,9 @@ struct BrowserOnboardingReviewChecklist: View {
     // MARK: - Rows
 
     private var spaceRow: some View {
-        BrowserOnboardingReviewRow(isOn: spaceInclusion, accessibilityLabel: "Bring this Space") {
+        BrowserOnboardingReviewRow(
+            isOn: spaceInclusion, canToggle: !isOutOfRoom, accessibilityLabel: "Bring this Space"
+        ) {
             Text(review.sourceSpace.settings.name)
                 .lineLimit(1)
             Spacer(minLength: 8)
@@ -56,7 +58,6 @@ struct BrowserOnboardingReviewChecklist: View {
             )
             .disabled(!review.isIncluded)
         }
-        .disabled(isOutOfRoom)
     }
 
     private var tabsRow: some View {
@@ -140,6 +141,8 @@ struct BrowserOnboardingReviewChecklist: View {
 /// One row of the checklist: a checkbox and what it brings.
 private struct BrowserOnboardingReviewRow<Content: View>: View {
     @Binding var isOn: Bool
+    /// Whether the checkbox may change; the rest of the row stays usable.
+    var canToggle = true
     let accessibilityLabel: LocalizedStringResource
     @ViewBuilder let content: Content
     @Environment(\.isEnabled) private var isEnabled
@@ -149,6 +152,7 @@ private struct BrowserOnboardingReviewRow<Content: View>: View {
             Toggle(isOn: $isOn) { EmptyView() }
                 .toggleStyle(.checkbox)
                 .labelsHidden()
+                .disabled(!canToggle)
                 .accessibilityLabel(Text(accessibilityLabel))
             HStack(spacing: 8) { content }
                 .font(CrestTypography.sans(14, weight: .semibold))

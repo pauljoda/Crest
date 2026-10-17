@@ -51,8 +51,16 @@ enum BrowserOnboardingStageMetrics {
     static let headerInset: CGFloat = 28
     /// The inset the footer keeps from the stage's edges.
     static let inset: CGFloat = 40
-    /// The inset a page's content keeps from the stage's edges.
+    /// The inset a page's content keeps from the stage's edges on a wide
+    /// stage; a narrower one keeps the footer's.
     static let pageInset: CGFloat = 120
+    /// The stage width from which pages keep `pageInset`.
+    static let wideStageWidth: CGFloat = 1440
+
+    /// The inset a page's content keeps on a stage `width` wide.
+    static func pageInset(for width: CGFloat) -> CGFloat {
+        width >= wideStageWidth ? pageInset : inset
+    }
     /// How far a page's headline sits under the header.
     static let headlineSize: CGFloat = 46
     /// How much the backdrop darkens the field so the page reads over it.

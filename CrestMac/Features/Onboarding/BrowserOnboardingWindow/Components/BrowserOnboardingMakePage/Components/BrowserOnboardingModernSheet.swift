@@ -31,7 +31,7 @@ struct BrowserOnboardingModernSheet: View {
     private var colors: some View {
         BrowserOnboardingMakeSection("Color") {
             VStack(alignment: .leading, spacing: 16) {
-                HStack(spacing: 10) {
+                BrowserOnboardingMakeStrip {
                     ForEach(Array(presets.enumerated()), id: \.offset) { _, preset in
                         BrowserOnboardingModernPresetSwatch(
                             colors: preset, isSelected: Array(branding.colors) == preset
@@ -43,7 +43,7 @@ struct BrowserOnboardingModernSheet: View {
                         }
                     }
                 }
-                HStack(spacing: 0) {
+                BrowserOnboardingMakeStrip(spacing: 0) {
                     BrowserOnboardingSidebarSwatches(branding: $branding)
                 }
             }

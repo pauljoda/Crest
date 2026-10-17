@@ -30,6 +30,23 @@ struct BrowserOnboardingMakeSection<Accessory: View, Content: View>: View {
     }
 }
 
+/// A row of choices, which scrolls sideways where the sheet is narrower
+/// than the row.
+struct BrowserOnboardingMakeStrip<Content: View>: View {
+    var spacing: CGFloat = 10
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        ScrollView(.horizontal) {
+            HStack(spacing: spacing) { content }
+                .padding(.vertical, 2)
+        }
+        .scrollIndicators(.hidden)
+        .scrollBounceBehavior(.basedOnSize)
+        .scrollClipDisabled()
+    }
+}
+
 /// One choice on a strip: artwork on a tile, lit when chosen.
 struct BrowserOnboardingMakeTile<Artwork: View>: View {
     let title: LocalizedStringResource

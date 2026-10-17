@@ -29,7 +29,7 @@ struct BrowserOnboardingWelcomeCallToAction: View {
 
             Text(
                 action.waitsOnCloud
-                    ? "Checking iCloud for an existing setup…"
+                    ? String(localized: "Checking iCloud for an existing setup…")
                     : cloudStatusDetail
             )
             .font(CrestTypography.sans(12, weight: .medium))

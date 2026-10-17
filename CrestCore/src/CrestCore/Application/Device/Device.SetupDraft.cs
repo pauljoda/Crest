@@ -43,11 +43,12 @@ internal sealed partial class Device {
         changes.Publish(new SetupDraftChanged(draft));
     }
 
-    /// Gives the setup held over `workspaceId`, when there is one, `look` for
-    /// the Spaces it makes, and publishes it. The caller holds the device lock.
-    internal void RestyleSetup(Guid workspaceId, SessionState session, SetupLook look, ChangeFeed changes) {
+    /// Gives the setup held over `workspaceId`, when there is one, `look` in
+    /// place of `previous` for the Spaces it makes, and publishes it. The
+    /// caller holds the device lock.
+    internal void RestyleSetup(Guid workspaceId, SessionState session, SetupLook previous, SetupLook look, ChangeFeed changes) {
         if (setupDraft is not { } draft || draft.WorkspaceId != workspaceId) return;
-        KeepSetup(draft.Restyled(look, session), changes);
+        KeepSetup(draft.Restyled(previous, look, session), changes);
     }
 
     /// The look the Spaces setup makes wear: the one setup chose, or Crest's

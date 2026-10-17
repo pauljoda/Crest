@@ -63,13 +63,22 @@ public sealed record SetupDraft(Guid WorkspaceId, IReadOnlyList<SetupDraftSpace>
     }
 
     /// The setup with its new Spaces, and a first launch's disposable ones
-    /// in `session`, wearing `look`. An existing Space the person made keeps
-    /// its own.
-    internal SetupDraft Restyled(SetupLook look, SessionState session) {
+    /// in `session`, wearing `look` in place of `previous`: a new Space the
+    /// person has not edited takes the look a new Space of `look` gets, and
+    /// any other keeps its colors and crest in the new mode. An existing
+    /// Space the person made keeps its own.
+    internal SetupDraft Restyled(SetupLook previous, SetupLook look, SessionState session) {
+        ArgumentNullException.ThrowIfNull(previous);
         ArgumentNullException.ThrowIfNull(look);
         ArgumentNullException.ThrowIfNull(session);
         bool disposable = session.DisposableSeedMarker is not null;
-        return this with { Spaces = [.. Spaces.Select(space => space.IsNew || disposable ? space.Restyled(look) : space)] };
+        return this with {
+            Spaces = [.. Spaces.Select(space =>
+                space.IsNew && space.Customization.Branding == previous.NewSpaceLook(space.Customization.Accent)
+                    ? space with { Customization = space.Customization with { Branding = look.NewSpaceLook(space.Customization.Accent) } }
+                    : space.IsNew || disposable ? space.Restyled(look)
+                    : space)]
+        };
     }
 
     /// The setup without the new Space `spaceId`. An existing Space stays.
