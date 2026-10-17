@@ -36,7 +36,16 @@ struct BrowserOnboardingStepContent: View, BrowserOnboardingPages {
         )
     }
 
-    func lookPage() -> some View { EmptyView() }
+    func lookPage() -> some View {
+        BrowserOnboardingLookPage(
+            look: flow.look,
+            choose: { look in
+                withAnimation(motion(CrestMotion.onboardingBackdrop)) { flow.chooseLook(look) }
+            },
+            back: back,
+            continueSetup: continueSetup
+        )
+    }
 
     /// Setup on the Mac has no pages for the feature tour.
     func featureSpacesPage() -> some View { EmptyView() }
@@ -61,6 +70,7 @@ struct BrowserOnboardingStepContent: View, BrowserOnboardingPages {
             continueImport: flow.continueImportQueue,
             back: back
         )
+        .id(flow.step)
     }
 
     func reviewPage() -> some View {
