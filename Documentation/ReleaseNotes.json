@@ -4193,6 +4193,10 @@
     "core-history-load-identity-on-failure": {
       "category": "internal",
       "message": "A page the core asks to load in place of a history entry gives up that entry's identity when the load fails or is cancelled, so a later page never takes it."
+    },
+    "sidebar-edge-reveals-for-moving-pointer": {
+      "category": "fixed",
+      "message": "The sidebar no longer slides back out under a pointer that is just resting at the screen edge, such as one left there by Universal Control. It reveals when you move the pointer to the edge."
     }
   }
 }
