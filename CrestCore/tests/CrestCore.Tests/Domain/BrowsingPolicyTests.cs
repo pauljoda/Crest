@@ -18,6 +18,7 @@ public sealed class BrowsingPolicyTests {
     [InlineData("localhost:3000", "http://localhost:3000", null)]
     [InlineData("192.168.0.1", "http://192.168.0.1", null)]
     [InlineData("[fe80::1]:8080/setup", "http://[fe80::1]:8080/setup", null)]
+    [InlineData("[0:0:0:0:0:0:0:1]:8080", "http://[0:0:0:0:0:0:0:1]:8080", null)]
     [InlineData("printer.local:631", "http://printer.local:631", null)]
     [InlineData("http://192.168.0.1", "http://192.168.0.1", null)]
     [InlineData("https://webkit.org/blog/", "https://webkit.org/blog/", null)]

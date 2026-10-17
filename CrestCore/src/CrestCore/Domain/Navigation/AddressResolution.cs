@@ -86,12 +86,13 @@ public sealed record AddressResolution(string Url, string? SearchQuery) {
     }
 
     /// Whether `address`, read from `typed` without a scheme, names a host
-    /// only this device or its network answers: an IP address written out in
-    /// full, `localhost`, or a name reserved for local networks. Short
-    /// numbers such as `3.14` parse as addresses but are not written as one.
+    /// only this device or its network answers: an IPv6 address, which only
+    /// brackets spell; an IPv4 address written out in full; `localhost`; or a
+    /// name reserved for local networks. Short numbers such as `3.14` parse
+    /// as IPv4 addresses but are not written as one.
     private static bool IsLocal(Uri address, string typed) {
-        if (address.HostNameType is UriHostNameType.IPv4 or UriHostNameType.IPv6)
-            return typed.StartsWith(address.Host, StringComparison.OrdinalIgnoreCase);
+        if (address.HostNameType == UriHostNameType.IPv6) return true;
+        if (address.HostNameType == UriHostNameType.IPv4) return typed.StartsWith(address.Host, StringComparison.Ordinal);
         string host = address.Host.TrimEnd('.');
         return host.Equals("localhost", StringComparison.OrdinalIgnoreCase)
             || LocalNameEndings.Any(ending => host.EndsWith(ending, StringComparison.OrdinalIgnoreCase));
