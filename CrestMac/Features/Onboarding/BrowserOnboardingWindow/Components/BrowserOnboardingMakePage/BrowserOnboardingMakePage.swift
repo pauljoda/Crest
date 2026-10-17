@@ -110,7 +110,20 @@ struct BrowserOnboardingMakePicker {
 private struct BrowserOnboardingMakeChips: View {
     let picker: BrowserOnboardingMakePicker
 
+    /// The chips in a row where they fit the header, and in a row that
+    /// scrolls sideways where a setup has made more Spaces than fit.
     var body: some View {
+        ViewThatFits(in: .horizontal) {
+            chips
+            ScrollView(.horizontal) { chips }
+                .scrollIndicators(.hidden)
+                .frame(maxWidth: BrowserOnboardingMakeMetrics.chipsWidth)
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Spaces")
+    }
+
+    private var chips: some View {
         HStack(spacing: 8) {
             ForEach(picker.spaces) { space in
                 BrowserOnboardingSpaceChip(space: space, isSelected: space.id == picker.selectedID) {
@@ -136,8 +149,6 @@ private struct BrowserOnboardingMakeChips: View {
             .accessibilityLabel("Add a Space")
             .accessibilityIdentifier("space-customization-add")
         }
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel("Spaces")
     }
 }
 
@@ -178,6 +189,8 @@ enum BrowserOnboardingMakeMetrics {
     static let minimumPreviewWidth: CGFloat = 520
     /// Between the window and the sheet.
     static let spacing: CGFloat = 48
+    /// The most of the header the Space chips take once they scroll.
+    static let chipsWidth: CGFloat = 520
     static let pageIconSize: CGFloat = 180
     /// A choice tile on the sheet.
     static let tileSize: CGFloat = 52
