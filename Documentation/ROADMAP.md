@@ -145,7 +145,6 @@ the live status for each issue.
 - [ ] [Treat a Split View as one tab when cycling tabs from the keyboard](https://github.com/pauljoda/Crest/issues/356)
 - [ ] [Move to New Window in the tab menu](https://github.com/pauljoda/Crest/issues/357)
 - [ ] [Start a new Space from an existing Space's settings](https://github.com/pauljoda/Crest/issues/359)
-- [ ] [bug: http://192.168.0.1 automatically turns into https://192.168.0.1 and can not be open](https://github.com/pauljoda/Crest/issues/363)
 - [ ] [bug: cannot install third-party extensions](https://github.com/pauljoda/Crest/issues/364)
 - [ ] [Hold-space cursor control doesn't work in the iPhone address bar](https://github.com/pauljoda/Crest/issues/370)
 - [ ] [Open links in Crest from the iOS share sheet](https://github.com/pauljoda/Crest/issues/372)
@@ -185,6 +184,7 @@ the live status for each issue.
 #### Completed
 
 - [x] [bug: Right-clicking an extension in Site Controls closes Site Controls](https://github.com/pauljoda/Crest/issues/262)
+- [x] [bug: http://192.168.0.1 automatically turns into https://192.168.0.1 and can not be open](https://github.com/pauljoda/Crest/issues/363)
 - [x] [Page menu commands are disabled in Quick Windows on Mac](https://github.com/pauljoda/Crest/issues/377) — [`2b661960`](https://github.com/pauljoda/Crest/commit/2b661960d1013f9101417871ebdfeb8796dab253)
 - [x] [Closing find with Escape doesn't return focus to the page on Mac](https://github.com/pauljoda/Crest/issues/378) — [`fdee1e3d`](https://github.com/pauljoda/Crest/commit/fdee1e3d41566ba4cf245d528d325b438b8be48b)
 - [x] [feature: Choose search engine on new tab prompt (based on shortcut)](https://github.com/pauljoda/Crest/issues/386)
