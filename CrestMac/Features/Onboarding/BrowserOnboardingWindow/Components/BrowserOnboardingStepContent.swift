@@ -36,6 +36,8 @@ struct BrowserOnboardingStepContent: View, BrowserOnboardingPages {
         )
     }
 
+    func lookPage() -> some View { EmptyView() }
+
     /// Setup on the Mac has no pages for the feature tour.
     func featureSpacesPage() -> some View { EmptyView() }
 

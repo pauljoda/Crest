@@ -39,13 +39,14 @@ public sealed record SetupReviewSpace(SpaceState Source, bool Included, Guid? De
 
     /// The review of `space` as a review starts it: joining `match`, taking
     /// its name and look and leaving out the tabs it holds, or coming in new
-    /// with its own. It comes in when `included`, with the `passwordCount`
-    /// saved passwords that belong with it, offering `offered`, all of them
-    /// left on.
+    /// with its own in `look`. It comes in when `included`, with the
+    /// `passwordCount` saved passwords that belong with it, offering
+    /// `offered`, all of them left on.
     internal static SetupReviewSpace Started(SpaceState space, SpaceState? match, bool included, int passwordCount,
-        IReadOnlyList<ImportExtension> offered) {
+        IReadOnlyList<ImportExtension> offered, SetupLook look) {
+        ArgumentNullException.ThrowIfNull(look);
         var duplicates = match is null ? [] : space.TabsAlsoIn(match).ToHashSet();
-        return new(space, included, match?.Id, (match ?? space).Customization,
+        return new(space, included, match?.Id, match?.Customization ?? look.Applying(space.Customization),
             included ? [.. space.Tabs.Where(tab => !duplicates.Contains(tab.Id)).Select(tab => tab.Id)] : [], [], [], [],
             IncludesPasswords: true, passwordCount, offered, [.. offered.Select(extension => extension.ExtensionId)]);
     }

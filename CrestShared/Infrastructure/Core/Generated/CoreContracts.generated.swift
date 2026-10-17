@@ -1507,6 +1507,10 @@ struct ChooseQuickWindowArchivePolicy: Intent, LinkIntent, Equatable, Sendable {
     let policy: QuickWindowArchivePolicy
 }
 
+struct ChooseSetupLook: Intent, SetupFlowIntent, Equatable, Sendable {
+    let look: SetupLook
+}
+
 struct ChooseShareSource: PageRequest, Equatable, Sendable {
     typealias Answer = Bool
 
@@ -5713,6 +5717,7 @@ struct SetupFlowState: Equatable, Sendable {
     let summary: SetupSummary?
     let opensGuide: Bool
     let opensCrestFromWelcome: Bool
+    let look: SetupLook
 }
 
 struct SetupImportQueue: Equatable, Sendable {
@@ -16944,6 +16949,60 @@ struct SetupFailureReason: Hashable, Sendable {
     }
 }
 
+/// The members of the core's `SetupLook`. A member's wire tag is its index in `all`.
+/// Core-only behavior, not emitted: `newSpaceLook`, `applying`.
+struct SetupLook: Hashable, Sendable {
+    enum Kinds: Sendable {
+        case heraldic
+        case modern
+    }
+
+    let tag: Int
+    var kind: Kinds { facts.kind }
+    var name: String { facts.name }
+    var title: LocalizedStringResource { facts.title }
+    private let facts: Facts
+
+    private init(tag: Int, kind: Kinds, name: String, title: LocalizedStringResource) {
+        self.tag = tag
+        facts = Facts(kind: kind, name: name, title: title)
+    }
+
+    static let heraldic = SetupLook(
+        tag: 0,
+        kind: .heraldic,
+        name: "heraldic",
+        title: LocalizedStringResource("Heraldic")
+    )
+    static let modern = SetupLook(tag: 1, kind: .modern, name: "modern", title: LocalizedStringResource("Modern"))
+
+    static let all: [SetupLook] = [heraldic, modern]
+
+    static func named(_ name: String?) -> SetupLook? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: SetupLook, rhs: SetupLook) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+
+    private final class Facts: Sendable {
+        let kind: Kinds
+        let name: String
+        let title: LocalizedStringResource
+
+        init(kind: Kinds, name: String, title: LocalizedStringResource) {
+            self.kind = kind
+            self.name = name
+            self.title = title
+        }
+    }
+}
+
 /// The members of the core's `SetupPhase`. A member's wire tag is its index in `all`.
 struct SetupPhase: Hashable, Sendable {
     let tag: Int
@@ -16998,7 +17057,10 @@ struct SetupStep: Hashable, Sendable {
         case review
         case manualSetup
         case complete
+        case look
     }
+
+    static let progressCount = 6
 
     let tag: Int
     var kind: Kinds { facts.kind }
@@ -17015,10 +17077,11 @@ struct SetupStep: Hashable, Sendable {
     static let featureSpaces = SetupStep(tag: 1, kind: .featureSpaces, name: "featureSpaces", progressPosition: 0)
     static let featureTabs = SetupStep(tag: 2, kind: .featureTabs, name: "featureTabs", progressPosition: 0)
     static let featureSync = SetupStep(tag: 3, kind: .featureSync, name: "featureSync", progressPosition: 0)
-    static let importBrowser = SetupStep(tag: 4, kind: .importBrowser, name: "importBrowser", progressPosition: 1)
-    static let review = SetupStep(tag: 5, kind: .review, name: "review", progressPosition: 2)
-    static let manualSetup = SetupStep(tag: 6, kind: .manualSetup, name: "manualSetup", progressPosition: 2)
-    static let complete = SetupStep(tag: 7, kind: .complete, name: "complete", progressPosition: 2)
+    static let importBrowser = SetupStep(tag: 4, kind: .importBrowser, name: "importBrowser", progressPosition: 2)
+    static let review = SetupStep(tag: 5, kind: .review, name: "review", progressPosition: 3)
+    static let manualSetup = SetupStep(tag: 6, kind: .manualSetup, name: "manualSetup", progressPosition: 4)
+    static let complete = SetupStep(tag: 7, kind: .complete, name: "complete", progressPosition: 5)
+    static let look = SetupStep(tag: 8, kind: .look, name: "look", progressPosition: 1)
 
     static let all: [SetupStep] = [
         welcome,
@@ -17028,7 +17091,8 @@ struct SetupStep: Hashable, Sendable {
         importBrowser,
         review,
         manualSetup,
-        complete
+        complete,
+        look
     ]
 
     static func named(_ name: String?) -> SetupStep? {

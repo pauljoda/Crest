@@ -4209,6 +4209,10 @@
     "history-kept-before-engine-state": {
       "category": "internal",
       "message": "A tab keeps its history across engines after a relaunch or when duplicated even before its page has any engine state to keep, and a long history no longer loses a run the page left on its oldest entry."
+    },
+    "setup-full-screen-look-choice": {
+      "category": "new",
+      "message": "Setup on the Mac fills the screen and asks whether your Spaces wear Crest's heraldic banners and crests or a modern gradient and icon, then carries that look through importing, reviewing and making your Spaces yours."
     }
   }
 }

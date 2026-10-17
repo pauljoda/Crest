@@ -178,6 +178,7 @@ the live status for each issue.
 - [ ] [bug: Cannot visit Kagi homepage (CREST_NAVIGATION_FAILED)](https://github.com/pauljoda/Crest/issues/487)
 - [ ] [bug: Space settings stop responding to clicks after the first one](https://github.com/pauljoda/Crest/issues/491)
 - [ ] [Keep a Space slide moving forward when Next is pressed again mid-slide](https://github.com/pauljoda/Crest/issues/495)
+- [ ] [Redesign first-launch setup as a full-screen flow with a Heraldic or Modern look](https://github.com/pauljoda/Crest/issues/515)
 
 #### Completed
 
