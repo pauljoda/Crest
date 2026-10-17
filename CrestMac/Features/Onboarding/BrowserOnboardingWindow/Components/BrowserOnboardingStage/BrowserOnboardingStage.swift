@@ -49,8 +49,10 @@ private struct BrowserOnboardingStageHeader: View {
 enum BrowserOnboardingStageMetrics {
     static let headerHeight: CGFloat = 64
     static let headerInset: CGFloat = 28
-    /// The inset the footer and a page's content keep from the stage's edges.
+    /// The inset the footer keeps from the stage's edges.
     static let inset: CGFloat = 40
+    /// The inset a page's content keeps from the stage's edges.
+    static let pageInset: CGFloat = 120
     /// How far a page's headline sits under the header.
     static let headlineSize: CGFloat = 46
     /// How much the backdrop darkens the field so the page reads over it.

@@ -43,10 +43,14 @@ struct BrowserOnboardingHeadline: View {
 
 /// The primary button that carries a page forward, with its arrow.
 struct BrowserOnboardingContinueButton: View {
-    let title: LocalizedStringKey
+    let title: Text
     let action: () -> Void
 
     init(_ title: LocalizedStringKey = "Continue", action: @escaping () -> Void) {
+        self.init(Text(title), action: action)
+    }
+
+    init(_ title: Text, action: @escaping () -> Void) {
         self.title = title
         self.action = action
     }
@@ -54,7 +58,7 @@ struct BrowserOnboardingContinueButton: View {
     var body: some View {
         Button(action: action) {
             HStack(spacing: 10) {
-                Text(title)
+                title
                 Image(systemName: "arrow.right")
             }
             .frame(minWidth: 120)

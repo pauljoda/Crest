@@ -91,14 +91,15 @@ final class BrowserOnboardingFlow {
         state?.summary.map(BrowserOnboardingSummary.completed)
     }
 
+    /// What the review's last Space offers: importing and going on to the
+    /// next chosen browser, or importing alone.
     var importReviewActionTitle: LocalizedStringResource {
         state?.queue?.hasMoreAfterCurrent == true
             ? LocalizedStringResource(
                 "Import & Continue",
                 comment: "Button that imports the current browser and continues to the next selected browser.")
             : LocalizedStringResource(
-                "Import Reviewed Data",
-                comment: "Button that imports the reviewed data from the final selected browser.")
+                "Import", comment: "Button that imports the reviewed data from the final browser.")
     }
 
     // MARK: - Initializers
