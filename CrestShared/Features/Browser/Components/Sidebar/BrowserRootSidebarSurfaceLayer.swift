@@ -69,7 +69,6 @@ struct BrowserRootSidebarSurfaceLayer<Content: View>: View {
                 .onHover(perform: hoverChanged)
             #endif
             .offset(x: hiddenOffset)
-            .opacity(presentation.showsSidebar ? 1 : 0)
             .allowsHitTesting(presentation.showsSidebar)
             .accessibilityHidden(!presentation.showsSidebar)
             .zIndex(
@@ -122,7 +121,7 @@ struct BrowserRootSidebarSurfaceLayer<Content: View>: View {
     }
 
     private var usesFloatingCardAppearance: Bool {
-        presentation != .docked
+        presentation == .floating
     }
 
     private var surfaceInset: CGFloat {

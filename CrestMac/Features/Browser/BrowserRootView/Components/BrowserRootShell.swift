@@ -76,7 +76,7 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
             chromeAnimation(
                 model.isSidebarApproachingDock
                     ? CrestMotion.sidebarDockAttachment
-                    : CrestMotion.sidebarMorph
+                    : CrestMotion.chrome
             ),
             value: model.chrome.columnVisibility
         )

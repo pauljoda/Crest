@@ -54,13 +54,18 @@ final class BrowserNativeWindowControlsHostView: NSView {
     /// lays its title bar out again on every window update, and putting them
     /// straight at their destination then would cut the move short.
     private var isMovingControls = false
+    /// Whether the controls are fading between visible and gone. AppKit lays
+    /// its title bar out again during the fade, and applying their destination
+    /// then would cut the fade short.
+    private var isFadingControls = false
     var sidebarWidth: CGFloat = BrowserChromeLayout.sidebarIdealWidth
     var isVisible = true {
         didSet {
             guard isVisible != oldValue else { return }
-            applyBrowserChrome()
+            updateControlsVisibility(animated: true)
         }
     }
+
     /// Whether the window shows the system's standard title bar: while it is
     /// fullscreen and its title bar is revealed, and not once it starts to
     /// leave.
@@ -111,15 +116,62 @@ final class BrowserNativeWindowControlsHostView: NSView {
         }
         applyTitleBar(to: window)
         applySystemToolbarMetrics(to: window)
+        updateControlsVisibility(animated: false)
+        positionWindowControls()
+    }
+
+    /// Fades the standard window controls in and out over the sidebar's own
+    /// motion, or puts them where they belong at once where no fade runs.
+    func updateControlsVisibility(animated: Bool) {
+        // Reduce Motion takes the fade away, as it takes the transaction
+        // animation the sidebar itself moves with.
+        let animates =
+            animated && !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+        guard animates || !isFadingControls else { return }
+        guard let window else { return }
         let shouldShowWindowControls = window.styleMask.showsWindowControls(
             sidebarPresentationShowsControls: isVisible)
-        for type in Self.buttonTypes {
-            guard let button = window.standardWindowButton(type) else { continue }
+        let buttons = Self.buttonTypes.compactMap { window.standardWindowButton($0) }
+        if animates {
+            for button in buttons where button.isHidden {
+                button.alphaValue = shouldShowWindowControls ? 0 : 1
+                button.isHidden = false
+            }
+            isFadingControls = true
+            NSAnimationContext.runAnimationGroup { context in
+                context.duration = CrestMotion.chromeTransition
+                for button in buttons {
+                    button.animator().alphaValue = shouldShowWindowControls ? 1 : 0
+                }
+            } completionHandler: { [weak self] in
+                guard let self, self.isFadingControls, let window = self.window else { return }
+                // Every fade ends the fade: a reversed or interrupted one has
+                // handed the work over, and instant updates must resume.
+                self.isFadingControls = false
+                let showsWindowControlsNow = window.styleMask.showsWindowControls(
+                    sidebarPresentationShowsControls: self.isVisible)
+                // Only the fade its target still asks for may hide: a
+                // reversed one has handed the work to a later fade.
+                guard showsWindowControlsNow == shouldShowWindowControls else { return }
+                // Invisible controls may not stay in the title bar, where they
+                // would answer clicks while gone.
+                guard !showsWindowControlsNow else { return }
+                for button in buttons {
+                    button.isHidden = true
+                }
+            }
+        } else {
+            let targetAlpha: CGFloat = shouldShowWindowControls ? 1 : 0
             let shouldHide = !shouldShowWindowControls
-            guard button.isHidden != shouldHide else { continue }
-            button.isHidden = shouldHide
+            for button in buttons {
+                if button.alphaValue != targetAlpha {
+                    button.alphaValue = targetAlpha
+                }
+                if button.isHidden != shouldHide {
+                    button.isHidden = shouldHide
+                }
+            }
         }
-        positionWindowControls()
     }
 
     /// Shows the title bar as Crest's chrome, transparent and without a title
@@ -178,6 +230,7 @@ final class BrowserNativeWindowControlsHostView: NSView {
 
     func restoreWindowChrome() {
         stopObservingWindow()
+        isFadingControls = false
         guard let window, let originalChrome else { return }
         isMovingControls = false
         positionWindowControls(onRight: false)
@@ -191,7 +244,11 @@ final class BrowserNativeWindowControlsHostView: NSView {
         window.contentView?.superview?.clipsToBounds =
             originalChrome.contentFrameClipsToBounds
         for (type, wasHidden) in originalChrome.buttonVisibility {
-            window.standardWindowButton(type)?.isHidden = wasHidden
+            guard let button = window.standardWindowButton(type) else { continue }
+            if !wasHidden {
+                button.alphaValue = 1
+            }
+            button.isHidden = wasHidden
         }
         toolbarVisibilityObservation = nil
         chromeToolbar = nil

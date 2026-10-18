@@ -352,38 +352,15 @@ extension BrowserRootModel {
     }
 
     func hideSidebar(reduceMotion: Bool) {
-        chrome.utilityPresentation.dismiss()
+        cancelSidebarMorph()
         isFloatingSidebarRevealedByPointer = false
-        guard !reduceMotion else {
-            cancelSidebarMorph()
-            isFloatingSidebarPresented = isSidebarSurfaceHovered
+        isSidebarSurfaceHovered = false
+        // Hiding slides the sidebar away in one motion. Turning it into a
+        // floating card first, as hiding used to, left the card waiting on a
+        // hover guard and lagged behind its own toggle.
+        withAnimation(accessibleAnimation(CrestMotion.chrome, reduceMotion)) {
+            isFloatingSidebarPresented = false
             chrome.hideSidebar()
-            return
-        }
-
-        let revision = beginSidebarMorph()
-        sidebarMorphTask = Task { @MainActor [weak self] in
-            await Task.yield()
-            guard let self,
-                !Task.isCancelled,
-                self.sidebarMorphRevision == revision
-            else { return }
-            withAnimation(
-                self.accessibleAnimation(CrestMotion.sidebarMorph, reduceMotion)
-            ) {
-                self.isFloatingSidebarPresented = true
-                self.chrome.hideSidebar()
-            }
-            try? await self.sidebarMorphWait(
-                CrestMotion.sidebarMorphCompletionDelay
-            )
-            guard !Task.isCancelled,
-                self.finishSidebarMorph(revision),
-                self.sidebarPresentation == .floating
-            else { return }
-            self.dismissFloatingSidebarIfInteractionAllows(
-                reduceMotion: reduceMotion
-            )
         }
     }
 
@@ -393,12 +370,22 @@ extension BrowserRootModel {
 
     func dockSidebar(reduceMotion: Bool) {
         isFloatingSidebarRevealedByPointer = false
+        guard isFloatingSidebarPresented else {
+            // The sidebar is put away, so showing it needs no floating-card
+            // handoff: it moves into its docked seat in one motion.
+            cancelSidebarMorph()
+            withAnimation(accessibleAnimation(CrestMotion.chrome, reduceMotion)) {
+                chrome.showSidebar()
+            }
+            return
+        }
         guard !reduceMotion else {
             cancelSidebarMorph()
             isFloatingSidebarPresented = false
             chrome.showSidebar()
             return
         }
+
         let revision = beginSidebarMorph()
         sidebarMorphTask = Task { @MainActor [weak self] in
             await Task.yield()
