@@ -4217,6 +4217,14 @@
     "setup-full-screen-look-choice": {
       "category": "new",
       "message": "Setup on the Mac fills the screen and asks whether your Spaces wear Crest's heraldic banners and crests or a modern gradient and icon, then carries that look through importing, reviewing and making your Spaces yours."
+    },
+    "extension-all-spaces-actions": {
+      "category": "improved",
+      "message": "An extension installed in several Spaces can be turned on, turned off or removed in all of them at once from its Extensions settings."
+    },
+    "extension-all-spaces-waits-for-every-space": {
+      "category": "internal",
+      "message": "The all-Spaces extension actions appear only once every Space's extensions have loaded, and the removal dialog says which Spaces each choice affects."
     }
   }
 }

@@ -30,7 +30,7 @@ Once installed, the listing's button reads **Added to Crest**, and it offers **R
 ## Use it after installation
 
 - Open **Site Controls** beside the address field to find the extension's action, and pin it if you want it in the Space's extension strip. See [Pin extensions and use popups](./pin-and-use-popups.md).
-- Open **Crest Settings**, select the Space in the sidebar, then select **Extensions**. Expand the extension to turn it on or off, open its settings, manage its permissions, copy it to other Spaces, or remove it.
+- Open **Crest Settings**, select the Space in the sidebar, then select **Extensions**. Expand the extension to turn it on or off, open its settings, manage its permissions, copy it to other Spaces, or remove it. When other Spaces have the same extension, **Turn Off in All Spaces** (or **Turn On in All Spaces**) and **Remove from All Spaces** change them together. They appear once every Space is unlocked and its extensions have loaded.
 - If the extension has keyboard commands, see [Set extension keyboard shortcuts](./keyboard-shortcuts.md).
 
 ## Updates

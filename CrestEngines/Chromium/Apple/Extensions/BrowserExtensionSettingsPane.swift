@@ -21,7 +21,13 @@ struct BrowserExtensionSettingsPane: View {
                 }
             }
             if let space, !spaceAccess.isLocked(space) {
-                BrowserExtensionsView(space: space, store: store).id(space.profileID)
+                BrowserExtensionsView(
+                    space: space, store: store,
+                    // A locked or still-loading Space has no list yet, so "all" would miss it.
+                    everySpaceKnown: browser.spaceModels.allSatisfy {
+                        $0.id == space.id || store.installed[$0.profileID] != nil
+                    }
+                ).id(space.profileID)
             } else if let space {
                 BrowserSettingsPrivateSpaceAccessSection(
                     space: space, accessController: spaceAccess,
@@ -40,6 +46,9 @@ struct BrowserExtensionSettingsPane: View {
 struct BrowserExtensionsView: View {
     let space: BrowserSpaceIdentity
     let store: ChromiumExtensionStore
+    /// Whether every other Space's extension list is loaded, so the Spaces
+    /// holding an extension are all of them.
+    let everySpaceKnown: Bool
     @State private var failure: String?
     @State private var pendingRemoval: ChromiumExtensionStore.Installed?
     @State private var pendingCopy: ChromiumExtensionStore.Installed?
@@ -64,7 +73,10 @@ struct BrowserExtensionsView: View {
             }
             if usesLiveSidebar { installedExtensions }
         }
-        .task(id: space.profileID) { await store.load(space) }
+        .task(id: space.profileID) {
+            await store.load(space)
+            for other in store.spaces where other.id != space.id { await store.prepare(other) }
+        }
         .alert(
             "Couldn’t Complete Extension Action",
             isPresented: Binding(get: { failure != nil }, set: { if !$0 { failure = nil } })
@@ -82,9 +94,18 @@ struct BrowserExtensionsView: View {
                 run(.remove, item.id)
                 pendingRemoval = nil
             }
+            if holdsElsewhere(item) {
+                Button("Remove from All Spaces", role: .destructive) {
+                    run(.remove, item.id, everywhere: true)
+                    pendingRemoval = nil
+                }
+            }
             Button("Cancel", role: .cancel) { pendingRemoval = nil }
         } message: { item in
-            Text("\(item.name) and its data are removed from this Space only.")
+            Text(
+                holdsElsewhere(item)
+                    ? "\(item.name) and its data are removed from this Space only. Remove from All Spaces deletes them from every Space that has it."
+                    : "\(item.name) and its data are removed from this Space only.")
         }
         .sheet(item: $pendingCopy) { item in BrowserExtensionCopySheet(item: item, space: space, store: store) }
     }
@@ -100,13 +121,22 @@ struct BrowserExtensionsView: View {
                     BrowserExtensionRow(
                         item: item, setEnabled: { run($0 ? .enable : .disable, item.id) },
                         options: { run(.options, item.id) }, manage: { run(.details, item.id) },
-                        remove: { pendingRemoval = item }, copy: { pendingCopy = item })
+                        remove: { pendingRemoval = item }, copy: { pendingCopy = item },
+                        setEnabledEverywhere: holdsElsewhere(item)
+                            ? { run($0 ? .enable : .disable, item.id, everywhere: true) } : nil)
                 }
             }
         }
     }
-    private func run(_ command: ExtensionCommand, _ id: String = "") {
-        if !store.command(command, extensionID: id, space: space) {
+    private func holdsElsewhere(_ item: ChromiumExtensionStore.Installed) -> Bool {
+        everySpaceKnown && !store.spaces(holding: item.id, besides: space).isEmpty
+    }
+    private func run(_ command: ExtensionCommand, _ id: String = "", everywhere: Bool = false) {
+        let done =
+            everywhere
+            ? store.commandInAllSpaces(command, extensionID: id, space: space)
+            : store.command(command, extensionID: id, space: space)
+        if !done {
             failure = "Check the extension’s details for policy or permission requirements."
         }
     }
@@ -120,10 +150,17 @@ struct BrowserExtensionRow: View {
     let manage: () -> Void
     let remove: () -> Void
     let copy: () -> Void
+    /// Set when other Spaces hold the extension too.
+    var setEnabledEverywhere: ((Bool) -> Void)?
     var body: some View {
         DisclosureGroup {
             VStack(alignment: .leading, spacing: CrestSpacing.medium) {
                 if item.webStore { Button("Install a copy in other spaces", action: copy) }
+                if let setEnabledEverywhere {
+                    Button(item.enabled ? "Turn Off in All Spaces" : "Turn On in All Spaces") {
+                        setEnabledEverywhere(!item.enabled)
+                    }
+                }
                 if !item.permissions.isEmpty {
                     VStack(alignment: .leading, spacing: CrestSpacing.small) {
                         Text("Permissions and Website Access").font(.headline)

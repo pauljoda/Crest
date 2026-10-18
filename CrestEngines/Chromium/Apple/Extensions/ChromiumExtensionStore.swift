@@ -160,7 +160,8 @@ final class ChromiumExtensionStore {
     /// change, or when the command has nothing to open and no change to make.
     @discardableResult
     func command(
-        _ command: ExtensionCommand, extensionID: String = "", space: BrowserSpaceIdentity, window: NSWindow? = nil
+        _ command: ExtensionCommand, extensionID: String = "", space: BrowserSpaceIdentity, window: NSWindow? = nil,
+        refreshing: Bool = true
     ) -> Bool {
         guard authorized(space), let pages = ChromiumComposition.chromiumEngine?.pages,
             let window = window ?? ChromiumComposition.activeNativeWindow
@@ -172,8 +173,22 @@ final class ChromiumExtensionStore {
         guard let change = command.change else { return false }
         let accepted = pages.request(
             ChangeExtension(profileID: space.profileID, extensionID: extensionID, change: change))
-        refresh()
+        if refreshing { refresh() }
         return accepted
+    }
+    /// The Spaces besides `space` whose profile holds the extension, as far as
+    /// their lists are loaded.
+    func spaces(holding extensionID: String, besides space: BrowserSpaceIdentity) -> [BrowserSpaceIdentity] {
+        spaces.filter { $0.id != space.id && installed[$0.profileID]?.contains { $0.id == extensionID } == true }
+    }
+    /// Runs the change in `space` and in every other Space holding the
+    /// extension. False when any of them refused it.
+    @discardableResult
+    func commandInAllSpaces(_ command: ExtensionCommand, extensionID: String, space: BrowserSpaceIdentity) -> Bool {
+        defer { refresh() }
+        return ([space] + spaces(holding: extensionID, besides: space))
+            .map { self.command(command, extensionID: extensionID, space: $0, refreshing: false) }
+            .allSatisfy { $0 }
     }
     func togglePin(_ action: BrowserExtensionActionPresentation, space: BrowserSpaceIdentity) {
         _ = command(action.isPinned ? .unpin : .pin, extensionID: action.id, space: space)
