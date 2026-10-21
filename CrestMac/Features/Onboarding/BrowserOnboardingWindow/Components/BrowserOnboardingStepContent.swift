@@ -68,6 +68,7 @@ struct BrowserOnboardingStepContent: View, BrowserOnboardingPages {
             scanForMore: flow.scanForMore,
             beginManualSetup: beginManualSetup,
             continueImport: flow.continueImportQueue,
+            cancelRead: flow.cancelImportRead,
             back: back
         )
         .id(flow.step)

@@ -16,6 +16,8 @@ struct BrowserOnboardingImportPage: View {
     let scanForMore: () -> Void
     let beginManualSetup: () -> Void
     let continueImport: () -> Void
+    /// Stops reading the chosen browser, leaving the choice as it was.
+    let cancelRead: () -> Void
     let back: BrowserOnboardingBackAction
 
     private var hasSelection: Bool { sources.contains(where: isSelected) }
@@ -35,14 +37,38 @@ struct BrowserOnboardingImportPage: View {
             .frame(maxHeight: .infinity)
             BrowserOnboardingFooter(back: back, isBackDisabled: isLocked) {
                 HStack(spacing: 18) {
-                    Button("Skip", action: beginManualSetup)
-                        .buttonStyle(.crestTertiary)
-                        .accessibilityIdentifier("onboarding-import-skip")
-                    BrowserOnboardingContinueButton(action: continueImport)
-                        .disabled(!hasSelection)
-                        .accessibilityIdentifier("onboarding-import-continue")
+                    if isReading {
+                        // Reading sits where Continue was, with a way out, so a
+                        // slow browser never looks like a dead end.
+                        ProgressView()
+                            .controlSize(.small)
+                        Text("Building your review…")
+                            .font(CrestTypography.sans(13, weight: .medium))
+                            .foregroundStyle(CrestBrandTheme.textDisplay.opacity(0.7))
+                        Button("Cancel", action: cancelRead)
+                            .buttonStyle(.crestSecondary)
+                            .accessibilityIdentifier("onboarding-import-cancel")
+                    } else {
+                        if let failure {
+                            Label {
+                                BrowserOnboardingFailureMessage(message: failure)
+                            } icon: {
+                                Image(systemName: "exclamationmark.triangle.fill")
+                            }
+                            .font(CrestTypography.sans(12, weight: .medium))
+                            .foregroundStyle(.red)
+                            .lineLimit(2)
+                            .accessibilityIdentifier("onboarding-import-error")
+                        }
+                        Button("Skip", action: beginManualSetup)
+                            .buttonStyle(.crestTertiary)
+                            .accessibilityIdentifier("onboarding-import-skip")
+                        BrowserOnboardingContinueButton(action: continueImport)
+                            .disabled(!hasSelection)
+                            .accessibilityIdentifier("onboarding-import-continue")
+                    }
                 }
-                .disabled(isLocked)
+                .disabled(isLocked && !isReading)
             }
         }
     }
@@ -71,20 +97,6 @@ struct BrowserOnboardingImportPage: View {
                 isLocked: isLocked,
                 scan: scanForMore
             )
-
-            if isReading {
-                ProgressView("Building your review…")
-                    .controlSize(.large)
-            }
-            if let failure {
-                Label {
-                    BrowserOnboardingFailureMessage(message: failure)
-                } icon: {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                }
-                .foregroundStyle(.red)
-                .accessibilityIdentifier("onboarding-import-error")
-            }
         }
         .padding(.horizontal, 36)
         .padding(.vertical, 24)

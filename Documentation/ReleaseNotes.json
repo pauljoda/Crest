@@ -4217,6 +4217,10 @@
     "setup-full-screen-look-choice": {
       "category": "new",
       "message": "Setup on the Mac fills the screen and asks whether your Spaces wear Crest's heraldic banners and crests or a modern gradient and icon, then carries that look through importing, reviewing and making your Spaces yours."
+    },
+    "setup-import-read-cancel": {
+      "category": "fixed",
+      "message": "While setup reads a browser you chose to import, the page says so where Continue was and offers Cancel, so a slow or stuck read no longer leaves setup looking stuck with every button disabled."
     }
   }
 }
