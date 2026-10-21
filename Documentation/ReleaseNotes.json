@@ -4226,6 +4226,14 @@
       "category": "fixed",
       "message": "Tapping the address bar on iPhone selects the whole address, so typing replaces it or you can copy it right away."
     },
+    "mobile-cross-site-download-test-wait": {
+      "category": "internal",
+      "message": "The iPhone and iPad test of a download from another site waits as long as WebKit takes in the Simulator to start it, so it no longer fails after other tests have run."
+    },
+    "mobile-full-screen-video-shows": {
+      "category": "fixed",
+      "message": "On iPhone and iPad, a video a site shows full screen, such as Reddit's, fills the screen instead of going black, and the page is back when you leave full screen."
+    },
     "sync-default-search-and-crest-passwords": {
       "category": "fixed",
       "message": "A new iPhone or iPad that syncs with iCloud searches with the default your other devices' Spaces follow instead of keeping Google, turning Crest Passwords on or off for a Space reaches your other devices, and Settings says which search and password choices stay on each device."
