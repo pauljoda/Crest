@@ -140,6 +140,7 @@ the live status for each issue.
 - [ ] [feature: Show extension actions next to the address field in Developer Mode](https://github.com/pauljoda/Crest/issues/352)
 - [ ] [Treat a Split View as one tab when cycling tabs from the keyboard](https://github.com/pauljoda/Crest/issues/356)
 - [ ] [bug: cannot install third-party extensions](https://github.com/pauljoda/Crest/issues/364)
+- [ ] [Some settings don't sync to iPhone](https://github.com/pauljoda/Crest/issues/369)
 - [ ] [Hold-space cursor control doesn't work in the iPhone address bar](https://github.com/pauljoda/Crest/issues/370)
 - [ ] [Open links in Crest from the iOS share sheet](https://github.com/pauljoda/Crest/issues/372)
 - [ ] [Crest's iOS icon doesn't tint with tinted Home Screen icons](https://github.com/pauljoda/Crest/issues/373)
