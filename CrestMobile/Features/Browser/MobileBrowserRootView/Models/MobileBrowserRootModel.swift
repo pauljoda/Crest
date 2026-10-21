@@ -60,9 +60,10 @@ extension MobileBrowserRootModel {
         navigation.adapt(to: presentation)
         settings.adapt(to: presentation)
         guard !presentation.presentsPageOverTabViewer else { return }
+        // A sidebar put away for a folded split keeps the person's choice.
         windowState?.captureSidebar(
             width: Double(sidebarWidth),
-            isPresented: navigation.regularSidebarIsDocked
+            isPresented: navigation.hidSidebarForFoldedSplit ? nil : navigation.regularSidebarIsDocked
         )
     }
 
