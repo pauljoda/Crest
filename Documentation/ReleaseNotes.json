@@ -4237,6 +4237,22 @@
     "sync-default-search-and-crest-passwords": {
       "category": "fixed",
       "message": "A new iPhone or iPad that syncs with iCloud searches with the default your other devices' Spaces follow instead of keeping Google, turning Crest Passwords on or off for a Space reaches your other devices, and Settings says which search and password choices stay on each device."
+    },
+    "share-sheet-open-links": {
+      "category": "new",
+      "message": "On iPhone and iPad, Crest appears in the share sheet, so a link shared from another app, or the first link in shared text, opens in Crest."
+    },
+    "appearance-preview-concentric-page-corners": {
+      "category": "fixed",
+      "message": "On iPhone and iPad, the page in the Appearance window preview rounds its corners with the preview's, so the window border keeps its width all the way around."
+    },
+    "ios-icon-tinted-clear-background": {
+      "category": "fixed",
+      "message": "With tinted or clear app icons on iPhone, iPad and Mac, Crest's icon sits on the same tinted or glass background as other apps instead of a flat gray one."
+    },
+    "mobile-edge-swipe-back-forward": {
+      "category": "new",
+      "message": "On iPhone and iPad, swipe in from a page's left edge to go back and from its right edge to go forward. With the sidebar hidden on iPad, a swipe in from the top or bottom of its edge still brings the sidebar back."
     }
   }
 }

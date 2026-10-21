@@ -77,6 +77,7 @@ final class MobileBrowserWebHostView: UIView {
     private func show(_ webView: WKWebView) {
         webView.removeFromSuperview()
         webView.translatesAutoresizingMaskIntoConstraints = true
+        webView.transform = .identity
         addSubview(webView)
         applyViewportInsets()
     }
@@ -96,14 +97,33 @@ final class MobileBrowserWebHostView: UIView {
     }
 
     /// Fits the web view this host shows to the host, clear of the viewport's
-    /// frame insets.
+    /// frame insets. It is placed by bounds and centre rather than frame, which
+    /// stay true while a history swipe shifts the page aside.
     private func placeHostedWebView() {
         guard let hostedWebView, hostedWebView.superview === self else { return }
         let frame = bounds.inset(by: viewport.webViewFrameInsets)
-        hostedWebView.frame = CGRect(
-            origin: frame.origin,
+        hostedWebView.bounds = CGRect(
+            origin: .zero,
             size: CGSize(width: max(frame.width, 0), height: max(frame.height, 0))
         )
+        hostedWebView.center = CGPoint(x: frame.midX, y: frame.midY)
+    }
+
+    // MARK: - Actions - History swipe
+
+    /// Moves the page `offset` points sideways while a history swipe follows
+    /// the finger, clipping it to this host so it never slides over what sits
+    /// beside it. Zero puts it back.
+    func shiftPage(by offset: CGFloat) {
+        guard let hostedWebView, hostedWebView.superview === self else { return }
+        clipsToBounds = true
+        hostedWebView.transform = CGAffineTransform(translationX: offset, y: 0)
+    }
+
+    /// Stops clipping once a history swipe has settled the page back in place.
+    func endPageShift() {
+        hostedWebView?.transform = .identity
+        clipsToBounds = false
     }
 
     // MARK: - Actions - Viewport
