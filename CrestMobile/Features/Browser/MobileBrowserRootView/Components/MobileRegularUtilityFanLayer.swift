@@ -3,7 +3,6 @@ import UIKit
 
 struct MobileRegularUtilityFanLayer: View {
     @Environment(\.browserChromeAppearance) private var appearance
-    @Environment(\.mobileBrowserControlPlacement) private var controlPlacement
     let layout: MobileRegularWindowLayout
     let layoutDirection: LayoutDirection
     let triggerFrameInGlobal: CGRect?
@@ -40,13 +39,9 @@ struct MobileRegularUtilityFanLayer: View {
                         x: localTriggerFrame.midX,
                         y: localTriggerFrame.midY
                     ),
-                    destination: controlPlacement.utilityFanDestination(
-                        besideSidebar: CGPoint(
-                            x: destinationX,
-                            y: proxy.size.height / 2
-                        ),
-                        trigger: localTriggerFrame,
-                        gap: edgeOffset
+                    destination: CGPoint(
+                        x: destinationX,
+                        y: proxy.size.height / 2
                     ),
                     selectedSurface: selectedSurface,
                     badgeColor: badgeColor,

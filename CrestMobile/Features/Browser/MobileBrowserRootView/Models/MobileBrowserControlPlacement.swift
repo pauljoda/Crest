@@ -61,21 +61,6 @@ struct MobileBrowserControlPlacement: Equatable, Sendable {
         )
     }
 
-    // MARK: - Actions - Utilities
-
-    /// Where the Archive, History and Downloads fan opens: beside the sidebar
-    /// when its trigger sits in the sidebar, and beside the bar, at the same
-    /// height, when the trigger is a toolbar item at the window's edge.
-    func utilityFanDestination(
-        besideSidebar: CGPoint,
-        trigger: CGRect,
-        gap: CGFloat
-    ) -> CGPoint {
-        guard movesControlsToToolbar else { return besideSidebar }
-        let x = trigger.midX < besideSidebar.x ? trigger.maxX + gap : trigger.minX - gap
-        return CGPoint(x: x, y: besideSidebar.y)
-    }
-
     // MARK: - Actions - Identity
 
     static func == (lhs: MobileBrowserControlPlacement, rhs: MobileBrowserControlPlacement) -> Bool {

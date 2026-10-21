@@ -79,17 +79,9 @@ struct MobileBrowserSidebarTopChrome: View {
     @ToolbarContentBuilder
     private var navigationToolbarItems: some ToolbarContent {
         ToolbarItemGroup(placement: .topBarTrailing) {
-            BrowserSidebarNavigationHistoryControl(
-                direction: .back,
-                port: navigationPort,
-                metrics: navigationMetrics
-            )
+            MobileHistoryToolbarControl(direction: .back, port: navigationPort)
             if navigationPort.canGoForward() {
-                BrowserSidebarNavigationHistoryControl(
-                    direction: .forward,
-                    port: navigationPort,
-                    metrics: navigationMetrics
-                )
+                MobileHistoryToolbarControl(direction: .forward, port: navigationPort)
             }
             // A system button, which the bar can stand on end; the strip's
             // reload control is a custom view the bar keeps horizontal.
@@ -144,10 +136,6 @@ struct MobileBrowserSidebarTopChrome: View {
             pageActions: selectedPageActions,
             showHistory: configuration.context.chromeActions.presentHistory
         )
-    }
-
-    private var navigationMetrics: BrowserSidebarNavigationControlMetrics {
-        configuration.context.capabilities.navigationControlMetrics
     }
 
     /// `hasResidentPage` stays off: the compact field has no live-site controls

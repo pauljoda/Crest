@@ -354,11 +354,10 @@ struct MobileBrowserDetailView: View {
         pageActions: MobileSelectedPageActionPort?
     ) -> some ToolbarContent {
         let port = BrowserSidebarNavigationPort(pageActions: pageActions, showHistory: showHistory)
-        let metrics = capabilities.navigationControlMetrics
         ToolbarItemGroup(placement: .topBarTrailing) {
-            BrowserSidebarNavigationHistoryControl(direction: .back, port: port, metrics: metrics)
+            MobileHistoryToolbarControl(direction: .back, port: port)
             if port.canGoForward() {
-                BrowserSidebarNavigationHistoryControl(direction: .forward, port: port, metrics: metrics)
+                MobileHistoryToolbarControl(direction: .forward, port: port)
             }
         }
         ToolbarItemGroup(placement: .bottomBar) {
