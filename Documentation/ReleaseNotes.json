@@ -4221,6 +4221,10 @@
     "setup-import-read-cancel": {
       "category": "fixed",
       "message": "While setup reads a browser you chose to import, the page says so where Continue was and offers Cancel, so a slow or stuck read no longer leaves setup looking stuck with every button disabled."
+    },
+    "mobile-cross-site-download-test-wait": {
+      "category": "internal",
+      "message": "The iPhone and iPad test of a download from another site waits as long as WebKit takes in the Simulator to start it, so it no longer fails after other tests have run."
     }
   }
 }
