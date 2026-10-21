@@ -4269,6 +4269,10 @@
     "history-swipe-from-page-frame": {
       "category": "new",
       "message": "On iPhone and iPad, a swipe to go back or forward can also start on the frame around the page, where a finger reaching for the edge of the screen lands."
+    },
+    "sidebar-keeps-space-across-displays": {
+      "category": "fixed",
+      "message": "On iPhone Duo, opening or closing the phone keeps the sidebar and its colors on the Space you're in instead of showing your first Space."
     }
   }
 }
