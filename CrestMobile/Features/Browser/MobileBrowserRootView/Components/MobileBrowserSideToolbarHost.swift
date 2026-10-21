@@ -10,7 +10,12 @@ import SwiftUI
 /// side edge the bars stay hidden, and the chrome draws its own controls as it
 /// always has.
 struct MobileBrowserSideToolbarHost: ViewModifier {
-    /// The scheme the bar's glass follows, or nil for the system's.
+    /// The browser whose shown Space's tone the bar's glass follows. It is
+    /// read here rather than by the view that applies this, so a change to the
+    /// window never rebuilds that view in the middle of a change it is making.
+    var browser: BrowserStore?
+    /// The scheme the bar's glass follows where no browser is given, or nil
+    /// for the system's.
     var colorScheme: ColorScheme?
 
     @Environment(\.mobileBrowserSideToolbarIsHosted) private var isHosted
@@ -25,7 +30,7 @@ struct MobileBrowserSideToolbarHost: ViewModifier {
             #if canImport(SwiftUICore, _version: 8.0.85)
                 if #available(iOS 27.1, *) {
                     MobileBrowserSideToolbarStack(
-                        colorScheme: colorScheme ?? contentColorScheme,
+                        colorScheme: barColorScheme ?? contentColorScheme,
                         contentColorScheme: contentColorScheme
                     ) {
                         content
@@ -37,6 +42,10 @@ struct MobileBrowserSideToolbarHost: ViewModifier {
                 content
             #endif
         }
+    }
+
+    private var barColorScheme: ColorScheme? {
+        browser?.shownSpace?.settings.look.foregroundTone.colorScheme ?? colorScheme
     }
 }
 
