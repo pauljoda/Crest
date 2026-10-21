@@ -124,7 +124,8 @@ static size_t session_seed(uint8_t* output, size_t capacity, uint8_t deleted) {
         0, 0,          /* its own search and suggestions, not the device's defaults */
         0, 0, 0, 0, 0, /* the first tab cleanup, content blocking, and history, archive and download retention */
         1, 1, 0,       /* offers to save passwords and sync them, not to the system's */
-        0, 1, 0        /* open, saved tabs expanded, never collapsed */
+        0, 1, 0,       /* open, saved tabs expanded, never collapsed */
+        0              /* nobody chose whether it uses Crest Passwords */
     };
     size_t at = 0;
     assert(capacity >= 1 + 37 + sizeof(settings) + 4 + 48);
