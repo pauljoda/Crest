@@ -4261,6 +4261,10 @@
     "no-room-for-hidden-keyboard": {
       "category": "fixed",
       "message": "On iPhone and iPad, Crest no longer leaves an empty band at the bottom of the window for a keyboard that isn't on screen."
+    },
+    "history-swipe-from-page-frame": {
+      "category": "new",
+      "message": "On iPhone and iPad, a swipe to go back or forward can also start on the frame around the page, where a finger reaching for the edge of the screen lands."
     }
   }
 }
