@@ -197,8 +197,10 @@ final class MobileBrowserInteropTests: XCTestCase {
         // already the file's; the page's site still owns the choice.
         page.webView.load(URLRequest(url: fileURL))
 
+        // In the Simulator WebKit takes four to five seconds to hand a
+        // navigation to another site over as a download.
         let center = downloads.center
-        try await waitUntil(timeout: 5) {
+        try await waitUntil(timeout: 15) {
             center.items.contains { $0.phase != .preparing }
         }
         XCTAssertEqual(center.items.first?.phase, .blockedAutomaticDownload)
