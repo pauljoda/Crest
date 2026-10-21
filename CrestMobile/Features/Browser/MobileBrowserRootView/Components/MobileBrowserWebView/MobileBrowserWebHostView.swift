@@ -101,12 +101,18 @@ final class MobileBrowserWebHostView: UIView {
     /// stay true while a history swipe shifts the page aside.
     private func placeHostedWebView() {
         guard let hostedWebView, hostedWebView.superview === self else { return }
-        let frame = bounds.inset(by: viewport.webViewFrameInsets)
+        let frame = pageFrame
         hostedWebView.bounds = CGRect(
             origin: .zero,
             size: CGSize(width: max(frame.width, 0), height: max(frame.height, 0))
         )
         hostedWebView.center = CGPoint(x: frame.midX, y: frame.midY)
+    }
+
+    /// Where the page sits in this host, clear of the viewport's frame insets
+    /// and unshifted: the edges a history swipe comes in from.
+    var pageFrame: CGRect {
+        bounds.inset(by: viewport.webViewFrameInsets)
     }
 
     // MARK: - Actions - History swipe

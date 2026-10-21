@@ -47,6 +47,9 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     /// The color WebKit draws behind the page, kept as it changes so the
     /// chrome around the page can take it up.
     private(set) var underPageColor: UIColor?
+    /// The history swipe of the view showing this page, for a swipe that
+    /// starts on the frame beside it.
+    @ObservationIgnored weak var historySwipe: MobileHistorySwipe?
     /// Documents the page committed and finished, which reveal its surface.
     var committedNavigationCount = 0
     private(set) var completedNavigationCount = 0

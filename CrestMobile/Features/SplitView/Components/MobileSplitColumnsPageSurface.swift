@@ -75,6 +75,13 @@ struct MobileSplitColumnsPageSurface: View {
                 )
             }
         )
+        .overlay {
+            MobileHistorySwipeBorder(
+                insets: frameInsets,
+                leadingPage: members.first.flatMap(residentPage(of:)),
+                trailingPage: members.last.flatMap(residentPage(of:))
+            )
+        }
         .environment(\.browserSplitUsesBorderlessFrame, appearance.borderless)
         .onGeometryChange(for: CGRect.self) { proxy in
             proxy.frame(in: .global)
@@ -118,17 +125,21 @@ struct MobileSplitColumnsPageSurface: View {
         )
     }
 
-    /// The transparent-interior decision, made per card rather than once for the
-    /// window: a start-page or not-yet-committed card shows the Space's atmosphere
-    /// through it while loaded neighbours keep their page background.
-    private func usesTransparentInnerSurface(_ member: TabStateModel) -> Bool {
-        let page = model.pages.residentPage(
+    private func residentPage(of member: TabStateModel) -> MobileBrowserPage? {
+        model.pages.residentPage(
             matching: BrowserTabRuntimeAssignment(
                 tabID: member.id,
                 spaceID: space.id,
                 profileID: space.profileID
             )
         )
+    }
+
+    /// The transparent-interior decision, made per card rather than once for the
+    /// window: a start-page or not-yet-committed card shows the Space's atmosphere
+    /// through it while loaded neighbours keep their page background.
+    private func usesTransparentInnerSurface(_ member: TabStateModel) -> Bool {
+        let page = residentPage(of: member)
         return BrowserPageSurfacePresentation.usesTransparentInnerSurface(
             isStartPage: member.surface == .startPage,
             hasActivePage: page != nil,

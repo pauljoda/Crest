@@ -72,30 +72,77 @@ final class MobileHistorySwipe: NSObject, UIGestureRecognizerDelegate {
     // MARK: - Actions - Gesture
 
     @objc private func pan(_ recognizer: UIPanGestureRecognizer) {
-        guard let host, let direction else { return }
-        let layoutDirection = host.effectiveUserInterfaceLayoutDirection
-        let inward = direction.inwardDistance(of: recognizer.translation(in: host), layoutDirection: layoutDirection)
+        guard let host, direction != nil else { return }
+        let translation = recognizer.translation(in: host)
         switch recognizer.state {
         case .began:
-            indicatorY = min(
-                max(recognizer.location(in: host).y, host.bounds.minY + Self.indicatorVerticalInset),
-                host.bounds.maxY - Self.indicatorVerticalInset
-            )
-            isFollowing = true
-            setArmed(false, direction: direction)
-            host.addSubview(indicator)
-            follow(inward: inward, direction: direction, in: host)
+            begin(at: recognizer.location(in: host), translation: translation, in: host)
         case .changed:
-            follow(inward: inward, direction: direction, in: host)
+            move(translation: translation, in: host)
         case .ended:
-            let velocity = direction.inwardDistance(
-                of: recognizer.velocity(in: host), layoutDirection: layoutDirection)
-            let commits = inward >= Self.commitDistance || (inward > 0 && velocity >= Self.commitVelocity)
-            if commits, let page { direction.step(on: page) }
-            settle(in: host)
+            finish(translation: translation, velocity: recognizer.velocity(in: host), in: host)
         default:
             settle(in: host)
         }
+    }
+
+    // MARK: - Actions - Swipes beside the page
+
+    /// Follows a swipe that began on the frame beside the page, in from
+    /// `direction`'s edge, at `point` in the window. False where the page has
+    /// no step that way or a swipe on it is already under way.
+    func beginBesidePage(from direction: MobileHistorySwipeDirection, at point: CGPoint) -> Bool {
+        guard let host, let page, host.window != nil, recognizer.state == .possible, !isFollowing,
+            direction.isAvailable(on: page)
+        else { return false }
+        self.direction = direction
+        begin(at: host.convert(point, from: nil), translation: .zero, in: host)
+        return true
+    }
+
+    /// Moves a swipe begun beside the page `translation` points from where it began.
+    func moveBesidePage(translation: CGPoint) {
+        guard let host, isFollowing, recognizer.state == .possible else { return }
+        move(translation: translation, in: host)
+    }
+
+    /// Ends a swipe begun beside the page, taking the step if it went far or
+    /// fast enough.
+    func endBesidePage(translation: CGPoint, velocity: CGPoint) {
+        guard let host, isFollowing, recognizer.state == .possible else { return }
+        finish(translation: translation, velocity: velocity, in: host)
+    }
+
+    // MARK: - Actions - Following
+
+    private func begin(at point: CGPoint, translation: CGPoint, in host: MobileBrowserWebHostView) {
+        guard let direction else { return }
+        let pageFrame = host.pageFrame
+        indicatorY = min(
+            max(point.y, pageFrame.minY + Self.indicatorVerticalInset),
+            pageFrame.maxY - Self.indicatorVerticalInset
+        )
+        isFollowing = true
+        setArmed(false, direction: direction)
+        host.addSubview(indicator)
+        move(translation: translation, in: host)
+    }
+
+    private func move(translation: CGPoint, in host: MobileBrowserWebHostView) {
+        guard let direction else { return }
+        let inward = direction.inwardDistance(
+            of: translation, layoutDirection: host.effectiveUserInterfaceLayoutDirection)
+        follow(inward: inward, direction: direction, in: host)
+    }
+
+    private func finish(translation: CGPoint, velocity: CGPoint, in host: MobileBrowserWebHostView) {
+        guard let direction else { return }
+        let layoutDirection = host.effectiveUserInterfaceLayoutDirection
+        let inward = direction.inwardDistance(of: translation, layoutDirection: layoutDirection)
+        let inwardVelocity = direction.inwardDistance(of: velocity, layoutDirection: layoutDirection)
+        let commits = inward >= Self.commitDistance || (inward > 0 && inwardVelocity >= Self.commitVelocity)
+        if commits, let page { direction.step(on: page) }
+        settle(in: host)
     }
 
     /// Moves the page and the indicator with a finger `inward` points in from
@@ -117,7 +164,7 @@ final class MobileHistorySwipe: NSObject, UIGestureRecognizerDelegate {
         // The indicator rides in the gap the page leaves, sliding in from
         // beyond the edge; without motion it waits just inside the edge.
         let size = CrestLayout.minimumHitTarget
-        let edgeX = direction.edgeX(of: host.bounds, layoutDirection: layoutDirection)
+        let edgeX = direction.edgeX(of: host.pageFrame, layoutDirection: layoutDirection)
         let offset = reduceMotion ? size / 2 + CrestSpacing.small : shift - size / 2 - CrestSpacing.small
         indicator.bounds = CGRect(x: 0, y: 0, width: size, height: size)
         indicator.center = CGPoint(x: edgeX + offset * sign, y: indicatorY)
@@ -169,7 +216,7 @@ final class MobileHistorySwipe: NSObject, UIGestureRecognizerDelegate {
         guard let host, let page, recognizer.state == .possible else { return false }
         let landed = MobileHistorySwipeDirection.starting(
             at: touch.location(in: host),
-            in: host.bounds,
+            in: host.pageFrame,
             within: Self.edgeBandWidth,
             layoutDirection: host.effectiveUserInterfaceLayoutDirection
         )

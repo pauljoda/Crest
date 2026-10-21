@@ -51,6 +51,12 @@ struct MobileRegularPageSurface: View {
         )
     }
 
+    private var frameInsets: EdgeInsets {
+        controlPlacement.pageInsets(
+            appearance.pageInsets(docked: adjoinsSidebar, direction: layoutDirection)
+        )
+    }
+
     var body: some View {
         let presentation = pageSurfacePresentation
         return surface(presentation)
@@ -94,9 +100,7 @@ struct MobileRegularPageSurface: View {
                         .handleInteraction(.webContent)
                     model.navigation.handleRegularPageInteraction()
                 },
-                frameInsets: controlPlacement.pageInsets(
-                    appearance.pageInsets(docked: adjoinsSidebar, direction: layoutDirection)
-                ),
+                frameInsets: frameInsets,
                 content: MobileBrowserDetailSurface(
                     browser: model.browser,
                     pages: model.pages,
@@ -125,6 +129,13 @@ struct MobileRegularPageSurface: View {
                     compactTransitionEnded: compactTransitionEnded
                 )
             )
+            .overlay {
+                MobileHistorySwipeBorder(
+                    insets: frameInsets,
+                    leadingPage: model.selectedPage,
+                    trailingPage: model.selectedPage
+                )
+            }
             // The lone tab on show is a card as far as a drag is concerned: it
             // is what a dropped tab would join, and the side of it the finger
             // is on is which side of it the new card lands.

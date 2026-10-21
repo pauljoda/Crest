@@ -31,6 +31,7 @@ struct MobileBrowserWebView: UIViewRepresentable {
         context.coordinator.handleInteraction = handleInteraction
         context.coordinator.historySwipe.install(on: host)
         context.coordinator.historySwipe.page = page
+        page.historySwipe = context.coordinator.historySwipe
         installFocusRecognizerIfNeeded(on: host, coordinator: context.coordinator)
         return host
     }
@@ -40,6 +41,7 @@ struct MobileBrowserWebView: UIViewRepresentable {
         host.attach(page.webView)
         context.coordinator.handleInteraction = handleInteraction
         context.coordinator.historySwipe.page = page
+        page.historySwipe = context.coordinator.historySwipe
         installFocusRecognizerIfNeeded(on: host, coordinator: context.coordinator)
     }
 
