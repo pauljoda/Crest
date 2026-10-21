@@ -4253,6 +4253,14 @@
     "mobile-edge-swipe-back-forward": {
       "category": "new",
       "message": "On iPhone and iPad, swipe in from a page's left edge to go back and from its right edge to go forward. With the sidebar hidden on iPad, a swipe in from the top or bottom of its edge still brings the sidebar back."
+    },
+    "iphone-duo-layout": {
+      "category": "new",
+      "message": "On iPhone Duo, Crest's controls move to the side bar where iOS puts them, pages use the outer display's full width, the open display's page and sidebar reach its edges, and folded like a book the sidebar and page, or a Split View's two pages, each take one side of the fold."
+    },
+    "no-room-for-hidden-keyboard": {
+      "category": "fixed",
+      "message": "On iPhone and iPad, Crest no longer leaves an empty band at the bottom of the window for a keyboard that isn't on screen."
     }
   }
 }
