@@ -4277,6 +4277,10 @@
     "split-view-shows-every-page-on-open": {
       "category": "fixed",
       "message": "On iPhone Duo, a Split View made on the outer display shows both of its pages when you open the phone, instead of one staying blank until you tap it."
+    },
+    "narrower-default-sidebar-ipad": {
+      "category": "improved",
+      "message": "On iPad and iPhone Duo, the sidebar starts narrower, leaving more of the window to the page."
     }
   }
 }

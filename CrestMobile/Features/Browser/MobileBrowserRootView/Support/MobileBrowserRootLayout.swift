@@ -35,7 +35,7 @@ enum MobileBrowserChromeLayout {
 
 /// Geometry and timing owned by the mobile browser composition shell.
 enum MobileBrowserRootLayout {
-    static let defaultRegularSidebarWidth: CGFloat = 320
+    static let defaultRegularSidebarWidth: CGFloat = 240
     static let resizeHandleOverlap: CGFloat = 8
 
     /// The system's layout margin, kept between chrome and a display edge
