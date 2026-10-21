@@ -18,8 +18,8 @@ struct MobileSplitCardPager: View {
     ///
     /// `false` for 0.4, and the pager is `scrollDisabled` because of it. A
     /// horizontal `ScrollView` wrapped around live `WKWebView`s competes with
-    /// every page's own horizontal pan — carousels, maps, code blocks, and
-    /// WebKit's own back/forward edge swipe — and the loser of that arbitration
+    /// every page's own horizontal pan — carousels, maps, code blocks, and the
+    /// back/forward edge swipe — and the loser of that arbitration
     /// is whichever one the person actually meant. Paging is therefore
     /// programmatic: the toolbar swipe commits a selection and the pager
     /// animates to it. Direct content-drag paging is a post-0.4 gesture spike.

@@ -4245,6 +4245,10 @@
     "appearance-preview-concentric-page-corners": {
       "category": "fixed",
       "message": "On iPhone and iPad, the page in the Appearance window preview rounds its corners with the preview's, so the window border keeps its width all the way around."
+    },
+    "mobile-edge-swipe-back-forward": {
+      "category": "new",
+      "message": "On iPhone and iPad, swipe in from a page's left edge to go back and from its right edge to go forward. With the sidebar hidden on iPad, a swipe in from the top or bottom of its edge still brings the sidebar back."
     }
   }
 }

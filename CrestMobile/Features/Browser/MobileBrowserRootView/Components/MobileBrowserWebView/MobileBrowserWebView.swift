@@ -4,9 +4,7 @@ import UIKit
 struct MobileBrowserWebView: UIViewRepresentable {
     let page: MobileBrowserPage
     var viewport = MobileBrowserPageViewport.inline
-    /// Observes page taps without taking them away from WebKit. Horizontal pans
-    /// remain exclusively WebKit's so native back/forward navigation keeps its
-    /// normal recognition priority.
+    /// Observes page taps without taking them away from WebKit.
     var handleInteraction: (() -> Void)?
     /// An unfocused split card's request to become the focused one.
     ///
@@ -31,6 +29,8 @@ struct MobileBrowserWebView: UIViewRepresentable {
             )
         }
         context.coordinator.handleInteraction = handleInteraction
+        context.coordinator.historySwipe.install(on: host)
+        context.coordinator.historySwipe.page = page
         installFocusRecognizerIfNeeded(on: host, coordinator: context.coordinator)
         return host
     }
@@ -39,6 +39,7 @@ struct MobileBrowserWebView: UIViewRepresentable {
         host.configureViewport(viewport)
         host.attach(page.webView)
         context.coordinator.handleInteraction = handleInteraction
+        context.coordinator.historySwipe.page = page
         installFocusRecognizerIfNeeded(on: host, coordinator: context.coordinator)
     }
 

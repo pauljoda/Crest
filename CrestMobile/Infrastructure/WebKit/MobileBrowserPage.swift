@@ -286,7 +286,9 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         #endif
         webView.navigationDelegate = self
         webView.uiDelegate = self
-        webView.allowsBackForwardNavigationGestures = true
+        // Crest's own edge swipe steps the core's history
+        // (`MobileHistorySwipe`); WebKit's would walk its own list.
+        webView.allowsBackForwardNavigationGestures = false
         webView.allowsLinkPreview = true
         if let mediaSessionStore {
             let coordinator = BrowserMediaSessionPageCoordinator(
