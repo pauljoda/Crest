@@ -376,6 +376,9 @@
         }
       }
     },
+    "%@, %lld of %lld" : {
+
+    },
     "%@, build %@, bundle identifier: %@" : {
 
     },
@@ -8017,6 +8020,9 @@
         }
       }
     },
+    "Most Recent Tab Backward" : {
+
+    },
     "Most Stars" : {
 
     },
@@ -10217,6 +10223,9 @@
     "Rearrange Spaces" : {
 
     },
+    "Recent tabs" : {
+
+    },
     "Recent Tabs" : {
 
     },
@@ -12072,6 +12081,9 @@
           }
         }
       }
+    },
+    "Show recent tabs while switching" : {
+
     },
     "Show Saved Files" : {
 
@@ -15070,6 +15082,12 @@
           }
         }
       }
+    },
+    "When off, %@ jumps to your last tab without showing previews." : {
+
+    },
+    "When off, switching jumps to your last tab without showing previews." : {
+
     },
     "When URL" : {
 

@@ -14,11 +14,18 @@ internal sealed class Window {
     /// A split group renders only with at least this many members.
     private const int MinimumSplitMembers = 2;
 
+    /// The most items a Space's recent tabs hold, the shown one included.
+    private const int RecentLimit = 5;
+
     /// The tab shown in each Space; null when the window shows none there.
     private readonly Dictionary<Guid, Guid?> tabs;
     private readonly Dictionary<Guid, IReadOnlyList<double>> shares;
     /// Each Space's shown tabs, most recent last. Kept in memory only.
     private readonly Dictionary<Guid, List<Guid>> recent;
+    /// The tabs in `recent`, by Space, that no person saw on screen.
+    private readonly HashSet<(Guid SpaceId, Guid TabId)> unseen;
+    /// The tabs in `recent`, by Space, that another window took over.
+    private readonly HashSet<(Guid SpaceId, Guid TabId)> departed;
 
     public Guid Id { get; }
     public Guid WorkspaceId { get; }
@@ -34,7 +41,8 @@ internal sealed class Window {
     #region Constructors
 
     private Window(Guid id, Guid workspaceId, bool saved, Guid shownSpaceId, Dictionary<Guid, Guid?> tabs,
-        Dictionary<Guid, IReadOnlyList<double>> shares, Dictionary<Guid, List<Guid>> recent) {
+        Dictionary<Guid, IReadOnlyList<double>> shares, Dictionary<Guid, List<Guid>> recent,
+        HashSet<(Guid SpaceId, Guid TabId)> unseen, HashSet<(Guid SpaceId, Guid TabId)> departed) {
         Id = id;
         WorkspaceId = workspaceId;
         Saved = saved;
@@ -42,16 +50,18 @@ internal sealed class Window {
         this.tabs = tabs;
         this.shares = shares;
         this.recent = recent;
+        this.unseen = unseen;
+        this.departed = departed;
     }
 
     /// A window that shows what `record` kept.
     public static Window Restoring(SavedWindow record, Guid workspaceId) => new(record.Id, workspaceId, saved: true,
         record.ShownSpaceId, record.Tabs.ToDictionary(tab => tab.SpaceId, tab => tab.TabId),
-        record.Shares.ToDictionary(group => group.GroupId, group => group.Shares), []);
+        record.Shares.ToDictionary(group => group.GroupId, group => group.Shares), [], [], []);
 
     /// A window that starts as `other` shows, without its split columns.
     public static Window Copying(Window other, Guid id, bool saved) =>
-        new(id, other.WorkspaceId, saved, other.ShownSpaceId, new(other.tabs), [], []);
+        new(id, other.WorkspaceId, saved, other.ShownSpaceId, new(other.tabs), [], [], [], []);
 
     /// A window on `session`'s launch Space: its default Space unless that is
     /// being deleted, else the first Space. `legacyTabs` are the tabs an older
@@ -61,7 +71,7 @@ internal sealed class Window {
         var launch = LaunchSpace(session);
         var window = new Window(id, workspaceId, saved, launch?.Id ?? Guid.Empty,
             legacyTabs.Where(entry => session.Spaces.Any(space => space.Id == entry.Key && Contains(space, entry.Value)))
-                .ToDictionary(entry => entry.Key, entry => (Guid?)entry.Value), [], []);
+                .ToDictionary(entry => entry.Key, entry => (Guid?)entry.Value), [], [], [], []);
         if (launch is not null) window.ShowSpace(launch);
         return window;
     }
@@ -114,7 +124,7 @@ internal sealed class Window {
 
     /// A copy a command reads while the device keeps editing the window.
     public Window Snapshot() => new(Id, WorkspaceId, Saved, ShownSpaceId, new(tabs), new(shares),
-        recent.ToDictionary(entry => entry.Key, entry => new List<Guid>(entry.Value)));
+        recent.ToDictionary(entry => entry.Key, entry => new List<Guid>(entry.Value)), [.. unseen], [.. departed]);
 
     #endregion
 
@@ -122,6 +132,26 @@ internal sealed class Window {
 
     /// The tab the window shows in a Space, or null when it shows none there.
     public Guid? Tab(Guid spaceId) => tabs.GetValueOrDefault(spaceId);
+
+    /// The tabs the window showed in `space`, as the items a person switches
+    /// between, the shown one first and then the rest most recent first, up to
+    /// the limit. The members of a split are one item, at the place of the
+    /// member shown last, which the item focuses; a Start Page leaves out of
+    /// every item but the shown one, and a tab the Space no longer holds drops
+    /// out. A window that shows no tab in `space` has none.
+    public IReadOnlyList<RecentTabItem> RecentItems(SpaceState space) {
+        ArgumentNullException.ThrowIfNull(space);
+        if (Tab(space.Id) is not { } shown || !Contains(space, shown)) return [];
+        List<RecentTabItem> items = [new(Cards(space, shown).TabIds, shown)];
+        if (!recent.TryGetValue(space.Id, out var history)) return items;
+        for (int index = history.Count - 1; index >= 0 && items.Count < RecentLimit; index--) {
+            var tab = space.Tabs.FirstOrDefault(candidate => candidate.Id == history[index]);
+            if (tab is null || tab.IsStartPage || unseen.Contains((space.Id, tab.Id))
+                || departed.Contains((space.Id, tab.Id)) || items.Any(item => item.TabIds.Contains(tab.Id))) continue;
+            items.Add(new(Cards(space, tab.Id).TabIds, tab.Id));
+        }
+        return items;
+    }
 
     /// Shows `space`, on the tab the window showed there while it still
     /// exists, else on the Space's fallback tab.
@@ -140,6 +170,8 @@ internal sealed class Window {
         tabs.Clear();
         shares.Clear();
         recent.Clear();
+        unseen.Clear();
+        departed.Clear();
     }
 
     /// Shows `tabId` in its Space, moving the window there when `moves`, or
@@ -147,7 +179,25 @@ internal sealed class Window {
     public void ShowTab(Guid spaceId, Guid? tabId, bool moves) {
         if (moves && tabId is not null) ShownSpaceId = spaceId;
         tabs[spaceId] = tabId;
+        if (tabId is { } shown) departed.Remove((spaceId, shown));
         Remember(spaceId);
+    }
+
+    /// Shows `tabId` in `spaceId` for a window that is opening, as `ShowTab`
+    /// does, except that what the window had placed on its own there was never
+    /// on screen for a person, so the recent tabs leave it out. The history
+    /// keeps it, which the dismissal fallback reads.
+    public void Adopt(Guid spaceId, Guid? tabId) {
+        if (recent.TryGetValue(spaceId, out var history)) unseen.UnionWith(history.Select(placed => (spaceId, placed)));
+        ShowTab(spaceId, tabId, moves: false);
+    }
+
+    /// Forgets `tabId` in `spaceId` because another window took it over: the
+    /// history drops it, and the recent tabs leave it out until the window
+    /// shows it again. The window may keep showing it meanwhile.
+    public void Depart(Guid spaceId, Guid tabId) {
+        if (recent.TryGetValue(spaceId, out var history)) history.Remove(tabId);
+        departed.Add((spaceId, tabId));
     }
 
     /// Applies what a command chose for this window to show next.
@@ -156,6 +206,7 @@ internal sealed class Window {
             if (recent.TryGetValue(spaceId, out var history)) history.Remove(tabId);
         foreach (var (spaceId, tabId) in followUp.Tabs) {
             tabs[spaceId] = tabId;
+            if (tabId is { } shown) departed.Remove((spaceId, shown));
             Remember(spaceId);
         }
         if (followUp.SpaceId is { } space) ShownSpaceId = space;
@@ -208,6 +259,7 @@ internal sealed class Window {
 
     private void Remember(Guid spaceId) {
         if (tabs.GetValueOrDefault(spaceId) is not { } tabId) return;
+        unseen.Remove((spaceId, tabId));
         if (!recent.TryGetValue(spaceId, out var history)) recent[spaceId] = history = [];
         if (history.Count > 0 && history[^1] == tabId) return;
         history.Remove(tabId);

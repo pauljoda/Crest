@@ -2,26 +2,24 @@ using CrestCore.Application;
 
 namespace CrestCore.Contracts;
 
-/// Shows the tab of the window's Space used most recently other than the one
-/// it shows, recording its use as `ShowTab` does. Publishes nothing when the
-/// window shows no tab or the Space holds no other.
+/// Shows the second of the window's recent tabs (see `RecentTabs`), the one
+/// it showed before the one on screen, recording its use as `ShowTab` does.
+/// A split is one item and shows the page used last. Publishes nothing when
+/// the window has shown no other tab in its Space.
 public sealed record ShowMostRecentTab(Guid WindowId) : WindowIntent {
     #region Actions - Device
 
-    /// Shows the tab of the window's Space used most recently other than the
-    /// one it shows, the way `ShowTab` does.
+    /// Shows the second recent item's focused tab the way `ShowTab` does.
     internal override void Apply(Device device, DeviceTurn turn) {
         var window = device.Opened(WindowId);
         var session = device.Workspace(window.WorkspaceId).Current;
         Guid spaceId;
-        Guid? shown;
+        IReadOnlyList<RecentTabItem> items;
         lock (device.Gate) {
             spaceId = window.ShownSpaceId;
-            shown = window.Tab(spaceId);
+            items = Device.Available(session, spaceId) is { } space ? window.RecentItems(space) : [];
         }
-        if (Device.Available(session, spaceId) is not { } space || shown is not { } tabId
-            || space.Tabs.Where(tab => tab.Id != tabId).MaxBy(tab => tab.LastActivatedAt) is not { } recent) return;
-        new ShowTab(WindowId, space.Id, recent.Id).Apply(device, turn);
+        if (items.Count > 1) new ShowTab(WindowId, spaceId, items[1].FocusedTabId).Apply(device, turn);
     }
 
     #endregion

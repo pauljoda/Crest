@@ -12,6 +12,8 @@ struct MobileBrowserCommandContext {
     let canDuplicateSelectedTab: Bool
     let canReopenClosedTab: Bool
     let tabCount: Int
+    /// Whether the window has a second tab or split in its recent order.
+    let canJumpToRecentTab: Bool
     let spaceCount: Int
     /// Where each numbered command leads in this window, per the core.
     let numberedSelections: [ShortcutCommand: NumberedSelection]
@@ -46,6 +48,7 @@ struct MobileBrowserCommandContext {
     let selectPreviousTab: () -> Void
     let selectNextTab: () -> Void
     let selectMostRecentTab: () -> Void
+    let selectLeastRecentTab: () -> Void
     let selectTab: (UUID) -> Void
     let splitWithNextTab: () -> Void
     let focusNextSplitCard: () -> Void

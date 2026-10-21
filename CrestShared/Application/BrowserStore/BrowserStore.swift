@@ -121,6 +121,36 @@ final class BrowserStore {
         return true
     }
 
+    /// Shows the tab of this window's Space used least recently, which the
+    /// core chooses. False when there is none.
+    @discardableResult
+    func showLeastRecentTab() -> Bool {
+        let shown = shownTab?.id
+        guard sendWindowIntent(ShowLeastRecentTab(windowID: windowID)), shownTab?.id != shown else { return false }
+        windowRevision &+= 1
+        return true
+    }
+
+    /// This window's tabs and splits from the one it shows to the one used
+    /// longest ago, as the core orders them; empty when it shows no tab.
+    func recentTabItems() -> [RecentTabItem] {
+        (try? core.query(RecentTabs(windowID: windowID)))?.items ?? []
+    }
+
+    /// Shows the tab or split `item` stands for, focusing the tab the core
+    /// named. False when the core showed nothing new.
+    @discardableResult
+    func showRecentTab(_ item: RecentTabItem) -> Bool {
+        guard let spaceID = shownSpace?.id else { return false }
+        let shown = shownTab?.id
+        guard
+            sendWindowIntent(ShowTab(windowID: windowID, spaceID: spaceID, tabID: item.focusedTabID)),
+            shownTab?.id != shown
+        else { return false }
+        windowRevision &+= 1
+        return true
+    }
+
     func clearPresentedTabSelection(in spaceID: UUID) {
         guard sendWindowIntent(ShowTab(windowID: windowID, spaceID: spaceID, tabID: nil)) else {
             return

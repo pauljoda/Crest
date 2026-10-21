@@ -105,6 +105,18 @@ struct MobileBrowserCommandController {
         return browser.shownTab?.id
     }
 
+    @discardableResult
+    func selectLeastRecentTab() -> UUID? {
+        guard browser.showLeastRecentTab() else { return nil }
+        synchronizePages()
+        return browser.shownTab?.id
+    }
+
+    /// Whether this window has another tab or split to jump to.
+    var canJumpToRecentTab: Bool {
+        browser.recentTabItems().count >= 2
+    }
+
     /// Shows the tab a numbered command leads to, in the Space this window shows.
     @discardableResult
     func selectNumberedTab(_ tabID: UUID) -> UUID? {

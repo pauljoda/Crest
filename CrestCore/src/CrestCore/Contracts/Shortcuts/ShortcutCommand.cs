@@ -74,7 +74,8 @@ public sealed class ShortcutCommand {
         ToggleTranslationToolbar,
         OpenFile,
         FindNext,
-        FindPrevious
+        FindPrevious,
+        MostRecentTabBackward
     }
 
     #endregion
@@ -148,6 +149,12 @@ public sealed class ShortcutCommand {
         ShortcutSection.Tabs, title: "Most Recent Tab", symbol: "arrow.left.arrow.right",
         shortcuts: Everywhere(Special(ShortcutSpecialKey.Tab, Control)), searchTerms: "toggle recent switch tabs",
         reservedFromPages: true);
+    public static readonly ShortcutCommand MostRecentTabBackward = new(Kinds.MostRecentTabBackward,
+        name: "mostRecentTabBackward", ShortcutSection.Tabs, title: "Most Recent Tab Backward",
+        symbol: "arrow.left.arrow.right",
+        shortcuts: [.. DevicePlatform.All.Select(platform =>
+            new ShortcutDefault(platform, Special(ShortcutSpecialKey.Tab, Control | Shift), YieldsToOverrides: true))],
+        searchTerms: "toggle recent switch tabs oldest back", reservedFromPages: true);
     public static readonly ShortcutCommand SelectTab1 = SelectingTab(name: "selectTab1", number: 1);
     public static readonly ShortcutCommand SelectTab2 = SelectingTab(name: "selectTab2", number: 2);
     public static readonly ShortcutCommand SelectTab3 = SelectingTab(name: "selectTab3", number: 3);
@@ -284,7 +291,7 @@ public sealed class ShortcutCommand {
         ExportPDF, SaveWebArchive, PrintPage, ToggleSidebar, ShowHistory, ShowArchive, ShowDownloads, ShowWebInspector,
         SplitWithNextTab, FocusNextSplitCard, FocusPreviousSplitCard, RemoveTabFromSplit, SeparateSplitTabs,
         MoveSplitCardLeft, MoveSplitCardRight, ToggleDeveloperToolbar, ToggleTranslationToolbar, OpenFile, FindNext,
-        FindPrevious
+        FindPrevious, MostRecentTabBackward
     ];
 
     public Kinds Kind { get; }

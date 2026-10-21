@@ -216,7 +216,16 @@ struct MobileBrowserCommands: Commands {
                 context?.selectMostRecentTab()
             }
             .keyboardShortcut(shortcut(.mostRecentTab))
-            .disabled((context?.tabCount ?? 0) < 2)
+            .disabled(context?.canJumpToRecentTab != true)
+
+            Button(
+                "Most Recent Tab Backward",
+                systemImage: ShortcutCommand.mostRecentTabBackward.symbol
+            ) {
+                context?.selectLeastRecentTab()
+            }
+            .keyboardShortcut(shortcut(.mostRecentTabBackward))
+            .disabled(context?.canJumpToRecentTab != true)
 
             Divider()
 

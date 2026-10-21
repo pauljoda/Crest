@@ -39,6 +39,7 @@ extension MobileBrowserRootModel {
             canDuplicateSelectedTab: controller.canDuplicateSelectedTab,
             canReopenClosedTab: controller.canReopenClosedTab,
             tabCount: controller.tabCount,
+            canJumpToRecentTab: controller.canJumpToRecentTab,
             spaceCount: browser.spaceModels.count,
             numberedSelections: browser.core.numberedSelections(windowID: browser.windowID),
             isSelectedTabInSplit: controller.isSelectedTabInSplit,
@@ -102,6 +103,11 @@ extension MobileBrowserRootModel {
             },
             selectMostRecentTab: {
                 _ = self.selectMostRecentTabFromCommand(
+                    beforeSynchronization: prepareForSelectionSynchronization
+                )
+            },
+            selectLeastRecentTab: {
+                _ = self.selectLeastRecentTabFromCommand(
                     beforeSynchronization: prepareForSelectionSynchronization
                 )
             },
@@ -271,6 +277,16 @@ extension MobileBrowserRootModel {
         beforeSynchronization: () -> Void = {}
     ) -> Bool {
         guard commandController.selectMostRecentTab() != nil else { return false }
+        beforeSynchronization()
+        synchronizeAfterCommandSelection()
+        return true
+    }
+
+    @discardableResult
+    func selectLeastRecentTabFromCommand(
+        beforeSynchronization: () -> Void = {}
+    ) -> Bool {
+        guard commandController.selectLeastRecentTab() != nil else { return false }
         beforeSynchronization()
         synchronizeAfterCommandSelection()
         return true

@@ -4877,6 +4877,21 @@ struct ReassignShortcut: Intent, ShortcutIntent, Equatable, Sendable {
     let keys: KeyCombination
 }
 
+struct RecentTabItem: Equatable, Sendable {
+    let tabIDs: [UUID]
+    let focusedTabID: UUID
+}
+
+struct RecentTabList: Equatable, Sendable {
+    let items: [RecentTabItem]
+}
+
+struct RecentTabs: Query, Equatable, Sendable {
+    typealias Answer = RecentTabList
+
+    let windowID: UUID
+}
+
 struct RecordCloudFields: Intent, CloudTransportIntent, Equatable, Sendable {
     let updated: [CloudRecordFields]
     let removed: [String]
@@ -5835,6 +5850,10 @@ struct ShowHistoryEntry: Intent, PageIntent, Equatable, Sendable {
 
 struct ShowImportSpace: Intent, SetupFlowIntent, Equatable, Sendable {
     let sourceSpaceID: UUID
+}
+
+struct ShowLeastRecentTab: Intent, WindowIntent, Equatable, Sendable {
+    let windowID: UUID
 }
 
 struct ShowMostRecentTab: Intent, WindowIntent, Equatable, Sendable {
@@ -17177,6 +17196,7 @@ struct ShortcutCommand: Hashable, Sendable {
         case openFile
         case findNext
         case findPrevious
+        case mostRecentTabBackward
     }
 
     let tag: Int
@@ -19067,6 +19087,34 @@ struct ShortcutCommand: Hashable, Sendable {
         offersInPalette: true,
         isReservedFromPages: false
     )
+    static let mostRecentTabBackward = ShortcutCommand(
+        tag: 70,
+        kind: .mostRecentTabBackward,
+        name: "mostRecentTabBackward",
+        section: ShortcutSection.tabs,
+        title: LocalizedStringResource("Most Recent Tab Backward"),
+        searchTerms: LocalizedStringResource("toggle recent switch tabs oldest back"),
+        menuTitle: nil,
+        symbol: "arrow.left.arrow.right",
+        requiredCapability: nil,
+        selects: nil,
+        number: nil,
+        defaultShortcuts: [
+            ShortcutDefault(
+                platform: DevicePlatform.desktop,
+                keys: KeyCombination(key: "tab", isSpecialKey: true, modifiers: [.control, .shift]),
+                yieldsToOverrides: true
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.mobile,
+                keys: KeyCombination(key: "tab", isSpecialKey: true, modifiers: [.control, .shift]),
+                yieldsToOverrides: true
+            )
+        ],
+        paletteRest: nil,
+        offersInPalette: true,
+        isReservedFromPages: true
+    )
 
     static let all: [ShortcutCommand] = [
         newWindow,
@@ -19138,7 +19186,8 @@ struct ShortcutCommand: Hashable, Sendable {
         toggleTranslationToolbar,
         openFile,
         findNext,
-        findPrevious
+        findPrevious,
+        mostRecentTabBackward
     ]
 
     static func named(_ name: String?) -> ShortcutCommand? {
@@ -19269,7 +19318,12 @@ struct ShortcutMenu: Hashable, Sendable {
                 ShortcutCommand.clearUnpinnedTabs,
                 ShortcutCommand.archiveTab
             ],
-            [ShortcutCommand.previousTab, ShortcutCommand.nextTab, ShortcutCommand.mostRecentTab],
+            [
+                ShortcutCommand.previousTab,
+                ShortcutCommand.nextTab,
+                ShortcutCommand.mostRecentTab,
+                ShortcutCommand.mostRecentTabBackward
+            ],
             [
                 ShortcutCommand.splitWithNextTab,
                 ShortcutCommand.focusNextSplitCard,

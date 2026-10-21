@@ -35,6 +35,9 @@ extension BrowserMacShell {
     /// such as the location field or the sidebar, get every Crest shortcut
     /// before they see the key.
     func handleShortcut(_ event: NSEvent, pageSeesFirst: Bool) -> Bool {
+        // While a Most Recent Tab shortcut is held, its keys are the
+        // switcher's and no page or command sees them.
+        if event.type == .keyDown, recentTabSwitcher.handleKeyDown(event) { return true }
         guard let windows, let application, event.type == .keyDown,
             NSApp.modalWindow == nil, NSApp.keyWindow?.attachedSheet == nil,
             (NSApp.keyWindow?.firstResponder as? ShortcutRecorderButton)?.isRecording != true,
@@ -56,6 +59,11 @@ extension BrowserMacShell {
         guard context != nil || windows.isQuickWindowKey else { return false }
         if let command = application.shortcuts.command(for: event, isEnabled: canPerform) {
             guard command.isReservedFromPages || !pageSeesFirst else { return false }
+            if let direction = BrowserMacCommand.of(command)?.recentTabDirection,
+                recentTabSwitcher.begin(direction: direction)
+            {
+                return true
+            }
             perform(command)
             return true
         }

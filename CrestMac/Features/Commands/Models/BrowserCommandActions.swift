@@ -405,6 +405,17 @@ struct BrowserCommandActions: BrowserNumberedSelectionPerformer {
         pages.select()
     }
 
+    func selectLeastRecentTab() {
+        guard browser.showLeastRecentTab() else { return }
+        pages.select()
+    }
+
+    /// Shows the tab or split a held Most Recent Tab shortcut chose.
+    func selectRecentTab(_ item: RecentTabItem) {
+        guard browser.showRecentTab(item) else { return }
+        pages.select()
+    }
+
     func selectAdjacentTab(_ direction: AdjacentDirection) {
         guard browser.selectAdjacentTab(direction) != nil else { return }
         pages.select()

@@ -23,7 +23,10 @@ struct MobileBrowserCommand {
     static let archiveTab = MobileBrowserCommand(.archiveTab) { $0.archiveSelectedTab() }
     static let previousTab = MobileBrowserCommand(.previousTab) { $0.selectPreviousTab() }
     static let nextTab = MobileBrowserCommand(.nextTab) { $0.selectNextTab() }
-    static let mostRecentTab = MobileBrowserCommand(.mostRecentTab) { $0.selectMostRecentTab() }
+    static let mostRecentTab = MobileBrowserCommand(
+        .mostRecentTab, isAvailable: { $0.canJumpToRecentTab }, run: { $0.selectMostRecentTab() })
+    static let mostRecentTabBackward = MobileBrowserCommand(
+        .mostRecentTabBackward, isAvailable: { $0.canJumpToRecentTab }, run: { $0.selectLeastRecentTab() })
     static let splitWithNextTab = MobileBrowserCommand(.splitWithNextTab) { $0.splitWithNextTab() }
     static let focusNextSplitCard = MobileBrowserCommand(.focusNextSplitCard) { $0.focusNextSplitCard() }
     static let focusPreviousSplitCard = MobileBrowserCommand(.focusPreviousSplitCard) { $0.focusPreviousSplitCard() }
@@ -58,7 +61,8 @@ struct MobileBrowserCommand {
     static let all = [
         closeTabOrWindow, back, forward, reloadPage, stopLoading, reloadFromOrigin, toggleSelectedTabPinned,
         duplicateTab,
-        reopenClosedTab, clearUnpinnedTabs, archiveTab, previousTab, nextTab, mostRecentTab, splitWithNextTab,
+        reopenClosedTab, clearUnpinnedTabs, archiveTab, previousTab, nextTab, mostRecentTab, mostRecentTabBackward,
+        splitWithNextTab,
         focusNextSplitCard,
         focusPreviousSplitCard, removeTabFromSplit, separateSplitTabs, moveSplitCardLeft, moveSplitCardRight,
         previousSpace,

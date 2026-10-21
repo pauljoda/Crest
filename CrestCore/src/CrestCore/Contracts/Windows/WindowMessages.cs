@@ -22,6 +22,16 @@ public enum TearOffRefusal {
 /// about, or null for a Space without tabs.
 public sealed record FallbackTabIndex(int? Index);
 
+/// What a window's person switches between in the Space it shows: up to five
+/// items, the one on screen first, then the rest most recent first. Empty
+/// when the window shows no tab there.
+public sealed record RecentTabList(IReadOnlyList<RecentTabItem> Items);
+
+/// One thing to switch to: a tab, or the tabs of a split, which are one item.
+/// `TabIds` are its tabs in the order they show side by side, and
+/// `FocusedTabId` is the one to show, the one of a split used last.
+public sealed record RecentTabItem(IReadOnlyList<Guid> TabIds, Guid FocusedTabId);
+
 /// The tab "Split With Next Tab" would add, or null when it would add none.
 public sealed record SplitJoinCandidateTab(Guid? TabId);
 

@@ -47,7 +47,10 @@ struct BrowserMacCommand {
     static let archiveTab = BrowserMacCommand(.archiveTab) { $0.archiveSelectedTab() }
     static let previousTab = BrowserMacCommand(.previousTab) { $0.selectPreviousTab() }
     static let nextTab = BrowserMacCommand(.nextTab) { $0.selectNextTab() }
-    static let mostRecentTab = BrowserMacCommand(.mostRecentTab) { $0.selectMostRecentTab() }
+    static let mostRecentTab = BrowserMacCommand(
+        .mostRecentTab, recentTabDirection: .forward, run: { $0.selectMostRecentTab() })
+    static let mostRecentTabBackward = BrowserMacCommand(
+        .mostRecentTabBackward, recentTabDirection: .backward, run: { $0.selectLeastRecentTab() })
     static let splitWithNextTab = BrowserMacCommand(.splitWithNextTab) { $0.splitWithNextTab() }
     static let focusNextSplitCard = BrowserMacCommand(.focusNextSplitCard) { $0.focusAdjacentSplitCard(offset: 1) }
     static let focusPreviousSplitCard = BrowserMacCommand(.focusPreviousSplitCard) {
@@ -141,7 +144,8 @@ struct BrowserMacCommand {
         closeWindow,
         back, forward, reloadPage, stopLoading, reloadFromOrigin, toggleSelectedTabPinned, duplicateTab,
         reopenClosedTab,
-        clearUnpinnedTabs, archiveTab, previousTab, nextTab, mostRecentTab, splitWithNextTab, focusNextSplitCard,
+        clearUnpinnedTabs, archiveTab, previousTab, nextTab, mostRecentTab, mostRecentTabBackward,
+        splitWithNextTab, focusNextSplitCard,
         focusPreviousSplitCard, removeTabFromSplit, separateSplitTabs, moveSplitCardLeft, moveSplitCardRight,
         previousSpace, nextSpace,
         toggleReaderMode, toggleContentBlocking, findInPage, findNext, findPrevious, zoomIn, zoomOut, actualSize,
@@ -183,6 +187,11 @@ struct BrowserMacCommand {
     /// as finding again before any search.
     let waitsInPaletteUntilAvailable: Bool
 
+    /// Which way the command goes through the recent tabs when a held key
+    /// begins it, or nil for a command that is not one of them. Chosen from
+    /// the menu bar or the palette it jumps at once.
+    let recentTabDirection: RecentTabSwitchDirection?
+
     // MARK: - Initializers
 
     private init(
@@ -193,11 +202,13 @@ struct BrowserMacCommand {
         isOn: @escaping @MainActor (BrowserCommandActions) -> Bool? = { _ in nil },
         withoutWindow: BrowserMacWindowlessCommand? = nil,
         waitsInPaletteUntilAvailable: Bool = false,
+        recentTabDirection: RecentTabSwitchDirection? = nil,
         run: @escaping @MainActor (BrowserCommandActions) -> Void
     ) {
         self.init(
             kind, actsOnPage: actsOnPage, isAvailable: { actions, _ in isAvailable(actions) }, title: title,
             isOn: isOn, withoutWindow: withoutWindow, waitsInPaletteUntilAvailable: waitsInPaletteUntilAvailable,
+            recentTabDirection: recentTabDirection,
             run: { actions, _ in run(actions) })
     }
 
@@ -209,6 +220,7 @@ struct BrowserMacCommand {
         isOn: @escaping @MainActor (BrowserCommandActions) -> Bool? = { _ in nil },
         withoutWindow: BrowserMacWindowlessCommand? = nil,
         waitsInPaletteUntilAvailable: Bool = false,
+        recentTabDirection: RecentTabSwitchDirection? = nil,
         run: @escaping @MainActor (BrowserCommandActions, ShortcutCommand) -> Void
     ) {
         self.kind = kind
@@ -218,6 +230,7 @@ struct BrowserMacCommand {
         self.isOn = isOn
         self.withoutWindow = withoutWindow
         self.waitsInPaletteUntilAvailable = waitsInPaletteUntilAvailable
+        self.recentTabDirection = recentTabDirection
         self.run = run
     }
 
