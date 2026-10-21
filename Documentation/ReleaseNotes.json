@@ -4273,6 +4273,10 @@
     "sidebar-keeps-space-across-displays": {
       "category": "fixed",
       "message": "On iPhone Duo, opening or closing the phone keeps the sidebar and its colors on the Space you're in instead of showing your first Space."
+    },
+    "split-view-shows-every-page-on-open": {
+      "category": "fixed",
+      "message": "On iPhone Duo, a Split View made on the outer display shows both of its pages when you open the phone, instead of one staying blank until you tap it."
     }
   }
 }

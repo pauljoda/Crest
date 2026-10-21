@@ -459,12 +459,16 @@ extension MobileBrowserRootModel {
         address = browser.shownTab?.url ?? ""
     }
 
-    /// Builds a page for every column of an iPad split.
+    /// Builds and presents a page for every column of an iPad split.
     ///
     /// Columns are all visible at once, so all of them load — the lazy,
     /// focused-±1 residency the phone's carousel gets is a property of showing
-    /// one card at a time, not of the platform.
+    /// one card at a time, not of the platform. Selecting presents them too: a
+    /// split made while the window showed none of its pages, as from iPhone
+    /// Duo's outer display before opening it, has only its focused card
+    /// presented, and its other columns would stay empty until tapped.
     func prepareSplitCardPages() {
+        pages.select()
         for member in presentedSplitMembers {
             pages.prepareResidentPage(for: member.id)
         }
