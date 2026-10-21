@@ -263,6 +263,10 @@ final class MobileBrowserNavigationState {
             hideRegularSidebar()
         } else if hidSidebarForFoldedSplit {
             hidSidebarForFoldedSplit = false
+            // The sidebar was docked before the fold put it away, so a narrow
+            // window that docked it again meanwhile must not hide it on
+            // widening.
+            dockedHiddenSidebarWhileNarrow = false
             if regularSidebarPresentation != .docked {
                 dockRegularSidebar()
             }
