@@ -4254,6 +4254,10 @@
       "category": "new",
       "message": "On iPhone and iPad, swipe in from a page's left edge to go back and from its right edge to go forward. With the sidebar hidden on iPad, a swipe in from the top or bottom of its edge still brings the sidebar back."
     },
+    "setup-color-strip-clip": {
+      "category": "fixed",
+      "message": "In setup, the color and emblem rows on Make it yours stay inside their panel while you scroll them, instead of drawing over the window preview."
+    },
     "iphone-duo-layout": {
       "category": "new",
       "message": "On iPhone Duo, Crest's controls move to the side bar where iOS puts them, pages use the outer display's full width, the open display's page and sidebar reach its edges, and folded like a book the sidebar and page, or a Split View's two pages, each take one side of the fold."

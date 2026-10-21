@@ -43,7 +43,6 @@ struct BrowserOnboardingMakeStrip<Content: View>: View {
         }
         .scrollIndicators(.hidden)
         .scrollBounceBehavior(.basedOnSize)
-        .scrollClipDisabled()
     }
 }
 
