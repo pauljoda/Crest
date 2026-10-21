@@ -213,7 +213,8 @@ final class MobileHistorySwipe: NSObject, UIGestureRecognizerDelegate {
 
     /// Tracks a touch only when it lands near an edge the page can step from.
     func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive touch: UITouch) -> Bool {
-        guard let host, let page, recognizer.state == .possible else { return false }
+        // A swipe begun beside the page keeps its direction while it runs.
+        guard let host, let page, recognizer.state == .possible, !isFollowing else { return false }
         let landed = MobileHistorySwipeDirection.starting(
             at: touch.location(in: host),
             in: host.pageFrame,
