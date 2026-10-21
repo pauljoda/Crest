@@ -4241,6 +4241,10 @@
     "share-sheet-open-links": {
       "category": "new",
       "message": "On iPhone and iPad, Crest appears in the share sheet, so a link shared from another app, or the first link in shared text, opens in Crest."
+    },
+    "appearance-preview-concentric-page-corners": {
+      "category": "fixed",
+      "message": "On iPhone and iPad, the page in the Appearance window preview rounds its corners with the preview's, so the window border keeps its width all the way around."
     }
   }
 }
