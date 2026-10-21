@@ -22,10 +22,6 @@ final class MobileBrowserWebHostView: UIView {
     // MARK: - Variables
 
     private weak var hostedWebView: WKWebView?
-    private var hostedWebViewLeadingConstraint: NSLayoutConstraint?
-    private var hostedWebViewTrailingConstraint: NSLayoutConstraint?
-    private var hostedWebViewTopConstraint: NSLayoutConstraint?
-    private var hostedWebViewBottomConstraint: NSLayoutConstraint?
     private var viewport = MobileBrowserPageViewport.inline
     /// When this host claimed `hostedWebView`: the newest claim is the largest.
     private var claim = 0
@@ -65,10 +61,6 @@ final class MobileBrowserWebHostView: UIView {
             hostedWebView.scrollView.verticalScrollIndicatorInsets = .zero
             hostedWebView.removeFromSuperview()
         }
-        hostedWebViewLeadingConstraint = nil
-        hostedWebViewTrailingConstraint = nil
-        hostedWebViewTopConstraint = nil
-        hostedWebViewBottomConstraint = nil
         self.hostedWebView = nil
         guard showsHostedWebView else { return }
         Self.claimants.allObjects
@@ -77,26 +69,41 @@ final class MobileBrowserWebHostView: UIView {
             .show(hostedWebView)
     }
 
-    /// Puts `webView`, which this host claimed, on screen here.
+    /// Puts `webView`, which this host claimed, on screen here. The web view
+    /// is placed by its frame, not by constraints: for element full screen
+    /// WebKit lifts it into a window of its own, which sizes it by frame and
+    /// autoresizing mask, and later puts it back here by frame. Constraints
+    /// would leave it no size in full screen, and none once it came back.
     private func show(_ webView: WKWebView) {
         webView.removeFromSuperview()
-        webView.translatesAutoresizingMaskIntoConstraints = false
+        webView.translatesAutoresizingMaskIntoConstraints = true
         addSubview(webView)
-        let leadingConstraint = webView.leadingAnchor.constraint(equalTo: leadingAnchor)
-        let trailingConstraint = webView.trailingAnchor.constraint(equalTo: trailingAnchor)
-        let topConstraint = webView.topAnchor.constraint(equalTo: topAnchor)
-        let bottomConstraint = webView.bottomAnchor.constraint(equalTo: bottomAnchor)
-        NSLayoutConstraint.activate([
-            leadingConstraint,
-            trailingConstraint,
-            topConstraint,
-            bottomConstraint,
-        ])
-        hostedWebViewLeadingConstraint = leadingConstraint
-        hostedWebViewTrailingConstraint = trailingConstraint
-        hostedWebViewTopConstraint = topConstraint
-        hostedWebViewBottomConstraint = bottomConstraint
         applyViewportInsets()
+    }
+
+    // MARK: - Actions - Layout
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        placeHostedWebView()
+    }
+
+    /// WebKit puts the web view back here when its page leaves full screen.
+    override func didAddSubview(_ subview: UIView) {
+        super.didAddSubview(subview)
+        guard subview === hostedWebView else { return }
+        applyViewportInsets()
+    }
+
+    /// Fits the web view this host shows to the host, clear of the viewport's
+    /// frame insets.
+    private func placeHostedWebView() {
+        guard let hostedWebView, hostedWebView.superview === self else { return }
+        let frame = bounds.inset(by: viewport.webViewFrameInsets)
+        hostedWebView.frame = CGRect(
+            origin: frame.origin,
+            size: CGSize(width: max(frame.width, 0), height: max(frame.height, 0))
+        )
     }
 
     // MARK: - Actions - Viewport
@@ -113,7 +120,6 @@ final class MobileBrowserWebHostView: UIView {
     /// reasoning.
     private func applyViewportInsets() {
         guard let hostedWebView, hostedWebView.superview === self else { return }
-        let frameInsets = viewport.webViewFrameInsets
         let overlayInsets = viewport.chromeOverlayInsets
         let viewportRange = viewport.viewportRangeInsets
         let scrollView = hostedWebView.scrollView
@@ -123,10 +129,7 @@ final class MobileBrowserWebHostView: UIView {
         // extends the terminal scroll range without changing the web view's
         // frame or the viewport range WebKit reports to fixed, sticky, svh,
         // and lvh layouts.
-        hostedWebViewLeadingConstraint?.constant = frameInsets.left
-        hostedWebViewTrailingConstraint?.constant = -frameInsets.right
-        hostedWebViewTopConstraint?.constant = frameInsets.top
-        hostedWebViewBottomConstraint?.constant = -frameInsets.bottom
+        placeHostedWebView()
         hostedWebView.setMinimumViewportInset(
             viewportRange.minimum,
             maximumViewportInset: viewportRange.maximum
