@@ -83,6 +83,7 @@ struct MobileSplitColumnsPageSurface: View {
             )
         }
         .environment(\.browserSplitUsesBorderlessFrame, appearance.borderless)
+        .environment(\.browserSplitInterCardGap, interCardGap)
         .onGeometryChange(for: CGRect.self) { proxy in
             proxy.frame(in: .global)
         } action: { frame in
@@ -121,8 +122,19 @@ struct MobileSplitColumnsPageSurface: View {
             memberCount: members.count,
             across: row,
             direction: layoutDirection,
-            gap: BrowserSplitLayoutMetrics.interCardGap
+            gap: foldGap(fold)
         )
+    }
+
+    /// The space between cards: the whole fold while the pages meet in it,
+    /// so neither reaches into the crease.
+    private var interCardGap: CGFloat {
+        guard let fold, foldFractions != nil else { return BrowserSplitLayoutMetrics.interCardGap }
+        return foldGap(fold)
+    }
+
+    private func foldGap(_ fold: MobileBrowserFold) -> CGFloat {
+        max(BrowserSplitLayoutMetrics.interCardGap, fold.frame.width)
     }
 
     private func residentPage(of member: TabStateModel) -> MobileBrowserPage? {
