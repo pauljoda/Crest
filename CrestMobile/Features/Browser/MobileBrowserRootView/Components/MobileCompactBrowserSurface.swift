@@ -5,6 +5,8 @@ struct MobileCompactBrowserSurface<
     FloatingSidebar: View,
     Page: View
 >: View {
+    @Environment(\.browserChromeAppearance) private var appearance
+
     let compactShowsPage: Bool
     @Binding var isPagePresented: Bool
     let usesDockedDetailPresentation: Bool
@@ -20,6 +22,8 @@ struct MobileCompactBrowserSurface<
     let hasActivePage: Bool
     let completedNavigationCount: Int
     let hasSelectedSpace: Bool
+    /// The page on show, which a swipe in from the frame around it steps.
+    let selectedPage: MobileBrowserPage?
     let showSidebar: () -> Void
     let handlePageInteraction: () -> Void
     let commitSidebarWidth: (CGFloat) -> Void
@@ -87,5 +91,14 @@ struct MobileCompactBrowserSurface<
             handleWebContentInteraction: handlePageInteraction,
             content: page
         )
+        .overlay {
+            if !usesBorderlessFloatingPageFrame {
+                MobileHistorySwipeBorder(
+                    insets: appearance.pageInsets(docked: false, direction: layoutDirection),
+                    leadingPage: selectedPage,
+                    trailingPage: selectedPage
+                )
+            }
+        }
     }
 }

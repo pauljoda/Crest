@@ -87,6 +87,7 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
                 completedNavigationCount:
                     model.selectedPage?.completedNavigationCount ?? 0,
                 hasSelectedSpace: browser.shownSpace != nil,
+                selectedPage: model.selectedPage,
                 showSidebar: showRegularSidebar,
                 handlePageInteraction: navigation.handleRegularPageInteraction,
                 commitSidebarWidth: commitRegularSidebarWidth,
