@@ -255,26 +255,40 @@ public sealed partial class BrowserContractsTests {
         Assert.Contains(Fixed(102), ArchivedIds(materialized["archivedTabs"]));
     }
 
+    /// Whether a Space uses Crest Passwords travels with it once someone chose;
+    /// this device's default Space and where each Space keeps its passwords
+    /// stay its own.
     [Fact]
-    public void MaterializingKeepsThisDevicesDefaultSpaceAndCredentialPreferences() {
+    public void MaterializingTakesWhetherASpaceUsesCrestPasswordsAndKeepsThisDevicesDefaultSpaceAndPasswordStorage() {
         var source = SessionOf(FirstSpace(OneSpaceSession(Fixed(20_001), Fixed(20_002), Fixed(20_003))),
             FirstSpace(OneSpaceSession(Fixed(20_004), Fixed(20_005), Fixed(20_006))));
+        source["spaces"]![1]!["credentialPreferences"] = new JsonObject {
+            ["isEnabled"] = false,
+            ["syncsCrestPasswordsWithICloud"] = true,
+            ["alsoOffersSaveToSystemPasswords"] = false
+        };
+        source["spaces"]![1]!["credentialsEnabledModifiedAt"] = 800_000_100.0;
         var local = source.DeepClone().AsObject();
         local["defaultSpaceID"] = SwiftId(Fixed(20_001));
-        var credentials = new JsonObject {
+        local["spaces"]![0]!["credentialPreferences"] = new JsonObject { ["isEnabled"] = false };
+        local["spaces"]![1]!["credentialPreferences"] = new JsonObject {
             ["isEnabled"] = true,
             ["syncsCrestPasswordsWithICloud"] = false,
             ["alsoOffersSaveToSystemPasswords"] = true
         };
-        local["spaces"]![1]!["credentialPreferences"] = credentials.DeepClone();
+        local["spaces"]![1]!.AsObject().Remove("credentialsEnabledModifiedAt");
         var journal = new JournalUnderTest(Fixed(20));
         journal.Stage(source);
 
         var result = journal.Materialize(local);
 
         Assert.Equal(Fixed(20_001), StoredSessionCodec.Identity(result["defaultSpaceID"]));
-        Assert.Equal(StoredSessionCodec.DecodeCredentialPreferences(credentials),
-            StoredSessionCodec.DecodeSpace(SpaceIn(result, Fixed(20_004))).Settings.CredentialPreferences);
+        var chosen = StoredSessionCodec.DecodeSpace(SpaceIn(result, Fixed(20_004))).Settings;
+        Assert.Equal(new CredentialPreferences(IsEnabled: false, SyncsCrestPasswordsWithICloud: false, AlsoOffersSaveToSystemPasswords: true),
+            chosen.CredentialPreferences);
+        Assert.Equal(StoredSessionCodec.Date(800_000_100.0), chosen.CredentialsEnabledModifiedAt);
+        // A Space nobody chose for keeps this device's own choice.
+        Assert.False(StoredSessionCodec.DecodeSpace(SpaceIn(result, Fixed(20_001))).Settings.CredentialPreferences.IsEnabled);
     }
 
     /// A device that syncs neither current tabs nor history keeps its own of

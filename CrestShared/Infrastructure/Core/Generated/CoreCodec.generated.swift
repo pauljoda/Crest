@@ -7,7 +7,7 @@ import Foundation
 enum CoreCodec {
     /// SHA-256 of the canonical contract schema. The core refuses any other.
     static let fingerprint: [UInt8] = [
-        0x4e, 0x98, 0x40, 0x96, 0x04, 0x2c, 0xb7, 0x97, 0x23, 0x4f, 0x6b, 0x96, 0xd4, 0xc0, 0x26, 0x64, 0xcc, 0xc8, 0x0a, 0x29, 0x15, 0x58, 0xfa, 0x2a, 0xe8, 0xc0, 0xce, 0x23, 0xbe, 0x03, 0x03, 0x39
+        0xa4, 0xc2, 0x01, 0xd5, 0x8d, 0xd6, 0x4d, 0x22, 0x9e, 0x68, 0xae, 0xda, 0x79, 0xcd, 0xbf, 0x09, 0xcb, 0xae, 0x42, 0x70, 0x53, 0xcf, 0x7d, 0xd0, 0x63, 0x1d, 0xd0, 0xb8, 0x33, 0x32, 0xa3, 0x85
     ]
     /// SHA-256 of the engine contract alone, which an engine binding registers with.
     static let engineFingerprint: [UInt8] = [
@@ -21473,9 +21473,16 @@ extension SpaceSettings {
         } else {
             savedTabsExpansionModifiedAt = nil
         }
+        let credentialsEnabledModifiedAt: Date?
+        if try reader.readPresence() {
+            let credentialsEnabledModifiedAtValue = try reader.readDate()
+            credentialsEnabledModifiedAt = credentialsEnabledModifiedAtValue
+        } else {
+            credentialsEnabledModifiedAt = nil
+        }
         let look = try SpaceBranding(from: &reader)
         let requiresAuthentication = try reader.readBool()
-        self.init(name: name, symbol: symbol, accent: accent, branding: branding, browsingPreferences: browsingPreferences, credentialPreferences: credentialPreferences, accessPolicy: accessPolicy, isSavedTabsExpanded: isSavedTabsExpanded, savedTabsExpansionModifiedAt: savedTabsExpansionModifiedAt, look: look, requiresAuthentication: requiresAuthentication)
+        self.init(name: name, symbol: symbol, accent: accent, branding: branding, browsingPreferences: browsingPreferences, credentialPreferences: credentialPreferences, accessPolicy: accessPolicy, isSavedTabsExpanded: isSavedTabsExpanded, savedTabsExpansionModifiedAt: savedTabsExpansionModifiedAt, credentialsEnabledModifiedAt: credentialsEnabledModifiedAt, look: look, requiresAuthentication: requiresAuthentication)
     }
 
     func encode(into writer: inout WireWriter) {
@@ -21493,6 +21500,12 @@ extension SpaceSettings {
         accessPolicy.encode(into: &writer)
         writer.writeBool(isSavedTabsExpanded)
         if let present0 = savedTabsExpansionModifiedAt {
+            writer.writePresence(true)
+            writer.writeDate(present0)
+        } else {
+            writer.writePresence(false)
+        }
+        if let present0 = credentialsEnabledModifiedAt {
             writer.writePresence(true)
             writer.writeDate(present0)
         } else {
@@ -21526,7 +21539,14 @@ extension SpaceSettings.Seed {
         } else {
             savedTabsExpansionModifiedAt = nil
         }
-        self.init(name: name, symbol: symbol, accent: accent, branding: branding, browsingPreferences: browsingPreferences, credentialPreferences: credentialPreferences, accessPolicy: accessPolicy, isSavedTabsExpanded: isSavedTabsExpanded, savedTabsExpansionModifiedAt: savedTabsExpansionModifiedAt)
+        let credentialsEnabledModifiedAt: Date?
+        if try reader.readPresence() {
+            let credentialsEnabledModifiedAtValue = try reader.readDate()
+            credentialsEnabledModifiedAt = credentialsEnabledModifiedAtValue
+        } else {
+            credentialsEnabledModifiedAt = nil
+        }
+        self.init(name: name, symbol: symbol, accent: accent, branding: branding, browsingPreferences: browsingPreferences, credentialPreferences: credentialPreferences, accessPolicy: accessPolicy, isSavedTabsExpanded: isSavedTabsExpanded, savedTabsExpansionModifiedAt: savedTabsExpansionModifiedAt, credentialsEnabledModifiedAt: credentialsEnabledModifiedAt)
     }
 
     func encode(into writer: inout WireWriter) {
@@ -21544,6 +21564,12 @@ extension SpaceSettings.Seed {
         accessPolicy.encode(into: &writer)
         writer.writeBool(isSavedTabsExpanded)
         if let present0 = savedTabsExpansionModifiedAt {
+            writer.writePresence(true)
+            writer.writeDate(present0)
+        } else {
+            writer.writePresence(false)
+        }
+        if let present0 = credentialsEnabledModifiedAt {
             writer.writePresence(true)
             writer.writeDate(present0)
         } else {

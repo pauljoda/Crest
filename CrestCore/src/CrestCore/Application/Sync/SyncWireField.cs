@@ -41,11 +41,12 @@ internal sealed class SyncWireField {
     public static readonly SyncWireField DeletedAt = new("deletedAt", Kinds.Timestamp);
     public static readonly SyncWireField FirstVisitedAt = new("firstVisitedAt", Kinds.Timestamp);
     public static readonly SyncWireField LastVisitedAt = new("lastVisitedAt", Kinds.Timestamp);
+    public static readonly SyncWireField CredentialsEnabledModifiedAt = new("credentialsEnabledModifiedAt", Kinds.Timestamp);
 
     public static IReadOnlyList<SyncWireField> All { get; } = [
         Id, RawValue, ProfileId, SpaceId, DeviceId, FolderId, ParentId, OrderAnchorTabId, SplitGroupId, LastActivatedAt,
         PositionModifiedAt, TitleModifiedAt, SavedTabsExpansionModifiedAt, CollapseModifiedAt, IconModifiedAt, TintModifiedAt,
-        ArchivedAt, DeletedAt, FirstVisitedAt, LastVisitedAt
+        ArchivedAt, DeletedAt, FirstVisitedAt, LastVisitedAt, CredentialsEnabledModifiedAt
     ];
 
     /// Every member by its key, since every field of every compared record

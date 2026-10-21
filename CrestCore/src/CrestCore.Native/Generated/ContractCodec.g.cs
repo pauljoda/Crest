@@ -14,7 +14,7 @@ namespace CrestCore.Native;
 public static class ContractCodec {
     /// <summary>SHA-256 of the canonical contract schema.</summary>
     public static ReadOnlySpan<byte> Fingerprint => [
-        0x4e, 0x98, 0x40, 0x96, 0x04, 0x2c, 0xb7, 0x97, 0x23, 0x4f, 0x6b, 0x96, 0xd4, 0xc0, 0x26, 0x64, 0xcc, 0xc8, 0x0a, 0x29, 0x15, 0x58, 0xfa, 0x2a, 0xe8, 0xc0, 0xce, 0x23, 0xbe, 0x03, 0x03, 0x39
+        0xa4, 0xc2, 0x01, 0xd5, 0x8d, 0xd6, 0x4d, 0x22, 0x9e, 0x68, 0xae, 0xda, 0x79, 0xcd, 0xbf, 0x09, 0xcb, 0xae, 0x42, 0x70, 0x53, 0xcf, 0x7d, 0xd0, 0x63, 0x1d, 0xd0, 0xb8, 0x33, 0x32, 0xa3, 0x85
     ];
 
     /// <summary>SHA-256 of the engine contract alone, which an engine binding registers with.</summary>
@@ -16697,6 +16697,7 @@ public static class ContractCodec {
             ReadCredentialPreferences(reader),
             ReadSpaceAccessPolicy(reader),
             reader.ReadBool(),
+            reader.ReadPresence() ? (DateTimeOffset?)reader.ReadDate() : null,
             reader.ReadPresence() ? (DateTimeOffset?)reader.ReadDate() : null);
         _ = ReadSpaceBranding(reader);
         _ = reader.ReadBool();
@@ -16725,6 +16726,12 @@ public static class ContractCodec {
         } else {
             writer.WritePresence(false);
         }
+        if (value.CredentialsEnabledModifiedAt is { } presentCredentialsEnabledModifiedAt) {
+            writer.WritePresence(true);
+            writer.WriteDate(presentCredentialsEnabledModifiedAt);
+        } else {
+            writer.WritePresence(false);
+        }
         WriteSpaceBranding(writer, value.Look);
         writer.WriteBool(value.RequiresAuthentication);
     }
@@ -16740,6 +16747,7 @@ public static class ContractCodec {
             ReadCredentialPreferences(reader),
             ReadSpaceAccessPolicy(reader),
             reader.ReadBool(),
+            reader.ReadPresence() ? (DateTimeOffset?)reader.ReadDate() : null,
             reader.ReadPresence() ? (DateTimeOffset?)reader.ReadDate() : null);
     }
 
@@ -16762,6 +16770,12 @@ public static class ContractCodec {
         if (value.SavedTabsExpansionModifiedAt is { } presentSavedTabsExpansionModifiedAt) {
             writer.WritePresence(true);
             writer.WriteDate(presentSavedTabsExpansionModifiedAt);
+        } else {
+            writer.WritePresence(false);
+        }
+        if (value.CredentialsEnabledModifiedAt is { } presentCredentialsEnabledModifiedAt) {
+            writer.WritePresence(true);
+            writer.WriteDate(presentCredentialsEnabledModifiedAt);
         } else {
             writer.WritePresence(false);
         }
