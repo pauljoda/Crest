@@ -4222,6 +4222,10 @@
       "category": "fixed",
       "message": "While setup reads a browser you chose to import, the page says so where Continue was and offers Cancel, so a slow or stuck read no longer leaves setup looking stuck with every button disabled."
     },
+    "address-bar-selects-url-on-tap": {
+      "category": "fixed",
+      "message": "Tapping the address bar on iPhone selects the whole address, so typing replaces it or you can copy it right away."
+    },
     "mobile-full-screen-video-shows": {
       "category": "fixed",
       "message": "On iPhone and iPad, a video a site shows full screen, such as Reddit's, fills the screen instead of going black, and the page is back when you leave full screen."
