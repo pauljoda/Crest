@@ -131,7 +131,10 @@ extension MobileBrowserRootModel {
     func regularSidebarPresentationChanged(
         _ presentation: BrowserSidebarPresentation
     ) {
-        windowState?.captureSidebar(isPresented: presentation.reservesSidebarWidth)
+        // A sidebar put away for a folded split is not the person's choice.
+        if !navigation.hidSidebarForFoldedSplit {
+            windowState?.captureSidebar(isPresented: presentation.reservesSidebarWidth)
+        }
         if !presentation.showsSidebar {
             navigation.utilityPresentation.dismiss()
         }

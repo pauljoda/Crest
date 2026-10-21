@@ -18,6 +18,7 @@ import SwiftUI
 struct MobileRegularPageSurface: View {
     @Environment(\.browserChromeAppearance) private var appearance
     @Environment(\.layoutDirection) private var layoutDirection
+    @Environment(\.mobileBrowserControlPlacement) private var controlPlacement
     let model: MobileBrowserRootModel
     let adjoinsSidebar: Bool
     let usesBorderlessPageFrame: Bool
@@ -93,7 +94,9 @@ struct MobileRegularPageSurface: View {
                         .handleInteraction(.webContent)
                     model.navigation.handleRegularPageInteraction()
                 },
-                frameInsets: appearance.pageInsets(docked: adjoinsSidebar, direction: layoutDirection),
+                frameInsets: controlPlacement.pageInsets(
+                    appearance.pageInsets(docked: adjoinsSidebar, direction: layoutDirection)
+                ),
                 content: MobileBrowserDetailSurface(
                     browser: model.browser,
                     pages: model.pages,

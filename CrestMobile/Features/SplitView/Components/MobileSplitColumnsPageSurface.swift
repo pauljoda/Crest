@@ -21,6 +21,10 @@ import SwiftUI
 struct MobileSplitColumnsPageSurface: View {
     @Environment(\.browserChromeAppearance) private var appearance
     @Environment(\.layoutDirection) private var layoutDirection
+    @Environment(\.mobileBrowserFold) private var fold
+    @Environment(\.mobileBrowserControlPlacement) private var controlPlacement
+    /// Where the row sits, for lining its pages up with a fold.
+    @State private var globalFrame = CGRect.zero
     let model: MobileBrowserRootModel
     let space: SpaceModel
     let members: [TabStateModel]
@@ -33,15 +37,17 @@ struct MobileSplitColumnsPageSurface: View {
         BrowserSplitColumnsView(
             members: members,
             focusedTabID: model.browser.shownTab?.id,
-            frameInsets: appearance.pageInsets(docked: adjoinsSidebar, direction: layoutDirection),
+            frameInsets: frameInsets,
             accent: space.settings.look.primaryColor.color,
             placeholderIndex: placeholderIndex,
             // "Fancy Move" is a pointer gesture: ⇧⌘-held mouse-down, and a
             // card that follows a cursor. iPadOS reorders its cards from the
             // member menu instead, so the row here is never carrying one.
             liftedTabID: nil,
-            widthTransaction: model.splitWidthTransactionBinding,
-            onResizeCommit: model.commitSplitColumnFractions,
+            widthTransaction: foldFractions.map { .constant(BrowserSplitWidthTransaction(persistedFractions: $0)) }
+                ?? model.splitWidthTransactionBinding,
+            // The fold's columns are never the person's, so none are kept.
+            onResizeCommit: foldFractions == nil ? model.commitSplitColumnFractions : { _ in },
             onFocus: model.focusSplitCard,
             usesTransparentInnerSurface: usesTransparentInnerSurface,
             content: { member, _ in
@@ -70,6 +76,11 @@ struct MobileSplitColumnsPageSurface: View {
             }
         )
         .environment(\.browserSplitUsesBorderlessFrame, appearance.borderless)
+        .onGeometryChange(for: CGRect.self) { proxy in
+            proxy.frame(in: .global)
+        } action: { frame in
+            globalFrame = frame
+        }
         .simultaneousGesture(
             TapGesture().onEnded {
                 model.navigation.utilityPresentation.handleInteraction(.webContent)
@@ -80,6 +91,31 @@ struct MobileSplitColumnsPageSurface: View {
             model.seedSplitColumnFractions()
             model.prepareSplitCardPages()
         }
+    }
+
+    private var frameInsets: EdgeInsets {
+        controlPlacement.pageInsets(
+            appearance.pageInsets(docked: adjoinsSidebar, direction: layoutDirection)
+        )
+    }
+
+    /// Columns that meet in the fold while the display is folded, or nil to
+    /// keep the split's own.
+    private var foldFractions: [Double]? {
+        guard let fold else { return nil }
+        let insets = frameInsets
+        let row = CGRect(
+            x: globalFrame.minX + (layoutDirection == .rightToLeft ? insets.trailing : insets.leading),
+            y: globalFrame.minY,
+            width: globalFrame.width - insets.leading - insets.trailing,
+            height: globalFrame.height
+        )
+        return fold.columnFractions(
+            memberCount: members.count,
+            across: row,
+            direction: layoutDirection,
+            gap: BrowserSplitLayoutMetrics.interCardGap
+        )
     }
 
     /// The transparent-interior decision, made per card rather than once for the

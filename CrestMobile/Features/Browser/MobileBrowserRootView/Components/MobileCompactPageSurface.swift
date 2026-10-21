@@ -39,6 +39,9 @@ struct MobileCompactPageSurface<Backdrop: View, Detail: View>: View {
                 )
             }
         }
+        // The page covers the window, so it carries its own side toolbar; the
+        // zoom below stays on the presentation's outermost view.
+        .modifier(MobileBrowserSideToolbarHost())
 
         if reduceMotion {
             page

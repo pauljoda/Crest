@@ -32,6 +32,7 @@ struct MobileBrowserDetailView: View {
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.layoutDirection) private var layoutDirection
+    @Environment(\.mobileBrowserControlPlacement) private var controlPlacement
     /// The page area's safe area, measured here because this is the last place
     /// both paths share it: the carousel's `ScrollView` resolves its cells'
     /// safe area to zero, so a cell can only learn the real one as data.
@@ -64,7 +65,7 @@ struct MobileBrowserDetailView: View {
                     prepareMember: prepareSplitCardPage,
                     handleInteraction: handleWebContentInteraction
                 )
-                .ignoresSafeArea(.container, edges: viewport.obscuresSystemSafeAreas ? .vertical : [])
+                .ignoresSafeArea(.container, edges: viewport.obscuresSystemSafeAreas ? .all : [])
             } else {
                 switch pagePresentation {
                 case .nativeContent:
@@ -160,9 +161,11 @@ struct MobileBrowserDetailView: View {
         .overlay(alignment: .bottom) {
             if isCompact, showsCompactToolbar {
                 if browser.shownTab.map({ $0.surface == .startPage }) ?? true {
-                    MobileCompactStartPageToolbar(showTabViewer: showTabViewer)
-                        .safeAreaPadding(.bottom, 0)
-                        .zIndex(1)
+                    if !controlPlacement.movesControlsToToolbar {
+                        MobileCompactStartPageToolbar(showTabViewer: showTabViewer)
+                            .safeAreaPadding(.bottom, 0)
+                            .zIndex(1)
+                    }
                 } else if compactToolbarIsHidden {
                     MobileCompactDomainChip(
                         url: page?.live.documentURL,
@@ -226,6 +229,11 @@ struct MobileBrowserDetailView: View {
                         : .move(edge: isCompact ? .bottom : .top)
                             .combined(with: .opacity)
                 )
+            }
+        }
+        .toolbar {
+            if isCompact, showsCompactToolbar, controlPlacement.movesControlsToToolbar {
+                compactToolbarItems(pageActions: pageActions)
             }
         }
         .animation(
@@ -336,6 +344,27 @@ struct MobileBrowserDetailView: View {
                 )
             }
         )
+    }
+
+    /// The compact page's controls where they move to the side toolbar:
+    /// history at the top, the way back to the tabs at the bottom, and the
+    /// address left over the page.
+    @ToolbarContentBuilder
+    private func compactToolbarItems(
+        pageActions: MobileSelectedPageActionPort?
+    ) -> some ToolbarContent {
+        let port = BrowserSidebarNavigationPort(pageActions: pageActions, showHistory: showHistory)
+        let metrics = capabilities.navigationControlMetrics
+        ToolbarItemGroup(placement: .topBarTrailing) {
+            BrowserSidebarNavigationHistoryControl(direction: .back, port: port, metrics: metrics)
+            if port.canGoForward() {
+                BrowserSidebarNavigationHistoryControl(direction: .forward, port: port, metrics: metrics)
+            }
+        }
+        ToolbarItemGroup(placement: .bottomBar) {
+            Button("Tabs", systemImage: "square.on.square", action: showTabViewer)
+                .accessibilityIdentifier("tab-viewer-button")
+        }
     }
 
     /// What this shell can do, as far as the find bar and the credential

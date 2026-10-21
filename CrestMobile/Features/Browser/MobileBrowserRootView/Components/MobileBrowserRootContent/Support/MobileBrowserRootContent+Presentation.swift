@@ -47,14 +47,18 @@ extension MobileBrowserRootContent {
         presentsSplitView || sidebarPresentation == .docked
     }
 
-    /// Whether the keyboard floats over the window rather than docking to its
-    /// bottom edge: one narrower than most of the window floats.
-    var ignoresFloatingKeyboardSafeArea: Bool {
+    /// Whether the window leaves the keyboard's room unused: a keyboard that
+    /// floats over the window, one narrower than most of it, or one that
+    /// covers nothing of the screen, as a software keyboard put away beside a
+    /// hardware one does, or one left behind as the window turns or moves to
+    /// the other display.
+    var ignoresKeyboardSafeArea: Bool {
         let floatingKeyboardMaximumWidthRatio: CGFloat = 0.85
-        guard !keyboardEndFrame.isNull,
-            !keyboardEndFrame.isEmpty,
-            availableRootSize.width > 0
-        else { return false }
+        guard !keyboardEndFrame.isNull, !keyboardEndFrame.isEmpty else { return true }
+        if !keyboardScreenBounds.isNull, !keyboardEndFrame.intersects(keyboardScreenBounds) {
+            return true
+        }
+        guard availableRootSize.width > 0 else { return false }
         return keyboardEndFrame.width
             < availableRootSize.width * floatingKeyboardMaximumWidthRatio
     }

@@ -14,10 +14,16 @@ struct MobileCompactPageToolbar: View {
     let handleSwipe: (BrowserSpaceSwipeDirection) -> Void
     let compactTransitionEnded: (CGSize) -> Void
 
+    /// Where Back, Forward and Tabs are: beside the address here, or in the
+    /// side toolbar, which leaves the address on its own over the page.
+    @Environment(\.mobileBrowserControlPlacement) private var controlPlacement
+
     var body: some View {
         HStack(spacing: MobileBrowserChromeLayout.compactToolbarSpacing) {
-            GlassEffectContainer(spacing: 0) {
-                MobilePageHistoryControls(pageActions: pageActions, showHistory: showHistory)
+            if !controlPlacement.movesControlsToToolbar {
+                GlassEffectContainer(spacing: 0) {
+                    MobilePageHistoryControls(pageActions: pageActions, showHistory: showHistory)
+                }
             }
 
             GlassEffectContainer(spacing: 0) {
@@ -39,14 +45,16 @@ struct MobileCompactPageToolbar: View {
                 )
             }
 
-            GlassEffectContainer(spacing: 0) {
-                MobileCompactIconButton(
-                    title: "Tabs",
-                    systemImage: "square.on.square",
-                    action: showTabViewer
-                )
-                .glassEffect(.regular.interactive(), in: .circle)
-                .accessibilityIdentifier("tab-viewer-button")
+            if !controlPlacement.movesControlsToToolbar {
+                GlassEffectContainer(spacing: 0) {
+                    MobileCompactIconButton(
+                        title: "Tabs",
+                        systemImage: "square.on.square",
+                        action: showTabViewer
+                    )
+                    .glassEffect(.regular.interactive(), in: .circle)
+                    .accessibilityIdentifier("tab-viewer-button")
+                }
             }
         }
         .labelStyle(.iconOnly)

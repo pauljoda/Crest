@@ -14,20 +14,13 @@ struct MobileSpaceDownloadsButton: View {
         }
         .foregroundStyle(.primary)
         .symbolEffect(.bounce, value: reduceMotion ? nil : newDownloads.first?.id)
-        .overlay(alignment: .topTrailing) {
-            if !newDownloads.isEmpty {
-                BrowserUtilityNotificationBadge(
-                    count: newDownloads.count,
-                    tint: badgeColor,
-                    progress: downloads.notificationProgress
-                )
-                .offset(
-                    x: BrowserUtilitySwitcherLayout.notificationBadgeOffset,
-                    y: -BrowserUtilitySwitcherLayout.notificationBadgeOffset
-                )
-            }
-        }
-        .zIndex(newDownloads.isEmpty ? 0 : 1)
+        .modifier(
+            MobileSpaceUtilityBadge(
+                count: newDownloads.count,
+                tint: badgeColor,
+                progress: downloads.notificationProgress
+            )
+        )
         .accessibilityLabel("Downloads")
         .accessibilityValue(
             BrowserChromeAccessibility.countValue(

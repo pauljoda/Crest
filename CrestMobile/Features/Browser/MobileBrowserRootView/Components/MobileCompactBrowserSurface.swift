@@ -38,6 +38,7 @@ struct MobileCompactBrowserSurface<
                     // Its backdrop owns the safe-area tint and its detail owns
                     // the floating URL controls.
                     page
+                        .environment(\.mobileBrowserSideToolbarIsHosted, false)
                 } else {
                     ZStack {
                         SpaceBackdropBlend(spaces: spaces, selectedSpace: space) {
@@ -65,6 +66,12 @@ struct MobileCompactBrowserSurface<
                         }
                     }
                     .environment(\.spacePagerPresentation, floatingPagerPresentation)
+                    .modifier(
+                        MobileBrowserSideToolbarHost(
+                            colorScheme: space?.settings.look.foregroundTone.colorScheme
+                        )
+                    )
+                    .environment(\.mobileBrowserSideToolbarIsHosted, false)
                 }
             }
     }

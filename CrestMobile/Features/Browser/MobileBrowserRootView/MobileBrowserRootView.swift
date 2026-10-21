@@ -57,6 +57,13 @@ struct MobileBrowserRootView: View {
             togglePrivateBrowsing: togglePrivateBrowsing,
             closePrivateBrowsing: closePrivateBrowsing
         )
+        // The side toolbar sits over the Space's atmosphere, so its glass
+        // follows the Space's tone as the sidebar's controls do.
+        .modifier(
+            MobileBrowserSideToolbarHost(
+                colorScheme: model.browser.shownSpace?.settings.look.foregroundTone.colorScheme
+            )
+        )
         .environment(model.sidebarInteraction)
         .environment(\.browserNativeTabs, model.pages.nativeTabs)
         .environment(

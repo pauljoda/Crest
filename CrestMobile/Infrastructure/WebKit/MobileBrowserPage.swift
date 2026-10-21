@@ -44,6 +44,9 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     private(set) var estimatedProgress = 0.0
     private(set) var faviconData: Data?
     private(set) var themeColor: UIColor?
+    /// The color WebKit draws behind the page, kept as it changes so the
+    /// chrome around the page can take it up.
+    private(set) var underPageColor: UIColor?
     /// Documents the page committed and finished, which reveal its surface.
     var committedNavigationCount = 0
     private(set) var completedNavigationCount = 0
@@ -862,6 +865,9 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
                     // html/body background instead of inventing a Crest color.
                     self?.updateUnderPageBackground()
                 }
+            },
+            webView.observe(\.underPageBackgroundColor, options: [.initial, .new]) { [weak self] webView, _ in
+                Task { @MainActor in self?.underPageColor = webView.underPageBackgroundColor }
             },
             webView.observe(\.canGoBack, options: [.initial, .new]) { [weak self] webView, _ in
                 Task { @MainActor in self?.refreshNavigationState() }

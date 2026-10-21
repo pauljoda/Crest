@@ -39,7 +39,7 @@ struct MobileBrowserLivePageView: View {
                     committedNavigationCount: page.committedNavigationCount
                 )
                     ? page.themeColor
-                        ?? page.webView.underPageBackgroundColor
+                        ?? page.underPageColor
                         ?? .systemBackground
                     : .clear
             )
@@ -66,9 +66,12 @@ struct MobileBrowserLivePageView: View {
                 committedNavigationCount: page.committedNavigationCount
             ) ? 1 : 0
         )
+        // Every edge: the host reaches the side safe areas too, so the frame
+        // insets are what keep the page clear of them, once, and the page's
+        // color fills the side column behind the system's controls.
         .ignoresSafeArea(
             .container,
-            edges: viewport.obscuresSystemSafeAreas ? .vertical : []
+            edges: viewport.obscuresSystemSafeAreas ? .all : []
         )
         .safeAreaPadding(.bottom, viewport.obscuresSystemSafeAreas ? 0 : viewport.bottomChromeHeight)
     }
