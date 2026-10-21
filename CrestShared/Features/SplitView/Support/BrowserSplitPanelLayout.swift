@@ -15,11 +15,12 @@ enum BrowserSplitPanelLayoutMetrics {
 /// cannot fit everything, the panel yields before any member reaches its floor.
 enum BrowserSplitPanelLayout {
     static func resolvedWidth(
-        requestedWidth: CGFloat, containerWidth: CGFloat, memberCount: Int
+        requestedWidth: CGFloat, containerWidth: CGFloat, memberCount: Int,
+        gap: CGFloat = BrowserSplitLayoutMetrics.interCardGap
     ) -> CGFloat {
         guard memberCount > 0, containerWidth.isFinite else { return 0 }
         let memberMinimum = CGFloat(memberCount) * BrowserSplitLayoutMetrics.minimumCardWidth
-        let gaps = CGFloat(memberCount) * BrowserSplitLayoutMetrics.interCardGap
+        let gaps = CGFloat(memberCount) * gap
         return max(
             0,
             min(
@@ -28,9 +29,12 @@ enum BrowserSplitPanelLayout {
             ))
     }
 
-    static func memberContainerWidth(containerWidth: CGFloat, panelWidth: CGFloat) -> CGFloat {
+    static func memberContainerWidth(
+        containerWidth: CGFloat, panelWidth: CGFloat,
+        gap: CGFloat = BrowserSplitLayoutMetrics.interCardGap
+    ) -> CGFloat {
         guard containerWidth.isFinite, panelWidth.isFinite else { return 0 }
-        return max(0, containerWidth - panelWidth - BrowserSplitLayoutMetrics.interCardGap)
+        return max(0, containerWidth - panelWidth - gap)
     }
 
     static func widthAfterResize(initialWidth: CGFloat, delta: CGFloat) -> CGFloat {

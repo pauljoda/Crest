@@ -321,7 +321,8 @@ struct BrowserSplitColumnsView<Member: Identifiable, Content: View, Panel: View>
         guard panel != nil else { return containerWidth }
         return BrowserSplitPanelLayout.memberContainerWidth(
             containerWidth: containerWidth,
-            panelWidth: resolvedPanelWidth(containerWidth: containerWidth)
+            panelWidth: resolvedPanelWidth(containerWidth: containerWidth),
+            gap: interCardGap
         )
     }
 
@@ -330,7 +331,8 @@ struct BrowserSplitColumnsView<Member: Identifiable, Content: View, Panel: View>
             requestedWidth: panelWidthTransaction.width ?? panel?.requestedWidth
                 ?? BrowserSplitPanelLayoutMetrics.defaultWidth,
             containerWidth: containerWidth,
-            memberCount: members.count + (resolvedPlaceholderIndex == nil ? 0 : 1)
+            memberCount: members.count + (resolvedPlaceholderIndex == nil ? 0 : 1),
+            gap: interCardGap
         )
     }
 
