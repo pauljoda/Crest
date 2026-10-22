@@ -4293,6 +4293,10 @@
     "sidebar-list-reaches-bottom-corner": {
       "category": "fixed",
       "message": "On iPad and iPhone Duo, the sidebar's tabs scroll on to the bottom of the screen and into its corner instead of stopping short above it."
+    },
+    "space-visibility-core": {
+      "category": "internal",
+      "message": "The core keeps which Spaces each device hides, never syncs that choice, and leaves hidden Spaces out of windows, shortcuts, drop targets, the Dock menu, link routing and agents."
     }
   }
 }

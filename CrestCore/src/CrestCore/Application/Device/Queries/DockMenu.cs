@@ -5,8 +5,8 @@ namespace CrestCore.Contracts;
 /// The Dock icon's menu, over this device's windows as the platform stacks
 /// them, frontmost first (`WindowIds`; a window the device does not have open
 /// is passed over). It lists the window commands, then the persistent
-/// session's Spaces in the session's order, leaving out one being deleted, as
-/// the Space switcher does.
+/// session's Spaces in the session's order, leaving out one being deleted or
+/// hidden on this device, as the Space switcher does.
 ///
 /// A private window keeps to itself. None of its Spaces is listed, and with
 /// one in front, as with a Blank Window, no Space is checked, because the
@@ -28,7 +28,7 @@ public sealed record DockMenu(IReadOnlyList<Guid> WindowIds) : Query<DockMenuCon
             target = stacked.FirstOrDefault(window => window.WorkspaceId == workspaceId)?.Id;
         }
         // The session's own locks are taken only once the device's is released.
-        var spaces = authority.Current.Spaces.Where(space => !authority.IsDeleting(space.Id))
+        var spaces = app.Device.ShowableSpaces(workspaceId, authority.Current)
             .Select(space => new DockMenuSpace(space.Id, space.ProfileId, space.Settings.Name, space.Settings.Symbol,
                 space.Settings.Accent, space.Settings.Look, IsShown: space.Id == shown, IsLocked: authority.IsLocked(space)));
         return new(DockMenuCommand.All, [.. spaces], target);

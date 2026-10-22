@@ -69,6 +69,9 @@ public sealed record WindowChanged(WindowState Window) : Change;
 /// A window is no longer open.
 public sealed record WindowClosed(Guid WindowId) : Change;
 
+/// The Spaces this device hides changed.
+public sealed record SpaceVisibilityChanged(SpaceVisibility Visibility) : Change;
+
 /// The device store holds the window records an installed release kept.
 /// `Layouts` are the sidebar values those records also carried, which the
 /// platform keeps as its own; the core keeps none of them.
@@ -81,6 +84,17 @@ public sealed record WindowLayout(Guid WindowId, double? SidebarWidth, bool? Sid
 #endregion
 
 #region Rejections
+
+/// Hiding the Space would leave this device without one to show.
+public sealed record CannotHideLastSpace : Rejection {
+    #region Variables
+
+    /// What the person is told.
+    [Localized]
+    public string Message => "Crest needs at least one Space on this device.";
+
+    #endregion
+}
 
 /// The shares cannot describe a split's columns: none, more than a split may
 /// hold, or one that is not a finite share greater than zero and at most the

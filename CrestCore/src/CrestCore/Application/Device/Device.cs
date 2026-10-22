@@ -111,6 +111,7 @@ internal sealed partial class Device {
         shortcuts = records.Shortcuts;
         links = records.Links;
         agents = records.Agents;
+        spaceVisibility = records.SpaceVisibility;
         keptSetupDraft = platform.KeepsSetupDraft ? records.SetupDraft : null;
         setupCompleted = records.SetupCompleted;
         adopted.UnionWith(records.Adopted);
@@ -138,13 +139,18 @@ internal sealed partial class Device {
     }
 
     /// Attaches the persistent session the core loaded, which every saved
-    /// window shows, with the selection an older release kept in it.
+    /// window shows, with the selection an older release kept in it. The
+    /// Spaces the device hides follow the session as it loaded.
     public void AttachPersistent(NativeSessionAuthority authority, JsonObject? legacySelection, Guid workspaceId) {
         Attach(authority, workspaceId);
+        var session = authority.Current;
+        SpaceVisibilityChanged? reconciled;
         lock (gate) {
             persistentWorkspace = workspaceId;
             legacyTabs = LegacyTabs(legacySelection);
+            reconciled = ReconcileSpaceVisibility(workspaceId, session);
         }
+        if (reconciled is not null) announce(reconciled);
     }
 
     /// The workspace `authority` is attached as, or null when it is not.
@@ -233,9 +239,11 @@ internal sealed partial class Device {
         changes.AddRange(events.Changes(workspaceId));
         NativeSessionAuthority? owner;
         lock (gate) {
+            if (ReconcileSpaceVisibility(workspaceId, next) is { } reconciled) changes.Add(reconciled);
+            var spaceVisibility = SpaceVisibilityOf(workspaceId);
             changes.AddRange(Changing(open.Values.Where(window => window.WorkspaceId == workspaceId), window => {
                 if (followUp is not null && window.Id == followUp.Window?.Id) window.Apply(followUp);
-                window.Repair(next);
+                window.Repair(next, spaceVisibility);
             }, next));
             if (FollowingSpaces(workspaceId, next) is { } setup) changes.Add(setup);
             owner = workspaces.GetValueOrDefault(workspaceId);
@@ -292,7 +300,8 @@ internal sealed partial class Device {
     /// device last published for it, keeping a saved window's record current
     /// with what it chose to show. The caller holds the device lock.
     internal WindowChanged? Publishing(Window window, SessionState session) {
-        var state = window.State(session, workspaces.GetValueOrDefault(window.WorkspaceId)?.Kind.IsPrivate == true);
+        var state = window.State(session, workspaces.GetValueOrDefault(window.WorkspaceId)?.Kind.IsPrivate == true,
+            SpaceVisibilityOf(window.WorkspaceId));
         published.TryGetValue(window.Id, out var before);
         if (state == before) return null;
         published[window.Id] = state;
@@ -340,7 +349,8 @@ internal sealed partial class Device {
         new HashSet<DeviceAdoption>(adopted), [.. keptTabGroups], defaultEngine) {
         PaletteMemories = paletteMemories,
         SearchCatalog = searchCatalog,
-        Agents = agents
+        Agents = agents,
+        SpaceVisibility = spaceVisibility
     };
 
     #endregion

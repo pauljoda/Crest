@@ -12,14 +12,14 @@ public sealed record RouteLocalDocument(IReadOnlyList<Guid> WindowIds) : Query<L
     #region Actions - Answering
 
     internal override LocalDocumentPlacement Answer(CrestApp app) {
-        if (app.Device.Persistent() is not (_, var authority)) return new(null, null, OpensWindow: false);
+        if (app.Device.Persistent() is not (var workspaceId, var authority)) return new(null, null, OpensWindow: false);
         var session = authority.Current;
         if (app.Device.FrontWindow(WindowIds) is { } front)
             return new(front.Id, Device.Available(session, front.ShownSpaceId)?.Id, OpensWindow: false);
         Guid opening;
         lock (app.Device.Gate) opening = app.Device.WindowToOpen(app.Ids);
-        return app.Device.OpeningSpace(opening, session) is { } space
-            ? new(opening, space, OpensWindow: true)
+        return app.Device.OpeningSpaceId(workspaceId, opening, session) is { } spaceId
+            ? new(opening, spaceId, OpensWindow: true)
             : new(null, null, OpensWindow: false);
     }
 
