@@ -38,6 +38,18 @@ final class BrowserStoreSidebarAccessTests: XCTestCase {
         )
     }
 
+    func testSpaceHiddenOnThisDeviceLeavesTheSwitcherUntilShownAgain() {
+        let context = makeContext()
+        context.browser.selectPresentedSpace(context.destination.id)
+
+        context.browser.showSpaceOnDevice(context.destination.id, shown: false)
+        XCTAssertEqual(context.browser.availableSpaces.map(\.id), [context.source.id])
+        XCTAssertEqual(context.browser.selectedSpaceID, context.source.id)
+
+        context.browser.showSpaceOnDevice(context.destination.id, shown: true)
+        XCTAssertEqual(context.browser.availableSpaces.map(\.id), [context.source.id, context.destination.id])
+    }
+
     func testLockedDestinationRemainsVisibleButRejectsTabDrops() {
         let context = makeContext(destinationIsProtected: true)
 

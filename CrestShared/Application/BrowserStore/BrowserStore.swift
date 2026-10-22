@@ -85,6 +85,13 @@ final class BrowserStore {
         windowRevision &+= 1
     }
 
+    /// Shows or hides a Space of the person's own session on this device. A
+    /// window that showed a Space now hidden moves to the first one shown.
+    func showSpaceOnDevice(_ spaceID: UUID, shown: Bool) {
+        guard sendWindowIntent(ShowSpaceOnDevice(spaceID: spaceID, shown: shown)) else { return }
+        windowRevision &+= 1
+    }
+
     /// Shows the Space before or after this window's, wrapping, among the
     /// Spaces it may show, and answers it; nil when the core showed no other.
     @discardableResult

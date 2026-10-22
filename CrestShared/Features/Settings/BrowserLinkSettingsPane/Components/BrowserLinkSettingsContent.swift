@@ -10,7 +10,7 @@ struct BrowserLinkSettingsContent: View {
         BrowserExternalLinkDestinationSection(
             destination: externalDestinationBinding,
             spaceID: externalSpaceBinding,
-            spaces: availableSpaces
+            spaces: browser.spaceChoices
         )
 
         BrowserQuickWindowSettingsSection(
@@ -27,7 +27,7 @@ struct BrowserLinkSettingsContent: View {
         if lockedRouteDestinationSpaces.isEmpty {
             BrowserLinkRoutingSection(
                 routes: links.preferences.routes,
-                spaces: availableSpaces,
+                spaces: browser.spaceChoices,
                 selectedSpaceID: resolvedSelectedSpaceID,
                 updateRoute: updateRoute,
                 remove: links.removeRoute,
@@ -51,22 +51,19 @@ struct BrowserLinkSettingsContent: View {
         }
     }
 
-    private var availableSpaces: [SpaceModel] {
-        browser.spaceModels.filter { !browser.isDeleting($0.id) }
-    }
-
     private var resolvedSelectedSpaceID: UUID {
         resolvedSpaceID(preferring: browser.selectedSpaceID)
     }
 
-    /// The Space links open in: the preferred one while it is available, then
-    /// the selected one, then the first available Space.
+    /// The Space a choice names: the preferred one while it is listed, even
+    /// hidden on this device, then the selected one, then the first available
+    /// Space.
     private func resolvedSpaceID(preferring preferredSpaceID: UUID?) -> UUID {
-        let spaces = availableSpaces
-        let selectedSpaceID = browser.selectedSpaceID
-        if let preferredSpaceID, spaces.contains(where: { $0.id == preferredSpaceID }) {
+        if let preferredSpaceID, browser.spaceChoices.contains(where: { $0.id == preferredSpaceID }) {
             return preferredSpaceID
         }
+        let spaces = browser.availableSpaces
+        let selectedSpaceID = browser.selectedSpaceID
         if spaces.contains(where: { $0.id == selectedSpaceID }) {
             return selectedSpaceID
         }

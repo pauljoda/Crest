@@ -3,7 +3,7 @@ import SwiftUI
 struct BrowserExternalLinkDestinationSection: View {
     @Binding var destination: ExternalLinkDestination
     @Binding var spaceID: UUID?
-    let spaces: [SpaceModel]
+    let spaces: [CrestSpaceIdentity]
 
     var body: some View {
         Section("Links from other apps") {
@@ -18,7 +18,7 @@ struct BrowserExternalLinkDestinationSection: View {
                 CrestSpaceMenuPicker(
                     "Space",
                     selection: $spaceID,
-                    spaces: CrestSpaceIdentity.list(spaces)
+                    spaces: spaces
                 )
             }
         }

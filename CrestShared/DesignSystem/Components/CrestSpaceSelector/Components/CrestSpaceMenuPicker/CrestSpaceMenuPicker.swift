@@ -22,6 +22,7 @@ struct CrestSpaceMenuPicker<Tag: Hashable>: View {
                     iconSize: iconSize
                 )
                 .tag(tag(identity))
+                .disabled(!identity.isEnabled)
             }
         }
         .modifier(CrestSpaceMenuLabelVisibility(labelsHidden: labelsHidden))

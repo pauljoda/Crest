@@ -8,6 +8,22 @@ import SwiftUI
 /// gone reads as its last published settings and writes nothing the core
 /// accepts.
 extension BrowserStore {
+    // MARK: - Variables
+
+    /// The Spaces a settings picker lists: every one not being deleted, with
+    /// the ones hidden on this device named as such and not offered, so a
+    /// choice that already names one still reads as made.
+    var spaceChoices: [CrestSpaceIdentity] {
+        spaceModels.filter { !isDeleting($0.id) }.map { space in
+            hidesSpaceOnDevice(space.id)
+                ? CrestSpaceIdentity(
+                    space: space,
+                    displayName: String(localized: "\(space.settings.name) (Hidden on This Device)"),
+                    isEnabled: false)
+                : CrestSpaceIdentity(space: space)
+        }
+    }
+
     // MARK: - Actions - Selection
 
     /// The Space a pane should be showing, given what it is showing now.
@@ -105,11 +121,23 @@ extension BrowserStore {
         }
     }
 
-    /// The Space a pane defaults to, for preferences that always resolve to one.
+    /// Whether this device shows a Space, which only this device keeps.
+    func spaceVisibilityBinding(for space: SpaceModel) -> Binding<Bool> {
+        Binding { [self] in
+            !hidesSpaceOnDevice(space.id)
+        } set: { [self] shown in
+            showSpaceOnDevice(space.id, shown: shown)
+        }
+    }
+
+    /// The Space a pane defaults to, for preferences that always resolve to
+    /// one. A Space hidden on this device is never written, since no window
+    /// here launches on it.
     func defaultSpaceBinding() -> Binding<UUID> {
         Binding { [self] in
             workspaceModel?.defaultSpaceID ?? selectedSpaceID
         } set: { [self] spaceID in
+            guard !hidesSpaceOnDevice(spaceID) else { return }
             setDefaultSpace(spaceID)
         }
     }

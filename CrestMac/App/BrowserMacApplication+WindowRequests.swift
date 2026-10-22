@@ -21,11 +21,9 @@ extension BrowserMacApplication {
     // MARK: - Variables
 
     /// The Spaces the engine's extensions may act in: every one this window
-    /// family holds that is neither locked nor being deleted.
+    /// family holds that is not locked, being deleted or hidden on this device.
     var extensionSpaces: [BrowserSpaceIdentity] {
-        browser.spaceModels.filter {
-            !browser.deletingSpaceIDs.contains($0.id) && !spaceAccess.isLocked($0)
-        }.map(\.identity)
+        browser.availableSpaces.filter { !spaceAccess.isLocked($0) }.map(\.identity)
     }
 
     // MARK: - Actions - Spaces
