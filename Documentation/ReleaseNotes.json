@@ -4297,6 +4297,14 @@
     "address-bar-swipes-through-tabs": {
       "category": "new",
       "message": "On iPhone, swiping left or right on the address bar moves through the tabs of your Space in sidebar order, and the page slides along with your finger. In a Split View, the other cards sit beside the address bar, and the swipe moves card by card before carrying on to the next tab."
+    },
+    "chromium-upstream-155-0-8059-84-1-1-721f3d908153": {
+      "category": "fixed",
+      "message": "Chromium is updated to 155.0.8059.84 with upstream security and compatibility fixes."
+    },
+    "chromium-emudhra-certificates-distrusted": {
+      "category": "fixed",
+      "message": "Pages that run in Chromium no longer trust certificates from the compromised eMudhra certificate authorities, matching Chrome."
     }
   }
 }
