@@ -64,8 +64,8 @@ tabs on the address bar and support for iPhone Duo.
 
 ### Security
 
-- Chromium includes upstream’s latest security fixes.
-- Chromium no longer trusts the eMudhra certificate authorities whose keys were compromised, as in Chrome. Sites whose certificates still rely on the removed emSign ECC Root CA - G3 root stop loading in the Chromium engine. WebKit follows macOS’s own certificate trust.
+- Chromium 155.0.8059.84 brings upstream’s latest security fixes.
+- Chromium no longer trusts the eight eMudhra certificate authorities whose keys were compromised, or the emSign ECC Root CA - G3 root, matching Chrome. Sites whose certificates still rely on that root stop loading in the Chromium engine and show a certificate warning instead. WebKit follows macOS’s own certificate trust.
 
 ### Upgrading
 

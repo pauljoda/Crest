@@ -4305,6 +4305,10 @@
     "chromium-emudhra-certificates-distrusted": {
       "category": "fixed",
       "message": "Pages that run in Chromium no longer trust certificates from the compromised eMudhra certificate authorities, matching Chrome."
+    },
+    "crest-0-8-50-chromium-security-setup-translation": {
+      "category": "new",
+      "message": "Crest 0.8.50 updates Chromium with its latest security fixes and stops trusting the compromised eMudhra certificate authorities, rebuilds setup on the Mac, translates whole pages in Chromium, and fixes several crashes and problems quitting."
     }
   }
 }
