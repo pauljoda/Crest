@@ -4282,6 +4282,10 @@
       "category": "improved",
       "message": "On iPad and iPhone Duo, the sidebar starts narrower, leaving more of the window to the page."
     },
+    "quick-window-card-fits-screen": {
+      "category": "fixed",
+      "message": "On iPhone and iPad, a Quick Window no longer leaves an empty band above it, and on iPad a Quick Window or Peek beside the sidebar stays on screen instead of running off its edge."
+    },
     "dismissed-address-shows-page": {
       "category": "fixed",
       "message": "On iPhone and in a Mac Quick Window, leaving the address bar without going anywhere, by tapping or clicking away or pressing Escape, puts the page's address back instead of what you typed."
