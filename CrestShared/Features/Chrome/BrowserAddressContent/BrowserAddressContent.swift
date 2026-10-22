@@ -65,6 +65,12 @@ struct BrowserAddressContent: View {
         .modifier(BrowserPlatformAddressInputModifier())
         .focused($isFocused)
         .onSubmit(submit)
+        // Escape puts the address away without opening it, as a click
+        // elsewhere does.
+        .onKeyPress(.escape) {
+            isFocused = false
+            return .handled
+        }
         .onTapGesture(perform: selectAll)
         .accessibilityLabel(Text(editorAccessibilityLabel))
         .accessibilityIdentifier(editorAccessibilityIdentifier)
