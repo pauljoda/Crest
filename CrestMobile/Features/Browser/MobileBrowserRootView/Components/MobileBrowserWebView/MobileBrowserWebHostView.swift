@@ -141,9 +141,8 @@ final class MobileBrowserWebHostView: UIView {
     }
 
     /// The viewport is applied from the value SwiftUI hands down rather than
-    /// from this view's own `safeAreaInsets`, which a carousel cell inside a
-    /// `ScrollView` never receives. `MobileBrowserPageViewport` carries the
-    /// reasoning.
+    /// from this view's own `safeAreaInsets`. `MobileBrowserPageViewport`
+    /// carries the reasoning.
     private func applyViewportInsets() {
         guard let hostedWebView, hostedWebView.superview === self else { return }
         let overlayInsets = viewport.chromeOverlayInsets

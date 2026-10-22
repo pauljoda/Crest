@@ -4,8 +4,8 @@ import SwiftUI
 /// platform.
 ///
 /// Every mobile surface that shows live web content goes through here: the
-/// selected tab in `MobileBrowserDetailView`, each cell of the iPhone split
-/// carousel, and each iPad split column. They differ in the
+/// selected tab in `MobileBrowserDetailView`, a tab the iPhone address bar's
+/// swipe slides in beside it, and each iPad split column. They differ in the
 /// `MobileBrowserPageViewport` they are handed and in whether a tap asks for
 /// focus — never in the treatment of the page itself. A grouped tab and a plain
 /// tab therefore render identically by construction rather than by two places
@@ -23,13 +23,16 @@ struct MobileBrowserLivePageView: View {
     /// An unfocused card's request to become the focused one. `nil` wherever
     /// the page on screen is already the focused one.
     var requestFocus: (() -> Void)?
+    /// Keeps the page out of VoiceOver's reach while it waits out of sight.
+    var hidesFromAccessibility = false
 
     var body: some View {
         MobileBrowserWebView(
             page: page,
             viewport: viewport,
             handleInteraction: handleInteraction,
-            requestFocus: requestFocus
+            requestFocus: requestFocus,
+            hidesFromAccessibility: hidesFromAccessibility
         )
         // Keep the document color behind WebKit; docked bars own their native
         // background independently of the page's theme.

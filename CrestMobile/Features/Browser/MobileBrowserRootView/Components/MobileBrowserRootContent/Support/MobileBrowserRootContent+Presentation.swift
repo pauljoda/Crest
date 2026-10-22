@@ -145,8 +145,7 @@ extension MobileBrowserRootContent {
             showTabViewer: showTabViewer,
             hideCompactToolbar: navigation.hideCompactToolbar,
             showCompactToolbar: navigation.showCompactToolbar,
-            handleToolbarSwipe: handleToolbarSwipe,
-            selectSplitCard: selectSplitCard,
+            showSwipedTab: showSwipedTab,
             compactTransitionEnded: finishCompactTransition
         )
     }

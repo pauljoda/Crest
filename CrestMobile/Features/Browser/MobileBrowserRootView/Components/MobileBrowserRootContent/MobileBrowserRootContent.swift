@@ -219,8 +219,7 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
                             navigation.hideCompactToolbar,
                         showCompactToolbar:
                             navigation.showCompactToolbar,
-                        handleToolbarSwipe: handleToolbarSwipe,
-                        selectSplitCard: selectSplitCard,
+                        showSwipedTab: showSwipedTab,
                         compactTransitionEnded: finishCompactTransition,
                         transientBrowsing: transientBrowsing,
                         didPromoteTransientPage: model.activateSelectedTab,

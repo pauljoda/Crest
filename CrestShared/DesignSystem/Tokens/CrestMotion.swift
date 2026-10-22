@@ -79,6 +79,10 @@ enum CrestMotion {
     static let contentNavigationTransition: TimeInterval = 0.42
     /// Settling an interactive horizontal Space swipe.
     static let spaceSwipeTransition: TimeInterval = 0.32
+    /// Shaking a control to show a swipe has nowhere further to go.
+    static let boundaryShakeTransition: TimeInterval = 0.36
+    /// Fading a page in where Reduce Motion stills a slide.
+    static let reducedMotionFadeTransition: TimeInterval = 0.2
     /// Presenting Peek inside a Quick Window.
     static let quickPeekEntranceTransition: TimeInterval = 0.34
     /// Revealing initial Peek web content after its first commit.
@@ -153,6 +157,11 @@ enum CrestMotion {
     }
     static var spaceSwipe: Animation {
         .snappy(duration: spaceSwipeTransition, extraBounce: 0)
+    }
+    /// The fade Reduce Motion keeps in place of a slide. Unlike the other
+    /// roles it is meant for Reduce Motion, so it is used as it is.
+    static var reducedMotionFade: Animation {
+        .easeInOut(duration: reducedMotionFadeTransition)
     }
     static var quickPeekEntrance: Animation {
         .smooth(duration: quickPeekEntranceTransition)

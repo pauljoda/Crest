@@ -41,9 +41,8 @@ final class MobileBrowserPageStore:
     /// rather than a special case, and the active page is always a member while
     /// anything is presented.
     ///
-    /// Deliberately observable: a carousel cell and an iPad column both read it
-    /// through `residentPage(matching:)` and have to re-render when membership
-    /// changes.
+    /// Deliberately observable: an iPad column reads it through
+    /// `residentPage(matching:)` and has to re-render when membership changes.
     private(set) var presentedTabIDs: [UUID] = []
     /// The pages this window hosts: its tabs', its leases' and the state its
     /// tabs leave when their pages go.
@@ -205,10 +204,10 @@ final class MobileBrowserPageStore:
         else {
             return false
         }
-        // Unlike macOS, only the focused member is built here. The carousel
-        // materializes its cells lazily and each one calls
-        // `prepareResidentPage(for:in:)` as it approaches, which is what keeps a
-        // four-member group to focused ±1 live web views on a phone.
+        // Unlike macOS, only the focused member is built here. A phone shows
+        // one card at a time and asks `prepareResidentPage(for:)` for the
+        // cards either side, which is what keeps a four-member group to
+        // focused ±1 live web views on a phone.
         let presented = presentedMemberIDs(for: tab, in: space)
         if tab.nativeContent != nil {
             nativeTabs.load(tab: tab, space: space, at: time)
@@ -303,6 +302,19 @@ final class MobileBrowserPageStore:
         return host.page(matching: assignment)
     }
 
+    /// The page a tab of the shown Space keeps in memory, for the address
+    /// bar's swipe to slide in, or nil when it keeps none. Never builds one:
+    /// touching the bar does not load a tab.
+    ///
+    /// On a phone only the shown tab's page is ever on screen, so the swipe's
+    /// is the one host it gets while the swipe moves.
+    func swipePreviewPage(for tabID: UUID) -> MobileBrowserPage? {
+        _ = residencyRevision
+        guard let space = browser.shownSpace else { return nil }
+        return host.page(
+            matching: BrowserTabRuntimeAssignment(tabID: tabID, spaceID: space.id, profileID: space.profileID))
+    }
+
     /// Removes every rendered page from presentation without evicting their
     /// isolated WebKit runtimes. Selecting that tab again can reuse the resident
     /// page, but no previous Space can remain visible underneath the tab viewer
@@ -329,7 +341,7 @@ final class MobileBrowserPageStore:
             self.activePage = nil
         }
         // A card whose tab is gone must stop being a card in the same pass, or
-        // the carousel would keep a cell for a member the session no longer has.
+        // a column would stay for a member the session no longer has.
         if presentedTabIDs.contains(where: { !validTabIDs.contains($0) }) {
             presentedTabIDs = presentedTabIDs.filter { validTabIDs.contains($0) }
         }

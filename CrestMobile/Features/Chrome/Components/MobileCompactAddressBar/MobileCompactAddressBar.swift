@@ -15,6 +15,9 @@ struct MobileCompactAddressBar: View {
     let transitionEnded: (CGSize) -> Void
     let beginNewTab: () -> Void
     let submit: () -> Void
+    /// Moves to the tab before or after the shown one, which VoiceOver offers
+    /// as actions on the address. Nil where the bar walks no tabs.
+    var stepTab: ((AdjacentDirection) -> Void)?
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.layoutDirection) private var layoutDirection
@@ -60,6 +63,7 @@ struct MobileCompactAddressBar: View {
                 longPressAction: beginNewTab,
                 submit: submit
             )
+            .modifier(MobileTabStepActions(step: isEditing ? nil : stepTab))
 
             if isEditing, !text.isEmpty {
                 Button("Clear", systemImage: "xmark.circle.fill") { text = "" }

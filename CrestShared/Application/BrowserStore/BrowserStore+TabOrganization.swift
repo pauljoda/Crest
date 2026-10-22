@@ -424,6 +424,14 @@ extension BrowserStore {
         (try? core.query(SplitJoinCandidate(windowID: windowID)))?.tabID
     }
 
+    /// The tabs a swipe reaches back and on from the tab this window shows, as
+    /// the core answers it: card by card through a split, then the nearest card
+    /// of the next stop of its sidebar, and nothing past either end, so a swipe
+    /// never leaves the Space.
+    var swipeNeighbors: SwipeNeighborTabs {
+        (try? core.query(SwipeNeighbors(windowID: windowID))) ?? SwipeNeighborTabs(previousTabID: nil, nextTabID: nil)
+    }
+
     /// Whether the tab-list menu's "Split with Current Tab" would do anything:
     /// the core accepts joining the menu's subject to the selected tab's group
     /// in the Space this window shows.

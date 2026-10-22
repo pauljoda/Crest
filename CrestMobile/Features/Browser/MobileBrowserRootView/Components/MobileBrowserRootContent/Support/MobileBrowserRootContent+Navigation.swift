@@ -63,25 +63,12 @@ extension MobileBrowserRootContent {
         .reveal(in: self)
     }
 
-    /// The compact toolbar's horizontal swipe.
-    ///
-    /// It used to switch Spaces unconditionally. As of 0.4 it belongs to Split
-    /// View: `MobileToolbarSwipeMode` decides, and outside a group the answer
-    /// is deliberately nothing. Keyboard Space switching (⌥⌘←/→) is untouched —
-    /// it goes through `MobileBrowserCommandController`, not through here.
-    func handleToolbarSwipe(_ direction: BrowserSpaceSwipeDirection) {
-        MobileToolbarSwipeMode.shipping.destination(isInSplitGroup: isSelectedTabInSplitGroup)
-            .swipe(direction, in: self)
-    }
-
-    /// The carousel's own selection commits: an accessibility adjustment, or a
-    /// programmatic page that settled somewhere the selection did not expect.
-    func selectSplitCard(_ tabID: UUID) {
-        model.focusSplitCard(tabID)
-    }
-
-    var isSelectedTabInSplitGroup: Bool {
-        model.presentedSplitGroupID != nil
+    /// Shows the tab the address bar's swipe landed on, which the core chose
+    /// from the shown Space. Keyboard Space switching (⌥⌘←/→) goes through
+    /// `MobileBrowserCommandController`, not through here, and the swipe never
+    /// switches Spaces.
+    func showSwipedTab(_ tabID: UUID) {
+        model.showSwipedTab(tabID)
     }
 
     func toggleSidebarFromCommand() {

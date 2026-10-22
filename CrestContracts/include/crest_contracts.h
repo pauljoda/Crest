@@ -7,7 +7,7 @@
 
 /* SHA-256 of the canonical contract schema; pass it to crest_app_create. */
 #define CREST_CONTRACTS_FINGERPRINT_LENGTH 32u
-#define CREST_CONTRACTS_FINGERPRINT { 0xa4, 0xc2, 0x01, 0xd5, 0x8d, 0xd6, 0x4d, 0x22, 0x9e, 0x68, 0xae, 0xda, 0x79, 0xcd, 0xbf, 0x09, 0xcb, 0xae, 0x42, 0x70, 0x53, 0xcf, 0x7d, 0xd0, 0x63, 0x1d, 0xd0, 0xb8, 0x33, 0x32, 0xa3, 0x85 }
+#define CREST_CONTRACTS_FINGERPRINT { 0xbd, 0x40, 0x7a, 0xa2, 0x6a, 0x0d, 0x28, 0xe3, 0xef, 0x21, 0x6a, 0x8d, 0x88, 0x1f, 0x40, 0x6d, 0x55, 0x46, 0x71, 0xd2, 0xce, 0xb3, 0xd8, 0x2b, 0x39, 0xe1, 0x55, 0xd9, 0x0e, 0xd3, 0xfc, 0x7c }
 
 /* SHA-256 of the engine contract alone; pass it to crest_engine_register. */
 #define CREST_ENGINE_CONTRACT_FINGERPRINT_LENGTH 32u
@@ -573,10 +573,11 @@
 #define CREST_QUERY_SITE_DECISION 74u
 #define CREST_QUERY_SPLIT_JOIN_CANDIDATE 75u
 #define CREST_QUERY_STRONG_PASSWORD 76u
-#define CREST_QUERY_SYSTEM_PASSWORD_OFFER 77u
-#define CREST_QUERY_SYSTEM_PASSWORD_WRITE_THROUGH 78u
-#define CREST_QUERY_TRANSLATION_CHOICE 79u
-#define CREST_QUERY_WINDOW_TO_REOPEN 80u
+#define CREST_QUERY_SWIPE_NEIGHBORS 77u
+#define CREST_QUERY_SYSTEM_PASSWORD_OFFER 78u
+#define CREST_QUERY_SYSTEM_PASSWORD_WRITE_THROUGH 79u
+#define CREST_QUERY_TRANSLATION_CHOICE 80u
+#define CREST_QUERY_WINDOW_TO_REOPEN 81u
 
 /* EngineCommand tags */
 #define CREST_ENGINE_COMMAND_ADOPT_OFFERED_PAGE 0u

@@ -6468,6 +6468,17 @@ struct SweepExpiredRecords: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
 }
 
+struct SwipeNeighborTabs: Equatable, Sendable {
+    let previousTabID: UUID?
+    let nextTabID: UUID?
+}
+
+struct SwipeNeighbors: Query, Equatable, Sendable {
+    typealias Answer = SwipeNeighborTabs
+
+    let windowID: UUID
+}
+
 struct SyncJournalChanged: CoreChange, Equatable, Sendable {
     let workspaceID: UUID
     let pendingRecords: Int

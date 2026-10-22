@@ -10,8 +10,8 @@ import SwiftUI
 /// which leaves the card's own controls their taps and clicks.
 ///
 /// A `nil` action leaves the view untouched rather than attaching a gesture that
-/// does nothing, so the carousel — where the visible card is already focused —
-/// adds no recognizer at all.
+/// does nothing, so a card that is already the focused one adds no recognizer
+/// at all.
 struct MobileSplitCardFocusTapModifier: ViewModifier {
     let requestFocus: (() -> Void)?
 

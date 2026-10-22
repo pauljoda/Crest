@@ -168,8 +168,8 @@ the live status for each issue.
 - [ ] [feature: Stretch pins to fill the row](https://github.com/pauljoda/Crest/issues/530)
 - [ ] [bug: can't continue onboarding when importing from Arc](https://github.com/pauljoda/Crest/issues/535)
 - [ ] [Remove the blank space at the bottom of the iPad layout](https://github.com/pauljoda/Crest/issues/548)
-- [ ] [Show the shared page when a share opens Crest from closed on iPhone](https://github.com/pauljoda/Crest/issues/551)
-- [ ] [Let the iPhone Duo sidebar's list run into the bottom corner](https://github.com/pauljoda/Crest/issues/560)
+- [ ] [Keep a Quick Window from another app clear of a new tab's keyboard on iPhone](https://github.com/pauljoda/Crest/issues/563)
+- [ ] [Say so when a link from another app needs a locked Space](https://github.com/pauljoda/Crest/issues/564)
 
 #### Completed
 
@@ -202,9 +202,11 @@ the live status for each issue.
 - [x] [Show the right tab title in the sidebar after a page fails to load](https://github.com/pauljoda/Crest/issues/506) — [`fbddee58`](https://github.com/pauljoda/Crest/commit/fbddee58da9df69d09256a5a1b59897018e1ac55)
 - [x] [Redesign first-launch setup as a full-screen flow with a Heraldic or Modern look](https://github.com/pauljoda/Crest/issues/515) — [`37618b0d`](https://github.com/pauljoda/Crest/commit/37618b0d4f8d9abfb19b72cf6af4774304090916)
 - [x] [Adapt Crest for iPhone Duo's inner and outer displays](https://github.com/pauljoda/Crest/issues/547) — [`bc99dcd9`](https://github.com/pauljoda/Crest/commit/bc99dcd926de87af86354bd434080a02b262f656)
-- [x] [Restore the page's address after dismissing a typed address](https://github.com/pauljoda/Crest/issues/549)
+- [x] [Restore the page's address after dismissing a typed address](https://github.com/pauljoda/Crest/issues/549) — [`a2303d81`](https://github.com/pauljoda/Crest/commit/a2303d8114c6749a6fca1d297e017e3b321da2fc)
 - [x] [Keep the iPad Quick Window card inside the screen in portrait](https://github.com/pauljoda/Crest/issues/550) — [`30f93252`](https://github.com/pauljoda/Crest/commit/30f9325290bf1296a1b826b3aba4234251b87826)
+- [x] [Show the shared page when a share opens Crest from closed on iPhone](https://github.com/pauljoda/Crest/issues/551) — [`b51ce590`](https://github.com/pauljoda/Crest/commit/b51ce5904844cdd6f64d6d63beb714e8d60f797b)
 - [x] [Keep the Quick Window card clear of the top of the screen only once on iPhone](https://github.com/pauljoda/Crest/issues/558) — [`30f93252`](https://github.com/pauljoda/Crest/commit/30f9325290bf1296a1b826b3aba4234251b87826)
+- [x] [Let the iPhone Duo sidebar's list run into the bottom corner](https://github.com/pauljoda/Crest/issues/560) — [`d1082130`](https://github.com/pauljoda/Crest/commit/d1082130937c86fca1b15e180f8885cb9e2868cd)
 
 <!-- crest-roadmap-sync:end -->
 
