@@ -467,7 +467,9 @@ instead of a window of its own. Its tab stays in the popup's own `Browser`, so
 the extension's window id, `chrome.windows.remove` and `windows.onRemoved` still
 cover that tab alone, and the popup's bounds, minimize and hide requests leave
 the person's window as it is. Picture-in-picture keeps its Views window, which Chromium drives on
-its own, and so does a DevTools frontend the user has undocked.
+its own; Crest only places it (free dragging, a two-finger swipe, floating over
+full-screen Spaces and a remembered frame). A DevTools frontend the user has
+undocked keeps its own window too.
 
 A page's own `window.close()` does not close its WebContents. After its
 document agreed to go, the renderer's close request reaches

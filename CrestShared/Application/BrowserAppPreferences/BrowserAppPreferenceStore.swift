@@ -76,6 +76,20 @@ final class BrowserAppPreferenceStore {
         set { set { $0.automaticallyShowsDeveloperToolbar = newValue } }
     }
 
+    /// Where the floating Picture in Picture window was last left. Only the
+    /// frame changes, so an edit never rewrites the other preferences.
+    var pictureInPictureFrame: PictureInPictureFrame? {
+        get { preferences.pictureInPictureFrame }
+        set {
+            guard let browser else {
+                detached.pictureInPictureFrame = newValue
+                return
+            }
+            browser.sendAppPreferences(
+                SetPictureInPictureFrame(workspaceID: browser.family.workspaceID, frame: newValue))
+        }
+    }
+
     /// How the command palette ranks and arranges what it offers.
     var palette: PalettePreferences {
         get { preferences.palette }

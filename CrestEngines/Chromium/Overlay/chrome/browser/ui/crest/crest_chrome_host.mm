@@ -1,8 +1,10 @@
 #import <AuthenticationServices/AuthenticationServices.h>
 #import <Cocoa/Cocoa.h>
+#import <objc/runtime.h>
 #import "CrestChromiumHost.h"
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <map>
 #include <cmath>
@@ -156,6 +158,7 @@
 #include "content/public/browser/web_contents.h"
 #include "content/public/browser/javascript_dialog_manager.h"
 #include "net/base/auth.h"
+#include "ui/views/controls/button/button.h"
 #include "ui/views/widget/widget.h"
 #include "content/public/browser/web_contents_observer.h"
 #include "content/public/common/drop_data.h"
@@ -1051,30 +1054,751 @@ using CrestChromiumUIStart = void (*)(id<CrestMacShell> shell, const crest_engin
 }
 @end
 
-namespace crest {
-void SnapPictureInPictureWindow(views::Widget* widget) {
-  if (!IsEnabled() || !widget) return;
-  NSWindow* window = widget->GetNativeWindow().GetNativeNSWindow();
-  NSScreen* screen = window.screen;
-  if (!screen) return;
-  constexpr CGFloat kMargin = 16;
-  NSRect frame = window.frame;
-  NSRect work = screen.visibleFrame;
-  const CGFloat left = NSMinX(work) + kMargin;
-  const CGFloat right = std::max(left, NSMaxX(work) - kMargin - NSWidth(frame));
-  const CGFloat bottom = NSMinY(work) + kMargin;
-  const CGFloat top = std::max(bottom, NSMaxY(work) - kMargin - NSHeight(frame));
-  NSRect target = frame;
-  target.origin.x = NSMidX(frame) < NSMidX(work) ? left : right;
-  target.origin.y = NSMidY(frame) < NSMidY(work) ? bottom : top;
-  if (std::abs(target.origin.x - frame.origin.x) < 1 &&
-      std::abs(target.origin.y - frame.origin.y) < 1) return;
-  [NSAnimationContext runAnimationGroup:^(NSAnimationContext* context) {
-    context.duration = 0.22;
-    [[window animator] setFrame:target display:YES];
-  } completionHandler:nil];
+// MARK: - Picture in Picture window
+
+namespace {
+const char kPictureInPictureMoverKey = 0;
+
+// MARK: Tuning. Everything that sets how the floating window feels.
+
+// The window keeps this far from every edge of its screen's visible frame.
+const CGFloat kScreenMargin = 10;
+// Within this distance of a corner a held window is pulled toward it, and a
+// window dropped inside it settles into the corner.
+const CGFloat kCornerSnapDistance = 40;
+// How strongly the pull grows toward the corner. 1 is linear, higher is gentler.
+const CGFloat kCornerPullExponent = 2;
+// A release faster than this, in points per second, throws the window to a
+// corner. The value below is the default; see MomentumThreshold().
+const CGFloat kMomentumThreshold = 500;
+// The release speed comes from the positions in this long before the last one,
+// and counts only if that last one is no older than the staleness.
+const NSTimeInterval kVelocityWindow = 0.08;
+const NSTimeInterval kVelocityStaleness = 0.1;
+// How far ahead a throw looks, to choose the corner it is heading toward.
+const NSTimeInterval kThrowProjection = 0.25;
+// A throw's animation lasts about three times its distance over its speed, kept between these.
+const NSTimeInterval kMinThrowDuration = 0.2;
+const NSTimeInterval kMaxThrowDuration = 0.55;
+// Settling into a nearby corner after a slow release.
+const NSTimeInterval kSettleDuration = 0.16;
+// A swipe hides the cursor after this long, and a gesture that goes this long
+// without an event is treated as over.
+const NSTimeInterval kCursorHideDelay = 0.15;
+const NSTimeInterval kSwipeIdleTimeout = 3;
+// A swipe's momentum scrolling is swallowed for this long after it ends, even
+// where it is delivered to another window.
+const NSTimeInterval kMomentumGracePeriod = 3;
+const NSTimeInterval kAnimationFrameInterval = 1.0 / 120;
+
+// The speed, in points per second, above which a release is a throw.
+CGFloat MomentumThreshold() {
+  // The Appearance setting's stored choice.
+  const double stored =
+      [NSUserDefaults.standardUserDefaults doubleForKey:@"crest.appearance.picture-in-picture-momentum-threshold"];
+  return stored > 0 ? stored : kMomentumThreshold;
 }
 
+// Where the window was at a moment of a drag or swipe, in AppKit coordinates.
+struct MoveSample {
+  NSTimeInterval time;
+  NSPoint origin;
+};
+
+// The display's UUID as text, which survives reconnecting the display.
+NSString* DisplayUUIDOf(NSScreen* screen) {
+  NSNumber* number = screen.deviceDescription[@"NSScreenNumber"];
+  if (!number) return nil;
+  CFUUIDRef uuid = CGDisplayCreateUUIDFromDisplayID(number.unsignedIntValue);
+  if (!uuid) return nil;
+  NSString* text = CFBridgingRelease(CFUUIDCreateString(kCFAllocatorDefault, uuid));
+  CFRelease(uuid);
+  return text;
+}
+
+NSScreen* ScreenWithDisplayUUID(NSString* uuid) {
+  for (NSScreen* screen in NSScreen.screens) {
+    if ([DisplayUUIDOf(screen) isEqualToString:uuid]) return screen;
+  }
+  return nil;
+}
+
+// The screen whose visible frame shares the most area with `frame`, or nil.
+NSScreen* ScreenMostlyHolding(NSRect frame) {
+  NSScreen* best = nil;
+  CGFloat bestArea = 0;
+  for (NSScreen* screen in NSScreen.screens) {
+    NSRect overlap = NSIntersectionRect(screen.visibleFrame, frame);
+    const CGFloat area = NSWidth(overlap) * NSHeight(overlap);
+    if (area > bestArea) {
+      best = screen;
+      bestArea = area;
+    }
+  }
+  return best;
+}
+
+// `frame` moved, and made smaller if it must be, to lie inside `visible`.
+NSRect ClampedToVisibleFrame(NSRect frame, NSRect visible) {
+  frame.size.width = std::min(NSWidth(frame), NSWidth(visible));
+  frame.size.height = std::min(NSHeight(frame), NSHeight(visible));
+  frame.origin.x = std::min(std::max(NSMinX(frame), NSMinX(visible)), NSMaxX(visible) - NSWidth(frame));
+  frame.origin.y = std::min(std::max(NSMinY(frame), NSMinY(visible)), NSMaxY(visible) - NSHeight(frame));
+  return frame;
+}
+
+// Where the window may sit on `screen`: its visible frame less the margin.
+NSRect PlacementFrame(NSScreen* screen) {
+  return NSInsetRect(screen.visibleFrame, kScreenMargin, kScreenMargin);
+}
+
+// The four origins that put a window of `size` in a corner of `placement`.
+std::array<NSPoint, 4> CornerOrigins(NSSize size, NSRect placement) {
+  const CGFloat minX = NSMinX(placement);
+  const CGFloat minY = NSMinY(placement);
+  const CGFloat maxX = std::max(minX, NSMaxX(placement) - size.width);
+  const CGFloat maxY = std::max(minY, NSMaxY(placement) - size.height);
+  return {NSMakePoint(minX, minY), NSMakePoint(maxX, minY), NSMakePoint(minX, maxY), NSMakePoint(maxX, maxY)};
+}
+
+CGFloat PointDistance(NSPoint a, NSPoint b) {
+  return std::hypot(a.x - b.x, a.y - b.y);
+}
+
+// The velocity, in points per second, of the last moves before `release`; zero
+// when the window had stopped, or too little was seen to tell.
+NSPoint ReleaseVelocity(const std::vector<MoveSample>& samples, NSTimeInterval release) {
+  if (samples.empty() || release - samples.back().time > kVelocityStaleness) return NSZeroPoint;
+  const MoveSample last = samples.back();
+  MoveSample first = last;
+  for (auto it = samples.rbegin(); it != samples.rend() && last.time - it->time <= kVelocityWindow; ++it) {
+    first = *it;
+  }
+  const NSTimeInterval elapsed = last.time - first.time;
+  if (elapsed < 0.01) return NSZeroPoint;
+  return NSMakePoint((last.origin.x - first.origin.x) / elapsed, (last.origin.y - first.origin.y) / elapsed);
+}
+
+// `origin` pulled toward the corner it is within snapping distance of, harder
+// the nearer it is, so the window clings to a corner it passes and lets go as it
+// moves away. Outside every corner's reach it is unchanged.
+NSPoint MagneticOrigin(NSPoint origin, NSSize size, NSRect placement) {
+  const auto corners = CornerOrigins(size, placement);
+  NSPoint nearest = origin;
+  CGFloat nearestDistance = kCornerSnapDistance;
+  for (const NSPoint corner : corners) {
+    const CGFloat distance = PointDistance(origin, corner);
+    if (distance < nearestDistance) {
+      nearest = corner;
+      nearestDistance = distance;
+    }
+  }
+  if (nearestDistance >= kCornerSnapDistance) return origin;
+  const CGFloat pull = std::pow(1 - nearestDistance / kCornerSnapDistance, kCornerPullExponent);
+  return NSMakePoint(origin.x + (nearest.x - origin.x) * pull, origin.y + (nearest.y - origin.y) * pull);
+}
+
+// The corner within snapping distance of `origin`, if there is one.
+bool CornerWithinSnap(NSPoint origin, NSSize size, NSRect placement, NSPoint* corner) {
+  for (const NSPoint candidate : CornerOrigins(size, placement)) {
+    if (PointDistance(origin, candidate) <= kCornerSnapDistance) {
+      *corner = candidate;
+      return true;
+    }
+  }
+  return false;
+}
+
+// The corner a throw from `origin` at `velocity` is heading toward: of the
+// corners ahead of it, the one nearest where it would be a moment later.
+NSPoint ThrownCorner(NSPoint origin, NSPoint velocity, NSSize size, NSRect placement) {
+  const NSPoint projected =
+      NSMakePoint(origin.x + velocity.x * kThrowProjection, origin.y + velocity.y * kThrowProjection);
+  const auto corners = CornerOrigins(size, placement);
+  NSPoint best = corners[0];
+  CGFloat bestDistance = CGFLOAT_MAX;
+  bool bestIsAhead = false;
+  for (const NSPoint corner : corners) {
+    const bool ahead = (corner.x - origin.x) * velocity.x + (corner.y - origin.y) * velocity.y > 0;
+    const CGFloat distance = PointDistance(projected, corner);
+    if ((ahead && !bestIsAhead) || (ahead == bestIsAhead && distance < bestDistance)) {
+      best = corner;
+      bestDistance = distance;
+      bestIsAhead = ahead;
+    }
+  }
+  return best;
+}
+
+// A point in AppKit's global coordinates (origin at the bottom left of the
+// main display) as Quartz's (origin at the top left of that same display), which
+// is what moving the cursor takes, on any display.
+CGPoint QuartzPoint(NSPoint point) {
+  NSScreen* primary = NSScreen.screens.firstObject;
+  const CGFloat height = primary ? NSHeight(primary.frame) : 0;
+  return CGPointMake(point.x, height - point.y);
+}
+}  // namespace
+
+// What Chromium's NativeWidgetMacNSWindow offers, which a plain NSWindow does not.
+@protocol CrestActivationIndependent <NSObject>
+- (void)setActivationIndependence:(BOOL)independence;
+- (bool)activationIndependence;
+@end
+
+// Keeps the Picture in Picture window above other apps' full-screen Spaces,
+// moves it with a two-finger swipe, and tells Crest where it was left. Chromium
+// still owns the window, its controls and its dragging.
+@interface CrestPictureInPictureMover : NSObject
+- (instancetype)initWithWidget:(views::Widget*)widget window:(NSWindow*)window;
+// Floats the window, puts it back where it was left and starts watching it.
+- (void)start;
+// A drag or swipe ended: keeps the window on a screen and remembers where.
+- (void)finishMove;
+// A mouse drag was let go: a fast release throws the window to a corner.
+- (void)finishDrag;
+// Stops watching the window and puts back the level and behavior it had.
+- (void)invalidate;
+@end
+
+@implementation CrestPictureInPictureMover {
+  base::WeakPtr<views::Widget> _widget;
+  NSWindow* __weak _window;
+  id _scrollMonitor;
+  id _resizeObserver;
+  BOOL _observingWindow;
+  NSWindowLevel _originalLevel;
+  NSWindowCollectionBehavior _originalBehavior;
+  BOOL _originalHidesOnDeactivate;
+  BOOL _originalExcludedFromWindowsMenu;
+  BOOL _originalActivationIndependence;
+  NSRect _savedFrame;
+  // A swipe that began on the window owns every event until it ends.
+  BOOL _swiping;
+  // Momentum that follows a swipe is not a page scroll either.
+  BOOL _swallowingMomentum;
+  NSTimeInterval _swipeEndedAt;
+  // Where the fingers have carried the window, before any pull toward a corner.
+  NSPoint _swipeOrigin;
+  // Recent positions, for the speed of a release.
+  std::vector<MoveSample> _samples;
+  // Set while the mover itself moves the window, whose notices are not a drag.
+  BOOL _movingWindow;
+  // The throw or settle that is carrying the window to `_animationTarget`.
+  NSTimer* _animationTimer;
+  NSPoint _animationStart;
+  NSPoint _animationTarget;
+  NSTimeInterval _animationBegan;
+  NSTimeInterval _animationDuration;
+  // The cursor stays under the same spot of a swiped window. `_cursorOffset` is
+  // that spot, from the window's origin; it is pending until the window is
+  // dropped and the cursor is moved there.
+  BOOL _cursorPending;
+  NSPoint _cursorOffset;
+  // Whether this mover has hidden the cursor and owes one unhide.
+  BOOL _cursorHidden;
+  NSTimer* _cursorHideTimer;
+  NSTimer* _swipeIdleTimer;
+}
+
+- (instancetype)initWithWidget:(views::Widget*)widget window:(NSWindow*)window {
+  if ((self = [super init])) {
+    _widget = widget->GetWeakPtr();
+    _window = window;
+    _originalLevel = window.level;
+    _originalBehavior = window.collectionBehavior;
+    _originalHidesOnDeactivate = window.hidesOnDeactivate;
+    _originalExcludedFromWindowsMenu = window.excludedFromWindowsMenu;
+    _originalActivationIndependence = [self activationIndependenceOf:window];
+  }
+  return self;
+}
+
+- (void)start {
+  NSWindow* window = _window;
+  if (window) {
+    [self floatOverFullScreenSpaces:window];
+    [self restoreSavedFrame:window];
+    _savedFrame = window.frame;
+    __weak CrestPictureInPictureMover* weakSelf = self;
+    _scrollMonitor = [NSEvent addLocalMonitorForEventsMatchingMask:NSEventMaskScrollWheel | NSEventMaskLeftMouseDown
+                                                           handler:^NSEvent*(NSEvent* event) {
+                                                             CrestPictureInPictureMover* strongSelf = weakSelf;
+                                                             if (!strongSelf) return event;
+                                                             if (event.type == NSEventTypeLeftMouseDown) {
+                                                               [strongSelf handleMouseDown:event];
+                                                               return event;
+                                                             }
+                                                             return [strongSelf handleScroll:event];
+                                                           }];
+    // Ending the gesture on every way the window can stop being moved is what
+    // keeps the cursor from staying hidden.
+    _observingWindow = YES;
+    [NSNotificationCenter.defaultCenter addObserver:self
+                                           selector:@selector(windowDidMove:)
+                                               name:NSWindowDidMoveNotification
+                                             object:window];
+    [NSNotificationCenter.defaultCenter addObserver:self
+                                           selector:@selector(gestureInterrupted:)
+                                               name:NSWindowWillCloseNotification
+                                             object:window];
+    [NSNotificationCenter.defaultCenter addObserver:self
+                                           selector:@selector(gestureInterrupted:)
+                                               name:NSApplicationDidResignActiveNotification
+                                             object:nil];
+    _resizeObserver = [NSNotificationCenter.defaultCenter
+        addObserverForName:NSWindowDidEndLiveResizeNotification
+                    object:window
+                     queue:NSOperationQueue.mainQueue
+                usingBlock:^(NSNotification*) {
+                  [weakSelf finishMove];
+                }];
+  }
+}
+
+- (void)dealloc {
+  [self invalidate];
+}
+
+- (void)invalidate {
+  // Before anything else, so the cursor is never left hidden.
+  [self stopMotionAndShowCursor];
+  if (_scrollMonitor) [NSEvent removeMonitor:_scrollMonitor];
+  if (_resizeObserver) [NSNotificationCenter.defaultCenter removeObserver:_resizeObserver];
+  if (_observingWindow) [NSNotificationCenter.defaultCenter removeObserver:self];
+  _observingWindow = NO;
+  _scrollMonitor = nil;
+  _resizeObserver = nil;
+  NSWindow* window = _window;
+  if (window) {
+    window.level = _originalLevel;
+    [self setActivationIndependence:_originalActivationIndependence on:window];
+    window.collectionBehavior = _originalBehavior;
+    window.hidesOnDeactivate = _originalHidesOnDeactivate;
+    window.excludedFromWindowsMenu = _originalExcludedFromWindowsMenu;
+  }
+  _window = nil;
+}
+
+// MARK: Actions - Placement
+
+- (void)floatOverFullScreenSpaces:(NSWindow*)window {
+  window.level = NSFloatingWindowLevel;
+  // Another app's full-screen Space only takes a window that AppKit treats as a
+  // nonactivating panel. Chromium's window class has a switch for that, which
+  // keeps it a plain window. AppKit reads the switch when the collection
+  // behavior is assigned, so that comes after it.
+  [self setActivationIndependence:YES on:window];
+  // Auxiliary full-screen and following the person across Spaces let it sit
+  // over a full-screen Space. Transient, stationary and ignoring the cycle keep
+  // it out of Mission Control and the window cycle; the managed and cycling
+  // bits Chromium sets say the opposite, so they are cleared. Chromium's other
+  // behavior stays.
+  NSWindowCollectionBehavior behavior = window.collectionBehavior;
+  behavior &= ~(NSWindowCollectionBehaviorMoveToActiveSpace | NSWindowCollectionBehaviorFullScreenPrimary |
+                NSWindowCollectionBehaviorFullScreenNone | NSWindowCollectionBehaviorManaged |
+                NSWindowCollectionBehaviorParticipatesInCycle);
+  behavior |= NSWindowCollectionBehaviorFullScreenAuxiliary | NSWindowCollectionBehaviorCanJoinAllSpaces |
+              NSWindowCollectionBehaviorStationary | NSWindowCollectionBehaviorTransient |
+              NSWindowCollectionBehaviorIgnoresCycle;
+  // Assigning the value it already has would not make AppKit look again.
+  window.collectionBehavior = NSWindowCollectionBehaviorDefault;
+  window.collectionBehavior = behavior;
+  window.hidesOnDeactivate = NO;
+  window.excludedFromWindowsMenu = YES;
+}
+
+// Chromium's window class (NativeWidgetMacNSWindow) answers AppKit's question
+// whether it is a nonactivating panel from this switch. Looked up by selector,
+// so any other window class is left alone. Not Widget::SetActivationIndependence,
+// whose CHECK would fail when it is turned back off for a floating widget.
+- (BOOL)activationIndependenceOf:(NSWindow*)window {
+  if (![window respondsToSelector:@selector(activationIndependence)]) return NO;
+  return [((id<CrestActivationIndependent>)window) activationIndependence];
+}
+
+- (void)setActivationIndependence:(BOOL)independence on:(NSWindow*)window {
+  if (![window respondsToSelector:@selector(setActivationIndependence:)]) return;
+  [((id<CrestActivationIndependent>)window) setActivationIndependence:independence];
+}
+
+// Puts the window where the person left the last one: on the screen it was
+// left on, else any screen it still overlaps, else the main screen, and always
+// inside that screen's visible frame.
+- (void)restoreSavedFrame:(NSWindow*)window {
+  id<CrestPictureInPictureFrame> saved = [UI() savedPictureInPictureFrame];
+  if (!saved) return;
+  NSRect frame = saved.frame;
+  NSScreen* screen = ScreenWithDisplayUUID(saved.displayUUID) ?: ScreenMostlyHolding(frame) ?: NSScreen.mainScreen;
+  if (!screen) return;
+  // A different video has a different shape; the window keeps the saved width
+  // and the shape the engine gave it.
+  const NSSize aspect = window.contentAspectRatio;
+  if (aspect.width > 0 && aspect.height > 0) frame.size.height = NSWidth(frame) * aspect.height / aspect.width;
+  [self moveWindow:window toFrame:ClampedToVisibleFrame(frame, PlacementFrame(screen)) display:NO];
+}
+
+// Moves the window without it counting as a person's drag.
+- (void)moveWindow:(NSWindow*)window toFrame:(NSRect)frame display:(BOOL)display {
+  _movingWindow = YES;
+  [window setFrame:frame display:display];
+  _movingWindow = NO;
+}
+
+- (void)moveWindow:(NSWindow*)window toOrigin:(NSPoint)origin {
+  _movingWindow = YES;
+  [window setFrameOrigin:origin];
+  _movingWindow = NO;
+}
+
+- (void)finishMove {
+  NSWindow* window = _window;
+  if (!window || !State().started || State().disposing) return;
+  NSRect frame = window.frame;
+  BOOL fits = NO;
+  for (NSScreen* screen in NSScreen.screens) {
+    if (NSContainsRect(PlacementFrame(screen), frame)) fits = YES;
+  }
+  NSScreen* screen = ScreenMostlyHolding(frame) ?: window.screen ?: NSScreen.mainScreen;
+  if (!fits && screen) {
+    frame = ClampedToVisibleFrame(frame, PlacementFrame(screen));
+    [self moveWindow:window toFrame:frame display:YES];
+  }
+  NSString* display = DisplayUUIDOf(screen);
+  if (!display || NSEqualRects(frame, _savedFrame)) return;
+  _savedFrame = frame;
+  [UI() savePictureInPictureFrame:frame displayUUID:display];
+}
+
+// MARK: Actions - Two-finger swipe
+
+// Handles scrolling for the window rather than letting Chromium's views see
+// it, so neither the page nor the overlay's controls can swallow the gesture.
+- (NSEvent*)handleScroll:(NSEvent*)event {
+  NSWindow* window = _window;
+  if (!window) return event;
+  if (_swiping) {
+    if (event.phase == NSEventPhaseNone && event.momentumPhase == NSEventPhaseNone) {
+      // Not part of a gesture: the latch is stale.
+      [self endSwipeAt:event.timestamp throwing:NO];
+      return event;
+    }
+    [self moveWindowBy:event];
+    if (event.phase & (NSEventPhaseEnded | NSEventPhaseCancelled)) {
+      _swallowingMomentum = YES;
+      _swipeEndedAt = event.timestamp;
+      [self endSwipeAt:event.timestamp throwing:!(event.phase & NSEventPhaseCancelled)];
+    } else {
+      [self scheduleSwipeIdleTimeout];
+    }
+    return nil;
+  }
+  // The window moved away from a stationary cursor, so the swipe's own momentum
+  // may be delivered to whatever is under the cursor now. It still belongs to
+  // the swipe for a short while after it ends.
+  if (_swallowingMomentum && event.momentumPhase != NSEventPhaseNone &&
+      (event.window == window || event.timestamp - _swipeEndedAt < kMomentumGracePeriod)) {
+    if (event.momentumPhase & (NSEventPhaseEnded | NSEventPhaseCancelled)) _swallowingMomentum = NO;
+    return nil;
+  }
+  if (event.window != window) return event;
+  _swallowingMomentum = NO;
+  if (!(event.phase & NSEventPhaseBegan) || !event.hasPreciseScrollingDeltas ||
+      event.momentumPhase != NSEventPhaseNone || (event.modifierFlags & NSEventModifierFlagCommand) ||
+      ![self startsOnDraggableArea:event]) {
+    return event;
+  }
+  [self beginSwipe];
+  [self moveWindowBy:event];
+  [self scheduleSwipeIdleTimeout];
+  return nil;
+}
+
+// A press on the window takes it back from a throw in flight.
+- (void)handleMouseDown:(NSEvent*)event {
+  if (event.window != _window) return;
+  if (!_animationTimer) return;
+  [self abandonGesture];
+}
+
+// Whether the swipe starts on the window's surface rather than on one of
+// Chromium's controls, which keep their own scrolling and clicking.
+- (BOOL)startsOnDraggableArea:(NSEvent*)event {
+  NSWindow* window = _window;
+  views::Widget* widget = _widget.get();
+  if (!window || !widget || !widget->GetRootView()) return NO;
+  const NSRect content = window.contentView.frame;
+  const NSPoint point = event.locationInWindow;
+  if (!NSPointInRect(point, content)) return NO;
+  const gfx::Point local(point.x - NSMinX(content), NSMaxY(content) - point.y);
+  for (views::View* view = widget->GetRootView()->GetEventHandlerForPoint(local); view; view = view->parent()) {
+    if (views::Button::AsButton(view)) return NO;
+  }
+  return YES;
+}
+
+- (void)moveWindowBy:(NSEvent*)event {
+  NSWindow* window = _window;
+  if (!window) return;
+  // Fingers carry the window the way they carry content. With natural
+  // scrolling off the system reverses the deltas, so they reverse back.
+  const CGFloat direction = event.directionInvertedFromDevice ? 1 : -1;
+  NSRect frame = window.frame;
+  frame.origin = _swipeOrigin;
+  frame.origin.x += direction * event.scrollingDeltaX;
+  frame.origin.y -= direction * event.scrollingDeltaY;
+  NSScreen* screen = ScreenMostlyHolding(window.frame) ?: window.screen ?: NSScreen.mainScreen;
+  if (!screen) return;
+  const NSRect placement = PlacementFrame(screen);
+  frame = ClampedToVisibleFrame(frame, placement);
+  _swipeOrigin = frame.origin;
+  if (event.scrollingDeltaX != 0 || event.scrollingDeltaY != 0) [self recordSampleAt:event.timestamp origin:_swipeOrigin];
+  // The window shows where the fingers are, drawn toward a corner they pass.
+  [self moveWindow:window toOrigin:MagneticOrigin(_swipeOrigin, frame.size, placement)];
+}
+
+// MARK: Actions - Release
+
+- (void)beginSwipe {
+  NSWindow* window = _window;
+  if (!window) return;
+  // A swipe takes the window back from a throw in flight; the cursor still owes
+  // its trip to the spot it was left on.
+  [self stopAnimation];
+  _swiping = YES;
+  _samples.clear();
+  _swipeOrigin = window.frame.origin;
+  if (!_cursorPending) {
+    const NSPoint cursor = NSEvent.mouseLocation;
+    _cursorOffset = NSMakePoint(cursor.x - NSMinX(window.frame), cursor.y - NSMinY(window.frame));
+    _cursorPending = YES;
+  }
+  if (!_cursorHidden && !_cursorHideTimer) {
+    __weak CrestPictureInPictureMover* weakSelf = self;
+    _cursorHideTimer = [NSTimer timerWithTimeInterval:kCursorHideDelay
+                                              repeats:NO
+                                                block:^(NSTimer*) {
+                                                  [weakSelf hideCursor];
+                                                }];
+    [NSRunLoop.mainRunLoop addTimer:_cursorHideTimer forMode:NSRunLoopCommonModes];
+  }
+}
+
+// The swipe's fingers lifted (or the swipe was cut short): lets the window go.
+- (void)endSwipeAt:(NSTimeInterval)time throwing:(BOOL)throwing {
+  _swiping = NO;
+  [_swipeIdleTimer invalidate];
+  _swipeIdleTimer = nil;
+  [_cursorHideTimer invalidate];
+  _cursorHideTimer = nil;
+  [self releaseAt:time throwing:throwing];
+}
+
+// A swipe that never says it ended must not keep the window and cursor.
+- (void)scheduleSwipeIdleTimeout {
+  [_swipeIdleTimer invalidate];
+  __weak CrestPictureInPictureMover* weakSelf = self;
+  _swipeIdleTimer = [NSTimer timerWithTimeInterval:kSwipeIdleTimeout
+                                           repeats:NO
+                                             block:^(NSTimer*) {
+                                               CrestPictureInPictureMover* strongSelf = weakSelf;
+                                               if (strongSelf && strongSelf->_swiping) {
+                                                 [strongSelf endSwipeAt:NSProcessInfo.processInfo.systemUptime throwing:NO];
+                                               }
+                                             }];
+  [NSRunLoop.mainRunLoop addTimer:_swipeIdleTimer forMode:NSRunLoopCommonModes];
+}
+
+- (void)finishDrag {
+  [self releaseAt:NSProcessInfo.processInfo.systemUptime throwing:YES];
+}
+
+// Chromium moves the window under a mouse drag; its positions, with the time
+// each was reached, give the speed it was let go at.
+- (void)windowDidMove:(NSNotification*)notification {
+  NSWindow* window = _window;
+  if (!window || _swiping || _movingWindow || _animationTimer) return;
+  [self recordSampleAt:NSProcessInfo.processInfo.systemUptime origin:window.frame.origin];
+}
+
+- (void)recordSampleAt:(NSTimeInterval)time origin:(NSPoint)origin {
+  _samples.push_back({time, origin});
+  // Only the last stretch is ever read.
+  while (_samples.size() > 1 && time - _samples.front().time > 4 * kVelocityWindow) _samples.erase(_samples.begin());
+}
+
+// The window was let go at `time`. Fast enough, it carries on to the corner it
+// was heading for; a slow release near a corner settles into it; otherwise it
+// stays where it was dropped.
+- (void)releaseAt:(NSTimeInterval)time throwing:(BOOL)throwing {
+  NSWindow* window = _window;
+  if (!window || !State().started || State().disposing) {
+    [self stopMotionAndShowCursor];
+    return;
+  }
+  const NSPoint velocity = throwing ? ReleaseVelocity(_samples, time) : NSZeroPoint;
+  _samples.clear();
+  const CGFloat speed = std::hypot(velocity.x, velocity.y);
+  const NSRect frame = window.frame;
+  NSScreen* screen = ScreenMostlyHolding(frame) ?: window.screen ?: NSScreen.mainScreen;
+  if (!screen) {
+    [self settle];
+    return;
+  }
+  const NSRect placement = PlacementFrame(screen);
+  const NSRect clamped = ClampedToVisibleFrame(frame, placement);
+  NSPoint target = clamped.origin;
+  NSTimeInterval duration = kSettleDuration;
+  if (speed > MomentumThreshold()) {
+    target = ThrownCorner(clamped.origin, velocity, clamped.size, placement);
+    duration = std::min(std::max(3 * PointDistance(clamped.origin, target) / speed, kMinThrowDuration), kMaxThrowDuration);
+  } else {
+    CornerWithinSnap(clamped.origin, clamped.size, placement, &target);
+  }
+  if (PointDistance(frame.origin, target) < 0.5 || NSWorkspace.sharedWorkspace.accessibilityDisplayShouldReduceMotion) {
+    [self moveWindow:window toOrigin:target];
+    [self settle];
+    return;
+  }
+  [self animateTo:target duration:duration];
+}
+
+// MARK: Actions - Animation
+
+- (void)animateTo:(NSPoint)target duration:(NSTimeInterval)duration {
+  NSWindow* window = _window;
+  if (!window) return;
+  [self stopAnimation];
+  _animationStart = window.frame.origin;
+  _animationTarget = target;
+  _animationBegan = NSProcessInfo.processInfo.systemUptime;
+  _animationDuration = duration;
+  __weak CrestPictureInPictureMover* weakSelf = self;
+  _animationTimer = [NSTimer timerWithTimeInterval:kAnimationFrameInterval
+                                           repeats:YES
+                                             block:^(NSTimer*) {
+                                               [weakSelf animationStep];
+                                             }];
+  [NSRunLoop.mainRunLoop addTimer:_animationTimer forMode:NSRunLoopCommonModes];
+}
+
+// Friction: fast at first, then easing to a stop in the corner.
+- (void)animationStep {
+  NSWindow* window = _window;
+  if (!window) {
+    [self stopMotionAndShowCursor];
+    return;
+  }
+  const CGFloat progress =
+      std::min<CGFloat>(1, (NSProcessInfo.processInfo.systemUptime - _animationBegan) / _animationDuration);
+  const CGFloat eased = 1 - std::pow(1 - progress, 3);
+  [self moveWindow:window
+          toOrigin:NSMakePoint(_animationStart.x + (_animationTarget.x - _animationStart.x) * eased,
+                               _animationStart.y + (_animationTarget.y - _animationStart.y) * eased)];
+  if (progress >= 1) {
+    [self stopAnimation];
+    [self settle];
+  }
+}
+
+- (void)stopAnimation {
+  [_animationTimer invalidate];
+  _animationTimer = nil;
+}
+
+// The window has come to rest: remembers it, and puts the cursor on it.
+- (void)settle {
+  [self finishMove];
+  [self dropCursor];
+}
+
+// MARK: Actions - Cursor
+
+// The cursor goes where the window goes: hidden while it is swiped, then moved
+// to the same spot of the window when it is dropped. Hiding is balanced by one
+// unhide, tracked here, so every way out of a gesture can undo it, however
+// often it is called.
+- (void)hideCursor {
+  _cursorHideTimer = nil;
+  if (_cursorHidden || !_swiping) return;
+  _cursorHidden = YES;
+  [NSCursor hide];
+}
+
+- (void)showCursor {
+  if (!_cursorHidden) return;
+  _cursorHidden = NO;
+  [NSCursor unhide];
+}
+
+// Puts the cursor on the spot of the window it was over, then shows it.
+- (void)dropCursor {
+  NSWindow* window = _window;
+  // Crest need not be the active app: the window is used over other apps.
+  if (_cursorPending && window) {
+    const NSRect frame = window.frame;
+    NSPoint spot = NSMakePoint(NSMinX(frame) + _cursorOffset.x, NSMinY(frame) + _cursorOffset.y);
+    spot.x = std::min(std::max(spot.x, NSMinX(frame)), NSMaxX(frame));
+    spot.y = std::min(std::max(spot.y, NSMinY(frame)), NSMaxY(frame));
+    const CGPoint point = QuartzPoint(spot);
+    CGWarpMouseCursorPosition(point);
+    // Without this the cursor ignores the mouse for a moment after the warp.
+    CGAssociateMouseAndMouseCursorPosition(true);
+    CGEventRef moved = CGEventCreateMouseEvent(nullptr, kCGEventMouseMoved, point, kCGMouseButtonLeft);
+    if (moved) {
+      CGEventPost(kCGHIDEventTap, moved);
+      CFRelease(moved);
+    }
+  }
+  _cursorPending = NO;
+  [self showCursor];
+}
+
+// MARK: Actions - Ending
+
+// Ends whatever the window is in the middle of, wherever it is, and shows the
+// cursor. Used when the window or app goes away or loses its place.
+- (void)stopMotionAndShowCursor {
+  _swiping = NO;
+  _samples.clear();
+  [self stopAnimation];
+  [_swipeIdleTimer invalidate];
+  _swipeIdleTimer = nil;
+  [_cursorHideTimer invalidate];
+  _cursorHideTimer = nil;
+  _cursorPending = NO;
+  [self showCursor];
+}
+
+- (void)gestureInterrupted:(NSNotification*)notification {
+  [self abandonGesture];
+}
+
+- (void)abandonGesture {
+  const BOOL wasMoving = _swiping || _animationTimer;
+  [self stopMotionAndShowCursor];
+  if (wasMoving) [self finishMove];
+}
+
+@end
+
+namespace crest {
+void PreparePictureInPictureWindow(views::Widget* widget) {
+  if (!IsEnabled() || !widget) return;
+  NSWindow* window = widget->GetNativeWindow().GetNativeNSWindow();
+  if (!window || objc_getAssociatedObject(window, &kPictureInPictureMoverKey)) return;
+  // Set before starting: restoring the frame moves the window, which calls back here.
+  CrestPictureInPictureMover* mover = [[CrestPictureInPictureMover alloc] initWithWidget:widget window:window];
+  objc_setAssociatedObject(window, &kPictureInPictureMoverKey, mover, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+  [mover start];
+}
+void PictureInPictureWindowMoved(views::Widget* widget) {
+  if (!IsEnabled() || !widget) return;
+  PreparePictureInPictureWindow(widget);
+  NSWindow* window = widget->GetNativeWindow().GetNativeNSWindow();
+  [static_cast<CrestPictureInPictureMover*>(objc_getAssociatedObject(window, &kPictureInPictureMoverKey))
+      finishDrag];
+}
 namespace {
 bool MatchesAuthenticationCallback(ASWebAuthenticationSessionRequest* request, const GURL& url) {
   NSURL* candidate = net::NSURLWithGURL(url);

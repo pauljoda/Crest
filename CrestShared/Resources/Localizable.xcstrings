@@ -6580,6 +6580,9 @@
     "Hides recent changes" : {
 
     },
+    "High" : {
+
+    },
     "History" : {
       "localizations" : {
         "ar" : {
@@ -7827,6 +7830,9 @@
     "Looks through other browsers’ data on this Mac" : {
 
     },
+    "Low" : {
+
+    },
     "Lozenge" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -7974,6 +7980,9 @@
           }
         }
       }
+    },
+    "Medium" : {
+
     },
     "Meeting notes" : {
 
@@ -9587,6 +9596,9 @@
 
     },
     "Phone" : {
+
+    },
+    "Picture in Picture momentum" : {
 
     },
     "Picture in Picture when switching tabs" : {

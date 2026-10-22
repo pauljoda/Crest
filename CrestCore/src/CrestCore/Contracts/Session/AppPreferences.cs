@@ -7,14 +7,15 @@ namespace CrestCore.Contracts;
 /// page translation and its per-language rules, spelling, automatic Picture in
 /// Picture, what closing a saved tab does, whether Split View focus follows the
 /// pointer, whether local pages open with the developer toolbar, and how the
-/// command palette ranks and arranges what it offers. Translation rules are in
+/// command palette ranks and arranges what it offers, and where the floating
+/// Picture in Picture window was last left. Translation rules are in
 /// ordinal order of their source language. They stay on this device and never
 /// become sync records.
 /// </summary>
 public sealed record AppPreferences(StartupBehavior Startup, bool OffersTranslation, bool AutomaticallyTranslates,
     IReadOnlyList<TranslationRule> TranslationRules, bool ChecksSpelling, bool AutomaticallyEntersPictureInPicture,
     SavedTabClosePolicy SavedTabClose, bool SavedTabFaviconReturnsToSavedUrl, bool SplitFocusFollowsMouse,
-    bool AutomaticallyShowsDeveloperToolbar, PalettePreferences Palette) {
+    bool AutomaticallyShowsDeveloperToolbar, PalettePreferences Palette, PictureInPictureFrame? PictureInPictureFrame = null) {
     #region Static Variables
 
     /// The documented defaults for a person who never chose, which a platform
@@ -58,11 +59,13 @@ public sealed record AppPreferences(StartupBehavior Startup, bool OffersTranslat
         && SavedTabFaviconReturnsToSavedUrl == other.SavedTabFaviconReturnsToSavedUrl
         && SplitFocusFollowsMouse == other.SplitFocusFollowsMouse
         && AutomaticallyShowsDeveloperToolbar == other.AutomaticallyShowsDeveloperToolbar
-        && Palette.Equals(other.Palette);
+        && Palette.Equals(other.Palette)
+        && Equals(PictureInPictureFrame, other.PictureInPictureFrame);
 
     public override int GetHashCode() => HashCode.Combine(Startup, OffersTranslation, AutomaticallyTranslates,
         TranslationRules.Count, ChecksSpelling, AutomaticallyEntersPictureInPicture, SavedTabClose,
-        HashCode.Combine(SavedTabFaviconReturnsToSavedUrl, SplitFocusFollowsMouse, AutomaticallyShowsDeveloperToolbar, Palette));
+        HashCode.Combine(SavedTabFaviconReturnsToSavedUrl, SplitFocusFollowsMouse, AutomaticallyShowsDeveloperToolbar, Palette,
+            PictureInPictureFrame));
 
     #endregion
 }

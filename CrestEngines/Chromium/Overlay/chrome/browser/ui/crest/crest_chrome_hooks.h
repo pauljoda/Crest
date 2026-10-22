@@ -80,7 +80,13 @@ bool PresentHTTPAuthentication(content::WebContents* contents, const net::AuthCh
 // Tells the shared page presentation when web content enters or leaves video
 // fullscreen; the renderer still owns Escape and the fullscreen lifecycle.
 void ReportContentFullscreen(content::WebContents* contents, bool active);
-void SnapPictureInPictureWindow(views::Widget* window);
+// A Picture in Picture window now exists. Crest lets it float over other apps'
+// full-screen Spaces, puts it back where the person last left it, and moves it
+// with a two-finger swipe. Safe to call again for a window already prepared.
+void PreparePictureInPictureWindow(views::Widget* window);
+// A person finished dragging the Picture in Picture window. It stays where it
+// was dropped, kept on a screen, and Crest remembers where.
+void PictureInPictureWindowMoved(views::Widget* window);
 // Chromium asks for `contents`' window after making it its Browser's active
 // tab, as a Picture in Picture window's return control does. Answers whether
 // the page returns from Picture in Picture, which the core then shows in its

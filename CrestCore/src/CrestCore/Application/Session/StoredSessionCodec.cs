@@ -58,6 +58,7 @@ internal static partial class StoredSessionCodec {
         public const string DeletionOrigin = "deletionOrigin";
         public const string Depth = "depth";
         public const string DisposableSeedMarker = "disposableSeedMarker";
+        public const string DisplayUuid = "displayUUID";
         public const string Downloads = "downloads";
         public const string EdgeColorIndex = "edgeColorIndex";
         public const string FaviconUrl = "faviconURL";
@@ -70,6 +71,7 @@ internal static partial class StoredSessionCodec {
         public const string GradientAngle = "gradientAngle";
         public const string Green = "green";
         public const string HasCustomAppearance = "hasCustomAppearance";
+        public const string Height = "height";
         public const string History = "history";
         public const string IconAccent = "iconAccent";
         public const string IconModifiedAt = "iconModifiedAt";
@@ -101,6 +103,7 @@ internal static partial class StoredSessionCodec {
         public const string ParentId = "parentID";
         public const string Placement = "placement";
         public const string PositionModifiedAt = "positionModifiedAt";
+        public const string PictureInPictureFrame = "pictureInPictureFrame";
         public const string PrefersOpenTabs = "prefersOpenTabs";
         public const string Profile = "profile";
         public const string ProfileId = "profileID";
@@ -115,6 +118,7 @@ internal static partial class StoredSessionCodec {
         public const string SavedTabsExpansionModifiedAt = "savedTabsExpansionModifiedAt";
         public const string CredentialsEnabledModifiedAt = "credentialsEnabledModifiedAt";
         public const string SavedUrl = "savedURL";
+        public const string Screen = "screen";
         public const string SearchesSitesWithTab = "searchesSitesWithTab";
         public const string SearchFollowsDefault = "searchFollowsDefault";
         public const string SearchSuggestionsEnabled = "searchSuggestionsEnabled";
@@ -158,6 +162,9 @@ internal static partial class StoredSessionCodec {
         public const string Url = "url";
         public const string Value = "value";
         public const string VisitCount = "visitCount";
+        public const string Width = "width";
+        public const string X = "x";
+        public const string Y = "y";
     }
 
     /// One closed set's stored spellings, read and written through the same pairs.

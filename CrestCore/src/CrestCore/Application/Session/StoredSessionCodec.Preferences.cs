@@ -130,12 +130,32 @@ internal static partial class StoredSessionCodec {
             TolerantFlag(value[Key.SavedTabFaviconReturnsToSavedUrl]) ?? defaults.SavedTabFaviconReturnsToSavedUrl,
             TolerantFlag(value[Key.SplitFocusFollowsMouse]) ?? defaults.SplitFocusFollowsMouse,
             TolerantFlag(value[Key.AutomaticallyShowsDeveloperToolbar]) ?? defaults.AutomaticallyShowsDeveloperToolbar,
-            DecodePalettePreferences(value[Key.Palette]));
+            DecodePalettePreferences(value[Key.Palette]), DecodePictureInPictureFrame(value[Key.PictureInPictureFrame]));
     }
 
-    /// The app-wide preferences. The palette's are written only once they
-    /// differ from the defaults, so a release that never stored them reads
-    /// its own document back unchanged.
+    /// The saved Picture in Picture frame. One this build cannot read, or that
+    /// no window could have, reads as never saved.
+    internal static PictureInPictureFrame? DecodePictureInPictureFrame(JsonNode? node) {
+        if (node is not JsonObject value) return null;
+        double? Coordinate(string key) => value[key] is JsonValue number && number.TryGetValue(out double result) ? result : null;
+        if (Coordinate(Key.X) is not { } x || Coordinate(Key.Y) is not { } y || Coordinate(Key.Width) is not { } width
+            || Coordinate(Key.Height) is not { } height || TolerantText((value[Key.Screen] as JsonObject)?[Key.DisplayUuid]) is not { } screen)
+            return null;
+        var frame = new PictureInPictureFrame(x, y, width, height, new(screen));
+        return frame.IsValid ? frame : null;
+    }
+
+    private static JsonObject Encode(PictureInPictureFrame frame) => new() {
+        [Key.X] = frame.X,
+        [Key.Y] = frame.Y,
+        [Key.Width] = frame.Width,
+        [Key.Height] = frame.Height,
+        [Key.Screen] = new JsonObject { [Key.DisplayUuid] = frame.Screen.DisplayUuid }
+    };
+
+    /// The app-wide preferences. The palette's and the Picture in Picture
+    /// frame are written only once they differ from the defaults, so a release
+    /// that never stored them reads its own document back unchanged.
     internal static JsonObject Encode(AppPreferences preferences) {
         var value = new JsonObject {
             [Key.StartupBehavior] = preferences.Startup.Name,
@@ -150,6 +170,7 @@ internal static partial class StoredSessionCodec {
             [Key.AutomaticallyShowsDeveloperToolbar] = preferences.AutomaticallyShowsDeveloperToolbar
         };
         if (!preferences.Palette.Equals(PalettePreferences.Default)) value[Key.Palette] = Encode(preferences.Palette);
+        if (preferences.PictureInPictureFrame is { } frame) value[Key.PictureInPictureFrame] = Encode(frame);
         return value;
     }
 

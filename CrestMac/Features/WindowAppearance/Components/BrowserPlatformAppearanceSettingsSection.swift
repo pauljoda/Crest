@@ -9,11 +9,19 @@ struct BrowserPlatformAppearanceSettingsSection: View {
     private var animatesSpacePages = SpacePageMotionPreference.defaultValue
     @AppStorage(SidebarRevealWidthPreference.key, store: BrowserChromeAppearancePreference.defaults)
     private var sidebarRevealWidth = SidebarRevealWidthPreference.defaultValue
+    @AppStorage(PictureInPictureMomentumPreference.key)
+    private var pictureInPictureMomentumSpeed = PictureInPictureMomentumPreference.defaultValue.speed
 
     var body: some View {
         let motion = CrestSettingValue($animatesSpacePages, default: SpacePageMotionPreference.defaultValue)
 
         let revealWidth = CrestSettingValue($sidebarRevealWidth, default: SidebarRevealWidthPreference.defaultValue)
+
+        let momentum = CrestSettingValue(
+            Binding(
+                get: { PictureInPictureMomentumPreference(storedSpeed: pictureInPictureMomentumSpeed) },
+                set: { pictureInPictureMomentumSpeed = $0.speed }),
+            default: PictureInPictureMomentumPreference.defaultValue)
 
         return BrowserWindowAppearanceGroup(
             space: space,
@@ -21,6 +29,7 @@ struct BrowserPlatformAppearanceSettingsSection: View {
             extraSettings: [
                 motion.resettable("Animate pages when switching Spaces"),
                 revealWidth.resettable("Sidebar hover area"),
+                momentum.resettable("Picture in Picture momentum"),
             ]
         ) {
             CrestSettingRow(
@@ -41,6 +50,21 @@ struct BrowserPlatformAppearanceSettingsSection: View {
                 onEditingChanged: { _ in SidebarRevealWidthPreview.shared.adjusted() }
             )
             .onChange(of: sidebarRevealWidth) { SidebarRevealWidthPreview.shared.adjusted() }
+
+            CrestSettingRow(
+                "Picture in Picture momentum",
+                setting: momentum.resettable("Picture in Picture momentum")
+            ) {
+                Picker("Picture in Picture momentum", selection: momentum.binding) {
+                    ForEach(PictureInPictureMomentumPreference.all) { choice in
+                        Text(choice.title).tag(choice)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                .fixedSize()
+                .accessibilityIdentifier("picture-in-picture-momentum")
+            }
         }
     }
 }
