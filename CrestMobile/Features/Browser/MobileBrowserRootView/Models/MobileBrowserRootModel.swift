@@ -162,8 +162,17 @@ extension MobileBrowserRootModel {
     /// Shows the address the selected page reads in the core in the address
     /// field, unless the person is editing it or the Space is locked.
     func synchronizePageMetadata(isAddressEditing: Bool) {
-        guard !isAddressEditing, !selectedSpaceIsLocked, let page = selectedPage else { return }
-        address = (page.live.displayURL ?? browser.shownTab?.address)?.absoluteString ?? ""
+        guard !isAddressEditing, selectedPage != nil else { return }
+        restoreAddress()
+    }
+
+    /// Gives the address field back to the shown tab once the person stops
+    /// editing it, so an address typed and then dismissed never stays: the
+    /// page's address as the core reads it, including one it is heading to,
+    /// or the tab's own when it has no page.
+    func restoreAddress() {
+        guard !selectedSpaceIsLocked else { return }
+        address = (selectedPage?.live.displayURL ?? browser.shownTab?.address)?.absoluteString ?? ""
     }
 
 }

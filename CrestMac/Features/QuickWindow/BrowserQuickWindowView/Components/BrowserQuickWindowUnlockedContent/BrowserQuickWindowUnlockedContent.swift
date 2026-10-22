@@ -48,7 +48,8 @@ struct BrowserQuickWindowUnlockedContent: View {
         .modifier(
             BrowserQuickWindowPageObservationModifier(
                 model: model,
-                addressText: $addressText
+                addressText: $addressText,
+                isAddressEditing: isAddressEditing
             )
         )
         .task { await requestInitialAddressFocus() }
