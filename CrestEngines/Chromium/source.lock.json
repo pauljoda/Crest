@@ -2,18 +2,18 @@
   "schemaVersion": 1,
   "status": "source-preparation",
   "chromium": {
-    "version": "155.0.8059.39",
-    "sourceArchive": "https://commondatastorage.googleapis.com/chromium-browser-official/chromium-155.0.8059.39-lite.tar.xz",
-    "hashManifest": "md5  305151b4480d9f3207aea6f2e1ac611c  chromium-155.0.8059.39-lite.tar.xz\nsha1  833949cb07f3838ffac508a0f48a46f59369a647  chromium-155.0.8059.39-lite.tar.xz\nsha224  e2cff4f6e30812936ab277362be6732f41b48cc08b4266b1acc4a30e  chromium-155.0.8059.39-lite.tar.xz\nsha256  d450182ea38a6485febfdfdad6f3a3f1d5d3408cc368329b94502c629ef8ec7e  chromium-155.0.8059.39-lite.tar.xz\nsha384  16b6870dfdd380fafd0b2873c35b55b107babb64faefc150a73a1250d62cf0e690e41486a6220b737b1b4988a8d14dc8  chromium-155.0.8059.39-lite.tar.xz\nsha512  563f029d0e9a8768351f1bd9cb3b29dab12754c20ea3bb1af72ce69b5b3c9207e6c0a2b108c0e3f708b1769fc57451e4ff85df3ccad7c9d13c3a00b8d0080379  chromium-155.0.8059.39-lite.tar.xz\n",
-    "sourceArchiveSha256": "d450182ea38a6485febfdfdad6f3a3f1d5d3408cc368329b94502c629ef8ec7e"
+    "version": "155.0.8059.84",
+    "sourceArchive": "https://commondatastorage.googleapis.com/chromium-browser-official/chromium-155.0.8059.84-lite.tar.xz",
+    "hashManifest": "md5  423e100504607898681bb9af54811497  chromium-155.0.8059.84-lite.tar.xz\nsha1  db416de2a9f273bf53e5e7be2969bc9c360afcd3  chromium-155.0.8059.84-lite.tar.xz\nsha224  0b7096981974fb50719af6e2dc6a40f999a1184411a0b5a2e60ff838  chromium-155.0.8059.84-lite.tar.xz\nsha256  2063834f528029ad02a6a3de6d229c3e8b19bc43864be397944cbda18d7ee680  chromium-155.0.8059.84-lite.tar.xz\nsha384  9b2ed10bc674d903158724dbf5ceffb22adc34f2fe5d8bd5bceb3ccf06d6e62db811acd547ecc0266feb65aa36b48462  chromium-155.0.8059.84-lite.tar.xz\nsha512  e2ef43daca4defdc5823fa39a8a9272705c60d695f239fad7fb3262b9b3c2caaaf141bdd1983215f6159e421a0096df1a131986a5c119eca9fd47221be3fa5c9  chromium-155.0.8059.84-lite.tar.xz\n",
+    "sourceArchiveSha256": "2063834f528029ad02a6a3de6d229c3e8b19bc43864be397944cbda18d7ee680"
   },
   "ungoogledMac": {
     "repository": "https://github.com/ungoogled-software/ungoogled-chromium-macos.git",
-    "tag": "155.0.8059.39-1.1",
-    "commit": "b1238bb72b02cd36219991d9029c1c65183ea295"
+    "tag": "155.0.8059.84-1.1",
+    "commit": "28552f14731fe8f60422e19bbc2361468d420b25"
   },
   "ungoogled": {
-    "commit": "ffeb45a2bb88bc56a1dfed31410aeb10e9efcd5a"
+    "commit": "c7b4b99027bb6f9f33848fdbee8a319a3ba3b238"
   },
   "inputs": {
     "ungoogled-chromium/flags.gn": "a274a5633b3f909a1d6035192b5ff02c28f81a2f8fe60545d56bde34a0dc6c6b",
@@ -25,7 +25,7 @@
     "retrieve_and_unpack_resource.py": "338ce89506e5075dca5ef71582d28f800a54364a6581cbc6c90de65e223e7fd2",
     "ungoogled-chromium/pruning.list": "13d91cb1bc89f8aae1d7b54b519accbcbf7a5fa087562977f265b4d641568a01",
     "ungoogled-chromium/domain_regex.list": "f59c4316b4ac32f9dfe4f6440c4cf9ad5dab0ab8827769f5dc2587ca07e91f09",
-    "ungoogled-chromium/domain_substitution.list": "2f38383729ca5f6511fd5e30c7be137b1dcba692b2a72b8d0538e27c7ff2140a"
+    "ungoogled-chromium/domain_substitution.list": "14cb2c6cd3c9e4972ced5992aed7186b4140558297bb2909992516fd7a1986a1"
   },
   "developmentBuildArguments": {
     "target_cpu": "arm64",
@@ -87,7 +87,7 @@
     "ungoogled-chromium/patches/core/ungoogled-chromium/disable-webstore-urls.patch": "297e6c0c3c1fa838d1679c9800444392771bba0b02c5af002868bd5795668bd0",
     "ungoogled-chromium/patches/core/ungoogled-chromium/fix-learn-doubleclick-hsts.patch": "40635334ab8b227930eeaeaec96b3b9600f83ca6f4e1741388876509f4ebd104",
     "ungoogled-chromium/patches/core/ungoogled-chromium/disable-webrtc-log-uploader.patch": "87025da2cd78fc438fddbaabb151804caf301f5feb6d5803ac1458f480b44435",
-    "ungoogled-chromium/patches/core/ungoogled-chromium/disable-ai.patch": "1a831d3a527abd04153b5412bd9d121e436e9a5e048021f2bce593bc37245fbf",
+    "ungoogled-chromium/patches/core/ungoogled-chromium/disable-ai.patch": "1968d9e18d947f47fede0d1b4902523edd7246605b58625e994b1e3d692304a2",
     "ungoogled-chromium/patches/core/ungoogled-chromium/fix-building-with-prunned-binaries.patch": "8a1eaf934f653b7d50e4954f5d79a780187d618a96e98736463133e7c2f9c3b4",
     "ungoogled-chromium/patches/core/ungoogled-chromium/disable-network-time-tracker.patch": "04278b44bfa8f0a3979e406e7208d6f27f278bfea1e3fd500c176cf7eac52d4e",
     "ungoogled-chromium/patches/core/ungoogled-chromium/disable-mei-preload.patch": "380432b35f2e9931ba71e474bb32106966dd2c4948a9839589b7a3b114d3c680",
@@ -159,7 +159,7 @@
     "ungoogled-chromium/patches/extra/ungoogled-chromium/add-flag-for-incognito-themes.patch": "6fbe87989ebefc073bfef0257d184d25b8c671a49b8a6eaa90d66655897d66fe",
     "ungoogled-chromium/patches/extra/ungoogled-chromium/add-flags-for-referrer-customization.patch": "4f5ff95f8273dd3a74e75f336c10f3fc56fa0bcf47aea7bcf1c9ddb08711da8a",
     "ungoogled-chromium/patches/extra/ungoogled-chromium/default-webrtc-ip-handling-policy.patch": "9dd3275f38a1e31bd532b40e6ef0a5f185036863f26dd593c595c7d5c5c93a7e",
-    "ungoogled-chromium/patches/extra/ungoogled-chromium/add-flags-for-existing-switches.patch": "6ec54945a7e804e2f74fd7245a989961ff573c2afeb2ea64494c2e3dcd0bc4ee",
+    "ungoogled-chromium/patches/extra/ungoogled-chromium/add-flags-for-existing-switches.patch": "e0c3a5a24c42fe8505ebdbc35df1459b4989514a7562457c9e8ea85346771f6c",
     "ungoogled-chromium/patches/extra/ungoogled-chromium/first-run-page.patch": "85ca1826f70e1fd29f3d5bf896b506e78033a06121dc167068d94ba600c952dc",
     "ungoogled-chromium/patches/extra/ungoogled-chromium/add-flag-to-reduce-system-info.patch": "558251ffd6184f6c15f72b7e3c74e6da2a033e91314bc0d82c3a258ce5131d79",
     "ungoogled-chromium/patches/extra/ungoogled-chromium/add-flag-to-remove-client-hints.patch": "1c0674ebda6137e3ac7dcfe9264c030ebe3a46a7d7921bdf9cedef6ef40018bc",
@@ -206,7 +206,7 @@
   },
   "performanceInputs": {
     "macSDKVersion": "26.5",
-    "pgoProfile": "chrome-mac-arm-8059-1790725703-ed7da42bedef35db11973f6f597f55d3df8f37b5-aca5b6aded42f34dbea27ea1e57fe9b01ca1766b.profdata",
-    "pgoSHA256": "57468d743c52ad296bdcad16e3ba035f7878235dc8595c107a8cf8d3520c2b58"
+    "pgoProfile": "chrome-mac-arm-8059-1791998370-9da45f39d5d8e72174ed31055657792f2867b016-9263554f9b24064a4d037674b38523386b94772f.profdata",
+    "pgoSHA256": "7103d4c75ff0deea190ca6b92d56626ce1f75842f631e18f79a7da0a720cc164"
   }
 }

@@ -108,7 +108,6 @@ the live status for each issue.
 
 #### Planned and in progress
 
-- [ ] [feature: Swipping Tab Gesture On iphone](https://github.com/pauljoda/Crest/issues/54)
 - [ ] [Choose a default Space using Focus](https://github.com/pauljoda/Crest/issues/145)
 - [ ] [Switch the active Space in a Quick Window](https://github.com/pauljoda/Crest/issues/161)
 - [ ] [Dim only the content behind Peek](https://github.com/pauljoda/Crest/issues/164)
@@ -170,9 +169,11 @@ the live status for each issue.
 - [ ] [Remove the blank space at the bottom of the iPad layout](https://github.com/pauljoda/Crest/issues/548)
 - [ ] [Keep a Quick Window from another app clear of a new tab's keyboard on iPhone](https://github.com/pauljoda/Crest/issues/563)
 - [ ] [Say so when a link from another app needs a locked Space](https://github.com/pauljoda/Crest/issues/564)
+- [ ] [Update the Chromium engine to 155.0.8059.84 and distrust the compromised eMudhra CAs](https://github.com/pauljoda/Crest/issues/572)
 
 #### Completed
 
+- [x] [feature: Swipping Tab Gesture On iphone](https://github.com/pauljoda/Crest/issues/54)
 - [x] [bug: Right-clicking an extension in Site Controls closes Site Controls](https://github.com/pauljoda/Crest/issues/262)
 - [x] [bug: http://192.168.0.1 automatically turns into https://192.168.0.1 and can not be open](https://github.com/pauljoda/Crest/issues/363)
 - [x] [Some settings don't sync to iPhone](https://github.com/pauljoda/Crest/issues/369) — [`55653076`](https://github.com/pauljoda/Crest/commit/55653076149e7c8743ec9dab3135d7f2a7926d63)

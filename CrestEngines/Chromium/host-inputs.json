@@ -366,5 +366,17 @@
   "chrome/browser/ui/autofill/payments/chrome_payments_autofill_client.cc": {
     "before": "15451f305fdb617014a2bc3131dc98987efb53ee523de3753dac2f0e89598258",
     "after": "be1f0298933b0c588b32cc9f7c2ab0cc4be0a1bb95c2cadab6b1463b19dd3de0"
+  },
+  "net/cert/cert_verify_proc_blocklist.inc": {
+    "before": "5609dd4d604eeb48d5c7c5734d036cbae318cdfb7d2234d1760f051557d16b44",
+    "after": "e8f7f45ee96c940f41ec889f22072ca00c96877edf7ad38a331bf7fa23df9333"
+  },
+  "net/data/ssl/chrome_root_store/root_store.textproto": {
+    "before": "fea50a202a27c3b9fde7a48ae1ae1f02773b5380f0212737be308892e201e2b2",
+    "after": "33e9fb5362b60c80432a5c13a6352c432dc87f9a1ae3b82fc1dfd1bb712540ba"
+  },
+  "net/data/ssl/chrome_root_store/root_store.certs": {
+    "before": "653230aea8ce815391eb8a13bc22fb3a0243ba0f09395b61c319aa6d52348102",
+    "after": "e3ada9517680b712e979331df3c34d805ebcdcbb14da13dcce004f4171e4b8ee"
   }
 }
