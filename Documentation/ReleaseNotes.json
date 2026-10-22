@@ -4285,6 +4285,10 @@
     "quick-window-card-fits-screen": {
       "category": "fixed",
       "message": "On iPhone and iPad, a Quick Window no longer leaves an empty band above it, and on iPad a Quick Window or Peek beside the sidebar stays on screen instead of running off its edge."
+    },
+    "sidebar-list-reaches-bottom-corner": {
+      "category": "fixed",
+      "message": "On iPad and iPhone Duo, the sidebar's tabs scroll on to the bottom of the screen and into its corner instead of stopping short above it."
     }
   }
 }
