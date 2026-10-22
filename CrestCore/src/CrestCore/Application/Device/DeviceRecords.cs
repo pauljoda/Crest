@@ -21,7 +21,8 @@ internal sealed record TabGroupRecord(Guid Id, Guid SpaceId, EngineKind Engine, 
 /// unfinished manual setup it keeps for the next launch, whether this device
 /// has completed setup, what it has adopted from an installed release, the
 /// tab groups whose folders follow them, the site searches, what each
-/// persistent Space's palette remembers, and the agent preferences.
+/// persistent Space's palette remembers, the agent preferences, and the
+/// Spaces this device hides.
 internal sealed record DeviceRecords(IReadOnlyList<SavedWindow> Windows, IReadOnlyList<Guid> Reopening,
     IReadOnlyList<SitePermissionRecord> SitePermissions, IReadOnlyList<SiteEngineChoice> SiteEngines, ShortcutOverrides Shortcuts,
     LinkPreferences Links, KeptSetupDraft? SetupDraft, bool SetupCompleted, IReadOnlySet<DeviceAdoption> Adopted,
@@ -43,6 +44,9 @@ internal sealed record DeviceRecords(IReadOnlyList<SavedWindow> Windows, IReadOn
 
     /// Whether agents may use Crest, and what the person allowed them.
     public AgentPreferences Agents { get; init; } = AgentPreferences.Off;
+
+    /// The Spaces of the person's own session this device hides.
+    public SpaceVisibility SpaceVisibility { get; init; } = SpaceVisibility.ShowingAll;
 
     #endregion
 
@@ -70,7 +74,8 @@ internal sealed record DeviceRecords(IReadOnlyList<SavedWindow> Windows, IReadOn
         && Equals(SearchCatalog, other.SearchCatalog)
         && PaletteMemories.Count == other.PaletteMemories.Count
         && PaletteMemories.All(entry => other.PaletteMemories.TryGetValue(entry.Key, out var memory) && ReferenceEquals(memory, entry.Value))
-        && Agents.Equals(other.Agents);
+        && Agents.Equals(other.Agents)
+        && SpaceVisibility.Equals(other.SpaceVisibility);
 
     public override int GetHashCode() => HashCode.Combine(Windows.Count, SitePermissions.Count, Adopted.Count);
 

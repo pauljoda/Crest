@@ -12,9 +12,10 @@ public sealed record ResizeSplitColumns(Guid WindowId, Guid GroupId, IReadOnlyLi
         var window = device.Opened(WindowId);
         var session = device.Workspace(window.WorkspaceId).Current;
         if (Window.SplitShares(Shares) is null) throw new Rejected(new InvalidSplitColumnShares());
+        var spaceVisibility = device.SpaceVisibilityOf(window.WorkspaceId);
         lock (device.Gate) Device.Publish(device.Changing([window], resized => {
             resized.Resize(GroupId, Shares);
-            resized.Repair(session);
+            resized.Repair(session, spaceVisibility);
         }, session), turn.Changes);
     }
 

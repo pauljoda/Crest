@@ -123,9 +123,15 @@ struct BrowserSettingsView: View {
     }
 
     /// Shows a Space's page. Settings in a window follows the Space: the
-    /// window switches to it and its own Settings tab opens on the page.
+    /// window switches to it and its own Settings tab opens on the page. A
+    /// Space hidden on this device opens here without moving the window,
+    /// since no window may show it.
     private func openSpace(_ id: UUID, tab: BrowserSpaceSettingsTab, intent: BrowserSettingsSpaceIntent) {
         guard let space = browser.spaceModel(id) else { return }
+        if browser.hidesSpaceOnDevice(id) {
+            tabState.showSpace(id, tab: tab, intent: intent)
+            return
+        }
         guard usesLiveSidebar, let tabAssignment, id != tabAssignment.spaceID else {
             tabState.showSpace(id, tab: tab, intent: intent)
             return

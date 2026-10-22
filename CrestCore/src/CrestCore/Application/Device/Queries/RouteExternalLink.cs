@@ -7,10 +7,10 @@ namespace CrestCore.Contracts;
 /// the platform stacks them, frontmost first (`WindowIds`): the first enabled
 /// route that matches and whose Space can open, else the external-link
 /// destination, both read from this device's preferences, in the persistent
-/// session's Spaces. A link never opens in a locked Space on another app's
-/// behalf: it opens in a Quick Window on the Space on screen when that one is
-/// unlocked, else on the first unlocked Space, and nowhere when every Space is
-/// locked.
+/// session's Spaces this device shows. A link never opens in a locked Space on
+/// another app's behalf: it opens in a Quick Window on the Space on screen when
+/// that one is unlocked, else on the first unlocked Space, and nowhere when
+/// every Space is locked.
 ///
 /// The link goes to the frontmost window over the persistent session, never a
 /// private or torn-off tab's window, and a Quick Window promotes into it. With
@@ -20,12 +20,13 @@ public sealed record RouteExternalLink(IReadOnlyList<Guid> WindowIds, string Url
     #region Actions - Answering
 
     /// Where a link another app hands Crest opens, under this device's
-    /// preferences and the persistent session's Spaces: none being deleted,
-    /// and never a locked one.
+    /// preferences and the persistent session's Spaces: none being deleted
+    /// or hidden, and never a locked one.
     internal override ExternalLinkPlacement Answer(CrestApp app) {
         var nowhere = new ExternalLinkPlacement(null, false, false, null, false);
-        if (app.Device.Persistent() is not (_, var authority)) return nowhere;
+        if (app.Device.Persistent() is not (var workspaceId, var authority)) return nowhere;
         var session = authority.Current;
+        var showableSpaceIds = app.Device.ShowableSpaces(workspaceId, session).Select(space => space.Id).ToHashSet();
         var spaces = session.Spaces;
         var front = app.Device.FrontWindow(WindowIds);
         Guid? opening = null;
@@ -34,9 +35,9 @@ public sealed record RouteExternalLink(IReadOnlyList<Guid> WindowIds, string Url
             if (front is null) opening = app.Device.WindowToOpen(app.Ids);
             preferences = app.Device.Links;
         }
-        var shown = front?.ShownSpaceId ?? app.Device.OpeningSpace(opening!.Value, session) ?? Guid.Empty;
-        var context = new LinkRoutingContext([.. spaces.Select(space => space.Id)], shown,
-            [.. spaces.Where(space => authority.IsDeleting(space.Id)).Select(space => space.Id)]);
+        var shownSpaceId = front?.ShownSpaceId ?? app.Device.OpeningSpaceId(workspaceId, opening!.Value, session) ?? Guid.Empty;
+        var context = new LinkRoutingContext([.. spaces.Select(space => space.Id)], shownSpaceId,
+            [.. spaces.Where(space => !showableSpaceIds.Contains(space.Id)).Select(space => space.Id)]);
         var locked = spaces.Where(authority.IsLocked).Select(space => space.Id).ToHashSet();
         if (preferences.RouteExternal(Url, context, locked) is not { } placed) return nowhere;
         return front is { } window

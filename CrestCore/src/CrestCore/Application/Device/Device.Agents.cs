@@ -149,14 +149,15 @@ internal sealed partial class Device {
         lock (gate) return agentSessions.All.Any(session => session.TabIds.Contains(tabId));
     }
 
-    /// The Spaces agents reach now, each with whether this process may show
-    /// it, or null while agents are off or the person's own session is not
-    /// open. Called without the device lock.
+    /// The Spaces agents reach now, leaving out one this device hides, each
+    /// with whether this process may show it, or null while agents are off or
+    /// the person's own session is not open. Called without the device lock.
     private IReadOnlyList<(SpaceState Space, bool IsLocked)>? ReachedSpaces() {
         var preferences = Agents;
+        var spaceVisibility = SpaceVisibility;
         if (!preferences.IsOn || Persistent() is not (_, var authority)) return null;
         return [.. authority.Current.Spaces
-            .Where(space => preferences.SpaceIds.Contains(space.Id) && !authority.IsDeleting(space.Id))
+            .Where(space => preferences.SpaceIds.Contains(space.Id) && spaceVisibility.Shows(space.Id) && !authority.IsDeleting(space.Id))
             .Select(space => (space, authority.IsLocked(space)))];
     }
 

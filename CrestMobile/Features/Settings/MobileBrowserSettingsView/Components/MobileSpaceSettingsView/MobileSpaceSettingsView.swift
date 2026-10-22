@@ -108,9 +108,12 @@ struct MobileSpaceSettingsView: View {
             dismissKeyboard: dismissKeyboard)
     }
 
+    /// A Space hidden on this device has no window to show it, so its page
+    /// opens here without the window following.
     private func selectEditedSpace(_ id: UUID?) {
         selectedSpaceID = id
-        if usesLiveSidebar, let id, id != browser.shownSpace?.id { liveSpaceSelection?.select(id) }
+        guard usesLiveSidebar, let id, !browser.hidesSpaceOnDevice(id), id != browser.shownSpace?.id else { return }
+        liveSpaceSelection?.select(id)
     }
 
     @ViewBuilder
@@ -126,7 +129,9 @@ struct MobileSpaceSettingsView: View {
     }
 
     private var editedSpaceID: UUID? {
-        usesLiveSidebar ? browser.selectedSpaceID : selectedSpaceID
+        guard usesLiveSidebar else { return selectedSpaceID }
+        if let selectedSpaceID, browser.hidesSpaceOnDevice(selectedSpaceID) { return selectedSpaceID }
+        return browser.selectedSpaceID
     }
 
     private var space: SpaceModel? {

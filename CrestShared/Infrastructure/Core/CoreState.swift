@@ -60,6 +60,12 @@ final class CoreState {
     }
     @ObservationIgnored private var agentPreferencesStorage = AgentPreferences(
         isOn: false, runsScripts: false, spaceIDs: [], agents: [])
+    /// The Spaces of the person's own session this device hides.
+    var spaceVisibility: SpaceVisibility {
+        get { observed(\.spaceVisibilityStorage, as: \.spaceVisibility) }
+        set { publish(newValue, into: \.spaceVisibilityStorage, as: \.spaceVisibility) }
+    }
+    @ObservationIgnored private var spaceVisibilityStorage = SpaceVisibility(hiddenSpaceIDs: [])
     /// The agents connected now, with the tabs each uses.
     var agentSessions: [AgentSessionState] {
         get { observed(\.agentSessionsStorage, as: \.agentSessions) }

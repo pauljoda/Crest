@@ -39,7 +39,7 @@ extension MobileBrowserRootModel {
             canDuplicateSelectedTab: controller.canDuplicateSelectedTab,
             canReopenClosedTab: controller.canReopenClosedTab,
             tabCount: controller.tabCount,
-            spaceCount: browser.spaceModels.count,
+            spaceCount: browser.availableSpaces.count,
             numberedSelections: browser.core.numberedSelections(windowID: browser.windowID),
             isSelectedTabInSplit: controller.isSelectedTabInSplit,
             canSplitWithNextTab: controller.canSplitWithNextTab,

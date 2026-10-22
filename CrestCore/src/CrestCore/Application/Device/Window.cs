@@ -53,12 +53,12 @@ internal sealed class Window {
     public static Window Copying(Window other, Guid id, bool saved) =>
         new(id, other.WorkspaceId, saved, other.ShownSpaceId, new(other.tabs), [], []);
 
-    /// A window on `session`'s launch Space: its default Space unless that is
-    /// being deleted, else the first Space. `legacyTabs` are the tabs an older
-    /// release kept in the session, which a window without a record adopts.
-    public static Window Launching(Guid id, Guid workspaceId, bool saved, SessionState session,
+    /// A window on `session`'s launch Space under `spaceVisibility`.
+    /// `legacyTabs` are the tabs an older release kept in the session, which a
+    /// window without a record adopts.
+    public static Window Launching(Guid id, Guid workspaceId, bool saved, SessionState session, SpaceVisibility spaceVisibility,
         IReadOnlyDictionary<Guid, Guid> legacyTabs) {
-        var launch = LaunchSpace(session);
+        var launch = LaunchSpace(session, spaceVisibility);
         var window = new Window(id, workspaceId, saved, launch?.Id ?? Guid.Empty,
             legacyTabs.Where(entry => session.Spaces.Any(space => space.Id == entry.Key && Contains(space, entry.Value)))
                 .ToDictionary(entry => entry.Key, entry => (Guid?)entry.Value), [], []);
@@ -67,20 +67,20 @@ internal sealed class Window {
     }
 
     /// The Space a window without a record opens on over `session`: its
-    /// default Space unless that is being deleted, else the first Space, or
-    /// none while every Space is going.
-    public static SpaceState? LaunchSpace(SessionState session) {
-        var available = Showable(session).ToArray();
-        return available.FirstOrDefault(space => space.Id == session.DefaultSpaceId) ?? available.FirstOrDefault();
+    /// default Space while a window may show it under `spaceVisibility`, else
+    /// the first Space it may show, or none while every Space is going.
+    public static SpaceState? LaunchSpace(SessionState session, SpaceVisibility spaceVisibility) {
+        var showableSpaces = Showable(session, spaceVisibility);
+        return showableSpaces.FirstOrDefault(space => space.Id == session.DefaultSpaceId) ?? showableSpaces.FirstOrDefault();
     }
 
     /// What the window shows over `session`, as the platform reads it: what
     /// it chose to show, the cards its content shows for the tab it shows, and
     /// the commands it cannot run now. A window over a private workspace keeps
     /// nothing, which its commands read.
-    public WindowState State(SessionState session, bool isPrivate) {
+    public WindowState State(SessionState session, bool isPrivate, SpaceVisibility spaceVisibility) {
         ArgumentNullException.ThrowIfNull(session);
-        var space = Showable(session).FirstOrDefault(candidate => candidate.Id == ShownSpaceId);
+        var space = Showable(session, spaceVisibility).FirstOrDefault(candidate => candidate.Id == ShownSpaceId);
         var shown = space is not null && Tab(space.Id) is { } tabId ? space.Tabs.FirstOrDefault(tab => tab.Id == tabId) : null;
         IReadOnlyList<ShownCards> cards = [.. session.Spaces.OrderBy(candidate => candidate.Id)
             .Select(candidate => Tab(candidate.Id) is { } tabId && Contains(candidate, tabId) ? Cards(candidate, tabId) : null)
@@ -172,18 +172,19 @@ internal sealed class Window {
         return null;
     }
 
-    /// Repairs the window after `session` changed under it: a tab that is gone shows nothing, a
-    /// Space that is gone or being deleted gives way to the first remaining
-    /// one on its fallback tab, split shares survive only while their group
-    /// renders with as many columns, and the history forgets what is gone.
-    public void Repair(SessionState session) {
+    /// Repairs the window after `session` or `spaceVisibility` changed under
+    /// it: a tab that is gone shows nothing, a Space that is gone, being
+    /// deleted or hidden gives way to the first one it may show on its fallback
+    /// tab, split shares survive only while their group renders with as many
+    /// columns, and the history forgets what is gone.
+    public void Repair(SessionState session, SpaceVisibility spaceVisibility) {
         var spaces = session.Spaces.ToDictionary(space => space.Id);
         foreach (var (spaceId, tabId) in tabs.ToArray()) {
             if (!spaces.TryGetValue(spaceId, out var space)) tabs.Remove(spaceId);
             else if (tabId is not null && !Contains(space, tabId)) tabs[spaceId] = null;
         }
-        if (!Showable(session).Any(space => space.Id == ShownSpaceId) && Showable(session).FirstOrDefault() is { } fallback)
-            ShowSpace(fallback);
+        var showableSpaces = Showable(session, spaceVisibility);
+        if (showableSpaces.All(space => space.Id != ShownSpaceId) && showableSpaces.FirstOrDefault() is { } fallbackSpace) ShowSpace(fallbackSpace);
         foreach (var groupId in shares.Keys.ToArray())
             if (!session.Spaces.Any(space => RenderedColumns(space, groupId) == shares[groupId].Count)) shares.Remove(groupId);
         foreach (var (spaceId, history) in recent.ToArray()) {
@@ -235,9 +236,10 @@ internal sealed class Window {
         return Math.Abs(total - 1) <= tolerance ? [.. requested] : [.. requested.Select(value => value / total)];
     }
 
-    /// The Spaces a window may show, in the session's order: every one not being deleted.
-    internal static IEnumerable<SpaceState> Showable(SessionState session) =>
-        session.Spaces.Where(space => session.SpaceDeletions.All(deletion => deletion.SpaceId != space.Id));
+    /// The Spaces a window may show, in the session's order: every one not
+    /// being deleted that `spaceVisibility` shows.
+    internal static IReadOnlyList<SpaceState> Showable(SessionState session, SpaceVisibility spaceVisibility) =>
+        spaceVisibility.Showable(session.Spaces.Where(space => session.SpaceDeletions.All(deletion => deletion.SpaceId != space.Id)));
 
     private static bool Contains(SpaceState space, Guid? tabId) => tabId is { } id && space.Tabs.Any(tab => tab.Id == id);
 

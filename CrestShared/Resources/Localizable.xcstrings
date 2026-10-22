@@ -130,6 +130,9 @@
         }
       }
     },
+    "%@ (Hidden on This Device)" : {
+
+    },
     "%@ %@" : {
       "localizations" : {
         "ar" : {
@@ -4482,6 +4485,9 @@
     "Crest needs at least one Space." : {
 
     },
+    "Crest needs at least one Space on this device." : {
+
+    },
     "Crest password suggestions" : {
       "localizations" : {
         "ar" : {
@@ -6490,6 +6496,9 @@
           }
         }
       }
+    },
+    "Hidden Spaces keep syncing with your other devices. The Space you're using can't be hidden." : {
+
     },
     "Hide AI Answers" : {
 
@@ -12441,6 +12450,9 @@
           }
         }
       }
+    },
+    "Spaces on This Device" : {
+
     },
     "Spaces, Essentials, pinned tabs, folders, open tabs, and colors" : {
       "comment" : "What importing from another browser brings. Keep product names as they are."

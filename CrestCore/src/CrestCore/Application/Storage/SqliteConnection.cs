@@ -163,6 +163,7 @@ internal sealed class SqliteConnection : IDisposable {
         Execute("CREATE TABLE IF NOT EXISTS device_agent_space (space TEXT PRIMARY KEY, position INTEGER NOT NULL)");
         Execute("CREATE TABLE IF NOT EXISTS device_agent (position INTEGER PRIMARY KEY, team TEXT, signing TEXT, path TEXT, "
             + "client TEXT, name TEXT NOT NULL)");
+        Execute("CREATE TABLE IF NOT EXISTS device_hidden_space (space TEXT PRIMARY KEY, position INTEGER NOT NULL)");
     }
 
     /// Everything the device store holds. A row whose identities or names do
@@ -171,7 +172,8 @@ internal sealed class SqliteConnection : IDisposable {
         ReadLinks(), ReadSetupDraft(), ReadSetupCompleted(), ReadAdoptions(), ReadTabGroups(), ReadDefaultEngine()) {
         PaletteMemories = ReadPaletteMemories(),
         SearchCatalog = ReadSearchCatalog(),
-        Agents = ReadAgents()
+        Agents = ReadAgents(),
+        SpaceVisibility = ReadSpaceVisibility()
     };
 
     /// The search catalog the store keeps, or null when it keeps none or it does not read.
@@ -343,6 +345,16 @@ internal sealed class SqliteConnection : IDisposable {
         return new(isOn, runsScripts, spaces, approved);
     }
 
+    /// The Spaces this device hides, in the order it hid them: none for a
+    /// device that never hid one. A Space that does not read is left out.
+    private SpaceVisibility ReadSpaceVisibility() {
+        var hiddenSpaceIds = new List<Guid>();
+        Rows("SELECT space FROM device_hidden_space ORDER BY position", statement => {
+            if (Identity(statement, 0) is { } spaceId) hiddenSpaceIds.Add(spaceId);
+        });
+        return new(hiddenSpaceIds);
+    }
+
     /// The unfinished manual setup, or null when the store keeps none or it
     /// does not read.
     private KeptSetupDraft? ReadSetupDraft() {
@@ -385,6 +397,7 @@ internal sealed class SqliteConnection : IDisposable {
         WritePaletteMemories(records.PaletteMemories, written?.PaletteMemories);
         if (written is null || !ReferenceEquals(records.SearchCatalog, written.SearchCatalog)) WriteSearchCatalog(records.SearchCatalog);
         if (written is null || !records.Agents.Equals(written.Agents)) WriteAgents(records.Agents);
+        if (written is null || !records.SpaceVisibility.Equals(written.SpaceVisibility)) WriteSpaceVisibility(records.SpaceVisibility);
     }
 
     /// The search catalog as its one document, or no row before it was first restored.
@@ -437,6 +450,19 @@ internal sealed class SqliteConnection : IDisposable {
                 Bind(statement, 4, agent.Identity.Path);
                 Bind(statement, 5, agent.Identity.Client);
                 Bind(statement, 6, agent.Name);
+            });
+        }
+    }
+
+    /// The Spaces this device hides, in order.
+    private void WriteSpaceVisibility(SpaceVisibility spaceVisibility) {
+        Execute("DELETE FROM device_hidden_space");
+        for (int position = 0; position < spaceVisibility.HiddenSpaceIds.Count; position++) {
+            var spaceId = spaceVisibility.HiddenSpaceIds[position];
+            int index = position;
+            Insert("INSERT INTO device_hidden_space(space, position) VALUES(?,?)", statement => {
+                Bind(statement, 1, Spelling(spaceId));
+                Checked(Sqlite.sqlite3_bind_int64(statement, 2, index));
             });
         }
     }

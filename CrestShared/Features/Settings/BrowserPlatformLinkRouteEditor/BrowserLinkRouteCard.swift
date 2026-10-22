@@ -4,7 +4,7 @@ import SwiftUI
 /// gets a usable editing width; narrow containers stack the destination below it.
 struct BrowserLinkRouteCard: View {
     let route: LinkRoute
-    let spaces: [SpaceModel]
+    let spaces: [CrestSpaceIdentity]
     let canMoveUp: Bool
     let canMoveDown: Bool
     let update: (BrowserLinkRouteFieldUpdate) -> Void
@@ -101,7 +101,7 @@ struct BrowserLinkRouteCard: View {
             CrestSpaceMenuPicker(
                 "Destination",
                 selection: binding(route.destinationSpaceID, field: BrowserLinkRouteFieldUpdate.destinationSpaceID),
-                spaces: CrestSpaceIdentity.list(spaces), labelsHidden: true
+                spaces: spaces, labelsHidden: true
             )
             .frame(maxWidth: .infinity, minHeight: 36, alignment: .leading)
         }

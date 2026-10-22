@@ -64,10 +64,12 @@ struct BrowserGeneralSettingsPane: View {
                 CrestSpaceMenuPicker(
                     "Default Space",
                     selection: browser.defaultSpaceBinding(),
-                    spaces: CrestSpaceIdentity.list(browser.spaceModels),
+                    spaces: browser.spaceChoices,
                     accessibilityIdentifier: "default-space-picker"
                 )
             }
+
+            BrowserSpacesOnDeviceSection(browser: browser)
 
             #if os(iOS)
                 Section("Sidebar") {
@@ -103,8 +105,9 @@ struct BrowserGeneralSettingsPane: View {
         }
     }
 
+    // MARK: - Startup
+
     #if os(iOS)
-        // MARK: - Startup
 
         /// A phone opens on a new tab in the default Space, or on its tab
         /// viewer, which is its Start Page.

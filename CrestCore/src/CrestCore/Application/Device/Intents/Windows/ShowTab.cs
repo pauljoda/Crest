@@ -5,7 +5,8 @@ namespace CrestCore.Contracts;
 /// Shows a tab in a window, switching the window to the tab's Space, and
 /// records when the tab was last used, which current-tab cleanup reads. A
 /// null tab leaves the Space showing nothing and the window where it is. A
-/// Space or tab that is already gone publishes nothing.
+/// Space or tab that is already gone, or a Space hidden on this device,
+/// publishes nothing.
 public sealed record ShowTab(Guid WindowId, Guid SpaceId, Guid? TabId) : WindowIntent {
     #region Actions - Device
 
@@ -15,7 +16,7 @@ public sealed record ShowTab(Guid WindowId, Guid SpaceId, Guid? TabId) : WindowI
     internal override void Apply(Device device, DeviceTurn turn) {
         var window = device.Opened(WindowId);
         var authority = device.Workspace(window.WorkspaceId);
-        if (Device.Available(authority.Current, SpaceId) is not { } space) return;
+        if (device.ShowableSpace(window.WorkspaceId, authority.Current, SpaceId) is not { } space) return;
         if (TabId is { } tabId) {
             if (space.Tabs.All(tab => tab.Id != tabId)) return;
             if (authority.Touch(SpaceId, tabId, DateTimeOffset.UtcNow) is { } touched)

@@ -107,12 +107,13 @@ internal sealed partial class Device {
         stacked.Select(id => open.GetValueOrDefault(id)).OfType<Window>().FirstOrDefault(window => window.WorkspaceId == workspaceId);
 
     /// The Space the saved window `windowId`, not open yet, would open on over
-    /// `session`: the one its record shows while that stays, else the launch
-    /// Space. Null while every Space is going.
-    internal Guid? OpeningSpace(Guid windowId, SessionState session) {
+    /// `session`, the workspace `workspaceId`'s: the one its record shows while
+    /// that stays shown, else the launch Space. Null while every Space is going.
+    internal Guid? OpeningSpaceId(Guid workspaceId, Guid windowId, SessionState session) {
         Guid? kept;
         lock (gate) kept = saved.GetValueOrDefault(windowId)?.ShownSpaceId;
-        return kept is { } space && Available(session, space) is not null ? space : Window.LaunchSpace(session)?.Id;
+        return kept is { } spaceId && ShowableSpace(workspaceId, session, spaceId) is not null ? spaceId
+            : Window.LaunchSpace(session, SpaceVisibilityOf(workspaceId))?.Id;
     }
 
     /// The setup a launch in `environment` on `platform` opens in front of its

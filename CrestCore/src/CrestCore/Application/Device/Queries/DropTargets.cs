@@ -25,7 +25,7 @@ public sealed record DropTargets(Guid WorkspaceId, Guid WindowId, Guid SpaceId, 
         var space = session.Spaces.First(candidate => candidate.Id == SpaceId);
         var (workspaceId, windowId, spaceId, selection) = (WorkspaceId, WindowId, SpaceId, Selection);
         ListDropTarget[] lists = [.. space.Sidebar.Lists.Select(list => new ListDropTarget(list.Section, list.FolderId))];
-        Guid[] spaces = [.. Window.Showable(session).Where(other => other.Id != spaceId).Select(other => other.Id)];
+        Guid[] otherSpaceIds = [.. app.Device.ShowableSpaces(WorkspaceId, session).Where(other => other.Id != spaceId).Select(other => other.Id)];
         Guid? shown;
         lock (app.Device.Gate) shown = window.Tab(spaceId);
         var split = shown is { } target
@@ -44,7 +44,7 @@ public sealed record DropTargets(Guid WorkspaceId, Guid WindowId, Guid SpaceId, 
             && Device.Refusal(authority, new DropAroundTab(workspaceId, windowId, spaceId, selection, around[0]), app.Clock.Now,
                 app.Pages) is not null)
             around = [];
-        return new(Refusal: null, lists, spaces, split, around);
+        return new(Refusal: null, lists, otherSpaceIds, split, around);
     }
 
     #endregion

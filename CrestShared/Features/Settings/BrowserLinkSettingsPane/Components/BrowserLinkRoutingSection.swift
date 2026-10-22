@@ -2,7 +2,7 @@ import SwiftUI
 
 struct BrowserLinkRoutingSection: View {
     let routes: [LinkRoute]
-    let spaces: [SpaceModel]
+    let spaces: [CrestSpaceIdentity]
     let selectedSpaceID: UUID
     let updateRoute: (UUID, BrowserLinkRouteFieldUpdate) -> Void
     let remove: (UUID) -> Void
