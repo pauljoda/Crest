@@ -167,11 +167,11 @@ the live status for each issue.
 - [ ] [feature: Share one extension install across chosen Spaces](https://github.com/pauljoda/Crest/issues/527)
 - [ ] [feature: Stretch pins to fill the row](https://github.com/pauljoda/Crest/issues/530)
 - [ ] [bug: can't continue onboarding when importing from Arc](https://github.com/pauljoda/Crest/issues/535)
-- [ ] [Adapt Crest for iPhone Duo's inner and outer displays](https://github.com/pauljoda/Crest/issues/547)
 - [ ] [Remove the blank space at the bottom of the iPad layout](https://github.com/pauljoda/Crest/issues/548)
 - [ ] [Restore the page's address after dismissing a typed address](https://github.com/pauljoda/Crest/issues/549)
 - [ ] [Keep the iPad Quick Window card inside the screen in portrait](https://github.com/pauljoda/Crest/issues/550)
 - [ ] [Show the shared page when a share opens Crest from closed on iPhone](https://github.com/pauljoda/Crest/issues/551)
+- [ ] [Keep the Quick Window card clear of the top of the screen only once on iPhone](https://github.com/pauljoda/Crest/issues/558)
 
 #### Completed
 
@@ -203,6 +203,7 @@ the live status for each issue.
 - [x] [Restart to Update waits for Command-Q instead of quitting on its own](https://github.com/pauljoda/Crest/issues/496) — [`3a81c9f6`](https://github.com/pauljoda/Crest/commit/3a81c9f658a42153c4d3407f78d37ea58d221551), [`9623204f`](https://github.com/pauljoda/Crest/commit/9623204f56fbf86655cc05e567a1c492b3171e8a)
 - [x] [Show the right tab title in the sidebar after a page fails to load](https://github.com/pauljoda/Crest/issues/506) — [`fbddee58`](https://github.com/pauljoda/Crest/commit/fbddee58da9df69d09256a5a1b59897018e1ac55)
 - [x] [Redesign first-launch setup as a full-screen flow with a Heraldic or Modern look](https://github.com/pauljoda/Crest/issues/515) — [`37618b0d`](https://github.com/pauljoda/Crest/commit/37618b0d4f8d9abfb19b72cf6af4774304090916)
+- [x] [Adapt Crest for iPhone Duo's inner and outer displays](https://github.com/pauljoda/Crest/issues/547) — [`bc99dcd9`](https://github.com/pauljoda/Crest/commit/bc99dcd926de87af86354bd434080a02b262f656)
 
 <!-- crest-roadmap-sync:end -->
 
