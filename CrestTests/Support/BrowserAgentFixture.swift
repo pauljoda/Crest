@@ -9,31 +9,34 @@ import XCTest
 final class BrowserAgentFixture {
     // MARK: - Types
 
-    final class DeferredDismissal: BrowserPageDismissalAuthorizing {
+    /// Answers for the person: allows every agent, and lets it delete history
+    /// while `deletesHistory`, keeping each deletion it was asked about.
+    final class Answers: BrowserAgentAsking {
         // MARK: - Variables
 
-        var pending: (@MainActor () -> Bool)?
+        var deletesHistory = true
+        private(set) var deletions: [BrowserAgentHistoryDeletion] = []
 
-        // MARK: - Actions - Confirmation
+        // MARK: - Actions - Questions
 
-        func performDismissal(
-            of assignments: [BrowserTabRuntimeAssignment], in browser: BrowserStore,
-            operation: @escaping @MainActor () -> Bool
-        ) -> Bool {
-            pending = operation
-            return false
+        func approveAgent(
+            _ agent: BrowserAgentPeer.Program, client: AgentClientInfo?, dismissal: BrowserPromptDismissal?
+        ) async -> Bool {
+            true
         }
 
-        func resolve(_ allowed: Bool) -> Bool {
-            let operation = pending
-            pending = nil
-            return allowed && operation?() == true
+        func approveHistoryDeletion(_ deletion: BrowserAgentHistoryDeletion, dismissal: BrowserPromptDismissal?)
+            async -> Bool
+        {
+            deletions.append(deletion)
+            return deletesHistory
         }
     }
 
     // MARK: - Variables
 
     let host = WebKitShellHost()
+    let answers = Answers()
     let application: BrowserMacApplication
     let windows: BrowserMacWindows
     let agents: BrowserMacAgents
@@ -47,7 +50,8 @@ final class BrowserAgentFixture {
     init() throws {
         application = try BrowserMacApplication()
         windows = BrowserMacWindows(application: application, engineHost: host)
-        agents = BrowserMacAgents(application: application, windows: windows)
+        agents = BrowserMacAgents(
+            application: application, windows: windows, approvals: BrowserAgentApprovals(asking: answers))
         space = try XCTUnwrap(application.browser.shownSpace)
         let identity = AgentIdentity(teamID: nil, signingID: nil, path: "/private/tmp/crest-test-agent", client: nil)
         var descriptors: [Int32] = [0, 0]
@@ -70,5 +74,15 @@ final class BrowserAgentFixture {
         if answer.isError { throw BrowserAgentFailure(answer.content.first?.text ?? "The tool failed.") }
         let text = try XCTUnwrap(answer.content.first?.text)
         return try JSONDecoder().decode(AgentJSON.self, from: Data(text.utf8))
+    }
+
+    /// Fails the test unless tool `name` refuses `arguments`.
+    func assertRefused(
+        _ name: String, _ arguments: [String: AgentJSON] = [:], file: StaticString = #filePath, line: UInt = #line
+    ) async {
+        do {
+            _ = try await invoke(name, arguments)
+            XCTFail("\(name) should refuse \(arguments).", file: file, line: line)
+        } catch {}
     }
 }

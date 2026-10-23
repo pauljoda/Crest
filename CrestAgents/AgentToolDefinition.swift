@@ -96,7 +96,7 @@ struct AgentToolDefinition: Sendable {
     static let closeTab = Self(
         name: "close_tab", title: "Close a tab",
         description:
-            "Closes a tab after its page agrees to go. Open tabs are archived; saved and pinned pages are put away while their sidebar entries stay. closed reports completion, and tabPreserved reports whether the entry remains.",
+            "Closes an open tab after its page agrees to go. Pinned and saved tabs are the person's, and stay.",
         arguments: [tab], readOnly: false, destructive: true, idempotent: false, openWorld: false)
     static let takeSnapshot = Self(
         name: "take_snapshot", title: "Read a page",

@@ -13,13 +13,7 @@ namespace CrestCore.Tests;
 /// own session, never a private window's, one being deleted, a locked Space's
 /// tabs or Crest's own views, and lets go of any tab it may no longer use.
 public sealed partial class BrowserContractsTests {
-    #region Static Variables
-
     private static readonly AgentIdentity Claude = new("Q6L2SF6YDW", "com.anthropic.claude-code", null, null);
-
-    #endregion
-
-    #region Actions - Agents
 
     private static AgentPreferences AgentPreferencesIn(IReadOnlyList<Change> changes) =>
         Assert.Single(changes.OfType<AgentPreferencesChanged>()).Preferences;
@@ -153,30 +147,6 @@ public sealed partial class BrowserContractsTests {
     }
 
     [Fact]
-    public void ReleasingATabAffectsOnlyItsConnectionAndDoesNotLiftAStop() {
-        using var app = new CrestApp();
-        var session = TwoSpaceSession();
-        var workspace = TestWorkspaces.Open(app, session);
-        var space = SpaceId(session["spaces"]![0]!);
-        var tab = app.Workspace(workspace).Current.Spaces.Single(candidate => candidate.Id == space).Tabs[0].Id;
-        var agent = ConnectClaude(app, space);
-        var other = Guid.NewGuid();
-        app.Send(new BeginAgentSession(other, Claude, "other connection"));
-        app.Send(new ClaimAgentTab(agent, tab));
-        app.Send(new ClaimAgentTab(other, tab));
-        var released = AgentSessionsIn(app.Send(new UnclaimAgentTab(agent, tab)));
-        Assert.Empty(released.Single(current => current.SessionId == agent).TabIds);
-        Assert.Equal([tab], released.Single(current => current.SessionId == other).TabIds);
-        app.Send(new UnclaimAgentTab(agent, tab));
-        app.Send(new UnclaimAgentTab(Guid.NewGuid(), tab));
-        Assert.True(app.Query(new AgentReach(other)).Spaces.SelectMany(current => current.Tabs).Single(current => current.TabId == tab).Claimed);
-        app.Send(new ClaimAgentTab(agent, tab));
-        app.Send(new StopAgentTab(tab));
-        app.Send(new UnclaimAgentTab(agent, tab));
-        Assert.Equal(new AgentTabStopped(tab), Assert.Throws<Rejected>(() => app.Send(new ClaimAgentTab(agent, tab))).Rejection);
-    }
-
-    [Fact]
     public void AnAgentLetsGoOfEveryTabItMayNoLongerUseAndAStoppedTabStaysOutOfReach() {
         using var app = new CrestApp();
         var session = TwoSpaceSession();
@@ -273,6 +243,4 @@ public sealed partial class BrowserContractsTests {
         using var app = new CrestApp(new AppConfiguration(null, DevicePlatform.Mobile));
         Assert.IsType<AgentsUnavailable>(Assert.Throws<Rejected>(() => app.Send(new SetAgents(true))).Rejection);
     }
-    #endregion
-
 }

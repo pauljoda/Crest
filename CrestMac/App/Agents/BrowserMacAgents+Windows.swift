@@ -1,5 +1,9 @@
 import AppKit
 
+/// The windows an agent opens at the person's request: a normal window, a
+/// Blank Window or a Quick Window over an allowed, unlocked Space, and a
+/// Private Window, which no tool reaches into afterwards. An agent never
+/// loads an address into private browsing the person already has open.
 extension BrowserMacAgents {
     // MARK: - Types
 
@@ -10,24 +14,6 @@ extension BrowserMacAgents {
     private struct PrivateReceipt: Encodable {
         let windowID: UUID
     }
-
-    // MARK: - Actions - Windows
-
-    /// Private creation grants no capability to enumerate or later act on its contents.
-    func openPrivateWindow(_ call: BrowserAgentCall) throws(BrowserAgentFailure) -> AgentToolResult {
-        _ = try reach(call)
-        let opening = try call.arguments(PrivateOpening.self)
-        let url = try opening.url.map(Self.address)
-        windows.openPrivateWindow()
-        if let url, application.privateBrowser.openNewTab(url: url) == nil {
-            throw .refused("Crest could not open the private address.")
-        }
-        return .data(PrivateReceipt(windowID: application.privatePages.windowID))
-    }
-}
-
-extension BrowserMacAgents {
-    // MARK: - Types
 
     private struct WindowOpening: Decodable {
         let space: UUID?
@@ -41,6 +27,26 @@ extension BrowserMacAgents {
     }
 
     // MARK: - Actions - Windows
+
+    /// Opens a Private Window, at `url` when given. With one already open,
+    /// it only comes forward, and an address is refused before anything
+    /// changes.
+    func openPrivateWindow(_ call: BrowserAgentCall) throws(BrowserAgentFailure) -> AgentToolResult {
+        _ = try reach(call)
+        let opening = try call.arguments(PrivateOpening.self)
+        let url = try opening.url.map(Self.address)
+        let alreadyOpen = windows.isOpen(.private)
+        if url != nil, alreadyOpen {
+            throw .refused(
+                "A Private Window is already open. Crest opens an address only in a new Private Window; ask the person to close theirs first."
+            )
+        }
+        windows.openPrivateWindow()
+        if let url, application.privateBrowser.openNewTab(url: url) == nil {
+            throw .refused("Crest could not open the private address.")
+        }
+        return .data(PrivateReceipt(windowID: application.privatePages.windowID))
+    }
 
     func openWindow(_ call: BrowserAgentCall) throws(BrowserAgentFailure) -> AgentToolResult {
         let opening = try call.arguments(WindowOpening.self)

@@ -86,10 +86,7 @@ extension BrowserMacAgents {
                     scheme == "http" || scheme == "https", let host = url.host?.lowercased()
                 else { return nil }
                 if let domain, !domain.isEmpty {
-                    let maps =
-                        domain == "maps.google.com" && ["google.com", "www.google.com"].contains(host)
-                        && (url.path == "/maps" || url.path.hasPrefix("/maps/"))
-                    guard maps || host == domain || host.hasSuffix("." + domain) else { return nil }
+                    guard host == domain || host.hasSuffix("." + domain) else { return nil }
                 }
                 return .init(
                     id: entry.id, space: space.id, spaceName: reached.name, url: entry.url,
@@ -107,21 +104,38 @@ extension BrowserMacAgents {
                     }.prefix(limit))))
     }
 
-    /// Removes one requested address from an explicitly allowed, unlocked Space through the core.
-    func deleteHistory(_ call: BrowserAgentCall) throws(BrowserAgentFailure) -> AgentToolResult {
+    /// Removes every visit to one address from an allowed, unlocked Space's
+    /// history through the core, once the person agrees. History keeps an
+    /// address without its fragment, so the comparison drops it, as the core
+    /// does. An address the Space has no visit to removes nothing and asks
+    /// nothing.
+    func deleteHistory(_ call: BrowserAgentCall) async throws(BrowserAgentFailure) -> AgentToolResult {
         let deletion = try call.arguments(HistoryDeletion.self)
-        let url = try Self.address(deletion.url)
+        let address = String(try Self.address(deletion.url).absoluteString.prefix { $0 != "#" })
         let space = try resolveSpace(deletion.space, call)
-        let reach = try reach(call)
-        guard let workspaceID = reach.workspaceID else { throw .rejected(.agentsOff(AgentsOff())) }
-        let before = space.history.entries.count
+        guard space.history.entries.contains(where: { $0.url == address }) else {
+            return .data(HistoryDeletionReceipt(space: space.id, removed: 0))
+        }
+        // The question names the agent as the person allowed it, never as it
+        // introduced itself.
+        let state = core.state
+        guard let session = state.agentSessions.first(where: { $0.sessionID == call.sessionID }),
+            let agent = state.agentPreferences.agents.first(where: { $0.identity == session.identity })
+        else { throw .rejected(.unknownAgentSession(UnknownAgentSession(sessionID: call.sessionID))) }
+        let spaceName = try reach(call).spaces.first { $0.spaceID == space.id }?.name ?? ""
+        try await approvals.approve(
+            BrowserAgentHistoryDeletion(agentName: agent.name, address: address, spaceName: spaceName),
+            for: ObjectIdentifier(call.link))
+        // The person may lock the Space, or stop allowing it, while asked.
+        let current = try resolveSpace(deletion.space, call)
+        guard let workspaceID = try reach(call).workspaceID else { throw .rejected(.agentsOff(AgentsOff())) }
+        let before = current.history.entries.count
         do {
-            try core.send(
-                RemoveHistoryAddress(workspaceID: workspaceID, spaceID: space.id, address: url.absoluteString))
+            try core.send(RemoveHistoryAddress(workspaceID: workspaceID, spaceID: current.id, address: address))
         } catch {
             throw .rejected(error)
         }
-        return .data(HistoryDeletionReceipt(space: space.id, removed: before - space.history.entries.count))
+        return .data(HistoryDeletionReceipt(space: current.id, removed: before - current.history.entries.count))
     }
 
     // MARK: - Actions - Spaces

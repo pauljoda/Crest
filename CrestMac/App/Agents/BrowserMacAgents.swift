@@ -62,7 +62,8 @@ final class BrowserMacAgents {
     private let helper: BrowserAgentHelperRequirement?
     private var listener: BrowserAgentListener?
     private var links: [ObjectIdentifier: Link] = [:]
-    private let approvals = BrowserAgentApprovals()
+    /// The person's answers to agents connecting and deleting history.
+    let approvals: BrowserAgentApprovals
     /// The work running on each tab, which the next call on that tab waits
     /// for, so calls on one tab never interleave.
     private var tabWork: [UUID: Task<Void, Never>] = [:]
@@ -72,9 +73,13 @@ final class BrowserMacAgents {
 
     // MARK: - Initializers
 
-    init(application: BrowserMacApplication, windows: BrowserMacWindows) {
+    init(
+        application: BrowserMacApplication, windows: BrowserMacWindows,
+        approvals: BrowserAgentApprovals = BrowserAgentApprovals()
+    ) {
         self.application = application
         self.windows = windows
+        self.approvals = approvals
         helper = BrowserAgentHelperRequirement(bundle: .main)
         path = helper == nil ? nil : Bundle.main.bundleIdentifier.flatMap(AgentSocketLocation.path(forApp:))
     }
@@ -206,7 +211,7 @@ final class BrowserMacAgents {
     /// Lets `link` go of tab `tabID`'s page: it renders and keeps activity
     /// for agents no more once no other connection uses it, since the engine
     /// keeps one of each per page.
-    func letGo(_ tabID: UUID, of link: Link) {
+    private func letGo(_ tabID: UUID, of link: Link) {
         let page = agentPage(tabID)?.enginePage
         let others = links.values.filter { $0 !== link }
         if let held = link.heldPages.removeValue(forKey: tabID), page?.id == held,

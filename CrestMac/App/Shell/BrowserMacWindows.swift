@@ -209,6 +209,11 @@ final class BrowserMacWindows {
         controllers.first { $0.kind == kind && (id == nil || $0.windowID == id) }
     }
 
+    /// Whether a window of `kind` is open now.
+    func isOpen(_ kind: BrowserMacWindowKind) -> Bool {
+        controller(kind) != nil
+    }
+
     /// Brings forward the window of `kind` already open, when one window of
     /// the kind is open at a time. Answers whether there was one.
     private func bringForwardOpenWindow(of kind: BrowserMacWindowKind) -> Bool {

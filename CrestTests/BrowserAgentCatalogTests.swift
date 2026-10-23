@@ -24,7 +24,7 @@ final class BrowserAgentCatalogTests: XCTestCase {
     func testWindowToolsPreserveTheRequestedSpaceAndSavedTabIdentity() async throws {
         let fixture = try BrowserAgentFixture()
         let before = fixture.application.stackedWindowIDs
-        await assertToolFailure(fixture, "open_window", ["url": .string("file:///private/tmp/test")])
+        await fixture.assertRefused("open_window", ["url": .string("file:///private/tmp/test")])
         XCTAssertEqual(fixture.application.stackedWindowIDs, before)
         let opening = try await fixture.invoke(
             "open_window",
@@ -84,17 +84,17 @@ final class BrowserAgentCatalogTests: XCTestCase {
         XCTAssertNotNil(formatter.date(from: try XCTUnwrap(visits.first?.lastVisitedAt)))
         let excluded = try await fixture.invoke("search_history", ["domain": .string("other.example.com")])
         XCTAssertEqual(try excluded["entries"]?.decoded(as: [Visit].self).count, 0)
-        await assertToolFailure(fixture, "search_history", ["limit": .number(1001)])
+        await fixture.assertRefused("search_history", ["limit": .number(1001)])
         try fixture.core.send(AllowAgentSpace(spaceID: fixture.space.id, allowed: false))
         let revoked = try await fixture.invoke("search_history")
         XCTAssertEqual(try revoked["entries"]?.decoded(as: [Visit].self).count, 0)
-        await assertToolFailure(fixture, "list_search_providers", ["space": .string(fixture.space.id.uuidString)])
+        await fixture.assertRefused("list_search_providers", ["space": .string(fixture.space.id.uuidString)])
     }
 
     func testPrivateCreationValidatesBeforeMutationAndNeverExposesPrivateTabs() async throws {
         let fixture = try BrowserAgentFixture()
         let before = fixture.application.stackedWindowIDs
-        await assertToolFailure(fixture, "open_private_window", ["url": .string("javascript:alert(1)")])
+        await fixture.assertRefused("open_private_window", ["url": .string("javascript:alert(1)")])
         XCTAssertEqual(fixture.application.stackedWindowIDs, before)
         let answer = try await fixture.invoke("open_private_window", ["url": .string("https://example.com/private")])
         defer { fixture.application.closePrivateBrowsingWindow() }
@@ -103,9 +103,14 @@ final class BrowserAgentCatalogTests: XCTestCase {
         XCTAssertNil(answer["spaceID"])
         let tab = try XCTUnwrap(fixture.application.privateBrowser.shownTab)
         XCTAssertEqual(tab.url, "https://example.com/private")
+        // Private browsing the person already has open never takes an agent's address.
+        let privateTabs = try XCTUnwrap(fixture.application.privateBrowser.shownSpace).tabs.models.count
+        await fixture.assertRefused("open_private_window", ["url": .string("https://example.com/second")])
+        _ = try await fixture.invoke("open_private_window")
+        XCTAssertEqual(try XCTUnwrap(fixture.application.privateBrowser.shownSpace).tabs.models.count, privateTabs)
         let listed = try await fixture.invoke("list_tabs")
         XCTAssertFalse(String(decoding: try JSONEncoder().encode(listed), as: UTF8.self).contains(tab.id.uuidString))
-        await assertToolFailure(fixture, "show_tab", ["tab": .string(tab.id.uuidString)])
+        await fixture.assertRefused("show_tab", ["tab": .string(tab.id.uuidString)])
         fixture.application.privateBrowser.seedVisit(
             to: try XCTUnwrap(URL(string: "https://example.com/private")), titled: "Private history coverage")
         XCTAssertTrue(
@@ -115,7 +120,7 @@ final class BrowserAgentCatalogTests: XCTestCase {
         let history = try await fixture.invoke("search_history", ["query": .string("example.com/private")])
         XCTAssertEqual(try history["entries"]?.decoded(as: [Visit].self).count, 0)
         try fixture.core.send(SetAgents(isOn: false))
-        await assertToolFailure(fixture, "open_private_window")
+        await fixture.assertRefused("open_private_window")
     }
 
     func testShowingSavedTabWithoutAnOpenWindowKeepsItsIdentity() async throws {
@@ -137,10 +142,10 @@ final class BrowserAgentCatalogTests: XCTestCase {
         for name in ["open_window", "open_blank_window", "open_quick_window"] {
             var arguments: [String: AgentJSON] = ["space": .string(fixture.space.id.uuidString)]
             if name != "open_blank_window" { arguments["url"] = .string("https://example.com/denied") }
-            await assertToolFailure(fixture, name, arguments)
+            await fixture.assertRefused(name, arguments)
         }
         XCTAssertEqual(fixture.application.stackedWindowIDs, before)
-        await assertToolFailure(fixture, "open_window")
+        await fixture.assertRefused("open_window")
     }
 
     func testLockedSpacesRedactListingsAndDenyPublicWindowCreation() async throws {
@@ -163,38 +168,8 @@ final class BrowserAgentCatalogTests: XCTestCase {
         for name in ["open_window", "open_blank_window", "open_quick_window"] {
             var arguments: [String: AgentJSON] = ["space": .string(fixture.space.id.uuidString)]
             if name != "open_blank_window" { arguments["url"] = .string("https://example.com/locked") }
-            await assertToolFailure(fixture, name, arguments)
+            await fixture.assertRefused(name, arguments)
         }
         XCTAssertEqual(fixture.application.stackedWindowIDs, before)
-    }
-
-    func testHistoryDomainMatchesSubdomainsButNotSiblingNamesAndIncludesMaps() async throws {
-        let fixture = try BrowserAgentFixture()
-        for address in [
-            "https://example.com/root", "https://docs.example.com/sub", "https://notexample.com/no",
-            "https://www.google.com/maps/place/test", "https://www.google.com/search?q=test",
-        ] {
-            fixture.application.browser.seedVisit(to: try XCTUnwrap(URL(string: address)), titled: "Domain coverage")
-        }
-        let answer = try await fixture.invoke(
-            "search_history", ["query": .string("Domain coverage"), "domain": .string("example.com")])
-        let visits = try XCTUnwrap(answer["entries"]?.decoded(as: [Visit].self))
-        XCTAssertEqual(Set(visits.map(\.url)), ["https://example.com/root", "https://docs.example.com/sub"])
-        let maps = try await fixture.invoke(
-            "search_history", ["query": .string("Domain coverage"), "domain": .string("maps.google.com")])
-        XCTAssertEqual(
-            try maps["entries"]?.decoded(as: [Visit].self).map(\.url), ["https://www.google.com/maps/place/test"])
-        await assertToolFailure(fixture, "search_history", ["limit": .number(0)])
-    }
-
-    private func assertToolFailure(
-        _ fixture: BrowserAgentFixture, _ name: String, _ arguments: [String: AgentJSON] = [:]
-    )
-        async
-    {
-        do {
-            _ = try await fixture.invoke(name, arguments)
-            XCTFail("The tool should refuse this operation.")
-        } catch {}
     }
 }

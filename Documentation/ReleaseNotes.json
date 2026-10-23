@@ -4062,14 +4062,6 @@
       "category": "fixed",
       "message": "On pinned tabs, the sound and sharing badge sits in the tile\u2019s bottom corner instead of over the site icon, so the icon is easy to click."
     },
-    "mcp-native-browser-tools": {
-      "category": "improved",
-      "message": "Connected tools can search history, use search providers, and open windows in allowed Spaces while private tabs remain inaccessible."
-    },
-    "agent-history-deletion-and-durable-page-close": {
-      "category": "improved",
-      "message": "Approved tools can delete an address from a chosen Space’s history and close saved or pinned pages while keeping their sidebar entries."
-    },
     "site-controls-extension-menu-stays-open": {
       "category": "fixed",
       "message": "Right-clicking an extension in Site Controls shows its menu without closing Site Controls."
@@ -4322,13 +4314,9 @@
       "category": "internal",
       "message": "Upload iOS Cloud archives to TestFlight from the App Store export when the ad hoc export fails"
     },
-    "mcp-browser-tools-focused-integration": {
-      "category": "internal",
-      "message": "Keep the MCP browser tools compatible with current main while preserving their behavior and existing source organization."
-    },
-    "mcp-unclaim-preserves-existing-intent-tags": {
-      "category": "internal",
-      "message": "Name the connection-specific claim release UnclaimAgentTab so existing generated intent tags stay unchanged."
+    "mcp-native-browser-tools": {
+      "category": "improved",
+      "message": "Connected tools can search history, use search providers, and open windows in allowed Spaces, and delete an address from a Space’s history once you agree, while private tabs remain inaccessible."
     }
   }
 }

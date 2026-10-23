@@ -14,7 +14,7 @@ namespace CrestCore.Native;
 public static class ContractCodec {
     /// <summary>SHA-256 of the canonical contract schema.</summary>
     public static ReadOnlySpan<byte> Fingerprint => [
-        0x73, 0x41, 0x9b, 0xbd, 0xa3, 0x62, 0xcd, 0x41, 0x8b, 0xe4, 0x0d, 0xc8, 0x77, 0x8b, 0xae, 0xde, 0xc7, 0x0d, 0x6b, 0x47, 0xd1, 0xa1, 0xad, 0xd8, 0xca, 0x8e, 0xc6, 0x6f, 0x69, 0x25, 0x3d, 0xbd
+        0xbd, 0x40, 0x7a, 0xa2, 0x6a, 0x0d, 0x28, 0xe3, 0xef, 0x21, 0x6a, 0x8d, 0x88, 0x1f, 0x40, 0x6d, 0x55, 0x46, 0x71, 0xd2, 0xce, 0xb3, 0xd8, 0x2b, 0x39, 0xe1, 0x55, 0xd9, 0x0e, 0xd3, 0xfc, 0x7c
     ];
 
     /// <summary>SHA-256 of the engine contract alone, which an engine binding registers with.</summary>
@@ -272,7 +272,6 @@ public static class ContractCodec {
             case 244: return ReadToggleImportSource(reader);
             case 245: return ReadTogglePin(reader);
             case 246: return ReadUnassignShortcut(reader);
-            case 247: return ReadUnclaimAgentTab(reader);
             default: throw new WireFormatException($"Unknown Intent tag {tag}.");
         }
     }
@@ -1268,10 +1267,6 @@ public static class ContractCodec {
             case UnassignShortcut member:
                 writer.WriteTag(246);
                 WriteUnassignShortcut(writer, member);
-                break;
-            case UnclaimAgentTab member:
-                writer.WriteTag(247);
-                WriteUnclaimAgentTab(writer, member);
                 break;
             default: throw new ArgumentOutOfRangeException(nameof(value), value.GetType().Name, "Not a contract Intent.");
         }
@@ -18322,20 +18317,6 @@ public static class ContractCodec {
         ArgumentNullException.ThrowIfNull(writer);
         ArgumentNullException.ThrowIfNull(value);
         WriteShortcutCommand(writer, value.Command);
-    }
-
-    public static UnclaimAgentTab ReadUnclaimAgentTab(WireReader reader) {
-        ArgumentNullException.ThrowIfNull(reader);
-        return new UnclaimAgentTab(
-            reader.ReadGuid(),
-            reader.ReadGuid());
-    }
-
-    public static void WriteUnclaimAgentTab(WireWriter writer, UnclaimAgentTab value) {
-        ArgumentNullException.ThrowIfNull(writer);
-        ArgumentNullException.ThrowIfNull(value);
-        writer.WriteGuid(value.SessionId);
-        writer.WriteGuid(value.TabId);
     }
 
     public static UnknownAgentSession ReadUnknownAgentSession(WireReader reader) {

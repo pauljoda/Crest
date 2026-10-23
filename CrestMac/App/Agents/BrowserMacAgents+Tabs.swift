@@ -10,12 +10,6 @@ import AppKit
 extension BrowserMacAgents {
     // MARK: - Types
 
-    private struct CloseReceipt: Encodable {
-        let closed: Bool
-        let tabPreserved: Bool
-        let note: String?
-    }
-
     private struct Introduction: Decodable {
         let name: String?
         let color: String?
@@ -186,49 +180,21 @@ extension BrowserMacAgents {
         return .data(["tab": try listing(tab.id, call)])
     }
 
-    /// Native confirmation precedes both archive and page-only close; a retained tab is not a failed close.
     func closeTab(_ call: BrowserAgentCall) async throws(BrowserAgentFailure) -> AgentToolResult {
         let reference = try call.arguments(TabReference.self)
         let (space, tab) = try claim(reference.tab, call)
-        let candidates = normalWindows(over: space)
-        let owner =
-            candidates.first { self.core.state.windows[$0.id]?.shownTabIDs.contains(tab.id) == true }
-            ?? candidates.first
-        if let owner {
-            // Native confirmation also applies before the new window's view registers its runtime.
-            application.pagePoolRegistry.register(owner.pages, browser: owner.browser, for: owner.id)
-        }
-        let browser = owner?.browser ?? application.browser
-        let assignment = BrowserTabRuntimeAssignment(tabID: tab.id, spaceID: space.id, profileID: space.profileID)
-        var closed = false
-        _ = browser.performPageDismissal(of: [assignment]) { [weak self, weak browser] in
-            // Permission can be revoked while a page is asking whether it may leave.
-            guard let self, let browser,
-                let (currentSpace, _) = try? self.claim(tab.id, call),
-                currentSpace.id == assignment.spaceID, currentSpace.profileID == assignment.profileID
-            else { return false }
-            // Put-away notifications run during close, so the caller must release its hold before those observers run.
-            do {
-                try self.core.send(UnclaimAgentTab(sessionID: call.sessionID, tabID: tab.id))
-            } catch { return false }
-            closed = browser.closeSessionTab(tab.id, in: space.id)
-            if closed {
-                self.letGo(tab.id, of: call.link)
-            } else {
-                _ = try? self.claim(tab.id, call)
-            }
-            return closed
-        }
-        // A deferred native confirmation may complete after the initial request.
+        guard tab.placement == .current else { throw .pinnedOrSaved }
+        let browser = frontWindow(over: space)?.browser ?? application.browser
+        if browser.closeTab(tab.id, in: space.id) { return .data(["closed": true]) }
+        // A page asked to answer whether it may go answers after this returns.
         let deadline = ContinuousClock.now + .seconds(2)
-        while !closed, ContinuousClock.now < deadline, !Task.isCancelled {
+        while space.tabs.contains(tab.id), ContinuousClock.now < deadline {
             try? await Task.sleep(for: .milliseconds(50))
         }
+        let closed = !space.tabs.contains(tab.id)
         return .data(
-            CloseReceipt(
-                closed: closed, tabPreserved: space.tabs.contains(tab.id),
-                note: closed
-                    ? nil : "The page has not closed. It may be waiting for confirmation, or closing was refused."))
+            ["closed": closed],
+            note: closed ? nil : "The page asked the person whether to leave; the tab is still open.")
     }
 
     // MARK: - Actions - Reach

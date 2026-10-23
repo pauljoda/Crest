@@ -6,14 +6,9 @@ extension AgentToolDefinition {
     static let openPrivateWindow = Self(
         name: "open_private_window", title: "Open a Private Window",
         description:
-            "Opens a Private Window at the person's request, optionally at an http or https address. Returns only a window receipt; private tabs and Spaces remain inaccessible to every tool.",
+            "Opens a Private Window at the person's request, optionally at an http or https address. Only a new Private Window takes an address: with one already open, it comes forward, and an address is refused. Returns only a window receipt; private tabs and Spaces remain inaccessible to every tool.",
         arguments: [.string("url", "The http or https address to open.", required: false)],
         readOnly: false, destructive: false, idempotent: false, openWorld: true)
-}
-
-extension AgentToolDefinition {
-    // MARK: - Static Variables
-
     static let searchHistory = Self(
         name: "search_history", title: "Search history",
         description:
@@ -26,7 +21,7 @@ extension AgentToolDefinition {
     static let deleteHistory = Self(
         name: "delete_history", title: "Delete a history address",
         description:
-            "At the person's explicit request, removes every visit to one HTTP or HTTPS address from the specified allowed, unlocked Space. URL fragments are ignored. Returns the number of history entries removed; repeating a deletion returns zero. Other Spaces and private history are untouched.",
+            "At the person's explicit request, removes every visit to one HTTP or HTTPS address from the specified allowed, unlocked Space, after Crest asks the person to confirm. URL fragments are ignored. Returns the number of history entries removed; an address with no visits returns zero without asking. Other Spaces and private history are untouched.",
         arguments: [
             .string("space", "The allowed, unlocked Space's id."),
             .string("url", "The HTTP or HTTPS address whose history should be deleted."),
@@ -40,11 +35,6 @@ extension AgentToolDefinition {
                 "space", "The Space's id; defaults to the active allowed Space or first unlocked one.", required: false)
         ],
         readOnly: true, destructive: false, idempotent: true, openWorld: false)
-}
-
-extension AgentToolDefinition {
-    // MARK: - Static Variables
-
     static let openWindow = Self(
         name: "open_window", title: "Open a window",
         description:
