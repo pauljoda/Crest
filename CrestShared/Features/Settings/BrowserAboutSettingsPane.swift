@@ -1,12 +1,18 @@
 import SwiftUI
 
 struct BrowserAboutSettingsPane: View {
+    // MARK: - Static Variables
+
     static let startsWhatsNewExpanded = false
+
+    // MARK: - Variables
 
     let buildInformation: BrowserAboutBuildInformation
     let releaseNotes: [BrowserAboutReleaseNote]
 
     @State private var showsWhatsNew: Bool
+
+    // MARK: - Initializers
 
     init(
         buildInformation: BrowserAboutBuildInformation = .current,
@@ -17,6 +23,8 @@ struct BrowserAboutSettingsPane: View {
         self.releaseNotes = releaseNotes
         _showsWhatsNew = State(initialValue: Self.startsWhatsNewExpanded)
     }
+
+    // MARK: - Actions - Presentation
 
     var body: some View {
         BrowserSettingsPane(.about) {
@@ -74,6 +82,20 @@ struct BrowserAboutSettingsPane: View {
             } footer: {
                 CrestFormFootnote("Reddit is public. Leave out private details.")
             }
+
+            Section {
+                LabeledContent {
+                    Text(verbatim: "Jessy Machado")
+                } label: {
+                    HStack {
+                        Text(verbatim: "🇫🇷")
+                            .accessibilityHidden(true)
+                        Text("French")
+                    }
+                }
+            } header: {
+                Text("Translations")
+            }
         }
     }
 
@@ -109,6 +131,8 @@ struct BrowserAboutSettingsPane: View {
 }
 
 private struct BrowserAboutWhatsNewDisclosureStyle: DisclosureGroupStyle {
+    // MARK: - Actions - Presentation
+
     func makeBody(configuration: Configuration) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             Button {
@@ -148,10 +172,14 @@ private struct BrowserAboutWhatsNewDisclosureStyle: DisclosureGroupStyle {
 }
 
 private struct BrowserAboutLink: View {
+    // MARK: - Variables
+
     let title: LocalizedStringResource
     let imageName: String
     let destination: URL
     let identifier: String
+
+    // MARK: - Actions - Presentation
 
     var body: some View {
         Link(destination: destination) {
@@ -179,7 +207,11 @@ private struct BrowserAboutLink: View {
 }
 
 private struct BrowserAboutReleaseNoteRow: View {
+    // MARK: - Variables
+
     let releaseNote: BrowserAboutReleaseNote
+
+    // MARK: - Actions - Presentation
 
     var body: some View {
         let mark = BrowserAboutReleaseNoteMark.marking(releaseNote.category)
