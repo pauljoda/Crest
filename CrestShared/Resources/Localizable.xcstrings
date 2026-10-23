@@ -3978,6 +3978,9 @@
     "Couldn’t Delete Space" : {
 
     },
+    "Couldn’t Open Crest" : {
+
+    },
     "Couldn’t open language downloads." : {
 
     },
@@ -5422,6 +5425,9 @@
         }
       }
     },
+    "Each device keeps its own default search. Search suggestions send what you type to the search engine." : {
+
+    },
     "Each Space gets an independent copy with the permissions you choose. Extension data stays separate." : {
 
     },
@@ -6719,6 +6725,9 @@
           }
         }
       }
+    },
+    "iCloud Keychain and Passwords choices apply to this device only." : {
+
     },
     "iCloud Keychain, per Space" : {
 
@@ -8515,6 +8524,9 @@
       }
     },
     "No Later Pages" : {
+
+    },
+    "No Link to Open" : {
 
     },
     "No match" : {
@@ -11051,6 +11063,9 @@
     "Route actions" : {
 
     },
+    "Routes apply to links from other apps. The first matching route wins." : {
+
+    },
     "Routing" : {
       "localizations" : {
         "ar" : {
@@ -13396,9 +13411,6 @@
 
     },
     "The file couldn’t be saved in its folder." : {
-
-    },
-    "The first matching route wins." : {
 
     },
     "The original filename used invisible or direction-changing characters that can disguise its real extension." : {

@@ -36,6 +36,17 @@ struct BrowserOnboardingStepContent: View, BrowserOnboardingPages {
         )
     }
 
+    func lookPage() -> some View {
+        BrowserOnboardingLookPage(
+            look: flow.look,
+            choose: { look in
+                withAnimation(motion(CrestMotion.onboardingBackdrop)) { flow.chooseLook(look) }
+            },
+            back: back,
+            continueSetup: continueSetup
+        )
+    }
+
     /// Setup on the Mac has no pages for the feature tour.
     func featureSpacesPage() -> some View { EmptyView() }
 
@@ -57,8 +68,10 @@ struct BrowserOnboardingStepContent: View, BrowserOnboardingPages {
             scanForMore: flow.scanForMore,
             beginManualSetup: beginManualSetup,
             continueImport: flow.continueImportQueue,
+            cancelRead: flow.cancelImportRead,
             back: back
         )
+        .id(flow.step)
     }
 
     func reviewPage() -> some View {
@@ -72,16 +85,20 @@ struct BrowserOnboardingStepContent: View, BrowserOnboardingPages {
     func manualSetupPage() -> some View {
         BrowserOnboardingManualSetupPage(
             flow: flow,
-            opensGettingStarted: flow.state?.opensGuide == true,
             selectedSpaceID: $selectedManualSpaceID,
-            back: back.action,
-            openCrest: openCrest
+            back: back,
+            advance: { transition(to: .complete) }
         )
     }
 
+    /// The Spaces setup is about to make, or the workspace's once it has.
     func completePage() -> some View {
         BrowserOnboardingCompletionPage(
+            spaces: flow.manualSetup.spaces.isEmpty
+                ? flow.destinationSpaces.map(\.identity) : flow.manualSetup.previewSpaces,
             summary: flow.completionSummary,
+            opensGuide: flow.state?.opensGuide == true,
+            back: flow.state?.backStep == nil ? nil : back,
             openCrest: openCrest
         )
     }

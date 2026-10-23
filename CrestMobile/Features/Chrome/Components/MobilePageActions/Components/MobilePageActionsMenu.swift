@@ -7,8 +7,28 @@ struct MobilePageActionsMenu: View {
     var downloadsAccess: MobileDownloadsMenuAccess? = nil
     var hideToolbar: (() -> Void)? = nil
     var controlSize = CGSize(width: 44, height: 44)
+    /// Whether the menu is a toolbar item, whose label the system draws so a
+    /// side toolbar can stand it on end with the others.
+    var isToolbarItem = false
 
     var body: some View {
+        if isToolbarItem {
+            menu {
+                Label("Page Actions", systemImage: systemImage)
+            }
+            .badge(downloadsAccess?.newItemCount ?? 0)
+        } else {
+            menu {
+                chromeLabel
+            }
+            .crestMenuActionLabelStyle()
+            .tint(.primary)
+            .menuStyle(.button)
+            .buttonStyle(.plain)
+        }
+    }
+
+    private func menu(@ViewBuilder label: () -> some View) -> some View {
         Menu {
             MobilePageActionsContent(
                 browser: browser,
@@ -18,37 +38,8 @@ struct MobilePageActionsMenu: View {
             )
             .crestMenuActionLabelStyle()
         } label: {
-            ZStack(alignment: .topTrailing) {
-                Image(systemName: systemImage)
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(
-                        pages.blockedPopupNotice == nil
-                            ? Color.secondary
-                            : Color.orange
-                    )
-                if pages.blockedPopupNotice != nil {
-                    Circle()
-                        .fill(.orange)
-                        .frame(width: 7, height: 7)
-                        .offset(x: 3, y: -3)
-                        .accessibilityHidden(true)
-                }
-                if let downloadsAccess, downloadsAccess.newItemCount > 0 {
-                    BrowserUtilityNotificationBadge(
-                        count: downloadsAccess.newItemCount,
-                        tint: .accentColor,
-                        progress: downloadsAccess.activeProgress
-                    )
-                    .offset(x: 9, y: -7)
-                }
-            }
-            .frame(width: controlSize.width, height: controlSize.height)
-            .contentShape(.rect)
+            label()
         }
-        .crestMenuActionLabelStyle()
-        .tint(.primary)
-        .menuStyle(.button)
-        .buttonStyle(.plain)
         .accessibilityLabel(accessibilityLabel)
         .accessibilityHint(accessibilityHint)
         .accessibilityIdentifier("page-actions-menu")
@@ -67,6 +58,35 @@ struct MobilePageActionsMenu: View {
                     .presentationCompactAdaptation(.popover)
             }
         }
+    }
+
+    private var chromeLabel: some View {
+        ZStack(alignment: .topTrailing) {
+            Image(systemName: systemImage)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(
+                    pages.blockedPopupNotice == nil
+                        ? Color.secondary
+                        : Color.orange
+                )
+            if pages.blockedPopupNotice != nil {
+                Circle()
+                    .fill(.orange)
+                    .frame(width: 7, height: 7)
+                    .offset(x: 3, y: -3)
+                    .accessibilityHidden(true)
+            }
+            if let downloadsAccess, downloadsAccess.newItemCount > 0 {
+                BrowserUtilityNotificationBadge(
+                    count: downloadsAccess.newItemCount,
+                    tint: .accentColor,
+                    progress: downloadsAccess.activeProgress
+                )
+                .offset(x: 9, y: -7)
+            }
+        }
+        .frame(width: controlSize.width, height: controlSize.height)
+        .contentShape(.rect)
     }
 
     private var accessibilityLabel: String {

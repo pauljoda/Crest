@@ -35,8 +35,46 @@ struct BrowserPageNavigationHistory {
     private var pendingLinkSource: ObjectIdentifier?
     private(set) var backItems: [WKBackForwardListItem] = []
     private(set) var forwardItems: [WKBackForwardListItem] = []
+    /// The identity each entry kept takes in the core, made when the entry
+    /// is first seen. WebKit cannot carry it in the item itself, so it lasts
+    /// as long as the entry does here.
+    private var entryIDs: [ObjectIdentifier: UUID] = [:]
+    /// The identity the next new entry takes: the core's, for an entry it
+    /// asked the page to load again.
+    private var nextEntryID: UUID?
+
+    /// The page's history as the core keeps it: the entries Back and Forward
+    /// reach and the current one, oldest first, and the index of the current
+    /// one; nil before anything committed.
+    var reported: (entries: [PageHistoryEntry], current: Int)? {
+        guard entries.indices.contains(currentIndex) else { return nil }
+        let listed = backItems + [entries[currentIndex]] + forwardItems
+        return (listed.compactMap(entry), backItems.count)
+    }
 
     // MARK: - Actions - Navigation
+
+    /// The item for the entry `entryID` names, when the page still keeps it.
+    func item(_ entryID: UUID) -> WKBackForwardListItem? {
+        entries.first { entryIDs[ObjectIdentifier($0)] == entryID }
+    }
+
+    /// The next entry the page commits takes `entryID`.
+    mutating func expectEntry(_ entryID: UUID?) {
+        nextEntryID = entryID
+    }
+
+    /// A new entry takes the identity the core's load expected, if any.
+    private mutating func takeExpectedEntry(_ item: WKBackForwardListItem) {
+        guard let expected = nextEntryID else { return }
+        entryIDs[ObjectIdentifier(item)] = expected
+        nextEntryID = nil
+    }
+
+    private func entry(_ item: WKBackForwardListItem) -> PageHistoryEntry? {
+        guard let id = entryIDs[ObjectIdentifier(item)] else { return nil }
+        return PageHistoryEntry(id: id, url: item.url.absoluteString, title: item.title ?? "")
+    }
 
     mutating func recordLink(to url: URL?, in list: WKBackForwardList) {
         synchronize(with: list)
@@ -56,7 +94,10 @@ struct BrowserPageNavigationHistory {
         synchronize(with: list)
         defer { arrivals = [] }
         guard let current = list.currentItem, arrivals.contains(ObjectIdentifier(current)) else { return }
+        // Entries WebKit keeps keep the identities the core knows them by.
+        let kept = entryIDs
         self = BrowserPageNavigationHistory()
+        entryIDs = kept
         synchronize(with: list)
     }
 
@@ -67,11 +108,15 @@ struct BrowserPageNavigationHistory {
         if entries.isEmpty {
             entries = nativeBack + [current] + nativeForward
             arrivals.insert(ObjectIdentifier(current))
+            // A new page's only entry is the load the core asked for, never a
+            // list WebKit restored.
+            if nativeBack.isEmpty, nativeForward.isEmpty { takeExpectedEntry(current) }
         } else if !entries.contains(where: { $0 === current }) {
             // A new entry discards the old forward branch. A restored list may
             // contain entries we have not observed yet; seed those below too.
             entries = Array(entries.prefix(currentIndex + 1)) + [current]
             arrivals.insert(ObjectIdentifier(current))
+            takeExpectedEntry(current)
         }
         // Merge native entries in their own order. This also seeds history
         // restored by WebKit without manufacturing entries from URL strings.
@@ -112,6 +157,10 @@ struct BrowserPageNavigationHistory {
         let retained = Set(entries.map(ObjectIdentifier.init))
         linkItems.formIntersection(retained)
         arrivals.formIntersection(retained)
+        entryIDs = entryIDs.filter { retained.contains($0.key) }
+        for item in entries where entryIDs[ObjectIdentifier(item)] == nil {
+            entryIDs[ObjectIdentifier(item)] = UUID()
+        }
         let allowed = linkItems.union((nativeBack + nativeForward).map(ObjectIdentifier.init))
         backItems = entries.prefix(currentIndex).filter { allowed.contains(ObjectIdentifier($0)) }
         forwardItems = Array(entries.dropFirst(currentIndex + 1))

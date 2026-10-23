@@ -7,19 +7,20 @@ struct BrowserOnboardingWelcomeCallToAction: View {
     let setUpWithoutCloud: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 9) {
+        VStack(alignment: .leading, spacing: 12) {
             Button(action: perform) {
-                HStack {
+                HStack(spacing: 10) {
                     if action.waitsOnCloud {
                         ProgressView().controlSize(.small)
                     }
                     Text(action.opensCrest ? "Open Crest" : "Continue")
                     Image(systemName: "arrow.right")
                 }
-                .frame(minWidth: 150)
+                .frame(minWidth: 120)
             }
-            .buttonStyle(BrowserOnboardingPrimaryButtonStyle())
+            .buttonStyle(.crestPrimary)
             .controlSize(.large)
+            .keyboardShortcut(.defaultAction)
             .disabled(action.waitsOnCloud)
             .accessibilityLabel(
                 action.opensCrest ? Text("Open Crest") : Text("Continue")
@@ -28,11 +29,11 @@ struct BrowserOnboardingWelcomeCallToAction: View {
 
             Text(
                 action.waitsOnCloud
-                    ? "Checking iCloud for an existing Crest setup…"
+                    ? String(localized: "Checking iCloud for an existing setup…")
                     : cloudStatusDetail
             )
-            .font(BrowserOnboardingTypography.sans(11, weight: .medium))
-            .foregroundStyle(BrowserOnboardingPalette.inkSoft.opacity(0.72))
+            .font(CrestTypography.sans(12, weight: .medium))
+            .foregroundStyle(CrestBrandTheme.textDisplay.opacity(0.6))
 
             if action.offersSetupWithoutCloud {
                 Button("Set Up Without iCloud", action: setUpWithoutCloud)

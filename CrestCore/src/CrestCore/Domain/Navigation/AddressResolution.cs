@@ -16,6 +16,11 @@ public sealed record AddressResolution(string Url, string? SearchQuery) {
     public const string CrestPrefix = CrestScheme + "://";
     public const string ChromeExtensionPrefix = ChromeExtensionScheme + "://";
 
+    /// The endings of names reserved for one device or one local network:
+    /// loopback, multicast DNS, home networks and private use. No public
+    /// certificate can name them.
+    private static readonly string[] LocalNameEndings = [".localhost", ".local", ".home.arpa", ".internal"];
+
     #endregion
 
     #region Actions - Navigation
@@ -71,13 +76,26 @@ public sealed record AddressResolution(string Url, string? SearchQuery) {
         if (Uri.TryCreate(value, UriKind.Absolute, out var explicitUrl) && WebScheme.Named(explicitUrl.Scheme) is not null
             && explicitUrl.Host.Length > 0) return new(value, null);
         if (LocalFile(value) is { } localFile) return new(localFile, null);
-        if (!value.Any(char.IsWhiteSpace)) {
-            if (Uri.TryCreate("http://" + value, UriKind.Absolute, out var local)
-                && local.Host.Equals("localhost", StringComparison.OrdinalIgnoreCase)) return new("http://" + value, null);
-            if (value.Contains('.') && Uri.TryCreate("https://" + value, UriKind.Absolute, out var domain)
-                && domain.Host.Length > 0) return new("https://" + value, null);
+        if (!value.Any(char.IsWhiteSpace) && Uri.TryCreate("http://" + value, UriKind.Absolute, out var typed) && typed.Host.Length > 0) {
+            // As other browsers do, a host that only this network answers loads
+            // over http, and any other dotted host over https.
+            if (IsLocal(typed, value)) return new("http://" + value, null);
+            if (value.Contains('.')) return new("https://" + value, null);
         }
         return new(provider.Search(value), value);
+    }
+
+    /// Whether `address`, read from `typed` without a scheme, names a host
+    /// only this device or its network answers: an IPv6 address, which only
+    /// brackets spell; an IPv4 address written out in full; `localhost`; or a
+    /// name reserved for local networks. Short numbers such as `3.14` parse
+    /// as IPv4 addresses but are not written as one.
+    private static bool IsLocal(Uri address, string typed) {
+        if (address.HostNameType == UriHostNameType.IPv6) return true;
+        if (address.HostNameType == UriHostNameType.IPv4) return typed.StartsWith(address.Host, StringComparison.Ordinal);
+        string host = address.Host.TrimEnd('.');
+        return host.Equals("localhost", StringComparison.OrdinalIgnoreCase)
+            || LocalNameEndings.Any(ending => host.EndsWith(ending, StringComparison.OrdinalIgnoreCase));
     }
 
     /// Whether `value` names one of the browser's own pages.

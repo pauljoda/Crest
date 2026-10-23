@@ -62,6 +62,7 @@ final class BrowserPagePoolTests: XCTestCase {
             let unrelatedID = UUID()
             archive.archive(
                 interactionState: Data("unrelated archive".utf8), url: child,
+                history: nil,
                 profileID: space.profileID, tabID: unrelatedID)
             let unrelatedState = archive.archivedState(profileID: space.profileID, tabID: unrelatedID)
             let preferences = BrowserAppPreferenceStore()
@@ -1260,6 +1261,7 @@ final class BrowserPagePoolTests: XCTestCase {
         archive.archive(
             interactionState: Data((0..<1024).map { _ in UInt8.random(in: 0...255) }),
             url: url,
+            history: nil,
             profileID: space.profileID,
             tabID: tab.id
         )
@@ -1321,6 +1323,7 @@ final class BrowserPagePoolTests: XCTestCase {
         archive.archive(
             interactionState: Data("other space".utf8),
             url: url,
+            history: nil,
             profileID: survivingProfileID,
             tabID: survivingTabID
         )
@@ -1482,6 +1485,7 @@ final class BrowserPagePoolTests: XCTestCase {
             archive.archive(
                 interactionState: Data("state".utf8),
                 url: url,
+                history: nil,
                 profileID: space.profileID,
                 tabID: tab.id
             )

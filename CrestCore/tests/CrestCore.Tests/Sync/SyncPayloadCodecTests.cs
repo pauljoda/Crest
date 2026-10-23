@@ -61,7 +61,8 @@ public sealed partial class BrowserContractsTests {
 
     [Fact]
     public void RecordsOlderClientsWroteTakeTheDefaultsTheyRead() {
-        var space = Legacy("space", "branding", "browsingPreferences", "accessPolicy", "isSavedTabsExpanded", "savedTabsExpansionModifiedAt");
+        var space = Legacy("space", "branding", "browsingPreferences", "accessPolicy", "credentialsEnabled", "credentialsEnabledModifiedAt",
+            "isSavedTabsExpanded", "savedTabsExpansionModifiedAt");
         Assert.Equal(3, space["branding"]!["colors"]!.AsArray().Count);
         Assert.Equal(0.12, space["branding"]!["colors"]![0]!["red"]!.GetValue<double>());
         Assert.Equal("book", space["branding"]!["crest"]!["symbol"]!.GetValue<string>());
@@ -70,6 +71,9 @@ public sealed partial class BrowserContractsTests {
         Assert.Equal("google", space["browsingPreferences"]!["selectedSearchProviderID"]!.GetValue<string>());
         Assert.Equal("after12Hours", space["browsingPreferences"]!["currentTabCleanupPolicy"]!.GetValue<string>());
         Assert.Equal("open", space["accessPolicy"]!.GetValue<string>());
+        // A Space whose record never said whether it uses Crest Passwords
+        // leaves each device's own choice alone.
+        Assert.Null(space["credentialsEnabled"]);
         Assert.True(space["isSavedTabsExpanded"]!.GetValue<bool>());
         Assert.Null(space["savedTabsExpansionModifiedAt"]);
 
@@ -340,6 +344,8 @@ public sealed partial class BrowserContractsTests {
                 ["branding"] = JsonNode.Parse(SavedBranding),
                 ["browsingPreferences"] = JsonNode.Parse(SavedBrowsingPreferences),
                 ["accessPolicy"] = "open",
+                ["credentialsEnabled"] = false,
+                ["credentialsEnabledModifiedAt"] = 800_000_020.0,
                 ["isSavedTabsExpanded"] = true,
                 ["savedTabsExpansionModifiedAt"] = 800000000.125,
                 ["splitGroups"] = new JsonArray(new JsonObject {

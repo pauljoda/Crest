@@ -277,8 +277,11 @@ struct MobileBrowserWindowScene: View {
 
     private func openExternalURL(_ url: URL) {
         BrowserPlatformDefaultBrowserSystem.noteOpenedLink(url)
+        // The share sheet hands a link over as `crest://open`, which routes
+        // as the web link it carries.
+        let link = BrowserSharedLink(handOffURL: url)?.url ?? url
         Task {
-            guard await model.routeExternalURL(url) else { return }
+            guard await model.routeExternalURL(link) else { return }
             withAnimation(modeAnimation) {
                 browsingMode = .standard
             }

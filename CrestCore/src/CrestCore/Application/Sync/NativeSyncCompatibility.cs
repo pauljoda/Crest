@@ -45,7 +45,7 @@ internal static class NativeSyncCompatibility {
         new() { ["id"] = Identity, ["spaceID"] = Identity, ["folderID"] = Identity, ["splitGroupID"] = Identity });
 
     private static readonly Dictionary<string, Shape> Values = new() {
-        [SyncRecordKind.Space.Name] = new("id profileID name symbol accent branding browsingPreferences accessPolicy isSavedTabsExpanded savedTabsExpansionModifiedAt splitGroups orderToken",
+        [SyncRecordKind.Space.Name] = new("id profileID name symbol accent branding browsingPreferences accessPolicy credentialsEnabled credentialsEnabledModifiedAt isSavedTabsExpanded savedTabsExpansionModifiedAt splitGroups orderToken",
             new() { ["id"] = Identity, ["branding"] = Branding, ["browsingPreferences"] = Browsing, ["splitGroups"] = List(Group, true) }),
         [SyncRecordKind.Folder.Name] = new("id spaceID title location symbol color parentID isCollapsed collapseModifiedAt orderAnchorTabID orderToken",
             new() { ["id"] = Identity, ["spaceID"] = Identity, ["parentID"] = Identity, ["orderAnchorTabID"] = Identity, ["color"] = Color }),

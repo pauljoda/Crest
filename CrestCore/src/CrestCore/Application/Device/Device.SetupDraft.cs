@@ -30,17 +30,30 @@ internal sealed partial class Device {
         lock (gate) KeepSetup(revise(setupDraft ?? throw new Rejected(new NoManualSetup())), changes);
     }
 
-    /// Starts a setup of `session`'s Spaces over `workspaceId`, or goes on with
-    /// the one held or kept unless `startsOver`, and publishes it. The caller
-    /// holds the device lock.
-    internal void BeginSetup(Guid workspaceId, SessionState session, bool startsOver, ChangeFeed changes, IIdSource ids) {
+    /// Starts a setup of `session`'s Spaces over `workspaceId` in `look`, or
+    /// goes on with the one held or kept unless `startsOver`, and publishes
+    /// it. The caller holds the device lock.
+    internal void BeginSetup(Guid workspaceId, SessionState session, bool startsOver, SetupLook look, ChangeFeed changes,
+        IIdSource ids) {
         var resumed = startsOver ? null
             : setupDraft is { } held && held.WorkspaceId == workspaceId ? held
             : keptSetupDraft?.For(workspaceId);
-        var draft = resumed is null ? SetupDraft.Started(workspaceId, session, ids.Next) : resumed.Reconciled(session);
+        var draft = resumed is null ? SetupDraft.Started(workspaceId, session, ids.Next, look) : resumed.Reconciled(session);
         KeepSetup(draft, changes: null);
         changes.Publish(new SetupDraftChanged(draft));
     }
+
+    /// Gives the setup held over `workspaceId`, when there is one, `look` in
+    /// place of `previous` for the Spaces it makes, and publishes it. The
+    /// caller holds the device lock.
+    internal void RestyleSetup(Guid workspaceId, SessionState session, SetupLook previous, SetupLook look, ChangeFeed changes) {
+        if (setupDraft is not { } draft || draft.WorkspaceId != workspaceId) return;
+        KeepSetup(draft.Restyled(previous, look, session), changes);
+    }
+
+    /// The look the Spaces setup makes wear: the one setup chose, or Crest's
+    /// own while setup is not open. The caller holds the device lock.
+    internal SetupLook SetupLook => setupFlow?.Look ?? SetupLook.Heraldic;
 
     #endregion
 

@@ -270,10 +270,10 @@ final class BrowserPagePool:
             return true
         }
         guard let runtime = source.tabRuntimes[tab.id] else {
-            if let url = tab.url,
+            if let url = tab.url {
+                let history = source.host.tabState.history(for: assignment, expecting: url)
                 let state = source.host.archivedInteractionState(for: assignment, expecting: url)
-            {
-                host.tabState.prepareCopy(state, url: url, for: assignment)
+                host.tabState.prepareCopy(state, url: url, history: history, for: assignment)
             }
             source.host.discardArchivedTabState(matching: assignment)
             source.runtimeStore.removePresentation(of: tab.id)
@@ -948,6 +948,14 @@ final class BrowserPagePool:
                 tabID: tab.id
             )
             tabRuntimes.removeValue(forKey: tab.id)?.release(keepingState: false)
+        }
+        // A tab's page opens with the history its archive kept, on the engine
+        // of the entry that history shows; a page another page opened keeps
+        // its opener's engine instead.
+        if opener == nil {
+            host.restoreTabHistory(
+                for: BrowserTabRuntimeAssignment(tabID: tab.id, spaceID: space.id, profileID: space.profileID),
+                expecting: tab.url, in: browser)
         }
         guard let page = makePage(space: space, tabID: tab.id, opener: opener) else { return nil }
         page.updateNavigationContext(tab: tab)

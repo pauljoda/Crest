@@ -12,6 +12,10 @@ final class CorePage {
 
     private static let logger = Logger(subsystem: "com.pauldavis.crest", category: "Pages")
 
+    /// Times each step through a page's history, from the person's input to
+    /// the command the core hands its engine, for Instruments.
+    static let historySignposter = OSSignposter(subsystem: "com.pauldavis.crest", category: "PageHistory")
+
     // MARK: - Variables
 
     let id: UUID
@@ -163,6 +167,35 @@ final class CorePage {
     /// An answer to a question that no longer waits changes nothing.
     func answer(_ intent: some PromptIntent) {
         _ = try? core?.send(intent)
+    }
+
+    /// The entries the page can go back and forward to, nearest first, as the
+    /// core keeps its history. Empty before the core holds the page.
+    var history: PageHistoryList {
+        (try? core?.query(PageHistoryEntries(pageID: id))) ?? PageHistoryList(back: [], forward: [])
+    }
+
+    /// The page's back and forward history as its tab's archive keeps it
+    /// across a relaunch, opaque here; nil for none.
+    var archivedHistory: Data? {
+        (try? core?.query(ArchivedPageHistory(pageID: id)))?.archive
+    }
+
+    /// Moves the page `offset` entries through its history: back when
+    /// negative. Going back from a failed navigation leaves the failure first.
+    func stepHistory(by offset: Int) {
+        guard !isReleased, offset != 0, let core else { return }
+        let interval = Self.historySignposter.beginInterval("Step History")
+        defer { Self.historySignposter.endInterval("Step History", interval) }
+        _ = try? core.send(StepHistory(pageID: id, offset: offset))
+    }
+
+    /// Moves the page to the history entry `entryID` names, as a menu offered it.
+    func showHistoryEntry(_ entryID: UUID) {
+        guard !isReleased, let core else { return }
+        let interval = Self.historySignposter.beginInterval("Show History Entry")
+        defer { Self.historySignposter.endInterval("Show History Entry", interval) }
+        _ = try? core.send(ShowHistoryEntry(pageID: id, entryID: entryID))
     }
 
     /// Leaves the page's failed navigation for the document behind it.

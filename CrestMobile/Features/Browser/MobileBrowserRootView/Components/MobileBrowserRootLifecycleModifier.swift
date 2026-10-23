@@ -62,6 +62,10 @@ struct MobileBrowserRootLifecycleModifier: ViewModifier {
             .onChange(of: model.selectedPage?.live.displayURL) {
                 synchronizePageMetadata()
             }
+            .onChange(of: isAddressEditing) { _, isEditing in
+                guard !isEditing else { return }
+                model.restoreAddress()
+            }
 
         let runtimeObservedContent =
             pageObservedContent

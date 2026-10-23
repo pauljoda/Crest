@@ -95,7 +95,12 @@ struct BrowserRootSidebarSurfaceLayer<Content: View>: View {
                 }
             }
             .compositingGroup()
-            .clipShape(shape)
+            // A docked sidebar's list runs on under the bottom safe area, into
+            // the display's corner, as the page beside it does; a floating
+            // card keeps to its rounded shape.
+            .mask {
+                shape.ignoresSafeArea(.container, edges: usesFloatingCardAppearance ? [] : .bottom)
+            }
             .overlay {
                 shape
                     .strokeBorder(

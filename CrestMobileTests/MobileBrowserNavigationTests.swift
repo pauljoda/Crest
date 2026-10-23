@@ -118,7 +118,7 @@ final class MobileBrowserNavigationTests: XCTestCase {
             showsCompactToolbar: false, compactToolbarIsHidden: false,
             handleWebContentInteraction: {}, submitAddress: {}, beginNewTab: {},
             showTabViewer: {}, hideCompactToolbar: {}, showCompactToolbar: {},
-            handleToolbarSwipe: { _ in }, selectSplitCard: { _ in },
+            showSwipedTab: { _ in },
             compactTransitionEnded: { _ in }
         )
         let window = mountBrowserSurface(safeAreaInsets: .zero, content: detail)
@@ -1420,4 +1420,6 @@ private final class MediaActivityHost: WebKitPageHosting {
     func mediaActivityMayHaveChanged() {
         mediaChanges += 1
     }
+
+    func historyMayHaveChanged() {}
 }

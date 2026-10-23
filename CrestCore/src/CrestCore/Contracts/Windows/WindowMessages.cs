@@ -25,6 +25,10 @@ public sealed record FallbackTabIndex(int? Index);
 /// The tab "Split With Next Tab" would add, or null when it would add none.
 public sealed record SplitJoinCandidateTab(Guid? TabId);
 
+/// The tabs a swipe reaches back and on from the tab a window shows, each null
+/// past that end.
+public sealed record SwipeNeighborTabs(Guid? PreviousTabId, Guid? NextTabId);
+
 /// What the Dock icon's menu shows: its window commands, then the Spaces a
 /// window can show, in order. `WindowId` is the window a chosen Space shows
 /// in and the commands act from, the frontmost over the persistent session,

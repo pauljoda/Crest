@@ -27,6 +27,7 @@ static_assert(!std::is_abstract_v<CrestBrowserWindow>);
 #include "chrome/browser/ui/exclusive_access/exclusive_access_manager.h"
 #include "chrome/browser/ui/exclusive_access/fullscreen_controller.h"
 #include "chrome/browser/ui/browser_window/public/browser_window_features.h"
+#include "chrome/browser/ui/unload_controller.h"
 #include "chrome/browser/ui/views/bubble_anchor_util_views.h"
 #include "components/input/native_web_keyboard_event.h"
 #include "components/sharing_message/sharing_dialog_data.h"
@@ -497,8 +498,7 @@ void CrestExclusiveAccessContext::WindowFullscreenChanged(bool entered) {
   // Chromium's own windows report every transition, as the fullscreen
   // controller expects: entering shows its disclosure, and leaving ends the
   // page's fullscreen however the window left.
-  browser_->GetFeatures()
-      .exclusive_access_manager()
+  ExclusiveAccessManager::From(browser_)
       ->fullscreen_controller()
       ->WindowFullscreenStateChanged();
   if (!entered) {
@@ -514,7 +514,7 @@ void CrestExclusiveAccessContext::UpdateUIForTabFullscreen() {
   // lets go, leaving the window fullscreen as it was.
   content::WebContents* contents = GetWebContentsForExclusiveAccess();
   FullscreenController* controller =
-      browser_->GetFeatures().exclusive_access_manager()->fullscreen_controller();
+      ExclusiveAccessManager::From(browser_)->fullscreen_controller();
   if (contents && controller->exclusive_access_tab() == contents) {
     content_fullscreen_ = contents->GetWeakPtr();
     crest::ReportContentFullscreen(contents, true);
@@ -834,6 +834,12 @@ LocationBar* CrestBrowserWindow::GetLocationBar() const {
   return const_cast<CrestLocationBar*>(&location_bar_);
 }
 
+// Crest's menus are its own, so no Chromium menu asks this window for its
+// command shortcuts.
+ui::AcceleratorProvider* CrestBrowserWindow::GetAcceleratorProvider() {
+  return nullptr;
+}
+
 void CrestBrowserWindow::SetFocusToLocationBar(bool is_user_initiated) {
   [crest::MacUI() focusLocation];
 }
@@ -931,7 +937,7 @@ DownloadBubbleUIController* CrestBrowserWindow::GetDownloadBubbleUIController() 
   return nullptr;
 }
 
-void CrestBrowserWindow::ConfirmBrowserCloseWithPendingDownloads( int download_count, UnloadController::DownloadCloseType dialog_type, base::OnceCallback<void(bool)> callback) {
+void CrestBrowserWindow::ConfirmBrowserCloseWithPendingDownloads( int download_count, DownloadCloseType dialog_type, base::OnceCallback<void(bool)> callback) {
   NSAlert* alert = [[NSAlert alloc] init];
   alert.messageText = download_count == 1
                           ? @"A download is still in progress."

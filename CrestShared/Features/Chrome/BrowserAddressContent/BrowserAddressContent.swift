@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct BrowserAddressContent: View {
+    // MARK: - Variables
+
     @Binding var text: String
     @Binding var isEditing: Bool
     var focusRequest = 0
@@ -25,6 +27,7 @@ struct BrowserAddressContent: View {
         }
         .frame(maxWidth: .infinity)
         .onChange(of: isFocused, initial: true) { _, focused in
+            if focused { selectAllOnceFocused() }
             guard isEditing != focused else { return }
             isEditing = focused
         }
@@ -62,6 +65,12 @@ struct BrowserAddressContent: View {
         .modifier(BrowserPlatformAddressInputModifier())
         .focused($isFocused)
         .onSubmit(submit)
+        // Escape puts the address away without opening it, as a click
+        // elsewhere does.
+        .onKeyPress(.escape) {
+            isFocused = false
+            return .handled
+        }
         .onTapGesture(perform: selectAll)
         .accessibilityLabel(Text(editorAccessibilityLabel))
         .accessibilityIdentifier(editorAccessibilityIdentifier)
@@ -96,6 +105,8 @@ struct BrowserAddressContent: View {
         .accessibilityIdentifier(summaryAccessibilityIdentifier)
     }
 
+    // MARK: - Actions - Address summary
+
     private func addressSummaryButton(
         _ presentation: BrowserAddressPresentation
     ) -> some View {
@@ -127,10 +138,21 @@ struct BrowserAddressContent: View {
         }
     }
 
+    // MARK: - Actions - Selection
+
     private func focusAndSelectAll() {
         Task { @MainActor in
             await Task.yield()
             isFocused = true
+            selectAll()
+        }
+    }
+
+    /// UIKit moves the caret to the end when the field takes focus, so the
+    /// selection has to land after that.
+    private func selectAllOnceFocused() {
+        Task { @MainActor in
+            await Task.yield()
             selectAll()
         }
     }

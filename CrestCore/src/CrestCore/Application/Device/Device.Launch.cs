@@ -54,13 +54,13 @@ internal sealed partial class Device {
     }
 
     /// The Spaces an attached workspace is deleting whose profile's data the
-    /// engines have yet to finish erasing, as `settled` says of each profile.
-    internal IReadOnlyList<Guid> SpacesBeingDeleted(Func<Guid, bool> settled) {
-        ArgumentNullException.ThrowIfNull(settled);
+    /// engines are erasing now, as `erasing` says of each profile.
+    internal IReadOnlyList<Guid> SpacesBeingDeleted(Func<Guid, bool> erasing) {
+        ArgumentNullException.ThrowIfNull(erasing);
         NativeSessionAuthority[] attached;
         lock (gate) attached = [.. workspaces.Values];
         return [.. attached.SelectMany(workspace => workspace.Current.SpaceDeletions)
-            .Where(deletion => !settled(deletion.ProfileId)).Select(deletion => deletion.SpaceId).Distinct()];
+            .Where(deletion => erasing(deletion.ProfileId)).Select(deletion => deletion.SpaceId).Distinct()];
     }
 
     #endregion

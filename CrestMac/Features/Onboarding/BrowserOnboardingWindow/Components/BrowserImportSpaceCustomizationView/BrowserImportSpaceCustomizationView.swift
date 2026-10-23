@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// Gives a reviewed Space a name, symbol and look before it is imported.
-/// Setup holds each choice.
+/// Makes a reviewed Space yours before it is imported, in the look setup
+/// chose. Setup holds each choice; Done returns to the review.
 struct BrowserImportSpaceCustomizationView: View {
     let flow: BrowserOnboardingFlow
     let spaceID: UUID
@@ -10,26 +10,36 @@ struct BrowserImportSpaceCustomizationView: View {
 
     @ViewBuilder
     var body: some View {
-        if review != nil {
-            BrowserImportSpaceCustomizationContent(
-                previewSpace: previewSpace,
-                previewFavicons: flow.previewFavicons,
-                name: binding(get: \.name) { current, name in
-                    SpaceCustomization(
-                        name: name, symbol: current.symbol, accent: current.accent, branding: current.branding)
-                },
+        if let review {
+            BrowserOnboardingMakePage(
+                look: flow.look,
+                branding: brandingBinding,
                 symbol: binding(get: \.symbol) { current, symbol in
                     SpaceCustomization(
                         name: current.name, symbol: symbol, accent: current.accent, branding: current.branding)
                 },
-                branding: brandingBinding,
-                done: done
+                name: binding(get: \.name) { current, name in
+                    SpaceCustomization(
+                        name: name, symbol: current.symbol, accent: current.accent, branding: current.branding)
+                },
+                identity: identity(of: review),
+                back: BrowserOnboardingBackAction(closes: false, action: done),
+                advanceTitle: Text("Done"),
+                advance: done
             )
         }
     }
 
     private var review: BrowserImportSpaceReview? {
         flow.reviewSpaces.first { $0.id == spaceID }
+    }
+
+    /// The Space as its icon draws it: the one the import would make, wearing
+    /// the review's choices.
+    private func identity(of review: BrowserImportSpaceReview) -> BrowserSpaceIdentity {
+        let customization = review.customization
+        return (previewSpace ?? review.sourceSpace).identity.wearing(
+            customization.branding, symbol: customization.symbol, name: review.record.shownName)
     }
 
     /// A binding to one part of the Space's customization, which `set`

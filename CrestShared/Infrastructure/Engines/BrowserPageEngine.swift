@@ -7,19 +7,12 @@ import Foundation
 protocol BrowserPageEngine: AnyObject {
     var registration: BrowserAdapterRegistration { get }
     var nativeView: BrowserEngineView { get }
-    /// The entries behind and ahead of the current one, nearest first, up to
-    /// `BrowserNavigationHistoryItem.listedLimit` each, however long the
-    /// engine's own list is.
-    var backHistory: [BrowserNavigationHistoryItem] { get }
-    var forwardHistory: [BrowserNavigationHistoryItem] { get }
     /// The engine's own document URL, which can run ahead of the URL the page
     /// last observed; nil before anything loaded.
     var currentURL: URL? { get }
-    var canGoBack: Bool { get }
-    var canGoForward: Bool { get }
     /// True when the engine reports each navigation's state itself, so the page
-    /// takes history availability and failures from those reports instead of
-    /// deriving them from navigation callbacks.
+    /// takes failures from those reports instead of deriving them from
+    /// navigation callbacks.
     var reportsNavigationState: Bool { get }
     /// Brings supplemental history up to date with the engine's own list and
     /// answers the URL of its current entry.

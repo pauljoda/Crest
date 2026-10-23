@@ -68,12 +68,6 @@ final class EnginePage: BrowserFindExecuting {
 
     // MARK: - Actions - Navigation
 
-    /// Moves `offset` entries through the page's history: back when negative.
-    func goToHistory(offset: Int) {
-        guard offset != 0 else { return }
-        pages.request(GoToHistoryOffset(pageID: id, offset: offset))
-    }
-
     func reload(bypassingCache: Bool = false) {
         pages.request(ReloadPage(pageID: id, bypassesCache: bypassingCache))
     }

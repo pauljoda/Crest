@@ -64,6 +64,7 @@ struct MobileBrowserSidebarSurface: View {
     let utilityPresentation: BrowserUtilityPresentationState
 
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.mobileBrowserControlPlacement) private var controlPlacement
     @State private var showsPasswords = false
     @State private var presentedSpaceSheet: MobileBrowserSidebarSpaceSheet?
 
@@ -85,7 +86,7 @@ struct MobileBrowserSidebarSurface: View {
                 )
             }
         }
-        .toolbarVisibility(.hidden, for: .navigationBar)
+        .toolbarVisibility(controlPlacement.barVisibility, for: .navigationBar)
     }
 
     /// What this shell can do: a finger is the primary input, a trackpad may

@@ -15,11 +15,14 @@ struct BrowserSidebarTabLabelContent: View {
     var titleOpacity = 1.0
     var iconOffset: CGFloat = 0
     @Environment(\.browserInteractionCapabilities) private var capabilities
+    /// The core whose page states name a tab whose page failed to load. None
+    /// where no window supplies one, such as a drag preview.
+    @Environment(CrestCore.self) private var core: CrestCore?
     let textScale: Double
 
     var body: some View {
         Label {
-            Text(tab.shownTitle)
+            Text(tab.shownTitle(in: isLoaded ? core?.state : nil))
                 .modifier(BrowserSidebarDensityFont(scale: textScale, supportsTouch: capabilities.supportsTouch))
                 .foregroundStyle(.primary)
                 .lineLimit(1)

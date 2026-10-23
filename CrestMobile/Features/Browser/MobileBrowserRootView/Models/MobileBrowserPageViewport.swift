@@ -11,12 +11,10 @@ import UIKit
 /// cannot drift into a different viewport treatment than the plain tab it is.
 ///
 /// `systemSafeAreaInsets` is carried as data rather than read from the hosting
-/// view for the same reason. A card is laid out inside the carousel's
-/// `ScrollView`, and a `ScrollView` resolves its content's safe area to zero —
-/// a `UIViewRepresentable` in there reports `safeAreaInsets == .zero` however
-/// far it extends behind the status bar. Passing the measurement taken outside
-/// the scroll view is what keeps the card's web content on the same row as the
-/// single page's.
+/// view for the same reason. Every page the content area draws — the shown
+/// tab, an iPad split column, a tab the iPhone address bar's swipe slides in —
+/// is handed the one measurement `MobileBrowserDetailView` takes, so none of
+/// them can lay its web content out on a different row from the others.
 struct MobileBrowserPageViewport: Equatable {
     // MARK: - Static Variables
 

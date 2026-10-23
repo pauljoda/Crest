@@ -1,4 +1,5 @@
 import Foundation
+import OSLog
 
 /// Tells the core what one page's engine shows and what its navigations and
 /// icon do. Every engine binding feeds it the engine's own callbacks, so a
@@ -17,6 +18,8 @@ import Foundation
 ///   differs from the last one reported, so a burst of engine callbacks costs
 ///   the core one report. The snapshot carries the address a navigation that
 ///   has not committed is heading to, which this tracks.
+/// - The page's back and forward history is read in the same turn and
+///   reported only when it differs from the last one reported.
 ///
 /// The core decides what each event records; this only decides when the
 /// engine's callbacks amount to one.
@@ -40,15 +43,23 @@ final class EnginePageReporter {
     /// it ends.
     private static var changedThisTurn: [EnginePageReporter] = []
 
+    /// Times reading and reporting a page's history, for Instruments.
+    private static let historySignposter = OSSignposter(subsystem: "com.pauldavis.crest", category: "PageHistory")
+
     // MARK: - Variables
 
     private let report: @MainActor (any EngineEvent, Data?) -> Void
     /// What the engine shows now, given the address a navigation that has not
     /// committed is heading to.
     private let snapshot: @MainActor (_ pendingURL: String?) -> PageSnapshot
+    /// The engine's back and forward history now: its entries, oldest first,
+    /// and the index of the one it shows, or nil while it has none to report.
+    private let history: @MainActor () -> (entries: [PageHistoryEntry], current: Int)?
     private let pageID: UUID
     /// The last snapshot reported, which a new one must differ from.
     private var reported: PageSnapshot?
+    /// The last history reported, which a new one must differ from.
+    private var reportedHistory: PageHistoryReported?
     /// The page changed since its last report, which is due when the turn ends.
     private var isReportDue = false
     /// Where a navigation that has not committed is heading.
@@ -69,19 +80,27 @@ final class EnginePageReporter {
 
     /// A reporter for `pageID` that hands each event to `report`, with the
     /// image a `PageIconChanged` names, and reads what the engine shows from
-    /// `snapshot`, which is given the pending address to carry.
+    /// `snapshot`, which is given the pending address to carry, and its
+    /// history from `history`.
     init(
         pageID: UUID, snapshot: @escaping @MainActor (_ pendingURL: String?) -> PageSnapshot,
+        history: @escaping @MainActor () -> (entries: [PageHistoryEntry], current: Int)?,
         report: @escaping @MainActor (any EngineEvent, Data?) -> Void
     ) {
         self.pageID = pageID
         self.snapshot = snapshot
+        self.history = history
         self.report = report
     }
 
     /// A reporter that reports through the engine hosting `page`.
-    convenience init(page: CorePage, snapshot: @escaping @MainActor (_ pendingURL: String?) -> PageSnapshot) {
-        self.init(pageID: page.id, snapshot: snapshot) { [weak page] event, icon in page?.report(event, icon: icon) }
+    convenience init(
+        page: CorePage, snapshot: @escaping @MainActor (_ pendingURL: String?) -> PageSnapshot,
+        history: @escaping @MainActor () -> (entries: [PageHistoryEntry], current: Int)?
+    ) {
+        self.init(pageID: page.id, snapshot: snapshot, history: history) { [weak page] event, icon in
+            page?.report(event, icon: icon)
+        }
     }
 
     // MARK: - Actions - State
@@ -107,9 +126,29 @@ final class EnginePageReporter {
     private func reportState() {
         isReportDue = false
         let current = snapshot(pendingURL?.absoluteString)
-        guard current != reported else { return }
-        reported = current
-        report(PageStateChanged(pageID: pageID, snapshot: current), nil)
+        if current != reported {
+            reported = current
+            report(PageStateChanged(pageID: pageID, snapshot: current), nil)
+        }
+        reportHistory()
+    }
+
+    /// Reports the page's history at the end of this turn even when it
+    /// matches the last one reported, for a core that asked for an entry the
+    /// engine no longer keeps.
+    func reportHistoryAgain() {
+        reportedHistory = nil
+        stateChanged()
+    }
+
+    private func reportHistory() {
+        let interval = Self.historySignposter.beginInterval("Report Page History")
+        defer { Self.historySignposter.endInterval("Report Page History", interval) }
+        guard let (entries, current) = history() else { return }
+        let event = PageHistoryReported(pageID: pageID, entries: entries, current: current)
+        guard event != reportedHistory else { return }
+        reportedHistory = event
+        report(event, nil)
     }
 
     // MARK: - Actions - Navigation

@@ -17,6 +17,17 @@ enum BrowserOnboardingLegacyDraftCleanup {
 }
 
 enum BrowserOnboardingSummary {
+    static func tabCount(_ count: Int) -> LocalizedStringResource {
+        LocalizedStringResource("\(max(count, 0)) tabs", comment: "Tab count shown while reviewing a browser import.")
+    }
+
+    /// How many of a Space's pinned tabs move to a saved folder.
+    static func overflowCount(_ count: Int) -> LocalizedStringResource {
+        LocalizedStringResource(
+            "\(max(count, 0)) pinned tabs move to a saved folder",
+            comment: "Shown under the tab count while reviewing a browser import.")
+    }
+
     static func passwordCount(_ count: Int) -> LocalizedStringResource {
         let count = max(count, 0)
         return LocalizedStringResource(

@@ -5,8 +5,9 @@ using CrestCore.Domain;
 
 namespace CrestCore.Application;
 
-/// Shared records become a typed session. Credentials, native pages and image
-/// choices come only from this device; encoding stays at the journal boundary.
+/// Shared records become a typed session. Where a Space keeps its passwords,
+/// native pages and image choices come only from this device; encoding stays
+/// at the journal boundary.
 public static class NativeSyncMaterializer {
     #region Actions - Materialization
 
@@ -40,9 +41,10 @@ public static class NativeSyncMaterializer {
             groups.AddRange((local?.SplitGroups ?? []).Where(group => localSplitIds.Contains(group.Id) && !groupIds.Contains(group.Id)));
             if (tabs.Count == 0) tabs.Add(new(Guid.NewGuid(), TabKind.StartPage.Name, null, null, null, TabKind.StartPage.Symbol,
                 null, null, null, TabPlacement.Current, null, null, now, null, null, null, false));
+            var (credentials, credentialsModifiedAt) = CredentialPreferences(local, remote);
             var settings = new SpaceSettings(remote.Name, remote.Symbol, remote.Accent, brandingIds.Contains(remote.Id) ? remote.Branding : null, remote.BrowsingPreferences,
-                local?.Settings.CredentialPreferences ?? StoredSessionCodec.DefaultCredentialPreferences, AccessPolicy(local, remote, access),
-                remote.IsSavedTabsExpanded, remote.SavedTabsExpansionModifiedAt?.Moment);
+                credentials, AccessPolicy(local, remote, access), remote.IsSavedTabsExpanded, remote.SavedTabsExpansionModifiedAt?.Moment,
+                credentialsModifiedAt);
             spaces.Add(new(remote.Id, remote.ProfileId, settings, folders, tabs, groups, archive, history));
         }
         foreach (var id in pending.Where(id => spaces.All(space => space.Id != id))) {
@@ -65,6 +67,15 @@ public static class NativeSyncMaterializer {
     private static Dictionary<Guid, FolderState> LocalFolders(SpaceState? local) => (local?.Folders ?? []).ToDictionary(folder => folder.Id);
 
     private static SyncRecordsFlawedException Error(SyncRecordFlaw flaw, Guid subject) => new(flaw, subject);
+
+    /// Whether the Space uses Crest Passwords, and when someone chose, come from
+    /// the record once someone chose; where it keeps them only from this device.
+    private static (CredentialPreferences Preferences, DateTimeOffset? ModifiedAt) CredentialPreferences(SpaceState? local, SpacePayload remote) {
+        var kept = local?.Settings.CredentialPreferences ?? StoredSessionCodec.DefaultCredentialPreferences;
+        return remote is { CredentialsEnabled: { } enabled, CredentialsEnabledModifiedAt: { } modifiedAt }
+            ? (kept with { IsEnabled = enabled }, modifiedAt.Moment)
+            : (kept, local?.Settings.CredentialsEnabledModifiedAt);
+    }
 
     /// Raising protection always applies. Removing it requires this device's
     /// grant; the next upload restores the guarded policy when it was refused.

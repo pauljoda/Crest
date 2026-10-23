@@ -13,6 +13,8 @@ struct MobileBrowserTransientUnlockedContent: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Environment(\.verticalSizeClass) private var verticalSizeClass
     @State private var isCardVisible = false
     @State private var isCardExpanded = false
     @State private var retainedMotionState: BrowserPeekMotionState?
@@ -68,7 +70,10 @@ struct MobileBrowserTransientUnlockedContent: View {
 
     private var presentationState: BrowserTransientPresentationState {
         BrowserTransientPresentationState(
-            arrangement: .current,
+            arrangement: .fitting(
+                horizontalSizeClass: horizontalSizeClass,
+                verticalSizeClass: verticalSizeClass
+            ),
             isCardVisible: !model.request.isQuickWindow || isCardVisible,
             isCardExpanded: model.request.isQuickWindow ? isCardExpanded : presentationPhase == .committed,
             reduceMotion: reduceMotion,

@@ -23,7 +23,7 @@ public sealed partial class BrowserContractsTests {
         app.Report(webKit, new ScriptDialogOpened(prompt, page, Confirmation));
         app.Drain();
 
-        // The old engine closes the page, its question ends, and the new engine creates the page heading to what it showed.
+        // The old engine closes the page keeping its history, its question ends, and the new engine creates the page heading to what it showed.
         app.Send(new RehostPage(page, EngineKind.Chromium));
         Assert.Equal(new CheckBeforeUnload(page), webKitBinding.Commands[^1]);
         Assert.Empty(chromiumBinding.Commands);
@@ -32,7 +32,7 @@ public sealed partial class BrowserContractsTests {
         var state = Assert.Single(moved.OfType<PageChanged>()).Page;
         Assert.Equal((EngineKind.Chromium, PagePhase.Opening, article), (state.Engine, state.Phase, state.Live.Address));
         Assert.Contains(new PromptSettled(prompt), moved);
-        Assert.Equal(new ClosePage(page, KeepsState: false), webKitBinding.Commands[^1]);
+        Assert.Equal(new ClosePage(page, KeepsState: true), webKitBinding.Commands[^1]);
         var profile = Assert.IsType<CreatePage>(Assert.Single(chromiumBinding.Commands)).ProfileId;
         Assert.Equal(new CreatePage(page, profile, IsPrivate: false, window, RestoreState: null), chromiumBinding.Commands[0]);
 
@@ -58,7 +58,7 @@ public sealed partial class BrowserContractsTests {
         app.Report(chromium, new NavigationStarted(page, video, SameDocument: false));
         // The engine it left hosts no page now, so what only that engine supports is no longer offered.
         Assert.DoesNotContain(EngineCapability.Reader, Assert.Single(app.Drain().OfType<EnginesChanged>()).Roster.Offered);
-        Assert.Equal(new ClosePage(page, KeepsState: false), chromiumBinding.Commands[^1]);
+        Assert.Equal(new ClosePage(page, KeepsState: true), chromiumBinding.Commands[^1]);
         Assert.IsType<CreatePage>(webKitBinding.Commands[^1]);
         app.Report(webKit, new PageCreated(page));
         Assert.Equal(new LoadPage(page, video), webKitBinding.Commands[^1]);
@@ -68,7 +68,7 @@ public sealed partial class BrowserContractsTests {
         app.Send(new Navigate(page, article));
         Assert.Equal(new CheckBeforeUnload(page), webKitBinding.Commands[^1]);
         app.Report(webKit, new BeforeUnloadAnswered(page, Proceeds: true));
-        Assert.Equal(new ClosePage(page, KeepsState: false), webKitBinding.Commands[^1]);
+        Assert.Equal(new ClosePage(page, KeepsState: true), webKitBinding.Commands[^1]);
         Assert.IsType<CreatePage>(chromiumBinding.Commands[^1]);
     }
 }
