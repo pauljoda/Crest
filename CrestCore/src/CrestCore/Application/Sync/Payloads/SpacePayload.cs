@@ -5,9 +5,10 @@ using CrestCore.Contracts;
 namespace CrestCore.Application;
 
 /// A Space's synced value: its identity and profile, how it looks and
-/// browses, who may open it, whether it uses Crest Passwords once someone
-/// chose, its saved tabs' disclosure, its splits' metadata and its position
-/// among the Spaces. Where it keeps its passwords stays with each device.
+/// browses, who may open it and when someone last chose, whether it uses
+/// Crest Passwords once someone chose, its saved tabs' disclosure, its
+/// splits' metadata and its position among the Spaces. Where it keeps its
+/// passwords stays with each device.
 internal sealed partial record SpacePayload(
     Guid Id,
     Guid ProfileId,
@@ -17,6 +18,7 @@ internal sealed partial record SpacePayload(
     SpaceBranding Branding,
     BrowsingPreferences BrowsingPreferences,
     SpaceAccessPolicy AccessPolicy,
+    SyncTime? AccessPolicyModifiedAt,
     bool? CredentialsEnabled,
     SyncTime? CredentialsEnabledModifiedAt,
     bool IsSavedTabsExpanded,
@@ -48,8 +50,8 @@ internal sealed partial record SpacePayload(
     /// accent and symbol gave it before brandings synced; one without browsing
     /// preferences or an access policy takes the defaults; one without a saved
     /// tabs disclosure shows them; and one without splits' metadata, or without
-    /// the time someone chose whether it uses Crest Passwords, holds no opinion
-    /// about them.
+    /// the time someone chose its lock or whether it uses Crest Passwords, holds
+    /// no opinion about them.
     public static SpacePayload Read(SyncPayloadReader value) {
         string name = value.Text("name"), symbol = value.Text("symbol");
         var accent = SpaceAccent.Named(value.Text("accent")) ?? throw new UnreadableSyncPayloadException();
@@ -61,6 +63,7 @@ internal sealed partial record SpacePayload(
                 : StoredSessionCodec.DefaultBrowsingPreferences,
             value.OptionalText("accessPolicy") is { } access
                 ? StoredSessionCodec.ParseAccessPolicy(access) ?? throw new UnreadableSyncPayloadException() : SpaceAccessPolicy.Open,
+            value.OptionalTime("accessPolicyModifiedAt"),
             credentialsEnabled,
             credentialsModifiedAt,
             value.OptionalFlag("isSavedTabsExpanded") ?? true,
@@ -81,6 +84,7 @@ internal sealed partial record SpacePayload(
             ["accessPolicy"] = StoredSessionCodec.SpaceAccessPolicies.Name(AccessPolicy),
             ["isSavedTabsExpanded"] = IsSavedTabsExpanded
         };
+        Put(value, "accessPolicyModifiedAt", AccessPolicyModifiedAt, form);
         Put(value, "savedTabsExpansionModifiedAt", SavedTabsExpansionModifiedAt, form);
         if (CredentialsEnabled is { } credentialsEnabled && CredentialsEnabledModifiedAt is { } credentialsModifiedAt) {
             value["credentialsEnabled"] = credentialsEnabled;

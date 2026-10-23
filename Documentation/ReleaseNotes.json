@@ -4353,6 +4353,10 @@
     "space-icon-size-setting": {
       "category": "new",
       "message": "The Space icons at the bottom of the sidebar shrink so more Spaces fit without scrolling. To keep one size instead, turn off Fit Space icons to sidebar in Appearance settings and choose it with the slider."
+    },
+    "space-lock-stays-off": {
+      "category": "fixed",
+      "message": "Turning off a Space’s lock in Settings now sticks after one Touch ID or password check, instead of the lock coming back. With iCloud sync, turning a lock on or off reaches your other devices too, even where the Space is locked, without unlocking it there first. If a lock can’t change, Crest says so at the top of the window."
     }
   }
 }

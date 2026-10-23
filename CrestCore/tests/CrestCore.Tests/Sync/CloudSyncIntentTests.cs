@@ -3,6 +3,7 @@ using System.Text.Json.Nodes;
 
 using CrestCore.Application;
 using CrestCore.Contracts;
+using CrestCore.Domain;
 
 using Xunit;
 
@@ -498,10 +499,11 @@ public sealed partial class BrowserContractsTests {
     }
 
     private static StoredSync StoredSyncing(StorageDirectory directory, JsonObject document, bool keepsSeed = false,
-        JsonObject? journal = null) {
+        JsonObject? journal = null, IClock? clock = null) {
         var session = document["session"]!.AsObject();
         if (!keepsSeed) session.Remove("disposableSeedMarker");
-        var app = new CrestApp(new AppConfiguration(directory.Path, DevicePlatform.Desktop));
+        var configuration = new AppConfiguration(directory.Path, DevicePlatform.Desktop);
+        var app = clock is null ? new CrestApp(configuration) : new CrestApp(configuration, clock, new TestIds());
         var answered = app.Send(Adoption(session, journal));
         var (workspace, opened) = TestWorkspaces.OpenStored(app);
         var sync = app.StoredSync!;
