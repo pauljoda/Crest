@@ -15,4 +15,8 @@ protocol WebKitPageHosting: BrowserPromptPresenting {
     /// Media in the page started, stopped or ended, so the page asks WebKit
     /// what it runs now and tells the core when that changed.
     func mediaActivityMayHaveChanged()
+
+    /// The core asked for a history entry WebKit no longer keeps, so the page
+    /// reports its history again, as WebKit keeps it now.
+    func historyMayHaveChanged()
 }

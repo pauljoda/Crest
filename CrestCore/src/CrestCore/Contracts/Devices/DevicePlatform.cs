@@ -9,11 +9,12 @@ public sealed class DevicePlatform {
     /// The Mac gives back one page under warning pressure and half of the
     /// eligible pages, at least one, under critical pressure. A page on screen
     /// is never taken. A manual setup left unfinished starts over at the next
-    /// launch, and setup imports from the browsers installed on it. First-run
-    /// setup opens in a window of its own before any browser window. Agents
-    /// the person runs on the Mac may use it.
+    /// launch, setup asks which look its Spaces wear, and it imports from the
+    /// browsers installed on it. First-run setup opens in a window of its own
+    /// before any browser window. Agents the person runs on the Mac may use it.
     public static readonly DevicePlatform Desktop = new(name: "desktop", warningReleaseLimit: _ => 1,
-        criticalReleaseLimit: eligible => Math.Max(1, (eligible + 1) / 2), keepsSetupDraft: false, importsBrowsers: true,
+        criticalReleaseLimit: eligible => Math.Max(1, (eligible + 1) / 2), keepsSetupDraft: false, choosesLook: true,
+        importsBrowsers: true,
         sharesPagesAcrossWindows: true,
         forcesSetup: environment => environment.ForcesOnboardingWelcome || environment.ForcesDesktopSetup,
         setupHoldsFirstWindow: true, showcaseOpensStartPage: false, offersAgents: true);
@@ -26,7 +27,8 @@ public sealed class DevicePlatform {
     /// in the background. First-run setup covers the browser, which opens
     /// beneath it as the person chose. No agent uses it.
     public static readonly DevicePlatform Mobile = new(name: "mobile", warningReleaseLimit: _ => 0,
-        criticalReleaseLimit: _ => 1, keepsSetupDraft: true, importsBrowsers: false, sharesPagesAcrossWindows: false,
+        criticalReleaseLimit: _ => 1, keepsSetupDraft: true, choosesLook: false, importsBrowsers: false,
+        sharesPagesAcrossWindows: false,
         forcesSetup: environment => environment.ForcesOnboardingWelcome || environment.ForcesMobileSetup,
         setupHoldsFirstWindow: false, showcaseOpensStartPage: true, offersAgents: false);
 
@@ -37,6 +39,11 @@ public sealed class DevicePlatform {
     /// Whether the device store keeps an unfinished manual setup for the next
     /// launch.
     public bool KeepsSetupDraft { get; }
+
+    /// Whether setup asks which look the Spaces it makes wear, as the Mac's
+    /// does on its way from the welcome. The core's own rule, which no
+    /// platform reads.
+    internal bool ChoosesLook { get; }
 
     /// Whether setup offers to import from other browsers installed here.
     /// Where it does not, setup goes from the welcome to setting up Spaces by
@@ -76,10 +83,11 @@ public sealed class DevicePlatform {
     #region Constructors
 
     private DevicePlatform(string name, Func<int, int> warningReleaseLimit, Func<int, int> criticalReleaseLimit,
-        bool keepsSetupDraft, bool importsBrowsers, bool sharesPagesAcrossWindows, Func<LaunchEnvironment, bool> forcesSetup,
-        bool setupHoldsFirstWindow, bool showcaseOpensStartPage, bool offersAgents) {
+        bool keepsSetupDraft, bool choosesLook, bool importsBrowsers, bool sharesPagesAcrossWindows,
+        Func<LaunchEnvironment, bool> forcesSetup, bool setupHoldsFirstWindow, bool showcaseOpensStartPage, bool offersAgents) {
         Name = name;
         KeepsSetupDraft = keepsSetupDraft;
+        ChoosesLook = choosesLook;
         ImportsBrowsers = importsBrowsers;
         SharesPagesAcrossWindows = sharesPagesAcrossWindows;
         SetupHoldsFirstWindow = setupHoldsFirstWindow;

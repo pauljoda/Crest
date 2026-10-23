@@ -82,8 +82,6 @@ class EnginePage final : public content::WebContentsObserver,
   // The person's typing, clicking and scrolling in the page is presented at
   // most this often.
   static constexpr base::TimeDelta kInteractionInterval = base::Seconds(1);
-  // The most history entries presented each way.
-  static constexpr int kHistoryDepth = 50;
 
   EnginePage(EngineBinding& binding, const engine::CreatePage& creation);
   EnginePage(const EnginePage&) = delete;
@@ -118,6 +116,10 @@ class EnginePage final : public content::WebContentsObserver,
   // Keeps the link the core staged for the page's first load, which a load of
   // the same address then runs. False once the page loads.
   bool Stage(const std::string& token, const std::string& url);
+  // The entry the next load the app asks for commits takes `entry_id`, the
+  // core's identity for an entry it asked the page to load again; none
+  // forgets the identity an earlier load expected.
+  void ExpectEntry(const std::optional<engine::Guid>& entry_id);
   // Restores navigation history saved by `SaveInteractionState` in place of a
   // load of `expected_url`; a page still being created restores once it
   // exists. False when the state does not restore this page.
@@ -140,9 +142,13 @@ class EnginePage final : public content::WebContentsObserver,
   // view is ready and everything its view shows again.
   void Watch();
 
+  // Shows the history entry `entry_id` names, the core's GoToHistoryEntry.
+  // An entry the page no longer keeps starts nothing, and the page reports
+  // its history again.
+  void GoToEntry(const engine::Guid& entry_id);
+
   // What the platform asks of the page directly. Each answers whether the
   // page took it; what finishes later is presented.
-  bool GoToOffset(int offset);
   bool Reload(bool bypasses_cache);
   // Brings the page back after its renderer stopped, as the core decided.
   bool Recover();
@@ -242,6 +248,7 @@ class EnginePage final : public content::WebContentsObserver,
   void DidStartLoading() override;
   void DidStopLoading() override;
   void TitleWasSet(content::NavigationEntry* entry) override;
+  void NavigationEntriesDeleted() override;
   void DidChangeVisibleSecurityState() override;
   void DidChangeThemeColor() override;
   void PrimaryMainFrameRenderProcessGone(base::TerminationStatus status) override;
@@ -275,7 +282,13 @@ class EnginePage final : public content::WebContentsObserver,
   void PresentSharing();
   // Presents what the page's view shows that changed since it last did.
   void PresentView();
-  std::vector<engine::PageHistoryEntry> History(int direction) const;
+  // The page's committed history, oldest first, with each entry's identity,
+  // as the core keeps it; empty before the page committed a document.
+  engine::PageHistoryReported History();
+  // Reports the page's history when it differs from the last report.
+  void ReportHistory();
+  // The identity of `entry`, made when the page first reports it.
+  engine::Guid EntryId(content::NavigationEntry* entry);
 
   // The engine's own callbacks, as navigation events.
   void Navigate(const std::string& url);
@@ -348,6 +361,15 @@ class EnginePage final : public content::WebContentsObserver,
   // The page changed since its last snapshot, which is due when the turn ends.
   bool report_due_ = false;
   std::optional<engine::PageSnapshot> reported_;
+  std::optional<engine::PageHistoryReported> reported_history_;
+  // The core's identity of each entry the page keeps, by the entry's unique
+  // id, which lasts as long as the entry does.
+  std::map<int, engine::Guid> entry_ids_;
+  // The identity the entry the core's load commits takes, and that load once
+  // it starts. The load gives the identity up however it ends, and any other
+  // navigation that starts first, or a load that never starts, drops it.
+  std::optional<engine::Guid> expected_entry_id_;
+  std::optional<int64_t> expected_entry_navigation_;
 
   // The zoom the platform asked for, which a page still being created takes
   // once it exists.
@@ -366,8 +388,6 @@ class EnginePage final : public content::WebContentsObserver,
 
   // What the page's view showed when it was last presented.
   std::optional<bool> presented_loading_;
-  std::optional<std::pair<std::vector<engine::PageHistoryEntry>, std::vector<engine::PageHistoryEntry>>>
-      presented_history_;
   std::optional<std::optional<engine::BrandColor>> presented_theme_;
   // How many pop-ups the engine blocked in the document when last presented.
   size_t presented_blocked_popups_ = 0;

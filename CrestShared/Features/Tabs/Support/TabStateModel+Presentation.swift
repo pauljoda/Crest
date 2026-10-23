@@ -47,4 +47,18 @@ extension TabStateModel {
     var supportsSavedLocationEditing: Bool {
         placement.isDurable && (savedURL ?? url) != nil
     }
+
+    // MARK: - Actions - Titles
+
+    /// The name the tab surfaces show, reading the tab's page in `state` when
+    /// given one. A page showing a failed load is named by the site it failed
+    /// to load, as the window title names it, unless the person renamed the
+    /// tab. Reading it observes the page's live state.
+    func shownTitle(in state: CoreState?) -> String {
+        guard nativeView == nil, BrowserShownTitle.resolve(customTitle) == nil,
+            let page = state?.pages.values.first(where: { $0.tabID == id && $0.phase.holdsEnginePage }),
+            page.live.failure != nil, let failed = page.live.displayURL, let host = failed.host(), !host.isEmpty
+        else { return shownTitle }
+        return BrowserAddressPresentation(failed.absoluteString).domain
+    }
 }

@@ -90,13 +90,9 @@
             else { return false }
             return engine.stage(stagedLinkID, from: sourcePageID, into: pageID, expecting: url)
         }
-        var backHistory: [BrowserNavigationHistoryItem] = []
-        var forwardHistory: [BrowserNavigationHistoryItem] = []
         var currentURL: URL?
-        var canGoBack = false
-        var canGoForward = false
-        /// The binding presents the page's history, loading and failures, so the
-        /// page reads them from its presentations.
+        /// The binding presents the page's loading and failures, so the page
+        /// reads them from its presentations.
         var reportsNavigationState: Bool { true }
 
         func load(_ request: URLRequest) {

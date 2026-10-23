@@ -60,9 +60,10 @@ extension MobileBrowserRootModel {
         navigation.adapt(to: presentation)
         settings.adapt(to: presentation)
         guard !presentation.presentsPageOverTabViewer else { return }
+        // A sidebar put away for a folded split keeps the person's choice.
         windowState?.captureSidebar(
             width: Double(sidebarWidth),
-            isPresented: navigation.regularSidebarIsDocked
+            isPresented: navigation.hidSidebarForFoldedSplit ? nil : navigation.regularSidebarIsDocked
         )
     }
 
@@ -131,7 +132,10 @@ extension MobileBrowserRootModel {
     func regularSidebarPresentationChanged(
         _ presentation: BrowserSidebarPresentation
     ) {
-        windowState?.captureSidebar(isPresented: presentation.reservesSidebarWidth)
+        // A sidebar put away for a folded split is not the person's choice.
+        if !navigation.hidSidebarForFoldedSplit {
+            windowState?.captureSidebar(isPresented: presentation.reservesSidebarWidth)
+        }
         if !presentation.showsSidebar {
             navigation.utilityPresentation.dismiss()
         }
@@ -158,8 +162,17 @@ extension MobileBrowserRootModel {
     /// Shows the address the selected page reads in the core in the address
     /// field, unless the person is editing it or the Space is locked.
     func synchronizePageMetadata(isAddressEditing: Bool) {
-        guard !isAddressEditing, !selectedSpaceIsLocked, let page = selectedPage else { return }
-        address = (page.live.displayURL ?? browser.shownTab?.address)?.absoluteString ?? ""
+        guard !isAddressEditing, selectedPage != nil else { return }
+        restoreAddress()
+    }
+
+    /// Gives the address field back to the shown tab once the person stops
+    /// editing it, so an address typed and then dismissed never stays: the
+    /// page's address as the core reads it, including one it is heading to,
+    /// or the tab's own when it has no page.
+    func restoreAddress() {
+        guard !selectedSpaceIsLocked else { return }
+        address = (selectedPage?.live.displayURL ?? browser.shownTab?.address)?.absoluteString ?? ""
     }
 
 }
@@ -442,11 +455,24 @@ extension MobileBrowserRootModel {
     }
 
     func focusSplitCard(_ tabID: UUID) {
-        guard tabID != browser.shownTab?.id,
-            let member = presentedSplitMembers.first(where: { $0.id == tabID }),
-            let space = browser.shownSpace, !spaceAccess.isLocked(space)
+        guard presentedSplitMembers.contains(where: { $0.id == tabID }) else { return }
+        showInPlace(tabID)
+    }
+
+    /// Shows the tab the address bar's swipe landed on, which the core chose
+    /// from the shown Space.
+    func showSwipedTab(_ tabID: UUID) {
+        showInPlace(tabID)
+    }
+
+    /// Shows `tabID`, a tab of the shown Space, in place of the shown tab, as
+    /// choosing it in the tab viewer would but without leaving the page. A
+    /// Settings tab opens Settings instead, as a tap on it does.
+    private func showInPlace(_ tabID: UUID) {
+        guard tabID != browser.shownTab?.id, let space = browser.shownSpace, !spaceAccess.isLocked(space),
+            let tab = space.tabs.model(tabID)
         else { return }
-        if settings.destination(for: member) == .settings {
+        if settings.destination(for: tab) == .settings {
             presentSettings(
                 matching: BrowserTabRuntimeAssignment(tabID: tabID, spaceID: space.id, profileID: space.profileID))
             return
@@ -456,35 +482,19 @@ extension MobileBrowserRootModel {
         address = browser.shownTab?.url ?? ""
     }
 
-    /// Builds a page for every column of an iPad split.
+    /// Builds and presents a page for every column of an iPad split.
     ///
     /// Columns are all visible at once, so all of them load — the lazy,
-    /// focused-±1 residency the phone's carousel gets is a property of showing
-    /// one card at a time, not of the platform.
+    /// focused-±1 residency a phone's split gets is a property of showing one
+    /// card at a time, not of the platform. Selecting presents them too: a
+    /// split made while the window showed none of its pages, as from iPhone
+    /// Duo's outer display before opening it, has only its focused card
+    /// presented, and its other columns would stay empty until tapped.
     func prepareSplitCardPages() {
+        pages.select()
         for member in presentedSplitMembers {
             pages.prepareResidentPage(for: member.id)
         }
-    }
-
-    /// The toolbar swipe's card move: one step along the presented run, clamped.
-    ///
-    /// No animation is started here. The carousel owns the motion — it watches
-    /// the selection and animates its scroll position with the same
-    /// `CrestMotion.spaceSwipe` token the Space pager settles on — so animating
-    /// the commit as well would run two curves against one another.
-    @discardableResult
-    func selectAdjacentSplitCard(
-        _ direction: BrowserSpaceSwipeDirection
-    ) -> UUID? {
-        guard let selectedTabID = browser.shownTab?.id, presentedSplitGroupID != nil,
-            let target = MobileSplitCardPager.adjacentMember(
-                of: selectedTabID, in: presentedSplitMembers.map(\.id), direction: direction)
-        else { return nil }
-        browser.selectTab(target)
-        pages.select()
-        address = browser.shownTab?.url ?? ""
-        return target
     }
 }
 

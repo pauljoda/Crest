@@ -96,12 +96,17 @@ struct BrowserTransientCardStack<WebContent: View>: View {
 
 // MARK: - Arrangement-shaped layout
 
+/// The arrangement's card size, as far as the room its insets and controls
+/// leave allows: a page column beside a tablet's sidebar can be narrower than
+/// the card the screen would float.
 private struct BrowserTransientCardSize: ViewModifier {
     let size: CGSize?
 
     func body(content: Content) -> some View {
         if let size {
-            content.frame(width: size.width, height: size.height)
+            content
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .frame(maxWidth: size.width, maxHeight: size.height)
         } else {
             content
         }

@@ -33,8 +33,7 @@ struct BrowserCollapsedSidebarRevealControl: View {
 
     var body: some View {
         Button(action: showSidebar) {
-            Color.clear
-                .contentShape(.rect)
+            revealArea
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Show Sidebar Temporarily")
@@ -58,6 +57,20 @@ struct BrowserCollapsedSidebarRevealControl: View {
 
     private var width: CGFloat {
         metrics.revealsOnHover ? pointerWidth ?? metrics.width : metrics.width
+    }
+
+    /// Where the strip answers: all of it, or on touch only its top and bottom,
+    /// since the middle of the edge is where a swipe in steps the page's
+    /// history. A clear colour takes no touches without a content shape, so the
+    /// middle falls through to the page.
+    private var revealArea: some View {
+        GeometryReader { proxy in
+            VStack(spacing: 0) {
+                Color.clear.contentShape(.rect)
+                Color.clear.frame(height: proxy.size.height * metrics.pageNavigationShare)
+                Color.clear.contentShape(.rect)
+            }
+        }
     }
 
     /// What the strip tells someone who stops on it: whichever input this shell

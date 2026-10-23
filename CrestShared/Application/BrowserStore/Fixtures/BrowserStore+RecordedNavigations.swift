@@ -44,8 +44,8 @@
                 PageStateChanged(
                     pageID: page.id,
                     snapshot: PageSnapshot(
-                        url: url.absoluteString, pendingURL: nil, title: title, isLoading: false, canGoBack: false,
-                        canGoForward: false, security: url.scheme == "https" ? .secure : .insecure, media: [])))
+                        url: url.absoluteString, pendingURL: nil, title: title, isLoading: false,
+                        security: url.scheme == "https" ? .secure : .insecure, media: [])))
             if let icon {
                 page.report(PageIconChanged(pageID: page.id, url: url.absoluteString, accent: nil), icon: icon)
             }

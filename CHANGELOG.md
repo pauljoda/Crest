@@ -7,6 +7,70 @@ and Crest uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.8.50] - 2026-10-22
+
+Crest 0.8.50 brings Chromium 155 with its latest security fixes and stops
+trusting the compromised eMudhra certificate authorities. It also rebuilds
+setup on the Mac, translates whole pages in Chromium, and fixes several
+crashes and problems quitting. On iPhone and iPad, Crest appears in the share
+sheet and an edge swipe goes back or forward. iPhone also gains swipes between
+tabs on the address bar and support for iPhone Duo.
+
+### Added
+
+- Set up Crest on the Mac in a rebuilt, full-screen setup that asks whether your Spaces wear Crest’s heraldic banners and crests or a modern gradient and icon, and carries that look through importing and making your Spaces yours.
+- Translate whole pages on device in Chromium too, with the same translation toolbar, automatic translation and Show Original as WebKit pages.
+- Use Crest on iPhone Duo: the controls move to the side bar, pages use the outer display’s full width, and folded like a book, the sidebar and page, or a Split View’s two pages, each take one side of the fold.
+- Open links in Crest from the share sheet on iPhone and iPad, including the first link in shared text.
+- Swipe left or right on the iPhone address bar to move through your Space’s tabs in sidebar order, with the page sliding along under your finger.
+- Swipe in from a page’s left edge to go back and from its right edge to go forward on iPhone and iPad.
+
+### Changed
+
+- Chromium is updated to 155.0.8059.84.
+- Resizing the window, a split or the sidebar is smoother, and so is showing and hiding the sidebar with several Spaces open.
+- The History, Archive and Downloads shortcuts open and close their list, even with the sidebar hidden, and Command-F searches the list that is open.
+- Back and Forward keep working after a page moves to the other engine, and tabs keep that history after Crest relaunches or when duplicated.
+- Next Space and Previous Space slide around from the last Space to the first and back.
+- Typing a local address such as 192.168.0.1 or printer.local opens it over http, as other browsers do.
+- A link route set to “Is Exactly” with just a site’s name, such as docs.google.com, matches that site’s home page.
+- Pins fill each row to the number chosen in Settings, as far as the sidebar width allows.
+- With tinted or clear app icons, Crest’s icon sits on the same background as other apps.
+- On iPhone, tapping the address bar selects the whole address.
+- On iPad and iPhone Duo, the sidebar starts narrower and its tabs scroll on into the bottom corner of the screen.
+- A new iPhone or iPad that syncs with iCloud uses the default search your other devices use, and turning Crest Passwords on or off for a Space reaches your other devices.
+
+### Fixed
+
+- Crest no longer quits when you submit a form with a payment card or address in Chromium, open an http:// address that can’t be reached, or choose Download Languages in Page Translation settings.
+- Restart and Update installs the update right away, and Quit in the Dock works again, even after another app has used AppleScript with Crest.
+- Crest quits instead of waiting indefinitely when a Space couldn’t be fully deleted, and finishes deleting it the next time it opens.
+- On macOS 26, switches, pickers and other controls in Settings take every click.
+- Page commands, Translate, Reader, content blocking, the Web Inspector and moving a page to the other engine work in a Quick Window.
+- Closing find in page or a Peek gives the keyboard back to the page, so the arrow keys and Space scroll right away.
+- A hidden sidebar hides again when the pointer moves on to another app, and no longer slides back out on its own.
+- Space switches keep sliding when you switch again or show or hide the sidebar during the slide, and the window buttons move with the sidebar when it changes sides.
+- Pressing Option-Command-I again closes the Web Inspector or Chromium DevTools.
+- Opening a link in another Space shows the link there instead of the Start Page.
+- Control-A and Control-E move to the start and end of the line in the address bar.
+- Pages in more languages, such as Swedish, translate, and a page Apple Translation can’t translate says so.
+- Right-clicking an extension in Site Controls shows its menu without closing Site Controls.
+- Link route address fields take clicks and typing, and Crest Studio no longer covers the Settings sidebar in a narrow window.
+- A tab whose page couldn’t be opened shows the site it tried to open.
+- While setup reads a browser you chose to import, it says so and offers Cancel.
+- On iPhone and iPad, full-screen video shows instead of a black screen, Quick Windows stay on screen, and no empty band is left for a keyboard that isn’t showing.
+- On iPhone and in a Mac Quick Window, leaving the address bar without going anywhere puts the page’s address back.
+- On iPhone Duo, opening or closing the phone keeps you in the same Space, and a Split View shows both of its pages.
+
+### Security
+
+- Chromium 155.0.8059.84 brings upstream’s latest security fixes.
+- Chromium no longer trusts the eight eMudhra certificate authorities whose keys were compromised, or the emSign ECC Root CA - G3 root, matching Chrome. Sites whose certificates still rely on that root stop loading in the Chromium engine and show a certificate warning instead. WebKit follows macOS’s own certificate trust.
+
+### Upgrading
+
+- The iPhone and iPad changes reach those devices separately, through the App Store.
+
 ## [0.8.1] - 2026-10-12
 
 ### Fixed

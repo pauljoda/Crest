@@ -8,6 +8,7 @@ struct MobileRegularBrowserLayout<Sidebar: View, Detail: View>: View,
 {
     @Environment(\.accessibilityReduceMotion) var reduceMotion
     @Environment(\.browserChromeAppearance) private var appearance
+    @Environment(\.mobileBrowserControlPlacement) private var controlPlacement
 
     private var sidebarEdge: HorizontalEdge { appearance.sidebarEdge(in: layoutDirection) }
 
@@ -25,11 +26,14 @@ struct MobileRegularBrowserLayout<Sidebar: View, Detail: View>: View,
 
     var body: some View {
         BrowserSidebarPageLayout(
-            presentation: effectivePresentation, width: layout.sidebarWidth, edge: sidebarEdge
+            presentation: effectivePresentation, width: layout.reservedSidebarWidth, edge: sidebarEdge
         ) {
             detail
                 // Extend only the page; sidebar controls keep their safe-area placement.
-                .ignoresSafeArea(.container, edges: appearance.borderless ? .bottom : [])
+                .ignoresSafeArea(
+                    .container,
+                    edges: appearance.borderless || controlPlacement.movesControlsToToolbar ? .bottom : []
+                )
         } sidebar: {
             BrowserRootSidebarSurfaceLayer(
                 presentation: effectivePresentation,
@@ -42,6 +46,10 @@ struct MobileRegularBrowserLayout<Sidebar: View, Detail: View>: View,
             ) {
                 sidebar
             }
+            // Where the status bar keeps to the far end of a band across the
+            // top, the sidebar takes the rest of the band.
+            .safeAreaPadding(.top, sidebarTopMargin)
+            .ignoresSafeArea(.container, edges: layout.runsSidebarToTopEdge ? .top : [])
 
         } controls: {
             if effectivePresentation == .collapsed {
@@ -52,7 +60,9 @@ struct MobileRegularBrowserLayout<Sidebar: View, Detail: View>: View,
                     showSidebar: showSidebar, edge: sidebarEdge
                 )
                 .zIndex(BrowserRootMetrics.floatingSidebarZIndex)
-            } else if effectivePresentation == .docked {
+            } else if effectivePresentation == .docked, !layout.followsFold {
+                // Across a fold the fold sets the width, so there is nothing
+                // to drag.
                 BrowserSidebarResizeHandle(
                     width: $preferredSidebarWidth,
                     onResizeEnded: commitSidebarWidth, edge: sidebarEdge
@@ -74,6 +84,18 @@ struct MobileRegularBrowserLayout<Sidebar: View, Detail: View>: View,
             ),
             value: effectivePresentation
         )
+    }
+
+    /// How far the sidebar stands from the display's top edge where nothing
+    /// above holds it off. With its controls in the side toolbar its address
+    /// field leads, out in the rounded corner, so it clears the corner;
+    /// beside the status bar its controls lead, clear of the corner, and keep
+    /// the layout margin.
+    private var sidebarTopMargin: CGFloat {
+        if controlPlacement.movesControlsToToolbar {
+            return MobileBrowserRootLayout.displayCornerClearance
+        }
+        return layout.runsSidebarToTopEdge ? MobileBrowserRootLayout.displayEdgeMargin : 0
     }
 
     /// Compact regular windows retain the desktop floating-card treatment, but

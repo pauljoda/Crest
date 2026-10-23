@@ -270,10 +270,10 @@ final class BrowserPagePool:
             return true
         }
         guard let runtime = source.tabRuntimes[tab.id] else {
-            if let url = tab.url,
+            if let url = tab.url {
+                let history = source.host.tabState.history(for: assignment, expecting: url)
                 let state = source.host.archivedInteractionState(for: assignment, expecting: url)
-            {
-                host.tabState.prepareCopy(state, url: url, for: assignment)
+                host.tabState.prepareCopy(state, url: url, history: history, for: assignment)
             }
             source.host.discardArchivedTabState(matching: assignment)
             source.runtimeStore.removePresentation(of: tab.id)
@@ -723,8 +723,21 @@ final class BrowserPagePool:
     func closePeek() -> Bool {
         guard let request = activeTabID.flatMap({ host.peekRequest(over: $0, where: isPeekOpen) })
         else { return false }
+        if let peekPage { returnFocus(fromPeek: peekPage) }
         dismissPeek(request)
         return true
+    }
+
+    /// Hands the keyboard back to the active tab's page as the Peek page
+    /// holding it closes, as closing find hands it back to the page searched.
+    /// An engine that focuses a page it shows, as Chromium does, gives the
+    /// Peek the keyboard when it opens.
+    func returnFocus(fromPeek peek: BrowserPage) {
+        guard let page = activePage, page !== peek,
+            let responder = peek.nativeView.window?.firstResponder as? NSView,
+            responder.isDescendant(of: peek.nativeView)
+        else { return }
+        page.focusRestoration.requestPageFocus(displacing: peek.nativeView)
     }
 
     // MARK: - Actions - Media sessions
@@ -894,10 +907,6 @@ final class BrowserPagePool:
         reload(.fromOrigin)
     }
 
-    func showWebInspector() {
-        activePage?.showWebInspector()
-    }
-
     /// Releases what memory pressure takes back that the core does not
     /// decide; see `BrowserPageHost.relieveMemoryPressure`.
     func relieveMemoryPressure(_ level: MemoryPressureLevel) {
@@ -939,6 +948,14 @@ final class BrowserPagePool:
                 tabID: tab.id
             )
             tabRuntimes.removeValue(forKey: tab.id)?.release(keepingState: false)
+        }
+        // A tab's page opens with the history its archive kept, on the engine
+        // of the entry that history shows; a page another page opened keeps
+        // its opener's engine instead.
+        if opener == nil {
+            host.restoreTabHistory(
+                for: BrowserTabRuntimeAssignment(tabID: tab.id, spaceID: space.id, profileID: space.profileID),
+                expecting: tab.url, in: browser)
         }
         guard let page = makePage(space: space, tabID: tab.id, opener: opener) else { return nil }
         page.updateNavigationContext(tab: tab)

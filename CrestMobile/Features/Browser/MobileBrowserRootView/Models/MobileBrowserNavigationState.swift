@@ -35,6 +35,10 @@ final class MobileBrowserNavigationState {
     /// regular width, which hides again once the window widens.
     @ObservationIgnored
     private var dockedHiddenSidebarWhileNarrow = false
+    /// Whether the window put its docked sidebar away because a fold divides
+    /// a split's pages. It docks again once the fold no longer does, and the
+    /// window's saved state never hears of it.
+    private(set) var hidSidebarForFoldedSplit = false
 
     init(
         regularSidebarIsPresented: Bool = true,
@@ -247,6 +251,26 @@ final class MobileBrowserNavigationState {
         hasAdaptedPresentation = true
         presentation.adapt(self)
         dockIfFloatingIsNotAllowed()
+    }
+
+    /// Puts a docked sidebar away while a fold divides a split's pages, so the
+    /// pages take a side each and the sidebar floats over them when called,
+    /// and docks it again when the fold no longer does.
+    func adaptToFoldedSplit(_ splitsPagesAtFold: Bool) {
+        if splitsPagesAtFold {
+            guard regularSidebarPresentation == .docked else { return }
+            hidSidebarForFoldedSplit = true
+            hideRegularSidebar()
+        } else if hidSidebarForFoldedSplit {
+            hidSidebarForFoldedSplit = false
+            // The sidebar was docked before the fold put it away, so a narrow
+            // window that docked it again meanwhile must not hide it on
+            // widening.
+            dockedHiddenSidebarWhileNarrow = false
+            if regularSidebarPresentation != .docked {
+                dockRegularSidebar()
+            }
+        }
     }
 
     /// A window that widens shows its toolbar, and hides again a sidebar it

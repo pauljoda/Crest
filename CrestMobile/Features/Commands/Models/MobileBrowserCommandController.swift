@@ -217,7 +217,7 @@ struct MobileBrowserCommandController {
     ///
     /// No `synchronizePages()`: the selection and the presented set are both
     /// unchanged, so there is nothing for the pool to reconcile — only the
-    /// column order the carousel reads back out of the session.
+    /// column order the split reads back out of the session.
     @discardableResult
     func moveFocusedSplitCard(offset: Int) -> UUID? {
         guard let space = browser.shownSpace,

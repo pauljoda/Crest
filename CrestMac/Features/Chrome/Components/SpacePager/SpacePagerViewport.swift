@@ -28,6 +28,11 @@ final class SpacePagerViewport<Content: View>: NSView {
     private(set) var selectedSpaceID: UUID?
     private(set) var presentationSpaceID: UUID?
     private(set) var isInteractionLocked = false
+    /// The last Next or Previous Space step the window took.
+    private var spaceStep: BrowserSpaceStep?
+    /// That step while it is new in the current update, which a slide follows
+    /// around the ends of the Spaces only once.
+    private var newSpaceStep: BrowserSpaceStep?
     private(set) var reduceMotion = false
     private(set) var layoutDirection = LayoutDirection.leftToRight
     private(set) var motion: Motion?
@@ -41,6 +46,10 @@ final class SpacePagerViewport<Content: View>: NSView {
     private var contentTopInsets: [UUID: CGFloat] = [:]
     private var pendingContentTopInsets: [UUID: CGFloat] = [:]
     private var motionDisplayLink: CADisplayLink?
+    /// Which installation of the settling animations finishes the motion. A
+    /// slide re-aimed at a new size replaces its animations, and the ones it
+    /// replaced must not end it.
+    private var settlementEpoch: UInt = 0
     private var maximumTrackingSpeed: CGFloat { bounds.width * SpacePagerSettlement.trackingPagesPerSecond }
     private lazy var frameObserver = SpacePagerFrameObserver { [weak self] interval in
         self?.advanceFrame(interval: interval)
@@ -70,7 +79,8 @@ final class SpacePagerViewport<Content: View>: NSView {
 
     func update(
         spaces: [SpaceModel], selectedSpaceID: UUID,
-        isInteractionLocked: Bool, reduceMotion: Bool, layoutDirection: LayoutDirection,
+        isInteractionLocked: Bool, spaceStep: BrowserSpaceStep? = nil, reduceMotion: Bool,
+        layoutDirection: LayoutDirection,
         presentation: SpacePagerPresentation? = nil,
         contentTopInsets: [UUID: CGFloat] = [:],
         selectSpace: @escaping (UUID) -> UUID,
@@ -91,6 +101,8 @@ final class SpacePagerViewport<Content: View>: NSView {
         self.spaces = spaces
         self.selectedSpaceID = selectedSpaceID
         self.isInteractionLocked = isInteractionLocked
+        newSpaceStep = spaceStep?.id == self.spaceStep?.id ? nil : spaceStep
+        self.spaceStep = spaceStep
         self.reduceMotion = reduceMotion
         self.layoutDirection = layoutDirection
         self.selectSpace = selectSpace
@@ -113,15 +125,11 @@ final class SpacePagerViewport<Content: View>: NSView {
             if continueSettling(to: selectedSpaceID) { return }
             cancelMotion()
             gesture.cancelCurrentGesture()
-            if let origin = presentationSpaceID, !reduceMotion,
-                let originIndex = spaces.firstIndex(where: { $0.id == origin }),
-                let targetIndex = spaces.firstIndex(where: { $0.id == selectedSpaceID }),
-                abs(targetIndex - originIndex) == 1
-            {
+            if let origin = presentationSpaceID, !reduceMotion, let step = step(from: origin, to: selectedSpaceID) {
                 // Retained pages keep their visible content until the slide
                 // finishes. The latest roots are supplied at completion.
                 prepareHosts(around: selectedSpaceID, retaining: origin, refreshContent: false)
-                animate(to: selectedSpaceID, commitsSelection: false)
+                animate(to: selectedSpaceID, step: step, commitsSelection: false)
                 return
             }
             // A direct nonadjacent choice presents its authoritative page.
@@ -159,9 +167,16 @@ final class SpacePagerViewport<Content: View>: NSView {
 
     override func layout() {
         super.layout()
+        // A sidebar animating beside a settling slide resizes this viewport.
+        // The slide keeps going: the pages it moves and the moment it began
+        // are read before the pages resize, and it is re-aimed after.
+        var settling: (previousWidth: CGFloat, moving: [BrowserSpaceRuntimeAssignment], began: CFTimeInterval?)?
         if lastSize != bounds.size {
+            let previousWidth = lastSize.width
             lastSize = bounds.size
-            if motion != nil {
+            if motion?.transition != nil, previousWidth > 0, bounds.width > 0 {
+                settling = (previousWidth, settlingHosts, settlementBeginTime)
+            } else if motion != nil {
                 cancelMotion()
                 presentationSpaceID = selectedSpaceID
                 if let presentationSpaceID {
@@ -172,6 +187,9 @@ final class SpacePagerViewport<Content: View>: NSView {
         }
         for (key, host) in hosts where host.frame.size != pageSize(for: key) {
             host.setFrameSize(pageSize(for: key))
+        }
+        if let settling {
+            resizeSettlement(from: settling.previousWidth, moving: settling.moving, beganAt: settling.began)
         }
         if motion == nil {
             positionHosts()
@@ -222,11 +240,14 @@ final class SpacePagerViewport<Content: View>: NSView {
             // sample for the entire strip. A newly admitted neighbor's layer
             // can still report geometry from an earlier layout transaction.
             let direction: CGFloat = layoutDirection == .leftToRight ? 1 : -1
-            let displacement = Int((-inheritedOffset * direction / bounds.width).rounded())
-            let nearestIndex = min(spaces.count - 1, max(0, index + displacement))
+            // A slide around the ends reaches a page one strip length away.
+            let reached = index + Int((-inheritedOffset * direction / bounds.width).rounded())
+            let count = spaces.count
+            let nearestIndex = count > 2 ? (reached % count + count) % count : min(count - 1, max(0, reached))
             let nearest = BrowserSpaceRuntimeAssignment(space: spaces[nearestIndex])
             if hosts[nearest] != nil {
-                inheritedOffset += CGFloat(nearestIndex - index) * bounds.width * direction
+                let placed = SpacePagerInterpolation.index(nearestIndex, near: CGFloat(reached), count: count)
+                inheritedOffset += CGFloat(placed - index) * bounds.width * direction
                 origin = nearest
             }
         }
@@ -352,14 +373,12 @@ final class SpacePagerViewport<Content: View>: NSView {
         updateAccessibility()
     }
 
-    private func animate(to destination: UUID, commitsSelection: Bool) {
+    private func animate(to destination: UUID, step: Int, commitsSelection: Bool) {
         guard let presentationSpaceID, let origin = assignment(for: presentationSpaceID),
             let target = assignment(for: destination)
         else { return }
         generation &+= 1
-        let originIndex = spaces.firstIndex { $0.id == origin.spaceID } ?? 0
-        let targetIndex = spaces.firstIndex { $0.id == target.spaceID } ?? originIndex
-        let direction: CGFloat = (targetIndex > originIndex ? -1 : 1) * (layoutDirection == .leftToRight ? 1 : -1)
+        let direction: CGFloat = (step > 0 ? -1 : 1) * (layoutDirection == .leftToRight ? 1 : -1)
         motion = Motion(
             generation: generation, origin: origin, target: target, direction: direction,
             commitsSelection: commitsSelection)
@@ -368,15 +387,25 @@ final class SpacePagerViewport<Content: View>: NSView {
         settleMotion(to: destination)
     }
 
+    /// How far the strip moves to show `target` from `origin`: one Space
+    /// forward or back, between neighbours or for a Next or Previous step
+    /// around the ends of the Spaces; nil for a choice further away.
+    private func step(from origin: UUID, to target: UUID) -> Int? {
+        guard let originIndex = spaces.firstIndex(where: { $0.id == origin }),
+            let targetIndex = spaces.firstIndex(where: { $0.id == target })
+        else { return nil }
+        if abs(targetIndex - originIndex) == 1 { return targetIndex - originIndex }
+        guard spaces.count > 2, let direction = newSpaceStep?.direction(from: origin, to: target) else { return nil }
+        return direction == .next ? 1 : -1
+    }
+
     /// A selection that arrives while a slide is still settling continues from
     /// what is on screen, starting at the Space that slide was heading to.
     /// Measured from the Space shown before the slide, the next one along
     /// would look two pages away and appear without motion.
     private func continueSettling(to destination: UUID) -> Bool {
         guard !reduceMotion, let current = motion, let heading = current.settledDestination,
-            let headingIndex = spaces.firstIndex(where: { $0.id == heading }),
-            let targetIndex = spaces.firstIndex(where: { $0.id == destination }),
-            abs(targetIndex - headingIndex) == 1,
+            let step = step(from: heading, to: destination),
             let origin = assignment(for: heading), hosts[origin] != nil,
             let target = assignment(for: destination)
         else { return false }
@@ -388,7 +417,7 @@ final class SpacePagerViewport<Content: View>: NSView {
         presentationSpaceID = heading
         motion = Motion(
             generation: generation, origin: origin, target: target, offset: offset, initialOffset: offset,
-            direction: (targetIndex > headingIndex ? -1 : 1) * (layoutDirection == .leftToRight ? 1 : -1),
+            direction: (step > 0 ? -1 : 1) * (layoutDirection == .leftToRight ? 1 : -1),
             commitsSelection: false)
         // The page the slide left is still partly on screen, so the cache
         // keeps the strip around the heading Space rather than the new one.
@@ -429,41 +458,128 @@ final class SpacePagerViewport<Content: View>: NSView {
             generation: token)
         current.transition = transition
         motion = current
-        NSAnimationContext.runAnimationGroup { context in
-            context.duration = transition.duration
-            context.timingFunction = transition.timingFunction
-            // All native leaves install their animations in this transaction,
-            // with the same clock and curve. Sampling must not drive settling.
-            publishPresentation()
-            for (key, host) in hosts {
-                let end = restingOffset(for: key, during: current) + targetOffset
-                let endFrame = CGRect(
-                    x: end, y: topInset(at: transition.endPosition),
-                    width: bounds.width, height: pageSize(for: key).height)
-                guard needsMotion(for: key, host: host, destination: endFrame) else { continue }
-                let animation = CAKeyframeAnimation()
-                transition.configure(animation)
-                // Both axes share the same fractional Space coordinate. Crossed
-                // boundaries preserve toolbar height during an interrupted reversal.
-                let pageIndex = spaces.firstIndex { $0.id == key.spaceID } ?? 0
-                animation.values = transition.positions.map { position in
-                    NSValue(
-                        point: NSPoint(
-                            x: (CGFloat(pageIndex) - position) * bounds.width * direction,
-                            y: topInset(at: position)))
-                }
-                animation.keyTimes = transition.positions.map {
-                    NSNumber(
-                        value: Double(
-                            ($0 - transition.startPosition) / (transition.endPosition - transition.startPosition)))
-                }
-                host.animations = ["frameOrigin": animation]
-                host.animator().setFrameOrigin(endFrame.origin)
-            }
-        } completionHandler: { [weak self] in
-            Task { @MainActor in self?.finishMotion(token: token, destination: destination) }
+        let moving = hosts.filter { key, host in
+            let end = restingOffset(for: key, during: current) + targetOffset
+            let endFrame = CGRect(
+                x: end, y: topInset(at: transition.endPosition),
+                width: bounds.width, height: pageSize(for: key).height)
+            return needsMotion(for: key, host: host, destination: endFrame)
         }
+        installSettlement(transition, moving: Array(moving.keys), destination: destination)
         startPresentationSampling()
+    }
+
+    /// Moves the `moving` pages along `transition`, each with its own native
+    /// animation on one clock and curve, and finishes the motion when they end.
+    private func installSettlement(
+        _ transition: SpacePagerSettlement, moving: [BrowserSpaceRuntimeAssignment], destination: UUID
+    ) {
+        let finish = settlementFinish(transition, destination: destination)
+        NSAnimationContext.runAnimationGroup(
+            { context in
+                context.duration = transition.duration
+                context.timingFunction = transition.timingFunction
+                // All native leaves install their animations in this transaction,
+                // with the same clock and curve. Sampling must not drive settling.
+                publishPresentation()
+                for key in moving {
+                    guard let host = hosts[key] else { continue }
+                    host.animations = ["frameOrigin": settlementAnimation(for: key, along: transition)]
+                    host.animator().setFrameOrigin(
+                        settlementOrigin(for: key, at: transition.endPosition, along: transition))
+                }
+            }, completionHandler: finish)
+    }
+
+    /// Re-aims the settling slide at the viewport's new width. Its `moving`
+    /// pages keep the moment the slide began and the Space positions it moves
+    /// between, so it neither restarts nor ends early. AppKit installs no
+    /// animator animation while it lays a view out, so the pages' layers take
+    /// the slide directly.
+    private func resizeSettlement(
+        from previousWidth: CGFloat, moving: [BrowserSpaceRuntimeAssignment], beganAt began: CFTimeInterval?
+    ) {
+        guard var current = motion, let transition = current.transition,
+            let destination = current.settledDestination
+        else { return }
+        let scale = bounds.width / previousWidth
+        current.offset *= scale
+        current.initialOffset *= scale
+        current.translation *= scale
+        motion = current
+        stopHostAnimations()
+        CATransaction.begin()
+        CATransaction.setCompletionBlock(settlementFinish(transition, destination: destination))
+        for key in moving {
+            guard let host = hosts[key] else { continue }
+            let animation = settlementAnimation(for: key, along: transition)
+            animation.keyPath = "position"
+            // Zero, for a slide Core Animation has not committed yet, starts now.
+            animation.beginTime = began ?? 0
+            host.setFrameOrigin(settlementOrigin(for: key, at: transition.endPosition, along: transition))
+            host.layer?.add(animation, forKey: "position")
+        }
+        CATransaction.commit()
+    }
+
+    /// Finishes the motion once the settling animations installed now end. A
+    /// slide re-aimed later replaces them, and their end no longer counts.
+    private func settlementFinish(_ transition: SpacePagerSettlement, destination: UUID) -> () -> Void {
+        settlementEpoch &+= 1
+        let epoch = settlementEpoch
+        let token = transition.generation
+        return { [weak self] in
+            Task { @MainActor in
+                guard let self, self.settlementEpoch == epoch else { return }
+                self.finishMotion(token: token, destination: destination)
+            }
+        }
+    }
+
+    /// The keyframes that move `key`'s page along `transition`.
+    private func settlementAnimation(
+        for key: BrowserSpaceRuntimeAssignment, along transition: SpacePagerSettlement
+    ) -> CAKeyframeAnimation {
+        let animation = CAKeyframeAnimation()
+        transition.configure(animation)
+        // Both axes share the same fractional Space coordinate. Crossed
+        // boundaries preserve toolbar height during an interrupted reversal.
+        animation.values = transition.positions.map {
+            NSValue(point: settlementOrigin(for: key, at: $0, along: transition))
+        }
+        animation.keyTimes = transition.positions.map {
+            NSNumber(
+                value: Double(($0 - transition.startPosition) / (transition.endPosition - transition.startPosition)))
+        }
+        return animation
+    }
+
+    /// Where `key`'s page sits while the strip shows the fractional Space
+    /// `position` of `transition`. A page keeps the place it had where the
+    /// transition began, so none switches ends partway.
+    private func settlementOrigin(
+        for key: BrowserSpaceRuntimeAssignment, at position: CGFloat, along transition: SpacePagerSettlement
+    ) -> NSPoint {
+        let index = spaces.firstIndex { $0.id == key.spaceID } ?? 0
+        let placed = SpacePagerInterpolation.index(index, near: transition.startPosition, count: spaces.count)
+        let pageIndex = CGFloat(placed)
+        let direction: CGFloat = layoutDirection == .leftToRight ? 1 : -1
+        return NSPoint(x: (pageIndex - position) * bounds.width * direction, y: topInset(at: position))
+    }
+
+    /// The pages the settling slide moves.
+    private var settlingHosts: [BrowserSpaceRuntimeAssignment] {
+        hosts.filter { $0.value.layer.flatMap(Self.slideAnimation) != nil }.map(\.key)
+    }
+
+    /// When Core Animation began the settling slide, once it has committed it.
+    private var settlementBeginTime: CFTimeInterval? {
+        hosts.values.lazy.compactMap { $0.layer.flatMap(Self.slideAnimation)?.beginTime }.first { $0 > 0 }
+    }
+
+    /// The slide's own animation on a page's layer, beside an inset change.
+    private static func slideAnimation(on layer: CALayer) -> CAAnimation? {
+        layer.animationKeys()?.first { $0 != "sidebarInsetChange" }.flatMap(layer.animation(forKey:))
     }
 
     private func finishMotion(token: UInt, destination: UUID?) {
@@ -578,7 +694,8 @@ final class SpacePagerViewport<Content: View>: NSView {
             let origin = spaces.firstIndex(where: { $0.id == originID }),
             let index = spaces.firstIndex(where: { $0.id == key.spaceID })
         else { return 0 }
-        let distance = CGFloat(index - origin)
+        let distance = CGFloat(
+            SpacePagerInterpolation.index(index, near: CGFloat(origin), count: spaces.count) - origin)
         return distance * (layoutDirection == .leftToRight ? 1 : -1) * bounds.width
     }
 

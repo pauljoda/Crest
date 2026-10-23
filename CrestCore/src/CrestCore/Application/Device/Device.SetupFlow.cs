@@ -86,7 +86,7 @@ internal sealed partial class Device {
         var authority = Attached(flow.WorkspaceId) ?? throw new Rejected(new NoSetup());
         if (!authority.Kind.KeepsAppPreferences) throw new Rejected(new PersistentWorkspaceRequired(flow.WorkspaceId));
         lock (gate) {
-            var draft = flow.Step == SetupStep.ManualSetup && setupDraft?.WorkspaceId == flow.WorkspaceId ? setupDraft : null;
+            var draft = flow.Step.AppliesManualSetup && setupDraft?.WorkspaceId == flow.WorkspaceId ? setupDraft : null;
             return new(flow.WorkspaceId, draft is not null, flow.Entry.OpensGuide(setupCompleted), draft?.Spaces.Count(space => space.IsNew) ?? 0);
         }
     }

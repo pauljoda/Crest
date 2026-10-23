@@ -100,6 +100,6 @@ final class MobileBrowserOnboardingPolicyTests: XCTestCase {
         SetupFlowState(
             workspaceID: UUID(), entry: .firstRun, step: .welcome, backStep: nil, nextStep: .featureSpaces,
             phase: .idle, offered: [], selected: [], queue: nil, source: nil, review: nil, failure: nil,
-            summary: nil, opensGuide: !setupCompleted, opensCrestFromWelcome: setupCompleted)
+            summary: nil, opensGuide: !setupCompleted, opensCrestFromWelcome: setupCompleted, look: .heraldic)
     }
 }

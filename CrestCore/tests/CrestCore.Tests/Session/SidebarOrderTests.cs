@@ -7,10 +7,10 @@ using Xunit;
 
 namespace CrestCore.Tests;
 
-/// Next and previous tab, and the numbered commands, follow the order a
-/// window's sidebar shows: pinned, then saved, then open, top to bottom, a
-/// split as one stop, and nothing a Start Page, a collapsed folder or a
-/// collapsed saved section hides.
+/// Next and previous tab, the address bar's swipe, and the numbered commands,
+/// follow the order a window's sidebar shows: pinned, then saved, then open,
+/// top to bottom, a split as one stop, and nothing a Start Page, a collapsed
+/// folder or a collapsed saved section hides.
 public sealed partial class BrowserContractsTests {
     /// A session whose first Space holds, in order: pinned tabs P1 and P2, a
     /// saved tab S1 in the collapsed saved folder Kept, a saved tab S2, open tabs
@@ -155,6 +155,39 @@ public sealed partial class BrowserContractsTests {
         Assert.Equal([f.C1], Stepping(device, window, f.Space, AdjacentDirection.Next, 1));
         device.Send(new ShowTab(window, f.Space, f.S2));
         Assert.Equal([f.P2], Stepping(device, window, f.Space, AdjacentDirection.Previous, 1));
+    }
+
+    /// The tabs a window shows as it swipes `direction` from the tab it shows,
+    /// one swipe at a time, until a swipe reaches nothing.
+    private static List<Guid> Swiping(TestDevice device, Guid window, Guid space, AdjacentDirection direction) {
+        var shown = new List<Guid>();
+        while (shown.Count < 32 && device.Query(new SwipeNeighbors(window)) is var neighbors
+            && (direction == AdjacentDirection.Next ? neighbors.NextTabId : neighbors.PreviousTabId) is { } tab) {
+            device.Send(new ShowTab(window, space, tab));
+            shown.Add(tab);
+        }
+        return shown;
+    }
+
+    /// A swipe walks the stops next and previous walk, but card by card through
+    /// a split, which it enters at the card nearest the side it comes from. It
+    /// stops at both ends rather than wrapping, so it never leaves the Space, and
+    /// a tab a collapsed folder hides swipes from where it lives.
+    [Fact]
+    public void ASwipeWalksTheStopsCardByCardAndStopsAtBothEnds() {
+        var f = new OrderSpace();
+        using var device = new TestDevice(f.Session);
+        var window = device.Open(f.Space, (f.Space, f.P1));
+        Guid[] run = [f.P1, f.P2, f.S2, f.C1, f.A, f.B, f.C2, f.C3, f.C5];
+
+        Assert.Equal(run.Skip(1), Swiping(device, window, f.Space, AdjacentDirection.Next));
+        Assert.Equal(new SwipeNeighborTabs(f.C3, NextTabId: null), device.Query(new SwipeNeighbors(window)));
+        Assert.Equal(run.Reverse().Skip(1), Swiping(device, window, f.Space, AdjacentDirection.Previous));
+        Assert.Equal(new SwipeNeighborTabs(PreviousTabId: null, f.P2), device.Query(new SwipeNeighbors(window)));
+        Assert.Equal(f.Space, device.Space(window));
+
+        device.Send(new ShowTab(window, f.Space, f.C4));
+        Assert.Equal(new SwipeNeighborTabs(f.C3, f.C5), device.Query(new SwipeNeighbors(window)));
     }
 
     /// A step that leads back to the stop the window shows, or starts from no

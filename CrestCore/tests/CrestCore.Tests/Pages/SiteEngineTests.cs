@@ -188,7 +188,7 @@ public sealed partial class BrowserContractsTests {
         app.Send(new Navigate(opened, signIn));
         Assert.Equal(new CheckBeforeUnload(opened), webKitBinding.Commands[^1]);
         app.Report(webKit, new BeforeUnloadAnswered(opened, Proceeds: true));
-        Assert.Equal(new ClosePage(opened, KeepsState: false), webKitBinding.Commands[^1]);
+        Assert.Equal(new ClosePage(opened, KeepsState: true), webKitBinding.Commands[^1]);
         Assert.Equal(opened, Assert.IsType<CreatePage>(chromiumBinding.Commands[^1]).PageId);
 
         // A page the person opens follows the site's choice, as does one whose opener the core no longer hosts.

@@ -14,9 +14,9 @@ struct BrowserInstalledImportSourceGrid: View {
     }
 
     var body: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 20) {
             ForEach(rows, id: \.first?.id) { row in
-                HStack(alignment: .top, spacing: 16) {
+                HStack(alignment: .top, spacing: 20) {
                     ForEach(row) { source in
                         BrowserInstalledImportSourceCard(
                             source: source,
@@ -27,17 +27,16 @@ struct BrowserInstalledImportSourceGrid: View {
                                 toggleSelection(source)
                             }
                         )
-                        .frame(width: 260)
                     }
                 }
-                .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: .infinity, alignment: .center)
             }
         }
-        .frame(maxWidth: 940)
     }
 }
 
+/// One browser as a tile: its icon and name, and what reading it takes once
+/// setup knows.
 private struct BrowserInstalledImportSourceCard: View {
     let source: BrowserInstalledImportSource
     let isSelected: Bool
@@ -47,60 +46,45 @@ private struct BrowserInstalledImportSourceCard: View {
 
     var body: some View {
         Button(action: toggleSelection) {
-            VStack(alignment: .leading, spacing: 14) {
-                HStack {
-                    Image(nsImage: source.icon)
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 54, height: 54)
-                        .accessibilityHidden(true)
-                    Spacer()
-                    if isSelected {
-                        Image(systemName: "checkmark.circle.fill")
-                            .font(.title3)
-                            .foregroundStyle(BrowserOnboardingPalette.coral)
-                            .accessibilityHidden(true)
-                    }
-                }
+            VStack(spacing: 12) {
+                Image(nsImage: source.icon)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 60, height: 60)
+                    .accessibilityHidden(true)
                 Text(source.title)
-                    .font(
-                        BrowserOnboardingTypography.sans(17, weight: .bold)
-                    )
-                    .foregroundStyle(BrowserOnboardingPalette.ink)
-                Text(source.application.description)
-                    .font(
-                        BrowserOnboardingTypography.sans(13, weight: .medium)
-                    )
-                    .foregroundStyle(BrowserOnboardingPalette.inkSoft)
-                    .multilineTextAlignment(.leading)
-                    .lineLimit(3)
-                if let accessLabel {
-                    Text(accessLabel)
-                        .font(
-                            BrowserOnboardingTypography.sans(11, weight: .bold)
-                        )
-                        .foregroundStyle(BrowserOnboardingPalette.coral)
-                }
+                    .font(CrestTypography.sans(15, weight: .semibold))
+                    .foregroundStyle(CrestBrandTheme.textDisplay)
+                    .lineLimit(1)
+                Text(accessLabel ?? "")
+                    .font(CrestTypography.sans(11, weight: .medium))
+                    .foregroundStyle(CrestBrandTheme.textDisplay.opacity(0.6))
+                    .lineLimit(1)
+                    .frame(height: 14)
             }
-            .frame(maxWidth: .infinity, minHeight: 172, maxHeight: .infinity, alignment: .topLeading)
-            .padding(18)
-            .contentShape(.rect)
+            .frame(width: 196, height: 176)
+            .contentShape(.rect(cornerRadius: CrestRadius.card, style: .continuous))
             .background {
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(
-                        isSelected
-                            ? BrowserOnboardingPalette.butter.opacity(0.24)
-                            : BrowserOnboardingPalette.paper
-                    )
+                RoundedRectangle(cornerRadius: CrestRadius.card, style: .continuous)
+                    .fill(CrestBrandPalette.paper.opacity(isSelected ? 0.12 : 0.07))
             }
             .overlay {
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                RoundedRectangle(cornerRadius: CrestRadius.card, style: .continuous)
                     .strokeBorder(
-                        isSelected
-                            ? BrowserOnboardingPalette.ink
-                            : BrowserOnboardingPalette.line,
-                        lineWidth: isSelected ? 1.5 : 0.75
+                        isSelected ? CrestBrandPalette.butter : CrestBrandTheme.line,
+                        lineWidth: isSelected ? 3 : CrestLayout.hairline
                     )
+            }
+            .overlay(alignment: .topTrailing) {
+                if isSelected {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundStyle(CrestBrandPalette.ink)
+                        .frame(width: 22, height: 22)
+                        .background(CrestBrandPalette.butter, in: .circle)
+                        .padding(10)
+                        .accessibilityHidden(true)
+                }
             }
         }
         .buttonStyle(.plain)

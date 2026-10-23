@@ -456,8 +456,44 @@ final class BrowserPeekModelTests: XCTestCase {
         XCTAssertEqual(context.model.page?.profileID, renamedSource.profileID)
     }
 
-    private func makeContext(browsingMode: BrowserBrowsingMode = .privateBrowsing) throws -> PeekTestContext {
-        let source = makeSpace(name: "Source")
+    /// Closing a Peek whose page holds the keyboard gives it back to the tab
+    /// under it, which takes it from the Peek's page as that page leaves. A
+    /// Peek closing while one of Crest's own fields holds the keyboard leaves
+    /// it there.
+    func testClosingPeekReturnsTheKeyboardToTheTabUnderIt() throws {
+        let allowed = BrowserWebFocusRestorationGate(browserChromeOwnsFocus: false, pageChromeOwnsFocus: false)
+        for peekHoldsKeyboard in [true, false] {
+            let context = try makeContext(sourceURL: XCTUnwrap(URL(string: "about:blank#tab")))
+            context.pages.present(tab: context.request.sourceTabID, in: context.source.id)
+            let tabPage = try XCTUnwrap(context.pages.activePage)
+            XCTAssertTrue(context.model.preparePage(isActive: true))
+            let peekPage = try XCTUnwrap(context.model.page)
+            let host = BrowserWebHostView(frame: NSRect(x: 0, y: 0, width: 640, height: 480))
+            let window = NSWindow(contentRect: host.frame, styleMask: [.titled], backing: .buffered, defer: false)
+            window.contentView = host
+            window.makeKeyAndOrderFront(nil)
+            host.attach(tabPage.nativeView, focusRestoration: tabPage.focusRestoration)
+            let field = NSTextField(string: "crest")
+            host.addSubview(peekPage.nativeView)
+            host.addSubview(field)
+            XCTAssertTrue(window.makeFirstResponder(peekHoldsKeyboard ? peekPage.nativeView : field))
+
+            context.model.dismiss()
+            let restored = tabPage.focusRestoration.restoreIfNeeded(
+                in: host, gate: allowed, applicationIsActive: true, accessibilityOwnsFocus: false,
+                menuIsTracking: false, windowIsKey: true)
+
+            XCTAssertEqual(restored, peekHoldsKeyboard)
+            XCTAssertEqual(window.firstResponder === tabPage.nativeView, peekHoldsKeyboard)
+            window.orderOut(nil)
+            host.detach()
+        }
+    }
+
+    private func makeContext(
+        browsingMode: BrowserBrowsingMode = .privateBrowsing, sourceURL: URL? = nil
+    ) throws -> PeekTestContext {
+        let source = makeSpace(name: "Source", url: sourceURL)
         let destination = makeSpace(name: "Destination")
         let sourceTabID = try XCTUnwrap(source.tabs.first?.id)
         let browser = BrowserStore(
@@ -522,8 +558,8 @@ final class BrowserPeekModelTests: XCTestCase {
         }
     }
 
-    private func makeSpace(name: String) -> SpaceState.Seed {
-        let tab = TabState.Seed.startPage()
+    private func makeSpace(name: String, url: URL? = nil) -> SpaceState.Seed {
+        let tab = url.map { TabState.Seed(title: name, url: $0, placement: .current) } ?? .startPage()
         return SpaceState.Seed(
             name: name,
             symbol: "circle",

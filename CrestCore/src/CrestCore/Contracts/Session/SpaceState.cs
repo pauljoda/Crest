@@ -89,6 +89,10 @@ public sealed record SpaceState(
     /// or null; see <see cref="SidebarOutline.Step"/>.</summary>
     public Guid? Step(Guid shownTabId, AdjacentDirection direction) => Sidebar.Step(shownTabId, direction, Folders, Shows);
 
+    /// <summary>The tab a swipe in <paramref name="direction"/> from the shown tab reaches,
+    /// or null at either end; see <see cref="SidebarOutline.Swipe"/>.</summary>
+    public Guid? Swipe(Guid shownTabId, AdjacentDirection direction) => Sidebar.Swipe(shownTabId, direction, Folders, Shows);
+
     /// <summary>The tab "Split With Next Tab" would add to the split of the shown tab
     /// <paramref name="shownTabId"/>: the first tab row after the row that holds it, in
     /// the same list of the sidebar, whose tab is in no split; or null. A Start Page,

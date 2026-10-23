@@ -116,6 +116,21 @@ struct BrowserCommandActions: BrowserNumberedSelectionPerformer {
         quickWindowPage ?? pages.commandPage
     }
 
+    /// The page the window shows: a Quick Window's in front, or else the
+    /// active tab's, even under a Peek. Reader, translation, the inspector,
+    /// content blocking and engine moves act on it.
+    var shownPage: BrowserPage? {
+        quickWindowPage ?? pages.activePage
+    }
+
+    /// The Space of the page the window shows: a Quick Window's own, or else
+    /// the one the browser window shows.
+    var shownPageSpace: SpaceModel? {
+        guard let page = quickWindowPage else { return browser.shownSpace }
+        let assignment = BrowserSpaceRuntimeAssignment(spaceID: page.spaceID, profileID: page.profileID)
+        return browser.spaceModel(matching: assignment)
+    }
+
     /// Whether the page the page commands act on has a search to find again.
     var canFindAgain: Bool {
         commandPageSupports(.find) && commandPage?.canFindAgain == true
@@ -136,16 +151,18 @@ struct BrowserCommandActions: BrowserNumberedSelectionPerformer {
         hasCommandPage && commandPage?.pageEngine.registration.supports(capability) == true
     }
 
+    /// Whether the page the window shows has loaded a document its engine can
+    /// do `capability` for.
     func supportsPageCapability(_ capability: EngineCapability) -> Bool {
-        pages.hasActivePage && pages.activePage?.pageEngine.registration.supports(capability) == true
+        shownPage?.live.documentURL != nil && shownPage?.pageEngine.registration.supports(capability) == true
     }
 
     /// The same question as `supportsPageCapability` for commands that are about
     /// the window rather than the document in it, so they stay available in the
     /// moment before a page exists, when the engine new pages open on answers.
-    /// The active page's own engine answers whenever there is one.
+    /// The shown page's own engine answers whenever there is one.
     func supportsEngineCapability(_ capability: EngineCapability) -> Bool {
-        pages.activePage?.pageEngine.registration.supports(capability)
+        shownPage?.pageEngine.registration.supports(capability)
             ?? browser.core.state.defaultEngineSupports(capability)
     }
 
@@ -221,13 +238,13 @@ struct BrowserCommandActions: BrowserNumberedSelectionPerformer {
 
     var contentBlockingActionTitle: LocalizedStringResource {
         ContentBlockingPolicy.switchTitle(
-            for: browser.shownSpace?.settings.browsingPreferences.contentBlocking)
+            for: shownPageSpace?.settings.browsingPreferences.contentBlocking)
     }
 
     /// The engines the shown page can move to: every registered engine but
     /// its own, so the choice is there before any page opens on the others.
     var pageEngineMoves: [EngineKind] {
-        pages.activePage?.corePage.otherEngines ?? []
+        shownPage?.corePage.otherEngines ?? []
     }
 
     // MARK: - Chrome
@@ -292,13 +309,13 @@ struct BrowserCommandActions: BrowserNumberedSelectionPerformer {
 
     /// Moves the shown page to `engine`, which loads what it showed there.
     func movePage(to engine: EngineKind) {
-        pages.activePage?.corePage.move(to: engine)
+        shownPage?.corePage.move(to: engine)
     }
 
     /// Translates the whole shown page, which its translation toolbar then
     /// follows.
     func translatePage() {
-        pages.activePage?.translation.present()
+        shownPage?.translation.present()
     }
 
     func copyPageLink() {
@@ -311,8 +328,9 @@ struct BrowserCommandActions: BrowserNumberedSelectionPerformer {
         chrome.showURLCopiedFeedback()
     }
 
+    /// Switches content blocking for the Space of the page the window shows.
     func toggleContentBlocking() {
-        guard let space = browser.shownSpace else { return }
+        guard let space = shownPageSpace else { return }
         var preferences = space.settings.browsingPreferences
         preferences.contentBlocking = preferences.contentBlocking.switched
         browser.updateBrowsingPreferences(preferences, in: space.id)

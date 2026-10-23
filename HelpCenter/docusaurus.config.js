@@ -103,7 +103,7 @@ const config = {
           items: [
             {label: 'GitHub Issues', href: 'https://github.com/pauljoda/Crest/issues/new/choose'},
             {label: 'r/CrestBrowser', href: 'https://www.reddit.com/r/CrestBrowser'},
-            {label: 'Discord', href: 'https://discord.gg/SMrnXTujz'},
+            {label: 'Discord', href: 'https://discord.gg/gjrM5qMB6x'},
             {label: 'Support open source software', href: 'https://ko-fi.com/pauljoda/tiers'},
             {label: 'Privacy', href: 'https://crestbrowser.com/privacy/'},
           ],

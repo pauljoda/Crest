@@ -15,6 +15,7 @@ extension EngineCommand {
         case .eraseProfileData(let command): command.perform(on: binding)
         case .eraseSiteData(let command): command.perform(on: binding)
         case .exitPictureInPicture(let command): command.perform(on: binding)
+        case .goToHistoryEntry(let command): command.perform(on: binding)
         case .groupPages:
             // WebKit reports no tab groups, so the core never asks it for one.
             break

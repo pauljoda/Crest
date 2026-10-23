@@ -27,7 +27,7 @@ public sealed record FinishImportCommit(int PasswordCount) : SetupFlowIntent {
         };
         if (queue?.Current is { } next) return done with { Step = SetupStep.ImportBrowser, Phase = SetupPhase.Reading, Source = next };
         if (!flow.Entry.IsGuided) return done with { Step = SetupStep.Complete };
-        device.BeginSetup(flow.WorkspaceId, session, startsOver: false, turn.Changes, turn.Ids);
+        device.BeginSetup(flow.WorkspaceId, session, startsOver: false, flow.Look, turn.Changes, turn.Ids);
         return done with { Step = SetupStep.ManualSetup };
     });
 
