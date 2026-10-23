@@ -295,8 +295,9 @@ engine::ExtensionActionList EngineExtensions::PageActions(content::WebContents* 
 
 // The pinned strip belongs to the Space, not to whatever page is open in it:
 // a Space showing its Start Page still has the extensions the person pinned.
-// Private profiles derive from the engine root, never a Space, so they have
-// no installed Space extensions or pins. The registry belongs to whichever
+// A private profile derives from the Space that lends it its extensions, and
+// shows that Space's pins of the extensions allowed in private browsing; one
+// derived from the engine root has none. The registry belongs to whichever
 // original profile owns this off-the-record profile.
 engine::ExtensionActionList EngineExtensions::Pinned(Profile* profile, const std::string& profile_id) {
   engine::ExtensionActionList list;

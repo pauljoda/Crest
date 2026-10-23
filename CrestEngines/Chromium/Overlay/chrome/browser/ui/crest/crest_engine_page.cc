@@ -190,6 +190,9 @@ EnginePage::EnginePage(EngineBinding& binding, const engine::CreatePage& creatio
       key_(GuidText(creation.page_id)),
       profile_(GuidText(creation.profile_id)),
       is_private_(creation.is_private),
+      extension_profile_(creation.is_private && creation.extension_profile_id
+                             ? GuidText(*creation.extension_profile_id)
+                             : std::string()),
       window_(GuidText(creation.window_id)) {}
 
 EnginePage::~EnginePage() {

@@ -4317,6 +4317,10 @@
     "appearance-light-dark-follow-system": {
       "category": "new",
       "message": "Keep Crest light or dark, or let it follow macOS, in Settings › Appearance. Spaces can also dim their colors in dark."
+    },
+    "private-window-extensions": {
+      "category": "fixed",
+      "message": "Extensions you allow in private browsing now run in the private window, using those of the Space it was opened from."
     }
   }
 }

@@ -143,6 +143,9 @@ final class BrowserMacWindows {
     init(application: BrowserMacApplication, engineHost: any BrowserMacEngineHost) {
         self.application = application
         self.engineHost = engineHost
+        application.pagePoolRegistry.releaseBorrowers = { [weak self] space in
+            self?.closePrivateWindow(borrowing: space)
+        }
     }
 
     // MARK: - Actions - Lookup
@@ -272,8 +275,14 @@ final class BrowserMacWindows {
 
     // MARK: - Actions - Private window
 
-    func openPrivateWindow() {
+    /// Opens the private window, or brings forward the one already open. A
+    /// new one runs the extensions `space` allows in private browsing, or with
+    /// none named, those of the Space the person's windows last showed, and
+    /// keeps them until it closes.
+    func openPrivateWindow(lendingExtensionsOf space: BrowserSpaceIdentity? = nil) {
         guard !bringForwardOpenWindow(of: .private) else { return }
+        let browser = application.browser
+        application.lendPrivateExtensions(from: space ?? browser.spaceModel(browser.selectedSpaceID)?.identity)
         let privatePages = application.privatePages
         // A Quick Window the private window's pages open, such as a sign-in
         // popup, finds its page and workspace through the registry.
@@ -296,6 +305,14 @@ final class BrowserMacWindows {
         application.pagePoolRegistry.unregister(application.privatePages, for: controller.windowID)
         application.closePrivateBrowsingWindow()
         engineHost.windowClosed(controller.windowID, releasingProfiles: profiles)
+    }
+
+    /// Closes the private window without asking when it runs the extensions
+    /// of `space`, whose profile is going, as Chrome closes the incognito
+    /// windows of a profile it deletes.
+    private func closePrivateWindow(borrowing space: BrowserSpaceRuntimeAssignment) {
+        guard application.privateExtensionLender?.id == space.spaceID else { return }
+        controller(.private)?.window.closeAfterApproval()
     }
 
     // MARK: - Actions - Quick Windows

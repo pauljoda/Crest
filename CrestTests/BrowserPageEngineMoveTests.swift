@@ -34,7 +34,7 @@ final class BrowserPageEngineMoveTests: XCTestCase {
             .createPage(
                 CreatePage(
                     pageID: corePage.id, profileID: space.profileID, isPrivate: false, windowID: browser.windowID,
-                    restoreState: nil)),
+                    restoreState: nil, extensionProfileID: nil)),
             on: .webKit)
         let movedView = try XCTUnwrap(page.webKitView)
         XCTAssertFalse(movedView === leftView)

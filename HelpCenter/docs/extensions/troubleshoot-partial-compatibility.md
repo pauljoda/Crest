@@ -25,7 +25,7 @@ Choose **Manage Extension…** from the extension's action menu to open Chromium
 
 ## In a private window
 
-Private windows use a fresh profile and do not inherit a Space's installed extensions. You cannot install or remove extensions there. Test the extension in its normal Space instead; enabling Chrome's incognito option does not copy it into Crest's separate private profile.
+A private window runs the extensions of the Space it was opened from, but only those you allow in private browsing. Choose **Manage Extension…** from the extension's action menu and turn on **Allow in Incognito** in that Space. The window keeps that Space's extensions until you close it. You cannot install or remove extensions from a private window.
 
 ## Password managers and companion apps
 

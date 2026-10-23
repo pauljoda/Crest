@@ -147,6 +147,10 @@
 
         static var extensionSpaces: [BrowserSpaceIdentity] { shell?.application?.extensionSpaces ?? [] }
 
+        /// The Space whose extensions allowed in private browsing the private
+        /// window runs, or nil for none.
+        static var privateExtensionLender: BrowserSpaceIdentity? { shell?.application?.privateExtensionLender }
+
         /// The Space whose profile is `profileID`, when its extensions may act.
         static func extensionSpace(forProfile profileID: UUID) -> BrowserSpaceIdentity? {
             extensionSpaces.first { $0.profileID == profileID }

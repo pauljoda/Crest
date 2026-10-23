@@ -191,7 +191,7 @@ struct BrowserCommandActions: BrowserNumberedSelectionPerformer {
     }
 
     func openPrivateWindow() {
-        windows?.openPrivateWindow()
+        windows?.openPrivateWindow(lendingExtensionsOf: browser.isPrivateBrowsing ? nil : browser.shownSpace?.identity)
     }
 
     func openQuickWindow() {

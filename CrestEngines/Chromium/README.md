@@ -445,12 +445,16 @@ choice do not apply. A build without the entitlement, such as the review package
 Chromium's own sheet, so passkeys there are not a test of Crest's behaviour.
 
 A private window works like incognito. Its pages use an off-the-record
-profile that is new each time private browsing opens, is always derived from
-the engine's own startup profile, which no Space owns and no page browses in,
-and is destroyed when the window closes, with every page, popup, Quick Window
-and Peek in it. No extension a person installed runs in a private window: the
-host patch reports every extension outside Chromium's own components as not
-allowed in private browsing, whatever its setting.
+profile that is new each time private browsing opens and is destroyed when the
+window closes, with every page, popup, Quick Window and Peek in it. The window
+borrows the extensions of the Space showing where it was first opened: the
+core records that Space as the private workspace's lender, page creation
+carries its engine profile, and the off-the-record profile is derived from it,
+so the extensions that Space allows in private browsing run there, as
+incognito extensions do in Chrome. Without a lender, or once the lending Space
+is locked or being deleted, the profile is derived from the engine's own
+startup profile, which no Space owns and which has no extensions. Deleting the
+lending Space closes the private window.
 
 A browsing window the engine creates for itself, such as one from
 `chrome.windows.create` or an extension app window, routes to a Crest window. Crest reserves the window when

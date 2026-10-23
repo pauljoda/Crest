@@ -85,7 +85,8 @@ public sealed record PageOffered(Guid OfferId, Guid ProfileId, Guid? SourcePageI
         pages.Add(page);
         turn.Changes.Publish(new PageOpened(page.State));
         turn.Changes.Publish(new OfferedPageAdopted(page.Id, workspaceId, windowId, space.Id, tabId, Foreground));
-        turn.Issue(engine, new AdoptOfferedPage(page.Id, OfferId, page.ProfileId, workspace.IsPrivateBrowsing, windowId));
+        turn.Issue(engine, new AdoptOfferedPage(page.Id, OfferId, page.ProfileId, workspace.IsPrivateBrowsing, windowId,
+            workspace.ExtensionProfileId));
         return true;
     }
 
@@ -101,7 +102,8 @@ public sealed record PageOffered(Guid OfferId, Guid ProfileId, Guid? SourcePageI
         pages.Add(page);
         turn.Changes.Publish(new PageOpened(page.State));
         turn.Changes.Publish(new OfferedWindowAdopted(page.Id, source.Id, source.WorkspaceId, source.WindowId, space.Id, Url));
-        turn.Issue(engine, new AdoptOfferedPage(page.Id, OfferId, page.ProfileId, workspace.IsPrivateBrowsing, source.WindowId));
+        turn.Issue(engine, new AdoptOfferedPage(page.Id, OfferId, page.ProfileId, workspace.IsPrivateBrowsing, source.WindowId,
+            workspace.ExtensionProfileId));
         return true;
     }
 

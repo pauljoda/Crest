@@ -9,11 +9,12 @@ public abstract record EngineCommand;
 
 /// Makes the page the engine offered as `OfferId` the page `PageId` names,
 /// which the core opened for a tab, in the profile `ProfileId` names and the
-/// window `WindowId` names. A private page keeps nothing once it closes. The
-/// binding answers with `PageCreated`, or `PageCreationFailed` when the offer
-/// is gone.
-public sealed record AdoptOfferedPage(Guid PageId, Guid OfferId, Guid ProfileId, bool IsPrivate, Guid WindowId)
-    : EngineCommand;
+/// window `WindowId` names. A private page keeps nothing once it closes, and
+/// runs the extensions `ExtensionProfileId` allows in private browsing, as
+/// `CreatePage` does. The binding answers with `PageCreated`, or
+/// `PageCreationFailed` when the offer is gone.
+public sealed record AdoptOfferedPage(Guid PageId, Guid OfferId, Guid ProfileId, bool IsPrivate, Guid WindowId,
+    Guid? ExtensionProfileId = null) : EngineCommand;
 
 /// Closes the engine's page for a page its owner released. `KeepsState` says
 /// the owner kept what it needs to bring the page back later, so the page was
@@ -22,13 +23,17 @@ public sealed record ClosePage(Guid PageId, bool KeepsState) : EngineCommand;
 
 /// Creates the engine's page for a page the core opened, in the profile of the
 /// page's Space, hosted by the window `WindowId` names. A private page keeps
-/// nothing once it closes, and shares nothing with any other Space: its
-/// profile is new each time private browsing opens. `RestoreState` is what an
-/// earlier page of the same tab kept, which the new page restores instead of
-/// loading anew. The binding answers with `PageCreated` or
-/// `PageCreationFailed`.
-public sealed record CreatePage(Guid PageId, Guid ProfileId, bool IsPrivate, Guid WindowId, PageRestoreState? RestoreState)
-    : EngineCommand;
+/// nothing once it closes, and shares no cookies, storage or history with any
+/// other Space: its profile is new each time private browsing opens. With
+/// `ExtensionProfileId`, a Space's regular profile, that private profile
+/// derives from it and runs the extensions it allows in private browsing;
+/// without, it derives from the engine's own profile and runs none. A private
+/// profile keeps what it derived from until private browsing starts over.
+/// `RestoreState` is what an earlier page of the same tab kept, which the new
+/// page restores instead of loading anew. The binding answers with
+/// `PageCreated` or `PageCreationFailed`.
+public sealed record CreatePage(Guid PageId, Guid ProfileId, bool IsPrivate, Guid WindowId, PageRestoreState? RestoreState,
+    Guid? ExtensionProfileId = null) : EngineCommand;
 
 /// Ends the Picture in Picture of a page a window shows again, or of one whose
 /// Space this process may not show, returning its video to its place in the

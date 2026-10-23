@@ -93,6 +93,9 @@ class EnginePage final : public content::WebContentsObserver,
   const std::string& key() const { return key_; }
   const std::string& profile() const { return profile_; }
   bool is_private() const { return is_private_; }
+  // The Space profile a private page's profile derives from, whose extensions
+  // it runs where they are allowed in private browsing; empty for none.
+  const std::string& extension_profile() const { return extension_profile_; }
   // The Crest window whose Browser holds the page.
   const std::string& window() const { return window_; }
   void set_window(std::string window) { window_ = std::move(window); }
@@ -322,6 +325,7 @@ class EnginePage final : public content::WebContentsObserver,
   const std::string key_;
   const std::string profile_;
   const bool is_private_;
+  const std::string extension_profile_;
   std::string window_;
   Phase phase_ = Phase::kCreating;
   // Primary main-frame navigations to a new document started, and main-frame

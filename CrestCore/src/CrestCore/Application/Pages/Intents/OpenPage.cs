@@ -41,7 +41,8 @@ public sealed record OpenPage(Guid PageId, Guid WorkspaceId, Guid SpaceId, Guid?
         if (restore is not null) page.Restoring(restore.Url);
         if (history is { } resumed) page.Resume(resumed.History, restores: restore is not null || resumed.Archived);
         turn.Changes.Publish(new PageOpened(page.State));
-        turn.Issue(engine, new CreatePage(page.Id, page.ProfileId, workspace.IsPrivateBrowsing, page.WindowId, restore));
+        turn.Issue(engine, new CreatePage(page.Id, page.ProfileId, workspace.IsPrivateBrowsing, page.WindowId, restore,
+            workspace.ExtensionProfileId));
     }
 
     #endregion
