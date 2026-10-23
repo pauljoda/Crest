@@ -223,6 +223,39 @@ final class BrowserChromeLayoutTests: XCTestCase {
         XCTAssertEqual(reports, [false, false])
     }
 
+    /// The edge strip reappears under a pointer that is still resting where
+    /// the sidebar just hid, as Universal Control leaves it after crossing to
+    /// another Mac. Only a pointer that moves onto the strip reveals it again.
+    @MainActor
+    func testCollapsedSidebarEdgeRevealsOnlyForAPointerThatMoves() throws {
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 800, height: 600),
+            styleMask: [.titled], backing: .buffered, defer: true
+        )
+        var pointer = NSPoint(x: 0, y: 300)
+        var reports: [Bool] = []
+        let edge = BrowserCollapsedSidebarHoverTrackingView(
+            pointerLocation: { pointer },
+            onHoverChange: { reports.append($0) }
+        )
+        edge.frame = NSRect(x: 0, y: 0, width: 6, height: 600)
+        window.contentView?.addSubview(edge)
+        let event = try XCTUnwrap(
+            NSEvent.mouseEvent(
+                with: .mouseMoved, location: pointer, modifierFlags: [], timestamp: 0,
+                windowNumber: window.windowNumber, context: nil, eventNumber: 0, clickCount: 0, pressure: 0
+            )
+        )
+
+        edge.mouseEntered(with: event)
+        edge.mouseMoved(with: event)
+        XCTAssertEqual(reports, [])
+
+        pointer.y += 1
+        edge.mouseMoved(with: event)
+        XCTAssertEqual(reports, [true])
+    }
+
     func testSidebarAuxiliaryMouseButtonsSwitchSpacesWithoutClaimingOtherButtons() {
         XCTAssertEqual(
             BrowserSidebarMouseButtonAction(buttonNumber: 3),

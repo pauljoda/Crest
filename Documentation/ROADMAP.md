@@ -169,6 +169,7 @@ the live status for each issue.
 - [ ] [Remove the blank space at the bottom of the iPad layout](https://github.com/pauljoda/Crest/issues/548)
 - [ ] [Keep a Quick Window from another app clear of a new tab's keyboard on iPhone](https://github.com/pauljoda/Crest/issues/563)
 - [ ] [Say so when a link from another app needs a locked Space](https://github.com/pauljoda/Crest/issues/564)
+- [ ] [Show what coding agents do in Crest and stop them all at once](https://github.com/pauljoda/Crest/issues/609)
 
 #### Completed
 
