@@ -135,7 +135,9 @@ extension BrowserMacAgents {
         } catch {
             throw .rejected(error)
         }
-        return .data(HistoryDeletionReceipt(space: current.id, removed: before - current.history.entries.count))
+        let removed = before - current.history.entries.count
+        if removed > 0 { note(.deletedHistory, address, call) }
+        return .data(HistoryDeletionReceipt(space: current.id, removed: removed))
     }
 
     // MARK: - Actions - Spaces

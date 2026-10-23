@@ -404,6 +404,7 @@ extension BrowserMacAgents {
             guard
                 let evaluated = await page.enginePage.evaluate(script.function, in: .page, timeout: Self.scriptTimeout)
             else { throw .timedOut }
+            self.note(.ranScript, page.live.url ?? "", call)
             if let error = evaluated.error { throw .script(error) }
             return .message(evaluated.json ?? "null")
         }

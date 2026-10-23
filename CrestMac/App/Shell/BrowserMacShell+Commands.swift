@@ -139,6 +139,16 @@ extension BrowserMacShell {
         application?.openSettings(in: context.windowID)
     }
 
+    /// Whether any agent is connected now.
+    var hasConnectedAgents: Bool {
+        application?.browser.core.state.agentSessions.isEmpty == false
+    }
+
+    /// Stops every agent at once.
+    func stopAllAgents() {
+        _ = try? application?.browser.core.send(StopAllAgents())
+    }
+
     /// Opens Getting Started in the browser window the person is using,
     /// opening one only when none is open.
     func openGettingStarted() {

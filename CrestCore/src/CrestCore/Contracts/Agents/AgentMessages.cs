@@ -40,18 +40,24 @@ public sealed record AgentTab(Guid TabId, string Title, string? Url, TabPlacemen
 #region Sessions
 
 /// An agent connected now: who macOS says it is, the name and colour it goes
-/// by, and the tabs it uses.
+/// by, the tabs it uses, and what it did that changed the person's browser,
+/// oldest first.
 public sealed record AgentSessionState(Guid SessionId, AgentIdentity Identity, string Name, BrandColor? Color,
-    IReadOnlyList<Guid> TabIds) {
+    IReadOnlyList<Guid> TabIds, IReadOnlyList<AgentActivity> Activity) {
     #region Actions - Equality
 
     public bool Equals(AgentSessionState? other) => other is not null && SessionId == other.SessionId
-        && Identity == other.Identity && Name == other.Name && Color == other.Color && TabIds.SequenceEqual(other.TabIds);
+        && Identity == other.Identity && Name == other.Name && Color == other.Color && TabIds.SequenceEqual(other.TabIds)
+        && Activity.SequenceEqual(other.Activity);
 
     public override int GetHashCode() => HashCode.Combine(SessionId, Name, TabIds.Count);
 
     #endregion
 }
+
+/// One thing an agent did that changed the person's browser: what, what it
+/// was about, such as an address or a tab's name, and when.
+public sealed record AgentActivity(AgentActivityKind Kind, string Subject, DateTimeOffset At);
 
 #endregion
 

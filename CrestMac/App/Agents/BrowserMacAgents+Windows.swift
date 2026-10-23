@@ -45,6 +45,7 @@ extension BrowserMacAgents {
         if let url, application.privateBrowser.openNewTab(url: url) == nil {
             throw .refused("Crest could not open the private address.")
         }
+        note(.openedPrivateWindow, url?.absoluteString ?? "", call)
         return .data(PrivateReceipt(windowID: application.privatePages.windowID))
     }
 
@@ -62,6 +63,7 @@ extension BrowserMacAgents {
             tabID = opened
         }
         bringForward(window)
+        note(.openedWindow, url?.absoluteString ?? "", call)
         return .data(WindowReceipt(windowID: window.id, spaceID: space.id, tabID: tabID))
     }
 
@@ -74,6 +76,7 @@ extension BrowserMacAgents {
         windows.open(request, activation: .key)
         guard let window = application.windowCoordinator.existingModel(for: request.id) else { throw .noWindow }
         bringForward(window)
+        note(.openedWindow, "", call)
         return .data(WindowReceipt(windowID: window.id, spaceID: space.id, tabID: nil))
     }
 
@@ -88,6 +91,7 @@ extension BrowserMacAgents {
         guard let windowID = windows.openQuickWindow(request), windows.quickWindow(windowID) != nil else {
             throw .noWindow
         }
+        note(.openedWindow, url.absoluteString, call)
         return .data(WindowReceipt(windowID: windowID, spaceID: space.id, tabID: nil))
     }
 

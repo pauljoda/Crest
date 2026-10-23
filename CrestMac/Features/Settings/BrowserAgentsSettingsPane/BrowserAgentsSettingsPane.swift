@@ -27,6 +27,14 @@ struct BrowserAgentsSettingsPane: View {
         }
     }
 
+    // MARK: - Static Variables
+
+    /// How much of each connected agent's activity shows, the latest, and how
+    /// its rows sit under the agent's.
+    static let shownActivity = 5
+    static let activitySymbolWidth: CGFloat = 18
+    static let activityIndent: CGFloat = 24
+
     // MARK: - Variables
 
     let core: CrestCore
@@ -84,12 +92,24 @@ struct BrowserAgentsSettingsPane: View {
             }
             .disabled(!preferences.isOn)
             if !core.state.agentSessions.isEmpty {
-                Section("Connected") {
+                Section {
                     ForEach(core.state.agentSessions, id: \.sessionID) { session in
                         BrowserAgentRow(name: session.name, detail: nil, color: session.color ?? .agentDefault) {
                             Button("Disconnect") { send(EndAgentSession(sessionID: session.sessionID)) }
                         }
+                        ForEach(
+                            Array(session.activity.suffix(Self.shownActivity).reversed().enumerated()), id: \.offset
+                        ) {
+                            _, activity in
+                            BrowserAgentActivityRow(activity: activity)
+                        }
                     }
+                    Button("Stop All Agents") { send(StopAllAgents()) }
+                } header: {
+                    Text("Connected")
+                } footer: {
+                    CrestFormFootnote(
+                        "Stopping every agent disconnects it and keeps it out of the tabs it used until Crest quits.")
                 }
             }
             Section {
@@ -179,6 +199,37 @@ struct BrowserAgentsSettingsPane: View {
 
 /// An agent: its name, what tells it apart, the colour it wears while
 /// connected, and what the person can do about it.
+/// One thing a connected agent did, newest first under its row: what, what
+/// about, and when.
+private struct BrowserAgentActivityRow: View {
+    let activity: AgentActivity
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline) {
+            Image(systemName: activity.kind.symbol)
+                .foregroundStyle(.secondary)
+                .frame(width: BrowserAgentsSettingsPane.activitySymbolWidth)
+                .accessibilityHidden(true)
+            VStack(alignment: .leading) {
+                Text(activity.kind.title)
+                if !activity.subject.isEmpty {
+                    Text(verbatim: activity.subject)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                }
+            }
+            Spacer()
+            Text(activity.at, format: .dateTime.hour().minute())
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .padding(.leading, BrowserAgentsSettingsPane.activityIndent)
+        .accessibilityElement(children: .combine)
+    }
+}
+
 private struct BrowserAgentRow<Action: View>: View {
     let name: String
     let detail: String?

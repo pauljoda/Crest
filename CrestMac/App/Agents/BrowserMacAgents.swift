@@ -164,6 +164,14 @@ final class BrowserMacAgents {
         approvals.dismissAll()
     }
 
+    // MARK: - Actions - Activity
+
+    /// Keeps that the agent behind `call` did `kind` about `subject`, which
+    /// Settings › Agents lists under it while it stays connected.
+    func note(_ kind: AgentActivityKind, _ subject: String, _ call: BrowserAgentCall) {
+        _ = try? core.send(NoteAgentActivity(sessionID: call.sessionID, kind: kind, subject: subject))
+    }
+
     // MARK: - Actions - Connections
 
     private func admit(_ connection: BrowserAgentConnection) {
