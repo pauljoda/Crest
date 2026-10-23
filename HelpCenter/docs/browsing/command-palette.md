@@ -19,19 +19,17 @@ Before you type, the palette shows **Recent Tabs**, the tabs you used most recen
 
 ## Complete addresses
 
-As you type the start of a site you've typed or opened before, or one a tab shows, the palette fills in the rest of its address in gray. It completes the site name, without `www.`, and once you type a `/`, the next part of the path. **Return** opens what the field shows. Press **Right Arrow** or **End** to accept the completion and keep typing. **Tab** also accepts it when **Tab selects a search provider** is on. Press **Escape** or **Delete** to reject it, which makes **Return** run what you typed.
+As you type the start of a site you've typed or opened before, or one a tab shows, the palette fills in the rest of its address in gray. It completes the site name, without `www.`, and once you type a `/`, the next part of the path. **Return** opens what the field shows. Press **Tab**, **Right Arrow**, or **End** to accept the completion and keep typing, or **Escape** or **Delete** to reject it, which makes **Return** run what you typed.
 
 ## Search a site or ask an assistant
 
-Type a provider's shortcut, such as **g** for Google, **ddg** for DuckDuckGo, **yt** for YouTube, **w** for Wikipedia, or **claude**, and press **Tab**. While you type the first word, every provider it names or starts to name shows as a chip under the field, with its shortcut; the first is the one **Tab** chooses, and you can click any of them. Once a provider is chosen, a chip with its icon and color appears beside the field. Type your search and press **Return** to search that provider, or to ask an AI assistant. When what you typed is exactly a shortcut, **Tab** chooses the provider even while the field completes an address. Type `$` before a shortcut, such as `$yt`, and a space to choose the provider without pressing **Tab**. Its suggestions, where it offers them, come only from that provider. Press **Escape**, **Delete** in an empty field, or the chip's close control to leave and keep your text.
-
-**Settings → Search** has two independent controls. **Tab selects a search provider** lets Tab enter providers and accept completions; turn it off to cycle suggestions with Tab. **Space selects a provider** offers **Off**, **Require $ before shortcut** (type `$yt`, then Space), or **Shortcut without $** (type `yt`, then Space). The last option also accepts `$yt`. Existing settings keep their previous Space behavior.
+Type a provider's shortcut, such as **g** for Google, **ddg** for DuckDuckGo, **yt** for YouTube, **w** for Wikipedia, or **claude**, and press **Tab**. While you type the first word, every provider it names or starts to name shows as a chip under the field, with its shortcut; the first is the one **Tab** chooses, and you can click any of them. Once a provider is chosen, a chip with its icon and color appears beside the field. Type your search and press **Return** to search that provider, or to ask an AI assistant. When what you typed is exactly a shortcut, **Tab** chooses the provider even while the field completes an address. Type `$` before a shortcut, such as `$yt`, and a space to choose the provider without pressing **Tab**. **Space to search providers** in **Settings → Search** turns this off, or lets a shortcut alone, such as `yt`, and a space choose the provider too. Its suggestions, where it offers them, come only from that provider. Press **Escape**, **Delete** in an empty field, or the chip's close control to leave and keep your text.
 
 Crest offers search engines such as Google, DuckDuckGo, Bing, Brave Search and Startpage; AI assistants such as ChatGPT, Claude and Perplexity; and websites such as YouTube, Wikipedia, GitHub, Reddit and Amazon. Turn providers on or off, change their shortcuts, set their options, choose your default search and the one private windows use, and add your own in **Settings → Search**. Search providers stay on this device.
 
 ## Narrow to one kind of result
 
-Type `@tabs`, `@history`, `@saved`, `@actions`, or `@spaces` and press **Space**, or **Tab** when provider entry is on, to list every match of that kind and nothing else. Leave the same way you leave a provider. Turn these off with **@ Filters** in **Settings → Search**.
+Type `@tabs`, `@history`, `@saved`, `@actions`, or `@spaces` and press **Space** or **Tab** to list every match of that kind and nothing else. Leave the same way you leave a provider. Turn these off with **@ Filters** in **Settings → Search**.
 
 ## Run commands by name
 
@@ -42,7 +40,7 @@ Type arithmetic such as `24 * 7` to see the answer; **Return** copies it.
 ## Keyboard
 
 - **Up** and **Down** arrows, or **Control-N** and **Control-P**, move the selection; **Option-Up** and **Option-Down** jump between sections.
-- **Tab** chooses a provider or scope, accepts a completion, or moves to the next result when **Tab selects a search provider** is on. When off, it always moves to the next result. **Shift-Tab** moves back.
+- **Tab** chooses the provider whose shortcut you typed, accepts a completion, or moves to the next result. **Shift-Tab** moves back.
 - **Return** runs the selected result. Hold **Command** to open it in a background tab, **Shift-Command** for a new tab, **Shift** for Split View, or **Option** for a Quick Window; the selected row shows where it will open while you hold the keys.
 - **Shift-Delete** on a history result removes it from history, and on a result the palette learned, forgets it.
 - **Escape** leaves a provider or scope, then rejects a completion, then closes the palette.

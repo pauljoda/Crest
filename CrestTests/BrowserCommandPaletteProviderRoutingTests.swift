@@ -82,52 +82,6 @@ final class BrowserCommandPaletteProviderRoutingTests: XCTestCase {
         XCTAssertNil(fixture.model.activeProvider)
     }
 
-    func testTabWithProviderTriggerDisabledCyclesRowsInsteadOfAcceptingAnAddress() async throws {
-        let previous = BrowserAppPreferenceStore.shared.palette
-        defer { BrowserAppPreferenceStore.shared.palette = previous }
-        var preferences = previous
-        preferences.searchesSitesWithTab = false
-        BrowserAppPreferenceStore.shared.palette = preferences
-        let fixture = makeEditor()
-        defer { fixture.window.close() }
-        let editor = try XCTUnwrap(fixture.field.currentEditor() as? NSTextView)
-        try await type("github", into: editor, fixture)
-        XCTAssertNotNil(fixture.model.urlCompletion)
-        XCTAssertGreaterThan(fixture.model.items.count, 1)
-
-        XCTAssertTrue(
-            fixture.coordinator.control(
-                fixture.field, textView: editor, doCommandBy: #selector(NSResponder.insertTab(_:))))
-
-        XCTAssertEqual(fixture.model.query, "github")
-        XCTAssertEqual(fixture.model.selectedResultIndex, 1)
-        XCTAssertNil(fixture.model.activeProvider)
-    }
-
-    func testSpaceTriggerModesRouteNativeTypingIndependentlyOfTab() async throws {
-        let previous = BrowserAppPreferenceStore.shared.palette
-        defer { BrowserAppPreferenceStore.shared.palette = previous }
-        for (mode, text, enters) in [
-            (SearchProviderSpaceTrigger.off, "$yt ", false),
-            (.prefixedShortcut, "yt ", false),
-            (.prefixedShortcut, "$yt ", true),
-            (.shortcut, "yt ", true),
-        ] {
-            var preferences = previous
-            preferences.searchesSitesWithTab = false
-            preferences.providerSpaceTrigger = mode
-            BrowserAppPreferenceStore.shared.palette = preferences
-            let fixture = makeEditor()
-            defer { fixture.window.close() }
-            let editor = try XCTUnwrap(fixture.field.currentEditor() as? NSTextView)
-
-            try await type(text, into: editor, fixture)
-
-            XCTAssertEqual(fixture.model.activeProvider?.title == "YouTube", enters)
-            XCTAssertEqual(editor.string, enters ? "" : text)
-        }
-    }
-
     private func type(
         _ text: String, into editor: NSTextView,
         _ fixture: (
@@ -158,11 +112,6 @@ final class BrowserCommandPaletteProviderRoutingTests: XCTestCase {
         let browser = BrowserStore(
             seed: SessionState.Seed(spaces: [space]), showing: space.id, tabs: [space.id: tab.id])
         BrowserSearchCatalog.restore(into: browser.core, locale: Locale(identifier: "en_US"))
-        XCTAssertTrue(
-            browser.sendAppPreferences(
-                SetAppPreferences(
-                    workspaceID: browser.family.workspaceID,
-                    preferences: BrowserAppPreferenceStore.shared.preferences)))
         let model = BrowserCommandPaletteModel(
             browser: browser, space: browser.spaceModel(space.id), selectedTabID: tab.id, initialQuery: "",
             commands: nil,

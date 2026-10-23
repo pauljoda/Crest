@@ -1878,6 +1878,9 @@
     "AFTER" : {
 
     },
+    "After $ and a shortcut" : {
+
+    },
     "After 1 Hour" : {
 
     },
@@ -1894,6 +1897,9 @@
 
     },
     "After 30 Days" : {
+
+    },
+    "After a shortcut" : {
 
     },
     "After closing" : {
@@ -12464,6 +12470,9 @@
         }
       }
     },
+    "Space always types a space." : {
+
+    },
     "Space appearance" : {
       "localizations" : {
         "ar" : {
@@ -12519,6 +12528,9 @@
 
     },
     "Space Skipped" : {
+
+    },
+    "Space to search providers" : {
 
     },
     "Space Unavailable" : {
@@ -14414,10 +14426,16 @@
     "Type @tabs, @saved, @history, @actions or @spaces, then a space or Tab, to show only that kind." : {
 
     },
-    "Type a provider’s name or shortcut and press Tab, or type $ and its shortcut, then a space." : {
+    "Type $yt and a space to search YouTube." : {
+
+    },
+    "Type a provider’s name or shortcut and press Tab." : {
 
     },
     "Type Shortcut" : {
+
+    },
+    "Type yt or $yt and a space to search YouTube." : {
 
     },
     "Typing" : {
@@ -15366,39 +15384,6 @@
           }
         }
       }
-    },
-    "Tab selects a search provider" : {
-
-    },
-    "When off, Tab cycles suggestions." : {
-
-    },
-    "Space selects a provider" : {
-
-    },
-    "Space keeps typing normally." : {
-
-    },
-    "Require $ before shortcut" : {
-
-    },
-    "Example: $yt, then Space" : {
-
-    },
-    "Shortcut without $" : {
-
-    },
-    "Example: yt, then Space" : {
-
-    },
-    "Right Arrow" : {
-
-    },
-    "Accept URL completion (Right Arrow)" : {
-
-    },
-    "Fills the address without opening it. Press Right Arrow to accept." : {
-
     }
   },
   "version" : "1.3"

@@ -5,23 +5,28 @@ namespace CrestCore.Contracts;
 public sealed class SearchProviderSpaceTrigger {
     #region Static Variables
 
-    public static readonly SearchProviderSpaceTrigger Off = new("off", "Off", "Space keeps typing normally.", false, false);
-    public static readonly SearchProviderSpaceTrigger PrefixedShortcut = new("prefixedShortcut", "Require $ before shortcut",
-        "Example: $yt, then Space", true, true);
-    public static readonly SearchProviderSpaceTrigger Shortcut = new("shortcut", "Shortcut without $",
-        "Example: yt, then Space", true, false);
+    public static readonly SearchProviderSpaceTrigger Off = new("off", "Off", "Space always types a space.", false, false);
+    public static readonly SearchProviderSpaceTrigger PrefixedShortcut = new("prefixedShortcut", "After $ and a shortcut",
+        "Type $yt and a space to search YouTube.", true, true);
+    public static readonly SearchProviderSpaceTrigger Shortcut = new("shortcut", "After a shortcut",
+        "Type yt or $yt and a space to search YouTube.", true, false);
     public static IReadOnlyList<SearchProviderSpaceTrigger> All { get; } = [Off, PrefixedShortcut, Shortcut];
 
     #endregion
 
     #region Variables
 
+    /// The stored name, which never changes.
     public string Name { get; }
+    /// The choice as Settings lists it.
     [Localized]
     public string Title { get; }
+    /// What a person types for it, shown under the choice.
     [Localized]
     public string Example { get; }
+    /// Whether Space enters a provider at all.
     public bool IsEnabled { get; }
+    /// Whether the shortcut needs the provider sign before it.
     public bool RequiresPrefix { get; }
 
     #endregion

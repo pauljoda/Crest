@@ -1,7 +1,8 @@
 import SwiftUI
 
 /// The search every Space follows unless it chose its own, the one private
-/// windows follow, suggestions, and the independent Tab and Space provider triggers.
+/// windows follow, whether the default suggests searches, and whether Tab
+/// or Space after a shortcut searches its provider.
 struct BrowserDefaultSearchSettingsSection: View {
     // MARK: - Variables
 
@@ -57,18 +58,20 @@ struct BrowserDefaultSearchSettingsSection: View {
                 .accessibilityIdentifier("default-search-suggestions")
 
             Toggle(isOn: $preferences.palette.searchesSitesWithTab) {
-                Text("Tab selects a search provider")
-                Text("When off, Tab cycles suggestions.")
+                Text("Tab to search providers")
+                Text("Type a provider’s name or shortcut and press Tab.")
             }
             .accessibilityIdentifier("palette-tab-to-search")
 
-            Picker("Space selects a provider", selection: $preferences.palette.providerSpaceTrigger) {
+            Picker(selection: $preferences.palette.providerSpaceTrigger) {
                 ForEach(SearchProviderSpaceTrigger.all, id: \.self) { trigger in
                     Text(trigger.title).tag(trigger)
                 }
+            } label: {
+                Text("Space to search providers")
+                Text(preferences.palette.providerSpaceTrigger.example)
             }
             .accessibilityIdentifier("palette-space-to-search")
-            Text(preferences.palette.providerSpaceTrigger.example).crestFormFootnote()
         } header: {
             Text("Search")
         } footer: {

@@ -16984,23 +16984,23 @@ struct SearchProviderSpaceTrigger: Hashable, Sendable {
         tag: 0,
         name: "off",
         title: LocalizedStringResource("Off"),
-        example: LocalizedStringResource("Space keeps typing normally."),
+        example: LocalizedStringResource("Space always types a space."),
         isEnabled: false,
         requiresPrefix: false
     )
     static let prefixedShortcut = SearchProviderSpaceTrigger(
         tag: 1,
         name: "prefixedShortcut",
-        title: LocalizedStringResource("Require $ before shortcut"),
-        example: LocalizedStringResource("Example: $yt, then Space"),
+        title: LocalizedStringResource("After $ and a shortcut"),
+        example: LocalizedStringResource("Type $yt and a space to search YouTube."),
         isEnabled: true,
         requiresPrefix: true
     )
     static let shortcut = SearchProviderSpaceTrigger(
         tag: 2,
         name: "shortcut",
-        title: LocalizedStringResource("Shortcut without $"),
-        example: LocalizedStringResource("Example: yt, then Space"),
+        title: LocalizedStringResource("After a shortcut"),
+        example: LocalizedStringResource("Type yt or $yt and a space to search YouTube."),
         isEnabled: true,
         requiresPrefix: false
     )
