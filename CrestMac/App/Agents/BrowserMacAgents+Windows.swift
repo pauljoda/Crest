@@ -84,9 +84,11 @@ extension BrowserMacAgents {
         let space = try resolveSpace(opening.space, call)
         let assignment = BrowserSpaceRuntimeAssignment(spaceID: space.id, profileID: space.profileID)
         let request = BrowserQuickWindowRequest(url: url, spaceAssignment: assignment)
-        windows.openQuickWindow(request)
-        guard windows.quickWindow(request.id) != nil else { throw .noWindow }
-        return .data(WindowReceipt(windowID: request.id, spaceID: space.id, tabID: nil))
+        // The same address in the same Space brings its Quick Window forward.
+        guard let windowID = windows.openQuickWindow(request), windows.quickWindow(windowID) != nil else {
+            throw .noWindow
+        }
+        return .data(WindowReceipt(windowID: windowID, spaceID: space.id, tabID: nil))
     }
 
     /// Opening a window happens only for explicit window and show-tab commands.

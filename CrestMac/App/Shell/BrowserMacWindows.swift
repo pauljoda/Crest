@@ -305,12 +305,16 @@ final class BrowserMacWindows {
 
     // MARK: - Actions - Quick Windows
 
-    func openQuickWindow(_ request: BrowserQuickWindowRequest) {
+    /// Opens a Quick Window for `request`, or brings forward the one already
+    /// open for the same address in the same Space, and answers the window's
+    /// identity, or nil when none could open.
+    @discardableResult
+    func openQuickWindow(_ request: BrowserQuickWindowRequest) -> UUID? {
         if let existing = quickWindows.first(where: { $0.value.request.value == request }),
             let controller = controller(.quick, id: existing.key)
         {
             controller.present(.key)
-            return
+            return existing.key
         }
         guard
             let context = BrowserQuickWindowBrowsingContext(
@@ -322,7 +326,7 @@ final class BrowserMacWindows {
             if let pageID = request.openedPageID {
                 DiagnosticLog.popups.notice("No window hosts the Quick Window for popup page \(pageID.uuidString)")
             }
-            return
+            return nil
         }
         let current = QuickRequest(request)
         let model = BrowserQuickWindowModel(
@@ -365,6 +369,7 @@ final class BrowserMacWindows {
                 .modifier(QuickWindowTitle(model: model, request: current, window: window))
             },
             closed: { [weak self] controller in self?.quickWindowClosed(controller) })
+        return request.id
     }
 
     /// The Quick Window named `id`, while it is open.
