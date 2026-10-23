@@ -83,6 +83,12 @@ final class EnginePage: BrowserFindExecuting {
         pages.request(ZoomPage(pageID: id, factor: Double(factor)))
     }
 
+    /// Undoes a pinch zoom the engine's view holds apart from the page's zoom.
+    func resetPageScale() {
+        guard !closed else { return }
+        pages.request(ResetPageScale(pageID: id))
+    }
+
     func restoreRequestedZoom() {
         guard !closed, let requestedZoom else { return }
         pages.request(ZoomPage(pageID: id, factor: Double(requestedZoom)))

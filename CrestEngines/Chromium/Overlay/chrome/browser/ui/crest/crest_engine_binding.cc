@@ -992,6 +992,11 @@ bool EngineBinding::Handle(const engine::ZoomPage& request) {
   return page && page->Zoom(request.factor);
 }
 
+bool EngineBinding::Handle(const engine::ResetPageScale& request) {
+  EnginePage* page = Find(GuidText(request.page_id));
+  return page && page->ResetPageScale();
+}
+
 bool EngineBinding::Handle(const engine::FindInPage& request) {
   EnginePage* page = Find(GuidText(request.page_id));
   return page && page->Find(request.query, request.backwards, request.case_sensitive);

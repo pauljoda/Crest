@@ -717,6 +717,9 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     func resetZoom() -> Bool {
         guard developerViewport == nil else { return false }
         hasTemporaryPageZoomOverride = false
+        // A pinch zoom lives in the engine's view, not in `pageZoom`, so it
+        // goes whether or not the page zoom was already the default.
+        enginePage.resetPageScale()
         return setPageZoom(defaultPageZoom)
     }
 

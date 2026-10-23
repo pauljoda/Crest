@@ -5052,6 +5052,12 @@ struct ResetCloudTransport: Intent, CloudTransportIntent, Equatable, Sendable {
     let overwritesCloud: Bool
 }
 
+struct ResetPageScale: PageRequest, Equatable, Sendable {
+    typealias Answer = Bool
+
+    let pageID: UUID
+}
+
 struct ResetPrivateBrowsing: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let windowID: UUID

@@ -7,7 +7,9 @@
 #include "base/functional/bind.h"
 #include "base/json/json_reader.h"
 #include "base/json/json_writer.h"
+#include "base/location.h"
 #include "base/strings/utf_string_conversions.h"
+#include "base/task/single_thread_task_runner.h"
 #include "base/time/time.h"
 #include "chrome/browser/ui/crest/crest_chrome_hooks.h"
 #include "content/public/browser/devtools_agent_host.h"
@@ -395,6 +397,28 @@ bool PageAgent::HoldRendering(bool held, double width, double height) {
     }
   }
   return true;
+}
+
+bool PageAgent::ResetPageScale() {
+  if (!Attach()) {
+    return false;
+  }
+  Send("Emulation.setPageScaleFactor", base::DictValue().Set("pageScaleFactor", 1),
+       base::BindOnce(&PageAgent::PageScaleReset, weak_factory_.GetWeakPtr()));
+  return true;
+}
+
+void PageAgent::PageScaleReset(const base::DictValue*) {
+  // The answer arrives inside the host's dispatch, which must finish before
+  // the client leaves it.
+  base::SingleThreadTaskRunner::GetCurrentDefault()->PostTask(
+      FROM_HERE, base::BindOnce(&PageAgent::DetachWhenIdle, weak_factory_.GetWeakPtr()));
+}
+
+void PageAgent::DetachWhenIdle() {
+  if (!observing_ && !rendering_) {
+    Detach();
+  }
 }
 
 void PageAgent::DispatchProtocolMessage(content::DevToolsAgentHost*, base::span<const uint8_t> message) {

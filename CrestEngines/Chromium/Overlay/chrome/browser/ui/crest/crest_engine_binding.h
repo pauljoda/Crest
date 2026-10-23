@@ -253,6 +253,7 @@ class EngineBinding {
   bool Handle(const engine::ReloadPage& request);
   bool Handle(const engine::StopLoading& request);
   bool Handle(const engine::ZoomPage& request);
+  bool Handle(const engine::ResetPageScale& request);
   bool Handle(const engine::FindInPage& request);
   bool Handle(const engine::CapturePage& request);
   bool Handle(const engine::ExportPage& request);

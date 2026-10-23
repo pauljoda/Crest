@@ -4313,6 +4313,10 @@
     "upload-ios-cloud-archives-without-ad-hoc-export": {
       "category": "internal",
       "message": "Upload iOS Cloud archives to TestFlight from the App Store export when the ad hoc export fails"
+    },
+    "reset-pinch-zoom-with-actual-size": {
+      "category": "fixed",
+      "message": "Actual Size (Cmd+0) now also undoes a pinch zoom made on the trackpad."
     }
   }
 }

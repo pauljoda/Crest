@@ -163,6 +163,7 @@ class EnginePage final : public content::WebContentsObserver,
   void RequestClose();
   bool StopLoading();
   bool Zoom(double factor);
+  bool ResetPageScale();
   bool Find(const std::string& query, bool backwards, bool case_sensitive);
   bool Capture(const engine::Guid& capture_id, const std::optional<engine::PageArea>& area, double width);
   bool Export(const engine::Guid& export_id, engine::PageExportFormat format, double width);

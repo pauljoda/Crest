@@ -58,6 +58,11 @@ class PageAgent final : public content::WebContentsObserver, public content::Dev
   engine::PageConsoleLog Console(int64_t after) const;
   engine::PageNetworkLog Network(int64_t after) const;
   bool HoldRendering(bool held, double width, double height);
+  // Sets the page's pinch zoom back to none, which the browser's own zoom
+  // does not reach. True once the command is sent, not once the renderer
+  // applied it; false when the page cannot take a DevTools command, as one
+  // that is not a web page.
+  bool ResetPageScale();
 
  private:
   // What a DevTools command answered: its result, or nothing when it failed.
@@ -83,6 +88,10 @@ class PageAgent final : public content::WebContentsObserver, public content::Dev
   void WebContentsDestroyed() override;
 
   bool Attach();
+  // Lets go of the page once the reset is answered, unless the agent still
+  // watches or holds it.
+  void PageScaleReset(const base::DictValue* result);
+  void DetachWhenIdle();
   // Keeps `request` as the newest, numbering it and dropping the oldest past
   // the bound; answers its number.
   int64_t Keep(engine::PageNetworkRequest request);

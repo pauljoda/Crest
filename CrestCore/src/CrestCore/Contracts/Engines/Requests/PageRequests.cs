@@ -98,6 +98,10 @@ public sealed record RefreshPageIcon(Guid PageId) : PageRequest<bool>;
 /// `BypassesCache`.
 public sealed record ReloadPage(Guid PageId, bool BypassesCache) : PageRequest<bool>;
 
+/// Undoes the pinch zoom the person made on the page's view, which `ZoomPage`
+/// does not reach, so the page shows at its zoom again.
+public sealed record ResetPageScale(Guid PageId) : PageRequest<bool>;
+
 /// Allows or blocks `Permission` for the site the page shows, as Crest's record
 /// decided, or clears the site's own setting so the engine's default applies.
 public sealed record SetSitePermission(Guid PageId, SitePermission Permission, bool? Allowed) : PageRequest<bool>;

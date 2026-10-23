@@ -1214,6 +1214,11 @@ bool EnginePage::Zoom(double factor) {
   return true;
 }
 
+bool EnginePage::ResetPageScale() {
+  PageAgent* agent = Agent();
+  return agent && agent->ResetPageScale();
+}
+
 void EnginePage::ApplyZoom() {
   if (!zoom_ || !web_contents()) {
     return;
