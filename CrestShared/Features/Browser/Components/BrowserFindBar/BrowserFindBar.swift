@@ -102,6 +102,13 @@ struct BrowserFindBar: View {
             .onSubmit {
                 port.find(port.query(), .forward)
             }
+            // `onSubmit` can't see modifiers, so Shift-Return steps back here
+            // before the field submits.
+            .onKeyPress(.return, phases: .down) { press in
+                guard press.modifiers.contains(.shift) else { return .ignored }
+                port.find(port.query(), .backward)
+                return .handled
+            }
             .accessibilityIdentifier("find-field")
     }
 
