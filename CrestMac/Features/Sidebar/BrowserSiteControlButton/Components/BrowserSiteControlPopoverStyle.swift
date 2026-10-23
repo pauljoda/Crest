@@ -1,38 +1,43 @@
 import SwiftUI
 
-/// Site controls own a dark surface even when their Space uses dark ink: the
-/// device's surface material, drawn in its dark appearance so bright page
-/// content behind it never washes out the light labels. A color-scheme override
-/// alone does not replace an inherited foreground style.
+/// Site controls draw in their Space's appearance: the color scheme its text
+/// color gives the sidebar, with the device's surface material and the labels
+/// in that same scheme. The popover sets its own foreground because the
+/// sidebar's Space foreground would otherwise carry into it, and draws its own
+/// surface so the material can never disagree with the labels above it.
 struct BrowserSiteControlPopoverStyle: ViewModifier {
-    @Environment(\.crestSurfaceMaterial) private var surfaceMaterial
+    let colorScheme: ColorScheme
 
     func body(content: Content) -> some View {
         content
             .font(.body)
-            .foregroundStyle(Color.white)
-            .tint(CrestBrandTheme.accent(.dark))
-            .presentationBackground(surfaceMaterial.material)
-            .preferredColorScheme(.dark)
-            .environment(\.colorScheme, .dark)
+            .foregroundStyle(.primary)
+            .tint(CrestBrandTheme.accent(colorScheme))
+            .presentationBackground {
+                CrestSurfaceLayer(shape: Rectangle())
+                    .environment(\.colorScheme, colorScheme)
+            }
+            .preferredColorScheme(colorScheme)
+            .environment(\.colorScheme, colorScheme)
     }
 }
 
 #if DEBUG
-    #Preview("Dark popover from a light Space") {
-        BrowserSiteControlStylePreview()
+    #Preview("Popover from a dark-ink Space") {
+        BrowserSiteControlStylePreview(colorScheme: .light)
+            .foregroundStyle(Color.white)
+            .environment(\.colorScheme, .dark)
+    }
+
+    #Preview("Popover from a light-ink Space") {
+        BrowserSiteControlStylePreview(colorScheme: .dark)
             .foregroundStyle(Color.black)
             .tint(.black)
             .environment(\.colorScheme, .light)
     }
 
-    #Preview("Dark popover from a dark Space") {
-        BrowserSiteControlStylePreview()
-            .foregroundStyle(Color.white)
-            .environment(\.colorScheme, .dark)
-    }
-
     private struct BrowserSiteControlStylePreview: View {
+        let colorScheme: ColorScheme
         @State private var remembersChoice = true
 
         var body: some View {
@@ -63,8 +68,8 @@ struct BrowserSiteControlPopoverStyle: ViewModifier {
             }
             .padding(CrestSpacing.medium)
             .frame(width: BrowserSiteControlMetrics.width)
-            .modifier(BrowserSiteControlPopoverStyle())
-            .background { CrestSurfaceLayer(shape: Rectangle()).environment(\.colorScheme, .dark) }
+            .modifier(BrowserSiteControlPopoverStyle(colorScheme: colorScheme))
+            .background { CrestSurfaceLayer(shape: Rectangle()).environment(\.colorScheme, colorScheme) }
             .padding()
             .background(.indigo.gradient)
         }
