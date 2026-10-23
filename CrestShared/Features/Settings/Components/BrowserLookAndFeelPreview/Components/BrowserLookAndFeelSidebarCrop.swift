@@ -19,6 +19,7 @@ struct BrowserLookAndFeelSidebarCrop: View {
 
     private var pageZoom = BrowserDefaultPageZoomStore.shared
     @Environment(\.layoutDirection) private var layoutDirection
+    @Environment(\.colorScheme) private var colorScheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     /// The sidebar's natural height, measured before any scaling.
@@ -44,7 +45,7 @@ struct BrowserLookAndFeelSidebarCrop: View {
             RoundedRectangle(cornerRadius: BrowserLookAndFeelPreviewMetrics.cardCornerRadius, style: .continuous)
                 .strokeBorder(.primary.opacity(CrestOpacity.border))
         }
-        .environment(\.colorScheme, branding.foregroundTone.colorScheme)
+        .environment(\.colorScheme, branding.colorScheme(over: colorScheme))
         .animation(
             CrestMotion.collection.unlessReducingMotion(reduceMotion),
             value: sidebarOnRight

@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct BrowserImportSidebarFrame<Content: View>: View {
+    @Environment(\.colorScheme) private var colorScheme
     let branding: SpaceBranding
     let content: Content
 
@@ -23,7 +24,7 @@ struct BrowserImportSidebarFrame<Content: View>: View {
             }
             .environment(
                 \.colorScheme,
-                branding.foregroundTone.colorScheme
+                branding.colorScheme(over: colorScheme)
             )
     }
 }

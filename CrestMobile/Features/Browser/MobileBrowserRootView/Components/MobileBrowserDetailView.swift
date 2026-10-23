@@ -31,6 +31,7 @@ struct MobileBrowserDetailView: View {
     var showHistory: () -> Void = {}
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.colorScheme) private var colorScheme
     @Environment(\.layoutDirection) private var layoutDirection
     @Environment(\.mobileBrowserControlPlacement) private var controlPlacement
     /// The page area's safe area, measured once here and handed as data to
@@ -485,7 +486,7 @@ struct MobileBrowserDetailView: View {
     /// no brand to follow and the header inherits the environment's appearance.
     private var startPageHeaderColorScheme: ColorScheme? {
         guard let branding = shownBranding else { return nil }
-        return branding.foregroundTone.colorScheme
+        return branding.colorScheme(over: colorScheme)
     }
 
     private var unloadedPageSurface: some View {

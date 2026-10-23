@@ -10,9 +10,18 @@ extension SpaceHouse {
     }
 
     /// `branding` starting over from the house's look, keeping the Space's
-    /// own strengths, folder and text choices.
+    /// own strengths, folder and text choices. A look that started from a
+    /// scheme wore the scheme's strength, fade, texture, text and icon color
+    /// rather than the person's, so it takes the house's own instead.
     func applying(to branding: SpaceBranding) -> SpaceBranding {
         var updated = branding
+        if SpaceScheme.startingPoint(of: branding) != nil {
+            updated.bannerStrength = look.bannerStrength
+            updated.readabilityFade = look.readabilityFade
+            updated.showsTexture = look.showsTexture
+            updated.textColorMode = look.textColorMode
+            updated.symbolColor = look.symbolColor
+        }
         updated.colors = look.colors
         updated.themeMode = look.themeMode
         updated.bannerPattern = look.bannerPattern

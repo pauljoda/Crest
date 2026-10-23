@@ -21394,12 +21394,106 @@ struct SpaceIconStyle: Hashable, Sendable {
     }
 }
 
+/// The members of the core's `SpaceScheme`. A member's wire tag is its index in `all`.
+struct SpaceScheme: Hashable, Sendable {
+    let tag: Int
+    var name: String { facts.name }
+    var title: LocalizedStringResource { facts.title }
+    var look: SpaceBranding { facts.look }
+    private let facts: Facts
+
+    private init(tag: Int, name: String, title: LocalizedStringResource, look: SpaceBranding) {
+        self.tag = tag
+        facts = Facts(name: name, title: title, look: look)
+    }
+
+    static let neutral = SpaceScheme(
+        tag: 0,
+        name: "neutral",
+        title: LocalizedStringResource("Neutral"),
+        look: SpaceBranding(
+            colors: ColorPalette(colors: [BrandColor(red: 0.337, green: 0.337, blue: 0.337, alpha: 1)]),
+            bannerPattern: SpaceBannerPattern.diagonal,
+            bannerStrength: 0.15,
+            readabilityFade: 0,
+            keepsControlsReadable: false,
+            themeMode: SpaceThemeMode.gradient,
+            gradientAngle: 0,
+            showsTexture: true,
+            iconStyle: SpaceIconStyle.simpleSymbol,
+            symbolColor: BrandColor(red: 0.588, green: 0.588, blue: 0.588, alpha: 1),
+            crest: SpaceCrest(
+                backplate: CrestBackplate.shield,
+                fieldDivision: CrestFieldDivision.plain,
+                ordinary: CrestOrdinary.none,
+                trim: CrestTrim.none,
+                symbol: CrestSymbol.mountain,
+                chargeLayout: CrestChargeLayout.single,
+                backplateColorIndex: 1,
+                secondaryFieldColorIndex: 1,
+                ordinaryColorIndex: 2,
+                trimColorIndex: 1,
+                symbolColorIndex: 2,
+                startingPresetID: nil,
+                edgeColorIndex: 1,
+                palette: nil,
+                charge: nil,
+                plateScale: 1,
+                edgeWidth: 0,
+                divisionCount: 4,
+                finish: CrestFinish.flat,
+                ordinaryWidth: 1,
+                trimWeight: 1,
+                trimDetail: 12,
+                chargeScale: 1,
+                chargeOffset: 0,
+                chargeWeight: CrestChargeWeight.bold,
+                sheenAngle: 45,
+                sealTeeth: 12,
+                showsOutline: false,
+                depth: CrestDepth.none
+            ),
+            renderingVersion: 2,
+            folderColorIntensity: 0,
+            textColorMode: SpaceTextColorMode.system,
+            hasCustomAppearance: false
+        )
+    )
+
+    static let all: [SpaceScheme] = [neutral]
+
+    static func named(_ name: String?) -> SpaceScheme? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: SpaceScheme, rhs: SpaceScheme) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+
+    private final class Facts: Sendable {
+        let name: String
+        let title: LocalizedStringResource
+        let look: SpaceBranding
+
+        init(name: String, title: LocalizedStringResource, look: SpaceBranding) {
+            self.name = name
+            self.title = title
+            self.look = look
+        }
+    }
+}
+
 /// The members of the core's `SpaceTextColorMode`. A member's wire tag is its index in `all`.
 struct SpaceTextColorMode: Hashable, Sendable {
     enum Kinds: Sendable {
         case automatic
         case light
         case dark
+        case system
     }
 
     let tag: Int
@@ -21421,8 +21515,14 @@ struct SpaceTextColorMode: Hashable, Sendable {
     )
     static let light = SpaceTextColorMode(tag: 1, kind: .light, name: "light", title: LocalizedStringResource("Light"))
     static let dark = SpaceTextColorMode(tag: 2, kind: .dark, name: "dark", title: LocalizedStringResource("Dark"))
+    static let system = SpaceTextColorMode(
+        tag: 3,
+        kind: .system,
+        name: "system",
+        title: LocalizedStringResource("System")
+    )
 
-    static let all: [SpaceTextColorMode] = [automatic, light, dark]
+    static let all: [SpaceTextColorMode] = [automatic, light, dark, system]
 
     static func named(_ name: String?) -> SpaceTextColorMode? {
         all.first { $0.name == name }
@@ -22564,6 +22664,18 @@ struct Tincture: Hashable, Sendable {
         title: LocalizedStringResource("Bone"),
         color: BrandColor(red: 0.812, green: 0.82, blue: 0.831, alpha: 1)
     )
+    static let neutralSmoke = Tincture(
+        tag: 55,
+        name: "neutralSmoke",
+        title: LocalizedStringResource("Smoke"),
+        color: BrandColor(red: 0.337, green: 0.337, blue: 0.337, alpha: 1)
+    )
+    static let neutralGray = Tincture(
+        tag: 56,
+        name: "neutralGray",
+        title: LocalizedStringResource("Gray"),
+        color: BrandColor(red: 0.588, green: 0.588, blue: 0.588, alpha: 1)
+    )
 
     static let all: [Tincture] = [
         ink,
@@ -22620,7 +22732,9 @@ struct Tincture: Hashable, Sendable {
         sunTenne,
         sunGules,
         sunOr,
-        vigilBone
+        vigilBone,
+        neutralSmoke,
+        neutralGray
     ]
 
     static func named(_ name: String?) -> Tincture? {

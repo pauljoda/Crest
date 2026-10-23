@@ -9,6 +9,7 @@ struct MobileTabSwipePlaceholder: View {
     let favicons: FaviconAssets
     /// The page area's chrome, which the icon and title stay clear of.
     let bottomChromeHeight: CGFloat
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         VStack(spacing: 12) {
@@ -26,6 +27,6 @@ struct MobileTabSwipePlaceholder: View {
             BrowserWindowAtmosphere(space: space)
                 .ignoresSafeArea()
         }
-        .environment(\.colorScheme, space.settings.look.foregroundTone.colorScheme)
+        .environment(\.colorScheme, space.settings.look.colorScheme(over: colorScheme))
     }
 }

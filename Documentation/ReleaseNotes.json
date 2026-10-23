@@ -4322,6 +4322,10 @@
       "category": "fixed",
       "message": "Connected tools can start Crest in the background without taking focus."
     },
+    "space-neutral-look": {
+      "category": "new",
+      "message": "Spaces can start from a Neutral look: a plain gray sidebar with a fine grain that goes light or dark with the system. A Space's text color can follow the system's appearance too."
+    },
     "mcp-native-browser-tools": {
       "category": "improved",
       "message": "Connected tools can search history, use search providers, and open windows in allowed Spaces, and delete an address from a Space’s history once you agree, while private tabs remain inaccessible."

@@ -1,8 +1,8 @@
 import SwiftUI
 
 /// A Space's look as a window draws it: as chosen in light, and in dark with
-/// its colors dimmed as far as the device asks, under text that reads over
-/// them.
+/// its colors dimmed as far as the device asks, under text and controls in
+/// the scheme that reads over them in the window's appearance.
 extension SpaceBranding {
     // MARK: - Variables
 
@@ -27,5 +27,17 @@ extension SpaceBranding {
         look.readabilityFade = readabilityFade * (1 - dimming)
         look.textColorMode = .automatic
         return look
+    }
+
+    // MARK: - Actions - Text
+
+    /// The tone the Space's text reads in over a window in `appearance`.
+    func foregroundTone(over appearance: ColorScheme) -> BrowserSpaceForegroundTone {
+        foregroundTone(system: BrowserSpaceForegroundTone(readingIn: appearance))
+    }
+
+    /// The scheme the Space's sidebar draws in over a window in `appearance`.
+    func colorScheme(over appearance: ColorScheme) -> ColorScheme {
+        foregroundTone(over: appearance).colorScheme
     }
 }

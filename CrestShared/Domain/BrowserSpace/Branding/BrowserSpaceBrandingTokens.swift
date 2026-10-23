@@ -64,13 +64,15 @@ struct BrowserSpaceBrandColorRole: Hashable, Identifiable, Sendable {
 }
 
 extension SpaceTextColorMode {
-    /// The tone a Space's text keeps whatever its colors; automatic works it
-    /// out from them.
-    var foregroundTone: BrowserSpaceForegroundTone? {
+    /// The tone a Space's text keeps whatever its colors, or `system`, the
+    /// tone the device's appearance reads in, when it follows the device;
+    /// automatic works it out from them.
+    func foregroundTone(system: BrowserSpaceForegroundTone) -> BrowserSpaceForegroundTone? {
         switch self.kind {
         case .automatic: nil
         case .light: .light
         case .dark: .dark
+        case .system: system
         }
     }
 }
