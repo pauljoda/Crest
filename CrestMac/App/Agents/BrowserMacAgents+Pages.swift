@@ -86,13 +86,37 @@ extension BrowserMacAgents {
 
     private struct Waiting: Decodable {
         enum CodingKeys: String, CodingKey {
-            case tab, text
+            case tab, text, url
             case timeout = "timeout_ms"
         }
 
         let tab: UUID
         let text: String?
+        let url: String?
         let timeout: Double?
+    }
+
+    private struct TextReading: Decodable {
+        enum CodingKeys: String, CodingKey {
+            case tab
+            case limit = "max_chars"
+        }
+
+        let tab: UUID
+        let limit: Int?
+    }
+
+    private struct PageText: Decodable {
+        let url: String
+        let title: String
+        let text: String
+        let truncated: Bool
+    }
+
+    private struct DialogAnswer: Decodable {
+        let tab: UUID
+        let accept: Bool
+        let text: String?
     }
 
     private struct Since: Decodable {
@@ -229,6 +253,22 @@ extension BrowserMacAgents {
         }
     }
 
+    func readPageText(_ call: BrowserAgentCall) async throws(BrowserAgentFailure) -> AgentToolResult {
+        let reading = try call.arguments(TextReading.self)
+        let limit = reading.limit ?? 20_000
+        guard (1_000...100_000).contains(limit) else {
+            throw .invalidArguments("max_chars must be between 1000 and 100000.")
+        }
+        return try await serially(on: reading.tab) { () async throws(BrowserAgentFailure) -> AgentToolResult in
+            let page = try await self.settledPage(for: reading.tab, call)
+            let read = try await self.run(BrowserAgentPageScript.readText(limit: limit), on: page).decoded(
+                PageText.self)
+            var text = "Page: \(read.title)\nAddress: \(read.url)\n\n\(read.text)"
+            if read.truncated { text += "\n\n(The text was cut short at \(limit) characters.)" }
+            return .message(text)
+        }
+    }
+
     func screenshot(_ call: BrowserAgentCall) async throws(BrowserAgentFailure) -> AgentToolResult {
         let capture = try call.arguments(Capture.self)
         return try await serially(on: capture.tab) { () async throws(BrowserAgentFailure) -> AgentToolResult in
@@ -341,18 +381,42 @@ extension BrowserMacAgents {
 
     func waitFor(_ call: BrowserAgentCall) async throws(BrowserAgentFailure) -> AgentToolResult {
         let waiting = try call.arguments(Waiting.self)
+        guard waiting.text == nil || waiting.url == nil else { throw .invalidArguments("give text or url, not both.") }
         let timeout = Duration.milliseconds(Int(min(max(waiting.timeout ?? 10_000, 0), 60_000)))
         return try await serially(on: waiting.tab) { () async throws(BrowserAgentFailure) -> AgentToolResult in
             let page = try await self.settledPage(for: waiting.tab, call)
             let deadline = ContinuousClock.now + timeout
             repeat {
-                if (try? await self.run(BrowserAgentPageScript.shows(waiting.text), on: page)) == .bool(true) {
+                if let address = waiting.url {
+                    if page.live.url?.contains(address) == true {
+                        return .message("The tab is at \(page.live.url ?? address).")
+                    }
+                } else if (try? await self.run(BrowserAgentPageScript.shows(waiting.text), on: page)) == .bool(true) {
                     return .message(waiting.text.map { "The page shows \($0)." } ?? "The page finished loading.")
                 }
                 try? await Task.sleep(for: .milliseconds(250))
             } while ContinuousClock.now < deadline
+            if let address = waiting.url {
+                throw .refused("The tab's address didn't come to contain \(address) in time.")
+            }
             throw .timedOut
         }
+    }
+
+    // MARK: - Actions - Dialogs
+
+    /// Answers the page's alert, confirm or prompt, never a question about
+    /// leaving the page, which keeps the person's unsaved work theirs. It
+    /// waits for no other call on the tab, since the dialog may be what holds
+    /// one up.
+    func handleDialog(_ call: BrowserAgentCall) async throws(BrowserAgentFailure) -> AgentToolResult {
+        let answer = try call.arguments(DialogAnswer.self)
+        let page = try page(for: answer.tab, call)
+        guard let asked = page.scriptDialog, asked.question.kind != .beforeUnload else {
+            throw .refused("The page shows no dialog an agent may answer.")
+        }
+        page.corePage.answer(AnswerScriptDialog(promptID: asked.promptID, accepted: answer.accept, text: answer.text))
+        return .message(answer.accept ? "Accepted the page's dialog." : "Dismissed the page's dialog.")
     }
 
     // MARK: - Actions - Activity
@@ -478,7 +542,7 @@ extension BrowserMacAgents {
     {
         guard let evaluated = await page.enginePage.evaluate(script.source, in: .agent, timeout: Self.scriptTimeout)
         else {
-            throw .timedOut
+            throw page.scriptDialog.map(BrowserAgentFailure.dialog) ?? .timedOut
         }
         if let error = evaluated.error { throw .script(error) }
         guard let json = evaluated.json, let value = try? JSONDecoder().decode(AgentJSON.self, from: Data(json.utf8))
@@ -503,7 +567,8 @@ extension BrowserMacAgents {
     {
         guard let delivered = await page.enginePage.deliver(input, timeout: Self.inputTimeout), delivered.delivered
         else {
-            throw .refused("The page did not take the input.")
+            // Input that opens a dialog waits on its answer.
+            throw page.scriptDialog.map(BrowserAgentFailure.dialog) ?? .refused("The page did not take the input.")
         }
         call.link.lastInput[tabID] = .now
         return delivered

@@ -9,6 +9,31 @@ import XCTest
 final class BrowserAgentMutationTests: XCTestCase {
     // MARK: - Actions - Mutations
 
+    /// An agent answers a page's alert, confirm or prompt in a tab it uses,
+    /// never a question about leaving the page, which keeps the person's
+    /// unsaved work theirs to decide about.
+    func testAnAgentAnswersAPageDialogButNeverOneAboutLeavingThePage() async throws {
+        let fixture = try BrowserAgentFixture()
+        let opening = try await fixture.invoke(
+            "open_tab",
+            ["space": .string(fixture.space.id.uuidString), "url": .string("https://dialog.crest.test/")])
+        let tabID = try XCTUnwrap(opening["tab"]?["id"]?.string.flatMap(UUID.init(uuidString:)))
+        let page = try fixture.page(for: tabID)
+        let answer: [String: AgentJSON] = ["tab": .string(tabID.uuidString), "accept": .bool(true)]
+        await fixture.assertRefused("handle_dialog", answer)
+        func asking(_ kind: JavaScriptDialogKind) -> ScriptDialogAsked {
+            ScriptDialogAsked(
+                promptID: UUID(), pageID: page.corePage.id,
+                question: ScriptDialogQuestion(
+                    kind: kind, message: "Leave?", defaultText: "", sourceURL: "https://dialog.crest.test/"))
+        }
+        page.scriptDialog = asking(.beforeUnload)
+        await fixture.assertRefused("handle_dialog", answer)
+        page.scriptDialog = asking(.confirm)
+        let answered = try await fixture.message("handle_dialog", answer)
+        XCTAssertEqual(answered, "Accepted the page's dialog.")
+    }
+
     /// Deletion is scoped and idempotent, asks the person only about an address
     /// the Space has visited, and checks access before asking and again after.
     func testHistoryDeletionPreservesOtherSpacesAndRejectsUnavailableReach() async throws {

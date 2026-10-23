@@ -61,6 +61,15 @@ struct BrowserAgentFailure: Error, Sendable {
         Self("The script threw: \(message)")
     }
 
+    /// The page is showing `asked`, which holds up its scripts until someone
+    /// answers it.
+    static func dialog(_ asked: ScriptDialogAsked) -> Self {
+        let message = String(asked.question.message.prefix(500))
+        return asked.question.kind == .beforeUnload
+            ? Self("The page is asking the person whether to leave it. Wait for them to answer.")
+            : Self("The page is showing a dialog: “\(message)”. Answer it with handle_dialog.")
+    }
+
     static func refused(_ detail: String) -> Self {
         Self(detail)
     }

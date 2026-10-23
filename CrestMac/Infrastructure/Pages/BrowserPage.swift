@@ -115,6 +115,10 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     /// Where the agent using the page's tab last acted, which the page shows
     /// as the agent's pointer while the agent uses the tab.
     private(set) var agentPointer: BrowserAgentPointer?
+    /// The page's alert, confirm, prompt or leave-page question waiting on an
+    /// answer while it shows, which an agent using the tab may read and, all
+    /// but a leave-page question, answer.
+    var scriptDialog: ScriptDialogAsked?
     private(set) var developerCaptureFeedback: String?
     private(set) var developerCaptureFeedbackRevision = 0
     var isCredentialAccessEnabled: Bool { credentialSession.isEnabled }

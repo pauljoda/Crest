@@ -86,6 +86,23 @@ final class BrowserAgentFixture {
         return try JSONDecoder().decode(AgentJSON.self, from: Data(text.utf8))
     }
 
+    /// What tool `name` answers `arguments` with, as the agent's model reads
+    /// it.
+    func message(_ name: String, _ arguments: [String: AgentJSON] = [:]) async throws -> String {
+        let tool = try XCTUnwrap(BrowserAgentTool.named(name))
+        let answer = try await tool.perform(
+            BrowserAgentCall(agents: agents, link: link, sessionID: sessionID, arguments: .object(arguments)))
+        let text = try XCTUnwrap(answer.content.first?.text)
+        if answer.isError { throw BrowserAgentFailure(text) }
+        return text
+    }
+
+    /// The page of tab `tabID`, which the agent uses.
+    func page(for tabID: UUID) throws -> BrowserPage {
+        try agents.page(
+            for: tabID, BrowserAgentCall(agents: agents, link: link, sessionID: sessionID, arguments: .object([:])))
+    }
+
     /// Fails the test unless tool `name` refuses `arguments`.
     func assertRefused(
         _ name: String, _ arguments: [String: AgentJSON] = [:], file: StaticString = #filePath, line: UInt = #line

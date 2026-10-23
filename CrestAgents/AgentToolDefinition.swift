@@ -18,10 +18,10 @@ struct AgentToolDefinition: Sendable {
                 isRequired: required)
         }
 
-        static func boolean(_ name: String, _ description: String) -> Self {
+        static func boolean(_ name: String, _ description: String, required: Bool = false) -> Self {
             Self(
                 name: name, schema: .object(["type": .string("boolean"), "description": .string(description)]),
-                isRequired: false)
+                isRequired: required)
         }
 
         static func number(_ name: String, _ description: String, required: Bool = false) -> Self {
@@ -152,9 +152,10 @@ struct AgentToolDefinition: Sendable {
     static let waitFor = Self(
         name: "wait_for", title: "Wait",
         description:
-            "Waits until text appears in the page of a tab, or until the page finishes loading when no text is given, for up to timeout_ms milliseconds.",
+            "Waits until text appears in the page of a tab, until its address contains url, or until the page finishes loading when neither is given, for up to timeout_ms milliseconds.",
         arguments: [
             tab, .string("text", "The text to wait for.", required: false),
+            .string("url", "Instead of text: wait until the tab's address contains this.", required: false),
             .number("timeout_ms", "How long to wait at most, up to 60000. Defaults to 10000."),
         ], readOnly: true, destructive: false, idempotent: true, openWorld: false)
     static let listConsoleMessages = Self(
@@ -187,9 +188,8 @@ struct AgentToolDefinition: Sendable {
     static let all: [Self] = [
         identify, listSpaces, listTabs, openTab, navigate, showTab, closeTab, takeSnapshot, screenshot, click, hover,
         fill, typeText, pressKey, scroll, waitFor, listConsoleMessages, listNetworkRequests, getNetworkRequest,
-        evaluateScript, openPrivateWindow, searchHistory, deleteHistory, listSearchProviders, openWindow,
-        openBlankWindow,
-        openQuickWindow,
+        evaluateScript, readPageText, handleDialog, openPrivateWindow, searchHistory, deleteHistory,
+        listSearchProviders, openWindow, openBlankWindow, openQuickWindow,
     ]
 
     /// What every tool is, as the protocol lists it.
