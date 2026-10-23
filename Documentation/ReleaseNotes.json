@@ -4318,6 +4318,10 @@
       "category": "new",
       "message": "Keep Crest light or dark, or let it follow macOS, in Settings › Appearance. Spaces can also dim their colors in dark."
     },
+    "background-launch-for-connected-tools": {
+      "category": "fixed",
+      "message": "Connected tools can start Crest in the background without taking focus."
+    },
     "mcp-native-browser-tools": {
       "category": "improved",
       "message": "Connected tools can search history, use search providers, and open windows in allowed Spaces, and delete an address from a Space’s history once you agree, while private tabs remain inaccessible."
