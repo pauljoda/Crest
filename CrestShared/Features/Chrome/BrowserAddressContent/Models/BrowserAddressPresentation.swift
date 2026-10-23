@@ -1,8 +1,12 @@
 import Foundation
 
 struct BrowserAddressPresentation: Equatable {
+    // MARK: - Variables
+
     let domain: String
     let route: String?
+
+    // MARK: - Initializers
 
     init(_ text: String) {
         guard !text.isEmpty,
@@ -10,7 +14,7 @@ struct BrowserAddressPresentation: Equatable {
             let rawHost = components.host,
             !rawHost.isEmpty
         else {
-            domain = text.isEmpty ? "Search or enter website" : text
+            domain = text.isEmpty ? String(localized: "Search or enter website") : text
             route = nil
             return
         }

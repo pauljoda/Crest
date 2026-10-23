@@ -4361,6 +4361,10 @@
     "sidebar-shift-click-selects-range": {
       "category": "fixed",
       "message": "Shift-clicking a tab in the sidebar selects every tab between the active tab and the one you clicked, instead of only adding that tab like Command-click."
+    },
+    "french-interface-translation": {
+      "category": "new",
+      "message": "Use Crest in French on Mac, iPhone, and iPad, with translated permission prompts and translation credits in About settings."
     }
   }
 }

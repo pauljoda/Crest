@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct BrowserCrestImportChrome: View {
+    // MARK: - Variables
+
     let space: SpaceModel
     let highlightedTabID: UUID?
 
@@ -17,7 +19,7 @@ struct BrowserCrestImportChrome: View {
 
             HStack(spacing: 7) {
                 Image(systemName: "magnifyingglass")
-                Text(selectedHost ?? "Search or enter website")
+                Text(selectedHost ?? String(localized: "Search or enter website"))
                     .lineLimit(1)
                 Spacer()
             }
