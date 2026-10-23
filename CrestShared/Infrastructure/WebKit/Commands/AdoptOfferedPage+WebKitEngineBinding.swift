@@ -12,7 +12,8 @@ extension AdoptOfferedPage {
             return
         }
         let creation = CreatePage(
-            pageID: pageID, profileID: profileID, isPrivate: isPrivate, windowID: windowID, restoreState: nil)
+            pageID: pageID, profileID: profileID, isPrivate: isPrivate, windowID: windowID, restoreState: nil,
+            extensionProfileID: extensionProfileID)
         let page = binding.keep(binding.build(creation, in: offer.space, popup: offer.popup))
         binding.adoptedOffers[offerID] = page
         engines.handOver(page, adoptedPage: pageID)

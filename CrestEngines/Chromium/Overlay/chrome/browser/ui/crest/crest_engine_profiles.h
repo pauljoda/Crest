@@ -21,10 +21,12 @@ namespace crest {
 
 // The engine profiles Crest browses in: each Space's own regular profile,
 // named `Crest-<Space profile>` in the engine's user data directory, and each
-// private Space's off-the-record profile. A private profile always derives
-// from the engine's own profile, which no Space owns and no page browses in,
-// so it shares nothing with any Space; its profile is new each time private
-// browsing opens, and it is destroyed when released. Their stores — cookies,
+// private Space's off-the-record profile. A private profile derives from the
+// Space profile that lends it its extensions, which then run there where they
+// are allowed in private browsing, or else from the engine's own profile,
+// which no Space owns and no page browses in. Either way it shares no
+// cookies, storage or history with any Space; its profile is new each time
+// private browsing opens, and it is destroyed when released. Their stores — cookies,
 // storage, cache, network state — are the engine's; this decides which
 // profile a page gets, keeps the ones in use alive, and wipes one when its
 // Space is deleted.
@@ -50,9 +52,14 @@ class EngineProfiles final {
   bool IsDeletingAny() const { return !deletions_.empty(); }
 
   // Loads the profile `id` names, a Space's regular profile, or a private
-  // Space's off-the-record profile derived from the engine's own, and answers
-  // it, or nullptr when it cannot load or is being deleted.
-  void Load(const std::string& id, bool is_private, base::OnceCallback<void(Profile*)> done);
+  // Space's off-the-record profile, and answers it, or nullptr when it cannot
+  // load or is being deleted. A private profile derives from the Space profile
+  // `extension_profile` names, or from the engine's own when it names none or
+  // that profile is being deleted, and keeps what it derived from once made.
+  void Load(const std::string& id,
+            bool is_private,
+            const std::string& extension_profile,
+            base::OnceCallback<void(Profile*)> done);
   // Loads a Space's regular profile for its extensions. Answers whether it is
   // ready; a private profile never is.
   void Prepare(const std::string& id, base::OnceCallback<void(bool)> done);

@@ -427,7 +427,7 @@ void EngineBinding::CreateNow(const std::string& key) {
   if (!page || page->phase() != EnginePage::Phase::kCreating || !shell_ || disposing_) {
     return;
   }
-  Profiles().Load(page->profile(), page->is_private(),
+  Profiles().Load(page->profile(), page->is_private(), page->extension_profile(),
                   base::BindOnce(&EngineBinding::ProfileLoaded, weak_factory_.GetWeakPtr(), key));
 }
 
@@ -490,7 +490,9 @@ void EngineBinding::Adopt(const engine::AdoptOfferedPage& adoption) {
                                                                       .profile_id = adoption.profile_id,
                                                                       .is_private = adoption.is_private,
                                                                       .window_id = adoption.window_id,
-                                                                      .restore_state = std::nullopt}))
+                                                                      .restore_state = std::nullopt,
+                                                                      .extension_profile_id =
+                                                                          adoption.extension_profile_id}))
                           .first->second;
   Live(page, contents);
 }
@@ -1341,7 +1343,7 @@ void EngineBinding::Erase(const engine::EraseSiteData& erasing) {
     std::move(done).Run(true);
     return;
   }
-  Profiles().Load(id, /*is_private=*/false,
+  Profiles().Load(id, /*is_private=*/false, /*extension_profile=*/std::string(),
                   base::BindOnce(
                       [](GURL site, base::OnceCallback<void(bool)> done, Profile* profile) {
                         if (!profile) {

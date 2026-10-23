@@ -29,7 +29,7 @@ namespace crest::engine {
 // SHA-256 of the engine contract alone. A binding registers with it, so the
 // core refuses an engine built against any other contract.
 inline constexpr std::array<uint8_t, 32> kFingerprint = {
-    0x07, 0x03, 0x52, 0x98, 0xec, 0xb0, 0x5a, 0x18, 0x8f, 0xa7, 0x39, 0x8d, 0x42, 0xf2, 0x50, 0xda, 0x65, 0xeb, 0xb7, 0x01, 0xfc, 0xbe, 0x4c, 0xc0, 0x38, 0x77, 0xa6, 0x62, 0xb2, 0x95, 0x64, 0xf6};
+    0xcc, 0xc5, 0xd2, 0x6b, 0xbf, 0x21, 0xfa, 0x28, 0x53, 0x1b, 0x5f, 0x80, 0x61, 0x4d, 0x6e, 0xeb, 0xa8, 0x5e, 0x0a, 0xe5, 0x33, 0xa2, 0x9a, 0x13, 0x58, 0xb8, 0x06, 0xa8, 0x1f, 0x4a, 0xff, 0x27};
 
 // A GUID in RFC 4122 byte order, as the wire carries it.
 using Guid = std::array<uint8_t, 16>;
@@ -760,6 +760,7 @@ struct AdoptOfferedPage {
   Guid profile_id = {};
   bool is_private = false;
   Guid window_id = {};
+  std::optional<Guid> extension_profile_id;
 
   friend bool operator==(const AdoptOfferedPage&, const AdoptOfferedPage&) = default;
 };
@@ -769,13 +770,15 @@ inline void Write(WireWriter& writer, const AdoptOfferedPage& value) {
   Write(writer, value.profile_id);
   Write(writer, value.is_private);
   Write(writer, value.window_id);
+  Write(writer, value.extension_profile_id);
 }
 inline bool Read(WireReader& reader, AdoptOfferedPage& value) {
   return Read(reader, value.page_id)
       && Read(reader, value.offer_id)
       && Read(reader, value.profile_id)
       && Read(reader, value.is_private)
-      && Read(reader, value.window_id);
+      && Read(reader, value.window_id)
+      && Read(reader, value.extension_profile_id);
 }
 
 struct AnswerInfoBar {
@@ -1255,6 +1258,7 @@ struct CreatePage {
   bool is_private = false;
   Guid window_id = {};
   std::optional<PageRestoreState> restore_state;
+  std::optional<Guid> extension_profile_id;
 
   friend bool operator==(const CreatePage&, const CreatePage&) = default;
 };
@@ -1264,13 +1268,15 @@ inline void Write(WireWriter& writer, const CreatePage& value) {
   Write(writer, value.is_private);
   Write(writer, value.window_id);
   Write(writer, value.restore_state);
+  Write(writer, value.extension_profile_id);
 }
 inline bool Read(WireReader& reader, CreatePage& value) {
   return Read(reader, value.page_id)
       && Read(reader, value.profile_id)
       && Read(reader, value.is_private)
       && Read(reader, value.window_id)
-      && Read(reader, value.restore_state);
+      && Read(reader, value.restore_state)
+      && Read(reader, value.extension_profile_id);
 }
 
 struct DataErased {

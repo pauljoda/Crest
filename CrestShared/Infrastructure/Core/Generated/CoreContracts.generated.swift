@@ -808,6 +808,7 @@ struct AdoptOfferedPage: Equatable, Sendable {
     let profileID: UUID
     let isPrivate: Bool
     let windowID: UUID
+    let extensionProfileID: UUID?
 }
 
 struct AdoptOpenWindows: Intent, WindowIntent, Equatable, Sendable {
@@ -1827,6 +1828,7 @@ struct CreatePage: Equatable, Sendable {
     let isPrivate: Bool
     let windowID: UUID
     let restoreState: PageRestoreState?
+    let extensionProfileID: UUID?
 }
 
 struct CreateSpace: Intent, SessionIntent, Equatable, Sendable {
@@ -2675,6 +2677,11 @@ struct ExtensionInstallRequested: EngineEvent, PromptEvent, Equatable, Sendable 
     let promptID: UUID
     let windowID: UUID
     let question: ExtensionInstallQuestion
+}
+
+struct ExtensionLender: Equatable, Sendable {
+    var workspaceID: UUID
+    var spaceID: UUID
 }
 
 struct ExtensionsChanged: Equatable, Sendable {
@@ -3531,6 +3538,11 @@ struct LegacySession: Equatable, Sendable {
     var wholeGraph: Data?
     var history: [LegacyHistory]
     var journal: Data?
+}
+
+struct LendPrivateExtensions: Intent, WorkspaceIntent, Equatable, Sendable {
+    let privateWorkspaceID: UUID
+    let lender: ExtensionLender?
 }
 
 struct LinkActivation: EngineQuestion, Equatable, Sendable {

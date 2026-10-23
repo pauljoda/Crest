@@ -165,16 +165,30 @@ bool EngineProfiles::IsDeleting(const std::string& id) const {
   return deleting_.contains(id);
 }
 
-void EngineProfiles::Load(const std::string& id, bool is_private, base::OnceCallback<void(Profile*)> done) {
+void EngineProfiles::Load(const std::string& id,
+                          bool is_private,
+                          const std::string& extension_profile,
+                          base::OnceCallback<void(Profile*)> done) {
   auto* manager = g_browser_process->profile_manager();
   if (!root_ || disposing_ || !manager || !IsProfileIdentity(id) || deleting_.contains(id)) {
     std::move(done).Run(nullptr);
     return;
   }
-  // A private profile derives from the engine's own, never from a Space's,
-  // so no Space's cookies, settings or extensions reach it.
+  // A private profile derives from the Space profile that lends its
+  // extensions, or from the engine's own, which no Space owns. Off the record,
+  // no Space's cookies, storage or history reach it either way.
   if (is_private) {
-    Loaded(id, is_private, std::move(done), root_.get());
+    if (profiles_.contains(id) || !IsProfileIdentity(extension_profile) || deleting_.contains(extension_profile)) {
+      Loaded(id, is_private, std::move(done), root_.get());
+      return;
+    }
+    if (Profile* source = Find(extension_profile); source && !source->IsOffTheRecord()) {
+      Loaded(id, is_private, std::move(done), source);
+      return;
+    }
+    manager->CreateProfileAsync(
+        ProfilePath(manager, extension_profile),
+        base::BindOnce(&EngineProfiles::Loaded, weak_factory_.GetWeakPtr(), id, is_private, std::move(done)));
     return;
   }
   manager->CreateProfileAsync(ProfilePath(manager, id), base::BindOnce(&EngineProfiles::Loaded,

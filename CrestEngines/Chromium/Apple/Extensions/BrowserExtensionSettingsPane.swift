@@ -13,6 +13,31 @@ struct BrowserExtensionSettingsPane: View {
 
     var body: some View {
         BrowserSettingsPane(.extensions) {
+            if browser.isPrivateBrowsing {
+                privateExtensions
+            } else {
+                spaceExtensions
+            }
+        }
+    }
+
+    /// A private window keeps no extensions of its own: it runs those its
+    /// lending Space allows in private browsing, which that Space manages.
+    private var privateExtensions: some View {
+        Section {
+            if let lender = ChromiumComposition.privateExtensionLender {
+                Text(
+                    "Extensions from \(lender.name) that are allowed in private windows run here. Manage them in that Space’s settings."
+                )
+            } else {
+                Text("Extensions don’t run in this private window.")
+            }
+        }
+        .foregroundStyle(.secondary)
+    }
+
+    private var spaceExtensions: some View {
+        Group {
             if fixedSpaceID == nil {
                 Section {
                     CrestSpaceMenuPicker(

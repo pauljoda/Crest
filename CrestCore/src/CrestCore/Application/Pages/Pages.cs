@@ -163,8 +163,9 @@ internal sealed class Pages(Device device, Engines engines, IClock clock, IIdSou
         var (_, restore, load) = page.History.Return(entryId);
         if (page.Phase.HoldsEnginePage) turn.Issue(page.Engine, new ClosePage(page.Id, KeepsState: true));
         Update(page, turn.Changes, () => page.Return(engine, restore?.Url ?? entry.Url, load?.Id));
-        turn.Issue(engine, new CreatePage(page.Id, page.ProfileId, device.Workspace(page.WorkspaceId).IsPrivateBrowsing,
-            page.WindowId, restore));
+        var workspace = device.Workspace(page.WorkspaceId);
+        turn.Issue(engine, new CreatePage(page.Id, page.ProfileId, workspace.IsPrivateBrowsing, page.WindowId, restore,
+            workspace.ExtensionProfileId));
     }
 
     /// Closes the page on its engine, which hands back its history for the
@@ -174,8 +175,9 @@ internal sealed class Pages(Device device, Engines engines, IClock clock, IIdSou
         var from = page.Engine;
         if (page.Phase.HoldsEnginePage) turn.Issue(from, new ClosePage(page.Id, KeepsState: true));
         Update(page, turn.Changes, () => page.Rehost(engine, address, reason));
-        turn.Issue(engine, new CreatePage(page.Id, page.ProfileId, device.Workspace(page.WorkspaceId).IsPrivateBrowsing, page.WindowId,
-            RestoreState: null));
+        var workspace = device.Workspace(page.WorkspaceId);
+        turn.Issue(engine, new CreatePage(page.Id, page.ProfileId, workspace.IsPrivateBrowsing, page.WindowId, RestoreState: null,
+            workspace.ExtensionProfileId));
         turn.Changes.Publish(new PageRehosted(page.Id, page.SpaceId, address is null ? null : new WebAddress(address).Origin, from.Kind,
             engine.Kind, reason));
     }

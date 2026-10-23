@@ -279,10 +279,6 @@
     "before": "13fe3a2e17ea5d1518ffd672ca15e015dd28c977002bfbe5cd78677b72aaf33f",
     "after": "84f3a20a16f05c931d379c72e6b5d50653d6346cace3f86cfebbb885254a51d1"
   },
-  "extensions/browser/extension_util.cc": {
-    "before": "33aab34c8c12b99a04bb935b79838c3166173c423892df7fabf578cd1a86b63b",
-    "after": "24bbae04c51f126b7941ffe841d7074b57cb907b49eae91eb19ffa00511207cf"
-  },
   "chrome/browser/notifications/mac/notification_platform_bridge_mac.cc": {
     "before": "6c66a0591cfec32a9e426656240204d0f4d926682131d490c4c3755a8c860955",
     "after": "50c648bac485ba98feee1ac78c779085015ae0e4405030363e73ba7f7bdafc0e"

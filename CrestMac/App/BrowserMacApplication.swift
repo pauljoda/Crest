@@ -18,6 +18,9 @@ final class BrowserMacApplication {
     let privatePages: BrowserPagePool
     let privateChrome: BrowserChromeState
     let privateTransientBrowsing: BrowserTransientBrowsingCoordinator
+    /// The Space whose extensions allowed in private browsing the private
+    /// window runs, chosen when it opened; nil for none.
+    private(set) var privateExtensionLender: BrowserSpaceIdentity?
     let spaceAccess: BrowserSpaceAccessController
     /// The app's one passkey controller: pages refresh it and settings show it.
     let passkeyAccess: BrowserPasskeyAccessController
@@ -389,6 +392,21 @@ final class BrowserMacApplication {
     /// closes as the app goes; the core saves them before it returns.
     func rememberWindowsForLaunch() {
         _ = try? browser.core.send(RememberWindowsForLaunch(windowIDs: stackedWindowIDs))
+    }
+
+    /// Lets the private window's pages run the extensions `space` allows in
+    /// private browsing from now on. A Space the core refuses, such as a
+    /// locked one, lends none.
+    func lendPrivateExtensions(from space: BrowserSpaceIdentity?) {
+        let privateWorkspace = privateBrowser.family.workspaceID
+        let lender = space.map { ExtensionLender(workspaceID: browser.family.workspaceID, spaceID: $0.id) }
+        let lending = LendPrivateExtensions(privateWorkspaceID: privateWorkspace, lender: lender)
+        if (try? browser.core.send(lending)) != nil {
+            privateExtensionLender = space
+        } else {
+            _ = try? browser.core.send(LendPrivateExtensions(privateWorkspaceID: privateWorkspace, lender: nil))
+            privateExtensionLender = nil
+        }
     }
 
     func closePrivateBrowsingWindow() {

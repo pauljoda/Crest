@@ -26,6 +26,9 @@ final class BrowserPagePoolRegistry: BrowserSpaceDataDeleting {
     private var pools: [ObjectIdentifier: WeakPool] = [:]
     private var windowRuntimes: [UUID: WeakWindowRuntime] = [:]
     private var spacesDeletingData: Set<UUID> = []
+    /// Lets go of what borrows a Space's profile before its data goes, such
+    /// as a private window running its extensions.
+    var releaseBorrowers: ((BrowserSpaceRuntimeAssignment) -> Void)?
 
     init(primary: BrowserPagePool, spaceAccess: BrowserSpaceAccessController? = nil) {
         self.primary = primary
@@ -88,6 +91,7 @@ final class BrowserPagePoolRegistry: BrowserSpaceDataDeleting {
         guard spacesDeletingData.insert(space.spaceID).inserted else { return }
         defer { spacesDeletingData.remove(space.spaceID) }
 
+        releaseBorrowers?(space)
         for pool in livePools where pool !== primary {
             await pool.releaseWindowRuntime(for: space)
         }

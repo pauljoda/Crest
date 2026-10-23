@@ -158,6 +158,48 @@ public sealed partial class BrowserContractsTests {
     }
 
     [Fact]
+    public void APrivatePageRunsTheExtensionsOfTheSpaceThatLendsThemUntilThatSpaceGoes() {
+        var session = TwoSpaceSession();
+        var (app, _, binding, workspace, window) = PageHost(session);
+        using var disposal = app;
+        var privateWorkspace = TestWorkspaces.Opened(app.Send(new OpenWorkspace(WorkspaceKind.Private, Seed: null)));
+        var privateWindow = Guid.NewGuid();
+        app.Send(new OpenWindow(privateWindow, privateWorkspace, Saved: false, null, null, [], RestoresTabs: true));
+        var (lending, other) = (SpaceId(session["spaces"]![0]!), SpaceId(session["spaces"]![1]!));
+        Guid? ExtensionProfile() {
+            var page = Guid.NewGuid();
+            var space = app.Workspace(privateWorkspace).Current.Spaces.Single();
+            app.Send(new OpenPage(page, privateWorkspace, space.Id, null, privateWindow));
+            var creation = binding.Commands.OfType<CreatePage>().Single(command => command.PageId == page);
+            Assert.Equal((true, space.ProfileId), (creation.IsPrivate, creation.ProfileId));
+            return creation.ExtensionProfileId;
+        }
+
+        // Only a Space of the persistent workspace lends, and a private page
+        // runs none until one does.
+        Assert.Null(ExtensionProfile());
+        var lender = new ExtensionLender(workspace, lending);
+        Assert.Equal(new NotPrivateWorkspace(workspace), Refusal(app, new LendPrivateExtensions(workspace, lender)));
+        Assert.Equal(new PersistentWorkspaceRequired(privateWorkspace), Refusal(app,
+            new LendPrivateExtensions(privateWorkspace, new(privateWorkspace, app.Workspace(privateWorkspace).Current.Spaces[0].Id))));
+        Assert.Equal(new UnknownSpace(window), Refusal(app, new LendPrivateExtensions(privateWorkspace, new(workspace, window))));
+
+        app.Send(new LendPrivateExtensions(privateWorkspace, lender));
+        Assert.Equal(ProfileId(session["spaces"]![0]!), ExtensionProfile());
+        app.Send(new LendPrivateExtensions(privateWorkspace, Lender: null));
+        Assert.Null(ExtensionProfile());
+
+        // A lender being deleted lends nothing more, and cannot be chosen.
+        app.Send(new LendPrivateExtensions(privateWorkspace, new(workspace, other)));
+        app.Send(new BeginDeletingSpace(workspace, window, other, Guid.NewGuid()));
+        Assert.Null(ExtensionProfile());
+        Assert.Equal(new SpaceBeingDeleted(other), Refusal(app, new LendPrivateExtensions(privateWorkspace, new(workspace, other))));
+        var regular = Guid.NewGuid();
+        app.Send(new OpenPage(regular, workspace, lending, null, window));
+        Assert.Null(binding.Commands.OfType<CreatePage>().Single(command => command.PageId == regular).ExtensionProfileId);
+    }
+
+    [Fact]
     public void AClosingWorkspaceTakesItsPagesAndTheirEnginesKeepNothing() {
         var session = TwoSpaceSession();
         var (app, engine, binding, workspace, window) = PageHost(session);
