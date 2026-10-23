@@ -12152,30 +12152,45 @@ struct DownloadRiskReason: Hashable, Sendable {
     let tag: Int
     var name: String { facts.name }
     var confirmsUserInitiated: Bool { facts.confirmsUserInitiated }
+    var confirmsAutomatic: Bool { facts.confirmsAutomatic }
     var message: LocalizedStringResource { facts.message }
     private let facts: Facts
 
-    private init(tag: Int, name: String, confirmsUserInitiated: Bool, message: LocalizedStringResource) {
+    private init(
+        tag: Int,
+        name: String,
+        confirmsUserInitiated: Bool,
+        confirmsAutomatic: Bool,
+        message: LocalizedStringResource
+    ) {
         self.tag = tag
-        facts = Facts(name: name, confirmsUserInitiated: confirmsUserInitiated, message: message)
+        facts = Facts(
+            name: name,
+            confirmsUserInitiated: confirmsUserInitiated,
+            confirmsAutomatic: confirmsAutomatic,
+            message: message
+        )
     }
 
     static let executableOrInstaller = DownloadRiskReason(
         tag: 0,
         name: "executableOrInstaller",
         confirmsUserInitiated: false,
+        confirmsAutomatic: false,
         message: LocalizedStringResource("This file type can install or run software.")
     )
     static let deceptiveFilename = DownloadRiskReason(
         tag: 1,
         name: "deceptiveFilename",
         confirmsUserInitiated: true,
+        confirmsAutomatic: true,
         message: LocalizedStringResource("The original filename used invisible or direction-changing characters that can disguise its real extension.")
     )
     static let dangerousTypeMismatch = DownloadRiskReason(
         tag: 2,
         name: "dangerousTypeMismatch",
         confirmsUserInitiated: true,
+        confirmsAutomatic: true,
         message: LocalizedStringResource("The server-reported file type does not match the filename and one of those types can run software.")
     )
 
@@ -12196,11 +12211,13 @@ struct DownloadRiskReason: Hashable, Sendable {
     private final class Facts: Sendable {
         let name: String
         let confirmsUserInitiated: Bool
+        let confirmsAutomatic: Bool
         let message: LocalizedStringResource
 
-        init(name: String, confirmsUserInitiated: Bool, message: LocalizedStringResource) {
+        init(name: String, confirmsUserInitiated: Bool, confirmsAutomatic: Bool, message: LocalizedStringResource) {
             self.name = name
             self.confirmsUserInitiated = confirmsUserInitiated
+            self.confirmsAutomatic = confirmsAutomatic
             self.message = message
         }
     }
@@ -12364,6 +12381,7 @@ struct DownloadWarning: Hashable, Sendable {
     let tag: Int
     var name: String { facts.name }
     var engineWarning: EngineDownloadWarning { facts.engineWarning }
+    var confirms: Bool { facts.confirms }
     var approvalMessage: LocalizedStringResource { facts.approvalMessage }
     var failure: DownloadFailure { facts.failure }
     var coveredBy: [DownloadRiskReason] { facts.coveredBy }
@@ -12373,6 +12391,7 @@ struct DownloadWarning: Hashable, Sendable {
         tag: Int,
         name: String,
         engineWarning: EngineDownloadWarning,
+        confirms: Bool,
         approvalMessage: LocalizedStringResource,
         failure: DownloadFailure,
         coveredBy: [DownloadRiskReason]
@@ -12381,6 +12400,7 @@ struct DownloadWarning: Hashable, Sendable {
         facts = Facts(
             name: name,
             engineWarning: engineWarning,
+            confirms: confirms,
             approvalMessage: approvalMessage,
             failure: failure,
             coveredBy: coveredBy
@@ -12391,6 +12411,7 @@ struct DownloadWarning: Hashable, Sendable {
         tag: 0,
         name: "insecureConnection",
         engineWarning: .insecureConnection,
+        confirms: true,
         approvalMessage: LocalizedStringResource("This file was transferred over an insecure connection and could have been changed by someone else. Keep it only if you trust its source."),
         failure: DownloadFailure.blockedInsecure,
         coveredBy: []
@@ -12399,6 +12420,7 @@ struct DownloadWarning: Hashable, Sendable {
         tag: 1,
         name: "dangerousFile",
         engineWarning: .dangerousFile,
+        confirms: false,
         approvalMessage: LocalizedStringResource("This type of file can change your computer. Keep it only if you trust its source."),
         failure: DownloadFailure.blockedUnsafe,
         coveredBy: [DownloadRiskReason.executableOrInstaller, DownloadRiskReason.dangerousTypeMismatch]
@@ -12407,6 +12429,7 @@ struct DownloadWarning: Hashable, Sendable {
         tag: 2,
         name: "uncommonContent",
         engineWarning: .uncommonContent,
+        confirms: true,
         approvalMessage: LocalizedStringResource("This file is not commonly downloaded. The engine could not confirm that it is safe."),
         failure: DownloadFailure.blockedUnsafe,
         coveredBy: []
@@ -12415,6 +12438,7 @@ struct DownloadWarning: Hashable, Sendable {
         tag: 3,
         name: "potentiallyUnwanted",
         engineWarning: .potentiallyUnwanted,
+        confirms: true,
         approvalMessage: LocalizedStringResource("This file may change your browser or computer settings without your permission."),
         failure: DownloadFailure.blockedUnsafe,
         coveredBy: []
@@ -12423,6 +12447,7 @@ struct DownloadWarning: Hashable, Sendable {
         tag: 4,
         name: "insecureBlocked",
         engineWarning: .insecureBlocked,
+        confirms: true,
         approvalMessage: LocalizedStringResource("The engine blocked this insecure download."),
         failure: DownloadFailure.blockedInsecure,
         coveredBy: []
@@ -12431,6 +12456,7 @@ struct DownloadWarning: Hashable, Sendable {
         tag: 5,
         name: "policyBlocked",
         engineWarning: .policyBlocked,
+        confirms: true,
         approvalMessage: LocalizedStringResource("The engine blocked this download because of its safety or organization policy verdict."),
         failure: DownloadFailure.blockedByPolicy,
         coveredBy: []
@@ -12460,6 +12486,7 @@ struct DownloadWarning: Hashable, Sendable {
     private final class Facts: Sendable {
         let name: String
         let engineWarning: EngineDownloadWarning
+        let confirms: Bool
         let approvalMessage: LocalizedStringResource
         let failure: DownloadFailure
         let coveredBy: [DownloadRiskReason]
@@ -12467,12 +12494,14 @@ struct DownloadWarning: Hashable, Sendable {
         init(
             name: String,
             engineWarning: EngineDownloadWarning,
+            confirms: Bool,
             approvalMessage: LocalizedStringResource,
             failure: DownloadFailure,
             coveredBy: [DownloadRiskReason]
         ) {
             self.name = name
             self.engineWarning = engineWarning
+            self.confirms = confirms
             self.approvalMessage = approvalMessage
             self.failure = failure
             self.coveredBy = coveredBy

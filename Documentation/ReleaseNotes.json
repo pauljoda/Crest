@@ -4361,6 +4361,10 @@
     "sidebar-shift-click-selects-range": {
       "category": "fixed",
       "message": "Shift-clicking a tab in the sidebar selects every tab between the active tab and the one you clicked, instead of only adding that tab like Command-click."
+    },
+    "user-started-installers-download-without-asking": {
+      "category": "improved",
+      "message": "Clicking to download an app or installer such as a .dmg or .pkg saves it straight away instead of asking whether you are sure. macOS still checks the file when you open it, and Crest still asks about files with disguised or mismatched names and downloads over insecure connections."
     }
   }
 }

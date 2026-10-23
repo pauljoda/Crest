@@ -94,8 +94,9 @@ internal sealed class EngineDownloadStage {
             turn.Issue(engine, new CancelEngineDownload(download.ProfileId, download.EngineId));
             return;
         }
-        if (download.ReasonsApproved && DownloadWarning.Of(warning).IsCoveredBy(download.Reasons)) {
-            // A warning about what the person already kept asks nothing new.
+        if (!DownloadWarning.Of(warning).RequiresConfirmation(download.ReasonsApproved ? download.Reasons : [])) {
+            // A warning about what the person already kept, or about a file
+            // type that is saved for the platform to check, asks nothing new.
             if (download.ApprovalToken == reported.ApprovalToken) return;
             download.ApprovalToken = reported.ApprovalToken;
             turn.Issue(engine, new ApproveEngineDownload(download.ProfileId, download.EngineId, reported.ApprovalToken));

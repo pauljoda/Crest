@@ -26,7 +26,6 @@ public sealed class DownloadPolicyTests {
     public void InstallerAndScriptExtensionsAreExecutableEvenWithoutPlatformTypes(string filename) {
         var assessment = Assess(filename, "application/octet-stream");
         Assert.Equal([DownloadRiskReason.ExecutableOrInstaller], assessment.Reasons);
-        Assert.True(assessment.RequiresConfirmation(isUserInitiated: false));
     }
 
     [Fact]
@@ -37,11 +36,11 @@ public sealed class DownloadPolicyTests {
     }
 
     [Fact]
-    public void UserInitiatedInstallersRelyOnThePlatformProtection() {
+    public void InstallersRelyOnThePlatformProtectionHoweverTheyBegan() {
         var assessment = Assess("Crest.dmg", "application/x-apple-diskimage", true, true, true);
         Assert.Equal([DownloadRiskReason.ExecutableOrInstaller], assessment.Reasons);
         Assert.False(assessment.RequiresConfirmation(isUserInitiated: true));
-        Assert.True(assessment.RequiresConfirmation(isUserInitiated: false));
+        Assert.False(assessment.RequiresConfirmation(isUserInitiated: false));
     }
 
     [Theory]
@@ -54,6 +53,7 @@ public sealed class DownloadPolicyTests {
         Assert.Contains(DownloadRiskReason.DeceptiveFilename, assessment.Reasons);
         Assert.Equal("renamed.txt", assessment.SanitizedFilename);
         Assert.True(assessment.RequiresConfirmation(isUserInitiated: true));
+        Assert.True(assessment.RequiresConfirmation(isUserInitiated: false));
     }
 
     [Fact]
@@ -61,6 +61,7 @@ public sealed class DownloadPolicyTests {
         var mismatch = Assess("holiday.jpg", "application/x-mach-binary", mimeRunsCode: true, related: false);
         Assert.Equal([DownloadRiskReason.ExecutableOrInstaller, DownloadRiskReason.DangerousTypeMismatch], mismatch.Reasons);
         Assert.True(mismatch.RequiresConfirmation(isUserInitiated: true));
+        Assert.True(mismatch.RequiresConfirmation(isUserInitiated: false));
         Assert.DoesNotContain(DownloadRiskReason.DangerousTypeMismatch,
             Assess("holiday.jpg", "application/x-mach-binary", mimeRunsCode: true, related: null).Reasons);
         Assert.Empty(Assess("holiday.jpg", "image/png", related: false).Reasons);

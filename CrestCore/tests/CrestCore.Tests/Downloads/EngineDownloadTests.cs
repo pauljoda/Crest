@@ -19,11 +19,12 @@ public sealed partial class BrowserContractsTests {
             Restored: false, Paused: false, state, warning, interruption, detail, token);
 
     /// The engine asking where `download`'s file goes, with the platform's
-    /// facts about a file named `name` that it declares as `mime`.
+    /// facts about a file named `name` that it declares as `mime`, and whether
+    /// the two types are `related`.
     private static EngineDownloadDestinationRequested Destination(Guid prompt, EngineDownload download, string name,
-        string? mime = null, bool userInitiated = true) =>
+        string? mime = null, bool userInitiated = true, bool? related = null) =>
         new(prompt, download, name, ForcesPrompt: false,
-            new DownloadRiskFacts(name, name, mime, ExtensionRunsCode: false, MimeTypeRunsCode: false, TypesRelated: null),
+            new DownloadRiskFacts(name, name, mime, ExtensionRunsCode: false, MimeTypeRunsCode: false, TypesRelated: related),
             userInitiated, SourceHost: "files.example");
 
     private static Guid ProfileOf(CrestApp app, Guid workspace, Guid space) =>
@@ -184,15 +185,15 @@ public sealed partial class BrowserContractsTests {
         var profile = ProfileOf(app, workspace, space);
 
         app.Report(engine, new EngineDownloadChanged(Transfer(profile, page, EngineDownloadState.AwaitingApproval,
-            warning: EngineDownloadWarning.DangerousFile, token: "danger:file")));
+            warning: EngineDownloadWarning.PotentiallyUnwanted, token: "unwanted")));
         var asked = app.Drain();
         var record = asked.OfType<DownloadUpdated>().Last().Download;
         Assert.Equal(DownloadPhase.AwaitingApproval, record.Phase);
         var approval = Assert.IsType<DownloadApprovalAsked>(asked[^1]);
-        Assert.Equal((record.Id, "report.pdf", DownloadWarning.DangerousFile),
+        Assert.Equal((record.Id, "report.pdf", DownloadWarning.PotentiallyUnwanted),
             (approval.DownloadId, approval.Filename, approval.Warning));
         Assert.Contains(new PromptSettled(approval.PromptId), app.Send(new AnswerDownloadApproval(approval.PromptId, Approved: true)));
-        Assert.Equal(new ApproveEngineDownload(profile, "7", "danger:file"), binding.Commands[^1]);
+        Assert.Equal(new ApproveEngineDownload(profile, "7", "unwanted"), binding.Commands[^1]);
 
         // The person cancels it from its row, then clears it; a late report brings nothing back.
         app.Send(new CancelDownload(record.Id, "Canceled."));
@@ -210,18 +211,18 @@ public sealed partial class BrowserContractsTests {
         var profile = ProfileOf(app, workspace, space);
         var prompt = Guid.NewGuid();
 
-        // An installer the site sent on its own asks first, with the core's
-        // reason, its Space and only the host it came from.
-        app.Report(engine, Destination(prompt, Transfer(profile, page) with { Filename = "installer.dmg" }, "installer.dmg",
-            "application/x-apple-diskimage", userInitiated: false));
+        // A program dressed as a photo asks first, even though the person
+        // clicked it, with the core's reasons, its Space and only the host it
+        // came from.
+        app.Report(engine, Destination(prompt, Transfer(profile, page) with { Filename = "holiday.jpg" }, "holiday.jpg",
+            "application/x-mach-binary", related: false));
         var asked = app.Drain();
         var approval = Assert.IsType<DownloadApprovalAsked>(asked[^1]);
-        Assert.Equal(DownloadRiskReason.ExecutableOrInstaller, Assert.Single(approval.Reasons));
-        Assert.Equal((space, "installer.dmg", (DownloadWarning?)null, "files.example"),
+        Assert.Equal([DownloadRiskReason.ExecutableOrInstaller, DownloadRiskReason.DangerousTypeMismatch], approval.Reasons);
+        Assert.Equal((space, "holiday.jpg", (DownloadWarning?)null, "files.example"),
             (approval.SpaceId, approval.Filename, approval.Warning, approval.SourceHost));
         Assert.DoesNotContain(asked, change => change is DownloadDestinationAsked);
-        Assert.Equal(DownloadRiskReason.ExecutableOrInstaller,
-            Assert.Single(asked.OfType<DownloadUpdated>().Last().Download.Risk!.Reasons));
+        Assert.Equal(approval.Reasons, asked.OfType<DownloadUpdated>().Last().Download.Risk!.Reasons);
 
         // Declining it cancels it on its engine without asking where it goes.
         var declined = app.Send(new AnswerDownloadApproval(approval.PromptId, Approved: false));
@@ -238,14 +239,15 @@ public sealed partial class BrowserContractsTests {
         using var disposal = app;
         var profile = ProfileOf(app, workspace, space);
         var prompt = Guid.NewGuid();
-        var installer = Transfer(profile, page) with { Filename = "installer.dmg" };
-        app.Report(engine, Destination(prompt, installer, "installer.dmg", userInitiated: false));
+        var installer = Transfer(profile, page) with { Filename = "holiday.jpg" };
+        app.Report(engine, Destination(prompt, installer, "holiday.jpg", "application/x-mach-binary", userInitiated: false,
+            related: false));
         var approval = app.Drain().OfType<DownloadApprovalAsked>().Single();
 
         // Keeping it asks where it goes, and only then.
         var kept = app.Send(new AnswerDownloadApproval(approval.PromptId, Approved: true));
-        Assert.Equal(new DownloadDestinationAsked(prompt, approval.DownloadId, space, "installer.dmg", ForcesPrompt: false), kept[^1]);
-        app.Send(new AnswerDownloadDestination(prompt, "/Users/test/Downloads/installer.dmg"));
+        Assert.Equal(new DownloadDestinationAsked(prompt, approval.DownloadId, space, "holiday.jpg", ForcesPrompt: false), kept[^1]);
+        app.Send(new AnswerDownloadDestination(prompt, "/Users/test/Downloads/holiday.jpg"));
 
         // The engine's warning that the file runs code is what the person
         // kept, so the core approves it without asking.
@@ -266,7 +268,51 @@ public sealed partial class BrowserContractsTests {
         var insecure = app.Drain().OfType<DownloadApprovalAsked>().Single();
         Assert.Equal((DownloadWarning.InsecureConnection, "files.example"),
             (insecure.Warning, insecure.SourceHost));
-        Assert.Equal(DownloadRiskReason.ExecutableOrInstaller, Assert.Single(insecure.Reasons));
+        Assert.Equal(approval.Reasons, insecure.Reasons);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void AnInstallerIsSavedWithoutAskingHoweverItBeganAndOnlyWarningsAboutTheFileOrItsTransferAsk(bool userInitiated) {
+        var (app, engine, binding, page, workspace, _, space, _) = LivePage();
+        using var disposal = app;
+        var profile = ProfileOf(app, workspace, space);
+        var prompt = Guid.NewGuid();
+        var installer = Transfer(profile, page) with { Filename = "installer.dmg" };
+
+        // Whether or not the engine saw the person's click, the core names
+        // the risk but asks only where it goes.
+        app.Report(engine, Destination(prompt, installer, "installer.dmg", "application/x-apple-diskimage", userInitiated));
+        var asked = app.Drain();
+        Assert.DoesNotContain(asked, change => change is DownloadApprovalAsked);
+        var destination = Assert.IsType<DownloadDestinationAsked>(asked[^1]);
+        Assert.Equal((prompt, space, "installer.dmg", false),
+            (destination.PromptId, destination.SpaceId, destination.SuggestedFilename, destination.ForcesPrompt));
+        Assert.Equal(DownloadRiskReason.ExecutableOrInstaller,
+            Assert.Single(asked.OfType<DownloadUpdated>().Last().Download.Risk!.Reasons));
+        app.Send(new AnswerDownloadDestination(prompt, "/Users/test/Downloads/installer.dmg"));
+
+        // The engine's warning that its type runs software is kept.
+        app.Report(engine, new EngineDownloadChanged(installer with {
+            State = EngineDownloadState.AwaitingApproval,
+            Warning = EngineDownloadWarning.DangerousFile,
+            ApprovalToken = "danger:file"
+        }));
+        var kept = app.Drain();
+        Assert.DoesNotContain(kept, change => change is DownloadApprovalAsked);
+        Assert.NotEqual(DownloadPhase.AwaitingApproval, kept.OfType<DownloadUpdated>().Last().Download.Phase);
+        Assert.Equal(new ApproveEngineDownload(profile, "7", "danger:file"), binding.Commands[^1]);
+
+        // A verdict about the transfer or the file itself still asks.
+        foreach (var warning in new[] { EngineDownloadWarning.InsecureConnection, EngineDownloadWarning.PotentiallyUnwanted }) {
+            app.Report(engine, new EngineDownloadChanged(installer with {
+                State = EngineDownloadState.AwaitingApproval,
+                Warning = warning,
+                ApprovalToken = warning.ToString()
+            }));
+            Assert.Equal(DownloadWarning.Of(warning), app.Drain().OfType<DownloadApprovalAsked>().Single().Warning);
+        }
     }
 
     [Fact]

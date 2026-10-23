@@ -11,26 +11,29 @@ public sealed class DownloadWarning {
     #region Static Variables
 
     public static readonly DownloadWarning InsecureConnection = new(name: "insecureConnection",
-        engineWarning: EngineDownloadWarning.InsecureConnection,
+        engineWarning: EngineDownloadWarning.InsecureConnection, confirms: true,
         approvalMessage: "This file was transferred over an insecure connection and could have been changed by someone else. "
             + "Keep it only if you trust its source.",
         failure: DownloadFailure.BlockedInsecure);
     public static readonly DownloadWarning DangerousFile = new(name: "dangerousFile", engineWarning: EngineDownloadWarning.DangerousFile,
+        confirms: false,
         approvalMessage: "This type of file can change your computer. Keep it only if you trust its source.",
         failure: DownloadFailure.BlockedUnsafe,
         coveredBy: [DownloadRiskReason.ExecutableOrInstaller, DownloadRiskReason.DangerousTypeMismatch]);
     public static readonly DownloadWarning UncommonContent = new(name: "uncommonContent",
-        engineWarning: EngineDownloadWarning.UncommonContent,
+        engineWarning: EngineDownloadWarning.UncommonContent, confirms: true,
         approvalMessage: "This file is not commonly downloaded. The engine could not confirm that it is safe.",
         failure: DownloadFailure.BlockedUnsafe);
     public static readonly DownloadWarning PotentiallyUnwanted = new(name: "potentiallyUnwanted",
-        engineWarning: EngineDownloadWarning.PotentiallyUnwanted,
+        engineWarning: EngineDownloadWarning.PotentiallyUnwanted, confirms: true,
         approvalMessage: "This file may change your browser or computer settings without your permission.",
         failure: DownloadFailure.BlockedUnsafe);
     public static readonly DownloadWarning InsecureBlocked = new(name: "insecureBlocked",
-        engineWarning: EngineDownloadWarning.InsecureBlocked, approvalMessage: "The engine blocked this insecure download.",
+        engineWarning: EngineDownloadWarning.InsecureBlocked, confirms: true,
+        approvalMessage: "The engine blocked this insecure download.",
         failure: DownloadFailure.BlockedInsecure);
     public static readonly DownloadWarning PolicyBlocked = new(name: "policyBlocked", engineWarning: EngineDownloadWarning.PolicyBlocked,
+        confirms: true,
         approvalMessage: "The engine blocked this download because of its safety or organization policy verdict.",
         failure: DownloadFailure.BlockedByPolicy);
 
@@ -45,6 +48,14 @@ public sealed class DownloadWarning {
 
     /// The engine's warning this one stands for.
     public EngineDownloadWarning EngineWarning { get; }
+
+    /// Whether the person must keep the file before the engine finishes it.
+    /// The engine's warning that a file's type can run software is what
+    /// `DownloadRiskReason.ExecutableOrInstaller` names, which is saved for
+    /// the platform's quarantine and Gatekeeper to check, so it does not ask.
+    /// An insecure connection, an uncommon file and a potentially unwanted one
+    /// are verdicts about the transfer or the file itself, and ask.
+    public bool Confirms { get; }
 
     /// What the person is told when Crest asks them to keep the file.
     [Localized]
@@ -62,10 +73,11 @@ public sealed class DownloadWarning {
 
     #region Constructors
 
-    private DownloadWarning(string name, EngineDownloadWarning engineWarning, string approvalMessage, DownloadFailure failure,
-        IReadOnlyList<DownloadRiskReason>? coveredBy = null) {
+    private DownloadWarning(string name, EngineDownloadWarning engineWarning, bool confirms, string approvalMessage,
+        DownloadFailure failure, IReadOnlyList<DownloadRiskReason>? coveredBy = null) {
         Name = name;
         EngineWarning = engineWarning;
+        Confirms = confirms;
         ApprovalMessage = approvalMessage;
         Failure = failure;
         CoveredBy = coveredBy ?? [];
@@ -89,6 +101,10 @@ public sealed class DownloadWarning {
         ArgumentNullException.ThrowIfNull(reasons);
         return reasons.Any(CoveredBy.Contains);
     }
+
+    /// Whether the person must keep the file before the engine finishes it,
+    /// given the core's reasons they already kept it for.
+    public bool RequiresConfirmation(IReadOnlyList<DownloadRiskReason> keptReasons) => Confirms && !IsCoveredBy(keptReasons);
 
     #endregion
 }
