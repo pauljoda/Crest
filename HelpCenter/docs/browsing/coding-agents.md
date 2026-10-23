@@ -20,7 +20,7 @@ Agents are off until you turn them on.
 
 Crest must be open while an agent works. Crest never opens a window for an agent.
 
-To start Crest without bringing it to the front, a tool can run `open -g --env CREST_BACKGROUND_LAUNCH=1 -a Crest`. Crest opens your windows behind the app you're using.
+To start Crest without bringing it to the front, a tool can run `open -g --env CREST_BACKGROUND_LAUNCH=1 -a Crest`. Crest opens your windows behind the app you're using, and comes forward only to ask you about an agent it hasn't met.
 
 ## Allow an agent
 

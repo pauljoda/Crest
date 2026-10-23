@@ -50,6 +50,9 @@ final class BrowserMacApplication {
     /// windows the launch opened. Every other window opens on the tab it left.
     var startupWindowID = BrowserMacWindowRequest.initial.id
     let presentsInstalledApplicationUI: Bool
+    /// Whether a tool started Crest in the background, so the launch's
+    /// windows open without taking focus.
+    let launchesInBackground: Bool
     /// The launch flags as the core reads them.
     let launchEnvironment: LaunchEnvironment
     /// The view an engine anchors its popups to behind Site Controls.
@@ -98,6 +101,7 @@ final class BrowserMacApplication {
         let utilityDefaults: UserDefaults? = usesIsolatedLaunch ? nil : .standard
         presentsInstalledApplicationUI =
             launchEnvironment.presentsInstalledApplicationUI
+        launchesInBackground = launchEnvironment.launchesInBackground
         // Import review and manual setup belong to the currently open wizard.
         // Retire drafts written by earlier releases before any new window opens.
         if !usesIsolatedLaunch {

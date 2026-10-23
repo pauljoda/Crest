@@ -94,7 +94,7 @@ final class BrowserMacShell {
         guard application.presentsInstalledApplicationUI else { return }
         BrowserMacAppearance.shared.start()
         BrowserMacDockTile.shared.start(following: application.browser.core)
-        let background = BrowserLaunchEnvironment.current.launchesInBackground
+        let background = application.launchesInBackground
         windows.openLaunchWindows(activation: background ? .background : .key)
         menuBar.install()
         keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
