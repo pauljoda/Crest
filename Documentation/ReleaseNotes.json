@@ -4361,6 +4361,10 @@
     "sidebar-shift-click-selects-range": {
       "category": "fixed",
       "message": "Shift-clicking a tab in the sidebar selects every tab between the active tab and the one you clicked, instead of only adding that tab like Command-click."
+    },
+    "link-menu-opens-in-new-tab-first": {
+      "category": "improved",
+      "message": "When you right-click a link, Open Link in New Tab is the first item in the menu, and Open Link in Another Space comes after Peek and Split View. Pages that run in Chromium no longer offer to open a link as another Chromium profile."
     }
   }
 }

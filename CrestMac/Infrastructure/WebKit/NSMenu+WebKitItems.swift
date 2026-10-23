@@ -8,6 +8,12 @@ extension NSMenu {
         items.first { $0.identifier == .webKitDownloadImage }
     }
 
+    /// WebKit's item that opens a link in a new page, which Crest opens as a
+    /// new tab, when the menu has one.
+    var webKitLinkDestinationItem: NSMenuItem? {
+        items.first { $0.identifier == .webKitOpenLinkInNewWindow }
+    }
+
     // MARK: - Actions - WebKit items
 
     /// Drops WebKit's selection search, which would leave Crest's own search.
@@ -20,7 +26,6 @@ extension NSMenu {
     /// Names WebKit's open-link item for where Crest actually opens it,
     /// keeping its action and shortcut.
     func relabelWebKitLinkDestination() {
-        items.first { $0.identifier == .webKitOpenLinkInNewWindow }?.title =
-            String(localized: "Open Link in This Space")
+        webKitLinkDestinationItem?.title = String(localized: "Open Link in New Tab")
     }
 }

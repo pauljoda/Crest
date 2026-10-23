@@ -57,7 +57,7 @@ final class BrowserDesktopWebView: WKWebView {
         BrowserPageContextMenu(
             actions: menuHost.contextMenuActions(linkURL: context.linkURL, selectionText: context.selectionText),
             host: menuHost, view: self
-        ).insert(into: menu)
+        ).insert(into: menu, newTab: menu.webKitLinkDestinationItem)
         if let imageDownloadURL = context.imageDownloadURL,
             let item = menu.webKitDownloadImageItem
         {

@@ -210,7 +210,7 @@ final class BrowserLinkContextCaptureTests: XCTestCase {
 
         menu.relabelWebKitLinkDestination()
 
-        XCTAssertEqual(item.title, String(localized: "Open Link in This Space"))
+        XCTAssertEqual(item.title, String(localized: "Open Link in New Tab"))
         XCTAssertEqual(item.action, action)
         XCTAssertTrue(item.target === target)
         XCTAssertEqual(item.keyEquivalent, "t")
@@ -242,11 +242,13 @@ final class BrowserLinkContextCaptureTests: XCTestCase {
     /// Picking a row Crest put in an engine's context menu runs it on the
     /// page once the menu is done. AppKit must reach the row's own method: a
     /// row whose method shares a name with one of NSObject's raised and quit
-    /// the app instead.
+    /// the app instead. The engine's own new-tab item leads the menu in place
+    /// of Crest's, so the link never offers two.
     @MainActor
     func testPickingACrestRowRunsItOnThePage() async throws {
         let host = RecordingContextMenuHost()
         let link = URL(string: "https://example.com/next")
+        let newTab = BrowserPageContextMenuAction.newTab(try XCTUnwrap(link))
         let space = BrowserPageContextMenuAction(
             kind: .space(UUID()), title: "Work", symbolName: "briefcase", linkURL: link, selectionText: nil
         ) { _, _, _ in true }
@@ -259,18 +261,22 @@ final class BrowserLinkContextCaptureTests: XCTestCase {
         let pageView = NSView()
         let menu = NSMenu()
         menu.addItem(withTitle: "Engine row", action: nil, keyEquivalent: "")
-        BrowserPageContextMenu(actions: [space, peek], host: host, view: pageView).insert(into: menu)
+        let engineNewTab = menu.addItem(withTitle: "Engine new tab", action: nil, keyEquivalent: "")
+        BrowserPageContextMenu(actions: [newTab, peek, space], host: host, view: pageView)
+            .insert(into: menu, newTab: engineNewTab)
         let ran = expectation(description: "Both rows ran")
         ran.expectedFulfillmentCount = 2
         host.performed = { _ in ran.fulfill() }
 
-        // The other Spaces sit under one row, ahead of the page's own rows.
-        let spaces = try XCTUnwrap(menu.items.first?.submenu)
+        XCTAssertTrue(menu.items.first === engineNewTab)
+        // The other Spaces sit under one row after the page's own rows.
+        let spaces = try XCTUnwrap(menu.items[2].submenu)
         spaces.performActionForItem(at: 0)
         menu.performActionForItem(at: 1)
         await fulfillment(of: [ran], timeout: 2)
 
         XCTAssertEqual(host.ran.map(\.kind), [space.kind, peek.kind])
+        XCTAssertFalse(menu.items.contains { $0.title == newTab.title })
         withExtendedLifetime(pageView) {}
     }
 

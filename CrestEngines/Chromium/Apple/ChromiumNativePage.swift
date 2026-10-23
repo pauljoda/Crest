@@ -382,7 +382,8 @@
         // MARK: Menus and drags
 
         /// Puts Crest's rows for `link` or `selection` in the engine's context
-        /// menu for this page.
+        /// menu for this page. The engine leaves out its own new-tab item, so
+        /// Crest's new-tab row leads the menu.
         func addMenuItems(to menu: NSMenu, link: URL?, selection: String?) {
             guard !disposed, let menuHost else { return }
             BrowserPageContextMenu(
