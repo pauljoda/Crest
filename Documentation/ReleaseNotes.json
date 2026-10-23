@@ -4356,11 +4356,7 @@
     },
     "background-link-opening-notice": {
       "category": "improved",
-      "message": "Opening a link in a background tab now confirms it in the window’s notice capsule."
-    },
-    "background-link-notice-localization": {
-      "category": "internal",
-      "message": "The background tab confirmation is included in the localization catalog."
+      "message": "Opening a link in a background tab now shows a brief confirmation at the top of the window."
     }
   }
 }

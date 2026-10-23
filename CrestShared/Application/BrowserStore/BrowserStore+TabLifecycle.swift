@@ -54,12 +54,8 @@ extension BrowserStore {
         selecting: Bool
     ) -> UUID? {
         guard !isDeleting(spaceID), spaceModel(spaceID) != nil else { return nil }
-        guard
-            let tabID = openSessionTab(
-                .page(url), in: spaceID, insertingAfter: selectedTabID(in: spaceID), shouldSelect: selecting)
-        else { return nil }
-        if !selecting { interactionObserver?.browserDidOpenBackgroundTab() }
-        return tabID
+        return openSessionTab(
+            .page(url), in: spaceID, insertingAfter: selectedTabID(in: spaceID), shouldSelect: selecting)
     }
 
     @discardableResult
@@ -76,10 +72,22 @@ extension BrowserStore {
         )
     }
 
+    /// Opens `url` in a new tab behind the one shown in Space `spaceID`, as a
+    /// person asked from a link or the palette, and confirms it. Tabs opened
+    /// for anyone else, such as an agent, use `openNewTab`.
+    @discardableResult
+    func openBackgroundTab(url: URL, in spaceID: UUID) -> UUID? {
+        guard let tabID = openNewTab(url: url, in: spaceID, selecting: false) else { return nil }
+        interactionObserver?.browserDidOpenBackgroundTab()
+        return tabID
+    }
+
     /// Opens `url` in a new tab of Space `spaceID` for a modified link,
     /// selected when `selecting`, and answers the tab with its Space.
     func openModifiedLink(_ url: URL, in spaceID: UUID, selecting: Bool) -> BrowserModifiedLinkRegistration? {
-        guard let tabID = openNewTab(url: url, in: spaceID, selecting: selecting),
+        let opened =
+            selecting ? openNewTab(url: url, in: spaceID, selecting: true) : openBackgroundTab(url: url, in: spaceID)
+        guard let tabID = opened,
             let space = spaceModel(spaceID),
             let tab = space.tabs.model(tabID)
         else { return nil }
@@ -295,4 +303,38 @@ extension BrowserStore {
             from: self, failure: "Core navigation failed")
     }
 
+}
+
+// MARK: - Residency
+
+extension BrowserStore {
+    @discardableResult
+    func setTabKeepsPageLoaded(
+        _ keepsPageLoaded: Bool,
+        for id: UUID,
+        in spaceID: UUID
+    ) -> Bool {
+        guard
+            setSessionTabResidency(
+                keepsPageLoaded,
+                tabID: id,
+                in: spaceID
+            )
+        else { return false }
+        return true
+    }
+
+    @discardableResult
+    func setTabKeepsPageLoaded(
+        _ keepsPageLoaded: Bool,
+        for id: UUID,
+        matching assignment: BrowserSpaceRuntimeAssignment
+    ) -> Bool {
+        guard spaceModel(matching: assignment)?.tabs.model(id) != nil else { return false }
+        return setTabKeepsPageLoaded(
+            keepsPageLoaded,
+            for: id,
+            in: assignment.spaceID
+        )
+    }
 }

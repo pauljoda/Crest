@@ -20,6 +20,11 @@ struct BrowserNotice: Equatable, Hashable {
         systemImage: "checkmark.circle.fill"
     )
 
+    static let openedInBackgroundTab = BrowserNotice(
+        message: String(localized: "Opened in Background Tab"),
+        systemImage: "plus.square.on.square"
+    )
+
     static func pageZoom(_ label: String) -> BrowserNotice {
         BrowserNotice(message: label, systemImage: "textformat.size")
     }
