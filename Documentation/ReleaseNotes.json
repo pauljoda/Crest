@@ -4338,6 +4338,10 @@
       "category": "new",
       "message": "Settings > Appearance can keep the sidebar hover area working while a video plays full screen, so the sidebar floats over the video when the pointer reaches the edge of the screen."
     },
+    "space-slide-continues-forward": {
+      "category": "fixed",
+      "message": "Pressing Next or Previous Space again while a Space is still sliding carries the slide on from where it is, without stepping back first, including around the ends."
+    },
     "temporary-sidebar-interruptible-animation": {
       "category": "fixed",
       "message": "The sidebar hides and shows more smoothly, the History, Archive and Downloads selector closes back to its button, and History, Archive or Downloads opened over a hidden sidebar stays open while you use the page."
