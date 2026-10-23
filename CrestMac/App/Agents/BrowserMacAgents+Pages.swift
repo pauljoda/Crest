@@ -257,10 +257,11 @@ extension BrowserMacAgents {
         return try await serially(on: click.tab) { () async throws(BrowserAgentFailure) -> AgentToolResult in
             let page = try await self.settledPage(for: click.tab, call)
             let located = try await self.locate(click.uid, on: page)
+            let point = PagePoint(x: located.x, y: located.y)
+            page.pointAgent(at: point, presses: true)
             let delivered = try await self.deliver(
-                .click(
-                    at: PagePoint(x: located.x, y: located.y), button: click.button?.pointer ?? .primary,
-                    count: click.double == true ? 2 : 1), to: page, tab: click.tab, call)
+                .click(at: point, button: click.button?.pointer ?? .primary, count: click.double == true ? 2 : 1),
+                to: page, tab: click.tab, call)
             return .message(Self.done("Clicked the \(located.tag) \(click.uid).", delivered))
         }
     }
@@ -270,8 +271,9 @@ extension BrowserMacAgents {
         return try await serially(on: reference.tab) { () async throws(BrowserAgentFailure) -> AgentToolResult in
             let page = try await self.settledPage(for: reference.tab, call)
             let located = try await self.locate(reference.uid, on: page)
-            let delivered = try await self.deliver(
-                .hover(at: PagePoint(x: located.x, y: located.y)), to: page, tab: reference.tab, call)
+            let point = PagePoint(x: located.x, y: located.y)
+            page.pointAgent(at: point, presses: false)
+            let delivered = try await self.deliver(.hover(at: point), to: page, tab: reference.tab, call)
             return .message(Self.done("The pointer is over the \(located.tag) \(reference.uid).", delivered))
         }
     }
@@ -280,6 +282,10 @@ extension BrowserMacAgents {
         let fill = try call.arguments(Fill.self)
         return try await serially(on: fill.tab) { () async throws(BrowserAgentFailure) -> AgentToolResult in
             let page = try await self.settledPage(for: fill.tab, call)
+            // The pointer goes to the field first, as a person's would.
+            if let located = try? await self.locate(fill.uid, on: page) {
+                page.pointAgent(at: PagePoint(x: located.x, y: located.y), presses: true)
+            }
             let prepared = try await self.run(BrowserAgentPageScript.prepareFill(fill.uid, value: fill.value), on: page)
             if let refusal = BrowserAgentFillRefusal.named(prepared["error"]?.string) {
                 throw refusal.failure(uid: fill.uid, value: fill.value)
@@ -323,6 +329,7 @@ extension BrowserMacAgents {
             if let uid = scrolling.uid {
                 let located = try await self.locate(uid, on: page)
                 point = PagePoint(x: located.x, y: located.y)
+                page.pointAgent(at: point, presses: false)
             }
             let (dx, dy) = (scrolling.dx ?? 0, scrolling.dy ?? 0)
             guard dx != 0 || dy != 0 else { return .message("Scrolled \(scrolling.uid ?? "the page") into view.") }
