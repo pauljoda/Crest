@@ -19,6 +19,10 @@ struct BrowserSidebarTabActivationButton: View {
     /// line leaves it at zero: its container has already placed it.
     var leadingInset: CGFloat = 0
     let restoreSavedLocation: (() -> Void)?
+    /// Supplied by a tab row, where the title's double-click renames the tab
+    /// and the favicon keeps the saved-location restore. Nil elsewhere, where
+    /// a double-click anywhere on the button restores the saved location.
+    var beginRenaming: (() -> Void)? = nil
     let iconCustomization: BrowserIconCustomizationPresentation
     let select: () -> Void
 
@@ -27,7 +31,8 @@ struct BrowserSidebarTabActivationButton: View {
             BrowserSidebarTabLabel(
                 tab: tab, favicons: favicons, profileID: profileID, isSelected: isSelected,
                 isLoaded: isLoaded, metrics: metrics, leadingInset: leadingInset,
-                restoreSavedLocation: restoreSavedLocation, faviconPrimaryClick: faviconPrimaryClick)
+                restoreSavedLocation: restoreSavedLocation, faviconPrimaryClick: faviconPrimaryClick,
+                beginRenaming: beginRenaming)
         }
         .buttonStyle(.plain)
         .frame(maxWidth: .infinity, maxHeight: maxHeight)
@@ -37,7 +42,8 @@ struct BrowserSidebarTabActivationButton: View {
                 TapGesture(count: 2).onEnded {
                     guard tab.placement == .saved else { return }
                     restoreSavedLocation?()
-                }
+                },
+                including: beginRenaming == nil ? .all : .none
             )
         #endif
         .overlay(alignment: .leading) {

@@ -12,6 +12,7 @@ struct BrowserSidebarTabLabelContent: View {
     var leadingInset: CGFloat = 0
     var restoreSavedLocation: (() -> Void)?
     var faviconPrimaryClick: (() -> Void)?
+    var beginRenaming: (() -> Void)?
     var titleOpacity = 1.0
     var iconOffset: CGFloat = 0
     @Environment(\.browserInteractionCapabilities) private var capabilities
@@ -28,6 +29,16 @@ struct BrowserSidebarTabLabelContent: View {
                 .lineLimit(1)
                 .browserTabResidency(isLoaded: isLoaded)
                 .opacity(titleOpacity)
+                #if os(macOS)
+                    // Stretches the hit area over the strip after the favicon, so the
+                    // title is a rename target beyond the glyphs of short text.
+                    .frame(maxWidth: beginRenaming == nil ? nil : .infinity, alignment: .leading)
+                    .contentShape(.rect)
+                    .simultaneousGesture(
+                        TapGesture(count: 2).onEnded { beginRenaming?() },
+                        including: beginRenaming == nil ? .none : .all
+                    )
+                #endif
         } icon: {
             HStack(spacing: 3) {
                 BrowserSidebarTabFaviconContent(
@@ -46,6 +57,17 @@ struct BrowserSidebarTabLabelContent: View {
                         .browserTabResidency(isLoaded: isLoaded)
                 }
             }
+            #if os(macOS)
+                // With a rename trigger, the title's double-click renames, so only the
+                // favicon and its indicator keep the saved-location restore.
+                .simultaneousGesture(
+                    TapGesture(count: 2).onEnded {
+                        guard tab.placement == .saved else { return }
+                        restoreSavedLocation?()
+                    },
+                    including: beginRenaming == nil ? .none : .all
+                )
+            #endif
             .offset(x: iconOffset)
         }
         .padding(.leading, leadingInset)
