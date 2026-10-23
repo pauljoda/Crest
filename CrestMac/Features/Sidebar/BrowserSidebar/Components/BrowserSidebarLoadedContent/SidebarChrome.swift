@@ -64,7 +64,7 @@ struct SidebarChrome: View {
             }
             .environment(
                 \.colorScheme,
-                space.settings.look.foregroundTone.colorScheme
+                space.settings.look.shown.foregroundTone.colorScheme
             )
             .modifier(SpaceForegroundBlend(spaces: context.availableSpaces, selectedSpaceID: space.id))
             .blur(radius: isLocked ? BrowserSidebarMetrics.lockedSpaceBlurRadius : 0)

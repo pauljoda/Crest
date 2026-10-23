@@ -18,7 +18,7 @@ struct SpaceForegroundBlend: ViewModifier {
         let brandings = spaces.map(\.settings.look)
         tones = zip(spaces, brandings).map { space, branding in
             SpaceForegroundPresentation.Tone(
-                id: space.id, white: branding.foregroundTone == .light ? 1 : 0)
+                id: space.id, white: branding.shown.foregroundTone == .light ? 1 : 0)
         }
         accents = brandings.map { $0.primaryColor.color }
         self.selectedSpaceID = selectedSpaceID
