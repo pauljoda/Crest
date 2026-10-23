@@ -4313,6 +4313,10 @@
     "upload-ios-cloud-archives-without-ad-hoc-export": {
       "category": "internal",
       "message": "Upload iOS Cloud archives to TestFlight from the App Store export when the ad hoc export fails"
+    },
+    "double-click-sidebar-tab-title-to-rename": {
+      "category": "improved",
+      "message": "Double-click a tab's name in the sidebar to rename it, and click anywhere else in the sidebar to finish."
     }
   }
 }

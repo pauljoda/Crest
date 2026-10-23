@@ -17,6 +17,19 @@ enum AddressFocusAction {
         resign(in: window, keepingFocusIn: page)
     }
 
+    /// Ends an inline text edit when the click that is being handled lands
+    /// outside its field. Only a field editor counts, and a click inside the
+    /// field keeps the caret where the person put it.
+    static func resignTextEditingOutsideClick() {
+        guard let window = NSApp.keyWindow,
+            let editor = window.firstResponder as? NSTextView, editor.isFieldEditor,
+            let field = editor.delegate as? NSView,
+            let location = NSApp.currentEvent?.locationInWindow,
+            !field.convert(field.bounds, to: nil).contains(location)
+        else { return }
+        resign(in: window)
+    }
+
     /// Gives up the responder that owns focus at this selection boundary,
     /// unless it is inside `page`, the page the selection moved to.
     ///

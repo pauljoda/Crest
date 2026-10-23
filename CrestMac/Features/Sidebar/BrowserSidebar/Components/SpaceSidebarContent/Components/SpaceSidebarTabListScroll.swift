@@ -63,6 +63,7 @@ struct SpaceSidebarTabListScroll<Background: View, Content: View>: View {
         .simultaneousGesture(
             TapGesture().onEnded {
                 BrowserAddressFocusDismissal.dismiss()
+                AddressFocusAction.resignTextEditingOutsideClick()
             }
         )
         .accessibilityElement(children: .contain)

@@ -41,6 +41,7 @@ struct BrowserSidebarTabRowContent: View {
                 metrics: configuration.metrics,
                 leadingInset: configuration.metrics.contentLeadingInset,
                 restoreSavedLocation: configuration.restoreSavedLocation,
+                beginRenaming: interaction.beginRenaming,
                 iconCustomization: BrowserIconCustomizationPresentation(
                     isPresented: interaction.isChoosingIcon,
                     title: "Tab Icon",
