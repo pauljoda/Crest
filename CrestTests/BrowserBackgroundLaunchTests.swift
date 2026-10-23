@@ -17,7 +17,12 @@ final class BrowserBackgroundLaunchTests: XCTestCase {
             styleMask: [.titled, .closable], backing: .buffered, defer: false)
         sentinel.isReleasedWhenClosed = false
         sentinel.makeKeyAndOrderFront(nil)
-        XCTAssertTrue(sentinel.isKeyWindow)
+        // Only the active app holds a key window, and another app may be in
+        // front while the tests run.
+        guard sentinel.isKeyWindow else {
+            sentinel.close()
+            throw XCTSkip("The test host holds a key window only while it is the active app.")
+        }
         let wasActive = NSApp.isActive
         let before = Set(NSApp.windows.map(\.windowNumber))
         defer {
