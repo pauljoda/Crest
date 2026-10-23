@@ -4317,6 +4317,10 @@
     "appearance-light-dark-follow-system": {
       "category": "new",
       "message": "Keep Crest light or dark, or let it follow macOS, in Settings › Appearance. Spaces can also dim their colors in dark."
+    },
+    "site-controls-follow-space-text-color": {
+      "category": "fixed",
+      "message": "Site Controls now use your Space's light or dark appearance, so their labels stay readable in Spaces with dark text."
     }
   }
 }

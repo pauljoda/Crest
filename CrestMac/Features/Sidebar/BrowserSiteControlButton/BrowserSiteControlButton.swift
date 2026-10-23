@@ -25,7 +25,11 @@ struct BrowserSiteControlButton: View {
                     )
                 }
             }
-            .modifier(BrowserSiteControlPopoverStyle())
+            .modifier(
+                BrowserSiteControlPopoverStyle(
+                    colorScheme: configuration.space.settings.look.shown.foregroundTone.colorScheme
+                )
+            )
             .modifier(BrowserDeviceAppearanceEnvironment())
         }
         // This control opens the window's extension list, so it is where an
