@@ -17,7 +17,7 @@ final class SpacePagerViewport<Content: View>: NSView {
         var settledDestination: UUID?
         var transition: SpacePagerSettlement?
         var hasPreparedNeighbors = false
-        let commitsSelection: Bool
+        var commitsSelection: Bool
     }
 
     private(set) var spaces: [SpaceModel] = []
@@ -122,19 +122,29 @@ final class SpacePagerViewport<Content: View>: NSView {
             // Actual authoritative selection changes supersede native motion;
             // unrelated updates carrying the old ID do not.
             expectedSelection = nil
-            if continueSettling(to: selectedSpaceID) { return }
-            cancelMotion()
-            gesture.cancelCurrentGesture()
-            if let origin = presentationSpaceID, !reduceMotion, let step = step(from: origin, to: selectedSpaceID) {
-                // Retained pages keep their visible content until the slide
-                // finishes. The latest roots are supplied at completion.
-                prepareHosts(around: selectedSpaceID, retaining: origin, refreshContent: false)
-                animate(to: selectedSpaceID, step: step, commitsSelection: false)
-                return
+            if let heading = motion?.settledDestination, !reduceMotion,
+                let step = step(from: heading, to: selectedSpaceID)
+            {
+                // The slide no longer decides the selection, even if it ends
+                // before the continuation starts. Its page is readied now,
+                // with this update, so the continuation's own commit is light.
+                motion?.commitsSelection = false
+                prepareHosts(around: heading, retaining: selectedSpaceID, refreshContent: false)
+                continueSettlingOnScreen(to: selectedSpaceID, from: heading, step: step)
+            } else {
+                cancelMotion()
+                gesture.cancelCurrentGesture()
+                if let origin = presentationSpaceID, !reduceMotion, let step = step(from: origin, to: selectedSpaceID) {
+                    // Retained pages keep their visible content until the slide
+                    // finishes. The latest roots are supplied at completion.
+                    prepareHosts(around: selectedSpaceID, retaining: origin, refreshContent: false)
+                    animate(to: selectedSpaceID, step: step, commitsSelection: false)
+                    return
+                }
+                // A direct nonadjacent choice presents its authoritative page.
+                // It does not create a compressed strip of unrelated neighbors.
+                presentationSpaceID = selectedSpaceID
             }
-            // A direct nonadjacent choice presents its authoritative page.
-            // It does not create a compressed strip of unrelated neighbors.
-            presentationSpaceID = selectedSpaceID
         }
         guard motion == nil else {
             updateAccessibility()
@@ -399,17 +409,40 @@ final class SpacePagerViewport<Content: View>: NSView {
         return direction == .next ? 1 : -1
     }
 
+    /// Continues the settling slide toward `destination` once the update that
+    /// selected it is on screen. That update can lay out a whole new Space
+    /// before it reaches the screen, and the slide keeps moving meanwhile, so
+    /// a continuation read from its position now would draw the page back by
+    /// the distance covered by then. A slide that finished in the meantime
+    /// slides on from the Space it reached.
+    private func continueSettlingOnScreen(to destination: UUID, from heading: UUID, step: Int) {
+        Task { @MainActor [weak self] in
+            guard let self, self.selectedSpaceID == destination, self.expectedSelection == nil,
+                !self.isInteractionLocked
+            else { return }
+            if !self.continueSettling(to: destination, from: heading, step: step) {
+                guard self.motion == nil, self.presentationSpaceID == heading, !self.reduceMotion else { return }
+                self.prepareHosts(around: destination, retaining: heading, refreshContent: false)
+                self.animate(to: destination, step: step, commitsSelection: false)
+            }
+            // Main-actor work queued behind this can hold the run loop's
+            // commit back while the earlier slide keeps moving on screen. The
+            // continuation starts from where the page is now, so it goes to
+            // the screen now.
+            CATransaction.flush()
+        }
+    }
+
     /// A selection that arrives while a slide is still settling continues from
     /// what is on screen, starting at the Space that slide was heading to.
     /// Measured from the Space shown before the slide, the next one along
     /// would look two pages away and appear without motion.
-    private func continueSettling(to destination: UUID) -> Bool {
-        guard !reduceMotion, let current = motion, let heading = current.settledDestination,
-            let step = step(from: heading, to: destination),
+    private func continueSettling(to destination: UUID, from heading: UUID, step: Int) -> Bool {
+        guard !reduceMotion, let current = motion, current.settledDestination == heading,
             let origin = assignment(for: heading), hosts[origin] != nil,
             let target = assignment(for: destination)
         else { return false }
-        let offset = visibleOffset(for: origin, during: current)
+        let offset = settlingOffset(for: origin, during: current) ?? visibleOffset(for: origin, during: current)
         gesture.cancelCurrentGesture()
         stopPresentationSampling()
         stopHostAnimations()
@@ -426,6 +459,23 @@ final class SpacePagerViewport<Content: View>: NSView {
         updateAccessibility()
         settleMotion(to: destination)
         return true
+    }
+
+    /// Where `key`'s page is now on the settling slide's own curve, timed
+    /// from when Core Animation began it; nil once the page's slide has
+    /// ended. A layer's presentation runs about a frame behind, which is a
+    /// visible step at the start of a slide.
+    private func settlingOffset(for key: BrowserSpaceRuntimeAssignment, during current: Motion) -> CGFloat? {
+        guard let transition = current.transition, bounds.width > 0,
+            let slide = hosts[key]?.layer.flatMap(Self.slideAnimation),
+            let index = spaces.firstIndex(where: { $0.id == key.spaceID })
+        else { return nil }
+        // Zero is a slide Core Animation has not committed yet.
+        let elapsed = slide.beginTime > 0 ? CACurrentMediaTime() - slide.beginTime : 0
+        let position = transition.position(after: elapsed)
+        let placed = SpacePagerInterpolation.index(index, near: transition.startPosition, count: spaces.count)
+        let direction: CGFloat = layoutDirection == .leftToRight ? 1 : -1
+        return (CGFloat(placed) - position) * bounds.width * direction
     }
 
     private func visibleOffset(for key: BrowserSpaceRuntimeAssignment, during current: Motion) -> CGFloat {

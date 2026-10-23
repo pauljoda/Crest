@@ -217,7 +217,11 @@ final class SpaceContentPagerView<Content: View & Equatable>: NSView {
         guard !spaces.isEmpty, let makeRoot else { return }
         let center = min(spaces.count - 1, max(0, Int(position.rounded())))
         let target = destination.flatMap { id in spaces.firstIndex { $0.id == id } } ?? center
-        let visible = Set([Int(position.rounded(.down)), Int(position.rounded(.up)), target])
+        var visible = Set([Int(position.rounded(.down)), Int(position.rounded(.up)), target])
+        if snapshot?.phase != .idle, let selected = spaces.firstIndex(where: { $0.id == selectedSpaceID }) {
+            // A selection made mid-slide is where the slide goes next.
+            visible.insert(selected)
+        }
         let neighbors = preparesNeighbors ? [target - 1, target + 1, center - 1, center + 1] : []
         var indices = visible.filter { spaces.indices.contains($0) }
         for index in neighbors where indices.count < 4 && spaces.indices.contains(index) { indices.insert(index) }
@@ -285,7 +289,9 @@ final class SpaceContentPagerView<Content: View & Equatable>: NSView {
         let start = snapshot.transition?.startPosition ?? snapshot.position
         let end = snapshot.transition?.endPosition ?? snapshot.position
         let visible = Int(min(start, end).rounded(.down))...Int(max(start, end).rounded(.up))
-        return visible.contains(index) || id == snapshot.destinationID ? .preview : .inactive
+        // A Space selected mid-slide is admitted with that selection, so the
+        // slide carrying on to it doesn't wait on its first layout.
+        return visible.contains(index) || id == snapshot.destinationID || id == selectedSpaceID ? .preview : .inactive
     }
 
     /// Where `key`'s page sits while the strip shows `position`, placed
