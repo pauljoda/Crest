@@ -4158,6 +4158,166 @@
       "category": "fixed",
       "message": "Restart and Update quits Crest and installs the update instead of waiting until you quit, and Quit in the Dock works again, even after another app has used AppleScript with Crest."
     },
+    "quit-after-space-deletion-fails": {
+      "category": "fixed",
+      "message": "Crest quits instead of waiting indefinitely when a Space couldn’t be fully deleted, and tries deleting that Space again the next time it opens."
+    },
+    "chromium-upstream-155-0-8059-39-1-1-6271503014ef": {
+      "category": "fixed",
+      "message": "Chromium is updated to 155.0.8059.39 with upstream security and compatibility fixes."
+    },
+    "http-dead-link-crash": {
+      "category": "fixed",
+      "message": "Opening an http:// address that can’t be reached shows Crest’s error page instead of closing Crest."
+    },
+    "link-route-exact-site-name": {
+      "category": "fixed",
+      "message": "A link route set to “Is Exactly” with just a site’s name, such as docs.google.com, now matches that site’s home page, and Links settings say that routes apply to links from other apps."
+    },
+    "link-route-address-field-editable": {
+      "category": "fixed",
+      "message": "A link route’s address field takes clicks and typing, with “example.com” shown as a hint inside it instead of a fixed label beside it."
+    },
+    "settings-narrow-window-sidebar-clicks": {
+      "category": "fixed",
+      "message": "In a narrow window, a Space’s Crest Studio no longer covers the Settings sidebar, so its search field and Space buttons take clicks again."
+    },
+    "local-addresses-open-over-http": {
+      "category": "fixed",
+      "message": "Typing a local address such as 192.168.0.1 or printer.local opens it over http, as other browsers do, and an address typed with http:// always opens over http."
+    },
+    "tab-title-after-failed-load": {
+      "category": "fixed",
+      "message": "When a page can’t be opened, its tab in the sidebar shows the site it tried to open instead of the previous page’s title."
+    },
+    "core-owned-tab-history": {
+      "category": "internal",
+      "message": "The core keeps each page's back and forward history, with an identity per entry that engines report and traverse by."
+    },
+    "core-history-load-identity-on-failure": {
+      "category": "internal",
+      "message": "A page the core asks to load in place of a history entry gives up that entry's identity when the load fails or is cancelled, so a later page never takes it."
+    },
+    "history-across-engine-moves": {
+      "category": "fixed",
+      "message": "Back and Forward keep working after a page opens in another engine, and take each page back to the engine it was shown in."
+    },
+    "history-refused-step-keeps-site-engine": {
+      "category": "internal",
+      "message": "A step through history the engine refuses no longer keeps a later visit to that address on the same engine instead of the one chosen for the site."
+    },
+    "history-across-engines-after-relaunch": {
+      "category": "improved",
+      "message": "Tabs keep their back and forward history across engines after Crest relaunches, and a duplicated tab keeps it too."
+    },
+    "history-kept-before-engine-state": {
+      "category": "internal",
+      "message": "A tab keeps its history across engines after a relaunch or when duplicated even before its page has any engine state to keep, and a long history no longer loses a run the page left on its oldest entry."
+    },
+    "chromium-form-submit-autofill-save-crash": {
+      "category": "fixed",
+      "message": "Crest no longer quits when you submit a form containing a payment card or address."
+    },
+    "setup-full-screen-look-choice": {
+      "category": "new",
+      "message": "Setup on the Mac fills the screen and asks whether your Spaces wear Crest's heraldic banners and crests or a modern gradient and icon, then carries that look through importing, reviewing and making your Spaces yours."
+    },
+    "setup-import-read-cancel": {
+      "category": "fixed",
+      "message": "While setup reads a browser you chose to import, the page says so where Continue was and offers Cancel, so a slow or stuck read no longer leaves setup looking stuck with every button disabled."
+    },
+    "address-bar-selects-url-on-tap": {
+      "category": "fixed",
+      "message": "Tapping the address bar on iPhone selects the whole address, so typing replaces it or you can copy it right away."
+    },
+    "mobile-cross-site-download-test-wait": {
+      "category": "internal",
+      "message": "The iPhone and iPad test of a download from another site waits as long as WebKit takes in the Simulator to start it, so it no longer fails after other tests have run."
+    },
+    "mobile-full-screen-video-shows": {
+      "category": "fixed",
+      "message": "On iPhone and iPad, a video a site shows full screen, such as Reddit's, fills the screen instead of going black, and the page is back when you leave full screen."
+    },
+    "sync-default-search-and-crest-passwords": {
+      "category": "fixed",
+      "message": "A new iPhone or iPad that syncs with iCloud searches with the default your other devices' Spaces follow instead of keeping Google, turning Crest Passwords on or off for a Space reaches your other devices, and Settings says which search and password choices stay on each device."
+    },
+    "share-sheet-open-links": {
+      "category": "new",
+      "message": "On iPhone and iPad, Crest appears in the share sheet, so a link shared from another app, or the first link in shared text, opens in Crest."
+    },
+    "appearance-preview-concentric-page-corners": {
+      "category": "fixed",
+      "message": "On iPhone and iPad, the page in the Appearance window preview rounds its corners with the preview's, so the window border keeps its width all the way around."
+    },
+    "ios-icon-tinted-clear-background": {
+      "category": "fixed",
+      "message": "With tinted or clear app icons on iPhone, iPad and Mac, Crest's icon sits on the same tinted or glass background as other apps instead of a flat gray one."
+    },
+    "mobile-edge-swipe-back-forward": {
+      "category": "new",
+      "message": "On iPhone and iPad, swipe in from a page's left edge to go back and from its right edge to go forward. With the sidebar hidden on iPad, a swipe in from the top or bottom of its edge still brings the sidebar back."
+    },
+    "setup-color-strip-clip": {
+      "category": "fixed",
+      "message": "In setup, the color and emblem rows on Make it yours stay inside their panel while you scroll them, instead of drawing over the window preview."
+    },
+    "iphone-duo-layout": {
+      "category": "new",
+      "message": "On iPhone Duo, Crest's controls move to the side bar where iOS puts them, pages use the outer display's full width, the open display's page and sidebar reach its edges, and folded like a book the sidebar and page, or a Split View's two pages, each take one side of the fold."
+    },
+    "no-room-for-hidden-keyboard": {
+      "category": "fixed",
+      "message": "On iPhone and iPad, Crest no longer leaves an empty band at the bottom of the window for a keyboard that isn't on screen."
+    },
+    "history-swipe-from-page-frame": {
+      "category": "new",
+      "message": "On iPhone and iPad, a swipe to go back or forward can also start on the frame around the page, where a finger reaching for the edge of the screen lands."
+    },
+    "sidebar-keeps-space-across-displays": {
+      "category": "fixed",
+      "message": "On iPhone Duo, opening or closing the phone keeps the sidebar and its colors on the Space you're in instead of showing your first Space."
+    },
+    "split-view-shows-every-page-on-open": {
+      "category": "fixed",
+      "message": "On iPhone Duo, a Split View made on the outer display shows both of its pages when you open the phone, instead of one staying blank until you tap it."
+    },
+    "narrower-default-sidebar-ipad": {
+      "category": "improved",
+      "message": "On iPad and iPhone Duo, the sidebar starts narrower, leaving more of the window to the page."
+    },
+    "quick-window-card-fits-screen": {
+      "category": "fixed",
+      "message": "On iPhone and iPad, a Quick Window no longer leaves an empty band above it, and on iPad a Quick Window or Peek beside the sidebar stays on screen instead of running off its edge."
+    },
+    "dismissed-address-shows-page": {
+      "category": "fixed",
+      "message": "On iPhone and in a Mac Quick Window, leaving the address bar without going anywhere, by tapping or clicking away or pressing Escape, puts the page's address back instead of what you typed."
+    },
+    "sidebar-list-reaches-bottom-corner": {
+      "category": "fixed",
+      "message": "On iPad and iPhone Duo, the sidebar's tabs scroll on to the bottom of the screen and into its corner instead of stopping short above it."
+    },
+    "address-bar-swipes-through-tabs": {
+      "category": "new",
+      "message": "On iPhone, swiping left or right on the address bar moves through the tabs of your Space in sidebar order, and the page slides along with your finger. In a Split View, the other cards sit beside the address bar, and the swipe moves card by card before carrying on to the next tab."
+    },
+    "chromium-upstream-155-0-8059-84-1-1-721f3d908153": {
+      "category": "fixed",
+      "message": "Chromium is updated to 155.0.8059.84 with upstream security and compatibility fixes."
+    },
+    "chromium-emudhra-certificates-distrusted": {
+      "category": "fixed",
+      "message": "Pages that run in Chromium no longer trust certificates from the compromised eMudhra certificate authorities, matching Chrome."
+    },
+    "crest-0-8-50-chromium-security-setup-translation": {
+      "category": "new",
+      "message": "Crest 0.8.50 updates Chromium with its latest security fixes and stops trusting the compromised eMudhra certificate authorities, rebuilds setup on the Mac, translates whole pages in Chromium, and fixes several crashes and problems quitting."
+    },
+    "upload-ios-cloud-archives-without-ad-hoc-export": {
+      "category": "internal",
+      "message": "Upload iOS Cloud archives to TestFlight from the App Store export when the ad hoc export fails"
+    },
     "background-launch-review-scope": {
       "category": "internal",
       "message": "Keep background launch focused on window activation while retaining the existing window implementation."

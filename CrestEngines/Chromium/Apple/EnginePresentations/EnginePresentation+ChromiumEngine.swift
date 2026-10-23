@@ -18,7 +18,6 @@
             case .inspectorLayoutChanged(let presentation): presentation.present(on: engine)
             case .linkHovered(let presentation): presentation.present(on: engine)
             case .mediaSessionChanged(let presentation): presentation.present(on: engine)
-            case .pageHistoryChanged(let presentation): presentation.present(on: engine)
             case .pageInteracted(let presentation): presentation.present(on: engine)
             case .pageLoadingChanged(let presentation): presentation.present(on: engine)
             case .pageNavigationCommitted(let presentation): presentation.present(on: engine)

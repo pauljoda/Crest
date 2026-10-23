@@ -216,6 +216,52 @@ public sealed partial class BrowserContractsTests {
         Assert.Same(replaced, stored.Session.Current);
     }
 
+    /// A first launch restores the device's search catalog over its seed,
+    /// which follows Google, before the cloud answers. Once the cloud's
+    /// Spaces take the seed's place, the device takes the default they follow.
+    [Fact]
+    public void AFirstLaunchTakesTheDefaultTheCloudsSpacesFollowInsteadOfItsSeeds() {
+        using var directory = new StorageDirectory();
+        var fixture = SavedSession();
+        fixture.Document["session"]!["spaces"]![0]!["browsingPreferences"] = Following(BuiltInSearchProvider.Google);
+        using var stored = StoredSyncing(directory, fixture.Document, keepsSeed: true);
+        stored.App.Send(new RestoreSearchCatalog("en", "US"));
+        Assert.Equal("google", stored.Session.SearchCatalog.Default.Name);
+
+        stored.App.Send(new ReplaceSeedWithCloudRecords([
+            CloudSpace(Guid.NewGuid(), Guid.NewGuid(), 5, Following(BuiltInSearchProvider.DuckDuckGo))
+        ]));
+        stored.App.Send(new RestoreSearchCatalog("en", "US"));
+
+        Assert.Equal("duckDuckGo", stored.Session.SearchCatalog.Default.Name);
+        Assert.True(Assert.Single(stored.Session.Current.Spaces).Settings.BrowsingPreferences.FollowsDefaultSearch);
+    }
+
+    /// Turning Crest Passwords on or off for a Space puts that choice, and when
+    /// it was made, in the Space's record; where the Space keeps its passwords
+    /// stays out of it.
+    [Fact]
+    public void TurningCrestPasswordsOnOrOffReachesTheSpacesRecordButWhereItKeepsThemDoesNot() {
+        using var directory = new StorageDirectory();
+        var fixture = SavedSession();
+        using var stored = StoredSyncing(directory, fixture.Document);
+        var kept = stored.Session.Current.Spaces.Single(space => space.Id == fixture.Space).Settings.CredentialPreferences;
+
+        stored.App.Send(new SetCredentialPreferences(stored.Workspace, fixture.Space,
+            kept with { SyncsCrestPasswordsWithICloud = !kept.SyncsCrestPasswordsWithICloud }));
+        stored.Sync.Flush();
+        Assert.Null(SpaceRecordValue(stored.Sync, fixture.Space)["credentialsEnabled"]);
+
+        stored.App.Send(new SetCredentialPreferences(stored.Workspace, fixture.Space, kept with { IsEnabled = !kept.IsEnabled }));
+        stored.Sync.Flush();
+        var value = SpaceRecordValue(stored.Sync, fixture.Space);
+
+        Assert.Equal(!kept.IsEnabled, value["credentialsEnabled"]!.GetValue<bool>());
+        Assert.NotNull(value["credentialsEnabledModifiedAt"]);
+        Assert.DoesNotContain("syncsCrestPasswordsWithICloud", value.ToJsonString(), StringComparison.Ordinal);
+        Assert.DoesNotContain("alsoOffersSaveToSystemPasswords", value.ToJsonString(), StringComparison.Ordinal);
+    }
+
     [Fact]
     public void AMergeThatDeletesABorrowedSpaceClosesItsBorrower() {
         using var directory = new StorageDirectory();
@@ -430,6 +476,12 @@ public sealed partial class BrowserContractsTests {
 
     #region Actions - Fixtures
 
+    /// The value of `space`'s record in the journal `sync` holds.
+    private static JsonObject SpaceRecordValue(NativeSyncAuthority sync, Guid space) =>
+        JsonNode.Parse(sync.Snapshot.Read())!["records"]!.AsArray()
+            .Single(record => record!["id"]!["kind"]!.GetValue<string>() == "space"
+                && Guid.Parse(record["id"]!["value"]!.GetValue<string>()) == space)!["payload"]!["value"]!.AsObject();
+
     /// Why the journal `sync` holds deletes `folder`'s record, or null while it
     /// holds no tombstone for it.
     private static string? FolderTombstoneReason(NativeSyncAuthority sync, Guid folder) =>
@@ -482,19 +534,26 @@ public sealed partial class BrowserContractsTests {
             }
         }), IsTombstone: false);
 
-    private static SyncRecord CloudSpace(Guid id, Guid profile, ulong clock) => new(SyncRecordKind.Space, id, id,
-        new SyncVersion(clock, CloudDevice), Schema: 1, Bytes(new JsonObject {
-            ["type"] = "space",
-            ["value"] = new JsonObject {
-                ["id"] = SwiftId(id),
-                ["profileID"] = profile.ToString("D").ToUpperInvariant(),
-                ["name"] = "From the cloud",
-                ["symbol"] = "cloud",
-                ["accent"] = "teal",
-                ["orderToken"] = "8000000000000000",
-                ["splitGroups"] = new JsonArray()
-            }
-        }), IsTombstone: false);
+    private static SyncRecord CloudSpace(Guid id, Guid profile, ulong clock, JsonObject? browsingPreferences = null) {
+        var value = new JsonObject {
+            ["id"] = SwiftId(id),
+            ["profileID"] = profile.ToString("D").ToUpperInvariant(),
+            ["name"] = "From the cloud",
+            ["symbol"] = "cloud",
+            ["accent"] = "teal",
+            ["orderToken"] = "8000000000000000",
+            ["splitGroups"] = new JsonArray()
+        };
+        if (browsingPreferences is not null) value["browsingPreferences"] = browsingPreferences;
+        return new(SyncRecordKind.Space, id, id, new SyncVersion(clock, CloudDevice), Schema: 1,
+            Bytes(new JsonObject { ["type"] = "space", ["value"] = value }), IsTombstone: false);
+    }
+
+    /// Browsing preferences that follow the device's default search, which
+    /// `engine` was when the Space last chose.
+    private static JsonObject Following(BuiltInSearchProvider engine) => StoredSessionCodec.Encode(new BrowsingPreferences(engine, null, [],
+        SearchSuggestionsEnabled: false, FollowsDefaultSearch: true, FollowsDefaultSuggestions: true, CurrentTabCleanup.After12Hours,
+        ContentBlockingPolicy.Balanced, new(DataRetention.Forever, DataRetention.Forever, DataRetention.Forever)));
 
     private static SyncRecord CloudFolder(Guid id, Guid space, Guid? parent, ulong clock) {
         var value = new JsonObject {

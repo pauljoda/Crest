@@ -59,6 +59,8 @@ public sealed partial class BrowserContractsTests {
     [Fact]
     public void TheFirstRestoreKeepsWhatSpacesChoseAndTheyFollowTheDefaultItMakes() {
         var (document, _, _) = SavedSession();
+        // Spaces a person chose, no longer the disposable seed of a first launch.
+        document["session"]!.AsObject().Remove("disposableSeedMarker");
         var spaces = document["session"]!["spaces"]!.AsArray();
         var first = spaces[0]!;
         spaces.Add(first.DeepClone());

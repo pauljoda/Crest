@@ -6,6 +6,7 @@ extension SetupStep {
     func page(in pages: some BrowserOnboardingPages) -> some View {
         switch kind {
         case .welcome: pages.welcomePage()
+        case .look: pages.lookPage()
         case .featureSpaces: pages.featureSpacesPage()
         case .featureTabs: pages.featureTabsPage()
         case .featureSync: pages.featureSyncPage()

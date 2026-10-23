@@ -19,11 +19,15 @@ public sealed record SetupDraft(Guid WorkspaceId, IReadOnlyList<SetupDraftSpace>
     #region Actions - Starting
 
     /// A setup of the Spaces `session` keeps, in their order, with a new Space
-    /// when there are none.
-    internal static SetupDraft Started(Guid workspaceId, SessionState session, Func<Guid> nextId) {
+    /// in `look` when there are none. A first launch's disposable Spaces take
+    /// `look` too, since the person has not made them theirs.
+    internal static SetupDraft Started(Guid workspaceId, SessionState session, Func<Guid> nextId, SetupLook look) {
         ArgumentNullException.ThrowIfNull(session);
-        var draft = new SetupDraft(workspaceId, [.. session.StayingSpaces.Select(SetupDraftSpace.Existing)], OrderWasEdited: false);
-        return draft.Spaces.Count == 0 ? draft.Adding(nextId) : draft;
+        ArgumentNullException.ThrowIfNull(look);
+        var existing = session.StayingSpaces.Select(SetupDraftSpace.Existing);
+        if (session.DisposableSeedMarker is not null) existing = existing.Select(space => space.Restyled(look));
+        var draft = new SetupDraft(workspaceId, [.. existing], OrderWasEdited: false);
+        return draft.Spaces.Count == 0 ? draft.Adding(nextId, look) : draft;
     }
 
     /// The setup following the Spaces `session` keeps now: an existing Space
@@ -44,17 +48,37 @@ public sealed record SetupDraft(Guid WorkspaceId, IReadOnlyList<SetupDraftSpace>
     #region Actions - Editing
 
     /// The setup with a new Space at its end, named for its place and wearing
-    /// the accents in turn, and the house look of its accent. Throws `Rejected`
-    /// with `SpaceLimitReached` when the setup holds as many Spaces as a
-    /// workspace may.
-    internal SetupDraft Adding(Func<Guid> nextId) {
+    /// the accents in turn, in `look`. Throws `Rejected` with
+    /// `SpaceLimitReached` when the setup holds as many Spaces as a workspace
+    /// may.
+    internal SetupDraft Adding(Func<Guid> nextId, SetupLook look) {
         ArgumentNullException.ThrowIfNull(nextId);
+        ArgumentNullException.ThrowIfNull(look);
         int count = Spaces.Count;
         if (count >= SessionState.MaximumSpaces) throw new Rejected(new SpaceLimitReached(SessionState.MaximumSpaces));
         var accent = SpaceAccent.All[count % SpaceAccent.All.Count];
         var space = new SetupDraftSpace(nextId(), nextId(), IsNew: true,
-            new($"Space {count + 1}", NewSpaceSymbol, accent, accent.House));
+            new($"Space {count + 1}", NewSpaceSymbol, accent, look.NewSpaceLook(accent)));
         return this with { Spaces = [.. Spaces, space] };
+    }
+
+    /// The setup with its new Spaces, and a first launch's disposable ones
+    /// in `session`, wearing `look` in place of `previous`: a new Space the
+    /// person has not edited takes the look a new Space of `look` gets, and
+    /// any other keeps its colors and crest in the new mode. An existing
+    /// Space the person made keeps its own.
+    internal SetupDraft Restyled(SetupLook previous, SetupLook look, SessionState session) {
+        ArgumentNullException.ThrowIfNull(previous);
+        ArgumentNullException.ThrowIfNull(look);
+        ArgumentNullException.ThrowIfNull(session);
+        bool disposable = session.DisposableSeedMarker is not null;
+        return this with {
+            Spaces = [.. Spaces.Select(space =>
+                space.IsNew && space.Customization.Branding == previous.NewSpaceLook(space.Customization.Accent)
+                    ? space with { Customization = space.Customization with { Branding = look.NewSpaceLook(space.Customization.Accent) } }
+                    : space.IsNew || disposable ? space.Restyled(look)
+                    : space)]
+        };
     }
 
     /// The setup without the new Space `spaceId`. An existing Space stays.

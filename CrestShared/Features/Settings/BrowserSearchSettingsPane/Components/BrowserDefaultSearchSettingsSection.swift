@@ -37,7 +37,8 @@ struct BrowserDefaultSearchSettingsSection: View {
         } header: {
             Text("Search")
         } footer: {
-            CrestFormFootnote("Search suggestions send what you type to the search engine.")
+            CrestFormFootnote(
+                "Each device keeps its own default search. Search suggestions send what you type to the search engine.")
         }
     }
 

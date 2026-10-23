@@ -14,4 +14,10 @@ enum BrowserSettingsLayout {
     static let formColumnWidth: CGFloat = 640
     /// The least space kept between the column and the page's edges.
     static let formMinimumInset: CGFloat = 12
+
+    /// The margin that centres the settings column in a page of the given
+    /// width, and keeps at least the minimum on each side of a narrow one.
+    static func formInset(for width: CGFloat, columnWidth: CGFloat = formColumnWidth) -> CGFloat {
+        max(formMinimumInset, (width - columnWidth) / 2)
+    }
 }

@@ -76,6 +76,11 @@ public static class NativeSyncProjection {
             var spaceValue = Fields(space, "id", "name", "symbol", "accent", "branding", "browsingPreferences",
                 "accessPolicy", "isSavedTabsExpanded", "savedTabsExpansionModifiedAt");
             spaceValue["profileID"] = space["profile"]!["id"]!.DeepClone();
+            if (space[StoredSessionCodec.Key.CredentialsEnabledModifiedAt] is { } credentialsModifiedAt) {
+                spaceValue["credentialsEnabled"] = StoredSessionCodec.DecodeCredentialPreferences(
+                    space[StoredSessionCodec.Key.CredentialPreferences] ?? new JsonObject()).IsEnabled;
+                spaceValue["credentialsEnabledModifiedAt"] = credentialsModifiedAt.DeepClone();
+            }
             SyncedText.SpaceName.Fit(spaceValue);
             SyncedText.SpaceSymbol.Fit(spaceValue);
             spaceValue["splitGroups"] = new JsonArray(Items(space, "splitGroups")

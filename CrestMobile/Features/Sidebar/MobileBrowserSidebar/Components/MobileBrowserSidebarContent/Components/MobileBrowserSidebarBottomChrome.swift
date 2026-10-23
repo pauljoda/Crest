@@ -2,30 +2,51 @@ import SwiftUI
 
 struct MobileBrowserSidebarBottomChrome: View {
     @Environment(\.browserChromeAppearance) private var appearance
+    @Environment(\.mobileBrowserControlPlacement) private var controlPlacement
     let configuration: MobileBrowserSidebarContentConfiguration
 
     var body: some View {
+        if controlPlacement.movesControlsToToolbar {
+            // The controls are toolbar items, so the chrome holds no room under
+            // the tabs for them.
+            Color.clear
+                .frame(height: 0)
+                .accessibilityHidden(true)
+                .toolbar { toolbarItems }
+        } else {
+            capsule
+        }
+    }
+
+    @ToolbarContentBuilder
+    private var toolbarItems: some ToolbarContent {
+        ToolbarItemGroup(placement: .bottomBar) {
+            if configuration.showsSidebarToggle {
+                sidebarToggle
+            }
+            if showsSpaceActions {
+                MobileSpaceActionButtons(
+                    browser: configuration.context.browser,
+                    pages: configuration.pages,
+                    utilityPresentationStyle: configuration.utilityPresentationStyle,
+                    configuration: configuration.spaceActionsConfiguration
+                )
+            }
+        }
+    }
+
+    private var capsule: some View {
         ZStack {
             actions
 
             if configuration.showsSidebarToggle {
                 HStack {
-                    Button(action: configuration.toggleSidebar) {
-                        MobileSpaceUtilityButtonLabel(
-                            systemImage: appearance.sidebarOnRight ? "sidebar.right" : "sidebar.left")
-                    }
-                    .buttonStyle(.plain)
-                    .controlSize(.large)
-                    .padding(4)
-                    .glassEffect(.regular, in: .capsule)
-                    .fixedSize(horizontal: true, vertical: false)
-                    .help(
-                        sidebarToggleTitle
-                    )
-                    .accessibilityLabel(
-                        sidebarToggleTitle
-                    )
-                    .accessibilityIdentifier("browser-sidebar-toggle")
+                    sidebarToggle
+                        .buttonStyle(.plain)
+                        .controlSize(.large)
+                        .padding(4)
+                        .glassEffect(.regular, in: .capsule)
+                        .fixedSize(horizontal: true, vertical: false)
 
                     Spacer(minLength: 0)
                 }
@@ -48,14 +69,27 @@ struct MobileBrowserSidebarBottomChrome: View {
         )
     }
 
+    private var sidebarToggle: some View {
+        Button(action: configuration.toggleSidebar) {
+            MobileSpaceUtilityButtonLabel(
+                systemImage: appearance.sidebarOnRight ? "sidebar.right" : "sidebar.left")
+        }
+        .help(sidebarToggleTitle)
+        .accessibilityLabel(sidebarToggleTitle)
+        .accessibilityIdentifier("browser-sidebar-toggle")
+    }
+
+    private var showsSpaceActions: Bool {
+        configuration.context.browser.showsSelectedSpaceActions(
+            accessController: configuration.context.spaceAccess)
+    }
+
     @ViewBuilder
     private var actions: some View {
         if holdsReservedSpace {
             reservedSpace
         } else {
-            if configuration.context.browser.showsSelectedSpaceActions(
-                accessController: configuration.context.spaceAccess)
-            {
+            if showsSpaceActions {
                 MobileSpaceActions(
                     browser: configuration.context.browser,
                     pages: configuration.pages,

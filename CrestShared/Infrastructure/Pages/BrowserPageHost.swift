@@ -245,25 +245,38 @@ final class BrowserPageHost {
     // MARK: - Actions - Tab copies
 
     /// Gives the copy `copyID` of `source`, a tab of the Space `space` names,
-    /// the engine state its page keeps for the copy's first page: what the
-    /// source's resident page shows now, or the state the source left.
+    /// the engine state its page keeps for the copy's first page, with its
+    /// back and forward history: what the source's resident page shows now,
+    /// or the state the source left.
     func prepareTabCopy(from source: TabState, copyID: UUID, in space: BrowserSpaceRuntimeAssignment) {
         let sourceAssignment = BrowserTabRuntimeAssignment(tabID: source.id, in: space)
         let sourceURL = source.url.flatMap(URL.init(string:))
         let url: URL?
         let state: Data?
+        let history: Data?
         if let page = page(matching: sourceAssignment) {
             url = page.live.displayURL ?? sourceURL
             state = !page.wasOpenedAsPopup && page.live.documentURL == url ? page.interactionState : nil
+            history = page.corePage.archivedHistory
         } else if let sourceURL {
             url = sourceURL
             state = archivedInteractionState(for: sourceAssignment, expecting: sourceURL, consumePendingCopy: false)
+            history = tabState.history(for: sourceAssignment, expecting: sourceURL)
         } else {
             url = nil
             state = nil
+            history = nil
         }
-        guard let state else { return }
-        tabState.prepareCopy(state, url: url, for: BrowserTabRuntimeAssignment(tabID: copyID, in: space))
+        tabState.prepareCopy(
+            state, url: url, history: history, for: BrowserTabRuntimeAssignment(tabID: copyID, in: space))
+    }
+
+    /// Hands the core the back and forward history the tab's pending copy or
+    /// archive keeps, before `browser` opens the tab's page, so the page opens
+    /// on the engine of the entry it shows and keeps every engine's history.
+    func restoreTabHistory(for assignment: BrowserTabRuntimeAssignment, expecting url: URL?, in browser: BrowserStore) {
+        guard let url, let history = tabState.history(for: assignment, expecting: url) else { return }
+        browser.restoreTabHistory(history, in: assignment.spaceID, for: assignment.tabID)
     }
 
     /// The address the tab's resident page shows.

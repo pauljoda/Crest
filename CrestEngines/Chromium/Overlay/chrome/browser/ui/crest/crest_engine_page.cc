@@ -1,7 +1,11 @@
 #include "chrome/browser/ui/crest/crest_engine_page.h"
 
+#include <os/log.h>
+#include <os/signpost.h>
+
 #include <algorithm>
 #include <cmath>
+#include <set>
 #include <utility>
 
 #include "base/containers/span.h"
@@ -10,6 +14,7 @@
 #include "base/pickle.h"
 #include "base/strings/string_util.h"
 #include "base/strings/utf_string_conversions.h"
+#include "base/uuid.h"
 #include "chrome/browser/ui/crest/crest_engine_agent.h"
 #include "chrome/browser/ui/crest/crest_engine_binding.h"
 #include "chrome/browser/ui/crest/crest_engine_content.h"
@@ -69,7 +74,11 @@ constexpr char kCrestScheme[] = "crest://";
 
 // The saved navigation history's own spelling, and its limits: the entries a
 // page may keep, the bytes one entry may take and the bytes of the whole.
-constexpr char kInteractionStateMagic[] = "crest.navigation.v1";
+// The second spelling keeps each entry's identity after it; the first, which
+// pages saved before entries had one, still restores, and its entries take
+// new identities.
+constexpr char kInteractionStateMagic[] = "crest.navigation.v2";
+constexpr char kInteractionStateMagicWithoutIds[] = "crest.navigation.v1";
 constexpr int kInteractionStateEntries = 100;
 constexpr size_t kInteractionStateEntryBytes = 64 * 1024;
 constexpr size_t kInteractionStateBytes = 2 * 1024 * 1024;
@@ -92,6 +101,16 @@ constexpr double kMaximumZoom = 5;
 // The widest capture, in points, and how long the compositor has to answer.
 constexpr double kMaximumCaptureWidth = 16384;
 constexpr base::TimeDelta kCaptureTimeout = base::Seconds(2);
+
+// Where reading and reporting a page's history shows in Instruments.
+os_log_t HistoryLog() {
+  static os_log_t log = os_log_create("com.pauldavis.crest", "PageHistory");
+  return log;
+}
+
+engine::Guid NewEntryId() {
+  return *ParseGuid(base::Uuid::GenerateRandomV4().AsLowercaseString());
+}
 
 std::string ReplacingScheme(std::string_view value, std::string_view from, std::string_view to) {
   if (value.size() < from.size() ||
@@ -276,6 +295,7 @@ void EnginePage::LoadPending() {
     // A stale link is never retried as a bare address, which would lose the
     // initiating frame's security and referrer.
     if (!binding_->LoadStagedLink(key_, staged.token, EngineURL(url))) {
+      expected_entry_id_.reset();
       Interrupted();
       Report(engine::StagedLinkUnavailable{.page_id = id_});
     }
@@ -303,6 +323,8 @@ std::optional<std::string> EnginePage::TakeStagedToken() {
 void EnginePage::Navigate(const std::string& url) {
   const GURL target = EngineURL(url);
   if (!web_contents() || !target.is_valid()) {
+    // No navigation starts to take the identity the load expected.
+    expected_entry_id_.reset();
     return;
   }
   web_contents()->GetController().LoadURL(target, content::Referrer(), ui::PAGE_TRANSITION_TYPED,
@@ -332,6 +354,8 @@ std::optional<std::vector<uint8_t>> EnginePage::SaveInteractionState() {
     // Chromium's session serializer leaves out password data.
     navigation.WriteToPickle(kInteractionStateEntryBytes, &entry);
     pickle.WriteData(entry.AsBytes());
+    const engine::Guid id = EntryId(controller.GetEntryAtIndex(index));
+    pickle.WriteData(base::span(id));
     if (pickle.AsBytes().size() > kInteractionStateBytes) {
       return std::nullopt;
     }
@@ -364,12 +388,18 @@ bool EnginePage::RestoreNow(const std::vector<uint8_t>& state, const std::string
   std::string profile;
   int selected = 0;
   int count = 0;
-  if (!iterator.ReadString(&magic) || magic != kInteractionStateMagic || !iterator.ReadString(&profile) ||
+  if (!iterator.ReadString(&magic) ||
+      (magic != kInteractionStateMagic && magic != kInteractionStateMagicWithoutIds)) {
+    return false;
+  }
+  const bool keeps_ids = magic == kInteractionStateMagic;
+  if (!iterator.ReadString(&profile) ||
       profile != profile_ || !iterator.ReadInt(&selected) || !iterator.ReadInt(&count) || count < 1 ||
       count > kInteractionStateEntries || selected < 0 || selected >= count) {
     return false;
   }
   std::vector<sessions::SerializedNavigationEntry> saved;
+  std::vector<engine::Guid> ids;
   for (int index = 0; index < count; ++index) {
     auto bytes = iterator.ReadData();
     if (!bytes || bytes->size() > kInteractionStateEntryBytes + 4 * 1024) {
@@ -381,6 +411,18 @@ bool EnginePage::RestoreNow(const std::vector<uint8_t>& state, const std::string
       return false;
     }
     saved.push_back(std::move(navigation));
+    engine::Guid id = NewEntryId();
+    if (keeps_ids) {
+      auto id_bytes = iterator.ReadData();
+      if (!id_bytes || id_bytes->size() != id.size()) {
+        return false;
+      }
+      std::copy(id_bytes->begin(), id_bytes->end(), id.begin());
+    }
+    ids.push_back(id);
+  }
+  if (std::set<engine::Guid>(ids.begin(), ids.end()).size() != ids.size()) {
+    return false;
   }
   const GURL expected = EngineURL(expected_url);
   if (!iterator.ReachedEnd() || !expected.is_valid() ||
@@ -396,6 +438,10 @@ bool EnginePage::RestoreNow(const std::vector<uint8_t>& state, const std::string
   web_contents()->Stop();
   controller.DiscardNonCommittedEntries();
   controller.Restore(selected, content::RestoreType::kRestored, &entries);
+  entry_ids_.clear();
+  for (int index = 0; index < controller.GetEntryCount(); ++index) {
+    entry_ids_[controller.GetEntryAtIndex(index)->GetUniqueID()] = ids[static_cast<size_t>(index)];
+  }
   controller.LoadIfNecessary();
   StateChanged();
   return true;
@@ -409,6 +455,17 @@ void EnginePage::DidStartNavigation(content::NavigationHandle* navigation) {
   }
   ++navigation_generation_;
   loading_navigation_ = navigation->GetNavigationId();
+  // Only the app's own load of a new entry carries the core's identity. A
+  // page's own navigation, a step through history or a reload that starts
+  // first means that load never came, so the identity is dropped.
+  if (expected_entry_id_ && !expected_entry_navigation_) {
+    if (!navigation->IsRendererInitiated() && navigation->GetReloadType() == content::ReloadType::NONE &&
+        !(navigation->GetPageTransition() & ui::PAGE_TRANSITION_FORWARD_BACK)) {
+      expected_entry_navigation_ = navigation->GetNavigationId();
+    } else {
+      expected_entry_id_.reset();
+    }
+  }
   Present(engine::PageNavigationStarted{.page_id = id_});
   Started(PresentedURL(navigation->GetURL()));
 }
@@ -428,6 +485,13 @@ void EnginePage::DidFinishNavigation(content::NavigationHandle* navigation) {
   }
   if (navigation->HasCommitted()) {
     ++navigation_revision_;
+  }
+  // The core's load takes its identity with it, whether it commits, fails or
+  // never loads, so no later entry inherits it.
+  std::optional<engine::Guid> expected_entry_id;
+  if (expected_entry_navigation_ == navigation->GetNavigationId()) {
+    expected_entry_id = std::exchange(expected_entry_id_, std::nullopt);
+    expected_entry_navigation_.reset();
   }
   // A store listing's own fragment carries the request its script made. It is
   // Crest's message, not a page anyone records.
@@ -467,6 +531,14 @@ void EnginePage::DidFinishNavigation(content::NavigationHandle* navigation) {
   if (ShowsInitialBlank(committed)) {
     return;
   }
+  // A load the core asked for in place of an entry it keeps takes that
+  // entry's identity; a step through history keeps the entry's own.
+  if (expected_entry_id && !(navigation->GetPageTransition() & ui::PAGE_TRANSITION_FORWARD_BACK)) {
+    if (content::NavigationEntry* entry = web_contents()->GetController().GetLastCommittedEntry()) {
+      std::erase_if(entry_ids_, [&](const auto& kept) { return kept.second == *expected_entry_id; });
+      entry_ids_[entry->GetUniqueID()] = *expected_entry_id;
+    }
+  }
   UpdateTheme();
   if (navigation->IsSameDocument()) {
     MovedWithinDocument(PresentedURL(committed));
@@ -504,6 +576,10 @@ void EnginePage::DidStopLoading() {
 
 void EnginePage::TitleWasSet(content::NavigationEntry* entry) {
   NoteTitle();
+  StateChanged();
+}
+
+void EnginePage::NavigationEntriesDeleted() {
   StateChanged();
 }
 
@@ -865,11 +941,78 @@ void EnginePage::ReportState() {
   report_due_ = false;
   PresentView();
   engine::PageSnapshot snapshot = Snapshot();
-  if (snapshot == reported_) {
-    return;
+  if (snapshot != reported_) {
+    reported_ = snapshot;
+    Report(engine::PageStateChanged{.page_id = id_, .snapshot = std::move(snapshot)});
   }
-  reported_ = snapshot;
-  Report(engine::PageStateChanged{.page_id = id_, .snapshot = std::move(snapshot)});
+  ReportHistory();
+}
+
+void EnginePage::ReportHistory() {
+  const os_signpost_id_t signpost = os_signpost_id_generate(HistoryLog());
+  os_signpost_interval_begin(HistoryLog(), signpost, "Report Page History");
+  engine::PageHistoryReported history = History();
+  if (history != reported_history_) {
+    reported_history_ = history;
+    Report(std::move(history));
+  }
+  os_signpost_interval_end(HistoryLog(), signpost, "Report Page History");
+}
+
+engine::PageHistoryReported EnginePage::History() {
+  engine::PageHistoryReported history{.page_id = id_, .current = -1};
+  if (!web_contents()) {
+    return history;
+  }
+  auto& controller = web_contents()->GetController();
+  const content::NavigationEntry* committed = controller.GetLastCommittedEntry();
+  if (!committed || committed->IsInitialEntry()) {
+    entry_ids_.clear();
+    return history;
+  }
+  std::map<int, engine::Guid> kept;
+  for (int index = 0; index < controller.GetEntryCount(); ++index) {
+    content::NavigationEntry* entry = controller.GetEntryAtIndex(index);
+    const engine::Guid id = EntryId(entry);
+    kept[entry->GetUniqueID()] = id;
+    history.entries.push_back(engine::PageHistoryEntry{
+        .id = id, .url = PresentedURL(entry->GetVirtualURL()), .title = base::UTF16ToUTF8(entry->GetTitle())});
+  }
+  // Entries the engine dropped take their identities with them.
+  entry_ids_ = std::move(kept);
+  history.current = controller.GetLastCommittedEntryIndex();
+  return history;
+}
+
+engine::Guid EnginePage::EntryId(content::NavigationEntry* entry) {
+  auto [found, added] = entry_ids_.try_emplace(entry->GetUniqueID());
+  if (added) {
+    found->second = NewEntryId();
+  }
+  return found->second;
+}
+
+void EnginePage::ExpectEntry(const std::optional<engine::Guid>& entry_id) {
+  expected_entry_id_ = entry_id;
+  expected_entry_navigation_.reset();
+}
+
+void EnginePage::GoToEntry(const engine::Guid& entry_id) {
+  os_signpost_event_emit(HistoryLog(), OS_SIGNPOST_ID_EXCLUSIVE, "Go To History Entry");
+  if (web_contents()) {
+    auto& controller = web_contents()->GetController();
+    for (int index = 0; index < controller.GetEntryCount(); ++index) {
+      auto found = entry_ids_.find(controller.GetEntryAtIndex(index)->GetUniqueID());
+      if (found != entry_ids_.end() && found->second == entry_id) {
+        if (index != controller.GetLastCommittedEntryIndex()) {
+          controller.GoToIndex(index);
+        }
+        return;
+      }
+    }
+  }
+  reported_history_.reset();
+  StateChanged();
 }
 
 engine::PageSnapshot EnginePage::Snapshot() const {
@@ -881,11 +1024,8 @@ engine::PageSnapshot EnginePage::Snapshot() const {
   if (!visible.is_empty() && !ShowsInitialBlank(visible)) {
     snapshot.url = PresentedURL(visible);
   }
-  auto& controller = web_contents()->GetController();
   snapshot.title = Title();
   snapshot.is_loading = web_contents()->IsLoading();
-  snapshot.can_go_back = controller.CanGoBack();
-  snapshot.can_go_forward = controller.CanGoForward();
   snapshot.security = Security();
   snapshot.media = MediaActivity();
   return snapshot;
@@ -975,11 +1115,6 @@ void EnginePage::PresentView() {
     presented_loading_ = loading;
     Present(engine::PageLoadingChanged{.page_id = id_, .is_loading = loading});
   }
-  auto history = std::make_pair(History(-1), History(1));
-  if (presented_history_ != history) {
-    presented_history_ = history;
-    Present(engine::PageHistoryChanged{.page_id = id_, .back = history.first, .forward = history.second});
-  }
   std::optional<engine::BrandColor> theme;
   if (const auto color = web_contents()->GetThemeColor()) {
     theme = engine::BrandColor{.red = SkColorGetR(*color) / 255.0,
@@ -993,32 +1128,12 @@ void EnginePage::PresentView() {
   }
 }
 
-std::vector<engine::PageHistoryEntry> EnginePage::History(int direction) const {
-  std::vector<engine::PageHistoryEntry> entries;
-  auto& controller = web_contents()->GetController();
-  const int current = controller.GetCurrentEntryIndex();
-  for (int depth = 1; depth <= kHistoryDepth; ++depth) {
-    const int index = current + direction * depth;
-    if (index < 0 || index >= controller.GetEntryCount()) {
-      break;
-    }
-    auto* entry = controller.GetEntryAtIndex(index);
-    if (!entry) {
-      break;
-    }
-    entries.push_back(engine::PageHistoryEntry{.url = PresentedURL(entry->GetVirtualURL()),
-                                               .title = base::UTF16ToUTF8(entry->GetTitle())});
-  }
-  return entries;
-}
-
 void EnginePage::Watch() {
   if (phase_ != Phase::kLive || !web_contents()) {
     return;
   }
   Present(engine::PageViewReady{.page_id = id_});
   presented_loading_.reset();
-  presented_history_.reset();
   presented_theme_.reset();
   if (infobars_) {
     infobars_->PresentAll();
@@ -1030,18 +1145,6 @@ void EnginePage::Watch() {
 }
 
 // What the platform asks of the page directly.
-
-bool EnginePage::GoToOffset(int offset) {
-  if (!web_contents() || offset == 0) {
-    return false;
-  }
-  auto& controller = web_contents()->GetController();
-  if (!controller.CanGoToOffset(offset)) {
-    return false;
-  }
-  controller.GoToOffset(offset);
-  return true;
-}
 
 bool EnginePage::Reload(bool bypasses_cache) {
   if (!web_contents()) {

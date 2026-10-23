@@ -17,6 +17,14 @@ extension BrowserStore {
                 windowID: windowID, transient: tabID == nil ? transient : nil, openerPageID: opener))
     }
 
+    /// Gives `tabID` in `spaceID` the back and forward history its archive
+    /// kept, for the page it opens next. Changes nothing when a rule refuses
+    /// it or the core cannot read it.
+    func restoreTabHistory(_ history: Data, in spaceID: UUID, for tabID: UUID) {
+        _ = try? core.send(
+            RestoreTabHistory(workspaceID: window.workspaceID, spaceID: spaceID, tabID: tabID, archive: history))
+    }
+
     /// Gives `page` to `tabID` in `spaceID` of this window's workspace, or to
     /// a transient request when `tabID` is nil, hosted by this window. False
     /// when a rule refuses it.

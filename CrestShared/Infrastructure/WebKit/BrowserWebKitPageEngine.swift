@@ -60,8 +60,6 @@ final class BrowserWebKitPageEngine: BrowserPageEngine {
     }
 
     var currentURL: URL? { webView.url }
-    var canGoBack: Bool { webView.canGoBack }
-    var canGoForward: Bool { webView.canGoForward }
 
     @discardableResult
     func synchronizeHistory() -> URL? {
@@ -69,16 +67,13 @@ final class BrowserWebKitPageEngine: BrowserPageEngine {
         return webView.backForwardList.currentItem?.url
     }
 
-    var backHistory: [BrowserNavigationHistoryItem] {
-        history.backItems.suffix(BrowserNavigationHistoryItem.listedLimit).reversed().enumerated().map {
-            Self.item($0.element, depth: $0.offset + 1)
-        }
+    /// The page's history as the core keeps it, brought up to date with
+    /// WebKit's own list first.
+    var reportedHistory: (entries: [PageHistoryEntry], current: Int)? {
+        history.synchronize(with: webView.backForwardList)
+        return history.reported
     }
-    var forwardHistory: [BrowserNavigationHistoryItem] {
-        history.forwardItems.prefix(BrowserNavigationHistoryItem.listedLimit).enumerated().map {
-            Self.item($0.element, depth: $0.offset + 1)
-        }
-    }
+
     func load(_ request: URLRequest) {
         if let staged = stagedRequest {
             stagedRequest = nil
@@ -97,27 +92,16 @@ final class BrowserWebKitPageEngine: BrowserPageEngine {
         }
         webView.load(request)
     }
-    func navigateHistory(by offset: Int) {
-        guard offset != 0 else { return }
+    /// Shows the history entry `entryID` names, as WebKit keeps it; false
+    /// when the page no longer keeps it.
+    func goToHistoryEntry(_ entryID: UUID) -> Bool {
         history.synchronize(with: webView.backForwardList)
-        let items = offset < 0 ? history.backItems : history.forwardItems
-        let index = offset < 0 ? items.count + offset : offset - 1
-        if items.indices.contains(index) {
-            webView.go(to: items[index])
-        } else if offset == -1 {
-            webView.goBack()
-        } else if offset == 1 {
-            webView.goForward()
-        }
+        guard let item = history.item(entryID) else { return false }
+        // WebKit starts nothing for an item it no longer keeps.
+        return webView.go(to: item) != nil
     }
     func reload(bypassingCache: Bool) {
         if bypassingCache { webView.reloadFromOrigin() } else { webView.reload() }
-    }
-    private static func item(_ item: WKBackForwardListItem, depth: Int) -> BrowserNavigationHistoryItem {
-        let title = item.title?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        return BrowserNavigationHistoryItem(
-            depth: depth,
-            title: title.isEmpty ? item.url.host() ?? item.url.absoluteString : title, url: item.url)
     }
     func mediaActivity() async -> PageMediaActivity? {
         let state = await withCheckedContinuation { continuation in

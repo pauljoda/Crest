@@ -101,4 +101,6 @@ private final class PromptHost: WebKitPageHosting {
     func prepareToLoad(_ url: URL) {}
 
     func mediaActivityMayHaveChanged() {}
+
+    func historyMayHaveChanged() {}
 }

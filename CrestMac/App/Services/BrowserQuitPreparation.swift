@@ -5,10 +5,10 @@ import Observation
 /// asks every page whether it may go, then asks the person whether to stop the
 /// downloads still in progress, which this shows as an alert on the key window.
 ///
-/// While a Space is being deleted the core defers the quit. This tells the
-/// person Crest will quit once the Space is deleted, and asks the entry point
-/// to quit again whenever the deletions this device runs move on, until the
-/// core allows it.
+/// While the engines erase a Space being deleted the core defers the quit.
+/// This tells the person Crest will quit once the Space is deleted, and asks
+/// the entry point to quit again whenever a deletion this device runs ends,
+/// finished or failed, until the core allows it.
 @MainActor
 final class BrowserQuitPreparation {
     // MARK: - Variables
@@ -17,8 +17,9 @@ final class BrowserQuitPreparation {
     private let dialogs = BrowserDialogPresenter()
     /// How to close the question about downloads in progress, while it waits.
     private var dismissals: [UUID: BrowserPromptDismissal] = [:]
-    /// The Spaces this device is deleting now, here or in the core, which a
-    /// deferred quit watches.
+    /// The Space deletions this device is running now, which a deferred quit
+    /// watches. A deletion that failed stays pending in the core, so the
+    /// running ones are what change when an attempt ends.
     private let deletingSpaces: @MainActor () -> Set<UUID>
     /// The deferred quit whose wait is current; an older one's is dropped.
     private var waiting: UUID?
@@ -69,7 +70,7 @@ final class BrowserQuitPreparation {
     // MARK: - Actions - Space deletion
 
     /// Tells the person, once per quit, that Crest quits when the Space is
-    /// deleted, and calls `retry` once the Spaces this device is deleting
+    /// deleted, and calls `retry` once the deletions this device is running
     /// change.
     private func waitForSpaceDeletions(_ underway: SpaceDeletionUnderway, retry: @escaping @MainActor () -> Void) {
         if !isDeferred {
@@ -82,8 +83,8 @@ final class BrowserQuitPreparation {
         watchSpaceDeletions(since: deletingSpaces(), wait: wait, retry: retry)
     }
 
-    /// Calls `retry` for the deferred quit `wait` once the Spaces being
-    /// deleted differ from `deleting`, watching them until then.
+    /// Calls `retry` for the deferred quit `wait` once the running deletions
+    /// differ from `deleting`, watching them until then.
     private func watchSpaceDeletions(since deleting: Set<UUID>, wait: UUID, retry: @escaping @MainActor () -> Void) {
         guard waiting == wait else { return }
         let now = withObservationTracking {

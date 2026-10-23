@@ -21,8 +21,8 @@ struct MobileBrowserDetailView: View {
     let showTabViewer: () -> Void
     let hideCompactToolbar: () -> Void
     let showCompactToolbar: () -> Void
-    let handleToolbarSwipe: (BrowserSpaceSwipeDirection) -> Void
-    let selectSplitCard: (UUID) -> Void
+    /// Shows the tab the address bar's swipe landed on.
+    let showSwipedTab: (UUID) -> Void
     let compactTransitionEnded: (CGSize) -> Void
     var transientBrowsing: BrowserTransientBrowsingCoordinator?
     var didPromoteTransientPage: () -> Void = {}
@@ -32,11 +32,15 @@ struct MobileBrowserDetailView: View {
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.layoutDirection) private var layoutDirection
-    /// The page area's safe area, measured here because this is the last place
-    /// both paths share it: the carousel's `ScrollView` resolves its cells'
-    /// safe area to zero, so a cell can only learn the real one as data.
+    @Environment(\.mobileBrowserControlPlacement) private var controlPlacement
+    /// The page area's safe area, measured once here and handed as data to
+    /// every page the area draws, the shown tab and the tabs the address
+    /// bar's swipe slides in beside it, so each lays its page out alike.
     @State private var resolvedSafeAreaInsets = EdgeInsets()
     @State private var downloadsAssignment: BrowserSpaceRuntimeAssignment?
+    /// The address bar's swipe through the shown Space's tabs, which moves
+    /// the page area and the bar together.
+    @State private var tabSwipe = MobileTabSwipe()
 
     var body: some View {
         let pageActions = MobileSelectedPageActionPort(
@@ -47,90 +51,22 @@ struct MobileBrowserDetailView: View {
         let page = selectedSpaceIsLocked ? nil : pageActions?.activePage
         let pagePresentation = PagePresentation.of(browser.shownTab?.surface, page: page, restoresUnloaded: isCompact)
         let viewport = pageViewport
-        Group {
-            if selectedSpaceIsLocked {
-                unloadedPageSurface
-            } else if let splitCardSpace,
-                let splitCardMembers,
-                let focusedTabID = browser.shownTab?.id
-            {
-                MobileSplitCardPager(
-                    members: splitCardMembers,
-                    space: splitCardSpace,
-                    focusedTabID: focusedTabID,
-                    pages: pages,
-                    viewport: viewport,
-                    selectTab: selectSplitCard,
-                    prepareMember: prepareSplitCardPage,
-                    handleInteraction: handleWebContentInteraction
-                )
-                .ignoresSafeArea(.container, edges: viewport.obscuresSystemSafeAreas ? .vertical : [])
-            } else {
-                switch pagePresentation {
-                case .nativeContent:
-                    if let tab = browser.shownTab, let space = browser.shownSpace {
-                        BrowserNativeTabHost(tab: tab, space: space, bottomChromeHeight: viewport.bottomChromeHeight)
-                    }
-                case .unloaded:
-                    unloadedPageSurface
-                case .noSelection, .startPage:
-                    if let space = browser.shownSpace {
-                        BrowserStartPage(
-                            browser: browser,
-                            space: space,
-                            isPrivateBrowsing: browser.isPrivateBrowsing,
-                            selectedTabID: browser.shownTab?.id,
-                            isSourceAvailable: isPaletteSourceAvailable,
-                            selectTab: selectStartPageTab,
-                            openURL: openStartPageURL,
-                            isCommandPaletteObscured: isCommandPalettePresented,
-                            layout: isCompact ? .mobileCompactPage : .mobileRegularPage,
-                            focusRequest: addressFocusRequest,
-                            headerColorScheme: startPageHeaderColorScheme,
-                            emptySelectionActions: emptySelectionPaletteActions,
-                            commands: commands
-                        )
-                        .onChange(of: isCompact, initial: true) { _, compact in
-                            if compact { address = "" }
-                        }
-                    } else {
-                        unloadedPageSurface
-                    }
-                case .livePage:
-                    if let page {
-                        MobileBrowserLivePageView(
-                            page: page,
-                            viewport: viewport,
-                            isActive: pages.activePage === page,
-                            handleInteraction: handleWebContentInteraction
-                        )
-                    } else {
-                        unloadedPageSurface
-                    }
-                case .navigationFailure:
-                    if let page, let failure = page.live.failure {
-                        BrowserNavigationFailureView(
-                            failure: failure,
-                            branding: shownBranding,
-                            layout: isCompact ? .compact : .regular,
-                            canGoBack: page.canReturnFromNavigationFailure,
-                            canProceed: page.canProceedAfterCertificateFailure,
-                            retry: page.retryAfterNavigationFailure,
-                            goBack: page.returnFromNavigationFailure,
-                            proceed: page.proceedAfterCertificateFailure
-                        )
-                    } else {
-                        unloadedPageSurface
-                    }
-                case .automaticRestore:
-                    unloadedPageSurface
-                        .onAppear {
-                            restoreSelectedTab()
-                        }
-                default:
-                    unloadedPageSurface
-                }
-            }
+        let livePage = pagePresentation == .livePage ? page : nil
+        MobileTabSwipeStage(swipe: tabSwipe, shownTabID: browser.shownTab?.id, shownLiveTabID: livePage?.tabID) {
+            slot, isMoving in
+            stagePage(
+                slot, isMoving: isMoving, livePage: livePage, page: page, presentation: pagePresentation,
+                viewport: viewport)
+        }
+        .onChange(of: swipeShownTab, initial: true) { _, shown in
+            tabSwipe.rest(
+                beside: shown == nil
+                    ? SwipeNeighborTabs(previousTabID: nil, nextTabID: nil) : browser.swipeNeighbors)
+        }
+        .onChange(of: splitNeighborIDs, initial: true) { _, neighbors in
+            // A split's cards either side are kept loaded, so a swipe slides
+            // them in live.
+            for tabID in neighbors { pages.prepareResidentPage(for: tabID) }
         }
         .overlay {
             if isCompact, let transientBrowsing {
@@ -160,9 +96,11 @@ struct MobileBrowserDetailView: View {
         .overlay(alignment: .bottom) {
             if isCompact, showsCompactToolbar {
                 if browser.shownTab.map({ $0.surface == .startPage }) ?? true {
-                    MobileCompactStartPageToolbar(showTabViewer: showTabViewer)
-                        .safeAreaPadding(.bottom, 0)
-                        .zIndex(1)
+                    if !controlPlacement.movesControlsToToolbar {
+                        MobileCompactStartPageToolbar(showTabViewer: showTabViewer)
+                            .safeAreaPadding(.bottom, 0)
+                            .zIndex(1)
+                    }
                 } else if compactToolbarIsHidden {
                     MobileCompactDomainChip(
                         url: page?.live.documentURL,
@@ -182,7 +120,10 @@ struct MobileBrowserDetailView: View {
                         showTabViewer: showTabViewer,
                         showHistory: showHistory,
                         hideToolbar: hideCompactToolbar,
-                        handleSwipe: handleToolbarSwipe,
+                        tabSwipe: tabSwipe,
+                        canSwipeTabs: swipeShownTab != nil,
+                        swipeNeighbors: { browser.swipeNeighbors },
+                        showSwipedTab: showSwipedTab,
                         compactTransitionEnded: compactTransitionEnded
                     )
                     .safeAreaPadding(.bottom, 0)
@@ -228,6 +169,11 @@ struct MobileBrowserDetailView: View {
                 )
             }
         }
+        .toolbar {
+            if isCompact, showsCompactToolbar, controlPlacement.movesControlsToToolbar {
+                compactToolbarItems(pageActions: pageActions)
+            }
+        }
         .animation(
             CrestMotion.toolbar.unlessReducingMotion(reduceMotion),
             value: page?.isFindPresented
@@ -243,6 +189,102 @@ struct MobileBrowserDetailView: View {
                 assignment: assignment,
                 spaceAccess: spaceAccess
             )
+        }
+    }
+
+    /// One page of the swipe stage. A live page draws one way in every place,
+    /// so the page a swipe slides in keeps its host as it becomes the shown
+    /// tab. A tab a swipe landed on keeps the placeholder it slid in with
+    /// behind it until its page has drawn.
+    private func stagePage(
+        _ slot: MobileTabSwipeStageSlot, isMoving: Bool, livePage: MobileBrowserPage?,
+        page: MobileBrowserPage?, presentation pagePresentation: PagePresentation, viewport: MobileBrowserPageViewport
+    ) -> some View {
+        Group {
+            if let slotPage = slot.place == 0 ? livePage : swipeNeighborPage(slot.tabID) {
+                MobileBrowserLivePageView(
+                    page: slotPage,
+                    viewport: viewport,
+                    isActive: slot.place == 0 && pages.activePage === slotPage,
+                    handleInteraction: slot.place == 0 ? handleWebContentInteraction : nil,
+                    hidesFromAccessibility: slot.place != 0
+                )
+            } else if slot.place != 0 {
+                if isMoving, let tabID = slot.tabID {
+                    swipePlaceholder(of: tabID, viewport: viewport)
+                }
+            } else if selectedSpaceIsLocked {
+                unloadedPageSurface
+            } else {
+                shownSurface(page: page, presentation: pagePresentation, viewport: viewport)
+            }
+        }
+        .background {
+            if slot.place == 0, let tabID = slot.tabID, tabID == tabSwipe.landedTabID, !selectedSpaceIsLocked,
+                !hasDrawn(livePage)
+            {
+                swipePlaceholder(of: tabID, viewport: viewport)
+            }
+        }
+    }
+
+    /// What the shown tab shows when it shows no live page.
+    @ViewBuilder
+    private func shownSurface(
+        page: MobileBrowserPage?, presentation pagePresentation: PagePresentation, viewport: MobileBrowserPageViewport
+    ) -> some View {
+        switch pagePresentation {
+        case .nativeContent:
+            if let tab = browser.shownTab, let space = browser.shownSpace {
+                BrowserNativeTabHost(tab: tab, space: space, bottomChromeHeight: viewport.bottomChromeHeight)
+            }
+        case .unloaded:
+            unloadedPageSurface
+        case .noSelection, .startPage:
+            if let space = browser.shownSpace {
+                BrowserStartPage(
+                    browser: browser,
+                    space: space,
+                    isPrivateBrowsing: browser.isPrivateBrowsing,
+                    selectedTabID: browser.shownTab?.id,
+                    isSourceAvailable: isPaletteSourceAvailable,
+                    selectTab: selectStartPageTab,
+                    openURL: openStartPageURL,
+                    isCommandPaletteObscured: isCommandPalettePresented,
+                    layout: isCompact ? .mobileCompactPage : .mobileRegularPage,
+                    focusRequest: addressFocusRequest,
+                    headerColorScheme: startPageHeaderColorScheme,
+                    emptySelectionActions: emptySelectionPaletteActions,
+                    commands: commands
+                )
+                .onChange(of: isCompact, initial: true) { _, compact in
+                    if compact { address = "" }
+                }
+            } else {
+                unloadedPageSurface
+            }
+        case .navigationFailure:
+            if let page, let failure = page.live.failure {
+                BrowserNavigationFailureView(
+                    failure: failure,
+                    branding: shownBranding,
+                    layout: isCompact ? .compact : .regular,
+                    canGoBack: page.canReturnFromNavigationFailure,
+                    canProceed: page.canProceedAfterCertificateFailure,
+                    retry: page.retryAfterNavigationFailure,
+                    goBack: page.returnFromNavigationFailure,
+                    proceed: page.proceedAfterCertificateFailure
+                )
+            } else {
+                unloadedPageSurface
+            }
+        case .automaticRestore:
+            unloadedPageSurface
+                .onAppear {
+                    restoreSelectedTab()
+                }
+        default:
+            unloadedPageSurface
         }
     }
 
@@ -338,6 +380,26 @@ struct MobileBrowserDetailView: View {
         )
     }
 
+    /// The compact page's controls where they move to the side toolbar:
+    /// history at the top, the way back to the tabs at the bottom, and the
+    /// address left over the page.
+    @ToolbarContentBuilder
+    private func compactToolbarItems(
+        pageActions: MobileSelectedPageActionPort?
+    ) -> some ToolbarContent {
+        let port = BrowserSidebarNavigationPort(pageActions: pageActions, showHistory: showHistory)
+        ToolbarItemGroup(placement: .topBarTrailing) {
+            MobileHistoryToolbarControl(direction: .back, port: port)
+            if port.canGoForward() {
+                MobileHistoryToolbarControl(direction: .forward, port: port)
+            }
+        }
+        ToolbarItemGroup(placement: .bottomBar) {
+            Button("Tabs", systemImage: "square.on.square", action: showTabViewer)
+                .accessibilityIdentifier("tab-viewer-button")
+        }
+    }
+
     /// What this shell can do, as far as the find bar and the credential
     /// prompts are concerned: they are aimed at with a finger, whichever
     /// placement they are drawn in.
@@ -364,32 +426,51 @@ struct MobileBrowserDetailView: View {
         )
     }
 
-    /// The Space whose cards the carousel may page, or `nil` for the single-page
-    /// path.
-    ///
-    /// Compact only: iPad presents the very same members as real columns. A
-    /// locked Space is excluded outright — the page store has already dropped
-    /// every card, so a carousel there would page through empty placeholders of
-    /// content the lock exists to put away.
-    private var splitCardSpace: SpaceModel? {
-        guard isCompact, let space = browser.shownSpace, !spaceAccess.isLocked(space) else { return nil }
-        return space
+    /// The cards beside the shown one in its split, on a phone, where a split
+    /// shows one card at a time and the address bar's swipe slides the next
+    /// one in. None in a locked Space, whose pages are put away.
+    private var splitNeighborIDs: [UUID] {
+        guard isCompact, let space = browser.shownSpace, !spaceAccess.isLocked(space),
+            let shown = browser.shownTab?.id
+        else { return [] }
+        let members = browser.cards(in: space).map(\.id)
+        guard let index = members.firstIndex(of: shown) else { return [] }
+        return [index - 1, index + 1].filter(members.indices.contains).map { members[$0] }
     }
 
-    /// The presented run when it is long enough to page, otherwise `nil`.
-    private var splitCardMembers: [TabStateModel]? {
-        guard let space = splitCardSpace else { return nil }
-        let members = browser.cards(in: space)
-        let isRenderableRun = MobileSplitCardPager.presents(
-            memberCount: members.count
-        )
-        return isRenderableRun ? members : nil
+    /// The tab the address bar's swipe moves from, on a phone with the bar
+    /// on show; nil where there is no swipe to make ready for.
+    private var swipeShownTab: UUID? {
+        guard isCompact, showsCompactToolbar, !selectedSpaceIsLocked else { return nil }
+        return browser.shownTab?.id
     }
 
-    /// Builds the page a carousel cell is about to show. Called as the cell
-    /// materializes, so a group only ever holds the cards near the viewport.
-    private func prepareSplitCardPage(_ tabID: UUID) {
-        pages.prepareResidentPage(for: tabID)
+    /// The page a neighbour of the shown tab keeps in memory, drawn, for the
+    /// address bar's swipe to slide in.
+    private func swipeNeighborPage(_ tabID: UUID?) -> MobileBrowserPage? {
+        guard let tabID, let page = pages.swipePreviewPage(for: tabID), hasDrawn(page) else { return nil }
+        return page
+    }
+
+    /// Whether `page` has drawn content of its own, so nothing need stand in
+    /// for it.
+    private func hasDrawn(_ page: MobileBrowserPage?) -> Bool {
+        page.map {
+            BrowserPageSurfacePresentation.revealsWebContent(committedNavigationCount: $0.committedNavigationCount)
+        } ?? false
+    }
+
+    /// What a neighbour with no page in memory shows as the swipe slides it in.
+    @ViewBuilder
+    private func swipePlaceholder(of tabID: UUID, viewport: MobileBrowserPageViewport) -> some View {
+        if let space = browser.shownSpace, let tab = space.tabs.model(tabID) {
+            MobileTabSwipePlaceholder(
+                tab: tab,
+                space: space,
+                favicons: browser.core.state.favicons,
+                bottomChromeHeight: viewport.bottomChromeHeight
+            )
+        }
     }
 
     /// The look of the Space this window shows, or nil for none.

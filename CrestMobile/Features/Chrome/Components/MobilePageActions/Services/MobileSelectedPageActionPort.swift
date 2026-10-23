@@ -98,11 +98,11 @@ struct MobileSelectedPageActionPort: MobilePageActions {
     }
 
     func goBack(to item: BrowserNavigationHistoryItem) {
-        activePage?.goBack(toDepth: item.depth)
+        activePage?.goToHistory(item)
     }
 
     func goForward(to item: BrowserNavigationHistoryItem) {
-        activePage?.goForward(toDepth: item.depth)
+        activePage?.goToHistory(item)
     }
 
     func reloadOrStop() {

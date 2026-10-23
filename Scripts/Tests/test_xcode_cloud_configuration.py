@@ -235,6 +235,115 @@ class XcodeCloudConfigurationTests(unittest.TestCase):
                             result.stderr,
                         )
 
+    def test_post_xcodebuild_uploads_app_store_export_only_without_ad_hoc_export(self) -> None:
+        guard = REPOSITORY_ROOT / "ci_scripts" / "ci_post_xcodebuild.sh"
+
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            temporary_root = pathlib.Path(temporary_directory)
+            archive = temporary_root / "CrestMobile.xcarchive"
+            app = archive / "Products" / "Applications" / "Crest.app"
+            app.mkdir(parents=True)
+            with (archive / "Info.plist").open("wb") as stream:
+                plistlib.dump(
+                    {"ApplicationProperties": {"ApplicationPath": "Applications/Crest.app"}},
+                    stream,
+                )
+            with (app / "Info.plist").open("wb") as stream:
+                plistlib.dump(
+                    {
+                        "CFBundleIdentifier": "com.pauldavis.crest",
+                        "CFBundleShortVersionString": self.marketing_version(),
+                        "CFBundleVersion": "52",
+                    },
+                    stream,
+                )
+
+            app_store_export = temporary_root / "appstoreexport"
+            ad_hoc_export = temporary_root / "adhocexport"
+            app_store_export.mkdir()
+            ad_hoc_export.mkdir()
+            app_store_package = app_store_export / "Crest.ipa"
+            app_store_package.write_bytes(b"ipa")
+
+            capture = temporary_root / "capture"
+            capture.mkdir()
+            fake_bin = temporary_root / "bin"
+            fake_bin.mkdir()
+            fake_xcrun = fake_bin / "xcrun"
+            fake_xcrun.write_text(
+                "#!/bin/sh\n"
+                'printf \'%s\\n\' "$@" > "$FAKE_XCRUN_CAPTURE/arguments"\n'
+                'while [ "$#" -gt 0 ]; do\n'
+                '    [ "$1" = "--p8-file-path" ] && cat "$2" > "$FAKE_XCRUN_CAPTURE/key"\n'
+                "    shift\n"
+                "done\n"
+                "exit 0\n"
+            )
+            fake_xcrun.chmod(0o755)
+
+            base_environment = {
+                name: value
+                for name, value in os.environ.items()
+                if not name.startswith("CREST_ASC_")
+            } | {
+                "CI_XCODE_CLOUD": "TRUE",
+                "CI_XCODEBUILD_ACTION": "archive",
+                "CI_XCODEBUILD_EXIT_CODE": "0",
+                "CI_PRODUCT_PLATFORM": "iOS",
+                "CI_PRIMARY_REPOSITORY_PATH": str(REPOSITORY_ROOT),
+                "CI_ARCHIVE_PATH": str(archive),
+                "CI_BUILD_NUMBER": "52",
+                "CI_AD_HOC_SIGNED_APP_PATH": str(ad_hoc_export),
+                "CI_APP_STORE_SIGNED_APP_PATH": str(app_store_export),
+                "FAKE_XCRUN_CAPTURE": str(capture),
+                "PATH": f"{fake_bin}{os.pathsep}{os.environ['PATH']}",
+            }
+            credentials = {
+                "CREST_ASC_API_KEY_ID": "KEY123",
+                "CREST_ASC_API_ISSUER_ID": "issuer",
+                "CREST_ASC_API_PRIVATE_KEY_BASE64": "cHJpdmF0ZSBrZXk=",
+            }
+
+            def run_guard(environment: dict[str, str]) -> subprocess.CompletedProcess[str]:
+                return subprocess.run(
+                    [str(guard)],
+                    cwd=REPOSITORY_ROOT,
+                    env=environment,
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                )
+
+            with self.subTest(export="missing credentials"):
+                result = run_guard(base_environment)
+                self.assertEqual(result.returncode, 64)
+                self.assertIn("CREST_ASC_API_KEY_ID", result.stderr)
+                self.assertFalse((capture / "arguments").exists())
+
+            with self.subTest(export="App Store only"):
+                result = run_guard(base_environment | credentials)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                arguments = (capture / "arguments").read_text().splitlines()
+                self.assertEqual(arguments[:7], [
+                    "altool",
+                    "--upload-package",
+                    str(app_store_package),
+                    "--api-key",
+                    "KEY123",
+                    "--api-issuer",
+                    "issuer",
+                ])
+                self.assertEqual((capture / "key").read_text(), "private key")
+                self.assertFalse(pathlib.Path(arguments[arguments.index("--p8-file-path") + 1]).exists())
+
+            (capture / "arguments").unlink()
+            (ad_hoc_export / "Crest.ipa").write_bytes(b"ipa")
+            with self.subTest(export="every distribution"):
+                result = run_guard(base_environment | credentials)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertIn("TestFlight post-action", result.stdout)
+                self.assertFalse((capture / "arguments").exists())
+
 
 if __name__ == "__main__":
     unittest.main()

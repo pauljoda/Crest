@@ -22,8 +22,13 @@ final class BrowserTabStateCoordinator {
         pendingCopies = pendingCopies.filter { assignments.contains($0.key) }
     }
 
-    func prepareCopy(_ state: Data, url: URL?, for assignment: BrowserTabRuntimeAssignment) {
-        pendingCopies[assignment] = BrowserTabStateEnvelope(interactionState: state, url: url)
+    /// Keeps what the copy `assignment` opens with: its engine state, the
+    /// core's history, or both. A page with no engine state yet still has the
+    /// history the core keeps for it.
+    func prepareCopy(_ state: Data?, url: URL?, history: Data?, for assignment: BrowserTabRuntimeAssignment) {
+        guard state != nil || history != nil else { return }
+        pendingCopies[assignment] = BrowserTabStateEnvelope(
+            interactionState: state ?? Data(), url: url, history: history)
     }
 
     func archivePage(_ page: BrowserPlatformPage, for tabID: UUID) {
@@ -34,13 +39,37 @@ final class BrowserTabStateCoordinator {
     /// the core no longer holds.
     func archivePage(_ page: BrowserPlatformPage, showing url: URL?, for tabID: UUID) {
         // WebKit drives adopted popups; they are never persisted as user tabs.
-        guard let archive, !page.wasOpenedAsPopup, let state = page.interactionState else { return }
+        guard let archive, !page.wasOpenedAsPopup else { return }
+        // The core keeps the page's history whether or not its engine has
+        // state to keep yet, as before its first document commits. Such a
+        // page keeps the engine state its archive already holds, so an empty
+        // renderer never replaces a useful one.
+        let history = page.corePage.archivedHistory
+        var state = page.interactionState
+        var shown = url
+        if state == nil, history != nil,
+            let kept = archive.archivedState(profileID: page.profileID, tabID: tabID)
+                .flatMap(BrowserTabStateEnvelope.decode),
+            kept.isRestorable
+        {
+            state = kept.interactionState
+            shown = kept.url
+        }
+        guard state != nil || history != nil else { return }
         archive.archive(
-            interactionState: state,
-            url: url,
+            interactionState: state ?? Data(),
+            url: shown,
+            history: history,
             profileID: page.profileID,
             tabID: tabID
         )
+    }
+
+    /// The back and forward history the tab's pending copy or archive keeps,
+    /// when it still shows `url`, which the core takes back before the tab's
+    /// page opens. Leaves the engine history for the page to restore.
+    func history(for assignment: BrowserTabRuntimeAssignment, expecting url: URL) -> Data? {
+        envelope(for: assignment, expecting: url, consumePendingCopy: false)?.history
     }
 
     func interactionState(
@@ -48,20 +77,33 @@ final class BrowserTabStateCoordinator {
         expecting url: URL,
         consumePendingCopy: Bool = true
     ) -> Data? {
+        guard let envelope = envelope(for: assignment, expecting: url, consumePendingCopy: consumePendingCopy),
+            envelope.isRestorable
+        else { return nil }
+        return envelope.interactionState
+    }
+
+    /// What the tab's pending copy keeps, or else its archive, when it still
+    /// shows `url`.
+    private func envelope(
+        for assignment: BrowserTabRuntimeAssignment,
+        expecting url: URL,
+        consumePendingCopy: Bool
+    ) -> BrowserTabStateEnvelope? {
         let pending = pendingCopies[assignment]
         if consumePendingCopy { pendingCopies.removeValue(forKey: assignment) }
         if let pending,
             SamePage.restoresArchivedState(archivedURL: pending.url, tabURL: url)
         {
-            return pending.interactionState
+            return pending
         }
         guard let archive,
             let archived = archive.archivedState(profileID: assignment.profileID, tabID: assignment.tabID),
             let envelope = BrowserTabStateEnvelope.decode(archived),
-            envelope.isRestorable,
+            envelope.isReadable,
             SamePage.restoresArchivedState(archivedURL: envelope.url, tabURL: url)
         else { return nil }
-        return envelope.interactionState
+        return envelope
     }
 
     /// Only membership changes warrant another directory sweep. Closed tabs

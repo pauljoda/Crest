@@ -10,6 +10,9 @@ final class MobileBrowserWebViewCoordinator: NSObject, UIGestureRecognizerDelega
     /// `updateUIView` so the recognizer never holds a stale member's closure.
     var requestFocus: (() -> Void)?
 
+    /// Steps the page back or forward when a finger swipes in from its edge.
+    let historySwipe = MobileHistorySwipe()
+
     lazy var dismissFocusRecognizer: UITapGestureRecognizer = {
         let recognizer = UITapGestureRecognizer(
             target: self,

@@ -119,12 +119,14 @@ void Write(engine::WireWriter& writer, SessionSeed) {
   Write(writer, false);
   for (int member = 0; member < 5; member++) writer.WriteVarint(0);
   // Offers to save passwords and sync them, not to the system's; open; saved
-  // tabs expanded and never collapsed.
+  // tabs expanded and never collapsed; nobody chose whether it uses Crest
+  // Passwords.
   Write(writer, true);
   Write(writer, true);
   Write(writer, false);
   writer.WriteVarint(0);
   Write(writer, true);
+  Write(writer, false);
   Write(writer, false);
   // No folders, tabs, splits, archived tabs or history; no default Space,
   // seed marker, Space deletion or app preferences.
@@ -211,6 +213,10 @@ void CodecRoundTrips() {
                                .color = engine::TabGroupColor::kOrange,
                                .is_collapsed = true,
                                .page_ids = {page}},
+      engine::PageHistoryReported{.page_id = page,
+                                  .entries = {{.id = Filled(0x7c), .url = "https://example.com/a", .title = "A"},
+                                              {.id = Filled(0x7d), .url = "https://example.com/", .title = "Example"}},
+                                  .current = 1},
       engine::PageIconChanged{.page_id = page, .url = "https://example.com/", .accent = engine::TabIconAccent{0.25, 0.5, 1}},
       engine::PageOffered{.offer_id = Filled(0x78),
                           .profile_id = Filled(0x76),
@@ -224,7 +230,6 @@ void CodecRoundTrips() {
                                             .pending_url = std::nullopt,
                                             .title = "Example",
                                             .is_loading = true,
-                                            .can_go_back = true,
                                             .security = engine::PageSecurity::kMixedContent,
                                             .media = engine::PageMediaActivity::kPlaying |
                                                      engine::PageMediaActivity::kPictureInPicture}},

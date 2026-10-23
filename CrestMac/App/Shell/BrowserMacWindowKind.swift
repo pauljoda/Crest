@@ -42,15 +42,15 @@ struct BrowserMacWindowKind: Hashable {
             width: BrowserQuickWindowLayout.defaultWidth, height: BrowserQuickWindowLayout.defaultHeight),
         minimumContentSize: CGSize(
             width: BrowserQuickWindowLayout.minimumWidth, height: BrowserQuickWindowLayout.minimumHeight))
-    /// Crest Setup. The setup content is fully flexible above its minimum, so
-    /// the window keeps the size it opens at rather than the content's ideal
-    /// one, which is that minimum.
+    /// Crest Setup, which fills the screen it opens on. The setup content is
+    /// fully flexible above its minimum, so the window keeps the size it opens
+    /// at rather than the content's ideal one, which is that minimum.
     static let setup = BrowserMacWindowKind(
         name: "setup", title: BrowserOnboardingWindowActivation.windowTitle,
         styleMask: [.titled, .closable, .resizable, .fullSizeContentView], hidesTitle: true,
-        hidesTitleBarSeparator: true, contentSize: CGSize(width: 1180, height: 820),
+        hidesTitleBarSeparator: true, contentSize: CGSize(width: 1440, height: 900),
         minimumContentSize: CGSize(width: 980, height: 660),
-        sizingOptions: [], isSingleton: true, identifier: "onboarding")
+        sizingOptions: [], fillsScreen: true, isSingleton: true, identifier: "onboarding")
     /// The release notes for the update the sidebar card presents, which keep
     /// their content's minimum size.
     static let updateDetails = BrowserMacWindowKind(
@@ -82,6 +82,9 @@ struct BrowserMacWindowKind: Hashable {
     /// Whether the window keeps its frame under its identity for the next time
     /// it opens; any other window opens centered.
     let savesFrame: Bool
+    /// Whether the window opens filling the visible screen, as a stage does,
+    /// rather than at its content size.
+    let fillsScreen: Bool
     /// Whether the window coordinator models the window: a browser window over
     /// a workspace of the person's own Spaces.
     let hasWindowModel: Bool
@@ -101,8 +104,8 @@ struct BrowserMacWindowKind: Hashable {
         name: String, title: String, styleMask: NSWindow.StyleMask, hidesTitle: Bool = false,
         hidesTitleBarSeparator: Bool = false, contentSize: CGSize, minimumContentSize: CGSize? = nil,
         sizingOptions: NSHostingSizingOptions? = nil,
-        savesFrame: Bool = false, hasWindowModel: Bool = false, hasPageRow: Bool = false, isSingleton: Bool = false,
-        identifier: String? = nil
+        savesFrame: Bool = false, fillsScreen: Bool = false, hasWindowModel: Bool = false, hasPageRow: Bool = false,
+        isSingleton: Bool = false, identifier: String? = nil
     ) {
         self.name = name
         self.title = title
@@ -113,6 +116,7 @@ struct BrowserMacWindowKind: Hashable {
         self.minimumContentSize = minimumContentSize
         self.sizingOptions = sizingOptions
         self.savesFrame = savesFrame
+        self.fillsScreen = fillsScreen
         self.hasWindowModel = hasWindowModel
         self.hasPageRow = hasPageRow
         self.isSingleton = isSingleton

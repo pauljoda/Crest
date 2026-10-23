@@ -223,6 +223,8 @@ struct BrowserPasswordSettingsPane: View {
                 } footer: {
                     if !space.settings.credentialPreferences.isEnabled {
                         Text(Self.disabledDescription).crestFormFootnote()
+                    } else if layout.showsCredentialPreferences {
+                        CrestFormFootnote("iCloud Keychain and Passwords choices apply to this device only.")
                     }
                 }
 

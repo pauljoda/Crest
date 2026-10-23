@@ -35,7 +35,6 @@ struct BrowserTransientCardArrangement: Hashable, Identifiable, Sendable {
     static let pointer = BrowserTransientCardArrangement(
         name: "pointer", entranceTarget: .pageCard, placesControlsAboveCard: true, controlAlignment: .trailing,
         controlSpacing: 10, constrainsControlBarToMaximumWidth: false, controlBarPadding: 0,
-        ignoredSafeAreaEdges: .all,
         framesContent: { containerSize, reservedLeadingWidth, layoutDirection in
             let leadingWidth = min(
                 max(reservedLeadingWidth, 0),
@@ -58,7 +57,7 @@ struct BrowserTransientCardArrangement: Hashable, Identifiable, Sendable {
     /// card itself is all web page, so every gesture over it stays WebKit's.
     static let sheet = BrowserTransientCardArrangement(
         name: "sheet", entranceTarget: .assembly, placesControlsAboveCard: false, controlAlignment: .center,
-        controlSpacing: 8, constrainsControlBarToMaximumWidth: true, controlBarPadding: 10, ignoredSafeAreaEdges: [],
+        controlSpacing: 8, constrainsControlBarToMaximumWidth: true, controlBarPadding: 10,
         framesContent: nil,
         sizesCard: { _ in nil },
         insetsContent: { safeAreaInsets in
@@ -77,7 +76,7 @@ struct BrowserTransientCardArrangement: Hashable, Identifiable, Sendable {
     /// around it for the scrim to be a deliberate target.
     static let canvas = BrowserTransientCardArrangement(
         name: "canvas", entranceTarget: .assembly, placesControlsAboveCard: false, controlAlignment: .trailing,
-        controlSpacing: 10, constrainsControlBarToMaximumWidth: false, controlBarPadding: 0, ignoredSafeAreaEdges: [],
+        controlSpacing: 10, constrainsControlBarToMaximumWidth: true, controlBarPadding: 0,
         framesContent: nil,
         sizesCard: { contentSize in
             CGSize(
@@ -111,17 +110,13 @@ struct BrowserTransientCardArrangement: Hashable, Identifiable, Sendable {
     let controlAlignment: HorizontalAlignment
     let controlSpacing: CGFloat
 
-    /// Whether the control bar may shrink below its natural width. A sheet's
-    /// screen can be narrower than the bar, so there the bar is a maximum with
-    /// its own padding; elsewhere it is a fixed width.
+    /// Whether the control bar may shrink below its natural width. A touch
+    /// screen, or the page column beside a tablet's sidebar, can be narrower
+    /// than the bar, so there the bar is a maximum; a pointer window never is,
+    /// so there it is a fixed width.
     let constrainsControlBarToMaximumWidth: Bool
 
     let controlBarPadding: CGFloat
-
-    /// Safe-area edges the surface draws through. A pointer overlay is laid
-    /// out against the window it reserves space inside, so it takes the whole
-    /// window; touch arrangements respect the screen's insets.
-    let ignoredSafeAreaEdges: Edge.Set
 
     /// How the arrangement measures the region, card size and insets below.
     private let framesContent: (@Sendable (CGSize, CGFloat, LayoutDirection) -> CGRect)?
@@ -151,7 +146,7 @@ struct BrowserTransientCardArrangement: Hashable, Identifiable, Sendable {
     private init(
         name: String, entranceTarget: BrowserTransientEntranceTarget, placesControlsAboveCard: Bool,
         controlAlignment: HorizontalAlignment, controlSpacing: CGFloat, constrainsControlBarToMaximumWidth: Bool,
-        controlBarPadding: CGFloat, ignoredSafeAreaEdges: Edge.Set,
+        controlBarPadding: CGFloat,
         framesContent: (@Sendable (CGSize, CGFloat, LayoutDirection) -> CGRect)?,
         sizesCard: @escaping @Sendable (CGSize) -> CGSize?,
         insetsContent: @escaping @Sendable (EdgeInsets) -> EdgeInsets,
@@ -165,7 +160,6 @@ struct BrowserTransientCardArrangement: Hashable, Identifiable, Sendable {
         self.controlSpacing = controlSpacing
         self.constrainsControlBarToMaximumWidth = constrainsControlBarToMaximumWidth
         self.controlBarPadding = controlBarPadding
-        self.ignoredSafeAreaEdges = ignoredSafeAreaEdges
         self.framesContent = framesContent
         self.sizesCard = sizesCard
         self.insetsContent = insetsContent

@@ -60,15 +60,19 @@ final class BrowserPageNavigationMarkerTests: XCTestCase {
             try await waitForNavigation { page.live.documentURL == destination }
         }
         XCTAssertEqual(page.backHistory.map(\.url), [feed, root])
+        // Every entry keeps the identity the core knows it by however the
+        // page moves through them, so the menus never drift from WebKit's list.
+        let identities = page.backHistory.reversed().map(\.id)
         page.goBack()
         try await waitForNavigation { page.live.documentURL == feed }
         XCTAssertEqual(page.live.displayURL, feed)
         XCTAssertEqual(page.forwardHistory.map(\.url), [post])
-        page.goForward(toDepth: 1)
+        page.goToHistory(try XCTUnwrap(page.forwardHistory.first))
         try await waitForNavigation { page.live.documentURL == post }
-        page.goBack(toDepth: 2)
+        page.goToHistory(try XCTUnwrap(page.backHistory.last))
         try await waitForNavigation { page.live.documentURL == root }
         XCTAssertEqual(page.forwardHistory.map(\.url), [feed, post])
+        XCTAssertEqual([identities[0]] + page.forwardHistory.prefix(1).map(\.id), identities)
         page.goForward()
         try await waitForNavigation { page.live.documentURL == feed }
 

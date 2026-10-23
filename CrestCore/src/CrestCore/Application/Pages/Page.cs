@@ -54,12 +54,17 @@ internal sealed class Page {
     public PageState State => new(Id, WorkspaceId, SpaceId, TabId, Engine.Kind, Phase, Live);
 
     /// What rules and views read of the page now: what its engine last showed,
-    /// and why its latest navigation failed. A failure over the document the
-    /// page still shows can be left for that document, so the page can go back
-    /// even when its engine's history cannot.
+    /// whether its history reaches back or forward, and why its latest
+    /// navigation failed. A failure over the document the page still shows can
+    /// be left for that document, so the page can go back even when its
+    /// history cannot.
     public PageLiveState Live => new(shown.Url, shown.PendingUrl, shown.Title, shown.IsLoading,
-        shown.CanGoBack || failure is { ReplacedDocument: false } && shown.Url is not null, shown.CanGoForward, shown.Security,
-        failure, shown.Media);
+        History.CanGoBack || failure is { ReplacedDocument: false } && shown.Url is not null, History.CanGoForward,
+        shown.Security, failure, shown.Media);
+
+    /// The page's back and forward history across the engines it moved
+    /// through, as their reports and the page's moves left it.
+    public PageHistory History { get; private set; } = new();
 
     /// The icon the engine last reported for the document the page shows.
     public PageIcon? Icon { get; private set; }
@@ -125,8 +130,10 @@ internal sealed class Page {
     public bool RecoversWhenShown => stoppedUnseen is not null;
 
     /// The address a page that moved to another engine loads once that
-    /// engine has created it.
+    /// engine has created it, and the history entry the load stands for when
+    /// the page returned to one.
     private string? rehostedAddress;
+    private Guid? rehostedEntry;
 
     /// Why the page moved to another engine, each reason once.
     private readonly HashSet<RehostReason> movedFor = [];
@@ -175,13 +182,28 @@ internal sealed class Page {
 
     /// The page moves to `engine` for `reason`, and `engine` opens it anew and
     /// loads `address` once it has created it. Nothing the old engine showed
-    /// or reported stays, and the page shows itself heading to `address` at
-    /// once.
+    /// stays but the page's history, and the page shows itself heading to
+    /// `address` at once.
     public void Rehost(Engine engine, string? address, RehostReason reason) {
         movedFor.Add(reason);
+        History.Leave(engine.Kind, address);
+        Arrive(engine, address, load: address, entry: null);
+    }
+
+    /// The page goes back or forward to a history entry another engine held,
+    /// and `engine` opens it anew, heading to `address`: restoring the
+    /// history it kept, or loading `entry` afresh once it created the page.
+    /// A return is no move of the page's own, so it records no reason.
+    public void Return(Engine engine, string address, Guid? entry) =>
+        Arrive(engine, address, load: entry is null ? null : address, entry);
+
+    /// The page opens anew on `engine`, heading to `address`, and loads
+    /// `load` once created, as `entry` when it names one.
+    private void Arrive(Engine engine, string? address, string? load, Guid? entry) {
         Engine = engine;
         Phase = PagePhase.Opening;
-        rehostedAddress = address;
+        rehostedAddress = load;
+        rehostedEntry = entry;
         shown = PageSnapshot.Blank with { PendingUrl = address };
         failure = null;
         documentUrl = null;
@@ -203,12 +225,15 @@ internal sealed class Page {
     /// Whether the page ever moved to another engine for `reason`.
     public bool MovedFor(RehostReason reason) => movedFor.Contains(reason);
 
-    /// The address the page loads now that its new engine created it, taken
-    /// once; null for a page that did not move.
-    public string? TakeRehostedAddress() {
-        var address = rehostedAddress;
+    /// The load the page makes now that its new engine created it, taken
+    /// once: its address and the history entry it stands for, if any; null
+    /// for a page that did not move, or one whose engine restores history.
+    public LoadPage? TakeRehostedLoad() {
+        if (rehostedAddress is not { } address) return null;
+        var load = new LoadPage(Id, address, rehostedEntry);
         rehostedAddress = null;
-        return address;
+        rehostedEntry = null;
+        return load;
     }
 
     #endregion
@@ -289,6 +314,13 @@ internal sealed class Page {
     /// The page restores what an earlier page of its tab showed at `url`, and
     /// shows it heading there at once, so its owner does not load it anew.
     public void Restoring(string url) => shown = shown with { PendingUrl = url };
+
+    /// The page takes on the history its tab's last page held, restoring
+    /// that page's engine's history when `restores`.
+    public void Resume(PageHistory history, bool restores) {
+        History = history;
+        history.Reopen(Engine.Kind, restores);
+    }
 
     /// Whether a window shows the page now. A page leaving the screen is
     /// stamped at `now`; one already off screen keeps its stamp. Answers

@@ -143,7 +143,7 @@ extension BrowserMacAgents {
             if let url {
                 page.corePage.load(url)
             } else {
-                navigation.action?.perform(on: page.enginePage)
+                navigation.action?.perform(on: page.corePage, page.enginePage)
             }
             return .data(["tab": try self.listing(navigation.tab, call)])
         }

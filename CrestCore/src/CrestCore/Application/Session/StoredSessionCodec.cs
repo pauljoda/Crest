@@ -113,6 +113,7 @@ internal static partial class StoredSessionCodec {
         public const string SavedTabClosePolicy = "savedTabClosePolicy";
         public const string SavedTabFaviconReturnsToSavedUrl = "savedTabFaviconReturnsToSavedURL";
         public const string SavedTabsExpansionModifiedAt = "savedTabsExpansionModifiedAt";
+        public const string CredentialsEnabledModifiedAt = "credentialsEnabledModifiedAt";
         public const string SavedUrl = "savedURL";
         public const string SearchesSitesWithTab = "searchesSitesWithTab";
         public const string SearchFollowsDefault = "searchFollowsDefault";

@@ -36,6 +36,18 @@ public sealed partial class BrowserContractsTests {
     }
 
     [Fact]
+    public void ATypedSchemeOpensThePlaceInThatSchemeWhereTheSpaceKnowsItInAnother() {
+        var (session, space) = PaletteSession([OpenTab(Guid.NewGuid(), "Privacy error", "https://10.0.0.1/")],
+            ("https://10.0.0.1/", "Privacy error", 2, 3, 1));
+        using var device = new TestDevice(session);
+        var window = device.Open(space);
+
+        var typed = device.Query(Asking(window, "http://10.0.0.1")).Groups.SelectMany(group => group.Rows).First();
+
+        Assert.Equal((PaletteRowKind.OpenAddress, "http://10.0.0.1"), (typed.Kind, typed.Address));
+    }
+
+    [Fact]
     public void APageVisitedOnceCompletesOnlyAfterThePersonTypesIt() {
         var (session, space) = PaletteSession([], ("https://news.example.org/today", "Today", 1, 2, 1));
         using var device = new TestDevice(session);
