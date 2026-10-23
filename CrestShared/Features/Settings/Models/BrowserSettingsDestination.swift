@@ -58,7 +58,7 @@ struct BrowserSettingsDestination: Hashable, Identifiable, Sendable {
     static let lookAndFeel = BrowserSettingsDestination(
         kind: .lookAndFeel, name: "lookAndFeel", title: "Appearance", subtitle: "Window, tabs, zoom and motion",
         searchTerms:
-            "look and feel theme accent color transparency page zoom percentage sidebar left right borderless window fullscreen layout interface animation motion page cards folder highlights counts borders preview density spacing padding scale icons",
+            "look and feel theme accent color transparency page zoom percentage sidebar left right borderless window fullscreen layout interface animation motion page cards folder highlights counts borders preview density spacing padding scale icons space size fit automatic",
         symbol: "paintpalette", tincture: .lionGules)
     static let engines = BrowserSettingsDestination(
         kind: .engines, name: "engines", title: "Engines", subtitle: "Default engine and website rules",

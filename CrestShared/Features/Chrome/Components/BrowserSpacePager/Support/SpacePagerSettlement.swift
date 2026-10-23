@@ -32,6 +32,29 @@ struct SpacePagerSettlement: Equatable {
             Double(Self.secondControl.x), Double(Self.secondControl.y), duration: duration)
     }
 
+    /// Where the strip is `elapsed` seconds after the slide began, on the
+    /// curve Core Animation draws it along.
+    func position(after elapsed: TimeInterval) -> CGFloat {
+        let progress = CGFloat(min(1, max(0, elapsed / duration)))
+        return startPosition + (endPosition - startPosition) * Self.curve(at: progress)
+    }
+
+    /// The timing curve's output for the time fraction `x`, found by
+    /// bisecting the curve's parameter.
+    private static func curve(at x: CGFloat) -> CGFloat {
+        func bezier(_ t: CGFloat, _ first: CGFloat, _ second: CGFloat) -> CGFloat {
+            let u = 1 - t
+            return 3 * u * u * t * first + 3 * u * t * t * second + t * t * t
+        }
+        var low: CGFloat = 0
+        var high: CGFloat = 1
+        for _ in 0..<32 {
+            let t = (low + high) / 2
+            if bezier(t, firstControl.x, secondControl.x) < x { low = t } else { high = t }
+        }
+        return bezier((low + high) / 2, firstControl.y, secondControl.y)
+    }
+
     /// Include crossed boundaries so a reversal through a third Space blends
     /// its actual colors instead of interpolating straight between endpoints.
     var positions: [CGFloat] {

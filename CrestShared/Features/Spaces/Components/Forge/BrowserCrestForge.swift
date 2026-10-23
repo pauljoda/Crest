@@ -24,7 +24,7 @@ struct BrowserCrestForge: View {
     private var context: BrowserCrestStudioContext {
         BrowserCrestStudioContext(
             branding: $branding,
-            defaults: SpaceHouse.startingPoint(of: branding)?.look ?? initialAppearance ?? branding,
+            defaults: branding.startingLook ?? initialAppearance ?? branding,
             compact: false, previewBranding: editingStart)
     }
 
@@ -134,6 +134,10 @@ struct BrowserCrestForge: View {
                 branding = house.applying(to: branding)
             } artwork: {
                 crest(house.applying(to: editingStart ?? branding))
+            }
+        } trailing: {
+            ForEach(SpaceScheme.all, id: \.self) { scheme in
+                BrowserSpaceSchemeChoice(scheme: scheme, branding: $branding, symbol: symbol, tint: .accentColor)
             }
         }
     }
@@ -323,9 +327,7 @@ struct BrowserCrestForge: View {
         let text = context.setting(\.textColorMode)
         return CrestSettingRow("Text", setting: text.resettable("Text")) {
             Picker("Text", selection: text.binding) {
-                Text("Automatic").tag(SpaceTextColorMode.automatic)
-                Text("Light").tag(SpaceTextColorMode.light)
-                Text("Dark").tag(SpaceTextColorMode.dark)
+                ForEach(SpaceTextColorMode.all, id: \.self) { Text($0.title).tag($0) }
             }
             .pickerStyle(.segmented)
             .labelsHidden()
@@ -353,11 +355,20 @@ struct BrowserCrestForge: View {
     private func gallery<Item, ID: Hashable, Tile: View>(
         _ items: [Item], id: KeyPath<Item, ID>, @ViewBuilder tile: @escaping (Item) -> Tile
     ) -> some View {
+        gallery(items, id: id, tile: tile) { EmptyView() }
+    }
+
+    /// A gallery of `items`' tiles followed by `trailing` tiles of another kind.
+    private func gallery<Item, ID: Hashable, Tile: View, Trailing: View>(
+        _ items: [Item], id: KeyPath<Item, ID>, @ViewBuilder tile: @escaping (Item) -> Tile,
+        @ViewBuilder trailing: () -> Trailing
+    ) -> some View {
         Section {
             LazyVGrid(
                 columns: [GridItem(.adaptive(minimum: 80), spacing: 8)], spacing: 8
             ) {
                 ForEach(items, id: id) { item in tile(item) }
+                trailing()
             }
             .padding(.vertical, 4)
             .accessibilityIdentifier("space-forge-gallery")

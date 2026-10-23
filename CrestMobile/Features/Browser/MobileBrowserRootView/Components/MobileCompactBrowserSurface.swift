@@ -5,6 +5,9 @@ struct MobileCompactBrowserSurface<
     FloatingSidebar: View,
     Page: View
 >: View {
+    @Environment(\.browserChromeAppearance) private var appearance
+    @Environment(\.colorScheme) private var colorScheme
+
     let compactShowsPage: Bool
     @Binding var isPagePresented: Bool
     let usesDockedDetailPresentation: Bool
@@ -20,6 +23,8 @@ struct MobileCompactBrowserSurface<
     let hasActivePage: Bool
     let completedNavigationCount: Int
     let hasSelectedSpace: Bool
+    /// The page on show, which a swipe in from the frame around it steps.
+    let selectedPage: MobileBrowserPage?
     let showSidebar: () -> Void
     let handlePageInteraction: () -> Void
     let commitSidebarWidth: (CGFloat) -> Void
@@ -38,6 +43,7 @@ struct MobileCompactBrowserSurface<
                     // Its backdrop owns the safe-area tint and its detail owns
                     // the floating URL controls.
                     page
+                        .environment(\.mobileBrowserSideToolbarIsHosted, false)
                 } else {
                     ZStack {
                         SpaceBackdropBlend(spaces: spaces, selectedSpace: space) {
@@ -65,6 +71,12 @@ struct MobileCompactBrowserSurface<
                         }
                     }
                     .environment(\.spacePagerPresentation, floatingPagerPresentation)
+                    .modifier(
+                        MobileBrowserSideToolbarHost(
+                            colorScheme: space?.settings.look.colorScheme(over: colorScheme)
+                        )
+                    )
+                    .environment(\.mobileBrowserSideToolbarIsHosted, false)
                 }
             }
     }
@@ -80,5 +92,14 @@ struct MobileCompactBrowserSurface<
             handleWebContentInteraction: handlePageInteraction,
             content: page
         )
+        .overlay {
+            if !usesBorderlessFloatingPageFrame {
+                MobileHistorySwipeBorder(
+                    insets: appearance.pageInsets(docked: false, direction: layoutDirection),
+                    leadingPage: selectedPage,
+                    trailingPage: selectedPage
+                )
+            }
+        }
     }
 }

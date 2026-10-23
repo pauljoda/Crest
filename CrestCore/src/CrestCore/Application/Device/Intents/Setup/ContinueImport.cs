@@ -13,7 +13,7 @@ public sealed record ContinueImport() : SetupFlowIntent {
     internal override void Apply(Device device, DeviceTurn turn) => device.ReviseFlow(turn.Changes, (chosen, session) => {
         var flow = Device.Idle(chosen);
         if (flow.Selected.Count == 0) {
-            device.BeginSetup(flow.WorkspaceId, session, startsOver: false, turn.Changes, turn.Ids);
+            device.BeginSetup(flow.WorkspaceId, session, startsOver: false, flow.Look, turn.Changes, turn.Ids);
             return flow with { Step = SetupStep.ManualSetup, Phase = SetupPhase.Idle, Source = null, Failure = null };
         }
         var queue = flow.Queue is { Current: not null } current && current.Sources.Skip(current.Index).ToHashSet().SetEquals(flow.Selected)

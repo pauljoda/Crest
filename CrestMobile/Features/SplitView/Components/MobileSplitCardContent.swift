@@ -1,14 +1,14 @@
 import SwiftUI
 
-/// One split card's interior on iOS and iPadOS: the per-member twin of what
+/// One split card's interior on iPadOS: the per-member twin of what
 /// `MobileBrowserDetailView` renders for the selected tab.
 ///
-/// Both platforms' split surfaces use it — the iPhone carousel for the cell it
-/// is paging to, the iPad columns for each column — because the difference
-/// between them is the viewport they are handed and how focus is asked for, not
-/// what a card shows. A live page goes through the same
-/// `MobileBrowserLivePageView` the selected tab does, with the same viewport, so
-/// a grouped tab renders exactly like the plain tab it is.
+/// The iPad's columns use it for each column, differing from the selected tab
+/// in the viewport they are handed and how focus is asked for, not in what a
+/// card shows. A live page goes through the same `MobileBrowserLivePageView`
+/// the selected tab does, with the same viewport, so a grouped tab renders
+/// exactly like the plain tab it is. An iPhone shows one card at a time, as
+/// the selected tab itself.
 ///
 /// A card resolves its **own** member's page. That is not a stylistic
 /// preference: `MobileBrowserWebHostView.attach(_:)` silently takes a web view
@@ -27,8 +27,7 @@ struct MobileSplitCardContent: View {
     let failureLayout: BrowserNavigationFailureLayout
     var handleInteraction: (() -> Void)?
     /// A tap's request to make this card the focused one. `nil` where focus is
-    /// not a tap away, which is every carousel cell: the phone shows one card at
-    /// a time, so the card on screen is already the focused one.
+    /// not a tap away, because the card on screen is already the focused one.
     var requestFocus: (() -> Void)?
 
     var body: some View {
@@ -61,9 +60,9 @@ struct MobileSplitCardContent: View {
             }
         default:
             // A Start Page has no committed navigation to render beside its
-            // siblings, and an evicted neighbour is waiting for the carousel to
-            // approach it again. Both read as an empty card rather than as
-            // chrome that would claim the space.
+            // siblings, and an evicted neighbour is waiting to be shown again.
+            // Both read as an empty card rather than as chrome that would
+            // claim the space.
             unloadedSurface
         }
     }

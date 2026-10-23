@@ -4,9 +4,7 @@ import UIKit
 struct MobileBrowserWebView: UIViewRepresentable {
     let page: MobileBrowserPage
     var viewport = MobileBrowserPageViewport.inline
-    /// Observes page taps without taking them away from WebKit. Horizontal pans
-    /// remain exclusively WebKit's so native back/forward navigation keeps its
-    /// normal recognition priority.
+    /// Observes page taps without taking them away from WebKit.
     var handleInteraction: (() -> Void)?
     /// An unfocused split card's request to become the focused one.
     ///
@@ -16,6 +14,10 @@ struct MobileBrowserWebView: UIViewRepresentable {
     /// false so the page still receives the tap it was given. `nil` outside a
     /// split, where there is no second card to focus.
     var requestFocus: (() -> Void)?
+    /// Keeps the page out of VoiceOver's reach, as for a page waiting out of
+    /// sight for the address bar's swipe. WebKit's content answers VoiceOver
+    /// itself, so SwiftUI's own hiding does not reach it.
+    var hidesFromAccessibility = false
 
     func makeCoordinator() -> MobileBrowserWebViewCoordinator {
         Coordinator()
@@ -25,12 +27,16 @@ struct MobileBrowserWebView: UIViewRepresentable {
         let host = MobileBrowserWebHostView()
         host.configureViewport(viewport)
         host.attach(page.webView)
+        hideFromAccessibility(host)
         if context.coordinator.dismissFocusRecognizer.view == nil {
             host.addGestureRecognizer(
                 context.coordinator.dismissFocusRecognizer
             )
         }
         context.coordinator.handleInteraction = handleInteraction
+        context.coordinator.historySwipe.install(on: host)
+        context.coordinator.historySwipe.page = page
+        page.historySwipe = context.coordinator.historySwipe
         installFocusRecognizerIfNeeded(on: host, coordinator: context.coordinator)
         return host
     }
@@ -38,8 +44,19 @@ struct MobileBrowserWebView: UIViewRepresentable {
     func updateUIView(_ host: MobileBrowserWebHostView, context: Context) {
         host.configureViewport(viewport)
         host.attach(page.webView)
+        hideFromAccessibility(host)
         context.coordinator.handleInteraction = handleInteraction
+        context.coordinator.historySwipe.page = page
+        page.historySwipe = context.coordinator.historySwipe
         installFocusRecognizerIfNeeded(on: host, coordinator: context.coordinator)
+    }
+
+    /// Hides the page from VoiceOver, or shows it again, on the host and the
+    /// web view both: the web view moves between hosts as a swipe lands, and
+    /// WebKit's content answers VoiceOver through it, not through the host.
+    private func hideFromAccessibility(_ host: MobileBrowserWebHostView) {
+        host.accessibilityElementsHidden = hidesFromAccessibility
+        page.webView.accessibilityElementsHidden = hidesFromAccessibility
     }
 
     private func installFocusRecognizerIfNeeded(

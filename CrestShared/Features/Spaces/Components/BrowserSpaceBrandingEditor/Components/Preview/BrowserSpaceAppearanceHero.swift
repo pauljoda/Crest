@@ -2,6 +2,7 @@ import SwiftUI
 
 /// The same sidebar preview used by import and setup, dressed in the live draft.
 struct BrowserSpaceAppearanceHero: View {
+    @Environment(\.colorScheme) private var colorScheme
     let branding: SpaceBranding
     let symbol: String
     var name = ""
@@ -77,7 +78,7 @@ struct BrowserSpaceAppearanceHero: View {
             }
         }
         .background { BrowserSpaceBannerBackground(branding: branding) }
-        .environment(\.colorScheme, branding.foregroundTone.colorScheme)
+        .environment(\.colorScheme, branding.colorScheme(over: colorScheme))
         .environment(\.sidebarSpacePresentation, SidebarSpacePresentation(space: preview, isUnlocked: true))
         .clipShape(.rect(cornerRadius: 18))
         .overlay {

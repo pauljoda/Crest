@@ -30,16 +30,16 @@ struct BrowserMacCommand {
     static let closeWindow = BrowserMacCommand(
         .closeWindow, withoutWindow: .closesShellWindow, run: { $0.closeKeyWindow() })
     static let back = BrowserMacCommand(
-        .back, isAvailable: { $0.pages.commandPage?.live.canGoBack == true },
-        run: { $0.pages.commandPage?.goBack() })
+        .back, actsOnPage: true, isAvailable: { $0.commandPage?.live.canGoBack == true },
+        run: { $0.commandPage?.goBack() })
     static let forward = BrowserMacCommand(
-        .forward, isAvailable: { $0.pages.commandPage?.live.canGoForward == true },
-        run: { $0.pages.commandPage?.goForward() })
-    static let reloadPage = BrowserMacCommand(.reloadPage) { $0.reload(.standard) }
+        .forward, actsOnPage: true, isAvailable: { $0.commandPage?.live.canGoForward == true },
+        run: { $0.commandPage?.goForward() })
+    static let reloadPage = BrowserMacCommand(.reloadPage, actsOnPage: true) { $0.reload(.standard) }
     static let stopLoading = BrowserMacCommand(
-        .stopLoading, isAvailable: { $0.pages.commandPage?.live.isLoading == true },
-        run: { $0.pages.commandPage?.stopLoading() })
-    static let reloadFromOrigin = BrowserMacCommand(.reloadFromOrigin) { $0.reload(.fromOrigin) }
+        .stopLoading, actsOnPage: true, isAvailable: { $0.commandPage?.live.isLoading == true },
+        run: { $0.commandPage?.stopLoading() })
+    static let reloadFromOrigin = BrowserMacCommand(.reloadFromOrigin, actsOnPage: true) { $0.reload(.fromOrigin) }
     static let toggleSelectedTabPinned = BrowserMacCommand(.toggleSelectedTabPinned) { $0.toggleSelectedTabPinned() }
     static let duplicateTab = BrowserMacCommand(.duplicateTab) { $0.duplicateSelectedTab() }
     static let reopenClosedTab = BrowserMacCommand(.reopenClosedTab) { $0.reopenClosedTab() }
@@ -64,56 +64,60 @@ struct BrowserMacCommand {
     static let previousSpace = BrowserMacCommand(.previousSpace) { $0.selectPreviousSpace() }
     static let nextSpace = BrowserMacCommand(.nextSpace) { $0.selectNextSpace() }
     static let toggleReaderMode = BrowserMacCommand(
-        .toggleReaderMode, isAvailable: { $0.supportsPageCapability(.reader) && $0.pages.readerModeState.canToggle },
-        title: { $0.pages.readerModeActionTitle }, run: { $0.pages.toggleReaderMode() })
+        .toggleReaderMode, actsOnPage: true,
+        isAvailable: { $0.supportsPageCapability(.reader) && $0.shownPage?.readerModeState.canToggle == true },
+        title: { ($0.shownPage?.readerModeState ?? .unavailable).actionTitle },
+        run: { $0.shownPage?.toggleReaderMode() })
     static let toggleContentBlocking = BrowserMacCommand(
-        .toggleContentBlocking, isAvailable: { $0.supportsEngineCapability(.contentBlocking) },
+        .toggleContentBlocking, actsOnPage: true, isAvailable: { $0.supportsEngineCapability(.contentBlocking) },
         title: { $0.contentBlockingActionTitle }, run: { $0.toggleContentBlocking() })
     static let findInPage = BrowserMacCommand(
-        .findInPage, isAvailable: { $0.commandPageSupports(.find) },
-        run: { $0.pages.commandPage?.presentFind() })
+        .findInPage, actsOnPage: true, isAvailable: { $0.canFind },
+        run: { $0.presentFind() })
     static let findNext = BrowserMacCommand(
-        .findNext, isAvailable: { $0.canFindAgain }, waitsInPaletteUntilAvailable: true,
-        run: { $0.pages.commandPage?.findAgain(.forward) })
+        .findNext, actsOnPage: true, isAvailable: { $0.canFindAgain }, waitsInPaletteUntilAvailable: true,
+        run: { $0.commandPage?.findAgain(.forward) })
     static let findPrevious = BrowserMacCommand(
-        .findPrevious, isAvailable: { $0.canFindAgain }, waitsInPaletteUntilAvailable: true,
-        run: { $0.pages.commandPage?.findAgain(.backward) })
-    static let zoomIn = BrowserMacCommand(.zoomIn, isAvailable: { $0.canZoom }, run: { $0.zoomIn() })
-    static let zoomOut = BrowserMacCommand(.zoomOut, isAvailable: { $0.canZoom }, run: { $0.zoomOut() })
-    static let actualSize = BrowserMacCommand(.actualSize, isAvailable: { $0.canZoom }, run: { $0.resetZoom() })
+        .findPrevious, actsOnPage: true, isAvailable: { $0.canFindAgain }, waitsInPaletteUntilAvailable: true,
+        run: { $0.commandPage?.findAgain(.backward) })
+    static let zoomIn = BrowserMacCommand(.zoomIn, actsOnPage: true, isAvailable: { $0.canZoom }, run: { $0.zoomIn() })
+    static let zoomOut = BrowserMacCommand(
+        .zoomOut, actsOnPage: true, isAvailable: { $0.canZoom }, run: { $0.zoomOut() })
+    static let actualSize = BrowserMacCommand(
+        .actualSize, actsOnPage: true, isAvailable: { $0.canZoom }, run: { $0.resetZoom() })
     static let copyPageLink = BrowserMacCommand(
-        .copyPageLink, isAvailable: { $0.hasCommandPage },
+        .copyPageLink, actsOnPage: true, isAvailable: { $0.hasCommandPage },
         run: { $0.copyPageLink() })
     static let copyPageLinkAsMarkdown = BrowserMacCommand(
-        .copyPageLinkAsMarkdown, isAvailable: { $0.hasCommandPage },
+        .copyPageLinkAsMarkdown, actsOnPage: true, isAvailable: { $0.hasCommandPage },
         run: { $0.copyPageLinkAsMarkdown() })
     static let sharePage = BrowserMacCommand(
-        .sharePage, isAvailable: { $0.hasCommandPage },
-        run: { $0.pages.commandPage?.sharePage() })
+        .sharePage, actsOnPage: true, isAvailable: { $0.hasCommandPage },
+        run: { $0.commandPage?.sharePage() })
     static let exportPDF = BrowserMacCommand(
-        .exportPDF, isAvailable: { $0.commandPageSupports(.pdf) },
-        run: { $0.pages.commandPage?.exportPDF() })
+        .exportPDF, actsOnPage: true, isAvailable: { $0.commandPageSupports(.pdf) },
+        run: { $0.commandPage?.exportPDF() })
     static let saveWebArchive = BrowserMacCommand(
-        .saveWebArchive, isAvailable: { $0.commandPageSupports(.webArchive) },
-        run: { $0.pages.commandPage?.exportWebArchive() })
+        .saveWebArchive, actsOnPage: true, isAvailable: { $0.commandPageSupports(.webArchive) },
+        run: { $0.commandPage?.exportWebArchive() })
     static let printPage = BrowserMacCommand(
-        .printPage, isAvailable: { $0.commandPageSupports(.print) },
-        run: { $0.pages.commandPage?.printPage() })
+        .printPage, actsOnPage: true, isAvailable: { $0.commandPageSupports(.print) },
+        run: { $0.commandPage?.printPage() })
     static let toggleSidebar = BrowserMacCommand(.toggleSidebar) { $0.toggleSidebar() }
-    static let showHistory = BrowserMacCommand(.showHistory) { $0.chrome.presentUtility(.history) }
-    static let showArchive = BrowserMacCommand(.showArchive) { $0.chrome.presentUtility(.archive) }
+    static let showHistory = BrowserMacCommand(.showHistory) { $0.chrome.toggleUtility(.history) }
+    static let showArchive = BrowserMacCommand(.showArchive) { $0.chrome.toggleUtility(.archive) }
     static let showDownloads = BrowserMacCommand(
         .showDownloads, isAvailable: { $0.supportsEngineCapability(.downloads) },
-        run: { $0.chrome.presentUtility(.downloads) })
+        run: { $0.chrome.toggleUtility(.downloads) })
     static let showWebInspector = BrowserMacCommand(
-        .showWebInspector, isAvailable: { $0.supportsPageCapability(.inspector) },
-        run: { $0.pages.showWebInspector() })
+        .showWebInspector, actsOnPage: true, isAvailable: { $0.supportsPageCapability(.inspector) },
+        run: { _ = $0.shownPage?.showWebInspector() })
     static let toggleTranslationToolbar = BrowserMacCommand(
-        .toggleTranslationToolbar,
-        isAvailable: { $0.supportsPageCapability(.translation) && !$0.pages.readerModeState.isActive },
-        isOn: { $0.pages.activePage?.translation.showsToolbar == true },
+        .toggleTranslationToolbar, actsOnPage: true,
+        isAvailable: { $0.supportsPageCapability(.translation) && $0.shownPage?.readerModeState.isActive != true },
+        isOn: { $0.shownPage?.translation.showsToolbar == true },
         run: { actions in
-            guard let page = actions.pages.activePage, !page.readerModeState.isActive else { return }
+            guard let page = actions.shownPage, !page.readerModeState.isActive else { return }
             page.translation.toggleToolbarVisibility()
         })
     static let toggleDeveloperToolbar = BrowserMacCommand(
@@ -170,6 +174,10 @@ struct BrowserMacCommand {
     /// command that needs one.
     let withoutWindow: BrowserMacWindowlessCommand?
 
+    /// Whether the command acts on a page, which a Quick Window in front
+    /// shows too, so a key Quick Window runs it on its own page.
+    let actsOnPage: Bool
+
     /// Whether the palette lists the command only while it can run, for a
     /// command that means nothing until something else happens first, such
     /// as finding again before any search.
@@ -179,6 +187,7 @@ struct BrowserMacCommand {
 
     private init(
         _ kind: ShortcutCommand.Kinds,
+        actsOnPage: Bool = false,
         isAvailable: @escaping @MainActor (BrowserCommandActions) -> Bool = { _ in true },
         title: @escaping @MainActor (BrowserCommandActions) -> LocalizedStringResource? = { _ in nil },
         isOn: @escaping @MainActor (BrowserCommandActions) -> Bool? = { _ in nil },
@@ -187,13 +196,14 @@ struct BrowserMacCommand {
         run: @escaping @MainActor (BrowserCommandActions) -> Void
     ) {
         self.init(
-            kind, isAvailable: { actions, _ in isAvailable(actions) }, title: title, isOn: isOn,
-            withoutWindow: withoutWindow, waitsInPaletteUntilAvailable: waitsInPaletteUntilAvailable,
+            kind, actsOnPage: actsOnPage, isAvailable: { actions, _ in isAvailable(actions) }, title: title,
+            isOn: isOn, withoutWindow: withoutWindow, waitsInPaletteUntilAvailable: waitsInPaletteUntilAvailable,
             run: { actions, _ in run(actions) })
     }
 
     private init(
         _ kind: ShortcutCommand.Kinds,
+        actsOnPage: Bool = false,
         isAvailable: @escaping @MainActor (BrowserCommandActions, ShortcutCommand) -> Bool,
         title: @escaping @MainActor (BrowserCommandActions) -> LocalizedStringResource? = { _ in nil },
         isOn: @escaping @MainActor (BrowserCommandActions) -> Bool? = { _ in nil },
@@ -202,6 +212,7 @@ struct BrowserMacCommand {
         run: @escaping @MainActor (BrowserCommandActions, ShortcutCommand) -> Void
     ) {
         self.kind = kind
+        self.actsOnPage = actsOnPage
         self.isAvailable = isAvailable
         self.title = title
         self.isOn = isOn

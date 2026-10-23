@@ -36,11 +36,19 @@ public sealed record CreatePage(Guid PageId, Guid ProfileId, bool IsPrivate, Gui
 /// the page holds, never another page's.
 public sealed record ExitPictureInPicture(Guid PageId) : EngineCommand;
 
+/// Shows the entry `EntryId` names in the page's back and forward history,
+/// as the engine keeps the entry. The binding reports the navigation it
+/// starts as it reports any other. An entry the engine no longer holds starts
+/// nothing, and the binding reports the page's history again.
+public sealed record GoToHistoryEntry(Guid PageId, Guid EntryId) : EngineCommand;
+
 /// Loads `Url` in a page, as the core resolved it from what the person asked
 /// for. The load is the app's own rather than the page content's, so it may
 /// reach an address web content may not. The binding reports the navigation
-/// it starts as it reports any other.
-public sealed record LoadPage(Guid PageId, string Url) : EngineCommand;
+/// it starts as it reports any other. With `EntryId`, the entry the load
+/// commits takes that identity, so a history entry the engine no longer holds
+/// comes back as itself.
+public sealed record LoadPage(Guid PageId, string Url, Guid? EntryId = null) : EngineCommand;
 
 /// Brings back the document a page showed when its renderer stopped, as the
 /// core's crash recovery decided. The binding loads the page's current history

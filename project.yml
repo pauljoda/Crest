@@ -480,6 +480,7 @@ targets:
           - Resources/CrestIcon/Validation
       - path: CrestMobile
     dependencies:
+      - target: CrestShareExtension
       - sdk: AuthenticationServices.framework
       - sdk: CloudKit.framework
       - sdk: CoreLocation.framework
@@ -500,6 +501,26 @@ targets:
         ASSETCATALOG_COMPILER_APPICON_NAME: Crest
         ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES: "CrestWinter CrestLion CrestStorm CrestDragon CrestMeadow CrestIron CrestRiver CrestSun CrestVigil"
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+  # The share sheet entry hands shared links to the iOS app. It compiles the
+  # hand-off it shares with the app, never the core, which an extension's
+  # memory budget cannot hold.
+  CrestShareExtension:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: CrestShareExtension
+      - path: CrestMobile/Infrastructure/BrowserLinkSharing
+      - path: CrestShared/Resources/Localizable.xcstrings
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: NO
+        INFOPLIST_FILE: CrestShareExtension/Info.plist
+        IPHONEOS_DEPLOYMENT_TARGET: "26.1"
+        CREST_MOBILE_BUNDLE_IDENTIFIER: com.pauldavis.crest
+        PRODUCT_BUNDLE_IDENTIFIER: $(CREST_MOBILE_BUNDLE_IDENTIFIER).share
+        PRODUCT_MODULE_NAME: CrestShareExtension
+        PRODUCT_NAME: CrestShareExtension
+        TARGETED_DEVICE_FAMILY: "1,2"
   CrestMobileTests:
     type: bundle.unit-test
     platform: iOS

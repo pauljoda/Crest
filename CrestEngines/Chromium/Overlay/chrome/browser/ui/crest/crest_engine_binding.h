@@ -250,7 +250,6 @@ class EngineBinding {
   static void CREST_CALL PresentTo(void* context, crest_engine_present_t present, void* ui);
 
   // Each request, handled where it lands.
-  bool Handle(const engine::GoToHistoryOffset& request);
   bool Handle(const engine::ReloadPage& request);
   bool Handle(const engine::StopLoading& request);
   bool Handle(const engine::ZoomPage& request);
@@ -309,6 +308,7 @@ class EngineBinding {
   // these, so a command without one fails to compile.
   void Handle(const engine::CreatePage& command);
   void Handle(const engine::LoadPage& command);
+  void Handle(const engine::GoToHistoryEntry& command);
   void Handle(const engine::ClosePage& command);
   void Handle(const engine::RecoverPage& command);
   void Handle(const engine::ExitPictureInPicture& command);

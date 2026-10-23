@@ -144,11 +144,12 @@ final class BrowserWebFocusRestorationController {
     /// closing find does: the responder it last held, or its own view when it
     /// never held one, since an engine that keeps no record of its responder,
     /// as Chromium does not, focuses its page from there. A page that already
-    /// holds focus keeps the responder it has.
-    func requestPageFocus() {
+    /// holds focus keeps the responder it has. Focus may be taken from
+    /// `outgoingWebView`, a page giving way to this one, as a closing Peek is.
+    func requestPageFocus(displacing outgoingWebView: NSView? = nil) {
         guard let webView, !adoptCurrentFocus() else { return }
         if validCandidate() == nil { candidate = webView }
-        permittedOutgoingWebView = nil
+        permittedOutgoingWebView = outgoingWebView
         hasPendingRestoration = true
     }
 

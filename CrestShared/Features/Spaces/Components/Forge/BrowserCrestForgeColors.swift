@@ -68,6 +68,17 @@ struct BrowserCrestForgeLayer: Hashable, Identifiable, Sendable {
 
     // MARK: - Actions - Drawing
 
+    /// The layers whose colors `branding`'s stage shows: every layer of a
+    /// crest, drawn or not, or an icon's one figure.
+    static func shown(by branding: SpaceBranding) -> [BrowserCrestForgeLayer] {
+        branding.iconStyle == .layeredCrest ? all : all.filter(\.isIconFigure)
+    }
+
+    /// The layer's name on `branding`'s stage: an icon's figure is its color.
+    func title(in branding: SpaceBranding) -> LocalizedStringResource {
+        branding.iconStyle == .layeredCrest || !isIconFigure ? title : "Color"
+    }
+
     /// Whether `branding` draws this layer at all. An icon draws only its
     /// figure.
     func isDrawn(by branding: SpaceBranding) -> Bool {

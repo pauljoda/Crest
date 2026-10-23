@@ -79,6 +79,10 @@ enum CrestMotion {
     static let contentNavigationTransition: TimeInterval = 0.42
     /// Settling an interactive horizontal Space swipe.
     static let spaceSwipeTransition: TimeInterval = 0.32
+    /// Shaking a control to show a swipe has nowhere further to go.
+    static let boundaryShakeTransition: TimeInterval = 0.36
+    /// Fading a page in where Reduce Motion stills a slide.
+    static let reducedMotionFadeTransition: TimeInterval = 0.2
     /// Presenting Peek inside a Quick Window.
     static let quickPeekEntranceTransition: TimeInterval = 0.34
     /// Revealing initial Peek web content after its first commit.
@@ -110,6 +114,11 @@ enum CrestMotion {
     static var onboardingProgress: Animation { .snappy }
     /// Uses SwiftUI's native snappy curve for onboarding presentation state.
     static var onboardingPresentation: Animation { .snappy }
+    /// The slow cross-fade between the fields the setup stage wears.
+    static var onboardingBackdrop: Animation { .easeInOut(duration: onboardingBackdropFade) }
+    static let onboardingBackdropFade: TimeInterval = 1.6
+    /// How long the welcome holds each template's field before fading to the next.
+    static let onboardingWelcomeHold: Duration = .seconds(7)
     static var press: Animation { .easeOut(duration: pressFeedback) }
     static var compactPress: Animation { .easeOut(duration: compactPressFeedback) }
     static var developerPress: Animation { .snappy(duration: developerPressFeedback) }
@@ -148,6 +157,11 @@ enum CrestMotion {
     }
     static var spaceSwipe: Animation {
         .snappy(duration: spaceSwipeTransition, extraBounce: 0)
+    }
+    /// The fade Reduce Motion keeps in place of a slide. Unlike the other
+    /// roles it is meant for Reduce Motion, so it is used as it is.
+    static var reducedMotionFade: Animation {
+        .easeInOut(duration: reducedMotionFadeTransition)
     }
     static var quickPeekEntrance: Animation {
         .smooth(duration: quickPeekEntranceTransition)

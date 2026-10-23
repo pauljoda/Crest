@@ -324,6 +324,9 @@ extension BrowserCloudSyncController: CloudSyncStepPerformer {
             let records = try await self.remote().loadSnapshot()
             observed = records.count
             try await self.deliver(ReplaceSeedWithCloudRecords(records: records))
+            // The device's first search catalog waited for the seed to give way
+            // and now takes the default the cloud's Spaces follow.
+            BrowserSearchCatalog.restore(into: self.core)
             return CloudSeedReplaced(attempt: step.attempt, cloudRecords: records.count)
         }
     }

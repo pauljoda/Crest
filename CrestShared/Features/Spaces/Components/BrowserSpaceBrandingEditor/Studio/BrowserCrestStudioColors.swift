@@ -150,9 +150,7 @@ struct BrowserCrestStudioBackground: View {
             let text = context.setting(\.textColorMode)
             CrestSettingRow("Text color", setting: text.resettable("Text color")) {
                 Picker("Text color", selection: text.binding) {
-                    Text("Automatic").tag(SpaceTextColorMode.automatic)
-                    Text("Light").tag(SpaceTextColorMode.light)
-                    Text("Dark").tag(SpaceTextColorMode.dark)
+                    ForEach(SpaceTextColorMode.all, id: \.self) { Text($0.title).tag($0) }
                 }.labelsHidden()
             }
         }

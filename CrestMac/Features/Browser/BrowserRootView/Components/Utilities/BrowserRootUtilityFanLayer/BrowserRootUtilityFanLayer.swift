@@ -5,20 +5,35 @@ struct BrowserRootUtilityFanLayer: View {
     let model: BrowserRootModel
     var sidebarOnRight = false
 
+    @State private var visibleTriggerFrame: CGRect?
+
     var body: some View {
         GeometryReader { proxy in
             if let triggerFrame = model.chrome.utilityPresentation
-                .triggerFrameInGlobal,
-                model.sidebarPresentation.showsSidebar
+                .triggerFrameInGlobal
             {
+                let rootFrame = proxy.frame(in: .global)
+                let localTriggerFrame = triggerFrame.offsetBy(
+                    dx: -rootFrame.minX,
+                    dy: -rootFrame.minY
+                )
                 BrowserRootUtilityFanControl(
                     model: model,
                     proxy: proxy,
-                    triggerFrame: triggerFrame,
+                    localTriggerFrame:
+                        model.sidebarPresentation.reservesSidebarWidth
+                        ? localTriggerFrame : visibleTriggerFrame ?? localTriggerFrame,
                     sidebarOnRight: sidebarOnRight
                 )
+                .onChange(of: localTriggerFrame, initial: true) { _, frame in
+                    guard !model.sidebarPresentation.reservesSidebarWidth,
+                        model.sidebarPresentation.showsSidebar
+                    else { return }
+                    visibleTriggerFrame = frame
+                }
             }
         }
+        .animation(nil, value: model.sidebarPresentation)
     }
 }
 

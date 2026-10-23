@@ -23,8 +23,9 @@ public sealed record StartSetup(Guid WorkspaceId, SetupEntry Entry) : SetupFlowI
             if (Entry.StartsManualSetupOver || !device.Platform.KeepsSetupDraft) device.KeepSetup(null, turn.Changes);
             var flow = new SetupFlowState(WorkspaceId, Entry, Entry.FirstStep, BackStep: null, NextStep: null,
                 SetupPhase.Idle, Offered: device.SetupFlow?.Offered ?? [], Selected: [], Queue: null, Source: null, Review: null,
-                Failure: null, Summary: null, OpensGuide: false, OpensCrestFromWelcome: false);
-            if (flow.Step == SetupStep.ManualSetup) device.BeginSetup(WorkspaceId, session, startsOver: false, turn.Changes, turn.Ids);
+                Failure: null, Summary: null, OpensGuide: false, OpensCrestFromWelcome: false, SetupLook.Heraldic);
+            if (flow.Step == SetupStep.ManualSetup)
+                device.BeginSetup(WorkspaceId, session, startsOver: false, flow.Look, turn.Changes, turn.Ids);
             device.Publish(flow, turn.Changes);
         }
     }

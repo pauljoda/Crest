@@ -1,33 +1,26 @@
 import Foundation
 
 extension BrowserPlatformPage {
+    /// Steps back through the page's history as the core keeps it, first
+    /// leaving a failed navigation the page shows.
     func goBack() {
         refreshNavigationState()
-        if live.failure != nil {
-            returnFromNavigationFailure()
-            return
-        }
-        enginePage.goToHistory(offset: -1)
+        corePage.stepHistory(by: -1)
     }
 
     func goForward() {
         refreshNavigationState()
-        enginePage.goToHistory(offset: 1)
+        corePage.stepHistory(by: 1)
     }
 
-    var backHistory: [BrowserNavigationHistoryItem] { pageEngine.backHistory }
-    var forwardHistory: [BrowserNavigationHistoryItem] { pageEngine.forwardHistory }
+    /// The entries the page's back and forward menus list, nearest first, as
+    /// the core keeps its history.
+    var backHistory: [BrowserNavigationHistoryItem] { BrowserNavigationHistoryItem.listed(corePage.history.back) }
+    var forwardHistory: [BrowserNavigationHistoryItem] { BrowserNavigationHistoryItem.listed(corePage.history.forward) }
 
-    func goBack(toDepth depth: Int) {
-        guard depth > 0, backHistory.contains(where: { $0.depth == depth }) else { return }
-        corePage.leaveFailure()
-        enginePage.goToHistory(offset: -depth)
-    }
-
-    func goForward(toDepth depth: Int) {
-        guard depth > 0, forwardHistory.contains(where: { $0.depth == depth }) else { return }
-        corePage.leaveFailure()
-        enginePage.goToHistory(offset: depth)
+    /// Returns to the entry a history menu offered.
+    func goToHistory(_ item: BrowserNavigationHistoryItem) {
+        corePage.showHistoryEntry(item.id)
     }
 
     /// Intercepted, same-document navigations have no didFinish callback.
@@ -77,22 +70,14 @@ extension BrowserPlatformPage {
         retryAfterNavigationFailure()
     }
 
-    /// Leaves the failure notice for the page behind it. A failure that
-    /// replaced that page, as a committed error page does, goes back to it.
+    /// Leaves the failure notice for the document behind it, or goes back
+    /// past a failure that replaced the document.
     func returnFromNavigationFailure() {
-        guard let failure = live.failure else { return }
-        let shouldNavigateBack = failure.replacedDocument && pageEngine.canGoBack
-        corePage.leaveFailure()
-        if shouldNavigateBack {
-            enginePage.goToHistory(offset: -1)
-        }
+        guard live.failure != nil else { return }
+        corePage.stepHistory(by: -1)
     }
 
-    var canReturnFromNavigationFailure: Bool {
-        guard let failure = live.failure else { return false }
-        if !failure.replacedDocument, pageEngine.currentURL != nil { return true }
-        return pageEngine.canGoBack
-    }
+    var canReturnFromNavigationFailure: Bool { live.failure != nil && live.canGoBack }
 
     /// Forgets the URL Crest asked this page to load, once the engine has begun
     /// the navigation that honored it.

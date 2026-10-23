@@ -19,5 +19,8 @@ public sealed record SetupDraftSpace(Guid SpaceId, Guid ProfileId, bool IsNew, S
     /// look.
     internal static SetupDraftSpace Existing(SpaceState space) => new(space.Id, space.ProfileId, IsNew: false, space.Customization);
 
+    /// The Space with its look in `look`, keeping its name, symbol and colors.
+    internal SetupDraftSpace Restyled(SetupLook look) => this with { Customization = look.Applying(Customization) };
+
     #endregion
 }

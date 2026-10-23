@@ -79,6 +79,7 @@ final class BrowserMacMenuBar: NSObject, NSMenuDelegate, NSMenuItemValidation {
         applicationItem(.updates, in: app)
         app.addItem(.separator())
         applicationItem(.settings, in: app)
+        applicationItem(.stopAllAgents, in: app)
         NSApp.servicesMenu = submenu(String(localized: "Services"), in: app)
         app.addItem(.separator())
         standard(String(localized: "Hide Crest"), #selector(NSApplication.hide(_:)), key: "h", in: app, target: NSApp)
@@ -131,7 +132,7 @@ final class BrowserMacMenuBar: NSObject, NSMenuDelegate, NSMenuItemValidation {
 
     func validateMenuItem(_ item: NSMenuItem) -> Bool {
         if let command = item.representedObject as? ShortcutCommand {
-            item.state = shell.activeActions?.isOn(command) == true ? .on : .off
+            item.state = shell.actions(for: command)?.isOn(command) == true ? .on : .off
             return shell.canPerform(command)
         }
         if let action = item.representedObject as? BrowserMacApplicationAction {
@@ -152,7 +153,7 @@ final class BrowserMacMenuBar: NSObject, NSMenuDelegate, NSMenuItemValidation {
 
     @objc private func movePage(_ item: NSMenuItem) {
         guard let engine = item.representedObject as? EngineKind else { return }
-        shell.activeActions?.movePage(to: engine)
+        shell.pageActions?.movePage(to: engine)
     }
 
     // MARK: - Actions - Read model
@@ -182,7 +183,7 @@ final class BrowserMacMenuBar: NSObject, NSMenuDelegate, NSMenuItemValidation {
         guard let pageMenu else { return }
         for item in engineMoveItems { pageMenu.removeItem(item) }
         engineMoveItems = []
-        let engines = shell.activeActions?.pageEngineMoves ?? []
+        let engines = shell.pageActions?.pageEngineMoves ?? []
         guard !engines.isEmpty else { return }
         engineMoveItems.append(.separator())
         for engine in engines {
@@ -200,9 +201,8 @@ final class BrowserMacMenuBar: NSObject, NSMenuDelegate, NSMenuItemValidation {
     /// Names each command in `menu` as the key window calls it now, such as
     /// Reader's Show or Hide, and otherwise as its item was made.
     private func refreshTitles(in menu: NSMenu) {
-        let actions = shell.activeActions
         for (command, item, title) in commandItems where item.menu === menu {
-            item.title = actions?.menuTitle(of: command).map { String(localized: $0) } ?? title
+            item.title = shell.actions(for: command)?.menuTitle(of: command).map { String(localized: $0) } ?? title
         }
     }
 

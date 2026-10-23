@@ -64,6 +64,11 @@ struct BrowserWebPageSurface: View {
                 BrowserEngineInfoBarStack(page: page, goToSharingCounterpart: goToSharingCounterpart)
             }
 
+            if let agent, let pointer = page.agentPointer {
+                BrowserAgentPointerOverlay(pointer: pointer, session: agent, zoom: page.renderedPageZoom)
+                    .zIndex(BrowserWebPageSurfaceMetrics.agentPointerZIndex)
+            }
+
             if let agent {
                 BrowserAgentPageBar(session: agent) {
                     if let tabID = browser.core.state.pages[page.corePage.id]?.tabID {

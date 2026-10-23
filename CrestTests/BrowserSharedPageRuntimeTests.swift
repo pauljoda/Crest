@@ -68,7 +68,7 @@ final class BrowserSharedPageRuntimeTests: XCTestCase {
         second.present(tab: tab.id, in: space.id)
         second.setWindowFocused(true)
         let page = try XCTUnwrap(second.activePage)
-        page.translation.setActive(true, in: page.webView)
+        page.translation.setActive(true, in: try XCTUnwrap(page.translationDocument))
         page.translation.sourceID = "es"
         page.translation.targetID = "en"
         page.translation.start()

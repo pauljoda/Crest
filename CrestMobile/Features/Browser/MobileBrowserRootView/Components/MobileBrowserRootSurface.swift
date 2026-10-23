@@ -19,6 +19,7 @@ struct MobileBrowserRootSurface<Compact: View, Regular: View, Palette: View>:
     let regular: (MobileRegularWindowLayout) -> Regular
     let palette: (EdgeInsets) -> Palette
     @Environment(\.layoutDirection) private var layoutDirection
+    @Environment(\.browserChromeAppearance) private var appearance
 
     var body: some View {
         ZStack {
@@ -36,11 +37,18 @@ struct MobileBrowserRootSurface<Compact: View, Regular: View, Palette: View>:
                 compact
             } else {
                 GeometryReader { proxy in
+                    let fold = MobileBrowserFold.dividing(proxy)
                     let layout = MobileRegularWindowLayout(
                         availableWidth: proxy.size.width,
-                        preferredSidebarWidth: preferredSidebarWidth
+                        preferredSidebarWidth: preferredSidebarWidth,
+                        foldSpan: fold?.span(across: proxy.frame(in: .global), direction: layoutDirection),
+                        sidebarEdge: appearance.sidebarEdge(in: layoutDirection),
+                        presentsColumns: browser.shownCards.count > 1,
+                        sharesTopBandWithStatusBar: MobileBrowserFold.isFoldable(proxy)
+                            && proxy.size.height > proxy.size.width
                     )
                     regular(layout)
+                        .environment(\.mobileBrowserFold, fold)
                         .allowsHitTesting(!isCommandPalettePresented)
                         .accessibilityHidden(isCommandPalettePresented)
                         .overlayPreferenceValue(BrowserRootPageBoundsKey.self) { anchor in

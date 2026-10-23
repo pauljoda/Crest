@@ -61,10 +61,6 @@ public enum PageExportFormat {
 /// the page's matches. False when the page cannot search.
 public sealed record FindInPage(Guid PageId, string Query, bool Backwards, bool CaseSensitive) : PageRequest<bool>;
 
-/// Moves the page `Offset` entries through its engine's navigation history:
-/// -1 goes back, 1 goes forward. False when the history has no such entry.
-public sealed record GoToHistoryOffset(Guid PageId, int Offset) : PageRequest<bool>;
-
 /// The page's view left the screen.
 public sealed record HidePage(Guid PageId) : PageRequest<bool>;
 

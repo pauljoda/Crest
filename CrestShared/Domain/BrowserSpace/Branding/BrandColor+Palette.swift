@@ -26,6 +26,14 @@ extension BrandColor {
         .ink, .indigo, .ocean, .sky, .teal, .sage, .gold, .ember, .rose, .sand,
     ]
 
+    /// How bright a fully dimmed color draws, from its darkest to its
+    /// brightest: a charcoal base tinted with its hue. The sidebar's layers
+    /// lighten it a little, so a light gray Space shows as a neutral charcoal
+    /// near #2B2B2B.
+    private static let dimmedBrightness: ClosedRange<Double> = 0.08...0.12
+    /// How much of a color's saturation stays once it is fully dimmed.
+    private static let dimmedSaturation = 0.8
+
     // MARK: - Variables
 
     /// The tone that reads best over this one solid color.
@@ -44,6 +52,25 @@ extension BrandColor {
     /// within 0 through 1.
     init(clampingRed red: Double, green: Double, blue: Double, alpha: Double) {
         self.init(red: Self.unit(red), green: Self.unit(green), blue: Self.unit(blue), alpha: Self.unit(alpha))
+    }
+
+    // MARK: - Actions - Dimming
+
+    /// This color dimmed `amount` of the way, from 0 to 1, toward a charcoal
+    /// tint of itself: the same hue, slightly less saturated, darkened toward
+    /// black, so a light color turns dark and a dark one stays as dark as it is.
+    func dimmed(by amount: Double) -> BrandColor {
+        let highest = Swift.max(red, green, blue)
+        let lowest = Swift.min(red, green, blue)
+        let range = Self.dimmedBrightness
+        let brightness = Swift.min(highest, range.lowerBound + (range.upperBound - range.lowerBound) * highest)
+        let saturation = highest > 0 ? (highest - lowest) / highest * Self.dimmedSaturation : 0
+        let spread = highest - lowest
+        func channel(_ value: Double) -> Double {
+            let distance = spread > 0 ? (highest - value) / spread : 0
+            return value + (brightness * (1 - saturation * distance) - value) * amount
+        }
+        return BrandColor(clampingRed: channel(red), green: channel(green), blue: channel(blue), alpha: alpha)
     }
 
     // MARK: - Actions - Comparing

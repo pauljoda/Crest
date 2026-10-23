@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct BrowserSidebarSpacePage: View {
+    @Environment(\.colorScheme) private var colorScheme
     private let assignment: BrowserSpaceRuntimeAssignment
     let isSelected: Bool
     let pages: BrowserPagePool
@@ -60,6 +61,14 @@ struct BrowserSidebarSpacePage: View {
         }
     }
 
+    /// Authorization and selection are checked again when the field mounts, including after a pending Find.
+    private func consumeSearchFocusRequest(_ request: Int, for surface: BrowserUtilitySurface) -> Bool {
+        guard let space = browser.spaceModel(matching: assignment), browser.shownSpace?.id == space.id,
+            !spaceAccess.isLocked(space)
+        else { return false }
+        return utilityPresentation.consumeSearchFocusRequest(request, for: surface)
+    }
+
     private func content(for space: SpaceModel) -> some View {
         let isLocked = spaceAccess.isLocked(space)
         // These callbacks use the page and their action owners, independently
@@ -87,7 +96,9 @@ struct BrowserSidebarSpacePage: View {
             ),
             utilityActions: utilityActions,
             dismissUtilityOnBlankSpace: dismissUtilityOnBlankSpace,
-            clearHistory: { confirmClear(pageSpace) }
+            clearHistory: { confirmClear(pageSpace) },
+            utilitySearchFocusRequest: utilityPresentation.searchFocusRequest,
+            consumeUtilitySearchFocusRequest: consumeSearchFocusRequest
         )
         .environment(\.sidebarSpacePresentation, SidebarSpacePresentation(space: space, isUnlocked: !isLocked))
         .environment(\.sidebarSpaceIsSelected, isSelected)
@@ -100,7 +111,7 @@ struct BrowserSidebarSpacePage: View {
         }
         .environment(
             \.colorScheme,
-            space.settings.look.foregroundTone.colorScheme
+            space.settings.look.shown.colorScheme(over: colorScheme)
         )
         .blur(
             radius: isLocked

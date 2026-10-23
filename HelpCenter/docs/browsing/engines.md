@@ -57,7 +57,6 @@ Extensions installed in earlier versions do not carry over. Install them again f
 | --- | --- | --- |
 | Chrome Web Store extensions | Yes | No |
 | Reader | No | Yes |
-| Translate the whole page | No. Translate selected text instead. | Yes |
 | Built-in ad and tracker blocking | No. Use a blocking extension. | Yes |
 | Protected video | Automatically switches to WebKit after unsaved-changes checks | FairPlay, when the website supports it |
 | Find in Page | Shows the number of matches | Shows whether there is a match |

@@ -83,12 +83,13 @@ struct BrowserCrestForgeStage: View {
         }
     }
 
-    /// The colors in columns of `columnWidth`; the sidebar's three take
-    /// wider ones where that keeps their names whole.
+    /// The colors in columns of `columnWidth`: a crest's layers, or an
+    /// icon's one color, then the sidebar's three, which take wider columns
+    /// where that keeps their names whole.
     private func swatches(columnWidth: CGFloat, sidebarColumnWidth: CGFloat? = nil) -> some View {
         VStack(alignment: .leading, spacing: 16) {
-            swatchGroup("Crest") {
-                ForEach(BrowserCrestForgeLayer.all) { layer in
+            swatchGroup(branding.iconStyle.title) {
+                ForEach(BrowserCrestForgeLayer.shown(by: branding)) { layer in
                     layerSwatch(layer, columnWidth: columnWidth)
                 }
             }
@@ -128,7 +129,7 @@ struct BrowserCrestForgeStage: View {
     }
 
     private func swatchGroup<Content: View>(
-        _ title: LocalizedStringKey, @ViewBuilder content: () -> Content
+        _ title: LocalizedStringResource, @ViewBuilder content: () -> Content
     ) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(title)
@@ -142,7 +143,7 @@ struct BrowserCrestForgeStage: View {
     private func layerSwatch(_ layer: BrowserCrestForgeLayer, columnWidth: CGFloat) -> some View {
         let isDrawn = layer.isDrawn(by: branding)
         return BrowserCrestForgeSwatch(
-            title: layer.title, color: branding.forgeColor(of: layer), isDrawn: isDrawn,
+            title: layer.title(in: branding), color: branding.forgeColor(of: layer), isDrawn: isDrawn,
             hint: isDrawn ? nil : layer.enablingHint(for: branding), isOpen: openLayer == layer,
             columnWidth: columnWidth
         ) {
@@ -153,7 +154,7 @@ struct BrowserCrestForgeStage: View {
             isPresented: Binding(get: { openLayer == layer }, set: { if !$0, openLayer == layer { openLayer = nil } }),
             arrowEdge: .bottom
         ) {
-            BrowserCrestForgePalette(title: layer.title, color: branding.forgeColor(of: layer)) { color in
+            BrowserCrestForgePalette(title: layer.title(in: branding), color: branding.forgeColor(of: layer)) { color in
                 branding.setForgeColor(color, of: layer)
                 branding = branding.normalized()
             }

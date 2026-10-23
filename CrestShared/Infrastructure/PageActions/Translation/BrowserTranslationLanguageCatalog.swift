@@ -49,29 +49,33 @@ final class BrowserTranslationLanguageCatalog {
     }
 
     private nonisolated static func loadInstalledPairs() async -> Set<Pair> {
-        let supported = await BrowserTranslationPreference.languageAvailability().supportedLanguages
-        let languages = supported.isEmpty ? await LanguageAvailability().supportedLanguages : supported
-        let ids = languages.map(\.minimalIdentifier)
+        let languages = await BrowserTranslationPreference.languages()
+        let ids = languages.all.map(\.minimalIdentifier)
         let candidates = ids.flatMap { source in
             zip(ids, matches(source, in: ids))
                 .filter { !$0.1 }
                 .map { Pair(source: source, target: $0.0) }
         }
-        return await check(candidates)
+        return await check(candidates, languages: languages)
     }
 
-    private nonisolated static func check(_ pairs: [Pair]) async -> Set<Pair> {
+    private nonisolated static func check(_ pairs: [Pair], languages: BrowserTranslationPreference.Languages) async
+        -> Set<Pair>
+    {
         await withTaskGroup(of: Set<Pair>.self, returning: Set<Pair>.self) { group in
             let workerCount = min(4, pairs.count)
             for worker in 0..<workerCount {
                 group.addTask {
                     guard !Task.isCancelled else { return [] }
-                    // Reuse setup while keeping the non-Sendable checker within one task.
-                    let availability = BrowserTranslationPreference.languageAvailability()
+                    // Reuse setup while keeping the non-Sendable checkers within one task.
+                    let lowLatency = BrowserTranslationPreference.languageAvailability(lowLatency: true)
+                    let standard = BrowserTranslationPreference.languageAvailability(lowLatency: false)
                     var installed: Set<Pair> = []
                     for index in stride(from: worker, to: pairs.count, by: workerCount) {
                         guard !Task.isCancelled else { return installed }
                         let pair = pairs[index]
+                        let availability =
+                            languages.usesLowLatency(from: pair.source, to: pair.target) ? lowLatency : standard
                         let status = await availability.status(
                             from: .init(identifier: pair.source), to: .init(identifier: pair.target))
                         if status == .installed { installed.insert(pair) }

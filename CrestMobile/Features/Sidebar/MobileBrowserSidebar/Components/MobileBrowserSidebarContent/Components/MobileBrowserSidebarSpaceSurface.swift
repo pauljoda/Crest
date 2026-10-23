@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct MobileBrowserSidebarSpaceSurface: View {
+    @Environment(\.colorScheme) private var colorScheme
     let configuration: MobileBrowserSidebarContentConfiguration
     let space: SpaceModel
     let isSelected: Bool
@@ -42,7 +43,7 @@ struct MobileBrowserSidebarSpaceSurface: View {
     /// than from the system appearance, as every compact placement does, so
     /// they keep agreeing.
     private var spaceColorScheme: ColorScheme {
-        space.settings.look.foregroundTone.colorScheme
+        space.settings.look.colorScheme(over: colorScheme)
     }
 
     private func selectUnlockedSpace(_ assignment: BrowserSpaceRuntimeAssignment) {

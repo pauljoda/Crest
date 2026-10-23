@@ -22,18 +22,20 @@ extension SpaceBranding {
         color(for: .pattern) ?? primaryColor
     }
 
-    /// The tone that reads best over the banner, unless the text color mode
-    /// names one.
-    var foregroundTone: BrowserSpaceForegroundTone {
-        if let override = textColorMode.foregroundTone { return override }
-        return (colors.isEmpty ? [.indigo] : colors).foregroundTone(
-            strength: bannerStrength, readabilityFade: readabilityFade)
-    }
-
     /// The icon's own color, or the Space's primary color, which it follows
     /// as the palette changes, when it has none.
     var resolvedSymbolColor: BrandColor {
         symbolColor ?? primaryColor
+    }
+
+    // MARK: - Actions - Text
+
+    /// The tone that reads best over the banner, unless the text color mode
+    /// names one or follows the device, whose appearance reads in `system`.
+    func foregroundTone(system: BrowserSpaceForegroundTone) -> BrowserSpaceForegroundTone {
+        if let override = textColorMode.foregroundTone(system: system) { return override }
+        return (colors.isEmpty ? [.indigo] : colors).foregroundTone(
+            strength: bannerStrength, readabilityFade: readabilityFade)
     }
 
     // MARK: - Actions - Colors

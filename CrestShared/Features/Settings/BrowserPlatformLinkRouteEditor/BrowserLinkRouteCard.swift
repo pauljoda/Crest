@@ -75,14 +75,19 @@ struct BrowserLinkRouteCard: View {
             Text("URL or text").font(.caption).foregroundStyle(.secondary)
             HStack(spacing: 8) {
                 Image(systemName: "link").foregroundStyle(.secondary)
-                TextField("example.com", text: binding(route.pattern, field: BrowserLinkRouteFieldUpdate.pattern))
-                    .textFieldStyle(.plain)
-                    .autocorrectionDisabled()
-                    #if !os(macOS)
-                        .textInputAutocapitalization(.never)
-                        .keyboardType(.URL)
-                    #endif
-                    .accessibilityLabel("URL or text")
+                // A grouped form shows a field's title as a row label beside
+                // it, so the example is a prompt and the label stays hidden.
+                TextField(
+                    "URL or text", text: binding(route.pattern, field: BrowserLinkRouteFieldUpdate.pattern),
+                    prompt: Text("example.com")
+                )
+                .labelsHidden()
+                .textFieldStyle(.plain)
+                .autocorrectionDisabled()
+                #if !os(macOS)
+                    .textInputAutocapitalization(.never)
+                    .keyboardType(.URL)
+                #endif
             }
             .padding(10)
             .background(BrowserSettingsCanvas.background, in: .rect(cornerRadius: 8))

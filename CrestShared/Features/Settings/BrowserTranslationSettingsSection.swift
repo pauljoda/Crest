@@ -84,8 +84,12 @@ struct BrowserTranslationSettingsSection: View {
         #endif
     }
 
+    /// The system answers whether it opened `url` on a queue of its own, so
+    /// the answer comes back to the main actor before it reaches the view.
     private func openLanguages(_ url: URL) {
-        openURL(url) { accepted in couldNotOpenLanguages = !accepted }
+        openURL(url) { @Sendable accepted in
+            Task { @MainActor in couldNotOpenLanguages = !accepted }
+        }
     }
 
     private func languageRow(_ source: String) -> some View {

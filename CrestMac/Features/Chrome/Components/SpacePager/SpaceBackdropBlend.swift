@@ -46,6 +46,9 @@ final class SpaceBackdropBlendView<Background: View>: NSView {
     private var hosts: [BrowserSpaceRuntimeAssignment: NSHostingView<SpaceBackdropRoot<Background>>] = [:]
     private var fallback: NSHostingView<SpaceBackdropRoot<Background>>?
     private var activeTransition: SpacePagerSettlement?
+    /// The background on top while nothing moves, or nil while a slide or a
+    /// swipe shows more than one.
+    private var restingKey: BrowserSpaceRuntimeAssignment?
 
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
@@ -63,7 +66,11 @@ final class SpaceBackdropBlendView<Background: View>: NSView {
 
     override func layout() {
         super.layout()
-        for view in subviews where view.frame != bounds { view.frame = bounds }
+        sizeShownHosts()
+    }
+
+    override func resizeSubviews(withOldSize oldSize: NSSize) {
+        sizeShownHosts()
     }
 
     func update(
@@ -115,21 +122,30 @@ final class SpaceBackdropBlendView<Background: View>: NSView {
         if let transition = snapshot?.transition, activeTransition == transition { return }
         let transition = snapshot?.spaceIDs == spaces.map(\.id) ? snapshot?.transition : nil
         activeTransition = transition
+        let count = spaces.count
+        // A step around the ends of the Spaces runs up to one Space past either end.
+        let reach: CGFloat = count > 2 ? 1 : 0
         let position: CGFloat
         if let snapshot, snapshot.spaceIDs == spaces.map(\.id), snapshot.position.isFinite {
-            position = min(CGFloat(spaces.count - 1), max(0, snapshot.position))
+            position = min(CGFloat(count - 1) + reach, max(-reach, snapshot.position))
         } else {
             position = CGFloat(spaces.firstIndex { $0.id == selectedSpace?.id } ?? 0)
         }
         let center = Int(position.rounded())
         let destination = transition?.endPosition ?? position
-        let first = max(0, min(center - 1, Int(destination.rounded(.down))))
-        let last = min(spaces.count - 1, max(center + 1, Int(destination.rounded(.up))))
-        let range = first...last
+        let lowest = min(center - 1, Int(destination.rounded(.down)))
+        let highest = max(center + 1, Int(destination.rounded(.up)))
+        let wraps = count > 2 && [position, destination].contains { $0 < 0 || $0 > CGFloat(count - 1) }
+        let range =
+            wraps
+            ? Set((max(-1, lowest)...min(count, highest)).map { ($0 + count) % count })
+            : Set(max(0, lowest)...min(count - 1, highest))
         let required = Set(range.map { BrowserSpaceRuntimeAssignment(space: spaces[$0]) })
+        let isResting = transition == nil && position == position.rounded()
+        restingKey = isResting ? BrowserSpaceRuntimeAssignment(space: spaces[(center % count + count) % count]) : nil
         // Keep the two visible backgrounds and their neighbors ready. No tab
         // trees, page snapshots, or WebKit instances belong to these hosts.
-        for index in range {
+        for index in range.sorted() {
             let space = spaces[index]
             let key = BrowserSpaceRuntimeAssignment(space: space)
             if hosts[key] == nil { hosts[key] = addHost(root: makeRoot(space)) }
@@ -139,25 +155,40 @@ final class SpaceBackdropBlendView<Background: View>: NSView {
                 hosts.removeValue(forKey: key)?.removeFromSuperview()
             }
         }
+        if !isResting {
+            for host in hosts.values where host.frame != bounds { host.frame = bounds }
+        }
         CATransaction.begin()
         CATransaction.setDisableActions(true)
         for (index, space) in spaces.enumerated() {
             guard let layer = hosts[BrowserSpaceRuntimeAssignment(space: space)]?.layer else { continue }
             // Stable stacking also works when an interrupted slide crosses a
             // third Space. The lower background remains opaque at all times.
-            layer.zPosition = CGFloat(index)
+            // Around the ends, the Space a step reaches stacks past the other.
+            let placed = SpacePagerInterpolation.index(
+                index, near: transition?.startPosition ?? position, count: count)
+            layer.zPosition = CGFloat(placed)
             if let transition {
                 transition.animate(
                     layer, keyPath: "opacity",
                     values: transition.positions.map {
-                        SpacePagerInterpolation.backdropOpacity(at: $0, index: index)
+                        SpacePagerInterpolation.backdropOpacity(at: $0, index: placed)
                     })
             } else {
                 layer.removeAnimation(forKey: "spaceTransition.opacity")
-                layer.opacity = SpacePagerInterpolation.backdropOpacity(at: position, index: index)
+                layer.opacity = SpacePagerInterpolation.backdropOpacity(at: position, index: placed)
             }
         }
         CATransaction.commit()
+    }
+
+    /// Only the background on screen follows a live resize. The ones under it
+    /// and beyond it are sized when a slide is about to show them.
+    private func sizeShownHosts() {
+        for (key, host) in hosts where host.frame != bounds && (restingKey == nil || key == restingKey) {
+            host.frame = bounds
+        }
+        if let fallback, fallback.frame != bounds { fallback.frame = bounds }
     }
 
     private func addHost(root: SpaceBackdropRoot<Background>) -> NSHostingView<SpaceBackdropRoot<Background>> {
@@ -167,7 +198,6 @@ final class SpaceBackdropBlendView<Background: View>: NSView {
         host.wantsLayer = true
         host.layer?.opacity = 0
         host.frame = bounds
-        host.autoresizingMask = [.width, .height]
         addSubview(host)
         host.layer?.opacity = 1
         return host

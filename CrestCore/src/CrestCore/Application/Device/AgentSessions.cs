@@ -14,6 +14,11 @@ internal sealed class AgentSessions {
     public const int MaximumSessions = 16;
     public const int MaximumTabs = 64;
 
+    /// The most an agent's activity keeps, the latest, and the longest
+    /// subject it keeps of each.
+    public const int MaximumActivity = 50;
+    public const int MaximumActivitySubject = 300;
+
     #endregion
 
     #region Variables
@@ -44,7 +49,7 @@ internal sealed class AgentSessions {
     public bool Begin(Guid sessionId, AgentIdentity identity, string name) {
         if (Find(sessionId) is not null) return false;
         if (sessions.Count >= MaximumSessions) throw new Rejected(new AgentSessionsFull(MaximumSessions));
-        sessions.Add(new AgentSessionState(sessionId, identity, name, null, []));
+        sessions.Add(new AgentSessionState(sessionId, identity, name, null, [], false, []));
         return true;
     }
 
@@ -77,6 +82,32 @@ internal sealed class AgentSessions {
             changed = true;
         }
         return changed;
+    }
+
+    /// The person let the agent connected as `sessionId` open windows without
+    /// asking each time, for as long as it stays connected.
+    public bool AllowWindows(Guid sessionId) => Revise(sessionId, current => current with { OpensWindows = true });
+
+    /// Keeps `activity` as the latest thing the agent connected as `sessionId`
+    /// did, letting go of the oldest past `MaximumActivity`. Refused with
+    /// `UnknownAgentSession` for an agent no longer connected.
+    public bool Note(Guid sessionId, AgentActivity activity) {
+        var subject = activity.Subject.Length > MaximumActivitySubject ? activity.Subject[..MaximumActivitySubject] : activity.Subject;
+        var kept = activity with { Subject = subject };
+        return Revise(sessionId, current => current with { Activity = [.. current.Activity.Append(kept).TakeLast(MaximumActivity)] });
+    }
+
+    /// The person stopped every agent: none uses a tab any more, none of them
+    /// may take a tab one used again while Crest runs, and every connection
+    /// ends. The agents stay allowed and may connect again.
+    public bool StopAll() {
+        if (sessions.Count == 0) return false;
+        foreach (var session in sessions) {
+            if (!stopped.TryGetValue(session.Identity, out var tabs)) stopped[session.Identity] = tabs = [];
+            tabs.UnionWith(session.TabIds);
+        }
+        sessions.Clear();
+        return true;
     }
 
     /// Disconnects the agents `ends` names.

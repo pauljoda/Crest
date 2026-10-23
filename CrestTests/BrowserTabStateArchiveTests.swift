@@ -102,6 +102,35 @@ final class BrowserTabStateArchiveTests: XCTestCase {
         XCTAssertFalse(foreignFormat.isRestorable)
     }
 
+    func testTheCoresHistoryTravelsWithTheEngineStateAndEarlierFramesStillRestore() throws {
+        let url = try XCTUnwrap(URL(string: "https://example.com/"))
+        let state = Data("session".utf8)
+        let history = Data("history".utf8)
+        let current = try XCTUnwrap(
+            BrowserTabStateEnvelope.decode(
+                BrowserTabStateEnvelope(interactionState: state, url: url, history: history).encoded()))
+        let earlier = try XCTUnwrap(
+            BrowserTabStateEnvelope.decode(
+                BrowserTabStateEnvelope(interactionState: state, url: url, history: history, formatVersion: 1)
+                    .encoded()))
+
+        XCTAssertEqual(current.history, history)
+        XCTAssertEqual(current.interactionState, state)
+        XCTAssertEqual(current.url, url)
+        XCTAssertTrue(current.isRestorable)
+        XCTAssertNil(earlier.history, "A version 1 frame, as earlier builds wrote it, carries no history.")
+        XCTAssertEqual(earlier.interactionState, state)
+        XCTAssertTrue(earlier.isRestorable)
+
+        // A page with no engine state yet still keeps the core's history.
+        let historyOnly = try XCTUnwrap(
+            BrowserTabStateEnvelope.decode(
+                BrowserTabStateEnvelope(interactionState: Data(), url: url, history: history).encoded()))
+        XCTAssertEqual(historyOnly.history, history)
+        XCTAssertTrue(historyOnly.isReadable)
+        XCTAssertFalse(historyOnly.isRestorable, "An empty engine state is never handed to the engine.")
+    }
+
     func testUnframedOrTruncatedDataDecodesToNothing() throws {
         let encoded = BrowserTabStateEnvelope(
             interactionState: Data("session".utf8),
@@ -169,12 +198,14 @@ final class BrowserTabStateArchiveTests: XCTestCase {
         archive.archive(
             interactionState: Data("first".utf8),
             url: url,
+            history: nil,
             profileID: profileID,
             tabID: first
         )
         archive.archive(
             interactionState: Data("second".utf8),
             url: url,
+            history: nil,
             profileID: profileID,
             tabID: second
         )
@@ -202,6 +233,7 @@ final class BrowserTabStateArchiveTests: XCTestCase {
         archive.archive(
             interactionState: Data(),
             url: nil,
+            history: nil,
             profileID: profileID,
             tabID: tabID
         )
@@ -219,6 +251,7 @@ final class BrowserTabStateArchiveTests: XCTestCase {
         archive.archive(
             interactionState: Data("small".utf8),
             url: url,
+            history: nil,
             profileID: profileID,
             tabID: tabID
         )
@@ -228,6 +261,7 @@ final class BrowserTabStateArchiveTests: XCTestCase {
         archive.archive(
             interactionState: Data(repeating: 0xAB, count: 4096),
             url: url,
+            history: nil,
             profileID: profileID,
             tabID: tabID
         )
@@ -251,6 +285,7 @@ final class BrowserTabStateArchiveTests: XCTestCase {
             archive.archive(
                 interactionState: Data("state-\(index)".utf8),
                 url: url,
+                history: nil,
                 profileID: profileID,
                 tabID: tabID
             )
@@ -277,12 +312,14 @@ final class BrowserTabStateArchiveTests: XCTestCase {
         archive.archive(
             interactionState: Data("gone".utf8),
             url: url,
+            history: nil,
             profileID: deleted,
             tabID: deletedTab
         )
         archive.archive(
             interactionState: Data("stays".utf8),
             url: url,
+            history: nil,
             profileID: kept,
             tabID: keptTab
         )
@@ -312,6 +349,7 @@ final class BrowserTabStateArchiveTests: XCTestCase {
             archive.archive(
                 interactionState: Data("state".utf8),
                 url: url,
+                history: nil,
                 profileID: profileID,
                 tabID: tabID
             )

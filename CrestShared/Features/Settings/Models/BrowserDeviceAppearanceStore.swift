@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import SwiftUI
 
 struct BrowserTabAppearance: Codable, Equatable, Sendable {
     enum Borders: String, Codable, CaseIterable { case selected, pinned, all }
@@ -81,6 +82,10 @@ final class BrowserDeviceAppearanceStore {
     static let addressKey = "crest.appearance.address"
     static let cornerRadiusKey = "crest.appearance.cornerRadius"
     static let surfaceMaterialKey = "crest.appearance.surfaceMaterial"
+    static let modeKey = "crest.appearance.mode"
+    static let darkSpaceDimmingKey = "crest.appearance.darkSpaceDimming"
+    static let spaceIconSizingKey = "crest.appearance.spaceIconSizing"
+    static let spaceIconScaleKey = "crest.appearance.spaceIconScale"
     static let maximumCornerRadius: Double = 40
     var cornerRadius: Double {
         didSet { defaults.set(sidebarCornerRadius, forKey: Self.cornerRadiusKey) }
@@ -96,6 +101,28 @@ final class BrowserDeviceAppearanceStore {
     var surfaceMaterial: CrestSurfaceMaterial {
         didSet { defaults.set(surfaceMaterial.name, forKey: Self.surfaceMaterialKey) }
     }
+    /// Whether windows draw light, dark, or as the system does, stored by name.
+    var mode: BrowserAppearanceMode {
+        didSet { defaults.set(mode.name, forKey: Self.modeKey) }
+    }
+    /// How far a dark appearance dims each Space's colors toward charcoal,
+    /// from 0, as chosen, to 1.
+    var darkSpaceDimming: Double {
+        didSet { defaults.set(darkSpaceDimming, forKey: Self.darkSpaceDimmingKey) }
+    }
+    /// Whether the Space switcher fits its icons to the sidebar or draws them
+    /// at ``spaceIconScale``, stored by name.
+    var spaceIconSizing: BrowserSpaceIconSizing {
+        didSet { defaults.set(spaceIconSizing.name, forKey: Self.spaceIconSizingKey) }
+    }
+    /// The size the Space switcher draws its icons at when it does not fit
+    /// them, as a fraction of their usual size.
+    var spaceIconScale: Double {
+        didSet { defaults.set(spaceIconScale, forKey: Self.spaceIconScaleKey) }
+    }
+    /// The scheme the windows draw in now, as the platform reports it once
+    /// ``mode`` and the system's own appearance are applied.
+    var shownColorScheme = ColorScheme.light
 
     init(defaults: UserDefaults) {
         self.defaults = defaults
@@ -125,6 +152,20 @@ final class BrowserDeviceAppearanceStore {
         surfaceMaterial =
             CrestSurfaceMaterial.named(defaults.string(forKey: Self.surfaceMaterialKey))
             ?? BrowserLookAndFeelDefaults.surfaceMaterial
+        mode =
+            BrowserAppearanceMode.named(defaults.string(forKey: Self.modeKey))
+            ?? BrowserLookAndFeelDefaults.appearanceMode
+        darkSpaceDimming =
+            (defaults.object(forKey: Self.darkSpaceDimmingKey) as? Double).flatMap {
+                $0.isFinite ? min(max($0, 0), 1) : nil
+            } ?? BrowserLookAndFeelDefaults.darkSpaceDimming
+        spaceIconSizing =
+            BrowserSpaceIconSizing.named(defaults.string(forKey: Self.spaceIconSizingKey))
+            ?? BrowserLookAndFeelDefaults.spaceIconSizing
+        spaceIconScale =
+            (defaults.object(forKey: Self.spaceIconScaleKey) as? Double).map {
+                Double(BrowserSpaceIconSizing.clamped($0))
+            } ?? BrowserLookAndFeelDefaults.spaceIconScale
     }
 
     private func save(_ value: some Encodable, key: String) {

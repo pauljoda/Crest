@@ -26,7 +26,7 @@ struct BrowserEngineOption: Identifiable {
             benefits: [
                 BrowserEngineBenefit(title: "Native macOS handling", symbol: "macwindow"),
                 BrowserEngineBenefit(title: "FairPlay protected video", symbol: "play.rectangle"),
-                BrowserEngineBenefit(title: "Reader and page translation", symbol: "doc.text"),
+                BrowserEngineBenefit(title: "Reader Mode", symbol: "doc.text"),
             ]),
     ]
 

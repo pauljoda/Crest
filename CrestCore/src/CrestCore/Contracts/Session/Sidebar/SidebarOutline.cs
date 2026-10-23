@@ -237,6 +237,36 @@ public sealed record SidebarOutline(IReadOnlyList<SidebarList> Lists) {
         return reached == shown ? null : stops[reached].Members[0];
     }
 
+    /// <summary>The tab a swipe in <paramref name="direction"/> from the shown tab
+    /// <paramref name="shownTabId"/> reaches among the <see cref="Stops"/>, which stops at
+    /// both ends: the next card of the split that shows it, or past its last card, the
+    /// next stop, entered at its nearest card. Null past either end. A tab no stop shows
+    /// swipes from where it lives, as <see cref="Step"/> steps, and a tab with no place
+    /// from before the first stop.</summary>
+    public Guid? Swipe(Guid shownTabId, AdjacentDirection direction, IReadOnlyList<FolderState> folders,
+        Func<TabPlacement, bool> isSectionExpanded) {
+        ArgumentNullException.ThrowIfNull(direction);
+        var stops = Stops(folders, isSectionExpanded);
+        int shown = -1;
+        int card = -1;
+        for (int index = 0; index < stops.Count && shown < 0; index++) {
+            for (int member = 0; member < stops[index].Members.Count && card < 0; member++)
+                if (stops[index].Members[member] == shownTabId) card = member;
+            if (card >= 0) shown = index;
+        }
+        int? reached;
+        if (shown >= 0) {
+            var members = stops[shown].Members;
+            if (direction.Within(card, members.Count) is { } next) return members[next];
+            reached = direction.Within(shown, stops.Count);
+        } else {
+            var positions = Positions();
+            int gap = positions.TryGetValue(shownTabId, out int place) ? stops.Count(stop => positions[stop.Members[0]] < place) : 0;
+            reached = direction.WithinFromGap(gap, stops.Count);
+        }
+        return reached is { } stop ? direction.Entering(stops[stop].Members) : null;
+    }
+
     private static HashSet<Guid> Collapsed(IReadOnlyList<FolderState> folders) =>
         folders.Where(folder => folder.IsCollapsed).Select(folder => folder.Id).ToHashSet();
 

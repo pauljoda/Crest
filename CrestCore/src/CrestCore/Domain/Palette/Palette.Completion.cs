@@ -13,7 +13,8 @@ public sealed partial class Palette {
     /// The address the text opens, or the search it runs with the Space's
     /// engine; null when nothing was typed or the text names nothing loadable.
     /// An address the Space knows under another spelling, such as with
-    /// `www.`, opens the way the Space knows it.
+    /// `www.`, opens the way the Space knows it, in the scheme the person
+    /// typed when they typed one.
     private PaletteRow? Intent(PaletteQuery query) {
         if (query.IsEmpty) return null;
         AddressResolution? resolution;
@@ -26,18 +27,23 @@ public sealed partial class Palette {
         if (resolution.SearchQuery is { } searched)
             return Searching(PaletteRowKind.Search, context.Search.Kind.RowTitle(context.Search.Title), searched, resolution.Url,
                 context.Search);
-        string address = Known(resolution.Url) ?? resolution.Url;
+        bool typedScheme = Uri.TryCreate(query.Text, UriKind.Absolute, out var typed) && WebScheme.Named(typed.Scheme) is not null;
+        string address = Known(resolution.Url, typedScheme ? url.Scheme : null) ?? resolution.Url;
         string host = url.Host.Length > 0 ? PaletteMemory.WithoutWww(url.Host) : resolution.Url;
         return PaletteRow.Of(PaletteRowKind.OpenAddress, $"Open {host}", address, address: address);
     }
 
     /// The address the Space knows for the same place as `url`: an open or
-    /// kept tab's, else history's; null when it knows none.
-    private string? Known(string url) {
+    /// kept tab's, else history's; null when it knows none. Only an address
+    /// in `scheme`, the one the person typed, is the same place when they
+    /// typed one, so a typed `http://` never opens a known `https://` page.
+    private string? Known(string url, string? scheme) {
         if (context.Space is not { } space || PaletteMemory.Place(url) is not { } place) return null;
+        bool Same(string known) => PaletteMemory.Place(known) == place
+            && (scheme is null || Uri.TryCreate(known, UriKind.Absolute, out var parsed) && parsed.Scheme == scheme);
         foreach (var tab in space.Tabs)
-            if ((tab.SavedAddress ?? tab.Url) is { } known && PaletteMemory.Place(known) == place) return known;
-        return space.History.Take(HistoryFinder.Scan).FirstOrDefault(entry => PaletteMemory.Place(entry.Url) == place)?.Url;
+            if ((tab.SavedAddress ?? tab.Url) is { } known && Same(known)) return known;
+        return space.History.Take(HistoryFinder.Scan).FirstOrDefault(entry => Same(entry.Url))?.Url;
     }
 
     private static PaletteRow Searching(PaletteRowKind kind, string title, string subtitle, string address, SearchProvider provider) =>

@@ -19,6 +19,15 @@ final class BrowserChromeState {
         set { publish(newValue, into: \.isFloatingSidebarPresentedStorage, as: \.isFloatingSidebarPresented) }
     }
     @ObservationIgnored private var isFloatingSidebarPresentedStorage = false
+    /// Whether a page shows alone in full screen with the sidebar hover area
+    /// still live, where a docked sidebar gives way to the edge reveal.
+    var revealsSidebarOverFullscreenPage: Bool {
+        get { observed(\.revealsSidebarOverFullscreenPageStorage, as: \.revealsSidebarOverFullscreenPage) }
+        set {
+            publish(newValue, into: \.revealsSidebarOverFullscreenPageStorage, as: \.revealsSidebarOverFullscreenPage)
+        }
+    }
+    @ObservationIgnored private var revealsSidebarOverFullscreenPageStorage = false
     private(set) var commandPaletteMode: BrowserCommandPaletteMode? {
         get { observed(\.commandPaletteModeStorage, as: \.commandPaletteMode) }
         set { publish(newValue, into: \.commandPaletteModeStorage, as: \.commandPaletteMode) }
@@ -50,7 +59,9 @@ final class BrowserChromeState {
 
     // MARK: - Actions - Sidebar
 
+    /// Hiding cancels utility presentation and pending input before an asynchronous view update can mount it.
     func hideSidebar() {
+        utilityPresentation.dismiss()
         columnVisibility = .detailOnly
     }
 
@@ -67,6 +78,28 @@ final class BrowserChromeState {
             showSidebar()
         }
         utilityPresentation.present(surface)
+    }
+
+    /// Utility shortcuts preserve the docked preference and toggle a floating sidebar when hidden.
+    func toggleUtility(_ surface: BrowserUtilitySurface) {
+        if utilityPresentation.surface == surface,
+            columnVisibility != .detailOnly || isFloatingSidebarPresented
+        {
+            utilityPresentation.dismiss(surface)
+            if columnVisibility == .detailOnly {
+                isFloatingSidebarPresented = false
+            }
+        } else {
+            if columnVisibility == .detailOnly {
+                isFloatingSidebarPresented = true
+            }
+            presentUtility(surface)
+        }
+    }
+
+    func handleWebContentInteraction() {
+        guard columnVisibility != .detailOnly || !isFloatingSidebarPresented else { return }
+        utilityPresentation.handleInteraction(.webContent)
     }
 
     // MARK: - Actions - Command Palette

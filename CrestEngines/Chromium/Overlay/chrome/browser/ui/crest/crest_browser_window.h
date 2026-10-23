@@ -16,7 +16,9 @@
 #include <string>
 #include <vector>
 
+#include "chrome/browser/ui/browser.h"
 #include "chrome/browser/ui/browser_window.h"
+#include "chrome/browser/ui/download_close_type.h"
 #include "chrome/browser/ui/exclusive_access/exclusive_access_context.h"
 #include "chrome/browser/ui/find_bar/find_bar.h"
 #include "chrome/browser/ui/location_bar/location_bar.h"
@@ -245,6 +247,7 @@ class CrestBrowserWindow : public BrowserWindow {
   void SetContentsSize(const gfx::Size& size) override;
   autofill::AutofillBubbleHandler* GetAutofillBubbleHandler() override;
   LocationBar* GetLocationBar() const override;
+  ui::AcceleratorProvider* GetAcceleratorProvider() override;
   void SetFocusToLocationBar(bool is_user_initiated) override;
   void UpdateReloadStopState(bool is_loading, bool force) override;
   void UpdateToolbar(content::WebContents* contents) override;
@@ -266,7 +269,7 @@ class CrestBrowserWindow : public BrowserWindow {
   void ShowBookmarkBubble(const GURL& url, bool already_bookmarked) override;
   ShowTranslateBubbleResult ShowTranslateBubble( content::WebContents* contents, translate::TranslateStep step, const std::string& source_language, const std::string& target_language, translate::TranslateErrors error_type, bool is_user_gesture) override;
   DownloadBubbleUIController* GetDownloadBubbleUIController() override;
-  void ConfirmBrowserCloseWithPendingDownloads( int download_count, UnloadController::DownloadCloseType dialog_type, base::OnceCallback<void(bool)> callback) override;
+  void ConfirmBrowserCloseWithPendingDownloads( int download_count, DownloadCloseType dialog_type, base::OnceCallback<void(bool)> callback) override;
   void ShowAppMenu() override;
   void PreHandleDragUpdate(const content::DropData& drop_data, const gfx::PointF& point) override;
   void PreHandleDragExit() override;

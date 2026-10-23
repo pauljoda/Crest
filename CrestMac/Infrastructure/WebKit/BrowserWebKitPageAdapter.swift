@@ -80,6 +80,7 @@ final class BrowserWebKitPageAdapter: BrowserPageEngineAdapter {
     var credentialEvaluator: BrowserCredentialSession.Evaluate? {
         BrowserCredentialSession.evaluator(in: webView)
     }
+    var translationDocument: BrowserTranslationDocument? { BrowserTranslationDocument(webView: webView) }
 
     // MARK: - Initializers
 
@@ -127,12 +128,15 @@ final class BrowserWebKitPageAdapter: BrowserPageEngineAdapter {
 
     func attach(to page: BrowserPage, allowsCredentialAccess: Bool) {
         self.page = page
-        reporter = EnginePageReporter(page: page.corePage) { [weak self] pendingURL in
-            self?.snapshot(pendingURL: pendingURL)
-                ?? PageSnapshot(
-                    url: nil, pendingURL: pendingURL, title: "", isLoading: false, canGoBack: false,
-                    canGoForward: false, security: PageSecurity.none, media: [])
-        }
+        reporter = EnginePageReporter(
+            page: page.corePage,
+            snapshot: { [weak self] pendingURL in
+                self?.snapshot(pendingURL: pendingURL)
+                    ?? PageSnapshot(
+                        url: nil, pendingURL: pendingURL, title: "", isLoading: false, security: PageSecurity.none,
+                        media: [])
+            },
+            history: { [weak self] in self?.webKit.reportedHistory })
         webView.menuHost = page
         webView.linkHover = linkHover
         webView.linkDrag = linkDrag
@@ -374,7 +378,7 @@ final class BrowserWebKitPageAdapter: BrowserPageEngineAdapter {
     }
 
     /// What WebKit shows for the page now: the document and its title,
-    /// whether it loads, its history with Crest's supplement, the page's
+    /// whether it loads, the page's
     /// security from its secure-content flag and the trust it kept, and the
     /// media WebKit last said it runs, with Picture in Picture while Crest's
     /// own controller holds or is entering it, so memory pressure never
@@ -388,8 +392,6 @@ final class BrowserWebKitPageAdapter: BrowserPageEngineAdapter {
             pendingURL: pendingURL,
             title: webView.title ?? "",
             isLoading: webView.isLoading,
-            canGoBack: !webKit.history.backItems.isEmpty || webView.canGoBack,
-            canGoForward: !webKit.history.forwardItems.isEmpty || webView.canGoForward,
             security: PageSecurity(
                 webKitURL: webView.url,
                 hasOnlySecureContent: webView.hasOnlySecureContent,

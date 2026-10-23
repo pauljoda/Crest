@@ -57,8 +57,7 @@ struct BrowserSpaceSwitcherCompactPicker: View {
                 moveSpace: moveSpace,
                 reorderViewport: viewport,
                 selectionPresentation: moveSpace == nil ? spacePagerPresentation : nil,
-                segmentSize: CGSize(
-                    width: segmentWidth, height: style.height - 2 * CrestSpaceIconPickerMetrics.trackPadding)
+                segmentSize: CGSize(width: segmentWidth, height: style.segmentHeight)
             ) { space in
                 if let reorderState {
                     BrowserSpacePickerSegment(
@@ -85,7 +84,7 @@ struct BrowserSpaceSwitcherCompactPicker: View {
             BrowserSpacePickerOverflow(
                 visibleRect: geometry.visibleRect,
                 contentWidth: geometry.contentSize.width,
-                spaceCount: spaces.count, segmentWidth: segmentWidth, dividerWidth: style.dividerWidth
+                spaceCount: spaces.count, segmentWidth: segmentWidth, style: style
             )
         } action: { _, value in
             overflow = value
@@ -120,7 +119,7 @@ struct BrowserSpaceSwitcherCompactPicker: View {
         guard style.fillsSegments, !spaces.isEmpty else { return style.minimumSegmentWidth }
         return max(
             style.minimumSegmentWidth,
-            (allocation.scrollViewportWidth - 2 * CrestSpaceIconPickerMetrics.trackPadding) / CGFloat(spaces.count))
+            (allocation.scrollViewportWidth - 2 * style.trackPadding) / CGFloat(spaces.count))
     }
 
     private var scrollAnimation: Animation? {

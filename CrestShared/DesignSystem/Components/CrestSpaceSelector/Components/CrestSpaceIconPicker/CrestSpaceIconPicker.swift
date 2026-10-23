@@ -3,6 +3,8 @@ import SwiftUI
 /// Shared icon buttons, selection, and reordering for desktop and touch Space
 /// pickers, over Spaces of the read model's identities or draft values.
 struct CrestSpaceIconPicker<Space: BrowserSpaceIdentifying, SegmentContent: View>: View {
+    // MARK: - Variables
+
     let spaces: [Space]
     let selectedSpaceID: UUID?
     let selectSpace: (UUID) -> Void
@@ -21,21 +23,16 @@ struct CrestSpaceIconPicker<Space: BrowserSpaceIdentifying, SegmentContent: View
     @State private var frames: [UUID: CGRect] = [:]
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
+    // MARK: - Actions - Drawing
+
     var body: some View {
         HStack(spacing: 0) {
             ForEach(spaces) { space in
-                HStack(spacing: 0) {
-                    reorderableButton(space)
-
-                    if style.showsDividers && space.id != spaces.last?.id {
-                        Divider()
-                            .frame(height: CrestSpaceIconPickerMetrics.dividerHeight)
-                    }
-                }
-                .zIndex(reorder.sourceID == space.id ? 1 : 0)
+                reorderableButton(space)
+                    .zIndex(reorder.sourceID == space.id ? 1 : 0)
             }
         }
-        .padding(CrestSpaceIconPickerMetrics.trackPadding)
+        .padding(style.trackPadding)
         .backgroundPreferenceValue(CrestSpaceIconFramePreference.self) { anchors in
             if let selectionPresentation {
                 GeometryReader { geometry in

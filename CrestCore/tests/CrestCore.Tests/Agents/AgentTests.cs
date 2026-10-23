@@ -196,6 +196,51 @@ public sealed partial class BrowserContractsTests {
     }
 
     [Fact]
+    public void StoppingEveryAgentEndsEachConnectionAndKeepsItsTabsOutOfReach() {
+        using var app = new CrestApp();
+        var session = TwoSpaceSession();
+        var (first, second) = (SpaceId(session["spaces"]![0]!), SpaceId(session["spaces"]![1]!));
+        var workspace = TestWorkspaces.Open(app, session);
+        var used = app.Workspace(workspace).Current.Spaces.Single(space => space.Id == first).Tabs[0].Id;
+        var unused = app.Workspace(workspace).Current.Spaces.Single(space => space.Id == second).Tabs[0].Id;
+        var agent = ConnectClaude(app, first);
+        app.Send(new AllowAgentSpace(second, true));
+        app.Send(new ClaimAgentTab(agent, used));
+
+        Assert.Empty(AgentSessionsIn(app.Send(new StopAllAgents())));
+        Assert.Equal(new AgentReachList(null, []), app.Query(new AgentReach(agent)));
+        // The agent may connect again, but not take back a tab it used.
+        var again = Guid.NewGuid();
+        app.Send(new BeginAgentSession(again, Claude, "claude"));
+        Assert.Equal(new AgentTabStopped(used), Assert.Throws<Rejected>(() => app.Send(new ClaimAgentTab(again, used))).Rejection);
+        Assert.Equal([unused], Assert.Single(AgentSessionsIn(app.Send(new ClaimAgentTab(again, unused)))).TabIds);
+    }
+
+    [Fact]
+    public void AnAgentsActivityIsItsOwnBoundedAndGoesWithItsConnection() {
+        using var app = new CrestApp();
+        var session = TwoSpaceSession();
+        var space = SpaceId(session["spaces"]![0]!);
+        TestWorkspaces.Open(app, session);
+        var agent = ConnectClaude(app, space);
+        var other = Guid.NewGuid();
+        app.Send(new BeginAgentSession(other, Claude, "other"));
+        for (int index = 0; index <= AgentSessions.MaximumActivity; index++) {
+            app.Send(new NoteAgentActivity(agent, AgentActivityKind.OpenedTab, $"https://example.com/{index}"));
+        }
+        var sessions = AgentSessionsIn(app.Send(new NoteAgentActivity(agent, AgentActivityKind.ClosedTab, new string('a', 400))));
+        var noted = sessions.Single(current => current.SessionId == agent).Activity;
+        Assert.Equal(AgentSessions.MaximumActivity, noted.Count);
+        Assert.Equal("https://example.com/2", noted[0].Subject);
+        Assert.Equal(AgentActivityKind.ClosedTab, noted[^1].Kind);
+        Assert.Equal(AgentSessions.MaximumActivitySubject, noted[^1].Subject.Length);
+        Assert.Empty(sessions.Single(current => current.SessionId == other).Activity);
+        app.Send(new EndAgentSession(agent));
+        Assert.IsType<UnknownAgentSession>(Assert.Throws<Rejected>(() =>
+            app.Send(new NoteAgentActivity(agent, AgentActivityKind.OpenedTab, "https://example.com"))).Rejection);
+    }
+
+    [Fact]
     public void MemoryPressureKeepsThePagesOfTabsAnAgentUses() {
         var (app, engine, _, clock, workspace, window, space, _) = ResidentHost();
         using var disposal = app;

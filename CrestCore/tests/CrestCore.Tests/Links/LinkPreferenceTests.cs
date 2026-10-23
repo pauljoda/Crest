@@ -139,6 +139,40 @@ public sealed partial class BrowserContractsTests {
     }
 
     [Fact]
+    public void AnExactRouteWithoutASchemeTakesTheAddressItNamesOnEitherWebScheme() {
+        using var directory = new StorageDirectory();
+        var (app, workspace, spaces) = DeviceApp(directory);
+        using var disposal = app;
+        var (shown, routed) = (SpaceId(spaces[0]!), SpaceId(spaces[1]!));
+        Guid window = Guid.NewGuid(), route = Guid.NewGuid();
+        app.Send(new OpenWindow(window, workspace, Saved: true, null, shown, [], RestoresTabs: true));
+        app.Send(new AddLinkRoute(route, routed));
+        app.Send(new EditLinkRoute(route, IsEnabled: null, LinkRouteMatch.Exact, Pattern: null, DestinationSpaceId: null));
+        app.Send(new EditLinkRoute(route, IsEnabled: null, Match: null, Pattern: "Docs.Google.com", DestinationSpaceId: null));
+        Guid? Opens(string url) => app.Query(new RouteExternalLink([window], url)).SpaceId;
+
+        // A bare host is its site's root address, with or without the slash, on either scheme.
+        Assert.Equal(routed, Opens("https://docs.google.com/"));
+        Assert.Equal(routed, Opens("http://docs.google.com"));
+        Assert.Equal(routed, Opens("https://docs.google.com/#top"));
+        // Another page at the site, a query or another port is another address.
+        Assert.Equal(shown, Opens("https://docs.google.com/document/d/1"));
+        Assert.Equal(shown, Opens("https://docs.google.com/?usp=sharing"));
+        Assert.Equal(shown, Opens("https://docs.google.com:8443/"));
+
+        // A port the pattern spells is read with the link's own scheme, so
+        // 443 is https's root address and not http's.
+        app.Send(new EditLinkRoute(route, IsEnabled: null, Match: null, Pattern: "docs.google.com:443", DestinationSpaceId: null));
+        Assert.Equal(routed, Opens("https://docs.google.com/"));
+        Assert.Equal(shown, Opens("http://docs.google.com/"));
+
+        // A pattern spelled with its scheme still takes only that spelling.
+        app.Send(new EditLinkRoute(route, IsEnabled: null, Match: null, Pattern: "https://docs.google.com/document", DestinationSpaceId: null));
+        Assert.Equal(routed, Opens("https://docs.google.com/document"));
+        Assert.Equal(shown, Opens("http://docs.google.com/document"));
+    }
+
+    [Fact]
     public void ALinkFollowedFromAPageGoesWhereItsTabItsPeekAndThePreferencesSendIt() {
         var (document, space, tab) = SavedSession();
         var (app, _, _, workspace, window) = PageHost(document["session"]!);
