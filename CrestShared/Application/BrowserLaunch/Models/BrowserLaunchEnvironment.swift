@@ -1,7 +1,8 @@
 import Foundation
 
 struct BrowserLaunchEnvironment: Equatable, Sendable {
-    /// Starts local services without taking focus.
+    /// Opens the launch's windows without taking focus, for a tool that
+    /// starts Crest in the background.
     let launchesInBackground: Bool
     let explicitlyRequiresIsolation: Bool
     let persistentIsolationID: String?
@@ -35,7 +36,7 @@ struct BrowserLaunchEnvironment: Equatable, Sendable {
         isXCTestRuntime: Bool,
         isSwiftUIPreviewRuntime: Bool = false
     ) {
-        launchesInBackground = values["CREST_BACKGROUND_LAUNCH"] == "1"
+        launchesInBackground = Self.isEnabled(.backgroundLaunch, in: values)
         explicitlyRequiresIsolation = Self.isEnabled(.isolatedSession, in: values)
         persistentIsolationID = values[Key.persistentIsolationID.rawValue]
             .flatMap(Self.normalizedIsolationID)
@@ -132,6 +133,7 @@ struct BrowserLaunchEnvironment: Equatable, Sendable {
     }
 
     private enum Key: String {
+        case backgroundLaunch = "CREST_BACKGROUND_LAUNCH"
         case isolatedSession = "CREST_ISOLATED_SESSION"
         case persistentIsolationID = "CREST_ISOLATED_PERSISTENCE_ID"
         case resetSession = "CREST_RESET_SESSION"

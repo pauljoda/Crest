@@ -4062,10 +4062,6 @@
       "category": "fixed",
       "message": "On pinned tabs, the sound and sharing badge sits in the tile\u2019s bottom corner instead of over the site icon, so the icon is easy to click."
     },
-    "background-launch-for-connected-tools": {
-      "category": "fixed",
-      "message": "Connected tools can start Crest in the background without taking focus."
-    },
     "site-controls-extension-menu-stays-open": {
       "category": "fixed",
       "message": "Right-clicking an extension in Site Controls shows its menu without closing Site Controls."
@@ -4318,9 +4314,9 @@
       "category": "internal",
       "message": "Upload iOS Cloud archives to TestFlight from the App Store export when the ad hoc export fails"
     },
-    "background-launch-review-scope": {
-      "category": "internal",
-      "message": "Keep background launch focused on window activation while retaining the existing window implementation."
+    "background-launch-for-connected-tools": {
+      "category": "fixed",
+      "message": "Connected tools can start Crest in the background without taking focus."
     }
   }
 }
