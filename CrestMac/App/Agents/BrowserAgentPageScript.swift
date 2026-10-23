@@ -211,11 +211,16 @@ struct BrowserAgentPageScript {
                   if (size + text.length > limit) { out.push(text.slice(0, limit - size)); truncated = true; size = limit; return; }
                   out.push(text); size += text.length;
                 };
-                // A display: contents wrapper has no box of its own, but its children may show.
-                const hidden = (node) => node.hidden || node.getAttribute("aria-hidden") === "true"
-                  || (node.checkVisibility && getComputedStyle(node).display !== "contents"
-                    && !node.checkVisibility({ checkOpacity: true, checkVisibilityCSS: true, opacityProperty: true,
-                      visibilityProperty: true }));
+                const hidden = (node) => {
+                  if (node.hidden || node.getAttribute("aria-hidden") === "true") return true;
+                  if (!node.checkVisibility) return false;
+                  // A display: contents wrapper has no box of its own, so only the visibility it
+                  // passes down, its own or an ancestor's, hides what it holds.
+                  const style = getComputedStyle(node);
+                  if (style.display === "contents") return style.visibility !== "visible";
+                  return !node.checkVisibility({ checkOpacity: true, checkVisibilityCSS: true, opacityProperty: true,
+                    visibilityProperty: true });
+                };
                 const inline = (node) => {
                   if (node.nodeType === Node.TEXT_NODE) return node.textContent.replace(/\\s+/g, " ");
                   if (node.nodeType !== Node.ELEMENT_NODE || skipped.has(node.tagName) || hidden(node)) return "";
