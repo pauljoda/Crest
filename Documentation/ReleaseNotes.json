@@ -4334,6 +4334,10 @@
       "category": "fixed",
       "message": "The sidebar no longer slides back out under a pointer that is just resting at the screen edge, such as one left there by Universal Control. It reveals when you move the pointer to the edge."
     },
+    "sidebar-hover-in-full-screen": {
+      "category": "new",
+      "message": "Settings > Appearance can keep the sidebar hover area working while a video plays full screen, so the sidebar floats over the video when the pointer reaches the edge of the screen."
+    },
     "agents-pointer-activity-and-questions": {
       "category": "new",
       "message": "An agent’s pointer shows where it works on a page, Settings › Agents lists what each agent did, Stop All Agents stops every agent at once, and Crest asks before an agent opens a window. Agents can also read a page’s text and answer its dialogs."

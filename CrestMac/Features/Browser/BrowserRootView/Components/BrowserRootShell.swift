@@ -15,14 +15,35 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @State private var downloadFeedback = BrowserMacDownloadFeedbackState()
     @State private var spacePagerPresentation = SpacePagerPresentation()
+    @AppStorage(SidebarFullscreenRevealPreference.key, store: BrowserChromeAppearancePreference.defaults)
+    private var revealsSidebarInFullscreen = SidebarFullscreenRevealPreference.defaultValue
 
     private var sidebarEdge: HorizontalEdge { appearance.sidebarEdge(in: layoutDirection) }
 
     var body: some View {
         ZStack(alignment: .leading) {
-            BrowserRootFullscreenContent(pages: model.pages) {
+            BrowserRootFullscreenContent(
+                pages: model.pages,
+                revealsSidebar: revealsSidebarInFullscreen,
+                sidebarEdge: sidebarEdge
+            ) {
                 standardContent
+            } sidebar: {
+                sidebarSurface
+                    .allowsHitTesting(!model.chrome.isCommandPalettePresented)
+                    .accessibilityHidden(model.chrome.isCommandPalettePresented)
+            } controls: {
+                shellControls
+                    .allowsHitTesting(!model.chrome.isCommandPalettePresented)
+                    .accessibilityHidden(model.chrome.isCommandPalettePresented)
             }
+
+            // Window focus gates the edge reveal in the shell and over a page
+            // in full screen alike, so it is followed whichever shows.
+            BrowserWindowFocusBridge(isWindowFocused: model.isWindowFocusedBinding)
+                .frame(width: 0, height: 0)
+                .allowsHitTesting(false)
+                .accessibilityHidden(true)
 
             // The window's chrome belongs to the window, not to the chrome a
             // fullscreen page hides: taking it down would restore the window's
@@ -114,6 +135,9 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
         }
         .ignoresSafeArea(.container, edges: .top)
         .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
+        .onChange(of: revealsSidebarOverFullscreenPage, initial: true) { _, reveals in
+            model.fullscreenSidebarRevealChanged(reveals)
+        }
         .onChange(of: transientBrowsing.orphanedPeeks(in: model.browser), initial: true) {
             transientBrowsing.reconcilePeeks(in: model.browser)
         }
@@ -141,41 +165,9 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
                 )
                 .clipped()
             } sidebar: {
-                BrowserRootSidebarSurfaceLayer(
-                    presentation: model.sidebarPresentation,
-                    width: model.sidebarWidth,
-                    edge: sidebarEdge,
-                    space: model.browser.shownSpace,
-                    reduceTransparency: reduceTransparency,
-                    spaces: model.browser.availableSpaces,
-                    isRevealedByPointer: model.isFloatingSidebarRevealedByPointer,
-                    hoverChanged: {
-                        model.sidebarSurfaceHoverChanged(
-                            $0,
-                            reduceMotion: reduceMotion
-                        )
-                    }
-                ) {
-                    BrowserRootSidebarContent(
-                        model: model,
-                        spaceSettingsPresentation: spaceSettingsPresentation,
-                        commandSurfaceNamespace: commandSurfaceNamespace,
-                        tabPromotionNamespace: tabPromotionNamespace
-                    )
-                }
-                .background {
-                    BrowserSidebarPointerNavigation(
-                        isSidebarVisible:
-                            model.sidebarPresentation.showsSidebar
-                            && !model.chrome.isCommandPalettePresented,
-                        perform: model.handleAuxiliaryMouseAction,
-                        navigationTargets: { [pages = model.pages] in pages.livePages },
-                        activeTarget: { [pages = model.pages] in pages.activePage }
-                    )
-                }
+                sidebarSurface
             } controls: {
-                BrowserRootShellControls(
-                    model: model, storedSidebarWidth: $storedSidebarWidth, sidebarEdge: sidebarEdge)
+                shellControls
             }
             .allowsHitTesting(!model.chrome.isCommandPalettePresented)
             .accessibilityHidden(model.chrome.isCommandPalettePresented)
@@ -190,36 +182,92 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
                 model: model,
                 reduceMotion: reduceMotion
             )
-
-            BrowserWindowFocusBridge(isWindowFocused: model.isWindowFocusedBinding)
-                .frame(width: 0, height: 0)
-                .allowsHitTesting(false)
-                .accessibilityHidden(true)
         }
     }
 
+    private var revealsSidebarOverFullscreenPage: Bool {
+        revealsSidebarInFullscreen && model.pages.activePage?.isContentFullscreen == true
+    }
+
+    private var sidebarSurface: some View {
+        BrowserRootSidebarSurfaceLayer(
+            presentation: model.sidebarPresentation,
+            width: model.sidebarWidth,
+            edge: sidebarEdge,
+            space: model.browser.shownSpace,
+            reduceTransparency: reduceTransparency,
+            spaces: model.browser.availableSpaces,
+            isRevealedByPointer: model.isFloatingSidebarRevealedByPointer,
+            hoverChanged: {
+                model.sidebarSurfaceHoverChanged(
+                    $0,
+                    reduceMotion: reduceMotion
+                )
+            }
+        ) {
+            BrowserRootSidebarContent(
+                model: model,
+                spaceSettingsPresentation: spaceSettingsPresentation,
+                commandSurfaceNamespace: commandSurfaceNamespace,
+                tabPromotionNamespace: tabPromotionNamespace
+            )
+        }
+        .background {
+            BrowserSidebarPointerNavigation(
+                isSidebarVisible:
+                    model.sidebarPresentation.showsSidebar
+                    && !model.chrome.isCommandPalettePresented,
+                perform: model.handleAuxiliaryMouseAction,
+                navigationTargets: { [pages = model.pages] in pages.livePages },
+                activeTarget: { [pages = model.pages] in pages.activePage }
+            )
+        }
+    }
+
+    private var shellControls: some View {
+        BrowserRootShellControls(
+            model: model, storedSidebarWidth: $storedSidebarWidth, sidebarEdge: sidebarEdge)
+    }
 }
 
 /// Tab selection is observed here so the ordinary shell's inputs stay stable
 /// when only the page occupying it changes.
-private struct BrowserRootFullscreenContent<Content: View>: View {
+///
+/// A page alone in full screen keeps the sidebar's hover area when the person
+/// asked for it, and the sidebar floats over the page without moving it.
+private struct BrowserRootFullscreenContent<Content: View, Sidebar: View, Controls: View>: View {
     let pages: BrowserPagePool
+    let revealsSidebar: Bool
+    let sidebarEdge: HorizontalEdge
     @ViewBuilder let content: Content
+    @ViewBuilder let sidebar: Sidebar
+    @ViewBuilder let controls: Controls
 
     var body: some View {
         if let page = pages.activePage, page.isContentFullscreen {
-            BrowserPlatformWebView(
-                page: page,
-                isPageActive: true,
-                focusRestorationGate: .suppressed
-            )
-            .environment(\.browserPagePresentationWindowID, pages.windowID)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(.black)
+            ZStack(alignment: .leading) {
+                BrowserPlatformWebView(
+                    page: page,
+                    isPageActive: true,
+                    focusRestorationGate: .suppressed
+                )
+                .environment(\.browserPagePresentationWindowID, pages.windowID)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(.black)
+
+                if revealsSidebar {
+                    sidebar.frame(maxWidth: .infinity, alignment: edgeAlignment)
+                    controls.frame(maxWidth: .infinity, alignment: edgeAlignment)
+                }
+            }
             .ignoresSafeArea()
         } else {
             content
         }
+    }
+
+    private var edgeAlignment: Alignment {
+        sidebarEdge == .leading ? .leading : .trailing
     }
 }
 
