@@ -887,6 +887,7 @@ struct AgentSessionState: Equatable, Sendable {
     let name: String
     let color: BrandColor?
     let tabIDs: [UUID]
+    let opensWindows: Bool
     let activity: [AgentActivity]
 }
 
@@ -964,6 +965,10 @@ struct AgentsUnavailable: Equatable, Sendable {
 struct AllowAgentSpace: Intent, AgentIntent, Equatable, Sendable {
     let spaceID: UUID
     let allowed: Bool
+}
+
+struct AllowAgentWindows: Intent, AgentIntent, Equatable, Sendable {
+    let sessionID: UUID
 }
 
 struct AlreadyInSpace: Equatable, Sendable {

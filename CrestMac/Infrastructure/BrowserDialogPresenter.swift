@@ -487,6 +487,36 @@ final class BrowserDialogPresenter {
         }
     }
 
+    /// Whether the agent may open a window, and whether it may again without
+    /// asking until it disconnects. Not opening one is the default, and Crest
+    /// comes forward, since the person is likely in the agent's terminal when
+    /// it asks.
+    func approveWindow(_ opening: BrowserAgentWindowOpening, dismissal: BrowserPromptDismissal? = nil) async
+        -> BrowserAgentAnswer
+    {
+        await withCheckedContinuation { continuation in
+            let alert = NSAlert()
+            alert.messageText = opening.kind.question(naming: Self.shown(opening.agentName))
+            if let detail = opening.kind.detail(
+                space: opening.spaceName.map { Self.shown($0) },
+                address: opening.address.map { Self.shown(address: $0) })
+            {
+                alert.informativeText = detail
+            }
+            alert.alertStyle = .warning
+            alert.addButton(withTitle: String(localized: "Don’t Allow"))
+            alert.addButton(withTitle: String(localized: "Allow"))
+            alert.showsSuppressionButton = true
+            alert.suppressionButton?.title = String(localized: "Don’t ask again until it disconnects")
+            if !NSApp.isActive { NSApp.requestUserAttention(.criticalRequest) }
+            present(alert, comesForward: true, dismissal: dismissal) { [weak alert] response in
+                guard response == .alertSecondButtonReturn else { return continuation.resume(returning: .declined) }
+                let lasts = alert?.suppressionButton?.state == .on
+                continuation.resume(returning: lasts ? .whileConnected : .once)
+            }
+        }
+    }
+
     /// `name` as a question may show it: without control or formatting
     /// characters, such as the ones that reverse text, and at most 64
     /// characters.

@@ -9,6 +9,7 @@ struct BrowserAgentFailure: Error, Sendable {
     static let unidentified = Self("Crest couldn’t tell which program this agent is.")
     static let declined = Self("The person didn’t allow this agent to use Crest.")
     static let historyKept = Self("The person kept this history.")
+    static let windowDeclined = Self("The person didn’t let this agent open a window.")
     static let busy = Self("Crest is already asking the person about agents. Try again shortly.")
     static let noWindow = Self(
         "Crest could not open a browser window.")

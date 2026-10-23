@@ -164,6 +164,25 @@ final class BrowserMacAgents {
         approvals.dismissAll()
     }
 
+    // MARK: - Actions - Questions
+
+    /// The agent connected as `call`'s session.
+    func connectedSession(_ call: BrowserAgentCall) throws(BrowserAgentFailure) -> AgentSessionState {
+        guard let session = core.state.agentSessions.first(where: { $0.sessionID == call.sessionID }) else {
+            throw .rejected(.unknownAgentSession(UnknownAgentSession(sessionID: call.sessionID)))
+        }
+        return session
+    }
+
+    /// The name the person allowed `session`'s agent under, which every
+    /// question about it names, never the one it introduced itself by.
+    func allowedName(of session: AgentSessionState) throws(BrowserAgentFailure) -> String {
+        guard let agent = core.state.agentPreferences.agents.first(where: { $0.identity == session.identity }) else {
+            throw .rejected(.unknownAgentSession(UnknownAgentSession(sessionID: session.sessionID)))
+        }
+        return agent.name
+    }
+
     // MARK: - Actions - Activity
 
     /// Keeps that the agent behind `call` did `kind` about `subject`, which

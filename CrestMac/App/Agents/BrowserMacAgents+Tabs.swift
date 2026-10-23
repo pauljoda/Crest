@@ -172,6 +172,7 @@ extension BrowserMacAgents {
         if let existing = frontWindow(over: space) {
             window = existing
         } else {
+            try await approveWindow(.window, over: space, at: nil, call)
             window = try openWindow(over: space)
         }
         window.browser.selectSpace(space.id)

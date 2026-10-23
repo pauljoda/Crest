@@ -9,13 +9,16 @@ import XCTest
 final class BrowserAgentFixture {
     // MARK: - Types
 
-    /// Answers for the person: allows every agent, and lets it delete history
-    /// while `deletesHistory`, keeping each deletion it was asked about.
+    /// Answers for the person: allows every agent, lets it delete history
+    /// while `deletesHistory` and open windows as `windows` says, keeping
+    /// each deletion and window it was asked about.
     final class Answers: BrowserAgentAsking {
         // MARK: - Variables
 
         var deletesHistory = true
+        var windows = BrowserAgentAnswer.once
         private(set) var deletions: [BrowserAgentHistoryDeletion] = []
+        private(set) var openings: [BrowserAgentWindowOpening] = []
 
         // MARK: - Actions - Questions
 
@@ -30,6 +33,13 @@ final class BrowserAgentFixture {
         {
             deletions.append(deletion)
             return deletesHistory
+        }
+
+        func approveWindow(_ opening: BrowserAgentWindowOpening, dismissal: BrowserPromptDismissal?) async
+            -> BrowserAgentAnswer
+        {
+            openings.append(opening)
+            return windows
         }
     }
 

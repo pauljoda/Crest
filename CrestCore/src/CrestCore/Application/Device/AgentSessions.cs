@@ -49,7 +49,7 @@ internal sealed class AgentSessions {
     public bool Begin(Guid sessionId, AgentIdentity identity, string name) {
         if (Find(sessionId) is not null) return false;
         if (sessions.Count >= MaximumSessions) throw new Rejected(new AgentSessionsFull(MaximumSessions));
-        sessions.Add(new AgentSessionState(sessionId, identity, name, null, [], []));
+        sessions.Add(new AgentSessionState(sessionId, identity, name, null, [], false, []));
         return true;
     }
 
@@ -83,6 +83,10 @@ internal sealed class AgentSessions {
         }
         return changed;
     }
+
+    /// The person let the agent connected as `sessionId` open windows without
+    /// asking each time, for as long as it stays connected.
+    public bool AllowWindows(Guid sessionId) => Revise(sessionId, current => current with { OpensWindows = true });
 
     /// Keeps `activity` as the latest thing the agent connected as `sessionId`
     /// did, letting go of the oldest past `MaximumActivity`. Refused with
