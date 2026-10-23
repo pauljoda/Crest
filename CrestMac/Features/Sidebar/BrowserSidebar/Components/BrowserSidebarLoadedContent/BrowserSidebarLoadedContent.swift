@@ -101,7 +101,7 @@ struct BrowserSidebarLoadedContent: View {
             .environment(
                 \.colorScheme,
                 context.browser.shownSpace.map {
-                    $0.settings.look.foregroundTone.colorScheme
+                    $0.settings.look.shown.foregroundTone.colorScheme
                 } ?? .dark
             )
             .modifier(

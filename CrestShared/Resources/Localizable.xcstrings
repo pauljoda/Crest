@@ -5077,6 +5077,9 @@
         }
       }
     },
+    "Dim Space colors in dark" : {
+
+    },
     "Dim unloaded tabs" : {
 
     },
@@ -6320,6 +6323,9 @@
           }
         }
       }
+    },
+    "Full" : {
+
     },
     "Full URL" : {
 
@@ -13102,6 +13108,9 @@
       }
     },
     "Syncing" : {
+
+    },
+    "System" : {
 
     },
     "System passkeys" : {
