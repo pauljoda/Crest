@@ -517,7 +517,7 @@ final class BrowserDialogPresenter {
             alert.alertStyle = .warning
             alert.addButton(withTitle: String(localized: "Don’t Allow"))
             alert.addButton(withTitle: String(localized: "Allow"))
-            alert.showsSuppressionButton = true
+            alert.showsSuppressionButton = !opening.kind.asksEachTime
             alert.suppressionButton?.title = String(localized: "Don’t ask again until it disconnects")
             if !NSApp.isActive { NSApp.requestUserAttention(.criticalRequest) }
             present(alert, comesForward: true, dismissal: dismissal) { [weak alert] response in

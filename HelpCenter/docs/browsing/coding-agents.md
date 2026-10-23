@@ -18,7 +18,7 @@ Agents are off until you turn them on.
 3. Under **Spaces**, turn on each Space agents may use.
 4. Under **Connect an Agent**, choose **Copy Setup** for your agent, and paste it in your agent's terminal or settings.
 
-Crest must be open while an agent works. Before an agent opens a window, Crest asks you; you can let it open windows without asking until it disconnects.
+Crest must be open while an agent works. Before an agent opens a window, Crest asks you; you can let it open windows without asking until it disconnects, except private windows, which Crest always asks about.
 
 To start Crest without bringing it to the front, a tool can run `open -g --env CREST_BACKGROUND_LAUNCH=1 -a Crest`. Crest opens your windows behind the app you're using, and comes forward only to ask you something, such as about an agent it hasn't met.
 

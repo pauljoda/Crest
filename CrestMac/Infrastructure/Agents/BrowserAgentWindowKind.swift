@@ -1,22 +1,24 @@
 import Foundation
 
 /// A kind of window an agent may ask to open, and how the person is asked
-/// about it: the question, which names the agent, and the line under it,
-/// which names the Space and the address where the agent gives them.
+/// about it: the question, which names the agent, the line under it, which
+/// names the Space and the address where the agent gives them, and whether
+/// the person may let the agent open more without asking. A private window
+/// is always asked about.
 struct BrowserAgentWindowKind: Equatable, Sendable {
     // MARK: - Static Variables
 
     static let window = Self(
-        name: "window", asking: { String(localized: "Let “\($0)” open a window?") },
+        name: "window", asksEachTime: false, asking: { String(localized: "Let “\($0)” open a window?") },
         describing: Self.spaceAndAddress)
     static let blankWindow = Self(
-        name: "blank", asking: { String(localized: "Let “\($0)” open a Blank Window?") },
+        name: "blank", asksEachTime: false, asking: { String(localized: "Let “\($0)” open a Blank Window?") },
         describing: Self.spaceAndAddress)
     static let quickWindow = Self(
-        name: "quick", asking: { String(localized: "Let “\($0)” open a Quick Window?") },
+        name: "quick", asksEachTime: false, asking: { String(localized: "Let “\($0)” open a Quick Window?") },
         describing: Self.spaceAndAddress)
     static let privateWindow = Self(
-        name: "private", asking: { String(localized: "Let “\($0)” open a private window?") },
+        name: "private", asksEachTime: true, asking: { String(localized: "Let “\($0)” open a private window?") },
         describing: { _, address in
             address.map { String(localized: "It opens \($0). Agents never reach into a private window.") }
                 ?? String(localized: "Agents never reach into a private window.")
@@ -25,16 +27,20 @@ struct BrowserAgentWindowKind: Equatable, Sendable {
     // MARK: - Variables
 
     let name: String
+    /// Crest asks about every one, even after the person let the agent open
+    /// windows without asking.
+    let asksEachTime: Bool
     private let asking: @Sendable (String) -> String
     private let describing: @Sendable (_ space: String?, _ address: String?) -> String?
 
     // MARK: - Initializers
 
     private init(
-        name: String, asking: @escaping @Sendable (String) -> String,
+        name: String, asksEachTime: Bool, asking: @escaping @Sendable (String) -> String,
         describing: @escaping @Sendable (String?, String?) -> String?
     ) {
         self.name = name
+        self.asksEachTime = asksEachTime
         self.asking = asking
         self.describing = describing
     }

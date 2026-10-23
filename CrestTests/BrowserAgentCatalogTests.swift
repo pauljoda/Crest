@@ -156,6 +156,11 @@ final class BrowserAgentCatalogTests: XCTestCase {
             }
         }
         XCTAssertEqual(fixture.answers.openings.count, 3)
+        // A private window is asked about every time.
+        fixture.answers.windows = .declined
+        await fixture.assertRefused("open_private_window")
+        XCTAssertEqual(fixture.answers.openings.last?.kind, .privateWindow)
+        XCTAssertFalse(fixture.windows.isOpen(.private))
     }
 
     func testDeniedSpacesCannotOpenPublicWindows() async throws {

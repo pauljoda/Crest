@@ -106,7 +106,7 @@ extension BrowserMacAgents {
         _ kind: BrowserAgentWindowKind, over space: SpaceModel?, at address: URL?, _ call: BrowserAgentCall
     ) async throws(BrowserAgentFailure) {
         let session = try connectedSession(call)
-        guard !session.opensWindows else { return }
+        guard !session.opensWindows || kind.asksEachTime else { return }
         let spaceName = try space.flatMap { space throws(BrowserAgentFailure) in
             try reach(call).spaces.first { $0.spaceID == space.id }?.name
         }
