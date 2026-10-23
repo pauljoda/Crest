@@ -61,13 +61,25 @@ struct BrowserFolderHeaderControl: View {
                             metrics: configuration.headerMetrics
                         )
 
-                        BrowserFolderHeaderTitle(
-                            folder: folder, context: configuration.context, tintsTitle: tintsTitle,
-                            emphasizesShownTab: alwaysVisible
-                        )
-                        .equatable()
+                        HStack(spacing: 7) {
+                            BrowserFolderHeaderTitle(
+                                folder: folder, context: configuration.context, tintsTitle: tintsTitle,
+                                emphasizesShownTab: alwaysVisible
+                            )
+                            .equatable()
 
-                        Spacer(minLength: 8)
+                            Spacer(minLength: 8)
+                        }
+                        .contentShape(.rect)
+                        #if os(macOS)
+                            // Each click of the double-click also runs the button's toggle. Renaming
+                            // starts after this event, so the second click's toggle undoes the first.
+                            .simultaneousGesture(
+                                TapGesture(count: 2).onEnded {
+                                    Task { @MainActor in interaction.beginRenaming() }
+                                }
+                            )
+                        #endif
                         if showsTabCounts {
                             BrowserFolderTabCount(folder: folder, space: configuration.context.space).equatable()
                         }

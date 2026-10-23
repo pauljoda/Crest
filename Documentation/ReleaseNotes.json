@@ -4317,6 +4317,10 @@
     "double-click-sidebar-tab-title-to-rename": {
       "category": "improved",
       "message": "Double-click a tab's name in the sidebar to rename it, and click anywhere else in the sidebar to finish."
+    },
+    "double-click-sidebar-folder-title-to-rename": {
+      "category": "improved",
+      "message": "Double-click a folder's name in the sidebar to rename it."
     }
   }
 }
