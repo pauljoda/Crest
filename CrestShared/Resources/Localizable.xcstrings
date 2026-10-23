@@ -1927,6 +1927,9 @@
     "Agents can’t use Crest on this device." : {
 
     },
+    "Agents never reach into a private window." : {
+
+    },
     "AI Assistant" : {
 
     },
@@ -3570,6 +3573,9 @@
         }
       }
     },
+    "Closed a tab" : {
+
+    },
     "Closed and automatically cleaned tabs from this Space appear here." : {
       "localizations" : {
         "ar" : {
@@ -4947,6 +4953,9 @@
     "Deleted" : {
 
     },
+    "Deleted history" : {
+
+    },
     "Deleted on another device" : {
 
     },
@@ -5144,6 +5153,9 @@
 
     },
     "Don’t Allow" : {
+
+    },
+    "Don’t ask again until it disconnects" : {
 
     },
     "Don't Share" : {
@@ -7476,6 +7488,22 @@
     "It can read and act on tabs and history in the Spaces you choose in Settings › Agents, and open windows. Every tab it uses shows its badge." : {
 
     },
+    "It opens %@ in the %@ Space." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "It opens %1$@ in the %2$@ Space."
+          }
+        }
+      }
+    },
+    "It opens %@. Agents never reach into a private window." : {
+
+    },
+    "It opens over the %@ Space." : {
+
+    },
     "It removes every visit to %@ from the %@ Space’s history." : {
       "localizations" : {
         "en" : {
@@ -7703,6 +7731,18 @@
     "Let “%@” delete history?" : {
 
     },
+    "Let “%@” open a Blank Window?" : {
+
+    },
+    "Let “%@” open a private window?" : {
+
+    },
+    "Let “%@” open a Quick Window?" : {
+
+    },
+    "Let “%@” open a window?" : {
+
+    },
     "Let agents run scripts in pages" : {
 
     },
@@ -7786,6 +7826,9 @@
           }
         }
       }
+    },
+    "Loaded a page" : {
+
     },
     "Loading" : {
 
@@ -9072,6 +9115,15 @@
     "Open Translate…" : {
 
     },
+    "Opened a private window" : {
+
+    },
+    "Opened a tab" : {
+
+    },
+    "Opened a window" : {
+
+    },
     "Opened in %@ for protected video" : {
 
     },
@@ -10144,6 +10196,9 @@
 
     },
     "Quit Crest" : {
+
+    },
+    "Ran a script" : {
 
     },
     "Raven" : {
@@ -12794,6 +12849,9 @@
     "Stop Agent in This Tab" : {
       "comment" : "Stops the agent using a tab from using it."
     },
+    "Stop All Agents" : {
+
+    },
     "Stop Keeping Loaded" : {
       "localizations" : {
         "ar" : {
@@ -12824,6 +12882,9 @@
       "comment" : "Stops the tab sharing a tab takes part in."
     },
     "Stop Speaking" : {
+
+    },
+    "Stopping every agent disconnects it and keeps it out of the tabs it used until Crest quits." : {
 
     },
     "Store" : {

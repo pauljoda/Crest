@@ -9,13 +9,16 @@ import XCTest
 final class BrowserAgentFixture {
     // MARK: - Types
 
-    /// Answers for the person: allows every agent, and lets it delete history
-    /// while `deletesHistory`, keeping each deletion it was asked about.
+    /// Answers for the person: allows every agent, lets it delete history
+    /// while `deletesHistory` and open windows as `windows` says, keeping
+    /// each deletion and window it was asked about.
     final class Answers: BrowserAgentAsking {
         // MARK: - Variables
 
         var deletesHistory = true
+        var windows = BrowserAgentAnswer.once
         private(set) var deletions: [BrowserAgentHistoryDeletion] = []
+        private(set) var openings: [BrowserAgentWindowOpening] = []
 
         // MARK: - Actions - Questions
 
@@ -30,6 +33,13 @@ final class BrowserAgentFixture {
         {
             deletions.append(deletion)
             return deletesHistory
+        }
+
+        func approveWindow(_ opening: BrowserAgentWindowOpening, dismissal: BrowserPromptDismissal?) async
+            -> BrowserAgentAnswer
+        {
+            openings.append(opening)
+            return windows
         }
     }
 
@@ -74,6 +84,23 @@ final class BrowserAgentFixture {
         if answer.isError { throw BrowserAgentFailure(answer.content.first?.text ?? "The tool failed.") }
         let text = try XCTUnwrap(answer.content.first?.text)
         return try JSONDecoder().decode(AgentJSON.self, from: Data(text.utf8))
+    }
+
+    /// What tool `name` answers `arguments` with, as the agent's model reads
+    /// it.
+    func message(_ name: String, _ arguments: [String: AgentJSON] = [:]) async throws -> String {
+        let tool = try XCTUnwrap(BrowserAgentTool.named(name))
+        let answer = try await tool.perform(
+            BrowserAgentCall(agents: agents, link: link, sessionID: sessionID, arguments: .object(arguments)))
+        let text = try XCTUnwrap(answer.content.first?.text)
+        if answer.isError { throw BrowserAgentFailure(text) }
+        return text
+    }
+
+    /// The page of tab `tabID`, which the agent uses.
+    func page(for tabID: UUID) throws -> BrowserPage {
+        try agents.page(
+            for: tabID, BrowserAgentCall(agents: agents, link: link, sessionID: sessionID, arguments: .object([:])))
     }
 
     /// Fails the test unless tool `name` refuses `arguments`.

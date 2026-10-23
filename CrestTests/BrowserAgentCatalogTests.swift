@@ -135,6 +135,34 @@ final class BrowserAgentCatalogTests: XCTestCase {
         defer { window.close() }
     }
 
+    func testAWindowOpensOnlyOnceThePersonAgreesAndAgainWithoutAskingWhenTheyLetIt() async throws {
+        let fixture = try BrowserAgentFixture()
+        let before = fixture.application.stackedWindowIDs
+        fixture.answers.windows = .declined
+        await fixture.assertRefused("open_window", ["space": .string(fixture.space.id.uuidString)])
+        await fixture.assertRefused("open_private_window")
+        XCTAssertEqual(fixture.application.stackedWindowIDs, before)
+        XCTAssertFalse(fixture.windows.isOpen(.private))
+        XCTAssertEqual(fixture.answers.openings.map(\.kind), [.window, .privateWindow])
+        XCTAssertEqual(fixture.answers.openings.first?.agentName, "Test")
+        fixture.answers.windows = .whileConnected
+        let first = try await fixture.invoke("open_blank_window", ["space": .string(fixture.space.id.uuidString)])
+        let second = try await fixture.invoke("open_blank_window", ["space": .string(fixture.space.id.uuidString)])
+        defer {
+            for answer in [first, second] {
+                if let id = answer["windowID"]?.string.flatMap(UUID.init(uuidString:)) {
+                    fixture.windows.window(for: id)?.close()
+                }
+            }
+        }
+        XCTAssertEqual(fixture.answers.openings.count, 3)
+        // A private window is asked about every time.
+        fixture.answers.windows = .declined
+        await fixture.assertRefused("open_private_window")
+        XCTAssertEqual(fixture.answers.openings.last?.kind, .privateWindow)
+        XCTAssertFalse(fixture.windows.isOpen(.private))
+    }
+
     func testDeniedSpacesCannotOpenPublicWindows() async throws {
         let fixture = try BrowserAgentFixture()
         try fixture.core.send(AllowAgentSpace(spaceID: fixture.space.id, allowed: false))

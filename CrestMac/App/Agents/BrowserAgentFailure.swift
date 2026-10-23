@@ -9,6 +9,7 @@ struct BrowserAgentFailure: Error, Sendable {
     static let unidentified = Self("Crest couldn’t tell which program this agent is.")
     static let declined = Self("The person didn’t allow this agent to use Crest.")
     static let historyKept = Self("The person kept this history.")
+    static let windowDeclined = Self("The person didn’t let this agent open a window.")
     static let busy = Self("Crest is already asking the person about agents. Try again shortly.")
     static let noWindow = Self(
         "Crest could not open a browser window.")
@@ -58,6 +59,15 @@ struct BrowserAgentFailure: Error, Sendable {
 
     static func script(_ message: String) -> Self {
         Self("The script threw: \(message)")
+    }
+
+    /// The page is showing `asked`, which holds up its scripts until someone
+    /// answers it.
+    static func dialog(_ asked: ScriptDialogAsked) -> Self {
+        let message = String(asked.question.message.prefix(500))
+        return asked.question.kind == .beforeUnload
+            ? Self("The page is asking the person whether to leave it. Wait for them to answer.")
+            : Self("The page is showing a dialog: “\(message)”. Answer it with handle_dialog.")
     }
 
     static func refused(_ detail: String) -> Self {

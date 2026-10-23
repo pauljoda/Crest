@@ -140,6 +140,7 @@ extension BrowserMacAgents {
             throw .refused("Crest could not open a tab in this Space.")
         }
         _ = try claim(tabID, call)
+        note(.openedTab, url.absoluteString, call)
         // Its page loads now, behind if need be, so the tab shows its site
         // while the agent works.
         _ = try? page(for: tabID, call)
@@ -156,6 +157,7 @@ extension BrowserMacAgents {
             let page = try self.page(for: navigation.tab, call)
             if let url {
                 page.corePage.load(url)
+                self.note(.loadedPage, url.absoluteString, call)
             } else {
                 navigation.action?.perform(on: page.corePage, page.enginePage)
             }
@@ -170,6 +172,7 @@ extension BrowserMacAgents {
         if let existing = frontWindow(over: space) {
             window = existing
         } else {
+            try await approveWindow(.window, over: space, at: nil, call)
             window = try openWindow(over: space)
         }
         window.browser.selectSpace(space.id)
@@ -184,14 +187,19 @@ extension BrowserMacAgents {
         let reference = try call.arguments(TabReference.self)
         let (space, tab) = try claim(reference.tab, call)
         guard tab.placement == .current else { throw .pinnedOrSaved }
+        let title = (try? listing(tab.id, call))?.title ?? ""
         let browser = frontWindow(over: space)?.browser ?? application.browser
-        if browser.closeTab(tab.id, in: space.id) { return .data(["closed": true]) }
+        if browser.closeTab(tab.id, in: space.id) {
+            note(.closedTab, title, call)
+            return .data(["closed": true])
+        }
         // A page asked to answer whether it may go answers after this returns.
         let deadline = ContinuousClock.now + .seconds(2)
         while space.tabs.contains(tab.id), ContinuousClock.now < deadline {
             try? await Task.sleep(for: .milliseconds(50))
         }
         let closed = !space.tabs.contains(tab.id)
+        if closed { note(.closedTab, title, call) }
         return .data(
             ["closed": closed],
             note: closed ? nil : "The page asked the person whether to leave; the tab is still open.")

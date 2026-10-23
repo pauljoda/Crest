@@ -12,8 +12,13 @@ struct BrowserFileInputOptions {
 final class BrowserDialogPresenter {
     // MARK: - Variables
 
+    /// The window a question attaches to as a sheet: the key or main window,
+    /// or Crest's frontmost window while Crest is in the background, so a
+    /// question waiting on the person never holds up the rest of Crest, such
+    /// as an agent answering a page's dialog.
     private var hostWindow: NSWindow? {
         NSApp.keyWindow ?? NSApp.mainWindow
+            ?? NSApp.orderedWindows.first { $0.isVisible && $0.canBecomeKey && $0.sheetParent == nil }
     }
 
     // MARK: - Actions - Script dialogs
@@ -21,30 +26,33 @@ final class BrowserDialogPresenter {
     func presentAlert(
         message: String,
         request: URLRequest,
+        on window: NSWindow? = nil,
         dismissal: BrowserPromptDismissal? = nil,
         completion: @escaping @MainActor @Sendable () -> Void
     ) {
         let alert = makeAlert(message: message, request: request)
         alert.addButton(withTitle: "OK")
-        present(alert, dismissal: dismissal) { _ in completion() }
+        present(alert, on: window, dismissal: dismissal) { _ in completion() }
     }
 
     func presentConfirm(
         message: String,
         request: URLRequest,
+        on window: NSWindow? = nil,
         dismissal: BrowserPromptDismissal? = nil,
         completion: @escaping @MainActor @Sendable (Bool) -> Void
     ) {
         let alert = makeAlert(message: message, request: request)
         alert.addButton(withTitle: "OK")
         alert.addButton(withTitle: "Cancel")
-        present(alert, dismissal: dismissal) { completion($0 == .alertFirstButtonReturn) }
+        present(alert, on: window, dismissal: dismissal) { completion($0 == .alertFirstButtonReturn) }
     }
 
     /// Pages no longer choose the wording of a beforeunload prompt, so the
     /// message names the site rather than repeating page-supplied text.
     func presentBeforeUnload(
         request: URLRequest,
+        on window: NSWindow? = nil,
         dismissal: BrowserPromptDismissal? = nil,
         completion: @escaping @MainActor @Sendable (Bool) -> Void
     ) {
@@ -54,13 +62,16 @@ final class BrowserDialogPresenter {
         alert.alertStyle = .warning
         alert.addButton(withTitle: "Leave Page")
         alert.addButton(withTitle: "Stay on Page")
-        present(alert, comesForward: true, dismissal: dismissal) { completion($0 == .alertFirstButtonReturn) }
+        present(alert, on: window, comesForward: true, dismissal: dismissal) {
+            completion($0 == .alertFirstButtonReturn)
+        }
     }
 
     func presentPrompt(
         message: String,
         defaultText: String?,
         request: URLRequest,
+        on window: NSWindow? = nil,
         dismissal: BrowserPromptDismissal? = nil,
         completion: @escaping @MainActor @Sendable (String?) -> Void
     ) {
@@ -70,7 +81,7 @@ final class BrowserDialogPresenter {
         alert.accessoryView = input
         alert.addButton(withTitle: "OK")
         alert.addButton(withTitle: "Cancel")
-        present(alert, dismissal: dismissal) { response in
+        present(alert, on: window, dismissal: dismissal) { response in
             completion(response == .alertFirstButtonReturn ? input.stringValue : nil)
         }
     }
@@ -487,6 +498,36 @@ final class BrowserDialogPresenter {
         }
     }
 
+    /// Whether the agent may open a window, and whether it may again without
+    /// asking until it disconnects. Not opening one is the default, and Crest
+    /// comes forward, since the person is likely in the agent's terminal when
+    /// it asks.
+    func approveWindow(_ opening: BrowserAgentWindowOpening, dismissal: BrowserPromptDismissal? = nil) async
+        -> BrowserAgentAnswer
+    {
+        await withCheckedContinuation { continuation in
+            let alert = NSAlert()
+            alert.messageText = opening.kind.question(naming: Self.shown(opening.agentName))
+            if let detail = opening.kind.detail(
+                space: opening.spaceName.map { Self.shown($0) },
+                address: opening.address.map { Self.shown(address: $0) })
+            {
+                alert.informativeText = detail
+            }
+            alert.alertStyle = .warning
+            alert.addButton(withTitle: String(localized: "Don’t Allow"))
+            alert.addButton(withTitle: String(localized: "Allow"))
+            alert.showsSuppressionButton = !opening.kind.asksEachTime
+            alert.suppressionButton?.title = String(localized: "Don’t ask again until it disconnects")
+            if !NSApp.isActive { NSApp.requestUserAttention(.criticalRequest) }
+            present(alert, comesForward: true, dismissal: dismissal) { [weak alert] response in
+                guard response == .alertSecondButtonReturn else { return continuation.resume(returning: .declined) }
+                let lasts = alert?.suppressionButton?.state == .on
+                continuation.resume(returning: lasts ? .whileConnected : .once)
+            }
+        }
+    }
+
     /// `name` as a question may show it: without control or formatting
     /// characters, such as the ones that reverse text, and at most 64
     /// characters.
@@ -535,13 +576,14 @@ final class BrowserDialogPresenter {
     // A `dismissal` closes the sheet once its question no longer waits; the
     // sheet then answers as declined.
 
-    /// Shows `alert` as a sheet on the key window, or on its own while Crest
-    /// has none. A question that holds up leaving a page or quitting
-    /// `comesForward`: Crest activates first, so a quit asked from outside it
-    /// (the updater's relaunch, the Dock, a logout) never waits on a question
-    /// the person cannot see.
+    /// Shows `alert` as a sheet on `preferred`, or the window Crest hosts
+    /// questions on, or on its own while Crest has none. A question that holds
+    /// up leaving a page or quitting `comesForward`: Crest activates first,
+    /// so a quit asked from outside it (the updater's relaunch, the Dock, a
+    /// logout) never waits on a question the person cannot see.
     private func present(
         _ alert: NSAlert,
+        on preferred: NSWindow? = nil,
         comesForward: Bool = false,
         dismissal: BrowserPromptDismissal? = nil,
         completion: @escaping @MainActor @Sendable (NSApplication.ModalResponse) -> Void
@@ -549,7 +591,7 @@ final class BrowserDialogPresenter {
         if comesForward, !NSApp.isActive {
             NSApp.activate(ignoringOtherApps: true)
         }
-        guard let window = hostWindow else {
+        guard let window = preferred ?? hostWindow else {
             dismissal?.attach { [weak alert] in
                 guard let alert, alert.window.isVisible else { return }
                 NSApp.stopModal(withCode: .cancel)

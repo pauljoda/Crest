@@ -35,6 +35,23 @@ extension AgentToolDefinition {
                 "space", "The Space's id; defaults to the active allowed Space or first unlocked one.", required: false)
         ],
         readOnly: true, destructive: false, idempotent: true, openWorld: false)
+    static let readPageText = Self(
+        name: "read_page_text", title: "Read a page's text",
+        description:
+            "Answers the readable text of the page in a tab as Markdown: headings, paragraphs, lists, quotes, code and links, without what the page hides or any form field's value. Use take_snapshot for the uids that click and fill take.",
+        arguments: [
+            .string("tab", "The tab's id, from list_tabs or open_tab."),
+            .number("max_chars", "The most characters to answer, from 1000 to 100000. Defaults to 20000."),
+        ], readOnly: true, destructive: false, idempotent: true, openWorld: false)
+    static let handleDialog = Self(
+        name: "handle_dialog", title: "Answer a page's dialog",
+        description:
+            "Answers the alert, confirm or prompt the page in a tab shows: accept it, with text for a prompt, or dismiss it. Never a question about leaving the page, which the person answers.",
+        arguments: [
+            .string("tab", "The tab's id, from list_tabs or open_tab."),
+            .boolean("accept", "Accept the dialog, or dismiss it.", required: true),
+            .string("text", "What to enter in a prompt.", required: false),
+        ], readOnly: false, destructive: false, idempotent: false, openWorld: false)
     static let openWindow = Self(
         name: "open_window", title: "Open a window",
         description:

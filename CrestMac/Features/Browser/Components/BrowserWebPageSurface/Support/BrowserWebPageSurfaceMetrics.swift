@@ -44,4 +44,16 @@ enum BrowserWebPageSurfaceMetrics {
     static let feedbackShadowRadius: CGFloat = 14
     static let feedbackShadowY: CGFloat = 6
     static let feedbackTopPadding = CrestSpacing.medium
+    /// The agent's pointer: its arrow, the tag beside it, the ripple of a
+    /// press, how it glides between points and how long it stays once the
+    /// agent pauses.
+    static let agentPointerSize: CGFloat = 20
+    static let agentPointerTagOffset = CGSize(width: 16, height: 18)
+    static let agentPointerTagHorizontalPadding: CGFloat = 8
+    static let agentPointerTagVerticalPadding: CGFloat = 3
+    static let agentPointerRippleSize: CGFloat = 34
+    static let agentPointerGlide = 0.35
+    static let agentPointerRipple = 0.45
+    static let agentPointerLinger: Duration = .seconds(4)
+    static let agentPointerZIndex: Double = 15
 }

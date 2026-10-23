@@ -168,7 +168,6 @@ the live status for each issue.
 - [ ] [Keep a Quick Window from another app clear of a new tab's keyboard on iPhone](https://github.com/pauljoda/Crest/issues/563)
 - [ ] [Say so when a link from another app needs a locked Space](https://github.com/pauljoda/Crest/issues/564)
 - [ ] [feature: Space switcher shows all Spaces at normal sidebar width](https://github.com/pauljoda/Crest/issues/588)
-- [ ] [Show what coding agents do in Crest and stop them all at once](https://github.com/pauljoda/Crest/issues/609)
 
 #### Completed
 
@@ -210,6 +209,7 @@ the live status for each issue.
 - [x] [Keep the Quick Window card clear of the top of the screen only once on iPhone](https://github.com/pauljoda/Crest/issues/558) — [`30f93252`](https://github.com/pauljoda/Crest/commit/30f9325290bf1296a1b826b3aba4234251b87826)
 - [x] [Let the iPhone Duo sidebar's list run into the bottom corner](https://github.com/pauljoda/Crest/issues/560) — [`d1082130`](https://github.com/pauljoda/Crest/commit/d1082130937c86fca1b15e180f8885cb9e2868cd)
 - [x] [Update the Chromium engine to 155.0.8059.84 and distrust the compromised eMudhra CAs](https://github.com/pauljoda/Crest/issues/572) — [`d8b18cd1`](https://github.com/pauljoda/Crest/commit/d8b18cd190ea196db650fdb01888f11c0fe55cab)
+- [x] [Show what coding agents do in Crest and stop them all at once](https://github.com/pauljoda/Crest/issues/609) — [`db8c4e0e`](https://github.com/pauljoda/Crest/commit/db8c4e0ede11456a8b010dc536f318f7f6399b73)
 
 <!-- crest-roadmap-sync:end -->
 

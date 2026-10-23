@@ -27,6 +27,8 @@ struct BrowserAgentTool {
     static let listNetworkRequests = Self(.listNetworkRequests, BrowserMacAgents.listNetworkRequests)
     static let getNetworkRequest = Self(.getNetworkRequest, BrowserMacAgents.getNetworkRequest)
     static let evaluateScript = Self(.evaluateScript, BrowserMacAgents.evaluateScript)
+    static let readPageText = Self(.readPageText, BrowserMacAgents.readPageText)
+    static let handleDialog = Self(.handleDialog, BrowserMacAgents.handleDialog)
     static let searchHistory = Self(.searchHistory, BrowserMacAgents.searchHistory)
     static let deleteHistory = Self(.deleteHistory, BrowserMacAgents.deleteHistory)
     static let listSearchProviders = Self(.listSearchProviders, BrowserMacAgents.listSearchProviders)
@@ -38,9 +40,8 @@ struct BrowserAgentTool {
     static let all: [Self] = [
         identify, listSpaces, listTabs, openTab, navigate, showTab, closeTab, takeSnapshot, screenshot, click, hover,
         fill, typeText, pressKey, scroll, waitFor, listConsoleMessages, listNetworkRequests, getNetworkRequest,
-        evaluateScript, openPrivateWindow, searchHistory, deleteHistory, listSearchProviders, openWindow,
-        openBlankWindow,
-        openQuickWindow,
+        evaluateScript, readPageText, handleDialog, openPrivateWindow, searchHistory, deleteHistory,
+        listSearchProviders, openWindow, openBlankWindow, openQuickWindow,
     ]
 
     // MARK: - Variables

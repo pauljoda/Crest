@@ -116,15 +116,10 @@ extension BrowserMacAgents {
         guard space.history.entries.contains(where: { $0.url == address }) else {
             return .data(HistoryDeletionReceipt(space: space.id, removed: 0))
         }
-        // The question names the agent as the person allowed it, never as it
-        // introduced itself.
-        let state = core.state
-        guard let session = state.agentSessions.first(where: { $0.sessionID == call.sessionID }),
-            let agent = state.agentPreferences.agents.first(where: { $0.identity == session.identity })
-        else { throw .rejected(.unknownAgentSession(UnknownAgentSession(sessionID: call.sessionID))) }
+        let agentName = try allowedName(of: try connectedSession(call))
         let spaceName = try reach(call).spaces.first { $0.spaceID == space.id }?.name ?? ""
         try await approvals.approve(
-            BrowserAgentHistoryDeletion(agentName: agent.name, address: address, spaceName: spaceName),
+            BrowserAgentHistoryDeletion(agentName: agentName, address: address, spaceName: spaceName),
             for: ObjectIdentifier(call.link))
         // The person may lock the Space, or stop allowing it, while asked.
         let current = try resolveSpace(deletion.space, call)
@@ -135,7 +130,9 @@ extension BrowserMacAgents {
         } catch {
             throw .rejected(error)
         }
-        return .data(HistoryDeletionReceipt(space: current.id, removed: before - current.history.entries.count))
+        let removed = before - current.history.entries.count
+        if removed > 0 { note(.deletedHistory, address, call) }
+        return .data(HistoryDeletionReceipt(space: current.id, removed: removed))
     }
 
     // MARK: - Actions - Spaces

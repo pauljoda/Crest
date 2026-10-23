@@ -14,6 +14,11 @@ struct BrowserMacApplicationAction: Hashable {
     static let settings = BrowserMacApplicationAction(
         name: "settings", title: "Settings…", symbol: "gearshape", keyEquivalent: ","
     ) { $0.openSettings() }
+    /// Ends every agent's connection and keeps agents out of the tabs they
+    /// used until Crest quits, while any agent is connected.
+    static let stopAllAgents = BrowserMacApplicationAction(
+        name: "stop-all-agents", title: "Stop All Agents", symbol: "stop.circle",
+        isEnabled: { $0.hasConnectedAgents }, perform: { $0.stopAllAgents() })
     static let gettingStarted = BrowserMacApplicationAction(
         name: "getting-started", title: "Getting Started with Crest"
     ) { $0.openGettingStarted() }
@@ -23,7 +28,9 @@ struct BrowserMacApplicationAction: Hashable {
         name: "translate-page", title: "Translate Page", symbol: "translate", offeredWith: .toggleTranslationToolbar,
         isEnabled: { $0.pageActions?.canPerform(.toggleTranslationToolbar) == true },
         perform: { $0.pageActions?.translatePage() })
-    static let all: [BrowserMacApplicationAction] = [about, updates, settings, gettingStarted, translatePage]
+    static let all: [BrowserMacApplicationAction] = [
+        about, updates, settings, stopAllAgents, gettingStarted, translatePage,
+    ]
 
     // MARK: - Variables
 

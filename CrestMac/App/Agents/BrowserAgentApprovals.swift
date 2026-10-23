@@ -16,7 +16,7 @@ final class BrowserAgentApprovals {
         let identity: AgentIdentity?
         let dismissal: BrowserPromptDismissal
         var waiters: Set<ObjectIdentifier>
-        var answer: Task<Bool, Never>?
+        var answer: Task<BrowserAgentAnswer, Never>?
 
         init(identity: AgentIdentity?, dismissal: BrowserPromptDismissal, waiter: ObjectIdentifier) {
             self.identity = identity
@@ -52,13 +52,13 @@ final class BrowserAgentApprovals {
     {
         if let open = asking.first(where: { $0.identity == agent.identity }), let answer = open.answer {
             open.waiters.insert(waiter)
-            guard await answer.value else { throw .declined }
+            guard await answer.value.allows else { throw .declined }
             return
         }
-        let allowed = try await ask(about: agent.identity, for: waiter) { [dialogs] dismissal in
-            await dialogs.approveAgent(agent, client: client, dismissal: dismissal)
+        let answer = try await ask(about: agent.identity, for: waiter) { [dialogs] dismissal in
+            await dialogs.approveAgent(agent, client: client, dismissal: dismissal) ? .once : .declined
         }
-        guard allowed else { throw .declined }
+        guard answer.allows else { throw .declined }
     }
 
     /// Returns once the person let the connection `waiter` make `deletion`.
@@ -67,34 +67,47 @@ final class BrowserAgentApprovals {
     func approve(_ deletion: BrowserAgentHistoryDeletion, for waiter: ObjectIdentifier)
         async throws(BrowserAgentFailure)
     {
-        let allowed = try await ask(about: nil, for: waiter) { [dialogs] dismissal in
-            await dialogs.approveHistoryDeletion(deletion, dismissal: dismissal)
+        let answer = try await ask(about: nil, for: waiter) { [dialogs] dismissal in
+            await dialogs.approveHistoryDeletion(deletion, dismissal: dismissal) ? .once : .declined
         }
-        guard allowed else { throw .historyKept }
+        guard answer.allows else { throw .historyKept }
+    }
+
+    /// Returns how the person let the connection `waiter` make `opening`.
+    /// Throws `windowDeclined` when they did not, and `busy` when too many
+    /// questions already wait.
+    func approve(_ opening: BrowserAgentWindowOpening, for waiter: ObjectIdentifier)
+        async throws(BrowserAgentFailure) -> BrowserAgentAnswer
+    {
+        let answer = try await ask(about: nil, for: waiter) { [dialogs] dismissal in
+            await dialogs.approveWindow(opening, dismissal: dismissal)
+        }
+        guard answer.allows else { throw .windowDeclined }
+        return answer
     }
 
     /// Asks `question` once the questions before it are answered, and answers
-    /// false when it closes unanswered.
+    /// declined when it closes unanswered.
     private func ask(
         about identity: AgentIdentity?, for waiter: ObjectIdentifier,
-        _ question: @escaping @MainActor (BrowserPromptDismissal) async -> Bool
-    ) async throws(BrowserAgentFailure) -> Bool {
+        _ question: @escaping @MainActor (BrowserPromptDismissal) async -> BrowserAgentAnswer
+    ) async throws(BrowserAgentFailure) -> BrowserAgentAnswer {
         guard asking.count < Self.maximumWaiting else { throw .busy }
         let dismissal = BrowserPromptDismissal()
         let open = Asking(identity: identity, dismissal: dismissal, waiter: waiter)
         let earlier = last
         let answer = Task {
             await earlier?.value
-            guard !dismissal.isDismissed else { return false }
-            let allowed = await question(dismissal)
-            return allowed && !dismissal.isDismissed
+            guard !dismissal.isDismissed else { return BrowserAgentAnswer.declined }
+            let answer = await question(dismissal)
+            return dismissal.isDismissed ? .declined : answer
         }
         open.answer = answer
         asking.append(open)
         last = Task { _ = await answer.value }
-        let allowed = await answer.value
+        let answered = await answer.value
         asking.removeAll { $0 === open }
-        return allowed
+        return answered
     }
 
     /// Stops the connection `waiter` waiting, closing unanswered any question

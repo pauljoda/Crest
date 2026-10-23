@@ -834,6 +834,12 @@ struct AdoptWindowRecords: Intent, WindowIntent, Equatable, Sendable {
     let records: Data?
 }
 
+struct AgentActivity: Equatable, Sendable {
+    let kind: AgentActivityKind
+    let subject: String
+    let at: Date
+}
+
 struct AgentIdentity: Equatable, Sendable {
     static let maximumField: Int = 255
     static let maximumPath: Int = 1024
@@ -881,6 +887,8 @@ struct AgentSessionState: Equatable, Sendable {
     let name: String
     let color: BrandColor?
     let tabIDs: [UUID]
+    let opensWindows: Bool
+    let activity: [AgentActivity]
 }
 
 struct AgentSessionsChanged: CoreChange, Equatable, Sendable {
@@ -957,6 +965,10 @@ struct AgentsUnavailable: Equatable, Sendable {
 struct AllowAgentSpace: Intent, AgentIntent, Equatable, Sendable {
     let spaceID: UUID
     let allowed: Bool
+}
+
+struct AllowAgentWindows: Intent, AgentIntent, Equatable, Sendable {
+    let sessionID: UUID
 }
 
 struct AlreadyInSpace: Equatable, Sendable {
@@ -3941,6 +3953,12 @@ struct NotPrivateWorkspace: Equatable, Sendable {
     let workspaceID: UUID
 }
 
+struct NoteAgentActivity: Intent, AgentIntent, Equatable, Sendable {
+    let sessionID: UUID
+    let kind: AgentActivityKind
+    let subject: String
+}
+
 struct NotificationDisplayCheck: Query, Equatable, Sendable {
     typealias Answer = NotificationDisplayVerdict
 
@@ -6407,6 +6425,9 @@ struct StopAgentTab: Intent, AgentIntent, Equatable, Sendable {
     let tabID: UUID
 }
 
+struct StopAllAgents: Intent, AgentIntent, Equatable, Sendable {
+}
+
 struct StopLoading: PageRequest, Equatable, Sendable {
     typealias Answer = Bool
 
@@ -7393,6 +7414,97 @@ struct AdjacentDirection: Hashable, Sendable {
         init(name: String, step: Int) {
             self.name = name
             self.step = step
+        }
+    }
+}
+
+/// The members of the core's `AgentActivityKind`. A member's wire tag is its index in `all`.
+struct AgentActivityKind: Hashable, Sendable {
+    let tag: Int
+    var name: String { facts.name }
+    var title: LocalizedStringResource { facts.title }
+    var symbol: String { facts.symbol }
+    private let facts: Facts
+
+    private init(tag: Int, name: String, title: LocalizedStringResource, symbol: String) {
+        self.tag = tag
+        facts = Facts(name: name, title: title, symbol: symbol)
+    }
+
+    static let openedTab = AgentActivityKind(
+        tag: 0,
+        name: "openedTab",
+        title: LocalizedStringResource("Opened a tab"),
+        symbol: "plus.square"
+    )
+    static let loadedPage = AgentActivityKind(
+        tag: 1,
+        name: "loadedPage",
+        title: LocalizedStringResource("Loaded a page"),
+        symbol: "arrow.right.circle"
+    )
+    static let closedTab = AgentActivityKind(
+        tag: 2,
+        name: "closedTab",
+        title: LocalizedStringResource("Closed a tab"),
+        symbol: "xmark.square"
+    )
+    static let openedWindow = AgentActivityKind(
+        tag: 3,
+        name: "openedWindow",
+        title: LocalizedStringResource("Opened a window"),
+        symbol: "macwindow.badge.plus"
+    )
+    static let openedPrivateWindow = AgentActivityKind(
+        tag: 4,
+        name: "openedPrivateWindow",
+        title: LocalizedStringResource("Opened a private window"),
+        symbol: "eyeglasses"
+    )
+    static let deletedHistory = AgentActivityKind(
+        tag: 5,
+        name: "deletedHistory",
+        title: LocalizedStringResource("Deleted history"),
+        symbol: "clock.arrow.trianglehead.counterclockwise.rotate.90"
+    )
+    static let ranScript = AgentActivityKind(
+        tag: 6,
+        name: "ranScript",
+        title: LocalizedStringResource("Ran a script"),
+        symbol: "curlybraces"
+    )
+
+    static let all: [AgentActivityKind] = [
+        openedTab,
+        loadedPage,
+        closedTab,
+        openedWindow,
+        openedPrivateWindow,
+        deletedHistory,
+        ranScript
+    ]
+
+    static func named(_ name: String?) -> AgentActivityKind? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: AgentActivityKind, rhs: AgentActivityKind) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+
+    private final class Facts: Sendable {
+        let name: String
+        let title: LocalizedStringResource
+        let symbol: String
+
+        init(name: String, title: LocalizedStringResource, symbol: String) {
+            self.name = name
+            self.title = title
+            self.symbol = symbol
         }
     }
 }
