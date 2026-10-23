@@ -1,36 +1,25 @@
 import SwiftUI
 
 struct MobileBrowserSidebarTopChrome: View {
+    @Environment(\.mobileBrowserControlPlacement) private var controlPlacement
     let configuration: MobileBrowserSidebarContentConfiguration
 
     var body: some View {
         if configuration.utilityPresentationStyle == .inline {
-            BrowserSidebarNavigationControls(
-                port: BrowserSidebarNavigationPort(
-                    pageActions: selectedPageActions,
-                    showHistory: configuration.context.chromeActions
-                        .presentHistory
-                ),
-                capabilities: configuration.context.capabilities,
-                hidesUnavailableForwardControl: true
-            ) {
-                if let pageActions = selectedPageActions,
-                    pageActions.isAvailable
-                {
-                    MobilePageActionsMenu(
-                        browser: configuration.context.browser,
-                        pages: pageActions,
-                        systemImage: "ellipsis.circle"
-                    )
-                    .font(.system(size: 17, weight: .medium))
-                } else {
-                    Button(
-                        "Page Actions",
-                        systemImage: "ellipsis.circle",
-                        action: {}
-                    )
-                    .disabled(true)
-                    .font(.system(size: 17, weight: .medium))
+            if controlPlacement.movesControlsToToolbar {
+                // The strip's controls are toolbar items; the address field
+                // leads, held off the sidebar's top edge as it is off its sides.
+                Color.clear
+                    .frame(height: BrowserSidebarMetrics.layerInset)
+                    .accessibilityHidden(true)
+                    .toolbar { navigationToolbarItems }
+            } else {
+                BrowserSidebarNavigationControls(
+                    port: navigationPort,
+                    capabilities: configuration.context.capabilities,
+                    hidesUnavailableForwardControl: true
+                ) {
+                    pageActionsMenu()
                 }
             }
 
@@ -83,6 +72,70 @@ struct MobileBrowserSidebarTopChrome: View {
             .padding(.top, 8)
             .padding(.bottom, 4)
         }
+    }
+
+    /// The strip's controls as items in the side toolbar's top group, in the
+    /// strip's order.
+    @ToolbarContentBuilder
+    private var navigationToolbarItems: some ToolbarContent {
+        ToolbarItemGroup(placement: .topBarTrailing) {
+            MobileHistoryToolbarControl(direction: .back, port: navigationPort)
+            if navigationPort.canGoForward() {
+                MobileHistoryToolbarControl(direction: .forward, port: navigationPort)
+            }
+            // A system button, which the bar can stand on end; the strip's
+            // reload control is a custom view the bar keeps horizontal.
+            Button(
+                navigationPort.isLoading() ? "Stop" : "Reload",
+                systemImage: navigationPort.isLoading() ? "xmark" : "arrow.clockwise",
+                action: navigationPort.reloadOrStop
+            )
+            .disabled(!navigationPort.hasActivePage())
+            .contextMenu {
+                if navigationPort.activeURL()?.isLocalDevelopmentAddress == true {
+                    Button(
+                        "Reload (Ignore Cache)",
+                        systemImage: "arrow.trianglehead.2.clockwise.rotate.90",
+                        action: navigationPort.reloadFromOrigin
+                    )
+                    Button("Clear Cookies, Storage, and Reload", systemImage: "trash") {
+                        Task { await navigationPort.clearSiteDataAndReload() }
+                    }
+                }
+            }
+            .accessibilityIdentifier("reload-control")
+            pageActionsMenu(isToolbarItem: true)
+        }
+    }
+
+    @ViewBuilder
+    private func pageActionsMenu(isToolbarItem: Bool = false) -> some View {
+        if let pageActions = selectedPageActions,
+            pageActions.isAvailable
+        {
+            MobilePageActionsMenu(
+                browser: configuration.context.browser,
+                pages: pageActions,
+                systemImage: "ellipsis.circle",
+                isToolbarItem: isToolbarItem
+            )
+            .font(.system(size: 17, weight: .medium))
+        } else {
+            Button(
+                "Page Actions",
+                systemImage: "ellipsis.circle",
+                action: {}
+            )
+            .disabled(true)
+            .font(.system(size: 17, weight: .medium))
+        }
+    }
+
+    private var navigationPort: BrowserSidebarNavigationPort {
+        BrowserSidebarNavigationPort(
+            pageActions: selectedPageActions,
+            showHistory: configuration.context.chromeActions.presentHistory
+        )
     }
 
     /// `hasResidentPage` stays off: the compact field has no live-site controls

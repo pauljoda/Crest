@@ -3,10 +3,16 @@ import Foundation
 /// Context-menu destinations use the same tab-opening and access rules as the sidebar.
 @MainActor
 struct BrowserLinkDestinationHost {
+    // MARK: - Static Variables
+
+    static let unavailable = BrowserLinkDestinationHost()
+
+    // MARK: - Variables
+
     weak var browser: BrowserStore?
     weak var spaceAccess: BrowserSpaceAccessController?
 
-    static let unavailable = BrowserLinkDestinationHost()
+    // MARK: - Actions - Link Destinations
 
     func canOpenLink(from source: BrowserTabRuntimeAssignment) -> Bool {
         guard let browser, let spaceAccess,
@@ -48,7 +54,13 @@ struct BrowserLinkDestinationHost {
             canOpenLink(from: source), let browser, let spaceAccess,
             browser.unlockedSpace(matching: destination, accessController: spaceAccess) != nil
         else { return false }
-        return browser.openNewTab(url: url, matching: destination) != nil
+        guard let tabID = browser.openNewTab(url: url, matching: destination) else { return false }
+        if destination.spaceID != source.spaceID {
+            // Space entry must show this explicit opening, even before its page is resident.
+            browser.pendingMovedTabActivation = BrowserTabRuntimeAssignment(
+                tabID: tabID, spaceID: destination.spaceID, profileID: destination.profileID)
+        }
+        return true
     }
 }
 

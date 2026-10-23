@@ -70,4 +70,9 @@ public sealed record EngineState(EngineKind Kind, IReadOnlyList<EngineCapability
 /// only, never in a saved or synced file.
 public sealed record PageRestoreState(string Url, byte[] State);
 
+/// One entry of a page's back and forward history: the identity its engine
+/// gave it when it committed, which the entry keeps however the page moves
+/// through its history, its address and the title it had.
+public sealed record PageHistoryEntry(Guid Id, string Url, string Title);
+
 #endregion

@@ -4,8 +4,9 @@ import SwiftUI
 /// held clear at either edge.
 ///
 /// The picker gets an explicit viewport from the actual strip width and the
-/// larger occupied utility side. Its segments keep their native size and
-/// identity, so overflow scrolls and the active Space can always be revealed.
+/// larger occupied utility side. Its segments keep their identity at the size
+/// the person's icon sizing picks for that viewport, so overflow scrolls and
+/// the active Space can always be revealed.
 ///
 /// The sidebar toggle keeps to the window's edge and the lists to the page
 /// side, where they fan out, whichever side the sidebar is docked on.
@@ -16,6 +17,8 @@ struct BrowserSpaceSwitcherCompactStrip: View {
     let selectedSpaceID: UUID
     let reorderState: BrowserSidebarReorderState
     let metrics: BrowserSpacePickerMetrics
+    let iconSizing: BrowserSpaceIconSizing
+    let chosenIconScale: Double
     let selectSpace: (UUID) -> Void
     let accessories: BrowserSpaceSwitcherAccessories
     let downloads: BrowserSpaceSwitcherDownloads
@@ -30,11 +33,20 @@ struct BrowserSpaceSwitcherCompactStrip: View {
 
     var body: some View {
         GeometryReader { geometry in
+            let scale = fittedScale(
+                in: BrowserSpaceSwitcherLayout.compactPickerViewportWidth(
+                    availableWidth: geometry.size.width,
+                    leadingUtilityWidth: utilityWidth(at: .leading),
+                    trailingUtilityWidth: utilityWidth(at: .trailing)
+                )
+            )
+            let style = CrestSpaceIconPickerStyle.compact.scaled(by: scale)
             let allocation = BrowserSpaceSwitcherLayout.compactStripAllocation(
                 availableWidth: geometry.size.width,
                 spaceCount: spaces.count,
                 leadingUtilityWidth: utilityWidth(at: .leading),
-                trailingUtilityWidth: utilityWidth(at: .trailing)
+                trailingUtilityWidth: utilityWidth(at: .trailing),
+                style: style
             )
 
             ZStack {
@@ -60,16 +72,28 @@ struct BrowserSpaceSwitcherCompactStrip: View {
                     spaces: spaces,
                     selectedSpaceID: selectedSpaceID,
                     reorderState: reorderState,
-                    metrics: metrics,
+                    metrics: metrics.scaled(by: scale),
                     selectSpace: selectSpace,
-                    allocation: allocation
+                    allocation: allocation,
+                    style: style
                 )
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .frame(height: BrowserSpaceSwitcherLayout.compactStripHeight)
+        .frame(
+            height: BrowserSpaceSwitcherLayout.compactStripHeight(
+                for: .compact.scaled(by: iconSizing.largestScale(chosen: chosenIconScale))
+            )
+        )
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Spaces")
+    }
+
+    // MARK: - Actions - Sizing
+
+    /// The scale these Spaces are drawn at in a picker `width` wide.
+    private func fittedScale(in width: CGFloat) -> CGFloat {
+        iconSizing.scale(chosen: chosenIconScale, spaceCount: spaces.count, style: .compact, width: width)
     }
 
     // MARK: - Actions - Accessories

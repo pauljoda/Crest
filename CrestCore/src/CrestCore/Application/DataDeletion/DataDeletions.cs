@@ -37,17 +37,12 @@ internal sealed class DataDeletions(Engines engines, IIdSource ids) {
     private readonly Dictionary<Guid, Deletion> byErasure = [];
     /// The profiles whose data this run erased in full.
     private readonly HashSet<Guid> erasedProfiles = [];
-    /// The profiles whose data this run last failed to erase in full.
-    private readonly HashSet<Guid> failedProfiles = [];
 
     /// Each erasure an engine has yet to answer, with its deletion.
     internal Dictionary<Guid, Deletion> ByErasure => byErasure;
 
     /// The profiles whose data this run erased in full.
     internal HashSet<Guid> ErasedProfiles => erasedProfiles;
-
-    /// The profiles whose data this run last failed to erase in full.
-    internal HashSet<Guid> FailedProfiles => failedProfiles;
 
     #endregion
 
@@ -73,7 +68,7 @@ internal sealed class DataDeletions(Engines engines, IIdSource ids) {
     #region Actions - Reports
 
     internal void Finish(Deletion deletion, ChangeFeed changes) {
-        if (deletion.ProfileId is { } profile) (deletion.Erased ? erasedProfiles : failedProfiles).Add(profile);
+        if (deletion.Erased && deletion.ProfileId is { } profile) erasedProfiles.Add(profile);
         changes.Publish(new DataDeleted(deletion.RequestId, deletion.Erased));
     }
 
@@ -84,10 +79,10 @@ internal sealed class DataDeletions(Engines engines, IIdSource ids) {
     /// Whether this run erased profile `profileId`'s data on every engine.
     public bool Erased(Guid profileId) => erasedProfiles.Contains(profileId);
 
-    /// Whether this run's last erasure of profile `profileId`'s data has
-    /// ended, erased or not. Its Space's deletion no longer waits on the
-    /// engines then: it finishes, or waits to be tried again.
-    public bool Settled(Guid profileId) => erasedProfiles.Contains(profileId) || failedProfiles.Contains(profileId);
+    /// Whether the engines are erasing profile `profileId`'s data now, which
+    /// a quit would interrupt. A Space deletion that is not erasing waits for
+    /// nothing: it finishes, or a later attempt or launch erases it again.
+    public bool Erasing(Guid profileId) => byErasure.Values.Any(deletion => deletion.ProfileId == profileId);
 
     #endregion
 }

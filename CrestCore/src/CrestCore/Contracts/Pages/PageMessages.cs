@@ -9,6 +9,13 @@ public sealed record SavedAddressReturn(bool ChangesPage);
 /// What a page surface shows.
 public sealed record PagePresented(PagePresentation Presentation);
 
+/// The entries a page can go back and forward to, nearest first.
+public sealed record PageHistoryList(IReadOnlyList<PageHistoryEntry> Back, IReadOnlyList<PageHistoryEntry> Forward);
+
+/// A page's back and forward history as its tab's archive keeps it, opaque
+/// to the platform, or null for none.
+public sealed record PageHistoryArchive(byte[]? Archive);
+
 #endregion
 
 #region Changes

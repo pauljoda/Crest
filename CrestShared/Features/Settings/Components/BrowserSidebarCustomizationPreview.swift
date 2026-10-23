@@ -17,6 +17,7 @@ struct BrowserSidebarCustomizationPreview: View {
     /// sidebar's contents alone.
     var showsBackground = true
     @Environment(\.browserInteractionCapabilities) private var hostCapabilities
+    @Environment(\.colorScheme) private var colorScheme
     @State private var sample = BrowserAppearancePreviewState()
 
     private var capabilities: BrowserInteractionCapabilities {
@@ -51,7 +52,7 @@ struct BrowserSidebarCustomizationPreview: View {
         .frame(maxWidth: BrowserChromeLayout.sidebarMaximumWidth)
         .background { background(for: branding) }
         .clipShape(.rect(cornerRadius: showsBackground ? 14 : 0))
-        .environment(\.colorScheme, branding.foregroundTone.colorScheme)
+        .environment(\.colorScheme, branding.colorScheme(over: colorScheme))
         .environment(\.sidebarSpacePresentation, context.map { presentation(of: $0) })
         .environment(\.browserInteractionCapabilities, capabilities)
         .environment(sample.sidebarInteraction)

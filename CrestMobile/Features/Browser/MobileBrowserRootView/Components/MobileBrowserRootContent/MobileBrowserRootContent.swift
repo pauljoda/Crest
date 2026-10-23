@@ -24,6 +24,8 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
     @State var storedRegularSidebarWidth: Double
     @State var availableRootSize = CGSize.zero
     @State var keyboardEndFrame = CGRect.null
+    /// The screen the keyboard last reported for, in its own coordinates.
+    @State var keyboardScreenBounds = CGRect.null
     @Environment(\.browserChromeAppearance) var chromeAppearance
     @AppStorage(
         MobileBrowserRootPreferences.allowsFloatingSidebarKey, store: BrowserChromeAppearancePreference.defaults)
@@ -85,6 +87,7 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
                 completedNavigationCount:
                     model.selectedPage?.completedNavigationCount ?? 0,
                 hasSelectedSpace: browser.shownSpace != nil,
+                selectedPage: model.selectedPage,
                 showSidebar: showRegularSidebar,
                 handlePageInteraction: navigation.handleRegularPageInteraction,
                 commitSidebarWidth: commitRegularSidebarWidth,
@@ -186,8 +189,7 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
                         hasSelectedPage: model.selectedPage != nil,
                         pageThemeColor: model.selectedPage?.themeColor,
                         underPageBackgroundColor:
-                            model.selectedPage?.webView
-                            .underPageBackgroundColor,
+                            model.selectedPage?.underPageColor,
                         space: browser.shownSpace
                     ),
                     detail: MobileBrowserDetailSurface(
@@ -217,8 +219,7 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
                             navigation.hideCompactToolbar,
                         showCompactToolbar:
                             navigation.showCompactToolbar,
-                        handleToolbarSwipe: handleToolbarSwipe,
-                        selectSplitCard: selectSplitCard,
+                        showSwipedTab: showSwipedTab,
                         compactTransitionEnded: finishCompactTransition,
                         transientBrowsing: transientBrowsing,
                         didPromoteTransientPage: model.activateSelectedTab,
@@ -316,6 +317,9 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
                         \.browserSettingsUsesLiveSidebar,
                         navigation.regularSidebarIsDocked && layout.reservesSidebarWidth)
                 )
+                .onChange(of: layout.splitsPagesAtFold, initial: true) { _, splits in
+                    navigation.adaptToFoldedSplit(splits)
+                }
                 .overlay {
                     MobileRegularUtilityFanLayer(
                         layout: layout,
@@ -408,7 +412,7 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
         }
         .ignoresSafeArea(
             .keyboard,
-            edges: ignoresFloatingKeyboardSafeArea ? .bottom : []
+            edges: ignoresKeyboardSafeArea ? .bottom : []
         )
         .onReceive(
             NotificationCenter.default.publisher(
@@ -418,6 +422,7 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
             keyboardEndFrame =
                 notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey]
                 as? CGRect ?? .null
+            keyboardScreenBounds = (notification.object as? UIScreen)?.bounds ?? .null
         }
         .onReceive(
             NotificationCenter.default.publisher(

@@ -71,6 +71,7 @@ struct BrowserSplitColumnsView<Member: Identifiable, Content: View, Panel: View>
 
     @Environment(\.browserChromeAppearance) private var appearance
     @Environment(\.browserSplitUsesBorderlessFrame) private var borderless
+    @Environment(\.browserSplitInterCardGap) private var interCardGap
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.layoutDirection) private var layoutDirection
     @State private var panelWidthTransaction = BrowserSplitPanelWidthTransaction()
@@ -110,7 +111,7 @@ struct BrowserSplitColumnsView<Member: Identifiable, Content: View, Panel: View>
     }
 
     private func cardRow(widths: [CGFloat]) -> some View {
-        HStack(spacing: BrowserSplitLayoutMetrics.interCardGap) {
+        HStack(spacing: interCardGap) {
             ForEach(Array(slots.enumerated()), id: \.element.id) { column in
                 columnSlot(
                     column.element,
@@ -223,7 +224,8 @@ struct BrowserSplitColumnsView<Member: Identifiable, Content: View, Panel: View>
                 x: layoutDirection.leadingOffset(
                     BrowserSplitColumnLayout.dividerLeadingDistance(
                         after: index,
-                        cardWidths: cardWidths
+                        cardWidths: cardWidths,
+                        gap: interCardGap
                     ))
             )
         }
@@ -260,7 +262,7 @@ struct BrowserSplitColumnsView<Member: Identifiable, Content: View, Panel: View>
         .offset(
             x: layoutDirection.leadingOffset(
                 BrowserSplitColumnLayout.dividerLeadingDistance(
-                    after: members.count - 1, cardWidths: cardWidths
+                    after: members.count - 1, cardWidths: cardWidths, gap: interCardGap
                 )))
     }
 
@@ -308,7 +310,8 @@ struct BrowserSplitColumnsView<Member: Identifiable, Content: View, Panel: View>
     private func slotWidths(containerWidth: CGFloat) -> [CGFloat] {
         let widths = BrowserSplitColumnLayout.widths(
             containerWidth: memberContainerWidth(containerWidth: containerWidth),
-            fractions: slotFractions
+            fractions: slotFractions,
+            gap: interCardGap
         )
         guard panel != nil else { return widths }
         return widths + [resolvedPanelWidth(containerWidth: containerWidth)]
@@ -318,7 +321,8 @@ struct BrowserSplitColumnsView<Member: Identifiable, Content: View, Panel: View>
         guard panel != nil else { return containerWidth }
         return BrowserSplitPanelLayout.memberContainerWidth(
             containerWidth: containerWidth,
-            panelWidth: resolvedPanelWidth(containerWidth: containerWidth)
+            panelWidth: resolvedPanelWidth(containerWidth: containerWidth),
+            gap: interCardGap
         )
     }
 
@@ -327,7 +331,8 @@ struct BrowserSplitColumnsView<Member: Identifiable, Content: View, Panel: View>
             requestedWidth: panelWidthTransaction.width ?? panel?.requestedWidth
                 ?? BrowserSplitPanelLayoutMetrics.defaultWidth,
             containerWidth: containerWidth,
-            memberCount: members.count + (resolvedPlaceholderIndex == nil ? 0 : 1)
+            memberCount: members.count + (resolvedPlaceholderIndex == nil ? 0 : 1),
+            gap: interCardGap
         )
     }
 
@@ -394,4 +399,7 @@ extension BrowserSplitColumnsView where Panel == EmptyView {
 // Default preserves the mobile and embedded split presentation.
 extension EnvironmentValues {
     @Entry var browserSplitUsesBorderlessFrame = false
+    /// The space between cards: wider where a display's fold runs between
+    /// them, so neither page reaches into the crease.
+    @Entry var browserSplitInterCardGap = BrowserSplitLayoutMetrics.interCardGap
 }

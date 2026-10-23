@@ -312,8 +312,8 @@ extension BrowserPageOwner {
 
     func goBack() { activePage?.goBack() }
     func goForward() { activePage?.goForward() }
-    func goBack(to item: BrowserNavigationHistoryItem) { activePage?.goBack(toDepth: item.depth) }
-    func goForward(to item: BrowserNavigationHistoryItem) { activePage?.goForward(toDepth: item.depth) }
+    func goBack(to item: BrowserNavigationHistoryItem) { activePage?.goToHistory(item) }
+    func goForward(to item: BrowserNavigationHistoryItem) { activePage?.goToHistory(item) }
 
     func stopLoading() {
         activePage?.stopLoading()

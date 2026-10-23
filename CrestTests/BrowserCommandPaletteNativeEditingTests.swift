@@ -138,14 +138,63 @@ final class BrowserCommandPaletteNativeEditingTests: XCTestCase {
                 fixture.field, textView: editor, doCommandBy: #selector(NSResponder.moveRight(_:))))
     }
 
-    private func makeEditor() -> (
+    /// Control-A and Control-E send Option-Up's and Option-Down's commands.
+    /// Only Option moves between result sections; Control keeps the line edges.
+    func testControlParagraphCommandsKeepLineEdgesAndOptionMovesSections() async throws {
+        let fixture = makeEditor(tabs: [
+            TabState.Seed(title: "Example", url: URL(string: "https://example.com/path"), placement: .current),
+            TabState.Seed(title: "Docs", url: URL(string: "https://docs.example.com/"), placement: .current),
+            TabState.Seed(
+                title: "Saved note", url: URL(string: "https://notes.example.com/saved"), placement: .saved),
+        ])
+        defer {
+            BrowserPlatformCommandPaletteField.dismantleNSView(fixture.field, coordinator: fixture.coordinator)
+            fixture.window.close()
+        }
+        let editor = try XCTUnwrap(fixture.field.currentEditor() as? NSTextView)
+        fixture.coordinator.controlTextDidBeginEditing(
+            Notification(name: NSControl.textDidBeginEditingNotification, object: fixture.field))
+        editor.insertText("exa", replacementRange: NSRange(location: 0, length: 0))
+        fixture.coordinator.editingChanged()
+        await fixture.model.waitForPendingResults()
+        XCTAssertNotNil(fixture.model.urlCompletion)
+        XCTAssertTrue(
+            fixture.coordinator.perform(
+                #selector(NSResponder.moveToEndOfParagraph(_:)), in: editor, modifiers: .control))
+        XCTAssertEqual(editor.string, "example.com")
+        XCTAssertNil(fixture.model.urlCompletion)
+
+        editor.insertText("docs", replacementRange: NSRange(location: 0, length: editor.string.utf16.count))
+        fixture.coordinator.editingChanged()
+        await fixture.model.waitForPendingResults()
+        XCTAssertGreaterThanOrEqual(fixture.model.groups.count, 2)
+        let start = fixture.model.selectedResultIndex
+        XCTAssertTrue(
+            fixture.coordinator.perform(
+                #selector(NSResponder.moveToEndOfParagraph(_:)), in: editor, modifiers: .option))
+        XCTAssertNotEqual(fixture.model.selectedResultIndex, start)
+        XCTAssertTrue(
+            fixture.coordinator.perform(
+                #selector(NSResponder.moveToBeginningOfParagraph(_:)), in: editor, modifiers: .option))
+        XCTAssertEqual(fixture.model.selectedResultIndex, start)
+        XCTAssertFalse(
+            fixture.coordinator.perform(
+                #selector(NSResponder.moveToBeginningOfParagraph(_:)), in: editor, modifiers: .control))
+        XCTAssertEqual(fixture.model.selectedResultIndex, start)
+    }
+
+    private func makeEditor(
+        tabs: [TabState.Seed] = [
+            TabState.Seed(title: "Example", url: URL(string: "https://example.com/path"), placement: .current)
+        ]
+    ) -> (
         window: NSWindow, field: NSTextField, coordinator: BrowserPlatformCommandPaletteField.Coordinator,
         model: BrowserCommandPaletteModel
     ) {
-        let tab = TabState.Seed(title: "Example", url: URL(string: "https://example.com/path"), placement: .current)
+        let tab = tabs[0]
         let space = SpaceState.Seed(
             name: "Test", symbol: "globe", accent: .indigo, folders: [],
-            tabs: [tab])
+            tabs: tabs)
         let browser = BrowserStore(
             seed: SessionState.Seed(spaces: [space]), showing: space.id, tabs: [space.id: tab.id])
         let model = BrowserCommandPaletteModel(

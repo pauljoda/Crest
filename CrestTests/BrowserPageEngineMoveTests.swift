@@ -43,7 +43,7 @@ final class BrowserPageEngineMoveTests: XCTestCase {
         XCTAssertTrue(pool.presentedPage(for: tab.id) === page)
         XCTAssertTrue(page.nativeView === movedView)
 
-        engines.run(.loadPage(LoadPage(pageID: corePage.id, url: "about:blank")), on: .webKit)
+        engines.run(.loadPage(LoadPage(pageID: corePage.id, url: "about:blank", entryID: nil)), on: .webKit)
         let deadline = ContinuousClock.now.advanced(by: .seconds(3))
         while movedView.url == nil, ContinuousClock.now < deadline {
             try await Task.sleep(for: .milliseconds(20))

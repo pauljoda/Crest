@@ -59,8 +59,14 @@ struct BrowserSidebarPresentation: Hashable, Sendable {
 
     /// The place a window's split-view column visibility and floating state
     /// put its sidebar.
-    init(columnVisibility: NavigationSplitViewVisibility, isFloatingSidebarPresented: Bool) {
-        guard columnVisibility == .detailOnly else {
+    init(
+        columnVisibility: NavigationSplitViewVisibility,
+        isFloatingSidebarPresented: Bool,
+        isPageFullscreen: Bool = false
+    ) {
+        // A page alone in full screen has no room beside it, so a docked
+        // sidebar can only float over it, and docks again once it ends.
+        guard columnVisibility == .detailOnly || isPageFullscreen else {
             self = .docked
             return
         }

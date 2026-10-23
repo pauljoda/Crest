@@ -13,6 +13,15 @@ enum BrowserDeveloperCaptureError: Error {
     case encodingFailed
 }
 
+/// Where the agent using a page's tab last acted on it, as the page shows the
+/// person: the point in the page's CSS pixels, and whether it pressed there.
+/// Each move is a new `revision`, so a second press at one point still shows.
+struct BrowserAgentPointer: Equatable, Sendable {
+    let point: PagePoint
+    let presses: Bool
+    let revision: Int
+}
+
 @Observable
 @MainActor
 final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
@@ -103,6 +112,13 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     var isContentBlockingActive: Bool { engineAdapter.isContentBlockingActive }
     var developerPanel: BrowserDeveloperPanel?
     private(set) var isRegionCapturePresented = false
+    /// Where the agent using the page's tab last acted, which the page shows
+    /// as the agent's pointer while the agent uses the tab.
+    private(set) var agentPointer: BrowserAgentPointer?
+    /// The page's alert, confirm, prompt or leave-page question waiting on an
+    /// answer while it shows, which an agent using the tab may read and, all
+    /// but a leave-page question, answer.
+    var scriptDialog: ScriptDialogAsked?
     private(set) var developerCaptureFeedback: String?
     private(set) var developerCaptureFeedbackRevision = 0
     var isCredentialAccessEnabled: Bool { credentialSession.isEnabled }
@@ -737,6 +753,14 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         return setPageZoom(normalized)
     }
 
+    // MARK: - Actions - Agents
+
+    /// Moves the agent's pointer to `point`, pressing there when `presses`.
+    func pointAgent(at point: PagePoint, presses: Bool) {
+        agentPointer = BrowserAgentPointer(
+            point: point, presses: presses, revision: (agentPointer?.revision ?? 0) &+ 1)
+    }
+
     // MARK: - Actions - Reader and info bars
 
     func refreshReaderModeAvailability() async {
@@ -817,6 +841,10 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
             try await scripting.callAsyncJavaScript(body, arguments: arguments, in: frame)
         }
     }
+
+    /// The document whole-page translation rewrites, on the engine the page
+    /// is on now.
+    var translationDocument: BrowserTranslationDocument? { engineAdapter.translationDocument }
 
     // MARK: - Actions - Sharing and export
 

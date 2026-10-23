@@ -55,6 +55,9 @@ final class BrowserOnboardingFlow {
     var state: SetupFlowState? { browser.core.state.setupFlow }
 
     var step: SetupStep { state?.step ?? request.entryPoint.firstStep }
+    /// The look the Spaces setup makes wear, which the stage and every
+    /// preview follow.
+    var look: SetupLook { state?.look ?? .heraldic }
     var failure: SetupFailure? { state?.failure }
     var review: SetupImportReview? { state?.review }
     var selectedImportApplications: Set<ImportSource> { Set(state?.selected ?? []) }
@@ -88,14 +91,15 @@ final class BrowserOnboardingFlow {
         state?.summary.map(BrowserOnboardingSummary.completed)
     }
 
+    /// What the review's last Space offers: importing and going on to the
+    /// next chosen browser, or importing alone.
     var importReviewActionTitle: LocalizedStringResource {
         state?.queue?.hasMoreAfterCurrent == true
             ? LocalizedStringResource(
                 "Import & Continue",
                 comment: "Button that imports the current browser and continues to the next selected browser.")
             : LocalizedStringResource(
-                "Import Reviewed Data",
-                comment: "Button that imports the reviewed data from the final selected browser.")
+                "Import", comment: "Button that imports the reviewed data from the final browser.")
     }
 
     // MARK: - Initializers
@@ -217,6 +221,12 @@ final class BrowserOnboardingFlow {
     func show(_ step: SetupStep) {
         guard !isImportSelectionLocked else { return }
         send(ShowSetupStep(step: step))
+    }
+
+    /// Gives the Spaces setup makes from here on `look`.
+    func chooseLook(_ look: SetupLook) {
+        guard !isImportSelectionLocked else { return }
+        send(ChooseSetupLook(look: look))
     }
 
     /// Sets Spaces up by hand, leaving any read that has not finished.

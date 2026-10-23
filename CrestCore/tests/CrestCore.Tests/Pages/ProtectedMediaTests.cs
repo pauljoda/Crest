@@ -51,7 +51,7 @@ public sealed partial class BrowserContractsTests {
         Assert.Equal(new PageRehosted(page, space, site, EngineKind.Chromium, EngineKind.WebKit, RehostReason.ProtectedMedia),
             Assert.Single(moved.OfType<PageRehosted>()));
         Assert.Equal(EngineKind.WebKit, Assert.Single(moved.OfType<PageChanged>()).Page.Engine);
-        Assert.Equal(new ClosePage(page, KeepsState: false), chromiumBinding.Commands[^1]);
+        Assert.Equal(new ClosePage(page, KeepsState: true), chromiumBinding.Commands[^1]);
         app.Report(webKit, new PageCreated(page));
         Assert.Equal(new LoadPage(page, url), webKitBinding.Commands[^1]);
 

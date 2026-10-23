@@ -16,26 +16,15 @@
  // This needs to be after the ESBUILD_BINARY_PATH is set
 --- a/third_party/devtools-frontend/src/scripts/build/ninja/bundle.gni
 +++ b/third_party/devtools-frontend/src/scripts/build/ninja/bundle.gni
-@@ -35,7 +35,7 @@
-       devtools_location_prepend + "scripts/devtools_paths.js",
-     ]
+@@ -58,7 +58,7 @@
+       inputs += [ _entrypoints_file ]
+     }
  
 -    _esbuild = "/opt/homebrew/bin/esbuild"
 +    _esbuild = devtools_location_prepend + "third_party/esbuild/esbuild"
      if (host_os == "win") {
        inputs += [ _esbuild + ".exe" ]
      } else {
---- a/third_party/devtools-frontend/src/scripts/build/typescript/typescript.gni
-+++ b/third_party/devtools-frontend/src/scripts/build/typescript/typescript.gni
-@@ -190,7 +190,7 @@
- 
-     if (devtools_skip_typecheck) {
-       args += [ "--use-esbuild" ]
--      _esbuild = "/opt/homebrew/bin/esbuild"
-+      _esbuild = devtools_location_prepend + "third_party/esbuild/esbuild"
-       if (host_os == "win") {
-         inputs += [ _esbuild + ".exe" ]
-       } else {
 --- a/third_party/devtools-frontend/src/scripts/devtools_paths.py
 +++ b/third_party/devtools-frontend/src/scripts/devtools_paths.py
 @@ -55,7 +55,7 @@

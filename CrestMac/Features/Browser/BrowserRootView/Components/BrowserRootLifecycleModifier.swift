@@ -147,14 +147,11 @@ private struct BrowserRootChromeObserver: ViewModifier {
                 model.restoreSidebarWidth(CGFloat(width))
                 persistSidebarWidth(width)
             }
-            .onChange(of: model.chrome.noticeRevision) { _, revision in
-                model.presentNotice(
-                    revision: revision,
-                    reduceMotion: reduceMotion
-                )
-            }
             .onChange(of: model.chrome.columnVisibility) {
                 model.columnVisibilityChanged(reduceMotion: reduceMotion)
+            }
+            .onChange(of: model.chrome.isFloatingSidebarPresented) {
+                model.floatingSidebarPresentationChanged()
             }
             .onChange(of: model.lockedSpaceIDs, initial: true) { _, spaceIDs in
                 model.relockProtectedSpaces(spaceIDs)

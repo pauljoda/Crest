@@ -6,12 +6,16 @@ import Foundation
 /// so a default can no longer drift between the `@AppStorage` declaration that
 /// seeds a control and the migration code that seeds the store.
 enum BrowserLookAndFeelDefaults {
+    static let appearanceMode = BrowserAppearanceMode.standard
+    static let darkSpaceDimming = 0.0
     static let windowBorderWidth = BrowserChromeAppearance.defaultBorderWidth
     static let sidebarOnRight = false
     static let surfaceMaterial = CrestSurfaceMaterial.standard
     static let cornerRadius: Double = 10
     static let tabScale: Double = 1
     static let pinColumns = 0
+    static let spaceIconSizing = BrowserSpaceIconSizing.standard
+    static let spaceIconScale: Double = 1
     static let tabs = BrowserTabAppearance()
     static let address = BrowserAddressAppearance()
     static let foldersAlwaysVisible = false
@@ -32,10 +36,14 @@ enum BrowserLookAndFeelDefaults {
         density: UserDefaults = BrowserSidebarDensityPreference.defaults,
         folders: UserDefaults = BrowserFolderAppearancePreference.defaults
     ) {
+        appearance.mode = appearanceMode
+        appearance.darkSpaceDimming = darkSpaceDimming
         appearance.cornerRadius = cornerRadius
         appearance.tabs = tabs
         appearance.address = address
         appearance.surfaceMaterial = surfaceMaterial
+        appearance.spaceIconSizing = spaceIconSizing
+        appearance.spaceIconScale = spaceIconScale
 
         chrome.set(windowBorderWidth, forKey: BrowserChromeAppearancePreference.borderWidthKey)
         chrome.set(sidebarOnRight, forKey: BrowserChromeAppearancePreference.sidebarOnRightKey)

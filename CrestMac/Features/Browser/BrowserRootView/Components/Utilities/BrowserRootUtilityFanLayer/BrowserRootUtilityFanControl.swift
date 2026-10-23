@@ -7,20 +7,10 @@ struct BrowserRootUtilityFanControl: View {
 
     let model: BrowserRootModel
     let proxy: GeometryProxy
-    let triggerFrame: CGRect
+    let localTriggerFrame: CGRect
     let sidebarOnRight: Bool
 
     @Environment(\.layoutDirection) private var layoutDirection
-
-    /// The trigger's frame in this layer, measured from its left edge as the
-    /// window measures it.
-    private var localTriggerFrame: CGRect {
-        let rootFrame = proxy.frame(in: .global)
-        return triggerFrame.offsetBy(
-            dx: -rootFrame.minX,
-            dy: -rootFrame.minY
-        )
-    }
 
     /// Where the fan settles, from the left edge: beside the trigger, on the
     /// page's side of the sidebar.
@@ -36,7 +26,9 @@ struct BrowserRootUtilityFanControl: View {
 
     var body: some View {
         BrowserUtilityFanControl(
-            isExpanded: model.chrome.utilityPresentation.isSwitcherExpanded,
+            isExpanded:
+                model.sidebarPresentation.showsSidebar
+                && model.chrome.utilityPresentation.isSwitcherExpanded,
             origin: CGPoint(
                 x: positionX(localTriggerFrame.midX),
                 y: localTriggerFrame.midY

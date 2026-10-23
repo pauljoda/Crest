@@ -93,6 +93,12 @@ final class BrowserQuickWindowModel {
         pageLease?.page
     }
 
+    /// What the address field shows while nobody types in it: where the page
+    /// is, or is heading, as the core resolves it.
+    var address: String {
+        (page?.live.displayURL ?? releasedPageSnapshot?.url ?? presentedRequest.initialURL)?.absoluteString ?? ""
+    }
+
     func windowTitle(for request: BrowserQuickWindowRequest) -> String {
         let fallback = String(localized: "Quick Window")
         // A Binding captured by the action lifecycle can read its older value

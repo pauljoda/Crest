@@ -60,6 +60,8 @@ public sealed class Tincture {
     public static readonly Tincture SunGules = new("sunGules", "Sunset Red", new(0.722, 0.165, 0.118));
     public static readonly Tincture SunOr = new("sunOr", "Saffron", new(0.894, 0.718, 0.333));
     public static readonly Tincture VigilBone = new("vigilBone", "Bone", new(0.812, 0.820, 0.831));
+    public static readonly Tincture NeutralSmoke = new("neutralSmoke", "Smoke", new(0.337, 0.337, 0.337));
+    public static readonly Tincture NeutralGray = new("neutralGray", "Gray", new(0.588, 0.588, 0.588));
 
     public static IReadOnlyList<Tincture> All { get; } = [
         Ink, Indigo, Ocean, Sky, Teal, Sage, Gold, Ember, Rose, Sand, WinterSlate, WinterSteel, WinterIce, LionOxblood,
@@ -67,7 +69,7 @@ public sealed class Tincture {
         MeadowForest, MeadowMoss, MeadowWheat, IronBlack, IronPewter, IronPatina, RiverNavy, RiverLapis, RiverRust,
         SunUmber, SunTerracotta, SunDune, VigilOnyx, VigilCharcoal, VigilAsh, WinterArgent, WinterWolf, LionGules, LionOr,
         StormOr, StormSable, DragonSable, DragonFire, MeadowVert, MeadowRose, IronOr, RiverAzure, RiverGules, RiverArgent,
-        SunTenne, SunGules, SunOr, VigilBone
+        SunTenne, SunGules, SunOr, VigilBone, NeutralSmoke, NeutralGray
     ];
 
     public string Name { get; }

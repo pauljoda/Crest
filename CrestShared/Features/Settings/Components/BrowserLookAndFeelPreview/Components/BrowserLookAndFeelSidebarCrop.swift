@@ -19,10 +19,8 @@ struct BrowserLookAndFeelSidebarCrop: View {
 
     private var pageZoom = BrowserDefaultPageZoomStore.shared
     @Environment(\.layoutDirection) private var layoutDirection
+    @Environment(\.colorScheme) private var colorScheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    /// The appearance of the window showing these settings, which says whether
-    /// its pages follow the window's corner.
-    @Environment(\.browserChromeAppearance) private var windowAppearance
 
     /// The sidebar's natural height, measured before any scaling.
     @State private var sidebarContentHeight: CGFloat = 0
@@ -47,7 +45,7 @@ struct BrowserLookAndFeelSidebarCrop: View {
             RoundedRectangle(cornerRadius: BrowserLookAndFeelPreviewMetrics.cardCornerRadius, style: .continuous)
                 .strokeBorder(.primary.opacity(CrestOpacity.border))
         }
-        .environment(\.colorScheme, branding.foregroundTone.colorScheme)
+        .environment(\.colorScheme, branding.colorScheme(over: colorScheme))
         .animation(
             CrestMotion.collection.unlessReducingMotion(reduceMotion),
             value: sidebarOnRight
@@ -149,14 +147,13 @@ struct BrowserLookAndFeelSidebarCrop: View {
         BrowserChromeAppearance(sidebarOnRight: sidebarOnRight, borderWidth: borderWidth)
     }
 
-    /// Where a window's page follows the window's corner, the crop's own corner
-    /// stands in for it. The crop is clipped after the window is scaled, so in
-    /// the window's units that corner is rounder by the same factor.
+    /// The crop's own corner is the window corner its page follows, so a framed
+    /// page stays concentric with it on every device. The crop is clipped after
+    /// the window is scaled, so in the window's units that corner is rounder by
+    /// the same factor.
     private func pageAppearance(scale: CGFloat) -> BrowserChromeAppearance {
         var appearance = self.appearance
-        if windowAppearance.windowCornerRadius != nil {
-            appearance.windowCornerRadius = BrowserLookAndFeelPreviewMetrics.cardCornerRadius / scale
-        }
+        appearance.windowCornerRadius = BrowserLookAndFeelPreviewMetrics.cardCornerRadius / scale
         return appearance
     }
 

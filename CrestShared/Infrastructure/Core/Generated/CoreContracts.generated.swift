@@ -431,6 +431,7 @@ enum EngineCommand: Equatable, Sendable {
     case eraseProfileData(EraseProfileData)
     case eraseSiteData(EraseSiteData)
     case exitPictureInPicture(ExitPictureInPicture)
+    case goToHistoryEntry(GoToHistoryEntry)
     case groupPages(GroupPages)
     case loadPage(LoadPage)
     case pauseEngineDownload(PauseEngineDownload)
@@ -462,7 +463,6 @@ enum EnginePresentation: Equatable, Sendable {
     case mediaSessionChanged(MediaSessionChanged)
     case pageCaptured(PageCaptured)
     case pageExported(PageExported)
-    case pageHistoryChanged(PageHistoryChanged)
     case pageInputDelivered(PageInputDelivered)
     case pageInteracted(PageInteracted)
     case pageLoadingChanged(PageLoadingChanged)
@@ -508,7 +508,6 @@ enum EnginePresentation: Equatable, Sendable {
         case .mediaSessionChanged(let value): value.pageID
         case .pageCaptured(let value): value.pageID
         case .pageExported(let value): value.pageID
-        case .pageHistoryChanged(let value): value.pageID
         case .pageInputDelivered(let value): value.pageID
         case .pageInteracted(let value): value.pageID
         case .pageLoadingChanged(let value): value.pageID
@@ -835,6 +834,12 @@ struct AdoptWindowRecords: Intent, WindowIntent, Equatable, Sendable {
     let records: Data?
 }
 
+struct AgentActivity: Equatable, Sendable {
+    let kind: AgentActivityKind
+    let subject: String
+    let at: Date
+}
+
 struct AgentIdentity: Equatable, Sendable {
     static let maximumField: Int = 255
     static let maximumPath: Int = 1024
@@ -882,6 +887,8 @@ struct AgentSessionState: Equatable, Sendable {
     let name: String
     let color: BrandColor?
     let tabIDs: [UUID]
+    let opensWindows: Bool
+    let activity: [AgentActivity]
 }
 
 struct AgentSessionsChanged: CoreChange, Equatable, Sendable {
@@ -958,6 +965,10 @@ struct AgentsUnavailable: Equatable, Sendable {
 struct AllowAgentSpace: Intent, AgentIntent, Equatable, Sendable {
     let spaceID: UUID
     let allowed: Bool
+}
+
+struct AllowAgentWindows: Intent, AgentIntent, Equatable, Sendable {
+    let sessionID: UUID
 }
 
 struct AlreadyInSpace: Equatable, Sendable {
@@ -1136,6 +1147,12 @@ struct ArchiveTransientPage: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let pageID: UUID
     let spaceID: UUID
+}
+
+struct ArchivedPageHistory: Query, Equatable, Sendable {
+    typealias Answer = PageHistoryArchive
+
+    let pageID: UUID
 }
 
 struct ArchivedTabState: Equatable, Sendable {
@@ -1501,6 +1518,10 @@ struct ChoosePeekModifier: Intent, LinkIntent, Equatable, Sendable {
 
 struct ChooseQuickWindowArchivePolicy: Intent, LinkIntent, Equatable, Sendable {
     let policy: QuickWindowArchivePolicy
+}
+
+struct ChooseSetupLook: Intent, SetupFlowIntent, Equatable, Sendable {
+    let look: SetupLook
 }
 
 struct ChooseShareSource: PageRequest, Equatable, Sendable {
@@ -2918,11 +2939,9 @@ struct GetEnginePreferences: Query, Equatable, Sendable {
 
 }
 
-struct GoToHistoryOffset: PageRequest, Equatable, Sendable {
-    typealias Answer = Bool
-
+struct GoToHistoryEntry: Equatable, Sendable {
     let pageID: UUID
-    let offset: Int
+    let entryID: UUID
 }
 
 struct GroupPages: Equatable, Sendable {
@@ -3610,6 +3629,7 @@ struct LoadAddress: Intent, PageIntent, Equatable, Sendable {
 struct LoadPage: Equatable, Sendable {
     let pageID: UUID
     let url: String
+    let entryID: UUID?
 }
 
 struct LocalDocumentFacts: Equatable, Sendable {
@@ -3934,6 +3954,12 @@ struct NotPrivateWorkspace: Equatable, Sendable {
     let workspaceID: UUID
 }
 
+struct NoteAgentActivity: Intent, AgentIntent, Equatable, Sendable {
+    let sessionID: UUID
+    let kind: AgentActivityKind
+    let subject: String
+}
+
 struct NotificationDisplayCheck: Query, Equatable, Sendable {
     typealias Answer = NotificationDisplayVerdict
 
@@ -4194,15 +4220,31 @@ struct PageHeader: Equatable, Sendable {
     let value: String
 }
 
-struct PageHistoryChanged: Equatable, Sendable {
+struct PageHistoryArchive: Equatable, Sendable {
+    let archive: Data?
+}
+
+struct PageHistoryEntries: Query, Equatable, Sendable {
+    typealias Answer = PageHistoryList
+
     let pageID: UUID
+}
+
+struct PageHistoryEntry: Equatable, Sendable, Identifiable {
+    var id: UUID
+    var url: String
+    var title: String
+}
+
+struct PageHistoryList: Equatable, Sendable {
     let back: [PageHistoryEntry]
     let forward: [PageHistoryEntry]
 }
 
-struct PageHistoryEntry: Equatable, Sendable {
-    let url: String
-    let title: String
+struct PageHistoryReported: EngineEvent, PageEvent, Equatable, Sendable {
+    let pageID: UUID
+    let entries: [PageHistoryEntry]
+    let current: Int
 }
 
 struct PageIcon: PageRequest, Equatable, Sendable {
@@ -4386,23 +4428,12 @@ struct PageScriptEvaluated: Equatable, Sendable {
 }
 
 struct PageSnapshot: Equatable, Sendable {
-    static let blank = PageSnapshot(
-        url: nil,
-        pendingURL: nil,
-        title: "",
-        isLoading: false,
-        canGoBack: false,
-        canGoForward: false,
-        security: PageSecurity.none,
-        media: []
-    )
+    static let blank = PageSnapshot(url: nil, pendingURL: nil, title: "", isLoading: false, security: PageSecurity.none, media: [])
 
     var url: String?
     var pendingURL: String?
     var title: String
     var isLoading: Bool
-    var canGoBack: Bool
-    var canGoForward: Bool
     var security: PageSecurity
     var media: PageMediaActivity
 }
@@ -5111,6 +5142,13 @@ struct RestoreSearchCatalog: Intent, SearchCatalogIntent, Equatable, Sendable {
     let region: String?
 }
 
+struct RestoreTabHistory: Intent, PageIntent, Equatable, Sendable {
+    let workspaceID: UUID
+    let spaceID: UUID
+    let tabID: UUID
+    let archive: Data
+}
+
 struct ResumeDownload: Intent, DownloadIntent, Equatable, Sendable {
     let downloadID: UUID
 }
@@ -5700,6 +5738,7 @@ struct SetupFlowState: Equatable, Sendable {
     let summary: SetupSummary?
     let opensGuide: Bool
     let opensCrestFromWelcome: Bool
+    let look: SetupLook
 }
 
 struct SetupImportQueue: Equatable, Sendable {
@@ -5808,6 +5847,11 @@ struct ShowBlockedPopups: PageRequest, Equatable, Sendable {
     typealias Answer = Bool
 
     let pageID: UUID
+}
+
+struct ShowHistoryEntry: Intent, PageIntent, Equatable, Sendable {
+    let pageID: UUID
+    let entryID: UUID
 }
 
 struct ShowImportSpace: Intent, SetupFlowIntent, Equatable, Sendable {
@@ -6142,6 +6186,7 @@ struct SpaceSettings: Equatable, Sendable {
     let accessPolicy: SpaceAccessPolicy
     let isSavedTabsExpanded: Bool
     let savedTabsExpansionModifiedAt: Date?
+    let credentialsEnabledModifiedAt: Date?
     let look: SpaceBranding
     let requiresAuthentication: Bool
 
@@ -6157,6 +6202,7 @@ struct SpaceSettings: Equatable, Sendable {
         var accessPolicy: SpaceAccessPolicy
         var isSavedTabsExpanded: Bool
         var savedTabsExpansionModifiedAt: Date?
+        var credentialsEnabledModifiedAt: Date?
     }
 
     /// The record's fields alone, as a platform sends it back.
@@ -6170,7 +6216,8 @@ struct SpaceSettings: Equatable, Sendable {
             credentialPreferences: credentialPreferences,
             accessPolicy: accessPolicy,
             isSavedTabsExpanded: isSavedTabsExpanded,
-            savedTabsExpansionModifiedAt: savedTabsExpansionModifiedAt
+            savedTabsExpansionModifiedAt: savedTabsExpansionModifiedAt,
+            credentialsEnabledModifiedAt: credentialsEnabledModifiedAt
         )
     }
 }
@@ -6365,6 +6412,11 @@ struct StartSetup: Intent, SetupFlowIntent, Equatable, Sendable {
     let entry: SetupEntry
 }
 
+struct StepHistory: Intent, PageIntent, Equatable, Sendable {
+    let pageID: UUID
+    let offset: Int
+}
+
 struct StepSplitMember: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let spaceID: UUID
@@ -6374,6 +6426,9 @@ struct StepSplitMember: Intent, SessionIntent, Equatable, Sendable {
 
 struct StopAgentTab: Intent, AgentIntent, Equatable, Sendable {
     let tabID: UUID
+}
+
+struct StopAllAgents: Intent, AgentIntent, Equatable, Sendable {
 }
 
 struct StopLoading: PageRequest, Equatable, Sendable {
@@ -6435,6 +6490,17 @@ struct StrongPasswordRecipe: Equatable, Sendable {
 
 struct SweepExpiredRecords: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
+}
+
+struct SwipeNeighborTabs: Equatable, Sendable {
+    let previousTabID: UUID?
+    let nextTabID: UUID?
+}
+
+struct SwipeNeighbors: Query, Equatable, Sendable {
+    typealias Answer = SwipeNeighborTabs
+
+    let windowID: UUID
 }
 
 struct SyncJournalChanged: CoreChange, Equatable, Sendable {
@@ -7351,6 +7417,97 @@ struct AdjacentDirection: Hashable, Sendable {
         init(name: String, step: Int) {
             self.name = name
             self.step = step
+        }
+    }
+}
+
+/// The members of the core's `AgentActivityKind`. A member's wire tag is its index in `all`.
+struct AgentActivityKind: Hashable, Sendable {
+    let tag: Int
+    var name: String { facts.name }
+    var title: LocalizedStringResource { facts.title }
+    var symbol: String { facts.symbol }
+    private let facts: Facts
+
+    private init(tag: Int, name: String, title: LocalizedStringResource, symbol: String) {
+        self.tag = tag
+        facts = Facts(name: name, title: title, symbol: symbol)
+    }
+
+    static let openedTab = AgentActivityKind(
+        tag: 0,
+        name: "openedTab",
+        title: LocalizedStringResource("Opened a tab"),
+        symbol: "plus.square"
+    )
+    static let loadedPage = AgentActivityKind(
+        tag: 1,
+        name: "loadedPage",
+        title: LocalizedStringResource("Loaded a page"),
+        symbol: "arrow.right.circle"
+    )
+    static let closedTab = AgentActivityKind(
+        tag: 2,
+        name: "closedTab",
+        title: LocalizedStringResource("Closed a tab"),
+        symbol: "xmark.square"
+    )
+    static let openedWindow = AgentActivityKind(
+        tag: 3,
+        name: "openedWindow",
+        title: LocalizedStringResource("Opened a window"),
+        symbol: "macwindow.badge.plus"
+    )
+    static let openedPrivateWindow = AgentActivityKind(
+        tag: 4,
+        name: "openedPrivateWindow",
+        title: LocalizedStringResource("Opened a private window"),
+        symbol: "eyeglasses"
+    )
+    static let deletedHistory = AgentActivityKind(
+        tag: 5,
+        name: "deletedHistory",
+        title: LocalizedStringResource("Deleted history"),
+        symbol: "clock.arrow.trianglehead.counterclockwise.rotate.90"
+    )
+    static let ranScript = AgentActivityKind(
+        tag: 6,
+        name: "ranScript",
+        title: LocalizedStringResource("Ran a script"),
+        symbol: "curlybraces"
+    )
+
+    static let all: [AgentActivityKind] = [
+        openedTab,
+        loadedPage,
+        closedTab,
+        openedWindow,
+        openedPrivateWindow,
+        deletedHistory,
+        ranScript
+    ]
+
+    static func named(_ name: String?) -> AgentActivityKind? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: AgentActivityKind, rhs: AgentActivityKind) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+
+    private final class Facts: Sendable {
+        let name: String
+        let title: LocalizedStringResource
+        let symbol: String
+
+        init(name: String, title: LocalizedStringResource, symbol: String) {
+            self.name = name
+            self.title = title
+            self.symbol = symbol
         }
     }
 }
@@ -17005,6 +17162,60 @@ struct SetupFailureReason: Hashable, Sendable {
     }
 }
 
+/// The members of the core's `SetupLook`. A member's wire tag is its index in `all`.
+/// Core-only behavior, not emitted: `newSpaceLook`, `applying`.
+struct SetupLook: Hashable, Sendable {
+    enum Kinds: Sendable {
+        case heraldic
+        case modern
+    }
+
+    let tag: Int
+    var kind: Kinds { facts.kind }
+    var name: String { facts.name }
+    var title: LocalizedStringResource { facts.title }
+    private let facts: Facts
+
+    private init(tag: Int, kind: Kinds, name: String, title: LocalizedStringResource) {
+        self.tag = tag
+        facts = Facts(kind: kind, name: name, title: title)
+    }
+
+    static let heraldic = SetupLook(
+        tag: 0,
+        kind: .heraldic,
+        name: "heraldic",
+        title: LocalizedStringResource("Heraldic")
+    )
+    static let modern = SetupLook(tag: 1, kind: .modern, name: "modern", title: LocalizedStringResource("Modern"))
+
+    static let all: [SetupLook] = [heraldic, modern]
+
+    static func named(_ name: String?) -> SetupLook? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: SetupLook, rhs: SetupLook) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+
+    private final class Facts: Sendable {
+        let kind: Kinds
+        let name: String
+        let title: LocalizedStringResource
+
+        init(kind: Kinds, name: String, title: LocalizedStringResource) {
+            self.kind = kind
+            self.name = name
+            self.title = title
+        }
+    }
+}
+
 /// The members of the core's `SetupPhase`. A member's wire tag is its index in `all`.
 struct SetupPhase: Hashable, Sendable {
     let tag: Int
@@ -17059,7 +17270,10 @@ struct SetupStep: Hashable, Sendable {
         case review
         case manualSetup
         case complete
+        case look
     }
+
+    static let progressCount = 6
 
     let tag: Int
     var kind: Kinds { facts.kind }
@@ -17076,10 +17290,11 @@ struct SetupStep: Hashable, Sendable {
     static let featureSpaces = SetupStep(tag: 1, kind: .featureSpaces, name: "featureSpaces", progressPosition: 0)
     static let featureTabs = SetupStep(tag: 2, kind: .featureTabs, name: "featureTabs", progressPosition: 0)
     static let featureSync = SetupStep(tag: 3, kind: .featureSync, name: "featureSync", progressPosition: 0)
-    static let importBrowser = SetupStep(tag: 4, kind: .importBrowser, name: "importBrowser", progressPosition: 1)
-    static let review = SetupStep(tag: 5, kind: .review, name: "review", progressPosition: 2)
-    static let manualSetup = SetupStep(tag: 6, kind: .manualSetup, name: "manualSetup", progressPosition: 2)
-    static let complete = SetupStep(tag: 7, kind: .complete, name: "complete", progressPosition: 2)
+    static let importBrowser = SetupStep(tag: 4, kind: .importBrowser, name: "importBrowser", progressPosition: 2)
+    static let review = SetupStep(tag: 5, kind: .review, name: "review", progressPosition: 3)
+    static let manualSetup = SetupStep(tag: 6, kind: .manualSetup, name: "manualSetup", progressPosition: 4)
+    static let complete = SetupStep(tag: 7, kind: .complete, name: "complete", progressPosition: 5)
+    static let look = SetupStep(tag: 8, kind: .look, name: "look", progressPosition: 1)
 
     static let all: [SetupStep] = [
         welcome,
@@ -17089,7 +17304,8 @@ struct SetupStep: Hashable, Sendable {
         importBrowser,
         review,
         manualSetup,
-        complete
+        complete,
+        look
     ]
 
     static func named(_ name: String?) -> SetupStep? {
@@ -21377,12 +21593,106 @@ struct SpaceIconStyle: Hashable, Sendable {
     }
 }
 
+/// The members of the core's `SpaceScheme`. A member's wire tag is its index in `all`.
+struct SpaceScheme: Hashable, Sendable {
+    let tag: Int
+    var name: String { facts.name }
+    var title: LocalizedStringResource { facts.title }
+    var look: SpaceBranding { facts.look }
+    private let facts: Facts
+
+    private init(tag: Int, name: String, title: LocalizedStringResource, look: SpaceBranding) {
+        self.tag = tag
+        facts = Facts(name: name, title: title, look: look)
+    }
+
+    static let neutral = SpaceScheme(
+        tag: 0,
+        name: "neutral",
+        title: LocalizedStringResource("Neutral"),
+        look: SpaceBranding(
+            colors: ColorPalette(colors: [BrandColor(red: 0.337, green: 0.337, blue: 0.337, alpha: 1)]),
+            bannerPattern: SpaceBannerPattern.diagonal,
+            bannerStrength: 0.15,
+            readabilityFade: 0,
+            keepsControlsReadable: false,
+            themeMode: SpaceThemeMode.gradient,
+            gradientAngle: 0,
+            showsTexture: true,
+            iconStyle: SpaceIconStyle.simpleSymbol,
+            symbolColor: BrandColor(red: 0.588, green: 0.588, blue: 0.588, alpha: 1),
+            crest: SpaceCrest(
+                backplate: CrestBackplate.shield,
+                fieldDivision: CrestFieldDivision.plain,
+                ordinary: CrestOrdinary.none,
+                trim: CrestTrim.none,
+                symbol: CrestSymbol.mountain,
+                chargeLayout: CrestChargeLayout.single,
+                backplateColorIndex: 1,
+                secondaryFieldColorIndex: 1,
+                ordinaryColorIndex: 2,
+                trimColorIndex: 1,
+                symbolColorIndex: 2,
+                startingPresetID: nil,
+                edgeColorIndex: 1,
+                palette: nil,
+                charge: nil,
+                plateScale: 1,
+                edgeWidth: 0,
+                divisionCount: 4,
+                finish: CrestFinish.flat,
+                ordinaryWidth: 1,
+                trimWeight: 1,
+                trimDetail: 12,
+                chargeScale: 1,
+                chargeOffset: 0,
+                chargeWeight: CrestChargeWeight.bold,
+                sheenAngle: 45,
+                sealTeeth: 12,
+                showsOutline: false,
+                depth: CrestDepth.none
+            ),
+            renderingVersion: 2,
+            folderColorIntensity: 0,
+            textColorMode: SpaceTextColorMode.system,
+            hasCustomAppearance: false
+        )
+    )
+
+    static let all: [SpaceScheme] = [neutral]
+
+    static func named(_ name: String?) -> SpaceScheme? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: SpaceScheme, rhs: SpaceScheme) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+
+    private final class Facts: Sendable {
+        let name: String
+        let title: LocalizedStringResource
+        let look: SpaceBranding
+
+        init(name: String, title: LocalizedStringResource, look: SpaceBranding) {
+            self.name = name
+            self.title = title
+            self.look = look
+        }
+    }
+}
+
 /// The members of the core's `SpaceTextColorMode`. A member's wire tag is its index in `all`.
 struct SpaceTextColorMode: Hashable, Sendable {
     enum Kinds: Sendable {
         case automatic
         case light
         case dark
+        case system
     }
 
     let tag: Int
@@ -21404,8 +21714,14 @@ struct SpaceTextColorMode: Hashable, Sendable {
     )
     static let light = SpaceTextColorMode(tag: 1, kind: .light, name: "light", title: LocalizedStringResource("Light"))
     static let dark = SpaceTextColorMode(tag: 2, kind: .dark, name: "dark", title: LocalizedStringResource("Dark"))
+    static let system = SpaceTextColorMode(
+        tag: 3,
+        kind: .system,
+        name: "system",
+        title: LocalizedStringResource("System")
+    )
 
-    static let all: [SpaceTextColorMode] = [automatic, light, dark]
+    static let all: [SpaceTextColorMode] = [automatic, light, dark, system]
 
     static func named(_ name: String?) -> SpaceTextColorMode? {
         all.first { $0.name == name }
@@ -22547,6 +22863,18 @@ struct Tincture: Hashable, Sendable {
         title: LocalizedStringResource("Bone"),
         color: BrandColor(red: 0.812, green: 0.82, blue: 0.831, alpha: 1)
     )
+    static let neutralSmoke = Tincture(
+        tag: 55,
+        name: "neutralSmoke",
+        title: LocalizedStringResource("Smoke"),
+        color: BrandColor(red: 0.337, green: 0.337, blue: 0.337, alpha: 1)
+    )
+    static let neutralGray = Tincture(
+        tag: 56,
+        name: "neutralGray",
+        title: LocalizedStringResource("Gray"),
+        color: BrandColor(red: 0.588, green: 0.588, blue: 0.588, alpha: 1)
+    )
 
     static let all: [Tincture] = [
         ink,
@@ -22603,7 +22931,9 @@ struct Tincture: Hashable, Sendable {
         sunTenne,
         sunGules,
         sunOr,
-        vigilBone
+        vigilBone,
+        neutralSmoke,
+        neutralGray
     ]
 
     static func named(_ name: String?) -> Tincture? {
@@ -23101,6 +23431,10 @@ final class SpaceSettingsModel: ObservedModel {
         access(keyPath: \.savedTabsExpansionModifiedAt)
         return savedTabsExpansionModifiedAtStorage
     }
+    var credentialsEnabledModifiedAt: Date? {
+        access(keyPath: \.credentialsEnabledModifiedAt)
+        return credentialsEnabledModifiedAtStorage
+    }
     var look: SpaceBranding {
         access(keyPath: \.look)
         return lookStorage
@@ -23119,6 +23453,7 @@ final class SpaceSettingsModel: ObservedModel {
     @ObservationIgnored private var accessPolicyStorage: SpaceAccessPolicy
     @ObservationIgnored private var isSavedTabsExpandedStorage: Bool
     @ObservationIgnored private var savedTabsExpansionModifiedAtStorage: Date?
+    @ObservationIgnored private var credentialsEnabledModifiedAtStorage: Date?
     @ObservationIgnored private var lookStorage: SpaceBranding
     @ObservationIgnored private var requiresAuthenticationStorage: Bool
 
@@ -23133,6 +23468,7 @@ final class SpaceSettingsModel: ObservedModel {
             accessPolicy: accessPolicy,
             isSavedTabsExpanded: isSavedTabsExpanded,
             savedTabsExpansionModifiedAt: savedTabsExpansionModifiedAt,
+            credentialsEnabledModifiedAt: credentialsEnabledModifiedAt,
             look: look,
             requiresAuthentication: requiresAuthentication
         )
@@ -23148,6 +23484,7 @@ final class SpaceSettingsModel: ObservedModel {
         accessPolicyStorage = value.accessPolicy
         isSavedTabsExpandedStorage = value.isSavedTabsExpanded
         savedTabsExpansionModifiedAtStorage = value.savedTabsExpansionModifiedAt
+        credentialsEnabledModifiedAtStorage = value.credentialsEnabledModifiedAt
         lookStorage = value.look
         requiresAuthenticationStorage = value.requiresAuthentication
     }
@@ -23188,6 +23525,10 @@ final class SpaceSettingsModel: ObservedModel {
         if savedTabsExpansionModifiedAtStorage != value.savedTabsExpansionModifiedAt {
             savedTabsExpansionModifiedAtStorage = value.savedTabsExpansionModifiedAt
             withMutation(keyPath: \.savedTabsExpansionModifiedAt) {}
+        }
+        if credentialsEnabledModifiedAtStorage != value.credentialsEnabledModifiedAt {
+            credentialsEnabledModifiedAtStorage = value.credentialsEnabledModifiedAt
+            withMutation(keyPath: \.credentialsEnabledModifiedAt) {}
         }
         if lookStorage != value.look {
             lookStorage = value.look

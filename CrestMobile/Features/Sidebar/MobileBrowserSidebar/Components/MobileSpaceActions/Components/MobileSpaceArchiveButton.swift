@@ -25,22 +25,15 @@ struct MobileSpaceArchiveButton: View {
             .bounce,
             value: reduceMotion ? nil : inlineNotificationID
         )
-        .overlay(alignment: .topTrailing) {
-            if presentsInline, !newDownloads.isEmpty {
-                BrowserUtilityNotificationBadge(
-                    count: newDownloads.count,
-                    tint: downloads.contains(where: { $0.phase.needsAttention })
-                        ? .red
-                        : badgeColor,
-                    progress: downloads.notificationProgress
-                )
-                .offset(
-                    x: BrowserUtilitySwitcherLayout.notificationBadgeOffset,
-                    y: -BrowserUtilitySwitcherLayout.notificationBadgeOffset
-                )
-            }
-        }
-        .zIndex(newDownloads.isEmpty ? 0 : 1)
+        .modifier(
+            MobileSpaceUtilityBadge(
+                count: presentsInline ? newDownloads.count : 0,
+                tint: downloads.contains(where: { $0.phase.needsAttention })
+                    ? .red
+                    : badgeColor,
+                progress: downloads.notificationProgress
+            )
+        )
         .accessibilityLabel(
             presentsInline ? "Archive, History, and Downloads" : "Archive"
         )

@@ -7,6 +7,7 @@ import SwiftUI
 /// their own insets inside a group's container.
 struct BrowserSidebarTabActivationButton: View {
     @Environment(BrowserSidebarInteractionState.self) private var sidebarInteraction
+    @Environment(CrestCore.self) private var core: CrestCore?
     let tab: TabStateModel
     let favicons: FaviconAssets
     let profileID: UUID
@@ -50,7 +51,7 @@ struct BrowserSidebarTabActivationButton: View {
                 .accessibilityHidden(true)
                 .browserIconCustomizationPopover(iconCustomization, arrowEdge: iconPickerArrowEdge)
         }
-        .accessibilityLabel(tab.shownTitle)
+        .accessibilityLabel(tab.shownTitle(in: isLoaded ? core?.state : nil))
         .accessibilityValue(BrowserChromeAccessibility.tabValue(isLoaded: isLoaded))
         .accessibilityAddTraits(isSelected ? .isSelected : [])
         .accessibilityIdentifier(BrowserTabAccessibilityID.row(tab.id))

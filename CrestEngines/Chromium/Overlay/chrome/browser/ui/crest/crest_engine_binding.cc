@@ -296,7 +296,18 @@ void EngineBinding::Handle(const engine::CreatePage& command) {
 }
 
 void EngineBinding::Handle(const engine::LoadPage& command) {
+  // Every load replaces the identity an earlier one expected, so a load that
+  // names no entry never commits one the core asked for before.
+  if (EnginePage* page = Find(GuidText(command.page_id))) {
+    page->ExpectEntry(command.entry_id);
+  }
   Load(GuidText(command.page_id), command.url);
+}
+
+void EngineBinding::Handle(const engine::GoToHistoryEntry& command) {
+  if (EnginePage* page = Find(GuidText(command.page_id))) {
+    page->GoToEntry(command.entry_id);
+  }
 }
 
 void EngineBinding::Handle(const engine::ClosePage& command) {
@@ -964,11 +975,6 @@ std::vector<uint8_t> EngineBinding::Answer(const engine::PageRequest& request) {
         return engine::Encode(answer);
       },
       request);
-}
-
-bool EngineBinding::Handle(const engine::GoToHistoryOffset& request) {
-  EnginePage* page = Find(GuidText(request.page_id));
-  return page && page->GoToOffset(request.offset);
 }
 
 bool EngineBinding::Handle(const engine::ReloadPage& request) {

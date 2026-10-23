@@ -22,7 +22,10 @@ struct BrowserCrestStudioStep: Hashable, Identifiable, Sendable {
 
     static let start = BrowserCrestStudioStep(
         kind: .start, name: "start", title: "Start from", symbol: "sparkles", isCrestOnly: false,
-        summary: { branding in SpaceHouse.all.first { $0.isWorn(by: branding) }?.title ?? "Custom" })
+        summary: { branding in
+            SpaceHouse.all.first { $0.isWorn(by: branding) }?.title
+                ?? SpaceScheme.all.first { $0.isWorn(by: branding) }?.title ?? "Custom"
+        })
     static let shape = BrowserCrestStudioStep(
         kind: .shape, name: "shape", title: "Shape", symbol: "shield", isCrestOnly: true,
         summary: { $0.crest.backplate.title })

@@ -27,14 +27,6 @@ public sealed record PageCaptured(Guid PageId, Guid CaptureId, byte[]? Png) : En
 /// The export `ExportId` asked for: its document, or why there is none.
 public sealed record PageExported(Guid PageId, Guid ExportId, byte[]? Document, PageExportFailure? Failure) : EnginePagePresentation(PageId);
 
-/// The entries the page can go back and forward to, nearest first, for the
-/// back and forward menus.
-public sealed record PageHistoryChanged(Guid PageId, IReadOnlyList<PageHistoryEntry> Back,
-    IReadOnlyList<PageHistoryEntry> Forward) : EnginePagePresentation(PageId);
-
-/// One entry of a page's history: its address and the title it had.
-public sealed record PageHistoryEntry(string Url, string Title);
-
 /// The person typed, clicked or scrolled in the page. Presented at most once a
 /// second, for timers that close pages left idle.
 public sealed record PageInteracted(Guid PageId) : EnginePagePresentation(PageId);

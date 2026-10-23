@@ -132,7 +132,7 @@ struct BrowserSplitPageSurface: View {
         }
         .simultaneousGesture(
             TapGesture().onEnded {
-                model.chrome.utilityPresentation.handleInteraction(.webContent)
+                model.chrome.handleWebContentInteraction()
             }
         )
         .onChange(of: members.map(\.id), initial: true) { _, identifiers in

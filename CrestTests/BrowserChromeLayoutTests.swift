@@ -189,12 +189,72 @@ final class BrowserChromeLayoutTests: XCTestCase {
         XCTAssertNil(transaction.commit())
     }
 
-    /// The shared direction source for the compact toolbar's horizontal swipe.
-    ///
-    /// What that swipe *does* is no longer this policy's business — on iOS it
-    /// pages Split View cards, routed by `MobileToolbarSwipeMode` — but "next"
-    /// still has to mean the trailing neighbour in both writing directions, and
-    /// this is the only place that decides it.
+    /// A pointer that reveals the floating sidebar from the window edge can
+    /// leave the window before the card slides under it. That still counts as
+    /// leaving, or the sidebar stays out until the pointer returns to it, and
+    /// each new reveal reports it again. A sidebar opened any other way waits
+    /// for the pointer to arrive first.
+    @MainActor
+    func testSidebarRevealedByThePointerHidesWhenThePointerLeavesBeforeArriving() {
+        let window = NSWindow(
+            contentRect: NSRect(x: 100, y: 100, width: 800, height: 600),
+            styleMask: [.titled], backing: .buffered, defer: true
+        )
+        var reports: [Bool] = []
+        let tracker = BrowserSidebarHoverTrackingView(
+            notificationCenter: NotificationCenter(),
+            pointerLocation: { NSPoint(x: 40, y: 300) },
+            onHoverChange: { reports.append($0) }
+        )
+        tracker.frame = NSRect(x: 0, y: 0, width: 300, height: 600)
+        window.contentView?.addSubview(tracker)
+
+        tracker.refreshPointerHover()
+        XCTAssertEqual(reports, [])
+
+        tracker.isRevealedByPointer = true
+        tracker.refreshPointerHover()
+        XCTAssertEqual(reports, [false])
+
+        // The pointer touches the edge again before the region is taken down.
+        tracker.isRevealedByPointer = false
+        tracker.isRevealedByPointer = true
+        tracker.refreshPointerHover()
+        XCTAssertEqual(reports, [false, false])
+    }
+
+    /// The edge strip reappears under a pointer that is still resting where
+    /// the sidebar just hid, as Universal Control leaves it after crossing to
+    /// another Mac. Only a pointer that moves onto the strip reveals it again.
+    @MainActor
+    func testCollapsedSidebarEdgeRevealsOnlyForAPointerThatMoves() throws {
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 800, height: 600),
+            styleMask: [.titled], backing: .buffered, defer: true
+        )
+        var pointer = NSPoint(x: 0, y: 300)
+        var reports: [Bool] = []
+        let edge = BrowserCollapsedSidebarHoverTrackingView(
+            pointerLocation: { pointer },
+            onHoverChange: { reports.append($0) }
+        )
+        edge.frame = NSRect(x: 0, y: 0, width: 6, height: 600)
+        window.contentView?.addSubview(edge)
+        let event = try XCTUnwrap(
+            NSEvent.mouseEvent(
+                with: .mouseMoved, location: pointer, modifierFlags: [], timestamp: 0,
+                windowNumber: window.windowNumber, context: nil, eventNumber: 0, clickCount: 0, pressure: 0
+            )
+        )
+
+        edge.mouseEntered(with: event)
+        edge.mouseMoved(with: event)
+        XCTAssertEqual(reports, [])
+
+        pointer.y += 1
+        edge.mouseMoved(with: event)
+        XCTAssertEqual(reports, [true])
+    }
 
     func testSidebarAuxiliaryMouseButtonsSwitchSpacesWithoutClaimingOtherButtons() {
         XCTAssertEqual(
@@ -334,6 +394,7 @@ final class BrowserChromeLayoutTests: XCTestCase {
         XCTAssertNil(firstWindow.utilityPresentation.surface)
     }
 
+    /// Commands reveal their list without overriding the owning window's docked-sidebar preference.
     @MainActor
     func testShowListCommandsBringTheirListOnScreen() {
         let browser = BrowserStore.hostingPages()
@@ -345,7 +406,9 @@ final class BrowserChromeLayoutTests: XCTestCase {
         for (command, surface) in lists {
             let hidden = BrowserChromeState(sidebarIsPresented: false)
             BrowserCommandActions(browser: browser, pages: pages, chrome: hidden, windows: nil).perform(command)
-            XCTAssertEqual(hidden.columnVisibility, .all, "\(command.name) docks a hidden sidebar.")
+            XCTAssertEqual(
+                hidden.columnVisibility, .detailOnly, "\(command.name) preserves the hidden sidebar preference.")
+            XCTAssertTrue(hidden.isFloatingSidebarPresented)
             XCTAssertEqual(hidden.utilityPresentation.surface, surface)
 
             let floating = BrowserChromeState(sidebarIsPresented: false)

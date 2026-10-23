@@ -90,13 +90,9 @@
             else { return false }
             return engine.stage(stagedLinkID, from: sourcePageID, into: pageID, expecting: url)
         }
-        var backHistory: [BrowserNavigationHistoryItem] = []
-        var forwardHistory: [BrowserNavigationHistoryItem] = []
         var currentURL: URL?
-        var canGoBack = false
-        var canGoForward = false
-        /// The binding presents the page's history, loading and failures, so the
-        /// page reads them from its presentations.
+        /// The binding presents the page's loading and failures, so the page
+        /// reads them from its presentations.
         var reportsNavigationState: Bool { true }
 
         func load(_ request: URLRequest) {
@@ -524,16 +520,24 @@
             -> Any?
         {
             guard created, !disposed, let frameID = frame.handle as? String else { return nil }
-            // The arguments arrive as constants named for their keys, as WebKit's
-            // callAsyncJavaScript binds them.
-            var source = ""
-            if !arguments.isEmpty {
-                let json = String(decoding: try JSONSerialization.data(withJSONObject: arguments), as: UTF8.self)
-                source = "const __crestArguments = \(json);\n"
-                for key in arguments.keys.sorted() { source += "const \(key) = __crestArguments[\"\(key)\"];\n" }
-            }
-            source += body
-            return await evaluate(source, in: frameID)
+            return await evaluate(try Self.binding(arguments, to: body), in: frameID)
+        }
+
+        func callAsyncJavaScriptInMainFrame(_ body: String, arguments: [String: Any]) async throws -> Any? {
+            guard created, !disposed else { return nil }
+            // The engine addresses the primary main frame's current document by
+            // this name.
+            return await evaluate(try Self.binding(arguments, to: body), in: "main")
+        }
+
+        /// `body` with `arguments` bound as constants named for their keys, as
+        /// WebKit's callAsyncJavaScript binds them.
+        private static func binding(_ arguments: [String: Any], to body: String) throws -> String {
+            guard !arguments.isEmpty else { return body }
+            let json = String(decoding: try JSONSerialization.data(withJSONObject: arguments), as: UTF8.self)
+            var source = "const __crestArguments = \(json);\n"
+            for key in arguments.keys.sorted() { source += "const \(key) = __crestArguments[\"\(key)\"];\n" }
+            return source + body
         }
 
         /// Runs `source` in the document `frameID` names and answers the value of

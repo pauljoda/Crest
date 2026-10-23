@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 
 /// The questions the core asks about the page, shown as sheets on its window
@@ -11,7 +12,14 @@ extension BrowserPage: BrowserPromptPresenting {
             url: URL(string: question.sourceURL) ?? pageEngine.currentURL ?? URL(fileURLWithPath: "/"))
         let corePage = corePage
         let promptID = asked.promptID
-        let reply: @MainActor @Sendable (Bool, String?) -> Void = { accepted, text in
+        scriptDialog = asked
+        // Whoever answers, the person or an agent, the core settles the
+        // question and its sheet closes.
+        dismissal.attach { [weak self] in
+            if self?.scriptDialog?.promptID == promptID { self?.scriptDialog = nil }
+        }
+        let reply: @MainActor @Sendable (Bool, String?) -> Void = { [weak self] accepted, text in
+            if self?.scriptDialog?.promptID == promptID { self?.scriptDialog = nil }
             corePage.answer(AnswerScriptDialog(promptID: promptID, accepted: accepted, text: text))
         }
         question.kind.present(question, request: request, dismissal: dismissal, on: self, reply: reply)
@@ -69,10 +77,20 @@ extension BrowserPage: BrowserPromptPresenting {
 
 /// Each kind of script dialog, shown as a sheet on the page's window.
 extension BrowserPage: BrowserScriptDialogPresenting {
+    /// The window the page's dialogs attach to: the page's own while the
+    /// person can see it, or else, as when it is hidden or minimized, the
+    /// window the presenter finds.
+    private var dialogWindow: NSWindow? {
+        guard let window = nativeView.window, window.isVisible, !window.isMiniaturized else { return nil }
+        return window
+    }
+
     func presentAlert(
         _ question: ScriptDialogQuestion, request: URLRequest, dismissal: BrowserPromptDismissal, reply: @escaping Reply
     ) {
-        dialogPresenter.presentAlert(message: question.message, request: request, dismissal: dismissal) {
+        dialogPresenter.presentAlert(
+            message: question.message, request: request, on: dialogWindow, dismissal: dismissal
+        ) {
             reply(true, nil)
         }
     }
@@ -80,7 +98,9 @@ extension BrowserPage: BrowserScriptDialogPresenting {
     func presentConfirm(
         _ question: ScriptDialogQuestion, request: URLRequest, dismissal: BrowserPromptDismissal, reply: @escaping Reply
     ) {
-        dialogPresenter.presentConfirm(message: question.message, request: request, dismissal: dismissal) {
+        dialogPresenter.presentConfirm(
+            message: question.message, request: request, on: dialogWindow, dismissal: dismissal
+        ) {
             reply($0, nil)
         }
     }
@@ -89,7 +109,8 @@ extension BrowserPage: BrowserScriptDialogPresenting {
         _ question: ScriptDialogQuestion, request: URLRequest, dismissal: BrowserPromptDismissal, reply: @escaping Reply
     ) {
         dialogPresenter.presentPrompt(
-            message: question.message, defaultText: question.defaultText, request: request, dismissal: dismissal
+            message: question.message, defaultText: question.defaultText, request: request, on: dialogWindow,
+            dismissal: dismissal
         ) { answer in
             reply(answer != nil, answer)
         }
@@ -98,7 +119,7 @@ extension BrowserPage: BrowserScriptDialogPresenting {
     func presentBeforeUnload(
         _ question: ScriptDialogQuestion, request: URLRequest, dismissal: BrowserPromptDismissal, reply: @escaping Reply
     ) {
-        dialogPresenter.presentBeforeUnload(request: request, dismissal: dismissal) {
+        dialogPresenter.presentBeforeUnload(request: request, on: dialogWindow, dismissal: dismissal) {
             reply($0, nil)
         }
     }

@@ -73,6 +73,13 @@ struct PlatformSpacePager<Content: View>: View {
                 .onChange(of: spaces.map(BrowserSpaceRuntimeAssignment.init(space:))) {
                     recenter(using: proxy)
                 }
+                // The offset is kept in points and starts at the first Space:
+                // a pager that appears at its full width, as the sidebar does
+                // when the window moves to a larger display, or one given a
+                // new width, would otherwise show another Space.
+                .onChange(of: viewport.size.width, initial: true) {
+                    recenter(using: proxy)
+                }
             }
             // The fixed top chrome stays clear. Rows may continue beneath the
             // bottom glass controls, whose safe-area inset still keeps the

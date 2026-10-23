@@ -8,4 +8,11 @@ extension BrowserSpaceForegroundTone {
     var colorScheme: ColorScheme {
         self == .light ? .dark : .light
     }
+
+    // MARK: - Initializers
+
+    /// The tone text reads in under `colorScheme`: a dark scheme reads light.
+    init(readingIn colorScheme: ColorScheme) {
+        self = colorScheme == .dark ? .light : .dark
+    }
 }

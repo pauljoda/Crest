@@ -4,13 +4,14 @@ namespace CrestCore.Contracts;
 
 /// Asks to move a page to `Engine`, honoring its before-unload decision.
 /// `RemembersSite` records the site choice only when the move is accepted.
-/// The core then closes the page on its engine, keeping
-/// nothing, creates it on `Engine` in the same profile and window, and once
+/// The core then closes the page on its engine, which hands back the history
+/// it held, creates it on `Engine` in the same profile and window, and once
 /// that engine has created it, loads the address the page showed. The page
-/// keeps its identity, its owner and its window; its history, form state and
-/// anything its old engine kept stay behind. A page already on `Engine`
-/// stays. Refused when the page is not open, its Space is locked or being
-/// deleted, or this device did not register `Engine`.
+/// keeps its identity, its owner, its window and its history, whose entries
+/// return to the engine that held them when the person goes back or forward
+/// to them; form state and the document stay behind. A page already on
+/// `Engine` stays. Refused when the page is not open, its Space is locked or
+/// being deleted, or this device did not register `Engine`.
 public sealed record RehostPage(Guid PageId, EngineKind Engine, bool RemembersSite = false) : PageIntent {
     #region Actions - Pages
 

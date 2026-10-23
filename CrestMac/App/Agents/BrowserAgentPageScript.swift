@@ -191,6 +191,75 @@ struct BrowserAgentPageScript {
                 """)
     }
 
+    /// The page's readable text as Markdown, within `limit` characters:
+    /// headings, paragraphs, list items, quotes, code and links, leaving out
+    /// what the page hides and every form field's value, a password's above
+    /// all.
+    static func readText(limit: Int) -> Self {
+        Self(
+            source: """
+                const limit = \(limit);
+                const skipped = new Set(["SCRIPT", "STYLE", "NOSCRIPT", "TEMPLATE", "SVG", "CANVAS", "IFRAME", "INPUT",
+                  "TEXTAREA", "SELECT", "OPTION"]);
+                const blocks = new Set(["P", "DIV", "SECTION", "ARTICLE", "MAIN", "HEADER", "FOOTER", "ASIDE", "NAV",
+                  "FIGURE", "FIGCAPTION", "TABLE", "TR", "UL", "OL", "DL", "DT", "DD", "FORM", "FIELDSET", "DETAILS", "SUMMARY"]);
+                const out = [];
+                let size = 0;
+                let truncated = false;
+                const push = (text) => {
+                  if (truncated) return;
+                  if (size + text.length > limit) { out.push(text.slice(0, limit - size)); truncated = true; size = limit; return; }
+                  out.push(text); size += text.length;
+                };
+                const hidden = (node) => {
+                  if (node.hidden || node.getAttribute("aria-hidden") === "true") return true;
+                  if (!node.checkVisibility) return false;
+                  // A display: contents wrapper has no box of its own, so only the visibility it
+                  // passes down, its own or an ancestor's, hides what it holds.
+                  const style = getComputedStyle(node);
+                  if (style.display === "contents") return style.visibility !== "visible";
+                  return !node.checkVisibility({ checkOpacity: true, checkVisibilityCSS: true, opacityProperty: true,
+                    visibilityProperty: true });
+                };
+                const inline = (node) => {
+                  if (node.nodeType === Node.TEXT_NODE) return node.textContent.replace(/\\s+/g, " ");
+                  if (node.nodeType !== Node.ELEMENT_NODE || skipped.has(node.tagName) || hidden(node)) return "";
+                  const text = [...node.childNodes].map(inline).join("");
+                  if (node.tagName === "A" && node.href && text.trim()) return `[${text.trim()}](${node.href})`;
+                  if (node.tagName === "IMG") return node.alt ? `![${node.alt}]` : "";
+                  if (node.tagName === "CODE") return text ? "`" + text + "`" : "";
+                  if (node.tagName === "BR") return "\\n";
+                  if (node.tagName === "STRONG" || node.tagName === "B") return text.trim() ? `**${text.trim()}**` : text;
+                  return text;
+                };
+                const walk = (node, depth) => {
+                  if (truncated || node.nodeType !== Node.ELEMENT_NODE || skipped.has(node.tagName) || hidden(node)) return;
+                  const tag = node.tagName;
+                  const heading = /^H([1-6])$/.exec(tag);
+                  if (heading) { const text = inline(node).trim(); if (text) push("#".repeat(+heading[1]) + " " + text + "\\n\\n"); return; }
+                  if (tag === "LI") {
+                    // A nested list follows its item, indented, rather than running into its text.
+                    const own = [...node.childNodes].filter((child) => !["UL", "OL"].includes(child.tagName)).map(inline).join("").trim();
+                    if (own) push("  ".repeat(Math.max(depth, 0)) + "- " + own + "\\n");
+                    for (const child of node.children) if (["UL", "OL"].includes(child.tagName)) walk(child, depth);
+                    return;
+                  }
+                  if (tag === "PRE") { push("```\\n" + node.innerText + "\\n```\\n\\n"); return; }
+                  if (tag === "BLOCKQUOTE") { const text = inline(node).trim(); if (text) push("> " + text + "\\n\\n"); return; }
+                  if (tag === "UL" || tag === "OL") { for (const child of node.children) walk(child, depth + 1); push("\\n"); return; }
+                  const hasBlocks = [...node.children].some((child) => blocks.has(child.tagName) || /^H[1-6]$/.test(child.tagName)
+                    || ["LI", "PRE", "BLOCKQUOTE", "UL", "OL"].includes(child.tagName));
+                  if (!hasBlocks) { const text = inline(node).trim(); if (text) push(text + "\\n\\n"); return; }
+                  for (const child of node.childNodes) {
+                    if (child.nodeType === Node.TEXT_NODE) { const text = child.textContent.trim(); if (text) push(text + "\\n\\n"); }
+                    else walk(child, depth);
+                  }
+                };
+                if (document.body) walk(document.body, -1);
+                return { url: location.href, title: document.title, text: out.join("").replace(/\\n{3,}/g, "\\n\\n").trim(), truncated };
+                """)
+    }
+
     /// Whether the page shows `text` now, or, without text, whether it has
     /// finished loading.
     static func shows(_ text: String?) -> Self {

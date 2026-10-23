@@ -7,6 +7,9 @@ struct BrowserRootSidebarSurfaceLayer<Content: View>: View {
     let space: SpaceModel?
     let reduceTransparency: Bool
     let spaces: [SpaceModel]
+    /// Whether the pointer brought a floating sidebar out by reaching the
+    /// window edge.
+    let isRevealedByPointer: Bool
     let hoverChanged: @MainActor @Sendable (Bool) -> Void
     let content: Content
 
@@ -19,6 +22,7 @@ struct BrowserRootSidebarSurfaceLayer<Content: View>: View {
         space: SpaceModel?,
         reduceTransparency: Bool,
         spaces: [SpaceModel] = [],
+        isRevealedByPointer: Bool = false,
         hoverChanged: @escaping @MainActor @Sendable (Bool) -> Void,
         @ViewBuilder content: () -> Content
     ) {
@@ -28,6 +32,7 @@ struct BrowserRootSidebarSurfaceLayer<Content: View>: View {
         self.space = space
         self.reduceTransparency = reduceTransparency
         self.spaces = spaces
+        self.isRevealedByPointer = isRevealedByPointer
         self.hoverChanged = hoverChanged
         self.content = content()
     }
@@ -53,14 +58,17 @@ struct BrowserRootSidebarSurfaceLayer<Content: View>: View {
                     // stay over the page it slid away from, where it would
                     // take the page's cursor updates.
                     if presentation.showsSidebar {
-                        BrowserSidebarHoverTracker(onHoverChange: hoverChanged).accessibilityHidden(true)
+                        BrowserSidebarHoverTracker(
+                            isRevealedByPointer: isRevealedByPointer,
+                            onHoverChange: hoverChanged
+                        )
+                        .accessibilityHidden(true)
                     }
                 }
             #else
                 .onHover(perform: hoverChanged)
             #endif
             .offset(x: hiddenOffset)
-            .opacity(presentation.showsSidebar ? 1 : 0)
             .allowsHitTesting(presentation.showsSidebar)
             .accessibilityHidden(!presentation.showsSidebar)
             .zIndex(
@@ -76,6 +84,7 @@ struct BrowserRootSidebarSurfaceLayer<Content: View>: View {
 
     private var cardSurface: some View {
         content
+            .animation(nil, value: presentation)
             .frame(width: width)
             .frame(maxHeight: .infinity)
             .background {
@@ -86,7 +95,12 @@ struct BrowserRootSidebarSurfaceLayer<Content: View>: View {
                 }
             }
             .compositingGroup()
-            .clipShape(shape)
+            // A docked sidebar's list runs on under the bottom safe area, into
+            // the display's corner, as the page beside it does; a floating
+            // card keeps to its rounded shape.
+            .mask {
+                shape.ignoresSafeArea(.container, edges: usesFloatingCardAppearance ? [] : .bottom)
+            }
             .overlay {
                 shape
                     .strokeBorder(
@@ -101,7 +115,7 @@ struct BrowserRootSidebarSurfaceLayer<Content: View>: View {
             }
             .shadow(
                 color: .black.opacity(
-                    reduceTransparency || !usesFloatingCardAppearance
+                    reduceTransparency || !usesFloatingCardAppearance || !presentation.showsSidebar
                         ? 0
                         : BrowserRootMetrics.floatingSidebarShadowOpacity
                 ),

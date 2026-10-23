@@ -78,6 +78,27 @@ The immediate upstream is ungoogled-chromium for macOS. Updates therefore follow
 its releases, not the first Google Chrome announcement. Pulling a Google security
 fix ahead of that release requires a deliberate patch and normal engine review.
 
+## Certificate trust backports
+
+Chrome distrusts certificate authorities through components: CRLSets and Chrome
+Root Store updates. Ungoogled's domain substitution points the component updater
+at an unreachable host, so this engine receives neither, nor Certificate
+Transparency log list updates. It trusts only the blocklist, root store and log
+list compiled into its source. Chromium stops enforcing Certificate Transparency
+70 days after the built-in log list's date, so the engine needs regular updates.
+
+`native-host.patch` therefore carries upstream distrust changes that the pinned
+source does not yet contain, copied hunk for hunk from Chromium:
+
+| Files | Change | Upstream |
+| --- | --- | --- |
+| `net/cert/cert_verify_proc_blocklist.inc` | Blocks the keys of eight compromised eMudhra subordinate CAs | Chromium `da63b94c4ee2` |
+| `net/data/ssl/chrome_root_store/root_store.textproto`, `root_store.certs` | Removes emSign ECC Root CA - G3 | Chrome Root Store version 43, Chromium `8793082f793c` |
+
+The root store keeps its pinned version number. Once an upstream release
+contains a change, its hunks no longer apply and the update stops there: remove
+those sections from the host patch and refresh the host inputs.
+
 ## GitHub Actions
 
 Install the repository-scoped runner on the build Mac:

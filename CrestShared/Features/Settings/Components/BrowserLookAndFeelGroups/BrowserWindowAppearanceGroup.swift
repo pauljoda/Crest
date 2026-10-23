@@ -1,12 +1,15 @@
 import SwiftUI
 
 /// The window's frame: how much of the Space shows around a page, which side
-/// the sidebar sits on, and the accent its tabs and address field wear.
+/// the sidebar sits on, how its Space icons are sized, and the accent its tabs
+/// and address field wear.
 ///
 /// The desktop hands in the choices only it has — focused-window transparency
 /// and Space page motion — as extra rows and the settings that go with them, so
 /// the group's own Reset covers them too.
 struct BrowserWindowAppearanceGroup<Extra: View>: View {
+    // MARK: - Variables
+
     var space: BrowserSpaceAppearance?
     var showsPreview = false
     var extraSettings: [CrestResettableSetting] = []
@@ -17,6 +20,8 @@ struct BrowserWindowAppearanceGroup<Extra: View>: View {
     @AppStorage(BrowserChromeAppearancePreference.sidebarOnRightKey, store: BrowserChromeAppearancePreference.defaults)
     private var sidebarOnRight = BrowserLookAndFeelDefaults.sidebarOnRight
     @Bindable private var appearance = BrowserDeviceAppearanceStore.shared
+
+    // MARK: - Actions - Drawing
 
     var body: some View {
         CrestSettingsGroup(
@@ -49,6 +54,21 @@ struct BrowserWindowAppearanceGroup<Extra: View>: View {
                     .labelsHidden()
                     .accessibilityIdentifier("sidebar-on-right")
             }
+            CrestSettingRow(
+                "Fit Space icons to sidebar", setting: fitsSpaceIcons.resettable("Fit Space icons to sidebar")
+            ) {
+                Toggle("Fit Space icons to sidebar", isOn: fitsSpaceIcons.binding)
+                    .labelsHidden()
+                    .accessibilityIdentifier("space-icons-fit-sidebar")
+            }
+            CrestSettingSlider(
+                "Space icon size",
+                value: spaceIconScale,
+                range: BrowserSpaceIconSizing.scaleRange,
+                step: BrowserSpaceIconSizing.scaleStep,
+                identifier: "space-icon-size"
+            )
+            .disabled(appearance.spaceIconSizing.fitsStrip)
             BrowserAppearanceAccentRow(
                 color: accent,
                 fallback: space?.branding.primaryColor ?? .indigo,
@@ -57,6 +77,8 @@ struct BrowserWindowAppearanceGroup<Extra: View>: View {
             extraRows()
         }
     }
+
+    // MARK: - Actions - Settings
 
     private var border: CrestSettingValue<Double> {
         CrestSettingValue($borderWidth, default: BrowserLookAndFeelDefaults.windowBorderWidth)
@@ -77,6 +99,22 @@ struct BrowserWindowAppearanceGroup<Extra: View>: View {
         CrestSettingValue($sidebarOnRight, default: BrowserLookAndFeelDefaults.sidebarOnRight)
     }
 
+    /// Whether the Space switcher fits its icons to the sidebar, or keeps the
+    /// size below.
+    private var fitsSpaceIcons: CrestSettingValue<Bool> {
+        CrestSettingValue(
+            Binding(
+                get: { appearance.spaceIconSizing.fitsStrip },
+                set: { appearance.spaceIconSizing = $0 ? .automatic : .manual }
+            ),
+            default: BrowserLookAndFeelDefaults.spaceIconSizing.fitsStrip
+        )
+    }
+
+    private var spaceIconScale: CrestSettingValue<Double> {
+        CrestSettingValue($appearance.spaceIconScale, default: BrowserLookAndFeelDefaults.spaceIconScale)
+    }
+
     /// One accent for the selected tabs, pins and the address field, which
     /// keep their own stored colors.
     private var accent: CrestSettingValue<BrandColor?> {
@@ -94,7 +132,8 @@ struct BrowserWindowAppearanceGroup<Extra: View>: View {
     private var settings: [CrestResettableSetting] {
         [
             border.resettable("Window border"), material.resettable("Material"),
-            sidebar.resettable("Sidebar on right"),
+            sidebar.resettable("Sidebar on right"), fitsSpaceIcons.resettable("Fit Space icons to sidebar"),
+            spaceIconScale.resettable("Space icon size"),
             accent.resettable("Follow Space accent"),
         ] + extraSettings
     }

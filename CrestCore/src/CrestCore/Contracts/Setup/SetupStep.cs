@@ -9,7 +9,7 @@ public sealed class SetupStep {
 
     /// Each platform shows a step with its own page, so the one place that
     /// builds a step's page switches over the kind.
-    public enum Kinds { Welcome, FeatureSpaces, FeatureTabs, FeatureSync, ImportBrowser, Review, ManualSetup, Complete }
+    public enum Kinds { Welcome, FeatureSpaces, FeatureTabs, FeatureSync, ImportBrowser, Review, ManualSetup, Complete, Look }
 
     #endregion
 
@@ -17,7 +17,8 @@ public sealed class SetupStep {
 
     /// Where setup opens for a person new to Crest, or who asked to see it again.
     public static readonly SetupStep Welcome = new(Kinds.Welcome, name: "welcome", progressPosition: 0,
-        next: platform => platform.ImportsBrowsers ? ImportBrowser : ManualSetup, back: (_, _) => null);
+        next: platform => platform.ChoosesLook ? Look : platform.ImportsBrowsers ? ImportBrowser : ManualSetup,
+        back: (_, _) => null);
     /// The tour of Spaces, tabs and sync, one page each.
     public static readonly SetupStep FeatureSpaces = new(Kinds.FeatureSpaces, name: "featureSpaces", progressPosition: 0,
         next: _ => FeatureTabs, back: (_, _) => null);
@@ -26,21 +27,29 @@ public sealed class SetupStep {
     public static readonly SetupStep FeatureSync = new(Kinds.FeatureSync, name: "featureSync", progressPosition: 0,
         next: _ => ManualSetup, back: (_, _) => null);
     /// Choosing the browsers to import from, and reading them.
-    public static readonly SetupStep ImportBrowser = new(Kinds.ImportBrowser, name: "importBrowser", progressPosition: 1,
-        next: _ => null, back: (entry, _) => entry.IsGuided ? Welcome : null);
+    public static readonly SetupStep ImportBrowser = new(Kinds.ImportBrowser, name: "importBrowser", progressPosition: 2,
+        next: _ => null, back: (entry, platform) => !entry.IsGuided ? null : platform.ChoosesLook ? Look : Welcome);
     /// Reviewing what one browser brings, and importing it.
-    public static readonly SetupStep Review = new(Kinds.Review, name: "review", progressPosition: 2, next: _ => null,
+    public static readonly SetupStep Review = new(Kinds.Review, name: "review", progressPosition: 3, next: _ => null,
         back: (_, _) => ImportBrowser);
     /// Setting up Spaces by hand.
-    public static readonly SetupStep ManualSetup = new(Kinds.ManualSetup, name: "manualSetup", progressPosition: 2,
+    public static readonly SetupStep ManualSetup = new(Kinds.ManualSetup, name: "manualSetup", progressPosition: 4,
         next: _ => null,
-        back: (entry, platform) => !entry.IsGuided ? null : platform.ImportsBrowsers ? ImportBrowser : Welcome);
-    /// What setup did, before Crest opens.
-    public static readonly SetupStep Complete = new(Kinds.Complete, name: "complete", progressPosition: 2, next: _ => null,
-        back: (_, _) => null);
+        back: (entry, platform) => !entry.IsGuided ? null
+            : platform.ImportsBrowsers ? ImportBrowser
+            : platform.ChoosesLook ? Look
+            : Welcome);
+    /// What setup is about to do, or did, before Crest opens. Setup that
+    /// walks the person through Crest reaches it from the manual setup, which
+    /// finishing then applies, and Back returns there.
+    public static readonly SetupStep Complete = new(Kinds.Complete, name: "complete", progressPosition: 5, next: _ => null,
+        back: (entry, _) => entry.IsGuided ? ManualSetup : null);
+    /// Choosing the look the Spaces setup makes wear, on a platform that offers it.
+    public static readonly SetupStep Look = new(Kinds.Look, name: "look", progressPosition: 1,
+        next: platform => platform.ImportsBrowsers ? ImportBrowser : ManualSetup, back: (_, _) => Welcome);
 
     public static IReadOnlyList<SetupStep> All { get; } =
-        [Welcome, FeatureSpaces, FeatureTabs, FeatureSync, ImportBrowser, Review, ManualSetup, Complete];
+        [Welcome, FeatureSpaces, FeatureTabs, FeatureSync, ImportBrowser, Review, ManualSetup, Complete, Look];
 
     #endregion
 
@@ -50,8 +59,15 @@ public sealed class SetupStep {
 
     public string Name { get; }
 
-    /// How far along setup the step stands, counting from zero, of three.
+    /// How far along setup the step stands, counting from zero, of `ProgressCount`.
     public int ProgressPosition { get; }
+
+    /// How many positions setup walks through on a platform that offers every step.
+    public const int ProgressCount = 6;
+
+    /// Whether finishing setup from this step applies the manual setup the
+    /// device holds: from the manual setup itself, or the page after it.
+    internal bool AppliesManualSetup => Kind is Kinds.ManualSetup or Kinds.Complete;
 
     private readonly Func<DevicePlatform, SetupStep?> next;
     private readonly Func<SetupEntry, DevicePlatform, SetupStep?> back;

@@ -14,7 +14,9 @@ import Foundation
 protocol BrowserTabStateArchiving: AnyObject, Sendable {
     /// The framed envelope stored for one tab, or nil when there is none.
     func archivedState(profileID: UUID, tabID: UUID) -> Data?
-    func archive(interactionState: Data, url: URL?, profileID: UUID, tabID: UUID)
+    /// Keeps the tab's engine history as showing `url`, with its back and
+    /// forward history as the core keeps it across engines, when it has one.
+    func archive(interactionState: Data, url: URL?, history: Data?, profileID: UUID, tabID: UUID)
     func removeState(profileID: UUID, tabID: UUID)
     /// Drops every state belonging to one profile. Space deletion calls this, so
     /// per-Space isolation survives a Space being deleted.

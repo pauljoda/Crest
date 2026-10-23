@@ -233,25 +233,6 @@
         {
           "fill-specializations" : [
             {
-              "appearance" : "tinted",
-              "value" : "none"
-            }
-          ],
-          "image-name" : "CrestTintedBackground.svg",
-          "name" : "CrestTintedBackground",
-          "opacity-specializations" : [
-            {
-              "value" : 0
-            },
-            {
-              "appearance" : "tinted",
-              "value" : 1
-            }
-          ]
-        },
-        {
-          "fill-specializations" : [
-            {
               "appearance" : "dark",
               "value" : "none"
             }

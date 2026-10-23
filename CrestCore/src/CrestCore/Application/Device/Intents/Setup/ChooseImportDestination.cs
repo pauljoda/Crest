@@ -10,7 +10,7 @@ public sealed record ChooseImportDestination(Guid SourceSpaceId, Guid? Destinati
     #region Actions - Device
 
     internal override void Apply(Device device, DeviceTurn turn) => device.ReviseFlow(turn.Changes, (flow, session) =>
-        Device.Editing(flow, review => review.ChoosingDestination(SourceSpaceId, DestinationSpaceId, session)));
+        Device.Editing(flow, review => review.ChoosingDestination(SourceSpaceId, DestinationSpaceId, session, flow.Look)));
 
     #endregion
 }
