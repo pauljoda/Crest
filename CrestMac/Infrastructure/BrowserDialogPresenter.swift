@@ -448,7 +448,7 @@ final class BrowserDialogPresenter {
             lines.append(
                 String(
                     localized:
-                        "It can read and act on tabs in the Spaces you choose in Settings › Agents, and every tab it uses shows its badge."
+                        "It can read and act on tabs and history in the Spaces you choose in Settings › Agents, and open windows. Every tab it uses shows its badge."
                 ))
             alert.informativeText = lines.joined(separator: "\n\n")
             alert.alertStyle = .warning
@@ -461,18 +461,56 @@ final class BrowserDialogPresenter {
         }
     }
 
+    /// Whether the agent may remove every visit to an address from a Space's
+    /// history. Keeping the history is the default, and Crest comes forward,
+    /// since the person is likely in the agent's terminal when it asks.
+    func approveHistoryDeletion(_ deletion: BrowserAgentHistoryDeletion, dismissal: BrowserPromptDismissal? = nil)
+        async -> Bool
+    {
+        await withCheckedContinuation { continuation in
+            let alert = NSAlert()
+            let agent = Self.shown(deletion.agentName)
+            let space = Self.shown(deletion.spaceName)
+            alert.messageText = String(localized: "Let “\(agent)” delete history?")
+            alert.informativeText = String(
+                localized:
+                    "It removes every visit to \(Self.shown(address: deletion.address)) from the \(space) Space’s history."
+            )
+            alert.alertStyle = .warning
+            alert.addButton(withTitle: String(localized: "Keep History"))
+            alert.addButton(withTitle: String(localized: "Delete"))
+            alert.buttons[1].hasDestructiveAction = true
+            if !NSApp.isActive { NSApp.requestUserAttention(.criticalRequest) }
+            present(alert, comesForward: true, dismissal: dismissal) { response in
+                continuation.resume(returning: response == .alertSecondButtonReturn)
+            }
+        }
+    }
+
     /// `name` as a question may show it: without control or formatting
     /// characters, such as the ones that reverse text, and at most 64
     /// characters.
     private static func shown(_ name: String) -> String {
-        let kept = name.unicodeScalars.filter { scalar in
+        printable(name).split(whereSeparator: \.isWhitespace).joined(separator: " ").prefix(64).description
+    }
+
+    /// `address` as a question may show it: without control or formatting
+    /// characters, and at most 200 characters, cut in the middle.
+    private static func shown(address: String) -> String {
+        let kept = printable(address)
+        guard kept.count > 200 else { return kept }
+        return "\(kept.prefix(120))…\(kept.suffix(79))"
+    }
+
+    /// `text` without control or formatting characters.
+    private static func printable(_ text: String) -> String {
+        let kept = text.unicodeScalars.filter { scalar in
             switch scalar.properties.generalCategory {
             case .control, .format, .lineSeparator, .paragraphSeparator, .surrogate, .privateUse, .unassigned: false
             default: true
             }
         }
-        return String(String.UnicodeScalarView(kept)).split(whereSeparator: \.isWhitespace).joined(separator: " ")
-            .prefix(64).description
+        return String(String.UnicodeScalarView(kept))
     }
 
     /// Whether to quit and stop the `count` downloads still in progress.

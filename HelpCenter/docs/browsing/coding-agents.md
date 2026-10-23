@@ -18,7 +18,7 @@ Agents are off until you turn them on.
 3. Under **Spaces**, turn on each Space agents may use.
 4. Under **Connect an Agent**, choose **Copy Setup** for your agent, and paste it in your agent's terminal or settings.
 
-Crest must be open while an agent works. Crest never opens a window for an agent.
+Crest must be open while an agent works. An agent can open a window with its window tools, or by showing a tab when no window is open.
 
 To start Crest without bringing it to the front, a tool can run `open -g --env CREST_BACKGROUND_LAUNCH=1 -a Crest`. Crest opens your windows behind the app you're using, and comes forward only to ask you about an agent it hasn't met.
 
@@ -33,12 +33,14 @@ When the program is a general interpreter, such as node or python, allowing it c
 - Each tab an agent uses shows the agent's badge and an outline in its colour, and the page shows a bar naming the agent.
 - Choose **Stop** in that bar, or **Stop Agent in This Tab** from the badge, to keep the agent out of that tab, through any of its connections, until Crest quits or you forget the agent.
 - **Settings > Agents** lists the agents connected now. Choose **Disconnect** to end one's connection.
+- Before an agent deletes history, Crest asks you, naming the agent, the address and the Space.
 - Turning agents off disconnects every agent.
 
 ## What agents can reach
 
 - Only the Spaces you turned on. A locked Space shows agents its name and nothing in it.
-- Never a private window, and never Crest's own pages, such as Settings, a browser or extension page, or a file.
+- Never into a private window, even one an agent opened for you, and never Crest's own pages, such as Settings, a browser or extension page, or a file. An agent opens an address in a private window only when it opens a new one.
+- History only in the Spaces you turned on, never private history.
 - Only `http` and `https` pages, and blank ones.
 - Not your saved passwords. A password field's value is left out of what agents read, cookies and sign-in headers are hidden in the requests they read, and request and response bodies are never shown.
 - Scripts in a page's own world only when you turn on **Let agents run scripts in pages**. A script runs with the page's own access, so it can read anything the page holds, including a password filled in on it.
@@ -53,6 +55,17 @@ Crest includes a Model Context Protocol server as a helper inside the app, which
 /Applications/Crest.app/Contents/Helpers/crest-browser mcp
 ```
 
-It speaks protocol version 2026-07-28 and the earlier versions that open with `initialize`. Call `identify` first with your name and brand colour as `#RRGGBB`, so the person sees which tabs you use. Then use `list_spaces` and `list_tabs`, and read pages with `take_snapshot`, whose element `uid`s `click`, `hover`, `fill` and `scroll` take. The other tools are `open_tab`, `navigate`, `show_tab`, `close_tab`, `screenshot`, `type_text`, `press_key`, `wait_for`, `list_console_messages`, `list_network_requests`, `get_network_request` and `evaluate_script`.
+It speaks protocol version 2026-07-28 and the earlier versions that open with `initialize`. Call `identify` first with your name and brand colour as `#RRGGBB`, so the person sees which tabs you use. Then use `list_spaces` and `list_tabs`, and read pages with `take_snapshot`, whose element `uid`s `click`, `hover`, `fill` and `scroll` take. The other tools are `open_tab`, `navigate`, `show_tab`, `close_tab`, `screenshot`, `type_text`, `press_key`, `wait_for`, `list_console_messages`, `list_network_requests`, `get_network_request`, `evaluate_script`, `search_history`, `delete_history`, `list_search_providers`, `open_window`, `open_blank_window`, `open_quick_window` and `open_private_window`.
 
 When a page runs on WebKit, input reaches it as script events, which some pages ignore, and its network requests show their address, type and timing without their method, status or headers.
+
+## Launchers and other tools
+
+Launchers and other local tools use the same helper, approval and Spaces as coding agents.
+
+- `list_spaces` says which Space is active and includes each unlocked Space's artwork. `list_tabs` says whether each tab is pinned or saved and which folders hold it.
+- `show_tab` shows the tab itself, opening a normal window over its Space only when none is open. `close_tab` closes only open tabs.
+- `search_history` searches the history of the allowed, unlocked Spaces, newest first. Every word of `query` must appear in the title or address, `domain` matches a host and its subdomains, and `limit` takes 1 through 1000, 25 by default.
+- `delete_history` removes every visit to one `url`, without its fragment, from one allowed, unlocked `space`, once the person agrees. An address with no visits removes nothing and asks nothing.
+- `list_search_providers` lists the enabled search providers and a Space's default.
+- `open_window`, `open_blank_window` and `open_quick_window` open a window over an allowed, unlocked Space, at an `http` or `https` address where they take one. `open_private_window` answers only with the window's ID; an address opens only in a new Private Window.

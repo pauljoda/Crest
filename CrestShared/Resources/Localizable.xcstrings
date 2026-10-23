@@ -1918,13 +1918,13 @@
     "Agents are turned off in Crest’s settings." : {
 
     },
+    "Agents can open a private window but never reach into one, and see only the name of a locked Space." : {
+
+    },
     "Agents can’t reach this copy of Crest." : {
 
     },
     "Agents can’t use Crest on this device." : {
-
-    },
-    "Agents never reach a private window, and see only the name of a locked Space." : {
 
     },
     "AI Assistant" : {
@@ -3619,7 +3619,7 @@
     "Coding agents and scripts" : {
 
     },
-    "Coding agents on this Mac can read and act on tabs in the Spaces you choose. Crest asks before each new agent connects." : {
+    "Coding agents on this Mac can read and act on tabs and history in the Spaces you choose, and open windows. Crest asks before each new agent connects." : {
 
     },
     "Collapsed" : {
@@ -7473,8 +7473,18 @@
     "Issues" : {
 
     },
-    "It can read and act on tabs in the Spaces you choose in Settings › Agents, and every tab it uses shows its badge." : {
+    "It can read and act on tabs and history in the Spaces you choose in Settings › Agents, and open windows. Every tab it uses shows its badge." : {
 
+    },
+    "It removes every visit to %@ from the %@ Space’s history." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "It removes every visit to %1$@ from the %2$@ Space’s history."
+          }
+        }
+      }
     },
     "Its content is still saved. Update Crest to open it." : {
 
@@ -7495,6 +7505,9 @@
 
     },
     "Keep current password" : {
+
+    },
+    "Keep History" : {
 
     },
     "Keep Loaded" : {
@@ -7686,6 +7699,9 @@
           }
         }
       }
+    },
+    "Let “%@” delete history?" : {
+
     },
     "Let agents run scripts in pages" : {
 

@@ -17,6 +17,8 @@ import os
 final class BrowserMacAgents {
     // MARK: - Static Variables
 
+    static let maximumConnections = 32
+
     private static let logger = Logger(subsystem: "com.pauldavis.crest", category: "Agents")
 
     // MARK: - Types
@@ -60,7 +62,8 @@ final class BrowserMacAgents {
     private let helper: BrowserAgentHelperRequirement?
     private var listener: BrowserAgentListener?
     private var links: [ObjectIdentifier: Link] = [:]
-    private let approvals = BrowserAgentApprovals()
+    /// The person's answers to agents connecting and deleting history.
+    let approvals: BrowserAgentApprovals
     /// The work running on each tab, which the next call on that tab waits
     /// for, so calls on one tab never interleave.
     private var tabWork: [UUID: Task<Void, Never>] = [:]
@@ -70,9 +73,13 @@ final class BrowserMacAgents {
 
     // MARK: - Initializers
 
-    init(application: BrowserMacApplication, windows: BrowserMacWindows) {
+    init(
+        application: BrowserMacApplication, windows: BrowserMacWindows,
+        approvals: BrowserAgentApprovals = BrowserAgentApprovals()
+    ) {
         self.application = application
         self.windows = windows
+        self.approvals = approvals
         helper = BrowserAgentHelperRequirement(bundle: .main)
         path = helper == nil ? nil : Bundle.main.bundleIdentifier.flatMap(AgentSocketLocation.path(forApp:))
     }
@@ -160,7 +167,7 @@ final class BrowserMacAgents {
     // MARK: - Actions - Connections
 
     private func admit(_ connection: BrowserAgentConnection) {
-        guard listener != nil else {
+        guard listener != nil, links.count < Self.maximumConnections else {
             connection.close()
             return
         }

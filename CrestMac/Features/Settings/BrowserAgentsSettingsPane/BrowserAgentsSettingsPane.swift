@@ -59,7 +59,7 @@ struct BrowserAgentsSettingsPane: View {
                     .accessibilityIdentifier("agents-enabled")
             } footer: {
                 CrestFormFootnote(
-                    "Coding agents on this Mac can read and act on tabs in the Spaces you choose. Crest asks before each new agent connects."
+                    "Coding agents on this Mac can read and act on tabs and history in the Spaces you choose, and open windows. Crest asks before each new agent connects."
                 )
             }
             if preferences.isOn { connection }
@@ -72,7 +72,9 @@ struct BrowserAgentsSettingsPane: View {
             } header: {
                 Text("Spaces")
             } footer: {
-                CrestFormFootnote("Agents never reach a private window, and see only the name of a locked Space.")
+                CrestFormFootnote(
+                    "Agents can open a private window but never reach into one, and see only the name of a locked Space."
+                )
             }
             .disabled(!preferences.isOn)
             Section {

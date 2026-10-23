@@ -5,8 +5,8 @@ import AppKit
 /// the person stopped allowing or locked, or a tab they stopped the agent
 /// using, is out of reach at once. Tabs open, close and come forward through
 /// the window stores Crest's own commands use, so the core's rules and a
-/// page's leave-page check apply as they do for the person. An agent never
-/// opens a window: it works in the windows the person has open.
+/// page's leave-page check apply as they do for the person. An agent
+/// creates a window only for an explicit command from the person.
 extension BrowserMacAgents {
     // MARK: - Types
 
@@ -39,6 +39,9 @@ extension BrowserMacAgents {
         let id: UUID
         let name: String
         let locked: Bool
+        let active: Bool?
+        let symbol: String?
+        let icon: String?
     }
 
     private struct TabListing: Encodable {
@@ -47,6 +50,9 @@ extension BrowserMacAgents {
         let title: String
         let url: String?
         let placement: String
+        let isPinned: Bool
+        let isSaved: Bool
+        let folders: [String]
         let inUse: Bool
         let shown: Bool
     }
@@ -79,14 +85,25 @@ extension BrowserMacAgents {
 
     // MARK: - Actions - Spaces
 
-    func listSpaces(_ call: BrowserAgentCall) async throws(BrowserAgentFailure) -> AgentToolResult {
+    func listSpaces(_ call: BrowserAgentCall) throws(BrowserAgentFailure) -> AgentToolResult {
         let reach = try reach(call)
-        return .data(["spaces": reach.spaces.map { SpaceListing(id: $0.spaceID, name: $0.name, locked: $0.isLocked) }])
+        let workspace = reach.workspaceID.flatMap { core.state.workspaces[$0] }
+        let selected = application.stackedWindowIDs.compactMap {
+            application.windowCoordinator.existingModel(for: $0)
+        }.first { !$0.isTemporary }?.browser.selectedSpaceID
+        let spaces = reach.spaces.map { reached in
+            let space = reached.isLocked ? nil : workspace?.spaces.model(reached.spaceID)
+            return SpaceListing(
+                id: reached.spaceID, name: reached.name, locked: reached.isLocked,
+                active: space.map { $0.id == selected }, symbol: space?.settings.symbol,
+                icon: space.flatMap(spaceIcon))
+        }
+        return .data(["spaces": spaces])
     }
 
     // MARK: - Actions - Tabs
 
-    func listTabs(_ call: BrowserAgentCall) async throws(BrowserAgentFailure) -> AgentToolResult {
+    func listTabs(_ call: BrowserAgentCall) throws(BrowserAgentFailure) -> AgentToolResult {
         let query = try call.arguments(SpaceQuery.self)
         let reach = try reach(call)
         var spaces = reach.spaces
@@ -96,12 +113,9 @@ extension BrowserMacAgents {
             }
             spaces = [space]
         }
+        let workspace = reach.workspaceID.flatMap { core.state.workspaces[$0] }
         let tabs = spaces.flatMap { space in
-            space.tabs.map { tab in
-                TabListing(
-                    id: tab.tabID, space: space.spaceID, title: tab.title, url: tab.url, placement: tab.placement.name,
-                    inUse: tab.claimed, shown: isShown(tab.tabID))
-            }
+            space.tabs.map { describe($0, in: space.spaceID, model: workspace?.spaces.model(space.spaceID)) }
         }
         let locked = spaces.filter(\.isLocked).map(\.name)
         let note =
@@ -152,7 +166,12 @@ extension BrowserMacAgents {
     func showTab(_ call: BrowserAgentCall) async throws(BrowserAgentFailure) -> AgentToolResult {
         let reference = try call.arguments(TabReference.self)
         let (space, tab) = try claim(reference.tab, call)
-        guard let window = frontWindow(over: space) else { throw .noWindow }
+        let window: BrowserMacWindowModel
+        if let existing = frontWindow(over: space) {
+            window = existing
+        } else {
+            window = try openWindow(over: space)
+        }
         window.browser.selectSpace(space.id)
         guard window.browser.activateSessionTab(tab.id, in: space.id) else {
             throw .refused("Crest could not show the tab.")
@@ -218,14 +237,41 @@ extension BrowserMacAgents {
 
     private func listing(_ tabID: UUID, _ call: BrowserAgentCall) throws(BrowserAgentFailure) -> TabListing {
         let reach = try reach(call)
+        let workspace = reach.workspaceID.flatMap { core.state.workspaces[$0] }
         for space in reach.spaces {
             if let tab = space.tabs.first(where: { $0.tabID == tabID }) {
-                return TabListing(
-                    id: tab.tabID, space: space.spaceID, title: tab.title, url: tab.url, placement: tab.placement.name,
-                    inUse: tab.claimed, shown: isShown(tab.tabID))
+                return describe(tab, in: space.spaceID, model: workspace?.spaces.model(space.spaceID))
             }
         }
         throw .rejected(.agentTabUnavailable(AgentTabUnavailable(tabID: tabID)))
+    }
+
+    private func describe(_ tab: AgentTab, in spaceID: UUID, model: SpaceModel?) -> TabListing {
+        let folders = model.flatMap { space in space.tabs.model(tab.tabID).map { folderPath($0, in: space) } } ?? []
+        return TabListing(
+            id: tab.tabID, space: spaceID, title: tab.title, url: tab.url,
+            placement: tab.placement.name, isPinned: tab.placement == .pinned, isSaved: tab.placement == .saved,
+            folders: folders, inUse: tab.claimed,
+            shown: isShown(tab.tabID))
+    }
+
+    private func folderPath(_ tab: TabStateModel, in space: SpaceModel) -> [String] {
+        var path: [String] = []
+        var visited = Set<UUID>()
+        var current = tab.folderID
+        while let id = current, visited.insert(id).inserted, let folder = space.folders.model(id) {
+            path.insert(folder.title, at: 0)
+            current = folder.parentID
+        }
+        return path
+    }
+
+    private func spaceIcon(_ space: SpaceModel) -> String? {
+        guard let image = BrowserSpaceSymbolArtworkRenderer.shared.menuImage(for: BrowserSpaceIdentity(space: space)),
+            let tiff = image.tiffRepresentation, let bitmap = NSBitmapImageRep(data: tiff),
+            let png = bitmap.representation(using: .png, properties: [:])
+        else { return nil }
+        return "data:image/png;base64," + png.base64EncodedString()
     }
 
     // MARK: - Actions - Windows
@@ -237,12 +283,19 @@ extension BrowserMacAgents {
 
     /// The front window over `space`'s workspace, or nil with none open.
     func frontWindow(over space: SpaceModel) -> BrowserMacWindowModel? {
-        application.stackedWindowIDs.lazy.compactMap { self.application.windowCoordinator.existingModel(for: $0) }
-            .first { !$0.isTemporary && $0.browser.spaceModel(space.id) != nil }
+        normalWindows(over: space).first
+    }
+
+    /// Includes open models whose native views have not attached yet, after windows AppKit can already stack.
+    private func normalWindows(over space: SpaceModel) -> [BrowserMacWindowModel] {
+        let stacked = application.stackedWindowIDs
+        let pending = application.windowCoordinator.openWindowPages.map(\.windowID).filter { !stacked.contains($0) }
+        return (stacked + pending).compactMap { application.windowCoordinator.existingModel(for: $0) }
+            .filter { !$0.isTemporary && $0.browser.spaceModel(space.id) != nil }
     }
 
     /// Shows what `window` selected and brings it forward, and Crest with it.
-    private func bringForward(_ window: BrowserMacWindowModel) {
+    func bringForward(_ window: BrowserMacWindowModel) {
         window.pages.select()
         windows.open(window.request, activation: .key)
         NSApp.activate(ignoringOtherApps: true)
