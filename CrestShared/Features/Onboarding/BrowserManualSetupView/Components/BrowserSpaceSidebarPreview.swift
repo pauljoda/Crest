@@ -7,6 +7,7 @@ struct BrowserSpaceSidebarPreview: View {
     /// The images the Space's tabs wear. A draft or a preview wears none.
     var favicons = FaviconAssets()
     @Environment(\.browserInteractionCapabilities) private var capabilities
+    @Environment(\.colorScheme) private var colorScheme
     @Environment(CrestCore.self) private var core: CrestCore?
 
     /// No window shows a previewed Space, so it highlights the tab the core
@@ -108,7 +109,7 @@ struct BrowserSpaceSidebarPreview: View {
         }
         .environment(
             \.colorScheme,
-            branding.foregroundTone.colorScheme
+            branding.colorScheme(over: colorScheme)
         )
         .allowsHitTesting(false)
         .environment(\.sidebarSpacePresentation, SidebarSpacePresentation(space: space, isUnlocked: true))

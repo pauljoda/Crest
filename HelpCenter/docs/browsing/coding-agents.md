@@ -20,6 +20,8 @@ Agents are off until you turn them on.
 
 Crest must be open while an agent works. Crest never opens a window for an agent.
 
+To start Crest without bringing it to the front, a tool can run `open -g --env CREST_BACKGROUND_LAUNCH=1 -a Crest`. Crest opens your windows behind the app you're using, and comes forward only to ask you about an agent it hasn't met.
+
 ## Allow an agent
 
 The first time an agent uses Crest, Crest asks whether to allow it. The question names the program macOS verified by its code signature, not the name the agent gives itself. Crest remembers your answer and lists the agent under **Allowed agents**. Choose **Forget** to disconnect it; Crest asks again the next time it connects.

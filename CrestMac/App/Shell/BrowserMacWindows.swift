@@ -222,28 +222,28 @@ final class BrowserMacWindows {
     /// Opens what the core says this launch opens: the windows the person
     /// left open, or first-run setup in front of them, which holds them back
     /// until it finishes. Private and Quick Windows are never restored.
-    func openLaunchWindows() {
+    func openLaunchWindows(activation: BrowserMacWindowActivation = .key) {
         guard
             let plan = try? application.browser.core.query(LaunchWindows(environment: application.launchEnvironment))
         else {
-            open(.initial, activation: .key)
+            open(.initial, activation: activation)
             return
         }
         if let setup = plan.setup {
             heldLaunch = plan
-            openOnboardingWindow(BrowserOnboardingRequest(entryPoint: setup))
+            openOnboardingWindow(BrowserOnboardingRequest(entryPoint: setup), activation: activation)
             return
         }
-        open(plan)
+        open(plan, activation: activation)
     }
 
     /// Opens the launch's windows back to front, each coming forward without
     /// focus, and the frontmost last, as the key window on the startup choice.
-    private func open(_ plan: LaunchWindowPlan) {
+    private func open(_ plan: LaunchWindowPlan, activation: BrowserMacWindowActivation = .key) {
         heldLaunch = nil
         application.startupWindowID = plan.startupWindowID
         for id in plan.windowIDs {
-            open(.reopening(id), activation: id == plan.startupWindowID ? .key : .background)
+            open(.reopening(id), activation: id == plan.startupWindowID ? activation : .background)
         }
     }
 
@@ -389,11 +389,11 @@ final class BrowserMacWindows {
 
     /// Opens setup for `request`. Asking again brings its current draft
     /// forward.
-    func openOnboardingWindow(_ request: BrowserOnboardingRequest) {
+    func openOnboardingWindow(_ request: BrowserOnboardingRequest, activation: BrowserMacWindowActivation = .key) {
         guard !bringForwardOpenWindow(of: .setup) else { return }
         let source = activeWindowModel
         show(
-            .setup,
+            .setup, activation: activation,
             content: { window in
                 BrowserOnboardingWindow(
                     request: request, browser: source?.browser ?? application.browser,

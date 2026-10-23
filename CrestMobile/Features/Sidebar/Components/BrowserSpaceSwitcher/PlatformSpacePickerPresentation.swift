@@ -65,10 +65,11 @@ final class SpacePickerPresentationView: UIView {
         let newWidth = spaces.first.flatMap { frames[$0.id]?.width } ?? 0
         if ids != spaces.map(\.id) || abs(oldWidth - newWidth) > 0.5 { needsInitialPosition = true }
         ids = spaces.map(\.id)
+        let system = BrowserSpaceForegroundTone(readingIn: ColorScheme(traitCollection.userInterfaceStyle) ?? .light)
         tones = spaces.map {
             .init(
                 id: $0.id,
-                white: $0.branding.foregroundTone == .light ? 1 : 0)
+                white: $0.branding.foregroundTone(system: system) == .light ? 1 : 0)
         }
         self.frames = frames
         self.tint = tint.map(UIColor.init)

@@ -43,9 +43,9 @@ struct BrowserSettingsSpacePage: View {
         }
     }
 
-    /// The template this Space's crest started from, as the template draws it.
+    /// The look this Space started from, as its house or scheme draws it.
     private var startingAppearance: SpaceBranding? {
-        SpaceHouse.startingPoint(of: space.settings.look)?.look
+        space.settings.look.startingLook
     }
 
     private func resetAppearance() {

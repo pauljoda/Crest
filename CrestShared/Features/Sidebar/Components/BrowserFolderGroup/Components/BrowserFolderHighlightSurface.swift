@@ -25,7 +25,9 @@ struct BrowserFolderHighlightSurface: ViewModifier {
     @Environment(\.folderBackgroundColor) private var parentBackgroundColor
 
     private var foregroundScheme: ColorScheme {
-        if let override = textColorMode.foregroundTone { return override == .light ? .dark : .light }
+        if let override = textColorMode.foregroundTone(system: BrowserSpaceForegroundTone(readingIn: colorScheme)) {
+            return override == .light ? .dark : .light
+        }
         guard showsFill, intensity > 0 else { return colorScheme }
         return compositedColor.foregroundTone.colorScheme
     }

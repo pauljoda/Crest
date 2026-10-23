@@ -5,6 +5,7 @@ import SwiftUI
 /// card inset beside it, measured as the real window is. The name is edited
 /// in place where the preview is given it.
 struct BrowserOnboardingWindowPreview<Page: View>: View {
+    @Environment(\.colorScheme) private var colorScheme
     let branding: SpaceBranding
     let symbol: String
     let name: String
@@ -37,7 +38,7 @@ struct BrowserOnboardingWindowPreview<Page: View>: View {
                 .strokeBorder(.primary.opacity(0.14), lineWidth: CrestLayout.hairline)
         }
         .shadow(color: .black.opacity(0.45), radius: 30, y: 24)
-        .environment(\.colorScheme, branding.foregroundTone.colorScheme)
+        .environment(\.colorScheme, branding.colorScheme(over: colorScheme))
         .environment(\.sidebarSpacePresentation, SidebarSpacePresentation(space: space, isUnlocked: true))
         .accessibilityElement(children: editableName == nil ? .ignore : .contain)
         .accessibilityLabel("Preview of \(space.settings.name) in a Crest window")

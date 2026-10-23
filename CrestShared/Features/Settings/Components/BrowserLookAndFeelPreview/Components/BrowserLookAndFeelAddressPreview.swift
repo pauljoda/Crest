@@ -12,6 +12,7 @@ struct BrowserLookAndFeelAddressPreview: View {
     @State private var standInSpaceID = UUID()
 
     @Environment(\.browserInteractionCapabilities) private var capabilities
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         if showsBackground {
@@ -20,7 +21,7 @@ struct BrowserLookAndFeelAddressPreview: View {
                 .frame(maxWidth: .infinity)
                 .background { BrowserSpaceBannerBackground(branding: branding) }
                 .clipShape(.rect(cornerRadius: BrowserLookAndFeelPreviewMetrics.cardCornerRadius))
-                .environment(\.colorScheme, branding.foregroundTone.colorScheme)
+                .environment(\.colorScheme, branding.colorScheme(over: colorScheme))
         } else {
             field
         }

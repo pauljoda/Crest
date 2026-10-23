@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct BrowserSidebarSpacePage: View {
+    @Environment(\.colorScheme) private var colorScheme
     private let assignment: BrowserSpaceRuntimeAssignment
     let isSelected: Bool
     let pages: BrowserPagePool
@@ -110,7 +111,7 @@ struct BrowserSidebarSpacePage: View {
         }
         .environment(
             \.colorScheme,
-            space.settings.look.shown.foregroundTone.colorScheme
+            space.settings.look.shown.colorScheme(over: colorScheme)
         )
         .blur(
             radius: isLocked

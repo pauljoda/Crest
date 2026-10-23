@@ -6,6 +6,7 @@ struct MobileCompactBrowserSurface<
     Page: View
 >: View {
     @Environment(\.browserChromeAppearance) private var appearance
+    @Environment(\.colorScheme) private var colorScheme
 
     let compactShowsPage: Bool
     @Binding var isPagePresented: Bool
@@ -72,7 +73,7 @@ struct MobileCompactBrowserSurface<
                     .environment(\.spacePagerPresentation, floatingPagerPresentation)
                     .modifier(
                         MobileBrowserSideToolbarHost(
-                            colorScheme: space?.settings.look.foregroundTone.colorScheme
+                            colorScheme: space?.settings.look.colorScheme(over: colorScheme)
                         )
                     )
                     .environment(\.mobileBrowserSideToolbarIsHosted, false)

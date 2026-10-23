@@ -7,19 +7,26 @@ extension EnvironmentValues {
 
 /// Fixed chrome follows visible Space progress without observing it in tab rows.
 struct SpaceForegroundBlend: ViewModifier {
-    let tones: [SpaceForegroundPresentation.Tone]
+    let ids: [UUID]
+    let brandings: [SpaceBranding]
     let accents: [Color]
     let selectedSpaceID: UUID?
 
     @Environment(\.spacePagerPresentation) private var presentation
+    @Environment(\.colorScheme) private var colorScheme
     @State private var foreground = SpaceForegroundPresentation()
 
-    init(spaces: [SpaceModel], selectedSpaceID: UUID?) {
-        let brandings = spaces.map(\.settings.look)
-        tones = zip(spaces, brandings).map { space, branding in
+    /// Each Space's text tone over the window's appearance.
+    private var tones: [SpaceForegroundPresentation.Tone] {
+        zip(ids, brandings).map { id, branding in
             SpaceForegroundPresentation.Tone(
-                id: space.id, white: branding.shown.foregroundTone == .light ? 1 : 0)
+                id: id, white: branding.shown.foregroundTone(over: colorScheme) == .light ? 1 : 0)
         }
+    }
+
+    init(spaces: [SpaceModel], selectedSpaceID: UUID?) {
+        ids = spaces.map(\.id)
+        brandings = spaces.map(\.settings.look)
         accents = brandings.map { $0.primaryColor.color }
         self.selectedSpaceID = selectedSpaceID
     }
