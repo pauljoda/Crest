@@ -82,7 +82,8 @@ private struct BrowserSidebarSelectionAccessibilityActions: ViewModifier {
                 .accessibilityAction(named: "Select Range to Here") {
                     browser.tabMultiSelection.click(
                         item,
-                        units: BrowserSidebarSelection.itemUnits(in: browser), command: true, shift: true)
+                        units: BrowserSidebarSelection.itemUnits(in: browser), command: true, shift: true,
+                        activeItem: browser.selectedTabID(in: browser.selectedSpaceID).map(BrowserSelectionItemID.tab))
                 }
         } else {
             content

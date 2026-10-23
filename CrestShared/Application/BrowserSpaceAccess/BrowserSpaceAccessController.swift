@@ -18,6 +18,11 @@ final class BrowserSpaceAccessController {
 
     private(set) var failure: BrowserSpaceAccessFailure?
 
+    /// Tells the person, at the top of the window they are looking at, about a
+    /// change to a Space's access that could not happen. The platform supplies
+    /// it where it has such a place.
+    @ObservationIgnored var announce: (@MainActor (String) -> Void)?
+
     @ObservationIgnored private let authenticator: any BrowserDeviceAuthenticating
     /// The core whose grants these are, once a store is attached.
     @ObservationIgnored private var core: CrestCore?
@@ -76,7 +81,9 @@ final class BrowserSpaceAccessController {
     }
 
     /// Authentication authorizes one profile identity. A window may replace or
-    /// delete that profile while the system prompt is awaiting a response.
+    /// delete that profile while the system prompt is awaiting a response. A
+    /// change the core refuses is announced, and the Space keeps the access
+    /// the core holds.
     @discardableResult
     func updatePolicy(
         _ policy: SpaceAccessPolicy,
@@ -88,7 +95,10 @@ final class BrowserSpaceAccessController {
             guard await unlock(space) else { return false }
         }
         guard browser.spaceModel(matching: assignment) != nil else { return false }
-        browser.updateSpaceAccessPolicy(policy, in: assignment.spaceID)
+        guard browser.updateSpaceAccessPolicy(policy, in: assignment.spaceID) == nil else {
+            announce?(String(localized: "Couldn’t change the lock on “\(space.settings.name)”"))
+            return false
+        }
         if policy != .open {
             lock(assignment.spaceID)
         }
@@ -135,7 +145,10 @@ final class BrowserSpaceAccessController {
                     localized: "Authenticate to unlock the \(name) Space in Crest."
                 )
             )
-            guard finish(request, for: space, authenticated: authenticated) else { return false }
+            guard finish(request, for: space, authenticated: authenticated) else {
+                if authenticated { announce?(String(localized: "“\(name)” locked again. Try again.")) }
+                return false
+            }
             guard authenticated else {
                 failure = .authenticationDenied
                 return false

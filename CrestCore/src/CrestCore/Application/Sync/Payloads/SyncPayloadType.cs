@@ -155,6 +155,7 @@ internal abstract class SyncPayloadType {
         public override void MergeFields(JsonObject result, JsonObject first, JsonObject second, int winner) {
             LatestFields(result, first, second, "savedTabsExpansionModifiedAt", "isSavedTabsExpanded");
             LatestFields(result, first, second, "credentialsEnabledModifiedAt", "credentialsEnabled");
+            LatestFields(result, first, second, "accessPolicyModifiedAt", "accessPolicy");
             result["splitGroups"] = MergeGroups(first["splitGroups"] as JsonArray, second["splitGroups"] as JsonArray, winner);
         }
 

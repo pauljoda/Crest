@@ -14,6 +14,9 @@
         }
       }
     },
+    "“%@” locked again. Try again." : {
+
+    },
     "@ Filters" : {
 
     },
@@ -3959,6 +3962,9 @@
 
     },
     "Couldn’t change app icon" : {
+
+    },
+    "Couldn’t change the lock on “%@”" : {
 
     },
     "Couldn’t check password" : {

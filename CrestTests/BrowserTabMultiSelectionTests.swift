@@ -31,6 +31,26 @@ final class BrowserTabMultiSelectionTests: XCTestCase {
         XCTAssertEqual(selection.selectedIDs, [ids[3]])
     }
 
+    func testShiftClickWithoutAnchorRangesFromTheActiveTab() {
+        let ids = (0..<5).map { _ in UUID() }
+        let units = ids.map { [BrowserSelectionItemID.tab($0)] }
+        let selection = BrowserTabMultiSelection()
+        selection.click(.tab(ids[4]), units: units, shift: true, activeItem: .tab(ids[1]))
+        XCTAssertEqual(selection.selectedIDs, Set(ids[1...4]))
+        XCTAssertEqual(selection.anchorID, ids[1])
+        selection.click(.tab(ids[2]), units: units, shift: true, activeItem: .tab(ids[1]))
+        XCTAssertEqual(selection.selectedIDs, Set(ids[1...2]))
+    }
+
+    func testShiftClickAnchorOutranksTheActiveTab() {
+        let ids = (0..<5).map { _ in UUID() }
+        let units = ids.map { [BrowserSelectionItemID.tab($0)] }
+        let selection = BrowserTabMultiSelection()
+        selection.click(.tab(ids[0]), units: units)
+        selection.click(.tab(ids[3]), units: units, shift: true, activeItem: .tab(ids[1]))
+        XCTAssertEqual(selection.selectedIDs, Set(ids[0...3]))
+    }
+
     func testHiddenRowsArePrunedAndLostAnchorStartsANewRange() {
         let ids = (0..<4).map { _ in UUID() }
         let selection = BrowserTabMultiSelection()

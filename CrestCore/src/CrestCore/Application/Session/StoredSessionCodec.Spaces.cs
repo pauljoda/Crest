@@ -35,7 +35,8 @@ internal static partial class StoredSessionCodec {
                 DecodeAccessPolicy(value[Key.AccessPolicy]),
                 Flag(value[Key.IsSavedTabsExpanded]) ?? true,
                 OptionalDate(value[Key.SavedTabsExpansionModifiedAt]),
-                OptionalDate(value[Key.CredentialsEnabledModifiedAt])),
+                OptionalDate(value[Key.CredentialsEnabledModifiedAt]),
+                OptionalDate(value[Key.AccessPolicyModifiedAt])),
             [.. Items(value[Key.Folders]).Select(DecodeFolder)],
             [.. Items(value[Key.Tabs]).Select(DecodeTab)],
             [.. Items(value[Key.SplitGroups]).Select(DecodeSplitGroup)],
@@ -64,6 +65,7 @@ internal static partial class StoredSessionCodec {
         value[Key.IsSavedTabsExpanded] = settings.IsSavedTabsExpanded;
         Put(value, Key.SavedTabsExpansionModifiedAt, settings.SavedTabsExpansionModifiedAt);
         Put(value, Key.CredentialsEnabledModifiedAt, settings.CredentialsEnabledModifiedAt);
+        Put(value, Key.AccessPolicyModifiedAt, settings.AccessPolicyModifiedAt);
         return value;
     }
 
