@@ -19,13 +19,14 @@ struct BrowserSidebarPresentation: Hashable, Sendable {
 
     static let docked = BrowserSidebarPresentation(
         kind: .docked, name: "docked", showsSidebar: true, showsWindowControls: true, reservesSidebarWidth: true,
-        sidebarToggleAction: .hide, toggles: { $0.toggleDockedSidebar() })
+        sidebarToggleAction: .hide, exitMargin: 0, toggles: { $0.toggleDockedSidebar() })
     static let floating = BrowserSidebarPresentation(
         kind: .floating, name: "floating", showsSidebar: true, showsWindowControls: true, reservesSidebarWidth: false,
-        sidebarToggleAction: .dock, toggles: { $0.toggleFloatingSidebar() })
+        sidebarToggleAction: .dock, exitMargin: 30, toggles: { $0.toggleFloatingSidebar() })
     static let collapsed = BrowserSidebarPresentation(
         kind: .collapsed, name: "collapsed", showsSidebar: false, showsWindowControls: false,
-        reservesSidebarWidth: false, sidebarToggleAction: .dock, toggles: { $0.toggleCollapsedSidebar() })
+        reservesSidebarWidth: false, sidebarToggleAction: .dock, exitMargin: 0,
+        toggles: { $0.toggleCollapsedSidebar() })
 
     // MARK: - Variables
 
@@ -38,6 +39,11 @@ struct BrowserSidebarPresentation: Hashable, Sendable {
     /// What the sidebar's toggle does from here.
     let sidebarToggleAction: BrowserSidebarToggleAction
 
+    /// How far past its page-side edge a hovered sidebar here still counts the
+    /// pointer as on it, so drifting just off a floating card does not put it
+    /// away.
+    let exitMargin: CGFloat
+
     /// Calls the handler's toggle for this place.
     private let toggles: @MainActor @Sendable (any BrowserSidebarToggleHandler) -> Void
 
@@ -45,7 +51,7 @@ struct BrowserSidebarPresentation: Hashable, Sendable {
 
     private init(
         kind: Kinds, name: String, showsSidebar: Bool, showsWindowControls: Bool, reservesSidebarWidth: Bool,
-        sidebarToggleAction: BrowserSidebarToggleAction,
+        sidebarToggleAction: BrowserSidebarToggleAction, exitMargin: CGFloat,
         toggles: @escaping @MainActor @Sendable (any BrowserSidebarToggleHandler) -> Void
     ) {
         self.kind = kind
@@ -54,6 +60,7 @@ struct BrowserSidebarPresentation: Hashable, Sendable {
         self.showsWindowControls = showsWindowControls
         self.reservesSidebarWidth = reservesSidebarWidth
         self.sidebarToggleAction = sidebarToggleAction
+        self.exitMargin = exitMargin
         self.toggles = toggles
     }
 

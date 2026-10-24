@@ -223,6 +223,42 @@ final class BrowserChromeLayoutTests: XCTestCase {
         XCTAssertEqual(reports, [false, false])
     }
 
+    /// A hovered floating sidebar stays out while the pointer drifts across the
+    /// exit margin over the page, and goes once it passes the margin. The
+    /// margin never brings the sidebar back or claims the hover on its own.
+    @MainActor
+    func testFloatingSidebarExitMarginKeepsOnlyAHoverAlreadyUnderWay() {
+        let window = BrowserKeyTestWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 800, height: 600),
+            styleMask: [.titled], backing: .buffered, defer: true
+        )
+        var pointer = NSPoint(x: 310, y: 300)
+        var reports: [Bool] = []
+        let tracker = BrowserSidebarHoverTrackingView(
+            notificationCenter: NotificationCenter(),
+            pointerLocation: { pointer },
+            onHoverChange: { reports.append($0) }
+        )
+        tracker.frame = NSRect(x: 0, y: 0, width: 330, height: 600)
+        tracker.setExitMargin(30, on: .maxXEdge)
+        window.contentView?.addSubview(tracker)
+
+        tracker.refreshPointerHover()
+        XCTAssertEqual(reports, [])
+
+        pointer.x = 150
+        tracker.refreshPointerHover()
+        pointer.x = 310
+        tracker.refreshPointerHover()
+        XCTAssertEqual(reports, [true])
+
+        pointer.x = 340
+        tracker.refreshPointerHover()
+        pointer.x = 310
+        tracker.refreshPointerHover()
+        XCTAssertEqual(reports, [true, false])
+    }
+
     /// The edge strip reappears under a pointer that is still resting where
     /// the sidebar just hid, as Universal Control leaves it after crossing to
     /// another Mac. Only a pointer that moves onto the strip reveals it again.
@@ -576,6 +612,12 @@ extension BrowserChromeLayoutTests {
             }
         }
     }
+}
+
+/// A window that answers as key, as the front browser window does, without
+/// the test process taking focus.
+private final class BrowserKeyTestWindow: NSWindow {
+    override var isKeyWindow: Bool { true }
 }
 
 private struct ChromeContinuityTestShell: View {

@@ -4381,6 +4381,10 @@
     "mouse-swipe-buttons-switch-spaces-over-sidebar": {
       "category": "fixed",
       "message": "Mouse Back and Forward buttons set up as swipes in Logitech Options+ switch Spaces when the pointer is over the sidebar, as other mice do."
+    },
+    "floating-sidebar-exit-margin": {
+      "category": "improved",
+      "message": "The floating sidebar stays open when the pointer drifts just past its edge, and hides once the pointer moves further into the page."
     }
   }
 }
