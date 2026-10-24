@@ -4485,6 +4485,10 @@
     "engine-extension-profile-check": {
       "category": "internal",
       "message": "Decide in one place whether a Chromium extension may run in a private window's profile."
+    },
+    "staged-link-uuid": {
+      "category": "internal",
+      "message": "Carry a staged link's identity as a UUID rather than as text both engines parse back."
     }
   }
 }

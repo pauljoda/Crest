@@ -9,7 +9,7 @@
                     destination: address, decision: decision,
                     stagedLink: stagedLinkID.map {
                         BrowserEngineNavigation(
-                            implementation: page.registration.implementationId, token: $0.uuidString,
+                            implementation: page.registration.implementationId, linkID: $0,
                             sourcePageID: pageID)
                     }))
         }
