@@ -5085,6 +5085,10 @@
     "command-z-undo-stays-in-text-fields": {
       "category": "fixed",
       "message": "Binding Command-Z or another editing shortcut to a command no longer takes Undo, Copy or Paste away from the text field you're typing in."
+    },
+    "finder-pdf-open-with": {
+      "category": "fixed",
+      "message": "Crest is available in Finder’s Open With menu for PDFs without changing your default PDF app."
     }
   }
 }
