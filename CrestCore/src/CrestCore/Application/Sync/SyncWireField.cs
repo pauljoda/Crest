@@ -27,8 +27,8 @@ internal sealed class SyncWireField {
     public static readonly SyncWireField SpaceId = new(StoredSessionCodec.Key.SpaceId, Kinds.Identity);
     /// The device a record's version names and when a tombstone deleted it,
     /// which no stored record carries.
-    public static readonly SyncWireField DeviceId = new("deviceID", Kinds.Identity);
-    public static readonly SyncWireField DeletedAt = new("deletedAt", Kinds.Timestamp);
+    public static readonly SyncWireField DeviceId = new(SyncJournalRecord.Key.DeviceId, Kinds.Identity);
+    public static readonly SyncWireField DeletedAt = new(SyncJournalRecord.Key.DeletedAt, Kinds.Timestamp);
     public static readonly SyncWireField FolderId = new(StoredSessionCodec.Key.FolderId, Kinds.Identity);
     public static readonly SyncWireField ParentId = new(StoredSessionCodec.Key.ParentId, Kinds.Identity);
     public static readonly SyncWireField OrderAnchorTabId = new(StoredSessionCodec.Key.OrderAnchorTabId, Kinds.Identity);

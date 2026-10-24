@@ -40,10 +40,10 @@ public sealed class NativeSyncJournal {
             .Select(member => KeyValuePair.Create(member.Key, member.Value?.DeepClone())));
         _ = Id(metadata["deviceID"]);
         records = RecordMap(source["records"]!.AsArray());
-        pending = source["pendingRecordIDs"]!.AsArray().Select(n => Name(n!)).ToHashSet(StringComparer.Ordinal);
+        pending = source["pendingRecordIDs"]!.AsArray().Select(n => SyncJournalRecord.NameOf(n!)).ToHashSet(StringComparer.Ordinal);
         if (!pending.IsSubsetOf(records.Keys)) throw new BrowserRuleException(BrowserRule.InvalidSyncPending);
         ulong clock = SyncJson.ULong(metadata["logicalClock"]!);
-        foreach (var record in records.Values) clock = Math.Max(clock, Clock(record));
+        foreach (var record in records.Values) clock = Math.Max(clock, new SyncJournalRecord(record).Clock);
         metadata["logicalClock"] = clock;
         encoded = new(Encode, true);
     }
@@ -77,35 +77,12 @@ public sealed class NativeSyncJournal {
 
     private static Guid Id(JsonNode? node) => SyncJson.Identity(node);
 
-    private static string Kind(JsonNode record) => record["id"]!["kind"]!.GetValue<string>();
-
-    private static string Name(JsonNode id) => id["kind"]!.GetValue<string>() + ":" + Id(id["value"]).ToString("D");
-
-    private static SyncVersion Version(JsonNode record) {
-        var version = record["version"]!;
-        return new(SyncJson.ULong(version["logicalClock"]!), Id(version["deviceID"]));
-    }
-
-    private static SyncRecordReference Reference(JsonNode record) =>
-        new(SyncRecordKind.Named(Kind(record)) ?? throw new BrowserRuleException(BrowserRule.InvalidSyncKind),
-            Id(record["id"]!["value"]));
-
-    private static ulong Clock(JsonNode record) => SyncJson.ULong(record["version"]!["logicalClock"]!);
-
-    private static JsonObject? Payload(JsonNode record) => record["payload"] as JsonObject;
-
-    private static JsonObject Value(JsonNode payload) => payload["value"]!.AsObject();
-
     /// An archive reason this build does not know counts as a close, as the
     /// stored session reads it.
     private static ArchiveReason Known(string name) => ArchiveReason.Named(name) ?? ArchiveReason.Closed;
 
-    private static JsonObject PayloadId(JsonObject payload) {
-        var type = SyncPayloadType.Of(payload);
-        return new() { ["kind"] = type.Kind.Name, ["value"] = Id(type.Subject(Value(payload))["id"]).ToString("D").ToUpperInvariant() };
-    }
-
-    private static JsonNode PayloadSpace(JsonObject payload) => SyncPayloadType.Of(payload).SpaceIdentity(Value(payload));
+    private static JsonNode PayloadSpace(JsonObject payload) =>
+        SyncPayloadType.Of(payload).SpaceIdentity(SyncPayload.ValueOf(payload));
 
     #endregion
 
@@ -123,7 +100,7 @@ public sealed class NativeSyncJournal {
 
     /// The Space the record `name` names belongs to here, or null when the
     /// journal holds no such record.
-    internal Guid? SpaceOf(string name) => records.TryGetValue(name, out var record) ? Id(record["spaceID"]) : null;
+    internal Guid? SpaceOf(string name) => records.TryGetValue(name, out var record) ? new SyncJournalRecord(record).SpaceId : null;
 
     /// The journal after staging `session`, a whole session in the stored
     /// format that nothing else holds, under this journal's preferences.
@@ -132,9 +109,10 @@ public sealed class NativeSyncJournal {
     /// for `reason`; `now` in seconds since 2001 dates the tombstones.
     internal NativeSyncJournal Stage(JsonObject session, SyncDeletionReason reason, double now,
         IReadOnlyDictionary<string, SyncDeletionReason>? removals = null) {
-        var archiveReasons = NativeSyncProjection.Items(session, "spaces")
+        var archiveReasons = NativeSyncProjection.Items(session, StoredSessionCodec.Key.Spaces)
             .SelectMany(space => NativeSyncProjection.Items(space!, StoredSessionCodec.Key.ArchivedTabs))
-            .ToDictionary(archived => Id(archived!["tab"]!["id"]), archived => Known(NativeSyncProjection.ArchiveReasonName(archived!)));
+            .ToDictionary(archived => Id(archived![StoredSessionCodec.Key.Tab]![StoredSessionCodec.Key.Id]),
+                archived => Known(NativeSyncProjection.ArchiveReasonName(archived!)));
         return Stage(NativeSyncProjection.Project(session, Preferences, records.Values), archiveReasons, Cleaning(session), reason, now,
             removals);
     }
@@ -148,28 +126,31 @@ public sealed class NativeSyncJournal {
         var draft = new Draft(this);
         var desired = draft.Desired(payloads, cleaning);
         // Parent evidence is from the accepted journal before staging.
-        var spaces = records.Values.Where(r => Kind(r) == SyncRecordKind.Space.Name).Select(r => Id(r["spaceID"])).ToHashSet();
-        var folders = records.Values.Where(r => Kind(r) == SyncRecordKind.Folder.Name).ToDictionary(r => Id(r["id"]!["value"]));
+        var accepted = records.Values.Select(r => new SyncJournalRecord(r)).ToArray();
+        var spaces = accepted.Where(r => r.KindName == SyncRecordKind.Space.Name).Select(r => r.SpaceId).ToHashSet();
+        var folders = accepted.Where(r => r.KindName == SyncRecordKind.Folder.Name).ToDictionary(r => r.Id);
         foreach (var (name, payload) in desired.OrderBy(p => p.Key, StringComparer.Ordinal)) {
-            if (draft.Records.TryGetValue(name, out var existing) && NativeSyncEvaluator.Equivalent(Payload(existing), payload)) continue;
+            if (draft.Records.TryGetValue(name, out var existing)
+                && NativeSyncEvaluator.Equivalent(new SyncJournalRecord(existing).Payload, payload)) continue;
             draft.Records[name] = draft.Save(payload);
             draft.Pending.Add(name);
         }
-        foreach (var (name, record) in draft.Records.ToArray()) {
-            if (cleaning.Contains(Id(record["spaceID"]))) continue;
-            if (Payload(record) is not { } payload) continue;
+        foreach (var (name, json) in draft.Records.ToArray()) {
+            var record = new SyncJournalRecord(json);
+            if (cleaning.Contains(record.SpaceId)) continue;
+            if (record.Payload is not { } payload) continue;
             var type = SyncPayloadType.Of(payload);
-            var value = Value(payload);
+            var value = SyncPayload.ValueOf(payload);
             if (!type.SyncsUnder(Preferences, value) || desired.ContainsKey(name)) continue;
             SyncDeletionReason? deletion;
             if (!type.IsPortable(value)) deletion = SyncDeletionReason.Superseded;
             else {
-                if (!spaces.Contains(Id(record["spaceID"])) || !AncestryArrived(type.ParentFolder(value), folders)) continue;
-                deletion = type.DeletionReason(value, archiveReasons.GetValueOrDefault(Id(record["id"]!["value"])),
-                    desired.ContainsKey(SyncRecordKind.Space.RecordName(Id(record["spaceID"]))), removals?.GetValueOrDefault(name) ?? reason);
+                if (!spaces.Contains(record.SpaceId) || !AncestryArrived(type.ParentFolder(value), folders)) continue;
+                deletion = type.DeletionReason(value, archiveReasons.GetValueOrDefault(record.Id),
+                    desired.ContainsKey(SyncRecordKind.Space.RecordName(record.SpaceId)), removals?.GetValueOrDefault(name) ?? reason);
             }
             if (deletion is null) continue;
-            draft.Records[name] = draft.Delete(record, deletion, now);
+            draft.Records[name] = draft.Delete(json, deletion, now);
             draft.Pending.Add(name);
         }
         return draft.Finish();
@@ -217,10 +198,11 @@ public sealed class NativeSyncJournal {
         var desired = draft.Desired(NativeSyncProjection.Project(session, Preferences, records.Values), cleaning);
         draft.Pending.Clear();
         foreach (string name in draft.Records.Keys.Union(desired.Keys).Order(StringComparer.Ordinal).ToArray()) {
-            if (draft.Records.TryGetValue(name, out var held) && cleaning.Contains(Id(held["spaceID"]))) continue;
+            if (draft.Records.TryGetValue(name, out var held) && cleaning.Contains(new SyncJournalRecord(held).SpaceId)) continue;
             if (desired.TryGetValue(name, out var payload)) draft.Records[name] = draft.Save(payload);
             else {
-                if (Payload(draft.Records[name]) is { } old && !SyncPayloadType.Of(old).SyncsUnder(Preferences, Value(old))) continue;
+                if (new SyncJournalRecord(draft.Records[name]).Payload is { } old
+                    && !SyncPayloadType.Of(old).SyncsUnder(Preferences, SyncPayload.ValueOf(old))) continue;
                 draft.Records[name] = draft.Delete(draft.Records[name], removals?.GetValueOrDefault(name) ?? SyncDeletionReason.Superseded, now);
             }
             draft.Pending.Add(name);
@@ -232,19 +214,19 @@ public sealed class NativeSyncJournal {
     /// local recovery state: it neither edits their records nor revives an
     /// incoming deletion of them.
     private static HashSet<Guid> Cleaning(JsonObject session) =>
-        (session["spaceDeletions"] as JsonArray ?? []).Select(deletion => Id(deletion!["spaceID"])).ToHashSet();
+        (session["spaceDeletions"] as JsonArray ?? []).Select(deletion => Id(deletion![StoredSessionCodec.Key.SpaceId])).ToHashSet();
 
     /// Whether every folder above `parent`, the folder a record sits in, is
     /// one of `folders` and holds a folder, so its absence is evidence.
-    private static bool AncestryArrived(JsonNode? parent, Dictionary<Guid, JsonObject> folders) {
+    private static bool AncestryArrived(JsonNode? parent, Dictionary<Guid, SyncJournalRecord> folders) {
         var next = parent;
         var seen = new HashSet<Guid>();
         while (next is not null) {
             var id = Id(next);
             if (!folders.TryGetValue(id, out var record)) return false;
             if (!seen.Add(id)) return true; // Materialization rejects cycles.
-            if (Payload(record) is not { } folder) return false;
-            next = Value(folder)["parentID"];
+            if (record.Payload is not { } folder) return false;
+            next = SyncPayload.ValueOf(folder)[StoredSessionCodec.Key.ParentId];
         }
         return true;
     }
@@ -255,7 +237,7 @@ public sealed class NativeSyncJournal {
 
     /// The records that wait to upload, in the order of their names.
     internal IReadOnlyList<SyncRecordReference> PendingReferences() =>
-        [.. pending.Order(StringComparer.Ordinal).Select(name => Reference(records[name]))];
+        [.. pending.Order(StringComparer.Ordinal).Select(name => new SyncJournalRecord(records[name]).Reference)];
 
     /// Whether the journal holds the record `reference` names.
     internal bool Holds(SyncRecordReference reference) => records.ContainsKey(reference.Kind.RecordName(reference.Id));
@@ -266,13 +248,13 @@ public sealed class NativeSyncJournal {
     /// one no client reads, or one naming an address it cannot spell as every
     /// client parses it.
     internal SyncRecord? Uploading(SyncRecordReference reference) {
-        if (!records.TryGetValue(reference.Kind.RecordName(reference.Id), out var record)) return null;
-        var tombstone = record["tombstone"];
-        var space = Id(record["spaceID"]);
+        if (!records.TryGetValue(reference.Kind.RecordName(reference.Id), out var json)) return null;
+        var record = new SyncJournalRecord(json);
         try {
-            var body = SyncRecordBody.Read(tombstone ?? record["payload"], tombstone is not null, SyncPayloadForm.Journal);
-            body.RequireSendable(reference.Kind, reference.Id, space);
-            return new(reference.Kind, reference.Id, space, Version(record), body.Schema, body.Bytes(SyncPayloadForm.Cloud), tombstone is not null);
+            var body = SyncRecordBody.Read(record.Body, record.IsTombstone, SyncPayloadForm.Journal);
+            body.RequireSendable(reference.Kind, reference.Id, record.SpaceId);
+            return new(reference.Kind, reference.Id, record.SpaceId, record.Version, body.Schema, body.Bytes(SyncPayloadForm.Cloud),
+                record.IsTombstone);
         } catch (UnreadableSyncPayloadException) {
             return null;
         }
@@ -286,7 +268,7 @@ public sealed class NativeSyncJournal {
         var queued = new HashSet<string>(pending, StringComparer.Ordinal);
         foreach (var upload in uploaded) {
             string name = upload.Record.Kind.RecordName(upload.Record.Id);
-            if (records.TryGetValue(name, out var record) && Version(record) == upload.Version) queued.Remove(name);
+            if (records.TryGetValue(name, out var record) && new SyncJournalRecord(record).Version == upload.Version) queued.Remove(name);
         }
         return new(metadata.DeepClone().AsObject(), records, queued);
     }
@@ -317,22 +299,22 @@ public sealed class NativeSyncJournal {
             }
         }
         bool matches = arrived.Count == device.Count && device.All(held =>
-            arrived.TryGetValue(held.Key, out var other) && Id(held.Value["spaceID"]) == other.Space
-            && (held.Value["tombstone"] is not null) == other.IsTombstone
-            && NativeSyncEvaluator.Equivalent(CloudForm(held.Value), other.Body));
+            arrived.TryGetValue(held.Key, out var other) && new SyncJournalRecord(held.Value) is var record
+            && record.SpaceId == other.Space && record.IsTombstone == other.IsTombstone
+            && NativeSyncEvaluator.Equivalent(CloudForm(record), other.Body));
         return new(matches, device.Count, arrived.Count,
-            device.Values.Count(record => Kind(record) == SyncRecordKind.Space.Name && Payload(record) is not null),
+            device.Values.Select(json => new SyncJournalRecord(json))
+                .Count(record => record.KindName == SyncRecordKind.Space.Name && record.Payload is not null),
             arrived.Count(record => record.Key.StartsWith(SyncRecordKind.Space.RecordPrefix, StringComparison.Ordinal) && !record.Value.IsTombstone));
     }
 
     /// The body of `record`, which this journal holds, in the CloudKit form, or
     /// as the journal holds it when no client reads it.
-    private static JsonNode? CloudForm(JsonObject record) {
-        var tombstone = record["tombstone"];
+    private static JsonNode? CloudForm(SyncJournalRecord record) {
         try {
-            return SyncRecordBody.Read(tombstone ?? record["payload"], tombstone is not null, SyncPayloadForm.Journal).Write(SyncPayloadForm.Cloud);
+            return SyncRecordBody.Read(record.Body, record.IsTombstone, SyncPayloadForm.Journal).Write(SyncPayloadForm.Cloud);
         } catch (UnreadableSyncPayloadException) {
-            return tombstone ?? record["payload"];
+            return record.Body;
         }
     }
 
@@ -345,7 +327,8 @@ public sealed class NativeSyncJournal {
     private byte[] Encode() {
         var value = metadata.DeepClone().AsObject();
         value["records"] = new JsonArray(records.OrderBy(p => p.Key, StringComparer.Ordinal).Select(p => p.Value.DeepClone()).ToArray());
-        value["pendingRecordIDs"] = new JsonArray(pending.Order(StringComparer.Ordinal).Select(id => records[id]["id"]!.DeepClone()).ToArray());
+        value["pendingRecordIDs"] = new JsonArray(pending.Order(StringComparer.Ordinal)
+            .Select(id => records[id][SyncJournalRecord.Key.Id]!.DeepClone()).ToArray());
         var result = Encoding.UTF8.GetBytes(value.ToJsonString());
         if (result.Length > MaximumBytes) throw new BrowserRuleException(BrowserRule.SyncSizeLimit);
         return result;
@@ -360,7 +343,8 @@ public sealed class NativeSyncJournal {
         var result = new Dictionary<string, JsonObject>(StringComparer.Ordinal);
         foreach (var value in values) {
             NativeSyncEvaluator.ValidateRecord(value!.AsObject());
-            if (!result.TryAdd(Name(value["id"]!), value.AsObject())) throw new BrowserRuleException(BrowserRule.DuplicateSyncRecord);
+            if (!result.TryAdd(new SyncJournalRecord(value.AsObject()).Name, value.AsObject()))
+                throw new BrowserRuleException(BrowserRule.DuplicateSyncRecord);
         }
         return result;
     }
@@ -401,7 +385,7 @@ public sealed class NativeSyncJournal {
         /// later edit at.
         public Dictionary<string, JsonObject> Arrive(JsonArray incoming) {
             var arrived = RecordMap(incoming.DeepClone().AsArray());
-            foreach (var record in arrived.Values) clock = Math.Max(clock, Clock(record));
+            foreach (var record in arrived.Values) clock = Math.Max(clock, new SyncJournalRecord(record).Clock);
             if (clock == ulong.MaxValue) throw new BrowserRuleException(BrowserRule.SyncClockExhausted);
             return arrived;
         }
@@ -414,21 +398,19 @@ public sealed class NativeSyncJournal {
             foreach (var node in payloads) {
                 var payload = node!.AsObject();
                 if (cleaning.Contains(Id(PayloadSpace(payload)))) continue;
-                var id = PayloadId(payload);
-                Records.TryGetValue(Name(id), out var previous);
-                var previousPayload = previous is null ? null : Payload(previous);
+                var id = SyncJournalRecord.IdentityOf(payload);
+                Records.TryGetValue(SyncJournalRecord.NameOf(id), out var previous);
+                var previousPayload = previous is null ? null : new SyncJournalRecord(previous).Payload;
                 // Closing and restoring a tab changes its record's kind, not the
                 // tab: carry its additive fields across.
                 var type = SyncPayloadType.Of(payload);
                 if (previousPayload is null && type.Counterpart is { } counterpart
-                    && Records.TryGetValue(counterpart.Kind.RecordName(Id(id["value"])), out var other) && Payload(other) is { } held) {
-                    previousPayload = new JsonObject {
-                        ["type"] = type.Kind.Name,
-                        ["value"] = type.Holding(counterpart.Subject(Value(held)))
-                    };
-                }
+                    && Records.TryGetValue(counterpart.Kind.RecordName(Id(id[SyncJournalRecord.Key.Value])), out var other)
+                    && new SyncJournalRecord(other).Payload is { } held)
+                    previousPayload = SyncPayload.Envelope(type.Kind, type.Holding(counterpart.Subject(SyncPayload.ValueOf(held))));
                 payload = NativeSyncCompatibility.Preserve(payload, previousPayload);
-                if (!desired.TryAdd(Name(PayloadId(payload)), payload)) throw new BrowserRuleException(BrowserRule.DuplicateSyncRecord);
+                if (!desired.TryAdd(SyncJournalRecord.NameOf(SyncJournalRecord.IdentityOf(payload)), payload))
+                    throw new BrowserRuleException(BrowserRule.DuplicateSyncRecord);
             }
             if (desired.Count > MaximumRecords) throw new BrowserRuleException(BrowserRule.SyncRecordLimit);
             return desired;
@@ -436,27 +418,15 @@ public sealed class NativeSyncJournal {
 
         /// The record `payload` writes at the next version, keeping whatever
         /// else the record it replaces carried.
-        public JsonObject Save(JsonObject payload) {
-            var id = PayloadId(payload);
-            var result = Records.TryGetValue(Name(id), out var previous) ? previous.DeepClone().AsObject() : new JsonObject();
-            result["id"] = id;
-            result["spaceID"] = PayloadSpace(payload).DeepClone();
-            result["payload"] = payload.DeepClone();
-            result["version"] = NextVersion();
-            result.Remove("tombstone");
-            return result;
-        }
+        public JsonObject Save(JsonObject payload) =>
+            SyncJournalRecord.Saved(Records.GetValueOrDefault(SyncJournalRecord.NameOf(SyncJournalRecord.IdentityOf(payload))), payload,
+                NextVersion());
 
         /// The tombstone of `previous` at the next version, deleted for
         /// `reason` at `now` in seconds since 2001.
         public JsonObject Delete(JsonObject previous, SyncDeletionReason reason, double now) {
             if (!double.IsFinite(now)) throw new BrowserRuleException(BrowserRule.InvalidSyncDate);
-            return new() {
-                ["id"] = previous["id"]!.DeepClone(),
-                ["spaceID"] = previous["spaceID"]!.DeepClone(),
-                ["version"] = NextVersion(),
-                ["tombstone"] = new JsonObject { ["reason"] = reason.Name, ["deletedAt"] = now }
-            };
+            return SyncJournalRecord.Deleted(previous, NextVersion(), reason, now);
         }
 
         /// The journal the update made.
@@ -468,7 +438,7 @@ public sealed class NativeSyncJournal {
 
         private JsonObject NextVersion() {
             if (clock == ulong.MaxValue) throw new BrowserRuleException(BrowserRule.SyncClockExhausted);
-            return new() { ["logicalClock"] = ++clock, ["deviceID"] = fields["deviceID"]!.DeepClone() };
+            return SyncJournalRecord.VersionOf(++clock, fields["deviceID"]!);
         }
 
         #endregion

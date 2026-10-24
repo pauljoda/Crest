@@ -105,12 +105,7 @@ internal sealed class IncomingSyncRecords {
         } catch (UnreadableSyncPayloadException) {
             return null;
         }
-        var node = new JsonObject {
-            ["id"] = new JsonObject { ["kind"] = record.Kind.Name, ["value"] = Spelled(record.Id) },
-            ["spaceID"] = new JsonObject { ["rawValue"] = Spelled(record.SpaceId) },
-            ["version"] = new JsonObject { ["logicalClock"] = record.Version.Clock, ["deviceID"] = Spelled(record.Version.DeviceId) },
-            [record.IsTombstone ? "tombstone" : "payload"] = body
-        };
+        var node = SyncJournalRecord.Written(record, body);
         // Every rule the journal reads a record by, which a record every client
         // reads keeps; one that breaks one is as unreadable here.
         try {
@@ -120,9 +115,6 @@ internal sealed class IncomingSyncRecords {
         }
         return node;
     }
-
-    /// An identity as the Apple clients spell it.
-    private static string Spelled(Guid id) => id.ToString("D").ToUpperInvariant();
 
     private static Rejected Refused(SyncRecordFlaw flaw, Guid? subject) => new(new InvalidSyncRecords(flaw, subject));
 

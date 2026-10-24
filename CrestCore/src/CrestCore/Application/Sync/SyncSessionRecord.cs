@@ -10,13 +10,14 @@ internal sealed record SyncSessionRecord(SyncRecordKind Kind, Guid Id, Guid Spac
     bool SuppliesBranding, bool SuppliesFolderColor) {
     #region Actions - Coding
 
-    public static SyncSessionRecord Read(JsonObject record) {
-        var payload = record["payload"];
-        return new(SyncRecordKind.Named(record["id"]!["kind"]!.GetValue<string>())!,
-            StoredSessionCodec.Identity(record["id"]!["value"]), StoredSessionCodec.Identity(record["spaceID"]),
+    public static SyncSessionRecord Read(JsonObject json) {
+        var record = new SyncJournalRecord(json);
+        var payload = record.Payload;
+        var value = payload?[SyncPayload.Key.Value];
+        return new(SyncRecordKind.Named(record.KindName)!, record.Id, record.SpaceId,
             payload is null ? null : ReadPayload(payload),
-            record["tombstone"] is { } tombstone ? SyncTombstone.Decode(tombstone, SyncPayloadForm.Journal) : null,
-            payload?["value"]?[StoredSessionCodec.Key.Branding] is not null, payload?["value"]?[StoredSessionCodec.Key.Color] is not null);
+            record.Tombstone is { } tombstone ? SyncTombstone.Decode(tombstone, SyncPayloadForm.Journal) : null,
+            value?[StoredSessionCodec.Key.Branding] is not null, value?[StoredSessionCodec.Key.Color] is not null);
     }
 
     /// Stored journals predate the cloud's strict readers. Supply the same
@@ -24,7 +25,7 @@ internal sealed record SyncSessionRecord(SyncRecordKind Kind, Guid Id, Guid Spac
     /// the journal or the cloud reader's validation.
     private static SyncPayload ReadPayload(JsonNode payload) {
         var type = SyncPayloadType.Of(payload);
-        var value = payload["value"]!.AsObject();
+        var value = SyncPayload.ValueOf(payload);
         var prepared = value.DeepClone().AsObject();
         if (type == SyncPayloadType.Tab) prepared = ReadTab(value);
         else if (type == SyncPayloadType.Folder) {

@@ -4505,6 +4505,10 @@
     "synced-space-field-names": {
       "category": "internal",
       "message": "Synced Spaces and splits spell their fields from one table."
+    },
+    "sync-record-envelope": {
+      "category": "internal",
+      "message": "Read and write a sync record's envelope in one place."
     }
   }
 }

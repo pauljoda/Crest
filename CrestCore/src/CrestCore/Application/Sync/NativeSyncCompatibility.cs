@@ -80,9 +80,10 @@ internal static class NativeSyncCompatibility {
     private static Shape List(Shape element, bool byId = false) => new("", Element: element, ById: byId);
 
     internal static JsonObject Preserve(JsonObject current, JsonObject? previous) {
-        string kind = current["type"]!.GetValue<string>();
-        if (previous?["type"]?.GetValue<string>() != kind) return current;
-        return Merge(new("type value", new() { ["value"] = Values[kind] }), current, previous).AsObject();
+        string kind = current[SyncPayload.Key.Type]!.GetValue<string>();
+        if (previous?[SyncPayload.Key.Type]?.GetValue<string>() != kind) return current;
+        return Merge(new([SyncPayload.Key.Type, SyncPayload.Key.Value], new() { [SyncPayload.Key.Value] = Values[kind] }), current, previous)
+            .AsObject();
     }
 
     private static string? MemberId(JsonNode? value) {

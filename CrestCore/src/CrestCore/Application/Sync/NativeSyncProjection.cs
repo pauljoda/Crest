@@ -54,20 +54,20 @@ public static class NativeSyncProjection {
         var policy = Preferences(preferences);
         var existing = new Dictionary<string, string?>(StringComparer.Ordinal);
         var archiveReasons = new Dictionary<Guid, string?>();
-        foreach (var record in existingRecords) {
-            if (record["payload"]?["value"] is not JsonObject value) continue;
-            var type = SyncPayloadType.Of(record["payload"]!);
-            var id = Id(record["id"]!["value"]);
-            existing[type.Kind.RecordName(id)] = Text(type.Subject(value)[SyncPayload.Key.OrderToken]);
-            if (type == SyncPayloadType.Archive) archiveReasons[id] = Text(value["reason"]);
+        foreach (var json in existingRecords) {
+            var record = new SyncJournalRecord(json);
+            if (record.Payload?[SyncPayload.Key.Value] is not JsonObject value) continue;
+            var type = SyncPayloadType.Of(record.Payload);
+            existing[type.Kind.RecordName(record.Id)] = Text(type.Subject(value)[SyncPayload.Key.OrderToken]);
+            if (type == SyncPayloadType.Archive) archiveReasons[record.Id] = Text(value[StoredSessionCodec.Key.Reason]);
         }
         var result = new JsonArray();
         var seen = new HashSet<string>(StringComparer.Ordinal);
         void Add(SyncPayloadType type, JsonObject value) {
-            string name = type.Kind.RecordName(Id(type.Subject(value)["id"]));
+            string name = type.Kind.RecordName(Id(type.Subject(value)[StoredSessionCodec.Key.Id]));
             if (!seen.Add(name)) throw new SyncRecordsFlawedException(SyncRecordFlaw.DuplicateRecord, subject: null);
             if (seen.Count > NativeSyncJournal.MaximumRecords) throw new SyncRecordsFlawedException(SyncRecordFlaw.TooManyRecords, subject: null);
-            result.Add((JsonNode)new JsonObject { ["type"] = type.Kind.Name, ["value"] = value });
+            result.Add((JsonNode)SyncPayload.Envelope(type.Kind, value));
         }
         IReadOnlyList<string> Tokens(SyncPayloadType type, IReadOnlyList<JsonNode> items)
             => SyncOrderTokens.Allocate(items.Select(item =>

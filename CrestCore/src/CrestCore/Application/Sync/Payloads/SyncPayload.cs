@@ -13,9 +13,14 @@ namespace CrestCore.Application;
 internal abstract record SyncPayload {
     #region Types
 
-    /// The members only synced values carry; `StoredSessionCodec.Key` spells
-    /// every member a stored record shares.
+    /// The envelope a payload travels in, and the members only synced values
+    /// carry; `StoredSessionCodec.Key` spells every member a stored record
+    /// shares.
     internal static class Key {
+        /// The envelope's kind of payload, by its kind's name.
+        public const string Type = "type";
+        /// The envelope's value.
+        public const string Value = "value";
         /// A value's fractional position among its siblings.
         public const string OrderToken = "orderToken";
         /// Whether a Space offers saved passwords, which the stored session
@@ -77,12 +82,18 @@ internal abstract record SyncPayload {
     /// Throws `UnreadableSyncPayloadException` for one no client reads.
     public static SyncPayload Decode(JsonNode? envelope, SyncPayloadForm form) {
         var reader = new SyncPayloadReader(envelope, form);
-        return reader.Named("type", SyncPayloadType.Named).Read(reader.Nested("value"));
+        return reader.Named(Key.Type, SyncPayloadType.Named).Read(reader.Nested(Key.Value));
     }
 
     /// The payload as `form` spells it, without the members this build does
     /// not know.
-    public JsonObject Encode(SyncPayloadForm form) => new() { ["type"] = Kind.Name, ["value"] = EncodeValue(form) };
+    public JsonObject Encode(SyncPayloadForm form) => Envelope(Kind, EncodeValue(form));
+
+    /// The envelope of a payload of `kind` whose value is `value`.
+    public static JsonObject Envelope(SyncRecordKind kind, JsonNode value) => new() { [Key.Type] = kind.Name, [Key.Value] = value };
+
+    /// The value `envelope`, a payload's `{"type", "value"}`, holds.
+    public static JsonObject ValueOf(JsonNode envelope) => envelope[Key.Value]!.AsObject();
 
     #endregion
 
