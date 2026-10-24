@@ -323,9 +323,11 @@ extension BrowserPage: WKNavigationDelegate {
             else { return }
             let title = documentTitle?.isEmpty == false ? documentTitle : webView.title
             self.completedNavigationCount += 1
+            // The page keeps a clear under-page colour until its first load
+            // finishes, so it follows the count once the count has moved.
+            self.updateUnderPageBackground()
             self.webKitAdapter?.reporter?.finished(finishedURL, title: title)
         }
-        updateUnderPageBackground()
         mediaSessionCoordinator?.didFinishNavigation()
         refreshFavicon()
         Task { [weak self] in
