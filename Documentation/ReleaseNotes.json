@@ -4453,6 +4453,10 @@
     "shared-script-message-proxy": {
       "category": "internal",
       "message": "Use one message proxy for every page script bridge instead of a copy per bridge."
+    },
+    "shared-sidebar-drag-state": {
+      "category": "internal",
+      "message": "Track a dragged sidebar folder or tab with one drag session type instead of two copies."
     }
   }
 }
