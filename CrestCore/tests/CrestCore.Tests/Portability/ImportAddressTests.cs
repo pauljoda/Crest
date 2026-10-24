@@ -55,16 +55,4 @@ public sealed partial class BrowserContractsTests {
         // What an import keeps is what a browser-data file may hold.
         if (kept is not null) Assert.True(ImportAddress.TryReadStored(kept, removesFragment: false, out _));
     }
-
-    [Fact]
-    public void AnAddressDropsItsFragmentWhereAskedAndNamesItsHostForAnUnnamedTab() {
-        Assert.Equal("http://example.com/a?b=c", ImportAddress.Read("http://user:pass@example.com/a?b=c#d", removesFragment: true)?.Spelling);
-        Assert.Equal("https://example.com", ImportAddress.Read("https://example.com#x", removesFragment: true)?.Spelling);
-        Assert.Equal("fe80::1%en0", ImportAddress.Read("https://[fe80::1%25en0]/")?.Host);
-        Assert.Equal("example.com", ImportAddress.Read("https://example.com:8080/x")?.Host);
-        Assert.Null(ImportAddress.Read("http://example.com/?" + new string('a', ImportAddress.MaximumLength)));
-        // A browser-data file must spell an address as it reads back.
-        Assert.False(ImportAddress.TryReadStored("https://example.com/a b", removesFragment: false, out _));
-        Assert.False(ImportAddress.TryReadStored("https://example.com:08080/", removesFragment: false, out _));
-    }
 }

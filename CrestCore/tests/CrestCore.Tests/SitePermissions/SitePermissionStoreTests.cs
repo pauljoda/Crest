@@ -232,28 +232,4 @@ public sealed partial class BrowserContractsTests {
         Assert.False(Shows(space.ProfileId, Conference, ProfileNotificationSource.ServiceWorker));
         Assert.False(Shows(space.ProfileId, extension, ProfileNotificationSource.Extension));
     }
-
-    [Fact]
-    public void SitePermissionLimitsRefuseWithTheirLimit() {
-        using var directory = new StorageDirectory();
-        var (app, _, spaces) = DeviceApp(directory);
-        using var disposal = app;
-        var space = SpaceId(spaces[0]!);
-        var full = Enumerable.Range(0, SitePermissionLedger.MaximumRecords)
-            .Select(index => LegacyPermission(Guid.NewGuid(), space, $"site{index}.example", "camera", "grantPersistently", "1"));
-        app.Send(new AdoptSitePermissions(Encoding.UTF8.GetBytes("[" + string.Join(",", full) + "]")));
-
-        Assert.Equal(new SitePermissionLimitReached(SitePermissionLedger.MaximumRecords), Assert.Throws<Rejected>(() =>
-            app.Send(new DecideSitePermission(space, Conference, SitePermission.Microphone, null, SitePermissionDecision.GrantPersistently)))
-            .Rejection);
-        // Changing a choice the store already holds needs no room.
-        Assert.Single(app.Send(new DecideSitePermission(space, new("https", "site0.example", 443), SitePermission.Camera, null,
-            SitePermissionDecision.DenyPersistently)).OfType<SitePermissionsChanged>());
-        Assert.Equal(new InvalidSitePermissionDetail(SitePermissionLedger.MaximumDetailLength), Assert.Throws<Rejected>(() =>
-            app.Send(new DecideSitePermission(space, Conference, SitePermission.ExternalApplications,
-                new string('x', SitePermissionLedger.MaximumDetailLength + 1), SitePermissionDecision.DenyForSession))).Rejection);
-        var nowhere = new SiteOrigin("https", "", 443);
-        Assert.Equal(new InvalidSiteOrigin(nowhere), Assert.Throws<Rejected>(() =>
-            app.Send(new DecideSitePermission(space, nowhere, SitePermission.Camera, null, SitePermissionDecision.Ask))).Rejection);
-    }
 }

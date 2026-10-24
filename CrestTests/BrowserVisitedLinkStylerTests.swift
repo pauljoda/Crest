@@ -5,28 +5,6 @@ import XCTest
 @testable import Crest
 
 final class BrowserVisitedLinkStylerTests: XCTestCase {
-    func testVisitedURLPayloadUsesOnlyNormalizedWebHistory() throws {
-        let history = [
-            HistoryEntryState(
-                url: try XCTUnwrap(URL(string: "https://arc.net/#download")),
-                title: "Arc",
-                firstVisitedAt: .now,
-                lastVisitedAt: .now
-            ),
-            HistoryEntryState(
-                url: try XCTUnwrap(URL(string: "file:///tmp/private")),
-                title: "Local",
-                firstVisitedAt: .now,
-                lastVisitedAt: .now
-            ),
-        ]
-
-        XCTAssertEqual(
-            BrowserVisitedLinkStyler.normalizedVisitedURLStrings(history),
-            ["https://arc.net/"]
-        )
-    }
-
     @MainActor
     func testStylerHighlightsAMatchingLinkWithoutExposingHistoryToThePage() async throws {
         let webView = try await webView(

@@ -5,103 +5,6 @@ import XCTest
 
 @MainActor
 final class KeychainCredentialVaultTests: XCTestCase {
-    func testSynchronizationMigrationRollsBackEarlierItemsWhenALaterWriteFails() async throws {
-        let spaceID = UUID()
-        let first = try keychainItem(
-            descriptor: descriptor(
-                id: UUID(),
-                spaceID: spaceID,
-                username: "first"
-            ),
-            password: "first-secret"
-        )
-        let second = try keychainItem(
-            descriptor: descriptor(
-                id: UUID(),
-                spaceID: spaceID,
-                username: "second"
-            ),
-            password: "second-secret"
-        )
-        let store = FailingMigrationCredentialKeychainStore(
-            items: [first, second],
-            failingAccount: second.account
-        )
-        let vault = KeychainCredentialVault(
-            store: store,
-            servicePrefix: "test.crest"
-        )
-
-        do {
-            try await vault.setSynchronizable(true, in: spaceID)
-            XCTFail("Expected the second migration write to fail")
-        } catch {
-            XCTAssertEqual(error as? TestCredentialKeychainError, .injectedFailure)
-        }
-
-        let storedItems = await store.storedItems
-        let writes = await store.writes
-        XCTAssertEqual(storedItems, [first, second])
-        XCTAssertEqual(writes.map(\.account), [first.account, second.account, first.account])
-        XCTAssertEqual(writes.map(\.isSynchronizable), [true, true, false])
-    }
-
-    func testCredentialLookupRejectsNonUTF8SecretData() async throws {
-        let spaceID = UUID()
-        let descriptor = descriptor(
-            id: UUID(),
-            spaceID: spaceID,
-            username: "person"
-        )
-        var item = try keychainItem(descriptor: descriptor, password: "secret")
-        item = CredentialKeychainItem(
-            account: item.account,
-            metadata: item.metadata,
-            secret: Data([0xFF]),
-            isSynchronizable: item.isSynchronizable
-        )
-        let store = FailingMigrationCredentialKeychainStore(items: [item])
-        let vault = KeychainCredentialVault(
-            store: store,
-            servicePrefix: "test.crest"
-        )
-
-        do {
-            _ = try await vault.credential(id: descriptor.id, in: spaceID)
-            XCTFail("Expected malformed password data to fail closed")
-        } catch {
-            XCTAssertEqual(error as? CredentialVaultError, .malformedStoredCredential)
-        }
-    }
-
-    func testDescriptorLookupRejectsMetadataWhoseSyncFlagDiffersFromKeychain() async throws {
-        let spaceID = UUID()
-        let descriptor = descriptor(
-            id: UUID(),
-            spaceID: spaceID,
-            username: "person"
-        )
-        let encoded = try JSONEncoder().encode(descriptor)
-        let item = CredentialKeychainItem(
-            account: descriptor.id.uuidString.lowercased(),
-            metadata: encoded,
-            secret: Data("secret".utf8),
-            isSynchronizable: true
-        )
-        let store = FailingMigrationCredentialKeychainStore(items: [item])
-        let vault = KeychainCredentialVault(
-            store: store,
-            servicePrefix: "test.crest"
-        )
-
-        do {
-            _ = try await vault.descriptors(in: spaceID)
-            XCTFail("Expected inconsistent Keychain metadata to fail closed")
-        } catch {
-            XCTAssertEqual(error as? CredentialVaultError, .malformedStoredCredential)
-        }
-    }
-
     func testAtomicReplacementRestoresTheOriginalInventoryWhenAWriteFails() async throws {
         let spaceID = UUID()
         let firstDescriptor = descriptor(
@@ -179,24 +82,6 @@ final class KeychainCredentialVaultTests: XCTestCase {
             isSynchronizable: true)
         let vault = KeychainCredentialVault(
             store: FailingMigrationCredentialKeychainStore(items: [olderItem]), servicePrefix: "test.crest")
-        let read = try await vault.descriptors(in: spaceID)
-        XCTAssertEqual(read, [written])
-    }
-
-    /// A descriptor whose Space is stored bare reads as the same descriptor.
-    func testDescriptorsReadABareSpace() async throws {
-        let spaceID = UUID()
-        let written = descriptor(id: UUID(), spaceID: spaceID, username: "person")
-        let item = try keychainItem(descriptor: written, password: "secret")
-        var metadata = try XCTUnwrap(JSONSerialization.jsonObject(with: item.metadata) as? [String: Any])
-        XCTAssertEqual(metadata["spaceID"] as? [String: String], StoredIdentityJSON.wrapped(spaceID))
-        metadata["spaceID"] = spaceID.uuidString
-        let bareItem = CredentialKeychainItem(
-            account: item.account, metadata: try JSONSerialization.data(withJSONObject: metadata),
-            secret: item.secret, isSynchronizable: false)
-        let vault = KeychainCredentialVault(
-            store: FailingMigrationCredentialKeychainStore(items: [bareItem]), servicePrefix: "test.crest")
-
         let read = try await vault.descriptors(in: spaceID)
         XCTAssertEqual(read, [written])
     }

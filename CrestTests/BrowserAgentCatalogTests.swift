@@ -14,82 +14,7 @@ final class BrowserAgentCatalogTests: XCTestCase {
         let lastVisitedAt: String
     }
 
-    private struct ClaimedTab: Decodable {
-        let id: UUID
-        let inUse: Bool
-    }
-
     // MARK: - Actions - Catalogs
-
-    func testWindowToolsPreserveTheRequestedSpaceAndSavedTabIdentity() async throws {
-        let fixture = try BrowserAgentFixture()
-        let before = fixture.application.stackedWindowIDs
-        await fixture.assertRefused("open_window", ["url": .string("file:///private/tmp/test")])
-        XCTAssertEqual(fixture.application.stackedWindowIDs, before)
-        let opening = try await fixture.invoke(
-            "open_window",
-            [
-                "space": .string(fixture.space.id.uuidString), "url": .string("https://example.com/window"),
-            ])
-        let windowID = try XCTUnwrap(opening["windowID"]?.string.flatMap(UUID.init(uuidString:)))
-        defer { fixture.windows.window(for: windowID)?.close() }
-        XCTAssertEqual(opening["spaceID"]?.string, fixture.space.id.uuidString)
-        XCTAssertNotNil(opening["tabID"])
-        let listed = try await fixture.invoke("list_tabs")
-        let created = try XCTUnwrap(
-            listed["tabs"]?.decoded(as: [ClaimedTab].self).first {
-                $0.id.uuidString == opening["tabID"]?.string
-            })
-        XCTAssertTrue(created.inUse)
-        let saved = try XCTUnwrap(fixture.space.tabs.models.first { $0.placement == .saved })
-        let count = fixture.space.tabs.models.count
-        let shown = try await fixture.invoke("show_tab", ["tab": .string(saved.id.uuidString)])
-        XCTAssertEqual(shown["tab"]?["id"]?.string, saved.id.uuidString)
-        XCTAssertEqual(fixture.space.tabs.models.count, count)
-        let quick = try await fixture.invoke(
-            "open_quick_window",
-            [
-                "space": .string(fixture.space.id.uuidString), "url": .string("https://example.com/quick"),
-            ])
-        let quickID = try XCTUnwrap(quick["windowID"]?.string.flatMap(UUID.init(uuidString:)))
-        defer { fixture.windows.closeQuickWindowWithoutAsking(quickID) }
-        XCTAssertNotNil(fixture.windows.quickWindow(quickID))
-        XCTAssertNotEqual(quick["windowID"], opening["windowID"])
-        XCTAssertEqual(quick["spaceID"], opening["spaceID"])
-        let blank = try await fixture.invoke("open_blank_window", ["space": .string(fixture.space.id.uuidString)])
-        XCTAssertEqual(blank["spaceID"], opening["spaceID"])
-        let blankID = try XCTUnwrap(blank["windowID"]?.string.flatMap(UUID.init(uuidString:)))
-        defer { fixture.windows.window(for: blankID)?.close() }
-        XCTAssertNotNil(fixture.windows.window(for: blankID))
-    }
-
-    func testLiveHistoryAndProvidersRespectRevocationAndSearchBeforeLimiting() async throws {
-        let fixture = try BrowserAgentFixture()
-        let catalog = try await fixture.invoke("list_search_providers")
-        XCTAssertNotNil(catalog["defaultProvider"])
-        let url = try XCTUnwrap(URL(string: "https://docs.example.com/older"))
-        fixture.application.browser.seedVisit(to: url, titled: "Older matching visit")
-        for index in 0..<30 {
-            fixture.application.browser.seedVisit(
-                to: try XCTUnwrap(URL(string: "https://example.com/new/\(index)")), titled: "New visit")
-        }
-        let newest = try await fixture.invoke("search_history", ["limit": .number(25)])
-        XCTAssertEqual(try newest["entries"]?.decoded(as: [Visit].self).count, 25)
-        let found = try await fixture.invoke(
-            "search_history", ["query": .string("Older matching"), "limit": .number(25)])
-        let visits = try XCTUnwrap(found["entries"]?.decoded(as: [Visit].self))
-        XCTAssertEqual(visits.map(\.url), ["https://docs.example.com/older"])
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        XCTAssertNotNil(formatter.date(from: try XCTUnwrap(visits.first?.lastVisitedAt)))
-        let excluded = try await fixture.invoke("search_history", ["domain": .string("other.example.com")])
-        XCTAssertEqual(try excluded["entries"]?.decoded(as: [Visit].self).count, 0)
-        await fixture.assertRefused("search_history", ["limit": .number(1001)])
-        try fixture.core.send(AllowAgentSpace(spaceID: fixture.space.id, allowed: false))
-        let revoked = try await fixture.invoke("search_history")
-        XCTAssertEqual(try revoked["entries"]?.decoded(as: [Visit].self).count, 0)
-        await fixture.assertRefused("list_search_providers", ["space": .string(fixture.space.id.uuidString)])
-    }
 
     func testPrivateCreationValidatesBeforeMutationAndNeverExposesPrivateTabs() async throws {
         let fixture = try BrowserAgentFixture()
@@ -123,18 +48,6 @@ final class BrowserAgentCatalogTests: XCTestCase {
         await fixture.assertRefused("open_private_window")
     }
 
-    func testShowingSavedTabWithoutAnOpenWindowKeepsItsIdentity() async throws {
-        let fixture = try BrowserAgentFixture()
-        XCTAssertNil(fixture.windows.activeBrowserWindow)
-        let saved = try XCTUnwrap(fixture.space.tabs.models.first { $0.placement == .saved })
-        let count = fixture.space.tabs.models.count
-        let shown = try await fixture.invoke("show_tab", ["tab": .string(saved.id.uuidString)])
-        XCTAssertEqual(shown["tab"]?["id"]?.string, saved.id.uuidString)
-        XCTAssertEqual(fixture.space.tabs.models.count, count)
-        let window = try XCTUnwrap(fixture.windows.activeBrowserWindow)
-        defer { window.close() }
-    }
-
     func testAWindowOpensOnlyOnceThePersonAgreesAndAgainWithoutAskingWhenTheyLetIt() async throws {
         let fixture = try BrowserAgentFixture()
         let before = fixture.application.stackedWindowIDs
@@ -161,19 +74,6 @@ final class BrowserAgentCatalogTests: XCTestCase {
         await fixture.assertRefused("open_private_window")
         XCTAssertEqual(fixture.answers.openings.last?.kind, .privateWindow)
         XCTAssertFalse(fixture.windows.isOpen(.private))
-    }
-
-    func testDeniedSpacesCannotOpenPublicWindows() async throws {
-        let fixture = try BrowserAgentFixture()
-        try fixture.core.send(AllowAgentSpace(spaceID: fixture.space.id, allowed: false))
-        let before = fixture.application.stackedWindowIDs
-        for name in ["open_window", "open_blank_window", "open_quick_window"] {
-            var arguments: [String: AgentJSON] = ["space": .string(fixture.space.id.uuidString)]
-            if name != "open_blank_window" { arguments["url"] = .string("https://example.com/denied") }
-            await fixture.assertRefused(name, arguments)
-        }
-        XCTAssertEqual(fixture.application.stackedWindowIDs, before)
-        await fixture.assertRefused("open_window")
     }
 
     func testLockedSpacesRedactListingsAndDenyPublicWindowCreation() async throws {

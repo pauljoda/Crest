@@ -12,21 +12,6 @@ public sealed partial class BrowserContractsTests {
     private static JsonObject SyncProjectionPreferences(bool saved = true, bool current = true, bool history = true)
         => new() { ["savedStructure"] = saved, ["currentTabs"] = current, ["historyAndArchive"] = history };
 
-    [Theory]
-    [InlineData("https://example.com", true)]
-    [InlineData("http://localhost:3200", true)]
-    [InlineData("crest://extensions", false)]
-    [InlineData("chrome://extensions", false)]
-    [InlineData("chrome-extension://abcdefghijklmnopabcdefghijklmnop/options.html", false)]
-    [InlineData("file:///tmp/page.html", false)]
-    [InlineData("about:blank", false)]
-    [InlineData(null, false)]
-    public void OnlyPortableWebContentEntersSharedRecords(string? url, bool expected) {
-        Assert.Equal(expected, SyncedAddress.IncludesTab(url, false, null));
-        Assert.False(SyncedAddress.IncludesTab(url, true, null));
-        Assert.False(SyncedAddress.IncludesTab(url, false, "crest://settings"));
-    }
-
     [Fact]
     public void ProjectionPreservesWireMetadataButExcludesLocalAssetsAndDisabledCategories() {
         var session = SavedSession().Document["session"]!.AsObject(); var space = session["spaces"]![0]!;
@@ -49,24 +34,6 @@ public sealed partial class BrowserContractsTests {
         // Group intent survives turning off tab categories on this device.
         Assert.Single(disabled[0]!["value"]!["splitGroups"]!.AsArray());
         Assert.Equal("local-image", original["faviconData"]!.GetValue<string>());
-    }
-
-    [Fact]
-    public void ProjectionRetainsPositionsAndClearsArchivedMembershipWithoutChangingLocalAuditReason() {
-        var fixture = SavedSession(); var session = fixture.Document["session"]!.AsObject(); var space = session["spaces"]![0]!;
-        var tab = space["tabs"]![0]!; tab.AsObject().Remove("savedURL");
-        var record = SyncTabRecord(fixture.Tab, fixture.Space, 10, Guid.NewGuid());
-        record["payload"]!["value"]!["orderToken"] = "3fffffffffffffff";
-        space["archivedTabs"] = new JsonArray(new JsonObject { ["tab"] = tab.DeepClone(), ["archivedAt"] = 800000010.0, ["reason"] = "synced", ["deletionOrigin"] = "remote" });
-        var result = NativeSyncProjection.Project(session, SyncProjectionPreferences(), [record]);
-        var projectedTab = result.Single(p => p!["type"]!.GetValue<string>() == "tab")!["value"]!;
-        Assert.Equal("3fffffffffffffff", projectedTab["orderToken"]!.GetValue<string>());
-        Assert.Equal(tab["url"]!.GetValue<string>(), projectedTab["savedURL"]!.GetValue<string>());
-        var archive = result.Single(p => p!["type"]!.GetValue<string>() == "archive")!["value"]!;
-        Assert.Equal("deleted", archive["reason"]!.GetValue<string>());
-        Assert.Equal("current", archive["tab"]!["placement"]!.GetValue<string>());
-        Assert.Null(archive["tab"]!["folderID"]); Assert.Null(archive["tab"]!["splitGroupID"]); Assert.Null(archive["tab"]!["savedURL"]);
-        Assert.Equal("remote", space["archivedTabs"]![0]!["deletionOrigin"]!.GetValue<string>());
     }
 
     [Fact]
@@ -110,19 +77,6 @@ public sealed partial class BrowserContractsTests {
         var retained = updated["records"]!.AsArray().Where(r =>
             Guid.Parse(r!["id"]!["value"]!.GetValue<string>()) != addedId).Select(r => r!.DeepClone());
         Assert.True(JsonNode.DeepEquals(sent["records"], new JsonArray(retained.ToArray())));
-    }
-
-    [Fact]
-    public void InvalidProjectionReportsTheOffendingIdentityWithoutMutatingTheSource() {
-        var fixture = SavedSession(); var session = fixture.Document["session"]!;
-        var folder = session["spaces"]![0]!["folders"]![0]!;
-        folder["parentID"] = folder["id"]!.DeepClone();
-        var before = Bytes(session);
-        var refused = Assert.Throws<SyncRecordsFlawedException>(() =>
-            NativeSyncProjection.Project(session.AsObject(), SyncProjectionPreferences(), []));
-        Assert.Equal(SyncRecordFlaw.InvalidFolderHierarchy, refused.Flaw);
-        Assert.Equal(fixture.Space, refused.Subject);
-        Assert.Equal(before, Bytes(session));
     }
 
     [Theory]

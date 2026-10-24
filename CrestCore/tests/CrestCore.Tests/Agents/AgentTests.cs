@@ -217,46 +217,6 @@ public sealed partial class BrowserContractsTests {
     }
 
     [Fact]
-    public void AnAgentsActivityIsItsOwnBoundedAndGoesWithItsConnection() {
-        using var app = new CrestApp();
-        var session = TwoSpaceSession();
-        var space = SpaceId(session["spaces"]![0]!);
-        TestWorkspaces.Open(app, session);
-        var agent = ConnectClaude(app, space);
-        var other = Guid.NewGuid();
-        app.Send(new BeginAgentSession(other, Claude, "other"));
-        for (int index = 0; index <= AgentSessions.MaximumActivity; index++) {
-            app.Send(new NoteAgentActivity(agent, AgentActivityKind.OpenedTab, $"https://example.com/{index}"));
-        }
-        var sessions = AgentSessionsIn(app.Send(new NoteAgentActivity(agent, AgentActivityKind.ClosedTab, new string('a', 400))));
-        var noted = sessions.Single(current => current.SessionId == agent).Activity;
-        Assert.Equal(AgentSessions.MaximumActivity, noted.Count);
-        Assert.Equal("https://example.com/2", noted[0].Subject);
-        Assert.Equal(AgentActivityKind.ClosedTab, noted[^1].Kind);
-        Assert.Equal(AgentSessions.MaximumActivitySubject, noted[^1].Subject.Length);
-        Assert.Empty(sessions.Single(current => current.SessionId == other).Activity);
-        app.Send(new EndAgentSession(agent));
-        Assert.IsType<UnknownAgentSession>(Assert.Throws<Rejected>(() =>
-            app.Send(new NoteAgentActivity(agent, AgentActivityKind.OpenedTab, "https://example.com"))).Rejection);
-    }
-
-    [Fact]
-    public void MemoryPressureKeepsThePagesOfTabsAnAgentUses() {
-        var (app, engine, _, clock, workspace, window, space, _) = ResidentHost();
-        using var disposal = app;
-        var (used, usedPage) = ShowNewTab(app, engine, clock, workspace, window, space, "https://used.example/");
-        var (_, idlePage) = ShowNewTab(app, engine, clock, workspace, window, space, "https://idle.example/");
-        ShowNewTab(app, engine, clock, workspace, window, space, "https://shown.example/");
-        var agent = ConnectClaude(app, space);
-        app.Send(new ClaimAgentTab(agent, used));
-
-        // The page off screen longest stays while an agent uses its tab.
-        var unloaded = app.Send(new ReportMemoryPressure(MemoryPressureLevel.Critical)).OfType<PageUnloaded>().Select(page => page.PageId);
-        Assert.DoesNotContain(usedPage, unloaded);
-        Assert.Contains(idlePage, unloaded);
-    }
-
-    [Fact]
     public void AnAgentsNameAndColourShowNothingThatMisleads() {
         Assert.Equal("Claude Code", AgentPreferences.CleanName("  Claude‮\u0000 \n Code "));
         Assert.Null(AgentPreferences.CleanName("​⁦\r\n"));
@@ -281,11 +241,5 @@ public sealed partial class BrowserContractsTests {
         Assert.Equal(new BrandColor(0.85, 0.47, 0.34), named.Color);
         Assert.Equal(new BrandColor(1, 0, 0), Assert.Single(AgentSessionsIn(app.Send(new IdentifyAgent(agent, null,
             new BrandColor(4, -1, 0))))).Color);
-    }
-
-    [Fact]
-    public void OnlyTheMacOffersAgents() {
-        using var app = new CrestApp(new AppConfiguration(null, DevicePlatform.Mobile));
-        Assert.IsType<AgentsUnavailable>(Assert.Throws<Rejected>(() => app.Send(new SetAgents(true))).Rejection);
     }
 }

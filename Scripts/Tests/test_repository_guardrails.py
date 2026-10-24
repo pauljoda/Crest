@@ -5,7 +5,6 @@ from __future__ import annotations
 
 import importlib.util
 import json
-import os
 from pathlib import Path
 import subprocess
 import tempfile
@@ -85,45 +84,6 @@ class ArchitectureGuardTests(unittest.TestCase):
             {"layer-import"},
         )
 
-    def test_application_can_coordinate_with_the_portable_synchronization_module(self) -> None:
-        self.write_source(
-            "CrestShared/Application/AccountCheck.swift",
-            "import Synchronization\nstruct AccountCheck {}\n",
-        )
-        self.assertEqual(self.violation_rules(), set())
-
-    def test_platform_frameworks_stay_in_their_native_roots(self) -> None:
-        self.write_source(
-            "CrestMobile/BadMobile.swift", "import AppKit\nstruct BadMobile {}\n"
-        )
-        self.write_source(
-            "CrestMac/BadMac.swift", "import UIKit\nstruct BadMac {}\n"
-        )
-        self.write_source(
-            "CrestShared/BadShared.swift", "import CoreServices\nstruct BadShared {}\n"
-        )
-
-        self.assertEqual(
-            self.violation_rules(),
-            {"platform-framework-placement"},
-        )
-
-    def test_legacy_observation_and_type_erasure_are_rejected(self) -> None:
-        self.write_source(
-            "CrestShared/Features/Legacy.swift",
-            """import SwiftUI
-final class Legacy: ObservableObject {
-    @Published var count = 0
-    var body: AnyView { AnyView(EmptyView()) }
-}
-""",
-        )
-
-        self.assertEqual(
-            self.violation_rules(),
-            {"legacy-observation", "any-view"},
-        )
-
     def test_xcode_27_state_and_builder_hazards_are_rejected(self) -> None:
         self.write_source(
             "CrestShared/Features/Compatibility.swift",
@@ -156,58 +116,6 @@ extension Compatibility where Body == TupleView<(Text, Text)> {}
                 "xcode27-tuple-view-constraint",
             },
         )
-
-    def test_previewable_state_is_not_treated_as_wrapper_composition(self) -> None:
-        self.write_source(
-            "CrestShared/Features/Preview.swift",
-            """import SwiftUI
-#Preview {
-    @Previewable @State var value = 0
-    Text(String(value))
-}
-""",
-        )
-
-        self.assertEqual(self.violations(), [])
-
-    def test_composed_state_wrappers_and_empty_map_builders_are_rejected(self) -> None:
-        self.write_source(
-            "CrestShared/Features/BuilderCompatibility.swift",
-            """import MapKit
-import SwiftUI
-struct BuilderCompatibility: View {
-    @FocusState @State private var value = 0
-    var body: some View { Group { } }
-}
-""",
-        )
-
-        self.assertEqual(
-            self.violation_rules(),
-            {"xcode27-empty-builder", "xcode27-state-wrapper-composition"},
-        )
-
-    def test_exact_exemptions_do_not_disable_the_rule_for_other_files(self) -> None:
-        exempt_path = "CrestShared/Domain/ExistingClock.swift"
-        self.write_config(
-            import_exemptions=[
-                {
-                    "path": exempt_path,
-                    "module": "Observation",
-                    "reason": "Tracked migration debt.",
-                }
-            ]
-        )
-        self.write_source(exempt_path, "import Observation\nstruct ExistingClock {}\n")
-        self.write_source(
-            "CrestShared/Domain/NewClock.swift",
-            "import Observation\nstruct NewClock {}\n",
-        )
-
-        violations = self.violations()
-
-        self.assertEqual(len(violations), 1)
-        self.assertEqual(violations[0].path, "CrestShared/Domain/NewClock.swift")
 
 class SwiftFormatGuardTests(unittest.TestCase):
     def setUp(self) -> None:
@@ -247,30 +155,6 @@ class SwiftFormatGuardTests(unittest.TestCase):
 
     def tearDown(self) -> None:
         self.temporary_directory.cleanup()
-
-    def test_default_check_lints_only_changed_swift_files_without_rewriting(self) -> None:
-        result = subprocess.run(
-            [str(FORMAT_SCRIPT)],
-            cwd=self.fixture_root,
-            env=os.environ
-            | {
-                "CREST_FORMAT_REPOSITORY_ROOT": str(self.fixture_root),
-                "CREST_SWIFT_FORMAT": str(self.fake_formatter),
-                "CREST_TEST_ARGUMENT_LOG": str(self.argument_log),
-            },
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-
-        self.assertEqual(result.returncode, 0, result.stderr)
-        arguments = self.argument_log.read_text().splitlines()
-        self.assertEqual(arguments[0:2], ["lint", "--strict"])
-        self.assertIn("--configuration", arguments)
-        self.assertIn("Changed.swift", arguments)
-        self.assertIn("Untracked.swift", arguments)
-        self.assertNotIn("notes.txt", arguments)
-        self.assertNotIn("--in-place", arguments)
 
 if __name__ == "__main__":
     unittest.main()

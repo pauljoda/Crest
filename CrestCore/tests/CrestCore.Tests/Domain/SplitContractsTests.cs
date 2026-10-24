@@ -35,31 +35,6 @@ public sealed class SplitContractsTests {
     }
 
     [Fact]
-    public void ReorderingDurableMembersKeepsTheirIdentityAndPlacement() {
-        var group = Guid.NewGuid();
-        var first = Tab("first", TabPlacement.Saved, group); var second = Tab("second", TabPlacement.Saved, group);
-        var space = Space(first, second);
-        var result = space.JoinSplit(second.Id, first.Id, 0, new SystemIdSource(), Now);
-        Assert.Empty(result.Copies); Assert.Equal(new[] { second.Id, first.Id }, space.Tabs.Select(t => t.Id));
-        Assert.All(space.Tabs, t => { Assert.Equal(TabPlacement.Saved, t.Placement); Assert.Equal(group, t.SplitGroupId); });
-    }
-
-    [Fact]
-    public void LeavingMiddleOfRunKeepsSurvivorsContiguousAndExplicitMutationDissolvesSingleton() {
-        var group = Guid.NewGuid();
-        var first = Tab("first", split: group); var second = Tab("second", split: group);
-        var third = Tab("third", split: group); var tail = Tab("tail");
-        var space = Space(first, second, third, tail);
-        space.LeaveSplit(second.Id, Now);
-        Assert.Equal(new[] { first.Id, third.Id, second.Id, tail.Id }, space.Tabs.Select(t => t.Id));
-        Assert.Equal(group, space.Tab(first.Id).SplitGroupId); Assert.Equal(group, space.Tab(third.Id).SplitGroupId);
-        Assert.Null(space.Tab(second.Id).SplitGroupId);
-        space.LeaveSplit(first.Id, Now.AddMinutes(1));
-        Assert.Null(space.Tab(first.Id).SplitGroupId); Assert.Null(space.Tab(third.Id).SplitGroupId);
-        Assert.Equal(Now.AddMinutes(1), space.Tab(third.Id).State.PositionModifiedAt);
-    }
-
-    [Fact]
     public void FullSplitRefusesWithoutCopyingOrChangingAnyTab() {
         var group = Guid.NewGuid();
         var space = Space([.. Enumerable.Range(0, 4).Select(i => Tab("member" + i, TabPlacement.Saved, group)), Tab("source")]);

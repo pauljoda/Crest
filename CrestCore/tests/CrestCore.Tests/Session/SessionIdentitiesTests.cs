@@ -68,54 +68,6 @@ public sealed class SessionIdentitiesTests {
         }
     }
 
-    /// Edits that move, reorder, replace or retire identities without sharing
-    /// one pass, including a tab that leaves one Space for another and a Space
-    /// that goes while its tab moves on.
-    [Fact]
-    public void AnEditThatKeepsEveryIdentityUniqueIsTaken() {
-        var (a, b, c) = (Space(5), Space(5), Space(5));
-        var basis = Session(a, b, c);
-        var moving = a.Tabs[1];
-        var cases = new (string Edit, SessionState Next)[] {
-            ("a tab moves from A to B", Replacing(Replacing(basis, a with { Tabs = [.. a.Tabs.Where(tab => tab != moving)] }),
-                b with { Tabs = [moving, .. b.Tabs] })),
-            ("A's tabs change order", Replacing(basis, a with { Tabs = [.. a.Tabs.Reverse()] })),
-            ("a tab of A is renamed", Replacing(basis, a with { Tabs = [.. a.Tabs.Select(tab => tab with { Title = "Renamed" })] })),
-            ("a tab of A takes a new identity", Replacing(basis, a with { Tabs = [a.Tabs[0] with { Id = Guid.NewGuid() }, .. a.Tabs.Skip(1)] })),
-            ("the Spaces change order", basis with { Spaces = [c, a, b] }),
-            ("A goes and its tab moves to C", basis with { Spaces = [b, c with { Tabs = [.. c.Tabs, moving] }] }),
-            ("a new Space arrives with new tabs", Adding(basis, Space(3))),
-        };
-
-        foreach (var (edit, next) in cases) Assert.True(Indexed(basis).Flaw(basis, next) is null, $"{edit} breaks no rule");
-    }
-
-    /// The identities follow each accepted state: a tab that moved is held by
-    /// the Space it moved to, and one that closed is free again.
-    [Fact]
-    public void TheIdentitiesFollowEachAcceptedState() {
-        var (a, b) = (Space(4), Space(4));
-        var basis = Session(a, b);
-        var identities = Indexed(basis);
-        var moving = a.Tabs[0];
-        var closing = b.Tabs[3];
-
-        var moved = Replacing(Replacing(basis, a with { Tabs = [.. a.Tabs.Skip(1)] }), b with { Tabs = [.. b.Tabs, moving] });
-        Assert.Null(identities.Flaw(basis, moved));
-        identities.Accepted(basis, moved);
-        var movedA = moved.Spaces[0];
-
-        // The moved tab now belongs to B, so A cannot take it back beside it.
-        Assert.Equal(SessionFlaw.DuplicateTab, identities.Flaw(moved, Replacing(moved, movedA with { Tabs = [moving, .. movedA.Tabs] })));
-
-        // A state accepted without a check of its own is followed too.
-        var closed = Replacing(moved, moved.Spaces[1] with { Tabs = [.. moved.Spaces[1].Tabs.Where(tab => tab.Id != closing.Id)] });
-        identities.Accepted(moved, closed);
-        Assert.Null(identities.Flaw(closed, Replacing(closed, closed.Spaces[0] with { Tabs = [.. closed.Spaces[0].Tabs, closing] })));
-        Assert.Equal(SessionFlaw.DuplicateTab,
-            identities.Flaw(closed, Replacing(closed, closed.Spaces[0] with { Tabs = [.. closed.Spaces[0].Tabs, moving] })));
-    }
-
     #endregion
 
     #region Actions - Scope

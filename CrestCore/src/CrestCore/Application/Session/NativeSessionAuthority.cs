@@ -33,10 +33,6 @@ public sealed partial class NativeSessionAuthority {
     /// What kind of workspace this session is.
     internal WorkspaceKind Kind => workspaceKind;
 
-    /// The identities the accepted session holds, which each edit is checked
-    /// against. Read it under the gate.
-    internal SessionIdentities Identities => identities;
-
     #endregion
 
     #region Constructors

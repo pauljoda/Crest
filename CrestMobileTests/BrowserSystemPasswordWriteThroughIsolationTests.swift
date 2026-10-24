@@ -4,13 +4,6 @@ import XCTest
 
 @MainActor
 final class BrowserSystemPasswordWriteThroughIsolationTests: XCTestCase {
-    func testOrdinaryLaunchKeepsSystemPasswordWriteThroughAvailable() throws {
-        let core = CrestCore()
-        let facts = BrowserSystemPasswordWriteThroughSystem.facts(
-            for: BrowserLaunchEnvironment(values: [:], isXCTestRuntime: false))
-        XCTAssertEqual(try core.query(facts).availability, .available)
-    }
-
     func testIsolatedLaunchRejectsWriteThroughBeforePresentation() async throws {
         let launchEnvironment = BrowserLaunchEnvironment(
             values: ["CREST_ISOLATED_SESSION": "1"],

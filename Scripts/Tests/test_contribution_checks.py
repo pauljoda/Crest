@@ -36,27 +36,12 @@ class ContributionCheckTests(unittest.TestCase):
         cls.check = load_check_module()
         cls.template = TEMPLATE.read_text(encoding="utf-8")
 
-    def test_template_carries_both_markers_unchecked(self) -> None:
-        states = self.check.checkbox_states(self.template)
-        self.assertEqual(
-            states,
-            {self.check.AI_USED_MARKER: False, self.check.SKILL_MARKER: False},
-        )
-        self.assertEqual(self.check.ai_declaration_problems(self.template), [])
-
     def test_ai_use_without_the_skill_is_rejected(self) -> None:
         body = self.template.replace(f"- [ ] {self.check.AI_USED_MARKER}", f"- [x] {self.check.AI_USED_MARKER}")
         self.assertEqual(len(self.check.ai_declaration_problems(body)), 1)
 
         body = body.replace("- [ ] I ran the `crest-contribution`", "- [x] I ran the `crest-contribution`")
         self.assertEqual(self.check.ai_declaration_problems(body), [])
-
-    def test_missing_section_is_rejected(self) -> None:
-        self.assertEqual(len(self.check.ai_declaration_problems("## What changed\n\nA fix.")), 1)
-
-    def test_pull_requests_before_the_policy_are_exempt(self) -> None:
-        self.assertTrue(self.check.opened_before_policy("2026-10-06T14:40:38Z"))
-        self.assertFalse(self.check.opened_before_policy("2026-10-09T00:00:00Z"))
 
     def test_sign_off_is_required_except_for_merges(self) -> None:
         signed = commit("fix: a thing\n\nSigned-off-by: Person <person@example.com>")

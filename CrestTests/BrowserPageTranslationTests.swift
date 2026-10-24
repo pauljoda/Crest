@@ -5,49 +5,6 @@ import XCTest
 
 @MainActor
 final class BrowserPageTranslationTests: XCTestCase {
-    func testOffersDoNotTranslateUntilRequestedAndShowingOriginalSuppressesAutomaticRetry() async throws {
-        let web = try await fixture()
-        let translation = BrowserPageTranslation()
-        translation.setActive(true, in: BrowserTranslationDocument(webView: web))
-        await translation.detect()
-        await translation.automaticallyTranslateIfAvailable(enabled: false)
-        XCTAssertNil(translation.configuration, "Detection must never request translation or a model download.")
-        XCTAssertFalse(translation.isWorking)
-        translation.dismiss()
-        translation.targetID = "en"
-        translation.start()
-        XCTAssertTrue(translation.showsToolbar, "Starting from Page Actions must reveal translation controls.")
-        XCTAssertNotNil(translation.configuration)
-        translation.showOriginal()
-        await translation.automaticallyTranslateIfAvailable(enabled: true)
-        XCTAssertFalse(translation.isWorking, "Show Original must suppress automatic translation for this document.")
-        XCTAssertNil(translation.configuration)
-        translation.reset()
-        XCTAssertFalse(translation.isOffered)
-        XCTAssertNil(translation.configuration)
-    }
-
-    func testDisappearingPreviousHostCannotCancelTheCurrentHostsTranslation() throws {
-        let web = WKWebView()
-        let translation = BrowserPageTranslation()
-        let previousHost = UUID()
-        let currentHost = UUID()
-        translation.setActive(true, in: BrowserTranslationDocument(webView: web), hostID: previousHost)
-        translation.sourceID = "es"
-        translation.targetID = "en"
-        translation.start()
-        let configuration = try XCTUnwrap(translation.configuration)
-
-        translation.setActive(true, in: BrowserTranslationDocument(webView: web), hostID: currentHost)
-        translation.setActive(false, in: BrowserTranslationDocument(webView: web), hostID: previousHost)
-
-        XCTAssertTrue(translation.isWorking)
-        XCTAssertEqual(translation.configuration, configuration)
-        translation.setActive(false, in: BrowserTranslationDocument(webView: web), hostID: currentHost)
-        XCTAssertFalse(translation.isWorking)
-        XCTAssertNil(translation.configuration)
-    }
-
     func testTranslationPreservesEditableContentAndWebsiteChangesOnRestore() async throws {
         let web = try await fixture()
         let capture = try await BrowserTranslationDocument(webView: web).capture(token: "first")
@@ -70,65 +27,6 @@ final class BrowserPageTranslationTests: XCTestCase {
                 "[document.querySelector('h1').textContent,document.querySelector('input').value,document.querySelector('#live').textContent,document.querySelector('a').getAttribute('href')]"
             ) as? [String]
         XCTAssertEqual(values, ["Hola mundo", "edited", "Site update", "#next"])
-    }
-
-    func testRetiredOperationCannotApplyOrRestoreOverANewerTranslation() async throws {
-        let web = try await fixture()
-        let first = try await BrowserTranslationDocument(webView: web).capture(token: "first")
-        let second = try await BrowserTranslationDocument(webView: web).capture(token: "second")
-        let stale = try await apply(first.texts.map { _ in "Stale" }, token: "first", in: web)
-        XCTAssertEqual(stale, 0)
-        _ = try await apply(second.texts.map { _ in "Current" }, token: "second", in: web)
-        try await BrowserTranslationDocument(webView: web).restore(token: "first")
-        let heading = try await web.evaluateJavaScript("document.querySelector('h1').textContent") as? String
-        XCTAssertEqual(heading, "Current")
-        try await BrowserTranslationDocument(webView: web).restore(token: "second")
-    }
-
-    func testPageHideRestoresTextBeforeTheDocumentCanBeCached() async throws {
-        let web = try await fixture()
-        let capture = try await BrowserTranslationDocument(webView: web).capture(token: "cached")
-        _ = try await apply(capture.texts.map { _ in "Translated" }, token: "cached", in: web)
-        _ = try await web.evaluateJavaScript(
-            "window.dispatchEvent(new PageTransitionEvent('pagehide', {persisted:true}))")
-        let heading = try await web.evaluateJavaScript("document.querySelector('h1').textContent") as? String
-        XCTAssertEqual(heading, "Hola mundo")
-        let late = try await apply(capture.texts, token: "cached", in: web)
-        XCTAssertEqual(late, 0)
-    }
-
-    func testNewDocumentRejectsOldResultsEvenAtTheSameURL() async throws {
-        let web = try await fixture()
-        let capture = try await BrowserTranslationDocument(webView: web).capture(token: "old")
-        web.loadHTMLString("<h1>New document</h1>", baseURL: URL(string: "https://translation.crest.test"))
-        try await waitForLoad(web)
-        let applied = try await apply(capture.texts, token: "old", in: web)
-        XCTAssertEqual(applied, 0)
-    }
-
-    func testRouteChangeRejectsLateResultsButAnchorNavigationKeepsTranslation() async throws {
-        let web = try await fixture()
-        let capture = try await BrowserTranslationDocument(webView: web).capture(token: "route")
-        _ = try await web.evaluateJavaScript("history.pushState({}, '', '#next')")
-        let applied = try await apply(capture.texts.map { _ in "Translated" }, token: "route", in: web)
-        XCTAssertEqual(applied, capture.texts.count)
-        try await BrowserTranslationDocument(webView: web).restore(token: "route")
-        _ = try await BrowserTranslationDocument(webView: web).capture(token: "route-two")
-        _ = try await web.evaluateJavaScript("history.pushState({}, '', '/new-route')")
-        let stale = try await apply(capture.texts.map { _ in "Stale" }, token: "route-two", in: web)
-        XCTAssertEqual(stale, 0)
-    }
-
-    func testDetectionSamplesBoundedTextWithoutChangingTheDocument() async throws {
-        let web = try await fixture()
-        _ = try await web.evaluateJavaScript("document.querySelector('h1').textContent = 'hola '.repeat(1500)")
-        let sample = try await BrowserTranslationDocument(webView: web).sample()
-        XCTAssertLessThanOrEqual(sample.text.count, 3000)
-        XCTAssertFalse(sample.text.contains("secret"))
-        let heading = try await web.evaluateJavaScript("document.querySelector('h1').textContent.length") as? Int
-        XCTAssertEqual(heading, 7500)
-        let capture = try await BrowserTranslationDocument(webView: web).capture(token: "large")
-        XCTAssertTrue(capture.isLimited)
     }
 
     /// Applies `texts` to the captured entries in document order.

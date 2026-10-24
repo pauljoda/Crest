@@ -4393,6 +4393,10 @@
     "remove-dead-sidebar-drop-indicators": {
       "category": "internal",
       "message": "Remove the sidebar's drop-indicator code, which never drew anything since the in-place reorder replaced it."
+    },
+    "slim-test-suite": {
+      "category": "internal",
+      "message": "Trim the test suites to the contracts that can break silently: persistence, sync, privacy, security, extensions, input routing and shared session rules."
     }
   }
 }

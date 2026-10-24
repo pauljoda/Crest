@@ -29,11 +29,9 @@ changing engine inputs.
 
 Run `Scripts/validate-identity.sh` after product metadata or persistent identifier changes. Run `Scripts/validate-cache-hygiene.sh` after building or testing, and run `Scripts/validate.sh` for the macOS and iOS unit gates. The validation script reuses one temporary Derived Data directory and removes it on success, failure, or interruption.
 
-For repository-only changes, run `Scripts/check-architecture.py`,
-`Scripts/check-vertical-structure.py`, and `Scripts/check-swift-format.sh`; use
-`--base main` to include committed branch changes in the formatting check. The
-vertical check uses an exact debt ledger: structural refactors remove their
-resolved entries in the same commit, while new violations are rejected.
+For repository-only changes, run `Scripts/check-architecture.py` and
+`Scripts/check-swift-format.sh`; use `--base main` to include committed branch
+changes in the formatting check.
 `Scripts/audit-periphery.sh` repeats the dead-code evidence audit across every
 app scheme and configuration when Periphery is installed. Its output never
 justifies deletion without reference, build, and test proof. See

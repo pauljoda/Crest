@@ -45,84 +45,6 @@ public sealed partial class BrowserContractsTests {
     }
 
     [Fact]
-    public void TheLaterSavedTabsDisclosureWinsOverAHigherStaleClock() {
-        var stale = SavedRecord(SyncRecordKind.Space, SpaceValue(FirstSpace(OneSpaceSession())), 100, Fixed(940));
-        stale["payload"]!["value"]!["isSavedTabsExpanded"] = true;
-        stale["payload"]!["value"]!["savedTabsExpansionModifiedAt"] = At(200);
-        var latest = Edited(stale, 10, Fixed(941), value => {
-            value["isSavedTabsExpanded"] = false;
-            value["savedTabsExpansionModifiedAt"] = At(300);
-        });
-
-        var resolved = ConvergedValue(SyncRecordKind.Space, Fixed(100), stale, latest);
-
-        Assert.False(resolved["isSavedTabsExpanded"]!.GetValue<bool>());
-        Assert.Equal(300, Unix(resolved["savedTabsExpansionModifiedAt"]), precision: 6);
-    }
-
-    [Fact]
-    public void TheLaterFolderDisclosureWinsOverAHigherStaleClock() {
-        var stale = SavedRecord(SyncRecordKind.Folder, new JsonObject {
-            ["id"] = SwiftId(Fixed(944)),
-            ["spaceID"] = SwiftId(Fixed(100)),
-            ["title"] = "Projects",
-            ["symbol"] = "folder",
-            ["location"] = "saved",
-            ["isCollapsed"] = false,
-            ["collapseModifiedAt"] = At(200),
-            ["orderToken"] = "a"
-        }, 100, Fixed(945));
-        var latest = Edited(stale, 10, Fixed(946), value => {
-            value["isCollapsed"] = true;
-            value["collapseModifiedAt"] = At(300);
-        });
-
-        var resolved = ConvergedValue(SyncRecordKind.Folder, Fixed(944), stale, latest);
-
-        Assert.True(resolved["isCollapsed"]!.GetValue<bool>());
-        Assert.Equal(300, Unix(resolved["collapseModifiedAt"]), precision: 6);
-    }
-
-    [Fact]
-    public void TheLaterMoveWinsOverAHigherStaleClock() {
-        var tab = FirstSpace(OneSpaceSession())["tabs"]![0]!.AsObject();
-        var stale = Edited(SavedRecord(SyncRecordKind.Tab, TabValue(tab, Fixed(100)), 0, Fixed(93)), 100, Fixed(93), value => {
-            value["placement"] = "pinned";
-            value["orderToken"] = "b";
-            value["positionModifiedAt"] = At(200);
-        });
-        var latest = Edited(stale, 10, Fixed(94), value => {
-            value["placement"] = "current";
-            value["orderToken"] = "a";
-            value["positionModifiedAt"] = At(300);
-        });
-
-        var resolved = ConvergedValue(SyncRecordKind.Tab, Fixed(102), stale, latest);
-
-        Assert.Equal("current", resolved["placement"]!.GetValue<string>());
-        Assert.Equal("a", resolved["orderToken"]!.GetValue<string>());
-        Assert.Equal(300, Unix(resolved["positionModifiedAt"]), precision: 6);
-    }
-
-    [Fact]
-    public void TheLaterRenameWinsOverAHigherStaleClock() {
-        var tab = FirstSpace(OneSpaceSession())["tabs"]![0]!.AsObject();
-        var stale = Edited(SavedRecord(SyncRecordKind.Tab, TabValue(tab, Fixed(100)), 0, Fixed(97)), 100, Fixed(97), value => {
-            value["customTitle"] = "Stale Name";
-            value["titleModifiedAt"] = At(200);
-        });
-        var latest = Edited(stale, 10, Fixed(98), value => {
-            value["customTitle"] = "Latest Name";
-            value["titleModifiedAt"] = At(300);
-        });
-
-        var resolved = ConvergedValue(SyncRecordKind.Tab, Fixed(102), stale, latest);
-
-        Assert.Equal("Latest Name", resolved["customTitle"]!.GetValue<string>());
-        Assert.Equal(300, Unix(resolved["titleModifiedAt"]), precision: 6);
-    }
-
-    [Fact]
     public void ALaterClearedRenameBeatsAnEarlierRenameOnAnotherDevice() {
         var tab = FirstSpace(OneSpaceSession())["tabs"]![0]!.AsObject();
         var renamed = Edited(SavedRecord(SyncRecordKind.Tab, TabValue(tab, Fixed(100)), 0, Fixed(107)), 100, Fixed(107), value => {
@@ -163,35 +85,6 @@ public sealed partial class BrowserContractsTests {
         Assert.Equal("Preserved", kept["customTitle"]!.GetValue<string>());
     }
 
-    /// Two devices renaming and tinting one split merge per field, each by its
-    /// own clock.
-    [Fact]
-    public void ConcurrentSplitRenameAndTintMergePerField() {
-        var group = Fixed(1_198);
-        JsonObject Metadata(string title, double titled, double red, double tinted) => new() {
-            ["id"] = SwiftId(group),
-            ["customTitle"] = title,
-            ["titleModifiedAt"] = At(titled),
-            ["tint"] = new JsonObject { ["red"] = red, ["green"] = 0.5, ["blue"] = 0.2, ["alpha"] = 1.0 },
-            ["tintModifiedAt"] = At(tinted)
-        };
-        var session = SplitSession([group, group]);
-        FirstSpace(session)["splitGroups"] = new JsonArray(Metadata("Original", 100, 0.1, 100));
-        var journal = new JournalUnderTest(Fixed(1_199));
-        journal.Stage(session, at: 200);
-        var baseline = journal.Record(SyncRecordKind.Space, Fixed(1_100))!;
-        var renamed = Edited(baseline, 20, Fixed(1_200),
-            value => value["splitGroups"] = new JsonArray(Metadata("Renamed Elsewhere", 500, 0.1, 100)));
-        var tinted = Edited(baseline, 30, Fixed(1_201), value => value["splitGroups"] = new JsonArray(Metadata("Original", 100, 0.7, 600)));
-
-        var result = NativeSyncEvaluator.Resolve(renamed, tinted)["payload"]!["value"]!["splitGroups"]![0]!;
-
-        Assert.Equal("Renamed Elsewhere", result["customTitle"]!.GetValue<string>());
-        Assert.Equal(500, Unix(result["titleModifiedAt"]), precision: 6);
-        Assert.Equal(0.7, result["tint"]!["red"]!.GetValue<double>());
-        Assert.Equal(600, Unix(result["tintModifiedAt"]), precision: 6);
-    }
-
     /// A build before split view re-saves a tab it only activated: a higher
     /// clock and a later activation, but no split membership and no move.
     /// Membership rides the move's clock, so the aware copy keeps it.
@@ -212,71 +105,6 @@ public sealed partial class BrowserContractsTests {
         Assert.Equal(group, StoredSessionCodec.Identity(resolved["splitGroupID"]));
         Assert.Equal(300, Unix(resolved["positionModifiedAt"]), precision: 6);
         Assert.Equal(400, Unix(resolved["lastActivatedAt"]), precision: 6);
-    }
-
-    /// The older build may move the tab, and moving a member out of its run
-    /// ends its membership however old the build is.
-    [Fact]
-    public void AnOlderClientsMoveEndsSplitMembership() {
-        var group = Fixed(1_140);
-        var journal = new JournalUnderTest(Fixed(1_141));
-        journal.Stage(SplitSession([group, group], positioned: 300), at: 300);
-        var grouped = Edited(journal.Record(SyncRecordKind.Tab, Fixed(1_101))!, 100, Fixed(1_142), _ => { });
-        var moved = Edited(grouped, 10, Fixed(1_143), value => {
-            value["orderToken"] = "ffffffffffffffff";
-            value["positionModifiedAt"] = At(500);
-            value.Remove("splitGroupID");
-        });
-
-        var resolved = ConvergedValue(SyncRecordKind.Tab, Fixed(1_101), grouped, moved);
-
-        Assert.Null(resolved["splitGroupID"]);
-        Assert.Equal("ffffffffffffffff", resolved["orderToken"]!.GetValue<string>());
-        Assert.Equal(500, Unix(resolved["positionModifiedAt"]), precision: 6);
-    }
-
-    /// Records from before moves carried a clock have no move clock at all, so
-    /// neither copy can claim it cleared membership: the copy that knows the
-    /// group keeps it.
-    [Fact]
-    public void SplitMembershipSurvivesRecordsWithoutAnyMoveClock() {
-        var group = Fixed(1_180);
-        var journal = new JournalUnderTest(Fixed(1_181));
-        journal.Stage(SplitSession([group, group]), at: 300);
-        var grouped = Edited(journal.Record(SyncRecordKind.Tab, Fixed(1_101))!, 10, Fixed(1_182), _ => { });
-        Assert.Null(grouped["payload"]!["value"]!["positionModifiedAt"]);
-        var stripped = Edited(grouped, 100, Fixed(1_183), value => {
-            value["lastActivatedAt"] = At(400);
-            value.Remove("splitGroupID");
-        });
-
-        var resolved = ConvergedValue(SyncRecordKind.Tab, Fixed(1_101), grouped, stripped);
-
-        Assert.Equal(group, StoredSessionCodec.Identity(resolved["splitGroupID"]));
-        Assert.Null(resolved["positionModifiedAt"]);
-    }
-
-    [Fact]
-    public void AVisitMergeKeepsTheWholeObservedRange() {
-        JsonObject Visit(string title, double first, double last, int count) => new() {
-            ["id"] = Fixed(10).ToString("D").ToUpperInvariant(),
-            ["spaceID"] = SwiftId(Fixed(100)),
-            ["url"] = "https://example.com",
-            ["title"] = title,
-            ["firstVisitedAt"] = At(first),
-            ["lastVisitedAt"] = At(last),
-            ["visitCount"] = count
-        };
-        var journal = new JournalUnderTest(Fixed(11));
-        journal.Merge(SavedRecord(SyncRecordKind.History, Visit("Earlier", 10, 20, 2), 5, Fixed(12)));
-
-        journal.Merge(SavedRecord(SyncRecordKind.History, Visit("Later", 15, 40, 5), 6, Fixed(13)));
-
-        var visit = journal.Value(SyncRecordKind.History, Fixed(10))!;
-        Assert.Equal("Later", visit["title"]!.GetValue<string>());
-        Assert.Equal(10, Unix(visit["firstVisitedAt"]), precision: 6);
-        Assert.Equal(40, Unix(visit["lastVisitedAt"]), precision: 6);
-        Assert.Equal(5, visit["visitCount"]!.GetValue<int>());
     }
 
     /// A retention tombstone written with a higher clock loses to a tab

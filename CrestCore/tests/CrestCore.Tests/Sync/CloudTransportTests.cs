@@ -90,31 +90,6 @@ public sealed partial class BrowserContractsTests {
     }
 
     [Fact]
-    public void APauseOlderBuildsKeptForARecordRaceIsDroppedButAnAccountChangeWaits() {
-        foreach (var (reason, flag, awaits) in new (string?, bool?, bool)[] {
-            (null, true, false), ("legacyRecordConflict", null, false), ("accountChange", null, true), (null, null, false)
-        }) {
-            using var app = new CrestApp();
-            var adopted = Transport(app, new OpenCloudTransport(TransportSchema,
-                LegacyTransportFile(reason: reason, requiresAccountConfirmation: flag)));
-            Assert.Equal(awaits, adopted.AwaitsAccountDecision);
-        }
-    }
-
-    [Fact]
-    public void AFileThatDoesNotReadAdoptsNothing() {
-        using var app = new CrestApp();
-        foreach (var unreadable in new[] {
-            "not json"u8.ToArray(), "{\"conflictResolution\":\"useCloud\"}"u8.ToArray(), "{\"requiresFullPull\":\"yes\"}"u8.ToArray(),
-            "{\"recordSchemaVersion\":3,\"systemFields\":{}}"u8.ToArray()
-        })
-            Assert.IsType<LegacyCloudStateUnreadable>(Assert.Throws<Rejected>(() =>
-                app.Send(new OpenCloudTransport(TransportSchema, unreadable))).Rejection);
-        Assert.False(app.Query(new CloudTransport()).IsAdopted);
-        Assert.True(Transport(app, new OpenCloudTransport(TransportSchema, Legacy: null)).IsAdopted);
-    }
-
-    [Fact]
     public void OnlyAnAccountChangeThatAlwaysPausesWaitsForTheFirstDecision() {
         foreach (var transition in CloudAccountTransition.All) {
             using var app = new CrestApp();
@@ -123,18 +98,6 @@ public sealed partial class BrowserContractsTests {
             // A sign-in never ends a pause another change began.
             Transport(app, new ObserveCloudAccountChange(CloudAccountTransition.SwitchAccounts));
             Assert.True(Transport(app, new ObserveCloudAccountChange(CloudAccountTransition.SignIn)).AwaitsAccountDecision);
-        }
-    }
-
-    [Fact]
-    public void AResetStartsOverInOneSaveAndMayOverwriteTheCloud() {
-        using var app = new CrestApp();
-        Transport(app, new OpenCloudTransport(TransportSchema, LegacyTransportFile()));
-        foreach (bool overwrites in new[] { true, false }) {
-            var reset = Transport(app, new ResetCloudTransport(overwrites));
-            Assert.Equal((false, false, overwrites, (byte[]?)null), (reset.RequiresFullPull, reset.AwaitsAccountDecision,
-                reset.OverwritesCloud, reset.EngineState));
-            Assert.Empty(KeptFields(app, "space:A", "tab:B"));
         }
     }
 

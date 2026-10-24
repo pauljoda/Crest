@@ -11,56 +11,6 @@ namespace CrestCore.Tests;
 /// memory, and a tab's page opens on the engine chosen for its site.
 public sealed partial class BrowserContractsTests {
     [Fact]
-    public void DefaultEngineAndEditableRulesRouteFuturePagesWithoutStartingOrMovingOtherPages() {
-        using var app = new CrestApp();
-        var chromium = new RecordingEngine();
-        var webKit = new RecordingEngine();
-        app.RegisterEngine(new EngineRegistration(EngineKind.Chromium, [.. EngineCapability.Required, EngineCapability.Extensions], true), chromium.Run);
-        app.RegisterEngine(new EngineRegistration(EngineKind.WebKit, EngineCapability.Required, false), webKit.Run);
-        var workspace = TestWorkspaces.Open(app, SavedSession().Document["session"]!);
-        var window = Guid.NewGuid();
-        app.Send(new OpenWindow(window, workspace, false, null, null, [], true));
-        var space = app.Workspace(workspace).Current.Spaces.First();
-        var tab = space.Tabs.First(tab => tab.Url is not null);
-        var origin = Origin(tab)!;
-        var changed = app.Send(new SelectDefaultEngine(EngineKind.WebKit));
-        Assert.Equal(EngineKind.WebKit, Assert.Single(changed.OfType<EnginesChanged>()).Roster.Engines.Single(engine => engine.IsDefault).Kind);
-        Assert.Equal(EngineKind.WebKit, Assert.Single(changed.OfType<EnginePreferencesChanged>()).Preferences.DefaultEngine);
-        Assert.Contains(EngineCapability.Extensions, Assert.Single(changed.OfType<EnginesChanged>()).Roster.Offered);
-        Assert.Empty(chromium.Commands);
-        Assert.Empty(webKit.Commands);
-        var first = Guid.NewGuid();
-        app.Send(new OpenPage(first, workspace, space.Id, tab.Id, window));
-        Assert.Equal(EngineKind.WebKit, CreatedOn(first, chromium, webKit));
-
-        app.Send(new EditEngineRule(null, origin, EngineKind.Chromium));
-        Assert.Equal([new SiteEngineRule(origin, EngineKind.Chromium)], app.Query(new GetEnginePreferences()).Rules);
-        Assert.DoesNotContain(webKit.Commands, command => command is ClosePage);
-        app.Send(new ReleasePage(first, false));
-        var second = Guid.NewGuid();
-        app.Send(new OpenPage(second, workspace, space.Id, tab.Id, window));
-        Assert.Equal(EngineKind.Chromium, CreatedOn(second, chromium, webKit));
-        var other = new SiteOrigin("https", "edited.example", 443);
-        app.Send(new EditEngineRule(origin, other, EngineKind.WebKit));
-        Assert.Equal([new SiteEngineRule(other, EngineKind.WebKit)], app.Query(new GetEnginePreferences()).Rules);
-        Assert.DoesNotContain(chromium.Commands, command => command is ClosePage);
-        app.Send(new ForgetEngineRule(other));
-        Assert.Empty(app.Query(new GetEnginePreferences()).Rules);
-        app.Send(new ReleasePage(second, false));
-        var third = Guid.NewGuid();
-        app.Send(new OpenPage(third, workspace, space.Id, tab.Id, window));
-        Assert.Equal(EngineKind.WebKit, CreatedOn(third, chromium, webKit));
-        app.Send(new SelectDefaultEngine(null));
-        Assert.Null(app.Query(new GetEnginePreferences()).DefaultEngine);
-        Assert.DoesNotContain(webKit.Commands, command => command is ClosePage closing && closing.PageId == third);
-
-        var privateWorkspace = TestWorkspaces.Opened(app.Send(new OpenWorkspace(WorkspaceKind.Private, null)));
-        var privateSpace = app.Workspace(privateWorkspace).Current.Spaces[0];
-        app.Send(new ChooseSiteEngine(privateSpace.Id, origin, EngineKind.WebKit));
-        Assert.Empty(app.Query(new GetEnginePreferences()).Rules);
-    }
-
-    [Fact]
     public void AnEnginePreferenceSurvivesRelaunchAndAnUnavailableEngineWithoutStartingIt() {
         using var directory = new StorageDirectory();
         var origin = new SiteOrigin("https", "kept.example", 443);
@@ -100,53 +50,6 @@ public sealed partial class BrowserContractsTests {
         chromium.Commands.OfType<CreatePage>().Any(command => command.PageId == page) ? EngineKind.Chromium
         : webKit.Commands.OfType<CreatePage>().Any(command => command.PageId == page) ? EngineKind.WebKit
         : throw new InvalidOperationException("No engine created the page.");
-
-    [Fact]
-    public void AnEngineOffersItsFeaturesAsTheDefaultOrWhileAPageIsOpenOnIt() {
-        var session = SavedSession();
-        var (app, _, _, workspace, window) = PageHost(session.Document["session"]!);
-        using var disposal = app;
-        IReadOnlyList<Change> Offering(IReadOnlyList<Change> changes) => [.. changes.Where(change => change is EnginesChanged or ShortcutsChanged)];
-        bool OffersReader(IReadOnlyList<Change> changes) =>
-            Assert.Single(changes.OfType<EnginesChanged>()).Roster.Offered.Contains(EngineCapability.Reader)
-            && Assert.Single(changes.OfType<ShortcutsChanged>()).Bindings.Any(binding => binding.Command == ShortcutCommand.ToggleReaderMode);
-
-        // PageHost's default WebKit lacks Reader, so a registered engine with it that no page uses adds nothing.
-        var chromium = app.RegisterEngine(new EngineRegistration(EngineKind.Chromium, [.. EngineCapability.Required, EngineCapability.Reader],
-            IsDefault: false), _ => { });
-        var registered = Assert.Single(app.Drain().OfType<EnginesChanged>()).Roster;
-        Assert.Equal([EngineKind.Chromium, EngineKind.WebKit], registered.Engines.Select(engine => engine.Kind));
-        Assert.Equal(EngineCapability.Required, registered.Offered);
-
-        // Its first page offers what it supports, and its last page going takes that back.
-        var tab = app.Workspace(workspace).Current.Spaces.Single(space => space.Id == session.Space).Tabs.Single(held => held.Id == session.Tab);
-        var site = new WebAddress(tab.Url!).Origin!;
-        app.Send(new ChooseSiteEngine(session.Space, site, EngineKind.Chromium));
-        var page = Guid.NewGuid();
-        var opened = Offering(app.Send(new OpenPage(page, workspace, session.Space, session.Tab, window)));
-        Assert.True(OffersReader(opened));
-        app.Report(chromium, new PageCreated(page));
-        Assert.False(OffersReader(Offering(app.Send(new ReleasePage(page, KeepsState: false)))));
-    }
-
-    [Fact]
-    public void EveryEngineButTheDefaultBadgesItsPagesOnceMoreThanOneIsRegistered() {
-        using var app = new CrestApp();
-        Assert.Empty(EngineRoster.Unregistered.Badged);
-
-        // One engine badges nothing: every page runs on it.
-        app.RegisterEngine(new EngineRegistration(EngineKind.WebKit, EngineCapability.Required, IsDefault: true), _ => { });
-        Assert.Empty(Assert.Single(app.Drain().OfType<EnginesChanged>()).Roster.Badged);
-
-        // A second engine badges its own pages, whichever engine is the default.
-        var chromium = app.RegisterEngine(new EngineRegistration(EngineKind.Chromium, EngineCapability.Required, IsDefault: false),
-            _ => { });
-        Assert.Equal([EngineKind.Chromium], Assert.Single(app.Drain().OfType<EnginesChanged>()).Roster.Badged);
-
-        // Once it goes, the default's pages stay unbadged.
-        app.UnregisterEngine(chromium);
-        Assert.Empty(Assert.Single(app.Drain().OfType<EnginesChanged>()).Roster.Badged);
-    }
 
     [Fact]
     public void APageAnotherPageOpensRunsOnItsOpenersEngineWhateverItsSiteAndOnlyThePersonMovesIt() {

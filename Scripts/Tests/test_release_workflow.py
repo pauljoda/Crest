@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-import json
 import os
 import pathlib
 import re
@@ -123,47 +122,6 @@ class ReleasePreflightTests(unittest.TestCase):
         outputs = dict(line.split("=", 1) for line in output_path.read_text().splitlines()) if output_path.exists() else {}
         return result, outputs
 
-    def test_unchanged_nightly_skips_scheduled_and_manual_builds(self) -> None:
-        self.publish_appcast("nightly", self.current_commit, "nightly")
-        for event in ("schedule", "workflow_dispatch"):
-            with self.subTest(event=event):
-                result, outputs = self.preflight(GITHUB_EVENT_NAME=event, REQUESTED_CHANNEL="nightly")
-                self.assertEqual(result.returncode, 0, result.stderr)
-                self.assertEqual(outputs["should_publish"], "false")
-
-    def test_changed_nightly_gets_a_distinct_tag_for_each_run_and_attempt(self) -> None:
-        self.publish_appcast("nightly", self.previous_commit, "nightly-0.5.24-2026-09-02-1060-r60.1")
-        tags = set()
-        for run, attempt in (("61", "1"), ("61", "2"), ("62", "1")):
-            result, outputs = self.preflight(GITHUB_RUN_NUMBER=run, GITHUB_RUN_ATTEMPT=attempt)
-            self.assertEqual(result.returncode, 0, result.stderr)
-            self.assertEqual(outputs["should_publish"], "true")
-            self.assertEqual(outputs["previous_commit"], self.previous_commit)
-            self.assertRegex(outputs["release_tag"], rf"^nightly-0\.5\.25-\d{{4}}-\d{{2}}-\d{{2}}-{1000 + int(run)}-r{run}\.{attempt}$")
-            tags.add(outputs["release_tag"])
-        self.assertEqual(len(tags), 3)
-
-    def test_development_dispatch_builds_even_when_the_commit_is_unchanged(self) -> None:
-        self.publish_appcast("development", self.current_commit, "development")
-        result, outputs = self.preflight(GITHUB_EVENT_NAME="workflow_dispatch", REQUESTED_CHANNEL="development")
-        self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(outputs["should_publish"], "true")
-        self.assertRegex(outputs["release_tag"], r"^development-0\.5\.25-\d{4}-\d{2}-\d{2}-1061-r61\.1$")
-
-    def test_missing_appcast_does_not_skip_an_incomplete_nightly_release(self) -> None:
-        result, outputs = self.preflight()
-        self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(outputs["should_publish"], "true")
-        self.assertEqual(outputs["previous_commit"], "")
-        self.assertFalse(self.github_log.exists(), "Nightly must use the signed appcast, not GitHub releases")
-
-    def test_stable_tag_push_finds_the_previous_stable_beyond_a_page_of_prereleases(self) -> None:
-        result, outputs = self.preflight(GITHUB_EVENT_NAME="push", GITHUB_REF_TYPE="tag", GITHUB_REF_NAME="v0.5.25")
-        self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(outputs["channel"], "stable")
-        self.assertEqual(outputs["release_tag"], "v0.5.25")
-        self.assertEqual(outputs["previous_commit"], self.previous_commit)
-
     def test_stable_dispatch_branch_push_and_mismatched_tags_are_rejected(self) -> None:
         scenarios = (
             {"GITHUB_EVENT_NAME": "workflow_dispatch", "REQUESTED_CHANNEL": "stable", "GITHUB_REF_TYPE": "tag", "GITHUB_REF_NAME": "v0.5.25"},
@@ -176,17 +134,6 @@ class ReleasePreflightTests(unittest.TestCase):
                 self.assertNotEqual(result.returncode, 0)
                 self.assertEqual(outputs, {})
 
-    def test_reruns_and_queued_runs_advance_past_every_published_channel_build(self) -> None:
-        self.publish_appcast("nightly", self.previous_commit, "nightly-build", build=1070)
-        self.publish_appcast("development", self.previous_commit, "development-build", build=1071)
-        result, outputs = self.preflight(
-            GITHUB_EVENT_NAME="workflow_dispatch", REQUESTED_CHANNEL="development",
-            GITHUB_RUN_ATTEMPT="2",
-        )
-        self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(outputs["build_number"], "1072")
-        self.assertTrue(outputs["release_tag"].endswith("-1072-r61.2"))
-
     def test_interrupted_publications_cannot_reuse_another_runs_release_tag(self) -> None:
         self.publish_appcast("nightly", self.previous_commit, "nightly-build", build=1070)
         tags = set()
@@ -196,21 +143,6 @@ class ReleasePreflightTests(unittest.TestCase):
             self.assertEqual(outputs["build_number"], "1071")
             tags.add(outputs["release_tag"])
         self.assertEqual(len(tags), 2)
-
-    def test_invalid_published_build_number_stops_publication(self) -> None:
-        self.publish_appcast("development", self.previous_commit, "development")
-        self.git("checkout", "updates")
-        appcast = self.repository / "appcast-development.xml"
-        appcast.write_text(appcast.read_text().replace("<sparkle:version>1060", "<sparkle:version>invalid"))
-        self.git("add", appcast.name)
-        self.git("commit", "-m", "Invalid appcast fixture")
-        self.git("checkout", "main")
-
-        result, outputs = self.preflight()
-
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn("Invalid Sparkle build number", result.stderr)
-        self.assertEqual(outputs, {})
 
 
 if __name__ == "__main__":

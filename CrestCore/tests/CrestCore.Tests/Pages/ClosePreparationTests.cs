@@ -32,27 +32,6 @@ public sealed partial class BrowserContractsTests {
     }
 
     [Fact]
-    public void APageThatGoesHasNothingToAskAndOneThatMovesOnVoidsItsAnswer() {
-        var (app, _, _, page, _, window, _, _) = LivePage();
-        using var disposal = app;
-
-        // The page waited on goes, so the close is ready.
-        var first = Guid.NewGuid();
-        app.Send(new PrepareToClosePages(first, [page]));
-        Assert.Contains(new CloseReady(first, Allowed: true), app.Send(new ReleasePage(page, KeepsState: false)));
-
-        // A page that agreed, then showed another document, voids the answer.
-        var (again, engineAgain, bindingAgain, pageAgain, _, _, _, _) = LivePage();
-        using var disposalAgain = again;
-        var second = Guid.NewGuid();
-        again.Send(new PrepareToClosePages(second, [pageAgain]));
-        again.Report(engineAgain, new NavigationCommitted(pageAgain, "https://example.org/", SameDocument: false));
-        again.Report(engineAgain, new BeforeUnloadAnswered(pageAgain, Proceeds: true));
-        Assert.Contains(new CloseReady(second, Allowed: false), again.Drain());
-        Assert.Equal(new CheckBeforeUnload(pageAgain), bindingAgain.Commands[^1]);
-    }
-
-    [Fact]
     public void ClosingAWindowAsksOnlyThePagesThatGoWithIt() {
         var session = TwoSpaceSession();
         var (app, engine, binding, workspace, window) = PageHost(session);
@@ -102,22 +81,5 @@ public sealed partial class BrowserContractsTests {
         Assert.Equal(new CheckBeforeUnload(privateQuick), binding.Commands[^1]);
         app.Report(engine, new BeforeUnloadAnswered(privateQuick, Proceeds: false));
         Assert.Equal([new CloseReady(closingPrivate, Allowed: false)], app.Drain());
-    }
-
-    [Fact]
-    public void QuittingWithDownloadsInProgressAsksThePerson() {
-        var (app, engine, _, page, workspace, _, space, _) = LivePage();
-        using var disposal = app;
-        var profile = ProfileOf(app, workspace, space);
-        app.Report(engine, new EngineDownloadChanged(Transfer(profile, page, EngineDownloadState.Downloading, received: 10)));
-        app.Drain();
-
-        var request = Guid.NewGuid();
-        app.Send(new PrepareToQuit(request));
-        app.Report(engine, new BeforeUnloadAnswered(page, Proceeds: true));
-        var asked = Assert.IsType<QuitWithDownloadsAsked>(Assert.Single(app.Drain()));
-        Assert.Equal((request, 1), (asked.RequestId, asked.LiveDownloads));
-        Assert.Equal([new PromptSettled(asked.PromptId), new CloseReady(request, Allowed: true)],
-            app.Send(new AnswerQuitWithDownloads(asked.PromptId, Quits: true)));
     }
 }

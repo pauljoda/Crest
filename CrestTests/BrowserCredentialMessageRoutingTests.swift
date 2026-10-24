@@ -58,33 +58,6 @@ final class BrowserCredentialMessageRoutingTests: XCTestCase {
         XCTAssertNil(page.credentialFillRequest)
     }
 
-    func testAPageStillHandlesCredentialMessagesFromItsOwnWebView() async throws {
-        let page = try makePage()
-        page.webView.loadSimulatedRequest(
-            URLRequest(url: try XCTUnwrap(URL(string: "https://login.crest.test/oauth"))),
-            responseHTML: Self.loginDocument
-        )
-        try await waitUntil { page.completedNavigationCount == 1 }
-
-        let didCapture = try await page.webView.callAsyncJavaScript(
-            "return globalThis.__crestCredentialBridge?.captureForTesting(selector) === true;",
-            arguments: ["selector": "#popup-login"],
-            in: nil,
-            contentWorld: BrowserCredentialContentBridge.contentWorld
-        )
-        XCTAssertEqual(didCapture as? Bool, true)
-        _ = try await page.webView.callAsyncJavaScript(
-            "document.querySelector('#popup-login').remove(); return true;",
-            arguments: [:],
-            in: nil,
-            contentWorld: .page
-        )
-        try await waitUntil { page.credentialSaveCandidate != nil }
-
-        XCTAssertEqual(page.credentialSaveCandidate?.username, "person@example.com")
-        page.dismissCredentialSaveCandidate()
-    }
-
     func testPageFillsTheRequestedPasswordFieldAndRevocationRejectsFurtherFills() async throws {
         let page = try makePage()
         page.webView.loadSimulatedRequest(

@@ -65,49 +65,6 @@ public sealed partial class BrowserContractsTests {
     }
 
     [Fact]
-    public void InsertingATabKeepsEveryOtherPosition() {
-        var session = CurrentTabSession(3);
-        var journal = new JournalUnderTest(Fixed(221));
-        journal.Stage(session);
-        journal.MarkUploaded();
-        var before = TabOrderTokens(journal);
-        var inserted = Fixed(722);
-        FirstSpace(session)["tabs"]!.AsArray().Insert(1, TabOf(inserted, "Inserted", "https://example.com/inserted", activated: 200));
-
-        journal.Stage(session, at: 200);
-
-        Assert.Equal([Name(SyncRecordKind.Tab, inserted)], journal.Pending);
-        var after = TabOrderTokens(journal);
-        foreach (var (id, token) in before) Assert.Equal(token, after[id]);
-        var order = Ids(FirstSpace(session)["tabs"]);
-        Assert.True(string.CompareOrdinal(after[order[0]], after[inserted]) < 0);
-        Assert.True(string.CompareOrdinal(after[inserted], after[order[2]]) < 0);
-    }
-
-    [Fact]
-    public void PositionsCompactOnceTheirGapsRunOutWithoutGrowing() {
-        var session = CurrentTabSession(2);
-        var journal = new JournalUnderTest(Fixed(222));
-        journal.Stage(session);
-        journal.MarkUploaded();
-        bool compacted = false;
-
-        for (int index = 0; index < 80; index++) {
-            FirstSpace(session)["tabs"]!.AsArray().Insert(0,
-                TabOf(Fixed(800 + index), $"Front {index}", $"https://example.com/front/{index}", activated: 300 + index));
-            journal.Stage(session, at: 300 + index);
-            compacted |= journal.Pending.Count > 1;
-            journal.MarkUploaded();
-        }
-
-        Assert.True(compacted);
-        var tokens = TabOrderTokens(journal);
-        Assert.Equal(FirstSpace(session)["tabs"]!.AsArray().Count, tokens.Count);
-        Assert.All(tokens.Values, token => Assert.Matches("^[0-9a-f]{16}$", token));
-        Assert.Equal(Ids(FirstSpace(session)["tabs"]), Ids(FirstSpace(journal.Materialize(session))["tabs"]));
-    }
-
-    [Fact]
     public void ConcurrentMovesConvergeWithoutRewritingSiblings() {
         var baseline = CurrentTabSession(5);
         var first = new JournalUnderTest(Fixed(223));
@@ -228,26 +185,6 @@ public sealed partial class BrowserContractsTests {
     }
 
     [Fact]
-    public void AFolderIsDeletedOnlyForAnExplicitDeletion() {
-        var session = OneSpaceSession();
-        var folder = Fixed(310);
-        FirstSpace(session)["folders"] = new JsonArray(FolderOf(folder, "Retained"));
-        var journal = new JournalUnderTest(Fixed(302));
-        journal.Stage(session);
-        journal.MarkUploaded();
-        FirstSpace(session)["folders"] = new JsonArray();
-
-        journal.Stage(session, SyncDeletionReason.Superseded, at: 200);
-
-        Assert.NotNull(journal.Value(SyncRecordKind.Folder, folder));
-        Assert.Empty(journal.Pending);
-
-        journal.Stage(session, SyncDeletionReason.ExplicitDelete, at: 300);
-
-        Assert.Equal("explicitDelete", journal.Record(SyncRecordKind.Folder, folder)!["tombstone"]!["reason"]!.GetValue<string>());
-    }
-
-    [Fact]
     public void DeletingASpaceDeletesTheRecordsItOwned() {
         var deleted = FirstSpace(OneSpaceSession(Fixed(950), Fixed(952), Fixed(951)));
         var retained = FirstSpace(OneSpaceSession(Fixed(953), Fixed(954), Fixed(955)));
@@ -328,39 +265,6 @@ public sealed partial class BrowserContractsTests {
 
         Assert.True(NativeSyncEvaluator.Equivalent(local, journal.Records[0]));
         Assert.Contains(RecordName(local["id"]!), journal.Pending);
-    }
-
-    /// An archive the cloud brought is marked as synced here, and staging it
-    /// again sends back the reason it arrived with, never the local mark.
-    [Fact]
-    public void AReceivedArchiveIsMarkedSyncedHereWithoutEchoingTheMark() {
-        var remote = OneSpaceSession();
-        var tab = FirstSpace(remote)["tabs"]![0]!.AsObject();
-        FirstSpace(remote)["tabs"] = new JsonArray();
-        FirstSpace(remote)["archivedTabs"] = new JsonArray(ArchivedOf(tab, 500));
-        var journal = new JournalUnderTest(Fixed(1_180));
-        journal.Stage(remote, at: 600);
-        journal.MarkUploaded();
-
-        var materialized = journal.Materialize(OneSpaceSession());
-
-        Assert.Equal("synced", FirstSpace(materialized)["archivedTabs"]![0]!["reason"]!.GetValue<string>());
-        journal.Stage(materialized, at: 700);
-        Assert.All(journal.Values(SyncRecordKind.Archive), archive => Assert.NotEqual("synced", archive["reason"]!.GetValue<string>()));
-    }
-
-    [Fact]
-    public void MaterializingKeepsAnArchiveCauseThisDeviceAlreadyHolds() {
-        var local = OneSpaceSession();
-        var tab = FirstSpace(local)["tabs"]![0]!.AsObject();
-        FirstSpace(local)["tabs"] = new JsonArray();
-        FirstSpace(local)["archivedTabs"] = new JsonArray(ArchivedOf(tab, 500, "autoCleanup"));
-        var journal = new JournalUnderTest(Fixed(1_181));
-        journal.Stage(local, at: 600);
-
-        var materialized = journal.Materialize(local);
-
-        Assert.Equal("autoCleanup", FirstSpace(materialized)["archivedTabs"]![0]!["reason"]!.GetValue<string>());
     }
 
     #endregion

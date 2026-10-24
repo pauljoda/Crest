@@ -36,10 +36,6 @@ struct BrowserLinkContextCapture: Equatable, Sendable {
         pendingContextValue?.linkURL
     }
 
-    var pendingImage: URL? {
-        pendingContextValue?.imageURL
-    }
-
     /// Records one `contextmenu` report from the content bridge.
     ///
     /// A malformed payload, a report over plain content, and a destination

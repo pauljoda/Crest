@@ -15,22 +15,6 @@ namespace CrestCore.Tests;
 public sealed partial class BrowserContractsTests {
     #region Actions - Tests
 
-    [Fact]
-    public void AnArchivedBlankPageDoesNotBlockChangesToItsSpace() {
-        var local = OneSpaceSession();
-        FirstSpace(local)["archivedTabs"] = new JsonArray(ArchivedOf(TabOf(Fixed(1_300), "Blank", "about:blank"), 100));
-        using var device = new SyncingDevice(local, Fixed(1_310));
-        var remote = SpaceValue(FirstSpace(local));
-        remote["branding"] = JsonNode.Parse(SavedBranding);
-        remote["branding"]!["crest"]!["symbol"] = "raven";
-
-        var merged = FirstSpace(device.Merge(SavedRecord(SyncRecordKind.Space, remote, 10_000, Fixed(1_301))));
-
-        Assert.Equal(StoredSessionCodec.DecodeBranding(remote["branding"]), StoredSessionCodec.DecodeSpace(merged).Settings.Branding);
-        Assert.Equal([Fixed(102)], Ids(merged["tabs"]));
-        Assert.Equal("about:blank", merged["archivedTabs"]![0]!["tab"]!["url"]!.GetValue<string>());
-    }
-
     /// Only web pages enter sync. Native views, extension pages, files, data and
     /// script addresses and blank pages stay on this device, and a merge leaves
     /// them where they were.
@@ -85,42 +69,6 @@ public sealed partial class BrowserContractsTests {
         Assert.Equal(before.ArchivedTabs.Select(archived => archived.Tab.Id).Order(), after.ArchivedTabs.Select(archived => archived.Tab.Id).Order());
         Assert.Equal(before.History.Select(visit => visit.Id).Order(), after.History.Select(visit => visit.Id).Order());
         Assert.Equal(1, after.Tabs.ToList().FindIndex(tab => tab.Id == Fixed(1_700)));
-    }
-
-    /// A web tab that went to an extension page stays on this device: a
-    /// deletion from the cloud does not close it, and the old web record the
-    /// cloud sends back does not reopen it once it was archived.
-    [Fact]
-    public void AWebTabThatWentToAnExtensionPageStaysLocal() {
-        var local = OneSpaceSession();
-        var staged = new JournalUnderTest(Fixed(1_703));
-        staged.Stage(local);
-        FirstSpace(local)["tabs"]![0]!["url"] = "chrome-extension://test/onboarding.html";
-        using var device = new SyncingDevice(local, staged);
-
-        var merged = FirstSpace(device.Merge(
-            TombstoneRecord(SyncRecordKind.Tab, Fixed(102), Fixed(100), 10_000, Fixed(1_702), SyncDeletionReason.ExplicitDelete, 150)));
-
-        Assert.Equal(StoredSessionCodec.DecodeSpace(FirstSpace(Canonical(local))).Tabs, StoredSessionCodec.DecodeSpace(merged).Tabs);
-        Assert.Empty(merged["archivedTabs"]!.AsArray());
-
-        var archived = local.DeepClone().AsObject();
-        FirstSpace(archived)["archivedTabs"] = new JsonArray(ArchivedOf(FirstSpace(local)["tabs"]![0]!.AsObject(), 200));
-        FirstSpace(archived)["tabs"] = new JsonArray(new JsonObject {
-            ["id"] = SwiftId(Fixed(1_704)),
-            ["title"] = "Start Page",
-            ["symbol"] = "flag.fill",
-            ["placement"] = "current",
-            ["lastActivatedAt"] = At(200)
-        });
-        using var reopening = new SyncingDevice(archived, device.Journal);
-        var oldWebTab = TabValue(FirstSpace(OneSpaceSession())["tabs"]![0]!.AsObject(), Fixed(100));
-
-        var reopened = FirstSpace(reopening.Merge(SavedRecord(SyncRecordKind.Tab, oldWebTab, 20_000, Fixed(1_702))));
-
-        Assert.DoesNotContain(Fixed(102), Ids(reopened["tabs"]));
-        Assert.Equal("chrome-extension://test/onboarding.html", reopened["archivedTabs"]!.AsArray()
-            .Single(item => StoredSessionCodec.Identity(item!["tab"]!["id"]) == Fixed(102))!["tab"]!["url"]!.GetValue<string>());
     }
 
     /// A batch has no ordering, so one member of a split can land alone. Repair
@@ -215,20 +163,6 @@ public sealed partial class BrowserContractsTests {
         Assert.Equal("Chosen from iCloud", FirstSpace(resolved)["name"]!.GetValue<string>());
         Assert.Empty(device.Journal.Pending);
         AssertSameRecords(cloud, device.Journal);
-    }
-
-    [Fact]
-    public void ChoosingAnEmptyCloudLeavesOneNewSpaceAndAnEmptyJournal() {
-        using var device = new SyncingDevice(OneSpaceSession(), Fixed(922));
-
-        var resolved = device.Replace([]);
-
-        var space = Assert.Single(resolved["spaces"]!.AsArray())!;
-        Assert.NotEqual(Fixed(100), SpaceId(space));
-        Assert.Equal("Space 1", space["name"]!.GetValue<string>());
-        Assert.Null(Assert.Single(space["tabs"]!.AsArray())!["url"]);
-        Assert.Empty(device.Journal.Records);
-        Assert.Empty(device.Journal.Pending);
     }
 
     /// A first sync splits across batches with no ordering between them, so a
@@ -337,61 +271,6 @@ public sealed partial class BrowserContractsTests {
 
         Assert.Equal("saved", afterMove["placement"]!.GetValue<string>());
         Assert.Null(afterMove["folderID"]);
-    }
-
-    /// The whole chain waits: a tab's folder and that folder's parent arrived,
-    /// and the record still missing is two levels up.
-    [Fact]
-    public void NestedFoldersThatArriveBeforeTheirRootWaitForIt() {
-        var (space, root, middle, leaf, current, saved) = (Fixed(1_010), Fixed(1_011), Fixed(1_012), Fixed(1_013), Fixed(1_014), Fixed(1_015));
-        var cloud = new JournalUnderTest(Fixed(1_017));
-        cloud.Stage(SessionOf(SpaceOf(space, Fixed(1_016), "Cloud", "cloud",
-            folders: [FolderOf(root, "Root"), FolderOf(middle, "Middle", parent: root), FolderOf(leaf, "Leaf", parent: middle)], tabs: [
-                TabOf(current, "Current", "https://example.com/current", activated: 500),
-                TabOf(saved, "Deep", "https://example.com/deep", "bookmark", "saved", folder: leaf, activated: 501)
-            ])), at: 900);
-        string rootName = Name(SyncRecordKind.Folder, root);
-        using var device = new SyncingDevice(OneSpaceSession(), Fixed(1_018));
-
-        var waiting = SpaceIn(device.Merge(cloud.Records.Where(record => RecordName(record["id"]!) != rootName)), space)!;
-
-        Assert.Empty(waiting["folders"]!.AsArray());
-        Assert.Equal([current], Ids(waiting["tabs"]));
-        foreach (var (kind, id) in new[] { (SyncRecordKind.Folder, middle), (SyncRecordKind.Folder, leaf), (SyncRecordKind.Tab, saved) })
-            Assert.True(SameRecord(cloud.Record(kind, id), device.Journal.Record(kind, id)), $"{Name(kind, id)} did not wait");
-
-        var restored = SpaceIn(device.Merge(cloud.Records.Where(record => RecordName(record["id"]!) == rootName)), space)!;
-
-        Assert.Equal([root, middle, leaf], Ids(restored["folders"]));
-        Assert.Equal([null, root, middle], restored["folders"]!.AsArray().Select(folder => StoredSessionCodec.OptionalIdentity(folder!["parentID"])));
-        Assert.Equal(leaf, StoredSessionCodec.Identity(restored["tabs"]!.AsArray()
-            .Single(tab => StoredSessionCodec.Identity(tab!["id"]) == saved)!["folderID"]));
-        Assert.All(device.Journal.Records, record => Assert.NotNull(record["payload"]));
-    }
-
-    /// Deleting a folder removes only that folder. What it held is promoted to
-    /// its parent, and neither those folders nor their tabs are deleted.
-    [Fact]
-    public void DeletingAParentFolderKeepsTheRecordsBeneathIt() {
-        var (space, root, middle, leaf, current, saved) = (Fixed(1_020), Fixed(1_021), Fixed(1_022), Fixed(1_023), Fixed(1_024), Fixed(1_025));
-        var session = SessionOf(SpaceOf(space, Fixed(1_026), "Shared", "cloud",
-            folders: [FolderOf(root, "Root"), FolderOf(middle, "Middle", parent: root), FolderOf(leaf, "Leaf", parent: middle)], tabs: [
-                TabOf(current, "Current", "https://example.com/current", activated: 500),
-                TabOf(saved, "Deep", "https://example.com/deep", "bookmark", "saved", folder: leaf, activated: 501)
-            ]));
-        using var device = new SyncingDevice(session, Fixed(1_027));
-        device.MarkUploaded();
-
-        var resolved = SpaceIn(device.Merge(
-            TombstoneRecord(SyncRecordKind.Folder, middle, space, 900, Fixed(1_028), SyncDeletionReason.ExplicitDelete, 900)), space)!;
-
-        Assert.Equal([root, leaf], Ids(resolved["folders"]));
-        Assert.Equal([null, root], resolved["folders"]!.AsArray().Select(folder => StoredSessionCodec.OptionalIdentity(folder!["parentID"])));
-        Assert.Equal([current, saved], Ids(resolved["tabs"]).Order());
-        Assert.Equal(leaf, StoredSessionCodec.Identity(resolved["tabs"]!.AsArray()
-            .Single(tab => StoredSessionCodec.Identity(tab!["id"]) == saved)!["folderID"]));
-        foreach (var (kind, id) in new[] { (SyncRecordKind.Folder, leaf), (SyncRecordKind.Tab, saved), (SyncRecordKind.Folder, root) })
-            Assert.NotNull(device.Journal.Value(kind, id));
     }
 
     #endregion

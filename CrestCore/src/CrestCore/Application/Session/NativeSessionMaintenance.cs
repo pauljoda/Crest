@@ -66,13 +66,7 @@ public static class NativeSessionMaintenance {
     }
 
     /// Removes history and archive records older than each Space keeps them;
-    /// a Space that is being deleted keeps everything. `{"session", "changed"}`.
-    public static JsonObject Retain(JsonObject source, double now) {
-        if (!double.IsFinite(now)) throw new ArgumentOutOfRangeException(nameof(now), now, "A time is a finite number of seconds.");
-        var retained = Retain(StoredSessionCodec.DecodeSession(source), StoredSessionCodec.Date(now), out var changed);
-        return new() { ["session"] = StoredSessionCodec.Encode(retained), ["changed"] = changed };
-    }
-
+    /// a Space that is being deleted keeps everything.
     internal static SessionState Retain(SessionState session, DateTimeOffset at, out bool removed) {
         var now = StoredSessionCodec.Seconds(at);
         var pending = session.SpaceDeletions.Select(deletion => deletion.SpaceId).ToHashSet();

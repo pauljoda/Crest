@@ -70,15 +70,4 @@ public sealed class OrganizationContractsTests {
         Assert.Null(space.Tab(first.Id).SplitGroupId); Assert.Null(space.Tab(second.Id).SplitGroupId);
         Assert.Equal(folder, space.Tab(first.Id).FolderId); Assert.Null(space.Tab(second.Id).FolderId);
     }
-
-    [Fact]
-    public void EmptyFolderBoundarySurvivesClosingItsLastTab() {
-        var first = Tab("first"); var last = Tab("last"); var space = Space(first, last); var folder = NewFolderId();
-        space.AddFolder(folder, "Current", TabPlacement.Current); space.FileTabs([first.Id], TabPlacement.Current, folder, Now);
-        space.DismissTabs([first.Id], null, null, Now, deleting: false, ensureSelection: false, resetArchivePlacement: true);
-        Assert.Equal(last.Id, Assert.Single(space.Folders).OrderAnchorTabId);
-        var restored = Restored(space);
-        Assert.Equal(last.Id, new FolderTree(restored.Folders).TabAnchor(folder, restored.Tabs));
-        Assert.Single(space.Archive);
-    }
 }

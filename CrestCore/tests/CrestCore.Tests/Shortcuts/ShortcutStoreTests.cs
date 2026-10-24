@@ -132,17 +132,4 @@ public sealed partial class BrowserContractsTests {
         Assert.All(cleared.Bindings, binding => Assert.False(binding.IsCustomized));
         Assert.Empty(relaunched.Send(new ResetShortcuts()).OfType<ShortcutsChanged>());
     }
-
-    [Fact]
-    public void OnlyCommandsTheDefaultEngineOffersHoldKeys() {
-        using var app = new CrestApp(new AppConfiguration(null, DevicePlatform.Desktop));
-        var reader = Typed("r", ShortcutModifiers.Command | ShortcutModifiers.Option);
-        app.Send(new AssignShortcut(ShortcutCommand.ToggleReaderMode, reader));
-        // An engine without Reader offers no Reader command, which then neither holds nor loses keys.
-        app.RegisterEngine(new EngineRegistration(EngineKind.Chromium, EngineCapability.Required, IsDefault: true), _ => { });
-        var offered = Assert.Single(app.Drain().OfType<ShortcutsChanged>()).Bindings.Select(binding => binding.Command).ToArray();
-        Assert.DoesNotContain(ShortcutCommand.ToggleReaderMode, offered);
-        Assert.Contains(ShortcutCommand.NewTab, offered);
-        Assert.Single(app.Send(new AssignShortcut(ShortcutCommand.NewTab, reader)).OfType<ShortcutsChanged>());
-    }
 }

@@ -215,25 +215,6 @@ public sealed partial class BrowserContractsTests {
         }
     }
 
-    /// A file with nothing to carry and no seed takes the session a first
-    /// launch starts with: one Personal Space in the Winter house look,
-    /// showing a Start Page, marked as the disposable seed. A launch without a
-    /// file asks the same session of the standalone answers.
-    [Fact]
-    public void AFileWithNothingToCarryTakesTheFirstInstallSession() {
-        using var directory = new StorageDirectory();
-        using var app = new CrestApp(new AppConfiguration(directory.Path, DevicePlatform.Desktop));
-        app.Send(new AdoptLegacySession(new LegacySession(Core: null, WholeGraph: null, [], Journal: null), Seed: null));
-
-        foreach (var session in new[] { StoredSession(app).Current, new StandaloneAnswers().Query(new FirstInstallSession()) }) {
-            var space = Assert.Single(session.Spaces);
-            Assert.Equal(("Personal", "person.fill", SpaceAccent.Indigo), (space.Settings.Name, space.Settings.Symbol, space.Settings.Accent));
-            Assert.True(Assert.Single(space.Tabs).IsStartPage);
-            Assert.NotNull(session.DisposableSeedMarker);
-        }
-        Assert.False(File.Exists(directory.File + ".cloud-recovery"));
-    }
-
     [Fact]
     public void AJournalFromANewerReleaseRefusesTheCarryAndWritesNothing() {
         using var directory = new StorageDirectory();

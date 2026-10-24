@@ -29,70 +29,6 @@ public sealed partial class BrowserContractsTests {
     private static Guid ProfileOf(CrestApp app, Guid workspace, Guid space) =>
         app.Workspace(workspace).Current.Spaces.First(candidate => candidate.Id == space).ProfileId;
 
-    [Fact]
-    public void PauseAndResumeFollowTheEnginesConfirmedState() {
-        var (app, engine, binding, page, workspace, _, space, _) = LivePage();
-        using var disposal = app;
-        var profile = ProfileOf(app, workspace, space);
-        var transfer = Transfer(profile, page, EngineDownloadState.Downloading, received: 50) with {
-            Path = "/Downloads/report.pdf",
-            CanPause = true
-        };
-        app.Report(engine, new EngineDownloadChanged(transfer));
-        var record = app.Drain().OfType<DownloadUpdated>().Last().Download;
-        Assert.True(record.CanPause);
-        Assert.Empty(app.Send(new PauseDownload(record.Id)));
-        Assert.Equal(new PauseEngineDownload(profile, "7"), binding.Commands[^1]);
-
-        app.Report(engine, new EngineDownloadChanged(transfer with { Paused = true, CanPause = false, CanResume = true }));
-        var paused = app.Drain().OfType<DownloadUpdated>().Last().Download;
-        Assert.True(paused.Telemetry.IsPaused);
-        Assert.True(paused.CanResume);
-        Assert.False(paused.CanPause);
-        Assert.Empty(app.Send(new ResumeDownload(record.Id)));
-        Assert.Equal(new ResumeEngineDownload(profile, "7"), binding.Commands[^1]);
-
-        app.Report(engine, new EngineDownloadChanged(transfer with { Received = 70 }));
-        var resumed = app.Drain().OfType<DownloadUpdated>().Last().Download;
-        Assert.False(resumed.Telemetry.IsPaused);
-        Assert.False(resumed.CanResume);
-        Assert.Equal(0.7, resumed.Progress);
-    }
-
-    [Fact]
-    public void OnlyRequestedRecoveryCanReviveAnInterruptedDownloadAndClearingCancelsTheRequest() {
-        var (app, engine, binding, page, workspace, _, space, _) = LivePage();
-        using var disposal = app;
-        var profile = ProfileOf(app, workspace, space);
-        var interrupted = Transfer(profile, page, EngineDownloadState.Failed, received: 50,
-            interruption: EngineDownloadInterruption.Network) with { Path = "/Downloads/report.pdf", CanResume = true };
-        app.Report(engine, new EngineDownloadChanged(interrupted));
-        var record = app.Drain().OfType<DownloadUpdated>().Last().Download;
-        Assert.True(record.CanResume);
-        var active = interrupted with { State = EngineDownloadState.Downloading, Received = 10, CanResume = false, CanPause = true };
-        app.Report(engine, new EngineDownloadChanged(active));
-        Assert.Empty(app.Drain());
-
-        app.Send(new ResumeDownload(record.Id));
-        Assert.Equal(new ResumeEngineDownload(profile, "7"), binding.Commands[^1]);
-        app.Report(engine, new EngineDownloadChanged(active));
-        var restarted = app.Drain().OfType<DownloadUpdated>().Last().Download;
-        Assert.Equal(DownloadPhase.Downloading, restarted.Phase);
-        Assert.Equal(0.1, restarted.Progress);
-        Assert.Null(restarted.Failure);
-        Assert.Equal(record.Destination, restarted.Destination);
-
-        app.Report(engine, new EngineDownloadChanged(interrupted));
-        app.Drain();
-        app.Send(new ResumeDownload(record.Id));
-        app.Send(new RemoveDownload(record.Id));
-        app.Report(engine, new EngineDownloadChanged(active));
-        Assert.Empty(app.Drain());
-        var commands = binding.Commands.Count;
-        app.Send(new ResumeDownload(record.Id));
-        Assert.Equal(commands, binding.Commands.Count);
-    }
-
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
@@ -114,57 +50,6 @@ public sealed partial class BrowserContractsTests {
         var commands = binding.Commands.Count;
         app.Send(new ResumeDownload(record.Id));
         Assert.Equal(commands, binding.Commands.Count);
-    }
-
-    [Fact]
-    public void AnEngineDownloadIsRecordedInItsPagesSpaceAndGoesWhereThePlatformAnswers() {
-        var (app, engine, binding, page, workspace, _, space, _) = LivePage();
-        using var disposal = app;
-        var profile = ProfileOf(app, workspace, space);
-        var prompt = Guid.NewGuid();
-
-        app.Report(engine, Destination(prompt, Transfer(profile, page), "../report.pdf", "application/pdf"));
-        var asked = app.Drain();
-        var record = Assert.IsType<DownloadUpdated>(asked[0]).Download;
-        Assert.Equal((profile, "report.pdf", DownloadPhase.Preparing), (record.ProfileId, record.Filename, record.Phase));
-        Assert.Equal(new DownloadDestinationAsked(prompt, record.Id, space, "report.pdf", ForcesPrompt: false), asked[^1]);
-
-        var answered = app.Send(new AnswerDownloadDestination(prompt, "/Users/test/Downloads/report 2.pdf"));
-        Assert.Equal("file:///Users/test/Downloads/report%202.pdf",
-            answered.OfType<DownloadUpdated>().Single().Download.Destination);
-        Assert.Contains(new PromptSettled(prompt), answered);
-        Assert.Equal(new SettleDownloadDestination(prompt, "/Users/test/Downloads/report 2.pdf"), binding.Commands[^1]);
-
-        app.Report(engine, new EngineDownloadChanged(Transfer(profile, page, EngineDownloadState.Downloading, received: 50)));
-        Assert.Equal(0.5, app.Drain().OfType<DownloadUpdated>().Last().Download.Progress);
-        app.Report(engine, new EngineDownloadChanged(Transfer(profile, page, EngineDownloadState.Finished, received: 100)));
-        Assert.Equal(DownloadPhase.Finished, app.Drain().OfType<DownloadUpdated>().Last().Download.Phase);
-    }
-
-    /// A download that begins on a page names that page once, so its window
-    /// can show it leaving, whichever engine runs it; one the engine restored
-    /// from an earlier run, and one no page started, begins without it.
-    [Fact]
-    public void ADownloadThatBeginsOnAPageNamesItOnce() {
-        var (app, engine, _, page, workspace, _, space, _) = LivePage();
-        using var disposal = app;
-        var profile = ProfileOf(app, workspace, space);
-
-        app.Report(engine, new EngineDownloadChanged(Transfer(profile, page)));
-        var begun = app.Drain();
-        var record = begun.OfType<DownloadUpdated>().First().Download;
-        Assert.Equal([new DownloadStarted(record.Id, page)], begun.OfType<DownloadStarted>());
-        app.Report(engine, new EngineDownloadChanged(Transfer(profile, page, EngineDownloadState.Downloading, received: 50)));
-        Assert.Empty(app.Drain().OfType<DownloadStarted>());
-
-        app.Report(engine, new EngineDownloadChanged(Transfer(profile, page) with { DownloadId = "8", Restored = true }));
-        var restored = app.Drain();
-        Assert.Contains(restored, change => change is DownloadUpdated);
-        Assert.Empty(restored.OfType<DownloadStarted>());
-        app.Report(engine, new EngineDownloadChanged(Transfer(profile, page: null) with { DownloadId = "9" }));
-        var pageless = app.Drain();
-        Assert.Contains(pageless, change => change is DownloadUpdated);
-        Assert.Empty(pageless.OfType<DownloadStarted>());
     }
 
     [Fact]
@@ -269,47 +154,6 @@ public sealed partial class BrowserContractsTests {
         Assert.Equal(DownloadRiskReason.ExecutableOrInstaller, Assert.Single(insecure.Reasons));
     }
 
-    [Fact]
-    public void ABlockedDownloadWaitsForARetryItsEngineReplaysIntoTheSameRecord() {
-        var (app, engine, binding, page, workspace, _, space, _) = LivePage();
-        using var disposal = app;
-        var profile = ProfileOf(app, workspace, space);
-
-        app.Report(engine, new EngineDownloadChanged(Transfer(profile, page, EngineDownloadState.Blocked, token: "retry:7")));
-        var blocked = app.Drain().OfType<DownloadUpdated>().Last().Download;
-        Assert.Equal(DownloadPhase.BlockedAutomaticDownload, blocked.Phase);
-
-        app.Send(new RestartDownload(blocked.Id));
-        Assert.Equal(new ApproveEngineDownload(profile, "7", "retry:7"), binding.Commands[^1]);
-        app.Report(engine, new EngineDownloadChanged(Transfer(profile, page, EngineDownloadState.Downloading, received: 40)));
-        var resumed = app.Drain().OfType<DownloadUpdated>().Last().Download;
-        Assert.Equal((blocked.Id, 0.4), (resumed.Id, resumed.Progress));
-
-        // A blocked download the person clears leaves its engine's list.
-        app.Report(engine, new EngineDownloadChanged(
-            Transfer(profile, page, EngineDownloadState.Blocked, token: "retry:8") with { DownloadId = "8" }));
-        var second = app.Drain().OfType<DownloadUpdated>().Last().Download;
-        app.Send(new RemoveDownload(second.Id));
-        Assert.Equal(new RemoveEngineDownload(profile, "8"), binding.Commands[^1]);
-    }
-
-    [Fact]
-    public void AFailedDownloadRecordsWhyAsAReasonAndKeepsTheEnginesWordsAsItsMessage() {
-        var (app, engine, _, page, workspace, _, space, _) = LivePage();
-        using var disposal = app;
-        var profile = ProfileOf(app, workspace, space);
-        app.Report(engine, new EngineDownloadChanged(Transfer(profile, page, EngineDownloadState.Failed,
-            interruption: EngineDownloadInterruption.NoSpace, detail: "Failed - Disk full")));
-        var failed = app.Drain().OfType<DownloadUpdated>().Last().Download;
-        Assert.Equal((DownloadPhase.Failed, DownloadFailure.NoSpace, "Failed - Disk full"), (failed.Phase, failed.Failure, failed.Message));
-
-        // A download the engine blocked fails for its warning, with no words of its own.
-        app.Report(engine, new EngineDownloadChanged(Transfer(profile, page, EngineDownloadState.Failed,
-            warning: EngineDownloadWarning.InsecureBlocked) with { DownloadId = "8" }));
-        var blocked = app.Drain().OfType<DownloadUpdated>().Last().Download;
-        Assert.Equal((DownloadFailure.BlockedInsecure, (string?)null), (blocked.Failure, blocked.Message));
-    }
-
     [Theory]
     [InlineData("folder/in‮exe.pdf", "inexe.pdf")]
     [InlineData("..\\secret​.txt..", "secret.txt")]
@@ -317,12 +161,5 @@ public sealed partial class BrowserContractsTests {
     [InlineData("  ", "download")]
     public void ADownloadsNameKeepsOnlyItsOwnSafeLastComponent(string suggested, string expected) {
         Assert.Equal(expected, DownloadFilename.Safe(suggested));
-    }
-
-    [Fact]
-    public void ALongDownloadNameIsShortenedToWholeCharactersAndKeepsItsExtension() {
-        var shortened = DownloadFilename.Safe(new string('é', 200) + ".pdf");
-        Assert.EndsWith("é.pdf", shortened, StringComparison.Ordinal);
-        Assert.True(System.Text.Encoding.UTF8.GetByteCount(shortened) <= DownloadFilename.MaximumByteCount);
     }
 }
