@@ -129,7 +129,11 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
                 reduceMotion: reduceMotion
             )
         }
-        .modifier(BrowserRootPermissionObserver(model: model, reduceMotion: reduceMotion))
+        .modifier(
+            BrowserRootPermissionObserver(
+                model: model, reduceMotion: reduceMotion,
+                asksInSidebar: !BrowserDeviceAppearanceStore.shared.showsPageToolbar)
+        )
         .transaction { transaction in
             if reduceMotion {
                 transaction.disablesAnimations = true
@@ -273,13 +277,16 @@ private struct BrowserRootFullscreenContent<Content: View, Sidebar: View, Contro
     }
 }
 
+/// A site asks for a permission from its Site Controls, so a sidebar holding
+/// them comes forward to ask. A page's own toolbar asks where it stands.
 private struct BrowserRootPermissionObserver: ViewModifier {
     let model: BrowserRootModel
     let reduceMotion: Bool
+    let asksInSidebar: Bool
 
     func body(content: Content) -> some View {
         content.onChange(of: model.pages.activePage?.sitePermissionRequests.current?.id) {
-            if model.pages.activePage?.sitePermissionRequests.current != nil {
+            if asksInSidebar, model.pages.activePage?.sitePermissionRequests.current != nil {
                 model.presentFloatingSidebar(reduceMotion: reduceMotion)
             }
         }

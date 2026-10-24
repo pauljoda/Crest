@@ -10,6 +10,9 @@ struct SpaceSidebarAddressBand: View {
     /// The tab this window shows in `space`.
     let selectedTabID: UUID?
     let pages: BrowserPagePool
+    /// The page the controls speak for when it is not the one the window
+    /// shows, as an unfocused Split View card's is.
+    var page: BrowserPage? = nil
     let capabilities: BrowserInteractionCapabilities
     let address: Binding<String>
     let isAddressEditing: Binding<Bool>
@@ -70,6 +73,7 @@ struct SpaceSidebarAddressBand: View {
     }
 
     private var displayedPage: BrowserPage? {
+        if let page { return page }
         guard let selectedTabID else { return nil }
         let assignment = BrowserTabRuntimeAssignment(
             tabID: selectedTabID, spaceID: space.id, profileID: space.profileID

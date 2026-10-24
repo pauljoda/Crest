@@ -28,4 +28,55 @@ extension BrowserSidebarNavigationPort {
             clearSiteDataAndReload: { await pages.clearSiteDataAndReload() }
         )
     }
+
+    /// Binds the strip to one page that the window is not showing, such as an
+    /// unfocused Split View card's. Every action, History included, brings the
+    /// card forward with `focus` before it acts.
+    init(page: BrowserPage?, showHistory: @escaping () -> Void, focus: @escaping () -> Void) {
+        self.init(
+            canGoBack: { page?.live.canGoBack == true },
+            canGoForward: { page?.live.canGoForward == true },
+            backHistory: { page?.backHistory ?? [] },
+            forwardHistory: { page?.forwardHistory ?? [] },
+            goBack: {
+                focus()
+                page?.goBack()
+            },
+            goForward: {
+                focus()
+                page?.goForward()
+            },
+            goBackToHistoryItem: { item in
+                focus()
+                page?.goToHistory(item)
+            },
+            goForwardToHistoryItem: { item in
+                focus()
+                page?.goToHistory(item)
+            },
+            showHistory: {
+                focus()
+                showHistory()
+            },
+            isLoading: { page?.live.isLoading == true },
+            hasActivePage: { page != nil },
+            activeURL: { page?.live.displayURL },
+            reloadOrStop: {
+                focus()
+                page?.performReload(.standard)
+            },
+            reload: {
+                focus()
+                page?.reload()
+            },
+            reloadFromOrigin: {
+                focus()
+                page?.performReload(.fromOrigin)
+            },
+            clearSiteDataAndReload: {
+                focus()
+                await page?.clearSiteDataAndReload()
+            }
+        )
+    }
 }
