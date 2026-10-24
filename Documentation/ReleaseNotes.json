@@ -4457,6 +4457,10 @@
     "shared-sidebar-drag-state": {
       "category": "internal",
       "message": "Track a dragged sidebar folder or tab with one drag session type instead of two copies."
+    },
+    "shared-drag-session-end": {
+      "category": "internal",
+      "message": "End an iPhone or iPad sidebar drag through one shared step once the system reports it finished."
     }
   }
 }

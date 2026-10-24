@@ -19,19 +19,6 @@ struct BrowserDragSessionToken: Equatable, Sendable {
     }
 }
 
-enum BrowserTabDragSessionLifecyclePhase: Equatable, Sendable {
-    case active
-    case ended
-    case dataTransferCompleted
-
-    // MARK: - Variables
-
-    /// Whether the drag session is over once it reaches this phase.
-    var endsSession: Bool {
-        self == .ended || self == .dataTransferCompleted
-    }
-}
-
 struct BrowserFolderDragItem: Codable, Equatable, Transferable, Sendable {
     let folderID: UUID
     let spaceID: UUID

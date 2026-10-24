@@ -91,32 +91,6 @@ struct BrowserPlatformFolderDragSourceModifier: ViewModifier {
                     .environment(\.colorScheme, colorScheme)
             }
 
-        #if compiler(>=6.4)
-            if #available(iOS 27.0, *) {
-                draggableContent
-                    .onDragSessionUpdated { session in
-                        let lifecyclePhase: BrowserTabDragSessionLifecyclePhase =
-                            switch session.phase {
-                            case .ended:
-                                .ended
-                            case .dataTransferCompleted:
-                                .dataTransferCompleted
-                            default:
-                                .active
-                            }
-                        guard
-                            lifecyclePhase.endsSession
-                        else { return }
-                        Task { @MainActor in
-                            guard let sessionToken else { return }
-                            dragState.end(session: sessionToken)
-                        }
-                    }
-            } else {
-                draggableContent
-            }
-        #else
-            draggableContent
-        #endif
+        draggableContent.endingSidebarDrag({ sessionToken }, in: dragState)
     }
 }
