@@ -23,6 +23,7 @@ struct BrowserPinnedTabReorderLayout: Equatable {
     var insertionIndex: Int?
     var availableWidth: CGFloat = BrowserChromeLayout.sidebarIdealWidth
     var preferredColumns = 0
+    var fillsLastRow = false
     var tabScale = 1.0
     var tileHeight: CGFloat = Self.cellHeight
     var tileSpacing: CGFloat = Self.spacing
@@ -59,8 +60,13 @@ struct BrowserPinnedTabReorderLayout: Equatable {
     // MARK: - Actions - Layout
 
     func frame(for slot: Slot, in bounds: CGRect) -> CGRect? {
+        let slots = slots
         guard let index = slots.firstIndex(of: slot) else { return nil }
-        let width = max(0, (bounds.width - CGFloat(columns - 1) * tileSpacing) / CGFloat(columns))
+        let columns = columns
+        let lastRowFirstIndex = (slots.count - 1) / columns * columns
+        // A short last row can share the full width instead of leaving empty cells.
+        let tilesInRow = fillsLastRow && index >= lastRowFirstIndex ? slots.count - lastRowFirstIndex : columns
+        let width = max(0, (bounds.width - CGFloat(tilesInRow - 1) * tileSpacing) / CGFloat(tilesInRow))
         return CGRect(
             x: bounds.minX + CGFloat(index % columns) * (width + tileSpacing),
             y: bounds.minY + CGFloat(index / columns) * (tileHeight + tileSpacing),
@@ -78,6 +84,8 @@ struct BrowserPinnedTabReorderLayout: Equatable {
                 max(
                     BrowserSidebarDensityPreference.number(BrowserSidebarDensityPreference.pinColumnsKey, default: 0), 0
                 ), 6))
+        value.fillsLastRow = BrowserSidebarDensityPreference.defaults.bool(
+            forKey: BrowserSidebarDensityPreference.pinsFillRowKey)
         let scale = BrowserSidebarDensityPreference.number(BrowserSidebarDensityPreference.scaleKey, default: 1)
         value.tabScale = scale
         value.tileHeight = BrowserSidebarDensity(scale).pinHeight(touch: touch)

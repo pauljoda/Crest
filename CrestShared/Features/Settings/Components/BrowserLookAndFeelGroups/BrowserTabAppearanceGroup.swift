@@ -10,6 +10,8 @@ struct BrowserTabAppearanceGroup: View {
     private var tabScale = BrowserLookAndFeelDefaults.tabScale
     @AppStorage(BrowserSidebarDensityPreference.pinColumnsKey, store: BrowserSidebarDensityPreference.defaults)
     private var pinColumns = BrowserLookAndFeelDefaults.pinColumns
+    @AppStorage(BrowserSidebarDensityPreference.pinsFillRowKey, store: BrowserSidebarDensityPreference.defaults)
+    private var pinsFillRow = BrowserLookAndFeelDefaults.pinsFillRow
 
     var body: some View {
         CrestSettingsGroup(
@@ -43,6 +45,12 @@ struct BrowserTabAppearanceGroup: View {
                 .labelsHidden()
                 .fixedSize()
                 .accessibilityLabel("Pin layout")
+            }
+            CrestSettingRow(
+                "Stretch pins to fill the row", setting: fillsRow.resettable("Stretch pins to fill the row")
+            ) {
+                Toggle("Stretch pins to fill the row", isOn: fillsRow.binding)
+                    .labelsHidden()
             }
             CrestSettingRow("Color borders", setting: borders.resettable("Color borders")) {
                 Picker("Color borders", selection: borders.binding) {
@@ -87,6 +95,10 @@ struct BrowserTabAppearanceGroup: View {
         CrestSettingValue($pinColumns, default: BrowserLookAndFeelDefaults.pinColumns)
     }
 
+    private var fillsRow: CrestSettingValue<Bool> {
+        CrestSettingValue($pinsFillRow, default: BrowserLookAndFeelDefaults.pinsFillRow)
+    }
+
     private var borders: CrestSettingValue<BrowserTabAppearance.Borders> {
         CrestSettingValue($appearance.tabs.borders, default: BrowserLookAndFeelDefaults.tabs.borders)
     }
@@ -126,6 +138,7 @@ struct BrowserTabAppearanceGroup: View {
             cornerRadius.resettable("Corner radius"),
             scale.resettable("Tab scale"),
             columns.resettable("Pin layout"),
+            fillsRow.resettable("Stretch pins to fill the row"),
             borders.resettable("Color borders"),
             outlines.resettable("Accent outline on selected tabs"),
             websiteColors.resettable("Website colors for pins"),

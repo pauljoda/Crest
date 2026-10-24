@@ -115,7 +115,6 @@ the live status for each issue.
 - [ ] [Reveal the collapsed iPad sidebar on pointer hover](https://github.com/pauljoda/Crest/issues/176)
 - [ ] [Add privacy-preserving analytics and opt-in diagnostics](https://github.com/pauljoda/Crest/issues/179)
 - [ ] [feature: Add Edit Pinned URL menu option and dialogue](https://github.com/pauljoda/Crest/issues/218)
-- [ ] [Investigate mouse side buttons ignoring the sidebar's Space switching](https://github.com/pauljoda/Crest/issues/227)
 - [ ] [Make Quick Windows practical for short browsing sessions](https://github.com/pauljoda/Crest/issues/228)
 - [ ] [Keep tabs opened inside collapsed folders visible](https://github.com/pauljoda/Crest/issues/231)
 - [ ] [Return a pinned tab to its saved address from the mobile menu](https://github.com/pauljoda/Crest/issues/236)
@@ -160,7 +159,6 @@ the live status for each issue.
 - [ ] [feature: Support multiple Private Browsing windows](https://github.com/pauljoda/Crest/issues/481)
 - [ ] [bug: Cannot visit Kagi homepage (CREST_NAVIGATION_FAILED)](https://github.com/pauljoda/Crest/issues/487)
 - [ ] [feature: Share one extension install across chosen Spaces](https://github.com/pauljoda/Crest/issues/527)
-- [ ] [feature: Stretch pins to fill the row](https://github.com/pauljoda/Crest/issues/530)
 - [ ] [bug: can't continue onboarding when importing from Arc](https://github.com/pauljoda/Crest/issues/535)
 - [ ] [Remove the blank space at the bottom of the iPad layout](https://github.com/pauljoda/Crest/issues/548)
 - [ ] [Keep a Quick Window from another app clear of a new tab's keyboard on iPhone](https://github.com/pauljoda/Crest/issues/563)
@@ -170,6 +168,7 @@ the live status for each issue.
 #### Completed
 
 - [x] [feature: Swipping Tab Gesture On iphone](https://github.com/pauljoda/Crest/issues/54)
+- [x] [Investigate mouse side buttons ignoring the sidebar's Space switching](https://github.com/pauljoda/Crest/issues/227) — [`36ed0821`](https://github.com/pauljoda/Crest/commit/36ed0821b08b6373775208aa9bb104596f1184a1)
 - [x] [bug: Right-clicking an extension in Site Controls closes Site Controls](https://github.com/pauljoda/Crest/issues/262)
 - [x] [feature: Redesign bottom space picker in the sidebar. ](https://github.com/pauljoda/Crest/issues/265)
 - [x] [bug: http://192.168.0.1 automatically turns into https://192.168.0.1 and can not be open](https://github.com/pauljoda/Crest/issues/363)
@@ -203,6 +202,7 @@ the live status for each issue.
 - [x] [Redesign first-launch setup as a full-screen flow with a Heraldic or Modern look](https://github.com/pauljoda/Crest/issues/515) — [`37618b0d`](https://github.com/pauljoda/Crest/commit/37618b0d4f8d9abfb19b72cf6af4774304090916)
 - [x] [bug: Shift-click in the sidebar toggles one tab instead of selecting a range](https://github.com/pauljoda/Crest/issues/519)
 - [x] [bug: The sidebar hiding animation is broken and laggy.](https://github.com/pauljoda/Crest/issues/524)
+- [x] [feature: Stretch pins to fill the row](https://github.com/pauljoda/Crest/issues/530)
 - [x] [Paste and Match Style is greyed out on web pages](https://github.com/pauljoda/Crest/issues/540) — [`58a4792b`](https://github.com/pauljoda/Crest/commit/58a4792bed157f0e4f4d9cbc508dff19c2f4d375)
 - [x] [Adapt Crest for iPhone Duo's inner and outer displays](https://github.com/pauljoda/Crest/issues/547) — [`bc99dcd9`](https://github.com/pauljoda/Crest/commit/bc99dcd926de87af86354bd434080a02b262f656)
 - [x] [Restore the page's address after dismissing a typed address](https://github.com/pauljoda/Crest/issues/549) — [`a2303d81`](https://github.com/pauljoda/Crest/commit/a2303d8114c6749a6fca1d297e017e3b321da2fc)

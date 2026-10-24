@@ -77,9 +77,11 @@ final class BrowserSidebarPointerNavigationView: NSView, BrowserMacWindowPointer
         return true
     }
 
+    /// Logitech Options+ sends a mouse's Back and Forward buttons as swipes,
+    /// so a swipe is answered as a press where the pointer is.
     func navigate(_ action: BrowserSidebarMouseButtonAction, swipedAt event: NSEvent) -> Bool {
-        guard event.window === window, let page = pageUnderPointer(for: event) ?? activeTarget(),
-            canNavigate(action, in: page)
+        if takePress(action, at: event) { return true }
+        guard event.window === window, let page = activeTarget(), canNavigate(action, in: page)
         else { return false }
         navigate(action, in: page)
         return true

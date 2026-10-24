@@ -15,6 +15,8 @@ struct PinnedTabGridContent: View {
         var tabScale = 1.0
     @AppStorage(BrowserSidebarDensityPreference.pinColumnsKey, store: BrowserSidebarDensityPreference.defaults) private
         var pinColumns = 0
+    @AppStorage(BrowserSidebarDensityPreference.pinsFillRowKey, store: BrowserSidebarDensityPreference.defaults) private
+        var pinsFillRow = false
 
     private var tabs: [TabStateModel] { grid.tabs }
     private var assignment: BrowserSpaceRuntimeAssignment { grid.assignment }
@@ -140,6 +142,7 @@ struct PinnedTabGridContent: View {
             (reorderContext?.state.pinnedLayout(ids: ids, in: assignment) ?? BrowserPinnedTabReorderLayout(ids: ids))
             .applyingPreferences(width: BrowserChromeLayout.sidebarIdealWidth, touch: capabilities.supportsTouch)
         value.preferredColumns = min(max(pinColumns, 0), 6)
+        value.fillsLastRow = pinsFillRow
         value.tabScale = tabScale
         value.tileHeight = BrowserSidebarDensity(tabScale).pinHeight(touch: capabilities.supportsTouch)
         value.tileSpacing = BrowserSidebarDensity(tabScale).pinSpacing

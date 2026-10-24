@@ -10,7 +10,8 @@ protocol BrowserMacWindowPointerNavigation: AnyObject {
     /// Crest took it. One it did not take goes on to the view under the
     /// pointer, with its drags and release.
     func takePress(_ action: BrowserSidebarMouseButtonAction, at event: NSEvent) -> Bool
-    /// Goes back or forward on the page under `event`, or with none there on
-    /// the window's active page, answering whether that page could.
+    /// Acts on a swipe of `action` at `event` as on a press, and over neither
+    /// a page nor the sidebar goes back or forward on the window's active
+    /// page, answering whether Crest took it.
     func navigate(_ action: BrowserSidebarMouseButtonAction, swipedAt event: NSEvent) -> Bool
 }
