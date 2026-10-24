@@ -12,6 +12,9 @@ namespace CrestCore.Application;
 /// may differ from its folder's.
 internal sealed record TabGroupRecord(Guid Id, Guid SpaceId, EngineKind Engine, string Title, TabGroupColor Color);
 
+/// A locally saved host zoom in one persistent browsing profile.
+internal sealed record SiteZoomChoice(Guid ProfileId, string Host, double Factor);
+
 #endregion
 
 /// What the device store holds: every saved window's record, the saved
@@ -49,6 +52,8 @@ internal sealed record DeviceRecords(IReadOnlyList<SavedWindow> Windows, IReadOn
     /// settle or the person agrees to quit.
     public bool ReopeningPages { get; init; }
 
+    public IReadOnlyList<SiteZoomChoice> SiteZoom { get; init; } = [];
+
     #endregion
 
     #region Actions - Adoption
@@ -65,6 +70,7 @@ internal sealed record DeviceRecords(IReadOnlyList<SavedWindow> Windows, IReadOn
         && Reopening.SequenceEqual(other.Reopening)
         && SitePermissions.SequenceEqual(other.SitePermissions)
         && SiteEngines.SequenceEqual(other.SiteEngines)
+        && SiteZoom.SequenceEqual(other.SiteZoom)
         && DefaultEngine == other.DefaultEngine
         && Shortcuts.SameAs(other.Shortcuts)
         && Links.Equals(other.Links)

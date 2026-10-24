@@ -106,7 +106,8 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     var findFocusRequest: Int { findSession.focusRequest }
     var findFocusesQueryField: Bool { findSession.focusesQueryField }
     var canFindAgain: Bool { findSession.canFindAgain }
-    private(set) var pageZoom: CGFloat = BrowserDefaultPageZoomStore.defaultLevel
+    var pageZoom: CGFloat { zoomSession.factor }
+    let zoomSession: BrowserPageZoomSession
     let translation = BrowserPageTranslation()
     var readerModeState: BrowserReaderModeState { readerModeSession?.state ?? .unavailable }
     var isContentBlockingActive: Bool { engineAdapter.isContentBlockingActive }
@@ -136,9 +137,6 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     /// drives an adopted popup, so nothing else may load it in that window —
     /// loading it here is what breaks `window.opener` and `document.write`.
     @ObservationIgnored var isAwaitingPopupNavigation = false
-
-    @ObservationIgnored private var defaultPageZoom: CGFloat
-    @ObservationIgnored private var hasTemporaryPageZoomOverride = false
 
     @ObservationIgnored let dialogPresenter: BrowserDialogPresenter
     /// The app's passkey access, refreshed when a secure page commits.
@@ -310,11 +308,8 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         self.allowsCredentialAccess = allowsCredentialAccess
         sitePermissionSession = BrowserPageSitePermissionSession(
             page: engineAdapter.enginePage, permissionCenter: permissionCenter, spaceID: spaceID)
-        let normalizedDefaultPageZoom = BrowserDefaultPageZoomStore.normalized(
-            defaultPageZoom
-        )
-        self.defaultPageZoom = normalizedDefaultPageZoom
-        pageZoom = normalizedDefaultPageZoom
+        zoomSession = BrowserPageZoomSession(
+            page: corePage, profileID: profileID, defaultZoom: defaultPageZoom, url: corePage.live.documentURL)
         self.openModifiedLink = openModifiedLink
         self.openPeek = openPeek
         self.handleLinkDrag = handleLinkDrag
@@ -354,6 +349,10 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         )
         self.externalSchemeCoordinator = externalSchemeCoordinator
         super.init()
+        zoomSession.apply = { [weak self] _ in
+            guard let self else { return }
+            self.enginePage.zoom(to: self.renderedPageZoom)
+        }
         corePage.engineMoved = { [weak self] in self?.moveToNewEngine() }
         installEngine()
     }
@@ -721,37 +720,25 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     @discardableResult
     func zoomIn() -> Bool {
         guard developerViewport == nil else { return false }
-        return setTemporaryPageZoom(pageZoom.pageZoomIncreased)
+        return zoomSession.set(pageZoom.pageZoomIncreased)
     }
 
     @discardableResult
     func zoomOut() -> Bool {
         guard developerViewport == nil else { return false }
-        return setTemporaryPageZoom(pageZoom.pageZoomDecreased)
+        return zoomSession.set(pageZoom.pageZoomDecreased)
     }
 
     @discardableResult
     func resetZoom() -> Bool {
         guard developerViewport == nil else { return false }
-        hasTemporaryPageZoomOverride = false
-        return setPageZoom(defaultPageZoom)
+        return zoomSession.reset()
     }
 
-    /// Updates this page's global baseline without discarding a temporary zoom
-    /// chosen through the page commands. A manually zoomed page rejoins the
-    /// baseline when Reset is used, when recreation makes a new page, or when
-    /// the newly selected default already equals its temporary value.
+    /// Changes the fallback without replacing a saved host preference.
     @discardableResult
     func applyDefaultPageZoom(_ zoom: CGFloat) -> Bool {
-        let normalized = BrowserDefaultPageZoomStore.normalized(zoom)
-        defaultPageZoom = normalized
-        if hasTemporaryPageZoomOverride {
-            if pageZoom.matchesPageZoom(normalized) {
-                hasTemporaryPageZoomOverride = false
-            }
-            return false
-        }
-        return setPageZoom(normalized)
+        zoomSession.applyDefault(zoom)
     }
 
     // MARK: - Actions - Agents
@@ -1093,29 +1080,13 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         }
     }
 
-    // MARK: - Actions - Zoom state
-
-    private func setTemporaryPageZoom(_ zoom: CGFloat) -> Bool {
-        let changed = setPageZoom(zoom)
-        hasTemporaryPageZoomOverride = !pageZoom.matchesPageZoom(defaultPageZoom)
-        return changed
-    }
-
-    private func setPageZoom(_ zoom: CGFloat) -> Bool {
-        guard zoom != pageZoom else {
-            return false
-        }
-        pageZoom = zoom
-        enginePage.zoom(to: renderedPageZoom)
-        return true
-    }
-
     // MARK: - Actions - Navigation state
 
     /// Readies the page for a navigation of its document to `url`, which the
     /// app asked for or the engine accepted: what belonged to the document it
     /// leaves goes, and the page shows it heading to `url`.
     func prepareForNavigation(to url: URL?) {
+        zoomSession.prepareForNavigation(to: url)
         // Same-document navigation never commits a replacement document.
         // Cancel the current pull here; suspend new pulls only when WebKit
         // actually starts provisional navigation.

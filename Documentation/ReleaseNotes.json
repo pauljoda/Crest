@@ -5185,6 +5185,14 @@
     "fullscreen-page-survives-space-swipe": {
       "category": "improved",
       "message": "On Mac, with Show sidebar on hover in full screen turned on, a full-screen page stays full screen when you swipe to another Space, and takes over the window again when you swipe back."
+    },
+    "remember-site-zoom-per-profile": {
+      "category": "fixed",
+      "message": "Page zoom is remembered for each website in its Space, including after closing a tab or restarting Crest. Other websites follow their own zoom or your default."
+    },
+    "retain-site-zoom-through-space-changes": {
+      "category": "fixed",
+      "message": "Saved website zoom survives unfinished Space deletions, joining and separating Sub-Spaces, and handing a shared session to another Space."
     }
   }
 }

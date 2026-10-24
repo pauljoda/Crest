@@ -11,6 +11,7 @@ struct BrowserPageNavigationCommitted: BrowserPageEngineEvent {
     // MARK: - Actions - Page
 
     func apply(to page: BrowserPage) {
+        page.zoomSession.committed(url)
         page.hasCommittedNavigationAwaitingCompletion = isLoading
         page.isContentFullscreen = false
         page.webContentFailureMessage = nil
