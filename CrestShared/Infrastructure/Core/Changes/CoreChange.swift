@@ -9,6 +9,7 @@ struct CoreChangeBatch {
     /// The navigations and icons the core recorded from pages' reports.
     var pageRecords = Engines.PageRecords()
     var permissionChanges: [SitePermissionsChanged] = []
+    var siteZoomChanges: [SiteZoomChanged] = []
     /// The questions the core asks the person, and each one that settles.
     var prompts: [any CorePromptChange] = []
     var downloads: [DownloadState] = []

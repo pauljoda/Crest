@@ -362,13 +362,19 @@ private final class RecordingMobileWebsiteDataStoreRemover:
 /// have changed.
 @MainActor
 private final class MediaActivityHost: WebKitPageHosting {
+    // MARK: - Variables
+
     private(set) var mediaChanges = 0
+
+    // MARK: - Actions - Prompts
 
     func ask(_ asked: ScriptDialogAsked, dismissal: BrowserPromptDismissal) {}
 
     func ask(_ asked: AuthenticationAsked, dismissal: BrowserPromptDismissal) {}
 
     func ask(_ asked: PermissionAsked, dismissal: BrowserPromptDismissal) {}
+
+    // MARK: - Actions - Page events
 
     func prepareToLoad(_ url: URL) {}
 
@@ -379,4 +385,6 @@ private final class MediaActivityHost: WebKitPageHosting {
     func historyMayHaveChanged() {}
 
     func receiveCredentialMessage(_ message: WKScriptMessage) {}
+
+    func receiveCosmeticFilterMessage(_ message: WKScriptMessage) {}
 }

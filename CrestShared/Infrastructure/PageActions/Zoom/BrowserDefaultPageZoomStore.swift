@@ -54,8 +54,8 @@ final class InMemoryBrowserDefaultPageZoomPersistence:
 /// The one persisted global zoom baseline shared by every browser runtime.
 ///
 /// Pages subscribe weakly so changing Settings can update every resident page
-/// without making their lifetimes part of the preference's lifetime. A page with
-/// a temporary command override decides for itself whether to adopt the change.
+/// without making their lifetimes part of the preference's lifetime. Pages
+/// resolve saved host preferences against this baseline.
 @Observable
 @MainActor
 final class BrowserDefaultPageZoomStore {

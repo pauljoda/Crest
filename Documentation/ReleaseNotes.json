@@ -5381,6 +5381,14 @@
     "copy-url-on-hover": {
       "category": "fixed",
       "message": "In a narrow sidebar, Copy URL appears in the address field while the pointer is over it, so you can still copy the address with a click."
+    },
+    "remember-site-zoom-per-profile": {
+      "category": "fixed",
+      "message": "Page zoom is remembered for each website in its Space, including after closing a tab or restarting Crest. Other websites follow their own zoom or your default."
+    },
+    "retain-site-zoom-through-space-changes": {
+      "category": "fixed",
+      "message": "Saved website zoom survives unfinished Space deletions, joining and separating Sub-Spaces, and handing a shared session to another Space."
     }
   }
 }
