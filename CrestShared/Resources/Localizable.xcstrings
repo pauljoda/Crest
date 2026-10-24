@@ -2947,6 +2947,9 @@
     "Capture in Portrait Mode" : {
 
     },
+    "Capture Page" : {
+
+    },
     "Capture Window" : {
 
     },
@@ -11471,6 +11474,9 @@
       }
     },
     "Screen Sharing" : {
+
+    },
+    "screenshot snapshot region selection image clipboard" : {
 
     },
     "Scripts run with the page’s own access to the site." : {

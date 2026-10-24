@@ -7,5 +7,6 @@ extension NSUserInterfaceItemIdentifier {
     /// their localized titles.
     static let webKitSearchWeb = Self("WKMenuItemIdentifierSearchWeb")
     static let webKitOpenLinkInNewWindow = Self("WKMenuItemIdentifierOpenLinkInNewWindow")
+    static let webKitPaste = Self("WKMenuItemIdentifierPaste")
     static let webKitDownloadImage = Self("WKMenuItemIdentifierDownloadImage")
 }

@@ -36,6 +36,7 @@ struct BrowserRegionCaptureOverlay: View {
 
     @State private var dragStart: CGPoint?
     @State private var dragEnd: CGPoint?
+    @FocusState private var isFocused: Bool
 
     var body: some View {
         GeometryReader { proxy in
@@ -48,6 +49,10 @@ struct BrowserRegionCaptureOverlay: View {
                 BrowserRegionCaptureInstruction()
             }
         }
+        .focusable()
+        .focusEffectDisabled()
+        .focused($isFocused)
+        .onAppear { isFocused = true }
         .onExitCommand(perform: page.cancelRegionCapture)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("Page capture selection")

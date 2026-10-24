@@ -74,7 +74,8 @@ public sealed class ShortcutCommand {
         ToggleTranslationToolbar,
         OpenFile,
         FindNext,
-        FindPrevious
+        FindPrevious,
+        CapturePage
     }
 
     #endregion
@@ -273,6 +274,10 @@ public sealed class ShortcutCommand {
         title: "Find Previous", symbol: "chevron.up", searchTerms: "previous match search again back",
         shortcuts: [new(DevicePlatform.Desktop, Character("g", Command | Shift), YieldsToOverrides: true)],
         availableWhen: ShowingWebPage);
+    public static readonly ShortcutCommand CapturePage = new(Kinds.CapturePage, name: "capturePage", ShortcutSection.Page,
+        title: "Capture Page", symbol: "camera", searchTerms: "screenshot snapshot region selection image clipboard",
+        shortcuts: [new(DevicePlatform.Desktop, Character("2", Command | Shift), YieldsToOverrides: true)],
+        requiredCapability: EngineCapability.ViewportCapture, availableWhen: ShowingWebPage);
 
     public static IReadOnlyList<ShortcutCommand> All { get; } = [
         NewWindow, NewBlankWindow, NewTab, NewQuickWindow, NewPrivateWindow, CloseTabOrWindow, CloseWindow, OpenLocation, Back,
@@ -284,7 +289,7 @@ public sealed class ShortcutCommand {
         ExportPDF, SaveWebArchive, PrintPage, ToggleSidebar, ShowHistory, ShowArchive, ShowDownloads, ShowWebInspector,
         SplitWithNextTab, FocusNextSplitCard, FocusPreviousSplitCard, RemoveTabFromSplit, SeparateSplitTabs,
         MoveSplitCardLeft, MoveSplitCardRight, ToggleDeveloperToolbar, ToggleTranslationToolbar, OpenFile, FindNext,
-        FindPrevious
+        FindPrevious, CapturePage
     ];
 
     public Kinds Kind { get; }

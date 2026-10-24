@@ -162,11 +162,9 @@ the live status for each issue.
 - [ ] [feature: Share one extension install across chosen Spaces](https://github.com/pauljoda/Crest/issues/527)
 - [ ] [feature: Stretch pins to fill the row](https://github.com/pauljoda/Crest/issues/530)
 - [ ] [bug: can't continue onboarding when importing from Arc](https://github.com/pauljoda/Crest/issues/535)
-- [ ] [Paste and Match Style is greyed out on web pages](https://github.com/pauljoda/Crest/issues/540)
 - [ ] [Remove the blank space at the bottom of the iPad layout](https://github.com/pauljoda/Crest/issues/548)
 - [ ] [Keep a Quick Window from another app clear of a new tab's keyboard on iPhone](https://github.com/pauljoda/Crest/issues/563)
 - [ ] [Say so when a link from another app needs a locked Space](https://github.com/pauljoda/Crest/issues/564)
-- [ ] [feature: Capture part of a page from the keyboard](https://github.com/pauljoda/Crest/issues/579)
 - [ ] [Keep Look and Feel changes smooth while they preview live](https://github.com/pauljoda/Crest/issues/619)
 
 #### Completed
@@ -205,6 +203,7 @@ the live status for each issue.
 - [x] [Redesign first-launch setup as a full-screen flow with a Heraldic or Modern look](https://github.com/pauljoda/Crest/issues/515) — [`37618b0d`](https://github.com/pauljoda/Crest/commit/37618b0d4f8d9abfb19b72cf6af4774304090916)
 - [x] [bug: Shift-click in the sidebar toggles one tab instead of selecting a range](https://github.com/pauljoda/Crest/issues/519)
 - [x] [bug: The sidebar hiding animation is broken and laggy.](https://github.com/pauljoda/Crest/issues/524)
+- [x] [Paste and Match Style is greyed out on web pages](https://github.com/pauljoda/Crest/issues/540) — [`58a4792b`](https://github.com/pauljoda/Crest/commit/58a4792bed157f0e4f4d9cbc508dff19c2f4d375)
 - [x] [Adapt Crest for iPhone Duo's inner and outer displays](https://github.com/pauljoda/Crest/issues/547) — [`bc99dcd9`](https://github.com/pauljoda/Crest/commit/bc99dcd926de87af86354bd434080a02b262f656)
 - [x] [Restore the page's address after dismissing a typed address](https://github.com/pauljoda/Crest/issues/549) — [`a2303d81`](https://github.com/pauljoda/Crest/commit/a2303d8114c6749a6fca1d297e017e3b321da2fc)
 - [x] [Keep the iPad Quick Window card inside the screen in portrait](https://github.com/pauljoda/Crest/issues/550) — [`30f93252`](https://github.com/pauljoda/Crest/commit/30f9325290bf1296a1b826b3aba4234251b87826)
@@ -212,6 +211,7 @@ the live status for each issue.
 - [x] [Keep the Quick Window card clear of the top of the screen only once on iPhone](https://github.com/pauljoda/Crest/issues/558) — [`30f93252`](https://github.com/pauljoda/Crest/commit/30f9325290bf1296a1b826b3aba4234251b87826)
 - [x] [Let the iPhone Duo sidebar's list run into the bottom corner](https://github.com/pauljoda/Crest/issues/560) — [`d1082130`](https://github.com/pauljoda/Crest/commit/d1082130937c86fca1b15e180f8885cb9e2868cd)
 - [x] [Update the Chromium engine to 155.0.8059.84 and distrust the compromised eMudhra CAs](https://github.com/pauljoda/Crest/issues/572) — [`d8b18cd1`](https://github.com/pauljoda/Crest/commit/d8b18cd190ea196db650fdb01888f11c0fe55cab)
+- [x] [feature: Capture part of a page from the keyboard](https://github.com/pauljoda/Crest/issues/579)
 - [x] [feature: Space switcher shows all Spaces at normal sidebar width](https://github.com/pauljoda/Crest/issues/588)
 - [x] [Show what coding agents do in Crest and stop them all at once](https://github.com/pauljoda/Crest/issues/609) — [`db8c4e0e`](https://github.com/pauljoda/Crest/commit/db8c4e0ede11456a8b010dc536f318f7f6399b73)
 - [x] [Keep a Space's lock off after switching it off in Settings](https://github.com/pauljoda/Crest/issues/618) — [`0757dd90`](https://github.com/pauljoda/Crest/commit/0757dd903c6ab9a17d072699d922689857ed86e2)

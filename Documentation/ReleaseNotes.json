@@ -4362,6 +4362,18 @@
       "category": "fixed",
       "message": "Shift-clicking a tab in the sidebar selects every tab between the active tab and the one you clicked, instead of only adding that tab like Command-click."
     },
+    "palette-search-typed-address": {
+      "category": "improved",
+      "message": "The command palette offers to search for a typed or pasted address as well as open it."
+    },
+    "capture-page-shortcut": {
+      "category": "new",
+      "message": "On Mac, Capture Page in the Page menu and the command palette lets you drag over part of a page to copy it as an image. Its shortcut is Command-Shift-2."
+    },
+    "paste-and-match-style-web-pages": {
+      "category": "fixed",
+      "message": "Paste and Match Style now works in editable web content, from the Edit menu, its shortcut and the page's right-click menu."
+    },
     "background-link-opening-notice": {
       "category": "improved",
       "message": "Opening a link in a background tab now shows a brief confirmation at the top of the window."

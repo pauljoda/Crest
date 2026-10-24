@@ -58,6 +58,14 @@ final class BrowserDesktopWebView: WKWebView {
             actions: menuHost.contextMenuActions(linkURL: context.linkURL, selectionText: context.selectionText),
             host: menuHost, view: self
         ).insert(into: menu)
+        if context.isEditable, let paste = menu.webKitPasteItem {
+            let item = NSMenuItem(
+                title: String(localized: "Paste and Match Style"), action: #selector(pasteAsPlainTextFromMenu(_:)),
+                keyEquivalent: "")
+            item.target = self
+            item.isEnabled = paste.isEnabled
+            menu.insertItem(item, at: menu.index(of: paste) + 1)
+        }
         if let imageDownloadURL = context.imageDownloadURL,
             let item = menu.webKitDownloadImageItem
         {
@@ -73,6 +81,12 @@ final class BrowserDesktopWebView: WKWebView {
     override func didCloseMenu(_ menu: NSMenu, with event: NSEvent?) {
         super.didCloseMenu(menu, with: event)
         menuHost?.discardSplitViewLinkCapture()
+    }
+
+    /// Named apart from `pasteAsPlainText:` so WebKit's own handler is the one
+    /// the paste reaches.
+    @objc private func pasteAsPlainTextFromMenu(_ sender: NSMenuItem) {
+        BrowserPlainTextPaste(for: self)?.perform()
     }
 
     @objc private func downloadImage(_ sender: NSMenuItem) {
