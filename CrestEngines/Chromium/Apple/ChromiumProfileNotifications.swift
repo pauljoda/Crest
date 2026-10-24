@@ -42,33 +42,19 @@
                 remove(identifier, previous.generation)
             }
             posted[identifier] = Posted(generation: generation, notification: notification)
+            let delivery = BrowserHostedWebNotificationDelivery(
+                identifier: systemIdentifier(identifier, generation), title: notification.title,
+                body: notification.body, origin: notification.origin, isSilent: notification.silent)
             Task { @MainActor [weak self] in
                 guard let self else { return }
-                guard await center.currentAuthorization() == .authorized, isCurrent(identifier, generation) else {
-                    decline(identifier, generation)
-                    return
+                // Revocation or replacement can race system delivery.
+                let shown = await center.show(delivery, while: { isCurrent(identifier, generation) }) { [weak self] _ in
+                    guard let self, isCurrent(identifier, generation) else { return }
+                    posted.removeValue(forKey: identifier)
+                    NSApp.activate()
+                    answer(notification, .clicked)
                 }
-                do {
-                    try await center.add(
-                        BrowserHostedWebNotificationDelivery(
-                            identifier: systemIdentifier(identifier, generation),
-                            title: String(notification.title.prefix(200)),
-                            body: String(notification.body.prefix(1_000)), origin: notification.origin,
-                            isSilent: notification.silent)
-                    ) { [weak self] _ in
-                        guard let self, isCurrent(identifier, generation) else { return }
-                        posted.removeValue(forKey: identifier)
-                        NSApp.activate()
-                        answer(notification, .clicked)
-                    }
-                    // Revocation or replacement can race system delivery.
-                    if !isCurrent(identifier, generation) {
-                        decline(identifier, generation)
-                        await center.remove(identifier: systemIdentifier(identifier, generation))
-                    }
-                } catch {
-                    decline(identifier, generation)
-                }
+                if !shown { decline(identifier, generation) }
             }
         }
 

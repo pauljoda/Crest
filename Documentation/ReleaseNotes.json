@@ -4421,6 +4421,10 @@
     "core-single-spellings": {
       "category": "internal",
       "message": "Keep one definition each in the core for the stored-date epoch, ordered device-store writes and known URL schemes, and show a sync save failure's own message."
+    },
+    "shared-notification-delivery": {
+      "category": "internal",
+      "message": "Show web and extension notifications through one shared path that checks permission, trims long text and withdraws stale ones."
     }
   }
 }
