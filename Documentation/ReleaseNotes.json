@@ -4365,6 +4365,10 @@
     "palette-search-typed-address": {
       "category": "improved",
       "message": "The command palette offers to search for a typed or pasted address as well as open it."
+    },
+    "quick-window-address-drag-selects-text": {
+      "category": "fixed",
+      "message": "Dragging across a Quick Window’s address field selects its text instead of moving the window. The space around the field still moves the window."
     }
   }
 }

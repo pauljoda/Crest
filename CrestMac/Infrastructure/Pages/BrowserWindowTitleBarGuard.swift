@@ -8,12 +8,13 @@ import QuartzCore
 /// SwiftUI claims none of that strip for the pages it hosts when the window's
 /// content extends under the title bar, so a press at the very top of a page
 /// would move the window. While the pointer is on a page there
-/// (`BrowserPageTitleBarTracker`), the window is not movable and the window
-/// server has no strip to drag from. Everywhere else it stays movable, so the
-/// Window menu's Move & Resize, the green button's tiling, the Globe-Control
-/// tiling keys and a display change all still move it. Holding Globe and
-/// Control hands the window back for those keys even while the pointer is on a
-/// page's top.
+/// (`BrowserPageTitleBarTracker`), or on a control there such as an address
+/// field (`BrowserWindowTitleBarControlAreaView`), the window is not movable
+/// and the window server has no strip to drag from. Everywhere else it stays
+/// movable, so the Window menu's Move & Resize, the green button's tiling, the
+/// Globe-Control tiling keys and a display change all still move it. Holding
+/// Globe and Control hands the window back for those keys even while the
+/// pointer is on a page's top.
 @MainActor
 final class BrowserWindowTitleBarGuard {
     // MARK: - Static Variables

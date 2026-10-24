@@ -16,6 +16,12 @@ struct BrowserQuickWindowToolbar: View {
                 addressFocusRequest: addressFocusRequest
             )
             .layoutPriority(1)
+            // The field sits under the title bar. A drag across it selects
+            // its text, while the strip around it still moves the window.
+            .background {
+                BrowserWindowTitleBarControlArea()
+                    .accessibilityHidden(true)
+            }
             BrowserQuickWindowDestinationControl(
                 model: model,
                 promote: promote

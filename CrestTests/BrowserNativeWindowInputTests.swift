@@ -62,6 +62,32 @@ final class BrowserNativeWindowInputTests: XCTestCase {
         XCTAssertTrue(window.isMovable)
     }
 
+    func testAControlUnderTheTitleBarHoldsTheWindowStillOnlyWhileThePointerIsOnIt() throws {
+        let window = makeWindow()
+        defer { window.close() }
+        let content = try XCTUnwrap(window.contentView)
+        content.addSubview(BrowserNativeWindowControlsHostView())
+        window.layoutIfNeeded()
+        let top = content.bounds.maxY
+        let field = BrowserWindowTitleBarControlAreaView(frame: NSRect(x: 100, y: top - 46, width: 400, height: 36))
+        let lowerField = BrowserWindowTitleBarControlAreaView(frame: NSRect(x: 100, y: 200, width: 400, height: 36))
+        content.addSubview(field)
+        content.addSubview(lowerField)
+        XCTAssertLessThan(window.contentLayoutRect.maxY, top - 10)
+
+        // A press on the field under the title bar reaches the field, so a
+        // drag across its text selects it rather than moving the window.
+        field.mouseEntered(with: try pointer(at: NSPoint(x: 300, y: top - 28), in: window))
+        XCTAssertFalse(window.isMovable)
+
+        // Off the field, or on a control below the title bar, the window
+        // moves as any window does.
+        field.mouseExited(with: try pointer(at: NSPoint(x: 700, y: top - 28), in: window))
+        XCTAssertTrue(window.isMovable)
+        lowerField.mouseEntered(with: try pointer(at: NSPoint(x: 300, y: 218), in: window))
+        XCTAssertTrue(window.isMovable)
+    }
+
     func testLeavingAWindowKeepsTheFullscreenStateAppKitGaveIt() {
         let windowed: NSWindow.StyleMask = [.titled, .closable, .miniaturizable, .resizable]
         let chrome = windowed.union(.fullSizeContentView)
