@@ -4389,6 +4389,10 @@
     "smooth-appearance-previews": {
       "category": "fixed",
       "message": "Dragging an Appearance setting, such as the window border, material, Space icon size or the tab and address field colors, no longer slows the whole app down."
+    },
+    "independent-search-provider-triggers": {
+      "category": "improved",
+      "message": "Choose in Search settings whether a space after a search shortcut chooses its provider, with or without a $ first, separately from Tab."
     }
   }
 }

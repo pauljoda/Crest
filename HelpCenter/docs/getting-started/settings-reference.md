@@ -23,7 +23,7 @@ Choose whether tabs opened from links get focus with **Switch to tabs opened fro
 
 ## Search
 
-- **Default search**: the search engine or AI assistant every Space uses unless it chose its own, the one **Private windows** use, and whether the default gives **Search suggestions**. **Tab to search providers** turns provider names and shortcuts in the command palette on or off.
+- **Default search**: the search engine or AI assistant every Space uses unless it chose its own, the one **Private windows** use, and whether the default gives **Search suggestions**. **Tab to search providers** lets Tab choose a provider by its name or shortcut in the command palette, and **Space to search providers** lets a space after `$` and a shortcut, or after a shortcut alone, choose it.
 
 The command palette settings come next:
 

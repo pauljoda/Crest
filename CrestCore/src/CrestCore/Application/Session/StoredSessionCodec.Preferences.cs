@@ -168,7 +168,10 @@ internal static partial class StoredSessionCodec {
             TolerantFlag(value[Key.ShowsTopHit]) ?? defaults.ShowsTopHit, TolerantFlag(value[Key.PrefersOpenTabs]) ?? defaults.PrefersOpenTabs,
             TolerantFlag(value[Key.CompletesInline]) ?? defaults.CompletesInline, TolerantFlag(value[Key.LearnsChoices]) ?? defaults.LearnsChoices,
             TolerantFlag(value[Key.SearchesSitesWithTab]) ?? defaults.SearchesSitesWithTab,
-            TolerantFlag(value[Key.ShowsReasons]) ?? defaults.ShowsReasons).Restored();
+            TolerantFlag(value[Key.ShowsReasons]) ?? defaults.ShowsReasons,
+            SearchProviderSpaceTrigger.Named(TolerantText(value[Key.ProviderSpaceTrigger]))
+                ?? ((TolerantFlag(value[Key.SearchesSitesWithTab]) ?? defaults.SearchesSitesWithTab)
+                    ? SearchProviderSpaceTrigger.PrefixedShortcut : SearchProviderSpaceTrigger.Off)).Restored();
     }
 
     private static JsonNode Encode(PaletteSourceChoice choice) {
@@ -185,6 +188,7 @@ internal static partial class StoredSessionCodec {
         [Key.CompletesInline] = preferences.CompletesInline,
         [Key.LearnsChoices] = preferences.LearnsChoices,
         [Key.SearchesSitesWithTab] = preferences.SearchesSitesWithTab,
+        [Key.ProviderSpaceTrigger] = preferences.ProviderSpaceTrigger.Name,
         [Key.ShowsReasons] = preferences.ShowsReasons
     };
 
